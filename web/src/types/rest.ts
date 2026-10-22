@@ -673,6 +673,7 @@ export type BotChannelCommand = {
   bot_avatar_url?: string
   bot_id: string
   bot_name: string
+  builtin?: boolean
   created_at: string
   description: string
   disabled: boolean
@@ -686,6 +687,7 @@ export function isBotChannelCommand(value: unknown): value is BotChannelCommand 
     && (!hasOwn(value, "bot_avatar_url") || isString(value["bot_avatar_url"]))
     && (hasOwn(value, "bot_id") && isIdentifier(value["bot_id"]))
     && (hasOwn(value, "bot_name") && isString(value["bot_name"]))
+    && (!hasOwn(value, "builtin") || typeof value["builtin"] === 'boolean')
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "description") && isString(value["description"]))
     && (hasOwn(value, "disabled") && typeof value["disabled"] === 'boolean')
@@ -808,6 +810,7 @@ export function isBotNewTokenResponse(value: unknown): value is BotNewTokenRespo
 export const decodeBotNewTokenResponse = decoder("bot.NewTokenResponse", isBotNewTokenResponse)
 
 export type BotOption = {
+  choices?: Array<string>
   description: string
   name: string
   required: boolean
@@ -816,6 +819,7 @@ export type BotOption = {
 
 export function isBotOption(value: unknown): value is BotOption {
   return isRecord(value)
+    && (!hasOwn(value, "choices") || isArrayOf(value["choices"], item => isString(item)))
     && (hasOwn(value, "description") && isString(value["description"], 100))
     && (hasOwn(value, "name") && isString(value["name"], 32))
     && (hasOwn(value, "required") && typeof value["required"] === 'boolean')
@@ -1477,6 +1481,7 @@ export type ChatMessage = {
   mentions: Array<string>
   number: number
   parent_id?: string
+  poll?: ChatPoll
   reactions: Array<ChatReactionSummary>
   reply_count: number
   reply_to?: ChatReplyPreview
@@ -1504,6 +1509,7 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (hasOwn(value, "mentions") && isArrayOf(value["mentions"], item => isIdentifier(item)))
     && (hasOwn(value, "number") && isInteger(value["number"]))
     && (!hasOwn(value, "parent_id") || isIdentifier(value["parent_id"]))
+    && (!hasOwn(value, "poll") || isChatPoll(value["poll"]))
     && (hasOwn(value, "reactions") && isArrayOf(value["reactions"], item => isChatReactionSummary(item)))
     && (hasOwn(value, "reply_count") && isInteger(value["reply_count"]))
     && (!hasOwn(value, "reply_to") || isChatReplyPreview(value["reply_to"]))
@@ -1535,6 +1541,44 @@ export function isChatNotifyLevel(value: unknown): value is ChatNotifyLevel {
 }
 
 export const decodeChatNotifyLevel = decoder("chat.NotifyLevel", isChatNotifyLevel)
+
+export type ChatPoll = {
+  anonymous: boolean
+  closed: boolean
+  closes_at: string
+  multiple: boolean
+  options: Array<ChatPollOption>
+  total_voters: number
+}
+
+export function isChatPoll(value: unknown): value is ChatPoll {
+  return isRecord(value)
+    && (hasOwn(value, "anonymous") && typeof value["anonymous"] === 'boolean')
+    && (hasOwn(value, "closed") && typeof value["closed"] === 'boolean')
+    && (hasOwn(value, "closes_at") && isTimestamp(value["closes_at"]))
+    && (hasOwn(value, "multiple") && typeof value["multiple"] === 'boolean')
+    && (hasOwn(value, "options") && isArrayOf(value["options"], item => isChatPollOption(item)))
+    && (hasOwn(value, "total_voters") && isInteger(value["total_voters"]))
+}
+
+export const decodeChatPoll = decoder("chat.Poll", isChatPoll)
+
+export type ChatPollOption = {
+  id: string
+  label: string
+  voters?: Array<string>
+  votes: number
+}
+
+export function isChatPollOption(value: unknown): value is ChatPollOption {
+  return isRecord(value)
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "label") && isString(value["label"], 55))
+    && (!hasOwn(value, "voters") || isArrayOf(value["voters"], item => isIdentifier(item)))
+    && (hasOwn(value, "votes") && isInteger(value["votes"]))
+}
+
+export const decodeChatPollOption = decoder("chat.PollOption", isChatPollOption)
 
 export type ChatReactionRequest = {
   emoji: string
@@ -2103,6 +2147,59 @@ export function isPermUploadSettings(value: unknown): value is PermUploadSetting
 }
 
 export const decodePermUploadSettings = decoder("perm.UploadSettings", isPermUploadSettings)
+
+export type PollCreateRequest = {
+  anonymous?: boolean
+  duration?: "1h" | "4h" | "8h" | "24h" | "3d" | "1w"
+  multiple?: boolean
+  options: Array<string>
+  question: string
+}
+
+export function isPollCreateRequest(value: unknown): value is PollCreateRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "anonymous") || typeof value["anonymous"] === 'boolean')
+    && (!hasOwn(value, "duration") || (value["duration"] === "1h" || value["duration"] === "4h" || value["duration"] === "8h" || value["duration"] === "24h" || value["duration"] === "3d" || value["duration"] === "1w"))
+    && (!hasOwn(value, "multiple") || typeof value["multiple"] === 'boolean')
+    && (hasOwn(value, "options") && isArrayOf(value["options"], item => isString(item)))
+    && (hasOwn(value, "question") && isString(value["question"], 300))
+}
+
+export const decodePollCreateRequest = decoder("poll.CreateRequest", isPollCreateRequest)
+
+export type PollDetail = {
+  anonymous: boolean
+  closed: boolean
+  closes_at: string
+  multiple: boolean
+  my_votes: Array<string>
+  options: Array<ChatPollOption>
+  total_voters: number
+}
+
+export function isPollDetail(value: unknown): value is PollDetail {
+  return isRecord(value)
+    && (hasOwn(value, "anonymous") && typeof value["anonymous"] === 'boolean')
+    && (hasOwn(value, "closed") && typeof value["closed"] === 'boolean')
+    && (hasOwn(value, "closes_at") && isTimestamp(value["closes_at"]))
+    && (hasOwn(value, "multiple") && typeof value["multiple"] === 'boolean')
+    && (hasOwn(value, "my_votes") && isArrayOf(value["my_votes"], item => isIdentifier(item)))
+    && (hasOwn(value, "options") && isArrayOf(value["options"], item => isChatPollOption(item)))
+    && (hasOwn(value, "total_voters") && isInteger(value["total_voters"]))
+}
+
+export const decodePollDetail = decoder("poll.Detail", isPollDetail)
+
+export type PollVoteRequest = {
+  option_ids: Array<string>
+}
+
+export function isPollVoteRequest(value: unknown): value is PollVoteRequest {
+  return isRecord(value)
+    && (hasOwn(value, "option_ids") && isArrayOf(value["option_ids"], item => isIdentifier(item)))
+}
+
+export const decodePollVoteRequest = decoder("poll.VoteRequest", isPollVoteRequest)
 
 export type PushConfig = {
   enabled: boolean
@@ -2737,6 +2834,17 @@ export function isServerVoiceHealth(value: unknown): value is ServerVoiceHealth 
 }
 
 export const decodeServerVoiceHealth = decoder("server.VoiceHealth", isServerVoiceHealth)
+
+export type SlashResult = {
+  message_id?: string
+}
+
+export function isSlashResult(value: unknown): value is SlashResult {
+  return isRecord(value)
+    && (!hasOwn(value, "message_id") || isIdentifier(value["message_id"]))
+}
+
+export const decodeSlashResult = decoder("slash.Result", isSlashResult)
 
 export type WebhookAllowedMentions = {
   parse: Array<string>

@@ -113,7 +113,7 @@ the own role is a convenient place for "this bot may post in #alerts").
 | View channels | See a channel or Talk and read its history | yes |
 | Send messages | Post, reply, edit own messages | yes |
 | Attach files | Upload files with a message | yes |
-| Add reactions | Add a reaction (taking back your own always works) | yes |
+| Add reactions | Add a reaction (taking back your own always works); vote in a poll | yes |
 | Manage messages | Delete other members' messages (with a reason, or a member's latest ones in bulk), pin messages, exempt from slow mode | yes |
 | Mention everyone | `@all` and `@here` notify people | yes |
 | Connect | Join a Talk | yes |
@@ -211,6 +211,8 @@ cannot do.
 |---|---|
 | `GET /api/channels` | Only viewable channels; a category shows if it is viewable or holds a viewable channel |
 | Messages, threads, reactions, search, by-number, read state, notifications | *View channels*; posting *Send messages*; reacting *Add reactions*; deleting others' *Manage messages* |
+| Polls (`/poll`, `POST /api/channels/{id}/polls`) | Posting *Send messages*; voting and reading your own votes *View channels* + *Add reactions* (so a timed-out member cannot vote); ending early the author, or *Manage messages* |
+| Slash commands | Listing *View channels*; running *Send messages* (built-in commands may ask for more, see their `Available` check in `internal/slash`); a bot's commands also need the bot to view and send there |
 | Uploads and `GET /api/media/{id}` | *Send messages* + *Attach files* to upload; *View channels* of the message's channel to download (404 otherwise) |
 | Mentions | `@all`/`@here` need *Mention everyone*; nobody who cannot view the channel is notified |
 | `/api/admin/*` | Per route: *Manage channels*, *Manage roles*, *Manage invites*, *Manage members*, *Disconnect members*; system, storage and passwords are Owner-only |

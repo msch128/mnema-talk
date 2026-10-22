@@ -133,7 +133,7 @@ nothing in it is a breaking change to a public surface, and `1.x` keeps working
 for existing clients, bots, webhooks, dashboards and alerts. What changes for an
 operator is below. Update with the procedure above; take the backup first.
 
-- **Five migrations run on first start: 0038, 0039, 0040, 0041 and 0043.** All
+- **Six migrations run on first start: 0038, 0039, 0040, 0041, 0043 and 0048.** All
   are quick on any instance (0042 belongs to the installable web app).
   - 0038 drops `idx_messages_content_trgm`, a duplicate of the trigram search
     index `messages_content_trgm_idx` (both came from earlier releases), so
@@ -155,6 +155,8 @@ operator is below. Update with the procedure above; take the backup first.
     and replaces the audit log's immutability trigger function with one that
     allows blanking names and details during an account deletion (and nothing
     else). No existing row changes.
+  - 0048 adds the tables `polls`, `poll_options` and `poll_votes` for the
+    `/poll` command. They start empty and nothing else changes.
   - The app waits for these locks like any other statement; there is nothing to
     stop or schedule. If startup is slow, check `docker compose logs app` for
     `migration applied`.
@@ -263,6 +265,17 @@ operator is below. Update with the procedure above; take the backup first.
   stores API answers. A reverse proxy must pass `/sw.js` and
   `/manifest.webmanifest` through unchanged (no caching of `/sw.js`, no
   rewriting); the app's own `Cache-Control: no-cache` already says so.
+- **Polls and built-in slash commands (migration 0048).** `/poll` and a poll
+  button in the composer let members ask a question with 2 to 10 answers
+  (single or multiple choice, open for 1 hour to 1 week, optionally anonymous).
+  Voting needs *View channels* and *Add reactions*, posting *Send messages*;
+  nothing to configure and no new setting. The server's built-in commands share
+  the slash menu with the bots' ([bots](bots.md#built-in-commands-and-polls));
+  bots can now give a text option `choices`. New surface, all additive: the
+  `poll` object on messages, the `poll_update` WebSocket event, the routes under
+  `/api/channels/{id}/polls` and `.../messages/{id}/poll`, and `200` as an
+  answer of running a built-in command. A reverse proxy needs no change. The
+  data export gains `poll_votes.json`.
 - **Rollback means restoring the pre-upgrade backup.** Migrations are
   forward-only and the 0.9.x code has not been verified against the 1.0 schema
   and data (the bot token column, the dropped index), so do not simply start

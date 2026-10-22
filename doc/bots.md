@@ -392,7 +392,9 @@ overwrite; `POST` adds or updates one by name; `GET`, `DELETE
 Names are 1 to 32 lowercase letters, digits, `-` or `_`; at most 50 commands
 per bot and 10 options per command. Option types: `3` string, `4` integer,
 `5` boolean, `6` user (a member's ID), `7` channel (an ID); required options
-come first.
+come first. A text option may list `choices` (at most 25, each 1 to 100
+characters, unique): the composer shows them as a list and the server refuses
+any other value.
 
 **Where they show.** Commands are not tied to channels by the bot. A member
 sees a command in the composer of every channel where the **bot can view and
@@ -460,12 +462,55 @@ higher role than the bot's highest role, never the Owner).
 - A bot's status shows as its presence dot (online, away, do not disturb), and
   its activity ("Playing chess") as the second line of its member row and in its
   profile. An invisible bot looks offline.
-- Typing `/` in a channel lists the slash commands available there; picking one
+- Typing `/` in a channel lists the slash commands available there, the
+  server's built-in ones first (see below); picking one
   shows its options in a bar above the composer (Enter on an empty composer or
   the Run button sends it, Esc drops it). A bot's private reply appears below
   the messages with a note that only you can see it, until you dismiss it.
 - Admins find **Bots** in the admin area: create, roles, intents, access view,
   tokens and commands.
+
+## Built-in commands and polls
+
+The server has slash commands of its own. They appear in the same menu as the
+bots' commands (marked *Built-in*, listed first), are run through the same
+route (`POST /api/channels/{id}/interactions`) and go through the same checks:
+the member needs *Send messages* in the channel, runs are limited to 20 a
+minute, and the options are validated against the command's definition before
+the command sees them. `GET /api/channels/{id}/commands` marks them
+`builtin: true` (with an empty `bot_name` and a fixed ID that is the same on
+every server); running one answers `200` with its result (`message_id` when it
+posted a message) instead of the `202` a bot's interaction gets. A bot's command with the same name is listed next to the built-in one,
+not instead of it. Descriptions are English fallbacks; the web app shows its
+own translations.
+
+Adding a command means one type that implements `slash.Builtin`
+(`internal/slash`: a `Definition`, an `Available` check for rights beyond
+sending, and `Run`) and one line in `builtinCommands` (`internal/server`).
+Today there is one:
+
+- **`/poll`** asks the channel a question. Options: `question` (up to 300
+  characters), `answers` (2 to 10, each up to 55 characters, separated by
+  `|`), `duration` (`1h`, `4h`, `8h`, `24h` by default, `3d`, `1w`),
+  `multiple` and `anonymous`. In the web app `/poll` and the poll button next
+  to the attach button open the same form; the REST route
+  `POST /api/channels/{id}/polls` does the same for scripts.
+
+**Polls.** A poll is a message whose text is the question, with a `poll`
+object (options with their vote counts, `multiple`, `anonymous`, `closes_at`,
+`closed`, `total_voters`). A poll cannot be edited; deleting its message
+deletes it. Members vote with `PUT .../messages/{id}/poll/votes`
+(`{"option_ids": [...]}` replaces their votes, an empty list withdraws them;
+`409` once the poll has ended). The author, or anyone with *Manage messages*,
+ends it early with `POST .../poll/end`. Every change is broadcast as a
+`poll_update` event (the poll as every viewer sees it). Results are live while
+the poll is open and stay after it ended. A poll that is not anonymous lists
+the voters of each option. An **anonymous** poll never does: not in the
+message, the message list, search, the mentions inbox, the WebSocket, the
+bot gateway or the outgoing webhooks, and not for the author or the Owner.
+`GET .../poll` returns the caller's own votes (the only place an anonymous
+poll shows a member their choice). Push and desktop notifications read
+"Poll: question".
 
 ## Management API
 

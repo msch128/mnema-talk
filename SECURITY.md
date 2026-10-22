@@ -310,6 +310,17 @@ details and the limits.
   a session whose token was revoked. Slash commands are run only by members
   who may send in the channel, only for bots that can view and send there,
   and an admin can switch any command off; ephemeral replies are never stored.
+  Built-in commands (`/poll`) run on the server behind the same checks: the
+  right to send in the channel, a rate limit and options validated against the
+  command's definition. **Polls** keep anonymous votes anonymous by
+  construction: the query that builds a poll never selects voter ids for an
+  anonymous poll, so the message, lists, search, the mentions inbox, the
+  WebSocket, the gateway, outgoing webhooks and the data export of other
+  members cannot carry them; a member's own choice is returned only to that
+  member. A vote needs *View channels* and *Add reactions* and is refused
+  after the poll ended; concurrent votes by one member cannot leave a
+  single-choice poll with two answers, and a vote cannot land after the end.
+  Deleting an account removes its votes and the polls it posted.
   Threat model and limits: a bot is as trusted as the roles it was given; a
   leaked token is a leaked bot (revoke it), and the Owner's explicit choice to
   give a bot administrator power is warned about in the interface.

@@ -14,6 +14,7 @@ import ReplyPreview from './ReplyPreview.vue'
 import ReactionPalette from './ReactionPalette.vue'
 import MessageAttachments from './MessageAttachments.vue'
 import MessageEmbeds from './MessageEmbeds.vue'
+import PollCard from './PollCard.vue'
 import BotBadge from './BotBadge.vue'
 import MessageEditor from './MessageEditor.vue'
 import ReactionBar from './ReactionBar.vue'
@@ -100,7 +101,7 @@ defineExpose({ el: row })
 
       <!-- Edit Message (if author) -->
       <button
-        v-if="isOwn"
+        v-if="isOwn && !msg.poll"
         type="button"
         @click.stop="emit('edit')"
         class="p-1.5 max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-accent transition"
@@ -173,6 +174,9 @@ defineExpose({ el: row })
 
       <!-- Webhook cards -->
       <MessageEmbeds :embeds="msg.embeds ?? []" />
+
+      <!-- Poll options and results -->
+      <PollCard v-if="msg.poll" :msg="msg" />
 
       <!-- Grouped messages have no header line, so the edit marker follows the body -->
       <span

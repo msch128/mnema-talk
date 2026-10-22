@@ -55,6 +55,7 @@ profile.json    your account: names, bio, status, language, role, e-mail address
 settings.json   notification levels per channel and category
 messages.json   the messages you wrote (channel_name is empty for channels you cannot see any more)
 reactions.json  the reactions you gave
+poll_votes.json the options you voted for in polls
 uploads.json    the files you uploaded, with links while they still exist
 audit.json      administrative log entries about your account (no other person's name)
 security.json   what is set up for signing in (no secrets)
@@ -132,6 +133,7 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 		{"profile.json", func() (any, error) { return exportProfile(ctx, q, user) }},
 		{"settings.json", func() (any, error) { return exportSettings(ctx, q, user, viewable) }},
 		{"reactions.json", func() (any, error) { return exportReactions(ctx, q, user) }},
+		{"poll_votes.json", func() (any, error) { return exportPollVotes(ctx, q, user) }},
 		{"uploads.json", func() (any, error) { return exportUploads(ctx, q, user) }},
 		{"audit.json", func() (any, error) { return exportAudit(ctx, q, user) }},
 		{"security.json", func() (any, error) { return h.exportSecurity(ctx, user) }},

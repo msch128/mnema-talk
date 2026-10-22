@@ -1079,6 +1079,10 @@
           "bot_name": {
             "type": "string"
           },
+          "builtin": {
+            "description": "Builtin marks a command the server runs itself (no bot): bot_name is\nempty, and running it answers 200 with the result instead of 202.",
+            "type": "boolean"
+          },
           "created_at": {
             "format": "date-time",
             "type": "string"
@@ -1296,6 +1300,13 @@
       },
       "bot.Option": {
         "properties": {
+          "choices": {
+            "description": "Choices limit a string option to these values (the composer shows them\nas a list). At most 25, each 1 to 100 characters.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "description": {
             "maxLength": 100,
             "minLength": 1,
@@ -2428,6 +2439,10 @@
             "format": "uuid",
             "type": "string"
           },
+          "poll": {
+            "$ref": "#/components/schemas/chat.Poll",
+            "description": "Poll is set when the message is a poll; its content is the question."
+          },
           "reactions": {
             "items": {
               "$ref": "#/components/schemas/chat.ReactionSummary"
@@ -2510,6 +2525,75 @@
           "NotifyMute",
           "NotifyInherit"
         ]
+      },
+      "chat.Poll": {
+        "properties": {
+          "anonymous": {
+            "description": "Anonymous polls never name voters: options carry counts only.",
+            "type": "boolean"
+          },
+          "closed": {
+            "description": "Closed is true once ClosesAt has passed, as the server saw it.",
+            "type": "boolean"
+          },
+          "closes_at": {
+            "description": "ClosesAt is when voting ends; ending the poll early moves it to that moment.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "multiple": {
+            "description": "Multiple lets a member vote for several options.",
+            "type": "boolean"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/chat.PollOption"
+            },
+            "type": "array"
+          },
+          "total_voters": {
+            "description": "TotalVoters counts members who voted for at least one option.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "anonymous",
+          "closed",
+          "closes_at",
+          "multiple",
+          "options",
+          "total_voters"
+        ],
+        "type": "object"
+      },
+      "chat.PollOption": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 55,
+            "type": "string"
+          },
+          "voters": {
+            "description": "Voters is only present when the poll is not anonymous.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "votes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "votes"
+        ],
+        "type": "object"
       },
       "chat.ReactionRequest": {
         "properties": {
@@ -3409,6 +3493,111 @@
         "required": [
           "ceiling_mb",
           "max_upload_mb"
+        ],
+        "type": "object"
+      },
+      "poll.CreateRequest": {
+        "properties": {
+          "anonymous": {
+            "description": "Anonymous hides who voted for what, from everyone.",
+            "type": "boolean"
+          },
+          "duration": {
+            "description": "Duration is how long voting stays open; 24h when omitted.",
+            "enum": [
+              "1h",
+              "4h",
+              "8h",
+              "24h",
+              "3d",
+              "1w"
+            ],
+            "type": "string"
+          },
+          "multiple": {
+            "description": "Multiple lets members vote for several options.",
+            "type": "boolean"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "question": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "options",
+          "question"
+        ],
+        "type": "object"
+      },
+      "poll.Detail": {
+        "properties": {
+          "anonymous": {
+            "description": "Anonymous polls never name voters: options carry counts only.",
+            "type": "boolean"
+          },
+          "closed": {
+            "description": "Closed is true once ClosesAt has passed, as the server saw it.",
+            "type": "boolean"
+          },
+          "closes_at": {
+            "description": "ClosesAt is when voting ends; ending the poll early moves it to that moment.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "multiple": {
+            "description": "Multiple lets a member vote for several options.",
+            "type": "boolean"
+          },
+          "my_votes": {
+            "description": "MyVotes are the options the caller voted for (also in an anonymous poll).",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/chat.PollOption"
+            },
+            "type": "array"
+          },
+          "total_voters": {
+            "description": "TotalVoters counts members who voted for at least one option.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "anonymous",
+          "closed",
+          "closes_at",
+          "multiple",
+          "my_votes",
+          "options",
+          "total_voters"
+        ],
+        "type": "object"
+      },
+      "poll.VoteRequest": {
+        "properties": {
+          "option_ids": {
+            "description": "OptionIDs replace the caller's votes; an empty list withdraws them.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "option_ids"
         ],
         "type": "object"
       },
@@ -4461,6 +4650,15 @@
           "turn_configured",
           "websocket_connections"
         ],
+        "type": "object"
+      },
+      "slash.Result": {
+        "properties": {
+          "message_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "webhook.AllowedMentions": {
@@ -16291,7 +16489,7 @@
     },
     "/api/channels/{channelID}/commands": {
       "get": {
-        "description": "The commands of bots that can view and send in the channel (through their roles and overwrites), not disabled by an admin, for the composer's autocomplete. Needs View channels.",
+        "description": "The server's built-in commands the caller may use in the channel (builtin: true, listed first), then the commands of bots that can view and send in the channel (through their roles and overwrites), not disabled by an admin, for the composer's autocomplete. Needs View channels.",
         "operationId": "listChannelCommands",
         "parameters": [
           {
@@ -16381,7 +16579,7 @@
     },
     "/api/channels/{channelID}/interactions": {
       "post": {
-        "description": "Sends an interaction to the command's bot over the gateway; the bot answers with a message in the channel, or one only the caller sees (an ephemeral response, delivered as the interaction_response WebSocket event). Needs Send messages in the channel; the bot must still be able to view and send there. 409 when the bot is not connected. At most 20 a minute per member.",
+        "description": "A built-in command (builtin in the list) runs on the server and answers 200 with its result. Otherwise sends an interaction to the command's bot over the gateway; the bot answers with a message in the channel, or one only the caller sees (an ephemeral response, delivered as the interaction_response WebSocket event). Needs Send messages in the channel; the bot must still be able to view and send there. 409 when the bot is not connected. At most 20 a minute per member.",
         "operationId": "invokeCommand",
         "parameters": [
           {
@@ -16407,6 +16605,16 @@
           "required": true
         },
         "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/slash.Result"
+                }
+              }
+            },
+            "description": "A built-in command ran; message_id is the message it posted, if any."
+          },
           "202": {
             "content": {
               "application/json": {
@@ -17357,6 +17565,348 @@
         ]
       }
     },
+    "/api/channels/{channelID}/messages/{messageID}/poll": {
+      "get": {
+        "description": "The poll as in the message, plus the options the caller voted for. This is the only place an anonymous poll shows a member their own choice. Needs View channels.",
+        "operationId": "getPoll",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "ID of the poll message.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/poll.Detail"
+                }
+              }
+            },
+            "description": "The poll."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such poll, or the channel is hidden from the caller."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Get a poll with my votes",
+        "tags": [
+          "Polls"
+        ]
+      }
+    },
+    "/api/channels/{channelID}/messages/{messageID}/poll/end": {
+      "post": {
+        "description": "The poll's author, or a member with Manage messages in the channel, closes voting now. Ending an ended poll changes nothing. Broadcasts poll_update.",
+        "operationId": "endPoll",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "ID of the poll message.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/poll.Detail"
+                }
+              }
+            },
+            "description": "The poll with the caller's votes."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: neither the author nor allowed to manage messages."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such poll, or the channel is hidden from the caller."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "End a poll early",
+        "tags": [
+          "Polls"
+        ]
+      }
+    },
+    "/api/channels/{channelID}/messages/{messageID}/poll/votes": {
+      "put": {
+        "description": "Replaces the caller's votes with option_ids (one for a single-choice poll, any number of distinct options for a multiple-choice one; an empty list withdraws the vote). Allowed until the poll ends (409 afterwards). Needs View channels and Add reactions. Broadcasts poll_update with the new tallies; in an anonymous poll nobody learns who voted. At most 60 a minute per member.",
+        "operationId": "votePoll",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "ID of the poll message.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/poll.VoteRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/poll.Detail"
+                }
+              }
+            },
+            "description": "The poll with the caller's votes."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): unknown or repeated option, several options in a single-choice poll."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such poll, or the channel is hidden from the caller."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the poll has ended."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Vote in a poll",
+        "tags": [
+          "Polls"
+        ]
+      }
+    },
     "/api/channels/{channelID}/notifications": {
       "put": {
         "description": "Level all, mentions, mute or inherit (follow the category). A mute may end at muted_until (future, at most a year ahead). Notifies the user's other sessions with a read_state refresh.",
@@ -17465,6 +18015,124 @@
         "summary": "Set channel notification level",
         "tags": [
           "Channels"
+        ]
+      }
+    },
+    "/api/channels/{channelID}/polls": {
+      "post": {
+        "description": "The same as the /poll command: a message whose content is the question, with 2 to 10 options (55 characters each), single or multiple choice, optionally anonymous, open for 1h, 4h, 8h, 24h (default), 3d or 1w. Needs Send messages in the channel. Mentions in the question work as in any message. Broadcasts message_create. A poll cannot be edited.",
+        "operationId": "createPoll",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/poll.CreateRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Message"
+                }
+              }
+            },
+            "description": "The poll message."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): question or options out of bounds, duplicate options, unknown duration."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such channel, or it is hidden from the caller."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests, or slow mode.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Post a poll",
+        "tags": [
+          "Polls"
         ]
       }
     },

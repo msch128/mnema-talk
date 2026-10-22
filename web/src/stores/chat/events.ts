@@ -12,6 +12,7 @@ import { applyToMessage, bumpReplyCount, countReply, insertMessage, onOriginalDe
 import { messageMentionsMe, triggerBrowserNotification } from './notifications'
 import { fetchReadState, isReadingActiveChannel } from './readState'
 import { refreshNotifications } from './notifySettings'
+import { applyPoll } from './polls'
 import { closeThread } from './threads'
 import { clearTypingForUser, handleTypingEvent } from './typing'
 
@@ -182,6 +183,7 @@ const HANDLERS: Handlers = {
   message_reaction: (cx, p) => {
     if (p?.message_id) applyToMessage(cx, p.message_id, m => { m.reactions = p.reactions })
   },
+  poll_update: (cx, p) => { if (p?.message_id) applyPoll(cx, p.message_id, p.poll) },
   interaction_response: ({ cs }, p) => {
     if (p?.channel_id) cs.ephemeral.value = [...cs.ephemeral.value, { ...p, id: ++cs.ephemeralSeq }].slice(-MAX_EPHEMERAL)
   },

@@ -124,6 +124,12 @@ describe('useMessageActions edit / delete / react', () => {
     expect(a.isOwn(msg)).toBe(false)
   })
 
+  it('does not start editing a poll', () => {
+    const a = setup()
+    a.startEdit(messageFixture({ id: 'p1', user_id: 'me', content: 'Lunch?', poll: { multiple: false, anonymous: false, closed: false, closes_at: '2099-01-01T00:00:00Z', total_voters: 0, options: [] } }))
+    expect(a.editingId.value).toBeNull()
+  })
+
   it('restores the row focus after editing except when another control already has focus', async () => {
     const root = document.createElement('div')
     root.innerHTML = '<div tabindex="0" data-msg-id="m1"></div><button>other</button>'

@@ -42,6 +42,9 @@ type Option struct {
 	// (a member's ID), 7 channel (a channel ID).
 	Type     int  `json:"type" enums:"3,4,5,6,7"`
 	Required bool `json:"required"`
+	// Choices limit a string option to these values (the composer shows them
+	// as a list). At most 25, each 1 to 100 characters.
+	Choices []string `json:"choices,omitempty" binding:"optional"`
 }
 
 // CommandInput is what a bot sends to register a command.
@@ -108,6 +111,29 @@ func cleanOptionEntry(o *Option, seen map[string]bool) error {
 	o.Description = d
 	if !isValidOptionType(o.Type) {
 		return httpx.ErrInvalidInput("unknown option type")
+	}
+	return cleanChoices(o)
+}
+
+// MaxChoices bounds the choices of one option.
+const MaxChoices = 25
+
+func cleanChoices(o *Option) error {
+	if len(o.Choices) == 0 {
+		o.Choices = nil
+		return nil
+	}
+	if o.Type != OptionString || len(o.Choices) > MaxChoices {
+		return httpx.ErrInvalidInput(fmt.Sprintf("only a text option has choices, at most %d", MaxChoices))
+	}
+	seen := map[string]bool{}
+	for i, ch := range o.Choices {
+		v, err := httpx.CleanText("choice", ch, 100, true)
+		if err != nil || seen[v] {
+			return httpx.ErrInvalidInput("choices are 1 to 100 characters and unique")
+		}
+		seen[v] = true
+		o.Choices[i] = v
 	}
 	return nil
 }

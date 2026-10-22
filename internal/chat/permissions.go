@@ -102,6 +102,12 @@ func MentionableRoles(snap *perm.Snapshot, mayAll bool) []MentionRole {
 	return out
 }
 
+// SendContext is sendContext for a message that another feature creates for
+// the caller (a built-in slash command, a poll): the caller needs need in ch.
+func SendContext(perms *perm.Service, r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
+	return sendContext(perms, r, ch, need)
+}
+
 // UploadContext is the sendContext of an upload (media package): the caller
 // needs to view the channel, send messages and attach files.
 func UploadContext(perms *perm.Service, r *http.Request, ch uuid.UUID) (context.Context, error) {

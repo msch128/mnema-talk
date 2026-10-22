@@ -73,6 +73,20 @@ func TestPushForAnAttachmentOnlyMessageSaysSo(t *testing.T) {
 	}
 }
 
+func TestPushForAPollShowsTheQuestionAsAPoll(t *testing.T) {
+	n := notice()
+	n.Content, n.Poll = "Pizza oder Pasta?", true
+	if got := build(n, "de", true).Body; got != "Umfrage: Pizza oder Pasta?" {
+		t.Fatalf("body %q", got)
+	}
+	if got := build(n, "en", true).Body; got != "Poll: Pizza oder Pasta?" {
+		t.Fatalf("body %q", got)
+	}
+	if got := build(n, "en", false).Body; strings.Contains(got, "Pizza") {
+		t.Fatalf("a push without preview leaked the question: %q", got)
+	}
+}
+
 func TestAGroupOfMessagesIsOnePush(t *testing.T) {
 	n := notice()
 	n.Count = 3

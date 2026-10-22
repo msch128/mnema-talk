@@ -44,11 +44,11 @@ const (
 var texts = map[string]map[string]string{
 	"de": {
 		"new": "Neue Nachricht", "mention": "Hat dich erwähnt", "attachment": "Anhang",
-		"group": "%d neue Nachrichten", "test": "Push funktioniert auf diesem Gerät.",
+		"group": "%d neue Nachrichten", "poll": "Umfrage", "test": "Push funktioniert auf diesem Gerät.",
 	},
 	"en": {
 		"new": "New message", "mention": "Mentioned you", "attachment": "Attachment",
-		"group": "%d new messages", "test": "Push works on this device.",
+		"group": "%d new messages", "poll": "Poll", "test": "Push works on this device.",
 	},
 }
 
@@ -68,7 +68,9 @@ type Notice struct {
 	Sender      string
 	Content     string
 	HasFiles    bool
-	Mention     bool
+	// Poll is set when the message is a poll; its content is the question.
+	Poll    bool
+	Mention bool
 	// Count is how many messages this push stands for (1 or more).
 	Count int
 	At    time.Time
@@ -107,6 +109,9 @@ func previewLine(n Notice, locale string, preview bool) string {
 		return text(locale, "new")
 	}
 	if line := clean(n.Content, maxPreviewRunes); line != "" {
+		if n.Poll {
+			return text(locale, "poll") + ": " + line
+		}
 		return line
 	}
 	if n.HasFiles {

@@ -44,6 +44,13 @@ afterEach(() => {
 })
 
 describe('useMessageMenu items', () => {
+  it('does not offer to edit a poll, whose question is fixed', () => {
+    const poll = messageFixture({ id: 'p1', user_id: 'me', content: 'Lunch?', poll: { multiple: false, anonymous: false, closed: false, closes_at: '2099-01-01T00:00:00Z', total_voters: 0, options: [] } })
+    const menu = useMessageMenu({ actions: makeActions(), reply: vi.fn() })
+    expect(labels(menu.itemsFor(poll))).not.toContain('Edit message')
+    expect(labels(menu.itemsFor(msg))).toContain('Edit message')
+  })
+
   it('uses the message channel when no channel is active and handles non-Error failures', async () => {
     chat.activeChannel = null
     chat.markChannelUnread = vi.fn().mockRejectedValue('offline')

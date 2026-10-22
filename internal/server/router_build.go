@@ -21,8 +21,10 @@ import (
 	"github.com/msch128/mnema-talk/internal/onboarding"
 	"github.com/msch128/mnema-talk/internal/opwarn"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/poll"
 	"github.com/msch128/mnema-talk/internal/push"
 	"github.com/msch128/mnema-talk/internal/roles"
+	"github.com/msch128/mnema-talk/internal/slash"
 	"github.com/msch128/mnema-talk/internal/ssrf"
 	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/msch128/mnema-talk/internal/webhook"
@@ -61,6 +63,7 @@ type components struct {
 	botH     *bot.Handler
 	botAuthn *bot.Authenticator
 	cmds     *bot.Commands
+	pollSvc  *poll.Service
 	gw       *gateway.Gateway
 
 	mail    *mailer.Mailer // nil: SMTP not configured
@@ -169,7 +172,8 @@ func (c *components) newBots() {
 	c.botH = &bot.Handler{DB: d.DB, Perms: c.permSvc, Media: c.mediaH, Events: c.pub}
 	c.botAuthn = bot.NewAuthenticator(d.DB)
 	c.botAuthn.Perms = c.permSvc
-	c.cmds = bot.NewCommands(bot.Commands{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub})
+	c.pollSvc = poll.NewService(poll.Service{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub})
+	c.cmds = bot.NewCommands(bot.Commands{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Builtins: builtinCommands(c.pollSvc)})
 	gw := gateway.New(gateway.Config{Auth: c.botAuthn, Perms: c.permSvc, DB: d.DB, PublicURL: c.cfg.PublicURL})
 	c.gw = gw
 	c.botH.OnRevoke = gw.Revoke
@@ -288,4 +292,16 @@ func (c *components) newLinkPreviews() {
 		go refreshPreviewDeny(c.ctx, denyRefresh, deny)
 	}
 	c.previewH = &linkpreview.Handler{Fetcher: fetcher}
+}
+
+// builtinCommands is the server's own slash commands, in menu order. Adding a
+// command means implementing slash.Builtin and listing it here.
+func builtinCommands(polls *poll.Service) *slash.Registry {
+	reg := slash.NewRegistry()
+	for _, b := range []slash.Builtin{poll.Command{Service: polls}} {
+		if err := reg.Add(b); err != nil {
+			panic(err) // a malformed built-in definition is a programming error
+		}
+	}
+	return reg
 }

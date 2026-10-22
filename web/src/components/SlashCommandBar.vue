@@ -4,7 +4,7 @@ import { computed, nextTick, onMounted, ref } from 'vue'
 import { Play, X } from '@lucide/vue'
 import type { BotChannelCommand } from '../types/rest'
 import type { OptionValues } from '../lib/slashCommands'
-import { OPTION } from '../lib/slashCommands'
+import { OPTION, choiceLabel, commandDescription, optionDescription } from '../lib/slashCommands'
 import { useChatStore } from '../stores/chat'
 
 // The picked slash command above the composer: its options as fields, a Run
@@ -51,7 +51,7 @@ function onKey(e: KeyboardEvent) {
   >
     <div class="flex items-center gap-2">
       <span class="font-mono font-semibold text-mnema-text">/{{ command.name }}</span>
-      <span class="min-w-0 flex-1 truncate text-xs text-mnema-tertiary">{{ command.description }} · {{ command.bot_name }}</span>
+      <span class="min-w-0 flex-1 truncate text-xs text-mnema-tertiary">{{ commandDescription(command) }} · {{ command.builtin ? $t('slash.builtinLabel') : command.bot_name }}</span>
       <button
         type="button"
         class="flex h-7 items-center gap-1 rounded-md bg-mnema-accent px-2.5 text-xs font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40"
@@ -77,7 +77,7 @@ function onKey(e: KeyboardEvent) {
         <span>
           <span class="font-semibold text-mnema-text">{{ o.name }}</span>
           <span v-if="o.required" class="text-mnema-accent" :title="$t('slash.required')"> *</span>
-          · {{ o.description }}
+          · {{ optionDescription(command, o) }}
         </span>
         <input
           v-if="o.type === OPTION.boolean"
@@ -87,6 +87,16 @@ function onKey(e: KeyboardEvent) {
           :data-option="o.name"
           @change="set(o.name, ($event.target as HTMLInputElement).checked)"
         />
+        <select
+          v-else-if="o.choices?.length"
+          class="h-8 rounded-md border border-mnema-border bg-mnema-elevated px-2 text-sm text-mnema-text"
+          :value="values[o.name]"
+          :data-option="o.name"
+          @change="set(o.name, ($event.target as HTMLSelectElement).value)"
+        >
+          <option v-if="!o.required" value="" />
+          <option v-for="c in o.choices" :key="c" :value="c">{{ choiceLabel(command, o, c) }}</option>
+        </select>
         <select
           v-else-if="o.type === OPTION.user"
           class="h-8 rounded-md border border-mnema-border bg-mnema-elevated px-2 text-sm text-mnema-text"

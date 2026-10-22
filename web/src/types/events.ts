@@ -1,8 +1,8 @@
 // WebSocket is not represented in OpenAPI. These payloads follow
 // internal/ws/{handle,voice,presence,signal,lifecycle}.go and chat publications.
 import type { ModerationNotice } from '../lib/moderation'
-import type { Message, ReactionSummary, ReadState, User, UserUpdate, VoiceUser, Presence } from './domain'
-import { isAuthUser, isChatMessage, isChatReactionSummary, isChatNotifyLevel } from './rest'
+import type { Message, Poll, ReactionSummary, ReadState, User, UserUpdate, VoiceUser, Presence } from './domain'
+import { isAuthUser, isChatMessage, isChatPoll, isChatReactionSummary, isChatNotifyLevel } from './rest'
 import { ContractError, hasOwn, isRecord, isIdentifier, isTimestamp, isInteger, isString, isArrayOf, isDictionaryOf } from './validation'
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue | undefined }
@@ -68,6 +68,8 @@ export interface ServerEventPayloads {
   message_update: Message
   message_delete: { id: string; channel_id: string; parent_id: string | null }
   message_reaction: { message_id: string; channel_id?: string; reactions: ReactionSummary[] }
+  /** Tallies of a poll after a vote or its end; the same for every viewer (no voters in an anonymous poll). */
+  poll_update: { message_id: string; channel_id: string; poll: Poll }
   interaction_response: InteractionResponse
   user_update: UserUpdate
   /** A member's timeout started (timeout_until) or ended (null). */
@@ -259,6 +261,7 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
     && (payload['parent_id'] === null || isIdentifier(payload['parent_id']))],
   ['message_reaction', payload => isIdentifier(payload['message_id']) && (!hasOwn(payload, 'channel_id') || isIdentifier(payload['channel_id']))
     && isArrayOf(payload['reactions'], isChatReactionSummary)],
+  ['poll_update', payload => isIdentifier(payload['message_id']) && isIdentifier(payload['channel_id']) && isChatPoll(payload['poll'])],
   ['interaction_response', isInteractionResponse],
   ['user_update', payload => hasOwn(payload, 'disabled')
     ? isIdentifier(payload['id']) && typeof payload['disabled'] === 'boolean' && onlyFields(payload, ['id', 'disabled'])
@@ -310,7 +313,7 @@ function isNoteEmbed(value: unknown): boolean {
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
   'channels_changed', 'permissions_changed', 'roles_changed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
-  'message_reaction', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
+  'message_reaction', 'poll_update', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'media_handshake'
 ])

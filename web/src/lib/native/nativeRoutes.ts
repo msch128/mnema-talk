@@ -195,6 +195,11 @@ function routeMetadata(path: string, request: ApiRequest): Promise<ApiReply> | n
 // /api/users/me/email*, /api/users/me/2fa/*, /api/users/me/export*, /api/users/me/delete, /api/auth/login/2fa) and the Owner's /api/admin/system/mail/test: the
 // shipped clients reach them through the trusted proxy, the native DEV client
 // answers "unavailable" and its sign-in screen offers no reset link.
+// The same holds for slash commands and polls (GET /api/channels/*/commands,
+// POST /api/channels/*/interactions, POST /api/channels/*/polls and
+// /api/channels/*/messages/*/poll[/votes|/end]): the shipped clients' proxy
+// passes them, the native DEV client answers "unavailable": there is no command menu and
+// a poll cannot be posted.
 const ROUTES: readonly Route[] = [
   routeRegister, routePassword, routeAdmin, routeLogin, routeMe, routeLogout, routePersonal, routeTypedChat, routeMetadata,
 ]

@@ -2,6 +2,7 @@
 // the values of a picked command become the options the server expects
 // (doc/bots.md). Pure functions; the composable wires them to the composer.
 import type { BotChannelCommand } from '../types/rest'
+import { t } from '../i18n'
 
 /** Option types, with Discord's numbers. */
 export const OPTION = { string: 3, integer: 4, boolean: 5, user: 6, channel: 7 } as const
@@ -60,4 +61,32 @@ export function buildOptions(command: Pick<BotChannelCommand, 'options'>, values
     options[o.name] = text
   }
   return { options, problem: null }
+}
+
+/** The translation of a built-in command's text, or the server's English text. */
+function builtinText(key: string, fallback: string): string {
+  const text = t(key)
+  return text === key ? fallback : text
+}
+
+/** What the menu says about a command: built-ins are translated here, bots bring their own text. */
+export function commandDescription(command: Pick<BotChannelCommand, 'builtin' | 'name' | 'description'>): string {
+  return command.builtin ? builtinText(`slash.builtin.${command.name}.description`, command.description) : command.description
+}
+
+/** The same for one of its options. */
+export function optionDescription(command: Pick<BotChannelCommand, 'builtin' | 'name'>, option: { name: string; description: string }): string {
+  return command.builtin ? builtinText(`slash.builtin.${command.name}.options.${option.name}`, option.description) : option.description
+}
+
+/** The label of one choice of an option (the value is what the server gets). */
+export function choiceLabel(command: Pick<BotChannelCommand, 'builtin' | 'name'>, option: { name: string }, choice: string): string {
+  return command.builtin ? builtinText(`slash.builtin.${command.name}.choices.${option.name}.${choice}`, choice) : choice
+}
+
+/** Built-in commands that open their own form instead of the generic option bar. */
+export const COMMAND_FORMS: ReadonlySet<string> = new Set(['poll'])
+
+export function hasForm(command: Pick<BotChannelCommand, 'builtin' | 'name'>): boolean {
+  return command.builtin === true && COMMAND_FORMS.has(command.name)
 }
