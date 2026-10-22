@@ -25,8 +25,11 @@ const ENDPOINT = 'https://push.example.test/wpush/e2e-device'
 type Session = Awaited<ReturnType<BrowserContext['storageState']>>
 let session: Session
 
+// The specs drive a Chromium-only push stand-in (they launch Chromium themselves).
+test.skip(({ browserName }) => browserName !== 'chromium', 'Chromium only')
+
 test.beforeAll(async ({ browser }) => {
-  const context = await browser.newContext()
+  const context = await browser.newContext({ serviceWorkers: 'allow' })
   const page = await context.newPage()
   await signIn(page)
   session = await context.storageState()
@@ -34,7 +37,7 @@ test.beforeAll(async ({ browser }) => {
 })
 
 async function signedInContext(browser: Browser, permissions: string[] = []): Promise<BrowserContext> {
-  return browser.newContext({ permissions, storageState: session })
+  return browser.newContext({ permissions, storageState: session, serviceWorkers: 'allow' })
 }
 
 async function signIn(page: Page) {
