@@ -36,7 +36,7 @@ creating the webhook or later (`PATCH /api/admin/webhooks/{id}`):
 | `allow_embeds` | on | a post may carry embeds; otherwise it is refused with `400` |
 | `allow_identity_override` | on | a post may set its own `username`; otherwise the webhook's name is used |
 
-Roles cannot be mentioned from a webhook (`allowed_mentions.roles` is ignored).
+Roles: `@Role Name` notifies the role's members only when the request asks for it, with `allowed_mentions.parse: ["roles"]` (every role the webhook may mention) or `allowed_mentions.roles` (role IDs, UUIDs). Without `allowed_mentions`, or with `parse` leaving `roles` out, the text stays plain. A webhook may mention roles marked mentionable; its `allow_everyone` setting extends that to every custom role (not `@everyone` or the managed Bot roles). This is the webhook's own setting, not any user's rights. Only members who can view the channel are notified, and the per-message mention cap still applies.
 Nobody who cannot see the channel is ever notified, whatever the settings say.
 The limits that protect the server stay global: sizes, rate limits, sanitizing
 of text and links, the file type checks.
@@ -100,7 +100,7 @@ posted.
 | `username` | Supported (1 to 80 characters, no control characters) unless the webhook's `allow_identity_override` is off |
 | `avatar_url` | **Ignored.** Mnema Talk never loads pictures from other hosts; set the avatar on the webhook |
 | `embeds` | Subset: `title`, `description`, `url`, `color`, `timestamp`, `fields`, `footer.text`, `author.name`/`url`, `image.url`, `thumbnail.url`. Discord's limits apply (10 embeds, 25 fields, 6000 characters in total). Pictures are shown as links, not loaded. `type`, `video`, `provider` and icon URLs are accepted and dropped |
-| `allowed_mentions` | `parse` with `users` and `everyone`, and `users` (member IDs). Default **differs from Discord**: `@username` notifies, `@all`/`@here` do not unless `parse` contains `everyone` and the webhook's `allow_everyone` setting is on (the settings can only narrow what a sender asks for). `roles` is accepted and ignored |
+| `allowed_mentions` | `parse` with `users`, `everyone` and `roles`, plus `users` (member IDs) and `roles` (role IDs). Default **differs from Discord**: `@username` notifies, `@all`/`@here` do not unless `parse` contains `everyone` and the webhook's `allow_everyone` setting is on (the settings can only narrow what a sender asks for). `parse` may also contain `roles` and `roles` lists role IDs (like Discord, `parse: ["roles"]` together with a `roles` list is rejected); see Mentions above. Roles are off unless asked for |
 | `?wait` | Supported |
 | `?thread_id` | Supported, as the ID of a root message |
 | `multipart/form-data`, `payload_json`, files | Supported (`files[n]`; any part with a file name counts) |

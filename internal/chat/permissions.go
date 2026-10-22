@@ -67,7 +67,7 @@ func sendContext(perms *perm.Service, r *http.Request, ch uuid.UUID, need perm.S
 	return WithMentionPolicy(ctx, MentionPolicy{
 		NoEveryone: !p.Has(perm.MentionEveryone),
 		CanView:    func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, ch).Has(perm.ViewChannel) },
-		Roles:      mentionableRoles(snap, p.Has(perm.MentionEveryone)),
+		Roles:      MentionableRoles(snap, p.Has(perm.MentionEveryone)),
 	}), nil
 }
 
@@ -85,11 +85,11 @@ func (h *Handler) refusalFor(r *http.Request, err error) error {
 	return err
 }
 
-// mentionableRoles are the roles an author may mention: those marked
+// MentionableRoles are the roles an author may mention: those marked
 // mentionable, or every custom role for an author who may mention everyone
 // (the Owner and Administrators always may). @everyone and the roles the
 // server manages for bots cannot be mentioned by name.
-func mentionableRoles(snap *perm.Snapshot, mayAll bool) []MentionRole {
+func MentionableRoles(snap *perm.Snapshot, mayAll bool) []MentionRole {
 	var out []MentionRole
 	for _, r := range snap.Roles() {
 		if r.Everyone || r.Managed || !(r.Mentionable || mayAll) {

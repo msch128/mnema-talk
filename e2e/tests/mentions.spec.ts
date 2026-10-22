@@ -47,7 +47,7 @@ test('a role mention reaches its members, shows as a pill and lands in the inbox
     const memberId = responseUserId(await apiFetch(member, 'GET', '/api/auth/me'))
 
     // A mentionable role held by the member; one channel is hidden from everyone.
-    const role = await apiFetch(owner, 'POST', '/api/admin/roles', { name: ROLE, permissions: 0, mentionable: true })
+    const role = await apiFetch(owner, 'POST', '/api/admin/roles', { name: ROLE, permissions: 0, mentionable: true, color: 0x3366cc })
     expect(role.status).toBe(201)
     expect((await apiFetch(owner, 'PUT', `/api/admin/users/${memberId}/roles`, { role_ids: [responseString(role, 'id')] })).status).toBe(204)
     const rolesJson = (await apiFetch(owner, 'GET', '/api/roles')).json as { roles?: { id: string; is_everyone: boolean }[] } | { id: string; is_everyone: boolean }[]
@@ -63,7 +63,11 @@ test('a role mention reaches its members, shows as a pill and lands in the inbox
     await expect(composer).toHaveValue(`@${ROLE} `)
     await composer.pressSequentially('bitte lesen')
     await composer.press('Enter')
-    await expect(owner.locator('.md-mention-role', { hasText: `@${ROLE}` })).toBeVisible()
+    const pill = owner.locator('.md-mention-role', { hasText: `@${ROLE}` })
+    await expect(pill).toBeVisible()
+    // The role colour reaches the pill under the CSP (CSSOM, no style attribute string).
+    await expect(pill).toHaveCSS('color', 'rgb(51, 102, 204)')
+    expect(await pill.getAttribute('style')).toContain('--role-color')
     // In the hidden channel the same mention reaches nobody who cannot see it.
     expect((await apiFetch(owner, 'POST', `/api/channels/${hiddenId}/messages`, { content: `@${ROLE} geheim` })).status).toBe(201)
 
