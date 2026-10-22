@@ -23,8 +23,16 @@ func IsAPIPath(r *http.Request) bool {
 	return strings.HasPrefix(r.URL.Path, BasePath+"/")
 }
 
-// ChannelParam reads the channelID path parameter.
-func ChannelParam(r *http.Request) string { return chi.URLParam(r, "channelID") }
+// ChannelParam reads the channelID path parameter as the canonical UUID text,
+// so every spelling the UUID parser accepts (case, braces, urn: prefix, no
+// dashes) names the same channel. It is empty when the parameter is no UUID.
+func ChannelParam(r *http.Request) string {
+	id, err := uuid.Parse(chi.URLParam(r, "channelID"))
+	if err != nil {
+		return ""
+	}
+	return id.String()
+}
 
 // Self is the bot as it sees itself.
 type Self struct {
