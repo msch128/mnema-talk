@@ -223,6 +223,16 @@ secret never leaves the server. The relay refuses private, loopback,
 link-local and reserved peers (so it can't reach your LAN or Docker
 networks) with one exception: a private IP listed in `WEBRTC_NAT_1TO1_IP`
 (the voice server's LAN address) is allowed and used as relay address.
+The compose file also caps the relay with coturn's `--user-quota=8` (relayed
+sessions per credential) and `--total-quota=48` (all sessions; the port range
+holds 49), so one member cannot occupy every relay port. If you widen the
+range `49152-49200`, raise `--total-quota` with it. The credential's lifetime
+(12 hours) is deliberately longer than a long call: coturn checks the expiry on
+every allocation refresh and a running call cannot renew its credential, so a
+shorter lifetime would cut relayed calls. The web app fetches a fresh
+credential on a voice join when its copy is older than an hour. A credential
+therefore outlives a sign-out for up to 12 hours but can only use the relay,
+within the quotas above.
 Configured TURN servers are listed in the privacy policy.
 
 ## SeaweedFS S3 authentication

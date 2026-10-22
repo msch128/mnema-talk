@@ -28,7 +28,7 @@ const (
 // @Summary WebSocket event stream
 // @Description Upgrades to a WebSocket (requires a same-origin Origin header; a foreign origin is refused with 403 by the upgrade handler). OpenAPI cannot model WebSocket frames, so the protocol is described here.
 // @Description
-// @Description Every frame in both directions is a JSON text message `{"type": string, "payload": any}`. At most a few events per second per connection are processed; excess client events are dropped.
+// @Description Every frame in both directions is a JSON text message `{"type": string, "payload": any}`. At most a few events per second per connection (and per account across its connections) are processed; excess client events, and events whose payload is over the cap for their type (1 KiB, more only for an SDP answer, ICE candidate, diagnostic and media handshake), are dropped.
 // @Description
 // @Description Server to client, on connect (to this connection only):
 // @Description - `presence_snapshot`: map of user id to live status for every online user.
@@ -59,7 +59,7 @@ const (
 // @Description - `screen_layers`: `{channel_id, user_id, layers}` to voice-room members: the layers of `user_id`'s live screen share, best first, each `{width, height, fps}` as the sharer declared them. Sent when they change, as an empty list once the share ends, and on `voice_join` one per live share to the joining connection only. A share of a client without layers has none.
 // @Description - `screen_quality`: `{channel_id, user_id, layer, auto}` to the watching connection only: the layer of `user_id`'s screen share it receives now (`-1` before the first picture) and whether the server chooses it (`auto`).
 // @Description - `screen_layers_wanted`: `{channel_id, layers}` to the sharing connection only: the indexes of its layers some viewer receives or is about to. A sender may stop encoding the others; layer 0 is always listed while nobody watches.
-// @Description - `media_handshake`: `{channel_id, user_id, wire}` to the other connections in that voice room. `wire` is opaque; the server does not read it.
+// @Description - `media_handshake`: `{channel_id, user_id, wire}` to the other connections in that voice room. `wire` is opaque: the server checks only its framing (an MLS key package, welcome or public message, or a heartbeat or capability message) and never reads or logs the content.
 // @Description - `voice_kicked`: `{channel_id, reason?}` when a moderator removes the user from voice, `reason: "room_full"` when a voice join is refused because the room is full (the channel's `user_limit`), `reason: "rules_not_accepted"` when the community's rules have not been accepted yet (POST /api/onboarding/accept), or `reason: "missing_permission"` when the user may not (or no longer may) view and connect to that Talk.
 // @Description - `pong`: `{t}` echoing a `ping`.
 // @Description
@@ -73,7 +73,7 @@ const (
 // @Description - `webrtc_layers` `{layers: [{width, height, fps}, ...]}` (1 to 3, best first, strictly shrinking): the layers of the sender's own screen share. They are sent on the SFU's lower video lines.
 // @Description - `webrtc_screenshare_stop`, `webrtc_camera_stop`.
 // @Description
-// @Description Unknown event types are ignored. The server closes the connection when the session is revoked or the account is disabled. A user keeps at most 8 browser connections: a newer one closes the oldest with close code 4001 ("too many connections"), after which that client should not reconnect by itself. Upgrades are rate-limited per address and per user (429), and `voice_join` beyond about one per second (burst 3) is answered with `voice_kicked`.
+// @Description Unknown event types are ignored. The server closes the connection when the session is revoked (sign-out of that session, sign-out everywhere, password change) or expires, or the account is disabled. A user keeps at most 8 browser connections: a newer one closes the oldest with close code 4001 ("too many connections"), after which that client should not reconnect by itself. Upgrades are rate-limited per address and per user (429), and `voice_join` beyond about one per second (burst 3) is answered with `voice_kicked`.
 // @ID connectWebSocket
 // @Tags Realtime
 // @Produce json
@@ -113,6 +113,7 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := newClient(h, conn, *user, tv)
+	h.bindSession(c, r)
 	if !h.admitPending(c) {
 		return
 	}
@@ -123,12 +124,6 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	metrics.WSConnections.Inc()
 	go c.writePump()
 	go c.readPump()
-}
-
-func (h *Hub) tokenVersion(ctx context.Context, userID uuid.UUID) (int, error) {
-	var tv int
-	err := h.DB.QueryRow(ctx, `SELECT token_version FROM users WHERE id = $1`, userID).Scan(&tv)
-	return tv, err
 }
 
 // registerPending admits a handshake. A browser user keeps at most
@@ -292,6 +287,7 @@ func (h *Hub) unregister(c *Client) {
 		delete(h.chosen, c.User.ID)
 		delete(h.profiles, c.User.ID)
 		h.voiceGate.forget(c.User.ID)
+		h.userBudgets.forget(c.User.ID)
 	}
 	after := h.statusLocked(c.User.ID)
 	h.mu.Unlock()

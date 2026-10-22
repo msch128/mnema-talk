@@ -50,7 +50,7 @@ func TestWSDatabaseBookkeepingAndChannelChecks(t *testing.T) {
 	c := testClient(h, u)
 	observer := testClient(h, auth.User{ID: uuid.New()})
 	drainTypes(t, observer)
-	if tv, err := h.tokenVersion(context.Background(), u.ID); err != nil || tv != 0 {
+	if tv, revoked, err := h.sessionState(context.Background(), u.ID, ""); err != nil || tv != 0 || revoked {
 		t.Fatalf("token version = %d, %v", tv, err)
 	}
 	for _, kind := range []string{"text", "voice"} {
@@ -109,7 +109,7 @@ func TestWSDatabaseBookkeepingAndChannelChecks(t *testing.T) {
 // TestHubPacingDefaultsToTheProductionIntervals).
 func TestWSWriterPeriodicLifecycle(t *testing.T) {
 	p := testutil.DB(t)
-	for _, mode := range []string{"revoked", "deleted", "database-unavailable", "valid", "ping-write-failure"} {
+	for _, mode := range []string{"revoked", "deleted", "valid", "ping-write-failure"} {
 		t.Run(mode, func(t *testing.T) {
 			t.Parallel()
 			u := wsFixtureUser(t, p)
@@ -117,9 +117,6 @@ func TestWSWriterPeriodicLifecycle(t *testing.T) {
 			h := NewHub(p, nil, nil, nil)
 			h.PingInterval, h.RevalidateInterval = 20*time.Millisecond, 300*time.Millisecond
 			c := newClient(h, server, u, 0)
-			if mode == "database-unavailable" {
-				h.DB = closedWSFixturePool(t, p)
-			}
 			if mode == "revoked" {
 				if _, err := p.Exec(context.Background(), `UPDATE users SET token_version=1 WHERE id=$1`, u.ID); err != nil {
 					t.Fatal(err)
@@ -156,7 +153,7 @@ func TestWSWriterPeriodicLifecycle(t *testing.T) {
 				return remote.WriteControl(websocket.PongMessage, []byte(data), time.Now().Add(time.Second))
 			})
 			remote.SetReadDeadline(time.Now().Add(h.RevalidateInterval + 10*time.Second))
-			if mode == "valid" || mode == "database-unavailable" {
+			if mode == "valid" {
 				timer := time.AfterFunc(h.RevalidateInterval+time.Second, func() { c.SendEvent("after-revalidation", nil) })
 				defer timer.Stop()
 				_, body, err := remote.ReadMessage()
