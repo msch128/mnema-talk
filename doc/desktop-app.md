@@ -1,6 +1,6 @@
 # Desktop client roadmap
 
-Status: **the Windows Desktop DEV client is experimentally testable**
+Status: **the desktop client is Beta** (the Windows Desktop DEV client is the furthest along and testable)
 (releases of this repository through v0.7.3 attach its ZIP; later builds come
 from the desktop repository), including the Gaming integration described below.
 The package is unsigned (no Authenticode); the installer of a desktop release updates itself from
@@ -20,6 +20,31 @@ The native-crypto boundary below remains a separate requirement. The older
 [feasibility probe](https://github.com/msch128/mnema-talk-desktop/blob/main/README.md)
 is a historical foundation.
 See [product status and evidence](product-status.md) for the binding scope.
+
+## Installing the unsigned Beta
+
+The desktop app is Beta and its installers are not code-signed: the project
+will not buy code-signing certificates. The operating system therefore warns
+before the first start. This does not mean the file is malicious, and it is no
+substitute for checking it: download only from the
+[desktop releases](https://github.com/msch128/mnema-talk-desktop/releases) and
+compare the published checksum. The app itself still verifies its web bundle and
+its updates with the project's own signatures.
+
+**Windows (SmartScreen).** Choose **More info**, then **Run anyway**. If the
+file was downloaded in a browser and still refuses to start, open its
+Properties and tick **Unblock**.
+
+**macOS (Gatekeeper).** Right-click the app, choose **Open**, then **Open**
+again. Alternatively, after a blocked first start open **System Settings,
+Privacy & Security** and choose **Open Anyway** for Mnema. As a last resort,
+remove the quarantine flag: `xattr -dr com.apple.quarantine "/Applications/<app name>.app"`.
+
+**Linux.** AppImage and .deb packages need no such step; make the AppImage
+executable (`chmod +x`) before running it.
+
+If you cannot accept these warnings, use the browser app, which is the fully
+supported client.
 
 ## Windows Gaming DEV
 
@@ -120,7 +145,7 @@ GitHub Releases. A mirror is a delivery location, not a release-signing authorit
 The client must independently verify package authenticity and prevent rollback or
 stale metadata from installing an unsafe release.
 
-No Windows code-signing certificate exists. The self-update is signed separately
+No Windows code-signing certificate exists and none will be bought (Beta; see [installing the unsigned Beta](#installing-the-unsigned-beta)). The self-update is signed separately
 (minisign, key pinned in the client) and installs only verified, newer versions.
 Development builds must be clearly identified as unsigned. Automatic installation
 of unverifiable updates remains disabled. Production distribution additionally
