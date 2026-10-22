@@ -1,0 +1,49 @@
+web/src/lib/markdown.ts
+  s_06fcde5dbef956::t_8cbab0fcd73c59 93-94,100-102,112-115
+e2e/tests/mentions.spec.ts
+  s_06fcde5dbef956::t_8cbab0fcd73c59 50
+  s_06fcde5dbef956::t_453a57c98013c0 66-70
+doc/bots.md
+  s_06fcde5dbef956::t_d71a1875f36c09 202
+doc/webhooks.md
+  s_06fcde5dbef956::t_d71a1875f36c09 39,103
+web/src/lib/markdown.test.ts
+  s_06fcde5dbef956::t_453a57c98013c0 122-130
+internal/chat/permissions.go
+  s_06fcde5dbef956::t_0e177566d78fcd 70,88,92
+internal/chat/mentions_allowed.go
+  s_06fcde5dbef956::t_0e177566d78fcd 1-31
+internal/server/mentions_automation_integration_test.go
+  s_06fcde5dbef956::t_2a2278591b4f9a 40-42
+  s_06fcde5dbef956::t_3c13f4c7c7ce7c 1-39,43-147
+internal/webhook/execute_mentions.go
+  s_06fcde5dbef956::t_cee5d80f5058f8 1-63
+internal/webhook/execute.go
+  s_06fcde5dbef956::t_0e177566d78fcd 109,114-115
+api/openapi.json
+  s_06fcde5dbef956::t_3670ddaea00a29 1152,1159,3953,3960
+web/src/directives/roleColor.test.ts
+  s_06fcde5dbef956::t_453a57c98013c0 1-39
+web/src/directives/roleColor.ts
+  s_06fcde5dbef956::t_27253b35e34672 1-26
+web/src/components/MarkdownContent.vue
+  s_06fcde5dbef956::t_8cbab0fcd73c59 10-11,35,85,141-146
+internal/chat/botapi.go
+  s_06fcde5dbef956::t_0e177566d78fcd 115-116,120,284-289
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b7d1dc68464378c618f2f8910ded4aca58563262",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
