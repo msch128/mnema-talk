@@ -3,6 +3,7 @@ package ws
 import (
 	"time"
 
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/metrics"
 )
 
@@ -33,12 +34,12 @@ const (
 // the largest payload each may carry. An answer is a full SDP and stays
 // under maxMessageBytes; an ICE candidate is one short line.
 var signalingEvents = map[string]int{
-	"webrtc_answer":    maxMessageBytes,
-	"webrtc_candidate": 2 << 10,
+	events.ClientWebrtcAnswer:    maxMessageBytes,
+	events.ClientWebrtcCandidate: 2 << 10,
 }
 
 // handshakeEvent is metered by handleHandshake, not by signalingEvents.
-const handshakeEvent = "media_handshake"
+const handshakeEvent = events.ClientMediaHandshake
 
 // eventBudget is a connection's per-second flood guard. It is used only by
 // the connection's read loop, so it needs no lock.

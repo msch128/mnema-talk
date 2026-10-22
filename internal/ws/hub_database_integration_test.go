@@ -87,7 +87,7 @@ func TestWSDatabaseBookkeepingAndChannelChecks(t *testing.T) {
 	if err := p.QueryRow(context.Background(), `SELECT voice_seconds FROM users WHERE id=$1`, u.ID).Scan(&total); err != nil || total != 2 {
 		t.Fatalf("voice total=%d, %v", total, err)
 	}
-	if got := events(t, c, "user_stats"); len(got) != 1 || got[0]["voice_seconds"] != float64(2) {
+	if got := sentEvents(t, c, "user_stats"); len(got) != 1 || got[0]["voice_seconds"] != float64(2) {
 		t.Fatalf("voice statistics announcement = %+v", got)
 	}
 	h.unregister(c)
@@ -99,7 +99,7 @@ func TestWSDatabaseBookkeepingAndChannelChecks(t *testing.T) {
 	b := testClient(broken, u)
 	broken.addVoiceTime(u.ID, uuid.New(), time.Second)
 	broken.unregister(b)
-	if broken.OnlineCount() != 0 || len(events(t, b, "user_stats")) != 0 {
+	if broken.OnlineCount() != 0 || len(sentEvents(t, b, "user_stats")) != 0 {
 		t.Fatal("database failure retained connection or invented statistics")
 	}
 }

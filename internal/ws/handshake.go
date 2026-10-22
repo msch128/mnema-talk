@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -128,8 +129,8 @@ func (h *Hub) notePresenceLocked(c *Client) {
 func (h *Hub) greet(c *Client, before, after string) {
 	slog.Info("ws connected", "user", c.User.Username)
 	h.announcePresence(c.User.ID, before, after)
-	c.SendEvent("server_info", h.serverInfo())
-	c.SendEvent("presence_snapshot", h.presenceSnapshot())
+	c.SendEvent(events.ServerInfo, h.serverInfo())
+	c.SendEvent(events.PresenceSnapshot, h.presenceSnapshot())
 	h.sendBotActivities(c)
 	// Talks the member may not view stay invisible: who sits in them, since
 	// when and what they share.
@@ -137,14 +138,14 @@ func (h *Hub) greet(c *Client, before, after string) {
 	if !ok {
 		snap = deniedSnapshot
 	}
-	c.SendEvent("voice_snapshot", visibleTo(c, snap, h.voiceSnapshot()))
-	c.SendEvent("voice_rooms", h.voiceRooms(c, snap))
+	c.SendEvent(events.VoiceSnapshot, visibleTo(c, snap, h.voiceSnapshot()))
+	c.SendEvent(events.VoiceRooms, h.voiceRooms(c, snap))
 	if h.SFU == nil {
 		return
 	}
 	for chID, states := range visibleTo(c, snap, h.SFU.AllMediaStates()) {
 		for uid, st := range states {
-			c.SendEvent("webrtc_media_state", mediaStatePayload(chID, uid, st))
+			c.SendEvent(events.WebrtcMediaState, mediaStatePayload(chID, uid, st))
 		}
 	}
 }

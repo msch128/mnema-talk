@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -53,7 +54,7 @@ func (h *Handler) channelParam(r *http.Request) (uuid.UUID, error) {
 // publishReadState tells the user's other sessions (tabs, devices) about it.
 func (h *Handler) publishReadState(userID, channelID uuid.UUID, payload map[string]any) {
 	payload["channel_id"] = channelID
-	h.Events.SendToUsers([]uuid.UUID{userID}, "read_state", payload)
+	h.Events.SendToUsers([]uuid.UUID{userID}, events.ReadState, payload)
 }
 
 // markRead handles POST /api/channels/{channelID}/read.

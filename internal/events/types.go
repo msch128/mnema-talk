@@ -1,0 +1,68 @@
+package events
+
+// The WebSocket event registry. Every event name on the wire is a constant
+// here; handlers and the hub never spell one as a string literal. The names are
+// public API (doc/api-stability.md): testdata/events.golden.json pins them, and
+// web/src/types/events.ts must agree (npm run contracts:check). A constant is
+// named after its value, "message_create" is MessageCreate; a client-to-server
+// event carries the prefix Client.
+
+// Server-to-client events.
+const (
+	MessageCreate       = "message_create"
+	MessageUpdate       = "message_update"
+	MessageDelete       = "message_delete"
+	MessageReaction     = "message_reaction"
+	ModerationNotice    = "moderation_notice"
+	ChannelsChanged     = "channels_changed"
+	ReadState           = "read_state"
+	UserUpdate          = "user_update"
+	MemberJoined        = "member_joined"
+	MemberTimeout       = "member_timeout"
+	RolesChanged        = "roles_changed"
+	PermissionsChanged  = "permissions_changed"
+	SystemUpdate        = "system_update"
+	InteractionResponse = "interaction_response"
+	WebrtcMediaState    = "webrtc_media_state"
+	PresenceUpdate      = "presence_update"
+	UserStats           = "user_stats"
+	VoiceStateUpdate    = "voice_state_update"
+	ScreenViewers       = "screen_viewers"
+	ScreenLayers        = "screen_layers"
+	ScreenQuality       = "screen_quality"
+	ScreenLayersWanted  = "screen_layers_wanted"
+	MediaHandshake      = "media_handshake"
+	VoiceKicked         = "voice_kicked"
+	ServerInfo          = "server_info"
+	PresenceSnapshot    = "presence_snapshot"
+	VoiceSnapshot       = "voice_snapshot"
+	VoiceRooms          = "voice_rooms"
+	Pong                = "pong"
+	WebrtcOffer         = "webrtc_offer"
+	WebrtcCandidate     = "webrtc_candidate"
+	Typing              = "typing"
+	VoiceSpeaking       = "voice_speaking"
+	VoiceMuteState      = "voice_mute_state"
+	NativeAccessRenewed = "native_access_renewed"
+)
+
+// Client-to-server events.
+const (
+	ClientPing                   = "ping"
+	ClientPresenceIdle           = "presence_idle"
+	ClientVoiceJoin              = "voice_join"
+	ClientVoiceLeave             = "voice_leave"
+	ClientTyping                 = "typing"
+	ClientVoiceSpeaking          = "voice_speaking"
+	ClientVoiceMuteState         = "voice_mute_state"
+	ClientWebrtcAnswer           = "webrtc_answer"
+	ClientWebrtcCandidate        = "webrtc_candidate"
+	ClientWebrtcDiag             = "webrtc_diag"
+	ClientWebrtcRequestKeyframe  = "webrtc_request_keyframe"
+	ClientWebrtcSubscribe        = "webrtc_subscribe"
+	ClientWebrtcLayers           = "webrtc_layers"
+	ClientWebrtcScreenshareStart = "webrtc_screenshare_start"
+	ClientWebrtcScreenshareStop  = "webrtc_screenshare_stop"
+	ClientWebrtcCameraStop       = "webrtc_camera_stop"
+	ClientMediaHandshake         = "media_handshake"
+)

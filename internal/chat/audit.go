@@ -8,6 +8,7 @@ import (
 
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -136,7 +137,7 @@ func (h *Handler) tellAuthor(s *auditSnapshot, by *auth.User, reason string) {
 	if s == nil || s.msg.UserID == by.ID || h.Events == nil {
 		return
 	}
-	h.Events.SendToUsers([]uuid.UUID{s.msg.UserID}, "moderation_notice", map[string]any{
+	h.Events.SendToUsers([]uuid.UUID{s.msg.UserID}, events.ModerationNotice, map[string]any{
 		"kind": "message_deleted", "reason": reason, "channel_name": s.channel,
 	})
 }

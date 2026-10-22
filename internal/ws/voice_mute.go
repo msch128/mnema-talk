@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 // sendToVoiceRoom sends an event to the connections currently in chID's room.
@@ -60,8 +61,8 @@ func (h *Hub) setMuteState(c *Client, st MuteState) {
 	if !changed {
 		return
 	}
-	c.emitApplicationEvent("voice_mute_state", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "muted": st.Muted, "deafened": st.Deafened}, false, nil, *cur)
+	c.emitApplicationEvent(events.VoiceMuteState, map[string]any{"channel_id": *cur, "user_id": c.User.ID, "muted": st.Muted, "deafened": st.Deafened}, false, nil, *cur)
 	if st.Muted && c.speakingChanged(false, time.Now()) {
-		c.emitApplicationEvent("voice_speaking", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": false}, false, cur, uuid.Nil)
+		c.emitApplicationEvent(events.VoiceSpeaking, map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": false}, false, cur, uuid.Nil)
 	}
 }

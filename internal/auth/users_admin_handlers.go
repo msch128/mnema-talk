@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -78,7 +79,7 @@ func (h *Handler) disableUser(w http.ResponseWriter, r *http.Request) error {
 	if h.OnAccountEnded != nil {
 		h.OnAccountEnded(id)
 	}
-	h.Events.Broadcast("user_update", map[string]any{"id": id, "disabled": true})
+	h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": true})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -109,7 +110,7 @@ func (h *Handler) enableUser(w http.ResponseWriter, r *http.Request) error {
 	if err := h.moderated(r, id, func(q db.Querier) error { return SetDisabled(r.Context(), q, id, false) }); err != nil {
 		return err
 	}
-	h.Events.Broadcast("user_update", map[string]any{"id": id, "disabled": false})
+	h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": false})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

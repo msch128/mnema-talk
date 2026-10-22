@@ -2,6 +2,7 @@ package ws
 
 import (
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 // kickClient takes c out of its voice room and tells it so. It reports
@@ -26,7 +27,7 @@ func (h *Hub) kickClientReason(c *Client, onlyCh *uuid.UUID, reason string) bool
 	if reason != "" {
 		payload["reason"] = reason
 	}
-	c.SendEvent("voice_kicked", payload)
+	c.SendEvent(events.VoiceKicked, payload)
 	return true
 }
 

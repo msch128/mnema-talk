@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 // NativeMetadataWebSocketHandler uses the qualified native lease/admission/Hub
@@ -73,7 +74,7 @@ func nativeMetadataEventAllowed(raw []byte) bool {
 		return false
 	}
 	switch event.Type {
-	case "server_info", "system_update", "pong", "presence_snapshot", "presence_update", "channels_changed", "member_joined", "user_update", "user_stats", "native_access_renewed":
+	case events.ServerInfo, events.SystemUpdate, events.Pong, events.PresenceSnapshot, events.PresenceUpdate, events.ChannelsChanged, events.MemberJoined, events.UserUpdate, events.UserStats, events.NativeAccessRenewed:
 		return true
 	default:
 		return false
@@ -120,10 +121,10 @@ func metadataSocketRejected(c *Client, kind int) bool {
 }
 
 func metadataEventRejected(eventType string) bool {
-	if eventType == "ping" {
+	if eventType == events.ClientPing {
 		return false
 	}
-	return eventType != "presence_idle"
+	return eventType != events.ClientPresenceIdle
 }
 
 func nativeMetadataObject(raw []byte) (map[string]json.RawMessage, bool) {
@@ -214,9 +215,9 @@ func metadataEvent(eventType string, payload json.RawMessage) (string, json.RawM
 
 func metadataPayload(eventType string, object map[string]json.RawMessage) bool {
 	switch eventType {
-	case "ping":
+	case events.ClientPing:
 		return finiteTimestamp(object["t"])
-	case "presence_idle":
+	case events.ClientPresenceIdle:
 		return idleFlag(object)
 	default:
 		return false

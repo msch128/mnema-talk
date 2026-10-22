@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/ssrf"
 )
 
@@ -22,7 +23,7 @@ import (
 // webhook do not leave again, so two webhooks cannot feed each other.
 func translate(eventType string, payload any) (name string, data any, ok bool) {
 	switch eventType {
-	case "message_create", "message_update":
+	case events.MessageCreate, events.MessageUpdate:
 		var m chat.Message
 		switch v := payload.(type) {
 		case chat.Message:
@@ -32,15 +33,15 @@ func translate(eventType string, payload any) (name string, data any, ok bool) {
 		default:
 			return "", nil, false
 		}
-		if m.IsBot && eventType == "message_create" {
+		if m.IsBot && eventType == events.MessageCreate {
 			return "", nil, false
 		}
-		return map[string]string{"message_create": EventMessageCreate, "message_update": EventMessageUpdate}[eventType], m, true
-	case "message_delete":
+		return map[string]string{events.MessageCreate: EventMessageCreate, events.MessageUpdate: EventMessageUpdate}[eventType], m, true
+	case events.MessageDelete:
 		return EventMessageDelete, payload, true
-	case "message_reaction":
+	case events.MessageReaction:
 		return EventReactionsUpdate, payload, true
-	case "voice_state_update":
+	case events.VoiceStateUpdate:
 		return EventVoiceStateUpdate, payload, true
 	}
 	return "", nil, false

@@ -6,6 +6,9 @@ Mnema Talk is a small, self-hosted, non-commercial project. Only the current
 `main` branch is supported; fixes land there. Forks and older commits are not
 maintained.
 
+Which interfaces are stable and how they may change (deprecation, removal only
+in a major release) is described in [doc/api-stability.md](doc/api-stability.md).
+
 ## Reporting a vulnerability
 
 Please report security issues **privately** through GitHub's private

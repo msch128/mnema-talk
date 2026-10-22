@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -73,7 +74,7 @@ func (h *Handler) mountModeration(r chi.Router) {
 
 func (h *Handler) notify(id uuid.UUID, n notice) {
 	if h.Events != nil {
-		h.Events.SendToUsers([]uuid.UUID{id}, "moderation_notice", n)
+		h.Events.SendToUsers([]uuid.UUID{id}, events.ModerationNotice, n)
 	}
 }
 
@@ -135,7 +136,7 @@ func (h *Handler) timeoutUser(w http.ResponseWriter, r *http.Request) error {
 	// Talk they are in ends for them.
 	h.Perms.Changed([]uuid.UUID{id})
 	h.notify(id, notice{Kind: "timeout", Until: &until, Seconds: req.DurationSeconds, Reason: reason})
-	h.Events.Broadcast("member_timeout", map[string]any{"id": id, "timeout_until": until})
+	h.Events.Broadcast(events.MemberTimeout, map[string]any{"id": id, "timeout_until": until})
 	httpx.WriteJSON(w, http.StatusOK, TimeoutState{UserID: id, TimeoutUntil: until, Reason: reason})
 	return nil
 }
@@ -172,7 +173,7 @@ func (h *Handler) untimeoutUser(w http.ResponseWriter, r *http.Request) error {
 	}
 	h.Perms.Changed([]uuid.UUID{id})
 	h.notify(id, notice{Kind: "timeout_removed"})
-	h.Events.Broadcast("member_timeout", map[string]any{"id": id, "timeout_until": nil})
+	h.Events.Broadcast(events.MemberTimeout, map[string]any{"id": id, "timeout_until": nil})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
