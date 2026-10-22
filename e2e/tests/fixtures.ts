@@ -113,7 +113,19 @@ async function contextOwnProcess(browser: Browser, options: Parameters<Browser['
 // the separate people it stands for. Production limits are untouched.
 // A service worker answers the page's requests itself, which context.route
 // (the welcome-flow stand-in below) does not see in WebKit and Firefox. Contexts
-// therefore block it unless a spec opts in with serviceWorkers: 'allow'.
+// therefore block it, except in the specs about the worker itself. (Playwright
+// drops a serviceWorkers option that equals its own default, so the specs are
+// named here instead of opting in through test.use.)
+const SERVICE_WORKER_SPECS = /[\\/](pwa|push)\.spec\.ts$/
+
+function serviceWorkersFor(): 'allow' | 'block' {
+  try {
+    return SERVICE_WORKER_SPECS.test(base.info().file) ? 'allow' : 'block'
+  } catch {
+    return 'block'
+  }
+}
+
 let nextClient = 1
 
 function clientAddress(): string {
@@ -126,7 +138,7 @@ function counted(browser: Browser): Browser {
   const separate = browser.browserType().name() === 'webkit'
   browser.newContext = async (...args: Parameters<Browser['newContext']>) => {
     const options = args[0] ?? {}
-    const addressed = grantable(browser, { serviceWorkers: 'block', ...options, extraHTTPHeaders: { 'X-Forwarded-For': clientAddress(), ...(options.extraHTTPHeaders ?? {}) } })
+    const addressed = grantable(browser, { serviceWorkers: serviceWorkersFor(), ...options, extraHTTPHeaders: { 'X-Forwarded-For': clientAddress(), ...(options.extraHTTPHeaders ?? {}) } })
     const context = await (separate ? contextOwnProcess(browser, addressed) : newContext(addressed))
     countApiRequests(context)
     await hideWelcomeFlow(context)
