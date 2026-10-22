@@ -101,6 +101,22 @@ export function setDraft(uid: string, key: string, draft: Draft | null) {
   write(uid, next)
 }
 
+/** A sign-in: drafts that belong to any other account on this device are removed. */
+export function dropOtherDrafts(uid: string) {
+  try {
+    const own = storageKey(uid)
+    const stale: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key?.startsWith(DRAFT_KEY_PREFIX) && key !== own) stale.push(key)
+    }
+    stale.forEach(key => localStorage.removeItem(key))
+  } catch {
+    // Storage blocked: nothing was kept.
+  }
+  if (state.value.uid !== null && state.value.uid !== uid) state.value = { uid: null, items: {} }
+}
+
 /** Sign-out and account deletion: every account's drafts leave this browser. */
 export function clearAllDrafts() {
   state.value = { uid: null, items: {} }
