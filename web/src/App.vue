@@ -19,6 +19,8 @@ import InviteLanding from './components/InviteLanding.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 import AudioSettingsModal from './components/AudioSettingsModal.vue'
+import AppSettingsModal from './components/AppSettingsModal.vue'
+import { appSettingsOpen } from './lib/appSettings'
 import ScreenShareModal from './components/ScreenShareModal.vue'
 import UserProfileModal from './components/UserProfileModal.vue'
 import LegalModal from './components/LegalModal.vue'
@@ -290,6 +292,9 @@ onMounted(async () => {
         v-if="voiceStore.showAudioSettings" 
         @close="voiceStore.showAudioSettings = false" 
       />
+
+      <!-- App dialog: install on this device -->
+      <AppSettingsModal v-if="appSettingsOpen" @close="appSettingsOpen = false" />
 
       <!-- Screen share quality dialog -->
       <ScreenShareModal
