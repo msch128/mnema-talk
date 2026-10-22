@@ -97,8 +97,8 @@ devices; run `make e2e` or see [development](development.md#browser-tests-e2e)):
 | Microphone and camera, sealed on every line, with key rotation, late join and reload | Supported | Supported | Supported |
 | Screen share with viewer-chosen layers (simulcast) | Supported | Supported | Supported (VP8) |
 | Screen share frames advance for the viewer | Supported | Supported | Supported |
-| Required CI check | Yes | No, until stable (`e2e (webkit)`) | No (`e2e (firefox)`, smoke subset) |
-| Not covered by the suite | | Real Safari and iOS hardware, Linux WebKit in CI | Real screen capture |
+| Required CI check | Yes | No (`e2e (webkit)`: text and admin specs only) | No (`e2e (firefox)`, smoke and sealed-call subset) |
+| Not covered by the suite | | Real Safari and iOS hardware; calls on Linux WebKit (the specs fail there, they pass on macOS WebKit) | Real screen capture |
 
 What it took:
 
