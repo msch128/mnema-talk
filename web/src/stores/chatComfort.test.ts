@@ -6,6 +6,7 @@ import { useChatStore, TYPING_EXPIRY_MS, MARK_READ_INTERVAL_MS } from './chat'
 import { useVoiceStore } from './voice'
 import { useAuthStore } from './auth'
 import { currentRoute } from '../lib/router'
+import { pushOnThisDevice } from '../lib/webPush'
 
 let calls: { url: string; method: string }[]
 function stubFetch() {
@@ -250,6 +251,22 @@ describe('desktop notifications', () => {
     required(made[0]).onclick?.()
     expect(focus).toHaveBeenCalled()
     expect(currentRoute.value).toMatchObject({ view: 'chat', channelId: 'ch2', messageId: 'mx' })
+  })
+
+  it('leaves a hidden page to the service worker when push is on for this device, and still speaks for a visible one', () => {
+    stubNotification('granted')
+    const chat = setup()
+    pushOnThisDevice.value = true
+    try {
+      setHidden(true)
+      chat.handleWSEvent({ type: 'message_create', payload: msg({ channel_id: 'ch2' }) })
+      expect(made).toHaveLength(0)
+      setHidden(false)
+      chat.handleWSEvent({ type: 'message_create', payload: msg({ channel_id: 'ch2' }) })
+      expect(made).toHaveLength(1)
+    } finally {
+      pushOnThisDevice.value = false
+    }
   })
 
   it('defaults the level to all', () => {

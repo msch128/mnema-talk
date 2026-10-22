@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/url"
 	"regexp"
+	"strings"
 )
 
 // maxSessionExpiryHours caps SESSION_EXPIRY_HOURS at one year.
@@ -50,7 +51,7 @@ func (c *Config) validateOptionalSecrets() error {
 	if c.MetricsToken != "" && len(c.MetricsToken) < 24 {
 		return fmt.Errorf("METRICS_TOKEN must be at least 24 characters when set")
 	}
-	return nil
+	return c.validateSMTP()
 }
 
 // validateBasics checks the settings every environment needs, stores the
@@ -110,7 +111,28 @@ func (c *Config) validateLimits() error {
 	if c.UploadQuotaMBPerDay < 0 || c.MediaMaxTotalMB < 0 || c.MediaMinFreeMB < 0 {
 		return fmt.Errorf("UPLOAD_QUOTA_MB_PER_DAY, MEDIA_MAX_TOTAL_MB and MEDIA_MIN_FREE_MB must be 0 (off) or positive")
 	}
+	if err := c.validatePush(); err != nil {
+		return err
+	}
 	return validateTrustedProxies(c.TrustedProxies)
+}
+
+// validatePush checks the Web Push settings.
+func (c *Config) validatePush() error {
+	if c.PushPreviews != "user" && c.PushPreviews != "off" {
+		return fmt.Errorf("PUSH_PREVIEWS must be user or off, got %q", c.PushPreviews)
+	}
+	subject := c.PushVAPIDSubject
+	if subject == "" {
+		return nil
+	}
+	if u, ok := parseAbsoluteHTTP(subject); ok && u.Scheme == "https" {
+		return nil
+	}
+	if addr, ok := strings.CutPrefix(subject, "mailto:"); ok && strings.Contains(addr, "@") {
+		return nil
+	}
+	return fmt.Errorf("PUSH_VAPID_SUBJECT must be an https:// URL or a mailto: address, got %q", subject)
 }
 
 func validateTrustedProxies(proxies []string) error {

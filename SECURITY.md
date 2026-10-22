@@ -150,6 +150,73 @@ details and the limits.
   session id and the token's own expiry, and ends at the expiry; if the
   database cannot answer three checks in a row, the socket is closed rather
   than kept on trust.
+- **E-mail address, confirmation and password reset.** An e-mail address is
+  optional and belongs to its account alone: no API response about other
+  members, the member list or the admin user list carries it, and the audit
+  log never stores it. Setting or removing it needs the current password (the
+  same lockout as changing the password). A new address starts unconfirmed;
+  two accounts may hold the same unconfirmed address, so adding one reveals
+  nothing, and only a confirmed address is unique. Mail needs `SMTP_HOST`
+  (credentials from the environment or a file, never in the database; TLS is
+  required and certificates are verified, `SMTP_TLS=none` is refused in
+  production; recipients and subjects are checked against header injection).
+  Without it no mail is sent and a saved address is never used. Confirmation
+  and reset links carry a 256-bit random token in the URL fragment (never in a
+  request line, access log or Referer); only its SHA-256 is stored; a token is
+  single use (one atomic UPDATE), expires (24 hours for confirmation, 30
+  minutes for reset), is bound to its purpose and, for confirmation, to the
+  address it was sent to (a reset token also to the account's session version, so a password change, an Owner password action, "log out everywhere" or a session revocation kills every open reset link), and a newer link retires the older one. Reset: the
+  request answers `202` with an empty body for every well-formed address, known
+  or not, confirmed or not, disabled account or not, and does its work after
+  responding, so neither content nor timing tells accounts apart; it is limited
+  per client address (10 per hour, IPv6 per /64, 40 per /48) and, silently, per
+  address (5 per hour) and per account (5 mails per hour, counted in the
+  database so it survives restarts and attacker-chosen keys). Only an active
+  account with a confirmed address gets a link. Confirming a reset spends the
+  token and sets the password in one transaction, applies the usual password
+  policy (the Owner needs 14 characters), revokes every session (token version)
+  and known-device cookie, closes open WebSockets and clears the account's
+  login lockouts; it signs nobody in. Mail delivery failures never reach the
+  client. The Owner's "send test mail" is Owner-only, limited to five per ten
+  minutes and audited without recipient.
+- **Two-factor sign-in (TOTP).** Optional for every account; the Owner's
+  settings recommend it prominently. RFC 6238 (HMAC-SHA1, 6 digits, 30 seconds,
+  one step of clock skew either way), enrolled with a QR code drawn in the
+  browser (no image service sees the secret) and confirmed with a first code;
+  turning it on returns ten single-use recovery codes, once. The secret is
+  stored encrypted (AES-256-GCM, key derived from `JWT_SECRET`, bound to the
+  account); recovery codes are stored as keyed HMACs (59-bit codes, so a
+  database copy alone cannot be searched for them). Rotating `JWT_SECRET`
+  therefore makes stored secrets unreadable: those accounts need a reset
+  (below). Sign-in: a correct password for such an account answers `202` with a
+  challenge instead of a session (nothing about the account is revealed before
+  the password is right). The challenge is 256 random bits (only its hash is
+  stored), lives five minutes, is bound to the account and to its token version
+  at that moment (a password change, "log out everywhere" or a disable in
+  between kills it), is spent by a successful sign-in and takes five code
+  attempts in total, counted atomically. An authenticator code works once (the
+  newest accepted step is stored, so a replay of the same or an older code is
+  refused); a recovery code works once. Wrong, expired, replayed, used and
+  unknown all answer the same `401`. The known-device cookie and the session are
+  only issued after the second step. Brute force: attempts of one account are
+  serialised, so parallel requests cannot all pass the lockout check; ten wrong
+  codes lock the account's second step (escalating, at most 15 minutes); and,
+  persisted in the database so a restart does not reset it, 20 wrong
+  authenticator codes in any 24 hours refuse authenticator codes for the
+  account until the oldest ages out (429), while recovery codes keep working
+  (they have their own, much higher budget of 100 wrong guesses a day). Someone
+  who knows the password can therefore guess at most about 20 six-digit codes a
+  day (about 0.01 % chance), and cannot lock the owner out: a recovery code or
+  an Owner reset still gets in. Five or more wrong codes not yet reported make
+  the next successful sign-in show a one-time security notice, raise one audit
+  entry (`auth.two_factor_alert`, no code) and send one e-mail to a confirmed
+  address when the server can send mail. Turning it off or making new recovery
+  codes needs the password and a current code; setting up needs the password.
+  The Owner can reset a member's second factor (`user.two_factor_reset`, ends
+  their sessions); the Owner's own is reset from the host with
+  `mnema-talk reset-2fa <username>`. Resetting a password by mail does not skip
+  the second factor, and a native sign-in has the same second step
+  (`POST /auth/login/2fa`) before any grant is issued.
 - **WebSocket flood limits.** Every client event has a payload cap (1 KiB for
   ping, typing, speaking and the like; larger only for an SDP answer, an ICE
   candidate, a diagnostic and a media handshake), and a frame too big for its
@@ -239,6 +306,37 @@ details and the limits.
   cannot send data to a third party. Dropping it (a hash for the picker's style
   text plus a patched or replaced picker, with a browser test that fails on any
   CSP violation) is planned after 1.0.
+- **Installable app and service worker.** The web app ships a manifest and a
+  small service worker (`/sw.js`, same origin, so it fits the CSP unchanged:
+  `script-src 'self'`, `worker-src 'self'`). It keeps the app shell (the page
+  and its hashed assets, icons) for offline starts and answers nothing else:
+  it never touches `/api/`, other origins or non-GET requests, so no message,
+  profile, media or session data is ever stored by it. Both files are served
+  with `Cache-Control: no-cache`, so a deploy reaches installed apps on the next
+  start. The desktop client never registers it.
+- **Web Push.** Pushes are encrypted for the receiving browser (RFC 8291,
+  `aes128gcm`) and signed with the server's VAPID key (RFC 8292), so the push
+  service (Google, Mozilla, Apple, Microsoft) cannot read them; they carry the
+  channel name and sender and, unless the member or `PUSH_PREVIEWS=off` says
+  otherwise, the first 140 characters of the message. Recipients are decided on
+  the server when a message is sent: the author never, only members who may
+  view the channel in the current permission snapshot (a failed snapshot sends
+  nothing), with the member's effective notification level, mutes and Do Not
+  Disturb applied. The VAPID private key lives in the database (`push_vapid`),
+  is never logged or returned, and is created on first start. A subscription
+  endpoint is member-supplied, so it is treated like an outgoing webhook URL
+  but stricter: https on port 443 only, no literal private address at
+  registration, and at every send the same resolve-vet-connect guard
+  (`internal/ssrf`) with no allowlist, no redirects and no response shown, so
+  the server cannot be used as a request proxy or to scan the network. Failed
+  or gone subscriptions are removed; a browser signing out removes its own, and
+  registering a browser under another account moves it, so the next person on a
+  shared browser is not sent the previous account's messages. A device is
+  bound to the session that registered it: once that session is signed out,
+  expired or revoked (password change or reset, "log out everywhere", admin
+  revoke, disabled account: the user's `token_version` moves on), the device is
+  no longer sent anything, checked on every send, and removed within a minute.
+  At most 10 devices per account; registering and testing are rate limited.
 - **Uploads.** File types are detected by content sniffing, not by the
   client-supplied name or MIME type. Risky types (HTML, SVG, scripts, unknown
   binaries, ...) are only ever served as downloads, never rendered inline. Media is

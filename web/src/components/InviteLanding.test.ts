@@ -35,7 +35,8 @@ afterEach(() => {
 describe('InviteLanding', () => {
   it('is just the login dialog away from an invite link and asks the server nothing', async () => {
     const w = await landing('/')
-    expect(apiMock).not.toHaveBeenCalled()
+    // Only the sign-in options are asked for, nothing about an invite.
+    expect(apiMock.mock.calls.filter(([path]) => path !== '/api/auth/options')).toEqual([])
     expect(w.find('[data-testid="login-heading"]').text()).toBe('Mnema Talk')
     expect(w.find('#login-invite').exists()).toBe(false)
   })

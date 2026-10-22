@@ -37,6 +37,7 @@ binary release.
 | [@noble/ciphers](https://github.com/paulmillr/noble-ciphers) | 2.1.1 | MIT |
 | [@noble/hashes](https://github.com/paulmillr/noble-hashes) | 2.3.0 | MIT |
 | [@noble/curves](https://github.com/paulmillr/noble-curves) | 2.0.1 | MIT |
+| [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (draws the QR code of the two-factor setup in the browser) | 2.0.4 | MIT |
 
 `ts-mls@1.6.4` depends on `@hpke/core@1.9.0` (MIT). That package is not a direct dependency.
 
@@ -76,6 +77,7 @@ modules are compiled into `mnema-talk`:
 
 | Module | Version | License |
 |---|---|---|
+| `github.com/SherClockHolmes/webpush-go` | v1.4.0 | MIT |
 | `github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream` | v1.7.20 | Apache-2.0 |
 | `github.com/aws/aws-sdk-go-v2/config` | v1.33.7 | Apache-2.0 |
 | `github.com/aws/aws-sdk-go-v2/credentials` | v1.20.7 | Apache-2.0 |

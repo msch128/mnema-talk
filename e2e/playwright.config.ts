@@ -40,10 +40,6 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { browserName: 'chromium', launchOptions: { args: chromiumArgs } },
-      // Chromium's sealed-media specs are late-join, key-lifecycle and screen-layers; this
-      // one proves the same on the other engines, and the suite's shared
-      // sign-in budget (60 per 15 minutes and address) has no room for more.
-      testIgnore: /browser-sealing\.spec\.ts$/,
     },
     {
       name: 'webkit',

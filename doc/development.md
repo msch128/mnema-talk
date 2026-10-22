@@ -79,8 +79,7 @@ account for: Firefox has no context-level camera/microphone grants (its fake
 devices are set by preferences in `playwright.config.ts`); every WebKit context
 gets its own browser process, because WebKit mutes the microphone of all but one
 page of a process; Chrome DevTools Protocol specs (crashing a tab, synthetic
-touch) skip on the other engines. The registration limit (10 per hour and
-address) is shared by a run, so WebKit's CI job is split into two shards.
+touch) skip on the other engines.
 
 Runs do not collide, so several can go at once (other worktrees, agents):
 every run uses its own Docker Compose project (`mnema-e2e-<pid>`) and free

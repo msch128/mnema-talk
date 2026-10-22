@@ -485,14 +485,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Two shards: a run shares ten registrations an hour per address, and
-          # the whole suite needs more than that on one server.
           - browser: webkit
-            label: webkit 1/2
-            only: "--project=webkit --shard=1/2"
-          - browser: webkit
-            label: webkit 2/2
-            only: "--project=webkit --shard=2/2"
+            label: webkit
+            only: "--project=webkit"
           - browser: firefox
             label: firefox
             only: "--project=firefox smoke.spec.ts browser-sealing.spec.ts late-join.spec.ts key-lifecycle.spec.ts search.spec.ts mentions.spec.ts screenshare.spec.ts"
