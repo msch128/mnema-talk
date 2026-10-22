@@ -1214,6 +1214,7 @@
       "deleted": "Emoji gelöscht",
       "deleteTitle": ":{name}: löschen?",
       "deleteBody": "Bestehende Nachrichten und Reaktionen zeigen :name: ab jetzt als Text. Das lässt sich nicht rückgängig machen.",
+      "animated": "Animiert",
       "rename": "Umbenennen",
       "empty": "Noch keine eigenen Emojis.",
       "full": "Das Limit ist erreicht. Lösche ein Emoji oder erhöhe EMOJI_MAX."

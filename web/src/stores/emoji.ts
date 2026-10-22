@@ -23,8 +23,8 @@ export const useEmojiStore = defineStore('emoji', () => {
       const list = await api('/api/emoji', { decode: decodeEmojiList })
       items.value = list.emoji.map(e => ({ id: e.id, name: e.name, animated: e.animated, url: e.url, ...(e.still_url ? { still_url: e.still_url } : {}) }))
       limit.value = list.limit
-    } catch (e) {
-      console.error('Failed to fetch emoji:', e)
+    } catch {
+      // The list on screen stays; the next emoji_changed or reconnect asks again.
     }
   }
 

@@ -373,6 +373,15 @@ details and the limits.
   revoke, disabled account: the user's `token_version` moves on), the device is
   no longer sent anything, checked on every send, and removed within a minute.
   At most 10 devices per account; registering and testing are rate limited.
+- **Custom emoji.** An uploaded emoji is never stored as sent: the server sniffs
+  PNG, GIF or WebP by content, refuses SVG, JPEG and animated WebP, bounds the
+  canvas (1024 px) and the pixel budget of an animation (canvas times frames)
+  before decoding, redraws every frame at most 128 x 128 and writes a new
+  PNG or GIF, so metadata, trailing bytes and polyglot payloads cannot survive
+  (256 KiB limit before and after). The images are served to signed-in members
+  from the app's own origin with their stored type, `nosniff` and a sandbox CSP.
+  Only the Owner and holders of *Manage emoji* can change them; every change is
+  in the audit log.
 - **Uploads.** File types are detected by content sniffing, not by the
   client-supplied name or MIME type. Risky types (HTML, SVG, scripts, unknown
   binaries, ...) are only ever served as downloads, never rendered inline. Media is

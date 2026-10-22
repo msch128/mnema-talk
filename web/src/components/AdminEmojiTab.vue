@@ -148,7 +148,7 @@ onMounted(() => { void store.load() })
             <button type="button" class="text-mnema-tertiary" :aria-label="$t('common.cancel')" @click="editing = null"><X class="w-4 h-4" /></button>
           </form>
           <span v-else class="font-mono text-mnema-text truncate">:{{ e.name }}:</span>
-          <span v-if="e.animated" class="text-xs text-mnema-tertiary">GIF</span>
+          <span v-if="e.animated" class="text-xs text-mnema-tertiary">{{ $t('emoji.admin.animated') }}</span>
         </div>
         <div v-if="editing !== e.id" class="flex items-center gap-3 flex-shrink-0">
           <button type="button" class="text-mnema-tertiary hover:text-mnema-accent transition" :title="$t('emoji.admin.rename')" :aria-label="$t('emoji.admin.rename')" @click="startRename(e.id, e.name)">
