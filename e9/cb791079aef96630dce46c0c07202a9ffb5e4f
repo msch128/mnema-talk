@@ -1,0 +1,47 @@
+internal/server/account_deleted_final_integration_test.go
+  s_06fcde5dbef956::t_201261966319d4 1-79
+internal/auth/account_export_data.go
+  s_06fcde5dbef956::t_597473d2d420b7 5-7,33-38,40-69,71-85,87-88
+internal/perm/store_assignments.go
+  s_06fcde5dbef956::t_712421f2b83c54 116
+internal/auth/users_admin.go
+  s_06fcde5dbef956::t_712421f2b83c54 79-81,99,102,122,145,175-177,214-216
+internal/auth/account_export.go
+  s_06fcde5dbef956::t_56788fdceb0026 217,226,236-240,242-243,249,258,260-261,263,268-294
+  s_06fcde5dbef956::t_9f30016102c515 295
+internal/auth/account_export_integration_test.go
+  s_06fcde5dbef956::t_1e090533aebb37 19,204,219-222
+  s_06fcde5dbef956::t_02a4215fa9449a 1-18,20-203,205-218,223-269
+api/openapi.json
+  s_06fcde5dbef956::t_8c7523db137aa6 20768,20805-20813
+  s_06fcde5dbef956::t_3840df5956dd1f 20814
+internal/auth/active.go
+  s_06fcde5dbef956::t_712421f2b83c54 22
+internal/auth/account_export_build.go
+  s_06fcde5dbef956::t_597473d2d420b7 9,18-22,29-30,34-51,66-68,71-87,91,99,111-114,118,120,123,126,142,145,148-153,155
+  s_06fcde5dbef956::t_86592a8e57e291 23-24,27-28,31
+  s_06fcde5dbef956::t_2ce3276b46b938 32-33
+SECURITY.md
+  s_06fcde5dbef956::t_8c7523db137aa6 238-241,243-251
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_712421f2b83c54 5,10-11,127-138
+  s_06fcde5dbef956::t_7d4441e47d9453 139
+internal/db/migrations/0043_account_privacy.sql
+  s_06fcde5dbef956::t_5fdc4b52a0acb0 23-25,53-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e9cb791079aef96630dce46c0c07202a9ffb5e4f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
