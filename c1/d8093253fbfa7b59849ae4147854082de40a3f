@@ -1,0 +1,202 @@
+api/openapi.json
+  s_06fcde5dbef956::t_8a0b6d4619b66d 2494-2541,17747-17858
+  s_06fcde5dbef956::t_46d1bc3555d390 17859-17863
+web/src/composables/useDraftSlot.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-49
+web/src/lib/markdown/types.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-30
+web/src/lib/markdown/plain.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-77
+web/src/components/SidebarChannelRow.vue
+  s_06fcde5dbef956::t_8a0b6d4619b66d 11-12,40,55-56,136
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1529-1558
+web/src/components/markdownBody.css
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1,9-171
+  s_06fcde5dbef956::t_d5657405d549e9 2-8
+web/src/lib/markdown/rules.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-93
+web/src/lib/native/nativeRoutes.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 204-205
+doc/operations.md
+  s_06fcde5dbef956::t_8a0b6d4619b66d 80
+web/src/components/EditHistoryDialog.test.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-89
+doc/moderation.md
+  s_06fcde5dbef956::t_8a0b6d4619b66d 103-132
+web/src/components/ThreadSidebar.test.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 480-492
+web/src/components/SidebarNotifications.test.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 6-7,9,50-67
+  s_06fcde5dbef956::t_fb35e390b5fbc5 68-70
+web/src/lib/markdown/rules.test.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-86
+web/src/lib/markdown.ts
+  s_06fcde5dbef956::t_967374d6aa844a 42
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-30,45-50,52-62
+web/src/components/ChatArea.vue
+  s_06fcde5dbef956::t_8a0b6d4619b66d 20-21,60-62
+web/src/stores/authRaces.test.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 7,289-323
+  s_06fcde5dbef956::t_37e66944581bc9 324
+.env.example
+  s_06fcde5dbef956::t_8a0b6d4619b66d 149-151
+internal/chat/handler.go
+  s_06fcde5dbef956::t_8a0b6d4619b66d 36-37,79-83
+internal/config/config_env.go
+  s_06fcde5dbef956::t_8a0b6d4619b66d 119
+web/src/components/MarkdownContent.vue
+  s_06fcde5dbef956::t_8a0b6d4619b66d 6,23-27,56,58,60-67,72,76-89,115,127
+  s_06fcde5dbef956::t_0f513dad7257b5 45
+web/src/lib/pureHelperEdges.test.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 58,60-61
+internal/server/account_delete_integration_test.go
+  s_06fcde5dbef956::t_8a0b6d4619b66d 72-75,166-168
+internal/server/account_export_integration_test.go
+  s_06fcde5dbef956::t_8a0b6d4619b66d 78,80-86,135,140-142
+web/src/components/ChatComposer.vue
+  s_06fcde5dbef956::t_8a0b6d4619b66d 3,9,22,126
+  s_06fcde5dbef956::t_fd31336a57ba69 127
+web/src/components/ReplyComposerBar.vue
+  s_06fcde5dbef956::t_8a0b6d4619b66d 7
+internal/server/router_build.go
+  s_06fcde5dbef956::t_8a0b6d4619b66d 115-119
+internal/db/migrations/0047_message_edit_history.sql
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-19
+README.md
+  s_06fcde5dbef956::t_8a0b6d4619b66d 44
+web/src/lib/editHistory.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-22
+internal/chat/edit_history.go
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-157
+web/src/components/ChatAreaDrafts.test.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-77
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_8a0b6d4619b66d 172,306-326,374-379,1740-1749
+web/src/components/MarkdownHelp.vue
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-97
+web/src/composables/useMessageMenu.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 9,11,90-98,129
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_8a0b6d4619b66d 172,306-326,374-379,1740-1749
+web/src/lib/markdownActions.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-40
+web/src/lib/replies.test.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 57-58
+web/src/stores/auth/session.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 4,52,72
+web/src/test-setup.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 3-4,32-34
+web/src/components/ThreadComposer.vue
+  s_06fcde5dbef956::t_8a0b6d4619b66d 3,17
+doc/upgrade.md
+  s_06fcde5dbef956::t_8a0b6d4619b66d 162-168,300-310
+web/src/lib/markdown/link.test.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-47
+web/src/lib/markdown/mentions.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-63
+doc/architecture.md
+  s_06fcde5dbef956::t_8a0b6d4619b66d 390
+internal/auth/account_export_edits.go
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-37
+internal/chat/message_mutations.go
+  s_06fcde5dbef956::t_8a0b6d4619b66d 38-40
+web/src/lib/markdown/security.test.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-217
+THIRD_PARTY_NOTICES.md
+  s_06fcde5dbef956::t_8a0b6d4619b66d 34,60
+web/src/components/MarkdownContent.actions.test.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-112
+web/src/stores/auth/credentials.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 4,39,107,142-143,174
+web/src/lib/markdown/render.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-133
+web/src/lib/drafts.test.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-92
+web/src/composables/useDraftSlot.test.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-108
+web/src/composables/useMessageModerationMenu.test.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 13,110-134
+  s_06fcde5dbef956::t_88f334c388cf68 135
+web/src/lib/drafts.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-133
+web/src/lib/markdown/parity.test.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-232
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_8a0b6d4619b66d 26-27,38
+internal/server/edit_history_integration_test.go
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-216
+internal/config/config.go
+  s_06fcde5dbef956::t_8a0b6d4619b66d 38-41
+web/src/stores/emoji.ts
+  s_06fcde5dbef956::t_11aab7646c58df 5,22
+  s_06fcde5dbef956::t_7f914373dde85c 23
+web/src/lib/chatLogic.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 3,25-26,28
+docker-compose.yml
+  s_06fcde5dbef956::t_8a0b6d4619b66d 80-81
+web/src/lib/replies.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 2,15-17,20
+web/src/lib/customEmoji.ts
+  s_06fcde5dbef956::t_11aab7646c58df 5-6,65-71,73-87
+  s_06fcde5dbef956::t_b0b8d7695f2196 17
+web/vite.config.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 43
+e2e/tests/drafts.spec.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-74
+web/package.json
+  s_06fcde5dbef956::t_8a0b6d4619b66d 32
+web/src/components/EditHistoryDialog.vue
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-72
+web/src/stores/auth.test.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 6,176-192
+  s_06fcde5dbef956::t_ec6f2742f87639 193-194
+web/src/lib/markdown/highlight.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-93
+web/src/lib/customEmoji.test.ts
+  s_06fcde5dbef956::t_11aab7646c58df 1-2,4,30-33,36,42-43,48-49,52-53,58-60
+internal/auth/account_export_edits_integration_test.go
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-37
+web/src/lib/markdown/escape.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-8
+internal/auth/account_export_build.go
+  s_06fcde5dbef956::t_8a0b6d4619b66d 57,135
+SECURITY.md
+  s_06fcde5dbef956::t_8a0b6d4619b66d 235-236,350-363,709-717
+web/src/lib/markdown/blocks.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-207
+internal/config/config_test.go
+  s_06fcde5dbef956::t_8a0b6d4619b66d 153
+web/src/components/MarkdownHelp.test.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-58
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_8a0b6d4619b66d 20-21,57-59
+internal/config/config_validate.go
+  s_06fcde5dbef956::t_8a0b6d4619b66d 105-107
+web/src/lib/markdown/inline.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-290
+web/src/App.vue
+  s_06fcde5dbef956::t_8a0b6d4619b66d 39,354
+web/src/lib/thirdParty.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 23
+web/src/lib/markdown/link.ts
+  s_06fcde5dbef956::t_8a0b6d4619b66d 1-46
+web/package-lock.json
+  s_06fcde5dbef956::t_93080030164fc5 21,2614-2622
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c1d8093253fbfa7b59849ae4147854082de40a3f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
