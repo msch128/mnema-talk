@@ -30,7 +30,9 @@ export default defineConfig({
   projects: [
     { name: 'chromium', testIgnore: /mobile\.spec\.ts/, use: { browserName: 'chromium' } },
     // Phone layout under device emulation (touch, small screen, safe areas).
-    { name: 'mobile-chromium', testMatch: /mobile\.spec\.ts/, use: { ...devices['Pixel 7'], locale: 'de-DE' } },
-    { name: 'mobile-webkit', testMatch: /mobile\.spec\.ts/, use: { ...devices['iPhone 15'], locale: 'de-DE', launchOptions: {} } },
+    // No service worker: its requests bypass the context routes that keep the
+    // welcome flow closed (see fixtures.ts).
+    { name: 'mobile-chromium', testMatch: /mobile\.spec\.ts/, use: { ...devices['Pixel 7'], serviceWorkers: 'block', locale: 'de-DE' } },
+    { name: 'mobile-webkit', testMatch: /mobile\.spec\.ts/, use: { ...devices['iPhone 15'], serviceWorkers: 'block', locale: 'de-DE', launchOptions: {} } },
   ],
 })

@@ -1,4 +1,5 @@
-import type { Page } from '@playwright/test'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import type { Cookie, Page } from '@playwright/test'
 import { apiFetch, bounds, responseString } from './helpers'
 import { test, expect } from './fixtures'
 
@@ -15,13 +16,33 @@ const TEXT_CHANNEL = `mobil-${suffix}`
 const VOICE_CHANNEL = `Mobil Talk ${suffix}`
 const MIN_TARGET = 44
 
+// The login allows 60 attempts per 15 minutes from one address and the whole
+// suite shares them. The first mobile project signs in through the dialog and
+// leaves its session here; the next one reuses it (and signs in itself if the
+// session is no longer valid) instead of spending another attempt.
+const SESSION_FILE = 'test-results/.mobile-session.json'
+
+async function savedSession(): Promise<Cookie[] | null> {
+  try {
+    return JSON.parse(await readFile(SESSION_FILE, 'utf8')) as Cookie[]
+  } catch {
+    return null
+  }
+}
+
 async function signIn(page: Page) {
+  const saved = await savedSession()
+  if (saved) await page.context().addCookies(saved)
   await page.goto('/')
   const dialog = page.getByRole('dialog')
+  await expect(dialog.or(page.getByTestId('open-nav'))).toBeVisible()
+  if (!(await dialog.isVisible())) return
   await dialog.getByLabel('Benutzername').fill(ADMIN_USER)
   await dialog.getByLabel('Passwort').fill(ADMIN_PASSWORD)
   await dialog.getByRole('button', { name: 'Anmelden' }).click()
   await expect(dialog).toBeHidden()
+  await mkdir('test-results', { recursive: true })
+  await writeFile(SESSION_FILE, JSON.stringify(await page.context().cookies()))
 }
 
 async function expectNoSidewaysScroll(page: Page) {
