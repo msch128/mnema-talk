@@ -1,0 +1,68 @@
+web/src/lib/markdown.ts
+  s_06fcde5dbef956::t_36dbf9d1d9f3e4 125,129,135
+web/src/stores/chat/notifications.ts
+  s_06fcde5dbef956::t_f20473de9c0b7c 3,31
+web/src/components/ReactionBar.vue
+  s_06fcde5dbef956::t_f20473de9c0b7c 7,9,50,52
+web/src/components/AdminDashboard.vue
+  s_06fcde5dbef956::t_c555c23dbfd900 5,20,33-34,42,57,103
+web/src/components/MentionSuggestions.vue
+  s_06fcde5dbef956::t_328225e7216155 7,30,34,53-55
+  s_06fcde5dbef956::t_a2e1bdcfeb42a9 56
+web/src/composables/useComposerAssist.ts
+  s_06fcde5dbef956::t_328225e7216155 10-11,52,57,61,73-75,85-86,88,93-96,99
+  s_06fcde5dbef956::t_d7268a4d863f3a 12,40-43,62
+  s_06fcde5dbef956::t_7e053d2da9e222 28-39,54
+web/src/components/MarkdownContent.vue
+  s_06fcde5dbef956::t_36dbf9d1d9f3e4 10-11,30,42-43,125-130
+  s_06fcde5dbef956::t_218bae8f6986f3 131
+web/src/components/EmojiButton.vue
+  s_06fcde5dbef956::t_61899d407ab683 46
+web/src/components/EmojiPicker.vue
+  s_06fcde5dbef956::t_61899d407ab683 6,9-10,15-18,20-28,50-55,57
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_c555c23dbfd900 821-822,1204-1220,1365-1368
+web/src/components/AdminEmojiTab.test.ts
+  s_06fcde5dbef956::t_11f3af9f236e57 1-106
+web/src/lib/emojiQuery.ts
+  s_06fcde5dbef956::t_0f412b460ba234 1-38
+web/src/stores/emoji.ts
+  s_06fcde5dbef956::t_3eabac69e9b989 1-50
+web/src/composables/useComposerAssist.test.ts
+  s_06fcde5dbef956::t_6432c1cec85537 9,170-182
+  s_06fcde5dbef956::t_ee34fb3f024c55 183-184
+web/src/stores/chat/messageActions.ts
+  s_06fcde5dbef956::t_b067cb21d1d127 4-5,10-14,19,36,53
+web/src/components/AdminEmojiTab.vue
+  s_06fcde5dbef956::t_05600e96a19132 1-164
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_36dbf9d1d9f3e4 3,162
+web/src/lib/mentionQuery.ts
+  s_06fcde5dbef956::t_328225e7216155 5,9-10,12-14
+web/src/lib/replies.ts
+  s_06fcde5dbef956::t_922ec27c884790 3,34
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_c555c23dbfd900 821-822,1204-1220,1365-1368
+web/src/stores/chat/socket.ts
+  s_06fcde5dbef956::t_36dbf9d1d9f3e4 4,38
+web/src/components/EmojiGlyph.vue
+  s_06fcde5dbef956::t_f20473de9c0b7c 1-32
+web/src/lib/customEmoji.test.ts
+  s_06fcde5dbef956::t_8d15da79f2f267 1-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b0e731d4e2f55ae540dbe9f0108b62a1971b324a",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
