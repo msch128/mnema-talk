@@ -42,11 +42,8 @@ import { useResizable } from './composables/useResizable'
 import { useWebRTC } from './composables/useWebRTC'
 import { useAppRouting } from './composables/useAppRouting'
 import { useAppBadge } from './composables/useAppBadge'
-<<<<<<< HEAD
 import { useCompactLayout } from './composables/useCompactLayout'
-=======
 import { usePushBridge } from './composables/usePushBridge'
->>>>>>> origin/release/1.0.0
 import { useTitleBadge } from './composables/useTitleBadge'
 import { VOICE_CHAT_HEIGHT, STAGE_MIN_HEIGHT } from './lib/voiceChatPanel'
 
