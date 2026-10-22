@@ -2,6 +2,7 @@ package perm
 
 import (
 	"errors"
+	"maps"
 	"time"
 
 	"github.com/google/uuid"
@@ -137,3 +138,22 @@ func (f *Fixture) Service() *Service {
 }
 
 var errNoDatabase = errors.New("permissions: no database")
+
+// Fork returns an independent copy of the state, for a test that swaps the
+// permissions a running component sees without touching the ones it reads.
+func (f *Fixture) Fork() *Fixture {
+	s := *f.s
+	s.roles, s.userRoles, s.owners, s.bots = maps.Clone(s.roles), maps.Clone(s.userRoles), maps.Clone(s.owners), maps.Clone(s.bots)
+	s.channelCat, s.categories = maps.Clone(s.channelCat), maps.Clone(s.categories)
+	s.timeouts, s.rulesAccepted = maps.Clone(s.timeouts), maps.Clone(s.rulesAccepted)
+	s.channelOv, s.categoryOv = cloneScopes(s.channelOv), cloneScopes(s.categoryOv)
+	return &Fixture{s: &s}
+}
+
+func cloneScopes(in map[uuid.UUID]*scope) map[uuid.UUID]*scope {
+	out := make(map[uuid.UUID]*scope, len(in))
+	for k, v := range in {
+		out[k] = &scope{roles: maps.Clone(v.roles), members: maps.Clone(v.members)}
+	}
+	return out
+}

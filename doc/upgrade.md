@@ -133,8 +133,8 @@ nothing in it is a breaking change to a public surface, and `1.x` keeps working
 for existing clients, bots, webhooks, dashboards and alerts. What changes for an
 operator is below. Update with the procedure above; take the backup first.
 
-- **Six migrations run on first start: 0038, 0039, 0040, 0041, 0043 and 0048.** All
-  are quick on any instance (0042 belongs to the installable web app).
+- **Seven migrations run on first start: 0038, 0039, 0040, 0041, 0042, 0043 and
+  0048.** All are quick on any instance.
   - 0038 drops `idx_messages_content_trgm`, a duplicate of the trigram search
     index `messages_content_trgm_idx` (both came from earlier releases), so
     message writes no longer maintain the same index twice and search is
@@ -151,6 +151,7 @@ operator is below. Update with the procedure above; take the backup first.
   - 0041 adds the tables `user_totp`, `recovery_codes`, `login_challenges`
     and `second_factor_failures` for optional two-factor sign-in. They start
     empty; nobody is asked for a code until they turn it on.
+  - 0042 belongs to Web Push and the installable web app (see below).
   - 0043 adds the nullable column `users.deleted_at`, the table `data_exports`
     and replaces the audit log's immutability trigger function with one that
     allows blanking names and details during an account deletion (and nothing
@@ -160,6 +161,8 @@ operator is below. Update with the procedure above; take the backup first.
   - The app waits for these locks like any other statement; there is nothing to
     stop or schedule. If startup is slow, check `docker compose logs app` for
     `migration applied`.
+- **Desktop client is Beta.** The Windows desktop client stays Beta at 1.0.0;
+  see [desktop-app.md](desktop-app.md).
 - **Optional e-mail, SMTP and password reset by mail.** Members may now add an
   e-mail address in Account & security (never required, never shown to other
   members or to the Owner). Setting `SMTP_HOST` (see

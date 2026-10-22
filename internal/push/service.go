@@ -156,7 +156,7 @@ func mentions(msg chat.Message, user uuid.UUID) bool {
 
 // handle works out who is told about msg and queues their pushes.
 func (s *Service) handle(ctx context.Context, msg chat.Message) {
-	cands, err := loadCandidates(ctx, s.DB, msg.ChannelID, msg.UserID)
+	cands, err := loadCandidates(ctx, s.DB, msg.ChannelID, msg.UserID, nil)
 	if err != nil || len(cands) == 0 {
 		if err != nil {
 			slog.Warn("push: load recipients", "err", err)
@@ -214,16 +214,38 @@ func sender(msg chat.Message) string {
 }
 
 // flush sends what a window held back; its targets are read again, since
-// devices may have come and gone meanwhile.
+// devices may have come and gone meanwhile. Access, mute and notification
+// level are checked again too: a member who lost the channel or muted it
+// inside the window is not told.
 func (s *Service) flush(h held) {
 	ctx, cancel := context.WithTimeout(s.ctx, sendTimeout)
 	defer cancel()
+	if !s.stillQualifies(ctx, h) {
+		metrics.PushDeliveries.With("dropped").Inc()
+		return
+	}
 	targets, err := targetsFor(ctx, s.DB, []uuid.UUID{h.user})
 	if err != nil {
 		slog.Warn("push: load subscriptions", "err", err)
 		return
 	}
 	s.enqueue(h, targets[h.user])
+}
+
+// stillQualifies repeats the message-time checks for a held push. It fails
+// closed: when the state cannot be read, nothing is sent.
+func (s *Service) stillQualifies(ctx context.Context, h held) bool {
+	cands, err := loadCandidates(ctx, s.DB, h.notice.ChannelID, uuid.Nil, &h.user)
+	if err != nil {
+		slog.Warn("push: recheck recipient", "err", err)
+		return false
+	}
+	snap, err := s.Perms.Snapshot(ctx)
+	if err != nil {
+		slog.Warn("push: permission snapshot", "err", err)
+		return false
+	}
+	return len(cands) == 1 && canView(snap, h.user, h.notice.ChannelID) && cands[0].wants(h.notice.Mention)
 }
 
 // enqueue builds the push and queues one job per device.

@@ -42,6 +42,10 @@ sessions, permissions, content and media, integrations (webhooks, bots, link
 previews), realtime and voice, and the supply chain (CI, signing, updates). It
 is an **internal review, done on 2026-10-22, not an external audit**; no
 independent audit exists yet ([doc/product-status.md](doc/product-status.md)).
+That review covered the code as it was before the later scope additions
+(e-mail/SMTP, two-factor sign-in, account deletion and export, Web Push and
+the installable app); those were reviewed per change by automated security
+review plus a final verification pass, not by the six-lane review.
 
 Result: 0 Critical, 0 High. Every Medium finding is fixed, with a test that
 fails without the fix, and the behaviour changes are listed in
