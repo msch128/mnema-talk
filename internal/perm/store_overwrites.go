@@ -2,7 +2,6 @@ package perm
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -148,6 +147,10 @@ type overwriteKey struct {
 // validateOverwrites checks the submitted list and returns the entries that
 // actually allow or deny something, by subject.
 func validateOverwrites(ctx context.Context, tx pgx.Tx, snap *Snapshot, list []Overwrite) (map[overwriteKey]overwrite, error) {
+	roles, err := memberAccountRoles(ctx, tx, list)
+	if err != nil {
+		return nil, err
+	}
 	seen := map[overwriteKey]bool{}
 	next := map[overwriteKey]overwrite{}
 	for _, o := range list {
@@ -159,7 +162,7 @@ func validateOverwrites(ctx context.Context, tx pgx.Tx, snap *Snapshot, list []O
 		if err := overwriteBitsRejected(o); err != nil {
 			return nil, err
 		}
-		if err := checkOverwriteSubject(ctx, tx, snap, o); err != nil {
+		if err := checkOverwriteSubject(snap, roles, o); err != nil {
 			return nil, err
 		}
 		if o.Allow != 0 || o.Deny != 0 {
@@ -182,21 +185,50 @@ func overwriteBitsRejected(o Overwrite) error {
 	return nil
 }
 
-// checkOverwriteSubject makes sure the role or member exists and is not the Owner.
-func checkOverwriteSubject(ctx context.Context, tx pgx.Tx, snap *Snapshot, o Overwrite) error {
+// memberAccountRoles loads the account role of every member the list names,
+// in one statement.
+func memberAccountRoles(ctx context.Context, tx pgx.Tx, list []Overwrite) (map[uuid.UUID]string, error) {
+	var ids []uuid.UUID
+	for _, o := range list {
+		if o.Type == "member" {
+			ids = append(ids, o.ID)
+		}
+	}
+	roles := map[uuid.UUID]string{}
+	if len(ids) == 0 {
+		return roles, nil
+	}
+	rows, err := tx.Query(ctx, `SELECT id, role FROM users WHERE id = ANY($1::uuid[])`, ids)
+	if err != nil {
+		return nil, fmt.Errorf("load members: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id uuid.UUID
+		var role string
+		if err := rows.Scan(&id, &role); err != nil {
+			return nil, fmt.Errorf("load members: %w", err)
+		}
+		roles[id] = role
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("load members: %w", err)
+	}
+	return roles, nil
+}
+
+// checkOverwriteSubject makes sure the role or member exists and is not the
+// Owner. accountRoles holds the account role of every member in the list.
+func checkOverwriteSubject(snap *Snapshot, accountRoles map[uuid.UUID]string, o Overwrite) error {
 	switch o.Type {
 	case "role":
 		if _, ok := snap.roles[o.ID]; !ok {
 			return httpx.ErrInvalidInput("unknown role")
 		}
 	case "member":
-		var role string
-		err := tx.QueryRow(ctx, `SELECT role FROM users WHERE id = $1`, o.ID).Scan(&role)
-		if errors.Is(err, pgx.ErrNoRows) {
+		role, ok := accountRoles[o.ID]
+		if !ok {
 			return httpx.ErrInvalidInput("unknown member")
-		}
-		if err != nil {
-			return fmt.Errorf("load member: %w", err)
 		}
 		if role == "admin" || snap.owners[o.ID] {
 			return ErrOwnerProtected
@@ -289,23 +321,33 @@ func authorizeOverwriteSubject(snap *Snapshot, actor Subject, k overwriteKey) er
 	return snap.CanModerate(actor, Subject{ID: k.id})
 }
 
-// replaceOverwrites rewrites the stored overwrites of the target with the list.
+// replaceOverwrites rewrites the stored overwrites of the target with the list:
+// one statement clears the old ones, one inserts every non-empty new one.
 func replaceOverwrites(ctx context.Context, tx pgx.Tx, col string, id uuid.UUID, list []Overwrite) error {
 	if _, err := tx.Exec(ctx, `DELETE FROM permission_overwrites WHERE `+col+` = $1`, id); err != nil {
 		return fmt.Errorf("clear overwrites: %w", err)
 	}
+	var subjects []uuid.UUID
+	var members []bool
+	var allow, deny []int64
 	for _, o := range list {
 		if o.Allow == 0 && o.Deny == 0 {
 			continue
 		}
-		subjectCol := "role_id"
-		if o.Type == "member" {
-			subjectCol = "user_id"
-		}
-		if _, err := tx.Exec(ctx, `INSERT INTO permission_overwrites (`+col+`, `+subjectCol+`, allow, deny) VALUES ($1, $2, $3, $4)`,
-			id, o.ID, int64(o.Allow), int64(o.Deny)); err != nil {
-			return fmt.Errorf("insert overwrite: %w", err)
-		}
+		subjects = append(subjects, o.ID)
+		members = append(members, o.Type == "member")
+		allow = append(allow, int64(o.Allow))
+		deny = append(deny, int64(o.Deny))
+	}
+	if len(subjects) == 0 {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO permission_overwrites (`+col+`, role_id, user_id, allow, deny)
+		SELECT $1, CASE WHEN NOT m THEN s END, CASE WHEN m THEN s END, a, d
+		FROM unnest($2::uuid[], $3::bool[], $4::bigint[], $5::bigint[]) AS v(s, m, a, d)`,
+		id, subjects, members, allow, deny); err != nil {
+		return fmt.Errorf("insert overwrites: %w", err)
 	}
 	return nil
 }
