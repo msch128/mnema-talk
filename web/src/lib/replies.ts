@@ -1,7 +1,5 @@
 // Helpers for reply previews (message.reply_to).
-import { t } from '../i18n'
-import { plainEmojiText } from './customEmoji'
-import { CODE_BLOCK_RE, INLINE_CODE_RE, SPOILER_RE, INLINE_FORMATS } from './markdown'
+import { markdownToPlain } from './markdown'
 import type { Message, ReplyPreview } from '../types/domain'
 
 export const REPLY_PREVIEW_LEN = 200
@@ -14,24 +12,12 @@ export function replySnippet(content: string | null | undefined, max = REPLY_PRE
 
 /**
  * Strips the markdown that renderMarkdown renders so a reply preview reads as
- * plain text: **bold**, *em*, _em_, ~~del~~, `code` and code blocks keep their
- * text, ||spoilers|| become "Spoiler", "> " quote markers are dropped. Links
- * stay. Anything renderMarkdown leaves alone (like __x__) stays as typed.
+ * plain text (the same parser, so both always agree): emphasis markers go,
+ * code and link texts stay, ||spoilers|| become "Spoiler", quote, heading and
+ * list markers are dropped.
  */
 export function stripMarkdown(content: string | null | undefined): string {
-  let text = content || ''
-  // Code first so markers inside code are kept verbatim.
-  const code: string[] = []
-  const stash = (body: string) => `\u0000${code.push(body) - 1}\u0000`
-  text = text.replace(CODE_BLOCK_RE, (_: string, body: string) => stash(body.trim()))
-  text = text.replace(INLINE_CODE_RE, (_: string, body: string) => stash(body))
-
-  text = text.replace(SPOILER_RE, () => t('chat.spoiler'))
-  for (const [re, , plain] of INLINE_FORMATS) text = text.replace(re, plain)
-  text = text.replace(/^>\s?/gm, '')
-
-  // eslint-disable-next-line no-control-regex
-  return plainEmojiText(text.replace(/\u0000(\d+)\u0000/g, (_: string, i: string) => code[Number(i)] ?? ''))
+  return markdownToPlain(content)
 }
 
 /** One-line plain-text preview; markdown stripped, newlines collapse to spaces. */

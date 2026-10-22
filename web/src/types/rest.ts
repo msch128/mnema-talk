@@ -1526,6 +1526,36 @@ export function isChatMessage(value: unknown): value is ChatMessage {
 
 export const decodeChatMessage = decoder("chat.Message", isChatMessage)
 
+export type ChatMessageEdit = {
+  content: string
+  edited_at: string
+  editor_id: string
+  id: number
+  replaced_at: string
+}
+
+export function isChatMessageEdit(value: unknown): value is ChatMessageEdit {
+  return isRecord(value)
+    && (hasOwn(value, "content") && isString(value["content"]))
+    && (hasOwn(value, "edited_at") && isTimestamp(value["edited_at"]))
+    && (hasOwn(value, "editor_id") && isIdentifier(value["editor_id"]))
+    && (hasOwn(value, "id") && isInteger(value["id"]))
+    && (hasOwn(value, "replaced_at") && isTimestamp(value["replaced_at"]))
+}
+
+export const decodeChatMessageEdit = decoder("chat.MessageEdit", isChatMessageEdit)
+
+export type ChatMessageEditHistory = {
+  edits: Array<ChatMessageEdit>
+}
+
+export function isChatMessageEditHistory(value: unknown): value is ChatMessageEditHistory {
+  return isRecord(value)
+    && (hasOwn(value, "edits") && isArrayOf(value["edits"], item => isChatMessageEdit(item)))
+}
+
+export const decodeChatMessageEditHistory = decoder("chat.MessageEditHistory", isChatMessageEditHistory)
+
 export type ChatNotificationSettings = {
   categories: Array<ChatCategoryNotifySetting>
   channels: Array<ChatChannelNotifySetting>

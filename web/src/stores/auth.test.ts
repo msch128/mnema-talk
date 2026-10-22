@@ -3,6 +3,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from './auth'
 import { locale, setLocale } from '../i18n'
 import { userFixture } from '../test-fixtures.fixture'
+import { DRAFT_KEY_PREFIX, clearAllDrafts, hasDraft, setDraft } from '../lib/drafts'
 import type { User } from '../types/domain'
 
 function respond(body: unknown, status = 200): Promise<Response> {
@@ -170,5 +171,24 @@ describe('runtime account input validation', () => {
     expect(locale.value).toBe('de')
     expect(auth.user.locale).toBe('de')
     expect(fetch).not.toHaveBeenCalled()
+  })
+})
+
+describe('unsent drafts', () => {
+  it('leave this browser on sign-out and on local reset', async () => {
+    localStorage.clear()
+    clearAllDrafts()
+    stubFetch(userFixture({ id: 'me' }))
+    const auth = useAuthStore()
+    auth.user = userFixture({ id: 'me' })
+    setDraft('me', 'c:c1', { text: 'unsent', reply: null })
+    await auth.logout()
+    expect(hasDraft('me', 'c:c1')).toBe(false)
+    expect(localStorage.getItem(`${DRAFT_KEY_PREFIX}me`)).toBeNull()
+
+    auth.user = userFixture({ id: 'me' })
+    setDraft('me', 'c:c1', { text: 'unsent', reply: null })
+    auth.resetLocalSession()
+    expect(localStorage.getItem(`${DRAFT_KEY_PREFIX}me`)).toBeNull()
   })
 })

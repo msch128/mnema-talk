@@ -3,8 +3,10 @@ import { createPinia, setActivePinia } from 'pinia'
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { useChatStore } from '../stores/chat'
+import { useAuthStore } from '../stores/auth'
+import { channelDraftKey, clearAllDrafts, setDraft } from '../lib/drafts'
 import { usePermissionsStore } from '../stores/permissions'
-import { channelFixture, readStateFixture } from '../test-fixtures.fixture'
+import { channelFixture, readStateFixture, userFixture } from '../test-fixtures.fixture'
 import SidebarCategoryHeader from './SidebarCategoryHeader.vue'
 import SidebarChannelRow from './SidebarChannelRow.vue'
 import SidebarServerMenu from './SidebarServerMenu.vue'
@@ -42,6 +44,27 @@ describe('muted channel row', () => {
     await nextTick()
     expect(row.find('[data-testid="channel-muted"]').exists()).toBe(false)
     expect(row.find('[data-testid="channel-unread"]').text()).toBe('4')
+  })
+})
+
+describe('channel row draft marker', () => {
+  it('marks a channel with an unsent message, except the one being read', async () => {
+    localStorage.clear()
+    clearAllDrafts()
+    const auth = useAuthStore()
+    auth.user = userFixture({ id: 'me' })
+    const channel = channelFixture({ id: 'c1', name: 'general' })
+    const row = mount(SidebarChannelRow, { props: { channel } })
+    expect(row.find('[data-testid="channel-draft"]').exists()).toBe(false)
+
+    setDraft('me', channelDraftKey('c1'), { text: 'later', reply: null })
+    await nextTick()
+    expect(row.find('[data-testid="channel-draft"]').text()).toBe('Entwurf')
+
+    useChatStore().activeChannel = channel
+    await nextTick()
+    expect(row.find('[data-testid="channel-draft"]').exists()).toBe(false)
+    clearAllDrafts()
   })
 })
 

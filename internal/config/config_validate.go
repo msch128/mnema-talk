@@ -102,6 +102,9 @@ func (c *Config) validateLimits() error {
 	if c.AuditRetentionDays < 0 {
 		return fmt.Errorf("AUDIT_RETENTION_DAYS must be 0 (keep forever) or a positive number of days")
 	}
+	if c.EditHistoryRetentionDays < 0 {
+		return fmt.Errorf("EDIT_HISTORY_RETENTION_DAYS must be 0 (keep up to 50 versions per message) or a positive number of days")
+	}
 	if c.MediaRetentionDays < 0 {
 		return fmt.Errorf("MEDIA_RETENTION_DAYS must be 0 (disabled) or a positive number of days")
 	}

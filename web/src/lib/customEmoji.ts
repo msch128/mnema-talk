@@ -2,6 +2,8 @@
 // or deleting an emoji never breaks old text, it only changes what is drawn.
 // Members type :name:, which is turned into the token when the message is sent.
 
+import { registerTextRule } from './markdown/rules'
+
 export interface CustomEmoji {
   id: string
   name: string
@@ -12,9 +14,8 @@ export interface CustomEmoji {
 
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 const NAME = '[a-z0-9_]{2,32}'
-// The token as written in the message, and as it looks after HTML escaping.
+// The token as written in the message.
 const TOKEN = new RegExp(`<:(${NAME}):(${UUID})>`, 'g')
-const ESCAPED_TOKEN = new RegExp(`&lt;:(${NAME}):(${UUID})&gt;`, 'g')
 const WHOLE_TOKEN = new RegExp(`^<:(${NAME}):(${UUID})>$`)
 const SHORTCODE = new RegExp(`(?<![A-Za-z0-9_:<]):(${NAME}):(?![A-Za-z0-9_])`, 'g')
 // Code is shown as typed, so nothing inside it is converted.
@@ -49,10 +50,6 @@ export function encodeShortcodes(text: string, byName: ReadonlyMap<string, Custo
     })).join('')
 }
 
-function attr(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
-}
-
 export interface EmojiImage {
   src: string
   alt: string
@@ -65,17 +62,26 @@ export function emojiImage(emoji: CustomEmoji, reducedMotion: boolean): EmojiIma
 
 export type EmojiLookup = (id: string) => CustomEmoji | undefined
 
-/**
- * Draws the tokens of already HTML-escaped text as small images; a token whose
- * emoji is gone (or not loaded yet) shows as :name:. Only fixed markup with the
- * server's own image address is produced.
- */
-export function renderEmojiTokens(escapedHtml: string, lookup: EmojiLookup, reducedMotion: boolean): string {
-  if (!escapedHtml.includes('&lt;:')) return escapedHtml
-  return escapedHtml.replace(ESCAPED_TOKEN, (_all: string, name: string, id: string) => {
-    const emoji = lookup(id)
-    if (!emoji) return `:${name}:`
-    const img = emojiImage(emoji, reducedMotion)
-    return `<img class="md-emoji" src="${attr(img.src)}" alt="${img.alt}" title="${img.alt}" draggable="false" loading="lazy" decoding="async">`
-  })
+let lookup: EmojiLookup = () => undefined
+let reducedMotion = (): boolean => false
+
+/** Where the markdown rule finds emoji by id, and whether motion is unwelcome (set by the emoji store). */
+export function setEmojiSource(find: EmojiLookup, reduced: () => boolean) {
+  lookup = find
+  reducedMotion = reduced
 }
+
+// Custom emoji tokens in message text: an image, or :name: when the emoji is
+// gone or not loaded yet. Previews (replies, notifications) show :name:.
+registerTextRule({
+  re: TOKEN,
+  build(m) {
+    const [, name = '', id = ''] = m
+    const emoji = lookup(id)
+    if (!emoji) return [{ t: 'text', v: `:${name}:` }]
+    const img = emojiImage(emoji, reducedMotion())
+    return [{ t: 'el', tag: 'img', attrs: { class: 'md-emoji', src: img.src, alt: img.alt, title: img.alt, draggable: 'false', loading: 'lazy' }, c: [] }]
+  },
+  plain: m => `:${m[1] ?? ''}:`,
+  inLinks: true
+})

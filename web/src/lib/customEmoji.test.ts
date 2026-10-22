@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest'
-import { emojiImage, emojiToken, encodeShortcodes, parseEmojiToken, plainEmojiText, renderEmojiTokens, type CustomEmoji } from './customEmoji'
+import { afterEach, beforeEach, describe, it, expect } from 'vitest'
+import { emojiImage, emojiToken, encodeShortcodes, parseEmojiToken, plainEmojiText, setEmojiSource, type CustomEmoji } from './customEmoji'
 import { findEmojiQuery, suggestEmoji, applyEmoji } from './emojiQuery'
-import { renderMarkdown } from './markdown'
+import { markdownToPlain, renderMarkdown } from './markdown'
 
 const ID = '11111111-2222-4333-8444-555555555555'
 const parrot: CustomEmoji = { id: ID, name: 'party_parrot', animated: true, url: '/api/emoji/x/image?v=1', still_url: '/api/emoji/x/still?v=1' }
@@ -27,32 +27,37 @@ describe('custom emoji tokens', () => {
 })
 
 describe('drawing custom emoji', () => {
-  const escaped = `a &lt;:party_parrot:${ID}&gt; b`
+  const text = `a <:party_parrot:${ID}> b`
+  let reduced = false
+  beforeEach(() => setEmojiSource(lookup, () => reduced))
+  afterEach(() => { reduced = false; setEmojiSource(() => undefined, () => false) })
 
   it('draws a known emoji as an image with its name as alt text', () => {
-    const html = renderEmojiTokens(escaped, lookup, false)
+    const html = renderMarkdown(text)
     expect(html).toContain('<img class="md-emoji" src="/api/emoji/x/image?v=1" alt=":party_parrot:"')
     expect(html).toContain('loading="lazy"')
   })
 
   it('shows the still frame when reduced motion is preferred', () => {
-    expect(renderEmojiTokens(escaped, lookup, true)).toContain('/api/emoji/x/still?v=1')
+    reduced = true
+    expect(renderMarkdown(text)).toContain('/api/emoji/x/still?v=1')
     expect(emojiImage({ id: ID, name: 'flat', animated: false, url: parrot.url }, true).src).toBe(parrot.url)
   })
 
   it('degrades a deleted emoji to :name: text', () => {
-    expect(renderEmojiTokens(escaped, () => undefined, false)).toBe('a :party_parrot: b')
+    setEmojiSource(() => undefined, () => false)
+    expect(renderMarkdown(text)).toContain('a :party_parrot: b')
   })
 
-  it('plugs into the markdown renderer without letting raw HTML through', () => {
-    const html = renderMarkdown(`<img src=x onerror=alert(1)> <:party_parrot:${ID}>`, { emoji: h => renderEmojiTokens(h, lookup, false) })
+  it('never lets raw HTML through next to an emoji', () => {
+    const html = renderMarkdown(`<img src=x onerror=alert(1)> <:party_parrot:${ID}>`)
     expect(html).toContain('&lt;img src=x')
     expect(html.match(/<img /g)).toHaveLength(1)
   })
 
-  it('does not draw an emoji inside code', () => {
-    const html = renderMarkdown('`<:party_parrot:' + ID + '>`', { emoji: h => renderEmojiTokens(h, lookup, false) })
-    expect(html).not.toContain('<img')
+  it('does not draw an emoji inside code, and shows :name: in previews', () => {
+    expect(renderMarkdown('`<:party_parrot:' + ID + '>`')).not.toContain('<img')
+    expect(markdownToPlain(`hi ${text}`)).toBe('hi a :party_parrot: b')
   })
 })
 

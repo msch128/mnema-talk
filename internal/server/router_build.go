@@ -112,7 +112,11 @@ func (c *components) newCore() {
 		go c.authH.RunExportSweep(c.ctx, 0)
 	}
 	go chat.RunSlowModePrune(c.ctx, d.DB, time.Hour)
-	c.chatH = &chat.Handler{DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog}
+	c.chatH = &chat.Handler{
+		DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog,
+		EditHistoryLimit: httpx.NewRateLimiter(chat.EditHistoryRate, time.Minute).Named("edit_history"),
+	}
+	go chat.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour)
 	c.rolesH = &roles.Handler{Perms: c.permSvc, Events: c.pub}
 	c.onboardH = onboarding.NewHandler(d.DB, c.permSvc)
 	if d.Store != nil {

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '../lib/api'
 import { decodeEmojiEmoji, decodeEmojiList } from '../types/rest'
+import { setEmojiSource } from '../lib/customEmoji'
 import type { CustomEmoji } from '../lib/customEmoji'
 
 /** True when the member asked the system for less motion. */
@@ -17,6 +18,8 @@ export const useEmojiStore = defineStore('emoji', () => {
   const limit = ref(0)
   const byId = computed(() => new Map(items.value.map(e => [e.id, e])))
   const byName = computed(() => new Map(items.value.map(e => [e.name, e])))
+
+  setEmojiSource(id => byId.value.get(id), prefersReducedMotion)
 
   async function load() {
     try {

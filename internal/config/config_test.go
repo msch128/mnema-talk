@@ -150,6 +150,7 @@ func TestValidation(t *testing.T) {
 		"negative retention":       {"DATABASE_URL": "x", "MEDIA_RETENTION_DAYS": "-1"},
 		"negative audit retention": {"DATABASE_URL": "x", "AUDIT_RETENTION_DAYS": "-1"},
 		"bad audit retention":      {"DATABASE_URL": "x", "AUDIT_RETENTION_DAYS": "forever"},
+		"negative edit history":    {"DATABASE_URL": "x", "EDIT_HISTORY_RETENTION_DAYS": "-1"},
 		"non-numeric int":          {"DATABASE_URL": "x", "SESSION_EXPIRY_HOURS": "soon"},
 		"bad proxy cidr":           {"DATABASE_URL": "x", "TRUSTED_PROXY_CIDRS": "10.0.0.0/99"},
 		"bad bool":                 {"DATABASE_URL": "x", "LINK_PREVIEWS_ENABLED": "yes please"},
