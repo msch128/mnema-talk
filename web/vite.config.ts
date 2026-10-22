@@ -40,6 +40,7 @@ const SHIPPED_LICENSES = {
   'swagger-ui/LICENSE': 'swagger-ui-dist/LICENSE',
   'swagger-ui/NOTICE': 'swagger-ui-dist/NOTICE',
   'swagger-ui/bundled-components.txt': 'swagger-ui-dist/swagger-ui-es-bundle.js.LICENSE.txt',
+  'highlight.js/LICENSE': 'highlight.js/LICENSE',
   'emoji-picker-element/LICENSE': 'emoji-picker-element/LICENSE',
   'emoji-picker-element-data/LICENSE': 'emoji-picker-element-data/LICENSE'
 }

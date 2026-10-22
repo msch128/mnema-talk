@@ -387,7 +387,7 @@ it is paid once per page load or reconnect, not per message.
   [system](../web/src/components/AdminSystemTab.vue)),
   [`UpdateBanner.vue`](../web/src/components/UpdateBanner.vue).
 - **Libraries** (`lib/`): pure, unit-tested logic such as
-  [`api.ts`](../web/src/lib/api.ts) (fetch wrapper), [`markdown.ts`](../web/src/lib/markdown.ts),
+  [`api.ts`](../web/src/lib/api.ts) (fetch wrapper), [`markdown.ts`](../web/src/lib/markdown.ts) (Discord-style Markdown: parser, renderer and the `registerTextRule` extension point in [`markdown/`](../web/src/lib/markdown)),
   [`channelLayout.ts`](../web/src/lib/channelLayout.ts),
   [`voiceSession.ts`](../web/src/lib/voiceSession.ts) (rejoin within 30 s),
   [`noiseSuppressor.ts`](../web/src/lib/noiseSuppressor.ts),

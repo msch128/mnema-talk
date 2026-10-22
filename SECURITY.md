@@ -346,6 +346,20 @@ details and the limits.
   cannot send data to a third party. Dropping it (a hash for the picker's style
   text plus a patched or replaced picker, with a browser test that fails on any
   CSP violation) is planned after 1.0.
+- **Message rendering.** Markdown is parsed into a tree of plain nodes
+  (`web/src/lib/markdown/`) and only one module turns that tree into HTML: every
+  string is escaped, tags come from a fixed table, and generated elements (mention
+  pills, future custom emoji) pass an attribute allowlist with a pattern per
+  attribute (an image source must be a same-origin path). Links are limited to
+  `http`, `https` and `mailto`; a link whose text does not name its destination
+  asks before it opens, however it is activated. Code is highlighted by
+  highlight.js in its core build with a fixed language list and no
+  auto-detection; its HTML output is re-tokenised and only
+  `<span class="hljs-…">` pairs survive (anything else, or unbalanced markup,
+  falls back to the escaped code), and large blocks are not highlighted.
+  Parsing is a hand-written scanner with bounded nesting and a size limit, with
+  tests for hostile input; there is no regular-expression backtracking on user
+  text. The only `v-html` sink is `MarkdownContent`.
 - **Installable app and service worker.** The web app ships a manifest and a
   small service worker (`/sw.js`, same origin, so it fits the CSP unchanged:
   `script-src 'self'`, `worker-src 'self'`). It keeps the app shell (the page

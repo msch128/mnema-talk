@@ -1,6 +1,6 @@
 // Pure helpers behind the chat store and message rendering, kept free of
 // Vue/Pinia so they can be unit tested directly.
-import { CODE_BLOCK_RE, INLINE_CODE_RE, SPOILER_RE, URL_RE } from './markdown'
+import { previewLinks } from './markdown'
 import type { Message, User, NotifyLevel } from '../types/domain'
 
 export function escapeRegExp(text: string): string {
@@ -22,17 +22,10 @@ export function shouldNotify({ permission, level = 'all', isMention = false, hid
   return hidden || !isCurrentChannel
 }
 
-// URLs worth a preview card: the links renderMarkdown makes, except those
-// inside code or spoilers.
+// URLs worth a preview card: the links renderMarkdown shows as links, except
+// those inside code or spoilers and <autolinks> that opt out of previews.
 export function extractPreviewUrls(content: string | null | undefined, max = 3): string[] {
-  if (!content) return []
-  const plain = content
-    .replace(CODE_BLOCK_RE, ' ')
-    .replace(INLINE_CODE_RE, ' ')
-    .replace(SPOILER_RE, ' ')
-  const matches = plain.match(URL_RE)
-  if (!matches) return []
-  return [...new Set(matches)].slice(0, max)
+  return [...new Set(previewLinks(content))].slice(0, max)
 }
 
 type UnreadMessage = Pick<Message, 'id' | 'created_at' | 'user_id'>
