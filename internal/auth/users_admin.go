@@ -156,6 +156,7 @@ func (h *Handler) mountUserAdmin(r chi.Router) {
 	r.With(RequireOwner).Post("/users/{id}/password", httpx.Handle(h.setUserPassword))
 	r.With(RequireOwner).Post("/users/{id}/password-reset", httpx.Handle(h.resetUserPassword))
 	r.With(RequireOwner).Post("/users/{id}/login-lockout/clear", httpx.Handle(h.clearUserLockout))
+	r.With(RequireOwner).Post("/users/{id}/two-factor/reset", httpx.Handle(h.resetUserTwoFactor))
 	r.With(RequirePerm(h.Perms, perm.DisconnectMembers)).Post("/users/{id}/kick", httpx.Handle(h.kickUser))
 	h.mountModeration(r)
 }

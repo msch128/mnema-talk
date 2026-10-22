@@ -58,6 +58,7 @@ var Routes = []Route{
 	{Method: "PUT", Pattern: "/users/{id}/status", Action: "user.status", TargetType: "user", IDParam: "id", Snapshot: ResUser},
 	{Method: "POST", Pattern: "/users/{id}/password", Action: "user.password_set", TargetType: "user", IDParam: "id", Snapshot: ResUser},
 	{Method: "POST", Pattern: "/users/{id}/password-reset", Action: "user.password_reset", TargetType: "user", IDParam: "id", Snapshot: ResUser},
+	{Method: "POST", Pattern: "/users/{id}/two-factor/reset", Action: "user.two_factor_reset", TargetType: "user", IDParam: "id", Snapshot: ResUser},
 	{Method: "POST", Pattern: "/users/{id}/login-lockout/clear", Action: "user.lockout_clear", TargetType: "user", IDParam: "id", Snapshot: ResUser},
 	{Method: "POST", Pattern: "/users/{id}/kick", Action: "user.talk_kick", TargetType: "user", IDParam: "id", Snapshot: ResUser},
 	{Method: "POST", Pattern: "/users/{id}/timeout", Action: "moderation.timeout", TargetType: "user", IDParam: "id", Snapshot: ResUser},

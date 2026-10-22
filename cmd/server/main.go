@@ -36,6 +36,9 @@ func run() error {
 	if len(os.Args) > 1 && os.Args[1] == "unlock" {
 		return unlockCommand(ctx, os.Args[2:], os.Stdout)
 	}
+	if len(os.Args) > 1 && os.Args[1] == "reset-2fa" {
+		return reset2faCommand(ctx, os.Args[2:], os.Stdout)
+	}
 	return runWithContext(ctx)
 }
 

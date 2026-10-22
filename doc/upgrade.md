@@ -133,8 +133,8 @@ nothing in it is a breaking change to a public surface, and `1.x` keeps working
 for existing clients, bots, webhooks, dashboards and alerts. What changes for an
 operator is below. Update with the procedure above; take the backup first.
 
-- **Three migrations run on first start: 0038, 0039 and 0040.** All are quick
-  on any instance.
+- **Four migrations run on first start: 0038, 0039, 0040 and 0041.** All are
+  quick on any instance.
   - 0038 drops `idx_messages_content_trgm`, a duplicate of the trigram search
     index `messages_content_trgm_idx` (both came from earlier releases), so
     message writes no longer maintain the same index twice and search is
@@ -148,6 +148,9 @@ operator is below. Update with the procedure above; take the backup first.
     (with a partial unique index on confirmed addresses) and the table
     `account_tokens` for single-use e-mail links. Adding nullable columns
     rewrites no rows. No account has an address afterwards.
+  - 0041 adds the tables `user_totp`, `recovery_codes`, `login_challenges`
+    and `second_factor_failures` for optional two-factor sign-in. They start
+    empty; nobody is asked for a code until they turn it on.
   - The app waits for these locks like any other statement; there is nothing to
     stop or schedule. If startup is slow, check `docker compose logs app` for
     `migration applied`.
@@ -163,6 +166,14 @@ operator is below. Update with the procedure above; take the backup first.
   also works for the Owner account if the Owner confirmed an address. Put
   `SMTP_PASSWORD` in the environment or mount a file and name it in
   `SMTP_PASSWORD_FILE`; `SMTP_TLS=none` is refused in production.
+- **Two-factor sign-in (optional).** Every member may turn on TOTP in Account
+  & security; the Owner is advised to. A client that does not know the new
+  second step (an old browser tab, a script) gets `202` with a challenge instead
+  of a session for such an account and cannot sign in; the shipped web app and
+  desktop clients handle it. Stored authenticator secrets are encrypted with a
+  key derived from `JWT_SECRET`: rotating it requires resetting two-factor for
+  the accounts that use it (Admin > Users, or `mnema-talk reset-2fa <username>`
+  for the Owner). See [operations.md](operations.md).
 - **Weak custom invite codes stop working.** Custom invite codes typed by an
   admin that fall below the new minimum (12 or more characters, 7 or more
   distinct, letters and digits below 16 characters, no common word with little

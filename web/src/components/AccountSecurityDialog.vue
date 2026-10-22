@@ -6,6 +6,7 @@ import { caughtErrorMessage } from '../lib/api'
 import { t } from '../i18n'
 import { useAccountStore } from '../stores/account'
 import AccountEmail from './AccountEmail.vue'
+import AccountTwoFactor from './AccountTwoFactor.vue'
 import BaseDialog from './BaseDialog.vue'
 
 const account = useAccountStore()
@@ -26,6 +27,7 @@ onMounted(async () => {
       <div v-if="loadError" role="alert" class="rounded border border-mnema-danger/30 bg-mnema-danger/10 p-2 text-sm text-mnema-danger">{{ loadError }}</div>
       <p v-else-if="!account.info" role="status" class="text-sm text-mnema-tertiary">{{ $t('security.loading') }}</p>
       <template v-else>
+        <AccountTwoFactor />
         <AccountEmail />
       </template>
     </div>

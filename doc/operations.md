@@ -591,6 +591,21 @@ not start (e.g. the UDP range is in use).
 
 ## Troubleshooting
 
+### The Owner lost the authenticator and the recovery codes
+
+Whoever can run commands on the host can turn two-factor sign-in off for the
+account (it asks for nothing more, because that person can already read the
+database), end its sessions and leave an audit entry:
+
+```
+docker exec mnema-talk /usr/local/bin/mnema-talk reset-2fa Herzog
+```
+
+Other members' second factor is reset by
+the Owner in Admin > Users. Rotating `JWT_SECRET` also makes every stored
+authenticator secret unreadable: each affected account has to be reset and
+enrol again, so rotate it only with that in mind.
+
 ### The Owner cannot sign in: "too many requests"
 
 Repeated wrong passwords lock a client address (1, 5, then 30 minutes). Many

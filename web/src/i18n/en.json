@@ -103,7 +103,11 @@
       "slowMode": "Slow mode: wait {seconds} s before posting again",
       "linkInvalid": "This link is invalid or has expired.",
       "emailInvalid": "Enter a valid e-mail address.",
-      "emailInUse": "Another account has already confirmed this address."
+      "emailInUse": "Another account has already confirmed this address.",
+      "codeWrong": "That code did not work. Codes expire after 30 seconds and work once.",
+      "codeCapped": "Too many wrong codes today. Use one of your recovery codes.",
+      "twoFactorOn": "Two-factor sign-in is already on.",
+      "twoFactorOff": "Two-factor sign-in is not on."
     },
     "field": {
       "content": "Message",
@@ -1102,7 +1106,12 @@
       "test": "Send test mail",
       "sent": "Test mail sent.",
       "tooOften": "Too many test mails. Try again in a few minutes."
-    }
+    },
+    "resetTwoFactor": "Reset two-factor sign-in",
+    "resetTwoFactorTitle": "Reset two-factor sign-in for {name}?",
+    "resetTwoFactorBody": "Turns two-factor sign-in off, deletes the authenticator secret and the recovery codes, and signs the member out everywhere. Use it when they lost both the authenticator and the recovery codes. They can turn it on again afterwards.",
+    "resetTwoFactorConfirm": "Reset",
+    "twoFactorReset": "Two-factor sign-in reset."
   },
   "profile": {
     "addedBy": "Added by {name}",
@@ -1835,6 +1844,37 @@
       "savedConfirm": "Address saved. Check your inbox to confirm it.",
       "removed": "Address removed."
     },
-    "loading": "Loading …"
+    "loading": "Loading …",
+    "twoFactor": {
+      "title": "Two-factor sign-in",
+      "intro": "After your password, sign-in asks for a six-digit code from an authenticator app. A stolen password alone is then not enough.",
+      "recommendOwner": "You are the Owner: this account can do everything. Turning on two-factor sign-in is strongly recommended.",
+      "on": "On",
+      "offState": "Off",
+      "remaining": "{count} recovery codes left",
+      "low": "Only a few recovery codes are left. Make new ones before you run out.",
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "newCodes": "New recovery codes",
+      "continue": "Continue",
+      "confirm": "Turn on",
+      "scan": "Scan this code with an authenticator app (for example your phone's password manager or Aegis, Google Authenticator, Authy), then enter the six digits it shows.",
+      "qrLabel": "QR code for the authenticator app",
+      "manual": "Or type this key into the app by hand:",
+      "code": "Code",
+      "proof": "Enter your password and a current code from the app, or one unused recovery code.",
+      "codesIntro": "These ten recovery codes each work once, in place of an app code, if you lose your phone. They are shown only now. Store them somewhere safe, away from your password manager entry if you can.",
+      "copied": "Recovery codes copied",
+      "download": "Download",
+      "fileHeader": "Mnema Talk recovery codes. Each works once.",
+      "saved": "I have stored these codes safely.",
+      "done": "Done",
+      "off": "Two-factor sign-in is off.",
+      "loginIntro": "Enter the six-digit code from your authenticator app, or a recovery code.",
+      "verify": "Verify",
+      "back": "Back",
+      "notice": "{count} wrong codes were entered for your account since you last signed in.",
+      "noticeHint": "Somebody may know your password. Change it under Account & security and check your recovery codes."
+    }
   }
 }

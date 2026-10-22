@@ -82,10 +82,24 @@ export async function showWelcomeFlow(context: BrowserContext): Promise<void> {
   await context.unroute(ONBOARDING_STATE)
 }
 
+// The server tells clients apart by address (and trusts the loopback proxy's
+// X-Forwarded-For), and its sign-in budget of 60 per 15 minutes is per address.
+// The whole suite runs from one address, so it sits right at that budget and
+// every new sign-in pushes later specs over it. Each browser context therefore
+// presents its own (from the benchmarking range, never routed) client address, like
+// the separate people it stands for. Production limits are untouched.
+let nextClient = 1
+
+function clientAddress(): string {
+  const n = nextClient++
+  return `198.18.${Math.floor(n / 250) % 250}.${(n % 250) + 1}`
+}
+
 function counted(browser: Browser): Browser {
   const newContext = browser.newContext.bind(browser)
   browser.newContext = async (...args: Parameters<Browser['newContext']>) => {
-    const context = await newContext(...args)
+    const options = args[0] ?? {}
+    const context = await newContext({ ...options, extraHTTPHeaders: { 'X-Forwarded-For': clientAddress(), ...(options.extraHTTPHeaders ?? {}) } })
     countApiRequests(context)
     await hideWelcomeFlow(context)
     return context

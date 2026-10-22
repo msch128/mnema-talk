@@ -30,6 +30,7 @@
     "emoji-picker-element": "^1.29.1",
     "emoji-picker-element-data": "^1.8.0",
     "pinia": "^4.1.0",
+    "qrcode-generator": "2.0.4",
     "swagger-ui-dist": "^5.33.2",
     "ts-mls": "1.6.4",
     "vue": "^3.5.44"

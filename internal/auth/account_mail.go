@@ -68,6 +68,7 @@ func (h *Handler) mountAccount(r chi.Router) {
 	r.Put("/users/me/email", httpx.Handle(h.setEmail))
 	r.Post("/users/me/email/remove", httpx.Handle(h.removeEmailHandler))
 	r.Post("/users/me/email/resend", httpx.Handle(h.resendVerification))
+	h.mountTwoFactor(r)
 }
 
 // mailEnabled reports whether account e-mails can be sent.

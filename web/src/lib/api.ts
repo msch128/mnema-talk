@@ -16,6 +16,11 @@ const DETAILS: Readonly<Record<string, string>> = {
   'invite code usage limit reached': 'inviteUsedUp',
   'username is already taken': 'usernameTaken',
   'current password is incorrect': 'wrongPassword',
+  'invalid or expired code': 'codeWrong',
+  'the code is incorrect': 'codeWrong',
+  'too many wrong codes today: use a recovery code': 'codeCapped',
+  'two-factor sign-in is already on': 'twoFactorOn',
+  'two-factor sign-in is not on': 'twoFactorOff',
   'this link is invalid or has expired': 'linkInvalid',
   'enter a valid e-mail address': 'emailInvalid',
   'this e-mail address is already confirmed for another account': 'emailInUse'

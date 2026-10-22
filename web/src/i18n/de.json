@@ -103,7 +103,11 @@
       "slowMode": "Langsammodus: bitte warte noch {seconds} s",
       "linkInvalid": "Dieser Link ist ungültig oder abgelaufen.",
       "emailInvalid": "Gib eine gültige E-Mail-Adresse ein.",
-      "emailInUse": "Ein anderes Konto hat diese Adresse bereits bestätigt."
+      "emailInUse": "Ein anderes Konto hat diese Adresse bereits bestätigt.",
+      "codeWrong": "Dieser Code hat nicht funktioniert. Codes laufen nach 30 Sekunden ab und gelten einmal.",
+      "codeCapped": "Heute zu viele falsche Codes. Nimm einen deiner Recovery-Codes.",
+      "twoFactorOn": "Die Zwei-Faktor-Anmeldung ist schon eingeschaltet.",
+      "twoFactorOff": "Die Zwei-Faktor-Anmeldung ist nicht eingeschaltet."
     },
     "field": {
       "content": "Nachricht",
@@ -1102,7 +1106,12 @@
       "test": "Testmail senden",
       "sent": "Testmail gesendet.",
       "tooOften": "Zu viele Testmails. Versuche es in ein paar Minuten erneut."
-    }
+    },
+    "resetTwoFactor": "Zwei-Faktor-Anmeldung zurücksetzen",
+    "resetTwoFactorTitle": "Zwei-Faktor-Anmeldung von {name} zurücksetzen?",
+    "resetTwoFactorBody": "Schaltet die Zwei-Faktor-Anmeldung aus, löscht das Authenticator-Geheimnis und die Recovery-Codes und meldet das Mitglied überall ab. Gedacht für den Fall, dass beides verloren ist. Danach kann es sie neu einschalten.",
+    "resetTwoFactorConfirm": "Zurücksetzen",
+    "twoFactorReset": "Zwei-Faktor-Anmeldung zurückgesetzt."
   },
   "profile": {
     "addedBy": "Hinzugefügt von {name}",
@@ -1835,6 +1844,37 @@
       "savedConfirm": "Adresse gespeichert. Bestätige sie über den Link in deinem Postfach.",
       "removed": "Adresse entfernt."
     },
-    "loading": "Lädt …"
+    "loading": "Lädt …",
+    "twoFactor": {
+      "title": "Zwei-Faktor-Anmeldung",
+      "intro": "Nach dem Passwort fragt die Anmeldung einen sechsstelligen Code aus einer Authenticator-App ab. Ein gestohlenes Passwort allein reicht dann nicht.",
+      "recommendOwner": "Du bist der Owner: Dieses Konto darf alles. Die Zwei-Faktor-Anmeldung wird dringend empfohlen.",
+      "on": "An",
+      "offState": "Aus",
+      "remaining": "Noch {count} Recovery-Codes",
+      "low": "Es sind nur noch wenige Recovery-Codes übrig. Erzeuge neue, bevor sie ausgehen.",
+      "turnOn": "Einschalten",
+      "turnOff": "Ausschalten",
+      "newCodes": "Neue Recovery-Codes",
+      "continue": "Weiter",
+      "confirm": "Einschalten",
+      "scan": "Scanne diesen Code mit einer Authenticator-App (zum Beispiel dem Passwortmanager deines Handys, Aegis, Google Authenticator oder Authy) und gib die sechs Ziffern ein, die sie anzeigt.",
+      "qrLabel": "QR-Code für die Authenticator-App",
+      "manual": "Oder tippe diesen Schlüssel von Hand in die App:",
+      "code": "Code",
+      "proof": "Gib dein Passwort und einen aktuellen Code aus der App ein, oder einen unbenutzten Recovery-Code.",
+      "codesIntro": "Diese zehn Recovery-Codes gelten je einmal anstelle eines App-Codes, falls du dein Handy verlierst. Sie werden nur jetzt angezeigt. Bewahre sie sicher auf, wenn möglich getrennt vom Eintrag deines Passwortmanagers.",
+      "copied": "Recovery-Codes kopiert",
+      "download": "Herunterladen",
+      "fileHeader": "Mnema-Talk-Recovery-Codes. Jeder gilt einmal.",
+      "saved": "Ich habe die Codes sicher aufbewahrt.",
+      "done": "Fertig",
+      "off": "Die Zwei-Faktor-Anmeldung ist ausgeschaltet.",
+      "loginIntro": "Gib den sechsstelligen Code deiner Authenticator-App ein, oder einen Recovery-Code.",
+      "verify": "Bestätigen",
+      "back": "Zurück",
+      "notice": "Seit deiner letzten Anmeldung wurden {count} falsche Codes für dein Konto eingegeben.",
+      "noticeHint": "Möglicherweise kennt jemand dein Passwort. Ändere es unter Konto & Sicherheit und prüfe deine Recovery-Codes."
+    }
   }
 }

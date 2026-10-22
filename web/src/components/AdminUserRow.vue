@@ -2,7 +2,7 @@
 import type { PropType } from 'vue'
 import type { AdminUser } from '../types/domain'
 import type { VoiceSnapshot } from '../types/events'
-import { KeyRound, UserX, UserCheck, PhoneOff, LogOut, Volume2, Shield, LockOpen } from '@lucide/vue'
+import { KeyRound, UserX, UserCheck, PhoneOff, LogOut, Volume2, Shield, ShieldOff, LockOpen } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { usePermissionsStore } from '../stores/permissions'
@@ -17,7 +17,7 @@ import { roleColorCss } from '../lib/permissions'
 const props = defineProps({
   user: { type: Object as PropType<AdminUser>, required: true }
 })
-const emit = defineEmits<{ kick: []; 'clear-lockout': []; roles: []; 'toggle-disable': []; 'reset-login': []; 'revoke-sessions': [] }>()
+const emit = defineEmits<{ kick: []; 'clear-lockout': []; roles: []; 'toggle-disable': []; 'reset-login': []; 'reset-two-factor': []; 'revoke-sessions': [] }>()
 
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
@@ -220,6 +220,19 @@ function roles() {
             @click="emit('reset-login')"
           >
             <KeyRound class="w-4 h-4" />
+          </button>
+
+          <!-- Reset two-factor sign-in: Owner only, for a member who lost the authenticator and the recovery codes -->
+          <button
+            v-if="permissions.isOwner"
+            data-testid="action-reset-two-factor"
+            type="button"
+            class="p-1.5 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition"
+            :title="$t('admin.resetTwoFactor')"
+            :aria-label="$t('admin.resetTwoFactor')"
+            @click="emit('reset-two-factor')"
+          >
+            <ShieldOff class="w-4 h-4" />
           </button>
 
           <!-- Revoke Sessions -->

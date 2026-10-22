@@ -179,6 +179,44 @@ details and the limits.
   login lockouts; it signs nobody in. Mail delivery failures never reach the
   client. The Owner's "send test mail" is Owner-only, limited to five per ten
   minutes and audited without recipient.
+- **Two-factor sign-in (TOTP).** Optional for every account; the Owner's
+  settings recommend it prominently. RFC 6238 (HMAC-SHA1, 6 digits, 30 seconds,
+  one step of clock skew either way), enrolled with a QR code drawn in the
+  browser (no image service sees the secret) and confirmed with a first code;
+  turning it on returns ten single-use recovery codes, once. The secret is
+  stored encrypted (AES-256-GCM, key derived from `JWT_SECRET`, bound to the
+  account); recovery codes are stored as keyed HMACs (59-bit codes, so a
+  database copy alone cannot be searched for them). Rotating `JWT_SECRET`
+  therefore makes stored secrets unreadable: those accounts need a reset
+  (below). Sign-in: a correct password for such an account answers `202` with a
+  challenge instead of a session (nothing about the account is revealed before
+  the password is right). The challenge is 256 random bits (only its hash is
+  stored), lives five minutes, is bound to the account and to its token version
+  at that moment (a password change, "log out everywhere" or a disable in
+  between kills it), is spent by a successful sign-in and takes five code
+  attempts in total, counted atomically. An authenticator code works once (the
+  newest accepted step is stored, so a replay of the same or an older code is
+  refused); a recovery code works once. Wrong, expired, replayed, used and
+  unknown all answer the same `401`. The known-device cookie and the session are
+  only issued after the second step. Brute force: attempts of one account are
+  serialised, so parallel requests cannot all pass the lockout check; ten wrong
+  codes lock the account's second step (escalating, at most 15 minutes); and,
+  persisted in the database so a restart does not reset it, 20 wrong
+  authenticator codes in any 24 hours refuse authenticator codes for the
+  account until the oldest ages out (429), while recovery codes keep working
+  (they have their own, much higher budget of 100 wrong guesses a day). Someone
+  who knows the password can therefore guess at most about 20 six-digit codes a
+  day (about 0.01 % chance), and cannot lock the owner out: a recovery code or
+  an Owner reset still gets in. Five or more wrong codes not yet reported make
+  the next successful sign-in show a one-time security notice, raise one audit
+  entry (`auth.two_factor_alert`, no code) and send one e-mail to a confirmed
+  address when the server can send mail. Turning it off or making new recovery
+  codes needs the password and a current code; setting up needs the password.
+  The Owner can reset a member's second factor (`user.two_factor_reset`, ends
+  their sessions); the Owner's own is reset from the host with
+  `mnema-talk reset-2fa <username>`. Resetting a password by mail does not skip
+  the second factor, and a native sign-in has the same second step
+  (`POST /auth/login/2fa`) before any grant is issued.
 - **WebSocket flood limits.** Every client event has a payload cap (1 KiB for
   ping, typing, speaking and the like; larger only for an SDP answer, an ICE
   candidate, a diagnostic and a media handshake), and a frame too big for its
