@@ -1,0 +1,41 @@
+internal/push/handler.go
+  s_06fcde5dbef956::t_91a036fd670610 23-24,191-193,204-211
+  s_06fcde5dbef956::t_23cf2ba114de8d 212-213
+internal/server/push_integration_test.go
+  s_06fcde5dbef956::t_5a6bcb1d539595 365
+  s_06fcde5dbef956::t_9308549beeda79 334-364,366-373
+internal/push/service_integration_test.go
+  s_06fcde5dbef956::t_5731c180fad47e 246-251,253-299
+  s_06fcde5dbef956::t_e36c132258cd43 252
+internal/push/service.go
+  s_06fcde5dbef956::t_91a036fd670610 136,299-307
+  s_06fcde5dbef956::t_840b810e259fa3 308-309
+internal/push/store.go
+  s_06fcde5dbef956::t_91a036fd670610 55-56,59-78,98-99,102-103,105,121-123,153-155
+internal/server/router_build.go
+  s_06fcde5dbef956::t_91a036fd670610 184
+internal/push/recipients.go
+  s_06fcde5dbef956::t_91a036fd670610 39
+internal/db/migrations/0042_web_push.sql
+  s_06fcde5dbef956::t_91a036fd670610 31-39
+SECURITY.md
+  s_06fcde5dbef956::t_022d261e3323b2 267-272
+doc/operations.md
+  s_06fcde5dbef956::t_4ea38289f7962b 261-264
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "118dd3206cfdaa77e354b87cf0c10c058c7fbe15",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
