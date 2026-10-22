@@ -1,0 +1,83 @@
+web/src/components/MessageRow.vue
+  s_06fcde5dbef956::t_e46c40e52ea509 53,62
+  s_06fcde5dbef956::t_34b583e2b48425 72,94,105,115
+  s_06fcde5dbef956::t_9421d284f5f2e5 136
+web/src/components/ChatComposer.vue
+  s_06fcde5dbef956::t_e46c40e52ea509 50,63,98,131
+web/src/components/UserBar.vue
+  s_06fcde5dbef956::t_22510465fb39f1 50
+web/src/components/UserProfileModal.vue
+  s_06fcde5dbef956::t_e5fdb091a7e194 121
+  s_06fcde5dbef956::t_2ac7013e089932 117,128
+e2e/playwright.config.ts
+  s_06fcde5dbef956::t_17f846e98341fc 1,30-35
+e2e/run.sh
+  s_06fcde5dbef956::t_0764c05dd3db61 6,83
+web/src/components/SidebarChannelRow.vue
+  s_06fcde5dbef956::t_9421d284f5f2e5 165
+  s_06fcde5dbef956::t_6ef6bd0761202f 65,176
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_9421d284f5f2e5 161
+web/src/components/BaseDialog.vue
+  s_06fcde5dbef956::t_2ac7013e089932 43,68
+web/src/components/TalkHeader.vue
+  s_06fcde5dbef956::t_e46c40e52ea509 10,30,32
+web/src/components/AccountMenu.vue
+  s_06fcde5dbef956::t_306fbdea90a082 17,46-47,50-51
+web/src/components/TipBar.vue
+  s_06fcde5dbef956::t_34b583e2b48425 12
+web/src/composables/useCompactLayout.test.ts
+  s_06fcde5dbef956::t_8423f688a3dff9 1-71
+web/index.html
+  s_06fcde5dbef956::t_eb182f6b087a4e 5
+web/src/composables/useCompactLayout.ts
+  s_06fcde5dbef956::t_0dbe3a1cea8fbe 1-51
+web/src/components/TalkControlBar.vue
+  s_06fcde5dbef956::t_97a68872ed87cd 121-122
+web/src/App.vue
+  s_06fcde5dbef956::t_badc35ea52de77 39,71-80,211-225,229,262-263,266,272-273,276
+web/src/components/ChatHeader.vue
+  s_06fcde5dbef956::t_e46c40e52ea509 11,43,49,53,57,69,76,85,99,109
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_9421d284f5f2e5 161
+doc/product-status.md
+  s_06fcde5dbef956::t_da25635f09ea7e 25
+e2e/tests/mobile.spec.ts
+  s_06fcde5dbef956::t_6af38a6acccd93 1-32,34-84,87-117,122-125
+  s_06fcde5dbef956::t_090a9782cf80aa 33,118-121
+  s_06fcde5dbef956::t_9963b6f47a61c2 85-86
+web/src/components/NavDrawerButton.vue
+  s_06fcde5dbef956::t_e46c40e52ea509 1-19
+doc/development.md
+  s_06fcde5dbef956::t_da25635f09ea7e 67-69
+web/src/components/talkButtons.ts
+  s_06fcde5dbef956::t_e46c40e52ea509 6,14
+web/src/components/MemberList.vue
+  s_06fcde5dbef956::t_e46c40e52ea509 28,31-39
+  s_06fcde5dbef956::t_9421d284f5f2e5 3
+web/src/style.css
+  s_06fcde5dbef956::t_33459fedf835b0 157-163
+  s_06fcde5dbef956::t_2ac7013e089932 166-172
+  s_06fcde5dbef956::t_c7f5a7e5149b9d 145-156,164-165,173-202
+web/src/components/SidebarCategoryHeader.vue
+  s_06fcde5dbef956::t_6ef6bd0761202f 36,55
+  s_06fcde5dbef956::t_9421d284f5f2e5 86
+web/src/components/Sidebar.vue
+  s_06fcde5dbef956::t_3fefcfdf9a51a3 30,198-199,201-202
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ffc5421d96ecf6ee839c4347b0e4c2b9681f1a32",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
