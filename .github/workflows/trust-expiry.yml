@@ -1,0 +1,33 @@
+name: Trust statement expiry
+
+# The desktop clients accept new bundles and app updates only while the signed
+# trust statement in desktop-trust/ is valid. It is renewed by hand with the
+# offline root key, so nothing else would notice it running out. This run
+# fails while fewer than 60 days remain (or once it is expired, or if the
+# signature does not verify); a failed scheduled run is the alert. Renewal:
+# doc/operations.md, "Renewing the desktop trust statement". Keys are never
+# involved: only the committed statement and the committed root public key.
+on:
+  schedule:
+    - cron: "41 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  expiry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Statement is valid for at least 60 more days
+        run: go run ./cmd/webbundle trust verify -min-valid-days 60
