@@ -41,5 +41,5 @@ export function useUnreadDivider() {
     return true
   }
 
-  return { dividerBeforeId, dividerLabel, markAllRead }
+  return { dividerSince, dividerBeforeId, dividerLabel, markAllRead }
 }

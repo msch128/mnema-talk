@@ -2,7 +2,7 @@
 import type { Message } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
 import { ref, computed, nextTick, watch, onMounted } from 'vue'
-import { Hash, ArrowDown, Loader2, Volume2 } from '@lucide/vue'
+import { Hash, ArrowDown, ArrowUp, Loader2, Volume2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import ChatHeader from './ChatHeader.vue'
@@ -16,6 +16,7 @@ import { useMessageActions } from '../composables/useMessageActions'
 import { useMessageMenu } from '../composables/useMessageMenu'
 import { useMessageScroll } from '../composables/useMessageScroll'
 import { useUnreadDivider } from '../composables/useUnreadDivider'
+import { useFirstUnreadJump } from '../composables/useFirstUnreadJump'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
 import { useEscapeMarksRead } from '../composables/useComposerKeys'
 import { continuationIds } from '../lib/messageGrouping'
@@ -67,7 +68,8 @@ const {
   showUnreadPill, highlightedId, messageRows, scrollToBottom, scrollToBottomNow,
   handleScroll, resetUnreadPill
 } = useMessageScroll(messageContainer)
-const { dividerBeforeId, dividerLabel, markAllRead } = useUnreadDivider()
+const { dividerSince, dividerBeforeId, dividerLabel, markAllRead } = useUnreadDivider()
+const { showJumpToUnread, jumpToFirstUnread } = useFirstUnreadJump({ container: messageContainer, since: dividerSince, dividerBeforeId })
 
 // ---- Typing indicator ----
 
@@ -257,6 +259,7 @@ const groupedIds = computed(() => {
       <div
         v-if="dividerBeforeId === msg.id"
         role="separator"
+        data-unread-divider
         class="flex items-center gap-3 px-4 mt-4 mb-1 select-none"
       >
         <span class="flex-1 h-px bg-mnema-accent/40"></span>
@@ -291,6 +294,18 @@ const groupedIds = computed(() => {
       />
       </template>
     </div>
+
+    <!-- The "new since" divider is above the viewport -->
+    <button
+      v-if="showJumpToUnread"
+      type="button"
+      data-testid="jump-to-unread"
+      class="absolute left-1/2 -translate-x-1/2 top-2 h-8 px-4 flex items-center gap-1.5 rounded-full bg-mnema-band text-mnema-mint text-sm font-semibold shadow-lg hover:brightness-110 transition z-20"
+      @click="jumpToFirstUnread"
+    >
+      <ArrowUp class="w-4 h-4" />
+      {{ $t('chat.jumpToFirstUnread') }}
+    </button>
 
     <!-- Viewing older history: the window doesn't reach the newest messages -->
     <button
