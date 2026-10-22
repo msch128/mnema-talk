@@ -1,0 +1,51 @@
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_b69bb0dc5bffc1 1217
+web/src/components/AdminEmojiTab.vue
+  s_06fcde5dbef956::t_b69bb0dc5bffc1 151
+THIRD_PARTY_NOTICES.md
+  s_06fcde5dbef956::t_30241ff8d7cedc 126
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_30241ff8d7cedc 132
+web/src/lib/native/nativeRoutes.ts
+  s_06fcde5dbef956::t_97c0cdf25324eb 193-195
+.env.example
+  s_06fcde5dbef956::t_30241ff8d7cedc 99-100
+web/src/components/EmojiPicker.test.ts
+  s_06fcde5dbef956::t_7ef11b0b41fa16 5,51-59
+  s_06fcde5dbef956::t_b69bb0dc5bffc1 4,25
+  s_06fcde5dbef956::t_4b7f58447898cc 60-61
+doc/desktop-trusted-client.md
+  s_06fcde5dbef956::t_30241ff8d7cedc 616-618
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_b69bb0dc5bffc1 1217
+web/src/stores/emoji.ts
+  s_06fcde5dbef956::t_b69bb0dc5bffc1 26-27
+SECURITY.md
+  s_06fcde5dbef956::t_30241ff8d7cedc 376-384
+docker-compose.yml
+  s_06fcde5dbef956::t_30241ff8d7cedc 57
+web/src/components/AdminPermissionsUi.test.ts
+  s_06fcde5dbef956::t_b69bb0dc5bffc1 117
+web/src/components/AdminRolesTab.test.ts
+  s_06fcde5dbef956::t_b69bb0dc5bffc1 62
+doc/operations.md
+  s_06fcde5dbef956::t_30241ff8d7cedc 78
+doc/upgrade.md
+  s_06fcde5dbef956::t_30241ff8d7cedc 259-268
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4d99bef01ca48bcb657299bb34b206b8fd479f21",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
