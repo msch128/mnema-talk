@@ -86,6 +86,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # Tags and history: make openapi-diff compares with the latest v* tag
+          # and reads the commit messages of the change.
+          fetch-depth: 0
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         id: go
@@ -122,6 +125,13 @@ jobs:
 
       - name: OpenAPI description is up to date
         run: make openapi-check
+
+      # Fails on breaking changes of the REST contract since the latest release
+      # tag (doc/api-stability.md); a BREAKING CHANGE: commit footer waives it.
+      - name: OpenAPI has no breaking changes
+        env:
+          OPENAPI_DIFF_RANGE: ${{ github.event_name == 'pull_request' && format('{0}..{1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || format('{0}..{1}', github.event.before, github.sha) }}
+        run: make openapi-diff
 
       - name: Unit tests
         run: go test -race -count=1 ./...

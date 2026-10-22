@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
@@ -12,7 +13,7 @@ import (
 // screen share consists of (empty once it ends), so viewers can label their
 // quality choices.
 func (h *Hub) announceScreenLayers(roomID, sharer uuid.UUID, layers []sfu.Layer) {
-	h.sendToVoiceRoom(roomID, "screen_layers", screenLayersPayload(roomID, sharer, layers))
+	h.sendToVoiceRoom(roomID, events.ScreenLayers, screenLayersPayload(roomID, sharer, layers))
 }
 
 func screenLayersPayload(roomID, sharer uuid.UUID, layers []sfu.Layer) map[string]any {
@@ -25,7 +26,7 @@ func screenLayersPayload(roomID, sharer uuid.UUID, layers []sfu.Layer) map[strin
 // announceScreenQuality tells a viewer which layer of sharer's screen share it
 // receives (layer -1 while none yet) and whether the server chooses it.
 func (h *Hub) announceScreenQuality(roomID, viewer, sharer uuid.UUID, st sfu.QualityState) {
-	h.sendToVoiceUser(roomID, viewer, "screen_quality", map[string]any{
+	h.sendToVoiceUser(roomID, viewer, events.ScreenQuality, map[string]any{
 		"channel_id": roomID, "user_id": sharer, "layer": st.Layer, "auto": st.Auto,
 	})
 }
@@ -35,7 +36,7 @@ func (h *Hub) announceLayersWanted(roomID, sharer uuid.UUID, layers []int) {
 	if layers == nil {
 		layers = []int{}
 	}
-	h.sendToVoiceUser(roomID, sharer, "screen_layers_wanted", map[string]any{"channel_id": roomID, "layers": layers})
+	h.sendToVoiceUser(roomID, sharer, events.ScreenLayersWanted, map[string]any{"channel_id": roomID, "layers": layers})
 }
 
 // sendToVoiceUser sends to the connections of userID that are in chID's room.

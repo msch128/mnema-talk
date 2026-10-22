@@ -123,10 +123,10 @@ never retried.
 
 Releases are automated with [release-please](https://github.com/googleapis/release-please)
 (`.github/workflows/release.yml`) and driven by conventional commits
-(`feat:` = minor, `fix:` = patch, `feat!:` / `BREAKING CHANGE:` = major). Until
-1.0.0 the project stays on `0.x`: `feat:` and `fix:` bump the patch version and
-breaking changes bump the minor version. 1.0.0 is released deliberately with a
-`Release-As: 1.0.0` commit footer.
+(`feat:` = minor, `fix:` = patch, `feat!:` / `BREAKING CHANGE:` = major). From
+1.0.0 on, the public API listed in [api-stability.md](api-stability.md) only
+breaks in a major release: `make openapi-diff` fails a change that breaks
+`api/openapi.json` unless a commit carries a `BREAKING CHANGE:` footer.
 
 1. After CI passes on a push to `main`, release-please opens or updates a
    **release PR** that bumps `version.txt` and `CHANGELOG.md`. Only the CI run

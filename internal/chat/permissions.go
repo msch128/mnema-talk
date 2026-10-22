@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -334,7 +335,7 @@ func checkChannelMove(snap *perm.Snapshot, sub perm.Subject, c ChannelPlacement)
 // is refetched, the permission state is untouched.
 func (h *Handler) channelsChanged() {
 	h.Perms.Invalidate() // new categories and the like must be known
-	h.Events.Broadcast("channels_changed", nil)
+	h.Events.Broadcast(events.ChannelsChanged, nil)
 }
 
 // structureChanged is channelsChanged for changes that can alter who sees what
@@ -342,5 +343,5 @@ func (h *Handler) channelsChanged() {
 // permission state is rebuilt and live connections are re-checked.
 func (h *Handler) structureChanged() {
 	h.Perms.Changed(nil)
-	h.Events.Broadcast("channels_changed", nil)
+	h.Events.Broadcast(events.ChannelsChanged, nil)
 }

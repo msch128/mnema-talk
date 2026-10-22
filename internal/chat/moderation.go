@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -131,7 +132,7 @@ func (h *Handler) setPinned(w http.ResponseWriter, r *http.Request, pinned bool)
 		Action: action, TargetType: "message", TargetID: msgID.String(), ChannelID: &chID,
 		Details: map[string]any{"channel_id": chID, "author_id": msg.UserID, "author_name": msg.Username, "content": audit.Content(msg.Content)},
 	})
-	h.Events.BroadcastChannel(chID, "message_update", msg)
+	h.Events.BroadcastChannel(chID, events.MessageUpdate, msg)
 	httpx.WriteJSON(w, http.StatusOK, msg)
 	return nil
 }
@@ -259,7 +260,7 @@ type bulkDeleteReport struct {
 func (h *Handler) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) {
 	chID, req := rep.chID, rep.req
 	for _, m := range rep.gone {
-		h.Events.BroadcastChannel(chID, "message_delete", map[string]any{"id": m.id, "channel_id": chID, "parent_id": m.parentID})
+		h.Events.BroadcastChannel(chID, events.MessageDelete, map[string]any{"id": m.id, "channel_id": chID, "parent_id": m.parentID})
 		d := map[string]any{
 			"channel_id": chID, "channel_name": rep.channelName, "author_id": req.UserID, "author_name": rep.targetName,
 			"content": audit.Content(m.content), "attachments": m.attachments, "sent_at": m.createdAt,
@@ -275,7 +276,7 @@ func (h *Handler) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) 
 		Details: map[string]any{"channel_id": chID, "channel_name": rep.channelName, "requested": req.Count, "deleted": len(rep.gone), "reason": rep.reason},
 	})
 	if len(rep.gone) > 0 && req.UserID != rep.actor.ID && h.Events != nil {
-		h.Events.SendToUsers([]uuid.UUID{req.UserID}, "moderation_notice", map[string]any{
+		h.Events.SendToUsers([]uuid.UUID{req.UserID}, events.ModerationNotice, map[string]any{
 			"kind": "messages_deleted", "reason": rep.reason, "channel_name": rep.channelName, "count": len(rep.gone),
 		})
 	}

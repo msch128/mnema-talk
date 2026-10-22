@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -220,7 +221,7 @@ func (h *Handler) execute(w http.ResponseWriter, r *http.Request) {
 		writeFailure(w, err)
 		return
 	}
-	h.Events.BroadcastChannel(msg.ChannelID, "message_create", msg)
+	h.Events.BroadcastChannel(msg.ChannelID, events.MessageCreate, msg)
 	if wait, err := strconv.ParseBool(r.URL.Query().Get("wait")); err == nil && wait {
 		httpx.WriteJSON(w, http.StatusOK, msg)
 		return

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -50,7 +51,7 @@ func (h *NativeHandler) registerNative(w http.ResponseWriter, request *http.Requ
 		return nativeHandlerError(err)
 	}
 	if h.accounts.Events != nil {
-		h.accounts.Events.Broadcast("member_joined", user.Public())
+		h.accounts.Events.Broadcast(events.MemberJoined, user.Public())
 	}
 	httpx.WriteJSON(w, http.StatusCreated, UserEnvelope{User: h.accounts.withRulesPending(request.Context(), user)})
 	return nil

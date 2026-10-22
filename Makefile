@@ -3,7 +3,7 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-web lint complexity-check fmt vuln openapi openapi-check check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill
+.PHONY: help dev web build run test test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-web lint complexity-check fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -14,6 +14,8 @@ GO_INTEGRATION_PKG_FLAGS := $(if $(filter undefined,$(origin TEST_DATABASE_URL))
 # Keep in sync with .github/workflows/ci.yml.
 GOVULNCHECK_VERSION ?= v1.8.0
 GOCOGNIT_VERSION ?= v1.2.0
+# Pinned oasdiff for make openapi-diff (CI runs the same target).
+OASDIFF_VERSION ?= v1.34.1
 
 OPENAPI_FILE := api/openapi.json
 
@@ -84,6 +86,7 @@ test-scripts: ## Backup/restore syntax and fault-injected lifecycle tests (Pytho
 	python3 scripts/tests/test_backup_restore.py
 	python3 scripts/tests/test_upgrade_mount_guard.py
 	python3 scripts/tests/test_coverage_summary.py
+	python3 scripts/tests/test_openapi_diff.py
 
 # Minimum total Go coverage (%, decimals allowed, compared on the exact
 # statement counts) and the floor for every single Go file; the frontend
@@ -124,6 +127,9 @@ vuln: ## govulncheck (Go vulnerability scan)
 openapi: ## Generate api/openapi.json from the handler annotations (swag v2, OpenAPI 3.1)
 	$(call openapi_gen,$(OPENAPI_FILE))
 
+openapi-diff: ## Fail on breaking changes of api/openapi.json against the latest v* tag (oasdiff; waived by a BREAKING CHANGE: commit footer)
+	OASDIFF_VERSION=$(OASDIFF_VERSION) python3 scripts/openapi_diff.py
+
 openapi-check: ## Fail when api/openapi.json is stale (regenerates into a temp file and diffs)
 	@tmp="$$(mktemp -d)" && trap 'rm -rf "$$tmp"' EXIT && \
 	$(MAKE) --no-print-directory openapi OPENAPI_FILE="$$tmp/openapi.json" && \
@@ -132,7 +138,7 @@ openapi-check: ## Fail when api/openapi.json is stale (regenerates into a temp f
 web-bundle-check: web ## Sign web/dist with a throwaway key and verify the desktop bundle (scripts/web-bundle-check.sh)
 	scripts/web-bundle-check.sh
 
-check: lint typecheck-web contracts-check openapi-check test test-scripts coverage-go vuln coverage-web web web-bundle-check ## Everything CI runs: backend and web checks, Docker build, smoke, backup, PostgreSQL upgrade and release upgrade drills
+check: lint typecheck-web contracts-check openapi-check openapi-diff test test-scripts coverage-go vuln coverage-web web web-bundle-check ## Everything CI runs: backend and web checks, Docker build, smoke, backup, PostgreSQL upgrade and release upgrade drills
 	cd web && npm audit --omit=dev --audit-level=high
 	CGO_ENABLED=0 go build ./...
 	docker build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) -t mnema-talk:ci .

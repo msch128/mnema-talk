@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -38,7 +39,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	h.auditUser(r.Context(), u, "auth.register")
-	h.Events.Broadcast("member_joined", u.Public())
+	h.Events.Broadcast(events.MemberJoined, u.Public())
 	httpx.WriteJSON(w, http.StatusCreated, UserEnvelope{User: h.withRulesPending(r.Context(), u)})
 	return nil
 }

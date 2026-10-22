@@ -12,7 +12,7 @@
     "lint": "node scripts/lint.ts",
     "check": "npm run lint && npm run contracts:check && npm run typecheck && npm run test:coverage && npm run build",
     "typecheck": "npm run typecheck:source && vue-tsc --noEmit -p tsconfig.app.json && vue-tsc --noEmit -p tsconfig.tests.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.worklet.json",
-    "contracts:check": "node scripts/generate-contracts.ts --check",
+    "contracts:check": "node scripts/generate-contracts.ts --check && node scripts/check-event-registry.ts",
     "typecheck:source": "node scripts/check-typescript.ts --e2e",
     "typecheck:app": "node scripts/check-typescript.ts && vue-tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.worklet.json",
     "test:tooling": "node --test scripts/*.test.ts",

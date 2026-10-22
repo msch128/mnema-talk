@@ -57,7 +57,7 @@ func TestVoiceJoinOverTheAllowanceIsRefusedWithAKick(t *testing.T) {
 		<-c.send
 	}
 	c.handle("voice_join", []byte(`{"channel_id":"`+ch.String()+`"}`))
-	got := events(t, c, "voice_kicked")
+	got := sentEvents(t, c, "voice_kicked")
 	if len(got) != 1 || got[0]["channel_id"] != ch.String() {
 		t.Fatalf("voice_kicked = %+v", got)
 	}

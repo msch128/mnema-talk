@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/bot"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -23,17 +24,17 @@ const (
 // event maps a hub event to its dispatch name and the intent that gates it.
 func event(eventType string) (name string, intent int64, ok bool) {
 	switch eventType {
-	case "message_create":
+	case events.MessageCreate:
 		return EventMessageCreate, bot.IntentGuildMessages, true
-	case "message_update":
+	case events.MessageUpdate:
 		return EventMessageUpdate, bot.IntentGuildMessages, true
-	case "message_delete":
+	case events.MessageDelete:
 		return EventMessageDelete, bot.IntentGuildMessages, true
-	case "message_reaction":
+	case events.MessageReaction:
 		return EventMessageReactionsUpdate, bot.IntentGuildMessageReactions, true
-	case "channels_changed":
+	case events.ChannelsChanged:
 		return EventChannelsUpdate, bot.IntentGuilds, true
-	case "member_joined":
+	case events.MemberJoined:
 		return EventGuildMemberAdd, bot.IntentGuildMembers, true
 	}
 	return "", 0, false

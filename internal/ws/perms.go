@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
@@ -128,7 +129,7 @@ func (c *Client) notifyPermissions() {
 	if wait <= 0 {
 		c.permSent = time.Now()
 		c.mu.Unlock()
-		c.SendEvent("permissions_changed", nil)
+		c.SendEvent(events.PermissionsChanged, nil)
 		return
 	}
 	if c.permPending {
@@ -142,7 +143,7 @@ func (c *Client) notifyPermissions() {
 		c.permPending = false
 		c.permSent = time.Now()
 		c.mu.Unlock()
-		c.SendEvent("permissions_changed", nil)
+		c.SendEvent(events.PermissionsChanged, nil)
 	})
 }
 

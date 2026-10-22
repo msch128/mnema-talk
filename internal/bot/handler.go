@@ -32,7 +32,7 @@ type Handler struct {
 // membersChanged makes every client reload the member list and the roles.
 func (h *Handler) membersChanged() {
 	if h.Events != nil {
-		h.Events.Broadcast("roles_changed", nil)
+		h.Events.Broadcast(events.RolesChanged, nil)
 	}
 }
 

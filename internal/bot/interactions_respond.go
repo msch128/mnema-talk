@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -172,7 +173,7 @@ func (c *Commands) respond(r *http.Request, in *interaction, m message) (*chat.M
 		return nil, err
 	}
 	if m.ephemeral {
-		c.Events.SendToUsers([]uuid.UUID{in.invoker}, "interaction_response", map[string]any{
+		c.Events.SendToUsers([]uuid.UUID{in.invoker}, events.InteractionResponse, map[string]any{
 			"channel_id": in.channel, "bot_id": in.botID, "bot_name": in.botName, "bot_avatar_url": in.avatar,
 			"content": m.content, "embeds": m.embeds, "created_at": time.Now().UTC(),
 		})
@@ -192,6 +193,6 @@ func (c *Commands) respond(r *http.Request, in *interaction, m message) (*chat.M
 	if err != nil {
 		return nil, err
 	}
-	c.Events.BroadcastChannel(msg.ChannelID, "message_create", msg)
+	c.Events.BroadcastChannel(msg.ChannelID, events.MessageCreate, msg)
 	return msg, nil
 }

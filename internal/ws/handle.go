@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/sfu"
@@ -33,51 +34,51 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 	_ = json.Unmarshal(payload, &p)
 
 	switch eventType {
-	case "ping":
-		c.SendEvent("pong", map[string]any{"t": p.T})
-	case "presence_idle":
+	case events.ClientPing:
+		c.SendEvent(events.Pong, map[string]any{"t": p.T})
+	case events.ClientPresenceIdle:
 		c.hub.setIdle(c, p.Idle)
-	case "voice_join":
+	case events.ClientVoiceJoin:
 		c.handleVoiceJoin(ctx, p.ChannelID)
-	case "voice_leave":
+	case events.ClientVoiceLeave:
 		// A leave is always honoured, but it spends from the same allowance
 		// as joins, so leave/join cycles stay bounded.
 		c.hub.voiceGate.take(c.User.ID, time.Now())
 		c.hub.leaveCurrentVoice(c)
-	case "typing":
+	case events.ClientTyping:
 		c.handleTyping(ctx, p.ChannelID)
-	case "voice_speaking":
+	case events.ClientVoiceSpeaking:
 		c.handleSpeaking(p.Active)
-	case "voice_mute_state":
+	case events.ClientVoiceMuteState:
 		var st MuteState
 		if json.Unmarshal(payload, &st) == nil {
 			c.hub.setMuteState(c, st)
 		}
-	case "webrtc_answer":
+	case events.ClientWebrtcAnswer:
 		c.handleAnswer(payload)
-	case "webrtc_candidate":
+	case events.ClientWebrtcCandidate:
 		c.handleCandidate(payload)
-	case "webrtc_diag":
+	case events.ClientWebrtcDiag:
 		c.handleDiag(payload)
-	case "webrtc_request_keyframe":
+	case events.ClientWebrtcRequestKeyframe:
 		if room := c.currentRoom(); room != nil {
 			room.DispatchKeyframe(c.User.ID)
 		}
-	case "webrtc_subscribe":
+	case events.ClientWebrtcSubscribe:
 		c.handleSubscribe(payload)
-	case "webrtc_layers":
+	case events.ClientWebrtcLayers:
 		c.handleLayers(payload)
-	case "webrtc_screenshare_start":
+	case events.ClientWebrtcScreenshareStart:
 		// The sharer's own screen needs a fresh keyframe for its viewers
 		// (DispatchKeyframe would ask for the videos the sharer watches).
 		if room := c.currentRoom(); room != nil {
 			room.RequestSourceKeyframe(c.User.ID, sfu.SourceScreen)
 		}
-	case "webrtc_screenshare_stop":
+	case events.ClientWebrtcScreenshareStop:
 		c.removeOwnSource(sfu.SourceScreen)
-	case "webrtc_camera_stop":
+	case events.ClientWebrtcCameraStop:
 		c.removeOwnSource(sfu.SourceCamera)
-	case "media_handshake":
+	case events.ClientMediaHandshake:
 		c.handleMediaHandshake(payload)
 	}
 }
@@ -104,7 +105,7 @@ func (c *Client) handleVoiceJoin(ctx context.Context, channelID uuid.UUID) {
 		// Over the join/leave allowance: refused, and the client ends
 		// the attempt on voice_kicked.
 		metrics.WSDropped.With("voice_churn").Inc()
-		c.SendEvent("voice_kicked", map[string]any{"channel_id": channelID})
+		c.SendEvent(events.VoiceKicked, map[string]any{"channel_id": channelID})
 		return
 	}
 	if ch, ok := h.voiceChannel(ctx, channelID); ok {
@@ -119,7 +120,7 @@ func (c *Client) handleTyping(ctx context.Context, channelID uuid.UUID) {
 	// Only someone who could send a message shows as typing, and only to
 	// those who can see the channel.
 	if c.canTypeInChannel(ctx, channelID) {
-		c.emitApplicationEvent("typing", map[string]any{"channel_id": channelID, "user_id": c.User.ID}, true, nil, channelID)
+		c.emitApplicationEvent(events.Typing, map[string]any{"channel_id": channelID, "user_id": c.User.ID}, true, nil, channelID)
 	}
 }
 
@@ -142,7 +143,7 @@ func (c *Client) handleSpeaking(active bool) {
 	// A muted or deafened member is never shown as speaking.
 	active = active && !c.hub.isMuted(c.User.ID, *cur)
 	if c.speakingChanged(active, time.Now()) {
-		c.emitApplicationEvent("voice_speaking", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": active}, false, cur, uuid.Nil)
+		c.emitApplicationEvent(events.VoiceSpeaking, map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": active}, false, cur, uuid.Nil)
 	}
 }
 

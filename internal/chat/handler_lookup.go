@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -63,7 +64,7 @@ func (h *Handler) toggleReaction(w http.ResponseWriter, r *http.Request) error {
 		return h.refusalFor(r, err)
 	}
 	payload := ReactionResult{MessageID: msgID, ChannelID: ref.ChannelID, Reactions: reactions}
-	h.Events.BroadcastChannel(ref.ChannelID, "message_reaction", payload)
+	h.Events.BroadcastChannel(ref.ChannelID, events.MessageReaction, payload)
 	httpx.WriteJSON(w, http.StatusOK, payload)
 	return nil
 }

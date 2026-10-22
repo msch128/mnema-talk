@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -64,7 +65,7 @@ func (h *Handler) postBanCleanup(id uuid.UUID, until *time.Time, reason string) 
 		h.Live.KickFromVoice(id)
 		time.AfterFunc(banDisconnectDelay, func() { h.Live.DisconnectUser(id) })
 	}
-	h.Events.Broadcast("user_update", map[string]any{"id": id, "disabled": true})
+	h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": true})
 }
 
 // banUser handles POST /api/admin/users/{id}/ban.
@@ -170,7 +171,7 @@ func (h *Handler) unbanUser(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast("user_update", map[string]any{"id": id, "disabled": false})
+	h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": false})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -282,7 +283,7 @@ func (h *Handler) ExpireBans(ctx context.Context) {
 			Action: "moderation.ban_expired", TargetType: "user", TargetID: id.String(), TargetName: e.name,
 		})
 		if h.Events != nil {
-			h.Events.Broadcast("user_update", map[string]any{"id": id, "disabled": false})
+			h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": false})
 		}
 	}
 }

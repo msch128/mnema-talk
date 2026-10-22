@@ -220,7 +220,7 @@ func TestFreshConnectionReceivesExistingMediaState(t *testing.T) {
 		t.Fatal(err)
 	}
 	newcomer := testClient(h, auth.User{ID: uuid.New()})
-	if got := events(t, newcomer, "webrtc_media_state"); len(got) < 1 || got[0]["user_id"] != sharer.User.ID.String() || got[0]["screen"] != true {
+	if got := sentEvents(t, newcomer, "webrtc_media_state"); len(got) < 1 || got[0]["user_id"] != sharer.User.ID.String() || got[0]["screen"] != true {
 		t.Fatalf("initial media snapshot: %+v", got)
 	}
 }
@@ -455,7 +455,7 @@ func TestServerInfoReportsRelease(t *testing.T) {
 	h := NewHub(nil, nil, nil, nil)
 	h.Version = "1.2.3"
 	c := testClient(h, auth.User{ID: uuid.New()})
-	got := events(t, c, "server_info")
+	got := sentEvents(t, c, "server_info")
 	if len(got) != 1 || got[0]["version"] != "1.2.3" {
 		t.Fatalf("server version frame=%+v", got)
 	}
