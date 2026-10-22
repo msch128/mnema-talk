@@ -187,6 +187,11 @@ function routeMetadata(path: string, request: ApiRequest): Promise<ApiReply> | n
 // clients (v0.2.x) run the signed web bundle through the trusted proxy, which
 // passes every /api path, so rules acceptance works there. Add typed onboarding
 // operations here before the native DEV client is ever shipped.
+// The same holds for the account recovery endpoints (/api/auth/options,
+// /api/auth/password-reset/*, /api/auth/email/verify, /api/users/me/account,
+// /api/users/me/email*) and the Owner's /api/admin/system/mail/test: the
+// shipped clients reach them through the trusted proxy, the native DEV client
+// answers "unavailable" and its sign-in screen offers no reset link.
 const ROUTES: readonly Route[] = [
   routeRegister, routePassword, routeAdmin, routeLogin, routeMe, routeLogout, routePersonal, routeTypedChat, routeMetadata,
 ]

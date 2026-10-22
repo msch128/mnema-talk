@@ -91,6 +91,29 @@ General rules:
 | `WEBRTC_TURN_SECRET` | empty | Shared secret with coturn (`use-auth-secret`). At least 16 characters when `WEBRTC_TURN_URLS` is set; no placeholder in production. |
 | `WEBRTC_TURN_REALM` | compose: `turn.example.com` | Read by the coturn container only, not by the app. |
 
+### Outgoing e-mail
+
+Optional. Without `SMTP_HOST` the server sends no e-mail and nothing else
+changes. With it, members can confirm an e-mail address and reset a forgotten
+password by mail; the Owner sees the setup under Admin > System and can send a
+test mail there. The settings live in the environment only, never in the
+database or its backups.
+
+| Variable | Default | Meaning and validation |
+|---|---|---|
+| `SMTP_HOST` | empty | The mail server. Empty = no mail. |
+| `SMTP_PORT` | `587` (`465` with `SMTP_TLS=tls`) | Port of the mail server. |
+| `SMTP_TLS` | `starttls` | `starttls` (upgrade is required; the server refuses to send in the clear when it is not offered), `tls` (implicit TLS) or `none` (no encryption: refused in production and together with credentials). Certificates are verified. |
+| `SMTP_USERNAME`, `SMTP_PASSWORD` | empty | Sign-in to the mail server (PLAIN, only over TLS). Set both or neither. |
+| `SMTP_PASSWORD_FILE` | empty | Reads the password from this file (first line) instead of `SMTP_PASSWORD`; mount it into the container. Setting both is an error. |
+| `SMTP_FROM` | empty | Sender address, e.g. `Mnema Talk <noreply@example.org>`. Required with `SMTP_HOST`. |
+
+Check the setup with Admin > System > "Send test mail" (Owner, at most five per
+ten minutes, audited without the recipient). A failed test names the stage
+(`connect`, `tls`, `auth`, `sender`, `recipient`, `data`); server replies and
+credentials are never shown. The links in the mails point to `PUBLIC_URL`.
+Mails are plain text, in the member's language (German or English).
+
 ### Monitoring
 
 | Variable | Default | Meaning and validation |

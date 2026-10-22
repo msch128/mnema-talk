@@ -5,6 +5,8 @@ import { useAuthStore } from './stores/auth'
 import { usePermissionsStore } from './stores/permissions'
 import { useChatStore } from './stores/chat'
 import { useVoiceStore } from './stores/voice'
+import { useAccountStore } from './stores/account'
+import { recoveryFromLocation } from './lib/recoveryLink'
 import { currentRoute, navigate, popRedirectRoute, savePendingRoute } from './lib/router'
 import Sidebar from './components/Sidebar.vue'
 import UserBar from './components/UserBar.vue'
@@ -16,6 +18,8 @@ import VoiceChatPanel from './components/VoiceChatPanel.vue'
 import MemberList from './components/MemberList.vue'
 import ThreadSidebar from './components/ThreadSidebar.vue'
 import InviteLanding from './components/InviteLanding.vue'
+import RecoveryPage from './components/RecoveryPage.vue'
+import AccountSecurityDialog from './components/AccountSecurityDialog.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 import AudioSettingsModal from './components/AudioSettingsModal.vue'
@@ -44,6 +48,11 @@ const permissions = usePermissionsStore()
 const chatStore = useChatStore()
 useTitleBadge()
 const voiceStore = useVoiceStore()
+const accountStore = useAccountStore()
+// A link from an account e-mail (confirm address, reset password) takes over the
+// page, signed in or not; the token is read here once and then removed from the URL.
+const recovery = recoveryFromLocation(window.location.pathname, window.location.hash)
+const leaveRecovery = () => window.location.assign('/')
 let alive = true
 let authRetryTimer: ReturnType<typeof setTimeout> | undefined
 let cancelAuthRetry: (() => void) | undefined
@@ -177,9 +186,11 @@ onMounted(async () => {
 
 <template>
   <div class="h-full flex overflow-hidden bg-mnema-canvas text-mnema-text">
+    <RecoveryPage v-if="recovery" :link="recovery" @done="leaveRecovery" />
+
     <!-- Session check still running: minimal loading state, no data fetching -->
     <div
-      v-if="!authChecked"
+      v-else-if="!authChecked"
       class="flex-1 flex flex-col items-center justify-center gap-3"
       role="status"
       aria-live="polite"
@@ -280,6 +291,9 @@ onMounted(async () => {
         @close="chatStore.closeUserProfile()"
         @mention="(uname) => chatStore.insertMention(uname)"
       />
+
+      <!-- Own sign-in security: e-mail address -->
+      <AccountSecurityDialog v-if="accountStore.dialogOpen" />
 
       <!-- First run and re-acceptance of changed rules -->
       <WelcomeFlow />

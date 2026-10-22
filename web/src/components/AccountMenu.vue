@@ -4,10 +4,11 @@ import type { Locale } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
 // The ⋯ menu of the user bar: profile, audio, language, admin, legal, sign out.
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
-import { User, Sliders, Languages, ShieldCheck, HelpCircle, LogOut, ChevronRight, Activity, Monitor, MonitorOff } from '@lucide/vue'
+import { User, KeyRound, Sliders, Languages, ShieldCheck, HelpCircle, LogOut, ChevronRight, Activity, Monitor, MonitorOff } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
+import { useAccountStore } from '../stores/account'
 import { useToastStore } from '../stores/toast'
 import { useAppVersionStore } from '../stores/appVersion'
 import { usePermissionsStore } from '../stores/permissions'
@@ -24,6 +25,7 @@ const permissions = usePermissionsStore()
 const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
 const toasts = useToastStore()
+const accountStore = useAccountStore()
 const versionStore = useAppVersionStore()
 // Set only in the trusted desktop client, which runs a bundle it verified.
 const verified = platform.trustedApp()
@@ -139,6 +141,9 @@ const item = 'flex min-h-8 w-full items-center gap-2.5 rounded-md px-2 py-1.5 te
 
     <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(openOwnProfile)">
       <User class="h-4 w-4 flex-shrink-0 text-mnema-tertiary" />{{ $t('account.editProfile') }}
+    </button>
+    <button type="button" role="menuitem" tabindex="-1" :class="item" data-testid="menu-account-security" @click="run(() => accountStore.open())">
+      <KeyRound class="h-4 w-4 flex-shrink-0 text-mnema-tertiary" />{{ $t('security.menu') }}
     </button>
     <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(() => { voiceStore.showAudioSettings = true })">
       <Sliders class="h-4 w-4 flex-shrink-0 text-mnema-tertiary" />{{ $t('account.audio') }}
