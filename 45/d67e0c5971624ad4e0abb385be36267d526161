@@ -1,0 +1,147 @@
+e2e/tests/two-factor.spec.ts
+  s_06fcde5dbef956::t_ff08ed14bdcc94 1-94
+internal/audit/classes_test.go
+  s_06fcde5dbef956::t_4a2e78da50009e 15-16
+web/src/components/SecondFactorStep.vue
+  s_06fcde5dbef956::t_f42d5ac619d1c7 1-62
+web/package.json
+  s_06fcde5dbef956::t_4b51f07c5299f8 33
+doc/operations.md
+  s_06fcde5dbef956::t_847c96117605de 601,604
+  s_06fcde5dbef956::t_2e626a4cd7e45a 594-600,602-603,605-608
+web/src/lib/api.ts
+  s_06fcde5dbef956::t_8baa6df821d327 19-23
+web/src/stores/auth.ts
+  s_06fcde5dbef956::t_7fa202c3a484ee 55
+internal/server/account_email_integration_test.go
+  s_06fcde5dbef956::t_a881c4de6b9e16 34-36
+internal/auth/account_mail.go
+  s_06fcde5dbef956::t_4a2e78da50009e 71
+internal/server/two_factor_bruteforce_integration_test.go
+  s_06fcde5dbef956::t_fb9adb2b8bb2c4 1-250
+internal/auth/two_factor_login.go
+  s_06fcde5dbef956::t_d532653ba5147d 110,139-144
+  s_06fcde5dbef956::t_b157351c26f759 118,122,125-127,133,168,189-190,195
+  s_06fcde5dbef956::t_d837aa260a9601 49-52
+  s_06fcde5dbef956::t_50977537bf1d52 145,199-213
+  s_06fcde5dbef956::t_3169436d94836f 146
+internal/auth/email_handler.go
+  s_06fcde5dbef956::t_4a2e78da50009e 23-27,64-69
+internal/auth/native_handler.go
+  s_06fcde5dbef956::t_75373160de4ab3 63-64
+internal/auth/native_two_factor_integration_test.go
+  s_06fcde5dbef956::t_7f0cb4a7168712 1-63
+web/src/stores/auth/credentials.ts
+  s_06fcde5dbef956::t_7fa202c3a484ee 4-5,64-85,87,95,99,106,152-160
+web/src/components/LoginModal.vue
+  s_06fcde5dbef956::t_4b51f07c5299f8 236
+  s_06fcde5dbef956::t_8baa6df821d327 9,29-30,102-106,150-151
+web/src/stores/auth.test.ts
+  s_06fcde5dbef956::t_68a4dbb17e44a0 124
+internal/db/migrations/0041_two_factor.sql
+  s_06fcde5dbef956::t_b157351c26f759 38-50
+web/src/components/LoginModal.secondFactor.test.ts
+  s_06fcde5dbef956::t_c4d418984f4d5f 1-21,28-34,36-49,51-61,63-93
+  s_06fcde5dbef956::t_f2f6f4d0c914af 22-27,35,50,62
+doc/moderation.md
+  s_06fcde5dbef956::t_2e626a4cd7e45a 144-146
+SECURITY.md
+  s_06fcde5dbef956::t_2e626a4cd7e45a 182-219
+web/src/lib/native/nativeRoutes.ts
+  s_06fcde5dbef956::t_2e626a4cd7e45a 192
+web/src/components/QrCode.vue
+  s_06fcde5dbef956::t_0babc811e30357 1-39
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_2039d3b0501e29 105-109,1108-1113,1835-1866
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_2039d3b0501e29 105-109,1108-1113,1835-1866
+internal/audit/classes.go
+  s_06fcde5dbef956::t_4a2e78da50009e 38
+cmd/server/reset2fa_integration_test.go
+  s_06fcde5dbef956::t_e92646ef3b3ca1 1-63
+cmd/server/reset2fa_test.go
+  s_06fcde5dbef956::t_30f1f56aab01d8 1-22
+doc/upgrade.md
+  s_06fcde5dbef956::t_2e626a4cd7e45a 136-137,151-153,169-176
+internal/auth/two_factor_failures.go
+  s_06fcde5dbef956::t_8af72937477ac0 1-135
+internal/server/two_factor_integration_test.go
+  s_06fcde5dbef956::t_2bf10d4b3adf37 1-61,63-234,238-342
+  s_06fcde5dbef956::t_0548c21bb22d0d 62
+  s_06fcde5dbef956::t_5b0becd6f18db6 235-237
+cmd/server/reset2fa.go
+  s_06fcde5dbef956::t_7bd7a00bd1a7fb 1-59
+web/src/lib/thirdParty.ts
+  s_06fcde5dbef956::t_ecfa2fd907ccfe 29-30
+web/src/components/AccountTwoFactor.test.ts
+  s_06fcde5dbef956::t_fb119cd4d6e3bf 1-180
+internal/auth/native_login.go
+  s_06fcde5dbef956::t_d837aa260a9601 1-88
+THIRD_PARTY_NOTICES.md
+  s_06fcde5dbef956::t_ecfa2fd907ccfe 40
+web/src/components/AdminUsersTab.vue
+  s_06fcde5dbef956::t_26c05abf1cbabc 91-106,201
+internal/audit/routes.go
+  s_06fcde5dbef956::t_4a2e78da50009e 61
+web/src/components/AccountSecurityDialog.vue
+  s_06fcde5dbef956::t_26c05abf1cbabc 9,30
+internal/auth/two_factor_handler.go
+  s_06fcde5dbef956::t_d532653ba5147d 136,165
+  s_06fcde5dbef956::t_418ac2ce999ba1 1-10,12-135,137-164,166-178,180-182,184-270,276
+  s_06fcde5dbef956::t_36700458b9ce9e 11,271-275
+  s_06fcde5dbef956::t_b157351c26f759 179,183
+internal/auth/handler.go
+  s_06fcde5dbef956::t_50977537bf1d52 52-54,93,102,114,141,166-169
+  s_06fcde5dbef956::t_d532653ba5147d 55-58
+  s_06fcde5dbef956::t_a3a046d5d638a8 59,83
+web/src/components/AdminUserRow.vue
+  s_06fcde5dbef956::t_26c05abf1cbabc 5,20,225-235
+  s_06fcde5dbef956::t_77cc781baff3af 236-237
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_30617feed6e864 51-52,60-61,261-271,289-299,396-483
+  s_06fcde5dbef956::t_7a4940abcdd260 484
+cmd/server/main.go
+  s_06fcde5dbef956::t_9d8d1595ebff59 39-41
+internal/auth/users_admin.go
+  s_06fcde5dbef956::t_4a2e78da50009e 159
+internal/auth/users_admin_handlers.go
+  s_06fcde5dbef956::t_4a2e78da50009e 335-370
+internal/auth/totp_test.go
+  s_06fcde5dbef956::t_d3bf4702fba3af 1-123
+web/src/components/RecoveryCodesPanel.vue
+  s_06fcde5dbef956::t_a724adcd754166 1-53
+web/src/components/AdminUsersTab.twoFactor.test.ts
+  s_06fcde5dbef956::t_3c98f026470ad4 1-73
+web/src/stores/account.ts
+  s_06fcde5dbef956::t_bb60ad099e6315 4-7,10,36-62,72-75
+web/src/components/AccountTwoFactor.vue
+  s_06fcde5dbef956::t_b5ed71df45ce96 1-142
+internal/auth/audit.go
+  s_06fcde5dbef956::t_50977537bf1d52 28-44
+  s_06fcde5dbef956::t_678260e17ba527 25-27
+internal/server/two_factor_helpers_integration_test.go
+  s_06fcde5dbef956::t_d9f4c837a45a2f 1-140
+api/openapi.json
+  s_06fcde5dbef956::t_30617feed6e864 96-103,108-110,456-469,500-510,641-756,12669-12768,13359-13368,13453,13455-13467,13469-13477,13480,13487,13495,13497,13505-13588,19490-19930
+internal/auth/two_factor_store.go
+  s_06fcde5dbef956::t_4a2e78da50009e 214
+  s_06fcde5dbef956::t_b157351c26f759 150-161,163,165-172,174-175
+web/package-lock.json
+  s_06fcde5dbef956::t_9970a58df75082 22,3725-3730
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "45d67e0c5971624ad4e0abb385be36267d526161",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
