@@ -34,7 +34,8 @@
     "Typing": "typing",
     "VoiceSpeaking": "voice_speaking",
     "VoiceMuteState": "voice_mute_state",
-    "NativeAccessRenewed": "native_access_renewed"
+    "NativeAccessRenewed": "native_access_renewed",
+    "EmojiChanged": "emoji_changed"
   },
   "client": {
     "ClientPing": "ping",

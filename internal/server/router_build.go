@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/msch128/mnema-talk/internal/emoji"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/gateway"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -52,6 +53,7 @@ type components struct {
 	rolesH   *roles.Handler
 	onboardH *onboarding.Handler
 	mediaH   *media.Handler
+	emojiH   *emoji.Handler
 
 	outgoing *webhook.Dispatcher
 	webhookH *webhook.Handler
@@ -116,6 +118,7 @@ func (c *components) newCore() {
 	if d.Store != nil {
 		c.chatH.Objects = d.Store
 	}
+	c.emojiH = &emoji.Handler{DB: d.DB, Store: d.Store, Events: c.pub, Perms: c.permSvc, Max: cfg.EmojiMax}
 	c.mediaH = &media.Handler{
 		DB:             d.DB,
 		Store:          d.Store,

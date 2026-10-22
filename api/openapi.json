@@ -2794,6 +2794,75 @@
         },
         "type": "object"
       },
+      "emoji.Emoji": {
+        "properties": {
+          "animated": {
+            "description": "Animated emoji are GIFs and have a still frame for reduced motion.",
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "pattern": "^[a-z0-9_]{2,32}$",
+            "type": "string"
+          },
+          "still_url": {
+            "description": "StillURL is the first frame (animated emoji only).",
+            "type": "string"
+          },
+          "url": {
+            "description": "URL serves the image; it changes with the content (the v parameter), so\nit may be cached for good.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "animated",
+          "created_at",
+          "id",
+          "name",
+          "url"
+        ],
+        "type": "object"
+      },
+      "emoji.List": {
+        "properties": {
+          "emoji": {
+            "items": {
+              "$ref": "#/components/schemas/emoji.Emoji"
+            },
+            "type": "array"
+          },
+          "limit": {
+            "description": "Limit is how many custom emoji the instance allows (EMOJI_MAX).",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "emoji",
+          "limit"
+        ],
+        "type": "object"
+      },
+      "emoji.RenameRequest": {
+        "properties": {
+          "name": {
+            "maxLength": 32,
+            "minLength": 2,
+            "pattern": "^[a-z0-9_]{2,32}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "gateway.Info": {
         "properties": {
           "heartbeat_interval": {
@@ -8638,6 +8707,385 @@
         "summary": "Create a webhook",
         "tags": [
           "Webhooks"
+        ]
+      }
+    },
+    "/api/admin/emoji": {
+      "post": {
+        "description": "multipart/form-data with `name` (2 to 32 characters of a-z, 0-9 and _; upper case is folded) and `file`, a PNG, GIF or WebP of at most 256 KiB. The image is decoded and redrawn (at most 128x128, no metadata); SVG, JPEG and animated WebP are refused. Needs Manage emoji. Broadcasts emoji_changed.",
+        "operationId": "createEmoji",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "description": "PNG, GIF or WebP, at most 256 KiB.",
+                    "format": "binary",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Emoji name.",
+                    "maxLength": 32,
+                    "minLength": 2,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Emoji name.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/emoji.Emoji"
+                }
+              }
+            },
+            "description": "Created emoji."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the name is taken or the instance limit is reached."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "PAYLOAD_TOO_LARGE: body or file exceeds the limit (1 MiB for JSON)."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNSUPPORTED_MEDIA_TYPE: the file type is not allowed."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Add a custom emoji",
+        "tags": [
+          "Emoji"
+        ]
+      }
+    },
+    "/api/admin/emoji/{id}": {
+      "delete": {
+        "description": "Messages and reactions that used it show `:name:` as text from now on. Needs Manage emoji. Broadcasts emoji_changed.",
+        "operationId": "deleteEmoji",
+        "parameters": [
+          {
+            "description": "Emoji ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Delete a custom emoji",
+        "tags": [
+          "Emoji"
+        ]
+      },
+      "patch": {
+        "description": "Messages and reactions keep pointing at the emoji by id, so they follow the new name. Needs Manage emoji. Broadcasts emoji_changed.",
+        "operationId": "renameEmoji",
+        "parameters": [
+          {
+            "description": "Emoji ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/emoji.RenameRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/emoji.Emoji"
+                }
+              }
+            },
+            "description": "Renamed emoji."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the name is taken."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Rename a custom emoji",
+        "tags": [
+          "Emoji"
         ]
       }
     },
@@ -17888,6 +18336,317 @@
         ]
       }
     },
+    "/api/emoji": {
+      "get": {
+        "description": "Every custom emoji of the instance, by name, with the instance limit. Members use them as `<:name:id>` in messages and reactions.",
+        "operationId": "listEmoji",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/emoji.List"
+                }
+              }
+            },
+            "description": "Custom emoji."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List custom emoji",
+        "tags": [
+          "Emoji"
+        ]
+      }
+    },
+    "/api/emoji/{id}/image": {
+      "get": {
+        "description": "The redrawn PNG or GIF, or with `/still` the first frame of an animated emoji. The `v` parameter is the content hash: the response is cacheable for a year.",
+        "operationId": "getEmojiImage",
+        "parameters": [
+          {
+            "description": "Emoji ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Content hash from the emoji's URL.",
+            "in": "query",
+            "name": "v",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/gif": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Image."
+          },
+          "304": {
+            "description": "Not modified (If-None-Match)."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Download a custom emoji image",
+        "tags": [
+          "Emoji"
+        ]
+      }
+    },
+    "/api/emoji/{id}/still": {
+      "get": {
+        "description": "The redrawn PNG or GIF, or with `/still` the first frame of an animated emoji. The `v` parameter is the content hash: the response is cacheable for a year.",
+        "operationId": "getEmojiImage",
+        "parameters": [
+          {
+            "description": "Emoji ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Content hash from the emoji's URL.",
+            "in": "query",
+            "name": "v",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/gif": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Image."
+          },
+          "304": {
+            "description": "Not modified (If-None-Match)."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Download a custom emoji image",
+        "tags": [
+          "Emoji"
+        ]
+      }
+    },
     "/api/health": {
       "get": {
         "description": "Pings the database.",
@@ -22225,7 +22984,7 @@
     },
     "/api/ws": {
       "get": {
-        "description": "Upgrades to a WebSocket (requires a same-origin Origin header; a foreign origin is refused with 403 by the upgrade handler). OpenAPI cannot model WebSocket frames, so the protocol is described here.\n\nEvery frame in both directions is a JSON text message `{\"type\": string, \"payload\": any}`. At most a few events per second per connection (and per account across its connections) are processed; excess client events, and events whose payload is over the cap for their type (1 KiB, more only for an SDP answer, ICE candidate, diagnostic and media handshake), are dropped.\n\nServer to client, on connect (to this connection only):\n- `presence_snapshot`: map of user id to live status for every online user.\n- `voice_snapshot`: map of voice channel id to a map of user id to User plus `joined_at`.\n- `voice_rooms`: `{started: {channelId: time}, now}`; the server clock lets clients count up.\n\nServer to client, broadcast to all connections:\nChannel events (`message_*`, `typing`, `voice_state_update`, `webrtc_media_state`) only reach connections whose user may view that channel; the connect snapshots list only the Talks the user may view.\n- `message_create`, `message_update`: Message.\n- `message_delete`: `{id, channel_id, parent_id}`.\n- `message_reaction`: `{message_id, channel_id, reactions}`.\n- `channels_changed`: no payload; refetch GET /api/channels (sent after any category/channel/layout admin change).\n- `permissions_changed`: no payload; refetch GET /api/permissions and GET /api/channels. Sent to the users whose roles or permissions may have changed (everybody after a channel, category, overwrite or @everyone change).\n- `roles_changed`: no payload; refetch GET /api/roles and GET /api/members (a role was created, edited, deleted, reordered or assigned).\n- `member_joined`: public User of a newly registered member.\n- `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.\n- `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.\n- `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline; for a bot that set an activity also `activity: {type, name}` (Discord activity type).\n- `voice_state_update`: `{action: \"join\", channel_id, user, started_at}` or `{action: \"leave\", channel_id, user_id}`.\n- `typing`: `{channel_id, user_id}` (to everyone except the typist).\n\nServer to client, targeted:\n- `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}`, or `{refresh: true}` alone after a notification setting changed or everything was marked read (reload read states and notification settings).\n- `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.\n- `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.\n- `screen_viewers`: `{channel_id, user_id, viewers}` to voice-room members: `viewers` are the distinct users in the room watching `user_id`'s screen share (sorted ids, never the sharer). Sent whenever that set changes (`viewers: []` once when a watched share ends or loses its last viewer), and on `voice_join` one per live share to the joining connection only.\n- `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.\n- `screen_layers`: `{channel_id, user_id, layers}` to voice-room members: the layers of `user_id`'s live screen share, best first, each `{width, height, fps}` as the sharer declared them. Sent when they change, as an empty list once the share ends, and on `voice_join` one per live share to the joining connection only. A share of a client without layers has none.\n- `screen_quality`: `{channel_id, user_id, layer, auto}` to the watching connection only: the layer of `user_id`'s screen share it receives now (`-1` before the first picture) and whether the server chooses it (`auto`).\n- `screen_layers_wanted`: `{channel_id, layers}` to the sharing connection only: the indexes of its layers some viewer receives or is about to. A sender may stop encoding the others; layer 0 is always listed while nobody watches.\n- `media_handshake`: `{channel_id, user_id, wire}` to the other connections in that voice room. `wire` is opaque: the server checks only its framing (an MLS key package, welcome or public message, or a heartbeat or capability message) and never reads or logs the content.\n- `voice_kicked`: `{channel_id, reason?}` when a moderator removes the user from voice, `reason: \"room_full\"` when a voice join is refused because the room is full (the channel's `user_limit`), `reason: \"rules_not_accepted\"` when the community's rules have not been accepted yet (POST /api/onboarding/accept), or `reason: \"missing_permission\"` when the user may not (or no longer may) view and connect to that Talk.\n- `pong`: `{t}` echoing a `ping`.\n\nClient to server:\n- `ping` `{t}`; `presence_idle` `{idle: bool}`.\n- `typing` `{channel_id}` (text and voice channels, rate-limited; ignored without View channels and Send messages).\n- `voice_join` `{channel_id}` (needs View channels and Connect, otherwise `voice_kicked` with `reason: \"missing_permission\"`); `voice_leave`; `voice_speaking` `{active}`. The SFU drops audio without Speak and camera/screen without Video.\n- `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.\n- `media_handshake` `{channel_id, wire}`: opaque handshake bytes for the current voice room.\n- `webrtc_subscribe` `{kind: \"screen\"|\"camera\", user_id, on}` or `{kind: \"camera\", all: true, on}`. A screen subscription may carry `quality`: `\"auto\"` or the index of a layer (0 is the best); it is applied before the first picture and again whenever sent. Without one, or with `\"auto\"`, the server chooses: it starts on the best layer, moves down one layer at a time when the viewer's receiver reports show lasting loss, a rising round trip time or repeated keyframe requests, and tries one layer up again after a long stretch without trouble (a failed attempt makes the next one wait twice as long).\n- `webrtc_layers` `{layers: [{width, height, fps}, ...]}` (1 to 3, best first, strictly shrinking): the layers of the sender's own screen share. They are sent on the SFU's lower video lines.\n- `webrtc_screenshare_stop`, `webrtc_camera_stop`.\n\nUnknown event types are ignored. The server closes the connection when the session is revoked (sign-out of that session, sign-out everywhere, password change) or expires, or the account is disabled. A user keeps at most 8 browser connections: a newer one closes the oldest with close code 4001 (\"too many connections\"), after which that client should not reconnect by itself. Upgrades are rate-limited per address and per user (429), and `voice_join` beyond about one per second (burst 3) is answered with `voice_kicked`.",
+        "description": "Upgrades to a WebSocket (requires a same-origin Origin header; a foreign origin is refused with 403 by the upgrade handler). OpenAPI cannot model WebSocket frames, so the protocol is described here.\n\nEvery frame in both directions is a JSON text message `{\"type\": string, \"payload\": any}`. At most a few events per second per connection (and per account across its connections) are processed; excess client events, and events whose payload is over the cap for their type (1 KiB, more only for an SDP answer, ICE candidate, diagnostic and media handshake), are dropped.\n\nServer to client, on connect (to this connection only):\n- `presence_snapshot`: map of user id to live status for every online user.\n- `voice_snapshot`: map of voice channel id to a map of user id to User plus `joined_at`.\n- `voice_rooms`: `{started: {channelId: time}, now}`; the server clock lets clients count up.\n\nServer to client, broadcast to all connections:\nChannel events (`message_*`, `typing`, `voice_state_update`, `webrtc_media_state`) only reach connections whose user may view that channel; the connect snapshots list only the Talks the user may view.\n- `message_create`, `message_update`: Message.\n- `message_delete`: `{id, channel_id, parent_id}`.\n- `message_reaction`: `{message_id, channel_id, reactions}`.\n- `channels_changed`: no payload; refetch GET /api/channels (sent after any category/channel/layout admin change).\n- `permissions_changed`: no payload; refetch GET /api/permissions and GET /api/channels. Sent to the users whose roles or permissions may have changed (everybody after a channel, category, overwrite or @everyone change).\n- `roles_changed`: no payload; refetch GET /api/roles and GET /api/members (a role was created, edited, deleted, reordered or assigned).\n- `emoji_changed`: no payload; refetch GET /api/emoji (a custom emoji was added, renamed or deleted).\n- `member_joined`: public User of a newly registered member.\n- `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.\n- `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.\n- `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline; for a bot that set an activity also `activity: {type, name}` (Discord activity type).\n- `voice_state_update`: `{action: \"join\", channel_id, user, started_at}` or `{action: \"leave\", channel_id, user_id}`.\n- `typing`: `{channel_id, user_id}` (to everyone except the typist).\n\nServer to client, targeted:\n- `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}`, or `{refresh: true}` alone after a notification setting changed or everything was marked read (reload read states and notification settings).\n- `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.\n- `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.\n- `screen_viewers`: `{channel_id, user_id, viewers}` to voice-room members: `viewers` are the distinct users in the room watching `user_id`'s screen share (sorted ids, never the sharer). Sent whenever that set changes (`viewers: []` once when a watched share ends or loses its last viewer), and on `voice_join` one per live share to the joining connection only.\n- `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.\n- `screen_layers`: `{channel_id, user_id, layers}` to voice-room members: the layers of `user_id`'s live screen share, best first, each `{width, height, fps}` as the sharer declared them. Sent when they change, as an empty list once the share ends, and on `voice_join` one per live share to the joining connection only. A share of a client without layers has none.\n- `screen_quality`: `{channel_id, user_id, layer, auto}` to the watching connection only: the layer of `user_id`'s screen share it receives now (`-1` before the first picture) and whether the server chooses it (`auto`).\n- `screen_layers_wanted`: `{channel_id, layers}` to the sharing connection only: the indexes of its layers some viewer receives or is about to. A sender may stop encoding the others; layer 0 is always listed while nobody watches.\n- `media_handshake`: `{channel_id, user_id, wire}` to the other connections in that voice room. `wire` is opaque: the server checks only its framing (an MLS key package, welcome or public message, or a heartbeat or capability message) and never reads or logs the content.\n- `voice_kicked`: `{channel_id, reason?}` when a moderator removes the user from voice, `reason: \"room_full\"` when a voice join is refused because the room is full (the channel's `user_limit`), `reason: \"rules_not_accepted\"` when the community's rules have not been accepted yet (POST /api/onboarding/accept), or `reason: \"missing_permission\"` when the user may not (or no longer may) view and connect to that Talk.\n- `pong`: `{t}` echoing a `ping`.\n\nClient to server:\n- `ping` `{t}`; `presence_idle` `{idle: bool}`.\n- `typing` `{channel_id}` (text and voice channels, rate-limited; ignored without View channels and Send messages).\n- `voice_join` `{channel_id}` (needs View channels and Connect, otherwise `voice_kicked` with `reason: \"missing_permission\"`); `voice_leave`; `voice_speaking` `{active}`. The SFU drops audio without Speak and camera/screen without Video.\n- `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.\n- `media_handshake` `{channel_id, wire}`: opaque handshake bytes for the current voice room.\n- `webrtc_subscribe` `{kind: \"screen\"|\"camera\", user_id, on}` or `{kind: \"camera\", all: true, on}`. A screen subscription may carry `quality`: `\"auto\"` or the index of a layer (0 is the best); it is applied before the first picture and again whenever sent. Without one, or with `\"auto\"`, the server chooses: it starts on the best layer, moves down one layer at a time when the viewer's receiver reports show lasting loss, a rising round trip time or repeated keyframe requests, and tries one layer up again after a long stretch without trouble (a failed attempt makes the next one wait twice as long).\n- `webrtc_layers` `{layers: [{width, height, fps}, ...]}` (1 to 3, best first, strictly shrinking): the layers of the sender's own screen share. They are sent on the SFU's lower video lines.\n- `webrtc_screenshare_stop`, `webrtc_camera_stop`.\n\nUnknown event types are ignored. The server closes the connection when the session is revoked (sign-out of that session, sign-out everywhere, password change) or expires, or the account is disabled. A user keeps at most 8 browser connections: a newer one closes the oldest with close code 4001 (\"too many connections\"), after which that client should not reconnect by itself. Upgrades are rate-limited per address and per user (429), and `voice_join` beyond about one per second (burst 3) is answered with `voice_kicked`.",
         "operationId": "connectWebSocket",
         "parameters": [
           {

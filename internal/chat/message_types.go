@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/emojitext"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -147,9 +148,13 @@ func validEmojiLength(emoji string) bool {
 	return utf8.ValidString(emoji)
 }
 
-// ValidateEmoji accepts a short, printable, whitespace-free reaction token.
+// ValidateEmoji accepts a short, printable, whitespace-free reaction token, or
+// the token of a custom emoji (<:name:id>).
 func ValidateEmoji(emoji string) (string, error) {
 	emoji = strings.TrimSpace(emoji)
+	if emojitext.IsToken(emoji) {
+		return emoji, nil
+	}
 	if !validEmojiLength(emoji) {
 		return "", httpx.ErrInvalidInput("invalid emoji")
 	}

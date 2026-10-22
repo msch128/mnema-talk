@@ -25,6 +25,7 @@ const (
 	ResSettings   Resource = "settings"
 	ResBot        Resource = "bot"
 	ResOnboarding Resource = "onboarding"
+	ResEmoji      Resource = "emoji"
 )
 
 // Route describes one mutating admin route.
@@ -109,6 +110,10 @@ var Routes = []Route{
 	{Method: "PUT", Pattern: "/upload-limit", Action: "settings.upload_limit", TargetType: "settings", Snapshot: ResSettings},
 
 	{Method: "PUT", Pattern: "/onboarding", Action: "settings.onboarding", TargetType: "settings", Snapshot: ResOnboarding},
+
+	{Method: "POST", Pattern: "/emoji", Action: "emoji.create", TargetType: "emoji", NoBody: true},
+	{Method: "PATCH", Pattern: "/emoji/{id}", Action: "emoji.rename", TargetType: "emoji", IDParam: "id", Snapshot: ResEmoji},
+	{Method: "DELETE", Pattern: "/emoji/{id}", Action: "emoji.delete", TargetType: "emoji", IDParam: "id", Snapshot: ResEmoji},
 
 	{Method: "POST", Pattern: "/media/prune", Action: "media.prune", TargetType: "media"},
 	{Method: "POST", Pattern: "/media/orphans/cleanup", Action: "media.orphans_cleanup", TargetType: "media"},

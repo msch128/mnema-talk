@@ -36,6 +36,8 @@ type Config struct {
 	// days; 0 (default) keeps them forever.
 	AuditRetentionDays int
 	MaxUploadMB        int
+	// EmojiMax is how many custom emoji the instance holds (0: none can be added).
+	EmojiMax int
 	// UploadQuotaMBPerDay is what one account may upload in a rolling 24
 	// hours; 0 disables the budget. MediaMaxTotalMB caps all stored media
 	// (0 = no cap). MediaMinFreeMB pauses uploads while the filesystem at
