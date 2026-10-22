@@ -4,8 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
-	"net/url"
-	"strings"
+	"slices"
 	"sync"
 	"time"
 )
@@ -63,15 +62,53 @@ func (s *slowHosts) noteTimeout(host string, err error) {
 	s.m[host] = time.Now().Add(slowHostTTL)
 }
 
-// failedHost is the host the failed request was addressed to: after a
-// redirect that is the redirect target, not the link the member posted, so a
-// slow target cannot get the innocent host that redirects to it marked.
-func failedHost(err error, fallback string) string {
-	var ue *url.Error
-	if errors.As(err, &ue) {
-		if u, perr := url.Parse(ue.URL); perr == nil && u.Hostname() != "" {
-			return strings.ToLower(u.Hostname())
+// hopTimer times each hop of one fetch (the posted link and every redirect
+// target), so that a timeout is held against the hosts that actually used up
+// the time. Without it, a host that drips for nearly the whole deadline and
+// then redirects would get the innocent redirect target marked.
+type hopTimer struct {
+	mu    sync.Mutex
+	host  string
+	start time.Time
+	done  []hopSpan
+}
+
+type hopSpan struct {
+	host string
+	took time.Duration
+}
+
+type hopTimerKey struct{}
+
+func newHopTimer(host string) *hopTimer {
+	return &hopTimer{host: host, start: time.Now()}
+}
+
+// next closes the current hop and starts one at host.
+func (h *hopTimer) next(host string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	now := time.Now()
+	h.done = append(h.done, hopSpan{h.host, now.Sub(h.start)})
+	h.host, h.start = host, now
+}
+
+// noteTimeout marks every host whose own hop took at least half the fetch
+// deadline, when err is that deadline running out.
+func (h *hopTimer) noteTimeout(table *slowHosts, err error) {
+	h.mu.Lock()
+	spans := append(slices.Clone(h.done), hopSpan{h.host, time.Since(h.start)})
+	h.mu.Unlock()
+	for _, sp := range spans {
+		if sp.took >= fetchTimeout/2 {
+			table.noteTimeout(sp.host, err)
 		}
 	}
-	return fallback
+}
+
+// lastHop returns the timer carried by ctx (the redirect check gets the
+// request's context).
+func lastHop(ctx context.Context) *hopTimer {
+	h, _ := ctx.Value(hopTimerKey{}).(*hopTimer)
+	return h
 }

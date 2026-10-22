@@ -145,3 +145,40 @@ func TestRedirectToSlowHostIsRefusedWithoutDialling(t *testing.T) {
 		t.Fatal("the redirecting host must not be marked")
 	}
 }
+
+// A host that drips for most of the deadline and then redirects does not get
+// the innocent target marked when the deadline runs out there: each host is
+// held to its own hop.
+func TestSlowRedirectorIsMarkedButTheTargetIsNot(t *testing.T) {
+	old := fetchTimeout
+	fetchTimeout = 400 * time.Millisecond
+	defer func() { fetchTimeout = old }()
+
+	release := make(chan struct{})
+	defer close(release)
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-release:
+		case <-r.Context().Done():
+		}
+	}))
+	defer target.Close()
+	targetURL := strings.Replace(target.URL, "127.0.0.1", "localhost", 1)
+	redirector := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(300 * time.Millisecond) // most of the deadline, then hand over
+		http.Redirect(w, r, targetURL, http.StatusFound)
+	}))
+	defer redirector.Close()
+	f := New()
+	f.allowPrivate = true
+
+	if _, err := f.Preview(context.Background(), redirector.URL); err == nil {
+		t.Fatal("expected the deadline to run out")
+	}
+	if !f.slow.is("127.0.0.1") {
+		t.Fatal("the dripping redirector was not marked")
+	}
+	if f.slow.is("localhost") {
+		t.Fatal("the innocent redirect target was marked for time the redirector used")
+	}
+}

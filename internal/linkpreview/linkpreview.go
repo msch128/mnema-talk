@@ -133,8 +133,12 @@ func New() *Fetcher {
 			if err := f.checkURL(req.URL); err != nil {
 				return err
 			}
+			host := strings.ToLower(req.URL.Hostname())
+			if h := lastHop(req.Context()); h != nil {
+				h.next(host)
+			}
 			// The slow table applies on every hop, not only to the posted link.
-			if f.slow.is(strings.ToLower(req.URL.Hostname())) {
+			if f.slow.is(host) {
 				return errSlowHost
 			}
 			return nil
@@ -168,6 +172,8 @@ func (f *Fetcher) get(ctx context.Context, u *url.URL, accept string, limit int6
 	defer release()
 	ctx, cancel := context.WithTimeout(ctx, fetchTimeout)
 	defer cancel()
+	hops := newHopTimer(host)
+	ctx = context.WithValue(ctx, hopTimerKey{}, hops)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, "", nil, ErrBlocked
@@ -179,7 +185,7 @@ func (f *Fetcher) get(ctx context.Context, u *url.URL, accept string, limit int6
 		if errors.Is(err, ErrBlocked) {
 			return nil, "", nil, ErrBlocked
 		}
-		f.slow.noteTimeout(failedHost(err, host), err)
+		hops.noteTimeout(&f.slow, err)
 		return nil, "", nil, fmt.Errorf("fetch: %w", err)
 	}
 	defer res.Body.Close()
@@ -188,7 +194,7 @@ func (f *Fetcher) get(ctx context.Context, u *url.URL, accept string, limit int6
 	}
 	body, err := io.ReadAll(io.LimitReader(res.Body, limit))
 	if err != nil {
-		f.slow.noteTimeout(strings.ToLower(res.Request.URL.Hostname()), err)
+		hops.noteTimeout(&f.slow, err)
 		return nil, "", nil, fmt.Errorf("read: %w", err)
 	}
 	return body, res.Header.Get("Content-Type"), res.Request.URL, nil
