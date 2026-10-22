@@ -1,0 +1,189 @@
+web/src/lib/recoveryLink.test.ts
+  s_06fcde5dbef956::t_da02a0f287e96d 1-32
+internal/mailer/mailer_test.go
+  s_06fcde5dbef956::t_da5058e3c02f48 347
+  s_06fcde5dbef956::t_d9e74a32aa09f0 1-346,348-365
+web/src/components/AdminMailPanel.test.ts
+  s_06fcde5dbef956::t_0f569978fd7142 1-58
+internal/auth/mail_content.go
+  s_06fcde5dbef956::t_baf07130cc433d 1-21,23-24,26-38,40-50
+  s_06fcde5dbef956::t_8e9fefdb1d7302 22,25,39
+internal/server/account_email_integration_test.go
+  s_06fcde5dbef956::t_0803b2b5ad4329 1-250
+doc/upgrade.md
+  s_06fcde5dbef956::t_326a088d7b2380 136-137,147-150,154-165
+SECURITY.md
+  s_06fcde5dbef956::t_326a088d7b2380 153-167,169-181
+  s_06fcde5dbef956::t_b077d743f41495 168
+internal/auth/account_token.go
+  s_06fcde5dbef956::t_b79bc0096884bd 1-68,73-74,80-95,97-117,119-125,130-133,136-137
+  s_06fcde5dbef956::t_049cbff0165f74 69-72,75-77,96
+  s_06fcde5dbef956::t_de07e4a6060661 126-129,134-135
+  s_06fcde5dbef956::t_b3e68c2d5e7fa7 78-79,118
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_a84d409168358c 103-106,1095-1104,1787,1799-1836
+  s_06fcde5dbef956::t_e4c3eb4a55f65f 1837-1838
+web/src/components/RecoveryPage.test.ts
+  s_06fcde5dbef956::t_63fe8252fc8eee 70,84
+  s_06fcde5dbef956::t_3327ee067e31c1 1-69,71-83,85-93
+web/src/stores/account.ts
+  s_06fcde5dbef956::t_af052a42a386c0 1-43
+internal/config/config.go
+  s_06fcde5dbef956::t_851a92e214a972 90-91
+web/src/components/RecoveryPage.vue
+  s_06fcde5dbef956::t_e4e52021662791 55-57
+  s_06fcde5dbef956::t_9aef5ed1560167 1-54,58-106
+internal/mailer/mailer.go
+  s_06fcde5dbef956::t_19483382ee5e91 16,48-53
+  s_06fcde5dbef956::t_5c1912541fde0e 1-15,17-47,54-213
+web/src/components/ForgotPasswordDialog.test.ts
+  s_06fcde5dbef956::t_c797e1f375858f 1-16,18-49
+  s_06fcde5dbef956::t_bd6e8f0be7c980 17
+internal/auth/password_reset.go
+  s_06fcde5dbef956::t_d33d655492c7ad 160-161
+  s_06fcde5dbef956::t_9bd34cd38e0034 1-79,81-94,96-111,113-159,162-192
+  s_06fcde5dbef956::t_5f7efeb29bf7df 80
+  s_06fcde5dbef956::t_6a10197911be76 95,112
+internal/server/system_mail.go
+  s_06fcde5dbef956::t_e936503075605d 1-107
+web/src/components/LoginModal.test.ts
+  s_06fcde5dbef956::t_f6c3ce4aeb3bcc 99
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_a84d409168358c 103-106,1095-1104,1787,1799-1836
+  s_06fcde5dbef956::t_e4c3eb4a55f65f 1837-1838
+web/src/lib/native/nativeRoutes.ts
+  s_06fcde5dbef956::t_3917236358a0f9 190-194
+internal/auth/handler.go
+  s_06fcde5dbef956::t_38e2d4412ec95c 36-41,74
+  s_06fcde5dbef956::t_d33d655492c7ad 103,116
+web/src/lib/api.ts
+  s_06fcde5dbef956::t_2cbc7a44dd278a 18-21
+web/src/components/AdminMailPanel.vue
+  s_06fcde5dbef956::t_19e5039ddcf5bf 1-47
+web/src/components/AccountMenu.vue
+  s_06fcde5dbef956::t_2cbc7a44dd278a 11,29,146-147
+  s_06fcde5dbef956::t_8d6008c39512f3 148
+internal/server/password_reset_integration_test.go
+  s_06fcde5dbef956::t_a4893d03bf662b 250-255
+  s_06fcde5dbef956::t_b09088d09defe3 1-11,13-24,26-163,184-249,256-278,280,283-290
+  s_06fcde5dbef956::t_8dc711e2beeb0c 12,25,279,281-282
+  s_06fcde5dbef956::t_9834d59258f29f 164-183
+web/src/components/AccountSecurityDialog.test.ts
+  s_06fcde5dbef956::t_30653153969158 1-35,37-41,43-122,133-140
+  s_06fcde5dbef956::t_f3610b680d51cb 123-132
+  s_06fcde5dbef956::t_eb0be8bc2b9905 42
+  s_06fcde5dbef956::t_bd6e8f0be7c980 36
+internal/mailer/compose.go
+  s_06fcde5dbef956::t_38ffdaf9256f29 1-46
+internal/auth/email_handler.go
+  s_06fcde5dbef956::t_4142ef39072beb 1-115,117-196,201-218,226-272
+  s_06fcde5dbef956::t_5f7efeb29bf7df 116
+  s_06fcde5dbef956::t_a00a4fe6ba0898 197-200
+  s_06fcde5dbef956::t_de07e4a6060661 219-225
+.env.example
+  s_06fcde5dbef956::t_326a088d7b2380 172-191
+web/src/components/systemStatus.fixture.ts
+  s_06fcde5dbef956::t_91402eec5c23b5 19
+doc/moderation.md
+  s_06fcde5dbef956::t_326a088d7b2380 143-144
+web/src/components/AdminSystemTab.vue
+  s_06fcde5dbef956::t_2cbc7a44dd278a 15,389
+  s_06fcde5dbef956::t_63cdb2eb964590 390
+docker-compose.yml
+  s_06fcde5dbef956::t_326a088d7b2380 87-95
+internal/config/smtp_test.go
+  s_06fcde5dbef956::t_35b8914fe2e6a3 1-94
+internal/db/migrations/0040_account_email.sql
+  s_06fcde5dbef956::t_7f912d567b8481 1-27,32-38
+  s_06fcde5dbef956::t_b3e68c2d5e7fa7 28-31
+web/src/lib/recoveryLink.ts
+  s_06fcde5dbef956::t_fb4867b26274a8 1-28
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_8cc9deac9fc6ae 47-61,109-119,222-256,274-286,429-439,2120-2134,2388,2398,2422-2431
+  s_06fcde5dbef956::t_463a8b6c8f317a 2432
+internal/auth/account_mail.go
+  s_06fcde5dbef956::t_d33d655492c7ad 9,34,49-50,54-70
+  s_06fcde5dbef956::t_b7128851c4c3a9 1-8,10-33,35-42,45-48,51-53,71-108
+  s_06fcde5dbef956::t_38e2d4412ec95c 43-44
+web/src/components/ForgotPasswordDialog.vue
+  s_06fcde5dbef956::t_d367c8f1321cbb 32
+  s_06fcde5dbef956::t_e2154db5df86f9 1-31,33-50
+internal/config/config_env.go
+  s_06fcde5dbef956::t_851a92e214a972 16
+internal/auth/email.go
+  s_06fcde5dbef956::t_5f7efeb29bf7df 20,23
+  s_06fcde5dbef956::t_19483382ee5e91 75-76
+  s_06fcde5dbef956::t_6a10197911be76 116-117,119-120
+  s_06fcde5dbef956::t_12a8c405bb0c6e 1-19,21-22,24-74,77-115,118,121-123
+web/src/components/InviteLanding.test.ts
+  s_06fcde5dbef956::t_f6c3ce4aeb3bcc 38-39
+doc/operations.md
+  s_06fcde5dbef956::t_326a088d7b2380 94-116
+web/src/components/LoginModal.recovery.test.ts
+  s_06fcde5dbef956::t_fcfa10496b433a 1-56
+internal/server/account_email_edges_integration_test.go
+  s_06fcde5dbef956::t_0a3622a7cb67cb 1-93
+internal/server/system.go
+  s_06fcde5dbef956::t_bc1478e0c08888 53-55,57
+  s_06fcde5dbef956::t_5f7efeb29bf7df 16,43-46,56,142,178
+internal/server/router_build.go
+  s_06fcde5dbef956::t_5f7efeb29bf7df 19,63,130-144,206-208
+internal/config/config_smtp.go
+  s_06fcde5dbef956::t_17cdf317a7a677 1-122
+internal/config/config_validate.go
+  s_06fcde5dbef956::t_851a92e214a972 53
+api/openapi.json
+  s_06fcde5dbef956::t_9568df71c97778 83-103,214-225,401-445,476-493,707-720,3477-3498,3924-3927,3947,3976-3986,10513-10610,12999-13073,13376-13421,13514-13671,19139-19211,19348-19627
+internal/audit/routes.go
+  s_06fcde5dbef956::t_5f7efeb29bf7df 118
+internal/audit/classes_test.go
+  s_06fcde5dbef956::t_5f5efd7cdacefb 15,33
+web/src/components/AccountEmail.vue
+  s_06fcde5dbef956::t_e482c2af8a5ce5 1-100
+web/src/components/AccountSecurityDialog.vue
+  s_06fcde5dbef956::t_91402eec5c23b5 27
+  s_06fcde5dbef956::t_776c54fde9d164 1-26,28-33
+web/src/App.vue
+  s_06fcde5dbef956::t_2cbc7a44dd278a 8-9,21-22,53-57,191-192,195,300-301
+  s_06fcde5dbef956::t_e17676278b98fc 302
+web/src/components/LoginModal.vue
+  s_06fcde5dbef956::t_cf519027719fa3 2-3,8,25-27,49,65-72,182-188,261
+internal/mailer/mailtest/server.go
+  s_06fcde5dbef956::t_1e948d963b4ecd 1-148
+internal/server/server.go
+  s_06fcde5dbef956::t_5f7efeb29bf7df 123-126
+Makefile
+  s_06fcde5dbef956::t_309fab7f50f7ec 101
+internal/auth/two_factor_store.go
+  s_06fcde5dbef956::t_cf1a949e9afa3f 1-204
+internal/auth/two_factor_login.go
+  s_06fcde5dbef956::t_b7addbf1342e99 1-185
+internal/db/migrations/0041_two_factor.sql
+  s_06fcde5dbef956::t_b4b6813c219b1c 1-39
+internal/auth/totp.go
+  s_06fcde5dbef956::t_88735e1afa2999 1-96
+internal/auth/two_factor_keys.go
+  s_06fcde5dbef956::t_59332a997af562 1-72
+internal/auth/service_accounts.go
+  s_06fcde5dbef956::t_b3e68c2d5e7fa7 166-169,174-177
+internal/auth/users_admin.go
+  s_06fcde5dbef956::t_b3e68c2d5e7fa7 126,141-145
+internal/server/password_reset_revocation_integration_test.go
+  s_06fcde5dbef956::t_00e2b69f4431de 1-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "79932cb2d9f0ac71390f093d23ebd5e666e1213f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
