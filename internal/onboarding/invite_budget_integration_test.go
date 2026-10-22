@@ -17,6 +17,8 @@ import (
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
+const seededCode = "k7Rm2xQv9pLw"
+
 func seedInvite(t *testing.T, p *db.Pool) {
 	t.Helper()
 	ctx := context.Background()
@@ -27,63 +29,51 @@ func seedInvite(t *testing.T, p *db.Pool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := auth.CreateInvite(ctx, p, owner.ID, "k7Rm2xQv9pLw", nil, nil); err != nil {
+	if _, err := auth.CreateInvite(ctx, p, owner.ID, seededCode, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func preview(h *Handler, code string) *httptest.ResponseRecorder {
-	r := httptest.NewRequest(http.MethodGet, "/api/invites/"+code, nil)
-	rc := chi.NewRouteContext()
-	rc.URLParams.Add("code", code)
-	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rc))
+func previewFrom(r http.Handler, ip, code string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodGet, "/invites/"+code, nil)
+	req.RemoteAddr = ip + ":1234"
 	w := httptest.NewRecorder()
-	httpx.Handle(h.previewInvite).ServeHTTP(w, r)
+	r.ServeHTTP(w, req)
 	return w
 }
 
-// With the global budget of unknown codes spent, unknown codes are refused
-// but a valid invite still previews: exhausting the budget must not lock
-// invitees out (AUTH-04).
-func TestInvitePreviewGlobalMissBudgetNeverBlocksValidCodes(t *testing.T) {
+// The per-client budget is the only limiter and does not depend on whether the
+// code exists: an over-budget client is refused for valid codes too, other
+// clients are unaffected, and nothing is shared globally (no lockout, no
+// hit/miss oracle).
+func TestInvitePreviewBudgetIsPerClientAndIgnoresHitOrMiss(t *testing.T) {
 	p := testutil.DB(t)
 	testutil.Reset(t, p)
 	seedInvite(t, p)
 	h := NewHandler(p, nil)
-	h.lookupMisses = httpx.NewRateLimiter(3, time.Hour)
+	h.previewPerIP = httpx.NewRateLimiter(3, time.Hour)
+	r := chi.NewRouter()
+	h.MountPublic(r)
 
 	for i := 0; i < 3; i++ {
-		if w := preview(h, "unknown-code-"+string(rune('a'+i))); w.Code != http.StatusOK {
-			t.Fatalf("miss %d: %d", i, w.Code)
+		if w := previewFrom(r, "203.0.113.1", "unknown-code-x"); w.Code != http.StatusOK {
+			t.Fatalf("lookup %d: %d", i, w.Code)
 		}
 	}
-	w := preview(h, "unknown-code-z")
-	if w.Code != http.StatusTooManyRequests || w.Header().Get("Retry-After") == "" {
-		t.Fatalf("unknown code after the budget: %d retry-after %q, want 429", w.Code, w.Header().Get("Retry-After"))
-	}
-	if w := preview(h, "k7Rm2xQv9pLw"); w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"valid":true`) {
-		t.Fatalf("valid code while the budget is spent: %d %s", w.Code, w.Body)
-	}
-}
-
-// The per-client miss budget is the primary limit on unknown codes.
-func TestInvitePreviewPerClientMissBudget(t *testing.T) {
-	p := testutil.DB(t)
-	testutil.Reset(t, p)
-	seedInvite(t, p)
-	h := NewHandler(p, nil)
-	h.missPerIP = httpx.NewRateLimiter(2, time.Hour)
-	for i := 0; i < 2; i++ {
-		if w := preview(h, "unknown-code-"+string(rune('a'+i))); w.Code != http.StatusOK {
-			t.Fatalf("miss %d: %d", i, w.Code)
+	for _, code := range []string{seededCode, "unknown-code-x"} {
+		w := previewFrom(r, "203.0.113.1", code)
+		if w.Code != http.StatusTooManyRequests || w.Header().Get("Retry-After") == "" {
+			t.Fatalf("over-budget client, %q: %d, want 429 for hits and misses alike", code, w.Code)
 		}
 	}
-	if w := preview(h, "unknown-code-z"); w.Code != http.StatusTooManyRequests {
-		t.Fatalf("third miss from one client: %d", w.Code)
+	// Other clients, including another one that hammered, are unaffected.
+	if w := previewFrom(r, "198.51.100.9", seededCode); w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"valid":true`) {
+		t.Fatalf("other client: %d %s", w.Code, w.Body)
 	}
-	for i := 0; i < 10; i++ {
-		if w := preview(h, "k7Rm2xQv9pLw"); w.Code != http.StatusOK {
-			t.Fatalf("hit %d: %d", i, w.Code)
-		}
+	for i := 0; i < 20; i++ {
+		previewFrom(r, "192.0.2.7", "unknown-code-y")
+	}
+	if w := previewFrom(r, "198.51.100.10", seededCode); w.Code != http.StatusOK {
+		t.Fatalf("a third client after another one exhausted its own budget: %d", w.Code)
 	}
 }

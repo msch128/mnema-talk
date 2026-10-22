@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
@@ -36,15 +35,6 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 	}
 	u, err := Register(r.Context(), h.Sessions.DB, strings.TrimSpace(req.Username), req.DisplayName, req.Password, req.InviteCode)
 	if err != nil {
-		if errors.Is(err, ErrInvalidInvite) {
-			// Only unknown codes are refused once the global budget is
-			// spent; a valid invite always registers.
-			if exceeded, retry := h.inviteMisses.Exceeded("misses"); exceeded {
-				httpx.WriteRateLimited(w, retry)
-				return nil
-			}
-			h.inviteMisses.Allow("misses")
-		}
 		setRetryIfBusy(w, err)
 		return err
 	}

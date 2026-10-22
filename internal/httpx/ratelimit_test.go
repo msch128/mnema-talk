@@ -258,28 +258,3 @@ func TestTryAllowChargesOnlyGrantedHits(t *testing.T) {
 		t.Fatal("window did not reset")
 	}
 }
-
-func TestExceededReadsWithoutCharging(t *testing.T) {
-	now := time.Unix(1000, 0)
-	rl := NewRateLimiter(2, time.Minute)
-	rl.now = func() time.Time { return now }
-	if ex, _ := rl.Exceeded("k"); ex {
-		t.Fatal("unknown key exceeded")
-	}
-	rl.Allow("k")
-	if ex, _ := rl.Exceeded("k"); ex {
-		t.Fatal("exceeded below the limit")
-	}
-	rl.Allow("k")
-	ex, retry := rl.Exceeded("k")
-	if !ex || retry != time.Minute {
-		t.Fatalf("exceeded=%v retry=%v, want true and a minute", ex, retry)
-	}
-	if rl.entries["k"].count != 2 {
-		t.Fatal("Exceeded charged the key")
-	}
-	now = now.Add(time.Minute)
-	if ex, _ := rl.Exceeded("k"); ex {
-		t.Fatal("still exceeded after the window")
-	}
-}

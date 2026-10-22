@@ -13,10 +13,10 @@ import (
 // Codes created before the floor existed keep working; the admin API flags
 // them (Invite.Weak) so they can be replaced.
 const (
-	minCustomCodeLength   = 10
-	minCustomCodeDistinct = 6
-	// longCustomCode is the length from which a code needs no digit (generated codes have 12).
-	longCustomCode = 12
+	minCustomCodeLength   = 12
+	minCustomCodeDistinct = 7
+	// longCustomCode is the length from which a code needs no digit.
+	longCustomCode = 16
 )
 
 // weakCodeWords are what an attacker tries first. A code is weak when one of
@@ -33,7 +33,7 @@ const weakCodeSlack = 6
 // inviteCodeWeakness names why code is easy to guess, or "" when it is fine.
 func inviteCodeWeakness(code string) string {
 	if len(code) < minCustomCodeLength {
-		return "shorter than 10 characters"
+		return "shorter than 12 characters"
 	}
 	distinct := map[rune]struct{}{}
 	var letters, digits bool
@@ -46,7 +46,7 @@ func inviteCodeWeakness(code string) string {
 		return "too repetitive"
 	}
 	if len(code) < longCustomCode && !(letters && digits) {
-		return "needs letters and digits, or 12 or more characters"
+		return "needs letters and digits, or 16 or more characters"
 	}
 	lower := strings.ToLower(code)
 	for _, w := range weakCodeWords {
@@ -63,7 +63,7 @@ func IsWeakInviteCode(code string) bool { return inviteCodeWeakness(code) != "" 
 
 func checkCustomCodeStrength(code string) error {
 	if why := inviteCodeWeakness(code); why != "" {
-		return httpx.ErrInvalidInput("code is too easy to guess (" + why + "); leave it empty for a random code or use at least 10 hard-to-guess characters")
+		return httpx.ErrInvalidInput("code is too easy to guess (" + why + "); leave it empty for a random code or use at least 12 hard-to-guess characters")
 	}
 	return nil
 }

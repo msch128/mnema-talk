@@ -24,7 +24,7 @@ func TestAdminInviteValidation(t *testing.T) {
 	}{
 		{"code too short", map[string]any{"code": "abc"}, http.StatusBadRequest},
 		{"guessable word", map[string]any{"code": "welcome2026"}, http.StatusBadRequest},
-		{"nine characters", map[string]any{"code": "k7Rm2xQv9"}, http.StatusBadRequest},
+		{"eleven characters", map[string]any{"code": "k7Rm2xQv9pL"}, http.StatusBadRequest},
 		{"code with spaces", map[string]any{"code": "has spaces"}, http.StatusBadRequest},
 		{"code too long", map[string]any{"code": strings.Repeat("a", 65)}, http.StatusBadRequest},
 		{"max_uses zero", map[string]any{"max_uses": 0}, http.StatusBadRequest},

@@ -47,13 +47,16 @@ details and the limits.
   Unknown, malformed, expired, revoked and used-up codes give byte-identical
   answers, so the endpoint cannot tell an attacker that a code once existed. It
   is rate limited per client address (30 per minute, IPv6 per /64, 429 with
-  `Retry-After`) , for unknown codes by a budget of 20 per client address and hour,
-  and by a global budget of 600 unknown codes per hour (shared with
-  registration): once it is spent unknown codes get 429 while valid codes
-  still work, so exhausting it cannot lock invitees out; a generated code carries about
-  59 bits, and a custom code must be at least 10 characters, not repetitive,
-  mixing letters and digits unless it has 12 or more characters, and not a
-  common word with little around it. Older weak custom codes keep working; the
+  `Retry-After`), for hits and misses alike, so the answer never depends on
+  whether a code exists and nothing is shared between clients (no global brake
+  that one attacker could burn to lock invitees out). Distributed guessing is
+  made infeasible by the codes, not by a limiter: a generated code has 12
+  characters from a 31-character alphabet (about 59 bits), and a custom code must
+  be at least 12 characters with 7 or more distinct ones, mixing letters and
+  digits unless it has 16 or more characters, and not a common word with little
+  around it. Even 2^16 addresses at 30 lookups a minute try about 2^21 codes a
+  minute, which covers about 2^40 in a year, far below the 2^59 of a random code.
+  Older weak custom codes keep working; the
   admin invite list flags them (`weak`). The endpoint answers
   `Cache-Control: no-store`, and a code is only looked up when it has the shape
   the server issues. The community name is the only thing it discloses and the

@@ -75,19 +75,6 @@ func (rl *RateLimiter) Allow(key string) (bool, time.Duration) {
 	return e.count <= rl.limit, e.reset.Sub(now)
 }
 
-// Exceeded reports, without charging anything, whether key has used up its
-// budget in the current window, and when the window ends.
-func (rl *RateLimiter) Exceeded(key string) (bool, time.Duration) {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-	now := rl.now()
-	e, ok := rl.entries[key]
-	if !ok || !now.Before(e.reset) || e.count < rl.limit {
-		return false, 0
-	}
-	return true, e.reset.Sub(now)
-}
-
 // TryAllow is Allow that only charges the hits it grants: a refused call
 // leaves the count alone, so refused traffic cannot use up the budget of
 // callers who come after it.

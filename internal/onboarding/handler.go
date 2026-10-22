@@ -25,16 +25,7 @@ type Handler struct {
 	Perms *perm.Service
 
 	previewPerIP *httpx.RateLimiter
-	// lookupMisses is the global budget of failed code lookups, whatever the
-	// address: rotating IPv6 prefixes or a botnet gets no further than this.
-	lookupMisses *httpx.RateLimiter
-	// missPerIP is the primary limit on unknown codes per client address.
-	missPerIP *httpx.RateLimiter
 }
-
-// maxInviteLookupMisses is how many unknown or unusable codes the public
-// preview answers per hour across all clients before unknown codes get 429.
-const maxInviteLookupMisses = 600
 
 // NewHandler builds the handler with the invite preview's per-IP budget.
 func NewHandler(pool *db.Pool, perms *perm.Service) *Handler {
@@ -44,8 +35,6 @@ func NewHandler(pool *db.Pool, perms *perm.Service) *Handler {
 		// A preview costs one indexed lookup; the budget only has to make
 		// guessing codes pointless (a code carries about 59 bits).
 		previewPerIP: httpx.NewRateLimiter(30, time.Minute).Named("invite_preview_ip"),
-		lookupMisses: httpx.NewRateLimiter(maxInviteLookupMisses, time.Hour),
-		missPerIP:    httpx.NewRateLimiter(20, time.Hour),
 	}
 }
 

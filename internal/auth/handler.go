@@ -36,9 +36,6 @@ type Handler struct {
 
 	loginPerIP    *httpx.RateLimiter
 	registerPerIP *httpx.RateLimiter
-	// inviteMisses is the global budget of registrations with an unknown
-	// invite code, whatever the address (the preview has the same).
-	inviteMisses *httpx.RateLimiter
 	// loginFailures locks one client address out of one account;
 	// accountFailures is the much higher cap against guessing from many addresses.
 	loginFailures   *httpx.LoginFailureLimiter
@@ -69,7 +66,6 @@ func NewHandler(s *Sessions, pub events.Publisher) *Handler {
 		// Generous per address: a household or office shares one public IP.
 		loginPerIP:    httpx.NewRateLimiter(60, 15*time.Minute),
 		registerPerIP: httpx.NewRateLimiter(10, time.Hour),
-		inviteMisses:  httpx.NewRateLimiter(600, time.Hour),
 		// 10 failures → 1 min, then 5 min, then 30 min lockouts per address+username
 		// (IPv6 per /64); tiers are forgotten after an hour without failures.
 		loginFailures:   httpx.NewLoginFailureLimiter(10, time.Minute),

@@ -16850,7 +16850,7 @@
     },
     "/api/invites/{code}": {
       "get": {
-        "description": "Public, no session. Says whether an invite code can still be used and, if so, the community's name and when the code expires. Unknown, expired, revoked and used-up codes all answer the same `{\"valid\": false}`; nothing else about the invite is revealed. Rate limited per IP (30 per minute, IPv6 per /64) and by a global budget of 600 failed lookups per hour, after which every lookup answers 429 until the hour ends.",
+        "description": "Public, no session. Says whether an invite code can still be used and, if so, the community's name and when the code expires. Unknown, expired, revoked and used-up codes all answer the same `{\"valid\": false}`; nothing else about the invite is revealed. Rate limited per IP (30 per minute, IPv6 per /64)",
         "operationId": "previewInvite",
         "parameters": [
           {

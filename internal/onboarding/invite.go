@@ -2,7 +2,6 @@ package onboarding
 
 import (
 	"errors"
-	"log/slog"
 	"net/http"
 	"regexp"
 	"time"
@@ -26,29 +25,10 @@ type InvitePreview struct {
 // auth.CreateInvite); anything else is answered without a database lookup.
 var previewCodePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{6,64}$`)
 
-const lookupMissKey = "misses"
-
-// refuseMiss charges a lookup that found nothing to the client's miss budget
-// (the primary limit) and to the global one. Only misses are ever refused: a
-// code that exists is answered whatever the budgets say, so exhausting them
-// cannot lock valid invite holders out.
-func (h *Handler) refuseMiss(r *http.Request) (time.Duration, bool) {
-	if ok, retry := h.missPerIP.Allow(httpx.ClientIPKey(r)); !ok {
-		return retry, true
-	}
-	if exceeded, retry := h.lookupMisses.Exceeded(lookupMissKey); exceeded {
-		return retry, true
-	}
-	if ok, _ := h.lookupMisses.Allow(lookupMissKey); !ok {
-		slog.Warn("invite preview: global budget of failed lookups used up; unknown codes get 429 for the rest of the hour")
-	}
-	return 0, false
-}
-
 // previewInvite handles GET /api/invites/{code}.
 //
 // @Summary Preview an invite
-// @Description Public, no session. Says whether an invite code can still be used and, if so, the community's name and when the code expires. Unknown, expired, revoked and used-up codes all answer the same `{"valid": false}`; nothing else about the invite is revealed. Rate limited per IP (30 per minute, IPv6 per /64) Unknown codes also count against 20 per client address and hour and a global 600 per hour; once spent they answer 429 while existing codes keep answering normally.
+// @Description Public, no session. Says whether an invite code can still be used and, if so, the community's name and when the code expires. Unknown, expired, revoked and used-up codes all answer the same `{"valid": false}`; nothing else about the invite is revealed. Rate limited per IP (30 per minute, IPv6 per /64)
 // @ID previewInvite
 // @Tags Auth
 // @Produce json
@@ -74,10 +54,6 @@ func (h *Handler) previewInvite(w http.ResponseWriter, r *http.Request) error {
 		  AND (i.expires_at IS NULL OR i.expires_at > NOW())
 		  AND (i.max_uses IS NULL OR i.uses_count < i.max_uses)`, code).Scan(&out.CommunityName, &expires)
 	if errors.Is(err, pgx.ErrNoRows) {
-		if retry, refused := h.refuseMiss(r); refused {
-			httpx.WriteRateLimited(w, retry)
-			return nil
-		}
 		httpx.WriteJSON(w, http.StatusOK, InvitePreview{})
 		return nil
 	}

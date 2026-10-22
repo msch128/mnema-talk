@@ -38,7 +38,7 @@ func TestClearLoginLockoutScopesToOneAccount(t *testing.T) {
 	if ok, _ := h.passwordFails.IsLockedOut(uid.String()); ok {
 		t.Error("password lockout survived")
 	}
-	if ok, _ := h.unknownDevice.Exceeded("203.0.113.9|max"); ok || h.unknownDevice.Clear(func(k string) bool { return k == "203.0.113.9|max" }) != 0 {
+	if h.unknownDevice.Clear(func(k string) bool { return k == "203.0.113.9|max" }) != 0 {
 		t.Error("per-client new-device budget of max survived")
 	}
 	if h.unknownDeviceTotal.Clear(func(k string) bool { return k == "max" }) != 0 {
