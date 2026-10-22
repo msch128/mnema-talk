@@ -13,6 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/mailer"
 	"github.com/msch128/mnema-talk/internal/opwarn"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/msch128/mnema-talk/internal/update"
@@ -39,15 +40,21 @@ type systemHandler struct {
 	// warnings is the operator-warning registry (opwarn.Default in production).
 	warnings *opwarn.Registry
 
+	// mail is nil when SMTP is not configured.
+	mail          *mailer.Mailer
+	testMailLimit *httpx.RateLimiter
+
 	selfMu sync.Mutex
 	self   selfUpdate
 }
 
 // SystemStatus is the response of GET /api/admin/system.
 type SystemStatus struct {
-	Version    SystemVersion    `json:"version"`
-	Health     SystemHealth     `json:"health"`
-	Update     UpdateStatus     `json:"update"`
+	Version SystemVersion `json:"version"`
+	Health  SystemHealth  `json:"health"`
+	Update  UpdateStatus  `json:"update"`
+	// Mail is the outgoing mail setup (account e-mails need it).
+	Mail       MailStatus       `json:"mail"`
 	SelfUpdate SelfUpdateStatus `json:"self_update"`
 	// Warnings are configuration or deployment problems the server noticed
 	// (stable codes; the web app explains each). Empty when all is well.
@@ -132,6 +139,7 @@ func (h *systemHandler) mountAdmin(r chi.Router) {
 	r.Get("/system/update", httpx.Handle(h.getUpdate))
 	r.Post("/system/check", httpx.Handle(h.checkNow))
 	r.Post("/system/update", httpx.Handle(h.startSelfUpdate))
+	r.Post("/system/mail/test", httpx.Handle(h.sendTestMail))
 }
 
 // MountAdmin mounts the admin system routes on r.
@@ -167,6 +175,7 @@ func (h *systemHandler) snapshot(ctx context.Context) SystemStatus {
 		Version:    SystemVersion{Current: h.version, Revision: version.Commit(), GoVersion: version.GoVersion()},
 		Health:     h.health(ctx),
 		Update:     upd,
+		Mail:       h.mailStatus(),
 		SelfUpdate: h.selfUpdateStatus(upd),
 		Warnings:   h.warnings.List(),
 	}

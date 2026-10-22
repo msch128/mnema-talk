@@ -133,8 +133,8 @@ nothing in it is a breaking change to a public surface, and `1.x` keeps working
 for existing clients, bots, webhooks, dashboards and alerts. What changes for an
 operator is below. Update with the procedure above; take the backup first.
 
-- **Two migrations run on first start: 0038 and 0039.** Both are quick on any
-  instance.
+- **Three migrations run on first start: 0038, 0039 and 0040.** All are quick
+  on any instance.
   - 0038 drops `idx_messages_content_trgm`, a duplicate of the trigram search
     index `messages_content_trgm_idx` (both came from earlier releases), so
     message writes no longer maintain the same index twice and search is
@@ -144,9 +144,25 @@ operator is below. Update with the procedure above; take the backup first.
   - 0039 adds the nullable column `bot_tokens.created_by` (who issued a bot
     token), with a foreign key to `users`. It rewrites no rows and holds only a
     brief lock on `bot_tokens` while the foreign key is added.
+  - 0040 adds the nullable columns `users.email` and `users.email_verified_at`
+    (with a partial unique index on confirmed addresses) and the table
+    `account_tokens` for single-use e-mail links. Adding nullable columns
+    rewrites no rows. No account has an address afterwards.
   - The app waits for these locks like any other statement; there is nothing to
     stop or schedule. If startup is slow, check `docker compose logs app` for
     `migration applied`.
+- **Optional e-mail, SMTP and password reset by mail.** Members may now add an
+  e-mail address in Account & security (never required, never shown to other
+  members or to the Owner). Setting `SMTP_HOST` (see
+  [operations.md](operations.md#outgoing-e-mail)) lets the server confirm an
+  address by a single-use link and lets members reset a forgotten password with
+  an address they confirmed (link valid 30 minutes, signs every device out). Without
+  `SMTP_HOST` nothing changes: no mail is sent, saved addresses stay unconfirmed
+  and unused, and the "Forgot your password?" link does not appear. The Owner can
+  still set a temporary password for any member (Admin > Users). Reset by mail
+  also works for the Owner account if the Owner confirmed an address. Put
+  `SMTP_PASSWORD` in the environment or mount a file and name it in
+  `SMTP_PASSWORD_FILE`; `SMTP_TLS=none` is refused in production.
 - **Weak custom invite codes stop working.** Custom invite codes typed by an
   admin that fall below the new minimum (12 or more characters, 7 or more
   distinct, letters and digits below 16 characters, no common word with little

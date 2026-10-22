@@ -12,6 +12,7 @@ import { SOURCE_URL } from '../lib/thirdParty'
 import SelfUpdateDialog from './SelfUpdateDialog.vue'
 import AdminOpsPanel from './AdminOpsPanel.vue'
 import AdminUploadLimit from './AdminUploadLimit.vue'
+import AdminMailPanel from './AdminMailPanel.vue'
 
 const toasts = useToastStore()
 const versionStore = useAppVersionStore()
@@ -384,6 +385,8 @@ onMounted(refresh)
         </dl>
       </div>
     </div>
+
+    <AdminMailPanel v-if="status" :mail="status.mail" />
 
     <AdminUploadLimit v-if="status" />
 

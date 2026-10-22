@@ -123,7 +123,7 @@ func ResetPassword(ctx context.Context, p *db.Pool, id uuid.UUID) (string, error
 	if tag.RowsAffected() == 0 {
 		return "", httpx.ErrNotFound("user not found")
 	}
-	return password, nil
+	return password, dropTokens(ctx, p, id, purposePasswordReset)
 }
 
 // SetPassword sets a password chosen by the admin and ends all sessions.
@@ -138,9 +138,11 @@ func SetPassword(ctx context.Context, p *db.Pool, id uuid.UUID, password string)
 	if err != nil {
 		return fmt.Errorf("hash password: %w", err)
 	}
-	_, err = p.Exec(ctx, `UPDATE users SET password_hash = $1, token_version = token_version + 1,
-		updated_at = NOW() WHERE id = $2`, hash, id)
-	return err
+	if _, err = p.Exec(ctx, `UPDATE users SET password_hash = $1, token_version = token_version + 1,
+		updated_at = NOW() WHERE id = $2`, hash, id); err != nil {
+		return err
+	}
+	return dropTokens(ctx, p, id, purposePasswordReset)
 }
 
 func (h *Handler) mountUserAdmin(r chi.Router) {

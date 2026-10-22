@@ -100,7 +100,10 @@
       "fieldMax": "{field}: at most {count} characters",
       "fileTooBig": "The file is larger than {size} MB",
       "missingPermission": "You don’t have permission to do that.",
-      "slowMode": "Slow mode: wait {seconds} s before posting again"
+      "slowMode": "Slow mode: wait {seconds} s before posting again",
+      "linkInvalid": "This link is invalid or has expired.",
+      "emailInvalid": "Enter a valid e-mail address.",
+      "emailInUse": "Another account has already confirmed this address."
     },
     "field": {
       "content": "Message",
@@ -1089,6 +1092,16 @@
       "tooLong": "One of the texts is too long.",
       "save": "Save",
       "saved": "Welcome and rules saved."
+    },
+    "mail": {
+      "title": "E-mail (SMTP)",
+      "off": "Not set up. Without SMTP_HOST the server sends no e-mail, so passwords cannot be reset by mail and addresses stay unconfirmed. Everything else works as before.",
+      "on": "Sends as {from} ({tls}). The settings come from the server environment; nothing is stored in the database.",
+      "recipient": "Recipient of the test mail",
+      "recipientPlaceholder": "Empty: your own address",
+      "test": "Send test mail",
+      "sent": "Test mail sent.",
+      "tooOften": "Too many test mails. Try again in a few minutes."
     }
   },
   "profile": {
@@ -1782,5 +1795,46 @@
     "install_unavailable": "This browser does not offer to install the app. Look for Install or Add to Home Screen in its menu.",
     "installAction": "Install app",
     "installed": "Mnema Talk is installed."
+  },
+  "recovery": {
+    "forgotLink": "Forgot your password?",
+    "forgotTitle": "Reset your password",
+    "forgotIntro": "Enter the e-mail address you confirmed in your account settings. If it belongs to an account, we send a link that works once for 30 minutes.",
+    "forgotSubmit": "Send reset link",
+    "forgotSent": "If an account has this confirmed address, a link is on its way. It works once for 30 minutes. Nothing arrived? Check your spam folder, or ask the Owner for a temporary password.",
+    "verifyTitle": "Confirm your e-mail address",
+    "resetTitle": "Choose a new password",
+    "verifying": "Confirming your address …",
+    "verified": "Your e-mail address is confirmed.",
+    "addressInUse": "Another account has already confirmed this address, so it cannot be used here.",
+    "linkInvalid": "This link is invalid or has expired. Request a new one from the sign-in screen or your account settings.",
+    "resetIntro": "Choose a new password. All devices are signed out when you save it.",
+    "resetSubmit": "Save new password",
+    "resetDone": "Your password is changed. Sign in with the new one.",
+    "continue": "Continue to sign in"
+  },
+  "security": {
+    "menu": "Account & security",
+    "title": "Account & security",
+    "subtitle": "Only you see this",
+    "email": {
+      "title": "E-mail address",
+      "intro": "Optional. Only used to confirm it and to reset your password. Nobody else sees it, not even the Owner.",
+      "introNoMail": "Optional. This server cannot send e-mail, so a saved address stays unconfirmed and unused. Nobody else sees it.",
+      "none": "No e-mail address saved.",
+      "address": "E-mail address",
+      "add": "Add address",
+      "change": "Change",
+      "remove": "Remove",
+      "resend": "Send confirmation again",
+      "resent": "Confirmation e-mail sent.",
+      "confirmed": "Confirmed",
+      "unconfirmed": "Not confirmed yet",
+      "unused": "Not used",
+      "saved": "Address saved.",
+      "savedConfirm": "Address saved. Check your inbox to confirm it.",
+      "removed": "Address removed."
+    },
+    "loading": "Loading …"
   }
 }

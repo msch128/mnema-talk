@@ -120,6 +120,10 @@ func NewRouter(d Deps) (*Router, error) {
 
 	c := &components{d: d, cfg: cfg, ctx: ctx, trusted: trusted}
 	c.newCore()
+	if err := c.newMail(); err != nil {
+		cancel()
+		return nil, err
+	}
 	c.newWebhooks()
 	c.newBots()
 	if err := c.newSystem(); err != nil {

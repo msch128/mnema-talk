@@ -15,7 +15,10 @@ const DETAILS: Readonly<Record<string, string>> = {
   'invite code has expired': 'inviteExpired',
   'invite code usage limit reached': 'inviteUsedUp',
   'username is already taken': 'usernameTaken',
-  'current password is incorrect': 'wrongPassword'
+  'current password is incorrect': 'wrongPassword',
+  'this link is invalid or has expired': 'linkInvalid',
+  'enter a valid e-mail address': 'emailInvalid',
+  'this e-mail address is already confirmed for another account': 'emailInUse'
 }
 
 export class ApiError extends Error {

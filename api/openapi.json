@@ -80,6 +80,27 @@
         ],
         "type": "object"
       },
+      "auth.AccountInfo": {
+        "properties": {
+          "email": {
+            "description": "Email is the caller's own address; omitted when none is set. It is never\nshown to other members or administrators.",
+            "type": "string"
+          },
+          "email_verified": {
+            "description": "EmailVerified is true once the address was confirmed by its link.",
+            "type": "boolean"
+          },
+          "mail_available": {
+            "description": "MailAvailable is true when the server can send e-mail (SMTP is\nconfigured): addresses can be confirmed and passwords reset by mail.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "email_verified",
+          "mail_available"
+        ],
+        "type": "object"
+      },
       "auth.AdminUser": {
         "properties": {
           "avatar_url": {
@@ -187,6 +208,18 @@
           "role",
           "status_text",
           "username"
+        ],
+        "type": "object"
+      },
+      "auth.AuthOptions": {
+        "properties": {
+          "password_reset": {
+            "description": "PasswordReset is true when members can reset a forgotten password by\ne-mail (the server can send mail). It does not say who has an address.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "password_reset"
         ],
         "type": "object"
       },
@@ -365,6 +398,51 @@
         ],
         "type": "object"
       },
+      "auth.PasswordConfirmRequest": {
+        "properties": {
+          "current_password": {
+            "format": "password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password"
+        ],
+        "type": "object"
+      },
+      "auth.PasswordResetConfirmation": {
+        "properties": {
+          "new_password": {
+            "format": "password",
+            "minLength": 10,
+            "type": "string"
+          },
+          "token": {
+            "description": "Token is the one from the link in the reset mail.",
+            "maxLength": 43,
+            "minLength": 43,
+            "type": "string"
+          }
+        },
+        "required": [
+          "new_password",
+          "token"
+        ],
+        "type": "object"
+      },
+      "auth.PasswordResetRequest": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "maxLength": 254,
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "type": "object"
+      },
       "auth.RegisterRequest": {
         "properties": {
           "display_name": {
@@ -392,6 +470,24 @@
           "invite_code",
           "password",
           "username"
+        ],
+        "type": "object"
+      },
+      "auth.SetEmailRequest": {
+        "properties": {
+          "current_password": {
+            "format": "password",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "maxLength": 254,
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "email"
         ],
         "type": "object"
       },
@@ -605,6 +701,20 @@
         },
         "required": [
           "user"
+        ],
+        "type": "object"
+      },
+      "auth.VerifyEmailRequest": {
+        "properties": {
+          "token": {
+            "description": "Token is the one from the link in the confirmation mail.",
+            "maxLength": 43,
+            "minLength": 43,
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
         ],
         "type": "object"
       },
@@ -3364,6 +3474,28 @@
         ],
         "type": "object"
       },
+      "server.MailStatus": {
+        "properties": {
+          "configured": {
+            "description": "Configured is true when SMTP_HOST is set.",
+            "type": "boolean"
+          },
+          "from": {
+            "description": "From is the sender address of outgoing mail; empty when not configured.",
+            "type": "string"
+          },
+          "tls": {
+            "description": "TLS is the transport security in use (starttls, tls or none); empty when not configured.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "configured",
+          "from",
+          "tls"
+        ],
+        "type": "object"
+      },
       "server.OpsPool": {
         "properties": {
           "acquired": {
@@ -3789,6 +3921,10 @@
           "health": {
             "$ref": "#/components/schemas/server.SystemHealth"
           },
+          "mail": {
+            "$ref": "#/components/schemas/server.MailStatus",
+            "description": "Mail is the outgoing mail setup (account e-mails need it)."
+          },
           "self_update": {
             "$ref": "#/components/schemas/server.SelfUpdateStatus"
           },
@@ -3808,6 +3944,7 @@
         },
         "required": [
           "health",
+          "mail",
           "self_update",
           "update",
           "version",
@@ -3834,6 +3971,17 @@
           "go_version",
           "revision"
         ],
+        "type": "object"
+      },
+      "server.TestMailRequest": {
+        "properties": {
+          "to": {
+            "description": "To is the recipient; it defaults to the Owner's own e-mail address.",
+            "format": "email",
+            "maxLength": 254,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "server.UpdateStatus": {
@@ -10362,6 +10510,104 @@
         ]
       }
     },
+    "/api/admin/system/mail/test": {
+      "post": {
+        "description": "Sends a short message through the configured SMTP server to show that mail works. The recipient defaults to the Owner's own address (set one under the account settings) and can be given explicitly. Owner only (403 otherwise); at most five per ten minutes. The audit entry names no recipient. The failure answer says which stage failed (connect, tls, auth, sender, recipient, data), never a server reply or a credential.",
+        "operationId": "sendTestMail",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.TestMailRequest"
+              }
+            }
+          },
+          "description": "Request body."
+        },
+        "responses": {
+          "204": {
+            "description": "Test mail sent."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): no valid recipient, or SMTP is not configured."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: the mail could not be delivered; the message names the failing stage."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Send a test e-mail",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/api/admin/system/ops": {
       "get": {
         "description": "Live counters and a short history (last hour, 10 s resolution) for the admin System tab. Contains no secrets and no user or channel ids. Owner only (403 otherwise).",
@@ -12750,6 +12996,81 @@
         ]
       }
     },
+    "/api/auth/email/verify": {
+      "post": {
+        "description": "Uses the single-use token from the confirmation mail (no session needed; the link carries it in the URL fragment). The token works once, for 24 hours, and only while the account still has the address it was sent to. Every unusable token answers the same 400.",
+        "operationId": "verifyEmail",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.VerifyEmailRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Address confirmed."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT: the link is invalid or has expired."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: another account has already confirmed this address."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [],
+        "summary": "Confirm an e-mail address",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/api/auth/login": {
       "post": {
         "description": "Sets the session cookie and a signed known-device cookie. Rate limited per IP (60 per 15 min, IPv6 per /64) and by escalating lockouts per address+username. Once the account-wide guess cap trips, devices without the known-device cookie get about one password check per minute per client address (and about ten per minute for the whole account); everything else is answered 429 without a check. The cap lasts at most 15 minutes. Limited requests answer 429 with Retry-After.",
@@ -13052,6 +13373,47 @@
         ]
       }
     },
+    "/api/auth/options": {
+      "get": {
+        "description": "Which recovery paths the server offers, so the sign-in screen can show them. Carries nothing about any account.",
+        "operationId": "getAuthOptions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.AuthOptions"
+                }
+              }
+            },
+            "description": "Options."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "Sign-in options",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/api/auth/password": {
       "put": {
         "description": "Signs out all other sessions and keeps the current one (a fresh cookie is set); open WebSockets are closed and reconnect with it. Five wrong current passwords trigger a lockout (429).",
@@ -13144,6 +13506,164 @@
           }
         ],
         "summary": "Change own password",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/password-reset/confirm": {
+      "post": {
+        "description": "Uses the single-use token from the reset mail. The token works once and for 30 minutes. A new password follows the usual policy (the Owner needs 14 characters). Success ends every session of the account, including other devices; it does not sign anyone in, and a second factor, if enabled, is still asked at sign-in. Every unusable token answers the same 400.",
+        "operationId": "confirmPasswordReset",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.PasswordResetConfirmation"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Password changed."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT: the link is invalid or has expired, or the password does not meet the policy."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: too many password checks are queued; retry after the Retry-After seconds.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "Set a new password with a reset link",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/password-reset/request": {
+      "post": {
+        "description": "Answers 202 with an empty body whether or not the address belongs to an account, has been confirmed, or the account is disabled, and takes the same time either way: lookup and mail run after the response. Only an active account with a confirmed address gets a single-use link (valid 30 minutes). Rate limited per client address (10 per hour, IPv6 per /64) and, silently, per address and per account (a few mails per hour); 404 when the server cannot send mail.",
+        "operationId": "requestPasswordReset",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.PasswordResetRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted; if the address is confirmed for an account, a mail is on its way."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON or not an e-mail address."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the server cannot send e-mail."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [],
+        "summary": "Ask for a password reset mail",
         "tags": [
           "Auth"
         ]
@@ -18616,6 +19136,79 @@
         ]
       }
     },
+    "/api/users/me/account": {
+      "get": {
+        "description": "The caller's e-mail address and whether it is confirmed, and whether the server can send mail. Visible to the account itself only.",
+        "operationId": "getAccountSecurity",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.AccountInfo"
+                }
+              }
+            },
+            "description": "Account security.",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Own sign-in security",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
     "/api/users/me/avatar": {
       "post": {
         "description": "multipart/form-data with an image in field 'avatar' (max 5 MB). Replaces and deletes the previous avatar. Broadcasts user_update.",
@@ -18747,6 +19340,286 @@
           }
         ],
         "summary": "Upload avatar",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/users/me/email": {
+      "put": {
+        "description": "Optional; used only to confirm the address and to reset the password. Needs the current password. A new address starts unconfirmed; when the server can send mail, a single-use link (valid 24 hours) is sent to it. Typing the confirmed address again keeps it confirmed. Never shown to other members. Wrong passwords count toward the same lockout as PUT /api/auth/password.",
+        "operationId": "setEmail",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.SetEmailRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.AccountInfo"
+                }
+              }
+            },
+            "description": "Account security after the change."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the current password is incorrect, or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests, or too many confirmation mails for this account in the last hour.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: the confirmation mail could not be sent; the address is saved and the mail can be requested again."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set the account's e-mail address",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/users/me/email/remove": {
+      "post": {
+        "description": "Always possible; needs the current password. Pending confirmation and reset links stop working. Without an address, password reset by e-mail is not available for the account.",
+        "operationId": "removeEmail",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.PasswordConfirmRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.AccountInfo"
+                }
+              }
+            },
+            "description": "Account security after the change."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the current password is incorrect, or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Remove the account's e-mail address",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/users/me/email/resend": {
+      "post": {
+        "description": "For an address that is set but not confirmed, when the server can send mail. At most one per minute and five per hour for the account; an earlier link stops working.",
+        "operationId": "resendEmailVerification",
+        "responses": {
+          "204": {
+            "description": "Mail sent."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): no unconfirmed address, or the server cannot send mail."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: the mail could not be sent."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Send the confirmation mail again",
         "tags": [
           "Users"
         ]

@@ -115,6 +115,7 @@ var Routes = []Route{
 
 	{Method: "POST", Pattern: "/system/check", Skip: true},
 	{Method: "POST", Pattern: "/system/update", Action: "system.update", TargetType: "system"},
+	{Method: "POST", Pattern: "/system/mail/test", Action: "system.mail_test", TargetType: "system", NoBody: true},
 }
 
 // Match finds the route for a request below the admin prefix and its path
