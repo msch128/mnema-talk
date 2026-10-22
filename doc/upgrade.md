@@ -205,6 +205,19 @@ operator is below. Update with the procedure above; take the backup first.
   [`deploy/monitoring/mnema-alerts.yml`](../deploy/monitoring/mnema-alerts.yml),
   checked with `promtool` and against `/api/metrics` in CI. Metric names are
   part of the stability contract.
+- **Web Push (migration 0042).** Members can turn on push notifications per
+  device (Account menu > App & notifications) and get messages while the app
+  is closed; on iPhone and iPad only for the installed app. The migration
+  creates `push_vapid` (the server's VAPID key, generated on first start: it
+  is in your database backups, so restores keep working subscriptions),
+  `push_subscriptions` (one row per device) and `users.push_preview`. Nothing
+  is sent until a member subscribes. New settings, all optional:
+  `PUSH_ENABLED` (default `true`), `PUSH_PREVIEWS` (`user`, default, or `off`
+  to never put message text in a push) and `PUSH_VAPID_SUBJECT`; see
+  [operations.md](operations.md#web-push-and-the-installable-app). The server
+  needs outbound HTTPS to the browser vendors' push services (Google, Mozilla,
+  Apple, Microsoft) when a member uses push; it connects only to public
+  addresses. Rolling back needs the pre-upgrade backup like every migration.
 - **Installable app.** The web app now has a manifest, icons and a service
   worker (`/sw.js`) that keeps its shell available offline; browsers offer
   "Install", and Account menu > App explains it (on iPhone and iPad: Share >

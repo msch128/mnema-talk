@@ -78,6 +78,31 @@ describe('the service worker', () => {
     expect(raw.fetch).toHaveBeenCalledTimes(1)
   })
 
+  it('hands pushes, clicks and subscription changes to the push handlers', async () => {
+    const { scope, listeners, raw } = fakeScope()
+    const openWindow = vi.fn(async () => null)
+    const shown: string[] = []
+    Object.assign(raw, {
+      registration: { showNotification: async (title: string) => { shown.push(title) }, getNotifications: async () => [], pushManager: { subscribe: vi.fn(async () => ({ toJSON: () => ({}) })) } },
+      clients: { claim: vi.fn(async () => {}), matchAll: async () => [], openWindow },
+    })
+    installWorker(scope, config)
+
+    const push = waitEvent()
+    listeners.get('push')!({ ...push.event, data: { json: () => ({ v: 1, type: 'test', title: 'Mnema Talk', body: 'hi', tag: 'test' }) } } as never)
+    await push.done()
+    expect(shown).toEqual(['Mnema Talk'])
+
+    const click = waitEvent()
+    listeners.get('notificationclick')!({ ...click.event, notification: { data: {}, close: vi.fn() } } as never)
+    await click.done()
+    expect(openWindow).toHaveBeenCalledWith('/')
+
+    const change = waitEvent()
+    listeners.get('pushsubscriptionchange')!({ ...change.event, oldSubscription: null } as never)
+    await expect(change.done()).resolves.toBeDefined()
+  })
+
   it('does not answer API calls: they go to the network untouched', () => {
     const { scope, listeners } = fakeScope()
     installWorker(scope, config)

@@ -59,6 +59,14 @@ type Config struct {
 	WebhookAllowPrivateTargets []netip.Prefix
 	// LinkPreviews lets the server fetch public web pages for link cards.
 	LinkPreviews bool
+	// PushEnabled turns Web Push on (PUSH_ENABLED, default true). PushPreviews
+	// is "user" (members choose whether a push carries the message text) or
+	// "off" (never). PushVAPIDSubject is the contact in the VAPID header: an
+	// https:// URL or a mailto: address; empty uses PUBLIC_URL when that is
+	// https.
+	PushEnabled      bool
+	PushPreviews     string
+	PushVAPIDSubject string
 	// APIDocs serves the API reference (/api/docs, /api/openapi.json) to
 	// signed-in members. Off by default.
 	APIDocs bool

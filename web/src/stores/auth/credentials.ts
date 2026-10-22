@@ -1,5 +1,6 @@
 import type { Ref } from 'vue'
 import { api, ApiError } from '../../lib/api'
+import { releaseThisDevice } from '../../lib/webPush'
 import { decodeUser, decodeUserEnvelope, type User } from '../../types/domain'
 import { isRecord } from '../../types/validation'
 import { t } from '../../i18n'
@@ -112,6 +113,8 @@ async function logout({ core, user }: AuthDeps) {
   user.value = null
   const session = sessionSnapshot()
   await queueCookieRequest(async () => {
+    // This browser must not keep receiving the account's messages once someone else may sign in here.
+    await releaseThisDevice()
     await api('/api/auth/logout', {
       method: 'POST', shouldNotifyUnauthorized: () => isCurrentSession(session)
     })

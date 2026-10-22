@@ -60,6 +60,9 @@ services:
       - MEDIA_DISK_PATH=${MEDIA_DISK_PATH:-}
       - LINK_PREVIEWS_ENABLED=${LINK_PREVIEWS_ENABLED:-true}
       - API_DOCS_ENABLED=${API_DOCS_ENABLED:-false}
+      - PUSH_ENABLED=${PUSH_ENABLED:-true}
+      - PUSH_PREVIEWS=${PUSH_PREVIEWS:-user}
+      - PUSH_VAPID_SUBJECT=${PUSH_VAPID_SUBJECT:-}
       - WEBHOOK_ALLOW_PRIVATE_TARGETS=${WEBHOOK_ALLOW_PRIVATE_TARGETS:-}
       # Release check against api.github.com every 30 min; false = no request.
       - UPDATE_CHECK_ENABLED=${UPDATE_CHECK_ENABLED:-true}

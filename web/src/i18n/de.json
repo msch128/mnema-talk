@@ -70,7 +70,7 @@
     "signOut": "Abmelden",
     "languageSet": "Sprache auf {language} gestellt. Für dieses Konto gespeichert.",
     "languageFailed": "Sprache konnte nicht gespeichert werden.",
-    "app": "App"
+    "app": "App & Benachrichtigungen"
   },
   "errors": {
     "unknown": "Unbekannter Fehler",
@@ -1773,8 +1773,8 @@
     }
   },
   "appSettings": {
-    "title": "App",
-    "subtitle": "Mnema Talk wie eine App auf diesem Gerät nutzen.",
+    "title": "App & Benachrichtigungen",
+    "subtitle": "Mnema Talk installieren und auch bei geschlossener App benachrichtigt werden.",
     "installTitle": "Installieren",
     "install_installed": "Mnema Talk ist auf diesem Gerät installiert und läuft in einem eigenen Fenster.",
     "install_available": "Installiere Mnema Talk, um es ohne Browserleiste vom Home-Bildschirm, Dock oder Startmenü zu öffnen.",
@@ -1782,5 +1782,34 @@
     "install_unavailable": "Dieser Browser bietet die Installation nicht an. Suche im Menü nach Installieren oder Zum Home-Bildschirm.",
     "installAction": "App installieren",
     "installed": "Mnema Talk ist installiert."
+  },
+  "push": {
+    "title": "Push-Benachrichtigungen",
+    "loading": "Wird geladen …",
+    "loadFailed": "Die Push-Einstellungen konnten nicht geladen werden.",
+    "offByOperator": "Der Betreiber hat Push-Benachrichtigungen auf diesem Server abgeschaltet.",
+    "needsInstall": "Auf iPhone und iPad funktionieren Push-Benachrichtigungen nur für die installierte App. Tippe in Safari auf Teilen, wähle Zum Home-Bildschirm und öffne Mnema Talk von dort.",
+    "unsupported": "Dieser Browser kann keine Push-Benachrichtigungen empfangen.",
+    "stateOn": "Dieses Gerät wird über neue Nachrichten benachrichtigt, auch wenn Mnema Talk geschlossen ist. Deine Benachrichtigungsstufen, Stummschaltungen und Nicht stören gelten.",
+    "stateOff": "Lass dich auf diesem Gerät benachrichtigen, während Mnema Talk geschlossen ist. Dein Browser fragt zuerst nach der Erlaubnis.",
+    "stateBlocked": "Benachrichtigungen sind für diese Seite blockiert. Erlaube sie in den Website-Einstellungen deines Browsers und komm dann zurück.",
+    "enable": "Für dieses Gerät einschalten",
+    "disable": "Für dieses Gerät ausschalten",
+    "test": "Testbenachrichtigung senden",
+    "previewTitle": "Nachrichtentext anzeigen",
+    "previewHint": "Pushes sind für deinen Browser verschlüsselt. Eingeschaltet enthalten sie die ersten Worte der Nachricht, die auch auf einem gesperrten Bildschirm erscheinen können. Ausgeschaltet zeigen sie nur Kanal und Absender.",
+    "previewLocked": "Der Betreiber hat den Nachrichtentext in Push-Benachrichtigungen abgeschaltet.",
+    "devices": "Geräte",
+    "thisDevice": "Dieses Gerät",
+    "unnamedDevice": "Unbenanntes Gerät",
+    "remove": "{name} entfernen",
+    "enabledToast": "Push-Benachrichtigungen sind für dieses Gerät eingeschaltet.",
+    "blockedToast": "Benachrichtigungen sind im Browser blockiert.",
+    "unavailableToast": "Push-Benachrichtigungen sind hier nicht verfügbar.",
+    "enableFailed": "Push-Benachrichtigungen konnten nicht eingeschaltet werden.",
+    "removeFailed": "Das Gerät konnte nicht entfernt werden.",
+    "testSent": "Testbenachrichtigung gesendet.",
+    "testFailed": "Die Testbenachrichtigung konnte nicht zugestellt werden.",
+    "previewFailed": "Die Einstellung konnte nicht gespeichert werden."
   }
 }

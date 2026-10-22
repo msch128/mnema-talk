@@ -129,6 +129,9 @@ func (r *envReader) numericSettings(cfg *Config) (portMin, portMax uint16) {
 	cfg.Port = strconv.Itoa(int(r.port("PORT", 8080)))
 	cfg.S3ForcePathStyle = r.bool("S3_FORCE_PATH_STYLE", true)
 	cfg.LinkPreviews = r.bool("LINK_PREVIEWS_ENABLED", true)
+	cfg.PushEnabled = r.bool("PUSH_ENABLED", true)
+	cfg.PushPreviews = strings.ToLower(r.get("PUSH_PREVIEWS", "user"))
+	cfg.PushVAPIDSubject = r.get("PUSH_VAPID_SUBJECT", "")
 	allow, err := ssrf.ParseAllow(r.get("WEBHOOK_ALLOW_PRIVATE_TARGETS", ""))
 	if err != nil {
 		r.fail(fmt.Errorf("WEBHOOK_ALLOW_PRIVATE_TARGETS: %w", err))

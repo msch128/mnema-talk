@@ -3079,6 +3079,146 @@
         ],
         "type": "object"
       },
+      "push.Config": {
+        "properties": {
+          "enabled": {
+            "description": "Enabled is false when the operator turned push off (PUSH_ENABLED=false).",
+            "type": "boolean"
+          },
+          "max_devices": {
+            "description": "MaxDevices is how many devices one account may enable push on.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "preview": {
+            "description": "Preview is the member's choice: include the message text in pushes. Only takes effect while PreviewAllowed.",
+            "type": "boolean"
+          },
+          "preview_allowed": {
+            "description": "PreviewAllowed is false when the operator forces pushes without message text.",
+            "type": "boolean"
+          },
+          "public_key": {
+            "description": "PublicKey is the VAPID public key (base64url) to subscribe with; empty while push is off.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "max_devices",
+          "preview",
+          "preview_allowed",
+          "public_key"
+        ],
+        "type": "object"
+      },
+      "push.PreferencesRequest": {
+        "properties": {
+          "preview": {
+            "description": "Preview includes the message text in pushes (default true).",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "preview"
+        ],
+        "type": "object"
+      },
+      "push.SubscribeRequest": {
+        "properties": {
+          "auth": {
+            "description": "Auth is the browser's 16 byte authentication secret, base64url.",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "endpoint": {
+            "description": "Endpoint is the push service address the browser got. https only, a public host, port 443.",
+            "maxLength": 2048,
+            "type": "string"
+          },
+          "label": {
+            "description": "Label names the device in the list (\"Firefox on Windows\"); at most 64 characters.",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "p256dh": {
+            "description": "P256dh is the browser's P-256 public key, base64url.",
+            "maxLength": 128,
+            "type": "string"
+          }
+        },
+        "required": [
+          "auth",
+          "endpoint",
+          "p256dh"
+        ],
+        "type": "object"
+      },
+      "push.Subscription": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "fingerprint": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "last_success_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "created_at",
+          "fingerprint",
+          "id",
+          "label",
+          "last_success_at"
+        ],
+        "type": "object"
+      },
+      "push.Subscriptions": {
+        "properties": {
+          "subscriptions": {
+            "items": {
+              "$ref": "#/components/schemas/push.Subscription"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "subscriptions"
+        ],
+        "type": "object"
+      },
+      "push.TestResult": {
+        "properties": {
+          "delivered": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "failed": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "delivered",
+          "failed"
+        ],
+        "type": "object"
+      },
       "roles.ChannelPermissions": {
         "properties": {
           "channel_id": {
@@ -18225,6 +18365,504 @@
         "summary": "Own permissions",
         "tags": [
           "Roles"
+        ]
+      }
+    },
+    "/api/push/config": {
+      "get": {
+        "description": "Whether push is on, the VAPID public key to subscribe with, whether the operator allows message text in pushes and the caller's own choice. Always answers 200; with push off the key is empty.",
+        "operationId": "getPushConfig",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/push.Config"
+                }
+              }
+            },
+            "description": "Settings."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Web Push settings",
+        "tags": [
+          "Push"
+        ]
+      }
+    },
+    "/api/push/preferences": {
+      "put": {
+        "description": "Whether pushes carry the message text. Off, a push shows only the channel and the sender. The operator can force this off for everyone (PUSH_PREVIEWS=off); the stored choice is kept.",
+        "operationId": "setPushPreferences",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/push.PreferencesRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: push is turned off on this server."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set the push preview",
+        "tags": [
+          "Push"
+        ]
+      }
+    },
+    "/api/push/subscriptions": {
+      "get": {
+        "description": "The caller's devices with push on, oldest first. The push address itself is never returned; fingerprint is the first 32 hex characters of the SHA-256 of the endpoint, so a browser can tell which entry is itself.",
+        "operationId": "listPushSubscriptions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/push.Subscriptions"
+                }
+              }
+            },
+            "description": "Devices."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: push is turned off on this server."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List my push devices",
+        "tags": [
+          "Push"
+        ]
+      },
+      "post": {
+        "description": "Registers the browser's push subscription for the caller. The endpoint must be an https URL on port 443 whose host is not a literal private, loopback or reserved address; the server connects only to that address, only to deliver encrypted pushes. Registering an endpoint again updates it; one registered by another account moves to the caller. At most 10 devices per account.",
+        "operationId": "subscribePush",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/push.SubscribeRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/push.Subscription"
+                }
+              }
+            },
+            "description": "Registered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, a refused endpoint or invalid keys."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: push is turned off on this server."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the account already has 10 devices."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Turn push on for this device",
+        "tags": [
+          "Push"
+        ]
+      }
+    },
+    "/api/push/subscriptions/{id}": {
+      "delete": {
+        "description": "Removes one of the caller's devices. Another account's device answers 404 like a missing one.",
+        "operationId": "unsubscribePush",
+        "parameters": [
+          {
+            "description": "Subscription ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Turn push off for a device",
+        "tags": [
+          "Push"
+        ]
+      }
+    },
+    "/api/push/test": {
+      "post": {
+        "description": "Sends a test notification to every device of the caller and reports how many push services accepted it. At most 6 a minute.",
+        "operationId": "sendTestPush",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/push.TestResult"
+                }
+              }
+            },
+            "description": "Result."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: push is turned off on this server."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Send a test push",
+        "tags": [
+          "Push"
         ]
       }
     },

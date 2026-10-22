@@ -3,6 +3,7 @@ import { t } from '../../i18n'
 import { mentionsUser, shouldNotify } from '../../lib/chatLogic'
 import { isQuiet } from '../../lib/presence'
 import { platform } from '../../lib/platform'
+import { pushOnThisDevice } from '../../lib/webPush'
 import type { Cx } from './state'
 import { goToMessage } from './messageWindow'
 import { isTabVisible } from './readState'
@@ -32,6 +33,8 @@ function buildNotificationBody(msg: Message): string {
 
 function canShowBrowserNotification(cx: Cx, msg: Message, isMention: boolean): boolean {
   if (isQuiet(cx.authStore.user?.presence)) return false
+  // With push on, a hidden page leaves the notification to the service worker, so it is not shown twice.
+  if (pushOnThisDevice.value && !isTabVisible()) return false
   return shouldNotify({
     permission: platform.notificationPermission(),
     level: notificationLevel(cx, msg.channel_id),

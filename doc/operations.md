@@ -77,6 +77,9 @@ General rules:
 | `MEDIA_MIN_FREE_MB` / `MEDIA_DISK_PATH` | `1024` / empty | Pauses uploads (503) while the filesystem at `MEDIA_DISK_PATH` has less than this much free. The app can only see disks it has mounted: with the bundled SeaweedFS container, mount its data volume read-only into the app and point `MEDIA_DISK_PATH` at it, or watch the volume from outside. Empty path = off. |
 | `MEDIA_RETENTION_DAYS` | `0` | `0` = never delete media automatically. A positive number deletes media older than that many days. Negative values are rejected. |
 | `LINK_PREVIEWS_ENABLED` | `true` | The server fetches public pages for link cards (never private addresses); linked sites see the server's IP. |
+| `PUSH_ENABLED` | `true` | Web Push notifications for members' devices while Mnema Talk is closed ([Web Push](#web-push-and-the-installable-app)). `false` turns them off: no key, no subscriptions API, nothing sent. |
+| `PUSH_PREVIEWS` | `user` | `user`: each member chooses whether a push carries the start of the message (default on); `off`: pushes never carry message text. Any other value is rejected at startup. |
+| `PUSH_VAPID_SUBJECT` | empty | Contact in the VAPID header (RFC 8292): an `https://` URL or a `mailto:` address. Empty uses `PUBLIC_URL` when that is `https://`, else a placeholder address (fine for testing; browsers' push services accept it). |
 | `API_DOCS_ENABLED` | `false` | Swagger UI at `/api/docs` and `/api/openapi.json` for signed-in members. |
 
 ### Voice (WebRTC)
@@ -211,6 +214,60 @@ logs a startup warning and shows "PUBLIC_URL is not https" under Admin >
 System; it does not refuse to start, so a trusted-LAN install over `http://`
 keeps working. Behind a TLS-terminating reverse proxy, set `PUBLIC_URL` to the
 public `https://` address.
+
+## Web Push and the installable app
+
+Mnema Talk is an installable web app (manifest, icons and a service worker at
+`/sw.js`). Members can install it from the browser (Account menu > App &
+notifications) and turn on push notifications per device, so they hear about
+messages while the app is closed. On iPhone and iPad this works for the
+installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
+
+- **Who is notified.** For each new message, every member with a subscribed
+  device who may view the channel *at that moment* (the permission snapshot of
+  the send, so a member who lost access stops at once), is not the author,
+  is not on Do Not Disturb or Focus, and whose effective notification level
+  for the channel allows it: all messages, or mentions (including `@all`,
+  `@here`, roles and replies to their messages) only; mutes, timed mutes and
+  category settings apply exactly as in the app. A burst in one channel is
+  merged: the first message goes out at once, the rest of the next five
+  seconds as one push ("3 new messages"); a mention is never held back. A
+  device that is offline gets only the newest push of a channel (push topic),
+  mentions separately; a push expires after one hour (a day for mentions).
+- **What a push contains.** Channel name and sender are always in it; the start
+  of the message (140 characters) only if the member keeps "Show message text"
+  on and `PUSH_PREVIEWS` is `user`. The payload is encrypted for the member's
+  browser (RFC 8291, `aes128gcm`), so Google, Mozilla, Apple or Microsoft's push
+  service sees only that something was sent, to which device, and its size.
+  The page does not show its own notification while push is on and the tab is
+  in the background, so nothing is shown twice.
+- **The key.** The server generates a VAPID key pair (P-256) on first start
+  and keeps it in the table `push_vapid`: subscriptions are bound to its public
+  half, so it has to survive restarts and restores, and it travels with the
+  database backup. It is never logged and no endpoint returns the private
+  half. Whoever can read the database can read all messages anyway; the key
+  adds nothing to that. If the key row is lost or replaced, all browsers keep
+  their subscription but the push services refuse the server (403) and the
+  subscriptions are removed after ten failures; members turn push on again.
+- **Outgoing requests.** The server posts only to the address a browser
+  registered for itself, and only after checking it twice: at registration it
+  must be an `https://` URL on port 443 whose host is not a private, loopback,
+  link-local or reserved address; at every send the host is resolved by the
+  server itself and every address must be public (the guard outgoing webhooks
+  use, with no allowlist: `WEBHOOK_ALLOW_PRIVATE_TARGETS` does not apply), the
+  connection goes to the address it vetted, redirects are not followed and the
+  answer is discarded. A member cannot use the server as a request proxy:
+  the body is encrypted binary and no response text is ever shown.
+- **Housekeeping.** A push service answering 404 or 410 removes the device at
+  once; any other refusal or failure counts, and ten in a row remove it. An
+  account has at most 10 devices. Deleting a member removes theirs. Signing out
+  in the browser removes that browser's device first; registering the same
+  browser under another account moves it.
+- **Operations.** `mnema_push_deliveries_total{outcome}` counts sends (see the
+  metrics table). Requests to push services need outbound HTTPS from the app
+  container. With `PUSH_ENABLED=false` there is no key, no subscriptions API
+  and no outgoing request. Behind a reverse proxy, pass `/sw.js` and
+  `/manifest.webmanifest` through unchanged and do not cache `/sw.js`.
 
 ## TURN (coturn)
 
@@ -525,6 +582,7 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_db_connections_total\|acquired\|idle\|max` | gauge | Database pool. `mnema_db_acquires_total`, `..._waited_total`, `..._canceled_total`, `mnema_db_acquire_seconds_total` count acquisitions, those that had to wait, those abandoned and the time spent. |
 | `mnema_storage_up` | gauge | 1 when object storage answers (the same check as `/api/health`), else 0. |
 | `mnema_s3_operations_total{op,result}` | counter | Object storage calls (`upload`, `get`, `delete`, `list`) by `ok`/`error`. |
+| `mnema_push_deliveries_total{outcome}` | counter | Web Push deliveries: `ok`, `gone` (the browser ended the subscription; it is removed), `retry` (temporary refusal, retried once), `rejected`, `error` (no answer: blocked address, DNS, connection, TLS, timeout) and `dropped` (a full queue). A rising `rejected` share right after a restore means the VAPID key changed. |
 
 ## Orphaned media
 

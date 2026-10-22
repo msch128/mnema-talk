@@ -185,7 +185,10 @@ function routeMetadata(path: string, request: ApiRequest): Promise<ApiReply> | n
 // welcome flow) and the public invite preview. This transport belongs to the
 // experimental Windows DEV client only (isDesktopRuntime); the shipped desktop
 // clients (v0.2.x) run the signed web bundle through the trusted proxy, which
-// passes every /api path, so rules acceptance works there. Add typed onboarding
+// passes every /api path, so rules acceptance works there. The same holds for Web Push (/api/push/*:
+// config, devices, preferences, test): the native DEV client answers "unavailable",
+// and the shipped clients' proxy passes the paths although the web bundle never
+// registers a service worker there (the desktop shows its own OS notifications). Add typed onboarding
 // operations here before the native DEV client is ever shipped.
 const ROUTES: readonly Route[] = [
   routeRegister, routePassword, routeAdmin, routeLogin, routeMe, routeLogout, routePersonal, routeTypedChat, routeMetadata,

@@ -247,6 +247,25 @@ details and the limits.
   profile, media or session data is ever stored by it. Both files are served
   with `Cache-Control: no-cache`, so a deploy reaches installed apps on the next
   start. The desktop client never registers it.
+- **Web Push.** Pushes are encrypted for the receiving browser (RFC 8291,
+  `aes128gcm`) and signed with the server's VAPID key (RFC 8292), so the push
+  service (Google, Mozilla, Apple, Microsoft) cannot read them; they carry the
+  channel name and sender and, unless the member or `PUSH_PREVIEWS=off` says
+  otherwise, the first 140 characters of the message. Recipients are decided on
+  the server when a message is sent: the author never, only members who may
+  view the channel in the current permission snapshot (a failed snapshot sends
+  nothing), with the member's effective notification level, mutes and Do Not
+  Disturb applied. The VAPID private key lives in the database (`push_vapid`),
+  is never logged or returned, and is created on first start. A subscription
+  endpoint is member-supplied, so it is treated like an outgoing webhook URL
+  but stricter: https on port 443 only, no literal private address at
+  registration, and at every send the same resolve-vet-connect guard
+  (`internal/ssrf`) with no allowlist, no redirects and no response shown, so
+  the server cannot be used as a request proxy or to scan the network. Failed
+  or gone subscriptions are removed; a browser signing out removes its own, and
+  registering a browser under another account moves it, so the next person on a
+  shared browser is not sent the previous account's messages. At most 10
+  devices per account; registering and testing are rate limited.
 - **Uploads.** File types are detected by content sniffing, not by the
   client-supplied name or MIME type. Risky types (HTML, SVG, scripts, unknown
   binaries, ...) are only ever served as downloads, never rendered inline. Media is

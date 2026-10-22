@@ -1,0 +1,161 @@
+import type { BrowserContext, Page } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { apiFetch, responseString } from './helpers'
+
+// Web Push in a real Chromium against the real binary. Chromium's own push
+// service (FCM) is not reachable from a test, so two things are stood in for:
+// the browser's PushManager hands out a made-up subscription (a real P-256 key
+// and a push address that resolves nowhere), and a push is delivered to the
+// service worker through the DevTools protocol. Encryption and delivery to a
+// push service are covered by the Go tests (RFC 8291 vectors, a fake push
+// service that decrypts what it receives).
+
+// Chromium's old headless shell reports every notification permission as
+// denied; the full browser in its new headless mode honours the grant.
+test.use({ channel: 'chromium' })
+
+const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
+if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
+
+const ENDPOINT = 'https://push.example.test/wpush/e2e-device'
+
+async function signIn(page: Page) {
+  await page.goto('/')
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByRole('heading', { name: 'Mnema Talk' })).toBeVisible()
+  await dialog.getByLabel('Benutzername').fill(ADMIN_USER)
+  await dialog.getByLabel('Passwort').fill(ADMIN_PASSWORD)
+  await dialog.getByRole('button', { name: 'Anmelden' }).click()
+  await expect(dialog).toBeHidden()
+}
+
+/** Replaces Chromium's PushManager with one that needs no push service. */
+async function fakePushManager(context: BrowserContext) {
+  await context.addInitScript((endpoint) => {
+    let current: unknown = null
+    const bytes = (n: number, fill: number) => Uint8Array.from({ length: n }, (_, i) => (i * fill + 7) % 251)
+    const b64url = (b: Uint8Array) => btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    Object.defineProperty(PushManager.prototype, 'getSubscription', { configurable: true, value: async () => current })
+    Object.defineProperty(PushManager.prototype, 'subscribe', {
+      configurable: true,
+      value: async (options: { applicationServerKey: BufferSource }) => {
+        const keys = (async () => {
+          const pair = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits'])
+          return new Uint8Array(await crypto.subtle.exportKey('raw', pair.publicKey))
+        })()
+        const p256dh = b64url(await keys)
+        const auth = b64url(bytes(16, 5))
+        const sub = {
+          endpoint,
+          options: { applicationServerKey: options.applicationServerKey instanceof ArrayBuffer ? options.applicationServerKey : (options.applicationServerKey as ArrayBufferView).buffer },
+          unsubscribe: async () => { current = null; return true },
+          toJSON: () => ({ endpoint, expirationTime: null, keys: { p256dh, auth } }),
+        }
+        current = sub
+        return sub
+      },
+    })
+  }, ENDPOINT)
+}
+
+async function openAppDialog(page: Page) {
+  await page.getByTestId('account-menu-button').click()
+  await page.getByTestId('account-app').click()
+  await expect(page.getByRole('dialog', { name: 'App & Benachrichtigungen' })).toBeVisible()
+}
+
+test('a member turns push on and off for this device', async ({ browser }) => {
+  const context = await browser.newContext({ permissions: ['notifications'] })
+  await fakePushManager(context)
+  const page = await context.newPage()
+  try {
+    await signIn(page)
+    await page.evaluate(async () => { await navigator.serviceWorker.ready })
+    await openAppDialog(page)
+    const section = page.getByTestId('push-section')
+
+    await expect(section.getByTestId('push-state')).toContainText('Lass dich auf diesem Gerät benachrichtigen')
+    await section.getByTestId('push-enable').click()
+    await expect(section.getByTestId('push-device')).toHaveCount(1)
+    await expect(section.getByTestId('push-device')).toContainText('Dieses Gerät')
+
+    const list = await apiFetch(page, 'GET', '/api/push/subscriptions') as { status: number, json: { subscriptions: Array<{ label: string, fingerprint: string }> } }
+    expect(list.status).toBe(200)
+    expect(list.json.subscriptions).toHaveLength(1)
+    expect(JSON.stringify(list.json)).not.toContain('push.example.test')
+
+    // The message text can be switched off, and the choice is kept on the server.
+    await section.getByTestId('push-preview').click()
+    await expect.poll(async () => ((await apiFetch(page, 'GET', '/api/push/config')).json as { preview: boolean }).preview).toBe(false)
+
+    // A test push goes to the made-up address, which resolves nowhere: the
+    // server reports it as not delivered instead of failing.
+    await section.getByTestId('push-test').click()
+    await expect(page.getByText('Die Testbenachrichtigung konnte nicht zugestellt werden.')).toBeVisible()
+
+    await section.getByTestId('push-disable').click()
+    await expect(section.getByTestId('push-enable')).toBeVisible()
+    await expect.poll(async () => ((await apiFetch(page, 'GET', '/api/push/subscriptions')).json as { subscriptions: unknown[] }).subscriptions.length).toBe(0)
+  } finally {
+    await apiFetch(page, 'PUT', '/api/push/preferences', { preview: true })
+    await context.close()
+  }
+})
+
+test('the server refuses a push address that points into its network', async ({ page }) => {
+  await signIn(page)
+  const key = await page.evaluate(async () => {
+    const pair = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits'])
+    const raw = new Uint8Array(await crypto.subtle.exportKey('raw', pair.publicKey))
+    return btoa(String.fromCharCode(...raw)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  })
+  for (const endpoint of ['https://127.0.0.1/x', 'https://192.168.1.1/x', 'http://push.example.test/x', 'https://push.example.test:6379/x']) {
+    const res = await apiFetch(page, 'POST', '/api/push/subscriptions', { endpoint, p256dh: key, auth: 'AAAAAAAAAAAAAAAAAAAAAA', label: 'x' })
+    expect(res.status, endpoint).toBe(400)
+  }
+  const ok = await apiFetch(page, 'POST', '/api/push/subscriptions', { endpoint: ENDPOINT + '-api', p256dh: key, auth: 'AAAAAAAAAAAAAAAAAAAAAA', label: 'API device' })
+  expect(ok.status).toBe(201)
+  expect((await apiFetch(page, 'DELETE', `/api/push/subscriptions/${responseString(ok, 'id')}`)).status).toBe(204)
+})
+
+test('the service worker shows a delivered push and keeps quiet for a message while the app is on screen', async ({ browser }) => {
+  const context = await browser.newContext({ permissions: ['notifications'] })
+  const page = await context.newPage()
+  try {
+    await signIn(page)
+    await page.evaluate(async () => { await navigator.serviceWorker.ready })
+    await page.reload()
+    await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true)
+
+    const cdp = await context.newCDPSession(page)
+    const registrations: Array<{ registrationId: string, scopeURL: string }> = []
+    cdp.on('ServiceWorker.workerRegistrationUpdated', (event) => registrations.push(...event.registrations))
+    await cdp.send('ServiceWorker.enable')
+    await expect.poll(() => registrations.length).toBeGreaterThan(0)
+    const registrationId = registrations[0]!.registrationId
+    const origin = new URL(page.url()).origin
+    const deliver = (payload: unknown) => cdp.send('ServiceWorker.deliverPushMessage', { origin, registrationId, data: JSON.stringify(payload) })
+    const shown = () => page.evaluate(async () => {
+      const reg = await navigator.serviceWorker.ready
+      return (await reg.getNotifications()).map(n => ({ title: n.title, body: n.body, tag: n.tag }))
+    })
+
+    // A message for a channel the page is not showing: the page is on screen, so the page shows it itself.
+    const channel = '11111111-1111-4111-8111-111111111111'
+    const message = '22222222-2222-4222-8222-222222222222'
+    await deliver({ v: 1, type: 'message', title: 'Alice (#allgemein)', body: 'Hallo', tag: channel, ts: Date.now(), channel_id: channel, message_id: message })
+    await page.waitForTimeout(500)
+    expect(await shown()).toEqual([])
+
+    // The test push is always shown.
+    await deliver({ v: 1, type: 'test', title: 'Mnema Talk', body: 'Push funktioniert auf diesem Gerät.', tag: 'test', ts: Date.now() })
+    await expect.poll(shown).toEqual([{ title: 'Mnema Talk', body: 'Push funktioniert auf diesem Gerät.', tag: 'test' }])
+
+    // Anything that is not ours still shows something (the browser requires it) and never throws.
+    await deliver({ unexpected: true })
+    await expect.poll(async () => (await shown()).length).toBe(2)
+  } finally {
+    await context.close()
+  }
+})

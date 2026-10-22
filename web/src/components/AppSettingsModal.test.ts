@@ -21,7 +21,8 @@ afterEach(() => {
 
 function open(state: string) {
   pwa.state = state
-  w = mount(AppSettingsModal, { attachTo: document.body })
+  // The push section has its own tests; here it is a stand-in.
+  w = mount(AppSettingsModal, { attachTo: document.body, global: { stubs: { PushSection: true } } })
 }
 
 describe('installing the app from the dialog', () => {
