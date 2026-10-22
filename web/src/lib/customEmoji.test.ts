@@ -37,7 +37,7 @@ describe('drawing custom emoji', () => {
 
   it('shows the still frame when reduced motion is preferred', () => {
     expect(renderEmojiTokens(escaped, lookup, true)).toContain('/api/emoji/x/still?v=1')
-    expect(emojiImage({ ...parrot, still_url: undefined }, true).src).toBe(parrot.url)
+    expect(emojiImage({ id: ID, name: 'flat', animated: false, url: parrot.url }, true).src).toBe(parrot.url)
   })
 
   it('degrades a deleted emoji to :name: text', () => {
