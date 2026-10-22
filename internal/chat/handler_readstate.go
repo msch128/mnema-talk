@@ -136,43 +136,6 @@ func (h *Handler) markUnread(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// setNotifyLevel handles PUT /api/channels/{channelID}/notifications.
-//
-// @Summary Set channel notification level
-// @ID setChannelNotifications
-// @Tags Channels
-// @Accept json
-// @Produce json
-// @Security cookieAuth
-// @Param channelID path string true "Channel ID." Format(uuid)
-// @Param request body SetNotifyLevelRequest true "Request body."
-// @Success 204 "Success, no content."
-// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
-// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
-// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
-// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
-// @Header 429 {integer} Retry-After "Seconds until the client may retry."
-// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
-// @Router /api/channels/{channelID}/notifications [put]
-func (h *Handler) setNotifyLevel(w http.ResponseWriter, r *http.Request) error {
-	chID, err := h.channelParam(r)
-	if err != nil {
-		return err
-	}
-	var req SetNotifyLevelRequest
-	if err := httpx.DecodeJSON(r, &req); err != nil {
-		return err
-	}
-	user := auth.UserFrom(r.Context())
-	if err := SetNotifyLevel(r.Context(), h.DB, user.ID, chID, req.Level); err != nil {
-		return err
-	}
-	h.publishReadState(user.ID, chID, map[string]any{"notify_level": req.Level})
-	w.WriteHeader(http.StatusNoContent)
-	return nil
-}
-
 // MarkReadRequest is the optional body of POST /api/channels/{channelID}/read.
 type MarkReadRequest struct {
 	// MessageID is the message to mark read up to; null or omitted means now.
@@ -182,9 +145,4 @@ type MarkReadRequest struct {
 // MarkUnreadRequest is the body of POST /api/channels/{channelID}/unread.
 type MarkUnreadRequest struct {
 	MessageID uuid.UUID `json:"message_id" format:"uuid"`
-}
-
-// SetNotifyLevelRequest is the body of PUT /api/channels/{channelID}/notifications.
-type SetNotifyLevelRequest struct {
-	Level NotifyLevel `json:"level"`
 }

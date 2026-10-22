@@ -11,9 +11,10 @@ import { deleteMessage, editMessage, sendMessage, setPinned, toggleReaction, upl
 import { closeThread, openThread, sendThreadReply, uploadThreadMedia } from './chat/threads'
 import { closeWebSocket, initWebSocket, installVisibilityRetry, retryNow, sendWSEvent, setWebRTCHandlers } from './chat/socket'
 import { handleWSEvent } from './chat/events'
-import { fetchReadState, markActiveChannelReadIfReading, markChannelRead, markChannelUnread, notificationLevel, setNotificationLevel, setReturnToTabHandler, setVoiceChatReading } from './chat/readState'
+import { fetchReadState, markActiveChannelReadIfReading, markChannelRead, markChannelUnread, setReturnToTabHandler, setVoiceChatReading } from './chat/readState'
+import { fetchNotificationSettings, markAllRead, notificationLevel, setCategoryNotificationLevel, setNotificationLevel } from './chat/notifySettings'
 import { sendTyping } from './chat/typing'
-import { messageMentionsMe, requestNotificationPermission } from './chat/notifications'
+import { messageMentionsMe, refreshNotificationPermission, requestNotificationPermission } from './chat/notifications'
 import { dismissEphemeral, resetCommunityState } from './chat/reset'
 
 export type { EphemeralNote, ProfilePreview, ThreadRoot } from './chat/types'
@@ -52,6 +53,7 @@ function exposedState(cs: ChatState) {
     selectedUserProfile: cs.selectedUserProfile,
     pendingMention: cs.pendingMention,
     readStates: cs.readStates,
+    notifySettings: cs.notifySettings,
     activeChannelLastReadAt: cs.activeChannelLastReadAt,
     voiceChatReading: cs.voiceChatReading,
     notificationPermission: cs.notificationPermission,
@@ -104,10 +106,14 @@ function exposedActions(cx: Cx) {
     fetchReadState: bind(fetchReadState),
     markChannelRead: bind(markChannelRead),
     markChannelUnread: bind(markChannelUnread),
+    fetchNotificationSettings: bind(fetchNotificationSettings),
     setNotificationLevel: bind(setNotificationLevel),
+    setCategoryNotificationLevel: bind(setCategoryNotificationLevel),
+    markAllRead: bind(markAllRead),
     notificationLevel: bind(notificationLevel),
     goToMessage: bind(goToMessage),
     sendTyping: bind(sendTyping),
+    refreshNotificationPermission: bind(refreshNotificationPermission),
     requestNotificationPermission: bind(requestNotificationPermission),
     openThread: bind(openThread),
     closeThread: bind(closeThread),

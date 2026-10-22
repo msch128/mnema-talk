@@ -439,6 +439,33 @@ host:
   or inline-safe media, never a document of the app origin. The attachment child window
   and the gaming surfaces use the same protocol and the same bundle.
 
+* **OS notifications and the app badge** (host capability `notify`). The
+  identity of the instance window carries `capabilities: ["notify"]`; the
+  selector, gaming surfaces and the attachment window announce none, and a
+  client from before this feature announces no list at all, in which case the
+  app falls back to the browser's Notification and Badging APIs. The commands
+  are `desktop_notify_open` (a channel that reports which toast was clicked, as
+  `{channel_id, message_id}`), `desktop_notify` (`title`, `body`, `channelId`,
+  `messageId`), `desktop_notify_permission` and
+  `desktop_notify_request_permission` (both answer `granted`, `denied`,
+  `default` or `unsupported`) and `desktop_set_badge` (`count`). They are
+  allowed only in the instance window, never on the selector or a gaming
+  surface. The host treats everything as untrusted text: control characters
+  are flattened, title and body are truncated, ids must be plain identifiers,
+  and toasts are rate limited, so a hostile server cannot show markup or spam
+  the desktop. The OS owns the permission and the host reports it: on macOS
+  the system asks once (UserNotifications), when the page calls
+  `desktop_notify_request_permission` or at the first toast, and `default`
+  means it has not been asked yet; Windows and Linux never ask and answer
+  `granted` (a toast the person turned off in the system is dropped without an
+  error). A page that gets an unknown-command error from these two commands (a
+  client from before them) keeps treating the permission as `granted`. Clicking
+  a toast is reported by the platform itself (the toast's activation on Windows,
+  the notification delegate on macOS, the `click` event on Linux) and also
+  brings the window forward. Windows shows a dot as the taskbar overlay, macOS
+  and Linux the count on the dock or launcher icon. This needs no
+  `web_client_api` bump: the web app detects the capability.
+
 ### Why this keeps the browser model intact
 
 * CSRF: unchanged. The Origin the server sees is the instance's own, set by
@@ -557,3 +584,13 @@ executable itself is trusted as far as its download was.
   a throwaway stack. Anything that needs WebView2 (custom protocol mapping on
   Windows, media permission prompts, the gaming overlays) is listed as
   Windows-only in the desktop repository's status page.
+
+## Rules acceptance and the native DEV client
+
+Community rules (`/api/onboarding`, see [roles-and-permissions.md](roles-and-permissions.md))
+reach the shipped desktop clients through the trusted proxy like any other
+`/api` call, so members accept them in the web app as usual. The native IPC
+transport (`web/src/lib/native/nativeRoutes.ts`) belongs to the experimental
+Windows DEV client, which is not shipped; it does not carry `/api/onboarding`
+and a member of that client could not accept rules until a typed operation is
+added.

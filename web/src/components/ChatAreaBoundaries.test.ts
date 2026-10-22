@@ -6,7 +6,8 @@ import ChatArea from './ChatArea.vue'
 import ContextMenu from './ContextMenu.vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
-import { fixtureId, channelFixture, messageFixture, readStateFixture, userFixture, memoryStorageFixture } from '../test-fixtures.fixture'
+import { useOnboardingStore } from '../stores/onboarding'
+import { fixtureId, channelFixture, messageFixture, readStateFixture, userFixture, onboardingStateFixture } from '../test-fixtures.fixture'
 import { t } from '../i18n'
 
 let wrapper: ReturnType<typeof mount<typeof ChatArea>> | undefined
@@ -14,6 +15,7 @@ const channelId = fixtureId(2)
 
 function seed() {
   useAuthStore().user = userFixture()
+  useOnboardingStore().state = onboardingStateFixture({ dismissed_tips: ['search', 'mention', 'talk'] })
   const chat = useChatStore()
   chat.activeChannel = channelFixture()
   chat.notificationPermission = 'granted'
@@ -28,7 +30,6 @@ function render() {
 
 beforeEach(() => {
   setActivePinia(createPinia())
-  localStorage.removeItem('mnema_notif_hint_dismissed')
   vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => new Response(null, { status: 204 })))
 })
 
@@ -41,18 +42,14 @@ afterEach(() => {
 })
 
 describe('ChatArea boundary and teardown behavior', () => {
-  it('keeps notification opt-in usable when reading browser storage is denied', async () => {
+  it('keeps notification opt-in usable when saving its dismissal fails', async () => {
     const chat = seed()
     chat.notificationPermission = 'default'
-    // Initialize stores before failing the component's own preference read.
-    const read = vi.fn<(key: string) => string | null>(() => { throw new DOMException('Storage unavailable', 'SecurityError') })
-    const write = vi.fn<(key: string, value: string) => void>(() => { throw new DOMException('Storage unavailable', 'SecurityError') })
-    vi.stubGlobal('localStorage', { ...memoryStorageFixture(), getItem: read, setItem: write })
     const w = render()
-    expect(read).toHaveBeenCalledWith('mnema_notif_hint_dismissed')
     expect(w.find('[role="region"]').exists()).toBe(true)
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => { throw new Error('offline') }))
     await w.find(`[aria-label="${t('notifications.notNow')}"]`).trigger('click')
-    expect(write).toHaveBeenCalledWith('mnema_notif_hint_dismissed', '1')
+    await flushPromises()
     expect(w.find('[role="region"]').exists()).toBe(false)
   })
 

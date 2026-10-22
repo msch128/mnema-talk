@@ -248,7 +248,7 @@ function formatDate(dateStr?: string) {
           </div>
         </div>
 
-        <MarkdownContent v-if="chatStore.activeThread.content" :content="chatStore.activeThread.content" />
+        <MarkdownContent v-if="chatStore.activeThread.content" :content="chatStore.activeThread.content" :mention-roles="chatStore.activeThread.mention_roles ?? []" />
         <MessageEmbeds :embeds="chatStore.activeThread.embeds ?? []" />
 
         <!-- Root Message Attachments -->

@@ -51,7 +51,7 @@ const (
 // @Description - `typing`: `{channel_id, user_id}` (to everyone except the typist).
 // @Description
 // @Description Server to client, targeted:
-// @Description - `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}` or `{channel_id, notify_level}`.
+// @Description - `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}`, or `{refresh: true}` alone after a notification setting changed or everything was marked read (reload read states and notification settings).
 // @Description - `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.
 // @Description - `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.
 // @Description - `screen_viewers`: `{channel_id, user_id, viewers}` to voice-room members: `viewers` are the distinct users in the room watching `user_id`'s screen share (sorted ids, never the sharer). Sent whenever that set changes (`viewers: []` once when a watched share ends or loses its last viewer), and on `voice_join` one per live share to the joining connection only.
@@ -60,7 +60,7 @@ const (
 // @Description - `screen_quality`: `{channel_id, user_id, layer, auto}` to the watching connection only: the layer of `user_id`'s screen share it receives now (`-1` before the first picture) and whether the server chooses it (`auto`).
 // @Description - `screen_layers_wanted`: `{channel_id, layers}` to the sharing connection only: the indexes of its layers some viewer receives or is about to. A sender may stop encoding the others; layer 0 is always listed while nobody watches.
 // @Description - `media_handshake`: `{channel_id, user_id, wire}` to the other connections in that voice room. `wire` is opaque; the server does not read it.
-// @Description - `voice_kicked`: `{channel_id, reason?}` when a moderator removes the user from voice, `reason: "room_full"` when a voice join is refused because the room is full (the channel's `user_limit`), or `reason: "missing_permission"` when the user may not (or no longer may) view and connect to that Talk.
+// @Description - `voice_kicked`: `{channel_id, reason?}` when a moderator removes the user from voice, `reason: "room_full"` when a voice join is refused because the room is full (the channel's `user_limit`), `reason: "rules_not_accepted"` when the community's rules have not been accepted yet (POST /api/onboarding/accept), or `reason: "missing_permission"` when the user may not (or no longer may) view and connect to that Talk.
 // @Description - `pong`: `{t}` echoing a `ping`.
 // @Description
 // @Description Client to server:

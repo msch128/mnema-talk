@@ -58,15 +58,47 @@ func sendContext(perms *perm.Service, r *http.Request, ch uuid.UUID, need perm.S
 	if err != nil {
 		return nil, err
 	}
-	p := snap.Channel(auth.UserFrom(ctx).Subject(), ch)
-	if err := perm.CheckChannel(p, need); err != nil {
+	sub := auth.UserFrom(ctx).Subject()
+	p := snap.Channel(sub, ch)
+	if err := snap.Deny(sub, p, need); err != nil {
 		return nil, err
 	}
 	ctx = WithSlowModeExempt(ctx, p.Has(perm.ManageMessages))
 	return WithMentionPolicy(ctx, MentionPolicy{
 		NoEveryone: !p.Has(perm.MentionEveryone),
 		CanView:    func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, ch).Has(perm.ViewChannel) },
+		Roles:      mentionableRoles(snap, p.Has(perm.MentionEveryone)),
 	}), nil
+}
+
+// refusalFor turns a "missing permission" refusal into RULES_NOT_ACCEPTED when
+// the caller's rules acceptance is what took the permission away.
+func (h *Handler) refusalFor(r *http.Request, err error) error {
+	var apiErr *httpx.APIError
+	if h.Perms == nil || !errors.As(err, &apiErr) || apiErr.Code != httpx.CodeForbidden {
+		return err
+	}
+	snap, serr := h.Perms.Snapshot(r.Context())
+	if serr == nil && snap.RulesPending(auth.UserFrom(r.Context()).ID) {
+		return perm.ErrRulesNotAccepted
+	}
+	return err
+}
+
+// mentionableRoles are the roles an author may mention: those marked
+// mentionable, or every custom role for an author who may mention everyone
+// (the Owner and Administrators always may). @everyone and the roles the
+// server manages for bots cannot be mentioned by name.
+func mentionableRoles(snap *perm.Snapshot, mayAll bool) []MentionRole {
+	var out []MentionRole
+	for _, r := range snap.Roles() {
+		if r.Everyone || r.Managed || !(r.Mentionable || mayAll) {
+			continue
+		}
+		id := r.ID
+		out = append(out, MentionRole{ID: id, Name: r.Name, Members: func() []uuid.UUID { return snap.RoleMembers(id) }})
+	}
+	return out
 }
 
 // UploadContext is the sendContext of an upload (media package): the caller

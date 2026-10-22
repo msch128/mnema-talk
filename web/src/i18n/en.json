@@ -83,6 +83,7 @@
       "PAYLOAD_TOO_LARGE": "The file is too large",
       "UNSUPPORTED_MEDIA_TYPE": "This file type isn't supported",
       "RATE_LIMITED": "Too many attempts – please wait a moment",
+      "RULES_NOT_ACCEPTED": "Please accept the community rules first",
       "UNAVAILABLE": "The service isn't available right now",
       "INTERNAL_ERROR": "Internal server error"
     },
@@ -147,7 +148,11 @@
     "toRegister": "Have an invite code? Register here",
     "legal": "Privacy policy & legal",
     "inviteRequired": "Please enter an invite code.",
-    "failed": "That didn't work. Please try again."
+    "failed": "That didn't work. Please try again.",
+    "subtitleInvited": "You've been invited to join",
+    "inviteChecking": "Checking your invite …",
+    "inviteInvalid": "This invite is not valid any more. Ask for a new one, or sign in if you already have an account.",
+    "inviteExpires": "Valid until {when}"
   },
   "sidebar": {
     "subtitle": "Private community",
@@ -170,6 +175,8 @@
     "markedRead": "Marked as read",
     "markAllRead": "Mark all as read",
     "allMarkedRead": "All marked as read",
+    "categoryMentions": "{n} mentions in this category",
+    "categoryUnread": "Unread messages in this category",
     "copyLink": "Copy link",
     "copiedLink": "Link copied",
     "editChannel": "Edit channel",
@@ -209,7 +216,48 @@
     "notNow": "Not now",
     "granted": "Notifications are enabled.",
     "denied": "Notifications are blocked in the browser.",
-    "channelSettings": "Notifications for this channel"
+    "channelSettings": "Notifications for this channel",
+    "inheritChannel": "Use category setting",
+    "inheritCategory": "Default (all messages)",
+    "muteChannel": "Mute channel",
+    "muteCategory": "Mute category",
+    "mute_15m": "For 15 minutes",
+    "mute_1h": "For 1 hour",
+    "mute_8h": "For 8 hours",
+    "mute_24h": "For 24 hours",
+    "mute_forever": "Until I turn it back on",
+    "mutedUntil": "Until {time}",
+    "mutedIndefinitely": "Muted",
+    "unmute": "Unmute"
+  },
+  "welcome": {
+    "progress": "Step {current} of {total}",
+    "close": "Skip the introduction",
+    "continue": "Continue",
+    "skip": "Skip",
+    "welcome": {
+      "title": "Welcome to {name}",
+      "fallback": "Glad you are here. A few quick steps and you are set."
+    },
+    "rules": {
+      "title": "The rules",
+      "intro": "Please read the rules of this community. You can read along, but posting, reacting, uploading and joining a Talk wait until you accept them.",
+      "accept": "I accept the rules"
+    },
+    "profile": {
+      "title": "Your profile"
+    },
+    "notifications": {
+      "title": "Stay in the loop",
+      "body": "Get a desktop notification for new messages while Mnema Talk runs in the background. You can change this per channel at any time."
+    }
+  },
+  "tips": {
+    "label": "Tip",
+    "gotIt": "Got it",
+    "search": "Press Ctrl or Cmd + K to search every channel you can see.",
+    "mention": "Type @ to mention someone and / for slash commands.",
+    "talk": "Click a Talk to join it right away. Nobody gets a call, it is a hangout spot."
   },
   "channel": {
     "create": "Create channel",
@@ -293,8 +341,7 @@
     "search": "Search",
     "searchPlaceholder": "Search messages …",
     "filter": "Filter",
-    "hasAttachment": "Has attachment",
-    "searchHint": "Type a search term",
+    "searchHint": "Type a search term or a filter such as from: or in:",
     "noResults": "No messages found",
     "isTyping": "{name} is typing …",
     "severalTyping": "Several people are typing …",
@@ -303,13 +350,10 @@
     "markUnreadFailed": "Could not mark as unread.",
     "twoTyping": "{a} and {b} are typing …",
     "newSinceDivider": "New since {time}",
-    "searchChannel": "Channel",
-    "searchAllChannels": "All channels",
-    "searchAuthor": "Author",
-    "searchAnyAuthor": "All authors",
-    "hasImage": "Has image",
-    "hasLink": "Has link",
     "searchMore": "Load more",
+    "searchUnknownFilter": "No matching member or channel",
+    "searchRemoveFilter": "Remove filter {filter}",
+    "searchInChannel": "Search in this channel",
     "searchFailed": "The search failed.",
     "inThread": "in thread",
     "copyText": "Copy text",
@@ -761,7 +805,8 @@
       "roles": "Roles",
       "audit": "Audit log",
       "bans": "Bans",
-      "bots": "Bots"
+      "bots": "Bots",
+      "onboarding": "Welcome & rules"
     },
     "system": {
       "heading": "System & version",
@@ -1019,6 +1064,24 @@
       "saved": "Upload limit saved.",
       "hint": "Applies to everyone unless a role sets its own. It cannot exceed the server maximum of {ceiling} MB (MAX_UPLOAD_SIZE_MB). Your reverse proxy must allow that body size.",
       "invalid": "Enter a whole number from 1 to {ceiling}."
+    },
+    "onboarding": {
+      "hint": "Shown to new members. Once rules exist, members have to accept them before they can post, react, upload or join a Talk. You are never asked.",
+      "name": "Community name",
+      "namePlaceholder": "Mnema Talk",
+      "nameHint": "Appears on invite links, before anyone has signed in.",
+      "welcome": "Welcome text",
+      "rules": "Rules",
+      "preview": "Preview",
+      "edit": "Edit",
+      "rulesOn": "Members must accept these rules (version {version}).",
+      "rulesOff": "No rules: nothing is asked of members and nothing is blocked.",
+      "reaccept": "Require everyone to accept the rules again",
+      "startChannel": "Start channel",
+      "startChannelNone": "The first channel a member can see",
+      "tooLong": "One of the texts is too long.",
+      "save": "Save",
+      "saved": "Welcome and rules saved."
     }
   },
   "profile": {
@@ -1093,7 +1156,13 @@
     "title": "Mention",
     "listLabel": "Mention suggestions",
     "allHint": "Every member",
-    "hereHint": "Everyone online right now"
+    "hereHint": "Everyone online right now",
+    "roleHint": "Role: everyone who holds it is notified"
+  },
+  "mentions": {
+    "inbox": "Mentions",
+    "empty": "Nothing mentions you yet.",
+    "failed": "Mentions could not be loaded."
   },
   "emoji": {
     "open": "Insert emoji",

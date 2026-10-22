@@ -16,6 +16,8 @@ export interface TrustedApp {
   /** First 8 bytes of SHA-256 over the public key that signed it, hex. */
   keyId: string
   role: TrustedAppRole
+  /** Extra things the host offers this window (e.g. `notify`); absent in older clients. */
+  capabilities: readonly string[]
 }
 
 const VERSION = /^\d{1,9}\.\d{1,9}\.\d{1,9}$/
@@ -58,6 +60,15 @@ function parseRole(val: unknown): TrustedAppRole | null {
   return typeof val === 'string' && ROLES.includes(val) ? (val as TrustedAppRole) : null
 }
 
+const CAPABILITY = /^[a-z][a-z0-9_]{0,31}$/
+
+/** Known-shape capability names only; a missing or malformed list means none. */
+function parseCapabilities(val: unknown): readonly string[] {
+  if (!Array.isArray(val)) return Object.freeze([])
+  const names = val.filter((v): v is string => typeof v === 'string' && CAPABILITY.test(v)).slice(0, 16)
+  return Object.freeze(names)
+}
+
 function parseRawIdentity(raw: object): TrustedApp | null {
   const version = parseVersion(field(raw, 'version'))
   if (!version) return null
@@ -70,7 +81,7 @@ function parseRawIdentity(raw: object): TrustedApp | null {
   const role = parseRole(field(raw, 'role'))
   if (!role) return null
 
-  return Object.freeze({ version, source, webClientApi, keyId, role })
+  return Object.freeze({ version, source, webClientApi, keyId, role, capabilities: parseCapabilities(field(raw, 'capabilities')) })
 }
 
 /** The verified bundle this page runs from, or null (browser, wrong origin, malformed). */

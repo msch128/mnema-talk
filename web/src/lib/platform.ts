@@ -11,6 +11,7 @@ import {
   type NativeReply,
 } from './native/nativeTransport'
 import { isTrustedDesktop, trustedApp, type TrustedApp } from './native/trustedDesktop'
+import { browserNotify, hostNotify, type NotifyAdapter, type NotifyPermission, type OsNotification } from './osNotify'
 import { TrustedSocket } from './native/trustedSocket'
 
 /** What the chat store needs from a live socket, whichever host opens it. */
@@ -42,6 +43,16 @@ export interface Platform {
   gamingBridgeToken(): string | null
   /** Calls a host command of the desktop client. */
   invoke<T = unknown>(command: string, args?: Record<string, unknown>): Promise<T>
+  /** Whether OS notifications may be shown. */
+  notificationPermission(): NotifyPermission
+  /** Asks the host what notifications may do right now (it can change outside the app). */
+  refreshNotificationPermission(): Promise<NotifyPermission>
+  /** Asks for notification permission; call only from a user gesture. */
+  requestNotificationPermission(): Promise<NotifyPermission>
+  /** Shows an OS notification; clicking it runs `onClick`. */
+  notify(n: OsNotification): void
+  /** Count on the taskbar/dock/app icon; 0 clears it. */
+  setBadge(count: number): void
   /** Native connection lifecycle (desktop only). */
   initializeNative(): Promise<void>
   connectNative(address: string): Promise<NativeReply>
@@ -55,6 +66,12 @@ function windowString(name: string): string | null {
   return typeof value === 'string' ? value : null
 }
 
+/** The host shows toasts itself only when it announced it and this is its instance window. */
+function notifier(): NotifyAdapter {
+  const app = trustedApp()
+  return app?.role === 'instance' && app.capabilities.includes('notify') ? hostNotify : browserNotify
+}
+
 /** A browser tab, including the trusted bundle served from the client's own origin. */
 export const browserPlatform: Platform = {
   isDesktop: () => false,
@@ -66,6 +83,11 @@ export const browserPlatform: Platform = {
   gamingSurface: () => windowString('__MNEMA_GAMING_SURFACE__'),
   gamingBridgeToken: () => windowString('__MNEMA_GAMING_BRIDGE__'),
   invoke: <T = unknown>(command: string, args?: Record<string, unknown>) => tauriInvoke<T>(command, args),
+  notificationPermission: () => notifier().permission(),
+  refreshNotificationPermission: () => notifier().refreshPermission(),
+  requestNotificationPermission: () => notifier().requestPermission(),
+  notify: n => notifier().notify(n),
+  setBadge: count => notifier().setBadge(count),
   initializeNative: initializeNativeContext,
   connectNative,
   disconnectNative,
@@ -95,6 +117,11 @@ export const platform: Platform = {
   gamingSurface: () => current().gamingSurface(),
   gamingBridgeToken: () => current().gamingBridgeToken(),
   invoke: <T = unknown>(command: string, args?: Record<string, unknown>) => current().invoke<T>(command, args),
+  notificationPermission: () => current().notificationPermission(),
+  refreshNotificationPermission: () => current().refreshNotificationPermission(),
+  requestNotificationPermission: () => current().requestNotificationPermission(),
+  notify: n => current().notify(n),
+  setBadge: count => current().setBadge(count),
   initializeNative: () => current().initializeNative(),
   connectNative: address => current().connectNative(address),
   disconnectNative: () => current().disconnectNative(),

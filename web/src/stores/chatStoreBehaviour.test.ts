@@ -361,7 +361,7 @@ describe('read state, presence and typing', () => {
   it('fetches read state and tolerates failed optimistic writes and empty action identifiers', async () => {
     const chat = setup()
     hidden(true)
-    http.handle = () => [readStateFixture({ channel_id: ch.id, unread_count: 3, mention_count: 1 })]
+    http.handle = url => url === '/api/notification-settings' ? { channels: [], categories: [] } : [readStateFixture({ channel_id: ch.id, unread_count: 3, mention_count: 1 })]
     expect(await chat.fetchReadState()).toEqual({ [ch.id]: expect.objectContaining({ unread_count: 3 }) })
     await chat.setNotificationLevel(ch.id, 'mentions')
     expect(chat.notificationLevel(ch.id)).toBe('mentions')
@@ -371,7 +371,7 @@ describe('read state, presence and typing', () => {
     await chat.markChannelRead(ch.id)
     expect(chat.readStates[ch.id]?.unread_count).toBe(0)
     await chat.setNotificationLevel(ch.id, 'mute')
-    expect(chat.readStates[ch.id]?.notify_level).toBe('mute')
+    expect(chat.readStates[ch.id]?.notify_level).toBe('mentions')
     await chat.markChannelRead('')
     await chat.markChannelUnread('', 'id')
     await chat.markChannelUnread(ch.id, '')
@@ -458,6 +458,14 @@ describe('browser notifications', () => {
     BrowserNotification.permission = 'denied'
     BrowserNotification.requestPermission.mockRejectedValueOnce(new Error('blocked'))
     expect(await chat.requestNotificationPermission()).toBe('denied')
+    expect(chat.notificationPermission).toBe('denied')
+  })
+  it('re-reads what the platform allows, and leaves the state alone where notifications are unsupported', async () => {
+    const chat = setup()
+    expect(await chat.refreshNotificationPermission()).toBe('unsupported')
+    vi.stubGlobal('Notification', BrowserNotification)
+    BrowserNotification.permission = 'denied'
+    expect(await chat.refreshNotificationPermission()).toBe('denied')
     expect(chat.notificationPermission).toBe('denied')
   })
   it('notifies off-channel mentions, focuses/routes on click, and silences focus/DND', () => {

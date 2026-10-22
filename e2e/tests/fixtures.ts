@@ -62,11 +62,32 @@ function countApiRequests(context: BrowserContext): void {
   })
 }
 
+// Every test registers or signs in accounts that are new to the welcome flow,
+// whose dialog would cover the page under test. Contexts therefore see it as
+// already finished; the onboarding spec opts back in with showWelcomeFlow.
+const ONBOARDING_STATE = '**/api/onboarding'
+
+async function hideWelcomeFlow(context: BrowserContext): Promise<void> {
+  await context.route(ONBOARDING_STATE, async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback()
+    const response = await route.fetch()
+    const state: unknown = await response.json().catch(() => null)
+    if (typeof state !== 'object' || state === null) return route.fulfill({ response })
+    return route.fulfill({ response, json: { ...state, welcome_done: true } })
+  })
+}
+
+/** Lets the welcome flow appear in this context, as it does for a real new member. */
+export async function showWelcomeFlow(context: BrowserContext): Promise<void> {
+  await context.unroute(ONBOARDING_STATE)
+}
+
 function counted(browser: Browser): Browser {
   const newContext = browser.newContext.bind(browser)
   browser.newContext = async (...args: Parameters<Browser['newContext']>) => {
     const context = await newContext(...args)
     countApiRequests(context)
+    await hideWelcomeFlow(context)
     return context
   }
   return browser

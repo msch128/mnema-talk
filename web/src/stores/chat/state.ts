@@ -1,7 +1,7 @@
 import { computed, ref, shallowRef } from 'vue'
-import type { Category, Channel, Member, Message, Presence, ReadState, User } from '../../types/domain'
+import type { Category, Channel, Member, Message, NotificationSettings, Presence, ReadState, User } from '../../types/domain'
 import type { ServerEventPayloads } from '../../types/events'
-import type { PlatformSocket } from '../../lib/platform'
+import { platform, type PlatformSocket } from '../../lib/platform'
 import { createKeyedThrottle } from '../../lib/chatLogic'
 import type { useAuthStore } from '../auth'
 import type { useVoiceStore } from '../voice'
@@ -62,6 +62,10 @@ function memberState() {
 
     // Read states per channel: channel_id -> { channel_id, unread_count, mention_count, last_read_at, notify_level }
     readStates: ref<Record<string, ReadState>>({}),
+    // The caller's stored notification settings (the read states carry the effective level).
+    notifySettings: ref<NotificationSettings>({ channels: [], categories: [] }),
+    // Re-reads read states and settings when the next timed mute runs out.
+    notifyExpiryTimer: undefined as Timer | undefined,
     activeChannelLastReadAt: ref<string | null>(null),
     // A voice channel's chat is only read while its panel next to the Talk is
     // open (VoiceChatPanel sets this); with the panel closed it collects unreads.
@@ -74,7 +78,7 @@ function memberState() {
     lastTypingSentAt: new Map<string, number>(),
 
     // Desktop notification permission: 'default' | 'granted' | 'denied' | 'unsupported'
-    notificationPermission: ref<string>(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission),
+    notificationPermission: ref<string>(platform.notificationPermission()),
     // Thread to open once the jump to its root message has landed (search / notification targets).
     pendingThreadOpen: null as { rootId: string; channelId: string } | null
   }

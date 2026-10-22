@@ -15,7 +15,7 @@ import VoiceStage from './components/VoiceStage.vue'
 import VoiceChatPanel from './components/VoiceChatPanel.vue'
 import MemberList from './components/MemberList.vue'
 import ThreadSidebar from './components/ThreadSidebar.vue'
-import LoginModal from './components/LoginModal.vue'
+import InviteLanding from './components/InviteLanding.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 import AudioSettingsModal from './components/AudioSettingsModal.vue'
@@ -25,6 +25,7 @@ import LegalModal from './components/LegalModal.vue'
 import ResizeHandle from './components/ResizeHandle.vue'
 import ToastHost from './components/ToastHost.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
+import WelcomeFlow from './components/WelcomeFlow.vue'
 import ConnectionBanner from './components/ConnectionBanner.vue'
 import TimeoutBanner from './components/TimeoutBanner.vue'
 import ModerationDialog from './components/ModerationDialog.vue'
@@ -34,11 +35,14 @@ import PipHost from './components/PipHost.vue'
 import { useResizable } from './composables/useResizable'
 import { useWebRTC } from './composables/useWebRTC'
 import { useAppRouting } from './composables/useAppRouting'
+import { useAppBadge } from './composables/useAppBadge'
+import { useTitleBadge } from './composables/useTitleBadge'
 import { VOICE_CHAT_HEIGHT, STAGE_MIN_HEIGHT } from './lib/voiceChatPanel'
 
 const authStore = useAuthStore()
 const permissions = usePermissionsStore()
 const chatStore = useChatStore()
+useTitleBadge()
 const voiceStore = useVoiceStore()
 let alive = true
 let authRetryTimer: ReturnType<typeof setTimeout> | undefined
@@ -64,6 +68,7 @@ const panels = useResizable([
 const voiceChatHeight = useResizable([VOICE_CHAT_HEIGHT], { axis: 'y', centerMin: STAGE_MIN_HEIGHT + 48 }).voiceChat
 const showLegalModal = ref(false)
 const routing = useAppRouting(() => alive)
+useAppBadge()
 const { showAdminModal, adminTab, voiceShowChat, voiceChannelId, applyRoute, syncCurrentStateToRoute, openAdmin, closeAdmin, onVoiceJoin } = routing
 
 // Avoids flashing the login dialog while the session cookie is being checked.
@@ -77,7 +82,8 @@ async function initializeApp() {
   await Promise.all([
     chatStore.fetchChannels(),
     chatStore.fetchMembers(),
-    chatStore.fetchReadState()
+    chatStore.fetchReadState(),
+    chatStore.fetchNotificationSettings()
   ])
   if (!alive) return
   chatStore.initWebSocket()
@@ -185,7 +191,7 @@ onMounted(async () => {
     </div>
 
     <!-- Unauthenticated: login / invite registration -->
-    <LoginModal v-else-if="!authStore.isAuthenticated" />
+    <InviteLanding v-else-if="!authStore.isAuthenticated" />
 
     <!-- Main Mnema Talk Layout -->
     <template v-else>
@@ -274,6 +280,9 @@ onMounted(async () => {
         @close="chatStore.closeUserProfile()"
         @mention="(uname) => chatStore.insertMention(uname)"
       />
+
+      <!-- First run and re-acceptance of changed rules -->
+      <WelcomeFlow />
 
       <!-- Legal & privacy dialog -->
       <LegalModal v-if="showLegalModal" @close="showLegalModal = false" />

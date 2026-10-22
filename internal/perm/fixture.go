@@ -74,6 +74,18 @@ func (f *Fixture) Timeout(user uuid.UUID, until time.Time, reason string) *Fixtu
 	return f
 }
 
+// Rules sets the version of the community rules in force (0: none).
+func (f *Fixture) Rules(version int) *Fixture {
+	f.s.rulesVersion = version
+	return f
+}
+
+// AcceptedRules records the rules version a member has accepted.
+func (f *Fixture) AcceptedRules(user uuid.UUID, version int) *Fixture {
+	f.s.rulesAccepted[user] = version
+	return f
+}
+
 // Category adds a category.
 func (f *Fixture) Category() uuid.UUID {
 	id := uuid.New()

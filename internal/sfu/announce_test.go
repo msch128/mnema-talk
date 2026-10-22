@@ -119,8 +119,12 @@ func TestAnnounceRulesMatchLegacyNAT1To1(t *testing.T) {
 	}
 }
 
-// offerCandidates lists the SDP's candidates as sorted "protocol address typ
-// type" strings, leaving out foundation, priority and the random port.
+// offerCandidates lists the distinct candidates of the SDP as sorted "component
+// protocol address typ type" strings, leaving out foundation, priority and the
+// random port. The agent gathers one socket per local address and drops a
+// candidate that repeats another's address and port. The OS may hand two
+// sockets the same ephemeral port, so how often an address repeats is chance;
+// which addresses are offered is not.
 func offerCandidates(t *testing.T, sdp string) []string {
 	t.Helper()
 	var out []string
@@ -133,7 +137,7 @@ func offerCandidates(t *testing.T, sdp string) []string {
 		out = append(out, strings.Join([]string{f[1], strings.ToLower(f[2]), f[4], f[6], f[7]}, " "))
 	}
 	slices.Sort(out)
-	return out
+	return slices.Compact(out)
 }
 
 func gatherOffer(t *testing.T, s *SFU) string {

@@ -168,7 +168,7 @@ defineExpose({ el: row })
       />
 
       <!-- Markdown Message Content -->
-      <MarkdownContent v-else-if="msg.content" :content="msg.content" />
+      <MarkdownContent v-else-if="msg.content" :content="msg.content" :mention-roles="msg.mention_roles ?? []" />
 
       <!-- Webhook cards -->
       <MessageEmbeds :embeds="msg.embeds ?? []" />

@@ -126,6 +126,32 @@ until the new release has passed your application checks.
 
 ## Version notes
 
+### 0.8.x → 0.9.0
+
+- **Three migrations run on first start: 0035, 0036 and 0037.** 0035 adds
+  notification levels per channel and category (with timed mutes), 0036 adds
+  role mentions (`message_mentions.kind`, `message_role_mentions`) and 0037 adds
+  the community onboarding settings (welcome text, rules, start channel) and
+  each member's accepted rules version. Take the usual backup first.
+- **Nobody loses notifications.** 0035 rewrites every stored channel level
+  `all` to `inherit`, so a category setting now reaches those channels; with no
+  category setting `inherit` still means `all`. Explicit `mentions` and `mute`
+  levels are kept as they were.
+- **Rules enforcement is off until an Owner or Administrator writes rules.**
+  Empty rules text enforces nothing, so the upgrade itself never locks anyone
+  out. Writing rules for the first time (or publishing a new version) puts
+  every member who has not accepted them in a pending state.
+- **What pending members lose.** Once rules exist, a member who has not
+  accepted the current version cannot send messages, react, upload or join a
+  Talk (`RULES_NOT_ACCEPTED`, and `voice_kicked` with reason
+  `rules_not_accepted` for someone already in a Talk). They keep read access
+  and can accept through the web app. The Owner and bots are exempt. See
+  [SECURITY.md](../SECURITY.md) for the model.
+- **Rollback means restoring the pre-upgrade backup.** The 0.8.16 code has not
+  been verified against `inherit` notification rows or the new tables, so do
+  not simply start the old image on the migrated database; restore the backup
+  taken before the upgrade (see "Rollback" above).
+
 ### 0.8.x → next
 
 - **Upload limits are now editable by the Owner.** `MAX_UPLOAD_SIZE_MB`

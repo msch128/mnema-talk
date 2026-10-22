@@ -83,6 +83,7 @@
       "PAYLOAD_TOO_LARGE": "Die Datei ist zu groß",
       "UNSUPPORTED_MEDIA_TYPE": "Dieser Dateityp wird nicht unterstützt",
       "RATE_LIMITED": "Zu viele Versuche – bitte warte einen Moment",
+      "RULES_NOT_ACCEPTED": "Bitte akzeptiere zuerst die Regeln der Community",
       "UNAVAILABLE": "Der Dienst ist gerade nicht verfügbar",
       "INTERNAL_ERROR": "Interner Serverfehler"
     },
@@ -147,7 +148,11 @@
     "toRegister": "Hast du einen Einladungscode? Hier registrieren",
     "legal": "Datenschutzerklärung & Rechtliches",
     "inviteRequired": "Bitte gib einen Einladungscode ein.",
-    "failed": "Das hat nicht geklappt. Versuch es noch einmal."
+    "failed": "Das hat nicht geklappt. Versuch es noch einmal.",
+    "subtitleInvited": "Du wurdest eingeladen, beizutreten",
+    "inviteChecking": "Einladung wird geprüft …",
+    "inviteInvalid": "Diese Einladung gilt nicht mehr. Frag nach einer neuen, oder melde dich an, wenn du schon ein Konto hast.",
+    "inviteExpires": "Gültig bis {when}"
   },
   "sidebar": {
     "subtitle": "Private Gemeinschaft",
@@ -170,6 +175,8 @@
     "markedRead": "Als gelesen markiert",
     "markAllRead": "Alle als gelesen markieren",
     "allMarkedRead": "Alle als gelesen markiert",
+    "categoryMentions": "{n} Erwähnungen in dieser Kategorie",
+    "categoryUnread": "Ungelesene Nachrichten in dieser Kategorie",
     "copyLink": "Link kopieren",
     "copiedLink": "Link kopiert",
     "editChannel": "Kanal bearbeiten",
@@ -209,7 +216,48 @@
     "notNow": "Nicht jetzt",
     "granted": "Benachrichtigungen sind aktiviert.",
     "denied": "Benachrichtigungen sind im Browser blockiert.",
-    "channelSettings": "Benachrichtigungen für diesen Kanal"
+    "channelSettings": "Benachrichtigungen für diesen Kanal",
+    "inheritChannel": "Einstellung der Kategorie verwenden",
+    "inheritCategory": "Standard (alle Nachrichten)",
+    "muteChannel": "Kanal stummschalten",
+    "muteCategory": "Kategorie stummschalten",
+    "mute_15m": "Für 15 Minuten",
+    "mute_1h": "Für 1 Stunde",
+    "mute_8h": "Für 8 Stunden",
+    "mute_24h": "Für 24 Stunden",
+    "mute_forever": "Bis ich es wieder einschalte",
+    "mutedUntil": "Bis {time}",
+    "mutedIndefinitely": "Stumm",
+    "unmute": "Stummschaltung aufheben"
+  },
+  "welcome": {
+    "progress": "Schritt {current} von {total}",
+    "close": "Einführung überspringen",
+    "continue": "Weiter",
+    "skip": "Überspringen",
+    "welcome": {
+      "title": "Willkommen bei {name}",
+      "fallback": "Schön, dass du da bist. Ein paar kurze Schritte, dann kann es losgehen."
+    },
+    "rules": {
+      "title": "Die Regeln",
+      "intro": "Bitte lies die Regeln dieser Community. Mitlesen geht sofort, Schreiben, Reagieren, Hochladen und Talks beitreten erst, wenn du sie akzeptierst.",
+      "accept": "Ich akzeptiere die Regeln"
+    },
+    "profile": {
+      "title": "Dein Profil"
+    },
+    "notifications": {
+      "title": "Immer auf dem Laufenden",
+      "body": "Erhalte eine Desktop-Benachrichtigung bei neuen Nachrichten, während Mnema Talk im Hintergrund läuft. Du kannst das jederzeit pro Kanal ändern."
+    }
+  },
+  "tips": {
+    "label": "Tipp",
+    "gotIt": "Verstanden",
+    "search": "Mit Strg oder Cmd + K durchsuchst du alle Kanäle, die du sehen kannst.",
+    "mention": "Mit @ erwähnst du jemanden, mit / startest du Slash-Befehle.",
+    "talk": "Ein Klick auf einen Talk tritt sofort bei. Niemand wird angerufen, es ist ein Treffpunkt."
   },
   "channel": {
     "create": "Kanal erstellen",
@@ -293,8 +341,7 @@
     "search": "Suche",
     "searchPlaceholder": "Nachrichten durchsuchen …",
     "filter": "Filter",
-    "hasAttachment": "Mit Anhang",
-    "searchHint": "Gib einen Suchbegriff ein",
+    "searchHint": "Gib einen Suchbegriff oder einen Filter wie from: oder in: ein",
     "noResults": "Keine Nachrichten gefunden",
     "isTyping": "{name} tippt …",
     "severalTyping": "Mehrere Personen tippen …",
@@ -303,13 +350,10 @@
     "markUnreadFailed": "Konnte nicht als ungelesen markiert werden.",
     "twoTyping": "{a} und {b} tippen …",
     "newSinceDivider": "Neu seit {time}",
-    "searchChannel": "Kanal",
-    "searchAllChannels": "Alle Kanäle",
-    "searchAuthor": "Autor",
-    "searchAnyAuthor": "Alle Autoren",
-    "hasImage": "Mit Bild",
-    "hasLink": "Mit Link",
     "searchMore": "Mehr laden",
+    "searchUnknownFilter": "Kein passendes Mitglied oder Kanal",
+    "searchRemoveFilter": "Filter {filter} entfernen",
+    "searchInChannel": "In diesem Kanal suchen",
     "searchFailed": "Die Suche ist fehlgeschlagen.",
     "inThread": "im Thread",
     "copyText": "Text kopieren",
@@ -761,7 +805,8 @@
       "roles": "Rollen",
       "audit": "Audit-Log",
       "bans": "Sperren",
-      "bots": "Bots"
+      "bots": "Bots",
+      "onboarding": "Willkommen & Regeln"
     },
     "system": {
       "heading": "System & Version",
@@ -1019,6 +1064,24 @@
       "saved": "Upload-Limit gespeichert.",
       "hint": "Gilt für alle, sofern eine Rolle kein eigenes Limit setzt. Es kann das Server-Maximum von {ceiling} MB (MAX_UPLOAD_SIZE_MB) nicht übersteigen. Dein Reverse-Proxy muss diese Body-Größe erlauben.",
       "invalid": "Gib eine ganze Zahl von 1 bis {ceiling} ein."
+    },
+    "onboarding": {
+      "hint": "Wird neuen Mitgliedern gezeigt. Sobald es Regeln gibt, müssen Mitglieder sie akzeptieren, bevor sie schreiben, reagieren, hochladen oder einem Talk beitreten können. Du wirst nie gefragt.",
+      "name": "Name der Community",
+      "namePlaceholder": "Mnema Talk",
+      "nameHint": "Erscheint auf Einladungslinks, bevor sich jemand angemeldet hat.",
+      "welcome": "Willkommenstext",
+      "rules": "Regeln",
+      "preview": "Vorschau",
+      "edit": "Bearbeiten",
+      "rulesOn": "Mitglieder müssen diese Regeln akzeptieren (Version {version}).",
+      "rulesOff": "Keine Regeln: Mitglieder werden nichts gefragt und nichts wird blockiert.",
+      "reaccept": "Alle müssen die Regeln erneut akzeptieren",
+      "startChannel": "Startkanal",
+      "startChannelNone": "Der erste Kanal, den ein Mitglied sehen kann",
+      "tooLong": "Einer der Texte ist zu lang.",
+      "save": "Speichern",
+      "saved": "Willkommen und Regeln gespeichert."
     }
   },
   "profile": {
@@ -1093,7 +1156,13 @@
     "title": "Erwähnen",
     "listLabel": "Vorschläge für Erwähnungen",
     "allHint": "Alle Mitglieder",
-    "hereHint": "Alle, die gerade online sind"
+    "hereHint": "Alle, die gerade online sind",
+    "roleHint": "Rolle: alle, die sie tragen, werden benachrichtigt"
+  },
+  "mentions": {
+    "inbox": "Erwähnungen",
+    "empty": "Dich erwähnt noch niemand.",
+    "failed": "Erwähnungen konnten nicht geladen werden."
   },
   "emoji": {
     "open": "Emoji einfügen",

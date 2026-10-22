@@ -1,5 +1,5 @@
 import { requireValue } from '../test-fixtures.fixture'
-import { messageFixture, userFixture, categoryFixture, channelFixture } from '../test-fixtures.fixture'
+import { messageFixture, userFixture, categoryFixture, channelFixture, onboardingStateFixture } from '../test-fixtures.fixture'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
@@ -7,6 +7,7 @@ import { nextTick } from 'vue'
 import ChatArea from './ChatArea.vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
+import { useOnboardingStore } from '../stores/onboarding'
 import { setLocale, i18nPlugin } from '../i18n'
 import { tooltip } from '../directives/tooltip'
 
@@ -23,6 +24,7 @@ function msg(id: string, user: string, min: number, content = 'text ' + id) {
 function setup({ lastReadAt = null, notifPermission = 'granted' }: { lastReadAt?: string | null; notifPermission?: NotificationPermission } = {}) {
   const auth = useAuthStore()
   auth.user = userFixture({ id: 'me', username: 'me', role: 'user' })
+  useOnboardingStore().state = onboardingStateFixture({ dismissed_tips: ['search', 'mention', 'talk'] })
   const chat = useChatStore()
   chat.notificationPermission = notifPermission
   chat.categories = [categoryFixture({ id: 'c', channels: [channelFixture({ id: 'ch1', name: 'allgemein', type: 'text' })] })]
@@ -463,29 +465,28 @@ describe('ChatArea notification settings and presentation', () => {
     if (permission === 'denied') expect(useToastStore().toasts.at(-1)?.text).toBe(t('notifications.denied'))
   })
 
-  it('dismisses hints even if storage access is denied', async () => {
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('private') })
+  it('dismisses the hint at once and keeps it dismissed even if saving fails', async () => {
     const chat = setup({ notifPermission: 'default' })
     expect(chat.notificationPermission).toBe('default')
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('private') })
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => { throw new Error('offline') }))
     await w.find(`[aria-label="${t('notifications.notNow')}"]`).trigger('click')
     expect(w.find('[role=region]').exists()).toBe(false)
-    vi.restoreAllMocks()
   })
 
   it('persists channel notification choices through the menu and closes it on Escape', async () => {
     const chat = setup()
-    const set = vi.spyOn(chat, 'setNotificationLevel').mockResolvedValue(undefined)
-    for (const level of ['all', 'mentions', 'mute'] as const) {
-      chat.readStates.ch1 = readStateFixture({ channel_id: 'ch1', notify_level: level })
+    const set = vi.spyOn(chat, 'setNotificationLevel').mockResolvedValue(true)
+    for (const level of ['inherit', 'all', 'mentions'] as const) {
+      chat.notifySettings = { channels: level === 'inherit' ? [] : [{ channel_id: 'ch1', level, muted_until: null }], categories: [] }
       await nextTick()
       await w.find('[aria-haspopup=menu]').trigger('click')
       await nextTick()
       const menu = w.findComponent(ContextMenu)
-      const item = requireValue(requireValue(menu.props('items')).find(item => item.label === t(`notifications.${level}`)))
-      expect(item?.shortcut).toBe('✓')
+      const label = level === 'inherit' ? t('notifications.inheritChannel') : t(`notifications.${level}`)
+      const item = requireValue(requireValue(menu.props('items')).find(item => item.label === label))
+      expect(item).toMatchObject({ type: 'radio', checked: true })
       item.action?.()
-      expect(set).toHaveBeenCalledWith('ch1', level)
+      expect(set).toHaveBeenCalledWith('ch1', level, null)
       menu.vm.$emit('close')
       await nextTick()
     }

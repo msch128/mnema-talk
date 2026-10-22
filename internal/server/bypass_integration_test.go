@@ -127,14 +127,8 @@ func TestKickIsScopedToTheTalk(t *testing.T) {
 	wantStatus(t, "no kicking in Quiet", putOverwrites(owner, "channels", quiet, overwrite("role", role, 0, perm.DisconnectMembers)), http.StatusNoContent)
 	wantStatus(t, "hide Hidden", putOverwrites(owner, "channels", hidden, overwrite("member", mod.user.ID, 0, perm.ViewChannel)), http.StatusNoContent)
 
-	watcher, _, err := owner.dialWS(a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
-	conn, _, err := max.dialWS(a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
+	watcher := owner.dialLiveWS(a.origin())
+	conn := max.dialLiveWS(a.origin())
 	kick := "/api/admin/users/" + max.user.ID.String() + "/kick"
 	for _, ch := range []uuid.UUID{quiet, hidden} {
 		conn.send("voice_join", map[string]any{"channel_id": ch})

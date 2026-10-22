@@ -3,10 +3,11 @@ import type { PropType } from 'vue'
 import type { MentionSuggestion } from '../lib/mentionQuery'
 // The @mention list above a composer. Mouse picks; the keyboard is handled
 // by the composer (useComposerAssist) so focus stays in the textarea.
-import { Users, Radio } from '@lucide/vue'
+import { Users, Radio, AtSign } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
 import BotBadge from './BotBadge.vue'
 import { useChatStore } from '../stores/chat'
+import { roleColorCss } from '../lib/permissions'
 
 defineProps({
   items: { type: Array as PropType<MentionSuggestion[]>, required: true },
@@ -29,7 +30,7 @@ const chatStore = useChatStore()
     <div
       v-for="(item, i) in items"
       :id="`${id}-${i}`"
-      :key="item.username"
+      :key="`${item.group ? 'g' : item.role ? 'r' : 'u'}:${item.username}`"
       role="option"
       :aria-selected="i === active ? 'true' : 'false'"
       :data-mention-option="item.username"
@@ -47,6 +48,13 @@ const chatStore = useChatStore()
         </span>
         <span class="font-semibold text-mnema-text">@{{ item.username }}</span>
         <span class="truncate text-xs text-mnema-tertiary">{{ $t(`mention.${item.username}Hint`) }}</span>
+      </template>
+      <template v-else-if="item.role">
+        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-mnema-band text-mnema-mint">
+          <AtSign class="h-3.5 w-3.5" />
+        </span>
+        <span class="truncate font-semibold text-mnema-text" :style="item.role.color ? { color: roleColorCss(item.role.color) } : undefined">{{ item.role.name }}</span>
+        <span class="truncate text-xs text-mnema-tertiary">{{ $t('mention.roleHint') }}</span>
       </template>
       <template v-else>
         <UserAvatar :user="item.user" size="xs" show-status :status="chatStore.presenceOf(item.user.id)" ring-class="bg-mnema-elevated" />

@@ -74,6 +74,10 @@ type User struct {
 	// time spent in voice rooms (finished stays) and messages sent.
 	VoiceSeconds int64 `json:"voice_seconds,omitempty" binding:"optional"`
 	MessageCount int64 `json:"message_count,omitempty" binding:"optional"`
+	// RulesPending is true while the caller has to accept the community rules
+	// (POST /api/onboarding/accept) before posting, reacting, uploading or
+	// joining a Talk. Only set in responses about the caller's own account.
+	RulesPending bool `json:"rules_pending,omitempty" binding:"optional"`
 	// Locale is the chosen UI language ("de", "en"); empty until chosen.
 	Locale    string    `json:"locale"`
 	CreatedAt time.Time `json:"created_at" format:"date-time"`

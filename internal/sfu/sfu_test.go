@@ -42,10 +42,17 @@ func newTestSFU(t *testing.T) *SFU {
 
 func newClient(t *testing.T) *client {
 	t.Helper()
+	return newClientWith(t, func(*webrtc.SettingEngine) {})
+}
+
+// newClientWith builds a loopback client whose transport the test may adjust.
+func newClientWith(t *testing.T, adjust func(*webrtc.SettingEngine)) *client {
+	t.Helper()
 	settings := webrtc.SettingEngine{}
 	settings.SetIncludeLoopbackCandidate(true)
 	settings.SetIPFilter(func(ip net.IP) bool { return ip.IsLoopback() })
 	settings.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
+	adjust(&settings)
 	pc, err := webrtc.NewAPI(webrtc.WithSettingEngine(settings)).NewPeerConnection(webrtc.Configuration{})
 	if err != nil {
 		t.Fatal(err)
