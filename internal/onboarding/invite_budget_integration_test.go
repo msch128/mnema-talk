@@ -42,18 +42,16 @@ func preview(h *Handler, code string) *httptest.ResponseRecorder {
 	return w
 }
 
-// A guesser rotating addresses is stopped by the global budget of failed
-// lookups, not by any per-address limit (AUTH-04).
-func TestInvitePreviewGlobalMissBudget(t *testing.T) {
+// With the global budget of unknown codes spent, unknown codes are refused
+// but a valid invite still previews: exhausting the budget must not lock
+// invitees out (AUTH-04).
+func TestInvitePreviewGlobalMissBudgetNeverBlocksValidCodes(t *testing.T) {
 	p := testutil.DB(t)
 	testutil.Reset(t, p)
 	seedInvite(t, p)
 	h := NewHandler(p, nil)
 	h.lookupMisses = httpx.NewRateLimiter(3, time.Hour)
 
-	if w := preview(h, "k7Rm2xQv9pLw"); w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"valid":true`) {
-		t.Fatalf("hit: %d %s", w.Code, w.Body)
-	}
 	for i := 0; i < 3; i++ {
 		if w := preview(h, "unknown-code-"+string(rune('a'+i))); w.Code != http.StatusOK {
 			t.Fatalf("miss %d: %d", i, w.Code)
@@ -61,20 +59,28 @@ func TestInvitePreviewGlobalMissBudget(t *testing.T) {
 	}
 	w := preview(h, "unknown-code-z")
 	if w.Code != http.StatusTooManyRequests || w.Header().Get("Retry-After") == "" {
-		t.Fatalf("after the budget: %d retry-after %q, want 429", w.Code, w.Header().Get("Retry-After"))
+		t.Fatalf("unknown code after the budget: %d retry-after %q, want 429", w.Code, w.Header().Get("Retry-After"))
 	}
-	// Hits never spent budget, and the budget being used up is what blocks now.
-	if w := preview(h, "k7Rm2xQv9pLw"); w.Code != http.StatusTooManyRequests {
-		t.Fatalf("lookup while the budget is spent: %d", w.Code)
+	if w := preview(h, "k7Rm2xQv9pLw"); w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"valid":true`) {
+		t.Fatalf("valid code while the budget is spent: %d %s", w.Code, w.Body)
 	}
 }
 
-func TestInvitePreviewHitsDoNotSpendTheMissBudget(t *testing.T) {
+// The per-client miss budget is the primary limit on unknown codes.
+func TestInvitePreviewPerClientMissBudget(t *testing.T) {
 	p := testutil.DB(t)
 	testutil.Reset(t, p)
 	seedInvite(t, p)
 	h := NewHandler(p, nil)
-	h.lookupMisses = httpx.NewRateLimiter(2, time.Hour)
+	h.missPerIP = httpx.NewRateLimiter(2, time.Hour)
+	for i := 0; i < 2; i++ {
+		if w := preview(h, "unknown-code-"+string(rune('a'+i))); w.Code != http.StatusOK {
+			t.Fatalf("miss %d: %d", i, w.Code)
+		}
+	}
+	if w := preview(h, "unknown-code-z"); w.Code != http.StatusTooManyRequests {
+		t.Fatalf("third miss from one client: %d", w.Code)
+	}
 	for i := 0; i < 10; i++ {
 		if w := preview(h, "k7Rm2xQv9pLw"); w.Code != http.StatusOK {
 			t.Fatalf("hit %d: %d", i, w.Code)
