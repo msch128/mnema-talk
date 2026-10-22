@@ -30,6 +30,36 @@ type exportedMessage struct {
 	UpdatedAt   time.Time  `json:"updated_at" db:"updated_at"`
 }
 
+// messageStream writes messages one by one and knows when the bounds are hit.
+type messageStream struct {
+	w         io.Writer
+	viewable  map[uuid.UUID]bool
+	written   int
+	bytes     int
+	truncated bool
+}
+
+// add writes one message; it reports false (and marks the document
+// truncated) once the message or byte bound is reached.
+func (ms *messageStream) add(m exportedMessage) (bool, error) {
+	if ms.written >= exportMaxMessages || ms.bytes >= exportMessageBytes {
+		ms.truncated = true
+		return false, nil
+	}
+	if !ms.viewable[m.ChannelID] {
+		m.ChannelName = nil
+	}
+	n, err := writeMessage(ms.w, m, ms.written > 0)
+	ms.written++
+	ms.bytes += n
+	return err == nil, err
+}
+
+const messagePageSQL = `SELECT m.id, m.channel_id, c.name AS channel_name, m.parent_id, m.reply_to_id,
+	m.content, m.is_edited, m.is_pinned, m.created_at, m.updated_at
+	FROM messages m JOIN channels c ON c.id = m.channel_id
+	WHERE m.user_id = $1 AND (m.created_at, m.id) > ($2, $3) ORDER BY m.created_at, m.id LIMIT $4`
+
 // streamMessages writes the member's messages as one JSON document, a page at
 // a time, and stops (marking the document truncated) at the message or byte
 // bound.
@@ -37,42 +67,29 @@ func streamMessages(ctx context.Context, q db.Querier, user uuid.UUID, viewable 
 	if _, err := io.WriteString(w, `{"messages":[`); err != nil {
 		return err
 	}
-	var (
-		written   int
-		bytesOut  int
-		truncated bool
-		lastAt    = time.Time{}
-		lastID    = uuid.Nil
-	)
-	for !truncated {
-		page, err := collect(ctx, q, pgx.RowToStructByName[exportedMessage], `SELECT m.id, m.channel_id, c.name AS channel_name, m.parent_id, m.reply_to_id,
-			m.content, m.is_edited, m.is_pinned, m.created_at, m.updated_at
-			FROM messages m JOIN channels c ON c.id = m.channel_id
-			WHERE m.user_id = $1 AND (m.created_at, m.id) > ($2, $3) ORDER BY m.created_at, m.id LIMIT $4`, user, lastAt, lastID, exportPage)
+	ms := &messageStream{w: w, viewable: viewable}
+	var lastAt time.Time
+	lastID := uuid.Nil
+	for !ms.truncated {
+		page, err := collect(ctx, q, pgx.RowToStructByName[exportedMessage], messagePageSQL, user, lastAt, lastID, exportPage)
 		if err != nil {
 			return err
 		}
 		for _, m := range page {
-			if written >= exportMaxMessages || bytesOut >= exportMessageBytes {
-				truncated = true
-				break
-			}
-			if !viewable[m.ChannelID] {
-				m.ChannelName = nil
-			}
-			n, err := writeMessage(w, m, written > 0)
+			more, err := ms.add(m)
 			if err != nil {
 				return err
 			}
-			written++
-			bytesOut += n
+			if !more {
+				break
+			}
 			lastAt, lastID = m.CreatedAt, m.ID
 		}
 		if len(page) < exportPage {
 			break
 		}
 	}
-	_, err := fmt.Fprintf(w, `],"truncated":%t}`, truncated)
+	_, err := fmt.Fprintf(w, `],"truncated":%t}`, ms.truncated)
 	return err
 }
 
