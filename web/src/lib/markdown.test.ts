@@ -119,6 +119,15 @@ describe('role mentions', () => {
     expect(renderMarkdown('@dev', { roles: [] })).not.toContain('md-mention-role')
   })
 
+  it('carries only a valid #rrggbb colour, as data and never as a style attribute', () => {
+    const coloured = (color: string) => dom(renderMarkdown('@dev', { roles: [{ name: 'Dev', color }] })).querySelector('.md-mention-role')
+    expect(coloured('#3366cc')?.getAttribute('data-role-color')).toBe('#3366cc')
+    expect(coloured('#3366cc')?.hasAttribute('style')).toBe(false)
+    for (const bad of ['red', '#fff', 'url(x)', '#3366cc"onmouseover="x', '']) {
+      expect(coloured(bad)?.hasAttribute('data-role-color')).toBe(false)
+    }
+  })
+
   it('leaves role pills non-interactive and keeps user mentions working', () => {
     const d = dom(renderMarkdown('@dev and @max', { roles, known: new Set(['max']) }))
     expect(d.querySelector('.md-mention-role')?.hasAttribute('data-mention')).toBe(false)

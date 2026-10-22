@@ -7,6 +7,8 @@ import LinkPreviewCard from './LinkPreviewCard.vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
+import { roleColorCss } from '../lib/permissions'
+import { roleColors as vRoleColors } from '../directives/roleColor'
 
 const props = defineProps({
   content: {
@@ -30,7 +32,7 @@ const knownNames = computed(() => new Set(chatStore.members.map(m => (m.username
 const mentionedRoles = computed(() => props.mentionRoles
   .map(id => permissions.roles.find(r => r.id === id))
   .filter(r => r !== undefined)
-  .map(r => ({ name: r.name, me: permissions.myRoleIds.includes(r.id) })))
+  .map(r => ({ name: r.name, me: permissions.myRoleIds.includes(r.id), color: roleColorCss(r.color) })))
 const parsedHtml = computed(() => renderMarkdown(props.content, {
   known: knownNames.value,
   me: authStore.user?.username || '',
@@ -80,6 +82,7 @@ function onKeydown(event: KeyboardEvent) {
     <!-- The only intentional v-html: renderMarkdown escapes all input before adding markup. -->
     <!-- eslint-disable vue/no-v-html -->
     <div
+      v-role-colors
       class="markdown-body break-words whitespace-pre-wrap select-text text-message"
       @click="onClick"
       @keydown="onKeydown"
@@ -135,6 +138,12 @@ function onKeydown(event: KeyboardEvent) {
 .markdown-body .md-mention-group[data-mention] { cursor: default; }
 /* A role reads like a member mention with an outline; the reader's own roles turn amber via -me. */
 .markdown-body .md-mention-role { box-shadow: inset 0 0 0 1px rgba(45, 167, 113, 0.45); }
+/* --role-color is set through the CSSOM by v-role-colors (CSP: no style attribute strings). */
+.markdown-body .md-mention-role[data-role-color] {
+  color: var(--role-color, #2da771);
+  background: color-mix(in srgb, var(--role-color, #2da771) 18%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--role-color, #2da771) 55%, transparent);
+}
 .markdown-body .md-mention-me,
 .markdown-body .md-mention-group {
   color: #fce4a8;

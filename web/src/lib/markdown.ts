@@ -90,13 +90,16 @@ function formatMention(
 export interface RoleMention {
   name: string
   me?: boolean
+  /** The role colour as "#rrggbb"; anything else is ignored. */
+  color?: string
 }
 
 /**
  * Draws "@Role Name" as a pill for the roles the server recorded on the
  * message. Role names may contain spaces, so the known names are matched
- * (longest first) instead of a username-like token. Roles are not clickable
- * and carry no colour here (the CSP forbids inline styles in this markup).
+ * (longest first) instead of a username-like token. Roles are not clickable.
+ * The colour travels as data-role-color (a validated #rrggbb); the CSP forbids
+ * inline styles in this markup, so the v-role-colors directive applies it.
  */
 function highlightRoles(html: string, roles: readonly RoleMention[]): string {
   if (!roles.length) return html
@@ -106,8 +109,10 @@ function highlightRoles(html: string, roles: readonly RoleMention[]): string {
     .map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
   const re = new RegExp(`(^|[\\s(])@(${names.join('|')})(?![A-Za-z0-9_-]|\\.[A-Za-z0-9_-])`, 'gi')
   return html.replace(re, (_all: string, pre: string, name: string) => {
-    const cls = byName.get(name.toLowerCase())?.me ? 'md-mention md-mention-role md-mention-me' : 'md-mention md-mention-role'
-    return `${pre}<span class="${cls}">@${name}</span>`
+    const role = byName.get(name.toLowerCase())
+    const cls = role?.me ? 'md-mention md-mention-role md-mention-me' : 'md-mention md-mention-role'
+    const color = role?.color && /^#[0-9a-fA-F]{6}$/.test(role.color) ? ` data-role-color="${role.color}"` : ''
+    return `${pre}<span class="${cls}"${color}>@${name}</span>`
   })
 }
 
