@@ -74,6 +74,13 @@ func messageTime(ctx context.Context, p *db.Pool, channelID, messageID uuid.UUID
 
 // MarkRead moves the user's read marker forward to messageID (or to now). It
 // never moves backwards; use MarkUnread for that.
+//
+// It writes only when another member's message sits between the current
+// marker and the target, or when the member has no marker yet (the first read
+// starts the "new since" divider). Repeated calls (a second tab, Esc on an
+// already read channel, a client retry) cost one indexed probe and no row
+// version, and sending a message never writes a marker at all. The result is
+// the marker afterwards.
 func MarkRead(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, messageID *uuid.UUID) (time.Time, error) {
 	// "Now" is the database's clock, the one messages.created_at comes from:
 	// the app's clock may lag it by a few milliseconds (separate containers,
@@ -88,11 +95,44 @@ func MarkRead(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, mess
 	}
 	var marked time.Time
 	err := p.QueryRow(ctx, `
-		INSERT INTO channel_reads (user_id, channel_id, last_read_at, notify_level) VALUES ($1, $2, COALESCE($3, NOW()), 'inherit')
-		ON CONFLICT (user_id, channel_id) DO UPDATE
-		SET last_read_at = GREATEST(COALESCE(channel_reads.last_read_at, EXCLUDED.last_read_at), EXCLUDED.last_read_at)
-		RETURNING last_read_at`, userID, channelID, at).Scan(&marked)
+		WITH marker AS (
+		    SELECT last_read_at AS at FROM channel_reads WHERE user_id = $1 AND channel_id = $2
+		), cur AS (
+		    SELECT COALESCE((SELECT at FROM marker), (SELECT created_at FROM users WHERE id = $1)) AS at,
+		           (SELECT at FROM marker) IS NOT NULL AS has_marker
+		), target AS (SELECT COALESCE($3::timestamptz, NOW()) AS at),
+		written AS (
+		    INSERT INTO channel_reads (user_id, channel_id, last_read_at, notify_level)
+		    SELECT $1, $2, target.at, 'inherit' FROM target, cur
+		    WHERE NOT cur.has_marker OR EXISTS (SELECT 1 FROM messages m
+		                  WHERE m.channel_id = $2 AND m.user_id <> $1
+		                    AND m.created_at > cur.at AND m.created_at <= target.at)
+		    ON CONFLICT (user_id, channel_id) DO UPDATE
+		    SET last_read_at = GREATEST(COALESCE(channel_reads.last_read_at, EXCLUDED.last_read_at), EXCLUDED.last_read_at)
+		    RETURNING last_read_at
+		)
+		SELECT COALESCE((SELECT last_read_at FROM written), (SELECT at FROM cur))`,
+		userID, channelID, at).Scan(&marked)
 	return marked, err
+}
+
+// FirstUnread returns the oldest top-level message by another member posted
+// after since in channelID, or nil when there is none. The client uses it to
+// jump to the first unread message when that one is older than the page it
+// has loaded; the divider itself is computed from the loaded messages.
+func FirstUnread(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, since time.Time) (*uuid.UUID, error) {
+	var id uuid.UUID
+	err := p.QueryRow(ctx, `
+		SELECT id FROM messages
+		WHERE channel_id = $1 AND parent_id IS NULL AND user_id <> $2 AND created_at > $3
+		ORDER BY created_at, id LIMIT 1`, channelID, userID, since).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("first unread: %w", err)
+	}
+	return &id, nil
 }
 
 // MarkUnread sets the read marker just before messageID, so it and

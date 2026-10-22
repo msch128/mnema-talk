@@ -89,6 +89,7 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Get("/mentions", httpx.Handle(h.mentionsInbox))
 	r.Post("/channels/{channelID}/read", httpx.Handle(h.markRead))
 	r.Post("/channels/{channelID}/unread", httpx.Handle(h.markUnread))
+	r.Get("/channels/{channelID}/first-unread", httpx.Handle(h.firstUnread))
 	r.Put("/channels/{channelID}/notifications", httpx.Handle(h.setNotifyLevel))
 	r.Put("/categories/{id}/notifications", httpx.Handle(h.setCategoryNotify))
 	r.Get("/notification-settings", httpx.Handle(h.notificationSettings))

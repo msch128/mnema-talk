@@ -63,6 +63,22 @@ in PostgreSQL; uploads and avatars live in S3-compatible object storage
    mention counters and plays the notification according to the channel's
    notification setting.
 
+Unread state is derived, never fanned out per recipient. A member's read marker
+is one `channel_reads` row per channel (the time they have read up to, plus
+their notification setting); a send writes no marker for anyone. Unread and
+mention counts are computed on read from the marker and the indexed
+`(channel_id, created_at)` message order, so the cost of a send does not depend
+on the number of members. A marker is written only when the client reports a
+read: the web app sends at most one request per channel every two seconds
+(leading and trailing), and the server writes only if another member's message
+lies between the old marker and the new one (or the member has no marker yet),
+so a second tab, Esc on a read channel or a retry costs one index probe and no
+row. The "new since" divider is placed from the marker the client saw when it
+opened the channel; when the first unread message is older than the loaded page,
+`GET /api/channels/{id}/first-unread?since=...` (one indexed lookup) names it
+and the "Jump to first unread" pill loads the history around it. Numbers:
+[Capacity](#unread-tracking-with-10000-members).
+
 Every channel has a text chat, voice channels included (the chat panel under
 the Talk stage). Edits, deletes, reactions, typing and read state follow the
 same pattern: REST for changes, WebSocket events for fan-out. Media is never
@@ -305,6 +321,33 @@ The measurements are reproducible with `make load-test` (see
 lightweight Pion viewers, with join/reload stall checks, optional packet loss
 and jitter, server heap and goroutine sampling, and thresholds that fail the
 run. It can also run against a remote instance.
+
+### Unread tracking with 10,000 members
+
+The integration tests in
+[`internal/server/unread_scale_integration_test.go`](../internal/server/unread_scale_integration_test.go)
+(`go test -tags=integration -run 'Unread|ReadMarkers|SendingAMessage|Mentioning' -v ./internal/server`)
+put 10,000 members into one community on PostgreSQL 18 and count what the
+database really writes (row versions stamped by the test's own window, not
+statistics). One run on an Apple M5 laptop, database in a local container,
+single run, so read the figures as orders of magnitude:
+
+| What | Result |
+| --- | --- |
+| Rows written by one message, 2 members vs 10,002 members | the same: 1 message row and 1 `users` row (the sender), 0 read markers |
+| Median `POST /messages` time, 2 vs 10,002 members | 3.2 ms vs 2.8 ms (no difference beyond noise) |
+| One message with `@all` to 10,001 members | 1 statement, 10,000 `message_mentions` rows, 185 ms (the only send that writes per recipient; needs the right to use `@all`) |
+| All 10,000 members read the channel (32 concurrent workers) | 10,000 marker rows, 1.0 s in total (about 0.1 ms each) |
+| The same 10,000 members read it again without news | 0 rows written, 0.28 s |
+| `GET /api/read-state` for one member, 600 unread in a 50,000-message channel | 45 ms (cold), index scan on `idx_messages_channel_roots` |
+| Same, 50,000 unread | 29 ms (warm) |
+| First-unread lookup in that channel | 0.04 ms, 6 buffers, index scan |
+
+No migration was needed: the existing indexes serve every query (the plan is
+printed by the test with `-v`). The remaining cost that grows with unread
+volume is the count in `GET /api/read-state`, linear in the unread messages of
+a member who has been away for a long time (about 30 to 45 ms for 50,000);
+it is paid once per page load or reconnect, not per message.
 
 ## Frontend structure (`web/src`)
 

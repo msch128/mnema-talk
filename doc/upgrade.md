@@ -166,6 +166,11 @@ operator is below. Update with the procedure above; take the backup first.
   author. It starts empty and the migration touches no existing row. Nothing to
   configure; `EDIT_HISTORY_RETENTION_DAYS` (default `0`, keep) drops old
   versions after that many days. See [moderation](moderation.md#edit-history).
+- **Unread divider and "Jump to first unread".** No migration and no setting.
+  The new read-only endpoint `GET /api/channels/{id}/first-unread` is additive.
+  Marking a channel read now writes nothing when it has no news since the last
+  read (the first read still stores the member's marker), which reduces writes
+  on busy instances; see [Capacity](architecture.md#unread-tracking-with-10000-members).
 - **Desktop client is Beta.** The Windows desktop client stays Beta at 1.0.0;
   see [desktop-app.md](desktop-app.md).
 - **Optional e-mail, SMTP and password reset by mail.** Members may now add an
