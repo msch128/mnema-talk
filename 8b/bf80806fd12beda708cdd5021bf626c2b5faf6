@@ -1,0 +1,29 @@
+internal/server/poll_requests_integration_test.go
+  s_06fcde5dbef956::t_8ed244bba0e1a7 1-62
+internal/server/commands_integration_test.go
+  s_06fcde5dbef956::t_c931a0c56a5583 179-180,184-188
+internal/server/poll_account_integration_test.go
+  s_06fcde5dbef956::t_bc6a0e45d959c0 55
+internal/poll/faults_integration_test.go
+  s_06fcde5dbef956::t_1ffd77ebec9193 99-101,155
+  s_06fcde5dbef956::t_abc03cba07a750 1-98,102-154,156-196
+e2e/tests/polls.spec.ts
+  s_06fcde5dbef956::t_1abc6115a26e22 49
+  s_06fcde5dbef956::t_9853eabac1ca33 56,61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8bbf80806fd12beda708cdd5021bf626c2b5faf6",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
