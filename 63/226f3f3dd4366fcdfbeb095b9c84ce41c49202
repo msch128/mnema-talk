@@ -1,0 +1,35 @@
+internal/bot/authn.go
+  s_06fcde5dbef956::t_31c5387391c199 196-198
+internal/chat/mentions_cap_integration_test.go
+  s_06fcde5dbef956::t_20e36284a249ef 1-87
+internal/bot/limits_test.go
+  s_06fcde5dbef956::t_057e0f7f7d1bf7 1-32,34-115
+  s_06fcde5dbef956::t_46af62213643fa 33
+internal/bot/interaction_store.go
+  s_06fcde5dbef956::t_31c5387391c199 24-28,79-80,86-102
+  s_06fcde5dbef956::t_633bb60a404ada 103-104
+doc/webhooks.md
+  s_06fcde5dbef956::t_7054d4775c95c0 39
+internal/bot/api.go
+  s_06fcde5dbef956::t_31c5387391c199 26-35
+internal/chat/mentions_roles.go
+  s_06fcde5dbef956::t_a3e13e7b48d291 36,48-51,53
+internal/chat/mentions_cap.go
+  s_06fcde5dbef956::t_b9f4d0aa4e6da4 1-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "63226f3f3dd4366fcdfbeb095b9c84ce41c49202",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
