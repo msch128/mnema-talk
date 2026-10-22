@@ -4,6 +4,7 @@ import { useAuthStore } from './auth'
 import { api, ApiError } from '../lib/api'
 import { locale, setLocale } from '../i18n'
 import { userFixture, fixtureId, requireValue } from '../test-fixtures.fixture'
+import { DRAFT_KEY_PREFIX, hasDraft, setDraft } from '../lib/drafts'
 import { decodeUserEnvelope, type User } from '../types/domain'
 
 interface PendingRequest { path: string; resolve: (response: Response) => void; reject: (error: unknown) => void }
@@ -283,5 +284,41 @@ describe('account mutation races', () => {
     await started('/api/users/me/locale'); await loginAs(auth, bob)
     await answer('/api/users/me/locale', alice); await vi.waitFor(() => expect(auth.user).toEqual(bob))
     expect(locale.value).toBe('en')
+  })
+})
+
+describe('unsent drafts when the session ends or changes hands', () => {
+  const draftsOf = (uid: string) => localStorage.getItem(`${DRAFT_KEY_PREFIX}${uid}`)
+
+  it('are removed when the server revokes the session', async () => {
+    const auth = signedIn()
+    setDraft(alice.id, 'c:c1', { text: 'unsent', reply: null })
+    const revoked = auth.checkAuth()
+    await answer('/api/auth/me', { error: { code: 'UNAUTHORIZED' } }, 401)
+    expect(await revoked).toBe(false)
+    expect(hasDraft(alice.id, 'c:c1')).toBe(false)
+    expect(draftsOf(alice.id)).toBeNull()
+  })
+
+  it('are removed when a mismatched cookie account clears the UI', async () => {
+    const auth = signedIn()
+    setDraft(alice.id, 'c:c1', { text: 'unsent', reply: null })
+    const first = beginLogin(auth, bob)
+    const third = userFixture({ id: fixtureId(103), username: 'carol', locale: 'de' })
+    const latest = beginLogin(auth, third), failure = expect(latest).rejects.toBeInstanceOf(ApiError)
+    await answer('/api/auth/login', { user: bob }); await first
+    await answer('/api/auth/login', { error: { code: 'INVALID_CREDENTIALS' } }, 401, 1)
+    await failure
+    expect(auth.user).toBeNull()
+    expect(draftsOf(alice.id)).toBeNull()
+  })
+
+  it('of other accounts are removed on sign-in, the signing-in account keeps its own', async () => {
+    const auth = useAuthStore()
+    localStorage.setItem(`${DRAFT_KEY_PREFIX}${alice.id}`, '{"c:c1":{"text":"alice","reply":null,"at":1}}')
+    localStorage.setItem(`${DRAFT_KEY_PREFIX}${bob.id}`, '{"c:c1":{"text":"bob","reply":null,"at":1}}')
+    await loginAs(auth, bob)
+    expect(draftsOf(alice.id)).toBeNull()
+    expect(draftsOf(bob.id)).not.toBeNull()
   })
 })

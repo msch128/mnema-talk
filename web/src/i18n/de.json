@@ -169,6 +169,7 @@
     "channels": "Kanäle",
     "openChannels": "Kanalliste öffnen",
     "noChannels": "Keine Kanäle",
+    "draft": "Entwurf",
     "deleteCategory": "Kategorie löschen",
     "deleteChannel": "Kanal löschen",
     "deleteVoiceChannel": "Sprachkanal löschen",
