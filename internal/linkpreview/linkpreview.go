@@ -130,7 +130,14 @@ func New() *Fetcher {
 			if len(via) >= maxRedirects {
 				return errors.New("too many redirects")
 			}
-			return f.checkURL(req.URL)
+			if err := f.checkURL(req.URL); err != nil {
+				return err
+			}
+			// The slow table applies on every hop, not only to the posted link.
+			if f.slow.is(strings.ToLower(req.URL.Hostname())) {
+				return errSlowHost
+			}
+			return nil
 		},
 	}
 	return f

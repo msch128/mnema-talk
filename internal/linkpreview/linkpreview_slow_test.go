@@ -116,3 +116,32 @@ func TestSlowRedirectTargetIsMarkedNotTheRedirector(t *testing.T) {
 		t.Fatalf("redirecting host no longer works: %v", err)
 	}
 }
+
+// A redirect to a host already marked slow fails at once, without dialling it.
+func TestRedirectToSlowHostIsRefusedWithoutDialling(t *testing.T) {
+	var hits atomic.Int32
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+	}))
+	defer target.Close()
+	targetURL := strings.Replace(target.URL, "127.0.0.1", "localhost", 1)
+	redirector := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, targetURL, http.StatusFound)
+	}))
+	defer redirector.Close()
+	f := New()
+	f.allowPrivate = true
+	f.slow.noteTimeout("localhost", context.DeadlineExceeded)
+
+	start := time.Now()
+	_, err := f.Preview(context.Background(), redirector.URL)
+	if !errors.Is(err, errSlowHost) {
+		t.Fatalf("got %v, want errSlowHost", err)
+	}
+	if hits.Load() != 0 || time.Since(start) > time.Second {
+		t.Fatalf("slow host was dialled (hits %d, took %v)", hits.Load(), time.Since(start))
+	}
+	if f.slow.is("127.0.0.1") {
+		t.Fatal("the redirecting host must not be marked")
+	}
+}
