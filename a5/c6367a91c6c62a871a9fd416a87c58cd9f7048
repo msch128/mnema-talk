@@ -1,0 +1,109 @@
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_2f2ae6cf47a81d 56-57,1868-1886
+  s_06fcde5dbef956::t_ce1033d2381a90 625-626
+internal/server/account_export_integration_test.go
+  s_06fcde5dbef956::t_81e91b7e6a3ec1 1-257
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_515c6b9dcbb5f7 1-86,90-123
+  s_06fcde5dbef956::t_ae5ccac096c89b 87-89
+doc/moderation.md
+  s_06fcde5dbef956::t_4fe8ebbe6a872f 147
+internal/auth/account_mail.go
+  s_06fcde5dbef956::t_ae5ccac096c89b 39-42,47-55,75-76
+web/src/lib/native/nativeRoutes.ts
+  s_06fcde5dbef956::t_4fe8ebbe6a872f 192
+web/src/components/UserProfileModal.vue
+  s_06fcde5dbef956::t_9786a87ad57301 20,145
+web/src/lib/accountApi.ts
+  s_06fcde5dbef956::t_92c5077dfd03ac 1-45
+internal/server/public.go
+  s_06fcde5dbef956::t_ce1033d2381a90 23
+internal/auth/account_export_data.go
+  s_06fcde5dbef956::t_5f7a9f1589609b 1-143
+web/src/components/AccountTwoFactor.vue
+  s_06fcde5dbef956::t_5633b2590e4d61 9,56,61-62,68-69,75-76
+internal/auth/service.go
+  s_06fcde5dbef956::t_ae5ccac096c89b 184
+doc/upgrade.md
+  s_06fcde5dbef956::t_4fe8ebbe6a872f 136-137,154-157,181-187
+internal/audit/classes_test.go
+  s_06fcde5dbef956::t_2e0cc0ef235eca 16
+internal/server/router_build.go
+  s_06fcde5dbef956::t_4e5d06e6c14a49 105-108
+web/src/lib/deletedUser.ts
+  s_06fcde5dbef956::t_77d63cdc25716c 1-16
+internal/server/account_delete_integration_test.go
+  s_06fcde5dbef956::t_accc61994309d3 1-113,115-197,200-216,218-280
+  s_06fcde5dbef956::t_1556a14438d904 114,198
+  s_06fcde5dbef956::t_e4b57a9624ae31 199,217
+internal/auth/two_factor_handler.go
+  s_06fcde5dbef956::t_30a060e08297b9 163-164,166-178,183,191-194,196
+doc/operations.md
+  s_06fcde5dbef956::t_4fe8ebbe6a872f 594-606
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_2e0cc0ef235eca 190-234
+web/src/lib/deletedUser.test.ts
+  s_06fcde5dbef956::t_0ed2be943f67d2 1-22
+web/src/components/AccountPrivacy.test.ts
+  s_06fcde5dbef956::t_f0b1142cf6c958 1-144
+internal/auth/handler.go
+  s_06fcde5dbef956::t_ae5ccac096c89b 39-42,87
+web/src/components/MentionsInbox.vue
+  s_06fcde5dbef956::t_9786a87ad57301 10,95
+api/openapi.json
+  s_06fcde5dbef956::t_2e0cc0ef235eca 349-420,20212-20308,20589-20854
+e2e/tests/account-delete.spec.ts
+  s_06fcde5dbef956::t_d9ca1702f3ab29 1-68
+internal/db/migrations/0043_account_privacy.sql
+  s_06fcde5dbef956::t_2b707ed2c1b377 43-44
+  s_06fcde5dbef956::t_1af9fa30e12985 1-42,45-49
+web/src/components/AccountSecurityDialog.vue
+  s_06fcde5dbef956::t_25bbf0a883ae3a 10,33
+web/src/components/MessageRow.vue
+  s_06fcde5dbef956::t_9786a87ad57301 11,153
+web/src/stores/account.ts
+  s_06fcde5dbef956::t_72689739a87b2a 4,7-9,43
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_ce1033d2381a90 625-626
+  s_06fcde5dbef956::t_2f2ae6cf47a81d 56-57,1868-1886
+internal/auth/account_export_build.go
+  s_06fcde5dbef956::t_fffd18dda63f20 1-155,157-168,171-172,174,176-184
+  s_06fcde5dbef956::t_ae5ccac096c89b 156,169-170,173,175
+internal/auth/account_export.go
+  s_06fcde5dbef956::t_3c5c2711311bb4 24,105-123
+  s_06fcde5dbef956::t_45832f6e563aff 1-23,25-104,124-316
+web/src/components/ReplyPreview.vue
+  s_06fcde5dbef956::t_2263566f6b56b0 9
+  s_06fcde5dbef956::t_9786a87ad57301 24
+web/src/components/LegalModal.vue
+  s_06fcde5dbef956::t_ce1033d2381a90 210
+web/src/components/SearchResultItem.vue
+  s_06fcde5dbef956::t_9786a87ad57301 9,48,62
+web/src/components/ThreadReply.vue
+  s_06fcde5dbef956::t_9786a87ad57301 8,126
+SECURITY.md
+  s_06fcde5dbef956::t_4fc38d251c7b0e 223
+  s_06fcde5dbef956::t_4fe8ebbe6a872f 220-222,224-246
+web/src/components/AccountPrivacy.vue
+  s_06fcde5dbef956::t_3782c5d589b3c7 1-7,9-40,42-66,68-74,76-81,88-99,101-138
+  s_06fcde5dbef956::t_c97cb20baa8985 82-87,100
+  s_06fcde5dbef956::t_5633b2590e4d61 8,41,67,75
+internal/auth/account_delete.go
+  s_06fcde5dbef956::t_b34dfd986258f6 1-114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a5c6367a91c6c62a871a9fd416a87c58cd9f7048",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
