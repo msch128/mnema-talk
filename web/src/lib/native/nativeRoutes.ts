@@ -181,7 +181,10 @@ function routeMetadata(path: string, request: ApiRequest): Promise<ApiReply> | n
 // "unavailable" and the interface shows its failure state. The same holds for
 // channel and category notification levels, GET /api/notification-settings and
 // POST /api/read-state/read-all: the trusted desktop client has no typed
-// command for them. Also unavailable: /api/onboarding (rules acceptance,
+// command for them. GET /api/channels/{id}/first-unread (jump to the first
+// unread message) is in the same position: the native DEV client answers
+// "unavailable" and the pill simply stays hidden, the shipped clients' proxy
+// passes the path. Also unavailable: /api/onboarding (rules acceptance,
 // welcome flow) and the public invite preview. This transport belongs to the
 // experimental Windows DEV client only (isDesktopRuntime); the shipped desktop
 // clients (v0.2.x) run the signed web bundle through the trusted proxy, which

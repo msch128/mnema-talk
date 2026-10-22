@@ -334,6 +334,7 @@
     "newMessages": "New messages",
     "viewingOlder": "You're viewing older messages",
     "jumpToEnd": "Jump to latest",
+    "jumpToFirstUnread": "Jump to first unread",
     "enlargedImage": "Enlarged image",
     "attachment": "Attachment",
     "unknownUser": "Unknown",

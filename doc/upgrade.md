@@ -158,6 +158,11 @@ operator is below. Update with the procedure above; take the backup first.
   - The app waits for these locks like any other statement; there is nothing to
     stop or schedule. If startup is slow, check `docker compose logs app` for
     `migration applied`.
+- **Unread divider and "Jump to first unread".** No migration and no setting.
+  The new read-only endpoint `GET /api/channels/{id}/first-unread` is additive.
+  Marking a channel read now writes nothing when it has no news since the last
+  read (the first read still stores the member's marker), which reduces writes
+  on busy instances; see [Capacity](architecture.md#unread-tracking-with-10000-members).
 - **Optional e-mail, SMTP and password reset by mail.** Members may now add an
   e-mail address in Account & security (never required, never shown to other
   members or to the Owner). Setting `SMTP_HOST` (see
