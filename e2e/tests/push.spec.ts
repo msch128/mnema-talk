@@ -1,4 +1,4 @@
-import type { Browser, BrowserContext, Page } from '@playwright/test'
+import type { Browser, BrowserContext, Page, Worker } from '@playwright/test'
 import { test, expect } from './fixtures'
 import { apiFetch, responseString } from './helpers'
 
@@ -142,42 +142,68 @@ test('the server refuses a push address that points into its network', async ({ 
   await context.close()
 })
 
+// What the worker asked the browser to show for one push.
+interface Shown { title: string, body: string, tag: string }
+
+/**
+ * Runs a push through the installed worker the way the browser does (its own
+ * `push` listener gets a PushEvent) and resolves once the worker has finished
+ * with it, with what it asked the browser to show. Delivering through the
+ * DevTools protocol instead is fire-and-forget: under load Chromium sometimes
+ * drops such a push, and a notification it was asked to show can be missing
+ * from `getNotifications()` afterwards, so a test cannot tell "the worker did
+ * not show it" from "the browser lost it".
+ */
+async function pushThroughWorker(worker: Worker, payload: string): Promise<Shown[]> {
+  return worker.evaluate(async (data) => {
+    type Registration = { showNotification: (title: string, options: { body: string, tag: string }) => Promise<void> }
+    const registration = (self as unknown as { registration: Registration }).registration
+    const asked: Shown[] = []
+    const original = registration.showNotification
+    registration.showNotification = async (title, options) => {
+      asked.push({ title, body: options.body, tag: options.tag })
+      // The notification itself is Chromium's business and is not on screen in a test.
+    }
+    const finishing: Array<Promise<unknown>> = []
+    const PushEventOf = (self as unknown as { PushEvent: new (type: string, init: { data: string }) => Event }).PushEvent
+    const event = new PushEventOf('push', { data })
+    // Outside the browser's own dispatch a script-made event cannot be given work to wait for; take it instead.
+    Object.defineProperty(event, 'waitUntil', { value: (work: Promise<unknown>) => { finishing.push(work) } })
+    try {
+      self.dispatchEvent(event)
+      await Promise.all(finishing)
+    } finally {
+      registration.showNotification = original
+    }
+    return asked
+  }, payload)
+}
+
 test('the service worker shows a delivered push and keeps quiet for a message while the app is on screen', async ({ browser }) => {
-  const context = await signedInContext(browser, ['notifications'])
+  const context = await signedInContext(browser)
   const page = await context.newPage()
   try {
     await page.goto('/')
     await page.evaluate(async () => { await navigator.serviceWorker.ready })
     await page.reload()
     await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true)
-
-    const cdp = await context.newCDPSession(page)
-    const registrations: Array<{ registrationId: string, scopeURL: string }> = []
-    cdp.on('ServiceWorker.workerRegistrationUpdated', (event) => registrations.push(...event.registrations))
-    await cdp.send('ServiceWorker.enable')
-    await expect.poll(() => registrations.length).toBeGreaterThan(0)
-    const registrationId = registrations[0]!.registrationId
-    const origin = new URL(page.url()).origin
-    const deliver = (payload: unknown) => cdp.send('ServiceWorker.deliverPushMessage', { origin, registrationId, data: JSON.stringify(payload) })
-    const shown = () => page.evaluate(async () => {
-      const reg = await navigator.serviceWorker.ready
-      return (await reg.getNotifications()).map(n => ({ title: n.title, body: n.body, tag: n.tag }))
-    })
+    await expect.poll(() => context.serviceWorkers().length).toBe(1)
+    const worker = context.serviceWorkers()[0]!
 
     // A message for a channel the page is not showing: the page is on screen, so the page shows it itself.
     const channel = '11111111-1111-4111-8111-111111111111'
     const message = '22222222-2222-4222-8222-222222222222'
-    await deliver({ v: 1, type: 'message', title: 'Alice (#allgemein)', body: 'Hallo', tag: channel, ts: Date.now(), channel_id: channel, message_id: message })
-    await page.waitForTimeout(500)
-    expect(await shown()).toEqual([])
+    const chat = JSON.stringify({ v: 1, type: 'message', title: 'Alice (#allgemein)', body: 'Hallo', tag: channel, ts: Date.now(), channel_id: channel, message_id: message })
+    expect(await pushThroughWorker(worker, chat)).toEqual([])
 
     // The test push is always shown.
-    await deliver({ v: 1, type: 'test', title: 'Mnema Talk', body: 'Push funktioniert auf diesem Gerät.', tag: 'test', ts: Date.now() })
-    await expect.poll(shown).toEqual([{ title: 'Mnema Talk', body: 'Push funktioniert auf diesem Gerät.', tag: 'test' }])
+    const ping = JSON.stringify({ v: 1, type: 'test', title: 'Mnema Talk', body: 'Push funktioniert auf diesem Gerät.', tag: 'test', ts: Date.now() })
+    expect(await pushThroughWorker(worker, ping)).toEqual([{ title: 'Mnema Talk', body: 'Push funktioniert auf diesem Gerät.', tag: 'test' }])
 
     // Anything that is not ours still shows something (the browser requires it) and never throws.
-    await deliver({ unexpected: true })
-    await expect.poll(async () => (await shown()).length).toBe(2)
+    const plain: Shown = { title: 'Mnema Talk', body: '', tag: 'mnema' }
+    expect(await pushThroughWorker(worker, JSON.stringify({ unexpected: true }))).toEqual([plain])
+    expect(await pushThroughWorker(worker, 'not json at all')).toEqual([plain])
   } finally {
     await context.close()
   }
