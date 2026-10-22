@@ -1,0 +1,101 @@
+e2e/tests/screenshare.spec.ts
+  s_06fcde5dbef956::t_ba6267a86b3b37 19
+  s_06fcde5dbef956::t_097ba55f478dd2 110-111
+e2e/tests/screen-layers.spec.ts
+  s_06fcde5dbef956::t_ba6267a86b3b37 21
+  s_06fcde5dbef956::t_2d79326ae12573 100-106,201
+e2e/tests/helpers.ts
+  s_06fcde5dbef956::t_da2a56fb3b2ad8 98-113
+e2e/tests/late-join.spec.ts
+  s_06fcde5dbef956::t_da2a56fb3b2ad8 2
+  s_06fcde5dbef956::t_8af4af78bac519 173
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_0fbc42a11cecca 409
+web/src/lib/media/support.test.ts
+  s_06fcde5dbef956::t_2d89e3340a3c0a 1-42
+e2e/browser.d.ts
+  s_06fcde5dbef956::t_435adabc253f48 8
+e2e/tests/upload-limit.spec.ts
+  s_06fcde5dbef956::t_2d79326ae12573 65-67,69
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_0fbc42a11cecca 409
+doc/product-status.md
+  s_06fcde5dbef956::t_d0ef2f41317e69 22,79-113,123-127,218
+  s_06fcde5dbef956::t_69fb233bf0e57e 114-122
+e2e/tests/browser-sealing.spec.ts
+  s_06fcde5dbef956::t_950f50d7bef57a 50,85-86
+  s_06fcde5dbef956::t_553c0d1ad7cab3 1,3-49,51-84,88-133
+  s_06fcde5dbef956::t_da2a56fb3b2ad8 2,87
+e2e/tests/stage-switch.spec.ts
+  s_06fcde5dbef956::t_ba6267a86b3b37 16
+e2e/tests/notifications.spec.ts
+  s_06fcde5dbef956::t_928682379384cd 86-89
+web/src/lib/media/api.ts
+  s_06fcde5dbef956::t_0fbc42a11cecca 38-43
+e2e/tests/sidebar-layout.spec.ts
+  s_06fcde5dbef956::t_f60cd0e5d10a7b 533-534
+e2e/tests/crypto-state.spec.ts
+  s_06fcde5dbef956::t_f60cd0e5d10a7b 108-109
+e2e/tests/fixtures.ts
+  s_06fcde5dbef956::t_85d7f8ed77aa5a 93-107,110,112-113
+  s_06fcde5dbef956::t_21d089520f3cd7 85-92
+e2e/tests/talk-extras.spec.ts
+  s_06fcde5dbef956::t_ba6267a86b3b37 16,34
+e2e/tests/key-lifecycle.spec.ts
+  s_06fcde5dbef956::t_da2a56fb3b2ad8 2,76-77
+web/src/composables/webrtc/peer.ts
+  s_06fcde5dbef956::t_a1c01463734cde 3
+doc/development.md
+  s_06fcde5dbef956::t_388a7af3fb3faf 67-83
+SECURITY.md
+  s_06fcde5dbef956::t_7e5e774c299b60 495-499
+e2e/tests/search.spec.ts
+  s_06fcde5dbef956::t_351e1c9ab37fe0 75-76
+web/src/composables/useWebRTC.signaling.test.ts
+  s_06fcde5dbef956::t_af3bf057e1715f 8,158-163,167-170
+  s_06fcde5dbef956::t_94161905f73f90 164-166
+  s_06fcde5dbef956::t_a19307f3ce8334 530-531,554-555
+  s_06fcde5dbef956::t_6306b44b3e69d5 171-172
+e2e/playwright.config.ts
+  s_06fcde5dbef956::t_a205e556c51eb0 51-53,58
+  s_06fcde5dbef956::t_562f8dcc476952 21-22
+  s_06fcde5dbef956::t_9e4a0a34f00e89 5-20,23-24,39-42,47-50,54-57,59-60
+  s_06fcde5dbef956::t_e17582c5be91dc 43-46
+web/src/lib/media/support.ts
+  s_06fcde5dbef956::t_78e8327c0ff7c2 1-28
+web/src/lib/media/browserCall.ts
+  s_06fcde5dbef956::t_0fbc42a11cecca 3,39
+web/src/composables/webrtc/h264Support.ts
+  s_06fcde5dbef956::t_021770711e11d5 1-21
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_e4a7de014a6d9a 476-480,482-487,490,496,499-553,555
+  s_06fcde5dbef956::t_6a08a354a332a1 481,488-489,491-495,497-498,554
+  s_06fcde5dbef956::t_d3133639205e8a 556-559
+e2e/run.sh
+  s_06fcde5dbef956::t_3f789407791d5e 6-8,85
+  s_06fcde5dbef956::t_0f26a022ce6ec2 121
+web/src/composables/webrtc/session.ts
+  s_06fcde5dbef956::t_544568aedd4d1c 90-94,96-100,105-106
+  s_06fcde5dbef956::t_0fbc42a11cecca 101-102
+  s_06fcde5dbef956::t_e2c0ccd1886386 95
+web/src/composables/webrtc/h264Support.test.ts
+  s_06fcde5dbef956::t_06a4c0d122ec39 1-42
+web/src/lib/media/guard.ts
+  s_06fcde5dbef956::t_0fbc42a11cecca 75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9bed65e7dea5cea53e3cd8e504753039f4dd1199",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
