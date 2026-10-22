@@ -33,7 +33,7 @@ type MentionSet struct {
 func resolveMentionSet(ctx context.Context, q db.Querier, content string, authorID uuid.UUID, online []uuid.UUID) (MentionSet, error) {
 	policy := mentionPolicyFrom(ctx)
 	hits := roleHits(content, policy.Roles)
-	names := ParseMentions(maskPhraseRoles(content, hits))
+	names := capNames(ParseMentions(maskPhraseRoles(content, hits)))
 	roles := hitRoles(hits)
 	if len(names) == 0 && len(roles) == 0 {
 		return MentionSet{}, nil
@@ -45,10 +45,12 @@ func resolveMentionSet(ctx context.Context, q db.Querier, content string, author
 	}
 	delete(ids, authorID)
 	set := MentionSet{Users: allowedMentions(ids, policy, targets)}
-	if len(roles) == 0 {
-		return set, nil
+	if len(roles) > 0 {
+		if set, err = addRoleMentions(ctx, q, set, roles, authorID, policy); err != nil {
+			return set, err
+		}
 	}
-	return addRoleMentions(ctx, q, set, roles, authorID, policy)
+	return capRecipients(set, policy), nil
 }
 
 // addRoleMentions adds the members of the mentioned roles. A user whose name
