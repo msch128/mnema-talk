@@ -118,7 +118,7 @@ type UpdateRequest struct {
 	Disabled       *bool   `json:"disabled,omitempty" binding:"optional"`
 }
 
-func cleanName(s string) (string, error) { return httpx.CleanText("name", s, MaxNameLen, true) }
+func cleanName(s string) (string, error) { return httpx.CleanName("name", s, MaxNameLen, true) }
 
 func checkIntents(v int64) error {
 	if v < 0 || v&^AllIntents != 0 {

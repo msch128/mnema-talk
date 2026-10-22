@@ -59,7 +59,7 @@ func cleanTokenRequest(r *http.Request) (string, *time.Time, error) {
 			return "", nil, err
 		}
 	}
-	name, err := httpx.CleanText("name", req.Name, 32, false)
+	name, err := httpx.CleanName("name", req.Name, 32, false)
 	if err != nil {
 		return "", nil, err
 	}

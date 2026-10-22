@@ -164,6 +164,14 @@ details and the limits.
   client-supplied name or MIME type. Risky types (HTML, SVG, scripts, unknown
   binaries, ...) are only ever served as downloads, never rendered inline. Media is
   served only to authenticated users, through the app, not directly from S3.
+  File names lose path parts, control characters and invisible or
+  bidirectional format characters (so `invoice<RLO>fdp.exe` cannot pose as a
+  PDF); webhook, bot and username-override names get the same treatment.
+  Storage is bounded: each account (member, bot, webhook) may upload
+  `UPLOAD_QUOTA_MB_PER_DAY` (default 2048) in any rolling 24 hours, deleted
+  files included, and uploads pause when `MEDIA_MAX_TOTAL_MB` (default off) is
+  reached or the volume at `MEDIA_DISK_PATH` has less than `MEDIA_MIN_FREE_MB`
+  (default 1024) free.
 - **Abuse protection.** Per-client rate limiting, plus an escalating login
   lockout per client address and username after repeated failures (1, 5, then
   30 minutes; the tier is forgotten after an hour without failures). A much
@@ -437,6 +445,12 @@ details and the limits.
   operators must name it in their privacy notice. Only the Owner and holders
   of *View audit log* can read it; the database refuses updates, and nothing
   is deleted unless `AUDIT_RETENTION_DAYS` is set (default `0`: keep forever).
+- **Link previews.** Previews use the same address list as outgoing webhooks
+  (`internal/ssrf`: metadata, IPv4-compatible, IPv4-translated, discard-only,
+  multicast, private, NAT64 and similar ranges are refused after DNS
+  resolution, also on redirects). A fetch lasts at most 6 s in total; a host
+  that runs into that deadline is not fetched again for 5 minutes, and one
+  member holds at most two fetches at a time.
 - **Outbound connections.** Besides link previews (`LINK_PREVIEWS_ENABLED`)
   and optional STUN/TURN, the server only asks GitHub for the latest release
   (`UPDATE_CHECK_ENABLED`, default on): an unauthenticated `GET` to

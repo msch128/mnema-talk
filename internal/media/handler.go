@@ -35,6 +35,10 @@ type Handler struct {
 	// Perms decides who may upload to and download from which channel; nil
 	// imposes no channel limits (tests; the router always sets it).
 	Perms *perm.Service
+	// Quota bounds the storage uploads may use; the zero value imposes none.
+	Quota Quota
+
+	reserved reservations
 }
 
 // UploadBodyLimit is the transport ceiling for upload routes: the file cap
