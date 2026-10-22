@@ -3,7 +3,7 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-web lint complexity-check fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill
+.PHONY: help dev web build run test test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-web lint complexity-check fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill fresh-install docs-check
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -140,11 +140,12 @@ openapi-check: ## Fail when api/openapi.json is stale (regenerates into a temp f
 web-bundle-check: web ## Sign web/dist with a throwaway key and verify the desktop bundle (scripts/web-bundle-check.sh)
 	scripts/web-bundle-check.sh
 
-check: lint typecheck-web contracts-check openapi-check openapi-diff test test-scripts coverage-go vuln coverage-web web web-bundle-check ## Everything CI runs: backend and web checks, Docker build, smoke, backup, PostgreSQL upgrade and release upgrade drills
+check: docs-check lint typecheck-web contracts-check openapi-check openapi-diff test test-scripts coverage-go vuln coverage-web web web-bundle-check ## Everything CI runs: backend and web checks, Docker build, smoke, backup, PostgreSQL upgrade and release upgrade drills
 	cd web && npm audit --omit=dev --audit-level=high
 	CGO_ENABLED=0 go build ./...
 	docker build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) -t mnema-talk:ci .
 	scripts/smoke-image.sh mnema-talk:ci
+	scripts/fresh-install-check.sh mnema-talk:ci
 	scripts/backup-drill.sh mnema-talk:ci
 	scripts/postgres-upgrade-drill.sh mnema-talk:ci
 	scripts/upgrade-drill.sh mnema-talk:ci
@@ -157,6 +158,12 @@ load-test: ## Load test (PROFILE=smoke|full|join|reload|long) against a throwawa
 
 smoke: docker ## Start the built image with the production compose file and check health + admin login
 	scripts/smoke-image.sh mnema-talk:local
+
+fresh-install: docker ## Follow doc/deployment.md "Fresh install" in an empty directory with this build, then sign in as the Owner
+	scripts/fresh-install-check.sh mnema-talk:local
+
+docs-check: ## Relative links and anchors in README.md, SECURITY.md and doc/*.md (no network)
+	node scripts/check-doc-links.mjs
 
 backup-drill: docker ## Back up, change, verify and restore a throwaway compose stack, then check the data
 	scripts/backup-drill.sh mnema-talk:local

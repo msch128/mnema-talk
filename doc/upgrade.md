@@ -128,22 +128,92 @@ until the new release has passed your application checks.
 
 ### 0.9.x → 1.0.0
 
-- **One migration runs on first start: 0038.** It drops
-  `idx_messages_content_trgm`, a duplicate of the trigram search index
-  `messages_content_trgm_idx` (both came from earlier releases), so message
-  writes no longer maintain the same index twice and search is unchanged.
-  `DROP INDEX` takes a short exclusive lock on `messages`; the migration runs
-  in a transaction, so it is not `CONCURRENTLY`. On a large instance this takes
-  well under a second. Take the usual backup first.
+1.0.0 is the first release under the [API stability contract](api-stability.md):
+nothing in it is a breaking change to a public surface, and `1.x` keeps working
+for existing clients, bots, webhooks, dashboards and alerts. What changes for an
+operator is below. Update with the procedure above; take the backup first.
+
+- **Two migrations run on first start: 0038 and 0039.** Both are quick on any
+  instance.
+  - 0038 drops `idx_messages_content_trgm`, a duplicate of the trigram search
+    index `messages_content_trgm_idx` (both came from earlier releases), so
+    message writes no longer maintain the same index twice and search is
+    unchanged. `DROP INDEX` takes a short exclusive lock on `messages`; the
+    migration runs in a transaction, so it is not `CONCURRENTLY`. On a large
+    instance this takes well under a second.
+  - 0039 adds the nullable column `bot_tokens.created_by` (who issued a bot
+    token), with a foreign key to `users`. It rewrites no rows and holds only a
+    brief lock on `bot_tokens` while the foreign key is added.
+  - The app waits for these locks like any other statement; there is nothing to
+    stop or schedule. If startup is slow, check `docker compose logs app` for
+    `migration applied`.
 - **Weak custom invite codes stop working.** Custom invite codes typed by an
   admin that fall below the new minimum (12 or more characters, 7 or more
   distinct, letters and digits below 16 characters, no common word with little
   around it) are treated as unknown by the invite preview and by registration.
   Admin > Invites marks them "Disabled, regenerate"; delete them and create new
   ones (a random generated code is always accepted). Generated codes and
-  custom codes that meet the minimum are unaffected, and nothing else changes.
-  Invite lookups and registrations are also limited per IPv6 /48 in addition
-  to the per-client limits.
+  custom codes that meet the minimum are unaffected. Invite lookups and
+  registrations are also limited per IPv6 /48 in addition to the per-client
+  limits.
+- **Uploads have a daily budget per account.** `UPLOAD_QUOTA_MB_PER_DAY`
+  (default `2048`) is what one member, bot or webhook may upload in any rolling
+  24 hours; further uploads answer 429, and deleted files still count. `0`
+  turns it off. Two optional guards are off by default: `MEDIA_MAX_TOTAL_MB`
+  (pause all uploads once stored media reaches this size, `0` = no cap) and
+  `MEDIA_MIN_FREE_MB` (default `1024`) together with `MEDIA_DISK_PATH` (a
+  volume the app can see; empty = no free-space check). A busy community that
+  shares large files will hit the default; raise it before updating if members
+  upload more than 2 GiB each per day. `MEDIA_RETENTION_DAYS` still defaults
+  to `0`: nothing is deleted automatically. See
+  [operations.md](operations.md#configuration-reference).
+- **coturn is capped** (only if you run the `turn` profile). The compose file
+  now starts coturn with `--user-quota=8` (relayed sessions per credential) and
+  `--total-quota=48` (all sessions, matching the 49 ports of
+  `49152-49200`). Fetch the compose file of the tag (step 3) and restart the
+  profile. If you widened the relay port range, raise `--total-quota` with it;
+  see [TURN](operations.md#turn-coturn).
+- **`PUBLIC_URL` over plain `http://` warns.** In production and staging, a
+  `PUBLIC_URL` that is not `https://` logs a startup warning and shows
+  "PUBLIC_URL is not https" under Admin > System. The server still starts, so a
+  trusted-LAN install keeps working; behind a TLS-terminating reverse proxy set
+  it to the public `https://` address (see
+  [operations.md](operations.md#public_url-and-secure-cookies)).
+- **Bot tokens are bound to whoever issued them.** From 1.0 a token records its
+  issuer, and stops working when that person loses *Manage bots*, is disabled,
+  or can no longer act as the bot. Tokens created before the upgrade have no
+  recorded issuer: they keep working and are not re-checked until someone
+  regenerates them ([bots](bots.md#tokens)). Regenerate the tokens of every bot
+  you still use to bind them, and delete the ones you do not.
+- **Audit log visibility.** Category and layout entries (`category.*`,
+  `layout.apply`) are visible to the Owner and Administrators only, like the
+  other privileged entries.
+- **Realtime limits are stricter.** Sockets end with the session that opened
+  them (a sign-out closes them at once), oversized or flooding frames are
+  dropped, and there are per-account budgets for frames, events and voice
+  handshakes across connections. Ordinary use is not affected. A reverse proxy
+  must still pass WebSocket upgrades; nothing else changes.
+- **Mention fan-out is capped.** A message whose author may not mention everyone
+  notifies at most 50 members (named users first, then role members).
+- **Security floor trailer.** The desktop client's security floor (the lowest
+  web bundle it accepts) now rises only for a commit with a
+  `Security-Floor: raise` trailer; a `fix(security)` subject alone no longer
+  does. Operators need to do nothing. Forks and maintainers must add the
+  trailer to security fixes in anything the web bundle ships, see
+  [desktop-trusted-client.md](desktop-trusted-client.md) and `AGENTS.md`.
+- **Alert rules moved.** The example alert rules are now the file
+  [`deploy/monitoring/mnema-alerts.yml`](../deploy/monitoring/mnema-alerts.yml),
+  checked with `promtool` and against `/api/metrics` in CI. Metric names are
+  part of the stability contract.
+- **Rollback means restoring the pre-upgrade backup.** Migrations are
+  forward-only and the 0.9.x code has not been verified against the 1.0 schema
+  and data (the bot token column, the dropped index), so do not simply start
+  the old image on the migrated database. Stop the app, restore the backup
+  taken before the update with `scripts/restore.sh` and start the old image
+  (see "Rollback" above). Anything written after the update is lost with the
+  restore. CI drills this path for the supported source versions: the old
+  release refuses to start on the migrated data and a restore into the new
+  build succeeds.
 
 ### 0.8.x → 0.9.0
 

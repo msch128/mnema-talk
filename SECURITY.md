@@ -2,9 +2,18 @@
 
 ## Supported versions
 
-Mnema Talk is a small, self-hosted, non-commercial project. Only the current
-`main` branch is supported; fixes land there. Forks and older commits are not
-maintained.
+Mnema Talk is a small, self-hosted, non-commercial project. Security fixes go
+to:
+
+- the **latest 1.x minor release** (for example the newest `1.y.z`), and
+- the **previous minor release for 90 days** after the newer minor was
+  published, so an operator has a quarter to move up.
+
+Fixes land on `main` first and reach those lines as patch releases. Older
+minors, `0.x` releases, forks and unreleased commits are not maintained: update
+to a supported line ([doc/upgrade.md](doc/upgrade.md)). Desktop clients refuse
+web bundles below the release that carries the latest marked security fix, see
+[doc/desktop-trusted-client.md](doc/desktop-trusted-client.md).
 
 Which interfaces are stable and how they may change (deprecation, removal only
 in a major release) is described in [doc/api-stability.md](doc/api-stability.md).
@@ -25,6 +34,37 @@ what an attacker could achieve. You can expect an acknowledgement within 7 days.
 do not disclose them publicly before a fix is available. Do not run scanners,
 brute-force or load tests against instances you do not operate; run the stack
 locally instead (`make up` or `make dev`).
+
+## 1.0 internal security review
+
+Before 1.0.0 the project reviewed its own code in six lanes: authentication and
+sessions, permissions, content and media, integrations (webhooks, bots, link
+previews), realtime and voice, and the supply chain (CI, signing, updates). It
+is an **internal review, done on 2026-10-22, not an external audit**; no
+independent audit exists yet ([doc/product-status.md](doc/product-status.md)).
+
+Result: 0 Critical, 0 High. Every Medium finding is fixed, with a test that
+fails without the fix, and the behaviour changes are listed in
+[doc/upgrade.md](doc/upgrade.md#09x--100). Deliberately deferred past 1.0:
+
+- **CSP `style-src 'unsafe-inline'`.** Kept because the bundled
+  `emoji-picker-element` writes inline styles and has no nonce support (see
+  Security headers below for the plan to remove it and the browser test that
+  must come with it).
+- **RT-4, frame format version 2.** Version 2 media frames (no line binding)
+  are still accepted for mixed-version Talks; refusing them is a protocol
+  change that would cut old tabs off (see the media frame section below).
+- **RT-6, regroup collusion** (Info). Two colluding members, or the server, can
+  make a listener who hears nobody else regroup; rate-limited, no worse than the
+  denial of service the server already has.
+- **SUP-05, image signature check in the updater.** "Update now" does not verify
+  the cosign signature or provenance of the pulled image; see
+  [Self-update sidecar](#self-update-sidecar). Verify by hand and pin the digest.
+- **Legacy bot tokens without an issuer.** Tokens created before 1.0 have no
+  recorded issuer and are not re-checked against it until they are regenerated;
+  new tokens are bound to their issuer ([doc/bots.md](doc/bots.md#tokens)).
+
+Remaining Info-level items of the review are not listed individually.
 
 ## Security model (summary)
 

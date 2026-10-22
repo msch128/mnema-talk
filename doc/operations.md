@@ -456,86 +456,25 @@ receiver that speaks its webhook format (ntfy, Gotify, email); without one,
 
 ### Example alert rules
 
-```yaml
-# mnema-alerts.yml
-groups:
-  - name: mnema-talk
-    rules:
-      - alert: MnemaDown
-        expr: up{job="mnema-talk"} == 0
-        for: 2m
-        labels: {severity: page}
-        annotations: {summary: "Mnema Talk does not answer the scrape (or the token is wrong)"}
+The rules are in [`deploy/monitoring/mnema-alerts.yml`](../deploy/monitoring/mnema-alerts.yml)
+(copy it next to `prometheus.yml` as `mnema-alerts.yml`). CI validates it with
+`promtool check rules`, and a test fails when a rule names a metric that
+`/api/metrics` does not export. Adjust the `MnemaHealthFailing` probe address and
+the `MnemaMemoryHigh` threshold to your deployment. The rules:
 
-      # /api/health is public and the metrics endpoint is up while the
-      # database or storage is not, so check those through their metrics too.
-      - alert: MnemaStorageDown
-        expr: mnema_storage_up == 0
-        for: 5m
-        labels: {severity: page}
-        annotations: {summary: "Object storage is unreachable: uploads fail and /api/health answers 503"}
-
-      - alert: MnemaHealthFailing
-        # needs blackbox_exporter probing https://chat.example.com/api/health
-        expr: probe_success{instance="https://chat.example.com/api/health"} == 0
-        for: 3m
-        labels: {severity: page}
-        annotations: {summary: "/api/health fails (database or storage)"}
-
-      - alert: MnemaDatabasePoolExhausted
-        expr: mnema_db_connections_acquired >= mnema_db_connections_max
-        for: 5m
-        labels: {severity: warn}
-        annotations: {summary: "All database connections are busy: requests queue"}
-
-      - alert: MnemaMemoryHigh
-        # process_resident_memory_bytes is reported on Linux; the compose
-        # limit is APP_MEM_LIMIT (see Container resources).
-        expr: process_resident_memory_bytes > 800e6
-        for: 15m
-        labels: {severity: warn}
-        annotations: {summary: "Resident memory above 800 MB (80% of the default 1g container limit) for 15 minutes"}
-
-      - alert: MnemaGoroutineLeak
-        expr: go_goroutines > 5000
-        for: 15m
-        labels: {severity: warn}
-        annotations: {summary: "Unusually many goroutines: possible leak"}
-
-      - alert: MnemaServerErrors
-        expr: sum(rate(mnema_http_requests_total{class="5xx"}[10m])) > 0.1
-        for: 10m
-        labels: {severity: warn}
-        annotations: {summary: "More than one 5xx every 10 seconds"}
-
-      - alert: MnemaSlowRequests
-        expr: histogram_quantile(0.95, sum by (le) (rate(mnema_http_request_duration_seconds_bucket{route!~"/api/channels/.*/upload|/api/media/.*"}[10m]))) > 1
-        for: 15m
-        labels: {severity: warn}
-        annotations: {summary: "95th percentile API latency above one second"}
-
-      - alert: MnemaIceFailures
-        # failed ICE transitions relative to successful ones
-        expr: |
-          sum(increase(mnema_sfu_ice_transitions_total{state="failed"}[30m])) > 3
-          and
-          sum(increase(mnema_sfu_ice_transitions_total{state="failed"}[30m]))
-            / clamp_min(sum(increase(mnema_sfu_ice_transitions_total{state="connected"}[30m])), 1) > 0.2
-        for: 10m
-        labels: {severity: warn}
-        annotations: {summary: "Many voice connections fail: check UDP port range, WEBRTC_ANNOUNCE_IP and TURN"}
-
-      - alert: MnemaStorageErrors
-        expr: sum(increase(mnema_s3_operations_total{result="error"}[15m])) > 5
-        labels: {severity: warn}
-        annotations: {summary: "Object storage calls fail"}
-
-      - alert: MnemaBackupTooOld
-        # see "Backup age" below: the app cannot know when you last backed up
-        expr: time() - mnema_backup_last_success_timestamp_seconds > 36 * 3600
-        labels: {severity: warn}
-        annotations: {summary: "No successful backup for 36 hours"}
-```
+| Alert | Fires when |
+|---|---|
+| `MnemaDown` | The scrape fails for 2 minutes (or the token is wrong). |
+| `MnemaStorageDown` | Object storage is unreachable for 5 minutes. |
+| `MnemaHealthFailing` | The blackbox probe of `/api/health` fails for 3 minutes. |
+| `MnemaDatabasePoolExhausted` | Every database connection is busy for 5 minutes. |
+| `MnemaMemoryHigh` | Resident memory stays above 800 MB (80% of the default limit) for 15 minutes. |
+| `MnemaGoroutineLeak` | More than 5000 goroutines for 15 minutes. |
+| `MnemaServerErrors` | More than one 5xx every 10 seconds for 10 minutes. |
+| `MnemaSlowRequests` | The 95th percentile API latency (uploads and media excluded) is above one second for 15 minutes. |
+| `MnemaIceFailures` | More than 20% of voice connections fail ICE over 30 minutes. |
+| `MnemaStorageErrors` | More than 5 object storage errors in 15 minutes. |
+| `MnemaBackupTooOld` | No successful backup for 36 hours (see Backup age). |
 
 **Backup age.** The server does not know about your backups (they run on the
 host), so it exports nothing for it. Let the backup job report instead, with
