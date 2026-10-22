@@ -6,6 +6,7 @@
 import { computed, ref } from 'vue'
 import { Loader2, ShieldCheck, ShieldOff } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
+import { disableTwoFactor, enableTwoFactor, newRecoveryCodes, setupTwoFactor } from '../lib/accountApi'
 import type { AuthTwoFactorSetup } from '../types/rest'
 import { t } from '../i18n'
 import { useAccountStore } from '../stores/account'
@@ -52,24 +53,27 @@ async function run(action: () => Promise<void>) {
 }
 
 const start = () => run(async () => {
-  setup.value = await account.setupTwoFactor(password.value)
+  setup.value = await setupTwoFactor(password.value)
   go('scan')
 })
 
 const confirm = () => run(async () => {
-  codes.value = await account.enableTwoFactor(code.value)
+  codes.value = await enableTwoFactor(code.value)
+  await account.load()
   setup.value = null
   go('codes')
 })
 
 const turnOff = () => run(async () => {
-  await account.disableTwoFactor(password.value, code.value)
+  await disableTwoFactor(password.value, code.value)
+  await account.load()
   toasts.success(t('security.twoFactor.off'))
   go('idle')
 })
 
 const renew = () => run(async () => {
-  codes.value = await account.newRecoveryCodes(password.value, code.value)
+  codes.value = await newRecoveryCodes(password.value, code.value)
+  await account.load()
   go('codes')
 })
 

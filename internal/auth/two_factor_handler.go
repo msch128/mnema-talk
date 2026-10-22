@@ -160,13 +160,27 @@ func writeRecoveryCodes(w http.ResponseWriter, codes []string) {
 }
 
 // requireProof checks the password and a current second-factor code for a
-// sensitive change. It reports false when the response was already written.
+// change that only exists while two-factor sign-in is on. It reports false when
+// the response was already written.
 func (h *Handler) requireProof(w http.ResponseWriter, r *http.Request, u *User, req TwoFactorProofRequest) (bool, error) {
+	return h.identity(w, r, u, req.CurrentPassword, req.Code, true)
+}
+
+// ConfirmIdentity re-authenticates the signed-in member before an irreversible
+// or revealing action (deleting the account, exporting its data): the
+// password, and a current authenticator or recovery code when two-factor
+// sign-in is on. Wrong answers count toward the same lockouts as everywhere
+// else. It reports false when the response was already written.
+func (h *Handler) ConfirmIdentity(w http.ResponseWriter, r *http.Request, u *User, password, code string) (bool, error) {
+	return h.identity(w, r, u, password, code, false)
+}
+
+func (h *Handler) identity(w http.ResponseWriter, r *http.Request, u *User, password, code string, mustBeOn bool) (bool, error) {
 	defer h.lockFactor(u.ID)()
 	if h.lockedOut(w, u.ID) {
 		return false, nil
 	}
-	if ok, err := h.reauth(w, r, u.ID, req.CurrentPassword); !ok {
+	if ok, err := h.reauth(w, r, u.ID, password); !ok {
 		return false, err
 	}
 	st, err := h.Sessions.twoFactorState(r.Context(), h.Sessions.DB, u.ID)
@@ -174,9 +188,12 @@ func (h *Handler) requireProof(w http.ResponseWriter, r *http.Request, u *User, 
 		return false, err
 	}
 	if !st.Enabled {
-		return false, errTwoFactorOff
+		if mustBeOn {
+			return false, errTwoFactorOff
+		}
+		return true, nil
 	}
-	res, err := h.Sessions.verifyFactor(r.Context(), h.Sessions.DB, u.ID, req.Code)
+	res, err := h.Sessions.verifyFactor(r.Context(), h.Sessions.DB, u.ID, code)
 	if err != nil {
 		return false, err
 	}

@@ -13,7 +13,7 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"auth.login": VisPrivileged, "auth.login_failed": VisPrivileged, "auth.login_locked": VisPrivileged,
 		"auth.register": VisPrivileged, "auth.password_change": VisPrivileged, "auth.logout_all": VisPrivileged,
 		"auth.two_factor_enabled": VisPrivileged, "auth.two_factor_disabled": VisPrivileged, "auth.two_factor_failed": VisPrivileged, "auth.two_factor_alert": VisPrivileged,
-		"auth.recovery_code_used": VisPrivileged, "auth.recovery_codes_regenerated": VisPrivileged, "user.two_factor_reset": VisPrivileged,
+		"auth.recovery_code_used": VisPrivileged, "auth.account_delete": VisPrivileged, "auth.export_request": VisPrivileged, "auth.export_download": VisPrivileged, "auth.recovery_codes_regenerated": VisPrivileged, "user.two_factor_reset": VisPrivileged,
 		"auth.email_set": VisPrivileged, "auth.email_remove": VisPrivileged, "auth.email_verified": VisPrivileged, "auth.password_reset_mail": VisPrivileged,
 		// Admin routes.
 		"invite.create": VisAuditors, "invite.revoke": VisAuditors,

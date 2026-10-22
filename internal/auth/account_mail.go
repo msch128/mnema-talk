@@ -36,20 +36,23 @@ type recovery struct {
 	// whether or not an account has it, so it tells nothing about accounts.
 	perAddress    *httpx.RateLimiter
 	resendPerUser *httpx.RateLimiter
-	slots         chan struct{}
-	wg            sync.WaitGroup
+	// downloadPerUser bounds export downloads.
+	downloadPerUser *httpx.RateLimiter
+	slots           chan struct{}
+	wg              sync.WaitGroup
 }
 
 func newRecovery() *recovery {
 	return &recovery{
-		requestPerIP:   httpx.NewRateLimiter(10, time.Hour).Named("reset_request"),
-		requestPerSite: httpx.NewRateLimiter(40, time.Hour).Named("reset_request_site"),
-		confirmPerIP:   httpx.NewRateLimiter(20, time.Hour).Named("reset_confirm"),
-		verifyPerIP:    httpx.NewRateLimiter(30, time.Hour).Named("email_verify"),
-		perAddress:     httpx.NewRateLimiter(5, time.Hour),
-		optionsPerIP:   httpx.NewRateLimiter(120, 15*time.Minute).Named("auth_options"),
-		resendPerUser:  httpx.NewRateLimiter(1, time.Minute),
-		slots:          make(chan struct{}, mailJobs),
+		requestPerIP:    httpx.NewRateLimiter(10, time.Hour).Named("reset_request"),
+		requestPerSite:  httpx.NewRateLimiter(40, time.Hour).Named("reset_request_site"),
+		confirmPerIP:    httpx.NewRateLimiter(20, time.Hour).Named("reset_confirm"),
+		verifyPerIP:     httpx.NewRateLimiter(30, time.Hour).Named("email_verify"),
+		perAddress:      httpx.NewRateLimiter(5, time.Hour),
+		optionsPerIP:    httpx.NewRateLimiter(120, 15*time.Minute).Named("auth_options"),
+		resendPerUser:   httpx.NewRateLimiter(1, time.Minute),
+		downloadPerUser: httpx.NewRateLimiter(10, time.Hour).Named("export_download"),
+		slots:           make(chan struct{}, mailJobs),
 	}
 }
 
@@ -69,6 +72,8 @@ func (h *Handler) mountAccount(r chi.Router) {
 	r.Post("/users/me/email/remove", httpx.Handle(h.removeEmailHandler))
 	r.Post("/users/me/email/resend", httpx.Handle(h.resendVerification))
 	h.mountTwoFactor(r)
+	h.mountExport(r)
+	r.Post("/users/me/delete", httpx.Handle(h.deleteAccount))
 }
 
 // mailEnabled reports whether account e-mails can be sent.

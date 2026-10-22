@@ -6,6 +6,7 @@ import { Hash, Volume2, Paperclip, ArrowRight, CornerDownRight } from '@lucide/v
 import { locale } from '../i18n'
 import { splitHighlight } from '../lib/searchHighlight'
 import UserAvatar from './UserAvatar.vue'
+import { shownName } from '../lib/deletedUser'
 
 // One hit. Matches are highlighted by splitting the text into nodes, never as HTML.
 const props = defineProps<{
@@ -44,7 +45,7 @@ function formatDate(iso: string) {
 
     <div class="flex-1 min-w-0">
       <div class="flex items-center gap-2 mb-1">
-        <span class="font-medium text-sm text-mnema-text truncate">{{ msg.display_name || msg.username }}</span>
+        <span class="font-medium text-sm text-mnema-text truncate">{{ shownName(msg) }}</span>
         <span v-if="channelName" class="px-1.5 py-0.5 rounded bg-mnema-surface border border-mnema-border text-xs text-mnema-muted flex items-center gap-1">
           <Volume2 v-if="voice" class="w-2.5 h-2.5 text-mnema-tertiary" />
           <Hash v-else class="w-2.5 h-2.5 text-mnema-tertiary" />
@@ -58,7 +59,7 @@ function formatDate(iso: string) {
       </div>
 
       <p v-if="root" data-search-root class="mb-1 flex min-w-0 items-baseline gap-1 border-l-2 border-mnema-border pl-2 text-xs text-mnema-tertiary">
-        <span class="flex-shrink-0 font-medium">{{ root.display_name || root.username }}:</span>
+        <span class="flex-shrink-0 font-medium">{{ shownName(root) }}:</span>
         <span class="truncate">
           <template v-for="(part, i) in rootParts" :key="i"><mark v-if="part.match" class="bg-transparent font-semibold text-mnema-accent">{{ part.text }}</mark><template v-else>{{ part.text }}</template></template>
         </span>

@@ -19,5 +19,5 @@ func InactiveSQL(alias string) string {
 	if p != "" {
 		p += "."
 	}
-	return "(" + p + "disabled_at IS NOT NULL OR (" + p + "banned_at IS NOT NULL AND (" + p + "banned_until IS NULL OR " + p + "banned_until > NOW())))"
+	return "(" + p + "disabled_at IS NOT NULL OR " + p + "deleted_at IS NOT NULL OR (" + p + "banned_at IS NOT NULL AND (" + p + "banned_until IS NULL OR " + p + "banned_until > NOW())))"
 }
