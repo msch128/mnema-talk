@@ -1,0 +1,176 @@
+internal/push/sender_test.go
+  s_06fcde5dbef956::t_bfce94506c061f 1-24,26-46,48-203,210-256
+  s_06fcde5dbef956::t_d86865e0ee3e18 204-209
+  s_06fcde5dbef956::t_47df3e4d19d638 25,47
+internal/push/handler.go
+  s_06fcde5dbef956::t_4859c6de6887e7 299-300
+  s_06fcde5dbef956::t_f4e6ba0a03b473 1-298,301-324
+web/src/sw/push.test.ts
+  s_06fcde5dbef956::t_60dafa8a13d9db 1-13,16-179,181-184
+  s_06fcde5dbef956::t_d1cebde3e39f5c 14-15,180
+web/src/sw/worker.test.ts
+  s_06fcde5dbef956::t_eb082bedfc97d4 81-82,84-86,88-98,100-105
+  s_06fcde5dbef956::t_d1cebde3e39f5c 83,87,99
+web/src/composables/usePushSettings.ts
+  s_06fcde5dbef956::t_be3e6b3f106100 1-84
+web/src/lib/webPush.ts
+  s_06fcde5dbef956::t_3abbf2c38d9aaf 74-77,134,136,161-162
+  s_06fcde5dbef956::t_a67ac05f9a60d7 1-58,62-66,68-73,78-104,107,109-133,135,137-160,163-200
+  s_06fcde5dbef956::t_74dae1cc2a1779 59-61,67,105-106,108
+web/src/stores/auth/credentials.ts
+  s_06fcde5dbef956::t_e1c1886c6ac6b9 3,116-117
+internal/push/vapid.go
+  s_06fcde5dbef956::t_04947998a77832 1-104
+internal/push/service_integration_test.go
+  s_06fcde5dbef956::t_7e9892331f7bd3 99,129-130,168-169
+  s_06fcde5dbef956::t_eb3e1569a539c4 1-98,100-128,131-167,170-245
+web/src/sw/sw.test.ts
+  s_06fcde5dbef956::t_eb082bedfc97d4 15
+internal/push/validate.go
+  s_06fcde5dbef956::t_52e72c9d67d5f3 42
+  s_06fcde5dbef956::t_04988431d73036 1-41,43-72
+internal/push/store.go
+  s_06fcde5dbef956::t_c027d1bb716247 1-180
+internal/push/vapid_test.go
+  s_06fcde5dbef956::t_76e9ac51f58e2a 8,64,82-85,87-90
+  s_06fcde5dbef956::t_d532f6f13b7cd7 1-7,9-63,65-81,86,91-105
+internal/server/router_routes.go
+  s_06fcde5dbef956::t_aaa4770152236b 105
+internal/server/push_integration_test.go
+  s_06fcde5dbef956::t_729f9b8bd79672 14,147-150,160-163
+  s_06fcde5dbef956::t_e9fcd9a5447cb6 1-13,15-146,151-159,164-333
+internal/push/payload.go
+  s_06fcde5dbef956::t_933a4068a9de62 1-143
+web/scripts/serviceWorkerBuild.ts
+  s_06fcde5dbef956::t_1c0b6dc02f22fc 11
+internal/config/config_env.go
+  s_06fcde5dbef956::t_cb8203b0fb73f5 132-134
+web/src/composables/usePushBridge.ts
+  s_06fcde5dbef956::t_6a00c584484b6b 1-25
+web/src/App.vue
+  s_06fcde5dbef956::t_e1c1886c6ac6b9 41,75
+internal/config/config_validate.go
+  s_06fcde5dbef956::t_cb8203b0fb73f5 114-116,120-135
+  s_06fcde5dbef956::t_c479659926c6cf 9
+  s_06fcde5dbef956::t_3ebe4d8ade5d2b 136-137
+web/src/lib/native/nativeRoutes.ts
+  s_06fcde5dbef956::t_e76fcceec22454 188-191
+web/src/components/PushSection.vue
+  s_06fcde5dbef956::t_15199eebf8828b 1-109
+web/src/components/PushSection.test.ts
+  s_06fcde5dbef956::t_7e9cedc61437a4 1-194
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_3cd5f7df68f752 73,1776-1777,1785-1813
+.env.example
+  s_06fcde5dbef956::t_22bb65de19f653 120-132
+internal/push/recipients.go
+  s_06fcde5dbef956::t_a9c5556dd0de2b 1-91
+doc/operations.md
+  s_06fcde5dbef956::t_e76fcceec22454 218-271,585
+  s_06fcde5dbef956::t_22bb65de19f653 80-82
+web/src/components/AppSettingsModal.test.ts
+  s_06fcde5dbef956::t_fb551a9436a058 24-25
+THIRD_PARTY_NOTICES.md
+  s_06fcde5dbef956::t_22bb65de19f653 79
+internal/db/migrations/0042_web_push.sql
+  s_06fcde5dbef956::t_57d02bcfcb2385 1-35,38-39
+  s_06fcde5dbef956::t_80f8eb02a9c4ea 36-37
+internal/push/fixture_integration_test.go
+  s_06fcde5dbef956::t_326a68771b6cba 1-41,45-53,56,58-91,95-148
+  s_06fcde5dbef956::t_7e9892331f7bd3 42-44,57
+  s_06fcde5dbef956::t_29e7ac47c0bb9b 54-55,92-94
+internal/push/coalesce_test.go
+  s_06fcde5dbef956::t_865e5118a8508e 1-112
+internal/push/coalesce.go
+  s_06fcde5dbef956::t_60b8e88c9cbcdc 1-119
+go.mod
+  s_06fcde5dbef956::t_2b68897ee7eef0 31
+  s_06fcde5dbef956::t_e018e0d7473fef 30
+docker-compose.yml
+  s_06fcde5dbef956::t_22bb65de19f653 63-65
+doc/upgrade.md
+  s_06fcde5dbef956::t_e76fcceec22454 208-220
+internal/config/config_test.go
+  s_06fcde5dbef956::t_8734e108713b97 164-168,616-637
+  s_06fcde5dbef956::t_33de625f69f937 638
+web/src/sw/worker.ts
+  s_06fcde5dbef956::t_fb0a0a69e9fe4d 2-3,6,9,13-15,54-59,63
+web/src/stores/chatComfort.test.ts
+  s_06fcde5dbef956::t_eee7204f0c0faa 9,256-269
+  s_06fcde5dbef956::t_59264e17716ac1 270-271
+web/src/components/AppSettingsModal.vue
+  s_06fcde5dbef956::t_3cd5f7df68f752 4,14
+internal/push/payload_test.go
+  s_06fcde5dbef956::t_b634c25a8dda20 1-114
+internal/push/validate_test.go
+  s_06fcde5dbef956::t_b82fac34f50614 1-105
+web/src/stores/chat/notifications.ts
+  s_06fcde5dbef956::t_3cd5f7df68f752 6,36-37
+internal/server/router_build.go
+  s_06fcde5dbef956::t_aaa4770152236b 23,58-59,178-209
+  s_06fcde5dbef956::t_0026d07a0aea94 210-211
+e2e/tests/push.spec.ts
+  s_06fcde5dbef956::t_319721746969fe 1-12,17-161
+  s_06fcde5dbef956::t_d320615549db51 13-16
+web/src/components/AccountMenu.test.ts
+  s_06fcde5dbef956::t_3cd5f7df68f752 59
+internal/server/server.go
+  s_06fcde5dbef956::t_aaa4770152236b 21,131-134
+  s_06fcde5dbef956::t_0440a0890097e5 48-52
+internal/config/config.go
+  s_06fcde5dbef956::t_cb8203b0fb73f5 62-69
+api/openapi.json
+  s_06fcde5dbef956::t_68a77c17dda200 3082-3221,18371-18868
+internal/push/recipients_test.go
+  s_06fcde5dbef956::t_a1661d200cb715 1-67
+internal/push/sender.go
+  s_06fcde5dbef956::t_821e58af5bc431 1-7,9-49,53-57,59-75,79-145
+  s_06fcde5dbef956::t_8f301dfeafc705 8,76-78
+  s_06fcde5dbef956::t_0440a0890097e5 50-52,58
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_0bd3b80b1dbd17 1862-1951
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_3cd5f7df68f752 73,1776-1777,1785-1813
+internal/metrics/metrics.go
+  s_06fcde5dbef956::t_4859c6de6887e7 284-288,346
+internal/push/service.go
+  s_06fcde5dbef956::t_4859c6de6887e7 31-32
+  s_06fcde5dbef956::t_129fbf3a853c9f 1-30,33-55,59-264,270-297
+  s_06fcde5dbef956::t_47df3e4d19d638 56-58,265-269
+web/src/sw/push.ts
+  s_06fcde5dbef956::t_1c0b6dc02f22fc 48
+  s_06fcde5dbef956::t_3b3a95ea337295 1-47,49-182
+web/src/lib/webPush.test.ts
+  s_06fcde5dbef956::t_2b99ea4f13e1f6 17,36-37,174,179,181,207,221,253
+  s_06fcde5dbef956::t_ad10e5cd683a89 1-16,18-35,38-173,175-178,180,182-202,204-206,208-220,222-252,254-274
+  s_06fcde5dbef956::t_fb551a9436a058 203
+web/src/composables/usePushBridge.test.ts
+  s_06fcde5dbef956::t_0ba4134f4d03e2 1-63
+web/src/lib/thirdParty.ts
+  s_06fcde5dbef956::t_22bb65de19f653 53
+internal/push/store_integration_test.go
+  s_06fcde5dbef956::t_d7cc132dc63975 1-153
+internal/push/rfc8291_test.go
+  s_06fcde5dbef956::t_012957fb2b409f 1-117,121-125
+  s_06fcde5dbef956::t_70273cd1bb6fca 118-120
+SECURITY.md
+  s_06fcde5dbef956::t_e76fcceec22454 250-268
+go.sum
+  s_06fcde5dbef956::t_40cc56ce7aecad 5-6,82,86,189,206-211,214-218,221-228,231-237,240-250,253-270,275-280,283
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bdce88d1a6db397c58777c1153007fa1028cd983",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
