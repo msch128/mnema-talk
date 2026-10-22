@@ -1,80 +1,67 @@
 #!/usr/bin/env bash
-# Upgrade drill: install the previous release from GHCR, fill it with realistic
-# data through the API (users, channels, messages, an upload), then switch the
-# stack to the freshly built image like an operator running
-# `docker compose pull app && docker compose up -d app`, and check that the
-# migrations apply, nothing is lost, sessions and logins still work and health
+# Upgrade drill: install a released image from GHCR, fill it with realistic
+# data through the API (users, channels, messages, an upload, roles and
+# overwrites, a webhook, a bot, notification levels and, from 0.9.0 on,
+# onboarding and role mentions), then switch the stack to the freshly built
+# image like an operator running `docker compose pull app && docker compose up
+# -d app`, and check that the migrations apply, row counts match, every seeded
+# object reads back through the API, sessions and logins still work and health
 # is ok.
 #
 # Usage: scripts/upgrade-drill.sh [new-image]     (default mnema-talk:local; `make upgrade-drill`)
-#   PREVIOUS_IMAGE=ghcr.io/msch128/mnema-talk:0.7.16   skip the lookup and use this image
-#   DRILL_PORT=58192                                   host port for the app
+#   FROM_VERSIONS="0.8.16 0.9.0"   released versions to upgrade from, one leg each,
+#                                  run one after the other (default: that list).
+#                                  CI runs one leg per job with FROM_VERSIONS=<one>.
+#   PREVIOUS_IMAGE=ghcr.io/msch128/mnema-talk:0.9.0   one leg from exactly this
+#                                  image; FROM_VERSION names its version (default:
+#                                  the tag after the last colon)
+#   DRILL_PORT=58192               host port for the app
+#   DRILL_PULL_ATTEMPTS / DRILL_PULL_DELAY   bounded registry retry (4 / 15s)
 #
-# Which release is "previous": the newest released tag (git tags on origin, so a
-# shallow checkout works) that is not newer than version.txt and does not point
-# at the commit being tested, whose image can be pulled. Nothing in here is a
-# real secret: every credential is generated per run.
+# A registry outage fails the drill after the retries; it is never skipped.
+# Nothing in here is a real secret: every credential is generated per run.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=scripts/drill-common.sh
+source "$ROOT/scripts/drill-common.sh"
+# shellcheck source=scripts/upgrade-drill-data.sh
+source "$ROOT/scripts/upgrade-drill-data.sh"
 NEW_IMAGE="${1:-mnema-talk:local}"
+
+# --- several versions: one leg each, in a child process, then a summary --------
+if [ -z "${PREVIOUS_IMAGE:-}" ] && [ -z "${DRILL_LEG:-}" ]; then
+  VERSIONS="$(drill_resolve_versions "${FROM_VERSIONS:-}")" || exit 1
+  failed='' summary=''
+  for v in $VERSIONS; do
+    started=$SECONDS
+    if DRILL_LEG=1 FROM_VERSION="$v" "$0" "$NEW_IMAGE"; then result=passed; else result=FAILED; failed="$failed $v"; fi
+    summary="$summary$v $result in $((SECONDS - started))s"$'\n'
+  done
+  printf 'upgrade drill:\n%s' "$summary"
+  [ -z "$failed" ] || { echo "upgrade drill failed from:$failed" >&2; exit 1; }
+  exit 0
+fi
+
 PORT="${DRILL_PORT:-58192}"
 BASE="http://127.0.0.1:$PORT"
-REGISTRY_IMAGE="ghcr.io/msch128/mnema-talk"
 ADMIN_PASSWORD="drill-$(openssl rand -hex 8)"
 ALICE_PASSWORD="alice-$(openssl rand -hex 8)"
 BOB_PASSWORD="bob-$(openssl rand -hex 8)"
 
 # --- which release to upgrade from -------------------------------------------
-fetch_git_tags() {
-  local tags
-  tags="$(git -C "$ROOT" ls-remote --tags origin 'refs/tags/v*' 2>/dev/null || true)"
-  if [ -z "$tags" ]; then
-    tags="$(git -C "$ROOT" for-each-ref --format='%(objectname) %(refname)' 'refs/tags/v*' 2>/dev/null || true)"
-  fi
-  printf '%s\n' "$tags"
-}
-
-is_candidate_version() {
-  local ver="$1" current="$2" head="$3" tags="$4"
-  if [ -z "$ver" ]; then
-    return 1
-  fi
-  if [ -n "$head" ] && grep -Eq "^$head[[:space:]]+refs/tags/v$ver(\^\{\})?\$" <<<"$tags"; then
-    return 1
-  fi
-  if [ "$(printf '%s\n%s\n' "$ver" "$current" | sort -V | tail -n 1)" != "$current" ]; then
-    return 1
-  fi
-  return 0
-}
-
-resolve_previous() {
-  local current head tags ver
-  current="$(tr -d '[:space:]' <"$ROOT/version.txt")"
-  head="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)"
-  tags="$(fetch_git_tags)"
-  # Newest first, at most current, skipping the tag of the tested commit.
-  while read -r ver; do
-    if ! is_candidate_version "$ver" "$current" "$head" "$tags"; then
-      continue
-    fi
-    if docker pull --quiet "$REGISTRY_IMAGE:$ver" >/dev/null 2>&1; then
-      echo "$REGISTRY_IMAGE:$ver"
-      return 0
-    fi
-    echo "no image for $REGISTRY_IMAGE:$ver, trying the one before" >&2
-  done < <(awk '{sub("refs/tags/v", "", $2); sub(/\^\{\}$/, "", $2); print $2}' <<<"$tags" |
-    grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -uV -r | head -n 8)
-  return 1
-}
-
 if [ -n "${PREVIOUS_IMAGE:-}" ]; then
   OLD_IMAGE="$PREVIOUS_IMAGE"
+  FROM_VERSION="${FROM_VERSION:-${PREVIOUS_IMAGE##*:}}"
 else
-  OLD_IMAGE="$(resolve_previous)" || { echo "could not find a released image to upgrade from" >&2; exit 1; }
+  FROM_VERSION="$(drill_resolve_versions "${FROM_VERSION:-}")" || exit 1
+  case "$FROM_VERSION" in *$'\n'*) echo "a leg takes exactly one FROM_VERSION" >&2; exit 1 ;; esac
+  OLD_IMAGE="$REGISTRY_IMAGE:$FROM_VERSION"
 fi
+drill_semver_ok "$FROM_VERSION" || { echo "cannot tell the version of $OLD_IMAGE; set FROM_VERSION" >&2; exit 1; }
+drill_pull_image "$OLD_IMAGE"
 echo "==> upgrading from $OLD_IMAGE to $NEW_IMAGE"
+LEG_STARTED=$SECONDS
 
 # --- a throwaway deployment directory, laid out like a real one ---------------
 DEPLOY="$(mktemp -d)"
@@ -153,6 +140,7 @@ login() { # name password
 }
 api() { local who="$1"; shift; curl -fsS -b "$(jar "$who")" -H "Origin: $BASE" "$@"; }
 post_json() { local who="$1" path="$2" body="$3"; api "$who" -H 'Content-Type: application/json' --data "$body" "$BASE$path"; }
+put_json() { local who="$1" path="$2" body="$3"; api "$who" -X PUT -H 'Content-Type: application/json' --data "$body" "$BASE$path"; }
 post_message() { post_json "$1" "/api/channels/$2/messages" "{\"content\":\"$3\"}" >/dev/null; }
 messages() { api "$1" "$BASE/api/channels/$2/messages?limit=100" | jq -r '.. | .content? // empty'; }
 health_version() { curl -fsS "$BASE/api/health" | jq -r '.version'; }
@@ -192,6 +180,8 @@ head -c 262144 /dev/urandom >"$DEPLOY/payload.bin"
 MEDIA_URL="$(api alice -F "file=@$DEPLOY/payload.bin;filename=notes.bin;type=application/octet-stream" -F "content=upload-$TAG" \
   "$BASE/api/channels/$PROJECTS/upload" | jq -r '.attachments[0].url')"
 [ -n "$MEDIA_URL" ] && [ "$MEDIA_URL" != null ] || { echo "upload returned no attachment" >&2; exit 1; }
+echo "==> seeding roles, overwrites, a webhook, a bot and notification settings (from $FROM_VERSION)"
+seed_integration_data
 GENERAL_BEFORE="$(messages Herzog "$GENERAL" | sort)"
 PROJECTS_BEFORE="$(messages Herzog "$PROJECTS" | sort)"
 CHANNELS_BEFORE="$(api Herzog "$BASE/api/channels" | jq -S '[.categories[].channels[], .uncategorized[]] | map({id, name, type}) | sort_by(.id)')"
@@ -213,6 +203,8 @@ SYSTEM="$(api Herzog "$BASE/api/admin/system")"
 [ "$(jq -r '.health.storage.reachable' <<<"$SYSTEM")" = true ] || { echo "storage is not reachable" >&2; exit 1; }
 [ "$(jq -r '.version.current' <<<"$SYSTEM")" = "$NEW_VERSION" ] || { echo "admin and health disagree on the version" >&2; exit 1; }
 
+verify_counts
+
 echo "==> sessions from before the upgrade, and fresh logins"
 for person in alice bob; do
   [ "$(api "$person" "$BASE/api/auth/me" | jq -r '.username // .user.username')" = "$person" ] ||
@@ -230,8 +222,14 @@ echo "==> data intact"
 api bob "$BASE$MEDIA_URL" -o "$DEPLOY/after.bin"
 cmp -s "$DEPLOY/payload.bin" "$DEPLOY/after.bin" || { echo "the upload differs after the upgrade" >&2; exit 1; }
 
+echo "==> roles, overwrites, webhook, bot, notification levels, onboarding and role mentions"
+verify_integration_data
+
 echo "==> the upgraded server takes new writes"
 post_message bob "$GENERAL" "after-upgrade-$TAG"
 messages alice "$GENERAL" | grep -qx "after-upgrade-$TAG" || { echo "a new message was not stored" >&2; exit 1; }
 
-echo "==> upgrade drill passed ($OLD_VERSION -> $NEW_VERSION)"
+echo "==> the new tables take writes after the upgrade"
+exercise_new_tables
+
+echo "==> upgrade drill passed ($OLD_VERSION -> $NEW_VERSION) in $((SECONDS - LEG_STARTED))s"

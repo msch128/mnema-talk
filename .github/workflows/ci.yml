@@ -323,19 +323,28 @@ jobs:
           "$RUNNER_TEMP/trivy" image --scanners vuln --severity HIGH,CRITICAL \
             --ignore-unfixed --exit-code 1 --no-progress mnema-talk:ci
 
-  # -- Upgrade drill: previous release -> this build, with data in between ----
-  # Installs the latest released image from GHCR, seeds users, channels,
-  # messages and an upload through the API, switches the stack to the image
-  # built here and checks migrations, data, sessions and health. Not a
-  # required check: the ruleset lists its checks by name. continue-on-error keeps
-  # a registry outage from failing the workflow run, which release.yml waits
-  # for; a real failure still shows red on the job. Waits for the docker
-  # job so the image layers come from its build cache.
+  # -- Upgrade drill: released versions -> this build, with data in between --
+  # One parallel leg per supported source version (keep the matrix and
+  # DRILL_DEFAULT_FROM_VERSIONS in scripts/drill-common.sh in step). A leg
+  # installs that release from GHCR, seeds users, channels, messages, an
+  # upload, roles and overwrites, a webhook, a bot, notification levels and
+  # (from 0.9.0) onboarding and role mentions through the API, switches the
+  # stack to the image built here and checks migrations, row counts, an
+  # authenticated read of each object, sessions and health. It then backs up
+  # on the old release, restores into this build with scripts/restore.sh and
+  # checks that the old release refuses to start on the migrated data.
+  # A registry outage is retried a few times and then fails the leg with a
+  # clear message; nothing is skipped and the job is not continue-on-error.
+  # The required checks are named "upgrade-drill (<version>)", one per leg.
+  # Waits for the docker job so the image layers come from its build cache.
   upgrade-drill:
     needs: docker
-    continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        from: ['0.8.16', '0.9.0']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -354,8 +363,21 @@ jobs:
             REVISION=${{ github.sha }}
           cache-from: type=gha,scope=image
 
-      - name: Upgrade drill (previous release -> this build)
-        run: scripts/upgrade-drill.sh mnema-talk:ci
+      - name: Upgrade drill (${{ matrix.from }} -> this build)
+        env:
+          FROM_VERSIONS: ${{ matrix.from }}
+        run: |
+          set -euo pipefail
+          scripts/upgrade-drill.sh mnema-talk:ci | tee "$RUNNER_TEMP/upgrade-drill.log"
+          echo "- upgrade ${{ matrix.from }}: $(grep -E '^==> upgrade drill passed' "$RUNNER_TEMP/upgrade-drill.log")" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Restore drill (back up on ${{ matrix.from }}, restore into this build, refuse downgrade)
+        env:
+          FROM_VERSION: ${{ matrix.from }}
+        run: |
+          set -euo pipefail
+          scripts/backup-drill.sh mnema-talk:ci | tee "$RUNNER_TEMP/backup-drill.log"
+          echo "- restore ${{ matrix.from }}: $(grep -E '^==> backup drill passed' "$RUNNER_TEMP/backup-drill.log")" >> "$GITHUB_STEP_SUMMARY"
 
   # -- Browser smoke test: login, chat message, talk, against the real binary -
   e2e:

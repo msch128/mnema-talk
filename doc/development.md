@@ -53,8 +53,8 @@ make check             # everything CI runs: lint, tests, govulncheck, builds,
                        # npm audit, docker build
 make e2e               # Playwright (Chromium) against the real binary, see below
 make load-test         # voice/screen-share load test, see loadtest/README.md
-make upgrade-drill     # previous release image -> this build with seeded data
-make backup-drill      # backup -> change -> restore on a throwaway stack
+make upgrade-drill     # 0.8.16 and 0.9.0 images -> this build with seeded data (FROM_VERSIONS=0.9.0 for one)
+make backup-drill      # backup -> change -> restore on a throwaway stack (FROM_VERSION=0.9.0: back up on that release, restore into this build, check the downgrade refusal)
 make postgres-upgrade-drill # the one-time PostgreSQL 17 -> 18 move
 ```
 

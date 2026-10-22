@@ -80,9 +80,10 @@ typecheck-web: $(WEB_DEPS) $(E2E_DEPS) ## Strict TypeScript checks for app, test
 	cd e2e && npm run typecheck
 
 test-scripts: ## Backup/restore syntax and fault-injected lifecycle tests (Python 3; no Docker)
-	bash -n scripts/backup.sh scripts/restore.sh scripts/backup-common.sh
+	bash -n scripts/backup.sh scripts/restore.sh scripts/backup-common.sh scripts/drill-common.sh scripts/upgrade-drill.sh scripts/upgrade-drill-data.sh scripts/backup-drill.sh scripts/backup-drill-downgrade.sh
 	python3 scripts/tests/test_backup_restore.py
 	python3 scripts/tests/test_upgrade_mount_guard.py
+	python3 scripts/tests/test_drill_versions.py
 	python3 scripts/tests/test_coverage_summary.py
 
 # Minimum total Go coverage (%, decimals allowed, compared on the exact
@@ -158,7 +159,7 @@ backup-drill: docker ## Back up, change, verify and restore a throwaway compose 
 postgres-upgrade-drill: docker ## Install like 0.4 (PostgreSQL 17), then check the guard and scripts/upgrade-postgres.sh
 	scripts/postgres-upgrade-drill.sh mnema-talk:local
 
-upgrade-drill: docker ## Install the latest released image, seed data via the API, upgrade to the local build and verify (needs Docker and network access to GHCR)
+upgrade-drill: docker ## Install each supported released image (FROM_VERSIONS, default 0.8.16 and 0.9.0), seed data via the API, upgrade to the local build and verify (needs Docker and network access to GHCR)
 	scripts/upgrade-drill.sh mnema-talk:local
 
 docker: ## Build the app image (mnema-talk:local, what compose runs by default)
