@@ -7,6 +7,9 @@ export interface TypingUser { user_id: string; username: string; display_name: s
 export interface MessageWindow { messages: Message[]; hasMoreBefore: boolean; hasMoreAfter: boolean }
 export type Timer = ReturnType<typeof setTimeout>
 
+/** A compact note under the messages: someone pinned a message here. Kept in memory until dismissed. */
+export interface PinNotice { id: number; channel_id: string; message_id: string; actor_name: string }
+
 /** A private reply of a bot to a slash command, shown in its channel until dismissed. */
 export interface EphemeralNote extends InteractionResponse {
   id: number
@@ -20,3 +23,5 @@ export const TYPING_EXPIRY_MS = 5000
 export const TYPING_THROTTLE_MS = 3000
 /** How many private replies are kept. */
 export const MAX_EPHEMERAL = 20
+/** How many pin notes are kept. */
+export const MAX_PIN_NOTICES = 3

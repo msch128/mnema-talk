@@ -32,6 +32,7 @@ const examples: Record<ServerEventType, unknown[]> = {
   message_update: [messageFixture({ is_edited: true })],
   message_delete: [{ id, channel_id: id, parent_id: null }, { id, channel_id: id, parent_id: id }],
   message_reaction: [{ message_id: id, reactions: [] }, { message_id: id, reactions: [reaction] }, { message_id: id, channel_id: id, reactions: [reaction] }],
+  pins_changed: [{ channel_id: id, message_id: id, pinned: true, actor_id: id, actor_name: 'Mod' }, { channel_id: id, message_id: id, pinned: false, actor_id: id, actor_name: '' }],
   interaction_response: [
     { channel_id: id, bot_id: id, bot_name: 'helper', content: 'psst', embeds: null, created_at: FIXTURE_TIMESTAMP },
     { channel_id: id, bot_id: id, bot_name: 'helper', bot_avatar_url: '/api/media/x', content: '', embeds: [{ title: 'T', description: 'D' }, {}], created_at: FIXTURE_TIMESTAMP }

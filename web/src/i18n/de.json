@@ -1192,6 +1192,15 @@
     "hereHint": "Alle, die gerade online sind",
     "roleHint": "Rolle: alle, die sie tragen, werden benachrichtigt"
   },
+  "pins": {
+    "title": "Angeheftete Nachrichten",
+    "empty": "In diesem Kanal ist noch nichts angeheftet.",
+    "emptyModerator": "Noch nichts angeheftet. Hefte eine Nachricht über ihr Nachrichtenmenü an.",
+    "failed": "Die angehefteten Nachrichten konnten nicht geladen werden.",
+    "notice": "{name} hat eine Nachricht in diesem Kanal angeheftet.",
+    "view": "Ansehen",
+    "dismiss": "Schließen"
+  },
   "mentions": {
     "inbox": "Erwähnungen",
     "empty": "Dich erwähnt noch niemand.",

@@ -1192,6 +1192,15 @@
     "hereHint": "Everyone online right now",
     "roleHint": "Role: everyone who holds it is notified"
   },
+  "pins": {
+    "title": "Pinned messages",
+    "empty": "No messages are pinned in this channel yet.",
+    "emptyModerator": "No messages are pinned yet. Pin one from its message menu.",
+    "failed": "The pinned messages could not be loaded.",
+    "notice": "{name} pinned a message to this channel.",
+    "view": "View",
+    "dismiss": "Dismiss"
+  },
   "mentions": {
     "inbox": "Mentions",
     "empty": "Nothing mentions you yet.",

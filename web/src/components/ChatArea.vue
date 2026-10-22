@@ -10,6 +10,7 @@ import ChatComposer from './ChatComposer.vue'
 import ImageLightbox from './ImageLightbox.vue'
 import ContextMenu from './ContextMenu.vue'
 import EphemeralNotes from './EphemeralNotes.vue'
+import PinNotices from './PinNotices.vue'
 import MessageRow from './MessageRow.vue'
 import { useMessageActions } from '../composables/useMessageActions'
 import { useMessageMenu } from '../composables/useMessageMenu'
@@ -320,6 +321,7 @@ const groupedIds = computed(() => {
 
     </div>
 
+    <PinNotices v-if="chatStore.activeChannel" :channel-id="chatStore.activeChannel.id" />
     <EphemeralNotes v-if="chatStore.activeChannel" :channel-id="chatStore.activeChannel.id" />
 
     <ChatComposer

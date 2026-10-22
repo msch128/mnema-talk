@@ -68,6 +68,8 @@ export interface ServerEventPayloads {
   message_update: Message
   message_delete: { id: string; channel_id: string; parent_id: string | null }
   message_reaction: { message_id: string; channel_id?: string; reactions: ReactionSummary[] }
+  /** A message was pinned or unpinned: refetch GET /api/channels/{id}/pins and note it in the channel. */
+  pins_changed: { channel_id: string; message_id: string; pinned: boolean; actor_id: string; actor_name: string }
   interaction_response: InteractionResponse
   user_update: UserUpdate
   /** A member's timeout started (timeout_until) or ended (null). */
@@ -257,6 +259,8 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['read_state', isReadStateUpdate],
   ['message_delete', payload => isIdentifier(payload['id']) && isIdentifier(payload['channel_id'])
     && (payload['parent_id'] === null || isIdentifier(payload['parent_id']))],
+  ['pins_changed', payload => isIdentifier(payload['channel_id']) && isIdentifier(payload['message_id']) && typeof payload['pinned'] === 'boolean'
+    && isIdentifier(payload['actor_id']) && isString(payload['actor_name'], 128)],
   ['message_reaction', payload => isIdentifier(payload['message_id']) && (!hasOwn(payload, 'channel_id') || isIdentifier(payload['channel_id']))
     && isArrayOf(payload['reactions'], isChatReactionSummary)],
   ['interaction_response', isInteractionResponse],
@@ -310,7 +314,7 @@ function isNoteEmbed(value: unknown): boolean {
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
   'channels_changed', 'permissions_changed', 'roles_changed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
-  'message_reaction', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
+  'message_reaction', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'media_handshake'
 ])

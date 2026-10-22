@@ -32,7 +32,7 @@ const deletedUsernamePrefix = "deleted-"
 var eraseSteps = []string{
 	`DELETE FROM message_reactions WHERE user_id = $1`,
 	`DELETE FROM message_mentions WHERE user_id = $1`,
-	`UPDATE messages SET content = '', embeds = '[]'::jsonb, author_name = NULL, is_pinned = FALSE, is_edited = FALSE WHERE user_id = $1`,
+	`UPDATE messages SET content = '', embeds = '[]'::jsonb, author_name = NULL, is_pinned = FALSE, pinned_at = NULL, pinned_by = NULL, is_edited = FALSE WHERE user_id = $1`,
 	`DELETE FROM invites WHERE created_by = $1`,
 	`DELETE FROM channel_reads WHERE user_id = $1`,
 	`DELETE FROM category_notify WHERE user_id = $1`,
