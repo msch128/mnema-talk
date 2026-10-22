@@ -1,0 +1,295 @@
+.env.example
+  s_06fcde5dbef956::t_24d193473e2820 99-100,149-151
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_866a0c9fd20c04 448-449,460-474,545-546,557-571
+README.md
+  s_06fcde5dbef956::t_c445d4aedd58a5 44
+SECURITY.md
+  s_06fcde5dbef956::t_0303f33c73a1a9 235-236,350-363,395-403,709-717
+THIRD_PARTY_NOTICES.md
+  s_06fcde5dbef956::t_09c55daea83e62 34,60,127
+api/openapi.json
+  s_06fcde5dbef956::t_cf28f779c7e97b 2494-2541,2861-2929,8777-8789,8791-8802,8804,8806-8810,8814,8818,8820,8828,8830,8838,8840,8848,8850,8858,8860,8868,8870,8878,8907-8916,8924,8926,8930,8932-8933,8936,8948,9024,9026,9028-9043,9048,9056-9064,9106,9114-9126,9150,9152,9156,9158-9159,9166,9172,9228,9232-9246,9248,9252,9256-9266,9288-9297,9332,9338-9353,9355-9358,9362,9366,9388-9397,9432,9438-9447,9449-9452,9454-9455,9487-9496,9531,9537,9540-9563,9569-9572,9576,9632,9638-9641,9643,9647,9651,9717,9723-9726,9732,9736,9785-9794,9802,9804,9806-9820,9822-9823,9829,9833,9892-9901,9909,9911,9915-9918,9920,9924,9928,9938,9948,9984,9986,9988-9993,9996,10007-10008,10018,10028,10038,10048,10077-10086,10094,10096,10100,10102-10103,10109,10113,10115,10123,10125,10133,10135,10169,10171,10173-10182,10184-10187,10193,10197,10207,10217,10227,10263,10265,10269-10272,10286-10287,10363,10367-10382,10387,10391,10395,10399,10403,10413,10423,10433,10435,10443,10479,10481,10485-10497,10499-10500,10502-10513,10523,10533,10543-10553,10589,10591,10595-10598,10601,10612-10620,10630,10640,10650,10660,10696,10698,10700-10705,10708,10723,10727,10737,10747,10757,10767,10803,10805,10809-10823,10825,10829,10833-10837,10839,10842-10843,10863-10873,10909,10911,10915-10929,10931-10934,10938,10942,10962,10998,11000,11004-11016,11018-11019,11022,11032,11052-11062,11098,11100,11102-11128,11134,11138-11142,11144,11147-11148,11168-11178,11214,11216,11220,11222-11223,11229,11233,11297,11301-11303,11305-11306,11308,11312,11316,11336,11346,11356,11382,11388-11401,11403-11406,11410,11414,11463-11472,11480,11482,11484-11489,11495,11499-11502,11504,11507,11563,11565,11569,11571-11572,11578,11582-11590,11646,11650-11659,11661-11664,11666-11674,11704,11706,11714,11724,11743-11752,11760,11764-11769,11771,11775,11779,11835,11837,11839-11848,11851-11855,11859,11863,11865,11873,11875,11883,11885,11893,11929,11931,11935-11938,11940,11944-11947,11951,12007,12013-12016,12071,12107,12111,12113-12114,12127-12137,12216,12222,12224-12225,12316,12322,12324-12325,12339-12340,12416,12422-12425,12470,12516,12518,12522,12524-12525,12616,12622-12625,12642,12650-12651,12727,12733-12736,12750-12766,12842,12846-12851,12868,12876-12877,12907,12953,12955,12959,12961-12962,13053,13059-13062,13065,13075-13085,13087-13095,13105,13115,13125,13135,13171,13173,13175-13180,13183,13194-13195,13205,13215,13225,13235,13271,13273,13275,13277-13278,13281,13293,13295,13299,13307,13311,13321,13331,13341,13351,13387,13389,13393,13395-13396,13399,13410-13411,13421,13431,13441,13451,13487,13489,13493-13505,13507-13508,13511,13521,13523,13531-13551,13582-13587,13589,13591-13606,13611,13615,13623,13627,13629,13633,13637,13639,13647,13649,13657,13659,13667,13698-13703,13705,13709,13711-13724,13727,13729-13739,13743,13751,13755,13765,13775,13777,13785,13787,13795-13799,13801,13804-13805,13807,13815,13817,13825,13827-13828,13830,13835,13843,13845,13853-13884,13888,13892-13896,13898,13901-13902,13904,13912-13914,13918,13922,13924,13932,13968,13970,13974-13988,13990-13993,13997,14001-14011,14030-14039,14043,14049-14052,14057,14065-14073,14083-14092,14111,14121,14150-14167,14170-14171,14177,14179-14180,14185,14193-14209,14219,14221-14618,15353-15572,15577-15579,15600-15608,15612-15613,15643,15655-15664,15691,15697-15700,15713-15748,15750-15758,15780-15789,15798-15818,15839-15848,15856,15860-15864,15866-15877,15879,15886-15919,15921-15925,15929,15933,15935,15943,15945,15953,15963,15981,15985-15988,15991,15993-15994,15996-15997,16001,16005,16009-16012,16016,16038,16042,16046-16077,16079,16087,16089,16097,16099,16107,16125,16131,16133-16134,16140,16144,16172,16176-16178,16180-16202,16207,16211,16215-16218,16222,16226,16228,16236,16238,16246-16256,16266,16284,16288-16314,16319,16323,16327,16331,16335-16338,16348,16360,16368,16370,16378,16380,16388,16406,16412,16414-16415,16421-16424,16428,16440-16449,16459-16468,16476,16482-16485,16488,16490,16499-16507,16517,16537,16547,16549-16559,16567-16604,16622,16625-16631,16634,16636,16648,16652,16657,16663,16667,16673,16677,16683,16687,16693,16697,16699,16703,16707-16715,16717,16721,16725,16730,16733,16735,16739,16741-16742,16748,16752,16758,16762,16764,16768,16772-16775,16777,16780,16786,16790,16795,16798,16800,16804,16806-16807,16810,16812,16825-16828,16832,16838,16842,16844,16848,16852,16854,16858,16862-16865,16867,16870,16876,16880,16885,16888,16890,16894,16896-16919,16925,16929-16939,16945-16974,16977,16979,16983,16987,16992,16995,16997,17001-17004,17007,17009,17021,17025,17029-17037,17047,17057,17067,17077-17087,17123,17125,17129,17131-17182,17188-17191,17195-17205,17217-17226,17261,17263,17265-17268,17281-17291,17293,17297,17301-17311,17321-17331,17341,17377,17379,17383-17386,17399-17409,17415,17419-17429,17431,17439,17441,17449,17495,17497,17501-17504,17515-17524,17531,17535,17538-17539,17549,17559,17569,17579,17615,17617,17619-17622,17635-17638,17645-17655,17661,17665,17687-17696,17741,17745-17750,17761-17770,17774,17778,17782,17858,17864-17867,17878-17887,17895,17899,17975,17979-17982,18006-18014,18056-18065,18100,18104-18106,18108-18109,18126,18134-18135,18211,18213,18217-18220,18238-18241,18245,18311,18315-18320,18333-18337,18339-18345,18421,18423,18427-18430,18447,18532,18538-18541,18554-18589,18591,18595,18599,18621,18629,18631,18639-18643,18645,18648-18649,18651,18659-18675,18679,18687,18689,18697-18724,18726-18742,18746,18750,18752,18760,18796,18798,18802-18805,18808,18810,18816-18823,18827,18829,18831-18836,18840,18842-18845,18853,18855,18863,18902-18911,18919,18921,18925-18928,18931,18933,18939-18946,18950,18952,18954-18959,18963-18966,19042,19044,23385
+doc/architecture.md
+  s_06fcde5dbef956::t_312250ffd7036e 390
+doc/desktop-trusted-client.md
+  s_06fcde5dbef956::t_43b4047e6284e0 616-618
+doc/moderation.md
+  s_06fcde5dbef956::t_c2491d0affc3b5 114-143
+doc/operations.md
+  s_06fcde5dbef956::t_f1e624a247f2fa 78,80
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_fa999c0fdd162a 132
+doc/upgrade.md
+  s_06fcde5dbef956::t_684d853f7a4a5b 167-173,279-288,305-315
+docker-compose.yml
+  s_06fcde5dbef956::t_1538097175be74 57,80-81
+e2e/ci-install-deps.sh
+  s_06fcde5dbef956::t_350caddaf8abf8 1-45
+e2e/run.sh
+  s_06fcde5dbef956::t_e8b1bf8337e29a 6-7,86-90
+e2e/tests/drafts.spec.ts
+  s_06fcde5dbef956::t_da61d13f413099 1-74
+go.mod
+  s_06fcde5dbef956::t_bc92ae3569e173 32-33
+go.sum
+  s_06fcde5dbef956::t_4dff97dfc1dc55 214-215
+internal/audit/classes_test.go
+  s_06fcde5dbef956::t_c36dab45447e47 38
+internal/audit/routes.go
+  s_06fcde5dbef956::t_85642ea6e6f4d3 28,114-117
+internal/audit/snapshot.go
+  s_06fcde5dbef956::t_9b08cadf37d451 41
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_a99757da82e91d 26-27,38
+internal/auth/account_export_build.go
+  s_06fcde5dbef956::t_828fdb7faac9f1 57,135
+internal/auth/account_export_edits.go
+  s_06fcde5dbef956::t_93e5feb91fd59c 1-37
+internal/auth/account_export_edits_integration_test.go
+  s_06fcde5dbef956::t_22585f043b82e4 1-37
+internal/chat/edit_history.go
+  s_06fcde5dbef956::t_453fac277105ca 1-157
+internal/chat/handler.go
+  s_06fcde5dbef956::t_c6037ab54e4891 36-37,79-83
+internal/chat/message_mutations.go
+  s_06fcde5dbef956::t_b2f5e0c6abeba2 38-40
+internal/chat/message_types.go
+  s_06fcde5dbef956::t_76c7485286de9a 10,151-152,155-157
+internal/config/config.go
+  s_06fcde5dbef956::t_6d067f22093973 38-43
+internal/config/config_env.go
+  s_06fcde5dbef956::t_a9d75addb9d320 119,121
+internal/config/config_test.go
+  s_06fcde5dbef956::t_f6afea5a680c89 153
+internal/config/config_validate.go
+  s_06fcde5dbef956::t_98b24e8a6741df 105-107,111-113
+internal/db/migrations/0044_custom_emoji.sql
+  s_06fcde5dbef956::t_9c4565cc4931e3 1-22
+internal/db/migrations/0047_message_edit_history.sql
+  s_06fcde5dbef956::t_950dc03f16e2aa 1-19
+internal/emoji/gifscan.go
+  s_06fcde5dbef956::t_f2d1e73e6e5229 1-53
+internal/emoji/handler.go
+  s_06fcde5dbef956::t_164ad221d0c330 1-380
+internal/emoji/image.go
+  s_06fcde5dbef956::t_8cab18c139043b 1-264
+internal/emoji/image_test.go
+  s_06fcde5dbef956::t_d00a8078dc5cd2 1-196
+internal/emoji/store.go
+  s_06fcde5dbef956::t_7a10eca42bca98 1-140
+internal/emojitext/emojitext.go
+  s_06fcde5dbef956::t_06020740873fa4 1-35
+internal/emojitext/emojitext_test.go
+  s_06fcde5dbef956::t_9bdcfd52f7b12d 1-30
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_5b980e7df8d33b 38-39
+internal/events/types.go
+  s_06fcde5dbef956::t_838f4ce85d2a08 48
+internal/media/policy.go
+  s_06fcde5dbef956::t_355f873a8c2c4b 155-161
+internal/metrics/metrics.go
+  s_06fcde5dbef956::t_d7fd67363fdcb4 88-95
+internal/perm/perm.go
+  s_06fcde5dbef956::t_656514f061da80 67-69,104,137
+internal/perm/snapshot_test.go
+  s_06fcde5dbef956::t_e2ddcc3a9c08b7 34
+internal/push/payload.go
+  s_06fcde5dbef956::t_1026488e189288 12,110
+internal/server/account_delete_integration_test.go
+  s_06fcde5dbef956::t_2c137a782122bf 72-75,166-168
+internal/server/account_export_integration_test.go
+  s_06fcde5dbef956::t_d51bbea4bb7167 78,80-86,135,140-142
+internal/server/edit_history_integration_test.go
+  s_06fcde5dbef956::t_de82575dd66eb6 1-216
+internal/server/emoji_integration_test.go
+  s_06fcde5dbef956::t_b8706229b720b1 1-257
+internal/server/router_build.go
+  s_06fcde5dbef956::t_66c73f73ccbed4 15,56,115-119,125
+internal/server/router_observability_integration_test.go
+  s_06fcde5dbef956::t_2d539883cbc4d8 12,23
+internal/server/router_routes.go
+  s_06fcde5dbef956::t_68ef8f014317a9 103,137
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_f2a7ab8a2834c0 46
+web/package-lock.json
+  s_06fcde5dbef956::t_9aa3c466615f29 21,2614-2622
+web/package.json
+  s_06fcde5dbef956::t_30b57ef619a72c 32
+web/src/App.vue
+  s_06fcde5dbef956::t_f9391306646e77 39,354
+web/src/components/AdminDashboard.vue
+  s_06fcde5dbef956::t_18dca6a98f1b5f 5,20,33-34,42,57,103
+web/src/components/AdminEmojiTab.test.ts
+  s_06fcde5dbef956::t_d3126cb2af703d 1-106
+web/src/components/AdminEmojiTab.vue
+  s_06fcde5dbef956::t_25966d7c80e8b0 1-164
+web/src/components/AdminPermissionsUi.test.ts
+  s_06fcde5dbef956::t_e16a38aa2e832c 117
+web/src/components/AdminRolesTab.test.ts
+  s_06fcde5dbef956::t_12158ac1ab0306 62
+web/src/components/ChatArea.vue
+  s_06fcde5dbef956::t_3837e6133346ea 21-22,61-63
+web/src/components/ChatAreaDrafts.test.ts
+  s_06fcde5dbef956::t_a5a556373b257b 1-77
+web/src/components/ChatComposer.vue
+  s_06fcde5dbef956::t_5461391018fa51 3,9,22,126-127
+web/src/components/EditHistoryDialog.test.ts
+  s_06fcde5dbef956::t_cfd86ee3e9b5f4 1-89
+web/src/components/EditHistoryDialog.vue
+  s_06fcde5dbef956::t_a9945e63349d8e 1-72
+web/src/components/EmojiButton.vue
+  s_06fcde5dbef956::t_a13c67bc2d1f90 46
+web/src/components/EmojiGlyph.vue
+  s_06fcde5dbef956::t_78a03f42ae7561 1-32
+web/src/components/EmojiPicker.test.ts
+  s_06fcde5dbef956::t_a161add1479bf2 4-5,25,51-61
+web/src/components/EmojiPicker.vue
+  s_06fcde5dbef956::t_997759dc5e9ddf 6,9-10,15-18,20-28,50-55,57
+web/src/components/MarkdownContent.actions.test.ts
+  s_06fcde5dbef956::t_feef9b8c385ce6 1-112
+web/src/components/MarkdownContent.vue
+  s_06fcde5dbef956::t_bd18909a94b2f7 6,23-27,56,58,60-67,72,76-89,115,127
+web/src/components/MarkdownHelp.test.ts
+  s_06fcde5dbef956::t_decda81506c3e9 1-58
+web/src/components/MarkdownHelp.vue
+  s_06fcde5dbef956::t_c88fe89d80e389 1-97
+web/src/components/MentionSuggestions.vue
+  s_06fcde5dbef956::t_0f5821b3b5250c 7,30,34,53-56
+web/src/components/ReactionBar.vue
+  s_06fcde5dbef956::t_2df45de8d4c95d 7,9,50,52
+web/src/components/ReplyComposerBar.vue
+  s_06fcde5dbef956::t_78886b58ed3e9c 7
+web/src/components/SidebarChannelRow.vue
+  s_06fcde5dbef956::t_602c4a0b2be7c4 11-12,40,55-56,136
+web/src/components/SidebarNotifications.test.ts
+  s_06fcde5dbef956::t_18cf780d972429 6-7,9,50-70
+web/src/components/ThreadComposer.vue
+  s_06fcde5dbef956::t_ad3bbf85ee2129 3,17
+web/src/components/ThreadSidebar.test.ts
+  s_06fcde5dbef956::t_b80889097d2cce 480-492
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_5591e910ab1a74 20-21,57-59
+web/src/components/markdownBody.css
+  s_06fcde5dbef956::t_b96c518fde89e0 1-171
+web/src/composables/useComposerAssist.test.ts
+  s_06fcde5dbef956::t_d653201fb24357 9,170-184
+web/src/composables/useComposerAssist.ts
+  s_06fcde5dbef956::t_0d36152906cf08 10-12,28-43,52,54,57,61-62,73-75,85-86,88,93-96,99
+web/src/composables/useDraftSlot.test.ts
+  s_06fcde5dbef956::t_0af037205289fc 1-108
+web/src/composables/useDraftSlot.ts
+  s_06fcde5dbef956::t_0681126e582134 1-49
+web/src/composables/useMessageMenu.ts
+  s_06fcde5dbef956::t_a82ed46b4bca46 9,11,90-98,129
+web/src/composables/useMessageModerationMenu.test.ts
+  s_06fcde5dbef956::t_0e99b43612c19c 13,110-135
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_42b344cf60ee73 172,306-326,374-379,850-851,1242-1259,1404-1407,1749-1758
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_b0b7ef43e06659 172,306-326,374-379,850-851,1242-1259,1404-1407,1749-1758
+web/src/lib/chatLogic.ts
+  s_06fcde5dbef956::t_913ba871574e97 3,25-26,28
+web/src/lib/customEmoji.test.ts
+  s_06fcde5dbef956::t_13bc0d2c4d9909 1-79
+web/src/lib/customEmoji.ts
+  s_06fcde5dbef956::t_a0d9ca9af93565 1-87
+web/src/lib/drafts.test.ts
+  s_06fcde5dbef956::t_02cd6ea55d8e3c 1-92
+web/src/lib/drafts.ts
+  s_06fcde5dbef956::t_1bb59073f79f84 1-133
+web/src/lib/editHistory.ts
+  s_06fcde5dbef956::t_9783fe58eb541a 1-22
+web/src/lib/emojiQuery.ts
+  s_06fcde5dbef956::t_9b38ac17672b8c 1-38
+web/src/lib/markdown.ts
+  s_06fcde5dbef956::t_d82c83b109bb4f 1-30,45-50,52-62
+web/src/lib/markdown/blocks.ts
+  s_06fcde5dbef956::t_34627f23f05025 1-207
+web/src/lib/markdown/escape.ts
+  s_06fcde5dbef956::t_4c99cca0f5959b 1-8
+web/src/lib/markdown/highlight.ts
+  s_06fcde5dbef956::t_83180e528ddd76 1-93
+web/src/lib/markdown/inline.ts
+  s_06fcde5dbef956::t_374c445cf1e687 1-290
+web/src/lib/markdown/link.test.ts
+  s_06fcde5dbef956::t_30e631272fa440 1-47
+web/src/lib/markdown/link.ts
+  s_06fcde5dbef956::t_e365e0eb7e725a 1-46
+web/src/lib/markdown/mentions.ts
+  s_06fcde5dbef956::t_3eeb5e6772d471 1-63
+web/src/lib/markdown/parity.test.ts
+  s_06fcde5dbef956::t_c13d097f74d3db 1-232
+web/src/lib/markdown/plain.ts
+  s_06fcde5dbef956::t_43bfb9556b3f76 1-77
+web/src/lib/markdown/render.ts
+  s_06fcde5dbef956::t_2acff094cd71ed 1-133
+web/src/lib/markdown/rules.test.ts
+  s_06fcde5dbef956::t_c268651275b820 1-86
+web/src/lib/markdown/rules.ts
+  s_06fcde5dbef956::t_0bb2a0a9952459 1-93
+web/src/lib/markdown/security.test.ts
+  s_06fcde5dbef956::t_987fd0af916c3b 1-217
+web/src/lib/markdown/types.ts
+  s_06fcde5dbef956::t_5ccb7cb511f07d 1-30
+web/src/lib/markdownActions.ts
+  s_06fcde5dbef956::t_1d6b22fd9a0b9d 1-40
+web/src/lib/mentionQuery.ts
+  s_06fcde5dbef956::t_67af22cac63495 5,9-10,12-14
+web/src/lib/native/nativeRoutes.ts
+  s_06fcde5dbef956::t_0ea1b7266242a0 198-200,206-207
+web/src/lib/permissions.ts
+  s_06fcde5dbef956::t_e1312ef8009c84 26-27,43
+web/src/lib/pureHelperEdges.test.ts
+  s_06fcde5dbef956::t_2629e58c0ee4e6 58,60-61
+web/src/lib/replies.test.ts
+  s_06fcde5dbef956::t_ddbdbfbe7f9771 57-58
+web/src/lib/replies.ts
+  s_06fcde5dbef956::t_8aa2cf73ab0bb8 2,15-17,20
+web/src/lib/thirdParty.ts
+  s_06fcde5dbef956::t_98fbbb2e9b2931 23
+web/src/stores/auth.test.ts
+  s_06fcde5dbef956::t_2414e330dcfacd 6,176-194
+web/src/stores/auth/credentials.ts
+  s_06fcde5dbef956::t_af9cea022db937 4,39,107,142-143,174
+web/src/stores/auth/session.ts
+  s_06fcde5dbef956::t_5afbaaec94a46e 4,52,72
+web/src/stores/authRaces.test.ts
+  s_06fcde5dbef956::t_0d9765b8cfb740 7,289-324
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_511f90815e4a58 3,164
+web/src/stores/chat/messageActions.ts
+  s_06fcde5dbef956::t_e919aa73fb35bc 4-5,10-14,19,36,53
+web/src/stores/chat/notifications.ts
+  s_06fcde5dbef956::t_762ec5584a6c59 3,31
+web/src/stores/chat/socket.ts
+  s_06fcde5dbef956::t_a20f6b4a392040 4,38
+web/src/stores/emoji.ts
+  s_06fcde5dbef956::t_10bedb14ab8689 1-53
+web/src/test-setup.ts
+  s_06fcde5dbef956::t_e7aafc36503e1e 3-4,32-34
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_c1d0231c86000a 21
+web/src/types/events.ts
+  s_06fcde5dbef956::t_72de90dd9c1d39 65-66,186,319
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_22e7cf2c1c868d 1529-1558,1770-1814
+web/vite.config.ts
+  s_06fcde5dbef956::t_4216b553ae0367 43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7f73aaabeb294304cbeea1d4f34d6aacb585fe92",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
