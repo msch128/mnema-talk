@@ -36,6 +36,8 @@ type Handler struct {
 
 	loginPerIP    *httpx.RateLimiter
 	registerPerIP *httpx.RateLimiter
+	// registerPerSite caps a whole IPv6 /48 (or one IPv4 address) together.
+	registerPerSite *httpx.RateLimiter
 	// loginFailures locks one client address out of one account;
 	// accountFailures is the much higher cap against guessing from many addresses.
 	loginFailures   *httpx.LoginFailureLimiter
@@ -64,8 +66,9 @@ func NewHandler(s *Sessions, pub events.Publisher) *Handler {
 		Events:      pub,
 		failureSeen: &sync.Map{},
 		// Generous per address: a household or office shares one public IP.
-		loginPerIP:    httpx.NewRateLimiter(60, 15*time.Minute),
-		registerPerIP: httpx.NewRateLimiter(10, time.Hour),
+		loginPerIP:      httpx.NewRateLimiter(60, 15*time.Minute),
+		registerPerIP:   httpx.NewRateLimiter(10, time.Hour),
+		registerPerSite: httpx.NewRateLimiter(40, time.Hour),
 		// 10 failures → 1 min, then 5 min, then 30 min lockouts per address+username
 		// (IPv6 per /64); tiers are forgotten after an hour without failures.
 		loginFailures:   httpx.NewLoginFailureLimiter(10, time.Minute),
@@ -88,7 +91,7 @@ const accountLockoutMax = 15 * time.Minute
 // MountPublic registers the unauthenticated auth routes.
 func (h *Handler) MountPublic(r chi.Router) {
 	r.With(h.loginPerIP.PerIP).Post("/auth/login", httpx.Handle(h.login))
-	r.With(h.registerPerIP.PerIP).Post("/auth/register", httpx.Handle(h.register))
+	r.With(h.registerPerSite.By(httpx.ClientAggregateKey), h.registerPerIP.PerIP).Post("/auth/register", httpx.Handle(h.register))
 	r.Post("/auth/logout", httpx.Handle(h.logout))
 }
 

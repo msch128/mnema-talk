@@ -26,7 +26,8 @@ type Invite struct {
 	ExpiresAt *time.Time `json:"expires_at" format:"date-time" extensions:"x-nullable"`
 	CreatedAt time.Time  `json:"created_at" format:"date-time"`
 	// Weak is true for a custom code that is easy to guess (too short, a common
-	// word). New codes like that are refused; old ones keep working.
+	// word). New codes like that are refused and old ones no longer work for
+	// sign-up; regenerate them.
 	Weak bool `json:"weak"`
 }
 

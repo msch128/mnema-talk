@@ -51,7 +51,7 @@ describe('AdminInvitesTab', () => {
     expect(rows(w)).toHaveLength(4)
     expect(row(w, 'open-code').text()).toContain('Uses: 4 / ∞')
     expect(row(w, 'open-code').text()).toContain('no expiry')
-    expect(row(w, 'open-code').find('[data-testid="invite-weak"]').text()).toBe('Easy to guess')
+    expect(row(w, 'open-code').find('[data-testid="invite-weak"]').text()).toBe('Disabled, regenerate')
     expect(row(w, 'gone-code').find('[data-testid="invite-weak"]').exists()).toBe(false)
     expect(row(w, 'gone-code').text()).toContain('expired')
     expect(row(w, 'full-code').text()).toContain('used up')

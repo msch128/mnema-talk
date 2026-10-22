@@ -135,6 +135,15 @@ until the new release has passed your application checks.
   `DROP INDEX` takes a short exclusive lock on `messages`; the migration runs
   in a transaction, so it is not `CONCURRENTLY`. On a large instance this takes
   well under a second. Take the usual backup first.
+- **Weak custom invite codes stop working.** Custom invite codes typed by an
+  admin that fall below the new minimum (12 or more characters, 7 or more
+  distinct, letters and digits below 16 characters, no common word with little
+  around it) are treated as unknown by the invite preview and by registration.
+  Admin > Invites marks them "Disabled, regenerate"; delete them and create new
+  ones (a random generated code is always accepted). Generated codes and
+  custom codes that meet the minimum are unaffected, and nothing else changes.
+  Invite lookups and registrations are also limited per IPv6 /48 in addition
+  to the per-client limits.
 
 ### 0.8.x → 0.9.0
 

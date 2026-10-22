@@ -20,6 +20,12 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 		return nil, err
 	}
 
+	// A legacy custom code below the current floor is guessable and no longer
+	// works; it is refused like any invalid code.
+	if IsWeakInviteCode(inviteCode) {
+		return nil, ErrInvalidInvite
+	}
+
 	// Cheap pre-check so unauthenticated guesses never cost a bcrypt hash;
 	// the transaction below re-checks under a row lock.
 	var known bool

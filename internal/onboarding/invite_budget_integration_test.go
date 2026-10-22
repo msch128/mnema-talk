@@ -77,3 +77,56 @@ func TestInvitePreviewBudgetIsPerClientAndIgnoresHitOrMiss(t *testing.T) {
 		t.Fatalf("a third client after another one exhausted its own budget: %d", w.Code)
 	}
 }
+
+// Rotating /64 prefixes inside one /48 shares one budget.
+func TestInvitePreviewBudgetAggregatesPerIPv6Site(t *testing.T) {
+	p := testutil.DB(t)
+	testutil.Reset(t, p)
+	seedInvite(t, p)
+	h := NewHandler(p, nil)
+	h.previewPerSite = httpx.NewRateLimiter(4, time.Hour)
+	r := chi.NewRouter()
+	h.MountPublic(r)
+	for i := 0; i < 4; i++ {
+		ip := "2001:db8:1:" + string(rune('a'+i)) + "::1"
+		if w := previewFrom(r, ip, "unknown-code-x"); w.Code != http.StatusOK {
+			t.Fatalf("prefix %d: %d", i, w.Code)
+		}
+	}
+	if w := previewFrom(r, "2001:db8:1:ffff::9", seededCode); w.Code != http.StatusTooManyRequests {
+		t.Fatalf("another /64 of the same /48: %d, want 429", w.Code)
+	}
+	if w := previewFrom(r, "2001:db8:2::1", seededCode); w.Code != http.StatusOK {
+		t.Fatalf("a different /48: %d", w.Code)
+	}
+}
+
+// A legacy custom code below today's floor answers like an unknown code, and a
+// generated code works.
+func TestInvitePreviewTreatsWeakLegacyCodesAsUnknown(t *testing.T) {
+	p := testutil.DB(t)
+	testutil.Reset(t, p)
+	seedInvite(t, p)
+	owner, _, err := auth.Login(context.Background(), p, "Herzog", "owner-password-123")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.Exec(context.Background(), `INSERT INTO invites (code, created_by) VALUES ('welcome', $1)`, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	generated, err := auth.CreateInvite(context.Background(), p, owner.ID, "", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := NewHandler(p, nil)
+	r := chi.NewRouter()
+	h.MountPublic(r)
+	weak := previewFrom(r, "203.0.113.1", "welcome")
+	unknown := previewFrom(r, "203.0.113.2", "nothere")
+	if weak.Code != http.StatusOK || weak.Body.String() != unknown.Body.String() || strings.Contains(weak.Body.String(), `"valid":true`) {
+		t.Fatalf("weak legacy code: %d %s, want the unknown-code answer %s", weak.Code, weak.Body, unknown.Body)
+	}
+	if w := previewFrom(r, "203.0.113.3", generated.Code); !strings.Contains(w.Body.String(), `"valid":true`) {
+		t.Fatalf("generated code: %s", w.Body)
+	}
+}

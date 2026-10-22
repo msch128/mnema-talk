@@ -10,8 +10,9 @@ import (
 // Custom invite codes are typed by an admin, so unlike the generated ones
 // (about 59 bits) they can be as guessable as "welcome". Anyone can test a
 // code against the public preview, so new custom codes must clear a floor.
-// Codes created before the floor existed keep working; the admin API flags
-// them (Invite.Weak) so they can be replaced.
+// Codes created before the floor existed no longer work for sign-up (preview
+// and registration treat them as unknown); the admin API flags them
+// (Invite.Weak) so they can be replaced.
 const (
 	minCustomCodeLength   = 12
 	minCustomCodeDistinct = 7

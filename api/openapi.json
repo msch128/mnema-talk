@@ -333,7 +333,7 @@
             "type": "integer"
           },
           "weak": {
-            "description": "Weak is true for a custom code that is easy to guess (too short, a common\nword). New codes like that are refused; old ones keep working.",
+            "description": "Weak is true for a custom code that is easy to guess (too short, a common\nword). New codes like that are refused and old ones no longer work for\nsign-up; regenerate them.",
             "type": "boolean"
           }
         },
@@ -16850,7 +16850,7 @@
     },
     "/api/invites/{code}": {
       "get": {
-        "description": "Public, no session. Says whether an invite code can still be used and, if so, the community's name and when the code expires. Unknown, expired, revoked and used-up codes all answer the same `{\"valid\": false}`; nothing else about the invite is revealed. Rate limited per IP (30 per minute, IPv6 per /64)",
+        "description": "Public, no session. Says whether an invite code can still be used and, if so, the community's name and when the code expires. Unknown, weak legacy custom, expired, revoked and used-up codes all answer the same `{\"valid\": false}`; nothing else about the invite is revealed. Rate limited per IP (30 per minute, IPv6 per /64)",
         "operationId": "previewInvite",
         "parameters": [
           {

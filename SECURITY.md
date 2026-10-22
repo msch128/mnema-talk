@@ -56,8 +56,9 @@ details and the limits.
   digits unless it has 16 or more characters, and not a common word with little
   around it. Even 2^16 addresses at 30 lookups a minute try about 2^21 codes a
   minute, which covers about 2^40 in a year, far below the 2^59 of a random code.
-  Older weak custom codes keep working; the
-  admin invite list flags them (`weak`). The endpoint answers
+  Older weak custom codes no longer work (preview and registration treat them
+  as unknown); the admin invite list marks them (`weak`: disabled, regenerate).
+  Limits are per client address and, for IPv6, additionally per /48. The endpoint answers
   `Cache-Control: no-store`, and a code is only looked up when it has the shape
   the server issues. The community name is the only thing it discloses and the
   Owner chooses it.
