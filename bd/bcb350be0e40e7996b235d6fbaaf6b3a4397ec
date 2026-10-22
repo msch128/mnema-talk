@@ -1,0 +1,25 @@
+e2e/tests/fixtures.ts
+  s_06fcde5dbef956::t_5de551a8096e32 114-116,129
+e2e/tests/push.spec.ts
+  s_06fcde5dbef956::t_3f1fa4e9d35574 28-30
+  s_06fcde5dbef956::t_5de551a8096e32 32,40
+e2e/tests/pwa.spec.ts
+  s_06fcde5dbef956::t_3f1fa4e9d35574 34
+  s_06fcde5dbef956::t_b72d7e8e5573ea 35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bdbcb350be0e40e7996b235d6fbaaf6b3a4397ec",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
