@@ -70,7 +70,7 @@
     "signOut": "Sign out",
     "languageSet": "Language set to {language}. Saved for this account.",
     "languageFailed": "Couldn't save the language.",
-    "app": "App"
+    "app": "App & notifications"
   },
   "errors": {
     "unknown": "Unknown error",
@@ -1786,8 +1786,8 @@
     }
   },
   "appSettings": {
-    "title": "App",
-    "subtitle": "Use Mnema Talk like an app on this device.",
+    "title": "App & notifications",
+    "subtitle": "Install Mnema Talk and get notified while it is closed.",
     "installTitle": "Install",
     "install_installed": "Mnema Talk is installed on this device and runs in its own window.",
     "install_available": "Install Mnema Talk to open it from your home screen, dock or start menu without the browser bar.",
@@ -1795,6 +1795,35 @@
     "install_unavailable": "This browser does not offer to install the app. Look for Install or Add to Home Screen in its menu.",
     "installAction": "Install app",
     "installed": "Mnema Talk is installed."
+  },
+  "push": {
+    "title": "Push notifications",
+    "loading": "Loading …",
+    "loadFailed": "Couldn't load the push settings.",
+    "offByOperator": "The operator turned push notifications off on this server.",
+    "needsInstall": "On iPhone and iPad, push notifications work only for the installed app. Tap the Share button in Safari, choose Add to Home Screen, then open Mnema Talk from there.",
+    "unsupported": "This browser can't receive push notifications.",
+    "stateOn": "This device is notified about new messages even when Mnema Talk is closed. Your notification levels, mutes and Do Not Disturb apply.",
+    "stateOff": "Get notified on this device while Mnema Talk is closed. Your browser asks for permission first.",
+    "stateBlocked": "Notifications are blocked for this site. Allow them in your browser's site settings, then come back here.",
+    "enable": "Turn on for this device",
+    "disable": "Turn off for this device",
+    "test": "Send a test notification",
+    "previewTitle": "Show message text",
+    "previewHint": "Pushes are encrypted for your browser. With this on they include the first words of the message, which may show on a locked screen. Off, they show only the channel and who wrote.",
+    "previewLocked": "The operator turned off message text in push notifications.",
+    "devices": "Devices",
+    "thisDevice": "This device",
+    "unnamedDevice": "Unnamed device",
+    "remove": "Remove {name}",
+    "enabledToast": "Push notifications are on for this device.",
+    "blockedToast": "Notifications are blocked in the browser.",
+    "unavailableToast": "Push notifications are not available here.",
+    "enableFailed": "Couldn't turn on push notifications.",
+    "removeFailed": "Couldn't remove the device.",
+    "testSent": "Test notification sent.",
+    "testFailed": "The test notification could not be delivered.",
+    "previewFailed": "Couldn't save the setting."
   },
   "recovery": {
     "forgotLink": "Forgot your password?",

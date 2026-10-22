@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { build, type Plugin } from 'vite'
 
 /** Files every install stores besides the hashed ones index.html loads. */
-const FIXED_FILES = ['/manifest.webmanifest', '/favicon.svg', '/pwa-icon-192.png', '/pwa-icon-512.png', '/pwa-icon-maskable-512.png', '/apple-touch-icon.png']
+const FIXED_FILES = ['/manifest.webmanifest', '/favicon.svg', '/pwa-icon-192.png', '/pwa-icon-512.png', '/pwa-icon-maskable-512.png', '/pwa-badge-96.png', '/apple-touch-icon.png']
 
 /** The files of the offline shell: the page, what it loads from /assets/, and the fixed icons and manifest. */
 export function shellFiles(indexHtml: string): string[] {

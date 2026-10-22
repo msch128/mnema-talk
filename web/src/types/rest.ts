@@ -1944,6 +1944,96 @@ export function isPermUploadSettings(value: unknown): value is PermUploadSetting
 
 export const decodePermUploadSettings = decoder("perm.UploadSettings", isPermUploadSettings)
 
+export type PushConfig = {
+  enabled: boolean
+  max_devices: number
+  preview: boolean
+  preview_allowed: boolean
+  public_key: string
+}
+
+export function isPushConfig(value: unknown): value is PushConfig {
+  return isRecord(value)
+    && (hasOwn(value, "enabled") && typeof value["enabled"] === 'boolean')
+    && (hasOwn(value, "max_devices") && (isInteger(value["max_devices"]) && value["max_devices"] >= 1))
+    && (hasOwn(value, "preview") && typeof value["preview"] === 'boolean')
+    && (hasOwn(value, "preview_allowed") && typeof value["preview_allowed"] === 'boolean')
+    && (hasOwn(value, "public_key") && isString(value["public_key"]))
+}
+
+export const decodePushConfig = decoder("push.Config", isPushConfig)
+
+export type PushPreferencesRequest = {
+  preview: boolean
+}
+
+export function isPushPreferencesRequest(value: unknown): value is PushPreferencesRequest {
+  return isRecord(value)
+    && (hasOwn(value, "preview") && typeof value["preview"] === 'boolean')
+}
+
+export const decodePushPreferencesRequest = decoder("push.PreferencesRequest", isPushPreferencesRequest)
+
+export type PushSubscribeRequest = {
+  auth: string
+  endpoint: string
+  label?: string
+  p256dh: string
+}
+
+export function isPushSubscribeRequest(value: unknown): value is PushSubscribeRequest {
+  return isRecord(value)
+    && (hasOwn(value, "auth") && isString(value["auth"], 64))
+    && (hasOwn(value, "endpoint") && isString(value["endpoint"], 2048))
+    && (!hasOwn(value, "label") || isString(value["label"], 64))
+    && (hasOwn(value, "p256dh") && isString(value["p256dh"], 128))
+}
+
+export const decodePushSubscribeRequest = decoder("push.SubscribeRequest", isPushSubscribeRequest)
+
+export type PushSubscription = {
+  created_at: string
+  fingerprint: string
+  id: string
+  label: string
+  last_success_at: string | null
+}
+
+export function isPushSubscription(value: unknown): value is PushSubscription {
+  return isRecord(value)
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "fingerprint") && isString(value["fingerprint"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "label") && isString(value["label"], 64))
+    && (hasOwn(value, "last_success_at") && (isTimestamp(value["last_success_at"]) || value["last_success_at"] === null))
+}
+
+export const decodePushSubscription = decoder("push.Subscription", isPushSubscription)
+
+export type PushSubscriptions = {
+  subscriptions: Array<PushSubscription>
+}
+
+export function isPushSubscriptions(value: unknown): value is PushSubscriptions {
+  return isRecord(value)
+    && (hasOwn(value, "subscriptions") && isArrayOf(value["subscriptions"], item => isPushSubscription(item)))
+}
+
+export const decodePushSubscriptions = decoder("push.Subscriptions", isPushSubscriptions)
+
+export type PushTestResult = {
+  delivered: number
+  failed: number
+}
+
+export function isPushTestResult(value: unknown): value is PushTestResult {
+  return isRecord(value)
+    && (hasOwn(value, "delivered") && (isInteger(value["delivered"]) && value["delivered"] >= 0))
+    && (hasOwn(value, "failed") && (isInteger(value["failed"]) && value["failed"] >= 0))
+}
+
+export const decodePushTestResult = decoder("push.TestResult", isPushTestResult)
+
 export type RolesChannelPermissions = {
   channel_id: string
   permissions: number

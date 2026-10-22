@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BaseDialog from './BaseDialog.vue'
 import AppInstallSection from './AppInstallSection.vue'
+import PushSection from './PushSection.vue'
 
 const emit = defineEmits<{ close: [] }>()
 </script>
@@ -10,6 +11,7 @@ const emit = defineEmits<{ close: [] }>()
     <div class="contents">
       <div class="p-6 space-y-6 overflow-y-auto max-h-[80vh]">
         <AppInstallSection />
+        <PushSection />
       </div>
       <footer class="px-6 py-3.5 border-t border-mnema-hairline bg-mnema-raised flex justify-end">
         <button

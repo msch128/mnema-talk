@@ -56,7 +56,7 @@ describe('app entry', () => {
     auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member', id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Herzog', role: 'user', locale: 'de' })
     w = mount(UserBar, { attachTo: document.body })
     await w.find('[data-testid="account-menu-button"]')!.trigger('click')
-    expect(w.find('[data-testid="account-app"]').text()).toBe('App')
+    expect(w.find('[data-testid="account-app"]').text()).toBe('App & Benachrichtigungen')
     await w.find('[data-testid="account-app"]').trigger('click')
     expect(appSettingsOpen.value).toBe(true)
     appSettingsOpen.value = false

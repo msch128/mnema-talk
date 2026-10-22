@@ -161,6 +161,11 @@ func TestValidation(t *testing.T) {
 		"http port zero":           {"DATABASE_URL": "x", "PORT": "0"},
 		"http port too big":        {"DATABASE_URL": "x", "PORT": "70000"},
 		"http port text":           {"DATABASE_URL": "x", "PORT": "http"},
+		"bad push switch":          {"DATABASE_URL": "x", "PUSH_ENABLED": "sometimes"},
+		"bad push previews":        {"DATABASE_URL": "x", "PUSH_PREVIEWS": "always"},
+		"push subject is plain":    {"DATABASE_URL": "x", "PUSH_VAPID_SUBJECT": "ops@example.com"},
+		"push subject is http":     {"DATABASE_URL": "x", "PUSH_VAPID_SUBJECT": "http://chat.example.com"},
+		"push subject has no addr": {"DATABASE_URL": "x", "PUSH_VAPID_SUBJECT": "mailto:nobody"},
 	}
 	for name, env := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -606,5 +611,28 @@ func TestStorageBudgetDefaults(t *testing.T) {
 	env["MEDIA_DISK_PATH"] = "/data"
 	if cfg, err := FromEnv(lookup(env)); err != nil || cfg.UploadQuotaMBPerDay != 0 || cfg.MediaDiskPath != "/data" {
 		t.Fatalf("explicit: %+v %v", cfg, err)
+	}
+}
+
+func TestWebPushSettings(t *testing.T) {
+	cfg, err := FromEnv(lookup(base()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.PushEnabled || cfg.PushPreviews != "user" || cfg.PushVAPIDSubject != "" {
+		t.Fatalf("defaults: enabled=%v previews=%q subject=%q", cfg.PushEnabled, cfg.PushPreviews, cfg.PushVAPIDSubject)
+	}
+	for _, subject := range []string{"https://chat.example.com/contact", "mailto:ops@example.com"} {
+		env := base()
+		env["PUSH_ENABLED"] = "false"
+		env["PUSH_PREVIEWS"] = "OFF"
+		env["PUSH_VAPID_SUBJECT"] = subject
+		cfg, err := FromEnv(lookup(env))
+		if err != nil {
+			t.Fatalf("%s: %v", subject, err)
+		}
+		if cfg.PushEnabled || cfg.PushPreviews != "off" || cfg.PushVAPIDSubject != subject {
+			t.Fatalf("%s: enabled=%v previews=%q subject=%q", subject, cfg.PushEnabled, cfg.PushPreviews, cfg.PushVAPIDSubject)
+		}
 	}
 }

@@ -76,6 +76,7 @@ modules are compiled into `mnema-talk`:
 
 | Module | Version | License |
 |---|---|---|
+| `github.com/SherClockHolmes/webpush-go` | v1.4.0 | MIT |
 | `github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream` | v1.7.20 | Apache-2.0 |
 | `github.com/aws/aws-sdk-go-v2/config` | v1.33.7 | Apache-2.0 |
 | `github.com/aws/aws-sdk-go-v2/credentials` | v1.20.7 | Apache-2.0 |

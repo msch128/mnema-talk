@@ -12,6 +12,6 @@ describe('the service worker entry', () => {
     vi.stubGlobal('__SHELL_FILES__', ['/'])
     vi.stubGlobal('self', { addEventListener: (type: string) => added.push(type), location: { origin: 'https://app.test' } })
     await import('./sw')
-    expect(added).toEqual(['install', 'activate', 'fetch'])
+    expect(added).toEqual(['install', 'activate', 'fetch', 'push', 'notificationclick', 'pushsubscriptionchange'])
   })
 })
