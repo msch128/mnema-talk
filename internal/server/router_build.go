@@ -116,6 +116,12 @@ func (c *components) newCore() {
 		RetentionDays:  cfg.MediaRetentionDays,
 		Online:         hub,
 		Perms:          c.permSvc,
+		Quota: media.Quota{
+			PerUserBytes: int64(cfg.UploadQuotaMBPerDay) << 20,
+			TotalBytes:   int64(cfg.MediaMaxTotalMB) << 20,
+			MinFreeBytes: int64(cfg.MediaMinFreeMB) << 20,
+			DiskPath:     cfg.MediaDiskPath,
+		},
 	}
 }
 
