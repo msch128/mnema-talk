@@ -8,6 +8,7 @@ import { nextTick } from 'vue'
 import UserBar from './UserBar.vue'
 import { useAuthStore } from '../stores/auth'
 import { setLocale, locale } from '../i18n'
+import { appSettingsOpen } from '../lib/appSettings'
 
 vi.mock('../composables/useWebRTC', () => ({
   useWebRTC: () => ({ leaveVoiceChannel: vi.fn(), startScreenShare: vi.fn(), stopScreenShare: vi.fn() })
@@ -46,6 +47,19 @@ describe('verified app line', () => {
     vi.stubGlobal('__MNEMA_TRUSTED_APP__', { version: '0.8.0', source: 'builtin', webClientApi: 1, keyId: '1069c76ff2e11272', role: 'instance' })
     await openMenu()
     expect(w.find('[data-testid="verified-app"]').text()).toBe('Geprüfte App v0.8.0 · im Installer enthalten')
+  })
+})
+
+describe('app entry', () => {
+  it('opens the app dialog from the menu in a browser', async () => {
+    const auth = useAuthStore()
+    auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member', id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Herzog', role: 'user', locale: 'de' })
+    w = mount(UserBar, { attachTo: document.body })
+    await w.find('[data-testid="account-menu-button"]')!.trigger('click')
+    expect(w.find('[data-testid="account-app"]').text()).toBe('App')
+    await w.find('[data-testid="account-app"]').trigger('click')
+    expect(appSettingsOpen.value).toBe(true)
+    appSettingsOpen.value = false
   })
 })
 

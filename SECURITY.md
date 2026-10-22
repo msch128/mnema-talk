@@ -268,6 +268,14 @@ details and the limits.
   cannot send data to a third party. Dropping it (a hash for the picker's style
   text plus a patched or replaced picker, with a browser test that fails on any
   CSP violation) is planned after 1.0.
+- **Installable app and service worker.** The web app ships a manifest and a
+  small service worker (`/sw.js`, same origin, so it fits the CSP unchanged:
+  `script-src 'self'`, `worker-src 'self'`). It keeps the app shell (the page
+  and its hashed assets, icons) for offline starts and answers nothing else:
+  it never touches `/api/`, other origins or non-GET requests, so no message,
+  profile, media or session data is ever stored by it. Both files are served
+  with `Cache-Control: no-cache`, so a deploy reaches installed apps on the next
+  start. The desktop client never registers it.
 - **Uploads.** File types are detected by content sniffing, not by the
   client-supplied name or MIME type. Risky types (HTML, SVG, scripts, unknown
   binaries, ...) are only ever served as downloads, never rendered inline. Media is
