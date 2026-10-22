@@ -148,9 +148,20 @@ func maxBody(limit int64, refuse func(http.ResponseWriter, error)) func(http.Han
 
 // SPAContentSecurityPolicy guards the embedded Vue app. No inline scripts and
 // no JS eval; 'wasm-unsafe-eval' only allows compiling WebAssembly, which the
-// bundled AI noise filter (web/src/lib/noiseSuppressor.js) needs. Inline
-// styles are needed for Vue :style bindings. connect-src 'self' also
-// covers same-origin WebSockets in current browsers.
+// bundled AI noise filter (web/src/lib/noiseSuppressor.js) needs.
+//
+// style-src keeps 'unsafe-inline' for one reason: emoji-picker-element
+// (web/src/components/EmojiPicker.vue) creates a <style> element inside its
+// shadow root and renders inline style="" attributes, and its version has no
+// nonce support. The app's own code needs none: Vue :style bindings go through
+// the CSSOM, which style-src does not restrict, and SFC styles are extracted
+// to files. Residual risk is low (script-src is strict; img, font, connect and
+// media sources are same-origin, so injected CSS cannot exfiltrate). Post-1.0
+// plan: a hash source for the picker's <style> text plus style-src-attr
+// 'unsafe-inline', or a patched picker, together with a Playwright test that
+// loads the built app under this policy and fails on any CSP violation (the
+// desktop shell's policy changes in lock step). connect-src 'self' also covers
+// same-origin WebSockets in current browsers.
 const SPAContentSecurityPolicy = "default-src 'self'; " +
 	"script-src 'self' 'wasm-unsafe-eval'; " +
 	"style-src 'self' 'unsafe-inline'; " +

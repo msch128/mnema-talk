@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -28,7 +29,7 @@ var previewCodePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{6,64}$`)
 // previewInvite handles GET /api/invites/{code}.
 //
 // @Summary Preview an invite
-// @Description Public, no session. Says whether an invite code can still be used and, if so, the community's name and when the code expires. Unknown, expired, revoked and used-up codes all answer the same `{"valid": false}`; nothing else about the invite is revealed. Rate limited per IP (30 per minute, IPv6 per /64).
+// @Description Public, no session. Says whether an invite code can still be used and, if so, the community's name and when the code expires. Unknown, weak legacy custom, expired, revoked and used-up codes all answer the same `{"valid": false}`; nothing else about the invite is revealed. Rate limited per IP (30 per minute, IPv6 per /64)
 // @ID previewInvite
 // @Tags Auth
 // @Produce json
@@ -53,6 +54,11 @@ func (h *Handler) previewInvite(w http.ResponseWriter, r *http.Request) error {
 		WHERE i.code = $1
 		  AND (i.expires_at IS NULL OR i.expires_at > NOW())
 		  AND (i.max_uses IS NULL OR i.uses_count < i.max_uses)`, code).Scan(&out.CommunityName, &expires)
+	// A legacy custom code below today's floor is guessable, so it no longer
+	// works: it answers exactly like an unknown code.
+	if err == nil && auth.IsWeakInviteCode(code) {
+		err = pgx.ErrNoRows
+	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		httpx.WriteJSON(w, http.StatusOK, InvitePreview{})
 		return nil

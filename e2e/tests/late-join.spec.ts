@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString, suiteMember, trackPeerConnections } from './helpers'
+import { apiFetch, responseString, suiteMember, trackPeerConnections, leaveTalks } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
@@ -153,6 +153,7 @@ test('a member joining an occupied Talk is heard and hears', async ({ browser })
     return codes[0] === codes[1]
   }, { timeout: 30_000 }).toBe(true)
 
+  await leaveTalks([first, late])
   await firstCtx.close()
   await lateCtx.close()
 })
@@ -195,6 +196,7 @@ test('a member who reloads inside the grace period is heard again and hears agai
     await hearEachOther()
   }
 
+  await leaveTalks([first, second])
   await firstCtx.close()
   await secondCtx.close()
 })

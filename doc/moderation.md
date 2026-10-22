@@ -58,7 +58,10 @@ counting at once, before the expiry job (it runs every minute) clears it.
 
 By default the invite the account registered with is revoked, so that code
 cannot create the account anew; untick it in the dialog (`revoke_invite:
-false`) for an invite shared with others. Registration remembers the invite
+false`) for an invite shared with others. Deleting an invite is *Manage
+invites* territory, so the invite is only revoked when the person banning also
+holds that permission (or is the Owner); a moderator with *Ban members* alone
+bans the account and the invite stays valid. Registration remembers the invite
 (`users.invite_id`). Banning by IP address is deliberately not offered: behind
 a proxy an address is shared or spoofable, and the trusted-proxy model makes it
 a weak signal.

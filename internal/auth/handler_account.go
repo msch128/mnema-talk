@@ -25,6 +25,8 @@ import (
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: too many password checks are queued; retry after the Retry-After seconds."
+// @Header 503 {integer} Retry-After "Seconds until the client may retry."
 // @Router /api/auth/register [post]
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 	var req RegisterRequest
@@ -33,6 +35,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 	}
 	u, err := Register(r.Context(), h.Sessions.DB, strings.TrimSpace(req.Username), req.DisplayName, req.Password, req.InviteCode)
 	if err != nil {
+		setRetryIfBusy(w, err)
 		return err
 	}
 	if err := h.Sessions.Start(w, u, 0); err != nil {
@@ -47,7 +50,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 // logout handles POST /api/auth/logout.
 //
 // @Summary Sign out
-// @Description Clears the session cookie and revokes this session, so a copied cookie stops working. Needs no session.
+// @Description Clears the session cookie and revokes this session, so a copied cookie stops working, and closes the WebSockets opened with it. Needs no session.
 // @ID logout
 // @Tags Auth
 // @Produce json
@@ -57,8 +60,13 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/auth/logout [post]
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) error {
+	jti, _ := h.Sessions.SessionClaims(r)
 	if err := h.Sessions.Revoke(r); err != nil {
 		return err
+	}
+	// Sockets opened with this session end now, not at the next revalidation.
+	if h.Live != nil {
+		h.Live.DisconnectSession(jti)
 	}
 	h.Sessions.End(w)
 	w.WriteHeader(http.StatusNoContent)

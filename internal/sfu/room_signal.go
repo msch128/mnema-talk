@@ -10,7 +10,15 @@ import (
 // SetAnswer applies the client's answer and runs a pending renegotiation.
 // An answer that cannot be applied leaves the offer outstanding, so its
 // watchdog sends it again after the room's offerTimeout.
+//
+// Candidates inside the answer's SDP get the same vetting and budget as
+// trickled ones (see vetAnswerCandidates).
 func (p *Peer) SetAnswer(answer webrtc.SessionDescription) error {
+	vetted, err := p.vetAnswerCandidates(answer.SDP)
+	if err != nil {
+		return err
+	}
+	answer.SDP = vetted
 	if err := p.PC.SetRemoteDescription(answer); err != nil {
 		return err
 	}

@@ -202,8 +202,9 @@ func (a *Authenticator) Middleware(next http.Handler) http.Handler {
 func (a *Authenticator) LimitSends(channelParam func(*http.Request) string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if b := auth.BotFrom(r.Context()); b != nil {
-				if allowed, retry := a.sends.Allow(b.BotID.String() + ":" + channelParam(r)); !allowed {
+			// A parameter that is no UUID is refused by the handler.
+			if b, ch := auth.BotFrom(r.Context()), channelParam(r); b != nil && ch != "" {
+				if allowed, retry := a.sends.Allow(b.BotID.String() + ":" + ch); !allowed {
 					httpx.WriteDiscordRateLimit(w, retry, false)
 					return
 				}

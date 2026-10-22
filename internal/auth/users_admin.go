@@ -26,6 +26,9 @@ type LiveControl interface {
 	KickFromChannel(userID, channelID uuid.UUID)
 	// DisconnectUser closes all of the user's live connections.
 	DisconnectUser(userID uuid.UUID)
+	// DisconnectSession closes the connections opened with one session id (a
+	// single sign-out); the user's other sessions stay.
+	DisconnectSession(jti string)
 	// SetPresence applies a newly chosen presence to the user's live status.
 	SetPresence(userID uuid.UUID, presence string)
 }

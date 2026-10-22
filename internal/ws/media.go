@@ -14,7 +14,8 @@ import (
 const maxMediaHandshakeBytes = 32 << 10
 
 // handleMediaHandshake relays an opaque handshake to the other connections in
-// the sender's current voice room. The bytes are not parsed or logged.
+// the sender's current voice room. The content is opaque to the server and
+// never logged; only the framing is checked (see wellFormedHandshake).
 func (c *Client) handleMediaHandshake(payload json.RawMessage) {
 	var body struct {
 		ChannelID uuid.UUID `json:"channel_id"`
@@ -30,7 +31,7 @@ func (c *Client) handleMediaHandshake(payload json.RawMessage) {
 		return
 	}
 	raw, err := base64.StdEncoding.DecodeString(body.Wire)
-	if err != nil || len(raw) == 0 || len(raw) > maxMediaHandshakeBytes {
+	if err != nil || len(raw) > maxMediaHandshakeBytes || !wellFormedHandshake(raw) {
 		metrics.MLSHandshakes.With("rejected").Inc()
 		return
 	}

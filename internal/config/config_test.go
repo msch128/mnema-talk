@@ -396,6 +396,40 @@ func TestWebRTCReachabilityWarning(t *testing.T) {
 	}
 }
 
+func TestInsecurePublicURLWarning(t *testing.T) {
+	cases := []struct {
+		name string
+		cfg  Config
+		warn bool
+	}{
+		{"production over http", Config{AppEnv: "production", PublicURL: "http://chat.example.com"}, true},
+		{"production default localhost", Config{AppEnv: "production", PublicURL: "http://localhost:8080"}, true},
+		{"staging over http", Config{AppEnv: "staging", PublicURL: "http://chat.example.com"}, true},
+		{"production over https", Config{AppEnv: "production", PublicURL: "https://chat.example.com"}, false},
+		{"development over http", Config{AppEnv: "development", PublicURL: "http://localhost:8080"}, false},
+	}
+	for _, tc := range cases {
+		if got := tc.cfg.InsecurePublicURLWarning() != ""; got != tc.warn {
+			t.Errorf("%s: warning %v, want %v", tc.name, got, tc.warn)
+		}
+	}
+}
+
+func TestInsecurePublicURLIsNotARefusal(t *testing.T) {
+	env := base()
+	env["APP_ENV"] = "production"
+	env["PUBLIC_URL"] = "http://chat.example.com"
+	env["JWT_SECRET"] = strings.Repeat("k", 40)
+	env["S3_ACCESS_KEY"], env["S3_SECRET_KEY"] = "access-key-value", strings.Repeat("s", 40)
+	cfg, err := FromEnv(lookup(env))
+	if err != nil {
+		t.Fatalf("an http PUBLIC_URL must start with a warning, not refuse to start: %v", err)
+	}
+	if cfg.InsecurePublicURLWarning() == "" {
+		t.Fatal("no warning for an http PUBLIC_URL in production")
+	}
+}
+
 func TestBindAddrDefaultsAndDevelopmentRule(t *testing.T) {
 	cfg, err := FromEnv(lookup(base()))
 	if err != nil || cfg.BindAddr != "127.0.0.1" {

@@ -53,7 +53,7 @@ func TestMediaHandshakeStaysInsideTheVoiceRoom(t *testing.T) {
 	drainTypes(t, bob)
 	drainTypes(t, outsider)
 
-	wire := base64.StdEncoding.EncodeToString([]byte{0x4d, 0x31, 0x01, 0x02})
+	wire := base64.StdEncoding.EncodeToString(mlsWire(mlsKeyPackage, 2))
 	alice.handle("media_handshake", []byte(`{"channel_id":"`+room.ID.String()+`","wire":"`+wire+`"}`))
 
 	if got := mediaEvents(t, alice); len(got) != 0 {

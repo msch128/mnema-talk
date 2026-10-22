@@ -27,6 +27,10 @@ import (
 	"github.com/msch128/mnema-talk/internal/ws"
 )
 
+// The hub ties each WebSocket to its session through this; without it a
+// sign-out of one session would not end that session's sockets.
+var _ ws.SessionClaimer = (*auth.Sessions)(nil)
+
 // components are the handlers and background workers NewRouter assembles
 // before it mounts their routes. The new* methods fill it in stages; a later
 // stage may depend on what an earlier one set.

@@ -127,6 +127,7 @@ onMounted(loadInvites)
       <div v-for="inv in invites" :key="inv.id" class="px-4 py-2.5 flex items-center justify-between gap-3 text-sm">
         <div class="flex items-center gap-3 min-w-0">
           <span class="font-mono bg-mnema-elevated border border-mnema-border px-2 py-0.5 rounded text-mnema-text font-semibold">{{ inv.code }}</span>
+          <span v-if="inv.weak" class="text-mnema-danger whitespace-nowrap cursor-help" data-testid="invite-weak" :title="$t('admin.weakInviteHint')">{{ $t('admin.weakInvite') }}</span>
           <span class="text-mnema-muted whitespace-nowrap">{{ $t('admin.uses', { used: inv.uses_count, max: inv.max_uses ?? '∞' }) }}</span>
           <span class="text-mnema-tertiary truncate">{{ inviteStatus(inv) }}</span>
         </div>

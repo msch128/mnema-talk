@@ -935,6 +935,10 @@
           "title": "Voice capacity is limited",
           "body": "WEBRTC_UDP_MUX_PORT=0 gives every media peer its own UDP port from the range ({count} ports), which caps how many people can be in calls at once. Leave it empty to share one port."
         },
+        "insecure_public_url": {
+          "title": "PUBLIC_URL is not https",
+          "body": "Session cookies are sent without the Secure flag and the __Host- prefix, so someone on the network path can read or replace them. Set PUBLIC_URL to the https:// address people open, behind a reverse proxy that terminates TLS."
+        },
         "voice_unavailable": {
           "title": "Voice is disabled",
           "body": "The WebRTC engine could not start, so nobody can join voice or share screens. See the server log for the reason."
@@ -1039,6 +1043,8 @@
     "inviteCreated": "Invite created",
     "noInvites": "No invites yet.",
     "uses": "Uses: {used} / {max}",
+    "weakInvite": "Disabled, regenerate",
+    "weakInviteHint": "This custom code is short or common, so it no longer works for sign-up. Delete it and create a new one; generated codes are always safe.",
     "expired": "expired",
     "usedUp": "used up",
     "validUntil": "valid until {date}",

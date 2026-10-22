@@ -122,7 +122,7 @@ the own role is a convenient place for "this bot may post in #alerts").
 | Disconnect members | Remove members from a Talk | yes |
 | Manage channels | Create, edit, order, delete channels and categories; edit their overwrites | no |
 | Manage roles | Create, edit, order, delete and assign roles below your own highest role | no |
-| Manage invites | Create, list, revoke invite codes | no |
+| Manage invites | Create, list, revoke invite codes; also needed for a ban to revoke the banned member's invite | no |
 | Manage webhooks | Reserved, unused: webhooks are managed by the Owner and Administrators (see [webhooks](webhooks.md)) | no |
 | Manage members | Disable and re-enable accounts, end their sessions, edit their status line | no |
 | Manage bots | Create bots, give them roles and tokens, set their intents (see [bots](bots.md)). Only the Owner can grant it | no |

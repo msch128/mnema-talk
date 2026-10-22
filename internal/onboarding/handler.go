@@ -25,6 +25,9 @@ type Handler struct {
 	Perms *perm.Service
 
 	previewPerIP *httpx.RateLimiter
+	// previewPerSite caps a whole IPv6 /48 (or one IPv4 address) together, so
+	// rotating /64 prefixes inside one allocation gains nothing.
+	previewPerSite *httpx.RateLimiter
 }
 
 // NewHandler builds the handler with the invite preview's per-IP budget.
@@ -34,13 +37,14 @@ func NewHandler(pool *db.Pool, perms *perm.Service) *Handler {
 		Perms: perms,
 		// A preview costs one indexed lookup; the budget only has to make
 		// guessing codes pointless (a code carries about 59 bits).
-		previewPerIP: httpx.NewRateLimiter(30, time.Minute).Named("invite_preview_ip"),
+		previewPerIP:   httpx.NewRateLimiter(30, time.Minute).Named("invite_preview_ip"),
+		previewPerSite: httpx.NewRateLimiter(120, time.Minute).Named("invite_preview_site"),
 	}
 }
 
 // MountPublic registers the route that needs no session.
 func (h *Handler) MountPublic(r chi.Router) {
-	r.With(h.previewPerIP.PerIP).Get("/invites/{code}", httpx.Handle(h.previewInvite))
+	r.With(h.previewPerSite.By(httpx.ClientAggregateKey), h.previewPerIP.PerIP).Get("/invites/{code}", httpx.Handle(h.previewInvite))
 }
 
 // Mount registers the routes every signed-in member may call.

@@ -20,6 +20,12 @@ type Client struct {
 	User auth.User
 
 	tokenVersion int
+	// sessionID and sessionExp identify the browser session behind the
+	// connection (empty for native connections and in-memory clients).
+	sessionID  string
+	sessionExp time.Time
+	// revalidateFails counts consecutive revalidation database errors.
+	revalidateFails int
 	nativeSession
 	closeOnce sync.Once
 	// closing is set by the first deliver that finds the buffer full, so a

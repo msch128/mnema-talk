@@ -98,6 +98,8 @@ type Hub struct {
 	// writes of voice time.
 	voiceGate voiceGate
 	vtimes    voiceTimes
+	// userBudgets is the per-account flood guard across connections.
+	userBudgets userBudgets
 }
 
 type graceLeave struct {

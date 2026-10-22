@@ -48,6 +48,7 @@ func runWithContext(ctx context.Context) error {
 	}
 	setupLogging(cfg)
 	warnBroadTrustedProxies(cfg)
+	warnInsecurePublicURL(cfg)
 
 	pool, err := db.Connect(ctx, cfg.DatabaseURL)
 	if err != nil {
@@ -107,6 +108,15 @@ func warnBroadTrustedProxies(cfg *config.Config) {
 	slog.Warn("TRUSTED_PROXY_CIDRS contains broad ranges and the listener is not loopback-only: any host in those ranges can forge X-Forwarded-For and evade rate limits and login lockout; list only your reverse proxy's address",
 		"ranges", broad)
 	opwarn.Raise(opwarn.TrustedProxyBroad, len(broad))
+}
+
+// warnInsecurePublicURL flags a production-like deployment whose PUBLIC_URL is
+// plain http, which drops the Secure and __Host- cookie protections.
+func warnInsecurePublicURL(cfg *config.Config) {
+	if w := cfg.InsecurePublicURLWarning(); w != "" {
+		slog.Warn(w, "public_url_scheme", "http")
+		opwarn.Raise(opwarn.InsecurePublicURL, 0)
+	}
 }
 
 // startVoice starts the SFU and returns it with the function that closes it.
