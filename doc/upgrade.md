@@ -250,7 +250,7 @@ until the new release has passed your application checks.
   [Verifying a release image](operations.md#verifying-a-release-image). Pin the
   digest in `MNEMA_IMAGE` if you want the verified bytes to stay put.
 - **Desktop client**: it runs a signed web bundle with a security floor that
-  rises with `fix(security)` releases; see
+  rises with releases that carry a `Security-Floor: raise` commit; see
   [desktop-trusted-client.md](desktop-trusted-client.md). The server needs no
   configuration for it.
 
