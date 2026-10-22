@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString, suiteMember, trackPeerConnections, leaveTalks } from './helpers'
+import { apiFetch, responseString, suiteMember, trackPeerConnections, leaveTalks, audioDecodedIn } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
@@ -64,16 +64,6 @@ const audioBytesIn = (page: Page) => page.evaluate(async () => {
 })
 
 
-// Decoded audio from the other members on the current connection. Packets the
-// browser could not open never decode, so the energy stays zero for them; the
-// byte count would not.
-const audioEnergyIn = (page: Page) => page.evaluate(async () => {
-  const pc = window.__pcs.at(-1)
-  if (!pc) return 0
-  let energy = 0
-  ;(await pc.getStats()).forEach((s) => { if (s.type === 'inbound-rtp' && s.kind === 'audio') energy += s.totalAudioEnergy || 0 })
-  return energy
-})
 
 async function signIn(page: Page, username: string, password: string) {
   await page.goto('/')
@@ -180,7 +170,7 @@ test('a member who reloads inside the grace period is heard again and hears agai
   await sidebarVoice(second).click()
   const connected = (page: Page) => expect.poll(() => page.evaluate(() => window.__pcs.at(-1)?.connectionState), { timeout: 20_000 }).toBe('connected')
   const hearEachOther = async () => {
-    for (const page of [first, second]) await expect.poll(() => audioEnergyIn(page), { timeout: 20_000 }).toBeGreaterThan(0)
+    for (const page of [first, second]) await expect.poll(() => audioDecodedIn(page), { timeout: 20_000 }).toBeGreaterThan(24_000)
   }
   await connected(first)
   await connected(second)

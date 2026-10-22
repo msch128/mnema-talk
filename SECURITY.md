@@ -626,7 +626,11 @@ details and the limits.
   Video stays decodable by the
   browser's packetizer, so the codec headers it parses (H.264 parameter sets
   and slice headers, the VP8 payload header) are readable but authenticated;
-  only VP8 and H.264 are negotiated while media is sealed. Metadata (who speaks
+  only VP8 and H.264 are negotiated while media is sealed (Firefox prefers VP8,
+  because its H.264 encoder is an optional download). A browser that cannot seal
+  (no `RTCRtpScriptTransform` or no Ed25519 in WebCrypto) is refused at the
+  join, before any device is requested: there is no unsealed fallback in any
+  engine. Metadata (who speaks
   when, frame sizes, timing) is visible to the server. Text messages and
   attachments stay readable by the server. **Desktop client.** The desktop
   client does not run the server's JavaScript. It runs a signed bundle of the

@@ -35,6 +35,12 @@ export interface MediaCall {
   prepareIncoming(receiver: RTCRtpReceiver): boolean
   /** `source` is what the SFU says this line carries; a frame that names another source does not open. */
   protectIncoming(receiver: RTCRtpReceiver | undefined, senderId: string, source: FrameSource): boolean
+  /**
+   * Whether this browser can seal call media. Asked before a join; when it
+   * answers false the join is refused. A call without this method is taken to
+   * be able, and the per-line protect calls above still refuse unsealed media.
+   */
+  canSeal?(): Promise<boolean>
 }
 
 const disabled: MediaCall = {

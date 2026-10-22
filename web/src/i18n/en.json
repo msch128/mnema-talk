@@ -415,6 +415,7 @@
     "memberDeafened": "Deafened",
     "kicked": "An admin removed you from the voice channel.",
     "roomFull": "This voice channel is full. Try again when someone leaves.",
+    "mediaUnsupported": "This browser cannot protect calls (it lacks encrypted media transforms or Ed25519 signatures), so it cannot join. Use a current Chrome, Edge, Firefox or Safari.",
     "mediaUnprotected": "This browser cannot protect the call. Microphone, camera and screen stay off.",
     "mediaRekeyed": "The media keys of this call were reset by someone else in it or by the server. The call re-keys itself.",
     "mediaRefreshed": "The call was refreshed after a period of inactivity. Its media keys were renewed and the call re-keys itself.",

@@ -5,7 +5,7 @@ import { decodeServerEvent } from '../types/events'
 import { fixtureId } from '../test-fixtures.fixture'
 import { useWebRTC } from './useWebRTC'
 import { useChatStore } from '../stores/chat'
-import { installHarness, type ClientSentEvent, FakeAudioContext, FakePC, SFU_OFFER, fakeStream, fakeTrack, grantMic, joined, micRequests, negotiate, remoteStreamFor, setup } from './useWebRTC.harness.fixture'
+import { installHarness, permissiveMediaCall, type ClientSentEvent, FakeAudioContext, FakePC, SFU_OFFER, fakeStream, fakeTrack, grantMic, joined, micRequests, negotiate, remoteStreamFor, setup } from './useWebRTC.harness.fixture'
 
 vi.mock('../lib/noiseSuppressor', async () => (await import('./useWebRTC.noiseSuppressor.fixture')).noiseSuppressorModule)
 vi.mock('../lib/soundEffects', () => ({ playSoundEffect: vi.fn() }))
@@ -153,6 +153,21 @@ describe('kicked from voice', () => {
     expect(voice.currentChannelId).toBeNull()
     expect(sent.some(event => event.type === 'voice_join')).toBe(false)
     expect(useToastStore().toasts.map(toast => toast.text)).toContain(t('talk.noConnect'))
+  })
+
+  it('refuses to join with a browser that cannot seal call media, and asks for no microphone', async () => {
+    const { rtc, sent, voice } = setup()
+    const { useToastStore } = await import('../stores/toast')
+    const { installMediaCall } = await import('../lib/media/api')
+    const { t } = await import('../i18n')
+    installMediaCall({ ...permissiveMediaCall, canSeal: () => Promise.resolve(false) })
+    try {
+      await rtc.joinVoiceChannel('ch-1')
+    } finally { installMediaCall(permissiveMediaCall) }
+    expect(voice.currentChannelId).toBeNull()
+    expect(micRequests).toHaveLength(0)
+    expect(sent.some(event => event.type === 'voice_join')).toBe(false)
+    expect(useToastStore().toasts.map(toast => toast.text)).toContain(t('voice.mediaUnsupported'))
   })
 
   it('ends a call whose connect permission was withdrawn', async () => {
@@ -512,6 +527,8 @@ describe('server ICE configuration initialization', () => {
   it('retries a failed config request on a later join and applies only validated servers', async () => {
     vi.resetModules()
     const isolated = (await import('./useWebRTC')).useWebRTC()
+    // The real call cannot seal in jsdom (no frame transform) and would refuse the join.
+    ;(await import('../lib/media/api')).installMediaCall(permissiveMediaCall)
     const chat = useChatStore()
     chat.sendWSEvent = vi.fn()
     const fetch = vi.mocked(globalThis.fetch)
@@ -534,6 +551,8 @@ describe('server ICE configuration initialization', () => {
   it('handles an HTTP config failure without preventing a local voice connection', async () => {
     vi.resetModules()
     const isolated = (await import('./useWebRTC')).useWebRTC()
+    // The real call cannot seal in jsdom (no frame transform) and would refuse the join.
+    ;(await import('../lib/media/api')).installMediaCall(permissiveMediaCall)
     useChatStore().sendWSEvent = vi.fn()
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response(null, { status: 503 }))
     const join = isolated.joinVoiceChannel('local-only')

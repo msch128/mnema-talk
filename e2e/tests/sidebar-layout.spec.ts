@@ -530,7 +530,8 @@ test('keyboard: Alt+Arrow moves the focused channel and announces it', async () 
   await expectLayout(admin, final)
 })
 
-test('touch: long press drags, a quick swipe scrolls', async ({ browser }) => {
+test('touch: long press drags, a quick swipe scrolls', async ({ browser, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Synthetic touch input is sent through the Chrome DevTools Protocol, which only Chromium offers')
   // A small touch screen: the channel list is taller than its viewport.
   const ctx = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 900, height: 480 } })
   const page = await ctx.newPage()

@@ -82,12 +82,50 @@ export async function showWelcomeFlow(context: BrowserContext): Promise<void> {
   await context.unroute(ONBOARDING_STATE)
 }
 
+// Firefox has no context-level media grants (its fake devices need none, see
+// firefoxUserPrefs in playwright.config.ts) and rejects the names outright.
+function grantable(browser: Browser, options: Parameters<Browser['newContext']>[0]): Parameters<Browser['newContext']>[0] {
+  if (browser.browserType().name() !== 'firefox' || !options?.permissions) return options
+  const permissions = options.permissions.filter(name => name !== 'microphone' && name !== 'camera')
+  return { ...options, permissions }
+}
+
+// WebKit lets one page of a browser process capture the microphone and mutes
+// the others, as Safari does with its tabs. Two members of a call in one test
+// therefore each get their own WebKit process, which is also how two people
+// would join: from two devices.
+async function contextOwnProcess(browser: Browser, options: Parameters<Browser['newContext']>[0]): Promise<BrowserContext> {
+  const own = await browser.browserType().launch()
+  const context = await own.newContext(options)
+  const close = context.close.bind(context)
+  context.close = async (...args: Parameters<BrowserContext['close']>) => {
+    await close(...args)
+    await own.close()
+  }
+  return context
+}
+
 // The server tells clients apart by address (and trusts the loopback proxy's
 // X-Forwarded-For), and its sign-in budget of 60 per 15 minutes is per address.
 // The whole suite runs from one address, so it sits right at that budget and
 // every new sign-in pushes later specs over it. Each browser context therefore
 // presents its own (from the benchmarking range, never routed) client address, like
 // the separate people it stands for. Production limits are untouched.
+// A service worker answers the page's requests itself, which context.route
+// (the welcome-flow stand-in below) does not see in WebKit and Firefox. Contexts
+// therefore block it, except in the specs about the worker itself. (Playwright
+// drops a serviceWorkers option that equals its own default, so the specs are
+// named here instead of opting in through test.use.)
+const SERVICE_WORKER_SPECS = /[\\/](pwa|push)\.spec\.ts$/
+
+function serviceWorkersFor(): 'allow' | 'block' {
+  try {
+    return SERVICE_WORKER_SPECS.test(base.info().file) ? 'allow' : 'block'
+  } catch {
+    return 'block'
+  }
+}
+
 let nextClient = 1
 
 function clientAddress(): string {
@@ -97,9 +135,11 @@ function clientAddress(): string {
 
 function counted(browser: Browser): Browser {
   const newContext = browser.newContext.bind(browser)
+  const separate = browser.browserType().name() === 'webkit'
   browser.newContext = async (...args: Parameters<Browser['newContext']>) => {
     const options = args[0] ?? {}
-    const context = await newContext({ ...options, extraHTTPHeaders: { 'X-Forwarded-For': clientAddress(), ...(options.extraHTTPHeaders ?? {}) } })
+    const addressed = grantable(browser, { serviceWorkers: serviceWorkersFor(), ...options, extraHTTPHeaders: { 'X-Forwarded-For': clientAddress(), ...(options.extraHTTPHeaders ?? {}) } })
+    const context = await (separate ? contextOwnProcess(browser, addressed) : newContext(addressed))
     countApiRequests(context)
     await hideWelcomeFlow(context)
     return context

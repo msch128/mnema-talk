@@ -95,6 +95,22 @@ export function trackPeerConnections(): void {
   }
 }
 
+/**
+ * Audio the browser decoded from the other members on the current connection.
+ * Packets it could not open never reach the decoder, which then only makes up
+ * samples for them (counted as concealed), so this stays put for them; the byte
+ * count would not. It does not depend on how loud an engine's fake microphone
+ * is or on what the noise filter makes of it.
+ */
+export function audioDecodedIn(page: Page): Promise<number> {
+  return page.evaluate(async () => {
+    const pc = window.__pcs.at(-1)
+    let samples = 0
+    if (pc) (await pc.getStats()).forEach((s) => { if (s.type === 'inbound-rtp' && s.kind === 'audio') samples += (s.totalSamplesReceived || 0) - (s.concealedSamples || 0) })
+    return samples
+  })
+}
+
 /** The page's own call is up: after a reload it rejoins by itself, and leaving before that leaves nothing for the server to end. */
 export async function expectTalkLive(page: Page) {
   await expect.poll(() => page.evaluate(() => window.__pcs.at(-1)?.connectionState), { timeout: 20_000 }).toBe('connected')

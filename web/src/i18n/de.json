@@ -415,6 +415,7 @@
     "memberDeafened": "Taub geschaltet",
     "kicked": "Ein Admin hat dich aus dem Talk entfernt.",
     "roomFull": "Dieser Talk ist voll. Versuche es erneut, sobald jemand den Talk verlässt.",
+    "mediaUnsupported": "Dieser Browser kann Anrufe nicht schützen (es fehlen verschlüsselte Medientransformationen oder Ed25519-Signaturen) und kann deshalb nicht beitreten. Nutze ein aktuelles Chrome, Edge, Firefox oder Safari.",
     "mediaUnprotected": "Dieser Browser kann den Anruf nicht schützen. Mikrofon, Kamera und Bildschirm bleiben aus.",
     "mediaRekeyed": "Die Medienschlüssel dieses Anrufs wurden von jemand anderem im Anruf oder vom Server zurückgesetzt. Der Anruf richtet sie neu ein.",
     "mediaRefreshed": "Der Anruf wurde nach einer Zeit der Inaktivität aufgefrischt. Seine Medienschlüssel wurden erneuert, der Anruf richtet sie neu ein.",

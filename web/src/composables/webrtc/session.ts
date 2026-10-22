@@ -87,8 +87,23 @@ async function prepareAudioPipeline(cx: Cx, gen: number): Promise<MediaStream | 
   return sendStream
 }
 
+/**
+ * A browser that cannot seal call media joins nothing; unsealed media is never
+ * an option. Null when nothing needs asking, so the join does not wait a tick.
+ */
+function sealingRefusal(): Promise<boolean> | null {
+  const probe = mediaCall().canSeal?.()
+  if (!probe) return null
+  return probe.then(able => {
+    if (!able) useToastStore().error(t('voice.mediaUnsupported'))
+    return !able
+  })
+}
+
 export async function joinVoiceChannel(cx: Cx, channelId: string) {
   if (!canJoinVoiceChannel(cx, channelId)) return
+  const refusal = sealingRefusal()
+  if (refusal && await refusal) return
   const { voice, chat, st } = cx
   resetMediaAnnouncements()
   closeMediaRoom()

@@ -13,7 +13,7 @@ const TEXT_CHANNEL = `extras-text-${suffix}`
 
 // A shared "screen" is an animated canvas.
 const fakeDisplayMedia = () => {
-  navigator.mediaDevices.getDisplayMedia = async () => {
+  MediaDevices.prototype.getDisplayMedia = async () => {
     const canvas = document.createElement('canvas')
     canvas.width = 640
     canvas.height = 360
@@ -31,7 +31,7 @@ const fakeDisplayMedia = () => {
 // A full HD "screen" with sound (a tone), and every peer connection of the
 // page in window.__pcs so a test can look at what is sent.
 const fakeDisplayMediaWithSound = () => {
-  navigator.mediaDevices.getDisplayMedia = async () => {
+  MediaDevices.prototype.getDisplayMedia = async () => {
     const canvas = document.createElement('canvas')
     canvas.width = 1920
     canvas.height = 1080
