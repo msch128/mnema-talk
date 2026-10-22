@@ -95,10 +95,12 @@ mnema-talk/
 ├── scripts/postgres-upgrade-drill.sh # Drill for it (`make postgres-upgrade-drill`)
 ├── scripts/backup.sh, restore.sh # Backup and restore of database, media and configuration
 ├── scripts/web-bundle-check.sh # Signs web/dist with a throwaway key and verifies it (`make web-bundle-check`)
+├── scripts/security-floor.sh # Release step: raises the bundle security floor only on a `Security-Floor: raise` trailer
 ├── .github/workflows/
 │   ├── ci.yml               # CI: gitleaks, Go vet/fmt/tests, govulncheck, frontend, e2e,
 │   │                        # docker build + smoke test, backup/restore drill, trivy scan
 │   ├── image-scan.yml       # Weekly trivy scan of the released :latest image
+│   ├── trust-expiry.yml     # Weekly: fails when the desktop trust statement has under 60 days left
 │   └── release.yml          # CD after green CI on main: release-please + GHCR image push
 ├── release-please-config.json, .release-please-manifest.json, version.txt, CHANGELOG.md
 │                            # Managed by release-please; don't edit version/changelog by hand
@@ -141,7 +143,7 @@ mnema-talk/
    - `docs: update deployment and caddy proxy guide`
 
 11. **Release checklist for security fixes** (the desktop client refuses bundles below `security_floor`, see `doc/desktop-trusted-client.md`):
-   - A fix for a vulnerability in anything the web bundle ships (markdown, media, auth, message rendering, crypto, `web/src/lib`) is committed as `fix(security): ...` or carries a `Security-Floor: raise` trailer in the PR body/commit message. `release.yml` then raises the bundle's `security_floor` to that release's version when it signs. Without the mark the floor stays where it was.
+   - A fix for a vulnerability in anything the web bundle ships (markdown, media, auth, message rendering, crypto, `web/src/lib`) is committed as `fix(security): ...` **and** carries a `Security-Floor: raise` trailer as the last paragraph of the PR body/commit message (a real git trailer; the subject alone does nothing). `release.yml` (`scripts/security-floor.sh`) then raises the bundle's `security_floor` to that release's version when it signs. Without the trailer the floor stays where it was; a `security`-scoped subject without it only logs a warning.
    - `web/desktop-compat.json` holds the baseline floor (never above the version being released) and `min_server_version`; raise the floor by hand there only for a withdrawn release that is not covered by a marked commit.
    - Bumping `web_client_api` or `min_server_version` locks older servers out of desktop clients that have seen the new bundle (high-water mark): do it only when the web app really needs it.
 

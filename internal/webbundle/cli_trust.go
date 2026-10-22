@@ -22,7 +22,8 @@ const trustUsage = `usage: webbundle trust <command> [flags]
           signs a trust statement; writes DIR/trust.json and DIR/trust.json.sig
           with -prev the serial is prev+1 and earlier revocations are kept;
           -renew also keeps prev's allowed keys (re-sign before it expires)
-  verify  -trust FILE -sig FILE -pub PEM
+  verify  -trust FILE -sig FILE -pub PEM [-min-valid-days N]
+          -min-valid-days fails when fewer than N days remain (the scheduled expiry check uses 60)
 `
 
 type listFlag []string
@@ -103,6 +104,7 @@ func runTrustVerify(args []string, stdout, stderr io.Writer) error {
 	doc := fs.String("trust", "desktop-trust/trust.json", "trust statement")
 	sig := fs.String("sig", "desktop-trust/trust.json.sig", "its signature")
 	pubPath := fs.String("pub", "desktop-trust/root.pub", "root public key (PEM)")
+	minDays := fs.Int("min-valid-days", 0, "fail when the statement expires in fewer than this many days")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -125,7 +127,27 @@ func runTrustVerify(args []string, stdout, stderr io.Writer) error {
 	if t.Expired(time.Now()) {
 		return fmt.Errorf("trust statement serial %d expired at %s; re-sign it with trust sign -renew", t.Serial, t.ExpiresAt)
 	}
+	if err := checkRemaining(t, time.Now(), *minDays); err != nil {
+		return err
+	}
 	printFormat(stdout, "ok: serial %d, %d bundle key(s), valid until %s, root key %s\n", t.Serial, len(t.BundleKeys), t.ExpiresAt, KeyID(pub))
+	return nil
+}
+
+// checkRemaining fails when t expires in fewer than minDays days at now.
+func checkRemaining(t *Trust, now time.Time, minDays int) error {
+	if minDays <= 0 {
+		return nil
+	}
+	expires, err := parseUTC(t.ExpiresAt)
+	if err != nil {
+		return err
+	}
+	left := expires.Sub(now)
+	if left < time.Duration(minDays)*24*time.Hour {
+		return fmt.Errorf("trust statement serial %d expires at %s, in %d days (limit %d); renew it (doc/desktop-trusted-client.md, \"Renewing the statement\")",
+			t.Serial, t.ExpiresAt, int(left.Hours()/24), minDays)
+	}
 	return nil
 }
 
