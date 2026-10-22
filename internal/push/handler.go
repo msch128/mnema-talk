@@ -20,6 +20,8 @@ type Handler struct {
 	Service *Service
 	// Keys is the server's VAPID key pair (only the public half is served).
 	Keys Keys
+	// Sessions reads the registering session (id and expiry) from the request.
+	Sessions *auth.Sessions
 	// Enabled is PUSH_ENABLED. Off, every route but the config answers 404.
 	Enabled bool
 	// PreviewsAllowed is false when the operator forces "no preview".
@@ -186,8 +188,9 @@ func (h *Handler) subscribe(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	sub, err := upsert(r.Context(), h.DB, auth.UserFrom(r.Context()).ID,
-		newSubscription{endpoint: endpoint, p256dh: p256dh, auth: secret, label: clean(req.Label, 64)})
+	in := newSubscription{endpoint: endpoint, p256dh: p256dh, auth: secret, label: clean(req.Label, 64)}
+	in.sessionID, in.sessionExpires = h.session(r)
+	sub, err := upsert(r.Context(), h.DB, auth.UserFrom(r.Context()).ID, in)
 	if err != nil {
 		if ae, ok := httpx.AsAPIError(err); ok {
 			return ae
@@ -196,6 +199,16 @@ func (h *Handler) subscribe(w http.ResponseWriter, r *http.Request) error {
 	}
 	httpx.WriteJSON(w, http.StatusCreated, sub)
 	return nil
+}
+
+// session is the session the request runs in: the device it registers lives
+// and dies with it.
+func (h *Handler) session(r *http.Request) (string, *time.Time) {
+	id, expires := h.Sessions.SessionClaims(r)
+	if expires.IsZero() {
+		return id, nil
+	}
+	return id, &expires
 }
 
 // unsubscribe handles DELETE /api/push/subscriptions/{id}.

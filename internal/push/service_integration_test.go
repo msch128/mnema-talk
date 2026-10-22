@@ -243,3 +243,57 @@ func waitFor(t *testing.T, ok func() bool, what string) {
 	}
 	t.Fatalf("timed out waiting for %s", what)
 }
+
+// A device lives and dies with the session that registered it.
+func TestADeviceStopsReceivingWhenItsSessionEnds(t *testing.T) {
+	cases := map[string]string{
+		"signed out":                             `INSERT INTO revoked_sessions (jti, expires_at) VALUES ('sess-1', NOW() + INTERVAL '1 day')`,
+		"password changed or log out everywhere": `UPDATE users SET token_version = token_version + 1 WHERE username = 'bob'`,
+		"session expired":                        `UPDATE push_subscriptions SET session_expires_at = NOW() - INTERVAL '1 minute' WHERE user_id = (SELECT id FROM users WHERE username = 'bob')`,
+	}
+	for name, ending := range cases {
+		t.Run(name, func(t *testing.T) {
+			e := newEnv(t, http.StatusCreated)
+			alice, bob := e.member("alice"), e.member("bob")
+			e.exec(`UPDATE push_subscriptions SET session_id = 'sess-1', session_expires_at = NOW() + INTERVAL '1 day' WHERE user_id = $1`, bob.id)
+			e.publish(message(alice, e.general, "still valid"))
+			e.pushedTo("/device/bob", 1)
+
+			e.exec(ending)
+			e.publish(message(alice, e.general, "after the end"))
+			settle()
+			if n := len(e.requestsTo("/device/bob")); n != 1 {
+				t.Fatalf("%d pushes, want only the one before the session ended", n)
+			}
+			if devices, _ := list(context.Background(), e.pool, bob.id); len(devices) != 0 {
+				t.Fatalf("the ended session's device is still listed: %+v", devices)
+			}
+			n, err := pruneEnded(context.Background(), e.pool)
+			if err != nil || n != 1 || countSubscriptions(e, bob.id) != 0 {
+				t.Fatalf("pruned %d (%v), %d left", n, err, countSubscriptions(e, bob.id))
+			}
+		})
+	}
+}
+
+func TestRegisteringRecordsTheSessionAndOlderDevicesOfEndedSessionsDrop(t *testing.T) {
+	e := newEnv(t, http.StatusCreated)
+	bob := e.member("bob")
+	e.exec(`UPDATE users SET token_version = 3 WHERE id = $1`, bob.id)
+	exp := time.Now().Add(time.Hour)
+	sub, err := upsert(context.Background(), e.pool, bob.id, newSubscription{
+		endpoint: e.push.URL + "/second", p256dh: bob.browser.p256dh(), auth: bob.browser.secret(), sessionID: "sess-2", sessionExpires: &exp,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tv int
+	var sid string
+	if err := e.pool.QueryRow(context.Background(), `SELECT token_version, session_id FROM push_subscriptions WHERE id = $1`, sub.ID).Scan(&tv, &sid); err != nil || tv != 3 || sid != "sess-2" {
+		t.Fatalf("recorded token_version %d session %q (%v)", tv, sid, err)
+	}
+	// The first device was registered before the version moved on: its session ended with it.
+	if devices, _ := list(context.Background(), e.pool, bob.id); len(devices) != 1 || devices[0].ID != sub.ID {
+		t.Fatalf("%+v", devices)
+	}
+}

@@ -264,8 +264,12 @@ details and the limits.
   the server cannot be used as a request proxy or to scan the network. Failed
   or gone subscriptions are removed; a browser signing out removes its own, and
   registering a browser under another account moves it, so the next person on a
-  shared browser is not sent the previous account's messages. At most 10
-  devices per account; registering and testing are rate limited.
+  shared browser is not sent the previous account's messages. A device is
+  bound to the session that registered it: once that session is signed out,
+  expired or revoked (password change or reset, "log out everywhere", admin
+  revoke, disabled account: the user's `token_version` moves on), the device is
+  no longer sent anything, checked on every send, and removed within a minute.
+  At most 10 devices per account; registering and testing are rate limited.
 - **Uploads.** File types are detected by content sniffing, not by the
   client-supplied name or MIME type. Risky types (HTML, SVG, scripts, unknown
   binaries, ...) are only ever served as downloads, never rendered inline. Media is

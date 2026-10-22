@@ -258,6 +258,10 @@ installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
   connection goes to the address it vetted, redirects are not followed and the
   answer is discarded. A member cannot use the server as a request proxy:
   the body is encrypted binary and no response text is ever shown.
+- **Sessions.** A device belongs to the session that registered it. When that
+  session is signed out, expires, or is revoked (password change or reset, "log
+  out everywhere", admin revoke, disabled account), its device stops receiving
+  pushes at once and is deleted within a minute.
 - **Housekeeping.** A push service answering 404 or 410 removes the device at
   once; any other refusal or failure counts, and ten in a row remove it. An
   account has at most 10 devices. Deleting a member removes theirs. Signing out

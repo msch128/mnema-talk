@@ -331,3 +331,43 @@ func TestANewMessageIsPushedThroughTheRealHubToOtherMembersOnly(t *testing.T) {
 		t.Fatalf("a muted channel still pushed (%d -> %d)", before, after)
 	}
 }
+
+func TestAnEndedSessionTakesItsPushDeviceWithIt(t *testing.T) {
+	a, fake := newPushApp(t, true, nil)
+	admin := a.seedAdmin()
+	ch := a.createChannel(admin, "general", "text")
+	a.register(admin, "bob")
+	devices := func(c *client) int {
+		var list pushDevices
+		c.get("/api/push/subscriptions").decode(t, &list)
+		return len(list.Subscriptions)
+	}
+
+	// Signing out the registering session ends the device; another session of the account stays.
+	first, second := a.login("bob", "member-password-123"), a.login("bob", "member-password-123")
+	wantStatus(t, "subscribe", first.post("/api/push/subscriptions", subscription(t, "/signed-out")), http.StatusCreated)
+	wantStatus(t, "subscribe 2", second.post("/api/push/subscriptions", subscription(t, "/kept")), http.StatusCreated)
+	wantStatus(t, "logout", first.post("/api/auth/logout", nil), http.StatusNoContent)
+	if n := devices(second); n != 1 {
+		t.Fatalf("%d devices after one session signed out, want the other session's only", n)
+	}
+	a.send(admin, ch, "hello")
+	fake.waitFor(t, "/kept")
+	for _, got := range fake.received() {
+		if got == "/signed-out" {
+			t.Fatal("a signed-out session's device was pushed to")
+		}
+	}
+
+	// A password change ends every other session, and with them their devices.
+	third := a.login("bob", "member-password-123")
+	wantStatus(t, "subscribe 3", third.post("/api/push/subscriptions", subscription(t, "/after-reset")), http.StatusCreated)
+	wantStatus(t, "revoke", admin.post("/api/admin/users/"+second.user.ID.String()+"/sessions/revoke", nil), http.StatusNoContent)
+	time.Sleep(50 * time.Millisecond)
+	before := len(fake.received())
+	a.send(admin, ch, "again")
+	time.Sleep(300 * time.Millisecond)
+	if after := len(fake.received()); after != before {
+		t.Fatalf("devices of revoked sessions were pushed to (%d -> %d): %v", before, after, fake.received())
+	}
+}

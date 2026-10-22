@@ -36,7 +36,7 @@ func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.
 		LEFT JOIN channel_reads cr ON cr.user_id = u.id AND cr.channel_id = c.id
 		LEFT JOIN category_notify cn ON cn.user_id = u.id AND cn.category_id = c.category_id
 		WHERE u.id <> $2 AND u.disabled_at IS NULL
-		  AND EXISTS (SELECT 1 FROM push_subscriptions s WHERE s.user_id = u.id)`, channelID, authorID)
+		  AND EXISTS (SELECT 1 FROM push_subscriptions s WHERE s.user_id = u.id AND `+validSession+`)`, channelID, authorID)
 	if err != nil {
 		return nil, fmt.Errorf("load push candidates: %w", err)
 	}

@@ -181,7 +181,7 @@ func (c *components) newBots() {
 // that allows public addresses alone.
 func (c *components) newPush() error {
 	cfg := c.cfg
-	h := push.Handler{DB: c.d.DB, Enabled: cfg.PushEnabled, PreviewsAllowed: cfg.PushPreviews == "user"}
+	h := push.Handler{DB: c.d.DB, Sessions: c.sessions, Enabled: cfg.PushEnabled, PreviewsAllowed: cfg.PushPreviews == "user"}
 	if cfg.PushEnabled {
 		keys, err := push.LoadKeys(c.ctx, c.d.DB)
 		if err != nil {

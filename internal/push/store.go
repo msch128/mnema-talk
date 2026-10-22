@@ -52,9 +52,30 @@ func Fingerprint(endpoint string) string {
 // errTooManyDevices is the refusal when an account is at MaxDevices.
 var errTooManyDevices = httpx.ErrConflict(fmt.Sprintf("an account can use push on at most %d devices; remove one first", MaxDevices))
 
-// newSubscription is a validated registration.
+// newSubscription is a validated registration. sessionID and sessionExpires
+// belong to the session that registers it (see validSession).
 type newSubscription struct {
 	endpoint, p256dh, auth, label string
+	sessionID                     string
+	sessionExpires                *time.Time
+}
+
+// validSession is the SQL condition that a subscription s (joined to its
+// user u) still belongs to a live session: the session was not signed out, has
+// not expired, and the user's token_version has not moved on since.
+const validSession = `u.token_version = s.token_version
+	AND (s.session_expires_at IS NULL OR s.session_expires_at > NOW())
+	AND (s.session_id = '' OR NOT EXISTS (SELECT 1 FROM revoked_sessions r WHERE r.jti = s.session_id))`
+
+// pruneEnded deletes the subscriptions whose session ended, and returns how many.
+func pruneEnded(ctx context.Context, q db.Querier) (int64, error) {
+	tag, err := q.Exec(ctx, `
+		DELETE FROM push_subscriptions s USING users u
+		WHERE u.id = s.user_id AND NOT (`+validSession+`)`)
+	if err != nil {
+		return 0, fmt.Errorf("prune push subscriptions: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }
 
 // upsert stores or refreshes the browser's subscription for userID and returns
@@ -74,12 +95,14 @@ func upsert(ctx context.Context, p *db.Pool, userID uuid.UUID, in newSubscriptio
 			return errTooManyDevices
 		}
 		return tx.QueryRow(ctx, `
-			INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, label) VALUES ($1, $2, $3, $4, $5)
+			INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, label, session_id, session_expires_at, token_version)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, (SELECT token_version FROM users WHERE id = $1))
 			ON CONFLICT (endpoint) DO UPDATE
 			SET user_id = EXCLUDED.user_id, p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth,
-			    label = EXCLUDED.label, failures = 0
+			    label = EXCLUDED.label, failures = 0, session_id = EXCLUDED.session_id,
+			    session_expires_at = EXCLUDED.session_expires_at, token_version = EXCLUDED.token_version
 			RETURNING id, label, created_at, last_success_at`,
-			userID, in.endpoint, in.p256dh, in.auth, in.label).
+			userID, in.endpoint, in.p256dh, in.auth, in.label, in.sessionID, in.sessionExpires).
 			Scan(&out.ID, &out.Label, &out.CreatedAt, &out.LastSuccessAt)
 	})
 	if err != nil {
@@ -95,8 +118,9 @@ func upsert(ctx context.Context, p *db.Pool, userID uuid.UUID, in newSubscriptio
 // list returns the account's subscriptions, oldest first.
 func list(ctx context.Context, q db.Querier, userID uuid.UUID) ([]Subscription, error) {
 	rows, err := q.Query(ctx, `
-		SELECT id, label, endpoint, created_at, last_success_at
-		FROM push_subscriptions WHERE user_id = $1 ORDER BY created_at, id`, userID)
+		SELECT s.id, s.label, s.endpoint, s.created_at, s.last_success_at
+		FROM push_subscriptions s JOIN users u ON u.id = s.user_id
+		WHERE s.user_id = $1 AND `+validSession+` ORDER BY s.created_at, s.id`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list push subscriptions: %w", err)
 	}
@@ -126,8 +150,9 @@ func remove(ctx context.Context, q db.Querier, userID, id uuid.UUID) (bool, erro
 // targetsFor loads the delivery data of the given accounts' subscriptions.
 func targetsFor(ctx context.Context, q db.Querier, userIDs []uuid.UUID) (map[uuid.UUID][]target, error) {
 	rows, err := q.Query(ctx, `
-		SELECT id, user_id, endpoint, p256dh, auth FROM push_subscriptions
-		WHERE user_id = ANY($1::uuid[]) ORDER BY created_at, id`, userIDs)
+		SELECT s.id, s.user_id, s.endpoint, s.p256dh, s.auth
+		FROM push_subscriptions s JOIN users u ON u.id = s.user_id
+		WHERE s.user_id = ANY($1::uuid[]) AND `+validSession+` ORDER BY s.created_at, s.id`, userIDs)
 	if err != nil {
 		return nil, fmt.Errorf("load push subscriptions: %w", err)
 	}

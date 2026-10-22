@@ -28,7 +28,15 @@ CREATE TABLE push_subscriptions (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_success_at TIMESTAMPTZ,
     -- Failed deliveries in a row; a subscription that keeps failing is removed.
-    failures        INT NOT NULL DEFAULT 0 CHECK (failures >= 0)
+    failures        INT NOT NULL DEFAULT 0 CHECK (failures >= 0),
+    -- The session that registered the device: its id (jti, empty for tokens
+    -- from before session ids), its expiry and the user's token_version then.
+    -- A device is only told anything while that session is still valid: not
+    -- signed out (revoked_sessions), not expired, token_version unchanged
+    -- (password change or reset, "log out everywhere", a disabled account).
+    session_id         TEXT NOT NULL DEFAULT '',
+    session_expires_at TIMESTAMPTZ,
+    token_version      INT NOT NULL DEFAULT 0
 );
 
 CREATE INDEX push_subscriptions_user_idx ON push_subscriptions (user_id);

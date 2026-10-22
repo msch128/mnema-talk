@@ -133,6 +133,7 @@ func (s *Service) Run(ctx context.Context) {
 			s.handle(ctx, msg)
 		case <-sweep.C:
 			s.co.sweep()
+			s.pruneEnded(ctx)
 		}
 	}
 }
@@ -293,5 +294,16 @@ func (s *Service) record(ctx context.Context, id uuid.UUID, res Result) {
 	}
 	if err != nil && ctx.Err() == nil {
 		slog.Warn("push: record result", "subscription", id, "err", err)
+	}
+}
+
+// pruneEnded removes the devices of sessions that were signed out or expired,
+// or that a password change or "log out everywhere" revoked. They are never
+// told anything meanwhile (every query checks the session), this only tidies up.
+func (s *Service) pruneEnded(ctx context.Context) {
+	if n, err := pruneEnded(ctx, s.DB); err != nil && ctx.Err() == nil {
+		slog.Warn("push: prune ended sessions", "err", err)
+	} else if n > 0 {
+		slog.Debug("push: removed devices of ended sessions", "count", n)
 	}
 }
