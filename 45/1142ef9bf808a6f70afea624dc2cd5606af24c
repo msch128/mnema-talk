@@ -1,0 +1,82 @@
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_8a72fa6adeae5f 1788-1798
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 72-73
+web/scripts/serviceWorkerBuild.test.ts
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 1-25
+web/public/manifest.webmanifest
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 1-19
+web/src/sw/worker.test.ts
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 1-88
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_8a72fa6adeae5f 1788-1798
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 72-73
+e2e/tests/pwa.spec.ts
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 1-67
+web/src/sw/worker.ts
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 1-53
+doc/upgrade.md
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 224-230
+web/src/lib/pwa.test.ts
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 1-115
+web/src/sw/shell.ts
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 1-74
+web/src/main.ts
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 14,35-37
+web/src/components/AccountMenu.test.ts
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 11,53-62
+  s_06fcde5dbef956::t_0ea43785ec3a24 63-65
+web/src/sw/cacheStorage.fixture.ts
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 1-58
+web/src/sw/sw.ts
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 1-9
+web/src/components/AppInstallSection.vue
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 1-31
+web/src/lib/appSettings.ts
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 1-4
+web/src/components/AccountMenu.vue
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 7,16,152-153
+  s_06fcde5dbef956::t_9c546df30ded35 154
+web/vite.config.ts
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 9,62
+web/web.go
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 43-48,111-124
+  s_06fcde5dbef956::t_9b68547f03a0b0 125
+web/src/components/AppSettingsModal.test.ts
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 1-67
+web/src/sw/sw.test.ts
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 1-17
+web/index.html
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 10-15
+web/src/sw/shell.test.ts
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 1-109
+web/scripts/serviceWorkerBuild.ts
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 1-44
+web/web_test.go
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 7,85-110
+  s_06fcde5dbef956::t_b7289260e05932 111
+web/src/components/AppSettingsModal.vue
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 1-23
+web/src/App.vue
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 26-27,283-284
+  s_06fcde5dbef956::t_688f098809cdbc 285
+web/src/lib/pwa.ts
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 1-85
+SECURITY.md
+  s_06fcde5dbef956::t_b1dfcd3889ac3d 271-278
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "451142ef9bf808a6f70afea624dc2cd5606af24c",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
