@@ -16,10 +16,12 @@ import (
 	"github.com/msch128/mnema-talk/internal/gateway"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/linkpreview"
+	"github.com/msch128/mnema-talk/internal/mailer"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/onboarding"
 	"github.com/msch128/mnema-talk/internal/opwarn"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/push"
 	"github.com/msch128/mnema-talk/internal/roles"
 	"github.com/msch128/mnema-talk/internal/ssrf"
 	"github.com/msch128/mnema-talk/internal/update"
@@ -54,11 +56,14 @@ type components struct {
 	outgoing *webhook.Dispatcher
 	webhookH *webhook.Handler
 
+	pushH *push.Handler
+
 	botH     *bot.Handler
 	botAuthn *bot.Authenticator
 	cmds     *bot.Commands
 	gw       *gateway.Gateway
 
+	mail    *mailer.Mailer // nil: SMTP not configured
 	systemH *systemHandler
 	opsSrc  *opsSource
 
@@ -125,6 +130,21 @@ func (c *components) newCore() {
 	}
 }
 
+// newMail builds the SMTP client when configured and hands it to the account
+// flows that need it. Without SMTP_HOST both stay nil and those flows are off.
+func (c *components) newMail() error {
+	m, err := mailer.New(c.cfg.SMTP)
+	if err != nil {
+		return err
+	}
+	c.authH.PublicURL = c.cfg.PublicURL
+	if m != nil {
+		c.mail = m
+		c.authH.Mail = m
+	}
+	return nil
+}
+
 // newWebhooks builds the incoming webhook handler and the outgoing
 // dispatcher, which taps the hub's events.
 func (c *components) newWebhooks() {
@@ -172,6 +192,40 @@ func (c *components) newBots() {
 	}
 }
 
+// newPush builds Web Push: the key pair, the sender, the handler for the
+// devices API and, when push is on, the delivery service that taps the hub's
+// events. Requests go only to push services, through the SSRF-guarded client
+// that allows public addresses alone.
+func (c *components) newPush() error {
+	cfg := c.cfg
+	h := push.Handler{DB: c.d.DB, Sessions: c.sessions, Enabled: cfg.PushEnabled, PreviewsAllowed: cfg.PushPreviews == "user"}
+	if cfg.PushEnabled {
+		keys, err := push.LoadKeys(c.ctx, c.d.DB)
+		if err != nil {
+			return err
+		}
+		client := c.d.PushClient
+		if client == nil {
+			client = ssrf.NewClient(ssrf.NewDialer(&ssrf.Policy{}), 10*time.Second)
+		}
+		svc := &push.Service{
+			DB: c.d.DB, Perms: c.permSvc, Previews: h.PreviewsAllowed, Burst: c.d.PushBurst,
+			Sender: &push.Sender{Keys: keys, Subject: push.Subject(cfg.PushVAPIDSubject, cfg.PublicURL), HTTP: client},
+		}
+		prevTap := c.hub.Tap
+		c.hub.Tap = func(ch uuid.UUID, eventType string, payload any) {
+			if prevTap != nil {
+				prevTap(ch, eventType, payload)
+			}
+			svc.Observe(ch, eventType, payload)
+		}
+		go svc.Run(c.ctx)
+		h.Keys, h.Service = keys, svc
+	}
+	c.pushH = push.NewHandler(h)
+	return nil
+}
+
 // newSystem builds the admin System tab's handler, its ops sampler and, when
 // configured, the self-update client.
 func (c *components) newSystem() error {
@@ -186,6 +240,9 @@ func (c *components) newSystem() error {
 		version:  d.Version,
 		started:  time.Now(),
 		updates:  d.Updates,
+		mail:     c.mail,
+
+		testMailLimit: httpx.NewRateLimiter(5, 10*time.Minute).Named("test_mail"),
 	}
 	if h.version == "" {
 		h.version = "dev"

@@ -52,6 +52,7 @@ export const useAuthStore = defineStore('auth', () => {
     checkAuth: actions.checkAuth,
     changeLocale,
     login: actions.login,
+    secondStep: actions.secondStep,
     register: actions.register,
     uploadAvatar,
     updateProfile,

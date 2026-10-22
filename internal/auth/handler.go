@@ -33,6 +33,12 @@ type Handler struct {
 	// nil records nothing.
 	Audit       *audit.Log
 	failureSeen *sync.Map
+	// Mail delivers account e-mails (address confirmation, password reset);
+	// nil when SMTP is not configured, which switches those flows off.
+	Mail MailSender
+	// PublicURL is the address the links in those mails point to.
+	PublicURL string
+	rec       *recovery
 
 	loginPerIP    *httpx.RateLimiter
 	registerPerIP *httpx.RateLimiter
@@ -43,6 +49,14 @@ type Handler struct {
 	loginFailures   *httpx.LoginFailureLimiter
 	accountFailures *httpx.LoginFailureLimiter
 	passwordFails   *httpx.LoginFailureLimiter
+	// twoFactorFails locks the second sign-in step of one account after ten
+	// wrong codes (escalating, at most accountLockoutMax).
+	twoFactorFails *httpx.LoginFailureLimiter
+	// factorLocks serialise the second-factor attempts of one account (striped
+	// by account id), so the lockout check, the verification and the failure
+	// count are one step and parallel requests cannot all pass the check
+	// before the first failure is recorded.
+	factorLocks *[64]sync.Mutex
 	// unknownDevice allows about one password check per minute (burst 2) per
 	// client address and account to devices without a known-device cookie,
 	// while the account-wide cap is on, so one hostile client cannot use up
@@ -65,6 +79,8 @@ func NewHandler(s *Sessions, pub events.Publisher) *Handler {
 		Sessions:    s,
 		Events:      pub,
 		failureSeen: &sync.Map{},
+		rec:         newRecovery(),
+		factorLocks: new([64]sync.Mutex),
 		// Generous per address: a household or office shares one public IP.
 		loginPerIP:      httpx.NewRateLimiter(60, 15*time.Minute),
 		registerPerIP:   httpx.NewRateLimiter(10, time.Hour),
@@ -74,6 +90,7 @@ func NewHandler(s *Sessions, pub events.Publisher) *Handler {
 		loginFailures:   httpx.NewLoginFailureLimiter(10, time.Minute),
 		accountFailures: httpx.NewLoginFailureLimiter(100, time.Minute),
 		passwordFails:   httpx.NewLoginFailureLimiter(5, time.Minute),
+		twoFactorFails:  httpx.NewLoginFailureLimiter(10, time.Minute),
 		unknownDevice:   httpx.NewRateLimiter(2, 2*time.Minute),
 		// About 10 checks per minute for the whole account, however many
 		// addresses ask: guessing stays slow, and a sustained attack needs
@@ -82,6 +99,7 @@ func NewHandler(s *Sessions, pub events.Publisher) *Handler {
 	}
 	// An attacker cannot keep the owner out for long by tripping the cap again.
 	h.accountFailures.CapLockout(accountLockoutMax)
+	h.twoFactorFails.CapLockout(accountLockoutMax)
 	return h
 }
 
@@ -93,6 +111,8 @@ func (h *Handler) MountPublic(r chi.Router) {
 	r.With(h.loginPerIP.PerIP).Post("/auth/login", httpx.Handle(h.login))
 	r.With(h.registerPerSite.By(httpx.ClientAggregateKey), h.registerPerIP.PerIP).Post("/auth/register", httpx.Handle(h.register))
 	r.Post("/auth/logout", httpx.Handle(h.logout))
+	r.With(h.loginPerIP.PerIP).Post("/auth/login/2fa", httpx.Handle(h.login2fa))
+	h.mountRecovery(r)
 }
 
 // MountAuthenticated registers routes that need a session.
@@ -105,6 +125,7 @@ func (h *Handler) MountAuthenticated(r chi.Router) {
 	r.Put("/users/me/locale", httpx.Handle(h.setLocale))
 	r.Put("/users/me/presence", httpx.Handle(h.setPresence))
 	r.Put("/users/me/status", httpx.Handle(h.setStatus))
+	h.mountAccount(r)
 }
 
 // login handles POST /api/auth/login.
@@ -117,6 +138,7 @@ func (h *Handler) MountAuthenticated(r chi.Router) {
 // @Produce json
 // @Param request body LoginRequest true "Request body."
 // @Success 200 {object} UserEnvelope "Signed in."
+// @Success 202 {object} TwoFactorChallenge "Correct password, but the account has two-factor sign-in: finish with POST /api/auth/login/2fa. No session is set yet."
 // @Header 200 {string} Set-Cookie "Session cookie (HttpOnly, SameSite=Lax, Path=/; Secure on HTTPS)."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "INVALID_CREDENTIALS: unknown user or wrong password."
@@ -141,6 +163,10 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) error {
 		setRetryIfBusy(w, err)
 		return err
 	}
+	if challenged, err := h.challengeIfNeeded(r.Context(), w, u, tv); challenged || err != nil {
+		return err
+	}
+	h.auditUser(r.Context(), u, "auth.login")
 	if err := h.Sessions.Start(w, u, tv); err != nil {
 		return err
 	}
@@ -227,7 +253,6 @@ func (h *Handler) verifyLogin(r *http.Request, req LoginRequest) (*User, int, ti
 	}
 	h.loginFailures.ResetFailures(key)
 	h.accountFailures.ResetFailures(account)
-	h.auditUser(r.Context(), u, "auth.login")
 	return u, tv, 0, nil
 }
 

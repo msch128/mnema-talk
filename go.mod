@@ -27,6 +27,8 @@ require (
 	golang.org/x/net v0.61.0
 )
 
+require github.com/SherClockHolmes/webpush-go v1.4.0
+
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect

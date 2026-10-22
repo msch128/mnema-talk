@@ -96,7 +96,7 @@ describe('LoginModal', () => {
     await w.find<HTMLInputElement>('#login-invite')!.setValue('   ')
     await submit(w)
     await flushPromises()
-    expect(apiMock).not.toHaveBeenCalled()
+    expect(apiMock.mock.calls.filter(([path]) => path !== '/api/auth/options')).toEqual([])
     expect(w.find('[role="alert"]')!.text()).toBe('Please enter an invite code.')
 
     // Switching back to sign-in clears the error.

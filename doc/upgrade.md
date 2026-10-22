@@ -133,8 +133,8 @@ nothing in it is a breaking change to a public surface, and `1.x` keeps working
 for existing clients, bots, webhooks, dashboards and alerts. What changes for an
 operator is below. Update with the procedure above; take the backup first.
 
-- **Two migrations run on first start: 0038 and 0039.** Both are quick on any
-  instance.
+- **Four migrations run on first start: 0038, 0039, 0040 and 0041.** All are
+  quick on any instance.
   - 0038 drops `idx_messages_content_trgm`, a duplicate of the trigram search
     index `messages_content_trgm_idx` (both came from earlier releases), so
     message writes no longer maintain the same index twice and search is
@@ -144,9 +144,36 @@ operator is below. Update with the procedure above; take the backup first.
   - 0039 adds the nullable column `bot_tokens.created_by` (who issued a bot
     token), with a foreign key to `users`. It rewrites no rows and holds only a
     brief lock on `bot_tokens` while the foreign key is added.
+  - 0040 adds the nullable columns `users.email` and `users.email_verified_at`
+    (with a partial unique index on confirmed addresses) and the table
+    `account_tokens` for single-use e-mail links. Adding nullable columns
+    rewrites no rows. No account has an address afterwards.
+  - 0041 adds the tables `user_totp`, `recovery_codes`, `login_challenges`
+    and `second_factor_failures` for optional two-factor sign-in. They start
+    empty; nobody is asked for a code until they turn it on.
   - The app waits for these locks like any other statement; there is nothing to
     stop or schedule. If startup is slow, check `docker compose logs app` for
     `migration applied`.
+- **Optional e-mail, SMTP and password reset by mail.** Members may now add an
+  e-mail address in Account & security (never required, never shown to other
+  members or to the Owner). Setting `SMTP_HOST` (see
+  [operations.md](operations.md#outgoing-e-mail)) lets the server confirm an
+  address by a single-use link and lets members reset a forgotten password with
+  an address they confirmed (link valid 30 minutes, signs every device out). Without
+  `SMTP_HOST` nothing changes: no mail is sent, saved addresses stay unconfirmed
+  and unused, and the "Forgot your password?" link does not appear. The Owner can
+  still set a temporary password for any member (Admin > Users). Reset by mail
+  also works for the Owner account if the Owner confirmed an address. Put
+  `SMTP_PASSWORD` in the environment or mount a file and name it in
+  `SMTP_PASSWORD_FILE`; `SMTP_TLS=none` is refused in production.
+- **Two-factor sign-in (optional).** Every member may turn on TOTP in Account
+  & security; the Owner is advised to. A client that does not know the new
+  second step (an old browser tab, a script) gets `202` with a challenge instead
+  of a session for such an account and cannot sign in; the shipped web app and
+  desktop clients handle it. Stored authenticator secrets are encrypted with a
+  key derived from `JWT_SECRET`: rotating it requires resetting two-factor for
+  the accounts that use it (Admin > Users, or `mnema-talk reset-2fa <username>`
+  for the Owner). See [operations.md](operations.md).
 - **Weak custom invite codes stop working.** Custom invite codes typed by an
   admin that fall below the new minimum (12 or more characters, 7 or more
   distinct, letters and digits below 16 characters, no common word with little
@@ -205,6 +232,19 @@ operator is below. Update with the procedure above; take the backup first.
   [`deploy/monitoring/mnema-alerts.yml`](../deploy/monitoring/mnema-alerts.yml),
   checked with `promtool` and against `/api/metrics` in CI. Metric names are
   part of the stability contract.
+- **Web Push (migration 0042).** Members can turn on push notifications per
+  device (Account menu > App & notifications) and get messages while the app
+  is closed; on iPhone and iPad only for the installed app. The migration
+  creates `push_vapid` (the server's VAPID key, generated on first start: it
+  is in your database backups, so restores keep working subscriptions),
+  `push_subscriptions` (one row per device) and `users.push_preview`. Nothing
+  is sent until a member subscribes. New settings, all optional:
+  `PUSH_ENABLED` (default `true`), `PUSH_PREVIEWS` (`user`, default, or `off`
+  to never put message text in a push) and `PUSH_VAPID_SUBJECT`; see
+  [operations.md](operations.md#web-push-and-the-installable-app). The server
+  needs outbound HTTPS to the browser vendors' push services (Google, Mozilla,
+  Apple, Microsoft) when a member uses push; it connects only to public
+  addresses. Rolling back needs the pre-upgrade backup like every migration.
 - **Installable app.** The web app now has a manifest, icons and a service
   worker (`/sw.js`) that keeps its shell available offline; browsers offer
   "Install", and Account menu > App explains it (on iPhone and iPad: Share >

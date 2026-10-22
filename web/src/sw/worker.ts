@@ -1,14 +1,18 @@
 import { answerAsset, answerPage, dropOldShells, precache, shellCacheName, strategyFor } from './shell.ts'
+import { onNotificationClick, onPush, onSubscriptionChange } from './push.ts'
+import type { ClickEventLike, PushEventLike, PushScope, SubscriptionChangeEventLike } from './push.ts'
 
 /** What the worker needs from its global scope; a test passes a stand-in. */
-export interface WorkerScope {
+export interface WorkerScope extends PushScope {
   location: { origin: string }
   caches: CacheStorage
-  clients: { claim(): Promise<void> }
+  clients: PushScope['clients'] & { claim(): Promise<void> }
   skipWaiting(): Promise<void>
-  fetch(request: Request): Promise<Response>
   addEventListener(type: 'install' | 'activate', listener: (event: WaitEvent) => void): void
   addEventListener(type: 'fetch', listener: (event: FetchLike) => void): void
+  addEventListener(type: 'push', listener: (event: PushEventLike) => void): void
+  addEventListener(type: 'notificationclick', listener: (event: ClickEventLike) => void): void
+  addEventListener(type: 'pushsubscriptionchange', listener: (event: SubscriptionChangeEventLike) => void): void
 }
 
 export interface WaitEvent {
@@ -47,7 +51,14 @@ function installShell(scope: WorkerScope, config: WorkerConfig, cacheName: strin
   })
 }
 
+function installPush(scope: WorkerScope) {
+  scope.addEventListener('push', event => event.waitUntil(onPush(scope, event)))
+  scope.addEventListener('notificationclick', event => event.waitUntil(onNotificationClick(scope, event)))
+  scope.addEventListener('pushsubscriptionchange', event => event.waitUntil(onSubscriptionChange(scope, event)))
+}
+
 /** Registers every handler of the service worker on its scope. */
 export function installWorker(scope: WorkerScope, config: WorkerConfig) {
   installShell(scope, config, shellCacheName(config.version))
+  installPush(scope)
 }

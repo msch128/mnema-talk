@@ -25,6 +25,26 @@ func (h *Handler) auditUser(ctx context.Context, u *User, action string) {
 	})
 }
 
+// auditTwoFactorFailure records a wrong second-step code, at most once per
+// account and failureAuditEvery. It never stores the code.
+func (h *Handler) auditTwoFactorFailure(ctx context.Context, u *User) {
+	if h.Audit == nil {
+		return
+	}
+	key := "auth.two_factor_failed|" + u.ID.String()
+	now := time.Now()
+	if h.failureSeen != nil {
+		if last, ok := h.failureSeen.Load(key); ok && now.Sub(last.(time.Time)) < failureAuditEvery {
+			return
+		}
+		h.failureSeen.Store(key, now)
+	}
+	id := u.ID
+	h.Audit.RecordOrLog(ctx, audit.Entry{
+		Action: "auth.two_factor_failed", TargetType: "user", TargetID: id.String(), TargetName: u.Username,
+	})
+}
+
 // auditLoginFailure records a wrong password or a lockout for an account
 // that exists. Names that match no account are not stored: what was typed
 // into the username field may be anything, even a password. At most one
