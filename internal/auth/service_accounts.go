@@ -163,13 +163,18 @@ func ChangePassword(ctx context.Context, p *db.Pool, userID uuid.UUID, current, 
 	err = p.QueryRow(ctx, `
 		UPDATE users SET password_hash = $1, token_version = token_version + 1, updated_at = NOW()
 		WHERE id = $2 RETURNING token_version`, newHash, userID).Scan(&tv)
-	return tv, err
+	if err != nil {
+		return 0, err
+	}
+	return tv, dropTokens(ctx, p, userID, purposePasswordReset)
 }
 
 // RevokeSessions invalidates every session of userID ("log out everywhere").
 func RevokeSessions(ctx context.Context, p db.Querier, userID uuid.UUID) error {
-	_, err := p.Exec(ctx, `UPDATE users SET token_version = token_version + 1, updated_at = NOW() WHERE id = $1`, userID)
-	return err
+	if _, err := p.Exec(ctx, `UPDATE users SET token_version = token_version + 1, updated_at = NOW() WHERE id = $1`, userID); err != nil {
+		return err
+	}
+	return dropTokens(ctx, p, userID, purposePasswordReset)
 }
 
 // UpdateProfile changes display name and bio.

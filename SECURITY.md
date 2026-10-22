@@ -165,7 +165,7 @@ details and the limits.
   request line, access log or Referer); only its SHA-256 is stored; a token is
   single use (one atomic UPDATE), expires (24 hours for confirmation, 30
   minutes for reset), is bound to its purpose and, for confirmation, to the
-  address it was sent to, and a newer link retires the older one. Reset: the
+  address it was sent to (a reset token also to the account's session version, so a password change, an Owner password action, "log out everywhere" or a session revocation kills every open reset link), and a newer link retires the older one. Reset: the
   request answers `202` with an empty body for every well-formed address, known
   or not, confirmed or not, disabled account or not, and does its work after
   responding, so neither content nor timing tells accounts apart; it is limited

@@ -25,6 +25,10 @@ CREATE TABLE account_tokens (
     purpose    TEXT NOT NULL CHECK (purpose IN ('email_verify', 'password_reset')),
     token_hash BYTEA NOT NULL UNIQUE,
     email      TEXT NOT NULL DEFAULT '',
+    -- The account's token_version when the token was issued. A reset token only
+    -- works while it is unchanged, so every password change, admin password
+    -- action and session revocation (all of which bump it) kills open links.
+    token_version INT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     expires_at TIMESTAMPTZ NOT NULL,
     used_at    TIMESTAMPTZ

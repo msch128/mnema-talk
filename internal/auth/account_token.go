@@ -75,8 +75,8 @@ func issueToken(ctx context.Context, q db.Querier, userID uuid.UUID, purpose, em
 	if _, err := q.Exec(ctx, `DELETE FROM account_tokens WHERE expires_at < NOW() - INTERVAL '1 day'`); err != nil {
 		return "", fmt.Errorf("prune tokens: %w", err)
 	}
-	_, err := q.Exec(ctx, `INSERT INTO account_tokens (user_id, purpose, token_hash, email, expires_at)
-		VALUES ($1, $2, $3, $4, NOW() + $5 * INTERVAL '1 second')`, userID, purpose, hashToken(plain), email, int64(ttl.Seconds()))
+	_, err := q.Exec(ctx, `INSERT INTO account_tokens (user_id, purpose, token_hash, email, token_version, expires_at)
+		VALUES ($1, $2, $3, $4, (SELECT token_version FROM users WHERE id = $1), NOW() + $5 * INTERVAL '1 second')`, userID, purpose, hashToken(plain), email, int64(ttl.Seconds()))
 	if err != nil {
 		return "", fmt.Errorf("store token: %w", err)
 	}
@@ -115,6 +115,7 @@ func consumeToken(ctx context.Context, q db.Querier, plain, purpose string) (cla
 	}
 	err := q.QueryRow(ctx, `UPDATE account_tokens SET used_at = NOW()
 		WHERE token_hash = $1 AND purpose = $2 AND used_at IS NULL AND expires_at > NOW()
+		AND (purpose <> 'password_reset' OR token_version = (SELECT token_version FROM users WHERE id = account_tokens.user_id))
 		RETURNING user_id, email`, hashToken(plain), purpose).Scan(&c.UserID, &c.Email)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return c, errInvalidLink
