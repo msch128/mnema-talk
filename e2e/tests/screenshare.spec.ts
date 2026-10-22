@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString, responseUserId } from './helpers'
+import { apiFetch, responseString, responseUserId, leaveTalks } from './helpers'
 import { randomBytes } from 'node:crypto'
 import { test, expect } from './fixtures'
 
@@ -117,6 +117,7 @@ test('a viewer sees a shared screen after choosing to watch it', async ({ browse
   for (let i = 1; i < samples.length; i++) { const current = samples[i]; const previous = samples[i - 1]; if (!current || !previous) throw new Error('Expected frame samples'); expect(current.time).toBeGreaterThan(previous.time) }
   expect(new Set(samples.map(frame => frame.color)).size).toBeGreaterThan(1)
 
+  await leaveTalks([sharer, viewer])
   await sharerCtx.close()
   await viewerCtx.close()
 })

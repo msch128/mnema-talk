@@ -1,5 +1,5 @@
 import type { Page, Browser } from '@playwright/test'
-import { apiFetch, awaitApiBudget, responseString, responseUserId, suiteMember, trackPeerConnections } from './helpers'
+import { apiFetch, awaitApiBudget, responseString, responseUserId, suiteMember, trackPeerConnections, leaveTalks } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
@@ -101,7 +101,7 @@ async function twoMembers(browser: Browser, tag: string) {
   for (const page of [a, b]) {
     await expect(page.getByRole('button', { name: 'Verlassen' }).first()).toBeVisible()
   }
-  return { a, b, bId, bName, close: async () => { await aCtx.close(); await bCtx.close() } }
+  return { a, b, bId, bName, close: async () => { await leaveTalks([a, b]); await aCtx.close(); await bCtx.close() } }
 }
 
 // Regression: while sharing my own screen, a share I watched never reached the
