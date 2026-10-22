@@ -1,0 +1,57 @@
+internal/audit/classes.go
+  s_06fcde5dbef956::t_dca2a13d55314a 43-44
+internal/audit/classes_test.go
+  s_06fcde5dbef956::t_98509d29361139 57-76
+  s_06fcde5dbef956::t_dca2a13d55314a 21,23
+internal/bot/faults_integration_test.go
+  s_06fcde5dbef956::t_3591c6512dfd2e 165,327
+doc/bots.md
+  s_06fcde5dbef956::t_4bb780961e176f 140-146
+internal/bot/authn_minter.go
+  s_06fcde5dbef956::t_eef2a955bc0602 24,29
+  s_06fcde5dbef956::t_10bfea73872109 1-4,6-9,11-23,25-28,30-57,59-80
+  s_06fcde5dbef956::t_eef3c87b52ef14 5,10,58
+internal/gateway/gateway_integration_test.go
+  s_06fcde5dbef956::t_554eff94a413b7 11-12,164-192
+  s_06fcde5dbef956::t_7fe0925a24702c 193
+internal/bot/store.go
+  s_06fcde5dbef956::t_3591c6512dfd2e 304,323,325
+internal/bot/minter_integration_test.go
+  s_06fcde5dbef956::t_9ba3337ab4a469 1-106
+internal/bot/handler_tokens.go
+  s_06fcde5dbef956::t_3591c6512dfd2e 105,156
+  s_06fcde5dbef956::t_d2d3a1a89c7dad 8
+internal/bot/authn.go
+  s_06fcde5dbef956::t_1ae2481a91237d 18
+  s_06fcde5dbef956::t_3591c6512dfd2e 45-47,55,93,95,99
+  s_06fcde5dbef956::t_d2d3a1a89c7dad 44
+  s_06fcde5dbef956::t_eef2a955bc0602 106
+  s_06fcde5dbef956::t_e1bdc00d117927 107-108
+internal/db/migrations/0039_bot_token_minter.sql
+  s_06fcde5dbef956::t_3591c6512dfd2e 1-6
+internal/gateway/gateway_tokens.go
+  s_06fcde5dbef956::t_2e0004c49cde53 6,12,95-99
+  s_06fcde5dbef956::t_eef2a955bc0602 77-78,80-84,86,90,93-94,100-101
+doc/moderation.md
+  s_06fcde5dbef956::t_310302a1084a49 189,191
+doc/upgrade.md
+  s_06fcde5dbef956::t_76191982795488 131-138
+internal/server/router_build.go
+  s_06fcde5dbef956::t_1f4aee76df84b8 137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1b442c32e949f062570eecd9ca3192fe38663b21",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
