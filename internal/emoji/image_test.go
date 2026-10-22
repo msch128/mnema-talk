@@ -11,6 +11,7 @@ import (
 	"image/gif"
 	"image/jpeg"
 	"image/png"
+	"strings"
 	"testing"
 )
 
@@ -176,4 +177,20 @@ func TestUnsupportedAndHostileFilesAreRejected(t *testing.T) {
 	rejected(t, "huge canvas", pngOf(t, 1025, 4))
 	rejected(t, "too many frames", gifOf(t, 4, 4, maxFrames+1))
 	rejected(t, "gif header only", []byte("GIF89a"))
+}
+
+// A big canvas with many tiny frames: small on the wire, huge once decoded.
+func TestAnimationBeyondThePixelBudgetIsRejectedBeforeDecoding(t *testing.T) {
+	var b bytes.Buffer
+	b.WriteString("GIF89a")
+	b.Write([]byte{0x00, 0x04, 0x00, 0x04, 0x80, 0, 0}) // 1024x1024, 2-colour global table
+	b.Write([]byte{0, 0, 0, 255, 255, 255})
+	for i := 0; i < 90; i++ {
+		b.Write([]byte{0x2C, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 2, 0x44, 0x01, 0})
+	}
+	b.WriteByte(0x3B)
+	_, err := Process(b.Bytes())
+	if !errors.Is(err, ErrImage) || !strings.Contains(err.Error(), "too large") {
+		t.Fatalf("err = %v", err)
+	}
 }

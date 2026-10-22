@@ -30,6 +30,9 @@ const (
 	maxSourceEdge = 1024
 	// maxFrames bounds an animation; counted before the frames are decoded.
 	maxFrames = 100
+	// maxAnimationPixels bounds canvas area times frames, which is what the
+	// decoder and the redraw hold in memory; checked before any frame is decoded.
+	maxAnimationPixels = 16 << 20
 )
 
 // Content types the stored result can have.
@@ -173,6 +176,9 @@ func processGIF(data []byte) (*Image, error) {
 	if n := countGIFFrames(data); n < 1 || n > maxFrames {
 		return nil, reject("an animation may have 1 to %d frames", maxFrames)
 	}
+	if cfg.Width*cfg.Height*countGIFFrames(data) > maxAnimationPixels {
+		return nil, reject("the animation is too large: canvas size times frames may not exceed %d million pixels", maxAnimationPixels>>20)
+	}
 	g, err := gif.DecodeAll(bytes.NewReader(data))
 	if err != nil || len(g.Image) == 0 {
 		return nil, reject("the image cannot be read")
@@ -196,14 +202,17 @@ type composed struct {
 func composeFrames(g *gif.GIF, cfg image.Config) []composed {
 	canvas := image.NewRGBA(image.Rect(0, 0, cfg.Width, cfg.Height))
 	out := make([]composed, 0, len(g.Image))
-	var saved *image.RGBA
+	var saved *image.RGBA // one reusable buffer for DisposalPrevious
 	for i, frame := range g.Image {
 		disposal := byte(0)
 		if i < len(g.Disposal) {
 			disposal = g.Disposal[i]
 		}
 		if disposal == gif.DisposalPrevious {
-			saved = cloneRGBA(canvas)
+			if saved == nil {
+				saved = image.NewRGBA(canvas.Rect)
+			}
+			copy(saved.Pix, canvas.Pix)
 		}
 		draw.Draw(canvas, frame.Bounds(), frame, frame.Bounds().Min, draw.Over)
 		out = append(out, composed{img: scaled(canvas), pal: frame.Palette})
@@ -215,12 +224,6 @@ func composeFrames(g *gif.GIF, cfg image.Config) []composed {
 		}
 	}
 	return out
-}
-
-func cloneRGBA(src *image.RGBA) *image.RGBA {
-	dst := image.NewRGBA(src.Rect)
-	copy(dst.Pix, src.Pix)
-	return dst
 }
 
 // withTransparency makes sure the palette can draw a see-through pixel.
