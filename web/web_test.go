@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"testing/fstest"
 )
@@ -79,5 +80,32 @@ func TestMissingAssetIs404(t *testing.T) {
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/c/some-channel", nil))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("client route: %d, want the app shell", rec.Code)
+	}
+}
+
+func TestServiceWorkerAndManifestAreRevalidatedAndTyped(t *testing.T) {
+	h := newHandler(fstest.MapFS{
+		"index.html":           {Data: []byte("<html>")},
+		"sw.js":                {Data: []byte("self")},
+		"manifest.webmanifest": {Data: []byte(`{"name":"Mnema Talk"}`)},
+		"favicon.svg":          {Data: []byte("<svg/>")},
+	})
+	cases := []struct{ path, wantType, wantCache string }{
+		{"/sw.js", "text/javascript", "no-cache"},
+		{"/manifest.webmanifest", "application/manifest+json", "no-cache"},
+		{"/favicon.svg", "image/svg+xml", ""},
+	}
+	for _, c := range cases {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, c.path, nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s: status %d", c.path, rec.Code)
+		}
+		if got := rec.Header().Get("Content-Type"); !strings.HasPrefix(got, c.wantType) {
+			t.Errorf("%s: Content-Type %q, want %q", c.path, got, c.wantType)
+		}
+		if got := rec.Header().Get("Cache-Control"); got != c.wantCache {
+			t.Errorf("%s: Cache-Control %q, want %q", c.path, got, c.wantCache)
+		}
 	}
 }

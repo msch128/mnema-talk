@@ -11,6 +11,7 @@ import '@fontsource/jetbrains-mono/500.css'
 import App from './App.vue'
 import { gamingSurface } from './lib/desktopGaming'
 import { platform } from './lib/platform'
+import { captureInstallPrompt, registerServiceWorker } from './lib/pwa'
 import './style.css'
 import { i18nPlugin, setLocale, browserLocale } from './i18n'
 import { tooltip } from './directives/tooltip'
@@ -31,3 +32,6 @@ createApp(root)
   .use(i18nPlugin)
   .directive('tooltip', tooltip)
   .mount('#app')
+
+captureInstallPrompt()
+registerServiceWorker()

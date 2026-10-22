@@ -69,7 +69,8 @@
     "language": "Language",
     "signOut": "Sign out",
     "languageSet": "Language set to {language}. Saved for this account.",
-    "languageFailed": "Couldn't save the language."
+    "languageFailed": "Couldn't save the language.",
+    "app": "App"
   },
   "errors": {
     "unknown": "Unknown error",
@@ -1770,5 +1771,16 @@
       "deleteTitle": "Delete command /{name}?",
       "deleteBody": "The bot can register it again."
     }
+  },
+  "appSettings": {
+    "title": "App",
+    "subtitle": "Use Mnema Talk like an app on this device.",
+    "installTitle": "Install",
+    "install_installed": "Mnema Talk is installed on this device and runs in its own window.",
+    "install_available": "Install Mnema Talk to open it from your home screen, dock or start menu without the browser bar.",
+    "install_ios": "On iPhone and iPad: tap the Share button in Safari, then Add to Home Screen. Notifications work only for the installed app.",
+    "install_unavailable": "This browser does not offer to install the app. Look for Install or Add to Home Screen in its menu.",
+    "installAction": "Install app",
+    "installed": "Mnema Talk is installed."
   }
 }

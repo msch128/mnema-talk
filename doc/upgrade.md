@@ -205,6 +205,13 @@ operator is below. Update with the procedure above; take the backup first.
   [`deploy/monitoring/mnema-alerts.yml`](../deploy/monitoring/mnema-alerts.yml),
   checked with `promtool` and against `/api/metrics` in CI. Metric names are
   part of the stability contract.
+- **Installable app.** The web app now has a manifest, icons and a service
+  worker (`/sw.js`) that keeps its shell available offline; browsers offer
+  "Install", and Account menu > App explains it (on iPhone and iPad: Share >
+  Add to Home Screen). Nothing to configure and no migration. The worker never
+  stores API answers. A reverse proxy must pass `/sw.js` and
+  `/manifest.webmanifest` through unchanged (no caching of `/sw.js`, no
+  rewriting); the app's own `Cache-Control: no-cache` already says so.
 - **Rollback means restoring the pre-upgrade backup.** Migrations are
   forward-only and the 0.9.x code has not been verified against the 1.0 schema
   and data (the bot token column, the dropped index), so do not simply start
