@@ -644,5 +644,6 @@ failure (see [upgrade.md](upgrade.md)).
 > Migration 0017 adds the tables that restrict access. A binary that does not
 > know them (0.7.x before roles, or older) would ignore them and show every
 > private channel to everyone. This release and later ones refuse to start on a
-> database migrated by a newer version, but binaries from before that guard
+> database migrated by a newer version (CI checks this against the 0.8.16 and
+> 0.9.0 images), but binaries from before that guard
 > existed cannot. To go back, restore a backup taken before the update.

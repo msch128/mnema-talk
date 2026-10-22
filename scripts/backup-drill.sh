@@ -5,10 +5,26 @@
 # seeded message and file are back and the later change is gone.
 # Usage: scripts/backup-drill.sh [image]   (default mnema-talk:local; `make backup-drill`)
 #   DRILL_PORT=58190  host port for the app
+#   FROM_VERSION=0.9.0  cross-version mode: run and back up on that released
+#                     image, restore into [image] with scripts/restore.sh, let
+#                     it migrate, verify, then check that the released image
+#                     refuses to start on the migrated data (downgrade guard).
+#                     A registry outage fails the drill after bounded retries.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=scripts/drill-common.sh
+source "$ROOT/scripts/drill-common.sh"
+# shellcheck source=scripts/backup-drill-downgrade.sh
+source "$ROOT/scripts/backup-drill-downgrade.sh"
 IMAGE="${1:-mnema-talk:local}"
+START_IMAGE="$IMAGE"
+if [ -n "${FROM_VERSION:-}" ]; then
+  FROM_VERSION="$(drill_resolve_versions "$FROM_VERSION")" || exit 1
+  START_IMAGE="$REGISTRY_IMAGE:$FROM_VERSION"
+  drill_pull_image "$START_IMAGE"
+  echo "==> cross-version: back up on $START_IMAGE, restore into $IMAGE"
+fi
 PORT="${DRILL_PORT:-58190}"
 BASE="http://127.0.0.1:$PORT"
 ADMIN_PASSWORD="drill-$(openssl rand -hex 8)"
@@ -26,7 +42,7 @@ export BACKUP_DIR="$DEPLOY/backups"
 cp "$ROOT/docker-compose.yml" "$DEPLOY/"
 cp -R "$ROOT/scripts" "$DEPLOY/scripts"
 cat >"$DEPLOY/.env" <<EOF
-MNEMA_IMAGE=$IMAGE
+MNEMA_IMAGE=$START_IMAGE
 APP_ENV=production
 PORT=$PORT
 PUBLIC_URL=$BASE
@@ -114,6 +130,7 @@ login() {
     --data "{\"username\":\"Herzog\",\"password\":\"$ADMIN_PASSWORD\"}" \
     "$BASE/api/auth/login" >/dev/null
 }
+set_image() { sed -i.bak "s|^MNEMA_IMAGE=.*|MNEMA_IMAGE=$1|" .env && rm -f .env.bak; }
 api() { curl -fsS -b "$COOKIES" -H "Origin: $BASE" "$@"; }
 post_message() {
   api -H 'Content-Type: application/json' --data "{\"content\":\"$1\"}" \
@@ -121,7 +138,7 @@ post_message() {
 }
 messages() { api "$BASE/api/channels/$CHANNEL/messages?limit=100" | jq -r '.. | .content? // empty'; }
 
-echo "==> starting $IMAGE"
+echo "==> starting $START_IMAGE"
 docker compose up -d --no-build --wait --wait-timeout 180
 login
 CHANNEL="$(api "$BASE/api/channels" | jq -r '[.categories[].channels[], .uncategorized[]] | map(select(.type == "text")) | first | .id')"
@@ -145,6 +162,13 @@ echo "==> changing data after the backup"
 login
 post_message "$AFTER"
 
+if [ "$START_IMAGE" != "$IMAGE" ]; then
+  # The operator restores into the new version: the app is stopped, the image
+  # switched, and the first start of the new image migrates the restored data.
+  docker compose stop -t 60 app >/dev/null
+  set_image "$IMAGE"
+fi
+
 echo "==> restore.sh --verify"
 scripts/restore.sh "$SNAPSHOT" --verify
 
@@ -160,4 +184,11 @@ if grep -qx "$AFTER" <<<"$current"; then echo "message from after the backup sur
 api "$BASE$MEDIA_URL" -o "$DEPLOY/restored.bin"
 cmp -s "$DEPLOY/payload.bin" "$DEPLOY/restored.bin" || { echo "restored upload differs" >&2; exit 1; }
 
-echo "==> backup drill passed"
+if [ "$START_IMAGE" != "$IMAGE" ]; then
+  echo "==> the new image migrated the restored data"
+  check_migrated "$ROOT"
+  check_downgrade_refused "$START_IMAGE" "$IMAGE"
+  [ "$(messages | grep -cx "$BEFORE")" = 1 ] || { echo "data not intact after the refused downgrade" >&2; exit 1; }
+fi
+
+echo "==> backup drill passed${FROM_VERSION:+ ($FROM_VERSION -> restore into $IMAGE) in ${SECONDS}s}"
