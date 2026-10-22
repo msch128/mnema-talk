@@ -8,7 +8,7 @@
 CREATE TABLE message_edits (
     id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     message_id  UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
-    editor_id   UUID NOT NULL REFERENCES users(id),
+    editor_id   UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     content     TEXT NOT NULL,
     edited_at   TIMESTAMPTZ NOT NULL,
     replaced_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
