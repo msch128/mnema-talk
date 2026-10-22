@@ -28,7 +28,8 @@ test('admin actions appear in the audit log, without secrets, and only for those
     await signIn(a, ADMIN_USER, ADMIN_PASSWORD)
     const role = await apiFetch(a, 'POST', '/api/admin/roles', { name: ROLE, permissions: 0 })
     expect(role.status).toBe(201)
-    const invite = await apiFetch(a, 'POST', '/api/admin/invites', { code: `geheim-${suffix}` })
+    // 16+ characters: shorter custom codes need a digit and the suffix may have none.
+    const invite = await apiFetch(a, 'POST', '/api/admin/invites', { code: `geheim-${suffix}-audit` })
     expect(invite.status).toBe(201)
 
     await a.goto('/admin/audit')
@@ -45,7 +46,7 @@ test('admin actions appear in the audit log, without secrets, and only for those
 
     // The invite code never reaches the log.
     await a.locator('[data-testid^="audit-entry-"]', { hasText: 'Einladung erstellt' }).first().getByRole('button').click()
-    await expect(a.locator('pre').first()).not.toContainText(`geheim-${suffix}`)
+    await expect(a.locator('pre').first()).not.toContainText(`geheim-${suffix}-audit`)
 
     // A member without the permission neither sees the tab nor the API.
     await b.goto('/')

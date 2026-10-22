@@ -1,5 +1,5 @@
 import type { Page, Browser } from '@playwright/test'
-import { apiFetch, awaitApiBudget, responseString, responseUserId, bounds, suiteMember } from './helpers'
+import { apiFetch, awaitApiBudget, responseString, responseUserId, bounds, suiteMember, leaveTalks, trackPeerConnections, expectTalkLive } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
@@ -107,6 +107,7 @@ async function twoMembers(browser: Browser, tag: string, { pip = false, sound = 
   const aCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   for (const ctx of [aCtx, bCtx]) await ctx.addInitScript(sound ? fakeDisplayMediaWithSound : fakeDisplayMedia)
+  for (const ctx of [aCtx, bCtx]) await ctx.addInitScript(trackPeerConnections)
   if (pip) await aCtx.addInitScript(fakePictureInPicture)
   const a = await aCtx.newPage()
   const b = await bCtx.newPage()
@@ -141,7 +142,7 @@ async function twoMembers(browser: Browser, tag: string, { pip = false, sound = 
   for (const page of [a, b]) {
     await expect(page.getByRole('button', { name: 'Verlassen' }).first()).toBeVisible()
   }
-  return { a, b, bId, bName, channel, close: async () => { await aCtx.close(); await bCtx.close() } }
+  return { a, b, bId, bName, channel, close: async () => { await leaveTalks([a, b]); await aCtx.close(); await bCtx.close() } }
 }
 
 test('the streamer sees who watches their screen share', async ({ browser }) => {
@@ -221,6 +222,7 @@ test('the grid fits the window and can hide participants without video', async (
   await expect(a.getByTestId('no-video-hint')).toBeVisible({ timeout: 15_000 })
   // The choice is remembered across a reload.
   await a.reload()
+  await expectTalkLive(a)
   await expect(a.getByTestId('hide-no-video')).toHaveAttribute('aria-pressed', 'true', { timeout: 20_000 })
   await a.getByTestId('no-video-hint').getByRole('button', { name: 'Alle Teilnehmer zeigen' }).click()
   await expect(a.getByTestId('talk-grid').locator('[data-participant-tile]')).toHaveCount(2)

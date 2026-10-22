@@ -1,5 +1,5 @@
 import type { Browser, Page } from '@playwright/test'
-import { apiFetch, responseString, responseUserId, suiteMember, trackPeerConnections } from './helpers'
+import { apiFetch, responseString, responseUserId, suiteMember, trackPeerConnections, leaveTalks } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
@@ -111,6 +111,7 @@ test('the media key rotates on its own and audio keeps flowing across it', async
   }
   // No reconnect was needed for any of it.
   expect(await committer.evaluate(() => window.__pcs.length)).toBe(connections)
+  await leaveTalks(pages)
   await adminCtx.close()
   await memberCtx.close()
 })
@@ -137,6 +138,7 @@ test('a member that showed no sign of life is rekeyed out and is let back in whe
   await committer.waitForTimeout(9000)
   expect(await sameCode(pages)).toBe(back)
   await hearEachOther(pages)
+  await leaveTalks(pages)
   await adminCtx.close()
   await memberCtx.close()
 })

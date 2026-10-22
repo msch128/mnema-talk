@@ -122,7 +122,50 @@ const ghost = (page: Page) => page.getByTestId('drag-ghost')
 const indicator = (page: Page) => page.locator('[data-drop-indicator]')
 const tail = (page: Page) => nav(page).locator('[data-drop-tail]')
 
+// ---- Stable sidebar ----
+
+/**
+ * Resolves with the number of voice participants in the first voice_snapshot the
+ * server sends on this page's WebSocket. Call before the page navigates.
+ * Earlier specs leave callers in Talks and a dropped caller stays listed for the
+ * 30 s voice grace period; the rows below it then jump up by the height of the
+ * participants, in the middle of a measured mouse action.
+ */
+function firstVoiceSnapshot(page: Page): Promise<number> {
+  return new Promise((resolve) => {
+    page.on('websocket', (ws) => {
+      ws.on('framereceived', ({ payload }) => {
+        if (typeof payload !== 'string') return
+        const event: unknown = JSON.parse(payload)
+        if (typeof event !== 'object' || event === null || !('type' in event) || event.type !== 'voice_snapshot') return
+        const rooms = 'payload' in event && typeof event.payload === 'object' && event.payload ? Object.values(event.payload) : []
+        resolve(rooms.reduce<number>((n, room) => n + (typeof room === 'object' && room ? Object.keys(room).length : 0), 0))
+      })
+    })
+  })
+}
+
+/** Waits until the snapshot is applied and every listed caller has left. */
+async function expectNoVoiceUsers(page: Page, snapshotUsers: Promise<number>) {
+  const users = page.locator('nav [data-voice-user]')
+  if (await snapshotUsers > 0) await expect(users.first()).toBeAttached()
+  // The longest a dropped caller stays listed is the 30 s grace period.
+  await expect(users).toHaveCount(0, { timeout: 45_000 })
+}
+
 // ---- Real mouse drags ----
+
+/** Moves the held pointer onto `locator` as it is right now (bounds read immediately before the move). */
+async function moveOnto(page: Page, locator: Locator, x: number, yRatio: number, steps = 1) {
+  const b = await bounds(locator)
+  await page.mouse.move(b.x + x, b.y + b.height * yRatio, { steps })
+}
+
+/** Puts the pointer on `locator` once it has stopped moving, then presses: the press lands on that row. */
+async function pressOn(page: Page, locator: Locator) {
+  await locator.hover({ position: { x: 30, y: 12 } })
+  await page.mouse.down()
+}
 
 /**
  * Presses on `source`, moves past the drag threshold and on to `ratio` of the
@@ -145,9 +188,7 @@ async function dragTo(page: Page, source: Locator, target: Locator, ratio: numbe
   await page.mouse.down()
   await page.mouse.move(x + 2, y + 6, { steps: 3 })
   await expect(ghost(page)).toBeVisible()
-  const t = await bounds(target)
-  if (!t) throw new Error('Expected drop target bounds')
-  await page.mouse.move(t.x + 40, t.y + t.height * ratio, { steps: 12 })
+  await moveOnto(page, target, 40, ratio, 12)
 }
 
 /** A full drag and drop that saves; resolves once the server answered. */
@@ -183,6 +224,7 @@ test.beforeAll(async ({ browser }) => {
   memberCtx = await browser.newContext({ viewport: { width: 1280, height: 1500 } })
   admin = await adminCtx.newPage()
   member = await memberCtx.newPage()
+  const adminVoice = firstVoiceSnapshot(admin)
   admin.on('request', (req) => { if (isLayoutSave(req)) layoutSaves++ })
   for (const page of [admin, member]) page.on('pageerror', (err) => pageErrors.push(err.message))
 
@@ -200,6 +242,8 @@ test.beforeAll(async ({ browser }) => {
     ids[key] = responseString(res, 'id')
   }
   await resetLayout(admin)
+  // Start from a sidebar that no longer changes under the mouse.
+  await expectNoVoiceUsers(admin, adminVoice)
 
   const invite = await apiFetch(admin, 'POST', '/api/admin/invites', { max_uses: 1 })
   expect(invite.status).toBe(201)
@@ -208,6 +252,9 @@ test.beforeAll(async ({ browser }) => {
     username: MEMBER, password: MEMBER_PASSWORD, invite_code: responseString(invite, 'code'),
   })
   expect(reg.status).toBe(201)
+  const memberVoice = firstVoiceSnapshot(member)
+  await member.reload()
+  await expectNoVoiceUsers(member, memberVoice)
 })
 
 test.afterAll(async () => {
@@ -292,8 +339,7 @@ test('the empty tail of the list appends to the last group without opening it', 
   await admin.waitForTimeout(1000)
   await expect(toggle(admin, 'G')).toHaveAttribute('aria-expanded', 'false')
   // ... while holding over its header does; Escape closes it again.
-  const g = await bounds(header(admin, 'G'))
-  await admin.mouse.move(g.x + 40, g.y + g.height * 0.6, { steps: 4 })
+  await moveOnto(admin, header(admin, 'G'), 40, 0.6, 4)
   await expect(toggle(admin, 'G')).toHaveAttribute('aria-expanded', 'true')
   await admin.keyboard.press('Escape')
   await admin.mouse.up()
@@ -319,9 +365,11 @@ test('drag feedback: indicator, Escape cancels, a click still opens', async () =
   await dragTo(admin, row(admin, 'a1'), row(admin, 'a3'), 0.8)
   await expect(indicator(admin)).toHaveCount(1)
   // The line sits at the bottom edge of a3's row.
-  const line = await bounds(indicator(admin))
-  const a3 = await bounds(row(admin, 'a3'))
-  expect(Math.abs(line.y + line.height / 2 - (a3.y + a3.height))).toBeLessThanOrEqual(4)
+  await expect.poll(async () => {
+    const line = await bounds(indicator(admin))
+    const a3 = await bounds(row(admin, 'a3'))
+    return Math.abs(line.y + line.height / 2 - (a3.y + a3.height))
+  }, { message: 'indicator sits at the bottom edge of a3' }).toBeLessThanOrEqual(4)
   await expect(row(admin, 'a1').locator('..')).toHaveClass(/opacity-40/)
 
   // Escape cancels: nothing moves, nothing is saved, releasing does nothing.
@@ -341,10 +389,8 @@ test('drag feedback: indicator, Escape cancels, a click still opens', async () =
   await expectLayout(admin, SEED)
 
   // A plain click (even with a small wobble below the threshold) navigates.
-  const g1 = await bounds(row(admin, 'g1'))
-  await admin.mouse.move(g1.x + 30, g1.y + g1.height / 2)
-  await admin.mouse.down()
-  await admin.mouse.move(g1.x + 32, g1.y + g1.height / 2 + 1)
+  await pressOn(admin, row(admin, 'g1'))
+  await row(admin, 'g1').hover({ position: { x: 32, y: 13 } })
   await admin.mouse.up()
   await expect(admin).toHaveURL(new RegExp(`/c/${idFor('g1')}$`))
   await expect(admin.getByRole('textbox', { name: `Nachricht an #${CHANNELS.g1.name}` })).toBeVisible()
@@ -563,11 +609,8 @@ test('members cannot move anything', async () => {
   member.on('request', count)
 
   // Dragging does nothing: no ghost, no indicator, no save.
-  const s = await bounds(row(member, 'a1'))
-  const t = await bounds(row(member, 'a3'))
-  await member.mouse.move(s.x + 30, s.y + s.height / 2)
-  await member.mouse.down()
-  await member.mouse.move(t.x + 30, t.y + t.height * 0.8, { steps: 12 })
+  await pressOn(member, row(member, 'a1'))
+  await moveOnto(member, row(member, 'a3'), 30, 0.8, 12)
   await expect(ghost(member)).toHaveCount(0)
   await expect(indicator(member)).toHaveCount(0)
   await member.mouse.up()
