@@ -3,7 +3,7 @@
 # SeaweedFS, runs Playwright against it and tears everything down.
 # Usage: e2e/run.sh   (or `make e2e`)
 #   SKIP_BUILD=1          reuse web/dist and bin/mnema-talk-e2e
-#   E2E_INSTALL_BROWSER=1 also run `playwright install --with-deps chromium`
+#   E2E_INSTALL_BROWSER=1 also run `playwright install --with-deps chromium webkit`
 #   E2E_WEBRTC_ALL_INTERFACES=1 include VM/VPN interfaces in the browser ICE test
 #   E2E_WEBRTC_UDP_MUX_PORT=0    test legacy per-peer ports instead of the shared UDP port
 # Runs do not collide: the compose project is unique per run (mnema-e2e-<pid>) and
@@ -80,7 +80,7 @@ fi
 echo "==> installing e2e dependencies"
 (cd e2e && npm ci --no-audit --no-fund)
 if [ "${E2E_INSTALL_BROWSER:-0}" = "1" ]; then
-  (cd e2e && npx playwright install --with-deps chromium)
+  (cd e2e && npx playwright install --with-deps chromium webkit)
 fi
 
 echo "==> project $PROJECT: postgres :$PG_PORT, s3 :$S3_PORT, app :$APP_PORT, udp :$UDP_MIN-$UDP_MAX"

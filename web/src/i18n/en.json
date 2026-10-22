@@ -158,6 +158,7 @@
     "subtitle": "Private community",
     "menu": "Menu",
     "channels": "Channels",
+    "openChannels": "Open channel list",
     "noChannels": "No channels",
     "deleteCategory": "Delete category",
     "deleteChannel": "Delete channel",

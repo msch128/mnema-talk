@@ -50,7 +50,7 @@ defineExpose({ el: row })
     tabindex="0"
     role="article"
     :class="[
-      'relative pl-[72px] pr-12 py-0.5 hover:bg-mnema-surface/50 transition-colors group focus:outline-none focus-visible:bg-mnema-surface/40',
+      'relative pl-[72px] pr-12 max-md:pl-[60px] max-md:pr-3 py-0.5 hover:bg-mnema-surface/50 transition-colors group focus:outline-none focus-visible:bg-mnema-surface/40',
       grouped ? '' : 'mt-[17px] first:mt-2',
       highlighted ? 'msg-flash' : '',
       mentionsMe ? 'msg-mentions-me' : ''
@@ -59,7 +59,7 @@ defineExpose({ el: row })
     <!-- Hover Quick Actions Bar -->
     <div
       :class="[
-        'absolute right-4 -top-4 items-center gap-0.5 bg-mnema-elevated border border-mnema-border rounded-lg p-1 shadow-lg z-20 before:absolute before:-inset-2 before:content-[\'\'] before:-z-10',
+        'absolute right-4 max-md:right-2 -top-4 items-center gap-0.5 bg-mnema-elevated border border-mnema-border rounded-lg p-1 shadow-lg z-20 before:absolute before:-inset-2 before:content-[\'\'] before:-z-10',
         pickerId === msg.id ? 'flex' : 'hidden group-hover:flex group-focus-within:flex'
       ]"
     >
@@ -69,7 +69,7 @@ defineExpose({ el: row })
           type="button"
           @click.stop="emit('toggle-picker', msg.id)"
           :class="[
-            'p-1.5 rounded transition',
+            'p-1.5 rounded transition max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center',
             pickerId === msg.id
               ? 'bg-mnema-surface text-amber-400'
               : 'hover:bg-mnema-surface text-mnema-tertiary hover:text-amber-400'
@@ -91,7 +91,7 @@ defineExpose({ el: row })
       <button
         type="button"
         @click.stop="emit('reply')"
-        class="p-1.5 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
+        class="p-1.5 max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
         v-tooltip="$t('chat.reply')"
       >
         <Reply class="w-4 h-4" />
@@ -102,7 +102,7 @@ defineExpose({ el: row })
         v-if="isOwn"
         type="button"
         @click.stop="emit('edit')"
-        class="p-1.5 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-accent transition"
+        class="p-1.5 max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-accent transition"
         v-tooltip="$t('chat.edit')"
       >
         <Pencil class="w-4 h-4" />
@@ -112,7 +112,7 @@ defineExpose({ el: row })
       <button
         type="button"
         @click.stop="emit('more', $event)"
-        class="p-1.5 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
+        class="p-1.5 max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
         v-tooltip="$t('chat.moreActions')"
       >
         <MoreHorizontal class="w-4 h-4" />
@@ -133,7 +133,7 @@ defineExpose({ el: row })
       v-else
       :user="msg"
       size="md"
-      :class="['!absolute left-4 cursor-pointer hover:opacity-85 transition', msg.reply_to ? 'top-6' : 'top-1']"
+      :class="['!absolute left-4 max-md:left-2 cursor-pointer hover:opacity-85 transition', msg.reply_to ? 'top-6' : 'top-1']"
       @click="emit('open-profile')"
     />
 

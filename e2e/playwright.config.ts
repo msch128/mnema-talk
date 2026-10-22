@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test'
 
 const baseURL = process.env.E2E_BASE_URL || 'http://127.0.0.1:58080'
 
@@ -27,5 +27,10 @@ export default defineConfig({
       ],
     },
   },
-  projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
+  projects: [
+    { name: 'chromium', testIgnore: /mobile\.spec\.ts/, use: { browserName: 'chromium' } },
+    // Phone layout under device emulation (touch, small screen, safe areas).
+    { name: 'mobile-chromium', testMatch: /mobile\.spec\.ts/, use: { ...devices['Pixel 7'], locale: 'de-DE' } },
+    { name: 'mobile-webkit', testMatch: /mobile\.spec\.ts/, use: { ...devices['iPhone 15'], locale: 'de-DE', launchOptions: {} } },
+  ],
 })

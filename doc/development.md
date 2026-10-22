@@ -64,8 +64,9 @@ make postgres-upgrade-drill # the one-time PostgreSQL 17 -> 18 move
 throwaway PostgreSQL and SeaweedFS with Docker on loopback ports, runs the
 Playwright specs in `e2e/tests/` with fake camera/microphone devices and tears
 everything down again. `SKIP_BUILD=1` reuses the last build,
-`E2E_INSTALL_BROWSER=1` installs Chromium first and `E2E_ONLY=<spec>` runs one
-file.
+`E2E_INSTALL_BROWSER=1` installs Chromium and WebKit first and `E2E_ONLY=<spec>` runs one
+file. `tests/mobile.spec.ts` runs only in the `mobile-chromium` (Pixel 7) and
+`mobile-webkit` (iPhone 15) projects, which emulate a phone; the other specs run in `chromium`.
 
 Runs do not collide, so several can go at once (other worktrees, agents):
 every run uses its own Docker Compose project (`mnema-e2e-<pid>`) and free

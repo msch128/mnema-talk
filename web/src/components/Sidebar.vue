@@ -27,6 +27,7 @@ import { currentRoute, navigate } from '../lib/router'
 import {
   useMenuState, buildChannelItems, buildCategoryItems, buildMemberItems, buildSidebarItems
 } from '../composables/useNavMenus'
+import { useCompactLayout } from '../composables/useCompactLayout'
 import { useChannelAdminActions } from '../composables/useChannelAdminActions'
 import { useChannelLayout } from '../composables/useChannelLayout'
 import { useSidebarReorder, UNCATEGORIZED_SECTION } from '../composables/useSidebarReorder'
@@ -194,7 +195,11 @@ function handleTextClick(channel: Channel) {
   voiceStore.activeView = 'chat'
 }
 
+const { closeNav } = useCompactLayout()
+
 function handleChannelClick(channel: Channel) {
+  // Also when the channel is already open: the drawer has done its job.
+  closeNav()
   if (channel.type === 'voice') handleVoiceClick(channel)
   else handleTextClick(channel)
 }

@@ -22,7 +22,7 @@ incompatibly only in a major release. What the 1.0 label does and does not say:
 | Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), backup and restore, upgrade from the supported releases (0.8.16 and 0.9.x), cosign-signed images | Supported |
 | Desktop client on Windows | Experimental (unsigned, no Authenticode) |
 | Desktop client on macOS and Linux | Experimental (DEV builds, not qualified on real hardware; not notarised) |
-| Mobile clients, text end-to-end encryption | Not offered. Text stays readable by the server, by design. |
+| Native mobile apps, text end-to-end encryption | Not offered. Text stays readable by the server, by design. The browser app has a phone layout (channel list as a drawer, full-screen thread and member list, 44 px touch targets, safe areas) that is covered by the `mobile-*` e2e projects in Chromium and WebKit device emulation, not by tests on real phones. |
 
 **Internal security review, 2026-10-22.** Before 1.0 the code was reviewed in
 six lanes (authentication and sessions, permissions, content and media,

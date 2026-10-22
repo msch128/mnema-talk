@@ -47,7 +47,7 @@ function handleKeyDown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="px-4 pb-1 flex-shrink-0">
+  <div class="px-4 max-md:px-2 pb-1 flex-shrink-0">
     <SlashCommandBar
       v-if="slash.picked.value && canSend"
       :command="slash.picked.value"
@@ -60,7 +60,7 @@ function handleKeyDown(e: KeyboardEvent) {
     <ReplyComposerBar v-if="replyingTo" :target="replyingTo" @cancel="emit('cancel-reply')" />
     <div
       :class="[
-        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 flex items-center gap-2 shadow-sm focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
+        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 max-md:py-1 max-md:pr-1 flex items-center gap-1 sm:gap-2 shadow-sm focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
         replyingTo ? 'rounded-b-lg' : 'rounded-lg'
       ]"
     >
@@ -95,7 +95,7 @@ function handleKeyDown(e: KeyboardEvent) {
         v-if="canAttach"
         @click="fileInput?.click()"
         :disabled="uploading || sending"
-        class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition disabled:opacity-50"
+        class="w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition disabled:opacity-50"
         v-tooltip="$t('chat.upload')"
       >
         <Plus class="w-5 h-5" />
@@ -128,7 +128,7 @@ function handleKeyDown(e: KeyboardEvent) {
       <button
         @click="emit('send')"
         :disabled="!canSend || !text.trim() || uploading || sending"
-        class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold transition disabled:opacity-20 disabled:bg-mnema-surface disabled:text-mnema-tertiary"
+        class="w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center flex-shrink-0 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold transition disabled:opacity-20 disabled:bg-mnema-surface disabled:text-mnema-tertiary"
         v-tooltip="$t('chat.send')"
       >
         <ArrowUp class="w-4 h-4" />

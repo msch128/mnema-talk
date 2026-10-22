@@ -7,6 +7,7 @@ import { useChatStore } from '../stores/chat'
 import TalkParticipants from './TalkParticipants.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import { headerButton } from './talkButtons'
+import NavDrawerButton from './NavDrawerButton.vue'
 
 // The Talk's header: its name, who is there and for how long, and the
 // buttons for the Talk's chat, "only participants with video" and the member list.
@@ -26,8 +27,9 @@ const chatStore = useChatStore()
 </script>
 
 <template>
-  <header class="h-12 px-4 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 flex-shrink-0 z-10">
+  <header class="h-12 px-4 max-md:pl-1 max-md:pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 flex-shrink-0 z-10">
     <div class="flex items-center gap-3 min-w-0">
+      <NavDrawerButton />
       <div
         v-if="!narrow"
         class="w-8 h-8 rounded-md bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint flex-shrink-0"

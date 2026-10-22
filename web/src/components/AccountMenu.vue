@@ -14,6 +14,7 @@ import { usePermissionsStore } from '../stores/permissions'
 import { platform } from '../lib/platform'
 import { useWebRTC } from '../composables/useWebRTC'
 import { locale, SUPPORTED, t } from '../i18n'
+import { useCompactLayout } from '../composables/useCompactLayout'
 import UserAvatar from './UserAvatar.vue'
 
 const props = defineProps({ trigger: { type: Object as PropType<HTMLElement | null>, default: null } })
@@ -42,8 +43,12 @@ function close(returnFocus = true) {
   if (returnFocus) props.trigger?.focus()
 }
 
+const { closeNav } = useCompactLayout()
+
 function run(fn: () => void) {
   close()
+  // On a phone the drawer holding this menu makes way for what was chosen.
+  closeNav()
   fn()
 }
 

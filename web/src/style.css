@@ -142,3 +142,61 @@
 .msg-mentions-me:hover {
   background-color: rgba(224, 162, 58, 0.11);
 }
+
+/* Phones and installed web apps ------------------------------------------ */
+
+/* The page height follows the visible area: --app-h is set while an on-screen
+   keyboard covers part of the layout viewport (see useCompactLayout). */
+#app {
+  height: var(--app-h, 100%);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  box-sizing: border-box;
+}
+
+/* Fixed panels sit outside #app's padding and keep clear of notch and home indicator themselves. */
+@layer utilities {
+  .safe-pad {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Dialog scrim: 1rem of air, more where a notch or the home indicator is. */
+@layer components {
+  .dialog-scrim {
+    padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  }
+}
+
+@media (pointer: coarse) {
+  /* iOS zooms into any field below 16px */
+  input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  /* Small controls keep their look but get a 44px touch area (no layout change). */
+  button,
+  [role='button'],
+  [role='menuitem'],
+  [role='tab'] {
+    position: relative;
+  }
+  button::after,
+  [role='button']::after,
+  [role='menuitem']::after,
+  [role='tab']::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+  /* A tap is not a hover: tooltips would stick after it. */
+  .mnema-tooltip { display: none; }
+}
