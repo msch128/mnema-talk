@@ -1,0 +1,44 @@
+e2e/tests/key-lifecycle.spec.ts
+  s_06fcde5dbef956::t_89c807a9014544 2,114,141
+e2e/tests/helpers.ts
+  s_06fcde5dbef956::t_89c807a9014544 2,97,103-115
+  s_06fcde5dbef956::t_28ef51a13cb966 98-102,116-117
+e2e/tests/screenshare.spec.ts
+  s_06fcde5dbef956::t_89c807a9014544 2,120
+e2e/tests/talk-extras.spec.ts
+  s_06fcde5dbef956::t_89c807a9014544 145
+  s_06fcde5dbef956::t_2f4ffb7565d50b 110
+  s_06fcde5dbef956::t_28ef51a13cb966 2,225
+e2e/tests/voice-chat.spec.ts
+  s_06fcde5dbef956::t_28ef51a13cb966 2,30,134
+  s_06fcde5dbef956::t_89c807a9014544 142
+e2e/tests/sidebar-layout.spec.ts
+  s_06fcde5dbef956::t_86f83f840b39a5 191
+  s_06fcde5dbef956::t_708bb66567e05d 227,245-246,257,342,368-372,392-393,612-613
+  s_06fcde5dbef956::t_fc14a8c7436114 255-256
+  s_06fcde5dbef956::t_53d0d7d9bb5ff3 125-155,158-168
+  s_06fcde5dbef956::t_692dc55ec28983 169
+e2e/tests/stage-switch.spec.ts
+  s_06fcde5dbef956::t_89c807a9014544 104
+  s_06fcde5dbef956::t_91bda1ebbd7b40 2
+e2e/tests/late-join.spec.ts
+  s_06fcde5dbef956::t_89c807a9014544 2,156,199
+e2e/tests/audit.spec.ts
+  s_06fcde5dbef956::t_5c9f792aef8fd5 31-32,49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3fc2d8bf56616df42dafee4c9b5854aaef72d2d8",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
