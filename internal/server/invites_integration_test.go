@@ -23,6 +23,8 @@ func TestAdminInviteValidation(t *testing.T) {
 		want int
 	}{
 		{"code too short", map[string]any{"code": "abc"}, http.StatusBadRequest},
+		{"guessable word", map[string]any{"code": "welcome2026"}, http.StatusBadRequest},
+		{"eleven characters", map[string]any{"code": "k7Rm2xQv9pL"}, http.StatusBadRequest},
 		{"code with spaces", map[string]any{"code": "has spaces"}, http.StatusBadRequest},
 		{"code too long", map[string]any{"code": strings.Repeat("a", 65)}, http.StatusBadRequest},
 		{"max_uses zero", map[string]any{"max_uses": 0}, http.StatusBadRequest},
@@ -59,13 +61,13 @@ func TestAdminListsAndDeletesInvites(t *testing.T) {
 	if created.ExpiresAt == nil || time.Until(*created.ExpiresAt) < time.Hour || time.Until(*created.ExpiresAt) > 2*time.Hour {
 		t.Fatalf("expiry not about two hours ahead: %v", created.ExpiresAt)
 	}
-	if res := admin.post("/api/admin/invites", map[string]any{"code": "second-code"}); res.status != http.StatusCreated {
+	if res := admin.post("/api/admin/invites", map[string]any{"code": "second-code-xk42"}); res.status != http.StatusCreated {
 		t.Fatalf("second invite: %d %s", res.status, res.body)
 	}
 
 	var list []auth.Invite
 	admin.get("/api/admin/invites").decode(t, &list)
-	if len(list) != 2 || list[0].Code != "second-code" || list[1].ID != created.ID {
+	if len(list) != 2 || list[0].Code != "second-code-xk42" || list[1].ID != created.ID {
 		t.Fatalf("list not newest first: %+v", list)
 	}
 	if list[0].MaxUses != nil || list[0].ExpiresAt != nil {
@@ -101,14 +103,14 @@ func TestExpiredInviteCannotRegister(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
 
-	res := admin.post("/api/admin/invites", map[string]any{"code": "soon-gone", "expires_in_hours": 1})
+	res := admin.post("/api/admin/invites", map[string]any{"code": "soon-gone-q7x9z", "expires_in_hours": 1})
 	if res.status != http.StatusCreated {
 		t.Fatalf("create: %d %s", res.status, res.body)
 	}
-	if _, err := a.db.Exec(context.Background(), `UPDATE invites SET expires_at = now() - interval '1 minute' WHERE code = 'soon-gone'`); err != nil {
+	if _, err := a.db.Exec(context.Background(), `UPDATE invites SET expires_at = now() - interval '1 minute' WHERE code = 'soon-gone-q7x9z'`); err != nil {
 		t.Fatal(err)
 	}
-	reg := a.anon().post("/api/auth/register", map[string]string{"username": "late", "password": "member-password-123", "invite_code": "soon-gone"})
+	reg := a.anon().post("/api/auth/register", map[string]string{"username": "late", "password": "member-password-123", "invite_code": "soon-gone-q7x9z"})
 	if reg.status != http.StatusBadRequest {
 		t.Fatalf("expired invite registered: %d %s", reg.status, reg.body)
 	}

@@ -47,7 +47,18 @@ details and the limits.
   Unknown, malformed, expired, revoked and used-up codes give byte-identical
   answers, so the endpoint cannot tell an attacker that a code once existed. It
   is rate limited per client address (30 per minute, IPv6 per /64, 429 with
-  `Retry-After`; a code carries about 59 bits, so guessing is hopeless), answers
+  `Retry-After`), for hits and misses alike, so the answer never depends on
+  whether a code exists and nothing is shared between clients (no global brake
+  that one attacker could burn to lock invitees out). Distributed guessing is
+  made infeasible by the codes, not by a limiter: a generated code has 12
+  characters from a 31-character alphabet (about 59 bits), and a custom code must
+  be at least 12 characters with 7 or more distinct ones, mixing letters and
+  digits unless it has 16 or more characters, and not a common word with little
+  around it. Even 2^16 addresses at 30 lookups a minute try about 2^21 codes a
+  minute, which covers about 2^40 in a year, far below the 2^59 of a random code.
+  Older weak custom codes no longer work (preview and registration treat them
+  as unknown); the admin invite list marks them (`weak`: disabled, regenerate).
+  Limits are per client address and, for IPv6, additionally per /48. The endpoint answers
   `Cache-Control: no-store`, and a code is only looked up when it has the shape
   the server issues. The community name is the only thing it discloses and the
   Owner chooses it.
@@ -80,6 +91,10 @@ details and the limits.
   members who may no longer join their Talk are removed from it. A permission
   state that cannot be loaded denies access. Details and the resolution
   order are in [doc/roles-and-permissions.md](doc/roles-and-permissions.md).
+- **Plain-HTTP deployments.** With a production or staging `APP_ENV` and a
+  `PUBLIC_URL` that is not `https://`, session cookies lose `Secure` and the
+  `__Host-` prefix. The server starts anyway, logs a warning and shows it under
+  Admin > System (see `doc/operations.md`).
 - **Sessions.** A signed session token in an `HttpOnly` cookie (`__Host-` prefix
   and `Secure` on HTTPS, `SameSite=Lax`). Each token carries the user's
   `token_version`; changing the password or "log out everywhere"
@@ -177,7 +192,13 @@ details and the limits.
   JS eval; `'wasm-unsafe-eval'` only so the bundled noise filter can compile
   its WebAssembly),
   `frame-ancestors 'none'`, `nosniff`, a restrictive referrer policy and related
-  headers on every response.
+  headers on every response. `style-src` still allows `'unsafe-inline'`, only
+  because the emoji picker library writes a `<style>` element and inline style
+  attributes itself and has no nonce support; the app's own code needs none,
+  and images, fonts, media and connections are same-origin, so injected CSS
+  cannot send data to a third party. Dropping it (a hash for the picker's style
+  text plus a patched or replaced picker, with a browser test that fails on any
+  CSP violation) is planned after 1.0.
 - **Uploads.** File types are detected by content sniffing, not by the
   client-supplied name or MIME type. Risky types (HTML, SVG, scripts, unknown
   binaries, ...) are only ever served as downloads, never rendered inline. Media is
@@ -199,15 +220,21 @@ details and the limits.
   session secret, bound to the user id and the account's token_version, so it survives restarts
   and address changes but not a password change or reset, "log out
   everywhere", an administrator revoking sessions or disabling the account) are checked as
-  usual, while every other device together gets about one password check per
-  minute for the whole account (however many addresses they come from) and is
-  answered 429 otherwise, so a distributed guesser
-  learns next to nothing and the owner on a new phone still gets in. Wrong
+  usual, while every other device gets about one password check per minute per
+  client address and about ten per minute for the whole account, and is answered
+  429 otherwise; refused attempts are not charged to the shared ceiling, so one
+  hostile address cannot use up the budget a legitimate new device needs and a
+  distributed guesser learns next to nothing. (An attacker with as many distinct
+  client addresses as the ceiling allows can still crowd out new-device sign-ins
+  for the 15 minutes of the cap; the owner's known devices and `mnema-talk
+  unlock` are unaffected.) Wrong
   guesses count triple against their address. The cap lasts at most 15
   minutes, and a restart clears all lockouts (they are held in memory). Password
   hashing for login, registration, re-authentication and password changes
-  shares one concurrency limit, so a flood of attempts cannot starve the
-  server. Passwords need at least 10 characters, 14 for the Owner account.
+  shares one concurrency limit; unauthenticated work (login, registration)
+  waits at most two seconds for a slot, with a bounded queue and cancellation
+  when the client disconnects, and otherwise answers 503 with `Retry-After`, so
+  a flood of attempts neither starves the server nor piles up goroutines. Passwords need at least 10 characters, 14 for the Owner account.
   Rate-limit and lockout keys treat an IPv6 /64 as one client. Login attempts
   with a username that cannot exist are rejected before they are tracked, and
   limiter memory is capped. Invite codes are checked before any password

@@ -21,7 +21,7 @@ vi.mock('../lib/confirm', () => ({ confirm: (...args: [path: string, options?: A
 const future = new Date(Date.now() + 3600e3).toISOString()
 const past = new Date(Date.now() - 3600e3).toISOString()
 const invites = () => [
-  { created_at: '2026-01-01T00:00:00Z',  id: "00000000-0000-4000-8000-000000000403", code: 'open-code', max_uses: null, uses_count: 4, expires_at: null },
+  { created_at: '2026-01-01T00:00:00Z',  id: "00000000-0000-4000-8000-000000000403", code: 'open-code', max_uses: null, uses_count: 4, expires_at: null, weak: true },
   { created_at: '2026-01-01T00:00:00Z',  id: "00000000-0000-4000-8000-000000000404", code: 'gone-code', max_uses: 5, uses_count: 0, expires_at: past },
   { created_at: '2026-01-01T00:00:00Z',  id: "00000000-0000-4000-8000-000000000405", code: 'full-code', max_uses: 2, uses_count: 2, expires_at: future },
   { created_at: '2026-01-01T00:00:00Z',  id: "00000000-0000-4000-8000-000000000406", code: 'soon-code', max_uses: 3, uses_count: 1, expires_at: future }
@@ -51,6 +51,8 @@ describe('AdminInvitesTab', () => {
     expect(rows(w)).toHaveLength(4)
     expect(row(w, 'open-code').text()).toContain('Uses: 4 / ∞')
     expect(row(w, 'open-code').text()).toContain('no expiry')
+    expect(row(w, 'open-code').find('[data-testid="invite-weak"]').text()).toBe('Disabled, regenerate')
+    expect(row(w, 'gone-code').find('[data-testid="invite-weak"]').exists()).toBe(false)
     expect(row(w, 'gone-code').text()).toContain('expired')
     expect(row(w, 'full-code').text()).toContain('used up')
     expect(row(w, 'soon-code').text()).toContain('valid until')

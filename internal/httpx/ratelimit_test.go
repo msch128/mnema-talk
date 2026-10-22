@@ -235,3 +235,26 @@ func TestFailuresDuringLockoutDoNotRestartOrEscalateIt(t *testing.T) {
 		t.Fatalf("new breach used wrong tier: locked=%v remaining=%v", locked, retry)
 	}
 }
+
+func TestTryAllowChargesOnlyGrantedHits(t *testing.T) {
+	now := time.Unix(1000, 0)
+	rl := NewRateLimiter(2, time.Minute)
+	rl.now = func() time.Time { return now }
+	for i := 0; i < 2; i++ {
+		if ok, _ := rl.TryAllow("k"); !ok {
+			t.Fatalf("hit %d refused", i)
+		}
+	}
+	for i := 0; i < 50; i++ {
+		if ok, _ := rl.TryAllow("k"); ok {
+			t.Fatal("hit beyond the limit granted")
+		}
+	}
+	if e := rl.entries["k"]; e.count != 2 {
+		t.Fatalf("refused hits were charged: count %d", e.count)
+	}
+	now = now.Add(time.Minute)
+	if ok, _ := rl.TryAllow("k"); !ok {
+		t.Fatal("window did not reset")
+	}
+}

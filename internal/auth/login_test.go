@@ -110,13 +110,13 @@ func TestAccountCapTricklesUnknownDevicesAndKeepsKnownOnes(t *testing.T) {
 	inner := h.verify
 	h.verify = func(ctx context.Context, u, p string) (*User, int, error) { evaluated++; return inner(ctx, u, p) }
 
-	// Unknown devices share one trickle for the whole account (burst 2), no
-	// matter how many addresses they use.
+	// Each unknown address gets a burst of 2, and the whole account a ceiling
+	// of 20 checks, however many addresses guess.
 	for i := 0; i < 50; i++ {
 		postLoginWith(h, fmt.Sprintf("203.0.113.%d", i), "Herzog", "guess")
 	}
-	if evaluated != 2 {
-		t.Fatalf("passwords evaluated for unknown devices: %d, want 2 across all addresses", evaluated)
+	if evaluated != 20 {
+		t.Fatalf("passwords evaluated for unknown devices: %d, want the account ceiling of 20", evaluated)
 	}
 	if code := postLoginWith(h, "203.0.113.200", "Herzog", testPassword).Code; code != http.StatusTooManyRequests {
 		t.Fatalf("owner on a new device once the trickle is spent: got %d, want 429", code)

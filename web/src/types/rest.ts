@@ -164,6 +164,7 @@ export type AuthInvite = {
   id: string
   max_uses: number | null
   uses_count: number
+  weak: boolean
 }
 
 export function isAuthInvite(value: unknown): value is AuthInvite {
@@ -174,6 +175,7 @@ export function isAuthInvite(value: unknown): value is AuthInvite {
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (hasOwn(value, "max_uses") && (isInteger(value["max_uses"]) || value["max_uses"] === null))
     && (hasOwn(value, "uses_count") && isInteger(value["uses_count"]))
+    && (hasOwn(value, "weak") && typeof value["weak"] === 'boolean')
 }
 
 export const decodeAuthInvite = decoder("auth.Invite", isAuthInvite)

@@ -137,6 +137,8 @@ function describeWarning(code: string, value: number | undefined) {
       return { title: t('admin.system.warn.webrtc_reachability.title'), body: t('admin.system.warn.webrtc_reachability.body'), doc: VOICE_DOC }
     case 'webrtc_udp_mux_disabled':
       return { title: t('admin.system.warn.webrtc_udp_mux_disabled.title'), body: t('admin.system.warn.webrtc_udp_mux_disabled.body', { count: value ?? 0 }), doc: `${OPERATIONS_DOC}#voice-webrtc` }
+    case 'insecure_public_url':
+      return { title: t('admin.system.warn.insecure_public_url.title'), body: t('admin.system.warn.insecure_public_url.body'), doc: `${OPERATIONS_DOC}#public_url-and-secure-cookies` }
     case 'voice_unavailable':
       return { title: t('admin.system.warn.voice_unavailable.title'), body: t('admin.system.warn.voice_unavailable.body'), doc: VOICE_DOC }
     default:
