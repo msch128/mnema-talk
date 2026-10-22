@@ -2,6 +2,7 @@ package onboarding
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"time"
@@ -25,10 +26,12 @@ type InvitePreview struct {
 // auth.CreateInvite); anything else is answered without a database lookup.
 var previewCodePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{6,64}$`)
 
+const lookupMissKey = "misses"
+
 // previewInvite handles GET /api/invites/{code}.
 //
 // @Summary Preview an invite
-// @Description Public, no session. Says whether an invite code can still be used and, if so, the community's name and when the code expires. Unknown, expired, revoked and used-up codes all answer the same `{"valid": false}`; nothing else about the invite is revealed. Rate limited per IP (30 per minute, IPv6 per /64).
+// @Description Public, no session. Says whether an invite code can still be used and, if so, the community's name and when the code expires. Unknown, expired, revoked and used-up codes all answer the same `{"valid": false}`; nothing else about the invite is revealed. Rate limited per IP (30 per minute, IPv6 per /64) and by a global budget of 600 failed lookups per hour, after which every lookup answers 429 until the hour ends.
 // @ID previewInvite
 // @Tags Auth
 // @Produce json
@@ -45,6 +48,10 @@ func (h *Handler) previewInvite(w http.ResponseWriter, r *http.Request) error {
 		httpx.WriteJSON(w, http.StatusOK, InvitePreview{})
 		return nil
 	}
+	if exceeded, retry := h.lookupMisses.Exceeded(lookupMissKey); exceeded {
+		httpx.WriteRateLimited(w, retry)
+		return nil
+	}
 	var out InvitePreview
 	var expires *time.Time
 	err := h.DB.QueryRow(r.Context(), `
@@ -54,6 +61,9 @@ func (h *Handler) previewInvite(w http.ResponseWriter, r *http.Request) error {
 		  AND (i.expires_at IS NULL OR i.expires_at > NOW())
 		  AND (i.max_uses IS NULL OR i.uses_count < i.max_uses)`, code).Scan(&out.CommunityName, &expires)
 	if errors.Is(err, pgx.ErrNoRows) {
+		if ok, _ := h.lookupMisses.Allow(lookupMissKey); !ok {
+			slog.Warn("invite preview: global budget of failed lookups used up; answering 429 for the rest of the hour")
+		}
 		httpx.WriteJSON(w, http.StatusOK, InvitePreview{})
 		return nil
 	}

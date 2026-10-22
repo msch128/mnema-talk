@@ -235,3 +235,51 @@ func TestFailuresDuringLockoutDoNotRestartOrEscalateIt(t *testing.T) {
 		t.Fatalf("new breach used wrong tier: locked=%v remaining=%v", locked, retry)
 	}
 }
+
+func TestTryAllowChargesOnlyGrantedHits(t *testing.T) {
+	now := time.Unix(1000, 0)
+	rl := NewRateLimiter(2, time.Minute)
+	rl.now = func() time.Time { return now }
+	for i := 0; i < 2; i++ {
+		if ok, _ := rl.TryAllow("k"); !ok {
+			t.Fatalf("hit %d refused", i)
+		}
+	}
+	for i := 0; i < 50; i++ {
+		if ok, _ := rl.TryAllow("k"); ok {
+			t.Fatal("hit beyond the limit granted")
+		}
+	}
+	if e := rl.entries["k"]; e.count != 2 {
+		t.Fatalf("refused hits were charged: count %d", e.count)
+	}
+	now = now.Add(time.Minute)
+	if ok, _ := rl.TryAllow("k"); !ok {
+		t.Fatal("window did not reset")
+	}
+}
+
+func TestExceededReadsWithoutCharging(t *testing.T) {
+	now := time.Unix(1000, 0)
+	rl := NewRateLimiter(2, time.Minute)
+	rl.now = func() time.Time { return now }
+	if ex, _ := rl.Exceeded("k"); ex {
+		t.Fatal("unknown key exceeded")
+	}
+	rl.Allow("k")
+	if ex, _ := rl.Exceeded("k"); ex {
+		t.Fatal("exceeded below the limit")
+	}
+	rl.Allow("k")
+	ex, retry := rl.Exceeded("k")
+	if !ex || retry != time.Minute {
+		t.Fatalf("exceeded=%v retry=%v, want true and a minute", ex, retry)
+	}
+	if rl.entries["k"].count != 2 {
+		t.Fatal("Exceeded charged the key")
+	}
+	now = now.Add(time.Minute)
+	if ex, _ := rl.Exceeded("k"); ex {
+		t.Fatal("still exceeded after the window")
+	}
+}

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -25,14 +26,24 @@ import (
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: too many password checks are queued; retry after the Retry-After seconds."
+// @Header 503 {integer} Retry-After "Seconds until the client may retry."
 // @Router /api/auth/register [post]
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 	var req RegisterRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
+	if exceeded, retry := h.inviteMisses.Exceeded("misses"); exceeded {
+		httpx.WriteRateLimited(w, retry)
+		return nil
+	}
 	u, err := Register(r.Context(), h.Sessions.DB, strings.TrimSpace(req.Username), req.DisplayName, req.Password, req.InviteCode)
 	if err != nil {
+		if errors.Is(err, ErrInvalidInvite) {
+			h.inviteMisses.Allow("misses")
+		}
+		setRetryIfBusy(w, err)
 		return err
 	}
 	if err := h.Sessions.Start(w, u, 0); err != nil {

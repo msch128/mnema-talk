@@ -935,6 +935,10 @@
           "title": "Sprachkapazität ist begrenzt",
           "body": "WEBRTC_UDP_MUX_PORT=0 gibt jedem Medien-Peer einen eigenen UDP-Port aus dem Bereich ({count} Ports); das begrenzt, wie viele Personen gleichzeitig in Gesprächen sein können. Lass die Einstellung leer, damit sich alle einen Port teilen."
         },
+        "insecure_public_url": {
+          "title": "PUBLIC_URL ist nicht https",
+          "body": "Sitzungs-Cookies werden ohne Secure-Flag und ohne __Host--Präfix gesendet; wer im Netzwerkpfad sitzt, kann sie lesen oder ersetzen. Setze PUBLIC_URL auf die https://-Adresse, die alle öffnen, hinter einem Reverse Proxy, der TLS beendet."
+        },
         "voice_unavailable": {
           "title": "Sprache ist deaktiviert",
           "body": "Die WebRTC-Engine konnte nicht starten, daher kann niemand Sprachkanälen beitreten oder den Bildschirm teilen. Den Grund findest du im Server-Log."
@@ -1039,6 +1043,8 @@
     "inviteCreated": "Einladung erstellt",
     "noInvites": "Noch keine Einladungen.",
     "uses": "Nutzungen: {used} / {max}",
+    "weakInvite": "Leicht zu erraten",
+    "weakInviteHint": "Dieser eigene Code ist kurz oder gebräuchlich und könnte durch Ausprobieren gefunden werden. Lösche ihn und erstelle einen neuen; generierte Codes sind immer sicher.",
     "expired": "abgelaufen",
     "usedUp": "aufgebraucht",
     "validUntil": "gültig bis {date}",

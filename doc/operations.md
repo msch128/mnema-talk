@@ -196,8 +196,18 @@ untrusted hop). Rate limits and the login lockout depend on that address.
   `/24` or an IPv6 `/64` and the listener is not loopback. Other environments
   still log that warning.
 
+### `PUBLIC_URL` and Secure cookies
+
 `PUBLIC_URL` must be the `https://` URL users open; otherwise the CSRF origin
-check rejects their requests and cookies lose `Secure`.
+check rejects their requests and cookies lose `Secure`. With an `http://`
+`PUBLIC_URL` (including the `http://localhost:8080` default) the session cookie
+is also sent without the `__Host-` prefix, while HSTS is still sent in
+production, so someone on the network path of a first plain-HTTP visit can
+read or replace the cookie. In production and staging the server therefore
+logs a startup warning and shows "PUBLIC_URL is not https" under Admin >
+System; it does not refuse to start, so a trusted-LAN install over `http://`
+keeps working. Behind a TLS-terminating reverse proxy, set `PUBLIC_URL` to the
+public `https://` address.
 
 ## TURN (coturn)
 
@@ -572,7 +582,9 @@ wrong guesses on one account from many addresses switch on an account-wide
 cap: while it is on, browsers that signed in to the account before (they hold
 a signed `mnema_dev_*` cookie, valid a year, independent of the IP) sign in
 normally, and every other device together gets about one password check per
-minute for the whole account. The cap lasts at most 15 minutes. All of this
+minute per client address, and about ten per minute for the whole account
+(refused attempts are not charged to that shared ceiling, so one hostile
+address cannot use it up alone). The cap lasts at most 15 minutes. All of this
 state is held in memory; a restart is not needed to clear it:
 
 - **From the host** (works even when nobody can sign in):
@@ -585,7 +597,7 @@ state is held in memory; a restart is not needed to clear it:
   The command runs in a second process, so it leaves a request in the
   database (table `login_unlock_requests`); the running server picks it up
   within a couple of seconds and forgets that account's lockouts (every client
-  address, the account-wide cap, the unknown-device trickle and the
+  address, the account-wide cap, the new-device budgets and the
   password-change lockout). It prints `Login lockouts cleared ...` once the
   server applied it, or says the request stays queued when no server picked it
   up in 15 seconds. Only someone who can reach the database can do this; there

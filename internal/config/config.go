@@ -102,6 +102,18 @@ func (c *Config) WebRTCReachabilityWarning() string {
 	return "WEBRTC_NAT_1TO1_IP and WEBRTC_TURN_URLS are empty: browsers are told the container's own address, so voice and video will likely fail for members outside this host; set WEBRTC_NAT_1TO1_IP to the public (and LAN) address"
 }
 
+// InsecurePublicURLWarning explains the cost of a production-like deployment
+// whose PUBLIC_URL is not https://, or returns "". Session cookies then lose
+// Secure and the __Host- prefix while HSTS is still sent, so a network
+// attacker on a first plain-HTTP visit can read or overwrite them. It is a
+// warning, not a refusal: a LAN-only install over http stays possible.
+func (c *Config) InsecurePublicURLWarning() string {
+	if !c.IsProduction() || c.SecureCookies() {
+		return ""
+	}
+	return "PUBLIC_URL is not https://: session cookies are sent without the Secure flag and the __Host- prefix, so anyone on the network path can read or replace them; set PUBLIC_URL to the https:// URL users open (behind a TLS-terminating reverse proxy) unless this is a trusted LAN"
+}
+
 // IsProduction is the single definition of a production-like deployment:
 // strict secret checks, HSTS, short panic stacks and info-level logs.
 func (c *Config) IsProduction() bool { return c.AppEnv == "production" || c.AppEnv == "staging" }

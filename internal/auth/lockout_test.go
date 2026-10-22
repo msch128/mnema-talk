@@ -19,7 +19,9 @@ func TestClearLoginLockoutScopesToOneAccount(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		h.passwordFails.RecordFailure(uid.String())
 	}
-	h.unknownDevice.Allow("max")
+	h.unknownDevice.Allow("203.0.113.9|max")
+	h.unknownDevice.Allow("203.0.113.9|anna")
+	h.unknownDeviceTotal.Allow("max")
 
 	locked := h.lockedAccounts()
 	if !locked["max"] || !locked["anna"] || len(locked) != 2 {
@@ -35,6 +37,15 @@ func TestClearLoginLockoutScopesToOneAccount(t *testing.T) {
 	}
 	if ok, _ := h.passwordFails.IsLockedOut(uid.String()); ok {
 		t.Error("password lockout survived")
+	}
+	if ok, _ := h.unknownDevice.Exceeded("203.0.113.9|max"); ok || h.unknownDevice.Clear(func(k string) bool { return k == "203.0.113.9|max" }) != 0 {
+		t.Error("per-client new-device budget of max survived")
+	}
+	if h.unknownDeviceTotal.Clear(func(k string) bool { return k == "max" }) != 0 {
+		t.Error("account-wide new-device ceiling of max survived")
+	}
+	if h.unknownDevice.Clear(func(k string) bool { return k == "203.0.113.9|anna" }) != 1 {
+		t.Error("another account's new-device budget was cleared")
 	}
 	if ok, _ := h.loginFailures.IsLockedOut("203.0.113.9|anna"); !ok {
 		t.Error("other account was cleared")

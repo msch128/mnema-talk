@@ -30,7 +30,10 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 		return nil, ErrInvalidInvite
 	}
 
-	hash, err := HashPassword(password)
+	hash, err := hashPasswordCtx(ctx, password)
+	if errors.Is(err, ErrServerBusy) || ctx.Err() != nil {
+		return nil, err
+	}
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
 	}

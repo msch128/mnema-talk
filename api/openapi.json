@@ -331,6 +331,10 @@
           },
           "uses_count": {
             "type": "integer"
+          },
+          "weak": {
+            "description": "Weak is true for a custom code that is easy to guess (too short, a common\nword). New codes like that are refused; old ones keep working.",
+            "type": "boolean"
           }
         },
         "required": [
@@ -339,7 +343,8 @@
           "expires_at",
           "id",
           "max_uses",
-          "uses_count"
+          "uses_count",
+          "weak"
         ],
         "type": "object"
       },
@@ -10984,7 +10989,7 @@
         ]
       },
       "post": {
-        "description": "Ends the member's sessions and connections and blocks signing in, with an optional reason and an optional duration (otherwise for good). The account and its messages stay. By default the invite the account registered with is revoked, so that code cannot create the account again. Needs Ban members and a higher role than the member; the Owner cannot be banned. Kicking someone without a record is Disable.",
+        "description": "Ends the member's sessions and connections and blocks signing in, with an optional reason and an optional duration (otherwise for good). The account and its messages stay. By default the invite the account registered with is revoked, so that code cannot create the account again; that only happens when the caller also holds Manage invites (or is the Owner), otherwise the ban goes through and the invite stays. Needs Ban members and a higher role than the member; the Owner cannot be banned. Kicking someone without a record is Disable.",
         "operationId": "banUser",
         "parameters": [
           {
@@ -12747,7 +12752,7 @@
     },
     "/api/auth/login": {
       "post": {
-        "description": "Sets the session cookie and a signed known-device cookie. Rate limited per IP (60 per 15 min, IPv6 per /64) and by escalating lockouts per address+username. Once the account-wide guess cap trips, devices without the known-device cookie share about one password check per minute for the whole account; everything else is answered 429 without a check. The cap lasts at most 15 minutes. Limited requests answer 429 with Retry-After.",
+        "description": "Sets the session cookie and a signed known-device cookie. Rate limited per IP (60 per 15 min, IPv6 per /64) and by escalating lockouts per address+username. Once the account-wide guess cap trips, devices without the known-device cookie get about one password check per minute per client address (and about ten per minute for the whole account); everything else is answered 429 without a check. The cap lasts at most 15 minutes. Limited requests answer 429 with Retry-After.",
         "operationId": "login",
         "requestBody": {
           "content": {
@@ -12836,6 +12841,24 @@
               }
             },
             "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: too many password checks are queued; retry after the Retry-After seconds.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
           }
         },
         "security": [],
@@ -13217,6 +13240,24 @@
               }
             },
             "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: too many password checks are queued; retry after the Retry-After seconds.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
           }
         },
         "security": [],
@@ -16809,7 +16850,7 @@
     },
     "/api/invites/{code}": {
       "get": {
-        "description": "Public, no session. Says whether an invite code can still be used and, if so, the community's name and when the code expires. Unknown, expired, revoked and used-up codes all answer the same `{\"valid\": false}`; nothing else about the invite is revealed. Rate limited per IP (30 per minute, IPv6 per /64).",
+        "description": "Public, no session. Says whether an invite code can still be used and, if so, the community's name and when the code expires. Unknown, expired, revoked and used-up codes all answer the same `{\"valid\": false}`; nothing else about the invite is revealed. Rate limited per IP (30 per minute, IPv6 per /64) and by a global budget of 600 failed lookups per hour, after which every lookup answers 429 until the hour ends.",
         "operationId": "previewInvite",
         "parameters": [
           {

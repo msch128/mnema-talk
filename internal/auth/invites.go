@@ -25,6 +25,9 @@ type Invite struct {
 	UsesCount int        `json:"uses_count"`
 	ExpiresAt *time.Time `json:"expires_at" format:"date-time" extensions:"x-nullable"`
 	CreatedAt time.Time  `json:"created_at" format:"date-time"`
+	// Weak is true for a custom code that is easy to guess (too short, a common
+	// word). New codes like that are refused; old ones keep working.
+	Weak bool `json:"weak"`
 }
 
 var inviteCodePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{6,64}$`)
@@ -34,6 +37,16 @@ const inviteAlphabet = "abcdefghjkmnpqrstuvwxyz23456789"
 
 // GenerateInviteCode returns a random 12-character code (~59 bits).
 func GenerateInviteCode() (string, error) {
+	for {
+		code, err := randomInviteCode()
+		// A random code that happens to spell a common word is not issued.
+		if err != nil || !IsWeakInviteCode(code) {
+			return code, err
+		}
+	}
+}
+
+func randomInviteCode() (string, error) {
 	b := make([]byte, 12)
 	for i := range b {
 		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(inviteAlphabet))))
@@ -59,6 +72,7 @@ func ListInvites(ctx context.Context, p *db.Pool) ([]Invite, error) {
 		if err := rows.Scan(&inv.ID, &inv.Code, &inv.MaxUses, &inv.UsesCount, &inv.ExpiresAt, &inv.CreatedAt); err != nil {
 			return nil, err
 		}
+		inv.Weak = IsWeakInviteCode(inv.Code)
 		invites = append(invites, inv)
 	}
 	return invites, rows.Err()
@@ -70,6 +84,9 @@ func validateOrGenerateCode(code string) (string, error) {
 	}
 	if !inviteCodePattern.MatchString(code) {
 		return "", httpx.ErrInvalidInput("code must be 6-64 characters: letters, digits, '_' or '-'")
+	}
+	if err := checkCustomCodeStrength(code); err != nil {
+		return "", err
 	}
 	return code, nil
 }
@@ -125,6 +142,7 @@ func CreateInvite(ctx context.Context, p *db.Pool, createdBy uuid.UUID, rawCode 
 	if err != nil {
 		return nil, mapInsertInviteError(err)
 	}
+	inv.Weak = IsWeakInviteCode(inv.Code)
 	return &inv, nil
 }
 
