@@ -6,11 +6,13 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 func TestANewMessageReachesExactlyTheMembersWhoShouldBeTold(t *testing.T) {
@@ -122,6 +124,55 @@ func TestEveryDeviceOfAMemberIsTold(t *testing.T) {
 	e.publish(message(alice, e.general, "hi"))
 	e.pushedTo("/device/bob", 1)
 	e.pushedTo("/device/bob-phone", 1)
+}
+
+// switchablePerms lets a test change what the permission service answers while
+// the delivery service runs.
+type switchablePerms struct{ cur atomic.Pointer[perm.Service] }
+
+func (s *switchablePerms) Snapshot(ctx context.Context) (*perm.Snapshot, error) {
+	return s.cur.Load().Snapshot(ctx)
+}
+
+func TestAHeldPushIsDroppedWhenTheMemberLosesTheChannelInsideTheWindow(t *testing.T) {
+	cases := map[string]func(e *env, sw *switchablePerms, bob member){
+		"access revoked": func(e *env, sw *switchablePerms, bob member) {
+			sw.cur.Store(e.perms.Fork().MemberOverwrite(true, e.general, bob.id, 0, perm.ViewChannel).Service())
+		},
+		"channel muted": func(e *env, _ *switchablePerms, bob member) {
+			e.exec(`INSERT INTO channel_reads (user_id, channel_id, notify_level) VALUES ($1, $2, 'mute')`, bob.id, e.general)
+		},
+		"notification level set to mentions": func(e *env, _ *switchablePerms, bob member) {
+			e.exec(`INSERT INTO channel_reads (user_id, channel_id, notify_level) VALUES ($1, $2, 'mentions')`, bob.id, e.general)
+		},
+	}
+	for name, change := range cases {
+		t.Run(name, func(t *testing.T) {
+			e := newEnvWith(t, http.StatusCreated, time.Second)
+			sw := &switchablePerms{}
+			sw.cur.Store(e.perms.Service())
+			e.svc.Perms = sw // set before the first message is published
+			alice, bob := e.member("alice"), e.member("bob")
+			e.publish(message(alice, e.general, "first"))
+			e.pushedTo("/device/bob", 1)
+			e.publish(message(alice, e.general, "held back"))
+			time.Sleep(50 * time.Millisecond) // let the second message reach the window
+			change(e, sw, bob)
+			time.Sleep(1500 * time.Millisecond) // the window ends
+			if n := len(e.requestsTo("/device/bob")); n != 1 {
+				t.Fatalf("%d pushes, want only the one sent before the change", n)
+			}
+		})
+	}
+}
+
+func TestAHeldPushStillGoesOutWhenNothingChanged(t *testing.T) {
+	e := newEnvWith(t, http.StatusCreated, 200*time.Millisecond)
+	alice := e.member("alice")
+	e.member("bob")
+	e.publish(message(alice, e.general, "first"))
+	e.publish(message(alice, e.general, "second"))
+	e.pushedTo("/device/bob", 2)
 }
 
 func TestOnlyMessageCreationsArePushed(t *testing.T) {
