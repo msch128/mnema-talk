@@ -1,0 +1,109 @@
+web/src/lib/markdown/escape.ts
+  s_06fcde5dbef956::t_748c628ebc53e1 1-8
+web/vite.config.ts
+  s_06fcde5dbef956::t_39c95bbcb5812c 43
+web/src/lib/replies.ts
+  s_06fcde5dbef956::t_f8cf38da785354 2,15-17,20
+web/src/lib/markdown/render.ts
+  s_06fcde5dbef956::t_468f4f96480c25 57
+  s_06fcde5dbef956::t_9cbf39fc159325 26
+  s_06fcde5dbef956::t_1e57c7f6a661b6 1-25,27-56,58-133
+web/src/lib/markdown/highlight.ts
+  s_06fcde5dbef956::t_71e7c52838fa4a 1-42,46-48,50-93
+  s_06fcde5dbef956::t_4c29c956a90344 43-45,49
+web/src/lib/markdown/mentions.ts
+  s_06fcde5dbef956::t_e349bbf13bd8c0 1-63
+doc/upgrade.md
+  s_06fcde5dbef956::t_404cf652a8ce03 275-285
+README.md
+  s_06fcde5dbef956::t_404cf652a8ce03 44
+web/src/lib/pureHelperEdges.test.ts
+  s_06fcde5dbef956::t_40828c08c3043c 58,60-61
+web/src/components/MarkdownHelp.test.ts
+  s_06fcde5dbef956::t_f21c8b58e69594 9
+  s_06fcde5dbef956::t_6ac2d64f0d3cac 1-8,10-58
+web/src/lib/markdown/rules.ts
+  s_06fcde5dbef956::t_64e414ea3895f2 1-93
+web/src/components/MarkdownHelp.vue
+  s_06fcde5dbef956::t_1f2c7b312d581e 1-97
+web/src/lib/thirdParty.ts
+  s_06fcde5dbef956::t_f172793b27ecf9 23
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_8ff18acac19fbe 305-325,372-377
+web/src/lib/markdown/link.test.ts
+  s_06fcde5dbef956::t_7fa6902c3ad408 1-47
+web/src/components/MarkdownContent.actions.test.ts
+  s_06fcde5dbef956::t_0711ff7870e031 1-112
+SECURITY.md
+  s_06fcde5dbef956::t_404cf652a8ce03 345-358
+web/src/components/markdownBody.css
+  s_06fcde5dbef956::t_afbdb5a7e13937 1-151,159-164
+  s_06fcde5dbef956::t_ac0685c443273c 152-158
+web/src/lib/markdown/link.ts
+  s_06fcde5dbef956::t_db9fd8ca780cc3 5
+  s_06fcde5dbef956::t_9692b742bf5722 1-4,6-46
+doc/architecture.md
+  s_06fcde5dbef956::t_404cf652a8ce03 347
+web/src/lib/markdown/blocks.ts
+  s_06fcde5dbef956::t_abe747c24d6deb 1-207
+web/src/lib/chatLogic.ts
+  s_06fcde5dbef956::t_f8cf38da785354 3,25-26,28
+web/src/components/ChatComposer.vue
+  s_06fcde5dbef956::t_d4ad1b54803bbf 9,126
+  s_06fcde5dbef956::t_faf9025ea7140f 127
+web/package.json
+  s_06fcde5dbef956::t_44343626a65082 32
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_8ff18acac19fbe 305-325,372-377
+web/src/lib/markdown/parity.test.ts
+  s_06fcde5dbef956::t_7157f1eb828225 57,192
+  s_06fcde5dbef956::t_26a8589b072591 43,65,71,138,142,174,226
+  s_06fcde5dbef956::t_55d00b17eedf11 1-42,44-56,58-64,66-70,72-137,139-141,143-173,175-191,193-225,227-232
+web/src/lib/markdown/inline.ts
+  s_06fcde5dbef956::t_f7ea2f7efeea76 105
+  s_06fcde5dbef956::t_a93678cf0d8460 1-5,7-104,106-267
+  s_06fcde5dbef956::t_5b1bdc11e3591b 6
+web/src/lib/markdown/types.ts
+  s_06fcde5dbef956::t_b019d2c6fb863d 1-30
+web/src/lib/markdown.ts
+  s_06fcde5dbef956::t_0d9faabfdb5cc6 24
+  s_06fcde5dbef956::t_f172793b27ecf9 27-30
+  s_06fcde5dbef956::t_9450bd702070d3 1-23,25-26,45-50,52-62
+THIRD_PARTY_NOTICES.md
+  s_06fcde5dbef956::t_39c95bbcb5812c 60
+  s_06fcde5dbef956::t_f172793b27ecf9 34
+web/src/components/MarkdownContent.vue
+  s_06fcde5dbef956::t_35e4342f3e2c4a 6,23-27,56,58,60-67,72,76-89,115,127
+web/src/lib/markdown/plain.ts
+  s_06fcde5dbef956::t_4c1ff66cd16438 59-68
+  s_06fcde5dbef956::t_784477d3a70933 1-58,69-77
+web/src/lib/markdownActions.ts
+  s_06fcde5dbef956::t_2cae23b0dc49cf 1-40
+web/src/lib/replies.test.ts
+  s_06fcde5dbef956::t_40828c08c3043c 57-58
+web/src/lib/markdown/rules.test.ts
+  s_06fcde5dbef956::t_46dfbbde9ebffe 1-74,76-86
+  s_06fcde5dbef956::t_db9fd8ca780cc3 75
+web/src/lib/markdown/security.test.ts
+  s_06fcde5dbef956::t_3f071925ec76a7 1-3,5-140,142-154,162-173,177-217
+  s_06fcde5dbef956::t_f755129af0333a 4,141,174-176
+  s_06fcde5dbef956::t_e8d8d6bfd233a1 155-161
+web/package-lock.json
+  s_06fcde5dbef956::t_3a3de15bea3ae5 21,2614-2622
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "783b7df7296b7cb20b10b12f93324a08759d7e01",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
