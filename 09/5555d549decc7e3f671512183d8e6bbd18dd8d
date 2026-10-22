@@ -1,0 +1,85 @@
+SECURITY.md
+  s_06fcde5dbef956::t_39abb8c9ae70f4 91-110,406-416
+api/openapi.json
+  s_06fcde5dbef956::t_500542bd3d4cf4 12850,19439
+doc/operations.md
+  s_06fcde5dbef956::t_23c2b0b8b2590d 223-232
+doc/upgrade.md
+  s_06fcde5dbef956::t_7af3b0ff78972a 246
+docker-compose.yml
+  s_06fcde5dbef956::t_04d7250836e080 264-266,298
+internal/auth/claims_version.go
+  s_06fcde5dbef956::t_2474792b75eccd 6,36-52
+internal/auth/handler_account.go
+  s_06fcde5dbef956::t_d4d26073baf709 50,60,64-67
+internal/auth/native_password_test.go
+  s_06fcde5dbef956::t_8bb5f91cc336ae 16
+internal/auth/session_claims_test.go
+  s_06fcde5dbef956::t_db7368b5a9af1f 1,4-5,9-10,13-27,31-50
+internal/auth/users_admin.go
+  s_06fcde5dbef956::t_f957de1b0cf2b7 29-31
+internal/server/router_build.go
+  s_06fcde5dbef956::t_36126ce1d70d34 30-33
+internal/server/ws_session_integration_test.go
+  s_06fcde5dbef956::t_4ca4b9c9b7145c 1-37
+internal/ws/budget.go
+  s_06fcde5dbef956::t_575f75defd98b0 74-75,106
+internal/ws/client.go
+  s_06fcde5dbef956::t_2c6ee3db118302 23-28
+internal/ws/frame_peek.go
+  s_06fcde5dbef956::t_e61d5c880e4aff 1-62
+internal/ws/hub.go
+  s_06fcde5dbef956::t_b38ecb41400526 101-102
+internal/ws/hub_database_integration_test.go
+  s_06fcde5dbef956::t_84ca0da72a285e 53,112,156
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_b01425c74a18a7 31,62,76,116,290
+internal/ws/lifecycle_pumps.go
+  s_06fcde5dbef956::t_272f4ff916bda4 12,47-55,70,76-89,93,97,119-121,146-151,156-159,161,163,167-175,180-194
+internal/ws/media.go
+  s_06fcde5dbef956::t_44494146a6d500 17-18,34
+internal/ws/media_framing.go
+  s_06fcde5dbef956::t_9b89bee7817698 1-44
+internal/ws/media_framing_test.go
+  s_06fcde5dbef956::t_d9a4a01372e7ef 1-87
+internal/ws/media_test.go
+  s_06fcde5dbef956::t_153eb191a4170a 56
+internal/ws/metrics_test.go
+  s_06fcde5dbef956::t_c17cf0b9ab64be 70-71,84-85
+internal/ws/payload_caps_test.go
+  s_06fcde5dbef956::t_10f59fa3bde305 1-162
+internal/ws/session_bind.go
+  s_06fcde5dbef956::t_0638d4192a404e 1-65
+internal/ws/session_bind_test.go
+  s_06fcde5dbef956::t_ef7dd1a38c3fd4 1-71
+internal/ws/session_revalidation_integration_test.go
+  s_06fcde5dbef956::t_79a20bab0ce38d 1-121
+internal/ws/user_budget.go
+  s_06fcde5dbef956::t_b841ddcc2a458b 1-91
+web/src/composables/webrtc/iceServers.test.ts
+  s_06fcde5dbef956::t_6905e8f571d9a6 1-51
+web/src/composables/webrtc/iceServers.ts
+  s_06fcde5dbef956::t_d47f375303cd24 7-12,18-19,21,25-29
+doc/desktop-trusted-client.md
+  s_06fcde5dbef956::t_2ff89b06f96d70 107-114,120-128,238-239
+doc/product-status.md
+  s_06fcde5dbef956::t_22e0bd83b6125c 65-66
+internal/webbundle/cli_trust.go
+  s_06fcde5dbef956::t_e716b30a76a472 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "095555d549decc7e3f671512183d8e6bbd18dd8d",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
