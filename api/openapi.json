@@ -2475,6 +2475,54 @@
         ],
         "type": "object"
       },
+      "chat.MessageEdit": {
+        "properties": {
+          "content": {
+            "description": "Content is the text of this earlier version.",
+            "type": "string"
+          },
+          "edited_at": {
+            "description": "EditedAt is when this version was written (the message's creation time\nfor the original).",
+            "format": "date-time",
+            "type": "string"
+          },
+          "editor_id": {
+            "description": "EditorID wrote this version.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "replaced_at": {
+            "description": "ReplacedAt is when an edit replaced it.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content",
+          "edited_at",
+          "editor_id",
+          "id",
+          "replaced_at"
+        ],
+        "type": "object"
+      },
+      "chat.MessageEditHistory": {
+        "properties": {
+          "edits": {
+            "items": {
+              "$ref": "#/components/schemas/chat.MessageEdit"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "edits"
+        ],
+        "type": "object"
+      },
       "chat.NotificationSettings": {
         "properties": {
           "categories": {
@@ -17120,6 +17168,123 @@
           }
         ],
         "summary": "Edit own message",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/channels/{channelID}/messages/{messageID}/edits": {
+      "get": {
+        "description": "The earlier versions of an edited message, newest first (at most 50). Needs the Manage messages permission in the channel (the Owner always); the author and other members cannot read it. Not searched and not part of any export except the author's own. Rate limited per member. An unedited message has an empty list.",
+        "operationId": "getMessageEditHistory",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.MessageEditHistory"
+                }
+              }
+            },
+            "description": "Earlier versions, newest first."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Edit history of a message",
         "tags": [
           "Messages"
         ]

@@ -158,6 +158,13 @@ operator is below. Update with the procedure above; take the backup first.
   - The app waits for these locks like any other statement; there is nothing to
     stop or schedule. If startup is slow, check `docker compose logs app` for
     `migration applied`.
+- **Edit history for moderators (migration 0047).** The new table
+  `message_edits` keeps the previous text of every edit from now on (up to 50
+  per message). Members with *Manage messages* can read it from the message
+  menu; nobody else can, and it is not searched or exported to anyone but the
+  author. It starts empty and the migration touches no existing row. Nothing to
+  configure; `EDIT_HISTORY_RETENTION_DAYS` (default `0`, keep) drops old
+  versions after that many days. See [moderation](moderation.md#edit-history).
 - **Optional e-mail, SMTP and password reset by mail.** Members may now add an
   e-mail address in Account & security (never required, never shown to other
   members or to the Owner). Setting `SMTP_HOST` (see

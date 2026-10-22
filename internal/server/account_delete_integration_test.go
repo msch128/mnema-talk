@@ -69,7 +69,10 @@ func (a *app) foreignKeysToUsers() [][2]string {
 func (a *app) populate(admin, alice, bob *client, ch uuid.UUID) (aliceMsg, bobMsg uuid.UUID, files []string) {
 	a.t.Helper()
 	ctx := context.Background()
-	aliceMsg = a.send(alice, ch, "alice's private words, call me at 555-0100 @bob")
+	aliceMsg = a.send(alice, ch, "alice's first draft, call me at 555-0199")
+	if res := alice.put("/api/channels/"+ch.String()+"/messages/"+aliceMsg.String(), map[string]any{"content": "alice's private words, call me at 555-0100 @bob"}); res.status != http.StatusOK {
+		a.t.Fatalf("edit: %d %s", res.status, res.body)
+	}
 	bobMsg = a.send(bob, ch, "bob's own words")
 	reply := alice.post("/api/channels/"+ch.String()+"/messages", map[string]any{"content": "alice again", "reply_to_id": bobMsg})
 	if reply.status != http.StatusCreated {
@@ -160,7 +163,9 @@ func TestDeletingAnAccountRemovesThePersonButKeepsThreadsReadable(t *testing.T) 
 	if n := a.countRows(`SELECT COUNT(*) FROM messages WHERE id = $1 AND content = 'bob''s own words'`, bobMsg); n != 1 {
 		t.Fatal("other members' messages stay untouched")
 	}
-	_ = aliceMsg
+	if n := a.countRows(`SELECT COUNT(*) FROM message_edits WHERE message_id = $1`, aliceMsg); n != 0 {
+		t.Fatalf("%d earlier versions of her words survived", n)
+	}
 
 	// Her files are gone from storage and from the database.
 	for _, k := range files {

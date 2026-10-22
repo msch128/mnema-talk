@@ -33,6 +33,8 @@ type Handler struct {
 	Perms *perm.Service
 	// Audit records message deletions and edits; nil records nothing.
 	Audit *audit.Log
+	// EditHistoryLimit caps edit-history reads per member; nil means no cap.
+	EditHistoryLimit *httpx.RateLimiter
 }
 
 // VoiceRooms acts on live voice rooms (implemented by the WebSocket hub).
@@ -74,6 +76,11 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Put("/channels/{channelID}/messages/{messageID}", httpx.Handle(h.editMessage))
 	r.Delete("/channels/{channelID}/messages/{messageID}", httpx.Handle(h.deleteMessage))
 	h.mountModeration(r)
+	history := r
+	if h.EditHistoryLimit != nil {
+		history = r.With(h.EditHistoryLimit.By(auth.UserKey))
+	}
+	history.Get("/channels/{channelID}/messages/{messageID}/edits", httpx.Handle(h.getEditHistory))
 	r.Post("/messages/{messageID}/reactions", httpx.Handle(h.toggleReaction))
 	r.Get("/messages/{messageID}/thread", httpx.Handle(h.getThread))
 	r.Get("/messages/by-number/{number}", httpx.Handle(h.getMessageByNumber))

@@ -1686,6 +1686,16 @@
     "slowModeHint": "Members wait this long between two messages. Moderators are exempt.",
     "slowModeChip": "Slow mode {time}"
   },
+  "editHistory": {
+    "menu": "Edit history",
+    "title": "Edit history",
+    "body": "Earlier versions of this message, newest first. Only members who manage messages can see them.",
+    "current": "Current",
+    "loading": "Loading …",
+    "none": "No earlier versions are kept for this message.",
+    "empty": "(no text)",
+    "failed": "The edit history could not be loaded."
+  },
   "bots": {
     "title": "Bots",
     "intro": "Bots are accounts for programs: they post messages, answer slash commands and react to events through the bot API (see doc/bots.md). A new bot can do nothing until you give it a role, allow its intents and issue a token. Every change here lands in the audit log.",
