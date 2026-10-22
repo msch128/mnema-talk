@@ -1,0 +1,26 @@
+web/src/lib/customEmoji.ts
+  s_06fcde5dbef956::t_0a5f947f149077 1-81
+internal/emoji/image.go
+  s_06fcde5dbef956::t_94c675b3a5a252 33-35,179-181,205,212-215
+internal/emoji/image_test.go
+  s_06fcde5dbef956::t_94c675b3a5a252 14,181-195
+  s_06fcde5dbef956::t_ac34470052d40f 196
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_2a94366f38d147 1729-1773
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "825237ea6d08a75aa8f3fdff12fe8b677d4eb0fe",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
