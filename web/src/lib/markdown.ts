@@ -21,7 +21,7 @@ export { registerTextRule } from './markdown/rules'
 export type { TextRule, RoleMention }
 
 /** Longer text is shown as it is, unformatted: parsing is for chat messages, not documents. */
-export const MAX_MARKDOWN_CHARS = 8000
+export const MAX_MARKDOWN_CHARS = 6000
 
 function parse(content: string): Block[] {
   // NUL characters carry no text and are dropped, so they cannot split tokens.

@@ -7,11 +7,15 @@ import { needsConfirm, safeHref } from './link'
 
 /** Formatting nests at most this deep; deeper delimiters stay literal text. */
 export const MAX_INLINE_DEPTH = 6
+/** A link label is at most this long; a longer "[" stays text. */
+const MAX_LABEL = 500
 
 export interface InlineContext {
   depth: number
   /** Inside a link label: no further links. */
   noLinks: boolean
+  /** Per run of text: from where on no closer exists for a delimiter (see scan). */
+  miss?: Map<string, number>
 }
 
 const ROOT: InlineContext = { depth: 0, noLinks: false }
@@ -25,8 +29,21 @@ const isSpace = (ch: string | undefined): boolean => ch === undefined || /\s/.te
 const isWord = (ch: string | undefined): boolean => ch !== undefined && /[A-Za-z0-9_]/.test(ch)
 const isEscapable = (ch: string | undefined): boolean => ch !== undefined && /[^0-9A-Za-z\s]/.test(ch)
 
-/** The first index >= from where test passes, skipping escaped characters (and `pair`, if given). */
-function scan(src: string, from: number, test: (j: number) => boolean, pair = ''): number {
+/**
+ * The first index >= from where test passes, skipping escaped characters (and
+ * `pair`, if given). A failed search is remembered per delimiter: the test does
+ * not depend on where the opener stood, so later openers of the same kind fail
+ * at once and a run of unclosed delimiters costs linear time, not quadratic.
+ */
+function scan(ctx: InlineContext, key: string, src: string, from: number, test: (j: number) => boolean, pair = ''): number {
+  const missed = ctx.miss?.get(key)
+  if (missed !== undefined && from >= missed) return -1
+  const found = scanFrom(src, from, test, pair)
+  if (found < 0) ctx.miss?.set(key, Math.min(from, missed ?? from))
+  return found
+}
+
+function scanFrom(src: string, from: number, test: (j: number) => boolean, pair: string): number {
   for (let j = from; j < src.length; j++) {
     if (src[j] === '\\') {
       j++
@@ -46,39 +63,41 @@ function format(kind: FormatKind, src: string, from: number, to: number, end: nu
 }
 
 function strong(src: string, i: number, ctx: InlineContext): Hit | null {
-  const j = scan(src, i + 3, k => src.startsWith('**', k) && src[k + 2] !== '*')
+  const j = scan(ctx, '**', src, i + 3, k => src.startsWith('**', k) && src[k + 2] !== '*')
   return j < 0 ? null : format('strong', src, i + 2, j, j + 2, ctx)
 }
 
 function underline(src: string, i: number, ctx: InlineContext): Hit | null {
-  const j = scan(src, i + 3, k => src.startsWith('__', k) && src[k + 2] !== '_')
+  const j = scan(ctx, '__', src, i + 3, k => src.startsWith('__', k) && src[k + 2] !== '_')
   return j < 0 ? null : format('u', src, i + 2, j, j + 2, ctx)
 }
 
 function emStar(src: string, i: number, ctx: InlineContext): Hit | null {
   if (isSpace(src[i + 1]) || src[i + 1] === '*') return null
-  const j = scan(src, i + 2, k => src[k] === '*' && src[k + 1] !== '*' && !isSpace(src[k - 1]), '**')
+  const j = scan(ctx, '*', src, i + 2, k => src[k] === '*' && src[k + 1] !== '*' && !isSpace(src[k - 1]), '**')
   return j < 0 ? null : format('em', src, i + 1, j, j + 1, ctx)
 }
 
 function emUnderscore(src: string, i: number, ctx: InlineContext): Hit | null {
   if (isWord(src[i - 1]) || src[i + 1] === '_') return null
-  const j = scan(src, i + 2, k => src[k] === '_' && !isWord(src[k + 1]), '__')
+  const j = scan(ctx, '_', src, i + 2, k => src[k] === '_' && !isWord(src[k + 1]), '__')
   return j < 0 ? null : format('em', src, i + 1, j, j + 1, ctx)
 }
 
 function strike(src: string, i: number, ctx: InlineContext): Hit | null {
   if (isSpace(src[i + 2])) return null
-  const j = scan(src, i + 3, k => src.startsWith('~~', k))
+  const j = scan(ctx, '~~', src, i + 3, k => src.startsWith('~~', k))
   return j < 0 || isSpace(src[j - 1]) ? null : format('del', src, i + 2, j, j + 2, ctx)
 }
 
 function spoiler(src: string, i: number, ctx: InlineContext): Hit | null {
-  const j = scan(src, i + 3, k => src.startsWith('||', k))
+  const j = scan(ctx, '||', src, i + 3, k => src.startsWith('||', k))
   return j < 0 ? null : format('spoiler', src, i + 2, j, j + 2, ctx)
 }
 
 function matchFormat(src: string, i: number, ctx: InlineContext): Hit | null {
+  // Too deep to nest further: leave the delimiters literal without scanning for a closer.
+  if (ctx.depth >= MAX_INLINE_DEPTH) return null
   switch (src[i]) {
     case '*':
       return (src[i + 1] === '*' ? strong(src, i, ctx) : null) ?? emStar(src, i, ctx)
@@ -92,11 +111,13 @@ function matchFormat(src: string, i: number, ctx: InlineContext): Hit | null {
 }
 
 /** `code` and ``code with ` inside``: a run of backticks closes with a run of the same length. */
-function matchCode(src: string, i: number): Hit {
+function matchCode(src: string, i: number, ctx: InlineContext): Hit {
   let n = 1
   while (src[i + n] === '`') n++
   const fence = '`'.repeat(n)
+  const key = `\`${n}`
   let from = i + n
+  if (from >= (ctx.miss?.get(key) ?? Infinity)) return { node: { t: 'text', v: fence }, end: i + n }
   while (from < src.length) {
     const close = src.indexOf(fence, from)
     if (close < 0) break
@@ -107,6 +128,7 @@ function matchCode(src: string, i: number): Hit {
     }
     from = runEnd
   }
+  ctx.miss?.set(key, Math.min(i + n, ctx.miss.get(key) ?? Infinity))
   return { node: { t: 'text', v: fence }, end: i + n }
 }
 
@@ -163,7 +185,7 @@ function matchBare(src: string, i: number, ctx: InlineContext): Hit | null {
 /** The index of the "]" closing the "[" at i, or -1. */
 function labelEnd(src: string, i: number): number {
   let depth = 0
-  for (let j = i; j < src.length; j++) {
+  for (let j = i; j < Math.min(src.length, i + MAX_LABEL); j++) {
     const ch = src[j]
     if (ch === '\\') j++
     else if (ch === '[') depth++
@@ -179,7 +201,7 @@ function destination(src: string, i: number): { url: string; end: number } | nul
   let j = i + (angled ? 2 : 1)
   const start = j
   let depth = 0
-  while (j < src.length) {
+  while (j < Math.min(src.length, start + MAX_LABEL * 4)) {
     const ch = src[j]
     if (angled ? ch === '>' : (ch === ')' && depth === 0) || /\s/.test(ch ?? '')) break
     if (ch === '(') depth++
@@ -211,7 +233,7 @@ function plainLabel(nodes: Inline[]): string {
 function matchAt(src: string, i: number, ctx: InlineContext): Hit | null {
   switch (src[i]) {
     case '`':
-      return matchCode(src, i)
+      return matchCode(src, i, ctx)
     case '<':
       return matchAutolink(src, i, ctx)
     case '[':
@@ -237,7 +259,8 @@ function pushText(out: Inline[], text: string): void {
 }
 
 /** Parses a run of inline Markdown. */
-export function parseInline(src: string, ctx: InlineContext = ROOT): Inline[] {
+export function parseInline(src: string, outer: InlineContext = ROOT): Inline[] {
+  const ctx: InlineContext = { ...outer, miss: new Map() }
   const out: Inline[] = []
   let buf = ''
   let i = 0
