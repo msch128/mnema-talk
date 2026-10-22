@@ -8,6 +8,7 @@ entire communication path.
 | --- | --- |
 | Supported | Normal maintained product path. Named tests and explicit limits apply. |
 | Experimental | Available to execute or test; outstanding acceptance prevents a production qualification. |
+| Beta | Usable and maintained, but outstanding acceptance (for example platform signing) keeps it out of Supported. Expect rough edges. |
 | Planned | Requirements exist, but no qualified usable product path is available. |
 
 ## Status at 1.0
@@ -20,8 +21,8 @@ incompatibly only in a major release. What the 1.0 label does and does not say:
 | --- | --- |
 | Server (Docker, linux/amd64 and arm64), browser app, text chat, roles and permissions, webhooks and bots, notifications, search and onboarding, voice, cameras and screen share in Chromium-based browsers | Supported |
 | Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), backup and restore, upgrade from the supported releases (0.8.16 and 0.9.x), cosign-signed images | Supported |
-| Desktop client on Windows | Experimental (unsigned, no Authenticode) |
-| Desktop client on macOS and Linux | Experimental (DEV builds, not qualified on real hardware; not notarised) |
+| Desktop client on Windows | Beta (unsigned, no Authenticode; SmartScreen warns) |
+| Desktop client on macOS and Linux | Beta (DEV builds, not qualified on real hardware; not notarised; Gatekeeper warns) |
 | Mobile clients, text end-to-end encryption | Not offered. Text stays readable by the server, by design. |
 
 **Internal security review, 2026-10-22.** Before 1.0 the code was reviewed in
@@ -75,9 +76,9 @@ hardware, an external security audit and capacity beyond the recorded runs.
 An internal five-area security review preceded 0.8 and a six-lane one
 preceded 1.0 (see "Status at 1.0"); neither is an independent audit.
 
-## Experimental desktop path
+## Beta desktop path
 
-The desktop client is Experimental on every platform. The Windows path is the
+The desktop client is Beta on every platform. It is unsigned by decision: no paid code-signing certificate will be bought (see [installing the unsigned Beta](desktop-app.md#installing-the-unsigned-beta)). The Windows path is the
 furthest along and is described first; macOS and Linux builds are published by
 the desktop repository as DEV builds (a macOS disk image, Linux AppImage and
 .deb packages, each with an updater signature) and run the same signed web
