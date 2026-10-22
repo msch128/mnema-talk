@@ -1,4 +1,4 @@
-import type { BrowserContext, Page } from '@playwright/test'
+import type { Browser, BrowserContext, Page } from '@playwright/test'
 import { test, expect } from './fixtures'
 import { apiFetch, responseString } from './helpers'
 
@@ -19,6 +19,23 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 
 const ENDPOINT = 'https://push.example.test/wpush/e2e-device'
+
+// The suite shares the login budget of one address, so this file signs in once
+// and its tests start from that session.
+type Session = Awaited<ReturnType<BrowserContext['storageState']>>
+let session: Session
+
+test.beforeAll(async ({ browser }) => {
+  const context = await browser.newContext()
+  const page = await context.newPage()
+  await signIn(page)
+  session = await context.storageState()
+  await context.close()
+})
+
+async function signedInContext(browser: Browser, permissions: string[] = []): Promise<BrowserContext> {
+  return browser.newContext({ permissions, storageState: session })
+}
 
 async function signIn(page: Page) {
   await page.goto('/')
@@ -66,11 +83,11 @@ async function openAppDialog(page: Page) {
 }
 
 test('a member turns push on and off for this device', async ({ browser }) => {
-  const context = await browser.newContext({ permissions: ['notifications'] })
+  const context = await signedInContext(browser, ['notifications'])
   await fakePushManager(context)
   const page = await context.newPage()
   try {
-    await signIn(page)
+    await page.goto('/')
     await page.evaluate(async () => { await navigator.serviceWorker.ready })
     await openAppDialog(page)
     const section = page.getByTestId('push-section')
@@ -103,8 +120,10 @@ test('a member turns push on and off for this device', async ({ browser }) => {
   }
 })
 
-test('the server refuses a push address that points into its network', async ({ page }) => {
-  await signIn(page)
+test('the server refuses a push address that points into its network', async ({ browser }) => {
+  const context = await signedInContext(browser)
+  const page = await context.newPage()
+  await page.goto('/')
   const key = await page.evaluate(async () => {
     const pair = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits'])
     const raw = new Uint8Array(await crypto.subtle.exportKey('raw', pair.publicKey))
@@ -117,13 +136,14 @@ test('the server refuses a push address that points into its network', async ({ 
   const ok = await apiFetch(page, 'POST', '/api/push/subscriptions', { endpoint: ENDPOINT + '-api', p256dh: key, auth: 'AAAAAAAAAAAAAAAAAAAAAA', label: 'API device' })
   expect(ok.status).toBe(201)
   expect((await apiFetch(page, 'DELETE', `/api/push/subscriptions/${responseString(ok, 'id')}`)).status).toBe(204)
+  await context.close()
 })
 
 test('the service worker shows a delivered push and keeps quiet for a message while the app is on screen', async ({ browser }) => {
-  const context = await browser.newContext({ permissions: ['notifications'] })
+  const context = await signedInContext(browser, ['notifications'])
   const page = await context.newPage()
   try {
-    await signIn(page)
+    await page.goto('/')
     await page.evaluate(async () => { await navigator.serviceWorker.ready })
     await page.reload()
     await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true)
