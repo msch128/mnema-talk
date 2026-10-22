@@ -133,11 +133,15 @@ async function dragTo(page: Page, source: Locator, target: Locator, ratio: numbe
   // Both ends on screen first: the list auto-scrolls near its edges.
   await target.scrollIntoViewIfNeeded()
   await expect(source).toBeInViewport()
+  // hover() waits until the row has stopped moving and puts the pointer on it
+  // as it is at that moment. Rows above it come and go (a caller leaving a
+  // Talk after its grace period, unread badges), so coordinates measured
+  // earlier can point at the neighbour by the time the button goes down.
+  await source.hover({ position: { x: 40, y: 12 } })
   const s = await bounds(source)
   if (!s) throw new Error('Expected drag source bounds')
-  const x = s.x + Math.min(40, s.width / 2)
-  const y = s.y + s.height / 2
-  await page.mouse.move(x, y)
+  const x = s.x + 40
+  const y = s.y + 12
   await page.mouse.down()
   await page.mouse.move(x + 2, y + 6, { steps: 3 })
   await expect(ghost(page)).toBeVisible()
