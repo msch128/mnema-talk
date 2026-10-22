@@ -122,16 +122,17 @@ function highlightRoles(html: string, roles: readonly RoleMention[]): string {
  *   @here) are highlighted as mentions.
  * - me: the reader's username; mentions of them get .md-mention-me.
  * - roles: the roles the message mentions (by the server), drawn as pills.
+ * - emoji: hook that draws custom emoji tokens in the escaped HTML (lib/customEmoji).
  */
 export function renderMarkdown(
   content: string | null | undefined,
-  { known = null, me = '', roles = [] }: { known?: ReadonlySet<string> | null; me?: string; roles?: readonly RoleMention[] } = {}
+  { known = null, me = '', roles = [], emoji }: { known?: ReadonlySet<string> | null; me?: string; roles?: readonly RoleMention[]; emoji?: (html: string) => string } = {}
 ): string {
   if (!content) return ''
   const { text: stashed, code } = stashCodeAndLinks(escapeHtml(content))
   const styled = applyInlineStyles(stashed)
   const self = me.toLowerCase()
-  const mentioned = highlightRoles(styled, roles).replace(/(^|[\s(])@([A-Za-z0-9_.-]{3,32})/g, (all: string, pre: string, raw: string) =>
+  const mentioned = (emoji ?? ((html: string) => html))(highlightRoles(styled, roles)).replace(/(^|[\s(])@([A-Za-z0-9_.-]{3,32})/g, (all: string, pre: string, raw: string) =>
     formatMention({ all, pre, raw }, known, self))
 
   // \u0000 is the intentional code-span placeholder delimiter used for code spans above, so matching it is deliberate.

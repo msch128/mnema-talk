@@ -1,6 +1,7 @@
 import { platform, type PlatformSocket } from '../../lib/platform'
 import { decodeServerEvent } from '../../types/events'
 import type { ServerEventPayloads, ClientEventPayloads } from '../../types/events'
+import { useEmojiStore } from '../emoji'
 import { usePermissionsStore } from '../permissions'
 import { installGlobalSearch, uninstallGlobalSearch } from '../../lib/globalSearch'
 import type { Cx } from './state'
@@ -34,6 +35,7 @@ function resyncState(cx: Cx) {
   const permissions = usePermissionsStore()
   permissions.load()
   permissions.loadRoles()
+  void useEmojiStore().load()
   fetchChannels(cx)
   fetchMembers(cx)
   fetchReadState(cx)

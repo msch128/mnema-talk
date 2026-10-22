@@ -7,6 +7,8 @@ import LinkPreviewCard from './LinkPreviewCard.vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
+import { renderEmojiTokens } from '../lib/customEmoji'
+import { prefersReducedMotion, useEmojiStore } from '../stores/emoji'
 import { roleColorCss } from '../lib/permissions'
 import { roleColors as vRoleColors } from '../directives/roleColor'
 
@@ -25,6 +27,7 @@ const props = defineProps({
 const chatStore = useChatStore()
 const authStore = useAuthStore()
 const permissions = usePermissionsStore()
+const emojiStore = useEmojiStore()
 
 // Only real members (and @all/@here) are highlighted, and clickable.
 const knownNames = computed(() => new Set(chatStore.members.map(m => (m.username || '').toLowerCase())))
@@ -36,7 +39,8 @@ const mentionedRoles = computed(() => props.mentionRoles
 const parsedHtml = computed(() => renderMarkdown(props.content, {
   known: knownNames.value,
   me: authStore.user?.username || '',
-  roles: mentionedRoles.value
+  roles: mentionedRoles.value,
+  emoji: html => renderEmojiTokens(html, id => emojiStore.byId.get(id), prefersReducedMotion())
 }))
 
 function openMention(el: HTMLElement) {
@@ -117,6 +121,13 @@ function onKeydown(event: KeyboardEvent) {
   overflow-x: auto;
   white-space: pre;
   background: rgba(0, 0, 0, 0.35);
+}
+.markdown-body .md-emoji {
+  display: inline-block;
+  height: 1.375em;
+  width: auto;
+  vertical-align: -0.3em;
+  object-fit: contain;
 }
 .markdown-body .md-quote {
   border-left: 2px solid rgba(45, 167, 113, 0.6);

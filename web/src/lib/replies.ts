@@ -1,5 +1,6 @@
 // Helpers for reply previews (message.reply_to).
 import { t } from '../i18n'
+import { plainEmojiText } from './customEmoji'
 import { CODE_BLOCK_RE, INLINE_CODE_RE, SPOILER_RE, INLINE_FORMATS } from './markdown'
 import type { Message, ReplyPreview } from '../types/domain'
 
@@ -30,7 +31,7 @@ export function stripMarkdown(content: string | null | undefined): string {
   text = text.replace(/^>\s?/gm, '')
 
   // eslint-disable-next-line no-control-regex
-  return text.replace(/\u0000(\d+)\u0000/g, (_: string, i: string) => code[Number(i)] ?? '')
+  return plainEmojiText(text.replace(/\u0000(\d+)\u0000/g, (_: string, i: string) => code[Number(i)] ?? ''))
 }
 
 /** One-line plain-text preview; markdown stripped, newlines collapse to spaces. */

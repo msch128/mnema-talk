@@ -1,15 +1,22 @@
 import type { CreateMessageRequest } from '../../types/domain'
 import { decodeMessage, decodeReactionResult } from '../../types/domain'
 import { api } from '../../lib/api'
+import { encodeShortcodes } from '../../lib/customEmoji'
+import { useEmojiStore } from '../emoji'
 import { assertCommunity, type Cx } from './state'
 import { applyToMessage, countReply, insertMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
 import { closeThread } from './threads'
+
+/** Typed :name: of known custom emoji become their stable token. */
+function withEmojiTokens(text: string): string {
+  return encodeShortcodes(text, useEmojiStore().byName)
+}
 
 export async function sendMessage(cx: Cx, content: string, parentId: string | null = null, replyToId: string | null = null) {
   const { cs } = cx
   const community = cs.communityGeneration
   if (!cs.activeChannel.value || !content.trim()) return null
-  const json: CreateMessageRequest = { content: content.trim() }
+  const json: CreateMessageRequest = { content: withEmojiTokens(content.trim()) }
   if (parentId) json.parent_id = parentId
   if (replyToId) json.reply_to_id = replyToId
   const msg = await api(`/api/channels/${cs.activeChannel.value.id}/messages`, { method: 'POST', json, decode: decodeMessage })
@@ -26,7 +33,7 @@ export async function uploadMedia(cx: Cx, file: File, content = '', parentId: st
   if (!cs.activeChannel.value || !file) return null
   const form = new FormData()
   // Text fields go before the file so the server reads them first.
-  if (content) form.append('content', content)
+  if (content) form.append('content', withEmojiTokens(content))
   if (parentId) form.append('parent_id', parentId)
   if (replyToId) form.append('reply_to_id', replyToId)
   form.append('file', file)
@@ -43,7 +50,7 @@ export async function editMessage(cx: Cx, channelId: string, messageId: string, 
   if (!content.trim()) return null
   const updated = await api(`/api/channels/${channelId}/messages/${messageId}`, {
     method: 'PUT',
-    json: { content: content.trim() }, decode: decodeMessage
+    json: { content: withEmojiTokens(content.trim()) }, decode: decodeMessage
   })
   assertCommunity(cx, community)
   applyToMessage(cx, messageId, m => Object.assign(m, updated))

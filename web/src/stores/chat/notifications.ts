@@ -1,5 +1,6 @@
 import type { Message } from '../../types/domain'
 import { t } from '../../i18n'
+import { plainEmojiText } from '../../lib/customEmoji'
 import { mentionsUser, shouldNotify } from '../../lib/chatLogic'
 import { isQuiet } from '../../lib/presence'
 import { platform } from '../../lib/platform'
@@ -27,7 +28,7 @@ function buildNotificationTitle(cx: Cx, msg: Message): string {
 }
 
 function buildNotificationBody(msg: Message): string {
-  if (msg.content) return msg.content
+  if (msg.content) return plainEmojiText(msg.content)
   return msg.attachments?.length ? t('chat.attachment') : ''
 }
 

@@ -6,6 +6,7 @@ import { defineComponent, ref, h, nextTick } from 'vue'
 import { useComposerAssist } from './useComposerAssist'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
+import { useEmojiStore } from '../stores/emoji'
 import { usePermissionsStore } from '../stores/permissions'
 import { channelFixture } from '../test-fixtures.fixture'
 
@@ -164,6 +165,21 @@ describe('role suggestions in the composer', () => {
     permissions.info = { owner: false, permissions: 0, max_upload_mb: 50, role_ids: [], top_position: 0, catalog: [], channels: [{ channel_id: 'c1', permissions: 2 | 64 }] }
     await type(w, '@')
     expect(w.vm.assist.suggestions.value.filter(s => s.role).map(s => s.username)).toEqual(['Mods', 'Staff'])
+    w.unmount()
+  })
+
+  it('offers custom emoji after ":" and inserts the chosen :name:', async () => {
+    useEmojiStore().items = [{ id: 'e1', name: 'party_parrot', animated: true, url: '/a' }, { id: 'e2', name: 'blob', animated: false, url: '/b' }]
+    const w = mount(Harness, { attachTo: document.body })
+    await type(w, 'hello :pa')
+    expect(w.vm.assist.open.value).toBe(true)
+    expect(w.vm.assist.suggestions.value.map(s => s.emoji?.name)).toEqual(['party_parrot'])
+    await w.vm.assist.pick(w.vm.assist.suggestions.value[0])
+    expect(w.vm.text).toBe('hello :party_parrot: ')
+    expect(w.vm.assist.open.value).toBe(false)
+    await type(w, ':pa')
+    w.vm.assist.close()
+    expect(w.vm.assist.open.value).toBe(false)
     w.unmount()
   })
 })
