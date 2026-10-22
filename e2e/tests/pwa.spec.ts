@@ -31,7 +31,8 @@ test('the app has a manifest with working icons', async ({ page }) => {
   expect(manifest.icons.some(i => i.sizes === '512x512')).toBe(true)
 })
 
-test('the service worker serves the shell offline and never stores the API', async ({ page, context }) => {
+test('the service worker serves the shell offline and never stores the API', async ({ page, context, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Playwright\'s WebKit does not register service workers on http://127.0.0.1 and its Firefox contexts are private, where Firefox has none')
   await page.goto('/')
   await page.evaluate(async () => { await navigator.serviceWorker.ready })
   // A page is controlled from its next load on.

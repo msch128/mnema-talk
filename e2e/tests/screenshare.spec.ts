@@ -16,7 +16,7 @@ const VOICE_CHANNEL = `Stream ${suffix}`
 // Headless Chromium has no screen to pick: a shared "screen" is an animated
 // canvas, so the test exercises the app's real publish/subscribe path.
 const fakeDisplayMedia = () => {
-  navigator.mediaDevices.getDisplayMedia = async () => {
+  MediaDevices.prototype.getDisplayMedia = async () => {
     const canvas = document.createElement('canvas')
     canvas.width = 640
     canvas.height = 360
@@ -107,7 +107,8 @@ test('a viewer sees a shared screen after choosing to watch it', async ({ browse
     const deadline = setTimeout(finish, 5_000)
     const sample: VideoFrameRequestCallback = (_, metadata) => {
       ctx.drawImage(v, 0, 0, 1, 1, 0, 0, 1, 1)
-      frames.push({ time: metadata.mediaTime, color: [...ctx.getImageData(0, 0, 1, 1).data].join(',') })
+      // presentedFrames counts in every engine; WebKit leaves mediaTime at 0 for a live stream.
+      frames.push({ time: metadata.presentedFrames, color: [...ctx.getImageData(0, 0, 1, 1).data].join(',') })
       if (frames.length === 4) finish()
       else nextSample = setTimeout(() => { callback = v.requestVideoFrameCallback(sample) }, 300)
     }

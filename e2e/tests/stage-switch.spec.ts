@@ -13,7 +13,7 @@ const VOICE_CHANNEL = `Stage ${suffix}`
 // A shared "screen" is an animated canvas. Each member's has its own size, so
 // the stage's resolution tells whose share it shows.
 const fakeDisplayMedia = ([width, height]: [number, number]) => {
-  navigator.mediaDevices.getDisplayMedia = async () => {
+  MediaDevices.prototype.getDisplayMedia = async () => {
     const canvas = document.createElement('canvas')
     canvas.width = width
     canvas.height = height

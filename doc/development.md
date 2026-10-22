@@ -64,8 +64,22 @@ make postgres-upgrade-drill # the one-time PostgreSQL 17 -> 18 move
 throwaway PostgreSQL and SeaweedFS with Docker on loopback ports, runs the
 Playwright specs in `e2e/tests/` with fake camera/microphone devices and tears
 everything down again. `SKIP_BUILD=1` reuses the last build,
-`E2E_INSTALL_BROWSER=1` installs Chromium first and `E2E_ONLY=<spec>` runs one
-file.
+`E2E_INSTALL_BROWSER=1` installs the browsers named in `E2E_BROWSERS` first
+(default `chromium`; also `webkit` and `firefox`) and `E2E_ONLY` is handed to
+`playwright test`, so `E2E_ONLY="smoke.spec.ts"` runs one file and
+`E2E_ONLY="--project=webkit"` another engine. Without it only the `chromium`
+project runs.
+
+The suite has three Playwright projects. **Chromium** is the required check and
+runs everything. **WebKit** (what Safari, iOS and installed iOS web apps use)
+runs the whole suite in CI as `e2e (webkit)`; **Firefox** runs a smoke subset
+(sign-in, chat, search, mentions, sealed Talk, key rotation, screen share) as
+`e2e (firefox)`. Neither is a required check yet. Engine differences the specs
+account for: Firefox has no context-level camera/microphone grants (its fake
+devices are set by preferences in `playwright.config.ts`); every WebKit context
+gets its own browser process, because WebKit mutes the microphone of all but one
+page of a process; Chrome DevTools Protocol specs (crashing a tab, synthetic
+touch) skip on the other engines.
 
 Runs do not collide, so several can go at once (other worktrees, agents):
 every run uses its own Docker Compose project (`mnema-e2e-<pid>`) and free
