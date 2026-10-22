@@ -40,6 +40,12 @@ func APIDocsPage() []byte {
 	return b
 }
 
+// Files of the installable app that sit at the root under a fixed name.
+const (
+	serviceWorkerScript = "sw.js"
+	manifestFile        = "manifest.webmanifest"
+)
+
 type staticServer struct {
 	sub        fs.FS
 	indexHTML  []byte
@@ -101,6 +107,21 @@ func (s *staticServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(name, "assets/") {
 		s.serveAsset(w, r, name)
 		return
+	}
+	s.serveFixed(w, r, name)
+}
+
+// serveFixed serves a file whose name carries no hash. The service worker
+// script and the manifest must be revalidated on every load (so a deploy
+// reaches installed apps at once) and the manifest has its own media type,
+// which the Go tables do not know.
+func (s *staticServer) serveFixed(w http.ResponseWriter, r *http.Request, name string) {
+	switch name {
+	case serviceWorkerScript:
+		w.Header().Set("Cache-Control", "no-cache")
+	case manifestFile:
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Content-Type", "application/manifest+json")
 	}
 	s.fileServer.ServeHTTP(w, r)
 }
