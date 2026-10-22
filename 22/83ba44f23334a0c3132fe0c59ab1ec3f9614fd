@@ -1,0 +1,82 @@
+internal/config/config.go
+  s_06fcde5dbef956::t_5a28eb4d8052f5 39-46
+internal/webhook/webhook_test.go
+  s_06fcde5dbef956::t_44aed24c052060 62-65
+internal/webhook/execute_request.go
+  s_06fcde5dbef956::t_5a28eb4d8052f5 13
+  s_06fcde5dbef956::t_d99a49257d29fe 35,54
+  s_06fcde5dbef956::t_3cf46e8d0f481a 55-56
+internal/webhook/execute.go
+  s_06fcde5dbef956::t_d99a49257d29fe 235
+internal/config/config_env.go
+  s_06fcde5dbef956::t_5a28eb4d8052f5 119-122
+.env.example
+  s_06fcde5dbef956::t_16cac185df6839 99-107
+internal/server/router_build.go
+  s_06fcde5dbef956::t_5a28eb4d8052f5 115-120
+internal/media/quota.go
+  s_06fcde5dbef956::t_69949e5f95028b 1-80
+internal/linkpreview/linkpreview_test.go
+  s_06fcde5dbef956::t_8e9d013133efd9 22
+docker-compose.yml
+  s_06fcde5dbef956::t_16cac185df6839 57-60
+internal/httpx/request.go
+  s_06fcde5dbef956::t_0327041473afe5 11
+  s_06fcde5dbef956::t_b621d7c43f94af 81-102,125
+internal/media/disk_other.go
+  s_06fcde5dbef956::t_ea45137da5a073 1-10
+internal/bot/handler.go
+  s_06fcde5dbef956::t_0327041473afe5 121
+internal/config/config_test.go
+  s_06fcde5dbef956::t_9c6e5b7a91cf28 525-531,564-575
+  s_06fcde5dbef956::t_1b8b214cbd53e9 576
+internal/linkpreview/linkpreview.go
+  s_06fcde5dbef956::t_3fcc19c11178ac 122
+  s_06fcde5dbef956::t_4189607fdcb22c 43-46,88,153-156,175,184
+internal/linkpreview/linkpreview_slow_test.go
+  s_06fcde5dbef956::t_3f7be2c668fc93 1-75
+internal/media/handler.go
+  s_06fcde5dbef956::t_d99a49257d29fe 38-39
+internal/bot/handler_tokens.go
+  s_06fcde5dbef956::t_0327041473afe5 62
+internal/webhook/store.go
+  s_06fcde5dbef956::t_0327041473afe5 180
+internal/ssrf/ssrf.go
+  s_06fcde5dbef956::t_226940a45bd675 34-36,38-46,97-102
+  s_06fcde5dbef956::t_524baee5d54e34 103-104
+internal/httpx/request_test.go
+  s_06fcde5dbef956::t_de29af1fa337d6 75-85,235-250
+  s_06fcde5dbef956::t_71eb63d6bd116a 251
+internal/media/handler_upload.go
+  s_06fcde5dbef956::t_d99a49257d29fe 114-116
+SECURITY.md
+  s_06fcde5dbef956::t_16cac185df6839 167-174,448-453
+internal/media/disk_unix.go
+  s_06fcde5dbef956::t_90e98e40b7b5ca 1-14
+doc/operations.md
+  s_06fcde5dbef956::t_16cac185df6839 75-77
+internal/config/config_validate.go
+  s_06fcde5dbef956::t_5a28eb4d8052f5 110-112
+internal/linkpreview/linkpreview_ssrf.go
+  s_06fcde5dbef956::t_226940a45bd675 41
+internal/media/quota_integration_test.go
+  s_06fcde5dbef956::t_81d76e487e2aaf 1-91
+internal/linkpreview/linkpreview_slow.go
+  s_06fcde5dbef956::t_f2bffa307ea657 1-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2283ba44f23334a0c3132fe0c59ab1ec3f9614fd",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
