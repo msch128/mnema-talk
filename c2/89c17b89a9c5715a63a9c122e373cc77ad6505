@@ -1,0 +1,46 @@
+scripts/tests/test_drill_versions.py
+  s_06fcde5dbef956::t_8d923c4899d121 1-107
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_1e725b34d27c21 326-339,344-347,366-380
+scripts/backup-drill-downgrade.sh
+  s_06fcde5dbef956::t_6d9fd8c792da34 26,29-30,33
+  s_06fcde5dbef956::t_ebf1cec62aff36 1-25,27-28,31-32,34-58
+scripts/upgrade-drill-data.sh
+  s_06fcde5dbef956::t_af5364c03a39f8 81
+  s_06fcde5dbef956::t_1fa918031d6884 161-162
+  s_06fcde5dbef956::t_0e59a5d4615d24 1-80,82-160,163-180
+doc/operations.md
+  s_06fcde5dbef956::t_c33b52ca25af47 647-648
+Makefile
+  s_06fcde5dbef956::t_9e8e94b84f2fef 83,86
+  s_06fcde5dbef956::t_2037c9773590b9 162
+doc/development.md
+  s_06fcde5dbef956::t_2037c9773590b9 56-57
+scripts/upgrade-drill.sh
+  s_06fcde5dbef956::t_436294de4fb921 2-8,12-19,21-22,26-29,31-45,55,57-59,61-62,64,143
+  s_06fcde5dbef956::t_1fa918031d6884 232-234
+  s_06fcde5dbef956::t_bedd4c7234be67 183-184,206-207,225-226,235
+  s_06fcde5dbef956::t_bacd10a1650694 227
+AGENTS.md
+  s_06fcde5dbef956::t_2037c9773590b9 93
+scripts/drill-common.sh
+  s_06fcde5dbef956::t_e7ce0aa0957637 1-65
+scripts/backup-drill.sh
+  s_06fcde5dbef956::t_6d9fd8c792da34 8-12,16-19,21-27,45,133,141,165-171,187-194
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c289c17b89a9c5715a63a9c122e373cc77ad6505",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
