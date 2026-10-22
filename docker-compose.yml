@@ -261,6 +261,9 @@ services:
       - WEBRTC_TURN_SECRET=${WEBRTC_TURN_SECRET:-}
       - WEBRTC_TURN_REALM=${WEBRTC_TURN_REALM:-turn.example.com}
       - WEBRTC_NAT_1TO1_IP=${WEBRTC_NAT_1TO1_IP:-}
+    # Allocation quotas: at most 8 relayed sessions per credential and 48 in
+    # total (the relay port range below holds 49), so one member cannot take
+    # every relay port.
     # Refuses to start without a real secret: with an empty static-auth-secret
     # anyone could mint credentials and use the relay.
     # Never relays into private, loopback, link-local or reserved ranges (incl.
@@ -292,6 +295,7 @@ services:
           --static-auth-secret="$$WEBRTC_TURN_SECRET" --realm="$$WEBRTC_TURN_REALM" \
           --listening-port=3478 --min-port=49152 --max-port=49200 \
           --fingerprint --no-cli --no-multicast-peers --no-tcp-relay \
+          --user-quota=8 --total-quota=48 \
           --denied-peer-ip=0.0.0.0-0.255.255.255 \
           --denied-peer-ip=10.0.0.0-10.255.255.255 \
           --denied-peer-ip=100.64.0.0-100.127.255.255 \

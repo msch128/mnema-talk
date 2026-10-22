@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -31,4 +32,21 @@ func (s *Sessions) AuthenticateRequest(r *http.Request) (*User, int, error) {
 		return nil, 0, errNoSession
 	}
 	return u, claims.TokenVersion, nil
+}
+
+// SessionClaims returns the session id and expiry of the request's verified
+// cookie, for long-lived connections that must end with the session: when it
+// is signed out (its id lands in revoked_sessions) or when the token expires.
+// A request without a valid cookie yields an empty id and a zero time. Tokens
+// issued before session ids existed have an empty id.
+func (s *Sessions) SessionClaims(r *http.Request) (string, time.Time) {
+	c, err := r.Cookie(s.CookieName())
+	if err != nil || c.Value == "" {
+		return "", time.Time{}
+	}
+	claims, err := ParseToken(c.Value, s.Secret)
+	if err != nil || claims.ExpiresAt == nil {
+		return "", time.Time{}
+	}
+	return claims.ID, claims.ExpiresAt.Time
 }

@@ -71,8 +71,8 @@ func (b *eventBudget) allowFrame(now time.Time) bool {
 	return true
 }
 
-// allowEvent counts a parsed event against its category's budget. An
-// oversized signaling payload is dropped (and still counted).
+// allowEvent counts a parsed event against its category's budget. A payload
+// over its type's cap (see payloadCap) is dropped, and still counted.
 func (b *eventBudget) allowEvent(eventType string, payloadLen int, now time.Time) bool {
 	ok := b.admit(eventType, payloadLen, now)
 	switch {
@@ -103,5 +103,5 @@ func (b *eventBudget) admit(eventType string, payloadLen int, now time.Time) boo
 		return b.signaling <= maxSignalingPerSec && payloadLen <= maxLen
 	}
 	b.events++
-	return b.events <= maxEventsPerSec
+	return b.events <= maxEventsPerSec && payloadLen <= payloadCap(eventType)
 }

@@ -47,7 +47,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 // logout handles POST /api/auth/logout.
 //
 // @Summary Sign out
-// @Description Clears the session cookie and revokes this session, so a copied cookie stops working. Needs no session.
+// @Description Clears the session cookie and revokes this session, so a copied cookie stops working, and closes the WebSockets opened with it. Needs no session.
 // @ID logout
 // @Tags Auth
 // @Produce json
@@ -57,8 +57,13 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/auth/logout [post]
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) error {
+	jti, _ := h.Sessions.SessionClaims(r)
 	if err := h.Sessions.Revoke(r); err != nil {
 		return err
+	}
+	// Sockets opened with this session end now, not at the next revalidation.
+	if h.Live != nil {
+		h.Live.DisconnectSession(jti)
 	}
 	h.Sessions.End(w)
 	w.WriteHeader(http.StatusNoContent)

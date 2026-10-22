@@ -67,7 +67,8 @@ func TestMediaHandshakeCounters(t *testing.T) {
 	rejected := metrics.MLSHandshakes.With("rejected").Load()
 	bytes := metrics.MLSHandshakeBytes.Load()
 
-	wire := base64.StdEncoding.EncodeToString([]byte("hello"))
+	frame := mlsWire(mlsWelcome, 1)
+	wire := base64.StdEncoding.EncodeToString(frame)
 	good, _ := json.Marshal(map[string]any{"channel_id": room, "wire": wire})
 	other, _ := json.Marshal(map[string]any{"channel_id": uuid.New(), "wire": wire})
 	badBase64, _ := json.Marshal(map[string]any{"channel_id": room, "wire": "!!!"})
@@ -80,7 +81,7 @@ func TestMediaHandshakeCounters(t *testing.T) {
 	if got := metrics.MLSHandshakes.With("rejected").Load() - rejected; got != 3 {
 		t.Fatalf("rejected = %d, want 3", got)
 	}
-	if got := metrics.MLSHandshakeBytes.Load() - bytes; got != 5 {
-		t.Fatalf("handshake bytes = %d, want 5", got)
+	if got := metrics.MLSHandshakeBytes.Load() - bytes; got != uint64(len(frame)) {
+		t.Fatalf("handshake bytes = %d, want %d", got, len(frame))
 	}
 }

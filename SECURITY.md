@@ -88,8 +88,26 @@ details and the limits.
   user's open WebSockets (after a password change the current client
   reconnects with its fresh cookie). Each token also has its own id; signing
   out records it in a small table until the token would have expired, so a
-  copied cookie of that one session stops working at once. Tokens issued
-  before this existed carry no id and stay valid until they expire.
+  copied cookie of that one session stops working at once, and signing out
+  also closes the WebSockets opened with that session. Tokens issued
+  before this existed carry no id and stay valid until they expire. An open
+  WebSocket is re-checked every two minutes against the token version, the
+  session id and the token's own expiry, and ends at the expiry; if the
+  database cannot answer three checks in a row, the socket is closed rather
+  than kept on trust.
+- **WebSocket flood limits.** Every client event has a payload cap (1 KiB for
+  ping, typing, speaking and the like; larger only for an SDP answer, an ICE
+  candidate, a diagnostic and a media handshake), and a frame too big for its
+  type is dropped before it is decoded. On top of the per-connection limits,
+  an account has shared limits across all of its connections (frames, events
+  and media handshakes per second), so several sockets of one member do not
+  multiply the allowance. The relay of media handshakes checks only their
+  framing (an MLS key package, welcome or public message, or a heartbeat or
+  capability message of the exact size); the content stays opaque to the
+  server, and anything that is not shaped like one of these is not fanned
+  out to the room. ICE candidates in a client's answer SDP get the same
+  vetting and budget as trickled ones (no loopback, link-local, multicast,
+  unspecified or name addresses, at most 64 per peer).
 - **CSRF.** State-changing requests and WebSocket upgrades must come from an
   allowed origin (`PUBLIC_URL` / `CORS_ALLOWED_ORIGINS`), on top of `SameSite=Lax`.
   The one exception is the webhook execute route
@@ -385,7 +403,17 @@ details and the limits.
   on version 2, and a version 2 unit carries no line, so in such an epoch its
   units can still be moved between lines, exactly as before.
   Planned (phase B, a later release): refuse version 2 entirely and stop
-  sending it, once older tabs and desktop clients have aged out.
+  sending it, once older tabs and desktop clients have aged out. Every bundle
+  since 0.8.2 speaks version 3, but a Talk member that does not advertise it
+  (an old tab, or a hostile client that stays silent) keeps its epoch on
+  version 2 by design; the 1.0 review kept this as is, because removing
+  version 2 is a protocol change that would cut such members off, and the
+  party that could exploit it (moving units between a sender's lines) is the
+  active server, which is already outside the model.
+  Also known and accepted: two colluding members, or the server, can make a
+  listener who hears nobody else regroup by naming a newer epoch in unopened
+  frames; this is rate-limited with a backoff and no more than the denial of
+  service the server already has.
   Video stays decodable by the
   browser's packetizer, so the codec headers it parses (H.264 parameter sets
   and slice headers, the VP8 payload header) are readable but authenticated;
