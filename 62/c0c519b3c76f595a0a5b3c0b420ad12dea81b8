@@ -1,0 +1,43 @@
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_56996669b32c56 29-30
+  s_06fcde5dbef956::t_47bad8acae225a 38-39
+doc/operations.md
+  s_06fcde5dbef956::t_507a9844beb3dd 79
+doc/upgrade.md
+  s_06fcde5dbef956::t_507a9844beb3dd 136-137,154,162-163
+SECURITY.md
+  s_06fcde5dbef956::t_507a9844beb3dd 45-48
+internal/server/account_delete_integration_test.go
+  s_06fcde5dbef956::t_1d76670241650b 183-215
+internal/push/recipients.go
+  s_06fcde5dbef956::t_2f980f6a60c123 30-31
+  s_06fcde5dbef956::t_3aa1f518b2da4e 39
+  s_06fcde5dbef956::t_90b5308081d415 40
+internal/push/service_integration_test.go
+  s_06fcde5dbef956::t_4531a3dd48b389 14
+  s_06fcde5dbef956::t_5314b4be7ce0b1 128-165
+doc/product-status.md
+  s_06fcde5dbef956::t_507a9844beb3dd 23
+  s_06fcde5dbef956::t_50f516e6d4a32c 97-99,103-104
+  s_06fcde5dbef956::t_21a010ad652755 105
+internal/push/service.go
+  s_06fcde5dbef956::t_4396f5d13addca 235-250
+  s_06fcde5dbef956::t_bf384ff0c4c96c 217-219,223-226
+  s_06fcde5dbef956::t_0b161d380a0afc 159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "62c0c519b3c76f595a0a5b3c0b420ad12dea81b8",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
