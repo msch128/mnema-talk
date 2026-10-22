@@ -33,8 +33,12 @@ func TestRenegotiationAnswersDoNotExhaustTheCandidateBudget(t *testing.T) {
 	sdp := sdpHead + hostLines(1, 11)
 	for round := 0; round < 20; round++ {
 		got := mustVet(t, p, sdp)
-		if n := strings.Count(got, "a=candidate:"); n != 10 {
-			t.Fatalf("round %d kept %d of 10 candidates", round, n)
+		want := 0
+		if round == 0 {
+			want = 10
+		}
+		if n := strings.Count(got, "a=candidate:"); n != want {
+			t.Fatalf("round %d forwarded %d candidates, want %d", round, n, want)
 		}
 	}
 	if len(p.cands.seen) != 10 {
@@ -71,10 +75,10 @@ func TestDistinctCandidatesAreStillCapped(t *testing.T) {
 	if n := strings.Count(got, "a=candidate:"); n != maxRemoteCandidates {
 		t.Fatalf("%d distinct candidates passed, want %d", n, maxRemoteCandidates)
 	}
-	// Already counted ones still pass, a new one does not.
+	// Known ones are not handed over again, a new one is refused.
 	again := mustVet(t, p, sdpHead+hostLines(1, 4)+hostLines(100, 101))
-	if n := strings.Count(again, "a=candidate:"); n != 3 {
-		t.Fatalf("re-listed answer kept %d, want the 3 known ones", n)
+	if n := strings.Count(again, "a=candidate:"); n != 0 {
+		t.Fatalf("second answer forwarded %d candidates, want none", n)
 	}
 }
 
@@ -98,6 +102,32 @@ func TestTrickleAndAnswerShareTheSet(t *testing.T) {
 	}
 }
 
+// Candidates sharing address and port but differing in type or related address
+// are distinct to Pion, so they are distinct here: 100 of them reach Pion as
+// at most 64, and one already known is never forwarded twice.
+func TestCandidatesDifferingOnlyInTypeOrRelatedAddressAreCapped(t *testing.T) {
+	p := &Peer{}
+	var b strings.Builder
+	for i := 0; i < 100; i++ {
+		typ, rel := "srflx", fmt.Sprintf(" raddr 198.51.100.%d rport 9", i+1)
+		if i%2 == 1 {
+			typ, rel = "relay", fmt.Sprintf(" raddr 203.0.113.%d rport 9", i+1)
+		}
+		fmt.Fprintf(&b, "a=candidate:1 1 udp 100 192.0.2.5 50000 typ %s%s\r\n", typ, rel)
+	}
+	sdp := sdpHead + b.String()
+	if n := strings.Count(mustVet(t, p, sdp), "a=candidate:"); n != maxRemoteCandidates {
+		t.Fatalf("%d candidates reached Pion, want %d", n, maxRemoteCandidates)
+	}
+	if n := strings.Count(mustVet(t, p, sdp), "a=candidate:"); n != 0 {
+		t.Fatalf("re-listed answer forwarded %d candidates again", n)
+	}
+	same := "a=candidate:1 1 udp 100 192.0.2.5 50000 typ host\r\n"
+	if n := strings.Count(mustVet(t, &Peer{}, sdpHead+same+same), "a=candidate:"); n != 1 {
+		t.Fatalf("a candidate listed twice in one answer reached Pion %d times", n)
+	}
+}
+
 // A new ice-ufrag in an answer does not reset the set: the server is the only
 // offerer and never restarts ICE, so a changing ufrag is a client trying to
 // renew its budget.
@@ -108,7 +138,7 @@ func TestChangedUfragDoesNotResetTheBudget(t *testing.T) {
 	}
 	mustVet(t, p, withUfrag("abcd", hostLines(1, maxRemoteCandidates+1)))
 	got := mustVet(t, p, withUfrag("wxyz", hostLines(1, 3)+hostLines(200, 201)))
-	if n := strings.Count(got, "a=candidate:"); n != 2 {
-		t.Fatalf("after a ufrag change %d candidates kept, want only the 2 known", n)
+	if n := strings.Count(got, "a=candidate:"); n != 0 {
+		t.Fatalf("after a ufrag change %d candidates forwarded, want none", n)
 	}
 }

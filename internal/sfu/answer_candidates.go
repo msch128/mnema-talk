@@ -5,7 +5,7 @@ import "github.com/pion/sdp/v3"
 // vetAnswerCandidates removes the ICE candidates an answer SDP carries that the
 // trickle path would have refused (unspecified, multicast, link-local, loopback
 // and name addresses, malformed or oversized lines) and every new candidate
-// beyond the peer's budget (one already counted is kept at no cost). Pion adds the candidates of a remote description to its
+// beyond the peer's budget (one already counted is removed, as Pion has it already). Pion adds the candidates of a remote description to its
 // ICE agent as they are, so without this an answer would sidestep the vetting
 // and the cap that AddRemoteCandidate applies, and make the server probe
 // addresses the member chose.
@@ -40,6 +40,11 @@ func (p *Peer) keepVettedCandidates(attrs []sdp.Attribute) []sdp.Attribute {
 		key, err := vetCandidateKey(a.Value, p.allowLoopbackCands)
 		if err != nil {
 			p.candidateDropped(err)
+			continue
+		}
+		if p.candidateKnown(key) {
+			// Pion has it from an earlier description; it is not handed over
+			// again.
 			continue
 		}
 		if p.takeCandidateBudget(key) != nil {

@@ -120,6 +120,12 @@ func (p *Peer) AddRemoteCandidate(c webrtc.ICECandidateInit) error {
 		p.candMu.Unlock()
 		return err
 	}
+	if p.candidateKnown(key) {
+		// Already handed to Pion (or queued for it): forwarding it again
+		// would be a second probe target the budget never counted.
+		p.candMu.Unlock()
+		return nil
+	}
 	if p.PC.RemoteDescription() == nil {
 		defer p.candMu.Unlock()
 		if len(p.cands.early) >= maxHeldCandidates {
@@ -258,12 +264,29 @@ func vetCandidateKey(candidate string, allowLoopback bool) (string, error) {
 	return candidateKey(parsed), nil
 }
 
-// candidateKey names a candidate by foundation, component, transport,
-// address and port, so the same candidate re-listed with another priority
-// or related address is the same candidate.
+// candidateKey names a candidate by everything Pion's candidate equality
+// compares (transport address, type, related address) plus foundation,
+// component and TCP type, so two candidates Pion would keep apart never share
+// a key. Only the priority and extensions are left out: the same candidate
+// re-listed with another priority is one candidate.
 func candidateKey(c ice.Candidate) string {
-	return fmt.Sprintf("%s/%d/%s/%s/%d", c.Foundation(), c.Component(),
-		c.NetworkType().NetworkShort(), strings.ToLower(c.Address()), c.Port())
+	rel := ""
+	if r := c.RelatedAddress(); r != nil {
+		rel = fmt.Sprintf("%s/%d", strings.ToLower(r.Address), r.Port)
+	}
+	return fmt.Sprintf("%s/%d/%s/%s/%d/%s/%s/%s", c.Foundation(), c.Component(),
+		c.NetworkType().NetworkShort(), strings.ToLower(c.Address()), c.Port(),
+		c.Type(), rel, c.TCPType())
+}
+
+// candidateKnown reports whether the candidate was counted before. The
+// caller holds candMu.
+func (p *Peer) candidateKnown(key string) bool {
+	if key == "" {
+		return false
+	}
+	_, ok := p.cands.seen[key]
+	return ok
 }
 
 func isDisallowedAddr(addr netip.Addr) bool {
