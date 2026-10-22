@@ -16,6 +16,10 @@ const TEXT_CHANNEL = `mobil-${suffix}`
 const VOICE_CHANNEL = `Mobil Talk ${suffix}`
 const MIN_TARGET = 44
 
+// Sealed calls do not work on Playwright's Linux WebKit (CI); they pass on macOS
+// WebKit and on Chromium. Same limit as the CI WebKit job, which skips the call specs.
+const isLinuxWebkit = (browserName: string) => browserName === 'webkit' && process.platform === 'linux'
+
 // The login allows 60 attempts per 15 minutes from one address and the whole
 // suite shares them. The first mobile project signs in through the dialog and
 // leaves its session here; the next one reuses it (and signs in itself if the
@@ -61,7 +65,7 @@ async function openDrawer(page: Page) {
   await expect(page.getByTestId('channel-drawer')).toBeInViewport({ ratio: 0.9 })
 }
 
-test('phone: sign in, drawer, message, thread, settings, Talk', async ({ page }) => {
+test('phone: sign in, drawer, message, thread, settings, Talk', async ({ page, browserName }) => {
   await signIn(page)
   const viewport = page.viewportSize()
   expect(viewport && viewport.width).toBeLessThan(768)
@@ -136,6 +140,16 @@ test('phone: sign in, drawer, message, thread, settings, Talk', async ({ page })
   // Talk: join from the drawer, the control bar stays on screen, leave.
   await openDrawer(page)
   await page.locator('[data-channel-type="voice"]', { hasText: VOICE_CHANNEL }).tap()
+  if (isLinuxWebkit(browserName)) {
+    // Playwright's Linux WebKit cannot seal call media (no encoded-frame
+    // transform or Ed25519), so the client refuses to join there, on a phone
+    // as on a desktop; see doc/product-status.md. The refusal is what that
+    // engine must show: the message on screen, no call, no leave button.
+    await expect(page.getByRole('alert')).toContainText('Dieser Browser kann Anrufe nicht schützen')
+    await expect(page.getByRole('button', { name: 'Verlassen' })).toHaveCount(0)
+    await expectNoSidewaysScroll(page)
+    return
+  }
   // The stage's own control bar (the drawer's status panel is off screen).
   const leave = page.getByRole('button', { name: 'Verlassen' }).last()
   await expect(leave).toBeInViewport({ ratio: 1 })

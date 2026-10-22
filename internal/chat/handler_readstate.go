@@ -2,6 +2,7 @@ package chat
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
@@ -134,6 +135,47 @@ func (h *Handler) markUnread(w http.ResponseWriter, r *http.Request) error {
 	}
 	h.publishReadState(user.ID, chID, map[string]any{"last_read_at": at, "refresh": true})
 	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+// FirstUnreadResponse is the body of GET /api/channels/{channelID}/first-unread.
+type FirstUnreadResponse struct {
+	// MessageID is the oldest top-level message by someone else after `since`; null when there is none.
+	MessageID *uuid.UUID `json:"message_id" format:"uuid" extensions:"x-nullable"`
+}
+
+// firstUnread handles GET /api/channels/{channelID}/first-unread.
+//
+// @Summary First unread message of a channel
+// @Description Returns the oldest top-level message by another member posted after `since` (the read marker the client saw when it opened the channel), so the client can jump to it when it is older than the loaded page. One indexed lookup; it changes nothing.
+// @ID getFirstUnread
+// @Tags Channels
+// @Produce json
+// @Security cookieAuth
+// @Param channelID path string true "Channel ID." Format(uuid)
+// @Param since query string true "RFC 3339 time: the last-read time of the channel." Format(date-time)
+// @Success 200 {object} FirstUnreadResponse
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/channels/{channelID}/first-unread [get]
+func (h *Handler) firstUnread(w http.ResponseWriter, r *http.Request) error {
+	chID, err := h.channelParam(r)
+	if err != nil {
+		return err
+	}
+	since, err := time.Parse(time.RFC3339Nano, r.URL.Query().Get("since"))
+	if err != nil {
+		return httpx.ErrInvalidInput("since must be an RFC 3339 time")
+	}
+	id, err := FirstUnread(r.Context(), h.DB, auth.UserFrom(r.Context()).ID, chID, since)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, FirstUnreadResponse{MessageID: id})
 	return nil
 }
 

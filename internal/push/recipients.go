@@ -27,7 +27,8 @@ type candidate struct {
 
 // loadCandidates reads, for one channel, every account with a subscription
 // (except the author) together with its notification settings, in one query.
-func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.UUID) ([]candidate, error) {
+// A non-nil only limits the result to that account.
+func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.UUID, only *uuid.UUID) ([]candidate, error) {
 	rows, err := q.Query(ctx, `
 		SELECT u.id, u.locale, u.push_preview, u.presence, c.name,
 		       cr.notify_level, cr.muted_until, cn.notify_level, cn.muted_until, NOW()
@@ -35,8 +36,8 @@ func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.
 		JOIN channels c ON c.id = $1
 		LEFT JOIN channel_reads cr ON cr.user_id = u.id AND cr.channel_id = c.id
 		LEFT JOIN category_notify cn ON cn.user_id = u.id AND cn.category_id = c.category_id
-		WHERE u.id <> $2 AND u.disabled_at IS NULL
-		  AND EXISTS (SELECT 1 FROM push_subscriptions s WHERE s.user_id = u.id AND `+validSession+`)`, channelID, authorID)
+		WHERE u.id <> $2 AND ($3::uuid IS NULL OR u.id = $3) AND u.disabled_at IS NULL
+		  AND EXISTS (SELECT 1 FROM push_subscriptions s WHERE s.user_id = u.id AND `+validSession+`)`, channelID, authorID, only)
 	if err != nil {
 		return nil, fmt.Errorf("load push candidates: %w", err)
 	}
