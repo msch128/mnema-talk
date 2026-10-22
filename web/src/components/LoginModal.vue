@@ -6,6 +6,7 @@ import { LogIn, UserPlus } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import LegalModal from './LegalModal.vue'
 import ForgotPasswordDialog from './ForgotPasswordDialog.vue'
+import SecondFactorStep from './SecondFactorStep.vue'
 import { useDialog } from '../composables/useDialog'
 import { t, locale, chooseLocale, SUPPORTED } from '../i18n'
 import type { InviteContext } from '../lib/inviteLink'
@@ -25,6 +26,8 @@ const showLegalModal = ref(false)
 // Offered only when the server can send mail (GET /api/auth/options).
 const canResetPassword = ref(false)
 const showForgot = ref(false)
+// Set after a correct password for an account with two-factor sign-in.
+const challenge = ref('')
 const username = ref('')
 const displayName = ref('')
 const password = ref('')
@@ -96,7 +99,11 @@ async function handleSubmit() {
       }
       await authStore.register(submittedUsername, submittedDisplayName || submittedUsername, submittedPassword, submittedInviteCode)
     } else {
-      await authStore.login(submittedUsername, submittedPassword)
+      const outcome = await authStore.login(submittedUsername, submittedPassword)
+      if (outcome.kind === 'challenge') {
+        challenge.value = outcome.challenge
+        password.value = ''
+      }
     }
   } catch (err) {
     errorMsg.value = caughtErrorMessage(err, t('login.failed'))
@@ -140,7 +147,8 @@ async function handleSubmit() {
       </div>
 
       <!-- Auth Form -->
-      <form @submit.prevent="handleSubmit" class="space-y-3.5">
+      <SecondFactorStep v-if="challenge" :challenge="challenge" @back="challenge = ''" />
+      <form v-else @submit.prevent="handleSubmit" class="space-y-3.5">
         <div>
           <label for="login-username" class="block text-xs font-medium text-mnema-muted mb-1 font-mono uppercase tracking-wider">{{ $t('login.username') }}</label>
           <input
@@ -225,7 +233,7 @@ async function handleSubmit() {
       <!-- Toggle Mode Footer -->
       <div class="text-center pt-2 border-t border-mnema-hairline space-y-2">
         <button
-          @click="isRegister = !isRegister; errorMsg = ''"
+          @click="isRegister = !isRegister; errorMsg = ''; challenge = ''"
           type="button"
           class="text-sm text-mnema-muted hover:text-mnema-accent transition cursor-pointer"
         >

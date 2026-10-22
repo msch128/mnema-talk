@@ -22,6 +22,9 @@ regexes = [
   '''postgres://mnema:mnema@''',
   # Dummy JWT signing key in internal/auth/token_test.go.
   '''secret = "0123456789abcdef0123456789abcdef"''',
+  # RFC 6238 appendix B test secret ("12345678901234567890") in base32, used by
+  # the TOTP tests; public, not a credential.
+  '''GEZDGNBVGY3TQOJQ(?:GEZDGNBVGY3TQOJQ)?''',
 ]
 
 # Only generic-api-key: exact public upstream known-answer vector fields.

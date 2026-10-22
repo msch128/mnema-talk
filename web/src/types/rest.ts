@@ -48,6 +48,8 @@ export type AuthAccountInfo = {
   email?: string
   email_verified: boolean
   mail_available: boolean
+  recovery_codes_remaining: number
+  two_factor_enabled: boolean
 }
 
 export function isAuthAccountInfo(value: unknown): value is AuthAccountInfo {
@@ -55,6 +57,8 @@ export function isAuthAccountInfo(value: unknown): value is AuthAccountInfo {
     && (!hasOwn(value, "email") || isString(value["email"]))
     && (hasOwn(value, "email_verified") && typeof value["email_verified"] === 'boolean')
     && (hasOwn(value, "mail_available") && typeof value["mail_available"] === 'boolean')
+    && (hasOwn(value, "recovery_codes_remaining") && isInteger(value["recovery_codes_remaining"]))
+    && (hasOwn(value, "two_factor_enabled") && typeof value["two_factor_enabled"] === 'boolean')
 }
 
 export const decodeAuthAccountInfo = decoder("auth.AccountInfo", isAuthAccountInfo)
@@ -254,6 +258,17 @@ export function isAuthPasswordResetRequest(value: unknown): value is AuthPasswor
 
 export const decodeAuthPasswordResetRequest = decoder("auth.PasswordResetRequest", isAuthPasswordResetRequest)
 
+export type AuthRecoveryCodes = {
+  recovery_codes: Array<string>
+}
+
+export function isAuthRecoveryCodes(value: unknown): value is AuthRecoveryCodes {
+  return isRecord(value)
+    && (hasOwn(value, "recovery_codes") && isArrayOf(value["recovery_codes"], item => isString(item)))
+}
+
+export const decodeAuthRecoveryCodes = decoder("auth.RecoveryCodes", isAuthRecoveryCodes)
+
 export type AuthRegisterRequest = {
   display_name?: string
   invite_code: string
@@ -270,6 +285,17 @@ export function isAuthRegisterRequest(value: unknown): value is AuthRegisterRequ
 }
 
 export const decodeAuthRegisterRequest = decoder("auth.RegisterRequest", isAuthRegisterRequest)
+
+export type AuthSecurityNotice = {
+  failed_attempts: number
+}
+
+export function isAuthSecurityNotice(value: unknown): value is AuthSecurityNotice {
+  return isRecord(value)
+    && (hasOwn(value, "failed_attempts") && isInteger(value["failed_attempts"]))
+}
+
+export const decodeAuthSecurityNotice = decoder("auth.SecurityNotice", isAuthSecurityNotice)
 
 export type AuthSetEmailRequest = {
   current_password: string
@@ -366,6 +392,95 @@ export function isAuthTimeoutState(value: unknown): value is AuthTimeoutState {
 }
 
 export const decodeAuthTimeoutState = decoder("auth.TimeoutState", isAuthTimeoutState)
+
+export type AuthTwoFactorChallenge = {
+  challenge: string
+  expires_in: number
+  two_factor_required: boolean
+}
+
+export function isAuthTwoFactorChallenge(value: unknown): value is AuthTwoFactorChallenge {
+  return isRecord(value)
+    && (hasOwn(value, "challenge") && isString(value["challenge"], 43))
+    && (hasOwn(value, "expires_in") && isInteger(value["expires_in"]))
+    && (hasOwn(value, "two_factor_required") && typeof value["two_factor_required"] === 'boolean')
+}
+
+export const decodeAuthTwoFactorChallenge = decoder("auth.TwoFactorChallenge", isAuthTwoFactorChallenge)
+
+export type AuthTwoFactorEnableRequest = {
+  code: string
+}
+
+export function isAuthTwoFactorEnableRequest(value: unknown): value is AuthTwoFactorEnableRequest {
+  return isRecord(value)
+    && (hasOwn(value, "code") && isString(value["code"], 32))
+}
+
+export const decodeAuthTwoFactorEnableRequest = decoder("auth.TwoFactorEnableRequest", isAuthTwoFactorEnableRequest)
+
+export type AuthTwoFactorLoginRequest = {
+  challenge: string
+  code: string
+}
+
+export function isAuthTwoFactorLoginRequest(value: unknown): value is AuthTwoFactorLoginRequest {
+  return isRecord(value)
+    && (hasOwn(value, "challenge") && isString(value["challenge"], 43))
+    && (hasOwn(value, "code") && isString(value["code"], 32))
+}
+
+export const decodeAuthTwoFactorLoginRequest = decoder("auth.TwoFactorLoginRequest", isAuthTwoFactorLoginRequest)
+
+export type AuthTwoFactorLoginResult = {
+  security_notice?: AuthSecurityNotice
+  user: AuthUser
+}
+
+export function isAuthTwoFactorLoginResult(value: unknown): value is AuthTwoFactorLoginResult {
+  return isRecord(value)
+    && (!hasOwn(value, "security_notice") || isAuthSecurityNotice(value["security_notice"]))
+    && (hasOwn(value, "user") && isAuthUser(value["user"]))
+}
+
+export const decodeAuthTwoFactorLoginResult = decoder("auth.TwoFactorLoginResult", isAuthTwoFactorLoginResult)
+
+export type AuthTwoFactorProofRequest = {
+  code: string
+  current_password: string
+}
+
+export function isAuthTwoFactorProofRequest(value: unknown): value is AuthTwoFactorProofRequest {
+  return isRecord(value)
+    && (hasOwn(value, "code") && isString(value["code"], 32))
+    && (hasOwn(value, "current_password") && isString(value["current_password"]))
+}
+
+export const decodeAuthTwoFactorProofRequest = decoder("auth.TwoFactorProofRequest", isAuthTwoFactorProofRequest)
+
+export type AuthTwoFactorSetup = {
+  otpauth_uri: string
+  secret: string
+}
+
+export function isAuthTwoFactorSetup(value: unknown): value is AuthTwoFactorSetup {
+  return isRecord(value)
+    && (hasOwn(value, "otpauth_uri") && isString(value["otpauth_uri"]))
+    && (hasOwn(value, "secret") && isString(value["secret"]))
+}
+
+export const decodeAuthTwoFactorSetup = decoder("auth.TwoFactorSetup", isAuthTwoFactorSetup)
+
+export type AuthTwoFactorSetupRequest = {
+  current_password: string
+}
+
+export function isAuthTwoFactorSetupRequest(value: unknown): value is AuthTwoFactorSetupRequest {
+  return isRecord(value)
+    && (hasOwn(value, "current_password") && isString(value["current_password"]))
+}
+
+export const decodeAuthTwoFactorSetupRequest = decoder("auth.TwoFactorSetupRequest", isAuthTwoFactorSetupRequest)
 
 export type AuthUpdateProfileRequest = {
   bio?: string

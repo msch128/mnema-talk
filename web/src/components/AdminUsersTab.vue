@@ -88,6 +88,22 @@ async function revokeSessions(u: AdminUser) {
   }
 }
 
+async function resetTwoFactor(u: AdminUser) {
+  const ok = await confirm({
+    title: t('admin.resetTwoFactorTitle', { name: u.display_name || u.username }),
+    body: t('admin.resetTwoFactorBody'),
+    confirmLabel: t('admin.resetTwoFactorConfirm'),
+    danger: true
+  })
+  if (!ok) return
+  try {
+    await api(`/api/admin/users/${u.id}/two-factor/reset`, { method: 'POST' })
+    toasts.success(t('admin.twoFactorReset'))
+  } catch (e) {
+    showError(e)
+  }
+}
+
 async function clearLoginLockout(u: AdminUser) {
   try {
     await api(`/api/admin/users/${u.id}/login-lockout/clear`, { method: 'POST' })
@@ -182,6 +198,7 @@ onMounted(async () => {
               @roles="rolesModalUser = u"
               @toggle-disable="toggleDisableUser(u)"
               @reset-login="resetUser = u"
+              @reset-two-factor="resetTwoFactor(u)"
               @revoke-sessions="revokeSessions(u)"
             />
           </tbody>

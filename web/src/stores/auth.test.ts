@@ -121,7 +121,7 @@ describe('authentication and account mutations', () => {
     const fetch = vi.fn().mockImplementation(() => respond({ user: member }))
     vi.stubGlobal('fetch', fetch)
     const auth = useAuthStore()
-    expect(await auth.login('member', 'test-only-password')).toEqual(member)
+    expect(await auth.login('member', 'test-only-password')).toEqual({ kind: 'user', user: member, notice: null })
     expect(auth.isAdmin).toBe(true)
     fetch.mockImplementation(() => respond({ error: 'expired' }, 401))
     expect(await auth.checkAuth()).toBe(false)

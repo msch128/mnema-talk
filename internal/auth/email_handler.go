@@ -20,6 +20,11 @@ type AccountInfo struct {
 	// MailAvailable is true when the server can send e-mail (SMTP is
 	// configured): addresses can be confirmed and passwords reset by mail.
 	MailAvailable bool `json:"mail_available"`
+	// TwoFactorEnabled is true while sign-in asks for an authenticator code.
+	TwoFactorEnabled bool `json:"two_factor_enabled"`
+	// RecoveryCodesRemaining is how many single-use recovery codes are unused
+	// (0 when two-factor sign-in is off).
+	RecoveryCodesRemaining int `json:"recovery_codes_remaining"`
 }
 
 // SetEmailRequest is the body of PUT /api/users/me/email.
@@ -56,7 +61,12 @@ func (h *Handler) accountInfo(ctx context.Context, id uuid.UUID) (AccountInfo, e
 	if err != nil {
 		return AccountInfo{}, err
 	}
-	return AccountInfo{Email: st.Address, EmailVerified: st.Verified, MailAvailable: h.mailEnabled()}, nil
+	tf, err := h.Sessions.twoFactorState(ctx, h.Sessions.DB, id)
+	if err != nil {
+		return AccountInfo{}, err
+	}
+	return AccountInfo{Email: st.Address, EmailVerified: st.Verified, MailAvailable: h.mailEnabled(),
+		TwoFactorEnabled: tf.Enabled, RecoveryCodesRemaining: tf.RecoveryCodesRemaining}, nil
 }
 
 func (h *Handler) writeAccountInfo(w http.ResponseWriter, r *http.Request, id uuid.UUID) error {

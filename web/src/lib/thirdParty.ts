@@ -26,7 +26,8 @@ export const THIRD_PARTY = [
       { name: 'ts-mls', pkg: 'ts-mls', license: 'MIT', url: 'https://github.com/LukaJCB/ts-mls' },
       { name: '@noble/ciphers', pkg: '@noble/ciphers', license: 'MIT', url: 'https://github.com/paulmillr/noble-ciphers' },
       { name: '@noble/hashes', pkg: '@noble/hashes', license: 'MIT', url: 'https://github.com/paulmillr/noble-hashes' },
-      { name: '@noble/curves', pkg: '@noble/curves', license: 'MIT', url: 'https://github.com/paulmillr/noble-curves' }
+      { name: '@noble/curves', pkg: '@noble/curves', license: 'MIT', url: 'https://github.com/paulmillr/noble-curves' },
+      { name: 'qrcode-generator (two-factor setup QR code)', pkg: 'qrcode-generator', license: 'MIT', url: 'https://github.com/kazuhikoarase/qrcode-generator' }
     ]
   },
   {

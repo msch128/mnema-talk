@@ -31,6 +31,9 @@ type accountView struct {
 	Email         string `json:"email"`
 	EmailVerified bool   `json:"email_verified"`
 	MailAvailable bool   `json:"mail_available"`
+
+	TwoFactorEnabled       bool `json:"two_factor_enabled"`
+	RecoveryCodesRemaining int  `json:"recovery_codes_remaining"`
 }
 
 func (a *app) account(c *client) accountView {

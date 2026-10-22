@@ -37,6 +37,7 @@ binary release.
 | [@noble/ciphers](https://github.com/paulmillr/noble-ciphers) | 2.1.1 | MIT |
 | [@noble/hashes](https://github.com/paulmillr/noble-hashes) | 2.3.0 | MIT |
 | [@noble/curves](https://github.com/paulmillr/noble-curves) | 2.0.1 | MIT |
+| [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (draws the QR code of the two-factor setup in the browser) | 2.0.4 | MIT |
 
 `ts-mls@1.6.4` depends on `@hpke/core@1.9.0` (MIT). That package is not a direct dependency.
 

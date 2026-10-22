@@ -35,6 +35,7 @@ var Classes = []Class{
 	{"admin.%", VisPrivileged, "unlisted admin routes are not known to be harmless"},
 	{"user.password_set", VisPrivileged, "Owner-only account takeover"},
 	{"user.password_reset", VisPrivileged, "Owner-only account takeover"},
+	{"user.two_factor_reset", VisPrivileged, "Owner-only account recovery action"},
 	{"user.lockout_clear", VisPrivileged, "Owner-only, reveals account attacks"},
 	{"auth.%", VisPrivileged, "sign-ins, failures and lockouts are other members' security events"},
 	{"message.%", VisChannel, "holds message text of one channel"},

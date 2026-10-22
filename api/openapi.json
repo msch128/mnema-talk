@@ -93,11 +93,21 @@
           "mail_available": {
             "description": "MailAvailable is true when the server can send e-mail (SMTP is\nconfigured): addresses can be confirmed and passwords reset by mail.",
             "type": "boolean"
+          },
+          "recovery_codes_remaining": {
+            "description": "RecoveryCodesRemaining is how many single-use recovery codes are unused\n(0 when two-factor sign-in is off).",
+            "type": "integer"
+          },
+          "two_factor_enabled": {
+            "description": "TwoFactorEnabled is true while sign-in asks for an authenticator code.",
+            "type": "boolean"
           }
         },
         "required": [
           "email_verified",
-          "mail_available"
+          "mail_available",
+          "recovery_codes_remaining",
+          "two_factor_enabled"
         ],
         "type": "object"
       },
@@ -443,6 +453,20 @@
         ],
         "type": "object"
       },
+      "auth.RecoveryCodes": {
+        "properties": {
+          "recovery_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "recovery_codes"
+        ],
+        "type": "object"
+      },
       "auth.RegisterRequest": {
         "properties": {
           "display_name": {
@@ -470,6 +494,17 @@
           "invite_code",
           "password",
           "username"
+        ],
+        "type": "object"
+      },
+      "auth.SecurityNotice": {
+        "properties": {
+          "failed_attempts": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "failed_attempts"
         ],
         "type": "object"
       },
@@ -600,6 +635,122 @@
           "reason",
           "timeout_until",
           "user_id"
+        ],
+        "type": "object"
+      },
+      "auth.TwoFactorChallenge": {
+        "properties": {
+          "challenge": {
+            "description": "Challenge is a single-use token bound to the account and to this\nsign-in; it is worth nothing without a valid code.",
+            "maxLength": 43,
+            "minLength": 43,
+            "type": "string"
+          },
+          "expires_in": {
+            "description": "ExpiresIn is the number of seconds the challenge stays open.",
+            "type": "integer"
+          },
+          "two_factor_required": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "challenge",
+          "expires_in",
+          "two_factor_required"
+        ],
+        "type": "object"
+      },
+      "auth.TwoFactorEnableRequest": {
+        "properties": {
+          "code": {
+            "description": "Code is the six digits the app shows for the new secret.",
+            "maxLength": 32,
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "type": "object"
+      },
+      "auth.TwoFactorLoginRequest": {
+        "properties": {
+          "challenge": {
+            "maxLength": 43,
+            "minLength": 43,
+            "type": "string"
+          },
+          "code": {
+            "description": "Code is the six digits of the authenticator app, or an unused recovery\ncode (spaces and dashes are ignored).",
+            "maxLength": 32,
+            "type": "string"
+          }
+        },
+        "required": [
+          "challenge",
+          "code"
+        ],
+        "type": "object"
+      },
+      "auth.TwoFactorLoginResult": {
+        "properties": {
+          "security_notice": {
+            "$ref": "#/components/schemas/auth.SecurityNotice",
+            "description": "SecurityNotice is set once when at least five wrong codes were entered\nsince the last sign-in."
+          },
+          "user": {
+            "$ref": "#/components/schemas/auth.User"
+          }
+        },
+        "required": [
+          "user"
+        ],
+        "type": "object"
+      },
+      "auth.TwoFactorProofRequest": {
+        "properties": {
+          "code": {
+            "maxLength": 32,
+            "type": "string"
+          },
+          "current_password": {
+            "format": "password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "current_password"
+        ],
+        "type": "object"
+      },
+      "auth.TwoFactorSetup": {
+        "properties": {
+          "otpauth_uri": {
+            "description": "OtpauthURI is the same secret as an otpauth:// URI, for the QR code.",
+            "type": "string"
+          },
+          "secret": {
+            "description": "Secret is the shared secret in base32, for typing into an app by hand.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "otpauth_uri",
+          "secret"
+        ],
+        "type": "object"
+      },
+      "auth.TwoFactorSetupRequest": {
+        "properties": {
+          "current_password": {
+            "format": "password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password"
         ],
         "type": "object"
       },
@@ -12655,6 +12806,106 @@
         ]
       }
     },
+    "/api/admin/users/{id}/two-factor/reset": {
+      "post": {
+        "description": "For a member who lost the authenticator and the recovery codes: turns two-factor sign-in off, deletes the secret and recovery codes and ends all sessions of the account. Owner only (403 otherwise); the Owner account cannot be targeted (400), its second factor is reset from the host with `mnema-talk reset-2fa <username>`.",
+        "operationId": "resetUserTwoFactor",
+        "parameters": [
+          {
+            "description": "User ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Reset a member's two-factor sign-in",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/api/admin/webhooks/{id}": {
       "delete": {
         "description": "Its URL stops working at once. Messages it posted stay.",
@@ -13245,6 +13496,16 @@
               }
             }
           },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.TwoFactorChallenge"
+                }
+              }
+            },
+            "description": "Correct password, but the account has two-factor sign-in: finish with POST /api/auth/login/2fa. No session is set yet."
+          },
           "400": {
             "content": {
               "application/json": {
@@ -13324,6 +13585,96 @@
         },
         "security": [],
         "summary": "Sign in",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/login/2fa": {
+      "post": {
+        "description": "Second step of POST /api/auth/login for an account with two-factor sign-in: the challenge from the 202 answer plus a six-digit authenticator code or an unused recovery code. Sets the session cookie like a normal sign-in. The challenge lives five minutes, is bound to that sign-in, and accepts five codes in total; an authenticator code works once (a replay is refused). After ten wrong codes the account's second step is locked (429, escalating, at most 15 minutes). Wrong, expired, replayed and unknown all answer the same 401; sessions revoked since the password check also fail.",
+        "operationId": "loginSecondFactor",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.TwoFactorLoginRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.TwoFactorLoginResult"
+                }
+              }
+            },
+            "description": "Signed in; security_notice is set once when wrong codes were entered since the last sign-in.",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Session cookie (HttpOnly, SameSite=Lax, Path=/; Secure on HTTPS).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_CREDENTIALS: the code or the challenge is not valid."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests, or the account's second step is locked.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [],
+        "summary": "Finish a sign-in with the second factor",
         "tags": [
           "Auth"
         ]
@@ -19771,6 +20122,447 @@
         "summary": "Search messages",
         "tags": [
           "Messages"
+        ]
+      }
+    },
+    "/api/users/me/2fa/disable": {
+      "post": {
+        "description": "Needs the current password and a current authenticator code or an unused recovery code. Deletes the secret and all recovery codes. 409 when two-factor sign-in is off.",
+        "operationId": "disableTwoFactor",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.TwoFactorProofRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Two-factor sign-in is off."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the password or the code is incorrect, or cross-origin request rejected."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: two-factor sign-in is not on."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests, or the second step is locked.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Turn off two-factor sign-in",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/users/me/2fa/enable": {
+      "post": {
+        "description": "Confirms the first code of the pending secret from POST /api/users/me/2fa/setup, turns two-factor sign-in on and returns ten single-use recovery codes, once. From the next sign-in the password is followed by a code. Wrong codes count toward the account's second-factor lockout.",
+        "operationId": "enableTwoFactor",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.TwoFactorEnableRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.RecoveryCodes"
+                }
+              }
+            },
+            "description": "Recovery codes, shown once.",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the code is incorrect, or cross-origin request rejected."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: two-factor sign-in is already on."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests, or the second step is locked.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Turn on two-factor sign-in",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/users/me/2fa/recovery-codes": {
+      "post": {
+        "description": "Needs the current password and a current authenticator code or an unused recovery code. Replaces all recovery codes with ten new single-use ones, shown once.",
+        "operationId": "regenerateRecoveryCodes",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.TwoFactorProofRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.RecoveryCodes"
+                }
+              }
+            },
+            "description": "Recovery codes, shown once.",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the password or the code is incorrect, or cross-origin request rejected."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: two-factor sign-in is not on."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests, or the second step is locked.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Make new recovery codes",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/users/me/2fa/setup": {
+      "post": {
+        "description": "Needs the current password. Creates a new pending authenticator secret (an earlier unconfirmed one is replaced) and returns it as text and as otpauth:// URI for the QR code. Nothing changes at sign-in until POST /api/users/me/2fa/enable confirms a code. 409 when two-factor sign-in is already on.",
+        "operationId": "setupTwoFactor",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.TwoFactorSetupRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.TwoFactorSetup"
+                }
+              }
+            },
+            "description": "Pending secret.",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the current password is incorrect, or cross-origin request rejected."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: two-factor sign-in is already on."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Start two-factor setup",
+        "tags": [
+          "Users"
         ]
       }
     },
