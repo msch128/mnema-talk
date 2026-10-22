@@ -1,0 +1,21 @@
+internal/linkpreview/linkpreview_slow_test.go
+  s_06fcde5dbef956::t_7d7a6870e3c586 119-147
+internal/linkpreview/linkpreview.go
+  s_06fcde5dbef956::t_7d7a6870e3c586 133-140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3f70070d3324e3759504f898fe854cd5fe72c726",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
