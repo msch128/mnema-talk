@@ -20,7 +20,7 @@ incompatibly only in a major release. What the 1.0 label does and does not say:
 | Area | Category at 1.0 |
 | --- | --- |
 | Server (Docker, linux/amd64 and arm64), browser app, text chat, roles and permissions, webhooks and bots, notifications, search and onboarding, voice, cameras and screen share in Chromium-based browsers | Supported |
-| Browser app on WebKit (Safari, iOS, installed iOS web apps) and Firefox: text chat, search, voice, cameras and screen share with sealed media, as tested in [Browsers](#browsers) | Supported, see the limits there (not yet tested on real iOS or Android hardware) |
+| Browser app on WebKit (Safari, iOS, installed iOS web apps) and Firefox: text chat, search, voice, cameras and screen share with sealed media, as tested in [Browsers](#browsers) | Supported for text chat, search and administration. Sealed calls pass on macOS WebKit locally, but the CI WebKit job does not run the call specs because they fail on Linux WebKit; see the limits there (not yet tested on real iOS or Android hardware) |
 | Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), backup and restore, upgrade from the supported releases (0.8.16 and 0.9.x), cosign-signed images | Supported |
 | Native mobile apps, text end-to-end encryption | Not offered. Text stays readable by the server, by design. The browser app has a phone layout (channel list as a drawer, full-screen thread and member list, 44 px touch targets, safe areas) that is covered by the `mobile-*` e2e projects in Chromium and WebKit device emulation, not by tests on real phones. |
 | Desktop client on Windows | Beta (unsigned, no Authenticode; SmartScreen warns) |
@@ -94,11 +94,14 @@ devices; run `make e2e` or see [development](development.md#browser-tests-e2e)):
 | | Chromium (Chrome, Edge) | WebKit (Safari, iOS) | Firefox |
 | --- | --- | --- | --- |
 | Sign-in, chat, search, roles, moderation, webhooks, notifications | Supported | Supported | Supported |
-| Microphone and camera, sealed on every line, with key rotation, late join and reload | Supported | Supported | Supported |
-| Screen share with viewer-chosen layers (simulcast) | Supported | Supported | Supported (VP8) |
-| Screen share frames advance for the viewer | Supported | Supported | Supported |
+| Microphone and camera, sealed on every line, with key rotation, late join and reload | Supported | Passes on macOS WebKit locally; not run in CI (the call specs fail on Linux WebKit) | Supported |
+| Screen share with viewer-chosen layers (simulcast) | Supported | Passes on macOS WebKit locally; not run in CI | Supported (VP8) |
+| Screen share frames advance for the viewer | Supported | Passes on macOS WebKit locally; not run in CI | Supported |
 | Required CI check | Yes | No (`e2e (webkit)`: text and admin specs only) | No (`e2e (firefox)`, smoke and sealed-call subset) |
 | Not covered by the suite | | Real Safari and iOS hardware; calls on Linux WebKit (the specs fail there, they pass on macOS WebKit) | Real screen capture |
+
+A real-device call (real camera and microphone, real Google Chrome on macOS,
+sealed both ways) was verified on 2026-10-22.
 
 What it took:
 
