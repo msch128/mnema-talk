@@ -6,6 +6,7 @@ import { Reply, Image as ImageIcon } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
 import BotBadge from './BotBadge.vue'
 import { previewText } from '../lib/replies'
+import { shownName } from '../lib/deletedUser'
 import { t } from '../i18n'
 
 // The "replied to" line above a message: curved connector into the
@@ -20,7 +21,7 @@ const props = defineProps({
 defineEmits<{ jump: [] }>()
 
 const text = computed(() => previewText(props.reply?.content))
-const name = computed(() => props.reply?.display_name || props.reply?.username || t('chat.unknownUser'))
+const name = computed(() => (props.reply ? shownName(props.reply) : '') || t('chat.unknownUser'))
 </script>
 
 <template>

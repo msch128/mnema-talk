@@ -7,6 +7,7 @@ import { t } from '../i18n'
 import { useAccountStore } from '../stores/account'
 import AccountEmail from './AccountEmail.vue'
 import AccountTwoFactor from './AccountTwoFactor.vue'
+import AccountPrivacy from './AccountPrivacy.vue'
 import BaseDialog from './BaseDialog.vue'
 
 const account = useAccountStore()
@@ -29,6 +30,7 @@ onMounted(async () => {
       <template v-else>
         <AccountTwoFactor />
         <AccountEmail />
+        <AccountPrivacy />
       </template>
     </div>
   </BaseDialog>

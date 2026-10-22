@@ -181,7 +181,7 @@ func ValidateUsername(username string) error {
 	if !usernamePattern.MatchString(username) {
 		return httpx.ErrInvalidInput("username must be 3-32 characters: letters, digits, '_', '.', '-'")
 	}
-	if reservedUsernames[strings.ToLower(username)] {
+	if reservedUsernames[strings.ToLower(username)] || strings.HasPrefix(strings.ToLower(username), deletedUsernamePrefix) {
 		return httpx.ErrInvalidInput("this username is reserved")
 	}
 	return nil

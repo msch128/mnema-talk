@@ -53,7 +53,8 @@
   },
   "user": {
     "avatar": "Profilbild",
-    "openProfile": "Eigenes Profil öffnen"
+    "openProfile": "Eigenes Profil öffnen",
+    "deleted": "Gelöschter Nutzer"
   },
   "media": {
     "sizeMb": "{size} MB"
@@ -623,7 +624,8 @@
       "rights2Before": "Außerdem können Sie einer Verarbeitung auf Grundlage berechtigter Interessen widersprechen (Art. 21 DSGVO) und eine erteilte Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen (Art. 7 Abs. 3 DSGVO). Sie haben zudem das Recht, sich bei einer ",
       "rightsComplain": "Datenschutzaufsichtsbehörde zu beschweren",
       "rights2After": " (Art. 77 DSGVO), insbesondere in dem Land Ihres Wohnorts oder des Wohnsitzes des Betreibers.",
-      "noiseFilter": "Die KI-Rauschunterdrückung (DeepFilterNet3 bzw. GTCRN) läuft vollständig in Ihrem Browser. Ihr Mikrofonsignal wird dafür an keinen Drittanbieter übertragen; Modell und Programmcode kommen von diesem Server."
+      "noiseFilter": "Die KI-Rauschunterdrückung (DeepFilterNet3 bzw. GTCRN) läuft vollständig in Ihrem Browser. Ihr Mikrofonsignal wird dafür an keinen Drittanbieter übertragen; Modell und Programmcode kommen von diesem Server.",
+      "selfService": "Ohne jemanden anzuschreiben: Unter Konto & Sicherheit im Kontomenü kannst du eine Kopie deiner Daten herunterladen (JSON-Dateien in einer ZIP-Datei, einmal pro Tag) und dein Konto selbst löschen. Beim Löschen werden Profil, Avatar, E-Mail-Adresse, Sitzungen und Uploads entfernt; deine Nachrichten bleiben ohne ihren Text als von „Gelöschter Nutzer“ in ihren Threads stehen. Eine freiwillige E-Mail-Adresse dient nur zur Bestätigung und zum Zurücksetzen deines Passworts und wird anderen Mitgliedern nie angezeigt."
     },
     "cookies": {
       "heading": "3. Cookies & lokaler Speicher",
@@ -1905,6 +1907,25 @@
       "back": "Zurück",
       "notice": "Seit deiner letzten Anmeldung wurden {count} falsche Codes für dein Konto eingegeben.",
       "noticeHint": "Möglicherweise kennt jemand dein Passwort. Ändere es unter Konto & Sicherheit und prüfe deine Recovery-Codes."
+    },
+    "privacy": {
+      "title": "Deine Daten",
+      "exportTitle": "Kopie deiner Daten herunterladen",
+      "exportIntro": "Eine ZIP-Datei mit JSON-Dateien zu Profil, Einstellungen, Rollen, Nachrichten, Reaktionen, Uploads und den Protokolleinträgen zu deinem Konto. Daten anderer Mitglieder sind nicht enthalten. Einmal pro Tag; der Download ist 24 Stunden lang einmal möglich.",
+      "exportRequest": "Export anfordern",
+      "exportStarted": "Dein Export wird vorbereitet.",
+      "exportPending": "Dein Export wird vorbereitet …",
+      "exportReady": "Herunterladen (gültig bis {when})",
+      "exportFailed": "Der Export konnte nicht erstellt werden. Versuche es später erneut.",
+      "exportDownloaded": "Der letzte Export wurde heruntergeladen und entfernt.",
+      "exportExpired": "Der letzte Export ist abgelaufen und wurde entfernt.",
+      "exportNext": "Den nächsten Export kannst du ab {when} anfordern.",
+      "deleteTitle": "Mein Konto löschen",
+      "deleteIntro": "Löscht dein Profil, deinen Avatar, deine E-Mail-Adresse, Sitzungen, Einstellungen, Reaktionen und Uploads endgültig. Deine Nachrichten bleiben in ihren Threads als von „Gelöschter Nutzer“ stehen, ihr Text wird aber entfernt. Antworten anderer Mitglieder bleiben. Dein Benutzername wird wieder frei. Das lässt sich nicht rückgängig machen.",
+      "deleteOwner": "Das Owner-Konto kann nicht gelöscht werden: Die Eigentümerschaft lässt sich nicht übertragen, die Community hätte sonst keinen Owner.",
+      "deleteButton": "Mein Konto löschen …",
+      "deleteType": "Tippe zur Bestätigung deinen Benutzernamen ({name})",
+      "deleteConfirm": "Endgültig löschen"
     }
   }
 }

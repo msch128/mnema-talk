@@ -7,6 +7,7 @@ import { useMentionsInbox } from '../composables/useMentionsInbox'
 import { useDismissable } from '../composables/useDismissable'
 import { locale } from '../i18n'
 import UserAvatar from './UserAvatar.vue'
+import { shownName } from '../lib/deletedUser'
 
 // The mentions inbox in the channel header: a button with the number of
 // unread mentions and a popover listing them; a click jumps to the message.
@@ -91,7 +92,7 @@ function when(iso: string) {
           <UserAvatar :user="{ username: msg.username, display_name: msg.display_name, avatar_url: msg.avatar_url }" size="sm" class="mt-0.5" />
           <span class="min-w-0 flex-1">
             <span class="mb-0.5 flex items-center gap-2">
-              <span class="truncate text-sm font-medium text-mnema-text">{{ msg.display_name || msg.username }}</span>
+              <span class="truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
               <span v-if="channelNames.get(msg.channel_id)" class="flex items-center gap-1 rounded border border-mnema-border bg-mnema-surface px-1.5 py-0.5 text-xs text-mnema-muted">
                 <Volume2 v-if="channelNames.get(msg.channel_id)?.type === 'voice'" class="h-2.5 w-2.5 text-mnema-tertiary" />
                 <Hash v-else class="h-2.5 w-2.5 text-mnema-tertiary" />

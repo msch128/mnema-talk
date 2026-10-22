@@ -207,6 +207,7 @@ onMounted(() => {
           <p class="text-xs">
             {{ $t('legal.privacy.rights1Before') }}<strong class="text-mnema-text">{{ $t('legal.privacy.rightsAccess') }}</strong>{{ $t('legal.privacy.rights1Mid1') }}<strong class="text-mnema-text">{{ $t('legal.privacy.rightsRectify') }}</strong>{{ $t('legal.privacy.rights1Mid2') }}<strong class="text-mnema-text">{{ $t('legal.privacy.rightsErase') }}</strong>{{ $t('legal.privacy.rights1Mid3') }}<strong class="text-mnema-text">{{ $t('legal.privacy.rightsRestrict') }}</strong>{{ $t('legal.privacy.rights1Mid4') }}<strong class="text-mnema-text">{{ $t('legal.privacy.rightsPortability') }}</strong>{{ $t('legal.privacy.rights1Mid5') }}<a :href="`mailto:${operator.email}`" class="text-mnema-accent hover:underline">{{ operator.email }}</a>{{ $t('legal.privacy.rights1After') }}
           </p>
+          <p class="text-xs" data-testid="legal-self-service">{{ $t('legal.privacy.selfService') }}</p>
           <p class="text-xs">
             {{ $t('legal.privacy.rights2Before') }}<strong class="text-mnema-text">{{ $t('legal.privacy.rightsComplain') }}</strong>{{ $t('legal.privacy.rights2After') }}
           </p>

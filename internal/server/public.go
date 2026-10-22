@@ -20,7 +20,7 @@ const turnCredentialTTL = 12 * time.Hour
 
 // LegalVersion changes whenever recipients, retention or rights in the
 // privacy policy change.
-const LegalVersion = "1.4"
+const LegalVersion = "1.5"
 
 // Legal is the response of GET /api/legal: the operator details and the facts
 // the privacy policy must state.

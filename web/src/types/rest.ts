@@ -187,6 +187,51 @@ export function isAuthCreateInviteRequest(value: unknown): value is AuthCreateIn
 
 export const decodeAuthCreateInviteRequest = decoder("auth.CreateInviteRequest", isAuthCreateInviteRequest)
 
+export type AuthDeleteAccountRequest = {
+  code?: string
+  current_password: string
+}
+
+export function isAuthDeleteAccountRequest(value: unknown): value is AuthDeleteAccountRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "code") || isString(value["code"], 32))
+    && (hasOwn(value, "current_password") && isString(value["current_password"]))
+}
+
+export const decodeAuthDeleteAccountRequest = decoder("auth.DeleteAccountRequest", isAuthDeleteAccountRequest)
+
+export type AuthExportRequest = {
+  code?: string
+  current_password: string
+}
+
+export function isAuthExportRequest(value: unknown): value is AuthExportRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "code") || isString(value["code"], 32))
+    && (hasOwn(value, "current_password") && isString(value["current_password"]))
+}
+
+export const decodeAuthExportRequest = decoder("auth.ExportRequest", isAuthExportRequest)
+
+export type AuthExportStatus = {
+  expires_at?: string
+  next_request_at?: string
+  requested_at?: string
+  size_bytes: number
+  state: "none" | "pending" | "ready" | "failed" | "downloaded" | "expired"
+}
+
+export function isAuthExportStatus(value: unknown): value is AuthExportStatus {
+  return isRecord(value)
+    && (!hasOwn(value, "expires_at") || isTimestamp(value["expires_at"]))
+    && (!hasOwn(value, "next_request_at") || isTimestamp(value["next_request_at"]))
+    && (!hasOwn(value, "requested_at") || isTimestamp(value["requested_at"]))
+    && (hasOwn(value, "size_bytes") && isInteger(value["size_bytes"]))
+    && (hasOwn(value, "state") && (value["state"] === "none" || value["state"] === "pending" || value["state"] === "ready" || value["state"] === "failed" || value["state"] === "downloaded" || value["state"] === "expired"))
+}
+
+export const decodeAuthExportStatus = decoder("auth.ExportStatus", isAuthExportStatus)
+
 export type AuthInvite = {
   code: string
   created_at: string
