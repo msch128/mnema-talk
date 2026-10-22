@@ -28,6 +28,9 @@ type rawPayload struct {
 type request struct {
 	payload rawPayload
 	files   []*media.StoredFile
+	// release gives back the storage reserved for the request's files; the
+	// caller defers it once the message is stored or dropped.
+	release func()
 }
 
 // readRequest parses the JSON or multipart body. Files are already stored;
@@ -37,7 +40,7 @@ func (h *Handler) readRequest(w http.ResponseWriter, r *http.Request, uploader u
 	if err != nil {
 		return nil, formError("Content-Type must be application/json or multipart/form-data")
 	}
-	req := &request{}
+	req := &request{release: func() {}}
 	switch mt {
 	case "application/json":
 		httpx.SetJSONReadDeadline(w)
@@ -51,12 +54,18 @@ func (h *Handler) readRequest(w http.ResponseWriter, r *http.Request, uploader u
 		if err != nil {
 			return nil, err
 		}
-		if err := h.Media.CheckUploadQuota(ctx, uploader, r.ContentLength); err != nil {
+		release, err := h.Media.ReserveUpload(ctx, uploader, media.AnnouncedSize(r, body))
+		if err != nil {
 			return nil, err
 		}
+		req.release = release
 		r = r.WithContext(ctx)
 		r.Body = http.MaxBytesReader(w, r.Body, body)
-		return req, h.readMultipart(r, req)
+		if err := h.readMultipart(r, req); err != nil {
+			release()
+			return nil, err
+		}
+		return req, nil
 	}
 	return nil, formError("Content-Type must be application/json or multipart/form-data")
 }

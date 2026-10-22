@@ -236,6 +236,7 @@ func (h *Handler) post(w http.ResponseWriter, r *http.Request, rec *record) (*ch
 	if err != nil {
 		return nil, err
 	}
+	defer req.release()
 	discard := func() {
 		for _, f := range req.files {
 			h.Media.DiscardFile(ctx, f)

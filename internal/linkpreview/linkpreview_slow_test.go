@@ -73,3 +73,46 @@ func TestSlowHostEntryExpiresAndTableIsBounded(t *testing.T) {
 		t.Fatalf("table grew to %d", len(s.m))
 	}
 }
+
+// A slow redirect target is marked, not the innocent host that redirects to it.
+func TestSlowRedirectTargetIsMarkedNotTheRedirector(t *testing.T) {
+	old := fetchTimeout
+	fetchTimeout = 150 * time.Millisecond
+	defer func() { fetchTimeout = old }()
+
+	release := make(chan struct{})
+	defer close(release)
+	slow := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-release:
+		case <-r.Context().Done():
+		}
+	}))
+	defer slow.Close()
+	// The slow target is reached as "localhost", the redirector as 127.0.0.1.
+	slowURL := strings.Replace(slow.URL, "127.0.0.1", "localhost", 1)
+	redirector := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/ok" {
+			w.Header().Set("Content-Type", "text/html")
+			_, _ = w.Write([]byte(`<title>fine</title>`))
+			return
+		}
+		http.Redirect(w, r, slowURL, http.StatusFound)
+	}))
+	defer redirector.Close()
+	f := New()
+	f.allowPrivate = true
+
+	if _, err := f.Preview(context.Background(), redirector.URL+"/go"); err == nil {
+		t.Fatal("expected the slow redirect target to fail")
+	}
+	if f.slow.is("127.0.0.1") {
+		t.Fatal("the redirecting host was marked slow")
+	}
+	if !f.slow.is("localhost") {
+		t.Fatal("the slow redirect target was not marked")
+	}
+	if _, err := f.Preview(context.Background(), redirector.URL+"/ok"); err != nil {
+		t.Fatalf("redirecting host no longer works: %v", err)
+	}
+}

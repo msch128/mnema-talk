@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,16 +31,58 @@ type Quota struct {
 	DiskPath     string
 }
 
-// CheckUploadQuota refuses an upload of up to size bytes by userID when it
-// would exceed the per-user budget, the total storage cap or the free-space
-// floor. size is the announced request size (an upper bound for the file);
-// the streamed file is still capped by the upload limit.
-func (h *Handler) CheckUploadQuota(ctx context.Context, userID uuid.UUID, size int64) error {
+// reservations are the bytes of uploads in flight. The app is one process, so
+// a mutex makes check-and-reserve atomic: parallel uploads of one account
+// cannot all pass the same budget. The rolling window is read from the media
+// table (rows are written when an upload completes), in-flight uploads are
+// added on top, and a reservation is released only after the row is written
+// (or the upload failed), so nothing is ever counted less than once.
+type reservations struct {
+	mu    sync.Mutex
+	user  map[uuid.UUID]int64
+	total int64
+}
+
+// ReserveUpload checks an upload of up to size bytes by userID against the
+// budgets and reserves the bytes until the returned release is called. size
+// is an upper bound: the request body is capped at it (an unknown length must
+// be passed as the largest body the route accepts).
+func (h *Handler) ReserveUpload(ctx context.Context, userID uuid.UUID, size int64) (func(), error) {
 	size = max(size, 0)
 	q := h.Quota
 	if err := q.checkFreeSpace(size); err != nil {
-		return err
+		return nil, err
 	}
+	if q.PerUserBytes <= 0 && q.TotalBytes <= 0 {
+		return func() {}, nil
+	}
+	r := &h.reserved
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if err := h.checkBudgets(ctx, userID, size); err != nil {
+		return nil, err
+	}
+	if r.user == nil {
+		r.user = map[uuid.UUID]int64{}
+	}
+	r.user[userID] += size
+	r.total += size
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			r.mu.Lock()
+			defer r.mu.Unlock()
+			if r.user[userID] -= size; r.user[userID] <= 0 {
+				delete(r.user, userID)
+			}
+			r.total -= size
+		})
+	}, nil
+}
+
+// checkBudgets runs with h.reserved.mu held.
+func (h *Handler) checkBudgets(ctx context.Context, userID uuid.UUID, size int64) error {
+	q, r := h.Quota, &h.reserved
 	if q.PerUserBytes > 0 {
 		var used int64
 		if err := h.DB.QueryRow(ctx, `
@@ -48,7 +91,7 @@ func (h *Handler) CheckUploadQuota(ctx context.Context, userID uuid.UUID, size i
 			userID, time.Now().Add(-quotaWindow)).Scan(&used); err != nil {
 			return fmt.Errorf("read upload usage: %w", err)
 		}
-		if used+size > q.PerUserBytes {
+		if used+r.user[userID]+size > q.PerUserBytes {
 			return httpx.NewAPIError(http.StatusTooManyRequests, httpx.CodeRateLimited, "daily upload limit reached; try again later")
 		}
 	}
@@ -57,11 +100,20 @@ func (h *Handler) CheckUploadQuota(ctx context.Context, userID uuid.UUID, size i
 		if err := h.DB.QueryRow(ctx, `SELECT COALESCE(SUM(size_bytes), 0)::bigint FROM media WHERE NOT is_deleted`).Scan(&total); err != nil {
 			return fmt.Errorf("read storage usage: %w", err)
 		}
-		if total+size > q.TotalBytes {
+		if total+r.total+size > q.TotalBytes {
 			return httpx.ErrUnavailable("file storage is full; uploads are paused")
 		}
 	}
 	return nil
+}
+
+// AnnouncedSize is the size to reserve for a request: its Content-Length, or
+// the largest body the route accepts when the length is not known.
+func AnnouncedSize(r *http.Request, worstCase int64) int64 {
+	if r.ContentLength < 0 {
+		return worstCase
+	}
+	return r.ContentLength
 }
 
 func (q Quota) checkFreeSpace(size int64) error {

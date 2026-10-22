@@ -111,9 +111,6 @@ func (h *Handler) prepareUploadRequest(w http.ResponseWriter, r *http.Request, u
 	if r.ContentLength > bodyLimit(limit) {
 		return nil, httpx.ErrPayloadTooLarge(fmt.Sprintf("file exceeds the %d MB limit", limit>>20))
 	}
-	if err := h.CheckUploadQuota(r.Context(), user.ID, r.ContentLength); err != nil {
-		return nil, err
-	}
 	r.Body = http.MaxBytesReader(w, r.Body, bodyLimit(limit))
 	return r.WithContext(WithUploadLimit(r.Context(), limit)), nil
 }
@@ -182,6 +179,13 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	// The body is capped at the route's limit, so the reservation is an upper
+	// bound of what is stored.
+	release, err := h.ReserveUpload(req.Context(), user.ID, AnnouncedSize(req, bodyLimit(h.limit(req.Context()))))
+	if err != nil {
+		return err
+	}
+	defer release()
 	in, target, err := h.readUpload(req, chID)
 	if err != nil {
 		return err

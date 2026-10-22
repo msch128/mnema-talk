@@ -172,7 +172,7 @@ func (f *Fetcher) get(ctx context.Context, u *url.URL, accept string, limit int6
 		if errors.Is(err, ErrBlocked) {
 			return nil, "", nil, ErrBlocked
 		}
-		f.slow.noteTimeout(host, err)
+		f.slow.noteTimeout(failedHost(err, host), err)
 		return nil, "", nil, fmt.Errorf("fetch: %w", err)
 	}
 	defer res.Body.Close()
@@ -181,7 +181,7 @@ func (f *Fetcher) get(ctx context.Context, u *url.URL, accept string, limit int6
 	}
 	body, err := io.ReadAll(io.LimitReader(res.Body, limit))
 	if err != nil {
-		f.slow.noteTimeout(host, err)
+		f.slow.noteTimeout(strings.ToLower(res.Request.URL.Hostname()), err)
 		return nil, "", nil, fmt.Errorf("read: %w", err)
 	}
 	return body, res.Header.Get("Content-Type"), res.Request.URL, nil

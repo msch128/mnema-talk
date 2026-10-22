@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -59,4 +61,17 @@ func (s *slowHosts) noteTimeout(host string, err error) {
 		}
 	}
 	s.m[host] = time.Now().Add(slowHostTTL)
+}
+
+// failedHost is the host the failed request was addressed to: after a
+// redirect that is the redirect target, not the link the member posted, so a
+// slow target cannot get the innocent host that redirects to it marked.
+func failedHost(err error, fallback string) string {
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		if u, perr := url.Parse(ue.URL); perr == nil && u.Hostname() != "" {
+			return strings.ToLower(u.Hostname())
+		}
+	}
+	return fallback
 }

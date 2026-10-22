@@ -37,6 +37,8 @@ type Handler struct {
 	Perms *perm.Service
 	// Quota bounds the storage uploads may use; the zero value imposes none.
 	Quota Quota
+
+	reserved reservations
 }
 
 // UploadBodyLimit is the transport ceiling for upload routes: the file cap

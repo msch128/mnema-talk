@@ -6,6 +6,8 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/google/uuid"
@@ -53,13 +55,14 @@ func TestUploadQuotaIsPerAccountAndOffByDefault(t *testing.T) {
 	execMedia(t, f.p, `INSERT INTO media(id,uploader_id,s3_bucket,s3_key,original_filename,mime_type,size_bytes) VALUES($1,$2,'b','k','a','text/plain',900)`, uuid.New(), other)
 
 	f.h.Quota = Quota{PerUserBytes: 1000}
-	if err := f.h.CheckUploadQuota(context.Background(), f.user.ID, 900); err != nil {
+	if _, err := f.h.ReserveUpload(context.Background(), f.user.ID, 900); err != nil {
 		t.Fatalf("another account's usage must not count: %v", err)
 	}
-	requireAPIError(t, f.h.CheckUploadQuota(context.Background(), other, 200), http.StatusTooManyRequests)
+	_, err := f.h.ReserveUpload(context.Background(), other, 200)
+	requireAPIError(t, err, http.StatusTooManyRequests)
 
 	f.h.Quota = Quota{}
-	if err := f.h.CheckUploadQuota(context.Background(), other, 1<<30); err != nil {
+	if _, err := f.h.ReserveUpload(context.Background(), other, 1<<30); err != nil {
 		t.Fatalf("no quota configured: %v", err)
 	}
 }
@@ -81,11 +84,69 @@ func TestUploadRefusedWhenStorageIsFull(t *testing.T) {
 func TestUploadRefusedBelowFreeSpaceFloor(t *testing.T) {
 	f := mediaDB(t)
 	f.h.Quota = Quota{MinFreeBytes: 1 << 60, DiskPath: t.TempDir()}
-	requireAPIError(t, f.h.CheckUploadQuota(context.Background(), f.user.ID, 1), http.StatusServiceUnavailable)
+	_, err := f.h.ReserveUpload(context.Background(), f.user.ID, 1)
+	requireAPIError(t, err, http.StatusServiceUnavailable)
 
 	// An unreadable path must not block uploads (the guard is advisory).
 	f.h.Quota = Quota{MinFreeBytes: 1 << 60, DiskPath: "/does/not/exist"}
-	if err := f.h.CheckUploadQuota(context.Background(), f.user.ID, 1); err != nil {
+	if _, err := f.h.ReserveUpload(context.Background(), f.user.ID, 1); err != nil {
 		t.Fatalf("unreadable path: %v", err)
 	}
+}
+
+// Parallel uploads of one account cannot all pass the same budget: the bytes of
+// uploads in flight count until they are released.
+func TestUploadReservationsAreAtomic(t *testing.T) {
+	f := mediaDB(t)
+	f.h.Quota = Quota{PerUserBytes: 1000}
+	ctx := context.Background()
+
+	var wg sync.WaitGroup
+	var granted atomic.Int32
+	releases := make(chan func(), 20)
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if rel, err := f.h.ReserveUpload(ctx, f.user.ID, 300); err == nil {
+				granted.Add(1)
+				releases <- rel
+			}
+		}()
+	}
+	wg.Wait()
+	if granted.Load() != 3 {
+		t.Fatalf("%d parallel reservations of 300 passed a budget of 1000, want 3", granted.Load())
+	}
+	// A released reservation frees its bytes (the upload failed); releasing twice is harmless.
+	rel := <-releases
+	rel()
+	rel()
+	if _, err := f.h.ReserveUpload(ctx, f.user.ID, 300); err != nil {
+		t.Fatalf("released bytes were not given back: %v", err)
+	}
+	if _, err := f.h.ReserveUpload(ctx, f.user.ID, 300); err == nil {
+		t.Fatal("budget exceeded after a double release")
+	}
+}
+
+func TestUnknownLengthReservesTheWorstCase(t *testing.T) {
+	r := httptest.NewRequest(http.MethodPost, "/upload", nil)
+	r.ContentLength = -1
+	if got := AnnouncedSize(r, 5000); got != 5000 {
+		t.Fatalf("unknown length reserved %d, want the route limit", got)
+	}
+	r.ContentLength = 42
+	if got := AnnouncedSize(r, 5000); got != 42 {
+		t.Fatalf("known length reserved %d", got)
+	}
+
+	f := mediaDB(t)
+	f.h.MaxUploadBytes = 1 << 20
+	f.h.Quota = Quota{PerUserBytes: 1 << 20}
+	// A chunked upload (no Content-Length) is refused when the worst case does not fit.
+	body := uploadRequest(t, formPart{name: "file", filename: "a.txt", mime: "text/plain", value: "tiny"})
+	body.ContentLength = -1
+	err := f.h.upload(httptest.NewRecorder(), f.req(body, "channelID", f.channel.String()))
+	requireAPIError(t, err, http.StatusTooManyRequests)
 }
