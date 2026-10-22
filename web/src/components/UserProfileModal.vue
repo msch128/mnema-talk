@@ -115,18 +115,18 @@ function handleMention() {
 </script>
 
 <template>
-  <BaseDialog panel-class="max-w-sm select-none bg-mnema-surface" @close="emit('close')">
+  <BaseDialog panel-class="max-w-sm select-none bg-mnema-surface" initial-focus="[data-dialog-close]" @close="emit('close')">
     <template #default="{ titleId }">
     <div class="flex min-h-0 flex-col overflow-y-auto">
       <!-- Top banner -->
-      <div class="h-28 bg-gradient-to-br from-emerald-950 via-mnema-raised to-emerald-900 border-b border-mnema-hairline relative flex items-start justify-end p-3 overflow-hidden">
+      <div class="h-28 flex-shrink-0 bg-gradient-to-br from-emerald-950 via-mnema-raised to-emerald-900 border-b border-mnema-hairline relative flex items-start justify-end p-3 overflow-hidden">
         <!-- Background pattern -->
         <div class="absolute inset-0 opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:12px_12px] pointer-events-none"></div>
 
         <button 
           @click="emit('close')"
           data-dialog-close
-          class="relative z-10 w-7 h-7 rounded-full bg-black/50 hover:bg-black/80 text-mnema-muted hover:text-mnema-text flex items-center justify-center transition border border-white/10"
+          class="relative z-10 w-7 h-7 max-md:w-11 max-md:h-11 rounded-full bg-black/50 hover:bg-black/80 text-mnema-muted hover:text-mnema-text flex items-center justify-center transition border border-white/10"
           v-tooltip="{ text: $t('common.close'), shortcut: 'Esc' }"
         >
           <X class="w-4 h-4" />

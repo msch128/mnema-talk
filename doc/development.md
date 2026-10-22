@@ -81,6 +81,11 @@ gets its own browser process, because WebKit mutes the microphone of all but one
 page of a process; Chrome DevTools Protocol specs (crashing a tab, synthetic
 touch) skip on the other engines.
 
+Two more projects emulate a phone: `mobile-chromium` (Pixel 7) and
+`mobile-webkit` (iPhone 15) run only `tests/mobile.spec.ts`, and the other
+projects skip that file. The required `e2e` check runs `chromium` and both phone
+projects.
+
 Runs do not collide, so several can go at once (other worktrees, agents):
 every run uses its own Docker Compose project (`mnema-e2e-<pid>`) and free
 ports for PostgreSQL, S3, the app and WebRTC media, picked at start. Pin them

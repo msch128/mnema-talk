@@ -139,6 +139,9 @@ test('the Talk has its own text chat under the stage', async ({ browser }) => {
   await expect(aPanel).toBeVisible()
   await shot(a, 'chatpanel-narrow')
 
+  // Below 768px the channel list is a drawer, so the sidebar's Leave button is
+  // off screen; leave from the desktop layout like the other specs do.
+  await a.setViewportSize({ width: 1400, height: 900 })
   await leaveTalks([a, b])
   await aCtx.close()
   await bCtx.close()

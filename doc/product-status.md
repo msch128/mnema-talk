@@ -22,9 +22,9 @@ incompatibly only in a major release. What the 1.0 label does and does not say:
 | Server (Docker, linux/amd64 and arm64), browser app, text chat, roles and permissions, webhooks and bots, notifications, search and onboarding, voice, cameras and screen share in Chromium-based browsers | Supported |
 | Browser app on WebKit (Safari, iOS, installed iOS web apps) and Firefox: text chat, search, voice, cameras and screen share with sealed media, as tested in [Browsers](#browsers) | Supported, see the limits there (not yet tested on real iOS or Android hardware) |
 | Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), backup and restore, upgrade from the supported releases (0.8.16 and 0.9.x), cosign-signed images | Supported |
+| Native mobile apps, text end-to-end encryption | Not offered. Text stays readable by the server, by design. The browser app has a phone layout (channel list as a drawer, full-screen thread and member list, 44 px touch targets, safe areas) that is covered by the `mobile-*` e2e projects in Chromium and WebKit device emulation, not by tests on real phones. |
 | Desktop client on Windows | Beta (unsigned, no Authenticode; SmartScreen warns) |
 | Desktop client on macOS and Linux | Beta (DEV builds, not qualified on real hardware; not notarised; Gatekeeper warns) |
-| Mobile clients, text end-to-end encryption | Not offered. Text stays readable by the server, by design. |
 
 **Internal security review, 2026-10-22.** Before 1.0 the code was reviewed in
 six lanes (authentication and sessions, permissions, content and media,

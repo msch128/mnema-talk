@@ -42,6 +42,7 @@ import { useResizable } from './composables/useResizable'
 import { useWebRTC } from './composables/useWebRTC'
 import { useAppRouting } from './composables/useAppRouting'
 import { useAppBadge } from './composables/useAppBadge'
+import { useCompactLayout } from './composables/useCompactLayout'
 import { usePushBridge } from './composables/usePushBridge'
 import { useTitleBadge } from './composables/useTitleBadge'
 import { VOICE_CHAT_HEIGHT, STAGE_MIN_HEIGHT } from './lib/voiceChatPanel'
@@ -79,6 +80,16 @@ const panels = useResizable([
 // keeps the rest, at least STAGE_MIN_HEIGHT.
 const voiceChatHeight = useResizable([VOICE_CHAT_HEIGHT], { axis: 'y', centerMin: STAGE_MIN_HEIGHT + 48 }).voiceChat
 const showLegalModal = ref(false)
+// Phones: the channel list is a drawer, the thread and member list fill the screen.
+const { isCompact, navOpen, closeNav } = useCompactLayout()
+if (isCompact.value) chatStore.showMemberList = false
+watch(() => [chatStore.activeChannel?.id, voiceStore.currentChannelId, voiceStore.activeView], closeNav)
+watch(() => chatStore.activeThread, thread => { if (thread && isCompact.value) chatStore.showMemberList = false })
+function onWindowKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && navOpen.value) closeNav()
+}
+onMounted(() => window.addEventListener('keydown', onWindowKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown))
 const routing = useAppRouting(() => alive)
 useAppBadge()
 usePushBridge()
@@ -212,12 +223,25 @@ onMounted(async () => {
     <template v-else>
       <!-- Left Column: Navigation, Channels & User Controls -->
       <div
-        class="relative flex flex-col h-full flex-shrink-0 border-r border-mnema-hairline bg-mnema-raised"
-        :style="{ width: `${panels.left.width}px` }"
+        v-if="isCompact && navOpen"
+        data-testid="nav-scrim"
+        class="fixed inset-0 z-30 bg-black/60"
+        aria-hidden="true"
+        @click="closeNav"
+      ></div>
+      <div
+        data-testid="channel-drawer"
+        :class="[
+          'relative flex flex-col h-full flex-shrink-0 border-r border-mnema-hairline bg-mnema-raised',
+          'max-md:safe-pad max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:w-[min(86vw,22rem)] max-md:transition-transform max-md:duration-200 motion-reduce:transition-none',
+          navOpen ? '' : 'max-md:-translate-x-full'
+        ]"
+        :inert="isCompact && !navOpen"
+        :style="isCompact ? undefined : { width: `${panels.left.width}px` }"
       >
         <Sidebar @open-admin="openAdmin('users')" @open-legal="showLegalModal = true" class="flex-1 min-h-0" />
         <UserBar @open-admin="openAdmin('users')" @open-legal="showLegalModal = true" />
-        <ResizeHandle :panel="panels.left" :label="$t('resize.sidebar')" />
+        <ResizeHandle v-if="!isCompact" :panel="panels.left" :label="$t('resize.sidebar')" />
       </div>
 
       <!-- Center: connection banner, then the Talk or a text channel -->
@@ -250,21 +274,21 @@ onMounted(async () => {
       <!-- Thread panel -->
       <div
         v-if="chatStore.activeThread"
-        class="relative h-full flex-shrink-0"
-        :style="{ width: `${panels.thread.width}px` }"
+        class="relative h-full flex-shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas"
+        :style="isCompact ? undefined : { width: `${panels.thread.width}px` }"
       >
         <ThreadSidebar />
-        <ResizeHandle :panel="panels.thread" :label="$t('resize.thread')" />
+        <ResizeHandle v-if="!isCompact" :panel="panels.thread" :label="$t('resize.thread')" />
       </div>
 
       <!-- Right column: member list -->
       <div
         v-if="chatStore.showMemberList"
-        class="relative h-full flex-shrink-0"
-        :style="{ width: `${panels.members.width}px` }"
+        class="relative h-full flex-shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas"
+        :style="isCompact ? undefined : { width: `${panels.members.width}px` }"
       >
         <MemberList />
-        <ResizeHandle :panel="panels.members" :label="$t('resize.members')" />
+        <ResizeHandle v-if="!isCompact" :panel="panels.members" :label="$t('resize.members')" />
       </div>
 
       <!-- Admin console dialog -->

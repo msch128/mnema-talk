@@ -461,6 +461,8 @@ jobs:
       - name: Run browser smoke test
         env:
           E2E_INSTALL_BROWSER: "1"
+          E2E_BROWSERS: chromium webkit
+          E2E_ONLY: --project=chromium --project=mobile-chromium --project=mobile-webkit
         run: e2e/run.sh
 
       - name: Upload Playwright traces and screenshots

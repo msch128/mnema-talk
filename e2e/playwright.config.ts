@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test'
 
 const baseURL = process.env.E2E_BASE_URL || 'http://127.0.0.1:58080'
 
@@ -39,10 +39,12 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      testIgnore: /mobile\.spec\.ts/,
       use: { browserName: 'chromium', launchOptions: { args: chromiumArgs } },
     },
     {
       name: 'webkit',
+      testIgnore: /mobile\.spec\.ts/,
       use: { browserName: 'webkit', permissions: ['camera', 'microphone'] },
       // Two members of one test run as separate WebKit processes (see fixtures.ts),
       // and the sealed-media specs are timing-sensitive on a loaded machine.
@@ -50,8 +52,14 @@ export default defineConfig({
     },
     {
       name: 'firefox',
+      testIgnore: /mobile\.spec\.ts/,
       use: { browserName: 'firefox', launchOptions: { firefoxUserPrefs: firefoxPrefs } },
       retries: 1,
     },
+    // Phone layout under device emulation (touch, small screen, safe areas).
+    // No service worker: its requests bypass the context routes that keep the
+    // welcome flow closed (see fixtures.ts).
+    { name: 'mobile-chromium', testMatch: /mobile\.spec\.ts/, use: { ...devices['Pixel 7'], serviceWorkers: 'block', locale: 'de-DE', launchOptions: { args: chromiumArgs } } },
+    { name: 'mobile-webkit', testMatch: /mobile\.spec\.ts/, use: { ...devices['iPhone 15'], serviceWorkers: 'block', locale: 'de-DE', permissions: ['camera', 'microphone'] } },
   ],
 })

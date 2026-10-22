@@ -47,7 +47,7 @@ function openOwnProfile() {
   if (authStore.user) chatStore.openUserProfile(authStore.user)
 }
 
-const ib = 'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent'
+const ib = 'flex h-8 w-8 max-md:h-11 max-md:w-11 flex-shrink-0 items-center justify-center rounded-md transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent'
 function ibTone(active: boolean) {
   return active
     ? 'bg-mnema-danger/[0.12] text-mnema-danger'

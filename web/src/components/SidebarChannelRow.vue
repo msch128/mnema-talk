@@ -62,7 +62,7 @@ const voiceUsers = computed(() => {
 
 // Shared row styling (34px channel rows, rounded hover/selected states).
 const rowClass = computed(() => [
-  'relative w-full h-[34px] flex items-center justify-between gap-1.5 px-2 mb-px rounded-md text-nav transition-colors motion-reduce:transition-none group cursor-pointer text-left min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
+  'relative w-full h-[34px] max-md:h-11 flex items-center justify-between gap-1.5 px-2 mb-px rounded-md text-nav transition-colors motion-reduce:transition-none group cursor-pointer text-left min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
   active.value
     ? 'bg-mnema-hover text-mnema-text font-medium shadow-[inset_2px_0_0_0_#2DA771]'
     : unread.value > 0
@@ -162,7 +162,7 @@ const rowClass = computed(() => [
         @click.stop="emit('delete')"
         v-tooltip="isVoice ? $t('sidebar.deleteVoiceChannel') : $t('sidebar.deleteChannel')"
         :aria-label="isVoice ? $t('sidebar.deleteVoiceChannel') : $t('sidebar.deleteChannel')"
-        class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-6 h-6 flex items-center justify-center rounded text-mnema-tertiary hover:text-mnema-danger transition flex-shrink-0"
+        class="max-md:hidden opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-6 h-6 flex items-center justify-center rounded text-mnema-tertiary hover:text-mnema-danger transition flex-shrink-0"
       >
         <Trash2 class="w-4 h-4" />
       </button>
@@ -173,7 +173,7 @@ const rowClass = computed(() => [
       <div
         v-for="user in voiceUsers"
         :key="user.id"
-        class="min-h-8 py-1 flex items-center gap-2 px-2 rounded-md text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text transition-colors min-w-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
+        class="min-h-8 max-md:min-h-11 py-1 flex items-center gap-2 px-2 rounded-md text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text transition-colors min-w-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
         role="button"
         tabindex="0"
         aria-haspopup="menu"
