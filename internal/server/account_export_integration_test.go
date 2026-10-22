@@ -75,9 +75,15 @@ func TestAnExportHoldsOnlyTheMembersOwnData(t *testing.T) {
 	bob := a.register(admin, "bob")
 	open := a.createChannel(admin, "general", "text")
 	hidden := a.createChannel(admin, "backroom", "text")
-	a.send(alice, open, "alice in the open")
+	aliceOpen := a.send(alice, open, "alice's first wording")
 	a.send(alice, hidden, "alice in the backroom")
-	bobMsg := a.send(bob, open, "bob's secret plan")
+	bobMsg := a.send(bob, open, "bob's earlier plan")
+	// Both edit; the export holds the earlier version of hers only.
+	for c, edit := range map[*client][2]string{alice: {aliceOpen.String(), "alice in the open"}, bob: {bobMsg.String(), "bob's secret plan"}} {
+		if res := c.put("/api/channels/"+open.String()+"/messages/"+edit[0], map[string]any{"content": edit[1]}); res.status != http.StatusOK {
+			t.Fatalf("edit: %d %s", res.status, res.body)
+		}
+	}
 	alice.post("/api/messages/"+bobMsg.String()+"/reactions", map[string]string{"emoji": "👍"})
 	admin.post("/api/admin/users/"+alice.user.ID.String()+"/disable", nil)
 	admin.post("/api/admin/users/"+alice.user.ID.String()+"/enable", nil)
@@ -126,10 +132,13 @@ func TestAnExportHoldsOnlyTheMembersOwnData(t *testing.T) {
 		t.Fatalf("download: %d %v", dl.status, dl.header)
 	}
 	files := unzipAll(t, dl.body)
-	for _, name := range []string{"README.txt", "profile.json", "settings.json", "messages.json", "reactions.json", "uploads.json", "audit.json", "security.json"} {
+	for _, name := range []string{"README.txt", "profile.json", "settings.json", "messages.json", "edits.json", "reactions.json", "uploads.json", "audit.json", "security.json"} {
 		if _, ok := files[name]; !ok {
 			t.Errorf("missing %s", name)
 		}
+	}
+	if !strings.Contains(files["edits.json"], "alice's first wording") || strings.Contains(files["edits.json"], "earlier plan") {
+		t.Errorf("her own earlier versions, and nobody else's: %s", files["edits.json"])
 	}
 	var msgs struct {
 		Truncated bool `json:"truncated"`

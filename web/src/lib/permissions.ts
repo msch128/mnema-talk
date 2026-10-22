@@ -23,7 +23,8 @@ export const PERMISSION_BITS = {
   manage_bots: 65536,
   view_audit_log: 131072,
   timeout_members: 262144,
-  ban_members: 524288
+  ban_members: 524288,
+  manage_emoji: 1048576
 } as const
 
 export type PermissionKey = keyof typeof PERMISSION_BITS
@@ -39,7 +40,7 @@ export const CHANNEL_PERMISSION_KEYS: readonly PermissionKey[] = [
 
 /** Any of these opens a part of the admin area. */
 export const ADMIN_AREA_KEYS: readonly PermissionKey[] = [
-  'manage_channels', 'manage_roles', 'create_invites', 'manage_webhooks', 'manage_members', 'disconnect_members', 'view_audit_log', 'timeout_members', 'ban_members', 'manage_bots'
+  'manage_channels', 'manage_roles', 'create_invites', 'manage_webhooks', 'manage_members', 'disconnect_members', 'view_audit_log', 'timeout_members', 'ban_members', 'manage_bots', 'manage_emoji'
 ]
 
 /** What @everyone holds on a fresh install (internal/perm DefaultEveryone). */

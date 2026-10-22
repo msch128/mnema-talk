@@ -43,6 +43,7 @@ function pick(emoji: string) {
     <EmojiPicker
       v-if="open"
       :trigger="button"
+      shortcode
       :class="['absolute bottom-full mb-2', align === 'left' ? 'left-0' : 'right-0']"
       @pick="pick"
       @close="open = false"

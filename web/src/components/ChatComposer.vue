@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { Message } from '../types/domain'
+import type { DraftReply } from '../lib/drafts'
 import { ref } from 'vue'
 import { Plus, ArrowUp } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import ReplyComposerBar from './ReplyComposerBar.vue'
 import EmojiButton from './EmojiButton.vue'
+import MarkdownHelp from './MarkdownHelp.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
 import SlashSuggestions from './SlashSuggestions.vue'
 import SlashCommandBar from './SlashCommandBar.vue'
@@ -18,7 +19,7 @@ import { handleComposerKeydown } from '../composables/useComposerKeys'
 // attachments, emoji and the reply bar. Sending and uploading are the chat's.
 const props = defineProps({
   modelValue: { type: String, required: true },
-  replyingTo: { type: Object as PropType<Message | null>, default: null },
+  replyingTo: { type: Object as PropType<DraftReply | null>, default: null },
   canSend: { type: Boolean, default: false },
   canAttach: { type: Boolean, default: false },
   placeholder: { type: String, default: '' },
@@ -121,6 +122,8 @@ function handleKeyDown(e: KeyboardEvent) {
         rows="1"
         class="bg-transparent flex-1 min-w-0 resize-none outline-none text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
       ></textarea>
+
+      <MarkdownHelp class="max-md:hidden" :disabled="!canSend" />
 
       <EmojiButton :disabled="sending || !canSend" @pick="assist.insertText" />
 

@@ -18,6 +18,8 @@ import { useMessageScroll } from '../composables/useMessageScroll'
 import { useUnreadDivider } from '../composables/useUnreadDivider'
 import { useFirstUnreadJump } from '../composables/useFirstUnreadJump'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
+import { useDraftSlot } from '../composables/useDraftSlot'
+import { channelDraftKey, type DraftReply } from '../lib/drafts'
 import { useEscapeMarksRead } from '../composables/useComposerKeys'
 import { continuationIds } from '../lib/messageGrouping'
 import { typingLine } from '../lib/chatLogic'
@@ -56,7 +58,9 @@ const textAreaEl = computed(() => composer.value?.textArea ?? null)
 const isSending = ref(false)
 const selectedImage = ref<string | null>(null)
 // Message the composer is currently replying to.
-const replyingTo = ref<Message | null>(null)
+const replyingTo = ref<DraftReply | null>(null)
+// Text and reply target stay with their channel while another one is open.
+useDraftSlot(() => (chatStore.activeChannel ? channelDraftKey(chatStore.activeChannel.id) : null), inputMessage, replyingTo)
 
 // Editing, deleting, reactions and uploads
 const actions = useMessageActions({ container: messageContainer })
@@ -80,7 +84,6 @@ const typingText = computed(() => {
 
 watch(() => chatStore.activeChannel?.id, () => {
   resetUnreadPill()
-  replyingTo.value = null
   actions.cancelEdit()
   nextTick(() => composer.value?.focus())
 })

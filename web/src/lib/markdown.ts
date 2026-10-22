@@ -1,119 +1,33 @@
-// Chat Markdown → HTML. Everything is HTML-escaped first; only the
-// fixed tags produced below can appear in the output, and no inline event
-// handlers are emitted (the CSP forbids them). Spoilers are toggled by the
-// MarkdownContent component via event delegation.
+// Chat Markdown (Discord's syntax) → HTML. The text is parsed into a tree of
+// plain nodes (lib/markdown/), and only render.ts turns that tree into HTML:
+// every string is escaped there, tags come from fixed tables, and no inline
+// event handlers are emitted (the CSP forbids them). Spoilers, mentions,
+// copy buttons and masked links are handled by the MarkdownContent component
+// through event delegation.
+//
+// Extending: a feature with its own token inside text (custom emoji, say)
+// calls registerTextRule() once; see lib/markdown/rules.ts.
+import type { Block } from './markdown/types'
+import { parseBlocks } from './markdown/blocks'
+import { applyTextRulesToBlocks, registeredTextRules } from './markdown/rules'
+import type { TextRule } from './markdown/rules'
+import { roleMentionRule, userMentionRule } from './markdown/mentions'
+import type { RoleMention } from './markdown/mentions'
+import { renderBlocks } from './markdown/render'
+import { blocksPlain, linksIn } from './markdown/plain'
 
-// The syntax, shared with the plain-text helpers (lib/replies.js reply
-// previews, lib/chatLogic.js link previews) so they treat exactly what is
-// rendered here as markup. All are global regexes for String.replace/match.
+export { escapeHtml } from './markdown/escape'
+export { registerTextRule } from './markdown/rules'
+export type { TextRule, RoleMention }
 
-/** ```lang\n code ``` (group 1: the code). */
-export const CODE_BLOCK_RE = /```(?:[a-zA-Z0-9_-]+\n)?([\s\S]*?)```/g
-/** `code` (group 1: the code). */
-export const INLINE_CODE_RE = /`([^`\n]+)`/g
-/** An http(s) URL. The trailing class keeps a closing ")" or "*" that belongs
- *  to the text, not to the URL; a "*" inside the URL stays. */
-export const URL_RE = /\bhttps?:\/\/[^\s<]+[^\s<.,:;!?)\]'"*]/g
-/** ||spoiler|| (group 1: the hidden text). */
-export const SPOILER_RE = /\|\|([\s\S]+?)\|\|/g
+/** Longer text is shown as it is, unformatted: parsing is for chat messages, not documents. */
+export const MAX_MARKDOWN_CHARS = 6000
 
-/**
- * Inline emphasis, in the order it is applied: [regex, html, plain]. `html`
- * is the replacement renderMarkdown uses, `plain` the one that keeps only
- * the text.
- */
-export const INLINE_FORMATS: readonly (readonly [RegExp, string, string])[] = [
-  [/\*\*\*([^*\n]+)\*\*\*/g, '<strong><em>$1</em></strong>', '$1'],
-  [/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>', '$1'],
-  [/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>', '$1$2'],
-  [/(^|[\s(])_([^_\n]+)_(?=$|[\s).,!?])/g, '$1<em>$2</em>', '$1$2'],
-  [/~~([^~\n]+)~~/g, '<del>$1</del>', '$1']
-]
-
-export function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
-
-function stashCodeAndLinks(escaped: string): { text: string; code: string[] } {
-  const code: string[] = []
-  const stash = (html: string) => `\u0000${code.push(html) - 1}\u0000`
-
-  let text = escaped.replace(CODE_BLOCK_RE, (_: string, body: string) =>
-    stash(`<pre class="md-codeblock">${body.replace(/^\n+|\n+$/g, '')}</pre>`))
-  text = text.replace(INLINE_CODE_RE, (_: string, body: string) => stash(`<code class="md-code">${body}</code>`))
-  text = text.replace(URL_RE, url =>
-    stash(`<a href="${url}" target="_blank" rel="noopener noreferrer nofollow" class="md-link">${url}</a>`))
-
-  return { text, code }
-}
-
-function applyInlineStyles(text: string): string {
-  let styled = text.replace(SPOILER_RE, '<span class="md-spoiler" role="button" tabindex="0">$1</span>')
-  for (const [re, html] of INLINE_FORMATS) styled = styled.replace(re, html)
-  return styled.replace(/^&gt;\s?(.*)$/gm, '<blockquote class="md-quote">$1</blockquote>')
-}
-
-function isKnownMention(lower: string, group: boolean, known: ReadonlySet<string> | null): boolean {
-  if (!known || group) return true
-  return known.has(lower)
-}
-
-interface MentionMatch {
-  all: string
-  pre: string
-  raw: string
-}
-
-function formatMention(
-  m: MentionMatch,
-  known: ReadonlySet<string> | null,
-  self: string
-): string {
-  const name = m.raw.replace(/[.-]+$/, '')
-  const tail = m.raw.slice(name.length)
-  const lower = name.toLowerCase()
-  const group = lower === 'all' || lower === 'here'
-  if (name.length < 3 || !isKnownMention(lower, group, known)) return m.all
-  const cls = ['md-mention']
-  if (group) cls.push('md-mention-group')
-  if (lower === self) cls.push('md-mention-me')
-  const attrs = known ? ` data-mention="${lower}" role="button" tabindex="0"` : ''
-  return `${m.pre}<span class="${cls.join(' ')}"${attrs}>@${name}</span>${tail}`
-}
-
-/** A role the message mentions; me marks a role the reader holds. */
-export interface RoleMention {
-  name: string
-  me?: boolean
-  /** The role colour as "#rrggbb"; anything else is ignored. */
-  color?: string
-}
-
-/**
- * Draws "@Role Name" as a pill for the roles the server recorded on the
- * message. Role names may contain spaces, so the known names are matched
- * (longest first) instead of a username-like token. Roles are not clickable.
- * The colour travels as data-role-color (a validated #rrggbb); the CSP forbids
- * inline styles in this markup, so the v-role-colors directive applies it.
- */
-function highlightRoles(html: string, roles: readonly RoleMention[]): string {
-  if (!roles.length) return html
-  const byName = new Map(roles.map(r => [escapeHtml(r.name).toLowerCase(), r]))
-  const names = [...byName.keys()]
-    .sort((a, b) => b.length - a.length)
-    .map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  const re = new RegExp(`(^|[\\s(])@(${names.join('|')})(?![A-Za-z0-9_-]|\\.[A-Za-z0-9_-])`, 'gi')
-  return html.replace(re, (_all: string, pre: string, name: string) => {
-    const role = byName.get(name.toLowerCase())
-    const cls = role?.me ? 'md-mention md-mention-role md-mention-me' : 'md-mention md-mention-role'
-    const color = role?.color && /^#[0-9a-fA-F]{6}$/.test(role.color) ? ` data-role-color="${role.color}"` : ''
-    return `${pre}<span class="${cls}"${color}>@${name}</span>`
-  })
+function parse(content: string): Block[] {
+  // NUL characters carry no text and are dropped, so they cannot split tokens.
+  // eslint-disable-next-line no-control-regex
+  const text = content.replace(/\u0000/g, '')
+  return text.length > MAX_MARKDOWN_CHARS ? [{ t: 'p', c: [{ t: 'text', v: text }] }] : parseBlocks(text)
 }
 
 /**
@@ -128,13 +42,22 @@ export function renderMarkdown(
   { known = null, me = '', roles = [] }: { known?: ReadonlySet<string> | null; me?: string; roles?: readonly RoleMention[] } = {}
 ): string {
   if (!content) return ''
-  const { text: stashed, code } = stashCodeAndLinks(escapeHtml(content))
-  const styled = applyInlineStyles(stashed)
-  const self = me.toLowerCase()
-  const mentioned = highlightRoles(styled, roles).replace(/(^|[\s(])@([A-Za-z0-9_.-]{3,32})/g, (all: string, pre: string, raw: string) =>
-    formatMention({ all, pre, raw }, known, self))
+  const rules: TextRule[] = [...registeredTextRules()]
+  const roleRule = roleMentionRule(roles)
+  if (roleRule) rules.push(roleRule)
+  rules.push(userMentionRule(known, me))
+  return renderBlocks(applyTextRulesToBlocks(parse(content), rules))
+}
 
-  // \u0000 is the intentional code-span placeholder delimiter used for code spans above, so matching it is deliberate.
-  // eslint-disable-next-line no-control-regex
-  return mentioned.replace(/\u0000(\d+)\u0000/g, (_: string, i: string) => code[Number(i)] ?? '')
+/**
+ * The message without its formatting, for reply quotes and previews: markers
+ * disappear, code and link text stay, ||spoilers|| become "Spoiler".
+ */
+export function markdownToPlain(content: string | null | undefined): string {
+  return content ? blocksPlain(parse(content)) : ''
+}
+
+/** The http(s) links worth a preview card: shown as links, not in code, spoilers or <autolinks>. */
+export function previewLinks(content: string | null | undefined): string[] {
+  return content ? linksIn(parse(content)) : []
 }

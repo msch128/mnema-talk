@@ -613,4 +613,6 @@ reach the shipped desktop clients through the trusted proxy like any other
 transport (`web/src/lib/native/nativeRoutes.ts`) belongs to the experimental
 Windows DEV client, which is not shipped; it does not carry `/api/onboarding`
 and a member of that client could not accept rules until a typed operation is
-added.
+added. The same holds for custom emoji (`/api/emoji`, `/api/admin/emoji`): the
+shipped clients get them through the trusted proxy, the native DEV client answers
+"unavailable".

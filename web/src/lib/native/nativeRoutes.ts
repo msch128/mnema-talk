@@ -195,11 +195,16 @@ function routeMetadata(path: string, request: ApiRequest): Promise<ApiReply> | n
 // operations here before the native DEV client is ever shipped.
 // Pinned messages (GET /api/channels/{id}/pins, PUT/DELETE .../messages/{id}/pin) follow
 // the same rule: the shipped clients' proxy passes them, the native DEV client answers "unavailable".
+// The same holds for custom emoji (/api/emoji, /api/emoji/{id}/image and /still,
+// /api/admin/emoji): the shipped clients' proxy passes them, the native DEV client
+// answers "unavailable".
 // The same holds for the account recovery endpoints (/api/auth/options,
 // /api/auth/password-reset/*, /api/auth/email/verify, /api/users/me/account,
 // /api/users/me/email*, /api/users/me/2fa/*, /api/users/me/export*, /api/users/me/delete, /api/auth/login/2fa) and the Owner's /api/admin/system/mail/test: the
 // shipped clients reach them through the trusted proxy, the native DEV client
 // answers "unavailable" and its sign-in screen offers no reset link.
+// Also unavailable natively: GET /api/channels/{id}/messages/{id}/edits (the
+// moderators' edit history); the shipped clients' proxy passes it.
 const ROUTES: readonly Route[] = [
   routeRegister, routePassword, routeAdmin, routeLogin, routeMe, routeLogout, routePersonal, routeTypedChat, routeMetadata,
 ]

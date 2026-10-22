@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/emojitext"
 )
 
 // Payload is what the service worker receives (after the browser decrypted
@@ -106,7 +107,7 @@ func previewLine(n Notice, locale string, preview bool) string {
 	case !preview:
 		return text(locale, "new")
 	}
-	if line := clean(n.Content, maxPreviewRunes); line != "" {
+	if line := clean(emojitext.Plain(n.Content), maxPreviewRunes); line != "" {
 		return line
 	}
 	if n.HasFiles {

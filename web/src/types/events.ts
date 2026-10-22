@@ -62,6 +62,8 @@ export interface ServerEventPayloads {
   permissions_changed: null
   /** A role was created, edited, deleted, reordered or assigned: refetch GET /api/roles and /api/members. */
   roles_changed: null
+  /** A custom emoji was added, renamed or deleted: refetch GET /api/emoji. */
+  emoji_changed: null
   typing: { channel_id: string; user_id: string }
   read_state: ReadStateUpdate
   message_create: Message
@@ -181,6 +183,7 @@ const NON_OBJECT_CHECKS = new Map<string, (payload: unknown) => boolean>([
   ['channels_changed', payload => payload === null],
   ['permissions_changed', payload => payload === null],
   ['roles_changed', payload => payload === null],
+  ['emoji_changed', payload => payload === null],
   ['member_joined', isAuthUser],
   ['message_create', isChatMessage],
   ['message_update', isChatMessage],
@@ -313,7 +316,7 @@ function isNoteEmbed(value: unknown): boolean {
 
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
-  'channels_changed', 'permissions_changed', 'roles_changed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
+  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'media_handshake'

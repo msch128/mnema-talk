@@ -1526,6 +1526,36 @@ export function isChatMessage(value: unknown): value is ChatMessage {
 
 export const decodeChatMessage = decoder("chat.Message", isChatMessage)
 
+export type ChatMessageEdit = {
+  content: string
+  edited_at: string
+  editor_id: string
+  id: number
+  replaced_at: string
+}
+
+export function isChatMessageEdit(value: unknown): value is ChatMessageEdit {
+  return isRecord(value)
+    && (hasOwn(value, "content") && isString(value["content"]))
+    && (hasOwn(value, "edited_at") && isTimestamp(value["edited_at"]))
+    && (hasOwn(value, "editor_id") && isIdentifier(value["editor_id"]))
+    && (hasOwn(value, "id") && isInteger(value["id"]))
+    && (hasOwn(value, "replaced_at") && isTimestamp(value["replaced_at"]))
+}
+
+export const decodeChatMessageEdit = decoder("chat.MessageEdit", isChatMessageEdit)
+
+export type ChatMessageEditHistory = {
+  edits: Array<ChatMessageEdit>
+}
+
+export function isChatMessageEditHistory(value: unknown): value is ChatMessageEditHistory {
+  return isRecord(value)
+    && (hasOwn(value, "edits") && isArrayOf(value["edits"], item => isChatMessageEdit(item)))
+}
+
+export const decodeChatMessageEditHistory = decoder("chat.MessageEditHistory", isChatMessageEditHistory)
+
 export type ChatNotificationSettings = {
   categories: Array<ChatCategoryNotifySetting>
   channels: Array<ChatChannelNotifySetting>
@@ -1736,6 +1766,51 @@ export function isChatUpdateChannelRequest(value: unknown): value is ChatUpdateC
 }
 
 export const decodeChatUpdateChannelRequest = decoder("chat.UpdateChannelRequest", isChatUpdateChannelRequest)
+
+export type EmojiEmoji = {
+  animated: boolean
+  created_at: string
+  id: string
+  name: string
+  still_url?: string
+  url: string
+}
+
+export function isEmojiEmoji(value: unknown): value is EmojiEmoji {
+  return isRecord(value)
+    && (hasOwn(value, "animated") && typeof value["animated"] === 'boolean')
+    && (hasOwn(value, "created_at") && isString(value["created_at"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "name") && isString(value["name"]))
+    && (!hasOwn(value, "still_url") || isString(value["still_url"]))
+    && (hasOwn(value, "url") && isString(value["url"]))
+}
+
+export const decodeEmojiEmoji = decoder("emoji.Emoji", isEmojiEmoji)
+
+export type EmojiList = {
+  emoji: Array<EmojiEmoji>
+  limit: number
+}
+
+export function isEmojiList(value: unknown): value is EmojiList {
+  return isRecord(value)
+    && (hasOwn(value, "emoji") && isArrayOf(value["emoji"], item => isEmojiEmoji(item)))
+    && (hasOwn(value, "limit") && (isInteger(value["limit"]) && value["limit"] >= 0))
+}
+
+export const decodeEmojiList = decoder("emoji.List", isEmojiList)
+
+export type EmojiRenameRequest = {
+  name: string
+}
+
+export function isEmojiRenameRequest(value: unknown): value is EmojiRenameRequest {
+  return isRecord(value)
+    && (hasOwn(value, "name") && isString(value["name"], 32))
+}
+
+export const decodeEmojiRenameRequest = decoder("emoji.RenameRequest", isEmojiRenameRequest)
 
 export type GatewayInfo = {
   heartbeat_interval: number

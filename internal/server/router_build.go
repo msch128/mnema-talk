@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/msch128/mnema-talk/internal/emoji"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/gateway"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -52,6 +53,7 @@ type components struct {
 	rolesH   *roles.Handler
 	onboardH *onboarding.Handler
 	mediaH   *media.Handler
+	emojiH   *emoji.Handler
 
 	outgoing *webhook.Dispatcher
 	webhookH *webhook.Handler
@@ -110,12 +112,17 @@ func (c *components) newCore() {
 		go c.authH.RunExportSweep(c.ctx, 0)
 	}
 	go chat.RunSlowModePrune(c.ctx, d.DB, time.Hour)
-	c.chatH = &chat.Handler{DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog}
+	c.chatH = &chat.Handler{
+		DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog,
+		EditHistoryLimit: httpx.NewRateLimiter(chat.EditHistoryRate, time.Minute).Named("edit_history"),
+	}
+	go chat.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour)
 	c.rolesH = &roles.Handler{Perms: c.permSvc, Events: c.pub}
 	c.onboardH = onboarding.NewHandler(d.DB, c.permSvc)
 	if d.Store != nil {
 		c.chatH.Objects = d.Store
 	}
+	c.emojiH = &emoji.Handler{DB: d.DB, Store: d.Store, Events: c.pub, Perms: c.permSvc, Max: cfg.EmojiMax}
 	c.mediaH = &media.Handler{
 		DB:             d.DB,
 		Store:          d.Store,

@@ -169,6 +169,7 @@
     "channels": "Kanäle",
     "openChannels": "Kanalliste öffnen",
     "noChannels": "Keine Kanäle",
+    "draft": "Entwurf",
     "deleteCategory": "Kategorie löschen",
     "deleteChannel": "Kanal löschen",
     "deleteVoiceChannel": "Sprachkanal löschen",
@@ -302,6 +303,27 @@
     "offline": "Offline — {count}",
     "roleGroup": "{name} — {count}"
   },
+  "format": {
+    "help": "Formatierungshilfe",
+    "title": "Formatierung",
+    "intro": "Setze diese Zeichen um deinen Text. Ein Backslash davor zeigt das Zeichen unverändert.",
+    "bold": "Fett",
+    "italic": "Kursiv",
+    "underline": "Unterstrichen",
+    "strike": "Durchgestrichen",
+    "spoiler": "Spoiler",
+    "code": "Code im Text",
+    "codeBlock": "Codeblock mit Hervorhebung",
+    "heading": "Überschrift",
+    "subtext": "Kleiner Text",
+    "list": "Liste",
+    "numbered": "Nummerierte Liste",
+    "quote": "Zitat",
+    "blockQuote": "Zitat bis zum Ende",
+    "link": "Link mit eigenem Text",
+    "noEmbed": "Link ohne Vorschau",
+    "close": "Schließen"
+  },
   "chat": {
     "selectChannel": "Kanal auswählen",
     "welcome": "Willkommen in #{channel}",
@@ -349,6 +371,12 @@
     "deleteFailed": "Die Nachricht konnte nicht gelöscht werden.",
     "sendFailed": "Die Nachricht konnte nicht gesendet werden.",
     "spoiler": "Spoiler",
+    "copyCode": "Kopieren",
+    "codeCopied": "Code kopiert",
+    "copyCodeFailed": "Der Code konnte nicht kopiert werden.",
+    "linkConfirmTitle": "Diesen Link öffnen?",
+    "linkConfirmBody": "Der Linktext zeigt nicht, wohin der Link führt. Er öffnet {host}.",
+    "linkOpen": "Link öffnen",
     "search": "Suche",
     "searchPlaceholder": "Nachrichten durchsuchen …",
     "filter": "Filter",
@@ -819,7 +847,8 @@
       "audit": "Audit-Log",
       "bans": "Sperren",
       "bots": "Bots",
-      "onboarding": "Willkommen & Regeln"
+      "onboarding": "Willkommen & Regeln",
+      "emoji": "Emoji"
     },
     "system": {
       "heading": "System & Version",
@@ -1210,7 +1239,24 @@
   "emoji": {
     "open": "Emoji einfügen",
     "more": "Weitere Emojis",
-    "loading": "Emojis werden geladen …"
+    "loading": "Emojis werden geladen …",
+    "suggestTitle": "Eigene Emojis",
+    "admin": {
+      "title": "Eigene Emojis",
+      "hint": "PNG, GIF oder WebP bis 256 KiB. Bilder werden auf dem Server neu gezeichnet und auf höchstens 128 × 128 Pixel verkleinert. Mitglieder nutzen sie mit :name:. Animierte Emojis müssen GIFs sein.",
+      "count": "{n} von {max} belegt",
+      "file": "Bilddatei",
+      "name": "Name (a-z, 0-9, _)",
+      "add": "Emoji hinzufügen",
+      "added": "Emoji hinzugefügt",
+      "deleted": "Emoji gelöscht",
+      "deleteTitle": ":{name}: löschen?",
+      "deleteBody": "Bestehende Nachrichten und Reaktionen zeigen :name: ab jetzt als Text. Das lässt sich nicht rückgängig machen.",
+      "animated": "Animiert",
+      "rename": "Umbenennen",
+      "empty": "Noch keine eigenen Emojis.",
+      "full": "Das Limit ist erreicht. Lösche ein Emoji oder erhöhe EMOJI_MAX."
+    }
   },
   "activity": {
     "title": "Aktivität",
@@ -1355,6 +1401,10 @@
     "ban_members": {
       "name": "Mitglieder sperren",
       "desc": "Mitglieder unterhalb deiner höchsten Rolle sperren und entsperren und die Liste der Sperren sehen."
+    },
+    "manage_emoji": {
+      "name": "Emojis verwalten",
+      "desc": "Eigene Emojis dieser Community hochladen, umbenennen und löschen."
     }
   },
   "audit": {
@@ -1695,6 +1745,16 @@
     "slowModeOff": "Aus",
     "slowModeHint": "Mitglieder warten so lange zwischen zwei Nachrichten. Moderatoren sind ausgenommen.",
     "slowModeChip": "Langsammodus {time}"
+  },
+  "editHistory": {
+    "menu": "Bearbeitungsverlauf",
+    "title": "Bearbeitungsverlauf",
+    "body": "Frühere Fassungen dieser Nachricht, die neueste zuerst. Nur wer Nachrichten verwalten darf, sieht sie.",
+    "current": "Aktuell",
+    "loading": "Lädt …",
+    "none": "Von dieser Nachricht ist keine frühere Fassung gespeichert.",
+    "empty": "(kein Text)",
+    "failed": "Der Bearbeitungsverlauf konnte nicht geladen werden."
   },
   "bots": {
     "title": "Bots",

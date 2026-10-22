@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { VueWrapper } from '@vue/test-utils'
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { useEmojiStore } from '../stores/emoji'
 import { setLocale } from '../i18n'
 import EmojiPicker from './EmojiPicker.vue'
 import EmojiButton from './EmojiButton.vue'
@@ -20,7 +22,7 @@ vi.mock('emoji-picker-element/picker.js', () => {
   return { default: FakePicker }
 })
 let wrapper: VueWrapper
-beforeEach(() => { state.fail = false; state.options.mockClear(); setLocale('en') })
+beforeEach(() => { setActivePinia(createPinia()); state.fail = false; state.options.mockClear(); setLocale('en') })
 afterEach(() => { wrapper?.unmount(); vi.restoreAllMocks(); document.body.innerHTML = ''; setLocale('de') })
 
 describe('EmojiPicker and trigger', () => {
@@ -44,6 +46,17 @@ describe('EmojiPicker and trigger', () => {
     expect(wrapper.emitted('close')).toEqual([[]])
     wrapper.unmount()
     expect(picker.isConnected).toBe(false)
+  })
+
+  it.each([[false, '<:blob:00000000-0000-4000-8000-000000000501>'], [true, ':blob:']])('lists custom emoji and picks them (shortcode %s)', async (shortcode, expected) => {
+    useEmojiStore().items = [{ id: '00000000-0000-4000-8000-000000000501', name: 'blob', animated: false, url: '/api/emoji/x/image?v=1' }]
+    wrapper = mount(EmojiPicker, { attachTo: document.body, props: { shortcode } })
+    await vi.waitFor(() => expect(wrapper.element.querySelector('synthetic-emoji-picker')).not.toBeNull())
+    const picker = requireValue(document.querySelector<HTMLElement>('synthetic-emoji-picker'))
+    expect((picker as unknown as { customEmoji: unknown }).customEmoji).toEqual([{ name: 'blob', shortcodes: ['blob'], url: '/api/emoji/x/image?v=1' }])
+    picker.dispatchEvent(new CustomEvent('emoji-click', { detail: { name: 'blob' } }))
+    picker.dispatchEvent(new CustomEvent('emoji-click', { detail: { name: 'unknown' } }))
+    expect(wrapper.emitted('pick')).toEqual([[expected]])
   })
 
   it('reports a load failure by closing the picker', async () => {

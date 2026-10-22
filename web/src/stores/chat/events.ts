@@ -1,5 +1,6 @@
 import type { ServerEvent, ServerEventPayloads, ServerEventType } from '../../types/events'
 import { useToastStore } from '../toast'
+import { useEmojiStore } from '../emoji'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
 import { noticeText } from '../../lib/moderation'
@@ -160,6 +161,7 @@ const HANDLERS: Handlers = {
     usePermissionsStore().load()
     fetchChannels(cx)
   },
+  emoji_changed: () => { void useEmojiStore().load() },
   roles_changed: cx => {
     const permissions = usePermissionsStore()
     permissions.loadRoles()

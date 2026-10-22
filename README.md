@@ -41,7 +41,7 @@ webhooks and a call you can join with one click.
 
 ### Chat
 
-- Markdown, replies that jump to the original (also thousands of messages
+- Discord-style Markdown (headings, lists, quotes, links, code blocks with syntax highlighting), replies that jump to the original (also thousands of messages
   back), threads, reactions, emoji, @mentions, file and image attachments,
   link cards, search, typing notices, unread and mention markers,
   per-channel notification settings and presence with a status line.

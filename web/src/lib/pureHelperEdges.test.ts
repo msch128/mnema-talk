@@ -55,10 +55,10 @@ describe('runtime edges of pure chat helpers', () => {
     const throttle = createKeyedThrottle(vi.fn(), 100)
     throttle.cancel('never-scheduled')
   })
-  it('removes orphaned internal markdown placeholders and preserves short mention-like strings', () => {
+  it('drops NUL characters and preserves short mention-like strings', () => {
     expect(renderMarkdown(null)).toBe('')
-    expect(renderMarkdown('before\u00009999\u0000after')).toBe('beforeafter')
-    expect(stripMarkdown('before\u00009999\u0000after')).toBe('beforeafter')
+    expect(renderMarkdown('before\u00009999\u0000after')).toBe('before9999after')
+    expect(stripMarkdown('before\u00009999\u0000after')).toBe('before9999after')
     expect(renderMarkdown('@a..')).toBe('@a..')
   })
   it('supports edits that update only attachments without clearing the cached text', () => {

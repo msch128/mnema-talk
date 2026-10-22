@@ -64,6 +64,9 @@ const (
 	// BanMembers bans and unbans members below the actor's highest role and
 	// lists the bans.
 	BanMembers Set = 1 << 19
+	// ManageEmoji uploads, renames and deletes the custom emoji of the
+	// instance.
+	ManageEmoji Set = 1 << 20
 )
 
 // Info describes one permission for clients.
@@ -98,6 +101,7 @@ var Catalog = []Info{
 	{Key: "view_audit_log", Bit: ViewAuditLog, Name: "view the audit log"},
 	{Key: "timeout_members", Bit: TimeoutMembers, Name: "timeout members"},
 	{Key: "ban_members", Bit: BanMembers, Name: "ban members"},
+	{Key: "manage_emoji", Bit: ManageEmoji, Name: "manage emoji"},
 }
 
 var (
@@ -130,7 +134,7 @@ const (
 	// OwnerGrantOnly can only be handed out by the Owner.
 	OwnerGrantOnly = ManageBots
 	// AdminArea is any permission that opens a part of the admin area.
-	AdminArea = ManageChannels | ManageRoles | CreateInvites | ManageWebhooks | ManageMembers | DisconnectMembers | ViewAuditLog | TimeoutMembers | BanMembers | ManageBots
+	AdminArea = ManageChannels | ManageRoles | CreateInvites | ManageWebhooks | ManageMembers | DisconnectMembers | ViewAuditLog | TimeoutMembers | BanMembers | ManageBots | ManageEmoji
 )
 
 // TimeoutMask is what a timeout takes from a member: they can still read.

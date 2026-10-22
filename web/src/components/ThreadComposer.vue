@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { ThreadRoot } from '../stores/chat'
+import type { DraftReply } from '../lib/drafts'
 import { ref } from 'vue'
 import { Plus, ArrowUp } from '@lucide/vue'
 import ReplyComposerBar from './ReplyComposerBar.vue'
@@ -14,7 +14,7 @@ import { handleComposerKeydown } from '../composables/useComposerKeys'
 // emoji and the reply bar. Sending and uploading are the thread's.
 const props = defineProps({
   modelValue: { type: String, required: true },
-  replyingTo: { type: Object as PropType<ThreadRoot | null>, default: null },
+  replyingTo: { type: Object as PropType<DraftReply | null>, default: null },
   canSend: { type: Boolean, default: false },
   canAttach: { type: Boolean, default: false },
   uploading: { type: Boolean, default: false },

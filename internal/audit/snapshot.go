@@ -38,6 +38,7 @@ var snapshotSQL = map[Resource]string{
 	ResOnboarding: `SELECT jsonb_build_object('community_name', community_name, 'welcome_text', welcome_text,
 		'rules_text', rules_text, 'rules_version', rules_version, 'start_channel_id', start_channel_id),
 		'onboarding' FROM instance_settings`,
+	ResEmoji: `SELECT jsonb_build_object('name', name, 'animated', animated), name FROM custom_emoji WHERE id = $1`,
 	ResBot: `SELECT jsonb_build_object('name', b.name, 'allowed_intents', b.allowed_intents, 'disabled', b.disabled,
 		'role_ids', COALESCE((SELECT jsonb_agg(role_id ORDER BY role_id) FROM user_roles WHERE user_id = b.user_id), '[]'::jsonb),
 		'active_tokens', (SELECT COUNT(*) FROM bot_tokens t WHERE t.bot_id = b.id AND t.revoked_at IS NULL

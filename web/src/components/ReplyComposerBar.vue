@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { Message } from '../types/domain'
 import { X } from '@lucide/vue'
 
 // "Replying to <name>" strip that sits on top of a composer while replying.
 defineProps({
-  target: { type: Object as PropType<Partial<Pick<Message, 'display_name' | 'username'>>>, required: true }
+  target: { type: Object as PropType<{ display_name?: string | undefined; username?: string | undefined }>, required: true }
 })
 
 defineEmits<{ cancel: [] }>()
