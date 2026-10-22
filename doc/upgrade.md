@@ -272,6 +272,17 @@ operator is below. Update with the procedure above; take the backup first.
   restore. CI drills this path for the supported source versions: the old
   release refuses to start on the migrated data and a restore into the new
   build succeeds.
+- **Messages use Discord's Markdown.** The stored text does not change and
+  neither does any API: bots, webhooks, exports and search see the same text.
+  Only how the web app draws it does: `__underline__`, `# `/`## `/`### `
+  headings, `-# ` small text, `-`/`*`/`1.` lists with nesting, `>>> ` quotes to
+  the end of the message, `[text](https://…)` links (opening one whose text does
+  not name its destination asks first), `<https://…>` without a link card, `\`
+  escapes, and syntax highlighting with a copy button in fenced code blocks.
+  Two old habits render differently, as on Discord: `>quote` needs a space
+  after the `>`, and `__text__` is underlined instead of left as typed. The
+  composer has a formatting cheat sheet next to the emoji button. Desktop
+  clients render with the web bundle they load, so they follow this too.
 
 ### 0.8.x → 0.9.0
 

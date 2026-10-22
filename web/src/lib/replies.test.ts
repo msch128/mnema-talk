@@ -54,6 +54,8 @@ describe('plain text matches what is rendered', () => {
   function renderedText(md: string) {
     const el = document.createElement('div')
     el.innerHTML = renderMarkdown(md)
+    // The code block's language label and copy button are controls, not message text.
+    el.querySelectorAll('.md-code-tools').forEach(tools => tools.remove())
     return el.textContent
   }
 

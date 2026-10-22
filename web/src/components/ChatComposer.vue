@@ -6,6 +6,7 @@ import { Plus, ArrowUp } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import ReplyComposerBar from './ReplyComposerBar.vue'
 import EmojiButton from './EmojiButton.vue'
+import MarkdownHelp from './MarkdownHelp.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
 import SlashSuggestions from './SlashSuggestions.vue'
 import SlashCommandBar from './SlashCommandBar.vue'
@@ -121,6 +122,8 @@ function handleKeyDown(e: KeyboardEvent) {
         rows="1"
         class="bg-transparent flex-1 min-w-0 resize-none outline-none text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
       ></textarea>
+
+      <MarkdownHelp class="max-md:hidden" :disabled="!canSend" />
 
       <EmojiButton :disabled="sending || !canSend" @pick="assist.insertText" />
 
