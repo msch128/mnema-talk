@@ -18,7 +18,7 @@ const MIN_TARGET = 44
 
 // Sealed calls do not work on Playwright's Linux WebKit (CI); they pass on macOS
 // WebKit and on Chromium. Same limit as the CI WebKit job, which skips the call specs.
-const LINUX_WEBKIT = process.platform === 'linux'
+const isLinuxWebkit = (browserName: string) => browserName === 'webkit' && process.platform === 'linux'
 
 // The login allows 60 attempts per 15 minutes from one address and the whole
 // suite shares them. The first mobile project signs in through the dialog and
@@ -140,7 +140,7 @@ test('phone: sign in, drawer, message, thread, settings, Talk', async ({ page, b
   // Talk: join from the drawer, the control bar stays on screen, leave.
   await openDrawer(page)
   await page.locator('[data-channel-type="voice"]', { hasText: VOICE_CHANNEL }).tap()
-  if (LINUX_WEBKIT) {
+  if (isLinuxWebkit(browserName)) {
     // Playwright's Linux WebKit cannot seal call media (no encoded-frame
     // transform or Ed25519), so the client refuses to join there, on a phone
     // as on a desktop; see doc/product-status.md. The refusal is what that
