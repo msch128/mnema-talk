@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/media"
@@ -27,16 +28,19 @@ type rawPayload struct {
 type request struct {
 	payload rawPayload
 	files   []*media.StoredFile
+	// release gives back the storage reserved for the request's files; the
+	// caller defers it once the message is stored or dropped.
+	release func()
 }
 
 // readRequest parses the JSON or multipart body. Files are already stored;
 // the caller records or discards them.
-func (h *Handler) readRequest(w http.ResponseWriter, r *http.Request) (*request, error) {
+func (h *Handler) readRequest(w http.ResponseWriter, r *http.Request, uploader uuid.UUID) (*request, error) {
 	mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil {
 		return nil, formError("Content-Type must be application/json or multipart/form-data")
 	}
-	req := &request{}
+	req := &request{release: func() {}}
 	switch mt {
 	case "application/json":
 		httpx.SetJSONReadDeadline(w)
@@ -50,9 +54,18 @@ func (h *Handler) readRequest(w http.ResponseWriter, r *http.Request) (*request,
 		if err != nil {
 			return nil, err
 		}
+		release, err := h.Media.ReserveUpload(ctx, uploader, media.AnnouncedSize(r, body))
+		if err != nil {
+			return nil, err
+		}
+		req.release = release
 		r = r.WithContext(ctx)
 		r.Body = http.MaxBytesReader(w, r.Body, body)
-		return req, h.readMultipart(r, req)
+		if err := h.readMultipart(r, req); err != nil {
+			release()
+			return nil, err
+		}
+		return req, nil
 	}
 	return nil, formError("Content-Type must be application/json or multipart/form-data")
 }
