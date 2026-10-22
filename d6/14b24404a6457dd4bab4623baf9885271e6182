@@ -1,0 +1,54 @@
+scripts/fresh-install-check.sh
+  s_06fcde5dbef956::t_97249cd9f992cd 1-7,10-81
+  s_06fcde5dbef956::t_60e9d40a690bf6 8-9
+deploy/monitoring/mnema-alerts.yml
+  s_06fcde5dbef956::t_ebc8067a75ace5 1-80
+doc/upgrade.md
+  s_06fcde5dbef956::t_0a43f5c0b7d165 131-149,156-216
+doc/release-notes-1.0.md
+  s_06fcde5dbef956::t_3172e749b73dbf 1-70
+Makefile
+  s_06fcde5dbef956::t_de787df8b981f6 6,143,148,162-166
+  s_06fcde5dbef956::t_603cf31f3d5951 167
+SECURITY.md
+  s_06fcde5dbef956::t_6ea76aa91fc0b9 5-16,38-67
+  s_06fcde5dbef956::t_1e2434948bcb23 68
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_c2c3c133e84d0c 165-179,322-326
+  s_06fcde5dbef956::t_f8941a87e66954 327
+scripts/check-doc-links.mjs
+  s_06fcde5dbef956::t_035f116a4149b6 1-18,23,25-41,43-76
+  s_06fcde5dbef956::t_334c6106bd8827 19-22,24,42
+doc/architecture.md
+  s_06fcde5dbef956::t_e1ee86dddae254 34-35,43,219-283
+  s_06fcde5dbef956::t_8a3b6e4181ef04 284
+doc/product-status.md
+  s_06fcde5dbef956::t_801bef5ffd960a 13-20,22-41,75-83,86-88,90,167
+  s_06fcde5dbef956::t_5954422efc0174 21,84-85
+AGENTS.md
+  s_06fcde5dbef956::t_6bd1ed47afb8c1 96-98
+internal/server/alert_rules_integration_test.go
+  s_06fcde5dbef956::t_0b41b0850173fb 1-31,33-72,74-122
+  s_06fcde5dbef956::t_e9134cc515ac94 32,73
+doc/deployment.md
+  s_06fcde5dbef956::t_b2c5db47e22abc 33-55,57-73
+  s_06fcde5dbef956::t_a21778d0391e63 56
+doc/operations.md
+  s_06fcde5dbef956::t_ebc8067a75ace5 459-477
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d614b24404a6457dd4bab4623baf9885271e6182",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
