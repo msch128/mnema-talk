@@ -144,6 +144,7 @@ requests leave no entry. Reading the log is not recorded.
 | `auth.two_factor_enabled`, `auth.two_factor_disabled`, `auth.recovery_codes_regenerated`, `auth.recovery_code_used` | A member changes or uses their second factor | The member. Never a code or secret |
 | `auth.two_factor_failed`, `auth.two_factor_alert` | A wrong second-step code (at most one entry per account and minute); five or more not yet reported | The member. No code |
 | `user.two_factor_reset` | The Owner (or the host command `mnema-talk reset-2fa`) turns a member's second factor off | Who did it and the member |
+| `auth.account_delete`, `auth.export_request`, `auth.export_download` | A member deletes their account or asks for / takes their data export | The account id only. After a deletion, earlier entries about the account lose names and details |
 | `system.mail_test` | The Owner sends a test mail | Who did it; neither recipient nor mail text |
 
 Text channels have no membership (who may see one follows from roles and

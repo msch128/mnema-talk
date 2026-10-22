@@ -217,6 +217,42 @@ details and the limits.
   `mnema-talk reset-2fa <username>`. Resetting a password by mail does not skip
   the second factor, and a native sign-in has the same second step
   (`POST /auth/login/2fa`) before any grant is issued.
+- **Deleting an account and exporting its data (GDPR Art. 17 and 20).** Both
+  are self-service under Account & security and both need the password and,
+  while two-factor sign-in is on, a current code (wrong answers count toward the
+  usual lockouts), so a stolen session cookie alone cannot do either.
+  *Deletion* runs in one transaction and cannot be undone. The Owner account
+  cannot be deleted (ownership is not transferable). What goes: profile,
+  avatar, e-mail address, sessions (native ones too), tokens, invites,
+  reactions, mentions of the member, settings, roles and overwrites, every file
+  the member uploaded (database rows and objects), pending and finished exports,
+  and the second factor. What stays: the account row as an anonymised tombstone
+  (`deleted-<id>`, "Deleted user", disabled, unusable password hash) and the
+  member's messages, emptied of text, link cards and pins, so threads and other
+  members' replies stay readable; other members' texts that merely quote or
+  @mention the old name are not rewritten. Audit entries about the account keep
+  action, time and ids; their names and details are blanked by the one update
+  the append-only audit trigger permits (and only inside a transaction that sets
+  `mnema.audit_scrub`, never changing ids, actions or times). A test walks every
+  foreign key to `users` and fails when a table that refers to a person is
+  forgotten. The name `deleted-…` is reserved. A deleted account is final:
+  every administrative action treats it as missing (404), the account queries
+  count it as inactive, and a database trigger refuses any update that would
+  re-enable it or give it a password, name, address, avatar, role or ban. *Export* is built in the
+  background into the object store under `exports/` (not touched by the orphan
+  cleanup), limited to one per account per 24 hours by a database lock, is
+  streamed into storage while it is made (memory stays at one page of rows; the
+  bounds are enforced while writing), can be downloaded once within 24 hours
+  (the file is spent and deleted only after it was sent completely; an
+  interrupted download can be repeated, and only one download holds it at a
+  time), is swept when expired, and is removed with the account. Because the
+  download changes state, it refuses requests the browser marks as coming from
+  another site (`Sec-Fetch-Site`), so a link or image on another page cannot
+  burn it.
+  It holds the member's own profile, settings, roles, messages (channel names
+  only for channels they can still view), reactions, upload list, a security
+  summary and audit entries about the account as "you"/"staff" without any
+  other person's name; it is bounded to 200 000 messages and 64 MiB.
 - **WebSocket flood limits.** Every client event has a payload cap (1 KiB for
   ping, typing, speaking and the like; larger only for an SDP answer, an ICE
   candidate, a diagnostic and a media handshake), and a frame too big for its
@@ -590,7 +626,11 @@ details and the limits.
   Video stays decodable by the
   browser's packetizer, so the codec headers it parses (H.264 parameter sets
   and slice headers, the VP8 payload header) are readable but authenticated;
-  only VP8 and H.264 are negotiated while media is sealed. Metadata (who speaks
+  only VP8 and H.264 are negotiated while media is sealed (Firefox prefers VP8,
+  because its H.264 encoder is an optional download). A browser that cannot seal
+  (no `RTCRtpScriptTransform` or no Ed25519 in WebCrypto) is refused at the
+  join, before any device is requested: there is no unsealed fallback in any
+  engine. Metadata (who speaks
   when, frame sizes, timing) is visible to the server. Text messages and
   attachments stay readable by the server. **Desktop client.** The desktop
   client does not run the server's JavaScript. It runs a signed bundle of the

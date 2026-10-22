@@ -461,6 +461,8 @@ jobs:
       - name: Run browser smoke test
         env:
           E2E_INSTALL_BROWSER: "1"
+          E2E_BROWSERS: chromium webkit
+          E2E_ONLY: --project=chromium --project=mobile-chromium --project=mobile-webkit
         run: e2e/run.sh
 
       - name: Upload Playwright traces and screenshots
@@ -468,6 +470,89 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: e2e-results
+          path: |
+            e2e/test-results/
+            e2e/server.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # -- Other engines: the whole suite on WebKit (iOS, Safari, installed PWAs) and
+  # a smoke subset on Firefox. Not a required check until both have run stable
+  # (see doc/product-status.md).
+  e2e-browsers:
+    name: e2e (${{ matrix.label }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Playwright's Linux WebKit cannot run the sealed-call specs (they pass on
+          # macOS WebKit, see doc/product-status.md), so CI covers what it can.
+          - browser: webkit
+            label: webkit
+            only: "--project=webkit active-members.spec.ts audit.spec.ts bot-members.spec.ts bots.spec.ts crypto-state.spec.ts mentions.spec.ts message-moderation.spec.ts moderation.spec.ts notifications.spec.ts onboarding.spec.ts pwa.spec.ts"
+          - browser: firefox
+            # late-join.spec.ts also asserts the AI noise filter, which does not run
+            # on the Linux Firefox of CI; it passes on macOS (see doc/product-status.md).
+            label: firefox
+            only: "--project=firefox smoke.spec.ts browser-sealing.spec.ts key-lifecycle.spec.ts search.spec.ts mentions.spec.ts screenshare.spec.ts"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        id: go
+        with:
+          go-version-file: go.mod
+          # Cached per job below: setup-go's cache key is the same for every
+          # job, so whichever job finished first decided what all of them got.
+          cache: false
+
+      - name: Go module + build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            e2e/package-lock.json
+
+      # Browsers only; the system packages are still installed by
+      # `playwright install --with-deps` in e2e/run.sh, which skips the
+      # browser download when the cached revision is present.
+      - name: Playwright version
+        id: playwright
+        run: echo "version=$(jq -r '.packages["node_modules/playwright-core"].version' e2e/package-lock.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Playwright browser cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ steps.playwright.outputs.version }}
+
+      - name: Run browser smoke test
+        env:
+          E2E_INSTALL_BROWSER: "1"
+          E2E_BROWSERS: ${{ matrix.browser }}
+          E2E_ONLY: ${{ matrix.only }}
+        run: e2e/run.sh
+
+      - name: Upload Playwright traces and screenshots
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-results-${{ matrix.browser }}-${{ strategy.job-index }}
           path: |
             e2e/test-results/
             e2e/server.log

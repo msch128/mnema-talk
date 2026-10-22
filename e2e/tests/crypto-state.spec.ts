@@ -105,7 +105,8 @@ async function verifyRestoredSenderBlocked(page: Page) {
   })
 }
 
-test('native Web Lock prevents parallel ownership and a crashed tab cannot resume sender state', async ({ context }) => {
+test('native Web Lock prevents parallel ownership and a crashed tab cannot resume sender state', async ({ context, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Crashing a tab needs the Chrome DevTools Protocol, which only Chromium offers')
   const owner = await context.newPage()
   const other = await context.newPage()
   expect(await connect(owner, 'synthetic-context-1')).toBe('owned')

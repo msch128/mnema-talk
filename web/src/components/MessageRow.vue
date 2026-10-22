@@ -8,6 +8,7 @@ import type { Message } from '../types/domain'
 import { ref } from 'vue'
 import { MessageSquare, Pencil, Smile, Reply, MoreHorizontal, Pin } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
+import { shownName } from '../lib/deletedUser'
 import MarkdownContent from './MarkdownContent.vue'
 import ReplyPreview from './ReplyPreview.vue'
 import ReactionPalette from './ReactionPalette.vue'
@@ -149,7 +150,7 @@ defineExpose({ el: row })
           :style="permissions.nameColor(msg.user_id) ? { color: permissions.nameColor(msg.user_id) } : undefined"
           class="font-semibold text-message text-mnema-text hover:text-mnema-accent hover:underline transition-colors cursor-pointer truncate text-left focus-visible:underline focus-visible:text-mnema-accent"
         >
-          {{ msg.display_name || msg.username }}
+          {{ shownName(msg) }}
         </button>
         <BotBadge v-if="msg.is_bot" :webhook="msg.is_webhook === true" />
         <span class="text-xs text-mnema-tertiary flex-shrink-0 tabular-nums">{{ formatTime(msg.created_at) }}</span>

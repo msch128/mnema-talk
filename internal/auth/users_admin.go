@@ -76,6 +76,9 @@ var errOwnerAction = httpx.ErrInvalidInput("this action is not available for the
 // targetUser loads the user an admin action applies to. Admin accounts are
 // never targets: the single administrator cannot lock themselves out.
 func targetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
+	if err := refuseDeleted(ctx, p, id); err != nil {
+		return nil, err
+	}
 	u, err := GetUser(ctx, p, id)
 	if err != nil {
 		return nil, err
@@ -93,10 +96,10 @@ func SetDisabled(ctx context.Context, p db.Querier, id uuid.UUID, disabled bool)
 	}
 	if disabled {
 		_, err := p.Exec(ctx, `UPDATE users SET disabled_at = COALESCE(disabled_at, NOW()),
-			token_version = token_version + 1, updated_at = NOW() WHERE id = $1`, id)
+			token_version = token_version + 1, updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
 		return err
 	}
-	_, err := p.Exec(ctx, `UPDATE users SET disabled_at = NULL, updated_at = NOW() WHERE id = $1`, id)
+	_, err := p.Exec(ctx, `UPDATE users SET disabled_at = NULL, updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
 	return err
 }
 
@@ -116,7 +119,7 @@ func ResetPassword(ctx context.Context, p *db.Pool, id uuid.UUID) (string, error
 		return "", fmt.Errorf("hash password: %w", err)
 	}
 	tag, err := p.Exec(ctx, `UPDATE users SET password_hash = $1, token_version = token_version + 1,
-		updated_at = NOW() WHERE id = $2`, hash, id)
+		updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`, hash, id)
 	if err != nil {
 		return "", err
 	}
@@ -139,7 +142,7 @@ func SetPassword(ctx context.Context, p *db.Pool, id uuid.UUID, password string)
 		return fmt.Errorf("hash password: %w", err)
 	}
 	if _, err = p.Exec(ctx, `UPDATE users SET password_hash = $1, token_version = token_version + 1,
-		updated_at = NOW() WHERE id = $2`, hash, id); err != nil {
+		updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`, hash, id); err != nil {
 		return err
 	}
 	return dropTokens(ctx, p, id, purposePasswordReset)
@@ -169,6 +172,9 @@ func (h *Handler) mountUserAdmin(r chi.Router) {
 func (h *Handler) moderated(r *http.Request, id uuid.UUID, fn func(q db.Querier) error) error {
 	ctx := r.Context()
 	actor := UserFrom(ctx)
+	if err := refuseDeleted(ctx, h.Sessions.DB, id); err != nil {
+		return err
+	}
 	if h.Perms == nil {
 		target, err := GetUser(ctx, h.Sessions.DB, id)
 		if err != nil {
@@ -205,6 +211,9 @@ func checkTarget(snap *perm.Snapshot, actor, target *User) error {
 // moderate loads the member a moderation action aims at and checks that the
 // caller may act on them: never the Owner, only members below the caller.
 func (h *Handler) moderate(r *http.Request, id uuid.UUID) (*User, error) {
+	if err := refuseDeleted(r.Context(), h.Sessions.DB, id); err != nil {
+		return nil, err
+	}
 	target, err := GetUser(r.Context(), h.Sessions.DB, id)
 	if err != nil {
 		return nil, err

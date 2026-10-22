@@ -113,7 +113,7 @@ func grantRoles(ctx context.Context, tx pgx.Tx, userID uuid.UUID, roleIDs []uuid
 func loadRoleTarget(ctx context.Context, tx pgx.Tx, userID uuid.UUID, bot bool) (Subject, error) {
 	var role string
 	var isBot bool
-	err := tx.QueryRow(ctx, `SELECT role, is_bot FROM users WHERE id = $1`, userID).Scan(&role, &isBot)
+	err := tx.QueryRow(ctx, `SELECT role, is_bot FROM users WHERE id = $1 AND deleted_at IS NULL`, userID).Scan(&role, &isBot)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Subject{}, httpx.ErrNotFound("user not found")
 	}

@@ -53,7 +53,8 @@
   },
   "user": {
     "avatar": "Profile picture",
-    "openProfile": "Open your profile"
+    "openProfile": "Open your profile",
+    "deleted": "Deleted user"
   },
   "media": {
     "sizeMb": "{size} MB"
@@ -415,6 +416,7 @@
     "memberDeafened": "Deafened",
     "kicked": "An admin removed you from the voice channel.",
     "roomFull": "This voice channel is full. Try again when someone leaves.",
+    "mediaUnsupported": "This browser cannot protect calls (it lacks encrypted media transforms or Ed25519 signatures), so it cannot join. Use a current Chrome, Edge, Firefox or Safari.",
     "mediaUnprotected": "This browser cannot protect the call. Microphone, camera and screen stay off.",
     "mediaRekeyed": "The media keys of this call were reset by someone else in it or by the server. The call re-keys itself.",
     "mediaRefreshed": "The call was refreshed after a period of inactivity. Its media keys were renewed and the call re-keys itself.",
@@ -623,7 +625,8 @@
       "rights2Before": "You may also object to processing based on legitimate interests (Art. 21 GDPR) and withdraw any consent you gave at any time with effect for the future (Art. 7(3) GDPR). You also have the right to ",
       "rightsComplain": "lodge a complaint with a data protection supervisory authority",
       "rights2After": " (Art. 77 GDPR), in particular in the country where you live or where the operator is based.",
-      "noiseFilter": "AI noise suppression (DeepFilterNet3 or GTCRN) runs entirely in your browser. Your microphone signal is not sent to any third party for it; the model and code come from this server."
+      "noiseFilter": "AI noise suppression (DeepFilterNet3 or GTCRN) runs entirely in your browser. Your microphone signal is not sent to any third party for it; the model and code come from this server.",
+      "selfService": "Without emailing anyone: under Account & security in the account menu you can download a copy of your data (JSON files in a ZIP, once per day) and delete your account yourself. Deleting erases your profile, avatar, e-mail address, sessions and uploads; your messages stay in their threads as written by \"Deleted user\" without their text. An optional e-mail address is used only to confirm it and to reset your password, and is never shown to other members."
     },
     "cookies": {
       "heading": "3. Cookies & local storage",
@@ -1905,6 +1908,25 @@
       "back": "Back",
       "notice": "{count} wrong codes were entered for your account since you last signed in.",
       "noticeHint": "Somebody may know your password. Change it under Account & security and check your recovery codes."
+    },
+    "privacy": {
+      "title": "Your data",
+      "exportTitle": "Download a copy of your data",
+      "exportIntro": "A ZIP of JSON files with your profile, settings, roles, messages, reactions, uploads and the log entries about your account. It contains nothing of other members. One per day; you can download it once within 24 hours.",
+      "exportRequest": "Request export",
+      "exportStarted": "Your export is being prepared.",
+      "exportPending": "Preparing your export …",
+      "exportReady": "Download (valid until {when})",
+      "exportFailed": "The export could not be built. Try again later.",
+      "exportDownloaded": "The last export was downloaded and removed.",
+      "exportExpired": "The last export expired and was removed.",
+      "exportNext": "You can request the next export from {when}.",
+      "deleteTitle": "Delete my account",
+      "deleteIntro": "This erases your profile, avatar, e-mail address, sessions, settings, reactions and uploads for good. Your messages stay in their threads as written by \"Deleted user\", but their text is removed. Replies of other members stay. Your username becomes free. This cannot be undone.",
+      "deleteOwner": "The Owner account cannot be deleted: ownership cannot be transferred, so the community would be left without an Owner.",
+      "deleteButton": "Delete my account …",
+      "deleteType": "Type your username ({name}) to confirm",
+      "deleteConfirm": "Delete for good"
     }
   }
 }

@@ -72,7 +72,8 @@ test('search filters, results and jumping to an old message', async ({ browser }
 
     // Typing a filter: from: autocompletes members and becomes a chip.
     await dialog.getByRole('combobox').fill(`${OLD_WORD} mentions:${suiteMember.username.slice(0, 4)}`)
-    await dialog.locator('[data-search-suggestions] [role="option"]').first().click()
+    // Other specs add members with the same prefix: pick this suite's member.
+    await dialog.locator('[data-search-suggestions] [role="option"]').filter({ hasText: suiteMember.username }).click()
     await expect(dialog.locator('[data-search-chip]')).toHaveCount(2)
     await expect(dialog.locator('[role="option"]')).toHaveCount(1)
 

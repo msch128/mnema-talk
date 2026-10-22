@@ -36,6 +36,10 @@ type Handler struct {
 	// Mail delivers account e-mails (address confirmation, password reset);
 	// nil when SMTP is not configured, which switches those flows off.
 	Mail MailSender
+	// Objects is the object store; nil disables data exports and the removal
+	// of a deleted account's files.
+	Objects     ObjectStore
+	exportSlots chan struct{}
 	// PublicURL is the address the links in those mails point to.
 	PublicURL string
 	rec       *recovery
@@ -80,6 +84,7 @@ func NewHandler(s *Sessions, pub events.Publisher) *Handler {
 		Events:      pub,
 		failureSeen: &sync.Map{},
 		rec:         newRecovery(),
+		exportSlots: make(chan struct{}, exportSlots),
 		factorLocks: new([64]sync.Mutex),
 		// Generous per address: a household or office shares one public IP.
 		loginPerIP:      httpx.NewRateLimiter(60, 15*time.Minute),

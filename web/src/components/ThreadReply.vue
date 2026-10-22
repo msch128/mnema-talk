@@ -5,6 +5,7 @@ import { Pencil, Trash2, Smile, Reply } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import UserAvatar from './UserAvatar.vue'
+import { shownName } from '../lib/deletedUser'
 import MarkdownContent from './MarkdownContent.vue'
 import ReplyPreview from './ReplyPreview.vue'
 import ReactionPalette from './ReactionPalette.vue'
@@ -122,7 +123,7 @@ const { pickerId, editingId, editText } = props.actions
             @click="chatStore.openUserProfile(reply)"
             class="font-semibold text-message text-mnema-text hover:text-mnema-accent transition-colors cursor-pointer truncate text-left focus-visible:text-mnema-accent"
           >
-            {{ reply.display_name || reply.username }}
+            {{ shownName(reply) }}
           </button>
           <BotBadge v-if="reply.is_bot" :webhook="reply.is_webhook === true" />
           <span class="text-xs text-mnema-tertiary flex-shrink-0 tabular-nums">{{ formatTime(reply.created_at) }}</span>

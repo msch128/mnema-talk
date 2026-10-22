@@ -105,6 +105,10 @@ func (c *components) newCore() {
 	go c.authH.RunBanExpiry(c.ctx, time.Minute)
 	// `mnema-talk unlock` runs in another process and queues requests here.
 	go c.authH.RunUnlockWorker(c.ctx, auth.UnlockPollInterval)
+	if d.Store != nil {
+		c.authH.Objects = d.Store
+		go c.authH.RunExportSweep(c.ctx, 0)
+	}
 	go chat.RunSlowModePrune(c.ctx, d.DB, time.Hour)
 	c.chatH = &chat.Handler{DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog}
 	c.rolesH = &roles.Handler{Perms: c.permSvc, Events: c.pub}

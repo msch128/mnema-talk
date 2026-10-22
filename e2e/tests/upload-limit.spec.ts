@@ -62,9 +62,11 @@ test('the Owner lowers the upload limit and a member\'s large file is refused wi
       const id = flat.find(c => c.name === channelName)?.id
       const form = new FormData()
       form.append('file', new Blob([new Uint8Array(3 * 1024 * 1024)], { type: 'image/png' }), 'big.png')
-      return (await fetch(`/api/channels/${id}/upload`, { method: 'POST', body: form })).status
+      // The server may close the connection once it has refused, before the whole body is sent;
+      // Chromium and WebKit still read the refusal, Firefox reports a network error instead (0).
+      return fetch(`/api/channels/${id}/upload`, { method: 'POST', body: form }).then(res => res.status, () => 0)
     }, CHANNEL)
-    expect([400, 413]).toContain(direct)
+    expect([0, 400, 413]).toContain(direct)
   } finally {
     // Back to the server maximum for the other specs.
     await apiFetch(a, 'PUT', '/api/admin/upload-limit', { max_upload_mb: null })

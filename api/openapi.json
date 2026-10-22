@@ -346,6 +346,78 @@
         },
         "type": "object"
       },
+      "auth.DeleteAccountRequest": {
+        "properties": {
+          "code": {
+            "description": "Code is a current authenticator code or an unused recovery code; needed\nonly while two-factor sign-in is on.",
+            "maxLength": 32,
+            "type": "string"
+          },
+          "current_password": {
+            "format": "password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password"
+        ],
+        "type": "object"
+      },
+      "auth.ExportRequest": {
+        "properties": {
+          "code": {
+            "description": "Code is a current authenticator or recovery code; needed only while\ntwo-factor sign-in is on.",
+            "maxLength": 32,
+            "type": "string"
+          },
+          "current_password": {
+            "format": "password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password"
+        ],
+        "type": "object"
+      },
+      "auth.ExportStatus": {
+        "properties": {
+          "expires_at": {
+            "description": "ExpiresAt is when a ready export stops being downloadable.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "next_request_at": {
+            "description": "NextRequestAt is when a new export may be requested; omitted if now.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "requested_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "size_bytes": {
+            "type": "integer"
+          },
+          "state": {
+            "description": "State is none, pending, ready, failed, downloaded or expired.",
+            "enum": [
+              "none",
+              "pending",
+              "ready",
+              "failed",
+              "downloaded",
+              "expired"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "size_bytes",
+          "state"
+        ],
+        "type": "object"
+      },
       "auth.Invite": {
         "properties": {
           "code": {
@@ -20775,6 +20847,103 @@
         ]
       }
     },
+    "/api/users/me/delete": {
+      "post": {
+        "description": "Erases the caller's personal data (GDPR Art. 17) and cannot be undone. Needs the current password and, while two-factor sign-in is on, a current code; wrong answers count toward the usual lockouts. The Owner account cannot be deleted (403). Profile, avatar, e-mail address, sessions, tokens, reactions, uploads (files too), invites, settings and roles are deleted. The account's messages stay readable as written by \"Deleted user\" but lose their text, link cards and pins, so threads keep their shape; replies and quotes by other members stay. Audit entries about the account lose names and details. The username becomes free. The request signs the caller out everywhere.",
+        "operationId": "deleteAccount",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.DeleteAccountRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Account deleted.",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Expired session cookie that clears the session.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: wrong password or code, the Owner account, or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests, or the second step is locked.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Delete my account",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
     "/api/users/me/email": {
       "put": {
         "description": "Optional; used only to confirm the address and to reset the password. Needs the current password. A new address starts unconfirmed; when the server can send mail, a single-use link (valid 24 hours) is sent to it. Typing the confirmed address again keeps it confirmed. Never shown to other members. Wrong passwords count toward the same lockout as PUT /api/auth/password.",
@@ -21050,6 +21219,282 @@
           }
         ],
         "summary": "Send the confirmation mail again",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/users/me/export": {
+      "get": {
+        "description": "The caller's newest export: none, pending, ready (with the time it expires), failed, downloaded or expired, and when a new one may be requested.",
+        "operationId": "getDataExport",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.ExportStatus"
+                }
+              }
+            },
+            "description": "Export status.",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Status of my data export",
+        "tags": [
+          "Users"
+        ]
+      },
+      "post": {
+        "description": "GDPR Art. 20: builds a ZIP of JSON files with the caller's own data (profile, settings, roles, own messages with the channel names the caller can still see, reactions, upload list with links, audit entries about the account without other people's names). Needs the current password and, while two-factor sign-in is on, a current code. One export per 24 hours; it is built in the background (poll GET /api/users/me/export), can be downloaded once within 24 hours and is then deleted. Needs object storage. Size-bounded; nothing of other members' personal data is included.",
+        "operationId": "requestDataExport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.ExportRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.ExportStatus"
+                }
+              }
+            },
+            "description": "Accepted; the export is being built."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: wrong password or code, or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: an export was already requested in the last 24 hours, or too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: object storage is not available."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Request an export of my data",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/users/me/export/download": {
+      "get": {
+        "description": "The finished ZIP, once: the file is spent and deleted only after it was sent completely, so an interrupted download can be repeated. Refuses requests that browsers mark as coming from another site (Sec-Fetch-Site). 404 when there is no ready export, it expired or it was downloaded already.",
+        "operationId": "downloadDataExport",
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "type": "file"
+                }
+              }
+            },
+            "description": "The ZIP archive.",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Disposition": {
+                "description": "attachment; filename=mnema-talk-export.zip",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the request came from another site (Sec-Fetch-Site is neither same-origin nor none)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no export is ready, it expired or was downloaded already."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Download my data export",
         "tags": [
           "Users"
         ]

@@ -653,6 +653,19 @@ not start (e.g. the UDP range is in use).
 
 ## Troubleshooting
 
+### Account deletion and data exports
+
+Members delete their own account and download their data under Account &
+security (the Owner account cannot be deleted). Deleting keeps an anonymised
+row and the member's messages without text, removes everything else (see
+[SECURITY.md](../SECURITY.md)) and frees the username; files are removed from
+object storage in the same request, and anything that could not be removed is
+found by Admin > Media > orphan cleanup. Exports are stored for at most 24 hours
+under `exports/` in the bucket and need object storage; back-ups taken in that
+window contain them, so a restore can bring back a deleted account's rows and
+files: delete the account again after restoring an old back-up. Add this to your
+back-up retention statement.
+
 ### The Owner lost the authenticator and the recovery codes
 
 Whoever can run commands on the host can turn two-factor sign-in off for the

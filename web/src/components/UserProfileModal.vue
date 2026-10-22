@@ -17,6 +17,7 @@ import ProfileBio from './ProfileBio.vue'
 import ProfilePassword from './ProfilePassword.vue'
 import ProfileStatus from './ProfileStatus.vue'
 import BotBadge from './BotBadge.vue'
+import { shownName } from '../lib/deletedUser'
 import ActivityStats from './ActivityStats.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import MemberRolesDialog from './MemberRolesDialog.vue'
@@ -141,7 +142,7 @@ function handleMention() {
           <div class="flex items-center justify-between">
             <div>
               <h2 :id="titleId" class="text-lg font-bold text-mnema-text leading-tight flex items-center gap-1.5">
-                {{ profileUser.display_name || profileUser.username }}
+                {{ shownName(profileUser) }}
                 <BotBadge v-if="isBot" />
                 <Crown 
                   v-if="profileUser.role === 'admin'" 
