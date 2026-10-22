@@ -1,0 +1,21 @@
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_c8879679bf2fa6 492-493,495
+doc/product-status.md
+  s_06fcde5dbef956::t_1afef3292a767c 125-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6c26336db2aba8fd67410528ee37942cc47388ad",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
