@@ -82,10 +82,35 @@ export async function showWelcomeFlow(context: BrowserContext): Promise<void> {
   await context.unroute(ONBOARDING_STATE)
 }
 
+// Firefox has no context-level media grants (its fake devices need none, see
+// firefoxUserPrefs in playwright.config.ts) and rejects the names outright.
+function grantable(browser: Browser, options: Parameters<Browser['newContext']>[0]): Parameters<Browser['newContext']>[0] {
+  if (browser.browserType().name() !== 'firefox' || !options?.permissions) return options
+  const permissions = options.permissions.filter(name => name !== 'microphone' && name !== 'camera')
+  return { ...options, permissions }
+}
+
+// WebKit lets one page of a browser process capture the microphone and mutes
+// the others, as Safari does with its tabs. Two members of a call in one test
+// therefore each get their own WebKit process, which is also how two people
+// would join: from two devices.
+async function contextOwnProcess(browser: Browser, options: Parameters<Browser['newContext']>[0]): Promise<BrowserContext> {
+  const own = await browser.browserType().launch()
+  const context = await own.newContext(options)
+  const close = context.close.bind(context)
+  context.close = async (...args: Parameters<BrowserContext['close']>) => {
+    await close(...args)
+    await own.close()
+  }
+  return context
+}
+
 function counted(browser: Browser): Browser {
   const newContext = browser.newContext.bind(browser)
+  const separate = browser.browserType().name() === 'webkit'
   browser.newContext = async (...args: Parameters<Browser['newContext']>) => {
-    const context = await newContext(...args)
+    const options = grantable(browser, args[0])
+    const context = await (separate ? contextOwnProcess(browser, options) : newContext(options))
     countApiRequests(context)
     await hideWelcomeFlow(context)
     return context

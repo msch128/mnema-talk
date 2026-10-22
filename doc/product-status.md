@@ -19,6 +19,7 @@ incompatibly only in a major release. What the 1.0 label does and does not say:
 | Area | Category at 1.0 |
 | --- | --- |
 | Server (Docker, linux/amd64 and arm64), browser app, text chat, roles and permissions, webhooks and bots, notifications, search and onboarding, voice, cameras and screen share in Chromium-based browsers | Supported |
+| Browser app on WebKit (Safari, iOS, installed iOS web apps) and Firefox: text chat, search, voice, cameras and screen share with sealed media, as tested in [Browsers](#browsers) | Supported, see the limits there (not yet tested on real iOS or Android hardware) |
 | Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), backup and restore, upgrade from the supported releases (0.8.16 and 0.9.x), cosign-signed images | Supported |
 | Desktop client on Windows | Experimental (unsigned, no Authenticode) |
 | Desktop client on macOS and Linux | Experimental (DEV builds, not qualified on real hardware; not notarised) |
@@ -74,6 +75,55 @@ Not covered by these tests: real 4K/60 capture, system audio from physical
 hardware, an external security audit and capacity beyond the recorded runs.
 An internal five-area security review preceded 0.8 and a six-lane one
 preceded 1.0 (see "Status at 1.0"); neither is an independent audit.
+
+## Browsers
+
+Sealed media needs three things in the browser: a frame transform that
+reaches encoded media (`RTCRtpScriptTransform`), Ed25519 in WebCrypto and a
+module worker. Chrome and Edge 137+, Safari 17+ (including iOS 17+ and installed
+iOS web apps) and Firefox 129+ have them. A browser without them **does not
+join a call at all**: the join is refused with a message, no microphone is
+requested and nothing is sent. Media is never sent unsealed, in any engine.
+
+What the end-to-end suite showed (Playwright with the engines it ships:
+Chromium 153, WebKit 26.6, Firefox 155, two members per call with fake
+devices; run `make e2e` or see [development](development.md#browser-tests-e2e)):
+
+| | Chromium (Chrome, Edge) | WebKit (Safari, iOS) | Firefox |
+| --- | --- | --- | --- |
+| Sign-in, chat, search, roles, moderation, webhooks, notifications | Supported | Supported | Supported |
+| Microphone and camera, sealed on every line, with key rotation, late join and reload | Supported | Supported | Supported |
+| Screen share with viewer-chosen layers (simulcast) | Supported | Supported | Supported (VP8) |
+| Screen share frames advance for the viewer | Supported | Supported | Supported |
+| Required CI check | Yes | No, until stable (`e2e (webkit)`) | No (`e2e (firefox)`, smoke subset) |
+| Not covered by the suite | | Real Safari and iOS hardware, Linux WebKit in CI | Real screen capture |
+
+What it took:
+
+- **Firefox, screen share.** Screen lines asked for H.264 first. Firefox lists
+  H.264 but encodes it with a downloadable OpenH264 module; without it the
+  encoder never produced a frame and the share stayed black without an error.
+  Firefox now keeps VP8, which it encodes itself (sealed the same way).
+- **All engines, joining.** A browser that cannot seal media is refused at the
+  join (before any device is requested) instead of joining with microphone,
+  camera and screen switched off.
+- WebKit mutes the microphone of all but one page per browser process (as
+  Safari does between tabs). That limits two members in one Safari window, not
+  two devices; the suite therefore runs each WebKit member in its own process.
+
+Stability: Chromium passed 41 of 41 specs on every run. Firefox passed the
+whole suite apart from the specs that need Chrome's DevTools protocol, and its
+CI subset (7 files) 10 of 10. WebKit passed the suite apart from those too,
+but with one or two timing failures per full run on a loaded machine (a sealed
+call taking longer than the spec waits to re-key after a reload, a simulcast
+layer not up in time, a voice-chat leave); each passes when run alone. They are
+retried once in CI, and the WebKit and Firefox jobs stay out of the required
+checks until they have gone green for a while.
+
+Known limits: Firefox's fake microphone is a steady tone, which the AI noise
+filter removes, so the specs measure decoded samples rather than loudness.
+Real-device behaviour of iOS audio sessions, background tabs and installed web
+apps is not covered by the suite and stays on the "Remaining acceptance" list.
 
 ## Experimental desktop path
 
@@ -165,7 +215,7 @@ The remaining fixes and acceptance work follow:
    not click the prompt. A human prompt, a physical microphone or camera,
    display capture, sealed media on real hardware and a signed installer
    remain outstanding. The macOS and Linux builds have no hardware qualification either.
-2. Chat messages and attachments stay readable by the server and are not deleted by age. Sealed media is verified in Chromium browsers, including calls between 0.7.25 and 0.8 tabs; it is not yet qualified in WebView2 on real Windows hardware, and no external audit has reviewed it.
+2. Chat messages and attachments stay readable by the server and are not deleted by age. Sealed media is verified in Chromium, WebKit and Firefox (see [Browsers](#browsers)), and in Chromium for calls between 0.7.25 and 0.8 tabs; it is not yet qualified in WebView2 on real Windows hardware, and no external audit has reviewed it.
 3. Capacity: [`make load-test`](../loadtest/README.md) is reproducible (smoke, the 100-member `full` profile, join and reload stall checks, packet loss and jitter on the lightweight viewers, a two-hour `long` profile). On a loaded single test machine the `full` profile misses its gap and heap thresholds for 0.8 and 0.7.25 alike while all 84 viewers stay connected, so what remains is recording results on dedicated hardware with more real decrypting viewers ([capacity notes](architecture.md#capacity)). A viewer's bad reports move only that viewer to a lower screen layer (`TestOneViewersTroubleLeavesTheOtherOnTheHighLayer`); voice forwarding does not follow screen layers. The additional 250-endpoint target is deferred.
 4. Independent operation. `main` is protected by a ruleset (pull request required, CI and CodeQL checks must pass, squash merge only). Review approvals are not required. Dependency advisories remain part of release checks; a green build does not mean zero risk.
 
