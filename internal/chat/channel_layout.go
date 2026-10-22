@@ -35,26 +35,66 @@ func ApplyLayoutTx(ctx context.Context, tx pgx.Tx, cats []CategoryOrder, chans [
 	if err := lockChannelLayout(ctx, tx); err != nil {
 		return err
 	}
-	for _, c := range cats {
-		tag, err := tx.Exec(ctx, `UPDATE categories SET sort_order = $2 WHERE id = $1`, c.ID, c.SortOrder)
-		if err != nil {
-			return fmt.Errorf("order category: %w", err)
-		}
-		if tag.RowsAffected() == 0 {
-			return errCategoryNotFound
-		}
+	if err := orderCategories(ctx, tx, cats); err != nil {
+		return err
 	}
+	return placeChannels(ctx, tx, chans)
+}
+
+// orderCategories sets every sort order in one statement. When an ID repeats,
+// the last entry wins; an unknown category rejects the whole change.
+func orderCategories(ctx context.Context, tx pgx.Tx, cats []CategoryOrder) error {
+	last := map[uuid.UUID]int64{}
+	for _, c := range cats {
+		last[c.ID] = int64(c.SortOrder)
+	}
+	if len(last) == 0 {
+		return nil
+	}
+	ids, orders := make([]uuid.UUID, 0, len(last)), make([]int64, 0, len(last))
+	for id, order := range last {
+		ids, orders = append(ids, id), append(orders, order)
+	}
+	tag, err := tx.Exec(ctx, `
+		UPDATE categories c SET sort_order = v.sort_order
+		FROM unnest($1::uuid[], $2::bigint[]) AS v(id, sort_order)
+		WHERE c.id = v.id`, ids, orders)
+	if err != nil {
+		return fmt.Errorf("order categories: %w", err)
+	}
+	if tag.RowsAffected() != int64(len(ids)) {
+		return errCategoryNotFound
+	}
+	return nil
+}
+
+// placeChannels moves every channel in one statement. When an ID repeats, the
+// last entry wins; an unknown channel or category rejects the whole change.
+func placeChannels(ctx context.Context, tx pgx.Tx, chans []ChannelPlacement) error {
+	last := map[uuid.UUID]ChannelPlacement{}
 	for _, c := range chans {
-		tag, err := tx.Exec(ctx, `
-			UPDATE channels SET category_id = $2, sort_order = $3
-			WHERE id = $1 AND ($2::uuid IS NULL OR EXISTS (SELECT 1 FROM categories WHERE id = $2))`,
-			c.ID, c.CategoryID, c.SortOrder)
-		if err != nil {
-			return fmt.Errorf("place channel: %w", err)
-		}
-		if tag.RowsAffected() == 0 {
-			return httpx.ErrNotFound("channel or category not found")
-		}
+		last[c.ID] = c
+	}
+	if len(last) == 0 {
+		return nil
+	}
+	ids := make([]uuid.UUID, 0, len(last))
+	parents := make([]*uuid.UUID, 0, len(last))
+	orders := make([]int64, 0, len(last))
+	for id, c := range last {
+		ids, parents, orders = append(ids, id), append(parents, c.CategoryID), append(orders, int64(c.SortOrder))
+	}
+	tag, err := tx.Exec(ctx, `
+		UPDATE channels ch SET category_id = v.category_id, sort_order = v.sort_order
+		FROM unnest($1::uuid[], $2::uuid[], $3::bigint[]) AS v(id, category_id, sort_order)
+		WHERE ch.id = v.id
+		  AND (v.category_id IS NULL OR EXISTS (SELECT 1 FROM categories WHERE id = v.category_id))`,
+		ids, parents, orders)
+	if err != nil {
+		return fmt.Errorf("place channels: %w", err)
+	}
+	if tag.RowsAffected() != int64(len(ids)) {
+		return httpx.ErrNotFound("channel or category not found")
 	}
 	return nil
 }

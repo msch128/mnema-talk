@@ -126,6 +126,16 @@ until the new release has passed your application checks.
 
 ## Version notes
 
+### 0.9.x → 1.0.0
+
+- **One migration runs on first start: 0038.** It drops
+  `idx_messages_content_trgm`, a duplicate of the trigram search index
+  `messages_content_trgm_idx` (both came from earlier releases), so message
+  writes no longer maintain the same index twice and search is unchanged.
+  `DROP INDEX` takes a short exclusive lock on `messages`; the migration runs
+  in a transaction, so it is not `CONCURRENTLY`. On a large instance this takes
+  well under a second. Take the usual backup first.
+
 ### 0.8.x → 0.9.0
 
 - **Three migrations run on first start: 0035, 0036 and 0037.** 0035 adds
