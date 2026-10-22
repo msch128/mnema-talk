@@ -1,0 +1,21 @@
+internal/server/router_observability_integration_test.go
+  s_06fcde5dbef956::t_e58b68d304fc16 12,23
+internal/metrics/metrics.go
+  s_06fcde5dbef956::t_e58b68d304fc16 88-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cd16db41775b58bfe26c6f9cd29091e1e3561361",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
