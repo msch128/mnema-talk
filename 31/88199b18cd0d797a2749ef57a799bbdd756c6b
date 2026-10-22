@@ -1,0 +1,19 @@
+e2e/tests/push.spec.ts
+  s_06fcde5dbef956::t_651ecd40a5ca43 1,23-39,86,90,123-126,139,143,146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3188199b18cd0d797a2749ef57a799bbdd756c6b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
