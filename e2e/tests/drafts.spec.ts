@@ -25,10 +25,12 @@ const draftKeys = (page: Page) => page.evaluate(() => Object.keys(localStorage).
 test('an unsent message waits in its channel across switching and reload, and leaves with sign-out', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1400, height: 900 } })
   const page = await context.newPage()
+  let first = ''
+  let second = ''
   try {
     await signIn(page)
-    const first = responseString(await apiFetch(page, 'POST', '/api/admin/channels', { name: FIRST, type: 'text' }), 'id')
-    const second = responseString(await apiFetch(page, 'POST', '/api/admin/channels', { name: SECOND, type: 'text' }), 'id')
+    first = responseString(await apiFetch(page, 'POST', '/api/admin/channels', { name: FIRST, type: 'text' }), 'id')
+    second = responseString(await apiFetch(page, 'POST', '/api/admin/channels', { name: SECOND, type: 'text' }), 'id')
 
     await page.goto(`/c/${first}`)
     const composer = page.getByRole('textbox', { name: `Nachricht an #${FIRST}` })
@@ -61,6 +63,12 @@ test('an unsent message waits in its channel across switching and reload, and le
     await expect(page.getByRole('dialog').getByRole('heading', { name: 'Mnema Talk' })).toBeVisible()
     expect(await draftKeys(page)).toEqual([])
   } finally {
+    // The channels must not crowd the sidebar for the specs that follow.
+    if (first) {
+      await apiFetch(page, 'POST', '/api/auth/login', { username: ADMIN_USER, password: ADMIN_PASSWORD })
+      await apiFetch(page, 'DELETE', `/api/admin/channels/${first}`)
+      await apiFetch(page, 'DELETE', `/api/admin/channels/${second}`)
+    }
     await context.close()
   }
 })
