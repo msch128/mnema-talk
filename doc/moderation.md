@@ -186,9 +186,9 @@ quietly default to something wider than intended; this is the same table.
 
 | Class | Who reads it | Actions |
 |---|---|---|
-| Auditors | Every holder of *View audit log* | `role.*`, `user.*` except the Owner-only ones below, `invite.*`, `category.*`, `layout.apply` (and the moderation actions of later releases) |
+| Auditors | Every holder of *View audit log* | `role.*`, `user.*` except the Owner-only ones below, `invite.*` (and the moderation actions of later releases) |
 | Channel | Holders of *View audit log* **who can view the entry's channel when they read** | `message.*`, `voice.*`, `channel.*` (a private channel's name, topic and overwrites are private too) |
-| Owner and Administrators only | The Owner and members with *Administrator* | `auth.*` (sign-ins, failures, lockouts, password changes of other members), `webhook.*`, `outgoing_webhook.*`, `bot.*`, `media.*`, `settings.*`, `system.*`, `user.password_set`, `user.password_reset`, `user.lockout_clear`, `admin.*` (routes not yet named in the route table) |
+| Owner and Administrators only | The Owner and members with *Administrator* | `category.*` and `layout.apply` (a private category's name and overwrites are private too, and a layout lists every placement), `auth.*` (sign-ins, failures, lockouts, password changes of other members), `webhook.*`, `outgoing_webhook.*`, `bot.*`, `media.*`, `settings.*`, `system.*`, `user.password_set`, `user.password_reset`, `user.lockout_clear`, `admin.*` (routes not yet named in the route table) |
 
 The check runs on every read against the current permissions, so access that is
 granted later also opens the older entries of that channel, and access that is

@@ -128,7 +128,14 @@ until the new release has passed your application checks.
 
 ### 0.9.x → 1.0.0
 
-- **One migration runs on first start: 0038.** It drops
+- **Two migrations run on first start: 0038 and 0039.** 0039 adds
+  `bot_tokens.created_by` (a nullable column, instant): bot tokens now remember
+  who issued them and stop working when that person loses Manage bots (see
+  [bots](bots.md#tokens)). Existing tokens have no issuer and keep working until
+  regenerated. Other 1.0 changes: uploads are limited to
+  `UPLOAD_QUOTA_MB_PER_DAY` (default 2048) per account in 24 hours (`0` turns it
+  off), and category and layout entries of the audit log are now visible to
+  Owner and Administrators only. 0038 drops
   `idx_messages_content_trgm`, a duplicate of the trigram search index
   `messages_content_trgm_idx` (both came from earlier releases), so message
   writes no longer maintain the same index twice and search is unchanged.

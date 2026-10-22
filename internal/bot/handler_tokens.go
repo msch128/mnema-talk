@@ -5,6 +5,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -101,7 +102,7 @@ func (h *Handler) createToken(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	t, secret, err := IssueToken(r.Context(), h.DB, b.ID, name, exp)
+	t, secret, err := IssueToken(r.Context(), h.DB, b.ID, name, exp, auth.UserFrom(r.Context()).ID)
 	if err != nil {
 		return err
 	}
@@ -152,7 +153,7 @@ func (h *Handler) regenerateToken(w http.ResponseWriter, r *http.Request) error 
 	if h.OnRevoke != nil {
 		h.OnRevoke(b.ID, &tokenID)
 	}
-	t, secret, err := IssueToken(r.Context(), h.DB, b.ID, old.Name, old.ExpiresAt)
+	t, secret, err := IssueToken(r.Context(), h.DB, b.ID, old.Name, old.ExpiresAt, auth.UserFrom(r.Context()).ID)
 	if err != nil {
 		return err
 	}

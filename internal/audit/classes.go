@@ -40,6 +40,8 @@ var Classes = []Class{
 	{"message.%", VisChannel, "holds message text of one channel"},
 	{"moderation.bulk_delete", VisChannel, "names a channel and a reason that may concern a private channel"},
 	{"voice.%", VisChannel, "who was in which Talk"},
+	{"category.%", VisPrivileged, "names and overwrites of a possibly private category"},
+	{"layout.apply", VisPrivileged, "lists channel and category placements, private ones included"},
 	{"channel.%", VisChannel, "names, topics and overwrites of a possibly private channel"},
 	{"%", VisAuditors, "administration and moderation"},
 }

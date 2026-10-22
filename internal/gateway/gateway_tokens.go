@@ -3,11 +3,13 @@ package gateway
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
 // Revoke ends the live connections and the resumable sessions of a bot: of one
@@ -72,19 +74,31 @@ func (g *Gateway) removeLocked(id string, s *session) {
 }
 
 // validTokens returns which of the tokens are still good: not revoked, not
-// expired and of a bot that is neither disabled nor banned.
+// expired, of a bot that is neither disabled nor banned, and issued by someone
+// who may still act as the bot.
 func (g *Gateway) validTokens(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error) {
-	var live []uuid.UUID
+	type liveToken struct {
+		ID, BotUser uuid.UUID
+		Minter      *uuid.UUID
+	}
+	var live []liveToken
 	rows, err := g.DB.Query(ctx, `
-		SELECT t.id FROM bot_tokens t JOIN bots b ON b.id = t.bot_id JOIN users u ON u.id = b.user_id
+		SELECT t.id, b.user_id, t.created_by FROM bot_tokens t JOIN bots b ON b.id = t.bot_id JOIN users u ON u.id = b.user_id
 		WHERE t.id = ANY($1) AND t.revoked_at IS NULL AND (t.expires_at IS NULL OR t.expires_at > NOW()) AND NOT b.disabled
 		  AND `+auth.ActiveSQL("u"), ids)
 	if err == nil {
-		live, err = pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
+		live, err = pgx.CollectRows(rows, pgx.RowToStructByPos[liveToken])
 	}
 	valid := make(map[uuid.UUID]bool, len(live))
-	for _, id := range live {
-		valid[id] = true
+	for _, t := range live {
+		// The person who issued the token must still qualify (see bot.Authenticator).
+		// A failed check (database trouble) keeps the session; only a clear no ends it.
+		if g.Auth != nil {
+			if apiErr, ok := httpx.AsAPIError(g.Auth.CheckMinter(ctx, t.ID, t.Minter, t.BotUser)); ok && apiErr.Status == http.StatusUnauthorized {
+				continue
+			}
+		}
+		valid[t.ID] = true
 	}
 	return valid, err
 }

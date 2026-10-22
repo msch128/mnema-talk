@@ -18,9 +18,9 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"user.status": VisAuditors, "user.talk_kick": VisAuditors, "user.roles_set": VisAuditors,
 		"user.password_set": VisPrivileged, "user.password_reset": VisPrivileged, "user.lockout_clear": VisPrivileged,
 		"role.create": VisAuditors, "role.update": VisAuditors, "role.delete": VisAuditors, "role.reorder": VisAuditors,
-		"category.overwrites_set": VisAuditors,
+		"category.overwrites_set": VisPrivileged,
 		"channel.overwrites_set":  VisChannel, "channel.create": VisChannel, "channel.update": VisChannel, "channel.delete": VisChannel, "channel.duplicate": VisChannel,
-		"category.create": VisAuditors, "category.update": VisAuditors, "category.delete": VisAuditors, "layout.apply": VisAuditors,
+		"category.create": VisPrivileged, "category.update": VisPrivileged, "category.delete": VisPrivileged, "layout.apply": VisPrivileged,
 		"bot.create": VisPrivileged, "bot.update": VisPrivileged, "bot.delete": VisPrivileged, "bot.avatar": VisPrivileged, "bot.roles": VisPrivileged,
 		"bot.token_create": VisPrivileged, "bot.token_regenerate": VisPrivileged, "bot.token_revoke": VisPrivileged,
 		"bot.command_update": VisPrivileged, "bot.command_delete": VisPrivileged,
@@ -52,5 +52,25 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 	}
 	if matchLike("a.%", "a") || !matchLike("a.%", "a.b") || matchLike("exact", "exact2") || !matchLike("%", "x") {
 		t.Error("matchLike")
+	}
+}
+
+// An auditor without Administrator must not see categories: the filter hides
+// every pattern of the privileged class.
+func TestCategoryAndLayoutEntriesAreHiddenFromAuditors(t *testing.T) {
+	hidden := patterns(VisPrivileged)
+	for _, want := range []string{"category.%", "layout.apply"} {
+		found := false
+		for _, p := range hidden {
+			found = found || p == want
+		}
+		if !found {
+			t.Errorf("%s is not hidden from auditors: %v", want, hidden)
+		}
+	}
+	for _, a := range []string{"category.create", "category.overwrites_set", "layout.apply"} {
+		if ClassOf(a) != VisPrivileged {
+			t.Errorf("%s is %v", a, ClassOf(a))
+		}
 	}
 }

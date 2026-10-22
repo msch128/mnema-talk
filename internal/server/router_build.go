@@ -134,6 +134,7 @@ func (c *components) newBots() {
 	d, hub := c.d, c.hub
 	c.botH = &bot.Handler{DB: d.DB, Perms: c.permSvc, Media: c.mediaH, Events: c.pub}
 	c.botAuthn = bot.NewAuthenticator(d.DB)
+	c.botAuthn.Perms = c.permSvc
 	c.cmds = bot.NewCommands(bot.Commands{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub})
 	gw := gateway.New(gateway.Config{Auth: c.botAuthn, Perms: c.permSvc, DB: d.DB, PublicURL: c.cfg.PublicURL})
 	c.gw = gw
