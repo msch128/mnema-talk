@@ -26,6 +26,8 @@ const deletedUsernamePrefix = "deleted-"
 //     cards and pins removed (other members' replies and quotes remain);
 //   - their uploads and avatar are deleted from storage and the database;
 //   - their reactions and mentions of them disappear;
+//   - undelivered outgoing webhook events that carry their message text (or
+//     quote it) are dropped from the queue;
 //   - audit entries about them keep action, time and ids but lose names and
 //     details (other people's text that merely mentions them cannot be found
 //     and stays; the operator's privacy policy says so).
@@ -33,6 +35,8 @@ var eraseSteps = []string{
 	`DELETE FROM message_reactions WHERE user_id = $1`,
 	`DELETE FROM message_mentions WHERE user_id = $1`,
 	`UPDATE messages SET content = '', embeds = '[]'::jsonb, author_name = NULL, is_pinned = FALSE, pinned_at = NULL, pinned_by = NULL, is_edited = FALSE WHERE user_id = $1`,
+	`DELETE FROM outgoing_queue WHERE convert_from(data, 'UTF8')::jsonb->>'user_id' = $1::text
+		OR convert_from(data, 'UTF8')::jsonb->'reply_to'->>'user_id' = $1::text`,
 	`DELETE FROM invites WHERE created_by = $1`,
 	`DELETE FROM channel_reads WHERE user_id = $1`,
 	`DELETE FROM category_notify WHERE user_id = $1`,
