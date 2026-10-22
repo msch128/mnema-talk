@@ -3,7 +3,8 @@
 # SeaweedFS, runs Playwright against it and tears everything down.
 # Usage: e2e/run.sh   (or `make e2e`)
 #   SKIP_BUILD=1          reuse web/dist and bin/mnema-talk-e2e
-#   E2E_INSTALL_BROWSER=1 also run `playwright install --with-deps` for E2E_BROWSERS
+#   E2E_INSTALL_BROWSER=1 also run `playwright install` for E2E_BROWSERS
+#                         (with --with-deps, except when CI is set: the workflow installs those)
 #   E2E_BROWSERS=chromium browser(s) to install: chromium, webkit, firefox
 #   E2E_ONLY=...          arguments for `playwright test`, e.g. "--project=webkit"
 #   E2E_WEBRTC_ALL_INTERFACES=1 include VM/VPN interfaces in the browser ICE test
@@ -82,7 +83,11 @@ fi
 echo "==> installing e2e dependencies"
 (cd e2e && npm ci --no-audit --no-fund)
 if [ "${E2E_INSTALL_BROWSER:-0}" = "1" ]; then
-  (cd e2e && npx playwright install --with-deps ${E2E_BROWSERS:-chromium})
+  # In CI the system packages are installed by a bounded workflow step first
+  # (a slow apt mirror must not hang this script), so only fetch browsers.
+  DEPS=(--with-deps)
+  if [ -n "${CI:-}" ]; then DEPS=(); fi
+  (cd e2e && npx playwright install ${DEPS[@]+"${DEPS[@]}"} ${E2E_BROWSERS:-chromium})
 fi
 
 echo "==> project $PROJECT: postgres :$PG_PORT, s3 :$S3_PORT, app :$APP_PORT, udp :$UDP_MIN-$UDP_MAX"
