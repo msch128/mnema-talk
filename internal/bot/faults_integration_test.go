@@ -162,7 +162,7 @@ func (e *env) newBot() fixtureBot {
 			e.t.Fatal(err)
 		}
 	}
-	tok, _, err := IssueToken(ctx, e.p, b.ID, "t", nil)
+	tok, _, err := IssueToken(ctx, e.p, b.ID, "t", nil, uuid.Nil)
 	if err != nil {
 		e.t.Fatal(err)
 	}
@@ -324,7 +324,7 @@ func TestBotStoreEdges(t *testing.T) {
 	if err := Delete(ctx, e.p, uuid.New()); err == nil {
 		t.Fatal("delete of an unknown bot")
 	}
-	if _, _, err := IssueToken(ctx, e.p, uuid.New(), "x", nil); err == nil {
+	if _, _, err := IssueToken(ctx, e.p, uuid.New(), "x", nil, uuid.Nil); err == nil {
 		t.Fatal("token for an unknown bot")
 	}
 	if err := RevokeToken(ctx, e.p, f.bot.ID, uuid.New()); err == nil {

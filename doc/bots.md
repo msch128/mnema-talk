@@ -137,6 +137,13 @@ Each bot holds up to 10 active API tokens (`mnb_...`, 256 random bits).
 - **Regenerate** issues a new token with the same name and expiry and revokes
   the old one at once. **Revoke** and disabling or deleting the bot take
   effect immediately, also for connections that are open.
+- A token remembers **who issued it**. Every use re-checks (at most every 30
+  seconds, also for open gateway connections) that this person is still active
+  and is the Owner, or holds *Manage bots* and everything the bot can do. When
+  they are demoted, disabled, banned, or the bot gains a permission they lack,
+  their tokens stop working; regenerate them as someone who qualifies. Tokens
+  issued before 1.0 have no recorded issuer and are not re-checked until
+  regenerated.
 
 ## Getting started
 

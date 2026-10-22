@@ -301,7 +301,7 @@ func tokenState(revoked, expires *time.Time, now time.Time) string {
 
 // IssueToken adds a token to a bot and returns the secret, the only time it
 // exists in clear.
-func IssueToken(ctx context.Context, p *db.Pool, botID uuid.UUID, name string, expires *time.Time) (Token, string, error) {
+func IssueToken(ctx context.Context, p *db.Pool, botID uuid.UUID, name string, expires *time.Time, minter uuid.UUID) (Token, string, error) {
 	secret, hash, hint := NewToken()
 	var t Token
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
@@ -320,9 +320,9 @@ func IssueToken(ctx context.Context, p *db.Pool, botID uuid.UUID, name string, e
 			return httpx.ErrConflict(fmt.Sprintf("a bot can have at most %d active tokens", MaxTokens))
 		}
 		return tx.QueryRow(ctx, `
-			INSERT INTO bot_tokens (bot_id, name, token_hash, hint, expires_at) VALUES ($1, $2, $3, $4, $5)
+			INSERT INTO bot_tokens (bot_id, name, token_hash, hint, expires_at, created_by) VALUES ($1, $2, $3, $4, $5, NULLIF($6, '00000000-0000-0000-0000-000000000000'::uuid))
 			RETURNING id, name, hint, expires_at, last_used_at, created_at`,
-			botID, name, hash, hint, expires).Scan(&t.ID, &t.Name, &t.Hint, &t.ExpiresAt, &t.LastUsedAt, &t.CreatedAt)
+			botID, name, hash, hint, expires, minter).Scan(&t.ID, &t.Name, &t.Hint, &t.ExpiresAt, &t.LastUsedAt, &t.CreatedAt)
 	})
 	if err != nil {
 		if _, ok := httpx.AsAPIError(err); ok {
