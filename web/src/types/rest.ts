@@ -1287,6 +1287,17 @@ export function isChatEmbedMedia(value: unknown): value is ChatEmbedMedia {
 
 export const decodeChatEmbedMedia = decoder("chat.EmbedMedia", isChatEmbedMedia)
 
+export type ChatFirstUnreadResponse = {
+  message_id: string | null
+}
+
+export function isChatFirstUnreadResponse(value: unknown): value is ChatFirstUnreadResponse {
+  return isRecord(value)
+    && (hasOwn(value, "message_id") && (isIdentifier(value["message_id"]) || value["message_id"] === null))
+}
+
+export const decodeChatFirstUnreadResponse = decoder("chat.FirstUnreadResponse", isChatFirstUnreadResponse)
+
 export type ChatInEmbed = {
   author: {
   name: string
