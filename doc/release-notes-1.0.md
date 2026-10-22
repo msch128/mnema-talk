@@ -36,7 +36,7 @@ surfaces in [api-stability.md](api-stability.md). Concretely, for every `1.x`:
 
 Not covered by the promises: the database schema, `internal/...` Go packages,
 operator-only admin endpoints, log text and UI wording ([the full list](api-stability.md#what-is-not-public)).
-The desktop clients stay Experimental.
+The desktop clients are Beta and unsigned ([how to install them](desktop-app.md#installing-the-unsigned-beta)).
 
 ## What 1.0 is not
 
