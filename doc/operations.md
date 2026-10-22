@@ -326,6 +326,47 @@ digest; it says nothing about the code in it beyond that. Pinning the digest in
 from changing under a tag. Images released before signing was added carry no
 signature.
 
+**"Update now" does not run this check.** The updater sidecar only asks the
+Docker daemon to pull the tag again; neither the signature nor the BuildKit
+provenance is verified before the app is recreated, and there is no hook in
+the sidecar for it (see [SECURITY.md](../SECURITY.md#self-update-sidecar)).
+If you want every image verified before it runs, do not enable the `autoupdate`
+profile: for each release run `cosign verify` against the new tag, copy the
+digest it reports into `MNEMA_IMAGE` and run `docker compose pull app && docker
+compose up -d app` (the steps in [upgrade.md](upgrade.md)). A digest-pinned
+install is never touched by "Update now".
+
+## Renewing the desktop trust statement
+
+`desktop-trust/trust.json` is signed by the offline root key and valid for 180
+days. After `expires_at` the desktop clients keep running their current bundle
+but install no new bundle and no app update (security fixes included) until a
+fresh statement exists. Nothing renews it automatically and the key never
+leaves the owner's machine, so a scheduled workflow watches it:
+
+- `.github/workflows/trust-expiry.yml` runs every Monday and fails while fewer
+  than 60 days remain (`webbundle trust verify -min-valid-days 60`). A failed
+  run is the alert: treat it as a task due within the next few weeks, not as a
+  flaky check. Re-run it by hand with *Run workflow*.
+- Check the same thing locally with
+  `go run ./cmd/webbundle trust verify -min-valid-days 60`.
+
+Runbook when it fails:
+
+1. On the machine that holds the offline root key, from an up-to-date `main`:
+   `go run ./cmd/webbundle trust sign -key-file <root key> -out desktop-trust
+   -prev desktop-trust/trust.json -renew` (details and the confirmation prompt:
+   [desktop-trusted-client.md](desktop-trusted-client.md#renewing-the-statement-every-3-months)).
+   Read the printed list of allowed and revoked keys before confirming.
+2. Open a pull request with only `desktop-trust/` and merge it.
+3. Re-run the workflow; it must pass. Clients pick the new statement up at
+   their next start or six-hourly check.
+4. Add the next renewal date to your release checklist: the 60-day warning is a
+   backstop, not a schedule.
+
+Never put the root key in CI or in a GitHub secret; the workflow only reads the
+committed statement and public key.
+
 ## Health and metrics
 
 - **`GET /api/health`** (public): `200 {"status":"ok","version":"X.Y.Z"}`

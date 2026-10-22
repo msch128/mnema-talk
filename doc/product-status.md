@@ -62,8 +62,8 @@ WebSocket, so the instance supplies community data and never executable code
 the WebSocket commands and the gaming integration's session-bound Talk-state
 sync; local gaming surfaces hold their separate display/control permissions.
 Status: unit-tested and run on macOS during development; the bundle verifier
-has a high-water mark, a security floor that rises with `fix(security)`
-releases and a session cookie kept in the OS keychain. Windows CI on the
+has a high-water mark, a security floor that rises with releases whose
+security fixes carry a `Security-Floor: raise` trailer and a session cookie kept in the OS keychain. Windows CI on the
 desktop repository
 ([run 39423960431](https://github.com/msch128/mnema-talk-desktop/actions/runs/39423960431))
 checks the current web-client host. WebView2 presents the custom protocol as
