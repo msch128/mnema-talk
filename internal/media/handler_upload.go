@@ -111,6 +111,9 @@ func (h *Handler) prepareUploadRequest(w http.ResponseWriter, r *http.Request, u
 	if r.ContentLength > bodyLimit(limit) {
 		return nil, httpx.ErrPayloadTooLarge(fmt.Sprintf("file exceeds the %d MB limit", limit>>20))
 	}
+	if err := h.CheckUploadQuota(r.Context(), user.ID, r.ContentLength); err != nil {
+		return nil, err
+	}
 	r.Body = http.MaxBytesReader(w, r.Body, bodyLimit(limit))
 	return r.WithContext(WithUploadLimit(r.Context(), limit)), nil
 }

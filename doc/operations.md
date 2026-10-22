@@ -72,6 +72,9 @@ General rules:
 | Variable | Default | Meaning and validation |
 |---|---|---|
 | `MAX_UPLOAD_SIZE_MB` | `50` | The hard ceiling for a single upload, 1–2048, and the initial limit. The Owner can lower it in the System tab and per role (see [roles](roles-and-permissions.md#upload-size)), never raise it above this value. Your reverse proxy must allow at least this body size. |
+| `UPLOAD_QUOTA_MB_PER_DAY` | `2048` | What one account (member, bot or webhook) may upload in any rolling 24 hours; further uploads answer 429. Deleted files still count. `0` turns the budget off. |
+| `MEDIA_MAX_TOTAL_MB` | `0` | Pauses all uploads (503) once the stored media reaches this size. `0` = no cap. |
+| `MEDIA_MIN_FREE_MB` / `MEDIA_DISK_PATH` | `1024` / empty | Pauses uploads (503) while the filesystem at `MEDIA_DISK_PATH` has less than this much free. The app can only see disks it has mounted: with the bundled SeaweedFS container, mount its data volume read-only into the app and point `MEDIA_DISK_PATH` at it, or watch the volume from outside. Empty path = off. |
 | `MEDIA_RETENTION_DAYS` | `0` | `0` = never delete media automatically. A positive number deletes media older than that many days. Negative values are rejected. |
 | `LINK_PREVIEWS_ENABLED` | `true` | The server fetches public pages for link cards (never private addresses); linked sites see the server's IP. |
 | `API_DOCS_ENABLED` | `false` | Swagger UI at `/api/docs` and `/api/openapi.json` for signed-in members. |

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/media"
@@ -31,7 +32,7 @@ type request struct {
 
 // readRequest parses the JSON or multipart body. Files are already stored;
 // the caller records or discards them.
-func (h *Handler) readRequest(w http.ResponseWriter, r *http.Request) (*request, error) {
+func (h *Handler) readRequest(w http.ResponseWriter, r *http.Request, uploader uuid.UUID) (*request, error) {
 	mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil {
 		return nil, formError("Content-Type must be application/json or multipart/form-data")
@@ -48,6 +49,9 @@ func (h *Handler) readRequest(w http.ResponseWriter, r *http.Request) (*request,
 	case "multipart/form-data":
 		ctx, body, err := h.Media.GlobalLimit(r.Context())
 		if err != nil {
+			return nil, err
+		}
+		if err := h.Media.CheckUploadQuota(ctx, uploader, r.ContentLength); err != nil {
 			return nil, err
 		}
 		r = r.WithContext(ctx)
