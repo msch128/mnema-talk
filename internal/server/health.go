@@ -36,6 +36,7 @@ var Features = []string{
 	"blocks",
 	"dm",
 	"reports",
+	"saved",
 	"search.filters.v2",
 	"threads.follow",
 }

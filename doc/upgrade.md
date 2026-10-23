@@ -156,6 +156,17 @@ server lacks.
 - **New events** `dm_created`, `dm_member_added`, `dm_member_removed`.
 - **New event** `block_updated`, sent only to the blocker's own sessions.
 - **Export** gains `blocks.json` and `reports.json`.
+- **Migration 0051** adds `saved_messages`.
+- **Saved messages** (feature `saved`): a private list of up to 1,000
+  messages per member with an optional note of up to 200 characters
+  (`GET /api/me/saved`, `PUT` / `DELETE /api/me/saved/{messageId}`; event
+  `saved_updated` to the member's own sessions). A row is a reference, never a
+  copy, and access is checked on every read: a message the member can no
+  longer see comes back as unavailable. The export gains `saved.json` (ids,
+  notes and times, not the saved text); erasing an account removes the list.
+- **"Pinned by".** Messages and the pin event carry `pinned_at` and
+  `pinned_by` while pinned; the pinned list shows who pinned a message and
+  when. Additive, no migration.
 - **Stricter style policy.** The web app's Content-Security-Policy no longer
   allows inline styles: `style-src 'unsafe-inline'` became `style-src 'self'`
   plus `style-src-attr 'none'` (see [SECURITY.md](../SECURITY.md#security-model-summary)

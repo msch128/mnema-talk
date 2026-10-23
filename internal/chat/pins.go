@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -42,12 +43,15 @@ type PinsChanged struct {
 	Pinned    bool      `json:"pinned"`
 	ActorID   uuid.UUID `json:"actor_id" format:"uuid"`
 	ActorName string    `json:"actor_name"`
+	// PinnedAt and PinnedBy are set when the message was pinned.
+	PinnedAt *time.Time `json:"pinned_at,omitempty" binding:"optional" format:"date-time"`
+	PinnedBy *UserRef   `json:"pinned_by,omitempty" binding:"optional"`
 }
 
 // listPins handles GET /api/channels/{channelID}/pins.
 //
 // @Summary List a channel's pinned messages
-// @Description The channel's pinned messages, the most recently pinned first (at most 50). Needs View channel. Deleting a message unpins it.
+// @Description The channel's pinned messages, the most recently pinned first (at most 50), each with pinned_at and pinned_by. Needs View channel. Deleting a message unpins it.
 // @ID listPins
 // @Tags Messages
 // @Produce json
@@ -209,5 +213,6 @@ func (h *Handler) announcePin(r *http.Request, msg *Message, actor *auth.User, p
 	h.Events.BroadcastChannel(chID, events.MessageUpdate, msg)
 	h.Events.BroadcastChannel(chID, events.PinsChanged, PinsChanged{
 		ChannelID: chID, MessageID: msg.ID, Pinned: pinned, ActorID: actor.ID, ActorName: actor.DisplayName,
+		PinnedAt: msg.PinnedAt, PinnedBy: msg.PinnedBy,
 	})
 }
