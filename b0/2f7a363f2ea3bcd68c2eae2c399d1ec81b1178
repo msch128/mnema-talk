@@ -1,0 +1,125 @@
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_47eef4ae1075b9 615,646-647
+AGENTS.md
+  s_06fcde5dbef956::t_9bbadd3976c2b2 76
+SECURITY.md
+  s_06fcde5dbef956::t_1a084de31756a5 292
+api/openapi.json
+  s_06fcde5dbef956::t_d6c4d60aa9bfa6 124-127,853-856,2557-2560,25566-25784,27003
+doc/api-stability.md
+  s_06fcde5dbef956::t_330abbc5098ad6 28
+doc/architecture.md
+  s_06fcde5dbef956::t_067b9ca4e7297b 5
+doc/operations.md
+  s_06fcde5dbef956::t_f9f09b3f1604c0 522,672
+doc/product-status.md
+  s_06fcde5dbef956::t_5225f96c8797a9 99,124-125,127-128,136-150
+doc/upgrade.md
+  s_06fcde5dbef956::t_c9791e2060df51 138,151,201-211,245-246,248-249,251-252,264
+e2e/package-lock.json
+  s_06fcde5dbef956::t_f5729b36c6aa57 12,29-31,35,55-57,61,71-73
+e2e/package.json
+  s_06fcde5dbef956::t_9a8d61159342ce 13
+e2e/playwright.config.ts
+  s_06fcde5dbef956::t_9063e61436a76e 35-36
+e2e/tests/a11y.spec.ts
+  s_06fcde5dbef956::t_85d0076496aa31 12-14,17-18,38
+e2e/tests/fixtures.ts
+  s_06fcde5dbef956::t_6fd6aa5fb078b3 3,76-78,93-103,109,199
+e2e/tests/mobile.spec.ts
+  s_06fcde5dbef956::t_93fc8e129ec8c6 280
+e2e/tests/navigation-diagnostics.ts
+  s_06fcde5dbef956::t_74d3bcc9ac9ccf 1-69
+e2e/tests/profile-banner.spec.ts
+  s_06fcde5dbef956::t_7f22c21ec67855 1-82
+e2e/tests/sidebar-layout.spec.ts
+  s_06fcde5dbef956::t_07a9e6e16c0ff0 373
+e2e/tests/smoke.spec.ts
+  s_06fcde5dbef956::t_cb72ff8d3acd83 100
+e2e/tests/talk-chat-read.spec.ts
+  s_06fcde5dbef956::t_4efc219b6dd66a 49-50
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_de1e59a597ce91 28,110
+internal/auth/account_export_banner.go
+  s_06fcde5dbef956::t_25cdcbfeb4e961 1-45
+internal/auth/account_export_build.go
+  s_06fcde5dbef956::t_745dbaef1a1506 55,148
+internal/auth/handler_profile.go
+  s_06fcde5dbef956::t_21561be3d543f0 61-65,141,167-169
+internal/auth/service.go
+  s_06fcde5dbef956::t_552c9cc257a976 67-70,123-133
+internal/db/migrations/0057_profile_banner.sql
+  s_06fcde5dbef956::t_8d67d0b78adf7c 1-22
+internal/emoji/image.go
+  s_06fcde5dbef956::t_03f817641500c0 15,150,167-168,171,178,180,189-190,194-196,198
+internal/imgproc/banner.go
+  s_06fcde5dbef956::t_9830468676cb7a 1-176
+internal/imgproc/banner_test.go
+  s_06fcde5dbef956::t_7ffcc0822d7ede 1-146
+internal/imgproc/gif.go
+  s_06fcde5dbef956::t_67105e4b164937 1-93
+internal/imgproc/gif_test.go
+  s_06fcde5dbef956::t_b379e5d03e54a2 1-54
+internal/imgproc/gifscan.go
+  s_06fcde5dbef956::t_634d0f80264ef0 1-3,5,7-8,26
+internal/media/banner.go
+  s_06fcde5dbef956::t_213de266ad90e7 1-154
+internal/media/banner_integration_test.go
+  s_06fcde5dbef956::t_4270f0d612c880 1-83
+internal/media/handler.go
+  s_06fcde5dbef956::t_af517dc45a234c 86-87
+internal/media/handler_upload.go
+  s_06fcde5dbef956::t_e6eade33e10ea2 238,252,254-260,263,272
+internal/media/orphans.go
+  s_06fcde5dbef956::t_df3d4786b4eccb 24
+internal/server/banner_export_integration_test.go
+  s_06fcde5dbef956::t_30e2ee9eb26227 1-40
+internal/server/banner_integration_test.go
+  s_06fcde5dbef956::t_8c812d063f594e 1-261
+internal/server/health.go
+  s_06fcde5dbef956::t_bc78146f53d496 44
+internal/server/ops_test.go
+  s_06fcde5dbef956::t_123bbac0cc5333 16-17
+internal/server/system.go
+  s_06fcde5dbef956::t_08b1f4b53c9fc6 216
+web/src/components/MemberList.vue
+  s_06fcde5dbef956::t_6014add1959cdb 93
+web/src/components/PollCard.vue
+  s_06fcde5dbef956::t_cda40382834a82 50-51,80
+web/src/components/ProfileBanner.test.ts
+  s_06fcde5dbef956::t_be840167fce030 1-140
+web/src/components/ProfileBannerControls.vue
+  s_06fcde5dbef956::t_4e71e7874913ad 1-100
+web/src/components/Sidebar.test.ts
+  s_06fcde5dbef956::t_a0c958fa355021 96-97,229,231,276,530,532,535,538-539
+web/src/components/SidebarChannelRow.vue
+  s_06fcde5dbef956::t_18cb46b3044a6a 68-74,83,101,172,174-175,182,185,194,197,201
+web/src/components/UserProfileModal.vue
+  s_06fcde5dbef956::t_ba33152b55a3c7 12,20,89,143-151,166
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_da7db7b4d5e623 1252-1259
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_063d1c6d37fb3c 1252-1259
+web/src/stores/auth.ts
+  s_06fcde5dbef956::t_4b41e00d45594f 37-52,74-75
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_de9ea4d01812a9 40-41
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_25886806ace21d 69,93,547,565,1597,1619
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b02f7a363f2ea3bcd68c2eae2c399d1ec81b1178",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
