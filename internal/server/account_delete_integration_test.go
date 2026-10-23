@@ -150,7 +150,7 @@ func TestDeletingAnAccountRemovesThePersonButKeepsThreadsReadable(t *testing.T) 
 			continue
 		}
 		found = true
-		if m.Content != "" || m.DisplayName != "Deleted user" || !strings.HasPrefix(m.Username, "deleted-") || strings.Contains(m.Username, "alice") {
+		if m.Content != "" || m.DisplayName != "Deleted member" || !strings.HasPrefix(m.Username, "deleted-") || strings.Contains(m.Username, "alice") {
 			t.Fatalf("tombstone: %+v", m)
 		}
 	}
@@ -281,7 +281,7 @@ func TestDeletionLeavesNoPersonalDataInAnyTable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(username, "deleted-") || display != "Deleted user" || bio != "" || status != "" || locale != "" ||
+	if !strings.HasPrefix(username, "deleted-") || display != "Deleted member" || bio != "" || status != "" || locale != "" ||
 		email != nil || avatar != nil || !deleted || !disabled || strings.HasPrefix(hash, "$2") {
 		t.Fatalf("tombstone: %s %s %q %q %q %v %v", username, display, bio, status, hash, email, avatar)
 	}
