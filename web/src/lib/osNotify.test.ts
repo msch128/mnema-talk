@@ -176,4 +176,14 @@ describe('host adapter', () => {
     host.invoke.mockRejectedValueOnce(new Error('x'))
     expect(() => adapter.setBadge(1)).not.toThrow()
   })
+
+  it('reports bounded whole-number counts for the server rail and swallows host errors', () => {
+    const adapter = createHostNotify()
+    adapter.reportUnread?.({ unread: 2.9, mentions: -1 })
+    adapter.reportUnread?.({ unread: Number.NaN, mentions: 5000 })
+    const calls = host.invoke.mock.calls.filter(([command]) => command === 'desktop_report_unread')
+    expect(calls.map(([, args]) => args)).toEqual([{ unread: 2, mentions: 0 }, { unread: 0, mentions: 999 }])
+    host.invoke.mockRejectedValueOnce(new Error('x'))
+    expect(() => adapter.reportUnread?.({ unread: 1, mentions: 1 })).not.toThrow()
+  })
 })
