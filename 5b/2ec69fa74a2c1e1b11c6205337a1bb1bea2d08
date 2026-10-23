@@ -1,0 +1,23 @@
+e2e/tests/screen-layers.spec.ts
+  s_06fcde5dbef956::t_86e9173063ba89 123,170-172,184
+e2e/playwright.config.ts
+  s_06fcde5dbef956::t_86e9173063ba89 51-53,59
+e2e/tests/talk-extras.spec.ts
+  s_06fcde5dbef956::t_86e9173063ba89 2,160,338
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5b2ec69fa74a2c1e1b11c6205337a1bb1bea2d08",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
