@@ -30,16 +30,17 @@ type ReadState struct {
 // muted channel only messages addressed to the user count (by name, through a
 // role or as a reply; not @all or @here), the same ones that still notify.
 // Before the first read, "last read" is the sign-up.
+// Messages of members the caller blocked never count as mentions.
 // NotifyLevel is the effective level: the channel's own setting, else its
 // category's, else "all"; an expired mute counts as none (see ResolveNotify).
 func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadState, error) {
 	rows, err := p.Query(ctx, `
 		SELECT c.id,
 		       count(m.id) FILTER (WHERE m.parent_id IS NULL),
-		       count(m.id) FILTER (WHERE orig.user_id = $1 OR EXISTS (
-		           SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = $1)),
-		       count(m.id) FILTER (WHERE orig.user_id = $1 OR EXISTS (
-		           SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = $1 AND mm.kind <> 1)),
+		       count(m.id) FILTER (WHERE NOT blocked.is_blocked AND (orig.user_id = $1 OR EXISTS (
+		           SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = $1))),
+		       count(m.id) FILTER (WHERE NOT blocked.is_blocked AND (orig.user_id = $1 OR EXISTS (
+		           SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = $1 AND mm.kind <> 1))),
 		       cr.last_read_at,
 		       COALESCE(cr.notify_level, 'inherit'), cr.muted_until,
 		       COALESCE(cn.notify_level, 'inherit'), cn.muted_until,
@@ -51,6 +52,7 @@ func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadStat
 		LEFT JOIN messages m ON m.channel_id = c.id AND m.user_id <> $1
 		     AND m.created_at > COALESCE(cr.last_read_at, me.created_at)
 		LEFT JOIN messages orig ON orig.id = m.reply_to_id
+		CROSS JOIN LATERAL (SELECT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = m.user_id) AS is_blocked) blocked
 		GROUP BY c.id, cr.last_read_at, cr.notify_level, cr.muted_until, cn.notify_level, cn.muted_until
 		ORDER BY c.id`, user.ID)
 	if err != nil {
