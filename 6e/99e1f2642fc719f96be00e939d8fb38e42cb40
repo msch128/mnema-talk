@@ -1,0 +1,104 @@
+internal/auth/account_export_banner.go
+  s_06fcde5dbef956::t_76af988007f645 1-45
+internal/server/health.go
+  s_06fcde5dbef956::t_151f1b6b4b1fa5 44
+AGENTS.md
+  s_06fcde5dbef956::t_262f37b371b755 76
+web/src/components/UserProfileModal.vue
+  s_06fcde5dbef956::t_5b84b952ce9745 12,20,89,143-151,166
+doc/operations.md
+  s_06fcde5dbef956::t_b7ab7eaeacb608 648
+api/openapi.json
+  s_06fcde5dbef956::t_372cbd9fc9f0dc 124-127,853-856,2557-2560,25566-25784,27003
+doc/upgrade.md
+  s_06fcde5dbef956::t_b7ab7eaeacb608 209-226
+internal/imgproc/gifscan.go
+  s_06fcde5dbef956::t_d257bb77a6b3b0 1-55
+web/src/components/ProfileBanner.test.ts
+  s_06fcde5dbef956::t_71905d0c296db2 1-109,111-116,118-137,139-140
+  s_06fcde5dbef956::t_bac0bda4421fef 110,117,138
+doc/architecture.md
+  s_06fcde5dbef956::t_b7ab7eaeacb608 5
+internal/auth/account_export_build.go
+  s_06fcde5dbef956::t_9edb3ad7133b89 55,148
+internal/auth/handler_profile.go
+  s_06fcde5dbef956::t_151f1b6b4b1fa5 61-65,141,167-169
+internal/db/migrations/0057_profile_banner.sql
+  s_06fcde5dbef956::t_f9e7ea2e4e96be 1-22
+internal/media/handler_upload.go
+  s_06fcde5dbef956::t_883c45c88def6b 238,252,254-260,263,272
+internal/imgproc/banner.go
+  s_06fcde5dbef956::t_9a2f0d5065b499 33
+  s_06fcde5dbef956::t_d55eb0cef5e696 1-32,34-176
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_151f1b6b4b1fa5 28,110
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_5b84b952ce9745 40-41
+internal/imgproc/banner_test.go
+  s_06fcde5dbef956::t_50cec70f2480e8 1-146
+internal/imgproc/gif.go
+  s_06fcde5dbef956::t_f44d553907656d 1-93
+internal/server/banner_integration_test.go
+  s_06fcde5dbef956::t_a3fe3d0935f5aa 1-261
+internal/server/system.go
+  s_06fcde5dbef956::t_9edb3ad7133b89 216
+internal/media/orphans.go
+  s_06fcde5dbef956::t_547a3329e1d8fb 24
+web/src/components/ProfileBannerControls.vue
+  s_06fcde5dbef956::t_d7401de454bc6c 25-29
+  s_06fcde5dbef956::t_e125b99a17bb7c 1-24,30-100
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_5b84b952ce9745 1252-1259
+SECURITY.md
+  s_06fcde5dbef956::t_b7ab7eaeacb608 275
+internal/media/banner.go
+  s_06fcde5dbef956::t_547a3329e1d8fb 4,127
+  s_06fcde5dbef956::t_00f4495dc05919 1-3,5-126,128-154
+internal/emoji/image.go
+  s_06fcde5dbef956::t_c528d133ffd328 15,150,167-168,171,178,189-190,194-196,198
+  s_06fcde5dbef956::t_c96cd35060b870 180
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_5b84b952ce9745 1252-1259
+internal/auth/service.go
+  s_06fcde5dbef956::t_f869bc7722b263 132-133
+  s_06fcde5dbef956::t_151f1b6b4b1fa5 67-70,123-131
+internal/media/handler.go
+  s_06fcde5dbef956::t_547a3329e1d8fb 86-87
+web/src/stores/auth.ts
+  s_06fcde5dbef956::t_5b84b952ce9745 37-52,74-75
+e2e/tests/profile-banner.spec.ts
+  s_06fcde5dbef956::t_5eccc68c76b84e 1-14,16-57,59-66,68-82
+  s_06fcde5dbef956::t_04435a43e970f2 15,58,67
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_e487958969e3aa 69,93,547,565,1597,1619
+internal/imgproc/gif_test.go
+  s_06fcde5dbef956::t_d97b1a13394436 1-54
+internal/media/banner_integration_test.go
+  s_0405dbe72c1598::t_7d656542f53abb 1-83
+internal/server/banner_export_integration_test.go
+  s_0405dbe72c1598::t_5a4015a579018a 1-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6e99e1f2642fc719f96be00e939d8fb38e42cb40",
+  "prompts": {},
+  "sessions": {
+    "s_0405dbe72c1598": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a97fb466bd8f82c95",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
