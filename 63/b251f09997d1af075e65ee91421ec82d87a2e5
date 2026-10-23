@@ -1,0 +1,74 @@
+api/openapi.json
+  s_06fcde5dbef956::t_06da947298b78f 1498-1509,1946-1961,2014-2036,2047-2112,2830-2845,3788-3791,3818,3832-3838,4434-4436,4451-4454,10896,20390,20392-20393,20399-20402,20406,20452,20454,20456-20465,20468-20470,20474,20476,20478-20484,20486,20490,20512,20520-20530,20540,20566,20568,20572,20574-20575,20578,20591,20593,20597,20656-21214,23745,23825-23833,25432-25580,26095
+internal/chat/dm_members.go
+  s_06fcde5dbef956::t_c9ddaa18ec583e 23-41,43,46,53-57,62,69,84,91,100-109
+  s_06fcde5dbef956::t_8a11e211185242 42,44-45,47-52
+  s_06fcde5dbef956::t_f066552e87da7d 110
+doc/bots.md
+  s_06fcde5dbef956::t_a666de211ab465 520-528
+internal/chat/dm_handler.go
+  s_06fcde5dbef956::t_06da947298b78f 16,289,297,304-306
+AGENTS.md
+  s_06fcde5dbef956::t_a666de211ab465 37
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_a666de211ab465 133
+internal/push/service_integration_test.go
+  s_06fcde5dbef956::t_dfc86310301980 190-209,217-219
+  s_06fcde5dbef956::t_cbbd5f642e371a 210-216
+internal/chat/channels.go
+  s_06fcde5dbef956::t_7a5391b2a26f5d 20-24
+internal/chat/dm_gate.go
+  s_06fcde5dbef956::t_7a5391b2a26f5d 32
+doc/architecture.md
+  s_06fcde5dbef956::t_a666de211ab465 89-161
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_06da947298b78f 929-939,1208-1218,1247-1263,1275-1303,1724-1734,2337,2347,2358,2368,2710,2713,2726,2729
+doc/glossary.md
+  s_06fcde5dbef956::t_a666de211ab465 27
+internal/ws/dm_test.go
+  s_06fcde5dbef956::t_958c1dcce0a6d0 1-54
+internal/chat/moderation_failures_integration_test.go
+  s_06fcde5dbef956::t_0625fdd4e87f29 52,54
+README.md
+  s_06fcde5dbef956::t_a666de211ab465 15
+internal/chat/database_failures_integration_test.go
+  s_06fcde5dbef956::t_aa61e3dc37b6c8 151
+internal/chat/dm_failures_integration_test.go
+  s_06fcde5dbef956::t_80a73c188f94b8 1-54
+  s_06fcde5dbef956::t_3c1a2181a71fd0 55-62
+internal/server/dm_integration_test.go
+  s_06fcde5dbef956::t_9caa7aed8f930b 1-6,8,10-12,14-68,72-141,143-168,170-171,173-193,203,208,228-230,232,234,236-260,262-279,281-364,366-374,376-378
+  s_06fcde5dbef956::t_6d934bc2dff38c 7,209-211,213,215-227,233,235
+  s_06fcde5dbef956::t_2f8f4b8b8a6671 9,13,69-71,142,169,172,261,280,365,375
+  s_06fcde5dbef956::t_fb0e64661d9067 194-202,204-207,212,214,231
+internal/server/dm_privacy_integration_test.go
+  s_06fcde5dbef956::t_045420718f8f14 1-64
+web/src/components/AdminRolesTab.test.ts
+  s_06fcde5dbef956::t_a19c937dffd4ac 62
+internal/server/dm_group_integration_test.go
+  s_06fcde5dbef956::t_ca89cf10ac7893 1-29,31,39-40,42-51,57-58,62-195,197-201,203-296
+  s_06fcde5dbef956::t_e126d7d32cac9b 32-38,52-56,59-61,196,202
+  s_06fcde5dbef956::t_afb50d82ec4c72 30,41
+SECURITY.md
+  s_06fcde5dbef956::t_a666de211ab465 74-101
+internal/chat/dm.go
+  s_06fcde5dbef956::t_7f5504350e2f95 266-268
+doc/upgrade.md
+  s_06fcde5dbef956::t_a666de211ab465 144-156
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "63b251f09997d1af075e65ee91421ec82d87a2e5",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
