@@ -90,7 +90,7 @@ function openMemberMenu(e: MouseEvent | KeyboardEvent, member: Member) {
         <h3 class="pt-6 pb-1 px-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary truncate">
           {{ $t('members.offline', { count: offlineNonAdmins.length }) }}
         </h3>
-        <div class="opacity-60 hover:opacity-100 transition-opacity">
+        <div class="opacity-75 hover:opacity-100 transition-opacity">
           <MemberRow
             v-for="member in offlineNonAdmins"
             :key="member.id"
