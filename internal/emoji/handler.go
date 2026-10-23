@@ -51,8 +51,8 @@ type Handler struct {
 // Mount registers the routes every signed-in member may call.
 func (h *Handler) Mount(r chi.Router) {
 	r.Get("/emoji", httpx.Handle(h.listEmoji))
-	r.Get("/emoji/{id}/image", httpx.Handle(h.serve(false)))
-	r.Get("/emoji/{id}/still", httpx.Handle(h.serve(true)))
+	r.Get("/emoji/{id}/image", httpx.Handle(h.image))
+	r.Get("/emoji/{id}/still", httpx.Handle(h.still))
 }
 
 // MountAdmin registers the management routes (Manage emoji).
@@ -184,7 +184,7 @@ func (h *Handler) discard(ctx context.Context, keys ...string) {
 // @Success 201 {object} Emoji "Created emoji."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage emoji permission, or cross-origin request rejected."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the name is taken or the instance limit is reached."
 // @Failure 413 {object} httpx.ErrorResponse "PAYLOAD_TOO_LARGE: body or file exceeds the limit (1 MiB for JSON)."
 // @Failure 415 {object} httpx.ErrorResponse "UNSUPPORTED_MEDIA_TYPE: the file type is not allowed."
@@ -237,7 +237,7 @@ type RenameRequest struct {
 // @Success 200 {object} Emoji "Renamed emoji."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage emoji permission, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the name is taken."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
@@ -277,7 +277,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) error {
 // @Success 204 "Deleted."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage emoji permission, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -300,81 +300,5 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) error {
 	}
 	h.changed()
 	w.WriteHeader(http.StatusNoContent)
-	return nil
-}
-
-// serve streams the image (or its still frame) of an emoji.
-//
-// @Summary Download a custom emoji image
-// @Description The redrawn PNG or GIF, or with `/still` the first frame of an animated emoji. The `v` parameter is the content hash: the response is cacheable for a year.
-// @ID getEmojiImage
-// @Tags Emoji
-// @Produce png,gif
-// @Security cookieAuth
-// @Param id path string true "Emoji ID." Format(uuid)
-// @Param v query string false "Content hash from the emoji's URL."
-// @Success 200 {string} binary "Image."
-// @Success 304 "Not modified (If-None-Match)."
-// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
-// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
-// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
-// @Header 429 {integer} Retry-After "Seconds until the client may retry."
-// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
-// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
-// @Router /api/emoji/{id}/image [get]
-// @Router /api/emoji/{id}/still [get]
-func (h *Handler) serve(still bool) httpx.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) error {
-		if h.Store == nil {
-			return httpx.ErrUnavailable("file storage is not configured")
-		}
-		id, err := httpx.PathUUID(r, "id")
-		if err != nil {
-			return err
-		}
-		e, err := h.get(r.Context(), id)
-		if err != nil {
-			return err
-		}
-		key, ctype := e.key, e.contentType
-		if still {
-			if e.stillKey == nil {
-				return httpx.ErrNotFound("emoji has no still image")
-			}
-			key, ctype = *e.stillKey, TypePNG
-		}
-		return h.writeImage(w, r, key, ctype, e.hash, still)
-	}
-}
-
-func (h *Handler) writeImage(w http.ResponseWriter, r *http.Request, key, ctype, hash string, still bool) error {
-	etag := `"` + hash[:16]
-	if still {
-		etag += "-still"
-	}
-	etag += `"`
-	hdr := w.Header()
-	hdr.Set("ETag", etag)
-	hdr.Set("Cache-Control", "private, max-age=31536000, immutable")
-	if r.Header.Get("If-None-Match") == etag {
-		w.WriteHeader(http.StatusNotModified)
-		return nil
-	}
-	body, err := h.Store.GetObjectFrom(r.Context(), key, 0)
-	if err != nil {
-		return fmt.Errorf("fetch emoji object: %w", err)
-	}
-	defer body.Close()
-	data, err := io.ReadAll(io.LimitReader(body, MaxFileBytes+1))
-	if err != nil {
-		return fmt.Errorf("read emoji object: %w", err)
-	}
-	hdr.Set("Content-Type", ctype)
-	hdr.Set("Content-Length", fmt.Sprint(len(data)))
-	hdr.Set("Content-Disposition", "inline")
-	hdr.Set("X-Content-Type-Options", "nosniff")
-	hdr.Set("Content-Security-Policy", "default-src 'none'; sandbox")
-	_, _ = w.Write(data)
 	return nil
 }
