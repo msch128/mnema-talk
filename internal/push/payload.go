@@ -9,7 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/emojitext"
+	"github.com/msch128/mnema-talk/internal/mdplain"
 )
 
 // Payload is what the service worker receives (after the browser decrypted
@@ -45,11 +45,11 @@ const (
 var texts = map[string]map[string]string{
 	"de": {
 		"new": "Neue Nachricht", "mention": "Hat dich erwähnt", "attachment": "Anhang",
-		"group": "%d neue Nachrichten", "poll": "Umfrage", "test": "Push funktioniert auf diesem Gerät.",
+		"group": "%d neue Nachrichten", "poll": "Umfrage", "spoiler": "Spoiler", "test": "Push funktioniert auf diesem Gerät.",
 	},
 	"en": {
 		"new": "New message", "mention": "Mentioned you", "attachment": "Attachment",
-		"group": "%d new messages", "poll": "Poll", "test": "Push works on this device.",
+		"group": "%d new messages", "poll": "Poll", "spoiler": "Spoiler", "test": "Push works on this device.",
 	},
 }
 
@@ -72,6 +72,8 @@ type Notice struct {
 	// Poll is set when the message is a poll; its content is the question.
 	Poll    bool
 	Mention bool
+	// Addressed is set when the message is meant for the member itself (see addressed); it decides about a mute.
+	Addressed bool
 	// Count is how many messages this push stands for (1 or more).
 	Count int
 	At    time.Time
@@ -109,7 +111,7 @@ func previewLine(n Notice, locale string, preview bool) string {
 	case !preview:
 		return text(locale, "new")
 	}
-	if line := clean(emojitext.Plain(n.Content), maxPreviewRunes); line != "" {
+	if line := clean(mdplain.Plain(n.Content, text(locale, "spoiler")), maxPreviewRunes); line != "" {
 		if n.Poll {
 			return text(locale, "poll") + ": " + line
 		}

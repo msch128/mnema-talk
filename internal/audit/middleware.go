@@ -102,9 +102,21 @@ func (l *Log) finalizeEntry(
 	}
 	if e.TargetID == "" {
 		takeCreatedTarget(&e, response)
+		l.addCreatedState(ctx, &e, m)
 	}
 	attachChannelID(&e)
 	return e
+}
+
+// addCreatedState records the audited fields of a resource the request
+// created, once its id is known from the response.
+func (l *Log) addCreatedState(ctx context.Context, e *Entry, m routeMatch) {
+	if !m.known || m.rt.Snapshot == ResNone || m.rt.IDParam != "" || e.TargetID == "" {
+		return
+	}
+	if after, _ := Snapshot(ctx, l.DB, m.rt.Snapshot, e.TargetID); after != nil {
+		e.Details["after"] = after
+	}
 }
 
 // serve runs the request and records it if it was a successful change.

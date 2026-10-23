@@ -14,7 +14,7 @@ import (
 
 // Mount registers the member routes (RequireUser applies).
 func (s *Service) Mount(r chi.Router) {
-	r.Post("/channels/{channelID}/polls", httpx.Handle(s.create))
+	r.With(s.creates.By(auth.UserKey)).Post("/channels/{channelID}/polls", httpx.Handle(s.create))
 	r.Get("/channels/{channelID}/messages/{messageID}/poll", httpx.Handle(s.get))
 	r.Put("/channels/{channelID}/messages/{messageID}/poll/votes", httpx.Handle(s.vote))
 	r.Post("/channels/{channelID}/messages/{messageID}/poll/end", httpx.Handle(s.end))

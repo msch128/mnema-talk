@@ -35,6 +35,8 @@ type Handler struct {
 	Audit *audit.Log
 	// EditHistoryLimit caps edit-history reads per member; nil means no cap.
 	EditHistoryLimit *httpx.RateLimiter
+	// PinLimit caps pinning and unpinning per member (each change is broadcast); nil means no cap.
+	PinLimit *httpx.RateLimiter
 }
 
 // VoiceRooms acts on live voice rooms (implemented by the WebSocket hub).

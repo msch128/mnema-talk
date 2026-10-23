@@ -41,6 +41,7 @@ describe('AdminAuditTab', () => {
     expect(w.find('pre').exists()).toBe(false)
     await w.find('[data-testid="audit-entry-2"] button').trigger('click')
     expect(w.find('pre').text()).toContain('"from": "a"')
+    expect(w.find('[data-testid="audit-summary-2"]').text()).toBe('Changed: name: a → b')
     expect(w.text()).toContain('req-1')
     await w.find('[data-testid="audit-entry-2"] button').trigger('click')
     expect(w.find('pre').exists()).toBe(false)
