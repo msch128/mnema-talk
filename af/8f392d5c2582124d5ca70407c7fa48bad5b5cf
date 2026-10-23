@@ -1,0 +1,273 @@
+web/src/components/PollCard.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 91
+web/src/styles/controls.css
+  s_06fcde5dbef956::t_1bd40f7579bbc7 188
+  s_06fcde5dbef956::t_6b01ab9d13209a 1-187,189-245
+web/src/components/WelcomeFlow.vue
+  s_06fcde5dbef956::t_3d474f3574556d 40
+  s_06fcde5dbef956::t_db325c668315a2 28-29
+web/src/components/MessageRow.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 102,113,123
+web/src/components/AdminChannelRow.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 46,57,67,77
+web/src/components/AccountTwoFactor.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 103,105-106,115-116,128-129,141
+web/src/components/ChatComposer.vue
+  s_06fcde5dbef956::t_5075acc646b285 151
+web/src/components/ConnectionStatsModal.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 181
+web/src/components/AdminUsersTab.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 162
+web/src/components/MentionSuggestions.vue
+  s_06fcde5dbef956::t_09125c4c126a40 28
+web/src/components/DmCreateDialog.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 130,135
+web/src/components/SidebarCategoryHeader.vue
+  s_06fcde5dbef956::t_a735c9c065279b 94,104
+web/src/components/AdminDashboard.vue
+  s_06fcde5dbef956::t_65d1738b405d87 129
+web/src/components/AdminReportsTab.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 111
+web/src/components/ScreenViewers.vue
+  s_06fcde5dbef956::t_09125c4c126a40 108
+web/src/components/LoginModal.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 233
+  s_06fcde5dbef956::t_446284b83dceb6 123
+  s_06fcde5dbef956::t_c2c211be350dda 130
+web/src/components/PermissionToggles.vue
+  s_06fcde5dbef956::t_2e7240cf44cded 56
+web/src/components/SearchInput.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 122,150
+web/src/components/AudioProcessingSection.vue
+  s_06fcde5dbef956::t_2e7240cf44cded 70,119,137,163,181
+web/src/components/SlashSuggestions.vue
+  s_06fcde5dbef956::t_09125c4c126a40 24
+web/src/components/SavedMessages.vue
+  s_06fcde5dbef956::t_a735c9c065279b 142,152,172
+  s_06fcde5dbef956::t_38a693bcada9d0 183
+  s_06fcde5dbef956::t_3d474f3574556d 81
+  s_06fcde5dbef956::t_09125c4c126a40 97
+web/src/components/ConfirmDialog.vue
+  s_06fcde5dbef956::t_83776360efa793 41,46
+web/src/components/ProfilePassword.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 85,92
+web/src/components/ForgotPasswordDialog.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 42
+web/src/components/ForwardDialog.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 114,119
+web/src/main.ts
+  s_06fcde5dbef956::t_8c7a6fd92e280f 15
+  s_06fcde5dbef956::t_01febfe3415835 37
+web/src/components/AdminMailPanel.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 47
+web/src/components/BotCommandsPanel.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 76
+web/src/components/SlashCommandBar.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 57
+web/src/components/ThreadComposer.vue
+  s_06fcde5dbef956::t_5075acc646b285 102
+web/src/components/SelfUpdateDialog.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 76,83
+web/src/components/ProfileBio.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 133,140
+web/src/components/ReactionPalette.vue
+  s_06fcde5dbef956::t_a735c9c065279b 46
+web/src/components/ProfileAvatar.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 128
+web/src/components/TipBar.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 21,29
+web/src/components/RecoveryCodesPanel.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 44-45,51
+web/src/components/ContextMenu.vue
+  s_06fcde5dbef956::t_446284b83dceb6 308,325
+web/src/lib/rangeFill.ts
+  s_06fcde5dbef956::t_ce8ec34febfcf2 1-45
+web/src/components/AppInstallSection.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 26
+web/src/components/ThreadReply.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 78,88,98
+web/src/components/DmInfoDialog.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 84,95,107,114
+web/src/components/BotSecretDialog.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 37,46
+web/src/components/AdminAuditTab.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 130,168
+web/src/components/MentionsInbox.vue
+  s_06fcde5dbef956::t_09125c4c126a40 70
+  s_06fcde5dbef956::t_38a693bcada9d0 114
+  s_06fcde5dbef956::t_3d474f3574556d 49
+web/src/components/SearchResults.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 60
+web/src/components/SecondFactorStep.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 56
+web/src/components/MarkdownHelp.vue
+  s_06fcde5dbef956::t_a735c9c065279b 77
+web/src/components/RecoveryPage.vue
+  s_06fcde5dbef956::t_09125c4c126a40 72
+  s_06fcde5dbef956::t_38a693bcada9d0 93,102
+web/src/components/AccountMenu.vue
+  s_06fcde5dbef956::t_09125c4c126a40 132,189
+web/src/components/AdminEditDialogs.vue
+  s_06fcde5dbef956::t_db325c668315a2 35-36
+web/src/components/ToastHost.vue
+  s_06fcde5dbef956::t_ae04f980e43072 39
+  s_06fcde5dbef956::t_09125c4c126a40 29
+  s_06fcde5dbef956::t_a735c9c065279b 47
+web/src/components/AccountPrivacy.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 117-118,122,139,143
+web/src/components/AdminResetPasswordDialog.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 69,78
+web/src/components/AdminSystemTab.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 182,250,269,304
+web/src/components/TalkStageView.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 222
+web/src/components/ProfileStatus.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 92
+web/src/style.css
+  s_06fcde5dbef956::t_677b835787c7a3 259
+  s_06fcde5dbef956::t_09125c4c126a40 95
+  s_06fcde5dbef956::t_3c66c2299af255 65-94,96-97
+  s_06fcde5dbef956::t_b0fc979e95a1bd 249-252,258
+  s_06fcde5dbef956::t_ef02ff2dae09b5 3-7
+  s_06fcde5dbef956::t_4345ed7c165a01 100
+web/src/components/AdminLayoutTab.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 282
+web/src/components/WelcomeProfileStep.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 98,101
+web/src/components/BotRolesPanel.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 81
+web/src/components/MessageModerationDialog.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 130
+web/src/components/AccountEmail.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 89-91,100
+web/src/components/ChatHeader.vue
+  s_06fcde5dbef956::t_a735c9c065279b 100,109,123,133
+  s_06fcde5dbef956::t_83776360efa793 143
+  s_06fcde5dbef956::t_38a693bcada9d0 168,175
+web/src/components/PollDialog.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 145,150
+  s_06fcde5dbef956::t_a735c9c065279b 100
+web/src/components/IncomingWebhooksPanel.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 172,179,197,200,207,210
+web/src/components/SidebarChannelRow.vue
+  s_06fcde5dbef956::t_f10c4559679dfc 171
+web/src/components/TalkControlBar.vue
+  s_06fcde5dbef956::t_db325c668315a2 120
+web/src/components/TalkParticipants.vue
+  s_06fcde5dbef956::t_09125c4c126a40 81
+web/src/components/AdminInvitesTab.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 118
+web/src/components/ReportDialog.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 86-87
+web/src/components/AdminUploadLimit.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 66
+web/src/styles/buttons.css
+  s_06fcde5dbef956::t_c9bf9c2b503164 1-167,173,177-193,254-270
+  s_06fcde5dbef956::t_65d1738b405d87 229
+  s_06fcde5dbef956::t_a29c13c233a8c8 174-176
+  s_06fcde5dbef956::t_bb5e012448f901 168-172
+  s_06fcde5dbef956::t_b0f072d377f0d5 194-228,230-231
+  s_06fcde5dbef956::t_6e3c8283967f8b 232-253
+web/src/components/AdminUserRow.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 160,173,185,217,230,242
+web/src/components/SidebarDmSection.vue
+  s_06fcde5dbef956::t_a735c9c065279b 92
+web/src/components/EmojiPicker.vue
+  s_06fcde5dbef956::t_09125c4c126a40 97
+web/src/components/ChatArea.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 350
+web/src/components/CreateChannelModal.vue
+  s_06fcde5dbef956::t_6e3c8283967f8b 98,113
+  s_06fcde5dbef956::t_38a693bcada9d0 207,214
+web/src/components/ContextMenuRow.vue
+  s_06fcde5dbef956::t_09125c4c126a40 108
+web/src/components/AdminEmojiTab.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 120,139
+web/src/components/AdminReportDetail.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 127-128,136
+web/src/components/ConfirmDialog.test.ts
+  s_06fcde5dbef956::t_61669661fe84ec 44
+web/src/components/AudioSoundsSection.vue
+  s_06fcde5dbef956::t_2e7240cf44cded 47,106
+web/src/components/MemberRolesDialog.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 79-80
+web/src/components/AudioSettingsModal.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 39
+web/src/components/LegalModal.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 290
+web/src/components/ReactionBar.vue
+  s_06fcde5dbef956::t_5075acc646b285 72
+web/src/lib/rangeFill.test.ts
+  s_06fcde5dbef956::t_1ba8b25099ab9d 1-64
+web/src/components/AdminBotsTab.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 85
+web/src/components/BotTokensPanel.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 110,136-137
+web/src/components/OutgoingWebhooksPanel.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 177,202-203,206,224-229
+web/src/components/AdminMediaTab.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 107,129,169
+web/src/components/ModerationDialog.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 166
+  s_06fcde5dbef956::t_b0f072d377f0d5 173
+  s_06fcde5dbef956::t_65d1738b405d87 107,115,122
+web/src/styles/surfaces.css
+  s_06fcde5dbef956::t_982d05f3333f47 1-68,70-85
+  s_06fcde5dbef956::t_b0fc979e95a1bd 69
+  s_06fcde5dbef956::t_ae04f980e43072 86-93
+web/src/components/PinnedMessages.vue
+  s_06fcde5dbef956::t_a735c9c065279b 162
+  s_06fcde5dbef956::t_3d474f3574556d 111
+  s_06fcde5dbef956::t_09125c4c126a40 127
+web/src/components/PushSection.vue
+  s_06fcde5dbef956::t_db325c668315a2 41,49,56
+  s_06fcde5dbef956::t_2e7240cf44cded 76
+  s_06fcde5dbef956::t_38a693bcada9d0 95
+web/src/components/ScreenShareModal.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 242,250
+web/src/components/BaseDialog.vue
+  s_06fcde5dbef956::t_446284b83dceb6 43,54,68
+web/src/components/AdminLayoutToolbar.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 28
+web/src/components/AdminRolesTab.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 245,368
+web/src/components/ChannelPermissionsDialog.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 166,188-189
+web/src/components/UserProfileModal.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 210,223,230,237,247
+web/src/components/AdminCategoryHeader.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 28,39,49,59
+web/src/components/AppSettingsModal.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 19
+web/src/components/EditNameDialog.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 126,134
+web/src/components/AccountBlockedList.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 22
+web/src/components/EditHistoryDialog.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 66
+web/src/components/AdminOnboardingTab.vue
+  s_06fcde5dbef956::t_38a693bcada9d0 141
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_a735c9c065279b 224
+  s_06fcde5dbef956::t_38a693bcada9d0 249
+web/src/components/UpdateBanner.vue
+  s_06fcde5dbef956::t_a735c9c065279b 55
+web/src/components/PresenceMenu.vue
+  s_06fcde5dbef956::t_09125c4c126a40 93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "af8f392d5c2582124d5ca70407c7fa48bad5b5cf",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
