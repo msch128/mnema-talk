@@ -73,6 +73,7 @@ type deletedMessage struct {
 	content     string
 	createdAt   time.Time
 	attachments []map[string]any
+	edits       []map[string]any
 }
 
 func parseBulkDeleteRequest(r *http.Request) (uuid.UUID, BulkDeleteRequest, string, error) {
@@ -183,6 +184,9 @@ func (h *Handler) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) 
 		if m.parentID != nil {
 			d["parent_id"] = *m.parentID
 		}
+		if len(m.edits) > 0 {
+			d["edit_versions"] = m.edits
+		}
 		h.Audit.RecordOrLog(ctx, audit.Entry{Action: "message.delete", TargetType: "message", TargetID: m.id.String(), TargetName: rep.channelName, ChannelID: &chID, Details: d})
 	}
 	h.Audit.RecordOrLog(ctx, audit.Entry{
@@ -244,6 +248,10 @@ func takeLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID, 
 		return nil, nil, err
 	}
 	attachDeletedMedia(gone, byMessage)
+	versions := editVersionsForAudit(ctx, tx, ids)
+	for i := range gone {
+		gone[i].edits = versions[gone[i].id]
+	}
 	if _, err := tx.Exec(ctx, `DELETE FROM messages WHERE id = ANY($1)`, ids); err != nil {
 		return nil, nil, fmt.Errorf("delete messages: %w", err)
 	}
