@@ -48,6 +48,7 @@ const (
 	NativeAccessRenewed = "native_access_renewed"
 	EmojiChanged        = "emoji_changed"
 	ThreadFollowUpdated = "thread_follow_updated"
+	BlockUpdated        = "block_updated"
 )
 
 // Client-to-server events.

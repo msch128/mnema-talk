@@ -66,6 +66,8 @@ export interface ServerEventPayloads {
   emoji_changed: null
   /** The caller followed or unfollowed a thread (sent to their own sessions only). */
   thread_follow_updated: { thread_id: string; channel_id: string; following: boolean }
+  /** The caller blocked or unblocked a member (own sessions only): refetch GET /api/me/blocks. */
+  block_updated: { user_id: string; blocked: boolean }
   typing: { channel_id: string; user_id: string }
   read_state: ReadStateUpdate
   message_create: Message
@@ -279,6 +281,7 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['member_timeout', payload => isIdentifier(payload['id']) && (payload['timeout_until'] === null || isTimestamp(payload['timeout_until']))
     && onlyFields(payload, ['id', 'timeout_until'])],
   ['moderation_notice', isModerationNotice],
+  ['block_updated', payload => isIdentifier(payload['user_id']) && typeof payload['blocked'] === 'boolean' && onlyFields(payload, ['user_id', 'blocked'])],
   ['webrtc_offer', payload => payload['type'] === 'offer' && isString(payload['sdp'], 262_144)],
   ['webrtc_candidate', isIceCandidate],
   ['voice_state_update', payload => isIdentifier(payload['channel_id']) && (
@@ -322,7 +325,7 @@ function isNoteEmbed(value: unknown): boolean {
 
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
-  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'thread_follow_updated', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
+  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'thread_follow_updated', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'media_handshake'

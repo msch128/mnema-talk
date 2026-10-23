@@ -65,6 +65,8 @@ push.json       your push notification devices (label, added, last delivery; no 
 emoji.json      the custom emoji you uploaded; the image files are in the emoji folder
 audit.json      administrative log entries about your account (no other person's name)
 security.json   what is set up for signing in (no secrets)
+blocks.json     the members you blocked (their ids and when; no names)
+reports.json    the reports you filed about messages (your reason and note, not the reported text)
 
 The files are meant for machines: file names and keys are in English whatever
 language your account uses, and messages.json keeps your messages as typed,
@@ -153,6 +155,8 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 		{"emoji.json", func() (any, error) { return h.exportEmoji(ctx, z, user) }},
 		{"audit.json", func() (any, error) { return exportAudit(ctx, q, user) }},
 		{"security.json", func() (any, error) { return h.exportSecurity(ctx, user) }},
+		{"blocks.json", func() (any, error) { return exportBlocks(ctx, q, user) }},
+		{"reports.json", func() (any, error) { return exportReports(ctx, q, user) }},
 	}
 	for _, s := range steps {
 		v, err := s.build()

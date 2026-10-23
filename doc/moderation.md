@@ -143,6 +143,62 @@ minute per member (`edit_history` in the rate-limit metrics).
   together with the message text; the messages stay as emptied tombstones.
   Edits made before this feature (migration 0047) have no history.
 
+## Blocking and reports
+
+### Blocking a member
+
+Any member can block any other member (`PUT /api/me/blocks/{userID}`; at most
+500 blocks). Blocking is **private**: the blocked member is never told, and no
+response, event, list or error text they can read depends on it. For the
+blocker it means:
+
+- the web app collapses the blocked member's messages to "Blocked message ·
+  show" (the client reads `GET /api/me/blocks` and the `block_updated` event);
+- the blocked member's mentions and replies create no entry in the mentions
+  inbox, no mention count and no push, whatever the channel's notification
+  level, and a plain message of theirs sends no push either. It is decided
+  when the entry is listed or the push is sent, so it also covers messages
+  that were written before the block;
+- unblocking brings the earlier inbox entries back, because nothing was
+  deleted.
+
+A block is not a sanction: it changes nothing for anybody else and is not
+audited. Blocking the Owner or a moderator only mutes them for the blocker.
+Deleting an account removes the blocks to and from it; the export lists the
+member's own blocks by id (`blocks.json`).
+
+### Reporting a message
+
+Any member can report a message they can see (`POST
+/api/messages/{messageID}/report`, with a category of `spam`, `harassment`,
+`illegal` or `other` and an optional note of up to 500 characters). A message
+the member cannot see answers 404, like a missing one; their own message is
+refused. At most 10 reports an hour and 50 open reports per member, and
+repeating an open report returns the first one.
+
+The report stores **its own copy** of the message and up to 20 messages around
+it (15 before, 5 after) with author names, text and the names, types and sizes
+of attachments (never the files). The copy is the point: the author deleting or
+editing the message afterwards does not change what was reported. It is also
+the *only* way a moderator ever reads a direct message: moderators and
+Administrators have no path into a direct message conversation, and a report
+shows only what the reporter chose to report and its context.
+
+Members with *Manage reports* (the Owner and Administrators always) work the
+queue under **Admin > Reports** (`GET /api/admin/reports`, status filter,
+newest first; `GET /api/admin/reports/{id}` for the copy). They close a
+report as `resolved` or `dismissed` with an optional note, and can delete a
+closed one, which removes the copy. The reporter is not notified of the
+outcome. Reading a report needs only this permission, not access to the
+channel: a report of a private channel is readable by its handlers.
+
+- **Audited without text.** `report.create`, `report.resolve` and
+  `report.delete` are in the audit log for the Owner and Administrators only,
+  with the category and ids but never message text or the note.
+- **Erasure.** When an account is erased, its text is blanked in every report
+  copy (as the reported message or as context) and its links to reports are
+  cut; the reports stay.
+
 ## Audit log
 
 An append-only record of what was done to the instance and by whom.
@@ -181,6 +237,7 @@ requests leave no entry. Reading the log is not recorded.
 | `message.edit_history_view` | A moderator opens the earlier versions of **someone else's** message | Message, author, channel and how many versions were shown, not their text. One entry per reader and message every ten minutes; reading your own message leaves none |
 | `poll.end` | A moderator ends a poll that someone else posted | Message, author, channel and the question. An author ending their own poll is not audited |
 | `voice.join`, `voice.leave` | A member enters or leaves a Talk | Member and Talk with the time. A reload within the grace period is neither. High volume on a busy server: filter by the *Talk presence* group |
+| `report.create`, `report.resolve`, `report.delete` | A member reports a message; a moderator closes or deletes the report | The report id and category (and the closing status). Never message text or notes. See [Blocking and reports](#blocking-and-reports) |
 | `auth.login` | Successful sign-in (browser and native) | The member |
 | `auth.login_failed`, `auth.login_locked` | A wrong password, or a blocked attempt, for an **existing** account | The member. At most one entry per account and kind per minute, and no address, password or typed name; a name that is no account is not stored at all |
 | `auth.register`, `auth.password_change`, `auth.logout_all` | Own-account events | The member |
@@ -241,7 +298,7 @@ quietly default to something wider than intended; this is the same table.
 |---|---|---|
 | Auditors | Every holder of *View audit log* | `role.*`, `user.*` except the Owner-only ones below, `invite.*` (and the moderation actions of later releases) |
 | Channel | Holders of *View audit log* **who can view the entry's channel when they read** | `message.*`, `voice.*`, `channel.*` (a private channel's name, topic and overwrites are private too) |
-| Owner and Administrators only | The Owner and members with *Administrator* | `category.*` and `layout.apply` (a private category's name and overwrites are private too, and a layout lists every placement), `auth.*` (sign-ins, failures, lockouts, password changes of other members), `webhook.*`, `outgoing_webhook.*`, `bot.*`, `media.*`, `settings.*`, `system.*`, `user.password_set`, `user.password_reset`, `user.lockout_clear`, `admin.*` (routes not yet named in the route table) |
+| Owner and Administrators only | The Owner and members with *Administrator* | `category.*` and `layout.apply` (a private category's name and overwrites are private too, and a layout lists every placement), `auth.*` (sign-ins, failures, lockouts, password changes of other members), `webhook.*`, `outgoing_webhook.*`, `bot.*`, `media.*`, `settings.*`, `system.*`, `user.password_set`, `user.password_reset`, `user.lockout_clear`, `report.*` (a report may concern a private channel or a direct message), `admin.*` (routes not yet named in the route table) |
 
 The check runs on every read against the current permissions, so access that is
 granted later also opens the older entries of that channel, and access that is

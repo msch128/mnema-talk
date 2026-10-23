@@ -38,6 +38,7 @@ var Classes = []Class{
 	{"user.two_factor_reset", VisPrivileged, "Owner-only account recovery action"},
 	{"user.lockout_clear", VisPrivileged, "Owner-only, reveals account attacks"},
 	{"auth.%", VisPrivileged, "sign-ins, failures and lockouts are other members' security events"},
+	{"report.%", VisPrivileged, "reports may concern a private channel or a direct message"},
 	{"message.%", VisChannel, "holds message text of one channel"},
 	{"moderation.bulk_delete", VisChannel, "names a channel and a reason that may concern a private channel"},
 	{"poll.%", VisChannel, "names a channel and quotes the question of one of its polls"},

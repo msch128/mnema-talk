@@ -1542,6 +1542,10 @@
       "name": "Emojis verwalten",
       "desc": "Eigene Emojis dieser Community hochladen, umbenennen und löschen."
     },
+    "manage_reports": {
+      "name": "Meldungen verwalten",
+      "desc": "Meldungen von Mitgliedern zu Nachrichten lesen und bearbeiten, auch den Verlauf, der aus einer Direktnachricht mitgeschickt wurde."
+    },
     "groups": {
       "general": "Allgemein",
       "text": "Text",

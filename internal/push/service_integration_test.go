@@ -143,6 +143,9 @@ func TestAHeldPushIsDroppedWhenTheMemberLosesTheChannelInsideTheWindow(t *testin
 		"channel muted": func(e *env, _ *switchablePerms, bob member) {
 			e.exec(`INSERT INTO channel_reads (user_id, channel_id, notify_level) VALUES ($1, $2, 'mute')`, bob.id, e.general)
 		},
+		"author blocked": func(e *env, _ *switchablePerms, bob member) {
+			e.exec(`INSERT INTO user_blocks (blocker_id, blocked_id) SELECT $1, id FROM users WHERE username = 'alice'`, bob.id)
+		},
 		"notification level set to mentions": func(e *env, _ *switchablePerms, bob member) {
 			e.exec(`INSERT INTO channel_reads (user_id, channel_id, notify_level) VALUES ($1, $2, 'mentions')`, bob.id, e.general)
 		},
@@ -165,6 +168,23 @@ func TestAHeldPushIsDroppedWhenTheMemberLosesTheChannelInsideTheWindow(t *testin
 			}
 		})
 	}
+}
+
+func TestAMemberWhoBlockedTheAuthorIsNeverToldWhateverTheMessage(t *testing.T) {
+	e := newEnv(t, http.StatusCreated)
+	alice, bob, carol := e.member("alice"), e.member("bob"), e.member("carol")
+	e.exec(`INSERT INTO user_blocks (blocker_id, blocked_id) VALUES ($1, $2)`, bob.id, alice.id)
+
+	e.publish(message(alice, e.general, "plain"))
+	e.publish(message(alice, e.general, "hey bob", bob, carol))
+	e.pushedTo("/device/carol", 1)
+	settle()
+	if got := e.requestsTo("/device/bob"); len(got) != 0 {
+		t.Fatalf("bob blocked alice but got %d pushes", len(got))
+	}
+	// The block is one way: alice is still told about bob's messages.
+	e.publish(message(bob, e.general, "hello alice", alice))
+	e.pushedTo("/device/alice", 1)
 }
 
 func TestAHeldPushStillGoesOutWhenNothingChanged(t *testing.T) {

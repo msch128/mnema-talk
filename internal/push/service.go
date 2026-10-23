@@ -215,7 +215,7 @@ func (s *Service) notify(ctx context.Context, msg chat.Message, chosen []candida
 		h := held{
 			user: c.userID, locale: c.locale, preview: c.preview && s.Previews,
 			notice: Notice{
-				ChannelID: msg.ChannelID, ChannelName: c.channelName, MessageID: msg.ID, ParentID: msg.ParentID,
+				AuthorID: msg.UserID, ChannelID: msg.ChannelID, ChannelName: c.channelName, MessageID: msg.ID, ParentID: msg.ParentID,
 				Sender: sender(msg), Content: msg.Content, HasFiles: len(msg.Attachments) > 0 || len(msg.Embeds) > 0, Poll: msg.Poll != nil,
 				Mention: mentions(msg, c.userID), Addressed: addressed(msg, c.userID, byName), Count: 1, At: s.Now(),
 			},
@@ -255,7 +255,7 @@ func (s *Service) flush(h held) {
 // stillQualifies repeats the message-time checks for a held push. It fails
 // closed: when the state cannot be read, nothing is sent.
 func (s *Service) stillQualifies(ctx context.Context, h held) bool {
-	cands, err := loadCandidates(ctx, s.DB, h.notice.ChannelID, uuid.Nil, &h.user)
+	cands, err := loadCandidates(ctx, s.DB, h.notice.ChannelID, h.notice.AuthorID, &h.user)
 	if err != nil {
 		slog.Warn("push: recheck recipient", "err", err)
 		return false
