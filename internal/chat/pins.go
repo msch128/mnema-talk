@@ -18,12 +18,19 @@ import (
 // MaxPinsPerChannel is the most messages a channel keeps pinned.
 const MaxPinsPerChannel = 50
 
+// PinChangesPerMinute is how many pins and unpins one member may make per minute.
+const PinChangesPerMinute = 30
+
 var errTooManyPins = httpx.ErrConflict(fmt.Sprintf("a channel can keep at most %d pinned messages; unpin one first", MaxPinsPerChannel))
 
 func (h *Handler) mountPins(r chi.Router) {
 	r.Get("/channels/{channelID}/pins", httpx.Handle(h.listPins))
-	r.Put("/channels/{channelID}/messages/{messageID}/pin", httpx.Handle(h.pinMessage))
-	r.Delete("/channels/{channelID}/messages/{messageID}/pin", httpx.Handle(h.unpinMessage))
+	changes := r
+	if h.PinLimit != nil {
+		changes = r.With(h.PinLimit.By(auth.UserKey))
+	}
+	changes.Put("/channels/{channelID}/messages/{messageID}/pin", httpx.Handle(h.pinMessage))
+	changes.Delete("/channels/{channelID}/messages/{messageID}/pin", httpx.Handle(h.unpinMessage))
 }
 
 // PinsChanged is the payload of the pins_changed event: a message of the

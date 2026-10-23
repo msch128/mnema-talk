@@ -46,6 +46,8 @@ type Handler struct {
 	// Max is the most custom emoji the instance holds (EMOJI_MAX); 0 forbids
 	// new ones.
 	Max int
+	// UploadLimit caps uploads per member (each is decoded and redrawn); nil means no cap.
+	UploadLimit *httpx.RateLimiter
 }
 
 // Mount registers the routes every signed-in member may call.
@@ -55,10 +57,17 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Get("/emoji/{id}/still", httpx.Handle(h.serve(true)))
 }
 
+// UploadsPer10Minutes is how many emoji one member may upload per 10 minutes.
+const UploadsPer10Minutes = 10
+
 // MountAdmin registers the management routes (Manage emoji).
 func (h *Handler) MountAdmin(r chi.Router) {
 	r = r.With(auth.RequirePerm(h.Perms, perm.ManageEmoji))
-	r.Post("/emoji", httpx.Handle(h.create))
+	uploads := r
+	if h.UploadLimit != nil {
+		uploads = r.With(h.UploadLimit.By(auth.UserKey))
+	}
+	uploads.Post("/emoji", httpx.Handle(h.create))
 	r.Patch("/emoji/{id}", httpx.Handle(h.update))
 	r.Delete("/emoji/{id}", httpx.Handle(h.delete))
 }

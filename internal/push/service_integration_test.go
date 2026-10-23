@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -44,7 +45,7 @@ func TestANewMessageReachesExactlyTheMembersWhoShouldBeTold(t *testing.T) {
 	}
 
 	bobs := e.content(bob, e.requestsTo("/device/bob")[0])
-	if bobs.Title != "Display alice (#general)" || bobs.Body != "Hello **team**" || bobs.Mention || bobs.Tag != e.general.String() {
+	if bobs.Title != "Display alice (#general)" || bobs.Body != "Hello team" || bobs.Mention || bobs.Tag != e.general.String() {
 		t.Fatalf("bob's push: %+v", bobs)
 	}
 	if idas := e.content(ida, e.requestsTo("/device/ida")[0]); idas.Body != "New message" || strings.Contains(idas.Title+idas.Body, "Hello") {
@@ -346,5 +347,48 @@ func TestRegisteringRecordsTheSessionAndOlderDevicesOfEndedSessionsDrop(t *testi
 	// The first device was registered before the version moved on: its session ended with it.
 	if devices, _ := list(context.Background(), e.pool, bob.id); len(devices) != 1 || devices[0].ID != sub.ID {
 		t.Fatalf("%+v", devices)
+	}
+}
+
+// stored writes the message and who it mentions how (0 by name, 1 through @all or @here, 2 through a role),
+// like the chat package does before the message reaches the hub.
+func (e *env) stored(msg chat.Message, kind int, who ...member) chat.Message {
+	e.t.Helper()
+	e.exec(`INSERT INTO messages (id, channel_id, user_id, content) VALUES ($1, $2, $3, $4)`, msg.ID, msg.ChannelID, msg.UserID, msg.Content)
+	for _, m := range who {
+		e.exec(`INSERT INTO message_mentions (message_id, user_id, kind) VALUES ($1, $2, $3)`, msg.ID, m.id, kind)
+		msg.Mentions = append(msg.Mentions, m.id)
+	}
+	return msg
+}
+
+func TestAMuteLetsThroughWhatIsAddressedToTheMemberButNotAtAll(t *testing.T) {
+	e := newEnv(t, http.StatusCreated)
+	alice, bob := e.member("alice"), e.member("bob")
+	e.exec(`INSERT INTO channel_reads (user_id, channel_id, notify_level) VALUES ($1, $2, 'mute')`, bob.id, e.general)
+
+	e.publish(message(alice, e.general, "just chatting"))
+	e.publish(e.stored(message(alice, e.general, "@all stand-up"), 1, bob))
+	settle()
+	if got := e.requestsTo("/device/bob"); len(got) != 0 {
+		t.Fatalf("a muted channel pushed %d times for an ordinary message and @all", len(got))
+	}
+
+	e.publish(e.stored(message(alice, e.general, "@bob are you there?"), 0, bob))
+	p := e.content(bob, e.pushedTo("/device/bob", 1)[0])
+	if !p.Mention || p.Body != "@bob are you there?" {
+		t.Fatalf("push for a mention in a muted channel: %+v", p)
+	}
+}
+
+func TestADoNotDisturbStillSilencesAMentionInAMutedChannel(t *testing.T) {
+	e := newEnv(t, http.StatusCreated)
+	alice, bob := e.member("alice"), e.member("bob")
+	e.exec(`INSERT INTO channel_reads (user_id, channel_id, notify_level) VALUES ($1, $2, 'mute')`, bob.id, e.general)
+	e.exec(`UPDATE users SET presence = 'dnd' WHERE id = $1`, bob.id)
+	e.publish(e.stored(message(alice, e.general, "@bob"), 0, bob))
+	settle()
+	if got := e.requestsTo("/device/bob"); len(got) != 0 {
+		t.Fatalf("%d pushes during do not disturb", len(got))
 	}
 }

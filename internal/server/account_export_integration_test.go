@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -282,5 +283,92 @@ func TestExportOfADeletedAccountIsGone(t *testing.T) {
 	}
 	if a.store.Len() != 0 {
 		t.Fatalf("the export file must go with the account: %d objects", a.store.Len())
+	}
+}
+
+func TestAnExportCoversPollsPinsPushDevicesAndEmojiOfTheMember(t *testing.T) {
+	a, _ := mailApp(t)
+	admin := a.seedAdmin()
+	alice := a.register(admin, "alice")
+	bob := a.register(admin, "bob")
+	assignRoles(t, admin, alice, createRole(t, admin, "helpers", perm.ManageMessages|perm.ManageEmoji))
+	alice = a.login("alice", memberPassword)
+	ch := a.createChannel(admin, "general", "text")
+
+	// A poll of hers that bob voted in, a message of bob's she pinned, a push device and an emoji.
+	res := alice.post("/api/channels/"+ch.String()+"/polls", map[string]any{"question": "Pizza or pasta?", "options": []string{"Pizza", "Pasta"}, "multiple": true})
+	if res.status != http.StatusCreated {
+		t.Fatalf("poll: %d %s", res.status, res.body)
+	}
+	var pollMsg struct {
+		ID   string `json:"id"`
+		Poll struct {
+			Options []struct {
+				ID string `json:"id"`
+			} `json:"options"`
+		} `json:"poll"`
+	}
+	res.decode(t, &pollMsg)
+	if r := bob.put("/api/channels/"+ch.String()+"/messages/"+pollMsg.ID+"/poll/votes", map[string]any{"option_ids": []string{pollMsg.Poll.Options[0].ID}}); r.status != http.StatusOK {
+		t.Fatalf("vote: %d %s", r.status, r.body)
+	}
+	bobMsg := a.send(bob, ch, "bob's pinned wording")
+	if r := alice.do(http.MethodPut, "/api/channels/"+ch.String()+"/messages/"+bobMsg.String()+"/pin", nil, nil); r.status != http.StatusOK {
+		t.Fatalf("pin: %d %s", r.status, r.body)
+	}
+	ctx := context.Background()
+	if _, err := a.db.Exec(ctx, `INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, label) VALUES ($1, 'https://push.example.org/secret-endpoint', 'device-key-one', 'device-key-two', 'Alice phone')`, alice.user.ID); err != nil {
+		t.Fatal(err)
+	}
+	var emoji struct {
+		ID uuid.UUID `json:"id"`
+	}
+	uploadEmoji(alice, "party", "x.png", "image/png", squarePNG(t, 32)).decode(t, &emoji)
+
+	if r := a.requestExport(alice, memberPassword, ""); r.status != http.StatusAccepted {
+		t.Fatalf("request: %d %s", r.status, r.body)
+	}
+	a.waitForExport(alice)
+	files := unzipAll(t, alice.get("/api/users/me/export/download").body)
+
+	for _, name := range []string{"polls.json", "pins.json", "push.json", "emoji.json", "emoji/party.png"} {
+		if _, ok := files[name]; !ok {
+			t.Errorf("missing %s", name)
+		}
+	}
+	var polls []struct {
+		Question  string `json:"question"`
+		Multiple  bool   `json:"multiple"`
+		Anonymous bool   `json:"anonymous"`
+		ClosesAt  string `json:"closes_at"`
+		Options   []struct {
+			Label string `json:"label"`
+			Votes int    `json:"votes"`
+		} `json:"options"`
+	}
+	if err := json.Unmarshal([]byte(files["polls.json"]), &polls); err != nil || len(polls) != 1 {
+		t.Fatalf("polls: %v %s", err, files["polls.json"])
+	}
+	if p := polls[0]; p.Question != "Pizza or pasta?" || !p.Multiple || p.Anonymous || p.ClosesAt == "" ||
+		len(p.Options) != 2 || p.Options[0].Label != "Pizza" || p.Options[0].Votes != 1 || p.Options[1].Votes != 0 {
+		t.Errorf("poll: %+v", p)
+	}
+	if !strings.Contains(files["pins.json"], bobMsg.String()) || strings.Contains(files["pins.json"], "wording") {
+		t.Errorf("pins name the message but never its text: %s", files["pins.json"])
+	}
+	if !strings.Contains(files["push.json"], "Alice phone") || !strings.Contains(files["push.json"], `"show_message_text": true`) {
+		t.Errorf("push devices: %s", files["push.json"])
+	}
+	if !strings.Contains(files["emoji.json"], `"name": "party"`) || !strings.Contains(files["emoji.json"], "emoji/party.png") ||
+		!strings.HasPrefix(files["emoji/party.png"], "\x89PNG") {
+		t.Errorf("emoji: %s", files["emoji.json"])
+	}
+	// No secret of the device and nothing of bob, anywhere in the new files.
+	for _, name := range []string{"polls.json", "pins.json", "push.json", "emoji.json"} {
+		for _, secret := range []string{"secret-endpoint", "device-key-one", "device-key-two", "bob", bob.user.ID.String()} {
+			if strings.Contains(strings.ToLower(files[name]), strings.ToLower(secret)) {
+				t.Errorf("%s leaks %q", name, secret)
+			}
+		}
 	}
 }

@@ -19,6 +19,9 @@ import (
 // the channel.
 const votesPerMinute = 60
 
+// createsPerMinute bounds how many polls one member starts: each is a message broadcast to the channel.
+const createsPerMinute = 10
+
 // Service creates, votes on and ends polls.
 type Service struct {
 	DB     *db.Pool
@@ -27,12 +30,14 @@ type Service struct {
 	// Online resolves @here in the question; nil means nobody is online.
 	Online chat.OnlineSource
 
-	votes *httpx.RateLimiter
+	votes   *httpx.RateLimiter
+	creates *httpx.RateLimiter
 }
 
 // NewService returns s with its state.
 func NewService(s Service) *Service {
 	s.votes = httpx.NewRateLimiter(votesPerMinute, time.Minute).Named("poll_vote")
+	s.creates = httpx.NewRateLimiter(createsPerMinute, time.Minute).Named("poll_create")
 	return &s
 }
 

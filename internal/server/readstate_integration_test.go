@@ -102,3 +102,24 @@ func TestNotificationLevel(t *testing.T) {
 		t.Fatalf("unknown channel: %d", res.status)
 	}
 }
+
+func TestAMutedChannelCountsOnlyWhatIsAddressedToTheMember(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	ch := a.createChannel(admin, "musik", "text")
+	time.Sleep(10 * time.Millisecond)
+	max := a.register(admin, "max")
+	postMessage(t, admin, ch, map[string]any{"content": "@all stand-up in five"})
+	postMessage(t, admin, ch, map[string]any{"content": "hey @max"})
+	postMessage(t, admin, ch, map[string]any{"content": "just chatting"})
+
+	if got := max.readState(t, ch); got.MentionCount != 2 {
+		t.Fatalf("not muted: mentions=%d, want 2 (@all and @max)", got.MentionCount)
+	}
+	if res := max.put("/api/channels/"+ch.String()+"/notifications", map[string]string{"level": "mute"}); res.status != http.StatusNoContent {
+		t.Fatalf("mute: %d %s", res.status, res.body)
+	}
+	if got := max.readState(t, ch); got.NotifyLevel != "mute" || got.MentionCount != 1 {
+		t.Fatalf("muted: level=%s mentions=%d, want mute and 1 (only @max)", got.NotifyLevel, got.MentionCount)
+	}
+}

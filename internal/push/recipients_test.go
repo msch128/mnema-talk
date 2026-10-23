@@ -17,30 +17,35 @@ func settingOf(level chat.NotifyLevel, until *time.Time) chat.NotifySetting {
 
 func TestEffectiveNotificationLevelDecidesWhoIsTold(t *testing.T) {
 	later, earlier := noon.Add(time.Hour), noon.Add(-time.Hour)
+	inherit := settingOf(chat.NotifyInherit, nil)
 	cases := []struct {
 		name              string
 		channel, category chat.NotifySetting
 		presence          string
-		plain, mention    bool
+		// plain: an ordinary message; atAll: @all or @here; addressed: a mention by name or role, or a reply.
+		plain, atAll, addressed bool
 	}{
-		{"nothing set means all messages", settingOf(chat.NotifyInherit, nil), settingOf(chat.NotifyInherit, nil), "online", true, true},
-		{"mentions only", settingOf(chat.NotifyMentions, nil), settingOf(chat.NotifyInherit, nil), "online", false, true},
-		{"muted", settingOf(chat.NotifyMute, nil), settingOf(chat.NotifyInherit, nil), "online", false, false},
-		{"muted for an hour", settingOf(chat.NotifyMute, &later), settingOf(chat.NotifyInherit, nil), "online", false, false},
-		{"the mute ran out", settingOf(chat.NotifyMute, &earlier), settingOf(chat.NotifyInherit, nil), "online", true, true},
-		{"the category decides when the channel does not", settingOf(chat.NotifyInherit, nil), settingOf(chat.NotifyMentions, nil), "online", false, true},
-		{"the channel overrides a muted category", settingOf(chat.NotifyAll, nil), settingOf(chat.NotifyMute, nil), "online", true, true},
-		{"do not disturb silences everything", settingOf(chat.NotifyAll, nil), settingOf(chat.NotifyInherit, nil), "dnd", false, false},
-		{"focus silences everything", settingOf(chat.NotifyAll, nil), settingOf(chat.NotifyInherit, nil), "focus", false, false},
-		{"away still gets pushes", settingOf(chat.NotifyAll, nil), settingOf(chat.NotifyInherit, nil), "away", true, true},
+		{"nothing set means all messages", inherit, inherit, "online", true, true, true},
+		{"mentions only", settingOf(chat.NotifyMentions, nil), inherit, "online", false, true, true},
+		{"muted lets only what is addressed to the member through", settingOf(chat.NotifyMute, nil), inherit, "online", false, false, true},
+		{"muted for an hour", settingOf(chat.NotifyMute, &later), inherit, "online", false, false, true},
+		{"the mute ran out", settingOf(chat.NotifyMute, &earlier), inherit, "online", true, true, true},
+		{"the category decides when the channel does not", inherit, settingOf(chat.NotifyMentions, nil), "online", false, true, true},
+		{"the channel overrides a muted category", settingOf(chat.NotifyAll, nil), settingOf(chat.NotifyMute, nil), "online", true, true, true},
+		{"do not disturb silences everything, a mute or not", settingOf(chat.NotifyMute, nil), inherit, "dnd", false, false, false},
+		{"focus silences everything", settingOf(chat.NotifyAll, nil), inherit, "focus", false, false, false},
+		{"away still gets pushes", settingOf(chat.NotifyAll, nil), inherit, "away", true, true, true},
 	}
 	for _, c := range cases {
 		cand := candidate{presence: c.presence, channelLevel: c.channel, categoryLvl: c.category, now: noon}
-		if got := cand.wants(false); got != c.plain {
+		if got := cand.wants(false, false); got != c.plain {
 			t.Errorf("%s: plain message wanted = %v, want %v", c.name, got, c.plain)
 		}
-		if got := cand.wants(true); got != c.mention {
-			t.Errorf("%s: mention wanted = %v, want %v", c.name, got, c.mention)
+		if got := cand.wants(true, false); got != c.atAll {
+			t.Errorf("%s: @all wanted = %v, want %v", c.name, got, c.atAll)
+		}
+		if got := cand.wants(true, true); got != c.addressed {
+			t.Errorf("%s: addressed message wanted = %v, want %v", c.name, got, c.addressed)
 		}
 	}
 }

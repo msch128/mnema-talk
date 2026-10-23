@@ -244,9 +244,13 @@ and per category, a mute optionally with an end time. The stored value
 receives is always the effective one. Settings are rows in `channel_reads` and a
 category counterpart (migration 0035) and are changed through
 `PUT /api/channels/{id}/notifications` and `PUT /api/categories/{id}/notifications`.
-Levels only decide who is *notified*: unread state and the mentions inbox
-(`GET /api/mentions`) are independent, so a muted channel still shows what was
-addressed to the member.
+Levels decide who is *notified* and what the mention badge counts. A mute stays
+silent except for a message addressed to the member (by name, through a role
+they hold, or as a reply); `@all` and `@here` do not break a mute. Both the
+badge (`mention_count` in `GET /api/read-state`) and the push follow this rule.
+Do Not Disturb silences everything. Unread counts and the mentions inbox
+(`GET /api/mentions`) are independent of the level, so a muted channel still
+shows what was addressed to the member.
 
 **Mentions.** A message stores one `message_mentions` row per notified member,
 with a `kind` (by name, `@all`/`@here`, through a role) and the mentioned roles

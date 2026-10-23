@@ -149,9 +149,21 @@ func (s *Service) sendLoop(ctx context.Context) {
 	}
 }
 
-// mentions reports whether msg mentions the member or replies to them.
+// mentions reports whether msg mentions the member (also through @all or
+// @here) or replies to them.
 func mentions(msg chat.Message, user uuid.UUID) bool {
-	return slices.Contains(msg.Mentions, user) || msg.ReplyTo != nil && msg.ReplyTo.UserID == user
+	return slices.Contains(msg.Mentions, user) || replyTo(msg, user)
+}
+
+func replyTo(msg chat.Message, user uuid.UUID) bool {
+	return msg.ReplyTo != nil && msg.ReplyTo.UserID == user
+}
+
+// addressed reports whether msg is addressed to the member itself: by name,
+// through a role they hold, or as a reply. @all and @here do not count; only
+// an addressed message gets through a mute.
+func addressed(msg chat.Message, user uuid.UUID, byName map[uuid.UUID]bool) bool {
+	return byName[user] || replyTo(msg, user)
 }
 
 // handle works out who is told about msg and queues their pushes.
@@ -168,17 +180,18 @@ func (s *Service) handle(ctx context.Context, msg chat.Message) {
 		slog.Warn("push: permission snapshot", "err", err)
 		return // fail closed: nobody is told what they may not see
 	}
+	byName := namedMentions(ctx, s.DB, msg.ID)
 	var chosen []candidate
 	for _, c := range cands {
-		if canView(snap, c.userID, msg.ChannelID) && c.wants(mentions(msg, c.userID)) {
+		if canView(snap, c.userID, msg.ChannelID) && c.wants(mentions(msg, c.userID), addressed(msg, c.userID, byName)) {
 			chosen = append(chosen, c)
 		}
 	}
-	s.notify(ctx, msg, chosen)
+	s.notify(ctx, msg, chosen, byName)
 }
 
 // notify sends (or holds, see coalescer) the push of msg to each chosen member.
-func (s *Service) notify(ctx context.Context, msg chat.Message, chosen []candidate) {
+func (s *Service) notify(ctx context.Context, msg chat.Message, chosen []candidate, byName map[uuid.UUID]bool) {
 	if len(chosen) == 0 {
 		return
 	}
@@ -197,7 +210,7 @@ func (s *Service) notify(ctx context.Context, msg chat.Message, chosen []candida
 			notice: Notice{
 				ChannelID: msg.ChannelID, ChannelName: c.channelName, MessageID: msg.ID, ParentID: msg.ParentID,
 				Sender: sender(msg), Content: msg.Content, HasFiles: len(msg.Attachments) > 0 || len(msg.Embeds) > 0, Poll: msg.Poll != nil,
-				Mention: mentions(msg, c.userID), Count: 1, At: s.Now(),
+				Mention: mentions(msg, c.userID), Addressed: addressed(msg, c.userID, byName), Count: 1, At: s.Now(),
 			},
 		}
 		if now := s.co.add(key{c.userID, msg.ChannelID}, h, s.flush); now != nil {
@@ -245,7 +258,7 @@ func (s *Service) stillQualifies(ctx context.Context, h held) bool {
 		slog.Warn("push: permission snapshot", "err", err)
 		return false
 	}
-	return len(cands) == 1 && canView(snap, h.user, h.notice.ChannelID) && cands[0].wants(h.notice.Mention)
+	return len(cands) == 1 && canView(snap, h.user, h.notice.ChannelID) && cands[0].wants(h.notice.Mention, h.notice.Addressed)
 }
 
 // enqueue builds the push and queues one job per device.
