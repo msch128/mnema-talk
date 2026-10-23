@@ -3,6 +3,7 @@ import type { PropType } from 'vue'
 import type { TalkParticipant } from './presentationTypes'
 // "N participants" in the Talk header; opens who is in the Talk and since when.
 import { ref, nextTick } from 'vue'
+import { Users } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import UserAvatar from './UserAvatar.vue'
@@ -64,9 +65,12 @@ function onKeydown(e: KeyboardEvent) {
       :aria-expanded="open ? 'true' : 'false'"
       v-tooltip="$t('talk.participantsDetails')"
       class="text-xs leading-4 px-1.5 rounded-full border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent whitespace-nowrap flex-shrink-0 hover:bg-mnema-accent/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent"
+      :aria-label="$t('talk.participants', { count: users.length })"
       @click="toggle"
     >
-      {{ $t('talk.participants', { count: users.length }) }}
+      <!-- Phones: just the count, so the Talk's name keeps the room. -->
+      <span class="max-[420px]:hidden">{{ $t('talk.participants', { count: users.length }) }}</span>
+      <span class="hidden items-center gap-1 max-[420px]:inline-flex" aria-hidden="true"><Users class="h-3 w-3" />{{ users.length }}</span>
     </button>
 
     <div

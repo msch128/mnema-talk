@@ -46,6 +46,14 @@ async function run(action: () => Promise<void>, done: string) {
   }
 }
 
+// Checked here, in the app's language, instead of by the browser's own bubbles.
+const LOOKS_LIKE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+function submit() {
+  if (mode.value === 'edit' && !LOOKS_LIKE_EMAIL.test(email.value.trim())) { error.value = t('security.email.invalid'); return }
+  if (!password.value) { error.value = t('security.email.needPassword'); return }
+  void (mode.value === 'edit' ? save() : remove())
+}
+
 const save = () => run(() => account.setEmail(email.value.trim(), password.value),
   t(canConfirm.value ? 'security.email.savedConfirm' : 'security.email.saved'))
 const remove = () => run(() => account.removeEmail(password.value), t('security.email.removed'))
@@ -84,7 +92,7 @@ async function resend() {
       </div>
     </div>
 
-    <form v-else class="space-y-2" @submit.prevent="mode === 'edit' ? save() : remove()">
+    <form v-else class="space-y-2" novalidate @submit.prevent="submit">
       <input v-if="mode === 'edit'" v-model="email" type="email" required maxlength="254" autocomplete="email" :aria-label="$t('security.email.address')" :placeholder="$t('security.email.address')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-none" data-testid="account-email-input" />
       <input v-model="password" type="password" required autocomplete="current-password" :aria-label="$t('profile.currentPassword')" :placeholder="$t('profile.currentPassword')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-none" data-testid="account-email-password" />
       <div v-if="error" role="alert" class="rounded border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>

@@ -74,6 +74,22 @@ describe('AccountSecurityDialog e-mail section', () => {
     w.unmount()
   })
 
+  it('says in the app which field is missing instead of leaving it to the browser', async () => {
+    const w = await open(none)
+    await w.get('[data-testid="account-email-edit"]').trigger('click')
+    expect(w.get('form').attributes('novalidate')).toBeDefined()
+    await w.get('[data-testid="account-email-input"]').setValue('not-an-address')
+    await w.get('[data-testid="account-email-password"]').setValue('my-password-123')
+    await w.get('form').trigger('submit')
+    expect(w.get('[role="alert"]').text()).toBe('That does not look like an e-mail address.')
+    await w.get('[data-testid="account-email-input"]').setValue('me@example.org')
+    await w.get('[data-testid="account-email-password"]').setValue('')
+    await w.get('form').trigger('submit')
+    expect(w.get('[role="alert"]').text()).toBe('Enter your current password to confirm.')
+    expect(apiMock).not.toHaveBeenCalledWith('/api/users/me/email', expect.anything())
+    w.unmount()
+  })
+
   it('removes the address after asking for the password', async () => {
     const w = await open({ ...unconfirmed, email_verified: true })
     expect(w.get('[data-testid="account-email-state"]').text()).toBe('Confirmed')

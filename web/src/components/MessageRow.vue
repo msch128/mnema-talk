@@ -5,7 +5,7 @@ import type { Message } from '../types/domain'
 // gutter time, header, inline editor or body, attachments, thread counter
 // and reactions. Keyboard and context-menu handling stay with the list
 // (bound on this component, they land on the row element).
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { MessageSquare, Pencil, Smile, Reply, MoreHorizontal, Pin } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
 import { isRemovedMessage, shownName } from '../lib/deletedUser'
@@ -20,10 +20,13 @@ import MessageEditor from './MessageEditor.vue'
 import ReactionBar from './ReactionBar.vue'
 import { formatTime, PICKER_ANCHOR } from '../composables/useMessageActions'
 import { usePermissionsStore } from '../stores/permissions'
+import { useAuthStore } from '../stores/auth'
+import { hasDraft, threadDraftKey } from '../lib/drafts'
 
 const permissions = usePermissionsStore()
+const authStore = useAuthStore()
 
-defineProps({
+const props = defineProps({
   msg: { type: Object as PropType<Message>, required: true },
   // Follow-up of the previous message by the same author: no header.
   grouped: { type: Boolean, default: false },
@@ -41,6 +44,8 @@ const editText = defineModel<string>('editText', { type: String, default: '' })
 const emit = defineEmits<{ reply: []; edit: []; save: []; 'cancel-edit': []; more: [event: MouseEvent]; react: [emoji: string]; 'toggle-picker': [id: string]; 'close-picker': []; 'open-thread': []; 'open-profile': []; 'open-image': [src: string]; jump: [] }>()
 
 const row = ref<HTMLElement | null>(null)
+// An unsent reply in this message's thread, like the Draft marker of a channel.
+const threadDraft = computed(() => hasDraft(authStore.user?.id, threadDraftKey(props.msg.id)))
 
 defineExpose({ el: row })
 </script>
@@ -192,15 +197,16 @@ defineExpose({ el: row })
       <MessageAttachments :attachments="msg.attachments" @open-image="emit('open-image', $event)" />
 
       <!-- Thread counter -->
-      <div v-if="msg.reply_count > 0" class="mt-2">
+      <div v-if="msg.reply_count > 0 || threadDraft" class="mt-2">
         <button
           type="button"
           @click.stop="emit('open-thread')"
           class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-mnema-accent-subtle/80 hover:bg-mnema-accent-subtle text-mnema-accent border border-mnema-accent/30 transition shadow-xs"
         >
           <MessageSquare class="w-4 h-4 text-mnema-accent" />
-          <span>{{ $t('chat.replies', { count: msg.reply_count }) }}</span>
+          <span v-if="msg.reply_count > 0">{{ $t('chat.replies', { count: msg.reply_count }) }}</span>
           <span class="text-xs opacity-75 font-mono ml-0.5">{{ $t('chat.openThread') }} &rarr;</span>
+          <span v-if="threadDraft" class="flex-shrink-0 rounded bg-mnema-surface px-1 text-[10px] font-semibold uppercase tracking-wide text-mnema-tertiary" data-testid="thread-draft">{{ $t('sidebar.draft') }}</span>
         </button>
       </div>
 

@@ -135,7 +135,7 @@ itself; a call in progress reconnects automatically after the reload.
 latest release (`UPDATE_CHECK_ENABLED`, default on; conditional requests, so
 it stays far below GitHub's rate limit). Admin → **System** shows the running
 version and commit, the latest release with its notes, health of database,
-storage and voice, and the update command. A dot on the ⋯ menu and a badge
+storage and voice, and the update command. A dot on the server menu (the name at the top of the sidebar) and a badge
 on "Admin console" announce a new release. Nothing is ever updated
 automatically.
 

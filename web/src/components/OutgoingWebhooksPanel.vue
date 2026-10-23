@@ -221,12 +221,12 @@ onMounted(load)
         </p>
 
         <div class="flex flex-wrap items-center gap-1 text-mnema-tertiary">
-          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" :aria-label="$t('webhooks.edit', { name: hook.name })" @click="openForm(hook)"><Pencil class="h-4 w-4" /></button>
-          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" :aria-label="hook.status === 'active' ? $t('webhooks.switchOff', { name: hook.name }) : $t('webhooks.switchOn', { name: hook.name })" @click="setEnabled(hook, hook.status !== 'active')"><Power class="h-4 w-4" /></button>
-          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" :aria-label="$t('webhooks.test', { name: hook.name })" @click="test(hook)"><Send class="h-4 w-4" /></button>
-          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" :aria-label="$t('webhooks.deliveries', { name: hook.name })" :aria-expanded="deliveries?.id === hook.id" @click="toggleDeliveries(hook)"><ListChecks class="h-4 w-4" /></button>
-          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" :aria-label="$t('webhooks.rotateFor', { name: hook.name })" @click="rotate(hook)"><KeyRound class="h-4 w-4" /></button>
-          <button type="button" class="rounded p-1.5 transition hover:text-mnema-danger" :aria-label="$t('webhooks.deleteFor', { name: hook.name })" @click="remove(hook)"><Trash2 class="h-4 w-4" /></button>
+          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.edit', { name: hook.name })" @click="openForm(hook)"><Pencil class="h-4 w-4" /></button>
+          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" v-tooltip="hook.status === 'active' ? $t('webhooks.switchOff', { name: hook.name }) : $t('webhooks.switchOn', { name: hook.name })" @click="setEnabled(hook, hook.status !== 'active')"><Power class="h-4 w-4" /></button>
+          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.test', { name: hook.name })" @click="test(hook)"><Send class="h-4 w-4" /></button>
+          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.deliveries', { name: hook.name })" :aria-expanded="deliveries?.id === hook.id" @click="toggleDeliveries(hook)"><ListChecks class="h-4 w-4" /></button>
+          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.rotateFor', { name: hook.name })" @click="rotate(hook)"><KeyRound class="h-4 w-4" /></button>
+          <button type="button" class="rounded p-1.5 transition hover:text-mnema-danger" v-tooltip="$t('webhooks.deleteFor', { name: hook.name })" @click="remove(hook)"><Trash2 class="h-4 w-4" /></button>
         </div>
 
         <p v-if="testResult?.id === hook.id" :class="['text-xs', testResult.delivery.success ? 'text-mnema-accent' : 'text-mnema-danger']" role="status" data-testid="outgoing-test">

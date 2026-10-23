@@ -4,7 +4,8 @@ import { userFixture } from '../test-fixtures.fixture'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
-import UserBar from './UserBar.vue'
+import SidebarServerMenu from './SidebarServerMenu.vue'
+import { usePermissionsStore } from '../stores/permissions'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useAppVersionStore, ADMIN_UPDATE_POLL_MS } from '../stores/appVersion'
@@ -30,13 +31,14 @@ afterEach(() => {
 })
 
 describe('admin update badge', () => {
-  it('shows a dot on the menu and a badge on the admin console entry', async () => {
+  it('shows a dot on the server menu and a badge on its admin console entry', async () => {
     const auth = useAuthStore()
     auth.user = userFixture({ bio: '', status_text: '', locale: 'en', created_at: '2026-01-01T00:00:00Z', username: 'member',  id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Herzog', role: 'admin' })
     useAppVersionStore().setAdminUpdate(available)
-    w = mount(UserBar, { attachTo: document.body })
+    usePermissionsStore().info = null
+    w = mount(SidebarServerMenu, { attachTo: document.body })
     expect(w.find('[data-testid="admin-update-dot"]')!.exists()).toBe(true)
-    await w.find('[data-testid="account-menu-button"]')!.trigger('click')
+    await w.find('[aria-controls="server-menu"]')!.trigger('click')
     expect(w.find('[data-testid="admin-update-badge"]')!.text()).toBe('Update 0.4.0')
   })
 
@@ -44,9 +46,9 @@ describe('admin update badge', () => {
     const auth = useAuthStore()
     auth.user = userFixture({ bio: '', status_text: '', locale: 'en', created_at: '2026-01-01T00:00:00Z', username: 'member',  id: "00000000-0000-4000-8000-0000000003e9", display_name: 'Max', role: 'user' })
     useAppVersionStore().setAdminUpdate(available)
-    w = mount(UserBar, { attachTo: document.body })
+    w = mount(SidebarServerMenu, { attachTo: document.body })
     expect(w.find('[data-testid="admin-update-dot"]')!.exists()).toBe(false)
-    await w.find('[data-testid="account-menu-button"]')!.trigger('click')
+    await w.find('[aria-controls="server-menu"]')!.trigger('click')
     expect(w.find('[data-testid="admin-update-badge"]')!.exists()).toBe(false)
   })
 

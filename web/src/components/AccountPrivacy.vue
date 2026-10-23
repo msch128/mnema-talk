@@ -116,8 +116,9 @@ onBeforeUnmount(() => clearTimeout(timer))
       </template>
     </div>
 
-    <div class="space-y-2 rounded-lg border border-mnema-danger/30 p-3" data-testid="delete-account">
-      <p class="text-sm font-medium text-mnema-danger">{{ $t('security.privacy.deleteTitle') }}</p>
+    <!-- The Owner cannot delete the account: this block only explains why, so it is not styled as a live danger. -->
+    <div :class="['space-y-2 rounded-lg border p-3', isOwner ? 'border-mnema-hairline' : 'border-mnema-danger/30']" data-testid="delete-account">
+      <p :class="['text-sm font-medium', isOwner ? 'text-mnema-text' : 'text-mnema-danger']">{{ $t('security.privacy.deleteTitle') }}</p>
       <p v-if="isOwner" class="text-sm text-mnema-muted" data-testid="delete-owner">{{ $t('security.privacy.deleteOwner') }}</p>
       <template v-else>
         <p class="text-sm text-mnema-muted">{{ $t('security.privacy.deleteIntro') }}</p>

@@ -36,7 +36,7 @@ const messagesText = computed(() => new Intl.NumberFormat(locale.value).format(p
     :aria-label="$t('activity.summary', { voice: voiceText, messages: messagesText })"
     v-tooltip="$t('activity.summary', { voice: voiceText, messages: messagesText })"
   >
-    <span class="flex items-center gap-1 tabular-nums"><Headphones class="h-3 w-3" />{{ voiceText }}</span>
+    <span v-if="voiceSeconds > 0" class="flex items-center gap-1 tabular-nums" data-testid="activity-voice"><Headphones class="h-3 w-3" />{{ voiceText }}</span>
     <span class="flex items-center gap-1 tabular-nums"><MessageSquare class="h-3 w-3" />{{ messagesText }}</span>
   </div>
   <div v-else class="grid grid-cols-2 gap-2" data-testid="activity-stats">
