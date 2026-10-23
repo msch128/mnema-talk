@@ -414,6 +414,7 @@
     "deleteTitle": "Nachricht löschen?",
     "deleteBody": "Die Nachricht verschwindet für alle. Das lässt sich nicht rückgängig machen.",
     "messageNotFound": "Nachricht nicht gefunden",
+    "replyTargetGone": "Die Nachricht, auf die du antworten wolltest, gibt es nicht mehr. Deine Nachricht wurde ohne Antwort gesendet.",
     "messageLoadFailed": "Die Nachricht konnte nicht geladen werden. Versuche es noch einmal.",
     "editFailed": "Die Änderung konnte nicht gespeichert werden. Versuche es noch einmal.",
     "deleteFailed": "Die Nachricht konnte nicht gelöscht werden. Versuche es noch einmal.",
@@ -1361,6 +1362,8 @@
     "empty": "In diesem Kanal ist noch nichts angeheftet.",
     "emptyModerator": "Noch nichts angeheftet. Hefte eine Nachricht über ihr Nachrichtenmenü an.",
     "failed": "Die angehefteten Nachrichten konnten nicht geladen werden. Versuche es noch einmal.",
+    "unpinFailed": "Die Nachricht konnte nicht gelöst werden. Versuche es noch einmal.",
+    "poll": "Umfrage",
     "notice": "{name} hat eine Nachricht in diesem Kanal angeheftet.",
     "view": "Ansehen",
     "dismiss": "Ausblenden"

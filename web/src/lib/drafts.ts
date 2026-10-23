@@ -167,6 +167,20 @@ export function setDraft(uid: string, key: string, draft: Draft | null) {
 }
 
 /**
+ * Forgets the drafts of channels that are gone (deleted, or no longer visible
+ * to the account). Thread drafts are left alone: the channel list does not
+ * say which threads exist.
+ */
+export function pruneChannelDrafts(uid: string, channelIds: ReadonlySet<string>) {
+  if (!sessionAlive()) return
+  const items = current(uid)
+  const kept = Object.entries(items).filter(([key]) => !key.startsWith('c:') || channelIds.has(key.slice(2)))
+  if (kept.length === Object.keys(items).length) return
+  state.value = { uid, items: Object.fromEntries(kept) }
+  write(uid, state.value.items)
+}
+
+/**
  * A sign-in or restored session: joins the account's draft session (the one
  * another tab already began, or a new one) and removes the drafts of any other
  * account on this device.

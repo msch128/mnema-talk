@@ -138,6 +138,9 @@ func TestAnExportHoldsOnlyTheMembersOwnData(t *testing.T) {
 			t.Errorf("missing %s", name)
 		}
 	}
+	if !strings.Contains(files["README.txt"], "meant for machines") {
+		t.Errorf("the README says the export is English and machine-readable: %s", files["README.txt"])
+	}
 	if !strings.Contains(files["edits.json"], "alice's first wording") || strings.Contains(files["edits.json"], "earlier plan") {
 		t.Errorf("her own earlier versions, and nobody else's: %s", files["edits.json"])
 	}

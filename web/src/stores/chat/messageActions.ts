@@ -1,10 +1,11 @@
 import type { CreateMessageRequest } from '../../types/domain'
 import { decodeMessage, decodeReactionResult } from '../../types/domain'
-import { api } from '../../lib/api'
+import { api, isApiError } from '../../lib/api'
 import { encodeShortcodes } from '../../lib/customEmoji'
+import { t } from '../../i18n'
 import { useEmojiStore } from '../emoji'
 import { assertCommunity, type Cx } from './state'
-import { applyToMessage, countReply, insertMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
+import { applyToMessage, countReply, insertMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow, showToast } from './messageWindow'
 import { closeThread } from './threads'
 
 /** Typed :name: of known custom emoji become their stable token. */
@@ -12,14 +13,34 @@ function withEmojiTokens(text: string): string {
   return encodeShortcodes(text, useEmojiStore().byName)
 }
 
+/**
+ * Posts with the reply target; when the server refuses the request as invalid
+ * (the message replied to is gone, as with a restored draft), posts once more
+ * without it. A request that is invalid for another reason fails the same way
+ * again and its error reaches the caller.
+ */
+async function postWithReplyFallback<T>(replyToId: string | null, post: (replyToId: string | null) => Promise<T>): Promise<T> {
+  try {
+    return await post(replyToId)
+  } catch (error) {
+    if (!replyToId || !isApiError(error) || error.status !== 400) throw error
+    const posted = await post(null)
+    showToast(t('chat.replyTargetGone'))
+    return posted
+  }
+}
+
 export async function sendMessage(cx: Cx, content: string, parentId: string | null = null, replyToId: string | null = null) {
   const { cs } = cx
   const community = cs.communityGeneration
   if (!cs.activeChannel.value || !content.trim()) return null
-  const json: CreateMessageRequest = { content: withEmojiTokens(content.trim()) }
-  if (parentId) json.parent_id = parentId
-  if (replyToId) json.reply_to_id = replyToId
-  const msg = await api(`/api/channels/${cs.activeChannel.value.id}/messages`, { method: 'POST', json, decode: decodeMessage })
+  const channelId = cs.activeChannel.value.id
+  const msg = await postWithReplyFallback(replyToId, reply => {
+    const json: CreateMessageRequest = { content: withEmojiTokens(content.trim()) }
+    if (parentId) json.parent_id = parentId
+    if (reply) json.reply_to_id = reply
+    return api(`/api/channels/${channelId}/messages`, { method: 'POST', json, decode: decodeMessage })
+  })
   assertCommunity(cx, community)
   // The WebSocket echo is de-duplicated by insertMessage / countReply.
   countReply(cx, msg)
@@ -31,13 +52,16 @@ export async function uploadMedia(cx: Cx, file: File, content = '', parentId: st
   const { cs } = cx
   const community = cs.communityGeneration
   if (!cs.activeChannel.value || !file) return null
-  const form = new FormData()
-  // Text fields go before the file so the server reads them first.
-  if (content) form.append('content', withEmojiTokens(content))
-  if (parentId) form.append('parent_id', parentId)
-  if (replyToId) form.append('reply_to_id', replyToId)
-  form.append('file', file)
-  const msg = await api(`/api/channels/${cs.activeChannel.value.id}/upload`, { method: 'POST', form, decode: decodeMessage })
+  const channelId = cs.activeChannel.value.id
+  const msg = await postWithReplyFallback(replyToId, reply => {
+    const form = new FormData()
+    // Text fields go before the file so the server reads them first.
+    if (content) form.append('content', withEmojiTokens(content))
+    if (parentId) form.append('parent_id', parentId)
+    if (reply) form.append('reply_to_id', reply)
+    form.append('file', file)
+    return api(`/api/channels/${channelId}/upload`, { method: 'POST', form, decode: decodeMessage })
+  })
   assertCommunity(cx, community)
   countReply(cx, msg)
   insertMessage(cx, msg)

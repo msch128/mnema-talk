@@ -414,6 +414,7 @@
     "deleteTitle": "Delete message?",
     "deleteBody": "The message disappears for everyone. This can’t be undone.",
     "messageNotFound": "Message not found",
+    "replyTargetGone": "The message you were replying to is gone. Your message was sent without the reply.",
     "messageLoadFailed": "Couldn’t load the message. Try again.",
     "editFailed": "Couldn’t save your change. Try again.",
     "deleteFailed": "Couldn’t delete the message. Try again.",
@@ -1361,6 +1362,8 @@
     "empty": "No messages are pinned in this channel yet.",
     "emptyModerator": "No messages are pinned yet. Pin one from its message menu.",
     "failed": "Couldn’t load the pinned messages. Try again.",
+    "unpinFailed": "Couldn’t unpin the message. Try again.",
+    "poll": "Poll",
     "notice": "{name} pinned a message to this channel.",
     "view": "View",
     "dismiss": "Dismiss"
