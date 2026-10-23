@@ -52,6 +52,7 @@ func (b *budgetWriter) Write(p []byte) (int, error) {
 const exportReadme = `Your data from Mnema Talk (GDPR Art. 20).
 
 profile.json    your account: names, bio, status, language, role, e-mail address, settings
+banner.*        your profile banner, if you set one (as stored; the file name is in profile.json)
 settings.json   notification levels per channel and category
 messages.json   the messages you wrote (channel_name is empty for channels you cannot see any more)
 edits.json      the earlier versions of the messages you edited (newest first)
@@ -144,7 +145,7 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 		name  string
 		build func() (any, error)
 	}{
-		{"profile.json", func() (any, error) { return exportProfile(ctx, q, user) }},
+		{"profile.json", func() (any, error) { return h.exportProfileWithBanner(ctx, z, user) }},
 		{"settings.json", func() (any, error) { return exportSettings(ctx, q, user, viewable) }},
 		{"edits.json", func() (any, error) { return exportEdits(ctx, q, user) }},
 		{"reactions.json", func() (any, error) { return exportReactions(ctx, q, user) }},

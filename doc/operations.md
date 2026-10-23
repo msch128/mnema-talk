@@ -519,7 +519,7 @@ committed statement and public key.
   for 2 seconds, so it can't be used to flood the database. `features` lists
   the optional features this build has, so a newer web app can hide what an
   older server lacks. In 1.1 it holds `blocks`, `dm`, `reports`, `saved`,
-  `forward`, `search.filters.v2`, `threads.follow` and `slash.builtins`;
+  `forward`, `search.filters.v2`, `threads.follow`, `slash.builtins` and `profile.banner`;
   names never change meaning ([api-stability.md](api-stability.md)). A 1.0.x
   server sends no list. The compose
   healthcheck and [`scripts/health-check.sh`](../scripts/health-check.sh)
@@ -669,7 +669,7 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 
 Objects in storage that no media row refers to (a failed delete, a crash
 during an upload) are invisible to members and only take space. Once a day
-the app counts those older than 24 hours under `uploads/` and `avatars/` and
+the app counts those older than 24 hours under `uploads/`, `avatars/` and `banners/` and
 logs a warning when it finds any; it never deletes them on its own.
 
 ```sh

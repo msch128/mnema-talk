@@ -121,6 +121,10 @@
             "description": "Banned marks a disabled account that was banned (see GET /api/admin/bans).",
             "type": "boolean"
           },
+          "banner_url": {
+            "description": "BannerURL is the API URL of the profile banner (/api/media/{id}); omitted\nwhen none and in every payload but the profile endpoints (GET\n/api/users/{userID}, GET /api/auth/me and the banner routes).",
+            "type": "string"
+          },
           "bio": {
             "maxLength": 250,
             "type": "string"
@@ -844,6 +848,10 @@
         "properties": {
           "avatar_url": {
             "description": "AvatarURL is the API URL of the avatar (/api/media/{id}); omitted when none.",
+            "type": "string"
+          },
+          "banner_url": {
+            "description": "BannerURL is the API URL of the profile banner (/api/media/{id}); omitted\nwhen none and in every payload but the profile endpoints (GET\n/api/users/{userID}, GET /api/auth/me and the banner routes).",
             "type": "string"
           },
           "bio": {
@@ -2544,6 +2552,10 @@
           },
           "avatar_url": {
             "description": "AvatarURL is the API URL of the avatar (/api/media/{id}); omitted when none.",
+            "type": "string"
+          },
+          "banner_url": {
+            "description": "BannerURL is the API URL of the profile banner (/api/media/{id}); omitted\nwhen none and in every payload but the profile endpoints (GET\n/api/users/{userID}, GET /api/auth/me and the banner routes).",
             "type": "string"
           },
           "bio": {
@@ -25551,6 +25563,225 @@
         ]
       }
     },
+    "/api/users/me/banner": {
+      "delete": {
+        "description": "Deletes the banner and its stored file. Succeeds when there is none. Needs the profile.banner feature.",
+        "operationId": "deleteBanner",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.User"
+                }
+              }
+            },
+            "description": "Updated user, without banner_url."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: cross-origin request rejected by the CSRF check."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Remove the profile banner",
+        "tags": [
+          "Users"
+        ]
+      },
+      "put": {
+        "description": "multipart/form-data with an image in field 'banner' (PNG, JPEG, GIF or WebP, at most 5 MB, at least 300x100 pixels). The server never stores the upload: it decodes it, crops the centre 3:1, shrinks it to at most 1500x500 and writes a new file, so metadata such as EXIF is gone. An animated GIF stays animated within a budget of 16 million pixels (canvas times frames, at most 100 frames); animated WebP is rejected. Replaces and deletes the previous banner. Needs the profile.banner feature. Same rate limit as other uploads.",
+        "operationId": "setBanner",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "banner": {
+                    "description": "Image file, at most 5 MB.",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "banner"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Image file, at most 5 MB.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.User"
+                }
+              }
+            },
+            "description": "Updated user, including banner_url."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): no file, too small or too large in pixels, too many frames, or the picture cannot be read."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: cross-origin request rejected by the CSRF check."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "PAYLOAD_TOO_LARGE: body or file exceeds the limit (1 MiB for JSON)."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNSUPPORTED_MEDIA_TYPE: the file type is not allowed."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set the profile banner",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
     "/api/users/me/delete": {
       "post": {
         "description": "Erases the caller's personal data (GDPR Art. 17) and cannot be undone. Needs the current password and, while two-factor sign-in is on, a current code; wrong answers count toward the usual lockouts. The Owner account cannot be deleted (403). Profile, avatar, e-mail address, sessions, tokens, reactions, uploads (files too), invites, settings and roles are deleted. The account's messages stay readable as written by \"Deleted member\" but lose their text, link cards and pins, so threads keep their shape; replies and quotes by other members stay. Audit entries about the account lose names and details. The username becomes free. The request signs the caller out everywhere.",
@@ -26769,7 +27000,7 @@
     },
     "/api/users/{userID}": {
       "get": {
-        "description": "Includes voice_seconds and message_count. Other users are returned without the private presence choice.",
+        "description": "Includes voice_seconds, message_count and the banner_url of the profile banner. Other users are returned without the private presence choice.",
         "operationId": "getUser",
         "parameters": [
           {

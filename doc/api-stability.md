@@ -25,7 +25,7 @@ in any release.
 
 `GET /api/health` also lists the optional features a server has in `features`.
 Since 1.1 they are `blocks`, `dm`, `reports`, `saved`, `forward`,
-`search.filters.v2`, `threads.follow` and `slash.builtins`
+`search.filters.v2`, `threads.follow`, `slash.builtins` and `profile.banner`
 (`internal/server/health.go`). A name never changes meaning and is never
 removed in 1.x; a client treats a missing list as "none" (a 1.0.x server sends
 no list) and hides what is not listed. A new feature adds a name, never a

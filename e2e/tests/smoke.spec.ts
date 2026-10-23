@@ -97,7 +97,7 @@ test('login, chat and talk', async ({ browser }) => {
       .toBe(true)
   }
   // Both participants are listed under the voice channel for everyone.
-  const members = (page: Page) => sidebarVoice(page).locator('xpath=following-sibling::div[1]')
+  const members = (page: Page) => page.locator('[data-channel-item]', { has: sidebarVoice(page) }) // the Talk's row, its buttons and its members
   await expect(members(admin)).toContainText(USER_DISPLAY)
   await expect(members(admin)).toContainText(ADMIN_USER)
 

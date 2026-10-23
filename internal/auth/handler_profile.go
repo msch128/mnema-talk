@@ -58,7 +58,11 @@ func (h *Handler) setLocale(w http.ResponseWriter, r *http.Request) error {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/auth/me [get]
 func (h *Handler) me(w http.ResponseWriter, r *http.Request) error {
-	httpx.WriteJSON(w, http.StatusOK, h.withRulesPending(r.Context(), UserFrom(r.Context())))
+	u := h.withRulesPending(r.Context(), UserFrom(r.Context()))
+	if err := LoadBanner(r.Context(), h.Sessions.DB, &u); err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, u)
 	return nil
 }
 
@@ -134,7 +138,7 @@ func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request) error {
 // getUser handles GET /api/users/{userID}.
 //
 // @Summary Get a user profile
-// @Description Includes voice_seconds and message_count. Other users are returned without the private presence choice.
+// @Description Includes voice_seconds, message_count and the banner_url of the profile banner. Other users are returned without the private presence choice.
 // @ID getUser
 // @Tags Users
 // @Produce json
@@ -158,6 +162,9 @@ func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if err := LoadStats(r.Context(), h.Sessions.DB, u); err != nil {
+		return err
+	}
+	if err := LoadBanner(r.Context(), h.Sessions.DB, u); err != nil {
 		return err
 	}
 	if u.ID != UserFrom(r.Context()).ID {

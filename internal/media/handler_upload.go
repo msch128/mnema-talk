@@ -235,6 +235,7 @@ func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// deletePreviousAvatar deletes the object of a replaced avatar or banner.
 func (h *Handler) deletePreviousAvatar(ctx context.Context, previous *string) {
 	if previous == nil {
 		return
@@ -248,10 +249,18 @@ func (h *Handler) deletePreviousAvatar(ctx context.Context, previous *string) {
 	}
 }
 
+// recordAvatarTx makes mediaID the avatar and returns the previous one.
 func (h *Handler) recordAvatarTx(ctx context.Context, userID, mediaID uuid.UUID, key string, in *incomingFile) (*string, error) {
+	return h.recordProfileImageTx(ctx, "avatar_s3_key", userID, mediaID, key, in)
+}
+
+// recordProfileImageTx stores the media row and points users.column (a
+// constant column name: avatar_s3_key or banner_s3_key) at it, returning the
+// media ID it replaced.
+func (h *Handler) recordProfileImageTx(ctx context.Context, column string, userID, mediaID uuid.UUID, key string, in *incomingFile) (*string, error) {
 	var previous *string
 	err := pgx.BeginFunc(ctx, h.DB, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, `SELECT avatar_s3_key FROM users WHERE id = $1 FOR UPDATE`, userID).Scan(&previous); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT `+column+` FROM users WHERE id = $1 FOR UPDATE`, userID).Scan(&previous); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
@@ -260,7 +269,7 @@ func (h *Handler) recordAvatarTx(ctx context.Context, userID, mediaID uuid.UUID,
 			mediaID, userID, h.Bucket, key, in.filename, in.mime, in.size); err != nil {
 			return err
 		}
-		_, err := tx.Exec(ctx, `UPDATE users SET avatar_s3_key = $1, updated_at = NOW() WHERE id = $2`, mediaID.String(), userID)
+		_, err := tx.Exec(ctx, `UPDATE users SET `+column+` = $1, updated_at = NOW() WHERE id = $2`, mediaID.String(), userID)
 		return err
 	})
 	return previous, err

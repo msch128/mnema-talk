@@ -32,6 +32,8 @@ export default defineConfig({
   outputDir: 'test-results',
   use: {
     baseURL,
+    // A page that does not load fails within this, with the requests it waited for (tests/navigation-diagnostics.ts), instead of waiting for the test timeout.
+    navigationTimeout: 45_000,
     locale: 'de-DE',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',

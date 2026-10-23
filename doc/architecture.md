@@ -2,7 +2,7 @@
 
 Mnema Talk is one Go binary that serves the REST API, a WebSocket hub, a
 WebRTC selective forwarding unit (SFU) and the built Vue web app. State lives
-in PostgreSQL; uploads and avatars live in S3-compatible object storage
+in PostgreSQL; uploads, avatars and profile banners live in S3-compatible object storage
 (SeaweedFS in the default `docker compose` stack).
 
 ```

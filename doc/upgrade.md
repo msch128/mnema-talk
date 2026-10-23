@@ -135,7 +135,7 @@ Nothing in `.env` has to change.
 
 #### Database
 
-Six migrations run at the first start. All are additive and forward-only. A
+Seven migrations run at the first start. All are additive and forward-only. A
 rollback to a 1.0.x image needs the restore of the pre-update backup, because
 the 1.0.x image refuses a schema that a newer version migrated (see
 "Rollback" above).
@@ -148,6 +148,7 @@ the 1.0.x image refuses a schema that a newer version migrated (see
 | 0052 | `messages.forward_of` and `messages.forwarded`. |
 | 0054 | `thread_follows`, filled from the existing threads (root authors and repliers) so threads keep notifying the people who took part. |
 | 0056 | `bot_tokens.minter_inferred`, a flag for tokens bound to their likeliest issuer (see "Bots and webhooks"). |
+| 0057 | The nullable column `users.banner_s3_key` (the profile banner). It also extends the tombstone trigger of 0043 so a deleted account keeps no banner. |
 
 The numbers 0053 and 0055 are unused.
 
@@ -197,6 +198,17 @@ access to reports or kicking until a role is given the permission.
 - **Blocking and reports.** Members block each other and report a message to
   the moderators ([moderation](moderation.md#blocking-and-reports)). The admin
   console gets a **Reports** tab for holders of *Manage reports*.
+- **Profile banner** (feature `profile.banner`). A picture across the top of a
+  member's profile, set under **Change banner** next to **Change avatar** and
+  removed with **Remove banner**. The server never stores the upload: it crops
+  the centre 3:1, shrinks it to at most 1500x500 and writes a new file, so EXIF
+  and other metadata are gone. PNG, JPEG, GIF or WebP up to 5 MB and at least
+  300x100 pixels; an animated GIF stays animated within the same pixel budget as
+  animated emoji, an animated WebP is rejected. The file is stored under
+  `banners/` (the daily orphan check covers it), is deleted when replaced or
+  removed, goes into the data export as `banner.*` and is removed when the
+  account is erased. Without the feature (a 1.0.x server) the 1.1 web app shows
+  no banner controls.
 - **Saved messages.** A private list of up to 1,000 messages per member with
   an optional note of up to 200 characters. A row is a reference, never a copy,
   and access is checked on every read: a message the member can no longer see
@@ -230,10 +242,14 @@ access to reports or kicking until a role is given the permission.
 All changes are additive; `web_client_api` is unchanged.
 
 - `GET /api/health` has a `features` list: `blocks`, `dm`, `reports`, `saved`,
-  `forward`, `search.filters.v2`, `threads.follow`, `slash.builtins`.
+  `forward`, `search.filters.v2`, `threads.follow`, `slash.builtins`,
+  `profile.banner`.
 - New routes: `/api/me/saved`, `/api/messages/{messageId}/forward`,
-  `/api/threads/{id}/follow` and `/api/threads/following`, plus the routes for
+  `/api/threads/{id}/follow`, `/api/threads/following`, `PUT` / `DELETE
+  /api/users/me/banner` (multipart field `banner`), plus the routes for
   blocks, reports and direct messages (see `api/openapi.json`).
+- `banner_url` is added to `GET /api/users/{userID}` and `GET /api/auth/me` only,
+  never to message, member or event payloads.
 - Messages carry a `forward` marker (`{forwarded: true}`, no ids and no quoted
   text, for bots and webhooks too). Messages and the pin event carry
   `pinned_at` and `pinned_by` while pinned.
@@ -245,7 +261,7 @@ All changes are additive; `web_client_api` is unchanged.
   that query, so conversations there do not update live until the client is
   updated (the list and sending work).
 - The account export gains `blocks.json`, `reports.json`, `saved.json` (ids,
-  notes and times, not the saved text) and `thread_follows.json`. Erasing an
+  notes and times, not the saved text), `thread_follows.json` and `banner.*`. Erasing an
   account removes the saved list.
 
 #### Security

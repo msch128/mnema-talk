@@ -21,7 +21,7 @@ type Orphans struct {
 
 // orphanPrefixes are the key spaces the app writes. Other objects in a
 // shared bucket are never looked at.
-var orphanPrefixes = []string{"uploads/", "avatars/"}
+var orphanPrefixes = []string{"uploads/", "avatars/", "banners/"}
 
 // orphanMinAge skips objects younger than this: an upload stores its object
 // before its row is committed.

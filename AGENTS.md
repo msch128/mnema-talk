@@ -73,6 +73,7 @@ mnema-talk/
 │   ├── audit/               # Append-only audit log with per-entry visibility classes
 │   ├── emoji/               # Custom emoji: storage, serving, admin API
 │   ├── emojitext/           # How a custom emoji is written in message text
+│   ├── imgproc/             # Shared image redrawing: GIF frames, PNG/GIF encoding, the profile banner (crop 3:1, strip metadata)
 │   ├── linkpreview/         # Link cards (title, description, image) fetched through the SSRF guard
 │   ├── mailer/              # Optional SMTP delivery of the account e-mails (texts live in internal/auth/locales)
 │   ├── mdplain/             # Markdown to plain text for push and previews

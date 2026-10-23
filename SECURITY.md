@@ -289,7 +289,7 @@ details and the limits.
   usual lockouts), so a stolen session cookie alone cannot do either.
   *Deletion* runs in one transaction and cannot be undone. The Owner account
   cannot be deleted (ownership is not transferable). What goes: profile,
-  avatar, e-mail address, sessions (native ones too), tokens, invites,
+  avatar, banner, e-mail address, sessions (native ones too), tokens, invites,
   reactions, mentions of the member, settings, roles and overwrites, blocks (as
   blocker and as blocked), the saved list, thread follows, direct message
   memberships (a conversation nobody else is in goes with its messages and
