@@ -71,7 +71,7 @@ function playPreviewSound(sound: SoundEvent = 'join') {
           max="100"
           v-model.number="voiceStore.soundEffectsVolume"
           @input="handleSoundsVolumeChange"
-          class="w-full accent-mnema-accent cursor-pointer"
+          class="w-full cursor-pointer"
         />
       </div>
 

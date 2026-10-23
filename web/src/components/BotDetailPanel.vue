@@ -105,7 +105,7 @@ function onRoles(bot: BotBot) {
     </div>
 
     <label class="flex items-center gap-2 text-sm text-mnema-text">
-      <input type="checkbox" class="accent-mnema-accent" :checked="!bot.disabled" :disabled="busy" data-testid="bot-enabled" @change="patch({ disabled: !($event.target as HTMLInputElement).checked })" />
+      <input type="checkbox" :checked="!bot.disabled" :disabled="busy" data-testid="bot-enabled" @change="patch({ disabled: !($event.target as HTMLInputElement).checked })" />
       <span>{{ $t('bots.enabledLabel') }}</span>
     </label>
     <p v-if="bot.disabled" class="-mt-4 text-xs text-mnema-tertiary">{{ $t('bots.disabledHint') }}</p>
@@ -114,7 +114,7 @@ function onRoles(bot: BotBot) {
       <legend class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('bots.intents.title') }}</legend>
       <p class="text-sm text-mnema-tertiary">{{ $t('bots.intents.hint') }}</p>
       <label v-for="intent in BOT_INTENTS" :key="intent.key" class="flex items-start gap-2 text-sm text-mnema-text">
-        <input type="checkbox" class="mt-0.5 accent-mnema-accent" :checked="hasIntent(bot.allowed_intents, intent.bit)" :disabled="busy" :data-intent="intent.key" @change="patch({ allowed_intents: toggleIntent(bot.allowed_intents, intent.bit, ($event.target as HTMLInputElement).checked) })" />
+        <input type="checkbox" class="mt-0.5" :checked="hasIntent(bot.allowed_intents, intent.bit)" :disabled="busy" :data-intent="intent.key" @change="patch({ allowed_intents: toggleIntent(bot.allowed_intents, intent.bit, ($event.target as HTMLInputElement).checked) })" />
         <span>
           <span class="block">{{ $t(`bots.intents.${intent.key}.name`) }}</span>
           <span class="block text-xs text-mnema-tertiary">{{ $t(`bots.intents.${intent.key}.desc`) }}</span>

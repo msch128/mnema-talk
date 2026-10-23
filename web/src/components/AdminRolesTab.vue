@@ -341,7 +341,7 @@ onMounted(async () => {
           </div>
 
           <label class="flex items-center gap-2 text-sm text-mnema-text">
-            <input v-model="hoist" type="checkbox" :disabled="readonly" class="accent-mnema-accent" />
+            <input v-model="hoist" type="checkbox" :disabled="readonly" />
             <span>{{ $t('roles.hoist') }}</span>
           </label>
         </template>

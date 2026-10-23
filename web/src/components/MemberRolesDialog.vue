@@ -68,7 +68,7 @@ async function save() {
       <ul v-else class="divide-y divide-mnema-hairline rounded-lg border border-mnema-hairline bg-mnema-surface">
         <li v-for="role in roles" :key="role.id" :data-role="role.name">
           <label class="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm" :class="locked(role.id) ? 'cursor-not-allowed opacity-60' : ''">
-            <input type="checkbox" class="accent-mnema-accent" :checked="chosen.includes(role.id)" :disabled="locked(role.id)" @change="toggle(role.id)" />
+            <input type="checkbox" :checked="chosen.includes(role.id)" :disabled="locked(role.id)" @change="toggle(role.id)" />
             <span class="h-3 w-3 shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>
             <span class="min-w-0 flex-1 truncate text-mnema-text">{{ role.name }}</span>
             <span v-if="locked(role.id) && !frozen" class="shrink-0 text-xs text-mnema-tertiary">{{ $t('memberRoles.locked') }}</span>

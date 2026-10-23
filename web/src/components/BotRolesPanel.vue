@@ -65,7 +65,7 @@ onMounted(() => { if (!permissions.roles.length) void permissions.loadRoles() })
     <ul v-else class="divide-y divide-mnema-hairline overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
       <li v-for="role in roles" :key="role.id" class="space-y-1 px-3 py-2" :data-role="role.name">
         <label class="flex items-center gap-2 text-sm text-mnema-text">
-          <input type="checkbox" class="accent-mnema-accent" :checked="held(role)" :disabled="role.managed" @change="toggle(role.id, ($event.target as HTMLInputElement).checked)" />
+          <input type="checkbox" :checked="held(role)" :disabled="role.managed" @change="toggle(role.id, ($event.target as HTMLInputElement).checked)" />
           <span class="h-3 w-3 shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>
           <span class="truncate">{{ role.name }}</span>
           <Lock v-if="role.managed" class="h-3 w-3 shrink-0 text-mnema-tertiary" role="img" :aria-label="$t(role.bot_user_id ? 'roles.botRoleHint' : 'roles.managedHint')" data-testid="bot-role-managed" />

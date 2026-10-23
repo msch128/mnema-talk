@@ -237,7 +237,7 @@ function onOverlayPointer(e: PointerEvent, on: boolean) {
               :aria-valuetext="`${currentStreamVolume}%`"
               :value="currentStreamVolume"
               v-if="!tiny"
-              :class="['h-1 accent-mnema-accent cursor-pointer opacity-80 group-hover/vol:opacity-100 transition-opacity', narrow ? 'w-12' : 'w-16']"
+              :class="['cursor-pointer opacity-80 group-hover/vol:opacity-100 transition-opacity', narrow ? 'w-12' : 'w-16']"
               v-tooltip="`${currentStreamVolume}%`"
               @input="onStreamVolumeChange"
             />

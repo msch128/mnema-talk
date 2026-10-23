@@ -243,3 +243,12 @@ select:not([multiple], [size]) {
   line-height: 1rem;
   color: var(--color-mnema-danger);
 }
+
+/* Touch: larger boxes for checkbox and radio (their label is the rest of the target). */
+@media (pointer: coarse) {
+  input[type='checkbox'],
+  input[type='radio'] {
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+}

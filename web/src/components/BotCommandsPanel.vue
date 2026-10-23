@@ -70,7 +70,7 @@ onMounted(load)
           <p class="truncate text-xs text-mnema-tertiary">{{ command.description }} <span class="whitespace-nowrap">- {{ $t('bots.commands.options', { count: command.options.length }) }}</span></p>
         </div>
         <label class="flex items-center gap-2 text-sm text-mnema-text">
-          <input type="checkbox" class="accent-mnema-accent" :checked="!command.disabled" :aria-label="$t('bots.commands.enabledFor', { name: command.name })" @change="setDisabled(command, !($event.target as HTMLInputElement).checked)" />
+          <input type="checkbox" :checked="!command.disabled" :aria-label="$t('bots.commands.enabledFor', { name: command.name })" @change="setDisabled(command, !($event.target as HTMLInputElement).checked)" />
           <span>{{ command.disabled ? $t('bots.disabled') : $t('bots.enabled') }}</span>
         </label>
         <button type="button" class="btn btn-icon btn-sm hover:text-mnema-danger" :aria-label="$t('bots.commands.deleteFor', { name: command.name })" data-action="delete" @click="remove(command)"><Trash2 class="h-4 w-4" /></button>

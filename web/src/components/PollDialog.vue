@@ -129,11 +129,11 @@ async function submit() {
         </div>
         <div class="space-y-2 pt-1 sm:pt-5">
           <label class="flex items-center gap-2 text-sm text-mnema-body-ink">
-            <input v-model="draft.multiple" type="checkbox" class="h-4 w-4 accent-mnema-accent" data-testid="poll-multiple" />
+            <input v-model="draft.multiple" type="checkbox" class="h-4 w-4" data-testid="poll-multiple" />
             {{ $t('poll.allowMultiple') }}
           </label>
           <label class="flex items-center gap-2 text-sm text-mnema-body-ink">
-            <input v-model="draft.anonymous" type="checkbox" class="h-4 w-4 accent-mnema-accent" data-testid="poll-anonymous-toggle" />
+            <input v-model="draft.anonymous" type="checkbox" class="h-4 w-4" data-testid="poll-anonymous-toggle" />
             {{ $t('poll.makeAnonymous') }}
           </label>
         </div>

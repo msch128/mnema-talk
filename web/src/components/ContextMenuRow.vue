@@ -50,7 +50,7 @@ function role(item: ContextMenuItem) {
       :step="item.step ?? 1"
       :value="item.value"
       @input="item.onInput?.(Number(($event.target as HTMLInputElement).value))"
-      class="w-full cursor-pointer accent-mnema-accent"
+      class="w-full cursor-pointer"
     />
   </div>
 

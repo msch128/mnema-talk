@@ -65,7 +65,7 @@ async function send() {
           :key="option"
           :class="['flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 transition max-md:min-h-11', category === option ? 'border-mnema-accent/50 bg-mnema-accent/10' : 'border-mnema-border hover:bg-mnema-hover']"
         >
-          <input v-model="category" type="radio" name="report-category" :value="option" :data-report-first="i === 0 ? '' : undefined" :data-report-category="option" class="mt-1 accent-mnema-accent" />
+          <input v-model="category" type="radio" name="report-category" :value="option" :data-report-first="i === 0 ? '' : undefined" :data-report-category="option" class="mt-1" />
           <span>
             <span class="block text-sm font-medium text-mnema-text">{{ $t(`reports.category.${option}`) }}</span>
             <span class="block text-xs text-mnema-tertiary">{{ $t(`reports.categoryHint.${option}`) }}</span>

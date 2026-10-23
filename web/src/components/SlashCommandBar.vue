@@ -82,7 +82,7 @@ function onKey(e: KeyboardEvent) {
         <input
           v-if="o.type === OPTION.boolean"
           type="checkbox"
-          class="h-4 w-4 self-start accent-mnema-accent"
+          class="h-4 w-4 self-start"
           :checked="values[o.name] === true"
           :data-option="o.name"
           @change="set(o.name, ($event.target as HTMLInputElement).checked)"

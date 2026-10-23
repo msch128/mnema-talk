@@ -7,7 +7,7 @@ import { useActiveAudioSettings } from '../composables/useActiveAudioSettings'
 const voiceStore = useVoiceStore()
 const applyActiveAudioSettings = useActiveAudioSettings()
 const outputSelectable = canChooseOutputDevice()
-const sliderClass = 'w-full h-1.5 rounded-full appearance-none cursor-pointer bg-mnema-border accent-mnema-accent'
+const sliderClass = 'w-full'
 
 async function handleDeviceChange() {
   voiceStore.saveSettings()
@@ -24,8 +24,9 @@ async function handleDeviceChange() {
 
     <div class="stack-2">
       <div>
-        <label class="text-xs text-mnema-tertiary font-mono block mb-1">{{ $t('audio.inputDevice') }}</label>
+        <label for="audio-input-device" class="text-xs text-mnema-tertiary font-mono block mb-1">{{ $t('audio.inputDevice') }}</label>
         <select
+          id="audio-input-device"
           v-model="voiceStore.selectedInputDeviceId"
           @change="handleDeviceChange"
           class="w-full bg-mnema-canvas border border-mnema-border rounded-lg px-3 py-2 text-sm text-mnema-text focus:outline-hidden focus:border-mnema-accent focus:ring-1 focus:ring-mnema-accent"
