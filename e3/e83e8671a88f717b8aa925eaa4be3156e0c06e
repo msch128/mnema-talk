@@ -1,0 +1,21 @@
+internal/auth/moderation_kick_test.go
+  s_06fcde5dbef956::t_feb5139a8a1ed9 1-46
+internal/slashcmd/slashcmd_test.go
+  s_06fcde5dbef956::t_ee3f05adb0cf79 10,105-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e3e83e8671a88f717b8aa925eaa4be3156e0c06e",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
