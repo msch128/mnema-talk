@@ -132,6 +132,23 @@ describe('PinnedMessages', () => {
     expect(marks).toEqual([t('pins.poll'), t('chat.attachment'), t('chat.inThread'), ''])
   })
 
+  it('says who pinned a message and when, and stays quiet when the server does not say', async () => {
+    apiMock.mockResolvedValue([
+      messageFixture({ id: fixtureId(60), content: 'new', is_pinned: true, pinned_at: '2026-10-12T10:00:00Z', pinned_by: { id: fixtureId(1), username: 'mod', display_name: 'Mona' } }),
+      messageFixture({ id: fixtureId(61), content: 'gone pinner', is_pinned: true, pinned_at: '2026-10-12T10:00:00Z' }),
+      messageFixture({ id: fixtureId(62), content: 'no date', is_pinned: true, pinned_by: { id: fixtureId(1), username: 'mod', display_name: '' } }),
+      pinned(63, 'old server')
+    ])
+    const w = mountPins()
+    await w.find('[data-testid="pinned-button"]').trigger('click')
+    await flushPromises()
+    const lines = w.findAll('[data-testid="pinned-item"]').map(item => item.find('[data-testid="pinned-by"]'))
+    expect(lines[0]!.text().startsWith(`${t('pins.pinnedBy', { name: 'Mona' })} · `)).toBe(true)
+    expect(lines[1]!.exists()).toBe(false)
+    expect(lines[2]!.text()).toBe(t('pins.pinnedBy', { name: 'mod' }))
+    expect(lines[3]!.exists()).toBe(false)
+  })
+
   it('says unpinning failed when the server gives no reason', async () => {
     apiMock.mockResolvedValue([pinned(30, 'one')])
     vi.spyOn(usePermissionsStore(), 'canIn').mockReturnValue(true)

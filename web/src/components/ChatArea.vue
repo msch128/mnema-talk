@@ -5,6 +5,7 @@ import { ref, computed, nextTick, watch, onMounted } from 'vue'
 import { Hash, ArrowDown, ArrowUp, Loader2, Volume2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import ChatHeader from './ChatHeader.vue'
 import ChatComposer from './ChatComposer.vue'
 import ImageLightbox from './ImageLightbox.vue'
@@ -13,7 +14,7 @@ import EphemeralNotes from './EphemeralNotes.vue'
 import PinNotices from './PinNotices.vue'
 import MessageRow from './MessageRow.vue'
 import { useMessageActions } from '../composables/useMessageActions'
-import { useMessageMenu } from '../composables/useMessageMenu'
+import { toggleSavedMessage, useMessageMenu } from '../composables/useMessageMenu'
 import { useMessageScroll } from '../composables/useMessageScroll'
 import { useUnreadDivider } from '../composables/useUnreadDivider'
 import { useFirstUnreadJump } from '../composables/useFirstUnreadJump'
@@ -36,6 +37,7 @@ const emit = defineEmits<{ close: [] }>()
 
 const chatStore = useChatStore()
 const authStore = useAuthStore()
+const serverFeatures = useServerFeaturesStore()
 const toasts = useToastStore()
 const permissions = usePermissionsStore()
 
@@ -128,6 +130,7 @@ function onMessageKeydown(e: KeyboardEvent, msg: Message) {
     rows: messageRows,
     menu: (el: HTMLElement) => menu.openAtElement(el, msg),
     reply: () => startReply(msg),
+    ...(serverFeatures.has('saved') ? { save: () => { void toggleSavedMessage(msg) } } : {}),
     edit: () => {
       if (!actions.isOwn(msg)) return false
       actions.startEdit(msg)

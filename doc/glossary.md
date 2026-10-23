@@ -25,8 +25,9 @@ in the legal texts (Impressum, Datenschutz, AGB), which are formal by design.
 | Send a member away for now, no sanction | kick | rauswerfen | ban, sperren, disable | Signs the member out on every device and drops them from their Talk; they can sign in again at once. The permission is „Mitglieder rauswerfen“. |
 | Disable an account (no record) | disable | deaktivieren | sperren | "Konto deaktivieren / aktivieren". |
 | Brute-force lock | sign-in lock | Anmeldesperre | Login-Sperre | |
+| Pin | pin / unpin | anheften / Anheftung aufheben | lösen | "Angeheftete Nachrichten". "Pinned by {name}" / „Angeheftet von {name}“. |
+| Keep a message for yourself | save / remove from saved | speichern / aus Gespeichert entfernen | merken, favorisieren, lesezeichen | Private list: "Saved messages" / „Gespeicherte Nachrichten“. A message you can no longer see is "no longer available" / „nicht mehr verfügbar“. |
 | Private conversation | direct message | Direktnachricht | DM, private message, Privatnachricht | A conversation of two to ten members that is not a channel. "Group direct message" / „Gruppen-Direktnachricht“ for three or more. Calls in direct messages do not exist. |
-| Pin | pin / unpin | anheften / Anheftung aufheben | lösen | "Angeheftete Nachrichten". |
 | Poll | poll | Umfrage | Abstimmung (only for the act of voting) | |
 | Custom emoji | custom emoji | eigene Emojis | | "Emojis verwalten". |
 | Sign in / out | sign in, sign out | anmelden, abmelden | log in, Login | Registering is registrieren. |

@@ -1434,9 +1434,27 @@
     "failed": "Couldn’t load the pinned messages. Try again.",
     "unpinFailed": "Couldn’t unpin the message. Try again.",
     "poll": "Poll",
+    "pinnedBy": "Pinned by {name}",
+    "pinnedByOn": "Pinned by {name} · {date}",
     "notice": "{name} pinned a message to this channel.",
     "view": "View",
     "dismiss": "Dismiss"
+  },
+  "saved": {
+    "title": "Saved messages",
+    "empty": "Nothing saved yet. Save a message from its menu to keep it here, just for you.",
+    "failed": "Couldn’t load your saved messages. Try again.",
+    "unavailable": "This message is no longer available.",
+    "save": "Save message",
+    "removeFromSaved": "Remove from saved",
+    "remove": "Remove",
+    "added": "Message saved.",
+    "removed": "Removed from your saved messages.",
+    "saveFailed": "Couldn’t save the message. Try again.",
+    "removeFailed": "Couldn’t remove the message. Try again.",
+    "editNote": "Edit note",
+    "saveNote": "Save note",
+    "notePlaceholder": "Note (only you see it)"
   },
   "mentions": {
     "inbox": "Mentions",

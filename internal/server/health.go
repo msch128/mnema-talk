@@ -36,6 +36,7 @@ var Features = []string{
 	"blocks",
 	"dm",
 	"reports",
+	"saved",
 	"slash.builtins",
 }
 

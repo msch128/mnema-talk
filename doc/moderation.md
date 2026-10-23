@@ -119,7 +119,9 @@ Holders of *Manage messages* in a channel can:
   a pin also shows a compact note under the messages of every open client (it
   is not a stored message, so it is gone after a reload; the list is the
   record). Both actions are audited (`message.pin`, `message.unpin`). Deleting a
-  message unpins it.
+  message unpins it. A pinned message carries `pinned_at` and `pinned_by` (the
+  member who pinned it, absent once that account is gone) on every payload and
+  on the `pins_changed` event, and the pinned list shows "Pinned by".
 - **Delete with a reason**: `DELETE /api/channels/{channelID}/messages/{messageID}`
   takes an optional JSON body `{"reason": "..."}`. The author is told through a
   `moderation_notice`; the audit entry (`message.delete`, `moderator: true`)

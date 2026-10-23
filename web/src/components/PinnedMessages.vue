@@ -90,6 +90,14 @@ function excerpt(msg: Message) {
   return text || (msg.attachments?.length ? t('chat.attachment') : '')
 }
 
+/** "Pinned by Name · 12 Oct": who pinned it and when, as far as the server says (older servers say nothing). */
+function pinnedLine(msg: Message): string {
+  const name = msg.pinned_by ? msg.pinned_by.display_name || msg.pinned_by.username : ''
+  const day = msg.pinned_at ? when(msg.pinned_at) : ''
+  if (name && day) return t('pins.pinnedByOn', { name, date: day })
+  return name ? t('pins.pinnedBy', { name }) : ''
+}
+
 function when(iso: string) {
   return new Date(iso).toLocaleDateString(locale.value, { month: 'short', day: 'numeric', year: 'numeric' })
 }
@@ -143,6 +151,7 @@ function when(iso: string) {
                 <span class="ml-auto flex-shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
               </span>
               <span class="line-clamp-3 break-words text-sm text-mnema-muted">{{ excerpt(msg) }}</span>
+              <span v-if="pinnedLine(msg)" data-testid="pinned-by" class="mt-1 block truncate text-xs text-mnema-tertiary">{{ pinnedLine(msg) }}</span>
               <span v-if="markers(msg).length" data-testid="pinned-markers" class="mt-1 block truncate text-xs text-mnema-tertiary">{{ markers(msg).join(' · ') }}</span>
             </span>
           </button>
