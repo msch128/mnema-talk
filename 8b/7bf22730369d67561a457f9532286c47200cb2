@@ -1,0 +1,21 @@
+doc/architecture.md
+  s_06fcde5dbef956::t_25dda1e0505c44 544,546-547
+doc/development.md
+  s_06fcde5dbef956::t_818fbc7c640796 164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8b7bf22730369d67561a457f9532286c47200cb2",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
