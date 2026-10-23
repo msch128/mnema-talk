@@ -1,0 +1,46 @@
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_9b44d8ff7a2f19 1491-1497
+  s_06fcde5dbef956::t_53929dc794ac58 404-405
+web/src/components/MessagePresentation.test.ts
+  s_06fcde5dbef956::t_d0eed2372a1aaa 159-174
+internal/perm/webmirror_test.go
+  s_06fcde5dbef956::t_c7d42549082f0d 34-49
+web/src/components/SlashSuggestions.vue
+  s_06fcde5dbef956::t_976af771c5958e 35,45
+web/src/components/AdminRolesTab.vue
+  s_06fcde5dbef956::t_9b44d8ff7a2f19 13,360-363
+web/src/components/MessageRow.vue
+  s_06fcde5dbef956::t_695e11d737b6b3 11,174
+web/src/components/ThreadReply.vue
+  s_06fcde5dbef956::t_695e11d737b6b3 8,145
+web/src/lib/deletedUser.test.ts
+  s_06fcde5dbef956::t_53929dc794ac58 3,23-32
+  s_06fcde5dbef956::t_852098798c1ab0 33-34
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_53929dc794ac58 404-405
+  s_06fcde5dbef956::t_9b44d8ff7a2f19 1491-1497
+web/src/components/AdminRolesTab.test.ts
+  s_06fcde5dbef956::t_3260a6f0b03f6e 247,294
+  s_06fcde5dbef956::t_97c8506fa972b0 289-293,295-303
+  s_06fcde5dbef956::t_f14c0f0c3feab2 62
+web/src/lib/permissions.ts
+  s_06fcde5dbef956::t_9b44d8ff7a2f19 35-50
+web/src/lib/deletedUser.ts
+  s_06fcde5dbef956::t_695e11d737b6b3 17-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0358199d3bfe61d256eea36281bc691f6a1d93b9",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
