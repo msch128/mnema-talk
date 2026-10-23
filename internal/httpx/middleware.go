@@ -150,21 +150,19 @@ func maxBody(limit int64, refuse func(http.ResponseWriter, error)) func(http.Han
 // no JS eval; 'wasm-unsafe-eval' only allows compiling WebAssembly, which the
 // bundled AI noise filter (web/src/lib/noiseSuppressor.js) needs.
 //
-// style-src keeps 'unsafe-inline' for one reason: emoji-picker-element
-// (web/src/components/EmojiPicker.vue) creates a <style> element inside its
-// shadow root and renders inline style="" attributes, and its version has no
-// nonce support. The app's own code needs none: Vue :style bindings go through
-// the CSSOM, which style-src does not restrict, and SFC styles are extracted
-// to files. Residual risk is low (script-src is strict; img, font, connect and
-// media sources are same-origin, so injected CSS cannot exfiltrate). Post-1.0
-// plan: a hash source for the picker's <style> text plus style-src-attr
-// 'unsafe-inline', or a patched picker, together with a Playwright test that
-// loads the built app under this policy and fails on any CSP violation (the
-// desktop shell's policy changes in lock step). connect-src 'self' also covers
-// same-origin WebSockets in current browsers.
+// style-src is 'self' with style-src-attr 'none': no <style> elements and no
+// style="" attributes, only stylesheet files and constructable stylesheets.
+// The app's own code needs nothing else: Vue :style bindings go through the
+// CSSOM, which style-src does not restrict, and SFC styles are extracted to
+// files. The one library that wrote inline styles, emoji-picker-element, is
+// patched at build time to use adoptedStyleSheets and the CSSOM
+// (web/scripts/emojiPickerCsp.ts). The Playwright fixtures fail every spec on
+// any securitypolicyviolation event, so a regression cannot ship unnoticed.
+// connect-src 'self' also covers same-origin WebSockets in current browsers.
 const SPAContentSecurityPolicy = "default-src 'self'; " +
 	"script-src 'self' 'wasm-unsafe-eval'; " +
-	"style-src 'self' 'unsafe-inline'; " +
+	"style-src 'self'; " +
+	"style-src-attr 'none'; " +
 	"img-src 'self' data: blob:; " +
 	"media-src 'self' blob:; " +
 	"font-src 'self' data:; " +

@@ -126,6 +126,19 @@ until the new release has passed your application checks.
 
 ## Version notes
 
+### 1.0.x → 1.1.0
+
+- **Stricter style policy.** The web app's Content-Security-Policy no longer
+  allows inline styles: `style-src 'unsafe-inline'` became `style-src 'self'`
+  plus `style-src-attr 'none'` (see [SECURITY.md](../SECURITY.md#security-model-summary)
+  under "Security headers"). Nothing to configure. A browser tab that was
+  loaded before the update and is still running the old web app may show the
+  emoji picker unstyled until it is reloaded (installed apps update on their
+  next start). The desktop client serves the signed bundle under its
+  own policy, which is unchanged and still works with the new bundle. The
+  bundle's `security_floor` is not raised: the old policy was defense in depth
+  and older bundles are not exploitable because of it.
+
 ### 1.0.0 → 1.0.1
 
 A patch release: fixes and polish, no new features, and nothing in it changes
