@@ -1,0 +1,122 @@
+internal/auth/handler_account.go
+  s_06fcde5dbef956::t_647b084b26b65e 23,59,87
+internal/media/handler_admin.go
+  s_06fcde5dbef956::t_647b084b26b65e 78,119,185
+  s_06fcde5dbef956::t_b3c02f43ec058f 22,48,157
+internal/auth/handler_profile.go
+  s_06fcde5dbef956::t_647b084b26b65e 27,184,216,252
+  s_06fcde5dbef956::t_80484eabf9dfce 17,49
+internal/auth/lockout.go
+  s_06fcde5dbef956::t_647b084b26b65e 79
+internal/chat/handler_messages.go
+  s_06fcde5dbef956::t_647b084b26b65e 99,174,233
+internal/auth/users_admin_handlers.go
+  s_06fcde5dbef956::t_b3c02f43ec058f 26
+  s_06fcde5dbef956::t_647b084b26b65e 61,99,130,164,201,238,311,348
+internal/server/system_selfupdate.go
+  s_06fcde5dbef956::t_e590ecea64515a 92
+internal/auth/invites.go
+  s_06fcde5dbef956::t_b3c02f43ec058f 181
+  s_06fcde5dbef956::t_647b084b26b65e 208,239
+internal/onboarding/settings.go
+  s_06fcde5dbef956::t_b3c02f43ec058f 70
+  s_06fcde5dbef956::t_647b084b26b65e 97
+internal/chat/handler_readstate.go
+  s_06fcde5dbef956::t_647b084b26b65e 76,117
+  s_06fcde5dbef956::t_20c95df0ef0dd7 17
+internal/server/system.go
+  s_06fcde5dbef956::t_b3c02f43ec058f 161
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_647b084b26b65e 85
+internal/bot/handler_commands.go
+  s_06fcde5dbef956::t_e590ecea64515a 59,98
+  s_06fcde5dbef956::t_b3c02f43ec058f 25
+api/openapi.json
+  s_06fcde5dbef956::t_3959a8e8ecc17a 5587,5665,5743,6022,6235,6493,6947,7708,8346,8579,8798,9391,9795,9870,10147,10332,10742,11460,11726,11809,11998,12170,18044
+  s_06fcde5dbef956::t_c1f8aaf1f91aa2 5464,5837,5927,5979,6138,6363,6603,6729,6847,7062,7172,7279,7395,7485,7601,7817,7923,8013,8129,8236,8462,8688,8914,9047,9177,9293,9485,9585,9684,9955,10062,10237,10426,10516,10632,10849,10956,11062,11161,11251,11367,11535,11633,11903,12092,12260,12369,12469,12569,12669,12769,12880,12995,13106,13206,13324,13424,13540,13640,13740,13856,13984,14121,14490,14544,14588,14999,16064,16099-16108,16273,16330-16339,16909,17299,17563,17681,17801,17927,18161,18276,18490,18618,18739,18957,19067,19178,19321,19496,19611,19619-19620,19734,19847,20513,21664,22629,23356,23408,23514,23620,23716,24118,24218-24242
+internal/chat/handler_lookup.go
+  s_06fcde5dbef956::t_647b084b26b65e 29
+internal/auth/moderation.go
+  s_06fcde5dbef956::t_647b084b26b65e 103,156
+internal/bot/handler_access.go
+  s_06fcde5dbef956::t_b3c02f43ec058f 88
+  s_06fcde5dbef956::t_e590ecea64515a 56
+internal/bot/commands_bot.go
+  s_06fcde5dbef956::t_0404a0689a0719 16,24,114,124
+internal/chat/pins.go
+  s_06fcde5dbef956::t_647b084b26b65e 86,110
+internal/emoji/handler.go
+  s_06fcde5dbef956::t_647b084b26b65e 187,240,280
+  s_06fcde5dbef956::t_713ee565b0ae4b 54-55
+internal/chat/moderation.go
+  s_06fcde5dbef956::t_647b084b26b65e 125
+internal/bot/handler.go
+  s_06fcde5dbef956::t_b3c02f43ec058f 140,222
+  s_06fcde5dbef956::t_e590ecea64515a 172,271,325,362
+  s_06fcde5dbef956::t_80484eabf9dfce 214
+internal/emoji/handler_image.go
+  s_06fcde5dbef956::t_713ee565b0ae4b 1-113
+internal/roles/handler_permissions.go
+  s_06fcde5dbef956::t_b3c02f43ec058f 123
+  s_06fcde5dbef956::t_647b084b26b65e 150
+internal/webhook/outgoing_handler.go
+  s_06fcde5dbef956::t_e590ecea64515a 145,206,249,280,345
+  s_06fcde5dbef956::t_b3c02f43ec058f 88,315
+internal/audit/handler.go
+  s_06fcde5dbef956::t_b3c02f43ec058f 64
+internal/chat/handler_channels.go
+  s_06fcde5dbef956::t_647b084b26b65e 26,57,100,139,174,216,257,296
+internal/server/system_update.go
+  s_06fcde5dbef956::t_647b084b26b65e 92
+  s_06fcde5dbef956::t_b3c02f43ec058f 71
+internal/bot/interactions.go
+  s_06fcde5dbef956::t_e590ecea64515a 254
+internal/auth/moderation_bans.go
+  s_06fcde5dbef956::t_647b084b26b65e 86,160
+  s_06fcde5dbef956::t_b3c02f43ec058f 203
+internal/server/system_mail.go
+  s_06fcde5dbef956::t_647b084b26b65e 50
+internal/server/system_ops.go
+  s_06fcde5dbef956::t_b3c02f43ec058f 78
+internal/roles/handler.go
+  s_06fcde5dbef956::t_e590ecea64515a 89,123,159,198,236
+internal/roles/handler_overwrites.go
+  s_06fcde5dbef956::t_e590ecea64515a 54,100
+  s_06fcde5dbef956::t_b3c02f43ec058f 30,76
+internal/bot/handler_tokens.go
+  s_06fcde5dbef956::t_e590ecea64515a 89,125,175
+  s_06fcde5dbef956::t_b3c02f43ec058f 37
+internal/webhook/handler.go
+  s_06fcde5dbef956::t_e590ecea64515a 187,232,282,315,346
+  s_06fcde5dbef956::t_b3c02f43ec058f 151
+internal/server/doc.go
+  s_06fcde5dbef956::t_c1f8aaf1f91aa2 15,18
+  s_06fcde5dbef956::t_20c95df0ef0dd7 14,16-17,66-83,85
+internal/media/handler_upload.go
+  s_06fcde5dbef956::t_647b084b26b65e 153,213
+internal/chat/handler_notify.go
+  s_06fcde5dbef956::t_647b084b26b65e 48,86
+internal/server/public.go
+  s_06fcde5dbef956::t_80484eabf9dfce 61
+internal/poll/handler.go
+  s_06fcde5dbef956::t_647b084b26b65e 55,131
+  s_06fcde5dbef956::t_e590ecea64515a 178
+internal/chat/edit_history.go
+  s_06fcde5dbef956::t_b3c02f43ec058f 92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "68802dc44a8c7a458e64481a8fe7065eb776fbb4",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
