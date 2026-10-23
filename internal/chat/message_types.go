@@ -75,6 +75,16 @@ type Message struct {
 	// is gone).
 	PinnedAt *time.Time `json:"pinned_at,omitempty" binding:"optional" format:"date-time"`
 	PinnedBy *UserRef   `json:"pinned_by,omitempty" binding:"optional"`
+	// Forward is set when the message forwards another one. It says so and
+	// nothing more: no id and no text of the original travels with the
+	// message, because readers differ in what they may see. Each reader gets
+	// the original (with its ids) from GET /api/messages/{id}/forward.
+	Forward *ForwardRef `json:"forward,omitempty" binding:"optional"`
+}
+
+// ForwardRef marks a forwarded message.
+type ForwardRef struct {
+	Forwarded bool `json:"forwarded"`
 }
 
 // UserRef is a member in short: enough to show a name and an avatar.
