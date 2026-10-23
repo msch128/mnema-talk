@@ -506,8 +506,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser: [webkit, firefox] # TEMP-STABILITY
-        iteration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         include:
           # Playwright's Linux WebKit has no RTCRtpScriptTransform (nor
           # createEncodedStreams or RTCEncodedAudioFrame; same 26.6 build as on
@@ -605,10 +603,6 @@ jobs:
   # and SeaweedFS run as local processes (E2E_NO_DOCKER). Not a required check.
   e2e-webkit-macos:
     name: e2e (webkit-macos-calls)
-    strategy: # TEMP-STABILITY
-      fail-fast: false
-      matrix:
-        iteration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     runs-on: macos-latest
     timeout-minutes: 25
     steps:

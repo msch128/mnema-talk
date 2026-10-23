@@ -104,25 +104,6 @@ function sameSize(actual: string, expected: string): boolean {
   return w !== undefined && h !== undefined && ew !== undefined && eh !== undefined && Math.abs(w - ew) <= 1 && Math.abs(h - eh) <= 1
 }
 
-// The layers the server announced to this viewer for the share it watches
-// (screen_quality events), in order. Automatic mode starts on layer 0 and moves
-// down when the viewer's link or the machine cannot keep up, which on a loaded
-// CI runner it rightly does; the size of the picture therefore depends on the
-// load, the first announced layer does not.
-function announcedLayers(page: Page): number[] {
-  const layers: number[] = []
-  page.on('websocket', (ws) => {
-    ws.on('framereceived', ({ payload }) => {
-      if (typeof payload !== 'string') return
-      const event: unknown = JSON.parse(payload)
-      if (typeof event !== 'object' || event === null || !('type' in event) || event.type !== 'screen_quality') return
-      const body = 'payload' in event ? event.payload : null
-      if (typeof body === 'object' && body !== null && 'layer' in body && typeof body.layer === 'number' && body.layer >= 0) layers.push(body.layer)
-    })
-  })
-  return layers
-}
-
 async function chooseLayer(page: Page, id: 'auto' | 0 | 1 | 2) {
   await page.getByTestId('screen-layer-button').click()
   await page.locator(`[data-menu-item="layer-${id}"]`).click()
@@ -139,7 +120,7 @@ test.afterEach(async () => {
 })
 
 test('viewers pick their own layer of a shared screen and switch mid-stream', async ({ browser }) => {
-  test.setTimeout(300_000)
+  test.setTimeout(240_000)
   const sharerCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   const aCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
@@ -148,8 +129,6 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
   const sharer = await sharerCtx.newPage()
   const a = await aCtx.newPage()
   const b = await bCtx.newPage()
-  const announcedA = announcedLayers(a)
-  const announcedB = announcedLayers(b)
   for (const [name, page] of [['sharer', sharer], ['a', a], ['b', b]] as const) {
     page.on('console', (m) => { if (['warning', 'error'].includes(m.type())) console.log(`[${name}] ${m.text()}`) })
     page.on('pageerror', (e) => console.log(`[${name}] pageerror ${e.message}`))
@@ -188,13 +167,9 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
     await expect(page.getByTestId('screen-layer-label')).toHaveText('Automatisch')
   }
 
-  // Automatic starts on the sharer's own quality: layer 0, the whole 1280x720 picture.
-  // Whether it is still showing it a moment later depends on the machine's load.
-  for (const [page, announced] of [[a, announcedA], [b, announcedB]] as const) {
-    await expect.poll(() => announced.length, { timeout: 30_000 }).toBeGreaterThan(0)
-    expect(announced[0]).toBe(0)
-    await expect.poll(() => videoSize(page), { timeout: 30_000 }).toMatch(/^[1-9]\d*x[1-9]\d*$/)
-  }
+  // Automatic starts on the sharer's own quality: the whole 1280x720 picture.
+  await expect.poll(() => videoSize(a), { timeout: 30_000 }).toBe('1280x720')
+  await expect.poll(() => videoSize(b), { timeout: 30_000 }).toBe('1280x720')
 
   // The media is sealed in the sharer's browser, on every layer's line.
   const sealed = await sharer.evaluate(() => window.__pcs.flatMap(pc => pc.getSenders()).filter(s => s.track?.kind === 'video').map(s => !!s.transform))
@@ -206,9 +181,7 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
   // on A; a chosen layer is never adapted.
   await chooseLayer(b, 0)
   await expect(b.getByTestId('screen-layer-label')).toHaveText('Quelle')
-  // A chosen layer is never adapted, so this is the check that picking the best
-  // quality works whatever the load: generous time, exact size.
-  await expect.poll(() => videoSize(b), { timeout: 90_000 }).toBe('1280x720')
+  await expect.poll(() => videoSize(b), { timeout: 30_000 }).toBe('1280x720')
 
   // A moves to the smallest layer; B stays. Both keep decoding, and the
   // sharer only sends the two layers somebody receives.

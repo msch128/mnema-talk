@@ -131,25 +131,3 @@ export async function leaveTalks(pages: Page[]) {
   const last = pages.at(-1)
   if (last) await expect(last.locator('nav [data-voice-user]')).toHaveCount(0, { timeout: 5_000 })
 }
-
-/**
- * What a page's outgoing video lines are doing, as text. A viewer only gets a
- * screen card once the sharer's video reaches the server, so a card that never
- * appears is explained by what the sharer's senders say.
- */
-export async function describeVideoSenders(page: Page): Promise<string> {
-  return page.evaluate(async () => {
-    const lines: string[] = []
-    for (const pc of window.__pcs ?? []) {
-      for (const sender of pc.getSenders()) {
-        if (sender.track?.kind !== 'video') continue
-        const stats: string[] = []
-        for (const s of (await sender.getStats()).values()) {
-          if (s.type === 'outbound-rtp') stats.push(`ssrc ${s.ssrc} ${s.frameWidth ?? 0}x${s.frameHeight ?? 0} frames ${s.framesEncoded ?? 0} packets ${s.packetsSent ?? 0} bytes ${s.bytesSent ?? 0} limit ${s.qualityLimitationReason ?? '-'}`)
-        }
-        lines.push(`track ${sender.track.readyState}${sender.track.muted ? ' muted' : ''}, transform ${sender.transform ? 'yes' : 'no'}, pc ${pc.connectionState}: ${stats.join('; ') || 'no outbound stats'}`)
-      }
-    }
-    return lines.join('\n') || 'no video sender'
-  }).catch((e: unknown) => `unreadable: ${String(e).slice(0, 100)}`)
-}

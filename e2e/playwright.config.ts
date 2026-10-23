@@ -48,12 +48,15 @@ export default defineConfig({
       name: 'webkit',
       testIgnore: /mobile\.spec\.ts/,
       use: { browserName: 'webkit', permissions: ['camera', 'microphone'] },
-      // Two members of one test run as separate WebKit processes (see fixtures.ts).
+      // Two members of one test run as separate WebKit processes (see fixtures.ts),
+      // and the sealed-media specs are timing-sensitive on a loaded machine.
+      retries: 1,
     },
     {
       name: 'firefox',
       testIgnore: /mobile\.spec\.ts/,
       use: { browserName: 'firefox', launchOptions: { firefoxUserPrefs: firefoxPrefs } },
+      retries: 1,
     },
     // Phone layout under device emulation (touch, small screen, safe areas).
     // No service worker: its requests bypass the context routes that keep the
