@@ -71,6 +71,21 @@ codes. Put a reverse proxy with TLS in front, forward the voice UDP range
 before inviting anyone. CI runs exactly these steps against the image it just
 built (`scripts/fresh-install-check.sh`).
 
+### After the first start
+
+- Create the first invite: Admin console → Invites. Members register with that
+  code; there is no public registration.
+- Set the community name and the rules new members accept (Admin console →
+  Welcome & rules).
+- Optional features, each off until you configure it: e-mail and password reset
+  (`SMTP_*`), Web Push (keys are generated on the first start;
+  `PUSH_VAPID_SUBJECT` is optional), two-factor sign-in (members switch it on themselves),
+  the API reference page (`API_DOCS_ENABLED`), a TURN relay (`turn` profile)
+  and the update button (`autoupdate` profile). All variables:
+  [operations.md](operations.md).
+- Check what your host can carry: [capacity](architecture.md#capacity).
+- Browsers that can join Talks: [README](../README.md#supported-browsers).
+
 ## Running a released image
 
 Instead of building on the server, use a published image: set `MNEMA_IMAGE`
@@ -79,7 +94,7 @@ in `.env` (the compose file uses it for the `app` service) and start without
 
 ```sh
 # .env
-MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:0.8   # or :0.8.1 (pinned) or :latest
+MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.0   # or :1.0.0 (pinned) or :latest
 
 docker compose pull app && docker compose up -d
 ```
@@ -128,7 +143,7 @@ automatically.
 updater sidecar to pull the app image again and restart the app (everyone is
 disconnected for about 30–60 seconds). It is **off by default**; to enable it:
 
-1. Run a released image: `MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:0.8` (see
+1. Run a released image: `MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.0` (see
    below for the tag).
 2. Set `UPDATER_TOKEN` in `.env` (`openssl rand -hex 32`, at least 32
    characters).
@@ -145,16 +160,17 @@ tags. That decides what "update now" can reach:
 
 | `MNEMA_IMAGE` tag | Follows | Self-update |
 |---|---|---|
-| `:0.8` (major.minor) | all `0.8.x` releases | yes, until a breaking `0.9.0`; then change the tag by hand (recommended) |
+| `:1.0` (major.minor) | all `1.0.x` patch releases | yes, until `1.1.0`; a new minor is a deliberate tag change (recommended) |
 | `:latest` | every release, breaking ones included | always |
-| `:0.8.1` or `@sha256:…` | nothing (pinned) | no; the System tab shows the manual steps |
+| `:1.0.0` or `@sha256:…` | nothing (pinned) | no; the System tab shows the manual steps |
 | `mnema-talk:local` (default) | built on the server | no; `git pull && docker compose up -d --build` |
 
 Pinned tags are the most predictable (you choose every version and can roll
-back by setting the old one); `:0.8` is the practical middle ground. Until
-1.0.0, `feat:` and `fix:` releases bump the patch version, so a `:0.8` image
-receives them, and breaking changes need a deliberate tag change. To roll
-back, set the previous version (e.g. `:0.8.1`) and run `docker compose pull
+back by setting the old one); `:1.0` is the practical middle ground. From
+1.0.0, `fix:` releases bump the patch version and `feat:` releases the minor,
+so a `:1.0` image receives only fixes, and a new minor needs a deliberate tag
+change. There is no `:1` tag; the release pipeline publishes `X.Y.Z`, `X.Y`
+and `latest`. To roll back, set the previous version (e.g. `:1.0.0`) and run `docker compose pull
 app && docker compose up -d app`; database migrations are forward-only, so
 check the changelog before going back across a release that changed the
 schema.

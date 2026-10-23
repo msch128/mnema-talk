@@ -25,7 +25,7 @@ Because this repository is open-source and publicly visible on GitHub:
 
 ## 🎯 ARCHITECTURE & PHILOSOPHY
 
-Mnema Talk is a **lightweight, single-server Discord alternative** written in **Go**:
+Mnema Talk is a **lightweight, self-hosted chat and voice app for one community**, written in **Go**. Use the product vocabulary in [`doc/glossary.md`](doc/glossary.md) (community, member, Talk, Owner, timeout = "Auszeit", ...) in UI strings, docs and error messages; German always uses "du":
 
 ### 1. Single-Binary Architecture
 - Backend (REST API), WebSocket hub, WebRTC SFU and the built web app (`web/dist`, via `//go:embed`) are compiled into **one standalone Go binary**.
@@ -34,13 +34,13 @@ Mnema Talk is a **lightweight, single-server Discord alternative** written in **
 
 ### 2. Single-Server Model
 - There are **no multiple guilds/servers** to discover or federate.
-- One community space with categories, text channels and voice/hangout channels (no direct messages).
+- One community space with categories, text channels and Talks (voice rooms; no direct messages).
 
 ### 3. Voice & Screenshare
 - **Pion WebRTC** (`github.com/pion/webrtc/v4`) as a pure Go **Selective Forwarding Unit (SFU)**.
 - **No server-side transcoding**: the SFU forwards RTP packets in memory. Transport is DTLS-SRTP client-to-SFU. Microphone, camera, screen video and screen-audio payloads are encrypted in the browser with MLS-derived keys, so an honest SFU cannot read them; an active or compromised server (it serves the code and asserts membership) and metadata are out of scope. Text messages and attachments stay readable by the server.
 - Source-quality screen sharing (up to 4K at 60 FPS) with hardware encoding on the client.
-- **Hangout spots**: clicking a voice channel connects immediately, without ringing.
+- **Hangout spots**: clicking a Talk connects immediately, without ringing.
 
 ### 4. Admin & Security Model
 - **One Owner**: the account named by `ADMIN_USERNAME` (default **`Herzog`**; `users.role = 'admin'` in the database and API, "Owner" in the UI). The Owner has every permission without exception and **nobody** can edit, restrict, demote, disable, kick, rename or overwrite the Owner, or change their roles, not even a role with *Administrator*. Ownership is not transferable through the UI. System, storage and other accounts' passwords are Owner-only.
@@ -68,7 +68,16 @@ mnema-talk/
 │   ├── ssrf/                # Guard for outbound requests to member-chosen addresses (outgoing webhooks)
 │   ├── metrics/             # Prometheus counters (no client library), feed /api/metrics and the live operator view
 │   ├── webbundle/           # Build, sign and verify the desktop client's web bundle (Ed25519)
-│   ├── chat/                # Channels, categories, messages, replies, members
+│   ├── chat/                # Channels, categories, messages, replies, pins, edit history, members
+│   ├── audit/               # Append-only audit log with per-entry visibility classes
+│   ├── emoji/               # Custom emoji: storage, serving, admin API
+│   ├── emojitext/           # How a custom emoji is written in message text
+│   ├── linkpreview/         # Link cards (title, description, image) fetched through the SSRF guard
+│   ├── mailer/              # Optional SMTP: address verification and password-reset e-mails
+│   ├── onboarding/          # Community name, rules and the acceptance gate for new members
+│   ├── opwarn/              # Operator warnings (configuration and deployment hints) for the System tab
+│   ├── push/                # Web Push (VAPID keys, subscriptions, delivery)
+│   ├── repo/                # Repository-wide checks (file and function size limits)
 │   ├── media/               # Uploads (MIME sniffing), authenticated media serving, retention
 │   ├── s3/                  # S3 client
 │   ├── events/              # Event types / publishing to the hub
@@ -81,10 +90,12 @@ mnema-talk/
 │   ├── update/              # GitHub release check + client for the optional updater sidecar
 │   ├── version/             # Build version/revision (ldflags), shared with the web build
 │   ├── nativepreview/       # Isolated transport preview router and ciphertext relay research fixtures
+│   ├── tools/openapifix/    # Post-processes the generated OpenAPI document (`make openapi`)
 │   ├── server/              # Router wiring + integration tests
 │   └── testutil/            # Postgres fixture for integration tests (dockertest / TEST_DATABASE_URL)
 ├── api/                     # Generated OpenAPI document (`make openapi`)
-├── doc/                     # Architecture, operations, upgrade, roles, webhooks, desktop docs; doc/images has the README screenshots
+├── doc/                     # Architecture, operations, upgrade, glossary, roles, webhooks, desktop docs; doc/images has the README screenshots
+├── desktop-trust/           # Public trust anchor and signed trust statement for the desktop client
 ├── e2e/                     # Playwright browser tests (`make e2e`)
 ├── loadtest/                # Voice/screen-share load test (`make load-test`), see loadtest/README.md
 ├── web/                     # Vue 3 + Pinia + Vite + Tailwind SPA; web.go embeds web/dist
@@ -97,6 +108,7 @@ mnema-talk/
 ├── scripts/postgres-upgrade-drill.sh # Drill for it (`make postgres-upgrade-drill`)
 ├── scripts/fresh-install-check.sh # doc/deployment.md "Fresh install" in an empty directory with the built image (`make fresh-install`)
 ├── scripts/check-doc-links.mjs # Relative links and anchors in README, SECURITY and doc/*.md (`make docs-check`)
+├── scripts/check-conflict-markers.mjs # Fails on merge-conflict markers in tracked text files (`make docs-check`, CI)
 ├── deploy/monitoring/mnema-alerts.yml # Example Prometheus alert rules; promtool in CI, metric names checked against /api/metrics
 ├── scripts/backup.sh, restore.sh # Backup and restore of database, media and configuration
 ├── scripts/web-bundle-check.sh # Signs web/dist with a throwaway key and verifies it (`make web-bundle-check`)
