@@ -160,6 +160,24 @@ describe('DFN bridge protocol and buffering', () => {
     expect(node.outputCount).toBe(0)
   })
 
+  it('passes the dry microphone through without a gap while the worker is late, and reports nothing before 3 s', () => {
+    const { node, reports, render } = createBridge(false)
+    // 2.5 s of render quanta (128 samples at 48 kHz) with no filtered audio at all.
+    // The first 30 ms (three frames) are the bounded startup; after that the dry signal flows.
+    for (let i = 0; i < 12; i++) render()
+    for (let i = 12; i < 937; i++) {
+      expect(render().every(sample => sample === 0.25)).toBe(true)
+    }
+    expect(node.failed).toBe(false)
+    expect(reports.some(report => report.type === 'failed')).toBe(false)
+    // Past 3 s the filter is given up once, with a reason, and the dry signal still flows.
+    let output = new Float32Array()
+    for (let i = 0; i < 300; i++) output = render()
+    expect(node.failed).toBe(true)
+    expect(reports.filter(report => report.type === 'failed')).toEqual([{ type: 'failed', reason: expect.stringContaining('3000 ms') }])
+    expect(output.every(sample => sample === 0.25)).toBe(true)
+  })
+
   it('drops queued PCM that exceeds the end-to-end 30ms budget', () => {
     const { node, frames, render } = createBridge()
     for (let i = 0; i < 4; i++) render()
