@@ -36,8 +36,11 @@ export function plainEmojiText(text: string): string {
   return text.replace(TOKEN, ':$1:')
 }
 
-/** Tokens as :name: while editing, so the textarea stays readable. */
-export const shortcodesForEditing = plainEmojiText
+/** Tokens as :name: while editing, so the textarea stays readable. The emoji's
+ * current name is used, so saving finds it again after a rename. */
+export function shortcodesForEditing(text: string): string {
+  return text.replace(TOKEN, (_all, name: string, id: string) => `:${lookup(id)?.name ?? name}:`)
+}
 
 /** Replaces :name: of known emoji by their token, outside of code. */
 export function encodeShortcodes(text: string, byName: ReadonlyMap<string, CustomEmoji>): string {

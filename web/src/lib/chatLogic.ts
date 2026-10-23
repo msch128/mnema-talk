@@ -13,10 +13,12 @@ export function mentionsUser(content: string | null | undefined, username: strin
   return new RegExp('(^|[^A-Za-z0-9_.-])@' + escapeRegExp(username) + '($|[^A-Za-z0-9_.-])', 'i').test(content)
 }
 
-// Whether a new message should raise a desktop notification.
-export function shouldNotify({ permission, level = 'all', isMention = false, hidden = false, isCurrentChannel = false }: { permission: NotificationPermission | 'unsupported'; level?: NotifyLevel; isMention?: boolean; hidden?: boolean; isCurrentChannel?: boolean }): boolean {
+// Whether a new message should raise a desktop notification. A muted channel
+// stays silent except for a message addressed to the member (@name, their role
+// or a reply), like on Discord; @all and @here do not break a mute.
+export function shouldNotify({ permission, level = 'all', isMention = false, isDirectMention = false, hidden = false, isCurrentChannel = false }: { permission: NotificationPermission | 'unsupported'; level?: NotifyLevel; isMention?: boolean; isDirectMention?: boolean; hidden?: boolean; isCurrentChannel?: boolean }): boolean {
   if (permission !== 'granted') return false
-  if (level === 'mute') return false
+  if (level === 'mute' && !isDirectMention) return false
   if (level === 'mentions' && !isMention) return false
   // The user is looking at this very conversation: no need to interrupt.
   return hidden || !isCurrentChannel

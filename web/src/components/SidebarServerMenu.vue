@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
-import { ShieldCheck, Crown, Plus, FolderPlus, ChevronDown, X, CheckCheck } from '@lucide/vue'
+import { ShieldCheck, Crown, Plus, FolderPlus, ChevronDown, X, CheckCheck, ScrollText } from '@lucide/vue'
 import { usePermissionsStore } from '../stores/permissions'
+import { useOnboardingStore } from '../stores/onboarding'
+import { rulesOpen } from '../lib/communityRules'
 import { useDismissable } from '../composables/useDismissable'
 
 // The server header (48px, aligned with the channel header) and its dropdown:
@@ -11,6 +13,8 @@ const SERVER_NAME = 'Mnema Talk'
 const emit = defineEmits<{ 'open-admin': []; 'open-legal': []; 'create-channel': []; 'create-category': []; 'mark-all-read': [] }>()
 
 const permissions = usePermissionsStore()
+const onboarding = useOnboardingStore()
+const showRules = () => { rulesOpen.value = true }
 
 const menuOpen = ref(false)
 const menuRoot = ref<HTMLElement | null>(null)
@@ -140,6 +144,10 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('mark-all-read'))">
         <span class="truncate">{{ $t('sidebar.markAllRead') }}</span>
         <CheckCheck class="w-4 h-4 flex-shrink-0" />
+      </button>
+      <button v-if="onboarding.state?.rules_text" type="button" role="menuitem" tabindex="-1" :class="menuItemClass" data-testid="menu-community-rules" @click="runMenuAction(showRules)">
+        <span class="truncate">{{ $t('menu.rules') }}</span>
+        <ScrollText class="w-4 h-4 flex-shrink-0" />
       </button>
       <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('open-legal'))">
         <span class="truncate">{{ $t('menu.legal') }}</span>

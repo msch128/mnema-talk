@@ -10,9 +10,9 @@ import type { Cx } from './state'
 import { fetchChannels } from './channels'
 import { applyActivity, countMessageOf, fetchMembers, refreshMemberStats, updateUserEverywhere } from './members'
 import { applyToMessage, bumpReplyCount, countReply, insertMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
-import { messageMentionsMe, triggerBrowserNotification } from './notifications'
+import { messageMentionsMe, messageMentionsMeDirectly, triggerBrowserNotification } from './notifications'
 import { fetchReadState, isReadingActiveChannel } from './readState'
-import { refreshNotifications } from './notifySettings'
+import { notificationLevel, refreshNotifications } from './notifySettings'
 import { applyPoll } from './polls'
 import { onPinnedMaybeDeleted, onPinsChanged } from './pins'
 import { closeThread } from './threads'
@@ -67,7 +67,8 @@ function onReadState(cx: Cx, p: Payload<'read_state'>) {
 }
 
 // A message in a channel that is not being read right now counts as unread (and as a mention if it is one).
-function countUnread({ cs }: Cx, channelId: string, isMention: boolean) {
+// Thread replies never add to the unread count (the server counts top-level messages only), but a mention in one still counts.
+function countUnread({ cs }: Cx, channelId: string, isMention: boolean, isThreadReply: boolean) {
   const state = cs.readStates.value[channelId] || {
     channel_id: channelId,
     unread_count: 0,
@@ -79,7 +80,7 @@ function countUnread({ cs }: Cx, channelId: string, isMention: boolean) {
     ...cs.readStates.value,
     [channelId]: {
       ...state,
-      unread_count: (state.unread_count || 0) + 1,
+      unread_count: (state.unread_count || 0) + (isThreadReply ? 0 : 1),
       mention_count: isMention ? (state.mention_count || 0) + 1 : (state.mention_count || 0)
     }
   }
@@ -90,6 +91,7 @@ interface IncomingReadStateOptions {
   isOwn: boolean
   isCurrentChannel: boolean
   isMention: boolean
+  isThreadReply: boolean
 }
 
 function handleIncomingMessageReadState(cx: Cx, opts: IncomingReadStateOptions) {
@@ -98,7 +100,8 @@ function handleIncomingMessageReadState(cx: Cx, opts: IncomingReadStateOptions) 
     cx.cs.markReadThrottled.call(opts.channelId)
     return
   }
-  countUnread(cx, opts.channelId, opts.isMention)
+  if (opts.isThreadReply && !opts.isMention) return
+  countUnread(cx, opts.channelId, opts.isMention, opts.isThreadReply)
 }
 
 function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
@@ -111,9 +114,11 @@ function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
 
   const isOwn = p.user_id === authStore.user?.id
   const isCurrentChannel = p.channel_id === cs.activeChannel.value?.id
-  const isMention = messageMentionsMe(cx, p)
+  // A muted channel only counts what is addressed to me, the way the server counts it.
+  const muted = notificationLevel(cx, p.channel_id) === 'mute'
+  const isMention = muted ? messageMentionsMeDirectly(cx, p) : messageMentionsMe(cx, p)
 
-  handleIncomingMessageReadState(cx, { channelId: p.channel_id, isOwn, isCurrentChannel, isMention })
+  handleIncomingMessageReadState(cx, { channelId: p.channel_id, isOwn, isCurrentChannel, isMention, isThreadReply: !!p.parent_id })
   if (!isOwn && p.channel_id) {
     triggerBrowserNotification(cx, p, isMention)
   }
