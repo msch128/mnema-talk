@@ -440,7 +440,11 @@ host:
   `desktop_ws_open`, `desktop_ws_send`, `desktop_ws_close`, plus a Tauri
   channel for events. The host opens `wss://instance/api/ws` with the jar's
   cookie and the instance `Origin`; frames are text, bounded in size and
-  count. The chat store's existing reconnect logic is untouched.
+  count. The chat store's existing reconnect logic is untouched. The path is
+  `/api/ws`, with the one query the server understands, `?dm=1` (conversation
+  events, 1.1), when the host announces the capability `ws_query` in the
+  instance window's identity; a host without it only gets the plain path, so a
+  1.1 bundle never asks an older client for a socket it would refuse.
 * **Responses are data, not code.** Everything from the server is filtered
   before the page sees it: only an allow-list of headers is passed on,
   `Content-Type` of anything that could render as a document in the app

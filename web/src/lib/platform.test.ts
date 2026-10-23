@@ -20,7 +20,7 @@ const notify = vi.hoisted(() => ({
   host: { permission: vi.fn(() => 'granted'), refreshPermission: vi.fn(async () => 'default'), requestPermission: vi.fn(async () => 'granted'), notify: vi.fn(), setBadge: vi.fn(), reportUnread: vi.fn() },
 }))
 vi.mock('./osNotify', () => ({ browserNotify: notify.browser, hostNotify: notify.host }))
-vi.mock('./native/trustedSocket', () => ({ TrustedSocket: class TrustedSocket { kind = 'trusted' } }))
+vi.mock('./native/trustedSocket', () => ({ TrustedSocket: class TrustedSocket { kind = 'trusted'; constructor(public path?: string) {} } }))
 vi.mock('./native/nativeTransport', () => ({
   NativeSocket: class NativeSocket { kind = 'native' },
   nativeApiTransport: host.nativeTransport,
@@ -70,6 +70,18 @@ describe('browser platform', () => {
     expect(platform.isTrustedDesktop()).toBe(true)
     expect(platform.trustedApp()).toEqual(host.trusted)
     expect(platform.openSocket('wss://example.invalid/api/ws')).toMatchObject({ kind: 'trusted' })
+  })
+
+  it('asks the host for conversation events only when it relays the query', () => {
+    const open = (url: string) => (platform.openSocket(url) as unknown as { path: string }).path
+    host.trusted = { role: 'instance', version: '1.2.3', capabilities: ['notify', 'ws_query'] }
+    expect(open('wss://example.invalid/api/ws?dm=1')).toBe('/api/ws?dm=1')
+    expect(open('wss://example.invalid/api/ws')).toBe('/api/ws')
+    expect(open('wss://example.invalid/api/ws?x=1')).toBe('/api/ws')
+    expect(open('wss://example.invalid/other?dm=1')).toBe('/api/ws')
+    expect(open('not a url')).toBe('/api/ws')
+    host.trusted = { role: 'instance', version: '1.2.3', capabilities: ['notify'] }
+    expect(open('wss://example.invalid/api/ws?dm=1')).toBe('/api/ws')
   })
 
   it('reports the instance selector page', () => {

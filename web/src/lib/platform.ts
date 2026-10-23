@@ -81,6 +81,22 @@ function notifier(): NotifyAdapter {
   return app?.role === 'instance' && app.capabilities.includes('notify') ? hostNotify : browserNotify
 }
 
+const SOCKET_PATH = '/api/ws'
+
+/**
+ * What the host is asked to open. A client that announces `ws_query` relays the
+ * one question the socket may carry (`?dm=1`: send conversation events too);
+ * an older one only opens the plain path, and a socket URL it would refuse
+ * outright must not reach it.
+ */
+function trustedSocketPath(url: string): string {
+  try {
+    const { pathname, search } = new URL(url)
+    if (pathname === SOCKET_PATH && search === '?dm=1' && trustedApp()?.capabilities.includes('ws_query')) return `${SOCKET_PATH}${search}`
+  } catch { /* not a URL: the plain path */ }
+  return SOCKET_PATH
+}
+
 function unreadReporter(): NotifyAdapter | null {
   const app = trustedApp()
   return app?.role === 'instance' && app.capabilities.includes('unread') ? hostNotify : null
@@ -93,7 +109,7 @@ export const browserPlatform: Platform = {
   isTrustedDesktop,
   trustedApp,
   apiTransport: () => null,
-  openSocket: url => isTrustedDesktop() ? new TrustedSocket() : new WebSocket(url),
+  openSocket: url => isTrustedDesktop() ? new TrustedSocket(trustedSocketPath(url)) : new WebSocket(url),
   gamingSurface: () => windowString('__MNEMA_GAMING_SURFACE__'),
   gamingBridgeToken: () => windowString('__MNEMA_GAMING_BRIDGE__'),
   invoke: <T = unknown>(command: string, args?: Record<string, unknown>) => tauriInvoke<T>(command, args),
