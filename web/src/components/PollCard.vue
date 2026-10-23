@@ -47,7 +47,8 @@ async function confirmEnd() {
       <span v-if="poll.anonymous" class="inline-flex items-center gap-1" data-testid="poll-anonymous"><EyeOff class="h-3 w-3" aria-hidden="true" />{{ $t('poll.anonymous') }}</span>
     </p>
 
-    <ul class="space-y-1.5" role="group" :aria-label="$t('poll.options')">
+    <div role="group" :aria-label="$t('poll.options')">
+    <ul class="space-y-1.5">
       <li v-for="o in poll.options" :key="o.id">
         <button
           type="button"
@@ -76,6 +77,7 @@ async function confirmEnd() {
         <p v-if="!poll.anonymous && o.voters?.length" class="mt-0.5 truncate px-1 text-xs text-mnema-tertiary" data-testid="poll-voters">{{ voterNames(o.voters) }}</p>
       </li>
     </ul>
+    </div>
 
     <p v-if="votingBlocked" class="mt-2 text-xs text-mnema-tertiary" data-testid="poll-cannot-vote">{{ $t('poll.cannotVote') }}</p>
 

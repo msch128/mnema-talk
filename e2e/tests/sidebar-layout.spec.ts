@@ -370,7 +370,7 @@ test('drag feedback: indicator, Escape cancels, a click still opens', async () =
     const a3 = await bounds(row(admin, 'a3'))
     return Math.abs(line.y + line.height / 2 - (a3.y + a3.height))
   }, { message: 'indicator sits at the bottom edge of a3' }).toBeLessThanOrEqual(4)
-  await expect(row(admin, 'a1').locator('..')).toHaveClass(/opacity-40/)
+  await expect(row(admin, 'a1').locator('xpath=ancestor::*[@data-channel-item][1]')).toHaveClass(/opacity-40/)
 
   // Escape cancels: nothing moves, nothing is saved, releasing does nothing.
   await admin.keyboard.press('Escape')

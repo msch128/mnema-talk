@@ -46,7 +46,8 @@ test('read and write a Talk chat from its row, then join from the header', async
 
   const row = page.locator('[data-channel-type="voice"]', { hasText: CHANNEL })
   await row.hover()
-  const chatButton = row.getByRole('button', { name: 'Chat öffnen' })
+  // The chat button sits beside the row (a button inside a button is not valid markup).
+  const chatButton = page.locator('[data-channel-item]', { has: row }).getByRole('button', { name: 'Chat öffnen' })
   await expect(chatButton).toBeVisible()
   await chatButton.click()
 
