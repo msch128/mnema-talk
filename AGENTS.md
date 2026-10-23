@@ -57,6 +57,7 @@ Mnema Talk is a **lightweight, self-hosted chat and voice app for one community*
 mnema-talk/
 ├── cmd/server/              # Main entrypoint (main.go)
 ├── cmd/webbundle/           # Signs and verifies the web bundle for the trusted desktop client
+├── cmd/updater/             # Self-update sidecar: verifies a new image's signature and provenance first
 ├── internal/
 │   ├── config/              # Environment configuration loading + validation
 │   ├── db/                  # pgx pool, embedded versioned migrations (db/migrations/*.sql)
@@ -88,6 +89,8 @@ mnema-talk/
 │   ├── gateway/             # Bot gateway (Discord-style opcodes, intents, resume)
 │   ├── sfu/                 # Pion WebRTC SFU (audio/video/screenshare forwarding)
 │   ├── update/              # GitHub release check + client for the optional updater sidecar
+│   ├── updaterd/            # The updater sidecar (cmd/updater): verify, pull by digest, tag, restart
+│   ├── imageverify/         # cosign signature + SLSA provenance check of a release image
 │   ├── version/             # Build version/revision (ldflags), shared with the web build
 │   ├── nativepreview/       # Isolated transport preview router and ciphertext relay research fixtures
 │   ├── tools/openapifix/    # Post-processes the generated OpenAPI document (`make openapi`)

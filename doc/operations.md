@@ -140,6 +140,7 @@ behind it and so uses the stored language or the default.
 | `MNEMA_IMAGE` | compose: `mnema-talk:local` | Image the `app` service runs; the app reads it to tell whether a re-pull can reach the latest release. See the tag table in the [deployment guide](deployment.md#updates). |
 | `UPDATER_TOKEN` | empty | Turns on "Update now" through the updater sidecar (profile `autoupdate`). At least 32 characters of letters, digits and `._~+/=-`, no placeholder. Empty = feature off, `UPDATER_URL` ignored. |
 | `UPDATER_URL` | `http://mnema-updater:8080` | Where the app reaches the sidecar: `http(s)` without credentials, query or fragment. |
+| `UPDATER_IMAGE_REPOSITORY`, `UPDATER_CERT_IDENTITY_REGEXP`, `UPDATER_CERT_ISSUER`, `UPDATER_SOURCE_URL`, `UPDATER_TRUSTED_ROOT` | empty = this project's release images and workflow | Read by the updater sidecar only, for a fork that publishes its own signed images: the image repository it may pull from, an anchored (`^...$`) pattern for the signing workflow's identity, its OIDC issuer, the repository URL recorded in the build provenance and (optional) a mounted `trusted_root.json`. See [verifying a release image](#verifying-a-release-image). |
 
 ### Legal and privacy page
 
@@ -435,15 +436,29 @@ digest; it says nothing about the code in it beyond that. Pinning the digest in
 from changing under a tag. Images released before signing was added carry no
 signature.
 
-**"Update now" does not run this check.** The updater sidecar only asks the
-Docker daemon to pull the tag again; neither the signature nor the BuildKit
-provenance is verified before the app is recreated, and there is no hook in
-the sidecar for it (see [SECURITY.md](../SECURITY.md#self-update-sidecar)).
-If you want every image verified before it runs, do not enable the `autoupdate`
-profile: for each release run `cosign verify` against the new tag, copy the
-digest it reports into `MNEMA_IMAGE` and run `docker compose pull app && docker
-compose up -d app` (the steps in [upgrade.md](upgrade.md)). A digest-pinned
-install is never touched by "Update now".
+**"Update now" runs this check for you** (since 1.1). The updater sidecar
+resolves the tag to a digest, verifies the cosign signature against the
+workflow identity above and the BuildKit provenance of every platform image,
+then pulls exactly that digest and restarts the app from it. If anything is
+missing or does not match, nothing is pulled or restarted; the System tab
+shows that the update was refused, and the updater's log (`docker compose logs
+updater`) has the reason. Details and limits are in
+[SECURITY.md](../SECURITY.md#self-update-sidecar).
+
+- The updater needs outbound HTTPS to the image registry and to Sigstore's
+  TUF mirror (`tuf-repo-cdn.sigstore.dev`); it has its own network for that. An
+  installation that cannot reach the mirror can mount a `trusted_root.json`
+  into the updater and set `UPDATER_TRUSTED_ROOT` to its path (the operator
+  then keeps it current).
+- It runs from the same image as the app (`MNEMA_IMAGE`) with another
+  entrypoint, so the first `docker compose --profile autoupdate up -d` after
+  moving to 1.1 starts the new updater.
+- Images released before signing was added carry no signature and are
+  refused; update those by hand. A digest-pinned `MNEMA_IMAGE` is never
+  touched by "Update now".
+- To test the check yourself: pull a signed image, retag an unsigned one as
+  the tag your app runs in a throwaway stack, and press "Update now"; the
+  refusal and the log line show the gate working.
 
 ## Renewing the desktop trust statement
 

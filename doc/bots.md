@@ -141,9 +141,17 @@ Each bot holds up to 10 active API tokens (`mnb_...`, 256 random bits).
   seconds, also for open gateway connections) that this person is still active
   and is the Owner, or holds *Manage bots* and everything the bot can do. When
   they are demoted, disabled, banned, or the bot gains a permission they lack,
-  their tokens stop working; regenerate them as someone who qualifies. Tokens
-  issued before 1.0 have no recorded issuer and are not re-checked until
-  regenerated.
+  their tokens stop working; regenerate them as someone who qualifies.
+- **Tokens issued before 1.0** have no recorded issuer. Nobody has to
+  regenerate them: the first time such a token is used after the upgrade to
+  1.1 it is bound to the person who most plausibly issued it, the bot's
+  creator or else the Owner, whoever still qualifies at that moment, so the
+  token keeps working and from then on is re-checked like any other. Nothing is
+  revoked by this. The bot's token list marks these tokens: *Unbound* until
+  they are first used (or while nobody qualifies to take the binding), *Issuer
+  assumed* afterwards. An assumed issuer is a guess: regenerate the token to
+  bind it to the person who really manages the bot. The binding is logged
+  (`"audit":"bot_token_bound"`).
 
 ## Getting started
 

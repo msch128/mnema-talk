@@ -45,7 +45,8 @@ in PostgreSQL; uploads and avatars live in S3-compatible object storage
 | [`internal/metrics`](../internal/metrics/) | Process-wide counters (HTTP, realtime, SFU, storage, rate limits) rendered in the Prometheus text format without a client library; every labelled family has a series cap. Feeds `/api/metrics` and the live operator view in the admin System tab. See [operations.md](operations.md#monitoring-and-alerts). |
 | [`internal/webbundle`](../internal/webbundle/), [`cmd/webbundle`](../cmd/webbundle/) | Builds, signs (Ed25519) and verifies the web app bundle that the [trusted desktop client](desktop-trusted-client.md) runs instead of server-served JavaScript. |
 | [`internal/linkpreview`](../internal/linkpreview/linkpreview.go) | Link cards: fetches title, description and image of public pages with an SSRF guard (http(s) on 80/443 only, every resolved address checked, also on redirects) and a cache. |
-| [`internal/update`](../internal/update/checker.go) | Release check against GitHub every 30 minutes (ETag, backoff on 403/429), image-tag reach analysis ([`image.go`](../internal/update/image.go)) and the client for the optional updater sidecar ([`updater.go`](../internal/update/updater.go)). |
+| [`internal/imageverify`](../internal/imageverify/verifier.go), [`internal/updaterd`](../internal/updaterd/server.go) | The self-update sidecar ([`cmd/updater`](../cmd/updater/main.go)): checks the cosign signature and SLSA provenance of a new release image against the pinned release workflow identity, then pulls that digest and has the recreator restart the app. |
+| [`internal/update`](../internal/update/checker.go) | Release check against GitHub every 30 minutes (ETag, backoff on 403/429), image-tag reach analysis ([`image.go`](../internal/update/image.go)) and the client for the optional updater sidecar ([`updater.go`](../internal/update/updater.go)).|
 | [`internal/version`](../internal/version/version.go) | Version and commit baked in at build time (`VERSION` / `REVISION` build args). |
 | [`web/web.go`](../web/web.go) | Embeds `web/dist` with `//go:embed` and serves the SPA. |
 
@@ -453,8 +454,11 @@ it is paid once per page load or reconnect, not per message.
   ([`admin.go`](../internal/media/admin.go)).
 - **The app never touches Docker.** Self-update goes through an opt-in
   sidecar on an internal network with a token, admin password re-auth, a
-  5-minute cooldown and an audit log entry
-  ([`system_selfupdate.go`](../internal/server/system_selfupdate.go),
+  5-minute cooldown and an audit log entry; the sidecar verifies the new
+  image's cosign signature and provenance before it pulls anything
+  ([`internal/imageverify`](../internal/imageverify/verifier.go),
+  [`internal/updaterd`](../internal/updaterd/server.go),
+  [`system_selfupdate.go`](../internal/server/system_selfupdate.go),
   [`docker-compose.yml`](../docker-compose.yml),
   [SECURITY.md](../SECURITY.md#self-update-sidecar)).
 - **Reload, never auto-reload.** The server sends its version on every

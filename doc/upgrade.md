@@ -126,6 +126,34 @@ until the new release has passed your application checks.
 
 ## Version notes
 
+### 1.0.x → 1.1.0
+
+Update with the procedure above; take the backup first. Items below are the
+operator-relevant changes; the release notes list the rest.
+
+- **Migration 0056** adds one column to `bot_tokens` (an "inferred issuer"
+  flag; see bot tokens below). Rolling back to 1.0.x means restoring the
+  pre-upgrade backup: the 1.0.x image refuses a database that a newer version
+  migrated (see "Rollback" above).
+- **Self-update now verifies the image.** If you use the `autoupdate` profile,
+  fetch the compose file of the 1.1 tag and run
+  `docker compose --profile autoupdate up -d` after the update: the `updater`
+  service is now this project's verifying sidecar (started from the app image)
+  and a second service, `recreator` (the Watchtower that used to be the updater),
+  only restarts the app from the image the updater verified. "Update now" refuses
+  an image whose cosign signature or build provenance does not verify. It
+  needs outbound HTTPS from the updater to the registry and to Sigstore. Details:
+  [operations.md](operations.md#verifying-a-release-image),
+  [SECURITY.md](../SECURITY.md#self-update-sidecar). The new networks
+  (`mnema-recreator`, `mnema-updater-egress`) are created by compose; a custom
+  compose file needs the same two services and networks.
+- **Bot tokens issued before 1.0** are bound to their likeliest issuer the first
+  time they are used; nothing is revoked and no token needs regenerating
+  ([bots.md](bots.md#tokens)). The admin console marks tokens that were
+  bound by assumption.
+- **No change to the media frame format.** Refusing frame version 2 was
+  re-evaluated and deferred to 2.0 (SECURITY.md).
+
 ### 1.0.0 → 1.0.1
 
 A patch release: fixes and polish, no new features, and nothing in it changes
