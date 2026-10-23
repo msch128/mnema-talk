@@ -111,7 +111,7 @@ var Routes = []Route{
 
 	{Method: "PUT", Pattern: "/onboarding", Action: "settings.onboarding", TargetType: "settings", Snapshot: ResOnboarding},
 
-	{Method: "POST", Pattern: "/emoji", Action: "emoji.create", TargetType: "emoji", NoBody: true},
+	{Method: "POST", Pattern: "/emoji", Action: "emoji.create", TargetType: "emoji", Snapshot: ResEmoji, NoBody: true},
 	{Method: "PATCH", Pattern: "/emoji/{id}", Action: "emoji.rename", TargetType: "emoji", IDParam: "id", Snapshot: ResEmoji},
 	{Method: "DELETE", Pattern: "/emoji/{id}", Action: "emoji.delete", TargetType: "emoji", IDParam: "id", Snapshot: ResEmoji},
 

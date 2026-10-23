@@ -237,10 +237,12 @@ operator is below. Update with the procedure above; take the backup first.
   for the Owner). See [operations.md](operations.md).
 - **Members can delete their account and export their data.** Both are in
   Account & security; the Owner account cannot be deleted. A deleted account
-  leaves its messages in place without text, written by "Deleted member". The
-  username `deleted-…` is reserved. Exports need object storage and live there
-  for at most 24 hours. Clients built before this release show a deleted author
-  by the placeholder name instead of "Deleted member" in the member's language.
+  leaves its messages in place without text, written by "Deleted member" (1.0.0
+  stored "Deleted user" and keeps it for accounts deleted before 1.0.1; the web
+  app ignores the stored text and names a deleted author in the member's
+  language from the reserved `deleted-…` username). Exports need object storage
+  and live there for at most 24 hours. Clients built before this release show a
+  deleted author by the placeholder name instead.
   See [operations.md](operations.md#account-deletion-and-data-exports).
 - **Weak custom invite codes stop working.** Custom invite codes typed by an
   admin that fall below the new minimum (12 or more characters, 7 or more

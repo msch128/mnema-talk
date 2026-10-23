@@ -148,7 +148,11 @@ echo "==> seeding a message and an upload"
 BEFORE="before-backup-$(openssl rand -hex 4)"
 AFTER="after-backup-$(openssl rand -hex 4)"
 post_message "$BEFORE"
-head -c 4096 /dev/urandom >"$DEPLOY/payload.bin"
+# Deterministic binary content: content sniffing always says
+# application/octet-stream. Random bytes occasionally began with a signature
+# (BMP, ICO, ...) that is not on the upload allow-list, and the drill flaked
+# with a 415.
+{ printf 'MNEMA-DRILL\000'; head -c 4084 /dev/zero | LC_ALL=C tr '\000' '\001'; } >"$DEPLOY/payload.bin"
 MEDIA_URL="$(api -F "file=@$DEPLOY/payload.bin;type=application/octet-stream" -F 'content=drill upload' \
   "$BASE/api/channels/$CHANNEL/upload" | jq -r '.attachments[0].url')"
 [ -n "$MEDIA_URL" ] && [ "$MEDIA_URL" != null ] || { echo "upload returned no attachment" >&2; exit 1; }
