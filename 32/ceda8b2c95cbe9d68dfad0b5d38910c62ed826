@@ -1,0 +1,25 @@
+Makefile
+  s_06fcde5dbef956::t_8d4caa11137d3e 89
+scripts/backup-drill-downgrade.sh
+  s_06fcde5dbef956::t_f00e1e5cc80ab5 23-31,51,69-88
+scripts/backup-drill.sh
+  s_06fcde5dbef956::t_caacc15c8c19b6 168-169,192-196
+scripts/tests/test_drill_downgrade.py
+  s_06fcde5dbef956::t_76d617903fabf7 1-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "32ceda8b2c95cbe9d68dfad0b5d38910c62ed826",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
