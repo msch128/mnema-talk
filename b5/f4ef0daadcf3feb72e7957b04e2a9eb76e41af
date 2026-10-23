@@ -1,0 +1,79 @@
+web/src/components/EmojiPicker.vue
+  s_06fcde5dbef956::t_2cbd9ec605797e 8,73,111,116-117,120,123
+web/src/components/BaseDialog.vue
+  s_06fcde5dbef956::t_339ad7c8c40e8e 54,56
+web/src/components/AudioProcessingSection.vue
+  s_06fcde5dbef956::t_1a3878000e313a 7-8,26-28,30,32-35,38,40,48,50-51,53,61-74,78
+web/src/styles/surfaces.css
+  s_06fcde5dbef956::t_04dd62a01ac3c0 94
+web/src/components/AudioSettingsModal.test.ts
+  s_06fcde5dbef956::t_cb6a1f40413fe3 31
+web/src/lib/emojiPickerSheet.ts
+  s_06fcde5dbef956::t_ca7968d05417f1 1-42
+web/src/components/ProfilePassword.vue
+  s_06fcde5dbef956::t_9867f605dd91d3 46-48,52,54,59,65,72,79,81,85,92,101,104-105
+web/src/components/AudioOutputSection.vue
+  s_06fcde5dbef956::t_bc2739a6054634 1-102
+web/src/components/PollCard.vue
+  s_06fcde5dbef956::t_f701d4bcffc0b9 42-43,51,59
+web/src/components/ChatComposer.vue
+  s_06fcde5dbef956::t_04dd62a01ac3c0 124
+web/src/components/AccountSecurityDialog.vue
+  s_06fcde5dbef956::t_9867f605dd91d3 27-28
+web/src/components/AudioSettingsModal.vue
+  s_06fcde5dbef956::t_7722c3568f8723 6,8,22,24-25,27,29,33-34,38,40
+web/src/components/AccountEmail.vue
+  s_06fcde5dbef956::t_9867f605dd91d3 75,77-78,81-82,88-91,95-97,99-101
+web/src/styles/settings.css
+  s_06fcde5dbef956::t_619b9c94a4ecbe 1-135
+web/src/components/MessageEditor.vue
+  s_06fcde5dbef956::t_04dd62a01ac3c0 42
+web/src/components/AudioAdvancedSection.vue
+  s_06fcde5dbef956::t_06c0a01a486033 1-118
+web/src/components/ThreadComposer.vue
+  s_06fcde5dbef956::t_04dd62a01ac3c0 79
+web/src/components/PollDialog.vue
+  s_06fcde5dbef956::t_1f15daf012b516 62-63,69,77,82-86,94,101,112,119-120,125,131-133,136-137,142,144,146,151
+web/src/components/AudioInputSection.vue
+  s_06fcde5dbef956::t_08a9bbac6e6909 7,10-11,14,56-60,64-92,94-136,138-147,149-150,152,156,158-163,165-172,174,179,182,189,194-195,198,203-244,246-247,255-257,261
+web/src/components/AccountDmPolicy.vue
+  s_06fcde5dbef956::t_9867f605dd91d3 44-46,50
+web/src/styles/controls.css
+  s_06fcde5dbef956::t_339ad7c8c40e8e 200
+  s_06fcde5dbef956::t_04dd62a01ac3c0 192,198
+web/src/components/AccountBlockedList.vue
+  s_06fcde5dbef956::t_9867f605dd91d3 12-16,22
+web/src/components/AccountPrivacy.vue
+  s_06fcde5dbef956::t_9867f605dd91d3 97-98,104-106,108,112-114,116-118,122,128-130,132-136,138-140
+web/src/components/MessageRow.vue
+  s_06fcde5dbef956::t_7f08395d28d759 61,133
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_db6c6e7b545126 523-533
+web/src/components/AccountTwoFactor.vue
+  s_06fcde5dbef956::t_9867f605dd91d3 87,89-90,95,102-103,105-106,111-112,114-116,125,127-129,135,137-138,140-142
+web/src/components/SidebarChannelRow.vue
+  s_06fcde5dbef956::t_dd04954f042a2e 175
+  s_06fcde5dbef956::t_7f08395d28d759 77
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_db6c6e7b545126 523-533
+web/src/lib/emojiPickerSheet.test.ts
+  s_06fcde5dbef956::t_f934b394a7bef7 1-16
+web/src/style.css
+  s_06fcde5dbef956::t_169dcbbcbcbc6b 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b5f4ef0daadcf3feb72e7957b04e2a9eb76e41af",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
