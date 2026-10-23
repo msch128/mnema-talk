@@ -1,0 +1,53 @@
+e2e/tests/dm.spec.ts
+  s_06fcde5dbef956::t_25b1e961111933 1-303
+web/src/stores/chatDirectMessages.test.ts
+  s_06fcde5dbef956::t_8e04d1952c7cc7 131-140
+  s_06fcde5dbef956::t_c3ec40e0d63579 1-130,141-218
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_ef5d7cdcd1ecfb 12,173-174
+web/src/stores/featuresAndBlocks.test.ts
+  s_06fcde5dbef956::t_5c9b8147e7516f 1-132
+web/src/dm.fixture.ts
+  s_06fcde5dbef956::t_91aca4d3a42be8 1-17
+web/src/components/DmSidebarAndDialogs.test.ts
+  s_06fcde5dbef956::t_3d80541e56e683 265
+  s_06fcde5dbef956::t_754acca6ba8811 188-197
+  s_06fcde5dbef956::t_4cb32d4a19ce3a 258
+  s_06fcde5dbef956::t_1fac4e424d30aa 153
+  s_06fcde5dbef956::t_48ddc8c9537d04 247-257,259-262
+  s_06fcde5dbef956::t_cf80f9a521425d 1-152,154-187,198-246,263-264,266-271
+web/src/components/ChatAreaDm.test.ts
+  s_06fcde5dbef956::t_08a6eb494f8d69 1-5,7-108,124-134,136-137,140-168
+  s_06fcde5dbef956::t_48ddc8c9537d04 6,109-123,138-139
+  s_06fcde5dbef956::t_31a9764e138962 135
+web/src/components/ReportsAndPrivacy.test.ts
+  s_06fcde5dbef956::t_48ddc8c9537d04 266-295,307-312
+  s_06fcde5dbef956::t_39fb375eec7e12 1-44,46-225,227-265,296-306,313-343
+  s_06fcde5dbef956::t_dea6449bab97d7 45,226
+web/src/components/DmMenusProfileSearch.test.ts
+  s_06fcde5dbef956::t_a9d117c2071a12 1-91,94-95,97-100,102-150,170-204,206-211,213-220,222-223,226-232,235-254
+  s_06fcde5dbef956::t_3d80541e56e683 205
+  s_06fcde5dbef956::t_3d4ae5849d3f3d 92-93,96,101,212,221,224-225,233-234
+  s_06fcde5dbef956::t_48ddc8c9537d04 151-169
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_3920a9cdc034b5 19-21,35-40,313-314,316,326
+web/src/components/BlockedMessageRow.vue
+  s_06fcde5dbef956::t_dfbb226b286086 23
+  s_06fcde5dbef956::t_3920a9cdc034b5 10-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6914d990a94bf4d9d1f400fb0f7df04d0f3c66cd",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
