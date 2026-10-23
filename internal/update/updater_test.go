@@ -22,10 +22,10 @@ func TestUpdaterTriggersTheSidecar(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := u.Trigger(context.Background()); err != nil {
+	if err := u.Trigger(context.Background(), "1.2.3"); err != nil {
 		t.Fatal(err)
 	}
-	if gotMethod != http.MethodPost || gotPath != "/v1/update" || gotQuery != "async=true" || gotAuth != "Bearer "+testToken {
+	if gotMethod != http.MethodPost || gotPath != "/v1/update" || gotQuery != "async=true&target_version=1.2.3" || gotAuth != "Bearer "+testToken {
 		t.Fatalf("request: %s %s?%s auth=%q", gotMethod, gotPath, gotQuery, gotAuth)
 	}
 }
@@ -42,7 +42,7 @@ func TestUpdaterErrors(t *testing.T) {
 			_, _ = w.Write([]byte("secret detail " + testToken))
 		}))
 		u, _ := NewUpdater(srv.URL, testToken)
-		if err := u.Trigger(context.Background()); !errors.Is(err, want) {
+		if err := u.Trigger(context.Background(), "1.2.3"); !errors.Is(err, want) {
 			t.Errorf("status %d: err = %v, want %v", status, err, want)
 		}
 		srv.Close()
@@ -53,14 +53,14 @@ func TestUpdaterErrors(t *testing.T) {
 		_, _ = w.Write([]byte(testToken))
 	}))
 	u, _ := NewUpdater(srv.URL, testToken)
-	err := u.Trigger(context.Background())
+	err := u.Trigger(context.Background(), "1.2.3")
 	if err == nil || strings.Contains(err.Error(), testToken) {
 		t.Fatalf("500: err = %v (must not echo the body or token)", err)
 	}
 	srv.Close()
 
 	// Closed server: unreachable.
-	if err := u.Trigger(context.Background()); !errors.Is(err, ErrUpdaterUnreachable) {
+	if err := u.Trigger(context.Background(), "1.2.3"); !errors.Is(err, ErrUpdaterUnreachable) {
 		t.Fatalf("closed: err = %v", err)
 	}
 }
@@ -77,7 +77,7 @@ func TestUpdaterNeverFollowsRedirects(t *testing.T) {
 	}))
 	defer srv.Close()
 	u, _ := NewUpdater(srv.URL, testToken)
-	if err := u.Trigger(context.Background()); err == nil || leaked {
+	if err := u.Trigger(context.Background(), "1.2.3"); err == nil || leaked {
 		t.Fatalf("redirect followed: err=%v leaked=%v", err, leaked)
 	}
 }

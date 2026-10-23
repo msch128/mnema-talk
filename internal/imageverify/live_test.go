@@ -29,7 +29,10 @@ func TestLiveReleaseImage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the published release image must verify: %v", err)
 	}
-	t.Logf("verified %s (platforms %v)", res.Ref(), res.Platforms)
+	t.Logf("verified %s (platforms %v, release %s)", res.Ref(), res.Platforms, res.Version)
+	if res.Version == "" {
+		t.Fatal("the signed provenance must record the release version")
+	}
 
 	// The same image under a stricter, wrong identity must be refused.
 	p := DefaultPolicy()

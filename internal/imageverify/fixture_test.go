@@ -128,6 +128,8 @@ type Provenance struct {
 	NoSource bool
 	// Predicate overrides the statement's predicate type.
 	Predicate string
+	// Version is the release version recorded (default 1.1.0); "-" records none.
+	Version string
 }
 
 func (f *Fixture) statement(img v1.Hash, o Provenance) []byte {
@@ -147,10 +149,18 @@ func (f *Fixture) statement(img v1.Hash, o Provenance) []byte {
 	if o.Predicate != "" {
 		predicate = o.Predicate
 	}
+	version := o.Version
+	if version == "" {
+		version = "1.1.0"
+	}
 	args := map[string]string{"vcs:source": o.Source}
+	if version != "-" {
+		args["label:org.opencontainers.image.version"] = version
+	}
 	vcs := map[string]string{"source": o.Source}
 	if o.NoSource {
-		args, vcs = map[string]string{}, map[string]string{}
+		delete(args, "vcs:source")
+		vcs = map[string]string{}
 	}
 	st := map[string]any{
 		"_type":         "https://in-toto.io/Statement/v1",

@@ -36,7 +36,7 @@ func flow(t *testing.T, f *Fixture, d *daemontest.Daemon) *updaterd.Server {
 }
 
 func update(s *updaterd.Server) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(http.MethodPost, "/v1/update?async=true", nil)
+	req := httptest.NewRequest(http.MethodPost, "/v1/update?async=true&target_version=1.1.0", nil)
 	req.Header.Set("Authorization", "Bearer "+flowToken)
 	rec := httptest.NewRecorder()
 	s.ServeHTTP(rec, req)
@@ -117,6 +117,61 @@ func TestUpdateOfAnUntrustedImageChangesNothing(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// A valid signature says who built an image, not which release it is.
+func TestUpdateRefusesTheWrongRelease(t *testing.T) {
+	cases := map[string]struct {
+		signedVersion, running, target string
+	}{
+		"validly signed older release":     {"1.0.0", "1.0.1", "1.1.0"},
+		"signed release is not the target": {"1.2.0", "1.0.1", "1.1.0"},
+		"not newer than the running one":   {"1.1.0", "1.1.0", "1.1.0"},
+		"downgrade even if requested":      {"1.0.0", "1.0.1", "1.0.0"},
+		"running version unknown":          {"1.1.0", "dev", "1.1.0"},
+		"no release version in provenance": {"-", "1.0.1", "1.1.0"},
+	}
+	for label, tc := range cases {
+		t.Run(label, func(t *testing.T) {
+			f := newFixture(t)
+			rel := f.Push("1.0", Provenance{Version: tc.signedVersion}, Provenance{Version: tc.signedVersion})
+			f.Sign(rel, Identity, rel.Digest)
+			d := daemontest.New(t, f.Repo+":1.0")
+			d.Version = tc.running
+
+			req := httptest.NewRequest(http.MethodPost, "/v1/update?async=true&target_version="+tc.target, nil)
+			req.Header.Set("Authorization", "Bearer "+flowToken)
+			rec := httptest.NewRecorder()
+			flow(t, f, d).ServeHTTP(rec, req)
+			if rec.Code != http.StatusUnprocessableEntity {
+				t.Fatalf("status = %d (%s), want a refusal", rec.Code, rec.Body)
+			}
+			for _, c := range d.Log() {
+				if !strings.HasPrefix(c, "list ") {
+					t.Fatalf("a refused update must only have looked: %q", d.Log())
+				}
+			}
+		})
+	}
+}
+
+func TestUpdateNeedsAValidTargetVersion(t *testing.T) {
+	f := newFixture(t)
+	rel := f.Push("1.0")
+	f.Sign(rel, Identity, rel.Digest)
+	d := daemontest.New(t, f.Repo+":1.0")
+	for _, q := range []string{"", "&target_version=", "&target_version=latest", "&target_version=1.1"} {
+		req := httptest.NewRequest(http.MethodPost, "/v1/update?async=true"+q, nil)
+		req.Header.Set("Authorization", "Bearer "+flowToken)
+		rec := httptest.NewRecorder()
+		flow(t, f, d).ServeHTTP(rec, req)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("%q: status = %d, want 400", q, rec.Code)
+		}
+	}
+	if len(d.Log()) != 0 {
+		t.Fatalf("calls = %q", d.Log())
 	}
 }
 

@@ -100,6 +100,11 @@ type Result struct {
 	Digest     string
 	// Platforms lists the platform images whose provenance was checked.
 	Platforms []string
+	// Version is the release version the signed index's provenance records
+	// (the same for every platform image). A valid signature says who built
+	// the digest, not which release it is: the caller compares this with the
+	// release it meant to install, so an older signed image is not accepted.
+	Version string
 }
 
 // Ref is the pinned reference "repository@digest".
@@ -132,11 +137,11 @@ func (v *Verifier) Verify(ctx context.Context, image string) (*Result, error) {
 	if err := v.verifySignature(pinned, desc.Digest, trust, opts); err != nil {
 		return nil, err
 	}
-	platforms, err := v.verifyProvenance(pinned, opts)
+	platforms, version, err := v.verifyProvenance(pinned, opts)
 	if err != nil {
 		return nil, err
 	}
-	return &Result{Repository: repo.Name(), Digest: desc.Digest.String(), Platforms: platforms}, nil
+	return &Result{Repository: repo.Name(), Digest: desc.Digest.String(), Platforms: platforms, Version: version}, nil
 }
 
 func (v *Verifier) verifySignature(pinned name.Digest, digest v1.Hash, trust root.TrustedMaterial, opts []remote.Option) error {

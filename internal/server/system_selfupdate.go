@@ -152,7 +152,7 @@ func (h *systemHandler) verifySelfUpdatePassword(ctx context.Context, w http.Res
 func (h *systemHandler) triggerSelfUpdate(ctx context.Context, upd UpdateStatus, log *slog.Logger) error {
 	log.Info("self-update requested")
 	// The admin closing the tab must not cut the request short.
-	err := h.self.updater.Trigger(context.WithoutCancel(ctx))
+	err := h.self.updater.Trigger(context.WithoutCancel(ctx), upd.LatestVersion)
 	switch {
 	case errors.Is(err, update.ErrUpdaterBusy):
 		log.Warn("self-update: updater busy")
@@ -244,6 +244,8 @@ func updaterMessage(err error) string {
 		return update.ErrUpdaterUntrusted.Error()
 	case errors.Is(err, update.ErrUpdaterUnverified):
 		return update.ErrUpdaterUnverified.Error()
+	case errors.Is(err, update.ErrUpdaterRequest):
+		return update.ErrUpdaterRequest.Error()
 	default:
 		return "the updater could not start the update; see the updater's log"
 	}

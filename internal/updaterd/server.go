@@ -11,6 +11,7 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/imageverify"
+	"github.com/msch128/mnema-talk/internal/update"
 )
 
 // ImageVerifier is what the updater needs from imageverify.
@@ -36,6 +38,8 @@ const (
 	reasonUntrusted = "verification_failed"
 	reasonUnchecked = "verification_unavailable"
 	reasonNoTarget  = "no_target"
+	reasonVersion   = "version_mismatch"
+	reasonRequest   = "target_version_required"
 	reasonEngine    = "docker_unavailable"
 )
 
@@ -97,6 +101,11 @@ func (s *Server) handleUpdate(w http.ResponseWriter, r *http.Request) {
 		reply(w, http.StatusUnauthorized, "")
 		return
 	}
+	want, ok := update.ParseSemver(strings.TrimPrefix(r.URL.Query().Get("target_version"), "v"))
+	if !ok {
+		reply(w, http.StatusBadRequest, reasonRequest)
+		return
+	}
 	if !s.acquire() {
 		reply(w, http.StatusTooManyRequests, "")
 		return
@@ -121,7 +130,7 @@ func (s *Server) handleUpdate(w http.ResponseWriter, r *http.Request) {
 		reply(w, http.StatusConflict, reasonNoTarget)
 		return
 	}
-	plan, status, reason := s.verifyAll(ctx, targets)
+	plan, status, reason := s.verifyAll(ctx, targets, want)
 	if reason != "" {
 		reply(w, status, reason)
 		return
@@ -136,7 +145,7 @@ func (s *Server) handleUpdate(w http.ResponseWriter, r *http.Request) {
 
 // verifyAll checks every target before anything is changed: one failure
 // refuses the whole update.
-func (s *Server) verifyAll(ctx context.Context, targets []Target) ([]verified, int, string) {
+func (s *Server) verifyAll(ctx context.Context, targets []Target, want update.Semver) ([]verified, int, string) {
 	plan := make([]verified, 0, len(targets))
 	for _, t := range targets {
 		res, err := s.Verifier.Verify(ctx, t.Image)
@@ -147,6 +156,11 @@ func (s *Server) verifyAll(ctx context.Context, targets []Target) ([]verified, i
 				return nil, http.StatusUnprocessableEntity, reasonUntrusted
 			}
 			return nil, http.StatusBadGateway, reasonUnchecked
+		}
+		if err := checkVersion(res.Version, t.RunningVersion, want); err != nil {
+			s.Log.Error("UPDATE REFUSED: the signed image is not the release that was asked for; nothing was pulled or restarted",
+				"container", t.Name, "image", res.Ref(), "signed_version", res.Version, "running_version", t.RunningVersion, "target_version", want.String(), "err", err)
+			return nil, http.StatusUnprocessableEntity, reasonVersion
 		}
 		_, tag := splitTag(t.Image)
 		plan = append(plan, verified{target: t, result: res, tag: tag})
@@ -177,6 +191,29 @@ func (s *Server) swap(plan []verified) {
 		return
 	}
 	s.Log.Info("update done", "images", len(plan))
+}
+
+// checkVersion guards against rollback: a valid signature says who built an
+// image, not which release it is, so an attacker who controls the tag could
+// offer an older, vulnerable signed release. The version the signed
+// provenance records must be the release the admin asked for and strictly
+// newer than the one that runs now; anything unknown is refused.
+func checkVersion(signed, running string, want update.Semver) error {
+	got, ok := update.ParseSemver(strings.TrimPrefix(signed, "v"))
+	if !ok {
+		return fmt.Errorf("the signed version %q is not a release version", signed)
+	}
+	if got.Compare(want) != 0 {
+		return fmt.Errorf("the image is release %s, not the requested %s", got, want)
+	}
+	cur, ok := update.ParseSemver(strings.TrimPrefix(running, "v"))
+	if !ok {
+		return fmt.Errorf("the running version %q is unknown", running)
+	}
+	if got.Compare(cur) <= 0 {
+		return fmt.Errorf("release %s is not newer than the running %s", got, cur)
+	}
+	return nil
 }
 
 func (s *Server) background(f func()) {

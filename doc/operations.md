@@ -439,7 +439,9 @@ signature.
 **"Update now" runs this check for you** (since 1.1). The updater sidecar
 resolves the tag to a digest, verifies the cosign signature against the
 workflow identity above and the BuildKit provenance of every platform image,
-then pulls exactly that digest and restarts the app from it. If anything is
+checks that the signed release is the one you confirmed and newer than the
+running one (an older signed image is refused, so a moved tag cannot roll the
+app back), then pulls exactly that digest and restarts the app from it. If anything is
 missing or does not match, nothing is pulled or restarted; the System tab
 shows that the update was refused, and the updater's log (`docker compose logs
 updater`) has the reason. Details and limits are in

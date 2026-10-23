@@ -16,7 +16,7 @@ const token = "0123456789abcdef0123456789abcdef-token"
 func quiet() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
 
 func post(s *Server, auth string) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(http.MethodPost, "/v1/update?async=true", nil)
+	req := httptest.NewRequest(http.MethodPost, "/v1/update?async=true&target_version=2.0.0", nil)
 	if auth != "" {
 		req.Header.Set("Authorization", auth)
 	}
@@ -29,7 +29,7 @@ func post(s *Server, auth string) *httptest.ResponseRecorder {
 // forged provenance) is tested in internal/imageverify, which has the fixture.
 
 func TestUpdateRequiresTheTokenAndOneAtATime(t *testing.T) {
-	eng := &recordingEngine{stubEngine: stubEngine{targets: []Target{{Name: "app", Image: "r/x:1"}}}}
+	eng := &recordingEngine{stubEngine: stubEngine{targets: []Target{{Name: "app", Image: "r/x:1", RunningVersion: "1.0.0"}}}}
 	srv := &Server{Token: token, Scope: "s", Engine: eng, Verifier: okVerifier{}, Recreator: &countingRecreator{}, Log: quiet()}
 
 	for _, auth := range []string{"", "Bearer wrong", "Basic " + token, token} {

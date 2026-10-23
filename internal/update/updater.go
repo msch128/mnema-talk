@@ -26,6 +26,9 @@ var (
 	// ErrUpdaterUntrusted: the sidecar examined the new image and it did not
 	// pass the signature or provenance check; nothing was changed.
 	ErrUpdaterUntrusted = errors.New("the updater refused the update: the new image's signature or build provenance did not verify; nothing was changed")
+	// ErrUpdaterRequest: the sidecar did not understand the request (an
+	// updater older than the app).
+	ErrUpdaterRequest = errors.New("the updater did not accept the request; update the updater (docker compose --profile autoupdate up -d)")
 	// ErrUpdaterUnverified: the sidecar could not carry the check out
 	// (registry or Sigstore unreachable); nothing was changed.
 	ErrUpdaterUnverified = errors.New("the updater could not verify the new image (registry or Sigstore unreachable); nothing was changed")
@@ -60,7 +63,6 @@ func NewUpdater(baseURL, token string) (*Updater, error) {
 		return nil, errors.New("UPDATER_URL must be an http(s) URL without credentials")
 	}
 	u.Path += "/v1/update"
-	u.RawQuery = "async=true"
 	return &Updater{
 		endpoint: u.String(),
 		token:    token,
@@ -74,8 +76,9 @@ func NewUpdater(baseURL, token string) (*Updater, error) {
 
 // Trigger starts an update. It never returns the sidecar's response body or
 // the token in an error.
-func (u *Updater) Trigger(ctx context.Context) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.endpoint, nil)
+func (u *Updater) Trigger(ctx context.Context, targetVersion string) error {
+	q := url.Values{"async": {"true"}, "target_version": {targetVersion}}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.endpoint+"?"+q.Encode(), nil)
 	if err != nil {
 		return fmt.Errorf("build updater request: %w", err)
 	}
@@ -98,6 +101,8 @@ func (u *Updater) Trigger(ctx context.Context) error {
 		return ErrUpdaterBusy
 	case http.StatusUnprocessableEntity:
 		return ErrUpdaterUntrusted
+	case http.StatusBadRequest:
+		return ErrUpdaterRequest
 	case http.StatusBadGateway:
 		return ErrUpdaterUnverified
 	default:

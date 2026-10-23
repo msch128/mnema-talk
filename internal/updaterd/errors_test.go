@@ -45,7 +45,7 @@ func TestDockerClientReportsEngineErrors(t *testing.T) {
 	if _, err := d.Targets(ctx, "s"); err == nil || !strings.Contains(err.Error(), "HTTP 500") || len(err.Error()) > 300 {
 		t.Errorf("Targets: %v", err)
 	}
-	if _, err := d.configImage(ctx, "abc"); err == nil {
+	if _, _, err := d.configImage(ctx, "abc"); err == nil {
 		t.Error("inspect error not reported")
 	}
 	if err := d.Pull(ctx, "r/x", "sha256:1"); err == nil {
@@ -68,7 +68,7 @@ func TestDockerClientReportsEngineErrors(t *testing.T) {
 	if err := gone.Tag(ctx, "r/x", "sha256:1", "1.0"); err == nil {
 		t.Error("an unreachable daemon must be an error")
 	}
-	if _, err := gone.configImage(ctx, "abc"); err == nil {
+	if _, _, err := gone.configImage(ctx, "abc"); err == nil {
 		t.Error("an unreachable daemon must be an error")
 	}
 }
@@ -109,7 +109,7 @@ func (e *recordingEngine) Tag(_ context.Context, _, _, tag string) error {
 type okVerifier struct{}
 
 func (okVerifier) Verify(_ context.Context, image string) (*imageverify.Result, error) {
-	return &imageverify.Result{Repository: "r/x", Digest: "sha256:" + strings.Repeat("a", 64)}, nil
+	return &imageverify.Result{Repository: "r/x", Digest: "sha256:" + strings.Repeat("a", 64), Version: "2.0.0"}, nil
 }
 
 type countingRecreator struct{ n int }
@@ -117,7 +117,7 @@ type countingRecreator struct{ n int }
 func (c *countingRecreator) Recreate(context.Context) error { c.n++; return nil }
 
 func TestSwapDoesNotRestartWhenTaggingFails(t *testing.T) {
-	eng := &recordingEngine{stubEngine: stubEngine{targets: []Target{{Name: "app", Image: "r/x:1"}}}, tagError: context.DeadlineExceeded}
+	eng := &recordingEngine{stubEngine: stubEngine{targets: []Target{{Name: "app", Image: "r/x:1", RunningVersion: "1.0.0"}}}, tagError: context.DeadlineExceeded}
 	rec := &countingRecreator{}
 	srv := &Server{
 		Token: token, Engine: eng, Verifier: okVerifier{}, Recreator: rec,
@@ -139,7 +139,7 @@ func TestSwapDoesNotRestartWhenTaggingFails(t *testing.T) {
 }
 
 func TestSwapRunsInTheBackgroundByDefault(t *testing.T) {
-	eng := &recordingEngine{stubEngine: stubEngine{targets: []Target{{Name: "app", Image: "r/x:1"}}}}
+	eng := &recordingEngine{stubEngine: stubEngine{targets: []Target{{Name: "app", Image: "r/x:1", RunningVersion: "1.0.0"}}}}
 	done := make(chan struct{})
 	rec := &signalRecreator{done: done}
 	srv := &Server{Token: token, Engine: eng, Verifier: okVerifier{}, Recreator: rec, Log: slog.New(slog.NewTextHandler(io.Discard, nil))}

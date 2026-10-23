@@ -827,7 +827,15 @@ profile `autoupdate`, `UPDATER_TOKEN`). How it is built and why:
   - the BuildKit SLSA v1 provenance exists for every platform image, names that
     image as its subject, and records a GitHub Actions run and source
     repository of this project. BuildKit does not sign it; it is covered by
-    the signature because the signed index lists it by digest.
+    the signature because the signed index lists it by digest;
+  - **the release is the one that was asked for, and a newer one.** A valid
+    signature says who built an image, not which release it is, so a tag that
+    is moved back (or a registry mix-up) could offer an older, signed, known-
+    vulnerable release. The release version recorded in the signed provenance
+    must equal the version the admin confirmed (the app sends it with the
+    request) and be strictly newer than the version the running container
+    reports; an unknown version on either side is refused, so there is no
+    downgrade through "Update now".
   Only then it pulls `repository@digest` (the Docker daemon re-checks the
   content hash), points the local tag at it and lets the recreator restart
   the app from the local image without pulling, so the bytes that run are the

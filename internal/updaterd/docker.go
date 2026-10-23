@@ -24,6 +24,9 @@ const (
 // Target is a running container the updater may update.
 type Target struct {
 	Name string
+	// RunningVersion is the release the container runs, from its image's
+	// org.opencontainers.image.version label ("" if it has none).
+	RunningVersion string
 	// Image is the reference the container was created from, e.g.
 	// "ghcr.io/msch128/mnema-talk:1.0".
 	Image string
@@ -102,7 +105,7 @@ func (d *Docker) Targets(ctx context.Context, scope string) ([]Target, error) {
 	}
 	out := make([]Target, 0, len(list))
 	for _, c := range list {
-		image, err := d.configImage(ctx, c.ID)
+		image, version, err := d.configImage(ctx, c.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -110,31 +113,32 @@ func (d *Docker) Targets(ctx context.Context, scope string) ([]Target, error) {
 		if len(c.Names) > 0 {
 			name = strings.TrimPrefix(c.Names[0], "/")
 		}
-		out = append(out, Target{Name: name, Image: image})
+		out = append(out, Target{Name: name, Image: image, RunningVersion: version})
 	}
 	return out, nil
 }
 
 // configImage returns the reference a container was created from. The list
 // call shows the image id once the tag moved on, so inspect is needed.
-func (d *Docker) configImage(ctx context.Context, id string) (string, error) {
+func (d *Docker) configImage(ctx context.Context, id string) (image, version string, err error) {
 	res, err := d.do(ctx, http.MethodGet, "/containers/"+url.PathEscape(id)+"/json", nil)
 	if err != nil {
-		return "", fmt.Errorf("inspect container: %w", err)
+		return "", "", fmt.Errorf("inspect container: %w", err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return "", engineError(res)
+		return "", "", engineError(res)
 	}
 	var c struct {
 		Config struct {
-			Image string `json:"Image"`
+			Image  string            `json:"Image"`
+			Labels map[string]string `json:"Labels"`
 		} `json:"Config"`
 	}
 	if err := json.NewDecoder(io.LimitReader(res.Body, 4<<20)).Decode(&c); err != nil {
-		return "", fmt.Errorf("inspect container: %w", err)
+		return "", "", fmt.Errorf("inspect container: %w", err)
 	}
-	return c.Config.Image, nil
+	return c.Config.Image, c.Config.Labels["org.opencontainers.image.version"], nil
 }
 
 // Pull implements Engine. The pull is a stream of JSON progress messages; an

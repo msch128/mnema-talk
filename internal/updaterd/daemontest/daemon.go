@@ -24,6 +24,8 @@ type Daemon struct {
 	Socket string
 	// Image is the Config.Image of the one container in scope.
 	Image string
+	// Version is the running container's image version label (default 1.0.1).
+	Version string
 	// PullFail, if set, is streamed back as the pull's error message.
 	PullFail string
 
@@ -54,7 +56,13 @@ func (d *Daemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		d.Record("list labels=%s", strings.Join(f["label"], ","))
 		_, _ = w.Write([]byte(`[{"Id":"abc123","Names":["/mnema-app"]}]`))
 	case r.Method == http.MethodGet && r.URL.Path == "/containers/abc123/json":
-		_ = json.NewEncoder(w).Encode(map[string]any{"Config": map[string]string{"Image": d.Image}})
+		version := d.Version
+		if version == "" {
+			version = "1.0.1"
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"Config": map[string]any{
+			"Image": d.Image, "Labels": map[string]string{"org.opencontainers.image.version": version},
+		}})
 	case r.Method == http.MethodPost && r.URL.Path == "/images/create":
 		q := r.URL.Query()
 		d.Record("pull %s@%s", q.Get("fromImage"), q.Get("tag"))
