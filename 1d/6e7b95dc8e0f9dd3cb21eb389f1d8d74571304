@@ -1,0 +1,50 @@
+web/package-lock.json
+  s_06fcde5dbef956::t_d8b876cd48ae9c 19
+SECURITY.md
+  s_06fcde5dbef956::t_8cbd20ac512508 351-364
+doc/upgrade.md
+  s_06fcde5dbef956::t_31d53d84150995 133
+  s_06fcde5dbef956::t_8cbd20ac512508 129-132,134-136,138-141
+  s_06fcde5dbef956::t_09d8d5a1c42d3c 137
+web/package.json
+  s_06fcde5dbef956::t_b787fd0e4c9945 30
+e2e/tests/csp.spec.ts
+  s_06fcde5dbef956::t_edb21d17947389 86
+  s_06fcde5dbef956::t_707005c4469648 1-60,62-66,68-72,74-85,87-89
+  s_06fcde5dbef956::t_75cda29a0b67ae 73
+  s_06fcde5dbef956::t_5a727940dd3068 61,67
+web/scripts/emojiPickerCsp.ts
+  s_06fcde5dbef956::t_b3fbcf25616cce 1-72
+e2e/run.sh
+  s_06fcde5dbef956::t_d78e12b41ac7dd 109
+web/scripts/emojiPickerCsp.test.ts
+  s_06fcde5dbef956::t_23b43319783a42 1,3-24
+  s_06fcde5dbef956::t_154aae3fdd0d0e 2,25
+internal/httpx/middleware_test.go
+  s_06fcde5dbef956::t_355e3b5f1bfa58 153-160
+web/vite.config.ts
+  s_06fcde5dbef956::t_f007730921bf44 10,64,71-72
+internal/httpx/middleware.go
+  s_06fcde5dbef956::t_0ae23e0c031d36 153-161,164-165
+e2e/tests/fixtures.ts
+  s_06fcde5dbef956::t_8536e087bcd2b0 65-82,90-91,96-97,100-102,182,189,194-201
+  s_06fcde5dbef956::t_7a68a721e96e14 83-89,92-95,98-99
+THIRD_PARTY_NOTICES.md
+  s_06fcde5dbef956::t_efc73baad83a82 32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1d6e7b95dc8e0f9dd3cb21eb389f1d8d74571304",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": null
+    }
+  }
+}
