@@ -155,6 +155,9 @@ test('phone: sign in, drawer, message, thread, settings, Talk', async ({ page, b
   await expect(leave).toBeInViewport({ ratio: 1 })
   await expectTouchSize(page, 'Verlassen')
   await expectNoSidewaysScroll(page)
+  // Alone in the call the controls stay: nothing else on the screen could bring them back.
+  await page.waitForTimeout(4_000)
+  await expect(page.getByTestId('talk-controls').last()).toHaveAttribute('data-visible', 'true')
   await leave.tap()
   await expect(page.getByRole('button', { name: 'Verlassen' })).toHaveCount(0)
 })

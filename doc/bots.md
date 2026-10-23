@@ -492,7 +492,7 @@ own translations.
 Adding a command means one type that implements `slash.Builtin`
 (`internal/slash`: a `Definition`, an `Available` check for rights beyond
 sending, and `Run`) and one line in `builtinCommands` (`internal/server`).
-Today there is one:
+Today there are these (the web app translates the menu texts):
 
 - **`/poll`** asks the channel a question. Options: `question` (up to 300
   characters), `answers` (2 to 10, each up to 55 characters, separated by
@@ -500,6 +500,48 @@ Today there is one:
   `multiple` and `anonymous`. In the web app `/poll` and the poll button next
   to the attach button open the same form; the REST route
   `POST /api/channels/{id}/polls` does the same for scripts.
+- **`/me text`**, **`/shrug [text]`**, **`/tableflip [text]`**,
+  **`/unflip [text]`** and **`/spoiler text`** post a message of the caller
+  with a transformed text: `/me` stores `_text_` (italics, so every client
+  shows an action line), `/spoiler` stores `||text||`, the other three append
+  the familiar emoticon. They go through the same validation (4000 characters),
+  mention rules and slow mode as a message typed in the composer. The result
+  carries the `message_id`.
+- **`/msg @member text`** opens (or reuses) the direct message with the member
+  and writes the text there. It runs the service behind `POST /api/dms`, so
+  *Send direct messages*, the community switch, blocks, the member's
+  `dm_policy` and the limits apply, and a refusal about the other member is the
+  route's one text. The member must be able to see the channel the command is
+  run in.
+- **`/nick name`** changes the caller's own display name through the profile
+  code (`PUT /api/users/me/profile`): 24 characters at most, the same cleaning
+  of the text, the bio stays, `user_update` is broadcast. At most 3 changes in
+  10 minutes. It can only ever rename the caller.
+- **`/thread title`** starts a thread on the caller's latest message of the
+  channel that is not itself a reply; the title becomes the thread's first
+  reply. Anyone who may send may start a thread.
+- **`/timeout @member duration [reason]`** and **`/ban @member [duration]
+  [reason]`** run the same service functions as the admin routes
+  (`POST /api/admin/users/{id}/timeout` and `.../ban`): they need *Timeout
+  members* / *Ban members* and a highest role above the member's, never act on
+  the Owner or the caller, and write the same audit entries
+  (`moderation.timeout`, `moderation.ban`, with `via: slash`). A duration is a
+  number and a unit, for example `30m`, `2h`, `7d` or `2w`; a ban without one
+  is permanent.
+- **`/kick @member [reason]`** signs the member out everywhere and drops them
+  from their Talk, with no sanction; it needs *Kick members*
+  ([moderation](moderation.md#kicks)).
+
+The moderation commands only appear in the menu of members who hold the
+permission, and they check it again on the server: a request that names one
+without the right is refused (`404`, the command is not available to the
+caller), and the shared service functions repeat the hierarchy checks. A
+member option accepts only an active, non-bot member who can see the channel.
+The names `poll`, `me`, `msg`, `shrug`, `tableflip`, `unflip`, `spoiler`, `nick`,
+`thread`, `timeout`, `ban` and `kick` are taken by built-ins (a bot may
+register a command of the same name, listed next to it). `/tts` is not offered.
+`/giphy` is not built in 1.1: GIF search waits for a provider that allows
+server-side proxying.
 
 **Polls.** A poll is a message whose text is the question, with a `poll`
 object (options with their vote counts, `multiple`, `anonymous`, `closes_at`,

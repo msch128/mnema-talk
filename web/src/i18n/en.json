@@ -168,6 +168,7 @@
   },
   "connection": {
     "lost": "Connection lost – reconnecting…",
+    "offline": "You are offline – messages cannot be sent or received until the network is back.",
     "nextTry": "next try in {seconds} s · attempt {attempt}",
     "retryNow": "Retry now",
     "restored": "Reconnected"
@@ -312,6 +313,10 @@
       "body": "Get a desktop notification for new messages while Mnema Talk runs in the background. You can change this per channel at any time."
     }
   },
+  "skip": {
+    "toMessages": "Skip to messages",
+    "toComposer": "Skip to message box"
+  },
   "tips": {
     "label": "Tip",
     "gotIt": "Got it",
@@ -444,6 +449,9 @@
     "searchInChannel": "Search in this channel",
     "searchFailed": "Couldn’t search. Try again.",
     "inThread": "in thread",
+    "searchPinned": "Pinned",
+    "notifyNoText": "New message",
+    "searchFilterUnsupported": "This server doesn’t support this filter yet. Remove it or search without it.",
     "copyText": "Copy text",
     "copiedText": "Text copied",
     "copyLink": "Copy link",
@@ -456,6 +464,12 @@
   "thread": {
     "title": "Thread",
     "close": "Close thread",
+    "follow": "Follow thread",
+    "unfollow": "Unfollow thread",
+    "following": "You get notifications for replies in this thread.",
+    "notFollowing": "You do not get notifications for replies in this thread.",
+    "followFailed": "Couldn’t follow the thread. Try again.",
+    "unfollowFailed": "Couldn’t unfollow the thread. Try again.",
     "edit": "Edit reply",
     "delete": "Delete reply",
     "deleteTitle": "Delete reply?",
@@ -877,6 +891,7 @@
       "detailPriority": "Detail priority: text and code remain sharp"
     },
     "controls": "Talk controls",
+    "tapForControls": "Tap the screen to show the controls",
     "moreControls": "More options",
     "hideParticipants": "Hide participants",
     "showParticipants": "Show participants",
@@ -1258,6 +1273,7 @@
     "missing": "Fill in “{name}” first.",
     "notANumber": "“{name}” needs a whole number.",
     "botOffline": "{bot} is not connected right now.",
+    "done": "Done.",
     "failed": "Couldn’t run the command. Try again.",
     "privateFrom": "Private reply from {bot}",
     "bot": "Bot",
@@ -1265,6 +1281,78 @@
     "dismiss": "Dismiss",
     "builtinLabel": "Built-in",
     "builtin": {
+      "msg": {
+        "description": "Send a direct message",
+        "options": {
+          "member": "Who gets the message",
+          "text": "Your message"
+        }
+      },
+      "me": {
+        "description": "Describe what you are doing",
+        "options": {
+          "text": "What you are doing"
+        }
+      },
+      "shrug": {
+        "description": "Add a shrug to your message",
+        "options": {
+          "text": "Your message"
+        }
+      },
+      "tableflip": {
+        "description": "Flip a table",
+        "options": {
+          "text": "Your message"
+        }
+      },
+      "unflip": {
+        "description": "Put the table back",
+        "options": {
+          "text": "Your message"
+        }
+      },
+      "spoiler": {
+        "description": "Post a message that stays hidden until someone clicks it",
+        "options": {
+          "text": "The text to hide"
+        }
+      },
+      "nick": {
+        "description": "Change your display name",
+        "options": {
+          "name": "Your new display name (24 characters at most)"
+        }
+      },
+      "thread": {
+        "description": "Start a thread on your latest message",
+        "options": {
+          "title": "What the thread is about"
+        }
+      },
+      "timeout": {
+        "description": "Send a member into a timeout",
+        "options": {
+          "member": "Who gets the timeout",
+          "duration": "How long, for example 10m, 2h or 3d",
+          "reason": "Shown to the member (200 characters at most)"
+        }
+      },
+      "ban": {
+        "description": "Ban a member",
+        "options": {
+          "member": "Who gets banned",
+          "duration": "For how long, for example 7d; leave empty to ban for good",
+          "reason": "Shown to the member (200 characters at most)"
+        }
+      },
+      "kick": {
+        "description": "Sign a member out everywhere and drop them from their Talk",
+        "options": {
+          "member": "Who is kicked",
+          "reason": "Shown to the member (200 characters at most)"
+        }
+      },
       "poll": {
         "description": "Ask the channel a question",
         "options": {
@@ -1582,6 +1670,10 @@
       "name": "Send direct messages",
       "desc": "Start direct messages and write in them. Reading a direct message you are in never needs it."
     },
+    "kick_members": {
+      "name": "Kick members",
+      "desc": "Sign members below your highest role out everywhere and drop them from their Talk. They can sign in again at once."
+    },
     "groups": {
       "general": "General",
       "text": "Text",
@@ -1733,6 +1825,7 @@
         "timeout_remove": "Timeout ended",
         "ban": "Member banned",
         "unban": "Member unbanned",
+        "kick": "Member kicked",
         "ban_expired": "Ban expired",
         "bulk_delete": "Messages deleted in bulk"
       },
@@ -1932,6 +2025,8 @@
     "noticeTimeout": "You were timed out for {duration}",
     "noticeTimeoutRemoved": "Your timeout was lifted.",
     "noticeBan": "You were banned",
+    "noticeKicked": "You were signed out by a moderator. You can sign in again right away.",
+    "noticeKickedReason": "You were signed out by a moderator: {reason}. You can sign in again right away.",
     "bansTitle": "Bans",
     "noBans": "Nobody is banned.",
     "bannedUntil": "Banned until {date}",

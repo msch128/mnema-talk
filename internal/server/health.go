@@ -40,6 +40,7 @@ var Features = []string{
 	"forward",
 	"search.filters.v2",
 	"threads.follow",
+	"slash.builtins",
 }
 
 // healthCacheTTL is how long a health result is reused: the endpoint is

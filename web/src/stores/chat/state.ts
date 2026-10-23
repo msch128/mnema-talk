@@ -30,6 +30,9 @@ function channelState() {
     latestLoadSeq: ref(0),
     jumpTarget: ref<{ id: string; seq: number } | null>(null),
     activeThread: ref<ThreadRoot | null>(null),
+    // Root ids of the threads I follow, and whether the server told me (older servers do not).
+    followedThreads: ref<ReadonlySet<string>>(new Set()),
+    followKnown: ref(false),
     // Pinned messages: bumped when the pins of a channel changed, so an open pinned list refetches; plus the notes about new pins.
     pinsSignal: ref<{ channelId: string; seq: number } | null>(null),
     pinNotices: ref<PinNotice[]>([]),

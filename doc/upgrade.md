@@ -140,7 +140,7 @@ server lacks.
   existing role: nobody gains access to reports until a role is given it
   (the Owner and Administrators have it implicitly).
 - **`GET /api/health` has a `features` list** (for example `"blocks"`,
-  `"reports"`, `"search.filters.v2"`, `"threads.follow"`): the web app uses it to show only what the server supports.
+  `"reports"`, `"search.filters.v2"`, `"threads.follow"`, `"slash.builtins"`): the web app uses it to show only what the server supports.
 - **Direct messages** (migration 0050): conversations of two to ten members
   ([architecture](architecture.md#direct-messages), [SECURITY](../SECURITY.md#direct-messages-privacy-model)).
   The new permission *Send direct messages* (bit `1 << 22`) is added to
@@ -154,6 +154,11 @@ server lacks.
   channels and messages is unchanged (private messages are numbered apart).
   `GET /api/health` lists `dm` in `features`.
 - **New events** `dm_created`, `dm_member_added`, `dm_member_removed`.
+- **Built-in slash commands.** `/me`, `/shrug`, `/tableflip`, `/unflip`, `/spoiler`,
+  `/nick`, `/thread`, `/timeout`, `/ban` and `/kick` join `/poll` in the menu
+  ([bots](bots.md#built-in-commands-and-polls)). New permission *Kick members*
+  (bit `1 << 23`), off for @everyone and every existing role (the Owner and
+  Administrators have it implicitly), and the `kicked` WebSocket event.
 - **New event** `block_updated`, sent only to the blocker's own sessions.
 - **Export** gains `blocks.json` and `reports.json`.
 - **Migration 0051** adds `saved_messages`.
@@ -196,6 +201,7 @@ server lacks.
   `message.delete` entry of an edited message carries its earlier versions.
   Audit retention applies to them as to any entry.
 - New setting `INITIAL_LANGUAGE` (`de` default, or `en`) for the default category and channel names of a brand-new installation. An upgrade never renames anything.
+- Web app: a skip link and a fixed Tab order (channel list, header, messages, message box, member list), the connection banner also on the browser's offline event, Talk controls that stay visible when alone in the call on a phone, the search tip dismissed after the first search, a Follow thread button, and in-page notifications that follow the "show message text" setting. A 1.1 bundle against a 1.0.x server hides the follow button and notifies for every thread reply as before.
 - Search accepts `has=poll`, `has=edit` and `is=pinned`. The new routes
   (`/api/threads/{id}/follow`, `/api/threads/following`) and the event
   `thread_follow_updated` are additive; a 1.0.x web bundle ignores them.
