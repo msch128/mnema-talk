@@ -1,0 +1,25 @@
+scripts/postgres-upgrade-drill.sh
+  s_06fcde5dbef956::t_4dcf85435748fa 161-163
+scripts/smoke-image.sh
+  s_06fcde5dbef956::t_6c97b1ca2867fe 134-136
+scripts/upgrade-drill-data.sh
+  s_06fcde5dbef956::t_bc4120d806bc32 116-118
+scripts/upgrade-drill.sh
+  s_06fcde5dbef956::t_690c29b8895355 179-181
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3763cea116c53d843f56522dea5dba6431e3496e",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
