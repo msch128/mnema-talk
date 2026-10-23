@@ -1,0 +1,102 @@
+internal/imageverify/policy.go
+  s_06fcde5dbef956::t_6556b26ff9094d 1-62,68-82
+  s_06fcde5dbef956::t_4a26a9b2ff132c 63-67
+internal/imageverify/verifier.go
+  s_06fcde5dbef956::t_b13acc4911c3cf 65,67
+  s_06fcde5dbef956::t_b8d33801582498 23-25,31,173-177
+  s_06fcde5dbef956::t_be8d4d2d1cb0c5 155-169,171-172,183-184,186-193,195-197,199-200
+  s_06fcde5dbef956::t_0fa03f85ea222b 1-22,26-30,32-64,66,68-154,170,178-182,185,194,198,201-254
+scripts/upgrade-drill.sh
+  s_06fcde5dbef956::t_81802d51a7b197 107-108,114-117
+scripts/backup-drill.sh
+  s_06fcde5dbef956::t_81802d51a7b197 78-79,85-88,96-97
+internal/imageverify/provenance.go
+  s_06fcde5dbef956::t_7cf275dd3490d3 1-176
+internal/updaterd/run.go
+  s_06fcde5dbef956::t_ae2cbb8a7ac2a7 1-156
+internal/imageverify/live_test.go
+  s_06fcde5dbef956::t_c29778dfe0b2b7 1-44
+internal/server/system_selfupdate.go
+  s_06fcde5dbef956::t_fca02a7d8d0a7d 82,97
+  s_06fcde5dbef956::t_411548917b5218 160-165,243-246
+Makefile
+  s_06fcde5dbef956::t_bf94b3cf6621e2 103
+go.mod
+  s_06fcde5dbef956::t_95184765d864a0 32-46,48-71,74,76-77,79-86,90,92-99,102-103,161,171
+  s_06fcde5dbef956::t_9aa1c957b7daba 47,72-73,75,78,87-89,91
+  s_06fcde5dbef956::t_91bd7a0ef593de 104,125,127,130,132-135,140,160,162-164
+  s_06fcde5dbef956::t_14f3a870b0649a 100-101
+internal/imageverify/trust.go
+  s_06fcde5dbef956::t_3b75f522bef9d0 16-20,23-25
+  s_06fcde5dbef956::t_118f236cebd8bf 1-15,21-22,26-50
+internal/updaterd/updaterd_test.go
+  s_06fcde5dbef956::t_049b01ca853fc6 1-15,17-27,30-31,34-39,42-53,55-60,77-120,125-148,151-156
+  s_06fcde5dbef956::t_5e76b390b18d6f 66-67,149-150
+  s_06fcde5dbef956::t_05e21cc50560ec 16,28-29,32-33,40-41,54,61-65,68-76,121-124,157-160
+internal/imageverify/more_test.go
+  s_06fcde5dbef956::t_bf94b3cf6621e2 16,19-24,28,30,37,39,61,78,89,91
+  s_06fcde5dbef956::t_f153b73bc661ae 1-15,17-18,25-27,29,31-36,38,40-60,62-76,79-88,90,92-109,112-113,115-117
+  s_06fcde5dbef956::t_beebac2b02602d 77
+  s_06fcde5dbef956::t_1d1a9249af8db1 110-111,114
+THIRD_PARTY_NOTICES.md
+  s_06fcde5dbef956::t_c564574f2c0c2a 134-211,214-216,227
+  s_06fcde5dbef956::t_bd1296dcd27285 212-213
+internal/updaterd/errors_test.go
+  s_06fcde5dbef956::t_eafef04f74eaa3 1-188
+scripts/smoke-image.sh
+  s_06fcde5dbef956::t_81802d51a7b197 65-66,72-75,83-84
+scripts/postgres-upgrade-drill.sh
+  s_06fcde5dbef956::t_81802d51a7b197 45,47,73-74,80-83
+internal/updaterd/server.go
+  s_06fcde5dbef956::t_e1e7d29b659e90 1-215
+Dockerfile
+  s_06fcde5dbef956::t_7271ade1508508 62-64,82-85
+internal/updaterd/docker.go
+  s_06fcde5dbef956::t_0d260b5c10574a 1-182
+internal/update/updater.go
+  s_06fcde5dbef956::t_411548917b5218 15-19,26-31,36-39,99-102
+internal/imageverify/verifier_test.go
+  s_06fcde5dbef956::t_d913aa4e3a34d8 1,9,14,19-21,23-24,30,32-33,37-38,48,53-54,59-60,65-66,71-72,79,81,84,112,114,117-118,121,129,133-134,138,144,153-161,164,168,172
+  s_06fcde5dbef956::t_bf94b3cf6621e2 13,17,29,31,47,52,58,64,70,74,78,80,91,94-98,102-104,111,113,128,130
+  s_06fcde5dbef956::t_43e3536dfb5a31 2-8,10-12,15-16,18,22,25-28,34-36,39-46,49-51,55-57,61-63,67-69,73,75-77,82-83,85-90,92-93,99-101,105-110,115-116,119-120,122-127,131-132,135-137,139-143,145-152,162-163,165-167,169-171,173-175
+internal/server/system_selfupdate_integration_test.go
+  s_06fcde5dbef956::t_6acdc34fdd3c9b 204-219
+cmd/updater/main.go
+  s_06fcde5dbef956::t_744c1203bd12eb 1-14
+docker-compose.yml
+  s_06fcde5dbef956::t_a8cb74525fb2b7 381-382
+  s_06fcde5dbef956::t_af8bb1d92f5182 336,342-361,365,367-380,383-412,421-422,444,465-474
+internal/imageverify/fixture_test.go
+  s_06fcde5dbef956::t_bf94b3cf6621e2 1-3,6-314
+  s_06fcde5dbef956::t_08d049c1bc44f4 4-5
+.env.example
+  s_06fcde5dbef956::t_8e89340bad2b56 243-250
+internal/update/updater_test.go
+  s_06fcde5dbef956::t_6acdc34fdd3c9b 35-38
+internal/imageverify/testdata/release-1.0.1-bundle.json
+  s_06fcde5dbef956::t_e685bf566391f1 1-68
+internal/imageverify/flow_test.go
+  s_06fcde5dbef956::t_60052db734d351 1-152
+internal/updaterd/daemontest/daemon.go
+  s_06fcde5dbef956::t_444f613651adab 1-103
+go.sum
+  s_06fcde5dbef956::t_5c9d572b4ea0f2 1-32,39-42,67-68,81-86,89-92,97-105,107-111,114-119,126-127,129-130,133-190,194-197,201-208,211-214,217-248,257-262,265-266,271-278,283-290,297,330-333,335-344,347-385,395-412,419-420,422-450,480-481,513-514,537-554,563-564,567-570
+web/src/lib/thirdParty.ts
+  s_06fcde5dbef956::t_c564574f2c0c2a 57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "29dd33334dc0f677c388743ec931ab5fc4b7206f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
