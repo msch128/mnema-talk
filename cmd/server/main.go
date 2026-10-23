@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/media"
@@ -63,6 +64,10 @@ func runWithContext(ctx context.Context) error {
 		return err
 	}
 	if err := auth.EnsureAdminUser(ctx, pool, cfg.AdminUsername, cfg.AdminInitialPassword, cfg.IsProduction()); err != nil {
+		return err
+	}
+
+	if _, err := chat.LocalizeSeedLayout(ctx, pool, cfg.InitialLanguage); err != nil {
 		return err
 	}
 
