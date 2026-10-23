@@ -150,6 +150,14 @@ func TestSecurityHeaders(t *testing.T) {
 	if strings.Contains(SPAContentSecurityPolicy, "'unsafe-eval'") || strings.Contains(SPAContentSecurityPolicy, "script-src 'self' 'unsafe-inline'") {
 		t.Error("SPA CSP must not allow inline or eval scripts")
 	}
+	if strings.Contains(SPAContentSecurityPolicy, "unsafe-inline") || strings.Contains(SPAContentSecurityPolicy, "unsafe-hashes") {
+		t.Error("SPA CSP must not allow inline styles or scripts")
+	}
+	for _, want := range []string{"style-src 'self';", "style-src-attr 'none';"} {
+		if !strings.Contains(SPAContentSecurityPolicy, want) {
+			t.Errorf("SPA CSP lacks %s", want)
+		}
+	}
 	if !strings.Contains(SPAContentSecurityPolicy, "script-src 'self' 'wasm-unsafe-eval';") {
 		t.Error("SPA CSP must allow WebAssembly compilation for the noise filter")
 	}

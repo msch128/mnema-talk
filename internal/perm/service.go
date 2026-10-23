@@ -214,7 +214,7 @@ func (s *Service) ForChannel(ctx context.Context, ch uuid.UUID) (*Snapshot, erro
 	if err != nil {
 		return nil, err
 	}
-	if !snap.KnowsChannel(ch) {
+	if !snap.KnowsChannel(ch) && !snap.KnowsDM(ch) {
 		return s.reload(ctx, true)
 	}
 	return snap, nil

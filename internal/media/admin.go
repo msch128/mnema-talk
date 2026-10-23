@@ -56,6 +56,7 @@ func ListMedia(ctx context.Context, p *db.Pool, limit, offset int) ([]DashboardI
 		FROM media m
 		JOIN users u ON u.id = m.uploader_id
 		LEFT JOIN channels c ON c.id = m.channel_id
+		WHERE c.type IS DISTINCT FROM 'dm'
 		ORDER BY m.created_at DESC
 		LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {

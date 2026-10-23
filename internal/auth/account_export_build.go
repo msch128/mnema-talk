@@ -64,6 +64,7 @@ push.json       your push notification devices (label, added, last delivery; no 
 emoji.json      the custom emoji you uploaded; the image files are in the emoji folder
 audit.json      administrative log entries about your account (no other person's name)
 security.json   what is set up for signing in (no secrets)
+direct_messages.json  the direct message conversations you are in (which, when, who by id; the messages you wrote are in messages.json)
 blocks.json     the members you blocked (their ids and when; no names)
 reports.json    the reports you filed about messages (your reason and note, not the reported text)
 saved.json      the messages you saved (their ids, your note and when; not the saved text)
@@ -154,6 +155,7 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 		{"emoji.json", func() (any, error) { return h.exportEmoji(ctx, z, user) }},
 		{"audit.json", func() (any, error) { return exportAudit(ctx, q, user) }},
 		{"security.json", func() (any, error) { return h.exportSecurity(ctx, user) }},
+		{"direct_messages.json", func() (any, error) { return exportDirectMessages(ctx, q, user) }},
 		{"blocks.json", func() (any, error) { return exportBlocks(ctx, q, user) }},
 		{"reports.json", func() (any, error) { return exportReports(ctx, q, user) }},
 		{"saved.json", func() (any, error) { return exportSaved(ctx, q, user) }},

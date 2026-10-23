@@ -27,7 +27,7 @@
     "@noble/hashes": "2.3.0",
     "@sapphi-red/web-noise-suppressor": "^0.4.1",
     "@tauri-apps/api": "2.12.3",
-    "emoji-picker-element": "^1.29.1",
+    "emoji-picker-element": "1.29.1",
     "emoji-picker-element-data": "^1.8.0",
     "highlight.js": "11.11.1",
     "pinia": "^4.1.0",

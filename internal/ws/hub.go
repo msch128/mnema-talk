@@ -31,6 +31,10 @@ type Hub struct {
 	// for events to everybody), before delivery. Outgoing webhooks listen
 	// here. It must not block.
 	Tap func(channel uuid.UUID, eventType string, payload any)
+	// DMTap is Tap for the events of direct message conversations. Those
+	// never reach Tap (outgoing webhooks, the bot gateway): only Web Push
+	// listens here, which delivers to members alone. It must not block.
+	DMTap func(channel uuid.UUID, eventType string, payload any)
 	// Presence, when set, hears every join and leave of a Talk (a quick
 	// rejoin is neither). The audit log listens here. It must not block.
 	Presence func(userID, channelID uuid.UUID, joined bool)

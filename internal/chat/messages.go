@@ -3,6 +3,7 @@ package chat
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -32,57 +33,6 @@ const messageSelect = `
 	LEFT JOIN users ru ON ru.id = rm.user_id
 	LEFT JOIN users pu ON pu.id = m.pinned_by AND m.is_pinned`
 
-type rawReplyFields struct {
-	id          *uuid.UUID
-	user        *uuid.UUID
-	username    *string
-	displayName *string
-	avatar      *string
-	content     *string
-	hasMedia    bool
-	isBot       *bool
-	isWebhook   *bool
-}
-
-func buildReplyPreview(replyToID uuid.UUID, r rawReplyFields) *ReplyPreview {
-	p := &ReplyPreview{ID: replyToID, Deleted: r.id == nil}
-	if r.id != nil {
-		p.UserID = *r.user
-		p.Username = deref(r.username)
-		p.DisplayName = deref(r.displayName)
-		p.AvatarURL = auth.AvatarURL(r.avatar)
-		p.Content = deref(r.content)
-		p.HasAttachments = r.hasMedia
-		p.IsBot = r.isBot != nil && *r.isBot
-		p.IsWebhook = r.isWebhook != nil && *r.isWebhook
-	}
-	return p
-}
-
-// rawPinner is the left-joined member who pinned a message.
-type rawPinner struct {
-	id                            *uuid.UUID
-	username, displayName, avatar *string
-}
-
-func (p rawPinner) ref() *UserRef {
-	if p.id == nil {
-		return nil
-	}
-	return &UserRef{ID: *p.id, Username: deref(p.username), DisplayName: deref(p.displayName), AvatarURL: auth.AvatarURL(p.avatar)}
-}
-
-func decodeEmbeds(raw []byte) ([]Embed, error) {
-	if len(raw) <= 2 {
-		return nil, nil
-	}
-	var embeds []Embed
-	if err := json.Unmarshal(raw, &embeds); err != nil {
-		return nil, fmt.Errorf("decode embeds: %w", err)
-	}
-	return embeds, nil
-}
-
 func scanMessages(rows pgx.Rows) ([]Message, error) {
 	defer rows.Close()
 	msgs := make([]Message, 0)
@@ -110,13 +60,6 @@ func scanMessages(rows pgx.Rows) ([]Message, error) {
 		msgs = append(msgs, m)
 	}
 	return msgs, rows.Err()
-}
-
-func deref(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
 }
 
 // enrich loads attachments, reactions, mentions and polls for msgs.
@@ -386,10 +329,18 @@ func CreateMessage(ctx context.Context, q db.Querier, nm NewMessage) (uuid.UUID,
 	if nm.AuthorName != "" {
 		authorName = &nm.AuthorName
 	}
+	// A message of a direct message conversation draws its number from the
+	// conversations' own sequence, so the public numbering shows nothing of
+	// what is said in private (migration 0050).
 	err := q.QueryRow(ctx, `
-		INSERT INTO messages (channel_id, user_id, content, parent_id, reply_to_id, webhook_id, author_name, embeds)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO messages (number, in_dm, channel_id, user_id, content, parent_id, reply_to_id, webhook_id, author_name, embeds) OVERRIDING SYSTEM VALUE
+		SELECT CASE WHEN c.type = 'dm' THEN nextval('dm_number_seq') ELSE nextval(pg_get_serial_sequence('messages', 'number')) END,
+		       c.type = 'dm', c.id, $2, $3, $4, $5, $6, $7, $8
+		FROM channels c WHERE c.id = $1
 		RETURNING id`, nm.ChannelID, nm.UserID, nm.Content, nm.ParentID, nm.ReplyToID, nm.WebhookID, authorName, embeds).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, errChannelNotFound
+	}
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("insert message: %w", err)
 	}

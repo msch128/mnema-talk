@@ -70,7 +70,18 @@ var eraseSteps = []string{
 	`UPDATE message_reports SET reporter_id = NULL, note = '' WHERE reporter_id = $1`,
 	`UPDATE message_reports SET reported_user_id = NULL WHERE reported_user_id = $1`,
 	`UPDATE message_reports SET resolved_by = NULL WHERE resolved_by = $1`,
+	// Direct messages: a conversation nobody else is in goes with its
+	// messages; the others keep theirs (the erased member's words in it are
+	// emptied like everywhere), without the erased member.
+	`DELETE FROM channels WHERE id IN (` + soleDMs + `)`,
+	`DELETE FROM dm_members WHERE user_id = $1`,
+	`UPDATE dm_members SET added_by = NULL WHERE added_by = $1`,
+	`UPDATE channels SET dm_created_by = NULL WHERE dm_created_by = $1`,
 }
+
+// soleDMs selects the direct message conversations in which nobody but $1 is.
+const soleDMs = `SELECT c.id FROM channels c WHERE c.type = 'dm'
+	AND NOT EXISTS (SELECT 1 FROM dm_members m WHERE m.channel_id = c.id AND m.user_id <> $1)`
 
 // scrubReportCopies blanks the text, file names and author names of the
 // account's messages inside the stored copies of message_reports ($1 the
@@ -151,6 +162,8 @@ func eraseAccount(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*erased, error)
 	for _, sql := range []string{
 		`DELETE FROM media WHERE uploader_id = $1 RETURNING s3_key`,
 		`DELETE FROM data_exports WHERE user_id = $1 AND s3_key IS NOT NULL RETURNING s3_key`,
+		// The files of direct messages nobody else is in any more go with them.
+		`DELETE FROM media WHERE message_id IN (SELECT id FROM messages WHERE channel_id IN (` + soleDMs + `)) RETURNING s3_key`,
 	} {
 		rows, err := tx.Query(ctx, sql, id)
 		if err != nil {

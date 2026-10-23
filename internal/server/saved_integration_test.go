@@ -243,3 +243,34 @@ func TestPinsCarryWhoPinnedAndWhen(t *testing.T) {
 		t.Errorf("an unpinned message has no pin fields: %s", res.body)
 	}
 }
+
+func TestSavedMessagesFromAConversationNeedMembershipNotPermissions(t *testing.T) {
+	f := newDMFixture(t, false)
+	dm := f.alice.mustDM(t, f.bob, f.carol)
+	var msg struct {
+		ID uuid.UUID `json:"id"`
+	}
+	res := f.bob.dmPost(dm.ID, "words for the group only")
+	wantStatus(t, "post", res, http.StatusCreated)
+	res.decode(t, &msg)
+
+	// A member saves it; the Owner (global access) cannot save it and, with a
+	// row planted anyway, sees it as unavailable.
+	wantStatus(t, "member saves", f.alice.put("/api/me/saved/"+msg.ID.String(), nil), http.StatusOK)
+	wantStatus(t, "owner cannot save", f.admin.put("/api/me/saved/"+msg.ID.String(), nil), http.StatusNotFound)
+	f.a.runSQL(`INSERT INTO saved_messages (user_id, message_id) VALUES ($1, $2)`, f.admin.user.ID, msg.ID)
+	items, raw := f.admin.saved(t)
+	if len(items) != 1 || items[0].Available || strings.Contains(raw, "group only") {
+		t.Fatalf("the owner's list leaks a conversation: %s", raw)
+	}
+
+	// A former member sees it as unavailable too.
+	if items, _ := f.alice.saved(t); len(items) != 1 || !items[0].Available {
+		t.Fatalf("a member's list: %+v", items)
+	}
+	wantStatus(t, "leave", f.alice.delete("/api/dms/"+dm.ID.String()+"/members/@me"), http.StatusNoContent)
+	items, raw = f.alice.saved(t)
+	if len(items) != 1 || items[0].Available || strings.Contains(raw, "group only") {
+		t.Fatalf("a former member's list leaks a conversation: %s", raw)
+	}
+}

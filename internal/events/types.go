@@ -49,6 +49,9 @@ const (
 	EmojiChanged        = "emoji_changed"
 	BlockUpdated        = "block_updated"
 	SavedUpdated        = "saved_updated"
+	DMCreated           = "dm_created"
+	DMMemberAdded       = "dm_member_added"
+	DMMemberRemoved     = "dm_member_removed"
 )
 
 // Client-to-server events.

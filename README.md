@@ -12,7 +12,7 @@ and screen sharing up to 4K at 60 FPS, in one Go binary.**
 
 Mnema Talk is a self-hosted alternative to Discord for a group that wants its
 own place: friends, a club, a guild or a small team. It has one community
-instead of many servers, no direct messages, no ringing and its own quiet, dark
+instead of many servers, private direct messages without a back door for moderators, no ringing and its own quiet, dark
 design. It keeps the parts that make a community server useful: roles, private
 channels, webhooks, bots and a call you can join with one click. Invite-only,
 no accounts on someone else's platform.

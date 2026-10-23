@@ -105,7 +105,7 @@ func ListSaved(ctx context.Context, p *db.Pool, user uuid.UUID, visible []uuid.U
 	if len(saved) > limit {
 		saved, page.HasMore = saved[:limit], true
 	}
-	byID, err := savedMessages(ctx, p, saved, visible)
+	byID, err := savedMessages(ctx, p, user, saved, visible)
 	if err != nil {
 		return SavedPage{}, err
 	}
@@ -120,12 +120,17 @@ func ListSaved(ctx context.Context, p *db.Pool, user uuid.UUID, visible []uuid.U
 }
 
 // savedMessages loads the messages of saved that the user may see.
-func savedMessages(ctx context.Context, p *db.Pool, saved []savedRow, visible []uuid.UUID) (map[uuid.UUID]*Message, error) {
+func savedMessages(ctx context.Context, p *db.Pool, user uuid.UUID, saved []savedRow, visible []uuid.UUID) (map[uuid.UUID]*Message, error) {
 	ids := make([]uuid.UUID, len(saved))
 	for i, s := range saved {
 		ids[i] = s.id
 	}
-	msgs, err := queryMessages(ctx, p, messageSelect+` WHERE m.id = ANY($1) AND ($2::uuid[] IS NULL OR m.channel_id = ANY($2))`, ids, visible)
+	// A conversation is readable by its members only, whatever the permission
+	// state says (the Owner and Administrators included), so that rule is a
+	// membership test in SQL, as in search.
+	msgs, err := queryMessages(ctx, p, messageSelect+` WHERE m.id = ANY($1) AND (
+		(NOT m.in_dm AND ($2::uuid[] IS NULL OR m.channel_id = ANY($2)))
+		OR (m.in_dm AND EXISTS (SELECT 1 FROM dm_members dm WHERE dm.channel_id = m.channel_id AND dm.user_id = $3)))`, ids, visible, user)
 	if err != nil {
 		return nil, err
 	}
