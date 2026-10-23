@@ -82,17 +82,38 @@ func CleanText(field, s string, maxRunes int, required bool) (string, error) {
 // (webhook, bot and username overrides): invisible and bidirectional format
 // characters (Unicode Cf, such as U+202E and U+200B), private-use characters
 // and C1 controls are removed first, so a name cannot be spoofed with text
-// that renders differently from what it spells.
+// that renders differently from what it spells. The zero-width joiner and
+// non-joiner are the one exception: they stay when they sit between two
+// visible characters, because emoji sequences and Persian words need them.
 func CleanName(field, s string, maxRunes int, required bool) (string, error) {
 	if utf8.ValidString(s) {
-		s = strings.Map(func(r rune) rune {
-			if isInvisibleRune(r) {
-				return -1
-			}
-			return r
-		}, s)
+		s = stripInvisible(s)
 	}
 	return CleanText(field, s, maxRunes, required)
+}
+
+func stripInvisible(s string) string {
+	in := []rune(s)
+	out := make([]rune, 0, len(in))
+	for i, r := range in {
+		switch {
+		case isJoiner(r):
+			if i > 0 && i+1 < len(in) && isVisibleRune(in[i-1]) && isVisibleRune(in[i+1]) {
+				out = append(out, r)
+			}
+		case !isInvisibleRune(r):
+			out = append(out, r)
+		}
+	}
+	return string(out)
+}
+
+func isJoiner(r rune) bool { return r == 0x200c || r == 0x200d }
+
+// isVisibleRune reports a character that renders something: not invisible,
+// not whitespace and not a control.
+func isVisibleRune(r rune) bool {
+	return !isInvisibleRune(r) && !unicode.IsSpace(r) && !unicode.IsControl(r)
 }
 
 // isInvisibleRune reports format, private-use and C1 control characters.

@@ -249,3 +249,32 @@ func TestCleanNameStripsInvisibleSpoofing(t *testing.T) {
 		t.Fatal("NUL accepted")
 	}
 }
+
+func TestCleanNameKeepsJoinersBetweenVisibleCharacters(t *testing.T) {
+	for name, in := range map[string]string{
+		"family emoji": "👨\u200d👩\u200d👧",
+		"rainbow flag": "🏳\ufe0f\u200d🌈",
+		"persian word": "می\u200cخواهم",
+	} {
+		if got, err := CleanName("name", in, 32, true); err != nil || got != in {
+			t.Errorf("%s: got %q, %v; want it unchanged", name, got, err)
+		}
+	}
+}
+
+func TestCleanNameStripsMisplacedJoinersAndBidiControls(t *testing.T) {
+	for in, want := range map[string]string{
+		"\u200dabc\u200d":   "abc",   // leading and trailing
+		"a\u200d\u200db":    "ab",    // repeated
+		"a\u200d\u200bb":    "ab",    // next to another invisible
+		"a\u200d\u202eb":    "ab",    // next to a bidi control
+		"\u202eadmin\u200d": "admin", // spoof attempt
+		"Bot \u200d🤖":       "Bot 🤖", // after a space
+		"a\u200c b\u200c":   "a b",   // before a space and trailing
+		"👨\u200d\u2066👩":    "👨👩",    // a bidi isolate splits the sequence
+	} {
+		if got, err := CleanName("name", in, 32, true); err != nil || got != want {
+			t.Errorf("%q: got %q, %v; want %q", in, got, err, want)
+		}
+	}
+}
