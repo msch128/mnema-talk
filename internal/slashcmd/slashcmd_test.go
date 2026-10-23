@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -99,5 +100,23 @@ func TestTheTextCommandsRenderTheirMessage(t *testing.T) {
 		if got := tc.spec.render(tc.text); got != tc.want {
 			t.Errorf("/%s %q: %q, want %q", tc.spec.name, tc.text, got, tc.want)
 		}
+	}
+}
+
+func TestAHelperWithoutPermissionStateGrantsNothing(t *testing.T) {
+	if needs(nil, perm.Subject{ID: uuid.New()}, perm.KickMembers) {
+		t.Error("a missing snapshot granted a permission")
+	}
+	// An audit entry without details gets the slash marker and, without a log, is dropped quietly.
+	(&Services{}).record(context.Background(), audit.Entry{Action: "moderation.kick"})
+}
+
+func TestPostingIsRefusedWhenTheCallerMayNotSendThere(t *testing.T) {
+	user := &auth.User{ID: uuid.New(), Role: auth.RoleUser}
+	f := perm.NewFixture().Everyone(perm.ViewChannel)
+	svc := &Services{Perms: f.Service()}
+	req := httptest.NewRequest(http.MethodPost, "/", nil).WithContext(auth.WithUser(context.Background(), user))
+	if _, err := svc.post(slash.Call{Request: req, Channel: uuid.New(), User: user}, "hello", nil); err == nil {
+		t.Fatal("posted without Send messages")
 	}
 }
