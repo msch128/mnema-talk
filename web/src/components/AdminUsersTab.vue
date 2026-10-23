@@ -146,7 +146,7 @@ onMounted(async () => {
         <span class="text-xs text-mnema-tertiary">({{ users.length }})</span>
       </div>
 
-      <div class="flex items-center gap-2 flex-1 max-w-sm ml-auto">
+      <div class="flex items-center gap-2 flex-1 min-w-[12rem] max-w-sm ml-auto">
         <div class="relative flex-1">
           <Search class="w-4 h-4 text-mnema-tertiary absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
@@ -172,8 +172,8 @@ onMounted(async () => {
     <!-- Users Table -->
     <div class="bg-mnema-surface rounded-lg border border-mnema-hairline overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm divide-y divide-mnema-hairline">
-          <thead class="bg-mnema-canvas/50 text-xs uppercase font-mono text-mnema-tertiary tracking-wider select-none">
+        <table class="w-full text-left text-sm divide-y divide-mnema-hairline max-md:block">
+          <thead class="max-md:hidden bg-mnema-canvas/50 text-xs uppercase font-mono text-mnema-tertiary tracking-wider select-none">
             <tr>
               <th scope="col" class="py-3 px-4">{{ $t('admin.username') }}</th>
               <th scope="col" class="py-3 px-4">{{ $t('admin.displayName') }}</th>
@@ -183,9 +183,9 @@ onMounted(async () => {
               <th scope="col" class="py-3 px-4 text-right">{{ $t('admin.actions') }}</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-mnema-hairline">
-            <tr v-if="!filteredUsers.length">
-              <td colspan="6" class="p-6 text-center text-mnema-tertiary italic">
+          <tbody class="divide-y divide-mnema-hairline max-md:block">
+            <tr v-if="!filteredUsers.length" class="max-md:block">
+              <td colspan="6" class="max-md:block p-6 text-center text-mnema-tertiary italic">
                 {{ $t('admin.noUsersFound') }}
               </td>
             </tr>

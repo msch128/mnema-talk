@@ -15,6 +15,13 @@ const toasts = useToastStore()
 const recipient = ref('')
 const busy = ref(false)
 
+// The server words its refusals in English; name the two common ones here.
+function testFailure(err: unknown, noRecipient: boolean): string {
+  if (isApiError(err) && err.code === 'RATE_LIMITED') return t('admin.mail.tooOften')
+  if (isApiError(err) && err.code === 'INVALID_INPUT' && noRecipient) return t('admin.mail.needRecipient')
+  return caughtErrorMessage(err, t('admin.unknownError'))
+}
+
 async function sendTest() {
   busy.value = true
   try {
@@ -22,8 +29,7 @@ async function sendTest() {
     await api('/api/admin/system/mail/test', { method: 'POST', json: to ? { to } : {} })
     toasts.success(t('admin.mail.sent'))
   } catch (err) {
-    const limited = isApiError(err) && err.code === 'RATE_LIMITED'
-    toasts.error(limited ? t('admin.mail.tooOften') : caughtErrorMessage(err, t('admin.unknownError')))
+    toasts.error(testFailure(err, recipient.value.trim() === ''))
   } finally {
     busy.value = false
   }

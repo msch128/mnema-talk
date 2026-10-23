@@ -78,4 +78,14 @@ describe('dashboard route synchronization', () => {
     )
     expect(w.text()).toContain('Signed in as')
   })
+  it('names the dialog after the active tab and the console in the subtitle', async () => {
+    apiMock.mockResolvedValue([])
+    const w = keep(
+      mount(AdminDashboard, { global: { stubs: { AdminUsersTab: true, AdminSystemTab: true } } }),
+    )
+    expect(w.get('h2').text()).toBe('Members')
+    expect(w.text()).toContain('Admin console · Signed in as')
+    await w.get('[data-testid="tab-system"]').trigger('click')
+    expect(w.get('h2').text()).toBe('System')
+  })
 })

@@ -885,7 +885,6 @@
     "noConnect": "Du darfst diesem Talk nicht beitreten."
   },
   "admin": {
-    "title": "Speicher & Administration",
     "signedInAs": "Angemeldet als {name} (Owner)",
     "unknownError": "Unbekannter Fehler",
     "tabs": {
@@ -1190,7 +1189,8 @@
       "recipientPlaceholder": "Leer: deine eigene Adresse",
       "test": "Testmail senden",
       "sent": "Testmail gesendet.",
-      "tooOften": "Zu viele Testmails. Versuche es in ein paar Minuten erneut."
+      "tooOften": "Zu viele Testmails. Versuche es in ein paar Minuten erneut.",
+      "needRecipient": "Trag oben eine Empfängeradresse ein oder hinterlege eine E-Mail-Adresse in deinem Konto."
     },
     "resetTwoFactor": "Zwei-Faktor-Anmeldung zurücksetzen",
     "resetTwoFactorTitle": "Zwei-Faktor-Anmeldung von {name} zurücksetzen?",

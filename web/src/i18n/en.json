@@ -885,7 +885,6 @@
     "noConnect": "You don’t have permission to join this Talk."
   },
   "admin": {
-    "title": "Storage & administration",
     "signedInAs": "Signed in as {name} (Owner)",
     "unknownError": "Unknown error",
     "tabs": {
@@ -1190,7 +1189,8 @@
       "recipientPlaceholder": "Empty: your own address",
       "test": "Send test mail",
       "sent": "Test mail sent.",
-      "tooOften": "Too many test mails. Try again in a few minutes."
+      "tooOften": "Too many test mails. Try again in a few minutes.",
+      "needRecipient": "Enter a recipient above or add an e-mail address to your account."
     },
     "resetTwoFactor": "Reset two-factor sign-in",
     "resetTwoFactorTitle": "Reset two-factor sign-in for {name}?",

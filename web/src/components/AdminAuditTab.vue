@@ -156,7 +156,7 @@ onMounted(() => load(false))
             {{ e.action }} · {{ e.target_type }} {{ e.target_id }} · {{ $t('audit.request') }} {{ e.request_id }}
           </div>
           <p v-if="summary(e.details)" class="text-sm text-mnema-text break-words" :data-testid="`audit-summary-${e.id}`">{{ summary(e.details) }}</p>
-          <pre class="bg-mnema-canvas border border-mnema-border rounded-md p-3 text-xs text-mnema-text overflow-x-auto whitespace-pre-wrap break-words">{{ pretty(e.details) }}</pre>
+          <pre v-if="Object.keys(e.details).length" class="bg-mnema-canvas border border-mnema-border rounded-md p-3 text-xs text-mnema-text overflow-x-auto whitespace-pre-wrap break-words">{{ pretty(e.details) }}</pre>
         </div>
       </div>
     </div>

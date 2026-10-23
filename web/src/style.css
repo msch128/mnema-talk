@@ -154,6 +154,11 @@
 }
 
 /* Fixed panels sit outside #app's padding and keep clear of notch and home indicator themselves. */
+/* Edge fades for a sideways-scrolling strip (admin tab bar on phones). */
+.admin-tabs.fade-end { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+.admin-tabs.fade-start { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent); }
+.admin-tabs.fade-start.fade-end { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
+
 @layer utilities {
   .safe-pad {
     padding-top: env(safe-area-inset-top);
