@@ -1,0 +1,51 @@
+web/src/components/OutgoingWebhooksPanel.vue
+  s_06fcde5dbef956::t_9d534d45ae44f2 185
+web/src/components/BotDetailPanel.vue
+  s_06fcde5dbef956::t_9d534d45ae44f2 97
+web/src/components/CreateChannelModal.vue
+  s_06fcde5dbef956::t_9d534d45ae44f2 178
+web/src/components/SidebarServerMenu.vue
+  s_06fcde5dbef956::t_2abfe87b739987 2,5-6,16-18,113
+web/src/components/AdminRolesTab.vue
+  s_06fcde5dbef956::t_9d534d45ae44f2 319
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_9d534d45ae44f2 9-10
+web/src/components/BotTokensPanel.vue
+  s_06fcde5dbef956::t_9d534d45ae44f2 118
+web/src/components/AdminOnboardingTab.vue
+  s_06fcde5dbef956::t_2abfe87b739987 11,21,69
+  s_06fcde5dbef956::t_9d534d45ae44f2 126
+web/src/components/AdminLayoutToolbar.vue
+  s_06fcde5dbef956::t_9d534d45ae44f2 50
+web/src/components/AdminEditDialogs.vue
+  s_06fcde5dbef956::t_9d534d45ae44f2 59,93
+web/src/components/IncomingWebhooksPanel.vue
+  s_06fcde5dbef956::t_9d534d45ae44f2 170,192
+web/src/components/AdminBotsTab.vue
+  s_06fcde5dbef956::t_9d534d45ae44f2 84
+web/src/lib/api.ts
+  s_06fcde5dbef956::t_df0faa8a9b1193 55
+  s_06fcde5dbef956::t_df614b96fa4977 48-50
+web/src/components/AdminUploadLimit.vue
+  s_06fcde5dbef956::t_9d534d45ae44f2 66
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_9d534d45ae44f2 9-10
+web/src/components/SidebarNotifications.test.ts
+  s_06fcde5dbef956::t_8216d33d01f5ee 9-10,72-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "666f158af9fa1ba3cce1c0f085b6fd007fd8cab1",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
