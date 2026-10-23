@@ -233,9 +233,7 @@ and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client
 | Bots, the bot API and gateway | [doc/bots.md](doc/bots.md) |
 | What is public API and how it may change (1.0 stability promise) | [doc/api-stability.md](doc/api-stability.md) |
 | Where media keys live in the browser | [SECURITY.md](SECURITY.md#security-model-summary) |
-| Unused cryptographic state module (research history, not shipped) | [doc/crypto-state.md](doc/crypto-state.md) |
 | Web client code (TypeScript) | [doc/typescript.md](doc/typescript.md) |
-| Game detection for the desktop gaming integration | [doc/game-detection.md](doc/game-detection.md) |
 | Trusted desktop client, gaming overlay | [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md), [doc/desktop-app.md](doc/desktop-app.md) |
 | Load test | [loadtest/README.md](loadtest/README.md) |
 | Product status and acceptance | [doc/product-status.md](doc/product-status.md) |
