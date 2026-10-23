@@ -11,7 +11,7 @@ servers, no direct messages, no ringing, and its own quiet, dark design. It
 keeps the parts that make a community server useful: roles, private channels,
 webhooks and a call you can join with one click.
 
-![Mnema Talk: a text channel with replies, reactions and a code block](doc/images/chat.png)
+![Mnema Talk: the #dev-log channel of a small game studio, with a code block, reactions, an @mention and a thread under a bug report](doc/images/chat.png)
 
 [Features](#features) · [Quickstart](#quickstart) · [Security model](#security-and-privacy) ·
 [Desktop client](#desktop-client) · [Documentation](#documentation) ·
@@ -35,9 +35,9 @@ webhooks and a call you can join with one click.
 - **No transcoding.** A Pion-based forwarding unit (SFU) copies RTP packets;
   see [doc/architecture.md](doc/architecture.md).
 
-| Talk with a screen share and the quality picker | Safety code for the call |
+| A Talk where one member shares a code editor, with the viewing quality menu | The connection details with the safety code and the members holding the keys |
 |---|---|
-| ![A Talk with a shared screen and the viewing quality menu](doc/images/talk-screenshare.png) | ![Connection details with the safety code and the members holding the keys](doc/images/safety-code.png) |
+| ![The Stand-up Talk: Theo shares his editor, Maren watches and picks a viewing quality](doc/images/talk-screenshare.png) | ![Connection details of the Stand-up Talk with the safety code and the three members holding the keys](doc/images/safety-code.png) |
 
 ### Chat
 
@@ -55,6 +55,18 @@ webhooks and a call you can join with one click.
 - Upload size is up to the Owner: a global limit and an optional limit per
   role, within the `MAX_UPLOAD_SIZE_MB` ceiling.
 - German and English, chosen per account.
+
+| A thread under a message | Unread divider and an @mention |
+|---|---|
+| ![The thread under Priya's bug report in #dev-log, with four replies](doc/images/thread.png) | ![#general with a line "New since" above the messages that arrived after the last visit, and an @mention highlighted](doc/images/unread.png) |
+
+| Pinned rules and release schedule | A poll with votes |
+|---|---|
+| ![The pinned messages of #announcements: the rules and the release schedule](doc/images/pins.png) | ![A poll in #playtests asking which day the next playtest should be, with voters listed](doc/images/poll.png) |
+
+| The studio's own emoji | The phone layout |
+|---|---|
+| ![The emoji picker with the community's custom emoji in its first group](doc/images/emoji-picker.png) | ![#dev-log on a phone: a code block, an @mention and the thread link](doc/images/phone.png) |
 
 ### Supported browsers
 
@@ -75,6 +87,7 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 - **Accounts you control.** Optional e-mail (password reset needs SMTP),
   two-factor sign-in with recovery codes, and self-service export and deletion
   of your own data.
+
 - **Hardened by default**: `HttpOnly` session cookies with revocation, CSRF
   origin check, strict CSP, upload content sniffing, rate limits and login
   lockout, an SSRF guard for outgoing webhooks, and an app port that only
@@ -83,6 +96,8 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
   deletion unless enabled (`MEDIA_RETENTION_DAYS=0`), no telemetry (the optional release check is the only call home, and it can be
   turned off).
 - Release images are signed with cosign and ship provenance and an SBOM.
+
+![Turning on two-factor sign-in: a QR code for the authenticator app, the manual key and a field for the first code](doc/images/two-factor.png)
 
 ### Administration
 
@@ -106,7 +121,7 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 
 | Roles and permissions | Webhook settings |
 |---|---|
-| ![The roles editor with the Moderator role selected](doc/images/roles.png) | ![The webhooks dialog of a channel with an incoming webhook's settings](doc/images/webhooks.png) |
+| ![The roles editor with the Devs role selected, next to Moderator, Artists and the other roles](doc/images/roles.png) | ![The webhooks dialog of #dev-log with the build bot's incoming webhook and its settings](doc/images/webhooks.png) |
 
 ### Operations
 
@@ -124,7 +139,7 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 - Optional TURN relay (`coturn` profile) and a self-update sidecar
   (`autoupdate` profile, off by default).
 
-![The admin System tab with live operations charts](doc/images/operations.png)
+![The admin System tab with live operations charts while a Talk with a screen share is running](doc/images/operations.png)
 
 ## Quickstart
 

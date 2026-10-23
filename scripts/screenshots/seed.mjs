@@ -339,10 +339,20 @@ function spreadOverADay() {
       SELECT id, date_trunc('day', now()) - interval '1 day' + interval '9 hours 40 minutes'
         + row_number() OVER (ORDER BY created_at, number) * interval '3 minutes'
         + (abs(hashtext(id::text)) % 3) * interval '20 seconds' AS ts
-      FROM messages) t WHERE m.id = t.id;`
+      FROM messages) t WHERE m.id = t.id;
+    -- Everyone joined a few days ago, so unread counts start there. The Owner has
+    -- read the announcements and #dev-log, and #general up to Ines' answer about
+    -- the controller; the other channels are unread.
+    UPDATE users SET created_at = now() - interval '3 days';
+    DELETE FROM channel_reads WHERE user_id = (SELECT id FROM users WHERE username = :'owner');
+    INSERT INTO channel_reads (user_id, channel_id, last_read_at)
+      SELECT u.id, c.id, CASE WHEN c.name = 'general'
+        THEN (SELECT created_at FROM messages WHERE channel_id = c.id AND content LIKE 'Yes, controller works%')
+        ELSE now() END
+      FROM users u, channels c WHERE u.username = :'owner' AND c.name IN ('announcements', 'dev-log', 'general');`
   const project = process.env.SHOTS_COMPOSE_PROJECT || 'mnema-shots'
   const file = new URL('../../e2e/docker-compose.yml', import.meta.url).pathname
-  execFileSync('docker', ['compose', '-p', project, '-f', file, 'exec', '-T', 'postgres', 'psql', '-U', 'mnema', '-d', 'mnema_e2e', '-v', 'ON_ERROR_STOP=1'], { input: sql, stdio: ['pipe', 'inherit', 'inherit'] })
+  execFileSync('docker', ['compose', '-p', project, '-f', file, 'exec', '-T', 'postgres', 'psql', '-U', 'mnema', '-d', 'mnema_e2e', '-v', 'ON_ERROR_STOP=1', '-v', `owner=${ADMIN_USER}`], { input: sql, stdio: ['pipe', 'inherit', 'inherit'] })
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
