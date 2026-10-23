@@ -1,0 +1,29 @@
+web/src/lib/dfn/dfnBridgeWorklet.test.ts
+  s_06fcde5dbef956::t_4ff6f21671fabf 54,60,99,110,151,204,207,215,218
+web/src/lib/dfn/dfnBridgeWorklet.ts
+  s_06fcde5dbef956::t_4ff6f21671fabf 6-8,12,49,58,63,101-102,107,132,160
+web/src/lib/dfn/dfnNode.ts
+  s_06fcde5dbef956::t_4ff6f21671fabf 46
+web/src/lib/dfn/dfnNode.test.ts
+  s_06fcde5dbef956::t_4ff6f21671fabf 105
+web/src/lib/dfn/dfnWorker.test.ts
+  s_06fcde5dbef956::t_4ff6f21671fabf 81
+web/src/lib/dfn/dfnWorker.ts
+  s_06fcde5dbef956::t_4ff6f21671fabf 30-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "13af83723a74e65cca309d221fc651dd4b30112c",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
