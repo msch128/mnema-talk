@@ -1,0 +1,125 @@
+web/src/components/AccountSecurityDialog.vue
+  s_06fcde5dbef956::t_7c76f4af68bfef 8,32
+web/src/components/ProfilePassword.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 1-87
+web/src/components/CommunityRulesDialog.vue
+  s_06fcde5dbef956::t_7c76f4af68bfef 1-19
+web/src/i18n/auditLabels.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 1-68
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_7c76f4af68bfef 5,14,257-262
+web/src/components/PollCard.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 8-9,134,138-148
+  s_06fcde5dbef956::t_e5d7f9f59af638 149
+web/src/stores/chat/notifications.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 3,9,24-33,41-46,58
+web/src/composables/useMessageActions.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 12,114
+web/src/components/MentionsInbox.vue
+  s_06fcde5dbef956::t_7c76f4af68bfef 11,105
+web/src/stores/emoji.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 19-20,31,55
+web/src/lib/chatLogic.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 16-19,21
+web/src/lib/customEmoji.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 2,80-95
+  s_06fcde5dbef956::t_33dba7818c6c67 96
+web/src/components/ReactionBar.vue
+  s_06fcde5dbef956::t_7c76f4af68bfef 7-8,28,34-40,49
+web/src/components/EphemeralNotes.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 1-24
+web/src/components/SidebarServerMenu.vue
+  s_06fcde5dbef956::t_7c76f4af68bfef 3,5-6,16-17,148-150
+  s_06fcde5dbef956::t_2484deff366356 151
+web/src/App.vue
+  s_06fcde5dbef956::t_7c76f4af68bfef 22,24,335-336
+  s_06fcde5dbef956::t_b6145661886e2f 337
+web/src/composables/useMessageMenu.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 17,64
+web/src/lib/errorDetails.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 1-83
+web/src/lib/chatLogic.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 45-50
+web/src/components/EditHistoryDialog.vue
+  s_06fcde5dbef956::t_7c76f4af68bfef 9,52,56
+web/src/components/CommunityRulesDialog.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 1-59
+web/src/composables/usePoll.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 34-37,85
+web/src/components/AccountSecurityDialog.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 141-152
+web/src/components/PushSection.vue
+  s_06fcde5dbef956::t_7c76f4af68bfef 34
+web/src/stores/chatComfort.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 97-116,259,261-262,264-265
+web/src/components/ThreadComposer.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 1-24
+web/src/components/MentionsInbox.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 57-69
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_7c76f4af68bfef 64-65,114,116-121,123-125,127-132,134-137,140-143,145-146,149,151-153,155-159,465,1243,1349,1473,1477,1572-1574,1592-1593,1634-1635,1653-1666,1669-1670,1679-1698,2081,2173-2175
+  s_06fcde5dbef956::t_024a5f08c92b89 115,122,126,133,138-139,144,147-148,150,154,464,1242,1348,2080
+web/src/components/PollCard.vue
+  s_06fcde5dbef956::t_7c76f4af68bfef 21,80
+  s_06fcde5dbef956::t_aeee49d6551286 81
+web/src/components/SearchResultItem.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 1-26
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_7c76f4af68bfef 64-65,114-146,148-159,465,1242-1243,1349,1473,1572-1574,1592-1593,1634-1635,1653-1666,1669-1670,1679-1698,2081,2173-2175
+  s_06fcde5dbef956::t_024a5f08c92b89 147,464,1348,1477,2080
+web/src/components/ThreadSidebar.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 493-513
+web/src/components/UserProfileModal.vue
+  s_06fcde5dbef956::t_7c76f4af68bfef 5,7,34-40,239-243
+web/src/components/EphemeralNotes.vue
+  s_06fcde5dbef956::t_7c76f4af68bfef 5,30
+web/src/components/AdminAuditTab.vue
+  s_06fcde5dbef956::t_7c76f4af68bfef 20
+web/src/components/PollDialog.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 103
+web/src/lib/api.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 6,32-36,38-39,42-45
+web/src/lib/communityRules.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 1-4
+web/src/components/SearchResultItem.vue
+  s_06fcde5dbef956::t_7c76f4af68bfef 8,12-13,25-26
+web/src/lib/errorDetails.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 1-98
+web/src/components/ThreadComposer.vue
+  s_06fcde5dbef956::t_7c76f4af68bfef 4,27-29,108
+web/src/stores/chat/polls.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 4-5,53-55
+web/src/composables/useMessageActions.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 270-279
+web/src/components/ReactionBar.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 9,69-92
+  s_06fcde5dbef956::t_567fa878bb08fb 93
+web/src/stores/chatPollCreate.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 1-27
+web/src/stores/chatNotificationBody.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 1-39
+web/src/lib/customEmoji.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 39-43
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 13,15,70-71,83,94,103-104,117-119,121
+web/src/components/UserProfileModal.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 14,142,144-148,151-155
+web/src/components/AdminAuditTab.test.ts
+  s_06fcde5dbef956::t_7c76f4af68bfef 49-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "39bc5bc0bdf862f0470f009b8c97c72a91065efd",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
