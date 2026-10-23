@@ -54,7 +54,7 @@ describe('the conversation list', () => {
     expect(chat.dms).toEqual([])
   })
 
-  it('lists the newest conversation first and counts its unread messages like mentions', async () => {
+  it('lists the newest conversation first with its unread count, and no mentions of the inbox', async () => {
     const chat = setup()
     const quiet = dmFixture({ id: fixtureId(102), members: [dmMemberFixture(1), bo], last_message_at: '2026-01-02T00:00:00Z' })
     const busy = dmFixture({ id: fixtureId(103), members: [dmMemberFixture(1), dmMemberFixture(4)], last_message_at: '2026-01-03T00:00:00Z', unread_count: 3 })
@@ -62,7 +62,7 @@ describe('the conversation list', () => {
     await chat.fetchDms()
     expect(chat.dms.map(d => d.id)).toEqual([busy.id, quiet.id])
     expect(chat.dmsLoaded).toBe(true)
-    expect(chat.readStates[busy.id]).toMatchObject({ unread_count: 3, mention_count: 3, notify_level: 'all' })
+    expect(chat.readStates[busy.id]).toMatchObject({ unread_count: 3, mention_count: 0, notify_level: 'all' })
   })
 
   it('keeps the counts of conversations when the channels read states are read again', async () => {
@@ -92,7 +92,7 @@ describe('events', () => {
     expect(chat.dms).toHaveLength(2)
     chat.handleWSEvent({ type: 'message_create', payload: messageFixture({ id: fixtureId(8), channel_id: pair.id, user_id: ada.id, created_at: '2030-01-01T00:00:00Z' }) })
     expect(chat.dms[0]?.id).toBe(pair.id)
-    expect(chat.readStates[pair.id]).toMatchObject({ unread_count: 1, mention_count: 1 })
+    expect(chat.readStates[pair.id]).toMatchObject({ unread_count: 1, mention_count: 0 })
   })
 
   it('does not count a message of the conversation that is open and being read', async () => {
@@ -145,6 +145,19 @@ describe('events', () => {
     useChatStore().handleWSEvent({ type: 'block_updated', payload: { user_id: ada.id, blocked: true } })
     await vi.advanceTimersByTimeAsync(0)
     expect(vi.mocked(api).mock.calls.map(([u]) => u)).toContain('/api/me/blocks')
+  })
+})
+
+describe('mark everything read', () => {
+  it('reads the conversations too, but not for one category', async () => {
+    const chat = setup()
+    http.handle = url => (url === '/api/dms' ? [{ ...pair, unread_count: 4 }] : [])
+    await chat.fetchDms()
+    await chat.markAllRead(fixtureId(10))
+    expect(chat.readStates[pair.id]?.unread_count).toBe(4)
+    await chat.markAllRead()
+    expect(chat.readStates[pair.id]?.unread_count).toBe(0)
+    expect(calls('POST').some(([u]) => u === `/api/channels/${pair.id}/read`)).toBe(true)
   })
 })
 

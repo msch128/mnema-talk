@@ -43,8 +43,11 @@ function resyncState(cx: Cx) {
   fetchMembers(cx)
   fetchReadState(cx)
   fetchNotificationSettings(cx)
-  void fetchDms(cx)
-  void useBlocksStore().load()
+  // The first open follows the snapshots of sign-in by an instant; only a reconnect may have missed events.
+  if (cs.reconnectCount.value > 0) {
+    void fetchDms(cx)
+    void useBlocksStore().load()
+  }
   const channel = cs.activeChannel.value
   if (channel && channel.type === 'text' && !cs.hasMoreAfter.value) fetchMessages(cx, channel.id)
   if (cs.activeThread.value) openThread(cx, cs.activeThread.value)

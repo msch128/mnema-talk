@@ -32,16 +32,12 @@ export function dmChannel(cx: Cx, id: string | null | undefined): Channel | null
   return dm ? dmAsChannel(dm, cx.authStore.user?.id) : null
 }
 
-/**
- * What the sidebar counts for a conversation. Every message of somebody else
- * in a conversation is addressed to the caller, so each unread one also counts
- * as a mention (the badge, the tab title and the notification follow).
- */
+/** What the sidebar counts for a conversation (mentions are only the real ones, so the inbox badge stays about mentions). */
 function readStateOf(dm: ChatDirectMessage): ReadState {
   return {
     channel_id: dm.id,
     unread_count: dm.unread_count,
-    mention_count: dm.unread_count,
+    mention_count: dm.mention_count,
     last_read_at: dm.last_read_at,
     notify_level: dm.notify_level === 'inherit' ? 'all' : dm.notify_level
   }

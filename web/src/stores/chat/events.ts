@@ -120,8 +120,7 @@ function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
   const isCurrentChannel = p.channel_id === cs.activeChannel.value?.id
   // A muted channel only counts what is addressed to me, the way the server counts it.
   const muted = notificationLevel(cx, p.channel_id) === 'mute'
-  // Everything somebody writes in a conversation is addressed to me.
-  const isMention = isDm(cx, p.channel_id) || (muted ? messageMentionsMeDirectly(cx, p) : messageMentionsMe(cx, p))
+  const isMention = muted ? messageMentionsMeDirectly(cx, p) : messageMentionsMe(cx, p)
 
   // A blocked member's message is folded in the list; it adds no unread, mention or notification.
   if (!isOwn && useBlocksStore().isBlocked(p.user_id)) {
@@ -130,7 +129,8 @@ function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
   }
   handleIncomingMessageReadState(cx, { channelId: p.channel_id, isOwn, isCurrentChannel, isMention, isThreadReply: !!p.parent_id })
   if (!isOwn && p.channel_id) {
-    triggerBrowserNotification(cx, p, isMention)
+    // Everything somebody writes in a conversation is addressed to me.
+    triggerBrowserNotification(cx, p, isMention || isDm(cx, p.channel_id))
   }
 }
 

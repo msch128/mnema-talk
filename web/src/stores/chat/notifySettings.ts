@@ -114,8 +114,12 @@ export async function markAllRead(cx: Cx, categoryId?: string) {
     const prev = next[ch.id]
     if (prev) next[ch.id] = { ...prev, unread_count: 0, mention_count: 0, last_read_at: now }
   }
+  // Conversations are not channels: "everything read" includes them when there is no category.
+  const unreadDms = categoryId ? [] : cs.dms.value.filter(d => (next[d.id]?.unread_count ?? 0) > 0)
+  for (const dm of unreadDms) next[dm.id] = { ...next[dm.id]!, unread_count: 0, mention_count: 0, last_read_at: now }
   cs.readStates.value = next
   try {
+    await Promise.all(unreadDms.map(dm => api(`/api/channels/${dm.id}/read`, { method: 'POST' })))
     await api('/api/read-state/read-all', { method: 'POST', json: categoryId ? { category_id: categoryId } : {} })
     assertCommunity(cx, community)
     return true
