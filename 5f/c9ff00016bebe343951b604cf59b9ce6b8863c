@@ -1,0 +1,25 @@
+web/src/style.css
+  s_06fcde5dbef956::t_3fd54857929937 96-97
+web/src/components/AudioSettingsModal.test.ts
+  s_06fcde5dbef956::t_fe028a8e4ab062 330
+web/src/components/SidebarChannelRow.vue
+  s_06fcde5dbef956::t_d605d03ab138ac 174
+doc/development.md
+  s_06fcde5dbef956::t_87610c86e6740f 150-160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5fc9ff00016bebe343951b604cf59b9ce6b8863c",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
