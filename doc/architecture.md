@@ -325,6 +325,20 @@ Do Not Disturb silences everything. Unread counts and the mentions inbox
 (`GET /api/mentions`) are independent of the level, so a muted channel still
 shows what was addressed to the member.
 
+**Thread follow (1.1).** A reply notifies only the thread's followers (push and
+the in-page notification alike). The author of the root, everyone who replies
+and everyone mentioned in a reply follow automatically, in the reply's own
+transaction (`thread_follows`, migration 0054, backfilled for existing
+threads). `PUT`/`DELETE /api/threads/{id}/follow` change it; an explicit
+unfollow is kept and a later reply does not undo it, but a reply that mentions
+the member by name or quotes their message still reaches them. A change, and
+a reply that makes someone follow, is sent to that member's own sessions as
+`thread_follow_updated` (a hub tap, [`thread_follow_sync.go`](../internal/chat/thread_follow_sync.go)), and
+`GET /api/threads/following` lists the followed threads for clients. The
+in-page OS notification shows the message text only when the member's
+"show message text" setting is on and the operator has not set
+`PUSH_PREVIEWS=off`, like Web Push.
+
 **Mentions.** A message stores one `message_mentions` row per notified member,
 with a `kind` (by name, `@all`/`@here`, through a role) and the mentioned roles
 in `message_role_mentions` (migration 0036), so a pill survives a role rename.
@@ -334,7 +348,8 @@ without the right to mention everyone notifies at most 50 members per message
 
 **Search.** `GET /api/search` runs trigram-indexed substring matching on
 message text (`pg_trgm`, one index since migration 0038) with filters (channel,
-author, mentions, attachment kind, date window). Results are limited to the
+author, mentions, attachment kind, date window; since 1.1 also `has=poll`,
+`has=edit` and `is=pinned`). Results are limited to the
 channels the caller can read, using the same permission snapshot as message
 listing; a query has a length and term cap, a database statement timeout and
 at most two searches in flight per member.

@@ -1361,9 +1361,27 @@
     "failed": "Die angehefteten Nachrichten konnten nicht geladen werden. Versuche es noch einmal.",
     "unpinFailed": "Die Nachricht konnte nicht gelöst werden. Versuche es noch einmal.",
     "poll": "Umfrage",
+    "pinnedBy": "Angeheftet von {name}",
+    "pinnedByOn": "Angeheftet von {name} · {date}",
     "notice": "{name} hat eine Nachricht in diesem Kanal angeheftet.",
     "view": "Ansehen",
     "dismiss": "Ausblenden"
+  },
+  "saved": {
+    "title": "Gespeicherte Nachrichten",
+    "empty": "Noch nichts gespeichert. Speichere eine Nachricht über ihr Menü, um sie hier nur für dich aufzubewahren.",
+    "failed": "Deine gespeicherten Nachrichten konnten nicht geladen werden. Versuche es noch einmal.",
+    "unavailable": "Diese Nachricht ist nicht mehr verfügbar.",
+    "save": "Nachricht speichern",
+    "removeFromSaved": "Aus Gespeichert entfernen",
+    "remove": "Entfernen",
+    "added": "Nachricht gespeichert.",
+    "removed": "Aus deinen gespeicherten Nachrichten entfernt.",
+    "saveFailed": "Die Nachricht konnte nicht gespeichert werden. Versuche es noch einmal.",
+    "removeFailed": "Die Nachricht konnte nicht entfernt werden. Versuche es noch einmal.",
+    "editNote": "Notiz bearbeiten",
+    "saveNote": "Notiz speichern",
+    "notePlaceholder": "Notiz (nur für dich sichtbar)"
   },
   "mentions": {
     "inbox": "Erwähnungen",
@@ -1593,7 +1611,8 @@
       "settings": "Einstellungen",
       "moderation": "Moderation",
       "emoji": "Emoji",
-      "bot": "Bots"
+      "bot": "Bots",
+      "poll": "Umfragen"
     },
     "actions": {
       "role": {
@@ -1660,7 +1679,11 @@
         "delete": "Nachricht gelöscht",
         "edit": "Nachricht bearbeitet",
         "pin": "Nachricht angeheftet",
-        "unpin": "Anheftung aufgehoben"
+        "unpin": "Anheftung aufgehoben",
+        "edit_history_view": "Bearbeitungsverlauf angesehen"
+      },
+      "poll": {
+        "end": "Umfrage von Moderation beendet"
       },
       "voice": {
         "join": "Talk betreten",

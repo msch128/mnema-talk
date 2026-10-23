@@ -1406,6 +1406,17 @@ export function isChatFirstUnreadResponse(value: unknown): value is ChatFirstUnr
 
 export const decodeChatFirstUnreadResponse = decoder("chat.FirstUnreadResponse", isChatFirstUnreadResponse)
 
+export type ChatFollowedThreads = {
+  thread_ids: Array<string>
+}
+
+export function isChatFollowedThreads(value: unknown): value is ChatFollowedThreads {
+  return isRecord(value)
+    && (hasOwn(value, "thread_ids") && isArrayOf(value["thread_ids"], item => isIdentifier(item)))
+}
+
+export const decodeChatFollowedThreads = decoder("chat.FollowedThreads", isChatFollowedThreads)
+
 export type ChatInEmbed = {
   author: {
   name: string
@@ -1596,6 +1607,8 @@ export type ChatMessage = {
   mentions: Array<string>
   number: number
   parent_id?: string
+  pinned_at?: string
+  pinned_by?: ChatUserRef
   poll?: ChatPoll
   reactions: Array<ChatReactionSummary>
   reply_count: number
@@ -1624,6 +1637,8 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (hasOwn(value, "mentions") && isArrayOf(value["mentions"], item => isIdentifier(item)))
     && (hasOwn(value, "number") && isInteger(value["number"]))
     && (!hasOwn(value, "parent_id") || isIdentifier(value["parent_id"]))
+    && (!hasOwn(value, "pinned_at") || isTimestamp(value["pinned_at"]))
+    && (!hasOwn(value, "pinned_by") || isChatUserRef(value["pinned_by"]))
     && (!hasOwn(value, "poll") || isChatPoll(value["poll"]))
     && (hasOwn(value, "reactions") && isArrayOf(value["reactions"], item => isChatReactionSummary(item)))
     && (hasOwn(value, "reply_count") && isInteger(value["reply_count"]))
@@ -2028,6 +2043,49 @@ export function isChatResolveReportRequest(value: unknown): value is ChatResolve
 
 export const decodeChatResolveReportRequest = decoder("chat.ResolveReportRequest", isChatResolveReportRequest)
 
+export type ChatSaveRequest = {
+  note?: string | null
+}
+
+export function isChatSaveRequest(value: unknown): value is ChatSaveRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "note") || (isString(value["note"], 200) || value["note"] === null))
+}
+
+export const decodeChatSaveRequest = decoder("chat.SaveRequest", isChatSaveRequest)
+
+export type ChatSavedMessage = {
+  available: boolean
+  message?: ChatMessage
+  message_id: string
+  note: string
+  saved_at: string
+}
+
+export function isChatSavedMessage(value: unknown): value is ChatSavedMessage {
+  return isRecord(value)
+    && (hasOwn(value, "available") && typeof value["available"] === 'boolean')
+    && (!hasOwn(value, "message") || isChatMessage(value["message"]))
+    && (hasOwn(value, "message_id") && isIdentifier(value["message_id"]))
+    && (hasOwn(value, "note") && isString(value["note"], 200))
+    && (hasOwn(value, "saved_at") && isTimestamp(value["saved_at"]))
+}
+
+export const decodeChatSavedMessage = decoder("chat.SavedMessage", isChatSavedMessage)
+
+export type ChatSavedPage = {
+  has_more: boolean
+  items: Array<ChatSavedMessage>
+}
+
+export function isChatSavedPage(value: unknown): value is ChatSavedPage {
+  return isRecord(value)
+    && (hasOwn(value, "has_more") && typeof value["has_more"] === 'boolean')
+    && (hasOwn(value, "items") && isArrayOf(value["items"], item => isChatSavedMessage(item)))
+}
+
+export const decodeChatSavedPage = decoder("chat.SavedPage", isChatSavedPage)
+
 export type ChatSearchResult = {
   has_more: boolean
   messages: Array<ChatMessage>
@@ -2076,17 +2134,32 @@ export function isChatSetNotifyLevelRequest(value: unknown): value is ChatSetNot
 export const decodeChatSetNotifyLevelRequest = decoder("chat.SetNotifyLevelRequest", isChatSetNotifyLevelRequest)
 
 export type ChatThread = {
+  following?: boolean
   replies: Array<ChatMessage>
   root: ChatMessage
 }
 
 export function isChatThread(value: unknown): value is ChatThread {
   return isRecord(value)
+    && (!hasOwn(value, "following") || typeof value["following"] === 'boolean')
     && (hasOwn(value, "replies") && isArrayOf(value["replies"], item => isChatMessage(item)))
     && (hasOwn(value, "root") && isChatMessage(value["root"]))
 }
 
 export const decodeChatThread = decoder("chat.Thread", isChatThread)
+
+export type ChatThreadFollow = {
+  following: boolean
+  thread_id: string
+}
+
+export function isChatThreadFollow(value: unknown): value is ChatThreadFollow {
+  return isRecord(value)
+    && (hasOwn(value, "following") && typeof value["following"] === 'boolean')
+    && (hasOwn(value, "thread_id") && isIdentifier(value["thread_id"]))
+}
+
+export const decodeChatThreadFollow = decoder("chat.ThreadFollow", isChatThreadFollow)
 
 export type ChatUpdateChannelRequest = {
   name?: string
@@ -2104,6 +2177,23 @@ export function isChatUpdateChannelRequest(value: unknown): value is ChatUpdateC
 }
 
 export const decodeChatUpdateChannelRequest = decoder("chat.UpdateChannelRequest", isChatUpdateChannelRequest)
+
+export type ChatUserRef = {
+  avatar_url?: string
+  display_name: string
+  id: string
+  username: string
+}
+
+export function isChatUserRef(value: unknown): value is ChatUserRef {
+  return isRecord(value)
+    && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
+    && (hasOwn(value, "display_name") && isString(value["display_name"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "username") && isString(value["username"]))
+}
+
+export const decodeChatUserRef = decoder("chat.UserRef", isChatUserRef)
 
 export type EmojiEmoji = {
   animated: boolean

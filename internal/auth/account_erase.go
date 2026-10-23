@@ -45,6 +45,7 @@ var eraseSteps = []string{
 	`DELETE FROM invites WHERE created_by = $1`,
 	`DELETE FROM channel_reads WHERE user_id = $1`,
 	`DELETE FROM category_notify WHERE user_id = $1`,
+	`DELETE FROM thread_follows WHERE user_id = $1`,
 	`DELETE FROM slow_mode_posts WHERE user_id = $1`,
 	`DELETE FROM user_roles WHERE user_id = $1`,
 	`DELETE FROM permission_overwrites WHERE user_id = $1`,
@@ -62,6 +63,7 @@ var eraseSteps = []string{
 	`DELETE FROM login_challenges WHERE user_id = $1`,
 	`DELETE FROM second_factor_failures WHERE user_id = $1`,
 	`DELETE FROM user_blocks WHERE blocker_id = $1 OR blocked_id = $1`,
+	`DELETE FROM saved_messages WHERE user_id = $1`,
 	// Reports keep their copies of other people's messages, so the person's
 	// own text is blanked in every copy (as reported message or as context),
 	// and the links to their account are cut. The reports stay for the

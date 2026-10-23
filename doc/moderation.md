@@ -99,7 +99,9 @@ Holders of *Manage messages* in a channel can:
   a pin also shows a compact note under the messages of every open client (it
   is not a stored message, so it is gone after a reload; the list is the
   record). Both actions are audited (`message.pin`, `message.unpin`). Deleting a
-  message unpins it.
+  message unpins it. A pinned message carries `pinned_at` and `pinned_by` (the
+  member who pinned it, absent once that account is gone) on every payload and
+  on the `pins_changed` event, and the pinned list shows "Pinned by".
 - **Delete with a reason**: `DELETE /api/channels/{channelID}/messages/{messageID}`
   takes an optional JSON body `{"reason": "..."}`. The author is told through a
   `moderation_notice`; the audit entry (`message.delete`, `moderator: true`)
@@ -138,7 +140,8 @@ minute per member (`edit_history` in the rate-limit metrics).
   `EDIT_HISTORY_RETENTION_DAYS` (default `0`: keep) additionally drops versions
   replaced longer ago than that many days; the worker runs every six hours.
 - **Removed with their source.** Deleting the message deletes its versions
-  (cascade). Deleting an account deletes the versions of that person's messages
+  (cascade); the `message.delete` entry keeps them first (`edit_versions`, newest
+  first, with the same text policy as the entry's own text). Deleting an account deletes the versions of that person's messages
   together with the message text; the messages stay as emptied tombstones.
   Edits made before this feature (migration 0047) have no history.
 
@@ -233,6 +236,8 @@ requests leave no entry. Reading the log is not recorded.
 |---|---|---|
 | `message.delete` | A message is deleted, by its author or a moderator | The **full text**, the attachment names, types and sizes (not the files), author, channel, send time, `moderator` (true when someone else deleted it) and the thread replies (author and text, up to 50) |
 | `message.edit` | An author edits a message | Text `before` and `after`, author, channel |
+| `message.edit_history_view` | A moderator opens the earlier versions of **someone else's** message | Message, author, channel and how many versions were shown, not their text. One entry per reader and message every ten minutes; reading your own message leaves none |
+| `poll.end` | A moderator ends a poll that someone else posted | Message, author, channel and the question. An author ending their own poll is not audited |
 | `voice.join`, `voice.leave` | A member enters or leaves a Talk | Member and Talk with the time. A reload within the grace period is neither. High volume on a busy server: filter by the *Talk presence* group |
 | `report.create`, `report.resolve`, `report.delete` | A member reports a message; a moderator closes or deletes the report | The report id and category (and the closing status). Never message text or notes. See [Blocking and reports](#blocking-and-reports) |
 | `auth.login` | Successful sign-in (browser and native) | The member |

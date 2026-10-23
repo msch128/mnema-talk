@@ -1,6 +1,7 @@
 import type { ServerEvent, ServerEventPayloads, ServerEventType } from '../../types/events'
 import { useToastStore } from '../toast'
 import { useEmojiStore } from '../emoji'
+import { useSavedStore } from '../saved'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
 import { noticeText } from '../../lib/moderation'
@@ -168,8 +169,10 @@ const HANDLERS: Handlers = {
     fetchChannels(cx)
   },
   emoji_changed: () => { void useEmojiStore().load() },
+  thread_follow_updated: () => {},
   // The block list lives in the blocks store of the direct messages client (next package); nothing to refresh yet.
   block_updated: () => {},
+  saved_updated: (_cx, p) => { if (p) useSavedStore().onUpdated(p) },
   // The direct messages client (next package) keeps these lists; nothing to refresh yet.
   dm_created: () => {},
   dm_member_added: () => {},

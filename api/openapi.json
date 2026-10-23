@@ -2258,6 +2258,21 @@
         ],
         "type": "object"
       },
+      "chat.FollowedThreads": {
+        "properties": {
+          "thread_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "thread_ids"
+        ],
+        "type": "object"
+      },
       "chat.InEmbed": {
         "properties": {
           "author": {
@@ -2638,6 +2653,14 @@
           "parent_id": {
             "format": "uuid",
             "type": "string"
+          },
+          "pinned_at": {
+            "description": "PinnedAt and PinnedBy say when and by whom a pinned message was pinned;\nboth are absent on an unpinned message (PinnedBy also when the member\nis gone).",
+            "format": "date-time",
+            "type": "string"
+          },
+          "pinned_by": {
+            "$ref": "#/components/schemas/chat.UserRef"
           },
           "poll": {
             "$ref": "#/components/schemas/chat.Poll",
@@ -3335,6 +3358,68 @@
         ],
         "type": "object"
       },
+      "chat.SaveRequest": {
+        "properties": {
+          "note": {
+            "description": "Note replaces the note; left out (or null), a saved message keeps its\nnote and a new one starts without.",
+            "maxLength": 200,
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "chat.SavedMessage": {
+        "properties": {
+          "available": {
+            "description": "Available is false when the caller may no longer see the message; then\nMessage is absent and nothing but the id and the note is sent.",
+            "type": "boolean"
+          },
+          "message": {
+            "$ref": "#/components/schemas/chat.Message"
+          },
+          "message_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "note": {
+            "description": "Note is the caller's own note (up to 200 characters), possibly empty.",
+            "maxLength": 200,
+            "type": "string"
+          },
+          "saved_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "available",
+          "message_id",
+          "note",
+          "saved_at"
+        ],
+        "type": "object"
+      },
+      "chat.SavedPage": {
+        "properties": {
+          "has_more": {
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/chat.SavedMessage"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "has_more",
+          "items"
+        ],
+        "type": "object"
+      },
       "chat.SearchResult": {
         "properties": {
           "has_more": {
@@ -3412,6 +3497,10 @@
       },
       "chat.Thread": {
         "properties": {
+          "following": {
+            "description": "Following: replies of this thread notify the caller. Servers before 1.1 do not send it.",
+            "type": "boolean"
+          },
           "replies": {
             "items": {
               "$ref": "#/components/schemas/chat.Message"
@@ -3425,6 +3514,24 @@
         "required": [
           "replies",
           "root"
+        ],
+        "type": "object"
+      },
+      "chat.ThreadFollow": {
+        "properties": {
+          "following": {
+            "description": "Following: replies of the thread notify the caller.",
+            "type": "boolean"
+          },
+          "thread_id": {
+            "description": "ThreadID is the root message of the thread.",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "following",
+          "thread_id"
         ],
         "type": "object"
       },
@@ -3452,6 +3559,29 @@
             "type": "integer"
           }
         },
+        "type": "object"
+      },
+      "chat.UserRef": {
+        "properties": {
+          "avatar_url": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "display_name",
+          "id",
+          "username"
+        ],
         "type": "object"
       },
       "emoji.Emoji": {
@@ -18981,7 +19111,7 @@
     },
     "/api/channels/{channelID}/messages/{messageID}/edits": {
       "get": {
-        "description": "The earlier versions of an edited message, newest first (at most 50). Needs the Manage messages permission in the channel (the Owner always); the author and other members cannot read it. Not searched and not part of any export except the author's own. Rate limited per member. An unedited message has an empty list.",
+        "description": "The earlier versions of an edited message, newest first (at most 50). Needs the Manage messages permission in the channel (the Owner always); the author and other members cannot read it. Not searched and not part of any export except the author's own. Rate limited per member. A read of another member's message is recorded in the audit log (message.edit_history_view), once per reader and message every ten minutes. An unedited message has an empty list.",
         "operationId": "getMessageEditHistory",
         "parameters": [
           {
@@ -19437,7 +19567,7 @@
     },
     "/api/channels/{channelID}/messages/{messageID}/poll/end": {
       "post": {
-        "description": "The poll's author, or a member with Manage messages in the channel, closes voting now. Ending an ended poll changes nothing. Broadcasts poll_update.",
+        "description": "The poll's author, or a member with Manage messages in the channel, closes voting now. Ending an ended poll changes nothing. A moderator ending someone else's poll is recorded in the audit log (poll.end). Broadcasts poll_update.",
         "operationId": "endPoll",
         "parameters": [
           {
@@ -19793,7 +19923,7 @@
     },
     "/api/channels/{channelID}/pins": {
       "get": {
-        "description": "The channel's pinned messages, the most recently pinned first (at most 50). Needs View channel. Deleting a message unpins it.",
+        "description": "The channel's pinned messages, the most recently pinned first (at most 50), each with pinned_at and pinned_by. Needs View channel. Deleting a message unpins it.",
         "operationId": "listPins",
         "parameters": [
           {
@@ -21807,6 +21937,298 @@
         ]
       }
     },
+    "/api/me/saved": {
+      "get": {
+        "description": "The caller's private saved list, newest first. Visibility is checked on every read: a message the caller can no longer see comes back with available=false and no message, only their own note. At most 1,000 messages can be saved.",
+        "operationId": "listSaved",
+        "parameters": [
+          {
+            "description": "Page size. Values below 1 or non-numeric fall back to the default; larger values are clamped to 100.",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page back: only entries older than this saved message.",
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.SavedPage"
+                }
+              }
+            },
+            "description": "One page of the saved list."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List saved messages",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/me/saved/{messageID}": {
+      "delete": {
+        "description": "Idempotent. Works for a message the caller can no longer see. Sends saved_updated to the caller's own sessions.",
+        "operationId": "unsaveMessage",
+        "parameters": [
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed (or was not saved)."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Remove a saved message",
+        "tags": [
+          "Messages"
+        ]
+      },
+      "put": {
+        "description": "Adds the message to the caller's private saved list, or changes the note of a saved one (idempotent; a body without note keeps the note). Needs View channel for the message's channel; otherwise the message does not exist for the caller (404). At most 1,000 saved messages (409 beyond). Sends saved_updated to the caller's own sessions.",
+        "operationId": "saveMessage",
+        "parameters": [
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.SaveRequest"
+              }
+            }
+          },
+          "description": "Optional note."
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.SavedMessage"
+                }
+              }
+            },
+            "description": "The saved entry."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the saved list is full."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Save a message",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
     "/api/media/{id}": {
       "get": {
         "description": "Streams an attachment or avatar. Supports Range and conditional requests. Inline for safe types, attachment otherwise.",
@@ -23758,7 +24180,7 @@
     },
     "/api/search": {
       "get": {
-        "description": "Text channels and voice channels' chats (with dm=true, the caller's direct messages instead), newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id, mentions, has, after or before_date is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.",
+        "description": "Text channels and voice channels' chats (with dm=true, the caller's direct messages instead), newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id, mentions, has, is, after or before_date is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.",
         "operationId": "searchMessages",
         "parameters": [
           {
@@ -23789,7 +24211,7 @@
             }
           },
           {
-            "description": "Only messages with a file, an image, a video or a link.",
+            "description": "Only messages with a file, an image, a video, a link, a poll or an edit.",
             "in": "query",
             "name": "has",
             "schema": {
@@ -23797,7 +24219,20 @@
                 "file",
                 "image",
                 "video",
-                "link"
+                "link",
+                "poll",
+                "edit"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only pinned messages.",
+            "in": "query",
+            "name": "is",
+            "schema": {
+              "enum": [
+                "pinned"
               ],
               "type": "string"
             }
@@ -23925,6 +24360,263 @@
           }
         ],
         "summary": "Search messages",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/threads/following": {
+      "get": {
+        "description": "The root message IDs of the threads the caller follows in channels they may view, newest follow first, at most 500. A client uses it to decide which thread replies notify.",
+        "operationId": "listFollowedThreads",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.FollowedThreads"
+                }
+              }
+            },
+            "description": "Followed threads."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Threads the caller follows",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/threads/{threadID}/follow": {
+      "delete": {
+        "description": "Replies of the thread stop notifying the caller, except those that mention the caller or quote their message. The choice is kept: a later reply by the caller does not follow the thread again. Needs View channels. Idempotent. Sends thread_follow_updated to the caller's sessions.",
+        "operationId": "unfollowThread",
+        "parameters": [
+          {
+            "description": "ID of the thread's root message.",
+            "in": "path",
+            "name": "threadID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.ThreadFollow"
+                }
+              }
+            },
+            "description": "The follow state."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed ID."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such thread, or its channel is hidden from the caller."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Unfollow a thread",
+        "tags": [
+          "Messages"
+        ]
+      },
+      "put": {
+        "description": "Replies of the thread notify the caller from now on (push and in-page notifications). The root's author, everyone who replies and everyone mentioned in a reply follow automatically. Needs View channels; a reply or an unknown message is 404. Idempotent. Sends thread_follow_updated to the caller's sessions.",
+        "operationId": "followThread",
+        "parameters": [
+          {
+            "description": "ID of the thread's root message.",
+            "in": "path",
+            "name": "threadID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.ThreadFollow"
+                }
+              }
+            },
+            "description": "The follow state."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed ID."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such thread, or its channel is hidden from the caller."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Follow a thread",
         "tags": [
           "Messages"
         ]

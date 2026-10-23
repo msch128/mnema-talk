@@ -2,6 +2,7 @@
 // internal/ws/{handle,voice,presence,signal,lifecycle}.go and chat publications.
 import type { ModerationNotice } from '../lib/moderation'
 import type { Message, Poll, ReactionSummary, ReadState, User, UserUpdate, VoiceUser, Presence } from './domain'
+import type { ChatUserRef } from './rest'
 import { isAuthUser, isChatMessage, isChatPoll, isChatReactionSummary, isChatNotifyLevel } from './rest'
 import { ContractError, hasOwn, isRecord, isIdentifier, isTimestamp, isInteger, isString, isArrayOf, isDictionaryOf } from './validation'
 
@@ -84,8 +85,12 @@ export interface ServerEventPayloads {
   roles_changed: null
   /** A custom emoji was added, renamed or deleted: refetch GET /api/emoji. */
   emoji_changed: null
+  /** The caller followed or unfollowed a thread (sent to their own sessions only). */
+  thread_follow_updated: { thread_id: string; channel_id: string; following: boolean }
   /** The caller blocked or unblocked a member (own sessions only): refetch GET /api/me/blocks. */
   block_updated: { user_id: string; blocked: boolean }
+  /** The caller saved or removed a message (own sessions only): refetch GET /api/me/saved. */
+  saved_updated: { message_id: string; saved: boolean }
   /** A direct message was started with the receiver, or the receiver was added to a group: a DirectMessage as GET /api/dms/{id} returns it. */
   dm_created: DirectMessageRef
   /** A member joined a group direct message the receiver is in. */
@@ -101,7 +106,7 @@ export interface ServerEventPayloads {
   /** Tallies of a poll after a vote or its end; the same for every viewer (no voters in an anonymous poll). */
   poll_update: { message_id: string; channel_id: string; poll: Poll }
   /** A message was pinned or unpinned: refetch GET /api/channels/{id}/pins and note it in the channel. */
-  pins_changed: { channel_id: string; message_id: string; pinned: boolean; actor_id: string; actor_name: string }
+  pins_changed: { channel_id: string; message_id: string; pinned: boolean; actor_id: string; actor_name: string; pinned_at?: string; pinned_by?: ChatUserRef }
   interaction_response: InteractionResponse
   user_update: UserUpdate
   /** A member's timeout started (timeout_until) or ended (null). */
@@ -292,6 +297,7 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['read_state', isReadStateUpdate],
   ['message_delete', payload => isIdentifier(payload['id']) && isIdentifier(payload['channel_id'])
     && (payload['parent_id'] === null || isIdentifier(payload['parent_id']))],
+  ['thread_follow_updated', payload => isIdentifier(payload['thread_id']) && isIdentifier(payload['channel_id']) && typeof payload['following'] === 'boolean'],
   ['pins_changed', payload => isIdentifier(payload['channel_id']) && isIdentifier(payload['message_id']) && typeof payload['pinned'] === 'boolean'
     && isIdentifier(payload['actor_id']) && isString(payload['actor_name'], 128)],
   ['message_reaction', payload => isIdentifier(payload['message_id']) && (!hasOwn(payload, 'channel_id') || isIdentifier(payload['channel_id']))
@@ -304,6 +310,7 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['member_timeout', payload => isIdentifier(payload['id']) && (payload['timeout_until'] === null || isTimestamp(payload['timeout_until']))
     && onlyFields(payload, ['id', 'timeout_until'])],
   ['moderation_notice', isModerationNotice],
+  ['saved_updated', payload => isIdentifier(payload['message_id']) && typeof payload['saved'] === 'boolean' && onlyFields(payload, ['message_id', 'saved'])],
   ['dm_created', payload => isIdentifier(payload['id']) && typeof payload['group'] === 'boolean' && isArrayOf(payload['members'], isDirectMessageMember)
     && isTimestamp(payload['created_at']) && (payload['last_message_at'] === null || isTimestamp(payload['last_message_at']))
     && isInteger(payload['unread_count']) && isInteger(payload['mention_count'])
@@ -355,7 +362,7 @@ function isNoteEmbed(value: unknown): boolean {
 
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
-  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
+  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'media_handshake'

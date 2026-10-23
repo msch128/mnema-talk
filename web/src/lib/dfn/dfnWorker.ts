@@ -6,6 +6,11 @@ let handle: number | null = null
 let frameLength = 0
 let port: MessagePort | null = null
 
+// What went wrong, for whoever watches the worker's replies; never audio or model data.
+function failureReason(err: unknown): string {
+  return err instanceof Error ? err.message.slice(0, 200) : 'unknown'
+}
+
 function handleInit(data: unknown): void {
   if (!isDfnInit(data) || handle !== null) return
   initSync({ module: data.wasmModule })
@@ -22,9 +27,8 @@ function processFrame(framePort: MessagePort, activeHandle: number, frame: unkno
     if (!(samples instanceof Float32Array) || samples.length !== frameLength) throw new Error('Invalid filter output')
     framePort.postMessage({ type: 'frame', id: frame.id, samples }, [samples.buffer])
   } catch (err) {
-    void err
     framePort.postMessage({ type: 'failed' })
-    self.postMessage({ type: 'failed' })
+    self.postMessage({ type: 'failed', reason: failureReason(err) })
   }
 }
 
@@ -46,7 +50,6 @@ self.onmessage = ({ data }: MessageEvent<unknown>) => {
       handleConnect(data)
     }
   } catch (err) {
-    void err
-    self.postMessage({ type: 'failed' })
+    self.postMessage({ type: 'failed', reason: failureReason(err) })
   }
 }

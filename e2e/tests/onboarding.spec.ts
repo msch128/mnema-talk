@@ -101,6 +101,9 @@ test('invite links name the community, rules block a member until accepted, and 
     await ensureSuiteMember(a, b)
     expect((await apiFetch(b, 'POST', `/api/channels/${channelId}/messages`, { content: 'before the rules' })).status).toBe(201)
 
+    // Earlier runs against the same database may have raised the version already.
+    const versionBefore = Number(((await apiFetch(b, 'GET', '/api/onboarding')).json as { rules_version?: number }).rules_version ?? 0)
+
     // The Owner writes the community name and rules in the admin console.
     await a.goto('/admin/onboarding')
     const form = a.getByTestId('onboarding-settings')
@@ -128,7 +131,7 @@ test('invite links name the community, rules block a member until accepted, and 
 
     // The existing member must accept first: reading works, writing answers RULES_NOT_ACCEPTED.
     const pending = await apiFetch(b, 'GET', '/api/onboarding')
-    expect(pending.json).toMatchObject({ rules_pending: true, community_name: COMMUNITY, rules_version: 1 })
+    expect(pending.json).toMatchObject({ rules_pending: true, community_name: COMMUNITY, rules_version: versionBefore + 1 })
     const refused = await apiFetch(b, 'POST', `/api/channels/${channelId}/messages`, { content: 'too early' })
     expect(refused.status).toBe(403)
     expect(refused.json).toMatchObject({ error: { code: 'RULES_NOT_ACCEPTED' } })

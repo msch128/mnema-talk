@@ -13,16 +13,18 @@ import (
 type Config struct {
 	// LogLevel overrides the log level: "debug", "info", "warn" or "error"
 	// (empty: info in production, debug otherwise).
-	LogLevel             string
-	Port                 string
-	BindAddr             string
-	AppEnv               string
-	PublicURL            string
-	AllowedOrigins       []string
-	TrustedProxies       []string
-	JWTSecret            string
-	SessionExpiryHours   int
-	AdminUsername        string
+	LogLevel           string
+	Port               string
+	BindAddr           string
+	AppEnv             string
+	PublicURL          string
+	AllowedOrigins     []string
+	TrustedProxies     []string
+	JWTSecret          string
+	SessionExpiryHours int
+	AdminUsername      string
+	// InitialLanguage (INITIAL_LANGUAGE, en or de) names the default categories and channels of a brand-new installation.
+	InitialLanguage      string
 	AdminInitialPassword string
 	DatabaseURL          string
 	S3Endpoint           string

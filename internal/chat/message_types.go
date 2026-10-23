@@ -70,6 +70,19 @@ type Message struct {
 	Embeds []Embed `json:"embeds,omitempty" binding:"optional"`
 	// Poll is set when the message is a poll; its content is the question.
 	Poll *Poll `json:"poll,omitempty" binding:"optional"`
+	// PinnedAt and PinnedBy say when and by whom a pinned message was pinned;
+	// both are absent on an unpinned message (PinnedBy also when the member
+	// is gone).
+	PinnedAt *time.Time `json:"pinned_at,omitempty" binding:"optional" format:"date-time"`
+	PinnedBy *UserRef   `json:"pinned_by,omitempty" binding:"optional"`
+}
+
+// UserRef is a member in short: enough to show a name and an avatar.
+type UserRef struct {
+	ID          uuid.UUID `json:"id" format:"uuid"`
+	Username    string    `json:"username"`
+	DisplayName string    `json:"display_name"`
+	AvatarURL   string    `json:"avatar_url,omitempty" binding:"optional"`
 }
 
 // Embed is a rich card on a webhook message: the Discord embed fields Mnema

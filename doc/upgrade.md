@@ -140,7 +140,7 @@ server lacks.
   existing role: nobody gains access to reports until a role is given it
   (the Owner and Administrators have it implicitly).
 - **`GET /api/health` has a `features` list** (for example `"blocks"`,
-  `"reports"`): the web app uses it to show only what the server supports.
+  `"reports"`, `"search.filters.v2"`, `"threads.follow"`): the web app uses it to show only what the server supports.
 - **Direct messages** (migration 0050): conversations of two to ten members
   ([architecture](architecture.md#direct-messages), [SECURITY](../SECURITY.md#direct-messages-privacy-model)).
   The new permission *Send direct messages* (bit `1 << 22`) is added to
@@ -156,6 +156,17 @@ server lacks.
 - **New events** `dm_created`, `dm_member_added`, `dm_member_removed`.
 - **New event** `block_updated`, sent only to the blocker's own sessions.
 - **Export** gains `blocks.json` and `reports.json`.
+- **Migration 0051** adds `saved_messages`.
+- **Saved messages** (feature `saved`): a private list of up to 1,000
+  messages per member with an optional note of up to 200 characters
+  (`GET /api/me/saved`, `PUT` / `DELETE /api/me/saved/{messageId}`; event
+  `saved_updated` to the member's own sessions). A row is a reference, never a
+  copy, and access is checked on every read: a message the member can no
+  longer see comes back as unavailable. The export gains `saved.json` (ids,
+  notes and times, not the saved text); erasing an account removes the list.
+- **"Pinned by".** Messages and the pin event carry `pinned_at` and
+  `pinned_by` while pinned; the pinned list shows who pinned a message and
+  when. Additive, no migration.
 - **Stricter style policy.** The web app's Content-Security-Policy no longer
   allows inline styles: `style-src 'unsafe-inline'` became `style-src 'self'`
   plus `style-src-attr 'none'` (see [SECURITY.md](../SECURITY.md#security-model-summary)
@@ -188,6 +199,21 @@ server lacks.
   bound by assumption.
 - **No change to the media frame format.** Refusing frame version 2 was
   re-evaluated and deferred to 2.0 (SECURITY.md).
+
+- **Migration 0054** adds `thread_follows` and fills it from the existing
+  threads (root authors and repliers), so threads keep notifying the people
+  who took part. From then on a thread reply notifies only its followers (the
+  root's author, repliers, people mentioned in a reply, and anyone who
+  followed it by hand). Nothing else changes for members; 0055 is reserved
+  and unused.
+- The audit log gains `message.edit_history_view` and `poll.end`, and a
+  `message.delete` entry of an edited message carries its earlier versions.
+  Audit retention applies to them as to any entry.
+- New setting `INITIAL_LANGUAGE` (`de` default, or `en`) for the default category and channel names of a brand-new installation. An upgrade never renames anything.
+- Search accepts `has=poll`, `has=edit` and `is=pinned`. The new routes
+  (`/api/threads/{id}/follow`, `/api/threads/following`) and the event
+  `thread_follow_updated` are additive; a 1.0.x web bundle ignores them.
+- **Export** also gains `thread_follows.json`.
 
 ### 1.0.0 → 1.0.1
 

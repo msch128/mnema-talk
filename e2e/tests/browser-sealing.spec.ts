@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { Browser, Page } from '@playwright/test'
 import { apiFetch, audioDecodedIn, responseString, suiteMember, trackPeerConnections, leaveTalks } from './helpers'
 import { test, expect } from './fixtures'
 
@@ -47,7 +47,25 @@ async function memberFor(admin: Page, member: Page) {
   await member.reload()
 }
 
+// Playwright's Linux WebKit (WPE/GTK, version 26.6 like the macOS build) ships
+// WebRTC but not the encoded-media API: RTCRtpScriptTransform,
+// RTCRtpSender.createEncodedStreams and RTCEncodedAudioFrame are all undefined,
+// so the app correctly refuses to join a call there (the second spec below
+// proves that path). Real Safari and macOS WebKit have the API. Only that exact
+// gap skips the spec, so a build that gains the API runs it again.
+async function lacksFrameTransformOnLinuxWebKit(browser: Browser) {
+  if (browser.browserType().name() !== 'webkit' || process.platform !== 'linux') return false
+  const probe = await browser.newContext()
+  try {
+    const page = await probe.newPage()
+    return await page.evaluate(() => typeof RTCRtpScriptTransform === 'undefined')
+  } finally {
+    await probe.close()
+  }
+}
+
 test('call media is sealed on every audio line and arrives decoded', async ({ browser }) => {
+  test.skip(await lacksFrameTransformOnLinuxWebKit(browser), 'Playwright Linux WebKit has no RTCRtpScriptTransform; calls cannot be sealed there')
   const contexts = await Promise.all([0, 1].map(() => browser.newContext({ permissions: ['microphone', 'camera'] })))
   const [adminCtx, memberCtx] = contexts as [typeof contexts[0], typeof contexts[0]]
   for (const ctx of contexts) {

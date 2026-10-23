@@ -119,8 +119,10 @@ func (c *components) newCore() {
 		DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog,
 		EditHistoryLimit: httpx.NewRateLimiter(chat.EditHistoryRate, time.Minute).Named("edit_history"),
 		PinLimit:         httpx.NewRateLimiter(chat.PinChangesPerMinute, time.Minute).Named("pin"),
+		FollowLimit:      httpx.NewRateLimiter(chat.ThreadFollowChangesPerMinute, time.Minute).Named("thread_follow"),
 		BlockLimit:       httpx.NewRateLimiter(chat.BlockChangesPerMinute, time.Minute).Named("block"),
 		ReportLimit:      httpx.NewRateLimiter(chat.ReportsPerHour, time.Hour).Named("report"),
+		SavedLimit:       httpx.NewRateLimiter(chat.SavedChangesPerMinute, time.Minute).Named("saved"),
 		DMLimit:          httpx.NewRateLimiter(chat.NewDMsPerMinute, time.Minute).Named("dm_start"),
 	}
 	go chat.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour)
@@ -184,7 +186,7 @@ func (c *components) newBots() {
 	c.botH = &bot.Handler{DB: d.DB, Perms: c.permSvc, Media: c.mediaH, Events: c.pub}
 	c.botAuthn = bot.NewAuthenticator(d.DB)
 	c.botAuthn.Perms = c.permSvc
-	c.pollSvc = poll.NewService(poll.Service{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub})
+	c.pollSvc = poll.NewService(poll.Service{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Audit: c.auditLog})
 	c.cmds = bot.NewCommands(bot.Commands{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Builtins: builtinCommands(c.pollSvc)})
 	gw := gateway.New(gateway.Config{Auth: c.botAuthn, Perms: c.permSvc, DB: d.DB, PublicURL: c.cfg.PublicURL})
 	c.gw = gw
@@ -209,6 +211,19 @@ func (c *components) newBots() {
 			prevTap(ch, eventType, payload)
 		}
 		gw.Observe(ch, eventType, payload)
+	}
+}
+
+// tapThreadFollows tells open clients which threads they follow after a reply
+// made them follow it (see chat.NewFollowSync).
+func (c *components) tapThreadFollows() {
+	prevTap := c.hub.Tap
+	follows := chat.NewFollowSync(c.ctx, c.d.DB, c.permSvc, c.pub)
+	c.hub.Tap = func(ch uuid.UUID, eventType string, payload any) {
+		if prevTap != nil {
+			prevTap(ch, eventType, payload)
+		}
+		follows(ch, eventType, payload)
 	}
 }
 
