@@ -26,13 +26,13 @@ Replace the version and paths with yours.
 
 ```sh
 cd /path/to/mnema-talk
-NEW=0.8.0                                  # version to install
+NEW=1.0.0                                  # version to install
 
 # 1. Back up database, media and .env (see operations.md, "Backups")
 BACKUP_DIR=/path/to/backups ./scripts/backup.sh
 
 # 2. Note what runs now, for a rollback
-grep '^MNEMA_IMAGE=' .env                  # e.g. ghcr.io/msch128/mnema-talk:0.7.25
+grep '^MNEMA_IMAGE=' .env                  # e.g. ghcr.io/msch128/mnema-talk:0.9.0
 curl -fsS http://127.0.0.1:8080/api/health # {"status":"ok","version":"..."}
 cp docker-compose.yml docker-compose.yml.bak
 
@@ -354,7 +354,7 @@ operator is below. Update with the procedure above; take the backup first.
   not simply start the old image on the migrated database; restore the backup
   taken before the upgrade (see "Rollback" above).
 
-### 0.8.x → next
+### 0.8.x (up to 0.8.16)
 
 - **Upload limits are now editable by the Owner.** `MAX_UPLOAD_SIZE_MB`
   (default `50`, unchanged) stays the hard ceiling and the initial limit, so
