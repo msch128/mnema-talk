@@ -19,7 +19,9 @@ import MemberList from './components/MemberList.vue'
 import ThreadSidebar from './components/ThreadSidebar.vue'
 import InviteLanding from './components/InviteLanding.vue'
 import RecoveryPage from './components/RecoveryPage.vue'
+import { rulesOpen } from './lib/communityRules'
 import AccountSecurityDialog from './components/AccountSecurityDialog.vue'
+import CommunityRulesDialog from './components/CommunityRulesDialog.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 import AudioSettingsModal from './components/AudioSettingsModal.vue'
@@ -329,6 +331,9 @@ onMounted(async () => {
 
       <!-- First run and re-acceptance of changed rules -->
       <WelcomeFlow />
+
+      <!-- The community rules, read again from the server menu -->
+      <CommunityRulesDialog v-if="rulesOpen" />
 
       <!-- Legal & privacy dialog -->
       <LegalModal v-if="showLegalModal" @close="showLegalModal = false" />

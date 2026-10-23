@@ -1,6 +1,8 @@
 import type { Poll, PollCreateRequest, PollDetail } from '../../types/domain'
 import { decodeMessage, decodePollDetail } from '../../types/domain'
 import { api } from '../../lib/api'
+import { encodeShortcodes } from '../../lib/customEmoji'
+import { useEmojiStore } from '../emoji'
 import { assertCommunity, type Cx } from './state'
 import { applyToMessage, insertMessage } from './messageWindow'
 
@@ -48,7 +50,9 @@ export async function endPoll(cx: Cx, channelId: string, messageId: string): Pro
 /** Posts a poll to the channel; the WebSocket echo is de-duplicated by insertMessage. */
 export async function createPoll(cx: Cx, channelId: string, request: PollCreateRequest) {
   const community = cx.cs.communityGeneration
-  const msg = await api(`/api/channels/${channelId}/polls`, { method: 'POST', json: request, decode: decodeMessage })
+  // The question is message text: a typed :name: becomes the emoji, like in any message. Options stay plain text.
+  const json = { ...request, question: encodeShortcodes(request.question, useEmojiStore().byName) }
+  const msg = await api(`/api/channels/${channelId}/polls`, { method: 'POST', json, decode: decodeMessage })
   assertCommunity(cx, community)
   insertMessage(cx, msg)
   return msg

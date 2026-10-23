@@ -17,7 +17,7 @@ const toasts = useToastStore()
 const chat = useChatStore()
 
 // Event groups the server understands as a prefix (action=role matches role.*).
-const GROUPS = ['role', 'user', 'channel', 'category', 'layout', 'invite', 'webhook', 'outgoing_webhook', 'media', 'settings', 'moderation', 'message', 'voice', 'auth', 'bot', 'emoji', 'system'] as const
+const GROUPS = ['role', 'user', 'channel', 'category', 'layout', 'invite', 'webhook', 'outgoing_webhook', 'media', 'settings', 'moderation', 'message', 'voice', 'auth', 'system', 'emoji', 'bot'] as const
 
 const entries = ref<AuditItem[]>([])
 const next = ref<number | null>(null)

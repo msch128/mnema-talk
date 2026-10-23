@@ -8,6 +8,7 @@ import { useDismissable } from '../composables/useDismissable'
 import { locale } from '../i18n'
 import UserAvatar from './UserAvatar.vue'
 import { shownName } from '../lib/deletedUser'
+import { previewText } from '../lib/replies'
 
 // The mentions inbox in the channel header: a button with the number of
 // unread mentions and a popover listing them; a click jumps to the message.
@@ -101,7 +102,7 @@ function when(iso: string) {
               <CornerDownRight v-if="msg.parent_id" class="h-3 w-3 text-mnema-tertiary" :aria-label="$t('chat.inThread')" />
               <span class="ml-auto flex-shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
             </span>
-            <span class="line-clamp-2 break-words text-sm text-mnema-muted">{{ msg.content }}</span>
+            <span class="line-clamp-2 break-words text-sm text-mnema-muted">{{ previewText(msg.content) }}</span>
           </span>
         </button>
         <button

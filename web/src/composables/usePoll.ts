@@ -31,7 +31,10 @@ export function usePoll(message: () => Message) {
   const mine = computed(() => (poll.value.anonymous ? anonymousVotes.value : votedFor(poll.value, auth.user?.id)))
 
   const channelId = () => message().channel_id
-  const canVote = computed(() => !ended.value && permissions.canIn(channelId(), 'add_reactions'))
+  const mayVote = computed(() => permissions.canIn(channelId(), 'add_reactions'))
+  const canVote = computed(() => !ended.value && mayVote.value)
+  // An open poll the member may not vote in (voting needs Add reactions): the card says so.
+  const votingBlocked = computed(() => !ended.value && !mayVote.value)
   const canEnd = computed(() => !ended.value && (message().user_id === auth.user?.id || permissions.canIn(channelId(), 'manage_messages')))
 
   // The minute counter ticks; a timeout flips the card the moment voting ends.
@@ -79,5 +82,5 @@ export function usePoll(message: () => Message) {
     : Promise.resolve()
   const end = () => canEnd.value ? run(() => chat.endPoll(channelId(), message().id)) : Promise.resolve()
 
-  return { poll, ended, left, mine, busy, canVote, canEnd, vote, end }
+  return { poll, ended, left, mine, busy, canVote, votingBlocked, canEnd, vote, end }
 }

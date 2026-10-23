@@ -16,6 +16,8 @@ export function prefersReducedMotion(): boolean {
 export const useEmojiStore = defineStore('emoji', () => {
   const items = ref<CustomEmoji[]>([])
   const limit = ref(0)
+  // False until the first list arrived: an unknown emoji is only "gone" once the list is known.
+  const loaded = ref(false)
   const byId = computed(() => new Map(items.value.map(e => [e.id, e])))
   const byName = computed(() => new Map(items.value.map(e => [e.name, e])))
 
@@ -26,6 +28,7 @@ export const useEmojiStore = defineStore('emoji', () => {
       const list = await api('/api/emoji', { decode: decodeEmojiList })
       items.value = list.emoji.map(e => ({ id: e.id, name: e.name, animated: e.animated, url: e.url, ...(e.still_url ? { still_url: e.still_url } : {}) }))
       limit.value = list.limit
+      loaded.value = true
     } catch {
       // The list on screen stays; the next emoji_changed or reconnect asks again.
     }
@@ -49,5 +52,5 @@ export const useEmojiStore = defineStore('emoji', () => {
     await load()
   }
 
-  return { items, limit, byId, byName, load, upload, rename, remove }
+  return { items, limit, loaded, byId, byName, load, upload, rename, remove }
 })

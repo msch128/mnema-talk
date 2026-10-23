@@ -54,6 +54,19 @@ describe('MentionsInbox', () => {
     expect(w.find('[data-testid="mentions-inbox"]').exists()).toBe(false)
   })
 
+  it('shows a mention as plain text: no Markdown markers, hidden spoilers, emoji as :name:', async () => {
+    const msg = messageFixture({ id: fixtureId(33), content: '**hey** @member ||secret|| <:blob:11111111-2222-4333-8444-555555555555>', channel_id: fixtureId(2) })
+    apiMock.mockResolvedValue({ messages: [msg], has_more: false })
+    const w = mountInbox()
+    await w.find('[data-testid="mentions-inbox-button"]').trigger('click')
+    await flushPromises()
+    const text = w.find('[data-testid="mentions-inbox-item"]').text()
+    expect(text).toContain('hey @member Spoiler :blob:')
+    expect(text).not.toContain('secret')
+    expect(text).not.toContain('**')
+    expect(text).not.toContain('<:')
+  })
+
   it('shows the empty and failed states, and loads more', async () => {
     apiMock.mockResolvedValueOnce({ messages: [], has_more: false })
     const w = mountInbox()

@@ -164,8 +164,9 @@ smoke: docker ## Start the built image with the production compose file and chec
 fresh-install: docker ## Follow doc/deployment.md "Fresh install" in an empty directory with this build, then sign in as the Owner
 	scripts/fresh-install-check.sh mnema-talk:local
 
-docs-check: ## Relative links and anchors in README.md, SECURITY.md and doc/*.md (no network)
+docs-check: ## Relative links and anchors in README.md, SECURITY.md and doc/*.md, and no merge-conflict markers in tracked files (no network)
 	node scripts/check-doc-links.mjs
+	node scripts/check-conflict-markers.mjs
 
 backup-drill: docker ## Back up, change, verify and restore a throwaway compose stack, then check the data
 	scripts/backup-drill.sh mnema-talk:local
