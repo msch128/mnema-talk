@@ -1,0 +1,149 @@
+AGENTS.md
+  s_06fcde5dbef956::t_1053449a2c32a5 28,37,43,71-80,93,97-98,111
+web/src/composables/useMessageActions.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 12,114
+web/src/components/EphemeralNotes.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 1-24
+web/src/components/EphemeralNotes.vue
+  s_06fcde5dbef956::t_1053449a2c32a5 5,30
+web/src/components/PushSection.vue
+  s_06fcde5dbef956::t_1053449a2c32a5 34
+doc/crypto-state.md
+  s_06fcde5dbef956::t_1053449a2c32a5 1,3-14,123,126-136
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 13,15,70-71,83,94,103-104,117-119,121
+web/src/components/CommunityRulesDialog.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 1-59
+web/src/components/AdminAuditTab.vue
+  s_06fcde5dbef956::t_1053449a2c32a5 20
+web/src/components/UserProfileModal.vue
+  s_06fcde5dbef956::t_1053449a2c32a5 5,7,34-40,239-243
+scripts/check-conflict-markers.mjs
+  s_06fcde5dbef956::t_1053449a2c32a5 1-38
+web/src/lib/customEmoji.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 39-43
+web/src/components/PollCard.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 8-9,134,138-148
+  s_06fcde5dbef956::t_ebbb4d7e4c3756 149
+web/src/i18n/auditLabels.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 1-68
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_1053449a2c32a5 5,14,257-262
+web/src/lib/api.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 6,32-36,38-39,42-45
+web/src/components/PollCard.vue
+  s_06fcde5dbef956::t_1053449a2c32a5 21,80
+  s_06fcde5dbef956::t_69a0fa6c7a12a1 81
+web/src/components/SearchResultItem.vue
+  s_06fcde5dbef956::t_1053449a2c32a5 8,12-13,25-26
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_1053449a2c32a5 64-65,112-157,462-463,1240-1241,1346-1347,1471,1475,1571-1572,1633,1652,1660-1664,1668,1678-1682,1690,1695-1696,2078-2079,2171-2173
+web/src/components/ThreadComposer.vue
+  s_06fcde5dbef956::t_1053449a2c32a5 4,27-29,108
+web/src/components/CommunityRulesDialog.vue
+  s_06fcde5dbef956::t_1053449a2c32a5 1-19
+web/src/components/ReactionBar.vue
+  s_06fcde5dbef956::t_1053449a2c32a5 7-8,28,34-40,49
+web/src/components/ProfilePassword.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 1-87
+web/src/components/ThreadSidebar.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 493-513
+web/src/lib/chatLogic.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 16-19,21
+web/src/lib/errorDetails.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 1-98
+README.md
+  s_06fcde5dbef956::t_1053449a2c32a5 48-52,59-67,75-77,132-138,140,180,200-201,209-210,213,224,230,235-238
+web/src/components/ReactionBar.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 9,69-92
+  s_06fcde5dbef956::t_c8d46678bb4675 93
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_1053449a2c32a5 170-174
+web/src/stores/chat/notifications.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 3,9,24-33,41-46,58
+doc/operations.md
+  s_06fcde5dbef956::t_1053449a2c32a5 418,679,702
+web/src/components/AccountSecurityDialog.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 141-152
+web/src/lib/chatLogic.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 45-50
+web/src/components/UserProfileModal.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 14,142,144-148,151-155
+Makefile
+  s_06fcde5dbef956::t_1053449a2c32a5 167,169
+web/src/components/SidebarServerMenu.vue
+  s_06fcde5dbef956::t_1053449a2c32a5 3,5-6,16-17,148-150
+  s_06fcde5dbef956::t_a54092d12c73eb 151
+doc/product-status.md
+  s_06fcde5dbef956::t_1053449a2c32a5 20-25,30,62,69,83-84,187-190,193-195,197,209,226-227
+doc/upgrade.md
+  s_06fcde5dbef956::t_1053449a2c32a5 29,35,357
+web/src/components/PollDialog.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 103
+web/src/composables/useMessageActions.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 270-279
+web/src/App.vue
+  s_06fcde5dbef956::t_1053449a2c32a5 22,24,335-336
+  s_06fcde5dbef956::t_fbf9da15165e1e 337
+web/src/components/SearchResultItem.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 1-26
+web/src/lib/customEmoji.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 2,80-95
+  s_06fcde5dbef956::t_4e40af2f1794c7 96
+web/src/lib/errorDetails.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 1-83
+web/src/stores/chat/polls.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 4-5,53-55
+web/src/stores/chatNotificationBody.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 1-39
+doc/glossary.md
+  s_06fcde5dbef956::t_1053449a2c32a5 1-42
+doc/release-notes-1.0.md
+  s_06fcde5dbef956::t_1053449a2c32a5 8-22,49-52,76-78
+web/src/components/AccountSecurityDialog.vue
+  s_06fcde5dbef956::t_1053449a2c32a5 8,32
+SECURITY.md
+  s_06fcde5dbef956::t_1053449a2c32a5 12-15
+doc/deployment.md
+  s_06fcde5dbef956::t_1053449a2c32a5 74-88,97,146,163,165,169-173
+web/src/composables/useMessageMenu.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 17,64
+web/src/components/MentionsInbox.vue
+  s_06fcde5dbef956::t_1053449a2c32a5 11,105
+web/src/composables/usePoll.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 34-37,85
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_1053449a2c32a5 64-65,112-157,462-463,1240-1241,1346-1347,1471,1475,1571-1572,1633,1652,1660-1664,1668,1678-1682,1690,1695-1696,2078-2079,2171-2173
+web/src/stores/chatComfort.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 97-116,259,261-262,264-265
+web/src/lib/communityRules.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 1-4
+web/src/components/EditHistoryDialog.vue
+  s_06fcde5dbef956::t_1053449a2c32a5 9,52,56
+web/src/stores/chatPollCreate.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 1-27
+web/src/components/ThreadComposer.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 1-24
+web/src/components/AdminAuditTab.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 49-64
+web/src/stores/emoji.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 19-20,31,55
+web/src/components/MentionsInbox.test.ts
+  s_06fcde5dbef956::t_1053449a2c32a5 57-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "759a56bf02721dc20e6d04dcc549457fbe8b826a",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
