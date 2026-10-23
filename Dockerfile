@@ -59,7 +59,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS="${TARGETOS:-linux}" GOARCH="${TARGETARCH:-amd64}" GOARM="${TARGETVARIANT#v}" \
     go build -trimpath \
       -ldflags="-w -s -X github.com/msch128/mnema-talk/internal/version.Version=${v} -X github.com/msch128/mnema-talk/internal/version.Revision=${REVISION}" \
-      -o /out/mnema-talk ./cmd/server
+      -o /out/mnema-talk ./cmd/server && \
+    CGO_ENABLED=0 GOOS="${TARGETOS:-linux}" GOARCH="${TARGETARCH:-amd64}" GOARM="${TARGETVARIANT#v}" \
+    go build -trimpath -ldflags="-w -s" -o /out/mnema-updater ./cmd/updater
 
 # --- Stage 3: runtime files, prepared on the build machine ---
 # CA bundle, time zone data and /etc/passwd are the same on every
@@ -77,6 +79,10 @@ COPY --from=rootfs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certific
 COPY --from=rootfs /usr/share/zoneinfo /usr/share/zoneinfo
 
 COPY --from=builder /out/mnema-talk /usr/local/bin/mnema-talk
+# The self-update sidecar (compose profile autoupdate) runs from this same
+# image with another entrypoint: it checks a new image's signature and
+# provenance before the app is restarted on it.
+COPY --from=builder /out/mnema-updater /usr/local/bin/mnema-updater
 
 ENV PORT=8080 \
     BIND_ADDR=0.0.0.0 \

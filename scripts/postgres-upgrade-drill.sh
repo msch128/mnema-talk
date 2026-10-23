@@ -42,9 +42,9 @@ for scenario in $SCENARIOS; do
     [ -z "$existing" ] || { echo "project $project already has $kind resources; refusing without cleanup" >&2; exit 1; }
   done
   # Also refuse exact names whose owners did not attach Compose labels.
-  existing=$(docker ps -aq --filter "name=^/${project}-(app|postgres|seaweedfs|coturn|updater)$")
+  existing=$(docker ps -aq --filter "name=^/${project}-(app|postgres|seaweedfs|coturn|updater|recreator)$")
   [ -z "$existing" ] || { echo 'drill container names already exist; refusing without cleanup' >&2; exit 1; }
-  existing=$(docker network ls -q --filter "name=^${project}-(network|updater-network)$")
+  existing=$(docker network ls -q --filter "name=^${project}-(network|updater-network|recreator-network|updater-egress-network)$")
   [ -z "$existing" ] || { echo 'drill network names already exist; refusing without cleanup' >&2; exit 1; }
   existing=$(docker volume ls -q --filter "name=^${project}_(postgres-data|postgres18-data|seaweedfs-data)$")
   [ -z "$existing" ] || { echo 'drill volume names already exist; refusing without cleanup' >&2; exit 1; }
@@ -70,11 +70,17 @@ services:
     container_name: $project-coturn
   updater:
     container_name: $project-updater
+  recreator:
+    container_name: $project-recreator
 networks:
   mnema-network:
     name: $project-network
   mnema-updater:
     name: $project-updater-network
+  mnema-recreator:
+    name: $project-recreator-network
+  mnema-updater-egress:
+    name: $project-updater-egress-network
 YAML
   cat >"$DEPLOY/postgres17.yml" <<YAML
 services:

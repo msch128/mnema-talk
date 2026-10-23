@@ -22,6 +22,7 @@ in the legal texts (Impressum, Datenschutz, AGB), which are formal by design.
 | Block a member | ban | sperren / Sperre | | With a reason and a duration. |
 | Stop seeing a member's messages and notifications | block / unblock | blockieren / Blockierung aufheben | ban, sperren, mute | Private: the other member is not told. "Blocked message · show" / „Blockierte Nachricht · anzeigen“. Distinct from ban (a moderation sanction). |
 | Tell the moderators about a message | report | melden | flag, anzeigen | "Report message" / „Nachricht melden“. The moderators' list is "Reports" / „Meldungen“; a report is closed as resolved / erledigt or dismissed / abgelehnt. |
+| Send a member away for now, no sanction | kick | rauswerfen | ban, sperren, disable | Signs the member out on every device and drops them from their Talk; they can sign in again at once. The permission is „Mitglieder rauswerfen“. |
 | Disable an account (no record) | disable | deaktivieren | sperren | "Konto deaktivieren / aktivieren". |
 | Brute-force lock | sign-in lock | Anmeldesperre | Login-Sperre | |
 | Pin | pin / unpin | anheften / Anheftung aufheben | lösen | "Angeheftete Nachrichten". "Pinned by {name}" / „Angeheftet von {name}“. |

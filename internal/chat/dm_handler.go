@@ -166,23 +166,13 @@ func (h *Handler) createDM(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	if err := h.canStartDMs(r); err != nil {
-		return err
-	}
-	me := auth.UserFrom(r.Context()).ID
-	id, created, err := CreateDM(r.Context(), h.DB, NewDM{Creator: me, Others: req.UserIDs})
-	if err != nil {
-		return err
-	}
-	dm, err := h.loadDM(r, id)
+	dm, created, err := h.StartDM(r, req.UserIDs)
 	if err != nil {
 		return err
 	}
 	status := http.StatusOK
 	if created {
 		status = http.StatusCreated
-		h.Perms.Invalidate()
-		h.announceDM(dm)
 	}
 	httpx.WriteJSON(w, status, dm)
 	return nil

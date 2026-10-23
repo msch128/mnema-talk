@@ -85,6 +85,14 @@ export interface ModerationNotice {
   count?: number
 }
 
+/** How long the note about being kicked stays on screen, in ms. */
+export const KICKED_NOTICE_MS = 15_000
+
+/** What a member reads after /kick: they were signed out and may sign in again. */
+export function kickedText(reason: string): string {
+  return reason ? t('moderation.noticeKickedReason', { reason }) : t('moderation.noticeKicked')
+}
+
 /** The sentence a member reads about a moderation action against them. */
 export function noticeText(n: ModerationNotice): string {
   const reason = n.reason ? `: ${n.reason}` : ''
