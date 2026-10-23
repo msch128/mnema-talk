@@ -213,7 +213,7 @@ func (h *systemHandler) dbHealth(ctx context.Context) (DatabaseHealth, StorageHe
 	}
 	_ = h.db.QueryRow(ctx, `
 		SELECT COUNT(*), COALESCE(SUM(size_bytes), 0),
-		       COALESCE(SUM(size_bytes) FILTER (WHERE s3_key LIKE 'avatars/%'), 0)
+		       COALESCE(SUM(size_bytes) FILTER (WHERE s3_key LIKE 'avatars/%' OR s3_key LIKE 'banners/%'), 0)
 		FROM media WHERE NOT is_deleted`).Scan(&storH.Files, &storH.TotalBytes, &storH.AvatarBytes)
 	storH.AttachmentBytes = storH.TotalBytes - storH.AvatarBytes
 	return dbH, storH

@@ -9,6 +9,7 @@ import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useBlocksStore } from '../stores/blocks'
 import { useDmActions } from '../composables/useDmActions'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { usePermissionsStore } from '../stores/permissions'
 import { roleColorCss } from '../lib/permissions'
 import { activityText } from '../lib/presence'
@@ -16,6 +17,7 @@ import { t, locale } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 import PresenceDot from './PresenceDot.vue'
 import ProfileAvatar from './ProfileAvatar.vue'
+import ProfileBannerControls from './ProfileBannerControls.vue'
 import ProfileBio from './ProfileBio.vue'
 import ProfileStatus from './ProfileStatus.vue'
 import BotBadge from './BotBadge.vue'
@@ -84,6 +86,7 @@ const canGiveRoles = computed(() => !!profileId.value && !isSelf.value && !isBot
 const offer = computed(() => moderationOffer({ id: profileId.value, role: profileUser.value.role, display_name: profileUser.value.display_name, username: profileUser.value.username }))
 // Direct messages and blocking (hidden on a server without them).
 const blocks = useBlocksStore()
+const features = useServerFeaturesStore()
 const dmActions = useDmActions()
 const showMessage = computed(() => dmActions.canMessage(profileId.value))
 const showBlock = computed(() => dmActions.canBlock(profileId.value) && !isBot.value)
@@ -137,8 +140,15 @@ function handleMention() {
     <div class="flex min-h-0 flex-col overflow-y-auto">
       <!-- Top banner -->
       <div class="h-28 shrink-0 bg-linear-to-br from-emerald-950 via-mnema-raised to-emerald-900 border-b border-mnema-hairline relative flex items-start justify-end p-3 overflow-hidden">
-        <!-- Background pattern -->
-        <div class="absolute inset-0 opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] bg-size-[12px_12px] pointer-events-none"></div>
+        <!-- The member's banner, or the default pattern -->
+        <img
+          v-if="profileUser.banner_url"
+          :src="profileUser.banner_url"
+          alt=""
+          class="absolute inset-0 h-full w-full object-cover pointer-events-none"
+          data-testid="profile-banner"
+        />
+        <div v-else class="absolute inset-0 opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] bg-size-[12px_12px] pointer-events-none"></div>
 
         <button 
           @click="emit('close')"
@@ -153,6 +163,7 @@ function handleMention() {
       <!-- Profile Header (Avatar overlap & badges) -->
       <div class="px-5 pb-5 pt-0 relative bg-mnema-surface">
         <ProfileAvatar :profile-user="profileUser" :is-self="!!isSelf" :live-status="liveStatus" :can-message="showMessage" @mention="handleMention" @message="handleMessage" />
+        <ProfileBannerControls v-if="isSelf && features.profileBanner" :has-banner="!!profileUser.banner_url" />
 
         <!-- Name & Badges -->
         <div class="bg-mnema-canvas/70 border border-mnema-hairline rounded-xl p-3.5 shadow-inner">

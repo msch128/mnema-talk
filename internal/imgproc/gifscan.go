@@ -1,9 +1,11 @@
-package emoji
+// Package imgproc holds the pieces image uploads share: reading a GIF's
+// structure before decoding it, redrawing its frames and encoding the result.
+package imgproc
 
-// countGIFFrames walks the block structure of a GIF without decoding any
+// GIFFrames walks the block structure of a GIF without decoding any
 // pixels and returns the number of images, or 0 when the structure is broken.
-// It lets the frame limit hold before the (memory hungry) decode.
-func countGIFFrames(data []byte) int {
+// It stops counting past limit and lets the frame limit hold before the (memory hungry) decode.
+func GIFFrames(data []byte, limit int) int {
 	if len(data) < 13 {
 		return 0
 	}
@@ -21,7 +23,7 @@ func countGIFFrames(data []byte) int {
 			}
 			pos = skipSubBlocks(data, pos+10+colorTableSize(data[pos+9])+1)
 			frames++
-			if frames > maxFrames {
+			if frames > limit {
 				return frames
 			}
 		default:

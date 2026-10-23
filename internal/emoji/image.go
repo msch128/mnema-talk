@@ -7,12 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	"image/color"
 	"image/draw"
 	"image/gif"
 	"image/png"
 	"io"
 
+	"github.com/msch128/mnema-talk/internal/imgproc"
 	xdraw "golang.org/x/image/draw"
 	"golang.org/x/image/webp"
 )
@@ -135,15 +135,6 @@ func scaled(src image.Image) *image.NRGBA {
 	return dst
 }
 
-func encodePNG(img image.Image) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := png.Encoder{CompressionLevel: png.BestCompression}
-	if err := enc.Encode(&buf, img); err != nil {
-		return nil, fmt.Errorf("encode emoji: %w", err)
-	}
-	return buf.Bytes(), nil
-}
-
 func processStatic(data []byte, config func(io.Reader) (image.Config, error), decode func(io.Reader) (image.Image, error)) (*Image, error) {
 	cfg, err := config(bytes.NewReader(data))
 	if err != nil {
@@ -156,7 +147,7 @@ func processStatic(data []byte, config func(io.Reader) (image.Config, error), de
 	if err != nil {
 		return nil, reject("the image cannot be read")
 	}
-	encoded, err := encodePNG(scaled(src))
+	encoded, err := imgproc.EncodePNG(scaled(src))
 	if err != nil {
 		return nil, err
 	}
@@ -173,19 +164,20 @@ func processGIF(data []byte) (*Image, error) {
 	if err := checkCanvas(cfg); err != nil {
 		return nil, err
 	}
-	if n := countGIFFrames(data); n < 1 || n > maxFrames {
+	n := imgproc.GIFFrames(data, maxFrames)
+	if n < 1 || n > maxFrames {
 		return nil, reject("an animation may have 1 to %d frames", maxFrames)
 	}
-	if cfg.Width*cfg.Height*countGIFFrames(data) > maxAnimationPixels {
+	if cfg.Width*cfg.Height*n > maxAnimationPixels {
 		return nil, reject("the animation is too large: canvas size times frames may not exceed %d million pixels", maxAnimationPixels>>20)
 	}
 	g, err := gif.DecodeAll(bytes.NewReader(data))
 	if err != nil || len(g.Image) == 0 {
 		return nil, reject("the image cannot be read")
 	}
-	frames := composeFrames(g, cfg)
+	frames := imgproc.ComposeGIF(g, cfg, func(src image.Image) *image.NRGBA { return scaled(src) })
 	if len(frames) == 1 {
-		encoded, err := encodePNG(frames[0].img)
+		encoded, err := imgproc.EncodePNG(frames[0].Img)
 		if err != nil {
 			return nil, err
 		}
@@ -194,71 +186,14 @@ func processGIF(data []byte) (*Image, error) {
 	return encodeAnimation(g, frames)
 }
 
-type composed struct {
-	img *image.NRGBA
-	pal color.Palette
-}
-
-func composeFrames(g *gif.GIF, cfg image.Config) []composed {
-	canvas := image.NewRGBA(image.Rect(0, 0, cfg.Width, cfg.Height))
-	out := make([]composed, 0, len(g.Image))
-	var saved *image.RGBA // one reusable buffer for DisposalPrevious
-	for i, frame := range g.Image {
-		disposal := byte(0)
-		if i < len(g.Disposal) {
-			disposal = g.Disposal[i]
-		}
-		if disposal == gif.DisposalPrevious {
-			if saved == nil {
-				saved = image.NewRGBA(canvas.Rect)
-			}
-			copy(saved.Pix, canvas.Pix)
-		}
-		draw.Draw(canvas, frame.Bounds(), frame, frame.Bounds().Min, draw.Over)
-		out = append(out, composed{img: scaled(canvas), pal: frame.Palette})
-		switch disposal {
-		case gif.DisposalBackground:
-			draw.Draw(canvas, frame.Bounds(), image.Transparent, image.Point{}, draw.Src)
-		case gif.DisposalPrevious:
-			copy(canvas.Pix, saved.Pix)
-		}
-	}
-	return out
-}
-
-// withTransparency makes sure the palette can draw a see-through pixel.
-func withTransparency(p color.Palette) color.Palette {
-	for _, c := range p {
-		if _, _, _, a := c.RGBA(); a == 0 {
-			return p
-		}
-	}
-	out := append(color.Palette(nil), p...)
-	if len(out) < 256 {
-		return append(out, color.Transparent)
-	}
-	out[len(out)-1] = color.Transparent
-	return out
-}
-
-func encodeAnimation(g *gif.GIF, frames []composed) (*Image, error) {
-	b := frames[0].img.Bounds()
-	still, err := encodePNG(frames[0].img)
+func encodeAnimation(g *gif.GIF, frames []imgproc.Frame) (*Image, error) {
+	still, err := imgproc.EncodePNG(frames[0].Img)
 	if err != nil {
 		return nil, err
 	}
-	res := &gif.GIF{LoopCount: g.LoopCount, Config: image.Config{Width: b.Dx(), Height: b.Dy()}}
-	for i, f := range frames {
-		p := image.NewPaletted(b, withTransparency(f.pal))
-		xdraw.FloydSteinberg.Draw(p, b, f.img, b.Min)
-		res.Image = append(res.Image, p)
-		res.Delay = append(res.Delay, g.Delay[i])
-		// Every frame is a complete picture: clear before the next one.
-		res.Disposal = append(res.Disposal, gif.DisposalBackground)
+	data, err := imgproc.EncodeGIF(g, frames)
+	if err != nil {
+		return nil, err
 	}
-	var buf bytes.Buffer
-	if err := gif.EncodeAll(&buf, res); err != nil {
-		return nil, fmt.Errorf("encode emoji: %w", err)
-	}
-	return &Image{Data: buf.Bytes(), ContentType: TypeGIF, Animated: true, Still: still}, nil
+	return &Image{Data: data, ContentType: TypeGIF, Animated: true, Still: still}, nil
 }
