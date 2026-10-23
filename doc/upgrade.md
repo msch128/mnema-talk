@@ -140,7 +140,12 @@ server lacks.
   existing role: nobody gains access to reports until a role is given it
   (the Owner and Administrators have it implicitly).
 - **`GET /api/health` has a `features` list** (for example `"blocks"`,
-  `"reports"`): the web app uses it to show only what the server supports.
+  `"reports"`, `"slash.builtins"`): the web app uses it to show only what the server supports.
+- **Built-in slash commands.** `/me`, `/shrug`, `/tableflip`, `/unflip`, `/spoiler`,
+  `/nick`, `/thread`, `/timeout`, `/ban` and `/kick` join `/poll` in the menu
+  ([bots](bots.md#built-in-commands-and-polls)). New permission *Kick members*
+  (bit `1 << 23`), off for @everyone and every existing role (the Owner and
+  Administrators have it implicitly), and the `kicked` WebSocket event.
 - **New event** `block_updated`, sent only to the blocker's own sessions.
 - **Export** gains `blocks.json` and `reports.json`.
 

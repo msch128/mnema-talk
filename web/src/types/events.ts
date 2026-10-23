@@ -82,6 +82,8 @@ export interface ServerEventPayloads {
   member_timeout: { id: string; timeout_until: string | null }
   /** Told to the member a moderator acted on. */
   moderation_notice: ModerationNotice
+  /** A moderator signed this member out everywhere (/kick); the connection closes right after. They may sign in again at once. */
+  kicked: { reason: string }
   webrtc_offer: { type: 'offer'; sdp: string }
   webrtc_candidate: RTCIceCandidateInit
   voice_snapshot: VoiceSnapshot
@@ -278,6 +280,7 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['member_timeout', payload => isIdentifier(payload['id']) && (payload['timeout_until'] === null || isTimestamp(payload['timeout_until']))
     && onlyFields(payload, ['id', 'timeout_until'])],
   ['moderation_notice', isModerationNotice],
+  ['kicked', payload => isString(payload['reason'], 400) && onlyFields(payload, ['reason'])],
   ['block_updated', payload => isIdentifier(payload['user_id']) && typeof payload['blocked'] === 'boolean' && onlyFields(payload, ['user_id', 'blocked'])],
   ['webrtc_offer', payload => payload['type'] === 'offer' && isString(payload['sdp'], 262_144)],
   ['webrtc_candidate', isIceCandidate],
@@ -323,7 +326,7 @@ function isNoteEmbed(value: unknown): boolean {
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
   'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
-  'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
+  'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'media_handshake'
 ])

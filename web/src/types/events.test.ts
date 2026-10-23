@@ -52,6 +52,7 @@ const examples: Record<ServerEventType, unknown[]> = {
     { kind: 'message_deleted', reason: 'rude', channel_name: 'general' },
     { kind: 'messages_deleted', reason: '', channel_name: 'general', count: 3 },
   ],
+  kicked: [{ reason: '' }, { reason: 'too loud' }],
   webrtc_offer: [{ type: 'offer', sdp: 'v=0\r\n' }],
   webrtc_candidate: [{ candidate: '' }, { candidate: 'candidate:synthetic', sdpMid: '0', sdpMLineIndex: 0, usernameFragment: 'synthetic' }],
   voice_snapshot: [{}, { [id]: {} }, { [id]: { [id]: voiceUser } }],

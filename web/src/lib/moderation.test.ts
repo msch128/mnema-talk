@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { setLocale } from '../i18n'
-import { moderate, pendingModeration, customSeconds, durationLabel, formatRemaining, noticeText } from './moderation'
+import { moderate, pendingModeration, customSeconds, durationLabel, formatRemaining, noticeText, kickedText } from './moderation'
 
 beforeEach(() => {
   setLocale('en')
@@ -40,6 +40,11 @@ describe('moderation helpers', () => {
     expect(noticeText({ kind: 'timeout_removed', reason: '' })).toBe('Your timeout was lifted.')
     expect(noticeText({ kind: 'ban', reason: 'rude' })).toBe('You were banned: rude')
     expect(noticeText({ kind: 'ban', reason: '' })).toBe('You were banned')
+  })
+
+  it('words the note after a kick', () => {
+    expect(kickedText('')).toBe('You were signed out by a moderator. You can sign in again right away.')
+    expect(kickedText('take a break')).toBe('You were signed out by a moderator: take a break. You can sign in again right away.')
   })
 
   it('opens one dialog at a time; a new request cancels the old one', async () => {

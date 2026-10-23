@@ -5,6 +5,7 @@ import { flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { useSlashCommands } from './useSlashCommands'
 import { setLocale } from '../i18n'
+import { useToastStore } from '../stores/toast'
 import type { BotChannelCommand } from '../types/rest'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
@@ -63,6 +64,17 @@ describe('built-in slash commands', () => {
     expect(path).toBe(`/api/channels/${CH}/interactions`)
     expect(options?.json).toEqual({ command_id: builtin('shrug').id, options: { text: 'fine' } })
     expect(s.picked.value).toBeNull()
+  })
+
+  it('says a command is done when it posted no message (/nick, /timeout, ...)', async () => {
+    apiMock.mockResolvedValueOnce([builtin('nick', [{ name: 'name', description: 'n', type: 3, required: true }])])
+    const s = useSlashCommands(text as never, () => CH)
+    await typeSlash(s, '/nick')
+    s.pick(s.suggestions.value[0])
+    s.values['name'] = 'Grumpy'
+    apiMock.mockResolvedValueOnce({})
+    expect(await s.run()).toBe(true)
+    expect(useToastStore().toasts.map(t => t.text)).toEqual(['Done.'])
   })
 
   it('sorts built-ins in server order, so they stay ahead of the bots\' commands', async () => {

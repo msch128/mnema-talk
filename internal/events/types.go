@@ -48,6 +48,9 @@ const (
 	NativeAccessRenewed = "native_access_renewed"
 	EmojiChanged        = "emoji_changed"
 	BlockUpdated        = "block_updated"
+	// Kicked tells a member a moderator signed them out everywhere; their
+	// connection closes right after.
+	Kicked = "kicked"
 )
 
 // Client-to-server events.
