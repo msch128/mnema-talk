@@ -27,11 +27,15 @@ test('forwarding quotes the original per reader: visible to who may see it, "not
   const memberCtx = await browser.newContext({ viewport: { width: 1400, height: 900 } })
   const owner = await ownerCtx.newPage()
   const member = await memberCtx.newPage()
+  const created: string[] = []
   try {
     await signIn(owner, ADMIN_USER, ADMIN_PASSWORD)
     const source = responseString(await apiFetch(owner, 'POST', '/api/admin/channels', { name: SOURCE, type: 'text' }), 'id')
+    created.push(source)
     const target = responseString(await apiFetch(owner, 'POST', '/api/admin/channels', { name: TARGET, type: 'text' }), 'id')
+    created.push(target)
     const hidden = responseString(await apiFetch(owner, 'POST', '/api/admin/channels', { name: HIDDEN, type: 'text' }), 'id')
+    created.push(hidden)
     await member.goto('/')
     if (suiteMember.registered) {
       expect((await apiFetch(member, 'POST', '/api/auth/login', { username: suiteMember.username, password: suiteMember.password })).status).toBe(200)
@@ -70,6 +74,8 @@ test('forwarding quotes the original per reader: visible to who may see it, "not
     await owner.goto(`/c/${target}`)
     await expect(owner.getByTestId('forwarded').filter({ hasText: 'GEHEIMER-WORTLAUT' })).toBeVisible()
   } finally {
+    // Leave the sidebar as found: later specs count on its size.
+    for (const id of created) await apiFetch(owner, 'DELETE', `/api/admin/channels/${id}`)
     await ownerCtx.close()
     await memberCtx.close()
   }
