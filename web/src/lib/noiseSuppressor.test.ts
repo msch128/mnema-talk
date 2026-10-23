@@ -146,7 +146,7 @@ describe('createNoiseSuppressorNode', () => {
     worker.onerror()
     worker.onerror()
     expect(onFailure).toHaveBeenCalledOnce()
-    expect(node.port.postMessage).toHaveBeenCalledWith({ type: 'failed' })
+    expect(node.port.postMessage).toHaveBeenCalledWith({ type: 'failed', reason: expect.any(String) })
     node.destroy()
   })
 })
