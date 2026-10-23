@@ -75,7 +75,7 @@ describe('the push section', () => {
     w.unmount()
     lib.availability = 'unsupported'
     await open()
-    expect(w.find('[data-testid="push-unsupported"]').text()).toContain("can't receive push")
+    expect(w.find('[data-testid="push-unsupported"]').text()).toContain('can’t receive push')
   })
 
   it('reports a failed load without hiding the rest of the dialog', async () => {
@@ -136,7 +136,7 @@ describe('the push section', () => {
     lib.test.mockResolvedValueOnce({ delivered: 0, failed: 1 })
     await w.find('[data-testid="push-test"]').trigger('click')
     await flushPromises()
-    expect(toasts()).toContain('The test notification could not be delivered.')
+    expect(toasts()).toContain('Couldn’t deliver the test notification. Try again.')
 
     await w.find('[data-testid="push-disable"]').trigger('click')
     await flushPromises()

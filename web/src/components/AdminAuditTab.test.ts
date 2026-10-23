@@ -37,7 +37,7 @@ describe('AdminAuditTab', () => {
     expect(apiMock).toHaveBeenCalledWith('/api/admin/audit-log?limit=50', { decode: expect.any(Function) })
     expect(w.text()).toContain('Role edited')
     expect(w.text()).toContain('future.thing')
-    expect(w.text()).toContain('Server')
+    expect(w.text()).toContain('System')
     expect(w.find('pre').exists()).toBe(false)
     await w.find('[data-testid="audit-entry-2"] button').trigger('click')
     expect(w.find('pre').text()).toContain('"from": "a"')

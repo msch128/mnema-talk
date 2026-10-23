@@ -57,7 +57,7 @@ describe('LoginModal', () => {
     await submit(w)
     const button = w.find('button[type="submit"]')!
     expect(button.attributes('disabled')).toBeDefined()
-    expect(button.text()).toBe('One moment …')
+    expect(button.text()).toBe('One moment…')
     reject(new Error('invalid username or password'))
     await flushPromises()
     expect(w.find('[role="alert"]')!.text()).toBe('invalid username or password')
@@ -70,7 +70,7 @@ describe('LoginModal', () => {
     const w = mountLogin()
     await submit(w)
     await flushPromises()
-    expect(w.find('[role="alert"]')!.text()).toBe("That didn't work. Please try again.")
+    expect(w.find('[role="alert"]')!.text()).toBe('That didn’t work. Try again.')
   })
 
   it('registers with an invite and uses the username as display name by default', async () => {
@@ -97,7 +97,7 @@ describe('LoginModal', () => {
     await submit(w)
     await flushPromises()
     expect(apiMock.mock.calls.filter(([path]) => path !== '/api/auth/options')).toEqual([])
-    expect(w.find('[role="alert"]')!.text()).toBe('Please enter an invite code.')
+    expect(w.find('[role="alert"]')!.text()).toBe('Enter an invite code.')
 
     // Switching back to sign-in clears the error.
     await w.findAll('button').find(b => b.text().startsWith('Already registered'))!.trigger('click')

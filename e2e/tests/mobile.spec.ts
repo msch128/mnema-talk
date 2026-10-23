@@ -145,7 +145,7 @@ test('phone: sign in, drawer, message, thread, settings, Talk', async ({ page, b
     // transform or Ed25519), so the client refuses to join there, on a phone
     // as on a desktop; see doc/product-status.md. The refusal is what that
     // engine must show: the message on screen, no call, no leave button.
-    await expect(page.getByRole('alert')).toContainText('Dieser Browser kann Anrufe nicht schützen')
+    await expect(page.getByRole('alert')).toContainText('Dieser Browser kann die Medien eines Talks nicht schützen')
     await expect(page.getByRole('button', { name: 'Verlassen' })).toHaveCount(0)
     await expectNoSidewaysScroll(page)
     return

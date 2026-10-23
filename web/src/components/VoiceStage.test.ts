@@ -501,7 +501,7 @@ describe('VoiceStage screen share opt-in', () => {
     voice.setUserVideoStream('a', new MediaStream())
     const w = mountStage({ channelId: 'v1' })
     await nextTick()
-    await w.find<HTMLElement>(`[data-participant-tile][aria-label="Open Bob's profile"]`).trigger('click')
+    await w.find<HTMLElement>(`[data-participant-tile][aria-label="Open Bob’s profile"]`).trigger('click')
     expect(open).toHaveBeenCalledWith(expect.objectContaining({ id: 'b' }))
     expect(voice.focusedCamera).toBeNull()
   })

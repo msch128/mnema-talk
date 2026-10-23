@@ -84,7 +84,7 @@ it('member list groups roles and resolves known and missing voice channel names'
   chat.categories = [categoryFixture(), categoryFixture({ id: fixtureId(40), channels: [catChannel] })]; chat.uncategorized = [uncat]
   voice.channelUsers = { [catChannel.id]: { [admin.id]: voiceUserFixture(admin) }, [uncat.id]: { [online.id]: voiceUserFixture(online) }, [fixtureId(32)]: { [unknown.id]: voiceUserFixture(unknown) } }
   const w = keep(mount(MemberList, { global: { stubs: { ContextMenu: { template: '<button data-menu-close @click="$emit(\'update:modelValue\', false)">Close</button>' } } } })); expect(w.findAllComponents(MemberRow)).toHaveLength(4)
-  expect(w.text()).toContain('Categorized'); expect(w.text()).toContain('Uncategorized'); expect(w.text()).toContain('Sprachkanal'); for (const row of w.findAllComponents(MemberRow)) await row.trigger('contextmenu')
+  expect(w.text()).toContain('Categorized'); expect(w.text()).toContain('Uncategorized'); expect(w.text()).toContain('Talk'); for (const row of w.findAllComponents(MemberRow)) await row.trigger('contextmenu')
   await w.findComponent(ContextMenu).find('button').trigger('click')
   voice.channelUsers = {}; await nextTick(); expect(w.findAllComponents(MemberRow).every(row => row.props('voiceChannel') === '')).toBe(true)
   chat.members = []; await nextTick(); expect(w.findAll('section')).toHaveLength(0)

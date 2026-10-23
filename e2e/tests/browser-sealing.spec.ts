@@ -123,7 +123,7 @@ test('a browser that cannot seal media does not join, and sends nothing', async 
   await page.reload()
 
   await page.locator('[data-channel-type="voice"]', { hasText: channel }).click()
-  await expect(page.getByText(/Dieser Browser kann Anrufe nicht schützen/)).toBeVisible()
+  await expect(page.getByText(/Dieser Browser kann die Medien eines Talks nicht schützen/)).toBeVisible()
 
   // No call: no leave button, no peer connection, no microphone request.
   await expect(page.getByRole('button', { name: 'Verlassen' })).toHaveCount(0)

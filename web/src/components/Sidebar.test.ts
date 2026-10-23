@@ -399,7 +399,7 @@ describe('Sidebar drag and drop (admin)', () => {
     expect(order()).toBe('text: general random welcome | voice: lounge | empty: ')
     await answer('/api/admin/layout', { ok: false })
     expect(order()).toBe('welcome | text: general random | voice: lounge | empty: ')
-    expect(toasts.toasts.find(t => t.type === 'error')!.text).toBe('Die neue Reihenfolge konnte nicht gespeichert werden.')
+    expect(toasts.toasts.find(t => t.type === 'error')!.text).toBe('Die neue Reihenfolge konnte nicht gespeichert werden. Versuche es noch einmal.')
     expect(toasts.toasts.some(t => t.action)).toBe(false)
   })
 
@@ -518,7 +518,7 @@ describe('Sidebar administrative lifecycle and navigation', () => {
     expect(deleteChannel).toHaveBeenCalledWith('general')
     expect(toasts.toasts.at(-1)?.text).toBe('Kanal gelöscht')
     await rowOf('lounge').find('button').trigger('click'); await flush()
-    expect(confirmMock.mock.calls.at(-1)?.[0].title).toContain('Sprachkanal')
+    expect(confirmMock.mock.calls.at(-1)?.[0].title).toContain('Talk')
     deleteChannel.mockRejectedValueOnce(new Error('offline')).mockRejectedValueOnce(new Error(''))
     await rowOf('general').find('button').trigger('click'); await flush(); expect(toasts.toasts.at(-1)?.text).toBe('offline')
     await rowOf('general').find('button').trigger('click'); await flush(); expect(toasts.toasts.at(-1)?.type).toBe('error')

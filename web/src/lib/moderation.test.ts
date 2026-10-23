@@ -62,9 +62,9 @@ describe('moderation helpers', () => {
 
 describe('notices about messages', () => {
   it('words the removal of one or several messages', () => {
-    expect(noticeText({ kind: 'message_deleted', reason: 'rude', channel_name: 'general' })).toBe('A moderator removed your message in general: rude')
-    expect(noticeText({ kind: 'message_deleted', reason: '' })).toBe('A moderator removed your message in ')
-    expect(noticeText({ kind: 'messages_deleted', reason: '', channel_name: 'general', count: 3 })).toBe('A moderator removed 3 of your messages in general')
-    expect(noticeText({ kind: 'messages_deleted', reason: '' })).toBe('A moderator removed 0 of your messages in ')
+    expect(noticeText({ kind: 'message_deleted', reason: 'rude', channel_name: 'general' })).toBe('Your message in general was removed by someone with moderator rights: rude')
+    expect(noticeText({ kind: 'message_deleted', reason: '' })).toBe('Your message in  was removed by someone with moderator rights')
+    expect(noticeText({ kind: 'messages_deleted', reason: '', channel_name: 'general', count: 3 })).toBe('3 of your messages in general were removed by someone with moderator rights')
+    expect(noticeText({ kind: 'messages_deleted', reason: '' })).toBe('0 of your messages in  were removed by someone with moderator rights')
   })
 })

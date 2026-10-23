@@ -92,7 +92,7 @@ describe('AdminMediaTab', () => {
     serve()
     const w = mount(AdminMediaTab)
     await flushPromises()
-    const prune = w.findAll('button').find(b => b.text() === 'Delete …')!
+    const prune = w.findAll('button').find(b => b.text() === 'Delete…')!
     expect(prune!.attributes('disabled')).toBeDefined()
     await w.find<HTMLInputElement>('input[type="number"]')!.setValue('30')
     expect(prune!.attributes('disabled')).toBeUndefined()
@@ -119,7 +119,7 @@ describe('AdminMediaTab', () => {
     await flushPromises()
     await w.find<HTMLInputElement>('input[type="number"]')!.setValue('7')
     confirmMock.mockResolvedValueOnce(true)
-    await w.findAll('button').find(b => b.text() === 'Delete …')!.trigger('click')
+    await w.findAll('button').find(b => b.text() === 'Delete…')!.trigger('click')
     await flushPromises()
     expect(toasts().at(-1)!).toMatchObject({ type: 'error', text: 'storage unavailable' })
     expect(w.find<HTMLInputElement>('input[type="number"]')!.element.value).toBe('7')

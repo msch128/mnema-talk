@@ -57,7 +57,7 @@ describe('useMessageMenu items', () => {
     const menu = useMessageMenu({ actions: makeActions(), reply: vi.fn() })
     await item(menu.itemsFor(msg), 'Mark unread').action()
     expect(chat.markChannelUnread).toHaveBeenCalledWith(msg.channel_id, msg.id)
-    expect(toasts().at(-1)).toMatchObject({ type: 'error', text: 'Could not mark as unread.' })
+    expect(toasts().at(-1)).toMatchObject({ type: 'error', text: 'Couldn’t mark the message as unread. Try again.' })
   })
   it('offers edit and delete on own messages', () => {
     const menu = useMessageMenu({ actions: makeActions(), reply: vi.fn() })
@@ -126,7 +126,7 @@ describe('useMessageMenu items', () => {
     expect(chat.markChannelUnread).toHaveBeenCalledWith('ch1', 'm1')
     expect(toasts().at(-1)).toMatchObject({ type: 'success', text: 'Marked as unread' })
     await mark.action()
-    expect(toasts().at(-1)).toMatchObject({ type: 'error', text: 'Could not mark as unread.' })
+    expect(toasts().at(-1)).toMatchObject({ type: 'error', text: 'Couldn’t mark the message as unread. Try again.' })
     await mark.action()
     expect(toasts().at(-1)).toMatchObject({ type: 'error', text: 'offline' })
   })

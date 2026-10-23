@@ -24,7 +24,7 @@
     "voiceChat": "Höhe des Chats anpassen"
   },
   "role": {
-    "admin": "Inhaber",
+    "admin": "Owner",
     "member": "Mitglied"
   },
   "presence": {
@@ -35,7 +35,7 @@
     "focus": "Konzentriert",
     "choose": "Status wählen",
     "current": "Dein Status: {status}",
-    "saveFailed": "Status konnte nicht gespeichert werden",
+    "saveFailed": "Der Status konnte nicht gespeichert werden. Versuche es noch einmal.",
     "setStatus": "Statustext festlegen",
     "editStatus": "Statustext bearbeiten",
     "hint": {
@@ -54,7 +54,7 @@
   "user": {
     "avatar": "Profilbild",
     "openProfile": "Eigenes Profil öffnen",
-    "deleted": "Gelöschter Nutzer"
+    "deleted": "Gelöschtes Mitglied"
   },
   "media": {
     "sizeMb": "{size} MB"
@@ -70,7 +70,7 @@
     "language": "Sprache",
     "signOut": "Abmelden",
     "languageSet": "Sprache auf {language} gestellt. Für dieses Konto gespeichert.",
-    "languageFailed": "Sprache konnte nicht gespeichert werden.",
+    "languageFailed": "Die Sprache konnte nicht gespeichert werden. Versuche es noch einmal.",
     "app": "App & Benachrichtigungen"
   },
   "errors": {
@@ -87,7 +87,9 @@
       "RATE_LIMITED": "Zu viele Versuche – bitte warte einen Moment",
       "RULES_NOT_ACCEPTED": "Bitte akzeptiere zuerst die Regeln der Community",
       "UNAVAILABLE": "Der Dienst ist gerade nicht verfügbar",
-      "INTERNAL_ERROR": "Interner Serverfehler"
+      "INTERNAL_ERROR": "Interner Serverfehler",
+      "INVALID_INPUT": "Einige Angaben sind ungültig. Prüfe sie und versuche es noch einmal.",
+      "ACCOUNT_DISABLED": "Dieses Konto ist deaktiviert. Wende dich an den Owner oder einen Administrator der Community."
     },
     "detail": {
       "invalidInvite": "Ungültiger Einladungscode",
@@ -126,7 +128,7 @@
   },
   "update": {
     "reloadBanner": "Eine neue Version ist verfügbar – hier klicken zum Neuladen",
-    "reloadInCall": "Dein Anruf wird dabei kurz getrennt und danach automatisch wieder verbunden.",
+    "reloadInCall": "Dein Talk wird dabei kurz getrennt und danach automatisch wieder verbunden.",
     "dismiss": "Später",
     "badge": "Update {version}",
     "updating": "Der Server wird gerade auf Version {version} aktualisiert – gleich kurze Unterbrechung.",
@@ -157,14 +159,14 @@
     "toRegister": "Hast du einen Einladungscode? Hier registrieren",
     "legal": "Datenschutzerklärung & Rechtliches",
     "inviteRequired": "Bitte gib einen Einladungscode ein.",
-    "failed": "Das hat nicht geklappt. Versuch es noch einmal.",
+    "failed": "Das hat nicht geklappt. Versuche es noch einmal.",
     "subtitleInvited": "Du wurdest eingeladen, beizutreten",
     "inviteChecking": "Einladung wird geprüft …",
     "inviteInvalid": "Diese Einladung gilt nicht mehr. Frag nach einer neuen, oder melde dich an, wenn du schon ein Konto hast.",
     "inviteExpires": "Gültig bis {when}"
   },
   "sidebar": {
-    "subtitle": "Private Gemeinschaft",
+    "subtitle": "Private Community",
     "menu": "Menü",
     "channels": "Kanäle",
     "openChannels": "Kanalliste öffnen",
@@ -172,16 +174,16 @@
     "draft": "Entwurf",
     "deleteCategory": "Kategorie löschen",
     "deleteChannel": "Kanal löschen",
-    "deleteVoiceChannel": "Sprachkanal löschen",
+    "deleteVoiceChannel": "Talk löschen",
     "deleteChannelTitle": "#{name} löschen?",
     "deleteChannelBody": "Alle Nachrichten und Dateien in diesem Kanal gehen verloren. Das lässt sich nicht rückgängig machen.",
-    "deleteVoiceChannelTitle": "Sprachkanal „{name}“ löschen?",
+    "deleteVoiceChannelTitle": "Talk „{name}“ löschen?",
     "deleteVoiceChannelBody": "Der Talk und sein Chat gehen verloren. Das lässt sich nicht rückgängig machen.",
     "deleteCategoryTitle": "Kategorie „{name}“ löschen?",
     "deleteCategoryBody": "Die Kanäle darin bleiben erhalten.",
     "channelDeleted": "Kanal gelöscht",
     "categoryDeleted": "Kategorie gelöscht",
-    "deleteFailed": "Löschen hat nicht geklappt. Versuch es noch einmal.",
+    "deleteFailed": "Das Löschen hat nicht geklappt. Versuche es noch einmal.",
     "markRead": "Als gelesen markieren",
     "markedRead": "Als gelesen markiert",
     "markAllRead": "Alle als gelesen markieren",
@@ -194,19 +196,19 @@
     "editCategory": "Kategorie bearbeiten",
     "channelUpdated": "Kanal aktualisiert",
     "categoryUpdated": "Kategorie aktualisiert",
-    "updateFailed": "Aktualisierung fehlgeschlagen.",
+    "updateFailed": "Das Aktualisieren hat nicht geklappt. Versuche es noch einmal.",
     "channelMoved": "Kanal verschoben",
     "categoryMoved": "Kategorie verschoben",
-    "layoutSaveFailed": "Die neue Reihenfolge konnte nicht gespeichert werden.",
+    "layoutSaveFailed": "Die neue Reihenfolge konnte nicht gespeichert werden. Versuche es noch einmal.",
     "layoutRestored": "Reihenfolge wiederhergestellt",
     "movedChannel": "{name} verschoben: Position {position} von {total} in {category}",
     "movedCategory": "{name} verschoben: Position {position} von {total}",
     "createCategory": "Kategorie erstellen",
     "categoryCreated": "Kategorie erstellt",
-    "createCategoryFailed": "Die Kategorie konnte nicht erstellt werden.",
+    "createCategoryFailed": "Die Kategorie konnte nicht erstellt werden. Versuche es noch einmal.",
     "duplicateChannel": "Kanal duplizieren",
     "channelDuplicated": "„{name}“ dupliziert",
-    "duplicateFailed": "Der Kanal konnte nicht dupliziert werden.",
+    "duplicateFailed": "Der Kanal konnte nicht dupliziert werden. Versuche es noch einmal.",
     "collapseAll": "Alle einklappen",
     "expandAll": "Alle ausklappen",
     "atTop": "{name} ist schon ganz oben",
@@ -252,7 +254,7 @@
     },
     "rules": {
       "title": "Die Regeln",
-      "intro": "Bitte lies die Regeln dieser Community. Mitlesen geht sofort, Schreiben, Reagieren, Hochladen und Talks beitreten erst, wenn du sie akzeptierst.",
+      "intro": "Bitte lies die Regeln dieser Community. Mitlesen geht sofort – Schreiben, Reagieren, Hochladen und Talks beitreten erst, wenn du sie akzeptierst.",
       "accept": "Ich akzeptiere die Regeln"
     },
     "profile": {
@@ -277,14 +279,14 @@
     "type": "Art",
     "typeText": "Kanal",
     "typeTextHint": "Nachrichten und Dateien",
-    "typeVoice": "Sprachkanal",
+    "typeVoice": "Talk (Sprache)",
     "typeVoiceHint": "Sprechen, chatten und Bildschirm teilen",
     "category": "Kategorie",
     "noCategory": "Ohne Kategorie",
     "newCategory": "+ Neue Kategorie",
     "chooseExisting": "Bestehende wählen",
     "newCategoryPlaceholder": "z. B. Projekte, Spiele, Archiv",
-    "newCategoryHint": "Die Kategorie wird angelegt und der Kanal darin platziert.",
+    "newCategoryHint": "Die Kategorie wird erstellt und der Kanal darin platziert.",
     "name": "Name",
     "namePlaceholderText": "z. B. off-topic",
     "namePlaceholderVoice": "z. B. Lounge",
@@ -293,15 +295,15 @@
     "topic": "Thema (optional)",
     "topicPlaceholder": "Worum geht es hier?",
     "nameRequired": "Bitte gib einen Namen an.",
-    "createFailed": "Der Kanal konnte nicht erstellt werden."
+    "createFailed": "Der Kanal konnte nicht erstellt werden. Versuche es noch einmal."
   },
   "members": {
     "title": "Mitglieder",
     "toggle": "Mitgliederliste ein-/ausblenden",
-    "admins": "Inhaber",
-    "online": "Online — {count}",
-    "offline": "Offline — {count}",
-    "roleGroup": "{name} — {count}"
+    "admins": "Owner",
+    "online": "Online – {count}",
+    "offline": "Offline – {count}",
+    "roleGroup": "{name} – {count}"
   },
   "format": {
     "help": "Formatierungshilfe",
@@ -334,7 +336,7 @@
     "upload": "Datei oder Bild hochladen",
     "uploadTooLarge": "Datei ist zu groß (max. {max} MB).",
     "uploadTooLargeDetail": "{name} hat {size} MB.",
-    "uploadFailed": "Hochladen fehlgeschlagen.",
+    "uploadFailed": "Die Datei konnte nicht hochgeladen werden. Versuche es noch einmal.",
     "reply": "Antworten",
     "cancelReply": "Antwort abbrechen",
     "replyingTo": "Antwort an",
@@ -364,16 +366,16 @@
     "originalDeleted": "Ursprüngliche Nachricht wurde gelöscht",
     "seeAttachment": "Klick, um den Anhang zu sehen",
     "deleteTitle": "Nachricht löschen?",
-    "deleteBody": "Sie verschwindet für alle. Das lässt sich nicht rückgängig machen.",
+    "deleteBody": "Die Nachricht verschwindet für alle. Das lässt sich nicht rückgängig machen.",
     "messageNotFound": "Nachricht nicht gefunden",
-    "messageLoadFailed": "Nachricht konnte nicht geladen werden",
-    "editFailed": "Die Änderung konnte nicht gespeichert werden.",
-    "deleteFailed": "Die Nachricht konnte nicht gelöscht werden.",
-    "sendFailed": "Die Nachricht konnte nicht gesendet werden.",
+    "messageLoadFailed": "Die Nachricht konnte nicht geladen werden. Versuche es noch einmal.",
+    "editFailed": "Die Änderung konnte nicht gespeichert werden. Versuche es noch einmal.",
+    "deleteFailed": "Die Nachricht konnte nicht gelöscht werden. Versuche es noch einmal.",
+    "sendFailed": "Die Nachricht konnte nicht gesendet werden. Versuche es noch einmal.",
     "spoiler": "Spoiler",
     "copyCode": "Kopieren",
     "codeCopied": "Code kopiert",
-    "copyCodeFailed": "Der Code konnte nicht kopiert werden.",
+    "copyCodeFailed": "Der Code konnte nicht kopiert werden. Versuche es noch einmal.",
     "linkConfirmTitle": "Diesen Link öffnen?",
     "linkConfirmBody": "Der Linktext zeigt nicht, wohin der Link führt. Er öffnet {host}.",
     "linkOpen": "Link öffnen",
@@ -386,14 +388,14 @@
     "severalTyping": "Mehrere Personen tippen …",
     "markUnread": "Als ungelesen markieren",
     "markedUnread": "Als ungelesen markiert",
-    "markUnreadFailed": "Konnte nicht als ungelesen markiert werden.",
+    "markUnreadFailed": "Die Nachricht konnte nicht als ungelesen markiert werden. Versuche es noch einmal.",
     "twoTyping": "{a} und {b} tippen …",
     "newSinceDivider": "Neu seit {time}",
     "searchMore": "Mehr laden",
     "searchUnknownFilter": "Kein passendes Mitglied oder Kanal",
     "searchRemoveFilter": "Filter {filter} entfernen",
     "searchInChannel": "In diesem Kanal suchen",
-    "searchFailed": "Die Suche ist fehlgeschlagen.",
+    "searchFailed": "Die Suche hat nicht geklappt. Versuche es noch einmal.",
     "inThread": "im Thread",
     "copyText": "Text kopieren",
     "copiedText": "Text kopiert",
@@ -413,7 +415,7 @@
     "empty": "Noch keine Antworten. Schreib die erste.",
     "placeholder": "Im Thread antworten …",
     "upload": "Datei oder Bild im Thread teilen",
-    "sendFailed": "Die Antwort konnte nicht gesendet werden."
+    "sendFailed": "Die Antwort konnte nicht gesendet werden. Versuche es noch einmal."
   },
   "voice": {
     "mute": "Stummschalten",
@@ -423,7 +425,7 @@
     "share": "Bildschirm teilen",
     "stopShare": "Teilen beenden",
     "leave": "Verlassen",
-    "channelFallback": "Sprachkanal",
+    "channelFallback": "Talk",
     "audioBlocked": "Du bist wieder im Talk. Klick, um den Ton zu aktivieren",
     "join": "Beitreten",
     "userVolume": "Lautstärke (nur für dich)",
@@ -443,12 +445,12 @@
     "cameraBusy": "Die Kamera wird gerade von einer anderen App benutzt.",
     "memberMuted": "Stummgeschaltet",
     "memberDeafened": "Taub geschaltet",
-    "kicked": "Ein Admin hat dich aus dem Talk entfernt.",
+    "kicked": "Du wurdest aus dem Talk entfernt.",
     "roomFull": "Dieser Talk ist voll. Versuche es erneut, sobald jemand den Talk verlässt.",
-    "mediaUnsupported": "Dieser Browser kann Anrufe nicht schützen (es fehlen verschlüsselte Medientransformationen oder Ed25519-Signaturen) und kann deshalb nicht beitreten. Nutze ein aktuelles Chrome, Edge, Firefox oder Safari.",
-    "mediaUnprotected": "Dieser Browser kann den Anruf nicht schützen. Mikrofon, Kamera und Bildschirm bleiben aus.",
-    "mediaRekeyed": "Die Medienschlüssel dieses Anrufs wurden von jemand anderem im Anruf oder vom Server zurückgesetzt. Der Anruf richtet sie neu ein.",
-    "mediaRefreshed": "Der Anruf wurde nach einer Zeit der Inaktivität aufgefrischt. Seine Medienschlüssel wurden erneuert, der Anruf richtet sie neu ein.",
+    "mediaUnsupported": "Dieser Browser kann die Medien eines Talks nicht schützen und kann deshalb nicht beitreten. Nutze Chrome oder Edge ab 137, Safari ab 17 oder Firefox ab 129.",
+    "mediaUnprotected": "Dieser Browser kann den Talk nicht schützen. Mikrofon, Kamera und Bildschirm bleiben aus.",
+    "mediaRekeyed": "Die Medienschlüssel dieses Talks wurden von jemandem im Talk oder vom Server zurückgesetzt. Der Talk richtet neue Schlüssel selbst ein.",
+    "mediaRefreshed": "Der Talk wurde nach einer Zeit der Inaktivität aufgefrischt. Seine Medienschlüssel wurden erneuert.",
     "noPermission": "Du darfst diesem Talk nicht beitreten oder darin sprechen."
   },
   "audio": {
@@ -466,7 +468,7 @@
     "auto": "Automatisch ermitteln",
     "level": "Pegel {level} % · Spitze {peak} %",
     "threshold": "Schwelle {value} %",
-    "adviceTitle": "Tipp für gemeinsame Räume",
+    "adviceTitle": "Tipp, wenn mehrere Personen im selben Raum sitzen",
     "advice": "Lass eine zweite Person im Raum normal sprechen und beobachte die Leiste. Stell den Regler so ein, dass ihre Stimme unter dem weißen Strich im gelben Bereich bleibt (etwa 30 % bis 45 %). Sobald du sprichst, schlägt die Leiste grün über den Strich aus und nur deine Stimme wird gesendet.",
     "processing": "Erweiterte Sprachverarbeitung",
     "agc": "Automatische Lautstärkeregelung",
@@ -486,25 +488,25 @@
     "noiseMode_browser": "Browser",
     "noiseMode_off": "Aus",
     "noiseHint_ai": "DeepFilterNet3 filtert Tastatur, Klicks, Lüfter und Hintergrundlärm in voller Klangqualität heraus. Läuft komplett in deinem Browser, dein Ton verlässt dein Gerät dafür nicht. Einmaliger Download von etwa 10 MB.",
-    "noiseHint_ai-lite": "Ein kleines KI-Modell (GTCRN) für schwächere Rechner. Filtert ähnlich gut, die Stimme klingt aber etwas dumpfer.",
+    "noiseHint_ai-lite": "Ein kleineres KI-Modell für schwächere Rechner. Filtert ähnlich gut, die Stimme klingt aber etwas dumpfer.",
     "noiseHint_browser": "Die Rauschunterdrückung deines Browsers dämpft gleichmäßige Geräusche wie Lüfter oder Brummen. Spart Rechenleistung.",
     "noiseHint_off": "Kein Filter. Für Studiomikrofone oder wenn du Musik überträgst.",
-    "filterDegraded": "Der KI-Filter ist überlastet oder nicht verfügbar. Für dieses Gespräch wird die Browser-Rauschunterdrückung verwendet.",
+    "filterDegraded": "Der KI-Filter ist überlastet oder nicht verfügbar. Für diesen Talk wird die Browser-Rauschunterdrückung verwendet.",
     "micTest": "Mikrofontest",
     "micTestStart": "Mikrofon testen",
     "micTestStop": "Test beenden",
-    "micTestHint": "Dieser Test bleibt lokal und wird nicht an andere übertragen. Du hörst deine eigene Stimme mit dem eingestellten Rauschfilter und Schwellenwert. Während des Tests bist du für andere im Sprachkanal stummgeschaltet.",
+    "micTestHint": "Dieser Test bleibt lokal und wird nicht an andere übertragen. Du hörst deine eigene Stimme mit dem eingestellten Rauschfilter und Schwellenwert. Während des Tests bist du für andere im Talk stummgeschaltet.",
     "micTestActiveBadge": "Aktiv (stumm für andere)",
-    "qosTitle": "Quality of Service (Hohe Paketpriorität)",
-    "qosHint": "Markiert Sprach- und Videopakete mit hoher Netzwerkpriorität (DSCP), um Aussetzer bei hoher Netzwerkauslastung zu verringern.",
+    "qosTitle": "Netzwerkpriorität für Sprache und Video",
+    "qosHint": "Gibt Sprache und Video im Netzwerk Vorrang, um Aussetzer bei hoher Auslastung zu verringern.",
     "warnings": "Hinweise & Warnungen",
     "noAudioWarningTitle": "Warnung bei fehlendem Tonsignal",
     "noAudioWarningHint": "Zeigt einen Hinweis an, wenn dein Mikrofon aktiv ist, aber über längere Zeit kein Ton erfasst wird.",
     "noAudioDetectedToast": "Kein Ton erkannt: Dein Mikrofon sendet kein Tonsignal. Prüfe deine Audioeingabe oder Systemberechtigung.",
-    "switchChannelWarningTitle": "Bestätigung beim Kanalwechsel",
-    "switchChannelWarningHint": "Fragt nach einer Bestätigung, bevor du in einen anderen Sprachkanal wechselst.",
-    "switchChannelTitle": "Sprachkanal wechseln?",
-    "switchChannelPrompt": "Möchtest du wirklich in den Kanal „{channel}“ wechseln?",
+    "switchChannelWarningTitle": "Bestätigung beim Talk-Wechsel",
+    "switchChannelWarningHint": "Fragt nach einer Bestätigung, bevor du in einen anderen Talk wechselst.",
+    "switchChannelTitle": "Talk wechseln?",
+    "switchChannelPrompt": "Möchtest du wirklich in den Talk „{channel}“ wechseln?",
     "switchChannelConfirm": "Kanal wechseln",
     "soundsTitle": "Soundeffekte",
     "soundsHint": "Spielt Töne beim Beitreten, Verlassen, Stummschalten und Taubschalten ab.",
@@ -513,11 +515,11 @@
     "soundsCustomTitle": "Einzelne Töne",
     "sound_join": "Kanal beigetreten",
     "sound_leave": "Kanal verlassen",
-    "sound_user_join": "Teilnehmer tritt bei",
-    "sound_user_leave": "Teilnehmer verlässt",
+    "sound_user_join": "Mitglied tritt bei",
+    "sound_user_leave": "Mitglied verlässt",
     "sound_mute": "Stummschalten",
     "sound_unmute": "Stummschaltung aufheben",
-    "sound_deafen": "Taubschalten",
+    "sound_deafen": "Ton aus",
     "sound_undeafen": "Taubschaltung aufheben",
     "sound_ptt_start": "Push-to-Talk aktivieren",
     "sound_ptt_stop": "Push-to-Talk deaktivieren",
@@ -554,7 +556,7 @@
     "keyMembers": "Halten diese Schlüssel",
     "unknownKeyMember": "Nicht in diesem Talk",
     "noSafetyCode": "Noch keine Medienschlüssel",
-    "safetyCodeHint": "Vergleicht diesen Code mit den anderen im Gespräch, persönlich oder über einen anderen Weg, dem ihr vertraut. Stimmt er überall überein, halten alle dieselben Schlüssel mit genau den aufgeführten Mitgliedern. Er ändert sich, sobald jemand kommt oder geht. Ein rot markierter Name hält die Schlüssel, ohne in diesem Talk zu sein, oder hält sie doppelt. Nur der Code ist Ende-zu-Ende geschützt: Die Namen kommen vom Server.",
+    "safetyCodeHint": "Vergleiche diesen Code mit den anderen im Talk, persönlich oder über einen anderen Weg, dem du vertraust. Stimmt er überall überein, halten alle dieselben Schlüssel mit genau den aufgeführten Mitgliedern. Er ändert sich, sobald jemand kommt oder geht. Ein rot markierter Name hält die Schlüssel, ohne in diesem Talk zu sein, oder hält sie doppelt. Nur der Code ist Ende-zu-Ende geschützt: Die Namen kommen vom Server.",
     "channels": {
       "one": "{count} Kanal",
       "other": "{count} Kanäle"
@@ -609,7 +611,7 @@
       "voiceSfu": "Pion WebRTC SFU",
       "voiceMid": " auf dem eigenen Server ein. ",
       "voiceNoP2p": "Es finden keinerlei Direkt-P2P-Verbindungen zwischen Teilnehmern statt.",
-      "voiceAfter1": " Dadurch wird Ihre IP-Adresse niemals an andere Gesprächsteilnehmer offengelegt. Audioströme und Bildschirmübertragungen werden in Echtzeit selektiv im Arbeitsspeicher weitergeleitet und ",
+      "voiceAfter1": " Dadurch wird Ihre IP-Adresse niemals an andere Talk-Teilnehmer offengelegt. Audioströme und Bildschirmübertragungen werden in Echtzeit selektiv im Arbeitsspeicher weitergeleitet und ",
       "voiceNoRecord": "zu keinem Zeitpunkt aufgezeichnet oder dauerhaft gespeichert",
       "voiceAfter2": ".",
       "stunTitle": "STUN-Server:",
@@ -741,14 +743,14 @@
     "runningForTip": "So lange läuft dieser Talk schon",
     "live": "LIVE",
     "liveTooltip": "Teilt den Bildschirm (LIVE)",
-    "watchStream": "Stream ansehen",
-    "stopWatching": "Stream beenden",
-    "muteStreamAudio": "Stream-Audio stummschalten",
-    "unmuteStreamAudio": "Stream-Audio aktivieren",
+    "watchStream": "Übertragung ansehen",
+    "stopWatching": "Nicht mehr ansehen",
+    "muteStreamAudio": "Ton der Übertragung stummschalten",
+    "unmuteStreamAudio": "Ton der Übertragung einschalten",
     "noAudioInShare": "Bildschirm ohne Audio geteilt",
     "noAudioInShareTip": "Hinweis: Bildschirm wird ohne Ton übertragen. Wähle einen Browser-Tab oder aktiviere „Audio teilen“ im Browser-Dialog, um Sound zu übertragen.",
-    "screenAudioFeedbackWarning": "Bei dieser Aufnahme ist kein Schutz vor erneut aufgenommenem Gesprächston bestätigt. Zuschauer könnten Stimmen doppelt hören. Teile einen Tab oder ein Fenster mit eigenem Ton oder schalte den Stream-Ton stumm.",
-    "ownStreamRunning": "Keine Sorge, dein Stream läuft weiter",
+    "screenAudioFeedbackWarning": "Bei dieser Aufnahme ist kein Schutz vor erneut aufgenommenem Talk-Ton bestätigt. Zuschauer könnten Stimmen doppelt hören. Teile einen Tab oder ein Fenster mit eigenem Ton oder schalte den Ton der Übertragung stumm.",
+    "ownStreamRunning": "Keine Sorge, deine Übertragung läuft weiter",
     "ownStreamRunningHint": "Die Vorschau pausiert, solange du in einem anderen Fenster bist, und spart so Leistung.",
     "viewers": {
       "one": "{count} Zuschauer: {names}",
@@ -768,8 +770,8 @@
     "pipExit": "Bild-im-Bild beenden",
     "pipPlaying": "Läuft im Bild-im-Bild-Fenster",
     "pipBack": "Zurück auf die Bühne",
-    "pipFailed": "Bild-im-Bild konnte nicht geöffnet werden",
-    "streamVolume": "Stream-Lautstärke",
+    "pipFailed": "Bild-im-Bild konnte nicht geöffnet werden. Versuche es noch einmal.",
+    "streamVolume": "Lautstärke der Übertragung",
     "replaceShareTitle": "Bildschirmübertragung ersetzen?",
     "replaceShareBody": "Du teilst bereits deinen Bildschirm. Pro Person läuft nur eine Übertragung: die neue ersetzt die laufende.",
     "replaceShareConfirm": "Ersetzen",
@@ -782,24 +784,24 @@
       "switching": "Wechsle …"
     },
     "quality": {
-      "title": "Stream-Qualität",
+      "title": "Qualität der Übertragung",
       "streamModalTitle": "Bildschirmübertragung",
-      "streamModalSubtitle": "Wähle Qualität und Einstellungen für deinen Stream",
+      "streamModalSubtitle": "Wähle Qualität und Einstellungen für deine Übertragung",
       "startStream": "Übertragung starten",
-      "applyQuality": "Qualität anwenden",
+      "applyQuality": "Qualität übernehmen",
       "preset": "Voreinstellung",
-      "mode": "Stream-Modus",
+      "mode": "Modus der Übertragung",
       "gaming": "Gaming",
       "gamingHint": "Flüssigeres Video (1440p, 60 fps)",
       "screen": "Bildschirm",
       "screenHint": "Klarere Schrift (Quelle, 15 fps)",
-      "custom": "Benutzerdefiniert",
+      "custom": "Eigene",
       "resolution": "Auflösung",
       "frameRate": "Bildrate",
       "source": "Quelle",
       "source4k": "Quelle (bis zu 4K)",
       "fps": "{fps} fps",
-      "muteSound": "Stream-Ton stummschalten",
+      "muteSound": "Ton der Übertragung stummschalten",
       "advanced": "Erweitert",
       "codec": "Codec",
       "targetFps": "Gewähltes Bildratenziel",
@@ -835,10 +837,10 @@
   },
   "admin": {
     "title": "Speicher & Administration",
-    "signedInAs": "Angemeldet als {name} (Inhaber)",
+    "signedInAs": "Angemeldet als {name} (Owner)",
     "unknownError": "Unbekannter Fehler",
     "tabs": {
-      "users": "Nutzer",
+      "users": "Mitglieder",
       "channels": "Kanäle & Layout",
       "invites": "Einladungen",
       "media": "Medien & Speicher",
@@ -877,7 +879,7 @@
       "no": "Nein",
       "uptime": "Laufzeit",
       "uptimeDays": "{d} T {h} Std",
-      "uptimeHours": "{h} Std {m} Min",
+      "uptimeHours": "{h} Std. {m} Min.",
       "uptimeMinutes": "{m} Min",
       "memory": "Speicher (belegt / reserviert)",
       "goroutines": "Goroutinen",
@@ -897,7 +899,7 @@
       "manualUpdate": "Manuell aktualisieren (auf dem Server, im Verzeichnis mit docker-compose.yml):",
       "copy": "Kopieren",
       "copied": "Befehl kopiert",
-      "copyFailed": "Kopieren nicht möglich",
+      "copyFailed": "Das Kopieren hat nicht geklappt. Versuche es noch einmal.",
       "selfUpdateTitle": "Server jetzt aktualisieren?",
       "selfUpdateButton": "Jetzt aktualisieren",
       "selfUpdateStarting": "Starte Update …",
@@ -908,7 +910,7 @@
       "selfUpdateStalled": "Nach 5 Minuten läuft noch die alte Version. Prüfe das Log des Updaters (docker compose logs updater) und ob MNEMA_IMAGE einen Tag nutzt, der die neue Version enthält.",
       "selfUpdateDone": "Version {version} läuft",
       "selfUpdateCooldown": "Ein Update wurde gerade angestoßen; das nächste ist ab {when} möglich.",
-      "selfUpdateNotConfigured": "Direkt aus Mnema aktualisieren ist nicht eingerichtet (optionaler Updater, siehe doc/deployment.md „Updates“).",
+      "selfUpdateNotConfigured": "Direkt aus Mnema aktualisieren ist nicht eingerichtet (optionaler Updater; siehe „Updates“ im Deployment-Leitfaden).",
       "ops": {
         "heading": "Betrieb live",
         "hint": "Die letzte Stunde, alle 10 Sekunden aktualisiert. Prometheus kann dieselben Werte abrufen (METRICS_TOKEN).",
@@ -917,7 +919,7 @@
         "cpu": "CPU (ein Kern = 100 %)",
         "memory": "Speicher in Benutzung",
         "goroutines": "Goroutinen",
-        "online": "Nutzer online",
+        "online": "Mitglieder online",
         "talks": "Talk-Verbindungen",
         "screens": "Bildschirmübertragungen",
         "egress": "Datenrate zu den Zuschauern",
@@ -952,8 +954,8 @@
       "reach": {
         "follows": "Das Image {image} folgt neuen Versionen.",
         "unset": "MNEMA_IMAGE ist nicht gesetzt.",
-        "local_build": "Das Image {image} wird auf dem Server gebaut und kann nicht gezogen werden – bitte manuell aktualisieren.",
-        "digest_pinned": "Das Image {image} ist per Digest festgelegt – bitte manuell aktualisieren.",
+        "local_build": "Das Image {image} wird auf dem Server gebaut und kann nicht gezogen werden – aktualisiere manuell.",
+        "digest_pinned": "Das Image {image} ist per Digest festgelegt – aktualisiere manuell.",
         "version_pinned": "Das Image {image} ist auf eine Version festgelegt – für {version} den Tag in .env ändern.",
         "track_mismatch": "Der Tag von {image} enthält {version} nicht (z. B. größerer Versionssprung) – Tag in .env ändern.",
         "custom_tag": "Unbekannter Tag bei {image}."
@@ -963,7 +965,7 @@
         "docs": "So wird es behoben",
         "trusted_proxy_broad": {
           "title": "TRUSTED_PROXY_CIDRS ist zu weit gefasst",
-          "body": "Die Einstellung enthält weite Bereiche, obwohl der Server nicht nur lokal erreichbar ist. Jeder Host in diesen Bereichen kann seine Client-Adresse fälschen und Ratenbegrenzung und Login-Sperre umgehen. Trage nur die Adresse deines Reverse-Proxys ein."
+          "body": "Die Einstellung enthält weite Bereiche, obwohl der Server nicht nur lokal erreichbar ist. Jeder Host in diesen Bereichen kann seine Client-Adresse fälschen und Ratenbegrenzung und Anmeldesperre umgehen. Trage nur die Adresse deines Reverse-Proxys ein."
         },
         "proxy_not_trusted": {
           "title": "Anfragen kommen über einen nicht vertrauten Proxy",
@@ -975,7 +977,7 @@
         },
         "webrtc_udp_mux_disabled": {
           "title": "Sprachkapazität ist begrenzt",
-          "body": "WEBRTC_UDP_MUX_PORT=0 gibt jedem Medien-Peer einen eigenen UDP-Port aus dem Bereich ({count} Ports); das begrenzt, wie viele Personen gleichzeitig in Gesprächen sein können. Lass die Einstellung leer, damit sich alle einen Port teilen."
+          "body": "WEBRTC_UDP_MUX_PORT=0 gibt jedem Medien-Peer einen eigenen UDP-Port aus dem Bereich ({count} Ports); das begrenzt, wie viele Personen gleichzeitig in Talks sein können. Lass die Einstellung leer, damit sich alle einen Port teilen."
         },
         "insecure_public_url": {
           "title": "PUBLIC_URL ist nicht https",
@@ -983,7 +985,7 @@
         },
         "voice_unavailable": {
           "title": "Sprache ist deaktiviert",
-          "body": "Die WebRTC-Engine konnte nicht starten, daher kann niemand Sprachkanälen beitreten oder den Bildschirm teilen. Den Grund findest du im Server-Log."
+          "body": "Die WebRTC-Engine konnte nicht starten, daher kann niemand Talks beitreten oder den Bildschirm teilen. Den Grund findest du im Server-Log."
         },
         "unknown": {
           "title": "Server-Warnung: {code}",
@@ -991,10 +993,10 @@
         }
       }
     },
-    "users": "Nutzerverwaltung",
-    "searchUsers": "Nutzer suchen …",
-    "searchUsersLabel": "Nutzer suchen",
-    "noUsersFound": "Keine Nutzer gefunden.",
+    "users": "Mitgliederverwaltung",
+    "searchUsers": "Mitglieder suchen …",
+    "searchUsersLabel": "Mitglieder suchen",
+    "noUsersFound": "Keine Mitglieder gefunden.",
     "username": "Benutzername",
     "displayName": "Anzeigename",
     "role": "Rolle",
@@ -1002,16 +1004,16 @@
     "status": "Status",
     "actions": "Aktionen",
     "userActive": "Aktiv",
-    "userDisabled": "Gesperrt",
+    "userDisabled": "Deaktiviert",
     "never": "Nie",
     "inVoice": "Im Talk",
-    "disableUser": "Nutzer sperren",
-    "enableUser": "Nutzer entsperren",
-    "disableUserTitle": "„{name}“ sperren?",
-    "disableUserBody": "Der Nutzer wird sofort abgemeldet und kann sich nicht mehr einloggen.",
-    "disableUserConfirm": "Sperren",
-    "userDisabledToast": "Nutzer gesperrt",
-    "userEnabledToast": "Nutzer entsperrt",
+    "disableUser": "Konto deaktivieren",
+    "enableUser": "Konto aktivieren",
+    "disableUserTitle": "„{name}“ deaktivieren?",
+    "disableUserBody": "Das Mitglied wird sofort abgemeldet und kann sich nicht mehr anmelden.",
+    "disableUserConfirm": "Deaktivieren",
+    "userDisabledToast": "Konto deaktiviert",
+    "userEnabledToast": "Konto aktiviert",
     "resetPassword": "Passwort zurücksetzen",
     "resetPasswordTitle": "Passwort für „{name}“ zurücksetzen",
     "resetPasswordPrompt": "Gib ein neues Passwort ein (mindestens {count} Zeichen):",
@@ -1022,12 +1024,12 @@
     "passwordTooShort": "Das Passwort muss mindestens {count} Zeichen lang sein.",
     "revokeSessions": "Sitzungen beenden",
     "revokeSessionsTitle": "Sitzungen von „{name}“ beenden?",
-    "revokeSessionsBody": "Alle aktiven Sitzungen werden beendet. Der Nutzer muss sich neu anmelden.",
+    "revokeSessionsBody": "Alle aktiven Sitzungen werden beendet. Das Mitglied muss sich neu anmelden.",
     "revokeSessionsConfirm": "Sitzungen beenden",
     "sessionsRevoked": "Alle Sitzungen beendet",
     "kickFromVoice": "Aus Talk werfen",
     "kickFromVoiceTitle": "„{name}“ aus dem Talk werfen?",
-    "kickFromVoiceBody": "Der Nutzer wird sofort aus dem Talk getrennt.",
+    "kickFromVoiceBody": "Das Mitglied wird sofort aus dem Talk getrennt.",
     "kickConfirm": "Aus Talk werfen",
     "userKicked": "Aus Talk geworfen",
     "channelsLayout": "Kanäle & Layout",
@@ -1055,7 +1057,7 @@
     "channelDeleted": "Kanal gelöscht",
     "categoryDeleted": "Kategorie gelöscht",
     "uncategorized": "Ohne Kategorie",
-    "addCategory": "Kategorie anlegen",
+    "addCategory": "Kategorie erstellen",
     "save": "Speichern",
     "storage": "Speicher",
     "storageCounts": "{files} Dateien, {deleted} gelöscht",
@@ -1094,16 +1096,16 @@
     "copyLink": "Link kopieren",
     "copied": "Kopiert",
     "linkCopied": "Link kopiert",
-    "copyFailed": "Kopieren nicht möglich. Kopiere den Link von Hand:",
+    "copyFailed": "Das Kopieren hat nicht geklappt. Kopiere den Link von Hand:",
     "deleteInvite": "Einladung löschen",
     "deleteInviteTitle": "Einladung {code} löschen?",
     "deleteInviteBody": "Der Code funktioniert danach nicht mehr.",
     "inviteDeleted": "Einladung gelöscht",
     "media": "Hochgeladene Medien",
     "noMedia": "Keine Medien vorhanden.",
-    "loginLocked": "Login gesperrt",
-    "clearLoginLockout": "Login-Sperre aufheben",
-    "loginLockoutCleared": "Login-Sperre aufgehoben",
+    "loginLocked": "Anmeldesperre",
+    "clearLoginLockout": "Anmeldesperre aufheben",
+    "loginLockoutCleared": "Anmeldesperre aufgehoben",
     "uploadLimit": {
       "title": "Upload-Größe",
       "label": "Größte Datei",
@@ -1164,7 +1166,7 @@
     "bioLabel": "Biografie (max. {count} Zeichen)",
     "bioPlaceholder": "Erzähl etwas über dich …",
     "profileSaved": "Profil gespeichert",
-    "saveFailed": "Profil konnte nicht gespeichert werden.",
+    "saveFailed": "Das Profil konnte nicht gespeichert werden. Versuche es noch einmal.",
     "password": "Passwort",
     "changePassword": "Ändern",
     "currentPassword": "Aktuelles Passwort",
@@ -1181,12 +1183,12 @@
     "avatarHint": "Tipp: Klick auf dein Profilbild, um ein neues Bild (PNG, JPG, WEBP, GIF) hochzuladen.",
     "avatarSaved": "Avatar gespeichert",
     "avatarTooBig": "Das Bild ist zu groß (max. {size} MB).",
-    "avatarFailed": "Avatar konnte nicht hochgeladen werden.",
+    "avatarFailed": "Der Avatar konnte nicht hochgeladen werden. Versuche es noch einmal.",
     "status": "Status",
     "statusPlaceholder": "Was machst du gerade?",
     "noStatus": "Kein Status gesetzt",
     "clearStatus": "Leeren",
-    "moderateStatus": "Bearbeiten (Admin)",
+    "moderateStatus": "Bearbeiten (Moderation)",
     "statusSaved": "Status gespeichert",
     "statusCleared": "Status geleert",
     "displayNameHint": "So sehen dich andere. Dein Username @{username} bleibt gleich. Höchstens {count} Zeichen.",
@@ -1197,7 +1199,7 @@
     "voiceNotFound": "Diesen Talk gibt es nicht mehr.",
     "noAccess": "Dafür fehlt dir die Berechtigung.",
     "mentionCopied": "@Name in die Zwischenablage kopiert",
-    "actionFailed": "Das hat nicht geklappt. Bitte versuche es erneut."
+    "actionFailed": "Das hat nicht geklappt. Versuche es noch einmal."
   },
   "slash": {
     "title": "Befehle",
@@ -1209,7 +1211,7 @@
     "missing": "Fülle zuerst „{name}“ aus.",
     "notANumber": "„{name}“ braucht eine ganze Zahl.",
     "botOffline": "{bot} ist gerade nicht verbunden.",
-    "failed": "Der Befehl konnte nicht ausgeführt werden.",
+    "failed": "Der Befehl konnte nicht ausgeführt werden. Versuche es noch einmal.",
     "privateFrom": "Private Antwort von {bot}",
     "bot": "Bot",
     "onlyYou": "Nur du siehst das",
@@ -1259,14 +1261,14 @@
     },
     "allowMultiple": "Mehrere Antworten erlauben",
     "makeAnonymous": "Anonyme Umfrage",
-    "anonymousHint": "Niemand sieht, wer wofür gestimmt hat, auch du und die Admins nicht. Es werden nur die Summen angezeigt.",
+    "anonymousHint": "Niemand sieht, wer wofür gestimmt hat, auch du und Administratoren nicht. Es werden nur die Summen angezeigt.",
     "post": "Umfrage senden",
     "problem": {
       "question": "Gib eine Frage ein.",
       "options": "Mindestens {min} Antworten nötig.",
       "duplicate": "Die Antworten müssen sich unterscheiden."
     },
-    "postFailed": "Die Umfrage konnte nicht gesendet werden.",
+    "postFailed": "Die Umfrage konnte nicht gesendet werden. Versuche es noch einmal.",
     "single": "Eine Antwort wählen",
     "multiple": "Eine oder mehrere wählen",
     "anonymous": "Anonym",
@@ -1295,7 +1297,7 @@
     "endBody": "Die Abstimmung endet jetzt. Die Ergebnisse bleiben sichtbar.",
     "someone": "Jemand",
     "more": "+{count} weitere",
-    "failed": "Das hat nicht geklappt."
+    "failed": "Das hat nicht geklappt. Versuche es noch einmal."
   },
   "mention": {
     "title": "Erwähnen",
@@ -1308,15 +1310,15 @@
     "title": "Angeheftete Nachrichten",
     "empty": "In diesem Kanal ist noch nichts angeheftet.",
     "emptyModerator": "Noch nichts angeheftet. Hefte eine Nachricht über ihr Nachrichtenmenü an.",
-    "failed": "Die angehefteten Nachrichten konnten nicht geladen werden.",
+    "failed": "Die angehefteten Nachrichten konnten nicht geladen werden. Versuche es noch einmal.",
     "notice": "{name} hat eine Nachricht in diesem Kanal angeheftet.",
     "view": "Ansehen",
-    "dismiss": "Schließen"
+    "dismiss": "Ausblenden"
   },
   "mentions": {
     "inbox": "Erwähnungen",
     "empty": "Dich erwähnt noch niemand.",
-    "failed": "Erwähnungen konnten nicht geladen werden."
+    "failed": "Die Erwähnungen konnten nicht geladen werden. Versuche es noch einmal."
   },
   "emoji": {
     "open": "Emoji einfügen",
@@ -1328,7 +1330,7 @@
       "hint": "PNG, GIF oder WebP bis 256 KiB. Bilder werden auf dem Server neu gezeichnet und auf höchstens 128 × 128 Pixel verkleinert. Mitglieder nutzen sie mit :name:. Animierte Emojis müssen GIFs sein.",
       "count": "{n} von {max} belegt",
       "file": "Bilddatei",
-      "name": "Name (a-z, 0-9, _)",
+      "name": "Name (a–z, 0–9, _)",
       "add": "Emoji hinzufügen",
       "added": "Emoji hinzugefügt",
       "deleted": "Emoji gelöscht",
@@ -1337,7 +1339,7 @@
       "animated": "Animiert",
       "rename": "Umbenennen",
       "empty": "Noch keine eigenen Emojis.",
-      "full": "Das Limit ist erreicht. Lösche ein Emoji oder erhöhe EMOJI_MAX."
+      "full": "Das Limit ist erreicht. Lösche ein Emoji, um Platz zu schaffen."
     }
   },
   "activity": {
@@ -1352,7 +1354,7 @@
   "nativeDesktop": {
     "contextError": "Die lokale Verbindung konnte nicht gestartet werden.",
     "connectError": "Dieser Server ist nicht erreichbar oder unterstützt diese DEV-Version nicht.",
-    "disconnectError": "Die Verbindung wurde beendet. Bitte erneut verbinden.",
+    "disconnectError": "Die Verbindung wurde beendet. Verbinde dich erneut.",
     "dev": "DEV-Entwicklungsversion",
     "changeServer": "Server wechseln",
     "connectCommunity": "Mit deiner Community verbinden.",
@@ -1363,7 +1365,7 @@
     "featureUnavailable": "Diese Funktion ist in dieser DEV-Version noch nicht verfügbar.",
     "mediaUnavailable": "Talks, Kamera und Bildschirmfreigabe sind in dieser DEV-Version noch nicht verfügbar.",
     "addressTooLong": "Serveradresse zu lang",
-    "loginRequired": "Bitte melde dich an. Die Registrierung wird nicht automatisch wiederholt.",
+    "loginRequired": "Melde dich an. Die Registrierung wird nicht automatisch wiederholt.",
     "chatAuthorizationRequired": "Diese Chatfunktion benötigt eine gültige native Freigabe."
   },
   "nativeTrust": {
@@ -1380,7 +1382,7 @@
     "confirm": "Im Sicherheitsdialog prüfen",
     "preparing": "Wird vorbereitet …",
     "prepare": "Einrichtung vorbereiten",
-    "expired": "Die Einrichtung ist abgelaufen. Bitte erneut starten.",
+    "expired": "Die Einrichtung ist abgelaufen. Starte sie erneut.",
     "cancelled": "Die Einrichtung wurde abgebrochen.",
     "failed": "Die Einrichtung konnte nicht abgeschlossen werden.",
     "statusError": "Der Sicherheitsstatus konnte nicht gelesen werden.",
@@ -1392,8 +1394,8 @@
     "settings": "Gaming-Einstellungen",
     "overlay": "Overlay",
     "mute": "Stummschalten",
-    "deafen": "Ton ausschalten",
-    "ptt": "Push-to-talk",
+    "deafen": "Ton aus",
+    "ptt": "Push-to-Talk",
     "games": "Zusätzliche Spiele-EXEs (eine pro Zeile)",
     "error": "Nicht übernommen. Verbindung prüfen und unterschiedliche unterstützte Tasten wählen.",
     "enabled": "Gaming-Overlay und Sidepeek aktivieren",
@@ -1403,7 +1405,7 @@
   "perm": {
     "administrator": {
       "name": "Administrator",
-      "desc": "Hat alle Rechte unten und ignoriert Kanalrechte. Kann den Inhaber nicht antasten."
+      "desc": "Hat alle Rechte unten und ignoriert Kanalrechte. Kann den Owner nicht antasten."
     },
     "view_channel": {
       "name": "Kanäle ansehen",
@@ -1423,10 +1425,10 @@
     },
     "manage_messages": {
       "name": "Nachrichten verwalten",
-      "desc": "Nachrichten anderer löschen (nie die des Inhabers)."
+      "desc": "Nachrichten anderer löschen (nie die des Owners)."
     },
     "mention_everyone": {
-      "name": "@all erwähnen",
+      "name": "@all und @here erwähnen",
       "desc": "@all und @here nutzen, um alle zu benachrichtigen."
     },
     "connect": {
@@ -1459,11 +1461,11 @@
     },
     "manage_webhooks": {
       "name": "Webhooks verwalten",
-      "desc": "Reserviert. Webhooks verwalten die Inhaberin oder der Inhaber und Administratoren."
+      "desc": "Reserviert. Webhooks verwalten der Owner und Administratoren."
     },
     "manage_members": {
       "name": "Mitglieder verwalten",
-      "desc": "Konten sperren und entsperren, Sitzungen beenden und Status ändern, für Mitglieder unterhalb deiner höchsten Rolle."
+      "desc": "Konten deaktivieren und aktivieren, Sitzungen beenden und Status ändern, für Mitglieder unterhalb deiner höchsten Rolle."
     },
     "manage_bots": {
       "name": "Bots verwalten",
@@ -1477,8 +1479,8 @@
     "deny": "Verbieten",
     "inherit": "Erben",
     "timeout_members": {
-      "name": "Mitglieder stummschalten",
-      "desc": "Mitglieder unterhalb deiner höchsten Rolle für eine Weile stummschalten: kein Schreiben, Reagieren, Sprechen oder Talk-Beitreten."
+      "name": "Mitglieder in Auszeit schicken",
+      "desc": "Mitglieder unterhalb deiner höchsten Rolle für eine Weile in Auszeit schicken: kein Schreiben, Reagieren, Sprechen oder Talk-Beitreten."
     },
     "ban_members": {
       "name": "Mitglieder sperren",
@@ -1500,7 +1502,7 @@
     "to": "Bis Datum",
     "apply": "Anwenden",
     "empty": "Keine Einträge.",
-    "system": "Server",
+    "system": "System",
     "request": "Anfrage",
     "loadMore": "Mehr laden",
     "groups": {
@@ -1535,7 +1537,7 @@
         "status": "Statuszeile bearbeitet",
         "password_set": "Passwort gesetzt",
         "password_reset": "Passwort zurückgesetzt",
-        "lockout_clear": "Login-Sperre aufgehoben",
+        "lockout_clear": "Anmeldesperre aufgehoben",
         "talk_kick": "Aus Talk entfernt"
       },
       "channel": {
@@ -1583,7 +1585,7 @@
         "delete": "Nachricht gelöscht",
         "edit": "Nachricht bearbeitet",
         "pin": "Nachricht angeheftet",
-        "unpin": "Nachricht gelöst"
+        "unpin": "Anheftung aufgehoben"
       },
       "voice": {
         "join": "Talk betreten",
@@ -1592,7 +1594,7 @@
       "auth": {
         "login": "Angemeldet",
         "login_failed": "Anmeldung fehlgeschlagen",
-        "login_locked": "Anmeldung gesperrt",
+        "login_locked": "Anmeldung vorübergehend gesperrt (zu viele Versuche)",
         "register": "Registriert",
         "logout_all": "Überall abgemeldet",
         "password_change": "Passwort geändert"
@@ -1601,8 +1603,8 @@
         "upload_limit": "Upload-Limit geändert"
       },
       "moderation": {
-        "timeout": "Mitglied stummgeschaltet",
-        "timeout_remove": "Timeout aufgehoben",
+        "timeout": "Mitglied in Auszeit geschickt",
+        "timeout_remove": "Auszeit beendet",
         "ban": "Mitglied gesperrt",
         "unban": "Mitglied entsperrt",
         "ban_expired": "Sperre abgelaufen",
@@ -1614,7 +1616,7 @@
     "managedHint": "Verwaltete Rolle: Jeder Bot hat sie, sie lässt sich nicht entfernen.",
     "managedNote": "Die Bot-Rolle wird vom System verwaltet. Jeder Bot erhält sie automatisch, niemand sonst kann sie haben; sie lässt sich nicht umbenennen, einem Bot nicht wegnehmen und nicht löschen. Farbe, Position und getrennte Auflistung kannst du ändern. Sie startet ohne Rechte: Ein Bot kann nichts, bis du ihm hier oder in einem Kanal etwas erlaubst. Nur der Owner kann Bots erhöhte Rechte geben, und niemand kann Bots Rechte geben, die er selbst nicht hat.",
     "title": "Rollen",
-    "intro": "Rollen geben Mitgliedern Rechte. Eine höhere Rolle steht über einer niedrigeren. Der Inhaber hat immer alle Rechte und kann nicht eingeschränkt werden.",
+    "intro": "Rollen geben Mitgliedern Rechte. Eine höhere Rolle steht über einer niedrigeren. Der Owner hat immer alle Rechte und kann nicht eingeschränkt werden.",
     "new": "Neue Rolle",
     "newName": "Neue Rolle",
     "everyone": "@everyone",
@@ -1639,12 +1641,12 @@
     "locked": "Diese Rolle steht nicht unter deiner höchsten Rolle. Du kannst sie ansehen, aber nicht ändern.",
     "rank": "Rang {n}",
     "empty": "Noch keine Rollen. Lege eine an, um Mitgliedern mehr Rechte zu geben.",
-    "ownerNote": "Die Rechte des Inhabers lassen sich nicht ändern.",
+    "ownerNote": "Die Rechte des Owners lassen sich nicht ändern.",
     "cannotGrant": "Du kannst nur Rechte vergeben, die du selbst hast.",
     "selected": "Ausgewählte Rolle",
     "list": "Rollen",
     "nameRequired": "Gib der Rolle einen Namen.",
-    "reorderFailed": "Die Reihenfolge konnte nicht geändert werden.",
+    "reorderFailed": "Die Reihenfolge konnte nicht geändert werden. Versuche es noch einmal.",
     "uploadLimit": "Max. Upload-Größe",
     "uploadInherit": "Erben",
     "uploadHint": "Leer lassen, um das globale Limit zu nutzen. Mitglieder erhalten das höchste Limit ihrer Rollen, nie mehr als das Server-Maximum.",
@@ -1660,7 +1662,7 @@
     "saved": "Rollen gespeichert",
     "locked": "Über deinem Rang",
     "none": "Keine Rollen",
-    "owner": "Der Inhaber hat alle Rechte und bekommt keine Rollen.",
+    "owner": "Der Owner hat alle Rechte und bekommt keine Rollen.",
     "own": "Du kannst deine eigenen Rollen nicht ändern."
   },
   "overwrites": {
@@ -1681,8 +1683,8 @@
     "subjects": "Rollen und Mitglieder",
     "role": "Rolle",
     "member": "Mitglied",
-    "loadFailed": "Die Rechte konnten nicht geladen werden.",
-    "ownerNote": "Der Inhaber hat immer Zugriff und wird nicht aufgelistet."
+    "loadFailed": "Die Rechte konnten nicht geladen werden. Versuche es noch einmal.",
+    "ownerNote": "Der Owner hat immer Zugriff und wird nicht aufgelistet."
   },
   "webhooks": {
     "title": "Webhooks von #{name}",
@@ -1760,10 +1762,10 @@
     }
   },
   "moderation": {
-    "timeoutAction": "Timeout…",
-    "removeTimeout": "Timeout aufheben",
-    "banAction": "Sperren…",
-    "timeoutTitle": "{name} stummschalten",
+    "timeoutAction": "Auszeit verhängen …",
+    "removeTimeout": "Auszeit beenden",
+    "banAction": "Sperren …",
+    "timeoutTitle": "{name} in Auszeit schicken",
     "timeoutBody": "Die Person kann lesen, aber weder schreiben, reagieren, sprechen, Video teilen noch Talks beitreten, bis die Zeit um ist. Ein laufender Talk endet für sie.",
     "banTitle": "{name} sperren",
     "banBody": "Beendet alle Sitzungen und verhindert die Anmeldung. Konto und Nachrichten bleiben erhalten.",
@@ -1776,15 +1778,15 @@
     "reason": "Grund (optional)",
     "reasonPlaceholder": "Wird der Person angezeigt",
     "revokeInvite": "Auch die Einladung widerrufen, mit der sie sich registriert haben",
-    "timeoutConfirm": "Stummschalten",
+    "timeoutConfirm": "Auszeit verhängen",
     "banConfirm": "Sperren",
-    "timedOutToast": "{name} ist stummgeschaltet.",
+    "timedOutToast": "{name} ist in Auszeit.",
     "bannedToast": "{name} ist gesperrt.",
-    "timeoutRemovedToast": "Timeout für {name} aufgehoben.",
-    "failed": "Die Aktion ist fehlgeschlagen.",
-    "bannerText": "Du bist stummgeschaltet.",
-    "noticeTimeout": "Du wurdest für {duration} stummgeschaltet",
-    "noticeTimeoutRemoved": "Dein Timeout wurde aufgehoben.",
+    "timeoutRemovedToast": "Auszeit für {name} beendet.",
+    "failed": "Die Aktion konnte nicht ausgeführt werden. Versuche es noch einmal.",
+    "bannerText": "Du bist in Auszeit.",
+    "noticeTimeout": "Du wurdest für {duration} in Auszeit geschickt",
+    "noticeTimeoutRemoved": "Deine Auszeit wurde beendet.",
     "noticeBan": "Du wurdest gesperrt",
     "bansTitle": "Sperren",
     "noBans": "Niemand ist gesperrt.",
@@ -1800,7 +1802,7 @@
       "min": "{n} Min.",
       "s": "{n} s",
       "h": "{n} Std.",
-      "d": "{n} Tg.",
+      "d": "{n} T",
       "w": "{n} Wo."
     },
     "unitNames": {
@@ -1809,8 +1811,8 @@
       "hours": "Stunden",
       "days": "Tage"
     },
-    "noticeMessageDeleted": "Ein Moderator hat deine Nachricht in {channel} entfernt",
-    "noticeMessagesDeleted": "Ein Moderator hat {count} deiner Nachrichten in {channel} entfernt",
+    "noticeMessageDeleted": "Deine Nachricht in {channel} wurde vom Moderationsteam entfernt",
+    "noticeMessagesDeleted": "{count} deiner Nachrichten in {channel} wurden vom Moderationsteam entfernt",
     "bulkDeleted": "{count} Nachrichten von {name} gelöscht.",
     "deleteTitle": "Nachricht löschen",
     "deleteBody": "Die Person erfährt es samt Grund. Das Audit-Log behält den Text.",
@@ -1819,13 +1821,13 @@
     "bulkCount": "Wie viele Nachrichten",
     "bulkRange": "Zwischen 1 und {max}.",
     "pinMessage": "Nachricht anheften",
-    "unpinMessage": "Nachricht lösen",
+    "unpinMessage": "Anheftung aufheben",
     "pinned": "Angeheftet",
-    "deleteWithReason": "Mit Grund löschen…",
-    "deleteLatest": "Letzte Nachrichten dieser Person löschen…",
+    "deleteWithReason": "Mit Grund löschen …",
+    "deleteLatest": "Letzte Nachrichten dieser Person löschen …",
     "slowMode": "Langsammodus",
     "slowModeOff": "Aus",
-    "slowModeHint": "Mitglieder warten so lange zwischen zwei Nachrichten. Moderatoren sind ausgenommen.",
+    "slowModeHint": "Mitglieder warten so lange zwischen zwei Nachrichten. Mitglieder mit „Nachrichten verwalten“ sind ausgenommen.",
     "slowModeChip": "Langsammodus {time}"
   },
   "editHistory": {
@@ -1836,11 +1838,11 @@
     "loading": "Lädt …",
     "none": "Von dieser Nachricht ist keine frühere Fassung gespeichert.",
     "empty": "(kein Text)",
-    "failed": "Der Bearbeitungsverlauf konnte nicht geladen werden."
+    "failed": "Der Bearbeitungsverlauf konnte nicht geladen werden. Versuche es noch einmal."
   },
   "bots": {
     "title": "Bots",
-    "intro": "Bots sind Konten für Programme: Sie schreiben Nachrichten, beantworten Slash-Befehle und reagieren über die Bot-API auf Ereignisse (siehe doc/bots.md). Ein neuer Bot kann nichts, bis du ihm eine Rolle gibst, seine Intents erlaubst und ein Token ausstellst. Jede Änderung landet im Audit-Log.",
+    "intro": "Bots sind Konten für Programme: Sie schreiben Nachrichten, beantworten Slash-Befehle und reagieren über die Bot-API auf Ereignisse (siehe Bot-Dokumentation). Ein neuer Bot kann nichts, bis du ihm eine Rolle gibst, seine Intents erlaubst und ein Token ausstellst. Jede Änderung landet im Audit-Log.",
     "badge": "Bot",
     "new": "Neuer Bot",
     "name": "Name",
@@ -1963,8 +1965,8 @@
   },
   "push": {
     "title": "Push-Benachrichtigungen",
-    "loading": "Wird geladen …",
-    "loadFailed": "Die Push-Einstellungen konnten nicht geladen werden.",
+    "loading": "Lädt …",
+    "loadFailed": "Die Push-Einstellungen konnten nicht geladen werden. Versuche es noch einmal.",
     "offByOperator": "Der Betreiber hat Push-Benachrichtigungen auf diesem Server abgeschaltet.",
     "needsInstall": "Auf iPhone und iPad funktionieren Push-Benachrichtigungen nur für die installierte App. Tippe in Safari auf Teilen, wähle Zum Home-Bildschirm und öffne Mnema Talk von dort.",
     "unsupported": "Dieser Browser kann keine Push-Benachrichtigungen empfangen.",
@@ -1984,11 +1986,11 @@
     "enabledToast": "Push-Benachrichtigungen sind für dieses Gerät eingeschaltet.",
     "blockedToast": "Benachrichtigungen sind im Browser blockiert.",
     "unavailableToast": "Push-Benachrichtigungen sind hier nicht verfügbar.",
-    "enableFailed": "Push-Benachrichtigungen konnten nicht eingeschaltet werden.",
-    "removeFailed": "Das Gerät konnte nicht entfernt werden.",
+    "enableFailed": "Push-Benachrichtigungen konnten nicht eingeschaltet werden. Versuche es noch einmal.",
+    "removeFailed": "Das Gerät konnte nicht entfernt werden. Versuche es noch einmal.",
     "testSent": "Testbenachrichtigung gesendet.",
-    "testFailed": "Die Testbenachrichtigung konnte nicht zugestellt werden.",
-    "previewFailed": "Die Einstellung konnte nicht gespeichert werden."
+    "testFailed": "Die Testbenachrichtigung konnte nicht zugestellt werden. Versuche es noch einmal.",
+    "previewFailed": "Die Einstellung konnte nicht gespeichert werden. Versuche es noch einmal."
   },
   "recovery": {
     "forgotLink": "Passwort vergessen?",
@@ -2074,7 +2076,7 @@
       "exportExpired": "Der letzte Export ist abgelaufen und wurde entfernt.",
       "exportNext": "Den nächsten Export kannst du ab {when} anfordern.",
       "deleteTitle": "Mein Konto löschen",
-      "deleteIntro": "Löscht dein Profil, deinen Avatar, deine E-Mail-Adresse, Sitzungen, Einstellungen, Reaktionen und Uploads endgültig. Deine Nachrichten bleiben in ihren Threads als von „Gelöschter Nutzer“ stehen, ihr Text wird aber entfernt. Antworten anderer Mitglieder bleiben. Dein Benutzername wird wieder frei. Das lässt sich nicht rückgängig machen.",
+      "deleteIntro": "Löscht dein Profil, deinen Avatar, deine E-Mail-Adresse, Sitzungen, Einstellungen, Reaktionen und Uploads endgültig. Deine Nachrichten bleiben in ihren Threads als von „Gelöschtes Mitglied“ stehen, ihr Text wird aber entfernt. Antworten anderer Mitglieder bleiben. Dein Benutzername wird wieder frei. Das lässt sich nicht rückgängig machen.",
       "deleteOwner": "Das Owner-Konto kann nicht gelöscht werden: Die Eigentümerschaft lässt sich nicht übertragen, die Community hätte sonst keinen Owner.",
       "deleteButton": "Mein Konto löschen …",
       "deleteType": "Tippe zur Bestätigung deinen Benutzernamen ({name})",
