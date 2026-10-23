@@ -49,6 +49,9 @@ func TestMetricsExposeProcessBuildAndInstruments(t *testing.T) {
 }
 
 func TestOpsSamplerDifferencesCountersIntoRates(t *testing.T) {
+	// Earlier tests of the package may have used up the series of the family
+	// (maxSeries); a new route would then count under "other", not "5xx".
+	metrics.HTTPRequests.Reset()
 	o := newOpsSampler(nil)
 	o.sample() // baseline only
 	if len(o.ring.Snapshot()) != 0 {
