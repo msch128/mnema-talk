@@ -44,11 +44,11 @@ const (
 // language; German is the app's default).
 var texts = map[string]map[string]string{
 	"de": {
-		"new": "Neue Nachricht", "mention": "Hat dich erwähnt", "attachment": "Anhang",
+		"new": "Neue Nachricht", "mention": "Hat dich erwähnt", "attachment": "Anhang", "forward": "Weitergeleitete Nachricht",
 		"dm": "Direktnachricht", "group": "%d neue Nachrichten", "poll": "Umfrage", "spoiler": "Spoiler", "test": "Push funktioniert auf diesem Gerät.",
 	},
 	"en": {
-		"new": "New message", "mention": "Mentioned you", "attachment": "Attachment",
+		"new": "New message", "mention": "Mentioned you", "attachment": "Attachment", "forward": "Forwarded message",
 		"dm": "Direct message", "group": "%d new messages", "poll": "Poll", "spoiler": "Spoiler", "test": "Push works on this device.",
 	},
 }
@@ -71,6 +71,8 @@ type Notice struct {
 	Sender      string
 	Content     string
 	HasFiles    bool
+	// Forwarded is set when the message forwards another one.
+	Forwarded bool
 	// Poll is set when the message is a poll; its content is the question.
 	Poll bool
 	// DM is set for a message of a direct message conversation: the push
@@ -143,6 +145,9 @@ func previewLine(n Notice, locale string, preview bool) string {
 	}
 	if n.HasFiles {
 		return text(locale, "attachment")
+	}
+	if n.Forwarded {
+		return text(locale, "forward")
 	}
 	return text(locale, "new")
 }
