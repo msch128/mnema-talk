@@ -255,7 +255,10 @@ installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
   is not on Do Not Disturb or Focus, and whose effective notification level
   for the channel allows it: all messages, or mentions (including `@all`,
   `@here`, roles and replies to their messages) only; mutes, timed mutes and
-  category settings apply exactly as in the app. A burst in one channel is
+  category settings apply exactly as in the app (a mute still lets through
+  a message addressed to the member by name, role or reply, not `@all` or
+  `@here`). The text of a push is plain: Markdown marks are removed,
+  `||spoilers||` read "Spoiler" and custom emoji read `:name:`. A burst in one channel is
   merged: the first message goes out at once, the rest of the next five
   seconds as one push ("3 new messages"); a mention is never held back. A
   device that is offline gets only the newest push of a channel (push topic),

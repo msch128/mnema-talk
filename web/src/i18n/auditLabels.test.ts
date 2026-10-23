@@ -11,7 +11,7 @@ const GROUPS = ['role', 'user', 'channel', 'category', 'layout', 'invite', 'webh
   'settings', 'moderation', 'message', 'voice', 'auth', 'system', 'emoji', 'bot', 'admin']
 const ACTION = new RegExp(`"((?:${GROUPS.join('|')})\\.[a-z_]+)"`, 'g')
 // Filenames and similar strings that look like an action.
-const NOT_ACTIONS = new Set(['settings.json'])
+const NOT_ACTIONS = new Set(['settings.json', 'emoji.json'])
 
 function goFiles(dir: string): string[] {
   return readdirSync(dir).flatMap(name => {
