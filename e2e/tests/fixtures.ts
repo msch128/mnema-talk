@@ -1,5 +1,6 @@
 import { test as base, expect } from '@playwright/test'
 import type { Browser, BrowserContext } from '@playwright/test'
+import { explainNavigationFailures } from './navigation-diagnostics'
 
 // Every spec signs in as the Owner from one address, and the API allows 600
 // requests a minute per account. Instead of failing (or sleeping) after the
@@ -181,6 +182,7 @@ function counted(browser: Browser): Browser {
     countApiRequests(context)
     await watchCsp(context)
     await hideWelcomeFlow(context)
+    explainNavigationFailures(context)
     return context
   }
   return browser
