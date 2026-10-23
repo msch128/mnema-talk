@@ -51,13 +51,13 @@ describe('DFN render-thread bridge', () => {
   it('never queues more than three frames behind a stalled worker and bypasses after bounded startup', () => {
     const { node, frames, reports, render } = createBridge()
     let output = new Float32Array()
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < 1400; i++) {
       output = render()
       expect(node.pending.size).toBeLessThanOrEqual(3)
       expect(node.outputCount).toBeLessThanOrEqual(1440)
     }
     expect(frames).toHaveLength(3)
-    expect(reports).toEqual([{ type: 'failed' }])
+    expect(reports).toEqual([{ type: 'failed', reason: expect.any(String) }])
     expect(output.every(sample => sample === 0.25)).toBe(true)
   })
 
@@ -96,7 +96,7 @@ describe('DFN render-thread bridge', () => {
     for (let i = 0; i < 4; i++) render()
     node.receive({ type: 'frame', id: present(frames[0]).id, samples: new Float32Array(480).fill(0.1) })
     expect(render().every(sample => Math.abs(sample - 0.1) < 0.0001)).toBe(true)
-    node.pending.add(-100)
+    node.pending.add(-400)
     const count = node.outputCount
     node.receive({ type: 'frame', id: -100, samples: new Float32Array(480).fill(0.5) })
     expect(node.outputCount).toBe(count)
@@ -107,7 +107,7 @@ describe('DFN render-thread bridge', () => {
     for (let i = 0; i < 4; i++) render()
     node.receive({ type: 'frame', id: present(frames[0]).id, samples: new Float32Array(4096) })
     node.receive({ type: 'failed' })
-    expect(reports).toEqual([{ type: 'failed' }])
+    expect(reports).toEqual([{ type: 'failed', reason: expect.any(String) }])
     expect(render().every(sample => sample === 0.25)).toBe(true)
   })
 })
@@ -148,7 +148,7 @@ describe('DFN bridge protocol and buffering', () => {
     node.port.onmessage({ data: { type: 'failed' } })
     node.process([[input]], [channels])
     expect(channels.every(channel => channel.every(sample => Math.abs(sample - 0.7) < 0.0001))).toBe(true)
-    expect(reports).toEqual([{ type: 'failed' }])
+    expect(reports).toEqual([{ type: 'failed', reason: expect.any(String) }])
   })
 
   it('rejects a matching reply with a non-PCM payload', () => {
@@ -158,6 +158,24 @@ describe('DFN bridge protocol and buffering', () => {
     expect(node.failed).toBe(true)
     expect(node.pending.size).toBe(0)
     expect(node.outputCount).toBe(0)
+  })
+
+  it('passes the dry microphone through without a gap while the worker is late, and reports nothing before 3 s', () => {
+    const { node, reports, render } = createBridge(false)
+    // 2.5 s of render quanta (128 samples at 48 kHz) with no filtered audio at all.
+    // The first 30 ms (three frames) are the bounded startup; after that the dry signal flows.
+    for (let i = 0; i < 12; i++) render()
+    for (let i = 12; i < 937; i++) {
+      expect(render().every(sample => sample === 0.25)).toBe(true)
+    }
+    expect(node.failed).toBe(false)
+    expect(reports.some(report => report.type === 'failed')).toBe(false)
+    // Past 3 s the filter is given up once, with a reason, and the dry signal still flows.
+    let output = new Float32Array()
+    for (let i = 0; i < 300; i++) output = render()
+    expect(node.failed).toBe(true)
+    expect(reports.filter(report => report.type === 'failed')).toEqual([{ type: 'failed', reason: expect.stringContaining('3000 ms') }])
+    expect(output.every(sample => sample === 0.25)).toBe(true)
   })
 
   it('drops queued PCM that exceeds the end-to-end 30ms budget', () => {
@@ -201,10 +219,10 @@ describe('DFN bridge protocol and buffering', () => {
     const { node, render } = createBridge()
     for (let i = 0; i < 4; i++) render()
     node.pending.clear()
-    node.pending.add(-100)
+    node.pending.add(-400)
     for (let i = 0; i < 4; i++) render()
     expect(node.failed).toBe(true)
-    expect(reports).toEqual([{ type: 'failed' }])
+    expect(reports).toEqual([{ type: 'failed', reason: expect.any(String) }])
   })
 })
 
@@ -212,10 +230,10 @@ describe('DFN unconnected bridge lifecycle', () => {
   it('expires sustained underrun even when no worker frame is outstanding', () => {
     const { node, render } = createBridge(false)
     let output = new Float32Array()
-    for (let i = 0; i < 120; i++) output = render()
+    for (let i = 0; i < 1400; i++) output = render()
     expect(node.pending.size).toBe(0)
     expect(node.failed).toBe(true)
-    expect(reports).toEqual([{ type: 'failed' }])
+    expect(reports).toEqual([{ type: 'failed', reason: expect.any(String) }])
     expect(output.every(sample => sample === 0.25)).toBe(true)
   })
 })

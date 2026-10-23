@@ -36,7 +36,7 @@ export interface RoutingContext {
 type Superseded = () => boolean
 
 async function selectChannelFor(ctx: RoutingContext, channelId: string, superseded: Superseded) {
-  const target = ctx.chatStore.allChannels.find(c => c.id === channelId)
+  const target = ctx.chatStore.allChannels.find(c => c.id === channelId) ?? ctx.chatStore.dmChannel(channelId)
   if (!target) return null
   if (ctx.chatStore.activeChannel?.id !== target.id) {
     await ctx.chatStore.selectChannel(target)
@@ -169,7 +169,9 @@ async function dispatchRoute(ctx: RoutingContext, route: Route, previousVoiceCha
 }
 
 function handleRouteRedirect(ctx: RoutingContext, route: Route): boolean {
-  const fix = resolveRoute(route, { isAdmin: ctx.permissions.canOpenAdmin, channels: ctx.chatStore.allChannels })
+  // A conversation opens at /c/:id like a text channel.
+  const conversations = ctx.chatStore.dms.map(d => ({ id: d.id, type: 'text' as const }))
+  const fix = resolveRoute(route, { isAdmin: ctx.permissions.canOpenAdmin, channels: [...ctx.chatStore.allChannels, ...conversations] })
   if (!fix) return false
   if (fix.reason) ctx.toasts.error(t(`nav.${fix.reason}`))
   navigate(fix.redirect, { replace: true })

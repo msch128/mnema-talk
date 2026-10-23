@@ -19,6 +19,7 @@ import { moderateMessages } from '../lib/messageModeration'
 import { previewText } from '../lib/replies'
 import { shortcodesForEditing } from '../lib/customEmoji'
 import { t } from '../i18n'
+import { messageSafetyItems } from './dmMenuItems'
 
 type MessageActions = ReturnType<typeof useMessageActions>
 
@@ -101,6 +102,8 @@ function basicItems(msg: Message, { actions, reply, copy }: MenuDeps): ContextMe
   if (features.has('forward')) {
     items.push({ label: t('forward.menu'), icon: Forward, action: () => openForward({ messageId: msg.id, excerpt: previewText(msg.content) || t('chat.attachment') }) })
   }
+  const safety = messageSafetyItems(msg)
+  if (safety.length) items.push({ type: 'separator' }, ...safety)
   return items
 }
 

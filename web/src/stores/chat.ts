@@ -19,6 +19,7 @@ import { sendTyping } from './chat/typing'
 import { messageMentionsMe, refreshNotificationPermission, requestNotificationPermission } from './chat/notifications'
 import { dismissEphemeral, resetCommunityState } from './chat/reset'
 import { dismissPinNotice, fetchPins } from './chat/pins'
+import { addDmMember, waitForDms, dmById, dmChannel, fetchDms, isDm, leaveDm, openDm, startDm } from './chat/dms'
 
 export type { EphemeralNote, ProfilePreview, ThreadRoot } from './chat/types'
 export { MARK_READ_INTERVAL_MS, TYPING_EXPIRY_MS } from './chat/types'
@@ -49,6 +50,8 @@ function exposedState(cs: ChatState) {
     jumpTarget: cs.jumpTarget,
     isConnected: cs.isConnected,
     members: cs.members,
+    dms: cs.dms,
+    dmsLoaded: cs.dmsLoaded,
     presenceById: cs.presenceById,
     activityById: cs.activityById,
     onlineUserIds: cs.onlineUserIds,
@@ -81,6 +84,15 @@ function exposedActions(cx: Cx) {
     dismissPinNotice: bind(dismissPinNotice),
     fetchPins: bind(fetchPins),
     isVoiceChannel: bind(isVoiceChannel),
+    isDm: bind(isDm),
+    dmById: bind(dmById),
+    dmChannel: bind(dmChannel),
+    fetchDms: bind(fetchDms),
+    waitForDms: bind(waitForDms),
+    openDm: bind(openDm),
+    startDm: bind(startDm),
+    addDmMember: bind(addDmMember),
+    leaveDm: bind(leaveDm),
     showToast,
     loadOlder: bind(loadOlder),
     loadNewer: bind(loadNewer),
