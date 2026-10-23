@@ -1,0 +1,69 @@
+web/src/components/EmojiPicker.vue
+  s_06fcde5dbef956::t_c9b0a16dc86be4 31-43,73
+web/src/components/AdminDashboardRouting.test.ts
+  s_06fcde5dbef956::t_5d61dcbcf381ad 81-90
+web/src/components/AudioInputSection.vue
+  s_06fcde5dbef956::t_2e1b30a1beac2c 62,105,131-132,153,169
+web/src/components/AdminUserRow.vue
+  s_06fcde5dbef956::t_98634580393c5b 73,76,84,89,110,115,153-154
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_8a2638026cd98b 1521-1523,1541-1542,1583-1584,1602-1615,1618-1619,1628-1644
+  s_06fcde5dbef956::t_fca8d5a9f5bea1 1141-1142
+web/src/components/AdminUsersTab.vue
+  s_06fcde5dbef956::t_03e80d0ec2e0c5 149
+  s_06fcde5dbef956::t_98634580393c5b 175-176,186-188
+web/src/components/AdminMediaTab.vue
+  s_06fcde5dbef956::t_57abb30ccd8bbc 96-97,107,162,169
+web/src/components/AdminAuditTab.vue
+  s_06fcde5dbef956::t_69b0d164072c7b 152
+  s_06fcde5dbef956::t_8a2638026cd98b 20
+web/src/composables/useMessageScroll.test.ts
+  s_06fcde5dbef956::t_e70e49755cfaf4 209-233
+web/src/components/MentionsInbox.vue
+  s_06fcde5dbef956::t_66d038063f4c6f 47,68
+web/src/components/ChatHeader.vue
+  s_06fcde5dbef956::t_5be6193309b509 32-34,36-38
+  s_06fcde5dbef956::t_16968c92872255 35
+  s_06fcde5dbef956::t_765561bf841964 56
+  s_06fcde5dbef956::t_ecbde27ab7a7f5 58
+  s_06fcde5dbef956::t_34022542ec7d86 61
+web/src/components/AdminMailPanel.test.ts
+  s_06fcde5dbef956::t_d4fac5ec2a8844 58-65
+web/src/style.css
+  s_06fcde5dbef956::t_53c46893fa0e18 157-161
+web/src/components/AdminMailPanel.vue
+  s_06fcde5dbef956::t_fca8d5a9f5bea1 18-24,32
+web/src/components/AdminDashboard.vue
+  s_06fcde5dbef956::t_53c46893fa0e18 4,7,73-94,96,105-107,111-116
+web/src/components/AdminChannelRow.vue
+  s_06fcde5dbef956::t_98634580393c5b 38
+web/src/components/PinnedMessages.vue
+  s_06fcde5dbef956::t_66d038063f4c6f 110
+web/src/composables/useMessageScroll.ts
+  s_06fcde5dbef956::t_4420bd8742bb12 14-17,126,282
+  s_06fcde5dbef956::t_273a51e780843f 216-254,281,287,320,324
+e2e/tests/mobile.spec.ts
+  s_06fcde5dbef956::t_544ec87a2965e1 161-206
+e2e/tests/layout.spec.ts
+  s_06fcde5dbef956::t_5e9d576cac2c22 1-14,17-136
+  s_06fcde5dbef956::t_6f31876af8b5b4 15-16
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_8a2638026cd98b 1521-1523,1541-1542,1583-1584,1602-1615,1618-1619,1628-1644
+  s_06fcde5dbef956::t_fca8d5a9f5bea1 1141-1142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "15b3677db5e92bacd31e3219f866b100e08519b3",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
