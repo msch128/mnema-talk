@@ -311,3 +311,39 @@ test('a reported direct message reaches the moderators, who read the copy and re
     await memberCtx.close()
   }
 })
+
+test('a message forwarded into a direct message shows its quote to the recipient', async ({ browser }) => {
+  const ownerCtx = await browser.newContext({ viewport: VIEWPORT })
+  const memberCtx = await browser.newContext({ viewport: VIEWPORT })
+  const owner = await ownerCtx.newPage()
+  const member = await memberCtx.newPage()
+  let channelId = ''
+  try {
+    await signIn(owner, ADMIN_USER, ADMIN_PASSWORD)
+    const memberId = await joinSuiteMember(owner, member)
+    const dmId = await startDm(owner, memberId)
+    const channel = await apiFetch(owner, 'POST', '/api/admin/channels', { name: `dmfwd-${suffix}`, type: 'text' })
+    expect(channel.status).toBe(201)
+    channelId = responseString(channel, 'id')
+    const original = `Zitat ${suffix}`
+    expect((await apiFetch(owner, 'POST', `/api/channels/${channelId}/messages`, { content: original })).status).toBe(201)
+
+    // The member forwards it to the conversation with the Owner; the dialog lists conversations next to channels.
+    await member.goto(`/c/${channelId}`)
+    await member.getByText(original, { exact: true }).click({ button: 'right' })
+    await member.getByRole('menuitem', { name: 'Weiterleiten …' }).click()
+    await member.getByTestId(`forward-target-${ADMIN_USER}`).check()
+    await member.getByTestId('forward-comment').fill(`schau mal ${suffix}`)
+    await member.getByTestId('forward-send').click()
+    await expect(member.getByTestId('forward-dialog')).toBeHidden()
+
+    // The recipient sees the comment and the quote of the original.
+    await owner.goto(`/c/${dmId}`)
+    await expect(owner.getByText(`schau mal ${suffix}`, { exact: true })).toBeVisible()
+    await expect(owner.getByTestId('forwarded')).toContainText(original)
+  } finally {
+    if (channelId) await apiFetch(owner, 'DELETE', `/api/admin/channels/${channelId}`)
+    await ownerCtx.close()
+    await memberCtx.close()
+  }
+})

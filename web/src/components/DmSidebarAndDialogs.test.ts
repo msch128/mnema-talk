@@ -269,3 +269,34 @@ describe('DmInfoDialog', () => {
     expect(w.emitted('close')).toHaveLength(1)
   })
 })
+
+describe('ForwardDialog targets', () => {
+  async function dialog(features: string[]) {
+    const chat = setup({ features })
+    chat.dms = [pair, { ...group, can_send: false }]
+    const { default: ForwardDialog } = await import('./ForwardDialog.vue')
+    const { openForward, closeForward } = await import('../lib/forwardDialog')
+    closeForward()
+    openForward({ messageId: fixtureId(9), excerpt: 'quote me' })
+    const w = mount(ForwardDialog, { global, attachTo: document.body })
+    await flushPromises()
+    return w
+  }
+
+  it('lists the conversations the member may write in, with both features on', async () => {
+    const w = await dialog(['dm', 'forward'])
+    expect(document.querySelector('[data-testid="forward-target-Ada"]')).not.toBeNull()
+    expect(document.querySelector('[data-testid="forward-target-Ada, Bo"]')).toBeNull()
+    w.unmount()
+  })
+
+  it('lists none without dm or without forward', async () => {
+    for (const features of [['forward'], ['dm']]) {
+      document.body.innerHTML = ''
+      setActivePinia(createPinia())
+      const w = await dialog(features)
+      expect(document.querySelector('[data-testid="forward-target-Ada"]')).toBeNull()
+      w.unmount()
+    }
+  })
+})
