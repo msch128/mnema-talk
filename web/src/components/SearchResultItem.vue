@@ -5,10 +5,12 @@ import { computed } from 'vue'
 import { Hash, Volume2, Paperclip, ArrowRight, CornerDownRight } from '@lucide/vue'
 import { locale } from '../i18n'
 import { splitHighlight } from '../lib/searchHighlight'
+import { previewText } from '../lib/replies'
 import UserAvatar from './UserAvatar.vue'
 import { shownName } from '../lib/deletedUser'
 
-// One hit. Matches are highlighted by splitting the text into nodes, never as HTML.
+// One hit. The text is shown as plain text (no Markdown markers, spoilers hidden, emoji as :name:);
+// matches are highlighted by splitting it into nodes, never as HTML.
 const props = defineProps<{
   msg: Message
   index: number
@@ -20,8 +22,8 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ select: [msg: Message] }>()
 
-const parts = computed(() => splitHighlight(props.msg.content, props.terms))
-const rootParts = computed(() => splitHighlight(props.root?.snippet ?? '', props.terms))
+const parts = computed(() => splitHighlight(previewText(props.msg.content), props.terms))
+const rootParts = computed(() => splitHighlight(previewText(props.root?.snippet), props.terms))
 
 function formatDate(iso: string) {
   if (!iso) return ''

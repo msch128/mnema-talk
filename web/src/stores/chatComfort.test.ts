@@ -94,6 +94,26 @@ describe('marking the open channel read', () => {
     expect(required(chat.readStates.ch2).mention_count).toBe(1)
   })
 
+  it('does not count a thread reply as unread, but still counts a mention in one', () => {
+    const chat = setup()
+    chat.handleWSEvent({ type: 'message_create', payload: msg({ channel_id: 'ch2', parent_id: 'root', content: 'just a reply' }) })
+    expect(chat.readStates.ch2?.unread_count ?? 0).toBe(0)
+    chat.handleWSEvent({ type: 'message_create', payload: msg({ channel_id: 'ch2', parent_id: 'root', content: 'hey @max', mentions: ['me'] }) })
+    expect(required(chat.readStates.ch2).unread_count).toBe(0)
+    expect(required(chat.readStates.ch2).mention_count).toBe(1)
+    chat.handleWSEvent({ type: 'message_create', payload: msg({ channel_id: 'ch2', content: 'top level' }) })
+    expect(required(chat.readStates.ch2).unread_count).toBe(1)
+  })
+
+  it('counts only messages addressed to me in a muted channel, not @all', () => {
+    const chat = setup()
+    chat.readStates = { ...chat.readStates, ch2: readStateFixture({ channel_id: 'ch2', notify_level: 'mute', unread_count: 0, mention_count: 0 }) }
+    chat.handleWSEvent({ type: 'message_create', payload: msg({ channel_id: 'ch2', content: '@all hello', mentions: ['me', 'u3'] }) })
+    expect(required(chat.readStates.ch2).mention_count).toBe(0)
+    chat.handleWSEvent({ type: 'message_create', payload: msg({ channel_id: 'ch2', content: 'hey @max', mentions: ['me'] }) })
+    expect(required(chat.readStates.ch2).mention_count).toBe(1)
+  })
+
   it('does not mark read while viewing older history', () => {
     const chat = setup()
     chat.hasMoreAfter = true
@@ -236,9 +256,13 @@ describe('desktop notifications', () => {
     mention()
     expect(made).toHaveLength(1)
 
+    // A mute stays silent for ordinary messages and @all, but a message addressed to me still comes through.
     await chat.setNotificationLevel('ch2', 'mute')
-    mention()
+    other()
+    chat.handleWSEvent({ type: 'message_create', payload: msg({ channel_id: 'ch2', content: '@all', mentions: ['me', 'u3'] }) })
     expect(made).toHaveLength(1)
+    mention()
+    expect(made).toHaveLength(2)
     expect(N.requestPermission).toHaveBeenCalledTimes(1)
     expect(calls.some(c => c.url === '/api/channels/ch2/notifications' && c.method === 'PUT')).toBe(true)
   })

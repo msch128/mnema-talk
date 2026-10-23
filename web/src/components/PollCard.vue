@@ -18,7 +18,7 @@ const props = defineProps({
 })
 
 const chat = useChatStore()
-const { poll, ended, left, mine, busy, canVote, canEnd, vote, end } = usePoll(() => props.msg)
+const { poll, ended, left, mine, busy, canVote, votingBlocked, canEnd, vote, end } = usePoll(() => props.msg)
 const winners = computed(() => (ended.value ? leaders(poll.value) : []))
 const interactive = computed(() => canVote.value && !busy.value)
 
@@ -76,6 +76,8 @@ async function confirmEnd() {
         <p v-if="!poll.anonymous && o.voters?.length" class="mt-0.5 truncate px-1 text-xs text-mnema-tertiary" data-testid="poll-voters">{{ voterNames(o.voters) }}</p>
       </li>
     </ul>
+
+    <p v-if="votingBlocked" class="mt-2 text-xs text-mnema-tertiary" data-testid="poll-cannot-vote">{{ $t('poll.cannotVote') }}</p>
 
     <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-mnema-tertiary">
       <span data-testid="poll-total">{{ $t('poll.voters', { count: poll.total_voters }) }}</span>

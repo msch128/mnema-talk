@@ -6,6 +6,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import ReactionBar from './ReactionBar.vue'
 import ReactionPalette from './ReactionPalette.vue'
 import { useAuthStore } from '../stores/auth'
+import { useEmojiStore } from '../stores/emoji'
 
 const reactions = [
   { emoji: '👍', count: 2, users: [fixtureId(1), fixtureId(2)] },
@@ -63,5 +64,30 @@ describe('ReactionBar', () => {
   it('uses smaller badges when compact', () => {
     const w = mount(ReactionBar, { props: { reactions, compact: true } })
     expect(w.find('button[aria-pressed]').classes()).toContain('text-xs')
+  })
+})
+
+describe('ReactionBar with a deleted custom emoji', () => {
+  const ID = '11111111-2222-4333-8444-555555555555'
+  const token = `<:blob:${ID}>`
+  const custom = [{ emoji: token, count: 1, users: [fixtureId(2)] }]
+
+  it('shows :name: and cannot be added any more once the emoji list knows it is gone', () => {
+    useEmojiStore().loaded = true
+    const w = mount(ReactionBar, { props: { reactions: custom } })
+    const badge = requireValue(w.find('button[aria-pressed]'))
+    expect(badge.text()).toContain(':blob:')
+    expect(badge.attributes('disabled')).toBeDefined()
+  })
+
+  it('still lets the member take their own reaction back', () => {
+    useEmojiStore().loaded = true
+    const w = mount(ReactionBar, { props: { reactions: [{ ...requireValue(custom[0]), users: [fixtureId(1)] }] } })
+    expect(requireValue(w.find('button[aria-pressed]')).attributes('disabled')).toBeUndefined()
+  })
+
+  it('does not treat an emoji as gone before the list has loaded', () => {
+    const w = mount(ReactionBar, { props: { reactions: custom } })
+    expect(requireValue(w.find('button[aria-pressed]')).attributes('disabled')).toBeUndefined()
   })
 })

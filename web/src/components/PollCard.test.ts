@@ -5,6 +5,8 @@ import PollCard from './PollCard.vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
+import { usePermissionsStore } from '../stores/permissions'
+import { PERMISSION_BITS } from '../lib/permissions'
 import { setLocale, i18nPlugin } from '../i18n'
 import type { Message, Poll } from '../types/domain'
 import { fixtureId, messageFixture, userFixture } from '../test-fixtures.fixture'
@@ -129,7 +131,20 @@ describe('PollCard', () => {
     await option(w, A).trigger('click')
     await flushPromises()
     expect(useToastStore().toasts).toHaveLength(1)
+    expect(useToastStore().toasts[0]?.text).toBe('This poll has ended, so votes are closed.')
     expect(option(w, A).attributes('disabled')).toBeUndefined()
+  })
+
+  it('says why the answers are disabled when the member may not react in this channel', () => {
+    usePermissionsStore().info = { owner: false, permissions: 0, max_upload_mb: 1, role_ids: [], top_position: 0, catalog: [], channels: [{ channel_id: CH, permissions: PERMISSION_BITS.view_channel }] }
+    const { w } = mountCard()
+    expect(option(w, A).attributes('disabled')).toBeDefined()
+    expect(w.get('[data-testid="poll-cannot-vote"]').text()).toBe('You can’t vote in this channel.')
+  })
+
+  it('shows no such hint to a member who can vote', () => {
+    const { w } = mountCard()
+    expect(w.find('[data-testid="poll-cannot-vote"]').exists()).toBe(false)
   })
 
   it('asks the server for my own choice in an anonymous poll, and never lists voters', async () => {
