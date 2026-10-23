@@ -2,6 +2,7 @@
 // internal/ws/{handle,voice,presence,signal,lifecycle}.go and chat publications.
 import type { ModerationNotice } from '../lib/moderation'
 import type { Message, Poll, ReactionSummary, ReadState, User, UserUpdate, VoiceUser, Presence } from './domain'
+import type { ChatUserRef } from './rest'
 import { isAuthUser, isChatMessage, isChatPoll, isChatReactionSummary, isChatNotifyLevel } from './rest'
 import { ContractError, hasOwn, isRecord, isIdentifier, isTimestamp, isInteger, isString, isArrayOf, isDictionaryOf } from './validation'
 
@@ -66,6 +67,8 @@ export interface ServerEventPayloads {
   emoji_changed: null
   /** The caller blocked or unblocked a member (own sessions only): refetch GET /api/me/blocks. */
   block_updated: { user_id: string; blocked: boolean }
+  /** The caller saved or removed a message (own sessions only): refetch GET /api/me/saved. */
+  saved_updated: { message_id: string; saved: boolean }
   typing: { channel_id: string; user_id: string }
   read_state: ReadStateUpdate
   message_create: Message
@@ -75,7 +78,7 @@ export interface ServerEventPayloads {
   /** Tallies of a poll after a vote or its end; the same for every viewer (no voters in an anonymous poll). */
   poll_update: { message_id: string; channel_id: string; poll: Poll }
   /** A message was pinned or unpinned: refetch GET /api/channels/{id}/pins and note it in the channel. */
-  pins_changed: { channel_id: string; message_id: string; pinned: boolean; actor_id: string; actor_name: string }
+  pins_changed: { channel_id: string; message_id: string; pinned: boolean; actor_id: string; actor_name: string; pinned_at?: string; pinned_by?: ChatUserRef }
   interaction_response: InteractionResponse
   user_update: UserUpdate
   /** A member's timeout started (timeout_until) or ended (null). */
@@ -278,6 +281,7 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['member_timeout', payload => isIdentifier(payload['id']) && (payload['timeout_until'] === null || isTimestamp(payload['timeout_until']))
     && onlyFields(payload, ['id', 'timeout_until'])],
   ['moderation_notice', isModerationNotice],
+  ['saved_updated', payload => isIdentifier(payload['message_id']) && typeof payload['saved'] === 'boolean' && onlyFields(payload, ['message_id', 'saved'])],
   ['block_updated', payload => isIdentifier(payload['user_id']) && typeof payload['blocked'] === 'boolean' && onlyFields(payload, ['user_id', 'blocked'])],
   ['webrtc_offer', payload => payload['type'] === 'offer' && isString(payload['sdp'], 262_144)],
   ['webrtc_candidate', isIceCandidate],
@@ -322,7 +326,7 @@ function isNoteEmbed(value: unknown): boolean {
 
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
-  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
+  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'media_handshake'

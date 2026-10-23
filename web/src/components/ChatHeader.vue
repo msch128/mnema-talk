@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
 import type { ContextMenuItem } from './menuTypes'
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { Hash, Users, Bell, BellOff, AtSign, X, Volume2, Search } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useNotificationHint } from '../composables/useNotificationHint'
 import { durationLabel } from '../lib/moderation'
 import MentionsInbox from './MentionsInbox.vue'
+import SavedMessages from './SavedMessages.vue'
 import PinnedMessages from './PinnedMessages.vue'
 import TipBar from './TipBar.vue'
 import NavDrawerButton from './NavDrawerButton.vue'
@@ -21,6 +23,8 @@ const props = defineProps({
 const emit = defineEmits<{ close: []; menu: [x: number, y: number, items: ContextMenuItem[]] }>()
 
 const chatStore = useChatStore()
+const serverFeatures = useServerFeaturesStore()
+onMounted(() => { void serverFeatures.load() })
 const channelIcon = computed<Component>(() => (props.panel ? Volume2 : Hash))
 const { showNotifHint, dismissNotifHint, enableNotifications, notificationMenuItems } = useNotificationHint(() => props.panel)
 
@@ -76,6 +80,7 @@ function openNotificationMenu(e: MouseEvent) {
     <!-- Right: Badges & member list toggle -->
     <div class="flex items-center gap-2 max-md:gap-0 flex-shrink-0">
       <MentionsInbox v-if="!panel" />
+      <SavedMessages v-if="!panel && serverFeatures.has('saved')" />
       <PinnedMessages v-if="chatStore.activeChannel" />
       <button
         v-if="chatStore.activeChannel"

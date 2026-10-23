@@ -35,6 +35,7 @@ type Health struct {
 var Features = []string{
 	"blocks",
 	"reports",
+	"saved",
 }
 
 // healthCacheTTL is how long a health result is reused: the endpoint is

@@ -24,11 +24,13 @@ const messageSelect = `
 	       LEFT(rm.content, 200),
 	       CASE WHEN rm.id IS NULL THEN FALSE
 	            ELSE EXISTS (SELECT 1 FROM media md WHERE md.message_id = rm.id) END,
-	       u.is_bot, (u.is_bot AND u.username LIKE 'wh-%'), m.embeds, ru.is_bot, (ru.is_bot AND ru.username LIKE 'wh-%')
+	       u.is_bot, (u.is_bot AND u.username LIKE 'wh-%'), m.embeds, ru.is_bot, (ru.is_bot AND ru.username LIKE 'wh-%'),
+	       m.pinned_at, pu.id, pu.username, pu.display_name, pu.avatar_s3_key
 	FROM messages m
 	JOIN users u ON u.id = m.user_id
 	LEFT JOIN messages rm ON rm.id = m.reply_to_id
-	LEFT JOIN users ru ON ru.id = rm.user_id`
+	LEFT JOIN users ru ON ru.id = rm.user_id
+	LEFT JOIN users pu ON pu.id = m.pinned_by AND m.is_pinned`
 
 type rawReplyFields struct {
 	id          *uuid.UUID
@@ -57,6 +59,19 @@ func buildReplyPreview(replyToID uuid.UUID, r rawReplyFields) *ReplyPreview {
 	return p
 }
 
+// rawPinner is the left-joined member who pinned a message.
+type rawPinner struct {
+	id                            *uuid.UUID
+	username, displayName, avatar *string
+}
+
+func (p rawPinner) ref() *UserRef {
+	if p.id == nil {
+		return nil
+	}
+	return &UserRef{ID: *p.id, Username: deref(p.username), DisplayName: deref(p.displayName), AvatarURL: auth.AvatarURL(p.avatar)}
+}
+
 func decodeEmbeds(raw []byte) ([]Embed, error) {
 	if len(raw) <= 2 {
 		return nil, nil
@@ -76,9 +91,11 @@ func scanMessages(rows pgx.Rows) ([]Message, error) {
 		var avatar *string
 		var r rawReplyFields
 		var embeds []byte
+		var pin rawPinner
 		if err := rows.Scan(&m.ID, &m.Number, &m.ChannelID, &m.UserID, &m.ParentID, &m.Username, &m.DisplayName, &avatar,
 			&m.Content, &m.IsPinned, &m.IsEdited, &m.ReplyCount, &m.CreatedAt, &m.UpdatedAt,
-			&m.ReplyToID, &r.id, &r.user, &r.username, &r.displayName, &r.avatar, &r.content, &r.hasMedia, &m.IsBot, &m.IsWebhook, &embeds, &r.isBot, &r.isWebhook); err != nil {
+			&m.ReplyToID, &r.id, &r.user, &r.username, &r.displayName, &r.avatar, &r.content, &r.hasMedia, &m.IsBot, &m.IsWebhook, &embeds, &r.isBot, &r.isWebhook,
+			&m.PinnedAt, &pin.id, &pin.username, &pin.displayName, &pin.avatar); err != nil {
 			return nil, err
 		}
 		var err error
@@ -86,6 +103,7 @@ func scanMessages(rows pgx.Rows) ([]Message, error) {
 			return nil, err
 		}
 		m.AvatarURL = auth.AvatarURL(avatar)
+		m.PinnedBy = pin.ref()
 		if m.ReplyToID != nil {
 			m.ReplyTo = buildReplyPreview(*m.ReplyToID, r)
 		}

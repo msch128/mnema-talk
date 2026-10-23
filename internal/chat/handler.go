@@ -41,6 +41,8 @@ type Handler struct {
 	BlockLimit *httpx.RateLimiter
 	// ReportLimit caps message reports per member; nil means no cap.
 	ReportLimit *httpx.RateLimiter
+	// SavedLimit caps saving and removing saved messages per member; nil means no cap.
+	SavedLimit *httpx.RateLimiter
 }
 
 // VoiceRooms acts on live voice rooms (implemented by the WebSocket hub).
@@ -84,6 +86,7 @@ func (h *Handler) Mount(r chi.Router) {
 	h.mountModeration(r)
 	h.mountBlocks(r)
 	h.mountReports(r)
+	h.mountSaved(r)
 	history := r
 	if h.EditHistoryLimit != nil {
 		history = r.With(h.EditHistoryLimit.By(auth.UserKey))

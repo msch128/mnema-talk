@@ -24,7 +24,8 @@ in the legal texts (Impressum, Datenschutz, AGB), which are formal by design.
 | Tell the moderators about a message | report | melden | flag, anzeigen | "Report message" / „Nachricht melden“. The moderators' list is "Reports" / „Meldungen“; a report is closed as resolved / erledigt or dismissed / abgelehnt. |
 | Disable an account (no record) | disable | deaktivieren | sperren | "Konto deaktivieren / aktivieren". |
 | Brute-force lock | sign-in lock | Anmeldesperre | Login-Sperre | |
-| Pin | pin / unpin | anheften / Anheftung aufheben | lösen | "Angeheftete Nachrichten". |
+| Pin | pin / unpin | anheften / Anheftung aufheben | lösen | "Angeheftete Nachrichten". "Pinned by {name}" / „Angeheftet von {name}“. |
+| Keep a message for yourself | save / remove from saved | speichern / aus Gespeichert entfernen | merken, favorisieren, lesezeichen | Private list: "Saved messages" / „Gespeicherte Nachrichten“. A message you can no longer see is "no longer available" / „nicht mehr verfügbar“. |
 | Poll | poll | Umfrage | Abstimmung (only for the act of voting) | |
 | Custom emoji | custom emoji | eigene Emojis | | "Emojis verwalten". |
 | Sign in / out | sign in, sign out | anmelden, abmelden | log in, Login | Registering is registrieren. |

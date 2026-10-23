@@ -2506,6 +2506,14 @@
             "format": "uuid",
             "type": "string"
           },
+          "pinned_at": {
+            "description": "PinnedAt and PinnedBy say when and by whom a pinned message was pinned;\nboth are absent on an unpinned message (PinnedBy also when the member\nis gone).",
+            "format": "date-time",
+            "type": "string"
+          },
+          "pinned_by": {
+            "$ref": "#/components/schemas/chat.UserRef"
+          },
           "poll": {
             "$ref": "#/components/schemas/chat.Poll",
             "description": "Poll is set when the message is a poll; its content is the question."
@@ -3186,6 +3194,68 @@
         ],
         "type": "object"
       },
+      "chat.SaveRequest": {
+        "properties": {
+          "note": {
+            "description": "Note replaces the note; left out (or null), a saved message keeps its\nnote and a new one starts without.",
+            "maxLength": 200,
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "chat.SavedMessage": {
+        "properties": {
+          "available": {
+            "description": "Available is false when the caller may no longer see the message; then\nMessage is absent and nothing but the id and the note is sent.",
+            "type": "boolean"
+          },
+          "message": {
+            "$ref": "#/components/schemas/chat.Message"
+          },
+          "message_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "note": {
+            "description": "Note is the caller's own note (up to 200 characters), possibly empty.",
+            "maxLength": 200,
+            "type": "string"
+          },
+          "saved_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "available",
+          "message_id",
+          "note",
+          "saved_at"
+        ],
+        "type": "object"
+      },
+      "chat.SavedPage": {
+        "properties": {
+          "has_more": {
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/chat.SavedMessage"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "has_more",
+          "items"
+        ],
+        "type": "object"
+      },
       "chat.SearchResult": {
         "properties": {
           "has_more": {
@@ -3303,6 +3373,29 @@
             "type": "integer"
           }
         },
+        "type": "object"
+      },
+      "chat.UserRef": {
+        "properties": {
+          "avatar_url": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "display_name",
+          "id",
+          "username"
+        ],
         "type": "object"
       },
       "emoji.Emoji": {
@@ -19625,7 +19718,7 @@
     },
     "/api/channels/{channelID}/pins": {
       "get": {
-        "description": "The channel's pinned messages, the most recently pinned first (at most 50). Needs View channel. Deleting a message unpins it.",
+        "description": "The channel's pinned messages, the most recently pinned first (at most 50), each with pinned_at and pinned_by. Needs View channel. Deleting a message unpins it.",
         "operationId": "listPins",
         "parameters": [
           {
@@ -21130,6 +21223,298 @@
         "summary": "Block a member",
         "tags": [
           "Users"
+        ]
+      }
+    },
+    "/api/me/saved": {
+      "get": {
+        "description": "The caller's private saved list, newest first. Visibility is checked on every read: a message the caller can no longer see comes back with available=false and no message, only their own note. At most 1,000 messages can be saved.",
+        "operationId": "listSaved",
+        "parameters": [
+          {
+            "description": "Page size. Values below 1 or non-numeric fall back to the default; larger values are clamped to 100.",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page back: only entries older than this saved message.",
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.SavedPage"
+                }
+              }
+            },
+            "description": "One page of the saved list."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List saved messages",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/me/saved/{messageID}": {
+      "delete": {
+        "description": "Idempotent. Works for a message the caller can no longer see. Sends saved_updated to the caller's own sessions.",
+        "operationId": "unsaveMessage",
+        "parameters": [
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed (or was not saved)."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Remove a saved message",
+        "tags": [
+          "Messages"
+        ]
+      },
+      "put": {
+        "description": "Adds the message to the caller's private saved list, or changes the note of a saved one (idempotent; a body without note keeps the note). Needs View channel for the message's channel; otherwise the message does not exist for the caller (404). At most 1,000 saved messages (409 beyond). Sends saved_updated to the caller's own sessions.",
+        "operationId": "saveMessage",
+        "parameters": [
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.SaveRequest"
+              }
+            }
+          },
+          "description": "Optional note."
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.SavedMessage"
+                }
+              }
+            },
+            "description": "The saved entry."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the saved list is full."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Save a message",
+        "tags": [
+          "Messages"
         ]
       }
     },
