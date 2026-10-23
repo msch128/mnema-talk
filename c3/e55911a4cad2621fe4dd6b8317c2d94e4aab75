@@ -1,0 +1,35 @@
+internal/push/recipients.go
+  s_06fcde5dbef956::t_2530723ebb8cc0 6,74-77,86-87,98-118
+  s_06fcde5dbef956::t_209e44a1ea9261 119
+internal/server/readstate_integration_test.go
+  s_06fcde5dbef956::t_93c67ad8b72fa8 105-125
+internal/chat/readstate.go
+  s_06fcde5dbef956::t_93c67ad8b72fa8 29-32,41-42,63-64,67-69
+internal/push/service_integration_test.go
+  s_06fcde5dbef956::t_1de5590b4949ba 14,352-394
+  s_06fcde5dbef956::t_f065c374994da7 48
+internal/push/service.go
+  s_06fcde5dbef956::t_2530723ebb8cc0 152-153,155-166,183,186,190,194,213,261
+internal/push/recipients_test.go
+  s_06fcde5dbef956::t_86cc874c540bf9 20,25-26,28-37,41,44-48
+doc/operations.md
+  s_06fcde5dbef956::t_763eab41bb5223 258-261
+doc/architecture.md
+  s_06fcde5dbef956::t_763eab41bb5223 247-253
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c3e55911a4cad2621fe4dd6b8317c2d94e4aab75",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
