@@ -1,21 +1,50 @@
 # Mnema Talk
 
-**A small, self-hosted home for one community.** Text channels, drop-in Talks
-and screen sharing up to 4K at 60 FPS, in one Go binary that you run on your
-own server or NAS. Invite-only, no accounts on someone else's platform, no
-transcoding, and microphone, camera and screen are end-to-end encrypted
-against the server that relays them.
+**A small, self-hosted home for one community: text channels, drop-in Talks
+and screen sharing up to 4K at 60 FPS, in one Go binary.**
 
-Mnema Talk is not a Discord clone. It has one community instead of many
-servers, no direct messages, no ringing, and its own quiet, dark design. It
-keeps the parts that make a community server useful: roles, private channels,
-webhooks and a call you can join with one click.
+[![CI](https://github.com/msch128/mnema-talk/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/msch128/mnema-talk/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/msch128/mnema-talk)](https://github.com/msch128/mnema-talk/releases/latest)
+[![License: AGPL v3](https://img.shields.io/github/license/msch128/mnema-talk)](LICENSE)
+[![Go version](https://img.shields.io/github/go-mod/go-version/msch128/mnema-talk)](go.mod)
 
 ![Mnema Talk: a text channel with replies, reactions and a code block](doc/images/chat.png)
 
-[Features](#features) · [Quickstart](#quickstart) · [Security model](#security-and-privacy) ·
-[Desktop client](#desktop-client) · [Documentation](#documentation) ·
-[Development](#development)
+Mnema Talk is a self-hosted alternative to Discord for a group that wants its
+own place: friends, a club, a guild or a small team. It has one community
+instead of many servers, no direct messages, no ringing and its own quiet, dark
+design. It keeps the parts that make a community server useful: roles, private
+channels, webhooks, bots and a call you can join with one click. Invite-only,
+no accounts on someone else's platform.
+
+**[Download the desktop app (Beta, unsigned)](https://github.com/msch128/mnema-talk-desktop/releases/latest)**: Windows, macOS and Linux installers live in their own repository; releases here carry the Docker image and the signed web bundle. Prefer the browser? Nothing to install, see [Quick start](#quick-start) to host it.
+
+[Why Mnema](#why-mnema) · [Features](#features) · [Quick start](#quick-start) ·
+[Desktop (Beta)](#desktop-beta) · [Documentation](#documentation) ·
+[Security](#security-and-privacy) · [Contributing](#contributing)
+
+## Why Mnema
+
+- **Yours, and small to run.** One Go binary with the web app built in, plus
+  PostgreSQL and S3-compatible storage (SeaweedFS by default): three
+  containers on a NAS, a Raspberry Pi or a small VPS (linux/amd64 and arm64).
+  Low idle memory, no transcoding.
+- **Media is end-to-end encrypted.** Microphone, camera and screen are sealed
+  in the browser with MLS-derived keys, so an honest server that relays them
+  cannot read them. Text messages are *not* end-to-end encrypted and stay
+  readable by the server, by design.
+- **Screen sharing built for quality.** Share the source up to 4K at 60 FPS
+  (hardware encoding in the browser, so the result depends on your machine and
+  network). Each viewer picks a quality layer or leaves it on Auto, and
+  watching is opt-in. Our tests use synthetic capture, not real 4K/60 hardware.
+- **Privacy you can check.** No telemetry (the optional release check is the
+  only call home and can be turned off), no third-party STUN unless you
+  configure it, nothing deleted or recorded unless you turn it on, and members
+  can export and delete their own data themselves.
+- **Honest about its limits.** The browser app is the primary client; the
+  desktop client is Beta and unsigned; 1.0 had an internal security review,
+  not an external audit. The status of every area is in
+  [doc/product-status.md](doc/product-status.md).
 
 ## Features
 
@@ -65,7 +94,7 @@ is tested in CI; Safari/WebKit and Firefox calls pass locally but are not all
 required CI checks, and nothing is tested on real iOS or Android hardware.
 Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 
-### Security and privacy
+### Encryption and privacy
 
 - **Media is end-to-end encrypted** in the browser with keys from an MLS
   group: microphone, camera, screen video and screen audio. Keys rotate every
@@ -126,7 +155,7 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 
 ![The admin System tab with live operations charts](doc/images/operations.png)
 
-## Quickstart
+## Quick start
 
 You need a Linux host with Docker and Docker Compose, a domain with HTTPS
 (through a reverse proxy) and a UDP port range open for voice. No clone and no
@@ -134,8 +163,8 @@ build are needed: [Fresh install in doc/deployment.md](doc/deployment.md#fresh-i
 downloads the compose file and `.env.example` of a release, lists the few
 values to set (`PUBLIC_URL`, `JWT_SECRET`, `POSTGRES_PASSWORD`,
 `S3_ACCESS_KEY` / `S3_SECRET_KEY`, `ADMIN_INITIAL_PASSWORD`) and starts the
-published image (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.0`, also `:1.0.0`
-and `:latest`). CI runs those exact steps.
+published image (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.0`, a pinned patch
+version or `:latest`). CI runs those exact steps.
 
 Building from source is for development; see [Development](#development).
 
@@ -204,7 +233,7 @@ The full model, its limits and how to report a vulnerability privately are in
 [SECURITY.md](SECURITY.md); the product's test scope is in
 [doc/product-status.md](doc/product-status.md).
 
-## Desktop client
+## Desktop (Beta)
 
 The [desktop client](https://github.com/msch128/mnema-talk-desktop) for Windows,
 macOS and Linux (**Beta**, unsigned) wraps the same web app. Instead of loading code from
@@ -238,6 +267,7 @@ and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client
 | Load test | [loadtest/README.md](loadtest/README.md) |
 | Product status and acceptance | [doc/product-status.md](doc/product-status.md) |
 | Building, testing, CI, releases | [doc/development.md](doc/development.md) |
+| Contributing, conduct and getting help | [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), [SUPPORT.md](SUPPORT.md) |
 | API reference | `API_DOCS_ENABLED=true` serves it at `/api/docs` to signed-in members |
 
 ## Development
@@ -259,13 +289,13 @@ TypeScript; PostgreSQL 18; S3-compatible storage. More in
 
 ## Contributing
 
-Pull requests are welcome. The repository is public: never commit secrets,
-databases or uploads. Use conventional commits (`feat:`, `fix:`, `docs:`);
-release-please derives versions and the changelog from them. `main` is
-protected, so changes land through a pull request with green checks and a
-squash merge. Read [AGENTS.md](AGENTS.md) first, it applies to people and AI
-agents alike. Report vulnerabilities privately as described in
-[SECURITY.md](SECURITY.md).
+Pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) has the setup
+(`make dev`), the quality gates, the commit conventions and how pull requests
+go into release branches; [AGENTS.md](AGENTS.md) holds the full rules and
+applies to people and AI agents alike. The repository is public: never commit
+secrets, databases or uploads. Please follow the
+[Code of Conduct](CODE_OF_CONDUCT.md). Questions: [SUPPORT.md](SUPPORT.md).
+Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 
