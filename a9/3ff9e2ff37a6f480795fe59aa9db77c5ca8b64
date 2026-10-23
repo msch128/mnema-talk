@@ -1,0 +1,19 @@
+scripts/upgrade-drill-data.sh
+  s_06fcde5dbef956::t_ec3e3e36aaf3e6 85-89,91,114,116-117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a93ff9e2ff37a6f480795fe59aa9db77c5ca8b64",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
