@@ -27,10 +27,10 @@ env:
   # sha256 of gitleaks_8.30.1_linux_x64.tar.gz from the upstream checksums.txt
   GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
   # Keep in sync with GOVULNCHECK_VERSION in the Makefile.
-  GOVULNCHECK_VERSION: v1.8.0
-  TRIVY_VERSION: 0.75.0
-  # sha256 of trivy_0.75.0_Linux-64bit.tar.gz from the upstream checksums.txt
-  TRIVY_SHA256: c6e65abddb348e25f10549df887045629cf28cc72453cd1c63acb717316b3f3f
+  GOVULNCHECK_VERSION: v1.9.0
+  TRIVY_VERSION: 0.76.1
+  # sha256 of trivy_0.76.1_Linux-64bit.tar.gz from the upstream checksums.txt
+  TRIVY_SHA256: c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0
 
 jobs:
   # -- Secret scan: the whole tree plus the commits this push/PR adds --------
@@ -174,13 +174,13 @@ jobs:
         run: node scripts/check-conflict-markers.mjs
 
       # The alert rules operators copy (doc/operations.md). The image is pinned
-      # by digest (prom/prometheus v3.5.0); the metrics they name are checked
+      # by digest (prom/prometheus v3.15.1); the metrics they name are checked
       # against /api/metrics by TestAlertRulesNameOnlyExportedMetrics above.
       - name: Alert rules (promtool)
         run: |
           docker run --rm --entrypoint promtool \
             -v "$PWD/deploy/monitoring:/rules:ro" \
-            prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996 \
+            prom/prometheus@sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2 \
             check rules /rules/mnema-alerts.yml
 
   # -- Go vulnerability scan (reachable symbols only) ------------------------
