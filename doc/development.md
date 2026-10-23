@@ -109,11 +109,15 @@ has one; a locally installed open-source Chromium may not).
 
 ### Screenshots
 
-The pictures in the README (`doc/images/`) come from invented demo data on a
-throwaway stack. `scripts/screenshots/run.sh` builds the app, seeds users,
-channels, roles, a webhook and a conversation, starts a Talk with a fake screen
-share and captures 1440x900 PNGs with Playwright. `SHOTS_ONLY="chat roles"`
-limits it; `SKIP_BUILD=1` reuses the last build. Never capture a real instance.
+The pictures in the README (`doc/images/`) show one invented community, Lantern
+Fox Studio, a small game studio with eight members, four roles, custom emoji, a
+poll, pins, a thread and a build-bot webhook. `scripts/screenshots/seed.mjs`
+creates all of it (avatars, emoji and the game picture are drawn in the
+browser; nothing is real) and spreads the messages over one working day;
+`scripts/screenshots/run.sh` builds the app, starts a throwaway stack, seeds it,
+starts a Talk with a fake screen share and captures the PNGs with Playwright
+(1440x900, English, the phone shot at 390 px). `SHOTS_ONLY="chat roles"` limits
+it; `SKIP_BUILD=1` reuses the last build. Never capture a real instance.
 
 ### CI pipeline
 
