@@ -1,0 +1,120 @@
+web/src/lib/globalSearch.ts
+  s_06fcde5dbef956::t_c04cc8fd12bc96 13-15,32-33,61
+web/src/stores/chat/readState.ts
+  s_06fcde5dbef956::t_6dbc86e19b33f4 25-29
+web/src/composables/useDmActions.ts
+  s_06fcde5dbef956::t_1fbde30fe1a069 1-11,13-47,57
+  s_06fcde5dbef956::t_afb0796e950cc7 12,48-56
+web/src/composables/appRoutingApply.ts
+  s_06fcde5dbef956::t_cceb2a15c296a5 39,172-174
+web/src/components/SearchModal.vue
+  s_06fcde5dbef956::t_c04cc8fd12bc96 8-9,12-13,30-31,40-42,46,49,52-53,154-158,187-197,218
+web/src/components/AccountPrivacy.vue
+  s_06fcde5dbef956::t_c5b3c05bdb50b6 13-15,20,100-102
+  s_06fcde5dbef956::t_22a539a6489ac6 103
+web/src/lib/dm.ts
+  s_06fcde5dbef956::t_a5d2e9208638e4 5,55-56,59-70
+  s_06fcde5dbef956::t_cd62288beb353b 57-58
+  s_06fcde5dbef956::t_3ad13aafcfdeb6 71
+  s_06fcde5dbef956::t_011ad12659f4ec 1-4,6-54,72
+web/src/stores/features.ts
+  s_06fcde5dbef956::t_c579858c4509af 1-39
+web/src/components/SidebarDmSection.vue
+  s_06fcde5dbef956::t_6e7f81bbdc6612 1-154
+web/src/lib/reportDialog.ts
+  s_06fcde5dbef956::t_303a3e7d7b354e 1-24
+web/src/components/ReportDialog.vue
+  s_06fcde5dbef956::t_7117a70b5a72b0 1-93
+web/src/stores/chat/channels.ts
+  s_06fcde5dbef956::t_6dbc86e19b33f4 8,37-38,59-62
+web/src/composables/useMessageMenu.ts
+  s_06fcde5dbef956::t_3b186229fee4af 19,73-74
+web/src/components/AdminReportDetail.vue
+  s_06fcde5dbef956::t_b2821986549964 1-133
+web/src/stores/blocks.ts
+  s_06fcde5dbef956::t_657f4a2bcd61c3 1-62
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_ea32281b33a3d0 6,12,114,122-123,175-179
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_43bbd678988427 10-11,902-903,1181-1183,2200-2333
+web/src/App.vue
+  s_06fcde5dbef956::t_80c33eae3f01df 161-164
+  s_06fcde5dbef956::t_cce680e40cef8b 9-10,114-116,121-123
+  s_06fcde5dbef956::t_c8e19ed7d39a51 3,44,89-90,286,303,374
+web/src/App.test.ts
+  s_06fcde5dbef956::t_14cecc72eed0f6 9
+  s_06fcde5dbef956::t_9dfc6d75ca183f 27-28
+web/src/components/SearchResultItem.vue
+  s_06fcde5dbef956::t_c04cc8fd12bc96 6,21,54-55
+web/src/components/DmCreateDialog.vue
+  s_06fcde5dbef956::t_7b39c2618a1303 1-140
+web/src/stores/chat/reset.ts
+  s_06fcde5dbef956::t_ea30084f808275 4-5,41-45
+web/src/composables/dmMenuItems.ts
+  s_06fcde5dbef956::t_0a65c8240a40c9 1-58
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_5166cd619583d2 4,92-100,161
+web/src/components/AccountDmPolicy.vue
+  s_06fcde5dbef956::t_2cee7735ab3533 1-59
+web/src/components/DmInfoDialog.vue
+  s_06fcde5dbef956::t_d5694b0a221c20 1-121
+web/src/stores/chat/socket.ts
+  s_06fcde5dbef956::t_930e0f48d2ffbb 6-7,11,46-47,148-150
+web/src/stores/chat/dms.ts
+  s_06fcde5dbef956::t_fd5857473a0c39 1-57,60-63,65-77,79-171,173
+  s_06fcde5dbef956::t_3b2d5f6fe18444 58-59,64,78,172
+web/src/components/SearchResults.vue
+  s_06fcde5dbef956::t_c04cc8fd12bc96 21-22,48
+web/src/types/events.ts
+  s_06fcde5dbef956::t_930e0f48d2ffbb 42
+web/src/components/BlockedMessageRow.vue
+  s_06fcde5dbef956::t_af8b0649d863f3 1-32
+web/src/composables/useNavMenus.ts
+  s_06fcde5dbef956::t_3b186229fee4af 28,365
+web/src/components/AdminReportsTab.vue
+  s_06fcde5dbef956::t_70634a2185c925 1-114
+web/src/components/AccountBlockedList.vue
+  s_06fcde5dbef956::t_4a21d5e4683db6 1-29
+web/src/components/UserProfileModal.vue
+  s_06fcde5dbef956::t_5587c0cf0313f8 10-11,85-92,155,242-250
+  s_06fcde5dbef956::t_d4ab4266141da3 251-252
+web/src/components/AdminDashboard.vue
+  s_06fcde5dbef956::t_cca02cbe1dd461 5,10,23,35,37-38,47,63,139
+web/src/components/ChatArea.vue
+  s_06fcde5dbef956::t_02ffaade51357e 4,7,15,17,44-46,48-53,55-62,192,282,284
+web/src/composables/useDmChat.ts
+  s_06fcde5dbef956::t_3cabccad12d53d 1-5,7-23,26-29
+  s_06fcde5dbef956::t_02ffaade51357e 6,24-25
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_ea30084f808275 21,52-53,84-91
+web/src/components/ChatHeader.vue
+  s_06fcde5dbef956::t_7b0d57286d4a44 4-5,13-14,26-32,37-39,89,102,124-134,152
+  s_06fcde5dbef956::t_d7efced3f3075c 153
+web/src/components/ProfileAvatar.vue
+  s_06fcde5dbef956::t_5587c0cf0313f8 6,19-21,23,135-144
+  s_06fcde5dbef956::t_950fc292ca0ce4 145-146
+web/src/components/AdminOnboardingTab.vue
+  s_06fcde5dbef956::t_cca02cbe1dd461 12,23,31-32,39-40,52,70-71,132-137
+  s_06fcde5dbef956::t_c5756d37c65d1f 138-139
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_a21cfe49c46925 2261-2262
+  s_06fcde5dbef956::t_43bbd678988427 10-11,902-903,1181-1183,2200-2260,2263-2333
+web/src/components/Sidebar.vue
+  s_06fcde5dbef956::t_c8e19ed7d39a51 20,265
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7468a4e81bdd4f89a264ce6824802ff587e5a154",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
