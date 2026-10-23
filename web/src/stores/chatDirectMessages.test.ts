@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useChatStore } from './chat'
 import { useAuthStore } from './auth'
+import { useBlocksStore } from './blocks'
 import { useServerFeaturesStore } from './serverFeatures'
 import { channelFixture, categoryFixture, fixtureId, messageFixture, userFixture } from '../test-fixtures.fixture'
 import { dmFixture, dmMemberFixture } from '../dm.fixture'
@@ -144,6 +145,26 @@ describe('events', () => {
     useChatStore().handleWSEvent({ type: 'block_updated', payload: { user_id: ada.id, blocked: true } })
     await vi.advanceTimersByTimeAsync(0)
     expect(vi.mocked(api).mock.calls.map(([u]) => u)).toContain('/api/me/blocks')
+  })
+})
+
+describe('a blocked sender', () => {
+  it('adds no unread, mention or notification, in a group conversation or a channel', () => {
+    const chat = setup(['dm', 'blocks'])
+    useBlocksStore().blocked = [{ user_id: ada.id, username: 'member2', display_name: 'Ada', blocked_at: '2026-01-01T00:00:00Z' }]
+    const notify = vi.fn()
+    vi.stubGlobal('Notification', Object.assign(vi.fn(notify), { permission: 'granted' }))
+    chat.handleWSEvent({ type: 'dm_created', payload: group })
+    const channelId = fixtureId(2)
+    for (const id of [group.id, channelId]) {
+      chat.handleWSEvent({ type: 'message_create', payload: messageFixture({ id: fixtureId(70), channel_id: id, user_id: ada.id, content: '@member1 hi' }) })
+      expect(chat.readStates[id]?.unread_count ?? 0).toBe(0)
+      expect(chat.readStates[id]?.mention_count ?? 0).toBe(0)
+    }
+    chat.handleWSEvent({ type: 'message_create', payload: messageFixture({ id: fixtureId(71), channel_id: group.id, user_id: bo.id }) })
+    expect(chat.readStates[group.id]?.unread_count).toBe(1)
+    expect(notify).not.toHaveBeenCalledWith(expect.stringContaining('Ada'), expect.anything())
+    vi.unstubAllGlobals()
   })
 })
 

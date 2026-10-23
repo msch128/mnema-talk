@@ -123,6 +123,11 @@ function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
   // Everything somebody writes in a conversation is addressed to me.
   const isMention = isDm(cx, p.channel_id) || (muted ? messageMentionsMeDirectly(cx, p) : messageMentionsMe(cx, p))
 
+  // A blocked member's message is folded in the list; it adds no unread, mention or notification.
+  if (!isOwn && useBlocksStore().isBlocked(p.user_id)) {
+    if (isCurrentChannel && isReadingActiveChannel(cx)) cs.markReadThrottled.call(p.channel_id)
+    return
+  }
   handleIncomingMessageReadState(cx, { channelId: p.channel_id, isOwn, isCurrentChannel, isMention, isThreadReply: !!p.parent_id })
   if (!isOwn && p.channel_id) {
     triggerBrowserNotification(cx, p, isMention)
