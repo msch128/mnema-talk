@@ -19,7 +19,7 @@ import (
 const MaxPinsPerChannel = 50
 
 // PinChangesPerMinute is how many pins and unpins one member may make per minute.
-const PinChangesPerMinute = 30
+const PinChangesPerMinute = 60
 
 var errTooManyPins = httpx.ErrConflict(fmt.Sprintf("a channel can keep at most %d pinned messages; unpin one first", MaxPinsPerChannel))
 
