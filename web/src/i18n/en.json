@@ -447,7 +447,8 @@
     "copiedLink": "Link copied",
     "moreActions": "More actions",
     "readOnly": "You can’t write in this channel.",
-    "noAttach": "You can’t attach files here."
+    "noAttach": "You can’t attach files here.",
+    "messageRemoved": "Message removed"
   },
   "thread": {
     "title": "Thread",
@@ -1536,6 +1537,13 @@
     "manage_emoji": {
       "name": "Manage emoji",
       "desc": "Upload, rename and delete the custom emoji of this community."
+    },
+    "groups": {
+      "general": "General",
+      "text": "Text",
+      "voice": "Voice",
+      "moderation": "Moderation",
+      "administration": "Administration"
     }
   },
   "audit": {

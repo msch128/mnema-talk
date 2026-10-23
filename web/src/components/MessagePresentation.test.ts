@@ -156,3 +156,19 @@ describe('ReactionPalette', () => {
     expect(w.emitted('close')).toHaveLength(1)
   })
 })
+
+describe('MessageRow after the author deleted the account', () => {
+  const gone = { username: 'deleted-1a2b3c4d5e6f', display_name: 'Deleted user', content: '' }
+
+  it('shows a note instead of an empty bubble', () => {
+    const w = mount(MessageRow, { props: { msg: messageFixture(gone), isOwn: false }, global: { stubs: { EmojiPicker: emojiStub } } })
+    expect(w.get('[data-testid="message-removed"]').text()).toBe(t('chat.messageRemoved'))
+  })
+
+  it('shows no note for an ordinary message or one that still has a file', () => {
+    const ordinary = mount(MessageRow, { props: { msg: messageFixture({ content: 'hi' }), isOwn: false }, global: { stubs: { EmojiPicker: emojiStub } } })
+    expect(ordinary.find('[data-testid="message-removed"]').exists()).toBe(false)
+    const withFile = mount(MessageRow, { props: { msg: messageFixture({ ...gone, attachments: [image] }), isOwn: false }, global: { stubs: { EmojiPicker: emojiStub } } })
+    expect(withFile.find('[data-testid="message-removed"]').exists()).toBe(false)
+  })
+})

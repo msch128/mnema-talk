@@ -447,7 +447,8 @@
     "copiedLink": "Link kopiert",
     "moreActions": "Weitere Aktionen",
     "readOnly": "Du darfst in diesem Kanal nicht schreiben.",
-    "noAttach": "Du darfst hier keine Dateien anhängen."
+    "noAttach": "Du darfst hier keine Dateien anhängen.",
+    "messageRemoved": "Nachricht entfernt"
   },
   "thread": {
     "title": "Thread",
@@ -1536,6 +1537,13 @@
     "manage_emoji": {
       "name": "Emojis verwalten",
       "desc": "Eigene Emojis dieser Community hochladen, umbenennen und löschen."
+    },
+    "groups": {
+      "general": "Allgemein",
+      "text": "Text",
+      "voice": "Sprache",
+      "moderation": "Moderation",
+      "administration": "Verwaltung"
     }
   },
   "audit": {
