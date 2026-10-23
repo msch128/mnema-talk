@@ -1546,6 +1546,10 @@
       "name": "Meldungen verwalten",
       "desc": "Meldungen von Mitgliedern zu Nachrichten lesen und bearbeiten, auch den Verlauf, der aus einer Direktnachricht mitgeschickt wurde."
     },
+    "send_direct_messages": {
+      "name": "Direktnachrichten senden",
+      "desc": "Direktnachrichten beginnen und darin schreiben. Zum Lesen einer Direktnachricht, an der du beteiligt bist, wird sie nie gebraucht."
+    },
     "groups": {
       "general": "Allgemein",
       "text": "Text",

@@ -67,6 +67,34 @@ fails without the fix, and the behaviour changes are listed in
 
 Remaining Info-level items of the review are not listed individually.
 
+## Direct messages (privacy model)
+
+Direct messages (1.1) are conversations of two to ten members. Their privacy
+model, in short; the design is in [doc/architecture.md](doc/architecture.md#direct-messages).
+
+- **Who can read.** Members of the conversation, nobody else: the Owner,
+  Administrators and moderators have no route to it (REST, WebSocket, search,
+  media, push, audit all test membership). A moderator sees only what a member
+  chose to report: the reported message and up to 20 around it, copied at the
+  time of the report.
+- **Not end-to-end encrypted.** Like channel text, a conversation is readable
+  by the server and by whoever operates it or holds a backup or database
+  dump. Operators can read the `messages` table; this is the same trust as for
+  channel text, and there is no plan for text E2EE. Attachments of a
+  conversation are served only to its members.
+- **Blocks cannot be probed.** Every refusal about another member (a block,
+  their `dm_policy`, a disabled account, an unknown id) is one 403 text, and
+  `can_send` and every list say nothing about a block.
+- **Abuse limits.** 3 tries a minute and 10 new conversations a day, a cap of
+  two messages before the other side has answered, at most 10 members and
+  100 groups per member, *Send direct messages* as a permission (default on),
+  a community switch (default on) and a per-member `dm_policy`.
+- **Side channels removed.** Private messages do not move the public message
+  counters or the public message numbering, are absent from the audit log,
+  bot and webhook events and the admin media list.
+- **Server-side enforcement** of all of it; the UI only hides what a member
+  cannot do.
+
 ## Security model (summary)
 
 In short: members join by invitation only. Microphone, camera, screen video

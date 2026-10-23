@@ -1546,6 +1546,10 @@
       "name": "Manage reports",
       "desc": "Read and resolve member reports of messages, including the context shared from a direct message."
     },
+    "send_direct_messages": {
+      "name": "Send direct messages",
+      "desc": "Start direct messages and write in them. Reading a direct message you are in never needs it."
+    },
     "groups": {
       "general": "General",
       "text": "Text",

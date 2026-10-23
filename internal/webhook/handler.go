@@ -98,7 +98,7 @@ func (h *Handler) authorize(r *http.Request, ch uuid.UUID) error {
 		return err
 	}
 	var exists bool
-	if err := h.DB.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM channels WHERE id = $1)`, ch).Scan(&exists); err != nil {
+	if err := h.DB.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM channels WHERE id = $1 AND type <> 'dm')`, ch).Scan(&exists); err != nil {
 		return fmt.Errorf("check channel: %w", err)
 	}
 	if !exists {

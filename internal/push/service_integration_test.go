@@ -187,6 +187,36 @@ func TestAMemberWhoBlockedTheAuthorIsNeverToldWhateverTheMessage(t *testing.T) {
 	e.pushedTo("/device/alice", 1)
 }
 
+func TestADirectMessageIsPushedToItsOtherMembersWithTheSenderAsTitle(t *testing.T) {
+	e := newEnv(t, http.StatusCreated)
+	alice, bob, carol := e.member("alice"), e.member("bob"), e.member("carol")
+	dm := e.perms.DM(alice.id, bob.id)
+	e.exec(`INSERT INTO channels (id, number, name, type) OVERRIDING SYSTEM VALUE VALUES ($1, -1, '', 'dm')`, dm)
+
+	e.publish(message(alice, dm, "psst, only for you", carol))
+	got := e.pushedTo("/device/bob", 1)
+	settle()
+	p := e.content(bob, got[0])
+	if p.Title != "Display alice" || p.Body != "psst, only for you" || strings.Contains(p.Title, "#") || p.ChannelID == nil || *p.ChannelID != dm {
+		t.Fatalf("bob's push: %+v", p)
+	}
+	if got[0].header.Get("Urgency") != "high" {
+		t.Errorf("a direct message is urgent: %v", got[0].header)
+	}
+	for _, m := range []member{alice, carol} {
+		if n := len(e.requestsTo("/device/" + m.name)); n != 0 {
+			t.Errorf("%s was pushed %d times although not in the conversation", m.name, n)
+		}
+	}
+	// A muted conversation stays silent, although it is addressed to the member.
+	e.exec(`INSERT INTO channel_reads (user_id, channel_id, notify_level) VALUES ($1, $2, 'mute')`, bob.id, dm)
+	e.publish(message(alice, dm, "again", bob))
+	settle()
+	if n := len(e.requestsTo("/device/bob")); n != 1 {
+		t.Errorf("bob muted the conversation but has %d pushes", n)
+	}
+}
+
 func TestAHeldPushStillGoesOutWhenNothingChanged(t *testing.T) {
 	e := newEnvWith(t, http.StatusCreated, 200*time.Millisecond)
 	alice := e.member("alice")

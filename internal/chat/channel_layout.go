@@ -87,7 +87,7 @@ func placeChannels(ctx context.Context, tx pgx.Tx, chans []ChannelPlacement) err
 	tag, err := tx.Exec(ctx, `
 		UPDATE channels ch SET category_id = v.category_id, sort_order = v.sort_order
 		FROM unnest($1::uuid[], $2::uuid[], $3::bigint[]) AS v(id, category_id, sort_order)
-		WHERE ch.id = v.id
+		WHERE ch.id = v.id AND ch.type <> 'dm'
 		  AND (v.category_id IS NULL OR EXISTS (SELECT 1 FROM categories WHERE id = v.category_id))`,
 		ids, parents, orders)
 	if err != nil {
@@ -143,7 +143,7 @@ func lockSourceChannel(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*Channel, 
 	var src Channel
 	err := tx.QueryRow(ctx, `
 		SELECT id, category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds
-		FROM channels WHERE id = $1 FOR UPDATE`, id).
+		FROM channels WHERE id = $1 AND type <> 'dm' FOR UPDATE`, id).
 		Scan(&src.ID, &src.CategoryID, &src.Name, &src.Type, &src.Topic, &src.SortOrder, &src.UserLimit, &src.SlowModeSeconds)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, errChannelNotFound
@@ -205,7 +205,7 @@ func insertChannelCopy(ctx context.Context, tx pgx.Tx, src *Channel, sortOrder i
 func lockChannelGroup(ctx context.Context, tx pgx.Tx, categoryID *uuid.UUID) ([]uuid.UUID, []int, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT id, sort_order FROM channels
-		WHERE category_id IS NOT DISTINCT FROM $1
+		WHERE category_id IS NOT DISTINCT FROM $1 AND type <> 'dm'
 		ORDER BY sort_order, created_at, id
 		FOR UPDATE`, categoryID)
 	if err != nil {

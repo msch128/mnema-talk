@@ -18,6 +18,11 @@ const (
 	ChannelTypeText  ChannelType = "text"
 	ChannelTypeVoice ChannelType = "voice"
 
+	// channelKindDM is the type a direct message conversation has in the
+	// channels table (dm.go). It is deliberately not a ChannelType: it is never
+	// a channel type to create or one the API lists with the channels.
+	channelKindDM = "dm"
+
 	MaxChannelNameLen = 64
 	MaxTopicLen       = 255
 )
@@ -71,7 +76,7 @@ func loadCategories(ctx context.Context, p *db.Pool) ([]Category, map[uuid.UUID]
 func populateChannels(ctx context.Context, p *db.Pool, categories []Category, categoryIdx map[uuid.UUID]int) ([]Channel, error) {
 	chanRows, err := p.Query(ctx, `
 		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds
-		FROM channels ORDER BY sort_order, created_at`)
+		FROM channels WHERE type <> 'dm' ORDER BY sort_order, created_at`)
 	if err != nil {
 		return nil, fmt.Errorf("query channels: %w", err)
 	}
@@ -182,7 +187,7 @@ func DeleteChannel(ctx context.Context, p *db.Pool, channelID uuid.UUID) ([]stri
 		// it (their foreign keys need a share lock on it) until we are done,
 		// so every attachment the cascade removes is in keys.
 		var one int
-		err := tx.QueryRow(ctx, `SELECT 1 FROM channels WHERE id = $1 FOR UPDATE`, channelID).Scan(&one)
+		err := tx.QueryRow(ctx, `SELECT 1 FROM channels WHERE id = $1 AND type <> 'dm' FOR UPDATE`, channelID).Scan(&one)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errChannelNotFound
 		}
@@ -289,7 +294,7 @@ func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *s
 	err = p.QueryRow(ctx, `
 		UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic),
 			user_limit = COALESCE($4, user_limit), slow_mode_seconds = COALESCE($5, slow_mode_seconds)
-		WHERE id = $1 AND ($4::int IS NULL OR $4 = 0 OR type = 'voice')
+		WHERE id = $1 AND type <> 'dm' AND ($4::int IS NULL OR $4 = 0 OR type = 'voice')
 		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`, id, name, topic, userLimit, slowMode).
 		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds)
 	if errors.Is(err, pgx.ErrNoRows) {

@@ -19,6 +19,9 @@ const maxAuditedReplies = 50
 // or edited: the full text, as the operator's audit policy says
 // (doc/moderation.md), plus who wrote it and where.
 type auditSnapshot struct {
+	// dm marks a message of a direct message conversation: nothing of it is
+	// ever audited (doc/moderation.md).
+	dm      bool
 	msg     *Message
 	channel string
 	replies []uuid.UUID
@@ -35,7 +38,10 @@ func (h *Handler) snapshotMessage(ctx context.Context, id uuid.UUID, withReplies
 		return nil
 	}
 	s := &auditSnapshot{msg: msg}
-	_ = h.DB.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1`, msg.ChannelID).Scan(&s.channel)
+	_ = h.DB.QueryRow(ctx, `SELECT name, type = 'dm' FROM channels WHERE id = $1`, msg.ChannelID).Scan(&s.channel, &s.dm)
+	if s.dm {
+		return &auditSnapshot{dm: true, msg: &Message{UserID: msg.UserID}}
+	}
 	if withReplies && msg.ReplyCount > 0 {
 		s.replies = h.fetchAuditedReplyIDs(ctx, id)
 	}
@@ -85,6 +91,9 @@ func (s *auditSnapshot) details() map[string]any {
 // auditDelete records the deletion of a message, by its author or by a
 // moderator.
 func (h *Handler) auditDelete(ctx context.Context, user *auth.User, id uuid.UUID, s *auditSnapshot, reason string) {
+	if s != nil && s.dm {
+		return
+	}
 	e := audit.Entry{Action: "message.delete", TargetType: "message", TargetID: id.String(), Details: map[string]any{}}
 	if s != nil {
 		e.Details = s.details()
@@ -101,7 +110,7 @@ func (h *Handler) auditDelete(ctx context.Context, user *auth.User, id uuid.UUID
 
 // auditEdit records an edit with the text before and after.
 func (h *Handler) auditEdit(ctx context.Context, id uuid.UUID, s *auditSnapshot, after string) {
-	if s == nil {
+	if s == nil || s.dm {
 		return
 	}
 	d := s.details()
