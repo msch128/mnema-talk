@@ -131,6 +131,16 @@ async function seedMessages(admin, pages, channels) {
   await say('jonas', devChat, 'CI is green on main again. Merging the playback fix.')
   await say('mira', devChat, 'Thanks! Cutting the release in ten minutes.')
 
+  // Pins in #general (moderators and the Owner may pin) and a poll in #dev-chat with a few votes.
+  for (const msg of [m3, m1]) must(await api(admin, 'PUT', `/api/channels/${general}/messages/${msg.id}/pin`), 'pin')
+  const pollMessage = must(await api(pages.nora, 'POST', `/api/channels/${devChat}/polls`, {
+    question: 'Which day for the next release call?', options: ['Tuesday', 'Wednesday', 'Thursday'], duration: '3d',
+  }), 'poll')
+  const options = pollMessage.poll.options
+  for (const [who, picks] of [['mira', [1]], ['jonas', [1]], ['felix', [0]]]) {
+    must(await api(pages[who], 'PUT', `/api/channels/${devChat}/messages/${pollMessage.id}/poll/votes`, { option_ids: picks.map(i => options[i].id) }), 'vote')
+  }
+
   await seedWebhooks(admin, releases)
 }
 

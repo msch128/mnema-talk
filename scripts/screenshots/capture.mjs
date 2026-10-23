@@ -76,9 +76,21 @@ const browser = await chromium.launch({ args: [
   '--force-webrtc-ip-handling-policy=default_public_and_private_interfaces',
 ] })
 const newPage = async (init) => {
-  const ctx = await browser.newContext({ locale: 'en-US', viewport: size, permissions: ['microphone'] })
+  const ctx = await browser.newContext({ locale: 'en-US', viewport: size, permissions: ['microphone'], serviceWorkers: 'block' })
+  await closeWelcomeFlow(ctx)
   if (init) await ctx.addInitScript(init)
   return ctx.newPage()
+}
+// The first sign-in of every demo account would open the welcome flow and the
+// first-run tips over the picture; answer the state request as if both were done.
+async function closeWelcomeFlow(ctx) {
+  await ctx.route('**/api/onboarding', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback()
+    const response = await route.fetch()
+    const state = await response.json().catch(() => null)
+    if (!state || typeof state !== 'object') return route.fulfill({ response })
+    return route.fulfill({ response, json: { ...state, welcome_done: true, dismissed_tips: ['search', 'mention', 'talk', 'notif-hint'] } })
+  })
 }
 const channel = (page, type, text) => page.locator(`[data-channel-type="${type}"]`, { hasText: text }).first()
 
@@ -121,6 +133,76 @@ if (wanted('webhooks')) {
   await page.waitForTimeout(800)
   await shot(page, 'webhooks')
   await page.context().close()
+}
+
+// 4a. Pinned messages of a channel
+if (wanted('pins')) {
+  const page = await newPage()
+  await login(page, ADMIN_USER, ADMIN_PASSWORD)
+  await page.goto(BASE + '/')
+  await channel(page, 'text', 'general').click()
+  await page.getByTestId('pinned-button').click()
+  await page.getByTestId('pinned-item').first().waitFor()
+  await page.waitForTimeout(600)
+  await shot(page, 'pins')
+  await page.context().close()
+}
+
+// 4b. A poll with votes
+if (wanted('poll')) {
+  const page = await newPage()
+  await login(page, ADMIN_USER, ADMIN_PASSWORD)
+  await page.goto(BASE + '/')
+  await channel(page, 'text', 'dev-chat').click()
+  await page.getByTestId('poll').waitFor()
+  await page.getByTestId('poll').getByText('Wednesday').click()
+  await page.waitForTimeout(800)
+  await page.mouse.move(1000, 500)
+  await shot(page, 'poll')
+  await page.context().close()
+}
+
+// 4c. The emoji picker (with the instance's own emoji section when there is one)
+if (wanted('emoji-picker')) {
+  const page = await newPage()
+  await login(page, ADMIN_USER, ADMIN_PASSWORD)
+  await page.goto(BASE + '/')
+  await channel(page, 'text', 'general').click()
+  await page.getByTestId('emoji-button').click()
+  await page.getByTestId('emoji-picker').locator('emoji-picker').waitFor()
+  await page.waitForTimeout(1200)
+  await shot(page, 'emoji-picker')
+  await page.context().close()
+}
+
+// 4d. Turning on two-factor sign-in (the secret belongs to a demo account on a throwaway stack)
+if (wanted('two-factor')) {
+  const page = await newPage()
+  await login(page, 'nora', MEMBER_PASSWORD)
+  await page.goto(BASE + '/')
+  await page.getByTestId('account-menu-button').click()
+  await page.getByTestId('menu-account-security').click()
+  await page.getByTestId('two-factor-start').click()
+  await page.getByTestId('two-factor-password').fill(MEMBER_PASSWORD)
+  await page.getByTestId('two-factor-continue').click()
+  await page.getByTestId('qr-code').waitFor()
+  await page.waitForTimeout(600)
+  await shot(page, 'two-factor')
+  await page.context().close()
+}
+
+// 4e. The phone layout: the same channel on a 390 px screen
+if (wanted('phone')) {
+  const ctx = await browser.newContext({ locale: 'en-US', viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, serviceWorkers: 'block' })
+  await closeWelcomeFlow(ctx)
+  const page = await ctx.newPage()
+  await login(page, ADMIN_USER, ADMIN_PASSWORD)
+  await page.goto(BASE + '/')
+  await page.getByTestId('open-nav').tap()
+  await channel(page, 'text', 'general').tap()
+  await page.waitForTimeout(1200)
+  await shot(page, 'phone')
+  await ctx.close()
 }
 
 // 5/6. Talk with a screen share (quality picker) and the safety code
