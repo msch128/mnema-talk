@@ -193,6 +193,7 @@ server lacks.
   `message.delete` entry of an edited message carries its earlier versions.
   Audit retention applies to them as to any entry.
 - New setting `INITIAL_LANGUAGE` (`de` default, or `en`) for the default category and channel names of a brand-new installation. An upgrade never renames anything.
+- Web app: a skip link and a fixed Tab order (channel list, header, messages, message box, member list), the connection banner also on the browser's offline event, Talk controls that stay visible when alone in the call on a phone, the search tip dismissed after the first search, a Follow thread button, and in-page notifications that follow the "show message text" setting. A 1.1 bundle against a 1.0.x server hides the follow button and notifies for every thread reply as before.
 - Search accepts `has=poll`, `has=edit` and `is=pinned`. The new routes
   (`/api/threads/{id}/follow`, `/api/threads/following`) and the event
   `thread_follow_updated` are additive; a 1.0.x web bundle ignores them.

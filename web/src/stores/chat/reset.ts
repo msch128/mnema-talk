@@ -26,6 +26,8 @@ export function resetCommunityState(cx: Cx) {
   ++cs.reconnectCheckSeq
   closeWebSocket(cx)
   closeThread(cx)
+  cs.followedThreads.value = new Set()
+  cs.followKnown.value = false
   cs.pendingThreadOpen = null
   cs.pendingLive = []
   resetWindow(cx)

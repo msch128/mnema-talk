@@ -168,6 +168,7 @@
   },
   "connection": {
     "lost": "Connection lost – reconnecting…",
+    "offline": "You are offline – messages cannot be sent or received until the network is back.",
     "nextTry": "next try in {seconds} s · attempt {attempt}",
     "retryNow": "Retry now",
     "restored": "Reconnected"
@@ -312,6 +313,10 @@
       "body": "Get a desktop notification for new messages while Mnema Talk runs in the background. You can change this per channel at any time."
     }
   },
+  "skip": {
+    "toMessages": "Skip to messages",
+    "toComposer": "Skip to message box"
+  },
   "tips": {
     "label": "Tip",
     "gotIt": "Got it",
@@ -444,6 +449,9 @@
     "searchInChannel": "Search in this channel",
     "searchFailed": "Couldn’t search. Try again.",
     "inThread": "in thread",
+    "searchPinned": "Pinned",
+    "notifyNoText": "New message",
+    "searchFilterUnsupported": "This server doesn’t support this filter yet. Remove it or search without it.",
     "copyText": "Copy text",
     "copiedText": "Text copied",
     "copyLink": "Copy link",
@@ -456,6 +464,12 @@
   "thread": {
     "title": "Thread",
     "close": "Close thread",
+    "follow": "Follow thread",
+    "unfollow": "Unfollow thread",
+    "following": "You get notifications for replies in this thread.",
+    "notFollowing": "You do not get notifications for replies in this thread.",
+    "followFailed": "Couldn’t follow the thread. Try again.",
+    "unfollowFailed": "Couldn’t unfollow the thread. Try again.",
     "edit": "Edit reply",
     "delete": "Delete reply",
     "deleteTitle": "Delete reply?",
@@ -877,6 +891,7 @@
       "detailPriority": "Detail priority: text and code remain sharp"
     },
     "controls": "Talk controls",
+    "tapForControls": "Tap the screen to show the controls",
     "moreControls": "More options",
     "hideParticipants": "Hide participants",
     "showParticipants": "Show participants",

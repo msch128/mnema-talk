@@ -10,6 +10,7 @@ import { usePermissionsStore } from '../permissions'
 import { goToMessage } from './messageWindow'
 import { isTabVisible } from './readState'
 import { notificationLevel } from './notifySettings'
+import { notifyShowsText } from '../../lib/notifyPreview'
 
 /** Whether msg mentions the signed-in user (@username, @all, @here) or replies to them. */
 export function messageMentionsMe(cx: Cx, msg: Message) {
@@ -47,8 +48,19 @@ export function buildNotificationBody(msg: Message): string {
   return msg.attachments?.length ? t('chat.attachment') : ''
 }
 
+/**
+ * A thread reply notifies only the followers of its thread, and whoever it
+ * addresses by name. Without a list from the server (an older one) every reply
+ * is treated as before.
+ */
+function threadAllows(cx: Cx, msg: Message): boolean {
+  if (!msg.parent_id || !cx.cs.followKnown.value) return true
+  return cx.cs.followedThreads.value.has(msg.parent_id) || messageMentionsMeDirectly(cx, msg)
+}
+
 function canShowBrowserNotification(cx: Cx, msg: Message, isMention: boolean): boolean {
   if (isQuiet(cx.authStore.user?.presence)) return false
+  if (!threadAllows(cx, msg)) return false
   // With push on, a hidden page leaves the notification to the service worker, so it is not shown twice.
   if (pushOnThisDevice.value && !isTabVisible()) return false
   return shouldNotify({
@@ -65,7 +77,8 @@ export function triggerBrowserNotification(cx: Cx, msg: Message, isMention: bool
   if (!canShowBrowserNotification(cx, msg, isMention)) return
   platform.notify({
     title: buildNotificationTitle(cx, msg),
-    body: buildNotificationBody(msg),
+    // Like a push: with the text off (the member's choice, or the operator's), only who wrote and where.
+    body: notifyShowsText.value ? buildNotificationBody(msg) : t('chat.notifyNoText'),
     channelId: msg.channel_id,
     messageId: msg.id,
     onClick: () => goToMessage(cx, msg),
