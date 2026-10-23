@@ -52,10 +52,6 @@ Result: 0 Critical, 0 High. Every Medium finding is fixed, with a test that
 fails without the fix, and the behaviour changes are listed in
 [doc/upgrade.md](doc/upgrade.md#09x--100). Deliberately deferred past 1.0:
 
-- **CSP `style-src 'unsafe-inline'`.** Kept because the bundled
-  `emoji-picker-element` writes inline styles and has no nonce support (see
-  Security headers below for the plan to remove it and the browser test that
-  must come with it).
 - **RT-4, frame format version 2.** Version 2 media frames (no line binding)
   are still accepted for mixed-version Talks; refusing them is a protocol
   change that would cut old tabs off (see the media frame section below).
@@ -352,13 +348,20 @@ details and the limits.
   JS eval; `'wasm-unsafe-eval'` only so the bundled noise filter can compile
   its WebAssembly),
   `frame-ancestors 'none'`, `nosniff`, a restrictive referrer policy and related
-  headers on every response. `style-src` still allows `'unsafe-inline'`, only
-  because the emoji picker library writes a `<style>` element and inline style
-  attributes itself and has no nonce support; the app's own code needs none,
-  and images, fonts, media and connections are same-origin, so injected CSS
-  cannot send data to a third party. Dropping it (a hash for the picker's style
-  text plus a patched or replaced picker, with a browser test that fails on any
-  CSP violation) is planned after 1.0.
+  headers on every response. Styles are as strict as scripts: `style-src 'self'`
+  and `style-src-attr 'none'`, so there is no `'unsafe-inline'` and no
+  `'unsafe-hashes'`; injected markup cannot add a `<style>` element or a
+  `style=""` attribute. The app's own code needs neither (Vue style bindings go
+  through the CSSOM, which the policy does not restrict, and component styles
+  are files). The one library that wrote inline styles, `emoji-picker-element`,
+  is pinned to an exact version and patched while the web app is built
+  (`web/scripts/emojiPickerCsp.ts`): its stylesheet becomes a constructable
+  stylesheet (`adoptedStyleSheets`) and its `style` bindings are applied through
+  the CSSOM. Each of the two patches must match the package source exactly
+  once, or the build fails. The Playwright fixtures fail every end-to-end spec
+  on any `securitypolicyviolation` event or CSP console message, and
+  `e2e/tests/csp.spec.ts` visits the emoji picker, Markdown and code blocks,
+  every admin panel and the API reference under the real policy.
 - **Message rendering.** Markdown is parsed into a tree of plain nodes
   (`web/src/lib/markdown/`) and only one module turns that tree into HTML: every
   string is escaped, tags come from a fixed table, and generated elements (mention
