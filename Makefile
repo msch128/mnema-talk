@@ -100,7 +100,7 @@ COVERAGE_MIN ?= 90
 COVERAGE_FILE_MIN ?= 80
 # Packages counted in the Go coverage total: everything but test helpers and
 # build-time tools.
-COVER_PKGS = $(shell go list ./cmd/... ./internal/... ./web | grep -v -e /internal/testutil -e /internal/mailer/mailtest -e /internal/tools/ | paste -sd, -)
+COVER_PKGS = $(shell go list ./cmd/... ./internal/... ./web | grep -v -e /internal/testutil -e /internal/mailer/mailtest -e /internal/updaterd/daemontest -e /internal/tools/ | paste -sd, -)
 
 coverage: coverage-go coverage-web ## Go + web coverage reports (coverage.out, web/coverage/)
 

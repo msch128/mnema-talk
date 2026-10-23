@@ -131,6 +131,89 @@ modules are compiled into `mnema-talk`:
 | `golang.org/x/text` | v0.42.0 | BSD-3-Clause |
 | `golang.org/x/time` | v0.16.0 | BSD-3-Clause |
 
+## Updater binary
+
+The self-update sidecar (`mnema-updater`, compose profile `autoupdate`) is a
+second, separate binary in the app image. It verifies the cosign signature and
+build provenance of a new release image (SECURITY.md, "Self-update sidecar").
+Besides the Go standard library and the modules above that it shares with the
+server (`golang.org/x/*`, `github.com/google/uuid`), these modules are compiled
+into it; `go list -deps -f '{{with .Module}}{{.Path}} {{.Version}}{{end}}'
+./cmd/updater | sort -u` lists them:
+
+| Module | Version | License |
+|---|---|---|
+| `github.com/asaskevich/govalidator` | v0.0.0-20230301143203-a9d515a09cc2 | MIT |
+| `github.com/blang/semver` | v3.5.1+incompatible | MIT |
+| `github.com/cenkalti/backoff/v5` | v5.0.3 | MIT |
+| `github.com/cespare/xxhash/v2` | v2.3.0 | MIT |
+| `github.com/cyberphone/json-canonicalization` | v0.0.0-20241213102144-19d51d7fe467 | Apache-2.0 |
+| `github.com/digitorus/pkcs7` | v0.0.0-20230818184609-3a137a874352 | MIT |
+| `github.com/digitorus/timestamp` | v0.0.0-20231217203849-220c5c2851b7 | BSD-2-Clause |
+| `github.com/docker/cli` | v29.7.2+incompatible | Apache-2.0 |
+| `github.com/docker/docker-credential-helpers` | v0.9.3 | MIT |
+| `github.com/go-logr/logr` | v1.4.4 | Apache-2.0 |
+| `github.com/go-logr/stdr` | v1.2.2 | Apache-2.0 |
+| `github.com/go-openapi/analysis` | v0.25.5 | Apache-2.0 |
+| `github.com/go-openapi/errors` | v0.22.8 | Apache-2.0 |
+| `github.com/go-openapi/jsonpointer` | v1.0.0 | Apache-2.0 |
+| `github.com/go-openapi/jsonreference` | v1.0.0 | Apache-2.0 |
+| `github.com/go-openapi/loads` | v0.25.0 | Apache-2.0 |
+| `github.com/go-openapi/runtime` | v0.33.0 | Apache-2.0 |
+| `github.com/go-openapi/runtime/server-middleware` | v0.30.0 | Apache-2.0 |
+| `github.com/go-openapi/spec` | v0.22.9 | Apache-2.0 |
+| `github.com/go-openapi/strfmt` | v0.27.0 | Apache-2.0 |
+| `github.com/go-openapi/swag` | v0.26.1 | Apache-2.0 |
+| `github.com/go-openapi/swag/cmdutils` | v0.27.0 | Apache-2.0 |
+| `github.com/go-openapi/swag/conv` | v0.27.3 | Apache-2.0 |
+| `github.com/go-openapi/swag/fileutils` | v0.27.3 | Apache-2.0 |
+| `github.com/go-openapi/swag/jsonname` | v0.26.1 | Apache-2.0 |
+| `github.com/go-openapi/swag/jsonutils` | v0.27.3 | Apache-2.0 |
+| `github.com/go-openapi/swag/loading` | v0.27.3 | Apache-2.0 |
+| `github.com/go-openapi/swag/mangling` | v0.27.3 | Apache-2.0 |
+| `github.com/go-openapi/swag/netutils` | v0.27.0 | Apache-2.0 |
+| `github.com/go-openapi/swag/pools` | v0.27.3 | Apache-2.0 |
+| `github.com/go-openapi/swag/stringutils` | v0.27.3 | Apache-2.0 |
+| `github.com/go-openapi/swag/typeutils` | v0.27.3 | Apache-2.0 |
+| `github.com/go-openapi/swag/yamlutils` | v0.27.3 | Apache-2.0 |
+| `github.com/go-openapi/validate` | v0.26.1 | Apache-2.0 |
+| `github.com/go-viper/mapstructure/v2` | v2.5.0 | MIT |
+| `github.com/google/certificate-transparency-go` | v1.3.3 | Apache-2.0 |
+| `github.com/google/go-containerregistry` | v0.22.1 | Apache-2.0 |
+| `github.com/grpc-ecosystem/grpc-gateway/v2` | v2.29.0 | BSD-3-Clause |
+| `github.com/in-toto/attestation` | v1.2.0 | Apache-2.0 |
+| `github.com/in-toto/in-toto-golang` | v0.11.0 | Apache-2.0 |
+| `github.com/klauspost/compress` | v1.19.2 | Apache-2.0 |
+| `github.com/oklog/ulid/v2` | v2.1.1 | Apache-2.0 |
+| `github.com/opencontainers/go-digest` | v1.0.0 | Apache-2.0 |
+| `github.com/opencontainers/image-spec` | v1.1.1 | Apache-2.0 |
+| `github.com/pkg/errors` | v0.9.1 | BSD-2-Clause |
+| `github.com/secure-systems-lab/go-securesystemslib` | v0.11.0 | MIT |
+| `github.com/shibumi/go-pathspec` | v1.3.0 | Apache-2.0 |
+| `github.com/sigstore/protobuf-specs` | v0.5.1 | Apache-2.0 |
+| `github.com/sigstore/rekor` | v1.5.3 | Apache-2.0 |
+| `github.com/sigstore/rekor-tiles/v2` | v2.3.0 | Apache-2.0 |
+| `github.com/sigstore/sigstore` | v1.10.8 | Apache-2.0 |
+| `github.com/sigstore/sigstore-go` | v1.3.0 | Apache-2.0 |
+| `github.com/sigstore/timestamp-authority/v2` | v2.1.3 | Apache-2.0 |
+| `github.com/sirupsen/logrus` | v1.9.4 | MIT |
+| `github.com/theupdateframework/go-tuf/v2` | v2.4.2 | Apache-2.0 |
+| `github.com/transparency-dev/formats` | v0.1.1 | Apache-2.0 |
+| `github.com/transparency-dev/merkle` | v0.0.2 | Apache-2.0 |
+| `github.com/youmark/pkcs8` | v0.0.0-20240726163527-a2c0da244d78 | MIT |
+| `go.opentelemetry.io/auto/sdk` | v1.2.1 | Apache-2.0 |
+| `go.opentelemetry.io/otel` | v1.44.0 | Apache-2.0 |
+| `go.opentelemetry.io/otel/metric` | v1.44.0 | Apache-2.0 |
+| `go.opentelemetry.io/otel/trace` | v1.44.0 | Apache-2.0 |
+| `go.yaml.in/yaml/v3` | v3.0.5 | Apache-2.0 |
+| `golang.org/x/mod` | v0.41.0 | BSD-3-Clause |
+| `golang.org/x/term` | v0.47.0 | BSD-3-Clause |
+| `google.golang.org/genproto/googleapis/api` | v0.0.0-20260526163538-3dc84a4a5aaa | Apache-2.0 |
+| `google.golang.org/genproto/googleapis/rpc` | v0.0.0-20260526163538-3dc84a4a5aaa | Apache-2.0 |
+| `google.golang.org/grpc` | v1.83.1 | Apache-2.0 |
+| `google.golang.org/protobuf` | v1.36.11 | BSD-3-Clause |
+| `k8s.io/klog/v2` | v2.140.0 | Apache-2.0 |
+
 ## Bundled services (docker-compose.yml)
 
 These run as separate containers next to the app; they are not part of the
@@ -141,7 +224,7 @@ binary.
 | [PostgreSQL 18](https://www.postgresql.org) (`postgres:18-alpine`) | PostgreSQL License |
 | [SeaweedFS](https://github.com/seaweedfs/seaweedfs) (`chrislusf/seaweedfs`) | Apache-2.0 |
 | [coturn](https://github.com/coturn/coturn) (`coturn/coturn`, optional `turn` profile) | BSD-3-Clause |
-| [Watchtower](https://github.com/nicholas-fedor/watchtower) (`nickfedor/watchtower`, maintained fork of containrrr/watchtower, optional `autoupdate` profile) | Apache-2.0 |
+| [Watchtower](https://github.com/nicholas-fedor/watchtower) (`nickfedor/watchtower`, maintained fork of containrrr/watchtower, optional `autoupdate` profile; restarts the app from the image the updater verified, never pulls) | Apache-2.0 |
 | [Alpine Linux](https://alpinelinux.org) (base of the app image `alpine:3.24` and the Postgres image) | GPL-2.0 and others, per package |
 
 ## Build and development tools (not shipped)

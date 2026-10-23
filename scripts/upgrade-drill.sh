@@ -104,11 +104,17 @@ services:
     container_name: $COMPOSE_PROJECT_NAME-coturn
   updater:
     container_name: $COMPOSE_PROJECT_NAME-updater
+  recreator:
+    container_name: $COMPOSE_PROJECT_NAME-recreator
 networks:
   mnema-network:
     name: $COMPOSE_PROJECT_NAME-network
   mnema-updater:
     name: $COMPOSE_PROJECT_NAME-updater
+  mnema-recreator:
+    name: $COMPOSE_PROJECT_NAME-recreator
+  mnema-updater-egress:
+    name: $COMPOSE_PROJECT_NAME-updater-egress
 EOF
 cd "$DEPLOY"
 

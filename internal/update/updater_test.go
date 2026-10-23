@@ -32,8 +32,10 @@ func TestUpdaterTriggersTheSidecar(t *testing.T) {
 
 func TestUpdaterErrors(t *testing.T) {
 	for status, want := range map[int]error{
-		http.StatusUnauthorized:    ErrUpdaterAuth,
-		http.StatusTooManyRequests: ErrUpdaterBusy,
+		http.StatusUnauthorized:        ErrUpdaterAuth,
+		http.StatusTooManyRequests:     ErrUpdaterBusy,
+		http.StatusUnprocessableEntity: ErrUpdaterUntrusted,
+		http.StatusBadGateway:          ErrUpdaterUnverified,
 	} {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(status)

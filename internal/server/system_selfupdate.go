@@ -79,7 +79,7 @@ func (h *systemHandler) selfUpdateStatus(upd UpdateStatus) SelfUpdateStatus {
 // startSelfUpdate handles POST /api/admin/system/update.
 //
 // @Summary Update the server now
-// @Description Asks the optional updater sidecar (compose profile autoupdate, UPDATER_TOKEN) to pull the app image again and restart the app; everyone is disconnected for about 30-60 seconds. Admin only, same-origin only, re-authenticates with the admin's current password (5 wrong passwords lock the action like a password change does), at most once per 5 minutes, only while a newer release is known and target_version names it. Audit-logged. Owner only (403 otherwise).
+// @Description Asks the optional updater sidecar (compose profile autoupdate, UPDATER_TOKEN) to verify the new release image (cosign signature and build provenance of this project's release workflow), pull exactly that digest and restart the app; everyone is disconnected for about 30-60 seconds. Admin only, same-origin only, re-authenticates with the admin's current password (5 wrong passwords lock the action like a password change does), at most once per 5 minutes, only while a newer release is known and target_version names it. Audit-logged. Owner only (403 otherwise).
 // @ID startSelfUpdate
 // @Tags Admin
 // @Accept json
@@ -94,7 +94,7 @@ func (h *systemHandler) selfUpdateStatus(upd UpdateStatus) SelfUpdateStatus {
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: an update was requested less than 5 minutes ago, or too many wrong passwords."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
-// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: the updater is not reachable or rejected the request."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: the updater is not reachable, rejected the request, or refused the new image because its signature or provenance did not verify (nothing was changed)."
 // @Router /api/admin/system/update [post]
 func (h *systemHandler) startSelfUpdate(w http.ResponseWriter, r *http.Request) error {
 	admin := auth.UserFrom(r.Context())
@@ -157,6 +157,12 @@ func (h *systemHandler) triggerSelfUpdate(ctx context.Context, upd UpdateStatus,
 	case errors.Is(err, update.ErrUpdaterBusy):
 		log.Warn("self-update: updater busy")
 		return httpx.ErrConflict("an update is already running")
+	case errors.Is(err, update.ErrUpdaterUntrusted):
+		// The alert: audit-logged at error level for the operator's log
+		// monitoring and returned to the admin who asked, who sees the
+		// refusal in the update dialog. The sidecar changed nothing.
+		log.Error("SELF-UPDATE REFUSED: the new image failed signature or provenance verification", "err", err)
+		return httpx.ErrUnavailable(updaterMessage(err))
 	case err != nil:
 		log.Error("self-update failed", "err", err)
 		return httpx.ErrUnavailable(updaterMessage(err))
@@ -234,6 +240,10 @@ func updaterMessage(err error) string {
 		return update.ErrUpdaterAuth.Error()
 	case errors.Is(err, update.ErrUpdaterUnreachable):
 		return update.ErrUpdaterUnreachable.Error()
+	case errors.Is(err, update.ErrUpdaterUntrusted):
+		return update.ErrUpdaterUntrusted.Error()
+	case errors.Is(err, update.ErrUpdaterUnverified):
+		return update.ErrUpdaterUnverified.Error()
 	default:
 		return "the updater could not start the update; see the updater's log"
 	}

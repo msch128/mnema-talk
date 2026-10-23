@@ -201,6 +201,22 @@ func TestSelfUpdateRefusals(t *testing.T) {
 			t.Fatalf("update: %d %s", res.status, res.body)
 		}
 	})
+	t.Run("sidecar refuses an unverified image", func(t *testing.T) {
+		sidecar := newFakeSidecar(t)
+		sidecar.status.Store(http.StatusUnprocessableEntity)
+		a := selfUpdateApp(t, sidecar, "ghcr.io/msch128/mnema-talk:latest")
+		admin := a.seedAdmin()
+		res := admin.post("/api/admin/system/update", updateBody("admin-password-123"))
+		if res.status != http.StatusServiceUnavailable || !strings.Contains(string(res.body), "signature or build provenance did not verify") || !strings.Contains(string(res.body), "nothing was changed") {
+			t.Fatalf("update: %d %s", res.status, res.body)
+		}
+		sidecar.status.Store(http.StatusBadGateway)
+		a2 := selfUpdateApp(t, sidecar, "ghcr.io/msch128/mnema-talk:latest")
+		res = a2.seedAdmin().post("/api/admin/system/update", updateBody("admin-password-123"))
+		if res.status != http.StatusServiceUnavailable || !strings.Contains(string(res.body), "could not verify") {
+			t.Fatalf("unverifiable: %d %s", res.status, res.body)
+		}
+	})
 	t.Run("sidecar busy", func(t *testing.T) {
 		sidecar := newFakeSidecar(t)
 		sidecar.status.Store(http.StatusTooManyRequests)
