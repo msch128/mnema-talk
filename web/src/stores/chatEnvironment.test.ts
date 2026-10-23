@@ -5,6 +5,10 @@ import { useChatStore } from './chat'
 import { useAuthStore } from './auth'
 import { fixtureId, memoryStorageFixture, messageFixture, userFixture } from '../test-fixtures.fixture'
 import { required } from '../store-test-support.fixture'
+import { notifyShowsText } from '../lib/notifyPreview'
+
+// These tests look at the notification text, which is shown when the member's setting allows it.
+notifyShowsText.value = true
 
 beforeEach(() => { setActivePinia(createPinia()); vi.stubGlobal('localStorage', memoryStorageFixture()); vi.useFakeTimers() })
 afterEach(() => { useChatStore().closeWebSocket(); vi.clearAllTimers(); vi.useRealTimers(); vi.unstubAllGlobals() })

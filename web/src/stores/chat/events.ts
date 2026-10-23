@@ -11,6 +11,7 @@ import type { Cx } from './state'
 import { fetchChannels } from './channels'
 import { applyActivity, countMessageOf, fetchMembers, refreshMemberStats, updateUserEverywhere } from './members'
 import { applyToMessage, bumpReplyCount, countReply, insertMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
+import { onThreadFollowUpdated } from './threadFollow'
 import { messageMentionsMe, messageMentionsMeDirectly, triggerBrowserNotification } from './notifications'
 import { fetchReadState, isReadingActiveChannel } from './readState'
 import { notificationLevel, refreshNotifications } from './notifySettings'
@@ -169,7 +170,7 @@ const HANDLERS: Handlers = {
     fetchChannels(cx)
   },
   emoji_changed: () => { void useEmojiStore().load() },
-  thread_follow_updated: () => {},
+  thread_follow_updated: onThreadFollowUpdated,
   // The block list lives in the blocks store of the direct messages client (next package); nothing to refresh yet.
   block_updated: () => {},
   saved_updated: (_cx, p) => { if (p) useSavedStore().onUpdated(p) },

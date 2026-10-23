@@ -168,6 +168,7 @@
   },
   "connection": {
     "lost": "Verbindung getrennt – verbinde neu …",
+    "offline": "Du bist offline – Nachrichten kommen erst wieder an, wenn das Netzwerk zurück ist.",
     "nextTry": "nächster Versuch in {seconds} s · Versuch {attempt}",
     "retryNow": "Jetzt versuchen",
     "restored": "Wieder verbunden"
@@ -312,6 +313,10 @@
       "body": "Erhalte eine Desktop-Benachrichtigung bei neuen Nachrichten, während Mnema Talk im Hintergrund läuft. Du kannst das jederzeit pro Kanal ändern."
     }
   },
+  "skip": {
+    "toMessages": "Zu den Nachrichten springen",
+    "toComposer": "Zum Nachrichtenfeld springen"
+  },
   "tips": {
     "label": "Tipp",
     "gotIt": "Verstanden",
@@ -444,6 +449,9 @@
     "searchInChannel": "In diesem Kanal suchen",
     "searchFailed": "Die Suche hat nicht geklappt. Versuche es noch einmal.",
     "inThread": "im Thread",
+    "searchPinned": "Angeheftet",
+    "notifyNoText": "Neue Nachricht",
+    "searchFilterUnsupported": "Dieser Server unterstützt diesen Filter noch nicht. Entferne ihn oder suche ohne ihn.",
     "copyText": "Text kopieren",
     "copiedText": "Text kopiert",
     "copyLink": "Link kopieren",
@@ -456,6 +464,12 @@
   "thread": {
     "title": "Thread",
     "close": "Thread schließen",
+    "follow": "Thread folgen",
+    "unfollow": "Thread nicht mehr folgen",
+    "following": "Du wirst bei Antworten in diesem Thread benachrichtigt.",
+    "notFollowing": "Du wirst bei Antworten in diesem Thread nicht benachrichtigt.",
+    "followFailed": "Der Thread konnte nicht abonniert werden. Versuche es erneut.",
+    "unfollowFailed": "Das Abo des Threads konnte nicht beendet werden. Versuche es erneut.",
     "edit": "Antwort bearbeiten",
     "delete": "Antwort löschen",
     "deleteTitle": "Antwort löschen?",
@@ -877,6 +891,7 @@
       "detailPriority": "Detail-Priorität: Text und Code bleiben maximal scharf"
     },
     "controls": "Talk-Steuerung",
+    "tapForControls": "Tippe auf den Bildschirm, um die Steuerung zu zeigen",
     "moreControls": "Weitere Optionen",
     "hideParticipants": "Teilnehmer ausblenden",
     "showParticipants": "Teilnehmer einblenden",

@@ -4,6 +4,7 @@ import type { SearchSuggestion } from '../lib/searchSuggest'
 import { computed, ref, watch } from 'vue'
 import { Search, X, Loader2 } from '@lucide/vue'
 import { FILTER_KEYS, serializeSearchQuery, splitCommitted } from '../lib/searchQuery'
+import { filtersUnsupported } from '../lib/searchSupport'
 import { applySuggestion, suggestFor } from '../lib/searchSuggest'
 
 // The query line with its filter chips, the filter shortcuts and the
@@ -179,7 +180,7 @@ defineExpose({ focus: () => inputEl.value?.focus() })
     <div class="flex flex-wrap items-center gap-1.5 border-t border-mnema-hairline bg-mnema-raised px-4 py-2 text-xs text-mnema-muted">
       <span>{{ $t('chat.filter') }}:</span>
       <button
-        v-for="key in FILTER_KEYS"
+        v-for="key in FILTER_KEYS.filter(k => !(k === 'is' && filtersUnsupported))"
         :key="key"
         type="button"
         data-search-shortcut
