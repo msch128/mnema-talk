@@ -60,6 +60,7 @@ poll_votes.json the options you voted for in polls
 uploads.json    the files you uploaded, with links while they still exist
 polls.json      the polls you started: settings, end time and the number of votes per option
 pins.json       the messages you pinned (which message, where, when; not their text)
+thread_follows.json the threads you follow or turned off (the first message id of the thread and the state)
 push.json       your push notification devices (label, added, last delivery; no keys) and whether message text is shown
 emoji.json      the custom emoji you uploaded; the image files are in the emoji folder
 audit.json      administrative log entries about your account (no other person's name)
@@ -147,6 +148,7 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 		{"uploads.json", func() (any, error) { return exportUploads(ctx, q, user) }},
 		{"polls.json", func() (any, error) { return exportPolls(ctx, q, user, viewable) }},
 		{"pins.json", func() (any, error) { return exportPins(ctx, q, user, viewable) }},
+		{"thread_follows.json", func() (any, error) { return exportThreadFollows(ctx, q, user) }},
 		{"push.json", func() (any, error) { return exportPush(ctx, q, user) }},
 		{"emoji.json", func() (any, error) { return h.exportEmoji(ctx, z, user) }},
 		{"audit.json", func() (any, error) { return exportAudit(ctx, q, user) }},
