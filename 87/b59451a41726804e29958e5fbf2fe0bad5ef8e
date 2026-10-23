@@ -1,0 +1,202 @@
+internal/chat/channels.go
+  s_06fcde5dbef956::t_9da3094c12630d 21-25,79,190,297
+internal/server/dm_group_integration_test.go
+  s_06fcde5dbef956::t_9da3094c12630d 1-296
+internal/events/types.go
+  s_06fcde5dbef956::t_9da3094c12630d 52-54
+THIRD_PARTY_NOTICES.md
+  s_06fcde5dbef956::t_9da3094c12630d 32
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_9da3094c12630d 73-79,82-85,165-166
+internal/chat/messages.go
+  s_06fcde5dbef956::t_9da3094c12630d 6,332-334,336-339,341-343
+internal/push/service.go
+  s_06fcde5dbef956::t_9da3094c12630d 186,213,271-272
+internal/chat/post.go
+  s_06fcde5dbef956::t_9da3094c12630d 42-43,81
+internal/auth/account_export_build.go
+  s_06fcde5dbef956::t_9da3094c12630d 67,158
+e2e/run.sh
+  s_06fcde5dbef956::t_9da3094c12630d 109
+web/vite.config.ts
+  s_06fcde5dbef956::t_9da3094c12630d 10,64,71-72
+internal/chat/database_failures_integration_test.go
+  s_06fcde5dbef956::t_9da3094c12630d 151
+web/src/lib/permissions.ts
+  s_06fcde5dbef956::t_9da3094c12630d 28-29,47,65
+internal/chat/handler.go
+  s_06fcde5dbef956::t_9da3094c12630d 46-48,93
+internal/chat/inbox.go
+  s_06fcde5dbef956::t_9da3094c12630d 67
+api/openapi.json
+  s_06fcde5dbef956::t_9da3094c12630d 1498-1509,1946-1961,2014-2036,2047-2112,2838-2853,3881-3884,3911,3925-3931,4527-4529,4544-4547,10989,20483,20485-20486,20492-20495,20499,20545,20547,20549-20558,20561-20563,20567,20569,20571-20577,20579,20583,20605,20613-20623,20633,20659,20661,20665,20667-20668,20671,20684,20686,20690,20749-21307,24130,24210-24218,25817-25965,26480
+internal/server/router_build.go
+  s_06fcde5dbef956::t_9da3094c12630d 125,243
+internal/chat/notify.go
+  s_06fcde5dbef956::t_9da3094c12630d 183
+internal/server/dm_integration_test.go
+  s_06fcde5dbef956::t_9da3094c12630d 1-378
+README.md
+  s_06fcde5dbef956::t_9da3094c12630d 15
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_9da3094c12630d 43-45
+  s_06fcde5dbef956::t_69daf9ed12ca3a 42
+doc/architecture.md
+  s_06fcde5dbef956::t_9da3094c12630d 89-161
+internal/media/admin.go
+  s_06fcde5dbef956::t_9da3094c12630d 59
+internal/server/dm_privacy_integration_test.go
+  s_06fcde5dbef956::t_9da3094c12630d 1-64
+internal/perm/snapshot_load.go
+  s_06fcde5dbef956::t_9da3094c12630d 26-27,120-122,141
+e2e/tests/fixtures.ts
+  s_06fcde5dbef956::t_9da3094c12630d 65-102,182,189,194-201
+internal/chat/handler_lookup.go
+  s_06fcde5dbef956::t_9da3094c12630d 182,195,210-212
+internal/chat/moderation_failures_integration_test.go
+  s_06fcde5dbef956::t_9da3094c12630d 52,54
+internal/onboarding/settings.go
+  s_06fcde5dbef956::t_9da3094c12630d 36-39,54-56,59,63,94,182-184
+internal/perm/fixture.go
+  s_06fcde5dbef956::t_9da3094c12630d 129-138,158
+internal/perm/snapshot_channels.go
+  s_06fcde5dbef956::t_9da3094c12630d 62-64
+internal/server/health.go
+  s_06fcde5dbef956::t_9da3094c12630d 37
+internal/server/ws_integration_test.go
+  s_06fcde5dbef956::t_9da3094c12630d 30-36,69-74
+scripts/upgrade-drill-data.sh
+  s_06fcde5dbef956::t_9da3094c12630d 85-89,91,114,116-117
+SECURITY.md
+  s_06fcde5dbef956::t_9da3094c12630d 70-97,379-392
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_9da3094c12630d 175-178
+internal/push/recipients.go
+  s_06fcde5dbef956::t_9da3094c12630d 18-26,38,55,72-75
+  s_06fcde5dbef956::t_a62b5409f470fa 76-77
+internal/perm/snapshot_dm_test.go
+  s_06fcde5dbef956::t_9da3094c12630d 1-77
+internal/httpx/middleware.go
+  s_06fcde5dbef956::t_9da3094c12630d 153-161,164-165
+internal/chat/readstate.go
+  s_06fcde5dbef956::t_9da3094c12630d 56
+internal/perm/snapshot.go
+  s_06fcde5dbef956::t_9da3094c12630d 78-81
+internal/ws/client.go
+  s_06fcde5dbef956::t_9da3094c12630d 23-26
+web/scripts/emojiPickerCsp.ts
+  s_06fcde5dbef956::t_9da3094c12630d 1-72
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_9da3094c12630d 133
+internal/chat/messages_scan.go
+  s_06fcde5dbef956::t_98487dace4b479 1-70
+web/package.json
+  s_06fcde5dbef956::t_9da3094c12630d 30
+internal/ws/native_lease.go
+  s_06fcde5dbef956::t_9da3094c12630d 319-323,350-356
+internal/ws/dm_test.go
+  s_06fcde5dbef956::t_9da3094c12630d 1-54
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_9da3094c12630d 1567-1570
+internal/server/saved_integration_test.go
+  s_06fcde5dbef956::t_db204df1a71c94 246-276
+internal/perm/snapshot_test.go
+  s_06fcde5dbef956::t_9da3094c12630d 35,46-48,76
+internal/perm/snapshot_dm.go
+  s_06fcde5dbef956::t_9da3094c12630d 1-83
+internal/push/service_integration_test.go
+  s_06fcde5dbef956::t_9da3094c12630d 190-219
+web/scripts/emojiPickerCsp.test.ts
+  s_06fcde5dbef956::t_9da3094c12630d 1-25
+internal/chat/search_filters.go
+  s_06fcde5dbef956::t_9da3094c12630d 79-88,92-95
+doc/upgrade.md
+  s_06fcde5dbef956::t_9da3094c12630d 144-156,170-179
+internal/roles/handler_permissions.go
+  s_06fcde5dbef956::t_9da3094c12630d 52-57,95
+internal/ws/broadcast.go
+  s_06fcde5dbef956::t_9da3094c12630d 32-38
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_9da3094c12630d 56-58,121
+web/src/types/events.ts
+  s_06fcde5dbef956::t_9da3094c12630d 31-50,92-97,311-317
+  s_06fcde5dbef956::t_390a29ded7ef8a 362
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_9da3094c12630d 929-939,1208-1218,1247-1263,1275-1303,1728-1738,2401,2411,2422,2432,2774,2777,2790,2793
+web/src/components/AdminRolesTab.test.ts
+  s_06fcde5dbef956::t_9da3094c12630d 62
+internal/webhook/handler.go
+  s_06fcde5dbef956::t_9da3094c12630d 101
+internal/chat/dm_members.go
+  s_06fcde5dbef956::t_9da3094c12630d 1-145
+internal/ws/perms.go
+  s_06fcde5dbef956::t_9da3094c12630d 66-73,77
+AGENTS.md
+  s_06fcde5dbef956::t_9da3094c12630d 37
+internal/push/payload.go
+  s_06fcde5dbef956::t_9da3094c12630d 48,52,75-78,97-99,113-128,133
+internal/chat/search.go
+  s_06fcde5dbef956::t_9da3094c12630d 97-101
+internal/db/migrations/0050_direct_messages.sql
+  s_06fcde5dbef956::t_9da3094c12630d 1-79
+web/src/lib/permissions.test.ts
+  s_06fcde5dbef956::t_9da3094c12630d 26
+internal/chat/audit.go
+  s_06fcde5dbef956::t_9da3094c12630d 22-24,41-44,94-96,113
+internal/chat/channel_layout.go
+  s_06fcde5dbef956::t_9da3094c12630d 90,146,208
+internal/chat/dm_handler.go
+  s_06fcde5dbef956::t_9da3094c12630d 1-379
+doc/glossary.md
+  s_06fcde5dbef956::t_9da3094c12630d 29
+internal/bot/handler_access.go
+  s_06fcde5dbef956::t_9da3094c12630d 130
+internal/perm/service.go
+  s_06fcde5dbef956::t_9da3094c12630d 217
+internal/chat/dm.go
+  s_06fcde5dbef956::t_9da3094c12630d 1-281
+e2e/tests/csp.spec.ts
+  s_06fcde5dbef956::t_9da3094c12630d 1-89
+internal/auth/account_export_dm.go
+  s_06fcde5dbef956::t_9da3094c12630d 1-37
+internal/chat/dm_failures_integration_test.go
+  s_06fcde5dbef956::t_9da3094c12630d 1-62
+internal/chat/dm_gate.go
+  s_06fcde5dbef956::t_9da3094c12630d 1-128
+doc/bots.md
+  s_06fcde5dbef956::t_9da3094c12630d 520-528
+internal/ws/handle.go
+  s_06fcde5dbef956::t_9da3094c12630d 199
+internal/auth/account_export_data.go
+  s_06fcde5dbef956::t_9da3094c12630d 26-33,61
+internal/ws/hub.go
+  s_06fcde5dbef956::t_9da3094c12630d 34-37
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_9da3094c12630d 1567-1570
+internal/chat/saved.go
+  s_06fcde5dbef956::t_9ac485306498ae 108,123,128-133
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_9da3094c12630d 23-28
+internal/httpx/middleware_test.go
+  s_06fcde5dbef956::t_9da3094c12630d 153-160
+internal/perm/perm.go
+  s_06fcde5dbef956::t_9da3094c12630d 75-79,116,145,153
+web/package-lock.json
+  s_06fcde5dbef956::t_0495d4b8a19af9 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87b59451a41726804e29958e5fbf2fe0bad5ef8e",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
