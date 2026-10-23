@@ -367,8 +367,12 @@ test('the streamer picks the stream quality, the viewer sets the stream volume',
   const now = await sent()
   if (!now || now.height === undefined) throw new Error('Expected screen sender settings')
   expect(now.height / now.scale).toBeLessThanOrEqual(720)
-  await expect.poll(async () => (await sent())?.frameHeight, { timeout: 20_000 }).toBeLessThanOrEqual(720)
-  expect((await sent())?.frameHeight).toBeGreaterThan(0)
+  // Stats restart at 0 while the encoder takes the new settings, so wait for
+  // frames at the new size instead of accepting the empty reading as "small".
+  await expect.poll(async () => {
+    const height = (await sent())?.frameHeight ?? 0
+    return height > 0 && height <= 720
+  }, { timeout: 20_000 }).toBe(true)
 
   // Advanced: what is actually sent.
   await menu.getByRole('menuitem', { name: /Erweitert/ }).click()
