@@ -218,8 +218,10 @@ const groupedIds = computed(() => {
 <template>
   <component
     :is="panel ? 'section' : 'main'"
+    :id="panel ? undefined : 'main-content'"
+    :tabindex="panel ? undefined : -1"
     :aria-label="panel ? $t('talk.chatPanel', { channel: channelName }) : undefined"
-    class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden"
+    class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden focus:outline-none"
   >
     <ChatHeader :panel="panel" @close="emit('close')" @menu="(x, y, items) => menu.show(x, y, items)" />
 

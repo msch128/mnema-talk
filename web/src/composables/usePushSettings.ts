@@ -8,6 +8,7 @@ import {
 } from '../lib/webPush'
 import type { PushConfig, PushSubscription } from '../types/rest'
 import { useToastStore } from '../stores/toast'
+import { applyPushConfig } from '../lib/notifyPreview'
 import { t } from '../i18n'
 
 export function usePushSettings() {
@@ -28,6 +29,7 @@ export function usePushSettings() {
     failed.value = false
     try {
       config.value = await loadConfig()
+      applyPushConfig(config.value)
       if (config.value.enabled) {
         devices.value = await loadDevices()
         mine.value = availability === 'ready' ? await thisDevice(devices.value) : null
@@ -75,7 +77,10 @@ export function usePushSettings() {
 
   const setText = (on: boolean) => act(async () => {
     await setPreview(on)
-    if (config.value) config.value = { ...config.value, preview: on }
+    if (config.value) {
+      config.value = { ...config.value, preview: on }
+      applyPushConfig(config.value)
+    }
   }, t('push.previewFailed'))
 
   onMounted(load)

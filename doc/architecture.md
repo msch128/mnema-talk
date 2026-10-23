@@ -45,7 +45,8 @@ in PostgreSQL; uploads and avatars live in S3-compatible object storage
 | [`internal/metrics`](../internal/metrics/) | Process-wide counters (HTTP, realtime, SFU, storage, rate limits) rendered in the Prometheus text format without a client library; every labelled family has a series cap. Feeds `/api/metrics` and the live operator view in the admin System tab. See [operations.md](operations.md#monitoring-and-alerts). |
 | [`internal/webbundle`](../internal/webbundle/), [`cmd/webbundle`](../cmd/webbundle/) | Builds, signs (Ed25519) and verifies the web app bundle that the [trusted desktop client](desktop-trusted-client.md) runs instead of server-served JavaScript. |
 | [`internal/linkpreview`](../internal/linkpreview/linkpreview.go) | Link cards: fetches title, description and image of public pages with an SSRF guard (http(s) on 80/443 only, every resolved address checked, also on redirects) and a cache. |
-| [`internal/update`](../internal/update/checker.go) | Release check against GitHub every 30 minutes (ETag, backoff on 403/429), image-tag reach analysis ([`image.go`](../internal/update/image.go)) and the client for the optional updater sidecar ([`updater.go`](../internal/update/updater.go)). |
+| [`internal/imageverify`](../internal/imageverify/verifier.go), [`internal/updaterd`](../internal/updaterd/server.go) | The self-update sidecar ([`cmd/updater`](../cmd/updater/main.go)): checks the cosign signature and SLSA provenance of a new release image against the pinned release workflow identity, then pulls that digest and has the recreator restart the app. |
+| [`internal/update`](../internal/update/checker.go) | Release check against GitHub every 30 minutes (ETag, backoff on 403/429), image-tag reach analysis ([`image.go`](../internal/update/image.go)) and the client for the optional updater sidecar ([`updater.go`](../internal/update/updater.go)).|
 | [`internal/version`](../internal/version/version.go) | Version and commit baked in at build time (`VERSION` / `REVISION` build args). |
 | [`web/web.go`](../web/web.go) | Embeds `web/dist` with `//go:embed` and serves the SPA. |
 
@@ -158,6 +159,34 @@ nobody is left in; the export lists the member's conversations by id and their
 own messages.
 
 **Calls** in conversations are not part of 1.1.
+
+## Forwarding and saved messages
+
+**A forward is a reference, never a copy.** `POST /api/messages/{id}/forward`
+creates an ordinary message in the target (a channel or a direct message) whose
+text is only the forwarder's own comment. `messages.forward_of` points at the
+root of what was forwarded (forwarding a forward points at the same root) and
+`messages.forwarded` stays set when the original is later deleted
+(`ON DELETE SET NULL`). The forwarder needs to see the original and to send in
+the target, the target's slow mode and a conversation's rules apply, and every
+refusal answers one 403 text.
+
+**The visibility rule.** Nothing about the original is in the forwarded
+message's payload, not even an id: only `forward: {forwarded: true}`. What a reader sees of the
+original, with its ids, is returned by `GET /api/messages/{id}/forward`, decided for that
+reader at that moment: the text, author and channel when they may see the
+original (a channel they can view, or a conversation they are a member of; the
+Owner has no special access to conversations), otherwise only
+`available: false`. Lists, thread views, pins, search, the mentions inbox, the
+WebSocket events, push notifications, the export and the payloads of bots and
+webhooks therefore cannot show the original to someone who may not see it.
+Edits and deletes of the original show through because the quote is read when
+asked for.
+
+**Saved messages** (`saved_messages`, migration 0051) are the same idea: a row
+holds a reference and the member's note. `GET /api/me/saved` joins the messages
+the member may see now; a conversation's messages need membership, tested in
+SQL like search does.
 
 ## Data flow: voice, cameras and screen share
 
@@ -541,8 +570,11 @@ it is paid once per page load or reconnect, not per message.
   ([`admin.go`](../internal/media/admin.go)).
 - **The app never touches Docker.** Self-update goes through an opt-in
   sidecar on an internal network with a token, admin password re-auth, a
-  5-minute cooldown and an audit log entry
-  ([`system_selfupdate.go`](../internal/server/system_selfupdate.go),
+  5-minute cooldown and an audit log entry; the sidecar verifies the new
+  image's cosign signature and provenance before it pulls anything
+  ([`internal/imageverify`](../internal/imageverify/verifier.go),
+  [`internal/updaterd`](../internal/updaterd/server.go),
+  [`system_selfupdate.go`](../internal/server/system_selfupdate.go),
   [`docker-compose.yml`](../docker-compose.yml),
   [SECURITY.md](../SECURITY.md#self-update-sidecar)).
 - **Reload, never auto-reload.** The server sends its version on every

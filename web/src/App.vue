@@ -37,11 +37,13 @@ import ToastHost from './components/ToastHost.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 import WelcomeFlow from './components/WelcomeFlow.vue'
 import ConnectionBanner from './components/ConnectionBanner.vue'
+import SkipLinks from './components/SkipLinks.vue'
 import TimeoutBanner from './components/TimeoutBanner.vue'
 import ModerationDialog from './components/ModerationDialog.vue'
 import MessageModerationDialog from './components/MessageModerationDialog.vue'
 import EditHistoryDialog from './components/EditHistoryDialog.vue'
 import ReportDialog from './components/ReportDialog.vue'
+import ForwardDialog from './components/ForwardDialog.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
 import PipHost from './components/PipHost.vue'
 import { useResizable } from './composables/useResizable'
@@ -237,6 +239,7 @@ onMounted(async () => {
 
     <!-- Main Mnema Talk Layout -->
     <template v-else>
+      <SkipLinks />
       <!-- Left Column: Navigation, Channels & User Controls -->
       <div
         v-if="isCompact && navOpen"
@@ -371,5 +374,6 @@ onMounted(async () => {
     <MessageModerationDialog />
     <EditHistoryDialog />
     <ReportDialog />
+    <ForwardDialog />
   </div>
 </template>

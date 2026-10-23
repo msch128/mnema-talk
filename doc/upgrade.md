@@ -140,7 +140,7 @@ server lacks.
   existing role: nobody gains access to reports until a role is given it
   (the Owner and Administrators have it implicitly).
 - **`GET /api/health` has a `features` list** (for example `"blocks"`,
-  `"reports"`, `"search.filters.v2"`, `"threads.follow"`): the web app uses it to show only what the server supports.
+  `"reports"`, `"search.filters.v2"`, `"threads.follow"`, `"slash.builtins"`): the web app uses it to show only what the server supports.
 - **Direct messages** (migration 0050): conversations of two to ten members
   ([architecture](architecture.md#direct-messages), [SECURITY](../SECURITY.md#direct-messages-privacy-model)).
   The new permission *Send direct messages* (bit `1 << 22`) is added to
@@ -162,6 +162,11 @@ server lacks.
   server none of it appears. A desktop client from before 1.1 forwards the
   socket without that query, so conversations there do not update live until
   the client is updated (the list and sending work).
+- **Built-in slash commands.** `/me`, `/shrug`, `/tableflip`, `/unflip`, `/spoiler`,
+  `/nick`, `/thread`, `/timeout`, `/ban` and `/kick` join `/poll` in the menu
+  ([bots](bots.md#built-in-commands-and-polls)). New permission *Kick members*
+  (bit `1 << 23`), off for @everyone and every existing role (the Owner and
+  Administrators have it implicitly), and the `kicked` WebSocket event.
 - **New event** `block_updated`, sent only to the blocker's own sessions.
 - **Export** gains `blocks.json` and `reports.json`.
 - **Migration 0051** adds `saved_messages`.
@@ -172,6 +177,14 @@ server lacks.
   copy, and access is checked on every read: a message the member can no
   longer see comes back as unavailable. The export gains `saved.json` (ids,
   notes and times, not the saved text); erasing an account removes the list.
+- **Migration 0052** adds `messages.forward_of` and `messages.forwarded`.
+- **Forwarding** (feature `forward`): `POST /api/messages/{messageId}/forward`
+  posts a message that references the original, and `GET
+  /api/messages/{messageId}/forward` returns the original as the caller may see
+  it ([architecture](architecture.md#forwarding-and-saved-messages)). Messages
+  gain an additive `forward` marker (`{forwarded: true}`, no ids and no quoted
+  text, for bots and webhooks too). Older web apps show a forwarded message as just its
+  comment.
 - **"Pinned by".** Messages and the pin event carry `pinned_at` and
   `pinned_by` while pinned; the pinned list shows who pinned a message and
   when. Additive, no migration.
@@ -185,6 +198,28 @@ server lacks.
   own policy, which is unchanged and still works with the new bundle. The
   bundle's `security_floor` is not raised: the old policy was defense in depth
   and older bundles are not exploitable because of it.
+- **Migration 0056** adds one column to `bot_tokens` (an "inferred issuer"
+  flag; see bot tokens below). Rolling back to 1.0.x means restoring the
+  pre-upgrade backup: the 1.0.x image refuses a database that a newer version
+  migrated (see "Rollback" above).
+- **Self-update now verifies the image.** If you use the `autoupdate` profile,
+  fetch the compose file of the 1.1 tag and run
+  `docker compose --profile autoupdate up -d` after the update: the `updater`
+  service is now this project's verifying sidecar (started from the app image)
+  and a second service, `recreator` (the Watchtower that used to be the updater),
+  only restarts the app from the image the updater verified. "Update now" refuses
+  an image whose cosign signature or build provenance does not verify. It
+  needs outbound HTTPS from the updater to the registry and to Sigstore. Details:
+  [operations.md](operations.md#verifying-a-release-image),
+  [SECURITY.md](../SECURITY.md#self-update-sidecar). The new networks
+  (`mnema-recreator`, `mnema-updater-egress`) are created by compose; a custom
+  compose file needs the same two services and networks.
+- **Bot tokens issued before 1.0** are bound to their likeliest issuer the first
+  time they are used; nothing is revoked and no token needs regenerating
+  ([bots.md](bots.md#tokens)). The admin console marks tokens that were
+  bound by assumption.
+- **No change to the media frame format.** Refusing frame version 2 was
+  re-evaluated and deferred to 2.0 (SECURITY.md).
 
 - **Migration 0054** adds `thread_follows` and fills it from the existing
   threads (root authors and repliers), so threads keep notifying the people
@@ -196,6 +231,7 @@ server lacks.
   `message.delete` entry of an edited message carries its earlier versions.
   Audit retention applies to them as to any entry.
 - New setting `INITIAL_LANGUAGE` (`de` default, or `en`) for the default category and channel names of a brand-new installation. An upgrade never renames anything.
+- Web app: a skip link and a fixed Tab order (channel list, header, messages, message box, member list), the connection banner also on the browser's offline event, Talk controls that stay visible when alone in the call on a phone, the search tip dismissed after the first search, a Follow thread button, and in-page notifications that follow the "show message text" setting. A 1.1 bundle against a 1.0.x server hides the follow button and notifies for every thread reply as before.
 - Search accepts `has=poll`, `has=edit` and `is=pinned`. The new routes
   (`/api/threads/{id}/follow`, `/api/threads/following`) and the event
   `thread_follow_updated` are additive; a 1.0.x web bundle ignores them.

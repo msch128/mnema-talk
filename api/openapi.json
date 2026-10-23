@@ -1267,6 +1267,14 @@
             "format": "uuid",
             "type": "string"
           },
+          "issuer_binding": {
+            "description": "IssuerBinding is only set for a token issued before 1.0, which has no\nrecorded issuer: \"unbound\" until it is first used after the upgrade,\nthen \"inferred\" (bound to the bot's creator or the Owner, whoever\nqualified; regenerate it to bind it to its real issuer). Absent for a\ntoken whose issuer was recorded when it was issued.",
+            "enum": [
+              "unbound",
+              "inferred"
+            ],
+            "type": "string"
+          },
           "last_used_at": {
             "format": "date-time",
             "type": "string"
@@ -1436,6 +1444,14 @@
           },
           "id": {
             "format": "uuid",
+            "type": "string"
+          },
+          "issuer_binding": {
+            "description": "IssuerBinding is only set for a token issued before 1.0, which has no\nrecorded issuer: \"unbound\" until it is first used after the upgrade,\nthen \"inferred\" (bound to the bot's creator or the Owner, whoever\nqualified; regenerate it to bind it to its real issuer). Absent for a\ntoken whose issuer was recorded when it was issued.",
+            "enum": [
+              "unbound",
+              "inferred"
+            ],
             "type": "string"
           },
           "last_used_at": {
@@ -2257,6 +2273,78 @@
         ],
         "type": "object"
       },
+      "chat.ForwardQuote": {
+        "properties": {
+          "attachment_count": {
+            "type": "integer"
+          },
+          "author": {
+            "$ref": "#/components/schemas/chat.UserRef"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "channel_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "channel_name": {
+            "type": "string"
+          },
+          "content": {
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "is_edited": {
+            "type": "boolean"
+          },
+          "message_id": {
+            "description": "The rest is set only when Available.",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "available"
+        ],
+        "type": "object"
+      },
+      "chat.ForwardRef": {
+        "properties": {
+          "forwarded": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "forwarded"
+        ],
+        "type": "object"
+      },
+      "chat.ForwardRequest": {
+        "properties": {
+          "channel_id": {
+            "description": "ChannelID is the channel or direct message conversation to forward to.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "comment": {
+            "description": "Comment is the forwarder's own text, optional.",
+            "maxLength": 4000,
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id"
+        ],
+        "type": "object"
+      },
       "chat.InEmbed": {
         "properties": {
           "author": {
@@ -2595,6 +2683,10 @@
               "$ref": "#/components/schemas/chat.Embed"
             },
             "type": "array"
+          },
+          "forward": {
+            "$ref": "#/components/schemas/chat.ForwardRef",
+            "description": "Forward is set when the message forwards another one. It says so and\nnothing more: no id and no text of the original travels with the\nmessage, because readers differ in what they may see. Each reader gets\nthe original (with its ids) from GET /api/messages/{id}/forward."
           },
           "id": {
             "format": "uuid",
@@ -12965,7 +13057,7 @@
         ]
       },
       "post": {
-        "description": "Asks the optional updater sidecar (compose profile autoupdate, UPDATER_TOKEN) to pull the app image again and restart the app; everyone is disconnected for about 30-60 seconds. Admin only, same-origin only, re-authenticates with the admin's current password (5 wrong passwords lock the action like a password change does), at most once per 5 minutes, only while a newer release is known and target_version names it. Audit-logged. Owner only (403 otherwise).",
+        "description": "Asks the optional updater sidecar (compose profile autoupdate, UPDATER_TOKEN) to verify the new release image (cosign signature and build provenance of this project's release workflow), pull exactly that digest and restart the app; everyone is disconnected for about 30-60 seconds. Admin only, same-origin only, re-authenticates with the admin's current password (5 wrong passwords lock the action like a password change does), at most once per 5 minutes, only while a newer release is known and target_version names it. Audit-logged. Owner only (403 otherwise).",
         "operationId": "startSelfUpdate",
         "requestBody": {
           "content": {
@@ -13065,7 +13157,7 @@
                 }
               }
             },
-            "description": "UNAVAILABLE: the updater is not reachable or rejected the request."
+            "description": "UNAVAILABLE: the updater is not reachable, rejected the request, or refused the new image because its signature or provenance did not verify (nothing was changed)."
           }
         },
         "security": [
@@ -22600,6 +22692,209 @@
           }
         ],
         "summary": "Get a message by its link number",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/messages/{messageID}/forward": {
+      "get": {
+        "description": "The original of a forwarded message as the caller may see it right now: its text, author, time and channel when the caller can see it, otherwise only available=false. Edits and deletes of the original show through. Needs View channel for the forwarded message itself.",
+        "operationId": "getForwardQuote",
+        "parameters": [
+          {
+            "description": "ID of the forwarded message.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.ForwardQuote"
+                }
+              }
+            },
+            "description": "The quote."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the message does not exist, is not a forward, or the caller cannot see it."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Read the original of a forwarded message",
+        "tags": [
+          "Messages"
+        ]
+      },
+      "post": {
+        "description": "Posts a new message in the target channel or direct message conversation that points at the original; the original's text is never copied, and every reader sees it only if they may see the original. The caller needs to see the original and to send in the target (and the rules of a conversation apply). Forwarding a forward points at its original. The comment is optional. Every refusal answers the same 403 text. The target's slow mode applies. Broadcasts message_create.",
+        "operationId": "forwardMessage",
+        "parameters": [
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.ForwardRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Message"
+                }
+              }
+            },
+            "description": "The new message."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the same text for every refusal (no access to the original, no right to send in the target, a conversation that does not take the message), or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests, or the target's slow mode.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Forward a message",
         "tags": [
           "Messages"
         ]

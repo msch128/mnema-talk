@@ -53,6 +53,8 @@ type Authenticator struct {
 	mu      sync.Mutex
 	touched map[uuid.UUID]time.Time
 	minters map[uuid.UUID]minterVerdict
+	// bindTried remembers when binding a legacy token was last attempted.
+	bindTried map[uuid.UUID]time.Time
 }
 
 // NewAuthenticator returns an Authenticator with its rate limiters.

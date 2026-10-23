@@ -14,6 +14,8 @@ import { fetchMembers } from './members'
 import { fetchMessages } from './messageWindow'
 import { fetchReadState } from './readState'
 import { fetchNotificationSettings } from './notifySettings'
+import { fetchFollowedThreads } from './threadFollow'
+import { loadNotifyPreview } from '../../lib/notifyPreview'
 import { openThread } from './threads'
 
 function startPingHeartbeat(cx: Cx) {
@@ -48,6 +50,8 @@ function resyncState(cx: Cx) {
     void fetchDms(cx)
     void useBlocksStore().load()
   }
+  void fetchFollowedThreads(cx)
+  void loadNotifyPreview()
   const channel = cs.activeChannel.value
   if (channel && channel.type === 'text' && !cs.hasMoreAfter.value) fetchMessages(cx, channel.id)
   if (cs.activeThread.value) openThread(cx, cs.activeThread.value)
@@ -222,6 +226,14 @@ export function installVisibilityRetry(cx: Cx) {
           sendWSEvent(cx, 'ping', { t: Date.now() })
         }
       }
+    })
+  }
+  if (typeof window !== 'undefined') {
+    // The network is back: reconnect at once, or find out whether a socket that looks open still works.
+    window.addEventListener('online', () => {
+      if (!authStore.isAuthenticated) return
+      if (!cs.ws.value || !cs.isConnected.value) retryNow(cx)
+      else sendWSEvent(cx, 'ping', { t: Date.now() })
     })
   }
 }

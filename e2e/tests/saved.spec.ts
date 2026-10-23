@@ -25,11 +25,13 @@ test('a member saves a message, opens it from the saved list, loses access and r
   const memberCtx = await browser.newContext({ viewport: { width: 1400, height: 900 } })
   const owner = await ownerCtx.newPage()
   const member = await memberCtx.newPage()
+  const created: string[] = []
   try {
     await signIn(owner, ADMIN_USER, ADMIN_PASSWORD)
     const channel = await apiFetch(owner, 'POST', '/api/admin/channels', { name: CHANNEL, type: 'text' })
     expect(channel.status).toBe(201)
     const channelId = responseString(channel, 'id')
+    created.push(channelId)
 
     await member.goto('/')
     if (suiteMember.registered) {
@@ -83,6 +85,8 @@ test('a member saves a message, opens it from the saved list, loses access and r
     await member.getByTestId('saved-remove').click()
     await expect(member.getByTestId('saved-empty')).toBeVisible()
   } finally {
+    // Leave the sidebar as found: later specs count on its size.
+    for (const id of created) await apiFetch(owner, 'DELETE', `/api/admin/channels/${id}`)
     await ownerCtx.close()
     await memberCtx.close()
   }

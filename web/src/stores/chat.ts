@@ -9,6 +9,7 @@ import { installActivityListeners, setMyPresence, setStatusText } from './chat/p
 import { fetchMessages, goToMessage, jumpToLatest, jumpToMessage, loadNewer, loadOlder, showToast } from './chat/messageWindow'
 import { createPoll, endPoll, fetchPoll, votePoll } from './chat/polls'
 import { deleteMessage, editMessage, sendMessage, setPinned, toggleReaction, uploadMedia } from './chat/messageActions'
+import { fetchFollowedThreads, setThreadFollow } from './chat/threadFollow'
 import { closeThread, openThread, sendThreadReply, uploadThreadMedia } from './chat/threads'
 import { closeWebSocket, initWebSocket, installVisibilityRetry, retryNow, sendWSEvent, setWebRTCHandlers } from './chat/socket'
 import { handleWSEvent } from './chat/events'
@@ -66,6 +67,8 @@ function exposedState(cs: ChatState) {
     notificationPermission: cs.notificationPermission,
     typingByChannel: cs.typingByChannel,
     activeThread: cs.activeThread,
+    followedThreads: cs.followedThreads,
+    followKnown: cs.followKnown,
     threadReplies: cs.threadReplies,
     isThreadLoading: cs.isThreadLoading
   }
@@ -137,6 +140,8 @@ function exposedActions(cx: Cx) {
     refreshNotificationPermission: bind(refreshNotificationPermission),
     requestNotificationPermission: bind(requestNotificationPermission),
     openThread: bind(openThread),
+    setThreadFollow: bind(setThreadFollow),
+    fetchFollowedThreads: bind(fetchFollowedThreads),
     closeThread: bind(closeThread),
     sendThreadReply: bind(sendThreadReply),
     uploadThreadMedia: bind(uploadThreadMedia),

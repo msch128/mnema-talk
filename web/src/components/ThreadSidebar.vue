@@ -3,7 +3,7 @@ import { clockTimeOptions } from '../lib/time'
 import type { Message } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
-import { X, MessageSquare, Loader2, Pin, Reply } from '@lucide/vue'
+import { X, MessageSquare, Loader2, Pin, Reply, Bell, BellOff } from '@lucide/vue'
 import type { ThreadRoot } from '../stores/chat'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
@@ -39,6 +39,7 @@ const canSend = computed(() => (dmChat.isDm.value ? dmChat.canSend.value : permi
 const canAttach = computed(() => canSend.value && (dmChat.isDm.value || permissions.canIn(threadChannel.value, 'attach_files')))
 const canReact = computed(() => (dmChat.isDm.value ? dmChat.canSend.value : permissions.canIn(threadChannel.value, 'add_reactions')))
 
+const followed = computed(() => !!chatStore.activeThread && chatStore.followedThreads.has(chatStore.activeThread.id))
 const replyInput = ref('')
 const repliesContainer = ref<HTMLElement | null>(null)
 const isSending = ref(false)
@@ -202,6 +203,21 @@ function formatDate(dateStr?: string) {
           </div>
         </div>
       </div>
+
+      <button
+        v-if="chatStore.activeThread && chatStore.followKnown"
+        type="button"
+        data-testid="thread-follow"
+        :aria-pressed="followed ? 'true' : 'false'"
+        :aria-label="followed ? $t('thread.unfollow') : $t('thread.follow')"
+        class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-md hover:bg-mnema-surface transition"
+        :class="followed ? 'text-mnema-accent' : 'text-mnema-tertiary hover:text-mnema-text'"
+        v-tooltip="followed ? $t('thread.following') : $t('thread.notFollowing')"
+        @click="chatStore.activeThread && chatStore.setThreadFollow(chatStore.activeThread.id, !followed)"
+      >
+        <Bell v-if="followed" class="w-[18px] h-[18px]" />
+        <BellOff v-else class="w-[18px] h-[18px]" />
+      </button>
 
       <button
         @click="chatStore.closeThread"

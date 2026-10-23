@@ -98,6 +98,16 @@ func (h *Handler) banUser(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
+	if err := h.BanMember(r, id, req); err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+// BanMember bans a member. The REST route and the /ban slash command both run
+// it; the caller has checked the Ban members permission (RequirePermission).
+func (h *Handler) BanMember(r *http.Request, id uuid.UUID, req BanRequest) error {
 	reason, err := cleanReason(req.Reason)
 	if err != nil {
 		return err
@@ -124,7 +134,6 @@ func (h *Handler) banUser(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	h.postBanCleanup(id, until, reason)
-	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
 

@@ -72,8 +72,11 @@ async function invokeCommand(
   try {
     const request = { method: 'POST', json: { command_id: command.id, options: built.options } }
     // A built-in command answers with its result (200), a bot's command with the interaction it started (202).
-    if (command.builtin) await api(`/api/channels/${id}/interactions`, { ...request, decode: decodeSlashResult })
-    else await api(`/api/channels/${id}/interactions`, { ...request, decode: decodeBotInvoked })
+    if (command.builtin) {
+      const result = await api(`/api/channels/${id}/interactions`, { ...request, decode: decodeSlashResult })
+      // A command that posts a message shows it in the channel; the others (/nick, /timeout, ...) say they are done.
+      if (!result.message_id) toasts.success(t('slash.done'))
+    } else await api(`/api/channels/${id}/interactions`, { ...request, decode: decodeBotInvoked })
     cancel()
     return true
   } catch (err) {

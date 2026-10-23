@@ -68,3 +68,14 @@ func deref(s *string) string {
 	}
 	return *s
 }
+
+// rawForward is whether a message is a forward. Nothing about the original is
+// read with the message: its ids would reach readers who may not see it.
+type rawForward struct{ forwarded bool }
+
+func (f rawForward) ref() *ForwardRef {
+	if !f.forwarded {
+		return nil
+	}
+	return &ForwardRef{Forwarded: true}
+}

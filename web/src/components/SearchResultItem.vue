@@ -3,7 +3,7 @@ import { clockTimeOptions } from '../lib/time'
 import type { Message } from '../types/domain'
 import type { ChatSearchRoot } from '../types/rest'
 import { computed } from 'vue'
-import { Hash, Volume2, Paperclip, ArrowRight, CornerDownRight, MessageCircle } from '@lucide/vue'
+import { Hash, Volume2, Paperclip, ArrowRight, CornerDownRight, Pin, ChartNoAxesColumn, MessageCircle } from '@lucide/vue'
 import { locale } from '../i18n'
 import { splitHighlight } from '../lib/searchHighlight'
 import { previewText } from '../lib/replies'
@@ -59,6 +59,12 @@ function formatDate(iso: string) {
         <span v-if="msg.parent_id" class="text-xs text-mnema-tertiary flex items-center gap-1">
           <CornerDownRight class="w-3 h-3" />
           {{ $t('chat.inThread') }}
+        </span>
+        <span v-if="msg.is_pinned" data-search-marker="pinned" class="flex items-center gap-1 text-xs text-mnema-accent">
+          <Pin class="w-3 h-3" aria-hidden="true" />{{ $t('chat.searchPinned') }}
+        </span>
+        <span v-if="msg.poll" data-search-marker="poll" class="flex items-center gap-1 text-xs text-mnema-accent">
+          <ChartNoAxesColumn class="w-3 h-3" aria-hidden="true" />{{ $t('poll.title') }}
         </span>
         <span class="text-xs text-mnema-tertiary ml-auto">{{ formatDate(msg.created_at) }}</span>
       </div>

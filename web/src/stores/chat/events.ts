@@ -2,10 +2,11 @@ import type { ServerEvent, ServerEventPayloads, ServerEventType } from '../../ty
 import { useToastStore } from '../toast'
 import { useEmojiStore } from '../emoji'
 import { useSavedStore } from '../saved'
+import { useForwardQuotesStore } from '../forwardQuotes'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
 import { useBlocksStore } from '../blocks'
-import { noticeText } from '../../lib/moderation'
+import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../lib/moderation'
 import { snapshotToMap, applyPresenceUpdate } from '../../lib/presence'
 import { MAX_EPHEMERAL } from './types'
 import type { Cx } from './state'
@@ -13,6 +14,7 @@ import { fetchChannels } from './channels'
 import { fetchDms, isDm, noteDmMessage, onDmCreated, onDmMemberAdded, onDmMemberRemoved } from './dms'
 import { applyActivity, countMessageOf, fetchMembers, refreshMemberStats, updateUserEverywhere } from './members'
 import { applyToMessage, bumpReplyCount, countReply, insertMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
+import { onThreadFollowUpdated } from './threadFollow'
 import { messageMentionsMe, messageMentionsMeDirectly, triggerBrowserNotification } from './notifications'
 import { fetchReadState, isReadingActiveChannel } from './readState'
 import { notificationLevel, refreshNotifications } from './notifySettings'
@@ -145,6 +147,7 @@ function onMemberTimeout({ cs }: Cx, p: Payload<'member_timeout'>) {
 }
 
 function onMessageDelete(cx: Cx, p: Payload<'message_delete'>) {
+  useForwardQuotesStore().invalidate()
   const { cs } = cx
   if (!p?.id) return
   removeFromWindow(cx, p.id)
@@ -180,7 +183,7 @@ const HANDLERS: Handlers = {
     void fetchDms(cx)
   },
   emoji_changed: () => { void useEmojiStore().load() },
-  thread_follow_updated: () => {},
+  thread_follow_updated: onThreadFollowUpdated,
   // The caller blocked or unblocked someone in another session.
   block_updated: () => { void useBlocksStore().load() },
   saved_updated: (_cx, p) => { if (p) useSavedStore().onUpdated(p) },
@@ -202,9 +205,14 @@ const HANDLERS: Handlers = {
     useToastStore().info(noticeText(p))
     usePermissionsStore().load()
   },
+  // Signed out everywhere by a moderator: a calm note that stays long enough to read, no sanction.
+  kicked: (_cx, p) => {
+    useToastStore().info(kickedText(p?.reason ?? ''), { duration: KICKED_NOTICE_MS })
+  },
   message_update: (cx, p) => {
     if (!p) return
     applyToMessage(cx, p.id, m => Object.assign(m, p))
+    useForwardQuotesStore().invalidate()
     onOriginalEdited(cx, p)
   },
   message_delete: onMessageDelete,
