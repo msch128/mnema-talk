@@ -42,6 +42,12 @@ describe('shouldNotify', () => {
     expect(shouldNotify({ ...base, level: 'mentions', isMention: true })).toBe(true)
   })
 
+  it('lets a message addressed to the member through a mute, but not @all', () => {
+    expect(shouldNotify({ ...base, level: 'mute', isMention: true, isDirectMention: true })).toBe(true)
+    expect(shouldNotify({ ...base, level: 'mute', isMention: true, isDirectMention: false })).toBe(false)
+    expect(shouldNotify({ ...base, level: 'mute', isDirectMention: true, permission: 'denied' })).toBe(false)
+  })
+
   it('stays quiet for the open channel in a visible tab only', () => {
     expect(shouldNotify({ ...base, isCurrentChannel: true })).toBe(false)
     expect(shouldNotify({ ...base, isCurrentChannel: true, hidden: true })).toBe(true)

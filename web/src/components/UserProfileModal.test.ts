@@ -11,7 +11,7 @@ import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { t, setLocale } from '../i18n'
-import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
+import { useAccountStore } from '../stores/account'
 
 const mockApi = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
 vi.mock('../lib/api', async (importOriginal) => ({
@@ -96,26 +96,6 @@ describe('UserProfileModal bio editing', () => {
   })
 })
 
-it('matches the server password minimum', () => {
-  expect(MIN_PASSWORD_LENGTH).toBe(10)
-})
-
-describe('UserProfileModal password change', () => {
-  it('rejects passwords shorter than the server minimum', async () => {
-    auth.user = userFixture({ ...stub, bio: '' })
-    wrapper = mount(UserProfileModal, { attachTo: document.body })
-    await wrapper.findAll('button').find(b => b.text() === 'Ändern')!.trigger('click')
-    const input = wrapper.find("input[autocomplete=\"new-password\"]")!
-    expect(input.attributes('placeholder')).toBe(`Neues Passwort (mind. ${MIN_PASSWORD_LENGTH} Zeichen)`)
-    await wrapper.find('input[autocomplete="current-password"]')!.setValue('old-password')
-    await input.setValue('a'.repeat(MIN_PASSWORD_LENGTH - 1))
-    await wrapper.findAll("input[autocomplete=\"new-password\"]")[1]!.setValue('a'.repeat(MIN_PASSWORD_LENGTH - 1))
-    await wrapper.find('form')!.trigger('submit')
-    expect(wrapper.find('[role="alert"]')!.text()).toBe(`Das neue Passwort braucht mindestens ${MIN_PASSWORD_LENGTH} Zeichen.`)
-    expect(mockApi).not.toHaveBeenCalled()
-  })
-})
-
 describe('UserProfileModal account interactions', () => {
   function openSelf() {
     auth.user = userFixture({ ...stub })
@@ -124,13 +104,6 @@ describe('UserProfileModal account interactions', () => {
 
   function button(key: Parameters<typeof t>[0]) {
     return requireValue(wrapper.findAll('button').find(b => b.text() === t(key)), `Missing ${key} button`)
-  }
-
-  async function passwords(password: string, repeated = password) {
-    await button('profile.changePassword').trigger('click')
-    await wrapper.get('input[autocomplete="current-password"]').setValue('previous-password')
-    await wrapper.get('input[autocomplete="new-password"]').setValue(password)
-    await requireValue(wrapper.findAll('input[autocomplete="new-password"]')[1]).setValue(repeated)
   }
 
   it('saves edited profile fields into the loaded profile and announces success', async () => {
@@ -166,42 +139,20 @@ describe('UserProfileModal account interactions', () => {
     expect(mockApi).not.toHaveBeenCalled()
   })
 
-  it('rejects repeated-password mismatch before contacting the server', async () => {
+  it('no longer edits the password here: it links to the account and security dialog', async () => {
     openSelf()
-    await passwords('long-password', 'different-password')
-    await wrapper.get('form').trigger('submit')
-    expect(wrapper.get('[role="alert"]').text()).toBe(t('profile.passwordMismatch'))
-    expect(mockApi).not.toHaveBeenCalled()
-  })
-
-  it('submits a matching password and closes the password editor', async () => {
-    openSelf()
-    await passwords('valid-password')
-    mockApi.mockResolvedValue({ ok: true })
-    await wrapper.get('form').trigger('submit')
-    await flushPromises()
-    expect(mockApi).toHaveBeenCalledWith('/api/auth/password', expect.objectContaining({
-      json: { current_password: 'previous-password', new_password: 'valid-password' }
-    }))
-    expect(wrapper.find('input[autocomplete="current-password"]').exists()).toBe(false)
-  })
-
-  it.each([new Error('Wrong current password'), {}])('shows password failures and allows retry (%s)', async error => {
-    openSelf()
-    await passwords('valid-password')
-    mockApi.mockRejectedValue(error)
-    await wrapper.get('form').trigger('submit')
-    await flushPromises()
-    expect(wrapper.get('[role="alert"]').text()).toBe(error instanceof Error ? error.message : t('profile.saveFailed'))
-    expect(saveButton().attributes('disabled')).toBeUndefined()
-  })
-
-  it('cancels the password form without making a request', async () => {
-    openSelf()
-    await passwords('valid-password')
-    await button('common.cancel').trigger('click')
     expect(wrapper.find('input[type="password"]').exists()).toBe(false)
-    expect(mockApi).not.toHaveBeenCalled()
+    const account = useAccountStore()
+    await wrapper.get('[data-testid="profile-password-link"]').trigger('click')
+    expect(account.dialogOpen).toBe(true)
+    expect(wrapper.emitted('close')).toHaveLength(1)
+  })
+
+  it('shows no password link on somebody else\'s profile', () => {
+    auth.user = userFixture({ ...stub, id: '00000000-0000-4000-8000-000000000999', username: 'me' })
+    chat.selectedUserProfile = { ...stub }
+    wrapper = mount(UserProfileModal, { attachTo: document.body })
+    expect(wrapper.find('[data-testid="profile-password-link"]').exists()).toBe(false)
   })
 
   it('edits and trims the status line', async () => {

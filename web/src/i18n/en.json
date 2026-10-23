@@ -61,7 +61,8 @@
   },
   "menu": {
     "adminConsole": "Admin console",
-    "legal": "Legal & privacy"
+    "legal": "Legal & privacy",
+    "rules": "Community rules"
   },
   "account": {
     "menu": "Account menu",
@@ -458,7 +459,8 @@
     "empty": "No replies yet. Write the first one.",
     "placeholder": "Reply in thread …",
     "upload": "Share a file or image in the thread",
-    "sendFailed": "Couldn't send the reply."
+    "sendFailed": "Couldn't send the reply.",
+    "commandHint": "Commands and polls start in the channel. Here this text is sent as a reply."
   },
   "voice": {
     "mute": "Mute",
@@ -1235,7 +1237,8 @@
     "statusSaved": "Status saved",
     "statusCleared": "Status cleared",
     "displayNameHint": "This is what others see. Your username @{username} stays the same. At most {count} characters.",
-    "open": "Open {name}'s profile"
+    "open": "Open {name}'s profile",
+    "passwordLink": "Change password and sign-in security"
   },
   "nav": {
     "channelNotFound": "That channel doesn't exist anymore.",
@@ -1340,7 +1343,8 @@
     "endBody": "Voting stops now. The results stay visible.",
     "someone": "Someone",
     "more": "+{count} more",
-    "failed": "That did not work."
+    "failed": "That did not work.",
+    "cannotVote": "You can’t vote in this channel."
   },
   "mention": {
     "title": "Mention",
@@ -1464,11 +1468,11 @@
     },
     "add_reactions": {
       "name": "Add reactions",
-      "desc": "React to messages. Taking back your own reaction always works."
+      "desc": "React to messages and vote in polls. Taking back your own reaction always works."
     },
     "manage_messages": {
       "name": "Manage messages",
-      "desc": "Delete other members’ messages (never the Owner’s)."
+      "desc": "Delete other members’ messages (never the Owner’s), also in bulk. Pin and unpin messages, end any poll, read earlier versions of edited messages and ignore slow mode."
     },
     "mention_everyone": {
       "name": "Mention everyone",
@@ -1563,7 +1567,9 @@
       "voice": "Talk presence",
       "auth": "Sign-ins",
       "settings": "Settings",
-      "moderation": "Moderation"
+      "moderation": "Moderation",
+      "emoji": "Emoji",
+      "bot": "Bots"
     },
     "actions": {
       "role": {
@@ -1581,7 +1587,8 @@
         "password_set": "Password set",
         "password_reset": "Password reset",
         "lockout_clear": "Login lock cleared",
-        "talk_kick": "Removed from Talk"
+        "talk_kick": "Removed from Talk",
+        "two_factor_reset": "Two-factor sign-in reset"
       },
       "channel": {
         "create": "Channel created",
@@ -1622,7 +1629,8 @@
         "delete": "Media deleted"
       },
       "system": {
-        "update": "Update started"
+        "update": "Update started",
+        "mail_test": "Test e-mail sent"
       },
       "message": {
         "delete": "Message deleted",
@@ -1640,10 +1648,24 @@
         "login_locked": "Sign-in blocked",
         "register": "Registered",
         "logout_all": "Signed out everywhere",
-        "password_change": "Password changed"
+        "password_change": "Password changed",
+        "email_set": "E-mail address added",
+        "email_remove": "E-mail address removed",
+        "email_verified": "E-mail address confirmed",
+        "export_request": "Data export requested",
+        "export_download": "Data export downloaded",
+        "account_delete": "Account deleted",
+        "two_factor_enabled": "Two-factor sign-in turned on",
+        "two_factor_disabled": "Two-factor sign-in turned off",
+        "two_factor_failed": "Two-factor code failed",
+        "two_factor_alert": "Repeated wrong two-factor codes",
+        "recovery_code_used": "Recovery code used",
+        "recovery_codes_regenerated": "Recovery codes renewed",
+        "password_reset_mail": "Password reset by e-mail"
       },
       "settings": {
-        "upload_limit": "Upload limit changed"
+        "upload_limit": "Upload limit changed",
+        "onboarding": "Welcome and rules changed"
       },
       "moderation": {
         "timeout": "Member timed out",
@@ -1652,6 +1674,26 @@
         "unban": "Member unbanned",
         "ban_expired": "Ban expired",
         "bulk_delete": "Messages deleted in bulk"
+      },
+      "emoji": {
+        "create": "Emoji added",
+        "rename": "Emoji renamed",
+        "delete": "Emoji deleted"
+      },
+      "bot": {
+        "create": "Bot created",
+        "update": "Bot edited",
+        "delete": "Bot deleted",
+        "avatar": "Bot avatar changed",
+        "roles": "Bot roles changed",
+        "token_create": "Bot token created",
+        "token_regenerate": "Bot token regenerated",
+        "token_revoke": "Bot token revoked",
+        "command_update": "Bot command edited",
+        "command_delete": "Bot command deleted"
+      },
+      "admin": {
+        "post": "Admin action"
       }
     }
   },
@@ -2033,7 +2075,8 @@
     "removeFailed": "Couldn't remove the device.",
     "testSent": "Test notification sent.",
     "testFailed": "The test notification could not be delivered.",
-    "previewFailed": "Couldn't save the setting."
+    "previewFailed": "Couldn't save the setting.",
+    "channelLevels": "Notifications while the page is open follow your channel levels and Do Not Disturb, too."
   },
   "recovery": {
     "forgotLink": "Forgot your password?",
@@ -2125,5 +2168,8 @@
       "deleteType": "Type your username ({name}) to confirm",
       "deleteConfirm": "Delete for good"
     }
+  },
+  "rules": {
+    "title": "Community rules"
   }
 }

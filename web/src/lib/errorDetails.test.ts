@@ -23,6 +23,10 @@ describe('server reasons reach the user in their language', () => {
     ['INVALID_INPUT', 'only PNG, GIF and WebP images are accepted', /PNG-, GIF- oder WebP/],
     ['INVALID_INPUT', 'the image is larger than 256 KiB after processing', /256 KiB/],
     ['INVALID_INPUT', 'invalid emoji', /nicht verfügbar/],
+    ['INVALID_INPUT', 'the file must be between 1 byte and 256 KiB', /256 KiB/],
+    ['INVALID_INPUT', 'the image must be between 1 and 4096 pixels on each edge', /4096 Pixel/],
+    ['INVALID_INPUT', 'endpoint must be an https URL of a push service on a public address', /Push-Abo/],
+    ['INVALID_INPUT', 'p256dh must be a P-256 public key and auth a 16 byte secret, both base64url', /Push-Abo/],
     ['INVALID_INPUT', 'duration must be one of 1h, 1d', /Laufzeiten/]
   ])('%s "%s"', (code, message, expected) => {
     expect(errorMessage(code, message)).toMatch(expected)

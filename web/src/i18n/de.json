@@ -61,7 +61,8 @@
   },
   "menu": {
     "adminConsole": "Admin-Konsole",
-    "legal": "Rechtliches & Datenschutz"
+    "legal": "Rechtliches & Datenschutz",
+    "rules": "Community-Regeln"
   },
   "account": {
     "menu": "Konto-Menü",
@@ -458,7 +459,8 @@
     "empty": "Noch keine Antworten. Schreib die erste.",
     "placeholder": "Im Thread antworten …",
     "upload": "Datei oder Bild im Thread teilen",
-    "sendFailed": "Die Antwort konnte nicht gesendet werden."
+    "sendFailed": "Die Antwort konnte nicht gesendet werden.",
+    "commandHint": "Befehle und Umfragen startest du im Kanal. Hier wird dieser Text als Antwort gesendet."
   },
   "voice": {
     "mute": "Stummschalten",
@@ -1235,7 +1237,8 @@
     "statusSaved": "Status gespeichert",
     "statusCleared": "Status geleert",
     "displayNameHint": "So sehen dich andere. Dein Username @{username} bleibt gleich. Höchstens {count} Zeichen.",
-    "open": "Profil von {name} öffnen"
+    "open": "Profil von {name} öffnen",
+    "passwordLink": "Passwort ändern und Anmeldesicherheit"
   },
   "nav": {
     "channelNotFound": "Diesen Kanal gibt es nicht mehr.",
@@ -1340,7 +1343,8 @@
     "endBody": "Die Abstimmung endet jetzt. Die Ergebnisse bleiben sichtbar.",
     "someone": "Jemand",
     "more": "+{count} weitere",
-    "failed": "Das hat nicht geklappt."
+    "failed": "Das hat nicht geklappt.",
+    "cannotVote": "In diesem Kanal kannst du nicht abstimmen."
   },
   "mention": {
     "title": "Erwähnen",
@@ -1464,11 +1468,11 @@
     },
     "add_reactions": {
       "name": "Reaktionen hinzufügen",
-      "desc": "Auf Nachrichten reagieren. Die eigene Reaktion zurücknehmen geht immer."
+      "desc": "Auf Nachrichten reagieren und bei Umfragen abstimmen. Die eigene Reaktion zurücknehmen geht immer."
     },
     "manage_messages": {
       "name": "Nachrichten verwalten",
-      "desc": "Nachrichten anderer löschen (nie die des Inhabers)."
+      "desc": "Nachrichten anderer löschen (nie die des Inhabers), auch gesammelt. Nachrichten anheften und lösen, jede Umfrage beenden, frühere Fassungen bearbeiteter Nachrichten lesen und den Langsammodus umgehen."
     },
     "mention_everyone": {
       "name": "@all erwähnen",
@@ -1563,7 +1567,9 @@
       "voice": "Talk-Anwesenheit",
       "auth": "Anmeldungen",
       "settings": "Einstellungen",
-      "moderation": "Moderation"
+      "moderation": "Moderation",
+      "emoji": "Emoji",
+      "bot": "Bots"
     },
     "actions": {
       "role": {
@@ -1581,7 +1587,8 @@
         "password_set": "Passwort gesetzt",
         "password_reset": "Passwort zurückgesetzt",
         "lockout_clear": "Login-Sperre aufgehoben",
-        "talk_kick": "Aus Talk entfernt"
+        "talk_kick": "Aus Talk entfernt",
+        "two_factor_reset": "Zwei-Faktor-Anmeldung zurückgesetzt"
       },
       "channel": {
         "create": "Kanal erstellt",
@@ -1622,7 +1629,8 @@
         "delete": "Medium gelöscht"
       },
       "system": {
-        "update": "Update gestartet"
+        "update": "Update gestartet",
+        "mail_test": "Test-E-Mail gesendet"
       },
       "message": {
         "delete": "Nachricht gelöscht",
@@ -1640,10 +1648,24 @@
         "login_locked": "Anmeldung gesperrt",
         "register": "Registriert",
         "logout_all": "Überall abgemeldet",
-        "password_change": "Passwort geändert"
+        "password_change": "Passwort geändert",
+        "email_set": "E-Mail-Adresse hinzugefügt",
+        "email_remove": "E-Mail-Adresse entfernt",
+        "email_verified": "E-Mail-Adresse bestätigt",
+        "export_request": "Datenexport angefordert",
+        "export_download": "Datenexport heruntergeladen",
+        "account_delete": "Konto gelöscht",
+        "two_factor_enabled": "Zwei-Faktor-Anmeldung eingeschaltet",
+        "two_factor_disabled": "Zwei-Faktor-Anmeldung ausgeschaltet",
+        "two_factor_failed": "Zwei-Faktor-Code falsch",
+        "two_factor_alert": "Wiederholt falsche Zwei-Faktor-Codes",
+        "recovery_code_used": "Recovery-Code verwendet",
+        "recovery_codes_regenerated": "Recovery-Codes erneuert",
+        "password_reset_mail": "Passwort per E-Mail zurückgesetzt"
       },
       "settings": {
-        "upload_limit": "Upload-Limit geändert"
+        "upload_limit": "Upload-Limit geändert",
+        "onboarding": "Willkommen und Regeln geändert"
       },
       "moderation": {
         "timeout": "Mitglied stummgeschaltet",
@@ -1652,6 +1674,26 @@
         "unban": "Mitglied entsperrt",
         "ban_expired": "Sperre abgelaufen",
         "bulk_delete": "Nachrichten gesammelt gelöscht"
+      },
+      "emoji": {
+        "create": "Emoji hinzugefügt",
+        "rename": "Emoji umbenannt",
+        "delete": "Emoji gelöscht"
+      },
+      "bot": {
+        "create": "Bot erstellt",
+        "update": "Bot bearbeitet",
+        "delete": "Bot gelöscht",
+        "avatar": "Bot-Avatar geändert",
+        "roles": "Bot-Rollen geändert",
+        "token_create": "Bot-Token erstellt",
+        "token_regenerate": "Bot-Token neu erzeugt",
+        "token_revoke": "Bot-Token widerrufen",
+        "command_update": "Bot-Befehl bearbeitet",
+        "command_delete": "Bot-Befehl gelöscht"
+      },
+      "admin": {
+        "post": "Admin-Aktion"
       }
     }
   },
@@ -2033,7 +2075,8 @@
     "removeFailed": "Das Gerät konnte nicht entfernt werden.",
     "testSent": "Testbenachrichtigung gesendet.",
     "testFailed": "Die Testbenachrichtigung konnte nicht zugestellt werden.",
-    "previewFailed": "Die Einstellung konnte nicht gespeichert werden."
+    "previewFailed": "Die Einstellung konnte nicht gespeichert werden.",
+    "channelLevels": "Auch Benachrichtigungen bei geöffneter Seite folgen deinen Kanal-Einstellungen und „Nicht stören“."
   },
   "recovery": {
     "forgotLink": "Passwort vergessen?",
@@ -2125,5 +2168,8 @@
       "deleteType": "Tippe zur Bestätigung deinen Benutzernamen ({name})",
       "deleteConfirm": "Endgültig löschen"
     }
+  },
+  "rules": {
+    "title": "Community-Regeln"
   }
 }
