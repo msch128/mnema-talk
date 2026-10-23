@@ -90,6 +90,20 @@ describe('LoginModal', () => {
     })
   })
 
+  it('names the minimum password length while registering and refuses a short one before asking the server', async () => {
+    const w = mountLogin()
+    expect(w.find('[data-testid="password-hint"]').exists()).toBe(false)
+    await w.findAll('button').find(b => b.text().startsWith('Have an invite code'))!.trigger('click')
+    expect(w.get('[data-testid="password-hint"]').text()).toBe('At least 10 characters.')
+    await w.find<HTMLInputElement>('#login-username')!.setValue('max')
+    await w.find('#login-password')!.setValue('too-short')
+    await w.find<HTMLInputElement>('#login-invite')!.setValue('team-code')
+    await submit(w)
+    await flushPromises()
+    expect(w.find('[role="alert"]')!.text()).toBe('The password needs at least 10 characters')
+    expect(apiMock.mock.calls.filter(([path]) => path === '/api/auth/register')).toEqual([])
+  })
+
   it('requires an invite code before registering', async () => {
     const w = mountLogin()
     await w.findAll('button').find(b => b.text().startsWith('Have an invite code'))!.trigger('click')

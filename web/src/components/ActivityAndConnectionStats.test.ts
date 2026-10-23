@@ -60,6 +60,13 @@ describe('member activity and connection summaries', () => {
     })
     expect(w.text()).toContain('1,234')
   })
+  it('leaves talk time out of the compact view until there is some', async () => {
+    const w = keep(mount(ActivityStats, { props: { user: { id: fixtureId(1), voice_seconds: 0, message_count: 5 } } }))
+    expect(w.find('[data-testid="activity-voice"]').exists()).toBe(false)
+    expect(w.text()).toContain('5')
+    await w.setProps({ user: { id: fixtureId(1), voice_seconds: 90, message_count: 5 } })
+    expect(w.find('[data-testid="activity-voice"]').exists()).toBe(true)
+  })
   it('shows empty connection data and emits close through both controls', async () => {
     const w = keep(mount(ConnectionStatsModal))
     expect(w.text()).toContain('–')

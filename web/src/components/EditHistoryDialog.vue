@@ -16,7 +16,7 @@ const error = ref('')
 let seq = 0
 
 function formatStamp(iso: string) {
-  return new Date(iso).toLocaleString([locale.value], { dateStyle: 'medium', timeStyle: 'short' })
+  return new Date(iso).toLocaleString([locale.value], { dateStyle: 'medium', timeStyle: 'medium' })
 }
 
 async function load() {

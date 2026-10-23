@@ -100,16 +100,28 @@ onMounted(() => { void store.load() })
     <p class="text-sm text-mnema-muted">{{ $t('emoji.admin.hint') }}</p>
 
     <form class="flex flex-wrap gap-2" @submit.prevent="upload">
-      <input
-        ref="fileInput"
-        type="file"
-        accept="image/png,image/gif,image/webp"
-        data-testid="emoji-file"
-        :aria-label="$t('emoji.admin.file')"
-        :disabled="full"
-        class="text-sm text-mnema-muted min-w-0 flex-1 basis-56 file:mr-3 file:rounded-md file:border-0 file:bg-mnema-elevated file:px-3 file:py-1.5 file:text-mnema-text"
-        @change="onFile"
-      />
+      <!-- The browser's own file control is unstyled and in the browser's language: a button and the chosen name instead. -->
+      <div class="flex min-w-0 flex-1 basis-56 items-center gap-3">
+        <input
+          ref="fileInput"
+          type="file"
+          accept="image/png,image/gif,image/webp"
+          data-testid="emoji-file"
+          :aria-label="$t('emoji.admin.file')"
+          :disabled="full"
+          tabindex="-1"
+          class="sr-only"
+          @change="onFile"
+        />
+        <button
+          type="button"
+          :disabled="full"
+          data-testid="emoji-choose"
+          class="flex-shrink-0 rounded-md border border-mnema-border bg-mnema-elevated px-3 py-1.5 text-sm text-mnema-text transition hover:border-mnema-accent disabled:opacity-50"
+          @click="fileInput?.click()"
+        >{{ $t('emoji.admin.choose') }}</button>
+        <span class="min-w-0 truncate text-sm text-mnema-muted" data-testid="emoji-file-name">{{ file?.name ?? $t('emoji.admin.noFile') }}</span>
+      </div>
       <input
         v-model="name"
         type="text"

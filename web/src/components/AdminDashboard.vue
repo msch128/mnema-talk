@@ -105,6 +105,7 @@ watch(activeTab, (tab) => {
     :title="dialogTitle"
     :subtitle="dialogSubtitle"
     panel-class="max-w-5xl h-[85vh] max-h-[860px]"
+    initial-focus="[data-testid=admin-tabs] [aria-pressed=true]"
     @close="emit('close')"
   >
     <!-- Navigation tabs -->

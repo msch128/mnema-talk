@@ -209,7 +209,8 @@
     "subtitleInvited": "You’ve been invited to join",
     "inviteChecking": "Checking your invite…",
     "inviteInvalid": "This invite is not valid any more. Ask for a new one, or sign in if you already have an account.",
-    "inviteExpires": "Valid until {when}"
+    "inviteExpires": "Valid until {when}",
+    "passwordHint": "At least {count} characters."
   },
   "sidebar": {
     "subtitle": "Private community",
@@ -1224,7 +1225,7 @@
     "passwordTooShort": "The new password needs at least {count} characters.",
     "passwordMismatch": "The two passwords don’t match.",
     "passwordChanged": "Password changed",
-    "activity": "Activity",
+    "activity": "In a Talk",
     "inVoice": "In the Talk:",
     "notInVoice": "Not in a Talk right now",
     "membership": "Membership",
@@ -1392,7 +1393,9 @@
       "animated": "Animated",
       "rename": "Rename",
       "empty": "No custom emoji yet.",
-      "full": "The limit is reached. Delete an emoji to make room."
+      "full": "The limit is reached. Delete an emoji to make room.",
+      "choose": "Choose file",
+      "noFile": "No file yet"
     }
   },
   "activity": {
@@ -2132,7 +2135,9 @@
       "unused": "Not used",
       "saved": "Address saved.",
       "savedConfirm": "Address saved. Check your inbox to confirm it.",
-      "removed": "Address removed."
+      "removed": "Address removed.",
+      "invalid": "That does not look like an e-mail address.",
+      "needPassword": "Enter your current password to confirm."
     },
     "loading": "Loading…",
     "twoFactor": {

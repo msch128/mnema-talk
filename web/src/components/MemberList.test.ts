@@ -82,4 +82,13 @@ describe('MemberList', () => {
     expect(w.findComponent(ContextMenu).props('items')?.length).toBeGreaterThan(0)
     w.findAllComponents(MemberRow)[0]?.vm.$emit('menu', new MouseEvent('contextmenu'))
   })
+  it('shows activity totals for members but not for bots', () => {
+    const helper = { ...userFixture({ id: fixtureId(6), username: 'helper', display_name: 'Helper', message_count: 7 }), is_bot: true }
+    const w = setup()
+    useChatStore().members = [owner, ann, helper]
+    return w.vm.$nextTick().then(() => {
+      expect(w.find('[data-member="ann"] [data-testid="activity-stats"]').exists()).toBe(true)
+      expect(w.find('[data-member="helper"] [data-testid="activity-stats"]').exists()).toBe(false)
+    })
+  })
 })

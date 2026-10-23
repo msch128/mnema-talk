@@ -209,7 +209,8 @@
     "subtitleInvited": "Du wurdest eingeladen, beizutreten",
     "inviteChecking": "Einladung wird geprüft …",
     "inviteInvalid": "Diese Einladung gilt nicht mehr. Frag nach einer neuen, oder melde dich an, wenn du schon ein Konto hast.",
-    "inviteExpires": "Gültig bis {when}"
+    "inviteExpires": "Gültig bis {when}",
+    "passwordHint": "Mindestens {count} Zeichen."
   },
   "sidebar": {
     "subtitle": "Private Community",
@@ -1224,7 +1225,7 @@
     "passwordTooShort": "Das neue Passwort braucht mindestens {count} Zeichen.",
     "passwordMismatch": "Die beiden Passwörter stimmen nicht überein.",
     "passwordChanged": "Passwort geändert",
-    "activity": "Aktivität",
+    "activity": "Im Talk",
     "inVoice": "Im Talk:",
     "notInVoice": "Gerade in keinem Talk",
     "membership": "Mitgliedschaft",
@@ -1392,7 +1393,9 @@
       "animated": "Animiert",
       "rename": "Umbenennen",
       "empty": "Noch keine eigenen Emojis.",
-      "full": "Das Limit ist erreicht. Lösche ein Emoji, um Platz zu schaffen."
+      "full": "Das Limit ist erreicht. Lösche ein Emoji, um Platz zu schaffen.",
+      "choose": "Datei wählen",
+      "noFile": "Noch keine Datei"
     }
   },
   "activity": {
@@ -2132,7 +2135,9 @@
       "unused": "Nicht verwendet",
       "saved": "Adresse gespeichert.",
       "savedConfirm": "Adresse gespeichert. Bestätige sie über den Link in deinem Postfach.",
-      "removed": "Adresse entfernt."
+      "removed": "Adresse entfernt.",
+      "invalid": "Das sieht nicht nach einer E-Mail-Adresse aus.",
+      "needPassword": "Gib zur Bestätigung dein aktuelles Passwort ein."
     },
     "loading": "Lädt …",
     "twoFactor": {

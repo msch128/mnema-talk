@@ -81,6 +81,7 @@ const subline = computed(() => {
       <span v-else-if="subline" class="truncate text-xs text-mnema-tertiary" :data-testid="activity ? 'member-activity' : undefined">{{ subline }}</span>
     </div>
 
-    <ActivityStats :user="member" />
+    <!-- Bots do not sit in Talks or chat like members: no totals for them. -->
+    <ActivityStats v-if="!member.is_bot" :user="member" />
   </div>
 </template>
