@@ -230,9 +230,11 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
       expect(w.findComponent({ name: 'LegalModal' }).exists()).toBe(true)
       w.findComponent({ name: 'LegalModal' }).vm.$emit('close')
       await flushPromises()
-      w.findComponent({ name }).vm.$emit('open-admin')
-      await flushPromises()
-      expect(w.findComponent({ name: 'AdminDashboard' }).props('initialTab')).toBe('users')
+      if (name === 'Sidebar') {
+        w.findComponent({ name }).vm.$emit('open-admin') // only the server menu opens the admin console
+        await flushPromises()
+        expect(w.findComponent({ name: 'AdminDashboard' }).props('initialTab')).toBe('users')
+      }
       await go('/c/ch1')
     }
   })

@@ -32,7 +32,7 @@ it('opens profile, audio, connection details, screen share, admin, legal and log
   await item(t('voice.panel.details')).trigger('click'); expect(voice.showStatsModal).toBe(true)
   await item(t('voice.share')).trigger('click'); expect(voice.showScreenShareModal).toBe(true)
   voice.isScreenSharing = true; await nextTick(); await item(t('voice.stopShare')).trigger('click'); expect(h.stop).toHaveBeenCalledTimes(1)
-  await item(t('menu.adminConsole')).trigger('click'); expect(w.emitted('open-admin')).toHaveLength(1)
+  expect(w.findAll('[role="menuitem"]').some(i => i.text().includes(t('menu.adminConsole')))).toBe(false) // the admin console lives in the server menu
   await item(t('menu.legal')).trigger('click'); expect(w.emitted('open-legal')).toHaveLength(1)
   await item(t('account.signOut')).trigger('click'); expect(logout).toHaveBeenCalledTimes(1)
   expect(document.activeElement).toBe(trigger)
@@ -77,11 +77,10 @@ it('UserBar handles missing account, chosen presence, menu exclusivity and forwa
   auth.user = userFixture({ presence: 'focus' }); await nextTick(); expect(w.find('[data-testid="own-subline"]').text()).toBe('Focused')
   await w.find('[data-testid="presence-button"]').trigger('click'); expect(w.find('[data-testid="presence-menu"]').exists()).toBe(true)
   await w.find('[data-testid="account-menu-button"]').trigger('click'); expect(w.find('[data-testid="presence-menu"]').exists()).toBe(false)
-  auth.user = userFixture({ role: 'admin' }); await nextTick()
-  await item(t('menu.adminConsole')).trigger('click'); expect(w.emitted('open-admin')).toHaveLength(1)
-  await w.find('[data-testid="account-menu-button"]').trigger('click'); await item(t('menu.legal')).trigger('click'); expect(w.emitted('open-legal')).toHaveLength(1)
+  await item(t('menu.legal')).trigger('click'); expect(w.emitted('open-legal')).toHaveLength(1)
+  // The update dot belongs to the server menu, not to the personal account button.
   const version = useAppVersionStore(); version.adminUpdate = { ...systemStatus().update, update_available: true, latest_version: '0.5.0' }
-  await nextTick(); expect(w.find('[data-testid="admin-update-dot"]').exists()).toBe(true)
+  await nextTick(); expect(w.find('[data-testid="admin-update-dot"]').exists()).toBe(false)
 })
 
 it('does not focus menu items after the menu is unmounted before its initial focus tick', async () => {

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { ShieldCheck, Crown, Plus, FolderPlus, ChevronDown, X, CheckCheck, ScrollText } from '@lucide/vue'
 import { usePermissionsStore } from '../stores/permissions'
 import { useOnboardingStore } from '../stores/onboarding'
+import { useAppVersionStore } from '../stores/appVersion'
 import { rulesOpen } from '../lib/communityRules'
 import { useDismissable } from '../composables/useDismissable'
 
@@ -14,6 +15,9 @@ const emit = defineEmits<{ 'open-admin': []; 'open-legal': []; 'create-channel':
 
 const permissions = usePermissionsStore()
 const onboarding = useOnboardingStore()
+// Only people who may open the console see that a new release is out.
+const versionStore = useAppVersionStore()
+const updateHint = computed(() => permissions.canOpenAdmin && versionStore.adminUpdateAvailable)
 const showRules = () => { rulesOpen.value = true }
 
 const menuOpen = ref(false)
@@ -96,7 +100,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       :aria-expanded="menuOpen ? 'true' : 'false'"
       aria-controls="server-menu"
       :class="[
-        'w-full h-12 pl-3 pr-3 border-b border-mnema-hairline flex items-center gap-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
+        'relative w-full h-12 pl-3 pr-3 border-b border-mnema-hairline flex items-center gap-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
         menuOpen ? 'bg-mnema-hover' : 'hover:bg-mnema-hover/70'
       ]"
       v-tooltip.visual="SERVER_NAME"
@@ -113,6 +117,12 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       </span>
       <X v-if="menuOpen" class="w-4 h-4 text-mnema-muted flex-shrink-0" />
       <ChevronDown v-else class="w-4 h-4 text-mnema-muted flex-shrink-0" />
+      <span
+        v-if="updateHint"
+        data-testid="admin-update-dot"
+        class="absolute right-9 top-3 h-2 w-2 rounded-full bg-mnema-accent ring-2 ring-mnema-raised"
+        aria-hidden="true"
+      ></span>
     </button>
 
     <div
@@ -127,6 +137,11 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       <template v-if="permissions.canOpenAdmin || permissions.can('manage_channels')">
         <button v-if="permissions.canOpenAdmin" type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('open-admin'))">
           <span class="truncate">{{ $t('menu.adminConsole') }}</span>
+          <span
+            v-if="updateHint"
+            data-testid="admin-update-badge"
+            class="ml-auto rounded-full bg-mnema-accent/15 px-2 py-0.5 text-xs font-semibold text-mnema-accent"
+          >{{ $t('update.badge', { version: versionStore.adminUpdate?.latest_version }) }}</span>
           <Crown class="w-4 h-4 text-mnema-amber flex-shrink-0" />
         </button>
         <template v-if="permissions.can('manage_channels')">

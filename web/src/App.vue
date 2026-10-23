@@ -243,7 +243,7 @@ onMounted(async () => {
         :style="isCompact ? undefined : { width: `${panels.left.width}px` }"
       >
         <Sidebar @open-admin="openAdmin('users')" @open-legal="showLegalModal = true" class="flex-1 min-h-0" />
-        <UserBar @open-admin="openAdmin('users')" @open-legal="showLegalModal = true" />
+        <UserBar @open-legal="showLegalModal = true" />
         <ResizeHandle v-if="!isCompact" :panel="panels.left" :label="$t('resize.sidebar')" />
       </div>
 
