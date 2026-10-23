@@ -119,6 +119,12 @@ ten minutes, audited without the recipient). A failed test names the stage
 (`connect`, `tls`, `auth`, `sender`, `recipient`, `data`); server replies and
 credentials are never shown. The links in the mails point to `PUBLIC_URL`.
 Mails are plain text, in the member's language (German or English).
+Every mail to a member (address confirmation, password reset, second-factor
+alert) picks its language by the same rule: the language stored on the account
+(the UI language, `de` or `en`); if the account has none yet, the first shipped
+language in the `Accept-Language` header of the request that triggered the mail;
+otherwise English, the instance default. The alert mail has no member request
+behind it and so uses the stored language or the default.
 
 ### Monitoring
 

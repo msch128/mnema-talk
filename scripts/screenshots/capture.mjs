@@ -90,6 +90,27 @@ async function closeWelcomeFlow(ctx) {
     return route.fulfill({ response, json: { ...state, welcome_done: true, dismissed_tips: ['search', 'mention', 'talk', 'notif-hint'] } })
   })
 }
+// Scrolls the message list so its top edge is exactly the top of a message row:
+// the first row that is fully inside the list now. Whatever sat above it (a cut
+// message, the welcome block) is out of view, so no glyph is clipped at the top
+// edge. A list that cannot scroll that far gets bottom padding, which shows as
+// empty space above the composer instead of a shifted picture.
+async function alignMessageList(page) {
+  await page.waitForSelector('[data-msg-id]')
+  await page.evaluate(() => {
+    const first = document.querySelector('[data-msg-id]')
+    let list = first.parentElement
+    while (list && !/(auto|scroll)/.test(getComputedStyle(list).overflowY)) list = list.parentElement
+    const top = list.getBoundingClientRect().top
+    const rows = [...list.querySelectorAll('[data-msg-id]')]
+    const row = rows.find((r) => r.getBoundingClientRect().top >= top) || rows[0]
+    const delta = row.getBoundingClientRect().top - top - 8
+    const missing = list.scrollTop + delta - (list.scrollHeight - list.clientHeight)
+    if (missing > 0) list.style.paddingBottom = `${parseFloat(getComputedStyle(list).paddingBottom) + missing}px`
+    list.scrollTop += delta
+  })
+  await page.waitForTimeout(300)
+}
 const channel = (page, type, text) => page.locator(`[data-channel-type="${type}"]`, { hasText: text }).first()
 
 // Members who are online while the pictures are taken (the member list shows them).
@@ -112,7 +133,8 @@ if (wanted('chat')) {
   await login(page, ADMIN_USER, ADMIN_PASSWORD)
   await page.goto(BASE + '/')
   await channel(page, 'text', 'dev-log').click()
-  await page.mouse.move(700, 300)
+  await alignMessageList(page)
+  await page.mouse.move(700, 270)
   await page.waitForTimeout(1500)
   await shot(page, 'chat')
   await page.context().close()
@@ -126,6 +148,7 @@ if (wanted('thread')) {
   await channel(page, 'text', 'dev-log').click()
   await page.getByRole('button', { name: /Open thread/ }).first().click()
   await page.getByText('save.tmp').first().waitFor()
+  await alignMessageList(page)
   await page.mouse.move(120, 700)
   await page.waitForTimeout(800)
   await shot(page, 'thread')
@@ -140,6 +163,7 @@ if (wanted('unread')) {
   await page.waitForTimeout(1200)
   await channel(page, 'text', 'general').click()
   await page.waitForTimeout(1800)
+  await alignMessageList(page)
   await page.mouse.move(120, 760)
   await shot(page, 'unread')
   await page.context().close()
@@ -164,6 +188,7 @@ if (wanted('webhooks')) {
   await page.goto(BASE + '/')
   const row = channel(page, 'text', 'dev-log')
   await row.click()
+  await alignMessageList(page)
   await row.click({ button: 'right' })
   await page.getByRole('menuitem', { name: /Webhooks/ }).click()
   await page.getByRole('dialog').waitFor()

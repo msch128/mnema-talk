@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { clockTimeOptions } from '../lib/time'
 import type { Message } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
@@ -176,7 +177,7 @@ async function handleFileUpload(e: Event) {
 function formatDate(dateStr?: string) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
-  return d.toLocaleDateString([locale.value], { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString([locale.value], { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleDateString([locale.value], { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString([locale.value], clockTimeOptions(locale.value))
 }
 </script>
 

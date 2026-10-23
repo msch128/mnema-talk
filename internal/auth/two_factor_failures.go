@@ -113,7 +113,7 @@ func (h *Handler) raiseAlert(ctx context.Context, u *User) {
 		if err != nil || st.Address == "" || !st.Verified {
 			return
 		}
-		_ = h.sendMail(bg, h.alertMail(st.Address, st.Locale, st.Username))
+		_ = h.sendMail(bg, h.alertMail(st.Address, mailLocale(st.Locale, ""), st.Username))
 	})
 }
 

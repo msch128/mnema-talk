@@ -12,10 +12,11 @@ import { previewText } from '../lib/replies'
 import { shortcodesForEditing } from '../lib/customEmoji'
 import { confirm } from '../lib/confirm'
 import { t, locale } from '../i18n'
+import { clockTimeOptions } from '../lib/time'
 
 export function formatTime(dateStr: string | null | undefined) {
   if (!dateStr) return ''
-  return new Date(dateStr).toLocaleTimeString([locale.value], { hour: '2-digit', minute: '2-digit' })
+  return new Date(dateStr).toLocaleTimeString([locale.value], clockTimeOptions(locale.value))
 }
 
 // Reaction pickers live in elements with this class; presses inside one
