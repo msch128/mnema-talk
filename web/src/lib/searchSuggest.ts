@@ -1,7 +1,8 @@
 // Autocomplete for the filter token being typed at the end of the search line.
 
 import type { FilterKey, SearchLookup } from './searchQuery'
-import { HAS_KINDS, quoteValue } from './searchQuery'
+import { HAS_KINDS, IS_KINDS, quoteValue } from './searchQuery'
+import { NEW_HAS_KINDS, filtersUnsupported } from './searchSupport'
 
 export interface SearchSuggestion {
   /** Value written after "key:". */
@@ -19,7 +20,7 @@ export interface SuggestionContext {
   items: SearchSuggestion[]
 }
 
-const OPEN = /(^|\s)(from|in|has|mentions):("([^"]*)|([^\s"]*))$/i
+const OPEN = /(^|\s)(from|in|has|is|mentions):("([^"]*)|([^\s"]*))$/i
 const MAX = 6
 
 function fold(s: string): string {
@@ -49,7 +50,13 @@ function channelItems(lookup: SearchLookup, partial: string): SearchSuggestion[]
 
 function hasItems(partial: string): SearchSuggestion[] {
   const p = partial.toLowerCase()
-  return HAS_KINDS.filter(k => k.startsWith(p)).map(k => ({ value: k, label: k }))
+  return HAS_KINDS.filter(k => k.startsWith(p) && !(filtersUnsupported.value && NEW_HAS_KINDS.includes(k))).map(k => ({ value: k, label: k }))
+}
+
+function isItems(partial: string): SearchSuggestion[] {
+  if (filtersUnsupported.value) return []
+  const p = partial.toLowerCase()
+  return IS_KINDS.filter(k => k.startsWith(p)).map(k => ({ value: k, label: k }))
 }
 
 /** Suggestions for the filter value under the end of the input, or null. */
@@ -61,6 +68,7 @@ export function suggestFor(input: string, lookup: SearchLookup): SuggestionConte
   const start = (m.index ?? 0) + (m[1]?.length ?? 0)
   let items: SearchSuggestion[]
   if (key === 'has') items = hasItems(partial)
+  else if (key === 'is') items = isItems(partial)
   else if (key === 'in') items = channelItems(lookup, partial)
   else items = memberItems(lookup, partial)
   // A fully typed value that is the only match needs no list.

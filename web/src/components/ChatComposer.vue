@@ -121,6 +121,7 @@ function handleKeyDown(e: KeyboardEvent) {
       <!-- Text Input -->
       <textarea
         ref="textAreaEl"
+        data-composer-input
         v-model="text"
         @keydown="handleKeyDown"
         @input="handleComposerInput(); assist.onInput(); slash.onInput()"

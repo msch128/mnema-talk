@@ -54,6 +54,7 @@ export const THIRD_PARTY = [
       { name: 'golang-jwt', license: 'MIT', url: 'https://github.com/golang-jwt/jwt' },
       { name: 'webpush-go (Web Push encryption and VAPID)', license: 'MIT', url: 'https://github.com/SherClockHolmes/webpush-go' },
       { name: 'google/uuid', license: 'BSD-3-Clause', url: 'https://github.com/google/uuid' },
+      { name: 'sigstore-go, go-containerregistry (update verification)', license: 'Apache-2.0', url: 'https://github.com/sigstore/sigstore-go' },
       { name: 'godotenv', license: 'MIT', url: 'https://github.com/joho/godotenv' },
       { name: 'Go x/ libraries', license: 'BSD-3-Clause', url: 'https://pkg.go.dev/golang.org/x' },
       { name: 'Tauri, reqwest, serde, url and Windows bindings (desktop probe)', license: 'MIT OR Apache-2.0; dependency inventory in mnema-talk-desktop THIRD_PARTY_NOTICES.md', url: 'https://github.com/msch128/mnema-talk-desktop/blob/main/THIRD_PARTY_NOTICES.md' }

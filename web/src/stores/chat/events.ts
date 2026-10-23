@@ -4,13 +4,14 @@ import { useEmojiStore } from '../emoji'
 import { useSavedStore } from '../saved'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
-import { noticeText } from '../../lib/moderation'
+import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../lib/moderation'
 import { snapshotToMap, applyPresenceUpdate } from '../../lib/presence'
 import { MAX_EPHEMERAL } from './types'
 import type { Cx } from './state'
 import { fetchChannels } from './channels'
 import { applyActivity, countMessageOf, fetchMembers, refreshMemberStats, updateUserEverywhere } from './members'
 import { applyToMessage, bumpReplyCount, countReply, insertMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
+import { onThreadFollowUpdated } from './threadFollow'
 import { messageMentionsMe, messageMentionsMeDirectly, triggerBrowserNotification } from './notifications'
 import { fetchReadState, isReadingActiveChannel } from './readState'
 import { notificationLevel, refreshNotifications } from './notifySettings'
@@ -169,7 +170,7 @@ const HANDLERS: Handlers = {
     fetchChannels(cx)
   },
   emoji_changed: () => { void useEmojiStore().load() },
-  thread_follow_updated: () => {},
+  thread_follow_updated: onThreadFollowUpdated,
   // The block list lives in the blocks store of the direct messages client (next package); nothing to refresh yet.
   block_updated: () => {},
   saved_updated: (_cx, p) => { if (p) useSavedStore().onUpdated(p) },
@@ -191,6 +192,10 @@ const HANDLERS: Handlers = {
   moderation_notice: (_cx, p) => {
     useToastStore().info(noticeText(p))
     usePermissionsStore().load()
+  },
+  // Signed out everywhere by a moderator: a calm note that stays long enough to read, no sanction.
+  kicked: (_cx, p) => {
+    useToastStore().info(kickedText(p?.reason ?? ''), { duration: KICKED_NOTICE_MS })
   },
   message_update: (cx, p) => {
     if (!p) return

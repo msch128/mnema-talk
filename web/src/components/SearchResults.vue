@@ -13,6 +13,7 @@ const props = defineProps<{
   loadingMore: boolean
   searching: boolean
   failed: boolean
+  filterUnsupported?: boolean
   hasCriteria: boolean
   selectedIndex: number
   terms: string[]
@@ -32,6 +33,7 @@ watch(() => props.selectedIndex, async () => {
 <template>
   <div id="search-results" ref="listEl" role="listbox" class="flex-1 overflow-y-auto p-2 space-y-1">
     <div v-if="!hasCriteria" class="py-12 text-center text-sm text-mnema-tertiary">{{ $t('chat.searchHint') }}</div>
+    <div v-else-if="failed && filterUnsupported" class="py-12 text-center text-sm text-mnema-tertiary" role="alert" data-testid="search-filter-unsupported">{{ $t('chat.searchFilterUnsupported') }}</div>
     <div v-else-if="failed" class="py-12 text-center text-sm text-mnema-tertiary" role="alert">{{ $t('chat.searchFailed') }}</div>
     <div v-else-if="!results.length && !searching" class="py-12 text-center text-sm text-mnema-tertiary">{{ $t('chat.noResults') }}</div>
 

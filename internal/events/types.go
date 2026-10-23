@@ -53,6 +53,9 @@ const (
 	DMCreated           = "dm_created"
 	DMMemberAdded       = "dm_member_added"
 	DMMemberRemoved     = "dm_member_removed"
+	// Kicked tells a member a moderator signed them out everywhere; their
+	// connection closes right after.
+	Kicked = "kicked"
 )
 
 // Client-to-server events.

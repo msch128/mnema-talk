@@ -1,18 +1,22 @@
-// Search syntax: free text plus from: in: has: before: after: mentions: filters.
+// Search syntax: free text plus from: in: has: is: before: after: mentions: filters.
 // Values with spaces are quoted (from:"Ada Lovelace"). This module is pure: it
 // parses and serializes the query line and maps parsed filters to request
 // parameters; resolving names to ids is done against the given members/channels.
 
-export const HAS_KINDS = ['file', 'image', 'video', 'link'] as const
+export const HAS_KINDS = ['file', 'image', 'video', 'link', 'poll', 'edit'] as const
 export type HasKind = typeof HAS_KINDS[number]
 
-export const FILTER_KEYS = ['from', 'in', 'has', 'before', 'after', 'mentions'] as const
+export const IS_KINDS = ['pinned'] as const
+export type IsKind = typeof IS_KINDS[number]
+
+export const FILTER_KEYS = ['from', 'in', 'has', 'is', 'before', 'after', 'mentions'] as const
 export type FilterKey = typeof FILTER_KEYS[number]
 
 export interface SearchFilters {
   from?: string
   in?: string
   has?: HasKind
+  is?: IsKind
   before?: string // YYYY-MM-DD
   after?: string // YYYY-MM-DD
   mentions?: string
@@ -35,6 +39,15 @@ function isFilterKey(key: string): key is FilterKey {
 
 function isHasKind(v: string): v is HasKind {
   return (HAS_KINDS as readonly string[]).includes(v)
+}
+
+function isIsKind(v: string): v is IsKind {
+  return (IS_KINDS as readonly string[]).includes(v)
+}
+
+/** The keys whose values are a fixed word, written in lower case. */
+function isWordKey(key: string): boolean {
+  return key === 'has' || key === 'is'
 }
 
 /** True for a real calendar date written as YYYY-MM-DD. */
@@ -95,12 +108,13 @@ function tokenize(input: string): Token[] {
 function validFilterValue(key: FilterKey, value: string): boolean {
   if (!value) return false
   if (key === 'has') return isHasKind(value)
+  if (key === 'is') return isIsKind(value)
   if (key === 'before' || key === 'after') return isSearchDate(value)
   return true
 }
 
 function setFilter(filters: SearchFilters, key: FilterKey, value: string) {
-  if (key === 'has') { if (isHasKind(value)) filters.has = value } else filters[key] = value
+  if (key === 'has') { if (isHasKind(value)) filters.has = value } else if (key === 'is') { if (isIsKind(value)) filters.is = value } else filters[key] = value
 }
 
 /** Parses a query line into free text and filters; later filters of a kind win. */
@@ -111,8 +125,9 @@ export function parseSearchQuery(input: string): ParsedSearch {
   for (const t of tokenize(input)) {
     if (!t.key) { words.push(t.value); continue }
     const key = t.key as FilterKey
-    if (!validFilterValue(key, key === 'has' ? t.value.toLowerCase() : t.value)) { invalid.push(t.raw); continue }
-    setFilter(filters, key, key === 'has' ? t.value.toLowerCase() : t.value)
+    const value = isWordKey(key) ? t.value.toLowerCase() : t.value
+    if (!validFilterValue(key, value)) { invalid.push(t.raw); continue }
+    setFilter(filters, key, value)
   }
   return { text: words.join(' '), filters, invalid }
 }
@@ -130,7 +145,7 @@ export function splitCommitted(input: string): SplitQuery {
   const rest: string[] = []
   tokens.forEach((t, i) => {
     const key = t.key as FilterKey
-    const value = key === 'has' ? t.value.toLowerCase() : t.value
+    const value = isWordKey(key) ? t.value.toLowerCase() : t.value
     const done = i < tokens.length - 1 || !endsOpen
     if (t.key && done && validFilterValue(key, value)) setFilter(filters, key, value)
     else rest.push(t.raw)
@@ -190,7 +205,7 @@ export function dayStart(date: string, offsetDays = 0): string {
   return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + offsetDays).toISOString()
 }
 
-const CRITERIA = ['q', 'channel_id', 'author_id', 'mentions', 'has', 'after', 'before_date']
+const CRITERIA = ['q', 'channel_id', 'author_id', 'mentions', 'has', 'is', 'after', 'before_date']
 
 /** Whether the parameters hold at least one criterion the server accepts alone. */
 export function isSearchable(params: URLSearchParams): boolean {
@@ -220,6 +235,7 @@ export function buildSearchParams(p: ParsedSearch, lookup: SearchLookup, extra: 
     if (id) params.set('channel_id', id); else unresolved.push('in')
   }
   if (filters.has) params.set('has', filters.has)
+  if (filters.is) params.set('is', filters.is)
   if (filters.after) params.set('after', dayStart(filters.after))
   if (filters.before) params.set('before_date', dayStart(filters.before, 1))
   return { params, unresolved }

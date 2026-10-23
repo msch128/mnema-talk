@@ -127,7 +127,8 @@ onMounted(load)
           <tr v-for="token in tokens" :key="token.id" class="border-t border-mnema-hairline" data-testid="bot-token">
             <td class="px-3 py-2 text-mnema-text">{{ token.name || '-' }}</td>
             <td class="px-3 py-2 font-mono text-xs text-mnema-muted">...{{ token.hint }}</td>
-            <td class="px-3 py-2"><span :class="token.state === 'active' ? 'text-mnema-accent' : 'text-mnema-tertiary'" data-testid="bot-token-state">{{ $t(`bots.tokens.state.${token.state}`) }}</span></td>
+            <td class="px-3 py-2"><span :class="token.state === 'active' ? 'text-mnema-accent' : 'text-mnema-tertiary'" data-testid="bot-token-state">{{ $t(`bots.tokens.state.${token.state}`) }}</span>
+              <span v-if="token.issuer_binding" class="ml-2 rounded-full border border-mnema-hairline px-2 py-0.5 text-xs text-mnema-tertiary" :title="$t(`bots.tokens.binding.${token.issuer_binding}Hint`)" data-testid="bot-token-binding">{{ $t(`bots.tokens.binding.${token.issuer_binding}`) }}</span></td>
             <td class="px-3 py-2 text-mnema-muted">{{ day(token.expires_at) }}</td>
             <td class="px-3 py-2 text-mnema-muted">{{ token.last_used_at ? day(token.last_used_at) : $t('bots.tokens.never') }}</td>
             <td class="px-3 py-2">
