@@ -171,6 +171,10 @@ const HANDLERS: Handlers = {
   thread_follow_updated: () => {},
   // The block list lives in the blocks store of the direct messages client (next package); nothing to refresh yet.
   block_updated: () => {},
+  // The direct messages client (next package) keeps these lists; nothing to refresh yet.
+  dm_created: () => {},
+  dm_member_added: () => {},
+  dm_member_removed: () => {},
   roles_changed: cx => {
     const permissions = usePermissionsStore()
     permissions.loadRoles()

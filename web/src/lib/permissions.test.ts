@@ -23,7 +23,7 @@ describe('permission bits', () => {
   })
 
   it('default @everyone to what members could always do', () => {
-    expect(DEFAULT_EVERYONE).toBe(990)
+    expect(DEFAULT_EVERYONE).toBe(990 + 4194304) // plus send_direct_messages
     for (const key of ['view_channel', 'send_messages', 'attach_files', 'add_reactions', 'mention_everyone', 'connect', 'speak', 'video'] as const) {
       expect(hasPermission(DEFAULT_EVERYONE, key)).toBe(true)
     }

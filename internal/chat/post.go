@@ -2,7 +2,6 @@ package chat
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -57,10 +56,8 @@ func InsertMessage(ctx context.Context, p *db.Pool, online OnlineSource, nm NewM
 // insertMessageTx stores the message, its mentions and, for a thread reply,
 // the follows it implies.
 func insertMessageTx(ctx context.Context, tx pgx.Tx, online OnlineSource, nm NewMessage) (uuid.UUID, error) {
-	if nm.WebhookID == nil && !slowModeExempt(ctx) {
-		if err := enforceSlowMode(ctx, tx, nm.ChannelID, nm.UserID); err != nil {
-			return uuid.Nil, err
-		}
+	if err := gatePost(ctx, tx, nm); err != nil {
+		return uuid.Nil, err
 	}
 	id, err := CreateMessage(ctx, tx, nm)
 	if err != nil {
@@ -96,14 +93,7 @@ func slowModeExempt(ctx context.Context) bool {
 // not reset the wait, and the upsert runs in the insert's transaction: its row
 // lock makes a concurrent post wait and then see the new time, so two requests
 // cannot both slip through the same gap.
-func enforceSlowMode(ctx context.Context, tx pgx.Tx, channelID, userID uuid.UUID) error {
-	var seconds int
-	if err := tx.QueryRow(ctx, `SELECT slow_mode_seconds FROM channels WHERE id = $1`, channelID).Scan(&seconds); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return errChannelNotFound
-		}
-		return fmt.Errorf("load slow mode: %w", err)
-	}
+func enforceSlowMode(ctx context.Context, tx pgx.Tx, channelID, userID uuid.UUID, seconds int) error {
 	if seconds == 0 {
 		return nil
 	}

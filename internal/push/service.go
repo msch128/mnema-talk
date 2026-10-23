@@ -190,7 +190,7 @@ func (s *Service) handle(ctx context.Context, msg chat.Message) {
 		if followers != nil && !followers[c.userID] && !addressed(msg, c.userID, byName) {
 			continue
 		}
-		if canView(snap, c.userID, msg.ChannelID) && c.wants(mentions(msg, c.userID), addressed(msg, c.userID, byName)) {
+		if canView(snap, c.userID, msg.ChannelID) && c.wants(c.mention(msg), addressed(msg, c.userID, byName)) {
 			chosen = append(chosen, c)
 		}
 	}
@@ -217,7 +217,7 @@ func (s *Service) notify(ctx context.Context, msg chat.Message, chosen []candida
 			notice: Notice{
 				AuthorID: msg.UserID, ChannelID: msg.ChannelID, ChannelName: c.channelName, MessageID: msg.ID, ParentID: msg.ParentID,
 				Sender: sender(msg), Content: msg.Content, HasFiles: len(msg.Attachments) > 0 || len(msg.Embeds) > 0, Poll: msg.Poll != nil,
-				Mention: mentions(msg, c.userID), Addressed: addressed(msg, c.userID, byName), Count: 1, At: s.Now(),
+				DM: c.dm, Mention: c.mention(msg), Addressed: addressed(msg, c.userID, byName), Count: 1, At: s.Now(),
 			},
 		}
 		if now := s.co.add(key{c.userID, msg.ChannelID}, h, s.flush); now != nil {
@@ -281,8 +281,8 @@ func (s *Service) enqueue(h held, targets []target) {
 		slog.Warn("push: encode payload", "err", err)
 		return
 	}
-	opts := Options{TTL: messageTTL, Urgent: h.notice.Mention, Topic: topic(h.notice.ChannelID, h.notice.Mention), Timeout: sendTimeout}
-	if h.notice.Mention {
+	opts := Options{TTL: messageTTL, Urgent: h.notice.Mention || h.notice.DM, Topic: topic(h.notice.ChannelID, h.notice.Mention), Timeout: sendTimeout}
+	if h.notice.Mention || h.notice.DM {
 		opts.TTL = mentionTTL
 	}
 	for _, t := range targets {

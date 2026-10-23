@@ -20,6 +20,10 @@ type Client struct {
 	User auth.User
 
 	tokenVersion int
+	// dmAware is set by connections that asked for direct message events
+	// (/api/ws?dm=1). A bundle from before direct messages does not, and
+	// would not know what to do with the messages of a conversation.
+	dmAware bool
 	// sessionID and sessionExp identify the browser session behind the
 	// connection (empty for native connections and in-memory clients).
 	sessionID  string

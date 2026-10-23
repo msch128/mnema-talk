@@ -45,11 +45,11 @@ const (
 var texts = map[string]map[string]string{
 	"de": {
 		"new": "Neue Nachricht", "mention": "Hat dich erwähnt", "attachment": "Anhang",
-		"group": "%d neue Nachrichten", "poll": "Umfrage", "spoiler": "Spoiler", "test": "Push funktioniert auf diesem Gerät.",
+		"dm": "Direktnachricht", "group": "%d neue Nachrichten", "poll": "Umfrage", "spoiler": "Spoiler", "test": "Push funktioniert auf diesem Gerät.",
 	},
 	"en": {
 		"new": "New message", "mention": "Mentioned you", "attachment": "Attachment",
-		"group": "%d new messages", "poll": "Poll", "spoiler": "Spoiler", "test": "Push works on this device.",
+		"dm": "Direct message", "group": "%d new messages", "poll": "Poll", "spoiler": "Spoiler", "test": "Push works on this device.",
 	},
 }
 
@@ -72,7 +72,10 @@ type Notice struct {
 	Content     string
 	HasFiles    bool
 	// Poll is set when the message is a poll; its content is the question.
-	Poll    bool
+	Poll bool
+	// DM is set for a message of a direct message conversation: the push
+	// shows the sender and no channel name.
+	DM      bool
 	Mention bool
 	// Addressed is set when the message is meant for the member itself (see addressed); it decides about a mute.
 	Addressed bool
@@ -91,6 +94,9 @@ func build(n Notice, locale string, preview bool) Payload {
 	}
 	sender, channel := clean(n.Sender, maxNameRunes), clean(n.ChannelName, maxNameRunes)
 	line := previewLine(n, locale, preview)
+	if n.DM {
+		return buildDM(p, n, sender, locale, line, preview)
+	}
 	if n.Count > 1 {
 		p.Title = "#" + channel
 		p.Body = fmt.Sprintf(text(locale, "group"), n.Count)
@@ -104,11 +110,27 @@ func build(n Notice, locale string, preview bool) Payload {
 	return p
 }
 
+// buildDM composes the push of a direct message: the sender's name, never a
+// channel; a burst from possibly several people is titled by the kind of
+// conversation.
+func buildDM(p Payload, n Notice, sender, locale, line string, preview bool) Payload {
+	if n.Count > 1 {
+		p.Title = text(locale, "dm")
+		p.Body = fmt.Sprintf(text(locale, "group"), n.Count)
+		if preview {
+			p.Body += "\n" + sender + ": " + line
+		}
+		return p
+	}
+	p.Title, p.Body = sender, line
+	return p
+}
+
 // previewLine is the text of the latest message, or a neutral line when the
 // text must not be shown.
 func previewLine(n Notice, locale string, preview bool) string {
 	switch {
-	case !preview && n.Mention:
+	case !preview && n.Mention && !n.DM:
 		return text(locale, "mention")
 	case !preview:
 		return text(locale, "new")

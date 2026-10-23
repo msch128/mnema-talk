@@ -76,10 +76,23 @@ func (b *searchBuilder) addTerms(terms []string) {
 	}
 }
 
-func (b *searchBuilder) addFilters(q SearchQuery) error {
+// addScope limits the search to what the caller may read: channels they can
+// view, or the conversations they are in. The conversation rule is a
+// membership test in SQL, whatever the permission state says, so a mistake
+// elsewhere cannot make a conversation searchable by anybody else.
+func (b *searchBuilder) addScope(q SearchQuery) {
+	if q.Conversations {
+		b.where = append(b.where, "m.in_dm AND EXISTS (SELECT 1 FROM dm_members dm WHERE dm.channel_id = m.channel_id AND dm.user_id = "+b.addArg(q.Member)+")")
+		return
+	}
+	b.where = append(b.where, "NOT m.in_dm")
 	if q.Visible != nil {
 		b.where = append(b.where, "m.channel_id = ANY("+b.addArg(q.Visible)+"::uuid[])")
 	}
+}
+
+func (b *searchBuilder) addFilters(q SearchQuery) error {
+	b.addScope(q)
 	if q.ChannelID != nil {
 		b.where = append(b.where, "m.channel_id = "+b.addArg(*q.ChannelID))
 	}

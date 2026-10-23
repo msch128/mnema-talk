@@ -196,5 +196,5 @@ func (h *Hub) channelKnown(ctx context.Context, snap *perm.Snapshot, ch uuid.UUI
 		_, err := chat.LoadChannel(ctx, h.DB, ch)
 		return err == nil
 	}
-	return snap.KnowsChannel(ch)
+	return snap.KnowsChannel(ch) || snap.KnowsDM(ch)
 }

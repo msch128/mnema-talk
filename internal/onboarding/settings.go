@@ -33,6 +33,10 @@ type Settings struct {
 	// StartChannelID is the text channel new members land in; null for the
 	// first channel they can see.
 	StartChannelID *uuid.UUID `json:"start_channel_id" format:"uuid" extensions:"x-nullable"`
+	// DirectMessagesEnabled is the community's switch for direct messages
+	// (default on). Off: existing conversations stay readable and members
+	// can neither start new ones nor write in them.
+	DirectMessagesEnabled bool `json:"direct_messages_enabled"`
 }
 
 // SettingsInput is the body of PUT /api/admin/onboarding; it replaces the
@@ -47,13 +51,16 @@ type SettingsInput struct {
 	// written the version is raised on its own. Ignored while the rules are
 	// empty.
 	RequireReacceptance bool `json:"require_reacceptance" binding:"optional"`
+	// DirectMessagesEnabled switches direct messages on or off for the
+	// community; left out, it stays as it is.
+	DirectMessagesEnabled *bool `json:"direct_messages_enabled" binding:"optional" extensions:"x-nullable"`
 }
 
-const settingsColumns = `community_name, welcome_text, rules_text, rules_version, start_channel_id`
+const settingsColumns = `community_name, welcome_text, rules_text, rules_version, start_channel_id, direct_messages_enabled`
 
 func scanSettings(row pgx.Row) (Settings, error) {
 	var s Settings
-	err := row.Scan(&s.CommunityName, &s.WelcomeText, &s.RulesText, &s.RulesVersion, &s.StartChannelID)
+	err := row.Scan(&s.CommunityName, &s.WelcomeText, &s.RulesText, &s.RulesVersion, &s.StartChannelID, &s.DirectMessagesEnabled)
 	return s, err
 }
 
@@ -84,7 +91,7 @@ func (h *Handler) getSettings(w http.ResponseWriter, r *http.Request) error {
 // putSettings handles PUT /api/admin/onboarding.
 //
 // @Summary Set the onboarding settings
-// @Description Owner and Administrators only; audited. Replaces the community name, welcome text, rules and start channel. Writing rules for the first time, or `require_reacceptance`, raises the rules version: members then have to accept again before they may post, react, upload or join a Talk (the Owner and bots are exempt). Empty rules enforce nothing. Broadcasts permissions_changed.
+// @Description Owner and Administrators only; audited. Replaces the community name, welcome text, rules and start channel; direct_messages_enabled, when given, switches direct messages for the community on or off (existing conversations stay readable when off). Writing rules for the first time, or `require_reacceptance`, raises the rules version: members then have to accept again before they may post, react, upload or join a Talk (the Owner and bots are exempt). Empty rules enforce nothing. Broadcasts permissions_changed.
 // @ID setOnboardingSettings
 // @Tags Onboarding
 // @Accept json
@@ -172,8 +179,9 @@ func applySettings(ctx context.Context, tx pgx.Tx, in SettingsInput) (Settings, 
 		return Settings{}, fmt.Errorf("lock onboarding settings: %w", err)
 	}
 	row := tx.QueryRow(ctx, `UPDATE instance_settings SET community_name = $1, welcome_text = $2, rules_text = $3,
-		rules_version = $4, start_channel_id = $5, updated_at = NOW() RETURNING `+settingsColumns,
-		in.CommunityName, in.WelcomeText, in.RulesText, nextRulesVersion(current, in), in.StartChannelID)
+		rules_version = $4, start_channel_id = $5, direct_messages_enabled = COALESCE($6, direct_messages_enabled), updated_at = NOW()
+		RETURNING `+settingsColumns,
+		in.CommunityName, in.WelcomeText, in.RulesText, nextRulesVersion(current, in), in.StartChannelID, in.DirectMessagesEnabled)
 	s, err := scanSettings(row)
 	if err != nil {
 		return Settings{}, fmt.Errorf("write onboarding settings: %w", err)

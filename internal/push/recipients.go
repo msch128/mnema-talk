@@ -15,11 +15,15 @@ import (
 // candidate is an account with at least one subscription and what decides
 // whether this message reaches it.
 type candidate struct {
-	userID       uuid.UUID
-	locale       string
-	preview      bool
-	presence     string
-	channelName  string
+	userID      uuid.UUID
+	locale      string
+	preview     bool
+	presence    string
+	channelName string
+	// dm is set when the channel is a direct message conversation: every
+	// message in it is meant for the member (not just a mention), and a
+	// mute still silences it.
+	dm           bool
 	channelLevel chat.NotifySetting
 	categoryLvl  chat.NotifySetting
 	// now is the database's clock, the one the stored mute ends use.
@@ -31,7 +35,7 @@ type candidate struct {
 // A member who blocked the author is never a candidate. A non-nil only limits the result to that account.
 func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.UUID, only *uuid.UUID) ([]candidate, error) {
 	rows, err := q.Query(ctx, `
-		SELECT u.id, u.locale, u.push_preview, u.presence, c.name,
+		SELECT u.id, u.locale, u.push_preview, u.presence, c.name, c.type = 'dm',
 		       cr.notify_level, cr.muted_until, cn.notify_level, cn.muted_until, NOW()
 		FROM users u
 		JOIN channels c ON c.id = $1
@@ -48,7 +52,7 @@ func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.
 	for rows.Next() {
 		var c candidate
 		var chLevel, catLevel *string
-		if err := rows.Scan(&c.userID, &c.locale, &c.preview, &c.presence, &c.channelName,
+		if err := rows.Scan(&c.userID, &c.locale, &c.preview, &c.presence, &c.channelName, &c.dm,
 			&chLevel, &c.channelLevel.MutedUntil, &catLevel, &c.categoryLvl.MutedUntil, &c.now); err != nil {
 			return nil, fmt.Errorf("load push candidates: %w", err)
 		}
@@ -63,6 +67,12 @@ func levelOf(stored *string) chat.NotifyLevel {
 		return chat.NotifyInherit
 	}
 	return chat.NotifyLevel(*stored)
+}
+
+// mention reports whether msg counts as addressed to the member for the
+// notification level: a mention or reply, or any message of a conversation.
+func (c candidate) mention(msg chat.Message) bool {
+	return c.dm || mentions(msg, c.userID)
 }
 
 // quiet reports a presence that silences every notification, like the page does.
