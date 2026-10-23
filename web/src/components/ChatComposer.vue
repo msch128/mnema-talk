@@ -130,7 +130,6 @@ function handleKeyDown(e: KeyboardEvent) {
         @keyup.right="assist.onInput"
         @blur="assist.close(); slash.close()"
         aria-autocomplete="list"
-        :aria-expanded="assist.open.value ? 'true' : 'false'"
         :aria-controls="assist.open.value ? 'chat-mentions' : undefined"
         :aria-activedescendant="assist.open.value ? `chat-mentions-${assist.active.value}` : undefined"
         :placeholder="placeholder"
