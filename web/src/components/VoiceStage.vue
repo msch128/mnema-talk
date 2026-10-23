@@ -258,6 +258,8 @@ const { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, on
       :connected="isConnectedHere"
       :show-chat="showChat"
       :chat-unread="chatUnread"
+      :can-join="!!shownChannelId"
+      @join="join"
       @update:show-chat="emit('update:showChat', $event)"
     />
 

@@ -222,6 +222,19 @@ describe('Sidebar basics', () => {
     expect(voice.activeView).toBe('voice')
   })
 
+  it('opens a Talk\'s chat from its row without joining the Talk', async () => {
+    await mountSidebar({ role: 'user' })
+    const button = rowOf('lounge').get('[data-testid="talk-open-chat"]')
+    expect(button.attributes('aria-label')).toBe('Chat öffnen')
+    expect(wrapper.find('[data-channel-type="text"] [data-testid="talk-open-chat"]').exists()).toBe(false)
+    await button.trigger('click')
+    await flushPromises()
+    expect(window.location.pathname).toBe('/v/lounge/chat')
+    expect(joinVoiceChannel).not.toHaveBeenCalled()
+    expect(voice.currentChannelId).toBeNull()
+    expect(confirmMock).not.toHaveBeenCalled()
+  })
+
   it('shows unread and mention badges and the people in a voice channel', async () => {
     await mountSidebar({ role: 'user' })
     chat.readStates = { random: readStateFixture({ unread_count: 3, mention_count: 0 }), welcome: readStateFixture({ unread_count: 5, mention_count: 2 }) }
@@ -517,7 +530,7 @@ describe('Sidebar administrative lifecycle and navigation', () => {
     await rowOf('general').find('button').trigger('click'); await flush()
     expect(deleteChannel).toHaveBeenCalledWith('general')
     expect(toasts.toasts.at(-1)?.text).toBe('Kanal gelöscht')
-    await rowOf('lounge').find('button').trigger('click'); await flush()
+    await rowOf('lounge').find('[aria-label="Talk löschen"]').trigger('click'); await flush()
     expect(confirmMock.mock.calls.at(-1)?.[0].title).toContain('Talk')
     deleteChannel.mockRejectedValueOnce(new Error('offline')).mockRejectedValueOnce(new Error(''))
     await rowOf('general').find('button').trigger('click'); await flush(); expect(toasts.toasts.at(-1)?.text).toBe('offline')
