@@ -4,7 +4,7 @@ import { useEmojiStore } from '../emoji'
 import { useSavedStore } from '../saved'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
-import { noticeText } from '../../lib/moderation'
+import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../lib/moderation'
 import { snapshotToMap, applyPresenceUpdate } from '../../lib/presence'
 import { MAX_EPHEMERAL } from './types'
 import type { Cx } from './state'
@@ -191,6 +191,10 @@ const HANDLERS: Handlers = {
   moderation_notice: (_cx, p) => {
     useToastStore().info(noticeText(p))
     usePermissionsStore().load()
+  },
+  // Signed out everywhere by a moderator: a calm note that stays long enough to read, no sanction.
+  kicked: (_cx, p) => {
+    useToastStore().info(kickedText(p?.reason ?? ''), { duration: KICKED_NOTICE_MS })
   },
   message_update: (cx, p) => {
     if (!p) return

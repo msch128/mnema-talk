@@ -115,12 +115,25 @@ func (h *Handler) timeoutUser(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
+	state, err := h.TimeoutMember(r, id, req)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, state)
+	return nil
+}
+
+// TimeoutMember puts a member in timeout. The REST route and the /timeout
+// slash command both run it, so the validation, the role hierarchy and what
+// the member and the live clients are told are the same; the caller has
+// checked the Timeout members permission (RequirePermission).
+func (h *Handler) TimeoutMember(r *http.Request, id uuid.UUID, req TimeoutRequest) (TimeoutState, error) {
 	if req.DurationSeconds < MinTimeoutSeconds || req.DurationSeconds > MaxTimeoutSeconds {
-		return httpx.ErrInvalidInput(fmt.Sprintf("duration_seconds must be between %d and %d", MinTimeoutSeconds, MaxTimeoutSeconds))
+		return TimeoutState{}, httpx.ErrInvalidInput(fmt.Sprintf("duration_seconds must be between %d and %d", MinTimeoutSeconds, MaxTimeoutSeconds))
 	}
 	reason, err := cleanReason(req.Reason)
 	if err != nil {
-		return err
+		return TimeoutState{}, err
 	}
 	actor := UserFrom(r.Context())
 	var until time.Time
@@ -130,15 +143,14 @@ func (h *Handler) timeoutUser(w http.ResponseWriter, r *http.Request) error {
 			WHERE id = $1 RETURNING timeout_until`, id, float64(req.DurationSeconds), reason, actor.ID).Scan(&until)
 	})
 	if err != nil {
-		return err
+		return TimeoutState{}, err
 	}
 	// Rebuild the permission state: the member's rights shrink now, and a
 	// Talk they are in ends for them.
 	h.Perms.Changed([]uuid.UUID{id})
 	h.notify(id, notice{Kind: "timeout", Until: &until, Seconds: req.DurationSeconds, Reason: reason})
 	h.Events.Broadcast(events.MemberTimeout, map[string]any{"id": id, "timeout_until": until})
-	httpx.WriteJSON(w, http.StatusOK, TimeoutState{UserID: id, TimeoutUntil: until, Reason: reason})
-	return nil
+	return TimeoutState{UserID: id, TimeoutUntil: until, Reason: reason}, nil
 }
 
 // untimeoutUser handles DELETE /api/admin/users/{id}/timeout.

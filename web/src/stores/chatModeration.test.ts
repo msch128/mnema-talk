@@ -39,4 +39,13 @@ describe('moderation events', () => {
     expect(useToastStore().toasts.map(t => t.text)).toContain('You were timed out for 1 h: spam')
     expect(load).toHaveBeenCalledTimes(1)
   })
+
+  it('shows a calm note when a moderator kicked the member', () => {
+    const chat = useChatStore()
+    chat.handleWSEvent({ type: 'kicked', payload: { reason: 'take a break' } })
+    const [note] = useToastStore().toasts
+    expect(note?.text).toContain('signed out by a moderator')
+    expect(note?.text).toContain('take a break')
+    expect(note?.type).toBe('info')
+  })
 })

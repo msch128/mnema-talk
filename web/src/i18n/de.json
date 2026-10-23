@@ -1258,6 +1258,7 @@
     "missing": "Fülle zuerst „{name}“ aus.",
     "notANumber": "„{name}“ braucht eine ganze Zahl.",
     "botOffline": "{bot} ist gerade nicht verbunden.",
+    "done": "Erledigt.",
     "failed": "Der Befehl konnte nicht ausgeführt werden. Versuche es noch einmal.",
     "privateFrom": "Private Antwort von {bot}",
     "bot": "Bot",
@@ -1265,6 +1266,78 @@
     "dismiss": "Ausblenden",
     "builtinLabel": "Eingebaut",
     "builtin": {
+      "msg": {
+        "description": "Schicke eine Direktnachricht",
+        "options": {
+          "member": "Wer die Nachricht bekommt",
+          "text": "Deine Nachricht"
+        }
+      },
+      "me": {
+        "description": "Beschreibe, was du gerade tust",
+        "options": {
+          "text": "Was du gerade tust"
+        }
+      },
+      "shrug": {
+        "description": "Hänge ein Schulterzucken an deine Nachricht",
+        "options": {
+          "text": "Deine Nachricht"
+        }
+      },
+      "tableflip": {
+        "description": "Wirf einen Tisch um",
+        "options": {
+          "text": "Deine Nachricht"
+        }
+      },
+      "unflip": {
+        "description": "Stell den Tisch wieder hin",
+        "options": {
+          "text": "Deine Nachricht"
+        }
+      },
+      "spoiler": {
+        "description": "Schreibe eine Nachricht, die verborgen bleibt, bis jemand sie anklickt",
+        "options": {
+          "text": "Der Text, der verborgen werden soll"
+        }
+      },
+      "nick": {
+        "description": "Ändere deinen Anzeigenamen",
+        "options": {
+          "name": "Dein neuer Anzeigename (höchstens 24 Zeichen)"
+        }
+      },
+      "thread": {
+        "description": "Starte einen Thread an deiner letzten Nachricht",
+        "options": {
+          "title": "Worum es im Thread geht"
+        }
+      },
+      "timeout": {
+        "description": "Schicke ein Mitglied in eine Auszeit",
+        "options": {
+          "member": "Wer die Auszeit bekommt",
+          "duration": "Wie lange, zum Beispiel 10m, 2h oder 3d",
+          "reason": "Wird dem Mitglied angezeigt (höchstens 200 Zeichen)"
+        }
+      },
+      "ban": {
+        "description": "Sperre ein Mitglied",
+        "options": {
+          "member": "Wer gesperrt wird",
+          "duration": "Wie lange, zum Beispiel 7d; leer lassen für unbefristet",
+          "reason": "Wird dem Mitglied angezeigt (höchstens 200 Zeichen)"
+        }
+      },
+      "kick": {
+        "description": "Melde ein Mitglied überall ab und wirf es aus seinem Talk",
+        "options": {
+          "member": "Wer rausgeworfen wird",
+          "reason": "Wird dem Mitglied angezeigt (höchstens 200 Zeichen)"
+        }
+      },
       "poll": {
         "description": "Stelle dem Kanal eine Frage",
         "options": {
@@ -1568,6 +1641,10 @@
       "name": "Direktnachrichten senden",
       "desc": "Direktnachrichten beginnen und darin schreiben. Zum Lesen einer Direktnachricht, an der du beteiligt bist, wird sie nie gebraucht."
     },
+    "kick_members": {
+      "name": "Mitglieder rauswerfen",
+      "desc": "Mitglieder unterhalb deiner höchsten Rolle überall abmelden und aus ihrem Talk werfen. Sie können sich sofort wieder anmelden."
+    },
     "groups": {
       "general": "Allgemein",
       "text": "Text",
@@ -1719,6 +1796,7 @@
         "timeout_remove": "Auszeit beendet",
         "ban": "Mitglied gesperrt",
         "unban": "Mitglied entsperrt",
+        "kick": "Mitglied rausgeworfen",
         "ban_expired": "Sperre abgelaufen",
         "bulk_delete": "Nachrichten gesammelt gelöscht"
       },
@@ -1918,6 +1996,8 @@
     "noticeTimeout": "Du wurdest für {duration} in Auszeit geschickt",
     "noticeTimeoutRemoved": "Deine Auszeit wurde beendet.",
     "noticeBan": "Du wurdest gesperrt",
+    "noticeKicked": "Du wurdest von einer Moderation abgemeldet. Du kannst dich sofort wieder anmelden.",
+    "noticeKickedReason": "Du wurdest von einer Moderation abgemeldet: {reason}. Du kannst dich sofort wieder anmelden.",
     "bansTitle": "Sperren",
     "noBans": "Niemand ist gesperrt.",
     "bannedUntil": "Gesperrt bis {date}",

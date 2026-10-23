@@ -43,7 +43,8 @@
     "SavedUpdated": "saved_updated",
     "DMCreated": "dm_created",
     "DMMemberAdded": "dm_member_added",
-    "DMMemberRemoved": "dm_member_removed"
+    "DMMemberRemoved": "dm_member_removed",
+    "Kicked": "kicked"
   },
   "client": {
     "ClientPing": "ping",

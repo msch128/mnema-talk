@@ -17,7 +17,8 @@ the target out of reach between the check and the write.
 |---|---|---|
 | Timeout, end a timeout | *Timeout members* | `POST` / `DELETE /api/admin/users/{id}/timeout` |
 | Ban, unban, list bans | *Ban members* | `POST` / `DELETE /api/admin/users/{id}/ban`, `GET /api/admin/bans` |
-| Kick from the server | *Manage members* | The existing **Disable**: ends sessions and blocks sign-in until **Enable**. No record beyond the audit log |
+| Disable an account | *Manage members* | **Disable**: ends sessions and blocks sign-in until **Enable**. No record beyond the audit log |
+| Kick | *Kick members* | `/kick` in the composer, see [Kicks](#kicks) |
 | Remove from a Talk | *Disconnect members* | The existing kick from a Talk |
 
 ## Timeouts
@@ -70,6 +71,25 @@ A banned member who signs in with the right password sees the reason and the end
 of the ban; with a wrong password the answer does not reveal the ban. The
 admin console has a **Bans** tab (for *Ban members*) listing active bans with
 reason, moderator and end, and **Unban**.
+
+## Kicks
+
+A kick sends a member away for now and leaves no sanction. It is
+the "remove now, may come back" action: every session of the member ends (browser, desktop client and
+push devices), their live connections close, and they leave the Talk they are
+in. They can sign in again at once; nothing is stored against the account
+(compare *Disable*, which blocks sign-in, and *Ban*). The member first receives
+a `kicked` WebSocket event (`{"reason": "..."}`) and the web app shows a calm
+note; the connection closes a moment later.
+
+The permission is *Kick members* (bit `1 << 23`). It is off for @everyone and
+for every seeded role, so by default only the Owner and Administrators can
+kick. The role hierarchy is enforced like for a ban: a highest role strictly
+above the member's, never the Owner, never oneself. The only way to kick is
+the built-in `/kick @member [reason]` command (`POST
+/api/channels/{id}/interactions`, [bots](bots.md#built-in-commands-and-polls)):
+the server checks the permission again inside the command and writes the audit
+entry `moderation.kick` (details: `reason`, `via: slash`).
 
 ## Slow mode
 
