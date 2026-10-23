@@ -4,6 +4,7 @@ import type { MentionSuggestion } from '../lib/mentionQuery'
 // The @mention list above a composer. Mouse picks; the keyboard is handled
 // by the composer (useComposerAssist) so focus stays in the textarea.
 import { Users, Radio, AtSign } from '@lucide/vue'
+import EmojiGlyph from './EmojiGlyph.vue'
 import UserAvatar from './UserAvatar.vue'
 import BotBadge from './BotBadge.vue'
 import { useChatStore } from '../stores/chat'
@@ -26,11 +27,11 @@ const chatStore = useChatStore()
     :aria-label="$t('mention.listLabel')"
     class="absolute bottom-full left-0 right-0 z-30 mb-1.5 max-h-72 overflow-y-auto rounded-[10px] bg-mnema-elevated p-1.5 shadow-[inset_0_0_0_1px_#2B2F2D,0_12px_32px_rgba(0,0,0,0.5)]"
   >
-    <div class="px-2 pb-1 pt-0.5 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('mention.title') }}</div>
+    <div class="px-2 pb-1 pt-0.5 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ items[0]?.emoji ? $t('emoji.suggestTitle') : $t('mention.title') }}</div>
     <div
       v-for="(item, i) in items"
       :id="`${id}-${i}`"
-      :key="`${item.group ? 'g' : item.role ? 'r' : 'u'}:${item.username}`"
+      :key="`${item.group ? 'g' : item.role ? 'r' : item.emoji ? 'e' : 'u'}:${item.username}`"
       role="option"
       :aria-selected="i === active ? 'true' : 'false'"
       :data-mention-option="item.username"
@@ -48,6 +49,10 @@ const chatStore = useChatStore()
         </span>
         <span class="font-semibold text-mnema-text">@{{ item.username }}</span>
         <span class="truncate text-xs text-mnema-tertiary">{{ $t(`mention.${item.username}Hint`) }}</span>
+      </template>
+      <template v-else-if="item.emoji">
+        <EmojiGlyph :value="`<:${item.emoji.name}:${item.emoji.id}>`" class="!h-6 !w-6" />
+        <span class="truncate font-semibold text-mnema-text">:{{ item.emoji.name }}:</span>
       </template>
       <template v-else-if="item.role">
         <span class="flex h-6 w-6 items-center justify-center rounded-full bg-mnema-band text-mnema-mint">

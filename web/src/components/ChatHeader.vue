@@ -7,6 +7,7 @@ import { useChatStore } from '../stores/chat'
 import { useNotificationHint } from '../composables/useNotificationHint'
 import { durationLabel } from '../lib/moderation'
 import MentionsInbox from './MentionsInbox.vue'
+import PinnedMessages from './PinnedMessages.vue'
 import TipBar from './TipBar.vue'
 import NavDrawerButton from './NavDrawerButton.vue'
 import { openSearch } from '../lib/globalSearch'
@@ -68,6 +69,7 @@ function openNotificationMenu(e: MouseEvent) {
     <!-- Right: Badges & member list toggle -->
     <div class="flex items-center gap-2 max-md:gap-0 flex-shrink-0">
       <MentionsInbox v-if="!panel" />
+      <PinnedMessages v-if="chatStore.activeChannel" />
       <button
         v-if="chatStore.activeChannel"
         type="button"

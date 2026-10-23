@@ -129,6 +129,7 @@ the own role is a convenient place for "this bot may post in #alerts").
 | View audit log | Read the audit log ([moderation](moderation.md)) | no |
 | Timeout members | Silence members below your highest role for a while ([moderation](moderation.md)) | no |
 | Ban members | Ban and unban members below your highest role, list the bans | no |
+| Manage emoji | Upload, rename and delete the custom emoji of the community (bit `1 << 20`) | no |
 
 The bit values are stored in the database and sent over the API; they never
 change meaning (`perm.Catalog` and its test freeze them).

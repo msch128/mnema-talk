@@ -89,6 +89,17 @@ Holders of *Manage messages* in a channel can:
 
 - **Pin and unpin** a message (`PUT` / `DELETE
   /api/channels/{channelID}/messages/{messageID}/pin`); a pin icon marks it.
+  *Manage messages* is the pin permission as well (no separate bit): whoever
+  may remove a message in a channel may also pin one there, and the Owner
+  always may. A channel keeps at most 50 pins (a 51st answers `409`); pinning a
+  pinned message changes nothing. `GET /api/channels/{channelID}/pins` lists the
+  pins, newest pin first, for anyone who can view the channel, and the channel
+  header opens that list with a jump to each message. A real pin or unpin
+  broadcasts `message_update` and `pins_changed` to the channel's viewers only;
+  a pin also shows a compact note under the messages of every open client (it
+  is not a stored message, so it is gone after a reload; the list is the
+  record). Both actions are audited (`message.pin`, `message.unpin`). Deleting a
+  message unpins it.
 - **Delete with a reason**: `DELETE /api/channels/{channelID}/messages/{messageID}`
   takes an optional JSON body `{"reason": "..."}`. The author is told through a
   `moderation_notice`; the audit entry (`message.delete`, `moderator: true`)
@@ -100,6 +111,36 @@ Holders of *Manage messages* in a channel can:
   role than the member (checked in the same transaction as the delete) and
   leaves threads that hold a reply of the Owner alone. Every message gets its own
   audit entry with its text, plus one `moderation.bulk_delete` summary.
+- **Read the edit history** of an edited message (`GET
+  /api/channels/{channelID}/messages/{messageID}/edits`, "Edit history" in the
+  message menu of an edited message). See below.
+
+### Edit history
+
+Every edit keeps the version it replaces: its text, when that version was
+written (the creation time for the original) and who wrote it. Only members who
+hold *Manage messages* in the channel and can view it (the Owner always) can
+read the versions, newest first. I decided against a dedicated permission:
+reading what a message used to say is the same trust as deleting it, and a
+new bit would need a default, a migration of existing roles and one more switch
+in the roles screen for no gain. The author and other members get `403`;
+reading is not audited (it changes nothing) but is rate limited to 60 reads a
+minute per member (`edit_history` in the rate-limit metrics).
+
+- **Not exposed elsewhere.** The versions are not in the message list, the
+  thread, WebSocket events, search, push or notification previews, webhook
+  payloads, bot or gateway events, or any export except the author's own
+  (`edits.json` in "Export my data", at most the newest 2,000 versions; a
+  member never receives anybody else's earlier text). The audit log's
+  `message.edit` entry (full `before` and `after`, see above) is a separate
+  record with its own access and retention.
+- **Bounded.** At most 50 versions are kept per message, the oldest go first.
+  `EDIT_HISTORY_RETENTION_DAYS` (default `0`: keep) additionally drops versions
+  replaced longer ago than that many days; the worker runs every six hours.
+- **Removed with their source.** Deleting the message deletes its versions
+  (cascade). Deleting an account deletes the versions of that person's messages
+  together with the message text; the messages stay as emptied tombstones.
+  Edits made before this feature (migration 0047) have no history.
 
 ## Audit log
 

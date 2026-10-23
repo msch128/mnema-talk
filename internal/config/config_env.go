@@ -116,7 +116,9 @@ func (r *envReader) numericSettings(cfg *Config) (portMin, portMax uint16) {
 	// 0 (default) disables automatic media pruning entirely.
 	cfg.MediaRetentionDays = r.int("MEDIA_RETENTION_DAYS", 0)
 	cfg.AuditRetentionDays = r.int("AUDIT_RETENTION_DAYS", 0)
+	cfg.EditHistoryRetentionDays = r.int("EDIT_HISTORY_RETENTION_DAYS", 0)
 	cfg.MaxUploadMB = r.int("MAX_UPLOAD_SIZE_MB", 50)
+	cfg.EmojiMax = r.int("EMOJI_MAX", 200)
 	cfg.UploadQuotaMBPerDay = r.int("UPLOAD_QUOTA_MB_PER_DAY", 2048)
 	cfg.MediaMaxTotalMB = r.int("MEDIA_MAX_TOTAL_MB", 0)
 	cfg.MediaMinFreeMB = r.int("MEDIA_MIN_FREE_MB", 1024)

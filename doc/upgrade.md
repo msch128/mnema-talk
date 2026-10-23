@@ -134,7 +134,7 @@ for existing clients, bots, webhooks, dashboards and alerts. What changes for an
 operator is below. Update with the procedure above; take the backup first.
 
 - **Seven migrations run on first start: 0038, 0039, 0040, 0041, 0042, 0043 and
-  0048.** All are quick on any instance.
+  0045 and 0048.** All are quick on any instance.
   - 0038 drops `idx_messages_content_trgm`, a duplicate of the trigram search
     index `messages_content_trgm_idx` (both came from earlier releases), so
     message writes no longer maintain the same index twice and search is
@@ -156,11 +156,28 @@ operator is below. Update with the procedure above; take the backup first.
     and replaces the audit log's immutability trigger function with one that
     allows blanking names and details during an account deletion (and nothing
     else). No existing row changes.
+  - 0045 adds the nullable columns `messages.pinned_at` and `messages.pinned_by`
+    (who pinned a message and when; existing pins get their last-change time)
+    and a small partial index on pinned messages. Nothing else changes: the
+    pin flag already existed, and the limit of 50 pins per channel applies to
+    new pins only, so a channel that already has more keeps them.
   - 0048 adds the tables `polls`, `poll_options` and `poll_votes` for the
     `/poll` command. They start empty and nothing else changes.
   - The app waits for these locks like any other statement; there is nothing to
     stop or schedule. If startup is slow, check `docker compose logs app` for
     `migration applied`.
+- **Edit history for moderators (migration 0047).** The new table
+  `message_edits` keeps the previous text of every edit from now on (up to 50
+  per message). Members with *Manage messages* can read it from the message
+  menu; nobody else can, and it is not searched or exported to anyone but the
+  author. It starts empty and the migration touches no existing row. Nothing to
+  configure; `EDIT_HISTORY_RETENTION_DAYS` (default `0`, keep) drops old
+  versions after that many days. See [moderation](moderation.md#edit-history).
+- **Unread divider and "Jump to first unread".** No migration and no setting.
+  The new read-only endpoint `GET /api/channels/{id}/first-unread` is additive.
+  Marking a channel read now writes nothing when it has no news since the last
+  read (the first read still stores the member's marker), which reduces writes
+  on busy instances; see [Capacity](architecture.md#unread-tracking-with-10000-members).
 - **Desktop client is Beta.** The Windows desktop client stays Beta at 1.0.0;
   see [desktop-app.md](desktop-app.md).
 - **Optional e-mail, SMTP and password reset by mail.** Members may now add an
@@ -261,6 +278,16 @@ operator is below. Update with the procedure above; take the backup first.
   needs outbound HTTPS to the browser vendors' push services (Google, Mozilla,
   Apple, Microsoft) when a member uses push; it connects only to public
   addresses. Rolling back needs the pre-upgrade backup like every migration.
+- **Custom emoji (migration 0044).** Members holding the new permission *Manage
+  emoji* (the Owner always does; nobody else gets it from an upgrade) add PNG,
+  GIF or WebP pictures under Admin > Emoji; everyone uses them as `:name:` in
+  messages and reactions. 0044 creates the table `custom_emoji` and widens
+  `message_reactions.emoji` from 32 to 80 characters (a custom emoji reaction is
+  the token `<:name:id>`); no row is rewritten. `EMOJI_MAX` (default `200`, `0`
+  forbids new ones) caps the count. Uploads are decoded and redrawn on the
+  server (at most 128 x 128, metadata and trailing bytes dropped, 256 KiB,
+  SVG/JPEG/animated WebP refused) and stored under `emoji/` in object storage.
+  Older web bundles show the token text `<:name:id>` instead of the picture.
 - **Installable app.** The web app now has a manifest, icons and a service
   worker (`/sw.js`) that keeps its shell available offline; browsers offer
   "Install", and Account menu > App explains it (on iPhone and iPad: Share >
@@ -288,6 +315,17 @@ operator is below. Update with the procedure above; take the backup first.
   restore. CI drills this path for the supported source versions: the old
   release refuses to start on the migrated data and a restore into the new
   build succeeds.
+- **Messages use Discord's Markdown.** The stored text does not change and
+  neither does any API: bots, webhooks, exports and search see the same text.
+  Only how the web app draws it does: `__underline__`, `# `/`## `/`### `
+  headings, `-# ` small text, `-`/`*`/`1.` lists with nesting, `>>> ` quotes to
+  the end of the message, `[text](https://…)` links (opening one whose text does
+  not name its destination asks first), `<https://…>` without a link card, `\`
+  escapes, and syntax highlighting with a copy button in fenced code blocks.
+  Two old habits render differently, as on Discord: `>quote` needs a space
+  after the `>`, and `__text__` is underlined instead of left as typed. The
+  composer has a formatting cheat sheet next to the emoji button. Desktop
+  clients render with the web bundle they load, so they follow this too.
 
 ### 0.8.x → 0.9.0
 

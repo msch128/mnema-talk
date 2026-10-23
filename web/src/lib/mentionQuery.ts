@@ -2,13 +2,16 @@
 // caret, rank matching members, and splice the chosen name in.
 
 import type { Role, User } from '../types/domain'
+import type { CustomEmoji } from './customEmoji'
 
 type Mentionable = User & { is_bot?: boolean }
 export type MentionSuggestion =
-  | { username: 'here' | 'all'; display_name: string; group: true; user?: never; role?: never }
-  | { username: string; display_name: string; user: Mentionable; group?: false; role?: never }
+  | { username: 'here' | 'all'; display_name: string; group: true; user?: never; role?: never; emoji?: never }
+  | { username: string; display_name: string; user: Mentionable; group?: false; role?: never; emoji?: never }
   // A role: username holds the role's name, which is what gets inserted.
-  | { username: string; display_name: string; role: Role; user?: never; group?: false }
+  | { username: string; display_name: string; role: Role; user?: never; group?: false; emoji?: never }
+  // A custom emoji (typed as ":que"): username holds its name.
+  | { username: string; display_name: string; emoji: CustomEmoji; role?: never; user?: never; group?: false }
 const NAME_CHARS = /[A-Za-z0-9_.-]/
 
 function findAtPosition(text: string, caret: number): number {

@@ -39,6 +39,9 @@ func EditMessage(ctx context.Context, p *db.Pool, online OnlineSource, messageID
 			_, err := ValidateContent(content, false)
 			return err
 		}
+		if err := recordReplacedVersion(ctx, tx, messageID); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx, `
 			UPDATE messages SET content = $1, is_edited = TRUE, updated_at = NOW()
 			WHERE id = $2`, content, messageID); err != nil {

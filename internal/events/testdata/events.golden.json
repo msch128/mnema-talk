@@ -4,6 +4,7 @@
     "MessageUpdate": "message_update",
     "MessageDelete": "message_delete",
     "MessageReaction": "message_reaction",
+    "PinsChanged": "pins_changed",
     "PollUpdate": "poll_update",
     "ModerationNotice": "moderation_notice",
     "ChannelsChanged": "channels_changed",
@@ -35,7 +36,8 @@
     "Typing": "typing",
     "VoiceSpeaking": "voice_speaking",
     "VoiceMuteState": "voice_mute_state",
-    "NativeAccessRenewed": "native_access_renewed"
+    "NativeAccessRenewed": "native_access_renewed",
+    "EmojiChanged": "emoji_changed"
   },
   "client": {
     "ClientPing": "ping",

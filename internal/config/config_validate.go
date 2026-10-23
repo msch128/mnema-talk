@@ -102,8 +102,14 @@ func (c *Config) validateLimits() error {
 	if c.AuditRetentionDays < 0 {
 		return fmt.Errorf("AUDIT_RETENTION_DAYS must be 0 (keep forever) or a positive number of days")
 	}
+	if c.EditHistoryRetentionDays < 0 {
+		return fmt.Errorf("EDIT_HISTORY_RETENTION_DAYS must be 0 (keep up to 50 versions per message) or a positive number of days")
+	}
 	if c.MediaRetentionDays < 0 {
 		return fmt.Errorf("MEDIA_RETENTION_DAYS must be 0 (disabled) or a positive number of days")
+	}
+	if c.EmojiMax < 0 || c.EmojiMax > 2000 {
+		return fmt.Errorf("EMOJI_MAX must be between 0 and 2000")
 	}
 	if c.MaxUploadMB < 1 || c.MaxUploadMB > 2048 {
 		return fmt.Errorf("MAX_UPLOAD_SIZE_MB must be between 1 and 2048")

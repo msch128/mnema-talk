@@ -7,6 +7,9 @@ import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import { findMentionQuery, suggestMentions, applyMention } from '../lib/mentionQuery'
+import { findEmojiQuery, suggestEmoji, applyEmoji } from '../lib/emojiQuery'
+import { useEmojiStore } from '../stores/emoji'
+import type { CustomEmoji } from '../lib/customEmoji'
 
 /** Inserts text at the caret (e.g. an emoji) and keeps focus. */
 async function insertAtCaret(el: HTMLTextAreaElement | null, model: Ref<string>, str: string) {
@@ -22,6 +25,22 @@ async function insertAtCaret(el: HTMLTextAreaElement | null, model: Ref<string>,
   }
 }
 
+// The roles the member may mention here: mentionable ones, or any with
+// "Mention everyone". The server decides again when the message is sent.
+function useMentionableRoles() {
+  const chatStore = useChatStore()
+  const permissions = usePermissionsStore()
+  return computed(() => {
+    const channelId = chatStore.activeChannel?.id
+    const mayAll = channelId ? permissions.canIn(channelId, 'mention_everyone') : permissions.can('mention_everyone')
+    return permissions.roles.filter(r => !r.is_everyone && !r.managed && (r.mentionable || mayAll))
+  })
+}
+
+function emojiSuggestions(query: string, items: CustomEmoji[]): MentionSuggestion[] {
+  return suggestEmoji(query, items).map(emoji => ({ username: emoji.name, display_name: `:${emoji.name}:`, emoji }))
+}
+
 /**
  * textarea: ref to the <textarea>; model: ref holding its text.
  * Wire onInput to @input/@click/@keyup and call onKeydown first in the
@@ -30,21 +49,17 @@ async function insertAtCaret(el: HTMLTextAreaElement | null, model: Ref<string>,
 export function useComposerAssist(textarea: Ref<HTMLTextAreaElement | null>, model: Ref<string>) {
   const chatStore = useChatStore()
   const authStore = useAuthStore()
-  const permissions = usePermissionsStore()
+  const emojiStore = useEmojiStore()
 
-  // The roles the member may mention here: mentionable ones, or any with
-  // "Mention everyone". The server decides again when the message is sent.
-  const mentionableRoles = computed(() => {
-    const channelId = chatStore.activeChannel?.id
-    const mayAll = channelId ? permissions.canIn(channelId, 'mention_everyone') : permissions.can('mention_everyone')
-    return permissions.roles.filter(r => !r.is_everyone && !r.managed && (r.mentionable || mayAll))
-  })
+  const mentionableRoles = useMentionableRoles()
 
   const query = ref<ReturnType<typeof findMentionQuery>>(null) // { start, query } while a mention is being typed
+  const emojiQuery = ref<ReturnType<typeof findEmojiQuery>>(null) // the same for a custom emoji (":que")
   const active = ref(0)
   const dismissedAt = ref(-1)
 
-  const suggestions = computed(() => {
+  const suggestions = computed((): MentionSuggestion[] => {
+    if (emojiQuery.value) return emojiSuggestions(emojiQuery.value.query, emojiStore.items)
     if (!query.value) return []
     return suggestMentions(query.value.query, chatStore.members, { selfId: authStore.user?.id ?? null, roles: mentionableRoles.value })
   })
@@ -55,7 +70,9 @@ export function useComposerAssist(textarea: Ref<HTMLTextAreaElement | null>, mod
     if (!el) return
     const q = findMentionQuery(model.value, el.selectionStart)
     query.value = q && q.start !== dismissedAt.value ? q : null
-    if (!q) dismissedAt.value = -1
+    const e = q ? null : findEmojiQuery(model.value, el.selectionStart)
+    emojiQuery.value = e && e.start !== dismissedAt.value ? e : null
+    if (!q && !e) dismissedAt.value = -1
     if (active.value >= suggestions.value.length) active.value = 0
   }
 
@@ -65,16 +82,21 @@ export function useComposerAssist(textarea: Ref<HTMLTextAreaElement | null>, mod
   }
 
   function close() {
-    if (query.value) dismissedAt.value = query.value.start
+    const typing = query.value ?? emojiQuery.value
+    if (typing) dismissedAt.value = typing.start
     query.value = null
+    emojiQuery.value = null
   }
 
   async function pick(item: MentionSuggestion | undefined) {
     const el = textarea.value
-    if (!query.value || !el || !item) return
-    const { text, caret } = applyMention(model.value, query.value.start, el.selectionStart, item.username)
+    const typing = query.value ?? emojiQuery.value
+    if (!typing || !el || !item) return
+    const apply = item.emoji ? applyEmoji : applyMention
+    const { text, caret } = apply(model.value, typing.start, el.selectionStart, item.username)
     model.value = text
     query.value = null
+    emojiQuery.value = null
     await nextTick()
     el.focus()
     el.setSelectionRange(caret, caret)

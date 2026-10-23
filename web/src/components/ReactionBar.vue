@@ -4,7 +4,9 @@ import type { ReactionSummary } from '../types/domain'
 // Reaction badges under a message plus the dashed "add reaction" button
 // with its palette.
 import { SmilePlus } from '@lucide/vue'
+import { plainEmojiText } from '../lib/customEmoji'
 import { useAuthStore } from '../stores/auth'
+import EmojiGlyph from './EmojiGlyph.vue'
 import ReactionPalette from './ReactionPalette.vue'
 import { PICKER_ANCHOR } from '../composables/useMessageActions'
 
@@ -45,9 +47,9 @@ function reacted(reaction: ReactionSummary) {
           ? 'bg-mnema-accent/20 border-mnema-accent/40 text-mnema-accent font-semibold'
           : 'bg-mnema-surface hover:bg-mnema-band border-mnema-border text-mnema-muted'
       ]"
-      v-tooltip="$t('chat.reaction', { emoji: r.emoji })"
+      v-tooltip="$t('chat.reaction', { emoji: plainEmojiText(r.emoji) })"
     >
-      <span>{{ r.emoji }}</span>
+      <span><EmojiGlyph :value="r.emoji" /></span>
       <span class="text-xs font-mono">{{ r.count }}</span>
     </button>
 

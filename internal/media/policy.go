@@ -152,6 +152,13 @@ func reconcileMIME(declared string, head []byte, allow map[string]bool, imageOnl
 	return declared, nil
 }
 
+// SniffImage decides the type of an uploaded picture the way avatars are
+// checked: the bytes decide, the client header and file name only have to
+// agree; non-images and everything but PNG, JPEG, GIF and WebP are errors.
+func SniffImage(headerType, filename string, head []byte) (string, error) {
+	return reconcileMIME(declaredMIME(headerType, filename), head, avatarMIME, true)
+}
+
 // extensionFor picks the storage key extension from the final MIME type.
 func extensionFor(mimeType string) string {
 	switch mimeType {

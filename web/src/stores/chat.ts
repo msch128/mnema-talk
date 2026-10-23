@@ -17,6 +17,7 @@ import { fetchNotificationSettings, markAllRead, notificationLevel, setCategoryN
 import { sendTyping } from './chat/typing'
 import { messageMentionsMe, refreshNotificationPermission, requestNotificationPermission } from './chat/notifications'
 import { dismissEphemeral, resetCommunityState } from './chat/reset'
+import { dismissPinNotice, fetchPins } from './chat/pins'
 
 export type { EphemeralNote, ProfilePreview, ThreadRoot } from './chat/types'
 export { MARK_READ_INTERVAL_MS, TYPING_EXPIRY_MS } from './chat/types'
@@ -31,6 +32,8 @@ function exposedState(cs: ChatState) {
     categories: cs.categories,
     allChannels: cs.allChannels,
     ephemeral: cs.ephemeral,
+    pinsSignal: cs.pinsSignal,
+    pinNotices: cs.pinNotices,
     uncategorized: cs.uncategorized,
     activeChannel: cs.activeChannel,
     messages: cs.messages,
@@ -72,6 +75,8 @@ function exposedActions(cx: Cx) {
     resetCommunityState: bind(resetCommunityState),
     retryNow: bind(retryNow),
     dismissEphemeral: bind(dismissEphemeral),
+    dismissPinNotice: bind(dismissPinNotice),
+    fetchPins: bind(fetchPins),
     isVoiceChannel: bind(isVoiceChannel),
     showToast,
     loadOlder: bind(loadOlder),

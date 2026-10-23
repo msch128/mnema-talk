@@ -477,3 +477,16 @@ it('does not scroll a thread panel that closes before its initial scroll tick', 
   await nextTick()
   expect(document.querySelector('[data-reply-id]')).toBeNull()
 })
+
+describe('ThreadSidebar drafts', () => {
+  it('keeps the reply text of each thread while another thread is open', async () => {
+    const chat = setup()
+    await w.get('textarea').setValue('thread one reply')
+    chat.activeThread = msg('other', 'u2')
+    await nextTick()
+    expect(w.get('textarea').element.value).toBe('')
+    chat.activeThread = msg('root', 'u2')
+    await nextTick()
+    expect(w.get('textarea').element.value).toBe('thread one reply')
+  })
+})

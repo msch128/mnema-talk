@@ -445,9 +445,8 @@ jobs:
             web/package-lock.json
             e2e/package-lock.json
 
-      # Browsers only; the system packages are still installed by
-      # `playwright install --with-deps` in e2e/run.sh, which skips the
-      # browser download when the cached revision is present.
+      # Browsers only; the system packages come from the step below, and
+      # e2e/run.sh skips the browser download when the cached revision is present.
       - name: Playwright version
         id: playwright
         run: echo "version=$(jq -r '.packages["node_modules/playwright-core"].version' e2e/package-lock.json)" >> "$GITHUB_OUTPUT"
@@ -457,6 +456,21 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      # System libraries for the browsers, in a bounded step of their own. A slow
+      # Ubuntu mirror used to stall `playwright install --with-deps` inside
+      # e2e/run.sh until the job timed out. e2e/ci-install-deps.sh bounds each
+      # attempt, retries on another mirror, and the downloaded .debs are cached
+      # per Playwright version and browser.
+      - name: Playwright system dependencies cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-archives
+          key: apt-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-webkit
+
+      - name: Install browser system dependencies
+        timeout-minutes: 10
+        run: e2e/ci-install-deps.sh chromium webkit
 
       - name: Run browser smoke test
         env:
@@ -528,9 +542,8 @@ jobs:
             web/package-lock.json
             e2e/package-lock.json
 
-      # Browsers only; the system packages are still installed by
-      # `playwright install --with-deps` in e2e/run.sh, which skips the
-      # browser download when the cached revision is present.
+      # Browsers only; the system packages come from the step below, and
+      # e2e/run.sh skips the browser download when the cached revision is present.
       - name: Playwright version
         id: playwright
         run: echo "version=$(jq -r '.packages["node_modules/playwright-core"].version' e2e/package-lock.json)" >> "$GITHUB_OUTPUT"
@@ -540,6 +553,21 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ steps.playwright.outputs.version }}
+
+      # System libraries for the browsers, in a bounded step of their own. A slow
+      # Ubuntu mirror used to stall `playwright install --with-deps` inside
+      # e2e/run.sh until the job timed out. e2e/ci-install-deps.sh bounds each
+      # attempt, retries on another mirror, and the downloaded .debs are cached
+      # per Playwright version and browser.
+      - name: Playwright system dependencies cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-archives
+          key: apt-${{ runner.os }}-${{ steps.playwright.outputs.version }}-${{ matrix.browser }}
+
+      - name: Install browser system dependencies
+        timeout-minutes: 10
+        run: e2e/ci-install-deps.sh ${{ matrix.browser }}
 
       - name: Run browser smoke test
         env:

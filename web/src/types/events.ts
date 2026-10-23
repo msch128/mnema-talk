@@ -62,6 +62,8 @@ export interface ServerEventPayloads {
   permissions_changed: null
   /** A role was created, edited, deleted, reordered or assigned: refetch GET /api/roles and /api/members. */
   roles_changed: null
+  /** A custom emoji was added, renamed or deleted: refetch GET /api/emoji. */
+  emoji_changed: null
   typing: { channel_id: string; user_id: string }
   read_state: ReadStateUpdate
   message_create: Message
@@ -70,6 +72,8 @@ export interface ServerEventPayloads {
   message_reaction: { message_id: string; channel_id?: string; reactions: ReactionSummary[] }
   /** Tallies of a poll after a vote or its end; the same for every viewer (no voters in an anonymous poll). */
   poll_update: { message_id: string; channel_id: string; poll: Poll }
+  /** A message was pinned or unpinned: refetch GET /api/channels/{id}/pins and note it in the channel. */
+  pins_changed: { channel_id: string; message_id: string; pinned: boolean; actor_id: string; actor_name: string }
   interaction_response: InteractionResponse
   user_update: UserUpdate
   /** A member's timeout started (timeout_until) or ended (null). */
@@ -181,6 +185,7 @@ const NON_OBJECT_CHECKS = new Map<string, (payload: unknown) => boolean>([
   ['channels_changed', payload => payload === null],
   ['permissions_changed', payload => payload === null],
   ['roles_changed', payload => payload === null],
+  ['emoji_changed', payload => payload === null],
   ['member_joined', isAuthUser],
   ['message_create', isChatMessage],
   ['message_update', isChatMessage],
@@ -259,6 +264,8 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['read_state', isReadStateUpdate],
   ['message_delete', payload => isIdentifier(payload['id']) && isIdentifier(payload['channel_id'])
     && (payload['parent_id'] === null || isIdentifier(payload['parent_id']))],
+  ['pins_changed', payload => isIdentifier(payload['channel_id']) && isIdentifier(payload['message_id']) && typeof payload['pinned'] === 'boolean'
+    && isIdentifier(payload['actor_id']) && isString(payload['actor_name'], 128)],
   ['message_reaction', payload => isIdentifier(payload['message_id']) && (!hasOwn(payload, 'channel_id') || isIdentifier(payload['channel_id']))
     && isArrayOf(payload['reactions'], isChatReactionSummary)],
   ['poll_update', payload => isIdentifier(payload['message_id']) && isIdentifier(payload['channel_id']) && isChatPoll(payload['poll'])],
@@ -312,8 +319,8 @@ function isNoteEmbed(value: unknown): boolean {
 
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
-  'channels_changed', 'permissions_changed', 'roles_changed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
-  'message_reaction', 'poll_update', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
+  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
+  'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'media_handshake'
 ])

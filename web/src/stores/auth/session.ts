@@ -1,6 +1,7 @@
 import type { Ref } from 'vue'
 import { onScopeDispose } from 'vue'
 import { onUnauthorized } from '../../lib/api'
+import { clearAllDrafts } from '../../lib/drafts'
 import type { User } from '../../types/domain'
 
 /**
@@ -48,6 +49,7 @@ export function createSessionCore(user: Ref<User | null>): SessionCore {
       advanceSession()
       s.unauthorizedGeneration = generation
       user.value = null
+      clearAllDrafts()
     })
     return s.generation
   }
@@ -67,6 +69,7 @@ export function createSessionCore(user: Ref<User | null>): SessionCore {
     if (isCurrentSession(session) && s.cookieAccountId !== undefined && s.cookieAccountId !== session.userId) {
       advanceSession()
       user.value = null
+      clearAllDrafts()
     }
   }
 

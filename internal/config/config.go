@@ -35,7 +35,12 @@ type Config struct {
 	// AuditRetentionDays > 0 deletes audit log entries older than that many
 	// days; 0 (default) keeps them forever.
 	AuditRetentionDays int
-	MaxUploadMB        int
+	// EditHistoryRetentionDays > 0 deletes kept earlier versions of edited
+	// messages that were replaced longer ago; 0 (default) keeps them.
+	EditHistoryRetentionDays int
+	MaxUploadMB              int
+	// EmojiMax is how many custom emoji the instance holds (0: none can be added).
+	EmojiMax int
 	// UploadQuotaMBPerDay is what one account may upload in a rolling 24
 	// hours; 0 disables the budget. MediaMaxTotalMB caps all stored media
 	// (0 = no cap). MediaMinFreeMB pauses uploads while the filesystem at

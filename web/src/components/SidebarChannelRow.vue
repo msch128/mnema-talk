@@ -8,6 +8,8 @@ import { computed } from 'vue'
 import { Hash, Volume2, Trash2, Monitor, BellOff } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
+import { useAuthStore } from '../stores/auth'
+import { channelDraftKey, hasDraft } from '../lib/drafts'
 import UserAvatar from './UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import MuteMarks from './MuteMarks.vue'
@@ -35,6 +37,7 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
 
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
+const authStore = useAuthStore()
 
 const isVoice = computed(() => props.channel.type === 'voice')
 const active = computed(() =>
@@ -49,6 +52,8 @@ const reading = computed(() =>
     ? chatStore.voiceChatReading && chatStore.activeChannel?.id === props.channel.id && voiceStore.activeView === 'voice'
     : active.value
 )
+// An unsent message waits here (the open channel shows it in its composer).
+const draft = computed(() => !reading.value && hasDraft(authStore.user?.id, channelDraftKey(props.channel.id)))
 // Voice channels have their own text chat, so unreads and mentions too.
 const muted = computed(() => chatStore.readStates[props.channel.id]?.notify_level === 'mute')
 // A muted channel keeps its mentions but does not announce plain unreads.
@@ -128,6 +133,7 @@ const rowClass = computed(() => [
           ]"
         />
         <span class="truncate">{{ channel.name }}</span>
+        <span v-if="draft" class="flex-shrink-0 rounded bg-mnema-surface px-1 text-[10px] font-semibold uppercase tracking-wide text-mnema-tertiary" data-testid="channel-draft">{{ $t('sidebar.draft') }}</span>
         <BellOff v-if="muted" class="w-3.5 h-3.5 flex-shrink-0 text-mnema-tertiary" data-testid="channel-muted" :aria-label="$t('notifications.mute')" />
       </div>
 

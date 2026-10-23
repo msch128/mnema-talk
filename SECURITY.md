@@ -232,7 +232,8 @@ details and the limits.
   the member uploaded (database rows and objects), pending and finished exports,
   and the second factor. What stays: the account row as an anonymised tombstone
   (`deleted-<id>`, "Deleted user", disabled, unusable password hash) and the
-  member's messages, emptied of text, link cards and pins, so threads and other
+  member's messages, emptied of text, link cards and pins (and of the earlier
+  versions kept for moderators' edit history), so threads and other
   members' replies stay readable; other members' texts that merely quote or
   @mention the old name are not rewritten. Audit entries about the account keep
   action, time and ids; their names and details are blanked by the one update
@@ -357,6 +358,20 @@ details and the limits.
   cannot send data to a third party. Dropping it (a hash for the picker's style
   text plus a patched or replaced picker, with a browser test that fails on any
   CSP violation) is planned after 1.0.
+- **Message rendering.** Markdown is parsed into a tree of plain nodes
+  (`web/src/lib/markdown/`) and only one module turns that tree into HTML: every
+  string is escaped, tags come from a fixed table, and generated elements (mention
+  pills, future custom emoji) pass an attribute allowlist with a pattern per
+  attribute (an image source must be a same-origin path). Links are limited to
+  `http`, `https` and `mailto`; a link whose text does not name its destination
+  asks before it opens, however it is activated. Code is highlighted by
+  highlight.js in its core build with a fixed language list and no
+  auto-detection; its HTML output is re-tokenised and only
+  `<span class="hljs-…">` pairs survive (anything else, or unbalanced markup,
+  falls back to the escaped code), and large blocks are not highlighted.
+  Parsing is a hand-written scanner with bounded nesting and a size limit, with
+  tests for hostile input; there is no regular-expression backtracking on user
+  text. The only `v-html` sink is `MarkdownContent`.
 - **Installable app and service worker.** The web app ships a manifest and a
   small service worker (`/sw.js`, same origin, so it fits the CSP unchanged:
   `script-src 'self'`, `worker-src 'self'`). It keeps the app shell (the page
@@ -388,6 +403,15 @@ details and the limits.
   revoke, disabled account: the user's `token_version` moves on), the device is
   no longer sent anything, checked on every send, and removed within a minute.
   At most 10 devices per account; registering and testing are rate limited.
+- **Custom emoji.** An uploaded emoji is never stored as sent: the server sniffs
+  PNG, GIF or WebP by content, refuses SVG, JPEG and animated WebP, bounds the
+  canvas (1024 px) and the pixel budget of an animation (canvas times frames)
+  before decoding, redraws every frame at most 128 x 128 and writes a new
+  PNG or GIF, so metadata, trailing bytes and polyglot payloads cannot survive
+  (256 KiB limit before and after). The images are served to signed-in members
+  from the app's own origin with their stored type, `nosniff` and a sandbox CSP.
+  Only the Owner and holders of *Manage emoji* can change them; every change is
+  in the audit log.
 - **Uploads.** File types are detected by content sniffing, not by the
   client-supplied name or MIME type. Risky types (HTML, SVG, scripts, unknown
   binaries, ...) are only ever served as downloads, never rendered inline. Media is
@@ -693,6 +717,15 @@ details and the limits.
   operators must name it in their privacy notice. Only the Owner and holders
   of *View audit log* can read it; the database refuses updates, and nothing
   is deleted unless `AUDIT_RETENTION_DAYS` is set (default `0`: keep forever).
+- **Edit history.** Each edit keeps the text it replaced (at most 50 versions
+  per message, `message_edits`). Only holders of *Manage messages* in the
+  channel and the Owner can read it (`GET .../messages/{id}/edits`, checked
+  against the live permission snapshot, rate limited per member); it is not in
+  message lists, events, search, push or webhook payloads. The author's own
+  data export includes their earlier versions and nobody else's. It goes with
+  the message and with the author's account, and `EDIT_HISTORY_RETENTION_DAYS`
+  can expire it. The audit log's `message.edit` entry is a separate record
+  (see above). doc/moderation.md#edit-history.
 - **Link previews.** Previews use the same address list as outgoing webhooks
   (`internal/ssrf`: metadata, IPv4-compatible, IPv4-translated, discard-only,
   multicast, private, NAT64 and similar ranges are refused after DNS

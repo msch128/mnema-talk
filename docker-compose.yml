@@ -54,6 +54,7 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY:?set S3_SECRET_KEY in .env}
       - S3_FORCE_PATH_STYLE=true
       - MAX_UPLOAD_SIZE_MB=${MAX_UPLOAD_SIZE_MB:-50}
+      - EMOJI_MAX=${EMOJI_MAX:-200}
       - UPLOAD_QUOTA_MB_PER_DAY=${UPLOAD_QUOTA_MB_PER_DAY:-2048}
       - MEDIA_MAX_TOTAL_MB=${MEDIA_MAX_TOTAL_MB:-0}
       - MEDIA_MIN_FREE_MB=${MEDIA_MIN_FREE_MB:-1024}
@@ -76,6 +77,8 @@ services:
       - MEDIA_RETENTION_DAYS=${MEDIA_RETENTION_DAYS:-0}
       # 0 = keep audit log entries forever.
       - AUDIT_RETENTION_DAYS=${AUDIT_RETENTION_DAYS:-0}
+      # 0 = keep the earlier versions of edited messages (moderator edit history).
+      - EDIT_HISTORY_RETENTION_DAYS=${EDIT_HISTORY_RETENTION_DAYS:-0}
       - ADMIN_USERNAME=${ADMIN_USERNAME:-Herzog}
       - ADMIN_INITIAL_PASSWORD=${ADMIN_INITIAL_PASSWORD:-}
       - WEBRTC_UDP_PORT_MIN=${WEBRTC_UDP_PORT_MIN:-50000}

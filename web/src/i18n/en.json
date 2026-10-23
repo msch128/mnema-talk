@@ -169,6 +169,7 @@
     "channels": "Channels",
     "openChannels": "Open channel list",
     "noChannels": "No channels",
+    "draft": "Draft",
     "deleteCategory": "Delete category",
     "deleteChannel": "Delete channel",
     "deleteVoiceChannel": "Delete voice channel",
@@ -302,6 +303,27 @@
     "offline": "Offline — {count}",
     "roleGroup": "{name} — {count}"
   },
+  "format": {
+    "help": "Formatting help",
+    "title": "Formatting",
+    "intro": "Type these characters around your text. A backslash before one shows it as it is.",
+    "bold": "Bold",
+    "italic": "Italic",
+    "underline": "Underline",
+    "strike": "Strikethrough",
+    "spoiler": "Spoiler",
+    "code": "Inline code",
+    "codeBlock": "Code block with highlighting",
+    "heading": "Heading",
+    "subtext": "Small text",
+    "list": "List",
+    "numbered": "Numbered list",
+    "quote": "Quote",
+    "blockQuote": "Quote to the end",
+    "link": "Link with its own text",
+    "noEmbed": "Link without a preview",
+    "close": "Close"
+  },
   "chat": {
     "selectChannel": "Choose a channel",
     "welcome": "Welcome to #{channel}",
@@ -334,6 +356,7 @@
     "newMessages": "New messages",
     "viewingOlder": "You're viewing older messages",
     "jumpToEnd": "Jump to latest",
+    "jumpToFirstUnread": "Jump to first unread",
     "enlargedImage": "Enlarged image",
     "attachment": "Attachment",
     "unknownUser": "Unknown",
@@ -348,6 +371,12 @@
     "deleteFailed": "Couldn't delete the message.",
     "sendFailed": "Couldn't send the message.",
     "spoiler": "Spoiler",
+    "copyCode": "Copy",
+    "codeCopied": "Code copied",
+    "copyCodeFailed": "Couldn't copy the code.",
+    "linkConfirmTitle": "Open this link?",
+    "linkConfirmBody": "The link text does not show where it leads. It opens {host}.",
+    "linkOpen": "Open link",
     "search": "Search",
     "searchPlaceholder": "Search messages …",
     "filter": "Filter",
@@ -818,7 +847,8 @@
       "audit": "Audit log",
       "bans": "Bans",
       "bots": "Bots",
-      "onboarding": "Welcome & rules"
+      "onboarding": "Welcome & rules",
+      "emoji": "Emoji"
     },
     "system": {
       "heading": "System & version",
@@ -1274,6 +1304,15 @@
     "hereHint": "Everyone online right now",
     "roleHint": "Role: everyone who holds it is notified"
   },
+  "pins": {
+    "title": "Pinned messages",
+    "empty": "No messages are pinned in this channel yet.",
+    "emptyModerator": "No messages are pinned yet. Pin one from its message menu.",
+    "failed": "The pinned messages could not be loaded.",
+    "notice": "{name} pinned a message to this channel.",
+    "view": "View",
+    "dismiss": "Dismiss"
+  },
   "mentions": {
     "inbox": "Mentions",
     "empty": "Nothing mentions you yet.",
@@ -1282,7 +1321,24 @@
   "emoji": {
     "open": "Insert emoji",
     "more": "More emojis",
-    "loading": "Loading emojis …"
+    "loading": "Loading emojis …",
+    "suggestTitle": "Custom emoji",
+    "admin": {
+      "title": "Custom emoji",
+      "hint": "PNG, GIF or WebP up to 256 KiB. Pictures are redrawn on the server and shrunk to at most 128 × 128 pixels. Members type :name: to use them. Animated emoji must be GIFs.",
+      "count": "{n} of {max} used",
+      "file": "Image file",
+      "name": "Name (a-z, 0-9, _)",
+      "add": "Add emoji",
+      "added": "Emoji added",
+      "deleted": "Emoji deleted",
+      "deleteTitle": "Delete :{name}:?",
+      "deleteBody": "Existing messages and reactions show :name: as text from now on. This can't be undone.",
+      "animated": "Animated",
+      "rename": "Rename",
+      "empty": "No custom emoji yet.",
+      "full": "The limit is reached. Delete an emoji or raise EMOJI_MAX."
+    }
   },
   "activity": {
     "title": "Activity",
@@ -1427,6 +1483,10 @@
     "ban_members": {
       "name": "Ban members",
       "desc": "Ban and unban members below your highest role and see the list of bans."
+    },
+    "manage_emoji": {
+      "name": "Manage emoji",
+      "desc": "Upload, rename and delete the custom emoji of this community."
     }
   },
   "audit": {
@@ -1767,6 +1827,16 @@
     "slowModeOff": "Off",
     "slowModeHint": "Members wait this long between two messages. Moderators are exempt.",
     "slowModeChip": "Slow mode {time}"
+  },
+  "editHistory": {
+    "menu": "Edit history",
+    "title": "Edit history",
+    "body": "Earlier versions of this message, newest first. Only members who manage messages can see them.",
+    "current": "Current",
+    "loading": "Loading …",
+    "none": "No earlier versions are kept for this message.",
+    "empty": "(no text)",
+    "failed": "The edit history could not be loaded."
   },
   "bots": {
     "title": "Bots",
