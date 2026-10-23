@@ -32,7 +32,7 @@ A role has a name, a colour, a position, a set of permission bits and the flags
 
 A role mention (`@Role`, also with spaces, case-insensitive) notifies the
 members of the role who can view the channel when the role is *mentionable*,
-or when the author holds *Mention everyone* (the Owner and Administrators
+or when the author holds *Mention @all and @here* (the Owner and Administrators
 always do). Otherwise it stays plain text. A user named like the role wins:
 `@name` then mentions the user, not the role. Bots are only notified when
 named directly, never through a role, and `@everyone` is not a role mention
@@ -115,7 +115,7 @@ the own role is a convenient place for "this bot may post in #alerts").
 | Attach files | Upload files with a message | yes |
 | Add reactions | Add a reaction (taking back your own always works); vote in a poll | yes |
 | Manage messages | Delete other members' messages (with a reason, or a member's latest ones in bulk), pin messages, exempt from slow mode | yes |
-| Mention everyone | `@all` and `@here` notify people | yes |
+| Mention @all and @here | `@all` and `@here` notify people | yes |
 | Connect | Join a Talk | yes |
 | Speak | Send audio in a Talk | yes |
 | Video | Send camera and screen share in a Talk | yes |
@@ -141,7 +141,7 @@ role either: it is the one account with `users.role = 'admin'`.
 
 | Who | What it is | Permissions |
 |---|---|---|
-| Member | `@everyone` (position 0, every member has it) | *View channels, Send messages, Attach files, Add reactions, Mention everyone, Connect, Speak, Video* (`perm.DefaultEveryone`) |
+| Member | `@everyone` (position 0, every member has it) | *View channels, Send messages, Attach files, Add reactions, Mention @all and @here, Connect, Speak, Video* (`perm.DefaultEveryone`) |
 | Moderator | Seeded role, hoisted, not managed, not mentionable | *Manage messages, Disconnect members, Timeout members, View audit log* |
 | Admin | Seeded role, hoisted, not managed, not mentionable, above Moderator when both are new | Moderator's permissions, plus *Manage channels, Manage roles, Manage invites, Manage members, Ban members* |
 | Owner | The account `users.role = 'admin'`, not a role | Every permission, plus the Owner-only powers |
@@ -215,7 +215,7 @@ cannot do.
 | Polls (`/poll`, `POST /api/channels/{id}/polls`) | Posting *Send messages*; voting and reading your own votes *View channels* + *Add reactions* (so a timed-out member cannot vote); ending early the author, or *Manage messages* |
 | Slash commands | Listing *View channels*; running *Send messages* (built-in commands may ask for more, see their `Available` check in `internal/slash`); a bot's commands also need the bot to view and send there |
 | Uploads and `GET /api/media/{id}` | *Send messages* + *Attach files* to upload; *View channels* of the message's channel to download (404 otherwise) |
-| Mentions | `@all`/`@here` need *Mention everyone*; nobody who cannot view the channel is notified |
+| Mentions | `@all`/`@here` need *Mention @all and @here*; nobody who cannot view the channel is notified |
 | `/api/admin/*` | Per route: *Manage channels*, *Manage roles*, *Manage invites*, *Manage members*, *Disconnect members*; system, storage and passwords are Owner-only |
 | WebSocket | Channel events (messages, reactions, typing, who is in a Talk, media state) only reach viewers; the connect snapshot lists only viewable Talks |
 | Talks | *View channels* + *Connect* to join; the SFU drops audio without *Speak* and camera/screen without *Video*, also while a call is running |
@@ -228,7 +228,7 @@ name (admin console, *Welcome & rules*; `GET|PUT /api/admin/onboarding`, audited
 While rules exist, a member who has not accepted the current version
 (`rules_pending` in `GET /api/permissions`, `GET /api/auth/me` and
 `GET /api/onboarding`) loses what a timeout takes: *Send messages*, *Attach
-files*, *Add reactions*, *Mention everyone*, *Connect*, *Speak* and *Video*.
+files*, *Add reactions*, *Mention @all and @here*, *Connect*, *Speak* and *Video*.
 They keep reading. It is not a permission anyone can grant or deny: it comes
 from the same snapshot as a timeout, so REST, the WebSocket hub and the SFU all
 agree, and writes answer `403 RULES_NOT_ACCEPTED` (a Talk join answers

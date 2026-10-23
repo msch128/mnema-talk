@@ -13,6 +13,7 @@ type BotCommands []CommandInput
 // botList handles GET /api/bot/v1/commands.
 //
 // @Summary List the bot's commands
+// @Description The commands this bot registered, including those an admin switched off. Registration is by PUT (replace all) or POST (one).
 // @ID botListCommands
 // @Tags Bot API
 // @Produce json
@@ -20,6 +21,7 @@ type BotCommands []CommandInput
 // @Success 200 {array} Command "The bot's commands."
 // @Failure 401 {object} httpx.DiscordError "Missing or invalid token (0)."
 // @Failure 429 {object} httpx.DiscordRateLimit "Rate limited; see retry_after and Retry-After."
+// @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/commands [get]
 func (c *Commands) botList(w http.ResponseWriter, r *http.Request) error {
 	list, err := ListCommands(r.Context(), c.DB, auth.BotFrom(r.Context()).BotID)
@@ -109,6 +111,7 @@ func (c *Commands) botCreate(w http.ResponseWriter, r *http.Request) error {
 // botDelete handles DELETE /api/bot/v1/commands/{commandID}.
 //
 // @Summary Delete a command
+// @Description Removes one of the bot's own commands. Members stop seeing it in the composer at once.
 // @ID botDeleteCommand
 // @Tags Bot API
 // @Security botAuth
@@ -118,6 +121,7 @@ func (c *Commands) botCreate(w http.ResponseWriter, r *http.Request) error {
 // @Failure 401 {object} httpx.DiscordError "Missing or invalid token (0)."
 // @Failure 404 {object} httpx.DiscordError "Unknown command."
 // @Failure 429 {object} httpx.DiscordRateLimit "Rate limited; see retry_after and Retry-After."
+// @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/commands/{commandID} [delete]
 func (c *Commands) botDelete(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "commandID")

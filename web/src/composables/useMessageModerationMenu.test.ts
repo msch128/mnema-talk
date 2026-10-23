@@ -72,7 +72,7 @@ describe('message menu for moderators', () => {
     expect(useToastStore().toasts.map(t => t.text)).toContain('no way')
     pin.mockRejectedValueOnce('plain')
     await required(item(menu.itemsFor(msg), 'Pin message').action)()
-    expect(useToastStore().toasts.map(t => t.text)).toContain('The action failed.')
+    expect(useToastStore().toasts.map(t => t.text)).toContain('Couldn’t complete the action. Try again.')
   })
 
   it('opens the dialogs for deleting with a reason and for clearing a member', () => {

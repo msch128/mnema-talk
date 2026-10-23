@@ -127,7 +127,7 @@ test('two members share their screens and switch the stage both ways', async ({ 
   await expect.poll(() => stageSize(a), { timeout: 20_000 }).toBe('800x450')
   const ownCard = a.locator('[data-screen-card="own"]')
   await expect(ownCard).toContainText('Eigener Bildschirm')
-  await expect(aStage.getByRole('button', { name: 'Stream beenden' })).toBeVisible()
+  await expect(aStage.getByRole('button', { name: 'Nicht mehr ansehen' })).toBeVisible()
   await shot(a, 'stage-remote')
 
   // Back to A's own share; B's stays received as a card.

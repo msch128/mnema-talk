@@ -39,7 +39,7 @@ beforeEach(() => {
 describe('MemberList', () => {
   it('groups the Owner, hoisted roles, the rest online, and offline members', () => {
     const w = setup()
-    expect(groups(w)).toEqual(['Owner', 'Crew — 1', 'Guests — 1', 'Online — 1', 'Offline — 1'])
+    expect(groups(w)).toEqual(['Owner', 'Crew – 1', 'Guests – 1', 'Online – 1', 'Offline – 1'])
     expect(w.find('[data-role-group="Crew"]').text()).toContain('Ann')
     expect(w.find('[data-role-group="Guests"]').text()).toContain('Cy')
     expect(w.findAll('section').at(3)!.text()).toContain('Bob')
@@ -53,7 +53,7 @@ describe('MemberList', () => {
   it('has no role groups without hoisted roles', () => {
     const w = setup()
     usePermissionsStore().roles = []
-    return w.vm.$nextTick().then(() => expect(groups(w)).toEqual(['Owner', 'Online — 3', 'Offline — 1']))
+    return w.vm.$nextTick().then(() => expect(groups(w)).toEqual(['Owner', 'Online – 3', 'Offline – 1']))
   })
 
   it('shows where a member is in a Talk, by channel name', async () => {
@@ -72,7 +72,7 @@ describe('MemberList', () => {
     await w.vm.$nextTick()
     expect(w.find('[data-member="ann"]').text()).toContain('Lounge')
     expect(w.find('[data-member="bob"]').text()).toContain('Loose')
-    expect(w.find('[data-member="cy"]').text()).toContain('Voice channel')
+    expect(w.find('[data-member="cy"]').text()).toContain('Talk')
   })
 
   it('opens the member menu from a context click', async () => {

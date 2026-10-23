@@ -680,7 +680,7 @@ docker exec mnema-talk /usr/local/bin/mnema-talk reset-2fa OWNER_NAME
 ```
 
 Other members' second factor is reset by
-the Owner in Admin > Users. Rotating `JWT_SECRET` also makes every stored
+the Owner in Admin > Members. Rotating `JWT_SECRET` also makes every stored
 authenticator secret unreadable: each affected account has to be reset and
 enrol again, so rotate it only with that in mind.
 
@@ -711,8 +711,8 @@ state is held in memory; a restart is not needed to clear it:
   server applied it, or says the request stays queued when no server picked it
   up in 15 seconds. Only someone who can reach the database can do this; there
   is no network endpoint for it.
-- **From the admin panel:** the Owner sees a "Login locked" badge on a locked
-  account in Admin > Users and can click "Clear login lockout".
+- **From the admin panel:** the Owner sees a "Sign-in locked" badge on a locked
+  account in Admin > Members and can click "Clear sign-in lock".
 
 Otherwise sign in from a browser you used before, or wait.
 

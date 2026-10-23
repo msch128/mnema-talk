@@ -170,7 +170,7 @@ describe('Picture-in-Picture of the stage', () => {
     expect(await pip.enter()).toBe(false)
     expect(pip.active.value).toBe(false)
     expect(video.srcObject).toBe(null)
-    expect(useToastStore().toasts.at(-1)?.text).toBe('Could not open picture-in-picture')
+    expect(useToastStore().toasts.at(-1)?.text).toBe('Couldn’t open picture-in-picture. Try again.')
   })
 
   it('waits for the video size before asking for the window', async () => {
@@ -262,7 +262,7 @@ describe('pending picture-in-picture openings', () => {
       expect(await opening).toBe(false)
       expect(video.srcObject).toBeNull()
       expect(requestPip).not.toHaveBeenCalled()
-      expect(useToastStore().toasts.at(-1)?.text).toBe('Could not open picture-in-picture')
+      expect(useToastStore().toasts.at(-1)?.text).toBe('Couldn’t open picture-in-picture. Try again.')
       video.dispatchEvent(new Event('loadedmetadata'))
       expect(requestPip).not.toHaveBeenCalled()
     } finally { vi.useRealTimers() }

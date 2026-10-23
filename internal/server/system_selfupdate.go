@@ -89,7 +89,7 @@ func (h *systemHandler) selfUpdateStatus(upd UpdateStatus) SelfUpdateStatus {
 // @Success 202 {object} SelfUpdateStarted "The updater accepted the request."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not an admin, wrong current password, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner may do this, the current password is wrong, or cross-origin request rejected."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: self-update not configured, no update available, target_version outdated, the image tag cannot reach the release, or an update is already running."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: an update was requested less than 5 minutes ago, or too many wrong passwords."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."

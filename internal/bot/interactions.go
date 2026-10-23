@@ -251,7 +251,7 @@ func (c *Commands) dispatchInteraction(id uuid.UUID, token string, ch uuid.UUID,
 // @Success 202 {object} Invoked "Delivered to the bot."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): unknown or ill-typed options."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Send messages permission in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such channel or command, or the command is not available here."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the bot is not connected."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."

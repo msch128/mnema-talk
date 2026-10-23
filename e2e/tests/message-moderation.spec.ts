@@ -63,16 +63,16 @@ test('slow mode, pinning, deleting with a reason and clearing a member are visib
     await mod.getByRole('menuitem', { name: 'Nachricht anheften' }).click()
     await expect(member.getByTestId('pinned')).toHaveCount(1)
     await mod.getByText('zwei', { exact: true }).click({ button: 'right' })
-    await mod.getByRole('menuitem', { name: 'Nachricht lösen' }).click()
+    await mod.getByRole('menuitem', { name: 'Anheftung aufheben' }).click()
     await expect(member.getByTestId('pinned')).toHaveCount(0)
 
     // Deleting with a reason tells the author.
     await mod.getByText('eins', { exact: true }).click({ button: 'right' })
-    await mod.getByRole('menuitem', { name: 'Mit Grund löschen…' }).click()
+    await mod.getByRole('menuitem', { name: 'Mit Grund löschen …' }).click()
     await mod.getByTestId('reason').fill('Test')
     await mod.getByTestId('message-moderation-submit').click()
     await expect(member.getByText('eins', { exact: true })).toHaveCount(0)
-    await expect(member.getByText(`Ein Moderator hat deine Nachricht in ${CHANNEL} entfernt: Test`)).toBeVisible()
+    await expect(member.getByText(`Deine Nachricht in ${CHANNEL} wurde vom Moderationsteam entfernt: Test`)).toBeVisible()
 
     // Clearing a member's latest messages.
     for (const text of ['drei', 'vier']) {
@@ -81,7 +81,7 @@ test('slow mode, pinning, deleting with a reason and clearing a member are visib
       await expect(member.getByText(text, { exact: true })).toBeVisible()
     }
     await mod.getByText('vier', { exact: true }).click({ button: 'right' })
-    await mod.getByRole('menuitem', { name: 'Letzte Nachrichten dieser Person löschen…' }).click()
+    await mod.getByRole('menuitem', { name: 'Letzte Nachrichten dieser Person löschen …' }).click()
     await mod.getByTestId('bulk-count').fill('5')
     await mod.getByTestId('reason').fill('Aufräumen')
     await mod.getByTestId('message-moderation-submit').click()
