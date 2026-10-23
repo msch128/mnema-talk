@@ -128,7 +128,22 @@ until the new release has passed your application checks.
 
 ### 1.0.x → 1.1.0
 
-<<<<<<< HEAD
+Update with the procedure above; take the backup first. 1.1.0 only adds: a
+1.0.x web app keeps working against it, and a 1.1 web app hides what a 1.0.x
+server lacks.
+
+- **Migration 0049** adds `user_blocks` and `message_reports`. A rollback to a
+  1.0.x image needs the backup restore (the schema changed).
+- **Blocking and message reports.** Members can block each other and report a
+  message to the moderators ([moderation](moderation.md#blocking-and-reports)).
+  New permission *Manage reports* (bit `1 << 21`), off for @everyone and every
+  existing role: nobody gains access to reports until a role is given it
+  (the Owner and Administrators have it implicitly).
+- **`GET /api/health` has a `features` list** (for example `"blocks"`,
+  `"reports"`, `"search.filters.v2"`, `"threads.follow"`): the web app uses it to show only what the server supports.
+- **New event** `block_updated`, sent only to the blocker's own sessions.
+- **Export** gains `blocks.json` and `reports.json`.
+
 - **Migration 0054** adds `thread_follows` and fills it from the existing
   threads (root authors and repliers), so threads keep notifying the people
   who took part. From then on a thread reply notifies only its followers (the
@@ -142,23 +157,7 @@ until the new release has passed your application checks.
 - Search accepts `has=poll`, `has=edit` and `is=pinned`. The new routes
   (`/api/threads/{id}/follow`, `/api/threads/following`) and the event
   `thread_follow_updated` are additive; a 1.0.x web bundle ignores them.
-=======
-Update with the procedure above; take the backup first. 1.1.0 only adds: a
-1.0.x web app keeps working against it, and a 1.1 web app hides what a 1.0.x
-server lacks.
-
-- **Migration 0049** adds `user_blocks` and `message_reports`. A rollback to a
-  1.0.x image needs the backup restore (the schema changed).
-- **Blocking and message reports.** Members can block each other and report a
-  message to the moderators ([moderation](moderation.md#blocking-and-reports)).
-  New permission *Manage reports* (bit `1 << 21`), off for @everyone and every
-  existing role: nobody gains access to reports until a role is given it
-  (the Owner and Administrators have it implicitly).
-- **`GET /api/health` has a `features` list** (for example `"blocks"`,
-  `"reports"`): the web app uses it to show only what the server supports.
-- **New event** `block_updated`, sent only to the blocker's own sessions.
-- **Export** gains `blocks.json` and `reports.json`.
->>>>>>> origin/release/1.1.0
+- **Export** also gains `thread_follows.json`.
 
 ### 1.0.0 → 1.0.1
 
