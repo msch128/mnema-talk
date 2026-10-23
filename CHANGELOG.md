@@ -1,5 +1,50 @@
 # Changelog
 
+## [1.0.0](https://github.com/msch128/mnema-talk/compare/v0.9.0...v1.0.0) (2026-10-23)
+
+
+### Features
+
+* 1.0.0 stability, hardening and quality of life ([#320](https://github.com/msch128/mnema-talk/issues/320)) ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **account:** delete my account and export my data ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **api:** API stability contract with an OpenAPI breaking-change check in CI and a server-side WebSocket event registry ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **auth:** optional e-mail with SMTP and password reset by mail; optional TOTP two-factor sign-in with recovery codes ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **chat:** custom emoji per instance (Manage emoji) ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **chat:** Discord-compatible Markdown with code highlighting and confirmed external links ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **chat:** jump to the first unread message; read markers scale to 10,000-member channels ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **chat:** pinned messages per channel ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **chat:** slash-command framework with /poll ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **moderation:** edit history for moderators ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **web:** drafts per channel and thread ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **webhook:** role mentions for webhooks and bots through allowed_mentions; role pills keep their colour under the CSP ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **web:** media is refused in browsers that cannot seal it; Firefox screen share works (VP8) ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **web:** phone layout with drawer navigation and touch targets ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **web:** Web Push notifications and an installable web app ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+
+
+### Bug Fixes
+
+* **audit:** category and layout entries are visible to Owner and Administrators only ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **auth:** new-device sign-in cannot be locked out from one client; password hashing is bounded; weak custom invite codes are refused ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **bot:** send limits key on the canonical channel id; tokens record and re-check their issuer ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **chat:** mention fan-out is capped; invisible and bidi characters are stripped from file and display names ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **ci:** the web bundle is built and signed inside the protected job; the security floor rises only with an explicit trailer; the trust statement expiry is watched ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **linkpreview:** slow hosts are held to their own hop; the address filter matches the webhook SSRF guard ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **media:** daily upload budget per account and optional storage guards ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **sfu:** ICE candidates in answers are vetted like trickled ones and each distinct candidate counts once ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* **ws:** WebSockets end with their session and token; event payloads and rates are capped per type and account ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+
+
+### Performance Improvements
+
+* **perm:** role, overwrite and layout writes are batched; the duplicate trigram index is dropped ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+
+
+### Documentation
+
+* operator readiness for 1.0 (upgrade notes, alert rules file checked in CI, supported versions, fresh-install check) ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+* the desktop client is Beta ([b5b06dd](https://github.com/msch128/mnema-talk/commit/b5b06ddf6816bfd2fed5a645efb2993e052ef1ac))
+
 ## [0.9.0](https://github.com/msch128/mnema-talk/compare/v0.8.16...v0.9.0) (2026-10-22)
 
 
