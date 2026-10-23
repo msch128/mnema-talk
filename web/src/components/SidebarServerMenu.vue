@@ -5,6 +5,7 @@ import { usePermissionsStore } from '../stores/permissions'
 import { useOnboardingStore } from '../stores/onboarding'
 import { useAppVersionStore } from '../stores/appVersion'
 import { rulesOpen } from '../lib/communityRules'
+import { t } from '../i18n'
 import { useDismissable } from '../composables/useDismissable'
 
 // The server header (48px, aligned with the channel header) and its dropdown:
@@ -19,6 +20,8 @@ const onboarding = useOnboardingStore()
 const versionStore = useAppVersionStore()
 const updateHint = computed(() => permissions.canOpenAdmin && versionStore.adminUpdateAvailable)
 const showRules = () => { rulesOpen.value = true }
+// The community's own name (Admin > Welcome & rules) sits under the product name.
+const subtitle = computed(() => onboarding.state?.community_name.trim() || t('sidebar.subtitle'))
 
 const menuOpen = ref(false)
 const menuRoot = ref<HTMLElement | null>(null)
@@ -113,7 +116,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       </span>
       <span class="flex flex-col min-w-0 flex-1">
         <span class="font-semibold text-nav text-mnema-text truncate">{{ SERVER_NAME }}</span>
-        <span class="text-xs text-mnema-tertiary truncate">{{ $t('sidebar.subtitle') }}</span>
+        <span class="text-xs text-mnema-tertiary truncate">{{ subtitle }}</span>
       </span>
       <X v-if="menuOpen" class="w-4 h-4 text-mnema-muted flex-shrink-0" />
       <ChevronDown v-else class="w-4 h-4 text-mnema-muted flex-shrink-0" />

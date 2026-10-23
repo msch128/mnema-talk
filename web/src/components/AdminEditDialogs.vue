@@ -56,7 +56,7 @@ const saveButton = 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-
       </div>
       <div class="flex justify-end gap-2 pt-2">
         <button type="button" :class="cancelButton" @click="emit('close')">{{ $t('common.cancel') }}</button>
-        <button type="submit" :disabled="!categoryName.trim()" :class="saveButton">{{ $t('admin.save') }}</button>
+        <button type="submit" :disabled="!categoryName.trim()" :class="saveButton">{{ $t('common.save') }}</button>
       </div>
     </form>
   </BaseDialog>
@@ -90,7 +90,7 @@ const saveButton = 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-
       </div>
       <div class="flex justify-end gap-2 pt-2">
         <button type="button" :class="cancelButton" @click="emit('close')">{{ $t('common.cancel') }}</button>
-        <button type="submit" :disabled="!channelName.trim()" :class="saveButton">{{ $t('admin.save') }}</button>
+        <button type="submit" :disabled="!channelName.trim()" :class="saveButton">{{ $t('common.save') }}</button>
       </div>
     </form>
   </BaseDialog>

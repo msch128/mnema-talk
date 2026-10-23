@@ -47,7 +47,7 @@ const newCategoryName = defineModel<string>('newCategoryName', { required: true 
       @click="emit('save')"
     >
       <Save class="w-4 h-4" />
-      <span>{{ saving ? $t('admin.save') : $t('admin.saveLayout') }}</span>
+      <span>{{ saving ? $t('common.save') : $t('admin.saveLayout') }}</span>
     </button>
   </div>
 </template>

@@ -6,7 +6,8 @@
     "save": "Speichern",
     "delete": "Löschen",
     "undo": "Rückgängig",
-    "create": "Erstellen"
+    "create": "Erstellen",
+    "name": "Name"
   },
   "language": {
     "de": "Deutsch",
@@ -162,7 +163,6 @@
       "content": "Nachricht",
       "bio": "Biografie",
       "display_name": "Anzeigename",
-      "name": "Name",
       "topic": "Thema"
     }
   },
@@ -334,7 +334,6 @@
     "chooseExisting": "Bestehende wählen",
     "newCategoryPlaceholder": "z. B. Projekte, Spiele, Archiv",
     "newCategoryHint": "Die Kategorie wird erstellt und der Kanal darin platziert.",
-    "name": "Name",
     "namePlaceholderText": "z. B. off-topic",
     "namePlaceholderVoice": "z. B. Lounge",
     "nameHintText": "Kleinbuchstaben, Ziffern und Bindestriche.",
@@ -1107,7 +1106,6 @@
     "categoryDeleted": "Kategorie gelöscht",
     "uncategorized": "Ohne Kategorie",
     "addCategory": "Kategorie erstellen",
-    "save": "Speichern",
     "storage": "Speicher",
     "storageCounts": "{files} Dateien, {deleted} gelöscht",
     "retentionOff": "Automatische Löschung ist aus. Medien bleiben gespeichert, bis du sie löschst.",
@@ -1158,7 +1156,6 @@
     "uploadLimit": {
       "title": "Upload-Größe",
       "label": "Größte Datei",
-      "save": "Speichern",
       "reset": "Zurück zum Server-Maximum",
       "saved": "Upload-Limit gespeichert.",
       "hint": "Gilt für alle, sofern eine Rolle kein eigenes Limit setzt. Es kann das Server-Maximum von {ceiling} MB (MAX_UPLOAD_SIZE_MB) nicht übersteigen. Dein Reverse-Proxy muss diese Body-Größe erlauben.",
@@ -1179,7 +1176,6 @@
       "startChannel": "Startkanal",
       "startChannelNone": "Der erste Kanal, den ein Mitglied sehen kann",
       "tooLong": "Einer der Texte ist zu lang.",
-      "save": "Speichern",
       "saved": "Willkommen und Regeln gespeichert."
     },
     "mail": {
@@ -1726,7 +1722,6 @@
     "newName": "Neue Rolle",
     "everyone": "@everyone",
     "everyoneHint": "Was jedes Mitglied hat. Rollen kommen dazu.",
-    "name": "Name",
     "color": "Farbe",
     "colorNone": "Keine Farbe",
     "colorCustom": "Hex-Farbe (#rrggbb)",
@@ -1801,7 +1796,6 @@
     "menu": "Webhooks …",
     "incomingHint": "Ein eingehender Webhook gibt Skripten und Diensten eine geheime URL, mit der sie mit den Einstellungen unten Nachrichten in diesen Kanal schreiben. Wer die URL kennt, kann schreiben: behandle sie wie ein Passwort.",
     "outgoingHint": "Ein ausgehender Webhook schickt Ereignisse dieses Kanals an eine URL, signiert, damit du prüfen kannst, dass sie von hier kommen. Er sendet weiter, bis ein Administrator ihn ändert oder löscht.",
-    "name": "Name",
     "namePlaceholder": "Name des neuen Webhooks",
     "create": "Erstellen",
     "created": "Webhook erstellt",
@@ -1950,7 +1944,6 @@
     "intro": "Bots sind Konten für Programme: Sie schreiben Nachrichten, beantworten Slash-Befehle und reagieren über die Bot-API auf Ereignisse (siehe Bot-Dokumentation). Ein neuer Bot kann nichts, bis du ihm eine Rolle gibst, seine Intents erlaubst und ein Token ausstellst. Jede Änderung landet im Audit-Log.",
     "badge": "Bot",
     "new": "Neuer Bot",
-    "name": "Name",
     "namePlaceholder": "Name des neuen Bots",
     "nameRequired": "Ein Bot braucht einen Namen.",
     "list": "Bots",
@@ -2017,7 +2010,6 @@
       "expiry": "Läuft ab (optional)",
       "issue": "Token ausstellen",
       "empty": "Noch keine Tokens.",
-      "colName": "Name",
       "colToken": "Token",
       "colState": "Status",
       "colExpires": "Läuft ab",

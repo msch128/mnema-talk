@@ -6,7 +6,8 @@
     "save": "Save",
     "delete": "Delete",
     "undo": "Undo",
-    "create": "Create"
+    "create": "Create",
+    "name": "Name"
   },
   "language": {
     "de": "Deutsch",
@@ -162,7 +163,6 @@
       "content": "Message",
       "bio": "Bio",
       "display_name": "Display name",
-      "name": "Name",
       "topic": "Topic"
     }
   },
@@ -334,7 +334,6 @@
     "chooseExisting": "Choose existing",
     "newCategoryPlaceholder": "e.g. Projects, Games, Archive",
     "newCategoryHint": "The category is created and the channel is placed inside it.",
-    "name": "Name",
     "namePlaceholderText": "e.g. off-topic",
     "namePlaceholderVoice": "e.g. Lounge",
     "nameHintText": "Lowercase letters, digits and hyphens.",
@@ -1107,7 +1106,6 @@
     "categoryDeleted": "Category deleted",
     "uncategorized": "Uncategorized",
     "addCategory": "Create category",
-    "save": "Save",
     "storage": "Storage",
     "storageCounts": "{files} files, {deleted} deleted",
     "retentionOff": "Automatic deletion is off. Media stays until you delete it.",
@@ -1158,7 +1156,6 @@
     "uploadLimit": {
       "title": "Upload size",
       "label": "Largest file",
-      "save": "Save",
       "reset": "Back to the server maximum",
       "saved": "Upload limit saved.",
       "hint": "Applies to everyone unless a role sets its own. It cannot exceed the server maximum of {ceiling} MB (MAX_UPLOAD_SIZE_MB). Your reverse proxy must allow that body size.",
@@ -1179,7 +1176,6 @@
       "startChannel": "Start channel",
       "startChannelNone": "The first channel a member can see",
       "tooLong": "One of the texts is too long.",
-      "save": "Save",
       "saved": "Welcome and rules saved."
     },
     "mail": {
@@ -1726,7 +1722,6 @@
     "newName": "New role",
     "everyone": "@everyone",
     "everyoneHint": "What every member has. Roles add to it.",
-    "name": "Name",
     "color": "Colour",
     "colorNone": "No colour",
     "colorCustom": "Hex colour (#rrggbb)",
@@ -1801,7 +1796,6 @@
     "menu": "Webhooks…",
     "incomingHint": "An incoming webhook gives scripts and services a secret URL to post messages into this channel with the settings below. Anyone with the URL can post, so treat it like a password.",
     "outgoingHint": "An outgoing webhook sends events of this channel to a URL, signed so you can check they come from here. It keeps sending until an administrator changes or deletes it.",
-    "name": "Name",
     "namePlaceholder": "Name of the new webhook",
     "create": "Create",
     "created": "Webhook created",
@@ -1950,7 +1944,6 @@
     "intro": "Bots are accounts for programs: they post messages, answer slash commands and react to events through the bot API (see the bot documentation). A new bot can do nothing until you give it a role, allow its intents and issue a token. Every change here lands in the audit log.",
     "badge": "Bot",
     "new": "New bot",
-    "name": "Name",
     "namePlaceholder": "Name of the new bot",
     "nameRequired": "A bot needs a name.",
     "list": "Bots",
@@ -2017,7 +2010,6 @@
       "expiry": "Expires (optional)",
       "issue": "Issue token",
       "empty": "No tokens yet.",
-      "colName": "Name",
       "colToken": "Token",
       "colState": "State",
       "colExpires": "Expires",

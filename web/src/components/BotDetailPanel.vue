@@ -94,7 +94,7 @@ function onRoles(bot: BotBot) {
       <img v-if="bot.avatar_url" :src="bot.avatar_url" alt="" class="h-12 w-12 flex-shrink-0 rounded-full object-cover" />
       <span v-else class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-mnema-raised text-lg font-semibold text-mnema-muted" aria-hidden="true">{{ botInitial(bot.name) }}</span>
       <label class="min-w-0 flex-1 space-y-1">
-        <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('bots.name') }}</span>
+        <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('common.name') }}</span>
         <input v-model="name" maxlength="24" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-none transition focus:border-mnema-accent" data-testid="bot-name" @blur="rename" @keydown.enter.prevent="rename" />
       </label>
       <label class="flex cursor-pointer items-center gap-1.5 rounded-md border border-mnema-border-strong px-3 py-1.5 text-sm text-mnema-text transition hover:bg-mnema-hover">
