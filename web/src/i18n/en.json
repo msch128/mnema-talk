@@ -1561,6 +1561,10 @@
     "empty": "No entries.",
     "system": "System",
     "request": "request",
+    "changed": "Changed: {list}",
+    "created": "Created: {list}",
+    "yes": "yes",
+    "no": "no",
     "loadMore": "Load more",
     "groups": {
       "role": "Roles",
