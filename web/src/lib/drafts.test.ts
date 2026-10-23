@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { channelDraftKey, clearAllDrafts, DRAFT_KEY_PREFIX, getDraft, hasDraft, MAX_DRAFT_TEXT, MAX_DRAFTS, setDraft, threadDraftKey } from './drafts'
+import { beginDraftSession, channelDraftKey, clearAllDrafts, DRAFT_SESSION_KEY, DRAFT_KEY_PREFIX, getDraft, hasDraft, MAX_DRAFT_TEXT, MAX_DRAFTS, setDraft, threadDraftKey } from './drafts'
 
 beforeEach(() => {
   localStorage.clear()
@@ -88,5 +88,68 @@ describe('drafts', () => {
     clearAllDrafts()
     expect(hasDraft('u1', 'c:c1')).toBe(false)
     expect(Object.keys(localStorage)).toEqual(['mnema.sidebar.collapsedCategories'])
+  })
+
+  describe('across tabs', () => {
+    // A second tab is a second copy of the module sharing the same storage.
+    async function openTab() {
+      vi.resetModules()
+      return import('./drafts')
+    }
+
+    it('a stale tab cannot write a draft back after sign-out', async () => {
+      beginDraftSession('u1')
+      setDraft('u1', 'c:c1', { text: 'mine', reply: null })
+      const other = await openTab()
+      other.beginDraftSession('u1')
+      expect(other.getDraft('u1', 'c:c1')?.text).toBe('mine')
+
+      clearAllDrafts() // sign-out in the first tab
+      other.setDraft('u1', 'c:c1', { text: 'back again', reply: null })
+
+      expect(localStorage.getItem(`${DRAFT_KEY_PREFIX}u1`)).toBeNull()
+      expect(other.hasDraft('u1', 'c:c1')).toBe(false)
+      expect(other.getDraft('u1', 'c:c1')).toBeNull()
+    })
+
+    it('stays stopped when the account signs in again elsewhere', async () => {
+      beginDraftSession('u1')
+      const stale = await openTab()
+      stale.beginDraftSession('u1')
+      clearAllDrafts()
+      beginDraftSession('u1')
+      stale.setDraft('u1', 'c:c1', { text: 'late', reply: null })
+      expect(localStorage.getItem(`${DRAFT_KEY_PREFIX}u1`)).toBeNull()
+      // Its own sign-in lets it write again.
+      stale.beginDraftSession('u1')
+      stale.setDraft('u1', 'c:c1', { text: 'fresh', reply: null })
+      expect(stale.getDraft('u1', 'c:c1')?.text).toBe('fresh')
+    })
+
+    it('forgets its in-memory drafts as soon as another tab signs out', async () => {
+      const other = await openTab()
+      other.beginDraftSession('u1')
+      other.setDraft('u1', 'c:c1', { text: 'unsent', reply: null })
+      expect(other.hasDraft('u1', 'c:c1')).toBe(true)
+      localStorage.removeItem(DRAFT_SESSION_KEY)
+      window.dispatchEvent(new StorageEvent('storage', { key: DRAFT_SESSION_KEY, newValue: null }))
+      expect(other.hasDraft('u1', 'c:c1')).toBe(false)
+    })
+
+    it('tabs of one session share their drafts', async () => {
+      beginDraftSession('u1')
+      const other = await openTab()
+      other.beginDraftSession('u1')
+      other.setDraft('u1', 'c:c1', { text: 'from the other tab', reply: null })
+      expect(localStorage.getItem(`${DRAFT_KEY_PREFIX}u1`)).toContain('from the other tab')
+    })
+
+    it('keeps working in memory when storage is blocked', () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
+      beginDraftSession('u1')
+      setDraft('u1', 'c:c1', { text: 'x', reply: null })
+      expect(hasDraft('u1', 'c:c1')).toBe(true)
+    })
   })
 })
