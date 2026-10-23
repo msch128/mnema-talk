@@ -65,6 +65,13 @@ const voiceUsers = computed(() => {
   return users ? Object.values(users) : []
 })
 
+// The row leaves room on its right for the buttons that sit beside it (24px each, 44px chat on phones).
+const actionPad = computed(() => {
+  if (isVoice.value && props.admin) return 'pr-[68px] max-md:pr-[58px]'
+  if (isVoice.value) return 'pr-[38px] max-md:pr-[58px]'
+  return props.admin ? 'pr-[38px] max-md:pr-2' : ''
+})
+
 // Shared row styling (34px channel rows, rounded hover/selected states).
 const rowClass = computed(() => [
   'relative w-full h-[34px] max-md:h-11 flex items-center justify-between gap-1.5 px-2 mb-px rounded-md text-nav transition-colors motion-reduce:transition-none group cursor-pointer text-left min-w-0 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
@@ -73,6 +80,7 @@ const rowClass = computed(() => [
     : unread.value > 0
       ? 'text-mnema-text font-semibold hover:bg-mnema-hover/70'
       : 'text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text',
+  actionPad.value,
   muted.value && !active.value && 'opacity-60',
   props.flash && 'nav-flash'
 ])
@@ -90,6 +98,7 @@ const rowClass = computed(() => [
       aria-hidden="true"
     ></span>
 
+    <div class="group/row relative">
     <div
       :class="rowClass"
       role="button"
@@ -160,18 +169,20 @@ const rowClass = computed(() => [
           {{ unread }}
         </span>
       </div>
+    </div>
 
+      <!-- The actions sit beside the row, not inside it: a button inside a button is not valid. -->
+      <div v-if="isVoice || admin" class="pointer-events-none absolute inset-y-0 right-2 mb-px flex items-center gap-1.5">
       <!-- A Talk's chat can be read without joining the Talk -->
       <button
         v-if="isVoice"
         type="button"
         data-no-drag
         data-testid="talk-open-chat"
-        @click.stop="emit('open-chat')"
-        @pointerdown.stop
+        @click="emit('open-chat')"
         v-tooltip="$t('talk.openChat')"
         :aria-label="$t('talk.openChat')"
-        class="btn btn-icon opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100 max-md:z-10 w-6 h-6 max-md:w-11 max-md:h-11 shrink-0"
+        class="pointer-events-auto btn btn-icon opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100 max-md:z-10 w-6 h-6 max-md:w-11 max-md:h-11 shrink-0"
       >
         <MessageSquare class="w-4 h-4" />
       </button>
@@ -180,13 +191,14 @@ const rowClass = computed(() => [
         v-if="admin"
         type="button"
         data-no-drag
-        @click.stop="emit('delete')"
+        @click="emit('delete')"
         v-tooltip="isVoice ? $t('sidebar.deleteVoiceChannel') : $t('sidebar.deleteChannel')"
         :aria-label="isVoice ? $t('sidebar.deleteVoiceChannel') : $t('sidebar.deleteChannel')"
-        class="btn btn-icon max-md:hidden opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-6 h-6 hover:text-mnema-danger shrink-0"
+        class="pointer-events-auto btn btn-icon max-md:hidden opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 w-6 h-6 hover:text-mnema-danger shrink-0"
       >
         <Trash2 class="w-4 h-4" />
       </button>
+      </div>
     </div>
 
     <!-- Connected voice users (indented, 24px avatars, speaking ring) -->

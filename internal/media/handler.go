@@ -83,6 +83,8 @@ func (h *Handler) MountUploads(r chi.Router) {
 	// An avatar is parsed in memory (at most 5 MB), never spilled to /tmp:
 	// its body gets a tighter cap than file uploads.
 	r.With(httpx.MaxBody(MaxAvatarBytes+1<<20)).Post("/users/me/avatar", httpx.Handle(h.uploadAvatar))
+	r.With(httpx.MaxBody(MaxBannerBytes+1<<20)).Put("/users/me/banner", httpx.Handle(h.putBanner))
+	r.Delete("/users/me/banner", httpx.Handle(h.deleteBanner))
 }
 
 // Mount registers authenticated media serving.

@@ -13,6 +13,8 @@ import (
 )
 
 func TestMetricsExposeProcessBuildAndInstruments(t *testing.T) {
+	// Other tests fill the capped series of this family; start from an empty one.
+	metrics.HTTPRequests.Reset()
 	metrics.ObserveHTTP("/api/test-metrics", http.StatusInternalServerError, 20*time.Millisecond)
 	rec := httptest.NewRecorder()
 	metricsHandler(&opsSource{version: "9.9.9", hasStore: true, storage: func() error { return nil }}).

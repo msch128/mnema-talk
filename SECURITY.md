@@ -272,7 +272,7 @@ details and the limits.
   usual lockouts), so a stolen session cookie alone cannot do either.
   *Deletion* runs in one transaction and cannot be undone. The Owner account
   cannot be deleted (ownership is not transferable). What goes: profile,
-  avatar, e-mail address, sessions (native ones too), tokens, invites,
+  avatar, banner, e-mail address, sessions (native ones too), tokens, invites,
   reactions, mentions of the member, settings, roles and overwrites, every file
   the member uploaded (database rows and objects), pending and finished exports,
   and the second factor. What stays: the account row as an anonymised tombstone

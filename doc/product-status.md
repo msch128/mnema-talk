@@ -93,7 +93,7 @@ join a call at all**: the join is refused with a message, no microphone is
 requested and nothing is sent. Media is never sent unsealed, in any engine.
 
 What the end-to-end suite showed (Playwright with the engines it ships:
-Chromium 153, WebKit 26.6, Firefox 155, two members per call with fake
+Chromium 156, WebKit 27.2, Firefox 157, two members per call with fake
 devices; run `make e2e` or see [development](development.md#browser-tests-e2e)):
 
 | | Chromium (Chrome, Edge) | WebKit (Safari, iOS) | Firefox |
@@ -118,11 +118,11 @@ What it took:
   join (before any device is requested) instead of joining with microphone,
   camera and screen switched off.
 - **Linux WebKit in CI cannot take part in a sealed call.** This is the engine
-  build, not the app. Playwright 1.63's Linux WebKit (26.6, the same version as
-  its macOS build) reports `RTCPeerConnection` and `getUserMedia`, but
+  build, not the app. Playwright's Linux WebKit (26.6 in 1.63, 27.2 in 1.64.1, in
+  both cases the version of its macOS build) reports `RTCPeerConnection` and `getUserMedia`, but
   `RTCRtpScriptTransform`, `RTCRtpSender.prototype.createEncodedStreams` and
-  `RTCEncodedAudioFrame` are all `undefined` (checked on x64 and arm64 Linux;
-  the macOS build has `RTCRtpScriptTransform` and `RTCEncodedAudioFrame`). With
+  `RTCEncodedAudioFrame` are all `undefined` (checked on x64 and arm64 Linux
+  with both versions; the macOS build has `RTCRtpScriptTransform` and `RTCEncodedAudioFrame`). With
   no way to reach encoded media the app does what it promises for such a
   browser: it refuses the join with a message, requests no microphone and sends
   nothing (`browser-sealing.spec.ts`, second spec, runs in the WebKit CI job). The
@@ -130,6 +130,21 @@ What it took:
   `RTCRtpScriptTransform` is missing, so a build that gains it runs the call
   again. Every spec that joins a call (calls, screen share, Talk chat, roles
   rights) stays out of `e2e (webkit)` and runs in `e2e (webkit-macos-calls)` on a macOS runner, a separate job that is not a required check.
+- **WebKit 27.2, `<select>` and the style policy.** Playwright 1.64's WebKit
+  (27.2) reports one `style-src-attr` violation for every `<select>` a page
+  builds (empty sample, the script that created the select as source; the
+  browser's own shadow tree sets an inline style). Nothing is refused: a page
+  with selects renders pixel-identically under `'unsafe-inline'` and under
+  `style-src-attr 'none'`, and 26.6 does not report it. The policy is left as
+  it is; the e2e fixtures ignore this one signature in WebKit only (the
+  Chromium and Firefox jobs run the same code and still fail on any
+  `style-src-attr` event). Not yet checked in a release Safari 27.
+- **Firefox, navigations the driver loses.** On Linux Firefox (Playwright 1.63
+  and later) `page.goto` sometimes never resolves although the server answered
+  200 and `document.readyState` is `complete`: the driver's frame stays on
+  about:blank (no `navigated` event; 3 to 12 of 40 navigations of a bare page
+  on a 2-CPU container). Not specific to this app; the e2e fixtures retry the
+  navigation once the first attempt has timed out (`tests/navigation-diagnostics.ts`).
 - WebKit mutes the microphone of all but one page per browser process (as
   Safari does between tabs). That limits two members in one Safari window, not
   two devices; the suite therefore runs each WebKit member in its own process.

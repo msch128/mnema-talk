@@ -93,6 +93,8 @@ async function mountSidebar({ role = 'admin', collapsed = [] }: { role?: 'admin'
 
 const nav = () => wrapper.find('nav')
 const rowOf = (id: string) => wrapper.find(`[data-drop="channel"][data-id="${id}"]`)
+// The row and its action buttons (chat, delete) are siblings inside this wrapper.
+const itemOf = (id: string) => wrapper.find(`[data-channel-item="${id}"]`)
 const headerOf = (id: string) => wrapper.find(`[data-drop="header"][data-id="${id}"]`)
 const sectionIds = () => wrapper.findAll('[data-drop-section]').map(s => requireValue(s.attributes('data-drop-section')))
 const channelIds = (sectionId: string) =>
@@ -224,9 +226,9 @@ describe('Sidebar basics', () => {
 
   it('opens a Talk\'s chat from its row without joining the Talk', async () => {
     await mountSidebar({ role: 'user' })
-    const button = rowOf('lounge').get('[data-testid="talk-open-chat"]')
+    const button = itemOf('lounge').get('[data-testid="talk-open-chat"]')
     expect(button.attributes('aria-label')).toBe('Chat öffnen')
-    expect(wrapper.find('[data-channel-type="text"] [data-testid="talk-open-chat"]').exists()).toBe(false)
+    expect(itemOf('general').find('[data-testid="talk-open-chat"]').exists()).toBe(false)
     await button.trigger('click')
     await flushPromises()
     expect(window.location.pathname).toBe('/v/lounge/chat')
@@ -271,7 +273,7 @@ describe('Sidebar drag and drop (admin)', () => {
     await mountSidebar()
     await dragTo(rowOf('random'), yIn(rowOf('general'), 0.2))
     expect(q('[data-testid="drag-ghost"]').textContent).toContain('random')
-    expect(rowOf('general').element.parentElement!.querySelector('[data-drop-indicator]')).not.toBeNull()
+    expect(rowOf('general').element.closest('[data-channel-item]')!.querySelector('[data-drop-indicator]')).not.toBeNull()
     await drop(yIn(rowOf('general'), 0.2))
 
     expect(order()).toBe('welcome | text: random general | voice: lounge | empty: ')
@@ -525,16 +527,16 @@ describe('Sidebar administrative lifecycle and navigation', () => {
     const deleteChannel = vi.spyOn(chat, 'deleteChannel').mockResolvedValue()
     const deleteCategory = vi.spyOn(chat, 'deleteCategory').mockResolvedValue()
     confirmMock.mockResolvedValueOnce(false)
-    await rowOf('general').find('button').trigger('click'); await flush()
+    await itemOf('general').find('button').trigger('click'); await flush()
     expect(deleteChannel).not.toHaveBeenCalled()
-    await rowOf('general').find('button').trigger('click'); await flush()
+    await itemOf('general').find('button').trigger('click'); await flush()
     expect(deleteChannel).toHaveBeenCalledWith('general')
     expect(toasts.toasts.at(-1)?.text).toBe('Kanal gelöscht')
-    await rowOf('lounge').find('[aria-label="Talk löschen"]').trigger('click'); await flush()
+    await itemOf('lounge').find('[aria-label="Talk löschen"]').trigger('click'); await flush()
     expect(confirmMock.mock.calls.at(-1)?.[0].title).toContain('Talk')
     deleteChannel.mockRejectedValueOnce(new Error('offline')).mockRejectedValueOnce(new Error(''))
-    await rowOf('general').find('button').trigger('click'); await flush(); expect(toasts.toasts.at(-1)?.text).toBe('offline')
-    await rowOf('general').find('button').trigger('click'); await flush(); expect(toasts.toasts.at(-1)?.type).toBe('error')
+    await itemOf('general').find('button').trigger('click'); await flush(); expect(toasts.toasts.at(-1)?.text).toBe('offline')
+    await itemOf('general').find('button').trigger('click'); await flush(); expect(toasts.toasts.at(-1)?.type).toBe('error')
     confirmMock.mockResolvedValueOnce(false)
     await headerOf('text').findAll('button')[2]!.trigger('click'); await flush(); expect(deleteCategory).not.toHaveBeenCalled()
     await headerOf('text').findAll('button')[2]!.trigger('click'); await flush(); expect(deleteCategory).toHaveBeenCalledWith('text')
