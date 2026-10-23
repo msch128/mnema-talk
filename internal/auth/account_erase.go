@@ -61,7 +61,26 @@ var eraseSteps = []string{
 	`DELETE FROM recovery_codes WHERE user_id = $1`,
 	`DELETE FROM login_challenges WHERE user_id = $1`,
 	`DELETE FROM second_factor_failures WHERE user_id = $1`,
+	`DELETE FROM user_blocks WHERE blocker_id = $1 OR blocked_id = $1`,
+	// Reports keep their copies of other people's messages, so the person's
+	// own text is blanked in every copy (as reported message or as context),
+	// and the links to their account are cut. The reports stay for the
+	// moderators.
+	scrubReportCopies,
+	`UPDATE message_reports SET reporter_id = NULL, note = '' WHERE reporter_id = $1`,
+	`UPDATE message_reports SET reported_user_id = NULL WHERE reported_user_id = $1`,
+	`UPDATE message_reports SET resolved_by = NULL WHERE resolved_by = $1`,
 }
+
+// scrubReportCopies blanks the text and file names of the account's messages
+// inside the stored copies of message_reports.
+const scrubReportCopies = `UPDATE message_reports SET snapshot = jsonb_build_object(
+	'message', CASE WHEN snapshot->'message'->>'user_id' = $1::text
+	                THEN snapshot->'message' || '{"content": "", "attachments": []}'::jsonb ELSE snapshot->'message' END,
+	'context', COALESCE((SELECT jsonb_agg(CASE WHEN e->>'user_id' = $1::text
+	                THEN e || '{"content": "", "attachments": []}'::jsonb ELSE e END ORDER BY ord)
+	                FROM jsonb_array_elements(snapshot->'context') WITH ORDINALITY AS t(e, ord)), '[]'::jsonb))
+	WHERE snapshot::text LIKE '%' || $1::text || '%'`
 
 // scrubAudit blanks the names and details of every audit entry that is about
 // the account or mentions its id. The audit trigger allows exactly this while

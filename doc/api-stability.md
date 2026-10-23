@@ -23,6 +23,11 @@ in any release.
 | **Metric names** | [operations.md](operations.md#what-each-metric-means) (`GET /api/metrics`) | Metric names, types and label names. |
 | **Backup layout** | [operations.md](operations.md#backups-and-restore) | What the backup and restore scripts write and read. |
 
+`GET /api/health` also lists the optional features a server has in `features`
+(an array of names such as `blocks`). A name never changes meaning; a client
+treats a missing list as "none" (a 1.0.x server sends no list) and hides what
+is not listed.
+
 Documented behaviour is part of the contract, such as permission checks, limits
 that the OpenAPI document or the docs state, and the default of
 `MEDIA_RETENTION_DAYS=0`.

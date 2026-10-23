@@ -23,6 +23,18 @@ type Health struct {
 	Version string `json:"version"`
 	// WebClientAPI identifies the HTTPS web-client desktop integration contract.
 	WebClientAPI int `json:"web_client_api"`
+	// Features lists the optional features this server has, so a web app of a
+	// newer release can hide what an older server lacks (for example "blocks").
+	// A server of 1.0.x sends no list. See doc/api-stability.md.
+	Features []string `json:"features"`
+}
+
+// Features are the optional capabilities of this build, by name. Each feature
+// package adds its flag here when its server side ships; names are public API
+// and never change meaning.
+var Features = []string{
+	"blocks",
+	"reports",
 }
 
 // healthCacheTTL is how long a health result is reused: the endpoint is
@@ -93,7 +105,7 @@ func health(hc *healthCheck, version string) http.HandlerFunc {
 			httpx.WriteError(w, err)
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, Health{Status: "ok", Version: version, WebClientAPI: WebClientAPI})
+		httpx.WriteJSON(w, http.StatusOK, Health{Status: "ok", Version: version, WebClientAPI: WebClientAPI, Features: Features})
 	}
 }
 

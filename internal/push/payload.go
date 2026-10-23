@@ -62,6 +62,8 @@ func text(locale, key string) string {
 
 // Notice is one message to tell one member about, with everything the text needs.
 type Notice struct {
+	// AuthorID is who wrote the message; a member who blocked them is not told.
+	AuthorID    uuid.UUID
 	ChannelID   uuid.UUID
 	ChannelName string
 	MessageID   uuid.UUID

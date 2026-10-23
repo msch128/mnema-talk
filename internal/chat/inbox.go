@@ -62,7 +62,9 @@ func inboxArgs(q InboxQuery) []any {
 func inboxSQL() string {
 	visible := "($3::uuid[] IS NULL OR m.channel_id = ANY($3::uuid[]))"
 	cursor := "($4::uuid IS NULL OR (m.created_at, m.id) < (SELECT created_at, id FROM messages WHERE id = $4))"
-	tail := " AND m.user_id <> $1 AND " + visible + " AND " + cursor + " ORDER BY m.created_at DESC, m.id DESC LIMIT $2)"
+	// A member the caller blocked leaves no entry, whatever they mention.
+	unblocked := "NOT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = m.user_id)"
+	tail := " AND m.user_id <> $1 AND " + unblocked + " AND " + visible + " AND " + cursor + " ORDER BY m.created_at DESC, m.id DESC LIMIT $2)"
 	return `WITH hits AS (
 		(SELECT m.id, m.created_at FROM message_mentions mm JOIN messages m ON m.id = mm.message_id
 		  WHERE mm.user_id = $1` + tail + `

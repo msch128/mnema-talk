@@ -52,6 +52,7 @@ const (
 // @Description - `typing`: `{channel_id, user_id}` (to everyone except the typist).
 // @Description
 // @Description Server to client, targeted:
+// @Description - `block_updated`: to the user's own sessions only; `{user_id, blocked}` after they blocked or unblocked a member (refetch GET /api/me/blocks). The blocked member is never told.
 // @Description - `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}`, or `{refresh: true}` alone after a notification setting changed or everything was marked read (reload read states and notification settings).
 // @Description - `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.
 // @Description - `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.

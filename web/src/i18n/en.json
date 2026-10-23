@@ -1542,6 +1542,10 @@
       "name": "Manage emoji",
       "desc": "Upload, rename and delete the custom emoji of this community."
     },
+    "manage_reports": {
+      "name": "Manage reports",
+      "desc": "Read and resolve member reports of messages, including the context shared from a direct message."
+    },
     "groups": {
       "general": "General",
       "text": "Text",
