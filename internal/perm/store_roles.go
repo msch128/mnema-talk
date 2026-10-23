@@ -43,7 +43,7 @@ func cleanRoleName(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if strings.EqualFold(strings.TrimPrefix(name, "@"), "everyone") || strings.EqualFold(strings.TrimPrefix(name, "@"), "here") {
+	if reserved := strings.TrimPrefix(httpx.NameSkeleton(name), "@"); reserved == "everyone" || reserved == "here" {
 		return "", httpx.ErrInvalidInput("this role name is reserved")
 	}
 	return name, nil
