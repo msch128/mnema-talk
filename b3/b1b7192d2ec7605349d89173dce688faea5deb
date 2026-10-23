@@ -1,0 +1,43 @@
+internal/db/migrations/0056_bot_token_minter_inferred.sql
+  s_06fcde5dbef956::t_f32eb61b6a4039 1-7
+web/src/components/BotTokensPanel.test.ts
+  s_06fcde5dbef956::t_47b0972e9d4549 58-71
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_b532c53665e179 792,805,885,897
+web/src/components/BotTokensPanel.vue
+  s_06fcde5dbef956::t_d150656bfbf487 130-131
+internal/bot/store.go
+  s_06fcde5dbef956::t_c3ffa658be39f2 84-89,283-284,293
+internal/bot/authn_legacy.go
+  s_06fcde5dbef956::t_3c353aab67c7fe 1-76
+api/openapi.json
+  s_06fcde5dbef956::t_8ac1b305b465ba 1270-1277,1449-1456
+  s_06fcde5dbef956::t_76f3384e413a4d 11867,11967
+internal/bot/authn.go
+  s_06fcde5dbef956::t_c3ffa658be39f2 56-57
+internal/bot/authn_minter.go
+  s_06fcde5dbef956::t_c3ffa658be39f2 27-29,31-35
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_d150656bfbf487 2024-2025,2027,2029
+  s_06fcde5dbef956::t_bd1296dcd27285 2026,2028
+internal/bot/legacy_bind_integration_test.go
+  s_06fcde5dbef956::t_9ea88446ddfad1 1-201
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_d150656bfbf487 2024-2029
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b3b1b7192d2ec7605349d89173dce688faea5deb",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
