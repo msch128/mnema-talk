@@ -66,19 +66,21 @@ var eraseSteps = []string{
 	// own text is blanked in every copy (as reported message or as context),
 	// and the links to their account are cut. The reports stay for the
 	// moderators.
-	scrubReportCopies,
 	`UPDATE message_reports SET reporter_id = NULL, note = '' WHERE reporter_id = $1`,
 	`UPDATE message_reports SET reported_user_id = NULL WHERE reported_user_id = $1`,
 	`UPDATE message_reports SET resolved_by = NULL WHERE resolved_by = $1`,
 }
 
-// scrubReportCopies blanks the text and file names of the account's messages
-// inside the stored copies of message_reports.
+// scrubReportCopies blanks the text, file names and author names of the
+// account's messages inside the stored copies of message_reports ($1 the
+// account, $2 its tombstone username).
 const scrubReportCopies = `UPDATE message_reports SET snapshot = jsonb_build_object(
 	'message', CASE WHEN snapshot->'message'->>'user_id' = $1::text
-	                THEN snapshot->'message' || '{"content": "", "attachments": []}'::jsonb ELSE snapshot->'message' END,
+	                THEN snapshot->'message' || jsonb_build_object('content', '', 'attachments', '[]'::jsonb, 'username', $2::text, 'display_name', 'Deleted member')
+	                ELSE snapshot->'message' END,
 	'context', COALESCE((SELECT jsonb_agg(CASE WHEN e->>'user_id' = $1::text
-	                THEN e || '{"content": "", "attachments": []}'::jsonb ELSE e END ORDER BY ord)
+	                THEN e || jsonb_build_object('content', '', 'attachments', '[]'::jsonb, 'username', $2::text, 'display_name', 'Deleted member')
+	                ELSE e END ORDER BY ord)
 	                FROM jsonb_array_elements(snapshot->'context') WITH ORDINALITY AS t(e, ord)), '[]'::jsonb))
 	WHERE snapshot::text LIKE '%' || $1::text || '%'`
 
@@ -164,6 +166,7 @@ func eraseAccount(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*erased, error)
 		steps = append(steps, eraseStep{sql, byID})
 	}
 	steps = append(steps,
+		eraseStep{scrubReportCopies, func(id uuid.UUID, _ string) []any { return []any{id, deletedUsernamePrefix + shortID(id)} }},
 		eraseStep{`DELETE FROM login_unlock_requests WHERE LOWER(username) = LOWER($1)`, byName},
 		eraseStep{`SELECT set_config('mnema.audit_scrub', 'on', true)`, noArgs},
 		eraseStep{scrubAudit, byID},

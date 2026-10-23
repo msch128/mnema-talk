@@ -4,6 +4,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -65,11 +66,15 @@ type reportDetail struct {
 	Reported  struct{ Username string }
 	Snapshot  struct {
 		Message struct {
-			ID      uuid.UUID `json:"id"`
-			Content string    `json:"content"`
+			ID          uuid.UUID `json:"id"`
+			Username    string    `json:"username"`
+			DisplayName string    `json:"display_name"`
+			Content     string    `json:"content"`
 		} `json:"message"`
 		Context []struct {
-			Content string `json:"content"`
+			Username    string `json:"username"`
+			DisplayName string `json:"display_name"`
+			Content     string `json:"content"`
 		} `json:"context"`
 	} `json:"snapshot"`
 }
@@ -250,10 +255,18 @@ func TestErasingAnAccountBlanksItsTextInReportCopies(t *testing.T) {
 	if d.Snapshot.Message.Content != "reported text by the reporter" {
 		t.Errorf("the other person's text stays: %+v", d.Snapshot.Message)
 	}
+	if d.Snapshot.Message.Username != "reporter" || len(d.Snapshot.Context) != 2 {
+		t.Fatalf("other members' entries stay untouched: %+v", d.Snapshot)
+	}
 	for _, m := range d.Snapshot.Context {
-		if strings.Contains(m.Content, "author") {
-			t.Errorf("the erased account's text survived in a copy: %q", m.Content)
+		if m.Content != "" || m.Username == "author" || m.DisplayName == "author" || m.DisplayName != "Deleted member" ||
+			!strings.HasPrefix(m.Username, "deleted-") {
+			t.Errorf("the erased account's text and names must be replaced by the tombstone: %+v", m)
 		}
+	}
+	raw, _ := json.Marshal(d.Snapshot)
+	if strings.Contains(strings.ToLower(string(raw)), "author") {
+		t.Errorf("the member's name survived in the snapshot: %s", raw)
 	}
 	if d.Reporter.Username != "" && strings.Contains(d.Reporter.Username, "author") {
 		t.Errorf("reporter %+v", d.Reporter)
