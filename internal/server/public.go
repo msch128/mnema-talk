@@ -58,6 +58,7 @@ type ICEConfig struct {
 // state (Art. 13 GDPR). Everything comes from env so the public repo stays generic.
 //
 // @Summary Operator details and privacy-policy facts
+// @Description Public, no session needed. The operator named by the environment, the retention and session lifetimes, the STUN and TURN servers in use and whether the release check is on: the facts the in-app privacy policy states.
 // @ID getLegal
 // @Tags System
 // @Produce json

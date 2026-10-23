@@ -34,7 +34,7 @@ type NewTokenResponse struct {
 // @Param id path string true "Bot ID." Format(uuid)
 // @Success 200 {array} Token "Tokens, newest first."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage bots permission, or the bot's highest role is not below yours."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such bot."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -86,7 +86,7 @@ func cleanTokenRequest(r *http.Request) (string, *time.Time, error) {
 // @Success 201 {object} NewTokenResponse "Issued."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage bots permission, or the bot's highest role is not below yours, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such bot."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: too many active tokens."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
@@ -122,7 +122,7 @@ func (h *Handler) createToken(w http.ResponseWriter, r *http.Request) error {
 // @Param tokenID path string true "Token ID." Format(uuid)
 // @Success 201 {object} NewTokenResponse "Issued; the secret is shown once."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage bots permission, or the bot's highest role is not below yours, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such bot or token."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: too many active tokens."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
@@ -172,7 +172,7 @@ func (h *Handler) regenerateToken(w http.ResponseWriter, r *http.Request) error 
 // @Param tokenID path string true "Token ID." Format(uuid)
 // @Success 204 "Revoked."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage bots permission, or the bot's highest role is not below yours, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such bot or token."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
