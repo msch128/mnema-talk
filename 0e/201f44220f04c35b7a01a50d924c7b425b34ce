@@ -1,0 +1,45 @@
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_894094e143768f 119
+internal/server/talk_chat_without_joining_integration_test.go
+  s_06fcde5dbef956::t_90965885d1f583 1-77
+web/src/components/VoiceStage.vue
+  s_06fcde5dbef956::t_9bac84c925bd78 261-262
+web/src/components/Sidebar.test.ts
+  s_06fcde5dbef956::t_aac5be0d3e0ce3 228,533
+  s_06fcde5dbef956::t_6ed2825daf4733 225-227,229-237
+e2e/tests/mobile.spec.ts
+  s_06fcde5dbef956::t_cc97c66f33addd 270-278,280-294
+  s_06fcde5dbef956::t_6accfc41a69ee3 279
+web/src/components/SidebarChannelRow.vue
+  s_06fcde5dbef956::t_4439bee21d380e 174
+  s_06fcde5dbef956::t_9bac84c925bd78 8,30,164-173,175-177
+  s_06fcde5dbef956::t_7e219555e519a9 178
+web/src/components/VoiceStage.test.ts
+  s_06fcde5dbef956::t_6ed2825daf4733 135-149
+doc/upgrade.md
+  s_06fcde5dbef956::t_894094e143768f 142-145
+README.md
+  s_06fcde5dbef956::t_894094e143768f 54-58
+web/src/components/TalkHeader.vue
+  s_06fcde5dbef956::t_9bac84c925bd78 9,21-22,24,58-70
+e2e/tests/talk-chat-read.spec.ts
+  s_06fcde5dbef956::t_a728f80ce6e39c 1-76
+web/src/components/Sidebar.vue
+  s_06fcde5dbef956::t_9bac84c925bd78 194-199,311
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0e201f44220f04c35b7a01a50d924c7b425b34ce",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
