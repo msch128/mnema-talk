@@ -17,6 +17,8 @@ design. It keeps the parts that make a community server useful: roles, private
 channels, webhooks, bots and a call you can join with one click. Invite-only,
 no accounts on someone else's platform.
 
+**[Download the desktop app (Beta, unsigned)](https://github.com/msch128/mnema-talk-desktop/releases/latest)**: Windows, macOS and Linux installers live in their own repository; releases here carry the Docker image and the signed web bundle. Prefer the browser? Nothing to install, see [Quick start](#quick-start) to host it.
+
 [Why Mnema](#why-mnema) · [Features](#features) · [Quick start](#quick-start) ·
 [Desktop (Beta)](#desktop-beta) · [Documentation](#documentation) ·
 [Security](#security-and-privacy) · [Contributing](#contributing)

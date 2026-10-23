@@ -410,3 +410,37 @@ jobs:
         run: |
           gh release upload "$TAG" "bundle/mnema-web-$VERSION.zip" bundle/manifest.json bundle/manifest.sig \
             --repo "$GITHUB_REPOSITORY" --clobber
+
+  # The server releases carry the Docker image and the signed web bundle, not
+  # desktop installers (those come from the desktop repository). Say so in the
+  # release body, so nobody looks for a download that is not here. Idempotent:
+  # the marker comment keeps a rerun from appending the section twice.
+  release-notes:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.release-please.outputs.version }}
+      TAG: ${{ needs.release-please.outputs.tag_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Append the desktop app section
+        run: |
+          set -eu
+          marker='<!-- desktop-app-section -->'
+          body=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body)
+          case "$body" in *"$marker"*) echo "section already present"; exit 0 ;; esac
+          # The desktop release is resolved now; fall back to the releases page.
+          url=$(gh release view --repo msch128/mnema-talk-desktop --json url --jq .url 2>/dev/null || true)
+          [ -n "$url" ] || url="https://github.com/msch128/mnema-talk-desktop/releases"
+          {
+            printf '%s\n\n' "$body"
+            printf '%s\n' "$marker"
+            printf '%s\n\n' "### Desktop app (Beta)"
+            printf '%s\n' "The desktop app (Windows, macOS, Linux; Beta, unsigned) is published in its own repository: [latest desktop release]($url)."
+            printf '%s\n' "This server release carries the Docker image (\`ghcr.io/msch128/mnema-talk:$VERSION\`) and the signed web bundle that the desktop app verifies, not desktop installers."
+          } > notes.md
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
