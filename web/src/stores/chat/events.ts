@@ -13,6 +13,7 @@ import { applyToMessage, bumpReplyCount, countReply, insertMessage, onOriginalDe
 import { messageMentionsMe, triggerBrowserNotification } from './notifications'
 import { fetchReadState, isReadingActiveChannel } from './readState'
 import { refreshNotifications } from './notifySettings'
+import { onPinnedMaybeDeleted, onPinsChanged } from './pins'
 import { closeThread } from './threads'
 import { clearTypingForUser, handleTypingEvent } from './typing'
 
@@ -131,6 +132,7 @@ function onMessageDelete(cx: Cx, p: Payload<'message_delete'>) {
   const { cs } = cx
   if (!p?.id) return
   removeFromWindow(cx, p.id)
+  onPinnedMaybeDeleted(cx, p.channel_id)
   refreshMemberStats(cx)
   cs.threadReplies.value = cs.threadReplies.value.filter(m => m.id !== p.id)
   onOriginalDeleted(cx, p.id)
@@ -181,6 +183,7 @@ const HANDLERS: Handlers = {
     onOriginalEdited(cx, p)
   },
   message_delete: onMessageDelete,
+  pins_changed: (cx, p) => { if (p) onPinsChanged(cx, p) },
   message_reaction: (cx, p) => {
     if (p?.message_id) applyToMessage(cx, p.message_id, m => { m.reactions = p.reactions })
   },

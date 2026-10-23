@@ -5,7 +5,7 @@ import { platform, type PlatformSocket } from '../../lib/platform'
 import { createKeyedThrottle } from '../../lib/chatLogic'
 import type { useAuthStore } from '../auth'
 import type { useVoiceStore } from '../voice'
-import { MARK_READ_INTERVAL_MS, type EphemeralNote, type ProfilePreview, type ThreadRoot, type Timer, type TypingUser } from './types'
+import { MARK_READ_INTERVAL_MS, type EphemeralNote, type PinNotice, type ProfilePreview, type ThreadRoot, type Timer, type TypingUser } from './types'
 
 type Handler<K extends keyof ServerEventPayloads> = ((payload: ServerEventPayloads[K]) => void | Promise<void>) | null
 
@@ -30,6 +30,10 @@ function channelState() {
     latestLoadSeq: ref(0),
     jumpTarget: ref<{ id: string; seq: number } | null>(null),
     activeThread: ref<ThreadRoot | null>(null),
+    // Pinned messages: bumped when the pins of a channel changed, so an open pinned list refetches; plus the notes about new pins.
+    pinsSignal: ref<{ channelId: string; seq: number } | null>(null),
+    pinNotices: ref<PinNotice[]>([]),
+    pinNoticeSeq: 0,
     threadReplies: ref<Message[]>([]),
     isThreadLoading: ref(false),
     ws: shallowRef<PlatformSocket | null>(null),

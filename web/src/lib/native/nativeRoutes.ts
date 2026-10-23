@@ -193,6 +193,8 @@ function routeMetadata(path: string, request: ApiRequest): Promise<ApiReply> | n
 // and the shipped clients' proxy passes the paths although the web bundle never
 // registers a service worker there (the desktop shows its own OS notifications). Add typed onboarding
 // operations here before the native DEV client is ever shipped.
+// Pinned messages (GET /api/channels/{id}/pins, PUT/DELETE .../messages/{id}/pin) follow
+// the same rule: the shipped clients' proxy passes them, the native DEV client answers "unavailable".
 // The same holds for custom emoji (/api/emoji, /api/emoji/{id}/image and /still,
 // /api/admin/emoji): the shipped clients' proxy passes them, the native DEV client
 // answers "unavailable".

@@ -133,8 +133,8 @@ nothing in it is a breaking change to a public surface, and `1.x` keeps working
 for existing clients, bots, webhooks, dashboards and alerts. What changes for an
 operator is below. Update with the procedure above; take the backup first.
 
-- **Six migrations run on first start: 0038, 0039, 0040, 0041, 0042 and 0043.**
-  All are quick on any instance.
+- **Seven migrations run on first start: 0038, 0039, 0040, 0041, 0042, 0043 and
+  0045.** All are quick on any instance.
   - 0038 drops `idx_messages_content_trgm`, a duplicate of the trigram search
     index `messages_content_trgm_idx` (both came from earlier releases), so
     message writes no longer maintain the same index twice and search is
@@ -156,6 +156,11 @@ operator is below. Update with the procedure above; take the backup first.
     and replaces the audit log's immutability trigger function with one that
     allows blanking names and details during an account deletion (and nothing
     else). No existing row changes.
+  - 0045 adds the nullable columns `messages.pinned_at` and `messages.pinned_by`
+    (who pinned a message and when; existing pins get their last-change time)
+    and a small partial index on pinned messages. Nothing else changes: the
+    pin flag already existed, and the limit of 50 pins per channel applies to
+    new pins only, so a channel that already has more keeps them.
   - The app waits for these locks like any other statement; there is nothing to
     stop or schedule. If startup is slow, check `docker compose logs app` for
     `migration applied`.

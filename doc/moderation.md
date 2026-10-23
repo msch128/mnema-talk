@@ -89,6 +89,17 @@ Holders of *Manage messages* in a channel can:
 
 - **Pin and unpin** a message (`PUT` / `DELETE
   /api/channels/{channelID}/messages/{messageID}/pin`); a pin icon marks it.
+  *Manage messages* is the pin permission as well (no separate bit): whoever
+  may remove a message in a channel may also pin one there, and the Owner
+  always may. A channel keeps at most 50 pins (a 51st answers `409`); pinning a
+  pinned message changes nothing. `GET /api/channels/{channelID}/pins` lists the
+  pins, newest pin first, for anyone who can view the channel, and the channel
+  header opens that list with a jump to each message. A real pin or unpin
+  broadcasts `message_update` and `pins_changed` to the channel's viewers only;
+  a pin also shows a compact note under the messages of every open client (it
+  is not a stored message, so it is gone after a reload; the list is the
+  record). Both actions are audited (`message.pin`, `message.unpin`). Deleting a
+  message unpins it.
 - **Delete with a reason**: `DELETE /api/channels/{channelID}/messages/{messageID}`
   takes an optional JSON body `{"reason": "..."}`. The author is told through a
   `moderation_notice`; the audit entry (`message.delete`, `moderator: true`)

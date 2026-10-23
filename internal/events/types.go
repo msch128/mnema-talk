@@ -13,6 +13,7 @@ const (
 	MessageUpdate       = "message_update"
 	MessageDelete       = "message_delete"
 	MessageReaction     = "message_reaction"
+	PinsChanged         = "pins_changed"
 	ModerationNotice    = "moderation_notice"
 	ChannelsChanged     = "channels_changed"
 	ReadState           = "read_state"

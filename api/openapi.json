@@ -17863,7 +17863,7 @@
     },
     "/api/channels/{channelID}/messages/{messageID}/pin": {
       "delete": {
-        "description": "Needs the Manage messages permission in the channel. Broadcasts message_update.",
+        "description": "Needs the Manage messages permission in the channel (the Owner always). Unpinning a message that is not pinned changes nothing. Broadcasts message_update and pins_changed.",
         "operationId": "unpinMessage",
         "parameters": [
           {
@@ -17978,7 +17978,7 @@
         ]
       },
       "put": {
-        "description": "Needs the Manage messages permission in the channel. Broadcasts message_update.",
+        "description": "Needs the Manage messages permission in the channel (the Owner always). A channel keeps at most 50 pinned messages (409 beyond). Pinning a pinned message changes nothing. Broadcasts message_update and pins_changed.",
         "operationId": "pinMessage",
         "parameters": [
           {
@@ -18052,6 +18052,16 @@
               }
             },
             "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the channel already has 50 pinned messages."
           },
           "429": {
             "content": {
@@ -18201,6 +18211,106 @@
         "summary": "Set channel notification level",
         "tags": [
           "Channels"
+        ]
+      }
+    },
+    "/api/channels/{channelID}/pins": {
+      "get": {
+        "description": "The channel's pinned messages, the most recently pinned first (at most 50). Needs View channel. Deleting a message unpins it.",
+        "operationId": "listPins",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/chat.Message"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "The pinned messages."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List a channel's pinned messages",
+        "tags": [
+          "Messages"
         ]
       }
     },
