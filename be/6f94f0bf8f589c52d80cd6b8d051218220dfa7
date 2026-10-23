@@ -1,0 +1,77 @@
+internal/media/avatar_reencode.go
+  s_06fcde5dbef956::t_0277038e94ea27 4,120
+  s_06fcde5dbef956::t_03696f4a924a6a 1-3,5-119,121-135
+internal/imgproc/picture.go
+  s_06fcde5dbef956::t_255079a7fb4add 1-195
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_8f044ebfa9b9fa 41-42
+internal/server/media_integration_test.go
+  s_06fcde5dbef956::t_8977e98c5d4eab 93,96
+web/src/components/ProfileAvatar.vue
+  s_06fcde5dbef956::t_8f044ebfa9b9fa 6,10,29,44-46,66-83,176-186
+  s_06fcde5dbef956::t_aa2a0a95104576 187
+internal/imgproc/avatar_test.go
+  s_06fcde5dbef956::t_ecbe86ccc445b3 1-47
+internal/media/failures_integration_test.go
+  s_06fcde5dbef956::t_8977e98c5d4eab 134,155,170,178,429
+internal/media/avatar_reencode_start_integration_test.go
+  s_06fcde5dbef956::t_be84cc0e3fabd6 1-40
+api/openapi.json
+  s_06fcde5dbef956::t_0277038e94ea27 25431-25513,25515,25557
+internal/imgproc/sizes.go
+  s_06fcde5dbef956::t_aa3be81dafba0d 1-14
+internal/media/profile_image.go
+  s_06fcde5dbef956::t_762eb544224c5a 1-123
+internal/db/migrations/0058_avatar_reencoded.sql
+  s_06fcde5dbef956::t_172a83870d04f9 1-5
+web/src/components/ProfileAvatarRemove.test.ts
+  s_06fcde5dbef956::t_15c1e2dff0bc53 1-75
+internal/media/avatar_reencode_integration_test.go
+  s_06fcde5dbef956::t_0c9c876b6717f1 1-135
+cmd/server/main.go
+  s_06fcde5dbef956::t_0277038e94ea27 82
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_8f044ebfa9b9fa 1252-1254
+web/src/stores/auth.ts
+  s_06fcde5dbef956::t_8f044ebfa9b9fa 37-43,81
+internal/media/banner_integration_test.go
+  s_06fcde5dbef956::t_0277038e94ea27 74,80
+internal/server/media_admin_integration_test.go
+  s_06fcde5dbef956::t_8977e98c5d4eab 31,104
+  s_06fcde5dbef956::t_fd399038ca108c 107,134
+  s_06fcde5dbef956::t_c9915610846f00 41
+internal/server/avatar_integration_test.go
+  s_06fcde5dbef956::t_3df84075edcbef 1-92
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_8f044ebfa9b9fa 1252-1254
+doc/upgrade.md
+  s_06fcde5dbef956::t_1505032a6b0352 227-247
+SECURITY.md
+  s_06fcde5dbef956::t_7326cd75ab0029 467-475
+internal/server/content_review_integration_test.go
+  s_06fcde5dbef956::t_8977e98c5d4eab 63
+internal/media/banner.go
+  s_06fcde5dbef956::t_0bdbcb30b4ce4b 40,44,71
+internal/media/handler.go
+  s_06fcde5dbef956::t_4a472fe8601a0f 88
+internal/media/handler_upload.go
+  s_06fcde5dbef956::t_7f6e310fe71f1d 203,211,253-255,260,264-265,267-285,287-288,290,293-298
+internal/server/health.go
+  s_06fcde5dbef956::t_9a60c7df4c4d96 45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "be6f94f0bf8f589c52d80cd6b8d051218220dfa7",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
