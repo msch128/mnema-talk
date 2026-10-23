@@ -21,14 +21,14 @@ func TestTalkChatNeedsNoCallMembership(t *testing.T) {
 	wantStatus(t, "deny connect", putOverwrites(f.owner, "channels", lounge, overwrite("role", f.everyone, 0, perm.Connect)), http.StatusNoContent)
 	outWS := mustDial(t, f.outsider)
 
-	first := postMessage(t, f.owner, lounge, map[string]any{"content": "wer liest mit?"})
-	if p, ok := outWS.expect("message_create", soon); !ok || !strings.Contains(string(p), "wer liest mit?") {
+	first := postMessage(t, f.owner, lounge, map[string]any{"content": "who is reading along?"})
+	if p, ok := outWS.expect("message_create", soon); !ok || !strings.Contains(string(p), "who is reading along?") {
 		t.Fatalf("a viewer outside the call misses the live message: %s", p)
 	}
 	wantStatus(t, "read history", f.outsider.get(base+"/messages"), http.StatusOK)
 	wantStatus(t, "read marker", f.outsider.post(base+"/read", nil), http.StatusNoContent)
-	postMessage(t, f.outsider, lounge, map[string]any{"content": "nur gelesen, nicht beigetreten"})
-	if got, status := f.owner.search(t, map[string]string{"q": "beigetreten"}); status != http.StatusOK || len(got.Messages) != 1 {
+	postMessage(t, f.outsider, lounge, map[string]any{"content": "only read, not joined"})
+	if got, status := f.owner.search(t, map[string]string{"q": "joined"}); status != http.StatusOK || len(got.Messages) != 1 {
 		t.Fatalf("search of the Talk chat: %d %+v", status, got.Messages)
 	}
 	wantStatus(t, "thread", f.outsider.get("/api/messages/"+first.String()+"/thread"), http.StatusOK)
@@ -36,7 +36,7 @@ func TestTalkChatNeedsNoCallMembership(t *testing.T) {
 	// Without Send messages the chat stays readable but not writable.
 	wantStatus(t, "deny send", putOverwrites(f.owner, "channels", lounge, overwrite("role", f.everyone, 0, perm.Connect|perm.SendMessages)), http.StatusNoContent)
 	wantStatus(t, "read-only history", f.outsider.get(base+"/messages"), http.StatusOK)
-	if res := f.outsider.post(base+"/messages", map[string]any{"content": "darf ich nicht"}); res.status != http.StatusForbidden {
+	if res := f.outsider.post(base+"/messages", map[string]any{"content": "not allowed"}); res.status != http.StatusForbidden {
 		t.Fatalf("writing without Send messages: %d %s", res.status, res.body)
 	}
 }

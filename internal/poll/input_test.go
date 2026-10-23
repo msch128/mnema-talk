@@ -61,7 +61,7 @@ func TestInputBoundsAreEnforced(t *testing.T) {
 	}
 	exact := valid()
 	exact.Question = strings.Repeat("é", MaxQuestion)
-	exact.Options = []string{strings.Repeat("ü", MaxLabel), "b"}
+	exact.Options = []string{strings.Repeat("\u00fc", MaxLabel), "b"}
 	if _, err := exact.clean(); err != nil {
 		t.Fatalf("values at the limit: %v", err)
 	}

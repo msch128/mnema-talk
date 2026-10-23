@@ -31,7 +31,7 @@ in PostgreSQL; uploads and avatars live in S3-compatible object storage
 | [`internal/httpx`](../internal/httpx/middleware.go) | Middleware: request IDs, security headers (CSP, HSTS in production), CORS, CSRF origin check, body limits, rate limits ([`ratelimit.go`](../internal/httpx/ratelimit.go)), client IP from trusted proxies ([`request.go`](../internal/httpx/request.go)), JSON errors. |
 | [`internal/auth`](../internal/auth/service.go) | Password hashing, signed session cookies with a per-user `token_version` (revocation), login lockout, invite codes, admin seeding, user administration, password re-authentication for sensitive actions ([`reauth.go`](../internal/auth/reauth.go)). |
 | [`internal/perm`](../internal/perm/perm.go), [`internal/roles`](../internal/roles/handler.go) | Roles and permissions: the permission bits, the in-memory `Snapshot` that resolves base, role and overwrite permissions (and the hierarchy rules), the cache with live invalidation, and the HTTP API for roles, member roles and channel overwrites. See [roles-and-permissions.md](roles-and-permissions.md). |
-| [`internal/chat`](../internal/chat/handler.go) | Categories, channels (text and voice), layout, messages, replies, threads, reactions, mentions (by name, `@all`/`@here` and `@Role`, with a fan-out cap) and the mentions inbox, read state, notification levels ([`notify.go`](../internal/chat/notify.go)), search ([`search.go`](../internal/chat/search.go)), members. |
+| [`internal/chat`](../internal/chat/handler.go) | Categories, channels (text and voice), layout, messages, replies, threads, reactions, mentions (by name, `@all`/`@here` and `@Role`, with a fan-out cap) and the mentions inbox, read state, notification levels ([`notify.go`](../internal/chat/notify.go)), search ([`search.go`](../internal/chat/search.go), filters in [`search_filters.go`](../internal/chat/search_filters.go)), members. Since 1.1 also direct messages (`dm*.go`), blocks ([`blocks.go`](../internal/chat/blocks.go)), reports ([`reports.go`](../internal/chat/reports.go)), saved messages ([`saved.go`](../internal/chat/saved.go)), forwarding ([`forward.go`](../internal/chat/forward.go)) and thread follow ([`thread_follow.go`](../internal/chat/thread_follow.go)). |
 | [`internal/onboarding`](../internal/onboarding/handler.go) | The first-run side of the community: name, welcome text and rules, who accepted which rules version, dismissed tips and the public invite preview. |
 | [`internal/media`](../internal/media/handler.go) | Uploads with content sniffing and an allow-list ([`policy.go`](../internal/media/policy.go)), authenticated media serving through the app, admin storage stats and pruning, and the retention worker (off unless `MEDIA_RETENTION_DAYS > 0`). |
 | [`internal/s3`](../internal/s3/s3.go) | S3 client (AWS SDK v2); creates the bucket only when missing. |
@@ -40,13 +40,16 @@ in PostgreSQL; uploads and avatars live in S3-compatible object storage
 | [`internal/ws`](../internal/ws/hub.go) | WebSocket hub: one connection per browser session; chat events, presence and idle state, typing, voice rooms ([`voice.go`](../internal/ws/voice.go)), mute/deafen state, speaking indicators and WebRTC signaling for the SFU. |
 | [`internal/sfu`](../internal/sfu/sfu.go) | Pion WebRTC SFU: one room per voice channel, forwards RTP without transcoding; per-viewer subscriptions ([`subscriptions.go`](../internal/sfu/subscriptions.go)); announced addresses from `WEBRTC_NAT_1TO1_IP`, re-resolved every 5 minutes ([`announce.go`](../internal/sfu/announce.go)). |
 | [`internal/webhook`](../internal/webhook/), [`internal/ssrf`](../internal/ssrf/) | Webhooks: incoming URLs per channel in Discord's execute format (messages authored by a hidden bot account per webhook), outgoing signed events with a durable retry queue and delivery log, and the guard for outbound requests to member-chosen addresses (resolves names itself, refuses non-public addresses, connects to the vetted address). See [webhooks.md](webhooks.md). |
-| [`internal/slash`](../internal/slash/slash.go), [`internal/poll`](../internal/poll/service.go) | The built-in slash commands: a registry of server-side commands that share the composer menu and the invoke route with bot commands (adding one is a `slash.Builtin` and a line in the server wiring), and polls, the first of them. See [polls and built-in commands](bots.md#built-in-commands-and-polls). |
+| [`internal/slash`](../internal/slash/slash.go), [`internal/slashcmd`](../internal/slashcmd/slashcmd.go), [`internal/poll`](../internal/poll/service.go) | The built-in slash commands: a registry of server-side commands that share the composer menu and the invoke route with bot commands (adding one is a `slash.Builtin` and a line in the server wiring). `slashcmd` holds `/me`, `/shrug`, `/tableflip`, `/unflip`, `/spoiler`, `/nick`, `/thread`, `/msg` and the moderation shortcuts `/timeout`, `/ban` and `/kick`; `poll` holds `/poll`. A command never decides on its own what a member may do. See [built-in commands and polls](bots.md#built-in-commands-and-polls). |
+| [`internal/push`](../internal/push/handler.go), [`internal/mailer`](../internal/mailer/mailer.go), [`internal/mdplain`](../internal/mdplain/plain.go) | Web Push (VAPID keys, subscriptions, payloads in the account's language, previews cut to plain text by `mdplain`), and the few plain-text e-mails (address confirmation, password reset, two-factor alert, test message) sent through the operator's SMTP server. Without `SMTP_HOST` nothing is sent. German and English mail and push texts live in `locales/` files next to the code. |
+| [`internal/emoji`](../internal/emoji/handler.go), [`internal/emojitext`](../internal/emojitext/emojitext.go), [`internal/opwarn`](../internal/opwarn/opwarn.go) | Custom emoji (uploads are redrawn, never stored as sent; `<:name:id>` in text), and operator warnings (configuration problems registered under a stable code and shown in the admin System tab). |
 | [`internal/audit`](../internal/audit/), [`internal/bot`](../internal/bot/), [`internal/gateway`](../internal/gateway/) | The audit log with per-entry visibility classes, bot accounts, tokens (bound to the member who issued them) and slash commands, and the Discord-style bot gateway. See [bots.md](bots.md) and [moderation.md](moderation.md). |
 | [`internal/metrics`](../internal/metrics/) | Process-wide counters (HTTP, realtime, SFU, storage, rate limits) rendered in the Prometheus text format without a client library; every labelled family has a series cap. Feeds `/api/metrics` and the live operator view in the admin System tab. See [operations.md](operations.md#monitoring-and-alerts). |
 | [`internal/webbundle`](../internal/webbundle/), [`cmd/webbundle`](../cmd/webbundle/) | Builds, signs (Ed25519) and verifies the web app bundle that the [trusted desktop client](desktop-trusted-client.md) runs instead of server-served JavaScript. |
 | [`internal/linkpreview`](../internal/linkpreview/linkpreview.go) | Link cards: fetches title, description and image of public pages with an SSRF guard (http(s) on 80/443 only, every resolved address checked, also on redirects) and a cache. |
 | [`internal/imageverify`](../internal/imageverify/verifier.go), [`internal/updaterd`](../internal/updaterd/server.go) | The self-update sidecar ([`cmd/updater`](../cmd/updater/main.go)): checks the cosign signature and SLSA provenance of a new release image against the pinned release workflow identity, then pulls that digest and has the recreator restart the app. |
 | [`internal/update`](../internal/update/checker.go) | Release check against GitHub every 30 minutes (ETag, backoff on 403/429), image-tag reach analysis ([`image.go`](../internal/update/image.go)) and the client for the optional updater sidecar ([`updater.go`](../internal/update/updater.go)).|
+| [`internal/nativepreview`](../internal/nativepreview/), [`internal/repo`](../internal/repo/limits_test.go) | The isolated native preview transport (experimental, not public API) and the repository-wide checks: size limits for Go files and functions ([AGENTS.md](../AGENTS.md)). |
 | [`internal/version`](../internal/version/version.go) | Version and commit baked in at build time (`VERSION` / `REVISION` build args). |
 | [`web/web.go`](../web/web.go) | Embeds `web/dist` with `//go:embed` and serves the SPA. |
 
@@ -82,7 +85,9 @@ and the "Jump to first unread" pill loads the history around it. Numbers:
 [Capacity](#unread-tracking-with-10000-members).
 
 Every channel has a text chat, voice channels included (the chat panel under
-the Talk stage). Edits, deletes, reactions, typing and read state follow the
+the Talk stage). The chat of a Talk follows the channel permissions only
+(*View channels* to read, *Send messages* to write), not *Connect*, so a
+member can read it from the Talk's row in the sidebar without joining. Edits, deletes, reactions, typing and read state follow the
 same pattern: REST for changes, WebSocket events for fan-out. Media is never
 served from S3 directly: `GET /api/media/{id}` checks the session and streams
 the object through the app.
@@ -159,6 +164,23 @@ nobody is left in; the export lists the member's conversations by id and their
 own messages.
 
 **Calls** in conversations are not part of 1.1.
+
+## Blocking and reports
+
+A block (`user_blocks`, migration 0049) is private: the blocked member is not
+told, and nothing they can read depends on it. The server applies it where a
+notification would reach the blocker: the mentions inbox, mention counts and
+push skip the blocked member's messages, decided when the entry is listed or
+the push is sent. The web app collapses their messages to a placeholder the
+blocker can open. A block changes nothing for anybody else. It makes an
+existing 1:1 conversation unwritable in both directions (see
+[Direct messages](#direct-messages)). The `block_updated` event goes to the
+blocker's own sessions only.
+
+A report (`message_reports`, migration 0049, permission *Manage reports*,
+`1 << 21`) keeps its own copy of the message and up to 20 around it, so it survives an
+edit or a delete. It is the only way a moderator reads anything of a conversation. Rules,
+retention and the audit entries are in [moderation](moderation.md#blocking-and-reports).
 
 ## Forwarding and saved messages
 
@@ -334,7 +356,7 @@ keys out of band. The server validates who may commit but never sees keys.
 The code is [`web/src/lib/media/`](../web/src/lib/media/). Details and limits:
 [SECURITY.md](../SECURITY.md#security-model-summary).
 
-## Notifications, search and onboarding (0.9)
+## Notifications, search and onboarding
 
 Three features that cut across the chat path. All of them are enforced on the
 server; the client only renders the result.
@@ -393,7 +415,7 @@ nothing, which is why an upgrade never locks anyone out; the Owner and bots are
 exempt. `GET /api/invites/{code}` (the one public read) serves the community
 name for the sign-up page; it is rate limited and refuses weak legacy codes.
 
-## The 1.0 contract
+## The API contract
 
 From 1.0.0 the public surfaces are versioned with semantic versioning
 ([api-stability.md](api-stability.md)): the REST API as `api/openapi.json`, the
@@ -411,6 +433,7 @@ names. The contract is enforced mechanically, not by convention:
 - The alert rules in [`deploy/monitoring/mnema-alerts.yml`](../deploy/monitoring/mnema-alerts.yml)
   are checked with `promtool`, and an integration test fails when a rule names
   a metric `/api/metrics` does not export.
+- `GET /api/health` lists optional features by name (`internal/server/health.go`); a new feature adds a name and never bumps `web_client_api`.
 - Upgrade and restore drills install each supported release from GHCR, seed
   data through its own API, move to the build under test and check the data;
   a fresh-install check follows [deployment.md](deployment.md) on an empty
@@ -513,6 +536,26 @@ it is paid once per page load or reconnect, not per message.
   [`voiceSession.ts`](../web/src/lib/voiceSession.ts) (rejoin within 30 s),
   [`noiseSuppressor.ts`](../web/src/lib/noiseSuppressor.ts),
   [`thirdParty.ts`](../web/src/lib/thirdParty.ts) (in-app license list).
+- **Styles**: Tailwind CSS 4 (`@import 'tailwindcss'` in
+  [`style.css`](../web/src/style.css), the `@tailwindcss/vite` plugin; no
+  `tailwind.config`). The Mnema design tokens are in its `@theme` block. The
+  shared UI building blocks are plain CSS files in
+  [`styles/`](../web/src/styles): `buttons.css` (the `.btn` family and the focus
+  ring), `controls.css` (checkbox, radio, switch, slider, fields, select) and
+  `surfaces.css` (dialogs, menus, popovers, tooltips, toasts, list rows,
+  elevation and motion). They use tokens only and no inline style, because the
+  Content-Security-Policy forbids it.
+- **1.1 features in the UI**: direct messages
+  ([`DmCreateDialog.vue`](../web/src/components/DmCreateDialog.vue),
+  [`DmInfoDialog.vue`](../web/src/components/DmInfoDialog.vue)), blocking and
+  reports ([`BlockedMessageRow.vue`](../web/src/components/BlockedMessageRow.vue),
+  [`ReportDialog.vue`](../web/src/components/ReportDialog.vue)), saved messages
+  ([`SavedMessages.vue`](../web/src/components/SavedMessages.vue)), forwarding
+  ([`ForwardDialog.vue`](../web/src/components/ForwardDialog.vue),
+  [`ForwardedQuote.vue`](../web/src/components/ForwardedQuote.vue)), pinned
+  messages with "Pinned by" ([`PinnedMessages.vue`](../web/src/components/PinnedMessages.vue))
+  and the slash bar ([`SlashCommandBar.vue`](../web/src/components/SlashCommandBar.vue)).
+  Each shows only when `GET /api/health` lists its feature.
 - **i18n**: [`i18n/de.json`](../web/src/i18n/de.json) and
   [`i18n/en.json`](../web/src/i18n/en.json); tests fail on hard-coded UI text
   and unused keys.
@@ -566,6 +609,12 @@ it is paid once per page load or reconnect, not per message.
   sockets ([`session.go`](../internal/auth/session.go), [`token.go`](../internal/auth/token.go)).
 - **Forward-only, checksummed migrations** run at startup
   ([`db.go`](../internal/db/db.go)); never edit an applied one.
+- **A strict page policy.** The web app is served with `script-src 'self'
+  'wasm-unsafe-eval'`, `style-src 'self'` and `style-src-attr 'none'`
+  ([`SPAContentSecurityPolicy`](../internal/httpx/middleware.go)): no inline
+  script or style, so the Vue code sets no `style` attributes and uses classes
+  and custom properties set from script. [SECURITY.md](../SECURITY.md#security-model-summary)
+  has the full header list.
 - **Retention off by default.** `MEDIA_RETENTION_DAYS=0` deletes nothing
   ([`admin.go`](../internal/media/admin.go)).
 - **The app never touches Docker.** Self-update goes through an opt-in

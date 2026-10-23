@@ -80,7 +80,7 @@ func TestPresenceChoiceAndNames(t *testing.T) {
 		t.Fatalf("presence %q, want focus", me.Presence)
 	}
 
-	if res := max.put("/api/users/me/profile", map[string]string{"display_name": strings.Repeat("ä", 25)}); res.status != http.StatusBadRequest {
+	if res := max.put("/api/users/me/profile", map[string]string{"display_name": strings.Repeat("\u00e4", 25)}); res.status != http.StatusBadRequest {
 		t.Fatalf("25 character display name accepted: %d", res.status)
 	}
 	if res := max.put("/api/users/me/profile", map[string]string{"display_name": "Max Mustermann"}); res.status != http.StatusOK {
@@ -105,7 +105,7 @@ func TestMentionsResolveUsersAllAndHere(t *testing.T) {
 	admin := a.seedAdmin()
 	max := a.register(admin, "max")
 	moritz := a.register(admin, "moritz")
-	ch := a.createChannel(admin, "allgemein", "text")
+	ch := a.createChannel(admin, "lobby", "text")
 
 	// Only max is connected, so only max is "here".
 	ws, _, err := max.dialWS(a.origin())
@@ -132,7 +132,7 @@ func TestMentionsResolveUsersAllAndHere(t *testing.T) {
 	if got := mentions("an @here"); len(got) != 1 || got[0] != max.user.ID {
 		t.Fatalf("@here → %v, want only the connected max", got)
 	}
-	got := mentions("@all bitte lesen")
+	got := mentions("@all please read")
 	if len(got) != 2 || !slices.Contains(got, max.user.ID) || !slices.Contains(got, moritz.user.ID) {
 		t.Fatalf("@all → %v, want max and moritz (never the author)", got)
 	}
@@ -149,7 +149,7 @@ func TestMentionsResolveUsersAllAndHere(t *testing.T) {
 
 	// Editing re-resolves: the mention goes away with the text.
 	id := a.send(admin, ch, "@moritz komm mal")
-	res := admin.put("/api/channels/"+ch.String()+"/messages/"+id.String(), map[string]string{"content": "schon gut"})
+	res := admin.put("/api/channels/"+ch.String()+"/messages/"+id.String(), map[string]string{"content": "all good"})
 	if res.status != http.StatusOK {
 		t.Fatalf("edit: %d %s", res.status, res.body)
 	}
@@ -220,7 +220,7 @@ func TestVoiceTimeAndMessageCounts(t *testing.T) {
 	a := newApp(t, true)
 	admin := a.seedAdmin()
 	max := a.register(admin, "max")
-	text := a.createChannel(admin, "allgemein", "text")
+	text := a.createChannel(admin, "lobby", "text")
 	voice := a.createChannel(admin, "Spieleabend", "voice")
 	a.send(max, text, "eins")
 	a.send(max, text, "zwei")

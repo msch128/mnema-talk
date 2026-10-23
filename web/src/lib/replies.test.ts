@@ -16,11 +16,11 @@ describe('reply previews', () => {
   })
 
   it('renders previews as plain text without markdown markers', () => {
-    expect(previewText('Ja, Lounge ist offen. **Screenshare** geht auch.')).toBe('Ja, Lounge ist offen. Screenshare geht auch.')
-    expect(previewText('*kursiv* und _auch_ und ***beides*** und ~~weg~~')).toBe('kursiv und auch und beides und weg')
+    expect(previewText('Yes, Lounge is open. **Screenshare** works too.')).toBe('Yes, Lounge is open. Screenshare works too.')
+    expect(previewText('*italic* and _also_ and ***both*** and ~~gone~~')).toBe('italic and also and both and gone')
     expect(previewText('||Spoiler: das Update kommt morgen|| (#5)')).toBe('Spoiler (#5)')
     expect(previewText('Code: `docker compose up -d` **x**')).toBe('Code: docker compose up -d x')
-    expect(previewText('`**nicht fett**`')).toBe('**nicht fett**')
+    expect(previewText('`**not bold**`')).toBe('**not bold**')
     expect(previewText('```js\nconst a = 1\n```')).toBe('const a = 1')
     expect(previewText('> zitat\nantwort')).toBe('zitat antwort')
     expect(previewText('siehe https://example.com/a_b_c')).toBe('siehe https://example.com/a_b_c')

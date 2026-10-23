@@ -1,9 +1,9 @@
 # Trusted desktop client: a signed web app instead of server JavaScript
 
-Status: implemented (roadmap item 0.9.1). The release tooling is in this
-repository and needs no server change; the Tauri host that verifies and loads
-the bundle is in
-[mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop).
+Status: implemented and shipped. The release tooling is in this repository and
+needs no server change. The hosts that verify and load the bundle are in
+[mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop): a Tauri
+host for Windows and macOS and an Electron client for Linux.
 
 ## Why
 
@@ -32,15 +32,15 @@ instance supplies data, never code. Browser users are unchanged.
 | How does the local app reach the server? | A **native proxy** in the Tauri host behind a custom protocol, so the WebView still sees one origin and the web app's code (relative URLs, `fetch`, cookies in the browser model) works unchanged. The session cookie lives in the host, never in the page. WebSockets go through three IPC commands. |
 | Server changes | **None to the request path or the browser security model.** The server already advertises `version` and `web_client_api` in `/api/health`. This repository adds the signing tooling, a contract file and tests that keep the two numbers in step. |
 
-## How the desktop client loads the app today
+## How the first desktop client loaded the app
 
-`desktop_open_instance` in the desktop host validates the address (HTTPS
-origin only), reads `GET /api/health` (`status: ok`, `web_client_api: 1`),
-and opens a window on the instance origin. The page is then an ordinary
+Before the signed bundle, `desktop_open_instance` in the desktop host validated the address (HTTPS
+origin only), read `GET /api/health` (`status: ok`, `web_client_api: 1`),
+and opened a window on the instance origin. The page was an ordinary
 browser page: the `__Host-` session cookie, the Origin check
 (`httpx.CSRF`, allow-list from `PUBLIC_URL` / `CORS_ALLOWED_ORIGINS`), the
 SPA CSP (`script-src 'self'`) and the WebSocket at `/api/ws` all behave as in
-a browser, which is why no server change was ever needed. The cost is the
+a browser, which is why no server change was ever needed. The cost was the
 trust model: `script-src 'self'` means *the server's* scripts.
 
 ## The bundle
@@ -578,9 +578,11 @@ tile's menu. Servers stay fully separate:
   removal leaves), its sockets, toasts and gaming token, and its entry in the
   list. The list (`instances.json`) holds addresses only.
 * **Updating from the single-server client**: the end-to-end state of that
-  client sits in the engine's default storage. The first server added whose
-  session the old client stored takes that storage over (recorded as `legacy`
-  in the list), so nobody loses a device key by updating.
+  client sits in the engine's default storage. If exactly one server's session
+  was stored, that server takes the storage over (recorded as `legacy` in the
+  list), so nobody loses a device key by updating. If none or several were
+  stored, the old storage is wiped instead of being handed to a server that may
+  not have owned it.
 
 A server that ended the session (the `kicked` event of `/kick`, a password
 change, a sign-out elsewhere) leaves a stale cookie in the jar, as a browser
@@ -593,7 +595,8 @@ The signed web bundle covers the web app. The program around it (the shell) is
 replaced by its own, separate mechanism, so that users never have to download
 an installer by hand after the first time.
 
-* **Feed and key.** The installer is a per-user NSIS package built by the
+* **Feed and key.** On Windows the installer is a per-user NSIS package; macOS
+  has a signed `.app.tar.gz` and Linux signed AppImages. All are built by the
   [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop) release
   workflow on a `vX.Y.Z` tag. Installed clients read
   `https://github.com/msch128/mnema-talk-desktop/releases/latest/download/latest.json`
@@ -601,7 +604,9 @@ an installer by hand after the first time.
   feed is not trusted: it only names an installer and a minisign signature.
   The updater key (Ed25519, minisign format; the official Tauri updater) is a
   **different key from the bundle key** and its public half is pinned in
-  `tauri.conf.json` of the client.
+  `tauri.conf.json` of the client. The Electron client for Linux applies the same
+  rules in TypeScript; a `.deb` installation is owned by the package manager, so
+  the client only announces a newer version.
 * **What is verified.** The installer runs only if its signature verifies
   against the pinned key, the version recorded inside the signature equals the
   version the feed announces (`requireSignedVersion`: an old signed installer
@@ -612,7 +617,7 @@ an installer by hand after the first time.
   fetched feed before it runs; an installer that changed on disk, or that a newer
   release replaced, is deleted.
 * **Install.** Per user (`currentUser`), passive mode: no administrator prompt,
-  the app restarts afterwards. This does not depend on Authenticode.
+  the app restarts afterwards. This does not depend on a platform signature.
 * **User control.** Update now, On next start, Skip this version (a newer
   version is offered again), retry after a failure.
   `MNEMA_DESKTOP_NO_UPDATE_CHECK=1` turns the check off.
@@ -633,7 +638,7 @@ an installer by hand after the first time.
   and a way around the protected environment, can ship malicious code to every
   installed client. A network attacker can withhold updates (freeze) but not
   forge them. The first installer download still relies on how the user got it
-  (see the Authenticode gap below). macOS and Linux have no builds yet.
+  (see the installer gap below).
 
 ## Threat model for desktop users
 
@@ -646,12 +651,14 @@ an installer by hand after the first time.
 
 Browser users remain exactly as in SECURITY.md: the server serves the code.
 
-### Known gap: the `.exe` has no Authenticode signature
+### Known gap: the installers have no platform signature
 
-The signed bundle protects the web app, not the executable around it. The
-Windows build is not code-signed, because that needs a certificate that has to
-be bought for the project's publisher. Consequences: SmartScreen warns on first
-run, and nothing ties the executable to the publisher on the user's machine.
+The signed bundle protects the web app, not the program around it. The Windows
+installer has no Authenticode signature and the macOS app is ad-hoc signed, not
+notarized, because the project does not buy certificates. Consequences:
+SmartScreen and Gatekeeper warn on first run, and nothing ties the program to
+the publisher on the user's machine. Later updates are verified by the pinned
+minisign key instead.
 The release carries a `SHA256SUMS` file next to the ZIP, which is only
 protection against a corrupted download: it is published by the same account in
 the same release, so whoever can replace the ZIP can replace the checksums.

@@ -63,7 +63,7 @@ func TestNamesAndBotNames(t *testing.T) {
 	if got, err := cleanName("username", "\u202eadmin\u200b"); err != nil || got != "admin" {
 		t.Fatalf("spoofed username kept as %q (%v)", got, err)
 	}
-	if got := botDisplayName(strings.Repeat("ä", 40)); len([]rune(got)) != botNameLen {
+	if got := botDisplayName(strings.Repeat("\u00e4", 40)); len([]rune(got)) != botNameLen {
 		t.Fatalf("bot name %q", got)
 	}
 	if botDisplayName("short") != "short" {

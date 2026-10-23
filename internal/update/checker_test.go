@@ -254,7 +254,7 @@ func TestReleasePageOnlyLinksToTheRepository(t *testing.T) {
 }
 
 func TestCleanNotesCapsLength(t *testing.T) {
-	got := cleanNotes(strings.Repeat("ä", maxNotesRunes+50))
+	got := cleanNotes(strings.Repeat("\u00e4", maxNotesRunes+50))
 	if n := len([]rune(got)); n > maxNotesRunes+2 {
 		t.Fatalf("notes not capped: %d runes", n)
 	}

@@ -25,7 +25,7 @@ Because this repository is open-source and publicly visible on GitHub:
 
 ## 🎯 ARCHITECTURE & PHILOSOPHY
 
-Mnema Talk is a **lightweight, self-hosted chat and voice app for one community**, written in **Go**. Use the product vocabulary in [`doc/glossary.md`](doc/glossary.md) (community, member, Talk, Owner, timeout = "Auszeit", ...) in UI strings, docs and error messages; German always uses "du":
+Mnema Talk is a **lightweight, self-hosted chat and voice app for one community**, written in **Go**. Use the product vocabulary in [`doc/glossary.md`](doc/glossary.md) (community, member, Talk, Owner, timeout, ...) in UI strings, docs and error messages; German always uses "du":
 
 ### 1. Single-Binary Architecture
 - Backend (REST API), WebSocket hub, WebRTC SFU and the built web app (`web/dist`, via `//go:embed`) are compiled into **one standalone Go binary**.
@@ -69,15 +69,16 @@ mnema-talk/
 │   ├── ssrf/                # Guard for outbound requests to member-chosen addresses (outgoing webhooks)
 │   ├── metrics/             # Prometheus counters (no client library), feed /api/metrics and the live operator view
 │   ├── webbundle/           # Build, sign and verify the desktop client's web bundle (Ed25519)
-│   ├── chat/                # Channels, categories, messages, replies, pins, edit history, members
+│   ├── chat/                # Channels, categories, messages, replies, pins, edit history, members; direct messages, blocks, reports, saved messages, forwarding, thread follow, search
 │   ├── audit/               # Append-only audit log with per-entry visibility classes
 │   ├── emoji/               # Custom emoji: storage, serving, admin API
 │   ├── emojitext/           # How a custom emoji is written in message text
 │   ├── linkpreview/         # Link cards (title, description, image) fetched through the SSRF guard
-│   ├── mailer/              # Optional SMTP: address verification and password-reset e-mails
+│   ├── mailer/              # Optional SMTP delivery of the account e-mails (texts live in internal/auth/locales)
+│   ├── mdplain/             # Markdown to plain text for push and previews
 │   ├── onboarding/          # Community name, rules and the acceptance gate for new members
 │   ├── opwarn/              # Operator warnings (configuration and deployment hints) for the System tab
-│   ├── push/                # Web Push (VAPID keys, subscriptions, delivery)
+│   ├── push/                # Web Push (VAPID keys, subscriptions, delivery; texts in push/locales)
 │   ├── repo/                # Repository-wide checks (file and function size limits)
 │   ├── media/               # Uploads (MIME sniffing), authenticated media serving, retention
 │   ├── s3/                  # S3 client
@@ -85,6 +86,7 @@ mnema-talk/
 │   ├── ws/                  # Real-time WebSocket hub (events, presence)
 │   ├── bot/                 # Bot accounts, tokens, bot API authentication, slash commands (doc/bots.md)
 │   ├── slash/               # Built-in slash commands: the registry and the Builtin interface (doc/bots.md)
+│   ├── slashcmd/            # The built-ins besides /poll: /me, /shrug, /tableflip, /unflip, /spoiler, /nick, /thread, /msg, /timeout, /ban, /kick
 │   ├── poll/                # Polls and the /poll command
 │   ├── gateway/             # Bot gateway (Discord-style opcodes, intents, resume)
 │   ├── sfu/                 # Pion WebRTC SFU (audio/video/screenshare forwarding)
@@ -101,7 +103,7 @@ mnema-talk/
 ├── desktop-trust/           # Public trust anchor and signed trust statement for the desktop client
 ├── e2e/                     # Playwright browser tests (`make e2e`)
 ├── loadtest/                # Voice/screen-share load test (`make load-test`), see loadtest/README.md
-├── web/                     # Vue 3 + Pinia + Vite + Tailwind SPA; web.go embeds web/dist
+├── web/                     # Vue 3 + Pinia + Vite + Tailwind CSS 4 SPA (shared UI classes in web/src/styles); web.go embeds web/dist
 │   └── src/lib/             # Shared client modules: native/ (desktop IPC) and dfn/ (DeepFilterNet3)
 ├── scripts/git-hooks/       # pre-commit (gitleaks + gofmt); `make install-hooks`
 ├── scripts/smoke-image.sh   # Image smoke test on the production compose file (`make smoke`)
@@ -112,13 +114,14 @@ mnema-talk/
 ├── scripts/fresh-install-check.sh # doc/deployment.md "Fresh install" in an empty directory with the built image (`make fresh-install`)
 ├── scripts/check-doc-links.mjs # Relative links and anchors in README, SECURITY and doc/*.md (`make docs-check`)
 ├── scripts/check-conflict-markers.mjs # Fails on merge-conflict markers in tracked text files (`make docs-check`, CI)
+├── scripts/check-english-only.mjs # Fails on German outside the locale resources; exceptions in scripts/english-only-allowlist.txt (`make english-check`, CI)
 ├── deploy/monitoring/mnema-alerts.yml # Example Prometheus alert rules; promtool in CI, metric names checked against /api/metrics
 ├── scripts/backup.sh, restore.sh # Backup and restore of database, media and configuration
 ├── scripts/web-bundle-check.sh # Signs web/dist with a throwaway key and verifies it (`make web-bundle-check`)
 ├── scripts/security-floor.sh # Release step: raises the bundle security floor only on a `Security-Floor: raise` trailer
 ├── .github/workflows/
-│   ├── ci.yml               # CI: gitleaks, Go vet/fmt/tests, govulncheck, frontend, e2e,
-│   │                        # docker build + smoke test, backup/restore drill, trivy scan
+│   ├── ci.yml               # CI: gitleaks, Go vet/fmt/tests, govulncheck, frontend, e2e (Chromium, WebKit, Firefox, macOS WebKit calls),
+│   │                        # docker build + smoke test, upgrade/restore drills, English-only check, trivy scan
 │   ├── image-scan.yml       # Weekly trivy scan of the released :latest image
 │   ├── trust-expiry.yml     # Weekly: fails when the desktop trust statement has under 60 days left
 │   └── release.yml          # CD after green CI on main: release-please + GHCR image push
@@ -157,11 +160,13 @@ mnema-talk/
 7. **Dependencies**: pin GitHub Actions to full commit SHAs; commit `go.sum` / `package-lock.json`; don't run `go mod tidy` in the Docker build.
    New or removed shipped dependencies (Go modules in the binary, web `dependencies`, vendored code in `web/src/third_party/`) go into `THIRD_PARTY_NOTICES.md` and the in-app list `web/src/lib/thirdParty.ts`.
 8. **Never rewrite `main`**: no force push, no history rewrite, no moving or deleting release tags (a ruleset blocks it). release-please finds the last release by its tag commit in `main`'s history; once that commit is gone it re-releases old versions. Rebase your own unpushed commits onto `origin/main` instead.
-9. **Pull requests, CI and merging**: `main` is protected by a ruleset. Changes land only through a pull request (no approvals required) with the checks `secret-scan`, `backend`, `frontend`, `govulncheck`, `docker`, `e2e` and CodeQL `analyze (go)`, `analyze (javascript-typescript)`, `analyze (actions)` green; squash merge only. Agents may merge their own PRs once green. Release PRs are opened with `GITHUB_TOKEN` and start no workflows, so `release.yml` mirrors the conclusion of every check that main's ruleset requires (read from the ruleset; `scripts/release-checks.py`) from the tested commit as commit statuses on the release commit, and refuses to merge when one did not succeed (after checking that it only touches `version.txt`, `CHANGELOG.md` and the manifest and sits directly on the tested commit) and then merges it.
+9. **Pull requests, CI and merging**: `main` is protected by a ruleset. Changes land only through a pull request (no approvals required) with the checks `secret-scan`, `backend`, `frontend`, `govulncheck`, `docker`, `upgrade-drill (<version>)`, `e2e` and CodeQL `analyze (go)`, `analyze (javascript-typescript)`, `analyze (actions)` green; squash merge only. Agents may merge their own PRs once green. Release PRs are opened with `GITHUB_TOKEN` and start no workflows, so `release.yml` mirrors the conclusion of every check that main's ruleset requires (read from the ruleset; `scripts/release-checks.py`) from the tested commit as commit statuses on the release commit, and refuses to merge when one did not succeed (after checking that it only touches `version.txt`, `CHANGELOG.md` and the manifest and sits directly on the tested commit) and then merges it.
 10. **Structured commits**: release-please derives versions and the changelog from them (`feat:` minor, `fix:` patch, `!`/`BREAKING CHANGE:` major; from 1.0.0 on there is no pre-major shift). The public API in `doc/api-stability.md` (REST per `api/openapi.json`, WebSocket events in `internal/events`, bot and webhook payloads, the desktop bridge, env vars, metric names) changes incompatibly only in a major release: deprecate in a minor first. `make openapi-diff` (CI `backend` job) fails a breaking OpenAPI change unless a commit carries a `BREAKING CHANGE:` footer. Event names are constants in `internal/events/types.go`, never string literals; adding one means updating `internal/events/testdata/events.golden.json` and `web/src/types/events.ts`. Use descriptive conventional commits:
    - `feat: add webrtc sfu audio track routing`
    - `fix: resolve websocket presence disconnect leak`
    - `docs: update deployment and caddy proxy guide`
+
+    **English only.** Code, comments, identifiers, log and error messages, test names, fixtures, seed data, scripts, CI files and docs are English. German exists only in the locale resources (web `i18n/de.json`, the mail and push texts under `locales/`, the default names in `internal/chat/seed_layout.json`) and in tests that assert that German output. `make english-check` enforces it; an exception goes in `scripts/english-only-allowlist.txt` with a reason.
 
 11. **Release checklist for security fixes** (the desktop client refuses bundles below `security_floor`, see `doc/desktop-trusted-client.md`):
    - A fix for a vulnerability in anything the web bundle ships (markdown, media, auth, message rendering, crypto, `web/src/lib`) is committed as `fix(security): ...` **and** carries a `Security-Floor: raise` trailer as the last paragraph of the PR body/commit message (a real git trailer; the subject alone does nothing). `release.yml` (`scripts/security-floor.sh`) then raises the bundle's `security_floor` to that release's version when it signs. Without the trailer the floor stays where it was; a `security`-scoped subject without it only logs a warning.

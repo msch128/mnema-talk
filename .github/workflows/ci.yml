@@ -173,6 +173,14 @@ jobs:
       - name: Merge-conflict markers
         run: node scripts/check-conflict-markers.mjs
 
+      # Code, comments, docs and fixtures are English only. German lives in the
+      # locale resources and in tests that assert it; see
+      # scripts/english-only-allowlist.txt.
+      - name: English only
+        run: |
+          node --test scripts/check-english-only.test.mjs
+          node scripts/check-english-only.mjs
+
       # The alert rules operators copy (doc/operations.md). The image is pinned
       # by digest (prom/prometheus v3.15.1); the metrics they name are checked
       # against /api/metrics by TestAlertRulesNameOnlyExportedMetrics above.

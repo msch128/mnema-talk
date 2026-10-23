@@ -1,0 +1,64 @@
+# Where German is allowed. Every entry needs a reason after " | ".
+# See scripts/check-english-only.mjs for the format.
+
+# Locale resources: the German UI, mail, push and seed texts.
+path: web/src/i18n/de.json | German UI strings (i18n resource)
+path: web/src/i18n/en.json | English UI strings that quote German terms next to their translation
+path: internal/auth/locales/mail.json | German account mails (locale resource)
+path: internal/push/locales/texts.json | German push texts (locale resource)
+path: internal/chat/seed_layout.json | German default category and channel names, keyed by language (locale resource)
+
+# Applied migrations are never edited.
+path: internal/db/migrations/0001_init.sql | applied migration seeds the German default names
+
+# Documentation of the vocabulary itself.
+path: doc/glossary.md | maps each product term to its German UI term
+
+# Third party and legal text.
+path: LICENSE | license text
+path: THIRD_PARTY_NOTICES.md | author names
+path: web/src/third_party/** | vendored code and licenses
+
+# People's names.
+text: Schr(ö|oe)der|Schr(ö|oe)ter | surnames of the author and of a third-party model author
+
+# Tests that assert the German UI text (the default locale).
+path: e2e/tests/** | Playwright specs drive the German UI through its visible labels
+path: web/src/components/AccountMenu.test.ts | asserts German UI output
+path: web/src/components/AdminLockoutAndWarnings.test.ts | asserts German UI output
+path: web/src/components/AudioSettingsModal.test.ts | asserts German UI output
+path: web/src/components/ChatArea.test.ts | asserts German UI output
+path: web/src/components/ConfirmDialog.test.ts | asserts German UI output
+path: web/src/components/ConnectionBanner.test.ts | asserts German UI output
+path: web/src/components/DesktopSelector.test.ts | asserts German UI output
+path: web/src/components/EditNameDialog.test.ts | asserts German UI output
+path: web/src/components/NativeTrustSetup.test.ts | asserts German UI output
+path: web/src/components/ProfilePassword.test.ts | asserts German UI output
+path: web/src/components/Sidebar.keyboard.test.ts | asserts German UI output
+path: web/src/components/Sidebar.menus.test.ts | asserts German UI output
+path: web/src/components/Sidebar.test.ts | asserts German UI output
+path: web/src/components/SlashBuiltin.test.ts | asserts German UI output
+path: web/src/components/StreamQualityMenu.integration.test.ts | asserts German UI output
+path: web/src/components/UpdateBanner.test.ts | asserts German UI output
+path: web/src/components/UserBar.test.ts | asserts German UI output
+path: web/src/components/UserProfileModal.test.ts | asserts German UI output
+path: web/src/components/VoiceChatPanel.test.ts | asserts German UI output
+path: web/src/composables/useChannelLayout.test.ts | asserts German UI output
+path: web/src/composables/useWebRTC.signaling.test.ts | asserts German UI output
+path: web/src/i18n/i18n.test.ts | asserts German UI output
+path: web/src/i18n/noHardcodedText.test.ts | asserts German UI output
+path: web/src/lib/api.test.ts | asserts German UI output
+path: web/src/lib/deletedUser.test.ts | asserts German UI output
+path: web/src/lib/errorDetails.test.ts | asserts German UI output
+path: web/src/lib/native/nativeTransport.test.ts | asserts German UI output
+path: web/src/lib/rtcStats.test.ts | asserts German UI output
+path: web/src/stores/stores.test.ts | asserts German UI output
+path: web/src/stores/toast.test.ts | asserts German UI output
+path: internal/auth/mail_locale_test.go | asserts the German mail texts
+path: internal/push/payload_test.go | asserts the German push texts
+path: internal/server/account_email_edges_integration_test.go | asserts the German mail subjects
+
+# The guard names the words it looks for.
+path: scripts/check-english-only.mjs | lists the German words and characters it detects
+path: scripts/english-only-allowlist.txt | quotes the names it allows
+path: scripts/check-english-only.test.mjs | feeds the guard German samples

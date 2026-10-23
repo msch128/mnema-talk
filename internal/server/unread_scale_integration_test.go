@@ -96,7 +96,7 @@ func (a *app) timedSends(c *client, ch uuid.UUID, n int) time.Duration {
 func TestSendingAMessageCostsTheSameForTenMembersAndTenThousand(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
-	ch := a.createChannel(admin, "allgemein", "text")
+	ch := a.createChannel(admin, "lobby", "text")
 	a.register(admin, "max")
 	a.send(admin, ch, "warm-up")
 
@@ -128,7 +128,7 @@ func TestSendingAMessageCostsTheSameForTenMembersAndTenThousand(t *testing.T) {
 func TestReadMarkersAreWrittenOnceAndOnlyWhenThereIsSomethingNewToRead(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
-	ch := a.createChannel(admin, "allgemein", "text")
+	ch := a.createChannel(admin, "lobby", "text")
 	a.seedMembers(scaleMembers, "member")
 	a.send(admin, ch, "news")
 
@@ -212,7 +212,7 @@ func (a *app) explain(sql string, args ...any) string {
 func TestUnreadLookupsUseTheChannelIndexInAHugeChannel(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
-	ch := a.createChannel(admin, "allgemein", "text")
+	ch := a.createChannel(admin, "lobby", "text")
 	max := a.register(admin, "max")
 	const history = 50000
 	a.runSQL(`INSERT INTO messages (channel_id, user_id, content, created_at)
@@ -256,7 +256,7 @@ func TestUnreadLookupsUseTheChannelIndexInAHugeChannel(t *testing.T) {
 func TestMentioningEveryoneIsOneStatementWithOneRowPerMember(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
-	ch := a.createChannel(admin, "allgemein", "text")
+	ch := a.createChannel(admin, "lobby", "text")
 	a.seedMembers(scaleMembers, "member")
 
 	var took time.Duration

@@ -9,9 +9,10 @@ to:
 - the **previous minor release for 90 days** after the newer minor was
   published, so an operator has a quarter to move up.
 
-Fixes land on `main` first and reach those lines as patch releases. Until 1.1
-is published, only 1.0.x is supported: `0.9.x` and older releases get no fixes,
-and neither do forks or unreleased commits. Update to a supported line
+Fixes land on `main` first and reach those lines as patch releases. With 1.1
+published, 1.1.x is the latest line and 1.0.x gets fixes for 90 days after the
+1.1.0 release. `0.9.x` and older releases get no fixes, and neither do forks or
+unreleased commits. Update to a supported line
 ([doc/upgrade.md](doc/upgrade.md)). Desktop clients refuse
 web bundles below the release that carries the latest marked security fix, see
 [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md).
@@ -92,14 +93,30 @@ model, in short; the design is in [doc/architecture.md](doc/architecture.md#dire
   their `dm_policy`, a disabled account, an unknown id) is one 403 text, and
   `can_send` and every list say nothing about a block.
 - **Abuse limits.** 3 tries a minute and 10 new conversations a day, a cap of
-  two messages before the other side has answered, at most 10 members and
-  100 groups per member, *Send direct messages* as a permission (default on),
+  two messages before the other side has answered, at most 10 members per
+  conversation and 100 group conversations per member, *Send direct messages* as a permission (default on),
   a community switch (default on) and a per-member `dm_policy`.
 - **Side channels removed.** Private messages do not move the public message
   counters or the public message numbering, are absent from the audit log,
   bot and webhook events and the admin media list.
 - **Server-side enforcement** of all of it; the UI only hides what a member
   cannot do.
+
+## Blocks and reports
+
+A block is private: the blocked member is not told, and nothing about it is
+visible to them (see "Blocks cannot be probed" above). The blocker's web app
+collapses the blocked member's messages, and their mentions, replies and
+messages create no inbox entry, mention count or push for the blocker. This
+is decided when the entry is listed or the push is sent, on the server. Reports are the other
+way: a member reports a message they can see, and the report stores its own
+copy of that message and up to 20 around it, so editing or deleting the
+original does not change what the moderators read. Only the Owner,
+Administrators and holders of *Manage reports* (off by default) can open the
+queue, and reading a report needs no access to the channel. A report of a
+direct message shows only that copy, never the rest of the conversation.
+Deleting an account blanks its text in every report copy and cuts the links
+to the account. Details: [doc/moderation.md](doc/moderation.md#blocking-and-reports).
 
 ## Forwarding (a reference, not a copy)
 
@@ -273,9 +290,13 @@ details and the limits.
   *Deletion* runs in one transaction and cannot be undone. The Owner account
   cannot be deleted (ownership is not transferable). What goes: profile,
   avatar, e-mail address, sessions (native ones too), tokens, invites,
-  reactions, mentions of the member, settings, roles and overwrites, every file
+  reactions, mentions of the member, settings, roles and overwrites, blocks (as
+  blocker and as blocked), the saved list, thread follows, direct message
+  memberships (a conversation nobody else is in goes with its messages and
+  files), every file
   the member uploaded (database rows and objects), pending and finished exports,
-  and the second factor. What stays: the account row as an anonymised tombstone
+  and the second factor. Reports the member sent or received stay for the
+  moderators with the member's text, note and links blanked. What stays: the account row as an anonymised tombstone
   (`deleted-<id>`, "Deleted member", disabled, unusable password hash) and the
   member's messages, emptied of text, link cards and pins (and of the earlier
   versions kept for moderators' edit history), so threads and other
@@ -300,7 +321,8 @@ details and the limits.
   another site (`Sec-Fetch-Site`), so a link or image on another page cannot
   burn it.
   It holds the member's own profile, settings, roles, messages (channel names
-  only for channels they can still view), reactions, upload list, a security
+  only for channels they can still view), reactions, upload list, blocks,
+  reports they sent, saved message ids and notes, thread follows, a security
   summary and audit entries about the account as "you"/"staff" without any
   other person's name; it is bounded to 200 000 messages and 64 MiB.
 - **WebSocket flood limits.** Every client event has a payload cap (1 KiB for
@@ -360,9 +382,14 @@ details and the limits.
   a session whose token was revoked. Slash commands are run only by members
   who may send in the channel, only for bots that can view and send there,
   and an admin can switch any command off; ephemeral replies are never stored.
-  Built-in commands (`/poll`) run on the server behind the same checks: the
-  right to send in the channel, a rate limit and options validated against the
-  command's definition. **Polls** keep anonymous votes anonymous by
+  Built-in commands (`/poll`, `/me`, `/shrug`, `/tableflip`, `/unflip`,
+  `/spoiler`, `/nick`, `/thread`, `/msg`, `/timeout`, `/ban` and `/kick`) run on the server behind the
+  same checks: the right to send in the channel, a rate limit and options
+  validated against the command's definition. The moderation commands check the
+  global permission first (*Timeout members*, *Ban members*, *Kick members*;
+  the last is off for @everyone and every existing role), then call the same
+  service as the admin routes, so the role hierarchy and the Owner's
+  protection hold, and write the same audit entry. **Polls** keep anonymous votes anonymous by
   construction: the query that builds a poll never selects voter ids for an
   anonymous poll, so the message, lists, search, the mentions inbox, the
   WebSocket, the gateway, outgoing webhooks and the data export of other
@@ -437,7 +464,9 @@ details and the limits.
   service (Google, Mozilla, Apple, Microsoft) cannot read them; they carry the
   channel name and sender and, unless the member or `PUSH_PREVIEWS=off` says
   otherwise, the first 140 characters of the message. Recipients are decided on
-  the server when a message is sent: the author never, only members who may
+  the server when a message is sent: the author never, never a member who
+  blocked the author, a thread reply only to the thread's followers (unless the
+  member is addressed), only members who may
   view the channel in the current permission snapshot (a failed snapshot sends
   nothing), with the member's effective notification level, mutes and Do Not
   Disturb applied. The VAPID private key lives in the database (`push_vapid`),
@@ -744,7 +773,7 @@ details and the limits.
   still do everything else described above (metadata, membership assertions,
   steering newcomers, denial of service, hostile data). Whoever holds the
   bundle signing key, which is not on any server, can still ship a malicious
-  app, and the Windows `.exe` has no Authenticode signature (a known gap: it needs a code-signing certificate that must be bought; the `SHA256SUMS` file in the same release detects a damaged download but is no proof of origin, because whoever can replace the ZIP can replace the checksums). **Desktop self-update.** The client replaces itself through the official Tauri
+  app, and the desktop installers are unsigned at the operating-system level (no Authenticode on Windows, no notarization on macOS, no package signature on Linux; a known gap: it needs code-signing certificates that must be bought; the `SHA256SUMS` file in the same release detects a damaged download but is no proof of origin, because whoever can replace the ZIP can replace the checksums). **Desktop self-update.** The client replaces itself through the official Tauri
   updater: the installer runs only if its minisign signature verifies against a
   public key pinned in the client (not the bundle key), the signed version equals the
   announced one, the version is newer than the installed one, and the download is HTTPS from
@@ -760,8 +789,9 @@ details and the limits.
 - **Data retention.** Nothing is deleted automatically by default
   (`MEDIA_RETENTION_DAYS=0`). Operators who enable pruning must say so in their
   privacy notice.
-- **Moderation.** Timeouts and bans need their own permissions and a higher
-  role than the member; the Owner cannot be targeted. A timeout is applied in
+- **Moderation.** Timeouts, bans and kicks need their own permissions and a
+  higher role than the member; the Owner cannot be targeted. A kick signs the
+  member out everywhere and drops them from their Talk; they can sign in again. A timeout is applied in
   the permission snapshot, so REST, the WebSocket hub and the SFU all honour it
   and overwrites cannot undo it. A ban is a separate state from a disabled
   account and is checked wherever an account may act (sign-in, sessions,
@@ -813,10 +843,8 @@ profile `autoupdate`, `UPDATER_TOKEN`). How it is built and why:
 
 - **The Docker socket is root on the host.** Whoever can talk to it can start
   a privileged container that mounts `/`. So the app container never gets the
-  socket or any other Docker API access. A separate container, the updater
-  (`nickfedor/watchtower`, the maintained fork of the archived
-  containrrr/watchtower, pinned by version and digest), holds it, and only
-  when the operator opts in.
+  socket or any other Docker API access. Separate containers (below) hold it,
+  and only when the operator opts in.
 - **Two containers.** The *updater* (`cmd/updater`, started from the app
   image with another entrypoint) decides: it verifies the new image (below),
   pulls it and moves the local tag. The *recreator* (`nickfedor/watchtower`,

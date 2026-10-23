@@ -29,7 +29,7 @@ func (c *client) firstUnread(t *testing.T, ch uuid.UUID, since time.Time) *uuid.
 func TestFirstUnreadIsTheOldestTopLevelMessageOfOthersAfterTheMarker(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
-	ch := a.createChannel(admin, "allgemein", "text")
+	ch := a.createChannel(admin, "lobby", "text")
 	max := a.register(admin, "max")
 	since := time.Now().Add(-time.Hour)
 
@@ -67,7 +67,7 @@ func TestFirstUnreadRejectsBadInputAndHiddenChannels(t *testing.T) {
 func TestReadingAChannelWithNothingNewLeavesTheMarkerAlone(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
-	ch := a.createChannel(admin, "allgemein", "text")
+	ch := a.createChannel(admin, "lobby", "text")
 	max := a.register(admin, "max")
 	empty := a.createChannel(admin, "leer", "text")
 	for i := 0; i < 2; i++ {

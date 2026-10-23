@@ -34,11 +34,11 @@ network:
 
 A new host needs Docker with Compose and nothing else: the compose file and
 `.env.example` of the release are the whole deployment (no clone, no build).
-Replace `1.0.0` with the version to install.
+Replace `1.1.0` with the version to install.
 
 ```sh
 mkdir mnema-talk && cd mnema-talk
-VERSION=1.0.0
+VERSION=1.1.0
 base=https://raw.githubusercontent.com/msch128/mnema-talk/v$VERSION
 curl -fsSLO "$base/docker-compose.yml"
 curl -fsSL "$base/.env.example" -o .env
@@ -50,12 +50,13 @@ refuses the public placeholders from `.env.example`.
 
 | Variable | Set it to |
 |---|---|
-| `MNEMA_IMAGE` | `ghcr.io/msch128/mnema-talk:1.0.0` (or `:1.0`, see [Updates](#updates)) |
+| `MNEMA_IMAGE` | `ghcr.io/msch128/mnema-talk:1.1.0` (or `:1.1`, see [Updates](#updates)) |
 | `PUBLIC_URL` | The `https://` address members open. An `http://` address starts, with a warning (see [operations.md](operations.md#public_url-and-secure-cookies)). |
 | `JWT_SECRET` | `openssl rand -hex 32` |
 | `POSTGRES_PASSWORD` | `openssl rand -hex 16` (compose builds `DATABASE_URL` from it) |
 | `S3_ACCESS_KEY`, `S3_SECRET_KEY` | Any letters and digits (secret: at least 8 characters) |
 | `ADMIN_INITIAL_PASSWORD` | The Owner's password, at least 14 characters; remove it after the first start |
+| `INITIAL_LANGUAGE` | Optional, `de` (default) or `en`: the language of the default category and channel names. Only the first start uses it. |
 
 Then start and check it:
 
@@ -76,7 +77,11 @@ built (`scripts/fresh-install-check.sh`).
 - Create the first invite: Admin console → Invites. Members register with that
   code; there is no public registration.
 - Set the community name and the rules new members accept (Admin console →
-  Welcome & rules).
+  Welcome & rules). The same page has the Owner's switch for direct messages
+  (on by default).
+- Give moderators their rights through roles: *Manage reports* (the Reports
+  tab) and *Kick members* are off for @everyone and for every role until you
+  grant them ([roles](roles-and-permissions.md)).
 - Optional features, each off until you configure it: e-mail and password reset
   (`SMTP_*`), Web Push (keys are generated on the first start;
   `PUSH_VAPID_SUBJECT` is optional), two-factor sign-in (members switch it on themselves),
@@ -94,7 +99,7 @@ in `.env` (the compose file uses it for the `app` service) and start without
 
 ```sh
 # .env
-MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.0   # or :1.0.0 (pinned) or :latest
+MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.1   # or :1.1.0 (pinned) or :latest
 
 docker compose pull app && docker compose up -d
 ```
@@ -141,10 +146,14 @@ automatically.
 
 **Optional: update from the admin console.** "Update now" asks a separate
 updater sidecar to check the new image's signature and build provenance, pull
-it and restart the app (everyone is disconnected for about 30–60 seconds). An
-image that does not verify is refused and nothing changes. It is **off by default**; to enable it:
+that exact digest and restart the app (everyone is disconnected for about
+30–60 seconds). The profile runs two small services: the `updater`, which
+verifies and pulls, and the `recreator`, which only restarts the app from the
+local image. An image that does not verify is refused and nothing changes
+([how the check works](operations.md#verifying-a-release-image)). It is **off
+by default**; to enable it:
 
-1. Run a released image: `MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.0` (see
+1. Run a released image: `MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.1` (see
    below for the tag).
 2. Set `UPDATER_TOKEN` in `.env` (`openssl rand -hex 32`, at least 32
    characters).
@@ -161,20 +170,21 @@ tags. That decides what "update now" can reach:
 
 | `MNEMA_IMAGE` tag | Follows | Self-update |
 |---|---|---|
-| `:1.0` (major.minor) | all `1.0.x` patch releases | yes, until `1.1.0`; a new minor is a deliberate tag change (recommended) |
+| `:1.1` (major.minor) | all `1.1.x` patch releases | yes, until `1.2.0`; a new minor is a deliberate tag change (recommended) |
 | `:latest` | every release, breaking ones included | always |
-| `:1.0.0` or `@sha256:…` | nothing (pinned) | no; the System tab shows the manual steps |
+| `:1.1.0` or `@sha256:…` | nothing (pinned) | no; the System tab shows the manual steps |
 | `mnema-talk:local` (default) | built on the server | no; `git pull && docker compose up -d --build` |
 
 Pinned tags are the most predictable (you choose every version and can roll
-back by setting the old one); `:1.0` is the practical middle ground. From
+back by setting the old one); `:1.1` is the practical middle ground. Since
 1.0.0, `fix:` releases bump the patch version and `feat:` releases the minor,
-so a `:1.0` image receives only fixes, and a new minor needs a deliberate tag
+so a `:1.1` image receives only fixes, and a new minor needs a deliberate tag
 change. There is no `:1` tag; the release pipeline publishes `X.Y.Z`, `X.Y`
-and `latest`. To roll back, set the previous version (e.g. `:1.0.0`) and run `docker compose pull
+and `latest`. To roll back, set the previous version (e.g. `:1.0.1`) and run `docker compose pull
 app && docker compose up -d app`; database migrations are forward-only, so
-check the changelog before going back across a release that changed the
-schema.
+going back from 1.1 to 1.0.x means restoring a backup taken before the
+update (see [Rollback](upgrade.md#rollback)); check the changelog before
+going back across any release that changed the schema.
 
 **Manual update, step by step** (backup, compose file for the new tag, image,
 pull, verify, rollback) and what changed between versions for operators:

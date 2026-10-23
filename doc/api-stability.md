@@ -23,10 +23,17 @@ in any release.
 | **Metric names** | [operations.md](operations.md#what-each-metric-means) (`GET /api/metrics`) | Metric names, types and label names. |
 | **Backup layout** | [operations.md](operations.md#backups-and-restore) | What the backup and restore scripts write and read. |
 
-`GET /api/health` also lists the optional features a server has in `features`
-(an array of names such as `blocks`). A name never changes meaning; a client
-treats a missing list as "none" (a 1.0.x server sends no list) and hides what
-is not listed.
+`GET /api/health` also lists the optional features a server has in `features`.
+Since 1.1 they are `blocks`, `dm`, `reports`, `saved`, `forward`,
+`search.filters.v2`, `threads.follow` and `slash.builtins`
+(`internal/server/health.go`). A name never changes meaning and is never
+removed in 1.x; a client treats a missing list as "none" (a 1.0.x server sends
+no list) and hides what is not listed. A new feature adds a name, never a
+`web_client_api` bump.
+
+Permission bits are public too. 1.1 added *Manage reports* (`1 << 21`), *Send
+direct messages* (`1 << 22`) and *Kick members* (`1 << 23`); the meaning of a
+bit never changes ([roles and permissions](roles-and-permissions.md)).
 
 Documented behaviour is part of the contract, such as permission checks, limits
 that the OpenAPI document or the docs state, and the default of

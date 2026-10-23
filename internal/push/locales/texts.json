@@ -1,0 +1,22 @@
+{
+  "de": {
+    "new": "Neue Nachricht",
+    "mention": "Hat dich erwähnt",
+    "attachment": "Anhang",
+    "dm": "Direktnachricht",
+    "group": "%d neue Nachrichten",
+    "poll": "Umfrage",
+    "spoiler": "Spoiler",
+    "test": "Push funktioniert auf diesem Gerät."
+  },
+  "en": {
+    "new": "New message",
+    "mention": "Mentioned you",
+    "attachment": "Attachment",
+    "dm": "Direct message",
+    "group": "%d new messages",
+    "poll": "Poll",
+    "spoiler": "Spoiler",
+    "test": "Push works on this device."
+  }
+}

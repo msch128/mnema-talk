@@ -78,9 +78,22 @@ no accounts on someone else's platform.
   back), threads, reactions, emoji, @mentions, file and image attachments,
   link cards, search, typing notices, unread and mention markers,
   per-channel notification settings and presence with a status line.
-- **Pinned messages, polls and slash commands** (`/poll` and others), **custom
+- **Pinned messages** (with who pinned them and when), **polls**, **custom
   emoji** managed by the community, **edit history** for moderators, **drafts**
   that survive a reload and a **jump to the first unread message**.
+- **Saved messages and forwarding.** Keep a private list of up to 1,000
+  messages with an optional note, or forward a message into another channel or
+  a direct message. A forward is a reference, so it never shows more than the
+  reader may already see.
+- **Slash commands.** `/poll`, `/me`, `/shrug`, `/tableflip`, `/unflip`,
+  `/spoiler`, `/nick`, `/thread` and `/msg` (it needs *Send direct messages*)
+  for members; `/timeout`, `/ban` and `/kick` need the matching permission. Bots can add their own
+  ([doc/bots.md](doc/bots.md#built-in-commands-and-polls)).
+- **Threads you can follow.** A thread reply notifies the thread's followers:
+  the root's author, people who replied, people mentioned in a reply and
+  anyone who pressed **Follow thread**.
+- **Search filters** for author, channel, mentions, dates, attachments, links,
+  polls, edited and pinned messages.
 - **Installable web app with Web Push** notifications, and a layout for phones.
 - **Direct messages, blocking and reports.** Private conversations of two to
   ten members that moderators cannot browse, blocking that the other member
@@ -136,9 +149,11 @@ no accounts on someone else's platform.
 
 Chromium-based browsers (Chrome, Edge 137+), Safari 17+ (including iOS 17+ and
 the installed web app) and Firefox 129+ run the whole app. A browser that cannot
-seal media does not join a Talk at all, it never sends unsealed media. Chromium
-is tested in CI; Safari/WebKit and Firefox calls pass locally but are not all
-required CI checks, and nothing is tested on real iOS or Android hardware.
+seal media does not join a Talk at all, it never sends unsealed media. CI runs
+the full end-to-end suite and the phone layout in Chromium, every spec that
+needs no call in WebKit, and a subset in Firefox. Calls in WebKit run in a
+separate macOS job that is not a required check. Nothing is tested on real iOS
+or Android hardware.
 Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 
 ### Encryption and privacy
@@ -213,7 +228,7 @@ build are needed: [Fresh install in doc/deployment.md](doc/deployment.md#fresh-i
 downloads the compose file and `.env.example` of a release, lists the few
 values to set (`PUBLIC_URL`, `JWT_SECRET`, `POSTGRES_PASSWORD`,
 `S3_ACCESS_KEY` / `S3_SECRET_KEY`, `ADMIN_INITIAL_PASSWORD`) and starts the
-published image (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.0`, a pinned patch
+published image (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.1`, a pinned patch
 version or `:latest`). CI runs those exact steps.
 
 Building from source is for development; see [Development](#development).
@@ -256,7 +271,7 @@ proxy settings, TURN and troubleshooting:
 Take a backup before every update (`scripts/backup.sh`; restore with
 `scripts/restore.sh`, which can verify a backup in a disposable container
 first). Migrations run at startup and are forward-only. Per-version notes,
-including the move from 0.9 to 1.0, and the rollback procedure are in
+including the moves from 0.9 to 1.0 and from 1.0 to 1.1, and the rollback procedure are in
 [doc/upgrade.md](doc/upgrade.md). Admins see new releases in the System tab; an
 optional update button needs the `autoupdate` profile.
 
@@ -300,7 +315,7 @@ and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client
 
 | Topic | Where |
 |---|---|
-| **Read first when updating:** what 1.0 promises and what to do before updating | [doc/release-notes-1.0.md](doc/release-notes-1.0.md) |
+| **Read first when updating:** what 1.0 promises and what to do before updating; the 1.1 changes are in the upgrade notes | [doc/release-notes-1.0.md](doc/release-notes-1.0.md), [doc/upgrade.md](doc/upgrade.md) |
 | Components, data flow, capacity | [doc/architecture.md](doc/architecture.md) |
 | Configuration, reverse proxy, TURN, backups, metrics and alerts, troubleshooting | [doc/operations.md](doc/operations.md) |
 | Ports, image tags, platforms, updating | [doc/deployment.md](doc/deployment.md) |
@@ -333,8 +348,8 @@ make check              # everything CI runs
 make e2e                # Playwright against the real binary
 ```
 
-Stack: Go, chi, pgx, Pion WebRTC; Vue 3, Pinia, Vite, Tailwind in strict
-TypeScript; PostgreSQL 18; S3-compatible storage. More in
+Stack: Go, chi, pgx, Pion WebRTC; Vue 3, Pinia, Vite and Tailwind CSS 4 in
+strict TypeScript; PostgreSQL 18; S3-compatible storage. More in
 [doc/development.md](doc/development.md).
 
 ## Contributing

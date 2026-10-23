@@ -36,7 +36,7 @@ vi.mock('../composables/useWebRTC', () => ({
 const RAW_KEY = /\b(common|chat|admin|profile|legal|talk|mention|emoji|activity|audio|voice|stats|login|channel|sidebar|thread|members|account|connection|errors|menu|role|presence|user|media|resize|app)\.[A-Za-z][A-Za-z.]*\b/
 
 const msg = (id: string, extra: Partial<Message> = {}) => (messageFixture({
-  id, channel_id: 'c1', user_id: 'u1', display_name: 'Herzog', username: 'herzog', content: 'Hallo **Welt**',
+  id, channel_id: 'c1', user_id: 'u1', display_name: 'Herzog', username: 'herzog', content: 'Hello **world**',
   created_at: '2026-01-01T10:00:00Z', attachments: [], reactions: [{ emoji: '👍', count: 1, users: ['u1'] }], ...extra
 }))
 
@@ -44,7 +44,7 @@ function seed() {
   const auth = useAuthStore()
   auth.user = userFixture({ id: 'u1', username: 'herzog', display_name: 'Herzog', role: 'admin', locale: 'de' })
   const chat = useChatStore()
-  chat.categories = [categoryFixture({ id: 'cat', name: 'Allgemein', channels: [channelFixture({ id: 'c1', name: 'allgemein', type: 'text', topic: 'Hi' }), channelFixture({ id: 'v1', name: 'Lounge', type: 'voice' })] })]
+  chat.categories = [categoryFixture({ id: 'cat', name: 'Lobby', channels: [channelFixture({ id: 'c1', name: 'lobby', type: 'text', topic: 'Hi' }), channelFixture({ id: 'v1', name: 'Lounge', type: 'voice' })] })]
   chat.activeChannel = requireValue(requireValue(chat.categories[0]).channels[0])
   chat.members = [userFixture({ id: 'u1', username: 'herzog', display_name: 'Herzog', role: 'admin' }), userFixture({ id: 'u2', username: 'zoe', display_name: 'Zoe', role: 'user' })]
   chat.presenceById = { u1: 'online' }

@@ -117,7 +117,7 @@ func TestEmailRejectsAddressesThatCouldInjectHeaders(t *testing.T) {
 	m := a.register(a.seedAdmin(), "alice")
 	for _, bad := range []string{
 		"", "plain", "a@b", "Name <a@example.org>", "a@example.org\r\nBcc: x@example.org",
-		"a b@example.org", "a@example.org,b@example.org", "ä@example.org", "a@example.org.", strings.Repeat("a", 250) + "@example.org",
+		"a b@example.org", "a@example.org,b@example.org", "\u00e4@example.org", "a@example.org.", strings.Repeat("a", 250) + "@example.org",
 	} {
 		if res := a.setEmail(m, bad); res.status != http.StatusBadRequest {
 			t.Errorf("%q: want 400, got %d", bad, res.status)

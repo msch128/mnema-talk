@@ -128,118 +128,142 @@ until the new release has passed your application checks.
 
 ### 1.0.x → 1.1.0
 
-Update with the procedure above; take the backup first. 1.1.0 only adds: a
-1.0.x web app keeps working against it, and a 1.1 web app hides what a 1.0.x
-server lacks.
+Update with the procedure above and take the backup first. 1.1.0 only adds.
+A 1.0.x web app keeps working against a 1.1 server, and a 1.1 web app hides
+what a 1.0.x server lacks (it reads the `features` list of `GET /api/health`).
+Nothing in `.env` has to change.
 
-- **Migration 0049** adds `user_blocks` and `message_reports`. A rollback to a
-  1.0.x image needs the backup restore (the schema changed).
-- **Blocking and message reports.** Members can block each other and report a
-  message to the moderators ([moderation](moderation.md#blocking-and-reports)).
-  New permission *Manage reports* (bit `1 << 21`), off for @everyone and every
-  existing role: nobody gains access to reports until a role is given it
-  (the Owner and Administrators have it implicitly).
+#### Database
+
+Six migrations run at the first start. All are additive and forward-only. A
+rollback to a 1.0.x image needs the restore of the pre-update backup, because
+the 1.0.x image refuses a schema that a newer version migrated (see
+"Rollback" above).
+
+| Migration | Adds |
+|---|---|
+| 0049 | `user_blocks` and `message_reports`. |
+| 0050 | Direct messages: `dm_members`, the `dm` channel type, `users.dm_policy`, `instance_settings.direct_messages_enabled`, `messages.in_dm`. The permission *Send direct messages* is added to @everyone. |
+| 0051 | `saved_messages`. |
+| 0052 | `messages.forward_of` and `messages.forwarded`. |
+| 0054 | `thread_follows`, filled from the existing threads (root authors and repliers) so threads keep notifying the people who took part. |
+| 0056 | `bot_tokens.minter_inferred`, a flag for tokens bound to their likeliest issuer (see "Bots and webhooks"). |
+
+The numbers 0053 and 0055 are unused.
+
+#### New permissions
+
+| Permission | Bit | Default |
+|---|---|---|
+| *Manage reports* | `1 << 21` | Off for @everyone and every existing role. |
+| *Send direct messages* | `1 << 22` | On for @everyone (set by migration 0050). An administrator can take it away. |
+| *Kick members* | `1 << 23` | Off for @everyone and every existing role. |
+
+The Owner and Administrators have all three implicitly, so nobody else gains
+access to reports or kicking until a role is given the permission.
+
+#### Configuration
+
+- **New:** `INITIAL_LANGUAGE` (`de` default, or `en`) names the default
+  categories and channels of a brand-new installation. An upgrade never
+  renames anything.
+- **Changed defaults:** `LEGAL_OPERATOR_COUNTRY` and `LEGAL_PROJECT_NOTICE` are
+  now empty by default. The legal page then shows a translated default (the
+  country "Germany" and "Private, non-commercial project") instead of the former
+  fixed German text. A value you set in `.env` is unchanged. If you relied on
+  the old defaults and use the English interface, set the two variables.
+- **Self-update (profile `autoupdate`):** fetch the compose file of the 1.1
+  tag and run `docker compose --profile autoupdate up -d` after the update. The
+  `updater` service is now this project's verifying sidecar (started from the
+  app image). A second service, `recreator` (the Watchtower that used to be the
+  updater), only restarts the app from the image the updater verified. "Update
+  now" refuses an image whose cosign signature or build provenance does not
+  verify. It needs outbound HTTPS from the updater to the registry and to
+  Sigstore. The new networks `mnema-recreator` and `mnema-updater-egress` are
+  created by compose; a custom compose file needs the same two services and
+  networks. Details: [operations.md](operations.md#verifying-a-release-image),
+  [SECURITY.md](../SECURITY.md#self-update-sidecar).
+
+#### What members and moderators get
+
+- **Direct messages.** Conversations of two to ten members
+  ([architecture](architecture.md#direct-messages),
+  [SECURITY](../SECURITY.md#direct-messages-privacy-model)). The Owner can
+  switch them off for the community (`direct_messages_enabled`, under **Welcome
+  & rules**): existing conversations stay readable and nothing new can be
+  written. Members choose in their privacy setting (`dm_policy`) who may start
+  conversations with them. Channels and messages are numbered as before;
+  private messages are numbered apart.
+- **Blocking and reports.** Members block each other and report a message to
+  the moderators ([moderation](moderation.md#blocking-and-reports)). The admin
+  console gets a **Reports** tab for holders of *Manage reports*.
+- **Saved messages.** A private list of up to 1,000 messages per member with
+  an optional note of up to 200 characters. A row is a reference, never a copy,
+  and access is checked on every read: a message the member can no longer see
+  comes back as unavailable.
+- **Forwarding and "Pinned by".** A message can be forwarded into a channel or
+  a direct message ([architecture](architecture.md#forwarding-and-saved-messages)).
+  Older web apps show a forwarded message as just its comment. The pinned list
+  shows who pinned a message and when.
+- **Slash commands.** `/me`, `/shrug`, `/tableflip`, `/unflip`, `/spoiler`,
+  `/nick`, `/thread`, `/msg`, `/timeout`, `/ban` and `/kick` join `/poll` in the
+  menu ([bots](bots.md#built-in-commands-and-polls)). `/kick` signs the member
+  out on every device and drops them from their Talk; they can sign in again.
+- **Threads and search.** A thread reply notifies only the thread's followers:
+  the root's author, repliers, people mentioned in a reply and anyone who
+  followed it by hand. Search gains the filters `has` (file, image, video, link,
+  poll, edit), `is=pinned`, `after` and `before_date` (see `api/openapi.json`).
 - **A Talk's chat without joining.** A chat button on each Talk row opens the
-  Talk's chat with a *Join* button in its header; no server change, the chat
-  already followed the channel permissions only (*View channels* to read,
-  *Send messages* to write, [roles](roles-and-permissions.md)).
-- **`GET /api/health` has a `features` list** (for example `"blocks"`,
-  `"reports"`, `"search.filters.v2"`, `"threads.follow"`, `"slash.builtins"`): the web app uses it to show only what the server supports.
-- **Direct messages** (migration 0050): conversations of two to ten members
-  ([architecture](architecture.md#direct-messages), [SECURITY](../SECURITY.md#direct-messages-privacy-model)).
-  The new permission *Send direct messages* (bit `1 << 22`) is added to
-  @everyone by the migration, so nothing changes for existing roles; an
-  administrator can take it away. The Owner can switch direct messages off for
-  the community (`direct_messages_enabled` in the onboarding settings): existing
-  conversations then stay readable and nothing new can be written. Members
-  choose in their privacy setting (`dm_policy`) who may start conversations with
-  them. A web app from before 1.1 does not ask for conversation events and
-  shows none; a member's push notification still arrives. The numbering of
-  channels and messages is unchanged (private messages are numbered apart).
-  `GET /api/health` lists `dm` in `features`.
-- **New events** `dm_created`, `dm_member_added`, `dm_member_removed`.
-- **The 1.1 web app** shows direct messages (sidebar section, member picker,
-  conversation info), blocking, "Report message", the **Reports** tab in the
-  admin console and the Owner's switch under **Welcome & rules** only when
-  `GET /api/health` lists `dm`, `blocks` or `reports`; it asks for
-  conversation events by opening the socket as `/api/ws?dm=1`. Against a 1.0.x
-  server none of it appears. A desktop client from before 1.1 forwards the
-  socket without that query, so conversations there do not update live until
-  the client is updated (the list and sending work).
-- **Built-in slash commands.** `/me`, `/shrug`, `/tableflip`, `/unflip`, `/spoiler`,
-  `/nick`, `/thread`, `/timeout`, `/ban` and `/kick` join `/poll` in the menu
-  ([bots](bots.md#built-in-commands-and-polls)). New permission *Kick members*
-  (bit `1 << 23`), off for @everyone and every existing role (the Owner and
-  Administrators have it implicitly), and the `kicked` WebSocket event.
-- **New event** `block_updated`, sent only to the blocker's own sessions.
-- **Export** gains `blocks.json` and `reports.json`.
-- **Migration 0051** adds `saved_messages`.
-- **Saved messages** (feature `saved`): a private list of up to 1,000
-  messages per member with an optional note of up to 200 characters
-  (`GET /api/me/saved`, `PUT` / `DELETE /api/me/saved/{messageId}`; event
-  `saved_updated` to the member's own sessions). A row is a reference, never a
-  copy, and access is checked on every read: a message the member can no
-  longer see comes back as unavailable. The export gains `saved.json` (ids,
-  notes and times, not the saved text); erasing an account removes the list.
-- **Migration 0052** adds `messages.forward_of` and `messages.forwarded`.
-- **Forwarding** (feature `forward`): `POST /api/messages/{messageId}/forward`
-  posts a message that references the original, and `GET
-  /api/messages/{messageId}/forward` returns the original as the caller may see
-  it ([architecture](architecture.md#forwarding-and-saved-messages)). Messages
-  gain an additive `forward` marker (`{forwarded: true}`, no ids and no quoted
-  text, for bots and webhooks too). Older web apps show a forwarded message as just its
-  comment.
-- **"Pinned by".** Messages and the pin event carry `pinned_at` and
-  `pinned_by` while pinned; the pinned list shows who pinned a message and
-  when. Additive, no migration.
+  Talk's chat with a *Join* button in its header. The chat follows the channel
+  permissions only (*View channels* to read, *Send messages* to write,
+  [roles](roles-and-permissions.md)). No server change.
+- **Web app.** A skip link and a fixed Tab order, the connection banner also
+  on the browser's offline event, Talk controls that stay visible when alone in
+  the call on a phone, and in-page notifications that follow the "show message
+  text" setting. The style is built on Tailwind CSS 4; nothing to configure.
+- **Audit log.** New entries `message.edit_history_view` and `poll.end`; the
+  `message.delete` entry of an edited message carries its earlier versions.
+  Audit retention applies to them as to any entry.
+
+#### API, events and export
+
+All changes are additive; `web_client_api` is unchanged.
+
+- `GET /api/health` has a `features` list: `blocks`, `dm`, `reports`, `saved`,
+  `forward`, `search.filters.v2`, `threads.follow`, `slash.builtins`.
+- New routes: `/api/me/saved`, `/api/messages/{messageId}/forward`,
+  `/api/threads/{id}/follow` and `/api/threads/following`, plus the routes for
+  blocks, reports and direct messages (see `api/openapi.json`).
+- Messages carry a `forward` marker (`{forwarded: true}`, no ids and no quoted
+  text, for bots and webhooks too). Messages and the pin event carry
+  `pinned_at` and `pinned_by` while pinned.
+- New events: `dm_created`, `dm_member_added`, `dm_member_removed`,
+  `block_updated` (only to the blocker's own sessions), `saved_updated` (only to
+  the member's own sessions), `thread_follow_updated` and `kicked`.
+- The web app asks for conversation events by opening the socket as
+  `/api/ws?dm=1`. A desktop client from before 1.1 forwards the socket without
+  that query, so conversations there do not update live until the client is
+  updated (the list and sending work).
+- The account export gains `blocks.json`, `reports.json`, `saved.json` (ids,
+  notes and times, not the saved text) and `thread_follows.json`. Erasing an
+  account removes the saved list.
+
+#### Security
+
 - **Stricter style policy.** The web app's Content-Security-Policy no longer
   allows inline styles: `style-src 'unsafe-inline'` became `style-src 'self'`
   plus `style-src-attr 'none'` (see [SECURITY.md](../SECURITY.md#security-model-summary)
   under "Security headers"). Nothing to configure. A browser tab that was
-  loaded before the update and is still running the old web app may show the
-  emoji picker unstyled until it is reloaded (installed apps update on their
-  next start). The desktop client serves the signed bundle under its
-  own policy, which is unchanged and still works with the new bundle. The
-  bundle's `security_floor` is not raised: the old policy was defense in depth
-  and older bundles are not exploitable because of it.
-- **Migration 0056** adds one column to `bot_tokens` (an "inferred issuer"
-  flag; see bot tokens below). Rolling back to 1.0.x means restoring the
-  pre-upgrade backup: the 1.0.x image refuses a database that a newer version
-  migrated (see "Rollback" above).
-- **Self-update now verifies the image.** If you use the `autoupdate` profile,
-  fetch the compose file of the 1.1 tag and run
-  `docker compose --profile autoupdate up -d` after the update: the `updater`
-  service is now this project's verifying sidecar (started from the app image)
-  and a second service, `recreator` (the Watchtower that used to be the updater),
-  only restarts the app from the image the updater verified. "Update now" refuses
-  an image whose cosign signature or build provenance does not verify. It
-  needs outbound HTTPS from the updater to the registry and to Sigstore. Details:
-  [operations.md](operations.md#verifying-a-release-image),
-  [SECURITY.md](../SECURITY.md#self-update-sidecar). The new networks
-  (`mnema-recreator`, `mnema-updater-egress`) are created by compose; a custom
-  compose file needs the same two services and networks.
-- **Bot tokens issued before 1.0** are bound to their likeliest issuer the first
-  time they are used; nothing is revoked and no token needs regenerating
-  ([bots.md](bots.md#tokens)). The admin console marks tokens that were
-  bound by assumption.
-- **No change to the media frame format.** Refusing frame version 2 was
-  re-evaluated and deferred to 2.0 (SECURITY.md).
-
-- **Migration 0054** adds `thread_follows` and fills it from the existing
-  threads (root authors and repliers), so threads keep notifying the people
-  who took part. From then on a thread reply notifies only its followers (the
-  root's author, repliers, people mentioned in a reply, and anyone who
-  followed it by hand). Nothing else changes for members; 0055 is reserved
-  and unused.
-- The audit log gains `message.edit_history_view` and `poll.end`, and a
-  `message.delete` entry of an edited message carries its earlier versions.
-  Audit retention applies to them as to any entry.
-- New setting `INITIAL_LANGUAGE` (`de` default, or `en`) for the default category and channel names of a brand-new installation. An upgrade never renames anything.
-- Web app: a skip link and a fixed Tab order (channel list, header, messages, message box, member list), the connection banner also on the browser's offline event, Talk controls that stay visible when alone in the call on a phone, the search tip dismissed after the first search, a Follow thread button, and in-page notifications that follow the "show message text" setting. A 1.1 bundle against a 1.0.x server hides the follow button and notifies for every thread reply as before.
-- Search accepts `has=poll`, `has=edit` and `is=pinned`. The new routes
-  (`/api/threads/{id}/follow`, `/api/threads/following`) and the event
-  `thread_follow_updated` are additive; a 1.0.x web bundle ignores them.
-- **Export** also gains `thread_follows.json`.
+  loaded before the update may show the emoji picker unstyled until it is
+  reloaded; installed apps update on their next start. The desktop client
+  serves the signed bundle under its own policy, which still works with the new
+  bundle. The bundle's `security_floor` is not raised.
+- **Bots and webhooks.** Bot tokens issued before 1.0 are bound to their
+  likeliest issuer the first time they are used; nothing is revoked and no token
+  needs regenerating ([bots.md](bots.md#tokens)). The admin console marks tokens
+  that were bound by assumption.
+- **Media frame format.** No change. Refusing frame version 2 was re-evaluated
+  and deferred to 2.0 (SECURITY.md).
 
 ### 1.0.0 → 1.0.1
 

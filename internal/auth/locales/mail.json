@@ -1,0 +1,22 @@
+{
+  "de": {
+    "verify.subject": "%s: E-Mail-Adresse bestätigen",
+    "verify.body": "Hallo %s,\n\nbitte bestätige diese E-Mail-Adresse für dein Konto bei %s:\n\n%s\n\nDer Link gilt 24 Stunden und kann einmal benutzt werden. Du hast das nicht angefordert? Dann ignoriere diese Nachricht, es passiert nichts.\n",
+    "reset.subject": "%s: Passwort zurücksetzen",
+    "reset.body": "Hallo %s,\n\nfür dein Konto bei %s wurde ein neues Passwort angefordert. Mit diesem Link legst du es fest:\n\n%s\n\nDer Link gilt 30 Minuten und kann einmal benutzt werden. Beim Zurücksetzen werden alle angemeldeten Geräte abgemeldet. Du hast das nicht angefordert? Dann ignoriere diese Nachricht; dein Passwort bleibt, wie es ist.\n",
+    "alert.subject": "%s: falsche Anmeldecodes für dein Konto",
+    "alert.body": "Hallo %s,\n\nfür dein Konto bei %s wurden mehrfach falsche Codes für die Zwei-Faktor-Anmeldung eingegeben. Jemand kennt möglicherweise dein Passwort. Ändere es und prüfe deine Recovery-Codes unter Konto & Sicherheit.\n",
+    "test.subject": "%s: Testnachricht",
+    "test.body": "Diese Nachricht zeigt, dass dein Server E-Mails senden kann.\n"
+  },
+  "en": {
+    "verify.subject": "%s: confirm your e-mail address",
+    "verify.body": "Hello %s,\n\nplease confirm this e-mail address for your account at %s:\n\n%s\n\nThe link works once and for 24 hours. You did not ask for this? Ignore this message; nothing happens.\n",
+    "reset.subject": "%s: reset your password",
+    "reset.body": "Hello %s,\n\na new password was requested for your account at %s. Use this link to choose it:\n\n%s\n\nThe link works once and for 30 minutes. Resetting signs out every device. You did not ask for this? Ignore this message; your password stays as it is.\n",
+    "alert.subject": "%s: wrong sign-in codes for your account",
+    "alert.body": "Hello %s,\n\nseveral wrong two-factor codes were entered for your account at %s. Somebody may know your password. Change it and review your recovery codes under Account & security.\n",
+    "test.subject": "%s: test message",
+    "test.body": "This message shows that your server can send e-mail.\n"
+  }
+}

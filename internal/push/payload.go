@@ -1,6 +1,7 @@
 package push
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -40,18 +41,19 @@ const (
 	maxNameRunes    = 64
 )
 
-// texts are the few strings a push shows, by language (the account's
+// textsJSON holds the few strings a push shows, by language (the account's
 // language; German is the app's default).
-var texts = map[string]map[string]string{
-	"de": {
-		"new": "Neue Nachricht", "mention": "Hat dich erwähnt", "attachment": "Anhang",
-		"dm": "Direktnachricht", "group": "%d neue Nachrichten", "poll": "Umfrage", "spoiler": "Spoiler", "test": "Push funktioniert auf diesem Gerät.",
-	},
-	"en": {
-		"new": "New message", "mention": "Mentioned you", "attachment": "Attachment",
-		"dm": "Direct message", "group": "%d new messages", "poll": "Poll", "spoiler": "Spoiler", "test": "Push works on this device.",
-	},
-}
+//
+//go:embed locales/texts.json
+var textsJSON []byte
+
+var texts = func() map[string]map[string]string {
+	var out map[string]map[string]string
+	if err := json.Unmarshal(textsJSON, &out); err != nil {
+		panic("push: locales/texts.json: " + err.Error())
+	}
+	return out
+}()
 
 func text(locale, key string) string {
 	if t, ok := texts[locale]; ok {

@@ -3,7 +3,8 @@
 The generated list of changes is in [CHANGELOG.md](../CHANGELOG.md) (release-please
 writes it from the commits). This page is what the changelog cannot say: what
 1.0 promises, what it does not, and what to do before updating. The release
-pull request body can link here.
+pull request body can link here. This page describes 1.0; for the move to 1.1 read
+[the 1.0.x to 1.1.0 notes](upgrade.md#10x--110).
 
 ## What is new in 1.0
 
@@ -47,9 +48,8 @@ surfaces in [api-stability.md](api-stability.md). Concretely, for every `1.x`:
   automatically), invite-only registration and a single Owner who nobody can
   restrict do not change in a minor release.
 - **Security fixes ship as patch releases** for the latest minor and, once a
-  newer minor exists, the previous one for 90 days. Until 1.1 is out, 0.9.x
-  and older get no fixes: update to 1.0.x
-  ([SECURITY.md](../SECURITY.md#supported-versions)).
+  newer minor exists, the previous one for 90 days. 0.9.x and older get no
+  fixes ([SECURITY.md](../SECURITY.md#supported-versions)).
 
 Not covered by the promises: the database schema, `internal/...` Go packages,
 operator-only admin endpoints, log text and UI wording ([the full list](api-stability.md#what-is-not-public)).

@@ -1,6 +1,8 @@
 package auth
 
 import (
+	_ "embed"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -21,30 +23,44 @@ func (h *Handler) link(path, token string) string {
 
 const serviceName = "Mnema Talk"
 
-func (h *Handler) verifyMail(to, locale, username, token string) mailer.Message {
-	link, name := h.link(verifyPath, token), serviceName
-	if locale == "de" {
-		return mailer.Message{To: to, Subject: name + ": E-Mail-Adresse bestätigen", Body: fmt.Sprintf(
-			"Hallo %s,\n\nbitte bestätige diese E-Mail-Adresse für dein Konto bei %s:\n\n%s\n\n"+
-				"Der Link gilt 24 Stunden und kann einmal benutzt werden. Du hast das nicht angefordert? "+
-				"Dann ignoriere diese Nachricht, es passiert nichts.\n", username, name, link)}
+// mailJSON holds the subject and body templates by language (see mailLocale).
+// A subject takes the service name; a body takes the username, the service
+// name and, except for the alert, the link.
+//
+//go:embed locales/mail.json
+var mailJSON []byte
+
+var mailTexts = func() map[string]map[string]string {
+	var out map[string]map[string]string
+	if err := json.Unmarshal(mailJSON, &out); err != nil {
+		panic("auth: locales/mail.json: " + err.Error())
 	}
-	return mailer.Message{To: to, Subject: name + ": confirm your e-mail address", Body: fmt.Sprintf(
-		"Hello %s,\n\nplease confirm this e-mail address for your account at %s:\n\n%s\n\n"+
-			"The link works once and for 24 hours. You did not ask for this? "+
-			"Ignore this message; nothing happens.\n", username, name, link)}
+	return out
+}()
+
+func mailText(locale, key string) string {
+	if t, ok := mailTexts[locale]; ok {
+		return t[key]
+	}
+	return mailTexts["en"][key]
+}
+
+func (h *Handler) verifyMail(to, locale, username, token string) mailer.Message {
+	return mailer.Message{To: to, Subject: fmt.Sprintf(mailText(locale, "verify.subject"), serviceName),
+		Body: fmt.Sprintf(mailText(locale, "verify.body"), username, serviceName, h.link(verifyPath, token))}
 }
 
 func (h *Handler) resetMail(to, locale, username, token string) mailer.Message {
-	link, name := h.link(resetPath, token), serviceName
-	if locale == "de" {
-		return mailer.Message{To: to, Subject: name + ": Passwort zurücksetzen", Body: fmt.Sprintf(
-			"Hallo %s,\n\nfür dein Konto bei %s wurde ein neues Passwort angefordert. Mit diesem Link legst du es fest:\n\n%s\n\n"+
-				"Der Link gilt 30 Minuten und kann einmal benutzt werden. Beim Zurücksetzen werden alle angemeldeten Geräte abgemeldet. "+
-				"Du hast das nicht angefordert? Dann ignoriere diese Nachricht; dein Passwort bleibt, wie es ist.\n", username, name, link)}
-	}
-	return mailer.Message{To: to, Subject: name + ": reset your password", Body: fmt.Sprintf(
-		"Hello %s,\n\na new password was requested for your account at %s. Use this link to choose it:\n\n%s\n\n"+
-			"The link works once and for 30 minutes. Resetting signs out every device. "+
-			"You did not ask for this? Ignore this message; your password stays as it is.\n", username, name, link)}
+	return mailer.Message{To: to, Subject: fmt.Sprintf(mailText(locale, "reset.subject"), serviceName),
+		Body: fmt.Sprintf(mailText(locale, "reset.body"), username, serviceName, h.link(resetPath, token))}
+}
+
+func alertMail(to, locale, username string) mailer.Message {
+	return mailer.Message{To: to, Subject: fmt.Sprintf(mailText(locale, "alert.subject"), serviceName),
+		Body: fmt.Sprintf(mailText(locale, "alert.body"), username, serviceName)}
+}
+
+// TestMail is the message the Owner's "send a test mail" action sends.
+func TestMail(to, locale string) mailer.Message {
+	return mailer.Message{To: to, Subject: fmt.Sprintf(mailText(locale, "test.subject"), serviceName), Body: mailText(locale, "test.body")}
 }

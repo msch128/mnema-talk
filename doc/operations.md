@@ -8,7 +8,7 @@ see [upgrade.md](upgrade.md); for the security model see
 ## Configuration reference
 
 All settings are environment variables, read and validated in
-[`internal/config/config.go`](../internal/config/config.go). In the compose
+[`internal/config`](../internal/config/). In the compose
 stack they come from `.env`; [`.env.example`](../.env.example) lists all of
 them with placeholders.
 
@@ -36,7 +36,7 @@ General rules:
 | `PORT` | `8080` | HTTP port, 1–65535. In compose the container always listens on 8080; `PORT` there is the **host** port of the mapping. |
 | `BIND_ADDR` | `127.0.0.1` in development, else `0.0.0.0` | Listen address (outside compose). `APP_ENV=development` refuses any non-loopback address. |
 | `PUBLISH_ADDR` | `127.0.0.1` | Compose only: host address the app port is published on. |
-| `LOG_LEVEL` | empty | `debug`, `info`, `warn` or `error`. Empty = `info` in production/staging, `debug` otherwise. `debug` adds voice connection details (offered addresses, browser diagnostics). |
+| `LOG_LEVEL` | empty | `debug`, `info`, `warn` or `error`. Empty = `info` in production/staging, `debug` otherwise. `debug` adds voice connection details (offered addresses, browser diagnostics) and turns on Pion's ICE log unless `PION_LOG_DEBUG` is set. |
 
 ### Sessions and admin
 
@@ -84,6 +84,7 @@ General rules:
 | `PUSH_ENABLED` | `true` | Web Push notifications for members' devices while Mnema Talk is closed ([Web Push](#web-push-and-the-installable-app)). `false` turns them off: no key, no subscriptions API, nothing sent. |
 | `PUSH_PREVIEWS` | `user` | `user`: each member chooses whether a push carries the start of the message (default on); `off`: pushes never carry message text. Any other value is rejected at startup. |
 | `PUSH_VAPID_SUBJECT` | empty | Contact in the VAPID header (RFC 8292): an `https://` URL or a `mailto:` address. Empty uses `PUBLIC_URL` when that is `https://`, else a placeholder address (fine for testing; browsers' push services accept it). |
+| `WEBHOOK_ALLOW_PRIVATE_TARGETS` | empty | Comma-separated addresses or CIDR ranges (for example `192.168.1.20,10.0.0.0/24`) that outgoing webhooks may contact besides public addresses. Empty = public addresses only. Cloud metadata and reserved ranges stay closed. Anyone who may manage webhooks (the Owner and Administrators) can then make the server send requests to those addresses, so list only what you need. Web Push and link previews ignore it. |
 | `API_DOCS_ENABLED` | `false` | Swagger UI at `/api/docs` and `/api/openapi.json` for signed-in members. |
 
 ### Voice (WebRTC)
@@ -149,11 +150,14 @@ behind it and so uses the stored language or the default.
 |---|---|
 | `LEGAL_OPERATOR_NAME` | `Community Operator` |
 | `LEGAL_OPERATOR_EMAIL` | `admin@example.com` |
-| `LEGAL_OPERATOR_COUNTRY` | `Deutschland` |
-| `LEGAL_PROJECT_NOTICE` | `Privates, nicht-kommerzielles Projekt` |
+| `LEGAL_OPERATOR_COUNTRY` | empty |
+| `LEGAL_PROJECT_NOTICE` | empty |
 
 Shown in the privacy policy (`GET /api/legal`). Set your real details in
-`.env` only.
+`.env` only. While the country or the project notice is empty, the legal page
+shows a default in the member's language ("Germany" and "Private,
+non-commercial project" in English). Before 1.1 the defaults were German
+texts for both.
 
 ### Container resources (compose only)
 
@@ -260,6 +264,7 @@ installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
 - **Who is notified.** For each new message, every member with a subscribed
   device who may view the channel *at that moment* (the permission snapshot of
   the send, so a member who lost access stops at once), is not the author,
+  has not blocked the author,
   is not on Do Not Disturb or Focus, and whose effective notification level
   for the channel allows it: all messages, or mentions (including `@all`,
   `@here`, roles and replies to their messages) only; mutes, timed mutes and
@@ -271,7 +276,12 @@ installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
   seconds as one push ("3 new messages"); a mention is never held back. A
   device that is offline gets only the newest push of a channel (push topic),
   mentions separately; a push expires after one hour (a day for mentions).
-- **What a push contains.** Channel name and sender are always in it; the start
+  A thread reply goes only to the thread's followers (the root's author,
+  people who replied, people mentioned in the reply and anyone who followed it
+  by hand), unless the member is addressed by name, role or reply.
+  A message in a direct message conversation counts as a mention for push and
+  is sent urgently; its push names the sender and never a channel.
+- **What a push contains.** Channel name (for a direct message only the sender) and sender are always in it; the start
   of the message (140 characters) only if the member keeps "Show message text"
   on and `PUSH_PREVIEWS` is `user`. The payload is encrypted for the member's
   browser (RFC 8291, `aes128gcm`), so Google, Mozilla, Apple or Microsoft's push
@@ -453,9 +463,14 @@ updater`) has the reason. Details and limits are in
   installation that cannot reach the mirror can mount a `trusted_root.json`
   into the updater and set `UPDATER_TRUSTED_ROOT` to its path (the operator
   then keeps it current).
-- It runs from the same image as the app (`MNEMA_IMAGE`) with another
-  entrypoint, so the first `docker compose --profile autoupdate up -d` after
-  moving to 1.1 starts the new updater.
+- The `autoupdate` profile has two services. The `updater` runs from the same
+  image as the app (`MNEMA_IMAGE`) with another entrypoint; it verifies,
+  pulls and moves the local tag. The `recreator` (Watchtower, no pulling, no
+  route to the internet) only restarts the app from that local image. After
+  moving to 1.1, run `docker compose --profile autoupdate up -d` once to
+  start both. The sidecar's own settings (`UPDATER_LISTEN`,
+  `UPDATER_DOCKER_SOCKET`, `UPDATER_SCOPE`, `UPDATER_RECREATOR_URL`,
+  `UPDATER_TUF_CACHE`) are fixed by `docker-compose.yml`; leave them alone.
 - Images released before signing was added carry no signature and are
   refused; update those by hand. A digest-pinned `MNEMA_IMAGE` is never
   touched by "Update now".
@@ -496,10 +511,17 @@ committed statement and public key.
 
 ## Health and metrics
 
-- **`GET /api/health`** (public): `200 {"status":"ok","version":"X.Y.Z"}`
-  when the database answers and object storage is reachable, otherwise `503`
+- **`GET /api/health`** (public): `200` with `status` (`ok`), `version`,
+  `web_client_api` (the contract number the desktop client checks) and
+  `features`, when the database answers and object storage is reachable,
+  otherwise `503`
   (`database unavailable` / `file storage unavailable`). The result is cached
-  for 2 seconds, so it can't be used to flood the database. The compose
+  for 2 seconds, so it can't be used to flood the database. `features` lists
+  the optional features this build has, so a newer web app can hide what an
+  older server lacks. In 1.1 it holds `blocks`, `dm`, `reports`, `saved`,
+  `forward`, `search.filters.v2`, `threads.follow` and `slash.builtins`;
+  names never change meaning ([api-stability.md](api-stability.md)). A 1.0.x
+  server sends no list. The compose
   healthcheck and [`scripts/health-check.sh`](../scripts/health-check.sh)
   (cron, Unraid notification, optional webhook) use it.
 - **`GET /api/metrics`** (Prometheus text format), only when `METRICS_TOKEN`
@@ -617,7 +639,7 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_http_requests_total{route,class}` | counter | Requests by chi route pattern (`/api/channels/{channelID}/messages`) and status class `1xx`..`5xx`. Unknown paths are `unmatched`. |
 | `mnema_http_request_duration_seconds{route}` | histogram | Latency per route pattern (WebSocket upgrades are counted but not timed). |
 | `mnema_http_requests_in_flight` | gauge | Requests being served now. |
-| `mnema_ratelimit_hits_total{limiter}` | counter | Requests refused with 429, by limiter: `api_user` (600 a minute per member), `upload`, `link_preview`, `poll_create` (10 a minute), `poll_vote`, `pin` (60 pins or unpins a minute), `emoji_upload` (10 per 10 minutes), `edit_history`, `export_download`, the bot, webhook, gateway, push, e-mail and password-reset limiters, `ws_user` and `ws_ip`, and `other` for the few without a name. |
+| `mnema_ratelimit_hits_total{limiter}` | counter | Requests refused with 429, by limiter: `api_user` (600 a minute per member), `upload`, `link_preview`, `poll_create` (10 a minute), `poll_vote`, `pin` (60 pins or unpins a minute), `emoji_upload` (10 per 10 minutes), `edit_history`, `export_download`, `dm_start` (new conversations), `block`, `report`, `saved`, `forward`, `thread_follow`, `slash_nick`, `test_mail`, the bot, webhook, gateway, push, e-mail and password-reset limiters, `ws_user` and `ws_ip`, and `other` for the few without a name. |
 | `mnema_ws_online_users`, `mnema_ws_connections` | gauge | Distinct online users and open WebSockets. |
 | `mnema_ws_connections_total` | counter | Accepted realtime connections (reconnect churn). |
 | `mnema_ws_events_sent_total`, `mnema_ws_events_received_total` | counter | Event throughput to and from clients. |
@@ -635,10 +657,12 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_sfu_bandwidth_estimate_reports_total{range}` | counter | Bandwidth estimates taken for viewers whose screen layer the server chooses, by range (`lt0.5m` ... `ge16m`, bits per second); `rate()` per range shows how the downlinks are distributed. |
 | `mnema_sfu_bandwidth_layer_moves_total` | counter | Moves to a lower layer caused by the bandwidth estimate (those caused by loss, round trip time or keyframe requests are only in `mnema_sfu_layer_switches_total`). |
 | `mnema_sfu_ice_transitions_total{state}` | counter | `connected`, `failed`, `disconnected` ICE transitions. A rising `failed` share means clients cannot reach the UDP port or TURN. |
+| `mnema_sfu_ingress_dropped_total{reason}` | counter | Publisher packets dropped over the ingress limit: `rate` (a sender above its budget) or `closed` (the peer was already closing). |
 | `mnema_sfu_peer_joins_total` | counter | Media connections created. |
 | `mnema_db_connections_total\|acquired\|idle\|max` | gauge | Database pool. `mnema_db_acquires_total`, `..._waited_total`, `..._canceled_total`, `mnema_db_acquire_seconds_total` count acquisitions, those that had to wait, those abandoned and the time spent. |
 | `mnema_storage_up` | gauge | 1 when object storage answers (the same check as `/api/health`), else 0. |
 | `mnema_s3_operations_total{op,result}` | counter | Object storage calls (`upload`, `get`, `delete`, `list`) by `ok`/`error`. |
+| `mnema_webhook_events_dropped_total{reason}` | counter | Outgoing webhook events dropped or expired unsent: `webhook_cap` and `global_cap` (queue limits), `buffer_full`, `channel_share`, `store_error` and `expired` (older than the retry window). A rising count means a receiver is down or too slow. |
 | `mnema_push_deliveries_total{outcome}` | counter | Web Push deliveries: `ok`, `gone` (the browser ended the subscription; it is removed), `retry` (temporary refusal, retried once), `rejected`, `error` (no answer: blocked address, DNS, connection, TLS, timeout) and `dropped` (a full queue). A rising `rejected` share right after a restore means the VAPID key changed. |
 
 ## Orphaned media
@@ -690,10 +714,16 @@ security (the Owner account cannot be deleted). The export is a ZIP of JSON
 files with the member's profile, settings, messages, earlier versions of
 their edits, reactions, poll votes, uploads, the polls they started, the
 messages they pinned, their push devices (label and dates, no keys), the
-custom emoji they uploaded, audit entries about their account and their
-sign-in setup; nothing of other members. Deleting keeps an anonymised
+custom emoji they uploaded, the members they blocked, the reports they sent,
+their saved messages (ids, notes and times, not the saved text), the threads
+they follow, audit entries about their account and their sign-in setup;
+nothing of other members. Deleting keeps an anonymised
 row and the member's messages without text, removes everything else (see
-[SECURITY.md](../SECURITY.md)) and frees the username; files are removed from
+[SECURITY.md](../SECURITY.md)) and frees the username. Their blocks (in both
+directions), saved list and thread follows go; a direct message conversation
+nobody else is in is deleted with its messages and files, and in the others
+their messages stay without text; reports keep their copies for the
+moderators with the member's text blanked; files are removed from
 object storage in the same request, and anything that could not be removed is
 found by Admin > Media > orphan cleanup. Exports are stored for at most 24 hours
 under `exports/` in the bucket and need object storage; back-ups taken in that
