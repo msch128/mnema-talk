@@ -17,6 +17,19 @@ const LONG_NAME = `ohne-thema-kanal-${suffix.slice(-3)}`
 const IMAGE_CHANNEL = `bilder-${suffix}`
 const TABS = ['users', 'roles', 'channels', 'invites', 'onboarding', 'emoji', 'bans', 'bots', 'media', 'audit', 'system']
 
+// Channels these tests make are removed again: other specs count unread channels.
+const made: string[] = []
+async function makeChannel(page: Page, name: string): Promise<string> {
+  const res = await apiFetch(page, 'POST', '/api/admin/channels', { name, type: 'text' })
+  expect(res.status).toBe(201)
+  const id = responseString(res, 'id')
+  made.push(id)
+  return id
+}
+test.afterEach(async ({ page }) => {
+  for (const id of made.splice(0)) await apiFetch(page, 'DELETE', `/api/admin/channels/${id}`)
+})
+
 async function signIn(page: Page) {
   await page.goto('/')
   const dialog = page.getByRole('dialog')
@@ -67,7 +80,7 @@ function gradientPng(width: number, height: number): Buffer {
 test('a channel without a topic shows its whole name in the header at 1000px', async ({ page }) => {
   await page.setViewportSize({ width: 1000, height: 800 })
   await signIn(page)
-  expect((await apiFetch(page, 'POST', '/api/admin/channels', { name: LONG_NAME, type: 'text' })).status).toBe(201)
+  await makeChannel(page, LONG_NAME)
   await page.reload()
   await page.locator('[data-channel-type="text"]', { hasText: LONG_NAME }).click()
   const title = page.getByTestId('chat-channel-name')
@@ -102,9 +115,7 @@ for (const width of [1440, 1000]) {
 test('a channel with an image opens at the newest message even when the image loads late', async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 800 })
   await signIn(page)
-  const created = await apiFetch(page, 'POST', '/api/admin/channels', { name: IMAGE_CHANNEL, type: 'text' })
-  expect(created.status).toBe(201)
-  const id = responseString(created, 'id')
+  const id = await makeChannel(page, IMAGE_CHANNEL)
   for (let i = 1; i <= 4; i++) expect((await apiFetch(page, 'POST', `/api/channels/${id}/messages`, { content: `Text ${i}` })).status).toBe(201)
   const png = [...gradientPng(900, 600)]
   const uploaded = await page.evaluate(async ({ id, png }) => {

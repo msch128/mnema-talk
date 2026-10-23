@@ -166,7 +166,8 @@ test('phone: popovers, emoji picker and the admin console stay on screen', async
   await signIn(page)
   const width = page.viewportSize()?.width ?? 0
   const channel = `mobil-pop-${suffix}`
-  expect((await apiFetch(page, 'POST', '/api/admin/channels', { name: channel, type: 'text' })).status).toBe(201)
+  const made = await apiFetch(page, 'POST', '/api/admin/channels', { name: channel, type: 'text' })
+  expect(made.status).toBe(201)
   await page.reload()
   await openDrawer(page)
   await page.locator('[data-channel-type="text"]', { hasText: channel }).tap()
