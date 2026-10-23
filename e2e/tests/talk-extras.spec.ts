@@ -1,5 +1,5 @@
 import type { Page, Browser } from '@playwright/test'
-import { apiFetch, awaitApiBudget, responseString, responseUserId, bounds, suiteMember, leaveTalks, trackPeerConnections, expectTalkLive } from './helpers'
+import { apiFetch, awaitApiBudget, describeVideoSenders, responseString, responseUserId, bounds, suiteMember, leaveTalks, trackPeerConnections, expectTalkLive } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
@@ -102,6 +102,16 @@ async function shot(page: Page, name: string) {
   if (process.env.E2E_SHOT_DIR) await page.screenshot({ path: `${process.env.E2E_SHOT_DIR}/${name}.png` })
 }
 
+// B watches A's screen: the card appears once A's video has reached the server,
+// so when it does not, A's senders say why.
+async function watchScreenCard(a: Page, b: Page) {
+  const card = b.getByTestId('screen-card').getByRole('button', { name: 'Ansehen' })
+  await expect(card).toBeVisible({ timeout: 45_000 }).catch(async (e: unknown) => {
+    throw new Error(`${String(e)}\nA's video senders now:\n${await describeVideoSenders(a)}`)
+  })
+  await card.click()
+}
+
 // Two members (A: the admin, B: the file's member) in a new Talk.
 async function twoMembers(browser: Browser, tag: string, { pip = false, sound = false } = {}) {
   const aCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
@@ -157,7 +167,7 @@ test('the streamer sees who watches their screen share', async ({ browser }) => 
   await expect(viewers).toHaveAttribute('aria-label', 'Noch schaut niemand zu')
 
   // B watches: A sees one viewer, by name.
-  await b.getByTestId('screen-card').getByRole('button', { name: 'Ansehen' }).click()
+  await watchScreenCard(a, b)
   await expect(b.getByTestId('stage')).toBeVisible({ timeout: 20_000 })
   await expect(viewers).toHaveText('1', { timeout: 15_000 })
   await expect(viewers).toHaveAttribute('aria-label', `1 Zuschauer: ${bName}`)
@@ -335,7 +345,7 @@ test('the streamer picks the stream quality, the viewer sets the stream volume',
   await a.getByRole('button', { name: 'Bildschirm teilen' }).first().click()
   const aStage = a.getByTestId('stage')
   await expect(aStage).toHaveAttribute('data-stage-source', 'own')
-  await b.getByTestId('screen-card').getByRole('button', { name: 'Ansehen' }).click()
+  await watchScreenCard(a, b)
   const bVideo = b.getByTestId('stage').locator('video')
   await expect.poll(() => bVideo.evaluate(v => { if (!(v instanceof HTMLVideoElement)) throw new Error("Expected video"); return v.videoHeight }), { timeout: 20_000 }).toBeGreaterThan(0)
   await expect.poll(async () => (await sent())?.maxFramerate).toBe(30)
