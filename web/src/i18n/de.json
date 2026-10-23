@@ -2021,6 +2021,12 @@
         "expired": "Abgelaufen",
         "revoked": "Widerrufen"
       },
+      "binding": {
+        "unbound": "Ungebunden",
+        "unboundHint": "Vor 1.0 ausgestellt, daher ist kein Aussteller hinterlegt. Das Token funktioniert weiter und wird bei der ersten Benutzung an die Person gebunden, die den Bot angelegt hat (oder an den Owner). Erzeuge es neu, um es an den tatsächlichen Aussteller zu binden.",
+        "inferred": "Aussteller angenommen",
+        "inferredHint": "Vor 1.0 ausgestellt. Bei der ersten Benutzung wurde es an die Person gebunden, die den Bot angelegt hat, oder an den Owner; es endet, sobald diese Person den Bot nicht mehr verwalten darf. Erzeuge es neu, um es an den tatsächlichen Aussteller zu binden."
+      },
       "regenerate": "Neu erzeugen",
       "regenerateFor": "Token {name} neu erzeugen",
       "regenerateTitle": "Token {name} neu erzeugen?",

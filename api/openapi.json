@@ -1267,6 +1267,14 @@
             "format": "uuid",
             "type": "string"
           },
+          "issuer_binding": {
+            "description": "IssuerBinding is only set for a token issued before 1.0, which has no\nrecorded issuer: \"unbound\" until it is first used after the upgrade,\nthen \"inferred\" (bound to the bot's creator or the Owner, whoever\nqualified; regenerate it to bind it to its real issuer). Absent for a\ntoken whose issuer was recorded when it was issued.",
+            "enum": [
+              "unbound",
+              "inferred"
+            ],
+            "type": "string"
+          },
           "last_used_at": {
             "format": "date-time",
             "type": "string"
@@ -1436,6 +1444,14 @@
           },
           "id": {
             "format": "uuid",
+            "type": "string"
+          },
+          "issuer_binding": {
+            "description": "IssuerBinding is only set for a token issued before 1.0, which has no\nrecorded issuer: \"unbound\" until it is first used after the upgrade,\nthen \"inferred\" (bound to the bot's creator or the Owner, whoever\nqualified; regenerate it to bind it to its real issuer). Absent for a\ntoken whose issuer was recorded when it was issued.",
+            "enum": [
+              "unbound",
+              "inferred"
+            ],
             "type": "string"
           },
           "last_used_at": {
@@ -11848,7 +11864,7 @@
         ]
       },
       "post": {
-        "description": "Asks the optional updater sidecar (compose profile autoupdate, UPDATER_TOKEN) to pull the app image again and restart the app; everyone is disconnected for about 30-60 seconds. Admin only, same-origin only, re-authenticates with the admin's current password (5 wrong passwords lock the action like a password change does), at most once per 5 minutes, only while a newer release is known and target_version names it. Audit-logged. Owner only (403 otherwise).",
+        "description": "Asks the optional updater sidecar (compose profile autoupdate, UPDATER_TOKEN) to verify the new release image (cosign signature and build provenance of this project's release workflow), pull exactly that digest and restart the app; everyone is disconnected for about 30-60 seconds. Admin only, same-origin only, re-authenticates with the admin's current password (5 wrong passwords lock the action like a password change does), at most once per 5 minutes, only while a newer release is known and target_version names it. Audit-logged. Owner only (403 otherwise).",
         "operationId": "startSelfUpdate",
         "requestBody": {
           "content": {
@@ -11948,7 +11964,7 @@
                 }
               }
             },
-            "description": "UNAVAILABLE: the updater is not reachable or rejected the request."
+            "description": "UNAVAILABLE: the updater is not reachable, rejected the request, or refused the new image because its signature or provenance did not verify (nothing was changed)."
           }
         },
         "security": [
