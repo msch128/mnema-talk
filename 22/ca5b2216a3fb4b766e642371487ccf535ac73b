@@ -1,0 +1,49 @@
+doc/upgrade.md
+  s_06fcde5dbef956::t_ad02da3d30ccf3 29,35,357
+doc/crypto-state.md
+  s_06fcde5dbef956::t_9c678471f1a9dd 1,3-14,123,126-136
+scripts/check-conflict-markers.mjs
+  s_06fcde5dbef956::t_8116adc4073444 1-38
+doc/release-notes-1.0.md
+  s_06fcde5dbef956::t_3fab49cc461b0e 8-22,49-52,76-78
+Makefile
+  s_06fcde5dbef956::t_3bc2b29f14ba3d 166,168
+doc/operations.md
+  s_06fcde5dbef956::t_ad02da3d30ccf3 418
+  s_06fcde5dbef956::t_67c635f2d1ed4e 679,702
+README.md
+  s_06fcde5dbef956::t_8aebc7ca0f3d6b 230
+  s_06fcde5dbef956::t_44465ee5a6ea80 48-52,59-67,75-77,132-138,140,180,200-201,209-210,213,224,235-238
+doc/product-status.md
+  s_06fcde5dbef956::t_1f86c754f30303 30,62,69,83-84,226-227
+  s_06fcde5dbef956::t_3fab49cc461b0e 20-25
+  s_06fcde5dbef956::t_e6adcd9ab8ca0a 187-190,193-195,197,209
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_3bc2b29f14ba3d 170-174
+AGENTS.md
+  s_06fcde5dbef956::t_8aebc7ca0f3d6b 28,37,43,71-80,93,97-98,111
+doc/glossary.md
+  s_06fcde5dbef956::t_8aebc7ca0f3d6b 1-42
+SECURITY.md
+  s_06fcde5dbef956::t_3fab49cc461b0e 12-15
+doc/deployment.md
+  s_06fcde5dbef956::t_222ddab7e1b156 81-82
+  s_06fcde5dbef956::t_67c635f2d1ed4e 74-80,83-88
+  s_06fcde5dbef956::t_ad02da3d30ccf3 97,146,163,165,169-173
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "22ca5b2216a3fb4b766e642371487ccf535ac73b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
