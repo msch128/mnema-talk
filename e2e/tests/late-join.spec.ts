@@ -24,13 +24,13 @@ const trackAudioFilters = () => {
     constructor(...args: ConstructorParameters<typeof Worker>) {
       super(...args)
       if (!String(args[0]).includes('dfnWorker')) return
-      const state = { ready: false, failed: false }
+      const state = { ready: false, failed: false, why: '' }
       window.__dfnWorkers.push(state)
       this.addEventListener('message', ({ data }) => {
         if (data.type === 'ready') state.ready = true
-        if (data.type === 'failed') state.failed = true
+        if (data.type === 'failed') { state.failed = true; state.why = JSON.stringify(data) }
       })
-      this.addEventListener('error', () => { state.failed = true })
+      this.addEventListener('error', (e) => { state.failed = true; state.why = `error: ${e.message}` })
     }
   }
   const NativeNode = window.AudioWorkletNode
@@ -38,12 +38,12 @@ const trackAudioFilters = () => {
     constructor(...args: ConstructorParameters<typeof AudioWorkletNode>) {
       super(...args)
       if (args[1] !== 'deepfilter-worker-bridge') return
-      const state = { node: this, failed: false }
+      const state = { node: this, failed: false, why: '' }
       window.__dfnNodes.push(state)
       this.port.addEventListener('message', ({ data }) => {
-        if (data.type === 'failed') state.failed = true
+        if (data.type === 'failed') { state.failed = true; state.why = JSON.stringify(data) }
       })
-      this.addEventListener('processorerror', () => { state.failed = true })
+      this.addEventListener('processorerror', () => { state.failed = true; state.why = 'processorerror' })
     }
   }
 }
@@ -51,6 +51,8 @@ const trackAudioFilters = () => {
 const filterState = (page: Page) => page.evaluate(() => ({
   ready: window.__dfnWorkers.at(-1)?.ready ?? false,
   failed: window.__dfnWorkers.some(w => w.failed) || window.__dfnNodes.some(n => n.failed),
+  // What the filter said when it gave up, so a failure explains itself.
+  why: [...window.__dfnWorkers, ...window.__dfnNodes].filter(x => x.failed).map(x => x.why),
   processed: window.__dfnNodes.at(-1)?.node.filterStats?.processedFrames ?? 0,
 }))
 
@@ -123,7 +125,8 @@ test('a member joining an occupied Talk is heard and hears', async ({ browser })
     await expect.poll(() => audioBytesIn(page), { timeout: 15_000 }).toBeGreaterThan(2000)
     await expect.poll(async () => (await filterState(page)).processed, { timeout: 15_000 }).toBeGreaterThan(0)
     expect((await filterState(page)).ready).toBe(true)
-    expect((await filterState(page)).failed).toBe(false)
+    const state = await filterState(page)
+    expect({ failed: state.failed, why: state.why }).toEqual({ failed: false, why: [] })
   }
   // The first microphone keeps processing after the other member starts its
   // own filter; counts reflect accepted PCM replies from the actual Worker.

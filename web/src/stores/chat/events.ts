@@ -180,6 +180,7 @@ const HANDLERS: Handlers = {
     void fetchDms(cx)
   },
   emoji_changed: () => { void useEmojiStore().load() },
+  thread_follow_updated: () => {},
   // The caller blocked or unblocked someone in another session.
   block_updated: () => { void useBlocksStore().load() },
   saved_updated: (_cx, p) => { if (p) useSavedStore().onUpdated(p) },

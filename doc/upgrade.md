@@ -140,7 +140,7 @@ server lacks.
   existing role: nobody gains access to reports until a role is given it
   (the Owner and Administrators have it implicitly).
 - **`GET /api/health` has a `features` list** (for example `"blocks"`,
-  `"reports"`): the web app uses it to show only what the server supports.
+  `"reports"`, `"search.filters.v2"`, `"threads.follow"`): the web app uses it to show only what the server supports.
 - **Direct messages** (migration 0050): conversations of two to ten members
   ([architecture](architecture.md#direct-messages), [SECURITY](../SECURITY.md#direct-messages-privacy-model)).
   The new permission *Send direct messages* (bit `1 << 22`) is added to
@@ -185,6 +185,21 @@ server lacks.
   own policy, which is unchanged and still works with the new bundle. The
   bundle's `security_floor` is not raised: the old policy was defense in depth
   and older bundles are not exploitable because of it.
+
+- **Migration 0054** adds `thread_follows` and fills it from the existing
+  threads (root authors and repliers), so threads keep notifying the people
+  who took part. From then on a thread reply notifies only its followers (the
+  root's author, repliers, people mentioned in a reply, and anyone who
+  followed it by hand). Nothing else changes for members; 0055 is reserved
+  and unused.
+- The audit log gains `message.edit_history_view` and `poll.end`, and a
+  `message.delete` entry of an edited message carries its earlier versions.
+  Audit retention applies to them as to any entry.
+- New setting `INITIAL_LANGUAGE` (`de` default, or `en`) for the default category and channel names of a brand-new installation. An upgrade never renames anything.
+- Search accepts `has=poll`, `has=edit` and `is=pinned`. The new routes
+  (`/api/threads/{id}/follow`, `/api/threads/following`) and the event
+  `thread_follow_updated` are additive; a 1.0.x web bundle ignores them.
+- **Export** also gains `thread_follows.json`.
 
 ### 1.0.0 → 1.0.1
 
