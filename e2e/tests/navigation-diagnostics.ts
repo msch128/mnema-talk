@@ -24,7 +24,9 @@ export function explainNavigationFailures(context: BrowserContext): void {
         return await goto(...args)
       } catch (err) {
         const stuck = open()
-        const detail = `\nRequests still open in this context (${stuck.length}):\n${stuck.join('\n')}`
+        // Whether the page itself finished loading although the navigation never reported it.
+        const state = await page.evaluate(() => `${document.readyState}, ${location.href}`, undefined).catch((e: unknown) => `unreadable (${String(e).slice(0, 80)})`)
+        const detail = `\nThe page says: ${state}\nRequests still open in this context (${stuck.length}):\n${stuck.join('\n')}`
         throw new Error(`${err instanceof Error ? err.message : String(err)}${detail}`, { cause: err })
       }
     }
