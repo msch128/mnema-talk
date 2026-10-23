@@ -88,6 +88,10 @@ It is authored by the webhook, never by a member: its name (or the `username`
 of the call) and avatar, with a **Webhook** badge. Behind the scenes each
 webhook has a hidden bot account that cannot sign in and is not listed among
 the members. Text is Markdown like any message and sanitized the same way.
+The community's custom emoji appear only as the token the app stores,
+`<:name:id>`; a plain `:name:` in the text stays literal (the composer turns
+shortcodes into tokens before it sends, an API call does not). Unicode emoji
+work as typed.
 Editing a webhook message through the interface is not possible; members with
 *Manage messages* can delete it. Deleting the webhook keeps the messages it
 posted.
