@@ -1,0 +1,93 @@
+api/openapi.json
+  s_06fcde5dbef956::t_e76c18d3734f8d 2290-2291,2295,2658
+  s_06fcde5dbef956::t_1c46aac0ff6db3 2245-2289,2292-2294,2296-2316,2656-2657,2659,22647-22847
+  s_06fcde5dbef956::t_c6a2e7bed32dcf 22848-22849
+doc/webhooks.md
+  s_06fcde5dbef956::t_e76c18d3734f8d 164
+  s_06fcde5dbef956::t_1c46aac0ff6db3 163,165
+web/src/components/MessageRow.vue
+  s_06fcde5dbef956::t_1c46aac0ff6db3 14,182-183
+  s_06fcde5dbef956::t_ef1a05753ced20 184
+doc/bots.md
+  s_06fcde5dbef956::t_1c46aac0ff6db3 529,533
+  s_06fcde5dbef956::t_e76c18d3734f8d 530-532
+internal/chat/messages_scan.go
+  s_06fcde5dbef956::t_6c1ca366bed4c4 72-80
+  s_06fcde5dbef956::t_08fc1b9c285eae 71,81
+web/src/App.vue
+  s_06fcde5dbef956::t_1c46aac0ff6db3 42,361
+web/src/components/ForwardDialog.vue
+  s_06fcde5dbef956::t_1c46aac0ff6db3 1-103
+web/src/components/ForwardedQuote.vue
+  s_06fcde5dbef956::t_1c46aac0ff6db3 1-62
+doc/architecture.md
+  s_06fcde5dbef956::t_e76c18d3734f8d 174-175
+  s_06fcde5dbef956::t_1c46aac0ff6db3 162-173,176-189
+SECURITY.md
+  s_06fcde5dbef956::t_1c46aac0ff6db3 98-104,107,109-111
+  s_06fcde5dbef956::t_e76c18d3734f8d 105-106,108
+web/src/lib/forwardDialog.ts
+  s_06fcde5dbef956::t_1c46aac0ff6db3 1-19
+internal/db/migrations/0052_message_forward.sql
+  s_06fcde5dbef956::t_1c46aac0ff6db3 1-11
+web/src/stores/forwardQuotes.ts
+  s_06fcde5dbef956::t_1c46aac0ff6db3 1-44
+internal/server/forward_integration_test.go
+  s_06fcde5dbef956::t_904ceb71cbfa6c 162-163
+  s_06fcde5dbef956::t_1c46aac0ff6db3 1-85,87-89,92,96-117,119-130,132-151,153-161,164-264
+  s_06fcde5dbef956::t_e76c18d3734f8d 86,90-91,93-95,118,131,152
+e2e/tests/forward.spec.ts
+  s_06fcde5dbef956::t_1c46aac0ff6db3 1-76
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_e76c18d3734f8d 1435,1440
+  s_06fcde5dbef956::t_1c46aac0ff6db3 1405-1434,1436-1439,1441-1457,1639,1670
+internal/chat/forward.go
+  s_06fcde5dbef956::t_1c46aac0ff6db3 1-269
+internal/chat/message_mutations.go
+  s_06fcde5dbef956::t_1c46aac0ff6db3 22,25-26,39
+internal/chat/messages.go
+  s_06fcde5dbef956::t_6c1ca366bed4c4 30,46,50-51
+  s_06fcde5dbef956::t_3cdfcc5465a656 29,60,315-316,342,344,346
+internal/chat/message_types.go
+  s_06fcde5dbef956::t_6c1ca366bed4c4 78-87
+web/src/components/Forward.test.ts
+  s_06fcde5dbef956::t_1c46aac0ff6db3 1-22,24-162
+  s_06fcde5dbef956::t_534a76113c01f6 23
+doc/upgrade.md
+  s_06fcde5dbef956::t_e76c18d3734f8d 172-173
+  s_06fcde5dbef956::t_bc878386120389 167-171,174
+doc/glossary.md
+  s_06fcde5dbef956::t_cf6922d8255d7e 29
+internal/chat/handler.go
+  s_06fcde5dbef956::t_871b38cf9ad3e9 46-47,95
+internal/server/health.go
+  s_06fcde5dbef956::t_efeab0ce1da2bb 40
+internal/server/router_build.go
+  s_06fcde5dbef956::t_f507ad362cdb63 125
+web/src/composables/useMessageMenu.ts
+  s_06fcde5dbef956::t_22490fb5a223bc 9,12,99-103
+web/src/composables/useMessageMenuSaved.test.ts
+  s_06fcde5dbef956::t_cca92b1ee9f38a 14,72-81
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_223d88c638e849 1370-1383
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_17b8fdd7aa8bb4 1370-1383
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_59fe84f06d1d0f 5,140,199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2cda17043f416c16474892beaf34940adde38d1f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
