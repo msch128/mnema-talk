@@ -10,6 +10,7 @@ import { dmAsChannel, sortDms } from '../../lib/dm'
 import { emptyWindow } from '../../lib/messageWindow'
 import { navigate } from '../../lib/router'
 import { useServerFeaturesStore } from '../serverFeatures'
+import { watch } from 'vue'
 import { assertCommunity, type Cx } from './state'
 import { selectChannel } from './channels'
 import { resetWindow, setWindow } from './messageWindow'
@@ -17,6 +18,26 @@ import { markActiveChannelReadIfReading } from './readState'
 import { closeThread } from './threads'
 
 const decodeDms = arrayDecoder('direct messages', isChatDirectMessage)
+
+/**
+ * Resolves when the conversation list has been read (at once on a server
+ * without direct messages), or after ms. The list is read once the socket is
+ * open, so no creation event can fall between the list and the socket; a first
+ * route into a conversation waits for it here.
+ */
+export function waitForDms(cx: Cx, ms: number): Promise<void> {
+  const { cs } = cx
+  if (!useServerFeaturesStore().dm || cs.dmsLoaded.value) return Promise.resolve()
+  return new Promise<void>(resolve => {
+    const stop = watch(cs.dmsLoaded, loaded => { if (loaded) done() })
+    const timer = setTimeout(done, ms)
+    function done() {
+      stop()
+      clearTimeout(timer)
+      resolve()
+    }
+  })
+}
 
 export function dmById(cx: Cx, id: string | null | undefined): ChatDirectMessage | null {
   return id ? cx.cs.dms.value.find(d => d.id === id) ?? null : null

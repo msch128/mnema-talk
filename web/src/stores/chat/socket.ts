@@ -45,11 +45,10 @@ function resyncState(cx: Cx) {
   fetchMembers(cx)
   fetchReadState(cx)
   fetchNotificationSettings(cx)
-  // The first open follows the snapshots of sign-in by an instant; only a reconnect may have missed events.
-  if (cs.reconnectCount.value > 0) {
-    void fetchDms(cx)
-    void useBlocksStore().load()
-  }
+  // Read after the socket is open (and every time it reopens), so no conversation created in between is missed.
+  void fetchDms(cx)
+  // Blocks only reach this member's own sessions; a first open follows the sign-in snapshot by an instant.
+  if (cs.reconnectCount.value > 0) void useBlocksStore().load()
   void fetchFollowedThreads(cx)
   void loadNotifyPreview()
   const channel = cs.activeChannel.value

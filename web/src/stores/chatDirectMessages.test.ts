@@ -239,6 +239,42 @@ describe('the socket', () => {
   }
   afterEach(() => { vi.unstubAllGlobals() })
 
+  it('reads the conversations only once the socket is open, so a conversation created before that is not missed', async () => {
+    const sockets: { onopen: (() => void) | null }[] = []
+    vi.stubGlobal('WebSocket', class {
+      onopen: (() => void) | null = null
+      onclose = null
+      onmessage = null
+      readyState = 0
+      constructor() { sockets.push(this) }
+      send() {}
+      close() {}
+    })
+    const chat = setup(['dm'])
+    let created = false
+    http.handle = url => (url === '/api/dms' ? (created ? [pair] : []) : [])
+    chat.initWebSocket()
+    // Somebody starts a conversation after sign-in, before the socket is up: no list was read yet.
+    created = true
+    expect(vi.mocked(api).mock.calls.some(([u]) => u === '/api/dms')).toBe(false)
+    const waiting = chat.waitForDms(5000)
+    sockets[0]?.onopen?.()
+    await waiting
+    expect(chat.dms.map(d => d.id)).toEqual([pair.id])
+    expect(vi.mocked(api).mock.calls.filter(([u]) => u === '/api/dms')).toHaveLength(1)
+    chat.closeWebSocket()
+  })
+
+  it('does not wait for the conversations on a server without them, and gives up when the socket never opens', async () => {
+    const chat = setup([])
+    await chat.waitForDms(5000)
+    useServerFeaturesStore().list = ['dm']
+    const waiting = chat.waitForDms(3000)
+    await vi.advanceTimersByTimeAsync(3000)
+    await waiting
+    expect(chat.dmsLoaded).toBe(false)
+  })
+
   it('asks for conversation events only when the server has them', () => {
     const urls = captureSockets()
     const chat = setup(['dm'])

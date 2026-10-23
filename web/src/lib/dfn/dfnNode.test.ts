@@ -102,7 +102,7 @@ describe('DFN node lifecycle', () => {
     active.onerror()
     node.onprocessorerror()
     expect(onFailure).toHaveBeenCalledOnce()
-    expect(node.port.postMessage).toHaveBeenLastCalledWith({ type: 'failed' })
+    expect(node.port.postMessage).toHaveBeenLastCalledWith({ type: 'failed', reason: expect.any(String) })
     expect(active.terminate).toHaveBeenCalledOnce()
     present(node.destroy)()
   })

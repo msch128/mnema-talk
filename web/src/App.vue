@@ -121,11 +121,13 @@ async function initializeApp() {
     chatStore.fetchMembers(),
     chatStore.fetchReadState(),
     chatStore.fetchNotificationSettings(),
-    chatStore.fetchDms(),
     useBlocksStore().load()
   ])
   if (!alive) return
+  chatStore.dmsLoaded = false
   chatStore.initWebSocket()
+  // The conversations are read as the socket opens; a first route into one needs them.
+  await chatStore.waitForDms(3000)
 }
 
 async function onAuthSuccess() {
@@ -162,6 +164,7 @@ watch(() => authStore.isAuthenticated, async (isAuthed) => {
     chatStore.closeWebSocket()
     // Nothing of this account's private lists stays for the next sign-in.
     chatStore.dms = []
+    chatStore.dmsLoaded = false
     useBlocksStore().reset()
   }
 })

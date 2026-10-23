@@ -27,8 +27,9 @@ function processFrame(framePort: MessagePort, activeHandle: number, frame: unkno
     if (!(samples instanceof Float32Array) || samples.length !== frameLength) throw new Error('Invalid filter output')
     framePort.postMessage({ type: 'frame', id: frame.id, samples }, [samples.buffer])
   } catch (err) {
-    framePort.postMessage({ type: 'failed' })
-    self.postMessage({ type: 'failed', reason: failureReason(err) })
+    const reason = failureReason(err)
+    framePort.postMessage({ type: 'failed', reason })
+    self.postMessage({ type: 'failed', reason })
   }
 }
 

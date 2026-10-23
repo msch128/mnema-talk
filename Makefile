@@ -12,8 +12,8 @@ GO_PKGS    := ./...
 # binaries when one is configured; Docker fixtures otherwise remain isolated.
 GO_INTEGRATION_PKG_FLAGS := $(if $(filter undefined,$(origin TEST_DATABASE_URL)),,-p=1)
 # Keep in sync with .github/workflows/ci.yml.
-GOVULNCHECK_VERSION ?= v1.8.0
-GOCOGNIT_VERSION ?= v1.2.0
+GOVULNCHECK_VERSION ?= v1.9.0
+GOCOGNIT_VERSION ?= v1.3.0
 # Pinned oasdiff for make openapi-diff (CI runs the same target).
 OASDIFF_VERSION ?= v1.34.1
 
