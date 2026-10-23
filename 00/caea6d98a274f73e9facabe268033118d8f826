@@ -1,0 +1,53 @@
+.github/dependabot.yml
+  s_06fcde5dbef956::t_b15b1abb7306b8 58-62,65,68-74
+loadtest/viewer/go.mod
+  s_06fcde5dbef956::t_b15b1abb7306b8 7-8,14-15,19-20
+internal/sfu/authorization_test.go
+  s_06fcde5dbef956::t_b15b1abb7306b8 277-278
+scripts/backup.sh
+  s_06fcde5dbef956::t_b15b1abb7306b8 60
+scripts/postgres-upgrade-drill.sh
+  s_06fcde5dbef956::t_b15b1abb7306b8 14
+web/package.json
+  s_06fcde5dbef956::t_b15b1abb7306b8 24,27,29,32,35,42,44,48,51,53,57-59
+Dockerfile
+  s_06fcde5dbef956::t_b15b1abb7306b8 18,34,69,76
+.github/workflows/codeql.yml
+  s_06fcde5dbef956::t_b15b1abb7306b8 65,78
+docker-compose.yml
+  s_06fcde5dbef956::t_b15b1abb7306b8 139
+doc/development.md
+  s_06fcde5dbef956::t_b15b1abb7306b8 80
+scripts/upgrade-postgres.sh
+  s_06fcde5dbef956::t_b15b1abb7306b8 20
+THIRD_PARTY_NOTICES.md
+  s_06fcde5dbef956::t_b15b1abb7306b8 29,34-35,39,82-99,110-112,116-117,124,126,128-131,253
+scripts/restore.sh
+  s_06fcde5dbef956::t_b15b1abb7306b8 33,84
+.github/workflows/release.yml
+  s_06fcde5dbef956::t_b15b1abb7306b8 238
+go.mod
+  s_06fcde5dbef956::t_b15b1abb7306b8 8-12,20-25,109-121,144
+go.sum
+  s_06fcde5dbef956::t_f485c02f5ff3d9 43-66,69-80,295-296,300-305,312-315,328-329
+loadtest/viewer/go.sum
+  s_06fcde5dbef956::t_b06d34be832f8b 7-12,19-22,35-36
+web/package-lock.json
+  s_06fcde5dbef956::t_083575993462e5 13,16,18,21,24,31,33,37,40,42,46-48,440-442,488-490,507-509,517-519,534-536,551-553,568-570,585-587,602-604,619-621,639-641,659-661,679-681,699-701,719-721,739-741,756-758,773-775,1378-1380,1427-1429,1433,1454-1456,1461-1464,1477,1483-1485,1493-1495,1499-1502,1518-1520,1524-1525,1540-1542,1546-1547,1558-1560,1575-1577,1581-1583,1600-1602,1614-1616,1620-1623,1642-1644,1649-1651,1666-1668,1672,1701-1703,1720-1721,1753-1755,1760,1801-1803,2393-2395,2622-2624,2772-2774,2804-2806,3551-3553,3673-3675,3679,3689-3703,3774-3776,3960-3962,3966-3969,3984-3986,4008-4010,4016-4017,4034,4099-4101,4106,4132-4133,4135-4137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "00caea6d98a274f73e9facabe268033118d8f826",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
