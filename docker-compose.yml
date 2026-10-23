@@ -362,11 +362,7 @@ services:
   # nicholas-fedor/watchtower is the maintained fork of containrrr/watchtower
   # (archived December 2025). Pinned by version and multi-arch digest.
   updater:
-<<<<<<< HEAD
-    image: nickfedor/watchtower:1.23.2@sha256:62fb91130ddb493f869cad7e198fa260dd16c5da293ed092cbd5d8781566f7a6
-=======
     image: ${MNEMA_IMAGE:-mnema-talk:local}
->>>>>>> origin/release/1.1.0
     container_name: mnema-updater
     entrypoint: ["/usr/local/bin/mnema-updater"]
     restart: unless-stopped
