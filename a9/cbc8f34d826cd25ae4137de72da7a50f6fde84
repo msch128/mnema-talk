@@ -1,0 +1,23 @@
+e2e/tests/late-join.spec.ts
+  s_06fcde5dbef956::t_75a83a8f050b49 27,31,33,41,44,46,54-55,128-129
+e2e/browser.d.ts
+  s_06fcde5dbef956::t_b0b6ced25158c0 6-7
+e2e/tests/talk-extras.spec.ts
+  s_06fcde5dbef956::t_b0b6ced25158c0 370-375
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a9cbc8f34d826cd25ae4137de72da7a50f6fde84",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
