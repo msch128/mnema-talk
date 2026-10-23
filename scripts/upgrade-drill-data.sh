@@ -113,7 +113,9 @@ verify_roles() {
   [ "$(api Herzog "$BASE/api/admin/categories/$CATEGORY/overwrites" | jq -S '.overwrites | sort_by(.id)')" = "$CATEGORY_OVERWRITES_BEFORE" ] ||
     fail 'the category overwrites changed'
   # The overwrite still bites: bob may not attach files in the project channel.
-  head -c 1024 /dev/urandom >"$DEPLOY/small.bin"
+  # Deterministic binary content (sniffs as application/octet-stream); random
+  # bytes occasionally match a disallowed signature and the upload got a 415.
+  { printf 'MNEMA-DRILL\000'; head -c 1012 /dev/zero | LC_ALL=C tr '\000' '\001'; } >"$DEPLOY/small.bin"
   if api bob -F "file=@$DEPLOY/small.bin;type=application/octet-stream" "$BASE/api/channels/$PROJECTS/upload" >/dev/null 2>&1; then
     fail 'bob could upload despite the member overwrite'
   fi

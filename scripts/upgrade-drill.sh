@@ -176,7 +176,9 @@ post_message bob "$GENERAL" "bob-hello-$TAG"
 post_message alice "$PROJECTS" "alice-plan-$TAG"
 post_message bob "$PROJECTS" "bob-plan-$TAG"
 for i in 1 2 3 4 5 6 7 8; do post_message alice "$GENERAL" "bulk-$i-$TAG"; done
-head -c 262144 /dev/urandom >"$DEPLOY/payload.bin"
+# Deterministic binary content (sniffs as application/octet-stream); random
+# bytes occasionally match a disallowed signature and the upload got a 415.
+{ printf 'MNEMA-DRILL\000'; head -c 262132 /dev/zero | LC_ALL=C tr '\000' '\001'; } >"$DEPLOY/payload.bin"
 MEDIA_URL="$(api alice -F "file=@$DEPLOY/payload.bin;filename=notes.bin;type=application/octet-stream" -F "content=upload-$TAG" \
   "$BASE/api/channels/$PROJECTS/upload" | jq -r '.attachments[0].url')"
 [ -n "$MEDIA_URL" ] && [ "$MEDIA_URL" != null ] || { echo "upload returned no attachment" >&2; exit 1; }

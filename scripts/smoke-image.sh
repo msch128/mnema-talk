@@ -131,7 +131,9 @@ esac
 
 echo "==> 12 MB upload round trip"
 CHANNEL="$(curl -fsS -b "$COOKIES" "$BASE/api/channels" | jq -r '[.categories[].channels[], .uncategorized[]] | map(select(.type == "text")) | first | .id')"
-head -c $((12 << 20)) /dev/urandom >"$PAYLOAD"
+# Deterministic binary content (sniffs as application/octet-stream); random
+# bytes occasionally match a disallowed signature and the upload got a 415.
+{ printf 'MNEMA-DRILL\000'; head -c $(((12 << 20) - 12)) /dev/zero | LC_ALL=C tr '\000' '\001'; } >"$PAYLOAD"
 MEDIA_URL="$(curl -fsS -b "$COOKIES" -H "Origin: $BASE" \
   -F "file=@$PAYLOAD;filename=big.bin;type=application/octet-stream" \
   "$BASE/api/channels/$CHANNEL/upload" | jq -r '.attachments[0].url')"
