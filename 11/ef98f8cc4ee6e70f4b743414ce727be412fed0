@@ -1,0 +1,33 @@
+web/src/lib/searchSuggest.ts
+  s_06fcde5dbef956::t_a818a94a1ecf54 5,53,57
+web/src/lib/searchSupport.ts
+  s_06fcde5dbef956::t_b009ddc1ede6a9 1-26
+web/src/components/SearchInput.vue
+  s_06fcde5dbef956::t_a818a94a1ecf54 7,183
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_a818a94a1ecf54 454
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_a818a94a1ecf54 454
+web/src/components/SearchFilterSupport.test.ts
+  s_06fcde5dbef956::t_0301a6c9812e26 1-66
+web/src/components/SearchModal.vue
+  s_06fcde5dbef956::t_a818a94a1ecf54 7,10,36,75,100-104,201
+web/src/components/SearchResults.vue
+  s_06fcde5dbef956::t_a818a94a1ecf54 16,36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "11ef98f8cc4ee6e70f4b743414ce727be412fed0",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
