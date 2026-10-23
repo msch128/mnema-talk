@@ -279,7 +279,7 @@ onMounted(() => loadChannelsData())
       <span>{{ $t('admin.hasUnsavedLayout') }}</span>
       <button
         type="button"
-        class="bg-mnema-accent text-mnema-accent-ink px-3 py-1 rounded font-semibold hover:bg-mnema-accent-hover transition flex-shrink-0"
+        class="bg-mnema-accent text-mnema-accent-ink px-3 py-1 rounded-sm font-semibold hover:bg-mnema-accent-hover transition shrink-0"
         @click="saveLayout"
       >
         {{ $t('admin.saveLayout') }}

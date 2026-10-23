@@ -44,10 +44,10 @@ function openOwnProfile() {
   if (authStore.user) chatStore.openUserProfile(authStore.user)
 }
 
-const ib = 'flex h-8 w-8 max-md:h-11 max-md:w-11 flex-shrink-0 items-center justify-center rounded-md transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent'
+const ib = 'flex h-8 w-8 max-md:h-11 max-md:w-11 shrink-0 items-center justify-center rounded-md transition focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent'
 function ibTone(active: boolean) {
   return active
-    ? 'bg-mnema-danger/[0.12] text-mnema-danger'
+    ? 'bg-mnema-danger/12 text-mnema-danger'
     : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text'
 }
 </script>
@@ -67,7 +67,7 @@ function ibTone(active: boolean) {
         aria-haspopup="menu"
         :aria-expanded="presenceOpen ? 'true' : 'false'"
         :aria-label="$t('presence.current', { status: $t(`presence.${myStatus}`) })"
-        class="flex-shrink-0 rounded-full p-0.5 transition-colors hover:bg-mnema-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent"
+        class="shrink-0 rounded-full p-0.5 transition-colors hover:bg-mnema-hover focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent"
         @click="togglePresence"
       >
         <UserAvatar
@@ -85,7 +85,7 @@ function ibTone(active: boolean) {
         type="button"
         data-testid="own-profile-button"
         v-tooltip.visual="$t('user.openProfile')"
-        class="flex min-w-0 flex-1 flex-col rounded-md px-1.5 py-1 text-left leading-[18px] transition-colors hover:bg-mnema-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent"
+        class="flex min-w-0 flex-1 flex-col rounded-md px-1.5 py-1 text-left leading-[18px] transition-colors hover:bg-mnema-hover focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent"
         @click="openOwnProfile"
       >
         <span class="truncate text-sm font-semibold text-mnema-text">{{ me.display_name || me.username }}</span>

@@ -72,9 +72,9 @@ onBeforeUnmount(() => { alive = false; clearInterval(timer) })
       </label>
       <label v-for="key in (['overlay', 'mute', 'deafen', 'ptt'] as const)" :key="key" class="flex items-center justify-between gap-2">
         <span>{{ labels[key] }}</span>
-        <input :aria-label="labels[key]" :value="chordText(draft[key])" readonly class="w-36 rounded bg-mnema-canvas p-2" @keydown="bind(key, $event)" />
+        <input :aria-label="labels[key]" :value="chordText(draft[key])" readonly class="w-36 rounded-sm bg-mnema-canvas p-2" @keydown="bind(key, $event)" />
       </label>
-      <label class="block">{{ $t('gaming.games') }}<textarea :value="draft.games.join('\n')" class="block w-full rounded bg-mnema-canvas p-2" @input="draft.games = ($event.target as HTMLTextAreaElement).value.split('\n').map(s => s.trim()).filter(Boolean)" /></label>
+      <label class="block">{{ $t('gaming.games') }}<textarea :value="draft.games.join('\n')" class="block w-full rounded-sm bg-mnema-canvas p-2" @input="draft.games = ($event.target as HTMLTextAreaElement).value.split('\n').map(s => s.trim()).filter(Boolean)" /></label>
       <p class="text-xs text-mnema-muted">{{ $t('gaming.gamesHint') }}</p>
       <button type="submit">{{ $t('common.save') }}</button>
     </form>

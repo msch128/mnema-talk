@@ -175,7 +175,7 @@ onMounted(load)
     <div v-if="revealed" class="rounded-lg border border-mnema-accent/40 bg-mnema-accent-subtle p-3" role="status" data-testid="revealed-url">
       <p class="text-sm font-medium text-mnema-text">{{ $t('webhooks.urlOnce') }}</p>
       <div class="mt-2 flex items-center gap-2">
-        <code class="min-w-0 flex-1 select-all break-all rounded bg-mnema-surface px-2 py-1 font-mono text-xs text-mnema-text">{{ revealed.url }}</code>
+        <code class="min-w-0 flex-1 select-all break-all rounded-sm bg-mnema-surface px-2 py-1 font-mono text-xs text-mnema-text">{{ revealed.url }}</code>
         <button type="button" class="rounded-md border border-mnema-border-strong p-2 text-mnema-text transition hover:bg-mnema-hover" :aria-label="$t('webhooks.copyUrl')" @click="copy(revealed.url)">
           <Copy class="h-4 w-4" />
         </button>
@@ -185,29 +185,29 @@ onMounted(load)
     <p v-if="loaded && !hooks.length" class="text-sm text-mnema-tertiary">{{ $t('webhooks.emptyIncoming') }}</p>
     <ul v-if="hooks.length" class="divide-y divide-mnema-hairline overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
       <li v-for="hook in hooks" :key="hook.id" class="flex flex-wrap items-center gap-3 p-3" data-testid="incoming-webhook">
-        <img v-if="hook.avatar_url" :src="hook.avatar_url" alt="" class="h-9 w-9 flex-shrink-0 rounded-full object-cover" />
-        <span v-else class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-mnema-raised text-sm font-semibold text-mnema-muted" aria-hidden="true">{{ hook.name.slice(0, 1).toUpperCase() }}</span>
+        <img v-if="hook.avatar_url" :src="hook.avatar_url" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover" />
+        <span v-else class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mnema-raised text-sm font-semibold text-mnema-muted" aria-hidden="true">{{ hook.name.slice(0, 1).toUpperCase() }}</span>
 
         <form v-if="renaming?.id === hook.id" class="min-w-0 flex-1" @submit.prevent="saveName">
           <input v-model="renaming.name" type="text" maxlength="80" autofocus class="w-full rounded-md border border-mnema-border-field bg-mnema-elevated px-2 py-1 text-sm text-mnema-text" :aria-label="$t('common.name')" @keydown.esc="renaming = null" @blur="saveName" />
         </form>
         <span v-else class="min-w-0 flex-1 truncate text-sm font-medium text-mnema-text" data-testid="incoming-name">{{ hook.name }}</span>
 
-        <div class="flex flex-shrink-0 items-center gap-1 text-mnema-tertiary">
-          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.settingsFor', { name: hook.name })" :aria-expanded="settingsOpen === hook.id" @click="settingsOpen = settingsOpen === hook.id ? null : hook.id">
+        <div class="flex shrink-0 items-center gap-1 text-mnema-tertiary">
+          <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.settingsFor', { name: hook.name })" :aria-expanded="settingsOpen === hook.id" @click="settingsOpen = settingsOpen === hook.id ? null : hook.id">
             <SlidersHorizontal class="h-4 w-4" />
           </button>
-          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.rename', { name: hook.name })" @click="renaming = { id: hook.id, name: hook.name }">
+          <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.rename', { name: hook.name })" @click="renaming = { id: hook.id, name: hook.name }">
             <Pencil class="h-4 w-4" />
           </button>
-          <label class="cursor-pointer rounded p-1.5 transition hover:text-mnema-text" :title="$t('webhooks.avatar')">
+          <label class="cursor-pointer rounded-sm p-1.5 transition hover:text-mnema-text" :title="$t('webhooks.avatar')">
             <ImagePlus class="h-4 w-4" aria-hidden="true" />
             <input type="file" accept="image/*" class="sr-only" :aria-label="$t('webhooks.avatarFor', { name: hook.name })" @change="setAvatar(hook, $event)" />
           </label>
-          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.regenerateFor', { name: hook.name })" @click="regenerate(hook)">
+          <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.regenerateFor', { name: hook.name })" @click="regenerate(hook)">
             <KeyRound class="h-4 w-4" />
           </button>
-          <button type="button" class="rounded p-1.5 transition hover:text-mnema-danger" v-tooltip="$t('webhooks.deleteFor', { name: hook.name })" @click="remove(hook)">
+          <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-danger" v-tooltip="$t('webhooks.deleteFor', { name: hook.name })" @click="remove(hook)">
             <Trash2 class="h-4 w-4" />
           </button>
         </div>

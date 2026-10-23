@@ -99,13 +99,13 @@ onMounted(load)
     <p class="text-sm text-mnema-tertiary">{{ $t('bots.tokens.hint') }}</p>
 
     <form class="flex flex-wrap items-end gap-2" @submit.prevent="issue">
-      <label class="min-w-0 flex-1 space-y-1">
+      <label class="min-w-0 flex-1 stack-1">
         <span class="text-xs text-mnema-tertiary">{{ $t('bots.tokens.name') }}</span>
-        <input v-model="name" type="text" maxlength="32" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-none focus:border-mnema-accent" :placeholder="$t('bots.tokens.namePlaceholder')" />
+        <input v-model="name" type="text" maxlength="32" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" :placeholder="$t('bots.tokens.namePlaceholder')" />
       </label>
-      <label class="space-y-1">
+      <label class="stack-1">
         <span class="text-xs text-mnema-tertiary">{{ $t('bots.tokens.expiry') }}</span>
-        <input v-model="expires" type="date" class="rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1.5 text-sm text-mnema-text outline-none focus:border-mnema-accent" />
+        <input v-model="expires" type="date" class="rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1.5 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" />
       </label>
       <button type="submit" :disabled="busy" class="rounded-md bg-mnema-accent px-3.5 py-1.5 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40">{{ $t('bots.tokens.issue') }}</button>
     </form>
@@ -132,8 +132,8 @@ onMounted(load)
             <td class="px-3 py-2 text-mnema-muted">{{ token.last_used_at ? day(token.last_used_at) : $t('bots.tokens.never') }}</td>
             <td class="px-3 py-2">
               <div class="flex justify-end gap-1 text-mnema-tertiary">
-                <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" :aria-label="$t('bots.tokens.regenerateFor', { name: label(token) })" data-action="regenerate" @click="regenerate(token)"><RefreshCw class="h-4 w-4" /></button>
-                <button type="button" :disabled="token.state === 'revoked'" class="rounded p-1.5 transition hover:text-mnema-danger disabled:opacity-30" :aria-label="$t('bots.tokens.revokeFor', { name: label(token) })" data-action="revoke" @click="revoke(token)"><Ban class="h-4 w-4" /></button>
+                <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-text" :aria-label="$t('bots.tokens.regenerateFor', { name: label(token) })" data-action="regenerate" @click="regenerate(token)"><RefreshCw class="h-4 w-4" /></button>
+                <button type="button" :disabled="token.state === 'revoked'" class="rounded-sm p-1.5 transition hover:text-mnema-danger disabled:opacity-30" :aria-label="$t('bots.tokens.revokeFor', { name: label(token) })" data-action="revoke" @click="revoke(token)"><Ban class="h-4 w-4" /></button>
               </div>
             </td>
           </tr>

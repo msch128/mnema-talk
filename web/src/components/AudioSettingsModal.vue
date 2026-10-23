@@ -36,7 +36,7 @@ onUnmounted(() => {
         </span>
         <button
           @click="emit('close')"
-          class="px-5 py-2 rounded-lg bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold text-sm transition shadow-sm"
+          class="px-5 py-2 rounded-lg bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold text-sm transition shadow-xs"
         >
           {{ $t('audio.done') }}
         </button>

@@ -323,7 +323,7 @@ const groupedIds = computed(() => {
       <span class="truncate">
         {{ chatStore.missedLiveCount > 0 ? $t('chat.newMessages') : $t('chat.viewingOlder') }}
       </span>
-      <span class="flex items-center gap-1 flex-shrink-0 font-semibold">
+      <span class="flex items-center gap-1 shrink-0 font-semibold">
         {{ $t('chat.jumpToEnd') }}
         <ArrowDown class="w-4 h-4" />
       </span>

@@ -126,9 +126,9 @@ function handleMention() {
     <template #default="{ titleId }">
     <div class="flex min-h-0 flex-col overflow-y-auto">
       <!-- Top banner -->
-      <div class="h-28 flex-shrink-0 bg-gradient-to-br from-emerald-950 via-mnema-raised to-emerald-900 border-b border-mnema-hairline relative flex items-start justify-end p-3 overflow-hidden">
+      <div class="h-28 shrink-0 bg-linear-to-br from-emerald-950 via-mnema-raised to-emerald-900 border-b border-mnema-hairline relative flex items-start justify-end p-3 overflow-hidden">
         <!-- Background pattern -->
-        <div class="absolute inset-0 opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:12px_12px] pointer-events-none"></div>
+        <div class="absolute inset-0 opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] bg-size-[12px_12px] pointer-events-none"></div>
 
         <button 
           @click="emit('close')"
@@ -252,7 +252,7 @@ function handleMention() {
               v-if="voiceHangout" 
               class="flex items-center gap-2 p-2 rounded-lg bg-mnema-accent/10 border border-mnema-accent/25 text-mnema-accent text-sm"
             >
-              <Volume2 class="w-4 h-4 flex-shrink-0" />
+              <Volume2 class="w-4 h-4 shrink-0" />
               <div class="truncate">
                 <span class="font-medium">{{ $t('profile.inVoice') }}</span>
                 <span class="font-bold ml-1 text-mnema-text">#{{ voiceHangout.name }}</span>

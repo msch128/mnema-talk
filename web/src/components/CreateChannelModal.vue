@@ -83,7 +83,7 @@ async function handleSubmit() {
     <form @submit.prevent="handleSubmit" class="p-5 space-y-4 overflow-y-auto">
       <!-- Error -->
       <div v-if="error" role="alert" class="p-2.5 rounded-lg bg-mnema-danger/10 border border-mnema-danger/30 text-mnema-danger text-sm flex items-center gap-2">
-        <AlertCircle class="w-4 h-4 flex-shrink-0" />
+        <AlertCircle class="w-4 h-4 shrink-0" />
         <span>{{ error }}</span>
       </div>
 
@@ -102,7 +102,7 @@ async function handleSubmit() {
                 : 'bg-mnema-canvas border-mnema-hairline text-mnema-muted hover:border-mnema-border'
             ]"
           >
-            <div :class="['w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0', channelType === 'text' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
+            <div :class="['w-7 h-7 rounded-md flex items-center justify-center shrink-0', channelType === 'text' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
               <Hash class="w-4 h-4" />
             </div>
             <div class="min-w-0">
@@ -122,7 +122,7 @@ async function handleSubmit() {
                 : 'bg-mnema-canvas border-mnema-hairline text-mnema-muted hover:border-mnema-border'
             ]"
           >
-            <div :class="['w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0', channelType === 'voice' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
+            <div :class="['w-7 h-7 rounded-md flex items-center justify-center shrink-0', channelType === 'voice' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
               <Volume2 class="w-4 h-4" />
             </div>
             <div class="min-w-0">
@@ -142,7 +142,7 @@ async function handleSubmit() {
             @click="isCreatingCategory = !isCreatingCategory"
             class="text-xs text-mnema-accent hover:underline flex items-center gap-1 font-mono min-w-0"
           >
-            <FolderPlus class="w-3.5 h-3.5 flex-shrink-0" />
+            <FolderPlus class="w-3.5 h-3.5 shrink-0" />
             <span class="truncate">{{ isCreatingCategory ? $t('channel.chooseExisting') : $t('channel.newCategory') }}</span>
           </button>
         </div>
@@ -151,7 +151,7 @@ async function handleSubmit() {
           v-if="!isCreatingCategory"
           id="channel-category"
           v-model="selectedCategoryId"
-          class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text focus:outline-none focus:border-mnema-accent"
+          class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text focus:outline-hidden focus:border-mnema-accent"
         >
           <option value="">{{ $t('channel.noCategory') }}</option>
           <option v-for="cat in chatStore.categories" :key="cat.id" :value="cat.id">
@@ -165,7 +165,7 @@ async function handleSubmit() {
             v-model="newCategoryName"
             type="text"
             :placeholder="$t('channel.newCategoryPlaceholder')"
-            class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-none focus:border-mnema-accent"
+            class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-hidden focus:border-mnema-accent"
           />
           <p class="text-xs text-mnema-tertiary">
             {{ $t('channel.newCategoryHint') }}
@@ -189,7 +189,7 @@ async function handleSubmit() {
             :placeholder="channelType === 'text' ? $t('channel.namePlaceholderText') : $t('channel.namePlaceholderVoice')"
             required
             aria-describedby="channel-name-hint"
-            class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md pl-9 pr-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-none focus:border-mnema-accent font-mono"
+            class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md pl-9 pr-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-hidden focus:border-mnema-accent font-mono"
           />
         </div>
         <p id="channel-name-hint" class="text-xs text-mnema-tertiary">
@@ -205,7 +205,7 @@ async function handleSubmit() {
           v-model="channelTopic"
           type="text"
           :placeholder="$t('channel.topicPlaceholder')"
-          class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-none focus:border-mnema-accent"
+          class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-hidden focus:border-mnema-accent"
         />
       </div>
 

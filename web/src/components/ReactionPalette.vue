@@ -33,7 +33,7 @@ const full = ref(false)
       v-for="emoji in QUICK_REACTIONS"
       :key="emoji"
       type="button"
-      class="hover:scale-125 transition p-1 text-base rounded hover:bg-mnema-surface active:scale-95"
+      class="hover:scale-125 transition p-1 text-base rounded-sm hover:bg-mnema-surface active:scale-95"
       @click.stop="emit('pick', emoji)"
     >
       {{ emoji }}
@@ -43,7 +43,7 @@ const full = ref(false)
       data-testid="reaction-more"
       v-tooltip="$t('emoji.more')"
       :aria-label="$t('emoji.more')"
-      class="flex h-7 w-7 items-center justify-center rounded text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text"
+      class="flex h-7 w-7 items-center justify-center rounded-sm text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text"
       @click.stop="full = true"
     >
       <Plus class="h-4 w-4" />

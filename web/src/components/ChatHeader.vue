@@ -37,7 +37,7 @@ function searchInChannel() {
 // topic stays visible too.
 const titleClass = computed(() => {
   if (props.panel || !chatStore.activeChannel?.topic) return 'min-w-0'
-  return 'flex-shrink-0 max-w-[60%] max-md:flex-shrink max-md:max-w-none'
+  return 'shrink-0 max-w-[60%] max-md:shrink max-md:max-w-none'
 })
 
 function openNotificationMenu(e: MouseEvent) {
@@ -52,14 +52,14 @@ function openNotificationMenu(e: MouseEvent) {
 <template>
   <header
     :class="[
-      'px-4 max-md:pl-1 max-md:pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 flex-shrink-0 z-10',
+      'px-4 max-md:pl-1 max-md:pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 shrink-0 z-10',
       panel ? 'h-10' : 'h-12'
     ]"
   >
     <!-- Left: Channel name & topic -->
     <div class="flex items-center gap-2 min-w-0 flex-1">
       <NavDrawerButton v-if="!panel" />
-      <component :is="channelIcon" class="w-5 h-5 max-md:hidden text-mnema-tertiary flex-shrink-0" />
+      <component :is="channelIcon" class="w-5 h-5 max-md:hidden text-mnema-tertiary shrink-0" />
       <span
         data-testid="chat-channel-name"
         :class="['font-semibold text-base text-mnema-text truncate', titleClass]"
@@ -72,13 +72,13 @@ function openNotificationMenu(e: MouseEvent) {
       <span
         v-if="chatStore.activeChannel?.slow_mode_seconds"
         data-testid="slow-mode-chip"
-        class="flex-shrink-0 rounded-md border border-mnema-border px-1.5 py-0.5 font-mono text-xs text-mnema-muted"
+        class="shrink-0 rounded-md border border-mnema-border px-1.5 py-0.5 font-mono text-xs text-mnema-muted"
         v-tooltip="$t('moderation.slowModeHint')"
       >{{ $t('moderation.slowModeChip', { time: durationLabel(chatStore.activeChannel.slow_mode_seconds) }) }}</span>
     </div>
 
     <!-- Right: Badges & member list toggle -->
-    <div class="flex items-center gap-2 max-md:gap-0 flex-shrink-0">
+    <div class="flex items-center gap-2 max-md:gap-0 shrink-0">
       <MentionsInbox v-if="!panel" />
       <SavedMessages v-if="!panel && serverFeatures.has('saved')" />
       <PinnedMessages v-if="chatStore.activeChannel" />
@@ -136,25 +136,25 @@ function openNotificationMenu(e: MouseEvent) {
   <!-- Desktop notification opt-in: shown until answered or dismissed -->
   <div
     v-if="showNotifHint"
-    class="px-4 py-2 border-b border-mnema-hairline bg-mnema-raised flex items-center gap-3 text-sm flex-shrink-0"
+    class="px-4 py-2 border-b border-mnema-hairline bg-mnema-raised flex items-center gap-3 text-sm shrink-0"
     role="region"
     :aria-label="$t('notifications.hintTitle')"
   >
-    <Bell class="w-4 h-4 text-mnema-accent flex-shrink-0" />
+    <Bell class="w-4 h-4 text-mnema-accent shrink-0" />
     <p class="min-w-0 flex-1 text-mnema-muted">
       <span class="font-medium text-mnema-text">{{ $t('notifications.hintTitle') }}</span>
       <span class="ml-2">{{ $t('notifications.hintBody') }}</span>
     </p>
     <button
       type="button"
-      class="px-2.5 py-1 rounded-md bg-mnema-accent text-mnema-accent-ink font-semibold hover:bg-mnema-accent-hover transition flex-shrink-0"
+      class="px-2.5 py-1 rounded-md bg-mnema-accent text-mnema-accent-ink font-semibold hover:bg-mnema-accent-hover transition shrink-0"
       @click="enableNotifications"
     >
       {{ $t('notifications.enable') }}
     </button>
     <button
       type="button"
-      class="p-1 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition flex-shrink-0"
+      class="p-1 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition shrink-0"
       :aria-label="$t('notifications.notNow')"
       v-tooltip="$t('notifications.notNow')"
       @click="dismissNotifHint"

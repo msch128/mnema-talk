@@ -110,7 +110,7 @@ function onKeydown(event: KeyboardEvent) {
     <!-- eslint-disable vue/no-v-html -->
     <div
       v-role-colors
-      class="markdown-body break-words whitespace-pre-wrap select-text text-message"
+      class="markdown-body wrap-break-word whitespace-pre-wrap select-text text-message"
       @click="onClick"
       @auxclick="onAuxClick"
       @keydown="onKeydown"

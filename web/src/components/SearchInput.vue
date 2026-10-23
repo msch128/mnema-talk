@@ -103,14 +103,14 @@ defineExpose({ focus: () => inputEl.value?.focus() })
 <template>
   <div class="border-b border-mnema-border bg-mnema-surface/50">
     <div class="relative flex items-center gap-3 px-4 py-3.5">
-      <Search class="w-5 h-5 text-mnema-tertiary flex-shrink-0" />
+      <Search class="w-5 h-5 text-mnema-tertiary shrink-0" />
       <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
         <span
           v-for="chip in chips"
           :key="chip.key"
           data-search-chip
           :class="[
-            'inline-flex max-w-[14rem] items-center gap-1 rounded-md border py-0.5 pl-2 pr-1 text-xs',
+            'inline-flex max-w-56 items-center gap-1 rounded-md border py-0.5 pl-2 pr-1 text-xs',
             chip.bad ? 'border-mnema-danger text-mnema-danger' : 'border-mnema-accent/50 bg-mnema-accent/10 text-mnema-accent'
           ]"
           :title="chip.bad ? $t('chat.searchUnknownFilter') : undefined"
@@ -118,7 +118,7 @@ defineExpose({ focus: () => inputEl.value?.focus() })
           <span class="truncate font-mono">{{ chip.key }}:{{ chip.value }}</span>
           <button
             type="button"
-            class="rounded p-0.5 hover:bg-mnema-hover"
+            class="rounded-sm p-0.5 hover:bg-mnema-hover"
             :aria-label="$t('chat.searchRemoveFilter', { filter: chip.key })"
             @click="removeChip(chip.key)"
           >
@@ -137,12 +137,12 @@ defineExpose({ focus: () => inputEl.value?.focus() })
           :aria-activedescendant="activeDescendant"
           :placeholder="$t('chat.searchPlaceholder')"
           :aria-label="$t('chat.search')"
-          class="min-w-[8rem] flex-1 bg-transparent text-base text-mnema-text placeholder-mnema-tertiary focus:outline-none"
+          class="min-w-32 flex-1 bg-transparent text-base text-mnema-text placeholder-mnema-tertiary focus:outline-hidden"
           @input="onInput"
           @keydown="onKeydown"
         />
       </div>
-      <Loader2 v-if="loading" class="w-4 h-4 animate-spin text-mnema-accent flex-shrink-0" />
+      <Loader2 v-if="loading" class="w-4 h-4 animate-spin text-mnema-accent shrink-0" />
       <button
         type="button"
         data-dialog-close

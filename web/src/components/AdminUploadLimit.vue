@@ -60,10 +60,10 @@ onMounted(load)
     <form class="flex flex-wrap items-center gap-2" @submit.prevent="parsed !== null && save(parsed)">
       <label class="flex items-center gap-2 text-sm text-mnema-text">
         <span>{{ $t('admin.uploadLimit.label') }}</span>
-        <input v-model="draft" type="number" inputmode="numeric" min="1" :max="settings.ceiling_mb" step="1" :aria-label="$t('admin.uploadLimit.label')" class="w-24 rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1 text-sm tabular-nums text-mnema-text outline-none focus:border-mnema-accent" />
+        <input v-model="draft" type="number" inputmode="numeric" min="1" :max="settings.ceiling_mb" step="1" :aria-label="$t('admin.uploadLimit.label')" class="w-24 rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1 text-sm tabular-nums text-mnema-text outline-hidden focus:border-mnema-accent" />
         <span class="text-mnema-tertiary">MB</span>
       </label>
-      <button type="submit" :disabled="!dirty || busy" class="rounded-md bg-mnema-accent px-3 py-1 text-sm font-semibold text-mnema-accent-ink shadow-sm transition hover:bg-mnema-accent-hover disabled:opacity-40">{{ $t('common.save') }}</button>
+      <button type="submit" :disabled="!dirty || busy" class="rounded-md bg-mnema-accent px-3 py-1 text-sm font-semibold text-mnema-accent-ink shadow-xs transition hover:bg-mnema-accent-hover disabled:opacity-40">{{ $t('common.save') }}</button>
       <button v-if="!atCeiling" type="button" :disabled="busy" class="text-sm text-mnema-tertiary transition hover:text-mnema-text" @click="save(null)">{{ $t('admin.uploadLimit.reset') }}</button>
     </form>
     <p v-if="draft !== '' && parsed === null" class="text-xs text-mnema-danger" role="alert">{{ $t('admin.uploadLimit.invalid', { ceiling: settings.ceiling_mb }) }}</p>

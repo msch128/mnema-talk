@@ -100,7 +100,7 @@ watch(() => props.stream, (stream) => {
     @keydown.enter.self.prevent="handleTileClick"
     @keydown.space.self.prevent="handleTileClick"
     :class="[
-      'group relative isolate aspect-video cursor-pointer select-none overflow-hidden rounded-lg transition-colors duration-150 focus:outline-none',
+      'group relative isolate aspect-video cursor-pointer select-none overflow-hidden rounded-lg transition-colors duration-150 focus:outline-hidden',
       compact ? 'tile-compact' : '',
       fill ? '' : (compact ? 'w-44' : 'w-72'),
       stream ? 'bg-black' : 'bg-mnema-surface hover:bg-mnema-hover'
@@ -123,7 +123,7 @@ watch(() => props.stream, (stream) => {
       <div
         data-tile-avatar
         :class="[
-          'tile-avatar flex-shrink-0 rounded-full overflow-hidden flex items-center justify-center font-semibold border transition-shadow duration-150',
+          'tile-avatar shrink-0 rounded-full overflow-hidden flex items-center justify-center font-semibold border transition-shadow duration-150',
           compact ? 'text-base' : 'text-2xl',
           user.avatar_url ? 'border-mnema-border bg-mnema-surface' : 'bg-mnema-band border-mnema-mint/30 text-mnema-mint',
           speaking
@@ -154,7 +154,7 @@ watch(() => props.stream, (stream) => {
         type="button"
         data-testid="tile-watch-button"
         :class="[
-          'pointer-events-auto rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold flex items-center gap-1.5 shadow-lg transition active:scale-95 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-text',
+          'pointer-events-auto rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold flex items-center gap-1.5 shadow-lg transition active:scale-95 disabled:opacity-60 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-text',
           compact ? 'h-6 px-2 text-xs' : 'h-8 px-3 text-sm'
         ]"
         :disabled="isConnecting"
@@ -168,7 +168,7 @@ watch(() => props.stream, (stream) => {
         type="button"
         data-testid="tile-stop-watching-button"
         :class="[
-          'pointer-events-auto rounded-md bg-mnema-surface border border-mnema-border text-mnema-text hover:bg-mnema-hover font-semibold flex items-center gap-1.5 shadow-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent',
+          'pointer-events-auto rounded-md bg-mnema-surface border border-mnema-border text-mnema-text hover:bg-mnema-hover font-semibold flex items-center gap-1.5 shadow-lg transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent',
           compact ? 'h-6 px-2 text-xs' : 'h-8 px-3 text-sm'
         ]"
         @click.stop="$emit('stop-watching', user.id)"
@@ -183,7 +183,7 @@ watch(() => props.stream, (stream) => {
       v-if="showStatus"
       data-tile-status
       :class="[
-        'absolute z-30 flex items-center rounded bg-black/65 text-white/90 font-mono text-xs leading-4 tabular-nums pointer-events-none transition-opacity duration-150',
+        'absolute z-30 flex items-center rounded-sm bg-black/65 text-white/90 font-mono text-xs leading-4 tabular-nums pointer-events-none transition-opacity duration-150',
         compact ? 'top-1.5 left-1.5 h-4 px-1' : 'top-2 left-2 h-5 px-1.5',
         REVEAL
       ]"
@@ -202,7 +202,7 @@ watch(() => props.stream, (stream) => {
         v-if="cameraAvailable && !isSelf"
         type="button"
         :class="[
-          'flex items-center justify-center rounded bg-black/65 text-white hover:bg-black/85 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent',
+          'flex items-center justify-center rounded-sm bg-black/65 text-white hover:bg-black/85 transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent',
           compact ? 'w-5 h-5' : 'w-6 h-6',
           cameraHidden ? '' : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 focus-visible:opacity-100'
         ]"
@@ -216,7 +216,7 @@ watch(() => props.stream, (stream) => {
         v-if="isScreensharing"
         data-testid="tile-live-badge"
         :class="[
-          'flex items-center gap-1 rounded bg-red-600 text-white font-bold uppercase tracking-wider leading-none shadow-md shadow-black/30 pointer-events-none',
+          'flex items-center gap-1 rounded-sm bg-red-600 text-white font-bold uppercase tracking-wider leading-none shadow-md shadow-black/30 pointer-events-none',
           compact ? 'h-4 px-1 text-[10px]' : 'h-5 px-1.5 text-[11px]'
         ]"
       >
@@ -243,11 +243,11 @@ watch(() => props.stream, (stream) => {
         <span :class="['truncate font-semibold', compact ? 'text-xs' : 'text-sm']">{{ name }}</span>
         <span
           v-if="user.role === 'admin'"
-          class="flex-shrink-0 rounded px-1 bg-amber-500/15 text-amber-400 font-mono text-xs leading-4"
+          class="shrink-0 rounded-sm px-1 bg-amber-500/15 text-amber-400 font-mono text-xs leading-4"
         >{{ $t('role.admin') }}</span>
         <MicOff
           v-if="localMuted"
-          :class="['flex-shrink-0 text-mnema-danger', compact ? 'w-3 h-3' : 'w-3.5 h-3.5']"
+          :class="['shrink-0 text-mnema-danger', compact ? 'w-3 h-3' : 'w-3.5 h-3.5']"
           v-tooltip="$t('talk.localMuted')"
         />
         <MuteMarks :muted="muted" :deafened="deafened" :size="compact ? 12 : 14" />
@@ -264,7 +264,7 @@ watch(() => props.stream, (stream) => {
           ? 'ring-2 ring-inset ring-mnema-accent shadow-[inset_0_0_14px_rgba(45,167,113,0.35)]'
           : cameraFocused
             ? 'ring-2 ring-inset ring-mnema-accent/70'
-            : 'ring-1 ring-inset ring-white/[0.06] group-hover:ring-white/[0.12]'
+            : 'ring-1 ring-inset ring-white/6 group-hover:ring-white/12'
       ]"
     ></div>
     <!-- Keyboard focus ring, inside the tile so the strip never clips it -->

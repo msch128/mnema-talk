@@ -261,7 +261,7 @@ function channelIndicator(id: string): '' | 'top' | 'bottom' {
       v-on="navListeners"
       @contextmenu="openListMenu"
     >
-      <div class="flex-shrink-0">
+      <div class="shrink-0">
         <!-- Uncategorized channels first (headless section), then the categories -->
         <section
           v-for="category in sections"

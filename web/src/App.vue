@@ -235,7 +235,7 @@ onMounted(async () => {
       <div
         data-testid="channel-drawer"
         :class="[
-          'relative flex flex-col h-full flex-shrink-0 border-r border-mnema-hairline bg-mnema-raised',
+          'relative flex flex-col h-full shrink-0 border-r border-mnema-hairline bg-mnema-raised',
           'max-md:safe-pad max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:w-[min(86vw,22rem)] max-md:transition-transform max-md:duration-200 motion-reduce:transition-none',
           navOpen ? '' : 'max-md:-translate-x-full'
         ]"
@@ -277,7 +277,7 @@ onMounted(async () => {
       <!-- Thread panel -->
       <div
         v-if="chatStore.activeThread"
-        class="relative h-full flex-shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas"
+        class="relative h-full shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas"
         :style="isCompact ? undefined : { width: `${panels.thread.width}px` }"
       >
         <ThreadSidebar />
@@ -287,7 +287,7 @@ onMounted(async () => {
       <!-- Right column: member list -->
       <div
         v-if="chatStore.showMemberList"
-        class="relative h-full flex-shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas"
+        class="relative h-full shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas"
         :style="isCompact ? undefined : { width: `${panels.members.width}px` }"
       >
         <MemberList />

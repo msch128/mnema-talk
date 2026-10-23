@@ -62,11 +62,11 @@ async function submit() {
   <BaseDialog :title="$t('poll.createTitle')" @close="emit('close')">
     <form class="space-y-4 overflow-y-auto p-5" data-testid="poll-dialog" @submit.prevent="submit">
       <div v-if="error" role="alert" class="flex items-center gap-2 rounded-lg border border-mnema-danger/30 bg-mnema-danger/10 p-2.5 text-sm text-mnema-danger">
-        <AlertCircle class="h-4 w-4 flex-shrink-0" />
+        <AlertCircle class="h-4 w-4 shrink-0" />
         <span>{{ error }}</span>
       </div>
 
-      <div class="space-y-1.5">
+      <div class="stack-1.5">
         <label for="poll-question" class="font-mono text-xs font-medium uppercase tracking-wider text-mnema-tertiary">{{ $t('poll.question') }}</label>
         <input
           id="poll-question"
@@ -74,7 +74,7 @@ async function submit() {
           type="text"
           :maxlength="POLL_MAX_QUESTION"
           :placeholder="$t('poll.questionPlaceholder')"
-          class="h-9 w-full rounded-md border border-mnema-border bg-mnema-canvas px-3 text-sm text-mnema-text outline-none focus:border-mnema-accent"
+          class="h-9 w-full rounded-md border border-mnema-border bg-mnema-canvas px-3 text-sm text-mnema-text outline-hidden focus:border-mnema-accent"
           autocomplete="off"
         />
       </div>
@@ -90,14 +90,14 @@ async function submit() {
               :aria-label="$t('poll.answerN', { n: i + 1 })"
               :placeholder="$t('poll.answerN', { n: i + 1 })"
               data-testid="poll-answer"
-              class="h-9 min-w-0 flex-1 rounded-md border border-mnema-border bg-mnema-canvas px-3 text-sm text-mnema-text outline-none focus:border-mnema-accent"
+              class="h-9 min-w-0 flex-1 rounded-md border border-mnema-border bg-mnema-canvas px-3 text-sm text-mnema-text outline-hidden focus:border-mnema-accent"
               autocomplete="off"
             />
             <button
               type="button"
               :disabled="draft.options.length <= POLL_MIN_OPTIONS"
               :aria-label="$t('poll.removeAnswer', { n: i + 1 })"
-              class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text disabled:opacity-30"
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text disabled:opacity-30"
               @click="removeOption(i)"
             >
               <X class="h-4 w-4" />
@@ -116,7 +116,7 @@ async function submit() {
       </fieldset>
 
       <div class="grid gap-3 sm:grid-cols-2">
-        <div class="space-y-1.5">
+        <div class="stack-1.5">
           <label for="poll-duration" class="font-mono text-xs font-medium uppercase tracking-wider text-mnema-tertiary">{{ $t('poll.duration') }}</label>
           <select
             id="poll-duration"

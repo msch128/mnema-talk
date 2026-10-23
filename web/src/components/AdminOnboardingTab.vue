@@ -87,7 +87,7 @@ onMounted(load)
 
     <div class="space-y-1">
       <label for="onb-name" class="block text-xs font-medium text-mnema-muted font-mono uppercase tracking-wider">{{ $t('admin.onboarding.name') }}</label>
-      <input id="onb-name" v-model="name" type="text" :maxlength="MAX_NAME" :placeholder="$t('admin.onboarding.namePlaceholder')" class="w-full max-w-sm rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-none focus:border-mnema-accent" />
+      <input id="onb-name" v-model="name" type="text" :maxlength="MAX_NAME" :placeholder="$t('admin.onboarding.namePlaceholder')" class="w-full max-w-sm rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" />
       <p class="text-xs text-mnema-tertiary">{{ $t('admin.onboarding.nameHint') }}</p>
     </div>
 
@@ -97,7 +97,7 @@ onMounted(load)
         <button type="button" class="text-xs text-mnema-accent hover:underline" :aria-pressed="previewing === 'welcome' ? 'true' : 'false'" @click="togglePreview('welcome')">{{ previewing === 'welcome' ? $t('admin.onboarding.edit') : $t('admin.onboarding.preview') }}</button>
       </div>
       <div v-if="previewing === 'welcome'" class="min-h-24 rounded-md border border-mnema-hairline bg-mnema-canvas/40 p-3 text-sm" data-testid="welcome-preview"><MarkdownContent :content="welcome" /></div>
-      <textarea v-else id="onb-welcome" v-model="welcome" rows="5" :maxlength="MAX_WELCOME" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-none focus:border-mnema-accent" />
+      <textarea v-else id="onb-welcome" v-model="welcome" rows="5" :maxlength="MAX_WELCOME" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" />
     </div>
 
     <div class="space-y-1">
@@ -106,7 +106,7 @@ onMounted(load)
         <button type="button" class="text-xs text-mnema-accent hover:underline" :aria-pressed="previewing === 'rules' ? 'true' : 'false'" @click="togglePreview('rules')">{{ previewing === 'rules' ? $t('admin.onboarding.edit') : $t('admin.onboarding.preview') }}</button>
       </div>
       <div v-if="previewing === 'rules'" class="min-h-24 rounded-md border border-mnema-hairline bg-mnema-canvas/40 p-3 text-sm" data-testid="rules-preview"><MarkdownContent :content="rules" /></div>
-      <textarea v-else id="onb-rules" v-model="rules" rows="8" :maxlength="MAX_RULES" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-none focus:border-mnema-accent" />
+      <textarea v-else id="onb-rules" v-model="rules" rows="8" :maxlength="MAX_RULES" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" />
       <p class="text-xs text-mnema-tertiary">{{ $t(hasRules ? 'admin.onboarding.rulesOn' : 'admin.onboarding.rulesOff', { version: loaded.rules_version }) }}</p>
       <label v-if="hasRules && loaded.rules_version > 0" class="flex items-center gap-2 text-sm text-mnema-text">
         <input v-model="reaccept" type="checkbox" class="accent-mnema-accent" data-testid="reaccept" />
@@ -116,13 +116,13 @@ onMounted(load)
 
     <div class="space-y-1">
       <label for="onb-start" class="block text-xs font-medium text-mnema-muted font-mono uppercase tracking-wider">{{ $t('admin.onboarding.startChannel') }}</label>
-      <select id="onb-start" v-model="startChannel" class="w-full max-w-sm rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-none focus:border-mnema-accent">
+      <select id="onb-start" v-model="startChannel" class="w-full max-w-sm rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent">
         <option value="">{{ $t('admin.onboarding.startChannelNone') }}</option>
         <option v-for="c in textChannels" :key="c.id" :value="c.id"># {{ c.name }}</option>
       </select>
     </div>
 
     <p v-if="tooLong" class="text-xs text-mnema-danger" role="alert">{{ $t('admin.onboarding.tooLong') }}</p>
-    <button type="submit" :disabled="!dirty || busy || tooLong" class="rounded-md bg-mnema-accent px-4 py-1.5 text-sm font-semibold text-mnema-accent-ink shadow-sm transition hover:bg-mnema-accent-hover disabled:opacity-40" data-testid="onboarding-save">{{ $t('common.save') }}</button>
+    <button type="submit" :disabled="!dirty || busy || tooLong" class="rounded-md bg-mnema-accent px-4 py-1.5 text-sm font-semibold text-mnema-accent-ink shadow-xs transition hover:bg-mnema-accent-hover disabled:opacity-40" data-testid="onboarding-save">{{ $t('common.save') }}</button>
   </form>
 </template>

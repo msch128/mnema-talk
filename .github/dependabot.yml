@@ -53,9 +53,6 @@ updates:
       npm-dev:
         dependency-type: development
     ignore:
-      # Tailwind 4 is a CSS-first rewrite; migrate deliberately, not via a bot PR.
-      - dependency-name: tailwindcss
-        update-types: ["version-update:semver-major"]
       # Deprecated upstream; the app uses @lucide/vue.
       - dependency-name: lucide-vue-next
       # typescript-eslint supports TypeScript <6.1; move with it, not ahead.

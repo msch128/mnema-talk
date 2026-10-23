@@ -55,7 +55,7 @@ function handleKeyRecord(e: KeyboardEvent) {
 
 <template>
   <!-- 1. Input mode (voice activity or push-to-talk) -->
-  <div class="space-y-2">
+  <div class="stack-2">
     <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
       {{ $t('audio.inputMode') }}
     </label>
@@ -70,7 +70,7 @@ function handleKeyRecord(e: KeyboardEvent) {
             : 'bg-mnema-canvas border-mnema-hairline text-mnema-muted hover:border-mnema-border'
         ]"
       >
-        <div :class="['w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0', voiceStore.inputMode === 'activity' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
+        <div :class="['w-8 h-8 rounded-md flex items-center justify-center shrink-0', voiceStore.inputMode === 'activity' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
           <Mic class="w-4 h-4" />
         </div>
         <div>
@@ -89,7 +89,7 @@ function handleKeyRecord(e: KeyboardEvent) {
             : 'bg-mnema-canvas border-mnema-hairline text-mnema-muted hover:border-mnema-border'
         ]"
       >
-        <div :class="['w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0', voiceStore.inputMode === 'ptt' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
+        <div :class="['w-8 h-8 rounded-md flex items-center justify-center shrink-0', voiceStore.inputMode === 'ptt' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
           <Radio class="w-4 h-4" />
         </div>
         <div>
@@ -108,7 +108,7 @@ function handleKeyRecord(e: KeyboardEvent) {
         @click="isRecordingPttKey = true"
         @keydown="handleKeyRecord"
         :class="[
-          'px-3 py-1 rounded border font-mono text-sm font-semibold transition',
+          'px-3 py-1 rounded-sm border font-mono text-sm font-semibold transition',
           isRecordingPttKey 
             ? 'bg-mnema-accent text-mnema-accent-ink border-mnema-accent animate-pulse' 
             : 'bg-mnema-canvas border-mnema-border text-mnema-text hover:border-mnema-accent'
@@ -123,11 +123,11 @@ function handleKeyRecord(e: KeyboardEvent) {
   </div>
 
   <!-- 2. Mic Test (Discord-like level check and channel mute) -->
-  <div class="space-y-2">
+  <div class="stack-2">
     <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
       {{ $t('audio.micTest') }}
     </label>
-    <div class="p-3.5 rounded-lg bg-mnema-surface border border-mnema-hairline space-y-2.5">
+    <div class="p-3.5 rounded-lg bg-mnema-surface border border-mnema-hairline stack-2.5">
       <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
         <div class="min-w-0 space-y-0.5">
           <div class="text-sm font-semibold text-mnema-text flex items-center gap-2">
@@ -135,7 +135,7 @@ function handleKeyRecord(e: KeyboardEvent) {
             <span>{{ $t('audio.micTest') }}</span>
             <span
               v-if="voiceStore.isMicTesting"
-              class="text-xs px-2 py-0.5 rounded bg-amber-500/15 text-amber-400 font-mono font-medium animate-pulse"
+              class="text-xs px-2 py-0.5 rounded-sm bg-amber-500/15 text-amber-400 font-mono font-medium animate-pulse"
             >
               {{ $t('audio.micTestActiveBadge') }}
             </span>
@@ -150,7 +150,7 @@ function handleKeyRecord(e: KeyboardEvent) {
           data-testid="mic-test-toggle"
           :aria-pressed="voiceStore.isMicTesting ? 'true' : 'false'"
           :class="[
-            'px-3.5 py-1.5 max-sm:py-2.5 max-sm:w-full max-sm:justify-center rounded-lg font-semibold text-xs transition flex items-center gap-1.5 flex-shrink-0 shadow-sm sm:mt-0.5',
+            'px-3.5 py-1.5 max-sm:py-2.5 max-sm:w-full max-sm:justify-center rounded-lg font-semibold text-xs transition flex items-center gap-1.5 shrink-0 shadow-xs sm:mt-0.5',
             voiceStore.isMicTesting
               ? 'bg-amber-600 hover:bg-amber-500 text-white'
               : 'bg-mnema-accent hover:bg-mnema-accent-hover text-mnema-accent-ink'
@@ -175,7 +175,7 @@ function handleKeyRecord(e: KeyboardEvent) {
           type="checkbox"
           v-model="voiceStore.autoSensitivity"
           @change="voiceStore.saveSettings"
-          class="rounded border-mnema-border bg-mnema-canvas text-mnema-accent focus:ring-0"
+          class="rounded-sm border-mnema-border bg-mnema-canvas text-mnema-accent focus:ring-0"
         />
         <span>{{ $t('audio.auto') }}</span>
       </label>
@@ -187,7 +187,7 @@ function handleKeyRecord(e: KeyboardEvent) {
       <div class="relative h-6 bg-mnema-canvas rounded-lg border border-mnema-border overflow-hidden p-0.5 flex items-center">
         <!-- Live level fill -->
         <div
-          class="h-full rounded transition-all duration-75"
+          class="h-full rounded-sm transition-all duration-75"
           :class="isAboveThreshold ? 'bg-mnema-accent' : 'bg-mnema-warning'"
           :style="{ width: `${voiceStore.currentInputLevel}%` }"
         ></div>
@@ -195,7 +195,7 @@ function handleKeyRecord(e: KeyboardEvent) {
         <!-- Peak Marker (loudest level of the last moments) -->
         <div
           v-if="peakLevel > 0"
-          class="absolute top-1 bottom-1 w-0.5 rounded pointer-events-none"
+          class="absolute top-1 bottom-1 w-0.5 rounded-sm pointer-events-none"
           :class="peakLevel >= threshold ? 'bg-mnema-accent-hover' : 'bg-mnema-amber'"
           :style="{ left: `${peakLevel}%` }"
         ></div>

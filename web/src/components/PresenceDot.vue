@@ -27,7 +27,7 @@ const colour = computed(() => ({
 
 <template>
   <span
-    :class="['inline-flex flex-shrink-0 items-center justify-center rounded-full', colour, ring ? ringClass : '']"
+    :class="['inline-flex shrink-0 items-center justify-center rounded-full', colour, ring ? ringClass : '']"
     :style="{ width: `${size + (ring ? 4 : 0)}px`, height: `${size + (ring ? 4 : 0)}px` }"
     :data-status="s"
     aria-hidden="true"

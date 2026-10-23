@@ -38,7 +38,7 @@ const quiet = 'px-3 py-1.5 rounded-lg text-sm text-mnema-muted hover:text-mnema-
           <p class="font-mono text-xs text-mnema-tertiary" data-testid="welcome-progress">{{ $t('welcome.progress', { current: stepNumber, total }) }}</p>
           <h2 :id="titleId" class="text-lg font-semibold text-mnema-text" data-testid="welcome-title">{{ $t(`welcome.${step}.title`, { name: onboarding.state.community_name || 'Mnema Talk' }) }}</h2>
         </div>
-        <button v-if="canClose" type="button" data-dialog-close class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-hover hover:text-mnema-text" :aria-label="$t('welcome.close')" @click="close">
+        <button v-if="canClose" type="button" data-dialog-close class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-hover hover:text-mnema-text" :aria-label="$t('welcome.close')" @click="close">
           <X class="h-[18px] w-[18px]" />
         </button>
       </header>
@@ -57,7 +57,7 @@ const quiet = 'px-3 py-1.5 rounded-lg text-sm text-mnema-muted hover:text-mnema-
         <WelcomeProfileStep v-else-if="step === 'profile'" @done="next" @skip="next" />
 
         <div v-else-if="step === 'notifications'" class="flex items-start gap-3" data-testid="welcome-notifications">
-          <Bell class="mt-0.5 h-5 w-5 flex-shrink-0 text-mnema-accent" />
+          <Bell class="mt-0.5 h-5 w-5 shrink-0 text-mnema-accent" />
           <p>{{ $t('welcome.notifications.body') }}</p>
         </div>
       </div>

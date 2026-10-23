@@ -81,9 +81,9 @@ async function submit() {
 
 onBeforeUnmount(() => request.value?.resolve(false))
 
-const inputClass = 'w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-none focus:border-mnema-accent'
+const inputClass = 'w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-hidden focus:border-mnema-accent'
 const chipClass = (on: boolean) => [
-  'h-8 rounded-md border px-3 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mnema-accent',
+  'h-8 rounded-md border px-3 text-sm font-medium transition focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mnema-accent',
   on ? 'border-mnema-accent/40 bg-mnema-accent/15 text-mnema-accent' : 'border-mnema-border text-mnema-muted hover:text-mnema-text'
 ]
 </script>
@@ -92,7 +92,7 @@ const chipClass = (on: boolean) => [
   <BaseDialog v-if="request" :key="request.target.id" panel-class="max-w-[480px]" @close="close(false)">
     <template #default="{ titleId }">
       <form class="space-y-4 overflow-y-auto p-5" @submit.prevent="submit">
-        <h2 :id="titleId" class="break-words text-lg font-semibold text-mnema-text">
+        <h2 :id="titleId" class="wrap-break-word text-lg font-semibold text-mnema-text">
           {{ isBan ? $t('moderation.banTitle', { name: request.target.name }) : $t('moderation.timeoutTitle', { name: request.target.name }) }}
         </h2>
         <p class="text-sm text-mnema-muted">{{ isBan ? $t('moderation.banBody') : $t('moderation.timeoutBody') }}</p>
@@ -146,7 +146,7 @@ const chipClass = (on: boolean) => [
           </p>
         </fieldset>
 
-        <div class="space-y-1.5">
+        <div class="stack-1.5">
           <label for="moderation-reason" class="font-mono text-xs font-medium uppercase tracking-wider text-mnema-tertiary">{{ $t('moderation.reason') }}</label>
           <input
             id="moderation-reason"

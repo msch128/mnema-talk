@@ -90,7 +90,7 @@ onUnmounted(() => clearTimeout(hoverTimer))
       :aria-expanded="open ? 'true' : 'false'"
       :aria-controls="open ? popoverId : undefined"
       :class="[
-        'flex items-center gap-1 rounded tabular-nums font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent',
+        'flex items-center gap-1 rounded-sm tabular-nums font-semibold transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent',
         variant === 'stage'
           ? 'px-1.5 py-0.5 text-xs text-white/90 hover:text-white hover:bg-white/10'
           : 'h-7 px-2 text-xs text-mnema-accent hover:bg-mnema-accent/15'

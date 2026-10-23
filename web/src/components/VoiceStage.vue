@@ -274,7 +274,7 @@ function onActivity() {
       ref="area"
       data-testid="talk-area"
       :class="[
-        'flex-1 min-h-0 relative flex flex-col bg-gradient-to-b from-mnema-raised/40 to-transparent'
+        'flex-1 min-h-0 relative flex flex-col bg-linear-to-b from-mnema-raised/40 to-transparent'
       ]"
       @dblclick="onAreaDblclick"
     >
@@ -309,7 +309,7 @@ function onActivity() {
         <div
           v-if="screenCards.length"
           ref="cardsEl"
-          :class="['w-full flex flex-wrap justify-center gap-2 flex-shrink-0', hasStage ? '' : 'max-w-5xl']"
+          :class="['w-full flex flex-wrap justify-center gap-2 shrink-0', hasStage ? '' : 'max-w-5xl']"
         >
           <TalkScreenCards :cards="screenCards" @select="onScreenCard" @open-change="qualityMenuOpen = $event" />
         </div>
@@ -320,7 +320,7 @@ function onActivity() {
           v-if="hasStage && tileUsers.length"
           ref="stripRegion"
           data-testid="talk-strip-region"
-          class="w-full flex-shrink-0 flex flex-col items-center"
+          class="w-full shrink-0 flex flex-col items-center"
         >
           <TalkStrip
             :users="tileUsers"

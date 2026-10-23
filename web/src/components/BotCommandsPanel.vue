@@ -73,7 +73,7 @@ onMounted(load)
           <input type="checkbox" class="accent-mnema-accent" :checked="!command.disabled" :aria-label="$t('bots.commands.enabledFor', { name: command.name })" @change="setDisabled(command, !($event.target as HTMLInputElement).checked)" />
           <span>{{ command.disabled ? $t('bots.disabled') : $t('bots.enabled') }}</span>
         </label>
-        <button type="button" class="rounded p-1.5 text-mnema-tertiary transition hover:text-mnema-danger" :aria-label="$t('bots.commands.deleteFor', { name: command.name })" data-action="delete" @click="remove(command)"><Trash2 class="h-4 w-4" /></button>
+        <button type="button" class="rounded-sm p-1.5 text-mnema-tertiary transition hover:text-mnema-danger" :aria-label="$t('bots.commands.deleteFor', { name: command.name })" data-action="delete" @click="remove(command)"><Trash2 class="h-4 w-4" /></button>
       </li>
     </ul>
   </section>

@@ -33,7 +33,7 @@ binary release.
 | [emoji-picker-element-data](https://github.com/nolanlawson/emoji-picker-element-data) (emoji names and keywords built from [Emojibase](https://emojibase.dev) data, MIT, and [Unicode CLDR](https://cldr.unicode.org) annotations, Unicode License v3) | 1.8.0 | Apache-2.0 |
 | [highlight.js](https://highlightjs.org) (syntax highlighting of code blocks in messages; core build with a fixed language list) | 11.11.1 | BSD-3-Clause |
 | [Swagger UI](https://github.com/swagger-api/swagger-ui) (`swagger-ui-dist`, only on the API reference page `/api/docs`; NOTICE: "swagger-ui, Copyright 2020-2021 SmartBear Software Inc.") | 5.33.2 | Apache-2.0 |
-| [Tailwind CSS](https://tailwindcss.com) (only the generated CSS is shipped) | 3.4.19 | MIT |
+| [Tailwind CSS](https://tailwindcss.com) (only the generated CSS is shipped) | 4.3.3 | MIT |
 | [ts-mls](https://github.com/LukaJCB/ts-mls) | 1.6.4 | MIT |
 | [@noble/ciphers](https://github.com/paulmillr/noble-ciphers) | 2.1.1 | MIT |
 | [@noble/hashes](https://github.com/paulmillr/noble-hashes) | 2.3.0 | MIT |
