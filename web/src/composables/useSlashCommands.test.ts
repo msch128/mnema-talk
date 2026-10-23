@@ -127,11 +127,11 @@ describe('useSlashCommands', () => {
     await typeSlash(s, '/ping')
     s.pick(s.suggestions.value[0])
     expect(await s.run()).toBe(false)
-    expect(toasts()).toEqual(['Fill in "text" first.'])
+    expect(toasts()).toEqual(['Fill in “text” first.'])
     s.values['text'] = 'x'
     s.values['n'] = '1.5'
     expect(await s.run()).toBe(false)
-    expect(toasts()[1]).toBe('"n" needs a whole number.')
+    expect(toasts()[1]).toBe('“n” needs a whole number.')
     expect(apiMock).toHaveBeenCalledTimes(1)
   })
 
@@ -149,7 +149,7 @@ describe('useSlashCommands', () => {
     expect(await s.run()).toBe(false)
     apiMock.mockRejectedValueOnce(undefined)
     expect(await s.run()).toBe(false)
-    expect(toasts()[2]).toBe('The command could not be run.')
+    expect(toasts()[2]).toBe('Couldn’t run the command. Try again.')
     expect(s.picked.value?.name).toBe('ping')
     expect(s.running.value).toBe(false)
   })

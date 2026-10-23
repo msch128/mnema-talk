@@ -31,6 +31,22 @@ func TestWebMirrorsTheCatalog(t *testing.T) {
 			t.Errorf("%s: web %d, server %d", i.Key, got[i.Key], i.Bit)
 		}
 	}
+	// The permissions that open a part of the admin area decide which members see the admin console.
+	area := regexp.MustCompile(`(?s)ADMIN_AREA_KEYS[^=]*= \[(.*?)\]`).FindSubmatch(src)
+	if area == nil {
+		t.Fatal("ADMIN_AREA_KEYS not found")
+	}
+	var webArea Set
+	for _, m := range regexp.MustCompile(`'(\w+)'`).FindAllSubmatch(area[1], -1) {
+		bit, ok := got[string(m[1])]
+		if !ok {
+			t.Fatalf("ADMIN_AREA_KEYS names an unknown permission %q", m[1])
+		}
+		webArea |= bit
+	}
+	if webArea != AdminArea {
+		t.Errorf("ADMIN_AREA_KEYS is %d on the web and %d (AdminArea) on the server", webArea, AdminArea)
+	}
 	if m := regexp.MustCompile(`DEFAULT_EVERYONE = (\d+)`).FindSubmatch(src); m == nil || string(m[1]) != strconv.Itoa(int(DefaultEveryone)) {
 		t.Errorf("DEFAULT_EVERYONE differs from %d", DefaultEveryone)
 	}

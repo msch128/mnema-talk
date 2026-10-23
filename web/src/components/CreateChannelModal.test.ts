@@ -58,7 +58,7 @@ describe('CreateChannelModal', () => {
 
   it('keeps voice channel names as typed', async () => {
     const w = mountModal({ initialType: 'voice' })
-    expect(typeButton(w, 'Voice channel').attributes('aria-pressed')).toBe('true')
+    expect(typeButton(w, 'Talk (voice)').attributes('aria-pressed')).toBe('true')
     await w.find<HTMLInputElement>('#channel-name')!.setValue('Lounge & Bar')
     expect(w.find<HTMLInputElement>('#channel-name')!.element.value).toBe('Lounge & Bar')
     await w.find('form')!.trigger('submit')
@@ -69,8 +69,8 @@ describe('CreateChannelModal', () => {
   it('switches the channel type', async () => {
     const w = mountModal()
     expect(typeButton(w, 'Channel').attributes('aria-pressed')).toBe('true')
-    await typeButton(w, 'Voice channel').trigger('click')
-    expect(typeButton(w, 'Voice channel').attributes('aria-pressed')).toBe('true')
+    await typeButton(w, 'Talk (voice)').trigger('click')
+    expect(typeButton(w, 'Talk (voice)').attributes('aria-pressed')).toBe('true')
     expect(w.text()).toContain('Any title for the Talk.')
   })
 
@@ -102,7 +102,7 @@ describe('CreateChannelModal', () => {
     await w.find('form')!.trigger('submit')
     await flushPromises()
     expect(chat.createChannel).not.toHaveBeenCalled()
-    expect(w.find('[role="alert"]')!.text()).toContain('Please enter a name.')
+    expect(w.find('[role="alert"]')!.text()).toContain('Enter a name.')
   })
 
   it('shows the server error and stays open', async () => {
@@ -117,7 +117,7 @@ describe('CreateChannelModal', () => {
 
     await w.find('form')!.trigger('submit')
     await flushPromises()
-    expect(w.find('[role="alert"]')!.text()).toContain("Couldn't create the channel.")
+    expect(w.find('[role="alert"]')!.text()).toContain('Couldn’t create the channel. Try again.')
   })
 
   it('closes on cancel', async () => {

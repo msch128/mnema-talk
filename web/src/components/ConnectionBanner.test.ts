@@ -63,7 +63,7 @@ describe('ConnectionBanner', () => {
     chat.wasConnected = true
     const w = mount(ConnectionBanner)
     await nextTick()
-    expect(w.text()).toContain('Connection lost – reconnecting …')
+    expect(w.text()).toContain('Connection lost – reconnecting…')
     expect(w.text()).toContain('Retry now')
   })
 })

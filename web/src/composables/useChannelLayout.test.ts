@@ -163,7 +163,7 @@ describe('rollback', () => {
     expect(shape(layout.value)).toBe('u1 | A: a1 a2 | B: b1')
     const errors = toasts.toasts.filter(t => t.type === 'error')
     expect(errors).toHaveLength(1)
-    expect(required(errors[0]).text).toBe('Die neue Reihenfolge konnte nicht gespeichert werden.')
+    expect(required(errors[0]).text).toBe('Die neue Reihenfolge konnte nicht gespeichert werden. Versuche es noch einmal.')
     expect(required(errors[0]).detail).toBe('Nicht gefunden')
     expect(toasts.toasts.some(t => t.action)).toBe(false)
   })

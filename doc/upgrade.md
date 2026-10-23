@@ -189,7 +189,7 @@ operator is below. Update with the procedure above; take the backup first.
   an address they confirmed (link valid 30 minutes, signs every device out). Without
   `SMTP_HOST` nothing changes: no mail is sent, saved addresses stay unconfirmed
   and unused, and the "Forgot your password?" link does not appear. The Owner can
-  still set a temporary password for any member (Admin > Users). Reset by mail
+  still set a temporary password for any member (Admin > Members). Reset by mail
   also works for the Owner account if the Owner confirmed an address. Put
   `SMTP_PASSWORD` in the environment or mount a file and name it in
   `SMTP_PASSWORD_FILE`; `SMTP_TLS=none` is refused in production.
@@ -199,14 +199,14 @@ operator is below. Update with the procedure above; take the backup first.
   of a session for such an account and cannot sign in; the shipped web app and
   desktop clients handle it. Stored authenticator secrets are encrypted with a
   key derived from `JWT_SECRET`: rotating it requires resetting two-factor for
-  the accounts that use it (Admin > Users, or `mnema-talk reset-2fa <username>`
+  the accounts that use it (Admin > Members, or `mnema-talk reset-2fa <username>`
   for the Owner). See [operations.md](operations.md).
 - **Members can delete their account and export their data.** Both are in
   Account & security; the Owner account cannot be deleted. A deleted account
-  leaves its messages in place without text, written by "Deleted user". The
+  leaves its messages in place without text, written by "Deleted member". The
   username `deleted-…` is reserved. Exports need object storage and live there
   for at most 24 hours. Clients built before this release show a deleted author
-  by the placeholder name instead of "Deleted user" in the member's language.
+  by the placeholder name instead of "Deleted member" in the member's language.
   See [operations.md](operations.md#account-deletion-and-data-exports).
 - **Weak custom invite codes stop working.** Custom invite codes typed by an
   admin that fall below the new minimum (12 or more characters, 7 or more

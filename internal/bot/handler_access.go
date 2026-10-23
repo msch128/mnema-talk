@@ -53,7 +53,7 @@ type ChannelAccess struct {
 // @Success 200 {object} Bot "Updated."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission or authority over a role."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage bots permission, a role is not below your highest role, or it holds a permission you lack (roles with Administrator or admin-area permissions: Owner only), or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such bot."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -85,7 +85,7 @@ func (h *Handler) setRoles(w http.ResponseWriter, r *http.Request) error {
 // @Param id path string true "Bot ID." Format(uuid)
 // @Success 200 {object} Access "Effective access."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage bots permission, or the bot's highest role is not below yours."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such bot."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
