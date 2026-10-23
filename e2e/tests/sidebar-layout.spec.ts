@@ -220,8 +220,8 @@ test.describe.configure({ mode: 'serial' })
 test.beforeAll(async ({ browser }) => {
   // Tall enough that the whole channel list (other specs add channels too) fits,
   // with room to spare: a list that scrolls makes a drag auto-scroll under the mouse.
-  adminCtx = await browser.newContext({ viewport: { width: 1280, height: 1500 } })
-  memberCtx = await browser.newContext({ viewport: { width: 1280, height: 1500 } })
+  adminCtx = await browser.newContext({ viewport: { width: 1280, height: 1700 } })
+  memberCtx = await browser.newContext({ viewport: { width: 1280, height: 1700 } })
   admin = await adminCtx.newPage()
   member = await memberCtx.newPage()
   const adminVoice = firstVoiceSnapshot(admin)

@@ -22,6 +22,11 @@ export async function fetchReadState(cx: Cx) {
         notify_level: item.notify_level
       }
     }
+    // Conversations are not in the server's list; their counts are kept (GET /api/dms has them).
+    for (const dm of cs.dms.value) {
+      const kept = cs.readStates.value[dm.id]
+      if (kept) map[dm.id] = kept
+    }
     cs.readStates.value = map
     // The server may still hold counts for the channel being read right now.
     markActiveChannelReadIfReading(cx)

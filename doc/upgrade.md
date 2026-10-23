@@ -154,6 +154,14 @@ server lacks.
   channels and messages is unchanged (private messages are numbered apart).
   `GET /api/health` lists `dm` in `features`.
 - **New events** `dm_created`, `dm_member_added`, `dm_member_removed`.
+- **The 1.1 web app** shows direct messages (sidebar section, member picker,
+  conversation info), blocking, "Report message", the **Reports** tab in the
+  admin console and the Owner's switch under **Welcome & rules** only when
+  `GET /api/health` lists `dm`, `blocks` or `reports`; it asks for
+  conversation events by opening the socket as `/api/ws?dm=1`. Against a 1.0.x
+  server none of it appears. A desktop client from before 1.1 forwards the
+  socket without that query, so conversations there do not update live until
+  the client is updated (the list and sending work).
 - **Built-in slash commands.** `/me`, `/shrug`, `/tableflip`, `/unflip`, `/spoiler`,
   `/nick`, `/thread`, `/timeout`, `/ban` and `/kick` join `/poll` in the menu
   ([bots](bots.md#built-in-commands-and-polls)). New permission *Kick members*
