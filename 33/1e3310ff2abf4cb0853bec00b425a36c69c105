@@ -1,0 +1,37 @@
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_639de06e492afc 30-33,177,183
+.github/workflows/image-scan.yml
+  s_06fcde5dbef956::t_d7b8768d32ae84 15-17
+Makefile
+  s_06fcde5dbef956::t_2d7ac604590e1f 15-16
+THIRD_PARTY_NOTICES.md
+  s_06fcde5dbef956::t_d41eda0dd2b036 150-154,157-169,171-179,181,183,186-187,191,193-194,196,198-199,205-208,210,212-213,215
+docker-compose.yml
+  s_06fcde5dbef956::t_5d46787d33febc 411
+go.mod
+  s_06fcde5dbef956::t_3f59f1ba415e1d 3,8,16,27,30,32-33,39-40,55-56,60-62,64-65,71-95,99-100,103,116,118-128,131-134,138,140-147,150,152-156,158
+go.sum
+  s_06fcde5dbef956::t_768d1cce1228d9 1-2,5-16,23-26,33-34,39-40,69-70,89-90,97-98,102-105,107-110,113-116,125-126,132-176,188-189,197-200,203-206,210-213,232-233,252-253,256-257,276-277,328-331,336-339,342-343,346-357,378-379,382-383,397-398,401-418,445-446,457-458,511-512,516-523,526-527,542-543
+internal/httpx/middleware_clientip.go
+  s_06fcde5dbef956::t_df638684f9587a 81,88-107
+loadtest/viewer/go.mod
+  s_06fcde5dbef956::t_feeebbf07c7aee 28-31
+loadtest/viewer/go.sum
+  s_06fcde5dbef956::t_85fd089b59baec 43-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "331e3310ff2abf4cb0853bec00b425a36c69c105",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
