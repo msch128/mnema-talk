@@ -72,7 +72,9 @@ function countApiRequests(context: BrowserContext): void {
 const CSP_BINDING = '__mnemaCspViolation'
 const CSP_LISTENER = `(() => {
   const report = (e) => {
-    const text = [e.violatedDirective, e.blockedURI || 'inline', e.sourceFile ? e.sourceFile + ':' + e.lineNumber : '', (e.sample || '').slice(0, 80)].join(' ')
+    let text = [e.violatedDirective, e.blockedURI || 'inline', e.sourceFile ? e.sourceFile + ':' + e.lineNumber : '', (e.sample || '').slice(0, 80)].join(' ')
+    // The page has a select, whose shadow tree WebKit 27 reports (see WEBKIT_SELECT_EVENT).
+    if (e.violatedDirective === 'style-src-attr' && document.querySelector('select')) text += ' [select]'
     try { window.${CSP_BINDING}(text) } catch { /* page is going away */ }
   }
   document.addEventListener('securitypolicyviolation', report, true)
@@ -87,12 +89,23 @@ let cspViolations: string[] = []
 // the app is still caught by the Chromium and Firefox runs, and every other
 // violation (style attributes, scripts, connections) counts in all engines.
 const WEBKIT_SCREENSHOT_EVENT = /^style-src-elem inline\s*$/
+// WebKit 27.2 (Playwright 1.64) reports one style-src-attr violation for every
+// <select> it builds: the control's own shadow tree sets an inline style (empty
+// sample; the script that created the select is named as the source). Nothing
+// is blocked: a page with selects renders pixel-identically under
+// 'unsafe-inline' and under style-src-attr 'none', and WebKit 26.6 does not
+// report it. The policy therefore stays as it is, and in WebKit only this
+// signature (a style-src-attr event on a page that has a select) is ignored.
+// The same code runs in the Chromium and Firefox jobs, which still fail on any
+// style-src-attr event, so an attribute of the app cannot slip through. See
+// doc/product-status.md (Browsers).
+const WEBKIT_SELECT_EVENT = /^style-src-attr inline .*\[select\]$/
 const WEBKIT_SCREENSHOT_CONSOLE = /^Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear/
 
 async function watchCsp(context: BrowserContext): Promise<void> {
   const webkit = context.browser()?.browserType().name() === 'webkit'
   await context.exposeBinding(CSP_BINDING, (_source, text: string) => {
-    if (!(webkit && WEBKIT_SCREENSHOT_EVENT.test(text))) cspViolations.push(`event: ${text}`)
+    if (!(webkit && (WEBKIT_SCREENSHOT_EVENT.test(text) || WEBKIT_SELECT_EVENT.test(text)))) cspViolations.push(`event: ${text}`)
   })
   await context.addInitScript(CSP_LISTENER)
   context.on('console', (message) => {
