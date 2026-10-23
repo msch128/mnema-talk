@@ -65,6 +65,10 @@ emoji.json      the custom emoji you uploaded; the image files are in the emoji 
 audit.json      administrative log entries about your account (no other person's name)
 security.json   what is set up for signing in (no secrets)
 
+The files are meant for machines: file names and keys are in English whatever
+language your account uses, and messages.json keeps your messages as typed,
+with Markdown and tokens such as custom emoji (<:name:id>) unchanged.
+
 Other members' personal data is not part of this archive.
 This file was available for download once, for 24 hours.
 `

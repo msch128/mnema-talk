@@ -18,6 +18,7 @@ vi.mock('../lib/api', async (importOriginal) => ({
   }))
 }))
 
+import { channelDraftKey, clearAllDrafts, hasDraft, setDraft, threadDraftKey } from '../lib/drafts'
 import { useChatStore } from './chat'
 import { useAuthStore } from './auth'
 
@@ -66,6 +67,8 @@ function setup() {
 
 beforeEach(() => {
   pending.length = 0
+  localStorage.clear()
+  clearAllDrafts()
   setActivePinia(createPinia())
 })
 
@@ -150,6 +153,28 @@ describe('channel list refresh', () => {
     await fetching
     expect(required(chat.activeChannel).name).toBe('neu')
     expect(required(chat.activeChannel).topic).toBe('T')
+  })
+
+  it('forgets the drafts of channels that are gone, and only those', async () => {
+    const { chat } = setup()
+    setDraft('me', channelDraftKey('ch1'), { text: 'still here', reply: null })
+    setDraft('me', channelDraftKey('deleted'), { text: 'orphan', reply: null })
+    setDraft('me', threadDraftKey('some-thread'), { text: 'thread', reply: null })
+    const fetching = chat.fetchChannels()
+    answer('/api/channels', { categories: [categoryFixture({ id: 'c', channels: [channelFixture({ id: 'ch1', name: 'allgemein', type: 'text' })] })], uncategorized: [] })
+    await fetching
+    expect(hasDraft('me', channelDraftKey('ch1'))).toBe(true)
+    expect(hasDraft('me', channelDraftKey('deleted'))).toBe(false)
+    expect(hasDraft('me', threadDraftKey('some-thread'))).toBe(true)
+  })
+
+  it('keeps every draft when the list comes back empty', async () => {
+    const { chat } = setup()
+    setDraft('me', channelDraftKey('ch1'), { text: 'keep me', reply: null })
+    const fetching = chat.fetchChannels()
+    answer('/api/channels', { categories: [], uncategorized: [] })
+    await fetching
+    expect(hasDraft('me', channelDraftKey('ch1'))).toBe(true)
   })
 
   it('keeps the newest list when overlapping refetches answer out of order', async () => {

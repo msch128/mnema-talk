@@ -72,8 +72,17 @@ async function unpin(msg: Message) {
     await chatStore.setPinned(msg.channel_id, msg.id, false)
     items.value = items.value.filter(m => m.id !== msg.id)
   } catch (error) {
-    toasts.error(caughtErrorMessage(error, t('moderation.failed')))
+    toasts.error(caughtErrorMessage(error, t('pins.unpinFailed')))
   }
+}
+
+/** What the text alone does not show: a poll, a file, a reply inside a thread. */
+function markers(msg: Message): string[] {
+  const marks: string[] = []
+  if (msg.poll) marks.push(t('pins.poll'))
+  if (msg.attachments?.length && stripMarkdown(msg.content).trim()) marks.push(t('chat.attachment'))
+  if (msg.parent_id) marks.push(t('chat.inThread'))
+  return marks
 }
 
 function excerpt(msg: Message) {
@@ -134,6 +143,7 @@ function when(iso: string) {
                 <span class="ml-auto flex-shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
               </span>
               <span class="line-clamp-3 break-words text-sm text-mnema-muted">{{ excerpt(msg) }}</span>
+              <span v-if="markers(msg).length" data-testid="pinned-markers" class="mt-1 block truncate text-xs text-mnema-tertiary">{{ markers(msg).join(' · ') }}</span>
             </span>
           </button>
           <button

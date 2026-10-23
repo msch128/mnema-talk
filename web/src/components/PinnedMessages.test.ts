@@ -6,6 +6,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import PinnedMessages from './PinnedMessages.vue'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
+import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 import { channelFixture, fixtureId, messageFixture } from '../test-fixtures.fixture'
 
@@ -113,6 +114,34 @@ describe('PinnedMessages', () => {
     chat.activeChannel = channelFixture({ id: fixtureId(7), name: 'other' })
     await flushPromises()
     expect(w.find('[data-testid="pinned-panel"]').exists()).toBe(false)
+  })
+
+  it('marks polls, files with text and thread replies, and leaves plain messages unmarked', async () => {
+    const file = { id: fixtureId(51), original_filename: 'a.png', mime_type: 'image/png', size_bytes: 1, url: '/api/media/x', is_deleted: false }
+    const poll = { anonymous: false, closed: false, closes_at: '', multiple: false, options: [], total_voters: 0 }
+    apiMock.mockResolvedValue([
+      messageFixture({ id: fixtureId(50), content: 'Lunch?', is_pinned: true, poll }),
+      messageFixture({ id: fixtureId(52), content: 'see picture', is_pinned: true, attachments: [file] }),
+      messageFixture({ id: fixtureId(53), content: 'in a thread', is_pinned: true, parent_id: fixtureId(50) }),
+      pinned(54, 'plain')
+    ])
+    const w = mountPins()
+    await w.find('[data-testid="pinned-button"]').trigger('click')
+    await flushPromises()
+    const marks = w.findAll('[data-testid="pinned-item"]').map(item => item.find('[data-testid="pinned-markers"]').exists() ? item.find('[data-testid="pinned-markers"]').text() : '')
+    expect(marks).toEqual([t('pins.poll'), t('chat.attachment'), t('chat.inThread'), ''])
+  })
+
+  it('says unpinning failed when the server gives no reason', async () => {
+    apiMock.mockResolvedValue([pinned(30, 'one')])
+    vi.spyOn(usePermissionsStore(), 'canIn').mockReturnValue(true)
+    vi.spyOn(useChatStore(), 'setPinned').mockRejectedValue(null)
+    const w = mountPins()
+    await w.find('[data-testid="pinned-button"]').trigger('click')
+    await flushPromises()
+    await w.find('[data-testid="pinned-unpin"]').trigger('click')
+    await flushPromises()
+    expect(useToastStore().toasts.map(toast => toast.text)).toContain(t('pins.unpinFailed'))
   })
 
   it('leaves a closed list alone when the server reports a change', async () => {
