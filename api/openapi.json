@@ -4432,7 +4432,6 @@
           }
         },
         "required": [
-          "features",
           "status",
           "version",
           "web_client_api"

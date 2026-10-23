@@ -26,7 +26,7 @@ type Health struct {
 	// Features lists the optional features this server has, so a web app of a
 	// newer release can hide what an older server lacks (for example "blocks").
 	// A server of 1.0.x sends no list. See doc/api-stability.md.
-	Features []string `json:"features"`
+	Features []string `json:"features" binding:"optional"`
 }
 
 // Features are the optional capabilities of this build, by name. Each feature

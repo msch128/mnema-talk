@@ -2692,7 +2692,7 @@ export function isServerDatabaseHealth(value: unknown): value is ServerDatabaseH
 export const decodeServerDatabaseHealth = decoder("server.DatabaseHealth", isServerDatabaseHealth)
 
 export type ServerHealth = {
-  features: Array<string>
+  features?: Array<string>
   status: "ok"
   version: string
   web_client_api: number
@@ -2700,7 +2700,7 @@ export type ServerHealth = {
 
 export function isServerHealth(value: unknown): value is ServerHealth {
   return isRecord(value)
-    && (hasOwn(value, "features") && isArrayOf(value["features"], item => isString(item)))
+    && (!hasOwn(value, "features") || isArrayOf(value["features"], item => isString(item)))
     && (hasOwn(value, "status") && (value["status"] === "ok"))
     && (hasOwn(value, "version") && isString(value["version"]))
     && (hasOwn(value, "web_client_api") && isInteger(value["web_client_api"]))
