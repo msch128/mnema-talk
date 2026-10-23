@@ -99,7 +99,7 @@ const chipClass = (on: boolean) => [
 
         <div v-if="error" role="alert" class="rounded-lg border border-mnema-danger/30 bg-mnema-danger/10 p-2.5 text-sm text-mnema-danger">{{ error }}</div>
 
-        <fieldset class="space-y-2">
+        <fieldset class="stack-2">
           <legend class="font-mono text-xs font-medium uppercase tracking-wider text-mnema-tertiary">{{ $t('moderation.duration') }}</legend>
           <div class="flex flex-wrap gap-2">
             <button

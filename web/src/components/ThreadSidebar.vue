@@ -238,7 +238,7 @@ function formatDate(dateStr?: string) {
         role="article"
         @keydown="onRootKeydown($event, chatStore.activeThread)"
         :class="[
-          'relative group bg-mnema-elevated border border-mnema-border/80 rounded-xl p-3.5 shadow-xs space-y-2 focus:outline-hidden focus-visible:border-mnema-accent/60',
+          'relative group bg-mnema-elevated border border-mnema-border/80 rounded-xl p-3.5 shadow-xs stack-2 focus:outline-hidden focus-visible:border-mnema-accent/60',
           highlightedId === chatStore.activeThread.id ? 'msg-flash' : ''
         ]"
       >

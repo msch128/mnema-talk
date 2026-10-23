@@ -58,7 +58,7 @@ async function send() {
     <form class="flex min-h-0 flex-col gap-4 overflow-y-auto p-5" data-testid="report-dialog" @submit.prevent="send">
       <p class="text-sm text-mnema-muted">{{ $t('reports.intro', { name: pendingReport.author }) }}</p>
 
-      <fieldset class="space-y-1">
+      <fieldset class="stack-1">
         <legend class="mb-1 text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('reports.reason') }}</legend>
         <label
           v-for="(option, i) in REPORT_CATEGORIES"

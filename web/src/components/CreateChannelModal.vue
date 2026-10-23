@@ -88,7 +88,7 @@ async function handleSubmit() {
       </div>
 
       <!-- 1. Channel type -->
-      <fieldset class="space-y-1.5">
+      <fieldset class="stack-1.5">
         <legend class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono mb-1.5">{{ $t('channel.type') }}</legend>
         <div class="grid grid-cols-2 gap-2">
           <button

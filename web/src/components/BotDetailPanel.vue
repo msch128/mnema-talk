@@ -110,7 +110,7 @@ function onRoles(bot: BotBot) {
     </label>
     <p v-if="bot.disabled" class="-mt-4 text-xs text-mnema-tertiary">{{ $t('bots.disabledHint') }}</p>
 
-    <fieldset class="space-y-2">
+    <fieldset class="stack-2">
       <legend class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('bots.intents.title') }}</legend>
       <p class="text-sm text-mnema-tertiary">{{ $t('bots.intents.hint') }}</p>
       <label v-for="intent in BOT_INTENTS" :key="intent.key" class="flex items-start gap-2 text-sm text-mnema-text">

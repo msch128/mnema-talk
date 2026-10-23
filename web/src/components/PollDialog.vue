@@ -79,7 +79,7 @@ async function submit() {
         />
       </div>
 
-      <fieldset class="space-y-1.5">
+      <fieldset class="stack-1.5">
         <legend class="mb-1.5 font-mono text-xs font-medium uppercase tracking-wider text-mnema-tertiary">{{ $t('poll.answers') }}</legend>
         <div ref="list" class="space-y-1.5">
           <div v-for="(_, i) in draft.options" :key="i" class="flex items-center gap-1.5">

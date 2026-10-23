@@ -80,7 +80,7 @@ function playPreviewSound(sound: SoundEvent = 'join') {
       </div>
 
       <!-- Granular sound effects toggles -->
-      <div v-if="voiceStore.soundEffectsEnabled" class="space-y-1.5 pt-3 border-t border-mnema-hairline">
+      <div v-if="voiceStore.soundEffectsEnabled" class="stack-1.5 pt-3 border-t border-mnema-hairline">
         <div class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono mb-1">
           {{ $t('audio.soundsCustomTitle') }}
         </div>
