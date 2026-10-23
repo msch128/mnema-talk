@@ -22,7 +22,7 @@ const deletedUsernamePrefix = "deleted-"
 // every foreign key to users and fails when a table is forgotten here.
 //
 // What happens to what the person wrote:
-//   - their messages stay, authored by "Deleted user", with the text, link
+//   - their messages stay, authored by "Deleted member", with the text, link
 //     cards and pins removed, as are the kept earlier versions of their
 //     edits (other members' replies and quotes remain);
 //   - their uploads and avatar are deleted from storage and the database;
@@ -73,7 +73,7 @@ const scrubAudit = `UPDATE audit_log SET
 	WHERE actor_id = $1 OR (target_type = 'user' AND target_id = $1::text) OR details::text LIKE '%' || $1::text || '%'`
 
 const anonymise = `UPDATE users SET
-	username = $2, display_name = 'Deleted user', bio = '', avatar_s3_key = NULL, status_text = '',
+	username = $2, display_name = 'Deleted member', bio = '', avatar_s3_key = NULL, status_text = '',
 	password_hash = '!deleted', email = NULL, email_verified_at = NULL, presence = 'online', locale = '',
 	onboarding = '{}'::jsonb, rules_accepted_version = 0, last_seen_at = NULL, voice_seconds = 0,
 	timeout_until = NULL, timeout_reason = '', timeout_by = NULL,
