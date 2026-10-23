@@ -1585,7 +1585,8 @@
       "settings": "Einstellungen",
       "moderation": "Moderation",
       "emoji": "Emoji",
-      "bot": "Bots"
+      "bot": "Bots",
+      "poll": "Umfragen"
     },
     "actions": {
       "role": {
@@ -1652,7 +1653,11 @@
         "delete": "Nachricht gelöscht",
         "edit": "Nachricht bearbeitet",
         "pin": "Nachricht angeheftet",
-        "unpin": "Anheftung aufgehoben"
+        "unpin": "Anheftung aufgehoben",
+        "edit_history_view": "Bearbeitungsverlauf angesehen"
+      },
+      "poll": {
+        "end": "Umfrage von Moderation beendet"
       },
       "voice": {
         "join": "Talk betreten",
