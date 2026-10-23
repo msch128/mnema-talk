@@ -93,7 +93,7 @@ join a call at all**: the join is refused with a message, no microphone is
 requested and nothing is sent. Media is never sent unsealed, in any engine.
 
 What the end-to-end suite showed (Playwright with the engines it ships:
-Chromium 156, WebKit 27.2, Firefox 157, two members per call with fake
+Chromium 153, WebKit 26.6, Firefox 155, two members per call with fake
 devices; run `make e2e` or see [development](development.md#browser-tests-e2e)):
 
 | | Chromium (Chrome, Edge) | WebKit (Safari, iOS) | Firefox |
