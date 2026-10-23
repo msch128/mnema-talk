@@ -1,0 +1,31 @@
+internal/server/router_build.go
+  s_06fcde5dbef956::t_9311eecc6adf00 217
+internal/chat/handler_lookup.go
+  s_06fcde5dbef956::t_7b4e5eb8b63fa6 269-270
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_7b4e5eb8b63fa6 1796,1803
+internal/chat/thread_follow_sync.go
+  s_06fcde5dbef956::t_9311eecc6adf00 11,21-23,32,48,52-60,79-81
+  s_06fcde5dbef956::t_81aa7928459f3b 82
+internal/server/thread_follow_integration_test.go
+  s_06fcde5dbef956::t_7900b977d445c9 212
+  s_06fcde5dbef956::t_fa55ae8faa80ce 203-211,213-223
+api/openapi.json
+  s_06fcde5dbef956::t_7b4e5eb8b63fa6 2919
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d7e79b0b4bc6081d3ccf4c7e291513d26e750e78",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
