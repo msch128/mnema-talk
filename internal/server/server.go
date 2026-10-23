@@ -18,6 +18,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/gateway"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/msch128/mnema-talk/internal/push"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/msch128/mnema-talk/internal/webhook"
@@ -44,6 +45,11 @@ type Deps struct {
 	// Context bounds the router's background work (deny-list refresh);
 	// nil = until Close.
 	Context context.Context
+	// PushClient replaces the SSRF-guarded client that posts Web Push
+	// requests (tests point it at a local push service); PushBurst replaces
+	// the five second window that merges a burst of messages into one push.
+	PushClient push.HTTPClient
+	PushBurst  time.Duration
 }
 
 // SystemAdminMounter mounts the admin system routes.
@@ -120,8 +126,16 @@ func NewRouter(d Deps) (*Router, error) {
 
 	c := &components{d: d, cfg: cfg, ctx: ctx, trusted: trusted}
 	c.newCore()
+	if err := c.newMail(); err != nil {
+		cancel()
+		return nil, err
+	}
 	c.newWebhooks()
 	c.newBots()
+	if err := c.newPush(); err != nil {
+		cancel()
+		return nil, err
+	}
 	if err := c.newSystem(); err != nil {
 		cancel()
 		return nil, err

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 // dropVoiceForGrace ends c's media connection when its socket goes away.
@@ -59,7 +60,7 @@ func (h *Hub) removePresence(userID, chID uuid.UUID) {
 		if h.Presence != nil {
 			h.Presence(userID, chID, false)
 		}
-		h.BroadcastChannel(chID, "voice_state_update", map[string]any{"action": "leave", "channel_id": chID, "user_id": userID})
+		h.BroadcastChannel(chID, events.VoiceStateUpdate, map[string]any{"action": "leave", "channel_id": chID, "user_id": userID})
 		if hadSince {
 			h.addVoiceTime(userID, chID, time.Since(since))
 		}

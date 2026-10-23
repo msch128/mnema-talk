@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Member } from '../types/domain'
-import { Crown } from '@lucide/vue'
+import { Crown, X } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { roleColorCss } from '../lib/permissions'
 import MemberRow from './MemberRow.vue'
@@ -25,9 +25,18 @@ function openMemberMenu(e: MouseEvent | KeyboardEvent, member: Member) {
       <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary truncate">
         {{ $t('members.title') }}
       </span>
-      <span class="text-xs text-mnema-tertiary tabular-nums flex-shrink-0">
+      <span class="ml-auto text-xs text-mnema-tertiary tabular-nums flex-shrink-0">
         {{ chatStore.members.length }}
       </span>
+      <button
+        type="button"
+        data-testid="members-close"
+        class="hidden max-md:flex h-11 w-11 -mr-3 flex-shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text"
+        :aria-label="$t('common.close')"
+        @click="chatStore.showMemberList = false"
+      >
+        <X class="h-5 w-5" />
+      </button>
     </div>
 
     <!-- Scrollable Member Categories -->

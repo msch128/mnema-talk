@@ -150,6 +150,7 @@ func TestValidation(t *testing.T) {
 		"negative retention":       {"DATABASE_URL": "x", "MEDIA_RETENTION_DAYS": "-1"},
 		"negative audit retention": {"DATABASE_URL": "x", "AUDIT_RETENTION_DAYS": "-1"},
 		"bad audit retention":      {"DATABASE_URL": "x", "AUDIT_RETENTION_DAYS": "forever"},
+		"negative edit history":    {"DATABASE_URL": "x", "EDIT_HISTORY_RETENTION_DAYS": "-1"},
 		"non-numeric int":          {"DATABASE_URL": "x", "SESSION_EXPIRY_HOURS": "soon"},
 		"bad proxy cidr":           {"DATABASE_URL": "x", "TRUSTED_PROXY_CIDRS": "10.0.0.0/99"},
 		"bad bool":                 {"DATABASE_URL": "x", "LINK_PREVIEWS_ENABLED": "yes please"},
@@ -161,6 +162,11 @@ func TestValidation(t *testing.T) {
 		"http port zero":           {"DATABASE_URL": "x", "PORT": "0"},
 		"http port too big":        {"DATABASE_URL": "x", "PORT": "70000"},
 		"http port text":           {"DATABASE_URL": "x", "PORT": "http"},
+		"bad push switch":          {"DATABASE_URL": "x", "PUSH_ENABLED": "sometimes"},
+		"bad push previews":        {"DATABASE_URL": "x", "PUSH_PREVIEWS": "always"},
+		"push subject is plain":    {"DATABASE_URL": "x", "PUSH_VAPID_SUBJECT": "ops@example.com"},
+		"push subject is http":     {"DATABASE_URL": "x", "PUSH_VAPID_SUBJECT": "http://chat.example.com"},
+		"push subject has no addr": {"DATABASE_URL": "x", "PUSH_VAPID_SUBJECT": "mailto:nobody"},
 	}
 	for name, env := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -396,6 +402,40 @@ func TestWebRTCReachabilityWarning(t *testing.T) {
 	}
 }
 
+func TestInsecurePublicURLWarning(t *testing.T) {
+	cases := []struct {
+		name string
+		cfg  Config
+		warn bool
+	}{
+		{"production over http", Config{AppEnv: "production", PublicURL: "http://chat.example.com"}, true},
+		{"production default localhost", Config{AppEnv: "production", PublicURL: "http://localhost:8080"}, true},
+		{"staging over http", Config{AppEnv: "staging", PublicURL: "http://chat.example.com"}, true},
+		{"production over https", Config{AppEnv: "production", PublicURL: "https://chat.example.com"}, false},
+		{"development over http", Config{AppEnv: "development", PublicURL: "http://localhost:8080"}, false},
+	}
+	for _, tc := range cases {
+		if got := tc.cfg.InsecurePublicURLWarning() != ""; got != tc.warn {
+			t.Errorf("%s: warning %v, want %v", tc.name, got, tc.warn)
+		}
+	}
+}
+
+func TestInsecurePublicURLIsNotARefusal(t *testing.T) {
+	env := base()
+	env["APP_ENV"] = "production"
+	env["PUBLIC_URL"] = "http://chat.example.com"
+	env["JWT_SECRET"] = strings.Repeat("k", 40)
+	env["S3_ACCESS_KEY"], env["S3_SECRET_KEY"] = "access-key-value", strings.Repeat("s", 40)
+	cfg, err := FromEnv(lookup(env))
+	if err != nil {
+		t.Fatalf("an http PUBLIC_URL must start with a warning, not refuse to start: %v", err)
+	}
+	if cfg.InsecurePublicURLWarning() == "" {
+		t.Fatal("no warning for an http PUBLIC_URL in production")
+	}
+}
+
 func TestBindAddrDefaultsAndDevelopmentRule(t *testing.T) {
 	cfg, err := FromEnv(lookup(base()))
 	if err != nil || cfg.BindAddr != "127.0.0.1" {
@@ -522,10 +562,13 @@ func TestMalformedNumericSettingsNameTheirField(t *testing.T) {
 
 func TestUploadRelayAndMetricsValidation(t *testing.T) {
 	for name, changes := range map[string]map[string]string{
-		"upload zero":        {"MAX_UPLOAD_SIZE_MB": "0"},
-		"upload oversized":   {"MAX_UPLOAD_SIZE_MB": "2049"},
-		"TURN weak secret":   {"WEBRTC_TURN_URLS": "turn:relay.example.com:3478", "WEBRTC_TURN_SECRET": "short"},
-		"metrics weak token": {"METRICS_TOKEN": "short"},
+		"upload zero":         {"MAX_UPLOAD_SIZE_MB": "0"},
+		"upload oversized":    {"MAX_UPLOAD_SIZE_MB": "2049"},
+		"negative quota":      {"UPLOAD_QUOTA_MB_PER_DAY": "-1"},
+		"negative total cap":  {"MEDIA_MAX_TOTAL_MB": "-1"},
+		"negative free floor": {"MEDIA_MIN_FREE_MB": "-1"},
+		"TURN weak secret":    {"WEBRTC_TURN_URLS": "turn:relay.example.com:3478", "WEBRTC_TURN_SECRET": "short"},
+		"metrics weak token":  {"METRICS_TOKEN": "short"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			env := base()
@@ -555,6 +598,42 @@ func TestRandomHexReturnsRequestedCryptographicByteLength(t *testing.T) {
 		decoded, err := hex.DecodeString(value)
 		if err != nil || len(decoded) != n {
 			t.Fatalf("RandomHex(%d) length/encoding: %d %v", n, len(decoded), err)
+		}
+	}
+}
+
+func TestStorageBudgetDefaults(t *testing.T) {
+	cfg, err := FromEnv(lookup(base()))
+	if err != nil || cfg.UploadQuotaMBPerDay != 2048 || cfg.MediaMaxTotalMB != 0 || cfg.MediaMinFreeMB != 1024 || cfg.MediaDiskPath != "" {
+		t.Fatalf("defaults: %+v %v", cfg, err)
+	}
+	env := base()
+	env["UPLOAD_QUOTA_MB_PER_DAY"] = "0"
+	env["MEDIA_DISK_PATH"] = "/data"
+	if cfg, err := FromEnv(lookup(env)); err != nil || cfg.UploadQuotaMBPerDay != 0 || cfg.MediaDiskPath != "/data" {
+		t.Fatalf("explicit: %+v %v", cfg, err)
+	}
+}
+
+func TestWebPushSettings(t *testing.T) {
+	cfg, err := FromEnv(lookup(base()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.PushEnabled || cfg.PushPreviews != "user" || cfg.PushVAPIDSubject != "" {
+		t.Fatalf("defaults: enabled=%v previews=%q subject=%q", cfg.PushEnabled, cfg.PushPreviews, cfg.PushVAPIDSubject)
+	}
+	for _, subject := range []string{"https://chat.example.com/contact", "mailto:ops@example.com"} {
+		env := base()
+		env["PUSH_ENABLED"] = "false"
+		env["PUSH_PREVIEWS"] = "OFF"
+		env["PUSH_VAPID_SUBJECT"] = subject
+		cfg, err := FromEnv(lookup(env))
+		if err != nil {
+			t.Fatalf("%s: %v", subject, err)
+		}
+		if cfg.PushEnabled || cfg.PushPreviews != "off" || cfg.PushVAPIDSubject != subject {
+			t.Fatalf("%s: enabled=%v previews=%q subject=%q", subject, cfg.PushEnabled, cfg.PushPreviews, cfg.PushVAPIDSubject)
 		}
 	}
 }

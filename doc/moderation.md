@@ -58,7 +58,10 @@ counting at once, before the expiry job (it runs every minute) clears it.
 
 By default the invite the account registered with is revoked, so that code
 cannot create the account anew; untick it in the dialog (`revoke_invite:
-false`) for an invite shared with others. Registration remembers the invite
+false`) for an invite shared with others. Deleting an invite is *Manage
+invites* territory, so the invite is only revoked when the person banning also
+holds that permission (or is the Owner); a moderator with *Ban members* alone
+bans the account and the invite stays valid. Registration remembers the invite
 (`users.invite_id`). Banning by IP address is deliberately not offered: behind
 a proxy an address is shared or spoofable, and the trusted-proxy model makes it
 a weak signal.
@@ -86,6 +89,17 @@ Holders of *Manage messages* in a channel can:
 
 - **Pin and unpin** a message (`PUT` / `DELETE
   /api/channels/{channelID}/messages/{messageID}/pin`); a pin icon marks it.
+  *Manage messages* is the pin permission as well (no separate bit): whoever
+  may remove a message in a channel may also pin one there, and the Owner
+  always may. A channel keeps at most 50 pins (a 51st answers `409`); pinning a
+  pinned message changes nothing. `GET /api/channels/{channelID}/pins` lists the
+  pins, newest pin first, for anyone who can view the channel, and the channel
+  header opens that list with a jump to each message. A real pin or unpin
+  broadcasts `message_update` and `pins_changed` to the channel's viewers only;
+  a pin also shows a compact note under the messages of every open client (it
+  is not a stored message, so it is gone after a reload; the list is the
+  record). Both actions are audited (`message.pin`, `message.unpin`). Deleting a
+  message unpins it.
 - **Delete with a reason**: `DELETE /api/channels/{channelID}/messages/{messageID}`
   takes an optional JSON body `{"reason": "..."}`. The author is told through a
   `moderation_notice`; the audit entry (`message.delete`, `moderator: true`)
@@ -97,6 +111,36 @@ Holders of *Manage messages* in a channel can:
   role than the member (checked in the same transaction as the delete) and
   leaves threads that hold a reply of the Owner alone. Every message gets its own
   audit entry with its text, plus one `moderation.bulk_delete` summary.
+- **Read the edit history** of an edited message (`GET
+  /api/channels/{channelID}/messages/{messageID}/edits`, "Edit history" in the
+  message menu of an edited message). See below.
+
+### Edit history
+
+Every edit keeps the version it replaces: its text, when that version was
+written (the creation time for the original) and who wrote it. Only members who
+hold *Manage messages* in the channel and can view it (the Owner always) can
+read the versions, newest first. I decided against a dedicated permission:
+reading what a message used to say is the same trust as deleting it, and a
+new bit would need a default, a migration of existing roles and one more switch
+in the roles screen for no gain. The author and other members get `403`;
+reading is not audited (it changes nothing) but is rate limited to 60 reads a
+minute per member (`edit_history` in the rate-limit metrics).
+
+- **Not exposed elsewhere.** The versions are not in the message list, the
+  thread, WebSocket events, search, push or notification previews, webhook
+  payloads, bot or gateway events, or any export except the author's own
+  (`edits.json` in "Export my data", at most the newest 2,000 versions; a
+  member never receives anybody else's earlier text). The audit log's
+  `message.edit` entry (full `before` and `after`, see above) is a separate
+  record with its own access and retention.
+- **Bounded.** At most 50 versions are kept per message, the oldest go first.
+  `EDIT_HISTORY_RETENTION_DAYS` (default `0`: keep) additionally drops versions
+  replaced longer ago than that many days; the worker runs every six hours.
+- **Removed with their source.** Deleting the message deletes its versions
+  (cascade). Deleting an account deletes the versions of that person's messages
+  together with the message text; the messages stay as emptied tombstones.
+  Edits made before this feature (migration 0047) have no history.
 
 ## Audit log
 
@@ -137,6 +181,12 @@ requests leave no entry. Reading the log is not recorded.
 | `auth.login` | Successful sign-in (browser and native) | The member |
 | `auth.login_failed`, `auth.login_locked` | A wrong password, or a blocked attempt, for an **existing** account | The member. At most one entry per account and kind per minute, and no address, password or typed name; a name that is no account is not stored at all |
 | `auth.register`, `auth.password_change`, `auth.logout_all` | Own-account events | The member |
+| `auth.email_set`, `auth.email_remove`, `auth.email_verified`, `auth.password_reset_mail` | A member sets, removes or confirms an e-mail address, or resets the password through the link in a mail | The member. The address itself is never stored in the log |
+| `auth.two_factor_enabled`, `auth.two_factor_disabled`, `auth.recovery_codes_regenerated`, `auth.recovery_code_used` | A member changes or uses their second factor | The member. Never a code or secret |
+| `auth.two_factor_failed`, `auth.two_factor_alert` | A wrong second-step code (at most one entry per account and minute); five or more not yet reported | The member. No code |
+| `user.two_factor_reset` | The Owner (or the host command `mnema-talk reset-2fa`) turns a member's second factor off | Who did it and the member |
+| `auth.account_delete`, `auth.export_request`, `auth.export_download` | A member deletes their account or asks for / takes their data export | The account id only. After a deletion, earlier entries about the account lose names and details |
+| `system.mail_test` | The Owner sends a test mail | Who did it; neither recipient nor mail text |
 
 Text channels have no membership (who may see one follows from roles and
 overwrites, which are audited), so there is no join entry for them.
@@ -186,9 +236,9 @@ quietly default to something wider than intended; this is the same table.
 
 | Class | Who reads it | Actions |
 |---|---|---|
-| Auditors | Every holder of *View audit log* | `role.*`, `user.*` except the Owner-only ones below, `invite.*`, `category.*`, `layout.apply` (and the moderation actions of later releases) |
+| Auditors | Every holder of *View audit log* | `role.*`, `user.*` except the Owner-only ones below, `invite.*` (and the moderation actions of later releases) |
 | Channel | Holders of *View audit log* **who can view the entry's channel when they read** | `message.*`, `voice.*`, `channel.*` (a private channel's name, topic and overwrites are private too) |
-| Owner and Administrators only | The Owner and members with *Administrator* | `auth.*` (sign-ins, failures, lockouts, password changes of other members), `webhook.*`, `outgoing_webhook.*`, `bot.*`, `media.*`, `settings.*`, `system.*`, `user.password_set`, `user.password_reset`, `user.lockout_clear`, `admin.*` (routes not yet named in the route table) |
+| Owner and Administrators only | The Owner and members with *Administrator* | `category.*` and `layout.apply` (a private category's name and overwrites are private too, and a layout lists every placement), `auth.*` (sign-ins, failures, lockouts, password changes of other members), `webhook.*`, `outgoing_webhook.*`, `bot.*`, `media.*`, `settings.*`, `system.*`, `user.password_set`, `user.password_reset`, `user.lockout_clear`, `admin.*` (routes not yet named in the route table) |
 
 The check runs on every read against the current permissions, so access that is
 granted later also opens the older entries of that channel, and access that is

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -67,7 +68,7 @@ func sendContext(perms *perm.Service, r *http.Request, ch uuid.UUID, need perm.S
 	return WithMentionPolicy(ctx, MentionPolicy{
 		NoEveryone: !p.Has(perm.MentionEveryone),
 		CanView:    func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, ch).Has(perm.ViewChannel) },
-		Roles:      mentionableRoles(snap, p.Has(perm.MentionEveryone)),
+		Roles:      MentionableRoles(snap, p.Has(perm.MentionEveryone)),
 	}), nil
 }
 
@@ -85,11 +86,11 @@ func (h *Handler) refusalFor(r *http.Request, err error) error {
 	return err
 }
 
-// mentionableRoles are the roles an author may mention: those marked
+// MentionableRoles are the roles an author may mention: those marked
 // mentionable, or every custom role for an author who may mention everyone
 // (the Owner and Administrators always may). @everyone and the roles the
 // server manages for bots cannot be mentioned by name.
-func mentionableRoles(snap *perm.Snapshot, mayAll bool) []MentionRole {
+func MentionableRoles(snap *perm.Snapshot, mayAll bool) []MentionRole {
 	var out []MentionRole
 	for _, r := range snap.Roles() {
 		if r.Everyone || r.Managed || !(r.Mentionable || mayAll) {
@@ -99,6 +100,12 @@ func mentionableRoles(snap *perm.Snapshot, mayAll bool) []MentionRole {
 		out = append(out, MentionRole{ID: id, Name: r.Name, Members: func() []uuid.UUID { return snap.RoleMembers(id) }})
 	}
 	return out
+}
+
+// SendContext is sendContext for a message that another feature creates for
+// the caller (a built-in slash command, a poll): the caller needs need in ch.
+func SendContext(perms *perm.Service, r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
+	return sendContext(perms, r, ch, need)
 }
 
 // UploadContext is the sendContext of an upload (media package): the caller
@@ -334,7 +341,7 @@ func checkChannelMove(snap *perm.Snapshot, sub perm.Subject, c ChannelPlacement)
 // is refetched, the permission state is untouched.
 func (h *Handler) channelsChanged() {
 	h.Perms.Invalidate() // new categories and the like must be known
-	h.Events.Broadcast("channels_changed", nil)
+	h.Events.Broadcast(events.ChannelsChanged, nil)
 }
 
 // structureChanged is channelsChanged for changes that can alter who sees what
@@ -342,5 +349,5 @@ func (h *Handler) channelsChanged() {
 // permission state is rebuilt and live connections are re-checked.
 func (h *Handler) structureChanged() {
 	h.Perms.Changed(nil)
-	h.Events.Broadcast("channels_changed", nil)
+	h.Events.Broadcast(events.ChannelsChanged, nil)
 }

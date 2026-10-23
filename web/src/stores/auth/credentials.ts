@@ -1,6 +1,10 @@
 import type { Ref } from 'vue'
 import { api, ApiError } from '../../lib/api'
+import { releaseThisDevice } from '../../lib/webPush'
+import { clearAllDrafts, dropOtherDrafts } from '../../lib/drafts'
 import { decodeUser, decodeUserEnvelope, type User } from '../../types/domain'
+import { decodeAuthTwoFactorLoginResult, isAuthTwoFactorChallenge, type AuthSecurityNotice } from '../../types/rest'
+import type { Decoder } from '../../types/validation'
 import { isRecord } from '../../types/validation'
 import { t } from '../../i18n'
 import type { SessionCore } from './session'
@@ -32,6 +36,7 @@ function applyCurrentUser(
   core.s.cookieAccountId = currentUser.id
   if (currentUser.id !== session.userId) core.advanceSession()
   user.value = currentUser
+  dropOtherDrafts(currentUser.id)
   applyAccountLocale()
 }
 
@@ -59,8 +64,30 @@ async function checkAuth(deps: AuthDeps) {
   }
 }
 
+/**
+ * What a sign-in answered: a session for a user (with a security notice when
+ * wrong second-factor codes were entered since the last sign-in), or, for an
+ * account with two-factor sign-in, a challenge that POST /api/auth/login/2fa
+ * finishes. A challenge sets no cookie and changes no session state.
+ */
+export type SignInOutcome =
+  | { kind: 'user'; user: User; notice: AuthSecurityNotice | null }
+  | { kind: 'challenge'; challenge: string }
+
+const decodePasswordStep: Decoder<SignInOutcome> = value =>
+  isAuthTwoFactorChallenge(value)
+    ? { kind: 'challenge', challenge: value.challenge }
+    : { kind: 'user', user: decodeUserEnvelope(value).user, notice: null }
+
+const decodeSecondStep: Decoder<SignInOutcome> = value => {
+  const result = decodeAuthTwoFactorLoginResult(value)
+  return { kind: 'user', user: result.user, notice: result.security_notice ?? null }
+}
+
+const decodeRegistration: Decoder<SignInOutcome> = value => ({ kind: 'user', user: decodeUserEnvelope(value).user, notice: null })
+
 /** Login and registration: both set the session cookie and make the answered user the signed-in one. */
-async function establishSession({ core, user, applyAccountLocale }: AuthDeps, path: string, json: object, ownNotification: boolean) {
+async function establishSession({ core, user, applyAccountLocale }: AuthDeps, path: string, json: object, ownNotification: boolean, decode: Decoder<SignInOutcome>): Promise<SignInOutcome> {
   const { s, advanceSession, sessionSnapshot, isCurrentSession, clearMismatchedCookieAccount, queueCookieRequest } = core
   advanceSession()
   const session = sessionSnapshot()
@@ -68,17 +95,19 @@ async function establishSession({ core, user, applyAccountLocale }: AuthDeps, pa
     try {
       const data = await api(path, {
         method: 'POST',
-        decode: decodeUserEnvelope,
+        decode,
         ...(ownNotification ? { shouldNotifyUnauthorized: () => isCurrentSession(session) } : {}),
         json
       })
+      if (data.kind === 'challenge') return data
       s.cookieAccountId = data.user.id
       if (isCurrentSession(session)) {
         advanceSession()
         user.value = data.user
+        dropOtherDrafts(data.user.id)
         applyAccountLocale()
       }
-      return data.user
+      return data
     } catch (err) {
       clearMismatchedCookieAccount(session)
       throw err
@@ -110,8 +139,12 @@ async function logout({ core, user }: AuthDeps) {
   const { s, advanceSession, sessionSnapshot, isCurrentSession, queueCookieRequest } = core
   advanceSession()
   user.value = null
+  // Unsent messages stay on this device only while the account is signed in.
+  clearAllDrafts()
   const session = sessionSnapshot()
   await queueCookieRequest(async () => {
+    // This browser must not keep receiving the account's messages once someone else may sign in here.
+    await releaseThisDevice()
     await api('/api/auth/logout', {
       method: 'POST', shouldNotifyUnauthorized: () => isCurrentSession(session)
     })
@@ -124,14 +157,21 @@ export function createAuthActions(deps: AuthDeps) {
   const { core, user } = deps
   return {
     checkAuth: () => checkAuth(deps),
-    login: (username: string, password: string) => establishSession(deps, '/api/auth/login', { username, password }, false),
-    register: (username: string, displayName: string, password: string, inviteCode: string) =>
-      establishSession(deps, '/api/auth/register', { username, display_name: displayName, password, invite_code: inviteCode }, true),
+    login: (username: string, password: string) =>
+      establishSession(deps, '/api/auth/login', { username, password }, false, decodePasswordStep),
+    secondStep: (challenge: string, code: string) =>
+      establishSession(deps, '/api/auth/login/2fa', { challenge, code }, false, decodeSecondStep),
+    register: async (username: string, displayName: string, password: string, inviteCode: string) => {
+      const outcome = await establishSession(deps, '/api/auth/register',
+        { username, display_name: displayName, password, invite_code: inviteCode }, true, decodeRegistration)
+      return outcome.kind === 'user' ? outcome.user : null
+    },
     changePassword: (currentPassword: string, newPassword: string) => changePassword(deps, currentPassword, newPassword),
     logout: () => logout(deps),
     resetLocalSession() {
       core.advanceSession()
       user.value = null
+      clearAllDrafts()
       core.s.cookieAccountId = undefined
     }
   }

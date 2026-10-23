@@ -72,14 +72,17 @@ func TestCleanText(t *testing.T) {
 
 func TestSanitizeFilename(t *testing.T) {
 	cases := map[string]string{
-		"../../etc/passwd":    "passwd",
-		`C:\Users\x\evil.exe`: "evil.exe",
-		".htaccess":           "htaccess",
-		"a\r\nb.txt":          "ab.txt",
-		`quote"name.png`:      "quotename.png",
-		"..":                  "",
-		"   ":                 "",
-		"normal name (1).jpg": "normal name (1).jpg",
+		"../../etc/passwd":          "passwd",
+		`C:\Users\x\evil.exe`:       "evil.exe",
+		".htaccess":                 "htaccess",
+		"a\r\nb.txt":                "ab.txt",
+		`quote"name.png`:            "quotename.png",
+		"..":                        "",
+		"   ":                       "",
+		"normal name (1).jpg":       "normal name (1).jpg",
+		"invoice\u202efdp.exe":      "invoicefdp.exe", // right-to-left override
+		"a\u200bb\u2066c\ufeff.txt": "abc.txt",        // zero-width and isolate controls
+		"x\u0085y\u2028z.txt":       "xyz.txt",        // C1 control, line separator
 	}
 	for in, want := range cases {
 		if got := SanitizeFilename(in, 255); got != want {
@@ -227,5 +230,22 @@ func TestAPIErrorConstructorsPreserveStableStatusAndCode(t *testing.T) {
 		if w.Code != tc.status || envelope.Error.Code != tc.code || envelope.Error.Message != "test denial" || strings.Contains(w.Body.String(), "Status") {
 			t.Fatalf("API error contract: status=%d body=%s", w.Code, w.Body.String())
 		}
+	}
+}
+
+func TestCleanNameStripsInvisibleSpoofing(t *testing.T) {
+	got, err := CleanName("username", "\u202eadmin\u200b \u2066x", 32, true)
+	if err != nil || got != "admin x" {
+		t.Fatalf("got %q, %v", got, err)
+	}
+	if got, err := CleanName("name", "Zoë 🎉", 32, true); err != nil || got != "Zoë 🎉" {
+		t.Fatalf("ordinary name changed: %q %v", got, err)
+	}
+	// A name made only of invisible characters is empty, hence refused.
+	if _, err := CleanName("username", "\u202e\u200b", 32, true); err == nil {
+		t.Fatal("invisible-only name accepted")
+	}
+	if _, err := CleanName("name", "a\x00b", 32, true); err == nil {
+		t.Fatal("NUL accepted")
 	}
 }

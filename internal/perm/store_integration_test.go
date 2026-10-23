@@ -380,7 +380,7 @@ func TestStoreFailsWhenTheDatabaseDoes(t *testing.T) {
 			_, err := s.Overwrites(c, perm.TargetChannel, w.channel)
 			return err
 		}},
-		{"load member", "SELECT role FROM users WHERE id", 1, false, func(s *perm.Service, c context.Context) error {
+		{"load member", "SELECT id, role FROM users WHERE id = ANY", 1, false, func(s *perm.Service, c context.Context) error {
 			return s.SetOverwrites(c, w.owner, perm.TargetChannel, w.channel, []perm.Overwrite{{Type: "member", ID: w.other.ID, Deny: perm.Speak}})
 		}},
 		{"clear overwrites", "DELETE FROM permission_overwrites", 1, false, func(s *perm.Service, c context.Context) error {

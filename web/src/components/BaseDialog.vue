@@ -40,7 +40,7 @@ function onScrimUp(e: PointerEvent) {
 
 <template>
   <div
-    :class="['fixed inset-0 z-50 flex justify-center bg-black/60 p-4', align === 'top' ? 'items-start pt-20' : 'items-center']"
+    :class="['dialog-scrim fixed inset-0 z-50 flex justify-center bg-black/60', align === 'top' ? 'items-start pt-20 max-md:pt-[max(1rem,env(safe-area-inset-top))]' : 'items-center']"
     @pointerdown="onScrimDown"
     @pointerup="onScrimUp"
   >
@@ -65,7 +65,7 @@ function onScrimUp(e: PointerEvent) {
           type="button"
           data-dialog-close
           v-tooltip="$t('common.close')"
-          class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-hover hover:text-mnema-text"
+          class="flex h-8 w-8 max-md:h-11 max-md:w-11 max-md:-mr-2 flex-shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-hover hover:text-mnema-text"
           @click="close"
         >
           <X class="h-[18px] w-[18px]" />

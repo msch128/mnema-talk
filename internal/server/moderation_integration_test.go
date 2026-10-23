@@ -303,10 +303,10 @@ func TestBanBlocksSessionsLoginAndSocketsAndUnbanRestores(t *testing.T) {
 		t.Errorf("a wrong password must not reveal the ban: %d", wrong.status)
 	}
 
-	// The invite is gone: the same code cannot create the account again.
+	// The moderator may ban but not manage invites, so the shared code lives on.
 	again := a.anon().post("/api/auth/register", map[string]string{"username": "outlaw2", "password": "member-password-123", "invite_code": invite.Code})
-	if again.status != http.StatusBadRequest {
-		t.Errorf("re-registration with the banned member's invite: %d", again.status)
+	if again.status != http.StatusCreated {
+		t.Errorf("a ban without Manage invites must not delete the invite: %d %s", again.status, again.body)
 	}
 
 	// The list shows it; kicking-style Enable needs the ban permission.
@@ -464,5 +464,45 @@ func TestBanAndDisableDoNotClobberEachOther(t *testing.T) {
 	}
 	if got := login(); got != http.StatusOK {
 		t.Fatalf("an expired ban still blocks (before the job ran): %d", got)
+	}
+}
+
+// Banning revokes the member's invite only for callers who may manage invites.
+func TestBanRevokesTheInviteOnlyForInviteManagers(t *testing.T) {
+	f := newModerationFixture(t, false)
+	a := f.a
+	newMember := func(code, name string) string {
+		res := a.anon().post("/api/auth/register", map[string]string{"username": name, "password": "member-password-123", "invite_code": code})
+		if res.status != http.StatusCreated {
+			t.Fatalf("register %s: %d %s", name, res.status, res.body)
+		}
+		var reg struct{ User struct{ ID uuid.UUID } }
+		res.decode(t, &reg)
+		return reg.User.ID.String()
+	}
+	var inv struct {
+		Code string `json:"code"`
+	}
+	f.admin.post("/api/admin/invites", map[string]any{"max_uses": 5}).decode(t, &inv)
+	code := inv.Code
+	first := newMember(code, "guest-one")
+
+	// Ban-only moderator: the ban works, the Owner's invite survives.
+	if res := f.mod.post("/api/admin/users/"+first+"/ban", map[string]any{}); res.status != http.StatusNoContent {
+		t.Fatalf("ban: %d %s", res.status, res.body)
+	}
+	if res := a.anon().get("/api/invites/" + code); !strings.Contains(string(res.body), `"valid":true`) {
+		t.Fatalf("the invite did not survive a ban by a moderator without Manage invites: %s", res.body)
+	}
+
+	// A moderator who also manages invites revokes it, as before.
+	inviter := a.register(f.admin, "inviter")
+	assignRoles(t, f.admin, inviter, createRole(t, f.admin, "inviters", perm.BanMembers|perm.CreateInvites))
+	second := newMember(code, "guest-two")
+	if res := inviter.post("/api/admin/users/"+second+"/ban", map[string]any{}); res.status != http.StatusNoContent {
+		t.Fatalf("ban: %d %s", res.status, res.body)
+	}
+	if res := a.anon().get("/api/invites/" + code); !strings.Contains(string(res.body), `"valid":false`) {
+		t.Fatalf("the invite survived a ban by an invite manager: %s", res.body)
 	}
 }

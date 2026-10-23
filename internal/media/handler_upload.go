@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -178,6 +179,13 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	// The body is capped at the route's limit, so the reservation is an upper
+	// bound of what is stored.
+	release, err := h.ReserveUpload(req.Context(), user.ID, AnnouncedSize(req, bodyLimit(h.limit(req.Context()))))
+	if err != nil {
+		return err
+	}
+	defer release()
 	in, target, err := h.readUpload(req, chID)
 	if err != nil {
 		return err
@@ -222,7 +230,7 @@ func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast("user_update", updated.Public())
+	h.Events.Broadcast(events.UserUpdate, updated.Public())
 	httpx.WriteJSON(w, http.StatusOK, updated)
 	return nil
 }

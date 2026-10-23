@@ -10,6 +10,7 @@ import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { pendingMessageModeration } from '../lib/messageModeration'
+import { pendingEditHistory, closeEditHistory } from '../lib/editHistory'
 import { PERMISSION_BITS } from '../lib/permissions'
 import { setLocale } from '../i18n'
 
@@ -104,5 +105,31 @@ describe('message menu for moderators', () => {
     // Plain delete stays when allowed, and goes when not.
     expect(labels(menu.itemsFor(msg))).toContain('Delete with reason…')
     expect(labels(useMessageMenu({ actions: makeActions({ canDelete: false }), reply: vi.fn() }).itemsFor(msg))).not.toContain('Delete with reason…')
+  })
+})
+
+describe('message menu: edit history', () => {
+  const edited = { ...msg, is_edited: true, updated_at: '2026-01-02T10:00:00Z' }
+
+  it('is offered to moderators for edited messages only', () => {
+    moderate()
+    const menu = useMessageMenu({ actions: makeActions(), reply: vi.fn() })
+    expect(labels(menu.itemsFor(edited))).toContain('Edit history')
+    expect(labels(menu.itemsFor(msg))).not.toContain('Edit history')
+  })
+
+  it('is hidden from members without Manage messages, even for their own edits', () => {
+    permissions.info = { owner: false, permissions: 0, role_ids: [], top_position: 5, max_upload_mb: 50, catalog: [], channels: [{ channel_id: 'ch1', permissions: PERMISSION_BITS.view_channel }] }
+    const menu = useMessageMenu({ actions: makeActions({ own: true }), reply: vi.fn() })
+    expect(labels(menu.itemsFor(edited))).not.toContain('Edit history')
+  })
+
+  it('opens the dialog for that message', () => {
+    moderate()
+    closeEditHistory()
+    const menu = useMessageMenu({ actions: makeActions(), reply: vi.fn() })
+    required(item(menu.itemsFor(edited), 'Edit history').action)()
+    expect(pendingEditHistory.value).toEqual({ channelId: 'ch1', messageId: 'm1', current: 'rude words', editedAt: '2026-01-02T10:00:00Z' })
+    closeEditHistory()
   })
 })

@@ -19,7 +19,9 @@ func CheckUserPassword(ctx context.Context, p *db.Pool, userID uuid.UUID, passwo
 	var hash string
 	err := p.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1 AND `+ActiveSQL("")+` AND NOT is_bot`, userID).Scan(&hash)
 	if errors.Is(err, pgx.ErrNoRows) {
-		burnPasswordCheck(password)
+		if err := burnPasswordCheck(ctx, password); err != nil {
+			return err
+		}
 		return ErrWrongPassword
 	}
 	if err != nil {

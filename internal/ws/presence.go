@@ -3,6 +3,7 @@ package ws
 import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 // StatusOffline is the live status of a user without an open connection.
@@ -31,7 +32,7 @@ func (h *Hub) statusLocked(userID uuid.UUID) string {
 // announcePresence tells everyone about a changed live status.
 func (h *Hub) announcePresence(userID uuid.UUID, before, after string) {
 	if before != after {
-		h.Broadcast("presence_update", map[string]any{"user_id": userID, "status": after})
+		h.Broadcast(events.PresenceUpdate, map[string]any{"user_id": userID, "status": after})
 	}
 }
 
@@ -69,7 +70,7 @@ func (h *Hub) setIdle(c *Client, idle bool) {
 	after := h.statusLocked(c.User.ID)
 	h.mu.Unlock()
 	if before != after {
-		c.emitApplicationEvent("presence_update", map[string]any{"user_id": c.User.ID, "status": after}, false, nil, uuid.Nil)
+		c.emitApplicationEvent(events.PresenceUpdate, map[string]any{"user_id": c.User.ID, "status": after}, false, nil, uuid.Nil)
 	}
 }
 
@@ -137,7 +138,7 @@ func (h *Hub) SetBotPresence(userID uuid.UUID, online bool) {
 	after, act := h.botVisibleLocked(userID)
 	h.mu.Unlock()
 	if before != after || !sameActivity(beforeAct, act) {
-		h.Broadcast("presence_update", botPresenceEvent(userID, after, act))
+		h.Broadcast(events.PresenceUpdate, botPresenceEvent(userID, after, act))
 	}
 }
 
@@ -151,7 +152,7 @@ func (h *Hub) SetBotStatus(userID uuid.UUID, status string, activity *BotActivit
 	after, act := h.botVisibleLocked(userID)
 	h.mu.Unlock()
 	if before != after || !sameActivity(beforeAct, act) {
-		h.Broadcast("presence_update", botPresenceEvent(userID, after, act))
+		h.Broadcast(events.PresenceUpdate, botPresenceEvent(userID, after, act))
 	}
 }
 
@@ -166,15 +167,15 @@ func sameActivity(a, b *BotActivity) bool {
 // the presence snapshot only carries statuses.
 func (h *Hub) sendBotActivities(c *Client) {
 	h.mu.RLock()
-	events := make([]map[string]any, 0, len(h.botState))
+	presences := make([]map[string]any, 0, len(h.botState))
 	for id := range h.botState {
 		if status, act := h.botVisibleLocked(id); act != nil {
-			events = append(events, botPresenceEvent(id, status, act))
+			presences = append(presences, botPresenceEvent(id, status, act))
 		}
 	}
 	h.mu.RUnlock()
-	for _, ev := range events {
-		c.SendEvent("presence_update", ev)
+	for _, ev := range presences {
+		c.SendEvent(events.PresenceUpdate, ev)
 	}
 }
 

@@ -1,5 +1,5 @@
 import type { Browser, Page } from '@playwright/test'
-import { apiFetch, responseString, responseUserId, suiteMember, trackPeerConnections } from './helpers'
+import { apiFetch, responseString, responseUserId, suiteMember, trackPeerConnections, leaveTalks, audioDecodedIn } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
@@ -27,13 +27,6 @@ async function signIn(page: Page, username: string, password: string) {
   await expect(dialog).toBeHidden()
 }
 
-const audioEnergyIn = (page: Page) => page.evaluate(async () => {
-  const pc = window.__pcs.at(-1)
-  if (!pc) return 0
-  let energy = 0
-  ;(await pc.getStats()).forEach((s) => { if (s.type === 'inbound-rtp' && s.kind === 'audio') energy += s.totalAudioEnergy || 0 })
-  return energy
-})
 
 // The safety code names the keys of the current epoch, so it changes with
 // every new epoch. Null while the member holds no group.
@@ -80,8 +73,8 @@ async function setup(browser: Browser, committerTiming: Timing, otherTiming: Tim
 
 const hearEachOther = async (pages: Page[]) => {
   for (const page of pages) {
-    const before = await audioEnergyIn(page)
-    await expect.poll(() => audioEnergyIn(page), { timeout: 20_000 }).toBeGreaterThan(before)
+    const before = await audioDecodedIn(page)
+    await expect.poll(() => audioDecodedIn(page), { timeout: 20_000 }).toBeGreaterThan(before)
   }
 }
 
@@ -111,6 +104,7 @@ test('the media key rotates on its own and audio keeps flowing across it', async
   }
   // No reconnect was needed for any of it.
   expect(await committer.evaluate(() => window.__pcs.length)).toBe(connections)
+  await leaveTalks(pages)
   await adminCtx.close()
   await memberCtx.close()
 })
@@ -137,6 +131,7 @@ test('a member that showed no sign of life is rekeyed out and is let back in whe
   await committer.waitForTimeout(9000)
   expect(await sameCode(pages)).toBe(back)
   await hearEachOther(pages)
+  await leaveTalks(pages)
   await adminCtx.close()
   await memberCtx.close()
 })

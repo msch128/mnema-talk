@@ -3,6 +3,8 @@ package ws
 import (
 	"strings"
 	"time"
+
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 func (c *Client) handleNativeControl(eventType string, raw []byte) bool {
@@ -47,6 +49,6 @@ func (c *Client) renewNativeLease(raw []byte) bool {
 	if c.closed.Load() || !s.install(generation, fresh, true) {
 		return false
 	}
-	c.SendEvent("native_access_renewed", map[string]any{"access_expires_at": fresh.Principal().AccessExpiresAt()})
+	c.SendEvent(events.NativeAccessRenewed, map[string]any{"access_expires_at": fresh.Principal().AccessExpiresAt()})
 	return true
 }

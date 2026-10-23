@@ -20,6 +20,12 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 		return nil, err
 	}
 
+	// A legacy custom code below the current floor is guessable and no longer
+	// works; it is refused like any invalid code.
+	if IsWeakInviteCode(inviteCode) {
+		return nil, ErrInvalidInvite
+	}
+
 	// Cheap pre-check so unauthenticated guesses never cost a bcrypt hash;
 	// the transaction below re-checks under a row lock.
 	var known bool
@@ -30,7 +36,10 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 		return nil, ErrInvalidInvite
 	}
 
-	hash, err := HashPassword(password)
+	hash, err := hashPasswordCtx(ctx, password)
+	if errors.Is(err, ErrServerBusy) || ctx.Err() != nil {
+		return nil, err
+	}
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
 	}
@@ -154,13 +163,18 @@ func ChangePassword(ctx context.Context, p *db.Pool, userID uuid.UUID, current, 
 	err = p.QueryRow(ctx, `
 		UPDATE users SET password_hash = $1, token_version = token_version + 1, updated_at = NOW()
 		WHERE id = $2 RETURNING token_version`, newHash, userID).Scan(&tv)
-	return tv, err
+	if err != nil {
+		return 0, err
+	}
+	return tv, dropTokens(ctx, p, userID, purposePasswordReset)
 }
 
 // RevokeSessions invalidates every session of userID ("log out everywhere").
 func RevokeSessions(ctx context.Context, p db.Querier, userID uuid.UUID) error {
-	_, err := p.Exec(ctx, `UPDATE users SET token_version = token_version + 1, updated_at = NOW() WHERE id = $1`, userID)
-	return err
+	if _, err := p.Exec(ctx, `UPDATE users SET token_version = token_version + 1, updated_at = NOW() WHERE id = $1`, userID); err != nil {
+		return err
+	}
+	return dropTokens(ctx, p, userID, purposePasswordReset)
 }
 
 // UpdateProfile changes display name and bio.

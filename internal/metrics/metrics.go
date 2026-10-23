@@ -85,6 +85,14 @@ func (v *Vec) With(values ...string) *Counter {
 	return c
 }
 
+// Reset forgets every series. Tests that read the exposition use it so the
+// series other tests created (bounded by maxSeries) cannot crowd theirs out.
+func (v *Vec) Reset() {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	clear(v.series)
+}
+
 // Total sums every series.
 func (v *Vec) Total() uint64 {
 	v.mu.RLock()
@@ -281,6 +289,11 @@ var (
 	// global_cap, expired, store_error.
 	WebhookDropped = newVec("mnema_webhook_events_dropped_total", "Outgoing webhook events dropped or expired unsent, by reason", "reason")
 
+	// PushDeliveries counts Web Push deliveries by outcome: ok, gone (the
+	// browser's subscription ended), retry (temporary refusal, retried once),
+	// rejected, error (no answer) and dropped (a full queue).
+	PushDeliveries = newVec("mnema_push_deliveries_total", "Web Push deliveries, by outcome", "outcome")
+
 	// S3Operations counts object storage calls, by operation and result.
 	S3Operations = newVec("mnema_s3_operations_total", "Object storage operations, by operation and result", "op", "result")
 )
@@ -338,6 +351,7 @@ func WriteInstruments(w io.Writer) {
 	writeCounter(w, "mnema_sfu_peer_joins_total", "Media connections created", SFUPeerJoins.Load())
 	S3Operations.write(w)
 	WebhookDropped.write(w)
+	PushDeliveries.write(w)
 }
 
 func writeCounter(w io.Writer, name, help string, v uint64) {

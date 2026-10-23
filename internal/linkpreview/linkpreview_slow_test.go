@@ -1,0 +1,184 @@
+package linkpreview
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"sync/atomic"
+	"testing"
+	"time"
+)
+
+// A host that holds the connection past the fetch deadline costs one deadline,
+// not one per request: it is not fetched again for a while, and other hosts
+// keep their fetch slots.
+func TestSlowHostIsNotFetchedAgain(t *testing.T) {
+	old := fetchTimeout
+	fetchTimeout = 150 * time.Millisecond
+	defer func() { fetchTimeout = old }()
+
+	var hits atomic.Int32
+	release := make(chan struct{})
+	defer close(release)
+	slow := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		select {
+		case <-release:
+		case <-r.Context().Done():
+		}
+	}))
+	defer slow.Close()
+	fast := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte(`<title>fast</title>`))
+	}))
+	defer fast.Close()
+	f := New()
+	f.allowPrivate = true
+
+	if _, err := f.Preview(context.Background(), slow.URL+"/a"); err == nil || errors.Is(err, errSlowHost) {
+		t.Fatalf("first fetch: %v, want a timeout", err)
+	}
+	start := time.Now()
+	if _, err := f.Preview(context.Background(), slow.URL+"/b"); !errors.Is(err, errSlowHost) {
+		t.Fatalf("second fetch: %v, want errSlowHost", err)
+	}
+	if time.Since(start) > fetchTimeout/2 || hits.Load() != 1 {
+		t.Fatalf("slow host was contacted again (hits %d, took %v)", hits.Load(), time.Since(start))
+	}
+	if _, err := f.Preview(context.Background(), strings.Replace(fast.URL, "127.0.0.1", "localhost", 1)); err != nil {
+		t.Fatalf("other host starved: %v", err)
+	}
+}
+
+func TestSlowHostEntryExpiresAndTableIsBounded(t *testing.T) {
+	var s slowHosts
+	s.noteTimeout("a.example", context.DeadlineExceeded)
+	s.noteTimeout("b.example", errors.New("connection refused"))
+	if !s.is("a.example") || s.is("b.example") {
+		t.Fatal("only a timeout marks a host")
+	}
+	s.mu.Lock()
+	s.m["a.example"] = time.Now().Add(-time.Second)
+	s.mu.Unlock()
+	if s.is("a.example") {
+		t.Fatal("entry must expire")
+	}
+	for i := 0; i < slowHostMax+10; i++ {
+		s.noteTimeout(strings.Repeat("h", i+1), context.DeadlineExceeded)
+	}
+	if len(s.m) > slowHostMax {
+		t.Fatalf("table grew to %d", len(s.m))
+	}
+}
+
+// A slow redirect target is marked, not the innocent host that redirects to it.
+func TestSlowRedirectTargetIsMarkedNotTheRedirector(t *testing.T) {
+	old := fetchTimeout
+	fetchTimeout = 150 * time.Millisecond
+	defer func() { fetchTimeout = old }()
+
+	release := make(chan struct{})
+	defer close(release)
+	slow := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-release:
+		case <-r.Context().Done():
+		}
+	}))
+	defer slow.Close()
+	// The slow target is reached as "localhost", the redirector as 127.0.0.1.
+	slowURL := strings.Replace(slow.URL, "127.0.0.1", "localhost", 1)
+	redirector := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/ok" {
+			w.Header().Set("Content-Type", "text/html")
+			_, _ = w.Write([]byte(`<title>fine</title>`))
+			return
+		}
+		http.Redirect(w, r, slowURL, http.StatusFound)
+	}))
+	defer redirector.Close()
+	f := New()
+	f.allowPrivate = true
+
+	if _, err := f.Preview(context.Background(), redirector.URL+"/go"); err == nil {
+		t.Fatal("expected the slow redirect target to fail")
+	}
+	if f.slow.is("127.0.0.1") {
+		t.Fatal("the redirecting host was marked slow")
+	}
+	if !f.slow.is("localhost") {
+		t.Fatal("the slow redirect target was not marked")
+	}
+	if _, err := f.Preview(context.Background(), redirector.URL+"/ok"); err != nil {
+		t.Fatalf("redirecting host no longer works: %v", err)
+	}
+}
+
+// A redirect to a host already marked slow fails at once, without dialling it.
+func TestRedirectToSlowHostIsRefusedWithoutDialling(t *testing.T) {
+	var hits atomic.Int32
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+	}))
+	defer target.Close()
+	targetURL := strings.Replace(target.URL, "127.0.0.1", "localhost", 1)
+	redirector := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, targetURL, http.StatusFound)
+	}))
+	defer redirector.Close()
+	f := New()
+	f.allowPrivate = true
+	f.slow.noteTimeout("localhost", context.DeadlineExceeded)
+
+	start := time.Now()
+	_, err := f.Preview(context.Background(), redirector.URL)
+	if !errors.Is(err, errSlowHost) {
+		t.Fatalf("got %v, want errSlowHost", err)
+	}
+	if hits.Load() != 0 || time.Since(start) > time.Second {
+		t.Fatalf("slow host was dialled (hits %d, took %v)", hits.Load(), time.Since(start))
+	}
+	if f.slow.is("127.0.0.1") {
+		t.Fatal("the redirecting host must not be marked")
+	}
+}
+
+// A host that drips for most of the deadline and then redirects does not get
+// the innocent target marked when the deadline runs out there: each host is
+// held to its own hop.
+func TestSlowRedirectorIsMarkedButTheTargetIsNot(t *testing.T) {
+	old := fetchTimeout
+	fetchTimeout = 400 * time.Millisecond
+	defer func() { fetchTimeout = old }()
+
+	release := make(chan struct{})
+	defer close(release)
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-release:
+		case <-r.Context().Done():
+		}
+	}))
+	defer target.Close()
+	targetURL := strings.Replace(target.URL, "127.0.0.1", "localhost", 1)
+	redirector := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(300 * time.Millisecond) // most of the deadline, then hand over
+		http.Redirect(w, r, targetURL, http.StatusFound)
+	}))
+	defer redirector.Close()
+	f := New()
+	f.allowPrivate = true
+
+	if _, err := f.Preview(context.Background(), redirector.URL); err == nil {
+		t.Fatal("expected the deadline to run out")
+	}
+	if !f.slow.is("127.0.0.1") {
+		t.Fatal("the dripping redirector was not marked")
+	}
+	if f.slow.is("localhost") {
+		t.Fatal("the innocent redirect target was marked for time the redirector used")
+	}
+}

@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/bot"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
@@ -157,5 +159,35 @@ func TestRevokeWhileResumingEndsTheSession(t *testing.T) {
 		if _, err := testutil.DB(t).Exec(context.Background(), `UPDATE bot_tokens SET revoked_at = NULL WHERE id = $1`, tok[1]); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+// An open connection ends within a sweep once the person who issued its token
+// no longer holds Manage bots.
+func TestTokenCheckClosesSessionsOfAnUnqualifiedMinter(t *testing.T) {
+	p := testutil.DB(t)
+	testutil.Reset(t, p)
+	ctx := context.Background()
+	var minter, botUser, botID, tokenID uuid.UUID
+	if err := p.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash, role) VALUES ('plain', 'p', 'x', 'user') RETURNING id`).Scan(&minter); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash, role, is_bot) VALUES ('bot-min', 'b', '!', 'user', TRUE) RETURNING id`).Scan(&botUser); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.QueryRow(ctx, `INSERT INTO bots (user_id, name) VALUES ($1, 'min') RETURNING id`, botUser).Scan(&botID); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.QueryRow(ctx, `INSERT INTO bot_tokens (bot_id, token_hash, hint, created_by) VALUES ($1, '\x02', 'abcd', $2) RETURNING id`, botID, minter).Scan(&tokenID); err != nil {
+		t.Fatal(err)
+	}
+	authn := bot.NewAuthenticator(p)
+	authn.Perms = perm.NewService(p)
+	g := New(Config{DB: p, Auth: authn})
+	s := &session{id: "m", botID: botID, userID: botUser, tokenID: tokenID, conn: newConnection(nil)}
+	g.register(s)
+	g.checkTokens(ctx)
+	if !s.conn.closed() || s.conn.closeCode != CloseAuthFailed {
+		t.Fatalf("a token of a minter without Manage bots kept its connection: %d", s.conn.closeCode)
 	}
 }

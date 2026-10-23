@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 type Event struct {
@@ -35,7 +36,7 @@ func (h *Hub) Broadcast(eventType string, payload any) {
 		return
 	}
 	h.tapped(uuid.Nil, eventType, payload)
-	if eventType == "user_update" {
+	if eventType == events.UserUpdate {
 		h.applyUserUpdate(payload)
 	}
 	h.mu.RLock()

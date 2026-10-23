@@ -5,6 +5,7 @@ declare global {
     __pcs: RTCPeerConnection[]
     __dfnWorkers: Array<{ ready: boolean; failed: boolean }>
     __dfnNodes: Array<{ node: AudioWorkletNode & { filterStats?: { processedFrames: number } }; failed: boolean }>
+    __micRequests: number
     __pip: { requests: number; exits: number }
     openStore: (fresh: string) => Promise<CryptoStateStore>
     store: CryptoStateStore

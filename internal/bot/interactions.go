@@ -16,6 +16,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/slash"
 )
 
 // Commands serves slash commands: the bot API to register them and answer
@@ -27,6 +28,9 @@ type Commands struct {
 	Online chat.OnlineSource
 	// Deliver sends interactions to bots; required.
 	Deliver Deliverer
+	// Builtins are the server's own commands (internal/slash), listed and run
+	// next to the bots'; nil means none.
+	Builtins *slash.Registry
 
 	store   *interactionStore
 	invokes *httpx.RateLimiter
@@ -60,12 +64,15 @@ type ChannelCommand struct {
 	Command
 	BotName      string `json:"bot_name"`
 	BotAvatarURL string `json:"bot_avatar_url,omitempty" binding:"optional"`
+	// Builtin marks a command the server runs itself (no bot): bot_name is
+	// empty, and running it answers 200 with the result instead of 202.
+	Builtin bool `json:"builtin,omitempty" binding:"optional"`
 }
 
 // listForChannel handles GET /api/channels/{channelID}/commands.
 //
 // @Summary List the slash commands of a channel
-// @Description The commands of bots that can view and send in the channel (through their roles and overwrites), not disabled by an admin, for the composer's autocomplete. Needs View channels.
+// @Description The server's built-in commands the caller may use in the channel (builtin: true, listed first), then the commands of bots that can view and send in the channel (through their roles and overwrites), not disabled by an admin, for the composer's autocomplete. Needs View channels.
 // @ID listChannelCommands
 // @Tags Commands
 // @Produce json
@@ -111,7 +118,10 @@ func (c *Commands) listForChannel(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return fmt.Errorf("list channel commands: %w", err)
 	}
-	out := []ChannelCommand{}
+	out := c.builtinsFor(snap, auth.UserFrom(r.Context()).Subject(), ch)
+	if out == nil {
+		out = []ChannelCommand{}
+	}
 	for _, f := range list {
 		if snap.Channel(perm.Subject{ID: f.BotUser}, ch).Has(perm.ViewChannel | perm.SendMessages) {
 			out = append(out, ChannelCommand{Command: f.Command, BotName: f.BotName, BotAvatarURL: auth.AvatarURL(f.Avatar)})
@@ -229,7 +239,7 @@ func (c *Commands) dispatchInteraction(id uuid.UUID, token string, ch uuid.UUID,
 // invoke handles POST /api/channels/{channelID}/interactions.
 //
 // @Summary Run a slash command
-// @Description Sends an interaction to the command's bot over the gateway; the bot answers with a message in the channel, or one only the caller sees (an ephemeral response, delivered as the interaction_response WebSocket event). Needs Send messages in the channel; the bot must still be able to view and send there. 409 when the bot is not connected. At most 20 a minute per member.
+// @Description A built-in command (builtin in the list) runs on the server and answers 200 with its result. Otherwise sends an interaction to the command's bot over the gateway; the bot answers with a message in the channel, or one only the caller sees (an ephemeral response, delivered as the interaction_response WebSocket event). Needs Send messages in the channel; the bot must still be able to view and send there. 409 when the bot is not connected. At most 20 a minute per member.
 // @ID invokeCommand
 // @Tags Commands
 // @Accept json
@@ -237,6 +247,7 @@ func (c *Commands) dispatchInteraction(id uuid.UUID, token string, ch uuid.UUID,
 // @Security cookieAuth
 // @Param channelID path string true "Channel ID." Format(uuid)
 // @Param body body InvokeRequest true "The command and its options."
+// @Success 200 {object} slash.Result "A built-in command ran; message_id is the message it posted, if any."
 // @Success 202 {object} Invoked "Delivered to the bot."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): unknown or ill-typed options."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
@@ -256,6 +267,9 @@ func (c *Commands) invoke(w http.ResponseWriter, r *http.Request) error {
 	var req InvokeRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
+	}
+	if b, ok := c.Builtins.Lookup(req.CommandID); ok {
+		return c.runBuiltin(w, r, b, snap, user, ch, req.Options)
 	}
 	cmd, botUser, err := c.resolveTargetCommand(r.Context(), snap, ch, req.CommandID)
 	if err != nil {

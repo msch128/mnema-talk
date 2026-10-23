@@ -4,16 +4,19 @@ import type { Locale } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
 // The ⋯ menu of the user bar: profile, audio, language, admin, legal, sign out.
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
-import { User, Sliders, Languages, ShieldCheck, HelpCircle, LogOut, ChevronRight, Activity, Monitor, MonitorOff } from '@lucide/vue'
+import { User, KeyRound, Sliders, Smartphone, Languages, ShieldCheck, HelpCircle, LogOut, ChevronRight, Activity, Monitor, MonitorOff } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
+import { useAccountStore } from '../stores/account'
 import { useToastStore } from '../stores/toast'
 import { useAppVersionStore } from '../stores/appVersion'
 import { usePermissionsStore } from '../stores/permissions'
 import { platform } from '../lib/platform'
+import { appSettingsOpen } from '../lib/appSettings'
 import { useWebRTC } from '../composables/useWebRTC'
 import { locale, SUPPORTED, t } from '../i18n'
+import { useCompactLayout } from '../composables/useCompactLayout'
 import UserAvatar from './UserAvatar.vue'
 
 const props = defineProps({ trigger: { type: Object as PropType<HTMLElement | null>, default: null } })
@@ -24,6 +27,7 @@ const permissions = usePermissionsStore()
 const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
 const toasts = useToastStore()
+const accountStore = useAccountStore()
 const versionStore = useAppVersionStore()
 // Set only in the trusted desktop client, which runs a bundle it verified.
 const verified = platform.trustedApp()
@@ -42,8 +46,12 @@ function close(returnFocus = true) {
   if (returnFocus) props.trigger?.focus()
 }
 
+const { closeNav } = useCompactLayout()
+
 function run(fn: () => void) {
   close()
+  // On a phone the drawer holding this menu makes way for what was chosen.
+  closeNav()
   fn()
 }
 
@@ -140,8 +148,14 @@ const item = 'flex min-h-8 w-full items-center gap-2.5 rounded-md px-2 py-1.5 te
     <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(openOwnProfile)">
       <User class="h-4 w-4 flex-shrink-0 text-mnema-tertiary" />{{ $t('account.editProfile') }}
     </button>
+    <button type="button" role="menuitem" tabindex="-1" :class="item" data-testid="menu-account-security" @click="run(() => accountStore.open())">
+      <KeyRound class="h-4 w-4 flex-shrink-0 text-mnema-tertiary" />{{ $t('security.menu') }}
+    </button>
     <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(() => { voiceStore.showAudioSettings = true })">
       <Sliders class="h-4 w-4 flex-shrink-0 text-mnema-tertiary" />{{ $t('account.audio') }}
+    </button>
+    <button v-if="!platform.isDesktop() && !platform.isTrustedDesktop()" type="button" role="menuitem" tabindex="-1" data-testid="account-app" :class="item" @click="run(() => { appSettingsOpen = true })">
+      <Smartphone class="h-4 w-4 flex-shrink-0 text-mnema-tertiary" />{{ $t('account.app') }}
     </button>
     <template v-if="voiceStore.isConnected">
       <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(() => { voiceStore.showStatsModal = true })">

@@ -33,7 +33,7 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
 <template>
   <div
     :class="[
-      'relative h-6 flex items-center gap-1 pr-1 rounded transition-colors motion-reduce:transition-none',
+      'relative h-6 max-md:h-11 flex items-center gap-1 pr-1 rounded transition-colors motion-reduce:transition-none',
       indicator === 'inside' && 'bg-mnema-accent/15 ring-1 ring-inset ring-mnema-accent',
       dragging && 'opacity-40',
       flash && 'nav-flash'
@@ -52,7 +52,7 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
 
     <button
       type="button"
-      class="flex-1 min-w-0 h-6 pl-0.5 flex items-center gap-0.5 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary hover:text-mnema-muted transition-colors focus:outline-none focus-visible:text-mnema-text focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent rounded"
+      class="flex-1 min-w-0 h-6 max-md:h-11 pl-0.5 flex items-center gap-0.5 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary hover:text-mnema-muted transition-colors focus:outline-none focus-visible:text-mnema-text focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent rounded"
       :aria-expanded="collapsed ? 'false' : 'true'"
       aria-haspopup="menu"
       :data-category-toggle="category.id"
@@ -83,7 +83,7 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
     </button>
     <div
       v-if="admin"
-      class="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover/cat:opacity-100 focus-within:opacity-100 transition"
+      class="max-md:hidden flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover/cat:opacity-100 focus-within:opacity-100 transition"
     >
       <button
         type="button"

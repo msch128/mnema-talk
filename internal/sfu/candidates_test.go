@@ -195,7 +195,7 @@ func TestEarlyClientCandidatesAreBounded(t *testing.T) {
 			t.Fatalf("candidate %d: %v", i, err)
 		}
 	}
-	if err := peer.AddRemoteCandidate(candidate(1)); err == nil {
+	if err := peer.AddRemoteCandidate(candidate(250)); err == nil {
 		t.Fatal("candidate over the bound accepted")
 	}
 	if got := logs.String(); !strings.Contains(got, "reason=\"too many candidates before the answer\"") {
@@ -361,9 +361,7 @@ func TestRemoteCandidateBudgetHoldsAfterTheAnswer(t *testing.T) {
 	if err := peer.SetAnswer(answer); err != nil {
 		t.Fatal(err)
 	}
-	peer.candMu.Lock()
-	peer.cands.accepted = maxRemoteCandidates - 1
-	peer.candMu.Unlock()
+	fillBudget(peer, maxRemoteCandidates-1)
 	if err := peer.AddRemoteCandidate(candidate(1)); err != nil {
 		t.Fatalf("last candidate of the budget: %v", err)
 	}

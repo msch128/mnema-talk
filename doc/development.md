@@ -53,8 +53,8 @@ make check             # everything CI runs: lint, tests, govulncheck, builds,
                        # npm audit, docker build
 make e2e               # Playwright (Chromium) against the real binary, see below
 make load-test         # voice/screen-share load test, see loadtest/README.md
-make upgrade-drill     # previous release image -> this build with seeded data
-make backup-drill      # backup -> change -> restore on a throwaway stack
+make upgrade-drill     # 0.8.16 and 0.9.0 images -> this build with seeded data (FROM_VERSIONS=0.9.0 for one)
+make backup-drill      # backup -> change -> restore on a throwaway stack (FROM_VERSION=0.9.0: back up on that release, restore into this build, check the downgrade refusal)
 make postgres-upgrade-drill # the one-time PostgreSQL 17 -> 18 move
 ```
 
@@ -64,8 +64,27 @@ make postgres-upgrade-drill # the one-time PostgreSQL 17 -> 18 move
 throwaway PostgreSQL and SeaweedFS with Docker on loopback ports, runs the
 Playwright specs in `e2e/tests/` with fake camera/microphone devices and tears
 everything down again. `SKIP_BUILD=1` reuses the last build,
-`E2E_INSTALL_BROWSER=1` installs Chromium first and `E2E_ONLY=<spec>` runs one
-file.
+`E2E_INSTALL_BROWSER=1` installs the browsers named in `E2E_BROWSERS` first
+(default `chromium`; also `webkit` and `firefox`) and `E2E_ONLY` is handed to
+`playwright test`, so `E2E_ONLY="smoke.spec.ts"` runs one file and
+`E2E_ONLY="--project=webkit"` another engine. Without it only the `chromium`
+project runs.
+
+The suite has three Playwright projects. **Chromium** is the required check and
+runs everything. **WebKit** (what Safari, iOS and installed iOS web apps use)
+runs the whole suite in CI as `e2e (webkit)`; **Firefox** runs a smoke subset
+(sign-in, chat, search, mentions, sealed Talk, key rotation, screen share) as
+`e2e (firefox)`. Neither is a required check yet. Engine differences the specs
+account for: Firefox has no context-level camera/microphone grants (its fake
+devices are set by preferences in `playwright.config.ts`); every WebKit context
+gets its own browser process, because WebKit mutes the microphone of all but one
+page of a process; Chrome DevTools Protocol specs (crashing a tab, synthetic
+touch) skip on the other engines.
+
+Two more projects emulate a phone: `mobile-chromium` (Pixel 7) and
+`mobile-webkit` (iPhone 15) run only `tests/mobile.spec.ts`, and the other
+projects skip that file. The required `e2e` check runs `chromium` and both phone
+projects.
 
 Runs do not collide, so several can go at once (other worktrees, agents):
 every run uses its own Docker Compose project (`mnema-e2e-<pid>`) and free
@@ -123,10 +142,10 @@ never retried.
 
 Releases are automated with [release-please](https://github.com/googleapis/release-please)
 (`.github/workflows/release.yml`) and driven by conventional commits
-(`feat:` = minor, `fix:` = patch, `feat!:` / `BREAKING CHANGE:` = major). Until
-1.0.0 the project stays on `0.x`: `feat:` and `fix:` bump the patch version and
-breaking changes bump the minor version. 1.0.0 is released deliberately with a
-`Release-As: 1.0.0` commit footer.
+(`feat:` = minor, `fix:` = patch, `feat!:` / `BREAKING CHANGE:` = major). From
+1.0.0 on, the public API listed in [api-stability.md](api-stability.md) only
+breaks in a major release: `make openapi-diff` fails a change that breaks
+`api/openapi.json` unless a commit carries a `BREAKING CHANGE:` footer.
 
 1. After CI passes on a push to `main`, release-please opens or updates a
    **release PR** that bumps `version.txt` and `CHANGELOG.md`. Only the CI run

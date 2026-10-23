@@ -20,13 +20,15 @@ export const THIRD_PARTY = [
       { name: 'JetBrains Mono', pkg: '@fontsource/jetbrains-mono', license: 'OFL-1.1', url: 'https://www.jetbrains.com/lp/mono/' },
       { name: 'emoji-picker-element', pkg: 'emoji-picker-element', license: 'Apache-2.0', url: 'https://github.com/nolanlawson/emoji-picker-element' },
       { name: 'emoji-picker-element-data (CLDR, Emojibase)', pkg: 'emoji-picker-element-data', license: 'Apache-2.0', url: 'https://github.com/nolanlawson/emoji-picker-element-data' },
+      { name: 'highlight.js (syntax highlighting of code blocks)', pkg: 'highlight.js', license: 'BSD-3-Clause', url: 'https://highlightjs.org' },
       { name: 'Swagger UI (API reference)', pkg: 'swagger-ui-dist', license: 'Apache-2.0', url: 'https://github.com/swagger-api/swagger-ui' },
       { name: 'Tailwind CSS', license: 'MIT', url: 'https://tailwindcss.com', note: 'generated' },
       { name: 'Tauri API (desktop client)', pkg: '@tauri-apps/api', license: 'MIT OR Apache-2.0', url: 'https://github.com/tauri-apps/tauri' },
       { name: 'ts-mls', pkg: 'ts-mls', license: 'MIT', url: 'https://github.com/LukaJCB/ts-mls' },
       { name: '@noble/ciphers', pkg: '@noble/ciphers', license: 'MIT', url: 'https://github.com/paulmillr/noble-ciphers' },
       { name: '@noble/hashes', pkg: '@noble/hashes', license: 'MIT', url: 'https://github.com/paulmillr/noble-hashes' },
-      { name: '@noble/curves', pkg: '@noble/curves', license: 'MIT', url: 'https://github.com/paulmillr/noble-curves' }
+      { name: '@noble/curves', pkg: '@noble/curves', license: 'MIT', url: 'https://github.com/paulmillr/noble-curves' },
+      { name: 'qrcode-generator (two-factor setup QR code)', pkg: 'qrcode-generator', license: 'MIT', url: 'https://github.com/kazuhikoarase/qrcode-generator' }
     ]
   },
   {
@@ -50,6 +52,7 @@ export const THIRD_PARTY = [
       { name: 'Gorilla WebSocket', license: 'BSD-2-Clause', url: 'https://github.com/gorilla/websocket' },
       { name: 'AWS SDK for Go v2', license: 'Apache-2.0', url: 'https://github.com/aws/aws-sdk-go-v2' },
       { name: 'golang-jwt', license: 'MIT', url: 'https://github.com/golang-jwt/jwt' },
+      { name: 'webpush-go (Web Push encryption and VAPID)', license: 'MIT', url: 'https://github.com/SherClockHolmes/webpush-go' },
       { name: 'google/uuid', license: 'BSD-3-Clause', url: 'https://github.com/google/uuid' },
       { name: 'godotenv', license: 'MIT', url: 'https://github.com/joho/godotenv' },
       { name: 'Go x/ libraries', license: 'BSD-3-Clause', url: 'https://pkg.go.dev/golang.org/x' },

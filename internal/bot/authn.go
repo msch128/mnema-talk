@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 const (
@@ -40,7 +41,10 @@ var errUnauthorized = httpx.ErrUnauthorized("401: Unauthorized")
 // per-bot rate limits. It reads only the Authorization header: cookies are
 // never looked at, so the routes behind it have nothing to forge.
 type Authenticator struct {
-	DB       *db.Pool
+	DB *db.Pool
+	// Perms re-checks on use that the person who issued a token may still
+	// act as its bot; nil skips the check (tests).
+	Perms    *perm.Service
 	failures *httpx.RateLimiter
 	global   *httpx.RateLimiter
 	sends    *httpx.RateLimiter
@@ -48,6 +52,7 @@ type Authenticator struct {
 
 	mu      sync.Mutex
 	touched map[uuid.UUID]time.Time
+	minters map[uuid.UUID]minterVerdict
 }
 
 // NewAuthenticator returns an Authenticator with its rate limiters.
@@ -85,16 +90,20 @@ func (a *Authenticator) Lookup(ctx context.Context, token string) (*Credentials,
 	var c Credentials
 	var userID uuid.UUID
 	var lastUsed *time.Time
+	var minter *uuid.UUID
 	err := a.DB.QueryRow(ctx, `
-		SELECT t.id, b.id, b.user_id, b.name, b.allowed_intents, t.last_used_at
+		SELECT t.id, b.id, b.user_id, b.name, b.allowed_intents, t.last_used_at, t.created_by
 		FROM bot_tokens t JOIN bots b ON b.id = t.bot_id JOIN users u ON u.id = b.user_id
 		WHERE t.token_hash = $1 AND t.revoked_at IS NULL AND (t.expires_at IS NULL OR t.expires_at > NOW()) AND NOT b.disabled
 		  AND `+auth.ActiveSQL("u"),
-		hash).Scan(&c.Bot.TokenID, &c.Bot.BotID, &userID, &c.Bot.Name, &c.Bot.Intents, &lastUsed)
+		hash).Scan(&c.Bot.TokenID, &c.Bot.BotID, &userID, &c.Bot.Name, &c.Bot.Intents, &lastUsed, &minter)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, errUnauthorized
 	}
 	if err != nil {
+		return nil, err
+	}
+	if err := a.CheckMinter(ctx, c.Bot.TokenID, minter, userID); err != nil {
 		return nil, err
 	}
 	// The account exists as long as the bot does (the foreign key cascades).
@@ -193,8 +202,9 @@ func (a *Authenticator) Middleware(next http.Handler) http.Handler {
 func (a *Authenticator) LimitSends(channelParam func(*http.Request) string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if b := auth.BotFrom(r.Context()); b != nil {
-				if allowed, retry := a.sends.Allow(b.BotID.String() + ":" + channelParam(r)); !allowed {
+			// A parameter that is no UUID is refused by the handler.
+			if b, ch := auth.BotFrom(r.Context()), channelParam(r); b != nil && ch != "" {
+				if allowed, retry := a.sends.Allow(b.BotID.String() + ":" + ch); !allowed {
 					httpx.WriteDiscordRateLimit(w, retry, false)
 					return
 				}

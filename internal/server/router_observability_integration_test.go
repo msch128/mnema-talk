@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
@@ -19,6 +20,7 @@ func TestRouterMetricsExposeRealPoolHubAndVoice(t *testing.T) {
 	}
 	defer voice.Close()
 	a := newAppWithDeps(t, false, func(cfg *config.Config) { cfg.MetricsToken = "fixture-metrics-token" }, func(deps *Deps) { deps.SFU = voice })
+	metrics.HTTPRequests.Reset()
 	a.anon().get("/api/health")
 	res := a.anon().do(http.MethodGet, "/api/metrics", nil, map[string]string{"Authorization": "Bearer fixture-metrics-token"})
 	if res.status != http.StatusOK {

@@ -200,7 +200,7 @@ func TestQualityAndWantedGoToOneMemberOfTheRoom(t *testing.T) {
 func TestServerInfoAnnouncesScreenLayers(t *testing.T) {
 	h, _ := newSFUHub(t)
 	c := testClient(h, auth.User{ID: uuid.New(), Username: "member"})
-	got := events(t, c, "server_info")
+	got := sentEvents(t, c, "server_info")
 	if len(got) != 1 {
 		t.Fatalf("expected 1 server_info event, got %d", len(got))
 	}
@@ -210,7 +210,7 @@ func TestServerInfoAnnouncesScreenLayers(t *testing.T) {
 
 	plain := NewHub(nil, nil, nil, nil)
 	d := testClient(plain, auth.User{ID: uuid.New(), Username: "member"})
-	got = events(t, d, "server_info")
+	got = sentEvents(t, d, "server_info")
 	if len(got) != 1 {
 		t.Fatalf("server_info without media: %+v", got)
 	}

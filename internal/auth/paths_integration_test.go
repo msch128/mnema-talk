@@ -47,10 +47,10 @@ func authFixture(t *testing.T) (*db.Pool, *User, *User) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CreateInvite(ctx, p, admin.ID, "member-invite", nil, nil); err != nil {
+	if _, err := CreateInvite(ctx, p, admin.ID, "member-invite-k7x2", nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	member, err := Register(ctx, p, "member", "", testPassword, "member-invite")
+	member, err := Register(ctx, p, "member", "", testPassword, "member-invite-k7x2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,23 +127,23 @@ func TestAuthDatabaseCancellationPropagates(t *testing.T) {
 		{"seed admin lookup", "SELECT EXISTS (SELECT 1 FROM users WHERE role = 'admin')", func(p *db.Pool) error { return EnsureAdminUser(ctx, p, "Herzog", testPassword, true) }},
 		{"login", "FROM users WHERE LOWER(username)", func(p *db.Pool) error { _, _, e := Login(ctx, p, member.Username, testPassword); return e }},
 		{"register invite precheck", "SELECT EXISTS (SELECT 1 FROM invites", func(p *db.Pool) error {
-			_, e := Register(ctx, p, "newmember", "", testPassword, "member-invite")
+			_, e := Register(ctx, p, "newmember", "", testPassword, "member-invite-k7x2")
 			return e
 		}},
 		{"register locked invite lookup", "FROM invites WHERE code = $1 FOR UPDATE", func(p *db.Pool) error {
-			_, e := Register(ctx, p, "newmember", "", testPassword, "member-invite")
+			_, e := Register(ctx, p, "newmember", "", testPassword, "member-invite-k7x2")
 			return e
 		}},
 		{"register username lookup", "SELECT EXISTS (SELECT 1 FROM users WHERE LOWER(username)", func(p *db.Pool) error {
-			_, e := Register(ctx, p, "newmember", "", testPassword, "member-invite")
+			_, e := Register(ctx, p, "newmember", "", testPassword, "member-invite-k7x2")
 			return e
 		}},
 		{"register insert", "INSERT INTO users (username, display_name, password_hash, role, invite_id)", func(p *db.Pool) error {
-			_, e := Register(ctx, p, "newmember", "", testPassword, "member-invite")
+			_, e := Register(ctx, p, "newmember", "", testPassword, "member-invite-k7x2")
 			return e
 		}},
 		{"register invite increment", "UPDATE invites SET uses_count", func(p *db.Pool) error {
-			_, e := Register(ctx, p, "newmember", "", testPassword, "member-invite")
+			_, e := Register(ctx, p, "newmember", "", testPassword, "member-invite-k7x2")
 			return e
 		}},
 		{"change password load", "SELECT password_hash FROM users", func(p *db.Pool) error {
@@ -152,7 +152,10 @@ func TestAuthDatabaseCancellationPropagates(t *testing.T) {
 		}},
 		{"password confirmation load", "SELECT password_hash FROM users", func(p *db.Pool) error { return CheckUserPassword(ctx, p, member.ID, testPassword) }},
 		{"list invitations", "FROM invites ORDER BY", func(p *db.Pool) error { _, e := ListInvites(ctx, p); return e }},
-		{"create invitation", "INSERT INTO invites", func(p *db.Pool) error { _, e := CreateInvite(ctx, p, admin.ID, "cancelled-invite", nil, nil); return e }},
+		{"create invitation", "INSERT INTO invites", func(p *db.Pool) error {
+			_, e := CreateInvite(ctx, p, admin.ID, "cancelled-invite-k7x2", nil, nil)
+			return e
+		}},
 		{"delete invitation", "DELETE FROM invites", func(p *db.Pool) error { return DeleteInvite(ctx, p, uuid.New()) }},
 		{"list admin users", "ORDER BY role = 'admin' DESC", func(p *db.Pool) error { _, e := ListUsersForAdmin(ctx, p); return e }},
 		{"reset password write", "UPDATE users SET password_hash", func(p *db.Pool) error { _, e := ResetPassword(ctx, p, member.ID); return e }},
@@ -280,7 +283,7 @@ func TestAuthNotFoundAndConflicts(t *testing.T) {
 	if _, err := Register(ctx, p, "newmember", "", testPassword, "unknown-code"); err != ErrInvalidInvite {
 		t.Fatalf("unknown invite = %v", err)
 	}
-	if _, err := Register(ctx, p, "MEMBER", "", testPassword, "member-invite"); err != ErrUsernameTaken {
+	if _, err := Register(ctx, p, "MEMBER", "", testPassword, "member-invite-k7x2"); err != ErrUsernameTaken {
 		t.Fatalf("case-insensitive conflict = %v", err)
 	}
 	if err := SetPassword(ctx, p, admin.ID, testPassword); err == nil {
@@ -296,7 +299,7 @@ func TestAuthRegistrationConcurrentChanges(t *testing.T) {
 		want        error
 	}{
 		{"invite removed after precheck", "FROM invites WHERE code = $1 FOR UPDATE", func(t *testing.T, p *db.Pool) {
-			if _, e := p.Exec(ctx, `DELETE FROM invites WHERE code='member-invite'`); e != nil {
+			if _, e := p.Exec(ctx, `DELETE FROM invites WHERE code='member-invite-k7x2'`); e != nil {
 				t.Fatal(e)
 			}
 		}, ErrInvalidInvite},
@@ -310,7 +313,7 @@ func TestAuthRegistrationConcurrentChanges(t *testing.T) {
 			p, _, _ := authFixture(t)
 			hook := &authQueryHook{match: tc.query, before: func() { tc.change(t, p) }}
 			fault := authHookPool(t, p, hook)
-			u, e := Register(ctx, fault, "newmember", "", testPassword, "member-invite")
+			u, e := Register(ctx, fault, "newmember", "", testPassword, "member-invite-k7x2")
 			if u != nil || e != tc.want {
 				t.Fatalf("register = %+v, %v want %v", u, e, tc.want)
 			}
@@ -477,7 +480,7 @@ func TestAuthHashEntropyFailuresPreserveAccounts(t *testing.T) {
 		call      func() error
 	}{
 		{"register", 0, func() error {
-			_, err := Register(ctx, p, "entropy-member", "", testPassword, "member-invite")
+			_, err := Register(ctx, p, "entropy-member", "", testPassword, "member-invite-k7x2")
 			return err
 		}},
 		{"change password", 0, func() error {

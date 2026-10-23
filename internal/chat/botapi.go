@@ -112,10 +112,12 @@ func (h *Handler) botGetMessage(w http.ResponseWriter, r *http.Request) error {
 type BotAllowedMentions struct {
 	// Parse lists the kinds of mentions that notify: "users" and "everyone"
 	// (@all and @here, which also need the Mention everyone permission).
-	// "roles" is accepted and ignored.
+	// "roles" lets @Role notify the role's members (the role must be
+	// mentionable, or the bot must hold Mention everyone).
 	Parse []string `json:"parse"`
 	// Users are user IDs (UUIDs) notified although "users" is not in Parse.
 	Users []string `json:"users"`
+	// Roles are role IDs (UUIDs) notified although "roles" is not in Parse.
 	Roles []string `json:"roles"`
 }
 
@@ -279,6 +281,12 @@ func botMentionPolicy(snap *perm.Snapshot, ch uuid.UUID, p perm.Set, am *BotAllo
 	}
 	applyAllowedMentions(&policy, am)
 	policy.NoEveryone = policy.NoEveryone || !p.Has(perm.MentionEveryone)
+	// Roles follow the bot's permissions like a member's and only notify when
+	// the request asked for them. An edit sends no allowed_mentions, so it
+	// never adds role mentions.
+	if am != nil {
+		policy.Roles = AllowedRoles(MentionableRoles(snap, p.Has(perm.MentionEveryone)), am.Parse, am.Roles)
+	}
 	return policy
 }
 

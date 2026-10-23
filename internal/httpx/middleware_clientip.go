@@ -135,6 +135,21 @@ func ClientIPKey(r *http.Request) string {
 	return IPKey(ClientIP(r))
 }
 
+// ClientAggregateKey is the coarser limiter key for budgets that must hold
+// against an attacker who owns a whole site allocation: IPv4 addresses as they
+// are, IPv6 addresses masked to their /48 (65536 /64 prefixes).
+func ClientAggregateKey(r *http.Request) string {
+	addr, err := netip.ParseAddr(strings.Trim(ClientIP(r), "[]"))
+	if err != nil {
+		return ClientIP(r)
+	}
+	addr = addr.Unmap()
+	if addr.Is4() {
+		return addr.String()
+	}
+	return netip.PrefixFrom(addr.WithZone(""), 48).Masked().String()
+}
+
 // IPKey normalizes ip for use as a limiter key (see ClientIPKey). Anything
 // that does not parse as an IP is returned unchanged.
 func IPKey(ip string) string {

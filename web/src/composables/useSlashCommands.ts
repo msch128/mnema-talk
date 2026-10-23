@@ -6,9 +6,9 @@ import { ref, computed, reactive } from 'vue'
 import type { Ref } from 'vue'
 import { api, isApiError, caughtErrorMessage } from '../lib/api'
 import { arrayDecoder } from '../types/validation'
-import { isBotChannelCommand, decodeBotInvoked } from '../types/rest'
+import { isBotChannelCommand, decodeBotInvoked, decodeSlashResult } from '../types/rest'
 import type { BotChannelCommand } from '../types/rest'
-import { slashQuery, filterCommands, emptyValues, buildOptions } from '../lib/slashCommands'
+import { slashQuery, filterCommands, emptyValues, buildOptions, hasForm } from '../lib/slashCommands'
 import type { OptionValues } from '../lib/slashCommands'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
@@ -70,7 +70,10 @@ async function invokeCommand(
     return false
   }
   try {
-    await api(`/api/channels/${id}/interactions`, { method: 'POST', json: { command_id: command.id, options: built.options }, decode: decodeBotInvoked })
+    const request = { method: 'POST', json: { command_id: command.id, options: built.options } }
+    // A built-in command answers with its result (200), a bot's command with the interaction it started (202).
+    if (command.builtin) await api(`/api/channels/${id}/interactions`, { ...request, decode: decodeSlashResult })
+    else await api(`/api/channels/${id}/interactions`, { ...request, decode: decodeBotInvoked })
     cancel()
     return true
   } catch (err) {
@@ -79,7 +82,11 @@ async function invokeCommand(
   }
 }
 
-export function useSlashCommands(model: Ref<string>, channelId: () => string | undefined) {
+/**
+ * @param openForm called for a built-in command that has a form of its own (see
+ *   COMMAND_FORMS) instead of the option bar, e.g. /poll opens the poll dialog.
+ */
+export function useSlashCommands(model: Ref<string>, channelId: () => string | undefined, openForm: (command: BotChannelCommand) => void = () => {}) {
   const toasts = useToastStore()
   const { commands, load } = useChannelCommands()
   const query = ref<string | null>(null)
@@ -112,10 +119,14 @@ export function useSlashCommands(model: Ref<string>, channelId: () => string | u
   function pick(command: BotChannelCommand | undefined) {
     if (!command) return
     cancel()
-    Object.assign(values, emptyValues(command))
-    picked.value = command
     model.value = ''
     query.value = null
+    if (hasForm(command)) {
+      openForm(command)
+      return
+    }
+    Object.assign(values, emptyValues(command))
+    picked.value = command
   }
 
   async function run() {

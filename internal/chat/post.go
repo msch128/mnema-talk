@@ -146,7 +146,7 @@ func PublishMessage(w http.ResponseWriter, r *http.Request, p *db.Pool, pub even
 	if err != nil {
 		return err
 	}
-	pub.BroadcastChannel(msg.ChannelID, "message_create", msg)
+	pub.BroadcastChannel(msg.ChannelID, events.MessageCreate, msg)
 	httpx.WriteJSON(w, http.StatusCreated, msg)
 	return nil
 }

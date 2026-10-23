@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"runtime"
 	"strings"
 	"time"
 
@@ -138,16 +137,6 @@ var passwordCost = bcryptCost
 // times do not reveal which accounts exist.
 var dummyHash = newDummyHash()
 
-// bcryptSlots bounds how many password hashes run at once across login,
-// register, reauth and password changes, so a flood of attempts cannot starve
-// the CPU of everything else.
-var bcryptSlots = make(chan struct{}, max(2, runtime.NumCPU()))
-
-func acquireBcrypt() func() {
-	bcryptSlots <- struct{}{}
-	return func() { <-bcryptSlots }
-}
-
 func newDummyHash() []byte {
 	h, err := bcrypt.GenerateFromPassword([]byte("mnema-talk-timing-equaliser"), passwordCost)
 	if err != nil {
@@ -156,28 +145,11 @@ func newDummyHash() []byte {
 	return h
 }
 
-// burnPasswordCheck spends the same bcrypt work as checking a real password.
-func burnPasswordCheck(password string) {
-	defer acquireBcrypt()()
-	_ = bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
-}
-
 // isUniqueViolation reports a unique-constraint violation (SQLSTATE 23505),
 // e.g. on the username or its case-insensitive index.
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
-}
-
-func HashPassword(password string) (string, error) {
-	defer acquireBcrypt()()
-	b, err := bcrypt.GenerateFromPassword([]byte(password), passwordCost)
-	return string(b), err
-}
-
-func CheckPassword(password, hash string) bool {
-	defer acquireBcrypt()()
-	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
 }
 
 // ValidatePassword enforces the password policy for regular accounts.
@@ -209,7 +181,7 @@ func ValidateUsername(username string) error {
 	if !usernamePattern.MatchString(username) {
 		return httpx.ErrInvalidInput("username must be 3-32 characters: letters, digits, '_', '.', '-'")
 	}
-	if reservedUsernames[strings.ToLower(username)] {
+	if reservedUsernames[strings.ToLower(username)] || strings.HasPrefix(strings.ToLower(username), deletedUsernamePrefix) {
 		return httpx.ErrInvalidInput("this username is reserved")
 	}
 	return nil
@@ -256,13 +228,19 @@ func Login(ctx context.Context, p *db.Pool, username, password string) (*User, i
 		`SELECT `+userColumns+`, password_hash, token_version, `+InactiveSQL("")+` FROM users WHERE LOWER(username) = LOWER($1) AND NOT is_bot`,
 		strings.TrimSpace(username)), &hash, &tv, &disabled)
 	if errors.Is(err, pgx.ErrNoRows) {
-		burnPasswordCheck(password)
+		if err := burnPasswordCheck(ctx, password); err != nil {
+			return nil, 0, err
+		}
 		return nil, 0, ErrInvalidCredentials
 	}
 	if err != nil {
 		return nil, 0, fmt.Errorf("login query: %w", err)
 	}
-	if !CheckPassword(password, hash) {
+	ok, err := checkPasswordCtx(ctx, password, hash)
+	if err != nil {
+		return nil, 0, err
+	}
+	if !ok {
 		return nil, 0, ErrInvalidCredentials
 	}
 	if disabled {

@@ -25,6 +25,7 @@ const (
 	ResSettings   Resource = "settings"
 	ResBot        Resource = "bot"
 	ResOnboarding Resource = "onboarding"
+	ResEmoji      Resource = "emoji"
 )
 
 // Route describes one mutating admin route.
@@ -58,6 +59,7 @@ var Routes = []Route{
 	{Method: "PUT", Pattern: "/users/{id}/status", Action: "user.status", TargetType: "user", IDParam: "id", Snapshot: ResUser},
 	{Method: "POST", Pattern: "/users/{id}/password", Action: "user.password_set", TargetType: "user", IDParam: "id", Snapshot: ResUser},
 	{Method: "POST", Pattern: "/users/{id}/password-reset", Action: "user.password_reset", TargetType: "user", IDParam: "id", Snapshot: ResUser},
+	{Method: "POST", Pattern: "/users/{id}/two-factor/reset", Action: "user.two_factor_reset", TargetType: "user", IDParam: "id", Snapshot: ResUser},
 	{Method: "POST", Pattern: "/users/{id}/login-lockout/clear", Action: "user.lockout_clear", TargetType: "user", IDParam: "id", Snapshot: ResUser},
 	{Method: "POST", Pattern: "/users/{id}/kick", Action: "user.talk_kick", TargetType: "user", IDParam: "id", Snapshot: ResUser},
 	{Method: "POST", Pattern: "/users/{id}/timeout", Action: "moderation.timeout", TargetType: "user", IDParam: "id", Snapshot: ResUser},
@@ -109,12 +111,17 @@ var Routes = []Route{
 
 	{Method: "PUT", Pattern: "/onboarding", Action: "settings.onboarding", TargetType: "settings", Snapshot: ResOnboarding},
 
+	{Method: "POST", Pattern: "/emoji", Action: "emoji.create", TargetType: "emoji", NoBody: true},
+	{Method: "PATCH", Pattern: "/emoji/{id}", Action: "emoji.rename", TargetType: "emoji", IDParam: "id", Snapshot: ResEmoji},
+	{Method: "DELETE", Pattern: "/emoji/{id}", Action: "emoji.delete", TargetType: "emoji", IDParam: "id", Snapshot: ResEmoji},
+
 	{Method: "POST", Pattern: "/media/prune", Action: "media.prune", TargetType: "media"},
 	{Method: "POST", Pattern: "/media/orphans/cleanup", Action: "media.orphans_cleanup", TargetType: "media"},
 	{Method: "DELETE", Pattern: "/media/{id}", Action: "media.delete", TargetType: "media", IDParam: "id"},
 
 	{Method: "POST", Pattern: "/system/check", Skip: true},
 	{Method: "POST", Pattern: "/system/update", Action: "system.update", TargetType: "system"},
+	{Method: "POST", Pattern: "/system/mail/test", Action: "system.mail_test", TargetType: "system", NoBody: true},
 }
 
 // Match finds the route for a request below the admin prefix and its path

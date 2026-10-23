@@ -31,12 +31,14 @@ binary release.
 | [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (`@fontsource/jetbrains-mono`) | 5.3.0 | OFL-1.1 |
 | [emoji-picker-element](https://github.com/nolanlawson/emoji-picker-element) | 1.29.1 | Apache-2.0 |
 | [emoji-picker-element-data](https://github.com/nolanlawson/emoji-picker-element-data) (emoji names and keywords built from [Emojibase](https://emojibase.dev) data, MIT, and [Unicode CLDR](https://cldr.unicode.org) annotations, Unicode License v3) | 1.8.0 | Apache-2.0 |
+| [highlight.js](https://highlightjs.org) (syntax highlighting of code blocks in messages; core build with a fixed language list) | 11.11.1 | BSD-3-Clause |
 | [Swagger UI](https://github.com/swagger-api/swagger-ui) (`swagger-ui-dist`, only on the API reference page `/api/docs`; NOTICE: "swagger-ui, Copyright 2020-2021 SmartBear Software Inc.") | 5.33.2 | Apache-2.0 |
 | [Tailwind CSS](https://tailwindcss.com) (only the generated CSS is shipped) | 3.4.19 | MIT |
 | [ts-mls](https://github.com/LukaJCB/ts-mls) | 1.6.4 | MIT |
 | [@noble/ciphers](https://github.com/paulmillr/noble-ciphers) | 2.1.1 | MIT |
 | [@noble/hashes](https://github.com/paulmillr/noble-hashes) | 2.3.0 | MIT |
 | [@noble/curves](https://github.com/paulmillr/noble-curves) | 2.0.1 | MIT |
+| [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (draws the QR code of the two-factor setup in the browser) | 2.0.4 | MIT |
 
 `ts-mls@1.6.4` depends on `@hpke/core@1.9.0` (MIT). That package is not a direct dependency.
 
@@ -55,7 +57,7 @@ copies to `/licenses/swagger-ui/bundled-components.txt` (with Swagger UI's
 | [classnames](https://github.com/JedWatson/classnames), [deep-extend](https://github.com/unclechu/node-deep-extend), [buffer](https://github.com/feross/buffer), [safe-buffer](https://github.com/feross/safe-buffer), [fast-json-patch](https://github.com/Starcounter-Jack/JSON-Patch), [repeat-string](https://github.com/jonschlinkert/repeat-string) | MIT |
 | [ieee754](https://github.com/feross/ieee754) | BSD-3-Clause |
 
-The license texts of emoji-picker-element and emoji-picker-element-data are
+The license texts of highlight.js, emoji-picker-element and emoji-picker-element-data are
 shipped under `/licenses/` as well.
 
 ## AI noise suppression (shipped, runs in the browser)
@@ -76,6 +78,7 @@ modules are compiled into `mnema-talk`:
 
 | Module | Version | License |
 |---|---|---|
+| `github.com/SherClockHolmes/webpush-go` | v1.4.0 | MIT |
 | `github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream` | v1.7.20 | Apache-2.0 |
 | `github.com/aws/aws-sdk-go-v2/config` | v1.33.7 | Apache-2.0 |
 | `github.com/aws/aws-sdk-go-v2/credentials` | v1.20.7 | Apache-2.0 |
@@ -121,6 +124,7 @@ modules are compiled into `mnema-talk`:
 | `github.com/pion/webrtc/v4` | v4.2.23 | MIT |
 | `github.com/wlynxg/anet` | v0.0.5 | BSD-3-Clause |
 | `golang.org/x/crypto` | v0.57.0 | BSD-3-Clause |
+| `golang.org/x/image` | v0.47.0 | BSD-3-Clause |
 | `golang.org/x/net` | v0.60.0 | BSD-3-Clause |
 | `golang.org/x/sync` | v0.23.0 | BSD-3-Clause |
 | `golang.org/x/sys` | v0.48.0 | BSD-3-Clause |

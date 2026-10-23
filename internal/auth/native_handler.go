@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -61,6 +60,8 @@ func (h *NativeHandler) Handler() http.Handler {
 	})
 	// Exactly the same IP budget as browser login, counted once per request.
 	r.With(h.accounts.loginPerIP.PerIP).Post("/auth/login", httpx.Handle(h.login))
+	// The second step of an account with two-factor sign-in, same IP budget.
+	r.With(h.accounts.loginPerIP.PerIP).Post("/auth/login/2fa", httpx.Handle(h.login2fa))
 	// A separate budget avoids legitimate refreshes exhausting login attempts.
 	// An IP-exhausted replay is not processed; admitted replay handling in the
 	// service still precedes the per-family refresh-success throttle.
@@ -250,48 +251,6 @@ func nativeHandlerError(err error) error {
 		return err
 	}
 	return nativeStoreFailure(err)
-}
-
-func nativeLoginFields(fields map[string]string) (uuid.UUID, error) {
-	if len(fields["username"]) > 64 || len(fields["password"]) > MaxPasswordBytes {
-		return uuid.Nil, httpx.ErrInvalidInput("invalid native credential fields")
-	}
-	instanceID, err := uuid.Parse(fields["client_instance_id"])
-	if err != nil || instanceID == uuid.Nil {
-		return uuid.Nil, httpx.ErrInvalidInput("invalid native client instance")
-	}
-	if instanceID.String() != fields["client_instance_id"] {
-		return uuid.Nil, httpx.ErrInvalidInput("invalid native client instance")
-	}
-	return instanceID, nil
-}
-
-func (h *NativeHandler) login(w http.ResponseWriter, r *http.Request) error {
-	if err := noNativeAuthorization(r); err != nil {
-		return err
-	}
-	fields, err := decodeNativeStrings(w, r, "username", "password", "client_instance_id")
-	if err != nil {
-		return nativeHandlerError(err)
-	}
-	instanceID, err := nativeLoginFields(fields)
-	if err != nil {
-		return err
-	}
-	user, version, retry, err := h.accounts.verifyLogin(r, LoginRequest{Username: fields["username"], Password: fields["password"]})
-	if retry > 0 {
-		httpx.WriteRateLimited(w, retry)
-		return nil
-	}
-	if err != nil {
-		return nativeHandlerError(err)
-	}
-	grant, err := h.sessions.IssueVerified(r.Context(), verifiedNativeLogin{userID: user.ID, tokenVersion: version}, instanceID)
-	if err != nil {
-		return nativeHandlerError(err)
-	}
-	writeNativeGrant(w, grant)
-	return nil
 }
 
 func (h *NativeHandler) refresh(w http.ResponseWriter, r *http.Request) error {

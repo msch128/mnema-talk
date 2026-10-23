@@ -74,6 +74,8 @@ mnema-talk/
 │   ├── events/              # Event types / publishing to the hub
 │   ├── ws/                  # Real-time WebSocket hub (events, presence)
 │   ├── bot/                 # Bot accounts, tokens, bot API authentication, slash commands (doc/bots.md)
+│   ├── slash/               # Built-in slash commands: the registry and the Builtin interface (doc/bots.md)
+│   ├── poll/                # Polls and the /poll command
 │   ├── gateway/             # Bot gateway (Discord-style opcodes, intents, resume)
 │   ├── sfu/                 # Pion WebRTC SFU (audio/video/screenshare forwarding)
 │   ├── update/              # GitHub release check + client for the optional updater sidecar
@@ -90,15 +92,20 @@ mnema-talk/
 ├── scripts/git-hooks/       # pre-commit (gitleaks + gofmt); `make install-hooks`
 ├── scripts/smoke-image.sh   # Image smoke test on the production compose file (`make smoke`)
 ├── scripts/backup-drill.sh  # Backup -> restore drill on a throwaway stack (`make backup-drill`)
-├── scripts/upgrade-drill.sh # Previous release (GHCR) -> this build with seeded data (`make upgrade-drill`)
+├── scripts/upgrade-drill.sh # Each supported release (GHCR) -> this build with seeded data (`make upgrade-drill`); shares scripts/drill-common.sh, upgrade-drill-data.sh
 ├── scripts/upgrade-postgres.sh # One-time PostgreSQL 17 -> 18 move (0.4 -> 0.5)
 ├── scripts/postgres-upgrade-drill.sh # Drill for it (`make postgres-upgrade-drill`)
+├── scripts/fresh-install-check.sh # doc/deployment.md "Fresh install" in an empty directory with the built image (`make fresh-install`)
+├── scripts/check-doc-links.mjs # Relative links and anchors in README, SECURITY and doc/*.md (`make docs-check`)
+├── deploy/monitoring/mnema-alerts.yml # Example Prometheus alert rules; promtool in CI, metric names checked against /api/metrics
 ├── scripts/backup.sh, restore.sh # Backup and restore of database, media and configuration
 ├── scripts/web-bundle-check.sh # Signs web/dist with a throwaway key and verifies it (`make web-bundle-check`)
+├── scripts/security-floor.sh # Release step: raises the bundle security floor only on a `Security-Floor: raise` trailer
 ├── .github/workflows/
 │   ├── ci.yml               # CI: gitleaks, Go vet/fmt/tests, govulncheck, frontend, e2e,
 │   │                        # docker build + smoke test, backup/restore drill, trivy scan
 │   ├── image-scan.yml       # Weekly trivy scan of the released :latest image
+│   ├── trust-expiry.yml     # Weekly: fails when the desktop trust statement has under 60 days left
 │   └── release.yml          # CD after green CI on main: release-please + GHCR image push
 ├── release-please-config.json, .release-please-manifest.json, version.txt, CHANGELOG.md
 │                            # Managed by release-please; don't edit version/changelog by hand
@@ -135,13 +142,13 @@ mnema-talk/
    New or removed shipped dependencies (Go modules in the binary, web `dependencies`, vendored code in `web/src/third_party/`) go into `THIRD_PARTY_NOTICES.md` and the in-app list `web/src/lib/thirdParty.ts`.
 8. **Never rewrite `main`**: no force push, no history rewrite, no moving or deleting release tags (a ruleset blocks it). release-please finds the last release by its tag commit in `main`'s history; once that commit is gone it re-releases old versions. Rebase your own unpushed commits onto `origin/main` instead.
 9. **Pull requests, CI and merging**: `main` is protected by a ruleset. Changes land only through a pull request (no approvals required) with the checks `secret-scan`, `backend`, `frontend`, `govulncheck`, `docker`, `e2e` and CodeQL `analyze (go)`, `analyze (javascript-typescript)`, `analyze (actions)` green; squash merge only. Agents may merge their own PRs once green. Release PRs are opened with `GITHUB_TOKEN` and start no workflows, so `release.yml` reports the tested CI run's result as commit statuses on the release commit (after checking that it only touches `version.txt`, `CHANGELOG.md` and the manifest and sits directly on the tested commit) and then merges it.
-10. **Structured commits**: release-please derives versions and the changelog from them (`feat:` minor, `fix:` patch, `!`/`BREAKING CHANGE:` major). Use descriptive conventional commits:
+10. **Structured commits**: release-please derives versions and the changelog from them (`feat:` minor, `fix:` patch, `!`/`BREAKING CHANGE:` major; from 1.0.0 on there is no pre-major shift). The public API in `doc/api-stability.md` (REST per `api/openapi.json`, WebSocket events in `internal/events`, bot and webhook payloads, the desktop bridge, env vars, metric names) changes incompatibly only in a major release: deprecate in a minor first. `make openapi-diff` (CI `backend` job) fails a breaking OpenAPI change unless a commit carries a `BREAKING CHANGE:` footer. Event names are constants in `internal/events/types.go`, never string literals; adding one means updating `internal/events/testdata/events.golden.json` and `web/src/types/events.ts`. Use descriptive conventional commits:
    - `feat: add webrtc sfu audio track routing`
    - `fix: resolve websocket presence disconnect leak`
    - `docs: update deployment and caddy proxy guide`
 
 11. **Release checklist for security fixes** (the desktop client refuses bundles below `security_floor`, see `doc/desktop-trusted-client.md`):
-   - A fix for a vulnerability in anything the web bundle ships (markdown, media, auth, message rendering, crypto, `web/src/lib`) is committed as `fix(security): ...` or carries a `Security-Floor: raise` trailer in the PR body/commit message. `release.yml` then raises the bundle's `security_floor` to that release's version when it signs. Without the mark the floor stays where it was.
+   - A fix for a vulnerability in anything the web bundle ships (markdown, media, auth, message rendering, crypto, `web/src/lib`) is committed as `fix(security): ...` **and** carries a `Security-Floor: raise` trailer as the last paragraph of the PR body/commit message (a real git trailer; the subject alone does nothing). `release.yml` (`scripts/security-floor.sh`) then raises the bundle's `security_floor` to that release's version when it signs. Without the trailer the floor stays where it was; a `security`-scoped subject without it only logs a warning.
    - `web/desktop-compat.json` holds the baseline floor (never above the version being released) and `min_server_version`; raise the floor by hand there only for a withdrawn release that is not covered by a marked commit.
    - Bumping `web_client_api` or `min_server_version` locks older servers out of desktop clients that have seen the new bundle (high-water mark): do it only when the web app really needs it.
 

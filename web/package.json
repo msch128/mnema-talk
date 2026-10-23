@@ -12,7 +12,7 @@
     "lint": "node scripts/lint.ts",
     "check": "npm run lint && npm run contracts:check && npm run typecheck && npm run test:coverage && npm run build",
     "typecheck": "npm run typecheck:source && vue-tsc --noEmit -p tsconfig.app.json && vue-tsc --noEmit -p tsconfig.tests.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.worklet.json",
-    "contracts:check": "node scripts/generate-contracts.ts --check",
+    "contracts:check": "node scripts/generate-contracts.ts --check && node scripts/check-event-registry.ts",
     "typecheck:source": "node scripts/check-typescript.ts --e2e",
     "typecheck:app": "node scripts/check-typescript.ts && vue-tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.worklet.json",
     "test:tooling": "node --test scripts/*.test.ts",
@@ -29,7 +29,9 @@
     "@tauri-apps/api": "2.12.3",
     "emoji-picker-element": "^1.29.1",
     "emoji-picker-element-data": "^1.8.0",
+    "highlight.js": "11.11.1",
     "pinia": "^4.1.0",
+    "qrcode-generator": "2.0.4",
     "swagger-ui-dist": "^5.33.2",
     "ts-mls": "1.6.4",
     "vue": "^3.5.44"

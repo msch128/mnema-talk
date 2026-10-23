@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/metrics"
 )
 
@@ -13,7 +14,8 @@ import (
 const maxMediaHandshakeBytes = 32 << 10
 
 // handleMediaHandshake relays an opaque handshake to the other connections in
-// the sender's current voice room. The bytes are not parsed or logged.
+// the sender's current voice room. The content is opaque to the server and
+// never logged; only the framing is checked (see wellFormedHandshake).
 func (c *Client) handleMediaHandshake(payload json.RawMessage) {
 	var body struct {
 		ChannelID uuid.UUID `json:"channel_id"`
@@ -29,13 +31,13 @@ func (c *Client) handleMediaHandshake(payload json.RawMessage) {
 		return
 	}
 	raw, err := base64.StdEncoding.DecodeString(body.Wire)
-	if err != nil || len(raw) == 0 || len(raw) > maxMediaHandshakeBytes {
+	if err != nil || len(raw) > maxMediaHandshakeBytes || !wellFormedHandshake(raw) {
 		metrics.MLSHandshakes.With("rejected").Inc()
 		return
 	}
 	metrics.MLSHandshakes.With("relayed").Inc()
 	metrics.MLSHandshakeBytes.Add(uint64(len(raw)))
-	c.hub.sendToVoiceRoomExcept(c, *cur, "media_handshake", map[string]any{
+	c.hub.sendToVoiceRoomExcept(c, *cur, events.MediaHandshake, map[string]any{
 		"channel_id": *cur,
 		"user_id":    c.User.ID,
 		"wire":       body.Wire,

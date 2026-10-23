@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -210,7 +211,7 @@ func (h *Handler) editMessageWith(w http.ResponseWriter, r *http.Request, ctxFor
 	if err != nil {
 		return err
 	}
-	h.Events.BroadcastChannel(msg.ChannelID, "message_update", msg)
+	h.Events.BroadcastChannel(msg.ChannelID, events.MessageUpdate, msg)
 	httpx.WriteJSON(w, http.StatusOK, msg)
 	return nil
 }
@@ -260,7 +261,7 @@ func (h *Handler) deleteMessage(w http.ResponseWriter, r *http.Request) error {
 	h.auditDelete(r.Context(), user, msgID, snap, reason)
 	h.tellAuthor(snap, user, reason)
 	h.deleteObjects(r.Context(), keys)
-	h.Events.BroadcastChannel(ref.ChannelID, "message_delete", map[string]any{"id": msgID, "channel_id": ref.ChannelID, "parent_id": ref.ParentID})
+	h.Events.BroadcastChannel(ref.ChannelID, events.MessageDelete, map[string]any{"id": msgID, "channel_id": ref.ChannelID, "parent_id": ref.ParentID})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

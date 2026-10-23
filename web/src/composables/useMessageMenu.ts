@@ -6,8 +6,9 @@ import type { ContextMenuItem } from '../components/menuTypes'
 import type { useMessageActions } from './useMessageActions'
 import {
   MessageSquare, Pencil, Trash2, SmilePlus, Reply,
-  Link as LinkIcon, Copy, Bookmark, Pin, PinOff, Eraser
+  Link as LinkIcon, Copy, Bookmark, Pin, PinOff, Eraser, History
 } from '@lucide/vue'
+import { openEditHistory } from '../lib/editHistory'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
@@ -52,7 +53,7 @@ function basicItems(msg: Message, { actions, reply, copy }: MenuDeps): ContextMe
     { label: t('chat.addReaction'), icon: SmilePlus, action: () => { actions.pickerId.value = msg.id } },
     { label: t('chat.openThread'), icon: MessageSquare, action: () => chatStore.openThread(msg) }
   ]
-  if (actions.isOwn(msg)) {
+  if (actions.isOwn(msg) && !msg.poll) {
     items.push({ label: t('chat.edit'), icon: Pencil, shortcut: 'e', action: () => actions.startEdit(msg) })
   }
   items.push({ type: 'separator' })
@@ -86,6 +87,15 @@ function pinItem(msg: Message, channelId: string): ContextMenuItem {
   }
 }
 
+/** The earlier versions of an edited message; the server shows them only to moderators. */
+function historyItem(msg: Message, channelId: string): ContextMenuItem {
+  return {
+    label: t('editHistory.menu'),
+    icon: History,
+    action: () => openEditHistory({ channelId, messageId: msg.id, current: msg.content, editedAt: msg.updated_at })
+  }
+}
+
 /** Delete, and for a moderator deleting someone else's message, delete with a reason. */
 function deleteItems(msg: Message, channelId: string, moderator: boolean, actions: MessageActions): ContextMenuItem[] {
   if (!actions.canDelete(msg)) return []
@@ -116,6 +126,7 @@ function messageItems(msg: Message, deps: MenuDeps): ContextMenuItem[] {
   const channelId = useChatStore().activeChannel?.id ?? msg.channel_id
   const moderator = usePermissionsStore().canIn(channelId, 'manage_messages')
   if (moderator) items.push({ type: 'separator' }, pinItem(msg, channelId))
+  if (moderator && msg.is_edited) items.push(historyItem(msg, channelId))
   items.push(...deleteItems(msg, channelId, moderator, actions))
   if (canClearLatest(msg, moderator, actions)) {
     items.push({

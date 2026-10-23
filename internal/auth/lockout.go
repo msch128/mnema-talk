@@ -30,7 +30,8 @@ func (h *Handler) ClearLoginLockout(username string, userID uuid.UUID) {
 	suffix := "|" + account
 	h.loginFailures.Clear(func(k string) bool { return strings.HasSuffix(k, suffix) })
 	h.accountFailures.Clear(func(k string) bool { return k == account })
-	h.unknownDevice.Clear(func(k string) bool { return k == account })
+	h.unknownDevice.Clear(func(k string) bool { return strings.HasSuffix(k, suffix) })
+	h.unknownDeviceTotal.Clear(func(k string) bool { return k == account })
 	if userID != uuid.Nil {
 		id := userID.String()
 		h.passwordFails.Clear(func(k string) bool { return k == id })
@@ -44,6 +45,7 @@ func (h *Handler) ClearAllLoginLockouts() {
 	h.accountFailures.Clear(all)
 	h.passwordFails.Clear(all)
 	h.unknownDevice.Clear(all)
+	h.unknownDeviceTotal.Clear(all)
 	h.loginPerIP.Clear(all)
 }
 

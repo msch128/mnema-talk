@@ -12,20 +12,29 @@ import (
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/msch128/mnema-talk/internal/emoji"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/gateway"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/linkpreview"
+	"github.com/msch128/mnema-talk/internal/mailer"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/onboarding"
 	"github.com/msch128/mnema-talk/internal/opwarn"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/poll"
+	"github.com/msch128/mnema-talk/internal/push"
 	"github.com/msch128/mnema-talk/internal/roles"
+	"github.com/msch128/mnema-talk/internal/slash"
 	"github.com/msch128/mnema-talk/internal/ssrf"
 	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/msch128/mnema-talk/internal/webhook"
 	"github.com/msch128/mnema-talk/internal/ws"
 )
+
+// The hub ties each WebSocket to its session through this; without it a
+// sign-out of one session would not end that session's sockets.
+var _ ws.SessionClaimer = (*auth.Sessions)(nil)
 
 // components are the handlers and background workers NewRouter assembles
 // before it mounts their routes. The new* methods fill it in stages; a later
@@ -46,15 +55,20 @@ type components struct {
 	rolesH   *roles.Handler
 	onboardH *onboarding.Handler
 	mediaH   *media.Handler
+	emojiH   *emoji.Handler
 
 	outgoing *webhook.Dispatcher
 	webhookH *webhook.Handler
 
+	pushH *push.Handler
+
 	botH     *bot.Handler
 	botAuthn *bot.Authenticator
 	cmds     *bot.Commands
+	pollSvc  *poll.Service
 	gw       *gateway.Gateway
 
+	mail    *mailer.Mailer // nil: SMTP not configured
 	systemH *systemHandler
 	opsSrc  *opsSource
 
@@ -96,13 +110,22 @@ func (c *components) newCore() {
 	go c.authH.RunBanExpiry(c.ctx, time.Minute)
 	// `mnema-talk unlock` runs in another process and queues requests here.
 	go c.authH.RunUnlockWorker(c.ctx, auth.UnlockPollInterval)
+	if d.Store != nil {
+		c.authH.Objects = d.Store
+		go c.authH.RunExportSweep(c.ctx, 0)
+	}
 	go chat.RunSlowModePrune(c.ctx, d.DB, time.Hour)
-	c.chatH = &chat.Handler{DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog}
+	c.chatH = &chat.Handler{
+		DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog,
+		EditHistoryLimit: httpx.NewRateLimiter(chat.EditHistoryRate, time.Minute).Named("edit_history"),
+	}
+	go chat.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour)
 	c.rolesH = &roles.Handler{Perms: c.permSvc, Events: c.pub}
 	c.onboardH = onboarding.NewHandler(d.DB, c.permSvc)
 	if d.Store != nil {
 		c.chatH.Objects = d.Store
 	}
+	c.emojiH = &emoji.Handler{DB: d.DB, Store: d.Store, Events: c.pub, Perms: c.permSvc, Max: cfg.EmojiMax}
 	c.mediaH = &media.Handler{
 		DB:             d.DB,
 		Store:          d.Store,
@@ -112,7 +135,28 @@ func (c *components) newCore() {
 		RetentionDays:  cfg.MediaRetentionDays,
 		Online:         hub,
 		Perms:          c.permSvc,
+		Quota: media.Quota{
+			PerUserBytes: int64(cfg.UploadQuotaMBPerDay) << 20,
+			TotalBytes:   int64(cfg.MediaMaxTotalMB) << 20,
+			MinFreeBytes: int64(cfg.MediaMinFreeMB) << 20,
+			DiskPath:     cfg.MediaDiskPath,
+		},
 	}
+}
+
+// newMail builds the SMTP client when configured and hands it to the account
+// flows that need it. Without SMTP_HOST both stay nil and those flows are off.
+func (c *components) newMail() error {
+	m, err := mailer.New(c.cfg.SMTP)
+	if err != nil {
+		return err
+	}
+	c.authH.PublicURL = c.cfg.PublicURL
+	if m != nil {
+		c.mail = m
+		c.authH.Mail = m
+	}
+	return nil
 }
 
 // newWebhooks builds the incoming webhook handler and the outgoing
@@ -134,7 +178,9 @@ func (c *components) newBots() {
 	d, hub := c.d, c.hub
 	c.botH = &bot.Handler{DB: d.DB, Perms: c.permSvc, Media: c.mediaH, Events: c.pub}
 	c.botAuthn = bot.NewAuthenticator(d.DB)
-	c.cmds = bot.NewCommands(bot.Commands{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub})
+	c.botAuthn.Perms = c.permSvc
+	c.pollSvc = poll.NewService(poll.Service{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub})
+	c.cmds = bot.NewCommands(bot.Commands{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Builtins: builtinCommands(c.pollSvc)})
 	gw := gateway.New(gateway.Config{Auth: c.botAuthn, Perms: c.permSvc, DB: d.DB, PublicURL: c.cfg.PublicURL})
 	c.gw = gw
 	c.botH.OnRevoke = gw.Revoke
@@ -161,6 +207,40 @@ func (c *components) newBots() {
 	}
 }
 
+// newPush builds Web Push: the key pair, the sender, the handler for the
+// devices API and, when push is on, the delivery service that taps the hub's
+// events. Requests go only to push services, through the SSRF-guarded client
+// that allows public addresses alone.
+func (c *components) newPush() error {
+	cfg := c.cfg
+	h := push.Handler{DB: c.d.DB, Sessions: c.sessions, Enabled: cfg.PushEnabled, PreviewsAllowed: cfg.PushPreviews == "user"}
+	if cfg.PushEnabled {
+		keys, err := push.LoadKeys(c.ctx, c.d.DB)
+		if err != nil {
+			return err
+		}
+		client := c.d.PushClient
+		if client == nil {
+			client = ssrf.NewClient(ssrf.NewDialer(&ssrf.Policy{}), 10*time.Second)
+		}
+		svc := &push.Service{
+			DB: c.d.DB, Perms: c.permSvc, Previews: h.PreviewsAllowed, Burst: c.d.PushBurst,
+			Sender: &push.Sender{Keys: keys, Subject: push.Subject(cfg.PushVAPIDSubject, cfg.PublicURL), HTTP: client},
+		}
+		prevTap := c.hub.Tap
+		c.hub.Tap = func(ch uuid.UUID, eventType string, payload any) {
+			if prevTap != nil {
+				prevTap(ch, eventType, payload)
+			}
+			svc.Observe(ch, eventType, payload)
+		}
+		go svc.Run(c.ctx)
+		h.Keys, h.Service = keys, svc
+	}
+	c.pushH = push.NewHandler(h)
+	return nil
+}
+
 // newSystem builds the admin System tab's handler, its ops sampler and, when
 // configured, the self-update client.
 func (c *components) newSystem() error {
@@ -175,6 +255,9 @@ func (c *components) newSystem() error {
 		version:  d.Version,
 		started:  time.Now(),
 		updates:  d.Updates,
+		mail:     c.mail,
+
+		testMailLimit: httpx.NewRateLimiter(5, 10*time.Minute).Named("test_mail"),
 	}
 	if h.version == "" {
 		h.version = "dev"
@@ -216,4 +299,16 @@ func (c *components) newLinkPreviews() {
 		go refreshPreviewDeny(c.ctx, denyRefresh, deny)
 	}
 	c.previewH = &linkpreview.Handler{Fetcher: fetcher}
+}
+
+// builtinCommands is the server's own slash commands, in menu order. Adding a
+// command means implementing slash.Builtin and listing it here.
+func builtinCommands(polls *poll.Service) *slash.Registry {
+	reg := slash.NewRegistry()
+	for _, b := range []slash.Builtin{poll.Command{Service: polls}} {
+		if err := reg.Add(b); err != nil {
+			panic(err) // a malformed built-in definition is a programming error
+		}
+	}
+	return reg
 }

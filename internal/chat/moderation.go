@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -25,8 +26,7 @@ const (
 )
 
 func (h *Handler) mountModeration(r chi.Router) {
-	r.Put("/channels/{channelID}/messages/{messageID}/pin", httpx.Handle(h.pinMessage))
-	r.Delete("/channels/{channelID}/messages/{messageID}/pin", httpx.Handle(h.unpinMessage))
+	h.mountPins(r)
 	r.Post("/channels/{channelID}/messages/bulk-delete", httpx.Handle(h.bulkDelete))
 }
 
@@ -49,91 +49,6 @@ func (h *Handler) asModerator(r *http.Request, channelID uuid.UUID, fn func(tx p
 		}
 		return fn(tx, snap)
 	})
-}
-
-// pinMessage handles PUT /api/channels/{channelID}/messages/{messageID}/pin.
-//
-// @Summary Pin a message
-// @Description Needs the Manage messages permission in the channel. Broadcasts message_update.
-// @ID pinMessage
-// @Tags Messages
-// @Produce json
-// @Security cookieAuth
-// @Param channelID path string true "Channel ID." Format(uuid)
-// @Param messageID path string true "Message ID." Format(uuid)
-// @Success 200 {object} Message "The message."
-// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
-// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
-// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
-// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
-// @Header 429 {integer} Retry-After "Seconds until the client may retry."
-// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
-// @Router /api/channels/{channelID}/messages/{messageID}/pin [put]
-func (h *Handler) pinMessage(w http.ResponseWriter, r *http.Request) error {
-	return h.setPinned(w, r, true)
-}
-
-// unpinMessage handles DELETE /api/channels/{channelID}/messages/{messageID}/pin.
-//
-// @Summary Unpin a message
-// @Description Needs the Manage messages permission in the channel. Broadcasts message_update.
-// @ID unpinMessage
-// @Tags Messages
-// @Produce json
-// @Security cookieAuth
-// @Param channelID path string true "Channel ID." Format(uuid)
-// @Param messageID path string true "Message ID." Format(uuid)
-// @Success 200 {object} Message "The message."
-// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
-// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
-// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
-// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
-// @Header 429 {integer} Retry-After "Seconds until the client may retry."
-// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
-// @Router /api/channels/{channelID}/messages/{messageID}/pin [delete]
-func (h *Handler) unpinMessage(w http.ResponseWriter, r *http.Request) error {
-	return h.setPinned(w, r, false)
-}
-
-func (h *Handler) setPinned(w http.ResponseWriter, r *http.Request, pinned bool) error {
-	chID, err := httpx.PathUUID(r, "channelID")
-	if err != nil {
-		return err
-	}
-	msgID, err := httpx.PathUUID(r, "messageID")
-	if err != nil {
-		return err
-	}
-	err = h.asModerator(r, chID, func(tx pgx.Tx, _ *perm.Snapshot) error {
-		tag, err := tx.Exec(r.Context(), `UPDATE messages SET is_pinned = $3 WHERE id = $1 AND channel_id = $2`, msgID, chID, pinned)
-		if err != nil {
-			return fmt.Errorf("pin message: %w", err)
-		}
-		if tag.RowsAffected() == 0 {
-			return errMessageNotFound
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	msg, err := GetMessage(r.Context(), h.DB, msgID)
-	if err != nil {
-		return err
-	}
-	action := "message.unpin"
-	if pinned {
-		action = "message.pin"
-	}
-	h.Audit.RecordOrLog(r.Context(), audit.Entry{
-		Action: action, TargetType: "message", TargetID: msgID.String(), ChannelID: &chID,
-		Details: map[string]any{"channel_id": chID, "author_id": msg.UserID, "author_name": msg.Username, "content": audit.Content(msg.Content)},
-	})
-	h.Events.BroadcastChannel(chID, "message_update", msg)
-	httpx.WriteJSON(w, http.StatusOK, msg)
-	return nil
 }
 
 // BulkDeleteRequest is the body of POST /api/channels/{channelID}/messages/bulk-delete.
@@ -259,7 +174,7 @@ type bulkDeleteReport struct {
 func (h *Handler) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) {
 	chID, req := rep.chID, rep.req
 	for _, m := range rep.gone {
-		h.Events.BroadcastChannel(chID, "message_delete", map[string]any{"id": m.id, "channel_id": chID, "parent_id": m.parentID})
+		h.Events.BroadcastChannel(chID, events.MessageDelete, map[string]any{"id": m.id, "channel_id": chID, "parent_id": m.parentID})
 		d := map[string]any{
 			"channel_id": chID, "channel_name": rep.channelName, "author_id": req.UserID, "author_name": rep.targetName,
 			"content": audit.Content(m.content), "attachments": m.attachments, "sent_at": m.createdAt,
@@ -275,7 +190,7 @@ func (h *Handler) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) 
 		Details: map[string]any{"channel_id": chID, "channel_name": rep.channelName, "requested": req.Count, "deleted": len(rep.gone), "reason": rep.reason},
 	})
 	if len(rep.gone) > 0 && req.UserID != rep.actor.ID && h.Events != nil {
-		h.Events.SendToUsers([]uuid.UUID{req.UserID}, "moderation_notice", map[string]any{
+		h.Events.SendToUsers([]uuid.UUID{req.UserID}, events.ModerationNotice, map[string]any{
 			"kind": "messages_deleted", "reason": rep.reason, "channel_name": rep.channelName, "count": len(rep.gone),
 		})
 	}

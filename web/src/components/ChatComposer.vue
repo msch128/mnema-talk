@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { Message } from '../types/domain'
+import type { DraftReply } from '../lib/drafts'
 import { ref } from 'vue'
-import { Plus, ArrowUp } from '@lucide/vue'
+import { Plus, ArrowUp, ChartNoAxesColumn } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import ReplyComposerBar from './ReplyComposerBar.vue'
 import EmojiButton from './EmojiButton.vue'
+import MarkdownHelp from './MarkdownHelp.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
 import SlashSuggestions from './SlashSuggestions.vue'
 import SlashCommandBar from './SlashCommandBar.vue'
+import PollDialog from './PollDialog.vue'
 import { useDraftModel } from '../composables/useDraftModel'
 import { useComposerAssist } from '../composables/useComposerAssist'
 import { useSlashCommands } from '../composables/useSlashCommands'
@@ -18,7 +20,7 @@ import { handleComposerKeydown } from '../composables/useComposerKeys'
 // attachments, emoji and the reply bar. Sending and uploading are the chat's.
 const props = defineProps({
   modelValue: { type: String, required: true },
-  replyingTo: { type: Object as PropType<Message | null>, default: null },
+  replyingTo: { type: Object as PropType<DraftReply | null>, default: null },
   canSend: { type: Boolean, default: false },
   canAttach: { type: Boolean, default: false },
   placeholder: { type: String, default: '' },
@@ -34,7 +36,8 @@ const text = useDraftModel(() => props.modelValue, value => emit('update:modelVa
 const fileInput = ref<HTMLInputElement | null>(null)
 const textAreaEl = ref<HTMLTextAreaElement | null>(null)
 const assist = useComposerAssist(textAreaEl, text)
-const slash = useSlashCommands(text, () => chatStore.activeChannel?.id)
+const pollOpen = ref(false)
+const slash = useSlashCommands(text, () => chatStore.activeChannel?.id, () => { pollOpen.value = true })
 defineExpose({ textArea: textAreaEl, focus: () => textAreaEl.value?.focus() })
 
 function handleComposerInput() {
@@ -47,7 +50,7 @@ function handleKeyDown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="px-4 pb-1 flex-shrink-0">
+  <div class="px-4 max-md:px-2 pb-1 flex-shrink-0">
     <SlashCommandBar
       v-if="slash.picked.value && canSend"
       :command="slash.picked.value"
@@ -60,7 +63,7 @@ function handleKeyDown(e: KeyboardEvent) {
     <ReplyComposerBar v-if="replyingTo" :target="replyingTo" @cancel="emit('cancel-reply')" />
     <div
       :class="[
-        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 flex items-center gap-2 shadow-sm focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
+        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 max-md:py-1 max-md:pr-1 flex items-center gap-1 sm:gap-2 shadow-sm focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
         replyingTo ? 'rounded-b-lg' : 'rounded-lg'
       ]"
     >
@@ -95,10 +98,24 @@ function handleKeyDown(e: KeyboardEvent) {
         v-if="canAttach"
         @click="fileInput?.click()"
         :disabled="uploading || sending"
-        class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition disabled:opacity-50"
+        class="w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition disabled:opacity-50"
         v-tooltip="$t('chat.upload')"
       >
         <Plus class="w-5 h-5" />
+      </button>
+
+      <!-- Poll Button -->
+      <button
+        v-if="canSend"
+        type="button"
+        data-testid="poll-button"
+        @click="pollOpen = true"
+        :disabled="sending"
+        class="w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition disabled:opacity-50"
+        v-tooltip="$t('poll.create')"
+        :aria-label="$t('poll.create')"
+      >
+        <ChartNoAxesColumn class="w-5 h-5" />
       </button>
 
       <!-- Text Input -->
@@ -122,18 +139,26 @@ function handleKeyDown(e: KeyboardEvent) {
         class="bg-transparent flex-1 min-w-0 resize-none outline-none text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
       ></textarea>
 
+      <MarkdownHelp class="max-md:hidden" :disabled="!canSend" />
+
       <EmojiButton :disabled="sending || !canSend" @pick="assist.insertText" />
 
       <!-- Send Button -->
       <button
         @click="emit('send')"
         :disabled="!canSend || !text.trim() || uploading || sending"
-        class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold transition disabled:opacity-20 disabled:bg-mnema-surface disabled:text-mnema-tertiary"
+        class="w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center flex-shrink-0 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold transition disabled:opacity-20 disabled:bg-mnema-surface disabled:text-mnema-tertiary"
         v-tooltip="$t('chat.send')"
       >
         <ArrowUp class="w-4 h-4" />
       </button>
     </div>
+
+    <PollDialog
+      v-if="pollOpen && chatStore.activeChannel"
+      :channel-id="chatStore.activeChannel.id"
+      @close="pollOpen = false; textAreaEl?.focus()"
+    />
 
     <!-- Who is typing (keeps its height so the layout doesn't jump) -->
     <div class="h-5 px-1 pt-0.5 text-xs text-mnema-tertiary truncate" role="status" aria-live="polite">

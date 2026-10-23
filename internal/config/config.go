@@ -35,7 +35,20 @@ type Config struct {
 	// AuditRetentionDays > 0 deletes audit log entries older than that many
 	// days; 0 (default) keeps them forever.
 	AuditRetentionDays int
-	MaxUploadMB        int
+	// EditHistoryRetentionDays > 0 deletes kept earlier versions of edited
+	// messages that were replaced longer ago; 0 (default) keeps them.
+	EditHistoryRetentionDays int
+	MaxUploadMB              int
+	// EmojiMax is how many custom emoji the instance holds (0: none can be added).
+	EmojiMax int
+	// UploadQuotaMBPerDay is what one account may upload in a rolling 24
+	// hours; 0 disables the budget. MediaMaxTotalMB caps all stored media
+	// (0 = no cap). MediaMinFreeMB pauses uploads while the filesystem at
+	// MediaDiskPath has less free space (needs MediaDiskPath).
+	UploadQuotaMBPerDay int
+	MediaMaxTotalMB     int
+	MediaMinFreeMB      int
+	MediaDiskPath       string
 	// TURN relay for clients behind restrictive NATs (coturn with
 	// use-auth-secret / static-auth-secret = WebRTCTURNSecret).
 	WebRTCTURNURLs   []string
@@ -51,6 +64,14 @@ type Config struct {
 	WebhookAllowPrivateTargets []netip.Prefix
 	// LinkPreviews lets the server fetch public web pages for link cards.
 	LinkPreviews bool
+	// PushEnabled turns Web Push on (PUSH_ENABLED, default true). PushPreviews
+	// is "user" (members choose whether a push carries the message text) or
+	// "off" (never). PushVAPIDSubject is the contact in the VAPID header: an
+	// https:// URL or a mailto: address; empty uses PUBLIC_URL when that is
+	// https.
+	PushEnabled      bool
+	PushPreviews     string
+	PushVAPIDSubject string
 	// APIDocs serves the API reference (/api/docs, /api/openapi.json) to
 	// signed-in members. Off by default.
 	APIDocs bool
@@ -79,6 +100,8 @@ type Config struct {
 	LegalOperatorEmail   string
 	LegalOperatorCountry string
 	LegalProjectNotice   string
+	// SMTP is the optional outgoing mail setup (SMTP_* variables).
+	SMTP SMTPConfig
 }
 
 func Load() (*Config, error) {
@@ -100,6 +123,18 @@ func (c *Config) WebRTCReachabilityWarning() string {
 		return ""
 	}
 	return "WEBRTC_NAT_1TO1_IP and WEBRTC_TURN_URLS are empty: browsers are told the container's own address, so voice and video will likely fail for members outside this host; set WEBRTC_NAT_1TO1_IP to the public (and LAN) address"
+}
+
+// InsecurePublicURLWarning explains the cost of a production-like deployment
+// whose PUBLIC_URL is not https://, or returns "". Session cookies then lose
+// Secure and the __Host- prefix while HSTS is still sent, so a network
+// attacker on a first plain-HTTP visit can read or overwrite them. It is a
+// warning, not a refusal: a LAN-only install over http stays possible.
+func (c *Config) InsecurePublicURLWarning() string {
+	if !c.IsProduction() || c.SecureCookies() {
+		return ""
+	}
+	return "PUBLIC_URL is not https://: session cookies are sent without the Secure flag and the __Host- prefix, so anyone on the network path can read or replace them; set PUBLIC_URL to the https:// URL users open (behind a TLS-terminating reverse proxy) unless this is a trusted LAN"
 }
 
 // IsProduction is the single definition of a production-like deployment:

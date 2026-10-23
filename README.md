@@ -41,7 +41,7 @@ webhooks and a call you can join with one click.
 
 ### Chat
 
-- Markdown, replies that jump to the original (also thousands of messages
+- Discord-style Markdown (headings, lists, quotes, links, code blocks with syntax highlighting), replies that jump to the original (also thousands of messages
   back), threads, reactions, emoji, @mentions, file and image attachments,
   link cards, search, typing notices, unread and mention markers,
   per-channel notification settings and presence with a status line.
@@ -195,13 +195,15 @@ The full model, its limits and how to report a vulnerability privately are in
 ## Desktop client
 
 The [Windows desktop client](https://github.com/msch128/mnema-talk-desktop)
-(experimental, unsigned) wraps the same web app. Instead of loading code from
+(**Beta**, unsigned) wraps the same web app. Instead of loading code from
 your server it runs a **signed bundle** that it verifies on every start, with
 rollback protection and a security floor, and keeps the session in the OS
 keychain. It adds a gaming sidepeek and an `Alt+M` overlay for your Talk. The
-browser app remains the primary, fully supported client. Details and the
-threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md)
-and [doc/desktop-app.md](doc/desktop-app.md).
+browser app remains the primary, fully supported client. The installers are
+not code-signed (no paid certificate), so Windows SmartScreen and macOS
+Gatekeeper warn on first start; the steps are in
+[doc/desktop-app.md](doc/desktop-app.md#installing-the-unsigned-beta). Details
+and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md).
 
 ## Documentation
 
@@ -215,6 +217,7 @@ and [doc/desktop-app.md](doc/desktop-app.md).
 | Moderation and the audit log | [doc/moderation.md](doc/moderation.md) |
 | Webhooks (incoming and outgoing) | [doc/webhooks.md](doc/webhooks.md) |
 | Bots, the bot API and gateway | [doc/bots.md](doc/bots.md) |
+| What is public API and how it may change (1.0 stability promise) | [doc/api-stability.md](doc/api-stability.md) |
 | Where media keys live in the browser | [SECURITY.md](SECURITY.md) |
 | Unused persistence foundation | [doc/crypto-state.md](doc/crypto-state.md) |
 | Trusted desktop client, gaming overlay | [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md), [doc/desktop-app.md](doc/desktop-app.md) |

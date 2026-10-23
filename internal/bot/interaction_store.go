@@ -21,6 +21,11 @@ const (
 	maxResponses = 5
 	// maxPending bounds the interactions kept in memory.
 	maxPending = 10000
+	// maxPendingPerBot and maxPendingPerInvoker keep one bot, or a few
+	// accounts, from taking the whole store: the rest of the members can
+	// still run the commands of other bots.
+	maxPendingPerBot     = 2000
+	maxPendingPerInvoker = 100
 	// invokesPerMinute bounds how often one member can run commands.
 	invokesPerMinute = 20
 	// flagEphemeral in a response's flags makes it visible to the invoker only.
@@ -71,18 +76,30 @@ func (s *interactionStore) add(id uuid.UUID, in *interaction) (token string, ok 
 	in.created = s.now()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if len(s.m) >= maxPending {
-		for k, v := range s.m {
-			if in.created.Sub(v.created) > interactionTTL {
-				delete(s.m, k)
-			}
-		}
-		if len(s.m) >= maxPending {
-			return "", false
-		}
+	if !s.hasRoom(in) {
+		return "", false
 	}
 	s.m[id] = in
 	return token, true
+}
+
+// hasRoom drops expired entries and reports whether in fits under the total
+// cap and the caps of its bot and its invoker.
+func (s *interactionStore) hasRoom(in *interaction) bool {
+	var byBot, byInvoker int
+	for k, v := range s.m {
+		if in.created.Sub(v.created) > interactionTTL {
+			delete(s.m, k)
+			continue
+		}
+		if v.botID == in.botID {
+			byBot++
+		}
+		if v.invoker == in.invoker {
+			byInvoker++
+		}
+	}
+	return len(s.m) < maxPending && byBot < maxPendingPerBot && byInvoker < maxPendingPerInvoker
 }
 
 var errUnknownInteraction = httpx.ErrNotFound("unknown interaction")

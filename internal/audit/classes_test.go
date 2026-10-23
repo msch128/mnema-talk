@@ -12,15 +12,18 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"voice.join":             VisChannel, "voice.leave": VisChannel,
 		"auth.login": VisPrivileged, "auth.login_failed": VisPrivileged, "auth.login_locked": VisPrivileged,
 		"auth.register": VisPrivileged, "auth.password_change": VisPrivileged, "auth.logout_all": VisPrivileged,
+		"auth.two_factor_enabled": VisPrivileged, "auth.two_factor_disabled": VisPrivileged, "auth.two_factor_failed": VisPrivileged, "auth.two_factor_alert": VisPrivileged,
+		"auth.recovery_code_used": VisPrivileged, "auth.account_delete": VisPrivileged, "auth.export_request": VisPrivileged, "auth.export_download": VisPrivileged, "auth.recovery_codes_regenerated": VisPrivileged, "user.two_factor_reset": VisPrivileged,
+		"auth.email_set": VisPrivileged, "auth.email_remove": VisPrivileged, "auth.email_verified": VisPrivileged, "auth.password_reset_mail": VisPrivileged,
 		// Admin routes.
 		"invite.create": VisAuditors, "invite.revoke": VisAuditors,
 		"user.disable": VisAuditors, "user.enable": VisAuditors, "user.sessions_revoke": VisAuditors,
 		"user.status": VisAuditors, "user.talk_kick": VisAuditors, "user.roles_set": VisAuditors,
 		"user.password_set": VisPrivileged, "user.password_reset": VisPrivileged, "user.lockout_clear": VisPrivileged,
 		"role.create": VisAuditors, "role.update": VisAuditors, "role.delete": VisAuditors, "role.reorder": VisAuditors,
-		"category.overwrites_set": VisAuditors,
+		"category.overwrites_set": VisPrivileged,
 		"channel.overwrites_set":  VisChannel, "channel.create": VisChannel, "channel.update": VisChannel, "channel.delete": VisChannel, "channel.duplicate": VisChannel,
-		"category.create": VisAuditors, "category.update": VisAuditors, "category.delete": VisAuditors, "layout.apply": VisAuditors,
+		"category.create": VisPrivileged, "category.update": VisPrivileged, "category.delete": VisPrivileged, "layout.apply": VisPrivileged,
 		"bot.create": VisPrivileged, "bot.update": VisPrivileged, "bot.delete": VisPrivileged, "bot.avatar": VisPrivileged, "bot.roles": VisPrivileged,
 		"bot.token_create": VisPrivileged, "bot.token_regenerate": VisPrivileged, "bot.token_revoke": VisPrivileged,
 		"bot.command_update": VisPrivileged, "bot.command_delete": VisPrivileged,
@@ -29,9 +32,10 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"outgoing_webhook.create": VisPrivileged, "outgoing_webhook.update": VisPrivileged,
 		"outgoing_webhook.rotate_secret": VisPrivileged, "outgoing_webhook.delete": VisPrivileged,
 		"media.prune": VisPrivileged, "media.orphans_cleanup": VisPrivileged, "media.delete": VisPrivileged,
-		"settings.upload_limit": VisPrivileged, "settings.onboarding": VisPrivileged, "system.update": VisPrivileged,
+		"settings.upload_limit": VisPrivileged, "settings.onboarding": VisPrivileged, "system.update": VisPrivileged, "system.mail_test": VisPrivileged,
 		"moderation.timeout": VisAuditors, "moderation.timeout_remove": VisAuditors, "moderation.ban": VisAuditors,
 		"moderation.unban": VisAuditors, "moderation.ban_expired": VisAuditors,
+		"emoji.create": VisAuditors, "emoji.rename": VisAuditors, "emoji.delete": VisAuditors,
 		"admin.post": VisPrivileged,
 	}
 	for _, rt := range Routes {
@@ -52,5 +56,25 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 	}
 	if matchLike("a.%", "a") || !matchLike("a.%", "a.b") || matchLike("exact", "exact2") || !matchLike("%", "x") {
 		t.Error("matchLike")
+	}
+}
+
+// An auditor without Administrator must not see categories: the filter hides
+// every pattern of the privileged class.
+func TestCategoryAndLayoutEntriesAreHiddenFromAuditors(t *testing.T) {
+	hidden := patterns(VisPrivileged)
+	for _, want := range []string{"category.%", "layout.apply"} {
+		found := false
+		for _, p := range hidden {
+			found = found || p == want
+		}
+		if !found {
+			t.Errorf("%s is not hidden from auditors: %v", want, hidden)
+		}
+	}
+	for _, a := range []string{"category.create", "category.overwrites_set", "layout.apply"} {
+		if ClassOf(a) != VisPrivileged {
+			t.Errorf("%s is %v", a, ClassOf(a))
+		}
 	}
 }

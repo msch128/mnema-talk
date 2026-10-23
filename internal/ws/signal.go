@@ -5,13 +5,14 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
 // announceMediaState tells all clients that userID started or stopped
 // a screen share or camera so they can show the LIVE indicator and offer to watch.
 func (h *Hub) announceMediaState(roomID, userID uuid.UUID, st sfu.MediaState) {
-	h.BroadcastChannel(roomID, "webrtc_media_state", mediaStatePayload(roomID, userID, st))
+	h.BroadcastChannel(roomID, events.WebrtcMediaState, mediaStatePayload(roomID, userID, st))
 }
 
 func mediaStatePayload(roomID, userID uuid.UUID, st sfu.MediaState) map[string]any {
@@ -21,7 +22,7 @@ func mediaStatePayload(roomID, userID uuid.UUID, st sfu.MediaState) map[string]a
 // announceScreenViewers tells the members of a voice room who watches
 // sharer's screen share. Like in Discord, only the room sees it.
 func (h *Hub) announceScreenViewers(roomID, sharer uuid.UUID, viewers []uuid.UUID) {
-	h.sendToVoiceRoom(roomID, "screen_viewers", screenViewersPayload(roomID, sharer, viewers))
+	h.sendToVoiceRoom(roomID, events.ScreenViewers, screenViewersPayload(roomID, sharer, viewers))
 }
 
 func screenViewersPayload(roomID, sharer uuid.UUID, viewers []uuid.UUID) map[string]any {

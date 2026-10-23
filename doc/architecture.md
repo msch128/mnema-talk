@@ -31,7 +31,8 @@ in PostgreSQL; uploads and avatars live in S3-compatible object storage
 | [`internal/httpx`](../internal/httpx/middleware.go) | Middleware: request IDs, security headers (CSP, HSTS in production), CORS, CSRF origin check, body limits, rate limits ([`ratelimit.go`](../internal/httpx/ratelimit.go)), client IP from trusted proxies ([`request.go`](../internal/httpx/request.go)), JSON errors. |
 | [`internal/auth`](../internal/auth/service.go) | Password hashing, signed session cookies with a per-user `token_version` (revocation), login lockout, invite codes, admin seeding, user administration, password re-authentication for sensitive actions ([`reauth.go`](../internal/auth/reauth.go)). |
 | [`internal/perm`](../internal/perm/perm.go), [`internal/roles`](../internal/roles/handler.go) | Roles and permissions: the permission bits, the in-memory `Snapshot` that resolves base, role and overwrite permissions (and the hierarchy rules), the cache with live invalidation, and the HTTP API for roles, member roles and channel overwrites. See [roles-and-permissions.md](roles-and-permissions.md). |
-| [`internal/chat`](../internal/chat/handler.go) | Categories, channels (text and voice), layout, messages, replies, threads, reactions, mentions, read state, notification settings, search, members. |
+| [`internal/chat`](../internal/chat/handler.go) | Categories, channels (text and voice), layout, messages, replies, threads, reactions, mentions (by name, `@all`/`@here` and `@Role`, with a fan-out cap) and the mentions inbox, read state, notification levels ([`notify.go`](../internal/chat/notify.go)), search ([`search.go`](../internal/chat/search.go)), members. |
+| [`internal/onboarding`](../internal/onboarding/handler.go) | The first-run side of the community: name, welcome text and rules, who accepted which rules version, dismissed tips and the public invite preview. |
 | [`internal/media`](../internal/media/handler.go) | Uploads with content sniffing and an allow-list ([`policy.go`](../internal/media/policy.go)), authenticated media serving through the app, admin storage stats and pruning, and the retention worker (off unless `MEDIA_RETENTION_DAYS > 0`). |
 | [`internal/s3`](../internal/s3/s3.go) | S3 client (AWS SDK v2); creates the bucket only when missing. |
 | [`internal/db`](../internal/db/db.go) | pgx pool and the embedded, numbered migrations in [`internal/db/migrations/`](../internal/db/migrations/). Each applied file's checksum is recorded in `schema_migrations`; an edited migration stops startup. |
@@ -39,6 +40,8 @@ in PostgreSQL; uploads and avatars live in S3-compatible object storage
 | [`internal/ws`](../internal/ws/hub.go) | WebSocket hub: one connection per browser session; chat events, presence and idle state, typing, voice rooms ([`voice.go`](../internal/ws/voice.go)), mute/deafen state, speaking indicators and WebRTC signaling for the SFU. |
 | [`internal/sfu`](../internal/sfu/sfu.go) | Pion WebRTC SFU: one room per voice channel, forwards RTP without transcoding; per-viewer subscriptions ([`subscriptions.go`](../internal/sfu/subscriptions.go)); announced addresses from `WEBRTC_NAT_1TO1_IP`, re-resolved every 5 minutes ([`announce.go`](../internal/sfu/announce.go)). |
 | [`internal/webhook`](../internal/webhook/), [`internal/ssrf`](../internal/ssrf/) | Webhooks: incoming URLs per channel in Discord's execute format (messages authored by a hidden bot account per webhook), outgoing signed events with a durable retry queue and delivery log, and the guard for outbound requests to member-chosen addresses (resolves names itself, refuses non-public addresses, connects to the vetted address). See [webhooks.md](webhooks.md). |
+| [`internal/slash`](../internal/slash/slash.go), [`internal/poll`](../internal/poll/service.go) | The built-in slash commands: a registry of server-side commands that share the composer menu and the invoke route with bot commands (adding one is a `slash.Builtin` and a line in the server wiring), and polls, the first of them. See [polls and built-in commands](bots.md#built-in-commands-and-polls). |
+| [`internal/audit`](../internal/audit/), [`internal/bot`](../internal/bot/), [`internal/gateway`](../internal/gateway/) | The audit log with per-entry visibility classes, bot accounts, tokens (bound to the member who issued them) and slash commands, and the Discord-style bot gateway. See [bots.md](bots.md) and [moderation.md](moderation.md). |
 | [`internal/metrics`](../internal/metrics/) | Process-wide counters (HTTP, realtime, SFU, storage, rate limits) rendered in the Prometheus text format without a client library; every labelled family has a series cap. Feeds `/api/metrics` and the live operator view in the admin System tab. See [operations.md](operations.md#monitoring-and-alerts). |
 | [`internal/webbundle`](../internal/webbundle/), [`cmd/webbundle`](../cmd/webbundle/) | Builds, signs (Ed25519) and verifies the web app bundle that the [trusted desktop client](desktop-trusted-client.md) runs instead of server-served JavaScript. |
 | [`internal/linkpreview`](../internal/linkpreview/linkpreview.go) | Link cards: fetches title, description and image of public pages with an SSRF guard (http(s) on 80/443 only, every resolved address checked, also on redirects) and a cache. |
@@ -60,6 +63,22 @@ in PostgreSQL; uploads and avatars live in S3-compatible object storage
    [chat store](../web/src/stores/chat.ts) inserts it, updates unread and
    mention counters and plays the notification according to the channel's
    notification setting.
+
+Unread state is derived, never fanned out per recipient. A member's read marker
+is one `channel_reads` row per channel (the time they have read up to, plus
+their notification setting); a send writes no marker for anyone. Unread and
+mention counts are computed on read from the marker and the indexed
+`(channel_id, created_at)` message order, so the cost of a send does not depend
+on the number of members. A marker is written only when the client reports a
+read: the web app sends at most one request per channel every two seconds
+(leading and trailing), and the server writes only if another member's message
+lies between the old marker and the new one (or the member has no marker yet),
+so a second tab, Esc on a read channel or a retry costs one index probe and no
+row. The "new since" divider is placed from the marker the client saw when it
+opened the channel; when the first unread message is older than the loaded page,
+`GET /api/channels/{id}/first-unread?since=...` (one indexed lookup) names it
+and the "Jump to first unread" pill loads the history around it. Numbers:
+[Capacity](#unread-tracking-with-10000-members).
 
 Every channel has a text chat, voice channels included (the chat panel under
 the Talk stage). Edits, deletes, reactions, typing and read state follow the
@@ -214,6 +233,72 @@ The code is [`web/src/lib/media/`](../web/src/lib/media/). Details and limits:
 [SECURITY.md](../SECURITY.md#security-model-summary).
 [`doc/crypto-state.md`](crypto-state.md) is an unused persistence foundation.
 
+## Notifications, search and onboarding (0.9)
+
+Three features that cut across the chat path. All of them are enforced on the
+server; the client only renders the result.
+
+**Notification levels.** A member sets `all`, `mentions` or `mute` per channel
+and per category, a mute optionally with an end time. The stored value
+`inherit` (the default) follows the category, then `all`; the level a client
+receives is always the effective one. Settings are rows in `channel_reads` and a
+category counterpart (migration 0035) and are changed through
+`PUT /api/channels/{id}/notifications` and `PUT /api/categories/{id}/notifications`.
+Levels only decide who is *notified*: unread state and the mentions inbox
+(`GET /api/mentions`) are independent, so a muted channel still shows what was
+addressed to the member.
+
+**Mentions.** A message stores one `message_mentions` row per notified member,
+with a `kind` (by name, `@all`/`@here`, through a role) and the mentioned roles
+in `message_role_mentions` (migration 0036), so a pill survives a role rename.
+Webhooks and bots mention roles too, subject to `allowed_mentions`. An author
+without the right to mention everyone notifies at most 50 members per message
+([`mentions_cap.go`](../internal/chat/mentions_cap.go)).
+
+**Search.** `GET /api/search` runs trigram-indexed substring matching on
+message text (`pg_trgm`, one index since migration 0038) with filters (channel,
+author, mentions, attachment kind, date window). Results are limited to the
+channels the caller can read, using the same permission snapshot as message
+listing; a query has a length and term cap, a database statement timeout and
+at most two searches in flight per member.
+
+**Onboarding and rules.** The Owner (or Administrators) writes a welcome text,
+rules and a start channel through `/api/admin/onboarding` (migration 0037).
+Publishing rules creates a rules version; a member who has not accepted the
+current one is pending. Enforcement is part of the permission resolver
+([`internal/perm`](../internal/perm/snapshot.go)): a pending member loses what
+a timeout takes (posting, reacting, uploading, joining a Talk) and receives
+`RULES_NOT_ACCEPTED`, in REST, the hub and the SFU alike. Empty rules enforce
+nothing, which is why an upgrade never locks anyone out; the Owner and bots are
+exempt. `GET /api/invites/{code}` (the one public read) serves the community
+name for the sign-up page; it is rate limited and refuses weak legacy codes.
+
+## The 1.0 contract
+
+From 1.0.0 the public surfaces are versioned with semantic versioning
+([api-stability.md](api-stability.md)): the REST API as `api/openapi.json`, the
+WebSocket event registry in [`internal/events`](../internal/events/types.go),
+bot and webhook payloads, the desktop bridge, environment variables and metric
+names. The contract is enforced mechanically, not by convention:
+
+- `make openapi-check` fails when `api/openapi.json` is stale and `make
+  openapi-diff` fails on an incompatible change against the latest release
+  tag, unless a commit carries a `BREAKING CHANGE:` footer.
+- Event names are constants in `internal/events`; a golden file
+  (`internal/events/testdata/events.golden.json`) and a comparison with
+  `web/src/types/events.ts` fail the build when the registry and the client
+  types drift.
+- The alert rules in [`deploy/monitoring/mnema-alerts.yml`](../deploy/monitoring/mnema-alerts.yml)
+  are checked with `promtool`, and an integration test fails when a rule names
+  a metric `/api/metrics` does not export.
+- Upgrade and restore drills install each supported release from GHCR, seed
+  data through its own API, move to the build under test and check the data;
+  a fresh-install check follows [deployment.md](deployment.md) on an empty
+  directory.
+
+The database schema, `internal/...` packages and the operator-only admin
+endpoints are not part of the contract.
+
 ## Capacity
 
 Measured on a 4-core home NAS with the default `APP_MEM_LIMIT=1g`: one browser
@@ -237,6 +322,33 @@ The measurements are reproducible with `make load-test` (see
 lightweight Pion viewers, with join/reload stall checks, optional packet loss
 and jitter, server heap and goroutine sampling, and thresholds that fail the
 run. It can also run against a remote instance.
+
+### Unread tracking with 10,000 members
+
+The integration tests in
+[`internal/server/unread_scale_integration_test.go`](../internal/server/unread_scale_integration_test.go)
+(`go test -tags=integration -run 'Unread|ReadMarkers|SendingAMessage|Mentioning' -v ./internal/server`)
+put 10,000 members into one community on PostgreSQL 18 and count what the
+database really writes (row versions stamped by the test's own window, not
+statistics). One run on an Apple M5 laptop, database in a local container,
+single run, so read the figures as orders of magnitude:
+
+| What | Result |
+| --- | --- |
+| Rows written by one message, 2 members vs 10,002 members | the same: 1 message row and 1 `users` row (the sender), 0 read markers |
+| Median `POST /messages` time, 2 vs 10,002 members | 3.2 ms vs 2.8 ms (no difference beyond noise) |
+| One message with `@all` to 10,001 members | 1 statement, 10,000 `message_mentions` rows, 185 ms (the only send that writes per recipient; needs the right to use `@all`) |
+| All 10,000 members read the channel (32 concurrent workers) | 10,000 marker rows, 1.0 s in total (about 0.1 ms each) |
+| The same 10,000 members read it again without news | 0 rows written, 0.28 s |
+| `GET /api/read-state` for one member, 600 unread in a 50,000-message channel | 45 ms (cold), index scan on `idx_messages_channel_roots` |
+| Same, 50,000 unread | 29 ms (warm) |
+| First-unread lookup in that channel | 0.04 ms, 6 buffers, index scan |
+
+No migration was needed: the existing indexes serve every query (the plan is
+printed by the test with `-v`). The remaining cost that grows with unread
+volume is the count in `GET /api/read-state`, linear in the unread messages of
+a member who has been away for a long time (about 30 to 45 ms for 50,000);
+it is paid once per page load or reconnect, not per message.
 
 ## Frontend structure (`web/src`)
 
@@ -276,7 +388,7 @@ run. It can also run against a remote instance.
   [system](../web/src/components/AdminSystemTab.vue)),
   [`UpdateBanner.vue`](../web/src/components/UpdateBanner.vue).
 - **Libraries** (`lib/`): pure, unit-tested logic such as
-  [`api.ts`](../web/src/lib/api.ts) (fetch wrapper), [`markdown.ts`](../web/src/lib/markdown.ts),
+  [`api.ts`](../web/src/lib/api.ts) (fetch wrapper), [`markdown.ts`](../web/src/lib/markdown.ts) (Discord-style Markdown: parser, renderer and the `registerTextRule` extension point in [`markdown/`](../web/src/lib/markdown)),
   [`channelLayout.ts`](../web/src/lib/channelLayout.ts),
   [`voiceSession.ts`](../web/src/lib/voiceSession.ts) (rejoin within 30 s),
   [`noiseSuppressor.ts`](../web/src/lib/noiseSuppressor.ts),

@@ -72,8 +72,17 @@ General rules:
 | Variable | Default | Meaning and validation |
 |---|---|---|
 | `MAX_UPLOAD_SIZE_MB` | `50` | The hard ceiling for a single upload, 1–2048, and the initial limit. The Owner can lower it in the System tab and per role (see [roles](roles-and-permissions.md#upload-size)), never raise it above this value. Your reverse proxy must allow at least this body size. |
+| `UPLOAD_QUOTA_MB_PER_DAY` | `2048` | What one account (member, bot or webhook) may upload in any rolling 24 hours; further uploads answer 429. Deleted files still count. `0` turns the budget off. |
+| `MEDIA_MAX_TOTAL_MB` | `0` | Pauses all uploads (503) once the stored media reaches this size. `0` = no cap. |
+| `MEDIA_MIN_FREE_MB` / `MEDIA_DISK_PATH` | `1024` / empty | Pauses uploads (503) while the filesystem at `MEDIA_DISK_PATH` has less than this much free. The app can only see disks it has mounted: with the bundled SeaweedFS container, mount its data volume read-only into the app and point `MEDIA_DISK_PATH` at it, or watch the volume from outside. Empty path = off. |
+| `EMOJI_MAX` | `200` | How many custom emoji the community may hold, 0-2000. `0` allows no new ones; existing ones keep working. Each is at most 256 KiB in object storage (`emoji/`). |
 | `MEDIA_RETENTION_DAYS` | `0` | `0` = never delete media automatically. A positive number deletes media older than that many days. Negative values are rejected. |
+| `EDIT_HISTORY_RETENTION_DAYS` | `0` | `0` = keep the earlier versions of edited messages (at most 50 per message; members with Manage messages can read them). A positive number deletes versions replaced longer ago than that many days. Negative values are rejected. |
+| `AUDIT_RETENTION_DAYS` | `0` | `0` = keep the audit log forever. A positive number deletes entries older than that many days (checked every six hours); see [moderation](moderation.md#immutability-and-retention). Negative values are rejected. |
 | `LINK_PREVIEWS_ENABLED` | `true` | The server fetches public pages for link cards (never private addresses); linked sites see the server's IP. |
+| `PUSH_ENABLED` | `true` | Web Push notifications for members' devices while Mnema Talk is closed ([Web Push](#web-push-and-the-installable-app)). `false` turns them off: no key, no subscriptions API, nothing sent. |
+| `PUSH_PREVIEWS` | `user` | `user`: each member chooses whether a push carries the start of the message (default on); `off`: pushes never carry message text. Any other value is rejected at startup. |
+| `PUSH_VAPID_SUBJECT` | empty | Contact in the VAPID header (RFC 8292): an `https://` URL or a `mailto:` address. Empty uses `PUBLIC_URL` when that is `https://`, else a placeholder address (fine for testing; browsers' push services accept it). |
 | `API_DOCS_ENABLED` | `false` | Swagger UI at `/api/docs` and `/api/openapi.json` for signed-in members. |
 
 ### Voice (WebRTC)
@@ -87,6 +96,29 @@ General rules:
 | `WEBRTC_TURN_URLS` | empty | Optional TURN URLs, e.g. `turn:turn.example.com:3478?transport=udp,turn:turn.example.com:3478?transport=tcp`. |
 | `WEBRTC_TURN_SECRET` | empty | Shared secret with coturn (`use-auth-secret`). At least 16 characters when `WEBRTC_TURN_URLS` is set; no placeholder in production. |
 | `WEBRTC_TURN_REALM` | compose: `turn.example.com` | Read by the coturn container only, not by the app. |
+
+### Outgoing e-mail
+
+Optional. Without `SMTP_HOST` the server sends no e-mail and nothing else
+changes. With it, members can confirm an e-mail address and reset a forgotten
+password by mail; the Owner sees the setup under Admin > System and can send a
+test mail there. The settings live in the environment only, never in the
+database or its backups.
+
+| Variable | Default | Meaning and validation |
+|---|---|---|
+| `SMTP_HOST` | empty | The mail server. Empty = no mail. |
+| `SMTP_PORT` | `587` (`465` with `SMTP_TLS=tls`) | Port of the mail server. |
+| `SMTP_TLS` | `starttls` | `starttls` (upgrade is required; the server refuses to send in the clear when it is not offered), `tls` (implicit TLS) or `none` (no encryption: refused in production and together with credentials). Certificates are verified. |
+| `SMTP_USERNAME`, `SMTP_PASSWORD` | empty | Sign-in to the mail server (PLAIN, only over TLS). Set both or neither. |
+| `SMTP_PASSWORD_FILE` | empty | Reads the password from this file (first line) instead of `SMTP_PASSWORD`; mount it into the container. Setting both is an error. |
+| `SMTP_FROM` | empty | Sender address, e.g. `Mnema Talk <noreply@example.org>`. Required with `SMTP_HOST`. |
+
+Check the setup with Admin > System > "Send test mail" (Owner, at most five per
+ten minutes, audited without the recipient). A failed test names the stage
+(`connect`, `tls`, `auth`, `sender`, `recipient`, `data`); server replies and
+credentials are never shown. The links in the mails point to `PUBLIC_URL`.
+Mails are plain text, in the member's language (German or English).
 
 ### Monitoring
 
@@ -196,8 +228,76 @@ untrusted hop). Rate limits and the login lockout depend on that address.
   `/24` or an IPv6 `/64` and the listener is not loopback. Other environments
   still log that warning.
 
+### `PUBLIC_URL` and Secure cookies
+
 `PUBLIC_URL` must be the `https://` URL users open; otherwise the CSRF origin
-check rejects their requests and cookies lose `Secure`.
+check rejects their requests and cookies lose `Secure`. With an `http://`
+`PUBLIC_URL` (including the `http://localhost:8080` default) the session cookie
+is also sent without the `__Host-` prefix, while HSTS is still sent in
+production, so someone on the network path of a first plain-HTTP visit can
+read or replace the cookie. In production and staging the server therefore
+logs a startup warning and shows "PUBLIC_URL is not https" under Admin >
+System; it does not refuse to start, so a trusted-LAN install over `http://`
+keeps working. Behind a TLS-terminating reverse proxy, set `PUBLIC_URL` to the
+public `https://` address.
+
+## Web Push and the installable app
+
+Mnema Talk is an installable web app (manifest, icons and a service worker at
+`/sw.js`). Members can install it from the browser (Account menu > App &
+notifications) and turn on push notifications per device, so they hear about
+messages while the app is closed. On iPhone and iPad this works for the
+installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
+
+- **Who is notified.** For each new message, every member with a subscribed
+  device who may view the channel *at that moment* (the permission snapshot of
+  the send, so a member who lost access stops at once), is not the author,
+  is not on Do Not Disturb or Focus, and whose effective notification level
+  for the channel allows it: all messages, or mentions (including `@all`,
+  `@here`, roles and replies to their messages) only; mutes, timed mutes and
+  category settings apply exactly as in the app. A burst in one channel is
+  merged: the first message goes out at once, the rest of the next five
+  seconds as one push ("3 new messages"); a mention is never held back. A
+  device that is offline gets only the newest push of a channel (push topic),
+  mentions separately; a push expires after one hour (a day for mentions).
+- **What a push contains.** Channel name and sender are always in it; the start
+  of the message (140 characters) only if the member keeps "Show message text"
+  on and `PUSH_PREVIEWS` is `user`. The payload is encrypted for the member's
+  browser (RFC 8291, `aes128gcm`), so Google, Mozilla, Apple or Microsoft's push
+  service sees only that something was sent, to which device, and its size.
+  The page does not show its own notification while push is on and the tab is
+  in the background, so nothing is shown twice.
+- **The key.** The server generates a VAPID key pair (P-256) on first start
+  and keeps it in the table `push_vapid`: subscriptions are bound to its public
+  half, so it has to survive restarts and restores, and it travels with the
+  database backup. It is never logged and no endpoint returns the private
+  half. Whoever can read the database can read all messages anyway; the key
+  adds nothing to that. If the key row is lost or replaced, all browsers keep
+  their subscription but the push services refuse the server (403) and the
+  subscriptions are removed after ten failures; members turn push on again.
+- **Outgoing requests.** The server posts only to the address a browser
+  registered for itself, and only after checking it twice: at registration it
+  must be an `https://` URL on port 443 whose host is not a private, loopback,
+  link-local or reserved address; at every send the host is resolved by the
+  server itself and every address must be public (the guard outgoing webhooks
+  use, with no allowlist: `WEBHOOK_ALLOW_PRIVATE_TARGETS` does not apply), the
+  connection goes to the address it vetted, redirects are not followed and the
+  answer is discarded. A member cannot use the server as a request proxy:
+  the body is encrypted binary and no response text is ever shown.
+- **Sessions.** A device belongs to the session that registered it. When that
+  session is signed out, expires, or is revoked (password change or reset, "log
+  out everywhere", admin revoke, disabled account), its device stops receiving
+  pushes at once and is deleted within a minute.
+- **Housekeeping.** A push service answering 404 or 410 removes the device at
+  once; any other refusal or failure counts, and ten in a row remove it. An
+  account has at most 10 devices. Deleting a member removes theirs. Signing out
+  in the browser removes that browser's device first; registering the same
+  browser under another account moves it.
+- **Operations.** `mnema_push_deliveries_total{outcome}` counts sends (see the
+  metrics table). Requests to push services need outbound HTTPS from the app
+  container. With `PUSH_ENABLED=false` there is no key, no subscriptions API
+  and no outgoing request. Behind a reverse proxy, pass `/sw.js` and
+  `/manifest.webmanifest` through unchanged and do not cache `/sw.js`.
 
 ## TURN (coturn)
 
@@ -220,6 +320,16 @@ secret never leaves the server. The relay refuses private, loopback,
 link-local and reserved peers (so it can't reach your LAN or Docker
 networks) with one exception: a private IP listed in `WEBRTC_NAT_1TO1_IP`
 (the voice server's LAN address) is allowed and used as relay address.
+The compose file also caps the relay with coturn's `--user-quota=8` (relayed
+sessions per credential) and `--total-quota=48` (all sessions; the port range
+holds 49), so one member cannot occupy every relay port. If you widen the
+range `49152-49200`, raise `--total-quota` with it. The credential's lifetime
+(12 hours) is deliberately longer than a long call: coturn checks the expiry on
+every allocation refresh and a running call cannot renew its credential, so a
+shorter lifetime would cut relayed calls. The web app fetches a fresh
+credential on a voice join when its copy is older than an hour. A credential
+therefore outlives a sign-out for up to 12 hours but can only use the relay,
+within the quotas above.
 Configured TURN servers are listed in the privacy policy.
 
 ## SeaweedFS S3 authentication
@@ -316,6 +426,47 @@ digest; it says nothing about the code in it beyond that. Pinning the digest in
 from changing under a tag. Images released before signing was added carry no
 signature.
 
+**"Update now" does not run this check.** The updater sidecar only asks the
+Docker daemon to pull the tag again; neither the signature nor the BuildKit
+provenance is verified before the app is recreated, and there is no hook in
+the sidecar for it (see [SECURITY.md](../SECURITY.md#self-update-sidecar)).
+If you want every image verified before it runs, do not enable the `autoupdate`
+profile: for each release run `cosign verify` against the new tag, copy the
+digest it reports into `MNEMA_IMAGE` and run `docker compose pull app && docker
+compose up -d app` (the steps in [upgrade.md](upgrade.md)). A digest-pinned
+install is never touched by "Update now".
+
+## Renewing the desktop trust statement
+
+`desktop-trust/trust.json` is signed by the offline root key and valid for 180
+days. After `expires_at` the desktop clients keep running their current bundle
+but install no new bundle and no app update (security fixes included) until a
+fresh statement exists. Nothing renews it automatically and the key never
+leaves the owner's machine, so a scheduled workflow watches it:
+
+- `.github/workflows/trust-expiry.yml` runs every Monday and fails while fewer
+  than 60 days remain (`webbundle trust verify -min-valid-days 60`). A failed
+  run is the alert: treat it as a task due within the next few weeks, not as a
+  flaky check. Re-run it by hand with *Run workflow*.
+- Check the same thing locally with
+  `go run ./cmd/webbundle trust verify -min-valid-days 60`.
+
+Runbook when it fails:
+
+1. On the machine that holds the offline root key, from an up-to-date `main`:
+   `go run ./cmd/webbundle trust sign -key-file <root key> -out desktop-trust
+   -prev desktop-trust/trust.json -renew` (details and the confirmation prompt:
+   [desktop-trusted-client.md](desktop-trusted-client.md#renewing-the-statement-every-3-months)).
+   Read the printed list of allowed and revoked keys before confirming.
+2. Open a pull request with only `desktop-trust/` and merge it.
+3. Re-run the workflow; it must pass. Clients pick the new statement up at
+   their next start or six-hourly check.
+4. Add the next renewal date to your release checklist: the 60-day warning is a
+   backstop, not a schedule.
+
+Never put the root key in CI or in a GitHub secret; the workflow only reads the
+committed statement and public key.
+
 ## Health and metrics
 
 - **`GET /api/health`** (public): `200 {"status":"ok","version":"X.Y.Z"}`
@@ -392,86 +543,25 @@ receiver that speaks its webhook format (ntfy, Gotify, email); without one,
 
 ### Example alert rules
 
-```yaml
-# mnema-alerts.yml
-groups:
-  - name: mnema-talk
-    rules:
-      - alert: MnemaDown
-        expr: up{job="mnema-talk"} == 0
-        for: 2m
-        labels: {severity: page}
-        annotations: {summary: "Mnema Talk does not answer the scrape (or the token is wrong)"}
+The rules are in [`deploy/monitoring/mnema-alerts.yml`](../deploy/monitoring/mnema-alerts.yml)
+(copy it next to `prometheus.yml` as `mnema-alerts.yml`). CI validates it with
+`promtool check rules`, and a test fails when a rule names a metric that
+`/api/metrics` does not export. Adjust the `MnemaHealthFailing` probe address and
+the `MnemaMemoryHigh` threshold to your deployment. The rules:
 
-      # /api/health is public and the metrics endpoint is up while the
-      # database or storage is not, so check those through their metrics too.
-      - alert: MnemaStorageDown
-        expr: mnema_storage_up == 0
-        for: 5m
-        labels: {severity: page}
-        annotations: {summary: "Object storage is unreachable: uploads fail and /api/health answers 503"}
-
-      - alert: MnemaHealthFailing
-        # needs blackbox_exporter probing https://chat.example.com/api/health
-        expr: probe_success{instance="https://chat.example.com/api/health"} == 0
-        for: 3m
-        labels: {severity: page}
-        annotations: {summary: "/api/health fails (database or storage)"}
-
-      - alert: MnemaDatabasePoolExhausted
-        expr: mnema_db_connections_acquired >= mnema_db_connections_max
-        for: 5m
-        labels: {severity: warn}
-        annotations: {summary: "All database connections are busy: requests queue"}
-
-      - alert: MnemaMemoryHigh
-        # process_resident_memory_bytes is reported on Linux; the compose
-        # limit is APP_MEM_LIMIT (see Container resources).
-        expr: process_resident_memory_bytes > 800e6
-        for: 15m
-        labels: {severity: warn}
-        annotations: {summary: "Resident memory above 800 MB (80% of the default 1g container limit) for 15 minutes"}
-
-      - alert: MnemaGoroutineLeak
-        expr: go_goroutines > 5000
-        for: 15m
-        labels: {severity: warn}
-        annotations: {summary: "Unusually many goroutines: possible leak"}
-
-      - alert: MnemaServerErrors
-        expr: sum(rate(mnema_http_requests_total{class="5xx"}[10m])) > 0.1
-        for: 10m
-        labels: {severity: warn}
-        annotations: {summary: "More than one 5xx every 10 seconds"}
-
-      - alert: MnemaSlowRequests
-        expr: histogram_quantile(0.95, sum by (le) (rate(mnema_http_request_duration_seconds_bucket{route!~"/api/channels/.*/upload|/api/media/.*"}[10m]))) > 1
-        for: 15m
-        labels: {severity: warn}
-        annotations: {summary: "95th percentile API latency above one second"}
-
-      - alert: MnemaIceFailures
-        # failed ICE transitions relative to successful ones
-        expr: |
-          sum(increase(mnema_sfu_ice_transitions_total{state="failed"}[30m])) > 3
-          and
-          sum(increase(mnema_sfu_ice_transitions_total{state="failed"}[30m]))
-            / clamp_min(sum(increase(mnema_sfu_ice_transitions_total{state="connected"}[30m])), 1) > 0.2
-        for: 10m
-        labels: {severity: warn}
-        annotations: {summary: "Many voice connections fail: check UDP port range, WEBRTC_ANNOUNCE_IP and TURN"}
-
-      - alert: MnemaStorageErrors
-        expr: sum(increase(mnema_s3_operations_total{result="error"}[15m])) > 5
-        labels: {severity: warn}
-        annotations: {summary: "Object storage calls fail"}
-
-      - alert: MnemaBackupTooOld
-        # see "Backup age" below: the app cannot know when you last backed up
-        expr: time() - mnema_backup_last_success_timestamp_seconds > 36 * 3600
-        labels: {severity: warn}
-        annotations: {summary: "No successful backup for 36 hours"}
-```
+| Alert | Fires when |
+|---|---|
+| `MnemaDown` | The scrape fails for 2 minutes (or the token is wrong). |
+| `MnemaStorageDown` | Object storage is unreachable for 5 minutes. |
+| `MnemaHealthFailing` | The blackbox probe of `/api/health` fails for 3 minutes. |
+| `MnemaDatabasePoolExhausted` | Every database connection is busy for 5 minutes. |
+| `MnemaMemoryHigh` | Resident memory stays above 800 MB (80% of the default limit) for 15 minutes. |
+| `MnemaGoroutineLeak` | More than 5000 goroutines for 15 minutes. |
+| `MnemaServerErrors` | More than one 5xx every 10 seconds for 10 minutes. |
+| `MnemaSlowRequests` | The 95th percentile API latency (uploads and media excluded) is above one second for 15 minutes. |
+| `MnemaIceFailures` | More than 20% of voice connections fail ICE over 30 minutes. |
+| `MnemaStorageErrors` | More than 5 object storage errors in 15 minutes. |
+| `MnemaBackupTooOld` | No successful backup for 36 hours (see Backup age). |
 
 **Backup age.** The server does not know about your backups (they run on the
 host), so it exports nothing for it. Let the backup job report instead, with
@@ -522,6 +612,7 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_db_connections_total\|acquired\|idle\|max` | gauge | Database pool. `mnema_db_acquires_total`, `..._waited_total`, `..._canceled_total`, `mnema_db_acquire_seconds_total` count acquisitions, those that had to wait, those abandoned and the time spent. |
 | `mnema_storage_up` | gauge | 1 when object storage answers (the same check as `/api/health`), else 0. |
 | `mnema_s3_operations_total{op,result}` | counter | Object storage calls (`upload`, `get`, `delete`, `list`) by `ok`/`error`. |
+| `mnema_push_deliveries_total{outcome}` | counter | Web Push deliveries: `ok`, `gone` (the browser ended the subscription; it is removed), `retry` (temporary refusal, retried once), `rejected`, `error` (no answer: blocked address, DNS, connection, TLS, timeout) and `dropped` (a full queue). A rising `rejected` share right after a restore means the VAPID key changed. |
 
 ## Orphaned media
 
@@ -565,6 +656,34 @@ not start (e.g. the UDP range is in use).
 
 ## Troubleshooting
 
+### Account deletion and data exports
+
+Members delete their own account and download their data under Account &
+security (the Owner account cannot be deleted). Deleting keeps an anonymised
+row and the member's messages without text, removes everything else (see
+[SECURITY.md](../SECURITY.md)) and frees the username; files are removed from
+object storage in the same request, and anything that could not be removed is
+found by Admin > Media > orphan cleanup. Exports are stored for at most 24 hours
+under `exports/` in the bucket and need object storage; back-ups taken in that
+window contain them, so a restore can bring back a deleted account's rows and
+files: delete the account again after restoring an old back-up. Add this to your
+back-up retention statement.
+
+### The Owner lost the authenticator and the recovery codes
+
+Whoever can run commands on the host can turn two-factor sign-in off for the
+account (it asks for nothing more, because that person can already read the
+database), end its sessions and leave an audit entry:
+
+```
+docker exec mnema-talk /usr/local/bin/mnema-talk reset-2fa Herzog
+```
+
+Other members' second factor is reset by
+the Owner in Admin > Users. Rotating `JWT_SECRET` also makes every stored
+authenticator secret unreadable: each affected account has to be reset and
+enrol again, so rotate it only with that in mind.
+
 ### The Owner cannot sign in: "too many requests"
 
 Repeated wrong passwords lock a client address (1, 5, then 30 minutes). Many
@@ -572,7 +691,9 @@ wrong guesses on one account from many addresses switch on an account-wide
 cap: while it is on, browsers that signed in to the account before (they hold
 a signed `mnema_dev_*` cookie, valid a year, independent of the IP) sign in
 normally, and every other device together gets about one password check per
-minute for the whole account. The cap lasts at most 15 minutes. All of this
+minute per client address, and about ten per minute for the whole account
+(refused attempts are not charged to that shared ceiling, so one hostile
+address cannot use it up alone). The cap lasts at most 15 minutes. All of this
 state is held in memory; a restart is not needed to clear it:
 
 - **From the host** (works even when nobody can sign in):
@@ -585,7 +706,7 @@ state is held in memory; a restart is not needed to clear it:
   The command runs in a second process, so it leaves a request in the
   database (table `login_unlock_requests`); the running server picks it up
   within a couple of seconds and forgets that account's lockouts (every client
-  address, the account-wide cap, the unknown-device trickle and the
+  address, the account-wide cap, the new-device budgets and the
   password-change lockout). It prints `Login lockouts cleared ...` once the
   server applied it, or says the request stays queued when no server picked it
   up in 15 seconds. Only someone who can reach the database can do this; there
@@ -644,5 +765,6 @@ failure (see [upgrade.md](upgrade.md)).
 > Migration 0017 adds the tables that restrict access. A binary that does not
 > know them (0.7.x before roles, or older) would ignore them and show every
 > private channel to everyone. This release and later ones refuse to start on a
-> database migrated by a newer version, but binaries from before that guard
+> database migrated by a newer version (CI checks this against the 0.8.16 and
+> 0.9.0 images), but binaries from before that guard
 > existed cannot. To go back, restore a backup taken before the update.

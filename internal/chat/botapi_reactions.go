@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -31,7 +32,7 @@ func (h *Handler) applyBotReactionChange(r *http.Request, msgID, userID, channel
 	if err != nil {
 		return err
 	}
-	h.Events.BroadcastChannel(channelID, "message_reaction", ReactionResult{
+	h.Events.BroadcastChannel(channelID, events.MessageReaction, ReactionResult{
 		MessageID: msgID, ChannelID: channelID, Reactions: reactions,
 	})
 	return nil

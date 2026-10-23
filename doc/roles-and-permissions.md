@@ -113,7 +113,7 @@ the own role is a convenient place for "this bot may post in #alerts").
 | View channels | See a channel or Talk and read its history | yes |
 | Send messages | Post, reply, edit own messages | yes |
 | Attach files | Upload files with a message | yes |
-| Add reactions | Add a reaction (taking back your own always works) | yes |
+| Add reactions | Add a reaction (taking back your own always works); vote in a poll | yes |
 | Manage messages | Delete other members' messages (with a reason, or a member's latest ones in bulk), pin messages, exempt from slow mode | yes |
 | Mention everyone | `@all` and `@here` notify people | yes |
 | Connect | Join a Talk | yes |
@@ -122,13 +122,14 @@ the own role is a convenient place for "this bot may post in #alerts").
 | Disconnect members | Remove members from a Talk | yes |
 | Manage channels | Create, edit, order, delete channels and categories; edit their overwrites | no |
 | Manage roles | Create, edit, order, delete and assign roles below your own highest role | no |
-| Manage invites | Create, list, revoke invite codes | no |
+| Manage invites | Create, list, revoke invite codes; also needed for a ban to revoke the banned member's invite | no |
 | Manage webhooks | Reserved, unused: webhooks are managed by the Owner and Administrators (see [webhooks](webhooks.md)) | no |
 | Manage members | Disable and re-enable accounts, end their sessions, edit their status line | no |
 | Manage bots | Create bots, give them roles and tokens, set their intents (see [bots](bots.md)). Only the Owner can grant it | no |
 | View audit log | Read the audit log ([moderation](moderation.md)) | no |
 | Timeout members | Silence members below your highest role for a while ([moderation](moderation.md)) | no |
 | Ban members | Ban and unban members below your highest role, list the bans | no |
+| Manage emoji | Upload, rename and delete the custom emoji of the community (bit `1 << 20`) | no |
 
 The bit values are stored in the database and sent over the API; they never
 change meaning (`perm.Catalog` and its test freeze them).
@@ -211,6 +212,8 @@ cannot do.
 |---|---|
 | `GET /api/channels` | Only viewable channels; a category shows if it is viewable or holds a viewable channel |
 | Messages, threads, reactions, search, by-number, read state, notifications | *View channels*; posting *Send messages*; reacting *Add reactions*; deleting others' *Manage messages* |
+| Polls (`/poll`, `POST /api/channels/{id}/polls`) | Posting *Send messages*; voting and reading your own votes *View channels* + *Add reactions* (so a timed-out member cannot vote); ending early the author, or *Manage messages* |
+| Slash commands | Listing *View channels*; running *Send messages* (built-in commands may ask for more, see their `Available` check in `internal/slash`); a bot's commands also need the bot to view and send there |
 | Uploads and `GET /api/media/{id}` | *Send messages* + *Attach files* to upload; *View channels* of the message's channel to download (404 otherwise) |
 | Mentions | `@all`/`@here` need *Mention everyone*; nobody who cannot view the channel is notified |
 | `/api/admin/*` | Per route: *Manage channels*, *Manage roles*, *Manage invites*, *Manage members*, *Disconnect members*; system, storage and passwords are Owner-only |

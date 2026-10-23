@@ -1,0 +1,171 @@
+/* Rendered chat Markdown (lib/markdown). Global on purpose: the markup comes from v-html. */
+.markdown-body .md-emoji {
+  display: inline-block;
+  height: 1.375em;
+  width: auto;
+  vertical-align: -0.3em;
+  object-fit: contain;
+}
+.markdown-body strong { font-weight: 600; }
+.markdown-body em { font-style: italic; }
+.markdown-body .md-underline { text-decoration: underline; text-underline-offset: 2px; }
+.markdown-body del { text-decoration: line-through; opacity: 0.7; }
+.markdown-body .md-code {
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.875em;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Headings, subtext, lists: block elements consume the line break around them. */
+.markdown-body .md-heading { font-weight: 600; line-height: 1.3; margin: 0.375rem 0 0.125rem; }
+.markdown-body .md-h1 { font-size: 1.5rem; }
+.markdown-body .md-h2 { font-size: 1.25rem; }
+.markdown-body .md-h3 { font-size: 1.0625rem; }
+.markdown-body .md-subtext { font-size: 0.75rem; line-height: 1.1rem; opacity: 0.65; }
+.markdown-body .md-list { margin: 0.125rem 0; padding-left: 1.5rem; white-space: normal; }
+.markdown-body ul.md-list { list-style: disc; }
+.markdown-body ul.md-list ul.md-list { list-style: circle; }
+.markdown-body ol.md-list { list-style: decimal; }
+.markdown-body .md-list li { padding-left: 0.125rem; white-space: pre-wrap; }
+.markdown-body .md-list li::marker { color: rgba(45, 167, 113, 0.8); }
+
+.markdown-body .md-quote {
+  border-left: 2px solid rgba(45, 167, 113, 0.6);
+  padding-left: 0.625rem;
+  margin: 0.125rem 0;
+  opacity: 0.85;
+}
+
+/* Code blocks: a toolbar with the language and a copy button appears on hover or focus. */
+.markdown-body .md-codeblock-wrap { position: relative; margin: 0.375rem 0; }
+.markdown-body .md-codeblock {
+  margin: 0;
+  padding: 0.625rem;
+  border-radius: 0.5rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  overflow-x: auto;
+  white-space: pre;
+  background: rgba(0, 0, 0, 0.35);
+}
+.markdown-body .md-code-tools {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.6875rem;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.markdown-body .md-codeblock-wrap:hover .md-code-tools,
+.markdown-body .md-code-tools:focus-within { opacity: 1; }
+@media (hover: none) { .markdown-body .md-code-tools { opacity: 0.85; } }
+.markdown-body .md-code-lang { text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.6; }
+.markdown-body .md-copy {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  cursor: pointer;
+}
+.markdown-body .md-copy:hover { background: rgba(255, 255, 255, 0.16); }
+.markdown-body .md-copy:focus-visible { outline: 2px solid #2da771; outline-offset: 1px; }
+
+/* highlight.js tokens, in the Mnema palette. */
+.markdown-body .hljs { color: #d6dcd8; }
+.markdown-body .hljs-keyword,
+.markdown-body .hljs-selector-tag,
+.markdown-body .hljs-meta .hljs-keyword,
+.markdown-body .hljs-doctag,
+.markdown-body .hljs-section { color: #5fc79a; }
+.markdown-body .hljs-string,
+.markdown-body .hljs-regexp,
+.markdown-body .hljs-meta .hljs-string,
+.markdown-body .hljs-addition { color: #e0a23a; }
+.markdown-body .hljs-number,
+.markdown-body .hljs-literal,
+.markdown-body .hljs-symbol,
+.markdown-body .hljs-bullet { color: #d98c6a; }
+.markdown-body .hljs-title,
+.markdown-body .hljs-title.function_,
+.markdown-body .hljs-built_in,
+.markdown-body .hljs-type,
+.markdown-body .hljs-class .hljs-title { color: #7cc4d4; }
+.markdown-body .hljs-attr,
+.markdown-body .hljs-attribute,
+.markdown-body .hljs-variable,
+.markdown-body .hljs-template-variable,
+.markdown-body .hljs-property { color: #b9c9f2; }
+.markdown-body .hljs-comment,
+.markdown-body .hljs-quote,
+.markdown-body .hljs-meta { color: #7a8580; font-style: italic; }
+.markdown-body .hljs-deletion { color: #e07a7a; }
+.markdown-body .hljs-emphasis { font-style: italic; }
+.markdown-body .hljs-strong { font-weight: 600; }
+
+.markdown-body .md-link { color: #2da771; word-break: break-all; }
+.markdown-body .md-link:hover { text-decoration: underline; }
+/* A masked link shows where it really leads when hovered or focused. */
+.markdown-body .md-link-masked { word-break: normal; text-decoration: underline dotted; text-underline-offset: 3px; }
+.markdown-body .md-link-masked:focus-visible::after,
+.markdown-body .md-link-masked:hover::after {
+  content: ' (' attr(data-host) ')';
+  font-size: 0.75em;
+  opacity: 0.65;
+}
+.markdown-body .md-mention {
+  padding: 0 0.25rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+  color: #2da771;
+  background: rgba(45, 167, 113, 0.15);
+}
+.markdown-body .md-mention[data-mention] { cursor: pointer; }
+.markdown-body .md-mention[data-mention]:hover { background: rgba(45, 167, 113, 0.28); }
+.markdown-body .md-mention-group[data-mention] { cursor: default; }
+/* A role reads like a member mention with an outline; the reader's own roles turn amber via -me. */
+.markdown-body .md-mention-role { box-shadow: inset 0 0 0 1px rgba(45, 167, 113, 0.45); }
+/* --role-color is set through the CSSOM by v-role-colors (CSP: no style attribute strings). */
+.markdown-body .md-mention-role[data-role-color] {
+  color: var(--role-color, #2da771);
+  background: color-mix(in srgb, var(--role-color, #2da771) 18%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--role-color, #2da771) 55%, transparent);
+}
+.markdown-body .md-mention-me,
+.markdown-body .md-mention-group {
+  color: #fce4a8;
+  background: rgba(224, 162, 58, 0.18);
+}
+.markdown-body .md-mention-me[data-mention]:hover { background: rgba(224, 162, 58, 0.3); }
+
+/* Spoiler: blacked out until clicked */
+.md-spoiler {
+  background-color: #2b2d31;
+  color: transparent !important;
+  border-radius: 4px;
+  padding: 1px 5px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+  display: inline-block;
+}
+.md-spoiler:hover { background-color: #35373c; }
+/* Hidden content stays hidden and inert (links inside must not open, mentions must not click). */
+.md-spoiler:not(.revealed) * {
+  color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  pointer-events: none;
+}
+.md-spoiler.revealed {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: inherit !important;
+  user-select: text !important;
+  cursor: text;
+}

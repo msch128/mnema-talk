@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -78,7 +79,7 @@ func (h *Handler) disableUser(w http.ResponseWriter, r *http.Request) error {
 	if h.OnAccountEnded != nil {
 		h.OnAccountEnded(id)
 	}
-	h.Events.Broadcast("user_update", map[string]any{"id": id, "disabled": true})
+	h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": true})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -109,7 +110,7 @@ func (h *Handler) enableUser(w http.ResponseWriter, r *http.Request) error {
 	if err := h.moderated(r, id, func(q db.Querier) error { return SetDisabled(r.Context(), q, id, false) }); err != nil {
 		return err
 	}
-	h.Events.Broadcast("user_update", map[string]any{"id": id, "disabled": false})
+	h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": false})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -330,4 +331,40 @@ type SetPasswordRequest struct {
 type TemporaryPassword struct {
 	// Password is shown once; it is never stored in plain text.
 	Password string `json:"password"`
+}
+
+// resetUserTwoFactor handles POST /api/admin/users/{id}/two-factor/reset.
+//
+// @Summary Reset a member's two-factor sign-in
+// @Description For a member who lost the authenticator and the recovery codes: turns two-factor sign-in off, deletes the secret and recovery codes and ends all sessions of the account. Owner only (403 otherwise); the Owner account cannot be targeted (400), its second factor is reset from the host with `mnema-talk reset-2fa <username>`.
+// @ID resetUserTwoFactor
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Param id path string true "User ID." Format(uuid)
+// @Success 204 "Success, no content."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/users/{id}/two-factor/reset [post]
+func (h *Handler) resetUserTwoFactor(w http.ResponseWriter, r *http.Request) error {
+	id, err := httpx.PathUUID(r, "id")
+	if err != nil {
+		return err
+	}
+	if _, err := targetUser(r.Context(), h.Sessions.DB, id); err != nil {
+		return err
+	}
+	if err := ResetTwoFactor(r.Context(), h.Sessions.DB, id); err != nil {
+		return err
+	}
+	if h.Live != nil {
+		h.Live.DisconnectUser(id)
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
 }

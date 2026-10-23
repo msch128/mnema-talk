@@ -126,6 +126,208 @@ until the new release has passed your application checks.
 
 ## Version notes
 
+### 0.9.x → 1.0.0
+
+1.0.0 is the first release under the [API stability contract](api-stability.md):
+nothing in it is a breaking change to a public surface, and `1.x` keeps working
+for existing clients, bots, webhooks, dashboards and alerts. What changes for an
+operator is below. Update with the procedure above; take the backup first.
+
+- **Ten migrations run on first start: 0038 to 0045, 0047 and 0048** (0046 is
+  intentionally unused). All are quick on any instance; 0044 and 0047 are
+  described under custom emoji and edit history below.
+  - 0038 drops `idx_messages_content_trgm`, a duplicate of the trigram search
+    index `messages_content_trgm_idx` (both came from earlier releases), so
+    message writes no longer maintain the same index twice and search is
+    unchanged. `DROP INDEX` takes a short exclusive lock on `messages`; the
+    migration runs in a transaction, so it is not `CONCURRENTLY`. On a large
+    instance this takes well under a second.
+  - 0039 adds the nullable column `bot_tokens.created_by` (who issued a bot
+    token), with a foreign key to `users`. It rewrites no rows and holds only a
+    brief lock on `bot_tokens` while the foreign key is added.
+  - 0040 adds the nullable columns `users.email` and `users.email_verified_at`
+    (with a partial unique index on confirmed addresses) and the table
+    `account_tokens` for single-use e-mail links. Adding nullable columns
+    rewrites no rows. No account has an address afterwards.
+  - 0041 adds the tables `user_totp`, `recovery_codes`, `login_challenges`
+    and `second_factor_failures` for optional two-factor sign-in. They start
+    empty; nobody is asked for a code until they turn it on.
+  - 0042 belongs to Web Push and the installable web app (see below).
+  - 0043 adds the nullable column `users.deleted_at`, the table `data_exports`
+    and replaces the audit log's immutability trigger function with one that
+    allows blanking names and details during an account deletion (and nothing
+    else). No existing row changes.
+  - 0045 adds the nullable columns `messages.pinned_at` and `messages.pinned_by`
+    (who pinned a message and when; existing pins get their last-change time)
+    and a small partial index on pinned messages. Nothing else changes: the
+    pin flag already existed, and the limit of 50 pins per channel applies to
+    new pins only, so a channel that already has more keeps them.
+  - 0048 adds the tables `polls`, `poll_options` and `poll_votes` for the
+    `/poll` command. They start empty and nothing else changes.
+  - The app waits for these locks like any other statement; there is nothing to
+    stop or schedule. If startup is slow, check `docker compose logs app` for
+    `migration applied`.
+- **Edit history for moderators (migration 0047).** The new table
+  `message_edits` keeps the previous text of every edit from now on (up to 50
+  per message). Members with *Manage messages* can read it from the message
+  menu; nobody else can, and it is not searched or exported to anyone but the
+  author. It starts empty and the migration touches no existing row. Nothing to
+  configure; `EDIT_HISTORY_RETENTION_DAYS` (default `0`, keep) drops old
+  versions after that many days. See [moderation](moderation.md#edit-history).
+- **Unread divider and "Jump to first unread".** No migration and no setting.
+  The new read-only endpoint `GET /api/channels/{id}/first-unread` is additive.
+  Marking a channel read now writes nothing when it has no news since the last
+  read (the first read still stores the member's marker), which reduces writes
+  on busy instances; see [Capacity](architecture.md#unread-tracking-with-10000-members).
+- **Desktop client is Beta.** The Windows desktop client stays Beta at 1.0.0;
+  see [desktop-app.md](desktop-app.md).
+- **Optional e-mail, SMTP and password reset by mail.** Members may now add an
+  e-mail address in Account & security (never required, never shown to other
+  members or to the Owner). Setting `SMTP_HOST` (see
+  [operations.md](operations.md#outgoing-e-mail)) lets the server confirm an
+  address by a single-use link and lets members reset a forgotten password with
+  an address they confirmed (link valid 30 minutes, signs every device out). Without
+  `SMTP_HOST` nothing changes: no mail is sent, saved addresses stay unconfirmed
+  and unused, and the "Forgot your password?" link does not appear. The Owner can
+  still set a temporary password for any member (Admin > Users). Reset by mail
+  also works for the Owner account if the Owner confirmed an address. Put
+  `SMTP_PASSWORD` in the environment or mount a file and name it in
+  `SMTP_PASSWORD_FILE`; `SMTP_TLS=none` is refused in production.
+- **Two-factor sign-in (optional).** Every member may turn on TOTP in Account
+  & security; the Owner is advised to. A client that does not know the new
+  second step (an old browser tab, a script) gets `202` with a challenge instead
+  of a session for such an account and cannot sign in; the shipped web app and
+  desktop clients handle it. Stored authenticator secrets are encrypted with a
+  key derived from `JWT_SECRET`: rotating it requires resetting two-factor for
+  the accounts that use it (Admin > Users, or `mnema-talk reset-2fa <username>`
+  for the Owner). See [operations.md](operations.md).
+- **Members can delete their account and export their data.** Both are in
+  Account & security; the Owner account cannot be deleted. A deleted account
+  leaves its messages in place without text, written by "Deleted user". The
+  username `deleted-…` is reserved. Exports need object storage and live there
+  for at most 24 hours. Clients built before this release show a deleted author
+  by the placeholder name instead of "Deleted user" in the member's language.
+  See [operations.md](operations.md#account-deletion-and-data-exports).
+- **Weak custom invite codes stop working.** Custom invite codes typed by an
+  admin that fall below the new minimum (12 or more characters, 7 or more
+  distinct, letters and digits below 16 characters, no common word with little
+  around it) are treated as unknown by the invite preview and by registration.
+  Admin > Invites marks them "Disabled, regenerate"; delete them and create new
+  ones (a random generated code is always accepted). Generated codes and
+  custom codes that meet the minimum are unaffected. Invite lookups and
+  registrations are also limited per IPv6 /48 in addition to the per-client
+  limits.
+- **Uploads have a daily budget per account.** `UPLOAD_QUOTA_MB_PER_DAY`
+  (default `2048`) is what one member, bot or webhook may upload in any rolling
+  24 hours; further uploads answer 429, and deleted files still count. `0`
+  turns it off. Two optional guards are off by default: `MEDIA_MAX_TOTAL_MB`
+  (pause all uploads once stored media reaches this size, `0` = no cap) and
+  `MEDIA_MIN_FREE_MB` (default `1024`) together with `MEDIA_DISK_PATH` (a
+  volume the app can see; empty = no free-space check). A busy community that
+  shares large files will hit the default; raise it before updating if members
+  upload more than 2 GiB each per day. `MEDIA_RETENTION_DAYS` still defaults
+  to `0`: nothing is deleted automatically. See
+  [operations.md](operations.md#configuration-reference).
+- **coturn is capped** (only if you run the `turn` profile). The compose file
+  now starts coturn with `--user-quota=8` (relayed sessions per credential) and
+  `--total-quota=48` (all sessions, matching the 49 ports of
+  `49152-49200`). Fetch the compose file of the tag (step 3) and restart the
+  profile. If you widened the relay port range, raise `--total-quota` with it;
+  see [TURN](operations.md#turn-coturn).
+- **`PUBLIC_URL` over plain `http://` warns.** In production and staging, a
+  `PUBLIC_URL` that is not `https://` logs a startup warning and shows
+  "PUBLIC_URL is not https" under Admin > System. The server still starts, so a
+  trusted-LAN install keeps working; behind a TLS-terminating reverse proxy set
+  it to the public `https://` address (see
+  [operations.md](operations.md#public_url-and-secure-cookies)).
+- **Bot tokens are bound to whoever issued them.** From 1.0 a token records its
+  issuer, and stops working when that person loses *Manage bots*, is disabled,
+  or can no longer act as the bot. Tokens created before the upgrade have no
+  recorded issuer: they keep working and are not re-checked until someone
+  regenerates them ([bots](bots.md#tokens)). Regenerate the tokens of every bot
+  you still use to bind them, and delete the ones you do not.
+- **Audit log visibility.** Category and layout entries (`category.*`,
+  `layout.apply`) are visible to the Owner and Administrators only, like the
+  other privileged entries.
+- **Realtime limits are stricter.** Sockets end with the session that opened
+  them (a sign-out closes them at once), oversized or flooding frames are
+  dropped, and there are per-account budgets for frames, events and voice
+  handshakes across connections. Ordinary use is not affected. A reverse proxy
+  must still pass WebSocket upgrades; nothing else changes.
+- **Mention fan-out is capped.** A message whose author may not mention everyone
+  notifies at most 50 members (named users first, then role members).
+- **Security floor trailer.** The desktop client's security floor (the lowest
+  web bundle it accepts) now rises only for a commit with a
+  `Security-Floor: raise` trailer; a `fix(security)` subject alone no longer
+  does. Operators need to do nothing. Forks and maintainers must add the
+  trailer to security fixes in anything the web bundle ships, see
+  [desktop-trusted-client.md](desktop-trusted-client.md) and `AGENTS.md`.
+- **Alert rules moved.** The example alert rules are now the file
+  [`deploy/monitoring/mnema-alerts.yml`](../deploy/monitoring/mnema-alerts.yml),
+  checked with `promtool` and against `/api/metrics` in CI. Metric names are
+  part of the stability contract.
+- **Web Push (migration 0042).** Members can turn on push notifications per
+  device (Account menu > App & notifications) and get messages while the app
+  is closed; on iPhone and iPad only for the installed app. The migration
+  creates `push_vapid` (the server's VAPID key, generated on first start: it
+  is in your database backups, so restores keep working subscriptions),
+  `push_subscriptions` (one row per device) and `users.push_preview`. Nothing
+  is sent until a member subscribes. New settings, all optional:
+  `PUSH_ENABLED` (default `true`), `PUSH_PREVIEWS` (`user`, default, or `off`
+  to never put message text in a push) and `PUSH_VAPID_SUBJECT`; see
+  [operations.md](operations.md#web-push-and-the-installable-app). The server
+  needs outbound HTTPS to the browser vendors' push services (Google, Mozilla,
+  Apple, Microsoft) when a member uses push; it connects only to public
+  addresses. Rolling back needs the pre-upgrade backup like every migration.
+- **Custom emoji (migration 0044).** Members holding the new permission *Manage
+  emoji* (the Owner always does; nobody else gets it from an upgrade) add PNG,
+  GIF or WebP pictures under Admin > Emoji; everyone uses them as `:name:` in
+  messages and reactions. 0044 creates the table `custom_emoji` and widens
+  `message_reactions.emoji` from 32 to 80 characters (a custom emoji reaction is
+  the token `<:name:id>`); no row is rewritten. `EMOJI_MAX` (default `200`, `0`
+  forbids new ones) caps the count. Uploads are decoded and redrawn on the
+  server (at most 128 x 128, metadata and trailing bytes dropped, 256 KiB,
+  SVG/JPEG/animated WebP refused) and stored under `emoji/` in object storage.
+  Older web bundles show the token text `<:name:id>` instead of the picture.
+- **Installable app.** The web app now has a manifest, icons and a service
+  worker (`/sw.js`) that keeps its shell available offline; browsers offer
+  "Install", and Account menu > App explains it (on iPhone and iPad: Share >
+  Add to Home Screen). Nothing to configure and no migration. The worker never
+  stores API answers. A reverse proxy must pass `/sw.js` and
+  `/manifest.webmanifest` through unchanged (no caching of `/sw.js`, no
+  rewriting); the app's own `Cache-Control: no-cache` already says so.
+- **Polls and built-in slash commands (migration 0048).** `/poll` and a poll
+  button in the composer let members ask a question with 2 to 10 answers
+  (single or multiple choice, open for 1 hour to 1 week, optionally anonymous).
+  Voting needs *View channels* and *Add reactions*, posting *Send messages*;
+  nothing to configure and no new setting. The server's built-in commands share
+  the slash menu with the bots' ([bots](bots.md#built-in-commands-and-polls));
+  bots can now give a text option `choices`. New surface, all additive: the
+  `poll` object on messages, the `poll_update` WebSocket event, the routes under
+  `/api/channels/{id}/polls` and `.../messages/{id}/poll`, and `200` as an
+  answer of running a built-in command. A reverse proxy needs no change. The
+  data export gains `poll_votes.json`.
+- **Rollback means restoring the pre-upgrade backup.** Migrations are
+  forward-only and the 0.9.x code has not been verified against the 1.0 schema
+  and data (the bot token column, the dropped index), so do not simply start
+  the old image on the migrated database. Stop the app, restore the backup
+  taken before the update with `scripts/restore.sh` and start the old image
+  (see "Rollback" above). Anything written after the update is lost with the
+  restore. CI drills this path for the supported source versions: the old
+  release refuses to start on the migrated data and a restore into the new
+  build succeeds.
+- **Messages use Discord's Markdown.** The stored text does not change and
+  neither does any API: bots, webhooks, exports and search see the same text.
+  Only how the web app draws it does: `__underline__`, `# `/`## `/`### `
+  headings, `-# ` small text, `-`/`*`/`1.` lists with nesting, `>>> ` quotes to
+  the end of the message, `[text](https://…)` links (opening one whose text does
+  not name its destination asks first), `<https://…>` without a link card, `\`
+  escapes, and syntax highlighting with a copy button in fenced code blocks.
+  Two old habits render differently, as on Discord: `>quote` needs a space
+  after the `>`, and `__text__` is underlined instead of left as typed. The
+  composer has a formatting cheat sheet next to the emoji button. Desktop
+  clients render with the web bundle they load, so they follow this too.
+
 ### 0.8.x → 0.9.0
 
 - **Three migrations run on first start: 0035, 0036 and 0037.** 0035 adds
@@ -233,7 +435,7 @@ until the new release has passed your application checks.
   [Verifying a release image](operations.md#verifying-a-release-image). Pin the
   digest in `MNEMA_IMAGE` if you want the verified bytes to stay put.
 - **Desktop client**: it runs a signed web bundle with a security floor that
-  rises with `fix(security)` releases; see
+  rises with releases that carry a `Security-Floor: raise` commit; see
   [desktop-trusted-client.md](desktop-trusted-client.md). The server needs no
   configuration for it.
 

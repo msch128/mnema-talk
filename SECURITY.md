@@ -2,9 +2,21 @@
 
 ## Supported versions
 
-Mnema Talk is a small, self-hosted, non-commercial project. Only the current
-`main` branch is supported; fixes land there. Forks and older commits are not
-maintained.
+Mnema Talk is a small, self-hosted, non-commercial project. Security fixes go
+to:
+
+- the **latest 1.x minor release** (for example the newest `1.y.z`), and
+- the **previous minor release for 90 days** after the newer minor was
+  published, so an operator has a quarter to move up.
+
+Fixes land on `main` first and reach those lines as patch releases. Older
+minors, `0.x` releases, forks and unreleased commits are not maintained: update
+to a supported line ([doc/upgrade.md](doc/upgrade.md)). Desktop clients refuse
+web bundles below the release that carries the latest marked security fix, see
+[doc/desktop-trusted-client.md](doc/desktop-trusted-client.md).
+
+Which interfaces are stable and how they may change (deprecation, removal only
+in a major release) is described in [doc/api-stability.md](doc/api-stability.md).
 
 ## Reporting a vulnerability
 
@@ -22,6 +34,41 @@ what an attacker could achieve. You can expect an acknowledgement within 7 days.
 do not disclose them publicly before a fix is available. Do not run scanners,
 brute-force or load tests against instances you do not operate; run the stack
 locally instead (`make up` or `make dev`).
+
+## 1.0 internal security review
+
+Before 1.0.0 the project reviewed its own code in six lanes: authentication and
+sessions, permissions, content and media, integrations (webhooks, bots, link
+previews), realtime and voice, and the supply chain (CI, signing, updates). It
+is an **internal review, done on 2026-10-22, not an external audit**; no
+independent audit exists yet ([doc/product-status.md](doc/product-status.md)).
+That review covered the code as it was before the later scope additions
+(e-mail/SMTP, two-factor sign-in, account deletion and export, Web Push and
+the installable app); those were reviewed per change by automated security
+review plus a final verification pass, not by the six-lane review.
+
+Result: 0 Critical, 0 High. Every Medium finding is fixed, with a test that
+fails without the fix, and the behaviour changes are listed in
+[doc/upgrade.md](doc/upgrade.md#09x--100). Deliberately deferred past 1.0:
+
+- **CSP `style-src 'unsafe-inline'`.** Kept because the bundled
+  `emoji-picker-element` writes inline styles and has no nonce support (see
+  Security headers below for the plan to remove it and the browser test that
+  must come with it).
+- **RT-4, frame format version 2.** Version 2 media frames (no line binding)
+  are still accepted for mixed-version Talks; refusing them is a protocol
+  change that would cut old tabs off (see the media frame section below).
+- **RT-6, regroup collusion** (Info). Two colluding members, or the server, can
+  make a listener who hears nobody else regroup; rate-limited, no worse than the
+  denial of service the server already has.
+- **SUP-05, image signature check in the updater.** "Update now" does not verify
+  the cosign signature or provenance of the pulled image; see
+  [Self-update sidecar](#self-update-sidecar). Verify by hand and pin the digest.
+- **Legacy bot tokens without an issuer.** Tokens created before 1.0 have no
+  recorded issuer and are not re-checked against it until they are regenerated;
+  new tokens are bound to their issuer ([doc/bots.md](doc/bots.md#tokens)).
+
+Remaining Info-level items of the review are not listed individually.
 
 ## Security model (summary)
 
@@ -44,7 +91,18 @@ details and the limits.
   Unknown, malformed, expired, revoked and used-up codes give byte-identical
   answers, so the endpoint cannot tell an attacker that a code once existed. It
   is rate limited per client address (30 per minute, IPv6 per /64, 429 with
-  `Retry-After`; a code carries about 59 bits, so guessing is hopeless), answers
+  `Retry-After`), for hits and misses alike, so the answer never depends on
+  whether a code exists and nothing is shared between clients (no global brake
+  that one attacker could burn to lock invitees out). Distributed guessing is
+  made infeasible by the codes, not by a limiter: a generated code has 12
+  characters from a 31-character alphabet (about 59 bits), and a custom code must
+  be at least 12 characters with 7 or more distinct ones, mixing letters and
+  digits unless it has 16 or more characters, and not a common word with little
+  around it. Even 2^16 addresses at 30 lookups a minute try about 2^21 codes a
+  minute, which covers about 2^40 in a year, far below the 2^59 of a random code.
+  Older weak custom codes no longer work (preview and registration treat them
+  as unknown); the admin invite list marks them (`weak`: disabled, regenerate).
+  Limits are per client address and, for IPv6, additionally per /48. The endpoint answers
   `Cache-Control: no-store`, and a code is only looked up when it has the shape
   the server issues. The community name is the only thing it discloses and the
   Owner chooses it.
@@ -77,6 +135,10 @@ details and the limits.
   members who may no longer join their Talk are removed from it. A permission
   state that cannot be loaded denies access. Details and the resolution
   order are in [doc/roles-and-permissions.md](doc/roles-and-permissions.md).
+- **Plain-HTTP deployments.** With a production or staging `APP_ENV` and a
+  `PUBLIC_URL` that is not `https://`, session cookies lose `Secure` and the
+  `__Host-` prefix. The server starts anyway, logs a warning and shows it under
+  Admin > System (see `doc/operations.md`).
 - **Sessions.** A signed session token in an `HttpOnly` cookie (`__Host-` prefix
   and `Secure` on HTTPS, `SameSite=Lax`). Each token carries the user's
   `token_version`; changing the password or "log out everywhere"
@@ -85,8 +147,130 @@ details and the limits.
   user's open WebSockets (after a password change the current client
   reconnects with its fresh cookie). Each token also has its own id; signing
   out records it in a small table until the token would have expired, so a
-  copied cookie of that one session stops working at once. Tokens issued
-  before this existed carry no id and stay valid until they expire.
+  copied cookie of that one session stops working at once, and signing out
+  also closes the WebSockets opened with that session. Tokens issued
+  before this existed carry no id and stay valid until they expire. An open
+  WebSocket is re-checked every two minutes against the token version, the
+  session id and the token's own expiry, and ends at the expiry; if the
+  database cannot answer three checks in a row, the socket is closed rather
+  than kept on trust.
+- **E-mail address, confirmation and password reset.** An e-mail address is
+  optional and belongs to its account alone: no API response about other
+  members, the member list or the admin user list carries it, and the audit
+  log never stores it. Setting or removing it needs the current password (the
+  same lockout as changing the password). A new address starts unconfirmed;
+  two accounts may hold the same unconfirmed address, so adding one reveals
+  nothing, and only a confirmed address is unique. Mail needs `SMTP_HOST`
+  (credentials from the environment or a file, never in the database; TLS is
+  required and certificates are verified, `SMTP_TLS=none` is refused in
+  production; recipients and subjects are checked against header injection).
+  Without it no mail is sent and a saved address is never used. Confirmation
+  and reset links carry a 256-bit random token in the URL fragment (never in a
+  request line, access log or Referer); only its SHA-256 is stored; a token is
+  single use (one atomic UPDATE), expires (24 hours for confirmation, 30
+  minutes for reset), is bound to its purpose and, for confirmation, to the
+  address it was sent to (a reset token also to the account's session version, so a password change, an Owner password action, "log out everywhere" or a session revocation kills every open reset link), and a newer link retires the older one. Reset: the
+  request answers `202` with an empty body for every well-formed address, known
+  or not, confirmed or not, disabled account or not, and does its work after
+  responding, so neither content nor timing tells accounts apart; it is limited
+  per client address (10 per hour, IPv6 per /64, 40 per /48) and, silently, per
+  address (5 per hour) and per account (5 mails per hour, counted in the
+  database so it survives restarts and attacker-chosen keys). Only an active
+  account with a confirmed address gets a link. Confirming a reset spends the
+  token and sets the password in one transaction, applies the usual password
+  policy (the Owner needs 14 characters), revokes every session (token version)
+  and known-device cookie, closes open WebSockets and clears the account's
+  login lockouts; it signs nobody in. Mail delivery failures never reach the
+  client. The Owner's "send test mail" is Owner-only, limited to five per ten
+  minutes and audited without recipient.
+- **Two-factor sign-in (TOTP).** Optional for every account; the Owner's
+  settings recommend it prominently. RFC 6238 (HMAC-SHA1, 6 digits, 30 seconds,
+  one step of clock skew either way), enrolled with a QR code drawn in the
+  browser (no image service sees the secret) and confirmed with a first code;
+  turning it on returns ten single-use recovery codes, once. The secret is
+  stored encrypted (AES-256-GCM, key derived from `JWT_SECRET`, bound to the
+  account); recovery codes are stored as keyed HMACs (59-bit codes, so a
+  database copy alone cannot be searched for them). Rotating `JWT_SECRET`
+  therefore makes stored secrets unreadable: those accounts need a reset
+  (below). Sign-in: a correct password for such an account answers `202` with a
+  challenge instead of a session (nothing about the account is revealed before
+  the password is right). The challenge is 256 random bits (only its hash is
+  stored), lives five minutes, is bound to the account and to its token version
+  at that moment (a password change, "log out everywhere" or a disable in
+  between kills it), is spent by a successful sign-in and takes five code
+  attempts in total, counted atomically. An authenticator code works once (the
+  newest accepted step is stored, so a replay of the same or an older code is
+  refused); a recovery code works once. Wrong, expired, replayed, used and
+  unknown all answer the same `401`. The known-device cookie and the session are
+  only issued after the second step. Brute force: attempts of one account are
+  serialised, so parallel requests cannot all pass the lockout check; ten wrong
+  codes lock the account's second step (escalating, at most 15 minutes); and,
+  persisted in the database so a restart does not reset it, 20 wrong
+  authenticator codes in any 24 hours refuse authenticator codes for the
+  account until the oldest ages out (429), while recovery codes keep working
+  (they have their own, much higher budget of 100 wrong guesses a day). Someone
+  who knows the password can therefore guess at most about 20 six-digit codes a
+  day (about 0.01 % chance), and cannot lock the owner out: a recovery code or
+  an Owner reset still gets in. Five or more wrong codes not yet reported make
+  the next successful sign-in show a one-time security notice, raise one audit
+  entry (`auth.two_factor_alert`, no code) and send one e-mail to a confirmed
+  address when the server can send mail. Turning it off or making new recovery
+  codes needs the password and a current code; setting up needs the password.
+  The Owner can reset a member's second factor (`user.two_factor_reset`, ends
+  their sessions); the Owner's own is reset from the host with
+  `mnema-talk reset-2fa <username>`. Resetting a password by mail does not skip
+  the second factor, and a native sign-in has the same second step
+  (`POST /auth/login/2fa`) before any grant is issued.
+- **Deleting an account and exporting its data (GDPR Art. 17 and 20).** Both
+  are self-service under Account & security and both need the password and,
+  while two-factor sign-in is on, a current code (wrong answers count toward the
+  usual lockouts), so a stolen session cookie alone cannot do either.
+  *Deletion* runs in one transaction and cannot be undone. The Owner account
+  cannot be deleted (ownership is not transferable). What goes: profile,
+  avatar, e-mail address, sessions (native ones too), tokens, invites,
+  reactions, mentions of the member, settings, roles and overwrites, every file
+  the member uploaded (database rows and objects), pending and finished exports,
+  and the second factor. What stays: the account row as an anonymised tombstone
+  (`deleted-<id>`, "Deleted user", disabled, unusable password hash) and the
+  member's messages, emptied of text, link cards and pins (and of the earlier
+  versions kept for moderators' edit history), so threads and other
+  members' replies stay readable; other members' texts that merely quote or
+  @mention the old name are not rewritten. Audit entries about the account keep
+  action, time and ids; their names and details are blanked by the one update
+  the append-only audit trigger permits (and only inside a transaction that sets
+  `mnema.audit_scrub`, never changing ids, actions or times). A test walks every
+  foreign key to `users` and fails when a table that refers to a person is
+  forgotten. The name `deleted-…` is reserved. A deleted account is final:
+  every administrative action treats it as missing (404), the account queries
+  count it as inactive, and a database trigger refuses any update that would
+  re-enable it or give it a password, name, address, avatar, role or ban. *Export* is built in the
+  background into the object store under `exports/` (not touched by the orphan
+  cleanup), limited to one per account per 24 hours by a database lock, is
+  streamed into storage while it is made (memory stays at one page of rows; the
+  bounds are enforced while writing), can be downloaded once within 24 hours
+  (the file is spent and deleted only after it was sent completely; an
+  interrupted download can be repeated, and only one download holds it at a
+  time), is swept when expired, and is removed with the account. Because the
+  download changes state, it refuses requests the browser marks as coming from
+  another site (`Sec-Fetch-Site`), so a link or image on another page cannot
+  burn it.
+  It holds the member's own profile, settings, roles, messages (channel names
+  only for channels they can still view), reactions, upload list, a security
+  summary and audit entries about the account as "you"/"staff" without any
+  other person's name; it is bounded to 200 000 messages and 64 MiB.
+- **WebSocket flood limits.** Every client event has a payload cap (1 KiB for
+  ping, typing, speaking and the like; larger only for an SDP answer, an ICE
+  candidate, a diagnostic and a media handshake), and a frame too big for its
+  type is dropped before it is decoded. On top of the per-connection limits,
+  an account has shared limits across all of its connections (frames, events
+  and media handshakes per second), so several sockets of one member do not
+  multiply the allowance. The relay of media handshakes checks only their
+  framing (an MLS key package, welcome or public message, or a heartbeat or
+  capability message of the exact size); the content stays opaque to the
+  server, and anything that is not shaped like one of these is not fanned
+  out to the room. ICE candidates in a client's answer SDP get the same
+  vetting and budget as trickled ones (no loopback, link-local, multicast,
+  unspecified or name addresses, at most 64 per peer).
 - **CSRF.** State-changing requests and WebSocket upgrades must come from an
   allowed origin (`PUBLIC_URL` / `CORS_ALLOWED_ORIGINS`), on top of `SameSite=Lax`.
   The one exception is the webhook execute route
@@ -131,6 +315,17 @@ details and the limits.
   a session whose token was revoked. Slash commands are run only by members
   who may send in the channel, only for bots that can view and send there,
   and an admin can switch any command off; ephemeral replies are never stored.
+  Built-in commands (`/poll`) run on the server behind the same checks: the
+  right to send in the channel, a rate limit and options validated against the
+  command's definition. **Polls** keep anonymous votes anonymous by
+  construction: the query that builds a poll never selects voter ids for an
+  anonymous poll, so the message, lists, search, the mentions inbox, the
+  WebSocket, the gateway, outgoing webhooks and the data export of other
+  members cannot carry them; a member's own choice is returned only to that
+  member. A vote needs *View channels* and *Add reactions* and is refused
+  after the poll ended; concurrent votes by one member cannot leave a
+  single-choice poll with two answers, and a vote cannot land after the end.
+  Deleting an account removes its votes and the polls it posted.
   Threat model and limits: a bot is as trusted as the roles it was given; a
   leaked token is a leaked bot (revoke it), and the Owner's explicit choice to
   give a bot administrator power is warned about in the interface.
@@ -156,11 +351,79 @@ details and the limits.
   JS eval; `'wasm-unsafe-eval'` only so the bundled noise filter can compile
   its WebAssembly),
   `frame-ancestors 'none'`, `nosniff`, a restrictive referrer policy and related
-  headers on every response.
+  headers on every response. `style-src` still allows `'unsafe-inline'`, only
+  because the emoji picker library writes a `<style>` element and inline style
+  attributes itself and has no nonce support; the app's own code needs none,
+  and images, fonts, media and connections are same-origin, so injected CSS
+  cannot send data to a third party. Dropping it (a hash for the picker's style
+  text plus a patched or replaced picker, with a browser test that fails on any
+  CSP violation) is planned after 1.0.
+- **Message rendering.** Markdown is parsed into a tree of plain nodes
+  (`web/src/lib/markdown/`) and only one module turns that tree into HTML: every
+  string is escaped, tags come from a fixed table, and generated elements (mention
+  pills, future custom emoji) pass an attribute allowlist with a pattern per
+  attribute (an image source must be a same-origin path). Links are limited to
+  `http`, `https` and `mailto`; a link whose text does not name its destination
+  asks before it opens, however it is activated. Code is highlighted by
+  highlight.js in its core build with a fixed language list and no
+  auto-detection; its HTML output is re-tokenised and only
+  `<span class="hljs-…">` pairs survive (anything else, or unbalanced markup,
+  falls back to the escaped code), and large blocks are not highlighted.
+  Parsing is a hand-written scanner with bounded nesting and a size limit, with
+  tests for hostile input; there is no regular-expression backtracking on user
+  text. The only `v-html` sink is `MarkdownContent`.
+- **Installable app and service worker.** The web app ships a manifest and a
+  small service worker (`/sw.js`, same origin, so it fits the CSP unchanged:
+  `script-src 'self'`, `worker-src 'self'`). It keeps the app shell (the page
+  and its hashed assets, icons) for offline starts and answers nothing else:
+  it never touches `/api/`, other origins or non-GET requests, so no message,
+  profile, media or session data is ever stored by it. Both files are served
+  with `Cache-Control: no-cache`, so a deploy reaches installed apps on the next
+  start. The desktop client never registers it.
+- **Web Push.** Pushes are encrypted for the receiving browser (RFC 8291,
+  `aes128gcm`) and signed with the server's VAPID key (RFC 8292), so the push
+  service (Google, Mozilla, Apple, Microsoft) cannot read them; they carry the
+  channel name and sender and, unless the member or `PUSH_PREVIEWS=off` says
+  otherwise, the first 140 characters of the message. Recipients are decided on
+  the server when a message is sent: the author never, only members who may
+  view the channel in the current permission snapshot (a failed snapshot sends
+  nothing), with the member's effective notification level, mutes and Do Not
+  Disturb applied. The VAPID private key lives in the database (`push_vapid`),
+  is never logged or returned, and is created on first start. A subscription
+  endpoint is member-supplied, so it is treated like an outgoing webhook URL
+  but stricter: https on port 443 only, no literal private address at
+  registration, and at every send the same resolve-vet-connect guard
+  (`internal/ssrf`) with no allowlist, no redirects and no response shown, so
+  the server cannot be used as a request proxy or to scan the network. Failed
+  or gone subscriptions are removed; a browser signing out removes its own, and
+  registering a browser under another account moves it, so the next person on a
+  shared browser is not sent the previous account's messages. A device is
+  bound to the session that registered it: once that session is signed out,
+  expired or revoked (password change or reset, "log out everywhere", admin
+  revoke, disabled account: the user's `token_version` moves on), the device is
+  no longer sent anything, checked on every send, and removed within a minute.
+  At most 10 devices per account; registering and testing are rate limited.
+- **Custom emoji.** An uploaded emoji is never stored as sent: the server sniffs
+  PNG, GIF or WebP by content, refuses SVG, JPEG and animated WebP, bounds the
+  canvas (1024 px) and the pixel budget of an animation (canvas times frames)
+  before decoding, redraws every frame at most 128 x 128 and writes a new
+  PNG or GIF, so metadata, trailing bytes and polyglot payloads cannot survive
+  (256 KiB limit before and after). The images are served to signed-in members
+  from the app's own origin with their stored type, `nosniff` and a sandbox CSP.
+  Only the Owner and holders of *Manage emoji* can change them; every change is
+  in the audit log.
 - **Uploads.** File types are detected by content sniffing, not by the
   client-supplied name or MIME type. Risky types (HTML, SVG, scripts, unknown
   binaries, ...) are only ever served as downloads, never rendered inline. Media is
   served only to authenticated users, through the app, not directly from S3.
+  File names lose path parts, control characters and invisible or
+  bidirectional format characters (so `invoice<RLO>fdp.exe` cannot pose as a
+  PDF); webhook, bot and username-override names get the same treatment.
+  Storage is bounded: each account (member, bot, webhook) may upload
+  `UPLOAD_QUOTA_MB_PER_DAY` (default 2048) in any rolling 24 hours, deleted
+  files included, and uploads pause when `MEDIA_MAX_TOTAL_MB` (default off) is
+  reached or the volume at `MEDIA_DISK_PATH` has less than `MEDIA_MIN_FREE_MB`
+  (default 1024) free.
 - **Abuse protection.** Per-client rate limiting, plus an escalating login
   lockout per client address and username after repeated failures (1, 5, then
   30 minutes; the tier is forgotten after an hour without failures). A much
@@ -170,15 +433,21 @@ details and the limits.
   session secret, bound to the user id and the account's token_version, so it survives restarts
   and address changes but not a password change or reset, "log out
   everywhere", an administrator revoking sessions or disabling the account) are checked as
-  usual, while every other device together gets about one password check per
-  minute for the whole account (however many addresses they come from) and is
-  answered 429 otherwise, so a distributed guesser
-  learns next to nothing and the owner on a new phone still gets in. Wrong
+  usual, while every other device gets about one password check per minute per
+  client address and about ten per minute for the whole account, and is answered
+  429 otherwise; refused attempts are not charged to the shared ceiling, so one
+  hostile address cannot use up the budget a legitimate new device needs and a
+  distributed guesser learns next to nothing. (An attacker with as many distinct
+  client addresses as the ceiling allows can still crowd out new-device sign-ins
+  for the 15 minutes of the cap; the owner's known devices and `mnema-talk
+  unlock` are unaffected.) Wrong
   guesses count triple against their address. The cap lasts at most 15
   minutes, and a restart clears all lockouts (they are held in memory). Password
   hashing for login, registration, re-authentication and password changes
-  shares one concurrency limit, so a flood of attempts cannot starve the
-  server. Passwords need at least 10 characters, 14 for the Owner account.
+  shares one concurrency limit; unauthenticated work (login, registration)
+  waits at most two seconds for a slot, with a bounded queue and cancellation
+  when the client disconnects, and otherwise answers 503 with `Retry-After`, so
+  a flood of attempts neither starves the server nor piles up goroutines. Passwords need at least 10 characters, 14 for the Owner account.
   Rate-limit and lockout keys treat an IPv6 /64 as one client. Login attempts
   with a username that cannot exist are rejected before they are tracked, and
   limiter memory is capped. Invite codes are checked before any password
@@ -382,11 +651,25 @@ details and the limits.
   on version 2, and a version 2 unit carries no line, so in such an epoch its
   units can still be moved between lines, exactly as before.
   Planned (phase B, a later release): refuse version 2 entirely and stop
-  sending it, once older tabs and desktop clients have aged out.
+  sending it, once older tabs and desktop clients have aged out. Every bundle
+  since 0.8.2 speaks version 3, but a Talk member that does not advertise it
+  (an old tab, or a hostile client that stays silent) keeps its epoch on
+  version 2 by design; the 1.0 review kept this as is, because removing
+  version 2 is a protocol change that would cut such members off, and the
+  party that could exploit it (moving units between a sender's lines) is the
+  active server, which is already outside the model.
+  Also known and accepted: two colluding members, or the server, can make a
+  listener who hears nobody else regroup by naming a newer epoch in unopened
+  frames; this is rate-limited with a backoff and no more than the denial of
+  service the server already has.
   Video stays decodable by the
   browser's packetizer, so the codec headers it parses (H.264 parameter sets
   and slice headers, the VP8 payload header) are readable but authenticated;
-  only VP8 and H.264 are negotiated while media is sealed. Metadata (who speaks
+  only VP8 and H.264 are negotiated while media is sealed (Firefox prefers VP8,
+  because its H.264 encoder is an optional download). A browser that cannot seal
+  (no `RTCRtpScriptTransform` or no Ed25519 in WebCrypto) is refused at the
+  join, before any device is requested: there is no unsealed fallback in any
+  engine. Metadata (who speaks
   when, frame sizes, timing) is visible to the server. Text messages and
   attachments stay readable by the server. **Desktop client.** The desktop
   client does not run the server's JavaScript. It runs a signed bundle of the
@@ -434,6 +717,21 @@ details and the limits.
   operators must name it in their privacy notice. Only the Owner and holders
   of *View audit log* can read it; the database refuses updates, and nothing
   is deleted unless `AUDIT_RETENTION_DAYS` is set (default `0`: keep forever).
+- **Edit history.** Each edit keeps the text it replaced (at most 50 versions
+  per message, `message_edits`). Only holders of *Manage messages* in the
+  channel and the Owner can read it (`GET .../messages/{id}/edits`, checked
+  against the live permission snapshot, rate limited per member); it is not in
+  message lists, events, search, push or webhook payloads. The author's own
+  data export includes their earlier versions and nobody else's. It goes with
+  the message and with the author's account, and `EDIT_HISTORY_RETENTION_DAYS`
+  can expire it. The audit log's `message.edit` entry is a separate record
+  (see above). doc/moderation.md#edit-history.
+- **Link previews.** Previews use the same address list as outgoing webhooks
+  (`internal/ssrf`: metadata, IPv4-compatible, IPv4-translated, discard-only,
+  multicast, private, NAT64 and similar ranges are refused after DNS
+  resolution, also on redirects). A fetch lasts at most 6 s in total; a host
+  that runs into that deadline is not fetched again for 5 minutes, and one
+  member holds at most two fetches at a time.
 - **Outbound connections.** Besides link previews (`LINK_PREVIEWS_ENABLED`)
   and optional STUN/TURN, the server only asks GitHub for the latest release
   (`UPDATE_CHECK_ENABLED`, default on): an unauthenticated `GET` to
@@ -492,3 +790,14 @@ profile `autoupdate`, `UPDATER_TOKEN`). How it is built and why:
   the token and a foothold on the `mnema-updater` network, could have
   containers in scope recreated; anyone who compromises the updater container
   has root on the host. Leave the profile off if you update by hand anyway.
+- **No signature check on the pulled image (known limit).** The sidecar asks
+  the Docker daemon to pull the tag again; nothing on the host checks the
+  cosign signature or the provenance that `release.yml` attaches to every
+  release image before the app is recreated. Watchtower has no hook for such
+  a check, and a verifying wrapper around the pull would be new infrastructure
+  on the one container that holds the Docker socket, so this is documented
+  rather than built. The trust is the same as for installing the image at all
+  (GHCR plus this repository's release workflow). Operators who want the
+  check update by hand: verify the digest with `cosign verify` and pin it in
+  `MNEMA_IMAGE` ([doc/operations.md](doc/operations.md#verifying-a-release-image));
+  a digest-pinned install is excluded from "Update now" by design.

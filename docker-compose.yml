@@ -54,8 +54,16 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY:?set S3_SECRET_KEY in .env}
       - S3_FORCE_PATH_STYLE=true
       - MAX_UPLOAD_SIZE_MB=${MAX_UPLOAD_SIZE_MB:-50}
+      - EMOJI_MAX=${EMOJI_MAX:-200}
+      - UPLOAD_QUOTA_MB_PER_DAY=${UPLOAD_QUOTA_MB_PER_DAY:-2048}
+      - MEDIA_MAX_TOTAL_MB=${MEDIA_MAX_TOTAL_MB:-0}
+      - MEDIA_MIN_FREE_MB=${MEDIA_MIN_FREE_MB:-1024}
+      - MEDIA_DISK_PATH=${MEDIA_DISK_PATH:-}
       - LINK_PREVIEWS_ENABLED=${LINK_PREVIEWS_ENABLED:-true}
       - API_DOCS_ENABLED=${API_DOCS_ENABLED:-false}
+      - PUSH_ENABLED=${PUSH_ENABLED:-true}
+      - PUSH_PREVIEWS=${PUSH_PREVIEWS:-user}
+      - PUSH_VAPID_SUBJECT=${PUSH_VAPID_SUBJECT:-}
       - WEBHOOK_ALLOW_PRIVATE_TARGETS=${WEBHOOK_ALLOW_PRIVATE_TARGETS:-}
       # Release check against api.github.com every 30 min; false = no request.
       - UPDATE_CHECK_ENABLED=${UPDATE_CHECK_ENABLED:-true}
@@ -69,6 +77,8 @@ services:
       - MEDIA_RETENTION_DAYS=${MEDIA_RETENTION_DAYS:-0}
       # 0 = keep audit log entries forever.
       - AUDIT_RETENTION_DAYS=${AUDIT_RETENTION_DAYS:-0}
+      # 0 = keep the earlier versions of edited messages (moderator edit history).
+      - EDIT_HISTORY_RETENTION_DAYS=${EDIT_HISTORY_RETENTION_DAYS:-0}
       - ADMIN_USERNAME=${ADMIN_USERNAME:-Herzog}
       - ADMIN_INITIAL_PASSWORD=${ADMIN_INITIAL_PASSWORD:-}
       - WEBRTC_UDP_PORT_MIN=${WEBRTC_UDP_PORT_MIN:-50000}
@@ -80,6 +90,15 @@ services:
       - WEBRTC_TURN_URLS=${WEBRTC_TURN_URLS:-}
       - WEBRTC_TURN_SECRET=${WEBRTC_TURN_SECRET:-}
       - METRICS_TOKEN=${METRICS_TOKEN:-}
+      # Outgoing e-mail (confirm an address, reset a password). Empty SMTP_HOST =
+      # the server sends no e-mail. SMTP_PASSWORD_FILE needs the file mounted.
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-}
+      - SMTP_TLS=${SMTP_TLS:-starttls}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_PASSWORD_FILE=${SMTP_PASSWORD_FILE:-}
+      - SMTP_FROM=${SMTP_FROM:-}
       - LEGAL_OPERATOR_NAME=${LEGAL_OPERATOR_NAME:-Community Operator}
       - LEGAL_OPERATOR_EMAIL=${LEGAL_OPERATOR_EMAIL:-admin@example.com}
       - LEGAL_OPERATOR_COUNTRY=${LEGAL_OPERATOR_COUNTRY:-Deutschland}
@@ -261,6 +280,9 @@ services:
       - WEBRTC_TURN_SECRET=${WEBRTC_TURN_SECRET:-}
       - WEBRTC_TURN_REALM=${WEBRTC_TURN_REALM:-turn.example.com}
       - WEBRTC_NAT_1TO1_IP=${WEBRTC_NAT_1TO1_IP:-}
+    # Allocation quotas: at most 8 relayed sessions per credential and 48 in
+    # total (the relay port range below holds 49), so one member cannot take
+    # every relay port.
     # Refuses to start without a real secret: with an empty static-auth-secret
     # anyone could mint credentials and use the relay.
     # Never relays into private, loopback, link-local or reserved ranges (incl.
@@ -292,6 +314,7 @@ services:
           --static-auth-secret="$$WEBRTC_TURN_SECRET" --realm="$$WEBRTC_TURN_REALM" \
           --listening-port=3478 --min-port=49152 --max-port=49200 \
           --fingerprint --no-cli --no-multicast-peers --no-tcp-relay \
+          --user-quota=8 --total-quota=48 \
           --denied-peer-ip=0.0.0.0-0.255.255.255 \
           --denied-peer-ip=10.0.0.0-10.255.255.255 \
           --denied-peer-ip=100.64.0.0-100.127.255.255 \

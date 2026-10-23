@@ -53,7 +53,8 @@
   },
   "user": {
     "avatar": "Profilbild",
-    "openProfile": "Eigenes Profil öffnen"
+    "openProfile": "Eigenes Profil öffnen",
+    "deleted": "Gelöschter Nutzer"
   },
   "media": {
     "sizeMb": "{size} MB"
@@ -69,7 +70,8 @@
     "language": "Sprache",
     "signOut": "Abmelden",
     "languageSet": "Sprache auf {language} gestellt. Für dieses Konto gespeichert.",
-    "languageFailed": "Sprache konnte nicht gespeichert werden."
+    "languageFailed": "Sprache konnte nicht gespeichert werden.",
+    "app": "App & Benachrichtigungen"
   },
   "errors": {
     "unknown": "Unbekannter Fehler",
@@ -99,7 +101,14 @@
       "fieldMax": "{field}: höchstens {count} Zeichen",
       "fileTooBig": "Die Datei ist größer als {size} MB",
       "missingPermission": "Dafür fehlt dir die Berechtigung.",
-      "slowMode": "Langsammodus: bitte warte noch {seconds} s"
+      "slowMode": "Langsammodus: bitte warte noch {seconds} s",
+      "linkInvalid": "Dieser Link ist ungültig oder abgelaufen.",
+      "emailInvalid": "Gib eine gültige E-Mail-Adresse ein.",
+      "emailInUse": "Ein anderes Konto hat diese Adresse bereits bestätigt.",
+      "codeWrong": "Dieser Code hat nicht funktioniert. Codes laufen nach 30 Sekunden ab und gelten einmal.",
+      "codeCapped": "Heute zu viele falsche Codes. Nimm einen deiner Recovery-Codes.",
+      "twoFactorOn": "Die Zwei-Faktor-Anmeldung ist schon eingeschaltet.",
+      "twoFactorOff": "Die Zwei-Faktor-Anmeldung ist nicht eingeschaltet."
     },
     "field": {
       "content": "Nachricht",
@@ -158,7 +167,9 @@
     "subtitle": "Private Gemeinschaft",
     "menu": "Menü",
     "channels": "Kanäle",
+    "openChannels": "Kanalliste öffnen",
     "noChannels": "Keine Kanäle",
+    "draft": "Entwurf",
     "deleteCategory": "Kategorie löschen",
     "deleteChannel": "Kanal löschen",
     "deleteVoiceChannel": "Sprachkanal löschen",
@@ -292,6 +303,27 @@
     "offline": "Offline — {count}",
     "roleGroup": "{name} — {count}"
   },
+  "format": {
+    "help": "Formatierungshilfe",
+    "title": "Formatierung",
+    "intro": "Setze diese Zeichen um deinen Text. Ein Backslash davor zeigt das Zeichen unverändert.",
+    "bold": "Fett",
+    "italic": "Kursiv",
+    "underline": "Unterstrichen",
+    "strike": "Durchgestrichen",
+    "spoiler": "Spoiler",
+    "code": "Code im Text",
+    "codeBlock": "Codeblock mit Hervorhebung",
+    "heading": "Überschrift",
+    "subtext": "Kleiner Text",
+    "list": "Liste",
+    "numbered": "Nummerierte Liste",
+    "quote": "Zitat",
+    "blockQuote": "Zitat bis zum Ende",
+    "link": "Link mit eigenem Text",
+    "noEmbed": "Link ohne Vorschau",
+    "close": "Schließen"
+  },
   "chat": {
     "selectChannel": "Kanal auswählen",
     "welcome": "Willkommen in #{channel}",
@@ -324,6 +356,7 @@
     "newMessages": "Neue Nachrichten",
     "viewingOlder": "Du siehst ältere Nachrichten",
     "jumpToEnd": "Zum Ende springen",
+    "jumpToFirstUnread": "Zur ersten ungelesenen Nachricht",
     "enlargedImage": "Vergrößertes Bild",
     "attachment": "Anhang",
     "unknownUser": "Unbekannt",
@@ -338,6 +371,12 @@
     "deleteFailed": "Die Nachricht konnte nicht gelöscht werden.",
     "sendFailed": "Die Nachricht konnte nicht gesendet werden.",
     "spoiler": "Spoiler",
+    "copyCode": "Kopieren",
+    "codeCopied": "Code kopiert",
+    "copyCodeFailed": "Der Code konnte nicht kopiert werden.",
+    "linkConfirmTitle": "Diesen Link öffnen?",
+    "linkConfirmBody": "Der Linktext zeigt nicht, wohin der Link führt. Er öffnet {host}.",
+    "linkOpen": "Link öffnen",
     "search": "Suche",
     "searchPlaceholder": "Nachrichten durchsuchen …",
     "filter": "Filter",
@@ -406,6 +445,7 @@
     "memberDeafened": "Taub geschaltet",
     "kicked": "Ein Admin hat dich aus dem Talk entfernt.",
     "roomFull": "Dieser Talk ist voll. Versuche es erneut, sobald jemand den Talk verlässt.",
+    "mediaUnsupported": "Dieser Browser kann Anrufe nicht schützen (es fehlen verschlüsselte Medientransformationen oder Ed25519-Signaturen) und kann deshalb nicht beitreten. Nutze ein aktuelles Chrome, Edge, Firefox oder Safari.",
     "mediaUnprotected": "Dieser Browser kann den Anruf nicht schützen. Mikrofon, Kamera und Bildschirm bleiben aus.",
     "mediaRekeyed": "Die Medienschlüssel dieses Anrufs wurden von jemand anderem im Anruf oder vom Server zurückgesetzt. Der Anruf richtet sie neu ein.",
     "mediaRefreshed": "Der Anruf wurde nach einer Zeit der Inaktivität aufgefrischt. Seine Medienschlüssel wurden erneuert, der Anruf richtet sie neu ein.",
@@ -614,7 +654,8 @@
       "rights2Before": "Außerdem können Sie einer Verarbeitung auf Grundlage berechtigter Interessen widersprechen (Art. 21 DSGVO) und eine erteilte Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen (Art. 7 Abs. 3 DSGVO). Sie haben zudem das Recht, sich bei einer ",
       "rightsComplain": "Datenschutzaufsichtsbehörde zu beschweren",
       "rights2After": " (Art. 77 DSGVO), insbesondere in dem Land Ihres Wohnorts oder des Wohnsitzes des Betreibers.",
-      "noiseFilter": "Die KI-Rauschunterdrückung (DeepFilterNet3 bzw. GTCRN) läuft vollständig in Ihrem Browser. Ihr Mikrofonsignal wird dafür an keinen Drittanbieter übertragen; Modell und Programmcode kommen von diesem Server."
+      "noiseFilter": "Die KI-Rauschunterdrückung (DeepFilterNet3 bzw. GTCRN) läuft vollständig in Ihrem Browser. Ihr Mikrofonsignal wird dafür an keinen Drittanbieter übertragen; Modell und Programmcode kommen von diesem Server.",
+      "selfService": "Ohne jemanden anzuschreiben: Unter Konto & Sicherheit im Kontomenü kannst du eine Kopie deiner Daten herunterladen (JSON-Dateien in einer ZIP-Datei, einmal pro Tag) und dein Konto selbst löschen. Beim Löschen werden Profil, Avatar, E-Mail-Adresse, Sitzungen und Uploads entfernt; deine Nachrichten bleiben ohne ihren Text als von „Gelöschter Nutzer“ in ihren Threads stehen. Eine freiwillige E-Mail-Adresse dient nur zur Bestätigung und zum Zurücksetzen deines Passworts und wird anderen Mitgliedern nie angezeigt."
     },
     "cookies": {
       "heading": "3. Cookies & lokaler Speicher",
@@ -806,7 +847,8 @@
       "audit": "Audit-Log",
       "bans": "Sperren",
       "bots": "Bots",
-      "onboarding": "Willkommen & Regeln"
+      "onboarding": "Willkommen & Regeln",
+      "emoji": "Emoji"
     },
     "system": {
       "heading": "System & Version",
@@ -935,6 +977,10 @@
           "title": "Sprachkapazität ist begrenzt",
           "body": "WEBRTC_UDP_MUX_PORT=0 gibt jedem Medien-Peer einen eigenen UDP-Port aus dem Bereich ({count} Ports); das begrenzt, wie viele Personen gleichzeitig in Gesprächen sein können. Lass die Einstellung leer, damit sich alle einen Port teilen."
         },
+        "insecure_public_url": {
+          "title": "PUBLIC_URL ist nicht https",
+          "body": "Sitzungs-Cookies werden ohne Secure-Flag und ohne __Host--Präfix gesendet; wer im Netzwerkpfad sitzt, kann sie lesen oder ersetzen. Setze PUBLIC_URL auf die https://-Adresse, die alle öffnen, hinter einem Reverse Proxy, der TLS beendet."
+        },
         "voice_unavailable": {
           "title": "Sprache ist deaktiviert",
           "body": "Die WebRTC-Engine konnte nicht starten, daher kann niemand Sprachkanälen beitreten oder den Bildschirm teilen. Den Grund findest du im Server-Log."
@@ -1039,6 +1085,8 @@
     "inviteCreated": "Einladung erstellt",
     "noInvites": "Noch keine Einladungen.",
     "uses": "Nutzungen: {used} / {max}",
+    "weakInvite": "Deaktiviert, neu erzeugen",
+    "weakInviteHint": "Dieser eigene Code ist kurz oder gebräuchlich und könnte durch Ausprobieren gefunden werden und funktioniert deshalb bei der Registrierung nicht mehr. Lösche ihn und erstelle einen neuen; generierte Codes sind immer sicher.",
     "expired": "abgelaufen",
     "usedUp": "aufgebraucht",
     "validUntil": "gültig bis {date}",
@@ -1082,7 +1130,22 @@
       "tooLong": "Einer der Texte ist zu lang.",
       "save": "Speichern",
       "saved": "Willkommen und Regeln gespeichert."
-    }
+    },
+    "mail": {
+      "title": "E-Mail (SMTP)",
+      "off": "Nicht eingerichtet. Ohne SMTP_HOST sendet der Server keine E-Mails: Passwörter lassen sich nicht per Mail zurücksetzen und Adressen bleiben unbestätigt. Alles andere funktioniert wie bisher.",
+      "on": "Sendet als {from} ({tls}). Die Einstellungen kommen aus der Server-Umgebung, in der Datenbank wird nichts gespeichert.",
+      "recipient": "Empfänger der Testmail",
+      "recipientPlaceholder": "Leer: deine eigene Adresse",
+      "test": "Testmail senden",
+      "sent": "Testmail gesendet.",
+      "tooOften": "Zu viele Testmails. Versuche es in ein paar Minuten erneut."
+    },
+    "resetTwoFactor": "Zwei-Faktor-Anmeldung zurücksetzen",
+    "resetTwoFactorTitle": "Zwei-Faktor-Anmeldung von {name} zurücksetzen?",
+    "resetTwoFactorBody": "Schaltet die Zwei-Faktor-Anmeldung aus, löscht das Authenticator-Geheimnis und die Recovery-Codes und meldet das Mitglied überall ab. Gedacht für den Fall, dass beides verloren ist. Danach kann es sie neu einschalten.",
+    "resetTwoFactorConfirm": "Zurücksetzen",
+    "twoFactorReset": "Zwei-Faktor-Anmeldung zurückgesetzt."
   },
   "profile": {
     "addedBy": "Hinzugefügt von {name}",
@@ -1150,7 +1213,89 @@
     "privateFrom": "Private Antwort von {bot}",
     "bot": "Bot",
     "onlyYou": "Nur du siehst das",
-    "dismiss": "Ausblenden"
+    "dismiss": "Ausblenden",
+    "builtinLabel": "Eingebaut",
+    "builtin": {
+      "poll": {
+        "description": "Stelle dem Kanal eine Frage",
+        "options": {
+          "question": "Was möchtest du fragen?",
+          "answers": "2 bis 10 Antworten, getrennt durch |",
+          "duration": "Wie lange abgestimmt werden kann",
+          "multiple": "Mehrere Antworten pro Mitglied erlauben",
+          "anonymous": "Verbergen, wer wofür gestimmt hat"
+        },
+        "choices": {
+          "duration": {
+            "1h": "1 Stunde",
+            "4h": "4 Stunden",
+            "8h": "8 Stunden",
+            "24h": "24 Stunden",
+            "3d": "3 Tage",
+            "1w": "1 Woche"
+          }
+        }
+      }
+    }
+  },
+  "poll": {
+    "title": "Umfrage",
+    "create": "Umfrage erstellen",
+    "createTitle": "Umfrage erstellen",
+    "question": "Frage",
+    "questionPlaceholder": "Was möchtest du fragen?",
+    "answers": "Antworten",
+    "answerN": "Antwort {n}",
+    "removeAnswer": "Antwort {n} entfernen",
+    "addAnswer": "Antwort hinzufügen",
+    "duration": "Dauer",
+    "durations": {
+      "1h": "1 Stunde",
+      "4h": "4 Stunden",
+      "8h": "8 Stunden",
+      "24h": "24 Stunden",
+      "3d": "3 Tage",
+      "1w": "1 Woche"
+    },
+    "allowMultiple": "Mehrere Antworten erlauben",
+    "makeAnonymous": "Anonyme Umfrage",
+    "anonymousHint": "Niemand sieht, wer wofür gestimmt hat, auch du und die Admins nicht. Es werden nur die Summen angezeigt.",
+    "post": "Umfrage senden",
+    "problem": {
+      "question": "Gib eine Frage ein.",
+      "options": "Mindestens {min} Antworten nötig.",
+      "duplicate": "Die Antworten müssen sich unterscheiden."
+    },
+    "postFailed": "Die Umfrage konnte nicht gesendet werden.",
+    "single": "Eine Antwort wählen",
+    "multiple": "Eine oder mehrere wählen",
+    "anonymous": "Anonym",
+    "options": "Antworten",
+    "voters": {
+      "one": "{count} Stimme",
+      "other": "{count} Stimmen"
+    },
+    "ended": "Beendet",
+    "left": {
+      "minute": {
+        "one": "Endet in {count} Minute",
+        "other": "Endet in {count} Minuten"
+      },
+      "hour": {
+        "one": "Endet in {count} Stunde",
+        "other": "Endet in {count} Stunden"
+      },
+      "day": {
+        "one": "Endet in {count} Tag",
+        "other": "Endet in {count} Tagen"
+      }
+    },
+    "end": "Umfrage beenden",
+    "endTitle": "Umfrage beenden?",
+    "endBody": "Die Abstimmung endet jetzt. Die Ergebnisse bleiben sichtbar.",
+    "someone": "Jemand",
+    "more": "+{count} weitere",
+    "failed": "Das hat nicht geklappt."
   },
   "mention": {
     "title": "Erwähnen",
@@ -1158,6 +1303,15 @@
     "allHint": "Alle Mitglieder",
     "hereHint": "Alle, die gerade online sind",
     "roleHint": "Rolle: alle, die sie tragen, werden benachrichtigt"
+  },
+  "pins": {
+    "title": "Angeheftete Nachrichten",
+    "empty": "In diesem Kanal ist noch nichts angeheftet.",
+    "emptyModerator": "Noch nichts angeheftet. Hefte eine Nachricht über ihr Nachrichtenmenü an.",
+    "failed": "Die angehefteten Nachrichten konnten nicht geladen werden.",
+    "notice": "{name} hat eine Nachricht in diesem Kanal angeheftet.",
+    "view": "Ansehen",
+    "dismiss": "Schließen"
   },
   "mentions": {
     "inbox": "Erwähnungen",
@@ -1167,7 +1321,24 @@
   "emoji": {
     "open": "Emoji einfügen",
     "more": "Weitere Emojis",
-    "loading": "Emojis werden geladen …"
+    "loading": "Emojis werden geladen …",
+    "suggestTitle": "Eigene Emojis",
+    "admin": {
+      "title": "Eigene Emojis",
+      "hint": "PNG, GIF oder WebP bis 256 KiB. Bilder werden auf dem Server neu gezeichnet und auf höchstens 128 × 128 Pixel verkleinert. Mitglieder nutzen sie mit :name:. Animierte Emojis müssen GIFs sein.",
+      "count": "{n} von {max} belegt",
+      "file": "Bilddatei",
+      "name": "Name (a-z, 0-9, _)",
+      "add": "Emoji hinzufügen",
+      "added": "Emoji hinzugefügt",
+      "deleted": "Emoji gelöscht",
+      "deleteTitle": ":{name}: löschen?",
+      "deleteBody": "Bestehende Nachrichten und Reaktionen zeigen :name: ab jetzt als Text. Das lässt sich nicht rückgängig machen.",
+      "animated": "Animiert",
+      "rename": "Umbenennen",
+      "empty": "Noch keine eigenen Emojis.",
+      "full": "Das Limit ist erreicht. Lösche ein Emoji oder erhöhe EMOJI_MAX."
+    }
   },
   "activity": {
     "title": "Aktivität",
@@ -1312,6 +1483,10 @@
     "ban_members": {
       "name": "Mitglieder sperren",
       "desc": "Mitglieder unterhalb deiner höchsten Rolle sperren und entsperren und die Liste der Sperren sehen."
+    },
+    "manage_emoji": {
+      "name": "Emojis verwalten",
+      "desc": "Eigene Emojis dieser Community hochladen, umbenennen und löschen."
     }
   },
   "audit": {
@@ -1653,6 +1828,16 @@
     "slowModeHint": "Mitglieder warten so lange zwischen zwei Nachrichten. Moderatoren sind ausgenommen.",
     "slowModeChip": "Langsammodus {time}"
   },
+  "editHistory": {
+    "menu": "Bearbeitungsverlauf",
+    "title": "Bearbeitungsverlauf",
+    "body": "Frühere Fassungen dieser Nachricht, die neueste zuerst. Nur wer Nachrichten verwalten darf, sieht sie.",
+    "current": "Aktuell",
+    "loading": "Lädt …",
+    "none": "Von dieser Nachricht ist keine frühere Fassung gespeichert.",
+    "empty": "(kein Text)",
+    "failed": "Der Bearbeitungsverlauf konnte nicht geladen werden."
+  },
   "bots": {
     "title": "Bots",
     "intro": "Bots sind Konten für Programme: Sie schreiben Nachrichten, beantworten Slash-Befehle und reagieren über die Bot-API auf Ereignisse (siehe doc/bots.md). Ein neuer Bot kann nichts, bis du ihm eine Rolle gibst, seine Intents erlaubst und ein Token ausstellst. Jede Änderung landet im Audit-Log.",
@@ -1763,6 +1948,137 @@
       "deleteFor": "Befehl {name} löschen",
       "deleteTitle": "Befehl /{name} löschen?",
       "deleteBody": "Der Bot kann ihn erneut registrieren."
+    }
+  },
+  "appSettings": {
+    "title": "App & Benachrichtigungen",
+    "subtitle": "Mnema Talk installieren und auch bei geschlossener App benachrichtigt werden.",
+    "installTitle": "Installieren",
+    "install_installed": "Mnema Talk ist auf diesem Gerät installiert und läuft in einem eigenen Fenster.",
+    "install_available": "Installiere Mnema Talk, um es ohne Browserleiste vom Home-Bildschirm, Dock oder Startmenü zu öffnen.",
+    "install_ios": "Auf iPhone und iPad: In Safari auf Teilen tippen, dann Zum Home-Bildschirm. Benachrichtigungen gibt es nur für die installierte App.",
+    "install_unavailable": "Dieser Browser bietet die Installation nicht an. Suche im Menü nach Installieren oder Zum Home-Bildschirm.",
+    "installAction": "App installieren",
+    "installed": "Mnema Talk ist installiert."
+  },
+  "push": {
+    "title": "Push-Benachrichtigungen",
+    "loading": "Wird geladen …",
+    "loadFailed": "Die Push-Einstellungen konnten nicht geladen werden.",
+    "offByOperator": "Der Betreiber hat Push-Benachrichtigungen auf diesem Server abgeschaltet.",
+    "needsInstall": "Auf iPhone und iPad funktionieren Push-Benachrichtigungen nur für die installierte App. Tippe in Safari auf Teilen, wähle Zum Home-Bildschirm und öffne Mnema Talk von dort.",
+    "unsupported": "Dieser Browser kann keine Push-Benachrichtigungen empfangen.",
+    "stateOn": "Dieses Gerät wird über neue Nachrichten benachrichtigt, auch wenn Mnema Talk geschlossen ist. Deine Benachrichtigungsstufen, Stummschaltungen und Nicht stören gelten.",
+    "stateOff": "Lass dich auf diesem Gerät benachrichtigen, während Mnema Talk geschlossen ist. Dein Browser fragt zuerst nach der Erlaubnis.",
+    "stateBlocked": "Benachrichtigungen sind für diese Seite blockiert. Erlaube sie in den Website-Einstellungen deines Browsers und komm dann zurück.",
+    "enable": "Für dieses Gerät einschalten",
+    "disable": "Für dieses Gerät ausschalten",
+    "test": "Testbenachrichtigung senden",
+    "previewTitle": "Nachrichtentext anzeigen",
+    "previewHint": "Pushes sind für deinen Browser verschlüsselt. Eingeschaltet enthalten sie die ersten Worte der Nachricht, die auch auf einem gesperrten Bildschirm erscheinen können. Ausgeschaltet zeigen sie nur Kanal und Absender.",
+    "previewLocked": "Der Betreiber hat den Nachrichtentext in Push-Benachrichtigungen abgeschaltet.",
+    "devices": "Geräte",
+    "thisDevice": "Dieses Gerät",
+    "unnamedDevice": "Unbenanntes Gerät",
+    "remove": "{name} entfernen",
+    "enabledToast": "Push-Benachrichtigungen sind für dieses Gerät eingeschaltet.",
+    "blockedToast": "Benachrichtigungen sind im Browser blockiert.",
+    "unavailableToast": "Push-Benachrichtigungen sind hier nicht verfügbar.",
+    "enableFailed": "Push-Benachrichtigungen konnten nicht eingeschaltet werden.",
+    "removeFailed": "Das Gerät konnte nicht entfernt werden.",
+    "testSent": "Testbenachrichtigung gesendet.",
+    "testFailed": "Die Testbenachrichtigung konnte nicht zugestellt werden.",
+    "previewFailed": "Die Einstellung konnte nicht gespeichert werden."
+  },
+  "recovery": {
+    "forgotLink": "Passwort vergessen?",
+    "forgotTitle": "Passwort zurücksetzen",
+    "forgotIntro": "Gib die E-Mail-Adresse ein, die du in den Kontoeinstellungen bestätigt hast. Gehört sie zu einem Konto, schicken wir einen Link, der 30 Minuten lang einmal funktioniert.",
+    "forgotSubmit": "Link senden",
+    "forgotSent": "Wenn ein Konto diese bestätigte Adresse hat, ist ein Link unterwegs. Er funktioniert einmal und 30 Minuten lang. Nichts angekommen? Schau im Spam-Ordner nach oder bitte den Owner um ein temporäres Passwort.",
+    "verifyTitle": "E-Mail-Adresse bestätigen",
+    "resetTitle": "Neues Passwort wählen",
+    "verifying": "Adresse wird bestätigt …",
+    "verified": "Deine E-Mail-Adresse ist bestätigt.",
+    "addressInUse": "Ein anderes Konto hat diese Adresse bereits bestätigt, sie kann hier nicht verwendet werden.",
+    "linkInvalid": "Dieser Link ist ungültig oder abgelaufen. Fordere auf der Anmeldeseite oder in deinen Kontoeinstellungen einen neuen an.",
+    "resetIntro": "Wähle ein neues Passwort. Beim Speichern werden alle Geräte abgemeldet.",
+    "resetSubmit": "Neues Passwort speichern",
+    "resetDone": "Dein Passwort ist geändert. Melde dich mit dem neuen an.",
+    "continue": "Weiter zur Anmeldung"
+  },
+  "security": {
+    "menu": "Konto & Sicherheit",
+    "title": "Konto & Sicherheit",
+    "subtitle": "Das siehst nur du",
+    "email": {
+      "title": "E-Mail-Adresse",
+      "intro": "Freiwillig. Wird nur zum Bestätigen und zum Zurücksetzen deines Passworts verwendet. Niemand sonst sieht sie, auch der Owner nicht.",
+      "introNoMail": "Freiwillig. Dieser Server kann keine E-Mails senden, eine gespeicherte Adresse bleibt daher unbestätigt und ungenutzt. Niemand sonst sieht sie.",
+      "none": "Keine E-Mail-Adresse gespeichert.",
+      "address": "E-Mail-Adresse",
+      "add": "Adresse hinzufügen",
+      "change": "Ändern",
+      "remove": "Entfernen",
+      "resend": "Bestätigung erneut senden",
+      "resent": "Bestätigungs-E-Mail gesendet.",
+      "confirmed": "Bestätigt",
+      "unconfirmed": "Noch nicht bestätigt",
+      "unused": "Nicht verwendet",
+      "saved": "Adresse gespeichert.",
+      "savedConfirm": "Adresse gespeichert. Bestätige sie über den Link in deinem Postfach.",
+      "removed": "Adresse entfernt."
+    },
+    "loading": "Lädt …",
+    "twoFactor": {
+      "title": "Zwei-Faktor-Anmeldung",
+      "intro": "Nach dem Passwort fragt die Anmeldung einen sechsstelligen Code aus einer Authenticator-App ab. Ein gestohlenes Passwort allein reicht dann nicht.",
+      "recommendOwner": "Du bist der Owner: Dieses Konto darf alles. Die Zwei-Faktor-Anmeldung wird dringend empfohlen.",
+      "on": "An",
+      "offState": "Aus",
+      "remaining": "Noch {count} Recovery-Codes",
+      "low": "Es sind nur noch wenige Recovery-Codes übrig. Erzeuge neue, bevor sie ausgehen.",
+      "turnOn": "Einschalten",
+      "turnOff": "Ausschalten",
+      "newCodes": "Neue Recovery-Codes",
+      "continue": "Weiter",
+      "confirm": "Einschalten",
+      "scan": "Scanne diesen Code mit einer Authenticator-App (zum Beispiel dem Passwortmanager deines Handys, Aegis, Google Authenticator oder Authy) und gib die sechs Ziffern ein, die sie anzeigt.",
+      "qrLabel": "QR-Code für die Authenticator-App",
+      "manual": "Oder tippe diesen Schlüssel von Hand in die App:",
+      "code": "Code",
+      "proof": "Gib dein Passwort und einen aktuellen Code aus der App ein, oder einen unbenutzten Recovery-Code.",
+      "codesIntro": "Diese zehn Recovery-Codes gelten je einmal anstelle eines App-Codes, falls du dein Handy verlierst. Sie werden nur jetzt angezeigt. Bewahre sie sicher auf, wenn möglich getrennt vom Eintrag deines Passwortmanagers.",
+      "copied": "Recovery-Codes kopiert",
+      "download": "Herunterladen",
+      "fileHeader": "Mnema-Talk-Recovery-Codes. Jeder gilt einmal.",
+      "saved": "Ich habe die Codes sicher aufbewahrt.",
+      "done": "Fertig",
+      "off": "Die Zwei-Faktor-Anmeldung ist ausgeschaltet.",
+      "loginIntro": "Gib den sechsstelligen Code deiner Authenticator-App ein, oder einen Recovery-Code.",
+      "verify": "Bestätigen",
+      "back": "Zurück",
+      "notice": "Seit deiner letzten Anmeldung wurden {count} falsche Codes für dein Konto eingegeben.",
+      "noticeHint": "Möglicherweise kennt jemand dein Passwort. Ändere es unter Konto & Sicherheit und prüfe deine Recovery-Codes."
+    },
+    "privacy": {
+      "title": "Deine Daten",
+      "exportTitle": "Kopie deiner Daten herunterladen",
+      "exportIntro": "Eine ZIP-Datei mit JSON-Dateien zu Profil, Einstellungen, Rollen, Nachrichten, Reaktionen, Uploads und den Protokolleinträgen zu deinem Konto. Daten anderer Mitglieder sind nicht enthalten. Einmal pro Tag; der Download ist 24 Stunden lang einmal möglich.",
+      "exportRequest": "Export anfordern",
+      "exportStarted": "Dein Export wird vorbereitet.",
+      "exportPending": "Dein Export wird vorbereitet …",
+      "exportReady": "Herunterladen (gültig bis {when})",
+      "exportFailed": "Der Export konnte nicht erstellt werden. Versuche es später erneut.",
+      "exportDownloaded": "Der letzte Export wurde heruntergeladen und entfernt.",
+      "exportExpired": "Der letzte Export ist abgelaufen und wurde entfernt.",
+      "exportNext": "Den nächsten Export kannst du ab {when} anfordern.",
+      "deleteTitle": "Mein Konto löschen",
+      "deleteIntro": "Löscht dein Profil, deinen Avatar, deine E-Mail-Adresse, Sitzungen, Einstellungen, Reaktionen und Uploads endgültig. Deine Nachrichten bleiben in ihren Threads als von „Gelöschter Nutzer“ stehen, ihr Text wird aber entfernt. Antworten anderer Mitglieder bleiben. Dein Benutzername wird wieder frei. Das lässt sich nicht rückgängig machen.",
+      "deleteOwner": "Das Owner-Konto kann nicht gelöscht werden: Die Eigentümerschaft lässt sich nicht übertragen, die Community hätte sonst keinen Owner.",
+      "deleteButton": "Mein Konto löschen …",
+      "deleteType": "Tippe zur Bestätigung deinen Benutzernamen ({name})",
+      "deleteConfirm": "Endgültig löschen"
     }
   }
 }

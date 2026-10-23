@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString, bounds, suiteMember } from './helpers'
+import { apiFetch, responseString, bounds, suiteMember, leaveTalks, trackPeerConnections, expectTalkLive } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
@@ -27,6 +27,7 @@ async function shot(page: Page, name: string) {
 test('the Talk has its own text chat under the stage', async ({ browser }) => {
   const aCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
+  await aCtx.addInitScript(trackPeerConnections)
   const a = await aCtx.newPage()
   const b = await bCtx.newPage()
   for (const [name, page] of [['a', a], ['b', b]] as const) {
@@ -130,6 +131,7 @@ test('the Talk has its own text chat under the stage', async ({ browser }) => {
 
   // A deep link opens it.
   await a.goto(`/v/${channelId}/chat`)
+  await expectTalkLive(a)
   await expect(aPanel.getByText(first)).toBeVisible()
 
   // On a narrow window it sits under the stage as well.
@@ -137,6 +139,10 @@ test('the Talk has its own text chat under the stage', async ({ browser }) => {
   await expect(aPanel).toBeVisible()
   await shot(a, 'chatpanel-narrow')
 
+  // Below 768px the channel list is a drawer, so the sidebar's Leave button is
+  // off screen; leave from the desktop layout like the other specs do.
+  await a.setViewportSize({ width: 1400, height: 900 })
+  await leaveTalks([a, b])
   await aCtx.close()
   await bCtx.close()
 })

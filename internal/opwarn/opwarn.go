@@ -19,6 +19,7 @@ const (
 	WebRTCReachability   = "webrtc_reachability"
 	WebRTCUDPMuxDisabled = "webrtc_udp_mux_disabled"
 	VoiceUnavailable     = "voice_unavailable"
+	InsecurePublicURL    = "insecure_public_url"
 )
 
 // MaxWarnings bounds the registry; further new codes are dropped.

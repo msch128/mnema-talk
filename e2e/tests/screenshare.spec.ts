@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString, responseUserId } from './helpers'
+import { apiFetch, responseString, responseUserId, leaveTalks } from './helpers'
 import { randomBytes } from 'node:crypto'
 import { test, expect } from './fixtures'
 
@@ -16,7 +16,7 @@ const VOICE_CHANNEL = `Stream ${suffix}`
 // Headless Chromium has no screen to pick: a shared "screen" is an animated
 // canvas, so the test exercises the app's real publish/subscribe path.
 const fakeDisplayMedia = () => {
-  navigator.mediaDevices.getDisplayMedia = async () => {
+  MediaDevices.prototype.getDisplayMedia = async () => {
     const canvas = document.createElement('canvas')
     canvas.width = 640
     canvas.height = 360
@@ -107,7 +107,8 @@ test('a viewer sees a shared screen after choosing to watch it', async ({ browse
     const deadline = setTimeout(finish, 5_000)
     const sample: VideoFrameRequestCallback = (_, metadata) => {
       ctx.drawImage(v, 0, 0, 1, 1, 0, 0, 1, 1)
-      frames.push({ time: metadata.mediaTime, color: [...ctx.getImageData(0, 0, 1, 1).data].join(',') })
+      // presentedFrames counts in every engine; WebKit leaves mediaTime at 0 for a live stream.
+      frames.push({ time: metadata.presentedFrames, color: [...ctx.getImageData(0, 0, 1, 1).data].join(',') })
       if (frames.length === 4) finish()
       else nextSample = setTimeout(() => { callback = v.requestVideoFrameCallback(sample) }, 300)
     }
@@ -117,6 +118,7 @@ test('a viewer sees a shared screen after choosing to watch it', async ({ browse
   for (let i = 1; i < samples.length; i++) { const current = samples[i]; const previous = samples[i - 1]; if (!current || !previous) throw new Error('Expected frame samples'); expect(current.time).toBeGreaterThan(previous.time) }
   expect(new Set(samples.map(frame => frame.color)).size).toBeGreaterThan(1)
 
+  await leaveTalks([sharer, viewer])
   await sharerCtx.close()
   await viewerCtx.close()
 })

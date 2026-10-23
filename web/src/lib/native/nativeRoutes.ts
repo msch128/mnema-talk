@@ -181,12 +181,35 @@ function routeMetadata(path: string, request: ApiRequest): Promise<ApiReply> | n
 // "unavailable" and the interface shows its failure state. The same holds for
 // channel and category notification levels, GET /api/notification-settings and
 // POST /api/read-state/read-all: the trusted desktop client has no typed
-// command for them. Also unavailable: /api/onboarding (rules acceptance,
+// command for them. GET /api/channels/{id}/first-unread (jump to the first
+// unread message) is in the same position: the native DEV client answers
+// "unavailable" and the pill simply stays hidden, the shipped clients' proxy
+// passes the path. Also unavailable: /api/onboarding (rules acceptance,
 // welcome flow) and the public invite preview. This transport belongs to the
 // experimental Windows DEV client only (isDesktopRuntime); the shipped desktop
 // clients (v0.2.x) run the signed web bundle through the trusted proxy, which
-// passes every /api path, so rules acceptance works there. Add typed onboarding
+// passes every /api path, so rules acceptance works there. The same holds for Web Push (/api/push/*:
+// config, devices, preferences, test): the native DEV client answers "unavailable",
+// and the shipped clients' proxy passes the paths although the web bundle never
+// registers a service worker there (the desktop shows its own OS notifications). Add typed onboarding
 // operations here before the native DEV client is ever shipped.
+// Pinned messages (GET /api/channels/{id}/pins, PUT/DELETE .../messages/{id}/pin) follow
+// the same rule: the shipped clients' proxy passes them, the native DEV client answers "unavailable".
+// The same holds for custom emoji (/api/emoji, /api/emoji/{id}/image and /still,
+// /api/admin/emoji): the shipped clients' proxy passes them, the native DEV client
+// answers "unavailable".
+// The same holds for the account recovery endpoints (/api/auth/options,
+// /api/auth/password-reset/*, /api/auth/email/verify, /api/users/me/account,
+// /api/users/me/email*, /api/users/me/2fa/*, /api/users/me/export*, /api/users/me/delete, /api/auth/login/2fa) and the Owner's /api/admin/system/mail/test: the
+// shipped clients reach them through the trusted proxy, the native DEV client
+// answers "unavailable" and its sign-in screen offers no reset link.
+// The same holds for slash commands and polls (GET /api/channels/*/commands,
+// POST /api/channels/*/interactions, POST /api/channels/*/polls and
+// /api/channels/*/messages/*/poll[/votes|/end]): the shipped clients' proxy
+// passes them, the native DEV client answers "unavailable": there is no command menu and
+// a poll cannot be posted.
+// Also unavailable natively: GET /api/channels/{id}/messages/{id}/edits (the
+// moderators' edit history); the shipped clients' proxy passes it.
 const ROUTES: readonly Route[] = [
   routeRegister, routePassword, routeAdmin, routeLogin, routeMe, routeLogout, routePersonal, routeTypedChat, routeMetadata,
 ]

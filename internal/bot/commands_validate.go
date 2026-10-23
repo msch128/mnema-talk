@@ -67,7 +67,7 @@ func (c *Commands) checkValue(r *http.Request, snap *perm.Snapshot, user *auth.U
 		if !ok {
 			return bad("text")
 		}
-		return httpx.CleanText(o.Name, s, MaxOptionValue, o.Required)
+		return checkChoice(o, s)
 	case OptionInteger:
 		f, ok := v.(float64)
 		if !ok || f != math.Trunc(f) || math.Abs(f) > 1<<53 {
@@ -84,6 +84,21 @@ func (c *Commands) checkValue(r *http.Request, snap *perm.Snapshot, user *auth.U
 		return c.checkReference(r, snap, user, ch, o.Type, v, bad)
 	}
 	return bad("valid")
+}
+
+// checkChoice cleans a text value and, for an option with choices, requires
+// one of them.
+func checkChoice(o Option, s string) (any, error) {
+	v, err := httpx.CleanText(o.Name, s, MaxOptionValue, o.Required)
+	if err != nil || len(o.Choices) == 0 {
+		return v, err
+	}
+	for _, ch := range o.Choices {
+		if ch == v {
+			return v, nil
+		}
+	}
+	return nil, httpx.ErrInvalidInput(fmt.Sprintf("option %s must be one of its choices", o.Name))
 }
 
 // checkReference validates a user or channel option: an ID of a channel the

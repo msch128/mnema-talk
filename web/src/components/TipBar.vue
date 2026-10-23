@@ -9,7 +9,7 @@ const { activeTip, dismissTip } = useOnboardingTips()
 <template>
   <div
     v-if="activeTip"
-    class="px-4 py-2 border-b border-mnema-hairline bg-mnema-raised flex items-center gap-3 text-sm flex-shrink-0"
+    class="max-md:hidden px-4 py-2 border-b border-mnema-hairline bg-mnema-raised flex items-center gap-3 text-sm flex-shrink-0"
     role="region"
     :aria-label="$t('tips.label')"
     data-testid="tip-bar"

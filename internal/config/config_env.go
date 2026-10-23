@@ -13,6 +13,7 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 	r := &envReader{lookup: lookup}
 	cfg := r.textSettings()
 	portMin, portMax := r.numericSettings(cfg)
+	cfg.SMTP = r.smtpSettings()
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -115,7 +116,13 @@ func (r *envReader) numericSettings(cfg *Config) (portMin, portMax uint16) {
 	// 0 (default) disables automatic media pruning entirely.
 	cfg.MediaRetentionDays = r.int("MEDIA_RETENTION_DAYS", 0)
 	cfg.AuditRetentionDays = r.int("AUDIT_RETENTION_DAYS", 0)
+	cfg.EditHistoryRetentionDays = r.int("EDIT_HISTORY_RETENTION_DAYS", 0)
 	cfg.MaxUploadMB = r.int("MAX_UPLOAD_SIZE_MB", 50)
+	cfg.EmojiMax = r.int("EMOJI_MAX", 200)
+	cfg.UploadQuotaMBPerDay = r.int("UPLOAD_QUOTA_MB_PER_DAY", 2048)
+	cfg.MediaMaxTotalMB = r.int("MEDIA_MAX_TOTAL_MB", 0)
+	cfg.MediaMinFreeMB = r.int("MEDIA_MIN_FREE_MB", 1024)
+	cfg.MediaDiskPath = r.get("MEDIA_DISK_PATH", "")
 	portMin = r.port("WEBRTC_UDP_PORT_MIN", 50000)
 	portMax = r.port("WEBRTC_UDP_PORT_MAX", 50050)
 	cfg.WebRTCUDPMuxPort = r.port("WEBRTC_UDP_MUX_PORT", portMin)
@@ -125,6 +132,9 @@ func (r *envReader) numericSettings(cfg *Config) (portMin, portMax uint16) {
 	cfg.Port = strconv.Itoa(int(r.port("PORT", 8080)))
 	cfg.S3ForcePathStyle = r.bool("S3_FORCE_PATH_STYLE", true)
 	cfg.LinkPreviews = r.bool("LINK_PREVIEWS_ENABLED", true)
+	cfg.PushEnabled = r.bool("PUSH_ENABLED", true)
+	cfg.PushPreviews = strings.ToLower(r.get("PUSH_PREVIEWS", "user"))
+	cfg.PushVAPIDSubject = r.get("PUSH_VAPID_SUBJECT", "")
 	allow, err := ssrf.ParseAllow(r.get("WEBHOOK_ALLOW_PRIVATE_TARGETS", ""))
 	if err != nil {
 		r.fail(fmt.Errorf("WEBHOOK_ALLOW_PRIVATE_TARGETS: %w", err))

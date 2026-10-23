@@ -59,34 +59,51 @@ func changeRoles(ctx context.Context, tx pgx.Tx, snap *Snapshot, actor Subject, 
 }
 
 // syncRoles adds the wanted roles the user lacks and removes the ones they
-// no longer should hold.
+// no longer should hold. Every addition is authorized first; the rows then
+// change in at most two statements, however many roles are involved.
 func syncRoles(ctx context.Context, tx pgx.Tx, snap *Snapshot, actor Subject, userID uuid.UUID, want map[uuid.UUID]bool, bot bool) error {
 	have := map[uuid.UUID]bool{}
 	for _, id := range snap.userRoles[userID] {
 		have[id] = true
 	}
+	var add, remove []uuid.UUID
 	for id := range want {
 		if !have[id] {
-			if err := grantRole(ctx, tx, snap, actor, userID, id, bot); err != nil {
+			if err := authorizeGrant(snap, actor, snap.roles[id], bot); err != nil {
 				return err
 			}
+			add = append(add, id)
 		}
 	}
 	// CanModerate (checked by the caller) guarantees every role the target
 	// holds is below the actor's highest role, so removing any is allowed.
 	for id := range have {
 		if !want[id] {
-			if err := revokeRole(ctx, tx, userID, id); err != nil {
-				return err
-			}
+			remove = append(remove, id)
 		}
+	}
+	if err := grantRoles(ctx, tx, userID, add); err != nil {
+		return err
+	}
+	return revokeRoles(ctx, tx, userID, remove)
+}
+
+func revokeRoles(ctx context.Context, tx pgx.Tx, userID uuid.UUID, roleIDs []uuid.UUID) error {
+	if len(roleIDs) == 0 {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM user_roles WHERE user_id = $1 AND role_id = ANY($2::uuid[])`, userID, roleIDs); err != nil {
+		return fmt.Errorf("remove roles: %w", err)
 	}
 	return nil
 }
 
-func revokeRole(ctx context.Context, tx pgx.Tx, userID, roleID uuid.UUID) error {
-	if _, err := tx.Exec(ctx, `DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2`, userID, roleID); err != nil {
-		return fmt.Errorf("remove role: %w", err)
+func grantRoles(ctx context.Context, tx pgx.Tx, userID uuid.UUID, roleIDs []uuid.UUID) error {
+	if len(roleIDs) == 0 {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO user_roles (user_id, role_id) SELECT $1, unnest($2::uuid[]) ON CONFLICT DO NOTHING`, userID, roleIDs); err != nil {
+		return fmt.Errorf("assign roles: %w", err)
 	}
 	return nil
 }
@@ -96,7 +113,7 @@ func revokeRole(ctx context.Context, tx pgx.Tx, userID, roleID uuid.UUID) error 
 func loadRoleTarget(ctx context.Context, tx pgx.Tx, userID uuid.UUID, bot bool) (Subject, error) {
 	var role string
 	var isBot bool
-	err := tx.QueryRow(ctx, `SELECT role, is_bot FROM users WHERE id = $1`, userID).Scan(&role, &isBot)
+	err := tx.QueryRow(ctx, `SELECT role, is_bot FROM users WHERE id = $1 AND deleted_at IS NULL`, userID).Scan(&role, &isBot)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Subject{}, httpx.ErrNotFound("user not found")
 	}
@@ -149,9 +166,8 @@ func checkAssignable(snap *Snapshot, roleID, userID uuid.UUID, bot bool) error {
 	return nil
 }
 
-// grantRole gives the user a role the actor may hand out.
-func grantRole(ctx context.Context, tx pgx.Tx, snap *Snapshot, actor Subject, userID, roleID uuid.UUID, bot bool) error {
-	role := snap.roles[roleID]
+// authorizeGrant checks that the actor may give the role to a member (or bot).
+func authorizeGrant(snap *Snapshot, actor Subject, role Role, bot bool) error {
 	if err := snap.CanManageRole(actor, role); err != nil {
 		return err
 	}
@@ -162,9 +178,6 @@ func grantRole(ctx context.Context, tx pgx.Tx, snap *Snapshot, actor Subject, us
 	}
 	if forbidsBotElevation(snap, actor, role, bot) {
 		return httpx.ErrForbidden("only the Owner can give a bot a role with administrator or admin-area permissions")
-	}
-	if _, err := tx.Exec(ctx, `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, userID, roleID); err != nil {
-		return fmt.Errorf("assign role: %w", err)
 	}
 	return nil
 }

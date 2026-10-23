@@ -4,17 +4,29 @@ import { decodeServerICEConfig } from '../../types/rest'
 // third-party STUN server learns the user's IP
 let servers: RTCIceServer[] = []
 let loaded: Promise<void> | null = null
+let loadedAt = 0
+
+// The TURN credential in the config is time-limited, so a tab that stays open
+// for days must not keep using the one it got on its first join. A join reuses
+// the config for this long and fetches a fresh one after that.
+const MAX_AGE_MS = 60 * 60 * 1000
 
 export function iceServers() {
   return servers
 }
 
-// Loaded once, on the first voice join rather than at import time.
+// Loaded on a voice join rather than at import time, and again when the last
+// one is older than MAX_AGE_MS.
 export function loadIceServers() {
+  if (loaded && Date.now() - loadedAt >= MAX_AGE_MS) loaded = null
   if (!loaded) {
     loaded = fetch('/api/webrtc/config', { credentials: 'same-origin' })
       .then(async (res): Promise<unknown> => res.ok ? res.json() : null)
-      .then(data => { if (data !== null) servers = decodeServerICEConfig(data).ice_servers })
+      .then(data => {
+        if (data === null) return
+        servers = decodeServerICEConfig(data).ice_servers
+        loadedAt = Date.now()
+      })
       .catch(() => { loaded = null })
   }
   return loaded

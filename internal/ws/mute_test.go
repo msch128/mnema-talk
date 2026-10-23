@@ -8,8 +8,8 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 )
 
-// events drains c and returns the payloads of the given event type.
-func events(t *testing.T, c *Client, eventType string) []map[string]any {
+// sentEvents drains c and returns the payloads of the given event type.
+func sentEvents(t *testing.T, c *Client, eventType string) []map[string]any {
 	t.Helper()
 	var out []map[string]any
 	for {
@@ -41,10 +41,10 @@ func TestMutedMembersAreNeverShownSpeaking(t *testing.T) {
 	h.voice[chID] = map[uuid.UUID]auth.User{user.ID: user}
 	c.voiceCh = &chID
 	h.mu.Unlock()
-	events(t, c, "")
+	sentEvents(t, c, "")
 
 	c.handle("voice_speaking", []byte(`{"active":true}`))
-	if got := events(t, c, "voice_speaking"); len(got) != 1 || got[0]["active"] != true {
+	if got := sentEvents(t, c, "voice_speaking"); len(got) != 1 || got[0]["active"] != true {
 		t.Fatalf("speaking = %v, want active true", got)
 	}
 
@@ -72,13 +72,13 @@ func TestMutedMembersAreNeverShownSpeaking(t *testing.T) {
 
 	// Already shown as silent: speaking while deafened changes nothing.
 	c.handle("voice_speaking", []byte(`{"active":true}`))
-	if got := events(t, c, "voice_speaking"); len(got) != 0 {
+	if got := sentEvents(t, c, "voice_speaking"); len(got) != 0 {
 		t.Fatalf("speaking while deafened = %v, want no event", got)
 	}
 
 	c.handle("voice_mute_state", []byte(`{"muted":false,"deafened":false}`))
 	c.handle("voice_speaking", []byte(`{"active":true}`))
-	if got := events(t, c, "voice_speaking"); len(got) != 1 || got[0]["active"] != true {
+	if got := sentEvents(t, c, "voice_speaking"); len(got) != 1 || got[0]["active"] != true {
 		t.Fatalf("speaking after unmute = %v, want active true", got)
 	}
 }

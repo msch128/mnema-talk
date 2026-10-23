@@ -1,0 +1,150 @@
+package auth
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/httpx"
+)
+
+// deletedUsernamePrefix starts the placeholder name of a deleted account. No
+// new account may take a name with it (see ValidateUsername).
+const deletedUsernamePrefix = "deleted-"
+
+// Account deletion keeps one row: the account itself, anonymised, so that its
+// messages still have an author and threads stay readable. Everything else
+// that refers to the person is removed in one transaction. The step list is
+// the single place to extend when a new table refers to users; a test walks
+// every foreign key to users and fails when a table is forgotten here.
+//
+// What happens to what the person wrote:
+//   - their messages stay, authored by "Deleted user", with the text, link
+//     cards and pins removed, as are the kept earlier versions of their
+//     edits (other members' replies and quotes remain);
+//   - their uploads and avatar are deleted from storage and the database;
+//   - their reactions, poll votes and mentions of them disappear, and so do
+//     the polls they posted (the question was the message text);
+//   - undelivered outgoing webhook events that carry their message text (or
+//     quote it) are dropped from the queue;
+//   - audit entries about them keep action, time and ids but lose names and
+//     details (other people's text that merely mentions them cannot be found
+//     and stays; the operator's privacy policy says so).
+var eraseSteps = []string{
+	`DELETE FROM message_reactions WHERE user_id = $1`,
+	`DELETE FROM message_mentions WHERE user_id = $1`,
+	`DELETE FROM poll_votes WHERE user_id = $1`,
+	`DELETE FROM polls WHERE message_id IN (SELECT id FROM messages WHERE user_id = $1)`,
+	`DELETE FROM message_edits WHERE editor_id = $1 OR message_id IN (SELECT id FROM messages WHERE user_id = $1)`,
+	`UPDATE messages SET content = '', embeds = '[]'::jsonb, author_name = NULL, is_pinned = FALSE, pinned_at = NULL, pinned_by = NULL, is_edited = FALSE WHERE user_id = $1`,
+	`DELETE FROM outgoing_queue WHERE convert_from(data, 'UTF8')::jsonb->>'user_id' = $1::text
+		OR convert_from(data, 'UTF8')::jsonb->'reply_to'->>'user_id' = $1::text`,
+	`DELETE FROM invites WHERE created_by = $1`,
+	`DELETE FROM channel_reads WHERE user_id = $1`,
+	`DELETE FROM category_notify WHERE user_id = $1`,
+	`DELETE FROM slow_mode_posts WHERE user_id = $1`,
+	`DELETE FROM user_roles WHERE user_id = $1`,
+	`DELETE FROM permission_overwrites WHERE user_id = $1`,
+	`DELETE FROM native_session_families WHERE user_id = $1`,
+	`DELETE FROM push_subscriptions WHERE user_id = $1`,
+	`DELETE FROM native_ciphertext_events WHERE user_id = $1`,
+	`DELETE FROM bot_tokens WHERE created_by = $1`,
+	`UPDATE bots SET created_by = NULL WHERE created_by = $1`,
+	`UPDATE webhooks SET created_by = NULL WHERE created_by = $1`,
+	`UPDATE outgoing_webhooks SET created_by = NULL WHERE created_by = $1`,
+	`UPDATE outgoing_webhooks SET url_set_by = NULL WHERE url_set_by = $1`,
+	`DELETE FROM account_tokens WHERE user_id = $1`,
+	`DELETE FROM user_totp WHERE user_id = $1`,
+	`DELETE FROM recovery_codes WHERE user_id = $1`,
+	`DELETE FROM login_challenges WHERE user_id = $1`,
+	`DELETE FROM second_factor_failures WHERE user_id = $1`,
+}
+
+// scrubAudit blanks the names and details of every audit entry that is about
+// the account or mentions its id. The audit trigger allows exactly this while
+// mnema.audit_scrub is on.
+const scrubAudit = `UPDATE audit_log SET
+	actor_name  = CASE WHEN actor_id = $1 THEN '' ELSE actor_name END,
+	target_name = CASE WHEN target_type = 'user' AND target_id = $1::text THEN '' ELSE target_name END,
+	details     = '{}'::jsonb
+	WHERE actor_id = $1 OR (target_type = 'user' AND target_id = $1::text) OR details::text LIKE '%' || $1::text || '%'`
+
+const anonymise = `UPDATE users SET
+	username = $2, display_name = 'Deleted user', bio = '', avatar_s3_key = NULL, status_text = '',
+	password_hash = '!deleted', email = NULL, email_verified_at = NULL, presence = 'online', locale = '',
+	onboarding = '{}'::jsonb, rules_accepted_version = 0, last_seen_at = NULL, voice_seconds = 0,
+	timeout_until = NULL, timeout_reason = '', timeout_by = NULL,
+	banned_at = NULL, banned_until = NULL, ban_reason = '', banned_by = NULL, invite_id = NULL,
+	disabled_at = NOW(), deleted_at = NOW(), token_version = token_version + 1, updated_at = NOW()
+	WHERE id = $1`
+
+// eraseStep is one statement of the erasure and the arguments it takes.
+type eraseStep struct {
+	sql  string
+	args func(id uuid.UUID, name string) []any
+}
+
+func byID(id uuid.UUID, _ string) []any     { return []any{id} }
+func byName(_ uuid.UUID, name string) []any { return []any{name} }
+func noArgs(uuid.UUID, string) []any        { return nil }
+
+// eraseAccount removes the person from the database and returns the storage
+// keys of their files (uploads, avatar, finished exports) for the caller to
+// delete from the object store once the transaction committed.
+func eraseAccount(ctx context.Context, tx pgx.Tx, id uuid.UUID) ([]string, error) {
+	var name string
+	if err := tx.QueryRow(ctx, `SELECT username FROM users WHERE id = $1 AND NOT is_bot AND deleted_at IS NULL FOR UPDATE`, id).Scan(&name); err != nil {
+		return nil, err
+	}
+	var keys []string
+	for _, sql := range []string{
+		`DELETE FROM media WHERE uploader_id = $1 RETURNING s3_key`,
+		`DELETE FROM data_exports WHERE user_id = $1 AND s3_key IS NOT NULL RETURNING s3_key`,
+	} {
+		rows, err := tx.Query(ctx, sql, id)
+		if err != nil {
+			return nil, err
+		}
+		got, err := pgx.CollectRows(rows, pgx.RowTo[string])
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, got...)
+	}
+	steps := []eraseStep{{`DELETE FROM data_exports WHERE user_id = $1`, byID}}
+	for _, sql := range eraseSteps {
+		steps = append(steps, eraseStep{sql, byID})
+	}
+	steps = append(steps,
+		eraseStep{`DELETE FROM login_unlock_requests WHERE LOWER(username) = LOWER($1)`, byName},
+		eraseStep{`SELECT set_config('mnema.audit_scrub', 'on', true)`, noArgs},
+		eraseStep{scrubAudit, byID},
+	)
+	for _, st := range steps {
+		if _, err := tx.Exec(ctx, st.sql, st.args(id, name)...); err != nil {
+			return nil, fmt.Errorf("erase %q: %w", st.sql, err)
+		}
+	}
+	if _, err := tx.Exec(ctx, anonymise, id, deletedUsernamePrefix+shortID(id)); err != nil {
+		return nil, fmt.Errorf("anonymise account: %w", err)
+	}
+	return keys, nil
+}
+
+func shortID(id uuid.UUID) string { return fmt.Sprintf("%x", id[:6]) }
+
+// refuseDeleted makes a deleted account look like one that never existed to
+// every administrative action: it cannot be enabled, given a password, banned,
+// timed out or given roles again. The database enforces the same with a
+// trigger, so no code path can revive a tombstone.
+func refuseDeleted(ctx context.Context, q db.Querier, id uuid.UUID) error {
+	var deleted bool
+	err := q.QueryRow(ctx, `SELECT deleted_at IS NOT NULL FROM users WHERE id = $1`, id).Scan(&deleted)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && deleted) {
+		return httpx.ErrNotFound("user not found")
+	}
+	return err
+}

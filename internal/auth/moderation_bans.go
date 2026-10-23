@@ -12,7 +12,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 // BanRequest is the body of POST /api/admin/users/{id}/ban.
@@ -64,13 +66,13 @@ func (h *Handler) postBanCleanup(id uuid.UUID, until *time.Time, reason string) 
 		h.Live.KickFromVoice(id)
 		time.AfterFunc(banDisconnectDelay, func() { h.Live.DisconnectUser(id) })
 	}
-	h.Events.Broadcast("user_update", map[string]any{"id": id, "disabled": true})
+	h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": true})
 }
 
 // banUser handles POST /api/admin/users/{id}/ban.
 //
 // @Summary Ban a member
-// @Description Ends the member's sessions and connections and blocks signing in, with an optional reason and an optional duration (otherwise for good). The account and its messages stay. By default the invite the account registered with is revoked, so that code cannot create the account again. Needs Ban members and a higher role than the member; the Owner cannot be banned. Kicking someone without a record is Disable.
+// @Description Ends the member's sessions and connections and blocks signing in, with an optional reason and an optional duration (otherwise for good). The account and its messages stay. By default the invite the account registered with is revoked, so that code cannot create the account again; that only happens when the caller also holds Manage invites (or is the Owner), otherwise the ban goes through and the invite stays. Needs Ban members and a higher role than the member; the Owner cannot be banned. Kicking someone without a record is Disable.
 // @ID banUser
 // @Tags Admin
 // @Accept json
@@ -104,8 +106,17 @@ func (h *Handler) banUser(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	revoke := req.RevokeInvite == nil || *req.RevokeInvite
 	actor := UserFrom(r.Context())
+	revoke := req.RevokeInvite == nil || *req.RevokeInvite
+	if revoke {
+		// Deleting an invite is Manage invites territory: a moderator who
+		// may only ban cannot use a ban to destroy a shared code.
+		allowed, err := h.Perms.Global(r.Context(), actor.Subject())
+		if err != nil {
+			return err
+		}
+		revoke = allowed.HasAny(perm.CreateInvites)
+	}
 	err = h.moderationTarget(r, id, func(q db.Querier) error {
 		return setBan(r.Context(), q, id, actor.ID, reason, until, revoke)
 	})
@@ -170,7 +181,7 @@ func (h *Handler) unbanUser(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast("user_update", map[string]any{"id": id, "disabled": false})
+	h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": false})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -282,7 +293,7 @@ func (h *Handler) ExpireBans(ctx context.Context) {
 			Action: "moderation.ban_expired", TargetType: "user", TargetID: id.String(), TargetName: e.name,
 		})
 		if h.Events != nil {
-			h.Events.Broadcast("user_update", map[string]any{"id": id, "disabled": false})
+			h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": false})
 		}
 	}
 }

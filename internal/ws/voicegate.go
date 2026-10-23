@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 const (
@@ -158,7 +159,7 @@ func (h *Hub) flushVoiceTime(userID uuid.UUID) {
 	}
 	// A total that just grew by a stay in a Talk reveals that stay, so only
 	// those who can view that Talk learn it.
-	h.BroadcastChannel(chID, "user_stats", map[string]any{"user_id": userID, "voice_seconds": total})
+	h.BroadcastChannel(chID, events.UserStats, map[string]any{"user_id": userID, "voice_seconds": total})
 }
 
 // flushAllVoiceTime writes every pending total (shutdown, while the

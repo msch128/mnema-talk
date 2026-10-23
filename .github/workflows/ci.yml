@@ -86,6 +86,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # Tags and history: make openapi-diff compares with the latest v* tag
+          # and reads the commit messages of the change.
+          fetch-depth: 0
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         id: go
@@ -123,6 +126,13 @@ jobs:
       - name: OpenAPI description is up to date
         run: make openapi-check
 
+      # Fails on breaking changes of the REST contract since the latest release
+      # tag (doc/api-stability.md); a BREAKING CHANGE: commit footer waives it.
+      - name: OpenAPI has no breaking changes
+        env:
+          OPENAPI_DIFF_RANGE: ${{ github.event_name == 'pull_request' && format('{0}..{1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || format('{0}..{1}', github.event.before, github.sha) }}
+        run: make openapi-diff
+
       - name: Unit tests
         run: go test -race -count=1 ./...
 
@@ -151,6 +161,21 @@ jobs:
 
       - name: Build
         run: CGO_ENABLED=0 go build -trimpath -o /dev/null ./cmd/server
+
+      # Relative links and #anchors in README.md, SECURITY.md and doc/*.md; no
+      # network access.
+      - name: Docs links
+        run: node scripts/check-doc-links.mjs
+
+      # The alert rules operators copy (doc/operations.md). The image is pinned
+      # by digest (prom/prometheus v3.5.0); the metrics they name are checked
+      # against /api/metrics by TestAlertRulesNameOnlyExportedMetrics above.
+      - name: Alert rules (promtool)
+        run: |
+          docker run --rm --entrypoint promtool \
+            -v "$PWD/deploy/monitoring:/rules:ro" \
+            prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996 \
+            check rules /rules/mnema-alerts.yml
 
   # -- Go vulnerability scan (reachable symbols only) ------------------------
   govulncheck:
@@ -294,6 +319,12 @@ jobs:
       - name: Smoke test (compose stack)
         run: scripts/smoke-image.sh mnema-talk:ci
 
+      # doc/deployment.md "Fresh install" in an empty directory: the compose
+      # file and .env.example of this checkout, throwaway secrets, up --wait,
+      # health and the Owner's sign-in.
+      - name: Fresh install (doc/deployment.md)
+        run: scripts/fresh-install-check.sh mnema-talk:ci
+
       # scripts/backup.sh and restore.sh (--verify and --yes) end to end:
       # seeded message and upload come back, later changes are gone.
       - name: Backup/restore drill (compose stack)
@@ -323,19 +354,28 @@ jobs:
           "$RUNNER_TEMP/trivy" image --scanners vuln --severity HIGH,CRITICAL \
             --ignore-unfixed --exit-code 1 --no-progress mnema-talk:ci
 
-  # -- Upgrade drill: previous release -> this build, with data in between ----
-  # Installs the latest released image from GHCR, seeds users, channels,
-  # messages and an upload through the API, switches the stack to the image
-  # built here and checks migrations, data, sessions and health. Not a
-  # required check: the ruleset lists its checks by name. continue-on-error keeps
-  # a registry outage from failing the workflow run, which release.yml waits
-  # for; a real failure still shows red on the job. Waits for the docker
-  # job so the image layers come from its build cache.
+  # -- Upgrade drill: released versions -> this build, with data in between --
+  # One parallel leg per supported source version (keep the matrix and
+  # DRILL_DEFAULT_FROM_VERSIONS in scripts/drill-common.sh in step). A leg
+  # installs that release from GHCR, seeds users, channels, messages, an
+  # upload, roles and overwrites, a webhook, a bot, notification levels and
+  # (from 0.9.0) onboarding and role mentions through the API, switches the
+  # stack to the image built here and checks migrations, row counts, an
+  # authenticated read of each object, sessions and health. It then backs up
+  # on the old release, restores into this build with scripts/restore.sh and
+  # checks that the old release refuses to start on the migrated data.
+  # A registry outage is retried a few times and then fails the leg with a
+  # clear message; nothing is skipped and the job is not continue-on-error.
+  # The required checks are named "upgrade-drill (<version>)", one per leg.
+  # Waits for the docker job so the image layers come from its build cache.
   upgrade-drill:
     needs: docker
-    continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        from: ['0.8.16', '0.9.0']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -354,8 +394,21 @@ jobs:
             REVISION=${{ github.sha }}
           cache-from: type=gha,scope=image
 
-      - name: Upgrade drill (previous release -> this build)
-        run: scripts/upgrade-drill.sh mnema-talk:ci
+      - name: Upgrade drill (${{ matrix.from }} -> this build)
+        env:
+          FROM_VERSIONS: ${{ matrix.from }}
+        run: |
+          set -euo pipefail
+          scripts/upgrade-drill.sh mnema-talk:ci | tee "$RUNNER_TEMP/upgrade-drill.log"
+          echo "- upgrade ${{ matrix.from }}: $(grep -E '^==> upgrade drill passed' "$RUNNER_TEMP/upgrade-drill.log")" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Restore drill (back up on ${{ matrix.from }}, restore into this build, refuse downgrade)
+        env:
+          FROM_VERSION: ${{ matrix.from }}
+        run: |
+          set -euo pipefail
+          scripts/backup-drill.sh mnema-talk:ci | tee "$RUNNER_TEMP/backup-drill.log"
+          echo "- restore ${{ matrix.from }}: $(grep -E '^==> backup drill passed' "$RUNNER_TEMP/backup-drill.log")" >> "$GITHUB_STEP_SUMMARY"
 
   # -- Browser smoke test: login, chat message, talk, against the real binary -
   e2e:
@@ -392,9 +445,8 @@ jobs:
             web/package-lock.json
             e2e/package-lock.json
 
-      # Browsers only; the system packages are still installed by
-      # `playwright install --with-deps` in e2e/run.sh, which skips the
-      # browser download when the cached revision is present.
+      # Browsers only; the system packages come from the step below, and
+      # e2e/run.sh skips the browser download when the cached revision is present.
       - name: Playwright version
         id: playwright
         run: echo "version=$(jq -r '.packages["node_modules/playwright-core"].version' e2e/package-lock.json)" >> "$GITHUB_OUTPUT"
@@ -405,9 +457,26 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
 
+      # System libraries for the browsers, in a bounded step of their own. A slow
+      # Ubuntu mirror used to stall `playwright install --with-deps` inside
+      # e2e/run.sh until the job timed out. e2e/ci-install-deps.sh bounds each
+      # attempt, retries on another mirror, and the downloaded .debs are cached
+      # per Playwright version and browser.
+      - name: Playwright system dependencies cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-archives
+          key: apt-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-webkit
+
+      - name: Install browser system dependencies
+        timeout-minutes: 10
+        run: e2e/ci-install-deps.sh chromium webkit
+
       - name: Run browser smoke test
         env:
           E2E_INSTALL_BROWSER: "1"
+          E2E_BROWSERS: chromium webkit
+          E2E_ONLY: --project=chromium --project=mobile-chromium --project=mobile-webkit
         run: e2e/run.sh
 
       - name: Upload Playwright traces and screenshots
@@ -415,6 +484,103 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: e2e-results
+          path: |
+            e2e/test-results/
+            e2e/server.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # -- Other engines: the whole suite on WebKit (iOS, Safari, installed PWAs) and
+  # a smoke subset on Firefox. Not a required check until both have run stable
+  # (see doc/product-status.md).
+  e2e-browsers:
+    name: e2e (${{ matrix.label }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Playwright's Linux WebKit cannot run the sealed-call specs (they pass on
+          # macOS WebKit, see doc/product-status.md), so CI covers what it can.
+          - browser: webkit
+            label: webkit
+            only: "--project=webkit active-members.spec.ts audit.spec.ts bot-members.spec.ts bots.spec.ts crypto-state.spec.ts mentions.spec.ts message-moderation.spec.ts moderation.spec.ts notifications.spec.ts onboarding.spec.ts pwa.spec.ts"
+          - browser: firefox
+            # late-join.spec.ts also asserts the AI noise filter, which does not run
+            # on the Linux Firefox of CI; it passes on macOS (see doc/product-status.md).
+            label: firefox
+            only: "--project=firefox smoke.spec.ts browser-sealing.spec.ts key-lifecycle.spec.ts search.spec.ts mentions.spec.ts screenshare.spec.ts"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        id: go
+        with:
+          go-version-file: go.mod
+          # Cached per job below: setup-go's cache key is the same for every
+          # job, so whichever job finished first decided what all of them got.
+          cache: false
+
+      - name: Go module + build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            e2e/package-lock.json
+
+      # Browsers only; the system packages come from the step below, and
+      # e2e/run.sh skips the browser download when the cached revision is present.
+      - name: Playwright version
+        id: playwright
+        run: echo "version=$(jq -r '.packages["node_modules/playwright-core"].version' e2e/package-lock.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Playwright browser cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ steps.playwright.outputs.version }}
+
+      # System libraries for the browsers, in a bounded step of their own. A slow
+      # Ubuntu mirror used to stall `playwright install --with-deps` inside
+      # e2e/run.sh until the job timed out. e2e/ci-install-deps.sh bounds each
+      # attempt, retries on another mirror, and the downloaded .debs are cached
+      # per Playwright version and browser.
+      - name: Playwright system dependencies cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-archives
+          key: apt-${{ runner.os }}-${{ steps.playwright.outputs.version }}-${{ matrix.browser }}
+
+      - name: Install browser system dependencies
+        timeout-minutes: 10
+        run: e2e/ci-install-deps.sh ${{ matrix.browser }}
+
+      - name: Run browser smoke test
+        env:
+          E2E_INSTALL_BROWSER: "1"
+          E2E_BROWSERS: ${{ matrix.browser }}
+          E2E_ONLY: ${{ matrix.only }}
+        run: e2e/run.sh
+
+      - name: Upload Playwright traces and screenshots
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-results-${{ matrix.browser }}-${{ strategy.job-index }}
           path: |
             e2e/test-results/
             e2e/server.log

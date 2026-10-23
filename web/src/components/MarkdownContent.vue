@@ -3,10 +3,13 @@ import { computed } from 'vue'
 import type { PropType } from 'vue'
 import { renderMarkdown } from '../lib/markdown'
 import { extractPreviewUrls } from '../lib/chatLogic'
+import { copyCodeBlock, openConfirmedLink } from '../lib/markdownActions'
 import LinkPreviewCard from './LinkPreviewCard.vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
+import { roleColorCss } from '../lib/permissions'
+import { roleColors as vRoleColors } from '../directives/roleColor'
 
 const props = defineProps({
   content: {
@@ -17,6 +20,11 @@ const props = defineProps({
   mentionRoles: {
     type: Array as PropType<string[]>,
     default: () => []
+  },
+  // Link preview cards below the text (off where the text is only an example).
+  previews: {
+    type: Boolean,
+    default: true
   }
 })
 
@@ -30,7 +38,7 @@ const knownNames = computed(() => new Set(chatStore.members.map(m => (m.username
 const mentionedRoles = computed(() => props.mentionRoles
   .map(id => permissions.roles.find(r => r.id === id))
   .filter(r => r !== undefined)
-  .map(r => ({ name: r.name, me: permissions.myRoleIds.includes(r.id) })))
+  .map(r => ({ name: r.name, me: permissions.myRoleIds.includes(r.id), color: roleColorCss(r.color) })))
 const parsedHtml = computed(() => renderMarkdown(props.content, {
   known: knownNames.value,
   me: authStore.user?.username || '',
@@ -45,17 +53,38 @@ function openMention(el: HTMLElement) {
 }
 
 // Only links in plain text get a card, never ones inside code or spoilers.
-const links = computed(() => extractPreviewUrls(props.content, 3))
+const links = computed(() => (props.previews ? extractPreviewUrls(props.content, 3) : []))
 
-// Spoilers are revealed via delegation: the CSP forbids inline onclick handlers.
+// Spoilers, copy buttons and masked links work via delegation: the CSP forbids inline handlers.
 function onClick(event: MouseEvent) {
-  const mention = event.target instanceof Element ? event.target.closest<HTMLElement>('.md-mention[data-mention]') : null
+  const target = event.target instanceof Element ? event.target : null
+  const copy = target?.closest('[data-md-copy]')
+  if (copy) {
+    void copyCodeBlock(copy)
+    return
+  }
+  if (confirmLink(event, target)) return
+  const mention = target?.closest<HTMLElement>('.md-mention[data-mention]')
   if (mention) {
     openMention(mention)
     return
   }
-  const spoiler = event.target instanceof Element ? event.target.closest('.md-spoiler') : null
+  const spoiler = target?.closest('.md-spoiler')
   if (spoiler) spoiler.classList.toggle('revealed')
+}
+
+// A link whose text does not name its destination opens only after a confirmation,
+// however it is activated (click, modifier click, middle click, keyboard).
+function confirmLink(event: MouseEvent, target: Element | null): boolean {
+  const anchor = target?.closest<HTMLAnchorElement>('a.md-link[data-confirm]')
+  if (!anchor) return false
+  event.preventDefault()
+  void openConfirmedLink(anchor)
+  return true
+}
+
+function onAuxClick(event: MouseEvent) {
+  if (event.button === 1) confirmLink(event, event.target instanceof Element ? event.target : null)
 }
 
 function isSpoilerElement(target: EventTarget | null): target is Element {
@@ -80,8 +109,10 @@ function onKeydown(event: KeyboardEvent) {
     <!-- The only intentional v-html: renderMarkdown escapes all input before adding markup. -->
     <!-- eslint-disable vue/no-v-html -->
     <div
+      v-role-colors
       class="markdown-body break-words whitespace-pre-wrap select-text text-message"
       @click="onClick"
+      @auxclick="onAuxClick"
       @keydown="onKeydown"
       v-html="parsedHtml"
     ></div>
@@ -93,71 +124,4 @@ function onKeydown(event: KeyboardEvent) {
   </div>
 </template>
 
-<style>
-.markdown-body strong { font-weight: 600; }
-.markdown-body em { font-style: italic; }
-.markdown-body del { text-decoration: line-through; opacity: 0.7; }
-.markdown-body .md-code {
-  padding: 0.125rem 0.375rem;
-  border-radius: 0.25rem;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.875em;
-  background: rgba(255, 255, 255, 0.06);
-}
-.markdown-body .md-codeblock {
-  margin: 0.375rem 0;
-  padding: 0.625rem;
-  border-radius: 0.5rem;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  overflow-x: auto;
-  white-space: pre;
-  background: rgba(0, 0, 0, 0.35);
-}
-.markdown-body .md-quote {
-  border-left: 2px solid rgba(45, 167, 113, 0.6);
-  padding-left: 0.625rem;
-  margin: 0.125rem 0;
-  opacity: 0.85;
-}
-.markdown-body .md-link { color: #2da771; word-break: break-all; }
-.markdown-body .md-link:hover { text-decoration: underline; }
-.markdown-body .md-mention {
-  padding: 0 0.25rem;
-  border-radius: 0.25rem;
-  font-weight: 600;
-  color: #2da771;
-  background: rgba(45, 167, 113, 0.15);
-}
-.markdown-body .md-mention[data-mention] { cursor: pointer; }
-.markdown-body .md-mention[data-mention]:hover { background: rgba(45, 167, 113, 0.28); }
-.markdown-body .md-mention-group[data-mention] { cursor: default; }
-/* A role reads like a member mention with an outline; the reader's own roles turn amber via -me. */
-.markdown-body .md-mention-role { box-shadow: inset 0 0 0 1px rgba(45, 167, 113, 0.45); }
-.markdown-body .md-mention-me,
-.markdown-body .md-mention-group {
-  color: #fce4a8;
-  background: rgba(224, 162, 58, 0.18);
-}
-.markdown-body .md-mention-me[data-mention]:hover { background: rgba(224, 162, 58, 0.3); }
-
-/* Spoiler: blacked out until clicked */
-.md-spoiler {
-  background-color: #2b2d31;
-  color: transparent !important;
-  border-radius: 4px;
-  padding: 1px 5px;
-  cursor: pointer;
-  user-select: none;
-  transition: all 0.15s ease;
-  display: inline-block;
-}
-.md-spoiler:hover { background-color: #35373c; }
-.md-spoiler.revealed {
-  background-color: rgba(255, 255, 255, 0.08) !important;
-  color: inherit !important;
-  user-select: text !important;
-  cursor: text;
-}
-</style>
+<style src="./markdownBody.css"></style>

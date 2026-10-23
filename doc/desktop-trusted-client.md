@@ -104,28 +104,44 @@ committed in this repository (`web/desktop-signing.pub`) and attaches
 auditing) to the GitHub release. **Without the secret the job signs nothing
 and succeeds** (forks). Pull requests never see the secret.
 
-The release workflow builds and signs in separate jobs: `web-build` has no
-secrets and installs with `--ignore-scripts`; `web-bundle` holds the key in the
-GitHub environment `web-bundle-signing` (limited to `main`), never runs npm,
-builds `cmd/webbundle` from the tag's own Go source and signs the downloaded
-`web/dist`. Residual risk: the signed files are what the build job produced, so
-a poisoned npm dependency that reaches the build output would be signed. The
-lockfile pins every dependency and the manifest hash is printed in the job
-summary for comparison with the image's build.
+The signed bytes are built inside the protected job. `web-bundle` runs in the
+GitHub environment `web-bundle-signing` (limited to `main`) and builds
+`web/dist` itself from the release tag, so no artifact from an unprivileged job
+is ever signed. `npm ci --ignore-scripts` and `npm run build` each run in a
+throwaway container (the digest-pinned node image of the Dockerfile's web
+stage) with all capabilities dropped, no secret, no Docker socket, only a copy
+of `web/` mounted, and no network for the build. Code that runs during the
+build, even from a dependency, can therefore change only that copy: it cannot
+alter the job's environment, `PATH`, outputs or the signing step. The job
+builds `cmd/webbundle` from the tag's own Go source in a step without the key
+and hands the key to the single `webbundle build` step.
+
+Residual risk: a poisoned npm dependency that is already in `package-lock.json`
+still reaches the build output and would be signed, because the image build
+uses the same lockfile (so comparing against the image proves nothing). The
+lockfile pins every package with an integrity hash, Dependabot waits out a
+cooldown before proposing updates, and the manifest hash is printed in the job
+summary so the owner can rebuild on a second machine and compare. This job's
+behaviour needs a real release run to be confirmed end to end; the container
+steps were run locally against the same Dockerfile image.
 
 #### Security floor
 
 `web/desktop-compat.json` carries the baseline floor. Because only the three
 release-please files may change in a release PR, the floor is raised **at
-signing time**: the `web-bundle` job lists the commits since the previous tag
-and, if any of them has the scope `security` in its title
-(`fix(security): ...`) or a `Security-Floor: raise` trailer in its message,
-passes `-security-floor <release version>` to `webbundle build`. The flag only
-raises, never lowers, the value from the compat file. So a vulnerability fix in
-anything the bundle ships (the web app: markdown, media, auth, message
-rendering, crypto) must carry one of those two marks; the maintainer
-checklist in `AGENTS.md` repeats this. A fix without a mark leaves the floor
-where it was, and old clients keep accepting older bundles until the next
+signing time**: the `web-bundle` job runs `scripts/security-floor.sh` over the
+commits since the previous tag and, if any of them carries a
+`Security-Floor: raise` trailer (the last paragraph of the commit message, so
+for a squash merge the end of the pull request description), passes
+`-security-floor <release version>` to `webbundle build`. The flag only
+raises, never lowers, the value from the compat file. The commit subject plays
+no part: a `fix(security)` title alone neither raises the floor nor can a
+lookalike scope such as `docs(security-notes)` raise it by accident. A subject
+with the `security` scope but no trailer only prints a warning in the job log.
+So a vulnerability fix in anything the bundle ships (the web app: markdown,
+media, auth, message rendering, crypto) must carry the trailer; the maintainer
+checklist in `AGENTS.md` repeats this. A fix without the trailer leaves the
+floor where it was, and old clients keep accepting older bundles until the next
 release that raises it.
 
 The job builds the bundle tool in its own step without the key and passes
@@ -235,8 +251,12 @@ nobody can get a key root-signed by editing `desktop-trust/` in a pull request.
 Before signing it prints the full result, allowed and revoked keys with short ids
 and `+`/`-` against the previous statement, and asks for confirmation. Read it:
 every allowed key must be one you recognise.
-`go run ./cmd/webbundle trust verify` prints the expiry. A client that cannot
-get a fresh statement keeps working but stops installing updates.
+`go run ./cmd/webbundle trust verify` prints the expiry
+(`-min-valid-days N` also fails when fewer than N days remain). A client that
+cannot get a fresh statement keeps working but stops installing updates. The
+weekly workflow `trust-expiry.yml` runs that check with 60 days and fails
+early enough to renew in time; the runbook is in
+[operations.md](operations.md#renewing-the-desktop-trust-statement).
 
 #### Runbook: a CI signing key leaked
 
@@ -593,4 +613,6 @@ reach the shipped desktop clients through the trusted proxy like any other
 transport (`web/src/lib/native/nativeRoutes.ts`) belongs to the experimental
 Windows DEV client, which is not shipped; it does not carry `/api/onboarding`
 and a member of that client could not accept rules until a typed operation is
-added.
+added. The same holds for custom emoji (`/api/emoji`, `/api/admin/emoji`): the
+shipped clients get them through the trusted proxy, the native DEV client answers
+"unavailable".

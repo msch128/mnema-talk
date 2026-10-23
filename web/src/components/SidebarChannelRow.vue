@@ -8,6 +8,8 @@ import { computed } from 'vue'
 import { Hash, Volume2, Trash2, Monitor, BellOff } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
+import { useAuthStore } from '../stores/auth'
+import { channelDraftKey, hasDraft } from '../lib/drafts'
 import UserAvatar from './UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import MuteMarks from './MuteMarks.vue'
@@ -35,6 +37,7 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
 
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
+const authStore = useAuthStore()
 
 const isVoice = computed(() => props.channel.type === 'voice')
 const active = computed(() =>
@@ -49,6 +52,8 @@ const reading = computed(() =>
     ? chatStore.voiceChatReading && chatStore.activeChannel?.id === props.channel.id && voiceStore.activeView === 'voice'
     : active.value
 )
+// An unsent message waits here (the open channel shows it in its composer).
+const draft = computed(() => !reading.value && hasDraft(authStore.user?.id, channelDraftKey(props.channel.id)))
 // Voice channels have their own text chat, so unreads and mentions too.
 const muted = computed(() => chatStore.readStates[props.channel.id]?.notify_level === 'mute')
 // A muted channel keeps its mentions but does not announce plain unreads.
@@ -62,7 +67,7 @@ const voiceUsers = computed(() => {
 
 // Shared row styling (34px channel rows, rounded hover/selected states).
 const rowClass = computed(() => [
-  'relative w-full h-[34px] flex items-center justify-between gap-1.5 px-2 mb-px rounded-md text-nav transition-colors motion-reduce:transition-none group cursor-pointer text-left min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
+  'relative w-full h-[34px] max-md:h-11 flex items-center justify-between gap-1.5 px-2 mb-px rounded-md text-nav transition-colors motion-reduce:transition-none group cursor-pointer text-left min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
   active.value
     ? 'bg-mnema-hover text-mnema-text font-medium shadow-[inset_2px_0_0_0_#2DA771]'
     : unread.value > 0
@@ -128,6 +133,7 @@ const rowClass = computed(() => [
           ]"
         />
         <span class="truncate">{{ channel.name }}</span>
+        <span v-if="draft" class="flex-shrink-0 rounded bg-mnema-surface px-1 text-[10px] font-semibold uppercase tracking-wide text-mnema-tertiary" data-testid="channel-draft">{{ $t('sidebar.draft') }}</span>
         <BellOff v-if="muted" class="w-3.5 h-3.5 flex-shrink-0 text-mnema-tertiary" data-testid="channel-muted" :aria-label="$t('notifications.mute')" />
       </div>
 
@@ -162,7 +168,7 @@ const rowClass = computed(() => [
         @click.stop="emit('delete')"
         v-tooltip="isVoice ? $t('sidebar.deleteVoiceChannel') : $t('sidebar.deleteChannel')"
         :aria-label="isVoice ? $t('sidebar.deleteVoiceChannel') : $t('sidebar.deleteChannel')"
-        class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-6 h-6 flex items-center justify-center rounded text-mnema-tertiary hover:text-mnema-danger transition flex-shrink-0"
+        class="max-md:hidden opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-6 h-6 flex items-center justify-center rounded text-mnema-tertiary hover:text-mnema-danger transition flex-shrink-0"
       >
         <Trash2 class="w-4 h-4" />
       </button>
@@ -173,7 +179,7 @@ const rowClass = computed(() => [
       <div
         v-for="user in voiceUsers"
         :key="user.id"
-        class="min-h-8 py-1 flex items-center gap-2 px-2 rounded-md text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text transition-colors min-w-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
+        class="min-h-8 max-md:min-h-11 py-1 flex items-center gap-2 px-2 rounded-md text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text transition-colors min-w-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
         role="button"
         tabindex="0"
         aria-haspopup="menu"

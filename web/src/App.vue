@@ -5,6 +5,8 @@ import { useAuthStore } from './stores/auth'
 import { usePermissionsStore } from './stores/permissions'
 import { useChatStore } from './stores/chat'
 import { useVoiceStore } from './stores/voice'
+import { useAccountStore } from './stores/account'
+import { recoveryFromLocation } from './lib/recoveryLink'
 import { currentRoute, navigate, popRedirectRoute, savePendingRoute } from './lib/router'
 import Sidebar from './components/Sidebar.vue'
 import UserBar from './components/UserBar.vue'
@@ -16,9 +18,13 @@ import VoiceChatPanel from './components/VoiceChatPanel.vue'
 import MemberList from './components/MemberList.vue'
 import ThreadSidebar from './components/ThreadSidebar.vue'
 import InviteLanding from './components/InviteLanding.vue'
+import RecoveryPage from './components/RecoveryPage.vue'
+import AccountSecurityDialog from './components/AccountSecurityDialog.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 import AudioSettingsModal from './components/AudioSettingsModal.vue'
+import AppSettingsModal from './components/AppSettingsModal.vue'
+import { appSettingsOpen } from './lib/appSettings'
 import ScreenShareModal from './components/ScreenShareModal.vue'
 import UserProfileModal from './components/UserProfileModal.vue'
 import LegalModal from './components/LegalModal.vue'
@@ -30,12 +36,15 @@ import ConnectionBanner from './components/ConnectionBanner.vue'
 import TimeoutBanner from './components/TimeoutBanner.vue'
 import ModerationDialog from './components/ModerationDialog.vue'
 import MessageModerationDialog from './components/MessageModerationDialog.vue'
+import EditHistoryDialog from './components/EditHistoryDialog.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
 import PipHost from './components/PipHost.vue'
 import { useResizable } from './composables/useResizable'
 import { useWebRTC } from './composables/useWebRTC'
 import { useAppRouting } from './composables/useAppRouting'
 import { useAppBadge } from './composables/useAppBadge'
+import { useCompactLayout } from './composables/useCompactLayout'
+import { usePushBridge } from './composables/usePushBridge'
 import { useTitleBadge } from './composables/useTitleBadge'
 import { VOICE_CHAT_HEIGHT, STAGE_MIN_HEIGHT } from './lib/voiceChatPanel'
 
@@ -44,6 +53,11 @@ const permissions = usePermissionsStore()
 const chatStore = useChatStore()
 useTitleBadge()
 const voiceStore = useVoiceStore()
+const accountStore = useAccountStore()
+// A link from an account e-mail (confirm address, reset password) takes over the
+// page, signed in or not; the token is read here once and then removed from the URL.
+const recovery = recoveryFromLocation(window.location.pathname, window.location.hash)
+const leaveRecovery = () => window.location.assign('/')
 let alive = true
 let authRetryTimer: ReturnType<typeof setTimeout> | undefined
 let cancelAuthRetry: (() => void) | undefined
@@ -67,8 +81,19 @@ const panels = useResizable([
 // keeps the rest, at least STAGE_MIN_HEIGHT.
 const voiceChatHeight = useResizable([VOICE_CHAT_HEIGHT], { axis: 'y', centerMin: STAGE_MIN_HEIGHT + 48 }).voiceChat
 const showLegalModal = ref(false)
+// Phones: the channel list is a drawer, the thread and member list fill the screen.
+const { isCompact, navOpen, closeNav } = useCompactLayout()
+if (isCompact.value) chatStore.showMemberList = false
+watch(() => [chatStore.activeChannel?.id, voiceStore.currentChannelId, voiceStore.activeView], closeNav)
+watch(() => chatStore.activeThread, thread => { if (thread && isCompact.value) chatStore.showMemberList = false })
+function onWindowKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && navOpen.value) closeNav()
+}
+onMounted(() => window.addEventListener('keydown', onWindowKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown))
 const routing = useAppRouting(() => alive)
 useAppBadge()
+usePushBridge()
 const { showAdminModal, adminTab, voiceShowChat, voiceChannelId, applyRoute, syncCurrentStateToRoute, openAdmin, closeAdmin, onVoiceJoin } = routing
 
 // Avoids flashing the login dialog while the session cookie is being checked.
@@ -177,9 +202,11 @@ onMounted(async () => {
 
 <template>
   <div class="h-full flex overflow-hidden bg-mnema-canvas text-mnema-text">
+    <RecoveryPage v-if="recovery" :link="recovery" @done="leaveRecovery" />
+
     <!-- Session check still running: minimal loading state, no data fetching -->
     <div
-      v-if="!authChecked"
+      v-else-if="!authChecked"
       class="flex-1 flex flex-col items-center justify-center gap-3"
       role="status"
       aria-live="polite"
@@ -197,12 +224,25 @@ onMounted(async () => {
     <template v-else>
       <!-- Left Column: Navigation, Channels & User Controls -->
       <div
-        class="relative flex flex-col h-full flex-shrink-0 border-r border-mnema-hairline bg-mnema-raised"
-        :style="{ width: `${panels.left.width}px` }"
+        v-if="isCompact && navOpen"
+        data-testid="nav-scrim"
+        class="fixed inset-0 z-30 bg-black/60"
+        aria-hidden="true"
+        @click="closeNav"
+      ></div>
+      <div
+        data-testid="channel-drawer"
+        :class="[
+          'relative flex flex-col h-full flex-shrink-0 border-r border-mnema-hairline bg-mnema-raised',
+          'max-md:safe-pad max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:w-[min(86vw,22rem)] max-md:transition-transform max-md:duration-200 motion-reduce:transition-none',
+          navOpen ? '' : 'max-md:-translate-x-full'
+        ]"
+        :inert="isCompact && !navOpen"
+        :style="isCompact ? undefined : { width: `${panels.left.width}px` }"
       >
         <Sidebar @open-admin="openAdmin('users')" @open-legal="showLegalModal = true" class="flex-1 min-h-0" />
         <UserBar @open-admin="openAdmin('users')" @open-legal="showLegalModal = true" />
-        <ResizeHandle :panel="panels.left" :label="$t('resize.sidebar')" />
+        <ResizeHandle v-if="!isCompact" :panel="panels.left" :label="$t('resize.sidebar')" />
       </div>
 
       <!-- Center: connection banner, then the Talk or a text channel -->
@@ -235,21 +275,21 @@ onMounted(async () => {
       <!-- Thread panel -->
       <div
         v-if="chatStore.activeThread"
-        class="relative h-full flex-shrink-0"
-        :style="{ width: `${panels.thread.width}px` }"
+        class="relative h-full flex-shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas"
+        :style="isCompact ? undefined : { width: `${panels.thread.width}px` }"
       >
         <ThreadSidebar />
-        <ResizeHandle :panel="panels.thread" :label="$t('resize.thread')" />
+        <ResizeHandle v-if="!isCompact" :panel="panels.thread" :label="$t('resize.thread')" />
       </div>
 
       <!-- Right column: member list -->
       <div
         v-if="chatStore.showMemberList"
-        class="relative h-full flex-shrink-0"
-        :style="{ width: `${panels.members.width}px` }"
+        class="relative h-full flex-shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas"
+        :style="isCompact ? undefined : { width: `${panels.members.width}px` }"
       >
         <MemberList />
-        <ResizeHandle :panel="panels.members" :label="$t('resize.members')" />
+        <ResizeHandle v-if="!isCompact" :panel="panels.members" :label="$t('resize.members')" />
       </div>
 
       <!-- Admin console dialog -->
@@ -267,6 +307,9 @@ onMounted(async () => {
         @close="voiceStore.showAudioSettings = false" 
       />
 
+      <!-- App dialog: install on this device -->
+      <AppSettingsModal v-if="appSettingsOpen" @close="appSettingsOpen = false" />
+
       <!-- Screen share quality dialog -->
       <ScreenShareModal
         v-if="voiceStore.showScreenShareModal"
@@ -280,6 +323,9 @@ onMounted(async () => {
         @close="chatStore.closeUserProfile()"
         @mention="(uname) => chatStore.insertMention(uname)"
       />
+
+      <!-- Own sign-in security: e-mail address -->
+      <AccountSecurityDialog v-if="accountStore.dialogOpen" />
 
       <!-- First run and re-acceptance of changed rules -->
       <WelcomeFlow />
@@ -305,5 +351,6 @@ onMounted(async () => {
     <ConfirmDialog />
     <ModerationDialog />
     <MessageModerationDialog />
+    <EditHistoryDialog />
   </div>
 </template>

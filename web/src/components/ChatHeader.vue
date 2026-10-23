@@ -7,7 +7,9 @@ import { useChatStore } from '../stores/chat'
 import { useNotificationHint } from '../composables/useNotificationHint'
 import { durationLabel } from '../lib/moderation'
 import MentionsInbox from './MentionsInbox.vue'
+import PinnedMessages from './PinnedMessages.vue'
 import TipBar from './TipBar.vue'
+import NavDrawerButton from './NavDrawerButton.vue'
 import { openSearch } from '../lib/globalSearch'
 import { quoteValue } from '../lib/searchQuery'
 
@@ -39,20 +41,21 @@ function openNotificationMenu(e: MouseEvent) {
 <template>
   <header
     :class="[
-      'px-4 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 flex-shrink-0 z-10',
+      'px-4 max-md:pl-1 max-md:pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 flex-shrink-0 z-10',
       panel ? 'h-10' : 'h-12'
     ]"
   >
     <!-- Left: Channel name & topic -->
     <div :class="['flex items-center gap-2 min-w-0', panel ? 'flex-1' : '']">
+      <NavDrawerButton v-if="!panel" />
       <component :is="channelIcon" class="w-5 h-5 text-mnema-tertiary flex-shrink-0" />
       <span
         data-testid="chat-channel-name"
-        :class="['font-semibold text-base text-mnema-text truncate', panel ? 'min-w-0' : 'flex-shrink-0 max-w-[60%]']"
+        :class="['font-semibold text-base text-mnema-text truncate', panel ? 'min-w-0' : 'flex-shrink-0 max-w-[60%] max-md:flex-shrink max-md:max-w-none']"
       >
         {{ chatStore.activeChannel?.name || $t('chat.selectChannel') }}
       </span>
-      <span v-if="chatStore.activeChannel?.topic && !panel" class="text-sm text-mnema-muted pl-3 ml-1 border-l border-mnema-border truncate min-w-0">
+      <span v-if="chatStore.activeChannel?.topic && !panel" class="max-md:hidden text-sm text-mnema-muted pl-3 ml-1 border-l border-mnema-border truncate min-w-0">
         {{ chatStore.activeChannel.topic }}
       </span>
       <span
@@ -64,14 +67,15 @@ function openNotificationMenu(e: MouseEvent) {
     </div>
 
     <!-- Right: Badges & member list toggle -->
-    <div class="flex items-center gap-2 flex-shrink-0">
+    <div class="flex items-center gap-2 max-md:gap-0 flex-shrink-0">
       <MentionsInbox v-if="!panel" />
+      <PinnedMessages v-if="chatStore.activeChannel" />
       <button
         v-if="chatStore.activeChannel"
         type="button"
         data-testid="search-in-channel"
         @click="searchInChannel"
-        class="w-8 h-8 flex items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+        class="w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
         v-tooltip="$t('chat.searchInChannel')"
         :aria-label="$t('chat.searchInChannel')"
       >
@@ -80,7 +84,7 @@ function openNotificationMenu(e: MouseEvent) {
       <button
         v-if="chatStore.activeChannel"
         @click="openNotificationMenu"
-        class="w-8 h-8 flex items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+        class="w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
         v-tooltip="$t('notifications.channelSettings')"
         aria-haspopup="menu"
       >
@@ -94,7 +98,7 @@ function openNotificationMenu(e: MouseEvent) {
         type="button"
         data-testid="voice-chat-close"
         @click="emit('close')"
-        class="w-8 h-8 flex items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+        class="w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
         v-tooltip="$t('talk.closeChat')"
         :aria-label="$t('talk.closeChat')"
       >
@@ -104,7 +108,7 @@ function openNotificationMenu(e: MouseEvent) {
         v-else
         @click="chatStore.showMemberList = !chatStore.showMemberList"
         :class="[
-          'w-8 h-8 flex items-center justify-center rounded-md transition',
+          'w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-md transition',
           chatStore.showMemberList
             ? 'text-mnema-accent bg-mnema-surface'
             : 'text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface'

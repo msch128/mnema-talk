@@ -3,7 +3,7 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-web lint complexity-check fmt vuln openapi openapi-check check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill
+.PHONY: help dev web build run test test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-web lint complexity-check fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill fresh-install docs-check
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -14,6 +14,8 @@ GO_INTEGRATION_PKG_FLAGS := $(if $(filter undefined,$(origin TEST_DATABASE_URL))
 # Keep in sync with .github/workflows/ci.yml.
 GOVULNCHECK_VERSION ?= v1.8.0
 GOCOGNIT_VERSION ?= v1.2.0
+# Pinned oasdiff for make openapi-diff (CI runs the same target).
+OASDIFF_VERSION ?= v1.34.1
 
 OPENAPI_FILE := api/openapi.json
 
@@ -80,10 +82,13 @@ typecheck-web: $(WEB_DEPS) $(E2E_DEPS) ## Strict TypeScript checks for app, test
 	cd e2e && npm run typecheck
 
 test-scripts: ## Backup/restore syntax and fault-injected lifecycle tests (Python 3; no Docker)
-	bash -n scripts/backup.sh scripts/restore.sh scripts/backup-common.sh
+	bash -n scripts/security-floor.sh scripts/backup.sh scripts/restore.sh scripts/backup-common.sh scripts/drill-common.sh scripts/upgrade-drill.sh scripts/upgrade-drill-data.sh scripts/backup-drill.sh scripts/backup-drill-downgrade.sh
 	python3 scripts/tests/test_backup_restore.py
 	python3 scripts/tests/test_upgrade_mount_guard.py
+	python3 scripts/tests/test_drill_versions.py
 	python3 scripts/tests/test_coverage_summary.py
+	python3 scripts/tests/test_openapi_diff.py
+	python3 scripts/tests/test_security_floor.py
 
 # Minimum total Go coverage (%, decimals allowed, compared on the exact
 # statement counts) and the floor for every single Go file; the frontend
@@ -93,7 +98,7 @@ COVERAGE_MIN ?= 90
 COVERAGE_FILE_MIN ?= 80
 # Packages counted in the Go coverage total: everything but test helpers and
 # build-time tools.
-COVER_PKGS = $(shell go list ./cmd/... ./internal/... ./web | grep -v -e /internal/testutil -e /internal/tools/ | paste -sd, -)
+COVER_PKGS = $(shell go list ./cmd/... ./internal/... ./web | grep -v -e /internal/testutil -e /internal/mailer/mailtest -e /internal/tools/ | paste -sd, -)
 
 coverage: coverage-go coverage-web ## Go + web coverage reports (coverage.out, web/coverage/)
 
@@ -124,6 +129,9 @@ vuln: ## govulncheck (Go vulnerability scan)
 openapi: ## Generate api/openapi.json from the handler annotations (swag v2, OpenAPI 3.1)
 	$(call openapi_gen,$(OPENAPI_FILE))
 
+openapi-diff: ## Fail on breaking changes of api/openapi.json against the latest v* tag (oasdiff; waived by a BREAKING CHANGE: commit footer)
+	OASDIFF_VERSION=$(OASDIFF_VERSION) python3 scripts/openapi_diff.py
+
 openapi-check: ## Fail when api/openapi.json is stale (regenerates into a temp file and diffs)
 	@tmp="$$(mktemp -d)" && trap 'rm -rf "$$tmp"' EXIT && \
 	$(MAKE) --no-print-directory openapi OPENAPI_FILE="$$tmp/openapi.json" && \
@@ -132,11 +140,12 @@ openapi-check: ## Fail when api/openapi.json is stale (regenerates into a temp f
 web-bundle-check: web ## Sign web/dist with a throwaway key and verify the desktop bundle (scripts/web-bundle-check.sh)
 	scripts/web-bundle-check.sh
 
-check: lint typecheck-web contracts-check openapi-check test test-scripts coverage-go vuln coverage-web web web-bundle-check ## Everything CI runs: backend and web checks, Docker build, smoke, backup, PostgreSQL upgrade and release upgrade drills
+check: docs-check lint typecheck-web contracts-check openapi-check openapi-diff test test-scripts coverage-go vuln coverage-web web web-bundle-check ## Everything CI runs: backend and web checks, Docker build, smoke, backup, PostgreSQL upgrade and release upgrade drills
 	cd web && npm audit --omit=dev --audit-level=high
 	CGO_ENABLED=0 go build ./...
 	docker build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) -t mnema-talk:ci .
 	scripts/smoke-image.sh mnema-talk:ci
+	scripts/fresh-install-check.sh mnema-talk:ci
 	scripts/backup-drill.sh mnema-talk:ci
 	scripts/postgres-upgrade-drill.sh mnema-talk:ci
 	scripts/upgrade-drill.sh mnema-talk:ci
@@ -150,6 +159,12 @@ load-test: ## Load test (PROFILE=smoke|full|join|reload|long) against a throwawa
 smoke: docker ## Start the built image with the production compose file and check health + admin login
 	scripts/smoke-image.sh mnema-talk:local
 
+fresh-install: docker ## Follow doc/deployment.md "Fresh install" in an empty directory with this build, then sign in as the Owner
+	scripts/fresh-install-check.sh mnema-talk:local
+
+docs-check: ## Relative links and anchors in README.md, SECURITY.md and doc/*.md (no network)
+	node scripts/check-doc-links.mjs
+
 backup-drill: docker ## Back up, change, verify and restore a throwaway compose stack, then check the data
 	scripts/backup-drill.sh mnema-talk:local
 
@@ -158,7 +173,7 @@ backup-drill: docker ## Back up, change, verify and restore a throwaway compose 
 postgres-upgrade-drill: docker ## Install like 0.4 (PostgreSQL 17), then check the guard and scripts/upgrade-postgres.sh
 	scripts/postgres-upgrade-drill.sh mnema-talk:local
 
-upgrade-drill: docker ## Install the latest released image, seed data via the API, upgrade to the local build and verify (needs Docker and network access to GHCR)
+upgrade-drill: docker ## Install each supported released image (FROM_VERSIONS, default 0.8.16 and 0.9.0), seed data via the API, upgrade to the local build and verify (needs Docker and network access to GHCR)
 	scripts/upgrade-drill.sh mnema-talk:local
 
 docker: ## Build the app image (mnema-talk:local, what compose runs by default)

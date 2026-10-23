@@ -83,9 +83,10 @@ test('notification levels, timed mutes, category badges and mark all read', asyn
     await member.getByRole('menuitem', { name: 'Für 1 Stunde' }).click()
     await expect(member.locator(`[data-channel-item="${one}"] [data-testid="channel-muted"]`)).toBeVisible()
     await expect(member.locator(`[data-channel-item="${one}"] [data-testid="channel-unread"]`)).toHaveCount(0)
-    const stored = await settings(member)
-    const mute = stored.channels.find((c) => c.channel_id === one)
-    expect(mute?.level).toBe('mute')
+    // The bell appears at once; the server has the setting a moment later.
+    const storedMute = async () => (await settings(member)).channels.find((c) => c.channel_id === one)
+    await expect.poll(async () => (await storedMute())?.level).toBe('mute')
+    const mute = await storedMute()
     expect(Date.parse(mute?.muted_until ?? '') - Date.now()).toBeGreaterThan(50 * 60_000)
 
     // A past or too distant end is refused by the server.

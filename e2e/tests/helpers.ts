@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto'
+import { expect } from '@playwright/test'
 import type { Page, Locator } from '@playwright/test'
 
 // The invite-only sign-up allows ten registrations an hour from one address and
@@ -92,4 +93,41 @@ export function trackPeerConnections(): void {
       window.__pcs.push(this)
     }
   }
+}
+
+/**
+ * Audio the browser decoded from the other members on the current connection.
+ * Packets it could not open never reach the decoder, which then only makes up
+ * samples for them (counted as concealed), so this stays put for them; the byte
+ * count would not. It does not depend on how loud an engine's fake microphone
+ * is or on what the noise filter makes of it.
+ */
+export function audioDecodedIn(page: Page): Promise<number> {
+  return page.evaluate(async () => {
+    const pc = window.__pcs.at(-1)
+    let samples = 0
+    if (pc) (await pc.getStats()).forEach((s) => { if (s.type === 'inbound-rtp' && s.kind === 'audio') samples += (s.totalSamplesReceived || 0) - (s.concealedSamples || 0) })
+    return samples
+  })
+}
+
+/** The page's own call is up: after a reload it rejoins by itself, and leaving before that leaves nothing for the server to end. */
+export async function expectTalkLive(page: Page) {
+  await expect.poll(() => page.evaluate(() => window.__pcs.at(-1)?.connectionState), { timeout: 20_000 }).toBe('connected')
+}
+
+/**
+ * Leaves the Talk with the Leave button on every page, so the server drops the
+ * participants at once. Closing the context instead drops the socket and the
+ * server keeps the caller listed for the 30 s voice grace period, which shifts
+ * the sidebar rows of whatever spec runs next. The last page still has to see
+ * the Talk empty well inside that period.
+ */
+export async function leaveTalks(pages: Page[]) {
+  for (const page of pages) {
+    await page.getByRole('button', { name: 'Verlassen' }).first().click()
+    await expect(page.getByRole('button', { name: 'Verlassen' })).toHaveCount(0)
+  }
+  const last = pages.at(-1)
+  if (last) await expect(last.locator('nav [data-voice-user]')).toHaveCount(0, { timeout: 5_000 })
 }

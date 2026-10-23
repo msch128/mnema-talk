@@ -114,7 +114,7 @@ describe('AdminDashboard tabs', () => {
 
   it('shows a tab only to those it is for, and the storage and system tabs to the Owner alone', () => {
     useAuthStore().user = userFixture({ role: 'admin' })
-    expect(tabs(mount(AdminDashboard, { global: { stubs } }))).toEqual(['users', 'roles', 'channels', 'invites', 'onboarding', 'bans', 'bots', 'media', 'audit', 'system'])
+    expect(tabs(mount(AdminDashboard, { global: { stubs } }))).toEqual(['users', 'roles', 'channels', 'invites', 'onboarding', 'emoji', 'bans', 'bots', 'media', 'audit', 'system'])
     setActivePinia(createPinia())
     asModerator(PERMISSION_BITS.manage_bots)
     expect(tabs(mount(AdminDashboard, { global: { stubs } }))).toEqual(['bots'])
