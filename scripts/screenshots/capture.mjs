@@ -64,7 +64,12 @@ function fakeScreen() {
   }
 }
 
+// Every picture is taken with the pointer parked on the title-bar corner (the
+// browser's own edge, no app element), so no hover chrome (sidebar "+" and
+// trash icons, message toolbars) is captured by accident.
 const shot = async (page, name) => {
+  await page.mouse.move(0, 0)
+  await page.waitForTimeout(150)
   await page.screenshot({ path: `${OUT}/${name}.png` })
   console.log('captured', name)
 }
@@ -164,7 +169,6 @@ if (wanted('unread')) {
   await channel(page, 'text', 'general').click()
   await page.waitForTimeout(1800)
   await alignMessageList(page)
-  await page.mouse.move(120, 760)
   await shot(page, 'unread')
   await page.context().close()
 }
