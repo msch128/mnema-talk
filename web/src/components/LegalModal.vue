@@ -287,7 +287,7 @@ onMounted(() => {
       </span>
       <button
         type="button"
-        class="px-4 py-1.5 rounded-md bg-mnema-accent hover:bg-mnema-accent-hover text-mnema-accent-ink text-sm font-semibold transition shadow-xs shrink-0"
+        class="btn btn-primary shrink-0"
         @click="emit('close')"
       >
         {{ $t('common.close') }}

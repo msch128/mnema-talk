@@ -99,7 +99,7 @@ defineExpose({ el: row })
       <button
         type="button"
         @click.stop="emit('reply')"
-        class="p-1.5 max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center rounded-sm hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
+        class="btn btn-icon btn-sm max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center hover:text-mnema-text"
         v-tooltip="$t('chat.reply')"
       >
         <Reply class="w-4 h-4" />
@@ -110,7 +110,7 @@ defineExpose({ el: row })
         v-if="isOwn && !msg.poll"
         type="button"
         @click.stop="emit('edit')"
-        class="p-1.5 max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center rounded-sm hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-accent transition"
+        class="btn btn-icon btn-sm max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center hover:text-mnema-accent"
         v-tooltip="$t('chat.edit')"
       >
         <Pencil class="w-4 h-4" />
@@ -120,7 +120,7 @@ defineExpose({ el: row })
       <button
         type="button"
         @click.stop="emit('more', $event)"
-        class="p-1.5 max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center rounded-sm hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
+        class="btn btn-icon btn-sm max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center hover:text-mnema-text"
         v-tooltip="$t('chat.moreActions')"
       >
         <MoreHorizontal class="w-4 h-4" />

@@ -120,14 +120,14 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+  <div class="scrim fixed inset-0 flex items-center justify-center p-4 z-50">
     <div
       ref="panel"
       role="dialog"
       aria-modal="true"
       :aria-labelledby="titleId"
       tabindex="-1"
-      class="bg-mnema-elevated w-full max-w-sm p-7 rounded-[14px] shadow-2xl border border-mnema-border flex flex-col space-y-5 focus:outline-hidden"
+      class="dialog-panel bg-mnema-elevated w-full max-w-sm p-7 rounded-xl shadow-2xl border border-mnema-border flex flex-col space-y-5 focus:outline-hidden"
     >
       <!-- Brand & Title -->
       <div class="text-center space-y-2">
@@ -230,7 +230,7 @@ async function handleSubmit() {
         <button
           type="submit"
           :disabled="isLoading"
-          class="w-full mt-2 bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold py-2 rounded-md text-sm transition disabled:opacity-50 flex items-center justify-center gap-2 shadow-xs"
+          class="btn btn-primary w-full mt-2 flex items-center justify-center gap-2"
         >
           <component :is="isRegister ? UserPlus : LogIn" class="w-3.5 h-3.5" />
           <span>{{ isLoading ? $t('login.working') : (isRegister ? $t('login.register') : $t('login.signIn')) }}</span>

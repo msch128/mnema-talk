@@ -66,7 +66,7 @@ async function submitPasswordReset() {
       <div class="flex justify-end gap-2 pt-2">
         <button
           type="button"
-          class="px-3.5 py-1.5 rounded-md border border-mnema-border text-sm text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition"
+          class="btn btn-secondary"
           @click="emit('close')"
         >
           {{ $t('common.cancel') }}
@@ -75,7 +75,7 @@ async function submitPasswordReset() {
           data-testid="save-password-button"
           type="submit"
           :disabled="passwordTooShort || isResettingPassword"
-          class="bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold px-4 py-1.5 rounded-md text-sm transition disabled:opacity-40"
+          class="btn btn-primary"
         >
           {{ $t('admin.savePassword') }}
         </button>

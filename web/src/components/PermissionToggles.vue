@@ -53,13 +53,9 @@ const STATES: readonly State[] = ['deny', 'inherit', 'allow']
         :aria-checked="(allow & bit(key)) !== 0"
         :aria-label="$t(`perm.${key}.name`)"
         :disabled="isLocked(key)"
-        :class="[
-          'relative h-6 w-11 shrink-0 rounded-full border transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent disabled:opacity-40',
-          (allow & bit(key)) !== 0 ? 'border-mnema-accent bg-mnema-accent' : 'border-mnema-border-strong bg-mnema-elevated'
-        ]"
+        class="switch"
         @click="setSwitch(key, (allow & bit(key)) === 0)"
       >
-        <span :class="['absolute top-0.5 h-[18px] w-[18px] rounded-full bg-mnema-text transition-all', (allow & bit(key)) !== 0 ? 'left-[22px]' : 'left-0.5']"></span>
       </button>
 
       <div v-else role="group" :aria-label="$t(`perm.${key}.name`)" class="flex shrink-0 overflow-hidden rounded-md border border-mnema-border-strong text-xs font-medium">

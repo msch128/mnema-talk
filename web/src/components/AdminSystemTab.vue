@@ -179,7 +179,7 @@ onMounted(refresh)
       <h3 class="text-sm font-semibold text-mnema-text uppercase font-mono tracking-wider">{{ $t('admin.system.heading') }}</h3>
       <button
         type="button"
-        class="p-2 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-elevated transition disabled:opacity-40"
+        class="btn btn-icon btn-sm hover:text-mnema-text"
         :disabled="loading"
         :title="$t('admin.refresh')"
         :aria-label="$t('admin.refresh')"
@@ -247,7 +247,7 @@ onMounted(refresh)
           type="button"
           data-testid="update-check-now"
           :disabled="checking"
-          class="border border-mnema-border bg-mnema-canvas hover:bg-mnema-elevated text-mnema-text font-medium px-3 py-1.5 rounded-md text-sm transition disabled:opacity-40"
+          class="btn btn-secondary"
           @click="checkNow"
         >
           {{ checking ? $t('admin.system.checking') : $t('admin.system.checkNow') }}
@@ -266,7 +266,7 @@ onMounted(refresh)
           v-if="self.available"
           type="button"
           data-testid="self-update-open"
-          class="px-4 py-1.5 rounded-md bg-mnema-accent hover:bg-mnema-accent-hover text-mnema-accent-ink text-sm font-semibold transition"
+          class="btn btn-primary"
           @click="showConfirm = true"
         >{{ $t('admin.system.selfUpdateButton') }}</button>
         <p v-else-if="self.configured && self.next_allowed_at" class="text-xs text-mnema-muted" data-testid="self-update-cooldown">
@@ -301,7 +301,7 @@ onMounted(refresh)
             <code class="min-w-0 flex-1 truncate rounded-sm bg-mnema-canvas px-2 py-1 font-mono text-xs text-mnema-text" data-testid="update-command">{{ UPDATE_COMMAND }}</code>
             <button
               type="button"
-              class="shrink-0 rounded-md px-2 py-1 text-xs text-mnema-tertiary hover:bg-mnema-elevated hover:text-mnema-text"
+              class="btn btn-ghost btn-sm shrink-0"
               @click="copyCommand"
             >{{ $t('admin.system.copy') }}</button>
           </div>

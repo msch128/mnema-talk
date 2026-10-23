@@ -49,7 +49,7 @@ onMounted(load)
       :key="option"
       :class="['flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 transition max-md:min-h-11', policy === option ? 'border-mnema-accent/50 bg-mnema-accent/10' : 'border-mnema-border hover:bg-mnema-hover']"
     >
-      <input type="radio" name="dm-policy" :value="option" :checked="policy === option" :disabled="busy" :data-dm-policy="option" class="mt-1 accent-mnema-accent" @change="choose(option)" />
+      <input type="radio" name="dm-policy" :value="option" :checked="policy === option" :disabled="busy" :data-dm-policy="option" class="mt-1" @change="choose(option)" />
       <span>
         <span class="block text-sm font-medium text-mnema-text">{{ $t(`dm.policy.${option}`) }}</span>
         <span class="block text-xs text-mnema-tertiary">{{ $t(`dm.policy.${option}Hint`) }}</span>

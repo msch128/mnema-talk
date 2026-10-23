@@ -63,7 +63,7 @@ watch(request, load, { immediate: true })
         <div class="flex justify-end border-t border-mnema-hairline pt-3">
           <button
             type="button"
-            class="h-8 rounded-md border border-mnema-border px-3 text-sm font-semibold text-mnema-text transition hover:bg-mnema-hover"
+            class="btn btn-secondary h-8"
             @click="closeEditHistory"
           >{{ $t('common.close') }}</button>
         </div>

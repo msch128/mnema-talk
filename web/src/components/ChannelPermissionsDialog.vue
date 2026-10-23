@@ -163,7 +163,7 @@ onMounted(load)
             <option value="">{{ $t('overwrites.addMember') }}</option>
             <option v-for="m in addableMembers" :key="m.id" :value="m.id">{{ m.display_name || m.username }}</option>
           </select>
-          <button v-if="everyone && permissions.can('view_channel')" type="button" class="flex w-full items-center justify-center gap-2 rounded-md border border-mnema-border-strong px-3 py-1.5 text-sm text-mnema-text transition hover:bg-mnema-hover" :title="$t('overwrites.privateHint')" @click="makePrivate">
+          <button v-if="everyone && permissions.can('view_channel')" type="button" class="btn btn-secondary flex w-full items-center justify-center gap-2" :title="$t('overwrites.privateHint')" @click="makePrivate">
             <Lock class="h-4 w-4" />
             <span>{{ $t('overwrites.private') }}</span>
           </button>
@@ -185,8 +185,8 @@ onMounted(load)
       </div>
 
       <div class="flex justify-end gap-2">
-        <button type="button" class="rounded-md px-3.5 py-1.5 text-sm text-mnema-muted transition hover:text-mnema-text" @click="emit('close')">{{ $t('common.cancel') }}</button>
-        <button type="button" :disabled="busy || !loaded || failed" class="rounded-md bg-mnema-accent px-3.5 py-1.5 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40" @click="save">{{ $t('overwrites.save') }}</button>
+        <button type="button" class="btn btn-ghost" @click="emit('close')">{{ $t('common.cancel') }}</button>
+        <button type="button" :disabled="busy || !loaded || failed" class="btn btn-primary" @click="save">{{ $t('overwrites.save') }}</button>
       </div>
     </div>
   </BaseDialog>

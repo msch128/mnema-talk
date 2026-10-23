@@ -81,7 +81,7 @@ function openProfile(member: ChatDirectMessage['members'][number]) {
         v-if="canAdd"
         type="button"
         data-testid="dm-add-member"
-        class="flex h-9 items-center justify-center gap-2 rounded-md border border-mnema-border text-sm font-semibold text-mnema-text transition hover:bg-mnema-hover max-md:h-11"
+        class="btn btn-secondary flex h-9 items-center justify-center gap-2 max-md:h-11"
         @click="adding = true"
       >
         <UserPlus class="h-4 w-4" />{{ $t('dm.addMember') }}
@@ -92,7 +92,7 @@ function openProfile(member: ChatDirectMessage['members'][number]) {
         <button
           type="button"
           data-testid="dm-leave"
-          class="flex h-9 items-center justify-center gap-2 rounded-md border border-mnema-danger/50 text-sm font-semibold text-mnema-danger transition hover:bg-mnema-danger/10 max-md:h-11"
+          class="btn btn-danger flex h-9 items-center justify-center gap-2 max-md:h-11"
           @click="leave"
         >
           <LogOut class="h-4 w-4" />{{ $t('dm.leave') }}
@@ -104,14 +104,14 @@ function openProfile(member: ChatDirectMessage['members'][number]) {
           v-if="blocks.enabled && !blocks.isBlocked(peer.id)"
           type="button"
           data-testid="dm-block"
-          class="flex h-9 items-center justify-center rounded-md border border-mnema-border text-sm font-semibold text-mnema-text transition hover:border-mnema-danger hover:text-mnema-danger max-md:h-11"
+          class="btn btn-secondary flex h-9 items-center justify-center hover:border-mnema-danger hover:text-mnema-danger max-md:h-11"
           @click="blocks.block(peer.id)"
         >{{ $t('blocks.block') }}</button>
         <button
           v-else-if="blocks.enabled"
           type="button"
           data-testid="dm-unblock"
-          class="flex h-9 items-center justify-center rounded-md border border-mnema-border text-sm font-semibold text-mnema-text transition hover:border-mnema-accent hover:text-mnema-accent max-md:h-11"
+          class="btn btn-secondary flex h-9 items-center justify-center max-md:h-11"
           @click="blocks.unblock(peer.id)"
         >{{ $t('blocks.unblock') }}</button>
       </template>

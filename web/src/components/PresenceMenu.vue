@@ -90,7 +90,7 @@ const item = 'flex w-full items-start gap-2.5 rounded-md px-2 py-1.5 text-left t
     role="menu"
     data-testid="presence-menu"
     :aria-label="$t('presence.choose')"
-    class="absolute bottom-full left-2 z-40 mb-1 flex w-[260px] max-w-[calc(100vw-16px)] flex-col rounded-[10px] bg-mnema-elevated p-1.5 shadow-[inset_0_0_0_1px_#2B2F2D,0_12px_32px_rgba(0,0,0,0.5)]"
+    class="absolute bottom-full left-2 z-40 mb-1 flex w-[260px] max-w-[calc(100vw-16px)] flex-col rounded-lg bg-mnema-elevated p-1.5 shadow-popover pop-in"
     @keydown="onKeydown"
   >
     <button

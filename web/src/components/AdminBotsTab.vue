@@ -82,7 +82,7 @@ onMounted(async () => {
       <div class="space-y-3">
         <form class="flex gap-2" @submit.prevent="create">
           <input v-model="newName" type="text" maxlength="24" class="min-w-0 flex-1 rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" :placeholder="$t('bots.namePlaceholder')" :aria-label="$t('common.name')" data-testid="bot-new-name" />
-          <button type="submit" :disabled="busy || !newName.trim()" class="flex items-center gap-1.5 rounded-md bg-mnema-accent px-3 py-1.5 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40" data-testid="bot-create">
+          <button type="submit" :disabled="busy || !newName.trim()" class="btn btn-primary flex items-center gap-1.5" data-testid="bot-create">
             <Plus class="h-4 w-4" aria-hidden="true" />
             <span>{{ $t('bots.new') }}</span>
           </button>

@@ -239,7 +239,7 @@ async function handleStart() {
           type="button"
           data-testid="stream-modal-cancel"
           @click="emit('close')"
-          class="h-9 px-4 rounded-md border border-mnema-border hover:bg-mnema-hover text-mnema-text text-sm font-semibold transition cursor-pointer"
+          class="btn btn-secondary h-9 cursor-pointer"
         >
           {{ t('common.cancel') }}
         </button>
@@ -247,7 +247,7 @@ async function handleStart() {
           type="button"
           data-testid="stream-modal-submit"
           @click="handleStart"
-          class="h-9 px-4 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold text-sm transition flex items-center gap-1.5 cursor-pointer"
+          class="btn btn-primary h-9 flex items-center gap-1.5 cursor-pointer"
         >
           <Monitor class="w-4 h-4" />
           <span>{{ voiceStore.isScreenSharing ? t('talk.quality.applyQuality') : t('talk.quality.startStream') }}</span>

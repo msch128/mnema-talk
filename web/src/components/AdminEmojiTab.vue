@@ -117,7 +117,7 @@ onMounted(() => { void store.load() })
           type="button"
           :disabled="full"
           data-testid="emoji-choose"
-          class="shrink-0 rounded-md border border-mnema-border bg-mnema-elevated px-3 py-1.5 text-sm text-mnema-text transition hover:border-mnema-accent disabled:opacity-50"
+          class="btn btn-secondary shrink-0"
           @click="fileInput?.click()"
         >{{ $t('emoji.admin.choose') }}</button>
         <span class="min-w-0 truncate text-sm text-mnema-muted" data-testid="emoji-file-name">{{ file?.name ?? $t('emoji.admin.noFile') }}</span>
@@ -136,7 +136,7 @@ onMounted(() => { void store.load() })
         type="submit"
         data-testid="emoji-upload"
         :disabled="!file || !nameOk || busy || full"
-        class="bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold px-3.5 py-1.5 rounded-md text-sm transition shadow-xs disabled:opacity-50"
+        class="btn btn-primary"
       >
         {{ $t('emoji.admin.add') }}
       </button>

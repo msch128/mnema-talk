@@ -75,7 +75,7 @@ const { pickerId, editingId, editText } = props.actions
       <button
         type="button"
         @click.stop="emit('reply')"
-        class="p-1 rounded-sm hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
+        class="btn btn-icon btn-sm hover:text-mnema-text"
         v-tooltip="$t('chat.reply')"
       >
         <Reply class="w-3.5 h-3.5" />
@@ -85,7 +85,7 @@ const { pickerId, editingId, editText } = props.actions
         v-if="actions.isOwn(reply)"
         type="button"
         @click.stop="actions.startEdit(reply)"
-        class="p-1 rounded-sm hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-accent transition"
+        class="btn btn-icon btn-sm hover:text-mnema-accent"
         v-tooltip="$t('thread.edit')"
       >
         <Pencil class="w-3.5 h-3.5" />
@@ -95,7 +95,7 @@ const { pickerId, editingId, editText } = props.actions
         v-if="actions.canDelete(reply)"
         type="button"
         @click.stop="actions.deleteMessage(reply)"
-        class="p-1 rounded-sm hover:bg-mnema-surface text-mnema-tertiary hover:text-red-400 transition"
+        class="btn btn-icon btn-sm hover:text-red-400"
         v-tooltip="$t('thread.delete')"
       >
         <Trash2 class="w-3.5 h-3.5" />

@@ -41,7 +41,7 @@ describe('confirm() + ConfirmDialog', () => {
     const [cancel, ok] = buttons()
     expect(requireValue(cancel).textContent.trim()).toBe('Abbrechen')
     expect(requireValue(ok).textContent.trim()).toBe('Löschen')
-    expect(requireValue(ok).className).toContain('bg-mnema-danger')
+    expect(requireValue(ok).className).toContain('btn-danger-solid')
     expect(document.activeElement).toBe(cancel)
     requireValue(cancel).click()
     expect(await p).toBe(false)

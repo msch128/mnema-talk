@@ -225,7 +225,7 @@ function handleKeyRecord(e: KeyboardEvent) {
           max="100"
           v-model="voiceStore.sensitivityThreshold"
           @input="handleSliderChange"
-          class="w-full accent-mnema-accent cursor-pointer"
+          class="w-full cursor-pointer"
         />
       </div>
 

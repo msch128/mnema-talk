@@ -73,14 +73,14 @@ async function submit() {
         />
       </div>
       <div class="flex justify-end gap-2 pt-1">
-        <button type="button" class="px-3 py-1.5 rounded-md text-sm text-mnema-muted hover:text-mnema-text" @click="emit('close')">
+        <button type="button" class="btn btn-ghost" @click="emit('close')">
           {{ $t('common.cancel') }}
         </button>
         <button
           type="submit"
           data-testid="self-update-confirm"
           :disabled="!password || busy"
-          class="px-4 py-1.5 rounded-md bg-mnema-accent hover:bg-mnema-accent-hover text-mnema-accent-ink text-sm font-semibold transition disabled:opacity-40"
+          class="btn btn-primary"
         >
           {{ busy ? $t('admin.system.selfUpdateStarting') : $t('admin.system.selfUpdateButton') }}
         </button>

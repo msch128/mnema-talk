@@ -111,12 +111,12 @@ async function send() {
         ></textarea>
         <p v-if="error" role="alert" data-testid="forward-error" class="rounded-lg border border-mnema-danger/30 bg-mnema-danger/10 p-2.5 text-sm text-mnema-danger">{{ error }}</p>
         <div class="flex justify-end gap-2 border-t border-mnema-hairline pt-3">
-          <button type="button" class="h-8 rounded-md border border-mnema-border px-3 text-sm font-semibold text-mnema-text transition hover:bg-mnema-hover" @click="closeForward">{{ $t('common.cancel') }}</button>
+          <button type="button" class="btn btn-secondary h-8" @click="closeForward">{{ $t('common.cancel') }}</button>
           <button
             type="submit"
             data-testid="forward-send"
             :disabled="!target || sending"
-            class="h-8 rounded-md bg-mnema-accent px-3 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-50"
+            class="btn btn-primary h-8"
           >{{ $t('forward.send') }}</button>
         </div>
       </form>

@@ -25,7 +25,7 @@ const chatStore = useChatStore()
     role="listbox"
     data-testid="mention-suggestions"
     :aria-label="$t('mention.listLabel')"
-    class="absolute bottom-full left-0 right-0 z-30 mb-1.5 max-h-72 overflow-y-auto rounded-[10px] bg-mnema-elevated p-1.5 shadow-[inset_0_0_0_1px_#2B2F2D,0_12px_32px_rgba(0,0,0,0.5)]"
+    class="absolute bottom-full left-0 right-0 z-30 mb-1.5 max-h-72 overflow-y-auto rounded-lg bg-mnema-elevated p-1.5 shadow-popover pop-in"
   >
     <div class="px-2 pb-1 pt-0.5 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ items[0]?.emoji ? $t('emoji.suggestTitle') : $t('mention.title') }}</div>
     <div

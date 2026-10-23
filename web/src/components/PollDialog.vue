@@ -97,7 +97,7 @@ async function submit() {
               type="button"
               :disabled="draft.options.length <= POLL_MIN_OPTIONS"
               :aria-label="$t('poll.removeAnswer', { n: i + 1 })"
-              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text disabled:opacity-30"
+              class="btn btn-icon h-9 w-9 shrink-0 disabled:opacity-30"
               @click="removeOption(i)"
             >
               <X class="h-4 w-4" />
@@ -129,11 +129,11 @@ async function submit() {
         </div>
         <div class="space-y-2 pt-1 sm:pt-5">
           <label class="flex items-center gap-2 text-sm text-mnema-body-ink">
-            <input v-model="draft.multiple" type="checkbox" class="h-4 w-4 accent-mnema-accent" data-testid="poll-multiple" />
+            <input v-model="draft.multiple" type="checkbox" class="h-4 w-4" data-testid="poll-multiple" />
             {{ $t('poll.allowMultiple') }}
           </label>
           <label class="flex items-center gap-2 text-sm text-mnema-body-ink">
-            <input v-model="draft.anonymous" type="checkbox" class="h-4 w-4 accent-mnema-accent" data-testid="poll-anonymous-toggle" />
+            <input v-model="draft.anonymous" type="checkbox" class="h-4 w-4" data-testid="poll-anonymous-toggle" />
             {{ $t('poll.makeAnonymous') }}
           </label>
         </div>
@@ -142,12 +142,12 @@ async function submit() {
 
       <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
         <span v-if="problemText" class="max-sm:w-full sm:mr-auto text-xs text-mnema-tertiary" data-testid="poll-problem">{{ problemText }}</span>
-        <button type="button" class="h-9 whitespace-nowrap rounded-md px-3 text-sm text-mnema-muted transition hover:bg-mnema-surface hover:text-mnema-text" @click="emit('close')">{{ $t('common.cancel') }}</button>
+        <button type="button" class="btn btn-ghost h-9 whitespace-nowrap" @click="emit('close')">{{ $t('common.cancel') }}</button>
         <button
           type="submit"
           :disabled="!!problem || busy"
           data-testid="poll-post"
-          class="h-9 whitespace-nowrap rounded-md bg-mnema-accent px-4 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40"
+          class="btn btn-primary h-9 whitespace-nowrap"
         >{{ $t('poll.post') }}</button>
       </div>
     </form>

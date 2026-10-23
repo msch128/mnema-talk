@@ -305,7 +305,7 @@ onUnmounted(() => {
   window.removeEventListener('scroll', handleOutsideDismiss, true)
 })
 
-const panelClass = 'p-1.5 rounded-lg bg-mnema-elevated border border-mnema-border shadow-2xl text-sm text-mnema-muted font-sans'
+const panelClass = 'p-1.5 rounded-lg bg-mnema-elevated border border-mnema-border shadow-lg text-sm text-mnema-muted font-sans'
 </script>
 
 <template>
@@ -322,7 +322,7 @@ const panelClass = 'p-1.5 rounded-lg bg-mnema-elevated border border-mnema-borde
         top: `${posY}px`,
         minWidth: `${minWidth}px`
       }"
-      :class="['fixed z-50 focus:outline-hidden select-none animate-in fade-in zoom-in-95 duration-100', panelClass]"
+      :class="['fixed z-50 focus:outline-hidden select-none pop-in', panelClass]"
       @keydown="handleKeydown"
     >
       <slot name="header"></slot>

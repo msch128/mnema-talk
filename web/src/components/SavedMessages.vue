@@ -78,7 +78,7 @@ function when(iso: string) {
     <button
       type="button"
       data-testid="saved-button"
-      class="flex h-8 w-8 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text max-md:h-11 max-md:w-11"
+      class="btn btn-icon max-md:h-11 max-md:w-11"
       :class="open ? 'bg-mnema-surface text-mnema-accent' : ''"
       :aria-label="$t('saved.title')"
       :aria-expanded="open ? 'true' : 'false'"
@@ -94,7 +94,7 @@ function when(iso: string) {
       data-testid="saved-panel"
       role="dialog"
       :aria-label="$t('saved.title')"
-      class="absolute right-0 top-full z-30 mt-2 flex max-h-[70vh] w-[min(24rem,calc(100vw-1.5rem))] flex-col max-md:fixed max-md:inset-x-3 max-md:top-[calc(3rem+env(safe-area-inset-top))] max-md:mt-0 max-md:max-h-[calc(100dvh-4.5rem-env(safe-area-inset-top))] max-md:w-auto overflow-hidden rounded-[10px] bg-mnema-elevated shadow-[inset_0_0_0_1px_#2B2F2D,0_12px_32px_rgba(0,0,0,0.5)]"
+      class="absolute right-0 top-full z-30 mt-2 flex max-h-[70vh] w-[min(24rem,calc(100vw-1.5rem))] flex-col max-md:fixed max-md:inset-x-3 max-md:top-[calc(3rem+env(safe-area-inset-top))] max-md:mt-0 max-md:max-h-[calc(100dvh-4.5rem-env(safe-area-inset-top))] max-md:w-auto overflow-hidden rounded-lg bg-mnema-elevated shadow-popover pop-in"
     >
       <div class="border-b border-mnema-hairline px-3 py-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">
         {{ $t('saved.title') }}
@@ -139,7 +139,7 @@ function when(iso: string) {
               v-if="entry.available"
               type="button"
               data-testid="saved-note-edit"
-              class="mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text max-md:h-11 max-md:w-11"
+              class="btn btn-icon mt-1.5 h-7 w-7 shrink-0 max-md:h-11 max-md:w-11"
               :aria-label="$t('saved.editNote')"
               v-tooltip="$t('saved.editNote')"
               @click="startNote(entry)"
@@ -149,7 +149,7 @@ function when(iso: string) {
             <button
               type="button"
               data-testid="saved-remove"
-              class="mr-0.5 mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text max-md:h-11 max-md:w-11"
+              class="btn btn-icon mr-0.5 mt-1.5 h-7 w-7 shrink-0 max-md:h-11 max-md:w-11"
               :aria-label="$t('saved.remove')"
               v-tooltip="$t('saved.remove')"
               @click="remove(entry)"
@@ -169,7 +169,7 @@ function when(iso: string) {
               class="min-w-0 flex-1 rounded-md border border-mnema-border bg-mnema-surface px-2 py-1 text-sm text-mnema-text placeholder:text-mnema-tertiary focus:border-mnema-accent focus:outline-hidden"
               @keydown.esc.stop="editing = null"
             >
-            <button type="submit" data-testid="saved-note-save" class="flex h-7 w-7 items-center justify-center rounded-md text-mnema-accent hover:bg-mnema-surface" :aria-label="$t('saved.saveNote')">
+            <button type="submit" data-testid="saved-note-save" class="btn btn-icon h-7 w-7 text-mnema-accent" :aria-label="$t('saved.saveNote')">
               <Check class="h-4 w-4" />
             </button>
           </form>
@@ -180,7 +180,7 @@ function when(iso: string) {
           type="button"
           data-testid="saved-more"
           :disabled="saved.loadingMore"
-          class="flex w-full items-center justify-center gap-2 rounded-lg py-2 text-sm text-mnema-muted transition hover:bg-mnema-hover hover:text-mnema-text disabled:opacity-50"
+          class="btn btn-ghost flex w-full items-center justify-center gap-2"
           @click="saved.loadMore()"
         >
           <Loader2 v-if="saved.loadingMore" class="h-3.5 w-3.5 animate-spin" />

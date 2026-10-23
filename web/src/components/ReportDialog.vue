@@ -65,7 +65,7 @@ async function send() {
           :key="option"
           :class="['flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 transition max-md:min-h-11', category === option ? 'border-mnema-accent/50 bg-mnema-accent/10' : 'border-mnema-border hover:bg-mnema-hover']"
         >
-          <input v-model="category" type="radio" name="report-category" :value="option" :data-report-first="i === 0 ? '' : undefined" :data-report-category="option" class="mt-1 accent-mnema-accent" />
+          <input v-model="category" type="radio" name="report-category" :value="option" :data-report-first="i === 0 ? '' : undefined" :data-report-category="option" class="mt-1" />
           <span>
             <span class="block text-sm font-medium text-mnema-text">{{ $t(`reports.category.${option}`) }}</span>
             <span class="block text-xs text-mnema-tertiary">{{ $t(`reports.categoryHint.${option}`) }}</span>
@@ -83,8 +83,8 @@ async function send() {
       <div v-if="error" role="alert" data-testid="report-error" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-2 text-sm text-mnema-danger">{{ error }}</div>
 
       <div class="flex justify-end gap-2 border-t border-mnema-hairline pt-3">
-        <button type="button" class="h-8 rounded-md border border-mnema-border px-3 text-sm font-semibold text-mnema-text transition hover:bg-mnema-hover max-md:h-11" @click="closeReport">{{ $t('common.cancel') }}</button>
-        <button type="submit" :disabled="busy" data-testid="report-submit" class="flex h-8 items-center gap-1.5 rounded-md bg-mnema-accent px-3 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40 max-md:h-11">
+        <button type="button" class="btn btn-secondary h-8 max-md:h-11" @click="closeReport">{{ $t('common.cancel') }}</button>
+        <button type="submit" :disabled="busy" data-testid="report-submit" class="btn btn-primary flex h-8 items-center gap-1.5 max-md:h-11">
           <Loader2 v-if="busy" class="h-4 w-4 animate-spin" />{{ $t('reports.send') }}
         </button>
       </div>

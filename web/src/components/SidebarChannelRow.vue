@@ -171,7 +171,7 @@ const rowClass = computed(() => [
         @pointerdown.stop
         v-tooltip="$t('talk.openChat')"
         :aria-label="$t('talk.openChat')"
-        class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100 max-md:z-10 w-6 h-6 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-sm text-mnema-tertiary hover:text-mnema-text focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent transition shrink-0"
+        class="btn btn-icon opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100 max-md:z-10 w-6 h-6 max-md:w-11 max-md:h-11 shrink-0"
       >
         <MessageSquare class="w-4 h-4" />
       </button>
@@ -183,7 +183,7 @@ const rowClass = computed(() => [
         @click.stop="emit('delete')"
         v-tooltip="isVoice ? $t('sidebar.deleteVoiceChannel') : $t('sidebar.deleteChannel')"
         :aria-label="isVoice ? $t('sidebar.deleteVoiceChannel') : $t('sidebar.deleteChannel')"
-        class="max-md:hidden opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-6 h-6 flex items-center justify-center rounded-sm text-mnema-tertiary hover:text-mnema-danger transition shrink-0"
+        class="btn btn-icon max-md:hidden opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-6 h-6 hover:text-mnema-danger shrink-0"
       >
         <Trash2 class="w-4 h-4" />
       </button>

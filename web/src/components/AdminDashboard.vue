@@ -126,8 +126,7 @@ watch(activeTab, (tab) => {
         :data-testid="`tab-${tab}`"
         type="button"
         :aria-pressed="activeTab === tab ? 'true' : 'false'"
-        :class="activeTab === tab ? 'bg-mnema-accent/15 text-mnema-accent font-semibold border-mnema-accent/30' : 'text-mnema-muted hover:text-mnema-text border-transparent'"
-        class="px-3.5 py-1.5 rounded-md border transition whitespace-nowrap flex items-center gap-2"
+        class="chip chip-bare"
         @click="activeTab = tab"
       >
         <Users v-if="tab === 'users'" class="w-4 h-4" />

@@ -119,7 +119,7 @@ defineExpose({ focus: () => inputEl.value?.focus() })
           <span class="truncate font-mono">{{ chip.key }}:{{ chip.value }}</span>
           <button
             type="button"
-            class="rounded-sm p-0.5 hover:bg-mnema-hover"
+            class="btn btn-icon btn-sm"
             :aria-label="$t('chat.searchRemoveFilter', { filter: chip.key })"
             @click="removeChip(chip.key)"
           >
@@ -147,7 +147,7 @@ defineExpose({ focus: () => inputEl.value?.focus() })
       <button
         type="button"
         data-dialog-close
-        class="p-1 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition"
+        class="btn btn-icon btn-sm hover:text-mnema-text"
         v-tooltip="$t('common.close')"
         :aria-label="$t('common.close')"
         @click="emit('close')"
