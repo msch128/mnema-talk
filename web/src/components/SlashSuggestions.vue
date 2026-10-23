@@ -38,9 +38,9 @@ const emit = defineEmits<{ pick: [item: BotChannelCommand]; hover: [index: numbe
       @mousedown.prevent="emit('pick', item)"
       @mousemove="emit('hover', i)"
     >
-      <span v-if="item.builtin" class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-mnema-accent/20 text-mnema-accent" aria-hidden="true"><Slash class="h-3 w-3" /></span>
+      <span v-if="item.builtin" class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-mnema-accent/20 text-mnema-accent" aria-hidden="true"><Slash class="h-3 w-3" /></span>
       <UserAvatar v-else :user="{ display_name: item.bot_name, username: item.bot_name, avatar_url: item.bot_avatar_url }" size="xs" ring-class="bg-mnema-elevated" />
-      <span class="flex-shrink-0 font-mono font-semibold text-mnema-text">/{{ item.name }}</span>
+      <span class="shrink-0 font-mono font-semibold text-mnema-text">/{{ item.name }}</span>
       <span class="min-w-0 flex-1 truncate text-xs text-mnema-tertiary">{{ commandDescription(item) }}</span>
       <span class="min-w-0 max-w-[35%] truncate text-xs text-mnema-muted">{{ item.builtin ? $t('slash.builtinLabel') : item.bot_name }}</span>
     </div>

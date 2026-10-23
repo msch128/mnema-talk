@@ -109,11 +109,11 @@ function finish() {
     </div>
 
     <form v-else-if="step === 'password'" class="space-y-2" @submit.prevent="start">
-      <input v-model="password" type="password" required autocomplete="current-password" :aria-label="$t('profile.currentPassword')" :placeholder="$t('profile.currentPassword')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-none" data-testid="two-factor-password" />
-      <div v-if="error" role="alert" class="rounded border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
+      <input v-model="password" type="password" required autocomplete="current-password" :aria-label="$t('profile.currentPassword')" :placeholder="$t('profile.currentPassword')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden" data-testid="two-factor-password" />
+      <div v-if="error" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
       <div class="flex justify-end gap-1.5 text-xs">
-        <button type="button" class="rounded px-2 py-0.5 text-mnema-muted hover:text-mnema-text" @click="go('idle')">{{ $t('common.cancel') }}</button>
-        <button type="submit" :disabled="busy" class="rounded bg-mnema-accent px-2.5 py-1 font-bold text-mnema-canvas hover:brightness-110 disabled:opacity-50" data-testid="two-factor-continue">{{ $t('security.twoFactor.continue') }}</button>
+        <button type="button" class="rounded-sm px-2 py-0.5 text-mnema-muted hover:text-mnema-text" @click="go('idle')">{{ $t('common.cancel') }}</button>
+        <button type="submit" :disabled="busy" class="rounded-sm bg-mnema-accent px-2.5 py-1 font-bold text-mnema-canvas hover:brightness-110 disabled:opacity-50" data-testid="two-factor-continue">{{ $t('security.twoFactor.continue') }}</button>
       </div>
     </form>
 
@@ -122,11 +122,11 @@ function finish() {
       <div class="flex justify-center"><QrCode :text="setup.otpauth_uri" :label="$t('security.twoFactor.qrLabel')" /></div>
       <p class="text-xs text-mnema-tertiary">{{ $t('security.twoFactor.manual') }}</p>
       <code class="block select-all break-all rounded-md border border-mnema-hairline bg-mnema-canvas p-2 text-center font-mono text-sm text-mnema-text" data-testid="two-factor-secret">{{ setup.secret }}</code>
-      <input v-model="code" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8" :aria-label="$t('security.twoFactor.code')" :placeholder="$t('security.twoFactor.code')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 font-mono text-sm tracking-widest text-mnema-text focus:border-mnema-accent focus:outline-none" data-testid="two-factor-code" />
-      <div v-if="error" role="alert" class="rounded border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
+      <input v-model="code" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8" :aria-label="$t('security.twoFactor.code')" :placeholder="$t('security.twoFactor.code')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 font-mono text-sm tracking-widest text-mnema-text focus:border-mnema-accent focus:outline-hidden" data-testid="two-factor-code" />
+      <div v-if="error" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
       <div class="flex justify-end gap-1.5 text-xs">
-        <button type="button" class="rounded px-2 py-0.5 text-mnema-muted hover:text-mnema-text" @click="go('idle')">{{ $t('common.cancel') }}</button>
-        <button type="submit" :disabled="busy" class="flex items-center gap-1 rounded bg-mnema-accent px-2.5 py-1 font-bold text-mnema-canvas hover:brightness-110 disabled:opacity-50" data-testid="two-factor-enable"><Loader2 v-if="busy" class="h-3.5 w-3.5 animate-spin" />{{ $t('security.twoFactor.confirm') }}</button>
+        <button type="button" class="rounded-sm px-2 py-0.5 text-mnema-muted hover:text-mnema-text" @click="go('idle')">{{ $t('common.cancel') }}</button>
+        <button type="submit" :disabled="busy" class="flex items-center gap-1 rounded-sm bg-mnema-accent px-2.5 py-1 font-bold text-mnema-canvas hover:brightness-110 disabled:opacity-50" data-testid="two-factor-enable"><Loader2 v-if="busy" class="h-3.5 w-3.5 animate-spin" />{{ $t('security.twoFactor.confirm') }}</button>
       </div>
     </form>
 
@@ -134,12 +134,12 @@ function finish() {
 
     <form v-else class="space-y-2" @submit.prevent="step === 'proof-disable' ? turnOff() : renew()">
       <p class="text-sm text-mnema-muted">{{ $t('security.twoFactor.proof') }}</p>
-      <input v-model="password" type="password" required autocomplete="current-password" :aria-label="$t('profile.currentPassword')" :placeholder="$t('profile.currentPassword')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-none" data-testid="two-factor-password" />
-      <input v-model="code" type="text" required autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="32" :aria-label="$t('security.twoFactor.code')" :placeholder="$t('security.twoFactor.code')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 font-mono text-sm tracking-widest text-mnema-text focus:border-mnema-accent focus:outline-none" data-testid="two-factor-code" />
-      <div v-if="error" role="alert" class="rounded border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
+      <input v-model="password" type="password" required autocomplete="current-password" :aria-label="$t('profile.currentPassword')" :placeholder="$t('profile.currentPassword')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden" data-testid="two-factor-password" />
+      <input v-model="code" type="text" required autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="32" :aria-label="$t('security.twoFactor.code')" :placeholder="$t('security.twoFactor.code')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 font-mono text-sm tracking-widest text-mnema-text focus:border-mnema-accent focus:outline-hidden" data-testid="two-factor-code" />
+      <div v-if="error" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
       <div class="flex justify-end gap-1.5 text-xs">
-        <button type="button" class="rounded px-2 py-0.5 text-mnema-muted hover:text-mnema-text" @click="go('idle')">{{ $t('common.cancel') }}</button>
-        <button type="submit" :disabled="busy" :class="['flex items-center gap-1 rounded px-2.5 py-1 font-bold hover:brightness-110 disabled:opacity-50', step === 'proof-disable' ? 'bg-mnema-danger text-white' : 'bg-mnema-accent text-mnema-canvas']" data-testid="two-factor-proof-submit"><Loader2 v-if="busy" class="h-3.5 w-3.5 animate-spin" />{{ $t(step === 'proof-disable' ? 'security.twoFactor.turnOff' : 'security.twoFactor.newCodes') }}</button>
+        <button type="button" class="rounded-sm px-2 py-0.5 text-mnema-muted hover:text-mnema-text" @click="go('idle')">{{ $t('common.cancel') }}</button>
+        <button type="submit" :disabled="busy" :class="['flex items-center gap-1 rounded-sm px-2.5 py-1 font-bold hover:brightness-110 disabled:opacity-50', step === 'proof-disable' ? 'bg-mnema-danger text-white' : 'bg-mnema-accent text-mnema-canvas']" data-testid="two-factor-proof-submit"><Loader2 v-if="busy" class="h-3.5 w-3.5 animate-spin" />{{ $t(step === 'proof-disable' ? 'security.twoFactor.turnOff' : 'security.twoFactor.newCodes') }}</button>
       </div>
     </form>
   </section>

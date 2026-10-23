@@ -125,7 +125,7 @@ async function onAvatarSelected(e: Event) {
       <button
         v-if="!isSelf"
         @click="emit('mention')"
-        class="px-3 py-1.5 rounded-lg bg-mnema-band hover:bg-mnema-raised text-mnema-text text-sm font-medium border border-mnema-border flex items-center gap-1.5 transition active:scale-95 shadow-sm"
+        class="px-3 py-1.5 rounded-lg bg-mnema-band hover:bg-mnema-raised text-mnema-text text-sm font-medium border border-mnema-border flex items-center gap-1.5 transition active:scale-95 shadow-xs"
         v-tooltip.visual="$t('profile.mentionHint')"
       >
         <AtSign class="w-4 h-4 text-mnema-accent" />

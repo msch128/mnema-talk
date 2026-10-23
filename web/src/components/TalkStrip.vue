@@ -55,7 +55,7 @@ function toggle() {
             :camera-focusable="canFocusCamera(user)"
             :camera-focused="isCameraFocused(user)"
             compact
-            class="flex-shrink-0"
+            class="shrink-0"
             @focus-camera="emit('focus-camera', user)"
             @fullscreen-camera="emit('fullscreen-camera', user.id)"
             @watch-stream="emit('watch-stream', user.id)"

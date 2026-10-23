@@ -322,7 +322,7 @@ const panelClass = 'p-1.5 rounded-lg bg-mnema-elevated border border-mnema-borde
         top: `${posY}px`,
         minWidth: `${minWidth}px`
       }"
-      :class="['fixed z-50 focus:outline-none select-none animate-in fade-in zoom-in-95 duration-100', panelClass]"
+      :class="['fixed z-50 focus:outline-hidden select-none animate-in fade-in zoom-in-95 duration-100', panelClass]"
       @keydown="handleKeydown"
     >
       <slot name="header"></slot>
@@ -344,17 +344,17 @@ const panelClass = 'p-1.5 rounded-lg bg-mnema-elevated border border-mnema-borde
             tabindex="-1"
             :disabled="item.disabled"
             :class="[
-              'w-full h-8 px-2.5 flex items-center justify-between gap-3 rounded text-left transition-colors font-normal focus:outline-none',
+              'w-full h-8 px-2.5 flex items-center justify-between gap-3 rounded-sm text-left transition-colors font-normal focus:outline-hidden',
               item.disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-mnema-hover hover:text-mnema-text focus-visible:bg-mnema-hover focus-visible:text-mnema-text',
               openSub === item.id ? 'bg-mnema-hover text-mnema-text' : ''
             ]"
             @click="onTriggerClick(item, $event)"
           >
             <div class="flex items-center gap-2 truncate">
-              <component :is="item.icon" v-if="item.icon" class="w-4 h-4 flex-shrink-0 opacity-80" />
+              <component :is="item.icon" v-if="item.icon" class="w-4 h-4 shrink-0 opacity-80" />
               <span class="truncate">{{ item.label }}</span>
             </div>
-            <span class="ml-auto flex items-center gap-1 text-xs text-mnema-tertiary flex-shrink-0">
+            <span class="ml-auto flex items-center gap-1 text-xs text-mnema-tertiary shrink-0">
               <span v-if="item.value">{{ item.value }}</span>
               <ChevronRight class="w-3.5 h-3.5" aria-hidden="true" />
             </span>

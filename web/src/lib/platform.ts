@@ -11,7 +11,7 @@ import {
   type NativeReply,
 } from './native/nativeTransport'
 import { isTrustedDesktop, trustedApp, type TrustedApp } from './native/trustedDesktop'
-import { browserNotify, hostNotify, type NotifyAdapter, type NotifyPermission, type OsNotification } from './osNotify'
+import { browserNotify, hostNotify, type NotifyAdapter, type NotifyPermission, type OsNotification, type UnreadCounts } from './osNotify'
 import { TrustedSocket } from './native/trustedSocket'
 
 /** What the chat store needs from a live socket, whichever host opens it. */
@@ -53,6 +53,15 @@ export interface Platform {
   notify(n: OsNotification): void
   /** Count on the taskbar/dock/app icon; 0 clears it. */
   setBadge(count: number): void
+  /**
+   * What this instance has waiting, for the multi-instance desktop client's
+   * server rail and combined badge. Feature-detected: only a host that
+   * announces the `unread` capability gets it, and `supportsUnreadReport`
+   * says whether that is the case. Additive, no `web_client_api` bump.
+   */
+  reportUnread(counts: UnreadCounts): void
+  /** The host takes `reportUnread` (it then also sums the badge over its instances). */
+  supportsUnreadReport(): boolean
   /** Native connection lifecycle (desktop only). */
   initializeNative(): Promise<void>
   connectNative(address: string): Promise<NativeReply>
@@ -72,6 +81,27 @@ function notifier(): NotifyAdapter {
   return app?.role === 'instance' && app.capabilities.includes('notify') ? hostNotify : browserNotify
 }
 
+const SOCKET_PATH = '/api/ws'
+
+/**
+ * What the host is asked to open. A client that announces `ws_query` relays the
+ * one question the socket may carry (`?dm=1`: send conversation events too);
+ * an older one only opens the plain path, and a socket URL it would refuse
+ * outright must not reach it.
+ */
+function trustedSocketPath(url: string): string {
+  try {
+    const { pathname, search } = new URL(url)
+    if (pathname === SOCKET_PATH && search === '?dm=1' && trustedApp()?.capabilities.includes('ws_query')) return `${SOCKET_PATH}${search}`
+  } catch { /* not a URL: the plain path */ }
+  return SOCKET_PATH
+}
+
+function unreadReporter(): NotifyAdapter | null {
+  const app = trustedApp()
+  return app?.role === 'instance' && app.capabilities.includes('unread') ? hostNotify : null
+}
+
 /** A browser tab, including the trusted bundle served from the client's own origin. */
 export const browserPlatform: Platform = {
   isDesktop: () => false,
@@ -79,7 +109,7 @@ export const browserPlatform: Platform = {
   isTrustedDesktop,
   trustedApp,
   apiTransport: () => null,
-  openSocket: url => isTrustedDesktop() ? new TrustedSocket() : new WebSocket(url),
+  openSocket: url => isTrustedDesktop() ? new TrustedSocket(trustedSocketPath(url)) : new WebSocket(url),
   gamingSurface: () => windowString('__MNEMA_GAMING_SURFACE__'),
   gamingBridgeToken: () => windowString('__MNEMA_GAMING_BRIDGE__'),
   invoke: <T = unknown>(command: string, args?: Record<string, unknown>) => tauriInvoke<T>(command, args),
@@ -88,6 +118,8 @@ export const browserPlatform: Platform = {
   requestNotificationPermission: () => notifier().requestPermission(),
   notify: n => notifier().notify(n),
   setBadge: count => notifier().setBadge(count),
+  reportUnread: counts => unreadReporter()?.reportUnread?.(counts),
+  supportsUnreadReport: () => unreadReporter()?.reportUnread !== undefined,
   initializeNative: initializeNativeContext,
   connectNative,
   disconnectNative,
@@ -122,6 +154,8 @@ export const platform: Platform = {
   requestNotificationPermission: () => current().requestNotificationPermission(),
   notify: n => current().notify(n),
   setBadge: count => current().setBadge(count),
+  reportUnread: counts => current().reportUnread(counts),
+  supportsUnreadReport: () => current().supportsUnreadReport(),
   initializeNative: () => current().initializeNative(),
   connectNative: address => current().connectNative(address),
   disconnectNative: () => current().disconnectNative(),

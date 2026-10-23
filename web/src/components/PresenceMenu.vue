@@ -81,7 +81,7 @@ onMounted(() => {
 })
 onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown))
 
-const item = 'flex w-full items-start gap-2.5 rounded-md px-2 py-1.5 text-left text-sm text-mnema-body-ink transition-colors hover:bg-mnema-hover hover:text-mnema-text focus:outline-none focus-visible:bg-mnema-hover focus-visible:text-mnema-text'
+const item = 'flex w-full items-start gap-2.5 rounded-md px-2 py-1.5 text-left text-sm text-mnema-body-ink transition-colors hover:bg-mnema-hover hover:text-mnema-text focus:outline-hidden focus-visible:bg-mnema-hover focus-visible:text-mnema-text'
 </script>
 
 <template>
@@ -112,7 +112,7 @@ const item = 'flex w-full items-start gap-2.5 rounded-md px-2 py-1.5 text-left t
     </button>
     <div class="mx-0.5 my-1 h-px bg-mnema-hairline" role="separator"></div>
     <button type="button" role="menuitem" tabindex="-1" :class="[item, 'items-center']" @click="editStatus">
-      <MessageSquareText class="h-4 w-4 flex-shrink-0 text-mnema-tertiary" />
+      <MessageSquareText class="h-4 w-4 shrink-0 text-mnema-tertiary" />
       <span class="truncate">{{ authStore.user?.status_text ? $t('presence.editStatus') : $t('presence.setStatus') }}</span>
     </button>
   </div>

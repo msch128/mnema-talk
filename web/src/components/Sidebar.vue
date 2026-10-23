@@ -191,6 +191,12 @@ async function handleVoiceClick(channel: Channel) {
   navigate(`/v/${channel.id}${currentRoute.value.view === 'voice' && currentRoute.value.showChat ? '/chat' : ''}`)
 }
 
+// The Talk's chat without joining: the Talk opens as a preview with its chat.
+function handleOpenTalkChat(channel: Channel) {
+  closeNav()
+  navigate(`/v/${channel.id}/chat`)
+}
+
 function handleTextClick(channel: Channel) {
   chatStore.selectChannel(channel)
   voiceStore.activeView = 'chat'
@@ -263,7 +269,7 @@ function channelIndicator(id: string): '' | 'top' | 'bottom' {
       @contextmenu="openListMenu"
     >
       <SidebarDmSection />
-      <div class="flex-shrink-0">
+      <div class="shrink-0">
         <!-- Uncategorized channels first (headless section), then the categories -->
         <section
           v-for="category in sections"
@@ -302,6 +308,7 @@ function channelIndicator(id: string): '' | 'top' | 'bottom' {
               :flash="flashKey === `channel:${channel.id}`"
               :hint-id="hintId"
               @open="handleChannelClick(channel)"
+              @open-chat="handleOpenTalkChat(channel)"
               @menu="openChannelMenu($event, channel)"
               @delete="handleDeleteChannel(channel)"
               @drag-start="startDrag($event, 'channel', channel)"

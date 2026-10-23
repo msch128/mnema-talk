@@ -54,7 +54,7 @@ const STATES: readonly State[] = ['deny', 'inherit', 'allow']
         :aria-label="$t(`perm.${key}.name`)"
         :disabled="isLocked(key)"
         :class="[
-          'relative h-6 w-11 flex-shrink-0 rounded-full border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent disabled:opacity-40',
+          'relative h-6 w-11 shrink-0 rounded-full border transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent disabled:opacity-40',
           (allow & bit(key)) !== 0 ? 'border-mnema-accent bg-mnema-accent' : 'border-mnema-border-strong bg-mnema-elevated'
         ]"
         @click="setSwitch(key, (allow & bit(key)) === 0)"
@@ -62,7 +62,7 @@ const STATES: readonly State[] = ['deny', 'inherit', 'allow']
         <span :class="['absolute top-0.5 h-[18px] w-[18px] rounded-full bg-mnema-text transition-all', (allow & bit(key)) !== 0 ? 'left-[22px]' : 'left-0.5']"></span>
       </button>
 
-      <div v-else role="group" :aria-label="$t(`perm.${key}.name`)" class="flex flex-shrink-0 overflow-hidden rounded-md border border-mnema-border-strong text-xs font-medium">
+      <div v-else role="group" :aria-label="$t(`perm.${key}.name`)" class="flex shrink-0 overflow-hidden rounded-md border border-mnema-border-strong text-xs font-medium">
         <button
           v-for="state in STATES"
           :key="state"
@@ -71,7 +71,7 @@ const STATES: readonly State[] = ['deny', 'inherit', 'allow']
           :disabled="isLocked(key)"
           :data-state="state"
           :class="[
-            'px-2.5 py-1 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent disabled:opacity-40',
+            'px-2.5 py-1 transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent disabled:opacity-40',
             stateOf(key) === state
               ? (state === 'allow' ? 'bg-mnema-accent text-mnema-accent-ink' : state === 'deny' ? 'bg-mnema-danger text-mnema-accent-ink' : 'bg-mnema-hover text-mnema-text')
               : 'bg-mnema-elevated text-mnema-tertiary hover:text-mnema-text'

@@ -97,7 +97,7 @@ onMounted(load)
         <dd class="text-mnema-text">{{ report.kind === 'dm' ? $t('reports.admin.dm') : `#${report.channel_name ?? ''}` }}</dd>
         <template v-if="report.note">
           <dt class="text-mnema-tertiary">{{ $t('reports.admin.note') }}</dt>
-          <dd class="break-words text-mnema-text" data-testid="report-note-text">{{ report.note }}</dd>
+          <dd class="wrap-break-word text-mnema-text" data-testid="report-note-text">{{ report.note }}</dd>
         </template>
       </dl>
 
@@ -114,7 +114,7 @@ onMounted(load)
             <p class="flex items-baseline gap-2 text-xs text-mnema-tertiary">
               <span class="font-semibold text-mnema-text">{{ msg.display_name || msg.username }}</span>{{ when(msg.created_at) }}
             </p>
-            <p class="whitespace-pre-wrap break-words text-mnema-body-ink">{{ msg.content }}</p>
+            <p class="whitespace-pre-wrap wrap-break-word text-mnema-body-ink">{{ msg.content }}</p>
             <p v-for="file in msg.attachments" :key="file.filename" class="flex items-center gap-1 text-xs text-mnema-accent"><Paperclip class="h-3 w-3" />{{ file.filename }}</p>
           </li>
         </ol>
@@ -122,7 +122,7 @@ onMounted(load)
 
       <form v-if="isOpen" class="space-y-2" @submit.prevent>
         <label for="report-resolution" class="block text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('reports.admin.resolutionNote') }}</label>
-        <textarea id="report-resolution" v-model="note" rows="2" :maxlength="REPORT_NOTE_MAX" data-testid="report-resolution" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-none"></textarea>
+        <textarea id="report-resolution" v-model="note" rows="2" :maxlength="REPORT_NOTE_MAX" data-testid="report-resolution" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"></textarea>
         <div class="flex gap-2">
           <button type="button" :disabled="busy" data-testid="report-resolve" class="rounded-md bg-mnema-accent px-3 py-1.5 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40" @click="close('resolved')">{{ $t('reports.admin.resolve') }}</button>
           <button type="button" :disabled="busy" data-testid="report-dismiss" class="rounded-md border border-mnema-border px-3 py-1.5 text-sm font-semibold text-mnema-text transition hover:bg-mnema-hover disabled:opacity-40" @click="close('dismissed')">{{ $t('reports.admin.dismiss') }}</button>
@@ -132,7 +132,7 @@ onMounted(load)
         <p class="text-sm text-mnema-muted" data-testid="report-closed">
           {{ $t(`reports.admin.closedAs.${report.status}`, { name: report.resolved_by?.username ?? '', date: report.resolved_at ? when(report.resolved_at) : '' }) }}
         </p>
-        <p v-if="report.resolution_note" class="break-words text-sm text-mnema-text">{{ report.resolution_note }}</p>
+        <p v-if="report.resolution_note" class="wrap-break-word text-sm text-mnema-text">{{ report.resolution_note }}</p>
         <button type="button" data-testid="report-delete" class="rounded-md border border-mnema-danger/50 px-3 py-1.5 text-sm text-mnema-danger transition hover:bg-mnema-danger/10" @click="remove">{{ $t('reports.admin.delete') }}</button>
       </div>
     </template>

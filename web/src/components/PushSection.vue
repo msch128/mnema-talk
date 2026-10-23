@@ -16,7 +16,7 @@ function created(value: string): string {
   return new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }).format(new Date(value))
 }
 
-const button = 'px-4 py-2 rounded-lg font-semibold text-sm transition shadow-sm disabled:opacity-50'
+const button = 'px-4 py-2 rounded-lg font-semibold text-sm transition shadow-xs disabled:opacity-50'
 </script>
 
 <template>
@@ -75,12 +75,12 @@ const button = 'px-4 py-2 rounded-lg font-semibold text-sm transition shadow-sm 
             :aria-label="$t('push.previewTitle')"
             :disabled="busy || previewLocked"
             :class="[
-              'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1 disabled:opacity-50',
+              'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0 mt-1 disabled:opacity-50',
               preview && !previewLocked ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
             ]"
             @click="push.setText(!preview)"
           >
-            <span :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', preview && !previewLocked ? 'translate-x-5' : 'translate-x-0']"></span>
+            <span :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-xs', preview && !previewLocked ? 'translate-x-5' : 'translate-x-0']"></span>
           </button>
         </div>
       </template>

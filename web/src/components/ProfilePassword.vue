@@ -62,34 +62,34 @@ async function savePassword() {
         type="password"
         autocomplete="current-password"
         :placeholder="$t('profile.currentPassword')" :aria-label="$t('profile.currentPassword')"
-        class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
+        class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent"
       />
       <input
         v-model="newPassword"
         type="password"
         autocomplete="new-password"
         :placeholder="$t('profile.newPassword', { count: MIN_PASSWORD_LENGTH })" :aria-label="$t('profile.newPassword', { count: MIN_PASSWORD_LENGTH })"
-        class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
+        class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent"
       />
       <input
         v-model="newPasswordRepeat"
         type="password"
         autocomplete="new-password"
         :placeholder="$t('profile.repeatPassword')" :aria-label="$t('profile.repeatPassword')"
-        class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
+        class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent"
       />
       <div class="flex justify-end items-center gap-1.5 text-xs">
         <button
           type="button"
           @click="isChangingPassword = false; currentPassword = newPassword = newPasswordRepeat = ''"
-          class="px-2 py-0.5 rounded text-mnema-muted hover:text-mnema-text"
+          class="px-2 py-0.5 rounded-sm text-mnema-muted hover:text-mnema-text"
         >
           {{ $t('common.cancel') }}
         </button>
         <button
           type="submit"
           :disabled="isSavingPassword"
-          class="px-2.5 py-1 rounded bg-mnema-accent text-mnema-canvas font-bold flex items-center gap-1 hover:brightness-110 active:scale-95 disabled:opacity-50"
+          class="px-2.5 py-1 rounded-sm bg-mnema-accent text-mnema-canvas font-bold flex items-center gap-1 hover:brightness-110 active:scale-95 disabled:opacity-50"
         >
           <Loader2 v-if="isSavingPassword" class="w-3.5 h-3.5 animate-spin" />
           <Save v-else class="w-3.5 h-3.5" />
@@ -98,7 +98,7 @@ async function savePassword() {
       </div>
     </form>
 
-    <div v-if="passwordError" role="alert" class="mt-2 p-1.5 rounded bg-mnema-danger/10 border border-mnema-danger/30 text-mnema-danger text-sm flex items-center gap-1.5">
+    <div v-if="passwordError" role="alert" class="mt-2 p-1.5 rounded-sm bg-mnema-danger/10 border border-mnema-danger/30 text-mnema-danger text-sm flex items-center gap-1.5">
       <span>{{ passwordError }}</span>
     </div>
   </div>

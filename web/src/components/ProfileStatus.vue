@@ -82,21 +82,21 @@ async function saveStatus(text = editStatus.value) {
         :maxlength="MAX_STATUS"
         :aria-label="$t('profile.status')"
         :placeholder="$t('profile.statusPlaceholder')"
-        class="min-w-0 flex-1 rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-none"
+        class="min-w-0 flex-1 rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"
         @keydown.esc.stop.prevent="isEditingStatus = false"
       />
       <span class="w-10 text-right text-xs tabular-nums text-mnema-tertiary">{{ editStatus.length }}/{{ MAX_STATUS }}</span>
       <button
         type="submit"
         :disabled="isSavingStatus"
-        class="flex items-center gap-1 rounded bg-mnema-accent px-2.5 py-1 text-xs font-bold text-mnema-canvas hover:brightness-110 active:scale-95 disabled:opacity-50"
+        class="flex items-center gap-1 rounded-sm bg-mnema-accent px-2.5 py-1 text-xs font-bold text-mnema-canvas hover:brightness-110 active:scale-95 disabled:opacity-50"
       >
         <Loader2 v-if="isSavingStatus" class="h-3.5 w-3.5 animate-spin" />
         <Save v-else class="h-3.5 w-3.5" />
         <span>{{ $t('common.save') }}</span>
       </button>
     </form>
-    <p v-else-if="profileUser.status_text" class="break-words text-sm text-mnema-text">{{ profileUser.status_text }}</p>
+    <p v-else-if="profileUser.status_text" class="wrap-break-word text-sm text-mnema-text">{{ profileUser.status_text }}</p>
     <p v-else class="text-sm italic text-mnema-tertiary">{{ $t('profile.noStatus') }}</p>
   </div>
 </template>

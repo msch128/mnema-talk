@@ -51,10 +51,10 @@ function open() {
         <span class="text-xs text-mnema-tertiary">{{ when }}</span>
       </div>
       <button v-if="target" type="button" data-testid="forwarded-open" class="block w-full text-left" @click.stop="open">
-        <span class="line-clamp-4 break-words text-sm text-mnema-muted">{{ text || $t('chat.attachment') }}</span>
+        <span class="line-clamp-4 wrap-break-word text-sm text-mnema-muted">{{ text || $t('chat.attachment') }}</span>
         <span v-if="quote.is_edited" class="text-xs italic text-mnema-tertiary">{{ $t('chat.edited') }}</span>
       </button>
-      <p v-else class="line-clamp-4 break-words text-sm text-mnema-muted">{{ text || $t('chat.attachment') }}</p>
+      <p v-else class="line-clamp-4 wrap-break-word text-sm text-mnema-muted">{{ text || $t('chat.attachment') }}</p>
     </template>
     <p v-else-if="quote?.deleted" data-testid="forwarded-gone" class="text-sm italic text-mnema-tertiary">{{ $t('forward.deleted') }}</p>
     <p v-else-if="quote" data-testid="forwarded-unavailable" class="text-sm italic text-mnema-tertiary">{{ $t('forward.unavailable') }}</p>

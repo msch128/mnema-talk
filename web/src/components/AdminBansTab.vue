@@ -67,12 +67,12 @@ onMounted(load)
             {{ ban.banned_until ? $t('moderation.bannedUntil', { date: when(ban.banned_until) }) : $t('moderation.bannedForever') }}
             <span v-if="ban.banned_by"> · {{ $t('moderation.bannedBy', { name: ban.banned_by }) }}</span>
           </div>
-          <div v-if="ban.reason" class="break-words text-xs text-mnema-tertiary">{{ ban.reason }}</div>
+          <div v-if="ban.reason" class="wrap-break-word text-xs text-mnema-tertiary">{{ ban.reason }}</div>
         </div>
         <button
           type="button"
           data-testid="unban"
-          class="flex flex-shrink-0 items-center gap-1.5 font-medium text-mnema-accent transition hover:text-mnema-accent-hover"
+          class="flex shrink-0 items-center gap-1.5 font-medium text-mnema-accent transition hover:text-mnema-accent-hover"
           @click="unban(ban)"
         >
           <Undo2 class="h-4 w-4" />

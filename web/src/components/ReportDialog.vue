@@ -58,7 +58,7 @@ async function send() {
     <form class="flex min-h-0 flex-col gap-4 overflow-y-auto p-5" data-testid="report-dialog" @submit.prevent="send">
       <p class="text-sm text-mnema-muted">{{ $t('reports.intro', { name: pendingReport.author }) }}</p>
 
-      <fieldset class="space-y-1">
+      <fieldset class="stack-1">
         <legend class="mb-1 text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('reports.reason') }}</legend>
         <label
           v-for="(option, i) in REPORT_CATEGORIES"
@@ -75,12 +75,12 @@ async function send() {
 
       <div class="space-y-1">
         <label for="report-note" class="block text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('reports.note') }}</label>
-        <textarea id="report-note" v-model="note" rows="3" :maxlength="REPORT_NOTE_MAX" :placeholder="$t('reports.notePlaceholder')" data-testid="report-note" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-none"></textarea>
+        <textarea id="report-note" v-model="note" rows="3" :maxlength="REPORT_NOTE_MAX" :placeholder="$t('reports.notePlaceholder')" data-testid="report-note" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"></textarea>
         <p class="text-right text-xs text-mnema-tertiary">{{ note.length }} / {{ REPORT_NOTE_MAX }}</p>
       </div>
 
       <p class="text-xs text-mnema-tertiary">{{ $t('reports.privacy') }}</p>
-      <div v-if="error" role="alert" data-testid="report-error" class="rounded border border-mnema-danger/30 bg-mnema-danger/10 p-2 text-sm text-mnema-danger">{{ error }}</div>
+      <div v-if="error" role="alert" data-testid="report-error" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-2 text-sm text-mnema-danger">{{ error }}</div>
 
       <div class="flex justify-end gap-2 border-t border-mnema-hairline pt-3">
         <button type="button" class="h-8 rounded-md border border-mnema-border px-3 text-sm font-semibold text-mnema-text transition hover:bg-mnema-hover max-md:h-11" @click="closeReport">{{ $t('common.cancel') }}</button>

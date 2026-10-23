@@ -26,18 +26,18 @@ function reload() {
     v-if="versionStore.showUpdatingBanner"
     role="status"
     data-testid="updating-banner"
-    class="flex min-h-10 flex-shrink-0 items-center gap-2.5 border-b border-mnema-warning/35 bg-mnema-warning/10 py-1.5 pl-4 pr-3 text-sm text-mnema-text"
+    class="flex min-h-10 shrink-0 items-center gap-2.5 border-b border-mnema-warning/35 bg-mnema-warning/10 py-1.5 pl-4 pr-3 text-sm text-mnema-text"
   >
-    <Sparkles class="h-4 w-4 flex-shrink-0 text-mnema-warning" />
+    <Sparkles class="h-4 w-4 shrink-0 text-mnema-warning" />
     <span class="min-w-0 flex-1">{{ $t('update.updating', { version: versionStore.updatingTo }) }}</span>
   </div>
   <div
     v-else-if="versionStore.showReloadBanner"
     role="status"
     data-testid="update-banner"
-    class="flex min-h-10 flex-shrink-0 items-center gap-2.5 border-b border-mnema-accent/35 bg-mnema-accent/10 py-1.5 pl-4 pr-2 text-sm"
+    class="flex min-h-10 shrink-0 items-center gap-2.5 border-b border-mnema-accent/35 bg-mnema-accent/10 py-1.5 pl-4 pr-2 text-sm"
   >
-    <Sparkles class="h-4 w-4 flex-shrink-0 text-mnema-accent" />
+    <Sparkles class="h-4 w-4 shrink-0 text-mnema-accent" />
     <span v-if="trusted" data-testid="update-trusted" class="min-w-0 flex-1 text-mnema-text">{{ $t('update.trustedBanner', { version: versionStore.serverVersion }) }}</span>
     <button
       v-else
@@ -52,7 +52,7 @@ function reload() {
     <button
       type="button"
       data-testid="update-dismiss"
-      class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-hover hover:text-mnema-text"
+      class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-hover hover:text-mnema-text"
       :aria-label="$t('update.dismiss')"
       v-tooltip="$t('update.dismiss')"
       @click="versionStore.dismiss()"

@@ -31,19 +31,19 @@ const emit = defineEmits<{
     @drop.stop="emit('drop', $event)"
   >
     <div class="flex items-center gap-2 min-w-0 flex-1">
-      <GripVertical class="w-4 h-4 text-mnema-tertiary group-hover:text-mnema-muted flex-shrink-0" />
-      <Hash v-if="channel.type === 'text'" class="w-4 h-4 text-mnema-tertiary flex-shrink-0" />
-      <Volume2 v-else class="w-4 h-4 text-mnema-accent flex-shrink-0" />
+      <GripVertical class="w-4 h-4 text-mnema-tertiary group-hover:text-mnema-muted shrink-0" />
+      <Hash v-if="channel.type === 'text'" class="w-4 h-4 text-mnema-tertiary shrink-0" />
+      <Volume2 v-else class="w-4 h-4 text-mnema-accent shrink-0" />
       <span class="text-sm font-medium text-mnema-text truncate">{{ channel.name }}</span>
       <span v-if="channel.topic" class="max-md:hidden text-xs text-mnema-tertiary truncate">({{ channel.topic }})</span>
     </div>
 
-    <div class="flex items-center gap-1 flex-shrink-0">
+    <div class="flex items-center gap-1 shrink-0">
       <button
         data-testid="move-up-channel"
         type="button"
         :disabled="index === 0"
-        class="p-1 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition disabled:opacity-30"
+        class="p-1 rounded-sm text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition disabled:opacity-30"
         :title="$t('admin.moveUp')"
         :aria-label="$t('admin.moveUp')"
         @click.stop="emit('move', -1)"
@@ -54,7 +54,7 @@ const emit = defineEmits<{
         data-testid="move-down-channel"
         type="button"
         :disabled="index === count - 1"
-        class="p-1 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition disabled:opacity-30"
+        class="p-1 rounded-sm text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition disabled:opacity-30"
         :title="$t('admin.moveDown')"
         :aria-label="$t('admin.moveDown')"
         @click.stop="emit('move', 1)"
@@ -64,7 +64,7 @@ const emit = defineEmits<{
       <button
         data-testid="rename-channel"
         type="button"
-        class="p-1 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+        class="p-1 rounded-sm text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
         :title="$t('admin.renameChannel')"
         :aria-label="$t('admin.renameChannel')"
         @click.stop="emit('rename')"
@@ -74,7 +74,7 @@ const emit = defineEmits<{
       <button
         data-testid="delete-channel"
         type="button"
-        class="p-1 rounded text-mnema-tertiary hover:text-mnema-danger hover:bg-mnema-surface transition"
+        class="p-1 rounded-sm text-mnema-tertiary hover:text-mnema-danger hover:bg-mnema-surface transition"
         :title="$t('sidebar.deleteChannel')"
         :aria-label="$t('sidebar.deleteChannel')"
         @click.stop="emit('delete')"

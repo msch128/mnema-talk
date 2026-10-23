@@ -10,7 +10,7 @@ const { openNav } = useCompactLayout()
   <button
     type="button"
     data-testid="open-nav"
-    class="hidden max-md:flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
+    class="hidden max-md:flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent"
     :aria-label="$t('sidebar.openChannels')"
     @click="openNav"
   >

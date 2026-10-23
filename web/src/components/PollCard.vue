@@ -68,9 +68,9 @@ async function confirmEnd() {
             :style="{ width: `${percent(o.votes, poll.total_voters)}%` }"
           />
           <span class="relative flex items-center gap-2">
-            <Check v-if="mine.includes(o.id)" class="h-3.5 w-3.5 flex-shrink-0 text-mnema-accent" aria-hidden="true" />
-            <span class="min-w-0 flex-1 break-words text-mnema-text" :class="winners.includes(o.id) ? 'font-semibold' : ''">{{ o.label }}</span>
-            <span class="flex-shrink-0 text-xs tabular-nums text-mnema-muted">{{ o.votes }} · {{ percent(o.votes, poll.total_voters) }}%</span>
+            <Check v-if="mine.includes(o.id)" class="h-3.5 w-3.5 shrink-0 text-mnema-accent" aria-hidden="true" />
+            <span class="min-w-0 flex-1 wrap-break-word text-mnema-text" :class="winners.includes(o.id) ? 'font-semibold' : ''">{{ o.label }}</span>
+            <span class="shrink-0 text-xs tabular-nums text-mnema-muted">{{ o.votes }} · {{ percent(o.votes, poll.total_voters) }}%</span>
           </span>
         </button>
         <p v-if="!poll.anonymous && o.voters?.length" class="mt-0.5 truncate px-1 text-xs text-mnema-tertiary" data-testid="poll-voters">{{ voterNames(o.voters) }}</p>
@@ -88,7 +88,7 @@ async function confirmEnd() {
         v-if="canEnd"
         type="button"
         data-testid="poll-end"
-        class="ml-auto rounded px-1.5 py-0.5 font-medium text-mnema-muted transition hover:bg-mnema-surface hover:text-mnema-text"
+        class="ml-auto rounded-sm px-1.5 py-0.5 font-medium text-mnema-muted transition hover:bg-mnema-surface hover:text-mnema-text"
         :disabled="busy"
         @click="confirmEnd"
       >{{ $t('poll.end') }}</button>

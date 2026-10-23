@@ -132,6 +132,21 @@ describe('VoiceStage preview', () => {
     expect(rtc.joinVoiceChannel).not.toHaveBeenCalled()
   })
 
+  it('the header offers Join while only reading the Talk, and not once in it', async () => {
+    const { voice } = seed()
+    const w = mountStage({ channelId: 'v1', showChat: true })
+    const join = w.get<HTMLElement>('[data-testid="talk-header-join"]')
+    expect(join.text()).toBe('Join')
+    expect(rtc.joinVoiceChannel).not.toHaveBeenCalled()
+    await join.trigger('click')
+    await flushPromises()
+    expect(rtc.joinVoiceChannel).toHaveBeenCalledWith('v1')
+
+    voice.setChannel('v1')
+    await nextTick()
+    expect(w.find('[data-testid="talk-header-join"]').exists()).toBe(false)
+  })
+
   it('shows the unread count of the closed chat on the chat button', async () => {
     const { chat } = seed()
     const w = mountStage({ channelId: 'v1', showChat: false })

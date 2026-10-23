@@ -121,7 +121,7 @@ function onKey(e: KeyboardEvent) {
           v-else
           :type="o.type === OPTION.integer ? 'number' : 'text'"
           :inputmode="o.type === OPTION.integer ? 'numeric' : undefined"
-          class="h-8 rounded-md border border-mnema-border bg-mnema-elevated px-2 text-sm text-mnema-text outline-none focus:border-mnema-accent"
+          class="h-8 rounded-md border border-mnema-border bg-mnema-elevated px-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent"
           :value="values[o.name]"
           :data-option="o.name"
           @input="set(o.name, ($event.target as HTMLInputElement).value)"

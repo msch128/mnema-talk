@@ -49,11 +49,11 @@ watch(request, load, { immediate: true })
         <ol class="min-h-0 flex-1 space-y-3 overflow-y-auto" data-testid="edit-history-list">
           <li class="rounded-md border border-mnema-accent/40 bg-mnema-raised px-3 py-2.5">
             <p class="font-mono text-xs uppercase tracking-wider text-mnema-tertiary">{{ $t('editHistory.current') }} · {{ formatStamp(request.editedAt) }}</p>
-            <p class="mt-1 whitespace-pre-wrap break-words text-sm text-mnema-body-ink">{{ shortcodesForEditing(request.current) || $t('editHistory.empty') }}</p>
+            <p class="mt-1 whitespace-pre-wrap wrap-break-word text-sm text-mnema-body-ink">{{ shortcodesForEditing(request.current) || $t('editHistory.empty') }}</p>
           </li>
           <li v-for="edit in edits" :key="edit.id" class="rounded-md bg-mnema-raised px-3 py-2.5" data-testid="edit-history-version">
             <p class="font-mono text-xs uppercase tracking-wider text-mnema-tertiary">{{ formatStamp(edit.edited_at) }}</p>
-            <p class="mt-1 whitespace-pre-wrap break-words text-sm text-mnema-body-ink">{{ shortcodesForEditing(edit.content) || $t('editHistory.empty') }}</p>
+            <p class="mt-1 whitespace-pre-wrap wrap-break-word text-sm text-mnema-body-ink">{{ shortcodesForEditing(edit.content) || $t('editHistory.empty') }}</p>
           </li>
         </ol>
         <p v-if="loading" class="text-sm text-mnema-muted" role="status">{{ $t('editHistory.loading') }}</p>

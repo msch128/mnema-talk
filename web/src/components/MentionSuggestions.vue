@@ -51,7 +51,7 @@ const chatStore = useChatStore()
         <span class="truncate text-xs text-mnema-tertiary">{{ $t(`mention.${item.username}Hint`) }}</span>
       </template>
       <template v-else-if="item.emoji">
-        <EmojiGlyph :value="`<:${item.emoji.name}:${item.emoji.id}>`" class="!h-6 !w-6" />
+        <EmojiGlyph :value="`<:${item.emoji.name}:${item.emoji.id}>`" class="h-6! w-6!" />
         <span class="truncate font-semibold text-mnema-text">:{{ item.emoji.name }}:</span>
       </template>
       <template v-else-if="item.role">

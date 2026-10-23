@@ -95,15 +95,15 @@ function when(iso: string) {
           <span class="min-w-0 flex-1">
             <span class="mb-0.5 flex items-center gap-2">
               <span class="truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
-              <span v-if="channelNames.get(msg.channel_id)" class="flex items-center gap-1 rounded border border-mnema-border bg-mnema-surface px-1.5 py-0.5 text-xs text-mnema-muted">
+              <span v-if="channelNames.get(msg.channel_id)" class="flex items-center gap-1 rounded-sm border border-mnema-border bg-mnema-surface px-1.5 py-0.5 text-xs text-mnema-muted">
                 <Volume2 v-if="channelNames.get(msg.channel_id)?.type === 'voice'" class="h-2.5 w-2.5 text-mnema-tertiary" />
                 <Hash v-else class="h-2.5 w-2.5 text-mnema-tertiary" />
                 {{ channelNames.get(msg.channel_id)?.name }}
               </span>
               <CornerDownRight v-if="msg.parent_id" class="h-3 w-3 text-mnema-tertiary" :aria-label="$t('chat.inThread')" />
-              <span class="ml-auto flex-shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
+              <span class="ml-auto shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
             </span>
-            <span class="line-clamp-2 break-words text-sm text-mnema-muted">{{ previewText(msg.content) }}</span>
+            <span class="line-clamp-2 wrap-break-word text-sm text-mnema-muted">{{ previewText(msg.content) }}</span>
           </span>
         </button>
         <button

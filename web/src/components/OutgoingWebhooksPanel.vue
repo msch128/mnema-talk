@@ -173,7 +173,7 @@ onMounted(load)
     <div v-if="secret" class="rounded-lg border border-mnema-accent/40 bg-mnema-accent-subtle p-3" role="status" data-testid="revealed-secret">
       <p class="text-sm font-medium text-mnema-text">{{ $t('webhooks.secretOnce') }}</p>
       <div class="mt-2 flex items-center gap-2">
-        <code class="min-w-0 flex-1 select-all break-all rounded bg-mnema-surface px-2 py-1 font-mono text-xs text-mnema-text">{{ secret.value }}</code>
+        <code class="min-w-0 flex-1 select-all break-all rounded-sm bg-mnema-surface px-2 py-1 font-mono text-xs text-mnema-text">{{ secret.value }}</code>
         <button type="button" class="rounded-md border border-mnema-border-strong p-2 text-mnema-text transition hover:bg-mnema-hover" :aria-label="$t('webhooks.copySecret')" @click="copy(secret.value)">
           <Copy class="h-4 w-4" />
         </button>
@@ -210,7 +210,7 @@ onMounted(load)
       <li v-for="hook in hooks" :key="hook.id" class="space-y-2 p-3" data-testid="outgoing-webhook">
         <div class="flex flex-wrap items-center gap-2">
           <span class="min-w-0 truncate text-sm font-medium text-mnema-text">{{ hook.name }}</span>
-          <span :class="['rounded px-1.5 py-px text-[11px] font-semibold', statusClass(hook.status)]" data-testid="outgoing-status">{{ $t(`webhooks.status.${hook.status}`) }}</span>
+          <span :class="['rounded-sm px-1.5 py-px text-[11px] font-semibold', statusClass(hook.status)]" data-testid="outgoing-status">{{ $t(`webhooks.status.${hook.status}`) }}</span>
         </div>
         <p class="truncate font-mono text-xs text-mnema-muted" :title="hook.url">{{ hook.url }}</p>
         <p class="text-xs text-mnema-tertiary">{{ hook.events.map(eventLabel).join(', ') }}</p>
@@ -221,23 +221,23 @@ onMounted(load)
         </p>
 
         <div class="flex flex-wrap items-center gap-1 text-mnema-tertiary">
-          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.edit', { name: hook.name })" @click="openForm(hook)"><Pencil class="h-4 w-4" /></button>
-          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" v-tooltip="hook.status === 'active' ? $t('webhooks.switchOff', { name: hook.name }) : $t('webhooks.switchOn', { name: hook.name })" @click="setEnabled(hook, hook.status !== 'active')"><Power class="h-4 w-4" /></button>
-          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.test', { name: hook.name })" @click="test(hook)"><Send class="h-4 w-4" /></button>
-          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.deliveries', { name: hook.name })" :aria-expanded="deliveries?.id === hook.id" @click="toggleDeliveries(hook)"><ListChecks class="h-4 w-4" /></button>
-          <button type="button" class="rounded p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.rotateFor', { name: hook.name })" @click="rotate(hook)"><KeyRound class="h-4 w-4" /></button>
-          <button type="button" class="rounded p-1.5 transition hover:text-mnema-danger" v-tooltip="$t('webhooks.deleteFor', { name: hook.name })" @click="remove(hook)"><Trash2 class="h-4 w-4" /></button>
+          <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.edit', { name: hook.name })" @click="openForm(hook)"><Pencil class="h-4 w-4" /></button>
+          <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-text" v-tooltip="hook.status === 'active' ? $t('webhooks.switchOff', { name: hook.name }) : $t('webhooks.switchOn', { name: hook.name })" @click="setEnabled(hook, hook.status !== 'active')"><Power class="h-4 w-4" /></button>
+          <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.test', { name: hook.name })" @click="test(hook)"><Send class="h-4 w-4" /></button>
+          <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.deliveries', { name: hook.name })" :aria-expanded="deliveries?.id === hook.id" @click="toggleDeliveries(hook)"><ListChecks class="h-4 w-4" /></button>
+          <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.rotateFor', { name: hook.name })" @click="rotate(hook)"><KeyRound class="h-4 w-4" /></button>
+          <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-danger" v-tooltip="$t('webhooks.deleteFor', { name: hook.name })" @click="remove(hook)"><Trash2 class="h-4 w-4" /></button>
         </div>
 
         <p v-if="testResult?.id === hook.id" :class="['text-xs', testResult.delivery.success ? 'text-mnema-accent' : 'text-mnema-danger']" role="status" data-testid="outgoing-test">
           {{ testResult.delivery.success ? $t('webhooks.testOk', { status: testResult.delivery.status_code ?? 0 }) : $t('webhooks.testFailed', { error: testResult.delivery.error ?? '' }) }}
         </p>
-        <ul v-if="deliveries?.id === hook.id" class="max-h-48 space-y-0.5 overflow-y-auto rounded border border-mnema-hairline bg-mnema-elevated p-2 text-xs" data-testid="deliveries">
+        <ul v-if="deliveries?.id === hook.id" class="max-h-48 space-y-0.5 overflow-y-auto rounded-sm border border-mnema-hairline bg-mnema-elevated p-2 text-xs" data-testid="deliveries">
           <li v-if="!deliveries.list.length" class="text-mnema-tertiary">{{ $t('webhooks.noDeliveries') }}</li>
           <li v-for="d in deliveries.list" :key="d.id" class="flex items-center justify-between gap-2" data-testid="delivery">
             <span class="truncate text-mnema-text">{{ eventLabel(d.event_type) }} <span class="text-mnema-tertiary">#{{ d.attempt }}</span></span>
             <span :class="d.success ? 'text-mnema-accent' : 'text-mnema-danger'">{{ d.success ? (d.status_code ?? 'OK') : (d.error ?? '') }}</span>
-            <time class="flex-shrink-0 text-mnema-tertiary" :datetime="d.created_at">{{ when(d.created_at) }}</time>
+            <time class="shrink-0 text-mnema-tertiary" :datetime="d.created_at">{{ when(d.created_at) }}</time>
           </li>
         </ul>
       </li>

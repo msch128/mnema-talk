@@ -90,7 +90,7 @@ function roles() {
       <span
         v-if="user.role === 'admin'"
         data-testid="user-role"
-        class="px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20"
+        class="px-2 py-0.5 rounded-sm text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20"
       >
         {{ $t('role.admin') }}
       </span>
@@ -99,7 +99,7 @@ function roles() {
         <span
           v-for="role in roles()"
           :key="role.id"
-          class="inline-flex items-center gap-1 rounded border border-mnema-border px-1.5 py-0.5 text-mnema-text"
+          class="inline-flex items-center gap-1 rounded-sm border border-mnema-border px-1.5 py-0.5 text-mnema-text"
         >
           <span class="h-2 w-2 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>{{ role.name }}
         </span>
@@ -117,14 +117,14 @@ function roles() {
         <span
           v-if="user.disabled"
           data-testid="user-status"
-          class="px-2 py-0.5 rounded text-xs font-medium bg-mnema-danger/10 text-mnema-danger border border-mnema-danger/20"
+          class="px-2 py-0.5 rounded-sm text-xs font-medium bg-mnema-danger/10 text-mnema-danger border border-mnema-danger/20"
         >
           {{ $t('admin.userDisabled') }}
         </span>
         <span
           v-else
           data-testid="user-status"
-          class="px-2 py-0.5 rounded text-xs font-medium bg-mnema-accent/10 text-mnema-accent border border-mnema-accent/20"
+          class="px-2 py-0.5 rounded-sm text-xs font-medium bg-mnema-accent/10 text-mnema-accent border border-mnema-accent/20"
         >
           {{ $t('admin.userActive') }}
         </span>
@@ -132,7 +132,7 @@ function roles() {
         <span
           v-if="user.login_locked"
           data-testid="user-login-locked"
-          class="px-2 py-0.5 rounded text-xs font-medium bg-mnema-warning/10 text-mnema-warning border border-mnema-warning/25"
+          class="px-2 py-0.5 rounded-sm text-xs font-medium bg-mnema-warning/10 text-mnema-warning border border-mnema-warning/25"
         >
           {{ $t('admin.loginLocked') }}
         </span>
@@ -140,10 +140,10 @@ function roles() {
         <!-- In Voice indicator -->
         <span
           v-if="inVoice()"
-          class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-mono bg-mnema-band text-mnema-mint border border-mnema-mint/30"
+          class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[11px] font-mono bg-mnema-band text-mnema-mint border border-mnema-mint/30"
           :title="$t('admin.inVoice')"
         >
-          <Volume2 class="w-3 h-3 flex-shrink-0" />
+          <Volume2 class="w-3 h-3 shrink-0" />
           <span class="truncate max-w-[80px]">{{ voiceChannelName() }}</span>
         </span>
       </div>
@@ -157,7 +157,7 @@ function roles() {
           v-if="inVoice() && permissions.can('disconnect_members')"
           data-testid="action-kick"
           type="button"
-          class="p-1.5 rounded text-mnema-danger hover:bg-mnema-danger/15 transition"
+          class="p-1.5 rounded-sm text-mnema-danger hover:bg-mnema-danger/15 transition"
           :title="$t('admin.kickFromVoice')"
           :aria-label="$t('admin.kickFromVoice')"
           @click="emit('kick')"
@@ -170,7 +170,7 @@ function roles() {
           v-if="permissions.isOwner && user.login_locked"
           data-testid="action-clear-lockout"
           type="button"
-          class="p-1.5 rounded text-mnema-warning hover:bg-mnema-warning/15 transition"
+          class="p-1.5 rounded-sm text-mnema-warning hover:bg-mnema-warning/15 transition"
           :title="$t('admin.clearLoginLockout')"
           :aria-label="$t('admin.clearLoginLockout')"
           @click="emit('clear-lockout')"
@@ -182,7 +182,7 @@ function roles() {
           v-if="canGiveRoles()"
           data-testid="action-roles"
           type="button"
-          class="p-1.5 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition"
+          class="p-1.5 rounded-sm text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition"
           :title="$t('memberRoles.edit')"
           :aria-label="$t('memberRoles.edit')"
           @click="emit('roles')"
@@ -196,7 +196,7 @@ function roles() {
             data-testid="action-disable"
             type="button"
             :class="[
-              'p-1.5 rounded transition',
+              'p-1.5 rounded-sm transition',
               (user.disabled)
                 ? 'text-mnema-accent hover:bg-mnema-accent/15'
                 : 'text-mnema-tertiary hover:text-mnema-danger hover:bg-mnema-hover'
@@ -214,7 +214,7 @@ function roles() {
             v-if="permissions.isOwner"
             data-testid="action-reset-password"
             type="button"
-            class="p-1.5 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition"
+            class="p-1.5 rounded-sm text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition"
             :title="$t('admin.resetPassword')"
             :aria-label="$t('admin.resetPassword')"
             @click="emit('reset-login')"
@@ -227,7 +227,7 @@ function roles() {
             v-if="permissions.isOwner"
             data-testid="action-reset-two-factor"
             type="button"
-            class="p-1.5 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition"
+            class="p-1.5 rounded-sm text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition"
             :title="$t('admin.resetTwoFactor')"
             :aria-label="$t('admin.resetTwoFactor')"
             @click="emit('reset-two-factor')"
@@ -239,7 +239,7 @@ function roles() {
           <button
             data-testid="action-revoke-sessions"
             type="button"
-            class="p-1.5 rounded text-mnema-tertiary hover:text-mnema-warning hover:bg-mnema-hover transition"
+            class="p-1.5 rounded-sm text-mnema-tertiary hover:text-mnema-warning hover:bg-mnema-hover transition"
             :title="$t('admin.revokeSessions')"
             :aria-label="$t('admin.revokeSessions')"
             @click="emit('revoke-sessions')"

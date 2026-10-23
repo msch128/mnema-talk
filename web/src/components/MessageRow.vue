@@ -58,7 +58,7 @@ defineExpose({ el: row })
     tabindex="0"
     role="article"
     :class="[
-      'relative pl-[72px] pr-12 max-md:pl-[60px] max-md:pr-3 py-0.5 hover:bg-mnema-surface/50 transition-colors group focus:outline-none focus-visible:bg-mnema-surface/40',
+      'relative pl-[72px] pr-12 max-md:pl-[60px] max-md:pr-3 py-0.5 hover:bg-mnema-surface/50 transition-colors group focus:outline-hidden focus-visible:bg-mnema-surface/40',
       grouped ? '' : 'mt-[17px] first:mt-2',
       highlighted ? 'msg-flash' : '',
       mentionsMe ? 'msg-mentions-me' : ''
@@ -77,7 +77,7 @@ defineExpose({ el: row })
           type="button"
           @click.stop="emit('toggle-picker', msg.id)"
           :class="[
-            'p-1.5 rounded transition max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center',
+            'p-1.5 rounded-sm transition max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center',
             pickerId === msg.id
               ? 'bg-mnema-surface text-amber-400'
               : 'hover:bg-mnema-surface text-mnema-tertiary hover:text-amber-400'
@@ -99,7 +99,7 @@ defineExpose({ el: row })
       <button
         type="button"
         @click.stop="emit('reply')"
-        class="p-1.5 max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
+        class="p-1.5 max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center rounded-sm hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
         v-tooltip="$t('chat.reply')"
       >
         <Reply class="w-4 h-4" />
@@ -110,7 +110,7 @@ defineExpose({ el: row })
         v-if="isOwn && !msg.poll"
         type="button"
         @click.stop="emit('edit')"
-        class="p-1.5 max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-accent transition"
+        class="p-1.5 max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center rounded-sm hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-accent transition"
         v-tooltip="$t('chat.edit')"
       >
         <Pencil class="w-4 h-4" />
@@ -120,7 +120,7 @@ defineExpose({ el: row })
       <button
         type="button"
         @click.stop="emit('more', $event)"
-        class="p-1.5 max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
+        class="p-1.5 max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center rounded-sm hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
         v-tooltip="$t('chat.moreActions')"
       >
         <MoreHorizontal class="w-4 h-4" />
@@ -130,7 +130,7 @@ defineExpose({ el: row })
     <!-- Grouped follow-up: small time in the gutter on hover -->
     <span
       v-if="grouped"
-      class="absolute left-0 top-0.5 w-[72px] text-center text-xs leading-[1.375rem] text-mnema-tertiary tabular-nums opacity-0 group-hover:opacity-100 select-none"
+      class="absolute left-0 top-0.5 w-[72px] text-center text-xs leading-5.5 text-mnema-tertiary tabular-nums opacity-0 group-hover:opacity-100 select-none"
       aria-hidden="true"
     >
       {{ formatTime(msg.created_at) }}
@@ -141,7 +141,7 @@ defineExpose({ el: row })
       v-else
       :user="msg"
       size="md"
-      :class="['!absolute left-4 max-md:left-2 cursor-pointer hover:opacity-85 transition', msg.reply_to ? 'top-6' : 'top-1']"
+      :class="['absolute! left-4 max-md:left-2 cursor-pointer hover:opacity-85 transition', msg.reply_to ? 'top-6' : 'top-1']"
       @click="emit('open-profile')"
     />
 
@@ -160,9 +160,9 @@ defineExpose({ el: row })
           {{ shownName(msg) }}
         </button>
         <BotBadge v-if="msg.is_bot" :webhook="msg.is_webhook === true" />
-        <span class="text-xs text-mnema-tertiary flex-shrink-0 tabular-nums">{{ formatTime(msg.created_at) }}</span>
-        <span v-if="msg.is_edited" class="text-xs text-mnema-tertiary italic flex-shrink-0">{{ $t('chat.edited') }}</span>
-        <Pin v-if="msg.is_pinned" data-testid="pinned" class="w-3.5 h-3.5 flex-shrink-0 text-mnema-accent" :aria-label="$t('moderation.pinned')" role="img" />
+        <span class="text-xs text-mnema-tertiary shrink-0 tabular-nums">{{ formatTime(msg.created_at) }}</span>
+        <span v-if="msg.is_edited" class="text-xs text-mnema-tertiary italic shrink-0">{{ $t('chat.edited') }}</span>
+        <Pin v-if="msg.is_pinned" data-testid="pinned" class="w-3.5 h-3.5 shrink-0 text-mnema-accent" :aria-label="$t('moderation.pinned')" role="img" />
       </div>
 
       <!-- Inline Message Editor -->
@@ -205,12 +205,12 @@ defineExpose({ el: row })
         <button
           type="button"
           @click.stop="emit('open-thread')"
-          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-mnema-accent-subtle/80 hover:bg-mnema-accent-subtle text-mnema-accent border border-mnema-accent/30 transition shadow-xs"
+          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-mnema-accent-subtle/80 hover:bg-mnema-accent-subtle text-mnema-accent border border-mnema-accent/30 transition"
         >
           <MessageSquare class="w-4 h-4 text-mnema-accent" />
           <span v-if="msg.reply_count > 0">{{ $t('chat.replies', { count: msg.reply_count }) }}</span>
           <span class="text-xs opacity-75 font-mono ml-0.5">{{ $t('chat.openThread') }} &rarr;</span>
-          <span v-if="threadDraft" class="flex-shrink-0 rounded bg-mnema-surface px-1 text-[10px] font-semibold uppercase tracking-wide text-mnema-tertiary" data-testid="thread-draft">{{ $t('sidebar.draft') }}</span>
+          <span v-if="threadDraft" class="shrink-0 rounded-sm bg-mnema-surface px-1 text-[10px] font-semibold uppercase tracking-wide text-mnema-tertiary" data-testid="thread-draft">{{ $t('sidebar.draft') }}</span>
         </button>
       </div>
 

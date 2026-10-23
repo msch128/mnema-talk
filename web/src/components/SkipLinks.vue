@@ -13,7 +13,7 @@ function focusComposer() {
   document.querySelector<HTMLElement>('[data-composer-input]')?.focus()
 }
 
-const link = 'rounded-md bg-mnema-accent px-3 py-2 text-sm font-semibold text-mnema-accent-ink shadow-lg outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent focus-visible:ring-offset-2 focus-visible:ring-offset-mnema-canvas'
+const link = 'rounded-md bg-mnema-accent px-3 py-2 text-sm font-semibold text-mnema-accent-ink shadow-lg outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent focus-visible:ring-offset-2 focus-visible:ring-offset-mnema-canvas'
 </script>
 
 <template>
