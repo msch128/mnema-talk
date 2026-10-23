@@ -205,7 +205,7 @@ func createIn(ctx context.Context, tx pgx.Tx, name string, intents int64, creato
 // roleName is the name of a bot's own role: the bot's name, except where role
 // names are reserved (@everyone and @here).
 func roleName(bot string) string {
-	if n := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(bot), "@")); n == "everyone" || n == "here" {
+	if n := strings.TrimPrefix(httpx.NameSkeleton(bot), "@"); n == "everyone" || n == "here" {
 		return bot + " bot"
 	}
 	return bot

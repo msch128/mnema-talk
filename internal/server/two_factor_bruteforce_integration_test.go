@@ -130,6 +130,43 @@ func TestTenWrongCodesLockTheSecondStep(t *testing.T) {
 	}
 }
 
+func TestLockedAuthenticatorStepNeverBlocksARecoveryCode(t *testing.T) {
+	a := newApp(t, false)
+	alice := a.register(a.seedAdmin(), "alice")
+	e := a.enroll(alice, memberPassword)
+	a.freshStep()
+	// Somebody who knows the password locks the authenticator step.
+	for i := 0; i < 10; i++ {
+		secondStep(a.anon(), a.plantChallenge(alice.user.ID), wrongCode(i+1, e.auth))
+	}
+	if res := secondStep(a.anon(), a.plantChallenge(alice.user.ID), e.auth.code(0)); res.status != http.StatusTooManyRequests {
+		t.Fatalf("authenticator step must be locked: %d", res.status)
+	}
+	if res := secondStep(a.anon(), a.plantChallenge(alice.user.ID), e.recovery[0]); res.status != http.StatusOK {
+		t.Fatalf("a recovery code must still sign in: %d %s", res.status, res.body)
+	}
+}
+
+func TestWrongRecoveryCodesLockOnlyTheClientThatGuesses(t *testing.T) {
+	a := newApp(t, false)
+	alice := a.register(a.seedAdmin(), "alice")
+	e := a.enroll(alice, memberPassword)
+	a.freshStep()
+	step := func(ip, challenge, code string) response {
+		return a.anon().do(http.MethodPost, "/api/auth/login/2fa", map[string]string{"challenge": challenge, "code": code},
+			map[string]string{"X-Forwarded-For": ip})
+	}
+	for i := 0; i < 5; i++ {
+		step("198.51.100.7", a.plantChallenge(alice.user.ID), "abcdefghjkmn")
+	}
+	if res := step("198.51.100.7", a.plantChallenge(alice.user.ID), e.recovery[0]); res.status != http.StatusTooManyRequests {
+		t.Fatalf("the guessing client is limited: %d", res.status)
+	}
+	if res := step("203.0.113.9", a.plantChallenge(alice.user.ID), e.recovery[0]); res.status != http.StatusOK {
+		t.Fatalf("another client is not: %d %s", res.status, res.body)
+	}
+}
+
 func TestTheDailyCapRefusesAuthenticatorCodesButNotRecoveryCodes(t *testing.T) {
 	a := newApp(t, false)
 	alice := a.register(a.seedAdmin(), "alice")

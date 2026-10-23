@@ -56,6 +56,9 @@ type Handler struct {
 	// twoFactorFails locks the second sign-in step of one account after ten
 	// wrong codes (escalating, at most accountLockoutMax).
 	twoFactorFails *httpx.LoginFailureLimiter
+	// recoveryFails is the separate, tighter limiter for recovery codes at
+	// sign-in, keyed by account and client, so the lockout above never blocks them.
+	recoveryFails *httpx.LoginFailureLimiter
 	// factorLocks serialise the second-factor attempts of one account (striped
 	// by account id), so the lockout check, the verification and the failure
 	// count are one step and parallel requests cannot all pass the check
@@ -96,6 +99,7 @@ func NewHandler(s *Sessions, pub events.Publisher) *Handler {
 		accountFailures: httpx.NewLoginFailureLimiter(100, time.Minute),
 		passwordFails:   httpx.NewLoginFailureLimiter(5, time.Minute),
 		twoFactorFails:  httpx.NewLoginFailureLimiter(10, time.Minute),
+		recoveryFails:   httpx.NewLoginFailureLimiter(5, time.Minute),
 		unknownDevice:   httpx.NewRateLimiter(2, 2*time.Minute),
 		// About 10 checks per minute for the whole account, however many
 		// addresses ask: guessing stays slow, and a sustained attack needs
@@ -105,6 +109,7 @@ func NewHandler(s *Sessions, pub events.Publisher) *Handler {
 	// An attacker cannot keep the owner out for long by tripping the cap again.
 	h.accountFailures.CapLockout(accountLockoutMax)
 	h.twoFactorFails.CapLockout(accountLockoutMax)
+	h.recoveryFails.CapLockout(accountLockoutMax)
 	return h
 }
 
