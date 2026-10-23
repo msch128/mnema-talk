@@ -1,0 +1,29 @@
+scripts/screenshots/seed.mjs
+  s_06fcde5dbef956::t_85b568aa035f3a 97-115,169,217,256-257,275,288
+  s_06fcde5dbef956::t_6e15227ea7c4b3 241-245
+  s_06fcde5dbef956::t_77653f0565d6bd 2-6,8,13,16-28,55-56,58-63,65-66,145,149,151,155-156,158-159,161,163,167-168,171-176,179-182,185-197,203,206,209-212,216,218-219,222-240,246-255,258-259,261-274,276-278,280-281,283-287,289-316,319,321-322,326,328-329,334-345
+  s_06fcde5dbef956::t_8135d1e0100919 260,282
+  s_06fcde5dbef956::t_bd4b565ea3622e 49-54,57,64,67-96,116-144,157,162,170,279
+  s_06fcde5dbef956::t_7a8aa0a38ba176 146
+scripts/screenshots/run.sh
+  s_06fcde5dbef956::t_e809b2c3390fed 7,41
+scripts/screenshots/capture.mjs
+  s_06fcde5dbef956::t_e809b2c3390fed 27-31,40-41,46,53,95-109,114-115,121-147,154,165,177,182,190,195,197,199,204,223,236,244-245,255,257,260,295
+  s_06fcde5dbef956::t_614152efafb107 213-215
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3e3886a8ffa4f7df99e44e2b750770420802c49d",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
