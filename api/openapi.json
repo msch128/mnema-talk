@@ -14374,7 +14374,7 @@
     },
     "/api/auth/login/2fa": {
       "post": {
-        "description": "Second step of POST /api/auth/login for an account with two-factor sign-in: the challenge from the 202 answer plus a six-digit authenticator code or an unused recovery code. Sets the session cookie like a normal sign-in. The challenge lives five minutes, is bound to that sign-in, and accepts five codes in total; an authenticator code works once (a replay is refused). After ten wrong codes the account's second step is locked (429, escalating, at most 15 minutes). Wrong, expired, replayed and unknown all answer the same 401; sessions revoked since the password check also fail.",
+        "description": "Second step of POST /api/auth/login for an account with two-factor sign-in: the challenge from the 202 answer plus a six-digit authenticator code or an unused recovery code. Sets the session cookie like a normal sign-in. The challenge lives five minutes, is bound to that sign-in, and accepts five codes in total; an authenticator code works once (a replay is refused). After ten wrong authenticator codes the authenticator step of the account is locked (429, escalating, at most 15 minutes); recovery codes are limited separately, per client, so that lockout never blocks them. Wrong, expired, replayed and unknown all answer the same 401; sessions revoked since the password check also fail.",
         "operationId": "loginSecondFactor",
         "requestBody": {
           "content": {
