@@ -3,10 +3,13 @@ import { isDfnConnect, isDfnFailed, isDfnFrameHeader } from './dfnTypes'
 
 // The rendering thread only buffers and copies mono PCM. Three 10 ms frames
 // bound queued work, and replies older than 30 ms cannot add stale audio.
+// While the worker is late the dry microphone is passed through; the filter is
+// given up only after failureSamples (3 s) without a reply or filtered audio, so
+// a stall of the page or a burst of catch-up rendering does not end it for good.
 class DeepFilterBridge extends AudioWorkletProcessor {
   frameLength = 480
   maxFrames = 3
-  failureSamples = 480 * 25
+  failureSamples = 480 * 300
   input = new Float32Array(480)
   inputPos = 0
   output = new Float32Array(1440)

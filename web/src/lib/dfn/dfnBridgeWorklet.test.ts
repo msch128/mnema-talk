@@ -51,7 +51,7 @@ describe('DFN render-thread bridge', () => {
   it('never queues more than three frames behind a stalled worker and bypasses after bounded startup', () => {
     const { node, frames, reports, render } = createBridge()
     let output = new Float32Array()
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < 1400; i++) {
       output = render()
       expect(node.pending.size).toBeLessThanOrEqual(3)
       expect(node.outputCount).toBeLessThanOrEqual(1440)
@@ -96,7 +96,7 @@ describe('DFN render-thread bridge', () => {
     for (let i = 0; i < 4; i++) render()
     node.receive({ type: 'frame', id: present(frames[0]).id, samples: new Float32Array(480).fill(0.1) })
     expect(render().every(sample => Math.abs(sample - 0.1) < 0.0001)).toBe(true)
-    node.pending.add(-100)
+    node.pending.add(-400)
     const count = node.outputCount
     node.receive({ type: 'frame', id: -100, samples: new Float32Array(480).fill(0.5) })
     expect(node.outputCount).toBe(count)
@@ -201,7 +201,7 @@ describe('DFN bridge protocol and buffering', () => {
     const { node, render } = createBridge()
     for (let i = 0; i < 4; i++) render()
     node.pending.clear()
-    node.pending.add(-100)
+    node.pending.add(-400)
     for (let i = 0; i < 4; i++) render()
     expect(node.failed).toBe(true)
     expect(reports).toEqual([{ type: 'failed', reason: expect.any(String) }])
@@ -212,7 +212,7 @@ describe('DFN unconnected bridge lifecycle', () => {
   it('expires sustained underrun even when no worker frame is outstanding', () => {
     const { node, render } = createBridge(false)
     let output = new Float32Array()
-    for (let i = 0; i < 120; i++) output = render()
+    for (let i = 0; i < 1400; i++) output = render()
     expect(node.pending.size).toBe(0)
     expect(node.failed).toBe(true)
     expect(reports).toEqual([{ type: 'failed', reason: expect.any(String) }])
