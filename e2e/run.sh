@@ -8,6 +8,10 @@
 #   E2E_BROWSERS=chromium browser(s) to install: chromium, webkit, firefox
 #   E2E_ONLY=...          arguments for `playwright test`, e.g. "--project=webkit"
 #   E2E_WEBRTC_ALL_INTERFACES=1 include VM/VPN interfaces in the browser ICE test
+#   E2E_NO_DOCKER=1       run PostgreSQL and SeaweedFS as local processes instead of
+#                         in Docker (macOS CI runners have no Docker): needs
+#                         `initdb`/`pg_ctl`/`createdb` (E2E_PG_BIN, default: from
+#                         PATH) and `weed` on PATH
 #   E2E_WEBRTC_UDP_MUX_PORT=0    test legacy per-peer ports instead of the shared UDP port
 # Runs do not collide: the compose project is unique per run (mnema-e2e-<pid>) and
 # the Postgres, S3, app and WebRTC UDP ports are free ports picked at start, so
@@ -55,6 +59,9 @@ S3_SECRET="e2e-$(openssl rand -hex 12)"
 
 export E2E_PG_PORT="$PG_PORT" E2E_S3_PORT="$S3_PORT"
 SERVER_PID=""
+LOCAL_DIR=""
+PG_BIN="${E2E_PG_BIN:-}"
+pg() { "${PG_BIN:+$PG_BIN/}$1" "${@:2}"; }
 
 cleanup() {
   status=$?
@@ -66,7 +73,13 @@ cleanup() {
     echo "--- server log (last 60 lines) ---" >&2
     tail -n 60 "$LOG" >&2 || true
   fi
-  "${COMPOSE[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
+  if [ -n "$LOCAL_DIR" ]; then
+    [ -n "${WEED_PID:-}" ] && kill "$WEED_PID" 2>/dev/null || true
+    pg pg_ctl -D "$LOCAL_DIR/pg" -m immediate stop >/dev/null 2>&1 || true
+    rm -rf "$LOCAL_DIR"
+  else
+    "${COMPOSE[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
+  fi
   exit "$status"
 }
 trap cleanup EXIT
@@ -91,8 +104,26 @@ if [ "${E2E_INSTALL_BROWSER:-0}" = "1" ]; then
 fi
 
 echo "==> project $PROJECT: postgres :$PG_PORT, s3 :$S3_PORT, app :$APP_PORT, udp :$UDP_MIN-$UDP_MAX"
-echo "==> starting postgres + seaweedfs"
-"${COMPOSE[@]}" up -d --wait postgres seaweedfs
+if [ "${E2E_NO_DOCKER:-0}" = "1" ]; then
+  echo "==> starting local postgres + seaweedfs"
+  LOCAL_DIR="$(mktemp -d)"
+  pg initdb -D "$LOCAL_DIR/pg" -U mnema --auth=trust >/dev/null
+  pg pg_ctl -D "$LOCAL_DIR/pg" -o "-p $PG_PORT -h 127.0.0.1 -k $LOCAL_DIR" -l "$LOCAL_DIR/pg.log" -w start >/dev/null
+  pg createdb -h 127.0.0.1 -p "$PG_PORT" -U mnema mnema_e2e
+  WEED_PID=""
+  weed server -ip=127.0.0.1 -dir="$LOCAL_DIR/s3" -s3 -s3.port="$S3_PORT" \
+    -master.port="$(free_port tcp)" -volume.port="$(free_port tcp)" -filer.port="$(free_port tcp)" \
+    >"$LOCAL_DIR/weed.log" 2>&1 &
+  WEED_PID=$!
+  for _ in $(seq 1 60); do
+    if curl -s -o /dev/null "http://127.0.0.1:$S3_PORT/"; then break; fi
+    if ! kill -0 "$WEED_PID" 2>/dev/null; then cat "$LOCAL_DIR/weed.log" >&2; echo "seaweedfs exited early" >&2; exit 1; fi
+    sleep 1
+  done
+else
+  echo "==> starting postgres + seaweedfs"
+  "${COMPOSE[@]}" up -d --wait postgres seaweedfs
+fi
 
 echo "==> starting server on 127.0.0.1:$APP_PORT"
 # env -i keeps a developer's .env/shell secrets out of the test server.
