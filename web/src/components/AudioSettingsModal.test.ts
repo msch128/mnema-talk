@@ -111,7 +111,7 @@ describe('AudioSettingsModal mic test and extra settings', () => {
   it('toggles QoS high priority and applies settings', async () => {
     voice.localAudioStream = new MediaStream()
     const wrapper = mount(AudioSettingsModal, mountOpts)
-    const qosBtn = wrapper.find('button[aria-label="Quality of Service (Hohe Paketpriorität)"]')
+    const qosBtn = wrapper.find('button[aria-label="Netzwerkpriorität für Sprache und Video"]')
     expect(qosBtn.exists()).toBe(true)
     expect(qosBtn.attributes('aria-checked')).toBe('true')
     expect(voice.qosHighPriority).toBe(true)
@@ -125,7 +125,7 @@ describe('AudioSettingsModal mic test and extra settings', () => {
   it('toggles warning switches and persists to voiceStore', async () => {
     const wrapper = mount(AudioSettingsModal, mountOpts)
     const noAudioBtn = wrapper.find('button[aria-label="Warnung bei fehlendem Tonsignal"]')
-    const switchChBtn = wrapper.find('button[aria-label="Bestätigung beim Kanalwechsel"]')
+    const switchChBtn = wrapper.find('button[aria-label="Bestätigung beim Talk-Wechsel"]')
 
     expect(noAudioBtn.exists()).toBe(true)
     expect(switchChBtn.exists()).toBe(true)
@@ -205,7 +205,7 @@ describe('AudioSettingsModal mic test lifecycle', () => {
   it('saves input preferences without starting capture outside a call or test', async () => {
     const voice = useVoiceStore()
     const wrapper = mount(AudioSettingsModal, mountOpts)
-    await wrapper.get('button[aria-label="Quality of Service (Hohe Paketpriorität)"]').trigger('click')
+    await wrapper.get('button[aria-label="Netzwerkpriorität für Sprache und Video"]').trigger('click')
     expect(voice.qosHighPriority).toBe(false)
     expect(mockApplyAudioSettings).not.toHaveBeenCalled()
     expect(mockStartMicTest).not.toHaveBeenCalled()

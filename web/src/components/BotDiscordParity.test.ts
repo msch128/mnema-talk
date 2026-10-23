@@ -125,7 +125,7 @@ describe('the own role of a bot', () => {
     expect(w.findAll('li[draggable]').map(li => li.attributes('data-role'))).toEqual(['Mods', 'Bot'])
 
     await row.get('button[aria-pressed]').trigger('click')
-    expect(w.get('[data-testid="role-managed-note"]').text()).toContain('"Helper" is a bot\'s own role')
+    expect(w.get('[data-testid="role-managed-note"]').text()).toContain('“Helper” is a bot’s own role')
     expect((w.get('input[maxlength="32"]').element as HTMLInputElement).disabled).toBe(true)
     expect(w.find('input[type="number"]').exists()).toBe(false)
     expect(w.text()).not.toContain('Delete role')

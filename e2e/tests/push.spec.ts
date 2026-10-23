@@ -112,7 +112,7 @@ test('a member turns push on and off for this device', async ({ browser }) => {
     // A test push goes to the made-up address, which resolves nowhere: the
     // server reports it as not delivered instead of failing.
     await section.getByTestId('push-test').click()
-    await expect(page.getByText('Die Testbenachrichtigung konnte nicht zugestellt werden.')).toBeVisible()
+    await expect(page.getByText('Die Testbenachrichtigung konnte nicht zugestellt werden. Versuche es noch einmal.')).toBeVisible()
 
     await section.getByTestId('push-disable').click()
     await expect(section.getByTestId('push-enable')).toBeVisible()

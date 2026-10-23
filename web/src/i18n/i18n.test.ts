@@ -123,4 +123,45 @@ describe('locale files', () => {
       expect(ph(fe[k]), k).toBe(ph(v))
     }
   })
+
+  // The product vocabulary and style rules are in doc/glossary.md.
+  describe('copy style', () => {
+    const fd = flattenKeys(de, true)
+    const fe = flattenKeys(en, true)
+    const entries = (m: Record<string, string>) => Object.entries(m)
+
+    it('uses typographic apostrophes and quotes', () => {
+      for (const [k, v] of [...entries(fe), ...entries(fd)]) {
+        expect(v, k).not.toMatch(/['"]/)
+      }
+    })
+
+    it('writes the ellipsis tight in English and with a space in German', () => {
+      for (const [k, v] of entries(fe)) expect(v, k).not.toMatch(/\s…/)
+      for (const [k, v] of entries(fd)) expect(v, k).not.toMatch(/[^\s]…/)
+    })
+
+    it('separates with an en dash, not an em dash', () => {
+      for (const [k, v] of [...entries(fe), ...entries(fd)]) expect(v, k).not.toContain('—')
+    })
+
+    it('does not say please in English and uses du in German', () => {
+      for (const [k, v] of entries(fe)) expect(v, k).not.toMatch(/\bplease\b/i)
+      for (const [k, v] of entries(fd)) {
+        if (k.startsWith('legal.')) continue
+        expect(v, k).not.toMatch(/\b(euch|Euch|Ihr|Ihnen|Ihre[mnrs]?|Vergleicht)\b/)
+      }
+    })
+
+    it('keeps product terms apart: Talk is not a voice channel, a member is not a user', () => {
+      for (const [k, v] of entries(fe)) {
+        if (k.startsWith('legal.')) continue
+        expect(v, k).not.toMatch(/voice channel|\bDeleted user\b/i)
+      }
+      for (const [k, v] of entries(fd)) {
+        if (k.startsWith('legal.')) continue
+        expect(v, k).not.toMatch(/Sprachkanal|Anruf|Gemeinschaft|Login-Sperre|Inhaber\b/)
+      }
+    })
+  })
 })

@@ -49,8 +49,8 @@ describe('stream quality menu', () => {
   it('shows mode, resolution, frame rate, sound and advanced, without premium marks', async () => {
     await open()
     const menu = q('[role="menu"]')
-    expect(requireValue(menu).getAttribute('aria-label')).toBe('Stream-Qualität')
-    expect(requireValue(menu).textContent).toContain('Stream-Modus')
+    expect(requireValue(menu).getAttribute('aria-label')).toBe('Qualität der Übertragung')
+    expect(requireValue(menu).textContent).toContain('Modus der Übertragung')
     expect(requireValue(item('mode-gaming')).textContent).toContain('Flüssigeres Video (1440p, 60 fps)')
     expect(requireValue(item('mode-screen')).textContent).toContain('Klarere Schrift (Quelle, 15 fps)')
     // A new stream: 1080p at 30 fps, which is custom.

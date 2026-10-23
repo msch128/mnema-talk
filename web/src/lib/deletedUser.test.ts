@@ -11,10 +11,10 @@ describe('deleted accounts', () => {
     expect(isDeletedUsername(undefined)).toBe(false)
   })
 
-  it('shows "Deleted user" in the member\'s language, and normal names as before', () => {
-    expect(shownName({ username: 'deleted-1a2b3c4d5e6f', display_name: 'Deleted user' })).toBe('Deleted user')
+  it('shows "Deleted member" in the member\'s language, and normal names as before', () => {
+    expect(shownName({ username: 'deleted-1a2b3c4d5e6f', display_name: 'Deleted user' })).toBe('Deleted member')
     setLocale('de')
-    expect(shownName({ username: 'deleted-1a2b3c4d5e6f', display_name: 'Deleted user' })).toBe('Gelöschter Nutzer')
+    expect(shownName({ username: 'deleted-1a2b3c4d5e6f', display_name: 'Deleted user' })).toBe('Gelöschtes Mitglied')
     expect(shownName({ username: 'max', display_name: 'Max' })).toBe('Max')
     expect(shownName({ username: 'max', display_name: '' })).toBe('max')
     expect(shownName({})).toBe('')

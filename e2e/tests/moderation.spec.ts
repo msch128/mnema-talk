@@ -47,7 +47,7 @@ test('a moderator times out and bans a member; they see it, recover, and the aud
 
     // The moderator times the member out for a few seconds from the member list.
     await mod.locator(`[data-member="${suiteMember.username}"]`).click({ button: 'right' })
-    await mod.getByRole('menuitem', { name: 'Timeout…' }).click()
+    await mod.getByRole('menuitem', { name: 'Auszeit verhängen …' }).click()
     const dialog = mod.getByRole('dialog')
     await dialog.getByTestId('duration-custom').click()
     await dialog.getByTestId('custom-amount').fill('8')
@@ -72,7 +72,7 @@ test('a moderator times out and bans a member; they see it, recover, and the aud
 
     // A ban ends the member's session; unbanning in the admin console lets them back in.
     await mod.locator(`[data-member="${suiteMember.username}"]`).click({ button: 'right' })
-    await mod.getByRole('menuitem', { name: 'Sperren…' }).click()
+    await mod.getByRole('menuitem', { name: 'Sperren …' }).click()
     await mod.getByRole('dialog').getByTestId('reason').fill('Regelverstoß')
     await mod.getByRole('dialog').getByTestId('moderation-submit').click()
     await expect(mod.getByRole('dialog')).toBeHidden()
@@ -91,7 +91,7 @@ test('a moderator times out and bans a member; they see it, recover, and the aud
 
     // The audit log has all of it.
     await mod.goto('/admin/audit')
-    for (const label of ['Mitglied stummgeschaltet', 'Mitglied gesperrt', 'Mitglied entsperrt']) {
+    for (const label of ['Mitglied in Auszeit geschickt', 'Mitglied gesperrt', 'Mitglied entsperrt']) {
       await expect(mod.locator('[data-testid^="audit-entry-"]', { hasText: label }).first()).toBeVisible()
     }
   } finally {

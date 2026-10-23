@@ -88,7 +88,7 @@ describe('PresenceMenu', () => {
     const w = mountMenu()
     await option(w, 'focus').trigger('click')
     await flushPromises()
-    expect(useToastStore().toasts.at(-1)!).toMatchObject({ type: 'error', text: "Couldn't save your status" })
+    expect(useToastStore().toasts.at(-1)!).toMatchObject({ type: 'error', text: 'Couldn’t save your status. Try again.' })
     await option(w, 'online').trigger('click')
     await flushPromises()
     expect(useToastStore().toasts.at(-1)!.text).toBe('offline')

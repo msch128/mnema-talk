@@ -137,7 +137,7 @@ describe('kicked from voice', () => {
       expect(useToastStore().toasts.map(toast => toast.text)).not.toContain(t('voice.kicked'))
       expect(t('voice.roomFull')).toBe(language === 'de'
         ? 'Dieser Talk ist voll. Versuche es erneut, sobald jemand den Talk verlässt.'
-        : 'This voice channel is full. Try again when someone leaves.')
+        : 'This Talk is full. Try again when someone leaves.')
       rtc.rejoinAfterReconnect()
       expect(sent.filter(event => event.type === 'voice_join')).toHaveLength(joins)
     } finally { setLocale('de') }

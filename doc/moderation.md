@@ -24,7 +24,7 @@ the target out of reach between the check and the write.
 
 A timeout silences a member until a time passes: they can still read, and still
 delete or take back their own words, but they lose *Send messages*, *Attach
-files*, *Add reactions*, *Mention everyone*, *Connect*, *Speak* and *Video*
+files*, *Add reactions*, *Mention @all and @here*, *Connect*, *Speak* and *Video*
 (`perm.TimeoutMask`). Durations run from 5 seconds to 28 days; the interface
 offers 1 min, 5 min, 1 h, 1 day, 1 week or a custom time, with an optional
 reason of up to 200 characters.
