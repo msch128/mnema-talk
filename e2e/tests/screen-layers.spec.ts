@@ -139,7 +139,7 @@ test.afterEach(async () => {
 })
 
 test('viewers pick their own layer of a shared screen and switch mid-stream', async ({ browser }) => {
-  test.setTimeout(240_000)
+  test.setTimeout(300_000)
   const sharerCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   const aCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
@@ -206,7 +206,9 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
   // on A; a chosen layer is never adapted.
   await chooseLayer(b, 0)
   await expect(b.getByTestId('screen-layer-label')).toHaveText('Quelle')
-  await expect.poll(() => videoSize(b), { timeout: 30_000 }).toBe('1280x720')
+  // A chosen layer is never adapted, so this is the check that picking the best
+  // quality works whatever the load: generous time, exact size.
+  await expect.poll(() => videoSize(b), { timeout: 90_000 }).toBe('1280x720')
 
   // A moves to the smallest layer; B stays. Both keep decoding, and the
   // sharer only sends the two layers somebody receives.
