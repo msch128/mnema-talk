@@ -1,0 +1,23 @@
+internal/auth/account_export_build.go
+  s_06fcde5dbef956::t_bc27c7244f64c1 63,151
+internal/server/account_export_threads_integration_test.go
+  s_06fcde5dbef956::t_684e0dbb87af08 1-63
+internal/auth/account_export_threads.go
+  s_06fcde5dbef956::t_ff8d455207cb6c 1-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7054039d6d54557c82108cbf3ccffd7b103a7a90",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
