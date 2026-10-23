@@ -1,0 +1,93 @@
+internal/push/service.go
+  s_06fcde5dbef956::t_df96a10934c3f9 184-187,190-192,268-273
+internal/chat/handler.go
+  s_06fcde5dbef956::t_4bdc0b236f543a 40-41,92-98
+  s_06fcde5dbef956::t_dead40a39da24d 42-43
+internal/server/coherence_audit_integration_test.go
+  s_06fcde5dbef956::t_3a92965c5518ff 43
+  s_06fcde5dbef956::t_54c48cec56224d 1-42,44-146
+internal/poll/service.go
+  s_06fcde5dbef956::t_01f7c7c4678228 10,33-34
+internal/chat/moderation.go
+  s_06fcde5dbef956::t_77f540cb1f2d73 76
+  s_06fcde5dbef956::t_dead40a39da24d 187-189,251-254
+internal/chat/post.go
+  s_06fcde5dbef956::t_a675d3c7d30bb0 43,55-76
+  s_06fcde5dbef956::t_79e7db705fe22a 77
+doc/architecture.md
+  s_06fcde5dbef956::t_2d5a29ca48d9c9 254-266,276-277
+internal/chat/coherence_filters_test.go
+  s_06fcde5dbef956::t_76733860a09237 1-40
+internal/db/migrations/0054_thread_follows.sql
+  s_06fcde5dbef956::t_b89a2da29e729b 1-21,23-26,28
+  s_06fcde5dbef956::t_62fb46276a0aa6 22,27
+internal/chat/thread_follow.go
+  s_06fcde5dbef956::t_a76c6945240556 1-41,43-193
+  s_06fcde5dbef956::t_4bdc0b236f543a 42
+internal/push/recipients.go
+  s_06fcde5dbef956::t_df96a10934c3f9 99-113
+internal/server/thread_follow_integration_test.go
+  s_06fcde5dbef956::t_7970d60c464638 1-178
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_4ce6e83f7809a0 1305-1315,1796,1803,1810-1821
+  s_06fcde5dbef956::t_f4e296f9bc3efb 1822
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_4ce6e83f7809a0 171
+doc/upgrade.md
+  s_06fcde5dbef956::t_2d5a29ca48d9c9 129-143
+internal/chat/handler_lookup.go
+  s_06fcde5dbef956::t_4bdc0b236f543a 142-146,269-270
+  s_06fcde5dbef956::t_125180200fb112 186,194-195,213
+web/src/types/events.ts
+  s_06fcde5dbef956::t_4ce6e83f7809a0 269
+  s_06fcde5dbef956::t_02aebbad805876 67-68,325
+internal/poll/handler.go
+  s_06fcde5dbef956::t_01f7c7c4678228 4,10,168-178,182,216-217
+  s_06fcde5dbef956::t_60341b6746acb4 218
+internal/chat/edit_history.go
+  s_06fcde5dbef956::t_dead40a39da24d 8,13-14,82-159,163,204
+internal/server/router_build.go
+  s_06fcde5dbef956::t_ae864545eb22a4 185
+  s_06fcde5dbef956::t_4bdc0b236f543a 122
+internal/chat/search_filters.go
+  s_06fcde5dbef956::t_125180200fb112 22,96-102,131-145,147
+internal/events/types.go
+  s_06fcde5dbef956::t_4bdc0b236f543a 50
+internal/push/thread_follow_integration_test.go
+  s_06fcde5dbef956::t_25a8a28209e0a7 1-56,59-61
+  s_06fcde5dbef956::t_7635ab35f5aa3e 57-58
+internal/audit/classes_test.go
+  s_06fcde5dbef956::t_01f7c7c4678228 11
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_4bdc0b236f543a 48
+internal/chat/audit.go
+  s_06fcde5dbef956::t_dead40a39da24d 25-27,45-47,99-101
+doc/moderation.md
+  s_06fcde5dbef956::t_2d5a29ca48d9c9 141-142,181-182
+internal/chat/search.go
+  s_06fcde5dbef956::t_125180200fb112 81,87
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_bcf11dfd836e92 22
+api/openapi.json
+  s_06fcde5dbef956::t_5375b1011d98e3 2077-2091,2918-2921,2933,2939-2956,18019,18475,21926,21957,21965-21978,22102-22358
+internal/audit/classes.go
+  s_06fcde5dbef956::t_01f7c7c4678228 43
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_4a0d41bcf8b088 40-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d79afe6b34f8c425248e5e469f17c436d1556f3d",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
