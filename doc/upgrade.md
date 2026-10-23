@@ -164,6 +164,14 @@ server lacks.
   copy, and access is checked on every read: a message the member can no
   longer see comes back as unavailable. The export gains `saved.json` (ids,
   notes and times, not the saved text); erasing an account removes the list.
+- **Migration 0052** adds `messages.forward_of` and `messages.forwarded`.
+- **Forwarding** (feature `forward`): `POST /api/messages/{messageId}/forward`
+  posts a message that references the original, and `GET
+  /api/messages/{messageId}/forward` returns the original as the caller may see
+  it ([architecture](architecture.md#forwarding-and-saved-messages)). Messages
+  gain an additive `forward` marker (`{forwarded: true}`, no ids and no quoted
+  text, for bots and webhooks too). Older web apps show a forwarded message as just its
+  comment.
 - **"Pinned by".** Messages and the pin event carry `pinned_at` and
   `pinned_by` while pinned; the pinned list shows who pinned a message and
   when. Additive, no migration.

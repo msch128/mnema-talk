@@ -37,6 +37,7 @@ var Features = []string{
 	"dm",
 	"reports",
 	"saved",
+	"forward",
 }
 
 // healthCacheTTL is how long a health result is reused: the endpoint is

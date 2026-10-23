@@ -122,6 +122,7 @@ func (c *components) newCore() {
 		BlockLimit:       httpx.NewRateLimiter(chat.BlockChangesPerMinute, time.Minute).Named("block"),
 		ReportLimit:      httpx.NewRateLimiter(chat.ReportsPerHour, time.Hour).Named("report"),
 		SavedLimit:       httpx.NewRateLimiter(chat.SavedChangesPerMinute, time.Minute).Named("saved"),
+		ForwardLimit:     httpx.NewRateLimiter(chat.ForwardsPerMinute, time.Minute).Named("forward"),
 		DMLimit:          httpx.NewRateLimiter(chat.NewDMsPerMinute, time.Minute).Named("dm_start"),
 	}
 	go chat.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour)

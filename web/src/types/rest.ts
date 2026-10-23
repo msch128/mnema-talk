@@ -1402,6 +1402,59 @@ export function isChatFirstUnreadResponse(value: unknown): value is ChatFirstUnr
 
 export const decodeChatFirstUnreadResponse = decoder("chat.FirstUnreadResponse", isChatFirstUnreadResponse)
 
+export type ChatForwardQuote = {
+  attachment_count?: number
+  author?: ChatUserRef
+  available: boolean
+  channel_id?: string
+  channel_name?: string
+  content?: string
+  created_at?: string
+  deleted?: boolean
+  is_edited?: boolean
+  message_id?: string
+}
+
+export function isChatForwardQuote(value: unknown): value is ChatForwardQuote {
+  return isRecord(value)
+    && (!hasOwn(value, "attachment_count") || isInteger(value["attachment_count"]))
+    && (!hasOwn(value, "author") || isChatUserRef(value["author"]))
+    && (hasOwn(value, "available") && typeof value["available"] === 'boolean')
+    && (!hasOwn(value, "channel_id") || isIdentifier(value["channel_id"]))
+    && (!hasOwn(value, "channel_name") || isString(value["channel_name"]))
+    && (!hasOwn(value, "content") || isString(value["content"], 4000))
+    && (!hasOwn(value, "created_at") || isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "deleted") || typeof value["deleted"] === 'boolean')
+    && (!hasOwn(value, "is_edited") || typeof value["is_edited"] === 'boolean')
+    && (!hasOwn(value, "message_id") || isIdentifier(value["message_id"]))
+}
+
+export const decodeChatForwardQuote = decoder("chat.ForwardQuote", isChatForwardQuote)
+
+export type ChatForwardRef = {
+  forwarded: boolean
+}
+
+export function isChatForwardRef(value: unknown): value is ChatForwardRef {
+  return isRecord(value)
+    && (hasOwn(value, "forwarded") && typeof value["forwarded"] === 'boolean')
+}
+
+export const decodeChatForwardRef = decoder("chat.ForwardRef", isChatForwardRef)
+
+export type ChatForwardRequest = {
+  channel_id: string
+  comment?: string
+}
+
+export function isChatForwardRequest(value: unknown): value is ChatForwardRequest {
+  return isRecord(value)
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (!hasOwn(value, "comment") || isString(value["comment"], 4000))
+}
+
+export const decodeChatForwardRequest = decoder("chat.ForwardRequest", isChatForwardRequest)
+
 export type ChatInEmbed = {
   author: {
   name: string
@@ -1583,6 +1636,7 @@ export type ChatMessage = {
   created_at: string
   display_name: string
   embeds?: Array<ChatEmbed>
+  forward?: ChatForwardRef
   id: string
   is_bot?: boolean
   is_edited: boolean
@@ -1613,6 +1667,7 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "display_name") && isString(value["display_name"]))
     && (!hasOwn(value, "embeds") || isArrayOf(value["embeds"], item => isChatEmbed(item)))
+    && (!hasOwn(value, "forward") || isChatForwardRef(value["forward"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (!hasOwn(value, "is_bot") || typeof value["is_bot"] === 'boolean')
     && (hasOwn(value, "is_edited") && typeof value["is_edited"] === 'boolean')

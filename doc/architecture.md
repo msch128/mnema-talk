@@ -159,6 +159,34 @@ own messages.
 
 **Calls** in conversations are not part of 1.1.
 
+## Forwarding and saved messages
+
+**A forward is a reference, never a copy.** `POST /api/messages/{id}/forward`
+creates an ordinary message in the target (a channel or a direct message) whose
+text is only the forwarder's own comment. `messages.forward_of` points at the
+root of what was forwarded (forwarding a forward points at the same root) and
+`messages.forwarded` stays set when the original is later deleted
+(`ON DELETE SET NULL`). The forwarder needs to see the original and to send in
+the target, the target's slow mode and a conversation's rules apply, and every
+refusal answers one 403 text.
+
+**The visibility rule.** Nothing about the original is in the forwarded
+message's payload, not even an id: only `forward: {forwarded: true}`. What a reader sees of the
+original, with its ids, is returned by `GET /api/messages/{id}/forward`, decided for that
+reader at that moment: the text, author and channel when they may see the
+original (a channel they can view, or a conversation they are a member of; the
+Owner has no special access to conversations), otherwise only
+`available: false`. Lists, thread views, pins, search, the mentions inbox, the
+WebSocket events, push notifications, the export and the payloads of bots and
+webhooks therefore cannot show the original to someone who may not see it.
+Edits and deletes of the original show through because the quote is read when
+asked for.
+
+**Saved messages** (`saved_messages`, migration 0051) are the same idea: a row
+holds a reference and the member's note. `GET /api/me/saved` joins the messages
+the member may see now; a conversation's messages need membership, tested in
+SQL like search does.
+
 ## Data flow: voice, cameras and screen share
 
 Signaling runs over the existing WebSocket; media goes over UDP straight to

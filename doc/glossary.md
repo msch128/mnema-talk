@@ -26,6 +26,7 @@ in the legal texts (Impressum, Datenschutz, AGB), which are formal by design.
 | Brute-force lock | sign-in lock | Anmeldesperre | Login-Sperre | |
 | Pin | pin / unpin | anheften / Anheftung aufheben | lösen | "Angeheftete Nachrichten". "Pinned by {name}" / „Angeheftet von {name}“. |
 | Keep a message for yourself | save / remove from saved | speichern / aus Gespeichert entfernen | merken, favorisieren, lesezeichen | Private list: "Saved messages" / „Gespeicherte Nachrichten“. A message you can no longer see is "no longer available" / „nicht mehr verfügbar“. |
+| Send a message on to another place | forward | weiterleiten | teilen, senden an | "Forward…" / „Weiterleiten …“; the quote is "Forwarded" / „Weitergeleitet“. |
 | Private conversation | direct message | Direktnachricht | DM, private message, Privatnachricht | A conversation of two to ten members that is not a channel. "Group direct message" / „Gruppen-Direktnachricht“ for three or more. Calls in direct messages do not exist. |
 | Poll | poll | Umfrage | Abstimmung (only for the act of voting) | |
 | Custom emoji | custom emoji | eigene Emojis | | "Emojis verwalten". |

@@ -95,6 +95,20 @@ model, in short; the design is in [doc/architecture.md](doc/architecture.md#dire
 - **Server-side enforcement** of all of it; the UI only hides what a member
   cannot do.
 
+## Forwarding (a reference, not a copy)
+
+A forwarded message stores a reference to the original (`forward_of`) and the
+forwarder's own comment, never the original's text. The quote is produced when
+a reader asks for it (`GET /api/messages/{id}/forward`) from what that reader
+may see at that moment, so a hidden channel's text cannot reach someone through
+a forward, whoever forwarded it: not in message lists, search, the inbox, push,
+the export, WebSocket events, or the payloads of bots and webhooks, none of which holds an id or any text of
+the original (only `forward: {forwarded: true}`). Every refusal of a
+forward is one 403 text, so a forward cannot probe channels, conversations or
+blocks. The ids of the original are returned only to readers who may see it. Saved messages are a
+private list of references with the same read-time check, conversations by
+membership.
+
 ## Security model (summary)
 
 In short: members join by invitation only. Microphone, camera, screen video

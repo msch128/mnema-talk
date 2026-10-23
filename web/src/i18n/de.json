@@ -1367,6 +1367,20 @@
     "view": "Ansehen",
     "dismiss": "Ausblenden"
   },
+  "forward": {
+    "menu": "Weiterleiten …",
+    "title": "Nachricht weiterleiten",
+    "to": "Weiterleiten an",
+    "search": "Kanal suchen",
+    "none": "Kein Kanal zum Weiterleiten.",
+    "comment": "Kommentar hinzufügen (optional)",
+    "send": "Weiterleiten",
+    "done": "Nachricht weitergeleitet.",
+    "failed": "Die Nachricht konnte nicht weitergeleitet werden. Versuche es noch einmal.",
+    "label": "Weitergeleitet",
+    "unavailable": "Das Original ist nicht verfügbar.",
+    "deleted": "Das Original wurde gelöscht."
+  },
   "saved": {
     "title": "Gespeicherte Nachrichten",
     "empty": "Noch nichts gespeichert. Speichere eine Nachricht über ihr Menü, um sie hier nur für dich aufzubewahren.",
