@@ -1,0 +1,71 @@
+web/src/lib/searchQuery.ts
+  s_06fcde5dbef956::t_fdbc9fd9be0b61 1,6,9-12,19,44-52,111,117,128-130,148,208,238
+web/src/components/VoiceStage.phone.test.ts
+  s_06fcde5dbef956::t_69814d1cda9cbf 1-3,5-86
+  s_06fcde5dbef956::t_f27a5cb82520a7 4
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_e0c4f442e6685c 171
+  s_06fcde5dbef956::t_2bb1e5d65f2d63 452
+  s_06fcde5dbef956::t_cbb7db58f7f428 316-319
+  s_06fcde5dbef956::t_62c8be02dba29b 886
+web/src/components/SearchResultItem.vue
+  s_06fcde5dbef956::t_2bb1e5d65f2d63 6,61-66
+web/src/components/SkipLinks.vue
+  s_06fcde5dbef956::t_263d80570f4755 1-21,23-27
+  s_06fcde5dbef956::t_cbb7db58f7f428 22
+web/src/components/ConnectionBanner.vue
+  s_06fcde5dbef956::t_e0c4f442e6685c 4,10-21,46-47,61
+web/src/components/ConnectionBannerOffline.test.ts
+  s_06fcde5dbef956::t_86993fd9a2fe94 1-44,46,49-62
+  s_06fcde5dbef956::t_42cb531a5e311e 45,47-48
+web/src/components/ChatArea.vue
+  s_06fcde5dbef956::t_227670d10a192a 211
+  s_06fcde5dbef956::t_cbb7db58f7f428 208-209
+web/src/components/SearchModal.vue
+  s_06fcde5dbef956::t_2bb1e5d65f2d63 11,28,89-90
+web/src/components/SearchTipDismissal.test.ts
+  s_06fcde5dbef956::t_99ee66ca0e6fec 38-41
+  s_06fcde5dbef956::t_cdb1906dcfecbc 1-37,42-73
+web/src/App.vue
+  s_06fcde5dbef956::t_cbb7db58f7f428 38,228
+web/src/components/ChatComposer.vue
+  s_06fcde5dbef956::t_cbb7db58f7f428 124
+web/src/lib/searchIsFilter.test.ts
+  s_06fcde5dbef956::t_cd713ebb8dbdd7 1-31
+web/src/lib/searchSuggest.ts
+  s_06fcde5dbef956::t_fdbc9fd9be0b61 4,22,55-59,69
+web/src/stores/chat/socket.ts
+  s_06fcde5dbef956::t_40ab74e8aae628 217-224
+web/src/components/SkipLinks.test.ts
+  s_06fcde5dbef956::t_fe69ba04d226a7 1-37
+web/src/composables/useTalkControls.ts
+  s_06fcde5dbef956::t_629f2a32125da6 1-35
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_62c8be02dba29b 886
+  s_06fcde5dbef956::t_2bb1e5d65f2d63 452
+  s_06fcde5dbef956::t_e0c4f442e6685c 171
+  s_06fcde5dbef956::t_cbb7db58f7f428 316-319
+web/src/components/VoiceStage.vue
+  s_06fcde5dbef956::t_cbb7db58f7f428 245-246
+  s_06fcde5dbef956::t_1cf5bbf4ad4ac7 22,236-239
+  s_06fcde5dbef956::t_62c8be02dba29b 380-385
+  s_06fcde5dbef956::t_227670d10a192a 248
+web/src/lib/searchSuggest.test.ts
+  s_06fcde5dbef956::t_879c467bd785c8 34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b053a86307ba02938779e71e0525dc2b78257a74",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
