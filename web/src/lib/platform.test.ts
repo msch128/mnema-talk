@@ -17,7 +17,7 @@ vi.mock('./desktopRuntime', () => ({ isDesktopRuntime: () => host.desktop, isWeb
 vi.mock('./native/trustedDesktop', () => ({ trustedApp: () => host.trusted, isTrustedDesktop: () => host.trusted !== null }))
 const notify = vi.hoisted(() => ({
   browser: { permission: vi.fn(() => 'default'), refreshPermission: vi.fn(async () => 'default'), requestPermission: vi.fn(async () => 'granted'), notify: vi.fn(), setBadge: vi.fn() },
-  host: { permission: vi.fn(() => 'granted'), refreshPermission: vi.fn(async () => 'default'), requestPermission: vi.fn(async () => 'granted'), notify: vi.fn(), setBadge: vi.fn() },
+  host: { permission: vi.fn(() => 'granted'), refreshPermission: vi.fn(async () => 'default'), requestPermission: vi.fn(async () => 'granted'), notify: vi.fn(), setBadge: vi.fn(), reportUnread: vi.fn() },
 }))
 vi.mock('./osNotify', () => ({ browserNotify: notify.browser, hostNotify: notify.host }))
 vi.mock('./native/trustedSocket', () => ({ TrustedSocket: class TrustedSocket { kind = 'trusted' } }))
@@ -122,6 +122,34 @@ describe('notifications', () => {
     expect(notify.host.notify).toHaveBeenCalledWith(toast)
     expect(notify.host.setBadge).toHaveBeenCalledWith(3)
     expect(notify.browser.notify).not.toHaveBeenCalled()
+  })
+
+  describe('unread report (multi-instance client)', () => {
+    const counts = { unread: 3, mentions: 1 }
+
+    it('goes to the host only when its instance window announces unread', () => {
+      host.trusted = { role: 'instance', version: '1.2.3', capabilities: ['notify', 'unread'] }
+      expect(platform.supportsUnreadReport()).toBe(true)
+      platform.reportUnread(counts)
+      expect(notify.host.reportUnread).toHaveBeenCalledWith(counts)
+      expect(notify.browser.setBadge).not.toHaveBeenCalled()
+    })
+
+    it('is a no-op in a browser, in older clients and outside the instance window', () => {
+      for (const trusted of [null, { role: 'instance', version: '1.2.3', capabilities: ['notify'] }, { role: 'selector', version: '1.2.3', capabilities: ['unread'] }, { role: 'surface', version: '1.2.3', capabilities: ['unread'] }]) {
+        host.trusted = trusted
+        expect(platform.supportsUnreadReport()).toBe(false)
+        expect(() => platform.reportUnread(counts)).not.toThrow()
+      }
+      expect(notify.host.reportUnread).not.toHaveBeenCalled()
+    })
+
+    it('behaves the same on the desktop platform', () => {
+      host.desktop = true
+      host.trusted = { role: 'instance', version: '1.2.3', capabilities: ['unread'] }
+      platform.reportUnread(counts)
+      expect(notify.host.reportUnread).toHaveBeenCalledWith(counts)
+    })
   })
 
   it('routes the same way on the desktop platform', () => {

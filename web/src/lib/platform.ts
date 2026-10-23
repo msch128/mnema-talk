@@ -11,7 +11,7 @@ import {
   type NativeReply,
 } from './native/nativeTransport'
 import { isTrustedDesktop, trustedApp, type TrustedApp } from './native/trustedDesktop'
-import { browserNotify, hostNotify, type NotifyAdapter, type NotifyPermission, type OsNotification } from './osNotify'
+import { browserNotify, hostNotify, type NotifyAdapter, type NotifyPermission, type OsNotification, type UnreadCounts } from './osNotify'
 import { TrustedSocket } from './native/trustedSocket'
 
 /** What the chat store needs from a live socket, whichever host opens it. */
@@ -53,6 +53,15 @@ export interface Platform {
   notify(n: OsNotification): void
   /** Count on the taskbar/dock/app icon; 0 clears it. */
   setBadge(count: number): void
+  /**
+   * What this instance has waiting, for the multi-instance desktop client's
+   * server rail and combined badge. Feature-detected: only a host that
+   * announces the `unread` capability gets it, and `supportsUnreadReport`
+   * says whether that is the case. Additive, no `web_client_api` bump.
+   */
+  reportUnread(counts: UnreadCounts): void
+  /** The host takes `reportUnread` (it then also sums the badge over its instances). */
+  supportsUnreadReport(): boolean
   /** Native connection lifecycle (desktop only). */
   initializeNative(): Promise<void>
   connectNative(address: string): Promise<NativeReply>
@@ -72,6 +81,11 @@ function notifier(): NotifyAdapter {
   return app?.role === 'instance' && app.capabilities.includes('notify') ? hostNotify : browserNotify
 }
 
+function unreadReporter(): NotifyAdapter | null {
+  const app = trustedApp()
+  return app?.role === 'instance' && app.capabilities.includes('unread') ? hostNotify : null
+}
+
 /** A browser tab, including the trusted bundle served from the client's own origin. */
 export const browserPlatform: Platform = {
   isDesktop: () => false,
@@ -88,6 +102,8 @@ export const browserPlatform: Platform = {
   requestNotificationPermission: () => notifier().requestPermission(),
   notify: n => notifier().notify(n),
   setBadge: count => notifier().setBadge(count),
+  reportUnread: counts => unreadReporter()?.reportUnread?.(counts),
+  supportsUnreadReport: () => unreadReporter()?.reportUnread !== undefined,
   initializeNative: initializeNativeContext,
   connectNative,
   disconnectNative,
@@ -122,6 +138,8 @@ export const platform: Platform = {
   requestNotificationPermission: () => current().requestNotificationPermission(),
   notify: n => current().notify(n),
   setBadge: count => current().setBadge(count),
+  reportUnread: counts => current().reportUnread(counts),
+  supportsUnreadReport: () => current().supportsUnreadReport(),
   initializeNative: () => current().initializeNative(),
   connectNative: address => current().connectNative(address),
   disconnectNative: () => current().disconnectNative(),

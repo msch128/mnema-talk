@@ -485,6 +485,18 @@ host:
   brings the window forward. Windows shows a dot as the taskbar overlay, macOS
   and Linux the count on the dock or launcher icon. This needs no
   `web_client_api` bump: the web app detects the capability.
+* **Unread report** (host capability `unread`, 1.1; the multi-instance
+  client). One window of the client now shows one server out of several, and
+  the client lists them on a rail with an unread dot and a mention count each.
+  A host that announces `unread` in the instance window's `capabilities` gets
+  `desktop_report_unread` (`unread`: channels with unread messages that may
+  notify, `mentions`: unread mentions; both whole numbers, 0 to 999) instead of
+  `desktop_set_badge`, and sums the counts over its instances for the taskbar
+  or dock badge. `Platform.reportUnread` / `supportsUnreadReport`
+  (`web/src/lib/platform.ts`) do the feature detection, so a client without the
+  capability keeps getting `desktop_set_badge`, and a browser gets neither. No
+  `web_client_api` bump. Allowed only in the instance window, like the other
+  notification commands.
 
 ### Why this keeps the browser model intact
 
