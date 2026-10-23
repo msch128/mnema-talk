@@ -97,7 +97,7 @@ function openNotificationMenu(e: MouseEvent) {
         type="button"
         data-testid="search-in-channel"
         @click="searchInChannel"
-        class="btn btn-icon w-8 h-8 max-md:w-11 max-md:h-11"
+        class="btn btn-icon w-9 h-9 max-md:w-11 max-md:h-11"
         v-tooltip="$t('chat.searchInChannel')"
         :aria-label="$t('chat.searchInChannel')"
       >
@@ -106,7 +106,7 @@ function openNotificationMenu(e: MouseEvent) {
       <button
         v-if="chatStore.activeChannel && !isDm"
         @click="openNotificationMenu"
-        class="btn btn-icon w-8 h-8 max-md:w-11 max-md:h-11"
+        class="btn btn-icon w-9 h-9 max-md:w-11 max-md:h-11"
         v-tooltip="$t('notifications.channelSettings')"
         aria-haspopup="menu"
       >
@@ -120,7 +120,7 @@ function openNotificationMenu(e: MouseEvent) {
         type="button"
         data-testid="voice-chat-close"
         @click="emit('close')"
-        class="btn btn-icon w-8 h-8 max-md:w-11 max-md:h-11"
+        class="btn btn-icon w-9 h-9 max-md:w-11 max-md:h-11"
         v-tooltip="$t('talk.closeChat')"
         :aria-label="$t('talk.closeChat')"
       >
@@ -130,7 +130,7 @@ function openNotificationMenu(e: MouseEvent) {
         v-else-if="isDm"
         type="button"
         data-testid="dm-info-button"
-        class="btn btn-icon w-8 h-8 max-md:w-11 max-md:h-11"
+        class="btn btn-icon w-9 h-9 max-md:w-11 max-md:h-11"
         v-tooltip="$t('dm.info')"
         :aria-label="$t('dm.info')"
         @click="showInfo = true"
@@ -140,7 +140,7 @@ function openNotificationMenu(e: MouseEvent) {
       <button
         v-else
         @click="chatStore.showMemberList = !chatStore.showMemberList"
-        class="btn btn-icon w-8 h-8 max-md:w-11 max-md:h-11"
+        class="btn btn-icon w-9 h-9 max-md:w-11 max-md:h-11"
         v-tooltip="$t('members.toggle')"
         :aria-pressed="chatStore.showMemberList ? 'true' : 'false'"
       >

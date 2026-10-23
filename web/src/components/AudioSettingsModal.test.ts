@@ -28,7 +28,7 @@ vi.mock('../composables/useWebRTC', () => ({
 }))
 
 function meter(wrapper: ReturnType<typeof mount<typeof AudioSettingsModal>>) {
-  const bar = wrapper.find('.relative.h-6')
+  const bar = wrapper.find('[role="meter"]')
   const [fill, ...markers] = bar.findAll('div')
   return { fill, threshold: markers.at(-1) }
 }

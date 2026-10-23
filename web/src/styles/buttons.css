@@ -159,6 +159,7 @@
     height: 2rem;
     min-height: 0;
     padding: 0;
+    border-radius: var(--radius-lg);
     color: var(--color-mnema-tertiary);
   }
   .btn-icon:hover:not(:disabled, [aria-disabled='true']),
