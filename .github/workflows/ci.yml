@@ -641,6 +641,8 @@ jobs:
           echo "E2E_PG_BIN=$(brew --prefix postgresql@18)/bin" >> "$GITHUB_ENV"
 
       - name: Run the call specs on macOS WebKit
+        # A hang must end this step (and keep its log), not the job.
+        timeout-minutes: 22
         env:
           E2E_NO_DOCKER: "1"
           E2E_INSTALL_BROWSER: "1"
