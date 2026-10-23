@@ -149,9 +149,11 @@ test('a block folds the messages and makes the composer refuse', async ({ browse
 
     // Both sides are refused with the same calm sentence; nothing arrives.
     await owner.goto(`/c/${dmId}`)
+    await expect(owner.getByTestId('chat-channel-name')).toHaveText(suiteMember.username)
     await write(owner, `nach dem Block ${suffix}`)
     await expect(owner.getByText(REFUSED)).toBeVisible()
     await member.goto(`/c/${dmId}`)
+    await expect(member.getByTestId('chat-channel-name')).toHaveText(ADMIN_USER)
     await write(member, `ich auch ${suffix}`)
     await expect(member.getByText(REFUSED)).toBeVisible()
     await expect(owner.getByText(`ich auch ${suffix}`, { exact: true })).toHaveCount(0)
