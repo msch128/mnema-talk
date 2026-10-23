@@ -163,6 +163,18 @@ procedure above; take the backup first.
   and reports each one's result from the tested commit on the release pull
   request; it does not merge when one of them did not succeed. Nothing to do for
   operators; forks with their own ruleset get the same behaviour.
+- **Recovery codes have their own rate limiter.** The authenticator lockout no
+  longer blocks them, so a member locked out of the app can still sign in with a
+  recovery code.
+- **Bot and webhook names are stricter.** ZWJ and ZWNJ stay only inside emoji
+  and in scripts that need them; other invisible characters are stripped.
+- **`@everyone` and `@here` are reserved on a normalized skeleton**, so look-alike
+  spellings of those names are refused too.
+- **Push and OS notification text is plain text.** Markdown is stripped and
+  spoilers show as "Spoiler".
+- **Mail language:** the member's stored language, then the request's
+  `Accept-Language`, then English.
+- **Erasing an account updates open pin panels** right away.
 
 ### 0.9.x → 1.0.0
 
