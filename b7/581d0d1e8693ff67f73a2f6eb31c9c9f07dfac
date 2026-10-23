@@ -1,0 +1,24 @@
+scripts/drill-common.sh
+  s_06fcde5dbef956::t_736b8fd5bf2a60 9
+  s_06fcde5dbef956::t_e73cd946eb170a 8,10
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_736b8fd5bf2a60 378
+scripts/tests/test_drill_versions.py
+  s_06fcde5dbef956::t_df03a75766dfce 47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b7581d0d1e8693ff67f73a2f6eb31c9c9f07dfac",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
