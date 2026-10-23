@@ -8,6 +8,7 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 	want := map[string]Visibility{
 		// Events written by handlers.
 		"message.delete": VisChannel, "message.edit": VisChannel, "message.pin": VisChannel, "message.unpin": VisChannel,
+		"message.edit_history_view": VisChannel, "poll.end": VisChannel,
 		"moderation.bulk_delete": VisChannel,
 		"voice.join":             VisChannel, "voice.leave": VisChannel,
 		"auth.login": VisPrivileged, "auth.login_failed": VisPrivileged, "auth.login_locked": VisPrivileged,

@@ -64,6 +64,8 @@ export interface ServerEventPayloads {
   roles_changed: null
   /** A custom emoji was added, renamed or deleted: refetch GET /api/emoji. */
   emoji_changed: null
+  /** The caller followed or unfollowed a thread (sent to their own sessions only). */
+  thread_follow_updated: { thread_id: string; channel_id: string; following: boolean }
   typing: { channel_id: string; user_id: string }
   read_state: ReadStateUpdate
   message_create: Message
@@ -264,6 +266,7 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['read_state', isReadStateUpdate],
   ['message_delete', payload => isIdentifier(payload['id']) && isIdentifier(payload['channel_id'])
     && (payload['parent_id'] === null || isIdentifier(payload['parent_id']))],
+  ['thread_follow_updated', payload => isIdentifier(payload['thread_id']) && isIdentifier(payload['channel_id']) && typeof payload['following'] === 'boolean'],
   ['pins_changed', payload => isIdentifier(payload['channel_id']) && isIdentifier(payload['message_id']) && typeof payload['pinned'] === 'boolean'
     && isIdentifier(payload['actor_id']) && isString(payload['actor_name'], 128)],
   ['message_reaction', payload => isIdentifier(payload['message_id']) && (!hasOwn(payload, 'channel_id') || isIdentifier(payload['channel_id']))
@@ -319,7 +322,7 @@ function isNoteEmbed(value: unknown): boolean {
 
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
-  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
+  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'thread_follow_updated', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'media_handshake'

@@ -138,7 +138,8 @@ minute per member (`edit_history` in the rate-limit metrics).
   `EDIT_HISTORY_RETENTION_DAYS` (default `0`: keep) additionally drops versions
   replaced longer ago than that many days; the worker runs every six hours.
 - **Removed with their source.** Deleting the message deletes its versions
-  (cascade). Deleting an account deletes the versions of that person's messages
+  (cascade); the `message.delete` entry keeps them first (`edit_versions`, newest
+  first, with the same text policy as the entry's own text). Deleting an account deletes the versions of that person's messages
   together with the message text; the messages stay as emptied tombstones.
   Edits made before this feature (migration 0047) have no history.
 
@@ -177,6 +178,8 @@ requests leave no entry. Reading the log is not recorded.
 |---|---|---|
 | `message.delete` | A message is deleted, by its author or a moderator | The **full text**, the attachment names, types and sizes (not the files), author, channel, send time, `moderator` (true when someone else deleted it) and the thread replies (author and text, up to 50) |
 | `message.edit` | An author edits a message | Text `before` and `after`, author, channel |
+| `message.edit_history_view` | A moderator opens the earlier versions of **someone else's** message | Message, author, channel and how many versions were shown, not their text. One entry per reader and message every ten minutes; reading your own message leaves none |
+| `poll.end` | A moderator ends a poll that someone else posted | Message, author, channel and the question. An author ending their own poll is not audited |
 | `voice.join`, `voice.leave` | A member enters or leaves a Talk | Member and Talk with the time. A reload within the grace period is neither. High volume on a busy server: filter by the *Talk presence* group |
 | `auth.login` | Successful sign-in (browser and native) | The member |
 | `auth.login_failed`, `auth.login_locked` | A wrong password, or a blocked attempt, for an **existing** account | The member. At most one entry per account and kind per minute, and no address, password or typed name; a name that is no account is not stored at all |

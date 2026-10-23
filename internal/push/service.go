@@ -181,8 +181,15 @@ func (s *Service) handle(ctx context.Context, msg chat.Message) {
 		return // fail closed: nobody is told what they may not see
 	}
 	byName := namedMentions(ctx, s.DB, msg.ID)
+	followers, ok := threadAudience(ctx, s.DB, msg.ParentID)
+	if !ok {
+		return // fail closed: a thread reply with unknown followers tells nobody
+	}
 	var chosen []candidate
 	for _, c := range cands {
+		if followers != nil && !followers[c.userID] && !addressed(msg, c.userID, byName) {
+			continue
+		}
 		if canView(snap, c.userID, msg.ChannelID) && c.wants(mentions(msg, c.userID), addressed(msg, c.userID, byName)) {
 			chosen = append(chosen, c)
 		}
@@ -257,6 +264,12 @@ func (s *Service) stillQualifies(ctx context.Context, h held) bool {
 	if err != nil {
 		slog.Warn("push: permission snapshot", "err", err)
 		return false
+	}
+	if !h.notice.Addressed {
+		followers, ok := threadAudience(ctx, s.DB, h.notice.ParentID)
+		if !ok || (followers != nil && !followers[h.user]) {
+			return false // unfollowed inside the window
+		}
 	}
 	return len(cands) == 1 && canView(snap, h.user, h.notice.ChannelID) && cands[0].wants(h.notice.Mention, h.notice.Addressed)
 }

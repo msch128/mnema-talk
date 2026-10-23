@@ -139,7 +139,11 @@ func (h *Handler) getThread(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.WriteJSON(w, http.StatusOK, Thread{Root: root, Replies: replies})
+	following, err := IsFollowingThread(r.Context(), h.DB, auth.UserFrom(r.Context()).ID, msgID)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, Thread{Root: root, Replies: replies, Following: following})
 	return nil
 }
 
@@ -179,7 +183,7 @@ func (h *Handler) getMessageByNumber(w http.ResponseWriter, r *http.Request) err
 // search handles GET /api/search.
 //
 // @Summary Search messages
-// @Description Text channels and voice channels' chats, newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id, mentions, has, after or before_date is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.
+// @Description Text channels and voice channels' chats, newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id, mentions, has, is, after or before_date is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.
 // @ID searchMessages
 // @Tags Messages
 // @Produce json
@@ -187,7 +191,8 @@ func (h *Handler) getMessageByNumber(w http.ResponseWriter, r *http.Request) err
 // @Param q query string false "Search terms, whitespace separated." maxlength(200)
 // @Param channel_id query string false "Only messages of this channel." Format(uuid)
 // @Param author_id query string false "Only messages of this author." Format(uuid)
-// @Param has query string false "Only messages with a file, an image, a video or a link." Enums(file,image,video,link)
+// @Param has query string false "Only messages with a file, an image, a video, a link, a poll or an edit." Enums(file,image,video,link,poll,edit)
+// @Param is query string false "Only pinned messages." Enums(pinned)
 // @Param mentions query string false "Only messages that mention this user (directly or via @all/@here)." Format(uuid)
 // @Param after query string false "Only messages created after this instant (RFC 3339); must be earlier than before_date." Format(date-time)
 // @Param before_date query string false "Only messages created before this instant (RFC 3339)." Format(date-time)
@@ -205,6 +210,7 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 	q := SearchQuery{
 		Text:  v.Get("q"),
 		Has:   v.Get("has"),
+		Is:    v.Get("is"),
 		Limit: httpx.QueryLimit(r, "limit", 25, 50),
 	}
 	if _, err := queryIDs(r, "an id", map[string]**uuid.UUID{"channel_id": &q.ChannelID, "author_id": &q.AuthorID, "before": &q.Before, "mentions": &q.Mentions}); err != nil {
@@ -260,6 +266,8 @@ type ReactionResult struct {
 type Thread struct {
 	Root    *Message  `json:"root"`
 	Replies []Message `json:"replies"`
+	// Following: replies of this thread notify the caller.
+	Following bool `json:"following"`
 }
 
 // SearchResult is one page of search hits.

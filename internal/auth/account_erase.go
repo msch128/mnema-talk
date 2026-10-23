@@ -45,6 +45,7 @@ var eraseSteps = []string{
 	`DELETE FROM invites WHERE created_by = $1`,
 	`DELETE FROM channel_reads WHERE user_id = $1`,
 	`DELETE FROM category_notify WHERE user_id = $1`,
+	`DELETE FROM thread_follows WHERE user_id = $1`,
 	`DELETE FROM slow_mode_posts WHERE user_id = $1`,
 	`DELETE FROM user_roles WHERE user_id = $1`,
 	`DELETE FROM permission_overwrites WHERE user_id = $1`,

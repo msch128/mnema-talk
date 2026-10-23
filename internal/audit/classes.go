@@ -40,6 +40,7 @@ var Classes = []Class{
 	{"auth.%", VisPrivileged, "sign-ins, failures and lockouts are other members' security events"},
 	{"message.%", VisChannel, "holds message text of one channel"},
 	{"moderation.bulk_delete", VisChannel, "names a channel and a reason that may concern a private channel"},
+	{"poll.%", VisChannel, "names a channel and quotes the question of one of its polls"},
 	{"voice.%", VisChannel, "who was in which Talk"},
 	{"category.%", VisPrivileged, "names and overwrites of a possibly private category"},
 	{"layout.apply", VisPrivileged, "lists channel and category placements, private ones included"},

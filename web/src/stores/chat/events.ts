@@ -168,6 +168,7 @@ const HANDLERS: Handlers = {
     fetchChannels(cx)
   },
   emoji_changed: () => { void useEmojiStore().load() },
+  thread_follow_updated: () => {},
   roles_changed: cx => {
     const permissions = usePermissionsStore()
     permissions.loadRoles()

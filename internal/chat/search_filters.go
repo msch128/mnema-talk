@@ -19,7 +19,7 @@ func isSearchEmpty(terms []string, q SearchQuery) bool {
 	if len(terms) > 0 || q.ChannelID != nil || q.AuthorID != nil || q.Mentions != nil {
 		return false
 	}
-	return q.Has == "" && q.After == nil && q.BeforeDate == nil
+	return q.Has == "" && q.Is == "" && q.After == nil && q.BeforeDate == nil
 }
 
 // validateSearchDates rejects an empty time window (After not before BeforeDate).
@@ -93,6 +93,13 @@ func (b *searchBuilder) addFilters(q SearchQuery) error {
 	if has != "" {
 		b.where = append(b.where, has)
 	}
+	is, err := isCondition(q.Is)
+	if err != nil {
+		return err
+	}
+	if is != "" {
+		b.where = append(b.where, is)
+	}
 	if q.Mentions != nil {
 		b.where = append(b.where, "EXISTS (SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = "+b.addArg(*q.Mentions)+")")
 	}
@@ -121,6 +128,21 @@ func hasCondition(has string) (string, error) {
 		return "EXISTS (SELECT 1 FROM media f WHERE f.message_id = m.id AND f.mime_type LIKE 'video/%')", nil
 	case "link":
 		return `m.content ~* 'https?://'`, nil
+	case "poll":
+		return "EXISTS (SELECT 1 FROM polls p WHERE p.message_id = m.id)", nil
+	case "edit":
+		return "m.is_edited", nil
 	}
-	return "", httpx.ErrInvalidInput("has must be file, image, video or link")
+	return "", httpx.ErrInvalidInput("has must be file, image, video, link, poll or edit")
+}
+
+// isCondition is the WHERE condition of the "is" filter ("" for none).
+func isCondition(is string) (string, error) {
+	switch is {
+	case "":
+		return "", nil
+	case "pinned":
+		return "m.is_pinned", nil
+	}
+	return "", httpx.ErrInvalidInput("is must be pinned")
 }

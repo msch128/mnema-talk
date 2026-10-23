@@ -126,6 +126,21 @@ until the new release has passed your application checks.
 
 ## Version notes
 
+### 1.0.x → 1.1.0
+
+- **Migration 0054** adds `thread_follows` and fills it from the existing
+  threads (root authors and repliers), so threads keep notifying the people
+  who took part. From then on a thread reply notifies only its followers (the
+  root's author, repliers, people mentioned in a reply, and anyone who
+  followed it by hand). Nothing else changes for members; 0055 is reserved
+  and unused.
+- The audit log gains `message.edit_history_view` and `poll.end`, and a
+  `message.delete` entry of an edited message carries its earlier versions.
+  Audit retention applies to them as to any entry.
+- Search accepts `has=poll`, `has=edit` and `is=pinned`. The new routes
+  (`/api/threads/{id}/follow`, `/api/threads/following`) and the event
+  `thread_follow_updated` are additive; a 1.0.x web bundle ignores them.
+
 ### 1.0.0 → 1.0.1
 
 A patch release: fixes and polish, no new features, and nothing in it changes

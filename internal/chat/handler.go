@@ -37,6 +37,10 @@ type Handler struct {
 	EditHistoryLimit *httpx.RateLimiter
 	// PinLimit caps pinning and unpinning per member (each change is broadcast); nil means no cap.
 	PinLimit *httpx.RateLimiter
+	// FollowLimit caps thread follow changes per member; nil means no cap.
+	FollowLimit *httpx.RateLimiter
+
+	historyViews historyViews
 }
 
 // VoiceRooms acts on live voice rooms (implemented by the WebSocket hub).
@@ -85,6 +89,13 @@ func (h *Handler) Mount(r chi.Router) {
 	history.Get("/channels/{channelID}/messages/{messageID}/edits", httpx.Handle(h.getEditHistory))
 	r.Post("/messages/{messageID}/reactions", httpx.Handle(h.toggleReaction))
 	r.Get("/messages/{messageID}/thread", httpx.Handle(h.getThread))
+	follow := r
+	if h.FollowLimit != nil {
+		follow = r.With(h.FollowLimit.By(auth.UserKey))
+	}
+	follow.Put("/threads/{threadID}/follow", httpx.Handle(h.putThreadFollow))
+	follow.Delete("/threads/{threadID}/follow", httpx.Handle(h.deleteThreadFollow))
+	r.Get("/threads/following", httpx.Handle(h.listFollowedThreads))
 	r.Get("/messages/by-number/{number}", httpx.Handle(h.getMessageByNumber))
 	r.Get("/read-state", httpx.Handle(h.readState))
 	r.Get("/search", httpx.Handle(h.search))

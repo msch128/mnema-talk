@@ -1302,6 +1302,17 @@ export function isChatFirstUnreadResponse(value: unknown): value is ChatFirstUnr
 
 export const decodeChatFirstUnreadResponse = decoder("chat.FirstUnreadResponse", isChatFirstUnreadResponse)
 
+export type ChatFollowedThreads = {
+  thread_ids: Array<string>
+}
+
+export function isChatFollowedThreads(value: unknown): value is ChatFollowedThreads {
+  return isRecord(value)
+    && (hasOwn(value, "thread_ids") && isArrayOf(value["thread_ids"], item => isIdentifier(item)))
+}
+
+export const decodeChatFollowedThreads = decoder("chat.FollowedThreads", isChatFollowedThreads)
+
 export type ChatInEmbed = {
   author: {
   name: string
@@ -1782,17 +1793,32 @@ export function isChatSetNotifyLevelRequest(value: unknown): value is ChatSetNot
 export const decodeChatSetNotifyLevelRequest = decoder("chat.SetNotifyLevelRequest", isChatSetNotifyLevelRequest)
 
 export type ChatThread = {
+  following: boolean
   replies: Array<ChatMessage>
   root: ChatMessage
 }
 
 export function isChatThread(value: unknown): value is ChatThread {
   return isRecord(value)
+    && (hasOwn(value, "following") && typeof value["following"] === 'boolean')
     && (hasOwn(value, "replies") && isArrayOf(value["replies"], item => isChatMessage(item)))
     && (hasOwn(value, "root") && isChatMessage(value["root"]))
 }
 
 export const decodeChatThread = decoder("chat.Thread", isChatThread)
+
+export type ChatThreadFollow = {
+  following: boolean
+  thread_id: string
+}
+
+export function isChatThreadFollow(value: unknown): value is ChatThreadFollow {
+  return isRecord(value)
+    && (hasOwn(value, "following") && typeof value["following"] === 'boolean')
+    && (hasOwn(value, "thread_id") && isIdentifier(value["thread_id"]))
+}
+
+export const decodeChatThreadFollow = decoder("chat.ThreadFollow", isChatThreadFollow)
 
 export type ChatUpdateChannelRequest = {
   name?: string

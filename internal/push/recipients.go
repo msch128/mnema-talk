@@ -96,6 +96,21 @@ func canView(snap *perm.Snapshot, userID, channelID uuid.UUID) bool {
 	return snap.Channel(perm.Subject{ID: userID}, channelID).Has(perm.ViewChannel)
 }
 
+// threadAudience returns the followers of the thread a message replies to. A
+// nil map with ok means the message is not a thread reply and has no such
+// limit; ok is false when the followers cannot be read.
+func threadAudience(ctx context.Context, q db.Querier, thread *uuid.UUID) (followers map[uuid.UUID]bool, ok bool) {
+	if thread == nil {
+		return nil, true
+	}
+	followers, err := chat.ThreadFollowers(ctx, q, *thread)
+	if err != nil {
+		slog.Warn("push: load thread followers", "err", err)
+		return nil, false
+	}
+	return followers, true
+}
+
 // namedMentions returns the members msg is addressed to by name or through a
 // role (not through @all or @here). When the stored mentions cannot be read
 // nobody counts as addressed, so a mute stays silent.
