@@ -1,0 +1,94 @@
+internal/server/readstate_integration_test.go
+  s_06fcde5dbef956::t_93c67ad8b72fa8 105-125
+internal/mdplain/inline.go
+  s_06fcde5dbef956::t_b918e5f29322e3 33-34,64-67,93-95
+  s_06fcde5dbef956::t_b8d2420d556059 12-14,107,133
+  s_06fcde5dbef956::t_173dae4adb294e 1-11,15-27,30,35-63,68-69,71-92,96-106,108-132,134-203
+  s_06fcde5dbef956::t_5148e48b94d341 28-29,31-32,70
+internal/mdplain/links.go
+  s_06fcde5dbef956::t_c99170e6c91134 1-108,110-113,126,128-129,132,134-136,141,143,145-181
+  s_06fcde5dbef956::t_abbb3c3888084b 109,114-125,127,130-131,133,137-140,142,144
+internal/emoji/handler.go
+  s_06fcde5dbef956::t_b7437ee42c91ca 49-50,60-62,66-70
+internal/auth/account_export_activity.go
+  s_06fcde5dbef956::t_105133d12e09b2 37-46
+  s_06fcde5dbef956::t_40a74cb83b82da 145-146,157-160,167-169
+  s_06fcde5dbef956::t_3ab6583370c228 1-36,47-144,147-156,161-166,170-181
+doc/operations.md
+  s_06fcde5dbef956::t_763eab41bb5223 258-261
+internal/push/recipients.go
+  s_06fcde5dbef956::t_209e44a1ea9261 119
+  s_06fcde5dbef956::t_2530723ebb8cc0 6,74-77,86-87,98-118
+internal/emojitext/emojitext.go
+  s_06fcde5dbef956::t_9c4f12ba8caad0 30-39
+web/src/lib/markdown/plainFixtures.test.ts
+  s_06fcde5dbef956::t_0f9225e56ff4ba 1-24
+internal/server/account_export_integration_test.go
+  s_06fcde5dbef956::t_249646257c7f49 374
+  s_06fcde5dbef956::t_407d383fc76e12 288-373
+  s_06fcde5dbef956::t_e848b92d2cd9d0 16
+internal/push/service_integration_test.go
+  s_06fcde5dbef956::t_1de5590b4949ba 14,352-394
+  s_06fcde5dbef956::t_f065c374994da7 48
+internal/server/emoji_integration_test.go
+  s_06fcde5dbef956::t_0e7c0af586bad1 199,202-204,215-245
+  s_06fcde5dbef956::t_4c03f95a28957f 246-247
+internal/chat/pins.go
+  s_06fcde5dbef956::t_b7437ee42c91ca 21-23,28-33
+internal/chat/readstate.go
+  s_06fcde5dbef956::t_93c67ad8b72fa8 29-32,41-42,63-64,67-69
+internal/poll/handler.go
+  s_06fcde5dbef956::t_b7437ee42c91ca 17
+internal/poll/service.go
+  s_06fcde5dbef956::t_b7437ee42c91ca 22-24,33-34,40
+internal/push/payload_test.go
+  s_06fcde5dbef956::t_db807a3fc41502 129-149
+internal/auth/account_export_build.go
+  s_06fcde5dbef956::t_40a74cb83b82da 61-64,144-147
+internal/push/payload.go
+  s_06fcde5dbef956::t_2530723ebb8cc0 75-76
+  s_06fcde5dbef956::t_d67f7661f1999d 12,48,52,114
+internal/mdplain/plain.go
+  s_06fcde5dbef956::t_231f3faad7e50d 1-158
+doc/architecture.md
+  s_06fcde5dbef956::t_763eab41bb5223 247-253
+internal/server/router_build.go
+  s_06fcde5dbef956::t_b7437ee42c91ca 121,129-130
+internal/mdplain/plain_test.go
+  s_06fcde5dbef956::t_3ff919314e579f 1-69
+internal/emojitext/emojitext_test.go
+  s_06fcde5dbef956::t_83b84ab77c4e68 31-42
+internal/server/feature_limits_integration_test.go
+  s_06fcde5dbef956::t_3d9c01139abc47 1-6,8-18,20-62
+  s_06fcde5dbef956::t_0d65a6a082c1fa 7,19
+internal/chat/message_mutations.go
+  s_06fcde5dbef956::t_24ba999837fbc1 12
+  s_06fcde5dbef956::t_090f214556834e 245
+  s_06fcde5dbef956::t_9c4f12ba8caad0 185-186,188-190,229-244
+internal/push/recipients_test.go
+  s_06fcde5dbef956::t_86cc874c540bf9 20,25-26,28-37,41,44-48
+internal/chat/handler.go
+  s_06fcde5dbef956::t_b7437ee42c91ca 38-39
+internal/push/service.go
+  s_06fcde5dbef956::t_2530723ebb8cc0 152-153,155-166,183,186,190,194,213,261
+internal/mdplain/testdata/plain.json
+  s_06fcde5dbef956::t_5a19ed40fcadae 23-26
+  s_06fcde5dbef956::t_1c2912836f227a 1-3,5-22,27-28
+  s_06fcde5dbef956::t_49d60a7a0ac2af 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "41bb9746691fbcb2b3ed318e122e534b3ca7a228",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
