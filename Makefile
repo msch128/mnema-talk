@@ -90,6 +90,7 @@ test-scripts: ## Backup/restore syntax and fault-injected lifecycle tests (Pytho
 	python3 scripts/tests/test_coverage_summary.py
 	python3 scripts/tests/test_openapi_diff.py
 	python3 scripts/tests/test_security_floor.py
+	python3 scripts/tests/test_release_checks.py
 
 # Minimum total Go coverage (%, decimals allowed, compared on the exact
 # statement counts) and the floor for every single Go file; the frontend

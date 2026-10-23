@@ -47,12 +47,12 @@ const ib = 'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md tr
         data-testid="voice-panel-ping"
         :data-tone="pingTone(ping)"
         v-tooltip="$t('voice.panel.details')"
-        class="flex items-center gap-1.5 self-start pl-4 text-xs leading-4 rounded-sm hover:underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent"
+        class="flex min-w-0 max-w-full items-center gap-1.5 self-start whitespace-nowrap pl-4 text-xs leading-4 rounded-sm hover:underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent"
         @click="voiceStore.showStatsModal = true"
       >
-        <span :class="['font-mono font-medium tabular-nums', pingClass]">{{ ping == null ? '–' : ping }} ms</span>
-        <span class="vp-narrow-hide text-mnema-border-strong">·</span>
-        <span class="vp-narrow-hide truncate text-mnema-tertiary">{{ $t('voice.panel.details') }}</span>
+        <span :class="['flex-shrink-0 font-mono font-medium tabular-nums', pingClass]">{{ ping == null ? '–' : ping }} ms</span>
+        <span class="vp-narrow-hide flex-shrink-0 text-mnema-border-strong">·</span>
+        <span class="vp-narrow-hide min-w-0 truncate text-mnema-tertiary">{{ $t('voice.panel.details') }}</span>
       </button>
     </div>
 

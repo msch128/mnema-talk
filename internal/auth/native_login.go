@@ -71,7 +71,7 @@ func (h *NativeHandler) login2fa(w http.ResponseWriter, r *http.Request) error {
 	if err != nil || instanceID == uuid.Nil || instanceID.String() != fields["client_instance_id"] {
 		return httpx.ErrInvalidInput("invalid native client instance")
 	}
-	user, version, retry, err := h.accounts.completeSecondFactor(r.Context(), fields["challenge"], fields["code"])
+	user, version, retry, err := h.accounts.completeSecondFactor(r.Context(), httpx.ClientIPKey(r), fields["challenge"], fields["code"])
 	if retry > 0 {
 		httpx.WriteRateLimited(w, retry)
 		return nil

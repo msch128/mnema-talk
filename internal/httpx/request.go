@@ -82,15 +82,11 @@ func CleanText(field, s string, maxRunes int, required bool) (string, error) {
 // (webhook, bot and username overrides): invisible and bidirectional format
 // characters (Unicode Cf, such as U+202E and U+200B), private-use characters
 // and C1 controls are removed first, so a name cannot be spoofed with text
-// that renders differently from what it spells.
+// that renders differently from what it spells. Only the joiners that a script
+// or an emoji sequence really needs survive (see stripInvisible).
 func CleanName(field, s string, maxRunes int, required bool) (string, error) {
 	if utf8.ValidString(s) {
-		s = strings.Map(func(r rune) rune {
-			if isInvisibleRune(r) {
-				return -1
-			}
-			return r
-		}, s)
+		s = stripInvisible(s)
 	}
 	return CleanText(field, s, maxRunes, required)
 }
