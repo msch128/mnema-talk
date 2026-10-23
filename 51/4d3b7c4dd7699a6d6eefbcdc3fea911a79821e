@@ -1,0 +1,25 @@
+doc/operations.md
+  s_06fcde5dbef956::t_13b04ca0c451f3 260
+  s_06fcde5dbef956::t_8edc9dea9abd70 665-670
+  s_06fcde5dbef956::t_599ea8ea16c3c4 596
+doc/upgrade.md
+  s_06fcde5dbef956::t_acb35c01b14e62 139
+  s_06fcde5dbef956::t_49419d0af1c197 129-138,140-142,146-162
+  s_06fcde5dbef956::t_3a498e9d6642ad 143-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "514d3b7c4dd7699a6d6eefbcdc3fea911a79821e",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
