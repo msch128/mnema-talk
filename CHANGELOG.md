@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.0.1](https://github.com/msch128/mnema-talk/compare/v1.0.0...v1.0.1) (2026-10-23)
+
+
+### Bug Fixes
+
+* 1.0.1 coherence, polish and documentation ([#366](https://github.com/msch128/mnema-talk/issues/366)) ([7a82111](https://github.com/msch128/mnema-talk/commit/7a821114cc9f4aafea3c2b686aa657eed7b7d4f3))
+* **account:** the data export includes your polls, pins, push devices and uploaded emoji ([7a82111](https://github.com/msch128/mnema-talk/commit/7a821114cc9f4aafea3c2b686aa657eed7b7d4f3))
+* **audit:** every audit action has a readable label and a short summary of what changed ([7a82111](https://github.com/msch128/mnema-talk/commit/7a821114cc9f4aafea3c2b686aa657eed7b7d4f3))
+* **auth:** recovery codes keep working while the authenticator step is locked ([7a82111](https://github.com/msch128/mnema-talk/commit/7a821114cc9f4aafea3c2b686aa657eed7b7d4f3))
+* **chat:** bot and webhook names keep joiners only inside emoji and scripts that need them; reserved names are compared on a normalized skeleton ([7a82111](https://github.com/msch128/mnema-talk/commit/7a821114cc9f4aafea3c2b686aa657eed7b7d4f3))
+* **chat:** mentions addressed to you break a channel mute; [@all](https://github.com/all), [@here](https://github.com/here) and Do Not Disturb stay silent ([7a82111](https://github.com/msch128/mnema-talk/commit/7a821114cc9f4aafea3c2b686aa657eed7b7d4f3))
+* **chat:** named rate limits for polls, pins and emoji uploads; unknown or deleted emoji cannot be added as reactions ([7a82111](https://github.com/msch128/mnema-talk/commit/7a821114cc9f4aafea3c2b686aa657eed7b7d4f3))
+* one vocabulary and one voice across the interface copy (glossary in doc/glossary.md) ([7a82111](https://github.com/msch128/mnema-talk/commit/7a821114cc9f4aafea3c2b686aa657eed7b7d4f3))
+* **push:** OS notifications and Web Push show plain text; spoilers stay hidden ([7a82111](https://github.com/msch128/mnema-talk/commit/7a821114cc9f4aafea3c2b686aa657eed7b7d4f3))
+* **web:** 12-hour times have no leading zero; all mails to a member use the same language ([7a82111](https://github.com/msch128/mnema-talk/commit/7a821114cc9f4aafea3c2b686aa657eed7b7d4f3))
+* **web:** custom emoji never appear as raw tokens in the inbox, search, editing or edit history ([7a82111](https://github.com/msch128/mnema-talk/commit/7a821114cc9f4aafea3c2b686aa657eed7b7d4f3))
+* **web:** drafts stay private when another tab signs out; drafts of deleted channels are tidied; threads show a draft marker ([7a82111](https://github.com/msch128/mnema-talk/commit/7a821114cc9f4aafea3c2b686aa657eed7b7d4f3))
+* **web:** header title, late-loading media scroll, admin console tabs and title, phone layouts of dialogs and pop-overs, connection details on one line ([7a82111](https://github.com/msch128/mnema-talk/commit/7a821114cc9f4aafea3c2b686aa657eed7b7d4f3))
+* **web:** server errors of the 1.0 features show their real reason in English and German ([7a82111](https://github.com/msch128/mnema-talk/commit/7a821114cc9f4aafea3c2b686aa657eed7b7d4f3))
+* **web:** the admin console lives only in the server menu; the sidebar shows the community name ([7a82111](https://github.com/msch128/mnema-talk/commit/7a821114cc9f4aafea3c2b686aa657eed7b7d4f3))
+
+
+### Documentation
+
+* README, deployment, upgrade, operations and status pages describe 1.0 accurately; OpenAPI states each operation's real requirement; new README screenshots from one demo community; community files and issue templates ([7a82111](https://github.com/msch128/mnema-talk/commit/7a821114cc9f4aafea3c2b686aa657eed7b7d4f3))
+
 ## [1.0.0](https://github.com/msch128/mnema-talk/compare/v0.9.0...v1.0.0) (2026-10-23)
 
 
