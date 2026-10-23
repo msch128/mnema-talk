@@ -1793,14 +1793,14 @@ export function isChatSetNotifyLevelRequest(value: unknown): value is ChatSetNot
 export const decodeChatSetNotifyLevelRequest = decoder("chat.SetNotifyLevelRequest", isChatSetNotifyLevelRequest)
 
 export type ChatThread = {
-  following: boolean
+  following?: boolean
   replies: Array<ChatMessage>
   root: ChatMessage
 }
 
 export function isChatThread(value: unknown): value is ChatThread {
   return isRecord(value)
-    && (hasOwn(value, "following") && typeof value["following"] === 'boolean')
+    && (!hasOwn(value, "following") || typeof value["following"] === 'boolean')
     && (hasOwn(value, "replies") && isArrayOf(value["replies"], item => isChatMessage(item)))
     && (hasOwn(value, "root") && isChatMessage(value["root"]))
 }

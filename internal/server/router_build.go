@@ -214,7 +214,7 @@ func (c *components) newBots() {
 // made them follow it (see chat.NewFollowSync).
 func (c *components) tapThreadFollows() {
 	prevTap := c.hub.Tap
-	follows := chat.NewFollowSync(c.ctx, c.d.DB, c.pub)
+	follows := chat.NewFollowSync(c.ctx, c.d.DB, c.permSvc, c.pub)
 	c.hub.Tap = func(ch uuid.UUID, eventType string, payload any) {
 		if prevTap != nil {
 			prevTap(ch, eventType, payload)

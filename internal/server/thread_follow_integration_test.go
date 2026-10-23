@@ -200,3 +200,24 @@ func TestOpenSessionsLearnAboutTheThreadsAReplyMakesThemFollow(t *testing.T) {
 		t.Errorf("an uninvolved member was told: %s", raw)
 	}
 }
+
+func TestAMemberWhoLostTheChannelGetsNoThreadFollowEvents(t *testing.T) {
+	f := newMessageModerationFixture(t, true)
+	root := f.a.send(f.user, f.channel, "question")
+	f.reply(f.peer, root, "first answer")
+	author, _, err := f.user.dialWS(f.a.origin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	hide := putOverwrites(f.admin, "channels", f.channel, overwrite("member", f.user.user.ID, 0, perm.ViewChannel))
+	if hide.status != http.StatusNoContent {
+		t.Fatalf("hide: %d %s", hide.status, hide.body)
+	}
+	f.reply(f.peer, root, "second answer")
+	if raw, ok := author.expect("thread_follow_updated", 500*time.Millisecond); ok {
+		t.Fatalf("a member without access was told about the thread: %s", raw)
+	}
+	if res := f.user.put("/api/threads/"+root.String()+"/follow", nil); res.status != http.StatusNotFound {
+		t.Errorf("follow without access: %d", res.status)
+	}
+}

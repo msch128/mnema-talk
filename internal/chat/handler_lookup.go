@@ -266,8 +266,8 @@ type ReactionResult struct {
 type Thread struct {
 	Root    *Message  `json:"root"`
 	Replies []Message `json:"replies"`
-	// Following: replies of this thread notify the caller.
-	Following bool `json:"following"`
+	// Following: replies of this thread notify the caller. Servers before 1.1 do not send it.
+	Following bool `json:"following" binding:"optional"`
 }
 
 // SearchResult is one page of search hits.

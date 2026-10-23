@@ -2916,7 +2916,7 @@
       "chat.Thread": {
         "properties": {
           "following": {
-            "description": "Following: replies of this thread notify the caller.",
+            "description": "Following: replies of this thread notify the caller. Servers before 1.1 do not send it.",
             "type": "boolean"
           },
           "replies": {
@@ -2930,7 +2930,6 @@
           }
         },
         "required": [
-          "following",
           "replies",
           "root"
         ],
