@@ -63,8 +63,9 @@ jobs:
 
   # -- Backend: vet, format, unit + integration tests, build -----------------
   backend:
+    # Integration tests share one database and run package by package (~17 min in 1.1), so leave headroom.
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     services:
       postgres:
         image: postgres:18-alpine
