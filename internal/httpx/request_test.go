@@ -250,11 +250,13 @@ func TestCleanNameStripsInvisibleSpoofing(t *testing.T) {
 	}
 }
 
-func TestCleanNameKeepsJoinersBetweenVisibleCharacters(t *testing.T) {
+func TestCleanNameKeepsJoinersThatScriptsAndEmojiNeed(t *testing.T) {
 	for name, in := range map[string]string{
 		"family emoji": "👨\u200d👩\u200d👧",
 		"rainbow flag": "🏳\ufe0f\u200d🌈",
+		"modifier":     "👩🏽\u200d🚀",
 		"persian word": "می\u200cخواهم",
+		"hindi word":   "क\u094d\u200cष",
 	} {
 		if got, err := CleanName("name", in, 32, true); err != nil || got != in {
 			t.Errorf("%s: got %q, %v; want it unchanged", name, got, err)
@@ -262,19 +264,29 @@ func TestCleanNameKeepsJoinersBetweenVisibleCharacters(t *testing.T) {
 	}
 }
 
-func TestCleanNameStripsMisplacedJoinersAndBidiControls(t *testing.T) {
+func TestCleanNameStripsJoinersThatOnlyDisguise(t *testing.T) {
 	for in, want := range map[string]string{
-		"\u200dabc\u200d":   "abc",   // leading and trailing
-		"a\u200d\u200db":    "ab",    // repeated
-		"a\u200d\u200bb":    "ab",    // next to another invisible
-		"a\u200d\u202eb":    "ab",    // next to a bidi control
-		"\u202eadmin\u200d": "admin", // spoof attempt
-		"Bot \u200d🤖":       "Bot 🤖", // after a space
-		"a\u200c b\u200c":   "a b",   // before a space and trailing
-		"👨\u200d\u2066👩":    "👨👩",    // a bidi isolate splits the sequence
+		"Ad\u200dmin":       "Admin", // Latin neighbours
+		"Own\u200cer":       "Owner",
+		"\u200dabc\u200d":   "abc", // leading and trailing
+		"a\u200d\u200db":    "ab",  // repeated
+		"a\u200d\u202eb":    "ab",  // next to a bidi control
+		"\u202eadmin\u200d": "admin",
+		"👨\u200dx":          "👨x", // emoji then letter
+		"m\u200cی":          "mی", // ZWNJ between Latin and Arabic
+		"👨\u200d\u2066👩":    "👨👩", // a bidi isolate splits the sequence
+		"1\u200d2":          "12",
 	} {
 		if got, err := CleanName("name", in, 32, true); err != nil || got != want {
 			t.Errorf("%q: got %q, %v; want %q", in, got, err, want)
+		}
+	}
+}
+
+func TestNameSkeletonIgnoresInvisiblesAndCompatibilityForms(t *testing.T) {
+	for _, in := range []string{"Everyone", "every\u200done", "ＥＶＥＲＹＯＮＥ", "E\u200bveryone"} {
+		if got := NameSkeleton(in); got != "everyone" {
+			t.Errorf("%q: skeleton %q", in, got)
 		}
 	}
 }
