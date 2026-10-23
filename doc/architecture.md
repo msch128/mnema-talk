@@ -231,7 +231,6 @@ details show a **safety code** for the current epoch so members can compare
 keys out of band. The server validates who may commit but never sees keys.
 The code is [`web/src/lib/media/`](../web/src/lib/media/). Details and limits:
 [SECURITY.md](../SECURITY.md#security-model-summary).
-[`doc/crypto-state.md`](crypto-state.md) is an unused persistence foundation.
 
 ## Notifications, search and onboarding (0.9)
 
