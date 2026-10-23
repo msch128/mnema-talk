@@ -3,9 +3,12 @@ import { decodeServerEvent } from '../../types/events'
 import type { ServerEventPayloads, ClientEventPayloads } from '../../types/events'
 import { useEmojiStore } from '../emoji'
 import { usePermissionsStore } from '../permissions'
+import { useBlocksStore } from '../blocks'
+import { useServerFeaturesStore } from '../serverFeatures'
 import { installGlobalSearch, uninstallGlobalSearch } from '../../lib/globalSearch'
 import type { Cx } from './state'
 import { fetchChannels } from './channels'
+import { fetchDms } from './dms'
 import { handleWSEvent } from './events'
 import { fetchMembers } from './members'
 import { fetchMessages } from './messageWindow'
@@ -40,6 +43,8 @@ function resyncState(cx: Cx) {
   fetchMembers(cx)
   fetchReadState(cx)
   fetchNotificationSettings(cx)
+  void fetchDms(cx)
+  void useBlocksStore().load()
   const channel = cs.activeChannel.value
   if (channel && channel.type === 'text' && !cs.hasMoreAfter.value) fetchMessages(cx, channel.id)
   if (cs.activeThread.value) openThread(cx, cs.activeThread.value)
@@ -140,7 +145,9 @@ function handleSocketClose(
 
 function socketUrl(): string {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${protocol}//${window.location.host}/api/ws`
+  // Conversations are only sent to sockets that ask for them (dm=1), and only a server that has them understands the question.
+  const dm = useServerFeaturesStore().dm ? '?dm=1' : ''
+  return `${protocol}//${window.location.host}/api/ws${dm}`
 }
 
 export function initWebSocket(cx: Cx) {

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { startDesktopGaming } from './lib/desktopGaming'
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useAuthStore } from './stores/auth'
 import { usePermissionsStore } from './stores/permissions'
 import { useChatStore } from './stores/chat'
 import { useVoiceStore } from './stores/voice'
 import { useAccountStore } from './stores/account'
+import { useBlocksStore } from './stores/blocks'
+import { useServerFeaturesStore } from './stores/serverFeatures'
 import { recoveryFromLocation } from './lib/recoveryLink'
 import { currentRoute, navigate, popRedirectRoute, savePendingRoute } from './lib/router'
 import Sidebar from './components/Sidebar.vue'
@@ -39,6 +41,7 @@ import TimeoutBanner from './components/TimeoutBanner.vue'
 import ModerationDialog from './components/ModerationDialog.vue'
 import MessageModerationDialog from './components/MessageModerationDialog.vue'
 import EditHistoryDialog from './components/EditHistoryDialog.vue'
+import ReportDialog from './components/ReportDialog.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
 import PipHost from './components/PipHost.vue'
 import { useResizable } from './composables/useResizable'
@@ -83,6 +86,8 @@ const panels = useResizable([
 // keeps the rest, at least STAGE_MIN_HEIGHT.
 const voiceChatHeight = useResizable([VOICE_CHAT_HEIGHT], { axis: 'y', centerMin: STAGE_MIN_HEIGHT + 48 }).voiceChat
 const showLegalModal = ref(false)
+// A direct message conversation fills the chat area: no community member list beside it.
+const inConversation = computed(() => chatStore.isDm(chatStore.activeChannel?.id))
 // Phones: the channel list is a drawer, the thread and member list fill the screen.
 const { isCompact, navOpen, closeNav } = useCompactLayout()
 if (isCompact.value) chatStore.showMemberList = false
@@ -106,11 +111,16 @@ let resumeAttempted = false
 async function initializeApp() {
   if (!alive) return
   routing.beginFirstRoute()
+  // What the server can do decides what is fetched next and how the socket opens.
+  await useServerFeaturesStore().load()
+  if (!alive) return
   await Promise.all([
     chatStore.fetchChannels(),
     chatStore.fetchMembers(),
     chatStore.fetchReadState(),
-    chatStore.fetchNotificationSettings()
+    chatStore.fetchNotificationSettings(),
+    chatStore.fetchDms(),
+    useBlocksStore().load()
   ])
   if (!alive) return
   chatStore.initWebSocket()
@@ -148,6 +158,9 @@ watch(() => authStore.isAuthenticated, async (isAuthed) => {
     savePendingRoute()
     if (voiceStore.currentChannelId) leaveVoiceChannel()
     chatStore.closeWebSocket()
+    // Nothing of this account's private lists stays for the next sign-in.
+    chatStore.dms = []
+    useBlocksStore().reset()
   }
 })
 
@@ -269,7 +282,7 @@ onMounted(async () => {
           />
         </template>
         <div v-else class="min-h-0 flex flex-1 flex-col">
-          <NativeTrustControl v-if="platform.isDesktop() && authStore.isAdmin && chatStore.activeChannel" :key="authStore.user?.id + ':' + chatStore.activeChannel.id" :channel-id="chatStore.activeChannel.id" @saved="chatStore.activeChannel && chatStore.fetchMessages(chatStore.activeChannel.id)" />
+          <NativeTrustControl v-if="platform.isDesktop() && authStore.isAdmin && chatStore.activeChannel && !inConversation" :key="authStore.user?.id + ':' + chatStore.activeChannel.id" :channel-id="chatStore.activeChannel.id" @saved="chatStore.activeChannel && chatStore.fetchMessages(chatStore.activeChannel.id)" />
           <ChatArea class="min-h-0 flex-1" />
         </div>
       </div>
@@ -286,7 +299,7 @@ onMounted(async () => {
 
       <!-- Right column: member list -->
       <div
-        v-if="chatStore.showMemberList"
+        v-if="chatStore.showMemberList && !inConversation"
         class="relative h-full flex-shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas"
         :style="isCompact ? undefined : { width: `${panels.members.width}px` }"
       >
@@ -357,5 +370,6 @@ onMounted(async () => {
     <ModerationDialog />
     <MessageModerationDialog />
     <EditHistoryDialog />
+    <ReportDialog />
   </div>
 </template>

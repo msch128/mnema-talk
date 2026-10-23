@@ -7,7 +7,8 @@
     "delete": "Delete",
     "undo": "Undo",
     "create": "Create",
-    "name": "Name"
+    "name": "Name",
+    "loadMore": "Load more"
   },
   "language": {
     "de": "Deutsch",
@@ -898,7 +899,8 @@
       "bans": "Bans",
       "bots": "Bots",
       "onboarding": "Welcome & rules",
-      "emoji": "Emoji"
+      "emoji": "Emoji",
+      "reports": "Reports"
     },
     "system": {
       "heading": "System & version",
@@ -1176,7 +1178,9 @@
       "startChannel": "Start channel",
       "startChannelNone": "The first channel a member can see",
       "tooLong": "One of the texts is too long.",
-      "saved": "Welcome and rules saved."
+      "saved": "Welcome and rules saved.",
+      "dmEnabled": "Allow direct messages",
+      "dmEnabledHint": "When off, nobody can start or write direct messages. Existing conversations stay readable."
     },
     "mail": {
       "title": "E-mail (SMTP)",
@@ -2211,5 +2215,139 @@
   },
   "rules": {
     "title": "Community rules"
+  },
+  "dm": {
+    "section": "Direct messages",
+    "new": "New direct message",
+    "newTitle": "New direct message",
+    "newHint": "Choose one member for a conversation of two, or several for a group of up to ten people.",
+    "addTitle": "Add a member to {name}",
+    "addHint": "The new member can read the whole conversation, including what was written before they joined.",
+    "search": "Search members",
+    "members": "Members",
+    "membersCount": "Members ({n})",
+    "noCandidates": "No members to choose from.",
+    "picked": "{n} of {max} chosen",
+    "start": "Start conversation",
+    "startGroup": "Start group conversation",
+    "add": "Add to group",
+    "empty": "No conversations yet",
+    "showMore": "Show {n} more",
+    "unreadTotal": "{n} unread direct messages",
+    "info": "Conversation info",
+    "you": "You",
+    "alone": "Only you",
+    "message": "Message",
+    "messageHint": "Start a direct message with this member",
+    "addMember": "Add a member",
+    "historyHint": "Members who join later can read the whole conversation.",
+    "pairHint": "A conversation with one person can’t be left. Block the member if you don’t want to hear from them.",
+    "leave": "Leave conversation",
+    "leaveTitle": "Leave this conversation?",
+    "leaveBody": "You lose access to its messages. The others can add you again, and you would read everything from the start.",
+    "leaveFailed": "Couldn’t leave the conversation. Try again.",
+    "welcome": "Your conversation with {name}",
+    "groupWelcome": "Group conversation with {name}",
+    "beginning": "This is the start of your conversation with {name}.",
+    "groupBeginning": "This is the start of this group conversation.",
+    "placeholder": "Message {name}",
+    "readOnly": "You can’t write in direct messages right now.",
+    "refused": "Can’t send a message to this member.",
+    "startFailed": "Couldn’t start the conversation. Try again.",
+    "addFailed": "Couldn’t add the member. Try again.",
+    "sendFailed": "Couldn’t send the message. Try again.",
+    "groupFull": "This group is full. A group takes up to ten people.",
+    "tooManyGroups": "You are in too many group conversations. Leave one first.",
+    "slowDown": "Too many tries. Wait a moment, then try again.",
+    "searchScope": "Where to search",
+    "policy": {
+      "title": "Direct messages",
+      "intro": "Choose who may start a direct message with you. Conversations you already have go on, and you can still start your own.",
+      "everyone": "Everyone",
+      "everyoneHint": "Any member can start a conversation with you.",
+      "nobody": "Nobody",
+      "nobodyHint": "Nobody can start a conversation with you.",
+      "failed": "Couldn’t save the setting. Try again."
+    }
+  },
+  "blocks": {
+    "title": "Blocked members",
+    "intro": "You don’t see messages from members you block, and they don’t trigger mentions or notifications for you. They are not told.",
+    "none": "You haven’t blocked anyone.",
+    "block": "Block",
+    "unblock": "Unblock",
+    "hint": "Their messages fold away for you. They are not told.",
+    "blockedHint": "Their messages are folded away for you.",
+    "blocked": "Blocked {name}. Their messages are folded away.",
+    "unblocked": "Unblocked {name}.",
+    "blockFailed": "Couldn’t block the member. Try again.",
+    "unblockFailed": "Couldn’t unblock the member. Try again.",
+    "full": "Your block list is full. Unblock someone first.",
+    "collapsed": "Blocked message",
+    "show": "Show"
+  },
+  "reports": {
+    "menu": "Report message",
+    "title": "Report message",
+    "intro": "Tell the moderators about this message from {name}. They see a copy of it and of the messages around it.",
+    "reason": "Reason",
+    "category": {
+      "spam": "Spam",
+      "harassment": "Harassment",
+      "illegal": "Illegal content",
+      "other": "Something else"
+    },
+    "categoryHint": {
+      "spam": "Unwanted ads, links or repeated messages.",
+      "harassment": "Insults, threats or targeting a member.",
+      "illegal": "Content that breaks the law.",
+      "other": "Anything else the moderators should look at."
+    },
+    "note": "Note (optional)",
+    "notePlaceholder": "What should the moderators know?",
+    "privacy": "The member is not told. The moderators see the copy even if the message is deleted later.",
+    "send": "Send report",
+    "sent": "Report sent. The moderators will look at it.",
+    "failed": "Couldn’t send the report. Try again.",
+    "gone": "Couldn’t send the report. The message is no longer there.",
+    "tooMany": "You have too many open reports. Wait until the moderators have looked at them.",
+    "slowDown": "Too many reports in a short time. Try again later.",
+    "admin": {
+      "title": "Reports",
+      "hint": "Reports of channel messages and direct messages. A report keeps its own copy of the message and the ones around it.",
+      "filter": "Show reports",
+      "status": {
+        "open": "Open",
+        "resolved": "Resolved",
+        "dismissed": "Dismissed",
+        "all": "All"
+      },
+      "empty": "No reports here.",
+      "by": "{reporter} reported {reported}",
+      "dm": "Direct message",
+      "back": "Back to reports",
+      "reason": "Reason",
+      "reporter": "Reported by",
+      "reported": "Author",
+      "where": "Where",
+      "note": "Note",
+      "copy": "Message copy",
+      "dmNotice": "This is the only part of a direct message you can read. It was shared by a member in this report.",
+      "resolutionNote": "Note for the record (optional)",
+      "resolve": "Mark resolved",
+      "dismiss": "Dismiss",
+      "resolvedToast": "Report marked resolved.",
+      "dismissedToast": "Report dismissed.",
+      "closedAs": {
+        "resolved": "Resolved by {name} on {date}.",
+        "dismissed": "Dismissed by {name} on {date}."
+      },
+      "delete": "Delete report",
+      "deleteTitle": "Delete this report?",
+      "deleteBody": "The report and its copy of the messages are removed for good.",
+      "deleteFailed": "Couldn’t delete the report. Try again.",
+      "closeFailed": "Couldn’t close the report. Try again.",
+      "loadFailed": "Couldn’t load the reports. Try again."
+    }
   }
 }

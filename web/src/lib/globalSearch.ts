@@ -10,6 +10,9 @@ import { tooltip } from '../directives/tooltip'
 export const searchOpen = ref(false)
 /** The query line; kept while the session lasts so reopening shows the last search. */
 export const searchText = ref('')
+/** What the search looks through: the channels, or (dm) the member's direct messages. */
+export type SearchScope = 'channels' | 'dm'
+export const searchScope = ref<SearchScope>('channels')
 
 let installed = false
 let mounting: Promise<void> | null = null
@@ -26,7 +29,8 @@ function ensureMounted() {
 }
 
 /** Opens the search, optionally with a new query line (e.g. "in:general "). */
-export function openSearch(prefill?: string) {
+export function openSearch(prefill?: string, scope: SearchScope = 'channels') {
+  searchScope.value = scope
   if (prefill !== undefined) searchText.value = prefill
   return ensureMounted().then(() => { searchOpen.value = true })
 }
@@ -54,5 +58,6 @@ export function uninstallGlobalSearch() {
   installed = false
   searchOpen.value = false
   searchText.value = ''
+  searchScope.value = 'channels'
   window.removeEventListener('keydown', onKeydown)
 }

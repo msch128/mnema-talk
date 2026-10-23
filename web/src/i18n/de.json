@@ -7,7 +7,8 @@
     "delete": "Löschen",
     "undo": "Rückgängig",
     "create": "Erstellen",
-    "name": "Name"
+    "name": "Name",
+    "loadMore": "Mehr laden"
   },
   "language": {
     "de": "Deutsch",
@@ -898,7 +899,8 @@
       "bans": "Sperren",
       "bots": "Bots",
       "onboarding": "Willkommen & Regeln",
-      "emoji": "Emoji"
+      "emoji": "Emoji",
+      "reports": "Meldungen"
     },
     "system": {
       "heading": "System & Version",
@@ -1176,7 +1178,9 @@
       "startChannel": "Startkanal",
       "startChannelNone": "Der erste Kanal, den ein Mitglied sehen kann",
       "tooLong": "Einer der Texte ist zu lang.",
-      "saved": "Willkommen und Regeln gespeichert."
+      "saved": "Willkommen und Regeln gespeichert.",
+      "dmEnabled": "Direktnachrichten erlauben",
+      "dmEnabledHint": "Wenn aus, kann niemand Direktnachrichten beginnen oder schreiben. Bestehende Gespräche bleiben lesbar."
     },
     "mail": {
       "title": "E-Mail (SMTP)",
@@ -2211,5 +2215,139 @@
   },
   "rules": {
     "title": "Community-Regeln"
+  },
+  "dm": {
+    "section": "Direktnachrichten",
+    "new": "Neue Direktnachricht",
+    "newTitle": "Neue Direktnachricht",
+    "newHint": "Wähle ein Mitglied für ein Gespräch zu zweit oder mehrere für eine Gruppe mit bis zu zehn Personen.",
+    "addTitle": "Mitglied zu {name} hinzufügen",
+    "addHint": "Das neue Mitglied kann das ganze Gespräch lesen, auch was vor dem Beitritt geschrieben wurde.",
+    "search": "Mitglieder suchen",
+    "members": "Mitglieder",
+    "membersCount": "Mitglieder ({n})",
+    "noCandidates": "Keine Mitglieder zur Auswahl.",
+    "picked": "{n} von {max} gewählt",
+    "start": "Gespräch beginnen",
+    "startGroup": "Gruppengespräch beginnen",
+    "add": "Zur Gruppe hinzufügen",
+    "empty": "Noch keine Gespräche",
+    "showMore": "{n} weitere anzeigen",
+    "unreadTotal": "{n} ungelesene Direktnachrichten",
+    "info": "Gesprächsinfo",
+    "you": "Du",
+    "alone": "Nur du",
+    "message": "Nachricht",
+    "messageHint": "Eine Direktnachricht an dieses Mitglied beginnen",
+    "addMember": "Mitglied hinzufügen",
+    "historyHint": "Mitglieder, die später dazukommen, können das ganze Gespräch lesen.",
+    "pairHint": "Ein Gespräch zu zweit kann man nicht verlassen. Blockiere das Mitglied, wenn du nichts mehr von ihm hören willst.",
+    "leave": "Gespräch verlassen",
+    "leaveTitle": "Dieses Gespräch verlassen?",
+    "leaveBody": "Du verlierst den Zugriff auf die Nachrichten. Die anderen können dich wieder hinzufügen, dann liest du alles von Anfang an.",
+    "leaveFailed": "Das Gespräch konnte nicht verlassen werden. Versuche es noch einmal.",
+    "welcome": "Dein Gespräch mit {name}",
+    "groupWelcome": "Gruppengespräch mit {name}",
+    "beginning": "Das ist der Anfang deines Gesprächs mit {name}.",
+    "groupBeginning": "Das ist der Anfang dieses Gruppengesprächs.",
+    "placeholder": "Nachricht an {name}",
+    "readOnly": "Du kannst gerade keine Direktnachrichten schreiben.",
+    "refused": "An dieses Mitglied kann keine Nachricht gesendet werden.",
+    "startFailed": "Das Gespräch konnte nicht begonnen werden. Versuche es noch einmal.",
+    "addFailed": "Das Mitglied konnte nicht hinzugefügt werden. Versuche es noch einmal.",
+    "sendFailed": "Die Nachricht konnte nicht gesendet werden. Versuche es noch einmal.",
+    "groupFull": "Diese Gruppe ist voll. Eine Gruppe nimmt bis zu zehn Personen auf.",
+    "tooManyGroups": "Du bist in zu vielen Gruppengesprächen. Verlasse zuerst eines.",
+    "slowDown": "Zu viele Versuche. Warte einen Moment und versuche es dann noch einmal.",
+    "searchScope": "Wo gesucht wird",
+    "policy": {
+      "title": "Direktnachrichten",
+      "intro": "Lege fest, wer eine Direktnachricht mit dir beginnen darf. Bestehende Gespräche laufen weiter, und du kannst weiterhin selbst welche beginnen.",
+      "everyone": "Alle",
+      "everyoneHint": "Jedes Mitglied kann ein Gespräch mit dir beginnen.",
+      "nobody": "Niemand",
+      "nobodyHint": "Niemand kann ein Gespräch mit dir beginnen.",
+      "failed": "Die Einstellung konnte nicht gespeichert werden. Versuche es noch einmal."
+    }
+  },
+  "blocks": {
+    "title": "Blockierte Mitglieder",
+    "intro": "Nachrichten von Mitgliedern, die du blockierst, siehst du nicht, und sie lösen keine Erwähnungen oder Benachrichtigungen bei dir aus. Sie erfahren nichts davon.",
+    "none": "Du hast niemanden blockiert.",
+    "block": "Blockieren",
+    "unblock": "Blockierung aufheben",
+    "hint": "Die Nachrichten dieses Mitglieds werden für dich eingeklappt. Es erfährt nichts davon.",
+    "blockedHint": "Die Nachrichten dieses Mitglieds sind für dich eingeklappt.",
+    "blocked": "{name} blockiert. Die Nachrichten sind eingeklappt.",
+    "unblocked": "Blockierung von {name} aufgehoben.",
+    "blockFailed": "Das Mitglied konnte nicht blockiert werden. Versuche es noch einmal.",
+    "unblockFailed": "Die Blockierung konnte nicht aufgehoben werden. Versuche es noch einmal.",
+    "full": "Deine Blockliste ist voll. Hebe zuerst eine Blockierung auf.",
+    "collapsed": "Blockierte Nachricht",
+    "show": "Anzeigen"
+  },
+  "reports": {
+    "menu": "Nachricht melden",
+    "title": "Nachricht melden",
+    "intro": "Melde den Moderatoren diese Nachricht von {name}. Sie sehen eine Kopie davon und der Nachrichten drumherum.",
+    "reason": "Grund",
+    "category": {
+      "spam": "Spam",
+      "harassment": "Belästigung",
+      "illegal": "Illegale Inhalte",
+      "other": "Etwas anderes"
+    },
+    "categoryHint": {
+      "spam": "Unerwünschte Werbung, Links oder wiederholte Nachrichten.",
+      "harassment": "Beleidigungen, Drohungen oder gezielte Angriffe auf ein Mitglied.",
+      "illegal": "Inhalte, die gegen das Gesetz verstoßen.",
+      "other": "Alles andere, was die Moderatoren sich ansehen sollten."
+    },
+    "note": "Hinweis (optional)",
+    "notePlaceholder": "Was sollten die Moderatoren wissen?",
+    "privacy": "Das Mitglied erfährt nichts davon. Die Moderatoren sehen die Kopie auch, wenn die Nachricht später gelöscht wird.",
+    "send": "Meldung senden",
+    "sent": "Meldung gesendet. Die Moderatoren sehen sie sich an.",
+    "failed": "Die Meldung konnte nicht gesendet werden. Versuche es noch einmal.",
+    "gone": "Die Meldung konnte nicht gesendet werden. Die Nachricht gibt es nicht mehr.",
+    "tooMany": "Du hast zu viele offene Meldungen. Warte, bis die Moderatoren sie bearbeitet haben.",
+    "slowDown": "Zu viele Meldungen in kurzer Zeit. Versuche es später noch einmal.",
+    "admin": {
+      "title": "Meldungen",
+      "hint": "Meldungen von Kanalnachrichten und Direktnachrichten. Eine Meldung behält eine eigene Kopie der Nachricht und der Nachrichten drumherum.",
+      "filter": "Meldungen anzeigen",
+      "status": {
+        "open": "Offen",
+        "resolved": "Erledigt",
+        "dismissed": "Abgelehnt",
+        "all": "Alle"
+      },
+      "empty": "Hier gibt es keine Meldungen.",
+      "by": "{reporter} hat {reported} gemeldet",
+      "dm": "Direktnachricht",
+      "back": "Zurück zu den Meldungen",
+      "reason": "Grund",
+      "reporter": "Gemeldet von",
+      "reported": "Autor",
+      "where": "Wo",
+      "note": "Hinweis",
+      "copy": "Kopie der Nachricht",
+      "dmNotice": "Das ist der einzige Teil einer Direktnachricht, den du lesen kannst. Ein Mitglied hat ihn mit dieser Meldung geteilt.",
+      "resolutionNote": "Notiz für die Akten (optional)",
+      "resolve": "Als erledigt markieren",
+      "dismiss": "Ablehnen",
+      "resolvedToast": "Meldung als erledigt markiert.",
+      "dismissedToast": "Meldung abgelehnt.",
+      "closedAs": {
+        "resolved": "Erledigt von {name} am {date}.",
+        "dismissed": "Abgelehnt von {name} am {date}."
+      },
+      "delete": "Meldung löschen",
+      "deleteTitle": "Diese Meldung löschen?",
+      "deleteBody": "Die Meldung und ihre Kopie der Nachrichten werden endgültig entfernt.",
+      "deleteFailed": "Die Meldung konnte nicht gelöscht werden. Versuche es noch einmal.",
+      "closeFailed": "Die Meldung konnte nicht abgeschlossen werden. Versuche es noch einmal.",
+      "loadFailed": "Die Meldungen konnten nicht geladen werden. Versuche es noch einmal."
+    }
   }
 }

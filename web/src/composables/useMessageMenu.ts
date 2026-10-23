@@ -18,6 +18,7 @@ import { moderateMessages } from '../lib/messageModeration'
 import { previewText } from '../lib/replies'
 import { shortcodesForEditing } from '../lib/customEmoji'
 import { t } from '../i18n'
+import { messageSafetyItems } from './dmMenuItems'
 
 type MessageActions = ReturnType<typeof useMessageActions>
 
@@ -96,6 +97,8 @@ function basicItems(msg: Message, { actions, reply, copy }: MenuDeps): ContextMe
   })
   items.push(markUnreadItem(msg))
   if (useServerFeaturesStore().has('saved')) items.push(savedItem(msg))
+  const safety = messageSafetyItems(msg)
+  if (safety.length) items.push({ type: 'separator' }, ...safety)
   return items
 }
 

@@ -186,7 +186,8 @@ Administrators have no path into a direct message conversation, and a report
 shows only what the reporter chose to report and its context.
 
 Members with *Manage reports* (the Owner and Administrators always) work the
-queue under **Admin > Reports** (`GET /api/admin/reports`, status filter,
+queue under **Admin > Reports** (the tab shows only where the server lists the
+`reports` feature; `GET /api/admin/reports`, status filter,
 newest first; `GET /api/admin/reports/{id}` for the copy). They close a
 report as `resolved` or `dismissed` with an optional note, and can delete a
 closed one, which removes the copy. The reporter is not notified of the

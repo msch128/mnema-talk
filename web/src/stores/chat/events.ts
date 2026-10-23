@@ -4,11 +4,13 @@ import { useEmojiStore } from '../emoji'
 import { useSavedStore } from '../saved'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
+import { useBlocksStore } from '../blocks'
 import { noticeText } from '../../lib/moderation'
 import { snapshotToMap, applyPresenceUpdate } from '../../lib/presence'
 import { MAX_EPHEMERAL } from './types'
 import type { Cx } from './state'
 import { fetchChannels } from './channels'
+import { fetchDms, isDm, noteDmMessage, onDmCreated, onDmMemberAdded, onDmMemberRemoved } from './dms'
 import { applyActivity, countMessageOf, fetchMembers, refreshMemberStats, updateUserEverywhere } from './members'
 import { applyToMessage, bumpReplyCount, countReply, insertMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
 import { messageMentionsMe, messageMentionsMeDirectly, triggerBrowserNotification } from './notifications'
@@ -110,6 +112,7 @@ function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
   const { cs, authStore } = cx
   countReply(cx, p)
   insertMessage(cx, p)
+  noteDmMessage(cx, p)
   countMessageOf(cx, p.user_id)
   clearTypingForUser(cx, p.channel_id, p.user_id)
 
@@ -117,7 +120,8 @@ function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
   const isCurrentChannel = p.channel_id === cs.activeChannel.value?.id
   // A muted channel only counts what is addressed to me, the way the server counts it.
   const muted = notificationLevel(cx, p.channel_id) === 'mute'
-  const isMention = muted ? messageMentionsMeDirectly(cx, p) : messageMentionsMe(cx, p)
+  // Everything somebody writes in a conversation is addressed to me.
+  const isMention = isDm(cx, p.channel_id) || (muted ? messageMentionsMeDirectly(cx, p) : messageMentionsMe(cx, p))
 
   handleIncomingMessageReadState(cx, { channelId: p.channel_id, isOwn, isCurrentChannel, isMention, isThreadReply: !!p.parent_id })
   if (!isOwn && p.channel_id) {
@@ -167,15 +171,16 @@ const HANDLERS: Handlers = {
   permissions_changed: cx => {
     usePermissionsStore().load()
     fetchChannels(cx)
+    // Whether I may write in a conversation follows the same permissions and the community's switch.
+    void fetchDms(cx)
   },
   emoji_changed: () => { void useEmojiStore().load() },
-  // The block list lives in the blocks store of the direct messages client (next package); nothing to refresh yet.
-  block_updated: () => {},
+  // The caller blocked or unblocked someone in another session.
+  block_updated: () => { void useBlocksStore().load() },
   saved_updated: (_cx, p) => { if (p) useSavedStore().onUpdated(p) },
-  // The direct messages client (next package) keeps these lists; nothing to refresh yet.
-  dm_created: () => {},
-  dm_member_added: () => {},
-  dm_member_removed: () => {},
+  dm_created: (cx, p) => { if (p) onDmCreated(cx, p) },
+  dm_member_added: (cx, p) => { if (p) onDmMemberAdded(cx, p) },
+  dm_member_removed: (cx, p) => { if (p) onDmMemberRemoved(cx, p) },
   roles_changed: cx => {
     const permissions = usePermissionsStore()
     permissions.loadRoles()

@@ -5,9 +5,12 @@ import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { decodeSearchResult } from '../types/domain'
 import { isChatSearchRoot } from '../types/rest'
 import { api } from '../lib/api'
-import { searchText } from '../lib/globalSearch'
+import { searchScope, searchText } from '../lib/globalSearch'
+import { dmAsChannel } from '../lib/dm'
 import { buildSearchParams, isSearchable, parseSearchQuery } from '../lib/searchQuery'
 import { useChatStore } from '../stores/chat'
+import { useAuthStore } from '../stores/auth'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import BaseDialog from './BaseDialog.vue'
 import SearchInput from './SearchInput.vue'
 import SearchResults from './SearchResults.vue'
@@ -24,6 +27,8 @@ const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 const PAGE = 25
 
 const chatStore = useChatStore()
+const authStore = useAuthStore()
+const features = useServerFeaturesStore()
 const results = ref<Message[]>([])
 const roots = ref<Record<string, ChatSearchRoot>>({})
 const hasMore = ref(false)
@@ -32,17 +37,20 @@ const isLoadingMore = ref(false)
 const failed = ref(false)
 const selectedIndex = ref(0)
 
+const inDm = computed(() => features.dm && searchScope.value === 'dm')
+// The conversations take the channels' place in the "in:" filter when searching them.
+const conversations = computed(() => chatStore.dms.map(d => dmAsChannel(d, authStore.user?.id)))
 const lookup = computed(() => ({
   members: chatStore.members,
   // Every channel has a chat: text channels and the chat next to a voice channel's Talk.
-  channels: chatStore.allChannels,
+  channels: inDm.value ? conversations.value : chatStore.allChannels,
 }))
 const parsed = computed(() => parseSearchQuery(searchText.value))
-const built = computed(() => buildSearchParams(parsed.value, lookup.value, { limit: String(PAGE) }))
+const built = computed(() => buildSearchParams(parsed.value, lookup.value, inDm.value ? { limit: String(PAGE), dm: 'true' } : { limit: String(PAGE) }))
 const hasCriteria = computed(() => isSearchable(built.value.params))
 const terms = computed(() => parsed.value.text.split(/\s+/).filter(Boolean))
-const channelNames = computed(() => new Map(chatStore.allChannels.map(c => [c.id, c.name])))
-const voiceChannels = computed(() => new Set(chatStore.allChannels.filter(c => c.type === 'voice').map(c => c.id)))
+const channelNames = computed(() => new Map(lookup.value.channels.map(c => [c.id, c.name])))
+const voiceChannels = computed(() => new Set(inDm.value ? [] : chatStore.allChannels.filter(c => c.type === 'voice').map(c => c.id)))
 const activeResultId = computed(() => (results.value.length ? `search-result-${selectedIndex.value}` : undefined))
 
 let searchTimeout: ReturnType<typeof setTimeout> | undefined
@@ -143,6 +151,11 @@ watch(searchText, () => {
   searchTimeout = setTimeout(performSearch, 250)
 })
 
+// Switching between channels and direct messages searches the other set at once.
+watch(inDm, () => {
+  if (props.modelValue) void performSearch()
+})
+
 watch(() => props.modelValue, (open) => {
   if (open) {
     selectedIndex.value = 0
@@ -171,6 +184,17 @@ onUnmounted(() => {
       <template #default="{ titleId }">
         <h2 :id="titleId" class="sr-only">{{ $t('chat.search') }}</h2>
         <div class="flex max-h-[75vh] min-h-0 flex-col" @keydown="handleKeydown">
+          <div v-if="features.dm" role="group" :aria-label="$t('dm.searchScope')" class="flex gap-1 px-3 pt-3" data-testid="search-scope">
+            <button
+              v-for="scope in (['channels', 'dm'] as const)"
+              :key="scope"
+              type="button"
+              :aria-pressed="(scope === 'dm') === inDm ? 'true' : 'false'"
+              :data-scope="scope"
+              :class="['rounded-md border px-2.5 py-1 text-xs font-semibold transition max-md:min-h-11', (scope === 'dm') === inDm ? 'border-mnema-accent/40 bg-mnema-accent/15 text-mnema-accent' : 'border-transparent text-mnema-muted hover:text-mnema-text']"
+              @click="searchScope = scope"
+            >{{ $t(scope === 'dm' ? 'dm.section' : 'sidebar.channels') }}</button>
+          </div>
           <SearchInput
             v-model="searchText"
             :lookup="lookup"
@@ -191,6 +215,7 @@ onUnmounted(() => {
             :terms="terms"
             :channel-names="channelNames"
             :voice-channels="voiceChannels"
+            :conversations="inDm"
             @select="handleSelect"
             @more="loadMore"
           />

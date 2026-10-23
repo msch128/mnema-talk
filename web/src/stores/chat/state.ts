@@ -1,6 +1,7 @@
 import { computed, ref, shallowRef } from 'vue'
 import type { Category, Channel, Member, Message, NotificationSettings, Presence, ReadState, User } from '../../types/domain'
 import type { ServerEventPayloads } from '../../types/events'
+import type { ChatDirectMessage } from '../../types/rest'
 import { platform, type PlatformSocket } from '../../lib/platform'
 import { createKeyedThrottle } from '../../lib/chatLogic'
 import type { useAuthStore } from '../auth'
@@ -88,6 +89,15 @@ function memberState() {
   }
 }
 
+/** The direct message conversations of the caller (they are not channels). */
+function dmState() {
+  return {
+    dms: ref<ChatDirectMessage[]>([]),
+    dmsLoaded: ref(false),
+    dmsFetchSeq: 0
+  }
+}
+
 /** Socket generations, timers and the handlers the voice layer installs. */
 function socketState() {
   return {
@@ -148,6 +158,7 @@ export function createChatState(markRead: (channelId: string) => void) {
   const base = {
     ...channelState(),
     ...memberState(),
+    ...dmState(),
     ...socketState(),
     ...syncState(markRead)
   }
