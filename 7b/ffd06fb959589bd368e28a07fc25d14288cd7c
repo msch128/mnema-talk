@@ -1,0 +1,169 @@
+internal/chat/audit.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 22-24,41-44,94-96,113
+internal/auth/account_export_dm.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 1-37
+internal/push/service.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 186,213,271-272
+internal/server/dm_integration_test.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 1-378
+internal/server/dm_privacy_integration_test.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 1-64
+internal/chat/database_failures_integration_test.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 151
+internal/auth/account_export_data.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 26-33,61
+doc/bots.md
+  s_06fcde5dbef956::t_68adefa8cc1a08 520-528
+internal/perm/fixture.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 129-138,158
+internal/ws/handle.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 199
+internal/chat/notify.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 183
+internal/chat/post.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 42-43,81
+internal/perm/snapshot_load.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 26-27,120-122,141
+internal/server/dm_group_integration_test.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 1-296
+internal/ws/perms.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 66-73,77
+AGENTS.md
+  s_06fcde5dbef956::t_68adefa8cc1a08 37
+internal/chat/channel_layout.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 90,146,208
+internal/chat/dm_handler.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 1-379
+internal/chat/handler_lookup.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 182,195,210-212
+internal/onboarding/settings.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 36-39,54-56,59,63,94,182-184
+internal/ws/hub.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 34-37
+internal/ws/native_lease.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 319-323,350-356
+internal/chat/dm_members.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 1-145
+doc/glossary.md
+  s_06fcde5dbef956::t_68adefa8cc1a08 27
+internal/perm/service.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 217
+internal/roles/handler_permissions.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 52-57,95
+internal/perm/snapshot_dm.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 1-83
+README.md
+  s_06fcde5dbef956::t_68adefa8cc1a08 15
+internal/chat/search.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 97-101
+internal/ws/dm_test.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 1-54
+internal/webhook/handler.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 101
+SECURITY.md
+  s_06fcde5dbef956::t_68adefa8cc1a08 74-101
+internal/chat/dm_failures_integration_test.go
+  s_06fcde5dbef956::t_22840772b88ef0 18,22-54,61
+  s_06fcde5dbef956::t_961f2210e8ea6e 1-17,19-21,55-60,62
+internal/push/payload.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 48,52,75-78,97-99,113-128,133
+internal/push/recipients.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 18-26,38,55,72-75
+  s_06fcde5dbef956::t_e48dd4020e48be 76-77
+internal/db/migrations/0050_direct_messages.sql
+  s_06fcde5dbef956::t_68adefa8cc1a08 1-79
+internal/perm/snapshot_dm_test.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 1-77
+internal/chat/dm.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 1-281
+internal/chat/dm_gate.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 1-128
+internal/chat/search_filters.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 79-88,92-95
+internal/perm/snapshot_channels.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 62-64
+internal/bot/handler_access.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 130
+internal/chat/messages.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 6,372-374,376-379,381-383
+doc/architecture.md
+  s_06fcde5dbef956::t_68adefa8cc1a08 89-161
+internal/chat/moderation_failures_integration_test.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 52,54
+internal/server/ws_integration_test.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 30-36,69-74
+internal/media/admin.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 59
+internal/ws/broadcast.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 32-38
+internal/ws/client.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 23-26
+internal/chat/channels.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 21-25,79,190,297
+internal/perm/snapshot.go
+  s_06fcde5dbef956::t_68adefa8cc1a08 78-81
+api/openapi.json
+  s_06fcde5dbef956::t_a0578c36a11a4d 1498-1509,1946-1961,2014-2036,2047-2112,2830-2845,3788-3791,3818,3832-3838,4434-4436,4451-4454,10896,20390,20392-20393,20399-20402,20406,20452,20454,20456-20465,20468-20470,20474,20476,20478-20484,20486,20490,20512,20520-20530,20540,20566,20568,20572,20574-20575,20578,20591,20593,20597,20656-21214,23745,23825-23833,25432-25580,26095
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_244558db9403e6 133
+doc/upgrade.md
+  s_06fcde5dbef956::t_3be928a62faf0e 144-156
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_6b75e18fb8c499 72-78,81-84,164-165
+internal/auth/account_export_build.go
+  s_06fcde5dbef956::t_4131b9fef1aa1c 67,157
+internal/chat/handler.go
+  s_06fcde5dbef956::t_959291a288c7e7 44-46,90
+internal/chat/inbox.go
+  s_06fcde5dbef956::t_99ecb8643ce263 67
+internal/chat/readstate.go
+  s_06fcde5dbef956::t_6f0c560a64ffd3 56
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_7093a4f7e3f565 41-44
+internal/events/types.go
+  s_06fcde5dbef956::t_0c73b38487ed32 51-53
+internal/perm/perm.go
+  s_06fcde5dbef956::t_fe0a0ec4959381 75-79,116,145,153
+internal/perm/snapshot_test.go
+  s_06fcde5dbef956::t_2461ca302677a6 35,46-48,76
+internal/push/service_integration_test.go
+  s_06fcde5dbef956::t_801d52ba7bb6ff 190-219
+internal/server/health.go
+  s_06fcde5dbef956::t_98dfd3bacec61e 37
+internal/server/router_build.go
+  s_06fcde5dbef956::t_312407a4b21b82 124,242
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_52c0241bd2d7ca 56-58,121
+web/src/components/AdminRolesTab.test.ts
+  s_06fcde5dbef956::t_8d16ac99882734 62
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_27fde0337b37e0 1549-1552
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_c39ed52194e194 1549-1552
+web/src/lib/permissions.ts
+  s_06fcde5dbef956::t_16c069e4fc9684 28-29,47,65
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_03efb645ffa9a4 173-176
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_164c4348c59428 22-27
+web/src/types/events.ts
+  s_06fcde5dbef956::t_b9b6c116d54c8b 30-49,89-94,307-309,354
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_138eca265071c6 929-939,1208-1218,1247-1263,1275-1303,1724-1734,2337,2347,2358,2368,2710,2713,2726,2729
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7bffd06fb959589bd368e28a07fc25d14288cd7c",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
