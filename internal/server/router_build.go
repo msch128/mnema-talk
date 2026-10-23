@@ -118,6 +118,7 @@ func (c *components) newCore() {
 	c.chatH = &chat.Handler{
 		DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog,
 		EditHistoryLimit: httpx.NewRateLimiter(chat.EditHistoryRate, time.Minute).Named("edit_history"),
+		PinLimit:         httpx.NewRateLimiter(chat.PinChangesPerMinute, time.Minute).Named("pin"),
 	}
 	go chat.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour)
 	c.rolesH = &roles.Handler{Perms: c.permSvc, Events: c.pub}
@@ -125,7 +126,8 @@ func (c *components) newCore() {
 	if d.Store != nil {
 		c.chatH.Objects = d.Store
 	}
-	c.emojiH = &emoji.Handler{DB: d.DB, Store: d.Store, Events: c.pub, Perms: c.permSvc, Max: cfg.EmojiMax}
+	c.emojiH = &emoji.Handler{DB: d.DB, Store: d.Store, Events: c.pub, Perms: c.permSvc, Max: cfg.EmojiMax,
+		UploadLimit: httpx.NewRateLimiter(emoji.UploadsPer10Minutes, 10*time.Minute).Named("emoji_upload")}
 	c.mediaH = &media.Handler{
 		DB:             d.DB,
 		Store:          d.Store,

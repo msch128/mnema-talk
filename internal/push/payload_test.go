@@ -126,3 +126,24 @@ func TestTestPushHasNoChannel(t *testing.T) {
 		t.Fatal("German test text")
 	}
 }
+
+func TestPushHidesSpoilersAndStripsMarkdown(t *testing.T) {
+	n := notice()
+	n.Content = "**Look** at ||the secret plan|| <:blob:11111111-2222-4333-8444-555555555555>\n> quoted"
+	for _, locale := range []string{"en", "de"} {
+		p := build(n, locale, true)
+		if p.Body != "Look at Spoiler :blob: quoted" || strings.Contains(p.Body, "secret") {
+			t.Errorf("%s: body %q", locale, p.Body)
+		}
+	}
+}
+
+func TestPushGroupLineHidesSpoilersToo(t *testing.T) {
+	n := notice()
+	n.Count = 3
+	n.Content = "||hidden||"
+	p := build(n, "en", true)
+	if strings.Contains(p.Body, "hidden") || !strings.Contains(p.Body, "Spoiler") {
+		t.Fatalf("body %q", p.Body)
+	}
+}

@@ -28,3 +28,15 @@ func TestMalformedTokensAreNotTokens(t *testing.T) {
 		t.Fatal("name or plain rules")
 	}
 }
+
+func TestIDReadsOnlyAWholeToken(t *testing.T) {
+	id := uuid.New()
+	if got, ok := ID(Token("party", id)); !ok || got != id {
+		t.Errorf("ID(token) = %v, %v", got, ok)
+	}
+	for _, s := range []string{"👍", "", "x" + Token("party", id), Token("party", id) + "x", "<:a:not-a-uuid>"} {
+		if _, ok := ID(s); ok {
+			t.Errorf("ID(%q) accepted", s)
+		}
+	}
+}

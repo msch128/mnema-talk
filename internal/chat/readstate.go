@@ -26,7 +26,10 @@ type ReadState struct {
 // voice channel's chat counts like a text channel).
 // Unread counts top-level messages by others since the last read; mentions
 // count any message (also thread replies) that mentions the user (@username,
-// @all, @here; see message_mentions) or replies to one of their messages. Before the first read, "last read" is the sign-up.
+// @all, @here; see message_mentions) or replies to one of their messages. In a
+// muted channel only messages addressed to the user count (by name, through a
+// role or as a reply; not @all or @here), the same ones that still notify.
+// Before the first read, "last read" is the sign-up.
 // NotifyLevel is the effective level: the channel's own setting, else its
 // category's, else "all"; an expired mute counts as none (see ResolveNotify).
 func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadState, error) {
@@ -35,6 +38,8 @@ func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadStat
 		       count(m.id) FILTER (WHERE m.parent_id IS NULL),
 		       count(m.id) FILTER (WHERE orig.user_id = $1 OR EXISTS (
 		           SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = $1)),
+		       count(m.id) FILTER (WHERE orig.user_id = $1 OR EXISTS (
+		           SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = $1 AND mm.kind <> 1)),
 		       cr.last_read_at,
 		       COALESCE(cr.notify_level, 'inherit'), cr.muted_until,
 		       COALESCE(cn.notify_level, 'inherit'), cn.muted_until,
@@ -55,9 +60,13 @@ func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadStat
 		var s ReadState
 		var ch, cat NotifySetting
 		var now time.Time
-		err := row.Scan(&s.ChannelID, &s.UnreadCount, &s.MentionCount, &s.LastReadAt,
+		var addressed int
+		err := row.Scan(&s.ChannelID, &s.UnreadCount, &s.MentionCount, &addressed, &s.LastReadAt,
 			&ch.Level, &ch.MutedUntil, &cat.Level, &cat.MutedUntil, &now)
 		s.NotifyLevel = ResolveNotify(now, ch, cat)
+		if s.NotifyLevel == NotifyMute {
+			s.MentionCount = addressed
+		}
 		return s, err
 	})
 }
