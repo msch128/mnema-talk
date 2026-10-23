@@ -14,3 +14,14 @@ export function shownName(user: { display_name?: string | undefined; username?: 
   if (isDeletedUsername(user.username)) return t('user.deleted')
   return user.display_name || user.username || ''
 }
+
+/**
+ * A message whose author's account was deleted loses its text (the server keeps
+ * the bubble so threads stay readable): nothing left to show but a note.
+ */
+export function isRemovedMessage(msg: {
+  username?: string | undefined; content?: string | null | undefined
+  attachments?: readonly unknown[] | undefined; embeds?: readonly unknown[] | undefined; poll?: unknown
+}): boolean {
+  return isDeletedUsername(msg.username) && !msg.content && !msg.attachments?.length && !msg.embeds?.length && !msg.poll
+}

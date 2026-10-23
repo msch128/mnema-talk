@@ -10,7 +10,7 @@ import { decodeRole } from '../types/domain'
 import type { Role } from '../types/domain'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
-import { PERMISSION_BITS, PERMISSION_KEYS, ROLE_COLOR_PRESETS, parseRoleColor, roleColorCss } from '../lib/permissions'
+import { PERMISSION_BITS, PERMISSION_GROUPS, ROLE_COLOR_PRESETS, parseRoleColor, roleColorCss } from '../lib/permissions'
 import { t } from '../i18n'
 import PermissionToggles from './PermissionToggles.vue'
 
@@ -357,7 +357,10 @@ onMounted(async () => {
 
         <div class="space-y-2">
           <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('roles.permissions') }}</span>
-          <PermissionToggles v-model:allow="allow" :keys="PERMISSION_KEYS" :locked="lockedBits" :readonly="readonly" />
+          <section v-for="group in PERMISSION_GROUPS" :key="group.id" class="space-y-1.5" :data-permission-group="group.id">
+            <h4 class="pt-1 text-xs font-medium text-mnema-muted">{{ $t(`perm.groups.${group.id}`) }}</h4>
+            <PermissionToggles v-model:allow="allow" :keys="group.keys" :locked="lockedBits" :readonly="readonly" />
+          </section>
           <p v-if="lockedBits && !readonly" class="text-xs text-mnema-tertiary">{{ $t('roles.cannotGrant') }}</p>
         </div>
 

@@ -32,7 +32,7 @@ const emit = defineEmits<{ pick: [item: BotChannelCommand]; hover: [index: numbe
       :aria-selected="i === active ? 'true' : 'false'"
       :data-slash-option="item.name"
       :class="[
-        'flex h-10 cursor-pointer items-center gap-2.5 rounded-md px-2 text-sm',
+        'flex h-10 max-md:h-11 cursor-pointer items-center gap-2.5 rounded-md px-2 text-sm',
         i === active ? 'bg-mnema-hover text-mnema-text' : 'text-mnema-body-ink'
       ]"
       @mousedown.prevent="emit('pick', item)"
@@ -42,7 +42,7 @@ const emit = defineEmits<{ pick: [item: BotChannelCommand]; hover: [index: numbe
       <UserAvatar v-else :user="{ display_name: item.bot_name, username: item.bot_name, avatar_url: item.bot_avatar_url }" size="xs" ring-class="bg-mnema-elevated" />
       <span class="flex-shrink-0 font-mono font-semibold text-mnema-text">/{{ item.name }}</span>
       <span class="min-w-0 flex-1 truncate text-xs text-mnema-tertiary">{{ commandDescription(item) }}</span>
-      <span class="flex-shrink-0 truncate text-xs text-mnema-muted">{{ item.builtin ? $t('slash.builtinLabel') : item.bot_name }}</span>
+      <span class="min-w-0 max-w-[35%] truncate text-xs text-mnema-muted">{{ item.builtin ? $t('slash.builtinLabel') : item.bot_name }}</span>
     </div>
   </div>
 </template>

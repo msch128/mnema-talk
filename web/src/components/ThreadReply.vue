@@ -5,7 +5,7 @@ import { Pencil, Trash2, Smile, Reply } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import UserAvatar from './UserAvatar.vue'
-import { shownName } from '../lib/deletedUser'
+import { isRemovedMessage, shownName } from '../lib/deletedUser'
 import MarkdownContent from './MarkdownContent.vue'
 import ReplyPreview from './ReplyPreview.vue'
 import ReactionPalette from './ReactionPalette.vue'
@@ -142,6 +142,7 @@ const { pickerId, editingId, editText } = props.actions
         />
 
         <MarkdownContent v-else-if="reply.content" :content="reply.content" :mention-roles="reply.mention_roles ?? []" class="mt-0.5" />
+        <p v-else-if="isRemovedMessage(reply)" data-testid="message-removed" class="mt-0.5 text-sm italic text-mnema-tertiary">{{ $t('chat.messageRemoved') }}</p>
         <MessageEmbeds v-if="editingId !== reply.id" :embeds="reply.embeds ?? []" />
 
         <!-- Reply Attachments -->
