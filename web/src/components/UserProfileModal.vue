@@ -207,7 +207,7 @@ function handleMention() {
               v-if="canGiveRoles"
               type="button"
               data-testid="profile-edit-roles"
-              class="rounded-md border border-dashed border-mnema-border px-1.5 py-0.5 text-xs text-mnema-tertiary transition hover:border-mnema-accent hover:text-mnema-accent"
+              class="btn btn-secondary btn-sm border-dashed"
               @click="showRolesDialog = true"
             >{{ $t('memberRoles.edit') }}</button>
           </div>
@@ -220,21 +220,21 @@ function handleMention() {
               v-if="offer.timeout"
               type="button"
               data-testid="profile-timeout"
-              class="rounded-md border border-mnema-border px-2 py-1 text-xs text-mnema-text transition hover:border-mnema-danger hover:text-mnema-danger"
+              class="btn btn-secondary btn-sm hover:border-mnema-danger hover:text-mnema-danger"
               @click="openTimeout(moderationSubject)"
             >{{ $t('moderation.timeoutAction') }}</button>
             <button
               v-if="offer.removeTimeout"
               type="button"
               data-testid="profile-untimeout"
-              class="rounded-md border border-mnema-border px-2 py-1 text-xs text-mnema-text transition hover:border-mnema-accent hover:text-mnema-accent"
+              class="btn btn-secondary btn-sm"
               @click="liftTimeout(moderationSubject)"
             >{{ $t('moderation.removeTimeout') }}</button>
             <button
               v-if="offer.ban"
               type="button"
               data-testid="profile-ban"
-              class="rounded-md border border-mnema-border px-2 py-1 text-xs text-mnema-text transition hover:border-mnema-danger hover:text-mnema-danger"
+              class="btn btn-secondary btn-sm hover:border-mnema-danger hover:text-mnema-danger"
               @click="openBan(moderationSubject)"
             >{{ $t('moderation.banAction') }}</button>
           </div>
@@ -244,7 +244,7 @@ function handleMention() {
             <button
               type="button"
               data-testid="profile-block"
-              class="rounded-md border border-mnema-border px-2 py-1 text-xs text-mnema-text transition hover:border-mnema-danger hover:text-mnema-danger max-md:min-h-11"
+              class="btn btn-secondary btn-sm hover:border-mnema-danger hover:text-mnema-danger max-md:min-h-11"
               @click="dmActions.toggleBlock(moderationSubject)"
             >{{ $t(blocks.isBlocked(profileId) ? 'blocks.unblock' : 'blocks.block') }}</button>
             <p class="mt-1 text-xs text-mnema-tertiary">{{ $t(blocks.isBlocked(profileId) ? 'blocks.blockedHint' : 'blocks.hint') }}</p>

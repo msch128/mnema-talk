@@ -123,7 +123,7 @@ async function submit() {
       <div class="pt-3 flex items-center justify-end gap-2 border-t border-mnema-hairline">
         <button
           type="button"
-          class="h-8 px-3 rounded-md border border-mnema-border hover:bg-mnema-hover text-mnema-text text-sm font-semibold transition"
+          class="btn btn-secondary h-8"
           @click="emit('close')"
         >
           {{ $t('common.cancel') }}
@@ -131,7 +131,7 @@ async function submit() {
         <button
           type="submit"
           :disabled="saving || !name.trim()"
-          class="h-8 px-3 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold text-sm transition disabled:opacity-30 disabled:cursor-not-allowed"
+          class="btn btn-primary h-8 disabled:cursor-not-allowed"
         >
           {{ isCreate ? $t('common.create') : $t('common.save') }}
         </button>

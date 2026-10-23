@@ -159,7 +159,7 @@ onMounted(async () => {
         </div>
         <button
           type="button"
-          class="p-2 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-elevated transition shrink-0"
+          class="btn btn-icon btn-sm hover:text-mnema-text shrink-0"
           :title="$t('admin.refresh')"
           :aria-label="$t('admin.refresh')"
           @click="refreshUsers"

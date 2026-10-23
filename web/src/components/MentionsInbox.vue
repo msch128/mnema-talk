@@ -46,7 +46,7 @@ function when(iso: string) {
     <button
       type="button"
       data-testid="mentions-inbox-button"
-      class="relative flex h-8 w-8 max-md:h-11 max-md:w-11 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text"
+      class="btn btn-icon max-md:h-11 max-md:w-11"
       :class="open ? 'bg-mnema-surface text-mnema-accent' : ''"
       :aria-label="$t('mentions.inbox')"
       :aria-expanded="open ? 'true' : 'false'"
@@ -67,7 +67,7 @@ function when(iso: string) {
       data-testid="mentions-inbox"
       role="dialog"
       :aria-label="$t('mentions.inbox')"
-      class="absolute right-0 top-full z-30 mt-2 flex max-h-[70vh] w-[min(24rem,calc(100vw-1.5rem))] flex-col max-md:fixed max-md:inset-x-3 max-md:top-[calc(3rem+env(safe-area-inset-top))] max-md:mt-0 max-md:max-h-[calc(100dvh-4.5rem-env(safe-area-inset-top))] max-md:w-auto overflow-hidden rounded-[10px] bg-mnema-elevated shadow-[inset_0_0_0_1px_#2B2F2D,0_12px_32px_rgba(0,0,0,0.5)]"
+      class="absolute right-0 top-full z-30 mt-2 flex max-h-[70vh] w-[min(24rem,calc(100vw-1.5rem))] flex-col max-md:fixed max-md:inset-x-3 max-md:top-[calc(3rem+env(safe-area-inset-top))] max-md:mt-0 max-md:max-h-[calc(100dvh-4.5rem-env(safe-area-inset-top))] max-md:w-auto overflow-hidden rounded-lg bg-mnema-elevated shadow-popover pop-in"
     >
       <div class="border-b border-mnema-hairline px-3 py-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">
         {{ $t('mentions.inbox') }}
@@ -111,7 +111,7 @@ function when(iso: string) {
           type="button"
           data-testid="mentions-inbox-more"
           :disabled="inbox.loadingMore.value"
-          class="flex w-full items-center justify-center gap-2 rounded-lg py-2 text-sm text-mnema-muted transition hover:bg-mnema-hover hover:text-mnema-text disabled:opacity-50"
+          class="btn btn-ghost flex w-full items-center justify-center gap-2"
           @click="inbox.loadMore()"
         >
           <Loader2 v-if="inbox.loadingMore.value" class="h-3.5 w-3.5 animate-spin" />

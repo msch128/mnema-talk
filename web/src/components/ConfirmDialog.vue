@@ -38,17 +38,12 @@ onBeforeUnmount(() => request.value?.resolve(false))
         <button
           type="button"
           data-autofocus
-          class="h-8 rounded-md bg-mnema-elevated px-3 text-sm font-semibold text-mnema-text shadow-[inset_0_0_0_1px_#2B2F2D] transition hover:bg-mnema-hover focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mnema-accent"
+          class="btn btn-secondary"
           @click="answer(false)"
         >{{ request.cancelLabel || t('common.cancel') }}</button>
         <button
           type="button"
-          :class="[
-            'h-8 rounded-md px-3 text-sm font-semibold transition focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mnema-accent',
-            request.danger
-              ? 'bg-mnema-danger text-mnema-accent-ink hover:brightness-110'
-              : 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover'
-          ]"
+          :class="['btn', request.danger ? 'btn-danger-solid' : 'btn-primary']"
           @click="answer(true)"
         >{{ request.confirmLabel || t('common.confirm') }}</button>
       </div>

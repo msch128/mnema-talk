@@ -95,12 +95,7 @@ async function handleSubmit() {
             type="button"
             @click="channelType = 'text'"
             :aria-pressed="channelType === 'text' ? 'true' : 'false'"
-            :class="[
-              'flex items-center gap-2.5 p-3 rounded-lg border text-left transition min-w-0',
-              channelType === 'text'
-                ? 'bg-mnema-surface border-mnema-accent text-mnema-text ring-1 ring-mnema-accent/40'
-                : 'bg-mnema-canvas border-mnema-hairline text-mnema-muted hover:border-mnema-border'
-            ]"
+            class="choice-card flex items-center gap-2.5 min-w-0"
           >
             <div :class="['w-7 h-7 rounded-md flex items-center justify-center shrink-0', channelType === 'text' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
               <Hash class="w-4 h-4" />
@@ -115,12 +110,7 @@ async function handleSubmit() {
             type="button"
             @click="channelType = 'voice'"
             :aria-pressed="channelType === 'voice' ? 'true' : 'false'"
-            :class="[
-              'flex items-center gap-2.5 p-3 rounded-lg border text-left transition min-w-0',
-              channelType === 'voice'
-                ? 'bg-mnema-surface border-mnema-accent text-mnema-text ring-1 ring-mnema-accent/40'
-                : 'bg-mnema-canvas border-mnema-hairline text-mnema-muted hover:border-mnema-border'
-            ]"
+            class="choice-card flex items-center gap-2.5 min-w-0"
           >
             <div :class="['w-7 h-7 rounded-md flex items-center justify-center shrink-0', channelType === 'voice' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
               <Volume2 class="w-4 h-4" />
@@ -214,14 +204,14 @@ async function handleSubmit() {
         <button
           type="button"
           @click="emit('close')"
-          class="h-8 px-3 rounded-md border border-mnema-border hover:bg-mnema-hover text-mnema-text text-sm font-semibold transition"
+          class="btn btn-secondary h-8"
         >
           {{ $t('common.cancel') }}
         </button>
         <button
           type="submit"
           :disabled="isSubmitting || !channelName.trim()"
-          class="h-8 px-3 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold text-sm transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
+          class="btn btn-primary h-8 disabled:cursor-not-allowed flex items-center gap-1.5"
         >
           <Plus class="w-4 h-4" />
           <span>{{ isSubmitting ? $t('channel.creating') : $t('channel.create') }}</span>

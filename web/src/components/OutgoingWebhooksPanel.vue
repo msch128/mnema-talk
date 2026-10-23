@@ -174,7 +174,7 @@ onMounted(load)
       <p class="text-sm font-medium text-mnema-text">{{ $t('webhooks.secretOnce') }}</p>
       <div class="mt-2 flex items-center gap-2">
         <code class="min-w-0 flex-1 select-all break-all rounded-sm bg-mnema-surface px-2 py-1 font-mono text-xs text-mnema-text">{{ secret.value }}</code>
-        <button type="button" class="rounded-md border border-mnema-border-strong p-2 text-mnema-text transition hover:bg-mnema-hover" :aria-label="$t('webhooks.copySecret')" @click="copy(secret.value)">
+        <button type="button" class="btn btn-secondary p-2" :aria-label="$t('webhooks.copySecret')" @click="copy(secret.value)">
           <Copy class="h-4 w-4" />
         </button>
       </div>
@@ -199,11 +199,11 @@ onMounted(load)
         </div>
       </fieldset>
       <div class="flex justify-end gap-2">
-        <button type="button" class="rounded-md px-3.5 py-1.5 text-sm text-mnema-muted transition hover:text-mnema-text" @click="form = null">{{ $t('common.cancel') }}</button>
-        <button type="submit" :disabled="busy || !form.name.trim() || !form.url.trim() || !form.events.length" class="rounded-md bg-mnema-accent px-3.5 py-1.5 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40">{{ form.id ? $t('common.save') : $t('webhooks.create') }}</button>
+        <button type="button" class="btn btn-ghost" @click="form = null">{{ $t('common.cancel') }}</button>
+        <button type="submit" :disabled="busy || !form.name.trim() || !form.url.trim() || !form.events.length" class="btn btn-primary">{{ form.id ? $t('common.save') : $t('webhooks.create') }}</button>
       </div>
     </form>
-    <button v-else type="button" class="rounded-md border border-mnema-border-strong px-3 py-1.5 text-sm text-mnema-text transition hover:bg-mnema-hover" data-testid="outgoing-new" @click="openForm()">{{ $t('webhooks.newOutgoing') }}</button>
+    <button v-else type="button" class="btn btn-secondary" data-testid="outgoing-new" @click="openForm()">{{ $t('webhooks.newOutgoing') }}</button>
 
     <p v-if="loaded && !hooks.length" class="text-sm text-mnema-tertiary">{{ $t('webhooks.emptyOutgoing') }}</p>
     <ul v-if="hooks.length" class="divide-y divide-mnema-hairline overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
@@ -221,12 +221,12 @@ onMounted(load)
         </p>
 
         <div class="flex flex-wrap items-center gap-1 text-mnema-tertiary">
-          <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.edit', { name: hook.name })" @click="openForm(hook)"><Pencil class="h-4 w-4" /></button>
-          <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-text" v-tooltip="hook.status === 'active' ? $t('webhooks.switchOff', { name: hook.name }) : $t('webhooks.switchOn', { name: hook.name })" @click="setEnabled(hook, hook.status !== 'active')"><Power class="h-4 w-4" /></button>
-          <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.test', { name: hook.name })" @click="test(hook)"><Send class="h-4 w-4" /></button>
-          <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.deliveries', { name: hook.name })" :aria-expanded="deliveries?.id === hook.id" @click="toggleDeliveries(hook)"><ListChecks class="h-4 w-4" /></button>
-          <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-text" v-tooltip="$t('webhooks.rotateFor', { name: hook.name })" @click="rotate(hook)"><KeyRound class="h-4 w-4" /></button>
-          <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-danger" v-tooltip="$t('webhooks.deleteFor', { name: hook.name })" @click="remove(hook)"><Trash2 class="h-4 w-4" /></button>
+          <button type="button" class="btn btn-icon btn-sm hover:text-mnema-text" v-tooltip="$t('webhooks.edit', { name: hook.name })" @click="openForm(hook)"><Pencil class="h-4 w-4" /></button>
+          <button type="button" class="btn btn-icon btn-sm hover:text-mnema-text" v-tooltip="hook.status === 'active' ? $t('webhooks.switchOff', { name: hook.name }) : $t('webhooks.switchOn', { name: hook.name })" @click="setEnabled(hook, hook.status !== 'active')"><Power class="h-4 w-4" /></button>
+          <button type="button" class="btn btn-icon btn-sm hover:text-mnema-text" v-tooltip="$t('webhooks.test', { name: hook.name })" @click="test(hook)"><Send class="h-4 w-4" /></button>
+          <button type="button" class="btn btn-icon btn-sm hover:text-mnema-text" v-tooltip="$t('webhooks.deliveries', { name: hook.name })" :aria-expanded="deliveries?.id === hook.id" @click="toggleDeliveries(hook)"><ListChecks class="h-4 w-4" /></button>
+          <button type="button" class="btn btn-icon btn-sm hover:text-mnema-text" v-tooltip="$t('webhooks.rotateFor', { name: hook.name })" @click="rotate(hook)"><KeyRound class="h-4 w-4" /></button>
+          <button type="button" class="btn btn-icon btn-sm hover:text-mnema-danger" v-tooltip="$t('webhooks.deleteFor', { name: hook.name })" @click="remove(hook)"><Trash2 class="h-4 w-4" /></button>
         </div>
 
         <p v-if="testResult?.id === hook.id" :class="['text-xs', testResult.delivery.success ? 'text-mnema-accent' : 'text-mnema-danger']" role="status" data-testid="outgoing-test">

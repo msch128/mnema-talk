@@ -219,7 +219,7 @@ function onOverlayPointer(e: PointerEvent, on: boolean) {
             <button
               type="button"
               data-testid="viewer-stream-audio-mute"
-              class="p-0.5 rounded-sm text-white hover:text-mnema-accent transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/80"
+              class="btn btn-icon btn-sm text-white hover:text-mnema-accent"
               :aria-label="isCurrentStreamMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
               :aria-pressed="isCurrentStreamMuted ? 'true' : 'false'"
               v-tooltip="isCurrentStreamMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
@@ -237,7 +237,7 @@ function onOverlayPointer(e: PointerEvent, on: boolean) {
               :aria-valuetext="`${currentStreamVolume}%`"
               :value="currentStreamVolume"
               v-if="!tiny"
-              :class="['h-1 accent-mnema-accent cursor-pointer opacity-80 group-hover/vol:opacity-100 transition-opacity', narrow ? 'w-12' : 'w-16']"
+              :class="['cursor-pointer opacity-80 group-hover/vol:opacity-100 transition-opacity', narrow ? 'w-12' : 'w-16']"
               v-tooltip="`${currentStreamVolume}%`"
               @input="onStreamVolumeChange"
             />

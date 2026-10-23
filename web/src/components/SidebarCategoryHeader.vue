@@ -91,7 +91,7 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
         @click.stop="emit('create-channel')"
         v-tooltip="$t('channel.create')"
         :aria-label="$t('channel.create')"
-        class="w-5 h-5 flex items-center justify-center rounded-sm text-mnema-tertiary hover:text-mnema-text transition"
+        class="btn btn-icon w-5 h-5"
       >
         <Plus class="w-4 h-4" />
       </button>
@@ -101,7 +101,7 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
         @click.stop="emit('delete')"
         v-tooltip="$t('sidebar.deleteCategory')"
         :aria-label="$t('sidebar.deleteCategory')"
-        class="w-5 h-5 flex items-center justify-center rounded-sm text-mnema-tertiary hover:text-mnema-danger transition"
+        class="btn btn-icon w-5 h-5 hover:text-mnema-danger"
       >
         <Trash2 class="w-3.5 h-3.5" />
       </button>

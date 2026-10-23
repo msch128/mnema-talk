@@ -116,7 +116,7 @@ onMounted(load)
       <textarea v-else id="onb-rules" v-model="rules" rows="8" :maxlength="MAX_RULES" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" />
       <p class="text-xs text-mnema-tertiary">{{ $t(hasRules ? 'admin.onboarding.rulesOn' : 'admin.onboarding.rulesOff', { version: loaded.rules_version }) }}</p>
       <label v-if="hasRules && loaded.rules_version > 0" class="flex items-center gap-2 text-sm text-mnema-text">
-        <input v-model="reaccept" type="checkbox" class="accent-mnema-accent" data-testid="reaccept" />
+        <input v-model="reaccept" type="checkbox" data-testid="reaccept" />
         <span>{{ $t('admin.onboarding.reaccept') }}</span>
       </label>
     </div>
@@ -131,13 +131,13 @@ onMounted(load)
 
     <div v-if="features.dm" class="space-y-1" data-testid="dm-switch">
       <label class="flex items-center gap-2 text-sm text-mnema-text">
-        <input v-model="dmEnabled" type="checkbox" class="accent-mnema-accent" data-testid="dm-enabled" />
+        <input v-model="dmEnabled" type="checkbox" data-testid="dm-enabled" />
         <span>{{ $t('admin.onboarding.dmEnabled') }}</span>
       </label>
       <p class="text-xs text-mnema-tertiary">{{ $t('admin.onboarding.dmEnabledHint') }}</p>
     </div>
 
     <p v-if="tooLong" class="text-xs text-mnema-danger" role="alert">{{ $t('admin.onboarding.tooLong') }}</p>
-    <button type="submit" :disabled="!dirty || busy || tooLong" class="rounded-md bg-mnema-accent px-4 py-1.5 text-sm font-semibold text-mnema-accent-ink shadow-xs transition hover:bg-mnema-accent-hover disabled:opacity-40" data-testid="onboarding-save">{{ $t('common.save') }}</button>
+    <button type="submit" :disabled="!dirty || busy || tooLong" class="btn btn-primary" data-testid="onboarding-save">{{ $t('common.save') }}</button>
   </form>
 </template>

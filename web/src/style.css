@@ -1,5 +1,10 @@
 @import 'tailwindcss';
 
+/* Controls, buttons and surfaces live in their own files; they only use the tokens in @theme. */
+@import './styles/controls.css';
+@import './styles/buttons.css';
+@import './styles/surfaces.css';
+
 /* Dark is a class on an ancestor (the emoji picker element carries it), as in Tailwind 3. */
 @custom-variant dark (&:is(.dark *));
 
@@ -57,7 +62,42 @@
 
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* Radius scale: one soft step up from Tailwind's, so every rounded-* in the
+     UI follows (controls md, cards lg, panels xl, dialogs 2xl). */
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+
+  /* Elevation: two stacked, low-contrast shadows per step; a dark surface needs
+     depth more than darkness. xs/sm sit on the page, md/lg float (menus,
+     popovers), xl/2xl are modal (dialogs, sheets). */
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.24);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.26), 0 1px 3px rgb(0 0 0 / 0.16);
+  --shadow-md: 0 2px 4px rgb(0 0 0 / 0.2), 0 6px 14px rgb(0 0 0 / 0.22);
+  --shadow-lg: 0 4px 8px rgb(0 0 0 / 0.2), 0 12px 28px rgb(0 0 0 / 0.3);
+  --shadow-xl: 0 8px 16px rgb(0 0 0 / 0.22), 0 20px 44px rgb(0 0 0 / 0.34);
+  --shadow-2xl: 0 12px 24px rgb(0 0 0 / 0.24), 0 28px 64px rgb(0 0 0 / 0.4);
+
+  /* Motion: 120-200 ms, one easing. Out-curve: quick start, soft landing. */
+  --ease-mnema: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --default-transition-duration: 150ms;
+  --default-transition-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  --animate-fade-in: mnema-fade-in 160ms var(--ease-mnema) both;
+  --animate-pop-in: mnema-pop-in 140ms var(--ease-mnema) both;
+  --animate-dialog-in: mnema-dialog-in 200ms var(--ease-mnema) both;
+  --animate-toast-in: mnema-toast-in 200ms var(--ease-mnema) both;
+  @keyframes mnema-fade-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes mnema-pop-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: none; } }
+  /* Dialogs only fade: their box is measured (and clicked) the moment they open, so it must not move. */
+  @keyframes mnema-dialog-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes mnema-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 }
+
 
 /* space-y as Tailwind 3 applied it: a top margin on every visible child after the
    first, with enough weight to win against a child's own margin. Tailwind 4
@@ -79,11 +119,6 @@
   ::backdrop,
   ::file-selector-button {
     border-color: #E5E7EB;
-  }
-
-  input::placeholder,
-  textarea::placeholder {
-    color: #9CA3AF;
   }
 
   button:not(:disabled),
@@ -121,11 +156,6 @@
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-  }
-
-  ::selection {
-    background-color: #1F3A2E;
-    color: #2DA771;
   }
 }
 
@@ -217,15 +247,17 @@
   gap: 8px;
   max-width: 280px;
   padding: 6px 8px;
-  border-radius: 6px;
-  background: #1C1E1D;
-  color: #E6EAE8;
-  box-shadow: inset 0 0 0 1px #2B2F2D, 0 4px 12px rgba(0, 0, 0, 0.4);
+  border-radius: var(--radius-md);
+  background: var(--color-mnema-elevated);
+  color: var(--color-mnema-text);
+  box-shadow: inset 0 0 0 1px var(--color-mnema-border), var(--shadow-md);
   font: 500 12px/16px Inter, system-ui, sans-serif;
   pointer-events: none;
   white-space: normal;
 }
 .mnema-tooltip[hidden] { display: none; }
+.mnema-tooltip:not([hidden]) { animation: var(--animate-fade-in); }
+@media (prefers-reduced-motion: reduce) { .mnema-tooltip:not([hidden]) { animation: none; } }
 .mnema-tooltip-kbd {
   font: 500 12px/16px 'JetBrains Mono', ui-monospace, monospace;
   color: #8E9C94;

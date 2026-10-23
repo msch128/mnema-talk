@@ -41,13 +41,13 @@ function download() {
       <li v-for="c in codes" :key="c">{{ c }}</li>
     </ul>
     <div class="flex flex-wrap gap-2 text-xs">
-      <button type="button" class="flex items-center gap-1 rounded-md border border-mnema-border px-2 py-1 text-mnema-text transition hover:border-mnema-accent hover:text-mnema-accent" data-testid="recovery-copy" @click="copy"><Copy class="h-3.5 w-3.5" />{{ $t('admin.system.copy') }}</button>
-      <button type="button" class="flex items-center gap-1 rounded-md border border-mnema-border px-2 py-1 text-mnema-text transition hover:border-mnema-accent hover:text-mnema-accent" data-testid="recovery-download" @click="download"><Download class="h-3.5 w-3.5" />{{ $t('security.twoFactor.download') }}</button>
+      <button type="button" class="btn btn-secondary btn-sm flex items-center gap-1" data-testid="recovery-copy" @click="copy"><Copy class="h-3.5 w-3.5" />{{ $t('admin.system.copy') }}</button>
+      <button type="button" class="btn btn-secondary btn-sm flex items-center gap-1" data-testid="recovery-download" @click="download"><Download class="h-3.5 w-3.5" />{{ $t('security.twoFactor.download') }}</button>
     </div>
     <label class="flex items-start gap-2 text-sm text-mnema-text">
       <input v-model="saved" type="checkbox" class="mt-0.5" data-testid="recovery-saved" />
       <span>{{ $t('security.twoFactor.saved') }}</span>
     </label>
-    <button type="button" :disabled="!saved" class="rounded-md bg-mnema-accent px-3 py-1 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40" data-testid="recovery-done" @click="emit('done')">{{ $t('security.twoFactor.done') }}</button>
+    <button type="button" :disabled="!saved" class="btn btn-primary btn-sm" data-testid="recovery-done" @click="emit('done')">{{ $t('security.twoFactor.done') }}</button>
   </div>
 </template>

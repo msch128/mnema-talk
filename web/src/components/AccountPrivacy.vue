@@ -114,12 +114,12 @@ onBeforeUnmount(() => clearTimeout(timer))
         <input v-if="needsCode" v-model="code" type="text" required autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="32" :aria-label="$t('security.twoFactor.code')" :placeholder="$t('security.twoFactor.code')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 font-mono text-sm tracking-widest text-mnema-text focus:border-mnema-accent focus:outline-hidden" data-testid="privacy-code" />
         <div v-if="error" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
         <div class="flex justify-end gap-1.5 text-xs">
-          <button type="button" class="rounded-sm px-2 py-0.5 text-mnema-muted hover:text-mnema-text" @click="asking = null">{{ $t('common.cancel') }}</button>
-          <button type="submit" :disabled="busy" class="rounded-sm bg-mnema-accent px-2.5 py-1 font-bold text-mnema-canvas hover:brightness-110 disabled:opacity-50" data-testid="export-submit">{{ $t('security.privacy.exportRequest') }}</button>
+          <button type="button" class="btn btn-ghost btn-sm" @click="asking = null">{{ $t('common.cancel') }}</button>
+          <button type="submit" :disabled="busy" class="btn btn-primary btn-sm" data-testid="export-submit">{{ $t('security.privacy.exportRequest') }}</button>
         </div>
       </form>
       <template v-else-if="status?.state !== 'pending' && status?.state !== 'ready'">
-        <button v-if="canRequest" type="button" class="rounded-md border border-mnema-border px-2 py-1 text-xs text-mnema-text transition hover:border-mnema-accent hover:text-mnema-accent" data-testid="export-start" @click="ask('export')">{{ $t('security.privacy.exportRequest') }}</button>
+        <button v-if="canRequest" type="button" class="btn btn-secondary btn-sm" data-testid="export-start" @click="ask('export')">{{ $t('security.privacy.exportRequest') }}</button>
         <p v-else class="text-xs text-mnema-tertiary" data-testid="export-wait">{{ $t('security.privacy.exportNext', { when: when(status?.next_request_at) }) }}</p>
       </template>
     </div>
@@ -136,11 +136,11 @@ onBeforeUnmount(() => clearTimeout(timer))
           <input v-if="needsCode" v-model="code" type="text" required autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="32" :aria-label="$t('security.twoFactor.code')" :placeholder="$t('security.twoFactor.code')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 font-mono text-sm tracking-widest text-mnema-text focus:border-mnema-danger focus:outline-hidden" data-testid="privacy-code" />
           <div v-if="error" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
           <div class="flex justify-end gap-1.5 text-xs">
-            <button type="button" class="rounded-sm px-2 py-0.5 text-mnema-muted hover:text-mnema-text" @click="asking = null">{{ $t('common.cancel') }}</button>
+            <button type="button" class="btn btn-ghost btn-sm" @click="asking = null">{{ $t('common.cancel') }}</button>
             <button type="submit" :disabled="busy || !deleteReady" class="flex items-center gap-1 rounded-sm bg-mnema-danger px-2.5 py-1 font-bold text-white hover:brightness-110 disabled:opacity-40" data-testid="delete-submit"><Loader2 v-if="busy" class="h-3.5 w-3.5 animate-spin" /><Trash2 v-else class="h-3.5 w-3.5" />{{ $t('security.privacy.deleteConfirm') }}</button>
           </div>
         </form>
-        <button v-else type="button" class="rounded-md border border-mnema-danger/50 px-2 py-1 text-xs text-mnema-danger transition hover:bg-mnema-danger/10" data-testid="delete-start" @click="ask('delete')">{{ $t('security.privacy.deleteButton') }}</button>
+        <button v-else type="button" class="btn btn-danger btn-sm" data-testid="delete-start" @click="ask('delete')">{{ $t('security.privacy.deleteButton') }}</button>
       </template>
     </div>
   </section>

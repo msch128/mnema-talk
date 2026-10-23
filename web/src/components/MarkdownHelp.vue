@@ -74,7 +74,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
         <p class="text-xs text-mnema-muted">{{ $t('format.intro') }}</p>
         <button
           type="button"
-          class="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-mnema-tertiary hover:bg-mnema-surface hover:text-mnema-text"
+          class="btn btn-icon h-6 w-6 shrink-0"
           :aria-label="$t('format.close')"
           @click="close(true)"
         >

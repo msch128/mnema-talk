@@ -127,7 +127,7 @@ const inputClass = 'w-full bg-mnema-canvas border border-mnema-border-field roun
         <div class="flex items-center justify-end gap-2 border-t border-mnema-hairline pt-3">
           <button
             type="button"
-            class="h-8 rounded-md border border-mnema-border px-3 text-sm font-semibold text-mnema-text transition hover:bg-mnema-hover"
+            class="btn btn-secondary h-8"
             @click="close(false)"
           >{{ $t('common.cancel') }}</button>
           <button

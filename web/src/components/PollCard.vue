@@ -88,7 +88,7 @@ async function confirmEnd() {
         v-if="canEnd"
         type="button"
         data-testid="poll-end"
-        class="ml-auto rounded-sm px-1.5 py-0.5 font-medium text-mnema-muted transition hover:bg-mnema-surface hover:text-mnema-text"
+        class="btn btn-ghost btn-sm ml-auto"
         :disabled="busy"
         @click="confirmEnd"
       >{{ $t('poll.end') }}</button>

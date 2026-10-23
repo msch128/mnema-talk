@@ -127,12 +127,12 @@ async function submit() {
       <div v-if="error" role="alert" data-testid="dm-error" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-2 text-sm text-mnema-danger">{{ error }}</div>
 
       <div class="flex justify-end gap-2 border-t border-mnema-hairline pt-3">
-        <button type="button" class="h-8 rounded-md border border-mnema-border px-3 text-sm font-semibold text-mnema-text transition hover:bg-mnema-hover max-md:h-11" @click="emit('close')">{{ $t('common.cancel') }}</button>
+        <button type="button" class="btn btn-secondary h-8 max-md:h-11" @click="emit('close')">{{ $t('common.cancel') }}</button>
         <button
           type="submit"
           :disabled="!picked.length || busy || seats <= 0"
           data-testid="dm-submit"
-          class="flex h-8 items-center gap-1.5 rounded-md bg-mnema-accent px-3 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40 max-md:h-11"
+          class="btn btn-primary flex h-8 items-center gap-1.5 max-md:h-11"
         >
           <Loader2 v-if="busy" class="h-4 w-4 animate-spin" />
           {{ submitLabel }}

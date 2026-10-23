@@ -129,7 +129,7 @@ const item = 'flex min-h-8 w-full items-center gap-2.5 rounded-md px-2 py-1.5 te
     ref="root"
     role="menu"
     :aria-label="$t('account.menu')"
-    class="absolute bottom-full left-2 z-40 mb-1 flex w-[260px] max-w-[calc(100vw-16px)] flex-col rounded-[10px] bg-mnema-elevated p-1.5 shadow-[inset_0_0_0_1px_#2B2F2D,0_12px_32px_rgba(0,0,0,0.5)]"
+    class="absolute bottom-full left-2 z-40 mb-1 flex w-[260px] max-w-[calc(100vw-16px)] flex-col rounded-lg bg-mnema-elevated p-1.5 shadow-popover pop-in"
     @keydown="onKeydown"
   >
     <div class="flex items-center gap-2.5 px-2 pb-2.5 pt-1.5">
@@ -186,7 +186,7 @@ const item = 'flex min-h-8 w-full items-center gap-2.5 rounded-md px-2 py-1.5 te
         data-submenu
         role="menu"
         :aria-label="$t('account.language')"
-        class="absolute left-full top-0 z-50 ml-1 flex w-[180px] flex-col rounded-[10px] bg-mnema-elevated p-1.5 shadow-[inset_0_0_0_1px_#2B2F2D,0_12px_32px_rgba(0,0,0,0.5)]"
+        class="absolute left-full top-0 z-50 ml-1 flex w-[180px] flex-col rounded-lg bg-mnema-elevated p-1.5 shadow-popover pop-in"
       >
         <button
           v-for="l in SUPPORTED"

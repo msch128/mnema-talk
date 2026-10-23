@@ -69,7 +69,7 @@ onMounted(() => {
 
 <template>
   <div class="flex flex-1 items-center justify-center p-4" data-testid="recovery-page">
-    <div class="flex w-full max-w-sm flex-col space-y-5 rounded-[14px] border border-mnema-border bg-mnema-elevated p-7 shadow-2xl">
+    <div class="flex w-full max-w-sm flex-col space-y-5 rounded-xl border border-mnema-border bg-mnema-elevated p-7 shadow-2xl">
       <div class="space-y-2 text-center">
         <div class="mx-auto flex h-9 w-9 items-center justify-center rounded-lg border border-mnema-mint/30 bg-mnema-band text-base font-bold text-mnema-mint shadow-xs">M</div>
         <h1 class="text-lg font-bold tracking-tight text-mnema-text">{{ heading }}</h1>
@@ -90,7 +90,7 @@ onMounted(() => {
           <input id="recovery-repeat" v-model="repeat" type="password" required autocomplete="new-password" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden transition focus:border-mnema-accent" />
         </div>
         <div v-if="message" role="alert" class="rounded-md border border-mnema-danger/30 bg-mnema-danger/10 p-2.5 text-sm text-mnema-danger">{{ message }}</div>
-        <button type="submit" :disabled="busy" class="flex w-full items-center justify-center gap-2 rounded-md bg-mnema-accent py-2 text-sm font-semibold text-mnema-accent-ink shadow-xs transition hover:bg-mnema-accent-hover disabled:opacity-50">
+        <button type="submit" :disabled="busy" class="btn btn-primary flex w-full items-center justify-center gap-2">
           <Loader2 v-if="busy" class="h-3.5 w-3.5 animate-spin" /><KeyRound v-else class="h-3.5 w-3.5" />
           <span>{{ $t('recovery.resetSubmit') }}</span>
         </button>
@@ -99,7 +99,7 @@ onMounted(() => {
       <div v-else class="space-y-4 text-center">
         <component :is="phase === 'success' ? CheckCircle2 : XCircle" :class="['mx-auto h-8 w-8', phase === 'success' ? 'text-mnema-accent' : 'text-mnema-danger']" aria-hidden="true" />
         <p role="status" class="text-sm text-mnema-text" data-testid="recovery-message">{{ message }}</p>
-        <button type="button" class="w-full rounded-md bg-mnema-accent py-2 text-sm font-semibold text-mnema-accent-ink shadow-xs transition hover:bg-mnema-accent-hover" @click="emit('done')">{{ $t('recovery.continue') }}</button>
+        <button type="button" class="btn btn-primary w-full" @click="emit('done')">{{ $t('recovery.continue') }}</button>
       </div>
     </div>
   </div>

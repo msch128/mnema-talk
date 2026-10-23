@@ -117,7 +117,7 @@ function onClickCapture(e: MouseEvent) {
   e.stopPropagation()
 }
 
-const btn = 'inline-flex items-center justify-center gap-1.5 rounded-full shrink-0 transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent focus-visible:ring-offset-2 focus-visible:ring-offset-mnema-elevated'
+const btn = 'inline-flex items-center justify-center gap-1.5 rounded-full shrink-0 transition active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent focus-visible:ring-offset-2 focus-visible:ring-offset-mnema-elevated'
 const icon = computed(() => `${btn} ${props.compact ? 'w-9 h-9 max-md:w-11 max-md:h-11' : 'w-10 h-10 max-md:w-11 max-md:h-11'}`)
 const wide = computed(() => `${btn} ${props.compact ? 'w-9 h-9 max-md:w-11 max-md:h-11' : 'h-10 max-md:h-11 px-4 text-sm font-semibold'}`)
 const neutral = 'bg-mnema-surface text-mnema-text hover:bg-mnema-hover'

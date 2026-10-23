@@ -95,10 +95,10 @@ async function save() {
       ></textarea>
     </div>
     <div class="flex justify-end gap-2">
-      <button type="button" class="px-3 py-1.5 rounded-lg text-sm text-mnema-muted hover:text-mnema-text" data-testid="welcome-skip" @click="emit('skip')">
+      <button type="button" class="btn btn-ghost" data-testid="welcome-skip" @click="emit('skip')">
         {{ $t('welcome.skip') }}
       </button>
-      <button type="submit" :disabled="saving" class="px-4 py-1.5 rounded-lg bg-mnema-accent text-mnema-accent-ink text-sm font-semibold hover:bg-mnema-accent-hover transition disabled:opacity-50" data-testid="welcome-profile-save">
+      <button type="submit" :disabled="saving" class="btn btn-primary" data-testid="welcome-profile-save">
         {{ $t('welcome.continue') }}
       </button>
     </div>

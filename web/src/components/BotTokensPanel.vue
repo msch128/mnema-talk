@@ -107,7 +107,7 @@ onMounted(load)
         <span class="text-xs text-mnema-tertiary">{{ $t('bots.tokens.expiry') }}</span>
         <input v-model="expires" type="date" class="rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1.5 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" />
       </label>
-      <button type="submit" :disabled="busy" class="rounded-md bg-mnema-accent px-3.5 py-1.5 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40">{{ $t('bots.tokens.issue') }}</button>
+      <button type="submit" :disabled="busy" class="btn btn-primary">{{ $t('bots.tokens.issue') }}</button>
     </form>
 
     <p v-if="loaded && !tokens.length" class="text-sm text-mnema-tertiary">{{ $t('bots.tokens.empty') }}</p>
@@ -133,8 +133,8 @@ onMounted(load)
             <td class="px-3 py-2 text-mnema-muted">{{ token.last_used_at ? day(token.last_used_at) : $t('bots.tokens.never') }}</td>
             <td class="px-3 py-2">
               <div class="flex justify-end gap-1 text-mnema-tertiary">
-                <button type="button" class="rounded-sm p-1.5 transition hover:text-mnema-text" :aria-label="$t('bots.tokens.regenerateFor', { name: label(token) })" data-action="regenerate" @click="regenerate(token)"><RefreshCw class="h-4 w-4" /></button>
-                <button type="button" :disabled="token.state === 'revoked'" class="rounded-sm p-1.5 transition hover:text-mnema-danger disabled:opacity-30" :aria-label="$t('bots.tokens.revokeFor', { name: label(token) })" data-action="revoke" @click="revoke(token)"><Ban class="h-4 w-4" /></button>
+                <button type="button" class="btn btn-icon btn-sm hover:text-mnema-text" :aria-label="$t('bots.tokens.regenerateFor', { name: label(token) })" data-action="regenerate" @click="regenerate(token)"><RefreshCw class="h-4 w-4" /></button>
+                <button type="button" :disabled="token.state === 'revoked'" class="btn btn-icon btn-sm hover:text-mnema-danger" :aria-label="$t('bots.tokens.revokeFor', { name: label(token) })" data-action="revoke" @click="revoke(token)"><Ban class="h-4 w-4" /></button>
               </div>
             </td>
           </tr>

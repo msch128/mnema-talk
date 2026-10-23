@@ -82,14 +82,14 @@ async function savePassword() {
         <button
           type="button"
           @click="isChangingPassword = false; currentPassword = newPassword = newPasswordRepeat = ''"
-          class="px-2 py-0.5 rounded-sm text-mnema-muted hover:text-mnema-text"
+          class="btn btn-ghost btn-sm"
         >
           {{ $t('common.cancel') }}
         </button>
         <button
           type="submit"
           :disabled="isSavingPassword"
-          class="px-2.5 py-1 rounded-sm bg-mnema-accent text-mnema-canvas font-bold flex items-center gap-1 hover:brightness-110 active:scale-95 disabled:opacity-50"
+          class="btn btn-primary btn-sm flex items-center gap-1"
         >
           <Loader2 v-if="isSavingPassword" class="w-3.5 h-3.5 animate-spin" />
           <Save v-else class="w-3.5 h-3.5" />

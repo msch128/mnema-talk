@@ -43,7 +43,7 @@ const full = ref(false)
       data-testid="reaction-more"
       v-tooltip="$t('emoji.more')"
       :aria-label="$t('emoji.more')"
-      class="flex h-7 w-7 items-center justify-center rounded-sm text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text"
+      class="btn btn-icon h-7 w-7"
       @click.stop="full = true"
     >
       <Plus class="h-4 w-4" />

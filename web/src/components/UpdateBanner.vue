@@ -52,7 +52,7 @@ function reload() {
     <button
       type="button"
       data-testid="update-dismiss"
-      class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-hover hover:text-mnema-text"
+      class="btn btn-icon h-7 w-7 shrink-0"
       :aria-label="$t('update.dismiss')"
       v-tooltip="$t('update.dismiss')"
       @click="versionStore.dismiss()"
