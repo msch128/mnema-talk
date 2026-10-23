@@ -257,7 +257,7 @@ installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
   `@here`, roles and replies to their messages) only; mutes, timed mutes and
   category settings apply exactly as in the app (a mute still lets through
   a message addressed to the member by name, role or reply, not `@all` or
-  `@here`). The text of a push is plain: Markdown marks are removed,
+  `@here`; Do Not Disturb silences even those). The text of a push is plain: Markdown marks are removed,
   `||spoilers||` read "Spoiler" and custom emoji read `:name:`. A burst in one channel is
   merged: the first message goes out at once, the rest of the next five
   seconds as one push ("3 new messages"); a mention is never held back. A
@@ -593,7 +593,7 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_http_requests_total{route,class}` | counter | Requests by chi route pattern (`/api/channels/{channelID}/messages`) and status class `1xx`..`5xx`. Unknown paths are `unmatched`. |
 | `mnema_http_request_duration_seconds{route}` | histogram | Latency per route pattern (WebSocket upgrades are counted but not timed). |
 | `mnema_http_requests_in_flight` | gauge | Requests being served now. |
-| `mnema_ratelimit_hits_total{limiter}` | counter | Requests refused with 429: `api_user`, `upload`, `link_preview`, `other` (login, native clients and the rest). |
+| `mnema_ratelimit_hits_total{limiter}` | counter | Requests refused with 429, by limiter: `api_user` (600 a minute per member), `upload`, `link_preview`, `poll_create` (10 a minute), `poll_vote`, `pin` (60 pins or unpins a minute), `emoji_upload` (10 per 10 minutes), `edit_history`, `export_download`, the bot, webhook, gateway, push, e-mail and password-reset limiters, `ws_user` and `ws_ip`, and `other` for the few without a name. |
 | `mnema_ws_online_users`, `mnema_ws_connections` | gauge | Distinct online users and open WebSockets. |
 | `mnema_ws_connections_total` | counter | Accepted realtime connections (reconnect churn). |
 | `mnema_ws_events_sent_total`, `mnema_ws_events_received_total` | counter | Event throughput to and from clients. |
@@ -662,7 +662,12 @@ not start (e.g. the UDP range is in use).
 ### Account deletion and data exports
 
 Members delete their own account and download their data under Account &
-security (the Owner account cannot be deleted). Deleting keeps an anonymised
+security (the Owner account cannot be deleted). The export is a ZIP of JSON
+files with the member's profile, settings, messages, earlier versions of
+their edits, reactions, poll votes, uploads, the polls they started, the
+messages they pinned, their push devices (label and dates, no keys), the
+custom emoji they uploaded, audit entries about their account and their
+sign-in setup; nothing of other members. Deleting keeps an anonymised
 row and the member's messages without text, removes everything else (see
 [SECURITY.md](../SECURITY.md)) and frees the username; files are removed from
 object storage in the same request, and anything that could not be removed is

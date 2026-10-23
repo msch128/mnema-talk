@@ -126,6 +126,44 @@ until the new release has passed your application checks.
 
 ## Version notes
 
+### 1.0.0 → 1.0.1
+
+A patch release: fixes and polish, no new features, and nothing in it changes
+a public surface ([API stability](api-stability.md)). Update with the
+procedure above; take the backup first.
+
+- **No migrations.** The schema is the one 1.0.0 left, so a rollback to the
+  1.0.0 image needs no restore.
+- **Three new rate limiters**, per member, each under its own label in
+  `mnema_ratelimit_hits_total{limiter}` (see
+  [operations.md](operations.md#what-each-metric-means)): `poll_create` (10 polls per minute),
+  `pin` (60 pins or unpins per minute) and `emoji_upload` (10 uploads per
+  10 minutes). Members and bots never meet them in normal use; a script that
+  creates polls or pins in bulk now gets `429` with `Retry-After`.
+- **Unknown or deleted custom emoji are refused as new reactions** (`400`,
+  "invalid emoji"): a token whose emoji was deleted, or never existed, cannot
+  be added. A reaction that already exists can always be taken back.
+- **The data export is complete.** Besides profile, settings, messages, edits,
+  reactions, uploads, audit entries and sign-in setup, the archive now holds
+  the polls the member started, the messages they pinned, their push devices
+  (label and dates only, no keys) and the custom emoji they uploaded (with the
+  image files). Its `README.txt` also says that the files are English and
+  machine-readable and keep messages as typed.
+- **Mute rule, now the same everywhere.** In a muted channel or category, a
+  message addressed to the member breaks the mute: `@username`, a role the
+  member holds, or a reply to their message. `@all`, `@here` and Do Not
+  Disturb stay silent. The unread mention badge, Web Push and the notifications
+  shown while the page is open follow this rule alike.
+- **A deleted account is named "Deleted member" on the server too.** New
+  deletions store that name; accounts deleted under 1.0.0 keep the stored
+  "Deleted user" (the web app shows "Deleted member" in the member's language
+  for both). Bots and API clients that read `display_name` see the stored text.
+- **The release workflow mirrors the required checks.** `release.yml` reads the
+  checks that `main`'s ruleset requires (including the `upgrade-drill` jobs)
+  and reports each one's result from the tested commit on the release pull
+  request; it does not merge when one of them did not succeed. Nothing to do for
+  operators; forks with their own ruleset get the same behaviour.
+
 ### 0.9.x → 1.0.0
 
 1.0.0 is the first release under the [API stability contract](api-stability.md):
