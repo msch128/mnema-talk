@@ -541,9 +541,10 @@ it is paid once per page load or reconnect, not per message.
   `tailwind.config`). The Mnema design tokens are in its `@theme` block. The
   shared UI building blocks are plain CSS files in
   [`styles/`](../web/src/styles): `buttons.css` (the `.btn` family and the focus
-  ring), `controls.css` (checkbox, radio, switch, slider, fields, select) and
+  ring), `controls.css` (checkbox, radio, switch, slider, fields, select),
   `surfaces.css` (dialogs, menus, popovers, tooltips, toasts, list rows,
-  elevation and motion). They use tokens only and no inline style, because the
+  elevation and motion) and `settings.css` (the cards and groups of the
+  account and audio settings pages). They use tokens only and no inline style, because the
   Content-Security-Policy forbids it.
 - **1.1 features in the UI**: direct messages
   ([`DmCreateDialog.vue`](../web/src/components/DmCreateDialog.vue),

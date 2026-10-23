@@ -161,6 +161,7 @@ The look of the web client comes from tokens and a few shared classes, not from 
 - `web/src/styles/buttons.css`: `.btn` with `-primary`, `-secondary`, `-ghost`, `-danger`, `-danger-solid`, sizes `-sm`/`-lg`, `.btn-icon`, `.btn-link`, `.chip` (a choice in a row), `.choice-card`, and the keyboard focus ring. A loading button sets `aria-busy="true"`.
 - `web/src/styles/controls.css`: checkbox, radio, slider, select and text fields are styled on the elements themselves (no class needed); `.switch` is the toggle (`role="switch"` and `aria-checked`). Slider fill is painted by `lib/rangeFill.ts`.
 - `web/src/styles/surfaces.css`: dialog scrim and panel (`BaseDialog`), `.pop-in` for menus and popovers, toast motion, the `shadow-popover` utility, and the single `prefers-reduced-motion` rule.
+- `web/src/styles/settings.css`: `.settings-group` and its label, card, help and row classes for the account and audio settings pages.
 
 All of it respects the CSP (`style-src 'self'; style-src-attr 'none'`): no inline styles, only classes, tokens and CSSOM. `e2e/tests/a11y.spec.ts` runs axe (contrast and accessible names) over the main surfaces.
 
