@@ -26,7 +26,8 @@ const messageSelect = `
 	       CASE WHEN rm.id IS NULL THEN FALSE
 	            ELSE EXISTS (SELECT 1 FROM media md WHERE md.message_id = rm.id) END,
 	       u.is_bot, (u.is_bot AND u.username LIKE 'wh-%'), m.embeds, ru.is_bot, (ru.is_bot AND ru.username LIKE 'wh-%'),
-	       m.pinned_at, pu.id, pu.username, pu.display_name, pu.avatar_s3_key
+	       m.pinned_at, pu.id, pu.username, pu.display_name, pu.avatar_s3_key,
+	       m.forwarded
 	FROM messages m
 	JOIN users u ON u.id = m.user_id
 	LEFT JOIN messages rm ON rm.id = m.reply_to_id
@@ -42,10 +43,12 @@ func scanMessages(rows pgx.Rows) ([]Message, error) {
 		var r rawReplyFields
 		var embeds []byte
 		var pin rawPinner
+		var fwd rawForward
 		if err := rows.Scan(&m.ID, &m.Number, &m.ChannelID, &m.UserID, &m.ParentID, &m.Username, &m.DisplayName, &avatar,
 			&m.Content, &m.IsPinned, &m.IsEdited, &m.ReplyCount, &m.CreatedAt, &m.UpdatedAt,
 			&m.ReplyToID, &r.id, &r.user, &r.username, &r.displayName, &r.avatar, &r.content, &r.hasMedia, &m.IsBot, &m.IsWebhook, &embeds, &r.isBot, &r.isWebhook,
-			&m.PinnedAt, &pin.id, &pin.username, &pin.displayName, &pin.avatar); err != nil {
+			&m.PinnedAt, &pin.id, &pin.username, &pin.displayName, &pin.avatar,
+			&fwd.forwarded); err != nil {
 			return nil, err
 		}
 		var err error
@@ -54,6 +57,7 @@ func scanMessages(rows pgx.Rows) ([]Message, error) {
 		}
 		m.AvatarURL = auth.AvatarURL(avatar)
 		m.PinnedBy = pin.ref()
+		m.Forward = fwd.ref()
 		if m.ReplyToID != nil {
 			m.ReplyTo = buildReplyPreview(*m.ReplyToID, r)
 		}
@@ -308,6 +312,8 @@ type NewMessage struct {
 	Content   string
 	ParentID  *uuid.UUID // thread root, for thread replies
 	ReplyToID *uuid.UUID // quoted message, for Discord-style replies
+	// ForwardOf is the root message this one forwards (never a copy of it).
+	ForwardOf *uuid.UUID
 	// WebhookID, AuthorName and Embeds are set for webhook messages only.
 	WebhookID  *uuid.UUID
 	AuthorName string
@@ -333,11 +339,11 @@ func CreateMessage(ctx context.Context, q db.Querier, nm NewMessage) (uuid.UUID,
 	// conversations' own sequence, so the public numbering shows nothing of
 	// what is said in private (migration 0050).
 	err := q.QueryRow(ctx, `
-		INSERT INTO messages (number, in_dm, channel_id, user_id, content, parent_id, reply_to_id, webhook_id, author_name, embeds) OVERRIDING SYSTEM VALUE
+		INSERT INTO messages (number, in_dm, channel_id, user_id, content, parent_id, reply_to_id, webhook_id, author_name, embeds, forward_of, forwarded) OVERRIDING SYSTEM VALUE
 		SELECT CASE WHEN c.type = 'dm' THEN nextval('dm_number_seq') ELSE nextval(pg_get_serial_sequence('messages', 'number')) END,
-		       c.type = 'dm', c.id, $2, $3, $4, $5, $6, $7, $8
+		       c.type = 'dm', c.id, $2, $3, $4, $5, $6, $7, $8, $9::uuid, $9::uuid IS NOT NULL
 		FROM channels c WHERE c.id = $1
-		RETURNING id`, nm.ChannelID, nm.UserID, nm.Content, nm.ParentID, nm.ReplyToID, nm.WebhookID, authorName, embeds).Scan(&id)
+		RETURNING id`, nm.ChannelID, nm.UserID, nm.Content, nm.ParentID, nm.ReplyToID, nm.WebhookID, authorName, embeds, nm.ForwardOf).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, errChannelNotFound
 	}

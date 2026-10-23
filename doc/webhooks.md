@@ -160,6 +160,9 @@ and whether it is enabled. Deleting the channel deletes it.
 |---|---|---|
 | `MESSAGE_CREATE` | a message is posted in the channel (messages posted by an incoming webhook are not sent, so two webhooks cannot feed each other) | the message, as in `GET /api/channels/{id}/messages` |
 | `MESSAGE_UPDATE` | a message is edited | the message |
+
+A forwarded message carries `forward: {forwarded: true}` and its own comment as `content`; neither the forwarded text nor its ids are part of the payload, because a receiver may not be allowed to see the original.
+
 | `MESSAGE_DELETE` | a message is deleted | `{id, channel_id, parent_id}` |
 | `MESSAGE_REACTIONS_UPDATE` | someone reacts or takes a reaction back | `{message_id, channel_id, reactions}` |
 | `VOICE_STATE_UPDATE` | a member joins or leaves a Talk of the channel | `{action: "join"\|"leave", channel_id, user...}` |

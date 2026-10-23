@@ -19,11 +19,11 @@ import (
 func EditMessage(ctx context.Context, p *db.Pool, online OnlineSource, messageID, userID uuid.UUID, content string) error {
 	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		var author uuid.UUID
-		var hasMedia, isPoll bool
+		var hasMedia, isPoll, forwarded bool
 		err := tx.QueryRow(ctx, `
 			SELECT user_id, EXISTS (SELECT 1 FROM media WHERE message_id = messages.id),
-			       EXISTS (SELECT 1 FROM polls WHERE message_id = messages.id)
-			FROM messages WHERE id = $1 FOR UPDATE`, messageID).Scan(&author, &hasMedia, &isPoll)
+			       EXISTS (SELECT 1 FROM polls WHERE message_id = messages.id), forwarded
+			FROM messages WHERE id = $1 FOR UPDATE`, messageID).Scan(&author, &hasMedia, &isPoll, &forwarded)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errMessageNotFound
 		}
@@ -36,7 +36,7 @@ func EditMessage(ctx context.Context, p *db.Pool, online OnlineSource, messageID
 		if isPoll {
 			return httpx.ErrInvalidInput("a poll cannot be edited; delete it and ask again")
 		}
-		if content == "" && !hasMedia {
+		if content == "" && !hasMedia && !forwarded {
 			_, err := ValidateContent(content, false)
 			return err
 		}
