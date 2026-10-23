@@ -62,11 +62,17 @@ services:
     container_name: $PROJECT-coturn
   updater:
     container_name: $PROJECT-updater
+  recreator:
+    container_name: $PROJECT-recreator
 networks:
   mnema-network:
     name: $PROJECT-network
   mnema-updater:
     name: $PROJECT-updater
+  mnema-recreator:
+    name: $PROJECT-recreator
+  mnema-updater-egress:
+    name: $PROJECT-updater-egress
 EOF
 COMPOSE=(docker compose -p "$PROJECT" --env-file "$ENV_FILE" -f docker-compose.yml -f "$OVERRIDE_FILE")
 
@@ -74,8 +80,8 @@ COMPOSE=(docker compose -p "$PROJECT" --env-file "$ENV_FILE" -f docker-compose.y
 "${COMPOSE[@]}" config --quiet
 for kind in container network volume; do
   case "$kind" in
-    container) names="$PROJECT-app $PROJECT-postgres $PROJECT-seaweedfs $PROJECT-coturn $PROJECT-updater" ;;
-    network) names="$PROJECT-network $PROJECT-updater" ;;
+    container) names="$PROJECT-app $PROJECT-postgres $PROJECT-seaweedfs $PROJECT-coturn $PROJECT-updater $PROJECT-recreator" ;;
+    network) names="$PROJECT-network $PROJECT-updater $PROJECT-recreator $PROJECT-updater-egress" ;;
     volume) names="${PROJECT}_postgres18-data ${PROJECT}_postgres-data ${PROJECT}_seaweedfs-data" ;;
   esac
   if [ "$kind" = container ]; then

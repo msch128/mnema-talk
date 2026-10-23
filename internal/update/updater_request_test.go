@@ -9,7 +9,7 @@ import (
 
 func TestUpdaterReportsRequestsItCannotBuildWithoutLeakingTheToken(t *testing.T) {
 	u := &Updater{endpoint: "http://updater.invalid/\x7f", token: testToken, client: http.DefaultClient}
-	err := u.Trigger(context.Background())
+	err := u.Trigger(context.Background(), "1.2.3")
 	if err == nil || !strings.Contains(err.Error(), "build updater request") || strings.Contains(err.Error(), testToken) {
 		t.Fatalf("unbuildable request: %v", err)
 	}

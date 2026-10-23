@@ -789,6 +789,7 @@ export type BotNewTokenResponse = {
   expires_at?: string
   hint: string
   id: string
+  issuer_binding?: "unbound" | "inferred"
   last_used_at?: string
   name: string
   secret: string
@@ -801,6 +802,7 @@ export function isBotNewTokenResponse(value: unknown): value is BotNewTokenRespo
     && (!hasOwn(value, "expires_at") || isTimestamp(value["expires_at"]))
     && (hasOwn(value, "hint") && isString(value["hint"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "issuer_binding") || (value["issuer_binding"] === "unbound" || value["issuer_binding"] === "inferred"))
     && (!hasOwn(value, "last_used_at") || isTimestamp(value["last_used_at"]))
     && (hasOwn(value, "name") && isString(value["name"], 32))
     && (hasOwn(value, "secret") && isString(value["secret"]))
@@ -880,6 +882,7 @@ export type BotToken = {
   expires_at?: string
   hint: string
   id: string
+  issuer_binding?: "unbound" | "inferred"
   last_used_at?: string
   name: string
   state: "active" | "expired" | "revoked"
@@ -891,6 +894,7 @@ export function isBotToken(value: unknown): value is BotToken {
     && (!hasOwn(value, "expires_at") || isTimestamp(value["expires_at"]))
     && (hasOwn(value, "hint") && isString(value["hint"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "issuer_binding") || (value["issuer_binding"] === "unbound" || value["issuer_binding"] === "inferred"))
     && (!hasOwn(value, "last_used_at") || isTimestamp(value["last_used_at"]))
     && (hasOwn(value, "name") && isString(value["name"], 32))
     && (hasOwn(value, "state") && (value["state"] === "active" || value["state"] === "expired" || value["state"] === "revoked"))

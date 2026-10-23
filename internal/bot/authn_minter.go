@@ -24,10 +24,15 @@ type minterVerdict struct {
 // CheckMinter refuses a token whose issuer no longer qualifies: the account
 // must be active and either the Owner, or hold Manage bots and still be able
 // to act as the bot (it holds everything the bot can do, see CanActAs). A
-// token without a recorded minter (issued before the column existed) is not
-// checked. Failing to decide fails the request.
+// token without a recorded minter (issued before the column existed) is bound
+// to its likeliest issuer on first use (bindLegacy) and never refused for
+// lacking one. Failing to decide fails the request.
 func (a *Authenticator) CheckMinter(ctx context.Context, tokenID uuid.UUID, minter *uuid.UUID, botUser uuid.UUID) error {
-	if minter == nil || a.Perms == nil {
+	if a.Perms == nil {
+		return nil
+	}
+	if minter == nil {
+		a.bindLegacy(ctx, tokenID, botUser)
 		return nil
 	}
 	now := a.now()

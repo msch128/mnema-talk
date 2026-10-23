@@ -81,6 +81,12 @@ type Token struct {
 	ExpiresAt  *time.Time `json:"expires_at,omitempty" binding:"optional" format:"date-time"`
 	LastUsedAt *time.Time `json:"last_used_at,omitempty" binding:"optional" format:"date-time"`
 	CreatedAt  time.Time  `json:"created_at" format:"date-time"`
+	// IssuerBinding is only set for a token issued before 1.0, which has no
+	// recorded issuer: "unbound" until it is first used after the upgrade,
+	// then "inferred" (bound to the bot's creator or the Owner, whoever
+	// qualified; regenerate it to bind it to its real issuer). Absent for a
+	// token whose issuer was recorded when it was issued.
+	IssuerBinding string `json:"issuer_binding,omitempty" binding:"optional" enums:"unbound,inferred"`
 }
 
 // NewToken makes a token and its stored hash.
@@ -274,7 +280,8 @@ func WithRoles(bots []Bot, roles map[uuid.UUID][]uuid.UUID) {
 // Tokens lists the tokens of a bot, newest first.
 func Tokens(ctx context.Context, q db.Querier, botID uuid.UUID) ([]Token, error) {
 	rows, err := q.Query(ctx, `
-		SELECT id, name, hint, expires_at, last_used_at, revoked_at, created_at
+		SELECT id, name, hint, expires_at, last_used_at, revoked_at, created_at,
+		       CASE WHEN created_by IS NULL THEN 'unbound' WHEN minter_inferred THEN 'inferred' ELSE '' END
 		FROM bot_tokens WHERE bot_id = $1 ORDER BY created_at DESC, id`, botID)
 	if err != nil {
 		return nil, fmt.Errorf("list tokens: %w", err)
@@ -283,7 +290,7 @@ func Tokens(ctx context.Context, q db.Querier, botID uuid.UUID) ([]Token, error)
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (Token, error) {
 		var t Token
 		var revoked *time.Time
-		err := row.Scan(&t.ID, &t.Name, &t.Hint, &t.ExpiresAt, &t.LastUsedAt, &revoked, &t.CreatedAt)
+		err := row.Scan(&t.ID, &t.Name, &t.Hint, &t.ExpiresAt, &t.LastUsedAt, &revoked, &t.CreatedAt, &t.IssuerBinding)
 		t.State = tokenState(revoked, t.ExpiresAt, now)
 		return t, err
 	})

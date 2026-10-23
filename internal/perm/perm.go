@@ -77,6 +77,11 @@ const (
 	// administrator can withhold it from new members or onboarding roles.
 	// Reading a conversation one is in never needs it.
 	SendDirectMessages Set = 1 << 22
+	// KickMembers signs members below the actor's highest role out of every
+	// device and drops them from the Talk they are in, with no lasting
+	// sanction: they can sign in again at once (doc/moderation.md). Bit 22 is
+	// the direct-message permission.
+	KickMembers Set = 1 << 23
 )
 
 // Info describes one permission for clients.
@@ -114,6 +119,7 @@ var Catalog = []Info{
 	{Key: "manage_emoji", Bit: ManageEmoji, Name: "manage emoji"},
 	{Key: "manage_reports", Bit: ManageReports, Name: "manage reports"},
 	{Key: "send_direct_messages", Bit: SendDirectMessages, Name: "send direct messages"},
+	{Key: "kick_members", Bit: KickMembers, Name: "kick members"},
 }
 
 var (
@@ -146,7 +152,7 @@ const (
 	// OwnerGrantOnly can only be handed out by the Owner.
 	OwnerGrantOnly = ManageBots
 	// AdminArea is any permission that opens a part of the admin area.
-	AdminArea = ManageChannels | ManageRoles | CreateInvites | ManageWebhooks | ManageMembers | DisconnectMembers | ViewAuditLog | TimeoutMembers | BanMembers | ManageBots | ManageEmoji | ManageReports
+	AdminArea = ManageChannels | ManageRoles | CreateInvites | ManageWebhooks | ManageMembers | DisconnectMembers | ViewAuditLog | TimeoutMembers | BanMembers | ManageBots | ManageEmoji | ManageReports | KickMembers
 )
 
 // TimeoutMask is what a timeout takes from a member: they can still read.

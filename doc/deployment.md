@@ -140,8 +140,9 @@ on "Admin console" announce a new release. Nothing is ever updated
 automatically.
 
 **Optional: update from the admin console.** "Update now" asks a separate
-updater sidecar to pull the app image again and restart the app (everyone is
-disconnected for about 30–60 seconds). It is **off by default**; to enable it:
+updater sidecar to check the new image's signature and build provenance, pull
+it and restart the app (everyone is disconnected for about 30–60 seconds). An
+image that does not verify is refused and nothing changes. It is **off by default**; to enable it:
 
 1. Run a released image: `MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.0` (see
    below for the tag).
@@ -155,7 +156,7 @@ started which update (`"audit":"self_update"` in the app log). Read the
 threat model in [SECURITY.md](../SECURITY.md#self-update-sidecar) first: the
 sidecar holds the Docker socket.
 
-**Which tag?** The sidecar re-pulls the tag the app runs; it never switches
+**Which tag?** The sidecar updates the tag the app runs; it never switches
 tags. That decides what "update now" can reach:
 
 | `MNEMA_IMAGE` tag | Follows | Self-update |

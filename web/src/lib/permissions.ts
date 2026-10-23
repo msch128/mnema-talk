@@ -26,7 +26,8 @@ export const PERMISSION_BITS = {
   ban_members: 524288,
   manage_emoji: 1048576,
   manage_reports: 2097152,
-  send_direct_messages: 4194304
+  send_direct_messages: 4194304,
+  kick_members: 8388608
 } as const
 
 export type PermissionKey = keyof typeof PERMISSION_BITS
@@ -46,7 +47,7 @@ export const PERMISSION_GROUPS: readonly { id: PermissionGroupId; keys: readonly
   { id: 'general', keys: ['view_channel'] },
   { id: 'text', keys: ['send_messages', 'attach_files', 'add_reactions', 'mention_everyone', 'send_direct_messages'] },
   { id: 'voice', keys: ['connect', 'speak', 'video', 'disconnect_members'] },
-  { id: 'moderation', keys: ['manage_messages', 'manage_members', 'timeout_members', 'ban_members'] },
+  { id: 'moderation', keys: ['manage_messages', 'manage_members', 'timeout_members', 'ban_members', 'kick_members'] },
   { id: 'administration', keys: ['administrator', 'manage_channels', 'manage_roles', 'create_invites', 'manage_bots', 'manage_emoji', 'manage_reports', 'view_audit_log'] }
 ]
 
@@ -58,7 +59,7 @@ export const CHANNEL_PERMISSION_KEYS: readonly PermissionKey[] = [
 
 /** Any of these opens a part of the admin area. */
 export const ADMIN_AREA_KEYS: readonly PermissionKey[] = [
-  'manage_channels', 'manage_roles', 'create_invites', 'manage_webhooks', 'manage_members', 'disconnect_members', 'view_audit_log', 'timeout_members', 'ban_members', 'manage_bots', 'manage_emoji', 'manage_reports'
+  'manage_channels', 'manage_roles', 'create_invites', 'manage_webhooks', 'manage_members', 'disconnect_members', 'view_audit_log', 'timeout_members', 'ban_members', 'manage_bots', 'manage_emoji', 'manage_reports', 'kick_members'
 ]
 
 /** What @everyone holds on a fresh install (internal/perm DefaultEveryone). */
