@@ -17,6 +17,7 @@ import SidebarChannelRow from './SidebarChannelRow.vue'
 import SidebarCategoryHeader from './SidebarCategoryHeader.vue'
 import SidebarDragGhost from './SidebarDragGhost.vue'
 import SidebarServerMenu from './SidebarServerMenu.vue'
+import SidebarDmSection from './SidebarDmSection.vue'
 import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
 import { loadCollapsed, saveCollapsed } from '../lib/channelTree'
@@ -261,6 +262,7 @@ function channelIndicator(id: string): '' | 'top' | 'bottom' {
       v-on="navListeners"
       @contextmenu="openListMenu"
     >
+      <SidebarDmSection />
       <div class="shrink-0">
         <!-- Uncategorized channels first (headless section), then the categories -->
         <section

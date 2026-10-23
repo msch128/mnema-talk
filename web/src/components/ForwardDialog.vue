@@ -2,11 +2,14 @@
 // Host for openForward() from lib/forwardDialog: pick where to forward a
 // message and add an optional comment (POST /api/messages/{id}/forward).
 import { computed, ref, watch } from 'vue'
-import { Hash, Volume2 } from '@lucide/vue'
+import { Hash, MessageCircle, Volume2 } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import { closeForward, pendingForward } from '../lib/forwardDialog'
 import { decodeChatMessage } from '../types/rest'
 import { useChatStore } from '../stores/chat'
+import { useAuthStore } from '../stores/auth'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { dmTitle } from '../lib/dm'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
@@ -15,6 +18,8 @@ import BaseDialog from './BaseDialog.vue'
 const COMMENT_MAX = 4000
 const request = computed(() => pendingForward.value)
 const chatStore = useChatStore()
+const authStore = useAuthStore()
+const features = useServerFeaturesStore()
 const permissions = usePermissionsStore()
 const toasts = useToastStore()
 const target = ref('')
@@ -26,6 +31,16 @@ const error = ref('')
 const targets = computed(() => {
   const needle = filter.value.trim().toLowerCase()
   return chatStore.allChannels.filter(c => permissions.canIn(c.id, 'send_messages') && c.name.toLowerCase().includes(needle))
+})
+
+// Direct message conversations the member may write in are targets too (both features needed).
+const conversations = computed(() => {
+  if (!features.dm || !features.has('forward')) return []
+  const needle = filter.value.trim().toLowerCase()
+  return chatStore.dms
+    .filter(d => d.can_send)
+    .map(d => ({ id: d.id, name: dmTitle(d, authStore.user?.id) }))
+    .filter(d => d.name.toLowerCase().includes(needle))
 })
 
 watch(request, () => {
@@ -76,7 +91,14 @@ async function send() {
               <span class="truncate">{{ c.name }}</span>
             </label>
           </li>
-          <li v-if="!targets.length" class="px-2 py-3 text-sm text-mnema-tertiary">{{ $t('forward.none') }}</li>
+          <li v-for="d in conversations" :key="d.id">
+            <label class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-mnema-text hover:bg-mnema-hover">
+              <input v-model="target" type="radio" name="forward-target" :value="d.id" :data-testid="`forward-target-${d.name}`">
+              <MessageCircle class="h-4 w-4 text-mnema-tertiary" />
+              <span class="truncate">{{ d.name }}</span>
+            </label>
+          </li>
+          <li v-if="!targets.length && !conversations.length" class="px-2 py-3 text-sm text-mnema-tertiary">{{ $t('forward.none') }}</li>
         </ul>
         <textarea
           v-model="comment"

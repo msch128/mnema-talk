@@ -9,6 +9,7 @@ import { decodeOnboardingSettings, type OnboardingSettings } from '../types/rest
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { useOnboardingStore } from '../stores/onboarding'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { t } from '../i18n'
 import MarkdownContent from './MarkdownContent.vue'
 
@@ -19,6 +20,7 @@ const MAX_RULES = 10000
 const chat = useChatStore()
 const toasts = useToastStore()
 const onboarding = useOnboardingStore()
+const features = useServerFeaturesStore()
 
 const loaded = ref<OnboardingSettings | null>(null)
 const name = ref('')
@@ -26,13 +28,16 @@ const welcome = ref('')
 const rules = ref('')
 const startChannel = ref('')
 const reaccept = ref(false)
+// The community's switch for direct messages (existing conversations stay readable when it is off).
+const dmEnabled = ref(true)
 const previewing = ref<'' | 'welcome' | 'rules'>('')
 const busy = ref(false)
 
 const textChannels = computed(() => chat.allChannels.filter(c => c.type === 'text'))
 const dirty = computed(() => !!loaded.value && (
   name.value !== loaded.value.community_name || welcome.value !== loaded.value.welcome_text ||
-  rules.value !== loaded.value.rules_text || startChannel.value !== (loaded.value.start_channel_id ?? '') || reaccept.value
+  rules.value !== loaded.value.rules_text || startChannel.value !== (loaded.value.start_channel_id ?? '') || reaccept.value ||
+  (features.dm && dmEnabled.value !== loaded.value.direct_messages_enabled)
 ))
 const tooLong = computed(() => name.value.length > MAX_NAME || welcome.value.length > MAX_WELCOME || rules.value.length > MAX_RULES)
 const hasRules = computed(() => rules.value.trim() !== '')
@@ -44,6 +49,7 @@ function apply(s: OnboardingSettings) {
   rules.value = s.rules_text
   startChannel.value = s.start_channel_id ?? ''
   reaccept.value = false
+  dmEnabled.value = s.direct_messages_enabled
 }
 
 async function load() {
@@ -61,7 +67,8 @@ async function save() {
       method: 'PUT',
       json: {
         community_name: name.value, welcome_text: welcome.value, rules_text: rules.value,
-        start_channel_id: startChannel.value || null, require_reacceptance: reaccept.value && hasRules.value
+        start_channel_id: startChannel.value || null, require_reacceptance: reaccept.value && hasRules.value,
+        ...(features.dm ? { direct_messages_enabled: dmEnabled.value } : {})
       },
       decode: decodeOnboardingSettings
     }))
@@ -120,6 +127,14 @@ onMounted(load)
         <option value="">{{ $t('admin.onboarding.startChannelNone') }}</option>
         <option v-for="c in textChannels" :key="c.id" :value="c.id"># {{ c.name }}</option>
       </select>
+    </div>
+
+    <div v-if="features.dm" class="space-y-1" data-testid="dm-switch">
+      <label class="flex items-center gap-2 text-sm text-mnema-text">
+        <input v-model="dmEnabled" type="checkbox" class="accent-mnema-accent" data-testid="dm-enabled" />
+        <span>{{ $t('admin.onboarding.dmEnabled') }}</span>
+      </label>
+      <p class="text-xs text-mnema-tertiary">{{ $t('admin.onboarding.dmEnabledHint') }}</p>
     </div>
 
     <p v-if="tooLong" class="text-xs text-mnema-danger" role="alert">{{ $t('admin.onboarding.tooLong') }}</p>

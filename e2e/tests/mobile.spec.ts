@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import type { Cookie, Page } from '@playwright/test'
-import { apiFetch, bounds, responseString } from './helpers'
+import { apiFetch, bounds, responseString, responseUserId } from './helpers'
 import { test, expect } from './fixtures'
 
 // The phone layout (below 768px): the channel list is a drawer, the thread and
@@ -198,7 +198,7 @@ test('phone: popovers, emoji picker and the admin console stay on screen', async
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible()
   const barTop = (await bounds(page.getByTestId('admin-tabs'))).y
-  for (const tab of ['users', 'roles', 'channels', 'invites', 'onboarding', 'emoji', 'bans', 'bots', 'media', 'audit', 'system']) {
+  for (const tab of ['users', 'roles', 'channels', 'invites', 'onboarding', 'emoji', 'reports', 'bans', 'bots', 'media', 'audit', 'system']) {
     const button = page.getByTestId(`tab-${tab}`)
     await button.tap()
     await expect(button).toHaveAttribute('aria-pressed', 'true')
@@ -206,5 +206,64 @@ test('phone: popovers, emoji picker and the admin console stay on screen', async
     await expect(dialog.getByRole('heading', { level: 2 })).toHaveText((await button.innerText()).trim())
     expect((await bounds(page.getByTestId('admin-tabs'))).y, `${tab} tab bar position`).toBe(barTop)
     await expectNoSidewaysScroll(page)
+  }
+})
+
+// Direct messages have no screen of their own on a phone: they sit at the top of
+// the channel drawer, with the same touch targets and no sideways scrolling.
+test('phone: direct messages live in the drawer', async ({ page, browser }) => {
+  await signIn(page)
+  const viewport = page.viewportSize()
+  const name = `mobdm_${suffix}`
+  const memberContext = await browser.newContext()
+  const member = await memberContext.newPage()
+  try {
+    // A member to talk to, registered from a context of their own.
+    await member.goto('/')
+    const invite = await apiFetch(page, 'POST', '/api/admin/invites', { max_uses: 1 })
+    const registered = await apiFetch(member, 'POST', '/api/auth/register', { username: name, password: `pw-${suffix}-mobile-x1`, invite_code: responseString(invite, 'code') })
+    expect(registered.status).toBe(201)
+    const memberId = responseUserId(await apiFetch(member, 'GET', '/api/auth/me'))
+    const started = await apiFetch(page, 'POST', '/api/dms', { user_ids: [memberId] })
+    expect([200, 201]).toContain(started.status)
+    const message = `Hallo aus der Direktnachricht ${suffix}`
+    expect((await apiFetch(member, 'POST', `/api/channels/${responseString(started, 'id')}/messages`, { content: message })).status).toBe(201)
+    await page.reload()
+
+    // The section is in the drawer, not on the screen, with a badge and touch-sized rows.
+    await expect(page.getByTestId('dm-section')).not.toBeInViewport()
+    await openDrawer(page)
+    await expect(page.getByTestId('dm-section')).toBeInViewport()
+    const row = page.locator('[data-dm]', { hasText: name })
+    await expect(row.getByTestId('dm-unread')).toHaveText('1')
+    expect((await bounds(row)).height).toBeGreaterThanOrEqual(MIN_TARGET)
+    await expectTouchSize(page, 'Neue Direktnachricht')
+    await expectNoSidewaysScroll(page)
+
+    // Opening one closes the drawer and shows the conversation.
+    await row.tap()
+    await expect(page.getByTestId('channel-drawer')).not.toBeInViewport()
+    await expect(page.getByTestId('chat-channel-name')).toHaveText(name)
+    await expect(page.locator('[data-msg-id]', { hasText: message })).toBeVisible()
+    await expect(page.getByPlaceholder(`Nachricht an ${name}`)).toBeVisible()
+    await expectTouchSize(page, 'Gesprächsinfo')
+    await expectNoSidewaysScroll(page)
+
+    // The info dialog and the picker fit the screen.
+    await page.getByRole('button', { name: 'Gesprächsinfo' }).tap()
+    const info = page.getByTestId('dm-info')
+    await expect(info).toBeVisible()
+    const box = await bounds(page.getByRole('dialog'))
+    expect(box.x).toBeGreaterThanOrEqual(0)
+    expect(box.x + box.width).toBeLessThanOrEqual((viewport?.width ?? 0) + 1)
+    await page.keyboard.press('Escape')
+    await openDrawer(page)
+    await page.getByTestId('dm-new').tap()
+    await expect(page.getByTestId('dm-create')).toBeVisible()
+    const picker = await bounds(page.getByRole('dialog'))
+    expect(picker.x + picker.width).toBeLessThanOrEqual((viewport?.width ?? 0) + 1)
+    await expectNoSidewaysScroll(page)
+  } finally {
+    await memberContext.close()
   }
 })

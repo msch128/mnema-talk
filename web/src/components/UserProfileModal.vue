@@ -7,6 +7,8 @@ import { useAuthStore } from '../stores/auth'
 import { useAccountStore } from '../stores/account'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
+import { useBlocksStore } from '../stores/blocks'
+import { useDmActions } from '../composables/useDmActions'
 import { usePermissionsStore } from '../stores/permissions'
 import { roleColorCss } from '../lib/permissions'
 import { activityText } from '../lib/presence'
@@ -80,6 +82,14 @@ const showRolesDialog = ref(false)
 // Roles are given by someone with Manage roles and a higher rank; never the Owner's, never one's own.
 const canGiveRoles = computed(() => !!profileId.value && !isSelf.value && !isBot.value && profileUser.value.role !== 'admin' && permissions.can('manage_roles') && permissions.outranksMember(profileId.value))
 const offer = computed(() => moderationOffer({ id: profileId.value, role: profileUser.value.role, display_name: profileUser.value.display_name, username: profileUser.value.username }))
+// Direct messages and blocking (hidden on a server without them).
+const blocks = useBlocksStore()
+const dmActions = useDmActions()
+const showMessage = computed(() => dmActions.canMessage(profileId.value))
+const showBlock = computed(() => dmActions.canBlock(profileId.value) && !isBot.value)
+async function handleMessage() {
+  if (await dmActions.messageMember(profileId.value)) emit('close')
+}
 const moderationSubject = computed(() => ({ id: profileId.value, display_name: profileUser.value.display_name, username: profileUser.value.username }))
 
 // Current voice hangout channel of this user
@@ -142,7 +152,7 @@ function handleMention() {
 
       <!-- Profile Header (Avatar overlap & badges) -->
       <div class="px-5 pb-5 pt-0 relative bg-mnema-surface">
-        <ProfileAvatar :profile-user="profileUser" :is-self="!!isSelf" :live-status="liveStatus" @mention="handleMention" />
+        <ProfileAvatar :profile-user="profileUser" :is-self="!!isSelf" :live-status="liveStatus" :can-message="showMessage" @mention="handleMention" @message="handleMessage" />
 
         <!-- Name & Badges -->
         <div class="bg-mnema-canvas/70 border border-mnema-hairline rounded-xl p-3.5 shadow-inner">
@@ -227,6 +237,17 @@ function handleMention() {
               class="rounded-md border border-mnema-border px-2 py-1 text-xs text-mnema-text transition hover:border-mnema-danger hover:text-mnema-danger"
               @click="openBan(moderationSubject)"
             >{{ $t('moderation.banAction') }}</button>
+          </div>
+
+          <!-- Blocking is private: they are not told, their messages fold away -->
+          <div v-if="showBlock" class="mt-3" data-testid="profile-block-row">
+            <button
+              type="button"
+              data-testid="profile-block"
+              class="rounded-md border border-mnema-border px-2 py-1 text-xs text-mnema-text transition hover:border-mnema-danger hover:text-mnema-danger max-md:min-h-11"
+              @click="dmActions.toggleBlock(moderationSubject)"
+            >{{ $t(blocks.isBlocked(profileId) ? 'blocks.unblock' : 'blocks.block') }}</button>
+            <p class="mt-1 text-xs text-mnema-tertiary">{{ $t(blocks.isBlocked(profileId) ? 'blocks.blockedHint' : 'blocks.hint') }}</p>
           </div>
 
           <ProfileStatus :profile-user="profileUser" :is-self="!!isSelf" />

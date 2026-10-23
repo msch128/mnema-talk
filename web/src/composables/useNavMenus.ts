@@ -25,6 +25,7 @@ import { menuPointFromEvent } from '../lib/contextMenuPoint'
 import type { MenuTrigger } from '../lib/contextMenuPoint'
 import { moderationOffer, openTimeout, openBan, liftTimeout } from '../lib/moderationActions'
 import { t } from '../i18n'
+import { memberRelationItems } from './dmMenuItems'
 import { notifyMenuItems } from './useMuteMenu'
 
 /** Open/close state plus the items for one ContextMenu instance. */
@@ -361,6 +362,6 @@ export function buildMemberItems(member: MenuMember, ctx: { refresh?: () => void
   ]
   // Local audio controls only make sense for someone I'm in a call with.
   if (!isSelf && isInVoiceWithMe(member.id)) items.push(...localCallItems(member, ctx))
-  items.push(...moderationItems(member, isSelf))
+  items.push(...memberRelationItems(member), ...moderationItems(member, isSelf))
   return items
 }

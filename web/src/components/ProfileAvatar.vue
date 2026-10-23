@@ -3,7 +3,7 @@ import type { PropType } from 'vue'
 import type { User as ProfileUser } from '../types/domain'
 import type { LivePresence } from './presentationTypes'
 import { ref } from 'vue'
-import { AtSign, Camera, Loader2 } from '@lucide/vue'
+import { AtSign, Camera, Loader2, MessageCircle } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
@@ -16,9 +16,11 @@ import PresenceDot from './PresenceDot.vue'
 defineProps({
   profileUser: { type: Object as PropType<Partial<ProfileUser>>, required: true },
   isSelf: { type: Boolean, default: false },
-  liveStatus: { type: String as PropType<LivePresence>, required: true }
+  liveStatus: { type: String as PropType<LivePresence>, required: true },
+  // Offer "Message": direct messages are on and this member can be written to.
+  canMessage: { type: Boolean, default: false }
 })
-const emit = defineEmits<{ mention: [] }>()
+const emit = defineEmits<{ mention: []; message: [] }>()
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
@@ -128,6 +130,18 @@ async function onAvatarSelected(e: Event) {
       >
         <AtSign class="w-4 h-4 text-mnema-accent" />
         <span>{{ $t('profile.mention') }}</span>
+      </button>
+
+      <button
+        v-if="canMessage"
+        type="button"
+        data-testid="profile-message"
+        @click="emit('message')"
+        class="px-3 py-1.5 rounded-lg bg-mnema-accent/15 hover:bg-mnema-accent/25 text-mnema-accent text-sm font-medium border border-mnema-accent/30 flex items-center gap-1.5 transition active:scale-95"
+        v-tooltip.visual="$t('dm.messageHint')"
+      >
+        <MessageCircle class="w-4 h-4" />
+        <span>{{ $t('dm.message') }}</span>
       </button>
 
       <button

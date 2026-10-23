@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
 import type { ContextMenuItem } from './menuTypes'
-import { computed, onMounted } from 'vue'
-import { Hash, Users, Bell, BellOff, AtSign, X, Volume2, Search } from '@lucide/vue'
+import { computed, onMounted, ref } from 'vue'
+import { Hash, Users, Bell, BellOff, AtSign, X, Volume2, Search, MessageCircle, Info } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useNotificationHint } from '../composables/useNotificationHint'
@@ -12,6 +12,8 @@ import SavedMessages from './SavedMessages.vue'
 import PinnedMessages from './PinnedMessages.vue'
 import TipBar from './TipBar.vue'
 import NavDrawerButton from './NavDrawerButton.vue'
+import DmInfoDialog from './DmInfoDialog.vue'
+import { useDmChat } from '../composables/useDmChat'
 import { openSearch } from '../lib/globalSearch'
 import { quoteValue } from '../lib/searchQuery'
 
@@ -23,14 +25,22 @@ const props = defineProps({
 const emit = defineEmits<{ close: []; menu: [x: number, y: number, items: ContextMenuItem[]] }>()
 
 const chatStore = useChatStore()
+// A conversation takes the channel's place: no topic, pins or notification menu, and its members instead of the community's.
+const { dm, isDm } = useDmChat()
+const showInfo = ref(false)
 const serverFeatures = useServerFeaturesStore()
 onMounted(() => { void serverFeatures.load() })
-const channelIcon = computed<Component>(() => (props.panel ? Volume2 : Hash))
+const channelIcon = computed<Component>(() => {
+  if (props.panel) return Volume2
+  return isDm.value ? MessageCircle : Hash
+})
 const { showNotifHint, dismissNotifHint, enableNotifications, notificationMenuItems } = useNotificationHint(() => props.panel)
 
 function searchInChannel() {
   const channel = chatStore.activeChannel
-  if (channel) void openSearch(`in:${quoteValue(channel.name)} `)
+  if (!channel) return
+  if (isDm.value) void openSearch(`in:${quoteValue(channel.name)} `, 'dm')
+  else void openSearch(`in:${quoteValue(channel.name)} `)
 }
 
 // The name keeps the room it needs; only beside a topic is it capped so the
@@ -81,7 +91,7 @@ function openNotificationMenu(e: MouseEvent) {
     <div class="flex items-center gap-2 max-md:gap-0 shrink-0">
       <MentionsInbox v-if="!panel" />
       <SavedMessages v-if="!panel && serverFeatures.has('saved')" />
-      <PinnedMessages v-if="chatStore.activeChannel" />
+      <PinnedMessages v-if="chatStore.activeChannel && !isDm" />
       <button
         v-if="chatStore.activeChannel"
         type="button"
@@ -94,7 +104,7 @@ function openNotificationMenu(e: MouseEvent) {
         <Search class="w-5 h-5" />
       </button>
       <button
-        v-if="chatStore.activeChannel"
+        v-if="chatStore.activeChannel && !isDm"
         @click="openNotificationMenu"
         class="w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
         v-tooltip="$t('notifications.channelSettings')"
@@ -117,6 +127,17 @@ function openNotificationMenu(e: MouseEvent) {
         <X class="w-5 h-5" />
       </button>
       <button
+        v-else-if="isDm"
+        type="button"
+        data-testid="dm-info-button"
+        class="w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+        v-tooltip="$t('dm.info')"
+        :aria-label="$t('dm.info')"
+        @click="showInfo = true"
+      >
+        <Info class="w-5 h-5" />
+      </button>
+      <button
         v-else
         @click="chatStore.showMemberList = !chatStore.showMemberList"
         :class="[
@@ -132,6 +153,8 @@ function openNotificationMenu(e: MouseEvent) {
       </button>
     </div>
   </header>
+
+  <DmInfoDialog v-if="showInfo && dm" :dm="dm" @close="showInfo = false" />
 
   <!-- Desktop notification opt-in: shown until answered or dismissed -->
   <div

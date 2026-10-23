@@ -3,9 +3,12 @@ import { decodeServerEvent } from '../../types/events'
 import type { ServerEventPayloads, ClientEventPayloads } from '../../types/events'
 import { useEmojiStore } from '../emoji'
 import { usePermissionsStore } from '../permissions'
+import { useBlocksStore } from '../blocks'
+import { useServerFeaturesStore } from '../serverFeatures'
 import { installGlobalSearch, uninstallGlobalSearch } from '../../lib/globalSearch'
 import type { Cx } from './state'
 import { fetchChannels } from './channels'
+import { fetchDms } from './dms'
 import { handleWSEvent } from './events'
 import { fetchMembers } from './members'
 import { fetchMessages } from './messageWindow'
@@ -42,6 +45,11 @@ function resyncState(cx: Cx) {
   fetchMembers(cx)
   fetchReadState(cx)
   fetchNotificationSettings(cx)
+  // The first open follows the snapshots of sign-in by an instant; only a reconnect may have missed events.
+  if (cs.reconnectCount.value > 0) {
+    void fetchDms(cx)
+    void useBlocksStore().load()
+  }
   void fetchFollowedThreads(cx)
   void loadNotifyPreview()
   const channel = cs.activeChannel.value
@@ -144,7 +152,9 @@ function handleSocketClose(
 
 function socketUrl(): string {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${protocol}//${window.location.host}/api/ws`
+  // Conversations are only sent to sockets that ask for them (dm=1), and only a server that has them understands the question.
+  const dm = useServerFeaturesStore().dm ? '?dm=1' : ''
+  return `${protocol}//${window.location.host}/api/ws${dm}`
 }
 
 export function initWebSocket(cx: Cx) {
