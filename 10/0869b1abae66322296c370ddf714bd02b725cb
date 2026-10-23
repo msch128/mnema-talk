@@ -1,0 +1,101 @@
+internal/auth/account_export_saved.go
+  s_06fcde5dbef956::t_a7c8a345024021 1-31
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_a7c8a345024021 43
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_a7c8a345024021 1364-1365,1370-1384
+  s_06fcde5dbef956::t_f10edf57cf96a3 1385
+doc/glossary.md
+  s_06fcde5dbef956::t_a7c8a345024021 27-28
+internal/auth/account_export_build.go
+  s_06fcde5dbef956::t_a7c8a345024021 71,163
+internal/events/types.go
+  s_06fcde5dbef956::t_a7c8a345024021 52
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_a7c8a345024021 66
+internal/server/router_build.go
+  s_06fcde5dbef956::t_a7c8a345024021 125
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_a7c8a345024021 1364-1365,1370-1384
+  s_06fcde5dbef956::t_0c79749fa1c17b 1385
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_a7c8a345024021 4,175
+internal/chat/handler.go
+  s_06fcde5dbef956::t_a7c8a345024021 48-49,96
+web/src/stores/savedList.ts
+  s_06fcde5dbef956::t_a7c8a345024021 1-58
+web/src/stores/serverFeatures.test.ts
+  s_06fcde5dbef956::t_a7c8a345024021 1-50
+web/src/components/ChatHeader.vue
+  s_06fcde5dbef956::t_a7c8a345024021 4,7,11,26-27,83
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_a7c8a345024021 1-37
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_a7c8a345024021 1606-1607,1636-1637,2042-2084,2177-2192
+  s_06fcde5dbef956::t_c5105611cb6ea4 2193
+web/src/types/events.ts
+  s_06fcde5dbef956::t_a7c8a345024021 5,92-93,109,313
+  s_06fcde5dbef956::t_0a270025b5e604 365
+web/src/components/PinnedMessages.vue
+  s_06fcde5dbef956::t_a7c8a345024021 93-100,154
+internal/server/health.go
+  s_06fcde5dbef956::t_0a270025b5e604 39
+web/src/composables/useMessageKeyboard.ts
+  s_06fcde5dbef956::t_a7c8a345024021 17,25,74-79
+web/src/components/SavedMessages.test.ts
+  s_06fcde5dbef956::t_a7c8a345024021 1-128
+doc/moderation.md
+  s_06fcde5dbef956::t_a7c8a345024021 102-104
+internal/chat/message_types.go
+  s_06fcde5dbef956::t_a7c8a345024021 73-85
+internal/chat/messages_scan.go
+  s_06fcde5dbef956::t_a7c8a345024021 1-70
+doc/upgrade.md
+  s_06fcde5dbef956::t_a7c8a345024021 159-169
+internal/chat/saved.go
+  s_06fcde5dbef956::t_a7c8a345024021 1-301
+internal/db/migrations/0051_saved_messages.sql
+  s_06fcde5dbef956::t_a7c8a345024021 1-14
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_a7c8a345024021 23
+web/src/stores/saved.test.ts
+  s_06fcde5dbef956::t_a7c8a345024021 1-90
+web/src/components/SavedMessages.vue
+  s_06fcde5dbef956::t_a7c8a345024021 1-192
+internal/chat/pins.go
+  s_06fcde5dbef956::t_a7c8a345024021 7,46-48,54,216
+api/openapi.json
+  s_06fcde5dbef956::t_a7c8a345024021 2641-2648,3345-3406,3548-3570,19910,21924-22215
+internal/chat/messages.go
+  s_06fcde5dbef956::t_a7c8a345024021 28-29,33-34,44,47-48,56
+web/src/composables/useMessageMenuSaved.test.ts
+  s_06fcde5dbef956::t_a7c8a345024021 1-70
+web/src/components/ChatArea.vue
+  s_06fcde5dbef956::t_a7c8a345024021 8,17,40,133
+web/src/composables/useMessageMenu.ts
+  s_06fcde5dbef956::t_a7c8a345024021 9,15-16,51-74,98
+e2e/tests/saved.spec.ts
+  s_06fcde5dbef956::t_a7c8a345024021 1-89
+web/src/components/PinnedMessages.test.ts
+  s_06fcde5dbef956::t_a7c8a345024021 135-151
+web/src/stores/saved.ts
+  s_06fcde5dbef956::t_a7c8a345024021 1-52
+internal/server/saved_integration_test.go
+  s_06fcde5dbef956::t_a7c8a345024021 1-276
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "100869b1abae66322296c370ddf714bd02b725cb",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
