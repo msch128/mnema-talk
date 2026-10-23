@@ -1,0 +1,61 @@
+Dockerfile
+  s_06fcde5dbef956::t_e3d828a28dab69 18,34,67,74
+go.mod
+  s_06fcde5dbef956::t_64490f3f88456f 8-12,20-21,23-25,37-49,74
+  s_06fcde5dbef956::t_c308f52b77dbd8 22
+scripts/postgres-upgrade-drill.sh
+  s_06fcde5dbef956::t_e3d828a28dab69 14
+scripts/backup.sh
+  s_06fcde5dbef956::t_e3d828a28dab69 60
+docker-compose.yml
+  s_06fcde5dbef956::t_e3d828a28dab69 139,356
+.github/workflows/release.yml
+  s_06fcde5dbef956::t_96fa1c40ed80e9 238
+scripts/restore.sh
+  s_06fcde5dbef956::t_e3d828a28dab69 33,84
+web/package.json
+  s_06fcde5dbef956::t_a5416fde2b5d3e 41
+  s_06fcde5dbef956::t_8fc0cf854387da 24,27,29,32,35,43,48,51,53,55,58-60
+.github/dependabot.yml
+  s_06fcde5dbef956::t_e18c7314854f54 61-65,68,71,73-74
+  s_06fcde5dbef956::t_d74124d25ea79f 72,75-77
+THIRD_PARTY_NOTICES.md
+  s_06fcde5dbef956::t_4974ca670a0f08 29,34,39,82-99,110-112,116-117,124,126,128-131
+  s_06fcde5dbef956::t_94b54fc3158bd9 35,170
+doc/product-status.md
+  s_06fcde5dbef956::t_7a3a343bea2e79 96
+internal/sfu/authorization_test.go
+  s_06fcde5dbef956::t_e888d8c96e4939 277-278
+loadtest/viewer/go.mod
+  s_06fcde5dbef956::t_94b43e6fae9f41 7-8,14-15,19-20
+e2e/package.json
+  s_06fcde5dbef956::t_a5416fde2b5d3e 12
+scripts/upgrade-postgres.sh
+  s_06fcde5dbef956::t_e3d828a28dab69 20
+.github/workflows/codeql.yml
+  s_06fcde5dbef956::t_96fa1c40ed80e9 65,78
+e2e/package-lock.json
+  s_06fcde5dbef956::t_c770de61b2aef0 11,15-17,21,31-33,37,47-49
+go.sum
+  s_06fcde5dbef956::t_83b3395798ad6e 7-42,129-130,133-136,139-142,149-152,165-166,208-209
+loadtest/viewer/go.sum
+  s_06fcde5dbef956::t_553e4705cd77c6 7-12,19-22,35-36
+web/package-lock.json
+  s_06fcde5dbef956::t_c28b4c98be9709 13,16,18,21,24,30,32,37,40,42,44,47-49,443-445,491-493,548-550,558-560,575-577,592-594,609-611,626-628,643-645,660-662,680-682,700-702,720-722,740-742,760-762,780-782,797-799,814-816,862-864,911-913,917,938-940,945-948,961,967-969,977-979,983-986,1002-1004,1008-1009,1024-1026,1030-1031,1042-1044,1059-1061,1065-1067,1084-1086,1098-1100,1104-1107,1126-1128,1133-1135,1150-1152,1156,1185-1187,1204-1205,1237-1239,1244,1285-1287,2121-2123,2350-2352,2570-2572,2615-2617,3527-3529,3843-3845,3849,3859-3873,4004-4006,4260-4262,4266-4269,4284-4286,4339-4341,4347-4348,4365,4430-4432,4437,4463-4464,4466-4468
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b52fb3bf833d7a7374c9d896fcf7c0dbe00f1ab6",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
