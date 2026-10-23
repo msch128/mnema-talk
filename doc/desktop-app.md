@@ -16,6 +16,9 @@ in `web-client` mode, in the
 It runs the shared Vue app from a signed bundle that the client verifies and
 reaches the selected instance through its own proxy; the instance supplies data,
 never executable code ([doc/desktop-trusted-client.md](desktop-trusted-client.md)).
+Since 1.1 it shows several servers side by side, each with its own session,
+browser storage and connection
+([several servers at once](desktop-trusted-client.md#several-servers-at-once)).
 The native-crypto boundary below remains a separate requirement. The older
 [feasibility probe](https://github.com/msch128/mnema-talk-desktop/blob/main/README.md)
 is a historical foundation.
@@ -48,8 +51,8 @@ supported client.
 
 ## Windows Gaming DEV
 
-The shared-client host now connects gaming surfaces to the selected instance's
-actual Vue Talk state. The instance must serve the updated shared web client;
+The shared-client host now connects gaming surfaces to the actual Vue Talk state
+of the server that owns the Talk (with several servers open, only that one). The instance must serve the updated shared web client;
 an older web client without the gaming bridge cannot activate these surfaces.
 
 - Join Talk, then focus a detected game. The passive left-hand sidepeek shows

@@ -526,14 +526,66 @@ initialization script, frozen): `version`, `source` (`builtin` or `cache`),
 menu and to enable the gaming bridge on the local origin. In a browser none
 of this exists and nothing changes.
 
-### Isolation between instances
+### Several servers at once
 
-All instances share the local origin, so browser storage is shared. The MLS
-state database is already named from `(community id, account id, device id)`
-and everything else the app stores is per-account UI preference. A
-per-instance origin is not possible on Windows with Tauri's custom-protocol
-mapping (it filters `https://<scheme>.localhost`, no sub-domains). The
-session cookie and the jar are per instance.
+Since the 1.1 client one window shows several servers: a **rail** on the left
+(a page of the host, independent of every bundle and server) lists them with an
+unread dot and a mention count each, and the page of one server sits next to
+it. One account per server, no federation; at most nine, reached with Ctrl+1 to
+Ctrl+9 (Cmd on macOS), reordered by dragging or Alt+arrow, removed from the
+tile's menu. Servers stay fully separate:
+
+* **A page is tied to its server by its webview label** (`i-<id>`, the id is the
+  first 8 bytes of SHA-256 over the instance address, hex). The protocol
+  handler and every host command look the server up from the label of the
+  calling webview and never from an argument, so a page cannot name another
+  server's session, socket, counters or toasts. The capabilities are by
+  webview: pages (`i-*`) get the socket, notification, unread and gaming-bridge
+  commands, only the rail gets `rail_*` (switch, add, move, remove, reconnect)
+  and only the page for adding a server gets `desktop_open_instance`.
+* **Session**: one cookie jar per server, stored in the keychain under the id
+  of that server (one entry per instance, as before). One per origin: the
+  `/api/health` document carries no community id, so none is part of the key.
+* **Browser storage** is separate per server, because the pages share the
+  local origin and would otherwise share IndexedDB (the MLS state) and
+  `localStorage`: a WebView2 user-data folder per server on Windows, a
+  `WKWebsiteDataStore` per server on macOS 14 and newer, a session partition
+  (`persist:inst-<id>`) per server in the Electron client. Where a platform
+  cannot separate the storage (macOS before 14) the client runs one server
+  rather than share it. The host's own pages use a storage of their own, too.
+* **Sockets**: `desktop_ws_*` act on the calling server's relay only, with its
+  own budget. The relay opens `/api/ws` and, when the page asks, `/api/ws?dm=1`
+  (conversation events); the page announces nothing else the host would accept.
+* **Bundles**: the verified bundle is chosen per server from its own
+  `/api/health`, so a 1.0.x and a 1.1 server can run side by side, each with
+  the web app that fits it and the style policy of that bundle version. The
+  high-water mark stays one per `web_client_api`. A server that is too old or
+  too new keeps its place and shows the refusal in its own tab only; "Reconnect"
+  in its menu asks again.
+* **Counts and the badge**: pages report `unread` and `mentions`; the badge of
+  the taskbar or dock is the sum of the mentions. A toast names its server once
+  there are several, and using it brings that server forward and reaches only
+  its page.
+* **Gaming** (Windows overlay, shortcuts, sidepeek) belongs to one server at a
+  time: the one that owns the Talk the person is in. Another server's state is
+  ignored while that Talk is live, and commands go back to that server's page
+  with its own token.
+* **Background servers** are hidden, not stopped: their relay socket, counters
+  and calls keep running, the engine only stops painting them.
+* **Removing a server** wipes its keychain entry (and the fallback file), its
+  browser storage (the engine's storage is cleared, then the profile folder or
+  data store is deleted, with a sweep at the next start for what a cut-short
+  removal leaves), its sockets, toasts and gaming token, and its entry in the
+  list. The list (`instances.json`) holds addresses only.
+* **Updating from the single-server client**: the end-to-end state of that
+  client sits in the engine's default storage. The first server added whose
+  session the old client stored takes that storage over (recorded as `legacy`
+  in the list), so nobody loses a device key by updating.
+
+A server that ended the session (the `kicked` event of `/kick`, a password
+change, a sign-out elsewhere) leaves a stale cookie in the jar, as a browser
+does: requests are answered 401 until the person signs in again, which replaces
+the cookie. Nothing reconnects by itself with a refused session.
 
 ## Updating the client itself
 
