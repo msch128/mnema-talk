@@ -1,11 +1,12 @@
 import type { Message } from '../../types/domain'
 import { t } from '../../i18n'
-import { plainEmojiText } from '../../lib/customEmoji'
+import { previewText, replySnippet } from '../../lib/replies'
 import { mentionsUser, shouldNotify } from '../../lib/chatLogic'
 import { isQuiet } from '../../lib/presence'
 import { platform } from '../../lib/platform'
 import { pushOnThisDevice } from '../../lib/webPush'
 import type { Cx } from './state'
+import { usePermissionsStore } from '../permissions'
 import { goToMessage } from './messageWindow'
 import { isTabVisible } from './readState'
 import { notificationLevel } from './notifySettings'
@@ -20,6 +21,16 @@ export function messageMentionsMe(cx: Cx, msg: Message) {
   return mentionsUser(msg.content || '', me.username)
 }
 
+/** Whether msg is addressed to the signed-in user by name, through one of their roles or as a reply (not by @all/@here). */
+export function messageMentionsMeDirectly(cx: Cx, msg: Message): boolean {
+  const me = cx.authStore.user
+  if (!me || !msg) return false
+  if (msg.reply_to?.user_id === me.id) return true
+  if (mentionsUser(msg.content || '', me.username)) return true
+  const mine = new Set(usePermissionsStore().myRoleIds)
+  return (msg.mention_roles ?? []).some(id => mine.has(id))
+}
+
 function buildNotificationTitle(cx: Cx, msg: Message): string {
   const channel = cx.cs.allChannels.value.find(c => c.id === msg.channel_id)
   const channelName = channel ? `#${channel.name}` : ''
@@ -27,8 +38,12 @@ function buildNotificationTitle(cx: Cx, msg: Message): string {
   return channelName ? `${sender} (${channelName})` : sender
 }
 
-function buildNotificationBody(msg: Message): string {
-  if (msg.content) return msg.poll ? `${t('poll.title')}: ${plainEmojiText(msg.content)}` : plainEmojiText(msg.content)
+const NOTIFICATION_BODY_LEN = 140
+
+/** Plain text like a reply preview: no Markdown, spoilers hidden, emoji as :name:. */
+export function buildNotificationBody(msg: Message): string {
+  const text = replySnippet(previewText(msg.content), NOTIFICATION_BODY_LEN)
+  if (text) return msg.poll ? `${t('poll.title')}: ${text}` : text
   return msg.attachments?.length ? t('chat.attachment') : ''
 }
 
@@ -40,6 +55,7 @@ function canShowBrowserNotification(cx: Cx, msg: Message, isMention: boolean): b
     permission: platform.notificationPermission(),
     level: notificationLevel(cx, msg.channel_id),
     isMention,
+    isDirectMention: messageMentionsMeDirectly(cx, msg),
     hidden: !isTabVisible(),
     isCurrentChannel: msg.channel_id === cx.cs.activeChannel.value?.id
   })

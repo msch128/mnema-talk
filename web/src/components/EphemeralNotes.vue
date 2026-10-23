@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { EyeOff, X } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
+import MarkdownContent from './MarkdownContent.vue'
 import { useChatStore } from '../stores/chat'
 
 // Replies of bots to slash commands that only this member sees ("ephemeral").
@@ -26,7 +27,7 @@ const notes = computed(() => chat.ephemeral.filter(n => n.channel_id === props.c
           <span class="rounded bg-mnema-band px-1 text-[10px] font-bold uppercase tracking-wide text-mnema-mint">{{ $t('slash.bot') }}</span>
           <span class="flex items-center gap-1 text-xs text-mnema-tertiary"><EyeOff class="h-3.5 w-3.5" />{{ $t('slash.onlyYou') }}</span>
         </div>
-        <p v-if="n.content" class="mt-0.5 whitespace-pre-wrap break-words text-mnema-body-ink">{{ n.content }}</p>
+        <MarkdownContent v-if="n.content" :content="n.content" :previews="false" class="mt-0.5" />
         <div v-for="(e, i) in n.embeds ?? []" :key="i" class="mt-1 border-l-2 border-mnema-border pl-2">
           <div v-if="e.title" class="font-semibold text-mnema-text">{{ e.title }}</div>
           <div v-if="e.description" class="whitespace-pre-wrap break-words text-mnema-muted">{{ e.description }}</div>

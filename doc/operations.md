@@ -418,7 +418,7 @@ The image also carries BuildKit provenance and an SBOM. To check a pulled
 image before running it:
 
 ```sh
-cosign verify ghcr.io/msch128/mnema-talk:0.7 \
+cosign verify ghcr.io/msch128/mnema-talk:1.0 \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@'
 ```
@@ -679,7 +679,7 @@ account (it asks for nothing more, because that person can already read the
 database), end its sessions and leave an audit entry:
 
 ```
-docker exec mnema-talk /usr/local/bin/mnema-talk reset-2fa Herzog
+docker exec mnema-talk /usr/local/bin/mnema-talk reset-2fa OWNER_NAME
 ```
 
 Other members' second factor is reset by
@@ -702,7 +702,7 @@ state is held in memory; a restart is not needed to clear it:
 - **From the host** (works even when nobody can sign in):
 
   ```sh
-  docker exec mnema-talk /usr/local/bin/mnema-talk unlock Herzog   # one account
+  docker exec mnema-talk /usr/local/bin/mnema-talk unlock USERNAME   # one account
   docker exec mnema-talk /usr/local/bin/mnema-talk unlock --all    # everybody
   ```
 

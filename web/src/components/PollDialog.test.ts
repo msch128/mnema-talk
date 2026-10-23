@@ -100,7 +100,7 @@ describe('PollDialog', () => {
     await answers(w)[1]!.setValue('B')
     await w.get('[data-testid="poll-dialog"]').trigger('submit')
     await flushPromises()
-    expect(w.get('[role="alert"]').text()).toContain('options must differ')
+    expect(w.get('[role="alert"]').text()).toContain('The options must all be different.')
     expect(w.emitted('close')).toBeUndefined()
   })
 
