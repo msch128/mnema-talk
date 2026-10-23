@@ -23,6 +23,8 @@ func newSnapshot(now time.Time) *Snapshot {
 		owners:     map[uuid.UUID]bool{},
 		bots:       map[uuid.UUID]bool{},
 		channelCat: map[uuid.UUID]uuid.UUID{},
+		dms:        map[uuid.UUID]map[uuid.UUID]bool{},
+		dmEnabled:  true,
 		categories: map[uuid.UUID]bool{},
 		channelOv:  map[uuid.UUID]*scope{},
 		categoryOv: map[uuid.UUID]*scope{},
@@ -115,7 +117,9 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	accepted := load(r, `SELECT id, rules_accepted_version FROM users WHERE rules_accepted_version > 0`, pgx.RowToStructByPos[acceptedRow])
 	bots := load(r, `SELECT user_id FROM bots`, pgx.RowTo[uuid.UUID])
 	cats := load(r, `SELECT id FROM categories`, pgx.RowTo[uuid.UUID])
-	chans := load(r, `SELECT id, category_id FROM channels`, pgx.RowToStructByPos[channelRow])
+	chans := load(r, `SELECT id, category_id FROM channels WHERE type <> 'dm'`, pgx.RowToStructByPos[channelRow])
+	dmRows := load(r, `SELECT channel_id, user_id FROM dm_members`, pgx.RowToStructByPos[dmMemberRow])
+	dmOn := load(r, `SELECT direct_messages_enabled FROM instance_settings`, pgx.RowTo[bool])
 	ows := load(r, `SELECT channel_id, category_id, role_id, user_id, allow, deny FROM permission_overwrites`, pgx.RowToStructByPos[overwriteRow])
 	if r.err != nil {
 		return r.err
@@ -134,6 +138,7 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 		s.rulesAccepted[a.ID] = a.Version
 	}
 	s.addChannels(chans)
+	s.addDMs(dmRows, len(dmOn) == 0 || dmOn[0])
 	s.addOverwrites(ows)
 	return nil
 }

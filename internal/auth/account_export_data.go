@@ -23,11 +23,14 @@ type exportedMessage struct {
 	ChannelName *string    `json:"channel_name" db:"channel_name"`
 	ThreadOf    *uuid.UUID `json:"thread_of,omitempty" db:"parent_id"`
 	ReplyTo     *uuid.UUID `json:"reply_to,omitempty" db:"reply_to_id"`
-	Content     string     `json:"content" db:"content"`
-	Edited      bool       `json:"edited" db:"is_edited"`
-	Pinned      bool       `json:"pinned" db:"is_pinned"`
-	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at" db:"updated_at"`
+	// DirectMessage marks a message of a conversation; its channel_id is the
+	// conversation's id and channel_name is empty.
+	DirectMessage bool      `json:"direct_message" db:"direct_message"`
+	Content       string    `json:"content" db:"content"`
+	Edited        bool      `json:"edited" db:"is_edited"`
+	Pinned        bool      `json:"pinned" db:"is_pinned"`
+	CreatedAt     time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // messageStream writes messages one by one and knows when the bounds are hit.
@@ -55,7 +58,7 @@ func (ms *messageStream) add(m exportedMessage) (bool, error) {
 	return err == nil, err
 }
 
-const messagePageSQL = `SELECT m.id, m.channel_id, c.name AS channel_name, m.parent_id, m.reply_to_id,
+const messagePageSQL = `SELECT m.id, m.channel_id, c.name AS channel_name, m.parent_id, m.reply_to_id, m.in_dm AS direct_message,
 	m.content, m.is_edited, m.is_pinned, m.created_at, m.updated_at
 	FROM messages m JOIN channels c ON c.id = m.channel_id
 	WHERE m.user_id = $1 AND (m.created_at, m.id) > ($2, $3) ORDER BY m.created_at, m.id LIMIT $4`

@@ -180,7 +180,7 @@ func MarkAllRead(ctx context.Context, p *db.Pool, userID uuid.UUID, visible []uu
 	_, err := p.Exec(ctx, `
 		INSERT INTO channel_reads (user_id, channel_id, last_read_at, notify_level)
 		SELECT $1, c.id, NOW(), 'inherit' FROM channels c
-		WHERE ($2::uuid[] IS NULL OR c.id = ANY($2::uuid[]))
+		WHERE c.type <> 'dm' AND ($2::uuid[] IS NULL OR c.id = ANY($2::uuid[]))
 		  AND ($3::uuid IS NULL OR c.category_id = $3::uuid)
 		ON CONFLICT (user_id, channel_id) DO UPDATE
 		SET last_read_at = GREATEST(COALESCE(channel_reads.last_read_at, EXCLUDED.last_read_at), EXCLUDED.last_read_at)`,

@@ -6,12 +6,14 @@ import type { ContextMenuItem } from '../components/menuTypes'
 import type { useMessageActions } from './useMessageActions'
 import {
   MessageSquare, Pencil, Trash2, SmilePlus, Reply,
-  Link as LinkIcon, Copy, Bookmark, Pin, PinOff, Eraser, History
+  Link as LinkIcon, Copy, Bookmark, BookmarkPlus, BookmarkX, Pin, PinOff, Eraser, History
 } from '@lucide/vue'
 import { openEditHistory } from '../lib/editHistory'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
+import { useSavedStore } from '../stores/saved'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { moderateMessages } from '../lib/messageModeration'
 import { previewText } from '../lib/replies'
 import { shortcodesForEditing } from '../lib/customEmoji'
@@ -46,6 +48,30 @@ function markUnreadItem(msg: Message): ContextMenuItem {
   }
 }
 
+/** Adds the message to the member's private saved list, or takes it off. Only on servers that have the feature. */
+export async function toggleSavedMessage(msg: Message): Promise<void> {
+  const saved = useSavedStore()
+  const toasts = useToastStore()
+  const was = saved.isSaved(msg.id)
+  try {
+    if (was) await saved.remove(msg.id)
+    else await saved.save(msg.id)
+    toasts.success(t(was ? 'saved.removed' : 'saved.added'))
+  } catch (err) {
+    toasts.error(errorText(err, t(was ? 'saved.removeFailed' : 'saved.saveFailed')))
+  }
+}
+
+function savedItem(msg: Message): ContextMenuItem {
+  const was = useSavedStore().isSaved(msg.id)
+  return {
+    label: t(was ? 'saved.removeFromSaved' : 'saved.save'),
+    icon: was ? BookmarkX : BookmarkPlus,
+    shortcut: 's',
+    action: () => toggleSavedMessage(msg)
+  }
+}
+
 /** Reply, react, thread, edit, copy and mark unread: what everyone gets. */
 function basicItems(msg: Message, { actions, reply, copy }: MenuDeps): ContextMenuItem[] {
   const chatStore = useChatStore()
@@ -69,6 +95,7 @@ function basicItems(msg: Message, { actions, reply, copy }: MenuDeps): ContextMe
     action: () => copy(`${window.location.origin}/c/${chatStore.activeChannel?.id}/m/${msg.id}`, 'chat.copiedLink')
   })
   items.push(markUnreadItem(msg))
+  if (useServerFeaturesStore().has('saved')) items.push(savedItem(msg))
   return items
 }
 

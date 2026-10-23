@@ -148,7 +148,7 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 		requireChatError(t, err, "lock channel group")
 	})
 	t.Run("channel group decoding", func(t *testing.T) {
-		p := driftPool(t, f.p, map[string]string{"channels": `SELECT id,category_id,NULL::int sort_order,created_at FROM public.channels`})
+		p := driftPool(t, f.p, map[string]string{"channels": `SELECT id,category_id,NULL::int sort_order,created_at,type FROM public.channels`})
 		tx, err := p.Begin(ctx)
 		if err != nil {
 			t.Fatal(err)

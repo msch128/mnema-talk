@@ -115,6 +115,9 @@ var Routes = []Route{
 	{Method: "PATCH", Pattern: "/emoji/{id}", Action: "emoji.rename", TargetType: "emoji", IDParam: "id", Snapshot: ResEmoji},
 	{Method: "DELETE", Pattern: "/emoji/{id}", Action: "emoji.delete", TargetType: "emoji", IDParam: "id", Snapshot: ResEmoji},
 
+	{Method: "POST", Pattern: "/reports/{id}/resolve", Action: "report.resolve", TargetType: "report", IDParam: "id"},
+	{Method: "DELETE", Pattern: "/reports/{id}", Action: "report.delete", TargetType: "report", IDParam: "id"},
+
 	{Method: "POST", Pattern: "/media/prune", Action: "media.prune", TargetType: "media"},
 	{Method: "POST", Pattern: "/media/orphans/cleanup", Action: "media.orphans_cleanup", TargetType: "media"},
 	{Method: "DELETE", Pattern: "/media/{id}", Action: "media.delete", TargetType: "media", IDParam: "id"},

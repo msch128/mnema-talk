@@ -37,6 +37,15 @@ type Handler struct {
 	EditHistoryLimit *httpx.RateLimiter
 	// PinLimit caps pinning and unpinning per member (each change is broadcast); nil means no cap.
 	PinLimit *httpx.RateLimiter
+	// BlockLimit caps blocking and unblocking per member; nil means no cap.
+	BlockLimit *httpx.RateLimiter
+	// ReportLimit caps message reports per member; nil means no cap.
+	ReportLimit *httpx.RateLimiter
+	// SavedLimit caps saving and removing saved messages per member; nil means no cap.
+	SavedLimit *httpx.RateLimiter
+	// DMLimit caps starting direct messages and adding members to them per
+	// member; nil means no cap.
+	DMLimit *httpx.RateLimiter
 }
 
 // VoiceRooms acts on live voice rooms (implemented by the WebSocket hub).
@@ -78,6 +87,10 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Put("/channels/{channelID}/messages/{messageID}", httpx.Handle(h.editMessage))
 	r.Delete("/channels/{channelID}/messages/{messageID}", httpx.Handle(h.deleteMessage))
 	h.mountModeration(r)
+	h.mountBlocks(r)
+	h.mountReports(r)
+	h.mountSaved(r)
+	h.mountDMs(r)
 	history := r
 	if h.EditHistoryLimit != nil {
 		history = r.With(h.EditHistoryLimit.By(auth.UserKey))
@@ -101,6 +114,7 @@ func (h *Handler) Mount(r chi.Router) {
 // MountAdmin registers channel and category management (the Manage channels
 // permission applies).
 func (h *Handler) MountAdmin(r chi.Router) {
+	h.mountReportsAdmin(r)
 	r = r.With(auth.RequirePerm(h.Perms, perm.ManageChannels))
 	r.Post("/categories", httpx.Handle(h.createCategory))
 	r.Delete("/categories/{id}", httpx.Handle(h.deleteCategory))

@@ -49,6 +49,12 @@ type PermissionsInfo struct {
 	// roles' override or the global limit, never above the server's ceiling.
 	// It changes with permissions_changed.
 	MaxUploadMB int `json:"max_upload_mb" minimum:"1"`
+	// DirectMessagesEnabled is the community's switch for direct messages;
+	// CanStartDirectMessages says whether the caller may start them and write
+	// in them now (the switch is on, they hold Send direct messages, and no
+	// timeout or pending rules apply).
+	DirectMessagesEnabled  bool `json:"direct_messages_enabled" binding:"optional"`
+	CanStartDirectMessages bool `json:"can_start_direct_messages" binding:"optional"`
 }
 
 // myPermissions handles GET /api/permissions.
@@ -86,6 +92,7 @@ func (h *Handler) myPermissions(w http.ResponseWriter, r *http.Request) error {
 		Catalog:     perm.Catalog,
 		MaxUploadMB: snap.UploadMB(sub, h.Perms.UploadCeilingMB()),
 	}
+	info.DirectMessagesEnabled, info.CanStartDirectMessages = snap.DirectMessagesEnabled(), snap.CanStartDM(sub)
 	info.RulesPending = snap.RulesPending(user.ID)
 	if t, ok := snap.Timeout(user.ID); ok {
 		info.TimeoutUntil, info.TimeoutReason = &t.Until, t.Reason

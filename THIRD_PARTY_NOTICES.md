@@ -29,7 +29,7 @@ binary release.
 | [Lucide](https://lucide.dev) (`@lucide/vue`) | 1.57.0 | ISC |
 | [Inter](https://rsms.me/inter/) (`@fontsource/inter`) | 5.3.0 | OFL-1.1 |
 | [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (`@fontsource/jetbrains-mono`) | 5.3.0 | OFL-1.1 |
-| [emoji-picker-element](https://github.com/nolanlawson/emoji-picker-element) | 1.29.1 | Apache-2.0 |
+| [emoji-picker-element](https://github.com/nolanlawson/emoji-picker-element) | 1.29.1 (modified at build time: two small patches so it runs under the Content-Security-Policy, see `web/scripts/emojiPickerCsp.ts`) | Apache-2.0 |
 | [emoji-picker-element-data](https://github.com/nolanlawson/emoji-picker-element-data) (emoji names and keywords built from [Emojibase](https://emojibase.dev) data, MIT, and [Unicode CLDR](https://cldr.unicode.org) annotations, Unicode License v3) | 1.8.0 | Apache-2.0 |
 | [highlight.js](https://highlightjs.org) (syntax highlighting of code blocks in messages; core build with a fixed language list) | 11.11.1 | BSD-3-Clause |
 | [Swagger UI](https://github.com/swagger-api/swagger-ui) (`swagger-ui-dist`, only on the API reference page `/api/docs`; NOTICE: "swagger-ui, Copyright 2020-2021 SmartBear Software Inc.") | 5.33.2 | Apache-2.0 |
