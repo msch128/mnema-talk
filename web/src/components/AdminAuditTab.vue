@@ -17,7 +17,7 @@ const toasts = useToastStore()
 const chat = useChatStore()
 
 // Event groups the server understands as a prefix (action=role matches role.*).
-const GROUPS = ['role', 'user', 'channel', 'category', 'layout', 'invite', 'webhook', 'outgoing_webhook', 'media', 'settings', 'moderation', 'message', 'voice', 'auth', 'system'] as const
+const GROUPS = ['role', 'user', 'channel', 'category', 'layout', 'invite', 'webhook', 'outgoing_webhook', 'media', 'settings', 'moderation', 'message', 'voice', 'auth', 'bot', 'emoji', 'system'] as const
 
 const entries = ref<AuditItem[]>([])
 const next = ref<number | null>(null)
@@ -149,7 +149,7 @@ onMounted(() => load(false))
           <div class="text-xs text-mnema-tertiary font-mono break-all">
             {{ e.action }} · {{ e.target_type }} {{ e.target_id }} · {{ $t('audit.request') }} {{ e.request_id }}
           </div>
-          <pre class="bg-mnema-canvas border border-mnema-border rounded-md p-3 text-xs text-mnema-text overflow-x-auto whitespace-pre-wrap break-words">{{ pretty(e.details) }}</pre>
+          <pre v-if="Object.keys(e.details).length" class="bg-mnema-canvas border border-mnema-border rounded-md p-3 text-xs text-mnema-text overflow-x-auto whitespace-pre-wrap break-words">{{ pretty(e.details) }}</pre>
         </div>
       </div>
     </div>

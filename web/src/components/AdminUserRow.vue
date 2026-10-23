@@ -70,10 +70,10 @@ function roles() {
 <template>
   <tr
     data-testid="user-row"
-    class="hover:bg-mnema-elevated/60 transition-colors"
+    class="hover:bg-mnema-elevated/60 transition-colors max-md:block max-md:px-3 max-md:py-2.5"
   >
     <!-- Username with avatar -->
-    <td class="py-3 px-4">
+    <td class="py-3 px-4 max-md:block max-md:px-0 max-md:py-1">
       <div class="flex items-center gap-2.5 min-w-0">
         <UserAvatar :user="user" size="xs" />
         <span data-testid="user-username" class="font-mono text-xs font-semibold text-mnema-text truncate">@{{ user.username }}</span>
@@ -81,12 +81,12 @@ function roles() {
     </td>
 
     <!-- Display name -->
-    <td class="py-3 px-4">
+    <td class="py-3 px-4 max-md:block max-md:px-0 max-md:py-1">
       <span data-testid="user-displayname" class="text-mnema-text font-medium truncate block max-w-[160px]">{{ user.display_name || user.username }}</span>
     </td>
 
     <!-- Role -->
-    <td class="py-3 px-4">
+    <td class="py-3 px-4 max-md:block max-md:px-0 max-md:py-1">
       <span
         v-if="user.role === 'admin'"
         data-testid="user-role"
@@ -107,12 +107,12 @@ function roles() {
     </td>
 
     <!-- Last Seen -->
-    <td class="py-3 px-4 text-xs text-mnema-muted whitespace-nowrap">
+    <td class="py-3 px-4 max-md:block max-md:px-0 max-md:py-1 text-xs text-mnema-muted whitespace-nowrap">
       <span data-testid="user-lastseen">{{ formatDateTime(user.last_seen_at) }}</span>
     </td>
 
     <!-- Status -->
-    <td class="py-3 px-4 whitespace-nowrap">
+    <td class="py-3 px-4 max-md:block max-md:px-0 max-md:py-1 md:whitespace-nowrap">
       <div class="flex items-center gap-1.5 flex-wrap">
         <span
           v-if="user.disabled"
@@ -150,8 +150,8 @@ function roles() {
     </td>
 
     <!-- Actions -->
-    <td class="py-3 px-4 text-right whitespace-nowrap">
-      <div class="flex items-center justify-end gap-1">
+    <td class="py-3 px-4 max-md:block max-md:px-0 max-md:py-1 text-right whitespace-nowrap">
+      <div class="flex flex-wrap items-center justify-end max-md:justify-start gap-1">
         <!-- Kick from voice -->
         <button
           v-if="inVoice() && permissions.can('disconnect_members')"

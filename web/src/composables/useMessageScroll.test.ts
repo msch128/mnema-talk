@@ -206,4 +206,29 @@ describe('useMessageScroll', () => {
     wrapper?.unmount()
     expect(disconnect).toHaveBeenCalled()
   })
+  it('keeps the bottom when an image arrives after the first scroll', async () => {
+    metrics(el)
+    const s = setup()
+    await flush()
+    s.scrollToBottomNow()
+    metrics(el, { scrollHeight: 2400 }) // the image grew the list
+    el.dispatchEvent(new Event('load'))
+    expect(el.scrollTop).toBe(2400)
+  })
+
+  it('keeps a jump target centred while images above it load, until the person scrolls', async () => {
+    metrics(el)
+    const r = row('t', 0)
+    setup()
+    chat.jumpTarget = { id: 't', seq: 1 }
+    await flush()
+    vi.mocked(r.scrollIntoView).mockClear()
+    el.dispatchEvent(new Event('load'))
+    expect(r.scrollIntoView).toHaveBeenCalledWith({ block: 'center' })
+
+    el.dispatchEvent(new Event('wheel'))
+    vi.mocked(r.scrollIntoView).mockClear()
+    el.dispatchEvent(new Event('load'))
+    expect(r.scrollIntoView).not.toHaveBeenCalled()
+  })
 })

@@ -158,3 +158,49 @@ test('phone: sign in, drawer, message, thread, settings, Talk', async ({ page, b
   await leave.tap()
   await expect(page.getByRole('button', { name: 'Verlassen' })).toHaveCount(0)
 })
+
+// Popovers and the admin dialogs are anchored or wide on a desktop; on a phone
+// they must stay inside the screen (mentions inbox, pins, emoji picker, the
+// admin console).
+test('phone: popovers, emoji picker and the admin console stay on screen', async ({ page }) => {
+  await signIn(page)
+  const width = page.viewportSize()?.width ?? 0
+  const channel = `mobil-pop-${suffix}`
+  expect((await apiFetch(page, 'POST', '/api/admin/channels', { name: channel, type: 'text' })).status).toBe(201)
+  await page.reload()
+  await openDrawer(page)
+  await page.locator('[data-channel-type="text"]', { hasText: channel }).tap()
+
+  const insideScreen = async (testId: string) => {
+    const box = await bounds(page.getByTestId(testId))
+    expect(box.x, `${testId} left edge`).toBeGreaterThanOrEqual(0)
+    expect(box.x + box.width, `${testId} right edge`).toBeLessThanOrEqual(width + 1)
+  }
+  for (const [button, panel] of [['mentions-inbox-button', 'mentions-inbox'], ['pinned-button', 'pinned-panel']] as const) {
+    await page.getByTestId(button).tap()
+    await expect(page.getByTestId(panel)).toBeVisible()
+    await insideScreen(panel)
+    await page.getByTestId(button).tap()
+    await expect(page.getByTestId(panel)).toBeHidden()
+  }
+  await page.getByTestId('emoji-button').tap()
+  await expect(page.getByTestId('emoji-picker')).toBeVisible()
+  await insideScreen('emoji-picker')
+  await page.keyboard.press('Escape')
+
+  // The admin console: every tab fits, the title names the tab, the tab bar
+  // keeps its place and nothing pushes the page sideways.
+  await page.goto('/admin/users')
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+  const barTop = (await bounds(page.getByTestId('admin-tabs'))).y
+  for (const tab of ['users', 'roles', 'channels', 'invites', 'onboarding', 'emoji', 'bans', 'bots', 'media', 'audit', 'system']) {
+    const button = page.getByTestId(`tab-${tab}`)
+    await button.tap()
+    await expect(button).toHaveAttribute('aria-pressed', 'true')
+    await expect(button).toBeInViewport()
+    await expect(dialog.getByRole('heading', { level: 2 })).toHaveText((await button.innerText()).trim())
+    expect((await bounds(page.getByTestId('admin-tabs'))).y, `${tab} tab bar position`).toBe(barTop)
+    await expectNoSidewaysScroll(page)
+  }
+})

@@ -55,4 +55,12 @@ describe('AdminMailPanel', () => {
     await flushPromises()
     expect(useToastStore().toasts.at(-1)?.text).toBe('Too many test mails. Try again in a few minutes.')
   })
+  it('asks for a recipient when the Owner has no address of their own', async () => {
+    const { ApiError } = await vi.importActual<typeof import('../lib/api')>('../lib/api')
+    const w = mount(AdminMailPanel, { props: { mail: on } })
+    apiMock.mockRejectedValueOnce(new ApiError(400, 'INVALID_INPUT', 'add an e-mail address to your account or name a recipient'))
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(useToastStore().toasts.at(-1)?.text).toBe('Enter a recipient above or add an e-mail address to your account.')
+  })
 })

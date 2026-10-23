@@ -834,7 +834,6 @@
     "noConnect": "Du darfst diesem Talk nicht beitreten."
   },
   "admin": {
-    "title": "Speicher & Administration",
     "signedInAs": "Angemeldet als {name} (Inhaber)",
     "unknownError": "Unbekannter Fehler",
     "tabs": {
@@ -1139,7 +1138,8 @@
       "recipientPlaceholder": "Leer: deine eigene Adresse",
       "test": "Testmail senden",
       "sent": "Testmail gesendet.",
-      "tooOften": "Zu viele Testmails. Versuche es in ein paar Minuten erneut."
+      "tooOften": "Zu viele Testmails. Versuche es in ein paar Minuten erneut.",
+      "needRecipient": "Trag oben eine Empfängeradresse ein oder hinterlege eine E-Mail-Adresse in deinem Konto."
     },
     "resetTwoFactor": "Zwei-Faktor-Anmeldung zurücksetzen",
     "resetTwoFactorTitle": "Zwei-Faktor-Anmeldung von {name} zurücksetzen?",
@@ -1518,7 +1518,9 @@
       "voice": "Talk-Anwesenheit",
       "auth": "Anmeldungen",
       "settings": "Einstellungen",
-      "moderation": "Moderation"
+      "moderation": "Moderation",
+      "bot": "Bots",
+      "emoji": "Emoji"
     },
     "actions": {
       "role": {
@@ -1536,7 +1538,8 @@
         "password_set": "Passwort gesetzt",
         "password_reset": "Passwort zurückgesetzt",
         "lockout_clear": "Login-Sperre aufgehoben",
-        "talk_kick": "Aus Talk entfernt"
+        "talk_kick": "Aus Talk entfernt",
+        "two_factor_reset": "Zwei-Faktor-Anmeldung zurückgesetzt"
       },
       "channel": {
         "create": "Kanal erstellt",
@@ -1577,7 +1580,8 @@
         "delete": "Medium gelöscht"
       },
       "system": {
-        "update": "Update gestartet"
+        "update": "Update gestartet",
+        "mail_test": "Test-Mail gesendet"
       },
       "message": {
         "delete": "Nachricht gelöscht",
@@ -1595,10 +1599,24 @@
         "login_locked": "Anmeldung gesperrt",
         "register": "Registriert",
         "logout_all": "Überall abgemeldet",
-        "password_change": "Passwort geändert"
+        "password_change": "Passwort geändert",
+        "email_set": "E-Mail-Adresse gesetzt",
+        "email_remove": "E-Mail-Adresse entfernt",
+        "email_verified": "E-Mail-Adresse bestätigt",
+        "export_request": "Datenexport angefordert",
+        "export_download": "Datenexport heruntergeladen",
+        "account_delete": "Konto gelöscht",
+        "password_reset_mail": "Passwort per E-Mail zurückgesetzt",
+        "recovery_code_used": "Wiederherstellungscode benutzt",
+        "recovery_codes_regenerated": "Wiederherstellungscodes erneuert",
+        "two_factor_enabled": "Zwei-Faktor-Anmeldung eingeschaltet",
+        "two_factor_disabled": "Zwei-Faktor-Anmeldung ausgeschaltet",
+        "two_factor_failed": "Zweiter Faktor falsch",
+        "two_factor_alert": "Zwei-Faktor-Warnung"
       },
       "settings": {
-        "upload_limit": "Upload-Limit geändert"
+        "upload_limit": "Upload-Limit geändert",
+        "onboarding": "Willkommen & Regeln geändert"
       },
       "moderation": {
         "timeout": "Mitglied stummgeschaltet",
@@ -1607,6 +1625,23 @@
         "unban": "Mitglied entsperrt",
         "ban_expired": "Sperre abgelaufen",
         "bulk_delete": "Nachrichten gesammelt gelöscht"
+      },
+      "bot": {
+        "create": "Bot erstellt",
+        "update": "Bot bearbeitet",
+        "delete": "Bot gelöscht",
+        "avatar": "Bot-Avatar geändert",
+        "roles": "Bot-Rollen geändert",
+        "token_create": "Bot-Token erstellt",
+        "token_regenerate": "Bot-Token erneuert",
+        "token_revoke": "Bot-Token widerrufen",
+        "command_update": "Bot-Befehl bearbeitet",
+        "command_delete": "Bot-Befehl gelöscht"
+      },
+      "emoji": {
+        "create": "Emoji hinzugefügt",
+        "rename": "Emoji umbenannt",
+        "delete": "Emoji gelöscht"
       }
     }
   },

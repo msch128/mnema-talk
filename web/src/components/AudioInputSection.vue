@@ -59,7 +59,7 @@ function handleKeyRecord(e: KeyboardEvent) {
     <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
       {{ $t('audio.inputMode') }}
     </label>
-    <div class="grid grid-cols-2 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <button
         type="button"
         @click="handleInputModeChange('activity')"
@@ -102,7 +102,7 @@ function handleKeyRecord(e: KeyboardEvent) {
 
   <!-- Push-to-talk key (if active) -->
   <div v-if="voiceStore.inputMode === 'ptt'" class="p-3 rounded-lg bg-mnema-surface border border-mnema-hairline space-y-2">
-    <div class="flex items-center justify-between text-sm">
+    <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
       <span class="text-mnema-tertiary font-medium">{{ $t('audio.pttKey') }}</span>
       <button
         @click="isRecordingPttKey = true"
@@ -128,8 +128,8 @@ function handleKeyRecord(e: KeyboardEvent) {
       {{ $t('audio.micTest') }}
     </label>
     <div class="p-3.5 rounded-lg bg-mnema-surface border border-mnema-hairline space-y-2.5">
-      <div class="flex items-start justify-between gap-4">
-        <div class="space-y-0.5">
+      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+        <div class="min-w-0 space-y-0.5">
           <div class="text-sm font-semibold text-mnema-text flex items-center gap-2">
             <Volume2 class="w-4 h-4 text-mnema-accent" />
             <span>{{ $t('audio.micTest') }}</span>
@@ -150,7 +150,7 @@ function handleKeyRecord(e: KeyboardEvent) {
           data-testid="mic-test-toggle"
           :aria-pressed="voiceStore.isMicTesting ? 'true' : 'false'"
           :class="[
-            'px-3.5 py-1.5 rounded-lg font-semibold text-xs transition flex items-center gap-1.5 flex-shrink-0 shadow-sm mt-0.5',
+            'px-3.5 py-1.5 max-sm:py-2.5 max-sm:w-full max-sm:justify-center rounded-lg font-semibold text-xs transition flex items-center gap-1.5 flex-shrink-0 shadow-sm sm:mt-0.5',
             voiceStore.isMicTesting
               ? 'bg-amber-600 hover:bg-amber-500 text-white'
               : 'bg-mnema-accent hover:bg-mnema-accent-hover text-mnema-accent-ink'
@@ -166,7 +166,7 @@ function handleKeyRecord(e: KeyboardEvent) {
 
   <!-- 3. Input sensitivity and live meter (voice activity mode) -->
   <div v-if="voiceStore.inputMode === 'activity'" class="space-y-3">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
       <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
         {{ $t('audio.sensitivity') }}
       </label>

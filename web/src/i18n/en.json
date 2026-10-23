@@ -834,7 +834,6 @@
     "noConnect": "You don’t have permission to join this voice channel."
   },
   "admin": {
-    "title": "Storage & administration",
     "signedInAs": "Signed in as {name} (Owner)",
     "unknownError": "Unknown error",
     "tabs": {
@@ -1139,7 +1138,8 @@
       "recipientPlaceholder": "Empty: your own address",
       "test": "Send test mail",
       "sent": "Test mail sent.",
-      "tooOften": "Too many test mails. Try again in a few minutes."
+      "tooOften": "Too many test mails. Try again in a few minutes.",
+      "needRecipient": "Enter a recipient above or add an e-mail address to your account."
     },
     "resetTwoFactor": "Reset two-factor sign-in",
     "resetTwoFactorTitle": "Reset two-factor sign-in for {name}?",
@@ -1518,7 +1518,9 @@
       "voice": "Talk presence",
       "auth": "Sign-ins",
       "settings": "Settings",
-      "moderation": "Moderation"
+      "moderation": "Moderation",
+      "bot": "Bots",
+      "emoji": "Emoji"
     },
     "actions": {
       "role": {
@@ -1536,7 +1538,8 @@
         "password_set": "Password set",
         "password_reset": "Password reset",
         "lockout_clear": "Login lock cleared",
-        "talk_kick": "Removed from Talk"
+        "talk_kick": "Removed from Talk",
+        "two_factor_reset": "Two-factor sign-in reset"
       },
       "channel": {
         "create": "Channel created",
@@ -1577,7 +1580,8 @@
         "delete": "Media deleted"
       },
       "system": {
-        "update": "Update started"
+        "update": "Update started",
+        "mail_test": "Test mail sent"
       },
       "message": {
         "delete": "Message deleted",
@@ -1595,10 +1599,24 @@
         "login_locked": "Sign-in blocked",
         "register": "Registered",
         "logout_all": "Signed out everywhere",
-        "password_change": "Password changed"
+        "password_change": "Password changed",
+        "email_set": "E-mail address set",
+        "email_remove": "E-mail address removed",
+        "email_verified": "E-mail address confirmed",
+        "export_request": "Data export requested",
+        "export_download": "Data export downloaded",
+        "account_delete": "Account deleted",
+        "password_reset_mail": "Password reset by e-mail",
+        "recovery_code_used": "Recovery code used",
+        "recovery_codes_regenerated": "Recovery codes renewed",
+        "two_factor_enabled": "Two-factor sign-in turned on",
+        "two_factor_disabled": "Two-factor sign-in turned off",
+        "two_factor_failed": "Second factor wrong",
+        "two_factor_alert": "Two-factor warning"
       },
       "settings": {
-        "upload_limit": "Upload limit changed"
+        "upload_limit": "Upload limit changed",
+        "onboarding": "Welcome & rules changed"
       },
       "moderation": {
         "timeout": "Member timed out",
@@ -1607,6 +1625,23 @@
         "unban": "Member unbanned",
         "ban_expired": "Ban expired",
         "bulk_delete": "Messages deleted in bulk"
+      },
+      "bot": {
+        "create": "Bot created",
+        "update": "Bot edited",
+        "delete": "Bot deleted",
+        "avatar": "Bot avatar changed",
+        "roles": "Bot roles changed",
+        "token_create": "Bot token created",
+        "token_regenerate": "Bot token renewed",
+        "token_revoke": "Bot token revoked",
+        "command_update": "Bot command edited",
+        "command_delete": "Bot command deleted"
+      },
+      "emoji": {
+        "create": "Emoji added",
+        "rename": "Emoji renamed",
+        "delete": "Emoji deleted"
       }
     }
   },

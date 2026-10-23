@@ -1,9 +1,10 @@
 <script setup lang="ts">
 // Admin dashboard shell: the tab bar and one component per tab. Tabs stay
 // alive while the dialog is open, so an unsaved layout survives a tab switch.
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { Users, FolderTree, Link, HardDrive, Server, Shield, ScrollText, Gavel, Bot, Sparkles, Smile } from '@lucide/vue'
 import { navigate } from '../lib/router'
+import { t } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import BaseDialog from './BaseDialog.vue'
@@ -69,7 +70,30 @@ watch(() => props.initialTab, (newTab) => {
   }
 })
 
+// Phone widths: the tab bar scrolls sideways, so fade the edge that has more
+// tabs behind it and keep the active tab in view.
+const tabBar = ref<HTMLElement | null>(null)
+const fadeStart = ref(false)
+const fadeEnd = ref(false)
+function updateFades() {
+  const bar = tabBar.value
+  if (!bar) return
+  fadeStart.value = bar.scrollLeft > 4
+  fadeEnd.value = bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 4
+}
+async function revealActiveTab() {
+  await nextTick()
+  tabBar.value?.querySelector('[aria-pressed="true"]')?.scrollIntoView?.({ block: 'nearest', inline: 'center' })
+  updateFades()
+}
+onMounted(revealActiveTab)
+
+// The title names the tab you are on; the subtitle names the console.
+const dialogTitle = computed(() => t(`admin.tabs.${activeTab.value}`))
+const dialogSubtitle = computed(() => `${t('menu.adminConsole')} · ${t('admin.signedInAs', { name: authStore.user?.display_name || authStore.user?.username || '' })}`)
+
 watch(activeTab, (tab) => {
+  void revealActiveTab()
   if (typeof window !== 'undefined' && window.location.pathname !== `/admin/${tab}`) {
     navigate(`/admin/${tab}`, { replace: true })
   }
@@ -78,13 +102,18 @@ watch(activeTab, (tab) => {
 
 <template>
   <BaseDialog
-    :title="$t('admin.title')"
-    :subtitle="$t('admin.signedInAs', { name: authStore.user?.display_name || authStore.user?.username || '' })"
-    panel-class="max-w-5xl max-h-[90vh]"
+    :title="dialogTitle"
+    :subtitle="dialogSubtitle"
+    panel-class="max-w-5xl h-[85vh] max-h-[860px]"
     @close="emit('close')"
   >
     <!-- Navigation tabs -->
-    <div class="flex items-center gap-1 px-6 py-2.5 border-b border-mnema-hairline bg-mnema-canvas/40 text-sm overflow-x-auto flex-shrink-0">
+    <div
+      ref="tabBar"
+      data-testid="admin-tabs"
+      :class="['admin-tabs flex items-center gap-1 px-6 max-md:px-3 py-2.5 border-b border-mnema-hairline bg-mnema-canvas/40 text-sm flex-shrink-0 md:flex-wrap max-md:overflow-x-auto', fadeStart && 'fade-start', fadeEnd && 'fade-end']"
+      @scroll.passive="updateFades"
+    >
       <button
         v-for="tab in TABS"
         :key="tab"
