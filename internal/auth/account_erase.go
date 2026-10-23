@@ -26,7 +26,8 @@ const deletedUsernamePrefix = "deleted-"
 //     cards and pins removed, as are the kept earlier versions of their
 //     edits (other members' replies and quotes remain);
 //   - their uploads and avatar are deleted from storage and the database;
-//   - their reactions and mentions of them disappear;
+//   - their reactions, poll votes and mentions of them disappear, and so do
+//     the polls they posted (the question was the message text);
 //   - undelivered outgoing webhook events that carry their message text (or
 //     quote it) are dropped from the queue;
 //   - audit entries about them keep action, time and ids but lose names and
@@ -35,6 +36,8 @@ const deletedUsernamePrefix = "deleted-"
 var eraseSteps = []string{
 	`DELETE FROM message_reactions WHERE user_id = $1`,
 	`DELETE FROM message_mentions WHERE user_id = $1`,
+	`DELETE FROM poll_votes WHERE user_id = $1`,
+	`DELETE FROM polls WHERE message_id IN (SELECT id FROM messages WHERE user_id = $1)`,
 	`DELETE FROM message_edits WHERE editor_id = $1 OR message_id IN (SELECT id FROM messages WHERE user_id = $1)`,
 	`UPDATE messages SET content = '', embeds = '[]'::jsonb, author_name = NULL, is_pinned = FALSE, pinned_at = NULL, pinned_by = NULL, is_edited = FALSE WHERE user_id = $1`,
 	`DELETE FROM outgoing_queue WHERE convert_from(data, 'UTF8')::jsonb->>'user_id' = $1::text

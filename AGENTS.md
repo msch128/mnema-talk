@@ -74,6 +74,8 @@ mnema-talk/
 │   ├── events/              # Event types / publishing to the hub
 │   ├── ws/                  # Real-time WebSocket hub (events, presence)
 │   ├── bot/                 # Bot accounts, tokens, bot API authentication, slash commands (doc/bots.md)
+│   ├── slash/               # Built-in slash commands: the registry and the Builtin interface (doc/bots.md)
+│   ├── poll/                # Polls and the /poll command
 │   ├── gateway/             # Bot gateway (Discord-style opcodes, intents, resume)
 │   ├── sfu/                 # Pion WebRTC SFU (audio/video/screenshare forwarding)
 │   ├── update/              # GitHub release check + client for the optional updater sidecar

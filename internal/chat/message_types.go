@@ -68,6 +68,8 @@ type Message struct {
 	IsWebhook bool `json:"is_webhook,omitempty" binding:"optional"`
 	// Embeds are the rich cards of a webhook message (Discord-style subset).
 	Embeds []Embed `json:"embeds,omitempty" binding:"optional"`
+	// Poll is set when the message is a poll; its content is the question.
+	Poll *Poll `json:"poll,omitempty" binding:"optional"`
 }
 
 // Embed is a rich card on a webhook message: the Discord embed fields Mnema

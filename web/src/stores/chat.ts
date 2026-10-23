@@ -7,6 +7,7 @@ import { createCategory, createChannel, deleteCategory, deleteChannel, duplicate
 import { activityOfUser, closeUserProfile, fetchMembers, insertMention, openUserProfile, presenceOf } from './chat/members'
 import { installActivityListeners, setMyPresence, setStatusText } from './chat/presence'
 import { fetchMessages, goToMessage, jumpToLatest, jumpToMessage, loadNewer, loadOlder, showToast } from './chat/messageWindow'
+import { createPoll, endPoll, fetchPoll, votePoll } from './chat/polls'
 import { deleteMessage, editMessage, sendMessage, setPinned, toggleReaction, uploadMedia } from './chat/messageActions'
 import { closeThread, openThread, sendThreadReply, uploadThreadMedia } from './chat/threads'
 import { closeWebSocket, initWebSocket, installVisibilityRetry, retryNow, sendWSEvent, setWebRTCHandlers } from './chat/socket'
@@ -99,6 +100,10 @@ function exposedActions(cx: Cx) {
     deleteMessage: bind(deleteMessage),
     setPinned: bind(setPinned),
     toggleReaction: bind(toggleReaction),
+    createPoll: bind(createPoll),
+    fetchPoll: bind(fetchPoll),
+    votePoll: bind(votePoll),
+    endPoll: bind(endPoll),
     uploadMedia: bind(uploadMedia),
     createChannel: bind(createChannel),
     duplicateChannel: bind(duplicateChannel),

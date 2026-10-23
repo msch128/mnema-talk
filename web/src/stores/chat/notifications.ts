@@ -28,7 +28,7 @@ function buildNotificationTitle(cx: Cx, msg: Message): string {
 }
 
 function buildNotificationBody(msg: Message): string {
-  if (msg.content) return plainEmojiText(msg.content)
+  if (msg.content) return msg.poll ? `${t('poll.title')}: ${plainEmojiText(msg.content)}` : plainEmojiText(msg.content)
   return msg.attachments?.length ? t('chat.attachment') : ''
 }
 

@@ -1213,7 +1213,89 @@
     "privateFrom": "Private reply from {bot}",
     "bot": "Bot",
     "onlyYou": "Only you can see this",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "builtinLabel": "Built-in",
+    "builtin": {
+      "poll": {
+        "description": "Ask the channel a question",
+        "options": {
+          "question": "What do you want to ask?",
+          "answers": "2 to 10 answers, separated by |",
+          "duration": "How long voting stays open",
+          "multiple": "Allow several answers per member",
+          "anonymous": "Hide who voted for what"
+        },
+        "choices": {
+          "duration": {
+            "1h": "1 hour",
+            "4h": "4 hours",
+            "8h": "8 hours",
+            "24h": "24 hours",
+            "3d": "3 days",
+            "1w": "1 week"
+          }
+        }
+      }
+    }
+  },
+  "poll": {
+    "title": "Poll",
+    "create": "Create a poll",
+    "createTitle": "Create a poll",
+    "question": "Question",
+    "questionPlaceholder": "What do you want to ask?",
+    "answers": "Answers",
+    "answerN": "Answer {n}",
+    "removeAnswer": "Remove answer {n}",
+    "addAnswer": "Add answer",
+    "duration": "Duration",
+    "durations": {
+      "1h": "1 hour",
+      "4h": "4 hours",
+      "8h": "8 hours",
+      "24h": "24 hours",
+      "3d": "3 days",
+      "1w": "1 week"
+    },
+    "allowMultiple": "Allow several answers",
+    "makeAnonymous": "Anonymous poll",
+    "anonymousHint": "Nobody sees who voted for what, not even you or the admins. Only the totals are shown.",
+    "post": "Post poll",
+    "problem": {
+      "question": "Enter a question.",
+      "options": "Add at least {min} answers.",
+      "duplicate": "Answers must differ."
+    },
+    "postFailed": "The poll could not be posted.",
+    "single": "Choose one",
+    "multiple": "Choose one or more",
+    "anonymous": "Anonymous",
+    "options": "Answers",
+    "voters": {
+      "one": "{count} voter",
+      "other": "{count} voters"
+    },
+    "ended": "Ended",
+    "left": {
+      "minute": {
+        "one": "Ends in {count} minute",
+        "other": "Ends in {count} minutes"
+      },
+      "hour": {
+        "one": "Ends in {count} hour",
+        "other": "Ends in {count} hours"
+      },
+      "day": {
+        "one": "Ends in {count} day",
+        "other": "Ends in {count} days"
+      }
+    },
+    "end": "End poll",
+    "endTitle": "End this poll?",
+    "endBody": "Voting stops now. The results stay visible.",
+    "someone": "Someone",
+    "more": "+{count} more",
+    "failed": "That did not work."
   },
   "mention": {
     "title": "Mention",

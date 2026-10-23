@@ -101,7 +101,7 @@ func deref(s *string) string {
 	return *s
 }
 
-// enrich loads attachments, reactions and mentions for msgs in three queries.
+// enrich loads attachments, reactions, mentions and polls for msgs.
 func enrich(ctx context.Context, p *db.Pool, msgs []Message) error {
 	if len(msgs) == 0 {
 		return nil
@@ -113,7 +113,7 @@ func enrich(ctx context.Context, p *db.Pool, msgs []Message) error {
 		ids[i] = m.ID
 	}
 	for _, load := range []func(context.Context, *db.Pool, []Message, map[uuid.UUID]int, []uuid.UUID) error{
-		loadAttachments, loadReactions, loadMentions, loadMentionRoles,
+		loadAttachments, loadReactions, loadMentions, loadMentionRoles, loadPolls,
 	} {
 		if err := load(ctx, p, msgs, idx, ids); err != nil {
 			return err

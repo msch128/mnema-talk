@@ -53,7 +53,7 @@ function basicItems(msg: Message, { actions, reply, copy }: MenuDeps): ContextMe
     { label: t('chat.addReaction'), icon: SmilePlus, action: () => { actions.pickerId.value = msg.id } },
     { label: t('chat.openThread'), icon: MessageSquare, action: () => chatStore.openThread(msg) }
   ]
-  if (actions.isOwn(msg)) {
+  if (actions.isOwn(msg) && !msg.poll) {
     items.push({ label: t('chat.edit'), icon: Pencil, shortcut: 'e', action: () => actions.startEdit(msg) })
   }
   items.push({ type: 'separator' })

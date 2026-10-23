@@ -2,7 +2,7 @@
 import type { PropType } from 'vue'
 import type { DraftReply } from '../lib/drafts'
 import { ref } from 'vue'
-import { Plus, ArrowUp } from '@lucide/vue'
+import { Plus, ArrowUp, ChartNoAxesColumn } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import ReplyComposerBar from './ReplyComposerBar.vue'
 import EmojiButton from './EmojiButton.vue'
@@ -10,6 +10,7 @@ import MarkdownHelp from './MarkdownHelp.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
 import SlashSuggestions from './SlashSuggestions.vue'
 import SlashCommandBar from './SlashCommandBar.vue'
+import PollDialog from './PollDialog.vue'
 import { useDraftModel } from '../composables/useDraftModel'
 import { useComposerAssist } from '../composables/useComposerAssist'
 import { useSlashCommands } from '../composables/useSlashCommands'
@@ -35,7 +36,8 @@ const text = useDraftModel(() => props.modelValue, value => emit('update:modelVa
 const fileInput = ref<HTMLInputElement | null>(null)
 const textAreaEl = ref<HTMLTextAreaElement | null>(null)
 const assist = useComposerAssist(textAreaEl, text)
-const slash = useSlashCommands(text, () => chatStore.activeChannel?.id)
+const pollOpen = ref(false)
+const slash = useSlashCommands(text, () => chatStore.activeChannel?.id, () => { pollOpen.value = true })
 defineExpose({ textArea: textAreaEl, focus: () => textAreaEl.value?.focus() })
 
 function handleComposerInput() {
@@ -102,6 +104,20 @@ function handleKeyDown(e: KeyboardEvent) {
         <Plus class="w-5 h-5" />
       </button>
 
+      <!-- Poll Button -->
+      <button
+        v-if="canSend"
+        type="button"
+        data-testid="poll-button"
+        @click="pollOpen = true"
+        :disabled="sending"
+        class="w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition disabled:opacity-50"
+        v-tooltip="$t('poll.create')"
+        :aria-label="$t('poll.create')"
+      >
+        <ChartNoAxesColumn class="w-5 h-5" />
+      </button>
+
       <!-- Text Input -->
       <textarea
         ref="textAreaEl"
@@ -137,6 +153,12 @@ function handleKeyDown(e: KeyboardEvent) {
         <ArrowUp class="w-4 h-4" />
       </button>
     </div>
+
+    <PollDialog
+      v-if="pollOpen && chatStore.activeChannel"
+      :channel-id="chatStore.activeChannel.id"
+      @close="pollOpen = false; textAreaEl?.focus()"
+    />
 
     <!-- Who is typing (keeps its height so the layout doesn't jump) -->
     <div class="h-5 px-1 pt-0.5 text-xs text-mnema-tertiary truncate" role="status" aria-live="polite">

@@ -108,6 +108,7 @@ function useMessageEditor(channelOf: (msg: Message) => string, onStart?: () => v
   const isSavingEdit = ref(false)
 
   function startEdit(msg: Message) {
+    if (msg.poll) return // a poll cannot be edited
     editingId.value = msg.id
     editText.value = msg.content
     onStart?.()
