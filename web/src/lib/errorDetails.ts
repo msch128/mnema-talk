@@ -3,7 +3,9 @@
 // the generic text of its error code plus the server message (see api.ts).
 import { t } from '../i18n'
 
-const FIELDS = new Set(['content', 'bio', 'display_name', 'name', 'topic'])
+const FIELDS = new Set(['content', 'bio', 'display_name', 'topic'])
+// "name" is the one shared word for a name everywhere in the UI.
+const fieldLabel = (field: string) => field === 'name' ? t('common.name') : FIELDS.has(field) ? t(`errors.field.${field}`) : field
 
 /** Exact server message -> key under errors.detail. */
 export const DETAILS: Readonly<Record<string, string>> = {
@@ -71,7 +73,7 @@ const PATTERNS: readonly ErrorPattern[] = [
   [/^password must be at least (\d+) characters$/, n => t('errors.detail.passwordMin', { count: n })],
   [/^password must be at most/, () => t('errors.detail.passwordMax')],
   [/^username must be/, () => t('errors.detail.usernameFormat')],
-  [/^(\w+) must be at most (\d+) characters$/, (field = '', n = '') => t('errors.detail.fieldMax', { field: FIELDS.has(field) ? t(`errors.field.${field}`) : field, count: n })],
+  [/^(\w+) must be at most (\d+) characters$/, (field = '', n = '') => t('errors.detail.fieldMax', { field: fieldLabel(field), count: n })],
   [/^slow mode: wait (\d+) s/, n => t('errors.detail.slowMode', { seconds: n })],
   [/^file exceeds the (\d+) MB limit$/, n => t('errors.detail.fileTooBig', { size: n })],
   [/^(missing permission|cannot (grant|allow|change) a permission you do not have)/, () => t('errors.detail.missingPermission')],

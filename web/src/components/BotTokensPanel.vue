@@ -115,7 +115,7 @@ onMounted(load)
       <table class="w-full text-left text-sm">
         <thead class="text-xs uppercase tracking-wide text-mnema-tertiary">
           <tr>
-            <th scope="col" class="px-3 py-2 font-semibold">{{ $t('bots.tokens.colName') }}</th>
+            <th scope="col" class="px-3 py-2 font-semibold">{{ $t('common.name') }}</th>
             <th scope="col" class="px-3 py-2 font-semibold">{{ $t('bots.tokens.colToken') }}</th>
             <th scope="col" class="px-3 py-2 font-semibold">{{ $t('bots.tokens.colState') }}</th>
             <th scope="col" class="px-3 py-2 font-semibold">{{ $t('bots.tokens.colExpires') }}</th>

@@ -167,7 +167,7 @@ onMounted(load)
         maxlength="80"
         class="min-w-0 flex-1 rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text"
         :placeholder="$t('webhooks.namePlaceholder')"
-        :aria-label="$t('webhooks.name')"
+        :aria-label="$t('common.name')"
       />
       <button type="submit" :disabled="busy || !newName.trim()" class="rounded-md bg-mnema-accent px-3.5 py-1.5 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40">{{ $t('webhooks.create') }}</button>
     </form>
@@ -189,7 +189,7 @@ onMounted(load)
         <span v-else class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-mnema-raised text-sm font-semibold text-mnema-muted" aria-hidden="true">{{ hook.name.slice(0, 1).toUpperCase() }}</span>
 
         <form v-if="renaming?.id === hook.id" class="min-w-0 flex-1" @submit.prevent="saveName">
-          <input v-model="renaming.name" type="text" maxlength="80" autofocus class="w-full rounded-md border border-mnema-border-field bg-mnema-elevated px-2 py-1 text-sm text-mnema-text" :aria-label="$t('webhooks.name')" @keydown.esc="renaming = null" @blur="saveName" />
+          <input v-model="renaming.name" type="text" maxlength="80" autofocus class="w-full rounded-md border border-mnema-border-field bg-mnema-elevated px-2 py-1 text-sm text-mnema-text" :aria-label="$t('common.name')" @keydown.esc="renaming = null" @blur="saveName" />
         </form>
         <span v-else class="min-w-0 flex-1 truncate text-sm font-medium text-mnema-text" data-testid="incoming-name">{{ hook.name }}</span>
 
