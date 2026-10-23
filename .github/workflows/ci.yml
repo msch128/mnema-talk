@@ -63,8 +63,9 @@ jobs:
 
   # -- Backend: vet, format, unit + integration tests, build -----------------
   backend:
+    # Integration tests share one database and run package by package (~17 min in 1.1), so leave headroom.
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     services:
       postgres:
         image: postgres:18-alpine
@@ -495,9 +496,9 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  # -- Other engines: the whole suite on WebKit (iOS, Safari, installed PWAs) and
-  # a smoke subset on Firefox. Not a required check until both have run stable
-  # (see doc/product-status.md).
+  # -- Other engines: every spec that does not need a sealed call on WebKit (iOS,
+  # Safari, installed PWAs) and a smoke subset on Firefox. Not a required check
+  # until both have run stable (see doc/product-status.md).
   e2e-browsers:
     name: e2e (${{ matrix.label }})
     runs-on: ubuntu-latest
@@ -506,11 +507,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Playwright's Linux WebKit cannot run the sealed-call specs (they pass on
-          # macOS WebKit, see doc/product-status.md), so CI covers what it can.
+          # Playwright's Linux WebKit has no RTCRtpScriptTransform (nor
+          # createEncodedStreams or RTCEncodedAudioFrame; same 26.6 build as on
+          # macOS, which has them), so a call cannot be sealed there and the app
+          # refuses to join one. Every spec that joins a call is left out here and
+          # runs on macOS WebKit locally (evidence in doc/product-status.md); this
+          # list is every other spec, plus browser-sealing.spec.ts for the refusal.
           - browser: webkit
             label: webkit
-            only: "--project=webkit active-members.spec.ts audit.spec.ts bot-members.spec.ts bots.spec.ts crypto-state.spec.ts mentions.spec.ts message-moderation.spec.ts moderation.spec.ts notifications.spec.ts onboarding.spec.ts pwa.spec.ts"
+            only: "--project=webkit account-delete.spec.ts active-members.spec.ts audit.spec.ts bot-members.spec.ts bots.spec.ts browser-sealing.spec.ts crypto-state.spec.ts drafts.spec.ts layout.spec.ts mentions.spec.ts message-moderation.spec.ts moderation.spec.ts notifications.spec.ts onboarding.spec.ts polls.spec.ts pwa.spec.ts search.spec.ts sidebar-layout.spec.ts two-factor.spec.ts unread-jump.spec.ts upload-limit.spec.ts webhooks-outgoing.spec.ts webhooks-ui.spec.ts webhooks.spec.ts"
           - browser: firefox
             # late-join.spec.ts also asserts the AI noise filter, which does not run
             # on the Linux Firefox of CI; it passes on macOS (see doc/product-status.md).
@@ -586,6 +591,62 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: e2e-results-${{ matrix.browser }}-${{ strategy.job-index }}
+          path: |
+            e2e/test-results/
+            e2e/server.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # -- The call specs on WebKit. Playwright's Linux WebKit has no
+  # RTCRtpScriptTransform, so they cannot run in `e2e (webkit)`; macOS WebKit
+  # (the engine of Safari) has it. macOS runners have no Docker, so PostgreSQL
+  # and SeaweedFS run as local processes (E2E_NO_DOCKER). Not a required check.
+  e2e-webkit-macos:
+    name: e2e (webkit-macos-calls)
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            e2e/package-lock.json
+
+      # Homebrew can hiccup on the network: a bounded retry, nothing else.
+      - name: Install PostgreSQL and SeaweedFS
+        timeout-minutes: 10
+        run: |
+          for attempt in 1 2 3; do
+            brew install postgresql@18 seaweedfs && break
+            echo "brew install failed (attempt $attempt)" >&2
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 10
+          done
+          echo "E2E_PG_BIN=$(brew --prefix postgresql@18)/bin" >> "$GITHUB_ENV"
+
+      - name: Run the call specs on macOS WebKit
+        env:
+          E2E_NO_DOCKER: "1"
+          E2E_INSTALL_BROWSER: "1"
+          E2E_BROWSERS: webkit
+          E2E_ONLY: "--project=webkit browser-sealing.spec.ts key-lifecycle.spec.ts late-join.spec.ts screenshare.spec.ts screen-layers.spec.ts stage-switch.spec.ts talk-extras.spec.ts voice-chat.spec.ts smoke.spec.ts roles.spec.ts"
+        run: e2e/run.sh
+
+      - name: Upload Playwright traces and screenshots
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-results-webkit-macos
           path: |
             e2e/test-results/
             e2e/server.log

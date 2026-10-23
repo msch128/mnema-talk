@@ -45,9 +45,13 @@ test('a member deletes the account; the thread stays, the words and the name are
     await expect(m.getByTestId('delete-submit')).toBeDisabled()
     await m.getByTestId('delete-name').fill(MEMBER)
     await m.getByTestId('privacy-password').fill(PASSWORD)
+    // The page signs out in place and then navigates to '/'; a request sent
+    // in between is cancelled by that navigation (WebKit: "Load failed").
+    const reloaded = m.waitForEvent('load')
     await m.getByTestId('delete-submit').click()
 
     // Back at the sign-in screen, and the old credentials are dead.
+    await reloaded
     await expect(m.getByRole('dialog').getByRole('heading', { name: 'Mnema Talk' })).toBeVisible()
     expect((await apiFetch(m, 'POST', '/api/auth/login', { username: MEMBER, password: PASSWORD })).status).toBe(401)
 

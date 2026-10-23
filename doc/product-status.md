@@ -26,7 +26,7 @@ older get no fixes: update to 1.0.x. CI still upgrades from 0.8.16, 0.9.x and
 | Area | Category at 1.0 |
 | --- | --- |
 | Server (Docker, linux/amd64 and arm64), browser app, text chat, roles and permissions, webhooks and bots, notifications, search and onboarding, voice, cameras and screen share in Chromium-based browsers | Supported |
-| Browser app on WebKit (Safari, iOS, installed iOS web apps) and Firefox: text chat, search, voice, cameras and screen share with sealed media, as tested in [Browsers](#browsers) | Supported for text chat, search and administration. Sealed calls pass on macOS WebKit locally, but the CI WebKit job does not run the call specs because they fail on Linux WebKit; see the limits there (not yet tested on real iOS or Android hardware) |
+| Browser app on WebKit (Safari, iOS, installed iOS web apps) and Firefox: text chat, search, voice, cameras and screen share with sealed media, as tested in [Browsers](#browsers) | Supported for text chat, search and administration. Sealed calls pass on macOS WebKit locally; the CI WebKit job cannot run them because Playwright's Linux WebKit build has no encoded-media API (`RTCRtpScriptTransform`); see the limits there (not yet tested on real iOS or Android hardware) |
 | Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), backup and restore, upgrade tested from 0.8.16, 0.9.x and 1.0.0, cosign-signed images | Supported |
 | Native mobile apps, text end-to-end encryption | Not offered. Text stays readable by the server, by design. The browser app has a phone layout (channel list as a drawer, full-screen thread and member list, 44 px touch targets, safe areas) that is covered by the `mobile-*` e2e projects in Chromium and WebKit device emulation, not by tests on real phones. |
 | Desktop client on Windows | Beta (unsigned, no Authenticode; SmartScreen warns) |
@@ -99,11 +99,11 @@ devices; run `make e2e` or see [development](development.md#browser-tests-e2e)):
 | | Chromium (Chrome, Edge) | WebKit (Safari, iOS) | Firefox |
 | --- | --- | --- | --- |
 | Sign-in, chat, search, roles, moderation, webhooks, notifications | Supported | Supported | Supported |
-| Microphone and camera, sealed on every line, with key rotation, late join and reload | Supported | Passes on macOS WebKit locally; not run in CI (the call specs fail on Linux WebKit) | Supported |
-| Screen share with viewer-chosen layers (simulcast) | Supported | Passes on macOS WebKit locally; not run in CI | Supported (VP8) |
-| Screen share frames advance for the viewer | Supported | Passes on macOS WebKit locally; not run in CI | Supported |
-| Required CI check | Yes | No (`e2e (webkit)`: text and admin specs only) | No (`e2e (firefox)`, smoke and sealed-call subset) |
-| Not covered by the suite | | Real Safari and iOS hardware; calls on Linux WebKit (the specs fail there, they pass on macOS WebKit) | Real screen capture |
+| Microphone and camera, sealed on every line, with key rotation, late join and reload | Supported | Passes on macOS WebKit; in CI only in `e2e (webkit-macos-calls)` (Playwright's Linux WebKit has no `RTCRtpScriptTransform`, so the app refuses the join there, see below) | Supported |
+| Screen share with viewer-chosen layers (simulcast) | Supported | Passes on macOS WebKit; in CI only in `e2e (webkit-macos-calls)` | Supported (VP8) |
+| Screen share frames advance for the viewer | Supported | Passes on macOS WebKit; in CI only in `e2e (webkit-macos-calls)` | Supported |
+| Required CI check | Yes | No (`e2e (webkit)`: every spec that does not join a call, plus the refusal spec) | No (`e2e (firefox)`, smoke and sealed-call subset) |
+| Not covered by the suite | | Real Safari and iOS hardware; calls on Linux WebKit (no frame transform in that build, they pass on macOS WebKit) | Real screen capture |
 
 A real-device call (real camera and microphone, real Google Chrome on macOS,
 sealed both ways) was verified on 2026-10-22.
@@ -117,6 +117,19 @@ What it took:
 - **All engines, joining.** A browser that cannot seal media is refused at the
   join (before any device is requested) instead of joining with microphone,
   camera and screen switched off.
+- **Linux WebKit in CI cannot take part in a sealed call.** This is the engine
+  build, not the app. Playwright 1.63's Linux WebKit (26.6, the same version as
+  its macOS build) reports `RTCPeerConnection` and `getUserMedia`, but
+  `RTCRtpScriptTransform`, `RTCRtpSender.prototype.createEncodedStreams` and
+  `RTCEncodedAudioFrame` are all `undefined` (checked on x64 and arm64 Linux;
+  the macOS build has `RTCRtpScriptTransform` and `RTCEncodedAudioFrame`). With
+  no way to reach encoded media the app does what it promises for such a
+  browser: it refuses the join with a message, requests no microphone and sends
+  nothing (`browser-sealing.spec.ts`, second spec, runs in the WebKit CI job). The
+  first spec of that file skips itself only on Linux WebKit and only while
+  `RTCRtpScriptTransform` is missing, so a build that gains it runs the call
+  again. Every spec that joins a call (calls, screen share, Talk chat, roles
+  rights) stays out of `e2e (webkit)` and runs in `e2e (webkit-macos-calls)` on a macOS runner, a separate job that is not a required check.
 - WebKit mutes the microphone of all but one page per browser process (as
   Safari does between tabs). That limits two members in one Safari window, not
   two devices; the suite therefore runs each WebKit member in its own process.
