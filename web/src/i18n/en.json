@@ -1625,7 +1625,8 @@
       "settings": "Settings",
       "moderation": "Moderation",
       "emoji": "Emoji",
-      "bot": "Bots"
+      "bot": "Bots",
+      "poll": "Polls"
     },
     "actions": {
       "role": {
@@ -1692,7 +1693,11 @@
         "delete": "Message deleted",
         "edit": "Message edited",
         "pin": "Message pinned",
-        "unpin": "Message unpinned"
+        "unpin": "Message unpinned",
+        "edit_history_view": "Edit history viewed"
+      },
+      "poll": {
+        "end": "Poll ended by a moderator"
       },
       "voice": {
         "join": "Joined Talk",

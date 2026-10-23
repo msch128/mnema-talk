@@ -72,7 +72,12 @@ project runs.
 
 The suite has three Playwright projects. **Chromium** is the required check and
 runs everything. **WebKit** (what Safari, iOS and installed iOS web apps use)
-runs the whole suite in CI as `e2e (webkit)`; **Firefox** runs a smoke subset
+runs every spec that does not join a call in CI as `e2e (webkit)` (Playwright's
+Linux WebKit has no `RTCRtpScriptTransform`, so a sealed call cannot happen
+there, see [Browsers](product-status.md#browsers); the call specs run in the separate
+`e2e (webkit-macos-calls)` job on a macOS runner, which starts PostgreSQL and
+SeaweedFS as local processes with `E2E_NO_DOCKER=1`; both jobs are not required
+checks); **Firefox** runs a smoke subset
 (sign-in, chat, search, mentions, sealed Talk, key rotation, screen share) as
 `e2e (firefox)`. Neither is a required check yet. Engine differences the specs
 account for: Firefox has no context-level camera/microphone grants (its fake

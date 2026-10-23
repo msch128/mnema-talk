@@ -132,6 +132,7 @@ func NewRouter(d Deps) (*Router, error) {
 	}
 	c.newWebhooks()
 	c.newBots()
+	c.tapThreadFollows()
 	if err := c.newPush(); err != nil {
 		cancel()
 		return nil, err

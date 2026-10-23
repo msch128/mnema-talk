@@ -39,13 +39,7 @@ func InsertMessage(ctx context.Context, p *db.Pool, online OnlineSource, nm NewM
 	var id uuid.UUID
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		var err error
-		if err := gatePost(ctx, tx, nm); err != nil {
-			return err
-		}
-		if id, err = CreateMessage(ctx, tx, nm); err != nil {
-			return err
-		}
-		if err := RecordMentions(ctx, tx, online, id, nm.UserID, nm.Content); err != nil {
+		if id, err = insertMessageTx(ctx, tx, online, nm); err != nil {
 			return err
 		}
 		if also != nil {
@@ -55,6 +49,27 @@ func InsertMessage(ctx context.Context, p *db.Pool, online OnlineSource, nm NewM
 	})
 	if err != nil {
 		return uuid.Nil, err
+	}
+	return id, nil
+}
+
+// insertMessageTx stores the message, its mentions and, for a thread reply,
+// the follows it implies.
+func insertMessageTx(ctx context.Context, tx pgx.Tx, online OnlineSource, nm NewMessage) (uuid.UUID, error) {
+	if err := gatePost(ctx, tx, nm); err != nil {
+		return uuid.Nil, err
+	}
+	id, err := CreateMessage(ctx, tx, nm)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if err := RecordMentions(ctx, tx, online, id, nm.UserID, nm.Content); err != nil {
+		return uuid.Nil, err
+	}
+	if nm.ParentID != nil {
+		if err := followOnReply(ctx, tx, id, *nm.ParentID, nm.UserID); err != nil {
+			return uuid.Nil, err
+		}
 	}
 	return id, nil
 }

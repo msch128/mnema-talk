@@ -117,6 +117,9 @@ func (c *Config) validateLimits() error {
 	if c.UploadQuotaMBPerDay < 0 || c.MediaMaxTotalMB < 0 || c.MediaMinFreeMB < 0 {
 		return fmt.Errorf("UPLOAD_QUOTA_MB_PER_DAY, MEDIA_MAX_TOTAL_MB and MEDIA_MIN_FREE_MB must be 0 (off) or positive")
 	}
+	if c.InitialLanguage != "" && c.InitialLanguage != "en" && c.InitialLanguage != "de" {
+		return fmt.Errorf("INITIAL_LANGUAGE must be en or de, got %q", c.InitialLanguage)
+	}
 	if err := c.validatePush(); err != nil {
 		return err
 	}

@@ -2242,6 +2242,21 @@
         ],
         "type": "object"
       },
+      "chat.FollowedThreads": {
+        "properties": {
+          "thread_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "thread_ids"
+        ],
+        "type": "object"
+      },
       "chat.ForwardQuote": {
         "properties": {
           "attachment_count": {
@@ -3542,6 +3557,10 @@
       },
       "chat.Thread": {
         "properties": {
+          "following": {
+            "description": "Following: replies of this thread notify the caller. Servers before 1.1 do not send it.",
+            "type": "boolean"
+          },
           "replies": {
             "items": {
               "$ref": "#/components/schemas/chat.Message"
@@ -3555,6 +3574,24 @@
         "required": [
           "replies",
           "root"
+        ],
+        "type": "object"
+      },
+      "chat.ThreadFollow": {
+        "properties": {
+          "following": {
+            "description": "Following: replies of the thread notify the caller.",
+            "type": "boolean"
+          },
+          "thread_id": {
+            "description": "ThreadID is the root message of the thread.",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "following",
+          "thread_id"
         ],
         "type": "object"
       },
@@ -19134,7 +19171,7 @@
     },
     "/api/channels/{channelID}/messages/{messageID}/edits": {
       "get": {
-        "description": "The earlier versions of an edited message, newest first (at most 50). Needs the Manage messages permission in the channel (the Owner always); the author and other members cannot read it. Not searched and not part of any export except the author's own. Rate limited per member. An unedited message has an empty list.",
+        "description": "The earlier versions of an edited message, newest first (at most 50). Needs the Manage messages permission in the channel (the Owner always); the author and other members cannot read it. Not searched and not part of any export except the author's own. Rate limited per member. A read of another member's message is recorded in the audit log (message.edit_history_view), once per reader and message every ten minutes. An unedited message has an empty list.",
         "operationId": "getMessageEditHistory",
         "parameters": [
           {
@@ -19590,7 +19627,7 @@
     },
     "/api/channels/{channelID}/messages/{messageID}/poll/end": {
       "post": {
-        "description": "The poll's author, or a member with Manage messages in the channel, closes voting now. Ending an ended poll changes nothing. Broadcasts poll_update.",
+        "description": "The poll's author, or a member with Manage messages in the channel, closes voting now. Ending an ended poll changes nothing. A moderator ending someone else's poll is recorded in the audit log (poll.end). Broadcasts poll_update.",
         "operationId": "endPoll",
         "parameters": [
           {
@@ -24406,7 +24443,7 @@
     },
     "/api/search": {
       "get": {
-        "description": "Text channels and voice channels' chats (with dm=true, the caller's direct messages instead), newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id, mentions, has, after or before_date is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.",
+        "description": "Text channels and voice channels' chats (with dm=true, the caller's direct messages instead), newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id, mentions, has, is, after or before_date is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.",
         "operationId": "searchMessages",
         "parameters": [
           {
@@ -24437,7 +24474,7 @@
             }
           },
           {
-            "description": "Only messages with a file, an image, a video or a link.",
+            "description": "Only messages with a file, an image, a video, a link, a poll or an edit.",
             "in": "query",
             "name": "has",
             "schema": {
@@ -24445,7 +24482,20 @@
                 "file",
                 "image",
                 "video",
-                "link"
+                "link",
+                "poll",
+                "edit"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only pinned messages.",
+            "in": "query",
+            "name": "is",
+            "schema": {
+              "enum": [
+                "pinned"
               ],
               "type": "string"
             }
@@ -24573,6 +24623,263 @@
           }
         ],
         "summary": "Search messages",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/threads/following": {
+      "get": {
+        "description": "The root message IDs of the threads the caller follows in channels they may view, newest follow first, at most 500. A client uses it to decide which thread replies notify.",
+        "operationId": "listFollowedThreads",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.FollowedThreads"
+                }
+              }
+            },
+            "description": "Followed threads."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Threads the caller follows",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/threads/{threadID}/follow": {
+      "delete": {
+        "description": "Replies of the thread stop notifying the caller, except those that mention the caller or quote their message. The choice is kept: a later reply by the caller does not follow the thread again. Needs View channels. Idempotent. Sends thread_follow_updated to the caller's sessions.",
+        "operationId": "unfollowThread",
+        "parameters": [
+          {
+            "description": "ID of the thread's root message.",
+            "in": "path",
+            "name": "threadID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.ThreadFollow"
+                }
+              }
+            },
+            "description": "The follow state."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed ID."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such thread, or its channel is hidden from the caller."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Unfollow a thread",
+        "tags": [
+          "Messages"
+        ]
+      },
+      "put": {
+        "description": "Replies of the thread notify the caller from now on (push and in-page notifications). The root's author, everyone who replies and everyone mentioned in a reply follow automatically. Needs View channels; a reply or an unknown message is 404. Idempotent. Sends thread_follow_updated to the caller's sessions.",
+        "operationId": "followThread",
+        "parameters": [
+          {
+            "description": "ID of the thread's root message.",
+            "in": "path",
+            "name": "threadID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.ThreadFollow"
+                }
+              }
+            },
+            "description": "The follow state."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed ID."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such thread, or its channel is hidden from the caller."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Follow a thread",
         "tags": [
           "Messages"
         ]

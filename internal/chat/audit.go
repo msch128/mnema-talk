@@ -25,6 +25,9 @@ type auditSnapshot struct {
 	msg     *Message
 	channel string
 	replies []uuid.UUID
+	// edits are the replaced versions of an edited message, kept because
+	// message_edits cascades with the message.
+	edits []map[string]any
 }
 
 // snapshotMessage reads what the audit log needs to know about a message. A
@@ -44,6 +47,9 @@ func (h *Handler) snapshotMessage(ctx context.Context, id uuid.UUID, withReplies
 	}
 	if withReplies && msg.ReplyCount > 0 {
 		s.replies = h.fetchAuditedReplyIDs(ctx, id)
+	}
+	if withReplies && msg.IsEdited {
+		s.edits = editVersionsForAudit(ctx, h.DB, []uuid.UUID{id})[id]
 	}
 	return s
 }
@@ -99,6 +105,9 @@ func (h *Handler) auditDelete(ctx context.Context, user *auth.User, id uuid.UUID
 		e.Details = s.details()
 		e.Details["moderator"] = s.msg.UserID != user.ID
 		e.Details["reply_ids"] = s.replies
+		if len(s.edits) > 0 {
+			e.Details["edit_versions"] = s.edits
+		}
 		if reason != "" {
 			e.Details["reason"] = reason
 		}

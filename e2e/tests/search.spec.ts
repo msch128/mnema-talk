@@ -71,9 +71,10 @@ test('search filters, results and jumping to an old message', async ({ browser }
     await expect(dialog.locator('#search-result-0 mark').first()).toContainText(OLD_WORD)
 
     // Typing a filter: from: autocompletes members and becomes a chip.
-    await dialog.getByRole('combobox').fill(`${OLD_WORD} mentions:${suiteMember.username.slice(0, 4)}`)
-    // Other specs add members with the same prefix: pick this suite's member.
-    await dialog.locator('[data-search-suggestions] [role="option"]').filter({ hasText: suiteMember.username }).click()
+    // The whole name and a space turn the filter into a chip. A prefix would
+    // depend on the suggestion list, which is capped and shared with every
+    // member other specs have added to the database.
+    await dialog.getByRole('combobox').fill(`${OLD_WORD} mentions:${suiteMember.username} `)
     await expect(dialog.locator('[data-search-chip]')).toHaveCount(2)
     await expect(dialog.locator('[role="option"]')).toHaveCount(1)
 
