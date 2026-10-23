@@ -1,0 +1,25 @@
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_5ec90aee3d0fcf 207
+web/src/components/VoiceStage.vue
+  s_06fcde5dbef956::t_5ec90aee3d0fcf 248
+web/src/components/SkipLinks.vue
+  s_06fcde5dbef956::t_5ec90aee3d0fcf 16
+web/src/components/ChatArea.vue
+  s_06fcde5dbef956::t_5ec90aee3d0fcf 214
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "17b6b1a1b8d3e629cb3b80776db7a68dae2e52c1",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
