@@ -1,0 +1,23 @@
+internal/push/payload.go
+  s_06fcde5dbef956::t_283fcbb5e548e0 47,51,74-75,149-151
+internal/push/payload_test.go
+  s_06fcde5dbef956::t_9ebb09b7a125f5 76-99
+internal/push/service.go
+  s_06fcde5dbef956::t_bb9f1285aa9c8a 219-220
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0c52f556ada718a8814d55bfdfc700fa7cc46d53",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
