@@ -51,13 +51,13 @@ describe('DFN render-thread bridge', () => {
   it('never queues more than three frames behind a stalled worker and bypasses after bounded startup', () => {
     const { node, frames, reports, render } = createBridge()
     let output = new Float32Array()
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < 1400; i++) {
       output = render()
       expect(node.pending.size).toBeLessThanOrEqual(3)
       expect(node.outputCount).toBeLessThanOrEqual(1440)
     }
     expect(frames).toHaveLength(3)
-    expect(reports).toEqual([{ type: 'failed' }])
+    expect(reports).toEqual([{ type: 'failed', reason: expect.any(String) }])
     expect(output.every(sample => sample === 0.25)).toBe(true)
   })
 
@@ -96,7 +96,7 @@ describe('DFN render-thread bridge', () => {
     for (let i = 0; i < 4; i++) render()
     node.receive({ type: 'frame', id: present(frames[0]).id, samples: new Float32Array(480).fill(0.1) })
     expect(render().every(sample => Math.abs(sample - 0.1) < 0.0001)).toBe(true)
-    node.pending.add(-100)
+    node.pending.add(-400)
     const count = node.outputCount
     node.receive({ type: 'frame', id: -100, samples: new Float32Array(480).fill(0.5) })
     expect(node.outputCount).toBe(count)
@@ -107,7 +107,7 @@ describe('DFN render-thread bridge', () => {
     for (let i = 0; i < 4; i++) render()
     node.receive({ type: 'frame', id: present(frames[0]).id, samples: new Float32Array(4096) })
     node.receive({ type: 'failed' })
-    expect(reports).toEqual([{ type: 'failed' }])
+    expect(reports).toEqual([{ type: 'failed', reason: expect.any(String) }])
     expect(render().every(sample => sample === 0.25)).toBe(true)
   })
 })
@@ -148,7 +148,7 @@ describe('DFN bridge protocol and buffering', () => {
     node.port.onmessage({ data: { type: 'failed' } })
     node.process([[input]], [channels])
     expect(channels.every(channel => channel.every(sample => Math.abs(sample - 0.7) < 0.0001))).toBe(true)
-    expect(reports).toEqual([{ type: 'failed' }])
+    expect(reports).toEqual([{ type: 'failed', reason: expect.any(String) }])
   })
 
   it('rejects a matching reply with a non-PCM payload', () => {
@@ -201,10 +201,10 @@ describe('DFN bridge protocol and buffering', () => {
     const { node, render } = createBridge()
     for (let i = 0; i < 4; i++) render()
     node.pending.clear()
-    node.pending.add(-100)
+    node.pending.add(-400)
     for (let i = 0; i < 4; i++) render()
     expect(node.failed).toBe(true)
-    expect(reports).toEqual([{ type: 'failed' }])
+    expect(reports).toEqual([{ type: 'failed', reason: expect.any(String) }])
   })
 })
 
@@ -212,10 +212,10 @@ describe('DFN unconnected bridge lifecycle', () => {
   it('expires sustained underrun even when no worker frame is outstanding', () => {
     const { node, render } = createBridge(false)
     let output = new Float32Array()
-    for (let i = 0; i < 120; i++) output = render()
+    for (let i = 0; i < 1400; i++) output = render()
     expect(node.pending.size).toBe(0)
     expect(node.failed).toBe(true)
-    expect(reports).toEqual([{ type: 'failed' }])
+    expect(reports).toEqual([{ type: 'failed', reason: expect.any(String) }])
     expect(output.every(sample => sample === 0.25)).toBe(true)
   })
 })

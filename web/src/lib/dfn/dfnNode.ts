@@ -43,7 +43,7 @@ class FilterLifecycle {
     this.failed = true
     this.rejectReady?.(new Error('Filter worker unavailable'))
     if (this.node) {
-      this.node.port.postMessage({ type: 'failed' })
+      this.node.port.postMessage({ type: 'failed', reason: 'the page gave up on the filter' })
       this.worker.terminate()
       this.onFailure?.()
     }
