@@ -19,6 +19,7 @@ const examples: Record<ServerEventType, unknown[]> = {
   permissions_changed: [null],
   roles_changed: [null],
   emoji_changed: [null],
+  block_updated: [{ user_id: id, blocked: true }, { user_id: id, blocked: false }],
   typing: [room],
   read_state: [
     { channel_id: id, last_read_at: null, unread_count: 1, mention_count: 0 },

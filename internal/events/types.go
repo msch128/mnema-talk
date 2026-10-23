@@ -47,6 +47,7 @@ const (
 	VoiceMuteState      = "voice_mute_state"
 	NativeAccessRenewed = "native_access_renewed"
 	EmojiChanged        = "emoji_changed"
+	BlockUpdated        = "block_updated"
 )
 
 // Client-to-server events.

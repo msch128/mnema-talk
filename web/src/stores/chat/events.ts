@@ -168,6 +168,8 @@ const HANDLERS: Handlers = {
     fetchChannels(cx)
   },
   emoji_changed: () => { void useEmojiStore().load() },
+  // The block list lives in the blocks store of the direct messages client (next package); nothing to refresh yet.
+  block_updated: () => {},
   roles_changed: cx => {
     const permissions = usePermissionsStore()
     permissions.loadRoles()

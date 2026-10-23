@@ -36,6 +36,7 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"moderation.timeout": VisAuditors, "moderation.timeout_remove": VisAuditors, "moderation.ban": VisAuditors,
 		"moderation.unban": VisAuditors, "moderation.ban_expired": VisAuditors,
 		"emoji.create": VisAuditors, "emoji.rename": VisAuditors, "emoji.delete": VisAuditors,
+		"report.create": VisPrivileged, "report.resolve": VisPrivileged, "report.delete": VisPrivileged,
 		"admin.post": VisPrivileged,
 	}
 	for _, rt := range Routes {

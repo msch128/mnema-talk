@@ -28,7 +28,7 @@ type candidate struct {
 
 // loadCandidates reads, for one channel, every account with a subscription
 // (except the author) together with its notification settings, in one query.
-// A non-nil only limits the result to that account.
+// A member who blocked the author is never a candidate. A non-nil only limits the result to that account.
 func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.UUID, only *uuid.UUID) ([]candidate, error) {
 	rows, err := q.Query(ctx, `
 		SELECT u.id, u.locale, u.push_preview, u.presence, c.name,
@@ -38,6 +38,7 @@ func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.
 		LEFT JOIN channel_reads cr ON cr.user_id = u.id AND cr.channel_id = c.id
 		LEFT JOIN category_notify cn ON cn.user_id = u.id AND cn.category_id = c.category_id
 		WHERE u.id <> $2 AND ($3::uuid IS NULL OR u.id = $3) AND u.disabled_at IS NULL
+		  AND NOT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = u.id AND ub.blocked_id = $2)
 		  AND EXISTS (SELECT 1 FROM push_subscriptions s WHERE s.user_id = u.id AND `+validSession+`)`, channelID, authorID, only)
 	if err != nil {
 		return nil, fmt.Errorf("load push candidates: %w", err)

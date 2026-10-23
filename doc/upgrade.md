@@ -128,6 +128,21 @@ until the new release has passed your application checks.
 
 ### 1.0.x → 1.1.0
 
+Update with the procedure above; take the backup first. 1.1.0 only adds: a
+1.0.x web app keeps working against it, and a 1.1 web app hides what a 1.0.x
+server lacks.
+
+- **Migration 0049** adds `user_blocks` and `message_reports`. A rollback to a
+  1.0.x image needs the backup restore (the schema changed).
+- **Blocking and message reports.** Members can block each other and report a
+  message to the moderators ([moderation](moderation.md#blocking-and-reports)).
+  New permission *Manage reports* (bit `1 << 21`), off for @everyone and every
+  existing role: nobody gains access to reports until a role is given it
+  (the Owner and Administrators have it implicitly).
+- **`GET /api/health` has a `features` list** (for example `"blocks"`,
+  `"reports"`): the web app uses it to show only what the server supports.
+- **New event** `block_updated`, sent only to the blocker's own sessions.
+- **Export** gains `blocks.json` and `reports.json`.
 - **Stricter style policy.** The web app's Content-Security-Policy no longer
   allows inline styles: `style-src 'unsafe-inline'` became `style-src 'self'`
   plus `style-src-attr 'none'` (see [SECURITY.md](../SECURITY.md#security-model-summary)

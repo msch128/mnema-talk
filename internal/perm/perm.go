@@ -67,6 +67,11 @@ const (
 	// ManageEmoji uploads, renames and deletes the custom emoji of the
 	// instance.
 	ManageEmoji Set = 1 << 20
+	// ManageReports reads and resolves member reports of messages, including
+	// the context a reporter chose to share from a direct message
+	// (doc/moderation.md). It is the only way a moderator sees any part of a
+	// direct message conversation.
+	ManageReports Set = 1 << 21
 )
 
 // Info describes one permission for clients.
@@ -102,6 +107,7 @@ var Catalog = []Info{
 	{Key: "timeout_members", Bit: TimeoutMembers, Name: "timeout members"},
 	{Key: "ban_members", Bit: BanMembers, Name: "ban members"},
 	{Key: "manage_emoji", Bit: ManageEmoji, Name: "manage emoji"},
+	{Key: "manage_reports", Bit: ManageReports, Name: "manage reports"},
 }
 
 var (
@@ -134,7 +140,7 @@ const (
 	// OwnerGrantOnly can only be handed out by the Owner.
 	OwnerGrantOnly = ManageBots
 	// AdminArea is any permission that opens a part of the admin area.
-	AdminArea = ManageChannels | ManageRoles | CreateInvites | ManageWebhooks | ManageMembers | DisconnectMembers | ViewAuditLog | TimeoutMembers | BanMembers | ManageBots | ManageEmoji
+	AdminArea = ManageChannels | ManageRoles | CreateInvites | ManageWebhooks | ManageMembers | DisconnectMembers | ViewAuditLog | TimeoutMembers | BanMembers | ManageBots | ManageEmoji | ManageReports
 )
 
 // TimeoutMask is what a timeout takes from a member: they can still read.
