@@ -1,0 +1,26 @@
+e2e/package.json
+  s_06fcde5dbef956::t_15899de987b050 12
+e2e/tests/fixtures.ts
+  s_06fcde5dbef956::t_8bf41e735723fa 75,92-93,108
+  s_06fcde5dbef956::t_e03ef36e21e610 76-77,94-102
+doc/product-status.md
+  s_06fcde5dbef956::t_facc0a84831f10 96,121-122,124-125,133-147
+e2e/package-lock.json
+  s_06fcde5dbef956::t_342a646531b49b 11,15-17,21,31-33,37,47-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0712ab995472c5c25259b4adebcaca2dece5b320",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
