@@ -1,0 +1,40 @@
+internal/imgproc/firstframe.go
+  s_06fcde5dbef956::t_ee586ec0a08e37 1-74,77-91
+  s_06fcde5dbef956::t_34b57230274f63 75-76
+cmd/server/main.go
+  s_06fcde5dbef956::t_b9008f3162e165 14
+  s_06fcde5dbef956::t_34b57230274f63 83
+internal/media/avatar_reencode_integration_test.go
+  s_06fcde5dbef956::t_b9008f3162e165 11,16,94-129,131-134,139-147
+internal/imgproc/legacy_test.go
+  s_06fcde5dbef956::t_89737a3589e3ca 1-83
+internal/media/handler.go
+  s_06fcde5dbef956::t_34b57230274f63 9,39-41
+internal/media/avatar_reencode.go
+  s_06fcde5dbef956::t_34b57230274f63 14,33,37,57-58,106-111,119-138
+  s_06fcde5dbef956::t_05d99d2bb5d4da 139-140
+internal/media/avatar_reencode_start_integration_test.go
+  s_06fcde5dbef956::t_082bdcc90eaa2c 15-16
+doc/upgrade.md
+  s_06fcde5dbef956::t_50d51d244c6158 240-247
+internal/imgproc/picture.go
+  s_06fcde5dbef956::t_bc2ba727b99543 57-59,77-83,91-93,97-99,112-117
+internal/imgproc/sizes.go
+  s_06fcde5dbef956::t_6d53ce52868ffb 14-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4a2d7218337c6a3221d6031b570d1fd6844bfe7c",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
