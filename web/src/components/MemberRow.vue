@@ -44,7 +44,7 @@ const subline = computed(() => {
     aria-haspopup="menu"
     :data-member="member.username"
     :data-status="status"
-    class="group flex h-[42px] min-w-0 cursor-pointer items-center gap-3 rounded-md px-2 transition-colors hover:bg-mnema-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
+    class="group flex h-[42px] min-w-0 cursor-pointer items-center gap-3 rounded-md px-2 transition-colors hover:bg-mnema-hover focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent"
     @click="chatStore.openUserProfile(member)"
     @keydown.enter.self.prevent="chatStore.openUserProfile(member)"
     @contextmenu="emit('menu', $event)"
@@ -71,11 +71,11 @@ const subline = computed(() => {
           :style="nameColor && !offline ? { color: nameColor } : undefined"
         >{{ member.display_name || member.username }}</span>
         <BotBadge v-if="member.is_bot" />
-        <Crown v-if="member.role === 'admin'" class="h-3.5 w-3.5 flex-shrink-0 text-mnema-amber" />
+        <Crown v-if="member.role === 'admin'" class="h-3.5 w-3.5 shrink-0 text-mnema-amber" />
       </div>
 
       <div v-if="voiceChannel" class="flex min-w-0 items-center gap-1 text-xs font-medium text-mnema-mint">
-        <Volume2 class="h-3.5 w-3.5 flex-shrink-0" />
+        <Volume2 class="h-3.5 w-3.5 shrink-0" />
         <span class="truncate">{{ voiceChannel }}</span>
       </div>
       <span v-else-if="subline" class="truncate text-xs text-mnema-tertiary" :data-testid="activity ? 'member-activity' : undefined">{{ subline }}</span>

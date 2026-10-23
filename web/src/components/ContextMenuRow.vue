@@ -38,7 +38,7 @@ function role(item: ContextMenuItem) {
   >
     <div class="flex items-center justify-between text-xs text-mnema-muted font-normal">
       <span class="truncate">{{ item.label }}</span>
-      <span class="font-mono text-mnema-tertiary ml-2 flex-shrink-0">{{ item.value }}%</span>
+      <span class="font-mono text-mnema-tertiary ml-2 shrink-0">{{ item.value }}%</span>
     </div>
     <input
       type="range"
@@ -62,10 +62,10 @@ function role(item: ContextMenuItem) {
     data-menu-nav
     tabindex="-1"
     :data-menu-info="item.id || undefined"
-    class="w-full h-7 px-2.5 flex items-center justify-between gap-4 rounded text-left font-normal focus:outline-none focus-visible:bg-mnema-hover"
+    class="w-full h-7 px-2.5 flex items-center justify-between gap-4 rounded-sm text-left font-normal focus:outline-hidden focus-visible:bg-mnema-hover"
   >
     <span class="truncate text-mnema-muted">{{ item.label }}</span>
-    <span class="font-mono text-xs text-mnema-text flex-shrink-0">{{ item.value }}</span>
+    <span class="font-mono text-xs text-mnema-text shrink-0">{{ item.value }}</span>
   </div>
 
   <button
@@ -79,7 +79,7 @@ function role(item: ContextMenuItem) {
     tabindex="-1"
     :disabled="item.disabled"
     :class="[
-      'w-full px-2.5 flex items-center justify-between gap-3 rounded text-left transition-colors font-normal',
+      'w-full px-2.5 flex items-center justify-between gap-3 rounded-sm text-left transition-colors font-normal',
       item.subtitle ? 'min-h-8 py-1.5' : 'h-8',
       item.disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
       item.danger
@@ -88,30 +88,30 @@ function role(item: ContextMenuItem) {
       item.danger
         ? 'focus-visible:bg-red-500/10 focus-visible:text-red-300'
         : 'focus-visible:bg-mnema-hover focus-visible:text-mnema-text',
-      'focus:outline-none'
+      'focus:outline-hidden'
     ]"
     @click="emit('select', item)"
   >
     <div class="flex items-center gap-2 min-w-0">
-      <component :is="item.icon" v-if="item.icon" class="w-4 h-4 flex-shrink-0 opacity-80" />
+      <component :is="item.icon" v-if="item.icon" class="w-4 h-4 shrink-0 opacity-80" />
       <span class="flex flex-col min-w-0">
         <span class="truncate">{{ item.label }}</span>
         <span v-if="item.subtitle" class="truncate text-xs text-mnema-tertiary">{{ item.subtitle }}</span>
       </span>
     </div>
 
-    <Check v-if="item.type === 'radio' && item.checked" class="w-4 h-4 flex-shrink-0 text-mnema-accent" aria-hidden="true" />
+    <Check v-if="item.type === 'radio' && item.checked" class="w-4 h-4 shrink-0 text-mnema-accent" aria-hidden="true" />
     <span
       v-else-if="item.type === 'checkbox'"
       aria-hidden="true"
       :class="[
-        'w-4 h-4 flex-shrink-0 rounded-[4px] flex items-center justify-center border',
+        'w-4 h-4 shrink-0 rounded-[4px] flex items-center justify-center border',
         item.checked ? 'bg-mnema-accent border-mnema-accent text-mnema-accent-ink' : 'border-mnema-border-strong'
       ]"
     >
       <Check v-if="item.checked" class="w-3 h-3" />
     </span>
-    <span v-else-if="item.shortcut" class="text-xs text-mnema-tertiary ml-auto font-mono flex-shrink-0">
+    <span v-else-if="item.shortcut" class="text-xs text-mnema-tertiary ml-auto font-mono shrink-0">
       {{ item.shortcut }}
     </span>
   </button>

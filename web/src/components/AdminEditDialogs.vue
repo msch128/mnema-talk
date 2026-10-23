@@ -30,7 +30,7 @@ function saveChannel() {
   if (name) emit('save-channel', { name, topic: channelTopic.value.trim() })
 }
 
-const field = 'w-full bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text outline-none focus:border-mnema-accent transition'
+const field = 'w-full bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent transition'
 const label = 'block text-xs font-semibold text-mnema-tertiary uppercase tracking-wider mb-1.5 font-mono'
 const cancelButton = 'px-3.5 py-1.5 rounded-md border border-mnema-border text-sm text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition'
 const saveButton = 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold px-4 py-1.5 rounded-md text-sm transition disabled:opacity-40'

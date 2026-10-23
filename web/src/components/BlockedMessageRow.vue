@@ -20,15 +20,15 @@ const emit = defineEmits<{ show: [] }>()
     data-testid="blocked-message"
     tabindex="0"
     role="article"
-    :class="['mt-1 flex items-center gap-2 py-1 text-sm text-mnema-tertiary focus:outline-none focus-visible:bg-mnema-surface/40', compact ? 'px-2' : 'pl-[72px] pr-12 max-md:pl-[60px] max-md:pr-3']"
+    :class="['mt-1 flex items-center gap-2 py-1 text-sm text-mnema-tertiary focus:outline-hidden focus-visible:bg-mnema-surface/40', compact ? 'px-2' : 'pl-[72px] pr-12 max-md:pl-[60px] max-md:pr-3']"
   >
-    <EyeOff class="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+    <EyeOff class="h-4 w-4 shrink-0" aria-hidden="true" />
     <span class="italic">{{ $t('blocks.collapsed') }}</span>
     <span aria-hidden="true">·</span>
     <button
       type="button"
       data-testid="blocked-message-show"
-      class="rounded px-1 text-mnema-accent underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent max-md:min-h-11"
+      class="rounded-sm px-1 text-mnema-accent underline-offset-2 hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent max-md:min-h-11"
       @click="emit('show')"
     >{{ $t('blocks.show') }}</button>
   </div>

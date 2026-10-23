@@ -10,7 +10,7 @@ defineProps({
 
 <template>
   <span
-    class="flex-shrink-0 rounded px-1 py-px text-[10px] font-semibold uppercase leading-[14px] tracking-wide bg-mnema-accent-subtle text-mnema-accent border border-mnema-accent/30"
+    class="shrink-0 rounded-sm px-1 py-px text-[10px] font-semibold uppercase leading-[14px] tracking-wide bg-mnema-accent-subtle text-mnema-accent border border-mnema-accent/30"
     :data-testid="webhook ? 'webhook-badge' : 'bot-badge'"
   >{{ webhook ? $t('chat.webhook') : $t('chat.bot') }}</span>
 </template>

@@ -117,7 +117,7 @@ watch(activeTab, (tab) => {
     <div
       ref="tabBar"
       data-testid="admin-tabs"
-      :class="['admin-tabs flex items-center gap-1 px-6 max-md:px-3 py-2.5 border-b border-mnema-hairline bg-mnema-canvas/40 text-sm flex-shrink-0 md:flex-wrap max-md:overflow-x-auto', fadeStart && 'fade-start', fadeEnd && 'fade-end']"
+      :class="['admin-tabs flex items-center gap-1 px-6 max-md:px-3 py-2.5 border-b border-mnema-hairline bg-mnema-canvas/40 text-sm shrink-0 md:flex-wrap max-md:overflow-x-auto', fadeStart && 'fade-start', fadeEnd && 'fade-end']"
       @scroll.passive="updateFades"
     >
       <button

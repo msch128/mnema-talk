@@ -71,13 +71,13 @@ function open(id: string) {
     <div class="relative flex h-6 items-center gap-1 pr-1 max-md:h-11">
       <button
         type="button"
-        class="flex h-6 min-w-0 flex-1 items-center gap-0.5 rounded pl-0.5 text-left text-xs font-semibold uppercase tracking-wide text-mnema-tertiary transition-colors hover:text-mnema-muted focus:outline-none focus-visible:text-mnema-text focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent max-md:h-11"
+        class="flex h-6 min-w-0 flex-1 items-center gap-0.5 rounded-sm pl-0.5 text-left text-xs font-semibold uppercase tracking-wide text-mnema-tertiary transition-colors hover:text-mnema-muted focus:outline-hidden focus-visible:text-mnema-text focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent max-md:h-11"
         :aria-expanded="collapsed ? 'false' : 'true'"
         data-testid="dm-toggle"
         @click="toggle"
       >
-        <ChevronRight v-if="collapsed" class="h-3 w-3 flex-shrink-0" />
-        <ChevronDown v-else class="h-3 w-3 flex-shrink-0" />
+        <ChevronRight v-if="collapsed" class="h-3 w-3 shrink-0" />
+        <ChevronDown v-else class="h-3 w-3 shrink-0" />
         <span class="truncate">{{ $t('dm.section') }}</span>
         <span
           v-if="collapsed && unreadTotal > 0"
@@ -89,7 +89,7 @@ function open(id: string) {
         v-if="canStart"
         type="button"
         data-testid="dm-new"
-        class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-mnema-tertiary transition hover:text-mnema-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent max-md:h-11 max-md:w-11"
+        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-mnema-tertiary transition hover:text-mnema-text focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent max-md:h-11 max-md:w-11"
         v-tooltip="$t('dm.new')"
         :aria-label="$t('dm.new')"
         @click="creating = true"
@@ -107,7 +107,7 @@ function open(id: string) {
         :data-dm="dm.id"
         :aria-current="isOpen(dm.id) ? 'true' : undefined"
         :class="[
-          'group relative mb-px flex h-[34px] w-full min-w-0 cursor-pointer items-center justify-between gap-1.5 rounded-md px-2 text-left text-nav transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent max-md:h-11 motion-reduce:transition-none',
+          'group relative mb-px flex h-[34px] w-full min-w-0 cursor-pointer items-center justify-between gap-1.5 rounded-md px-2 text-left text-nav transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent max-md:h-11 motion-reduce:transition-none',
           isOpen(dm.id)
             ? 'bg-mnema-hover font-medium text-mnema-text shadow-[inset_2px_0_0_0_#2DA771]'
             : unreadOf(dm.id) > 0
@@ -127,7 +127,7 @@ function open(id: string) {
             :status="chatStore.presenceOf(dmPeer(dm, authStore.user?.id)?.id ?? null)"
             ring-class="bg-mnema-raised"
           />
-          <span v-else class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-mnema-surface text-mnema-tertiary" aria-hidden="true">
+          <span v-else class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-mnema-surface text-mnema-tertiary" aria-hidden="true">
             <Users class="h-3.5 w-3.5" />
           </span>
           <span class="truncate" data-testid="dm-title">{{ dmTitle(dm, authStore.user?.id) }}</span>
@@ -135,7 +135,7 @@ function open(id: string) {
         <span
           v-if="unreadOf(dm.id) > 0 && !isOpen(dm.id)"
           data-testid="dm-unread"
-          class="min-w-[18px] flex-shrink-0 rounded-full bg-mnema-danger px-1.5 py-0.5 text-center text-xs font-bold leading-none text-white"
+          class="min-w-[18px] shrink-0 rounded-full bg-mnema-danger px-1.5 py-0.5 text-center text-xs font-bold leading-none text-white"
         >{{ unreadOf(dm.id) }}</span>
       </div>
 
@@ -143,7 +143,7 @@ function open(id: string) {
       <button
         v-if="hiddenCount > 0"
         type="button"
-        class="w-full rounded-md px-2 py-1 text-left text-xs text-mnema-tertiary transition hover:text-mnema-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent max-md:h-11"
+        class="w-full rounded-md px-2 py-1 text-left text-xs text-mnema-tertiary transition hover:text-mnema-text focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent max-md:h-11"
         data-testid="dm-more"
         @click="showAll = true"
       >{{ $t('dm.showMore', { n: hiddenCount }) }}</button>

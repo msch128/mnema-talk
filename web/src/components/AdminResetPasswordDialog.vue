@@ -57,7 +57,7 @@ async function submitPasswordReset() {
           type="password"
           :placeholder="$t('admin.newPasswordPlaceholder', { count: MIN_PASSWORD_LENGTH })"
           :aria-label="$t('admin.newPasswordLabel')"
-          class="w-full bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary outline-none focus:border-mnema-accent transition"
+          class="w-full bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary outline-hidden focus:border-mnema-accent transition"
         />
         <p v-if="newPasswordInput && passwordTooShort" class="text-xs text-mnema-danger mt-1">
           {{ $t('admin.passwordTooShort', { count: MIN_PASSWORD_LENGTH }) }}

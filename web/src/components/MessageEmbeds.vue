@@ -49,7 +49,7 @@ function when(timestamp: string): string {
       <dl v-if="embed.fields?.length" class="mt-2 grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-3">
         <div v-for="(field, j) in embed.fields" :key="j" :class="field.inline ? '' : 'sm:col-span-3'" data-testid="embed-field">
           <dt class="text-xs font-semibold text-mnema-muted">{{ field.name }}</dt>
-          <dd class="text-sm text-mnema-text whitespace-pre-wrap break-words">{{ field.value }}</dd>
+          <dd class="text-sm text-mnema-text whitespace-pre-wrap wrap-break-word">{{ field.value }}</dd>
         </div>
       </dl>
       <ul v-if="embed.image || embed.thumbnail" class="mt-2 space-y-1 text-xs">

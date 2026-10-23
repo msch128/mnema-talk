@@ -148,9 +148,9 @@ function when(iso: string) {
             <span class="min-w-0 flex-1">
               <span class="mb-0.5 flex items-center gap-2">
                 <span class="truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
-                <span class="ml-auto flex-shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
+                <span class="ml-auto shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
               </span>
-              <span class="line-clamp-3 break-words text-sm text-mnema-muted">{{ excerpt(msg) }}</span>
+              <span class="line-clamp-3 wrap-break-word text-sm text-mnema-muted">{{ excerpt(msg) }}</span>
               <span v-if="pinnedLine(msg)" data-testid="pinned-by" class="mt-1 block truncate text-xs text-mnema-tertiary">{{ pinnedLine(msg) }}</span>
               <span v-if="markers(msg).length" data-testid="pinned-markers" class="mt-1 block truncate text-xs text-mnema-tertiary">{{ markers(msg).join(' · ') }}</span>
             </span>
@@ -159,7 +159,7 @@ function when(iso: string) {
             v-if="canUnpin"
             type="button"
             data-testid="pinned-unpin"
-            class="mr-1.5 mt-2 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text max-md:h-11 max-md:w-11"
+            class="mr-1.5 mt-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text max-md:h-11 max-md:w-11"
             :aria-label="$t('moderation.unpinMessage')"
             v-tooltip="$t('moderation.unpinMessage')"
             @click="unpin(msg)"

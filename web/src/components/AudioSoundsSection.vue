@@ -27,11 +27,11 @@ function playPreviewSound(sound: SoundEvent = 'join') {
 
 <template>
   <!-- 6. Sound Effects -->
-  <div class="space-y-2">
+  <div class="stack-2">
     <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
       {{ $t('audio.soundsTitle') }}
     </label>
-    <div class="rounded-lg bg-mnema-surface border border-mnema-hairline p-3.5 space-y-3">
+    <div class="rounded-lg bg-mnema-surface border border-mnema-hairline p-3.5 stack-3">
       <div class="flex items-start justify-between gap-4">
         <div class="space-y-0.5">
           <div class="text-sm font-semibold text-mnema-text">{{ $t('audio.soundsTitle') }}</div>
@@ -45,11 +45,11 @@ function playPreviewSound(sound: SoundEvent = 'join') {
           :aria-checked="voiceStore.soundEffectsEnabled ? 'true' : 'false'"
           :aria-label="$t('audio.soundsTitle')"
           :class="[
-            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
+            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0 mt-1',
             voiceStore.soundEffectsEnabled ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
           ]"
         >
-          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', voiceStore.soundEffectsEnabled ? 'translate-x-5' : 'translate-x-0']"></div>
+          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-xs', voiceStore.soundEffectsEnabled ? 'translate-x-5' : 'translate-x-0']"></div>
         </button>
       </div>
 
@@ -80,7 +80,7 @@ function playPreviewSound(sound: SoundEvent = 'join') {
       </div>
 
       <!-- Granular sound effects toggles -->
-      <div v-if="voiceStore.soundEffectsEnabled" class="space-y-1.5 pt-3 border-t border-mnema-hairline">
+      <div v-if="voiceStore.soundEffectsEnabled" class="stack-1.5 pt-3 border-t border-mnema-hairline">
         <div class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono mb-1">
           {{ $t('audio.soundsCustomTitle') }}
         </div>
@@ -95,7 +95,7 @@ function playPreviewSound(sound: SoundEvent = 'join') {
                 type="button"
                 @click="playPreviewSound(sound)"
                 :aria-label="$t('audio.soundsTest') + ': ' + $t(`audio.sound_${sound}`)"
-                class="w-6 h-6 rounded flex items-center justify-center bg-mnema-raised text-mnema-tertiary hover:text-mnema-accent hover:bg-mnema-surface transition flex-shrink-0"
+                class="w-6 h-6 rounded-sm flex items-center justify-center bg-mnema-raised text-mnema-tertiary hover:text-mnema-accent hover:bg-mnema-surface transition shrink-0"
               >
                 <Play class="w-3 h-3 fill-current ml-0.5" />
               </button>
@@ -108,11 +108,11 @@ function playPreviewSound(sound: SoundEvent = 'join') {
               :aria-checked="voiceStore.soundEvents[sound] !== false ? 'true' : 'false'"
               :aria-label="$t(`audio.sound_${sound}`)"
               :class="[
-                'w-8 h-4 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0',
+                'w-8 h-4 rounded-full transition-colors relative flex items-center px-0.5 shrink-0',
                 voiceStore.soundEvents[sound] !== false ? 'bg-mnema-accent' : 'bg-mnema-surface border border-mnema-border'
               ]"
             >
-              <div :class="['w-3 h-3 rounded-full bg-white transition-transform shadow-sm', voiceStore.soundEvents[sound] !== false ? 'translate-x-4' : 'translate-x-0']"></div>
+              <div :class="['w-3 h-3 rounded-full bg-white transition-transform shadow-xs', voiceStore.soundEvents[sound] !== false ? 'translate-x-4' : 'translate-x-0']"></div>
             </button>
           </div>
         </div>

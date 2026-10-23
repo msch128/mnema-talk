@@ -86,12 +86,12 @@ onMounted(() => load())
         :key="report.id"
         type="button"
         :data-report="report.id"
-        class="flex w-full items-start justify-between gap-3 px-4 py-2.5 text-left text-sm transition hover:bg-mnema-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent"
+        class="flex w-full items-start justify-between gap-3 px-4 py-2.5 text-left text-sm transition hover:bg-mnema-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent"
         @click="selected = report.id"
       >
         <span class="min-w-0 space-y-0.5">
           <span class="flex min-w-0 flex-wrap items-center gap-2">
-            <span class="rounded bg-mnema-band px-1.5 py-0.5 text-xs font-semibold text-mnema-text">{{ $t(`reports.category.${report.category}`) }}</span>
+            <span class="rounded-sm bg-mnema-band px-1.5 py-0.5 text-xs font-semibold text-mnema-text">{{ $t(`reports.category.${report.category}`) }}</span>
             <span class="flex items-center gap-1 text-xs text-mnema-muted">
               <MessageCircle v-if="report.kind === 'dm'" class="h-3 w-3" aria-hidden="true" />{{ where(report) }}
             </span>
@@ -102,7 +102,7 @@ onMounted(() => load())
           </span>
           <span v-if="report.note" class="block truncate text-xs text-mnema-tertiary">{{ report.note }}</span>
         </span>
-        <span :class="['flex-shrink-0 text-xs font-semibold', report.status === 'open' ? 'text-mnema-amber' : 'text-mnema-tertiary']">{{ $t(`reports.admin.status.${report.status}`) }}</span>
+        <span :class="['shrink-0 text-xs font-semibold', report.status === 'open' ? 'text-mnema-amber' : 'text-mnema-tertiary']">{{ $t(`reports.admin.status.${report.status}`) }}</span>
       </button>
     </div>
 

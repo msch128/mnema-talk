@@ -42,7 +42,7 @@ onUnmounted(() => {
 <template>
   <div
     data-testid="voice-chat-panel"
-    class="relative flex-shrink-0 min-h-0 flex flex-col border-t border-mnema-hairline bg-mnema-canvas"
+    class="relative shrink-0 min-h-0 flex flex-col border-t border-mnema-hairline bg-mnema-canvas"
     :style="{ height: `${panel ? panel.width : 300}px` }"
   >
     <ResizeHandle v-if="panel" :panel="panel" :label="$t('resize.voiceChat')" />

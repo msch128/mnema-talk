@@ -73,14 +73,14 @@ async function send() {
     <template #default="{ titleId }">
       <form class="flex max-h-[80vh] flex-col space-y-3 p-5" data-testid="forward-dialog" @submit.prevent="send">
         <h2 :id="titleId" class="text-lg font-semibold text-mnema-text">{{ $t('forward.title') }}</h2>
-        <p class="line-clamp-3 break-words rounded-md bg-mnema-raised px-3 py-2 text-sm text-mnema-muted">{{ request.excerpt }}</p>
+        <p class="line-clamp-3 wrap-break-word rounded-md bg-mnema-raised px-3 py-2 text-sm text-mnema-muted">{{ request.excerpt }}</p>
         <input
           v-model="filter"
           type="search"
           data-testid="forward-filter"
           :aria-label="$t('forward.search')"
           :placeholder="$t('forward.search')"
-          class="rounded-md border border-mnema-border bg-mnema-surface px-2.5 py-1.5 text-sm text-mnema-text placeholder:text-mnema-tertiary focus:border-mnema-accent focus:outline-none"
+          class="rounded-md border border-mnema-border bg-mnema-surface px-2.5 py-1.5 text-sm text-mnema-text placeholder:text-mnema-tertiary focus:border-mnema-accent focus:outline-hidden"
         >
         <ul class="min-h-0 flex-1 space-y-0.5 overflow-y-auto" role="radiogroup" :aria-label="$t('forward.to')">
           <li v-for="c in targets" :key="c.id">
@@ -107,7 +107,7 @@ async function send() {
           :maxlength="COMMENT_MAX"
           :aria-label="$t('forward.comment')"
           :placeholder="$t('forward.comment')"
-          class="resize-none rounded-md border border-mnema-border bg-mnema-surface px-2.5 py-1.5 text-sm text-mnema-text placeholder:text-mnema-tertiary focus:border-mnema-accent focus:outline-none"
+          class="resize-none rounded-md border border-mnema-border bg-mnema-surface px-2.5 py-1.5 text-sm text-mnema-text placeholder:text-mnema-tertiary focus:border-mnema-accent focus:outline-hidden"
         ></textarea>
         <p v-if="error" role="alert" data-testid="forward-error" class="rounded-lg border border-mnema-danger/30 bg-mnema-danger/10 p-2.5 text-sm text-mnema-danger">{{ error }}</p>
         <div class="flex justify-end gap-2 border-t border-mnema-hairline pt-3">

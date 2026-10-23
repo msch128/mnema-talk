@@ -70,7 +70,7 @@ const rows = computed(() => {
     <template #badge>
       <span
         :class="[
-          'flex flex-shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 font-mono text-xs font-medium',
+          'flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 font-mono text-xs font-medium',
           stats?.connected ? 'bg-mnema-accent/15 text-mnema-accent' : 'bg-mnema-surface text-mnema-tertiary'
         ]"
       >
@@ -84,7 +84,7 @@ const rows = computed(() => {
         <div class="p-3 rounded-lg bg-mnema-surface border border-mnema-hairline min-w-0">
           <div class="flex items-center justify-between gap-1 text-mnema-tertiary text-xs uppercase font-mono">
             <span class="truncate">{{ $t('stats.latency') }}</span>
-            <Activity class="w-4 h-4 text-mnema-accent flex-shrink-0" />
+            <Activity class="w-4 h-4 text-mnema-accent shrink-0" />
           </div>
           <div class="text-xl font-bold font-mono text-mnema-text mt-1 flex items-baseline gap-1">
             <span>{{ dash(stats?.rttMs) }}</span>
@@ -96,7 +96,7 @@ const rows = computed(() => {
         <div class="p-3 rounded-lg bg-mnema-surface border border-mnema-hairline min-w-0">
           <div class="flex items-center justify-between gap-1 text-mnema-tertiary text-xs uppercase font-mono">
             <span class="truncate">{{ $t('stats.jitterLabel') }}</span>
-            <Zap class="w-4 h-4 text-mnema-mint flex-shrink-0" />
+            <Zap class="w-4 h-4 text-mnema-mint shrink-0" />
           </div>
           <div class="text-xl font-bold font-mono text-mnema-text mt-1 flex items-baseline gap-1">
             <span>{{ dash(stats?.jitterMs) }}</span>
@@ -108,7 +108,7 @@ const rows = computed(() => {
         <div class="p-3 rounded-lg bg-mnema-surface border border-mnema-hairline min-w-0">
           <div class="flex items-center justify-between gap-1 text-mnema-tertiary text-xs uppercase font-mono">
             <span class="truncate">{{ $t('stats.loss') }}</span>
-            <ShieldCheck class="w-4 h-4 text-mnema-accent flex-shrink-0" />
+            <ShieldCheck class="w-4 h-4 text-mnema-accent shrink-0" />
           </div>
           <div class="text-xl font-bold font-mono text-mnema-text mt-1 flex items-baseline gap-1">
             <span>{{ stats ? stats.lossPercent : '–' }}</span>
@@ -127,7 +127,7 @@ const rows = computed(() => {
             {{ $t('stats.summary', { avg: dash(voiceStore.avgPing), min: dash(voiceStore.minPing), max: dash(voiceStore.maxPing) }) }}
           </span>
         </div>
-        <div class="h-16 w-full bg-mnema-canvas rounded border border-mnema-border p-2 relative overflow-hidden flex items-end">
+        <div class="h-16 w-full bg-mnema-canvas rounded-sm border border-mnema-border p-2 relative overflow-hidden flex items-end">
           <svg v-if="sparklinePoints" viewBox="0 0 280 50" preserveAspectRatio="none" class="w-full h-12 overflow-visible" role="img" :aria-label="$t('stats.signalHistory')">
             <polyline
               fill="none"
@@ -164,7 +164,7 @@ const rows = computed(() => {
               <li
                 v-for="member in keyMembers(verification.members)"
                 :key="member.key"
-                :class="['rounded px-1.5 py-0.5 text-xs', member.inRoom ? 'bg-mnema-canvas text-mnema-muted' : 'bg-mnema-danger/[0.12] text-mnema-danger']"
+                :class="['rounded-sm px-1.5 py-0.5 text-xs', member.inRoom ? 'bg-mnema-canvas text-mnema-muted' : 'bg-mnema-danger/12 text-mnema-danger']"
                 :data-in-room="member.inRoom ? 'true' : 'false'"
               >{{ member.name }}</li>
             </ul>

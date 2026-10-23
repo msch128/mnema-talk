@@ -96,7 +96,7 @@ async function submit() {
         spellcheck="false"
         :aria-label="$t('dm.search')"
         :placeholder="$t('dm.search')"
-        class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-none"
+        class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"
       />
 
       <ul class="max-h-64 min-h-[6rem] space-y-0.5 overflow-y-auto" :aria-label="$t('dm.members')" data-testid="dm-candidates">
@@ -106,7 +106,7 @@ async function submit() {
             :aria-pressed="picked.includes(member.id) ? 'true' : 'false'"
             :data-dm-candidate="member.username"
             :class="[
-              'flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition max-md:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent',
+              'flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition max-md:min-h-11 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent',
               picked.includes(member.id) ? 'bg-mnema-accent/15 text-mnema-text' : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text'
             ]"
             @click="toggle(member.id)"
@@ -116,7 +116,7 @@ async function submit() {
               <span class="block truncate text-sm font-medium">{{ member.display_name || member.username }}</span>
               <span class="block truncate font-mono text-xs text-mnema-tertiary">@{{ member.username }}</span>
             </span>
-            <Check v-if="picked.includes(member.id)" class="h-4 w-4 flex-shrink-0 text-mnema-accent" aria-hidden="true" />
+            <Check v-if="picked.includes(member.id)" class="h-4 w-4 shrink-0 text-mnema-accent" aria-hidden="true" />
           </button>
         </li>
         <li v-if="!candidates.length" class="px-2 py-3 text-sm italic text-mnema-tertiary">{{ $t('dm.noCandidates') }}</li>
@@ -124,7 +124,7 @@ async function submit() {
 
       <p v-if="seats <= 0" class="text-sm text-mnema-muted" role="status">{{ $t('dm.groupFull') }}</p>
       <p v-else-if="!adding" class="text-xs text-mnema-tertiary" aria-live="polite" data-testid="dm-count">{{ $t('dm.picked', { n: picked.length, max: seats }) }}</p>
-      <div v-if="error" role="alert" data-testid="dm-error" class="rounded border border-mnema-danger/30 bg-mnema-danger/10 p-2 text-sm text-mnema-danger">{{ error }}</div>
+      <div v-if="error" role="alert" data-testid="dm-error" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-2 text-sm text-mnema-danger">{{ error }}</div>
 
       <div class="flex justify-end gap-2 border-t border-mnema-hairline pt-3">
         <button type="button" class="h-8 rounded-md border border-mnema-border px-3 text-sm font-semibold text-mnema-text transition hover:bg-mnema-hover max-md:h-11" @click="emit('close')">{{ $t('common.cancel') }}</button>

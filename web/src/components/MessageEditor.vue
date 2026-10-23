@@ -39,7 +39,7 @@ defineExpose({ focus: () => input.value?.focus() })
       @keydown.enter.exact.prevent="emit('save')"
       @keydown.esc.prevent="emit('cancel')"
       :class="[
-        'w-full text-message rounded-lg bg-mnema-surface border border-mnema-accent text-mnema-text focus:outline-none resize-none',
+        'w-full text-message rounded-lg bg-mnema-surface border border-mnema-accent text-mnema-text focus:outline-hidden resize-none',
         compact ? 'p-1.5' : 'p-2'
       ]"
     ></textarea>
@@ -49,7 +49,7 @@ defineExpose({ focus: () => input.value?.focus() })
         <button
           type="button"
           @click="emit('cancel')"
-          :class="[compact ? 'px-1.5' : 'px-2 rounded', 'py-0.5 text-mnema-muted hover:text-mnema-text']"
+          :class="[compact ? 'px-1.5' : 'px-2 rounded-sm', 'py-0.5 text-mnema-muted hover:text-mnema-text']"
         >{{ $t('common.cancel') }}</button>
         <button
           type="button"
@@ -57,7 +57,7 @@ defineExpose({ focus: () => input.value?.focus() })
           :disabled="saving"
           :class="[
             compact ? 'px-2 py-0.5' : 'px-2.5 py-1',
-            'rounded bg-mnema-accent text-mnema-canvas font-bold flex items-center gap-1 hover:brightness-110 active:scale-95 disabled:opacity-50'
+            'rounded-sm bg-mnema-accent text-mnema-canvas font-bold flex items-center gap-1 hover:brightness-110 active:scale-95 disabled:opacity-50'
           ]"
         >
           <Loader2 v-if="saving" class="w-3.5 h-3.5 animate-spin" />

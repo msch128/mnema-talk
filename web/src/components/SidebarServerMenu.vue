@@ -91,11 +91,11 @@ useDismissable(menuRoot, (e, reason) => closeMenu(reason === 'escape'), { active
 
 watch(() => permissions.can('manage_channels'), () => closeMenu())
 
-const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 rounded text-sm text-left text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text focus:outline-none focus-visible:bg-mnema-hover focus-visible:text-mnema-text transition-colors'
+const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 rounded-sm text-sm text-left text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text focus:outline-hidden focus-visible:bg-mnema-hover focus-visible:text-mnema-text transition-colors'
 </script>
 
 <template>
-  <div ref="menuRoot" class="relative flex-shrink-0">
+  <div ref="menuRoot" class="relative shrink-0">
     <button
       ref="menuButton"
       type="button"
@@ -103,7 +103,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       :aria-expanded="menuOpen ? 'true' : 'false'"
       aria-controls="server-menu"
       :class="[
-        'relative w-full h-12 pl-3 pr-3 border-b border-mnema-hairline flex items-center gap-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
+        'relative w-full h-12 pl-3 pr-3 border-b border-mnema-hairline flex items-center gap-2.5 text-left transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
         menuOpen ? 'bg-mnema-hover' : 'hover:bg-mnema-hover/70'
       ]"
       v-tooltip.visual="SERVER_NAME"
@@ -111,15 +111,15 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       @keydown="onMenuButtonKeydown"
     >
       <!-- Mnema Forest Mark -->
-      <span class="w-7 h-7 rounded-md bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-semibold text-sm shadow-sm flex-shrink-0">
+      <span class="w-7 h-7 rounded-md bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-semibold text-sm shadow-xs shrink-0">
         M
       </span>
       <span class="flex flex-col min-w-0 flex-1">
         <span class="font-semibold text-nav text-mnema-text truncate">{{ SERVER_NAME }}</span>
         <span class="text-xs text-mnema-tertiary truncate">{{ subtitle }}</span>
       </span>
-      <X v-if="menuOpen" class="w-4 h-4 text-mnema-muted flex-shrink-0" />
-      <ChevronDown v-else class="w-4 h-4 text-mnema-muted flex-shrink-0" />
+      <X v-if="menuOpen" class="w-4 h-4 text-mnema-muted shrink-0" />
+      <ChevronDown v-else class="w-4 h-4 text-mnema-muted shrink-0" />
       <span
         v-if="updateHint"
         data-testid="admin-update-dot"
@@ -145,31 +145,31 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
             data-testid="admin-update-badge"
             class="ml-auto rounded-full bg-mnema-accent/15 px-2 py-0.5 text-xs font-semibold text-mnema-accent"
           >{{ $t('update.badge', { version: versionStore.adminUpdate?.latest_version }) }}</span>
-          <Crown class="w-4 h-4 text-mnema-amber flex-shrink-0" />
+          <Crown class="w-4 h-4 text-mnema-amber shrink-0" />
         </button>
         <template v-if="permissions.can('manage_channels')">
           <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('create-channel'))">
             <span class="truncate">{{ $t('channel.create') }}</span>
-            <Plus class="w-4 h-4 flex-shrink-0" />
+            <Plus class="w-4 h-4 shrink-0" />
           </button>
           <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('create-category'))">
             <span class="truncate">{{ $t('sidebar.createCategory') }}</span>
-            <FolderPlus class="w-4 h-4 flex-shrink-0" />
+            <FolderPlus class="w-4 h-4 shrink-0" />
           </button>
         </template>
         <div class="my-1 h-px bg-mnema-hairline" role="separator"></div>
       </template>
       <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('mark-all-read'))">
         <span class="truncate">{{ $t('sidebar.markAllRead') }}</span>
-        <CheckCheck class="w-4 h-4 flex-shrink-0" />
+        <CheckCheck class="w-4 h-4 shrink-0" />
       </button>
       <button v-if="onboarding.state?.rules_text" type="button" role="menuitem" tabindex="-1" :class="menuItemClass" data-testid="menu-community-rules" @click="runMenuAction(showRules)">
         <span class="truncate">{{ $t('menu.rules') }}</span>
-        <ScrollText class="w-4 h-4 flex-shrink-0" />
+        <ScrollText class="w-4 h-4 shrink-0" />
       </button>
       <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('open-legal'))">
         <span class="truncate">{{ $t('menu.legal') }}</span>
-        <ShieldCheck class="w-4 h-4 flex-shrink-0" />
+        <ShieldCheck class="w-4 h-4 shrink-0" />
       </button>
     </div>
   </div>

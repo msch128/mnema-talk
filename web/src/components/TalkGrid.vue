@@ -50,7 +50,7 @@ const sized = computed(() => layout.value.tileWidth > 0)
         :compact="sized && layout.tileWidth < 300"
         :show-status="connected"
         :style="tileStyle"
-        :class="sized ? 'flex-shrink-0' : 'w-56'"
+        :class="sized ? 'shrink-0' : 'w-56'"
         @focus-camera="emit('focus-camera', user)"
         @fullscreen-camera="emit('fullscreen-camera', user.id)"
         @watch-stream="emit('watch-stream', user.id)"
