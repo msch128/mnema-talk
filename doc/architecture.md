@@ -257,8 +257,9 @@ and everyone mentioned in a reply follow automatically, in the reply's own
 transaction (`thread_follows`, migration 0054, backfilled for existing
 threads). `PUT`/`DELETE /api/threads/{id}/follow` change it; an explicit
 unfollow is kept and a later reply does not undo it, but a reply that mentions
-the member by name or quotes their message still reaches them. The change is
-sent to the member's own sessions as `thread_follow_updated`, and
+the member by name or quotes their message still reaches them. A change, and
+a reply that makes someone follow, is sent to that member's own sessions as
+`thread_follow_updated` (a hub tap, [`thread_follow_sync.go`](../internal/chat/thread_follow_sync.go)), and
 `GET /api/threads/following` lists the followed threads for clients. The
 in-page OS notification shows the message text only when the member's
 "show message text" setting is on and the operator has not set

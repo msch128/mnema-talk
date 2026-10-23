@@ -210,6 +210,19 @@ func (c *components) newBots() {
 	}
 }
 
+// tapThreadFollows tells open clients which threads they follow after a reply
+// made them follow it (see chat.NewFollowSync).
+func (c *components) tapThreadFollows() {
+	prevTap := c.hub.Tap
+	follows := chat.NewFollowSync(c.ctx, c.d.DB, c.pub)
+	c.hub.Tap = func(ch uuid.UUID, eventType string, payload any) {
+		if prevTap != nil {
+			prevTap(ch, eventType, payload)
+		}
+		follows(ch, eventType, payload)
+	}
+}
+
 // newPush builds Web Push: the key pair, the sender, the handler for the
 // devices API and, when push is on, the delivery service that taps the hub's
 // events. Requests go only to push services, through the SSRF-guarded client

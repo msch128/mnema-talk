@@ -4,7 +4,9 @@ package server
 
 import (
 	"net/http"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -174,5 +176,27 @@ func TestSearchFiltersPinnedPollAndEdited(t *testing.T) {
 		if res := f.peer.get("/api/search?" + bad); res.status != http.StatusBadRequest {
 			t.Errorf("%s: %d", bad, res.status)
 		}
+	}
+}
+
+func TestOpenSessionsLearnAboutTheThreadsAReplyMakesThemFollow(t *testing.T) {
+	f := newMessageModerationFixture(t, true)
+	root := f.a.send(f.user, f.channel, "question")
+	author, _, err := f.user.dialWS(f.a.origin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	bystander, _, err := f.admin.dialWS(f.a.origin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.reply(f.peer, root, "an answer for @msgmod")
+
+	raw, ok := author.expect("thread_follow_updated", 2*time.Second)
+	if !ok || !strings.Contains(string(raw), root.String()) || !strings.Contains(string(raw), `"following":true`) {
+		t.Fatalf("the root's author is not told: %s", raw)
+	}
+	if raw, ok := bystander.expect("thread_follow_updated", 300*time.Millisecond); ok {
+		t.Errorf("an uninvolved member was told: %s", raw)
 	}
 }
