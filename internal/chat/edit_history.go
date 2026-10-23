@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -76,10 +79,88 @@ func loadEditHistory(ctx context.Context, q db.Querier, messageID uuid.UUID) (*M
 	return &MessageEditHistory{Edits: edits}, nil
 }
 
+// editVersionsForAudit reads the replaced versions of the messages, newest
+// first per message, as the audit log keeps them (text under the operator's
+// audit policy). A failure costs detail only: the deletion must not fail.
+func editVersionsForAudit(ctx context.Context, q db.Querier, ids []uuid.UUID) map[uuid.UUID][]map[string]any {
+	out := map[uuid.UUID][]map[string]any{}
+	rows, err := q.Query(ctx, `
+		SELECT message_id, content, edited_at, replaced_at, editor_id FROM (
+			SELECT e.*, row_number() OVER (PARTITION BY message_id ORDER BY id DESC) AS rn
+			FROM message_edits e WHERE message_id = ANY($1)) v
+		WHERE rn <= $2 ORDER BY message_id, rn`, ids, MaxEditVersions)
+	if err != nil {
+		slog.Warn("audit: read edit versions", "err", err)
+		return out
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id, editor uuid.UUID
+		var content string
+		var editedAt, replacedAt time.Time
+		if err := rows.Scan(&id, &content, &editedAt, &replacedAt, &editor); err != nil {
+			slog.Warn("audit: read edit versions", "err", err)
+			return out
+		}
+		out[id] = append(out[id], map[string]any{
+			"content": audit.Content(content), "edited_at": editedAt, "replaced_at": replacedAt, "editor_id": editor,
+		})
+	}
+	return out
+}
+
+// editViewAuditEvery is how long one member's reads of one message's history
+// count as a single audit entry.
+const editViewAuditEvery = 10 * time.Minute
+
+// historyViews remembers recent edit-history reads so that reopening the
+// dialog does not flood the audit log.
+type historyViews struct {
+	mu   sync.Mutex
+	seen map[string]time.Time
+}
+
+// first reports whether this is the first read of the message by the member
+// within editViewAuditEvery, and records it.
+func (v *historyViews) first(actor, msg uuid.UUID, now time.Time) bool {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if v.seen == nil {
+		v.seen = map[string]time.Time{}
+	}
+	for k, t := range v.seen {
+		if now.Sub(t) >= editViewAuditEvery {
+			delete(v.seen, k)
+		}
+	}
+	key := actor.String() + msg.String()
+	if _, ok := v.seen[key]; ok {
+		return false
+	}
+	v.seen[key] = now
+	return true
+}
+
+// auditHistoryView records that a moderator read another member's earlier
+// versions of a message.
+func (h *Handler) auditHistoryView(ctx context.Context, actor *auth.User, msgID uuid.UUID, versions int) {
+	if h.Audit == nil || !h.historyViews.first(actor.ID, msgID, time.Now()) {
+		return
+	}
+	s := h.snapshotMessage(ctx, msgID, false)
+	if s == nil || s.msg.UserID == actor.ID {
+		return
+	}
+	h.Audit.RecordOrLog(ctx, audit.Entry{
+		Action: "message.edit_history_view", TargetType: "message", TargetID: msgID.String(), TargetName: s.channel, ChannelID: &s.msg.ChannelID,
+		Details: map[string]any{"channel_id": s.msg.ChannelID, "channel_name": s.channel, "author_id": s.msg.UserID, "author_name": s.msg.Username, "versions": versions},
+	})
+}
+
 // getEditHistory handles GET /api/channels/{channelID}/messages/{messageID}/edits.
 //
 // @Summary Edit history of a message
-// @Description The earlier versions of an edited message, newest first (at most 50). Needs the Manage messages permission in the channel (the Owner always); the author and other members cannot read it. Not searched and not part of any export except the author's own. Rate limited per member. An unedited message has an empty list.
+// @Description The earlier versions of an edited message, newest first (at most 50). Needs the Manage messages permission in the channel (the Owner always); the author and other members cannot read it. Not searched and not part of any export except the author's own. Rate limited per member. A read of another member's message is recorded in the audit log (message.edit_history_view), once per reader and message every ten minutes. An unedited message has an empty list.
 // @ID getMessageEditHistory
 // @Tags Messages
 // @Produce json
@@ -120,6 +201,7 @@ func (h *Handler) getEditHistory(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	h.auditHistoryView(r.Context(), auth.UserFrom(r.Context()), msgID, len(history.Edits))
 	httpx.WriteJSON(w, http.StatusOK, history)
 	return nil
 }

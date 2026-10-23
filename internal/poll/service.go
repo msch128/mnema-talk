@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -29,6 +30,8 @@ type Service struct {
 	Events events.Publisher
 	// Online resolves @here in the question; nil means nobody is online.
 	Online chat.OnlineSource
+	// Audit records a moderator ending someone else's poll; nil records nothing.
+	Audit *audit.Log
 
 	votes   *httpx.RateLimiter
 	creates *httpx.RateLimiter

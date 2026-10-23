@@ -164,6 +164,7 @@ func TestValidation(t *testing.T) {
 		"http port text":           {"DATABASE_URL": "x", "PORT": "http"},
 		"bad push switch":          {"DATABASE_URL": "x", "PUSH_ENABLED": "sometimes"},
 		"bad push previews":        {"DATABASE_URL": "x", "PUSH_PREVIEWS": "always"},
+		"bad initial language":     {"DATABASE_URL": "x", "INITIAL_LANGUAGE": "fr"},
 		"push subject is plain":    {"DATABASE_URL": "x", "PUSH_VAPID_SUBJECT": "ops@example.com"},
 		"push subject is http":     {"DATABASE_URL": "x", "PUSH_VAPID_SUBJECT": "http://chat.example.com"},
 		"push subject has no addr": {"DATABASE_URL": "x", "PUSH_VAPID_SUBJECT": "mailto:nobody"},

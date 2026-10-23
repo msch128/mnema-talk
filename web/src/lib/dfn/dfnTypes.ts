@@ -4,7 +4,7 @@ export type DeepFilterAssets = readonly [WebAssembly.Module, ArrayBuffer]
 export interface FilterOptions { signal?: AbortSignal; onFailure?: () => void }
 export interface FilterStats { processedFrames: number; droppedFrames: number; bridgeBudgetMs: number }
 export interface DfnFrame { type: 'frame'; id: number; samples: Float32Array<ArrayBuffer> }
-export interface DfnFailed { type: 'failed' }
+export interface DfnFailed { type: 'failed'; reason?: string }
 export interface DfnConnect { type: 'connect'; port: MessagePort }
 export interface DfnReady { type: 'ready'; frameLength: number }
 export interface DfnInit { type: 'init'; wasmModule: WebAssembly.Module; modelBytes: ArrayBuffer; suppressionLevel: number }
