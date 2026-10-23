@@ -78,7 +78,7 @@ describe('DFN inference worker', () => {
     if (reason === 'length') glue.df_process_frame.mockReturnValueOnce(new Float32Array(128))
     const frame: DfnFrame = { type: 'frame', id: 7, samples: new Float32Array(480) }
     active.onmessage({ data: frame })
-    expect(active.postMessage).toHaveBeenCalledExactlyOnceWith({ type: 'failed' })
+    expect(active.postMessage).toHaveBeenCalledExactlyOnceWith({ type: 'failed', reason: expect.any(String) })
     expect(worker.postMessage).toHaveBeenLastCalledWith({ type: 'failed', reason: expect.any(String) })
   })
 })
