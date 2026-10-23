@@ -139,6 +139,10 @@ server lacks.
   New permission *Manage reports* (bit `1 << 21`), off for @everyone and every
   existing role: nobody gains access to reports until a role is given it
   (the Owner and Administrators have it implicitly).
+- **A Talk's chat without joining.** A chat button on each Talk row opens the
+  Talk's chat with a *Join* button in its header; no server change, the chat
+  already followed the channel permissions only (*View channels* to read,
+  *Send messages* to write, [roles](roles-and-permissions.md)).
 - **`GET /api/health` has a `features` list** (for example `"blocks"`,
   `"reports"`, `"search.filters.v2"`, `"threads.follow"`, `"slash.builtins"`): the web app uses it to show only what the server supports.
 - **Direct messages** (migration 0050): conversations of two to ten members

@@ -5,7 +5,7 @@ import type { Channel, VoiceUser } from '../types/domain'
 // it for a voice channel. Admins can drag the row (and its users with it) or
 // move it with Alt+ArrowUp / Alt+ArrowDown.
 import { computed } from 'vue'
-import { Hash, Volume2, Trash2, Monitor, BellOff } from '@lucide/vue'
+import { Hash, Volume2, Trash2, Monitor, BellOff, MessageSquare } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
@@ -27,7 +27,7 @@ const props = defineProps({
   hintId: { type: String, default: '' }
 })
 
-const emit = defineEmits<{ open: []; menu: [event: MouseEvent | KeyboardEvent]; delete: []; 'drag-start': [event: PointerEvent]; move: [direction: -1 | 1]; 'voice-user-click': [user: VoiceUser]; 'member-menu': [event: MouseEvent | KeyboardEvent, user: VoiceUser] }>()
+const emit = defineEmits<{ open: []; 'open-chat': []; menu: [event: MouseEvent | KeyboardEvent]; delete: []; 'drag-start': [event: PointerEvent]; move: [direction: -1 | 1]; 'voice-user-click': [user: VoiceUser]; 'member-menu': [event: MouseEvent | KeyboardEvent, user: VoiceUser] }>()
 
 function moveKey(e: KeyboardEvent, dir: -1 | 1) {
   if (!props.admin) return
@@ -160,6 +160,21 @@ const rowClass = computed(() => [
           {{ unread }}
         </span>
       </div>
+
+      <!-- A Talk's chat can be read without joining the Talk -->
+      <button
+        v-if="isVoice"
+        type="button"
+        data-no-drag
+        data-testid="talk-open-chat"
+        @click.stop="emit('open-chat')"
+        @pointerdown.stop
+        v-tooltip="$t('talk.openChat')"
+        :aria-label="$t('talk.openChat')"
+        class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100 max-md:z-10 w-6 h-6 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-sm text-mnema-tertiary hover:text-mnema-text focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent transition shrink-0"
+      >
+        <MessageSquare class="w-4 h-4" />
+      </button>
 
       <button
         v-if="admin"

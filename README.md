@@ -51,7 +51,11 @@ no accounts on someone else's platform.
 ### Talk (voice, camera, screen)
 
 - **Hangout spots.** Click a Talk and you are in. A reload within 30 seconds
-  puts you back into the call.
+  puts you back into the call. To only read (or write in) a Talk's chat, use
+  the speech-bubble button on the Talk's row: the Talk opens as a preview with
+  its chat, nothing is joined and no microphone is requested until you press
+  **Join** in the Talk's header. Reading needs *View channels*, writing
+  *Send messages*; *Connect* is not required.
 - **Screen sharing up to source quality**, up to 4K at 60 FPS with hardware
   encoding in the browser. A share is sent as the source plus smaller **layers**;
   every viewer picks a layer or leaves it on **Auto**, which follows the
