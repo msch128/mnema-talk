@@ -11,7 +11,8 @@ import { explainNavigationFailures } from './navigation-diagnostics'
 const WINDOW_MS = 60_000
 // Requests one account may have sent in the previous minute before a test is
 // allowed to start; the test itself then still has the rest of the 600.
-const HEADROOM = 400
+// (A page load asks the server for about twenty things since 1.1 added direct messages and blocks; the admin loop of csp.spec loads a dozen pages.)
+const HEADROOM = 300
 // A fixed window always ends within a minute, so waiting longer is pointless.
 const MAX_WAIT_MS = WINDOW_MS + 5_000
 

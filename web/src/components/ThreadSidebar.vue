@@ -16,6 +16,9 @@ import PollCard from './PollCard.vue'
 import BotBadge from './BotBadge.vue'
 import ReactionBar from './ReactionBar.vue'
 import ThreadReply from './ThreadReply.vue'
+import BlockedMessageRow from './BlockedMessageRow.vue'
+import { useBlocksStore } from '../stores/blocks'
+import { useDmChat } from '../composables/useDmChat'
 import ThreadComposer from './ThreadComposer.vue'
 import { useMessageActions } from '../composables/useMessageActions'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
@@ -29,9 +32,12 @@ const toasts = useToastStore()
 const permissions = usePermissionsStore()
 // The thread lives in a channel; the server decides, this hides what would fail.
 const threadChannel = computed(() => chatStore.activeThread?.channel_id ?? chatStore.activeChannel?.id ?? '')
-const canSend = computed(() => permissions.canIn(threadChannel.value, 'send_messages'))
-const canAttach = computed(() => canSend.value && permissions.canIn(threadChannel.value, 'attach_files'))
-const canReact = computed(() => permissions.canIn(threadChannel.value, 'add_reactions'))
+const blocks = useBlocksStore()
+// In a direct message conversation the server's own answer decides, not channel permissions.
+const dmChat = useDmChat()
+const canSend = computed(() => (dmChat.isDm.value ? dmChat.canSend.value : permissions.canIn(threadChannel.value, 'send_messages')))
+const canAttach = computed(() => canSend.value && (dmChat.isDm.value || permissions.canIn(threadChannel.value, 'attach_files')))
+const canReact = computed(() => (dmChat.isDm.value ? dmChat.canSend.value : permissions.canIn(threadChannel.value, 'add_reactions')))
 
 const followed = computed(() => !!chatStore.activeThread && chatStore.followedThreads.has(chatStore.activeThread.id))
 const replyInput = ref('')
@@ -320,9 +326,10 @@ function formatDate(dateStr?: string) {
       </div>
 
       <!-- Replies List -->
+      <template v-for="reply in chatStore.threadReplies" :key="reply.id">
+      <BlockedMessageRow v-if="blocks.hides(reply)" :msg="reply" compact @show="blocks.reveal(reply.id)" />
       <ThreadReply
-        v-for="reply in chatStore.threadReplies"
-        :key="reply.id"
+        v-else
         :reply="reply"
         :actions="actions"
         :can-react="canReact"
@@ -332,6 +339,7 @@ function formatDate(dateStr?: string) {
         @jump="jumpToReplied(reply)"
         @open-image="selectedImage = $event"
       />
+      </template>
     </div>
 
     <ThreadComposer

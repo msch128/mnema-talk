@@ -5,6 +5,7 @@ import { api } from '../../lib/api'
 import { emptyWindow } from '../../lib/messageWindow'
 import { pruneChannelDrafts } from '../../lib/drafts'
 import { currentRoute } from '../../lib/router'
+import { useServerFeaturesStore } from '../serverFeatures'
 import { assertCommunity, type Cx } from './state'
 import { fetchMessages, resetWindow, setWindow } from './messageWindow'
 import { markChannelRead } from './readState'
@@ -33,6 +34,8 @@ function resolveFallbackChannel(channels: Channel[]): Channel | null {
 function syncActiveChannel(cx: Cx) {
   const { cs } = cx
   const activeId = cs.activeChannel.value?.id
+  // An open conversation is not in the channel list and stays open.
+  if (activeId && cs.dms.value.some(d => d.id === activeId)) return
   const fresh = activeId ? cs.allChannels.value.find(c => c.id === activeId) : null
   if (fresh) {
     // Same channel, new object: a rename or topic change shows in the header.
@@ -53,7 +56,10 @@ function syncActiveChannel(cx: Cx) {
 function forgetDraftsOfGoneChannels(cx: Cx) {
   const uid = cx.authStore.user?.id
   const channels = cx.cs.allChannels.value
-  if (uid && channels.length) pruneChannelDrafts(uid, new Set(channels.map(c => c.id)))
+  // Drafts of conversations stay until the conversation list is known.
+  if (useServerFeaturesStore().dm && !cx.cs.dmsLoaded.value) return
+  const keep = new Set([...channels.map(c => c.id), ...cx.cs.dms.value.map(d => d.id)])
+  if (uid && channels.length) pruneChannelDrafts(uid, keep)
 }
 
 async function loadChannels(cx: Cx, seq: number): Promise<void> {

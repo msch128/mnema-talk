@@ -3,7 +3,7 @@ import { clockTimeOptions } from '../lib/time'
 import type { Message } from '../types/domain'
 import type { ChatSearchRoot } from '../types/rest'
 import { computed } from 'vue'
-import { Hash, Volume2, Paperclip, ArrowRight, CornerDownRight, Pin, ChartNoAxesColumn } from '@lucide/vue'
+import { Hash, Volume2, Paperclip, ArrowRight, CornerDownRight, Pin, ChartNoAxesColumn, MessageCircle } from '@lucide/vue'
 import { locale } from '../i18n'
 import { splitHighlight } from '../lib/searchHighlight'
 import { previewText } from '../lib/replies'
@@ -18,6 +18,7 @@ const props = defineProps<{
   selected: boolean
   channelName?: string | undefined
   voice: boolean
+  conversation?: boolean | undefined
   terms: string[]
   root?: ChatSearchRoot | undefined
 }>()
@@ -50,7 +51,8 @@ function formatDate(iso: string) {
       <div class="flex items-center gap-2 mb-1">
         <span class="font-medium text-sm text-mnema-text truncate">{{ shownName(msg) }}</span>
         <span v-if="channelName" class="px-1.5 py-0.5 rounded bg-mnema-surface border border-mnema-border text-xs text-mnema-muted flex items-center gap-1">
-          <Volume2 v-if="voice" class="w-2.5 h-2.5 text-mnema-tertiary" />
+          <MessageCircle v-if="conversation" class="w-2.5 h-2.5 text-mnema-tertiary" />
+          <Volume2 v-else-if="voice" class="w-2.5 h-2.5 text-mnema-tertiary" />
           <Hash v-else class="w-2.5 h-2.5 text-mnema-tertiary" />
           {{ channelName }}
         </span>

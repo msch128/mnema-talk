@@ -78,6 +78,10 @@ no accounts on someone else's platform.
   emoji** managed by the community, **edit history** for moderators, **drafts**
   that survive a reload and a **jump to the first unread message**.
 - **Installable web app with Web Push** notifications, and a layout for phones.
+- **Direct messages, blocking and reports.** Private conversations of two to
+  ten members that moderators cannot browse, blocking that the other member
+  is never told about, and a way to report a message to the moderators (see
+  [Direct messages, blocking and reports](#direct-messages-blocking-and-reports) below).
 - **Rules and onboarding** that new members accept before they write.
 - One community with categories, text channels and Talks. Every Talk has its
   own text chat.
@@ -96,6 +100,33 @@ no accounts on someone else's platform.
 | The studio's own emoji | The phone layout |
 |---|---|
 | ![The emoji picker with the community's custom emoji in its first group](doc/images/emoji-picker.png) | ![#dev-log on a phone: a code block, an @mention and the thread link](doc/images/phone.png) |
+
+### Direct messages, blocking and reports
+
+- **Start a conversation** with the **+** next to "Direct messages" at the top
+  of the sidebar (on a phone: in the channel drawer), or with **Message** on a
+  member's profile card or in their menu. One member makes a conversation of
+  two, several make a group of up to ten people. Members added to a group
+  later read its whole history. A conversation of two cannot be left (block
+  the other member instead); a group can, from the conversation's info.
+- **Who may write to you** is your choice under *Account & security* >
+  *Your data*: everyone (the default) or nobody. It only decides who can start
+  a conversation; existing ones go on.
+- **Block** a member from their profile card, their menu, a message's menu or
+  the conversation info. Their messages fold into "Blocked message" (one click
+  shows it), they cause no mentions or notifications for you, and a
+  conversation of two with them stops working in both directions. They are not
+  told. The list of blocked members, with a way to unblock, is under *Account &
+  security*.
+- **Report** a message from its menu (**Report message**) with a reason and an
+  optional note. The moderators see a copy of the message and the ones around
+  it in **Admin > Reports**, which needs the permission *Manage reports*; for a
+  direct message this copy is the only part of it they can read. The author is
+  not told.
+- **The Owner can switch direct messages off** for the community under
+  **Admin > Welcome & rules**: nothing new can then be started or written, and
+  existing conversations stay readable. A 1.0.x server has none of this, and
+  the web app hides it there.
 
 ### Supported browsers
 

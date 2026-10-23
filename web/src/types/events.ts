@@ -40,7 +40,7 @@ export interface DirectMessageRef {
   unread_count: number
   mention_count: number
   last_read_at: string | null
-  notify_level: 'all' | 'mentions' | 'mute'
+  notify_level: 'all' | 'mentions' | 'mute' | 'inherit'
   can_send: boolean
 }
 

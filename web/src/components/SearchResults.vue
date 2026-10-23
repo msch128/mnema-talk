@@ -19,6 +19,8 @@ const props = defineProps<{
   terms: string[]
   channelNames: Map<string, string>
   voiceChannels: Set<string>
+  // The results are direct messages, not channel messages.
+  conversations?: boolean
 }>()
 const emit = defineEmits<{ select: [msg: Message]; more: [] }>()
 
@@ -45,6 +47,7 @@ watch(() => props.selectedIndex, async () => {
       :selected="selectedIndex === idx"
       :channel-name="channelNames.get(msg.channel_id)"
       :voice="voiceChannels.has(msg.channel_id)"
+      :conversation="conversations === true"
       :terms="terms"
       :root="msg.parent_id ? roots[msg.parent_id] : undefined"
       @select="emit('select', $event)"

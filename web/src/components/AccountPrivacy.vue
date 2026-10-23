@@ -10,10 +10,14 @@ import type { AuthExportStatus } from '../types/rest'
 import { locale, t } from '../i18n'
 import { useAccountStore } from '../stores/account'
 import { useAuthStore } from '../stores/auth'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
+import AccountDmPolicy from './AccountDmPolicy.vue'
+import AccountBlockedList from './AccountBlockedList.vue'
 import { useToastStore } from '../stores/toast'
 
 const account = useAccountStore()
 const authStore = useAuthStore()
+const features = useServerFeaturesStore()
 const toasts = useToastStore()
 
 const POLL_MS = 2000
@@ -92,6 +96,10 @@ onBeforeUnmount(() => clearTimeout(timer))
 <template>
   <section class="space-y-4" data-testid="account-privacy" aria-labelledby="security-privacy-title">
     <h3 id="security-privacy-title" class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('security.privacy.title') }}</h3>
+
+    <!-- Who may write to this member, and whom they blocked (only on a server that has them) -->
+    <AccountDmPolicy v-if="features.dm" />
+    <AccountBlockedList v-if="features.blocks" />
 
     <div class="space-y-2">
       <p class="text-sm font-medium text-mnema-text">{{ $t('security.privacy.exportTitle') }}</p>

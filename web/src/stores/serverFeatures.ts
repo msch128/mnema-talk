@@ -33,5 +33,10 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     return pending
   }
 
-  return { list, loaded, has, load }
+  return {
+    list, loaded, has, load,
+    dm: computed(() => has('dm')),
+    blocks: computed(() => has('blocks')),
+    reports: computed(() => has('reports'))
+  }
 })
