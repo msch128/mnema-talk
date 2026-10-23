@@ -66,6 +66,7 @@ export const decodeAuthAccountInfo = decoder("auth.AccountInfo", isAuthAccountIn
 export type AuthAdminUser = {
   avatar_url?: string
   banned: boolean
+  banner_url?: string
   bio: string
   created_at: string
   disabled: boolean
@@ -89,6 +90,7 @@ export function isAuthAdminUser(value: unknown): value is AuthAdminUser {
   return isRecord(value)
     && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
     && (hasOwn(value, "banned") && typeof value["banned"] === 'boolean')
+    && (!hasOwn(value, "banner_url") || isString(value["banner_url"]))
     && (hasOwn(value, "bio") && isString(value["bio"], 250))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "disabled") && typeof value["disabled"] === 'boolean')
@@ -542,6 +544,7 @@ export const decodeAuthUpdateProfileRequest = decoder("auth.UpdateProfileRequest
 
 export type AuthUser = {
   avatar_url?: string
+  banner_url?: string
   bio: string
   created_at: string
   display_name: string
@@ -559,6 +562,7 @@ export type AuthUser = {
 export function isAuthUser(value: unknown): value is AuthUser {
   return isRecord(value)
     && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
+    && (!hasOwn(value, "banner_url") || isString(value["banner_url"]))
     && (hasOwn(value, "bio") && isString(value["bio"], 250))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "display_name") && isString(value["display_name"], 24))
@@ -1590,6 +1594,7 @@ export const decodeChatMediaAttachment = decoder("chat.MediaAttachment", isChatM
 export type ChatMember = {
   added_by?: string
   avatar_url?: string
+  banner_url?: string
   bio: string
   created_at: string
   display_name: string
@@ -1611,6 +1616,7 @@ export function isChatMember(value: unknown): value is ChatMember {
   return isRecord(value)
     && (!hasOwn(value, "added_by") || isIdentifier(value["added_by"]))
     && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
+    && (!hasOwn(value, "banner_url") || isString(value["banner_url"]))
     && (hasOwn(value, "bio") && isString(value["bio"], 250))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "display_name") && isString(value["display_name"], 24))

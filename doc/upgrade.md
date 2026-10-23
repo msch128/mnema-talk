@@ -206,6 +206,24 @@ server lacks.
   flag; see bot tokens below). Rolling back to 1.0.x means restoring the
   pre-upgrade backup: the 1.0.x image refuses a database that a newer version
   migrated (see "Rollback" above).
+- **Migration 0057** adds the nullable column `users.banner_s3_key` (the profile
+  banner) and extends the tombstone trigger of 0043 so a deleted account keeps
+  none. As with every migration here, a rollback to a 1.0.x image needs the
+  backup restore.
+- **Profile banner** (feature `profile.banner`): a picture across the top of a
+  member's profile, set under **Change banner** next to **Change avatar** and
+  removed with **Remove banner**. `PUT` / `DELETE /api/users/me/banner`
+  (multipart field `banner`; PNG, JPEG, GIF or WebP up to 5 MB and at least
+  300x100 pixels). The server never stores the upload: it crops the centre 3:1,
+  shrinks it to at most 1500x500 and writes a new file, so EXIF and other
+  metadata are gone. An animated GIF stays animated within the same pixel budget
+  as animated emoji (canvas times frames up to 16 million, 100 frames); animated
+  WebP is rejected. `banner_url` is added to `GET /api/users/{userID}` and
+  `GET /api/auth/me` only, never to message, member or event payloads. The file
+  is stored under `banners/` (the daily orphan check covers it), is deleted when
+  replaced or removed, goes into the data export as `banner.*` and is removed
+  when the account is erased. Without the feature (a 1.0.x server) the 1.1 web
+  app shows no banner controls.
 - **Self-update now verifies the image.** If you use the `autoupdate` profile,
   fetch the compose file of the 1.1 tag and run
   `docker compose --profile autoupdate up -d` after the update: the `updater`

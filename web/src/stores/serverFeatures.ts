@@ -37,6 +37,7 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     list, loaded, has, load,
     dm: computed(() => has('dm')),
     blocks: computed(() => has('blocks')),
-    reports: computed(() => has('reports'))
+    reports: computed(() => has('reports')),
+    profileBanner: computed(() => has('profile.banner'))
   }
 })

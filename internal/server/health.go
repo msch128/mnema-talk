@@ -41,6 +41,7 @@ var Features = []string{
 	"search.filters.v2",
 	"threads.follow",
 	"slash.builtins",
+	"profile.banner",
 }
 
 // healthCacheTTL is how long a health result is reused: the endpoint is
