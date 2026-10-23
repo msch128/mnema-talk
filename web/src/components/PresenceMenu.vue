@@ -81,7 +81,7 @@ onMounted(() => {
 })
 onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown))
 
-const item = 'flex w-full items-start gap-2.5 rounded-md px-2 py-1.5 text-left text-sm text-mnema-body-ink transition-colors hover:bg-mnema-hover hover:text-mnema-text focus:outline-hidden focus-visible:bg-mnema-hover focus-visible:text-mnema-text'
+const item = 'flex w-full items-start gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-mnema-body-ink transition-colors hover:bg-mnema-hover hover:text-mnema-text focus:outline-hidden focus-visible:bg-mnema-hover focus-visible:text-mnema-text'
 </script>
 
 <template>
@@ -90,7 +90,7 @@ const item = 'flex w-full items-start gap-2.5 rounded-md px-2 py-1.5 text-left t
     role="menu"
     data-testid="presence-menu"
     :aria-label="$t('presence.choose')"
-    class="absolute bottom-full left-2 z-40 mb-1 flex w-[260px] max-w-[calc(100vw-16px)] flex-col rounded-lg bg-mnema-elevated p-1.5 shadow-popover pop-in"
+    class="absolute bottom-full left-2 z-40 mb-1 flex w-[260px] max-w-[calc(100vw-16px)] flex-col rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in"
     @keydown="onKeydown"
   >
     <button

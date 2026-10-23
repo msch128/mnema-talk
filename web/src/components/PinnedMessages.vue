@@ -124,9 +124,9 @@ function when(iso: string) {
       data-testid="pinned-panel"
       role="dialog"
       :aria-label="$t('pins.title')"
-      class="absolute right-0 top-full z-30 mt-2 flex max-h-[70vh] w-[min(24rem,calc(100vw-1.5rem))] flex-col max-md:fixed max-md:inset-x-3 max-md:top-[calc(3rem+env(safe-area-inset-top))] max-md:mt-0 max-md:max-h-[calc(100dvh-4.5rem-env(safe-area-inset-top))] max-md:w-auto overflow-hidden rounded-lg bg-mnema-elevated shadow-popover pop-in"
+      class="absolute right-0 top-full z-30 mt-2 flex max-h-[70vh] w-[min(24rem,calc(100vw-1.5rem))] flex-col max-md:fixed max-md:inset-x-3 max-md:top-[calc(3rem+env(safe-area-inset-top))] max-md:mt-0 max-md:max-h-[calc(100dvh-4.5rem-env(safe-area-inset-top))] max-md:w-auto overflow-hidden rounded-xl bg-mnema-elevated shadow-popover pop-in"
     >
-      <div class="border-b border-mnema-hairline px-3 py-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">
+      <div class="border-b border-mnema-hairline px-4 py-3 font-mono text-xs font-semibold uppercase tracking-widest text-mnema-tertiary">
         {{ $t('pins.title') }}
       </div>
       <div class="min-h-0 flex-1 overflow-y-auto p-1.5">

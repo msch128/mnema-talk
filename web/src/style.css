@@ -247,8 +247,8 @@
   align-items: center;
   gap: 8px;
   max-width: 280px;
-  padding: 6px 8px;
-  border-radius: var(--radius-md);
+  padding: 7px 10px;
+  border-radius: var(--radius-lg);
   background: var(--color-mnema-elevated);
   color: var(--color-mnema-text);
   box-shadow: inset 0 0 0 1px var(--color-mnema-border), var(--shadow-md);
