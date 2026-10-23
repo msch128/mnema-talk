@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 type listedMessage struct {
@@ -309,6 +310,37 @@ func TestTheOwnerAccountCannotBeDeleted(t *testing.T) {
 	}
 	if me := admin.get("/api/auth/me"); me.status != http.StatusOK {
 		t.Fatal("the Owner stays signed in")
+	}
+}
+
+func TestDeletingAnAccountTellsTheChannelsItsPinsAreGone(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	alice := a.register(admin, "alice")
+	ch := a.createChannel(admin, "general", "text")
+	pinned := a.send(alice, ch, "alice's pinned words")
+	a.send(alice, ch, "never pinned")
+	if r := admin.do(http.MethodPut, "/api/channels/"+ch.String()+"/messages/"+pinned.String()+"/pin", nil, nil); r.status != http.StatusOK {
+		t.Fatalf("pin: %d %s", r.status, r.body)
+	}
+	before := len(a.events.Snapshot())
+
+	if res := a.deleteAccount(alice, memberPassword, ""); res.status != http.StatusNoContent {
+		t.Fatalf("delete: %d %s", res.status, res.body)
+	}
+
+	var told []events.Event
+	for _, e := range a.events.Snapshot()[before:] {
+		if e.Type == events.PinsChanged {
+			told = append(told, e)
+		}
+	}
+	if len(told) != 1 || told[0].ChannelID != ch {
+		t.Fatalf("exactly the channel of the erased pin hears about it: %+v", told)
+	}
+	payload, ok := told[0].Payload.(map[string]any)
+	if !ok || payload["message_id"] != pinned || payload["pinned"] != false {
+		t.Fatalf("the event says which message was unpinned: %+v", told[0].Payload)
 	}
 }
 

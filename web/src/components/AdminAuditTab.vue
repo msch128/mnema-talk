@@ -10,6 +10,7 @@ import { decoder } from '../types/validation'
 import { useToastStore } from '../stores/toast'
 import { useChatStore } from '../stores/chat'
 import { t, locale } from '../i18n'
+import { summarizeAudit } from '../lib/auditSummary'
 import BotBadge from './BotBadge.vue'
 
 const decodePage = decoder<AuditPage>('audit.Page', isAuditPage)
@@ -71,6 +72,11 @@ function actionLabel(action: string): string {
 
 function when(iso: string): string {
   return new Date(iso).toLocaleString(locale.value)
+}
+
+function summary(details: Record<string, unknown>): string {
+  const s = summarizeAudit(details, t('audit.yes'), t('audit.no'))
+  return s ? t(s.kind === 'changes' ? 'audit.changed' : 'audit.created', { list: s.text }) : ''
 }
 
 function pretty(details: Record<string, unknown>): string {
@@ -149,6 +155,7 @@ onMounted(() => load(false))
           <div class="text-xs text-mnema-tertiary font-mono break-all">
             {{ e.action }} · {{ e.target_type }} {{ e.target_id }} · {{ $t('audit.request') }} {{ e.request_id }}
           </div>
+          <p v-if="summary(e.details)" class="text-sm text-mnema-text break-words" :data-testid="`audit-summary-${e.id}`">{{ summary(e.details) }}</p>
           <pre class="bg-mnema-canvas border border-mnema-border rounded-md p-3 text-xs text-mnema-text overflow-x-auto whitespace-pre-wrap break-words">{{ pretty(e.details) }}</pre>
         </div>
       </div>

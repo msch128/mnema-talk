@@ -1561,6 +1561,10 @@
     "empty": "Keine Einträge.",
     "system": "System",
     "request": "Anfrage",
+    "changed": "Geändert: {list}",
+    "created": "Angelegt: {list}",
+    "yes": "ja",
+    "no": "nein",
     "loadMore": "Mehr laden",
     "groups": {
       "role": "Rollen",
