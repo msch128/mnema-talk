@@ -1,0 +1,38 @@
+.github/ISSUE_TEMPLATE/feature_request.yml
+  s_06fcde5dbef956::t_a74c573be4ce9d 1-30
+.github/ISSUE_TEMPLATE/config.yml
+  s_06fcde5dbef956::t_42621890cd644e 1-8
+CODE_OF_CONDUCT.md
+  s_06fcde5dbef956::t_7c7649c27a8c7d 1-135
+README.md
+  s_06fcde5dbef956::t_748d82ad5e8e2c 95
+  s_06fcde5dbef956::t_0293ce7fa48606 3-4,6-9,13-45,156,164-165,234,268,290-296
+.github/ISSUE_TEMPLATE/bug_report.yml
+  s_06fcde5dbef956::t_fffef2589686b4 1-52
+.gitignore
+  s_06fcde5dbef956::t_fc9caa4876897e 96-99
+SUPPORT.md
+  s_06fcde5dbef956::t_838b4e0af64e45 1-23
+.github/pull_request_template.md
+  s_06fcde5dbef956::t_d2575f82723db4 1-13
+CONTRIBUTING.md
+  s_06fcde5dbef956::t_43b794333eea0d 1-69
+AGENTS.md
+  s_06fcde5dbef956::t_748d82ad5e8e2c 132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5746bb02e45a05d159187eaa28f5cf7a44473504",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
