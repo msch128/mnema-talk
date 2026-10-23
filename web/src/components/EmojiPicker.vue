@@ -5,6 +5,7 @@ import type PickerElement from 'emoji-picker-element/picker.js'
 // and reads its emoji data from our own server, never from a CDN.
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { locale } from '../i18n'
+import { styleEmojiPicker } from '../lib/emojiPickerSheet'
 import { useDismissable } from '../composables/useDismissable'
 import { emojiImage, emojiToken } from '../lib/customEmoji'
 import { prefersReducedMotion, useEmojiStore } from '../stores/emoji'
@@ -69,6 +70,7 @@ async function create() {
   })
   syncCustomEmoji()
   host.value.appendChild(picker)
+  styleEmojiPicker(picker)
   loading.value = false
   keepInViewport()
   // Search field first, like any other picker.
@@ -106,19 +108,19 @@ onBeforeUnmount(() => {
 emoji-picker.mnema-emoji-picker {
   --background: #1c1e1d;
   --border-color: transparent;
-  --border-radius: 10px;
+  --border-radius: 16px;
   --button-active-background: #2b2f2d;
   --button-hover-background: #202423;
   --category-font-color: #8e9c94;
   --category-font-size: 0.75rem;
-  --emoji-size: 1.375rem;
-  --emoji-padding: 0.4rem;
+  --emoji-size: 1.5rem;
+  --emoji-padding: 0.45rem;
   --indicator-color: #2da771;
   --input-border-color: #2b2f2d;
-  --input-border-radius: 6px;
+  --input-border-radius: 9999px;
   --input-font-color: #e6eae8;
   --input-placeholder-color: #8e9c94;
-  --outline-color: #2da771;
+  --outline-color: transparent;
   --num-columns: 8;
   --skintone-border-radius: 6px;
   width: 340px;

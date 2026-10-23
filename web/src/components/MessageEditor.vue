@@ -39,7 +39,7 @@ defineExpose({ focus: () => input.value?.focus() })
       @keydown.enter.exact.prevent="emit('save')"
       @keydown.esc.prevent="emit('cancel')"
       :class="[
-        'w-full text-message rounded-lg bg-mnema-surface border border-mnema-accent text-mnema-text focus:outline-hidden resize-none',
+        'w-full text-message rounded-lg bg-mnema-surface border border-mnema-border-strong text-mnema-text resize-none',
         compact ? 'p-1.5' : 'p-2'
       ]"
     ></textarea>

@@ -39,8 +39,8 @@ async function confirmEnd() {
 </script>
 
 <template>
-  <section data-testid="poll" class="mt-1.5 max-w-md rounded-lg border border-mnema-border bg-mnema-raised p-3 select-text" :aria-label="$t('poll.title')">
-    <p class="mb-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-mnema-tertiary">
+  <section data-testid="poll" class="mt-2 max-w-md rounded-xl border border-mnema-border bg-mnema-raised p-4 select-text" :aria-label="$t('poll.title')">
+    <p class="mb-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-mnema-tertiary">
       <ChartNoAxesColumn class="h-3.5 w-3.5 text-mnema-accent" aria-hidden="true" />
       <span class="font-medium uppercase tracking-wide">{{ $t('poll.title') }}</span>
       <span>{{ poll.multiple ? $t('poll.multiple') : $t('poll.single') }}</span>
@@ -48,7 +48,7 @@ async function confirmEnd() {
     </p>
 
     <div role="group" :aria-label="$t('poll.options')">
-    <ul class="space-y-1.5">
+    <ul class="space-y-2">
       <li v-for="o in poll.options" :key="o.id">
         <button
           type="button"
@@ -56,7 +56,7 @@ async function confirmEnd() {
           :aria-pressed="mine.includes(o.id) ? 'true' : 'false'"
           :disabled="!interactive"
           :class="[
-            'relative block w-full overflow-hidden rounded-md border px-2.5 py-1.5 text-left text-sm transition',
+            'relative block w-full overflow-hidden rounded-lg border px-3.5 py-2.5 text-left text-sm transition',
             mine.includes(o.id) ? 'border-mnema-accent' : 'border-mnema-hairline',
             interactive ? 'cursor-pointer hover:border-mnema-accent/70' : 'cursor-default'
           ]"

@@ -43,53 +43,53 @@ async function savePassword() {
 </script>
 
 <template>
-  <div class="mb-3">
-    <div class="flex items-center justify-between mb-1">
-      <span class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('profile.password') }}</span>
+  <section class="settings-card" data-testid="account-password">
+    <div class="flex items-center justify-between gap-3">
+      <h3 class="settings-title">{{ $t('profile.password') }}</h3>
       <button
         v-if="!isChangingPassword"
         @click="isChangingPassword = true; passwordError = ''"
-        class="text-xs text-mnema-accent hover:underline flex items-center gap-1"
+        class="btn btn-secondary"
       >
-        <Edit3 class="w-3.5 h-3.5" />
+        <Edit3 class="w-4 h-4" />
         <span>{{ $t('profile.changePassword') }}</span>
       </button>
     </div>
 
-    <form v-if="isChangingPassword" class="space-y-2 mt-1" @submit.prevent="savePassword">
+    <form v-if="isChangingPassword" class="space-y-3" @submit.prevent="savePassword">
       <input
         v-model="currentPassword"
         type="password"
         autocomplete="current-password"
         :placeholder="$t('profile.currentPassword')" :aria-label="$t('profile.currentPassword')"
-        class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent"
+        class="w-full text-sm px-3 py-2 rounded-md bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent"
       />
       <input
         v-model="newPassword"
         type="password"
         autocomplete="new-password"
         :placeholder="$t('profile.newPassword', { count: MIN_PASSWORD_LENGTH })" :aria-label="$t('profile.newPassword', { count: MIN_PASSWORD_LENGTH })"
-        class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent"
+        class="w-full text-sm px-3 py-2 rounded-md bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent"
       />
       <input
         v-model="newPasswordRepeat"
         type="password"
         autocomplete="new-password"
         :placeholder="$t('profile.repeatPassword')" :aria-label="$t('profile.repeatPassword')"
-        class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent"
+        class="w-full text-sm px-3 py-2 rounded-md bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent"
       />
-      <div class="flex justify-end items-center gap-1.5 text-xs">
+      <div class="flex justify-end items-center gap-2 pt-1">
         <button
           type="button"
           @click="isChangingPassword = false; currentPassword = newPassword = newPasswordRepeat = ''"
-          class="btn btn-ghost btn-sm"
+          class="btn btn-ghost"
         >
           {{ $t('common.cancel') }}
         </button>
         <button
           type="submit"
           :disabled="isSavingPassword"
-          class="btn btn-primary btn-sm flex items-center gap-1"
+          class="btn btn-primary"
         >
           <Loader2 v-if="isSavingPassword" class="w-3.5 h-3.5 animate-spin" />
           <Save v-else class="w-3.5 h-3.5" />
@@ -98,8 +98,8 @@ async function savePassword() {
       </div>
     </form>
 
-    <div v-if="passwordError" role="alert" class="mt-2 p-1.5 rounded-sm bg-mnema-danger/10 border border-mnema-danger/30 text-mnema-danger text-sm flex items-center gap-1.5">
+    <div v-if="passwordError" role="alert" class="p-2.5 rounded-md bg-mnema-danger/10 border border-mnema-danger/30 text-mnema-danger text-sm flex items-center gap-1.5">
       <span>{{ passwordError }}</span>
     </div>
-  </div>
+  </section>
 </template>
