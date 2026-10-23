@@ -1,0 +1,29 @@
+api/openapi.json
+  s_06fcde5dbef956::t_a124cce670d1eb 14377
+internal/server/two_factor_bruteforce_integration_test.go
+  s_06fcde5dbef956::t_9ca1d714f08608 131,133-154,159,161,163-164,166-167
+  s_06fcde5dbef956::t_e66f14284d3bd2 155-158,160,162,165
+  s_06fcde5dbef956::t_0218fcb2dd44cc 132
+internal/auth/two_factor_login.go
+  s_06fcde5dbef956::t_1ec89988c01caa 102-105,110,112,124,131,140-152,176,195
+internal/auth/handler.go
+  s_06fcde5dbef956::t_1ec89988c01caa 59-61,102,112
+internal/auth/native_login.go
+  s_06fcde5dbef956::t_1ec89988c01caa 74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "77b1c3c9abaf15fb3cb8a108075d1988e837c489",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
