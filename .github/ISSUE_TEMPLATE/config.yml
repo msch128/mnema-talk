@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/msch128/mnema-talk/security/advisories/new
+    about: Please do not open a public issue. See SECURITY.md for the policy and supported versions.
+  - name: Ask a question
+    url: https://github.com/msch128/mnema-talk/discussions
+    about: Questions about setup and usage.

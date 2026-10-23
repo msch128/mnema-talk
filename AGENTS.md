@@ -129,6 +129,7 @@ mnema-talk/
 ├── .gitleaks.toml           # Secret-scan allowlist (placeholders, test-only values)
 ├── SECURITY.md              # Vulnerability reporting + security model
 ├── THIRD_PARTY_NOTICES.md   # Open-source software we use and ship, with licenses
+├── CONTRIBUTING.md, CODE_OF_CONDUCT.md, SUPPORT.md # Community files; .github/ISSUE_TEMPLATE and pull_request_template.md
 ├── AGENTS.md                # This file
 └── README.md                # Overview, quickstart, deployment
 ```

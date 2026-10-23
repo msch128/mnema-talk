@@ -93,3 +93,7 @@ scripts/tests/__pycache__/
 
 # Load test results and tokens
 /loadtest/results/
+
+# Python bytecode
+__pycache__/
+*.pyc
