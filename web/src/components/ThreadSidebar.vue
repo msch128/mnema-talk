@@ -204,7 +204,7 @@ function formatDate(dateStr?: string) {
         data-testid="thread-follow"
         :aria-pressed="followed ? 'true' : 'false'"
         :aria-label="followed ? $t('thread.unfollow') : $t('thread.follow')"
-        class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-md hover:bg-mnema-surface transition"
+        class="w-8 h-8 flex items-center justify-center shrink-0 rounded-md hover:bg-mnema-surface transition"
         :class="followed ? 'text-mnema-accent' : 'text-mnema-tertiary hover:text-mnema-text'"
         v-tooltip="followed ? $t('thread.following') : $t('thread.notFollowing')"
         @click="chatStore.activeThread && chatStore.setThreadFollow(chatStore.activeThread.id, !followed)"

@@ -245,7 +245,7 @@ const { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, on
     id="main-content"
     tabindex="-1"
     ref="root"
-    class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden select-none focus:outline-none"
+    class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden select-none focus:outline-hidden"
     @pointermove="onActivity"
     @pointerdown="onActivity"
     @focusin="onActivity"
