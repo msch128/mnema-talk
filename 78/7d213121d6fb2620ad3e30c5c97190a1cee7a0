@@ -1,0 +1,40 @@
+web/src/components/SidebarServerMenu.vue
+  s_06fcde5dbef956::t_df9a734d234152 2
+  s_06fcde5dbef956::t_6004731dc7b418 6,18-20,103,120-125,140-144
+web/src/components/AccountMenu.vue
+  s_06fcde5dbef956::t_6004731dc7b418 21
+web/src/App.test.ts
+  s_06fcde5dbef956::t_4b6c8195c4c0b8 233-237
+web/src/components/MessageRowThreadDraft.test.ts
+  s_06fcde5dbef956::t_c2e13c17850e14 32
+  s_06fcde5dbef956::t_b58ec06e59aff3 1-31,33-34
+web/src/App.vue
+  s_06fcde5dbef956::t_6004731dc7b418 246
+web/src/components/AccountMenu.behavior.test.ts
+  s_06fcde5dbef956::t_85028c7553274d 35,81,83
+  s_06fcde5dbef956::t_640f16775af0e9 80
+web/src/components/AdminUpdateBadge.test.ts
+  s_06fcde5dbef956::t_4b6c8195c4c0b8 7-8,34,38-39,41,49,51
+doc/deployment.md
+  s_06fcde5dbef956::t_1fd0b2faf1a824 138
+web/src/components/UserBar.vue
+  s_06fcde5dbef956::t_6004731dc7b418 14,127
+web/src/components/MessageRow.vue
+  s_06fcde5dbef956::t_08543c2225b6d2 8,23-24,27,29,47-48,200,207,209
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "787d213121d6fb2620ad3e30c5c97190a1cee7a0",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
