@@ -30,7 +30,7 @@ if [ "$mode" = --verify ]; then
   trap 'exit 143' TERM
   # No published ports, network or live volumes. Trust auth is confined to
   # this throwaway container's Unix socket; all access uses docker exec.
-  check_container=$(docker run --rm -d --network none --mount type=volume,dst=/var/lib/postgresql -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=mnema_verify postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873)
+  check_container=$(docker run --rm -d --network none --mount type=volume,dst=/var/lib/postgresql -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=mnema_verify postgres:18-alpine@sha256:898c60cb390d1085bc97bdd6a1ae968757421df394b071848b52b1c09c89d6a5)
   ready=false
   for _ in $(seq 1 60); do
     if docker exec "$check_container" sh -c '[ "$(cat /proc/1/comm)" = postgres ] && pg_isready -U postgres -d mnema_verify' </dev/null >/dev/null 2>&1; then ready=true; break; fi
@@ -81,5 +81,5 @@ if [ "$seaweed_resume" = true ]; then docker compose stop -t 60 seaweedfs >/dev/
 mutated=true
 docker compose exec -T postgres sh -c 'dropdb -U "$POSTGRES_USER" --if-exists --force "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" "$POSTGRES_DB"' </dev/null
 gunzip -c "$src/postgres.sql.gz" | docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -q' >/dev/null
-docker run --rm --network none --volumes-from "$seaweed" -v "$src":/in:ro alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 sh -c 'find /data -mindepth 1 -delete && tar xzf /in/seaweedfs.tar.gz -C /data'
+docker run --rm --network none --volumes-from "$seaweed" -v "$src":/in:ro alpine:3.24.3@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a sh -c 'find /data -mindepth 1 -delete && tar xzf /in/seaweedfs.tar.gz -C /data'
 echo 'data restore complete; current .env and compose configuration were preserved. Review backed-up env/compose.yaml manually before changing secrets, endpoints or service definitions.'
