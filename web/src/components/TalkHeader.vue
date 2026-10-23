@@ -6,7 +6,7 @@ import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import TalkParticipants from './TalkParticipants.vue'
 import VoiceTimer from './VoiceTimer.vue'
-import { headerButton } from './talkButtons'
+import { headerButton, focusRing } from './talkButtons'
 import NavDrawerButton from './NavDrawerButton.vue'
 
 // The Talk's header: its name, who is there and for how long, and the
@@ -18,9 +18,10 @@ defineProps({
   narrow: { type: Boolean, default: false },
   connected: { type: Boolean, default: false },
   showChat: { type: Boolean, default: false },
-  chatUnread: { type: String, default: '' }
+  chatUnread: { type: String, default: '' },
+  canJoin: { type: Boolean, default: true }
 })
-const emit = defineEmits<{ 'update:showChat': [show: boolean] }>()
+const emit = defineEmits<{ 'update:showChat': [show: boolean]; join: [] }>()
 
 const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
@@ -54,6 +55,19 @@ const chatStore = useChatStore()
 
     <!-- Top Right Actions -->
     <div class="flex items-center gap-2 shrink-0">
+      <!-- Reading the Talk without being in it: joining is one click away -->
+      <button
+        v-if="!connected"
+        type="button"
+        data-testid="talk-header-join"
+        :disabled="!canJoin"
+        @click="emit('join')"
+        :class="['flex items-center gap-1.5 h-8 max-md:h-11 px-3 rounded-md text-sm font-semibold bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover transition-colors motion-reduce:transition-none disabled:opacity-40', focusRing]"
+      >
+        <Volume2 class="w-4 h-4" aria-hidden="true" />
+        <span>{{ $t('voice.join') }}</span>
+      </button>
+
       <!-- The Talk's chat (under the stage), with its unread count while closed -->
       <button
         type="button"

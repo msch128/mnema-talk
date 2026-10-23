@@ -267,3 +267,28 @@ test('phone: direct messages live in the drawer', async ({ page, browser }) => {
     await memberContext.close()
   }
 })
+
+test('phone: the drawer row opens a Talk chat without joining', async ({ page }) => {
+  await signIn(page)
+  const name = `${VOICE_CHANNEL} lesen`
+  const voice = await apiFetch(page, 'POST', '/api/admin/channels', { name, type: 'voice' })
+  expect(voice.status).toBe(201)
+  const channelId = responseString(voice, 'id')
+  await page.reload()
+  await page.getByTestId('open-nav').tap()
+  await expect(page.getByTestId('channel-drawer')).toBeInViewport({ ratio: 0.9 })
+  const chatButton = page.locator('[data-channel-type="voice"]', { hasText: name }).getByRole('button', { name: 'Chat öffnen' })
+  await expect(chatButton).toBeVisible()
+  const box = await bounds(chatButton)
+  expect(box.width).toBeGreaterThanOrEqual(MIN_TARGET)
+  expect(box.height).toBeGreaterThanOrEqual(MIN_TARGET)
+  await chatButton.tap()
+  await expect(page).toHaveURL(new RegExp(`/v/${channelId}/chat$`))
+  await expect(page.getByTestId('channel-drawer')).not.toBeInViewport()
+  await expect(page.getByTestId('voice-chat-panel')).toBeVisible()
+  const join = page.getByTestId('talk-header-join')
+  await expect(join).toBeVisible()
+  expect((await bounds(join)).height).toBeGreaterThanOrEqual(MIN_TARGET)
+  await expect(page.getByRole('button', { name: 'Verlassen' })).toHaveCount(0)
+  await expectNoSidewaysScroll(page)
+})

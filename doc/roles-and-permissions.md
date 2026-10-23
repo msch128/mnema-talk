@@ -116,7 +116,7 @@ the own role is a convenient place for "this bot may post in #alerts").
 | Add reactions | Add a reaction (taking back your own always works); vote in a poll | yes |
 | Manage messages | Delete other members' messages (with a reason, or a member's latest ones in bulk), pin messages, exempt from slow mode | yes |
 | Mention @all and @here | `@all` and `@here` notify people | yes |
-| Connect | Join a Talk | yes |
+| Connect | Join a Talk (not needed to read or write the Talk's chat, that follows *View channels* and *Send messages*) | yes |
 | Speak | Send audio in a Talk | yes |
 | Video | Send camera and screen share in a Talk | yes |
 | Disconnect members | Remove members from a Talk | yes |
