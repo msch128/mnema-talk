@@ -62,6 +62,44 @@ function countApiRequests(context: BrowserContext): void {
   })
 }
 
+// The page's Content-Security-Policy (style-src 'self', style-src-attr 'none')
+// is part of what ships, so no spec may trigger a violation. Every context
+// reports securitypolicyviolation events from all of its frames (and shadow
+// trees, whose events reach the document) through a binding, and the browser's
+// own "Refused to ..." console messages are collected too. An auto fixture
+// fails the test that caused one.
+const CSP_BINDING = '__mnemaCspViolation'
+const CSP_LISTENER = `(() => {
+  const report = (e) => {
+    const text = [e.violatedDirective, e.blockedURI || 'inline', e.sourceFile ? e.sourceFile + ':' + e.lineNumber : '', (e.sample || '').slice(0, 80)].join(' ')
+    try { window.${CSP_BINDING}(text) } catch { /* page is going away */ }
+  }
+  document.addEventListener('securitypolicyviolation', report, true)
+  window.addEventListener('securitypolicyviolation', report, true)
+})()`
+const CSP_CONSOLE = /Content[- ]Security[- ]Policy|Refused to (apply|load|execute|create|connect|frame|evaluate)|violates the following/i
+
+let cspViolations: string[] = []
+// Playwright's WebKit injects an inline stylesheet of its own when it takes
+// the failure screenshot, which the policy rightly refuses and reports with no
+// source file. That one signature is ignored in WebKit; a <style> element of
+// the app is still caught by the Chromium and Firefox runs, and every other
+// violation (style attributes, scripts, connections) counts in all engines.
+const WEBKIT_SCREENSHOT_EVENT = /^style-src-elem inline\s*$/
+const WEBKIT_SCREENSHOT_CONSOLE = /^Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear/
+
+async function watchCsp(context: BrowserContext): Promise<void> {
+  const webkit = context.browser()?.browserType().name() === 'webkit'
+  await context.exposeBinding(CSP_BINDING, (_source, text: string) => {
+    if (!(webkit && WEBKIT_SCREENSHOT_EVENT.test(text))) cspViolations.push(`event: ${text}`)
+  })
+  await context.addInitScript(CSP_LISTENER)
+  context.on('console', (message) => {
+    const text = message.text()
+    if (CSP_CONSOLE.test(text) && !(webkit && WEBKIT_SCREENSHOT_CONSOLE.test(text))) cspViolations.push(`console: ${text}`)
+  })
+}
+
 // Every test registers or signs in accounts that are new to the welcome flow,
 // whose dialog would cover the page under test. Contexts therefore see it as
 // already finished; the onboarding spec opts back in with showWelcomeFlow.
@@ -141,17 +179,26 @@ function counted(browser: Browser): Browser {
     const addressed = grantable(browser, { serviceWorkers: serviceWorkersFor(), ...options, extraHTTPHeaders: { 'X-Forwarded-For': clientAddress(), ...(options.extraHTTPHeaders ?? {}) } })
     const context = await (separate ? contextOwnProcess(browser, addressed) : newContext(addressed))
     countApiRequests(context)
+    await watchCsp(context)
     await hideWelcomeFlow(context)
     return context
   }
   return browser
 }
 
-export const test = base.extend<{ apiHeadroom: void }, { browser: Browser }>({
+export const test = base.extend<{ apiHeadroom: void; cspViolations: void }, { browser: Browser }>({
   browser: [async ({ browser }, use) => { await use(counted(browser)) }, { scope: 'worker' }],
   // Playwright insists on a destructuring pattern, even an empty one.
   // eslint-disable-next-line no-empty-pattern
   apiHeadroom: [async ({}, use) => { await awaitApiHeadroom(); await use() }, { auto: true }],
+  // eslint-disable-next-line no-empty-pattern
+  cspViolations: [async ({}, use) => {
+    cspViolations = []
+    await use()
+    const seen = [...new Set(cspViolations)]
+    cspViolations = []
+    expect(seen, 'Content-Security-Policy violations').toEqual([])
+  }, { auto: true }],
 })
 
 export { expect }

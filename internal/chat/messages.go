@@ -3,6 +3,7 @@ package chat
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -368,10 +369,18 @@ func CreateMessage(ctx context.Context, q db.Querier, nm NewMessage) (uuid.UUID,
 	if nm.AuthorName != "" {
 		authorName = &nm.AuthorName
 	}
+	// A message of a direct message conversation draws its number from the
+	// conversations' own sequence, so the public numbering shows nothing of
+	// what is said in private (migration 0050).
 	err := q.QueryRow(ctx, `
-		INSERT INTO messages (channel_id, user_id, content, parent_id, reply_to_id, webhook_id, author_name, embeds)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO messages (number, in_dm, channel_id, user_id, content, parent_id, reply_to_id, webhook_id, author_name, embeds) OVERRIDING SYSTEM VALUE
+		SELECT CASE WHEN c.type = 'dm' THEN nextval('dm_number_seq') ELSE nextval(pg_get_serial_sequence('messages', 'number')) END,
+		       c.type = 'dm', c.id, $2, $3, $4, $5, $6, $7, $8
+		FROM channels c WHERE c.id = $1
 		RETURNING id`, nm.ChannelID, nm.UserID, nm.Content, nm.ParentID, nm.ReplyToID, nm.WebhookID, authorName, embeds).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, errChannelNotFound
+	}
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("insert message: %w", err)
 	}

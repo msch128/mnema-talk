@@ -29,6 +29,13 @@ func (h *Hub) tapped(channel uuid.UUID, eventType string, payload any) {
 	}
 }
 
+// dmTapped shows an event of a direct message conversation to the hub's DMTap.
+func (h *Hub) dmTapped(channel uuid.UUID, eventType string, payload any) {
+	if h.DMTap != nil {
+		h.DMTap(channel, eventType, payload)
+	}
+}
+
 // Broadcast sends an event to every connected client.
 func (h *Hub) Broadcast(eventType string, payload any) {
 	data := encode(eventType, payload)

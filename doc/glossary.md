@@ -20,8 +20,11 @@ in the legal texts (Impressum, Datenschutz, AGB), which are formal by design.
 | Silence notifications | mute notifications | Benachrichtigungen aus / stumm | | |
 | Moderation silence | timeout | Auszeit | stummschalten, Timeout | "Auszeit verhängen / beenden". The permission is "Mitglieder in Auszeit schicken". |
 | Block a member | ban | sperren / Sperre | | With a reason and a duration. |
+| Stop seeing a member's messages and notifications | block / unblock | blockieren / Blockierung aufheben | ban, sperren, mute | Private: the other member is not told. "Blocked message · show" / „Blockierte Nachricht · anzeigen“. Distinct from ban (a moderation sanction). |
+| Tell the moderators about a message | report | melden | flag, anzeigen | "Report message" / „Nachricht melden“. The moderators' list is "Reports" / „Meldungen“; a report is closed as resolved / erledigt or dismissed / abgelehnt. |
 | Disable an account (no record) | disable | deaktivieren | sperren | "Konto deaktivieren / aktivieren". |
 | Brute-force lock | sign-in lock | Anmeldesperre | Login-Sperre | |
+| Private conversation | direct message | Direktnachricht | DM, private message, Privatnachricht | A conversation of two to ten members that is not a channel. "Group direct message" / „Gruppen-Direktnachricht“ for three or more. Calls in direct messages do not exist. |
 | Pin | pin / unpin | anheften / Anheftung aufheben | lösen | "Angeheftete Nachrichten". |
 | Poll | poll | Umfrage | Abstimmung (only for the act of voting) | |
 | Custom emoji | custom emoji | eigene Emojis | | "Emojis verwalten". |

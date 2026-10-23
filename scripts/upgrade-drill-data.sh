@@ -82,8 +82,13 @@ seed_090() {
   post_message Herzog "$GENERAL" "ping @drillmods $TAG"
 }
 
+# Roles as the drill compares them. Migration 0050 adds one permission, Send
+# direct messages (bit 1 << 22), to @everyone (and so to nothing else): the bit
+# is left out of the comparison and checked on its own in verify_roles.
+ROLES_JQ='map({id, name, color, permissions: (.permissions as $p | if (($p / 4194304 | floor) % 2) == 1 then $p - 4194304 else $p end), mentionable, position}) | sort_by(.id)'
+
 snapshot_integrations() {
-  ROLES_BEFORE="$(api Herzog "$BASE/api/roles" | jq -S 'map({id, name, color, permissions, mentionable, position}) | sort_by(.id)')"
+  ROLES_BEFORE="$(api Herzog "$BASE/api/roles" | jq -S "$ROLES_JQ")"
   OVERWRITES_BEFORE="$(api Herzog "$BASE/api/admin/channels/$PROJECTS/overwrites" | jq -S '.overwrites | sort_by(.id)')"
   CATEGORY_OVERWRITES_BEFORE="$(api Herzog "$BASE/api/admin/categories/$CATEGORY/overwrites" | jq -S '.overwrites | sort_by(.id)')"
   COUNTS_BEFORE="$(count_tables)"
@@ -106,8 +111,10 @@ $(diff <(echo "$COUNTS_BEFORE") <(echo "$after") || true)"
 }
 
 verify_roles() {
-  [ "$(api Herzog "$BASE/api/roles" | jq -S 'map({id, name, color, permissions, mentionable, position}) | sort_by(.id)')" = "$ROLES_BEFORE" ] ||
+  [ "$(api Herzog "$BASE/api/roles" | jq -S "$ROLES_JQ")" = "$ROLES_BEFORE" ] ||
     fail 'the roles changed'
+  api Herzog "$BASE/api/roles" | jq -e 'any(.[]; ((.permissions / 4194304 | floor) % 2) == 1)' >/dev/null ||
+    fail 'no role holds Send direct messages after the upgrade (migration 0050 gives it to @everyone)'
   [ "$(api Herzog "$BASE/api/admin/channels/$PROJECTS/overwrites" | jq -S '.overwrites | sort_by(.id)')" = "$OVERWRITES_BEFORE" ] ||
     fail 'the channel overwrites changed'
   [ "$(api Herzog "$BASE/api/admin/categories/$CATEGORY/overwrites" | jq -S '.overwrites | sort_by(.id)')" = "$CATEGORY_OVERWRITES_BEFORE" ] ||

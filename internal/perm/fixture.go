@@ -126,6 +126,16 @@ func (f *Fixture) MemberOverwrite(channel bool, target, user uuid.UUID, allow, d
 	return f
 }
 
+// DM adds a direct message conversation with the given members.
+func (f *Fixture) DM(members ...uuid.UUID) uuid.UUID {
+	id := uuid.New()
+	f.s.dms[id] = map[uuid.UUID]bool{}
+	for _, m := range members {
+		f.s.dms[id][m] = true
+	}
+	return id
+}
+
 // Snapshot returns the state built so far.
 func (f *Fixture) Snapshot() *Snapshot { return f.s }
 
@@ -145,6 +155,7 @@ func (f *Fixture) Fork() *Fixture {
 	s := *f.s
 	s.roles, s.userRoles, s.owners, s.bots = maps.Clone(s.roles), maps.Clone(s.userRoles), maps.Clone(s.owners), maps.Clone(s.bots)
 	s.channelCat, s.categories = maps.Clone(s.channelCat), maps.Clone(s.categories)
+	s.dms = maps.Clone(s.dms)
 	s.timeouts, s.rulesAccepted = maps.Clone(s.timeouts), maps.Clone(s.rulesAccepted)
 	s.channelOv, s.categoryOv = cloneScopes(s.channelOv), cloneScopes(s.categoryOv)
 	return &Fixture{s: &s}

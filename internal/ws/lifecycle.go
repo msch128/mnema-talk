@@ -52,6 +52,10 @@ const (
 // @Description - `typing`: `{channel_id, user_id}` (to everyone except the typist).
 // @Description
 // @Description Server to client, targeted:
+// @Description - `block_updated`: to the user's own sessions only; `{user_id, blocked}` after they blocked or unblocked a member (refetch GET /api/me/blocks). The blocked member is never told.
+// @Description - `dm_created`: to every member's sessions; the direct message (`DirectMessage`) a conversation was started with, or the one the receiver was just added to.
+// @Description - `dm_member_added`: to the other members of a group conversation; `{dm_id, member}`.
+// @Description - `dm_member_removed`: to the remaining members and the leaver's sessions; `{dm_id, member}`.
 // @Description - `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}`, or `{refresh: true}` alone after a notification setting changed or everything was marked read (reload read states and notification settings).
 // @Description - `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.
 // @Description - `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.
@@ -114,6 +118,7 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := newClient(h, conn, *user, tv)
+	c.dmAware = r.URL.Query().Get("dm") == "1"
 	h.bindSession(c, r)
 	if !h.admitPending(c) {
 		return

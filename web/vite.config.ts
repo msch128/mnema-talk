@@ -7,6 +7,7 @@ import { join, dirname } from 'node:path'
 import { brotliCompressSync, gzipSync, constants as zlib } from 'node:zlib'
 import { appVersion } from './version.config.ts'
 import { serviceWorker } from './scripts/serviceWorkerBuild.ts'
+import { emojiPickerCsp } from './scripts/emojiPickerCsp.ts'
 
 // Writes .br and .gz next to compressible build assets; web.Handler serves
 // them to browsers that accept the encoding. Matters most for the 16 MB
@@ -60,13 +61,15 @@ function shipLicenses(): Plugin {
 }
 
 export default defineConfig(({ mode }) => ({
-  plugins: [vue(), precompress(), shipLicenses(), serviceWorker()],
+  plugins: [emojiPickerCsp(), vue(), precompress(), shipLicenses(), serviceWorker()],
   define: {
     __APP_VERSION__: JSON.stringify(appVersion()),
     // Test-only timing hook for the media key lifetimes (lib/media/bounds.ts):
     // on in unit tests and in `MNEMA_E2E=1` builds, never in a release build.
     __MNEMA_E2E_HOOKS__: JSON.stringify(mode === 'test' || process.env.MNEMA_E2E === '1')
   },
+  // The dev server must not pre-bundle the picker, or the CSP patch is skipped.
+  optimizeDeps: { exclude: ['emoji-picker-element'] },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

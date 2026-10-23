@@ -930,6 +930,36 @@ export function isBotUpdateRequest(value: unknown): value is BotUpdateRequest {
 
 export const decodeBotUpdateRequest = decoder("bot.UpdateRequest", isBotUpdateRequest)
 
+export type ChatAddDMMemberRequest = {
+  user_id: string
+}
+
+export function isChatAddDMMemberRequest(value: unknown): value is ChatAddDMMemberRequest {
+  return isRecord(value)
+    && (hasOwn(value, "user_id") && isIdentifier(value["user_id"]))
+}
+
+export const decodeChatAddDMMemberRequest = decoder("chat.AddDMMemberRequest", isChatAddDMMemberRequest)
+
+export type ChatBlockedMember = {
+  avatar_url?: string
+  blocked_at: string
+  display_name: string
+  user_id: string
+  username: string
+}
+
+export function isChatBlockedMember(value: unknown): value is ChatBlockedMember {
+  return isRecord(value)
+    && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
+    && (hasOwn(value, "blocked_at") && isTimestamp(value["blocked_at"]))
+    && (hasOwn(value, "display_name") && isString(value["display_name"]))
+    && (hasOwn(value, "user_id") && isIdentifier(value["user_id"]))
+    && (hasOwn(value, "username") && isString(value["username"]))
+}
+
+export const decodeChatBlockedMember = decoder("chat.BlockedMember", isChatBlockedMember)
+
 export type ChatBotAllowedMentions = {
   parse: Array<string>
   roles: Array<string>
@@ -1179,6 +1209,17 @@ export function isChatCreateChannelRequest(value: unknown): value is ChatCreateC
 
 export const decodeChatCreateChannelRequest = decoder("chat.CreateChannelRequest", isChatCreateChannelRequest)
 
+export type ChatCreateDMRequest = {
+  user_ids: Array<string>
+}
+
+export function isChatCreateDMRequest(value: unknown): value is ChatCreateDMRequest {
+  return isRecord(value)
+    && (hasOwn(value, "user_ids") && isArrayOf(value["user_ids"], item => isIdentifier(item)))
+}
+
+export const decodeChatCreateDMRequest = decoder("chat.CreateDMRequest", isChatCreateDMRequest)
+
 export type ChatCreateMessageRequest = {
   content: string
   parent_id?: string | null
@@ -1194,6 +1235,36 @@ export function isChatCreateMessageRequest(value: unknown): value is ChatCreateM
 
 export const decodeChatCreateMessageRequest = decoder("chat.CreateMessageRequest", isChatCreateMessageRequest)
 
+export type ChatCreateReportRequest = {
+  category: "spam" | "harassment" | "illegal" | "other"
+  note?: string
+}
+
+export function isChatCreateReportRequest(value: unknown): value is ChatCreateReportRequest {
+  return isRecord(value)
+    && (hasOwn(value, "category") && (value["category"] === "spam" || value["category"] === "harassment" || value["category"] === "illegal" || value["category"] === "other"))
+    && (!hasOwn(value, "note") || isString(value["note"], 500))
+}
+
+export const decodeChatCreateReportRequest = decoder("chat.CreateReportRequest", isChatCreateReportRequest)
+
+export type ChatDMMember = {
+  avatar_url?: string
+  display_name: string
+  id: string
+  username: string
+}
+
+export function isChatDMMember(value: unknown): value is ChatDMMember {
+  return isRecord(value)
+    && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
+    && (hasOwn(value, "display_name") && isString(value["display_name"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "username") && isString(value["username"]))
+}
+
+export const decodeChatDMMember = decoder("chat.DMMember", isChatDMMember)
+
 export type ChatDeleteMessageRequest = {
   reason?: string
 }
@@ -1204,6 +1275,35 @@ export function isChatDeleteMessageRequest(value: unknown): value is ChatDeleteM
 }
 
 export const decodeChatDeleteMessageRequest = decoder("chat.DeleteMessageRequest", isChatDeleteMessageRequest)
+
+export type ChatDirectMessage = {
+  can_send: boolean
+  created_at: string
+  group: boolean
+  id: string
+  last_message_at: string | null
+  last_read_at: string | null
+  members: Array<ChatDMMember>
+  mention_count: number
+  notify_level: ChatNotifyLevel
+  unread_count: number
+}
+
+export function isChatDirectMessage(value: unknown): value is ChatDirectMessage {
+  return isRecord(value)
+    && (hasOwn(value, "can_send") && typeof value["can_send"] === 'boolean')
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "group") && typeof value["group"] === 'boolean')
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "last_message_at") && (isTimestamp(value["last_message_at"]) || value["last_message_at"] === null))
+    && (hasOwn(value, "last_read_at") && (isTimestamp(value["last_read_at"]) || value["last_read_at"] === null))
+    && (hasOwn(value, "members") && isArrayOf(value["members"], item => isChatDMMember(item)))
+    && (hasOwn(value, "mention_count") && isInteger(value["mention_count"]))
+    && (hasOwn(value, "notify_level") && isChatNotifyLevel(value["notify_level"]))
+    && (hasOwn(value, "unread_count") && isInteger(value["unread_count"]))
+}
+
+export const decodeChatDirectMessage = decoder("chat.DirectMessage", isChatDirectMessage)
 
 export type ChatEditMessageRequest = {
   content: string
@@ -1625,6 +1725,17 @@ export function isChatPollOption(value: unknown): value is ChatPollOption {
 
 export const decodeChatPollOption = decoder("chat.PollOption", isChatPollOption)
 
+export type ChatPrivacy = {
+  dm_policy: "everyone" | "nobody"
+}
+
+export function isChatPrivacy(value: unknown): value is ChatPrivacy {
+  return isRecord(value)
+    && (hasOwn(value, "dm_policy") && (value["dm_policy"] === "everyone" || value["dm_policy"] === "nobody"))
+}
+
+export const decodeChatPrivacy = decoder("chat.Privacy", isChatPrivacy)
+
 export type ChatReactionRequest = {
   emoji: string
 }
@@ -1737,6 +1848,185 @@ export function isChatReplyPreview(value: unknown): value is ChatReplyPreview {
 }
 
 export const decodeChatReplyPreview = decoder("chat.ReplyPreview", isChatReplyPreview)
+
+export type ChatReport = {
+  category: "spam" | "harassment" | "illegal" | "other"
+  channel_id?: string
+  channel_name?: string
+  created_at: string
+  id: string
+  kind: "channel" | "dm"
+  message_id: string
+  note: string
+  reported?: ChatReportParty
+  reporter?: ChatReportParty
+  resolution_note?: string
+  resolved_at?: string
+  resolved_by?: ChatReportParty
+  status: "open" | "resolved" | "dismissed"
+}
+
+export function isChatReport(value: unknown): value is ChatReport {
+  return isRecord(value)
+    && (hasOwn(value, "category") && (value["category"] === "spam" || value["category"] === "harassment" || value["category"] === "illegal" || value["category"] === "other"))
+    && (!hasOwn(value, "channel_id") || isIdentifier(value["channel_id"]))
+    && (!hasOwn(value, "channel_name") || isString(value["channel_name"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "kind") && (value["kind"] === "channel" || value["kind"] === "dm"))
+    && (hasOwn(value, "message_id") && isIdentifier(value["message_id"]))
+    && (hasOwn(value, "note") && isString(value["note"]))
+    && (!hasOwn(value, "reported") || isChatReportParty(value["reported"]))
+    && (!hasOwn(value, "reporter") || isChatReportParty(value["reporter"]))
+    && (!hasOwn(value, "resolution_note") || isString(value["resolution_note"]))
+    && (!hasOwn(value, "resolved_at") || isTimestamp(value["resolved_at"]))
+    && (!hasOwn(value, "resolved_by") || isChatReportParty(value["resolved_by"]))
+    && (hasOwn(value, "status") && (value["status"] === "open" || value["status"] === "resolved" || value["status"] === "dismissed"))
+}
+
+export const decodeChatReport = decoder("chat.Report", isChatReport)
+
+export type ChatReportAttachment = {
+  filename: string
+  mime_type: string
+  size_bytes: number
+}
+
+export function isChatReportAttachment(value: unknown): value is ChatReportAttachment {
+  return isRecord(value)
+    && (hasOwn(value, "filename") && isString(value["filename"]))
+    && (hasOwn(value, "mime_type") && isString(value["mime_type"]))
+    && (hasOwn(value, "size_bytes") && isInteger(value["size_bytes"]))
+}
+
+export const decodeChatReportAttachment = decoder("chat.ReportAttachment", isChatReportAttachment)
+
+export type ChatReportDetail = {
+  category: "spam" | "harassment" | "illegal" | "other"
+  channel_id?: string
+  channel_name?: string
+  created_at: string
+  id: string
+  kind: "channel" | "dm"
+  message_id: string
+  note: string
+  reported?: ChatReportParty
+  reporter?: ChatReportParty
+  resolution_note?: string
+  resolved_at?: string
+  resolved_by?: ChatReportParty
+  snapshot: ChatReportSnapshot
+  status: "open" | "resolved" | "dismissed"
+}
+
+export function isChatReportDetail(value: unknown): value is ChatReportDetail {
+  return isRecord(value)
+    && (hasOwn(value, "category") && (value["category"] === "spam" || value["category"] === "harassment" || value["category"] === "illegal" || value["category"] === "other"))
+    && (!hasOwn(value, "channel_id") || isIdentifier(value["channel_id"]))
+    && (!hasOwn(value, "channel_name") || isString(value["channel_name"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "kind") && (value["kind"] === "channel" || value["kind"] === "dm"))
+    && (hasOwn(value, "message_id") && isIdentifier(value["message_id"]))
+    && (hasOwn(value, "note") && isString(value["note"]))
+    && (!hasOwn(value, "reported") || isChatReportParty(value["reported"]))
+    && (!hasOwn(value, "reporter") || isChatReportParty(value["reporter"]))
+    && (!hasOwn(value, "resolution_note") || isString(value["resolution_note"]))
+    && (!hasOwn(value, "resolved_at") || isTimestamp(value["resolved_at"]))
+    && (!hasOwn(value, "resolved_by") || isChatReportParty(value["resolved_by"]))
+    && (hasOwn(value, "snapshot") && isChatReportSnapshot(value["snapshot"]))
+    && (hasOwn(value, "status") && (value["status"] === "open" || value["status"] === "resolved" || value["status"] === "dismissed"))
+}
+
+export const decodeChatReportDetail = decoder("chat.ReportDetail", isChatReportDetail)
+
+export type ChatReportFiled = {
+  id: string
+}
+
+export function isChatReportFiled(value: unknown): value is ChatReportFiled {
+  return isRecord(value)
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+}
+
+export const decodeChatReportFiled = decoder("chat.ReportFiled", isChatReportFiled)
+
+export type ChatReportParty = {
+  id: string
+  username: string
+}
+
+export function isChatReportParty(value: unknown): value is ChatReportParty {
+  return isRecord(value)
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "username") && isString(value["username"]))
+}
+
+export const decodeChatReportParty = decoder("chat.ReportParty", isChatReportParty)
+
+export type ChatReportSnapshot = {
+  context: Array<ChatReportedMessage>
+  message: ChatReportedMessage
+}
+
+export function isChatReportSnapshot(value: unknown): value is ChatReportSnapshot {
+  return isRecord(value)
+    && (hasOwn(value, "context") && isArrayOf(value["context"], item => isChatReportedMessage(item)))
+    && (hasOwn(value, "message") && isChatReportedMessage(value["message"]))
+}
+
+export const decodeChatReportSnapshot = decoder("chat.ReportSnapshot", isChatReportSnapshot)
+
+export type ChatReportedMessage = {
+  attachments: Array<ChatReportAttachment>
+  content: string
+  created_at: string
+  display_name: string
+  id: string
+  parent_id?: string
+  user_id: string
+  username: string
+}
+
+export function isChatReportedMessage(value: unknown): value is ChatReportedMessage {
+  return isRecord(value)
+    && (hasOwn(value, "attachments") && isArrayOf(value["attachments"], item => isChatReportAttachment(item)))
+    && (hasOwn(value, "content") && isString(value["content"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "display_name") && isString(value["display_name"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "parent_id") || isIdentifier(value["parent_id"]))
+    && (hasOwn(value, "user_id") && isIdentifier(value["user_id"]))
+    && (hasOwn(value, "username") && isString(value["username"]))
+}
+
+export const decodeChatReportedMessage = decoder("chat.ReportedMessage", isChatReportedMessage)
+
+export type ChatReportsPage = {
+  has_more: boolean
+  reports: Array<ChatReport>
+}
+
+export function isChatReportsPage(value: unknown): value is ChatReportsPage {
+  return isRecord(value)
+    && (hasOwn(value, "has_more") && typeof value["has_more"] === 'boolean')
+    && (hasOwn(value, "reports") && isArrayOf(value["reports"], item => isChatReport(item)))
+}
+
+export const decodeChatReportsPage = decoder("chat.ReportsPage", isChatReportsPage)
+
+export type ChatResolveReportRequest = {
+  note?: string
+  status: "resolved" | "dismissed"
+}
+
+export function isChatResolveReportRequest(value: unknown): value is ChatResolveReportRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "note") || isString(value["note"], 500))
+    && (hasOwn(value, "status") && (value["status"] === "resolved" || value["status"] === "dismissed"))
+}
+
+export const decodeChatResolveReportRequest = decoder("chat.ResolveReportRequest", isChatResolveReportRequest)
 
 export type ChatSearchResult = {
   has_more: boolean
@@ -2048,6 +2338,7 @@ export const decodeOnboardingInvitePreview = decoder("onboarding.InvitePreview",
 
 export type OnboardingSettings = {
   community_name: string
+  direct_messages_enabled: boolean
   rules_text: string
   rules_version: number
   start_channel_id: string | null
@@ -2057,6 +2348,7 @@ export type OnboardingSettings = {
 export function isOnboardingSettings(value: unknown): value is OnboardingSettings {
   return isRecord(value)
     && (hasOwn(value, "community_name") && isString(value["community_name"], 60))
+    && (hasOwn(value, "direct_messages_enabled") && typeof value["direct_messages_enabled"] === 'boolean')
     && (hasOwn(value, "rules_text") && isString(value["rules_text"], 10000))
     && (hasOwn(value, "rules_version") && (isInteger(value["rules_version"]) && value["rules_version"] >= 0))
     && (hasOwn(value, "start_channel_id") && (isIdentifier(value["start_channel_id"]) || value["start_channel_id"] === null))
@@ -2067,6 +2359,7 @@ export const decodeOnboardingSettings = decoder("onboarding.Settings", isOnboard
 
 export type OnboardingSettingsInput = {
   community_name: string
+  direct_messages_enabled?: boolean | null
   require_reacceptance?: boolean
   rules_text: string
   start_channel_id: string | null
@@ -2076,6 +2369,7 @@ export type OnboardingSettingsInput = {
 export function isOnboardingSettingsInput(value: unknown): value is OnboardingSettingsInput {
   return isRecord(value)
     && (hasOwn(value, "community_name") && isString(value["community_name"], 60))
+    && (!hasOwn(value, "direct_messages_enabled") || (typeof value["direct_messages_enabled"] === 'boolean' || value["direct_messages_enabled"] === null))
     && (!hasOwn(value, "require_reacceptance") || typeof value["require_reacceptance"] === 'boolean')
     && (hasOwn(value, "rules_text") && isString(value["rules_text"], 10000))
     && (hasOwn(value, "start_channel_id") && (isIdentifier(value["start_channel_id"]) || value["start_channel_id"] === null))
@@ -2417,8 +2711,10 @@ export function isRolesOverwritesBody(value: unknown): value is RolesOverwritesB
 export const decodeRolesOverwritesBody = decoder("roles.OverwritesBody", isRolesOverwritesBody)
 
 export type RolesPermissionsInfo = {
+  can_start_direct_messages?: boolean
   catalog: Array<PermInfo>
   channels: Array<RolesChannelPermissions>
+  direct_messages_enabled?: boolean
   max_upload_mb: number
   owner: boolean
   permissions: number
@@ -2431,8 +2727,10 @@ export type RolesPermissionsInfo = {
 
 export function isRolesPermissionsInfo(value: unknown): value is RolesPermissionsInfo {
   return isRecord(value)
+    && (!hasOwn(value, "can_start_direct_messages") || typeof value["can_start_direct_messages"] === 'boolean')
     && (hasOwn(value, "catalog") && isArrayOf(value["catalog"], item => isPermInfo(item)))
     && (hasOwn(value, "channels") && isArrayOf(value["channels"], item => isRolesChannelPermissions(item)))
+    && (!hasOwn(value, "direct_messages_enabled") || typeof value["direct_messages_enabled"] === 'boolean')
     && (hasOwn(value, "max_upload_mb") && (isInteger(value["max_upload_mb"]) && value["max_upload_mb"] >= 1))
     && (hasOwn(value, "owner") && typeof value["owner"] === 'boolean')
     && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
@@ -2485,6 +2783,7 @@ export function isServerDatabaseHealth(value: unknown): value is ServerDatabaseH
 export const decodeServerDatabaseHealth = decoder("server.DatabaseHealth", isServerDatabaseHealth)
 
 export type ServerHealth = {
+  features?: Array<string>
   status: "ok"
   version: string
   web_client_api: number
@@ -2492,6 +2791,7 @@ export type ServerHealth = {
 
 export function isServerHealth(value: unknown): value is ServerHealth {
   return isRecord(value)
+    && (!hasOwn(value, "features") || isArrayOf(value["features"], item => isString(item)))
     && (hasOwn(value, "status") && (value["status"] === "ok"))
     && (hasOwn(value, "version") && isString(value["version"]))
     && (hasOwn(value, "web_client_api") && isInteger(value["web_client_api"]))

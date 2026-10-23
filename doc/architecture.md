@@ -87,6 +87,79 @@ same pattern: REST for changes, WebSocket events for fan-out. Media is never
 served from S3 directly: `GET /api/media/{id}` checks the session and streams
 the object through the app.
 
+## Direct messages
+
+Direct messages (1.1) are conversations of two to ten members. They are a
+**deliberate reversal of migration 0003**, which removed the earlier 1:1 model
+(recorded as a decision in the repository's decision store): the product
+position changed from "no direct messages" to private conversations that
+moderators cannot browse.
+
+**Model.** A conversation is a row of `channels` with `type = 'dm'` (no
+category, no name, no overwrites) with its members in `dm_members`
+(migration 0050). Messages, reactions, attachments, polls and threads use the
+one message pipeline, keyed by the conversation's id, so they inherit its
+behaviour; a 1:1 conversation has a `dm_key` (the sorted pair), so a pair has
+exactly one. Conversations have their own routes (`/api/dms`, see the OpenAPI
+document) and events (`dm_created`, `dm_member_added`, `dm_member_removed`);
+they appear in no channel list, layout, `channel_*` event, bot or webhook
+payload, public message count or public message number (conversations count
+down from -1 in a sequence of their own, so the public numbers show no gaps).
+
+**One access rule: membership.** `perm.Snapshot.Channel` answers for a
+conversation before the Owner shortcut, from membership alone. A member may
+read; writing, reacting and attaching also need *Send direct messages*, the
+community switch `direct_messages_enabled` to be on, and no timeout or pending
+rules. A non-member, the Owner and Administrators included, gets 0 and the
+same 404 as for a missing channel, on every path that asks the snapshot (REST,
+the WebSocket hub, media, push, reports). Searching a conversation also tests
+membership in SQL, so a mistake in one layer does not open another. Nobody can
+moderate a conversation: *Manage messages* never applies in it.
+
+**Fan-out.** The hub delivers a conversation's events to its members' sockets
+that asked for them (`/api/ws?dm=1`; a bundle from before direct messages
+never receives one). They are never shown to the hub's `Tap` (outgoing
+webhooks, bot gateway); only Web Push listens (`DMTap`), and it pushes to
+members only, without a channel name. Bots and webhooks can neither open
+conversations nor write in them.
+
+**Starting and writing (the rules in `internal/chat/dm*.go`).**
+- Whatever the reason a conversation cannot be started or a message cannot be
+  sent because of *another member* (a block in either direction, their
+  `dm_policy` of `nobody`, a disabled or erased account, a bot, an unknown id)
+  the answer is the same 403 text, so none can be probed. A block makes an
+  existing 1:1 conversation unwritable in both directions, silently; in a
+  group, a block between two members does not stop the group, and nobody can
+  add a member who blocked them.
+- 3 tries a minute and 10 new conversations per 24 hours per member, at most
+  100 group conversations per member, at most 10 members. The member who
+  started a conversation may send 2 messages before anybody else has written
+  in it (counted in `channels.dm_creator_sent`, so deleting messages does not
+  reset it).
+- A conversation with one other person cannot be left; a group can, and when
+  nobody is left it and its attachments are deleted. A member added to a group
+  reads its whole history.
+
+**What is never done with conversations.** They are not audited (an edit or
+deletion leaves no `message.*` entry with text), not counted in `message_count`,
+not in the mentions inbox or the channels' read states (`GET /api/dms` carries
+its own unread and mention counts), not searchable except by their members
+(`dm=true`), not shown in the admin media list, and not listed by the
+administrative channel routes (they answer 404 for a conversation id).
+
+**Moderation.** The only way a moderator reads anything of a conversation is a
+*report* by a member (`POST /api/messages/{id}/report`): it keeps its own copy
+of the message and up to 20 around it ([moderation](moderation.md#blocking-and-reports)).
+
+**Privacy model.** Messages are readable by the server and by whoever holds
+the database or backups, like channel messages: there is **no end-to-end
+encryption of text** (see SECURITY.md). Account erasure blanks the member's
+words in conversations (the others keep theirs) and deletes conversations
+nobody is left in; the export lists the member's conversations by id and their
+own messages.
+
+**Calls** in conversations are not part of 1.1.
+
 ## Data flow: voice, cameras and screen share
 
 Signaling runs over the existing WebSocket; media goes over UDP straight to

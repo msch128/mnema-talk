@@ -24,7 +24,9 @@ export const PERMISSION_BITS = {
   view_audit_log: 131072,
   timeout_members: 262144,
   ban_members: 524288,
-  manage_emoji: 1048576
+  manage_emoji: 1048576,
+  manage_reports: 2097152,
+  send_direct_messages: 4194304
 } as const
 
 export type PermissionKey = keyof typeof PERMISSION_BITS
@@ -42,10 +44,10 @@ export type PermissionGroupId = 'general' | 'text' | 'voice' | 'moderation' | 'a
  */
 export const PERMISSION_GROUPS: readonly { id: PermissionGroupId; keys: readonly PermissionKey[] }[] = [
   { id: 'general', keys: ['view_channel'] },
-  { id: 'text', keys: ['send_messages', 'attach_files', 'add_reactions', 'mention_everyone'] },
+  { id: 'text', keys: ['send_messages', 'attach_files', 'add_reactions', 'mention_everyone', 'send_direct_messages'] },
   { id: 'voice', keys: ['connect', 'speak', 'video', 'disconnect_members'] },
   { id: 'moderation', keys: ['manage_messages', 'manage_members', 'timeout_members', 'ban_members'] },
-  { id: 'administration', keys: ['administrator', 'manage_channels', 'manage_roles', 'create_invites', 'manage_bots', 'manage_emoji', 'view_audit_log'] }
+  { id: 'administration', keys: ['administrator', 'manage_channels', 'manage_roles', 'create_invites', 'manage_bots', 'manage_emoji', 'manage_reports', 'view_audit_log'] }
 ]
 
 /** Permissions a category or channel can allow or deny per role or member. */
@@ -56,11 +58,11 @@ export const CHANNEL_PERMISSION_KEYS: readonly PermissionKey[] = [
 
 /** Any of these opens a part of the admin area. */
 export const ADMIN_AREA_KEYS: readonly PermissionKey[] = [
-  'manage_channels', 'manage_roles', 'create_invites', 'manage_webhooks', 'manage_members', 'disconnect_members', 'view_audit_log', 'timeout_members', 'ban_members', 'manage_bots', 'manage_emoji'
+  'manage_channels', 'manage_roles', 'create_invites', 'manage_webhooks', 'manage_members', 'disconnect_members', 'view_audit_log', 'timeout_members', 'ban_members', 'manage_bots', 'manage_emoji', 'manage_reports'
 ]
 
 /** What @everyone holds on a fresh install (internal/perm DefaultEveryone). */
-export const DEFAULT_EVERYONE = 990
+export const DEFAULT_EVERYONE = 4195294
 
 export function hasPermission(set: number, key: PermissionKey): boolean {
   const bit = PERMISSION_BITS[key]

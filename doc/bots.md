@@ -525,6 +525,15 @@ bot gateway or the outgoing webhooks, and not for the author or the Owner.
 poll shows a member their choice). Push and desktop notifications read
 "Poll: question".
 
+## Direct messages
+
+Bots and webhooks can neither open direct message conversations nor write in
+them in 1.1, and the gateway's `MESSAGE_CREATE`, the outgoing webhook events
+and every bot REST route never carry a message of a conversation: a bot is
+never a member, so it holds no permission there, and the hub does not show
+conversation events to the gateway or to outgoing webhooks. A future intent
+for direct messages to a bot is not part of 1.1.
+
 ## Management API
 
 All under `/api/admin/bots`, documented in the OpenAPI document. Every

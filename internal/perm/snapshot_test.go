@@ -32,6 +32,7 @@ func TestCatalogIsConsistent(t *testing.T) {
 		"speak": 1 << 8, "video": 1 << 9, "disconnect_members": 1 << 10, "manage_channels": 1 << 11,
 		"manage_roles": 1 << 12, "create_invites": 1 << 13, "manage_webhooks": 1 << 14, "manage_members": 1 << 15,
 		"manage_bots": 1 << 16, "view_audit_log": 1 << 17, "timeout_members": 1 << 18, "ban_members": 1 << 19, "manage_emoji": 1 << 20,
+		"manage_reports": 1 << 21, "send_direct_messages": 1 << 22,
 	}
 	for _, i := range Catalog {
 		if want[i.Key] != i.Bit {
@@ -42,9 +43,9 @@ func TestCatalogIsConsistent(t *testing.T) {
 	if len(want) != 0 {
 		t.Fatalf("permissions removed: %v", want)
 	}
-	// Migration 0017 seeds @everyone with this number.
-	if DefaultEveryone != 990 {
-		t.Fatalf("DefaultEveryone = %d, migration 0017 seeds 990", DefaultEveryone)
+	// Migration 0017 seeds @everyone with this number, migration 0050 adds Send direct messages.
+	if DefaultEveryone != 990|SendDirectMessages {
+		t.Fatalf("DefaultEveryone = %d, migrations 0017 and 0050 seed %d", DefaultEveryone, 990|SendDirectMessages)
 	}
 	if ChannelScoped.Has(ManageRoles) || !ChannelScoped.Has(ViewChannel|Connect) || ChannelScoped.Has(Administrator) {
 		t.Fatalf("ChannelScoped = %b", ChannelScoped)
@@ -72,7 +73,7 @@ func TestEveryoneDefaultsPreserveTodaysBehavior(t *testing.T) {
 	ch := f.Channel(uuid.Nil)
 	member := Subject{ID: uuid.New()}
 	got := f.Snapshot().Channel(member, ch)
-	want := ViewChannel | SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video
+	want := ViewChannel | SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages
 	if got != want {
 		t.Fatalf("a plain member holds %b, want %b", got, want)
 	}

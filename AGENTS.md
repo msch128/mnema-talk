@@ -34,7 +34,7 @@ Mnema Talk is a **lightweight, self-hosted chat and voice app for one community*
 
 ### 2. Single-Server Model
 - There are **no multiple guilds/servers** to discover or federate.
-- One community space with categories, text channels and Talks (voice rooms; no direct messages).
+- One community space with categories, text channels and Talks (voice rooms; direct messages are separate conversations, see `doc/architecture.md`).
 
 ### 3. Voice & Screenshare
 - **Pion WebRTC** (`github.com/pion/webrtc/v4`) as a pure Go **Selective Forwarding Unit (SFU)**.
