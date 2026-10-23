@@ -327,7 +327,7 @@ describe('AudioSettingsModal device selection', () => {
     voice.availableOutputDevices = [device('', 'audiooutput', 'Empty'), device('default', 'audiooutput', 'Default'), device('speaker-a', 'audiooutput', 'Speaker A'), device('speaker-b', 'audiooutput', '')]
     voice.localAudioStream = new MediaStream()
     const wrapper = mount(AudioSettingsModal, mountOpts)
-    const input = wrapper.get('select:not([id])'); const output = wrapper.get('[data-testid="output-device"]')
+    const input = wrapper.get('#audio-input-device'); const output = wrapper.get('[data-testid="output-device"]')
     expect(input.text()).toContain('Microphone A'); expect(input.text()).toContain('mic-b')
     expect(output.findAll('option')).toHaveLength(3); expect(output.text()).toContain('Speaker A'); expect(output.text()).toContain('speak')
     await input.setValue('mic-b'); expect(voice.selectedInputDeviceId).toBe('mic-b'); expect(mockApplyAudioSettings).toHaveBeenCalledOnce()
