@@ -1,0 +1,52 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Security problems do not belong here, see SECURITY.md.
+        Never paste secrets, tokens or invite codes, and remove personal data from logs.
+  - type: input
+    id: version
+    attributes:
+      label: Mnema Talk version
+      description: Admin console, System tab (or the image tag).
+      placeholder: "1.0.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: How do you run it?
+      options:
+        - Docker Compose, released image
+        - Docker Compose, built from source
+        - Development setup (make dev)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS, or desktop client
+      placeholder: "Firefox on Linux, or the desktop client on Windows 11"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Join a Talk\n2. ..."
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or console output
+      description: Server log lines or the browser console, trimmed to the relevant part.
+      render: text

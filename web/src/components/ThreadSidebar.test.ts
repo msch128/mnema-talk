@@ -490,3 +490,24 @@ describe('ThreadSidebar drafts', () => {
     expect(w.get('textarea').element.value).toBe('thread one reply')
   })
 })
+
+describe('ThreadSidebar root poll', () => {
+  it('shows the options, votes and pin marker of a poll that started the thread', async () => {
+    const chat = setup()
+    chat.activeThread = msg('root', 'u2', {
+      content: 'Lunch?', is_pinned: true,
+      poll: { multiple: false, anonymous: false, closed: false, closes_at: '2099-01-01T00:00:00Z', total_voters: 1, options: [{ id: 'o1', label: 'Pizza', votes: 1, voters: [] }, { id: 'o2', label: 'Pasta', votes: 0, voters: [] }] }
+    })
+    await nextTick()
+    const root = w.find('[data-reply-id="root"]')
+    expect(root.find('[data-testid="poll"]').exists()).toBe(true)
+    expect(root.text()).toContain('Pizza')
+    expect(root.text()).toContain('Pasta')
+    expect(root.find('[data-testid="thread-root-pinned"]').exists()).toBe(true)
+  })
+
+  it('shows no poll card for an ordinary root message', () => {
+    setup()
+    expect(w.find('[data-testid="poll"]').exists()).toBe(false)
+  })
+})

@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { clockTimeOptions } from '../lib/time'
 import type { Message } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
-import { X, MessageSquare, Loader2, Reply } from '@lucide/vue'
+import { X, MessageSquare, Loader2, Pin, Reply } from '@lucide/vue'
 import type { ThreadRoot } from '../stores/chat'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
@@ -11,6 +12,7 @@ import MarkdownContent from './MarkdownContent.vue'
 import ImageLightbox from './ImageLightbox.vue'
 import MessageAttachments from './MessageAttachments.vue'
 import MessageEmbeds from './MessageEmbeds.vue'
+import PollCard from './PollCard.vue'
 import BotBadge from './BotBadge.vue'
 import ReactionBar from './ReactionBar.vue'
 import ThreadReply from './ThreadReply.vue'
@@ -175,7 +177,7 @@ async function handleFileUpload(e: Event) {
 function formatDate(dateStr?: string) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
-  return d.toLocaleDateString([locale.value], { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString([locale.value], { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleDateString([locale.value], { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString([locale.value], clockTimeOptions(locale.value))
 }
 </script>
 
@@ -253,6 +255,12 @@ function formatDate(dateStr?: string) {
 
         <MarkdownContent v-if="chatStore.activeThread.content" :content="chatStore.activeThread.content" :mention-roles="chatStore.activeThread.mention_roles ?? []" />
         <MessageEmbeds :embeds="chatStore.activeThread.embeds ?? []" />
+        <!-- A poll that started the thread keeps its options, votes and time left here -->
+        <PollCard v-if="chatStore.activeThread.poll" :msg="chatStore.activeThread as Message" />
+        <span v-if="chatStore.activeThread.is_edited" class="block text-xs text-mnema-tertiary italic">{{ $t('chat.edited') }}</span>
+        <span v-if="chatStore.activeThread.is_pinned" data-testid="thread-root-pinned" class="flex items-center gap-1 text-xs text-mnema-accent">
+          <Pin class="w-3.5 h-3.5" />{{ $t('moderation.pinned') }}
+        </span>
 
         <!-- Root Message Attachments -->
         <MessageAttachments

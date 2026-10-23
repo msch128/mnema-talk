@@ -93,8 +93,8 @@ onMounted(refresh)
   <section class="space-y-6">
     <!-- Storage summary & Prune -->
     <div class="bg-mnema-surface p-5 rounded-lg border border-mnema-hairline space-y-3">
-      <div class="flex flex-wrap items-center justify-between gap-4">
-        <div class="space-y-1">
+      <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0 space-y-1">
           <span class="text-xs uppercase font-semibold font-mono text-mnema-tertiary tracking-wider">{{ $t('admin.storage') }}</span>
           <div class="text-xl font-bold text-mnema-text flex items-baseline gap-2">
             <span>{{ formatBytes(stats.total_size_bytes) }}</span>
@@ -104,7 +104,7 @@ onMounted(refresh)
         </div>
         <button
           type="button"
-          class="p-2 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-elevated transition"
+          class="p-2 rounded-md flex-shrink-0 text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-elevated transition"
           :title="$t('admin.refresh')"
           :aria-label="$t('admin.refresh')"
           @click="refresh"
@@ -119,7 +119,6 @@ onMounted(refresh)
           v-model="pruneDays"
           type="number"
           min="1"
-          :placeholder="$t('admin.days')"
           :aria-label="$t('admin.pruneDaysLabel')"
           class="bg-mnema-canvas border border-mnema-border-field rounded-md px-2 py-1 text-sm text-mnema-text w-20 outline-none focus:border-mnema-accent"
         />
@@ -160,14 +159,14 @@ onMounted(refresh)
             </div>
           </div>
           <div class="relative z-10 p-2 bg-gradient-to-t from-black/85 via-black/40 to-transparent flex items-end justify-between mt-auto">
-            <div class="text-xs text-white truncate max-w-[120px]">
+            <div class="min-w-0 flex-1 text-xs text-white">
               <p class="truncate font-medium">{{ item.original_filename }}</p>
               <p class="text-mnema-muted">{{ formatBytes(item.size_bytes) }} • {{ item.uploader_name }}</p>
             </div>
             <template v-if="!item.is_deleted">
               <button
                 type="button"
-                class="p-1 rounded bg-mnema-danger/80 hover:bg-mnema-danger text-mnema-accent-ink transition flex-shrink-0"
+                class="ml-2 p-1 rounded bg-mnema-danger/80 hover:bg-mnema-danger text-mnema-accent-ink transition flex-shrink-0"
                 :title="$t('admin.deleteFile')"
                 :aria-label="$t('admin.deleteFile')"
                 @click.stop="deleteMedia(item)"

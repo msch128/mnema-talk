@@ -171,7 +171,7 @@ test('the streamer sees who watches their screen share', async ({ browser }) => 
   await shot(a, 'extras-viewers')
 
   // B stops watching: back to nobody.
-  await b.getByTestId('stage').getByRole('button', { name: 'Stream beenden' }).click()
+  await b.getByTestId('stage').getByRole('button', { name: 'Nicht mehr ansehen' }).click()
   await expect(viewers).toHaveText('0', { timeout: 15_000 })
 
   await close()
@@ -342,9 +342,9 @@ test('the streamer picks the stream quality, the viewer sets the stream volume',
 
   // The gear on A's own share: Discord's stream menu.
   await aStage.getByTestId('stream-quality-button').click()
-  const menu = a.getByRole('menu', { name: 'Stream-Qualität' })
+  const menu = a.getByRole('menu', { name: 'Qualität der Übertragung' })
   await expect(menu).toBeVisible()
-  await expect(menu.getByRole('menuitemradio', { name: /Benutzerdefiniert/ })).toHaveAttribute('aria-checked', 'true')
+  await expect(menu.getByRole('menuitemradio', { name: /Eigene/ })).toHaveAttribute('aria-checked', 'true')
   await shot(a, 'quality-main')
 
   await menu.getByRole('menuitem', { name: /Auflösung/ }).click()

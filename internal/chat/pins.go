@@ -18,12 +18,19 @@ import (
 // MaxPinsPerChannel is the most messages a channel keeps pinned.
 const MaxPinsPerChannel = 50
 
+// PinChangesPerMinute is how many pins and unpins one member may make per minute.
+const PinChangesPerMinute = 60
+
 var errTooManyPins = httpx.ErrConflict(fmt.Sprintf("a channel can keep at most %d pinned messages; unpin one first", MaxPinsPerChannel))
 
 func (h *Handler) mountPins(r chi.Router) {
 	r.Get("/channels/{channelID}/pins", httpx.Handle(h.listPins))
-	r.Put("/channels/{channelID}/messages/{messageID}/pin", httpx.Handle(h.pinMessage))
-	r.Delete("/channels/{channelID}/messages/{messageID}/pin", httpx.Handle(h.unpinMessage))
+	changes := r
+	if h.PinLimit != nil {
+		changes = r.With(h.PinLimit.By(auth.UserKey))
+	}
+	changes.Put("/channels/{channelID}/messages/{messageID}/pin", httpx.Handle(h.pinMessage))
+	changes.Delete("/channels/{channelID}/messages/{messageID}/pin", httpx.Handle(h.unpinMessage))
 }
 
 // PinsChanged is the payload of the pins_changed event: a message of the
@@ -83,7 +90,7 @@ func (h *Handler) listPins(w http.ResponseWriter, r *http.Request) error {
 // @Success 200 {object} Message "The message."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage messages permission in the channel, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the channel already has 50 pinned messages."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
@@ -107,7 +114,7 @@ func (h *Handler) pinMessage(w http.ResponseWriter, r *http.Request) error {
 // @Success 200 {object} Message "The message."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage messages permission in the channel, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."

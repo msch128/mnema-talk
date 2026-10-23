@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { clockTimeOptions } from '../lib/time'
 import type { Message } from '../types/domain'
 import { computed, ref, watch } from 'vue'
 import { Inbox, Hash, Volume2, CornerDownRight, Loader2 } from '@lucide/vue'
@@ -8,6 +9,7 @@ import { useDismissable } from '../composables/useDismissable'
 import { locale } from '../i18n'
 import UserAvatar from './UserAvatar.vue'
 import { shownName } from '../lib/deletedUser'
+import { previewText } from '../lib/replies'
 
 // The mentions inbox in the channel header: a button with the number of
 // unread mentions and a popover listing them; a click jumps to the message.
@@ -35,7 +37,7 @@ function pick(msg: Message) {
 
 function when(iso: string) {
   const d = new Date(iso)
-  return d.toLocaleDateString(locale.value, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleDateString(locale.value, { month: 'short', day: 'numeric', ...clockTimeOptions(locale.value) })
 }
 </script>
 
@@ -44,7 +46,7 @@ function when(iso: string) {
     <button
       type="button"
       data-testid="mentions-inbox-button"
-      class="relative flex h-8 w-8 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text"
+      class="relative flex h-8 w-8 max-md:h-11 max-md:w-11 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text"
       :class="open ? 'bg-mnema-surface text-mnema-accent' : ''"
       :aria-label="$t('mentions.inbox')"
       :aria-expanded="open ? 'true' : 'false'"
@@ -65,7 +67,7 @@ function when(iso: string) {
       data-testid="mentions-inbox"
       role="dialog"
       :aria-label="$t('mentions.inbox')"
-      class="absolute right-0 top-full z-30 mt-2 flex max-h-[70vh] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-[10px] bg-mnema-elevated shadow-[inset_0_0_0_1px_#2B2F2D,0_12px_32px_rgba(0,0,0,0.5)]"
+      class="absolute right-0 top-full z-30 mt-2 flex max-h-[70vh] w-[min(24rem,calc(100vw-1.5rem))] flex-col max-md:fixed max-md:inset-x-3 max-md:top-[calc(3rem+env(safe-area-inset-top))] max-md:mt-0 max-md:max-h-[calc(100dvh-4.5rem-env(safe-area-inset-top))] max-md:w-auto overflow-hidden rounded-[10px] bg-mnema-elevated shadow-[inset_0_0_0_1px_#2B2F2D,0_12px_32px_rgba(0,0,0,0.5)]"
     >
       <div class="border-b border-mnema-hairline px-3 py-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">
         {{ $t('mentions.inbox') }}
@@ -101,7 +103,7 @@ function when(iso: string) {
               <CornerDownRight v-if="msg.parent_id" class="h-3 w-3 text-mnema-tertiary" :aria-label="$t('chat.inThread')" />
               <span class="ml-auto flex-shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
             </span>
-            <span class="line-clamp-2 break-words text-sm text-mnema-muted">{{ msg.content }}</span>
+            <span class="line-clamp-2 break-words text-sm text-mnema-muted">{{ previewText(msg.content) }}</span>
           </span>
         </button>
         <button

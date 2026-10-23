@@ -3,6 +3,7 @@ package push
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -70,8 +71,10 @@ func quiet(presence string) bool {
 
 // wants decides whether the message is pushed to this account: the account's
 // effective level for the channel (own setting, else the category's, else all;
-// expired mutes ignored) must allow it, and do-not-disturb must be off.
-func (c candidate) wants(mention bool) bool {
+// expired mutes ignored) must allow it, and do-not-disturb must be off. A mute
+// still lets through a message addressed to the member (a mention by name or
+// role, or a reply), but not @all or @here.
+func (c candidate) wants(mention, addressed bool) bool {
 	if quiet(c.presence) {
 		return false
 	}
@@ -80,6 +83,8 @@ func (c candidate) wants(mention bool) bool {
 		return true
 	case chat.NotifyMentions:
 		return mention
+	case chat.NotifyMute:
+		return addressed
 	}
 	return false
 }
@@ -89,4 +94,26 @@ func (c candidate) wants(mention bool) bool {
 // the subscription, so a member who lost access stops being told at once.
 func canView(snap *perm.Snapshot, userID, channelID uuid.UUID) bool {
 	return snap.Channel(perm.Subject{ID: userID}, channelID).Has(perm.ViewChannel)
+}
+
+// namedMentions returns the members msg is addressed to by name or through a
+// role (not through @all or @here). When the stored mentions cannot be read
+// nobody counts as addressed, so a mute stays silent.
+func namedMentions(ctx context.Context, q db.Querier, messageID uuid.UUID) map[uuid.UUID]bool {
+	rows, err := q.Query(ctx, `SELECT user_id FROM message_mentions WHERE message_id = $1 AND kind <> 1`, messageID)
+	if err != nil {
+		slog.Warn("push: load mentions", "err", err)
+		return nil
+	}
+	defer rows.Close()
+	out := map[uuid.UUID]bool{}
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			slog.Warn("push: read mentions", "err", err)
+			return nil
+		}
+		out[id] = true
+	}
+	return out
 }

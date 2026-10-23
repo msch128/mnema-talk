@@ -13,7 +13,10 @@ name: Release
 # therefore reports the result of the CI run it was triggered by as commit
 # statuses on the release commit (after checking that the PR only touches
 # version.txt, CHANGELOG.md and the manifest and sits directly on the tested
-# commit) and then merges it.
+# commit) and then merges it. The statuses are not a fixed list: for every
+# check that main's ruleset requires, the conclusion of that check on the
+# tested commit is mirrored (scripts/release-checks.py), and the PR is not
+# merged if one of them did not succeed.
 #
 # 1. release-please opens/updates a release PR from conventional commits.
 #    Every green push to main is released: the job merges that release PR
@@ -48,11 +51,12 @@ jobs:
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 45
     permissions:
       contents: write
       pull-requests: write
       statuses: write
+      checks: read
     outputs:
       release_created: ${{ steps.release.outputs.release_created || steps.publish.outputs.release_created }}
       version: ${{ steps.release.outputs.version || steps.publish.outputs.version }}
@@ -84,6 +88,15 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           target-branch: main
+
+      # The script that decides which checks to mirror comes from the tested
+      # commit itself.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.release.outputs.release_created != 'true' && steps.release.outputs.pr != ''
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.workflow_run.head_sha }}
+          sparse-checkout: scripts/release-checks.py
 
       # Release every green main: merge the release PR that was just
       # opened or updated ...
@@ -151,12 +164,35 @@ jobs:
             echo "::notice::release PR is based on $parent, not $TESTED; leaving it for the next CI run"
             exit 0
           fi
-          for check in secret-scan backend frontend govulncheck docker e2e \
-            "analyze (go)" "analyze (javascript-typescript)" "analyze (actions)"; do
-            gh api "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context="$check" \
-              -f description="version and changelog only; checked on ${TESTED:0:7}" \
-              -f target_url="$RUN_URL" >/dev/null
+          # Mirror what main's ruleset requires, not a list kept here: read the
+          # required contexts from the ruleset and the conclusions from the
+          # check runs of the tested commit. A context that did not succeed
+          # there is never reported, and the PR is not merged. CodeQL may
+          # still be running when CI completes, so wait for pending ones for up
+          # to 30 minutes (60 x 30 s); after that the job fails closed.
+          work=$(mktemp -d)
+          gh api "repos/$GITHUB_REPOSITORY/rules/branches/main" > "$work/rules.json"
+          decided=1
+          for _ in $(seq 1 60); do
+            gh api --paginate "repos/$GITHUB_REPOSITORY/commits/$TESTED/check-runs?per_page=100" \
+              --jq '.check_runs[] | {id, name, status, conclusion}' > "$work/runs.jsonl"
+            set +e
+            python3 scripts/release-checks.py "$work/rules.json" "$work/runs.jsonl" > "$work/decision.tsv"
+            decided=$?
+            set -e
+            [ "$decided" -eq 3 ] || break
+            sleep 30
           done
+          cat "$work/decision.tsv"
+          if [ "$decided" -ne 0 ]; then
+            echo "::error::required checks did not all succeed on ${TESTED:0:7}; not merging the release PR"
+            exit 1
+          fi
+          while IFS=$'\t' read -r check state; do
+            gh api "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state="$state" -f context="$check" \
+              -f description="version and changelog only; mirrored from ${TESTED:0:7}" \
+              -f target_url="$RUN_URL" >/dev/null
+          done < "$work/decision.tsv"
           for _ in 1 2 3 4 5 6; do
             if gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --delete-branch --match-head-commit "$sha"; then
               echo "merged=true" >> "$GITHUB_OUTPUT"
@@ -375,3 +411,37 @@ jobs:
         run: |
           gh release upload "$TAG" "bundle/mnema-web-$VERSION.zip" bundle/manifest.json bundle/manifest.sig \
             --repo "$GITHUB_REPOSITORY" --clobber
+
+  # The server releases carry the Docker image and the signed web bundle, not
+  # desktop installers (those come from the desktop repository). Say so in the
+  # release body, so nobody looks for a download that is not here. Idempotent:
+  # the marker comment keeps a rerun from appending the section twice.
+  release-notes:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.release-please.outputs.version }}
+      TAG: ${{ needs.release-please.outputs.tag_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Append the desktop app section
+        run: |
+          set -eu
+          marker='<!-- desktop-app-section -->'
+          body=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body)
+          case "$body" in *"$marker"*) echo "section already present"; exit 0 ;; esac
+          # The desktop release is resolved now; fall back to the releases page.
+          url=$(gh release view --repo msch128/mnema-talk-desktop --json url --jq .url 2>/dev/null || true)
+          [ -n "$url" ] || url="https://github.com/msch128/mnema-talk-desktop/releases"
+          {
+            printf '%s\n\n' "$body"
+            printf '%s\n' "$marker"
+            printf '%s\n\n' "### Desktop app (Beta)"
+            printf '%s\n' "The desktop app (Windows, macOS, Linux; Beta, unsigned) is published in its own repository: [latest desktop release]($url)."
+            printf '%s\n' "This server release carries the Docker image (\`ghcr.io/msch128/mnema-talk:$VERSION\`) and the signed web bundle that the desktop app verifies, not desktop installers."
+          } > notes.md
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md

@@ -10,7 +10,7 @@ import { decodeRole } from '../types/domain'
 import type { Role } from '../types/domain'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
-import { PERMISSION_BITS, PERMISSION_KEYS, ROLE_COLOR_PRESETS, parseRoleColor, roleColorCss } from '../lib/permissions'
+import { PERMISSION_BITS, PERMISSION_GROUPS, ROLE_COLOR_PRESETS, parseRoleColor, roleColorCss } from '../lib/permissions'
 import { t } from '../i18n'
 import PermissionToggles from './PermissionToggles.vue'
 
@@ -270,7 +270,7 @@ onMounted(async () => {
             <button type="button" class="flex min-w-0 flex-1 items-center gap-2 py-2 text-left text-sm" :aria-pressed="selectedId === role.id" @click="select(role.id)">
               <span class="h-3 w-3 flex-shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>
               <span class="truncate text-mnema-text">{{ role.name }}</span>
-              <Lock v-if="role.managed" class="h-3 w-3 flex-shrink-0 text-mnema-tertiary" role="img" :aria-label="$t('roles.managedHint')" data-testid="role-managed-icon" />
+              <Lock v-if="role.managed" class="h-3 w-3 flex-shrink-0 text-mnema-tertiary" role="img" v-tooltip="$t('roles.managedHint')" data-testid="role-managed-icon" />
             </button>
             <button type="button" class="p-1 text-mnema-tertiary transition hover:text-mnema-text disabled:opacity-30" :disabled="!canMove(index, -1)" :aria-label="$t('roles.moveUp', { name: role.name })" @click="move(index, -1)">
               <ChevronUp class="h-4 w-4" />
@@ -280,7 +280,7 @@ onMounted(async () => {
             </button>
           </li>
           <template v-if="botRoles.length">
-            <li class="border-t border-mnema-hairline bg-mnema-band px-3 py-1 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary" data-testid="bot-roles-heading">{{ $t('roles.botRoles') }}</li>
+            <li class="border-t border-mnema-hairline px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary" data-testid="bot-roles-heading">{{ $t('roles.botRoles') }}</li>
             <li
               v-for="role in botRoles"
               :key="role.id"
@@ -291,7 +291,7 @@ onMounted(async () => {
               <button type="button" class="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm" :aria-pressed="selectedId === role.id" @click="select(role.id)">
                 <span class="h-3 w-3 flex-shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>
                 <span class="truncate text-mnema-text">{{ role.name }}</span>
-                <Lock class="h-3 w-3 flex-shrink-0 text-mnema-tertiary" role="img" :aria-label="$t('roles.botRoleHint')" data-testid="role-managed-icon" />
+                <Lock class="h-3 w-3 flex-shrink-0 text-mnema-tertiary" role="img" v-tooltip="$t('roles.botRoleHint')" data-testid="role-managed-icon" />
               </button>
             </li>
           </template>
@@ -316,7 +316,7 @@ onMounted(async () => {
 
         <template v-if="!isEveryone">
           <label class="block space-y-1">
-            <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('roles.name') }}</span>
+            <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('common.name') }}</span>
             <input v-model="name" maxlength="32" :disabled="readonly || isManaged" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-none transition focus:border-mnema-accent disabled:opacity-50" />
           </label>
 
@@ -357,7 +357,10 @@ onMounted(async () => {
 
         <div class="space-y-2">
           <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('roles.permissions') }}</span>
-          <PermissionToggles v-model:allow="allow" :keys="PERMISSION_KEYS" :locked="lockedBits" :readonly="readonly" />
+          <section v-for="group in PERMISSION_GROUPS" :key="group.id" class="space-y-1.5" :data-permission-group="group.id">
+            <h4 class="pt-1 text-xs font-medium text-mnema-muted">{{ $t(`perm.groups.${group.id}`) }}</h4>
+            <PermissionToggles v-model:allow="allow" :keys="group.keys" :locked="lockedBits" :readonly="readonly" />
+          </section>
           <p v-if="lockedBits && !readonly" class="text-xs text-mnema-tertiary">{{ $t('roles.cannotGrant') }}</p>
         </div>
 

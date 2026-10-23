@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
-import { ShieldCheck, Crown, Plus, FolderPlus, ChevronDown, X, CheckCheck } from '@lucide/vue'
+import { ref, computed, watch, nextTick } from 'vue'
+import { ShieldCheck, Crown, Plus, FolderPlus, ChevronDown, X, CheckCheck, ScrollText } from '@lucide/vue'
 import { usePermissionsStore } from '../stores/permissions'
+import { useOnboardingStore } from '../stores/onboarding'
+import { useAppVersionStore } from '../stores/appVersion'
+import { rulesOpen } from '../lib/communityRules'
+import { t } from '../i18n'
 import { useDismissable } from '../composables/useDismissable'
 
 // The server header (48px, aligned with the channel header) and its dropdown:
@@ -11,6 +15,13 @@ const SERVER_NAME = 'Mnema Talk'
 const emit = defineEmits<{ 'open-admin': []; 'open-legal': []; 'create-channel': []; 'create-category': []; 'mark-all-read': [] }>()
 
 const permissions = usePermissionsStore()
+const onboarding = useOnboardingStore()
+// Only people who may open the console see that a new release is out.
+const versionStore = useAppVersionStore()
+const updateHint = computed(() => permissions.canOpenAdmin && versionStore.adminUpdateAvailable)
+const showRules = () => { rulesOpen.value = true }
+// The community's own name (Admin > Welcome & rules) sits under the product name.
+const subtitle = computed(() => onboarding.state?.community_name.trim() || t('sidebar.subtitle'))
 
 const menuOpen = ref(false)
 const menuRoot = ref<HTMLElement | null>(null)
@@ -92,7 +103,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       :aria-expanded="menuOpen ? 'true' : 'false'"
       aria-controls="server-menu"
       :class="[
-        'w-full h-12 pl-3 pr-3 border-b border-mnema-hairline flex items-center gap-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
+        'relative w-full h-12 pl-3 pr-3 border-b border-mnema-hairline flex items-center gap-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
         menuOpen ? 'bg-mnema-hover' : 'hover:bg-mnema-hover/70'
       ]"
       v-tooltip.visual="SERVER_NAME"
@@ -105,10 +116,16 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       </span>
       <span class="flex flex-col min-w-0 flex-1">
         <span class="font-semibold text-nav text-mnema-text truncate">{{ SERVER_NAME }}</span>
-        <span class="text-xs text-mnema-tertiary truncate">{{ $t('sidebar.subtitle') }}</span>
+        <span class="text-xs text-mnema-tertiary truncate">{{ subtitle }}</span>
       </span>
       <X v-if="menuOpen" class="w-4 h-4 text-mnema-muted flex-shrink-0" />
       <ChevronDown v-else class="w-4 h-4 text-mnema-muted flex-shrink-0" />
+      <span
+        v-if="updateHint"
+        data-testid="admin-update-dot"
+        class="absolute right-9 top-3 h-2 w-2 rounded-full bg-mnema-accent ring-2 ring-mnema-raised"
+        aria-hidden="true"
+      ></span>
     </button>
 
     <div
@@ -123,6 +140,11 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       <template v-if="permissions.canOpenAdmin || permissions.can('manage_channels')">
         <button v-if="permissions.canOpenAdmin" type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('open-admin'))">
           <span class="truncate">{{ $t('menu.adminConsole') }}</span>
+          <span
+            v-if="updateHint"
+            data-testid="admin-update-badge"
+            class="ml-auto rounded-full bg-mnema-accent/15 px-2 py-0.5 text-xs font-semibold text-mnema-accent"
+          >{{ $t('update.badge', { version: versionStore.adminUpdate?.latest_version }) }}</span>
           <Crown class="w-4 h-4 text-mnema-amber flex-shrink-0" />
         </button>
         <template v-if="permissions.can('manage_channels')">
@@ -140,6 +162,10 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('mark-all-read'))">
         <span class="truncate">{{ $t('sidebar.markAllRead') }}</span>
         <CheckCheck class="w-4 h-4 flex-shrink-0" />
+      </button>
+      <button v-if="onboarding.state?.rules_text" type="button" role="menuitem" tabindex="-1" :class="menuItemClass" data-testid="menu-community-rules" @click="runMenuAction(showRules)">
+        <span class="truncate">{{ $t('menu.rules') }}</span>
+        <ScrollText class="w-4 h-4 flex-shrink-0" />
       </button>
       <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('open-legal'))">
         <span class="truncate">{{ $t('menu.legal') }}</span>

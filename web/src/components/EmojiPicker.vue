@@ -28,6 +28,19 @@ function syncCustomEmoji() {
 watch(() => store.items, syncCustomEmoji)
 
 const host = ref<HTMLElement | null>(null)
+
+// Anchored to its button, the picker can end up partly off screen on a phone:
+// slide it back inside the viewport with a margin.
+const EDGE = 8
+function keepInViewport() {
+  const el = host.value
+  if (!el) return
+  el.style.translate = ''
+  const { left, right } = el.getBoundingClientRect()
+  const over = right - (window.innerWidth - EDGE)
+  const shift = left < EDGE ? EDGE - left : over > 0 ? -Math.min(over, left - EDGE) : 0
+  if (shift !== 0) el.style.translate = `${Math.round(shift)}px 0`
+}
 const loading = ref(true)
 let picker: PickerElement | null = null
 
@@ -57,6 +70,7 @@ async function create() {
   syncCustomEmoji()
   host.value.appendChild(picker)
   loading.value = false
+  keepInViewport()
   // Search field first, like any other picker.
   requestAnimationFrame(() => picker?.shadowRoot?.querySelector('input')?.focus())
 }

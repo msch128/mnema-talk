@@ -9,9 +9,10 @@ to:
 - the **previous minor release for 90 days** after the newer minor was
   published, so an operator has a quarter to move up.
 
-Fixes land on `main` first and reach those lines as patch releases. Older
-minors, `0.x` releases, forks and unreleased commits are not maintained: update
-to a supported line ([doc/upgrade.md](doc/upgrade.md)). Desktop clients refuse
+Fixes land on `main` first and reach those lines as patch releases. Until 1.1
+is published, only 1.0.x is supported: `0.9.x` and older releases get no fixes,
+and neither do forks or unreleased commits. Update to a supported line
+([doc/upgrade.md](doc/upgrade.md)). Desktop clients refuse
 web bundles below the release that carries the latest marked security fix, see
 [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md).
 
@@ -231,7 +232,7 @@ details and the limits.
   reactions, mentions of the member, settings, roles and overwrites, every file
   the member uploaded (database rows and objects), pending and finished exports,
   and the second factor. What stays: the account row as an anonymised tombstone
-  (`deleted-<id>`, "Deleted user", disabled, unusable password hash) and the
+  (`deleted-<id>`, "Deleted member", disabled, unusable password hash) and the
   member's messages, emptied of text, link cards and pins (and of the earlier
   versions kept for moderators' edit history), so threads and other
   members' replies stay readable; other members' texts that merely quote or

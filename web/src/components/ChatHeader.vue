@@ -29,6 +29,13 @@ function searchInChannel() {
   if (channel) void openSearch(`in:${quoteValue(channel.name)} `)
 }
 
+// The name keeps the room it needs; only beside a topic is it capped so the
+// topic stays visible too.
+const titleClass = computed(() => {
+  if (props.panel || !chatStore.activeChannel?.topic) return 'min-w-0'
+  return 'flex-shrink-0 max-w-[60%] max-md:flex-shrink max-md:max-w-none'
+})
+
 function openNotificationMenu(e: MouseEvent) {
   const channel = chatStore.activeChannel
   if (!channel) return
@@ -46,12 +53,12 @@ function openNotificationMenu(e: MouseEvent) {
     ]"
   >
     <!-- Left: Channel name & topic -->
-    <div :class="['flex items-center gap-2 min-w-0', panel ? 'flex-1' : '']">
+    <div class="flex items-center gap-2 min-w-0 flex-1">
       <NavDrawerButton v-if="!panel" />
-      <component :is="channelIcon" class="w-5 h-5 text-mnema-tertiary flex-shrink-0" />
+      <component :is="channelIcon" class="w-5 h-5 max-md:hidden text-mnema-tertiary flex-shrink-0" />
       <span
         data-testid="chat-channel-name"
-        :class="['font-semibold text-base text-mnema-text truncate', panel ? 'min-w-0' : 'flex-shrink-0 max-w-[60%] max-md:flex-shrink max-md:max-w-none']"
+        :class="['font-semibold text-base text-mnema-text truncate', titleClass]"
       >
         {{ chatStore.activeChannel?.name || $t('chat.selectChannel') }}
       </span>

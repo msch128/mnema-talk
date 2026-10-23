@@ -27,6 +27,16 @@ func ValidName(name string) bool { return nameRE.MatchString(name) }
 // Token writes the token of an emoji.
 func Token(name string, id uuid.UUID) string { return "<:" + name + ":" + id.String() + ">" }
 
+// ID returns the emoji id of s when it is exactly one token.
+func ID(s string) (uuid.UUID, bool) {
+	m := wholeRE.FindStringSubmatch(s)
+	if m == nil {
+		return uuid.Nil, false
+	}
+	id, err := uuid.Parse(m[2])
+	return id, err == nil
+}
+
 // IsToken reports whether s is exactly one token.
 func IsToken(s string) bool { return wholeRE.MatchString(s) }
 

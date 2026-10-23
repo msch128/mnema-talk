@@ -39,7 +39,7 @@ beforeEach(() => {
 describe('MemberList', () => {
   it('groups the Owner, hoisted roles, the rest online, and offline members', () => {
     const w = setup()
-    expect(groups(w)).toEqual(['Owner', 'Crew — 1', 'Guests — 1', 'Online — 1', 'Offline — 1'])
+    expect(groups(w)).toEqual(['Owner', 'Crew – 1', 'Guests – 1', 'Online – 1', 'Offline – 1'])
     expect(w.find('[data-role-group="Crew"]').text()).toContain('Ann')
     expect(w.find('[data-role-group="Guests"]').text()).toContain('Cy')
     expect(w.findAll('section').at(3)!.text()).toContain('Bob')
@@ -53,7 +53,7 @@ describe('MemberList', () => {
   it('has no role groups without hoisted roles', () => {
     const w = setup()
     usePermissionsStore().roles = []
-    return w.vm.$nextTick().then(() => expect(groups(w)).toEqual(['Owner', 'Online — 3', 'Offline — 1']))
+    return w.vm.$nextTick().then(() => expect(groups(w)).toEqual(['Owner', 'Online – 3', 'Offline – 1']))
   })
 
   it('shows where a member is in a Talk, by channel name', async () => {
@@ -72,7 +72,7 @@ describe('MemberList', () => {
     await w.vm.$nextTick()
     expect(w.find('[data-member="ann"]').text()).toContain('Lounge')
     expect(w.find('[data-member="bob"]').text()).toContain('Loose')
-    expect(w.find('[data-member="cy"]').text()).toContain('Voice channel')
+    expect(w.find('[data-member="cy"]').text()).toContain('Talk')
   })
 
   it('opens the member menu from a context click', async () => {
@@ -81,5 +81,14 @@ describe('MemberList', () => {
     await w.vm.$nextTick()
     expect(w.findComponent(ContextMenu).props('items')?.length).toBeGreaterThan(0)
     w.findAllComponents(MemberRow)[0]?.vm.$emit('menu', new MouseEvent('contextmenu'))
+  })
+  it('shows activity totals for members but not for bots', () => {
+    const helper = { ...userFixture({ id: fixtureId(6), username: 'helper', display_name: 'Helper', message_count: 7 }), is_bot: true }
+    const w = setup()
+    useChatStore().members = [owner, ann, helper]
+    return w.vm.$nextTick().then(() => {
+      expect(w.find('[data-member="ann"] [data-testid="activity-stats"]').exists()).toBe(true)
+      expect(w.find('[data-member="helper"] [data-testid="activity-stats"]').exists()).toBe(false)
+    })
   })
 })

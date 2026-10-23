@@ -1,7 +1,7 @@
 import type { Ref } from 'vue'
 import { api, ApiError } from '../../lib/api'
 import { releaseThisDevice } from '../../lib/webPush'
-import { clearAllDrafts, dropOtherDrafts } from '../../lib/drafts'
+import { clearAllDrafts, beginDraftSession } from '../../lib/drafts'
 import { decodeUser, decodeUserEnvelope, type User } from '../../types/domain'
 import { decodeAuthTwoFactorLoginResult, isAuthTwoFactorChallenge, type AuthSecurityNotice } from '../../types/rest'
 import type { Decoder } from '../../types/validation'
@@ -36,7 +36,7 @@ function applyCurrentUser(
   core.s.cookieAccountId = currentUser.id
   if (currentUser.id !== session.userId) core.advanceSession()
   user.value = currentUser
-  dropOtherDrafts(currentUser.id)
+  beginDraftSession(currentUser.id)
   applyAccountLocale()
 }
 
@@ -104,7 +104,7 @@ async function establishSession({ core, user, applyAccountLocale }: AuthDeps, pa
       if (isCurrentSession(session)) {
         advanceSession()
         user.value = data.user
-        dropOtherDrafts(data.user.id)
+        beginDraftSession(data.user.id)
         applyAccountLocale()
       }
       return data

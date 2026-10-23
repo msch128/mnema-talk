@@ -3,6 +3,7 @@ import { decodeChannelHierarchy, decodeChannel, decodeCategory } from '../../typ
 import { decodeChatRenamedCategory } from '../../types/rest'
 import { api } from '../../lib/api'
 import { emptyWindow } from '../../lib/messageWindow'
+import { pruneChannelDrafts } from '../../lib/drafts'
 import { currentRoute } from '../../lib/router'
 import { assertCommunity, type Cx } from './state'
 import { fetchMessages, resetWindow, setWindow } from './messageWindow'
@@ -48,6 +49,13 @@ function syncActiveChannel(cx: Cx) {
   setWindow(cx, emptyWindow())
 }
 
+/** An empty list proves nothing (a hiccup, a fresh sign-in), so it prunes nothing. */
+function forgetDraftsOfGoneChannels(cx: Cx) {
+  const uid = cx.authStore.user?.id
+  const channels = cx.cs.allChannels.value
+  if (uid && channels.length) pruneChannelDrafts(uid, new Set(channels.map(c => c.id)))
+}
+
 async function loadChannels(cx: Cx, seq: number): Promise<void> {
   const { cs } = cx
   try {
@@ -55,6 +63,7 @@ async function loadChannels(cx: Cx, seq: number): Promise<void> {
     if (seq !== cs.channelsFetchSeq) return cs.latestChannelsFetch
     cs.categories.value = data.categories
     cs.uncategorized.value = data.uncategorized
+    forgetDraftsOfGoneChannels(cx)
     syncActiveChannel(cx)
   } catch (e) {
     console.error('Failed to fetch channels:', e)

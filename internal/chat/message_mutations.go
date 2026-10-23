@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/emojitext"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -181,8 +182,12 @@ func ToggleReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UU
 	return reactionSummary(ctx, p, messageID)
 }
 
-// addReaction adds the reaction unless the user or the message is at its limit.
+// addReaction adds the reaction unless the user or the message is at its limit
+// or the custom emoji no longer exists (taking a reaction back always works).
 func addReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, emoji string) error {
+	if err := requireKnownEmoji(ctx, tx, emoji); err != nil {
+		return err
+	}
 	var mine, distinct int
 	var emojiPresent bool
 	if err := tx.QueryRow(ctx, `
@@ -220,4 +225,21 @@ func reactionSummary(ctx context.Context, p *db.Pool, messageID uuid.UUID) ([]Re
 		out = append(out, r)
 	}
 	return out, rows.Err()
+}
+
+// requireKnownEmoji refuses the token of a custom emoji that was deleted (or
+// never existed); standard emoji need no record.
+func requireKnownEmoji(ctx context.Context, q db.Querier, emoji string) error {
+	id, ok := emojitext.ID(emoji)
+	if !ok {
+		return nil
+	}
+	var exists bool
+	if err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM custom_emoji WHERE id = $1)`, id).Scan(&exists); err != nil {
+		return fmt.Errorf("check emoji: %w", err)
+	}
+	if !exists {
+		return httpx.ErrInvalidInput("invalid emoji")
+	}
+	return nil
 }

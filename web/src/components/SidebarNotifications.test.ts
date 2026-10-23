@@ -6,7 +6,8 @@ import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { channelDraftKey, clearAllDrafts, setDraft } from '../lib/drafts'
 import { usePermissionsStore } from '../stores/permissions'
-import { channelFixture, readStateFixture, userFixture } from '../test-fixtures.fixture'
+import { useOnboardingStore } from '../stores/onboarding'
+import { channelFixture, onboardingStateFixture, readStateFixture, userFixture } from '../test-fixtures.fixture'
 import SidebarCategoryHeader from './SidebarCategoryHeader.vue'
 import SidebarChannelRow from './SidebarChannelRow.vue'
 import SidebarServerMenu from './SidebarServerMenu.vue'
@@ -65,6 +66,19 @@ describe('channel row draft marker', () => {
     await nextTick()
     expect(row.find('[data-testid="channel-draft"]').exists()).toBe(false)
     clearAllDrafts()
+  })
+})
+
+describe('server header subtitle', () => {
+  it('names the community once the Owner has set a name, and says "private community" before', async () => {
+    const header = mount(SidebarServerMenu)
+    expect(header.find('button[aria-controls="server-menu"]').text()).toContain('Private Community')
+    useOnboardingStore().state = onboardingStateFixture({ community_name: 'Mnema Testgemeinschaft' })
+    await nextTick()
+    const text = header.find('button[aria-controls="server-menu"]').text()
+    expect(text).toContain('Mnema Talk')
+    expect(text).toContain('Mnema Testgemeinschaft')
+    expect(text).not.toContain('Private Community')
   })
 })
 

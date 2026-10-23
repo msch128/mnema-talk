@@ -206,7 +206,12 @@ security scheme `botAuth`).
 
 Mentions: `@username` notifies members who can view the channel; `@all` and
 `@here` only when the bot may mention everyone **and** `allowed_mentions.parse`
-contains `"everyone"`. `@Role Name` notifies the role's members when `allowed_mentions.parse` contains `"roles"`, or `allowed_mentions.roles` lists the role's ID (UUID). A bot may mention roles marked mentionable; with Mention everyone it may mention any custom role (not `@everyone` or the managed Bot roles). Role mentions are **off by default**: a message without `allowed_mentions` mentions no role, and so does an edit (which takes no `allowed_mentions`, so editing a message removes its role mentions instead of adding them). Only members who can view the channel are notified. Bots cannot join Talks (voice) in v1.
+contains `"everyone"`. `@Role Name` notifies the role's members when `allowed_mentions.parse` contains `"roles"`, or `allowed_mentions.roles` lists the role's ID (UUID). A bot may mention roles marked mentionable; with Mention @all and @here it may mention any custom role (not `@everyone` or the managed Bot roles). Role mentions are **off by default**: a message without `allowed_mentions` mentions no role, and so does an edit (which takes no `allowed_mentions`, so editing a message removes its role mentions instead of adding them). Only members who can view the channel are notified. Bots cannot join Talks (voice) in v1.
+
+Custom emoji travel as the token the app stores, `<:name:id>` (a bot can copy
+one from a message it reads); a plain `:name:` in a message posted through the
+API stays literal text, because only the web composer turns shortcodes into
+tokens. Unicode emoji work as typed.
 
 ## Gateway
 

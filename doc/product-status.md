@@ -17,11 +17,17 @@ Mnema Talk 1.0 is the first release under the
 [API stability contract](api-stability.md): its public surfaces change
 incompatibly only in a major release. What the 1.0 label does and does not say:
 
+**Supported versions.** Security fixes go to the latest 1.x minor and, once a
+newer minor exists, to the previous minor for 90 days
+([SECURITY.md](../SECURITY.md#supported-versions)). Until 1.1 is out, 0.9.x and
+older get no fixes: update to 1.0.x. CI still upgrades from 0.8.16, 0.9.x and
+1.0.0 to prove the upgrade path; that is a test, not a support promise.
+
 | Area | Category at 1.0 |
 | --- | --- |
 | Server (Docker, linux/amd64 and arm64), browser app, text chat, roles and permissions, webhooks and bots, notifications, search and onboarding, voice, cameras and screen share in Chromium-based browsers | Supported |
 | Browser app on WebKit (Safari, iOS, installed iOS web apps) and Firefox: text chat, search, voice, cameras and screen share with sealed media, as tested in [Browsers](#browsers) | Supported for text chat, search and administration. Sealed calls pass on macOS WebKit locally, but the CI WebKit job does not run the call specs because they fail on Linux WebKit; see the limits there (not yet tested on real iOS or Android hardware) |
-| Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), backup and restore, upgrade from the supported releases (0.8.16 and 0.9.x), cosign-signed images | Supported |
+| Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), backup and restore, upgrade tested from 0.8.16, 0.9.x and 1.0.0, cosign-signed images | Supported |
 | Native mobile apps, text end-to-end encryption | Not offered. Text stays readable by the server, by design. The browser app has a phone layout (channel list as a drawer, full-screen thread and member list, 44 px touch targets, safe areas) that is covered by the `mobile-*` e2e projects in Chromium and WebKit device emulation, not by tests on real phones. |
 | Desktop client on Windows | Beta (unsigned, no Authenticode; SmartScreen warns) |
 | Desktop client on macOS and Linux | Beta (DEV builds, not qualified on real hardware; not notarised; Gatekeeper warns) |
@@ -53,14 +59,14 @@ not establish real 4K/60 capture, system audio or 100-person capacity.
 HTTPS protects browser traffic in transit. Chat messages and attachments stay
 readable by the server. Microphone, camera, screen video and screen audio are
 encrypted in the browser with MLS-derived keys; an honest SFU forwards those
-payloads and cannot read them. Since 0.8 the keys rotate every 30 minutes,
+payloads and cannot read them. From 0.8 on the keys rotate every 30 minutes,
 members silent for 20 minutes are removed and re-admitted, every sealed frame
 is signed with its sender's leaf key, and the connection details show a safety
 code to compare. An active or compromised server is not excluded (it serves
 the code and asserts group membership), and metadata such as who speaks when
 stays visible. The transport underneath is DTLS-SRTP. See [SECURITY.md](../SECURITY.md).
 
-Other 0.8 capabilities on this path, each with automated tests:
+Other capabilities on this path, each with automated tests:
 
 - **Screen-share layers** (source up to 4K at 60 FPS plus smaller layers) with a
   per-viewer choice or Auto; the browser tests switch layers mid-stream and
@@ -74,10 +80,9 @@ Other 0.8 capabilities on this path, each with automated tests:
 
 Not covered by these tests: real 4K/60 capture, system audio from physical
 hardware, an external security audit and capacity beyond the recorded runs.
-An internal five-area security review preceded 0.8 and a six-lane one
-preceded 1.0 (see "Status at 1.0"); neither is an independent audit.
+A six-lane internal security review preceded 1.0 (see "Status at 1.0"); it is
+not an independent audit.
 
-<<<<<<< HEAD
 ## Browsers
 
 Sealed media needs three things in the browser: a frame transform that
@@ -134,10 +139,7 @@ filter removes, so the specs measure decoded samples rather than loudness.
 Real-device behaviour of iOS audio sessions, background tabs and installed web
 apps is not covered by the suite and stays on the "Remaining acceptance" list.
 
-## Experimental desktop path
-=======
 ## Beta desktop path
->>>>>>> origin/release/1.0.0
 
 The desktop client is Beta on every platform. It is unsigned by decision: no paid code-signing certificate will be bought (see [installing the unsigned Beta](desktop-app.md#installing-the-unsigned-beta)). The Windows path is the
 furthest along and is described first; macOS and Linux builds are published by
@@ -182,23 +184,17 @@ Voice in the desktop client uses the instance's browser path, so microphone,
 camera and screen payloads are sealed in WebView2 by the same code as in a
 browser. This is not yet qualified on real Windows hardware.
 
-Releases of this repository through
-[v0.7.3](https://github.com/msch128/mnema-talk/releases) attach the Desktop DEV
-Windows ZIP and checksum file; later releases do not, and new desktop builds
-come from mnema-talk-desktop. Extract every file and run
-`Mnema Desktop DEV.exe`. WebView2 Runtime is required. Checksums
-identify package bytes; they are not publisher signatures. The desktop installer of a
-release updates itself with signature-verified, newer-only updates; no
+Desktop builds come from the mnema-talk-desktop repository (releases of this
+repository stopped attaching them after v0.7.3). WebView2 Runtime is required on
+Windows. Checksums identify package bytes; they are not publisher signatures. The
+desktop installer of a release updates itself with signature-verified, newer-only updates; no
 Authenticode signing exists.
 
-The earlier published v0.7.1 EXE passed two hosted Windows runtime checks
-listed below. These are evidence for that version and flow; they do not
-independently qualify every later build or the Gaming integration:
+The desktop repository's own CI runs a limited Windows flow (instance selection,
+sign-in, a persisted message, a live message over the hub connection, sign-out)
+on generated test accounts and an isolated server.
 
-- [Instance selection and language interaction](https://github.com/msch128/mnema-talk/actions/runs/37874166418): the real EXE reached a compatible HTTPS instance's canonical sign-in page.
-- [Authenticated chat and logout](https://github.com/msch128/mnema-talk/actions/runs/37888635202): generated test accounts on an isolated normal server, login 200, a persisted outgoing message, a live peer message over the desktop's hub connection without history fallback, logout 204 and return to sign-in. The owned database was PostgreSQL 17.11; media storage was an in-memory test fixture.
-
-These results qualify that limited flow. They do not qualify production-account
+These checks qualify only that limited flow. They do not qualify production-account
 usage, S3 uploads, physical microphone/camera capture, system audio, device
 recovery, E2EE, gaming, overlays, exclusive fullscreen or complete browser parity.
 The earlier feasibility probe and native-crypto checkpoint are research
@@ -210,7 +206,7 @@ The Windows-first client and its Gaming integration have been released.
 Versions remain managed by the normal release pipeline. Further runtime
 qualification and the remaining requirements below are still outstanding.
 
-The Gaming integration (first released with v0.7.2) connects these surfaces to the existing client:
+The Gaming integration connects these surfaces to the existing client:
 left-hand sidepeek with participants, speaking, mute and screen-share state;
 Alt+M interactive overlay; controls for the actual own Talk; persisted,
 configurable mute, deafen, push-to-talk and overlay bindings. Both surfaces
@@ -227,11 +223,10 @@ The remaining fixes and acceptance work follow:
    not click the prompt. A human prompt, a physical microphone or camera,
    display capture, sealed media on real hardware and a signed installer
    remain outstanding. The macOS and Linux builds have no hardware qualification either.
-2. Chat messages and attachments stay readable by the server and are not deleted by age. Sealed media is verified in Chromium, WebKit and Firefox (see [Browsers](#browsers)), and in Chromium for calls between 0.7.25 and 0.8 tabs; it is not yet qualified in WebView2 on real Windows hardware, and no external audit has reviewed it.
-3. Capacity: [`make load-test`](../loadtest/README.md) is reproducible (smoke, the 100-member `full` profile, join and reload stall checks, packet loss and jitter on the lightweight viewers, a two-hour `long` profile). On a loaded single test machine the `full` profile misses its gap and heap thresholds for 0.8 and 0.7.25 alike while all 84 viewers stay connected, so what remains is recording results on dedicated hardware with more real decrypting viewers ([capacity notes](architecture.md#capacity)). A viewer's bad reports move only that viewer to a lower screen layer (`TestOneViewersTroubleLeavesTheOtherOnTheHighLayer`); voice forwarding does not follow screen layers. The additional 250-endpoint target is deferred.
+2. Chat messages and attachments stay readable by the server and are not deleted by age. Sealed media is verified in Chromium, WebKit and Firefox (see [Browsers](#browsers)), and in Chromium for calls between current and one-release-older tabs; it is not yet qualified in WebView2 on real Windows hardware, and no external audit has reviewed it.
+3. Capacity: [`make load-test`](../loadtest/README.md) is reproducible (smoke, the 100-member `full` profile, join and reload stall checks, packet loss and jitter on the lightweight viewers, a two-hour `long` profile). On a loaded single test machine the `full` profile misses its gap and heap thresholds while all 84 viewers stay connected, so what remains is recording results on dedicated hardware with more real decrypting viewers ([capacity notes](architecture.md#capacity)). A viewer's bad reports move only that viewer to a lower screen layer (`TestOneViewersTroubleLeavesTheOtherOnTheHighLayer`); voice forwarding does not follow screen layers. The additional 250-endpoint target is deferred.
 4. Independent operation. `main` is protected by a ruleset (pull request required, CI and CodeQL checks must pass, squash merge only). Review approvals are not required. Dependency advisories remain part of release checks; a green build does not mean zero risk.
 
-[Desktop requirements](desktop-app.md), [cryptographic persistence limits](crypto-state.md)
-(not the shipped media path) and [the native research checkpoint](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/README.md) describe
+[Desktop requirements](desktop-app.md) and [the native research checkpoint](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/README.md) describe
 these boundaries in more detail. Existing coverage and security gates remain
 in force.

@@ -56,11 +56,11 @@ test('a member deletes the account; the thread stays, the words and the name are
     const messages = list.json as { username: string; display_name: string; content: string }[]
     expect(messages).toHaveLength(1)
     expect(messages[0]?.content).toBe('')
-    expect(messages[0]?.display_name).toBe('Deleted user')
+    expect(messages[0]?.display_name).toBe('Deleted member')
     expect(messages[0]?.username.startsWith('deleted-')).toBe(true)
     expect(JSON.stringify(list.json)).not.toContain(MEMBER)
     await a.goto(`/c/${channelId}`)
-    await expect(a.getByText('Gelöschter Nutzer')).toBeVisible()
+    await expect(a.getByText('Gelöschtes Mitglied')).toBeVisible()
   } finally {
     await aCtx.close()
     await mCtx.close()

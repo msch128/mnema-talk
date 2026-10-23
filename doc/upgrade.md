@@ -26,13 +26,13 @@ Replace the version and paths with yours.
 
 ```sh
 cd /path/to/mnema-talk
-NEW=0.8.0                                  # version to install
+NEW=1.0.0                                  # version to install
 
 # 1. Back up database, media and .env (see operations.md, "Backups")
 BACKUP_DIR=/path/to/backups ./scripts/backup.sh
 
 # 2. Note what runs now, for a rollback
-grep '^MNEMA_IMAGE=' .env                  # e.g. ghcr.io/msch128/mnema-talk:0.7.25
+grep '^MNEMA_IMAGE=' .env                  # e.g. ghcr.io/msch128/mnema-talk:0.9.0
 curl -fsS http://127.0.0.1:8080/api/health # {"status":"ok","version":"..."}
 cp docker-compose.yml docker-compose.yml.bak
 
@@ -126,6 +126,56 @@ until the new release has passed your application checks.
 
 ## Version notes
 
+### 1.0.0 → 1.0.1
+
+A patch release: fixes and polish, no new features, and nothing in it changes
+a public surface ([API stability](api-stability.md)). Update with the
+procedure above; take the backup first.
+
+- **No migrations.** The schema is the one 1.0.0 left, so a rollback to the
+  1.0.0 image needs no restore.
+- **Three new rate limiters**, per member, each under its own label in
+  `mnema_ratelimit_hits_total{limiter}` (see
+  [operations.md](operations.md#what-each-metric-means)): `poll_create` (10 polls per minute),
+  `pin` (60 pins or unpins per minute) and `emoji_upload` (10 uploads per
+  10 minutes). Members and bots never meet them in normal use; a script that
+  creates polls or pins in bulk now gets `429` with `Retry-After`.
+- **Unknown or deleted custom emoji are refused as new reactions** (`400`,
+  "invalid emoji"): a token whose emoji was deleted, or never existed, cannot
+  be added. A reaction that already exists can always be taken back.
+- **The data export is complete.** Besides profile, settings, messages, edits,
+  reactions, uploads, audit entries and sign-in setup, the archive now holds
+  the polls the member started, the messages they pinned, their push devices
+  (label and dates only, no keys) and the custom emoji they uploaded (with the
+  image files). Its `README.txt` also says that the files are English and
+  machine-readable and keep messages as typed.
+- **Mute rule, now the same everywhere.** In a muted channel or category, a
+  message addressed to the member breaks the mute: `@username`, a role the
+  member holds, or a reply to their message. `@all`, `@here` and Do Not
+  Disturb stay silent. The unread mention badge, Web Push and the notifications
+  shown while the page is open follow this rule alike.
+- **A deleted account is named "Deleted member" on the server too.** New
+  deletions store that name; accounts deleted under 1.0.0 keep the stored
+  "Deleted user" (the web app shows "Deleted member" in the member's language
+  for both). Bots and API clients that read `display_name` see the stored text.
+- **The release workflow mirrors the required checks.** `release.yml` reads the
+  checks that `main`'s ruleset requires (including the `upgrade-drill` jobs)
+  and reports each one's result from the tested commit on the release pull
+  request; it does not merge when one of them did not succeed. Nothing to do for
+  operators; forks with their own ruleset get the same behaviour.
+- **Recovery codes have their own rate limiter.** The authenticator lockout no
+  longer blocks them, so a member locked out of the app can still sign in with a
+  recovery code.
+- **Bot and webhook names are stricter.** ZWJ and ZWNJ stay only inside emoji
+  and in scripts that need them; other invisible characters are stripped.
+- **`@everyone` and `@here` are reserved on a normalized skeleton**, so look-alike
+  spellings of those names are refused too.
+- **Push and OS notification text is plain text.** Markdown is stripped and
+  spoilers show as "Spoiler".
+- **Mail language:** the member's stored language, then the request's
+  `Accept-Language`, then English.
+- **Erasing an account updates open pin panels** right away.
+
 ### 0.9.x → 1.0.0
 
 1.0.0 is the first release under the [API stability contract](api-stability.md):
@@ -189,7 +239,7 @@ operator is below. Update with the procedure above; take the backup first.
   an address they confirmed (link valid 30 minutes, signs every device out). Without
   `SMTP_HOST` nothing changes: no mail is sent, saved addresses stay unconfirmed
   and unused, and the "Forgot your password?" link does not appear. The Owner can
-  still set a temporary password for any member (Admin > Users). Reset by mail
+  still set a temporary password for any member (Admin > Members). Reset by mail
   also works for the Owner account if the Owner confirmed an address. Put
   `SMTP_PASSWORD` in the environment or mount a file and name it in
   `SMTP_PASSWORD_FILE`; `SMTP_TLS=none` is refused in production.
@@ -199,14 +249,16 @@ operator is below. Update with the procedure above; take the backup first.
   of a session for such an account and cannot sign in; the shipped web app and
   desktop clients handle it. Stored authenticator secrets are encrypted with a
   key derived from `JWT_SECRET`: rotating it requires resetting two-factor for
-  the accounts that use it (Admin > Users, or `mnema-talk reset-2fa <username>`
+  the accounts that use it (Admin > Members, or `mnema-talk reset-2fa <username>`
   for the Owner). See [operations.md](operations.md).
 - **Members can delete their account and export their data.** Both are in
   Account & security; the Owner account cannot be deleted. A deleted account
-  leaves its messages in place without text, written by "Deleted user". The
-  username `deleted-…` is reserved. Exports need object storage and live there
-  for at most 24 hours. Clients built before this release show a deleted author
-  by the placeholder name instead of "Deleted user" in the member's language.
+  leaves its messages in place without text, written by "Deleted member" (1.0.0
+  stored "Deleted user" and keeps it for accounts deleted before 1.0.1; the web
+  app ignores the stored text and names a deleted author in the member's
+  language from the reserved `deleted-…` username). Exports need object storage
+  and live there for at most 24 hours. Clients built before this release show a
+  deleted author by the placeholder name instead.
   See [operations.md](operations.md#account-deletion-and-data-exports).
 - **Weak custom invite codes stop working.** Custom invite codes typed by an
   admin that fall below the new minimum (12 or more characters, 7 or more
@@ -354,7 +406,7 @@ operator is below. Update with the procedure above; take the backup first.
   not simply start the old image on the migrated database; restore the backup
   taken before the upgrade (see "Rollback" above).
 
-### 0.8.x → next
+### 0.8.x (up to 0.8.16)
 
 - **Upload limits are now editable by the Owner.** `MAX_UPLOAD_SIZE_MB`
   (default `50`, unchanged) stays the hard ceiling and the initial limit, so

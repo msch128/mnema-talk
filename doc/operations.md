@@ -119,6 +119,12 @@ ten minutes, audited without the recipient). A failed test names the stage
 (`connect`, `tls`, `auth`, `sender`, `recipient`, `data`); server replies and
 credentials are never shown. The links in the mails point to `PUBLIC_URL`.
 Mails are plain text, in the member's language (German or English).
+Every mail to a member (address confirmation, password reset, second-factor
+alert) picks its language by the same rule: the language stored on the account
+(the UI language, `de` or `en`); if the account has none yet, the first shipped
+language in the `Accept-Language` header of the request that triggered the mail;
+otherwise English, the instance default. The alert mail has no member request
+behind it and so uses the stored language or the default.
 
 ### Monitoring
 
@@ -255,7 +261,10 @@ installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
   is not on Do Not Disturb or Focus, and whose effective notification level
   for the channel allows it: all messages, or mentions (including `@all`,
   `@here`, roles and replies to their messages) only; mutes, timed mutes and
-  category settings apply exactly as in the app. A burst in one channel is
+  category settings apply exactly as in the app (a mute still lets through
+  a message addressed to the member by name, role or reply, not `@all` or
+  `@here`; Do Not Disturb silences even those). The text of a push is plain: Markdown marks are removed,
+  `||spoilers||` read "Spoiler" and custom emoji read `:name:`. A burst in one channel is
   merged: the first message goes out at once, the rest of the next five
   seconds as one push ("3 new messages"); a mention is never held back. A
   device that is offline gets only the newest push of a channel (push topic),
@@ -415,7 +424,7 @@ The image also carries BuildKit provenance and an SBOM. To check a pulled
 image before running it:
 
 ```sh
-cosign verify ghcr.io/msch128/mnema-talk:0.7 \
+cosign verify ghcr.io/msch128/mnema-talk:1.0 \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@'
 ```
@@ -590,7 +599,7 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_http_requests_total{route,class}` | counter | Requests by chi route pattern (`/api/channels/{channelID}/messages`) and status class `1xx`..`5xx`. Unknown paths are `unmatched`. |
 | `mnema_http_request_duration_seconds{route}` | histogram | Latency per route pattern (WebSocket upgrades are counted but not timed). |
 | `mnema_http_requests_in_flight` | gauge | Requests being served now. |
-| `mnema_ratelimit_hits_total{limiter}` | counter | Requests refused with 429: `api_user`, `upload`, `link_preview`, `other` (login, native clients and the rest). |
+| `mnema_ratelimit_hits_total{limiter}` | counter | Requests refused with 429, by limiter: `api_user` (600 a minute per member), `upload`, `link_preview`, `poll_create` (10 a minute), `poll_vote`, `pin` (60 pins or unpins a minute), `emoji_upload` (10 per 10 minutes), `edit_history`, `export_download`, the bot, webhook, gateway, push, e-mail and password-reset limiters, `ws_user` and `ws_ip`, and `other` for the few without a name. |
 | `mnema_ws_online_users`, `mnema_ws_connections` | gauge | Distinct online users and open WebSockets. |
 | `mnema_ws_connections_total` | counter | Accepted realtime connections (reconnect churn). |
 | `mnema_ws_events_sent_total`, `mnema_ws_events_received_total` | counter | Event throughput to and from clients. |
@@ -659,7 +668,12 @@ not start (e.g. the UDP range is in use).
 ### Account deletion and data exports
 
 Members delete their own account and download their data under Account &
-security (the Owner account cannot be deleted). Deleting keeps an anonymised
+security (the Owner account cannot be deleted). The export is a ZIP of JSON
+files with the member's profile, settings, messages, earlier versions of
+their edits, reactions, poll votes, uploads, the polls they started, the
+messages they pinned, their push devices (label and dates, no keys), the
+custom emoji they uploaded, audit entries about their account and their
+sign-in setup; nothing of other members. Deleting keeps an anonymised
 row and the member's messages without text, removes everything else (see
 [SECURITY.md](../SECURITY.md)) and frees the username; files are removed from
 object storage in the same request, and anything that could not be removed is
@@ -676,11 +690,11 @@ account (it asks for nothing more, because that person can already read the
 database), end its sessions and leave an audit entry:
 
 ```
-docker exec mnema-talk /usr/local/bin/mnema-talk reset-2fa Herzog
+docker exec mnema-talk /usr/local/bin/mnema-talk reset-2fa OWNER_NAME
 ```
 
 Other members' second factor is reset by
-the Owner in Admin > Users. Rotating `JWT_SECRET` also makes every stored
+the Owner in Admin > Members. Rotating `JWT_SECRET` also makes every stored
 authenticator secret unreadable: each affected account has to be reset and
 enrol again, so rotate it only with that in mind.
 
@@ -699,7 +713,7 @@ state is held in memory; a restart is not needed to clear it:
 - **From the host** (works even when nobody can sign in):
 
   ```sh
-  docker exec mnema-talk /usr/local/bin/mnema-talk unlock Herzog   # one account
+  docker exec mnema-talk /usr/local/bin/mnema-talk unlock USERNAME   # one account
   docker exec mnema-talk /usr/local/bin/mnema-talk unlock --all    # everybody
   ```
 
@@ -711,8 +725,8 @@ state is held in memory; a restart is not needed to clear it:
   server applied it, or says the request stays queued when no server picked it
   up in 15 seconds. Only someone who can reach the database can do this; there
   is no network endpoint for it.
-- **From the admin panel:** the Owner sees a "Login locked" badge on a locked
-  account in Admin > Users and can click "Clear login lockout".
+- **From the admin panel:** the Owner sees a "Sign-in locked" badge on a locked
+  account in Admin > Members and can click "Clear sign-in lock".
 
 Otherwise sign in from a browser you used before, or wait.
 

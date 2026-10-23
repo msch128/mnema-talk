@@ -32,6 +32,22 @@ export type PermissionKey = keyof typeof PERMISSION_BITS
 /** Display order, the same as the server's catalog. */
 export const PERMISSION_KEYS = Object.keys(PERMISSION_BITS) as PermissionKey[]
 
+export type PermissionGroupId = 'general' | 'text' | 'voice' | 'moderation' | 'administration'
+
+/**
+ * How the role editor groups the permissions. manage_webhooks is left out on
+ * purpose: it is reserved (webhooks are managed by the Owner and Administrators),
+ * so a switch for it would only suggest something that does nothing. The bit
+ * stays in the table above because the server still knows it.
+ */
+export const PERMISSION_GROUPS: readonly { id: PermissionGroupId; keys: readonly PermissionKey[] }[] = [
+  { id: 'general', keys: ['view_channel'] },
+  { id: 'text', keys: ['send_messages', 'attach_files', 'add_reactions', 'mention_everyone'] },
+  { id: 'voice', keys: ['connect', 'speak', 'video', 'disconnect_members'] },
+  { id: 'moderation', keys: ['manage_messages', 'manage_members', 'timeout_members', 'ban_members'] },
+  { id: 'administration', keys: ['administrator', 'manage_channels', 'manage_roles', 'create_invites', 'manage_bots', 'manage_emoji', 'view_audit_log'] }
+]
+
 /** Permissions a category or channel can allow or deny per role or member. */
 export const CHANNEL_PERMISSION_KEYS: readonly PermissionKey[] = [
   'view_channel', 'send_messages', 'attach_files', 'add_reactions', 'manage_messages',

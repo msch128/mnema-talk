@@ -58,8 +58,16 @@ edits.json      the earlier versions of the messages you edited (newest first)
 reactions.json  the reactions you gave
 poll_votes.json the options you voted for in polls
 uploads.json    the files you uploaded, with links while they still exist
+polls.json      the polls you started: settings, end time and the number of votes per option
+pins.json       the messages you pinned (which message, where, when; not their text)
+push.json       your push notification devices (label, added, last delivery; no keys) and whether message text is shown
+emoji.json      the custom emoji you uploaded; the image files are in the emoji folder
 audit.json      administrative log entries about your account (no other person's name)
 security.json   what is set up for signing in (no secrets)
+
+The files are meant for machines: file names and keys are in English whatever
+language your account uses, and messages.json keeps your messages as typed,
+with Markdown and tokens such as custom emoji (<:name:id>) unchanged.
 
 Other members' personal data is not part of this archive.
 This file was available for download once, for 24 hours.
@@ -137,6 +145,10 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 		{"reactions.json", func() (any, error) { return exportReactions(ctx, q, user) }},
 		{"poll_votes.json", func() (any, error) { return exportPollVotes(ctx, q, user) }},
 		{"uploads.json", func() (any, error) { return exportUploads(ctx, q, user) }},
+		{"polls.json", func() (any, error) { return exportPolls(ctx, q, user, viewable) }},
+		{"pins.json", func() (any, error) { return exportPins(ctx, q, user, viewable) }},
+		{"push.json", func() (any, error) { return exportPush(ctx, q, user) }},
+		{"emoji.json", func() (any, error) { return h.exportEmoji(ctx, z, user) }},
 		{"audit.json", func() (any, error) { return exportAudit(ctx, q, user) }},
 		{"security.json", func() (any, error) { return h.exportSecurity(ctx, user) }},
 	}

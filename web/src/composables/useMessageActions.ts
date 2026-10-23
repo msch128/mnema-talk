@@ -9,12 +9,14 @@ import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
 import { useDismissable } from './useDismissable'
 import { previewText } from '../lib/replies'
+import { shortcodesForEditing } from '../lib/customEmoji'
 import { confirm } from '../lib/confirm'
 import { t, locale } from '../i18n'
+import { clockTimeOptions } from '../lib/time'
 
 export function formatTime(dateStr: string | null | undefined) {
   if (!dateStr) return ''
-  return new Date(dateStr).toLocaleTimeString([locale.value], { hour: '2-digit', minute: '2-digit' })
+  return new Date(dateStr).toLocaleTimeString([locale.value], clockTimeOptions(locale.value))
 }
 
 // Reaction pickers live in elements with this class; presses inside one
@@ -110,7 +112,7 @@ function useMessageEditor(channelOf: (msg: Message) => string, onStart?: () => v
   function startEdit(msg: Message) {
     if (msg.poll) return // a poll cannot be edited
     editingId.value = msg.id
-    editText.value = msg.content
+    editText.value = shortcodesForEditing(msg.content) // :name:, not the stored token; saving turns it back
     onStart?.()
   }
 

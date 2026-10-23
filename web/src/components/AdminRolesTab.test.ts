@@ -59,7 +59,7 @@ describe('AdminRolesTab', () => {
     expect(w.text()).toContain('What every member has.')
     // only the permissions of @everyone are editable
     expect(w.find('input[maxlength="32"]').exists()).toBe(false)
-    expect(w.findAll('[role="switch"]')).toHaveLength(21)
+    expect(w.findAll('[role="switch"]')).toHaveLength(20)
   })
 
   it('shows the empty state', async () => {
@@ -244,7 +244,7 @@ describe('AdminRolesTab', () => {
     expect(w.text()).toContain('You can only grant permissions you have yourself.')
     const switches = Object.fromEntries(w.findAll('[data-permission]').map(li => [li.attributes('data-permission'), li.find('[role="switch"]').attributes('disabled') !== undefined]))
     expect(switches['speak']).toBe(false) // held
-    expect(switches['manage_webhooks']).toBe(true) // not held
+    expect(switches['manage_bots']).toBe(true) // not held
     // dragging a role above the rank is ignored
     await row(w, 'Top').trigger('dragstart')
     await row(w, 'Middle').trigger('drop')
@@ -284,5 +284,20 @@ describe('AdminRolesTab', () => {
     await flushPromises()
     expect(w.find('[aria-label="Selected role"]').exists()).toBe(false)
     expect(w.findAll('[data-role]')).toHaveLength(1)
+  })
+})
+
+describe('AdminRolesTab permission list', () => {
+  it('groups the switches under headings and leaves out the reserved webhook permission', async () => {
+    const w = setup()
+    await flushPromises()
+    await row(w, 'Middle').find('button[aria-pressed]').trigger('click')
+    const groups = w.findAll('[data-permission-group]')
+    expect(groups.map(g => g.attributes('data-permission-group'))).toEqual(['general', 'text', 'voice', 'moderation', 'administration'])
+    expect(groups.map(g => g.find('h4').text())).toEqual(['General', 'Text', 'Voice', 'Moderation', 'Administration'])
+    const shown = w.findAll('[data-permission]').map(li => li.attributes('data-permission'))
+    expect(shown).not.toContain('manage_webhooks')
+    expect(new Set(shown)).toEqual(new Set(Object.keys(PERMISSION_BITS).filter(key => key !== 'manage_webhooks')))
+    expect(shown).toHaveLength(new Set(shown).size)
   })
 })

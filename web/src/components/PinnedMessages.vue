@@ -72,8 +72,17 @@ async function unpin(msg: Message) {
     await chatStore.setPinned(msg.channel_id, msg.id, false)
     items.value = items.value.filter(m => m.id !== msg.id)
   } catch (error) {
-    toasts.error(caughtErrorMessage(error, t('moderation.failed')))
+    toasts.error(caughtErrorMessage(error, t('pins.unpinFailed')))
   }
+}
+
+/** What the text alone does not show: a poll, a file, a reply inside a thread. */
+function markers(msg: Message): string[] {
+  const marks: string[] = []
+  if (msg.poll) marks.push(t('pins.poll'))
+  if (msg.attachments?.length && stripMarkdown(msg.content).trim()) marks.push(t('chat.attachment'))
+  if (msg.parent_id) marks.push(t('chat.inThread'))
+  return marks
 }
 
 function excerpt(msg: Message) {
@@ -107,7 +116,7 @@ function when(iso: string) {
       data-testid="pinned-panel"
       role="dialog"
       :aria-label="$t('pins.title')"
-      class="absolute right-0 top-full z-30 mt-2 flex max-h-[70vh] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-[10px] bg-mnema-elevated shadow-[inset_0_0_0_1px_#2B2F2D,0_12px_32px_rgba(0,0,0,0.5)]"
+      class="absolute right-0 top-full z-30 mt-2 flex max-h-[70vh] w-[min(24rem,calc(100vw-1.5rem))] flex-col max-md:fixed max-md:inset-x-3 max-md:top-[calc(3rem+env(safe-area-inset-top))] max-md:mt-0 max-md:max-h-[calc(100dvh-4.5rem-env(safe-area-inset-top))] max-md:w-auto overflow-hidden rounded-[10px] bg-mnema-elevated shadow-[inset_0_0_0_1px_#2B2F2D,0_12px_32px_rgba(0,0,0,0.5)]"
     >
       <div class="border-b border-mnema-hairline px-3 py-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">
         {{ $t('pins.title') }}
@@ -134,6 +143,7 @@ function when(iso: string) {
                 <span class="ml-auto flex-shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
               </span>
               <span class="line-clamp-3 break-words text-sm text-mnema-muted">{{ excerpt(msg) }}</span>
+              <span v-if="markers(msg).length" data-testid="pinned-markers" class="mt-1 block truncate text-xs text-mnema-tertiary">{{ markers(msg).join(' · ') }}</span>
             </span>
           </button>
           <button

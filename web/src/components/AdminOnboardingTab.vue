@@ -8,6 +8,7 @@ import { api, caughtErrorMessage } from '../lib/api'
 import { decodeOnboardingSettings, type OnboardingSettings } from '../types/rest'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
+import { useOnboardingStore } from '../stores/onboarding'
 import { t } from '../i18n'
 import MarkdownContent from './MarkdownContent.vue'
 
@@ -17,6 +18,7 @@ const MAX_RULES = 10000
 
 const chat = useChatStore()
 const toasts = useToastStore()
+const onboarding = useOnboardingStore()
 
 const loaded = ref<OnboardingSettings | null>(null)
 const name = ref('')
@@ -64,6 +66,7 @@ async function save() {
       decode: decodeOnboardingSettings
     }))
     toasts.success(t('admin.onboarding.saved'))
+    await onboarding.reload()
   } catch (e) {
     toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
   } finally {
@@ -120,6 +123,6 @@ onMounted(load)
     </div>
 
     <p v-if="tooLong" class="text-xs text-mnema-danger" role="alert">{{ $t('admin.onboarding.tooLong') }}</p>
-    <button type="submit" :disabled="!dirty || busy || tooLong" class="rounded-md bg-mnema-accent px-4 py-1.5 text-sm font-semibold text-mnema-accent-ink shadow-sm transition hover:bg-mnema-accent-hover disabled:opacity-40" data-testid="onboarding-save">{{ $t('admin.onboarding.save') }}</button>
+    <button type="submit" :disabled="!dirty || busy || tooLong" class="rounded-md bg-mnema-accent px-4 py-1.5 text-sm font-semibold text-mnema-accent-ink shadow-sm transition hover:bg-mnema-accent-hover disabled:opacity-40" data-testid="onboarding-save">{{ $t('common.save') }}</button>
   </form>
 </template>

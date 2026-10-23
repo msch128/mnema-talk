@@ -158,7 +158,9 @@ SH
   CHANNEL="$(api "$BASE/api/channels" | jq -r '[.categories[].channels[], .uncategorized[]] | map(select(.type == "text")) | first | .id')"
   MESSAGE="pg17-$(openssl rand -hex 4)"
   api -H 'Content-Type: application/json' --data "{\"content\":\"$MESSAGE\"}" "$BASE/api/channels/$CHANNEL/messages" >/dev/null
-  head -c 4096 /dev/urandom >"$DEPLOY/payload.bin"
+  # Deterministic binary content (sniffs as application/octet-stream); random
+  # bytes occasionally match a disallowed signature and the upload got a 415.
+  { printf 'MNEMA-DRILL\000'; head -c 4084 /dev/zero | LC_ALL=C tr '\000' '\001'; } >"$DEPLOY/payload.bin"
   MEDIA_URL="$(api -F "file=@$DEPLOY/payload.bin;type=application/octet-stream" "$BASE/api/channels/$CHANNEL/upload" | jq -r '.attachments[0].url')"
   old=$(docker volume ls -q --filter "label=com.docker.compose.project=$project" --filter 'label=com.docker.compose.volume=postgres-data')
   [ -n "$old" ] || { echo 'missing own PostgreSQL 17 fixture volume' >&2; exit 1; }

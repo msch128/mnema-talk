@@ -140,14 +140,14 @@ async function submit() {
       </div>
       <p v-if="draft.anonymous" class="text-xs text-mnema-tertiary">{{ $t('poll.anonymousHint') }}</p>
 
-      <div class="flex items-center justify-end gap-2 pt-1">
-        <span v-if="problemText" class="mr-auto text-xs text-mnema-tertiary" data-testid="poll-problem">{{ problemText }}</span>
-        <button type="button" class="h-9 rounded-md px-3 text-sm text-mnema-muted transition hover:bg-mnema-surface hover:text-mnema-text" @click="emit('close')">{{ $t('common.cancel') }}</button>
+      <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
+        <span v-if="problemText" class="max-sm:w-full sm:mr-auto text-xs text-mnema-tertiary" data-testid="poll-problem">{{ problemText }}</span>
+        <button type="button" class="h-9 whitespace-nowrap rounded-md px-3 text-sm text-mnema-muted transition hover:bg-mnema-surface hover:text-mnema-text" @click="emit('close')">{{ $t('common.cancel') }}</button>
         <button
           type="submit"
           :disabled="!!problem || busy"
           data-testid="poll-post"
-          class="h-9 rounded-md bg-mnema-accent px-4 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40"
+          class="h-9 whitespace-nowrap rounded-md bg-mnema-accent px-4 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40"
         >{{ $t('poll.post') }}</button>
       </div>
     </form>

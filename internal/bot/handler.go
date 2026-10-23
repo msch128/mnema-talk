@@ -137,7 +137,7 @@ func checkIntents(v int64) error {
 // @Security cookieAuth
 // @Success 200 {array} Bot "Bots, oldest first."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage bots permission."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
@@ -169,7 +169,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 // @Success 201 {object} Bot "Created."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage bots permission, or cross-origin request rejected."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the bot limit is reached."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -211,6 +211,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 // get handles GET /api/admin/bots/{id}.
 //
 // @Summary Get a bot
+// @Description One bot account with its owner, status and roles. Needs Manage bots (or the Owner); secrets and tokens are never part of the answer.
 // @ID getBot
 // @Tags Bots
 // @Produce json
@@ -218,7 +219,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 // @Param id path string true "Bot ID." Format(uuid)
 // @Success 200 {object} Bot "The bot."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage bots permission, or the bot's highest role is not below yours."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such bot."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -267,7 +268,7 @@ func shouldRevokeConnections(req UpdateRequest) bool {
 // @Success 200 {object} Bot "Updated."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage bots permission, or the bot's highest role is not below yours, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such bot."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -321,7 +322,7 @@ func (h *Handler) writeCurrent(w http.ResponseWriter, r *http.Request, id uuid.U
 // @Param id path string true "Bot ID." Format(uuid)
 // @Success 204 "Deleted."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage bots permission, or the bot's highest role is not below yours, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such bot."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -358,7 +359,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) error {
 // @Success 200 {object} Bot "Updated."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage bots permission, or the bot's highest role is not below yours, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such bot."
 // @Failure 413 {object} httpx.ErrorResponse "PAYLOAD_TOO_LARGE: file exceeds the limit."
 // @Failure 415 {object} httpx.ErrorResponse "UNSUPPORTED_MEDIA_TYPE: the file type is not allowed."

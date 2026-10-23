@@ -31,6 +31,7 @@ const button = 'px-4 py-2 rounded-lg font-semibold text-sm transition shadow-sm 
       <template v-else>
         <p class="text-xs text-mnema-tertiary leading-relaxed" data-testid="push-state">
           {{ mine ? $t('push.stateOn') : blocked ? $t('push.stateBlocked') : $t('push.stateOff') }}
+          {{ $t('push.channelLevels') }}
         </p>
         <div class="flex flex-wrap items-center gap-2">
           <button

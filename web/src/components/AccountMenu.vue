@@ -10,8 +10,6 @@ import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useAccountStore } from '../stores/account'
 import { useToastStore } from '../stores/toast'
-import { useAppVersionStore } from '../stores/appVersion'
-import { usePermissionsStore } from '../stores/permissions'
 import { platform } from '../lib/platform'
 import { appSettingsOpen } from '../lib/appSettings'
 import { useWebRTC } from '../composables/useWebRTC'
@@ -20,15 +18,13 @@ import { useCompactLayout } from '../composables/useCompactLayout'
 import UserAvatar from './UserAvatar.vue'
 
 const props = defineProps({ trigger: { type: Object as PropType<HTMLElement | null>, default: null } })
-const emit = defineEmits<{ close: []; 'open-admin': []; 'open-legal': [] }>()
+const emit = defineEmits<{ close: []; 'open-legal': [] }>()
 
 const authStore = useAuthStore()
-const permissions = usePermissionsStore()
 const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
 const toasts = useToastStore()
 const accountStore = useAccountStore()
-const versionStore = useAppVersionStore()
 // Set only in the trusted desktop client, which runs a bundle it verified.
 const verified = platform.trustedApp()
 const { stopScreenShare } = useWebRTC()
@@ -210,14 +206,6 @@ const item = 'flex min-h-8 w-full items-center gap-2.5 rounded-md px-2 py-1.5 te
     </div>
 
     <div class="mx-0.5 my-1 h-px bg-mnema-hairline" role="separator"></div>
-    <button v-if="permissions.canOpenAdmin" type="button" role="menuitem" tabindex="-1" :class="item" @click="run(() => emit('open-admin'))">
-      <ShieldCheck class="h-4 w-4 flex-shrink-0 text-mnema-tertiary" />{{ $t('menu.adminConsole') }}
-      <span
-        v-if="versionStore.adminUpdateAvailable"
-        data-testid="admin-update-badge"
-        class="ml-auto rounded-full bg-mnema-accent/15 px-2 py-0.5 text-xs font-semibold text-mnema-accent"
-      >{{ $t('update.badge', { version: versionStore.adminUpdate?.latest_version }) }}</span>
-    </button>
     <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(() => emit('open-legal'))">
       <HelpCircle class="h-4 w-4 flex-shrink-0 text-mnema-tertiary" />{{ $t('menu.legal') }}
     </button>

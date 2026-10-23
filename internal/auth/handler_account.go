@@ -20,7 +20,7 @@ import (
 // @Success 201 {object} UserEnvelope "Account created and signed in."
 // @Header 201 {string} Set-Cookie "Session cookie (HttpOnly, SameSite=Lax, Path=/; Secure on HTTPS)."
 // @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT: validation failed, or the invite code is invalid, expired or used up."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: cross-origin request rejected by the CSRF check."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the resource already exists."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -56,7 +56,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 // @Produce json
 // @Success 204 "Cookie cleared."
 // @Header 204 {string} Set-Cookie "Expired session cookie that clears the session."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: cross-origin request rejected by the CSRF check."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/auth/logout [post]
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) error {
@@ -84,7 +84,7 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) error {
 // @Success 204 "All sessions revoked."
 // @Header 204 {string} Set-Cookie "Expired session cookie that clears the session."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: cross-origin request rejected by the CSRF check."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."

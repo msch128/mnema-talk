@@ -10,6 +10,7 @@ import { PERMISSION_BITS } from './lib/permissions'
 import * as router from './lib/router'
 import { channelFixture, categoryFixture, messageFixture, userFixture, requireValue } from './test-fixtures.fixture'
 import App from './App.vue'
+import { useCompactLayout } from './composables/useCompactLayout'
 
 const rtc = vi.hoisted(() => ({ resumeVoiceSession: vi.fn(async () => false), resumeRemoteAudio: vi.fn(), leaveVoiceChannel: vi.fn(), rejoinAfterReconnect: vi.fn() }))
 vi.mock('./composables/useWebRTC', () => ({ useWebRTC: () => rtc }))
@@ -102,6 +103,13 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     chat.categories = [categoryFixture({ channels })]
     await go('/v/v2/chat')
     expect(chat.activeChannel?.id).toBe('v2')
+  })
+  it('closes the channel drawer on a phone with Escape', async () => {
+    await mountApp()
+    const { navOpen } = useCompactLayout()
+    navOpen.value = true
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    expect(navOpen.value).toBe(false)
   })
   it('guards admin routes and repairs missing or incorrectly typed channels', async () => {
     const { toasts, w } = await mountApp()
@@ -230,9 +238,11 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
       expect(w.findComponent({ name: 'LegalModal' }).exists()).toBe(true)
       w.findComponent({ name: 'LegalModal' }).vm.$emit('close')
       await flushPromises()
-      w.findComponent({ name }).vm.$emit('open-admin')
-      await flushPromises()
-      expect(w.findComponent({ name: 'AdminDashboard' }).props('initialTab')).toBe('users')
+      if (name === 'Sidebar') {
+        w.findComponent({ name }).vm.$emit('open-admin') // only the server menu opens the admin console
+        await flushPromises()
+        expect(w.findComponent({ name: 'AdminDashboard' }).props('initialTab')).toBe('users')
+      }
       await go('/c/ch1')
     }
   })

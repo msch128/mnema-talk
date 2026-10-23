@@ -6,6 +6,7 @@ import type { NotifyLevel } from '../types/domain'
 import type { ContextMenuItem } from '../components/menuTypes'
 import { useChatStore } from '../stores/chat'
 import { t } from '../i18n'
+import { clockTimeOptions } from '../lib/time'
 
 export type NotifyTarget = { kind: 'channel' | 'category'; id: string }
 
@@ -25,7 +26,7 @@ export function formatMuteEnd(iso: string, now = new Date()): string {
   const end = new Date(iso)
   const sameDay = end.toDateString() === now.toDateString()
   return sameDay
-    ? end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    ? end.toLocaleTimeString([], clockTimeOptions())
     : end.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
 }
 

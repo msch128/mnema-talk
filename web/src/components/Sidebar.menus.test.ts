@@ -228,7 +228,7 @@ describe('Sidebar context menus', () => {
     await choose('Kanal erstellen')
     // The category is preselected; a voice-only category suggests a voice channel.
     expect(q<HTMLSelectElement>('#channel-category').value).toBe('voice')
-    expect(q('[aria-pressed="true"]').textContent).toContain('Sprachkanal')
+    expect(q('[aria-pressed="true"]').textContent).toContain('Talk (Sprache)')
   })
 
   it('creates a category right below the one whose menu was used', async () => {

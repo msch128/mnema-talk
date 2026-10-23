@@ -4,7 +4,7 @@ import { openCryptoStateStore } from './stateStore.ts'
 import type { CryptoGroupRecord, CryptoSendInput, CryptoStateStore, FreshCryptoContext, OpenCryptoStateOptions } from './stateStore.ts'
 
 // A lock-manager platform fixture; native same-origin locking is additionally
-// verified by the Chromium harness documented in doc/crypto-state.md.
+// verified by the Chromium harness (e2e/tests/crypto-state.spec.ts).
 function lockManager(): Pick<LockManager, 'request'> {
   const owners = new Set<string>()
   function request<T>(name: string, callback: LockGrantedCallback<T>): Promise<Awaited<T>>

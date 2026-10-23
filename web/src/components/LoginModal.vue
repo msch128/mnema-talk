@@ -6,6 +6,7 @@ import { LogIn, UserPlus } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import LegalModal from './LegalModal.vue'
 import ForgotPasswordDialog from './ForgotPasswordDialog.vue'
+import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
 import SecondFactorStep from './SecondFactorStep.vue'
 import { useDialog } from '../composables/useDialog'
 import { t, locale, chooseLocale, SUPPORTED } from '../i18n'
@@ -97,6 +98,11 @@ async function handleSubmit() {
         isLoading.value = false
         return
       }
+      if ([...submittedPassword].length < MIN_PASSWORD_LENGTH) {
+        errorMsg.value = t('errors.detail.passwordMin', { count: MIN_PASSWORD_LENGTH })
+        isLoading.value = false
+        return
+      }
       await authStore.register(submittedUsername, submittedDisplayName || submittedUsername, submittedPassword, submittedInviteCode)
     } else {
       const outcome = await authStore.login(submittedUsername, submittedPassword)
@@ -183,10 +189,11 @@ async function handleSubmit() {
             v-model="password"
             type="password"
             required
-            autocomplete="current-password"
+            :autocomplete="isRegister ? 'new-password' : 'current-password'"
             placeholder="••••••••"
             class="w-full bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary outline-none focus:border-mnema-accent transition"
           />
+          <p v-if="isRegister" class="mt-1.5 text-xs text-mnema-tertiary" data-testid="password-hint">{{ $t('login.passwordHint', { count: MIN_PASSWORD_LENGTH }) }}</p>
           <button
             v-if="!isRegister && canResetPassword"
             type="button"

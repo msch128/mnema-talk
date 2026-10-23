@@ -194,6 +194,28 @@ describe('chat store history paging', () => {
     expect(chat.messages).toEqual([])
   })
 
+  it('sends a message without its reply when the message replied to is gone', async () => {
+    const chat = useChatStore()
+    chat.activeChannel = channelFixture({ id: CHANNEL_ID, type: 'text' })
+    const refusal = () => new Response(JSON.stringify({ error: { code: 'INVALID_INPUT', message: 'message to reply to not found' } }), { status: 400 })
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockImplementationOnce(async () => refusal())
+      .mockImplementation(async () => new Response(JSON.stringify(messageFixture({ channel_id: CHANNEL_ID })), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    await chat.sendMessage('hey', null, 'gone')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(JSON.parse(String(required(fetchMock.mock.calls[1])[1]?.body))).toEqual({ content: 'hey' })
+  })
+
+  it('reports the refusal when the message is invalid for another reason too', async () => {
+    const chat = useChatStore()
+    chat.activeChannel = channelFixture({ id: CHANNEL_ID, type: 'text' })
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => new Response(JSON.stringify({ error: { code: 'INVALID_INPUT', message: 'content too long' } }), { status: 400 }))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(chat.sendMessage('hey', null, 'orig')).rejects.toMatchObject({ status: 400 })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it('sends reply_to_id with messages and uploads', async () => {
     const chat = useChatStore()
     chat.activeChannel = channelFixture({ id: CHANNEL_ID, type: 'text' })

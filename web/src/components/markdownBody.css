@@ -65,7 +65,11 @@
 }
 .markdown-body .md-codeblock-wrap:hover .md-code-tools,
 .markdown-body .md-code-tools:focus-within { opacity: 1; }
-@media (hover: none) { .markdown-body .md-code-tools { opacity: 0.85; } }
+/* Touch screens have no hover: the toolbar stays visible, so give it a row of its own above the code. */
+@media (hover: none) {
+  .markdown-body .md-code-tools { opacity: 0.85; }
+  .markdown-body .md-codeblock-wrap .md-codeblock { padding-top: 1.75rem; }
+}
 .markdown-body .md-code-lang { text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.6; }
 .markdown-body .md-copy {
   padding: 0.25rem 0.5rem;
@@ -156,6 +160,7 @@
   display: inline-block;
 }
 .md-spoiler:hover { background-color: #35373c; }
+.md-spoiler:focus-visible { outline: 2px solid #2da771; outline-offset: 1px; }
 /* Hidden content stays hidden and inert (links inside must not open, mentions must not click). */
 .md-spoiler:not(.revealed) * {
   color: transparent !important;

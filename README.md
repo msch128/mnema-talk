@@ -1,21 +1,50 @@
 # Mnema Talk
 
-**A small, self-hosted home for one community.** Text channels, drop-in Talks
-and screen sharing up to 4K at 60 FPS, in one Go binary that you run on your
-own server or NAS. Invite-only, no accounts on someone else's platform, no
-transcoding, and microphone, camera and screen are end-to-end encrypted
-against the server that relays them.
+**A small, self-hosted home for one community: text channels, drop-in Talks
+and screen sharing up to 4K at 60 FPS, in one Go binary.**
 
-Mnema Talk is not a Discord clone. It has one community instead of many
-servers, no direct messages, no ringing, and its own quiet, dark design. It
-keeps the parts that make a community server useful: roles, private channels,
-webhooks and a call you can join with one click.
+[![CI](https://github.com/msch128/mnema-talk/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/msch128/mnema-talk/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/msch128/mnema-talk)](https://github.com/msch128/mnema-talk/releases/latest)
+[![License: AGPL v3](https://img.shields.io/github/license/msch128/mnema-talk)](LICENSE)
+[![Go version](https://img.shields.io/github/go-mod/go-version/msch128/mnema-talk)](go.mod)
 
-![Mnema Talk: a text channel with replies, reactions and a code block](doc/images/chat.png)
+![Mnema Talk: the #dev-log channel of a small game studio, with a code block, reactions, an @mention and a thread under a bug report](doc/images/chat.png)
 
-[Features](#features) · [Quickstart](#quickstart) · [Security model](#security-and-privacy) ·
-[Desktop client](#desktop-client) · [Documentation](#documentation) ·
-[Development](#development)
+Mnema Talk is a self-hosted alternative to Discord for a group that wants its
+own place: friends, a club, a guild or a small team. It has one community
+instead of many servers, no direct messages, no ringing and its own quiet, dark
+design. It keeps the parts that make a community server useful: roles, private
+channels, webhooks, bots and a call you can join with one click. Invite-only,
+no accounts on someone else's platform.
+
+**[Download the desktop app (Beta, unsigned)](https://github.com/msch128/mnema-talk-desktop/releases/latest)**: Windows, macOS and Linux installers live in their own repository; releases here carry the Docker image and the signed web bundle. Prefer the browser? Nothing to install, see [Quick start](#quick-start) to host it.
+
+[Why Mnema](#why-mnema) · [Features](#features) · [Quick start](#quick-start) ·
+[Desktop (Beta)](#desktop-beta) · [Documentation](#documentation) ·
+[Security](#security-and-privacy) · [Contributing](#contributing)
+
+## Why Mnema
+
+- **Yours, and small to run.** One Go binary with the web app built in, plus
+  PostgreSQL and S3-compatible storage (SeaweedFS by default): three
+  containers on a NAS, a Raspberry Pi or a small VPS (linux/amd64 and arm64).
+  Low idle memory, no transcoding.
+- **Media is end-to-end encrypted.** Microphone, camera and screen are sealed
+  in the browser with MLS-derived keys, so an honest server that relays them
+  cannot read them. Text messages are *not* end-to-end encrypted and stay
+  readable by the server, by design.
+- **Screen sharing built for quality.** Share the source up to 4K at 60 FPS
+  (hardware encoding in the browser, so the result depends on your machine and
+  network). Each viewer picks a quality layer or leaves it on Auto, and
+  watching is opt-in. Our tests use synthetic capture, not real 4K/60 hardware.
+- **Privacy you can check.** No telemetry (the optional release check is the
+  only call home and can be turned off), no third-party STUN unless you
+  configure it, nothing deleted or recorded unless you turn it on, and members
+  can export and delete their own data themselves.
+- **Honest about its limits.** The browser app is the primary client; the
+  desktop client is Beta and unsigned; 1.0 had an internal security review,
+  not an external audit. The status of every area is in
+  [doc/product-status.md](doc/product-status.md).
 
 ## Features
 
@@ -35,9 +64,9 @@ webhooks and a call you can join with one click.
 - **No transcoding.** A Pion-based forwarding unit (SFU) copies RTP packets;
   see [doc/architecture.md](doc/architecture.md).
 
-| Talk with a screen share and the quality picker | Safety code for the call |
+| A Talk where one member shares a code editor, with the viewing quality menu | The connection details with the safety code and the members holding the keys |
 |---|---|
-| ![A Talk with a shared screen and the viewing quality menu](doc/images/talk-screenshare.png) | ![Connection details with the safety code and the members holding the keys](doc/images/safety-code.png) |
+| ![The Stand-up Talk: Theo shares his editor, Maren watches and picks a viewing quality](doc/images/talk-screenshare.png) | ![Connection details of the Stand-up Talk with the safety code and the three members holding the keys](doc/images/safety-code.png) |
 
 ### Chat
 
@@ -45,19 +74,49 @@ webhooks and a call you can join with one click.
   back), threads, reactions, emoji, @mentions, file and image attachments,
   link cards, search, typing notices, unread and mention markers,
   per-channel notification settings and presence with a status line.
+- **Pinned messages, polls and slash commands** (`/poll` and others), **custom
+  emoji** managed by the community, **edit history** for moderators, **drafts**
+  that survive a reload and a **jump to the first unread message**.
+- **Installable web app with Web Push** notifications, and a layout for phones.
+- **Rules and onboarding** that new members accept before they write.
 - One community with categories, text channels and Talks. Every Talk has its
   own text chat.
 - Upload size is up to the Owner: a global limit and an optional limit per
   role, within the `MAX_UPLOAD_SIZE_MB` ceiling.
 - German and English, chosen per account.
 
-### Security and privacy
+| A thread under a message | Unread divider and an @mention |
+|---|---|
+| ![The thread under Priya's bug report in #dev-log, with four replies](doc/images/thread.png) | ![#general with a line "New since" above the messages that arrived after the last visit, and an @mention highlighted](doc/images/unread.png) |
+
+| Pinned rules and release schedule | A poll with votes |
+|---|---|
+| ![The pinned messages of #announcements: the rules and the release schedule](doc/images/pins.png) | ![A poll in #playtests asking which day the next playtest should be, with voters listed](doc/images/poll.png) |
+
+| The studio's own emoji | The phone layout |
+|---|---|
+| ![The emoji picker with the community's custom emoji in its first group](doc/images/emoji-picker.png) | ![#dev-log on a phone: a code block, an @mention and the thread link](doc/images/phone.png) |
+
+### Supported browsers
+
+Chromium-based browsers (Chrome, Edge 137+), Safari 17+ (including iOS 17+ and
+the installed web app) and Firefox 129+ run the whole app. A browser that cannot
+seal media does not join a Talk at all, it never sends unsealed media. Chromium
+is tested in CI; Safari/WebKit and Firefox calls pass locally but are not all
+required CI checks, and nothing is tested on real iOS or Android hardware.
+Details: [Browsers in product-status.md](doc/product-status.md#browsers).
+
+### Encryption and privacy
 
 - **Media is end-to-end encrypted** in the browser with keys from an MLS
   group: microphone, camera, screen video and screen audio. Keys rotate every
   30 minutes, every sealed frame is signed by its sender, and a **safety code**
   in the connection details lets members compare keys out of band.
 - **Invite-only.** There is no public registration.
+- **Accounts you control.** Optional e-mail (password reset needs SMTP),
+  two-factor sign-in with recovery codes, and self-service export and deletion
+  of your own data.
+
 - **Hardened by default**: `HttpOnly` session cookies with revocation, CSRF
   origin check, strict CSP, upload content sniffing, rate limits and login
   lockout, an SSRF guard for outgoing webhooks, and an app port that only
@@ -66,6 +125,8 @@ webhooks and a call you can join with one click.
   deletion unless enabled (`MEDIA_RETENTION_DAYS=0`), no telemetry (the optional release check is the only call home, and it can be
   turned off).
 - Release images are signed with cosign and ship provenance and an SBOM.
+
+![Turning on two-factor sign-in: a QR code for the authenticator app, the manual key and a field for the first code](doc/images/two-factor.png)
 
 ### Administration
 
@@ -89,7 +150,7 @@ webhooks and a call you can join with one click.
 
 | Roles and permissions | Webhook settings |
 |---|---|
-| ![The roles editor with the Moderator role selected](doc/images/roles.png) | ![The webhooks dialog of a channel with an incoming webhook's settings](doc/images/webhooks.png) |
+| ![The roles editor with the Devs role selected, next to Moderator, Artists and the other roles](doc/images/roles.png) | ![The webhooks dialog of #dev-log with the build bot's incoming webhook and its settings](doc/images/webhooks.png) |
 
 ### Operations
 
@@ -107,25 +168,20 @@ webhooks and a call you can join with one click.
 - Optional TURN relay (`coturn` profile) and a self-update sidecar
   (`autoupdate` profile, off by default).
 
-![The admin System tab with live operations charts](doc/images/operations.png)
+![The admin System tab with live operations charts while a Talk with a screen share is running](doc/images/operations.png)
 
-## Quickstart
+## Quick start
 
 You need a Linux host with Docker and Docker Compose, a domain with HTTPS
-(through a reverse proxy) and a UDP port range open for voice.
+(through a reverse proxy) and a UDP port range open for voice. No clone and no
+build are needed: [Fresh install in doc/deployment.md](doc/deployment.md#fresh-install)
+downloads the compose file and `.env.example` of a release, lists the few
+values to set (`PUBLIC_URL`, `JWT_SECRET`, `POSTGRES_PASSWORD`,
+`S3_ACCESS_KEY` / `S3_SECRET_KEY`, `ADMIN_INITIAL_PASSWORD`) and starts the
+published image (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.0`, a pinned patch
+version or `:latest`). CI runs those exact steps.
 
-```sh
-git clone https://github.com/msch128/mnema-talk.git && cd mnema-talk
-cp .env.example .env
-# edit .env: PUBLIC_URL, JWT_SECRET (openssl rand -hex 32), POSTGRES_PASSWORD,
-# S3_ACCESS_KEY / S3_SECRET_KEY and ADMIN_INITIAL_PASSWORD (14+ characters)
-docker compose up -d --build      # or: make up
-```
-
-To run a published image instead of building, set
-`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:0.8` in `.env` and use
-`docker compose pull app && docker compose up -d`
-([doc/deployment.md](doc/deployment.md)).
+Building from source is for development; see [Development](#development).
 
 Open `PUBLIC_URL`, sign in as the Owner (default username `Herzog`, set with
 `ADMIN_USERNAME`) and create invite codes for your members.
@@ -165,7 +221,7 @@ proxy settings, TURN and troubleshooting:
 Take a backup before every update (`scripts/backup.sh`; restore with
 `scripts/restore.sh`, which can verify a backup in a disposable container
 first). Migrations run at startup and are forward-only. Per-version notes,
-including the move from 0.7 to 0.8, and the rollback procedure are in
+including the move from 0.9 to 1.0, and the rollback procedure are in
 [doc/upgrade.md](doc/upgrade.md). Admins see new releases in the System tab; an
 optional update button needs the `autoupdate` profile.
 
@@ -185,20 +241,20 @@ In a few honest sentences:
   turn retention on.
 - **The desktop client removes server-served JavaScript**: it runs a signed web
   bundle that it verifies itself, so the server supplies data, never code.
-- Transport is HTTPS and DTLS-SRTP. The project is pre-1.0 and has had an
-  internal security review, not an external audit.
+- Transport is HTTPS and DTLS-SRTP. 1.0 has had an internal six-lane security
+  review, not an external audit ([SECURITY.md](SECURITY.md#10-internal-security-review)).
 
 The full model, its limits and how to report a vulnerability privately are in
 [SECURITY.md](SECURITY.md); the product's test scope is in
 [doc/product-status.md](doc/product-status.md).
 
-## Desktop client
+## Desktop (Beta)
 
-The [Windows desktop client](https://github.com/msch128/mnema-talk-desktop)
-(**Beta**, unsigned) wraps the same web app. Instead of loading code from
+The [desktop client](https://github.com/msch128/mnema-talk-desktop) for Windows,
+macOS and Linux (**Beta**, unsigned) wraps the same web app. Instead of loading code from
 your server it runs a **signed bundle** that it verifies on every start, with
 rollback protection and a security floor, and keeps the session in the OS
-keychain. It adds a gaming sidepeek and an `Alt+M` overlay for your Talk. The
+keychain. On Windows it adds a gaming sidepeek and an `Alt+M` overlay for your Talk. The
 browser app remains the primary, fully supported client. The installers are
 not code-signed (no paid certificate), so Windows SmartScreen and macOS
 Gatekeeper warn on first start; the steps are in
@@ -209,21 +265,24 @@ and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client
 
 | Topic | Where |
 |---|---|
+| **Read first when updating:** what 1.0 promises and what to do before updating | [doc/release-notes-1.0.md](doc/release-notes-1.0.md) |
 | Components, data flow, capacity | [doc/architecture.md](doc/architecture.md) |
 | Configuration, reverse proxy, TURN, backups, metrics and alerts, troubleshooting | [doc/operations.md](doc/operations.md) |
 | Ports, image tags, platforms, updating | [doc/deployment.md](doc/deployment.md) |
 | Upgrade notes per version, rollback | [doc/upgrade.md](doc/upgrade.md) |
 | Roles, permissions and private channels | [doc/roles-and-permissions.md](doc/roles-and-permissions.md) |
+| Product vocabulary (en/de) used in the UI and docs | [doc/glossary.md](doc/glossary.md) |
 | Moderation and the audit log | [doc/moderation.md](doc/moderation.md) |
 | Webhooks (incoming and outgoing) | [doc/webhooks.md](doc/webhooks.md) |
 | Bots, the bot API and gateway | [doc/bots.md](doc/bots.md) |
 | What is public API and how it may change (1.0 stability promise) | [doc/api-stability.md](doc/api-stability.md) |
-| Where media keys live in the browser | [SECURITY.md](SECURITY.md) |
-| Unused persistence foundation | [doc/crypto-state.md](doc/crypto-state.md) |
+| Where media keys live in the browser | [SECURITY.md](SECURITY.md#security-model-summary) |
+| Web client code (TypeScript) | [doc/typescript.md](doc/typescript.md) |
 | Trusted desktop client, gaming overlay | [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md), [doc/desktop-app.md](doc/desktop-app.md) |
 | Load test | [loadtest/README.md](loadtest/README.md) |
 | Product status and acceptance | [doc/product-status.md](doc/product-status.md) |
 | Building, testing, CI, releases | [doc/development.md](doc/development.md) |
+| Contributing, conduct and getting help | [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), [SUPPORT.md](SUPPORT.md) |
 | API reference | `API_DOCS_ENABLED=true` serves it at `/api/docs` to signed-in members |
 
 ## Development
@@ -245,13 +304,13 @@ TypeScript; PostgreSQL 18; S3-compatible storage. More in
 
 ## Contributing
 
-Pull requests are welcome. The repository is public: never commit secrets,
-databases or uploads. Use conventional commits (`feat:`, `fix:`, `docs:`);
-release-please derives versions and the changelog from them. `main` is
-protected, so changes land through a pull request with green checks and a
-squash merge. Read [AGENTS.md](AGENTS.md) first, it applies to people and AI
-agents alike. Report vulnerabilities privately as described in
-[SECURITY.md](SECURITY.md).
+Pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) has the setup
+(`make dev`), the quality gates, the commit conventions and how pull requests
+go into release branches; [AGENTS.md](AGENTS.md) holds the full rules and
+applies to people and AI agents alike. The repository is public: never commit
+secrets, databases or uploads. Please follow the
+[Code of Conduct](CODE_OF_CONDUCT.md). Questions: [SUPPORT.md](SUPPORT.md).
+Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 

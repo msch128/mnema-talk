@@ -4,7 +4,7 @@
 # loopback ports, seeds users/channels/messages, captures with Playwright and
 # tears everything down. Same pattern as e2e/run.sh.
 #   SKIP_BUILD=1   reuse web/dist and bin/mnema-talk-shots
-#   SHOTS_ONLY="chat roles"   capture only these (chat roles webhooks talk safety-code operations)
+#   SHOTS_ONLY="chat roles"   capture only these (chat thread unread roles webhooks pins poll emoji-picker two-factor phone talk safety-code operations)
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -38,7 +38,7 @@ fi
 # env -i keeps a developer's .env/shell secrets out of the demo server.
 env -i PATH="$PATH" HOME="$HOME" APP_ENV=development PORT="$APP_PORT" BIND_ADDR=127.0.0.1 \
   PUBLIC_URL="http://127.0.0.1:$APP_PORT" JWT_SECRET="$(openssl rand -hex 32)" \
-  ADMIN_USERNAME=Herzog ADMIN_INITIAL_PASSWORD="$PASSWORD" \
+  ADMIN_USERNAME=maren ADMIN_INITIAL_PASSWORD="$PASSWORD" \
   DATABASE_URL="postgres://mnema:mnema@127.0.0.1:$PG_PORT/mnema_e2e?sslmode=disable" \
   S3_ENDPOINT="http://127.0.0.1:$S3_PORT" S3_BUCKET=mnema-shots S3_ACCESS_KEY=shotskey1 S3_SECRET_KEY=shotssecret12 S3_FORCE_PATH_STYLE=true \
   WEBHOOK_ALLOW_PRIVATE_TARGETS=127.0.0.0/8 LINK_PREVIEWS_ENABLED=false UPDATE_CHECK_ENABLED=false \

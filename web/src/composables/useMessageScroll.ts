@@ -11,6 +11,10 @@ interface ScrollAnchor { id: string | undefined; offset: number }
 const LOAD_THRESHOLD_PX = 600
 // "At the bottom" for auto-stick on new messages.
 const STICK_THRESHOLD_PX = 80
+// After a jump, a late-loading image above the target keeps the target centred
+// for this long, unless the person scrolls first.
+const JUMP_SETTLE_MS = 4000
+const USER_SCROLL_EVENTS = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const
 
 function distanceFromBottom(el: HTMLElement) {
   return el.scrollHeight - el.scrollTop - el.clientHeight
@@ -119,6 +123,7 @@ function useStickyBottom(container: Ref<HTMLElement | null>) {
 
   return {
     pin() { stickToBottom = true },
+    isPinned: () => stickToBottom,
     // Scroll events caused by a pending resize (scrollTop clamping) must not
     // clear the stick flag before the ResizeObserver re-pins the view.
     syncFromScroll(el: HTMLElement, atBottom: boolean) {
@@ -208,6 +213,45 @@ function watchWindowChanges(ops: WindowScrollOps) {
   )
 }
 
+/**
+ * Images and videos have no stored size, so they grow the list when they
+ * arrive, after the view was already placed. Keep it where the person was
+ * sent: on the message a jump landed on (until they scroll themselves), or at
+ * the bottom while they are parked there.
+ */
+function useLateMedia(container: Ref<HTMLElement | null>, isPinned: () => boolean) {
+  let settling: { id: string; until: number } | null = null
+
+  function onMediaSized() {
+    const el = container.value
+    if (!el) return
+    if (settling && Date.now() < settling.until) {
+      findRow(el, settling.id)?.scrollIntoView({ block: 'center' })
+    } else if (isPinned()) {
+      el.scrollTop = el.scrollHeight
+    }
+  }
+  function onUserScroll() { settling = null }
+
+  return {
+    settleOn(id: string) { settling = { id, until: Date.now() + JUMP_SETTLE_MS } },
+    attach() {
+      const el = container.value
+      if (!el) return
+      // load and loadedmetadata do not bubble, but they can be caught on the way down.
+      el.addEventListener('load', onMediaSized, true)
+      el.addEventListener('loadedmetadata', onMediaSized, true)
+      for (const name of USER_SCROLL_EVENTS) el.addEventListener(name, onUserScroll, { passive: true })
+    },
+    detach() {
+      const el = container.value
+      el?.removeEventListener('load', onMediaSized, true)
+      el?.removeEventListener('loadedmetadata', onMediaSized, true)
+      for (const name of USER_SCROLL_EVENTS) el?.removeEventListener(name, onUserScroll)
+    }
+  }
+}
+
 export function useMessageScroll(container: Ref<HTMLElement | null>) {
   const chatStore = useChatStore()
   const showUnreadPill = ref(false)
@@ -234,10 +278,13 @@ export function useMessageScroll(container: Ref<HTMLElement | null>) {
     nextTick(scrollToBottomNow)
   }
 
+  const lateMedia = useLateMedia(container, sticky.isPinned)
+
   function scrollToMessage(id: string) {
     const row = findRow(container.value, id)
     if (!row) return
     row.scrollIntoView({ block: 'center' })
+    lateMedia.settleOn(id)
     flashMessage(id)
   }
 
@@ -270,9 +317,11 @@ export function useMessageScroll(container: Ref<HTMLElement | null>) {
   onMounted(() => {
     scrollToBottom()
     sticky.observe()
+    lateMedia.attach()
   })
 
   onUnmounted(() => {
+    lateMedia.detach()
     sticky.disconnect()
     clearHighlightTimer()
     if (scrollFrame) cancelAnimationFrame(scrollFrame)

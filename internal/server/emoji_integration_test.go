@@ -4,6 +4,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"image"
 	"image/color"
 	"image/gif"
@@ -195,11 +196,28 @@ func TestRenamedAndDeletedEmojiAreAuditedAndAnnounced(t *testing.T) {
 	}
 }
 
+func TestAnUploadedEmojiIsNamedInTheAuditEntry(t *testing.T) {
+	a, _, manager := emojiFixture(t, nil)
+	var e emojiJSON
+	uploadEmoji(manager, "party", "x.png", "image/png", squarePNG(t, 32)).decode(t, &e)
+	var name, shown string
+	err := a.db.QueryRow(context.Background(),
+		`SELECT target_name, details->'after'->>'name' FROM audit_log WHERE action = 'emoji.create' AND target_id = $1`, e.ID.String()).Scan(&name, &shown)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if name != "party" || shown != "party" {
+		t.Fatalf("the entry names the emoji: target %q, after.name %q", name, shown)
+	}
+}
+
 func TestCustomEmojiCanBeUsedAsAReaction(t *testing.T) {
-	a, admin, _ := emojiFixture(t, nil)
+	a, admin, manager := emojiFixture(t, nil)
 	ch := a.createChannel(admin, "general", "text")
 	msg := a.send(admin, ch, "hello")
-	token := emojitext.Token("party", uuid.New())
+	var e emojiJSON
+	uploadEmoji(manager, "party", "x.png", "image/png", squarePNG(t, 32)).decode(t, &e)
+	token := emojitext.Token("party", e.ID)
 	res := admin.post("/api/messages/"+msg.String()+"/reactions", map[string]string{"emoji": token})
 	var out struct {
 		Reactions []struct{ Emoji string } `json:"reactions"`
@@ -207,6 +225,39 @@ func TestCustomEmojiCanBeUsedAsAReaction(t *testing.T) {
 	res.decode(t, &out)
 	if res.status != http.StatusOK || len(out.Reactions) != 1 || out.Reactions[0].Emoji != token {
 		t.Fatalf("reaction: %d %s", res.status, res.body)
+	}
+}
+
+func TestADeletedEmojiCanBeTakenBackButNotAddedAgain(t *testing.T) {
+	a, admin, manager := emojiFixture(t, nil)
+	ch := a.createChannel(admin, "general", "text")
+	msg := a.send(admin, ch, "hello")
+	var e emojiJSON
+	uploadEmoji(manager, "party", "x.png", "image/png", squarePNG(t, 32)).decode(t, &e)
+	token := emojitext.Token("party", e.ID)
+	path := "/api/messages/" + msg.String() + "/reactions"
+	if res := admin.post(path, map[string]string{"emoji": token}); res.status != http.StatusOK {
+		t.Fatalf("react: %d %s", res.status, res.body)
+	}
+	if res := manager.delete("/api/admin/emoji/" + e.ID.String()); res.status != http.StatusNoContent {
+		t.Fatalf("delete: %d", res.status)
+	}
+
+	// Somebody else cannot add the deleted emoji any more, with its real or a made-up token.
+	other := a.register(admin, "latecomer")
+	for _, forged := range []string{token, emojitext.Token("whatever", uuid.New())} {
+		if res := other.post(path, map[string]string{"emoji": forged}); res.status != http.StatusBadRequest || !strings.Contains(string(res.body), "invalid emoji") {
+			t.Fatalf("adding %s: %d %s", forged, res.status, res.body)
+		}
+	}
+	// The member who reacted can still take it back.
+	res := admin.post(path, map[string]string{"emoji": token})
+	var out struct {
+		Reactions []struct{ Emoji string } `json:"reactions"`
+	}
+	res.decode(t, &out)
+	if res.status != http.StatusOK || len(out.Reactions) != 0 {
+		t.Fatalf("taking back: %d %s", res.status, res.body)
 	}
 }
 

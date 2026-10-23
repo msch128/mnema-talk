@@ -175,7 +175,7 @@ async function handleSubmit() {
 
       <!-- 3. Name -->
       <div class="space-y-1.5">
-        <label for="channel-name" class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono block">{{ $t('channel.name') }}</label>
+        <label for="channel-name" class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono block">{{ $t('common.name') }}</label>
         <div class="relative flex items-center">
           <span class="absolute left-3 text-mnema-tertiary select-none" aria-hidden="true">
             <Hash v-if="channelType === 'text'" class="w-4 h-4" />
