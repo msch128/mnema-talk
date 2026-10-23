@@ -11,4 +11,8 @@ const (
 	BannerMinHeight = 100
 	// AvatarMaxEdge is the largest stored avatar (a square).
 	AvatarMaxEdge = 512
+	// LegacyMaxEdge and LegacyMaxPixels bound the canvas of an avatar stored
+	// before 1.1 that is redrawn once (see ProcessLegacyAvatar).
+	LegacyMaxEdge   = 30000
+	LegacyMaxPixels = 64 << 20
 )

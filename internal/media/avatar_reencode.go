@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/imgproc"
 )
@@ -29,11 +30,11 @@ const (
 )
 
 // StartAvatarReencode redraws every avatar that still is the uploaded file.
-func StartAvatarReencode(ctx context.Context, p *db.Pool, store Store, bucket string) {
+func StartAvatarReencode(ctx context.Context, p *db.Pool, store Store, bucket string, log *audit.Log) {
 	if store == nil {
 		return
 	}
-	h := &Handler{DB: p, Store: store, Bucket: bucket}
+	h := &Handler{DB: p, Store: store, Bucket: bucket, Audit: log}
 	go runPeriodically(ctx, avatarReencodeFirstRun, avatarReencodeInterval, func(ctx context.Context) {
 		done, failed, err := h.ReencodeAvatars(ctx)
 		switch {
@@ -53,8 +54,8 @@ type storedAvatar struct {
 
 // ReencodeAvatars redraws the avatars not yet marked and returns how many it
 // finished and how many it could not reach (storage trouble; the next run
-// tries again). A picture that cannot be decoded is marked as done and kept:
-// there is nothing to redraw it from.
+// tries again). A picture that cannot be decoded even with the relaxed limits
+// of a legacy file is removed (never kept, its metadata would stay public).
 func (h *Handler) ReencodeAvatars(ctx context.Context) (done, failed int, err error) {
 	tried := []uuid.UUID{}
 	for ctx.Err() == nil {
@@ -102,14 +103,39 @@ func (h *Handler) reencodeAvatar(ctx context.Context, a storedAvatar) error {
 	}
 	pic, err := imgproc.ProcessAvatar(data)
 	if errors.Is(err, imgproc.ErrImage) {
-		slog.Warn("an old avatar cannot be redrawn and is kept as it is", "user_id", a.userID, "err", err)
-		_, err = h.DB.Exec(ctx, `UPDATE users SET avatar_reencoded_at = NOW() WHERE id = $1 AND avatar_s3_key = $2`, a.userID, a.mediaID)
-		return err
+		// Outside today's limits (a huge canvas, a long animation): old files
+		// were accepted, so redraw what can still be drawn, first frame only.
+		pic, err = imgproc.ProcessLegacyAvatar(data)
+	}
+	if errors.Is(err, imgproc.ErrImage) {
+		return h.removeUnreadableAvatar(ctx, a, err)
 	}
 	if err != nil {
 		return err
 	}
 	return h.swapAvatar(ctx, a, pic)
+}
+
+// removeUnreadableAvatar removes an avatar that cannot be redrawn: keeping
+// the original would keep its metadata public. The member can set a new one.
+func (h *Handler) removeUnreadableAvatar(ctx context.Context, a storedAvatar, reason error) error {
+	var cleared bool
+	err := pgx.BeginFunc(ctx, h.DB, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `UPDATE users SET avatar_s3_key = NULL, updated_at = NOW() WHERE id = $1 AND avatar_s3_key = $2`, a.userID, a.mediaID)
+		cleared = tag.RowsAffected() == 1
+		return err
+	})
+	if err != nil || !cleared {
+		return err
+	}
+	mediaID := a.mediaID
+	h.deletePreviousAvatar(ctx, &mediaID)
+	h.Audit.RecordOrLog(ctx, audit.Entry{
+		Action: "media.avatar_removed", TargetType: "user", TargetID: a.userID.String(),
+		Details: map[string]any{"reason": "the stored avatar could not be re-encoded without its metadata: " + reason.Error()},
+	})
+	slog.Warn("an old avatar could not be redrawn and was removed", "user_id", a.userID, "err", reason)
+	return nil
 }
 
 // swapAvatar writes the redrawn picture, points the account at it and only

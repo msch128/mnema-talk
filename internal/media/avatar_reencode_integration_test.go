@@ -8,10 +8,12 @@ import (
 	"errors"
 	"image"
 	"image/jpeg"
+	"image/png"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/audit"
 )
 
 const exifMarker = "camera-model-and-place-in-exif"
@@ -89,15 +91,60 @@ func TestOldAvatarsLoseTheirMetadataOnceAfterTheUpdate(t *testing.T) {
 	}
 }
 
-func TestAvatarThatCannotBeRedrawnIsKeptAndNotRetried(t *testing.T) {
+func (f *mediaFixture) avatarKey(t *testing.T) *string {
+	t.Helper()
+	var key *string
+	if err := f.p.QueryRow(context.Background(), `SELECT avatar_s3_key FROM users WHERE id=$1`, f.user.ID).Scan(&key); err != nil {
+		t.Fatal(err)
+	}
+	return key
+}
+
+func TestOldAvatarOutsideTodaysLimitsIsStillRedrawn(t *testing.T) {
 	f := mediaDB(t)
-	_, key := f.oldAvatar(t, []byte("not a picture at all"), "image/png")
+	// 8200 pixels wide was fine in 1.0 and is over the limit for new uploads.
+	var wide bytes.Buffer
+	if err := png.Encode(&wide, image.NewNRGBA(image.Rect(0, 0, 8200, 40))); err != nil {
+		t.Fatal(err)
+	}
+	_, oldKey := f.oldAvatar(t, wide.Bytes(), "image/png")
 	done, failed, err := f.h.ReencodeAvatars(context.Background())
 	if err != nil || done != 1 || failed != 0 {
 		t.Fatalf("job: done=%d failed=%d err=%v", done, failed, err)
 	}
-	if got, marked := f.avatarState(t); got != key || !marked || !f.store.Has(key) {
-		t.Fatalf("kept as it was, but marked: %s %v", got, marked)
+	key, marked := f.avatarState(t)
+	if key == oldKey || !marked || f.store.Has(oldKey) {
+		t.Fatalf("redrawn, marked, old file gone: %s %v", key, marked)
+	}
+	body, err := f.store.GetObjectFrom(context.Background(), key, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer body.Close()
+	if cfg, err := png.DecodeConfig(body); err != nil || cfg.Width != 40 || cfg.Height != 40 {
+		t.Fatalf("centre square: %v %v", cfg, err)
+	}
+}
+
+func TestOldAvatarThatCannotBeReadAtAllIsRemoved(t *testing.T) {
+	f := mediaDB(t)
+	f.h.Audit = &audit.Log{DB: f.p}
+	// A real EXIF block around a body no decoder understands.
+	broken := append(jpegWithEXIF(t)[:200:200], bytes.Repeat([]byte{0xAB}, 64)...)
+	_, key := f.oldAvatar(t, broken, "image/jpeg")
+	done, failed, err := f.h.ReencodeAvatars(context.Background())
+	if err != nil || done != 1 || failed != 0 {
+		t.Fatalf("job: done=%d failed=%d err=%v", done, failed, err)
+	}
+	if f.avatarKey(t) != nil || f.store.Has(key) || f.store.Len() != 0 {
+		t.Fatal("the avatar is removed, never kept with its metadata")
+	}
+	var action, reason string
+	if err := f.p.QueryRow(context.Background(), `SELECT action, details->>'reason' FROM audit_log ORDER BY id DESC LIMIT 1`).Scan(&action, &reason); err != nil || action != "media.avatar_removed" || reason == "" {
+		t.Fatalf("audited with a reason: %q %q %v", action, reason, err)
+	}
+	if done, _, _ := f.h.ReencodeAvatars(context.Background()); done != 0 {
+		t.Fatal("nothing left to do")
 	}
 }
 

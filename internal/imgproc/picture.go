@@ -54,6 +54,9 @@ type Picture struct {
 type kind struct {
 	minW, minH int
 	cover      func(image.Image) *image.NRGBA
+	// legacy relaxes the limits for files stored before pictures were
+	// redrawn: a larger canvas, and only the first frame of an animation.
+	legacy bool
 }
 
 // ProcessBanner returns an uploaded PNG, JPEG, GIF or WebP cropped to the
@@ -71,6 +74,13 @@ func ProcessAvatar(data []byte) (*Picture, error) {
 	return process(data, kind{minW: 1, minH: 1, cover: coverAvatar})
 }
 
+// ProcessLegacyAvatar redraws an avatar that was stored as uploaded before
+// 1.1, when no limits applied beyond the file size: a canvas of up to
+// LegacyMaxPixels, and for an animation only its first frame (as a still PNG).
+func ProcessLegacyAvatar(data []byte) (*Picture, error) {
+	return process(data, kind{minW: 1, minH: 1, cover: coverAvatar, legacy: true})
+}
+
 func process(data []byte, k kind) (*Picture, error) {
 	switch {
 	case bytes.HasPrefix(data, []byte("\x89PNG\r\n\x1a\n")):
@@ -78,9 +88,15 @@ func process(data []byte, k kind) (*Picture, error) {
 	case bytes.HasPrefix(data, []byte("\xff\xd8\xff")):
 		return still(data, k, jpeg.DecodeConfig, jpeg.Decode, "image/jpeg")
 	case bytes.HasPrefix(data, []byte("GIF87a")), bytes.HasPrefix(data, []byte("GIF89a")):
+		if k.legacy {
+			return firstGIFFrame(data, k)
+		}
 		return animation(data, k)
 	case len(data) >= 12 && string(data[:4]) == "RIFF" && string(data[8:12]) == "WEBP":
 		if len(data) >= 21 && string(data[12:16]) == "VP8X" && data[20]&0x02 != 0 {
+			if k.legacy {
+				return firstWebPFrame(data, k)
+			}
 			return nil, reject("animated WebP is not supported, use a GIF")
 		}
 		return still(data, k, webp.DecodeConfig, webp.Decode, "image/png")
@@ -93,8 +109,12 @@ func checkCanvas(cfg image.Config, k kind) error {
 	if cfg.Width < k.minW || cfg.Height < k.minH {
 		return reject("the image must be at least %dx%d pixels", k.minW, k.minH)
 	}
-	if cfg.Width > maxEdge || cfg.Height > maxEdge || cfg.Width*cfg.Height > maxPixels {
-		return reject("the image is too large: at most %d pixels on an edge and %d million in total", maxEdge, maxPixels>>20)
+	edge, pixels := maxEdge, maxPixels
+	if k.legacy {
+		edge, pixels = LegacyMaxEdge, LegacyMaxPixels
+	}
+	if cfg.Width > edge || cfg.Height > edge || cfg.Width*cfg.Height > pixels {
+		return reject("the image is too large: at most %d pixels on an edge and %d million in total", edge, pixels>>20)
 	}
 	return nil
 }

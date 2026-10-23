@@ -12,8 +12,8 @@ func TestReencodeJobDoesNothingWithoutStorage(t *testing.T) {
 	f := mediaDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	StartAvatarReencode(ctx, f.p, nil, "bucket")
-	StartAvatarReencode(ctx, f.p, f.store, "bucket") // waits for its first run; cancelled with the context
+	StartAvatarReencode(ctx, f.p, nil, "bucket", nil)
+	StartAvatarReencode(ctx, f.p, f.store, "bucket", nil) // waits for its first run; cancelled with the context
 }
 
 func TestAvatarThatCannotBeWrittenIsRetriedLater(t *testing.T) {

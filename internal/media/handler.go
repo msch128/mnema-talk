@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -35,6 +36,9 @@ type Handler struct {
 	// Perms decides who may upload to and download from which channel; nil
 	// imposes no channel limits (tests; the router always sets it).
 	Perms *perm.Service
+	// Audit records removals the server does on its own (avatars it cannot
+	// redraw); nil records nothing.
+	Audit *audit.Log
 	// Quota bounds the storage uploads may use; the zero value imposes none.
 	Quota Quota
 

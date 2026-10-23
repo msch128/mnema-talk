@@ -237,9 +237,14 @@ server lacks.
   start it processes the accounts without the marker, writes the new file, points
   the account at it and only then deletes the old object (a short extra copy per
   avatar exists meanwhile). It repeats hourly until nothing is left, so a storage
-  outage at start only delays it, and it never touches an avatar twice. An old
-  avatar that cannot be decoded is kept as it is, marked, and logged as a
-  warning. Take the backup first, as always; a rollback to 1.0.x needs the
+  outage at start only delays it, and it never touches an avatar twice. Old files
+  were accepted without limits, so the job is more lenient than an upload: a
+  canvas of up to 30,000 pixels an edge and 64 million in total, and for a long
+  or large animation only its first frame (as a still picture). An old avatar
+  that cannot be decoded even so is **removed** (the file is deleted, the
+  account has no avatar, an audit entry `media.avatar_removed` with the reason
+  is written, Owner and Administrators only): keeping the original would keep its
+  metadata public. The member can set a new avatar. Take the backup first, as always; a rollback to 1.0.x needs the
   restore.
 - **`DELETE /api/users/me/avatar`** (feature `profile.avatar_remove`) and a
   **Remove avatar** button next to **Change avatar**.
