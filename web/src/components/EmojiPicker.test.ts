@@ -59,6 +59,19 @@ describe('EmojiPicker and trigger', () => {
     expect(wrapper.emitted('pick')).toEqual([[expected]])
   })
 
+  it.each([
+    ['sticks out on the left', { left: -20, right: 320 }, '28px 0'],
+    ['sticks out on the right', { left: 800, right: 1140 }, '-124px 0'],
+    ['fits', { left: 100, right: 440 }, '']
+  ])('slides back into the viewport when it %s', async (_name, rect, translate) => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return this.dataset['testid'] === 'emoji-picker' ? { ...rect, top: 0, bottom: 360, width: 340, height: 360, x: rect.left, y: 0, toJSON: () => ({}) } : new DOMRect()
+    })
+    wrapper = mount(EmojiPicker, { attachTo: document.body })
+    await vi.waitFor(() => expect(wrapper.element.querySelector('synthetic-emoji-picker')).not.toBeNull())
+    expect((wrapper.element as HTMLElement).style.translate).toBe(translate)
+  })
+
   it('reports a load failure by closing the picker', async () => {
     state.fail = true
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
