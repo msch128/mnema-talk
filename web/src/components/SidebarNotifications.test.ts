@@ -72,13 +72,13 @@ describe('channel row draft marker', () => {
 describe('server header subtitle', () => {
   it('names the community once the Owner has set a name, and says "private community" before', async () => {
     const header = mount(SidebarServerMenu)
-    expect(header.find('button[aria-controls="server-menu"]').text()).toContain('Private Gemeinschaft')
+    expect(header.find('button[aria-controls="server-menu"]').text()).toContain('Private Community')
     useOnboardingStore().state = onboardingStateFixture({ community_name: 'Mnema Testgemeinschaft' })
     await nextTick()
     const text = header.find('button[aria-controls="server-menu"]').text()
     expect(text).toContain('Mnema Talk')
     expect(text).toContain('Mnema Testgemeinschaft')
-    expect(text).not.toContain('Private Gemeinschaft')
+    expect(text).not.toContain('Private Community')
   })
 })
 
