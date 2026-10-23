@@ -141,6 +141,19 @@ server lacks.
   (the Owner and Administrators have it implicitly).
 - **`GET /api/health` has a `features` list** (for example `"blocks"`,
   `"reports"`, `"slash.builtins"`): the web app uses it to show only what the server supports.
+- **Direct messages** (migration 0050): conversations of two to ten members
+  ([architecture](architecture.md#direct-messages), [SECURITY](../SECURITY.md#direct-messages-privacy-model)).
+  The new permission *Send direct messages* (bit `1 << 22`) is added to
+  @everyone by the migration, so nothing changes for existing roles; an
+  administrator can take it away. The Owner can switch direct messages off for
+  the community (`direct_messages_enabled` in the onboarding settings): existing
+  conversations then stay readable and nothing new can be written. Members
+  choose in their privacy setting (`dm_policy`) who may start conversations with
+  them. A web app from before 1.1 does not ask for conversation events and
+  shows none; a member's push notification still arrives. The numbering of
+  channels and messages is unchanged (private messages are numbered apart).
+  `GET /api/health` lists `dm` in `features`.
+- **New events** `dm_created`, `dm_member_added`, `dm_member_removed`.
 - **Built-in slash commands.** `/me`, `/shrug`, `/tableflip`, `/unflip`, `/spoiler`,
   `/nick`, `/thread`, `/timeout`, `/ban` and `/kick` join `/poll` in the menu
   ([bots](bots.md#built-in-commands-and-polls)). New permission *Kick members*
@@ -148,6 +161,16 @@ server lacks.
   Administrators have it implicitly), and the `kicked` WebSocket event.
 - **New event** `block_updated`, sent only to the blocker's own sessions.
 - **Export** gains `blocks.json` and `reports.json`.
+- **Stricter style policy.** The web app's Content-Security-Policy no longer
+  allows inline styles: `style-src 'unsafe-inline'` became `style-src 'self'`
+  plus `style-src-attr 'none'` (see [SECURITY.md](../SECURITY.md#security-model-summary)
+  under "Security headers"). Nothing to configure. A browser tab that was
+  loaded before the update and is still running the old web app may show the
+  emoji picker unstyled until it is reloaded (installed apps update on their
+  next start). The desktop client serves the signed bundle under its
+  own policy, which is unchanged and still works with the new bundle. The
+  bundle's `security_floor` is not raised: the old policy was defense in depth
+  and older bundles are not exploitable because of it.
 
 ### 1.0.0 → 1.0.1
 

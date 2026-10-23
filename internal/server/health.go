@@ -34,6 +34,7 @@ type Health struct {
 // and never change meaning.
 var Features = []string{
 	"blocks",
+	"dm",
 	"reports",
 	"slash.builtins",
 }

@@ -1266,6 +1266,13 @@
     "dismiss": "Dismiss",
     "builtinLabel": "Built-in",
     "builtin": {
+      "msg": {
+        "description": "Send a direct message",
+        "options": {
+          "member": "Who gets the message",
+          "text": "Your message"
+        }
+      },
       "me": {
         "description": "Describe what you are doing",
         "options": {
@@ -1611,6 +1618,10 @@
     "manage_reports": {
       "name": "Manage reports",
       "desc": "Read and resolve member reports of messages, including the context shared from a direct message."
+    },
+    "send_direct_messages": {
+      "name": "Send direct messages",
+      "desc": "Start direct messages and write in them. Reading a direct message you are in never needs it."
     },
     "kick_members": {
       "name": "Kick members",

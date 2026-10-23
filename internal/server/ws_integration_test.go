@@ -27,7 +27,13 @@ type wsConn struct {
 }
 
 func (c *client) dialWS(origin string) (*wsConn, *http.Response, error) {
-	u := "ws" + strings.TrimPrefix(c.a.srv.URL, "http") + "/api/ws"
+	return c.dialWSQuery(origin, "")
+}
+
+// dialWSQuery is dialWS with a query string on the socket's address (for
+// example "?dm=1", which asks for direct message events).
+func (c *client) dialWSQuery(origin, query string) (*wsConn, *http.Response, error) {
+	u := "ws" + strings.TrimPrefix(c.a.srv.URL, "http") + "/api/ws" + query
 	hdr := http.Header{}
 	if origin != "" {
 		hdr.Set("Origin", origin)
@@ -60,7 +66,12 @@ func (c *client) dialWS(origin string) (*wsConn, *http.Response, error) {
 // presence_snapshot is the hub's greeting to a registered connection.
 func (c *client) dialLiveWS(origin string) *wsConn {
 	c.a.t.Helper()
-	w, _, err := c.dialWS(origin)
+	return c.dialLiveWSQuery(origin, "")
+}
+
+func (c *client) dialLiveWSQuery(origin, query string) *wsConn {
+	c.a.t.Helper()
+	w, _, err := c.dialWSQuery(origin, query)
 	if err != nil {
 		c.a.t.Fatal(err)
 	}

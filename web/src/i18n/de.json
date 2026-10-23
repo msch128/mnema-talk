@@ -1266,6 +1266,13 @@
     "dismiss": "Ausblenden",
     "builtinLabel": "Eingebaut",
     "builtin": {
+      "msg": {
+        "description": "Schicke eine Direktnachricht",
+        "options": {
+          "member": "Wer die Nachricht bekommt",
+          "text": "Deine Nachricht"
+        }
+      },
       "me": {
         "description": "Beschreibe, was du gerade tust",
         "options": {
@@ -1611,6 +1618,10 @@
     "manage_reports": {
       "name": "Meldungen verwalten",
       "desc": "Meldungen von Mitgliedern zu Nachrichten lesen und bearbeiten, auch den Verlauf, der aus einer Direktnachricht mitgeschickt wurde."
+    },
+    "send_direct_messages": {
+      "name": "Direktnachrichten senden",
+      "desc": "Direktnachrichten beginnen und darin schreiben. Zum Lesen einer Direktnachricht, an der du beteiligt bist, wird sie nie gebraucht."
     },
     "kick_members": {
       "name": "Mitglieder rauswerfen",

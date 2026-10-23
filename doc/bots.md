@@ -507,6 +507,12 @@ Today there are these (the web app translates the menu texts):
   the familiar emoticon. They go through the same validation (4000 characters),
   mention rules and slow mode as a message typed in the composer. The result
   carries the `message_id`.
+- **`/msg @member text`** opens (or reuses) the direct message with the member
+  and writes the text there. It runs the service behind `POST /api/dms`, so
+  *Send direct messages*, the community switch, blocks, the member's
+  `dm_policy` and the limits apply, and a refusal about the other member is the
+  route's one text. The member must be able to see the channel the command is
+  run in.
 - **`/nick name`** changes the caller's own display name through the profile
   code (`PUT /api/users/me/profile`): 24 characters at most, the same cleaning
   of the text, the bio stays, `user_update` is broadcast. At most 3 changes in
@@ -531,7 +537,7 @@ permission, and they check it again on the server: a request that names one
 without the right is refused (`404`, the command is not available to the
 caller), and the shared service functions repeat the hierarchy checks. A
 member option accepts only an active, non-bot member who can see the channel.
-The names `poll`, `me`, `shrug`, `tableflip`, `unflip`, `spoiler`, `nick`,
+The names `poll`, `me`, `msg`, `shrug`, `tableflip`, `unflip`, `spoiler`, `nick`,
 `thread`, `timeout`, `ban` and `kick` are taken by built-ins (a bot may
 register a command of the same name, listed next to it). `/tts` is not offered.
 `/giphy` is not built in 1.1: GIF search waits for a provider that allows
@@ -552,6 +558,15 @@ bot gateway or the outgoing webhooks, and not for the author or the Owner.
 `GET .../poll` returns the caller's own votes (the only place an anonymous
 poll shows a member their choice). Push and desktop notifications read
 "Poll: question".
+
+## Direct messages
+
+Bots and webhooks can neither open direct message conversations nor write in
+them in 1.1, and the gateway's `MESSAGE_CREATE`, the outgoing webhook events
+and every bot REST route never carry a message of a conversation: a bot is
+never a member, so it holds no permission there, and the hub does not show
+conversation events to the gateway or to outgoing webhooks. A future intent
+for direct messages to a bot is not part of 1.1.
 
 ## Management API
 

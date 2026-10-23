@@ -35,6 +35,9 @@ type Services struct {
 	// Audit records the moderation shortcuts and /nick; nil records nothing.
 	Audit *audit.Log
 
+	// Chat starts direct messages for /msg (chat.Handler.StartDM).
+	Chat *chat.Handler
+
 	nick *nickLimiter
 }
 
@@ -48,6 +51,7 @@ func Commands(s Services) []slash.Builtin {
 		textCommand{svc: svc, spec: tableflipSpec},
 		textCommand{svc: svc, spec: unflipSpec},
 		textCommand{svc: svc, spec: spoilerSpec},
+		msgCommand{svc: svc},
 		nickCommand{svc: svc},
 		threadCommand{svc: svc},
 		timeoutCommand{svc: svc},

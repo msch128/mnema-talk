@@ -53,6 +53,7 @@ func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadStat
 		     AND m.created_at > COALESCE(cr.last_read_at, me.created_at)
 		LEFT JOIN messages orig ON orig.id = m.reply_to_id
 		CROSS JOIN LATERAL (SELECT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = m.user_id) AS is_blocked) blocked
+		WHERE c.type <> 'dm'
 		GROUP BY c.id, cr.last_read_at, cr.notify_level, cr.muted_until, cn.notify_level, cn.muted_until
 		ORDER BY c.id`, user.ID)
 	if err != nil {

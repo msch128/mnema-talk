@@ -72,6 +72,11 @@ const (
 	// (doc/moderation.md). It is the only way a moderator sees any part of a
 	// direct message conversation.
 	ManageReports Set = 1 << 21
+	// SendDirectMessages starts direct message conversations and writes in
+	// them (doc/architecture.md, "Direct messages"). On for @everyone; an
+	// administrator can withhold it from new members or onboarding roles.
+	// Reading a conversation one is in never needs it.
+	SendDirectMessages Set = 1 << 22
 	// KickMembers signs members below the actor's highest role out of every
 	// device and drops them from the Talk they are in, with no lasting
 	// sanction: they can sign in again at once (doc/moderation.md). Bit 22 is
@@ -113,6 +118,7 @@ var Catalog = []Info{
 	{Key: "ban_members", Bit: BanMembers, Name: "ban members"},
 	{Key: "manage_emoji", Bit: ManageEmoji, Name: "manage emoji"},
 	{Key: "manage_reports", Bit: ManageReports, Name: "manage reports"},
+	{Key: "send_direct_messages", Bit: SendDirectMessages, Name: "send direct messages"},
 	{Key: "kick_members", Bit: KickMembers, Name: "kick members"},
 }
 
@@ -142,7 +148,7 @@ const (
 	// DefaultEveryone is what @everyone holds on a fresh install and what
 	// migration 0017 seeds: exactly what every member could do before roles
 	// existed. Do not widen it: upgrades must not change behavior.
-	DefaultEveryone = ViewChannel | SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video
+	DefaultEveryone = ViewChannel | SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages
 	// OwnerGrantOnly can only be handed out by the Owner.
 	OwnerGrantOnly = ManageBots
 	// AdminArea is any permission that opens a part of the admin area.
@@ -150,7 +156,7 @@ const (
 )
 
 // TimeoutMask is what a timeout takes from a member: they can still read.
-const TimeoutMask = SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video
+const TimeoutMask = SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages
 
 // Has reports whether every bit of need is in s.
 func (s Set) Has(need Set) bool { return s&need == need }

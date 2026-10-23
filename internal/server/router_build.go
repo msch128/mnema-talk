@@ -122,6 +122,7 @@ func (c *components) newCore() {
 		PinLimit:         httpx.NewRateLimiter(chat.PinChangesPerMinute, time.Minute).Named("pin"),
 		BlockLimit:       httpx.NewRateLimiter(chat.BlockChangesPerMinute, time.Minute).Named("block"),
 		ReportLimit:      httpx.NewRateLimiter(chat.ReportsPerHour, time.Hour).Named("report"),
+		DMLimit:          httpx.NewRateLimiter(chat.NewDMsPerMinute, time.Minute).Named("dm_start"),
 	}
 	go chat.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour)
 	c.rolesH = &roles.Handler{Perms: c.permSvc, Events: c.pub}
@@ -185,7 +186,7 @@ func (c *components) newBots() {
 	c.botAuthn = bot.NewAuthenticator(d.DB)
 	c.botAuthn.Perms = c.permSvc
 	c.pollSvc = poll.NewService(poll.Service{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub})
-	c.cmds = bot.NewCommands(bot.Commands{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Builtins: builtinCommands(c.pollSvc, slashcmd.Services{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Auth: c.authH, Audit: c.auditLog})})
+	c.cmds = bot.NewCommands(bot.Commands{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Builtins: builtinCommands(c.pollSvc, slashcmd.Services{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Auth: c.authH, Chat: c.chatH, Audit: c.auditLog})})
 	gw := gateway.New(gateway.Config{Auth: c.botAuthn, Perms: c.permSvc, DB: d.DB, PublicURL: c.cfg.PublicURL})
 	c.gw = gw
 	c.botH.OnRevoke = gw.Revoke
@@ -239,6 +240,7 @@ func (c *components) newPush() error {
 			}
 			svc.Observe(ch, eventType, payload)
 		}
+		c.hub.DMTap = svc.Observe // conversations reach no webhook or bot, only push to their members
 		go svc.Run(c.ctx)
 		h.Keys, h.Service = keys, svc
 	}

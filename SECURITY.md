@@ -52,10 +52,6 @@ Result: 0 Critical, 0 High. Every Medium finding is fixed, with a test that
 fails without the fix, and the behaviour changes are listed in
 [doc/upgrade.md](doc/upgrade.md#09x--100). Deliberately deferred past 1.0:
 
-- **CSP `style-src 'unsafe-inline'`.** Kept because the bundled
-  `emoji-picker-element` writes inline styles and has no nonce support (see
-  Security headers below for the plan to remove it and the browser test that
-  must come with it).
 - **RT-4, frame format version 2.** Version 2 media frames (no line binding)
   are still accepted for mixed-version Talks; refusing them is a protocol
   change that would cut old tabs off (see the media frame section below).
@@ -70,6 +66,34 @@ fails without the fix, and the behaviour changes are listed in
   new tokens are bound to their issuer ([doc/bots.md](doc/bots.md#tokens)).
 
 Remaining Info-level items of the review are not listed individually.
+
+## Direct messages (privacy model)
+
+Direct messages (1.1) are conversations of two to ten members. Their privacy
+model, in short; the design is in [doc/architecture.md](doc/architecture.md#direct-messages).
+
+- **Who can read.** Members of the conversation, nobody else: the Owner,
+  Administrators and moderators have no route to it (REST, WebSocket, search,
+  media, push, audit all test membership). A moderator sees only what a member
+  chose to report: the reported message and up to 20 around it, copied at the
+  time of the report.
+- **Not end-to-end encrypted.** Like channel text, a conversation is readable
+  by the server and by whoever operates it or holds a backup or database
+  dump. Operators can read the `messages` table; this is the same trust as for
+  channel text, and there is no plan for text E2EE. Attachments of a
+  conversation are served only to its members.
+- **Blocks cannot be probed.** Every refusal about another member (a block,
+  their `dm_policy`, a disabled account, an unknown id) is one 403 text, and
+  `can_send` and every list say nothing about a block.
+- **Abuse limits.** 3 tries a minute and 10 new conversations a day, a cap of
+  two messages before the other side has answered, at most 10 members and
+  100 groups per member, *Send direct messages* as a permission (default on),
+  a community switch (default on) and a per-member `dm_policy`.
+- **Side channels removed.** Private messages do not move the public message
+  counters or the public message numbering, are absent from the audit log,
+  bot and webhook events and the admin media list.
+- **Server-side enforcement** of all of it; the UI only hides what a member
+  cannot do.
 
 ## Security model (summary)
 
@@ -352,13 +376,20 @@ details and the limits.
   JS eval; `'wasm-unsafe-eval'` only so the bundled noise filter can compile
   its WebAssembly),
   `frame-ancestors 'none'`, `nosniff`, a restrictive referrer policy and related
-  headers on every response. `style-src` still allows `'unsafe-inline'`, only
-  because the emoji picker library writes a `<style>` element and inline style
-  attributes itself and has no nonce support; the app's own code needs none,
-  and images, fonts, media and connections are same-origin, so injected CSS
-  cannot send data to a third party. Dropping it (a hash for the picker's style
-  text plus a patched or replaced picker, with a browser test that fails on any
-  CSP violation) is planned after 1.0.
+  headers on every response. Styles are as strict as scripts: `style-src 'self'`
+  and `style-src-attr 'none'`, so there is no `'unsafe-inline'` and no
+  `'unsafe-hashes'`; injected markup cannot add a `<style>` element or a
+  `style=""` attribute. The app's own code needs neither (Vue style bindings go
+  through the CSSOM, which the policy does not restrict, and component styles
+  are files). The one library that wrote inline styles, `emoji-picker-element`,
+  is pinned to an exact version and patched while the web app is built
+  (`web/scripts/emojiPickerCsp.ts`): its stylesheet becomes a constructable
+  stylesheet (`adoptedStyleSheets`) and its `style` bindings are applied through
+  the CSSOM. Each of the two patches must match the package source exactly
+  once, or the build fails. The Playwright fixtures fail every end-to-end spec
+  on any `securitypolicyviolation` event or CSP console message, and
+  `e2e/tests/csp.spec.ts` visits the emoji picker, Markdown and code blocks,
+  every admin panel and the API reference under the real policy.
 - **Message rendering.** Markdown is parsed into a tree of plain nodes
   (`web/src/lib/markdown/`) and only one module turns that tree into HTML: every
   string is escaped, tags come from a fixed table, and generated elements (mention

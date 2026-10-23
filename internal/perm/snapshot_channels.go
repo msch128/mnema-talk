@@ -59,6 +59,9 @@ func (s *Snapshot) KnowsCategory(cat uuid.UUID) bool { return s.categories[cat] 
 // Channel is what sub may do in a channel. A channel the snapshot does not
 // know gives a non-owner nothing.
 func (s *Snapshot) Channel(sub Subject, ch uuid.UUID) Set {
+	if members, ok := s.dms[ch]; ok {
+		return s.dmPerms(sub, members) // membership only: not even the Owner gets in
+	}
 	if s.IsOwner(sub) {
 		return All
 	}

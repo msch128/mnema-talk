@@ -421,3 +421,57 @@ func TestBuiltinsAreInTheCommandListAndHealthAdvertisesThem(t *testing.T) {
 		t.Errorf("health does not list slash.builtins: %s", res.body)
 	}
 }
+
+func TestMsgOpensTheDirectMessageUnderTheRulesOfTheRoute(t *testing.T) {
+	f := newBuiltinsFixture(t)
+	post := func(from, to *client) response {
+		return f.run(from, "msg", map[string]any{"member": to.user.ID, "text": "psst"})
+	}
+	if !f.names(f.member)["msg"] {
+		t.Fatal("/msg is not offered")
+	}
+	res := post(f.member, f.senior)
+	wantStatus(t, "/msg", res, http.StatusOK)
+	var out struct {
+		MessageID uuid.UUID `json:"message_id"`
+	}
+	res.decode(t, &out)
+	var dms []struct {
+		ID uuid.UUID `json:"id"`
+	}
+	f.senior.get("/api/dms").decode(t, &dms)
+	if len(dms) != 1 {
+		t.Fatalf("conversations of the receiver: %+v", dms)
+	}
+	history := f.senior.get("/api/channels/" + dms[0].ID.String() + "/messages?limit=10")
+	if !strings.Contains(string(history.body), out.MessageID.String()) || !strings.Contains(string(history.body), "psst") {
+		t.Errorf("message not in the conversation: %s", history.body)
+	}
+	wantStatus(t, "/msg again", post(f.member, f.senior), http.StatusOK)
+	f.senior.get("/api/dms").decode(t, &dms)
+	if len(dms) != 1 {
+		t.Errorf("a second conversation was opened: %+v", dms)
+	}
+
+	// A refusal about the other member is the route's one text, whatever the reason.
+	closed := f.a.register(f.owner, "closed")
+	wantStatus(t, "closes", closed.put("/api/users/me/privacy", map[string]any{"dm_policy": "nobody"}), http.StatusOK)
+	blocker := f.a.register(f.owner, "blocker")
+	wantStatus(t, "blocks", blocker.put("/api/me/blocks/"+f.mod.user.ID.String(), nil), http.StatusNoContent)
+	rest := f.mod.post("/api/dms", map[string]any{"user_ids": []uuid.UUID{closed.user.ID}})
+	for name, other := range map[string]*client{"dm_policy nobody": closed, "blocked": blocker} {
+		got := post(f.mod, other)
+		if got.status != http.StatusForbidden || string(got.body) != string(rest.body) {
+			t.Errorf("%s: %d %s, the route says %d %s", name, got.status, got.body, rest.status, rest.body)
+		}
+	}
+
+	// Without Send direct messages the command is neither offered nor run.
+	wantStatus(t, "everyone loses it", f.owner.patch("/api/admin/roles/"+everyoneID(t, f.owner).String(), map[string]any{"permissions": 990}), http.StatusOK)
+	if f.names(f.senior)["msg"] {
+		t.Error("/msg is offered without Send direct messages")
+	}
+	if got := post(f.senior, f.member); got.status != http.StatusNotFound && got.status != http.StatusForbidden {
+		t.Errorf("/msg without the permission: %d %s", got.status, got.body)
+	}
+}
