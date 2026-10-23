@@ -192,7 +192,7 @@ onMounted(refresh)
     <!-- Operator warnings -->
     <div v-if="warnings.length" class="rounded-lg border border-mnema-warning/35 bg-mnema-warning/10 p-4 space-y-3" role="region" :aria-label="$t('admin.system.warn.heading')" data-testid="system-warnings">
       <div class="flex items-center gap-2 text-sm font-semibold text-mnema-text">
-        <TriangleAlert class="w-4 h-4 text-mnema-warning flex-shrink-0" aria-hidden="true" />
+        <TriangleAlert class="w-4 h-4 text-mnema-warning shrink-0" aria-hidden="true" />
         {{ $t('admin.system.warn.heading') }}
       </div>
       <ul class="space-y-3">
@@ -205,7 +205,7 @@ onMounted(refresh)
     </div>
 
     <!-- Version -->
-    <div v-if="status" class="bg-mnema-surface p-5 rounded-lg border border-mnema-hairline space-y-2" data-testid="system-version">
+    <div v-if="status" class="bg-mnema-surface p-5 rounded-lg border border-mnema-hairline stack-2" data-testid="system-version">
       <span class="text-xs uppercase font-semibold font-mono text-mnema-tertiary tracking-wider">{{ $t('admin.system.version') }}</span>
       <div class="text-xl font-bold text-mnema-text font-mono">{{ status.version.current }}</div>
       <dl class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
@@ -227,7 +227,7 @@ onMounted(refresh)
     <!-- Updates -->
     <div v-if="upd" class="bg-mnema-surface p-5 rounded-lg border border-mnema-hairline space-y-3" data-testid="system-update">
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="space-y-1">
+        <div class="stack-1">
           <span class="text-xs uppercase font-semibold font-mono text-mnema-tertiary tracking-wider">{{ $t('admin.system.updates') }}</span>
           <p v-if="!upd.check_enabled" class="text-sm text-mnema-muted" data-testid="update-check-disabled">{{ $t('admin.system.checkDisabled') }}</p>
           <template v-else>
@@ -293,15 +293,15 @@ onMounted(refresh)
         <pre
           v-if="upd.release_notes"
           data-testid="update-notes"
-          class="max-h-60 overflow-y-auto whitespace-pre-wrap break-words rounded-md bg-mnema-canvas p-3 font-mono text-xs text-mnema-muted"
+          class="max-h-60 overflow-y-auto whitespace-pre-wrap wrap-break-word rounded-md bg-mnema-canvas p-3 font-mono text-xs text-mnema-muted"
         >{{ upd.release_notes }}</pre>
         <div class="space-y-1">
           <p class="text-xs text-mnema-muted">{{ $t('admin.system.manualUpdate') }}</p>
           <div class="flex items-center gap-2">
-            <code class="min-w-0 flex-1 truncate rounded bg-mnema-canvas px-2 py-1 font-mono text-xs text-mnema-text" data-testid="update-command">{{ UPDATE_COMMAND }}</code>
+            <code class="min-w-0 flex-1 truncate rounded-sm bg-mnema-canvas px-2 py-1 font-mono text-xs text-mnema-text" data-testid="update-command">{{ UPDATE_COMMAND }}</code>
             <button
               type="button"
-              class="flex-shrink-0 rounded-md px-2 py-1 text-xs text-mnema-tertiary hover:bg-mnema-elevated hover:text-mnema-text"
+              class="shrink-0 rounded-md px-2 py-1 text-xs text-mnema-tertiary hover:bg-mnema-elevated hover:text-mnema-text"
               @click="copyCommand"
             >{{ $t('admin.system.copy') }}</button>
           </div>

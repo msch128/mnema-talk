@@ -66,7 +66,7 @@ function openProfile(member: ChatDirectMessage['members'][number]) {
             <button
               type="button"
               :data-dm-info-first="i === 0 ? '' : undefined"
-              class="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition hover:bg-mnema-hover max-md:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
+              class="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition hover:bg-mnema-hover max-md:min-h-11 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent"
               @click="openProfile(member)"
             >
               <UserAvatar :user="member" size="sm" />

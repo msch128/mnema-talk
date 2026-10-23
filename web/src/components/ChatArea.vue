@@ -221,7 +221,7 @@ const groupedIds = computed(() => {
     :id="panel ? undefined : 'main-content'"
     :tabindex="panel ? undefined : -1"
     :aria-label="panel ? $t('talk.chatPanel', { channel: channelName }) : undefined"
-    class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden focus:outline-none"
+    class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden focus:outline-hidden"
   >
     <ChatHeader :panel="panel" @close="emit('close')" @menu="(x, y, items) => menu.show(x, y, items)" />
 
@@ -337,7 +337,7 @@ const groupedIds = computed(() => {
       <span class="truncate">
         {{ chatStore.missedLiveCount > 0 ? $t('chat.newMessages') : $t('chat.viewingOlder') }}
       </span>
-      <span class="flex items-center gap-1 flex-shrink-0 font-semibold">
+      <span class="flex items-center gap-1 shrink-0 font-semibold">
         {{ $t('chat.jumpToEnd') }}
         <ArrowDown class="w-4 h-4" />
       </span>

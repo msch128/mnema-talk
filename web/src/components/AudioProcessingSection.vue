@@ -45,7 +45,7 @@ function toggleWarnSwitchChannel() {
 
 <template>
   <!-- 3. Audio processing -->
-  <div class="space-y-2">
+  <div class="stack-2">
     <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
       {{ $t('audio.processing') }}
     </label>
@@ -56,7 +56,7 @@ function toggleWarnSwitchChannel() {
         <div class="space-y-0.5">
           <div class="text-sm font-semibold text-mnema-text flex items-center gap-1.5">
             <span>{{ $t('audio.agc') }}</span>
-            <span class="text-xs px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-400 font-mono">{{ $t('audio.agcBadge') }}</span>
+            <span class="text-xs px-1.5 py-0.2 rounded-sm bg-amber-500/15 text-amber-400 font-mono">{{ $t('audio.agcBadge') }}</span>
           </div>
           <p class="text-xs text-mnema-tertiary leading-relaxed">
             {{ $t('audio.agcHint') }}
@@ -68,11 +68,11 @@ function toggleWarnSwitchChannel() {
           :aria-checked="voiceStore.autoGainControl ? 'true' : 'false'"
           :aria-label="$t('audio.agc')"
           :class="[
-            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
+            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0 mt-1',
             voiceStore.autoGainControl ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
           ]"
         >
-          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', voiceStore.autoGainControl ? 'translate-x-5' : 'translate-x-0']"></div>
+          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-xs', voiceStore.autoGainControl ? 'translate-x-5' : 'translate-x-0']"></div>
         </button>
       </div>
 
@@ -121,11 +121,11 @@ function toggleWarnSwitchChannel() {
           :aria-checked="voiceStore.echoCancellation ? 'true' : 'false'"
           :aria-label="$t('audio.echo')"
           :class="[
-            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
+            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0 mt-1',
             voiceStore.echoCancellation ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
           ]"
         >
-          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', voiceStore.echoCancellation ? 'translate-x-5' : 'translate-x-0']"></div>
+          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-xs', voiceStore.echoCancellation ? 'translate-x-5' : 'translate-x-0']"></div>
         </button>
       </div>
 
@@ -143,18 +143,18 @@ function toggleWarnSwitchChannel() {
           :aria-checked="voiceStore.qosHighPriority ? 'true' : 'false'"
           :aria-label="$t('audio.qosTitle')"
           :class="[
-            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
+            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0 mt-1',
             voiceStore.qosHighPriority ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
           ]"
         >
-          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', voiceStore.qosHighPriority ? 'translate-x-5' : 'translate-x-0']"></div>
+          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-xs', voiceStore.qosHighPriority ? 'translate-x-5' : 'translate-x-0']"></div>
         </button>
       </div>
     </div>
   </div>
 
   <!-- 5. Warnings & Prompts -->
-  <div class="space-y-2">
+  <div class="stack-2">
     <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
       {{ $t('audio.warnings') }}
     </label>
@@ -173,11 +173,11 @@ function toggleWarnSwitchChannel() {
           :aria-checked="voiceStore.warnNoAudioDetected ? 'true' : 'false'"
           :aria-label="$t('audio.noAudioWarningTitle')"
           :class="[
-            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
+            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0 mt-1',
             voiceStore.warnNoAudioDetected ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
           ]"
         >
-          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', voiceStore.warnNoAudioDetected ? 'translate-x-5' : 'translate-x-0']"></div>
+          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-xs', voiceStore.warnNoAudioDetected ? 'translate-x-5' : 'translate-x-0']"></div>
         </button>
       </div>
 
@@ -195,11 +195,11 @@ function toggleWarnSwitchChannel() {
           :aria-checked="voiceStore.warnSwitchChannel ? 'true' : 'false'"
           :aria-label="$t('audio.switchChannelWarningTitle')"
           :class="[
-            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
+            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0 mt-1',
             voiceStore.warnSwitchChannel ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
           ]"
         >
-          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', voiceStore.warnSwitchChannel ? 'translate-x-5' : 'translate-x-0']"></div>
+          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-xs', voiceStore.warnSwitchChannel ? 'translate-x-5' : 'translate-x-0']"></div>
         </button>
       </div>
     </div>

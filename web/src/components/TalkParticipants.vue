@@ -64,7 +64,7 @@ function onKeydown(e: KeyboardEvent) {
       aria-haspopup="menu"
       :aria-expanded="open ? 'true' : 'false'"
       v-tooltip="$t('talk.participantsDetails')"
-      class="text-xs leading-4 px-1.5 rounded-full border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent whitespace-nowrap flex-shrink-0 hover:bg-mnema-accent/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent"
+      class="text-xs leading-4 px-1.5 rounded-full border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent whitespace-nowrap shrink-0 hover:bg-mnema-accent/20 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent"
       :aria-label="$t('talk.participants', { count: users.length })"
       @click="toggle"
     >
@@ -92,7 +92,7 @@ function onKeydown(e: KeyboardEvent) {
         role="menuitem"
         tabindex="-1"
         :data-participant="u.username"
-        class="flex h-10 w-full items-center gap-2.5 rounded-md px-2 text-left text-sm transition-colors hover:bg-mnema-hover focus:outline-none focus-visible:bg-mnema-hover"
+        class="flex h-10 w-full items-center gap-2.5 rounded-md px-2 text-left text-sm transition-colors hover:bg-mnema-hover focus:outline-hidden focus-visible:bg-mnema-hover"
         @click="openProfile(u)"
       >
         <UserAvatar :user="u" size="sm" :is-speaking="voiceStore.isSpeaking(u.id)" />

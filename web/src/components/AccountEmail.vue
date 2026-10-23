@@ -80,7 +80,7 @@ async function resend() {
 
     <div v-if="mode === 'view'" class="space-y-2">
       <div v-if="hasEmail" class="flex items-center gap-2 rounded-lg border border-mnema-hairline bg-mnema-raised/60 p-2.5 text-sm">
-        <component :is="info?.email_verified ? BadgeCheck : MailQuestion" :class="['h-4 w-4 flex-shrink-0', info?.email_verified ? 'text-mnema-accent' : 'text-mnema-tertiary']" aria-hidden="true" />
+        <component :is="info?.email_verified ? BadgeCheck : MailQuestion" :class="['h-4 w-4 shrink-0', info?.email_verified ? 'text-mnema-accent' : 'text-mnema-tertiary']" aria-hidden="true" />
         <span class="min-w-0 flex-1 truncate font-mono text-mnema-text" data-testid="account-email-address">{{ info?.email }}</span>
         <span class="whitespace-nowrap text-xs text-mnema-tertiary" data-testid="account-email-state">{{ $t(info?.email_verified ? 'security.email.confirmed' : (canConfirm ? 'security.email.unconfirmed' : 'security.email.unused')) }}</span>
       </div>
@@ -93,12 +93,12 @@ async function resend() {
     </div>
 
     <form v-else class="space-y-2" novalidate @submit.prevent="submit">
-      <input v-if="mode === 'edit'" v-model="email" type="email" required maxlength="254" autocomplete="email" :aria-label="$t('security.email.address')" :placeholder="$t('security.email.address')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-none" data-testid="account-email-input" />
-      <input v-model="password" type="password" required autocomplete="current-password" :aria-label="$t('profile.currentPassword')" :placeholder="$t('profile.currentPassword')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-none" data-testid="account-email-password" />
-      <div v-if="error" role="alert" class="rounded border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
+      <input v-if="mode === 'edit'" v-model="email" type="email" required maxlength="254" autocomplete="email" :aria-label="$t('security.email.address')" :placeholder="$t('security.email.address')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden" data-testid="account-email-input" />
+      <input v-model="password" type="password" required autocomplete="current-password" :aria-label="$t('profile.currentPassword')" :placeholder="$t('profile.currentPassword')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden" data-testid="account-email-password" />
+      <div v-if="error" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
       <div class="flex items-center justify-end gap-1.5 text-xs">
-        <button type="button" class="rounded px-2 py-0.5 text-mnema-muted hover:text-mnema-text" @click="start('view')">{{ $t('common.cancel') }}</button>
-        <button type="submit" :disabled="busy" :class="['flex items-center gap-1 rounded px-2.5 py-1 font-bold hover:brightness-110 disabled:opacity-50', mode === 'remove' ? 'bg-mnema-danger text-white' : 'bg-mnema-accent text-mnema-canvas']" data-testid="account-email-submit">
+        <button type="button" class="rounded-sm px-2 py-0.5 text-mnema-muted hover:text-mnema-text" @click="start('view')">{{ $t('common.cancel') }}</button>
+        <button type="submit" :disabled="busy" :class="['flex items-center gap-1 rounded-sm px-2.5 py-1 font-bold hover:brightness-110 disabled:opacity-50', mode === 'remove' ? 'bg-mnema-danger text-white' : 'bg-mnema-accent text-mnema-canvas']" data-testid="account-email-submit">
           <Loader2 v-if="busy" class="h-3.5 w-3.5 animate-spin" /><Mail v-else class="h-3.5 w-3.5" />
           <span>{{ $t(mode === 'edit' ? 'common.save' : 'security.email.remove') }}</span>
         </button>

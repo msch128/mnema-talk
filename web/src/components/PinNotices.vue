@@ -23,14 +23,14 @@ function view(messageId: string, noteId: number) {
       role="status"
       class="flex items-center gap-2 text-xs text-mnema-tertiary"
     >
-      <Pin class="h-3.5 w-3.5 flex-shrink-0 text-mnema-accent" />
+      <Pin class="h-3.5 w-3.5 shrink-0 text-mnema-accent" />
       <span class="min-w-0 truncate">
         {{ $t('pins.notice', { name: n.actor_name }) }}
       </span>
-      <button type="button" class="flex-shrink-0 font-medium text-mnema-accent hover:underline" @click="view(n.message_id, n.id)">{{ $t('pins.view') }}</button>
+      <button type="button" class="shrink-0 font-medium text-mnema-accent hover:underline" @click="view(n.message_id, n.id)">{{ $t('pins.view') }}</button>
       <button
         type="button"
-        class="ml-auto flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full transition hover:bg-mnema-surface hover:text-mnema-text"
+        class="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition hover:bg-mnema-surface hover:text-mnema-text"
         :aria-label="$t('pins.dismiss')"
         @click="chat.dismissPinNotice(n.id)"
       >

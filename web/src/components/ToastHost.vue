@@ -17,7 +17,7 @@ function runAction(toast: Toast) {
 
 <template>
   <div
-    class="pointer-events-none fixed bottom-5 right-5 z-[60] flex w-[360px] max-w-[calc(100vw-2.5rem)] flex-col gap-2 max-md:bottom-auto max-md:top-3 max-md:right-3 max-md:left-3 max-md:w-auto max-md:max-w-none"
+    class="pointer-events-none fixed bottom-5 right-5 z-60 flex w-[360px] max-w-[calc(100vw-2.5rem)] flex-col gap-2 max-md:bottom-auto max-md:top-3 max-md:right-3 max-md:left-3 max-md:w-auto max-md:max-w-none"
     aria-live="polite"
   >
     <div
@@ -30,13 +30,13 @@ function runAction(toast: Toast) {
     >
       <component :is="icons[toast.type] || Info" :class="['col-start-1 row-start-1 mt-0.5 h-4 w-4', tones[toast.type] || tones.info]" />
       <div class="col-start-2 row-start-1 min-w-0 text-sm">
-        <div class="break-words text-mnema-text">{{ toast.text }}</div>
-        <div v-if="toast.detail" class="break-words text-[13px] text-mnema-tertiary">{{ toast.detail }}</div>
+        <div class="wrap-break-word text-mnema-text">{{ toast.text }}</div>
+        <div v-if="toast.detail" class="wrap-break-word text-[13px] text-mnema-tertiary">{{ toast.detail }}</div>
       </div>
       <button
         v-if="toast.action"
         type="button"
-        class="pointer-events-auto col-start-2 row-start-2 min-h-7 max-w-full justify-self-start break-words rounded-md bg-mnema-elevated px-3 py-1 text-left text-[13px] font-semibold text-mnema-text shadow-[inset_0_0_0_1px_#2B2F2D] transition hover:bg-mnema-hover"
+        class="pointer-events-auto col-start-2 row-start-2 min-h-7 max-w-full justify-self-start wrap-break-word rounded-md bg-mnema-elevated px-3 py-1 text-left text-[13px] font-semibold text-mnema-text shadow-[inset_0_0_0_1px_#2B2F2D] transition hover:bg-mnema-hover"
         @click="runAction(toast)"
       >{{ toast.action.label }}</button>
       <button

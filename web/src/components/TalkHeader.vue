@@ -27,33 +27,33 @@ const chatStore = useChatStore()
 </script>
 
 <template>
-  <header class="h-12 px-4 max-md:pl-1 max-md:pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 flex-shrink-0 z-10">
+  <header class="h-12 px-4 max-md:pl-1 max-md:pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 shrink-0 z-10">
     <div class="flex items-center gap-3 min-w-0">
       <NavDrawerButton />
       <div
         v-if="!narrow"
-        class="w-8 h-8 rounded-md bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint flex-shrink-0"
+        class="w-8 h-8 rounded-md bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint shrink-0"
         aria-hidden="true"
       >
         <Volume2 class="w-4 h-4" />
       </div>
       <div class="flex items-center gap-2 min-w-0">
-        <h2 class="font-semibold text-base leading-5 text-mnema-text truncate min-w-[3rem]">
+        <h2 class="font-semibold text-base leading-5 text-mnema-text truncate min-w-12">
           {{ channelName || $t('voice.channelFallback') }}
         </h2>
-        <TalkParticipants class="flex-shrink-0" :users="users" :started-at="startedAt" />
+        <TalkParticipants class="shrink-0" :users="users" :started-at="startedAt" />
         <VoiceTimer
           v-if="startedAt && !narrow"
           :since="startedAt"
           data-testid="talk-timer"
           v-tooltip="$t('talk.runningForTip')"
-          class="text-xs text-mnema-tertiary flex-shrink-0"
+          class="text-xs text-mnema-tertiary shrink-0"
         />
       </div>
     </div>
 
     <!-- Top Right Actions -->
-    <div class="flex items-center gap-2 flex-shrink-0">
+    <div class="flex items-center gap-2 shrink-0">
       <!-- The Talk's chat (under the stage), with its unread count while closed -->
       <button
         type="button"

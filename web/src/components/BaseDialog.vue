@@ -51,7 +51,7 @@ function onScrimUp(e: PointerEvent) {
       :aria-labelledby="titleId"
       :aria-describedby="describedby || undefined"
       tabindex="-1"
-      :class="['flex max-h-full w-full flex-col overflow-hidden rounded-[14px] border border-mnema-border bg-mnema-elevated shadow-[0_24px_64px_rgba(0,0,0,0.6)] focus:outline-none', panelClass]"
+      :class="['flex max-h-full w-full flex-col overflow-hidden rounded-[14px] border border-mnema-border bg-mnema-elevated shadow-[0_24px_64px_rgba(0,0,0,0.6)] focus:outline-hidden', panelClass]"
     >
       <header v-if="title" class="flex items-center justify-between gap-3 border-b border-mnema-hairline bg-mnema-raised px-5 py-4">
         <div class="min-w-0">
@@ -65,7 +65,7 @@ function onScrimUp(e: PointerEvent) {
           type="button"
           data-dialog-close
           v-tooltip="$t('common.close')"
-          class="flex h-8 w-8 max-md:h-11 max-md:w-11 max-md:-mr-2 flex-shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-hover hover:text-mnema-text"
+          class="flex h-8 w-8 max-md:h-11 max-md:w-11 max-md:-mr-2 shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-hover hover:text-mnema-text"
           @click="close"
         >
           <X class="h-[18px] w-[18px]" />

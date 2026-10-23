@@ -18,7 +18,7 @@ defineEmits<{ cancel: [] }>()
     </span>
     <button
       type="button"
-      class="w-6 h-6 flex items-center justify-center flex-shrink-0 rounded-full text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+      class="w-6 h-6 flex items-center justify-center shrink-0 rounded-full text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
       v-tooltip="{ text: $t('chat.cancelReply'), shortcut: 'Esc' }"
       @click="$emit('cancel')"
     >

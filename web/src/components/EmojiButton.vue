@@ -22,7 +22,7 @@ function pick(emoji: string) {
 </script>
 
 <template>
-  <div class="relative flex-shrink-0">
+  <div class="relative shrink-0">
     <button
       ref="button"
       type="button"

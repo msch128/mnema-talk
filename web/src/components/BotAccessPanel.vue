@@ -39,7 +39,7 @@ onMounted(load)
     <h4 class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary"><Eye class="h-3.5 w-3.5" aria-hidden="true" />{{ $t('bots.access.title') }}</h4>
     <template v-if="access">
       <p v-if="access.elevated" class="flex items-start gap-2 rounded-md border border-mnema-danger/40 bg-mnema-danger/10 px-3 py-2 text-sm text-mnema-text" role="alert" data-testid="bot-elevated">
-        <TriangleAlert class="mt-0.5 h-4 w-4 flex-shrink-0 text-mnema-danger" aria-hidden="true" />
+        <TriangleAlert class="mt-0.5 h-4 w-4 shrink-0 text-mnema-danger" aria-hidden="true" />
         <span>{{ $t('bots.access.elevated') }}</span>
       </p>
       <div class="space-y-1">

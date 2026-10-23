@@ -1,5 +1,5 @@
 // Shared button looks of the Talk view: the header's square buttons and the stage's dark ones.
-export const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent'
+export const focusRing = 'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent'
 
 export function headerButton(active: boolean) {
   return [
@@ -11,4 +11,4 @@ export function headerButton(active: boolean) {
   ]
 }
 
-export const overlayButton = 'w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-lg text-white transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80'
+export const overlayButton = 'w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-lg text-white transition-colors motion-reduce:transition-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/80'

@@ -124,14 +124,14 @@ function when(iso: string) {
               <span class="min-w-0 flex-1">
                 <span class="mb-0.5 flex items-center gap-2">
                   <span class="truncate text-sm font-medium text-mnema-text">{{ shownName(entry.message) }}</span>
-                  <span v-if="channelNames.get(entry.message.channel_id)" class="flex items-center gap-1 rounded border border-mnema-border bg-mnema-surface px-1.5 py-0.5 text-xs text-mnema-muted">
+                  <span v-if="channelNames.get(entry.message.channel_id)" class="flex items-center gap-1 rounded-sm border border-mnema-border bg-mnema-surface px-1.5 py-0.5 text-xs text-mnema-muted">
                     <Volume2 v-if="channelNames.get(entry.message.channel_id)?.type === 'voice'" class="h-2.5 w-2.5 text-mnema-tertiary" />
                     <Hash v-else class="h-2.5 w-2.5 text-mnema-tertiary" />
                     {{ channelNames.get(entry.message.channel_id)?.name }}
                   </span>
-                  <span class="ml-auto flex-shrink-0 text-xs text-mnema-tertiary">{{ when(entry.message.created_at) }}</span>
+                  <span class="ml-auto shrink-0 text-xs text-mnema-tertiary">{{ when(entry.message.created_at) }}</span>
                 </span>
-                <span class="line-clamp-3 break-words text-sm text-mnema-muted">{{ previewText(entry.message.content) || $t('chat.attachment') }}</span>
+                <span class="line-clamp-3 wrap-break-word text-sm text-mnema-muted">{{ previewText(entry.message.content) || $t('chat.attachment') }}</span>
               </span>
             </button>
             <p v-else data-testid="saved-unavailable" class="min-w-0 flex-1 p-2 text-sm italic text-mnema-tertiary">{{ $t('saved.unavailable') }}</p>
@@ -139,7 +139,7 @@ function when(iso: string) {
               v-if="entry.available"
               type="button"
               data-testid="saved-note-edit"
-              class="mt-1.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text max-md:h-11 max-md:w-11"
+              class="mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text max-md:h-11 max-md:w-11"
               :aria-label="$t('saved.editNote')"
               v-tooltip="$t('saved.editNote')"
               @click="startNote(entry)"
@@ -149,7 +149,7 @@ function when(iso: string) {
             <button
               type="button"
               data-testid="saved-remove"
-              class="mr-0.5 mt-1.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text max-md:h-11 max-md:w-11"
+              class="mr-0.5 mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text max-md:h-11 max-md:w-11"
               :aria-label="$t('saved.remove')"
               v-tooltip="$t('saved.remove')"
               @click="remove(entry)"
@@ -166,14 +166,14 @@ function when(iso: string) {
               :maxlength="NOTE_MAX"
               :aria-label="$t('saved.notePlaceholder')"
               :placeholder="$t('saved.notePlaceholder')"
-              class="min-w-0 flex-1 rounded-md border border-mnema-border bg-mnema-surface px-2 py-1 text-sm text-mnema-text placeholder:text-mnema-tertiary focus:border-mnema-accent focus:outline-none"
+              class="min-w-0 flex-1 rounded-md border border-mnema-border bg-mnema-surface px-2 py-1 text-sm text-mnema-text placeholder:text-mnema-tertiary focus:border-mnema-accent focus:outline-hidden"
               @keydown.esc.stop="editing = null"
             >
             <button type="submit" data-testid="saved-note-save" class="flex h-7 w-7 items-center justify-center rounded-md text-mnema-accent hover:bg-mnema-surface" :aria-label="$t('saved.saveNote')">
               <Check class="h-4 w-4" />
             </button>
           </form>
-          <p v-else-if="entry.note" data-testid="saved-note" class="break-words px-2 pb-1.5 text-xs text-mnema-accent">{{ entry.note }}</p>
+          <p v-else-if="entry.note" data-testid="saved-note" class="wrap-break-word px-2 pb-1.5 text-xs text-mnema-accent">{{ entry.note }}</p>
         </div>
         <button
           v-if="saved.hasMore && !saved.loading"

@@ -245,7 +245,7 @@ const { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, on
     id="main-content"
     tabindex="-1"
     ref="root"
-    class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden select-none focus:outline-none"
+    class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden select-none focus:outline-hidden"
     @pointermove="onActivity"
     @pointerdown="onActivity"
     @focusin="onActivity"
@@ -267,7 +267,7 @@ const { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, on
       ref="area"
       data-testid="talk-area"
       :class="[
-        'flex-1 min-h-0 relative flex flex-col bg-gradient-to-b from-mnema-raised/40 to-transparent'
+        'flex-1 min-h-0 relative flex flex-col bg-linear-to-b from-mnema-raised/40 to-transparent'
       ]"
       @dblclick="onAreaDblclick"
     >
@@ -302,7 +302,7 @@ const { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, on
         <div
           v-if="screenCards.length"
           ref="cardsEl"
-          :class="['w-full flex flex-wrap justify-center gap-2 flex-shrink-0', hasStage ? '' : 'max-w-5xl']"
+          :class="['w-full flex flex-wrap justify-center gap-2 shrink-0', hasStage ? '' : 'max-w-5xl']"
         >
           <TalkScreenCards :cards="screenCards" @select="onScreenCard" @open-change="qualityMenuOpen = $event" />
         </div>
@@ -313,7 +313,7 @@ const { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, on
           v-if="hasStage && tileUsers.length"
           ref="stripRegion"
           data-testid="talk-strip-region"
-          class="w-full flex-shrink-0 flex flex-col items-center"
+          class="w-full shrink-0 flex flex-col items-center"
         >
           <TalkStrip
             :users="tileUsers"

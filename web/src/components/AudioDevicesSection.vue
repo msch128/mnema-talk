@@ -17,18 +17,18 @@ async function handleDeviceChange() {
 
 <template>
   <!-- 7. Devices -->
-  <div class="space-y-3">
+  <div class="stack-3">
     <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
       {{ $t('audio.devices') }}
     </label>
 
-    <div class="space-y-2">
+    <div class="stack-2">
       <div>
         <label class="text-xs text-mnema-tertiary font-mono block mb-1">{{ $t('audio.inputDevice') }}</label>
         <select
           v-model="voiceStore.selectedInputDeviceId"
           @change="handleDeviceChange"
-          class="w-full bg-mnema-canvas border border-mnema-border rounded-lg px-3 py-2 text-sm text-mnema-text focus:outline-none focus:border-mnema-accent focus:ring-1 focus:ring-mnema-accent"
+          class="w-full bg-mnema-canvas border border-mnema-border rounded-lg px-3 py-2 text-sm text-mnema-text focus:outline-hidden focus:border-mnema-accent focus:ring-1 focus:ring-mnema-accent"
         >
           <option value="">{{ $t('audio.defaultDevice') }}</option>
           <option 
@@ -65,7 +65,7 @@ async function handleDeviceChange() {
           id="audio-output-device"
           v-model="voiceStore.selectedOutputDeviceId"
           data-testid="output-device"
-          class="w-full bg-mnema-canvas border border-mnema-border rounded-lg px-3 py-2 text-sm text-mnema-text focus:outline-none focus:border-mnema-accent focus:ring-1 focus:ring-mnema-accent"
+          class="w-full bg-mnema-canvas border border-mnema-border rounded-lg px-3 py-2 text-sm text-mnema-text focus:outline-hidden focus:border-mnema-accent focus:ring-1 focus:ring-mnema-accent"
         >
           <option value="">{{ $t('audio.defaultDevice') }}</option>
           <option

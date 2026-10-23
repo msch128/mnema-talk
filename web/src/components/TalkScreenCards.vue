@@ -26,7 +26,7 @@ const authStore = useAuthStore()
     :data-screen-card="card.key"
     class="flex items-center gap-3 min-w-0 max-w-full rounded-lg border border-mnema-accent/30 bg-mnema-accent-subtle pl-3 pr-1.5 py-1.5"
   >
-    <Monitor class="w-4 h-4 text-mnema-accent flex-shrink-0" />
+    <Monitor class="w-4 h-4 text-mnema-accent shrink-0" />
     <span class="text-sm text-mnema-text truncate">
       {{ card.kind === 'own' ? $t('talk.ownScreen') : $t('talk.screenShareCard', { name: card.user.display_name || card.user.username }) }}
     </span>
@@ -39,7 +39,7 @@ const authStore = useAuthStore()
       type="button"
       data-testid="screen-card-action"
       :disabled="card.state === 'pending'"
-      :class="['h-7 px-3 rounded-md text-sm font-semibold bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover transition-colors disabled:opacity-60 flex-shrink-0', focusRing, 'focus-visible:ring-offset-2 focus-visible:ring-offset-mnema-accent-subtle']"
+      :class="['h-7 px-3 rounded-md text-sm font-semibold bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover transition-colors disabled:opacity-60 shrink-0', focusRing, 'focus-visible:ring-offset-2 focus-visible:ring-offset-mnema-accent-subtle']"
       @click="emit('select', card)"
     >
       {{ card.state === 'idle' ? $t('talk.watchScreen') : card.state === 'queued' ? $t('talk.toStage') : $t('talk.screenConnecting') }}
@@ -48,7 +48,7 @@ const authStore = useAuthStore()
     <button
       v-if="card.kind === 'remote' && card.state !== 'idle'"
       type="button"
-      :class="['w-7 h-7 flex items-center justify-center rounded-md text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition-colors flex-shrink-0', focusRing]"
+      :class="['w-7 h-7 flex items-center justify-center rounded-md text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition-colors shrink-0', focusRing]"
       v-tooltip="$t('talk.unwatchScreen')"
       @click="voiceStore.unwatchScreen(card.user.id)"
     >

@@ -117,7 +117,7 @@ function onClickCapture(e: MouseEvent) {
   e.stopPropagation()
 }
 
-const btn = 'inline-flex items-center justify-center gap-1.5 rounded-full flex-shrink-0 transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent focus-visible:ring-offset-2 focus-visible:ring-offset-mnema-elevated'
+const btn = 'inline-flex items-center justify-center gap-1.5 rounded-full shrink-0 transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent focus-visible:ring-offset-2 focus-visible:ring-offset-mnema-elevated'
 const icon = computed(() => `${btn} ${props.compact ? 'w-9 h-9 max-md:w-11 max-md:h-11' : 'w-10 h-10 max-md:w-11 max-md:h-11'}`)
 const wide = computed(() => `${btn} ${props.compact ? 'w-9 h-9 max-md:w-11 max-md:h-11' : 'h-10 max-md:h-11 px-4 text-sm font-semibold'}`)
 const neutral = 'bg-mnema-surface text-mnema-text hover:bg-mnema-hover'
@@ -133,7 +133,7 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
     :data-visible="visible ? 'true' : 'false'"
     :aria-label="t('talk.controls')"
     :class="[
-      'flex items-center gap-1.5 p-1.5 rounded-full bg-mnema-elevated/95 border border-mnema-border shadow-xl shadow-black/40 backdrop-blur-sm',
+      'flex items-center gap-1.5 p-1.5 rounded-full bg-mnema-elevated/95 border border-mnema-border shadow-xl shadow-black/40 backdrop-blur-xs',
       'transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none',
       visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
     ]"
@@ -220,7 +220,7 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
 
       <button
         type="button"
-        :class="[icon, voiceStore.noiseCancelling ? soft : `${neutral} !text-mnema-tertiary hover:!text-mnema-text`]"
+        :class="[icon, voiceStore.noiseCancelling ? soft : `${neutral} text-mnema-tertiary! hover:text-mnema-text!`]"
         :aria-pressed="voiceStore.noiseCancelling ? 'true' : 'false'"
         v-tooltip="t('talk.noiseToggleTip')"
         @click="toggleNoiseCancelling"
@@ -254,7 +254,7 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
       <Ellipsis class="w-5 h-5" aria-hidden="true" />
     </button>
 
-    <div class="w-px h-6 bg-mnema-border mx-0.5 flex-shrink-0" aria-hidden="true"></div>
+    <div class="w-px h-6 bg-mnema-border mx-0.5 shrink-0" aria-hidden="true"></div>
 
     <button
       type="button"
