@@ -167,6 +167,11 @@ jobs:
       - name: Docs links
         run: node scripts/check-doc-links.mjs
 
+      # Fails on <<<<<<<, ======= or >>>>>>> at the start of a line in any
+      # tracked text file (docs, code, JSON).
+      - name: Merge-conflict markers
+        run: node scripts/check-conflict-markers.mjs
+
       # The alert rules operators copy (doc/operations.md). The image is pinned
       # by digest (prom/prometheus v3.5.0); the metrics they name are checked
       # against /api/metrics by TestAlertRulesNameOnlyExportedMetrics above.

@@ -1,11 +1,17 @@
-# Cryptographic state and outbox persistence
+# Unused cryptographic state module (research history)
 
-Status: implemented persistence foundation for the E2EE integration. It does not
-encrypt messages, authenticate devices, provide recovery, or make chat
-end-to-end encrypted. The shipped voice and screen-share E2EE (MLS via `ts-mls`,
-in-memory group state per call) does not use this module, and no chat path does
-either. The production cryptographic provider and its admission/freshness contract
-remain release gates.
+Status: **not shipped, not used by any product path.** Mnema Talk encrypts
+media only: microphone, camera and screen payloads are sealed in the browser
+with MLS (`ts-mls`, in-memory group state per call). Text messages and
+attachments stay readable by the server, by decision, and this module is not a
+step towards changing that. It does not encrypt messages, authenticate devices
+or provide recovery, and no chat or call path calls it.
+
+This page keeps the research history: a transactional IndexedDB store for opaque
+provider state and an outbox, with the invariants and tests that were worked
+out for it. It is documentation of what was tried, kept in case a future media
+feature needs durable per-device state; nothing here is a release gate for
+anything.
 
 The implementation is `web/src/lib/crypto/stateStore.ts`. Runtime dependencies
 are browser IndexedDB and Web Locks. `fake-indexeddb` 6.2.5 is an exact-pinned
@@ -114,28 +120,20 @@ it never silently drops a previously committed event. Reducing limits below
 the existing stored usage blocks writes until a separately reviewed migration
 or cleanup resolves the conflict.
 
-## Local protection and remaining integration gates
+## Local protection and limits
 
 Opaque state may contain secret material. This adapter does not encrypt it at
-rest or guarantee secure memory erasure. The reviewed provider must define the
-appropriate protected serialization and device-key storage contract. It must
-not serialize plaintext messages into the state or attach debug key fields to
-events. Browser/OS compromise and malicious same-origin client code remain
-outside this storage boundary. Origin trust and independently delivered client
-code remain product requirements.
+rest or guarantee secure memory erasure. A provider that used it would have to
+define the protected serialization and device-key storage contract. Browser/OS
+compromise and malicious same-origin client code remain outside this storage
+boundary.
 
-The browser's MLS provider used for sealed voice media is in-memory and
-does not expose a reviewed transactional storage adapter. Wiring it to this
-module requires a production wrapper covering all provider records, atomic
-serialization, bounded decoding, device credentials, authorized freshness,
-epoch ordering and cancellation. Saving only the visible group object while
-discarding provider keystore state is insufficient. This module cannot repair
-an incorrect crypto provider or substitute for independent protocol review.
-
-Chat/SFU integration, protected attachments, media provider conformance,
-revocation, recovery/history policy, independent client delivery and encrypted
-100/250-user measurements remain separate gates. This foundation provides no
-capacity or latency promise for those paths.
+The browser's MLS provider used for sealed media is in-memory and does not
+expose a transactional storage adapter. Wiring it to this module would need a
+wrapper covering all provider records, atomic serialization, bounded decoding,
+device credentials, authorized freshness, epoch ordering and cancellation.
+Saving only the visible group object while discarding provider keystore state
+would be insufficient. The module makes no capacity or latency promise.
 
 ## Verification
 
