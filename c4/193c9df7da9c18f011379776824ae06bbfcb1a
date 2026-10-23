@@ -1,0 +1,108 @@
+web/src/components/VoiceStage.phone.test.ts
+  s_06fcde5dbef956::t_602a1cd5628059 1-86
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_602a1cd5628059 12,67-68,132-133
+web/src/composables/useTalkControls.ts
+  s_06fcde5dbef956::t_602a1cd5628059 1-35
+web/src/stores/chat/threadFollow.ts
+  s_06fcde5dbef956::t_602a1cd5628059 1-58
+web/src/lib/searchQuery.ts
+  s_06fcde5dbef956::t_602a1cd5628059 1,6,9-12,19,44-52,111,117,128-130,148,208,238
+web/src/stores/chat/socket.ts
+  s_06fcde5dbef956::t_602a1cd5628059 14-15,45-46,221-226
+  s_06fcde5dbef956::t_97270cc36b914c 227-228
+web/src/stores/chatStoreDefensive.test.ts
+  s_06fcde5dbef956::t_602a1cd5628059 19-22
+web/src/components/SearchTipDismissal.test.ts
+  s_06fcde5dbef956::t_602a1cd5628059 1-73
+web/src/lib/notifyPreview.ts
+  s_06fcde5dbef956::t_602a1cd5628059 1-22
+web/src/components/SkipLinks.test.ts
+  s_06fcde5dbef956::t_602a1cd5628059 1-37
+web/src/stores/chatPollNotification.test.ts
+  s_06fcde5dbef956::t_602a1cd5628059 9-12
+web/src/lib/searchSuggest.ts
+  s_06fcde5dbef956::t_602a1cd5628059 4-5,23,53-59,71
+web/src/components/SearchFilterFeatures.test.ts
+  s_06fcde5dbef956::t_a8bb9441b7b77b 1-48
+web/src/stores/chat/reset.ts
+  s_06fcde5dbef956::t_602a1cd5628059 29-30
+web/src/lib/searchSuggest.test.ts
+  s_06fcde5dbef956::t_602a1cd5628059 34
+web/src/stores/chat/notifications.ts
+  s_06fcde5dbef956::t_602a1cd5628059 13,51-60,63,80-81
+web/src/components/SearchResults.vue
+  s_06fcde5dbef956::t_602a1cd5628059 16,36
+web/src/components/SearchResultItem.vue
+  s_06fcde5dbef956::t_602a1cd5628059 6,61-66
+web/src/stores/chat/threads.ts
+  s_06fcde5dbef956::t_602a1cd5628059 7,35
+web/src/composables/usePushSettings.ts
+  s_06fcde5dbef956::t_602a1cd5628059 11,32,80-83
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_602a1cd5628059 6,36,201-214
+  s_06fcde5dbef956::t_0fcd7d90db104e 215
+e2e/tests/mobile.spec.ts
+  s_06fcde5dbef956::t_602a1cd5628059 158-160
+web/src/components/SearchInput.vue
+  s_06fcde5dbef956::t_602a1cd5628059 7,183
+web/src/components/ChatComposer.vue
+  s_06fcde5dbef956::t_602a1cd5628059 124
+web/src/components/SearchFilterSupport.test.ts
+  s_06fcde5dbef956::t_602a1cd5628059 1-66
+web/src/components/SkipLinks.vue
+  s_06fcde5dbef956::t_602a1cd5628059 1-27
+web/src/components/ConnectionBanner.vue
+  s_06fcde5dbef956::t_602a1cd5628059 4,10-21,46-47,61
+web/src/components/VoiceStage.vue
+  s_06fcde5dbef956::t_602a1cd5628059 22,236-239,245-246,248,380-385
+web/src/App.vue
+  s_06fcde5dbef956::t_602a1cd5628059 38,228
+web/src/stores/chatThreadFollow.test.ts
+  s_06fcde5dbef956::t_602a1cd5628059 1-123
+e2e/tests/coherence.spec.ts
+  s_06fcde5dbef956::t_602a1cd5628059 1-93
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_602a1cd5628059 33-35
+web/src/stores/chatEnvironment.test.ts
+  s_06fcde5dbef956::t_602a1cd5628059 8-11
+web/src/lib/searchIsFilter.test.ts
+  s_06fcde5dbef956::t_602a1cd5628059 1-31
+web/src/components/ConnectionBannerOffline.test.ts
+  s_06fcde5dbef956::t_602a1cd5628059 1-62
+web/src/lib/searchSupport.ts
+  s_06fcde5dbef956::t_602a1cd5628059 1-26
+web/src/stores/chatStoreBehaviour.test.ts
+  s_06fcde5dbef956::t_602a1cd5628059 22-25
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_02c0af61cf7306 173
+  s_06fcde5dbef956::t_ef0fdf67939907 14
+web/src/components/SearchModal.vue
+  s_06fcde5dbef956::t_0e8324e2553067 10-11,31-32,38
+  s_06fcde5dbef956::t_602a1cd5628059 7,13,30,46,85,102-103,110-114,211
+  s_06fcde5dbef956::t_f7cb9dd59dfe3a 33-37,39
+doc/upgrade.md
+  s_06fcde5dbef956::t_30a43ccd0abd64 191
+web/src/components/ChatArea.vue
+  s_06fcde5dbef956::t_d0243ce0d1a633 211-212,214
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_a5b9e8b0983867 171,316-319,452-454,467-472,894
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_7e715ff8003a02 171,316-319,452-454,467-472,894
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c4193c9df7da9c18f011379776824ae06bbfcb1a",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
