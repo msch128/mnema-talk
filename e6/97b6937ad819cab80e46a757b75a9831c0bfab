@@ -1,0 +1,53 @@
+web/src/stores/chat/messageActions.ts
+  s_06fcde5dbef956::t_ea2f9b5f80e79a 3,5
+  s_06fcde5dbef956::t_ec61c5865c43a3 55-64
+  s_06fcde5dbef956::t_c3b4b0ad40c376 8
+  s_06fcde5dbef956::t_bfc3c333cfbd7f 16-32,37-43
+web/src/lib/drafts.ts
+  s_06fcde5dbef956::t_17ee657d2f4c40 170-182
+  s_06fcde5dbef956::t_20bdb00a3714b4 169
+web/src/stores/stores.test.ts
+  s_06fcde5dbef956::t_8dcb463d7d6fd1 197-218
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_88fd92362a2245 1365-1366
+  s_06fcde5dbef956::t_b169679538c209 417
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_3f916bacde6dda 1365-1366
+  s_06fcde5dbef956::t_cd3be6c49756bc 417
+web/src/stores/chatSync.test.ts
+  s_06fcde5dbef956::t_5ae5a491d0c217 21
+  s_06fcde5dbef956::t_d46d01316970d8 70-71
+  s_06fcde5dbef956::t_e19eb7ff0974eb 158-179
+web/src/components/PinnedMessages.test.ts
+  s_06fcde5dbef956::t_9df546a84f04d5 9,144
+  s_06fcde5dbef956::t_991e4e242431e5 119-143,145-146
+web/src/components/PinnedMessages.vue
+  s_06fcde5dbef956::t_294bae0a9c9ed0 75,79-85
+  s_06fcde5dbef956::t_63058ae30b8847 146
+  s_06fcde5dbef956::t_320060e3c0fa97 86-87
+internal/server/account_export_integration_test.go
+  s_06fcde5dbef956::t_2b7d26a86b765a 141-143
+internal/auth/account_export_build.go
+  s_06fcde5dbef956::t_dd5b39995884e0 68-69,71
+  s_06fcde5dbef956::t_7346d7eb13de78 70
+web/src/stores/chat/channels.ts
+  s_06fcde5dbef956::t_1974d425cb7230 6
+  s_06fcde5dbef956::t_458617cd3bc728 66
+  s_06fcde5dbef956::t_0ecf066ecad340 52-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e697b6937ad819cab80e46a757b75a9831c0bfab",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
