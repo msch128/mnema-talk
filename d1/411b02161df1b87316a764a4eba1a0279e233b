@@ -1,0 +1,31 @@
+doc/desktop-trusted-client.md
+  s_06fcde5dbef956::t_69f1e201cf7794 488-499
+web/src/composables/useAppBadge.test.ts
+  s_06fcde5dbef956::t_f84126cbd50d6d 6-7,10,17,37-55
+web/src/composables/useAppBadge.ts
+  s_06fcde5dbef956::t_f5093cdc24a87a 1-4,12,14,16-22
+web/src/lib/osNotify.test.ts
+  s_06fcde5dbef956::t_4385f23a509759 179-188
+web/src/lib/osNotify.ts
+  s_06fcde5dbef956::t_46b52a745b9567 28-35,84-87,151-154
+web/src/lib/platform.test.ts
+  s_06fcde5dbef956::t_e6a78978960306 20,127-154
+web/src/lib/platform.ts
+  s_06fcde5dbef956::t_3d780520d3f090 14,56-64,84-88,105-106,141-142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d1411b02161df1b87316a764a4eba1a0279e233b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
