@@ -78,23 +78,31 @@ func ClientIPMiddleware(trusted []*net.IPNet) func(http.Handler) http.Handler {
 			if !remoteTrusted(client, trusted) {
 				warnUntrustedForwarded(r, client, &lastWarn)
 			} else {
-				// A proxy may append its hop as a separate header line instead
-				// of extending the first one; all lines form one list (RFC 9110).
-				hops := strings.Split(strings.Join(r.Header.Values("X-Forwarded-For"), ","), ",")
-				for i := len(hops) - 1; i >= 0; i-- {
-					addr, err := netip.ParseAddr(strings.TrimSpace(hops[i]))
-					if err != nil {
-						break
-					}
-					client = addr.Unmap().String()
-					if !remoteTrusted(client, trusted) {
-						break
-					}
-				}
+				client = rightmostUntrustedHop(r, client, trusted)
 			}
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), clientIPKey, client)))
 		})
 	}
+}
+
+// rightmostUntrustedHop walks X-Forwarded-For from the right and returns the
+// first hop that is not a trusted proxy, or peer when the header has no
+// usable entry. A proxy may append its hop as a separate header line instead
+// of extending the first one; all lines form one list (RFC 9110).
+func rightmostUntrustedHop(r *http.Request, peer string, trusted []*net.IPNet) string {
+	client := peer
+	hops := strings.Split(strings.Join(r.Header.Values("X-Forwarded-For"), ","), ",")
+	for i := len(hops) - 1; i >= 0; i-- {
+		addr, err := netip.ParseAddr(strings.TrimSpace(hops[i]))
+		if err != nil {
+			break
+		}
+		client = addr.Unmap().String()
+		if !remoteTrusted(client, trusted) {
+			break
+		}
+	}
+	return client
 }
 
 // warnUntrustedForwarded logs (at most hourly) that a private-range peer sent
