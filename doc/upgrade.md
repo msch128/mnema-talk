@@ -154,6 +154,10 @@ procedure above; take the backup first.
   member holds, or a reply to their message. `@all`, `@here` and Do Not
   Disturb stay silent. The unread mention badge, Web Push and the notifications
   shown while the page is open follow this rule alike.
+- **A deleted account is named "Deleted member" on the server too.** New
+  deletions store that name; accounts deleted under 1.0.0 keep the stored
+  "Deleted user" (the web app shows "Deleted member" in the member's language
+  for both). Bots and API clients that read `display_name` see the stored text.
 - **The release workflow mirrors the required checks.** `release.yml` reads the
   checks that `main`'s ruleset requires (including the `upgrade-drill` jobs)
   and reports each one's result from the tested commit on the release pull
