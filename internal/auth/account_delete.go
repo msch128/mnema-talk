@@ -35,7 +35,7 @@ type DeleteAccountRequest struct {
 // deleteAccount handles POST /api/users/me/delete.
 //
 // @Summary Delete my account
-// @Description Erases the caller's personal data (GDPR Art. 17) and cannot be undone. Needs the current password and, while two-factor sign-in is on, a current code; wrong answers count toward the usual lockouts. The Owner account cannot be deleted (403). Profile, avatar, e-mail address, sessions, tokens, reactions, uploads (files too), invites, settings and roles are deleted. The account's messages stay readable as written by "Deleted user" but lose their text, link cards and pins, so threads keep their shape; replies and quotes by other members stay. Audit entries about the account lose names and details. The username becomes free. The request signs the caller out everywhere.
+// @Description Erases the caller's personal data (GDPR Art. 17) and cannot be undone. Needs the current password and, while two-factor sign-in is on, a current code; wrong answers count toward the usual lockouts. The Owner account cannot be deleted (403). Profile, avatar, e-mail address, sessions, tokens, reactions, uploads (files too), invites, settings and roles are deleted. The account's messages stay readable as written by "Deleted member" but lose their text, link cards and pins, so threads keep their shape; replies and quotes by other members stay. Audit entries about the account lose names and details. The username becomes free. The request signs the caller out everywhere.
 // @ID deleteAccount
 // @Tags Users
 // @Accept json
@@ -63,15 +63,16 @@ func (h *Handler) deleteAccount(w http.ResponseWriter, r *http.Request) error {
 	if ok, err := h.ConfirmIdentity(w, r, u, req.CurrentPassword, req.Code); !ok {
 		return err
 	}
-	var keys []string
+	var gone *erased
 	err := pgx.BeginFunc(r.Context(), h.Sessions.DB, func(tx pgx.Tx) (err error) {
-		keys, err = eraseAccount(r.Context(), tx, u.ID)
+		gone, err = eraseAccount(r.Context(), tx, u.ID)
 		return err
 	})
 	if err != nil {
 		return err
 	}
-	h.removeObjects(r.Context(), keys)
+	h.removeObjects(r.Context(), gone.keys)
+	h.announceUnpins(u, gone.unpins)
 	h.endDeletedAccount(r.Context(), u)
 	h.Sessions.End(w)
 	w.WriteHeader(http.StatusNoContent)
@@ -87,6 +88,20 @@ func (h *Handler) removeObjects(ctx context.Context, keys []string) {
 	}
 	if err := h.Objects.DeleteBatch(ctx, keys); err != nil {
 		slog.Warn("files of a deleted account not removed", "files", len(keys), "err", err)
+	}
+}
+
+// announceUnpins tells the channels that the erasure unpinned messages, so
+// open pin panels refetch. The payload has the shape of chat.PinsChanged; the
+// actor is the deleted account, without a name.
+func (h *Handler) announceUnpins(u *User, unpins []pinRef) {
+	if h.Events == nil {
+		return
+	}
+	for _, p := range unpins {
+		h.Events.BroadcastChannel(p.channelID, events.PinsChanged, map[string]any{
+			"channel_id": p.channelID, "message_id": p.messageID, "pinned": false, "actor_id": u.ID, "actor_name": "",
+		})
 	}
 }
 

@@ -706,7 +706,7 @@
       "rightsComplain": "lodge a complaint with a data protection supervisory authority",
       "rights2After": " (Art. 77 GDPR), in particular in the country where you live or where the operator is based.",
       "noiseFilter": "AI noise suppression (DeepFilterNet3 or GTCRN) runs entirely in your browser. Your microphone signal is not sent to any third party for it; the model and code come from this server.",
-      "selfService": "Without emailing anyone: under Account & security in the account menu you can download a copy of your data (JSON files in a ZIP, once per day) and delete your account yourself. Deleting erases your profile, avatar, e-mail address, sessions and uploads; your messages stay in their threads as written by “Deleted user” without their text. An optional e-mail address is used only to confirm it and to reset your password, and is never shown to other members."
+      "selfService": "Without emailing anyone: under Account & security in the account menu you can download a copy of your data (JSON files in a ZIP, once per day) and delete your account yourself. Deleting erases your profile, avatar, e-mail address, sessions and uploads; your messages stay in their threads as written by “Deleted member” without their text. An optional e-mail address is used only to confirm it and to reset your password, and is never shown to other members."
     },
     "cookies": {
       "heading": "3. Cookies & local storage",
@@ -1564,6 +1564,10 @@
     "empty": "No entries.",
     "system": "System",
     "request": "request",
+    "changed": "Changed: {list}",
+    "created": "Created: {list}",
+    "yes": "yes",
+    "no": "no",
     "loadMore": "Load more",
     "groups": {
       "role": "Roles",

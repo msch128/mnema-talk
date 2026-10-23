@@ -22,7 +22,7 @@ const deletedUsernamePrefix = "deleted-"
 // every foreign key to users and fails when a table is forgotten here.
 //
 // What happens to what the person wrote:
-//   - their messages stay, authored by "Deleted user", with the text, link
+//   - their messages stay, authored by "Deleted member", with the text, link
 //     cards and pins removed, as are the kept earlier versions of their
 //     edits (other members' replies and quotes remain);
 //   - their uploads and avatar are deleted from storage and the database;
@@ -73,7 +73,7 @@ const scrubAudit = `UPDATE audit_log SET
 	WHERE actor_id = $1 OR (target_type = 'user' AND target_id = $1::text) OR details::text LIKE '%' || $1::text || '%'`
 
 const anonymise = `UPDATE users SET
-	username = $2, display_name = 'Deleted user', bio = '', avatar_s3_key = NULL, status_text = '',
+	username = $2, display_name = 'Deleted member', bio = '', avatar_s3_key = NULL, status_text = '',
 	password_hash = '!deleted', email = NULL, email_verified_at = NULL, presence = 'online', locale = '',
 	onboarding = '{}'::jsonb, rules_accepted_version = 0, last_seen_at = NULL, voice_seconds = 0,
 	timeout_until = NULL, timeout_reason = '', timeout_by = NULL,
@@ -91,12 +91,38 @@ func byID(id uuid.UUID, _ string) []any     { return []any{id} }
 func byName(_ uuid.UUID, name string) []any { return []any{name} }
 func noArgs(uuid.UUID, string) []any        { return nil }
 
-// eraseAccount removes the person from the database and returns the storage
-// keys of their files (uploads, avatar, finished exports) for the caller to
-// delete from the object store once the transaction committed.
-func eraseAccount(ctx context.Context, tx pgx.Tx, id uuid.UUID) ([]string, error) {
+// pinRef is a pinned message the erasure unpinned.
+type pinRef struct{ channelID, messageID uuid.UUID }
+
+// erased is what the caller finishes after the transaction committed: the
+// storage keys of the person's files (uploads, avatar, finished exports) to
+// delete from the object store, and the pins the erasure removed, whose
+// channels need a pins_changed event.
+type erased struct {
+	keys   []string
+	unpins []pinRef
+}
+
+// pinnedOf lists the pinned messages the account wrote.
+func pinnedOf(ctx context.Context, tx pgx.Tx, id uuid.UUID) ([]pinRef, error) {
+	rows, err := tx.Query(ctx, `SELECT channel_id, id FROM messages WHERE user_id = $1 AND is_pinned ORDER BY pinned_at`, id)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (p pinRef, err error) {
+		err = row.Scan(&p.channelID, &p.messageID)
+		return p, err
+	})
+}
+
+// eraseAccount removes the person from the database.
+func eraseAccount(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*erased, error) {
 	var name string
 	if err := tx.QueryRow(ctx, `SELECT username FROM users WHERE id = $1 AND NOT is_bot AND deleted_at IS NULL FOR UPDATE`, id).Scan(&name); err != nil {
+		return nil, err
+	}
+	unpins, err := pinnedOf(ctx, tx, id)
+	if err != nil {
 		return nil, err
 	}
 	var keys []string
@@ -131,7 +157,7 @@ func eraseAccount(ctx context.Context, tx pgx.Tx, id uuid.UUID) ([]string, error
 	if _, err := tx.Exec(ctx, anonymise, id, deletedUsernamePrefix+shortID(id)); err != nil {
 		return nil, fmt.Errorf("anonymise account: %w", err)
 	}
-	return keys, nil
+	return &erased{keys: keys, unpins: unpins}, nil
 }
 
 func shortID(id uuid.UUID) string { return fmt.Sprintf("%x", id[:6]) }

@@ -4,6 +4,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"image"
 	"image/color"
 	"image/gif"
@@ -192,6 +193,21 @@ func TestRenamedAndDeletedEmojiAreAuditedAndAnnounced(t *testing.T) {
 		if !strings.Contains(log, action) {
 			t.Errorf("audit log lacks %s", action)
 		}
+	}
+}
+
+func TestAnUploadedEmojiIsNamedInTheAuditEntry(t *testing.T) {
+	a, _, manager := emojiFixture(t, nil)
+	var e emojiJSON
+	uploadEmoji(manager, "party", "x.png", "image/png", squarePNG(t, 32)).decode(t, &e)
+	var name, shown string
+	err := a.db.QueryRow(context.Background(),
+		`SELECT target_name, details->'after'->>'name' FROM audit_log WHERE action = 'emoji.create' AND target_id = $1`, e.ID.String()).Scan(&name, &shown)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if name != "party" || shown != "party" {
+		t.Fatalf("the entry names the emoji: target %q, after.name %q", name, shown)
 	}
 }
 

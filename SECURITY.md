@@ -232,7 +232,7 @@ details and the limits.
   reactions, mentions of the member, settings, roles and overwrites, every file
   the member uploaded (database rows and objects), pending and finished exports,
   and the second factor. What stays: the account row as an anonymised tombstone
-  (`deleted-<id>`, "Deleted user", disabled, unusable password hash) and the
+  (`deleted-<id>`, "Deleted member", disabled, unusable password hash) and the
   member's messages, emptied of text, link cards and pins (and of the earlier
   versions kept for moderators' edit history), so threads and other
   members' replies stay readable; other members' texts that merely quote or
