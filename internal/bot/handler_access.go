@@ -127,7 +127,7 @@ func channelNames(ctx context.Context, q db.Querier) (map[uuid.UUID]string, erro
 		Name string
 	}
 	var list []row
-	rows, err := q.Query(ctx, `SELECT id, name FROM channels`)
+	rows, err := q.Query(ctx, `SELECT id, name FROM channels WHERE type <> 'dm'`)
 	if err == nil {
 		list, err = pgx.CollectRows(rows, pgx.RowToStructByPos[row])
 	}

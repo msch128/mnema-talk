@@ -63,11 +63,18 @@ func (h *Hub) BroadcastChannel(channelID uuid.UUID, eventType string, payload an
 	if !ok {
 		return
 	}
-	h.tapped(channelID, eventType, payload) // only what is really published
+	dm := snap != nil && snap.IsDM(channelID)
+	if dm {
+		// A conversation's events go to its members only: never to webhooks
+		// or bots, and not to a client that does not know conversations.
+		h.dmTapped(channelID, eventType, payload)
+	} else {
+		h.tapped(channelID, eventType, payload) // only what is really published
+	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	for c := range h.clients {
-		if c.can(snap, channelID, perm.ViewChannel) {
+		if (!dm || c.dmAware) && c.can(snap, channelID, perm.ViewChannel) {
 			c.deliver(data)
 		}
 	}
