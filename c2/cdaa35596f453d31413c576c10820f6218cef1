@@ -1,0 +1,275 @@
+web/src/composables/useSlashCommands.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 75-79
+internal/db/migrations/0056_bot_token_minter_inferred.sql
+  s_06fcde5dbef956::t_56ee373dcdc052 1-7
+internal/imageverify/flow_test.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-207
+internal/imageverify/policy.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-82
+scripts/backup-drill.sh
+  s_06fcde5dbef956::t_56ee373dcdc052 78-79,85-88,96-97
+web/src/components/VoiceStage.phone.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 1-86
+internal/perm/perm.go
+  s_06fcde5dbef956::t_56ee373dcdc052 80-84,122,155
+web/src/stores/chat/threadFollow.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 1-58
+web/src/stores/chatStoreBehaviour.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 22-25
+internal/updaterd/docker.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-186
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_56ee373dcdc052 46-47
+doc/glossary.md
+  s_06fcde5dbef956::t_56ee373dcdc052 25
+internal/updaterd/errors_test.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-188
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_56ee373dcdc052 6,36,201-214
+  s_06fcde5dbef956::t_7038d58c8db7e2 215
+internal/auth/moderation.go
+  s_06fcde5dbef956::t_56ee373dcdc052 118-130,132,136,146,153
+internal/auth/moderation_kick_test.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-46
+internal/slashcmd/slashcmd_test.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-122
+scripts/postgres-upgrade-drill.sh
+  s_06fcde5dbef956::t_56ee373dcdc052 45,47,73-74,80-83
+web/src/lib/permissions.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 29-30,50,62
+SECURITY.md
+  s_06fcde5dbef956::t_56ee373dcdc052 56-58,62-72,691-707,806-818,821,823-826,843-889
+internal/imageverify/fixture_test.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-324
+web/src/components/ConnectionBanner.vue
+  s_06fcde5dbef956::t_56ee373dcdc052 4,10-21,46-47,61
+internal/imageverify/provenance.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-198
+internal/slashcmd/slashcmd.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-121
+internal/updaterd/run.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-156
+web/src/lib/notifyPreview.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 1-22
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_56ee373dcdc052 171,316-319,452-454,467-472,894,1276,1284-1355,1659-1662,1814,2014-2015,2150-2155
+web/src/stores/chatStoreDefensive.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 19-22
+internal/imageverify/verifier_test.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-175
+web/src/components/SkipLinks.vue
+  s_06fcde5dbef956::t_56ee373dcdc052 1-27
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_56ee373dcdc052 171,316-319,452-454,467-472,894,1276,1284-1355,1659-1662,1814,2014-2015,2150-2155
+web/src/stores/chat/socket.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 14-15,45-46,221-226
+  s_06fcde5dbef956::t_53816eb0ddc7a6 227-228
+internal/updaterd/daemontest/daemon.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-111
+web/src/composables/useTalkControls.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 1-35
+.env.example
+  s_06fcde5dbef956::t_56ee373dcdc052 246-253
+internal/bot/legacy_bind_integration_test.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-201
+internal/chat/dm_start.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-46
+scripts/upgrade-drill.sh
+  s_06fcde5dbef956::t_56ee373dcdc052 107-108,114-117
+web/src/composables/usePushSettings.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 11,32,80-83
+internal/perm/snapshot_test.go
+  s_06fcde5dbef956::t_56ee373dcdc052 35
+internal/server/router_build.go
+  s_06fcde5dbef956::t_56ee373dcdc052 29,191,328,330
+web/src/components/ChatArea.vue
+  s_06fcde5dbef956::t_56ee373dcdc052 211-212,214
+scripts/smoke-image.sh
+  s_06fcde5dbef956::t_56ee373dcdc052 65-66,72-75,83-84
+internal/slashcmd/thread.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-47
+web/src/components/SearchResultItem.vue
+  s_06fcde5dbef956::t_56ee373dcdc052 6,61-66
+internal/bot/authn_legacy.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-76
+web/src/lib/searchIsFilter.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 1-31
+internal/update/updater.go
+  s_06fcde5dbef956::t_56ee373dcdc052 15-19,26-34,39-42,79-81,102-107
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 33-35
+e2e/tests/coherence.spec.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 1-93
+Makefile
+  s_06fcde5dbef956::t_56ee373dcdc052 103
+THIRD_PARTY_NOTICES.md
+  s_06fcde5dbef956::t_56ee373dcdc052 134-216,227
+AGENTS.md
+  s_06fcde5dbef956::t_56ee373dcdc052 60,92-93
+internal/imageverify/verifier.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-259
+internal/auth/moderation_bans.go
+  s_06fcde5dbef956::t_56ee373dcdc052 101-110
+internal/slashcmd/moderation.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-177
+go.mod
+  s_06fcde5dbef956::t_56ee373dcdc052 32-104,125,127,129-130,132-135,140,160-164,171
+internal/updaterd/server.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-252
+doc/bots.md
+  s_06fcde5dbef956::t_56ee373dcdc052 144-154,503,511-552
+web/src/components/SearchFilterFeatures.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 1-48
+web/src/lib/searchSuggest.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 34
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 63
+internal/chat/dm_handler.go
+  s_06fcde5dbef956::t_56ee373dcdc052 169
+web/src/stores/chat/threads.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 7,35
+internal/imageverify/more_test.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-117
+web/src/lib/searchSupport.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 1-26
+internal/server/slash_builtins_integration_test.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-477
+doc/moderation.md
+  s_06fcde5dbef956::t_56ee373dcdc052 20-21,75-92
+  s_06fcde5dbef956::t_e0f5bdfe25c0d6 93
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 12,67-68,132-133
+web/src/components/SearchTipDismissal.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 1-73
+internal/events/types.go
+  s_06fcde5dbef956::t_56ee373dcdc052 56-58
+internal/server/system_selfupdate_integration_test.go
+  s_06fcde5dbef956::t_56ee373dcdc052 204-219
+cmd/updater/main.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-14
+web/src/lib/moderation.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 88-95
+doc/operations.md
+  s_06fcde5dbef956::t_56ee373dcdc052 144,440-464
+internal/slashcmd/msg.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-50
+Dockerfile
+  s_06fcde5dbef956::t_56ee373dcdc052 62-64,82-85
+web/src/stores/chatModeration.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 42-50
+internal/imageverify/testdata/release-1.0.1-bundle.json
+  s_06fcde5dbef956::t_56ee373dcdc052 1-68
+web/src/lib/searchQuery.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 1,6,9-12,19,44-52,111,117,128-130,148,208,238
+web/src/stores/chat/notifications.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 13,51-60,63,80-81
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 792,805,885,897
+internal/server/health.go
+  s_06fcde5dbef956::t_56ee373dcdc052 42
+web/src/components/VoiceStage.vue
+  s_06fcde5dbef956::t_56ee373dcdc052 22,236-239,245-246,248,380-385
+web/src/lib/searchSuggest.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 4-5,23,53-59,71
+internal/update/updater_request_test.go
+  s_06fcde5dbef956::t_56ee373dcdc052 12
+web/src/stores/chatEnvironment.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 8-11
+web/src/components/ChatComposer.vue
+  s_06fcde5dbef956::t_56ee373dcdc052 124
+web/src/components/SearchModal.vue
+  s_06fcde5dbef956::t_56ee373dcdc052 7,10-11,13,30-39,46,85,102-103,110-114,211
+internal/updaterd/updaterd_test.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-160
+web/src/App.vue
+  s_06fcde5dbef956::t_56ee373dcdc052 38,228
+internal/bot/store.go
+  s_06fcde5dbef956::t_56ee373dcdc052 84-89,283-284,293
+internal/bot/authn.go
+  s_06fcde5dbef956::t_56ee373dcdc052 56-57
+e2e/tests/mobile.spec.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 158-160
+internal/update/updater_test.go
+  s_06fcde5dbef956::t_56ee373dcdc052 25,28,35-38,45,56,63,80
+docker-compose.yml
+  s_06fcde5dbef956::t_56ee373dcdc052 336,342-361,365,367-369,371-416,425-426,448,469-478
+doc/architecture.md
+  s_06fcde5dbef956::t_56ee373dcdc052 48-49,545-549
+web/src/types/events.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 116-117,315,369
+web/src/components/SearchInput.vue
+  s_06fcde5dbef956::t_56ee373dcdc052 7,183
+web/src/lib/thirdParty.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 57
+web/src/components/BotTokensPanel.vue
+  s_06fcde5dbef956::t_56ee373dcdc052 130-131
+api/openapi.json
+  s_06fcde5dbef956::t_56ee373dcdc052 1270-1277,1449-1456,12984,13084
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_56ee373dcdc052 135
+web/src/lib/moderation.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 3,45-47
+  s_06fcde5dbef956::t_e8cb162867b426 48-49
+web/src/components/BotTokensPanel.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 58-71
+doc/deployment.md
+  s_06fcde5dbef956::t_56ee373dcdc052 143-145,159
+internal/server/system_selfupdate.go
+  s_06fcde5dbef956::t_56ee373dcdc052 82,97,155,160-165,243-248
+internal/bot/authn_minter.go
+  s_06fcde5dbef956::t_56ee373dcdc052 27-29,31-35
+internal/slashcmd/text.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-85
+web/src/components/SearchResults.vue
+  s_06fcde5dbef956::t_56ee373dcdc052 16,36
+web/src/composables/useSlashBuiltin.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 8,69-77
+  s_06fcde5dbef956::t_7093ef26cb6056 78-79
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 7,14,173,196-198
+  s_06fcde5dbef956::t_7cdcc8f67b68a9 199
+internal/imageverify/trust.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-50
+web/src/stores/chatPollNotification.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 9-12
+web/src/stores/chatThreadFollow.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 1-123
+web/src/components/AdminRolesTab.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 62
+web/src/components/SearchFilterSupport.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 1-66
+web/src/components/SkipLinks.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 1-37
+internal/auth/moderation_kick.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-81
+doc/upgrade.md
+  s_06fcde5dbef956::t_56ee373dcdc052 143,157-161,185-206,218
+internal/slashcmd/nick.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-58
+web/src/components/ConnectionBannerOffline.test.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 1-62
+web/src/stores/chat/reset.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 29-30
+e2e/tests/slash-builtins.spec.ts
+  s_06fcde5dbef956::t_56ee373dcdc052 1-100
+internal/imageverify/live_test.go
+  s_06fcde5dbef956::t_56ee373dcdc052 1-47
+go.sum
+  s_06fcde5dbef956::t_f801c76e214e71 1-32,39-42,67-68,81-86,89-92,97-105,107-111,114-119,122-123,126-127,129-130,133-190,194-197,201-208,211-214,217-248,257-262,265-266,271-278,283-290,297,330-333,335-344,347-385,395-412,419-420,422-441,444-450,480-481,513-514,537-550,559-560,563-566
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c2cdaa35596f453d31413c576c10820f6218cef1",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
