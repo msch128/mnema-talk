@@ -14,6 +14,7 @@ import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
 import { moderateMessages } from '../lib/messageModeration'
 import { previewText } from '../lib/replies'
+import { shortcodesForEditing } from '../lib/customEmoji'
 import { t } from '../i18n'
 
 type MessageActions = ReturnType<typeof useMessageActions>
@@ -60,7 +61,7 @@ function basicItems(msg: Message, { actions, reply, copy }: MenuDeps): ContextMe
   items.push({
     label: t('chat.copyText'),
     icon: Copy,
-    action: () => copy(msg.content || '', 'chat.copiedText')
+    action: () => copy(shortcodesForEditing(msg.content || ''), 'chat.copiedText')
   })
   items.push({
     label: t('chat.copyLink'),

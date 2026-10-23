@@ -46,6 +46,22 @@ describe('AdminAuditTab', () => {
     expect(w.find('pre').exists()).toBe(false)
   })
 
+  it('names the 1.0 events and filters by emoji and bots', async () => {
+    apiMock.mockResolvedValue(page([entry(3, 'emoji.create'), entry(2, 'bot.token_regenerate'), entry(1, 'auth.two_factor_enabled')]))
+    const w = mount(AdminAuditTab)
+    await flushPromises()
+    expect(w.text()).toContain('Emoji added')
+    expect(w.text()).toContain('Bot token regenerated')
+    expect(w.text()).toContain('Two-factor sign-in turned on')
+    const options = w.findAll('select')[0]!.findAll('option').map(o => o.text())
+    expect(options).toContain('Emoji')
+    expect(options).toContain('Bots')
+    await w.findAll('select')[0]!.setValue('bot')
+    await w.find('[data-testid="audit-filters"]').trigger('submit')
+    await flushPromises()
+    expect(apiMock).toHaveBeenLastCalledWith('/api/admin/audit-log?limit=50&action=bot', { decode: expect.any(Function) })
+  })
+
   it('filters and pages', async () => {
     apiMock.mockResolvedValueOnce(page([entry(5, 'role.create')], 5))
     const w = mount(AdminAuditTab)

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { DraftReply } from '../lib/drafts'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Plus, ArrowUp } from '@lucide/vue'
 import ReplyComposerBar from './ReplyComposerBar.vue'
 import EmojiButton from './EmojiButton.vue'
@@ -23,6 +23,9 @@ const props = defineProps({
 const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cancel-reply': []; file: [event: Event] }>()
 
 const text = useDraftModel(() => props.modelValue, value => emit('update:modelValue', value))
+
+// Slash commands and polls start in the channel; here the text would go out as a plain reply.
+const looksLikeCommand = computed(() => /^\/[A-Za-z]/.test(text.value))
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const textAreaEl = ref<HTMLTextAreaElement | null>(null)
@@ -102,5 +105,6 @@ function handleKeyDown(e: KeyboardEvent) {
         <ArrowUp class="w-4 h-4" />
       </button>
     </div>
+    <p v-if="looksLikeCommand" data-testid="thread-command-hint" role="status" class="mt-1 px-1 text-xs text-mnema-tertiary">{{ $t('thread.commandHint') }}</p>
   </div>
 </template>
