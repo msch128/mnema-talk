@@ -645,7 +645,7 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 
 Objects in storage that no media row refers to (a failed delete, a crash
 during an upload) are invisible to members and only take space. Once a day
-the app counts those older than 24 hours under `uploads/` and `avatars/` and
+the app counts those older than 24 hours under `uploads/`, `avatars/` and `banners/` and
 logs a warning when it finds any; it never deletes them on its own.
 
 ```sh
