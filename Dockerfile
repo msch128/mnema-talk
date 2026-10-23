@@ -15,7 +15,7 @@
 # ==========================================================
 
 # --- Stage 1: frontend ---
-FROM --platform=$BUILDPLATFORM node:26-alpine@sha256:6f08a523443ddedf52941874c203475b0ad503e859ad70cb26ab8be9a517dbd5 AS web
+FROM --platform=$BUILDPLATFORM node:26-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS web
 WORKDIR /web
 
 COPY web/package.json web/package-lock.json ./
@@ -31,7 +31,7 @@ COPY version.txt /version.txt
 RUN MNEMA_VERSION="${VERSION}" npm run build
 
 # --- Stage 2: Go binary ---
-FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine@sha256:b8c9b82affbbb82a020bbcf998dad2ba9516944ac7e883524642a481a9505e9c AS builder
 WORKDIR /src
 
 COPY go.mod go.sum ./
@@ -66,14 +66,14 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # --- Stage 3: runtime files, prepared on the build machine ---
 # CA bundle, time zone data and /etc/passwd are the same on every
 # architecture, so they are assembled here and copied into the target image.
-FROM --platform=$BUILDPLATFORM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS rootfs
+FROM --platform=$BUILDPLATFORM alpine:3.24.3@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a AS rootfs
 RUN apk add --no-cache ca-certificates tzdata
 # Least-privilege runtime user. The binary writes nothing to disk except
 # multipart upload temp files in /tmp; media lives in S3, data in PostgreSQL.
 RUN adduser -D -H -u 10001 app
 
 # --- Stage 4: runtime ---
-FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+FROM alpine:3.24.3@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
 COPY --from=rootfs /etc/passwd /etc/group /etc/shadow /etc/
 COPY --from=rootfs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=rootfs /usr/share/zoneinfo /usr/share/zoneinfo
