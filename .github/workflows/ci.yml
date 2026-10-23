@@ -506,6 +506,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        browser: [webkit, firefox] # TEMP-STABILITY
+        iteration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         include:
           # Playwright's Linux WebKit has no RTCRtpScriptTransform (nor
           # createEncodedStreams or RTCEncodedAudioFrame; same 26.6 build as on
@@ -515,12 +517,12 @@ jobs:
           # list is every other spec, plus browser-sealing.spec.ts for the refusal.
           - browser: webkit
             label: webkit
-            only: "--project=webkit --retries=0 --repeat-each=2 account-delete.spec.ts active-members.spec.ts audit.spec.ts bot-members.spec.ts bots.spec.ts browser-sealing.spec.ts crypto-state.spec.ts drafts.spec.ts layout.spec.ts mentions.spec.ts message-moderation.spec.ts moderation.spec.ts notifications.spec.ts onboarding.spec.ts polls.spec.ts pwa.spec.ts search.spec.ts sidebar-layout.spec.ts two-factor.spec.ts unread-jump.spec.ts upload-limit.spec.ts webhooks-outgoing.spec.ts webhooks-ui.spec.ts webhooks.spec.ts"
+            only: "--project=webkit account-delete.spec.ts active-members.spec.ts audit.spec.ts bot-members.spec.ts bots.spec.ts browser-sealing.spec.ts crypto-state.spec.ts drafts.spec.ts layout.spec.ts mentions.spec.ts message-moderation.spec.ts moderation.spec.ts notifications.spec.ts onboarding.spec.ts polls.spec.ts pwa.spec.ts search.spec.ts sidebar-layout.spec.ts two-factor.spec.ts unread-jump.spec.ts upload-limit.spec.ts webhooks-outgoing.spec.ts webhooks-ui.spec.ts webhooks.spec.ts"
           - browser: firefox
             # late-join.spec.ts also asserts the AI noise filter, which does not run
             # on the Linux Firefox of CI; it passes on macOS (see doc/product-status.md).
             label: firefox
-            only: "--project=firefox --retries=0 --repeat-each=5 smoke.spec.ts browser-sealing.spec.ts key-lifecycle.spec.ts search.spec.ts mentions.spec.ts screenshare.spec.ts"
+            only: "--project=firefox smoke.spec.ts browser-sealing.spec.ts key-lifecycle.spec.ts search.spec.ts mentions.spec.ts screenshare.spec.ts"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -603,6 +605,10 @@ jobs:
   # and SeaweedFS run as local processes (E2E_NO_DOCKER). Not a required check.
   e2e-webkit-macos:
     name: e2e (webkit-macos-calls)
+    strategy: # TEMP-STABILITY
+      fail-fast: false
+      matrix:
+        iteration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     runs-on: macos-latest
     timeout-minutes: 40
     steps:
@@ -639,7 +645,7 @@ jobs:
           E2E_NO_DOCKER: "1"
           E2E_INSTALL_BROWSER: "1"
           E2E_BROWSERS: webkit
-          E2E_ONLY: "--project=webkit --retries=0 --repeat-each=3 browser-sealing.spec.ts key-lifecycle.spec.ts late-join.spec.ts screenshare.spec.ts screen-layers.spec.ts stage-switch.spec.ts talk-extras.spec.ts voice-chat.spec.ts smoke.spec.ts roles.spec.ts"
+          E2E_ONLY: "--project=webkit browser-sealing.spec.ts key-lifecycle.spec.ts late-join.spec.ts screenshare.spec.ts screen-layers.spec.ts stage-switch.spec.ts talk-extras.spec.ts voice-chat.spec.ts smoke.spec.ts roles.spec.ts"
         run: e2e/run.sh
 
       - name: Upload Playwright traces and screenshots
