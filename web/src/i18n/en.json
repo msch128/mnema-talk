@@ -1790,6 +1790,7 @@
       "media": {
         "prune": "Media pruned",
         "orphans_cleanup": "Orphaned files removed",
+        "avatar_removed": "Avatar removed (could not be redrawn without metadata)",
         "delete": "Media deleted"
       },
       "system": {

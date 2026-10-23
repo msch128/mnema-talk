@@ -1790,6 +1790,7 @@
       "media": {
         "prune": "Medien bereinigt",
         "orphans_cleanup": "Verwaiste Dateien entfernt",
+        "avatar_removed": "Avatar entfernt (ließ sich nicht ohne Metadaten neu zeichnen)",
         "delete": "Medium gelöscht"
       },
       "system": {
