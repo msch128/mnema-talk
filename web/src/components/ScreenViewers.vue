@@ -105,7 +105,7 @@ onUnmounted(() => clearTimeout(hoverTimer))
       v-if="open"
       :id="popoverId"
       data-testid="screen-viewers-list"
-      class="absolute left-0 top-full z-40 mt-1.5 w-56 max-w-[calc(100vw-16px)] rounded-lg bg-mnema-elevated p-1.5 text-left shadow-popover pop-in select-none"
+      class="absolute left-0 top-full z-40 mt-1.5 w-56 max-w-[calc(100vw-16px)] rounded-xl bg-mnema-elevated p-1.5 text-left shadow-popover pop-in select-none"
     >
       <p class="px-2 pb-1 pt-0.5 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">
         {{ count ? $t('talk.viewersTitle', { count }) : $t('talk.viewersNone') }}

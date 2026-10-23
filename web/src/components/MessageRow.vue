@@ -58,7 +58,7 @@ defineExpose({ el: row })
     tabindex="0"
     role="article"
     :class="[
-      'relative pl-[72px] pr-12 max-md:pl-[60px] max-md:pr-3 py-0.5 hover:bg-mnema-surface/50 transition-colors group focus:outline-hidden focus-visible:bg-mnema-surface/40',
+      'relative mx-2 rounded-lg pl-16 pr-10 max-md:mx-0 max-md:rounded-none max-md:pl-[60px] max-md:pr-3 py-0.5 hover:bg-mnema-surface/60 transition-colors group focus:outline-hidden focus-visible:bg-mnema-surface/40',
       grouped ? '' : 'mt-[17px] first:mt-2',
       highlighted ? 'msg-flash' : '',
       mentionsMe ? 'msg-mentions-me' : ''
@@ -130,7 +130,7 @@ defineExpose({ el: row })
     <!-- Grouped follow-up: small time in the gutter on hover -->
     <span
       v-if="grouped"
-      class="absolute left-0 top-0.5 w-[72px] text-center text-xs leading-5.5 text-mnema-tertiary tabular-nums opacity-0 group-hover:opacity-100 select-none"
+      class="absolute left-0 top-0.5 w-16 max-md:w-[72px] text-center text-xs leading-5.5 text-mnema-tertiary tabular-nums opacity-0 group-hover:opacity-100 select-none"
       aria-hidden="true"
     >
       {{ formatTime(msg.created_at) }}

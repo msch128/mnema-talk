@@ -305,7 +305,7 @@ onUnmounted(() => {
   window.removeEventListener('scroll', handleOutsideDismiss, true)
 })
 
-const panelClass = 'p-1.5 rounded-lg bg-mnema-elevated border border-mnema-border shadow-lg text-sm text-mnema-muted font-sans'
+const panelClass = 'p-2 rounded-xl bg-mnema-elevated border border-mnema-border shadow-lg text-sm text-mnema-muted font-sans'
 </script>
 
 <template>
@@ -344,7 +344,7 @@ const panelClass = 'p-1.5 rounded-lg bg-mnema-elevated border border-mnema-borde
             tabindex="-1"
             :disabled="item.disabled"
             :class="[
-              'w-full h-8 px-2.5 flex items-center justify-between gap-3 rounded-sm text-left transition-colors font-normal focus:outline-hidden',
+              'w-full h-9 px-3 flex items-center justify-between gap-3 rounded-lg text-left transition-colors font-normal focus:outline-hidden',
               item.disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-mnema-hover hover:text-mnema-text focus-visible:bg-mnema-hover focus-visible:text-mnema-text',
               openSub === item.id ? 'bg-mnema-hover text-mnema-text' : ''
             ]"
