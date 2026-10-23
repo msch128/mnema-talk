@@ -169,6 +169,7 @@ const HANDLERS: Handlers = {
     fetchChannels(cx)
   },
   emoji_changed: () => { void useEmojiStore().load() },
+  thread_follow_updated: () => {},
   // The block list lives in the blocks store of the direct messages client (next package); nothing to refresh yet.
   block_updated: () => {},
   saved_updated: (_cx, p) => { if (p) useSavedStore().onUpdated(p) },

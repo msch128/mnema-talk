@@ -19,6 +19,7 @@ const examples: Record<ServerEventType, unknown[]> = {
   permissions_changed: [null],
   roles_changed: [null],
   emoji_changed: [null],
+  thread_follow_updated: [{ thread_id: id, channel_id: id, following: true }, { thread_id: id, channel_id: id, following: false }],
   saved_updated: [{ message_id: id, saved: true }, { message_id: id, saved: false }],
   dm_created: [{
     id, group: false, members: [{ id, username: 'bob', display_name: 'Bob' }], created_at: FIXTURE_TIMESTAMP, last_message_at: null,

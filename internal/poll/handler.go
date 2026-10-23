@@ -1,11 +1,13 @@
 package poll
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -163,10 +165,21 @@ func (s *Service) vote(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// auditEnd records that a moderator closed another member's poll.
+func (s *Service) auditEnd(ctx context.Context, rf ref) {
+	var channel, author, question string
+	_ = s.DB.QueryRow(ctx, `SELECT c.name, u.display_name, m.content FROM messages m
+		JOIN channels c ON c.id = m.channel_id JOIN users u ON u.id = m.user_id WHERE m.id = $1`, rf.message).Scan(&channel, &author, &question)
+	s.Audit.RecordOrLog(ctx, audit.Entry{
+		Action: "poll.end", TargetType: "message", TargetID: rf.message.String(), TargetName: channel, ChannelID: &rf.channel,
+		Details: map[string]any{"channel_id": rf.channel, "channel_name": channel, "author_id": rf.author, "author_name": author, "question": audit.Content(question)},
+	})
+}
+
 // end handles POST /api/channels/{channelID}/messages/{messageID}/poll/end.
 //
 // @Summary End a poll early
-// @Description The poll's author, or a member with Manage messages in the channel, closes voting now. Ending an ended poll changes nothing. Broadcasts poll_update.
+// @Description The poll's author, or a member with Manage messages in the channel, closes voting now. Ending an ended poll changes nothing. A moderator ending someone else's poll is recorded in the audit log (poll.end). Broadcasts poll_update.
 // @ID endPoll
 // @Tags Polls
 // @Produce json
@@ -199,6 +212,9 @@ func (s *Service) end(w http.ResponseWriter, r *http.Request) error {
 	if changed {
 		if _, err := s.announce(r.Context(), rf.channel, rf.message); err != nil {
 			return err
+		}
+		if rf.author != user.ID {
+			s.auditEnd(r.Context(), rf)
 		}
 	}
 	d, err := s.detail(r.Context(), rf.message, user.ID)
