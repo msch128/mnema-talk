@@ -24,14 +24,12 @@ function fakeScreen() {
     const ctx = canvas.getContext('2d')
     let n = 0
     const lines = [
-      ['#c586c0', 'func', ' handleJoin(ctx context.Context, room *Room) error {'],
-      ['#9cdcfe', '    peer', ', err := room.NewPeer(ctx)'],
-      ['#c586c0', '    if', ' err != nil {'],
-      ['#c586c0', '        return', ' fmt.Errorf("join: %w", err)'],
+      ['#c586c0', 'pub fn', ' flush_lights(pass: &mut Pass, lights: &[Light]) {'],
+      ['#6a9955', '    // One uniform block per batch, not per light.', ''],
+      ['#c586c0', '    for', ' batch in lights.chunks(MAX_LIGHTS_PER_PASS) {'],
+      ['#9cdcfe', '        pass', '.set_uniforms(&LightBlock::from(batch));'],
+      ['#9cdcfe', '        pass', '.draw_indexed(0..quad.index_count, 0, 0..1);'],
       ['#d4d4d4', '    }', ''],
-      ['#6a9955', '    // Forward RTP, never transcode.', ''],
-      ['#9cdcfe', '    room', '.Forward(peer, layers)'],
-      ['#c586c0', '    return', ' nil'],
       ['#d4d4d4', '}', ''],
     ]
     const draw = () => {
@@ -39,20 +37,20 @@ function fakeScreen() {
       ctx.fillStyle = '#252526'; ctx.fillRect(0, 0, 360, H)
       ctx.fillStyle = '#333'; ctx.fillRect(0, 0, W, 56)
       ctx.fillStyle = '#d4d4d4'; ctx.font = '26px monospace'
-      ctx.fillText('sfu/room.go', 380, 38)
-      ;['cmd/', 'internal/', '  sfu/', '    room.go', '    peer.go', '    layers.go', '  ws/', 'web/'].forEach((t, i) => {
+      ctx.fillText('render/lights.rs', 380, 38)
+      ;['emberfall/', '  assets/', '  render/', '    lights.rs', '    pass.rs', '    batch.rs', '  game/', 'tools/'].forEach((t, i) => {
         ctx.fillStyle = i === 3 ? '#fff' : '#9aa0a0'; ctx.fillText(t, 28, 110 + i * 44)
       })
       ctx.font = '34px monospace'
       lines.forEach(([color, a, b], i) => {
-        ctx.fillStyle = '#6b6b6b'; ctx.fillText(String(i + 12), 390, 130 + i * 52)
+        ctx.fillStyle = '#6b6b6b'; ctx.fillText(String(i + 38), 390, 130 + i * 52)
         ctx.fillStyle = color; ctx.fillText(a, 460, 130 + i * 52)
         ctx.fillStyle = '#d4d4d4'; ctx.fillText(b, 460 + ctx.measureText(a).width, 130 + i * 52)
       })
       if (Math.floor(n / 15) % 2 === 0) { ctx.fillStyle = '#fff'; ctx.fillRect(460 + 20 * 20, 130 + 8 * 52 - 30, 3, 40) }
       // build pipeline panel with a moving graph
       ctx.fillStyle = '#181818'; ctx.fillRect(380, 640, W - 420, 400)
-      ctx.fillStyle = '#2da771'; ctx.font = '30px monospace'; ctx.fillText('PASS  internal/sfu  (race)  4.2s', 410, 695)
+      ctx.fillStyle = '#2da771'; ctx.font = '30px monospace'; ctx.fillText('test render::lights  ... ok  (41 passed)  3.2s', 410, 695)
       ctx.strokeStyle = '#2da771'; ctx.lineWidth = 4; ctx.beginPath()
       for (let x = 0; x < 1400; x += 8) {
         const y = 900 + Math.sin((x + n * 6) / 70) * 60 + Math.sin((x + n * 3) / 23) * 20
@@ -94,15 +92,56 @@ async function closeWelcomeFlow(ctx) {
 }
 const channel = (page, type, text) => page.locator(`[data-channel-type="${type}"]`, { hasText: text }).first()
 
-// 1. Chat
+// Members who are online while the pictures are taken (the member list shows them).
+async function keepOnline(names) {
+  const pages = []
+  for (const name of names) {
+    const page = await newPage()
+    await login(page, name, MEMBER_PASSWORD)
+    await page.goto(BASE + '/')
+    await page.getByTestId('account-menu-button').waitFor()
+    pages.push(page)
+  }
+  return pages
+}
+const online = await keepOnline(['theo', 'priya', 'ines', 'kai'])
+
+// 1. Chat: #dev-log with Markdown, a code block, a thread, a mention and reactions
 if (wanted('chat')) {
   const page = await newPage()
   await login(page, ADMIN_USER, ADMIN_PASSWORD)
   await page.goto(BASE + '/')
-  await channel(page, 'text', 'general').click()
-  await page.mouse.move(700, 450)
+  await channel(page, 'text', 'dev-log').click()
+  await page.mouse.move(700, 300)
   await page.waitForTimeout(1500)
   await shot(page, 'chat')
+  await page.context().close()
+}
+
+// 1b. The thread under the save-bug report
+if (wanted('thread')) {
+  const page = await newPage()
+  await login(page, ADMIN_USER, ADMIN_PASSWORD)
+  await page.goto(BASE + '/')
+  await channel(page, 'text', 'dev-log').click()
+  await page.getByRole('button', { name: /Open thread/ }).first().click()
+  await page.getByText('save.tmp').first().waitFor()
+  await page.mouse.move(120, 700)
+  await page.waitForTimeout(800)
+  await shot(page, 'thread')
+  await page.context().close()
+}
+
+// 1c. Unread messages and a mention: #general with the divider
+if (wanted('unread')) {
+  const page = await newPage()
+  await login(page, ADMIN_USER, ADMIN_PASSWORD)
+  await page.goto(BASE + '/')
+  await page.waitForTimeout(1200)
+  await channel(page, 'text', 'general').click()
+  await page.waitForTimeout(1800)
+  await page.mouse.move(120, 760)
+  await shot(page, 'unread')
   await page.context().close()
 }
 
@@ -112,7 +151,7 @@ if (wanted('roles')) {
   await login(page, ADMIN_USER, ADMIN_PASSWORD)
   await page.goto(BASE + '/admin/roles')
   await page.waitForTimeout(1500)
-  await page.getByRole('list', { name: /roles/i }).getByText('Moderator').first().click()
+  await page.getByRole('list', { name: /roles/i }).getByText('Devs').first().click()
   await page.waitForTimeout(500)
   await shot(page, 'roles')
   await page.context().close()
@@ -123,7 +162,7 @@ if (wanted('webhooks')) {
   const page = await newPage()
   await login(page, ADMIN_USER, ADMIN_PASSWORD)
   await page.goto(BASE + '/')
-  const row = channel(page, 'text', 'releases')
+  const row = channel(page, 'text', 'dev-log')
   await row.click()
   await row.click({ button: 'right' })
   await page.getByRole('menuitem', { name: /Webhooks/ }).click()
@@ -135,12 +174,12 @@ if (wanted('webhooks')) {
   await page.context().close()
 }
 
-// 4a. Pinned messages of a channel
+// 4a. Pinned messages: the rules and the release schedule
 if (wanted('pins')) {
   const page = await newPage()
   await login(page, ADMIN_USER, ADMIN_PASSWORD)
   await page.goto(BASE + '/')
-  await channel(page, 'text', 'general').click()
+  await channel(page, 'text', 'announcements').click()
   await page.getByTestId('pinned-button').click()
   await page.getByTestId('pinned-item').first().waitFor()
   await page.waitForTimeout(600)
@@ -148,21 +187,21 @@ if (wanted('pins')) {
   await page.context().close()
 }
 
-// 4b. A poll with votes
+// 4b. A poll with votes, voted by the Owner as well
 if (wanted('poll')) {
   const page = await newPage()
   await login(page, ADMIN_USER, ADMIN_PASSWORD)
   await page.goto(BASE + '/')
-  await channel(page, 'text', 'dev-chat').click()
+  await channel(page, 'text', 'playtests').click()
   await page.getByTestId('poll').waitFor()
-  await page.getByTestId('poll').getByText('Wednesday').click()
+  await page.getByTestId('poll').getByText('Saturday afternoon').click()
   await page.waitForTimeout(800)
-  await page.mouse.move(1000, 500)
+  await page.mouse.move(120, 760)
   await shot(page, 'poll')
   await page.context().close()
 }
 
-// 4c. The emoji picker (with the instance's own emoji section when there is one)
+// 4c. The emoji picker with the studio's own emoji
 if (wanted('emoji-picker')) {
   const page = await newPage()
   await login(page, ADMIN_USER, ADMIN_PASSWORD)
@@ -171,6 +210,9 @@ if (wanted('emoji-picker')) {
   await page.getByTestId('emoji-button').click()
   await page.getByTestId('emoji-picker').locator('emoji-picker').waitFor()
   await page.waitForTimeout(1200)
+  // The studio's own emoji are the first group of the picker.
+  await page.getByTestId('emoji-picker').locator('button.nav-button').first().click()
+  await page.waitForTimeout(500)
   await shot(page, 'emoji-picker')
   await page.context().close()
 }
@@ -178,7 +220,7 @@ if (wanted('emoji-picker')) {
 // 4d. Turning on two-factor sign-in (the secret belongs to a demo account on a throwaway stack)
 if (wanted('two-factor')) {
   const page = await newPage()
-  await login(page, 'nora', MEMBER_PASSWORD)
+  await login(page, 'ines', MEMBER_PASSWORD)
   await page.goto(BASE + '/')
   await page.getByTestId('account-menu-button').click()
   await page.getByTestId('menu-account-security').click()
@@ -191,7 +233,7 @@ if (wanted('two-factor')) {
   await page.context().close()
 }
 
-// 4e. The phone layout: the same channel on a 390 px screen
+// 4e. The phone layout: #dev-log on a 390 px screen
 if (wanted('phone')) {
   const ctx = await browser.newContext({ locale: 'en-US', viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, serviceWorkers: 'block' })
   await closeWelcomeFlow(ctx)
@@ -199,8 +241,8 @@ if (wanted('phone')) {
   await login(page, ADMIN_USER, ADMIN_PASSWORD)
   await page.goto(BASE + '/')
   await page.getByTestId('open-nav').tap()
-  await channel(page, 'text', 'general').tap()
-  await page.waitForTimeout(1200)
+  await channel(page, 'text', 'dev-log').tap()
+  await page.waitForTimeout(1500)
   await shot(page, 'phone')
   await ctx.close()
 }
@@ -210,12 +252,12 @@ if (wanted('talk') || wanted('safety-code') || wanted('operations')) {
   const sharer = await newPage(fakeScreen)
   const viewer = await newPage()
   const guest = await newPage()
-  await login(sharer, 'mira', MEMBER_PASSWORD)
+  await login(sharer, 'theo', MEMBER_PASSWORD)
   await login(viewer, ADMIN_USER, ADMIN_PASSWORD)
-  await login(guest, 'nora', MEMBER_PASSWORD)
+  await login(guest, 'priya', MEMBER_PASSWORD)
   for (const p of [sharer, viewer, guest]) {
     await p.goto(BASE + '/')
-    await channel(p, 'voice', 'Lounge').click()
+    await channel(p, 'voice', 'Stand-up').click()
     await p.getByRole('button', { name: /^Leave/i }).first().waitFor({ timeout: 20000 })
   }
   await sharer.getByRole('button', { name: /Share screen/i }).first().click()
@@ -250,4 +292,5 @@ if (wanted('talk') || wanted('safety-code') || wanted('operations')) {
   for (const p of [sharer, viewer, guest]) await p.context().close()
 }
 
+for (const p of online) await p.context().close()
 await browser.close()
