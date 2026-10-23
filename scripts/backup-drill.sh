@@ -165,6 +165,8 @@ post_message "$AFTER"
 if [ "$START_IMAGE" != "$IMAGE" ]; then
   # The operator restores into the new version: the app is stopped, the image
   # switched, and the first start of the new image migrates the restored data.
+  # What the old image migrated to is the newest migration it ships.
+  SOURCE_LATEST="$(schema_state)"; SOURCE_LATEST="${SOURCE_LATEST#* }"
   docker compose stop -t 60 app >/dev/null
   set_image "$IMAGE"
 fi
@@ -187,7 +189,11 @@ cmp -s "$DEPLOY/payload.bin" "$DEPLOY/restored.bin" || { echo "restored upload d
 if [ "$START_IMAGE" != "$IMAGE" ]; then
   echo "==> the new image migrated the restored data"
   check_migrated "$ROOT"
-  check_downgrade_refused "$START_IMAGE" "$IMAGE"
+  if build_has_newer_migrations "$ROOT" "$SOURCE_LATEST"; then
+    check_downgrade_refused "$START_IMAGE" "$IMAGE"
+  else
+    check_same_schema_runs "$START_IMAGE" "$IMAGE"
+  fi
   [ "$(messages | grep -cx "$BEFORE")" = 1 ] || { echo "data not intact after the refused downgrade" >&2; exit 1; }
 fi
 

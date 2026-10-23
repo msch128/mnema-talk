@@ -86,6 +86,7 @@ test-scripts: ## Backup/restore syntax and fault-injected lifecycle tests (Pytho
 	python3 scripts/tests/test_backup_restore.py
 	python3 scripts/tests/test_upgrade_mount_guard.py
 	python3 scripts/tests/test_drill_versions.py
+	python3 scripts/tests/test_drill_downgrade.py
 	python3 scripts/tests/test_coverage_summary.py
 	python3 scripts/tests/test_openapi_diff.py
 	python3 scripts/tests/test_security_floor.py

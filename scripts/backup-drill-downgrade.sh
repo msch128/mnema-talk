@@ -20,6 +20,15 @@ check_migrated() {
   [ "${state#* }" = "$latest" ] || { echo "restored data is at ${state#* }, not $latest" >&2; return 1; }
 }
 
+# build_has_newer_migrations ROOT SOURCE_LATEST: the build ships a migration
+# the source version lacks (filenames sort by their number). Only then is the
+# data newer than the source image knows and must it refuse to start.
+build_has_newer_migrations() {
+  local latest
+  latest="$(find "$1/internal/db/migrations" -name '*.sql' -exec basename {} \; | sort | tail -n 1)"
+  [ "$latest" != "$2" ] && [ "$(printf '%s\n%s\n' "$latest" "$2" | sort | tail -n 1)" = "$latest" ]
+}
+
 # wait_for_refusal: the app container of the old image must exit with an error
 # (the restart policy then starts it again, so a restart counts too).
 wait_for_refusal() {
@@ -39,6 +48,7 @@ check_downgrade_refused() {
   local old="$1" new="$2" before after users logs
   before="$(schema_state)"
   users="$(user_count)"
+  echo "==> downgrade check: the build has newer migrations than the source, so the old image must refuse"
   echo "==> downgrade: $old on data migrated by $new must refuse to start"
   set_image "$old"
   docker compose up -d --no-build app
@@ -52,6 +62,26 @@ check_downgrade_refused() {
   [ "$after" = "$before" ] || { echo "the refused downgrade changed the schema: $before -> $after" >&2; return 1; }
   [ "$(user_count)" = "$users" ] || { echo "the refused downgrade changed the data" >&2; return 1; }
   echo "the old image refused with the documented message and left the data alone"
+  set_image "$new"
+  docker compose up -d --no-build --wait --wait-timeout 180
+  login
+}
+
+# check_same_schema_runs OLD_IMAGE NEW_IMAGE: the build adds no migration, so
+# the restored data is not newer and the old image must start healthy on it.
+check_same_schema_runs() {
+  local old="$1" new="$2" before after users
+  before="$(schema_state)"
+  users="$(user_count)"
+  echo "==> downgrade check skipped: the build has no migration beyond the source, so $old must run on the data migrated by $new"
+  set_image "$old"
+  docker compose up -d --no-build --wait --wait-timeout 180 app
+  login
+  docker compose stop -t 30 app >/dev/null
+  after="$(schema_state)"
+  [ "$after" = "$before" ] || { echo "the old image changed the schema: $before -> $after" >&2; return 1; }
+  [ "$(user_count)" = "$users" ] || { echo "the old image changed the data" >&2; return 1; }
+  echo "the old image started healthy on the same schema and left the data alone"
   set_image "$new"
   docker compose up -d --no-build --wait --wait-timeout 180
   login
