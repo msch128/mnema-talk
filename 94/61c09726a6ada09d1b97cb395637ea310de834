@@ -1,0 +1,62 @@
+web/src/stores/chat/threadFollow.ts
+  s_06fcde5dbef956::t_846c2aeae35faf 10,56
+  s_06fcde5dbef956::t_e9294c186e2dd8 1-9,11-55,57-58
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_7c2c5c81b6c503 453,466-471
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_17bab6f90c3a0e 6,36,201-214
+  s_06fcde5dbef956::t_6d984cecd63a9d 215
+web/src/stores/chatStoreDefensive.test.ts
+  s_06fcde5dbef956::t_ed3eb02d9ad385 19-22
+web/src/stores/chatPollNotification.test.ts
+  s_06fcde5dbef956::t_ed3eb02d9ad385 9-12
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_51a065f8fd4c14 67-68
+  s_06fcde5dbef956::t_7c2c5c81b6c503 12,132
+e2e/tests/coherence.spec.ts
+  s_06fcde5dbef956::t_3cd30d8c3ad490 62-65
+  s_06fcde5dbef956::t_856b7423c2fd51 1-61,73-93
+  s_06fcde5dbef956::t_eba06137bf4de1 66-72
+web/src/stores/chatEnvironment.test.ts
+  s_06fcde5dbef956::t_ed3eb02d9ad385 8-11
+e2e/tests/mobile.spec.ts
+  s_06fcde5dbef956::t_d02c96b59e6b48 158-160
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_7c2c5c81b6c503 453,466-471
+web/src/stores/chat/threads.ts
+  s_06fcde5dbef956::t_7c2c5c81b6c503 7,35
+web/src/stores/chat/socket.ts
+  s_06fcde5dbef956::t_7c2c5c81b6c503 14-15,45-46
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_7c2c5c81b6c503 13,172
+web/src/stores/chat/notifications.ts
+  s_06fcde5dbef956::t_7c2c5c81b6c503 13,51-60,63,80-81
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_7c2c5c81b6c503 33-35
+web/src/stores/chatThreadFollow.test.ts
+  s_06fcde5dbef956::t_89612deae96ed1 1-96
+web/src/composables/usePushSettings.ts
+  s_06fcde5dbef956::t_7c2c5c81b6c503 11,32,80-83
+web/src/stores/chatStoreBehaviour.test.ts
+  s_06fcde5dbef956::t_ed3eb02d9ad385 22-25
+web/src/lib/notifyPreview.ts
+  s_06fcde5dbef956::t_dc5b08bb2f6c7e 1-22
+web/src/stores/chat/reset.ts
+  s_06fcde5dbef956::t_17bab6f90c3a0e 29-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9461c09726a6ada09d1b97cb395637ea310de834",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
