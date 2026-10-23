@@ -1,0 +1,34 @@
+AGENTS.md
+  s_06fcde5dbef956::t_dc57a847f3781b 60,92-93
+doc/upgrade.md
+  s_06fcde5dbef956::t_0f23a2763f053f 135-137
+  s_06fcde5dbef956::t_8e89340bad2b56 129-134,138-156
+doc/operations.md
+  s_06fcde5dbef956::t_8e89340bad2b56 439-461
+  s_06fcde5dbef956::t_a8cb74525fb2b7 143
+SECURITY.md
+  s_06fcde5dbef956::t_8e89340bad2b56 60-62,66-76,660-676,775-787,790,792-795,812-850
+doc/bots.md
+  s_06fcde5dbef956::t_8e89340bad2b56 144-154
+doc/deployment.md
+  s_06fcde5dbef956::t_8e89340bad2b56 143-145,159
+doc/architecture.md
+  s_06fcde5dbef956::t_dc57a847f3781b 48-49
+  s_06fcde5dbef956::t_8e89340bad2b56 457-461
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "60230aab8773239a0190ced4a2ba206a0740a39f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
