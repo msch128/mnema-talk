@@ -83,7 +83,7 @@ describe('dashboard route synchronization', () => {
     const w = keep(
       mount(AdminDashboard, { global: { stubs: { AdminUsersTab: true, AdminSystemTab: true } } }),
     )
-    expect(w.get('h2').text()).toBe('Users')
+    expect(w.get('h2').text()).toBe('Members')
     expect(w.text()).toContain('Admin console · Signed in as')
     await w.get('[data-testid="tab-system"]').trigger('click')
     expect(w.get('h2').text()).toBe('System')
