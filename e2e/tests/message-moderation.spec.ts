@@ -72,7 +72,7 @@ test('slow mode, pinning, deleting with a reason and clearing a member are visib
     await mod.getByTestId('reason').fill('Test')
     await mod.getByTestId('message-moderation-submit').click()
     await expect(member.getByText('eins', { exact: true })).toHaveCount(0)
-    await expect(member.getByText(`Ein Moderator hat deine Nachricht in ${CHANNEL} entfernt: Test`)).toBeVisible()
+    await expect(member.getByText(`Deine Nachricht in ${CHANNEL} wurde vom Moderationsteam entfernt: Test`)).toBeVisible()
 
     // Clearing a member's latest messages.
     for (const text of ['drei', 'vier']) {
