@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { clockTimeOptions } from '../lib/time'
 import type { Message } from '../types/domain'
 import type { ChatSearchRoot } from '../types/rest'
 import { computed } from 'vue'
@@ -27,7 +28,7 @@ const rootParts = computed(() => splitHighlight(previewText(props.root?.snippet)
 
 function formatDate(iso: string) {
   if (!iso) return ''
-  return new Date(iso).toLocaleDateString(locale.value, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleDateString(locale.value, { month: 'short', day: 'numeric', ...clockTimeOptions(locale.value) })
 }
 </script>
 

@@ -4,6 +4,7 @@ import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { firstUnreadId } from '../lib/chatLogic'
 import { t, locale } from '../i18n'
+import { clockTimeOptions } from '../lib/time'
 
 export function useUnreadDivider() {
   const chatStore = useChatStore()
@@ -25,8 +26,8 @@ export function useUnreadDivider() {
     const d = new Date(dividerSince.value ?? 0)
     const sameDay = d.toDateString() === new Date().toDateString()
     const time = sameDay
-      ? d.toLocaleTimeString([locale.value], { hour: '2-digit', minute: '2-digit' })
-      : d.toLocaleString([locale.value], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+      ? d.toLocaleTimeString([locale.value], clockTimeOptions(locale.value))
+      : d.toLocaleString([locale.value], { day: 'numeric', month: 'short', ...clockTimeOptions(locale.value) })
     return t('chat.newSinceDivider', { time })
   }
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { clockTimeOptions } from '../lib/time'
 import type { Message } from '../types/domain'
 import { computed, ref, watch } from 'vue'
 import { Inbox, Hash, Volume2, CornerDownRight, Loader2 } from '@lucide/vue'
@@ -36,7 +37,7 @@ function pick(msg: Message) {
 
 function when(iso: string) {
   const d = new Date(iso)
-  return d.toLocaleDateString(locale.value, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleDateString(locale.value, { month: 'short', day: 'numeric', ...clockTimeOptions(locale.value) })
 }
 </script>
 

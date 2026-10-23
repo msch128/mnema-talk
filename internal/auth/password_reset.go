@@ -82,7 +82,8 @@ func (h *Handler) requestPasswordReset(w http.ResponseWriter, r *http.Request) e
 		return err
 	}
 	if allowed, _ := h.rec.perAddress.Allow(addressKey(email)); allowed {
-		h.background(func(ctx context.Context) { h.sendReset(ctx, email) })
+		lang := requestLanguage(r)
+		h.background(func(ctx context.Context) { h.sendReset(ctx, email, lang) })
 	}
 	w.WriteHeader(http.StatusAccepted)
 	return nil
@@ -91,7 +92,7 @@ func (h *Handler) requestPasswordReset(w http.ResponseWriter, r *http.Request) e
 // sendReset looks the address up and, only for an active account with that
 // confirmed address that has not used up its hourly budget, mails a link.
 // Every other case ends silently.
-func (h *Handler) sendReset(ctx context.Context, email string) {
+func (h *Handler) sendReset(ctx context.Context, email, lang string) {
 	id, username, locale, stored, err := userByVerifiedEmail(ctx, h.Sessions.DB, email)
 	if err != nil {
 		if !notFound(err) {
@@ -109,7 +110,7 @@ func (h *Handler) sendReset(ctx context.Context, email string) {
 		return
 	}
 	// A failed send leaves the token; it expires unused.
-	_ = h.sendMail(ctx, h.resetMail(stored, locale, username, token))
+	_ = h.sendMail(ctx, h.resetMail(stored, mailLocale(locale, lang), username, token))
 }
 
 // confirmPasswordReset handles POST /api/auth/password-reset/confirm.

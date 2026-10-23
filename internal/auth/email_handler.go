@@ -136,7 +136,7 @@ func (h *Handler) setEmail(w http.ResponseWriter, r *http.Request) error {
 	}
 	h.auditUser(r.Context(), u, "auth.email_set")
 	if !verified {
-		if err := h.sendVerification(r.Context(), u.ID); err != nil {
+		if err := h.sendVerification(r.Context(), u.ID, requestLanguage(r)); err != nil {
 			return err
 		}
 	}
@@ -209,7 +209,7 @@ func (h *Handler) resendVerification(w http.ResponseWriter, r *http.Request) err
 		httpx.WriteRateLimited(w, retry)
 		return nil
 	}
-	if err := h.sendVerification(r.Context(), u.ID); err != nil {
+	if err := h.sendVerification(r.Context(), u.ID, requestLanguage(r)); err != nil {
 		return err
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -218,7 +218,7 @@ func (h *Handler) resendVerification(w http.ResponseWriter, r *http.Request) err
 
 // sendVerification issues a link for the account's unconfirmed address and
 // mails it. It does nothing when mail is off or there is nothing to confirm.
-func (h *Handler) sendVerification(ctx context.Context, id uuid.UUID) error {
+func (h *Handler) sendVerification(ctx context.Context, id uuid.UUID, lang string) error {
 	if !h.mailEnabled() {
 		return nil
 	}
@@ -239,7 +239,7 @@ func (h *Handler) sendVerification(ctx context.Context, id uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-	if err := h.sendMail(ctx, h.verifyMail(st.Address, st.Locale, st.Username, token)); err != nil {
+	if err := h.sendMail(ctx, h.verifyMail(st.Address, mailLocale(st.Locale, lang), st.Username, token)); err != nil {
 		return httpx.ErrUnavailable("the confirmation e-mail could not be sent")
 	}
 	return nil

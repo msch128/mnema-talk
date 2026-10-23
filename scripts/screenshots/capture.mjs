@@ -13,6 +13,7 @@ mkdirSync(OUT, { recursive: true })
 const only = process.argv.slice(2)
 const wanted = name => only.length === 0 || only.includes(name)
 const size = { width: 1440, height: 900 }
+const CHAT_HEIGHT = 850
 
 // A generic "screen" to share: an editor window with a moving cursor and chart.
 // No real content; every layer of the share has something to encode.
@@ -112,7 +113,11 @@ if (wanted('chat')) {
   await login(page, ADMIN_USER, ADMIN_PASSWORD)
   await page.goto(BASE + '/')
   await channel(page, 'text', 'dev-log').click()
-  await page.mouse.move(700, 300)
+  // A slightly lower window lets the list scroll far enough that it starts at
+  // the first message, with no clipped piece of the "Welcome to #dev-log" block
+  // under the header.
+  await page.setViewportSize({ width: size.width, height: CHAT_HEIGHT })
+  await page.mouse.move(700, 270)
   await page.waitForTimeout(1500)
   await shot(page, 'chat')
   await page.context().close()
