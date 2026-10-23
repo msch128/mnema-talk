@@ -6,9 +6,10 @@ import type { ContextMenuItem } from '../components/menuTypes'
 import type { useMessageActions } from './useMessageActions'
 import {
   MessageSquare, Pencil, Trash2, SmilePlus, Reply,
-  Link as LinkIcon, Copy, Bookmark, BookmarkPlus, BookmarkX, Pin, PinOff, Eraser, History
+  Link as LinkIcon, Copy, Bookmark, BookmarkPlus, BookmarkX, Forward, Pin, PinOff, Eraser, History
 } from '@lucide/vue'
 import { openEditHistory } from '../lib/editHistory'
+import { openForward } from '../lib/forwardDialog'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
@@ -95,7 +96,11 @@ function basicItems(msg: Message, { actions, reply, copy }: MenuDeps): ContextMe
     action: () => copy(`${window.location.origin}/c/${chatStore.activeChannel?.id}/m/${msg.id}`, 'chat.copiedLink')
   })
   items.push(markUnreadItem(msg))
-  if (useServerFeaturesStore().has('saved')) items.push(savedItem(msg))
+  const features = useServerFeaturesStore()
+  if (features.has('saved')) items.push(savedItem(msg))
+  if (features.has('forward')) {
+    items.push({ label: t('forward.menu'), icon: Forward, action: () => openForward({ messageId: msg.id, excerpt: previewText(msg.content) || t('chat.attachment') }) })
+  }
   return items
 }
 

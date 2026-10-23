@@ -11,6 +11,7 @@ import UserAvatar from './UserAvatar.vue'
 import { isRemovedMessage, shownName } from '../lib/deletedUser'
 import MarkdownContent from './MarkdownContent.vue'
 import ReplyPreview from './ReplyPreview.vue'
+import ForwardedQuote from './ForwardedQuote.vue'
 import ReactionPalette from './ReactionPalette.vue'
 import MessageAttachments from './MessageAttachments.vue'
 import MessageEmbeds from './MessageEmbeds.vue'
@@ -177,6 +178,9 @@ defineExpose({ el: row })
       <!-- Markdown Message Content -->
       <MarkdownContent v-else-if="msg.content" :content="msg.content" :mention-roles="msg.mention_roles ?? []" />
       <p v-else-if="isRemovedMessage(msg)" data-testid="message-removed" class="text-sm italic text-mnema-tertiary">{{ $t('chat.messageRemoved') }}</p>
+
+      <!-- The original of a forwarded message, as this reader may see it -->
+      <ForwardedQuote v-if="msg.forward" :msg="msg" />
 
       <!-- Webhook cards -->
       <MessageEmbeds :embeds="msg.embeds ?? []" />

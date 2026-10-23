@@ -1455,6 +1455,20 @@
     "view": "View",
     "dismiss": "Dismiss"
   },
+  "forward": {
+    "menu": "Forward…",
+    "title": "Forward message",
+    "to": "Forward to",
+    "search": "Find a channel",
+    "none": "No channel to forward to.",
+    "comment": "Add a comment (optional)",
+    "send": "Forward",
+    "done": "Message forwarded.",
+    "failed": "Couldn’t forward the message. Try again.",
+    "label": "Forwarded",
+    "unavailable": "The original isn’t available.",
+    "deleted": "The original was deleted."
+  },
   "saved": {
     "title": "Saved messages",
     "empty": "Nothing saved yet. Save a message from its menu to keep it here, just for you.",

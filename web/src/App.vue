@@ -40,6 +40,7 @@ import TimeoutBanner from './components/TimeoutBanner.vue'
 import ModerationDialog from './components/ModerationDialog.vue'
 import MessageModerationDialog from './components/MessageModerationDialog.vue'
 import EditHistoryDialog from './components/EditHistoryDialog.vue'
+import ForwardDialog from './components/ForwardDialog.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
 import PipHost from './components/PipHost.vue'
 import { useResizable } from './composables/useResizable'
@@ -359,5 +360,6 @@ onMounted(async () => {
     <ModerationDialog />
     <MessageModerationDialog />
     <EditHistoryDialog />
+    <ForwardDialog />
   </div>
 </template>

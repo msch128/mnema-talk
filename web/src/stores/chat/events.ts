@@ -2,6 +2,7 @@ import type { ServerEvent, ServerEventPayloads, ServerEventType } from '../../ty
 import { useToastStore } from '../toast'
 import { useEmojiStore } from '../emoji'
 import { useSavedStore } from '../saved'
+import { useForwardQuotesStore } from '../forwardQuotes'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
 import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../lib/moderation'
@@ -137,6 +138,7 @@ function onMemberTimeout({ cs }: Cx, p: Payload<'member_timeout'>) {
 }
 
 function onMessageDelete(cx: Cx, p: Payload<'message_delete'>) {
+  useForwardQuotesStore().invalidate()
   const { cs } = cx
   if (!p?.id) return
   removeFromWindow(cx, p.id)
@@ -200,6 +202,7 @@ const HANDLERS: Handlers = {
   message_update: (cx, p) => {
     if (!p) return
     applyToMessage(cx, p.id, m => Object.assign(m, p))
+    useForwardQuotesStore().invalidate()
     onOriginalEdited(cx, p)
   },
   message_delete: onMessageDelete,

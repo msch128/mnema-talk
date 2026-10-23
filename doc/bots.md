@@ -576,6 +576,11 @@ never a member, so it holds no permission there, and the hub does not show
 conversation events to the gateway or to outgoing webhooks. A future intent
 for direct messages to a bot is not part of 1.1.
 
+A forwarded message reaches a bot as an ordinary message: its `content` is the
+forwarder's comment (possibly empty) and `forward: {forwarded: true}`. Neither
+the original's text nor its ids are part of the event, so a forward cannot show
+a bot a channel it may not view. Forwards into conversations never reach bots.
+
 ## Management API
 
 All under `/api/admin/bots`, documented in the OpenAPI document. Every

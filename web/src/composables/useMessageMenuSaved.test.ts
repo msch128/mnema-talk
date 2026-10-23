@@ -11,6 +11,7 @@ import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useToastStore } from '../stores/toast'
 import { setLocale } from '../i18n'
+import { pendingForward } from '../lib/forwardDialog'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
 vi.mock('../lib/api', async importOriginal => ({
@@ -66,5 +67,15 @@ describe('the save item of the message menu', () => {
     const item = required(menu().itemsFor(msg).find(i => i.label === 'Save message'))
     await required(item.action)()
     expect(useToastStore().toasts.at(-1)).toMatchObject({ type: 'error', text: 'Couldn’t save the message. Try again.' })
+  })
+})
+
+describe('the forward item of the message menu', () => {
+  it('is offered only when the server can forward, and opens the dialog', async () => {
+    expect(labels(menu().itemsFor(msg))).not.toContain('Forward…')
+    useServerFeaturesStore().list = ['forward']
+    const item = required(menu().itemsFor(msg).find(i => i.label === 'Forward…'))
+    required(item.action)()
+    expect(pendingForward.value).toMatchObject({ messageId: 'm1', excerpt: 'hello world' })
   })
 })
