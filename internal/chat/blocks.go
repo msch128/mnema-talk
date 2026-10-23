@@ -2,7 +2,6 @@ package chat
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -120,20 +119,6 @@ func RemoveBlock(ctx context.Context, q db.Querier, blocker, target uuid.UUID) (
 		return false, fmt.Errorf("remove block: %w", err)
 	}
 	return tag.RowsAffected() == 1, nil
-}
-
-// BlockedEitherWay reports whether one of the two members has blocked the
-// other. Callers must not let the answer reach either of them (see the direct
-// message rules in doc/architecture.md).
-func BlockedEitherWay(ctx context.Context, q db.Querier, a, b uuid.UUID) (bool, error) {
-	var blocked bool
-	err := q.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM user_blocks
-		               WHERE (blocker_id = $1 AND blocked_id = $2) OR (blocker_id = $2 AND blocked_id = $1))`, a, b).Scan(&blocked)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
-	}
-	return blocked, err
 }
 
 func (h *Handler) mountBlocks(r chi.Router) {
