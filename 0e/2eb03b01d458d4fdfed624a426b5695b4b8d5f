@@ -1,0 +1,54 @@
+internal/updaterd/updaterd_test.go
+  s_06fcde5dbef956::t_6c72165b49983a 19,32
+doc/operations.md
+  s_06fcde5dbef956::t_e86891a8755c72 442-444
+internal/updaterd/daemontest/daemon.go
+  s_06fcde5dbef956::t_6c72165b49983a 27-28,59-65
+internal/updaterd/docker.go
+  s_06fcde5dbef956::t_ff5d66ce5dc3e8 27-29,108,116,123,126,130,134-135,139,141
+internal/imageverify/flow_test.go
+  s_06fcde5dbef956::t_6c72165b49983a 39,123-176
+  s_06fcde5dbef956::t_59774c551bce45 177
+internal/imageverify/provenance.go
+  s_06fcde5dbef956::t_49e59410343e5b 19,61,64,68,81,84,93,97-101,103-104,106,109,112,115,119,127,131,136,139,143,146-148,151,154,161,164-171,173
+  s_06fcde5dbef956::t_5b6878cea50af2 86-91
+internal/update/updater.go
+  s_06fcde5dbef956::t_ff5d66ce5dc3e8 29-31,79-81,104-105
+internal/imageverify/fixture_test.go
+  s_06fcde5dbef956::t_49e59410343e5b 131-132,152-155,157-159,162-163
+internal/server/system_selfupdate.go
+  s_06fcde5dbef956::t_ff5d66ce5dc3e8 155,247-248
+internal/updaterd/server.go
+  s_06fcde5dbef956::t_ff5d66ce5dc3e8 14,22,41-42,104-108,133,148,160-164,196-216
+  s_06fcde5dbef956::t_58f78043851f56 217-218
+internal/imageverify/live_test.go
+  s_06fcde5dbef956::t_acdb716a5c1819 32-35
+internal/update/updater_test.go
+  s_06fcde5dbef956::t_ff5d66ce5dc3e8 25,28
+  s_06fcde5dbef956::t_b170384cbcd406 45,56,63,80
+SECURITY.md
+  s_06fcde5dbef956::t_e86891a8755c72 830-838
+internal/imageverify/verifier.go
+  s_06fcde5dbef956::t_49e59410343e5b 103-107,140,144
+internal/update/updater_request_test.go
+  s_06fcde5dbef956::t_b170384cbcd406 12
+internal/updaterd/errors_test.go
+  s_06fcde5dbef956::t_6c72165b49983a 112,120,142
+  s_06fcde5dbef956::t_0af87f5d235ef7 48,71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0e2eb03b01d458d4fdfed624a426b5695b4b8d5f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
