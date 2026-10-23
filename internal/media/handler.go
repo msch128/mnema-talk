@@ -85,6 +85,7 @@ func (h *Handler) MountUploads(r chi.Router) {
 	r.With(httpx.MaxBody(MaxAvatarBytes+1<<20)).Post("/users/me/avatar", httpx.Handle(h.uploadAvatar))
 	r.With(httpx.MaxBody(MaxBannerBytes+1<<20)).Put("/users/me/banner", httpx.Handle(h.putBanner))
 	r.Delete("/users/me/banner", httpx.Handle(h.deleteBanner))
+	r.Delete("/users/me/avatar", httpx.Handle(h.deleteAvatar))
 }
 
 // Mount registers authenticated media serving.

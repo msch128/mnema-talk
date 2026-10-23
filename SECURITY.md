@@ -464,6 +464,15 @@ details and the limits.
   from the app's own origin with their stored type, `nosniff` and a sandbox CSP.
   Only the Owner and holders of *Manage emoji* can change them; every change is
   in the audit log.
+- **Profile pictures.** Avatars and banners are never stored as uploaded: the
+  server decodes them, crops (square, or 3:1 for a banner), shrinks (512x512,
+  or 1500x500) and writes a new file, so EXIF (GPS position, camera model),
+  XMP, trailing bytes and polyglot payloads cannot survive. Animations stay
+  within a pixel and frame budget before any frame is decoded. Avatars stored
+  before 1.1 were redrawn by a one-time background job after the update
+  ([upgrade notes](doc/upgrade.md#10x--110)). Chat attachments are the
+  exception: they are stored byte for byte, so a photo sent as a file keeps its
+  metadata.
 - **Uploads.** File types are detected by content sniffing, not by the
   client-supplied name or MIME type. Risky types (HTML, SVG, scripts, unknown
   binaries, ...) are only ever served as downloads, never rendered inline. Media is

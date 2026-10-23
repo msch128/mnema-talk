@@ -60,7 +60,7 @@ func TestMediaCacheHeaders(t *testing.T) {
 		t.Fatalf("revalidation: %d", cond.status)
 	}
 
-	av := admin.upload("/api/users/me/avatar", "avatar", "me.png", "image/png", pngBytes, nil)
+	av := admin.upload("/api/users/me/avatar", "avatar", "me.png", "image/png", bannerPNG(t, 8, 8), nil)
 	if av.status != http.StatusOK {
 		t.Fatalf("avatar: %d %s", av.status, av.body)
 	}

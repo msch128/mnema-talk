@@ -224,6 +224,27 @@ server lacks.
   replaced or removed, goes into the data export as `banner.*` and is removed
   when the account is erased. Without the feature (a 1.0.x server) the 1.1 web
   app shows no banner controls.
+- **Avatars are redrawn (privacy fix).** Until 1.0 an avatar was stored exactly
+  as uploaded, so the EXIF block of a phone photo (GPS position, camera model)
+  was readable by every member. From 1.1 an upload is decoded, cropped to the
+  centre square, shrunk to at most 512x512 (never enlarged) and written again;
+  limits and types are unchanged (5 MB; PNG, JPEG, GIF, WebP). An animated GIF
+  stays animated within the pixel budget animated emoji have (canvas times frames
+  up to 16 million, 100 frames), a one-frame GIF becomes a PNG, animated WebP
+  is rejected. Bot and webhook avatars follow the same rules.
+- **Migration 0058** adds `users.avatar_reencoded_at`. After the update, a
+  background job redraws every avatar stored before, once: 30 seconds after
+  start it processes the accounts without the marker, writes the new file, points
+  the account at it and only then deletes the old object (a short extra copy per
+  avatar exists meanwhile). It repeats hourly until nothing is left, so a storage
+  outage at start only delays it, and it never touches an avatar twice. An old
+  avatar that cannot be decoded is kept as it is, marked, and logged as a
+  warning. Take the backup first, as always; a rollback to 1.0.x needs the
+  restore.
+- **`DELETE /api/users/me/avatar`** (feature `profile.avatar_remove`) and a
+  **Remove avatar** button next to **Change avatar**.
+- Custom emoji were never affected: they have always been redrawn, so no
+  metadata survives in them.
 - **Self-update now verifies the image.** If you use the `autoupdate` profile,
   fetch the compose file of the 1.1 tag and run
   `docker compose --profile autoupdate up -d` after the update: the `updater`
