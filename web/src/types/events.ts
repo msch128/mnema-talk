@@ -304,7 +304,11 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['member_timeout', payload => isIdentifier(payload['id']) && (payload['timeout_until'] === null || isTimestamp(payload['timeout_until']))
     && onlyFields(payload, ['id', 'timeout_until'])],
   ['moderation_notice', isModerationNotice],
-  ['dm_created', payload => isIdentifier(payload['id']) && isArrayOf(payload['members'], isDirectMessageMember)],
+  ['dm_created', payload => isIdentifier(payload['id']) && typeof payload['group'] === 'boolean' && isArrayOf(payload['members'], isDirectMessageMember)
+    && isTimestamp(payload['created_at']) && (payload['last_message_at'] === null || isTimestamp(payload['last_message_at']))
+    && isInteger(payload['unread_count']) && isInteger(payload['mention_count'])
+    && (payload['last_read_at'] === null || isTimestamp(payload['last_read_at']))
+    && isChatNotifyLevel(payload['notify_level']) && typeof payload['can_send'] === 'boolean'],
   ['dm_member_added', payload => isIdentifier(payload['dm_id']) && isDirectMessageMember(payload['member'])],
   ['dm_member_removed', payload => isIdentifier(payload['dm_id']) && isDirectMessageMember(payload['member'])],
   ['block_updated', payload => isIdentifier(payload['user_id']) && typeof payload['blocked'] === 'boolean' && onlyFields(payload, ['user_id', 'blocked'])],
