@@ -1,0 +1,28 @@
+web/src/stores/chat/dms.ts
+  s_06fcde5dbef956::t_dcc5400f0ab32d 13,22-40
+  s_06fcde5dbef956::t_a3542d1c55931f 41
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_dcc5400f0ab32d 22,91
+web/src/stores/chatDirectMessages.test.ts
+  s_06fcde5dbef956::t_cb104a591f8f90 242-277
+web/src/App.vue
+  s_06fcde5dbef956::t_dcc5400f0ab32d 127,129-130,167
+web/src/stores/chat/socket.ts
+  s_06fcde5dbef956::t_dcc5400f0ab32d 48-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "98089b1871b59d889220c3f57f85aeb52f339052",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
