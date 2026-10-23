@@ -1,0 +1,207 @@
+.env.example
+  s_06fcde5dbef956::t_49a1ae821899ab 272-274
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_24b0f32447d3ca 176-183
+AGENTS.md
+  s_06fcde5dbef956::t_04db0b49f80603 28,72,77-78,81,89,106,117,123-124,163,169-170
+CONTRIBUTING.md
+  s_06fcde5dbef956::t_f6379b7047afe8 13,49-54
+Makefile
+  s_06fcde5dbef956::t_b28264070f3fd3 6,145,171-174
+README.md
+  s_06fcde5dbef956::t_1dac62373b749a 81,84-96,152-156,231,274,318,351-352
+SECURITY.md
+  s_06fcde5dbef956::t_9256174d4b8eb7 12-15,96-97,105-120,293-296,298-299,324-325,385-392,467-469,776,792-794,846-847
+doc/api-stability.md
+  s_06fcde5dbef956::t_fbc94934434de7 26-36
+doc/architecture.md
+  s_06fcde5dbef956::t_650b887234dea9 34,43-45,52,88-90,168-184,359,418,436,539-558,612-617
+doc/bots.md
+  s_06fcde5dbef956::t_b214898ca4a23d 10-12
+doc/deployment.md
+  s_06fcde5dbef956::t_58cac003e42061 37,41,53,59,80-84,102,149-156,173,175,179,181,183,185-187
+doc/desktop-app.md
+  s_06fcde5dbef956::t_99ed80979c1f6d 3-14,69-70,73,94,119-120,147-150
+doc/desktop-trusted-client.md
+  s_06fcde5dbef956::t_1ee682eda16447 3-6,35,37-39,43,581-585,598-599,607-609,620,641,654,656-661
+doc/development.md
+  s_06fcde5dbef956::t_4dfe2e34b0a4b9 31-33,52-53,56,60-61,77,143-145,158,196-200
+doc/moderation.md
+  s_06fcde5dbef956::t_c7a26378eb1241 3-4,18-19,22-23,29-30,93-95,148,187-189,198-208
+doc/operations.md
+  s_06fcde5dbef956::t_824c6b3e28f397 11,39,87,153-154,157-160,267,279-284,466-473,514-517,519-524,642,660,665,717-720,722-726
+doc/product-status.md
+  s_06fcde5dbef956::t_d32b076aa2b5a9 14,16,18-19,23-26,28,31,33,47,86,140
+doc/release-notes-1.0.md
+  s_06fcde5dbef956::t_b9b4298ab0baf3 6-7,51-52
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_86a1f76076dd14 147,219-224,229
+doc/typescript.md
+  s_06fcde5dbef956::t_391685ef572786 59-60,65,75,86-90
+doc/upgrade.md
+  s_06fcde5dbef956::t_bf4e654c730af6 131-215,217-252,257-266
+doc/webhooks.md
+  s_06fcde5dbef956::t_f9241a440f35c7 142,172-179,319-320
+docker-compose.yml
+  s_06fcde5dbef956::t_5de335b9752541 104-105
+e2e/tests/a11y.spec.ts
+  s_06fcde5dbef956::t_a7286d6604d927 39,41,44
+e2e/tests/dm.spec.ts
+  s_06fcde5dbef956::t_21346fb6590dc1 132-133,136,143,146,148,153,157,159-160,168
+e2e/tests/drafts.spec.ts
+  s_06fcde5dbef956::t_4657ec594de5ad 37,46,50,59
+e2e/tests/forward.spec.ts
+  s_06fcde5dbef956::t_82ed1cb5b0ba31 66-67
+e2e/tests/layout.spec.ts
+  s_06fcde5dbef956::t_ccbabdd873e769 16
+e2e/tests/mentions.spec.ts
+  s_06fcde5dbef956::t_34e2f576e8d9db 64,81
+e2e/tests/mobile.spec.ts
+  s_06fcde5dbef956::t_fbcc6ee696053b 93,229
+e2e/tests/moderation.spec.ts
+  s_06fcde5dbef956::t_85a567b36d71ee 44,46,64,69,71
+e2e/tests/onboarding.spec.ts
+  s_06fcde5dbef956::t_fc28dfb07c6e3e 42,48,76,112
+e2e/tests/polls.spec.ts
+  s_06fcde5dbef956::t_82bb7a8f80b82c 49,56,61
+e2e/tests/push.spec.ts
+  s_06fcde5dbef956::t_50ebf6f231d15d 196,200-201
+e2e/tests/saved.spec.ts
+  s_06fcde5dbef956::t_ffabea94e75365 44,50,55,83
+e2e/tests/slash-builtins.spec.ts
+  s_06fcde5dbef956::t_e3b22ad8a8e57b 52,54-55
+e2e/tests/smoke.spec.ts
+  s_06fcde5dbef956::t_c2fc3261e12dfb 15,76
+e2e/tests/voice-chat.spec.ts
+  s_06fcde5dbef956::t_625acbfc3f1d50 78,99
+internal/audit/audit_test.go
+  s_06fcde5dbef956::t_e3e2150238d9a7 133
+internal/auth/locales/mail.json
+  s_06fcde5dbef956::t_392916b7928cce 1-22
+internal/auth/login_test.go
+  s_06fcde5dbef956::t_e8fb935043e729 53
+internal/auth/mail_content.go
+  s_06fcde5dbef956::t_2e53a722ae65aa 4-5,26-43,45-50,54-65
+internal/auth/mail_locale_test.go
+  s_06fcde5dbef956::t_df80ac96f66e77 46
+internal/auth/mail_texts_test.go
+  s_06fcde5dbef956::t_5b6adc0900cabe 1-16
+internal/auth/native_token_test.go
+  s_06fcde5dbef956::t_2e67dc267fe613 41
+internal/auth/token_test.go
+  s_06fcde5dbef956::t_fddd7a54498f05 78
+internal/auth/two_factor_failures.go
+  s_06fcde5dbef956::t_9aad7545f18e92 115
+internal/chat/mentions_test.go
+  s_06fcde5dbef956::t_1f5ed5d2f655d2 50-58
+internal/chat/seed_layout.go
+  s_06fcde5dbef956::t_869dc7af930554 5-6,13-37,40-43,45,48-49,52,55,59-60,64-66,76-83,88-92
+internal/chat/seed_layout.json
+  s_06fcde5dbef956::t_534fae636f3639 1-20
+internal/chat/seed_layout_integration_test.go
+  s_06fcde5dbef956::t_19a92c54e9c51a 13-14,18-28,30-32,34-35,62,64,66,89,97,105-106,112
+internal/chat/seed_layout_test.go
+  s_06fcde5dbef956::t_e0ac43d77306c2 1-25
+internal/chat/validate_test.go
+  s_06fcde5dbef956::t_dddd0ecb189c85 18
+internal/config/config_env.go
+  s_06fcde5dbef956::t_e93a642267ea4b 108-109
+internal/httpx/request_test.go
+  s_06fcde5dbef956::t_61f2d69180307e 65,92
+internal/linkpreview/fetch_policy_test.go
+  s_06fcde5dbef956::t_1566a392af7ab1 196
+internal/mailer/mailer_test.go
+  s_06fcde5dbef956::t_522d4b16dc0840 233,253,260
+internal/poll/input_test.go
+  s_06fcde5dbef956::t_374f8755898ad9 64
+internal/push/locales/texts.json
+  s_06fcde5dbef956::t_b3674ad22a7f1b 1-22
+internal/push/payload.go
+  s_06fcde5dbef956::t_4b13534ceec000 4,44,46-56
+internal/push/payload_test.go
+  s_06fcde5dbef956::t_826e5948bb831a 15-16,23,36,53,57,78-79,82,94
+internal/push/texts_test.go
+  s_06fcde5dbef956::t_eb49033d790f5e 1-16
+internal/server/account_email_integration_test.go
+  s_06fcde5dbef956::t_ef355f30631341 120
+internal/server/channel_duplicate_integration_test.go
+  s_06fcde5dbef956::t_2aafa8c0d1db83 93,173
+internal/server/content_review_integration_test.go
+  s_06fcde5dbef956::t_7d8a2691efcf07 20,41,116
+internal/server/emoji_integration_test.go
+  s_06fcde5dbef956::t_ab4fcc2c94cddf 120
+internal/server/first_unread_integration_test.go
+  s_06fcde5dbef956::t_b573693858cab4 32,70
+internal/server/layout_integration_test.go
+  s_06fcde5dbef956::t_e66ae930023c25 37,42,52,69,71-72
+internal/server/presence_integration_test.go
+  s_06fcde5dbef956::t_85ab7f2bf995c1 83,108,135,152,223
+internal/server/readstate_integration_test.go
+  s_06fcde5dbef956::t_d276177409ea1f 50,55
+internal/server/search_integration_test.go
+  s_06fcde5dbef956::t_c54f5f9a2dad14 41-42,44-48,57,70,73,105
+internal/server/system_mail.go
+  s_06fcde5dbef956::t_877e8c3b298831 76
+internal/server/talk_chat_without_joining_integration_test.go
+  s_06fcde5dbef956::t_2a0aa57b9e89ef 24-25,30-31,39
+internal/server/unread_scale_integration_test.go
+  s_06fcde5dbef956::t_f98d8bb4736ef0 99,131,215,259
+internal/server/voice_chat_integration_test.go
+  s_06fcde5dbef956::t_6f5532678a1467 20,23-24,37,65,95,111
+internal/server/ws_integration_test.go
+  s_06fcde5dbef956::t_01cad8a9072e1b 245
+internal/update/checker_test.go
+  s_06fcde5dbef956::t_abcde53e3b3108 257
+internal/webbundle/webbundle_test.go
+  s_06fcde5dbef956::t_08858b68d04769 404
+internal/webhook/webhook_test.go
+  s_06fcde5dbef956::t_b646fb8fd47613 66
+scripts/check-english-only.mjs
+  s_06fcde5dbef956::t_62564e4e0037bf 1-96
+scripts/check-english-only.test.mjs
+  s_06fcde5dbef956::t_062dfc72e54173 1-27
+scripts/english-only-allowlist.txt
+  s_06fcde5dbef956::t_aad9d5e10225d6 1-64
+web/src/components/ChatArea.test.ts
+  s_06fcde5dbef956::t_e826f96470b3df 30-31
+web/src/components/ChatAreaDrafts.test.ts
+  s_06fcde5dbef956::t_eb7c521f7fadef 14
+web/src/components/ConfirmDialog.test.ts
+  s_06fcde5dbef956::t_c8f117997c04e5 36,40,43
+web/src/components/ScreenShareModal.vue
+  s_06fcde5dbef956::t_c72d3d52407c60 171
+web/src/components/ThreadSidebar.test.ts
+  s_06fcde5dbef956::t_1d83fedbfd9d04 26,150,155,210
+web/src/components/ToastHost.test.ts
+  s_06fcde5dbef956::t_711ef66297e6f3 15-16,21,30,40-41,43-45
+web/src/components/smoke.test.ts
+  s_06fcde5dbef956::t_9e422f3b0dd2a6 39,47
+web/src/composables/useComposerAssist.test.ts
+  s_06fcde5dbef956::t_a4c8a2620f254d 139,142
+web/src/lib/chatLogic.test.ts
+  s_06fcde5dbef956::t_33cc7279abbfa0 22
+web/src/lib/markdown.test.ts
+  s_06fcde5dbef956::t_becbe810601d3b 56,58
+web/src/lib/replies.test.ts
+  s_06fcde5dbef956::t_091d6ea4c8dca7 19-20,23
+web/src/stores/chatComfort.test.ts
+  s_06fcde5dbef956::t_0efcd6ecec78b7 33,226
+web/src/stores/chatSync.test.ts
+  s_06fcde5dbef956::t_5279fb63e030c0 49,54,164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "37879ff67121884e8714d131a53fb05f3f006803",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
