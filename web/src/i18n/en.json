@@ -2147,6 +2147,12 @@
         "expired": "Expired",
         "revoked": "Revoked"
       },
+      "binding": {
+        "unbound": "Unbound",
+        "unboundHint": "Issued before 1.0, so no issuer is recorded. It keeps working and is bound to the bot’s creator (or the Owner) the first time it is used. Regenerate it to bind it to its real issuer.",
+        "inferred": "Issuer assumed",
+        "inferredHint": "Issued before 1.0. On first use it was bound to the bot’s creator or the Owner, and it stops when that person loses the right to manage this bot. Regenerate it to bind it to its real issuer."
+      },
       "regenerate": "Regenerate",
       "regenerateFor": "Regenerate token {name}",
       "regenerateTitle": "Regenerate token {name}?",

@@ -53,17 +53,23 @@ fails without the fix, and the behaviour changes are listed in
 [doc/upgrade.md](doc/upgrade.md#09x--100). Deliberately deferred past 1.0:
 
 - **RT-4, frame format version 2.** Version 2 media frames (no line binding)
-  are still accepted for mixed-version Talks; refusing them is a protocol
-  change that would cut old tabs off (see the media frame section below).
+  are still accepted. Re-evaluated for 1.1 and deferred to 2.0: every 1.0.x
+  sender still seals version 2 at the start of each epoch, so refusing it would
+  break 1.0.x tabs (see the media frame section below for the evidence).
 - **RT-6, regroup collusion** (Info). Two colluding members, or the server, can
   make a listener who hears nobody else regroup; rate-limited, no worse than the
   denial of service the server already has.
-- **SUP-05, image signature check in the updater.** "Update now" does not verify
-  the cosign signature or provenance of the pulled image; see
-  [Self-update sidecar](#self-update-sidecar). Verify by hand and pin the digest.
-- **Legacy bot tokens without an issuer.** Tokens created before 1.0 have no
-  recorded issuer and are not re-checked against it until they are regenerated;
-  new tokens are bound to their issuer ([doc/bots.md](doc/bots.md#tokens)).
+
+Closed in 1.1:
+
+- **SUP-05, image signature check in the updater.** "Update now" now verifies
+  the cosign signature and the build provenance of the new image before
+  anything is pulled or restarted, and refuses otherwise; see
+  [Self-update sidecar](#self-update-sidecar).
+- **Legacy bot tokens without an issuer.** A token created before 1.0 is bound
+  to its likeliest issuer the first time it is used after the upgrade, and the
+  admin console lists the ones not bound yet; see
+  [doc/bots.md](doc/bots.md#tokens). No token was revoked for this.
 
 Remaining Info-level items of the review are not listed individually.
 
@@ -682,14 +688,23 @@ details and the limits.
   (the same denial of service it has by dropping any message) keeps an epoch
   on version 2, and a version 2 unit carries no line, so in such an epoch its
   units can still be moved between lines, exactly as before.
-  Planned (phase B, a later release): refuse version 2 entirely and stop
-  sending it, once older tabs and desktop clients have aged out. Every bundle
-  since 0.8.2 speaks version 3, but a Talk member that does not advertise it
-  (an old tab, or a hostile client that stays silent) keeps its epoch on
-  version 2 by design; the 1.0 review kept this as is, because removing
-  version 2 is a protocol change that would cut such members off, and the
-  party that could exploit it (moving units between a sender's lines) is the
-  active server, which is already outside the model.
+  Planned (phase B, 2.0): refuse version 2 entirely and stop sending it.
+  Re-evaluated for 1.1 (RT-4) and **not done**, because it cannot be shown to
+  be safe. Every bundle since 0.8.2 can *open* version 3, but a sender seals it
+  only after it has heard every member's capability message
+  (`frameVersion` and `applyCaps` in `mediaFrameWorker.ts`): each epoch of every
+  1.0.x tab starts on version 2, and stays there while any member is silent or
+  has not been heard yet. The behaviour is pinned by tests ("seals version 2
+  until every member of the epoch advertised version 3", "never goes back to
+  version 2 within an epoch, and decides again for the next one",
+  `mediaFrameWorker.test.ts`). A receiver that refused version 2 would
+  therefore drop 1.0.x tabs' media at every epoch start (every join, leave and
+  key rotation) and for as long as a capability message is delayed. Refusing it
+  safely needs senders that default to version 3, which is a change in the
+  client that the 1.0.x tabs in a mixed-version Talk do not have, so it waits
+  for 2.0 when those tabs are unsupported. The party that could exploit the
+  gap (moving units between a sender's lines) is the active server, which is
+  already outside the model.
   Also known and accepted: two colluding members, or the server, can make a
   listener who hears nobody else regroup by naming a newer epoch in unopened
   frames; this is rate-limited with a backoff and no more than the denial of
@@ -788,20 +803,27 @@ profile `autoupdate`, `UPDATER_TOKEN`). How it is built and why:
   (`nickfedor/watchtower`, the maintained fork of the archived
   containrrr/watchtower, pinned by version and digest), holds it, and only
   when the operator opts in.
-- **What the updater may do.** It runs with `--label-enable` and
-  `--scope mnema-talk`: only containers carrying both labels
-  (`com.centurylinklabs.watchtower.enable=true`, `...scope=mnema-talk`) are
-  touched, which in `docker-compose.yml` is the app alone (not PostgreSQL,
-  SeaweedFS, coturn, the updater itself or anything else on the host). It
-  re-pulls the image tag the app already runs and recreates the container
-  with the same configuration; it cannot be told to run another image.
+- **Two containers.** The *updater* (`cmd/updater`, started from the app
+  image with another entrypoint) decides: it verifies the new image (below),
+  pulls it and moves the local tag. The *recreator* (`nickfedor/watchtower`,
+  the maintained fork of the archived containrrr/watchtower, pinned by version
+  and digest, `WATCHTOWER_NO_PULL`) only restarts the app from the local image;
+  it never fetches anything and has no network route out.
+- **What they may do.** Both only touch containers carrying the labels
+  `com.centurylinklabs.watchtower.enable=true` and `...scope=mnema-talk`,
+  which in `docker-compose.yml` is the app alone (not PostgreSQL, SeaweedFS,
+  coturn, themselves or anything else on the host). They update the image tag
+  the app already runs and recreate the container with the same
+  configuration; they cannot be told to run another image, and the updater
+  refuses any image outside the configured release repository.
 - **When it acts.** Never on a schedule (`WATCHTOWER_HTTP_API_PERIODIC_POLLS=false`):
   only on `POST /v1/update` with `Authorization: Bearer <UPDATER_TOKEN>`.
-- **Who can reach it.** No published port. It is only attached to the
+- **Who can reach it.** No published port. The updater is attached to the
   `internal` network `mnema-updater`, which it shares with the app and
-  nothing else, and which has no route to the internet or the LAN (image
-  pulls are done by the Docker daemon). The container runs read-only, with all
-  capabilities dropped, `no-new-privileges`, and memory and PID limits.
+  nothing else, to an `internal` network shared with the recreator only, and
+  to `mnema-updater-egress`, its only way out (image registry and Sigstore).
+  The recreator has no route out. Both run read-only, with all capabilities
+  dropped, `no-new-privileges`, and memory and PID limits.
 - **Token.** `UPDATER_TOKEN` is shared by app and updater through `.env`
   only, must have at least 32 characters (`openssl rand -hex 32`), is
   rejected if it is a public example value, never appears in API responses
@@ -818,18 +840,50 @@ profile `autoupdate`, `UPDATER_TOKEN`). How it is built and why:
   address) whether it succeeds or not. A stolen admin session therefore cannot
   update without the password, and even then can only restart the app on the
   image tag the operator configured.
-- **Residual risk.** A compromised updater image, or anyone who obtains both
-  the token and a foothold on the `mnema-updater` network, could have
-  containers in scope recreated; anyone who compromises the updater container
-  has root on the host. Leave the profile off if you update by hand anyway.
-- **No signature check on the pulled image (known limit).** The sidecar asks
-  the Docker daemon to pull the tag again; nothing on the host checks the
-  cosign signature or the provenance that `release.yml` attaches to every
-  release image before the app is recreated. Watchtower has no hook for such
-  a check, and a verifying wrapper around the pull would be new infrastructure
-  on the one container that holds the Docker socket, so this is documented
-  rather than built. The trust is the same as for installing the image at all
-  (GHCR plus this repository's release workflow). Operators who want the
-  check update by hand: verify the digest with `cosign verify` and pin it in
-  `MNEMA_IMAGE` ([doc/operations.md](doc/operations.md#verifying-a-release-image));
-  a digest-pinned install is excluded from "Update now" by design.
+- **Residual risk.** A compromised updater or recreator image, or anyone who
+  obtains both the token and a foothold on the `mnema-updater` network, could
+  have containers in scope recreated; anyone who compromises either container
+  has root on the host (both hold the Docker socket; the updater, which also
+  talks to the internet and parses registry and Sigstore data, is the larger
+  surface of the two). Leave the profile off if you update by hand anyway.
+- **Image verification (SUP-05, since 1.1).** Before anything is pulled or
+  restarted the updater resolves the tag the app runs to one digest and checks
+  that digest, and only that one:
+  - the keyless cosign signature that `release.yml` stores next to the image
+    (a Sigstore bundle with the Fulcio certificate, the Rekor entry and an
+    RFC 3161 timestamp, checked offline against the Sigstore trusted root,
+    fetched through TUF) was made by this repository's release workflow:
+    issuer `https://token.actions.githubusercontent.com`, subject exactly
+    `https://github.com/msch128/mnema-talk/.github/workflows/release.yml@refs/heads/main`;
+  - the BuildKit SLSA v1 provenance exists for every platform image, names that
+    image as its subject, and records a GitHub Actions run and source
+    repository of this project. BuildKit does not sign it; it is covered by
+    the signature because the signed index lists it by digest;
+  - **the release is the one that was asked for, and a newer one.** A valid
+    signature says who built an image, not which release it is, so a tag that
+    is moved back (or a registry mix-up) could offer an older, signed, known-
+    vulnerable release. The release version recorded in the signed provenance
+    must equal the version the admin confirmed (the app sends it with the
+    request) and be strictly newer than the version the running container
+    reports; an unknown version on either side is refused, so there is no
+    downgrade through "Update now".
+  Only then it pulls `repository@digest` (the Docker daemon re-checks the
+  content hash), points the local tag at it and lets the recreator restart
+  the app from the local image without pulling, so the bytes that run are the
+  bytes that were verified and a tag that moves meanwhile changes nothing.
+  The check **fails closed**: an unsigned, wrongly signed or tampered image,
+  missing or foreign provenance, an image of another repository, or a registry
+  or Sigstore that cannot be reached all end with HTTP 422 or 502, no pull,
+  no restart and an error in the updater's log. The admin who pressed
+  "Update now" sees that the update was refused and that nothing changed, and
+  the app logs `SELF-UPDATE REFUSED` with the audit fields. The identity is
+  pinned in the code and cannot be changed from the admin console; a fork that
+  publishes its own images sets `UPDATER_IMAGE_REPOSITORY`,
+  `UPDATER_CERT_IDENTITY_REGEXP` (anchored) and `UPDATER_SOURCE_URL`
+  ([doc/operations.md](doc/operations.md#verifying-a-release-image)).
+  What it does not give: the signature proves that this workflow built the
+  digest, not that the code in it is free of bugs; Sigstore's public-good
+  instance and the registry are trusted; the image that is already running is
+  not re-checked; and images released before signing was added carry no
+  signature, so "Update now" refuses them (update by hand). A digest-pinned
+  install is excluded from "Update now" by design.

@@ -55,6 +55,20 @@ describe('BotTokensPanel', () => {
     expect(rows[1]?.get('[data-action="revoke"]').attributes('disabled')).toBeDefined()
   })
 
+  it('marks pre-1.0 tokens that have no recorded issuer, and tells which binding was assumed', async () => {
+    tokens = [
+      token(1),
+      token(2, { issuer_binding: 'unbound' }),
+      token(3, { issuer_binding: 'inferred' })
+    ]
+    const w = await mountPanel()
+    const badges = w.findAll('[data-testid="bot-token-binding"]')
+    expect(badges.map(b => b.text())).toEqual(['Unbound', 'Issuer assumed'])
+    expect(badges[0]?.attributes('title')).toContain('no issuer is recorded')
+    expect(badges[1]?.attributes('title')).toContain('stops when that person loses the right')
+    expect(w.findAll('[data-testid="bot-token"]')[0]?.find('[data-testid="bot-token-binding"]').exists()).toBe(false)
+  })
+
   it('shows the empty state', async () => {
     tokens = []
     const w = await mountPanel()
