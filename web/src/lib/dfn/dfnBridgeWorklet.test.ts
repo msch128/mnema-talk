@@ -57,7 +57,7 @@ describe('DFN render-thread bridge', () => {
       expect(node.outputCount).toBeLessThanOrEqual(1440)
     }
     expect(frames).toHaveLength(3)
-    expect(reports).toEqual([{ type: 'failed' }])
+    expect(reports).toEqual([{ type: 'failed', reason: expect.any(String) }])
     expect(output.every(sample => sample === 0.25)).toBe(true)
   })
 
@@ -107,7 +107,7 @@ describe('DFN render-thread bridge', () => {
     for (let i = 0; i < 4; i++) render()
     node.receive({ type: 'frame', id: present(frames[0]).id, samples: new Float32Array(4096) })
     node.receive({ type: 'failed' })
-    expect(reports).toEqual([{ type: 'failed' }])
+    expect(reports).toEqual([{ type: 'failed', reason: expect.any(String) }])
     expect(render().every(sample => sample === 0.25)).toBe(true)
   })
 })
@@ -148,7 +148,7 @@ describe('DFN bridge protocol and buffering', () => {
     node.port.onmessage({ data: { type: 'failed' } })
     node.process([[input]], [channels])
     expect(channels.every(channel => channel.every(sample => Math.abs(sample - 0.7) < 0.0001))).toBe(true)
-    expect(reports).toEqual([{ type: 'failed' }])
+    expect(reports).toEqual([{ type: 'failed', reason: expect.any(String) }])
   })
 
   it('rejects a matching reply with a non-PCM payload', () => {
@@ -204,7 +204,7 @@ describe('DFN bridge protocol and buffering', () => {
     node.pending.add(-100)
     for (let i = 0; i < 4; i++) render()
     expect(node.failed).toBe(true)
-    expect(reports).toEqual([{ type: 'failed' }])
+    expect(reports).toEqual([{ type: 'failed', reason: expect.any(String) }])
   })
 })
 
@@ -215,7 +215,7 @@ describe('DFN unconnected bridge lifecycle', () => {
     for (let i = 0; i < 120; i++) output = render()
     expect(node.pending.size).toBe(0)
     expect(node.failed).toBe(true)
-    expect(reports).toEqual([{ type: 'failed' }])
+    expect(reports).toEqual([{ type: 'failed', reason: expect.any(String) }])
     expect(output.every(sample => sample === 0.25)).toBe(true)
   })
 })
