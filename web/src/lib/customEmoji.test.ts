@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, it, expect } from 'vitest'
-import { emojiImage, emojiToken, encodeShortcodes, parseEmojiToken, plainEmojiText, setEmojiSource, type CustomEmoji } from './customEmoji'
+import { shortcodesForEditing, emojiImage, emojiToken, encodeShortcodes, parseEmojiToken, plainEmojiText, setEmojiSource, type CustomEmoji } from './customEmoji'
 import { findEmojiQuery, suggestEmoji, applyEmoji } from './emojiQuery'
 import { markdownToPlain, renderMarkdown } from './markdown'
 
@@ -75,5 +75,22 @@ describe('emoji autocomplete query', () => {
     expect(suggestEmoji('part', list).map(e => e.name)).toEqual(['party_parrot', 'big_party'])
     expect(applyEmoji('hi :pa there', 3, 6, 'party_parrot')).toEqual({ text: 'hi :party_parrot: there', caret: 17 })
     expect(applyEmoji('hi :pa', 3, 6, 'x_y')).toEqual({ text: 'hi :x_y: ', caret: 9 })
+  })
+})
+
+describe('editing text with custom emoji', () => {
+  beforeEach(() => setEmojiSource(lookup, () => false))
+  afterEach(() => setEmojiSource(() => undefined, () => false))
+
+  it('shows :name: with the current name, and typing it back makes the same token again', () => {
+    const stored = `see <:old_name:${ID}> there`
+    const shown = shortcodesForEditing(stored)
+    expect(shown).toBe('see :party_parrot: there')
+    expect(encodeShortcodes(shown, byName)).toBe(`see ${emojiToken(parrot)} there`)
+  })
+
+  it('keeps the stored name for an emoji that is gone', () => {
+    setEmojiSource(() => undefined, () => false)
+    expect(shortcodesForEditing(`<:blob:${ID}>`)).toBe(':blob:')
   })
 })

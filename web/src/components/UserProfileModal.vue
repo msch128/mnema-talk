@@ -2,8 +2,9 @@
 import type { PropType } from 'vue'
 import type { User as ProfileUser } from '../types/domain'
 import { ref, computed } from 'vue'
-import { X, Crown, Shield, User, Calendar, Volume2, Lock } from '@lucide/vue'
+import { X, Crown, Shield, User, Calendar, Volume2, Lock, KeyRound } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
+import { useAccountStore } from '../stores/account'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { usePermissionsStore } from '../stores/permissions'
@@ -14,7 +15,6 @@ import BaseDialog from './BaseDialog.vue'
 import PresenceDot from './PresenceDot.vue'
 import ProfileAvatar from './ProfileAvatar.vue'
 import ProfileBio from './ProfileBio.vue'
-import ProfilePassword from './ProfilePassword.vue'
 import ProfileStatus from './ProfileStatus.vue'
 import BotBadge from './BotBadge.vue'
 import { shownName } from '../lib/deletedUser'
@@ -31,6 +31,13 @@ const props = defineProps({
 })
 
 const emit = defineEmits<{ close: []; mention: [username: string] }>()
+const account = useAccountStore()
+
+// Password and sign-in security live together in "Account & security".
+function openSecurity() {
+  emit('close')
+  account.open()
+}
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
@@ -229,7 +236,11 @@ function handleMention() {
 
           <ProfileBio :profile-user="profileUser" :is-self="!!isSelf" />
 
-          <ProfilePassword v-if="isSelf" />
+          <div v-if="isSelf" class="mb-3">
+            <button type="button" data-testid="profile-password-link" class="flex items-center gap-1 text-xs text-mnema-accent hover:underline" @click="openSecurity">
+              <KeyRound class="w-3.5 h-3.5" /><span>{{ $t('profile.passwordLink') }}</span>
+            </button>
+          </div>
 
           <!-- Divider -->
           <div class="h-px bg-mnema-hairline my-3"></div>

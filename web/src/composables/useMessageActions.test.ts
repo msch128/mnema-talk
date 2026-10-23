@@ -267,6 +267,16 @@ describe('useMessageActions reaction picker', () => {
   })
 })
 
+describe('useMessageActions editing', () => {
+  const ID = '11111111-2222-4333-8444-555555555555'
+
+  it('shows custom emoji as :name: in the edit box instead of the stored token', () => {
+    const a = setup()
+    a.startEdit(messageFixture({ id: 'm1', user_id: 'me', content: `hello <:blob:${ID}> world` }))
+    expect(a.editText.value).toBe('hello :blob: world')
+  })
+})
+
 describe('formatTime', () => {
   it('returns hours and minutes, empty for no date', () => {
     expect(formatTime('')).toBe('')

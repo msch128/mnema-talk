@@ -61,7 +61,8 @@
   },
   "menu": {
     "adminConsole": "Admin-Konsole",
-    "legal": "Rechtliches & Datenschutz"
+    "legal": "Rechtliches & Datenschutz",
+    "rules": "Community-Regeln"
   },
   "account": {
     "menu": "Konto-Menü",
@@ -108,7 +109,52 @@
       "codeWrong": "Dieser Code hat nicht funktioniert. Codes laufen nach 30 Sekunden ab und gelten einmal.",
       "codeCapped": "Heute zu viele falsche Codes. Nimm einen deiner Recovery-Codes.",
       "twoFactorOn": "Die Zwei-Faktor-Anmeldung ist schon eingeschaltet.",
-      "twoFactorOff": "Die Zwei-Faktor-Anmeldung ist nicht eingeschaltet."
+      "twoFactorOff": "Die Zwei-Faktor-Anmeldung ist nicht eingeschaltet.",
+      "mailOff": "Dieser Server kann keine E-Mails senden.",
+      "emailNoPending": "Es gibt keine unbestätigte E-Mail-Adresse.",
+      "emailSendFailed": "Die Bestätigungs-E-Mail konnte nicht gesendet werden. Versuche es später noch einmal.",
+      "pollEnded": "Diese Umfrage ist beendet, Stimmen sind nicht mehr möglich.",
+      "pollGone": "Diese Umfrage gibt es nicht mehr.",
+      "pollOneAnswer": "Bei dieser Umfrage ist nur eine Antwort möglich.",
+      "pollOptionTwice": "Jede Option kann nur einmal gewählt werden.",
+      "pollUnknownOption": "Diese Option gibt es in der Umfrage nicht.",
+      "pollOptionCount": "Eine Umfrage braucht 2 bis 10 Optionen.",
+      "pollOptionLine": "Eine Option ist eine einzelne Textzeile.",
+      "pollOptionsDiffer": "Alle Optionen müssen verschieden sein.",
+      "pollNoEdit": "Eine Umfrage lässt sich nicht bearbeiten. Lösche sie und starte eine neue.",
+      "pollDuration": "Wähle eine der angebotenen Laufzeiten.",
+      "emojiNameTaken": "Ein Emoji mit diesem Namen gibt es schon.",
+      "emojiName": "Emoji-Name: 2–32 Zeichen, nur a–z, 0–9 und _.",
+      "emojiInvalid": "Dieses Emoji ist nicht verfügbar.",
+      "emojiGone": "Dieses Emoji gibt es nicht mehr.",
+      "emojiLimit": "Das Limit von {count} eigenen Emojis ist erreicht. Lösche zuerst eines.",
+      "emojiAnimatedWebp": "Animiertes WebP wird nicht unterstützt. Nimm ein GIF.",
+      "emojiImageType": "Ein Emoji muss ein PNG-, GIF- oder WebP-Bild sein.",
+      "emojiSize": "Das Emoji-Bild darf höchstens {size} KiB groß sein.",
+      "emojiPixels": "Das Emoji-Bild darf an jeder Kante höchstens {size} Pixel haben.",
+      "fileRequired": "Wähle zuerst eine Datei.",
+      "fileUnreadable": "Die Datei konnte nicht gelesen werden.",
+      "storageOff": "Auf diesem Server ist kein Dateispeicher eingerichtet.",
+      "exportNone": "Es gibt keinen Export zum Herunterladen.",
+      "exportSameSite": "Der Download kann nur von dieser Seite aus gestartet werden.",
+      "pushOff": "Push-Benachrichtigungen sind auf diesem Server ausgeschaltet.",
+      "pushDeviceLimit": "Push funktioniert auf höchstens {count} Geräten pro Konto. Entferne zuerst eines.",
+      "pushSubscription": "Das Push-Abo deines Browsers wurde nicht akzeptiert. Schalte Benachrichtigungen aus und wieder ein.",
+      "deviceGone": "Dieses Gerät ist schon entfernt.",
+      "pinCap": "Ein Kanal kann höchstens {count} angeheftete Nachrichten haben. Löse zuerst eine.",
+      "ownerDelete": "Das Owner-Konto kann nicht gelöscht werden: Die Inhaberschaft lässt sich nicht übertragen, die Community stünde sonst ohne Owner da.",
+      "ownerProtected": "Beim Owner-Konto ist das nicht möglich.",
+      "ownerOnly": "Das kann nur der Owner.",
+      "selfModeration": "Das kannst du bei dir selbst nicht tun.",
+      "serverBusy": "Der Server ist ausgelastet. Versuche es gleich noch einmal.",
+      "editAuthorOnly": "Nur die Autorin oder der Autor kann diese Nachricht bearbeiten.",
+      "deleteAuthorOnly": "Nur die Autorin, der Autor oder eine Moderation kann diese Nachricht löschen.",
+      "deleteOwnerMessage": "Nachrichten des Owners kann nur der Owner löschen.",
+      "reactionsLimit": "Diese Nachricht hat schon zu viele verschiedene Reaktionen.",
+      "replyGone": "Die Nachricht, auf die du antwortest, gibt es nicht mehr.",
+      "replyElsewhere": "Du kannst nur auf Nachrichten im selben Gespräch antworten.",
+      "inviteExists": "Eine Einladung mit diesem Code gibt es schon.",
+      "usernameReserved": "Dieser Benutzername ist reserviert."
     },
     "field": {
       "content": "Nachricht",
@@ -414,7 +460,8 @@
     "empty": "Noch keine Antworten. Schreib die erste.",
     "placeholder": "Im Thread antworten …",
     "upload": "Datei oder Bild im Thread teilen",
-    "sendFailed": "Die Antwort konnte nicht gesendet werden."
+    "sendFailed": "Die Antwort konnte nicht gesendet werden.",
+    "commandHint": "Befehle und Umfragen startest du im Kanal. Hier wird dieser Text als Antwort gesendet."
   },
   "voice": {
     "mute": "Stummschalten",
@@ -1191,7 +1238,8 @@
     "statusSaved": "Status gespeichert",
     "statusCleared": "Status geleert",
     "displayNameHint": "So sehen dich andere. Dein Username @{username} bleibt gleich. Höchstens {count} Zeichen.",
-    "open": "Profil von {name} öffnen"
+    "open": "Profil von {name} öffnen",
+    "passwordLink": "Passwort ändern und Anmeldesicherheit"
   },
   "nav": {
     "channelNotFound": "Diesen Kanal gibt es nicht mehr.",
@@ -1296,7 +1344,8 @@
     "endBody": "Die Abstimmung endet jetzt. Die Ergebnisse bleiben sichtbar.",
     "someone": "Jemand",
     "more": "+{count} weitere",
-    "failed": "Das hat nicht geklappt."
+    "failed": "Das hat nicht geklappt.",
+    "cannotVote": "In diesem Kanal kannst du nicht abstimmen."
   },
   "mention": {
     "title": "Erwähnen",
@@ -1420,11 +1469,11 @@
     },
     "add_reactions": {
       "name": "Reaktionen hinzufügen",
-      "desc": "Auf Nachrichten reagieren. Die eigene Reaktion zurücknehmen geht immer."
+      "desc": "Auf Nachrichten reagieren und bei Umfragen abstimmen. Die eigene Reaktion zurücknehmen geht immer."
     },
     "manage_messages": {
       "name": "Nachrichten verwalten",
-      "desc": "Nachrichten anderer löschen (nie die des Inhabers)."
+      "desc": "Nachrichten anderer löschen (nie die des Inhabers), auch gesammelt. Nachrichten anheften und lösen, jede Umfrage beenden, frühere Fassungen bearbeiteter Nachrichten lesen und den Langsammodus umgehen."
     },
     "mention_everyone": {
       "name": "@all erwähnen",
@@ -1526,7 +1575,9 @@
       "voice": "Talk-Anwesenheit",
       "auth": "Anmeldungen",
       "settings": "Einstellungen",
-      "moderation": "Moderation"
+      "moderation": "Moderation",
+      "emoji": "Emoji",
+      "bot": "Bots"
     },
     "actions": {
       "role": {
@@ -1544,7 +1595,8 @@
         "password_set": "Passwort gesetzt",
         "password_reset": "Passwort zurückgesetzt",
         "lockout_clear": "Login-Sperre aufgehoben",
-        "talk_kick": "Aus Talk entfernt"
+        "talk_kick": "Aus Talk entfernt",
+        "two_factor_reset": "Zwei-Faktor-Anmeldung zurückgesetzt"
       },
       "channel": {
         "create": "Kanal erstellt",
@@ -1585,7 +1637,8 @@
         "delete": "Medium gelöscht"
       },
       "system": {
-        "update": "Update gestartet"
+        "update": "Update gestartet",
+        "mail_test": "Test-E-Mail gesendet"
       },
       "message": {
         "delete": "Nachricht gelöscht",
@@ -1603,10 +1656,24 @@
         "login_locked": "Anmeldung gesperrt",
         "register": "Registriert",
         "logout_all": "Überall abgemeldet",
-        "password_change": "Passwort geändert"
+        "password_change": "Passwort geändert",
+        "email_set": "E-Mail-Adresse hinzugefügt",
+        "email_remove": "E-Mail-Adresse entfernt",
+        "email_verified": "E-Mail-Adresse bestätigt",
+        "export_request": "Datenexport angefordert",
+        "export_download": "Datenexport heruntergeladen",
+        "account_delete": "Konto gelöscht",
+        "two_factor_enabled": "Zwei-Faktor-Anmeldung eingeschaltet",
+        "two_factor_disabled": "Zwei-Faktor-Anmeldung ausgeschaltet",
+        "two_factor_failed": "Zwei-Faktor-Code falsch",
+        "two_factor_alert": "Wiederholt falsche Zwei-Faktor-Codes",
+        "recovery_code_used": "Recovery-Code verwendet",
+        "recovery_codes_regenerated": "Recovery-Codes erneuert",
+        "password_reset_mail": "Passwort per E-Mail zurückgesetzt"
       },
       "settings": {
-        "upload_limit": "Upload-Limit geändert"
+        "upload_limit": "Upload-Limit geändert",
+        "onboarding": "Willkommen und Regeln geändert"
       },
       "moderation": {
         "timeout": "Mitglied stummgeschaltet",
@@ -1615,6 +1682,26 @@
         "unban": "Mitglied entsperrt",
         "ban_expired": "Sperre abgelaufen",
         "bulk_delete": "Nachrichten gesammelt gelöscht"
+      },
+      "emoji": {
+        "create": "Emoji hinzugefügt",
+        "rename": "Emoji umbenannt",
+        "delete": "Emoji gelöscht"
+      },
+      "bot": {
+        "create": "Bot erstellt",
+        "update": "Bot bearbeitet",
+        "delete": "Bot gelöscht",
+        "avatar": "Bot-Avatar geändert",
+        "roles": "Bot-Rollen geändert",
+        "token_create": "Bot-Token erstellt",
+        "token_regenerate": "Bot-Token neu erzeugt",
+        "token_revoke": "Bot-Token widerrufen",
+        "command_update": "Bot-Befehl bearbeitet",
+        "command_delete": "Bot-Befehl gelöscht"
+      },
+      "admin": {
+        "post": "Admin-Aktion"
       }
     }
   },
@@ -1996,7 +2083,8 @@
     "removeFailed": "Das Gerät konnte nicht entfernt werden.",
     "testSent": "Testbenachrichtigung gesendet.",
     "testFailed": "Die Testbenachrichtigung konnte nicht zugestellt werden.",
-    "previewFailed": "Die Einstellung konnte nicht gespeichert werden."
+    "previewFailed": "Die Einstellung konnte nicht gespeichert werden.",
+    "channelLevels": "Auch Benachrichtigungen bei geöffneter Seite folgen deinen Kanal-Einstellungen und „Nicht stören“."
   },
   "recovery": {
     "forgotLink": "Passwort vergessen?",
@@ -2088,5 +2176,8 @@
       "deleteType": "Tippe zur Bestätigung deinen Benutzernamen ({name})",
       "deleteConfirm": "Endgültig löschen"
     }
+  },
+  "rules": {
+    "title": "Community-Regeln"
   }
 }

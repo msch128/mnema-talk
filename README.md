@@ -45,11 +45,25 @@ webhooks and a call you can join with one click.
   back), threads, reactions, emoji, @mentions, file and image attachments,
   link cards, search, typing notices, unread and mention markers,
   per-channel notification settings and presence with a status line.
+- **Pinned messages, polls and slash commands** (`/poll` and others), **custom
+  emoji** managed by the community, **edit history** for moderators, **drafts**
+  that survive a reload and a **jump to the first unread message**.
+- **Installable web app with Web Push** notifications, and a layout for phones.
+- **Rules and onboarding** that new members accept before they write.
 - One community with categories, text channels and Talks. Every Talk has its
   own text chat.
 - Upload size is up to the Owner: a global limit and an optional limit per
   role, within the `MAX_UPLOAD_SIZE_MB` ceiling.
 - German and English, chosen per account.
+
+### Supported browsers
+
+Chromium-based browsers (Chrome, Edge 137+), Safari 17+ (including iOS 17+ and
+the installed web app) and Firefox 129+ run the whole app. A browser that cannot
+seal media does not join a Talk at all, it never sends unsealed media. Chromium
+is tested in CI; Safari/WebKit and Firefox calls pass locally but are not all
+required CI checks, and nothing is tested on real iOS or Android hardware.
+Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 
 ### Security and privacy
 
@@ -58,6 +72,9 @@ webhooks and a call you can join with one click.
   30 minutes, every sealed frame is signed by its sender, and a **safety code**
   in the connection details lets members compare keys out of band.
 - **Invite-only.** There is no public registration.
+- **Accounts you control.** Optional e-mail (password reset needs SMTP),
+  two-factor sign-in with recovery codes, and self-service export and deletion
+  of your own data.
 - **Hardened by default**: `HttpOnly` session cookies with revocation, CSRF
   origin check, strict CSP, upload content sniffing, rate limits and login
   lockout, an SSRF guard for outgoing webhooks, and an app port that only
@@ -112,20 +129,15 @@ webhooks and a call you can join with one click.
 ## Quickstart
 
 You need a Linux host with Docker and Docker Compose, a domain with HTTPS
-(through a reverse proxy) and a UDP port range open for voice.
+(through a reverse proxy) and a UDP port range open for voice. No clone and no
+build are needed: [Fresh install in doc/deployment.md](doc/deployment.md#fresh-install)
+downloads the compose file and `.env.example` of a release, lists the few
+values to set (`PUBLIC_URL`, `JWT_SECRET`, `POSTGRES_PASSWORD`,
+`S3_ACCESS_KEY` / `S3_SECRET_KEY`, `ADMIN_INITIAL_PASSWORD`) and starts the
+published image (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.0`, also `:1.0.0`
+and `:latest`). CI runs those exact steps.
 
-```sh
-git clone https://github.com/msch128/mnema-talk.git && cd mnema-talk
-cp .env.example .env
-# edit .env: PUBLIC_URL, JWT_SECRET (openssl rand -hex 32), POSTGRES_PASSWORD,
-# S3_ACCESS_KEY / S3_SECRET_KEY and ADMIN_INITIAL_PASSWORD (14+ characters)
-docker compose up -d --build      # or: make up
-```
-
-To run a published image instead of building, set
-`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:0.8` in `.env` and use
-`docker compose pull app && docker compose up -d`
-([doc/deployment.md](doc/deployment.md)).
+Building from source is for development; see [Development](#development).
 
 Open `PUBLIC_URL`, sign in as the Owner (default username `Herzog`, set with
 `ADMIN_USERNAME`) and create invite codes for your members.
@@ -165,7 +177,7 @@ proxy settings, TURN and troubleshooting:
 Take a backup before every update (`scripts/backup.sh`; restore with
 `scripts/restore.sh`, which can verify a backup in a disposable container
 first). Migrations run at startup and are forward-only. Per-version notes,
-including the move from 0.7 to 0.8, and the rollback procedure are in
+including the move from 0.9 to 1.0, and the rollback procedure are in
 [doc/upgrade.md](doc/upgrade.md). Admins see new releases in the System tab; an
 optional update button needs the `autoupdate` profile.
 
@@ -185,8 +197,8 @@ In a few honest sentences:
   turn retention on.
 - **The desktop client removes server-served JavaScript**: it runs a signed web
   bundle that it verifies itself, so the server supplies data, never code.
-- Transport is HTTPS and DTLS-SRTP. The project is pre-1.0 and has had an
-  internal security review, not an external audit.
+- Transport is HTTPS and DTLS-SRTP. 1.0 has had an internal six-lane security
+  review, not an external audit ([SECURITY.md](SECURITY.md#10-internal-security-review)).
 
 The full model, its limits and how to report a vulnerability privately are in
 [SECURITY.md](SECURITY.md); the product's test scope is in
@@ -194,11 +206,11 @@ The full model, its limits and how to report a vulnerability privately are in
 
 ## Desktop client
 
-The [Windows desktop client](https://github.com/msch128/mnema-talk-desktop)
-(**Beta**, unsigned) wraps the same web app. Instead of loading code from
+The [desktop client](https://github.com/msch128/mnema-talk-desktop) for Windows,
+macOS and Linux (**Beta**, unsigned) wraps the same web app. Instead of loading code from
 your server it runs a **signed bundle** that it verifies on every start, with
 rollback protection and a security floor, and keeps the session in the OS
-keychain. It adds a gaming sidepeek and an `Alt+M` overlay for your Talk. The
+keychain. On Windows it adds a gaming sidepeek and an `Alt+M` overlay for your Talk. The
 browser app remains the primary, fully supported client. The installers are
 not code-signed (no paid certificate), so Windows SmartScreen and macOS
 Gatekeeper warn on first start; the steps are in
@@ -209,17 +221,21 @@ and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client
 
 | Topic | Where |
 |---|---|
+| **Read first when updating:** what 1.0 promises and what to do before updating | [doc/release-notes-1.0.md](doc/release-notes-1.0.md) |
 | Components, data flow, capacity | [doc/architecture.md](doc/architecture.md) |
 | Configuration, reverse proxy, TURN, backups, metrics and alerts, troubleshooting | [doc/operations.md](doc/operations.md) |
 | Ports, image tags, platforms, updating | [doc/deployment.md](doc/deployment.md) |
 | Upgrade notes per version, rollback | [doc/upgrade.md](doc/upgrade.md) |
 | Roles, permissions and private channels | [doc/roles-and-permissions.md](doc/roles-and-permissions.md) |
+| Product vocabulary (en/de) used in the UI and docs | [doc/glossary.md](doc/glossary.md) |
 | Moderation and the audit log | [doc/moderation.md](doc/moderation.md) |
 | Webhooks (incoming and outgoing) | [doc/webhooks.md](doc/webhooks.md) |
 | Bots, the bot API and gateway | [doc/bots.md](doc/bots.md) |
 | What is public API and how it may change (1.0 stability promise) | [doc/api-stability.md](doc/api-stability.md) |
-| Where media keys live in the browser | [SECURITY.md](SECURITY.md) |
-| Unused persistence foundation | [doc/crypto-state.md](doc/crypto-state.md) |
+| Where media keys live in the browser | [SECURITY.md](SECURITY.md#security-model-summary) |
+| Unused cryptographic state module (research history, not shipped) | [doc/crypto-state.md](doc/crypto-state.md) |
+| Web client code (TypeScript) | [doc/typescript.md](doc/typescript.md) |
+| Game detection for the desktop gaming integration | [doc/game-detection.md](doc/game-detection.md) |
 | Trusted desktop client, gaming overlay | [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md), [doc/desktop-app.md](doc/desktop-app.md) |
 | Load test | [loadtest/README.md](loadtest/README.md) |
 | Product status and acceptance | [doc/product-status.md](doc/product-status.md) |

@@ -4,7 +4,8 @@ import type { ReactionSummary } from '../types/domain'
 // Reaction badges under a message plus the dashed "add reaction" button
 // with its palette.
 import { SmilePlus } from '@lucide/vue'
-import { plainEmojiText } from '../lib/customEmoji'
+import { parseEmojiToken, plainEmojiText } from '../lib/customEmoji'
+import { useEmojiStore } from '../stores/emoji'
 import { useAuthStore } from '../stores/auth'
 import EmojiGlyph from './EmojiGlyph.vue'
 import ReactionPalette from './ReactionPalette.vue'
@@ -24,10 +25,18 @@ defineProps({
 const emit = defineEmits<{ toggle: [emoji: string]; 'toggle-picker': []; 'close-picker': [] }>()
 
 const authStore = useAuthStore()
+const emojiStore = useEmojiStore()
 
 function reacted(reaction: ReactionSummary) {
   const me = authStore.user?.id
   return !!me && !!reaction?.users?.includes(me)
+}
+
+// A deleted custom emoji stays on old messages as :name: text; it can be taken
+// back but not added anew.
+function gone(reaction: ReactionSummary) {
+  const token = parseEmojiToken(reaction.emoji)
+  return !!token && emojiStore.loaded && !emojiStore.byId.has(token.id)
 }
 </script>
 
@@ -37,7 +46,7 @@ function reacted(reaction: ReactionSummary) {
       v-for="r in reactions"
       :key="r.emoji"
       type="button"
-      :disabled="!canAdd && !reacted(r)"
+      :disabled="(!canAdd || gone(r)) && !reacted(r)"
       :aria-pressed="reacted(r) ? 'true' : 'false'"
       @click.stop="emit('toggle', r.emoji)"
       :class="[

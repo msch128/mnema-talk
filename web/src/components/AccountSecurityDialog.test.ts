@@ -138,3 +138,15 @@ describe('AccountSecurityDialog e-mail section', () => {
     w.unmount()
   })
 })
+
+describe('AccountSecurityDialog password', () => {
+  it('keeps the password next to two-factor sign-in and the e-mail address', async () => {
+    const w = await open(none)
+    const text = w.text()
+    expect(text).toContain('Password')
+    expect(text.indexOf('Password')).toBeLessThan(text.indexOf('E-mail address'))
+    await w.findAll('button').find(b => b.text() === 'Change')!.trigger('click')
+    expect(w.find('input[autocomplete="current-password"]').exists()).toBe(true)
+    w.unmount()
+  })
+})
