@@ -3,28 +3,13 @@ import { platform } from './platform'
 // client can inject transport without sharing unauthorized listeners or credentials.
 // Response JSON stays unknown until an explicit runtime decoder accepts it.
 import { t } from '../i18n'
+import { formatDetailMessage } from './errorDetails'
 import { isRecord, type Decoder } from '../types/validation'
 
 const CODES = new Set([
   'INVALID_CREDENTIALS', 'UNAUTHORIZED', 'FORBIDDEN', 'NOT_FOUND', 'CONFLICT', 'PAYLOAD_TOO_LARGE',
   'UNSUPPORTED_MEDIA_TYPE', 'RATE_LIMITED', 'RULES_NOT_ACCEPTED', 'UNAVAILABLE', 'INTERNAL_ERROR'
 ])
-
-const DETAILS: Readonly<Record<string, string>> = {
-  'invalid invite code': 'invalidInvite',
-  'invite code has expired': 'inviteExpired',
-  'invite code usage limit reached': 'inviteUsedUp',
-  'username is already taken': 'usernameTaken',
-  'current password is incorrect': 'wrongPassword',
-  'invalid or expired code': 'codeWrong',
-  'the code is incorrect': 'codeWrong',
-  'too many wrong codes today: use a recovery code': 'codeCapped',
-  'two-factor sign-in is already on': 'twoFactorOn',
-  'two-factor sign-in is not on': 'twoFactorOff',
-  'this link is invalid or has expired': 'linkInvalid',
-  'enter a valid e-mail address': 'emailInvalid',
-  'this e-mail address is already confirmed for another account': 'emailInUse'
-}
 
 export class ApiError extends Error {
   constructor(readonly status: number, readonly code: string, message: string) {
@@ -44,32 +29,20 @@ export function caughtErrorMessage(error: unknown, fallback: string): string {
     ? error['message'].slice(0, 1024) : fallback
 }
 
-type ErrorPattern = readonly [RegExp, (...matches: string[]) => string]
-const FIELDS = new Set(['content', 'bio', 'display_name', 'name', 'topic'])
-const PATTERNS: readonly ErrorPattern[] = [
-  [/^password must be at least (\d+) characters$/, n => t('errors.detail.passwordMin', { count: n })],
-  [/^password must be at most/, () => t('errors.detail.passwordMax')],
-  [/^username must be/, () => t('errors.detail.usernameFormat')],
-  [/^(\w+) must be at most (\d+) characters$/, (field = '', n = '') => t('errors.detail.fieldMax', { field: FIELDS.has(field) ? t(`errors.field.${field}`) : field, count: n })],
-  [/^slow mode: wait (\d+) s/, n => t('errors.detail.slowMode', { seconds: n })],
-  [/^file exceeds the (\d+) MB limit$/, n => t('errors.detail.fileTooBig', { size: n })],
-  [/^(missing permission|cannot (grant|allow|change) a permission you do not have)/, () => t('errors.detail.missingPermission')]
-]
+// Codes whose server message is stock wording: the generic text says it all.
+const PLAIN_CODES = new Set([
+  'INVALID_CREDENTIALS', 'UNAUTHORIZED', 'NOT_FOUND', 'PAYLOAD_TOO_LARGE', 'UNSUPPORTED_MEDIA_TYPE',
+  'RATE_LIMITED', 'RULES_NOT_ACCEPTED', 'INTERNAL_ERROR'
+])
 
-function formatDetailMessage(message: string): string | null {
-  if (Object.prototype.hasOwnProperty.call(DETAILS, message)) {
-    return t(`errors.detail.${DETAILS[message]}`)
-  }
-  for (const [pattern, format] of PATTERNS) {
-    const match = message.match(pattern)
-    if (match) return format(...match.slice(1))
-  }
-  return null
-}
-
+/** Unknown server sentence: the generic text of the code, followed by the
+ * server's own words (English) so the reason is never lost. */
 function formatErrorCode(code: unknown, message: string): string {
   if (code === 'INVALID_INPUT' && message) return message
-  if (typeof code === 'string' && CODES.has(code)) return t(`errors.code.${code}`)
+  if (typeof code === 'string' && CODES.has(code)) {
+    const generic = t(`errors.code.${code}`)
+    return message && !PLAIN_CODES.has(code) ? `${generic} (${message})` : generic
+  }
   return message || t('errors.unknown')
 }
 
