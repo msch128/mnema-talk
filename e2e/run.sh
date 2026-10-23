@@ -111,6 +111,7 @@ if [ "${E2E_NO_DOCKER:-0}" = "1" ]; then
   pg pg_ctl -D "$LOCAL_DIR/pg" -o "-p $PG_PORT -h 127.0.0.1 -k $LOCAL_DIR" -l "$LOCAL_DIR/pg.log" -w start >/dev/null
   pg createdb -h 127.0.0.1 -p "$PG_PORT" -U mnema mnema_e2e
   WEED_PID=""
+  mkdir -p "$LOCAL_DIR/s3"
   weed server -ip=127.0.0.1 -dir="$LOCAL_DIR/s3" -s3 -s3.port="$S3_PORT" \
     -master.port="$(free_port tcp)" -volume.port="$(free_port tcp)" -filer.port="$(free_port tcp)" \
     >"$LOCAL_DIR/weed.log" 2>&1 &
