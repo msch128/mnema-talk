@@ -74,7 +74,7 @@ const actionPad = computed(() => {
 
 // Shared row styling (34px channel rows, rounded hover/selected states).
 const rowClass = computed(() => [
-  'relative w-full h-9 max-md:h-11 flex items-center justify-between gap-2 px-2.5 mb-0.5 rounded-lg text-nav transition-colors motion-reduce:transition-none group cursor-pointer text-left min-w-0 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
+  'relative w-full h-[34px] max-md:h-11 flex items-center justify-between gap-1.5 px-2 mb-px rounded-lg text-nav transition-colors motion-reduce:transition-none group cursor-pointer text-left min-w-0 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
   active.value
     ? 'bg-mnema-hover text-mnema-text font-medium shadow-[inset_2px_0_0_0_#2DA771]'
     : unread.value > 0
@@ -172,7 +172,7 @@ const rowClass = computed(() => [
     </div>
 
       <!-- The actions sit beside the row, not inside it: a button inside a button is not valid. -->
-      <div v-if="isVoice || admin" class="pointer-events-none absolute inset-y-0 right-2.5 mb-0.5 flex items-center gap-1.5">
+      <div v-if="isVoice || admin" class="pointer-events-none absolute inset-y-0 right-2 mb-px flex items-center gap-1.5">
       <!-- A Talk's chat can be read without joining the Talk -->
       <button
         v-if="isVoice"
