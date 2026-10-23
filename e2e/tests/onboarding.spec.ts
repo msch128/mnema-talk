@@ -50,7 +50,7 @@ async function welcomeFlowPhase(a: Page, b: Page, bCtx: BrowserContext, channelI
 
   // The rules cannot be skipped or closed; reading works, writing waits for the click.
   await expect(dialog.getByRole('heading', { name: 'Die Regeln' })).toBeVisible()
-  await expect(dialog.getByTestId('welcome-rules')).toContainText('Sei nett.')
+  await expect(dialog.getByTestId('welcome-rules')).toContainText('Be kind.')
   await b.keyboard.press('Escape')
   await expect(dialog.getByRole('heading', { name: 'Die Regeln' })).toBeVisible()
   await expect(dialog.getByRole('button', { name: 'Einführung überspringen' })).toHaveCount(0)
@@ -78,7 +78,7 @@ async function welcomeFlowPhase(a: Page, b: Page, bCtx: BrowserContext, channelI
   await b.reload()
   await expect(dialog.getByRole('heading', { name: 'Die Regeln' })).toBeVisible()
   await expect(dialog.getByTestId('welcome-progress')).toHaveText('Schritt 1 von 1')
-  await expect(dialog.getByTestId('welcome-rules')).toContainText('Sei netter.')
+  await expect(dialog.getByTestId('welcome-rules')).toContainText('Be kinder.')
   await dialog.getByRole('button', { name: 'Ich akzeptiere die Regeln' }).click()
   await expect(dialog).toBeHidden()
   expect((await apiFetch(b, 'POST', `/api/channels/${channelId}/messages`, { content: 'angekommen' })).status).toBe(201)
@@ -111,7 +111,7 @@ test('invite links name the community, rules block a member until accepted, and 
     await form.getByLabel('Name der Community').fill(COMMUNITY)
     await form.getByLabel('Regeln').fill('# Rules\nBe kind.')
     await form.getByRole('button', { name: 'Vorschau' }).nth(1).click()
-    await expect(form.getByTestId('rules-preview')).toContainText('Sei nett.')
+    await expect(form.getByTestId('rules-preview')).toContainText('Be kind.')
     await form.getByTestId('onboarding-save').click()
     await expect(a.getByText('Willkommen und Regeln gespeichert.')).toBeVisible()
 
