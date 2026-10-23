@@ -1,0 +1,49 @@
+doc/operations.md
+  s_06fcde5dbef956::t_ebca8c2e23a743 122-127
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_a10be64a68a0b0 2,180
+web/src/components/SearchResultItem.vue
+  s_06fcde5dbef956::t_a10be64a68a0b0 2,31
+internal/auth/mail_locale.go
+  s_06fcde5dbef956::t_1ab8c66528128b 1-57
+internal/auth/two_factor_failures.go
+  s_06fcde5dbef956::t_b680724734ee03 116
+web/src/lib/time.ts
+  s_06fcde5dbef956::t_6601a1aaec426c 1-13
+web/src/composables/useMuteMenu.ts
+  s_06fcde5dbef956::t_a10be64a68a0b0 9,29
+web/src/composables/useUnreadDivider.ts
+  s_06fcde5dbef956::t_a10be64a68a0b0 7,29-30
+web/src/composables/formatTime.test.ts
+  s_06fcde5dbef956::t_3453950a448497 1-7,9-31
+  s_06fcde5dbef956::t_b9dc34d228901c 8
+internal/auth/mail_locale_test.go
+  s_06fcde5dbef956::t_7960f091f996bb 1-53
+web/src/composables/useMessageActions.ts
+  s_06fcde5dbef956::t_a10be64a68a0b0 15,19
+web/src/components/MentionsInbox.vue
+  s_06fcde5dbef956::t_a10be64a68a0b0 2,40
+scripts/screenshots/capture.mjs
+  s_06fcde5dbef956::t_102295600bcc02 120
+  s_06fcde5dbef956::t_df92f15419f01f 16,116-119
+internal/auth/password_reset.go
+  s_06fcde5dbef956::t_b680724734ee03 85-86,95,113
+internal/auth/email_handler.go
+  s_06fcde5dbef956::t_b680724734ee03 139,212,221,242
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8768e59efb67a3d67144725328bb6e8dc3cbf9a4",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
