@@ -133,8 +133,9 @@ nothing in it is a breaking change to a public surface, and `1.x` keeps working
 for existing clients, bots, webhooks, dashboards and alerts. What changes for an
 operator is below. Update with the procedure above; take the backup first.
 
-- **Seven migrations run on first start: 0038, 0039, 0040, 0041, 0042, 0043 and
-  0045 and 0048.** All are quick on any instance.
+- **Ten migrations run on first start: 0038 to 0045, 0047 and 0048** (0046 is
+  intentionally unused). All are quick on any instance; 0044 and 0047 are
+  described under custom emoji and edit history below.
   - 0038 drops `idx_messages_content_trgm`, a duplicate of the trigram search
     index `messages_content_trgm_idx` (both came from earlier releases), so
     message writes no longer maintain the same index twice and search is
