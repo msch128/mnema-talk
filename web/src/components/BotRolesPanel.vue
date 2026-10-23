@@ -78,6 +78,6 @@ onMounted(() => { if (!permissions.roles.length) void permissions.loadRoles() })
       </li>
     </ul>
     <p v-if="warnsPowerful" class="rounded-md border border-mnema-danger/40 bg-mnema-danger/10 px-3 py-2 text-sm text-mnema-text" role="alert" data-testid="bot-power-selected">{{ $t('bots.roles.powerSelected') }}</p>
-    <button type="button" :disabled="!dirty || busy" class="rounded-md bg-mnema-accent px-3.5 py-1.5 text-sm font-semibold text-mnema-accent-ink shadow-xs transition hover:bg-mnema-accent-hover disabled:opacity-40" data-testid="bot-roles-save" @click="save">{{ $t('bots.roles.save') }}</button>
+    <button type="button" :disabled="!dirty || busy" class="btn btn-primary" data-testid="bot-roles-save" @click="save">{{ $t('bots.roles.save') }}</button>
   </section>
 </template>

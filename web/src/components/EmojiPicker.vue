@@ -94,7 +94,7 @@ onBeforeUnmount(() => {
   <div
     ref="host"
     data-testid="emoji-picker"
-    class="z-40 overflow-hidden rounded-[10px] bg-mnema-elevated shadow-[inset_0_0_0_1px_#2B2F2D,0_12px_32px_rgba(0,0,0,0.5)]"
+    class="z-40 overflow-hidden rounded-lg bg-mnema-elevated shadow-popover pop-in"
   >
     <div v-if="loading" class="flex h-[360px] w-[340px] max-w-[calc(100vw-16px)] items-center justify-center text-sm text-mnema-tertiary">
       {{ $t('emoji.loading') }}

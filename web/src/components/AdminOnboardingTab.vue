@@ -138,6 +138,6 @@ onMounted(load)
     </div>
 
     <p v-if="tooLong" class="text-xs text-mnema-danger" role="alert">{{ $t('admin.onboarding.tooLong') }}</p>
-    <button type="submit" :disabled="!dirty || busy || tooLong" class="rounded-md bg-mnema-accent px-4 py-1.5 text-sm font-semibold text-mnema-accent-ink shadow-xs transition hover:bg-mnema-accent-hover disabled:opacity-40" data-testid="onboarding-save">{{ $t('common.save') }}</button>
+    <button type="submit" :disabled="!dirty || busy || tooLong" class="btn btn-primary" data-testid="onboarding-save">{{ $t('common.save') }}</button>
   </form>
 </template>

@@ -89,7 +89,7 @@ async function saveStatus(text = editStatus.value) {
       <button
         type="submit"
         :disabled="isSavingStatus"
-        class="flex items-center gap-1 rounded-sm bg-mnema-accent px-2.5 py-1 text-xs font-bold text-mnema-canvas hover:brightness-110 active:scale-95 disabled:opacity-50"
+        class="btn btn-primary btn-sm flex items-center gap-1"
       >
         <Loader2 v-if="isSavingStatus" class="h-3.5 w-3.5 animate-spin" />
         <Save v-else class="h-3.5 w-3.5" />

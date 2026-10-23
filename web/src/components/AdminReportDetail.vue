@@ -124,8 +124,8 @@ onMounted(load)
         <label for="report-resolution" class="block text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('reports.admin.resolutionNote') }}</label>
         <textarea id="report-resolution" v-model="note" rows="2" :maxlength="REPORT_NOTE_MAX" data-testid="report-resolution" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"></textarea>
         <div class="flex gap-2">
-          <button type="button" :disabled="busy" data-testid="report-resolve" class="rounded-md bg-mnema-accent px-3 py-1.5 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40" @click="close('resolved')">{{ $t('reports.admin.resolve') }}</button>
-          <button type="button" :disabled="busy" data-testid="report-dismiss" class="rounded-md border border-mnema-border px-3 py-1.5 text-sm font-semibold text-mnema-text transition hover:bg-mnema-hover disabled:opacity-40" @click="close('dismissed')">{{ $t('reports.admin.dismiss') }}</button>
+          <button type="button" :disabled="busy" data-testid="report-resolve" class="btn btn-primary" @click="close('resolved')">{{ $t('reports.admin.resolve') }}</button>
+          <button type="button" :disabled="busy" data-testid="report-dismiss" class="btn btn-secondary" @click="close('dismissed')">{{ $t('reports.admin.dismiss') }}</button>
         </div>
       </form>
       <div v-else class="space-y-2">
@@ -133,7 +133,7 @@ onMounted(load)
           {{ $t(`reports.admin.closedAs.${report.status}`, { name: report.resolved_by?.username ?? '', date: report.resolved_at ? when(report.resolved_at) : '' }) }}
         </p>
         <p v-if="report.resolution_note" class="wrap-break-word text-sm text-mnema-text">{{ report.resolution_note }}</p>
-        <button type="button" data-testid="report-delete" class="rounded-md border border-mnema-danger/50 px-3 py-1.5 text-sm text-mnema-danger transition hover:bg-mnema-danger/10" @click="remove">{{ $t('reports.admin.delete') }}</button>
+        <button type="button" data-testid="report-delete" class="btn btn-danger" @click="remove">{{ $t('reports.admin.delete') }}</button>
       </div>
     </template>
   </div>

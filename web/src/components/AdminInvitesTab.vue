@@ -115,7 +115,7 @@ onMounted(loadInvites)
       />
       <button
         type="button"
-        class="bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold px-3.5 py-1.5 rounded-md text-sm transition shadow-xs"
+        class="btn btn-primary"
         @click="createInvite"
       >
         {{ $t('admin.createInvite') }}

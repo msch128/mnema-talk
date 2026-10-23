@@ -25,7 +25,7 @@ const newCategoryName = defineModel<string>('newCategoryName', { required: true 
       <button
         type="button"
         :disabled="!newCategoryName.trim()"
-        class="bg-mnema-surface border border-mnema-border hover:border-mnema-accent text-mnema-text px-2.5 py-1 rounded-md text-sm transition disabled:opacity-40 flex items-center gap-1"
+        class="btn btn-secondary btn-sm flex items-center gap-1"
         @click="emit('create')"
       >
         <Plus class="w-4 h-4" />

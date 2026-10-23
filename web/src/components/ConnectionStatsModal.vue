@@ -178,7 +178,7 @@ const rows = computed(() => {
     <footer class="px-5 py-3 border-t border-mnema-hairline bg-mnema-raised flex items-center justify-end">
       <button
         type="button"
-        class="px-4 py-1.5 rounded-md bg-mnema-elevated border border-mnema-border hover:bg-mnema-hover text-mnema-text text-sm font-semibold transition"
+        class="btn btn-secondary"
         @click="emit('close')"
       >
         {{ $t('common.close') }}

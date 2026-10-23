@@ -76,8 +76,8 @@ async function save() {
         </li>
       </ul>
       <div class="flex justify-end gap-2 pt-1">
-        <button type="button" class="rounded-md px-3.5 py-1.5 text-sm text-mnema-muted transition hover:text-mnema-text" @click="emit('close')">{{ $t('common.cancel') }}</button>
-        <button type="button" :disabled="busy || frozen" class="rounded-md bg-mnema-accent px-3.5 py-1.5 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40" @click="save">{{ $t('common.save') }}</button>
+        <button type="button" class="btn btn-ghost" @click="emit('close')">{{ $t('common.cancel') }}</button>
+        <button type="button" :disabled="busy || frozen" class="btn btn-primary" @click="save">{{ $t('common.save') }}</button>
       </div>
     </div>
   </BaseDialog>

@@ -347,7 +347,7 @@ const groupedIds = computed(() => {
     <button
       v-else-if="showUnreadPill"
       type="button"
-      class="absolute left-1/2 -translate-x-1/2 bottom-2 h-8 px-4 flex items-center gap-1.5 rounded-full bg-mnema-accent text-mnema-accent-ink text-sm font-semibold shadow-lg hover:bg-mnema-accent-hover transition z-20"
+      class="btn btn-primary absolute left-1/2 -translate-x-1/2 bottom-2 h-8 flex items-center gap-1.5 rounded-full shadow-lg z-20"
       @click="scrollToBottomNow"
     >
       {{ $t('chat.newMessages') }}

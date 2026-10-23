@@ -97,7 +97,7 @@ function openNotificationMenu(e: MouseEvent) {
         type="button"
         data-testid="search-in-channel"
         @click="searchInChannel"
-        class="w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+        class="btn btn-icon w-8 h-8 max-md:w-11 max-md:h-11"
         v-tooltip="$t('chat.searchInChannel')"
         :aria-label="$t('chat.searchInChannel')"
       >
@@ -106,7 +106,7 @@ function openNotificationMenu(e: MouseEvent) {
       <button
         v-if="chatStore.activeChannel && !isDm"
         @click="openNotificationMenu"
-        class="w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+        class="btn btn-icon w-8 h-8 max-md:w-11 max-md:h-11"
         v-tooltip="$t('notifications.channelSettings')"
         aria-haspopup="menu"
       >
@@ -120,7 +120,7 @@ function openNotificationMenu(e: MouseEvent) {
         type="button"
         data-testid="voice-chat-close"
         @click="emit('close')"
-        class="w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+        class="btn btn-icon w-8 h-8 max-md:w-11 max-md:h-11"
         v-tooltip="$t('talk.closeChat')"
         :aria-label="$t('talk.closeChat')"
       >
@@ -130,7 +130,7 @@ function openNotificationMenu(e: MouseEvent) {
         v-else-if="isDm"
         type="button"
         data-testid="dm-info-button"
-        class="w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+        class="btn btn-icon w-8 h-8 max-md:w-11 max-md:h-11"
         v-tooltip="$t('dm.info')"
         :aria-label="$t('dm.info')"
         @click="showInfo = true"
@@ -140,12 +140,7 @@ function openNotificationMenu(e: MouseEvent) {
       <button
         v-else
         @click="chatStore.showMemberList = !chatStore.showMemberList"
-        :class="[
-          'w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-md transition',
-          chatStore.showMemberList
-            ? 'text-mnema-accent bg-mnema-surface'
-            : 'text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface'
-        ]"
+        class="btn btn-icon w-8 h-8 max-md:w-11 max-md:h-11"
         v-tooltip="$t('members.toggle')"
         :aria-pressed="chatStore.showMemberList ? 'true' : 'false'"
       >
@@ -170,14 +165,14 @@ function openNotificationMenu(e: MouseEvent) {
     </p>
     <button
       type="button"
-      class="px-2.5 py-1 rounded-md bg-mnema-accent text-mnema-accent-ink font-semibold hover:bg-mnema-accent-hover transition shrink-0"
+      class="btn btn-primary btn-sm shrink-0"
       @click="enableNotifications"
     >
       {{ $t('notifications.enable') }}
     </button>
     <button
       type="button"
-      class="p-1 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition shrink-0"
+      class="btn btn-icon btn-sm hover:text-mnema-text shrink-0"
       :aria-label="$t('notifications.notNow')"
       v-tooltip="$t('notifications.notNow')"
       @click="dismissNotifHint"

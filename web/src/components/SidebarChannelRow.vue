@@ -168,7 +168,7 @@ const rowClass = computed(() => [
         @click.stop="emit('delete')"
         v-tooltip="isVoice ? $t('sidebar.deleteVoiceChannel') : $t('sidebar.deleteChannel')"
         :aria-label="isVoice ? $t('sidebar.deleteVoiceChannel') : $t('sidebar.deleteChannel')"
-        class="max-md:hidden opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-6 h-6 flex items-center justify-center rounded-sm text-mnema-tertiary hover:text-mnema-danger transition shrink-0"
+        class="btn btn-icon max-md:hidden opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-6 h-6 hover:text-mnema-danger shrink-0"
       >
         <Trash2 class="w-4 h-4" />
       </button>

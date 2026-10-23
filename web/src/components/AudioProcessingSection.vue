@@ -67,12 +67,8 @@ function toggleWarnSwitchChannel() {
           role="switch"
           :aria-checked="voiceStore.autoGainControl ? 'true' : 'false'"
           :aria-label="$t('audio.agc')"
-          :class="[
-            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0 mt-1',
-            voiceStore.autoGainControl ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
-          ]"
+          class="switch mt-1"
         >
-          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-xs', voiceStore.autoGainControl ? 'translate-x-5' : 'translate-x-0']"></div>
         </button>
       </div>
 
@@ -120,12 +116,8 @@ function toggleWarnSwitchChannel() {
           role="switch"
           :aria-checked="voiceStore.echoCancellation ? 'true' : 'false'"
           :aria-label="$t('audio.echo')"
-          :class="[
-            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0 mt-1',
-            voiceStore.echoCancellation ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
-          ]"
+          class="switch mt-1"
         >
-          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-xs', voiceStore.echoCancellation ? 'translate-x-5' : 'translate-x-0']"></div>
         </button>
       </div>
 
@@ -142,12 +134,8 @@ function toggleWarnSwitchChannel() {
           role="switch"
           :aria-checked="voiceStore.qosHighPriority ? 'true' : 'false'"
           :aria-label="$t('audio.qosTitle')"
-          :class="[
-            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0 mt-1',
-            voiceStore.qosHighPriority ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
-          ]"
+          class="switch mt-1"
         >
-          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-xs', voiceStore.qosHighPriority ? 'translate-x-5' : 'translate-x-0']"></div>
         </button>
       </div>
     </div>
@@ -172,12 +160,8 @@ function toggleWarnSwitchChannel() {
           role="switch"
           :aria-checked="voiceStore.warnNoAudioDetected ? 'true' : 'false'"
           :aria-label="$t('audio.noAudioWarningTitle')"
-          :class="[
-            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0 mt-1',
-            voiceStore.warnNoAudioDetected ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
-          ]"
+          class="switch mt-1"
         >
-          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-xs', voiceStore.warnNoAudioDetected ? 'translate-x-5' : 'translate-x-0']"></div>
         </button>
       </div>
 
@@ -194,12 +178,8 @@ function toggleWarnSwitchChannel() {
           role="switch"
           :aria-checked="voiceStore.warnSwitchChannel ? 'true' : 'false'"
           :aria-label="$t('audio.switchChannelWarningTitle')"
-          :class="[
-            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0 mt-1',
-            voiceStore.warnSwitchChannel ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
-          ]"
+          class="switch mt-1"
         >
-          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-xs', voiceStore.warnSwitchChannel ? 'translate-x-5' : 'translate-x-0']"></div>
         </button>
       </div>
     </div>

@@ -108,7 +108,7 @@ onMounted(() => load())
 
     <div v-if="!selected" class="flex justify-center">
       <Loader2 v-if="loading" class="h-5 w-5 animate-spin text-mnema-accent" />
-      <button v-else-if="hasMore" type="button" data-testid="reports-more" class="rounded-md border border-mnema-border px-3 py-1.5 text-sm text-mnema-text transition hover:bg-mnema-hover" @click="load(true)">{{ $t('common.loadMore') }}</button>
+      <button v-else-if="hasMore" type="button" data-testid="reports-more" class="btn btn-secondary" @click="load(true)">{{ $t('common.loadMore') }}</button>
     </div>
   </section>
 </template>

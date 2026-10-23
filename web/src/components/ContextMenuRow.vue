@@ -105,7 +105,7 @@ function role(item: ContextMenuItem) {
       v-else-if="item.type === 'checkbox'"
       aria-hidden="true"
       :class="[
-        'w-4 h-4 shrink-0 rounded-[4px] flex items-center justify-center border',
+        'w-4 h-4 shrink-0 rounded-sm flex items-center justify-center border',
         item.checked ? 'bg-mnema-accent border-mnema-accent text-mnema-accent-ink' : 'border-mnema-border-strong'
       ]"
     >

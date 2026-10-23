@@ -44,7 +44,7 @@ async function sendTest() {
       <p class="text-xs text-mnema-tertiary" data-testid="admin-mail-on">{{ $t('admin.mail.on', { from: mail.from, tls: mail.tls }) }}</p>
       <form class="flex flex-wrap items-center gap-2" @submit.prevent="sendTest">
         <input v-model="recipient" type="email" maxlength="254" autocomplete="off" :aria-label="$t('admin.mail.recipient')" :placeholder="$t('admin.mail.recipientPlaceholder')" class="min-w-0 flex-1 rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" data-testid="admin-mail-recipient" />
-        <button type="submit" :disabled="busy" class="flex items-center gap-1.5 rounded-md bg-mnema-accent px-3 py-1 text-sm font-semibold text-mnema-accent-ink shadow-xs transition hover:bg-mnema-accent-hover disabled:opacity-40" data-testid="admin-mail-test">
+        <button type="submit" :disabled="busy" class="btn btn-primary btn-sm flex items-center gap-1.5" data-testid="admin-mail-test">
           <Loader2 v-if="busy" class="h-3.5 w-3.5 animate-spin" /><Send v-else class="h-3.5 w-3.5" />{{ $t('admin.mail.test') }}
         </button>
       </form>

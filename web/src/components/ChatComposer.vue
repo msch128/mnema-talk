@@ -148,7 +148,7 @@ function handleKeyDown(e: KeyboardEvent) {
       <button
         @click="emit('send')"
         :disabled="!canSend || !text.trim() || uploading || sending"
-        class="w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center shrink-0 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold transition disabled:opacity-20 disabled:bg-mnema-surface disabled:text-mnema-tertiary"
+        class="btn btn-primary w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center shrink-0 disabled:bg-mnema-surface disabled:text-mnema-tertiary p-0"
         v-tooltip="$t('chat.send')"
       >
         <ArrowUp class="w-4 h-4" />

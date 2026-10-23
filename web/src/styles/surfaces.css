@@ -1,0 +1,93 @@
+/* Surfaces and motion: dialogs, menus, popovers, tooltips, toasts, list rows.
+   Elevation comes from the --shadow-* scale, radii from --radius-*, timing
+   from --default-transition-*; nothing here uses an inline style. */
+
+@layer base {
+  /* Hover and focus feedback glides instead of snapping, on everything that
+     can be pointed at. :where keeps the specificity at zero, so any
+     transition-* utility of a view still wins. */
+  :where(a, button, summary, label, li, [role='button'], [role='menuitem'], [role='tab'], [role='option']) {
+    transition-property: color, background-color, border-color, box-shadow, opacity, text-decoration-color;
+    transition-duration: var(--default-transition-duration);
+    transition-timing-function: var(--default-transition-timing-function);
+  }
+
+  /* Line icons: a hair thinner than the library default, which reads calmer
+     next to 14-15px text. Components that set stroke-width themselves win. */
+  svg.lucide {
+    stroke-width: 1.75;
+  }
+
+  ::selection {
+    background-color: rgb(45 167 113 / 0.28);
+    color: var(--color-mnema-text);
+  }
+}
+
+/* Dialog scrim and panel: a soft blur behind, the panel eases up into place. */
+.scrim {
+  background-color: rgb(8 10 9 / 0.62);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: var(--animate-fade-in);
+}
+.dialog-panel {
+  animation: var(--animate-dialog-in);
+}
+
+/* Menus, popovers and the emoji picker pop in from just above their anchor. */
+.pop-in {
+  animation: var(--animate-pop-in);
+  transform-origin: top left;
+}
+
+/* Menu and list rows: keyboard focus is a frame, not only a tint, so it holds
+   3:1 against the panel. */
+[role='menuitem']:focus-visible,
+[role='option']:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px rgb(45 167 113 / 0.75);
+}
+
+/* Toasts slide up a few pixels while they fade in. */
+[data-toast] {
+  animation: var(--animate-toast-in);
+}
+
+/* The one reduced-motion rule: no movement, no blur, no entry animation; colour
+   changes stay (they are not motion) but are instant. Spinners keep turning
+   because they say "working". */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    scroll-behavior: auto !important;
+  }
+  .scrim,
+  .dialog-panel,
+  .pop-in,
+  [data-toast] {
+    animation: none;
+  }
+  .scrim {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  :where(a, button, summary, label, li, [role='button'], [role='menuitem'], [role='tab'], [role='option']),
+  .btn,
+  .switch,
+  .switch::before,
+  input,
+  textarea,
+  select {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Floating panels: a hairline inside the edge plus the large elevation step. */
+@utility shadow-popover {
+  box-shadow: inset 0 0 0 1px var(--color-mnema-border), var(--shadow-lg);
+}
+@utility shadow-ring {
+  box-shadow: inset 0 0 0 1px var(--color-mnema-border);
+}

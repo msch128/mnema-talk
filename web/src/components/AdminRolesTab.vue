@@ -242,7 +242,7 @@ onMounted(async () => {
       <button
         type="button"
         :disabled="busy"
-        class="flex items-center gap-1.5 rounded-md bg-mnema-accent px-3.5 py-1.5 text-sm font-semibold text-mnema-accent-ink shadow-xs transition hover:bg-mnema-accent-hover disabled:opacity-50"
+        class="btn btn-primary flex items-center gap-1.5"
         @click="create"
       >
         <Plus class="h-4 w-4" />
@@ -365,7 +365,7 @@ onMounted(async () => {
         </div>
 
         <div v-if="!readonly" class="flex items-center justify-between gap-3">
-          <button type="button" :disabled="!isDirty(selected) || busy" class="rounded-md bg-mnema-accent px-3.5 py-1.5 text-sm font-semibold text-mnema-accent-ink shadow-xs transition hover:bg-mnema-accent-hover disabled:opacity-40" @click="save">{{ $t('roles.save') }}</button>
+          <button type="button" :disabled="!isDirty(selected) || busy" class="btn btn-primary" @click="save">{{ $t('roles.save') }}</button>
           <button v-if="!isEveryone && !isManaged" type="button" class="flex items-center gap-1.5 text-sm text-mnema-tertiary transition hover:text-mnema-danger" @click="remove(selected)">
             <Trash2 class="h-4 w-4" />
             <span>{{ $t('roles.delete') }}</span>

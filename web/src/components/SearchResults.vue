@@ -57,7 +57,7 @@ watch(() => props.selectedIndex, async () => {
       v-if="hasMore"
       type="button"
       :disabled="loadingMore"
-      class="w-full py-2 rounded-lg text-sm text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition flex items-center justify-center gap-2 disabled:opacity-50"
+      class="btn btn-ghost w-full flex items-center justify-center gap-2"
       @click="emit('more')"
     >
       <Loader2 v-if="loadingMore" class="w-4 h-4 animate-spin" />

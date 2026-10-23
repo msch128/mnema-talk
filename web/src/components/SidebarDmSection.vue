@@ -89,7 +89,7 @@ function open(id: string) {
         v-if="canStart"
         type="button"
         data-testid="dm-new"
-        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-mnema-tertiary transition hover:text-mnema-text focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent max-md:h-11 max-md:w-11"
+        class="btn btn-icon h-5 w-5 shrink-0 max-md:h-11 max-md:w-11"
         v-tooltip="$t('dm.new')"
         :aria-label="$t('dm.new')"
         @click="creating = true"

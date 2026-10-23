@@ -127,7 +127,7 @@ onMounted(() => load(false))
       />
       <button
         type="submit"
-        class="bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold px-3.5 py-1.5 rounded-md text-sm transition shadow-xs"
+        class="btn btn-primary"
       >
         {{ $t('audit.apply') }}
       </button>
@@ -165,7 +165,7 @@ onMounted(() => load(false))
       <button
         type="button"
         :disabled="loading"
-        class="px-3.5 py-1.5 rounded-md text-sm border border-mnema-border text-mnema-muted hover:text-mnema-text transition disabled:opacity-50"
+        class="btn btn-secondary"
         @click="load(true)"
       >
         {{ $t('audit.loadMore') }}

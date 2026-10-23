@@ -221,7 +221,7 @@ function formatDate(dateStr?: string) {
 
       <button
         @click="chatStore.closeThread"
-        class="w-8 h-8 flex items-center justify-center shrink-0 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+        class="btn btn-icon w-8 h-8 shrink-0"
         v-tooltip="$t('thread.close')"
       >
         <X class="w-5 h-5" />
@@ -246,7 +246,7 @@ function formatDate(dateStr?: string) {
         <button
           type="button"
           @click.stop="startReply(chatStore.activeThread)"
-          class="absolute right-2 top-2 hidden group-hover:flex group-focus-within:flex p-1 rounded-sm bg-mnema-elevated border border-mnema-border text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+          class="btn btn-secondary btn-sm absolute right-2 top-2 hidden group-hover:flex group-focus-within:flex p-1"
           v-tooltip="$t('chat.reply')"
         >
           <Reply class="w-3.5 h-3.5" />

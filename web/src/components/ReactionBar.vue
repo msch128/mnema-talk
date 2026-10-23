@@ -69,7 +69,7 @@ function gone(reaction: ReactionSummary) {
         data-testid="reaction-add"
         :aria-expanded="pickerOpen ? 'true' : 'false'"
         @click.stop="emit('toggle-picker')"
-        class="inline-flex items-center justify-center w-7 h-7 rounded-full border border-dashed border-mnema-border hover:border-mnema-accent text-mnema-tertiary hover:text-mnema-accent hover:bg-mnema-surface transition cursor-pointer text-sm"
+        class="btn btn-secondary inline-flex items-center justify-center w-7 h-7 rounded-full border-dashed cursor-pointer p-0"
         v-tooltip="$t('chat.addReaction')"
       >
         <SmilePlus :class="smallIcon ? 'w-3.5 h-3.5' : 'w-4 h-4'" />

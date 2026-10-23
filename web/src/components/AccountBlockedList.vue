@@ -19,7 +19,7 @@ const blocks = useBlocksStore()
         <button
           type="button"
           data-testid="blocked-unblock"
-          class="rounded-md border border-mnema-border px-2 py-1 text-xs text-mnema-text transition hover:border-mnema-accent hover:text-mnema-accent max-md:min-h-11"
+          class="btn btn-secondary btn-sm max-md:min-h-11"
           @click="blocks.unblock(member.user_id)"
         >{{ $t('blocks.unblock') }}</button>
       </li>

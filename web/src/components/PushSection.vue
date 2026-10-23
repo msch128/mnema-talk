@@ -16,7 +16,6 @@ function created(value: string): string {
   return new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }).format(new Date(value))
 }
 
-const button = 'px-4 py-2 rounded-lg font-semibold text-sm transition shadow-xs disabled:opacity-50'
 </script>
 
 <template>
@@ -39,7 +38,7 @@ const button = 'px-4 py-2 rounded-lg font-semibold text-sm transition shadow-xs 
             type="button"
             data-testid="push-enable"
             :disabled="busy || blocked"
-            :class="[button, 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover']"
+            class="btn btn-primary"
             @click="push.enable"
           >{{ $t('push.enable') }}</button>
           <template v-else>
@@ -47,14 +46,14 @@ const button = 'px-4 py-2 rounded-lg font-semibold text-sm transition shadow-xs 
               type="button"
               data-testid="push-test"
               :disabled="busy"
-              :class="[button, 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover']"
+              class="btn btn-primary"
               @click="push.test"
             >{{ $t('push.test') }}</button>
             <button
               type="button"
               data-testid="push-disable"
               :disabled="busy"
-              :class="[button, 'border border-mnema-border text-mnema-text hover:border-mnema-danger hover:text-mnema-danger']"
+              class="btn btn-danger"
               @click="push.remove(mine)"
             >{{ $t('push.disable') }}</button>
           </template>
@@ -74,13 +73,9 @@ const button = 'px-4 py-2 rounded-lg font-semibold text-sm transition shadow-xs 
             :aria-checked="preview && !previewLocked ? 'true' : 'false'"
             :aria-label="$t('push.previewTitle')"
             :disabled="busy || previewLocked"
-            :class="[
-              'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0 mt-1 disabled:opacity-50',
-              preview && !previewLocked ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
-            ]"
+            class="switch mt-1"
             @click="push.setText(!preview)"
           >
-            <span :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-xs', preview && !previewLocked ? 'translate-x-5' : 'translate-x-0']"></span>
           </button>
         </div>
       </template>
@@ -97,7 +92,7 @@ const button = 'px-4 py-2 rounded-lg font-semibold text-sm transition shadow-xs 
               data-testid="push-remove"
               :disabled="busy"
               :aria-label="$t('push.remove', { name: device.label || $t('push.unnamedDevice') })"
-              class="rounded-md p-1 text-mnema-tertiary transition hover:text-mnema-danger disabled:opacity-50"
+              class="btn btn-icon btn-sm hover:text-mnema-danger"
               @click="push.remove(device)"
             >
               <Trash2 class="h-4 w-4" />

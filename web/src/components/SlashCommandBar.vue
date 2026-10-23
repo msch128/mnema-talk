@@ -54,7 +54,7 @@ function onKey(e: KeyboardEvent) {
       <span class="min-w-0 flex-1 truncate text-xs text-mnema-tertiary">{{ commandDescription(command) }} · {{ command.builtin ? $t('slash.builtinLabel') : command.bot_name }}</span>
       <button
         type="button"
-        class="flex h-7 items-center gap-1 rounded-md bg-mnema-accent px-2.5 text-xs font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40"
+        class="btn btn-primary btn-sm flex h-7 items-center gap-1"
         :disabled="running"
         data-testid="slash-run"
         @click="emit('run')"

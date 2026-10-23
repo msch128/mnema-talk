@@ -39,7 +39,7 @@ async function submit() {
           <input id="forgot-email" v-model="email" type="email" required autocomplete="email" maxlength="254" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden transition focus:border-mnema-accent" />
         </div>
         <div v-if="error" role="alert" class="rounded-md border border-mnema-danger/30 bg-mnema-danger/10 p-2.5 text-sm text-mnema-danger">{{ error }}</div>
-        <button type="submit" :disabled="busy" class="flex w-full items-center justify-center gap-2 rounded-md bg-mnema-accent py-2 text-sm font-semibold text-mnema-accent-ink shadow-xs transition hover:bg-mnema-accent-hover disabled:opacity-50">
+        <button type="submit" :disabled="busy" class="btn btn-primary flex w-full items-center justify-center gap-2">
           <Loader2 v-if="busy" class="h-3.5 w-3.5 animate-spin" /><Mail v-else class="h-3.5 w-3.5" />
           <span>{{ $t('recovery.forgotSubmit') }}</span>
         </button>
