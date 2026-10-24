@@ -580,3 +580,43 @@ func TestCommunityEventsRetractWhenHiddenOrMovedIntoHiddenTalk(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 	}
 }
+
+func TestCommunityEventsRetractionNeverReachesThoseWhoNeverSawTheEvent(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	stranger := a.register(admin, "stranger")
+	start := time.Now().Add(time.Hour).UTC().Format(time.RFC3339)
+
+	secretA := a.hiddenTalk(admin, "secret-a")
+	secretB := a.hiddenTalk(admin, "secret-b")
+	res := admin.post("/api/events", map[string]any{"title": "Never seen", "channel_id": secretA, "start_time": start})
+	wantStatus(t, "create", res, http.StatusCreated)
+	var ev communityevents.CommunityEvent
+	res.decode(t, &ev)
+	// The stranger loads the server once, so a snapshot exists to compare.
+	wantStatus(t, "stranger lists", stranger.get("/api/events"), http.StatusOK)
+
+	// A move between two Talks the stranger cannot view.
+	wantStatus(t, "move", admin.patch("/api/events/"+ev.ID.String(), map[string]any{"channel_id": secretB}), http.StatusOK)
+	// Permission changes elsewhere: a third Talk is hidden, then the event's Talk changes.
+	third := a.createChannel(admin, "third", "voice")
+	wantStatus(t, "hide third", putOverwrites(admin, "channels", third,
+		overwrite("role", everyoneID(t, admin), 0, perm.ViewChannel)), http.StatusNoContent)
+	wantStatus(t, "touch secret b", putOverwrites(admin, "channels", secretB,
+		overwrite("role", everyoneID(t, admin), 0, perm.ViewChannel|perm.Connect)), http.StatusNoContent)
+
+	time.Sleep(time.Second) // retraction runs in the background
+	if deletedFor(a, stranger.user.ID, ev.ID) {
+		t.Fatal("a member who never could view the event must not be told about it")
+	}
+	for _, rec := range a.events.Snapshot() {
+		if rec.Type != events.EventDelete {
+			continue
+		}
+		for _, r := range rec.Recipients {
+			if r == stranger.user.ID {
+				t.Fatalf("stranger received %+v", rec)
+			}
+		}
+	}
+}

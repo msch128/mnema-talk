@@ -240,7 +240,7 @@ func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 	}
 	if updated.ChannelID != nil && !sameChannel(ev.ChannelID, updated.ChannelID) {
 		// Members who cannot view the new Talk drop their copy.
-		if err := h.retractFor(r.Context(), updated); err != nil {
+		if err := h.retractFor(r.Context(), updated, ev.ChannelID); err != nil {
 			slog.ErrorContext(r.Context(), "retract moved event failed", "event_id", id, "err", err)
 		}
 	}

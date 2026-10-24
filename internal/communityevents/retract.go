@@ -29,9 +29,10 @@ func (h *Handler) PermissionsChanged(userIDs []uuid.UUID) {
 	}()
 }
 
-// RetractHidden sends event_delete, per event to the members among userIDs
-// (all members when nil) who cannot view its Talk. Only events the client can
-// still list (not ended more than a day ago) are covered.
+// RetractHidden sends event_delete, per event, to the members among userIDs
+// (all members when nil) who could view its Talk before the change and cannot
+// now. Members who never saw the event learn nothing. Only events the client
+// can still list (not ended more than a day ago) are covered.
 func (h *Handler) RetractHidden(ctx context.Context, userIDs []uuid.UUID) error {
 	rows, err := h.DB.Query(ctx, `
 		SELECT id, channel_id FROM events
@@ -52,6 +53,10 @@ func (h *Handler) RetractHidden(ctx context.Context, userIDs []uuid.UUID) error 
 	if err := rows.Err(); err != nil || len(list) == 0 {
 		return err
 	}
+	prev := h.Perms.Previous()
+	if prev == nil {
+		return nil // nothing is known about who saw what before
+	}
 	snap, err := h.Perms.Snapshot(ctx)
 	if err != nil {
 		return err
@@ -62,14 +67,16 @@ func (h *Handler) RetractHidden(ctx context.Context, userIDs []uuid.UUID) error 
 		}
 	}
 	for _, e := range list {
-		h.sendDelete(snap, e, userIDs)
+		h.sendDelete(snap, e, userIDs, func(id uuid.UUID) bool {
+			return prev.Channel(perm.Subject{ID: id}, e.channel).Has(perm.ViewChannel)
+		})
 	}
 	return nil
 }
 
-// retractFor sends event_delete for ev to every member who cannot view its
-// Talk, used when an event moves into a Talk.
-func (h *Handler) retractFor(ctx context.Context, ev *CommunityEvent) error {
+// retractFor sends event_delete for ev to the members who could see it where
+// it was (anyone, when it was not in a Talk) and cannot view its new Talk.
+func (h *Handler) retractFor(ctx context.Context, ev *CommunityEvent, from *uuid.UUID) error {
 	if ev.ChannelID == nil || h.Events == nil || h.Perms == nil {
 		return nil
 	}
@@ -81,14 +88,18 @@ func (h *Handler) retractFor(ctx context.Context, ev *CommunityEvent) error {
 	if err != nil {
 		return err
 	}
-	h.sendDelete(snap, talkEvent{ev.ID, *ev.ChannelID}, ids)
+	h.sendDelete(snap, talkEvent{ev.ID, *ev.ChannelID}, ids, func(id uuid.UUID) bool {
+		return from == nil || snap.Channel(perm.Subject{ID: id}, *from).Has(perm.ViewChannel)
+	})
 	return nil
 }
 
-func (h *Handler) sendDelete(snap *perm.Snapshot, e talkEvent, userIDs []uuid.UUID) {
+// sendDelete tells the members who sawBefore the event and cannot view its
+// Talk now to drop it. The payload is the id alone.
+func (h *Handler) sendDelete(snap *perm.Snapshot, e talkEvent, userIDs []uuid.UUID, sawBefore func(uuid.UUID) bool) {
 	var hidden []uuid.UUID
 	for _, id := range userIDs {
-		if !snap.Channel(perm.Subject{ID: id}, e.channel).Has(perm.ViewChannel) {
+		if sawBefore(id) && !snap.Channel(perm.Subject{ID: id}, e.channel).Has(perm.ViewChannel) {
 			hidden = append(hidden, id)
 		}
 	}
