@@ -1,0 +1,133 @@
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_f0f14232152a21 77-79
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_4ccbc5042a894c 912-914
+web/src/composables/webrtc/lobby.test.ts
+  s_06fcde5dbef956::t_d4c40d4c9a5727 1-5,7-29,31-77,79-96
+  s_06fcde5dbef956::t_15a9a8cfe137e3 6,30
+  s_06fcde5dbef956::t_9a6ecccf97c3c4 78
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_1783420392620b 115
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_a08cfbb84d0b40 59,70
+  s_06fcde5dbef956::t_b3b30ffde041f5 60
+web/src/composables/webrtc/lobby.ts
+  s_06fcde5dbef956::t_aa77a8daf4a87c 1-76
+internal/server/health.go
+  s_06fcde5dbef956::t_5bc2680f9132dd 46
+internal/ws/voice_lobby_test.go
+  s_06fcde5dbef956::t_35968668914def 1-14,16-23,25-26,32-33,35-37,39,43-46,48-49,55-62,65-71
+  s_06fcde5dbef956::t_bf6825c3be469c 15,24,27-31,34,38,40-42,47,50-54,63-64
+internal/chat/talks_handler.go
+  s_06fcde5dbef956::t_1702b4244c8aca 1-9,11-42,44-115,117-150,152-154
+  s_06fcde5dbef956::t_1c15f6d3bdccee 10,151
+  s_06fcde5dbef956::t_613a802f822e58 43,116
+web/src/stores/chatTalkLeader.test.ts
+  s_06fcde5dbef956::t_6ae887a9715ccf 2-58
+  s_06fcde5dbef956::t_7bb70874e8da4a 1
+web/src/types/events.ts
+  s_06fcde5dbef956::t_0a18fd81e1a522 131-135,345-347,372-373,379
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_4ccbc5042a894c 912-914
+api/openapi.json
+  s_06fcde5dbef956::t_cdc4bae98ddaef 1798-1810,2189-2193,2476-2488,3617-3634,3677-3680,3705-3720,8890,21199-21301,21303-21305,24835-24948,24950-25066,25068-25070
+  s_06fcde5dbef956::t_e6353fb5a14988 21302,24949,25067
+  s_06fcde5dbef956::t_b3b30ffde041f5 27808
+internal/chat/talks.go
+  s_06fcde5dbef956::t_bc0d640fec8a42 1-203
+internal/events/types.go
+  s_06fcde5dbef956::t_5f76ca089725b6 56-60
+internal/chat/talks_invite.go
+  s_06fcde5dbef956::t_613a802f822e58 55
+  s_06fcde5dbef956::t_1c15f6d3bdccee 1-54,56-93
+doc/glossary.md
+  s_06fcde5dbef956::t_44c99a9ac84692 17-18,33
+internal/chat/talks_integration_test.go
+  s_06fcde5dbef956::t_66fd29b6ba2eec 244-245
+  s_06fcde5dbef956::t_8067fde4b5868c 1-243,246-457
+internal/chat/handler_channels.go
+  s_06fcde5dbef956::t_d70a9106fc1fa5 205,234-238,243,379-381
+internal/chat/talks_manager.go
+  s_06fcde5dbef956::t_5bc2680f9132dd 26-27
+  s_06fcde5dbef956::t_bae54085e947d0 67-68,74
+  s_06fcde5dbef956::t_c2012cb94ac1be 1-25,28-66,69-73,75-151
+internal/chat/handler.go
+  s_06fcde5dbef956::t_1c15f6d3bdccee 55-58,105
+internal/ws/hub.go
+  s_06fcde5dbef956::t_321c48aad164cf 41-43
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_5f76ca089725b6 47-48
+web/src/stores/chat/talks.ts
+  s_06fcde5dbef956::t_eef39a5e42db07 10-13
+  s_06fcde5dbef956::t_4185c23e073cdc 1-6,8-9,14-19
+  s_06fcde5dbef956::t_c0a5eef2afd855 7
+internal/audit/snapshot.go
+  s_06fcde5dbef956::t_084841c4b4f283 22
+internal/ws/handle.go
+  s_06fcde5dbef956::t_502e57689c69b0 115
+  s_06fcde5dbef956::t_fbaa9f982ac5c3 116-117
+  s_06fcde5dbef956::t_321c48aad164cf 111-113,119
+  s_06fcde5dbef956::t_0d8fbd73304a73 114
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_1783420392620b 23,247-249
+web/src/composables/webrtc/session.ts
+  s_06fcde5dbef956::t_fac85793380beb 11,29,107-110,202
+  s_06fcde5dbef956::t_c3fcc57738ee21 105
+internal/chat/channels.go
+  s_06fcde5dbef956::t_e55e68ffb7c9b1 47-55,87-88,98
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_4ccbc5042a894c 42-43
+internal/chat/talks_live.go
+  s_06fcde5dbef956::t_ef63381c8a40c6 1-143,147-165
+  s_06fcde5dbef956::t_6502ad5b2aa385 144-146
+internal/chat/channel_layout.go
+  s_06fcde5dbef956::t_084841c4b4f283 78-80,105-127
+  s_06fcde5dbef956::t_838918bac9c69e 128-129
+internal/server/server.go
+  s_06fcde5dbef956::t_5bc2680f9132dd 134
+web/src/stores/chat/reset.ts
+  s_06fcde5dbef956::t_1783420392620b 76
+internal/chat/access.go
+  s_06fcde5dbef956::t_36111e63e5977e 24-25,33
+internal/chat/message_types.go
+  s_06fcde5dbef956::t_f5d0fadce8fffb 111-115
+internal/server/router_talks.go
+  s_06fcde5dbef956::t_fda922a8d37aa0 1-15,17-34
+  s_06fcde5dbef956::t_bae54085e947d0 16
+internal/chat/database_failures_integration_test.go
+  s_06fcde5dbef956::t_a0528a329d68c9 74
+internal/db/migrations/0059_talk_lobby.sql
+  s_06fcde5dbef956::t_630f2f0a5f5152 1-15
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_77843b3701326d 1108-1110,1125-1127,1336,1351,1535-1545,2216-2228,2258,2267,2276-2287
+  s_06fcde5dbef956::t_5b5d8ffa571930 2288
+doc/api-stability.md
+  s_06fcde5dbef956::t_7d34f6c6c7fd46 28
+internal/ws/voice_lobby.go
+  s_06fcde5dbef956::t_fbaa9f982ac5c3 20-28,36
+  s_06fcde5dbef956::t_321c48aad164cf 1-19,29-35,37-48
+doc/talks.md
+  s_06fcde5dbef956::t_ac0720f049ac4b 1-90
+web/src/composables/webrtc/state.ts
+  s_06fcde5dbef956::t_fac85793380beb 11,79-80,156
+web/src/stores/chat/socket.ts
+  s_06fcde5dbef956::t_1783420392620b 204,209,216
+doc/upgrade.md
+  s_06fcde5dbef956::t_7d34f6c6c7fd46 129-154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7e7c3418dc67d60754ba03e87e1f8040209d17b7",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
