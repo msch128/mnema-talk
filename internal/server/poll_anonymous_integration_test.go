@@ -3,12 +3,14 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
@@ -258,5 +260,32 @@ func TestAnonymousBallotsHaveNoMemberAndFoldingChangesNothing(t *testing.T) {
 	wantStatus(t, "third voter after a fold", f.vote(f.alice, m, f.optionID(m, 1)), http.StatusOK)
 	if got := tallies(f.detail(t, f.bob, m).Poll); !sameInts(got, []int{2, 1, 0}) {
 		t.Fatalf("after fold and vote: %v", got)
+	}
+}
+
+// The fold runs in the background on its schedule and stops with its context.
+func TestBallotFoldLoopRunsAndStops(t *testing.T) {
+	f := newPollFixture(t)
+	m := f.basic(t, f.alice, map[string]any{"anonymous": true})
+	wantStatus(t, "bob", f.vote(f.bob, m, f.optionID(m, 2)), http.StatusOK)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan struct{})
+	go func() { poll.RunFold(ctx, f.a.db, 20*time.Millisecond); close(done) }()
+	deadline := time.Now().Add(10 * time.Second)
+	for f.a.countRows(`SELECT COUNT(*) FROM poll_anon_ballots`) > 0 && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the fold loop did not stop with its context")
+	}
+	if n := f.a.countRows(`SELECT COUNT(*) FROM poll_anon_ballots`); n != 0 {
+		t.Fatalf("ballots never folded: %d", n)
+	}
+	if got := tallies(f.detail(t, f.bob, m).Poll); !sameInts(got, []int{0, 0, 1}) {
+		t.Fatalf("after the loop: %v", got)
 	}
 }

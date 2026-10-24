@@ -3,6 +3,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"testing"
 	"time"
@@ -214,5 +215,75 @@ func TestTurningAutoDeleteOffStopsTheSweeper(t *testing.T) {
 	f.sweep(t)
 	if !f.exists(id) {
 		t.Fatal("deleted although the setting is off")
+	}
+}
+
+// The background loop sweeps on its own schedule and stops with its context.
+func TestAutoDeleteLoopSweepsOnScheduleAndStops(t *testing.T) {
+	f := newAutoDeleteFixture(t)
+	id := f.a.send(f.alice, f.channel, "old")
+	f.age(t, id, 3)
+	wantStatus(t, "1 day", f.set(f.owner, f.channel, 1), http.StatusOK)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan struct{})
+	d := &chat.AutoDeleter{DB: f.a.db, Events: f.a.events, Objects: f.a.store, Audit: &audit.Log{DB: f.a.db}}
+	go func() { d.Run(ctx, 20*time.Millisecond); close(done) }()
+	deadline := time.Now().Add(10 * time.Second)
+	for f.exists(id) && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the loop did not stop with its context")
+	}
+	if f.exists(id) {
+		t.Fatal("the loop never swept")
+	}
+}
+
+// A sweep over a channel whose messages cannot be deleted reports nothing as
+// done: no audit entry claims a deletion, and the message stays.
+func TestAutoDeleteSweepThatFailsKeepsMessagesAndAuditsNothing(t *testing.T) {
+	f := newAutoDeleteFixture(t)
+	id := f.a.send(f.alice, f.channel, "old")
+	f.age(t, id, 3)
+	wantStatus(t, "1 day", f.set(f.owner, f.channel, 1), http.StatusOK)
+	ctx := t.Context()
+	for _, q := range []string{
+		`CREATE FUNCTION refuse_message_delete() RETURNS trigger AS $$ BEGIN RAISE EXCEPTION 'refused'; END; $$ LANGUAGE plpgsql`,
+		`CREATE TRIGGER refuse_message_delete BEFORE DELETE ON messages FOR EACH ROW EXECUTE FUNCTION refuse_message_delete()`,
+	} {
+		if _, err := f.a.db.Exec(ctx, q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Cleanup(func() {
+		_, _ = f.a.db.Exec(context.Background(), `DROP TRIGGER IF EXISTS refuse_message_delete ON messages`)
+		_, _ = f.a.db.Exec(context.Background(), `DROP FUNCTION IF EXISTS refuse_message_delete()`)
+	})
+	f.sweep(t)
+	if !f.exists(id) {
+		t.Fatal("the message went although the delete was refused")
+	}
+	if n := f.a.countRows(`SELECT COUNT(*) FROM audit_log WHERE action = 'channel.auto_delete_run'`); n != 0 {
+		t.Fatalf("a failed run was audited: %d", n)
+	}
+}
+
+// Without object storage the sweeper still removes the rows.
+func TestAutoDeleteWithoutObjectStorageOrEvents(t *testing.T) {
+	f := newAutoDeleteFixture(t)
+	id := f.a.send(f.alice, f.channel, "old")
+	f.age(t, id, 8)
+	wantStatus(t, "7 days", f.set(f.owner, f.channel, 7), http.StatusOK)
+	d := &chat.AutoDeleter{DB: f.a.db}
+	if err := d.Sweep(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if f.exists(id) {
+		t.Fatal("not swept")
 	}
 }
