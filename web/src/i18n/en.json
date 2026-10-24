@@ -1725,6 +1725,10 @@
       "name": "Kick members",
       "desc": "Sign members below your highest role out everywhere and drop them from their Talk. They can sign in again at once."
     },
+    "manage_stage": {
+      "name": "Manage Stages",
+      "desc": "Give and take talk power in a Stage and answer raised hands. Holders can always speak on a Stage."
+    },
     "groups": {
       "general": "General",
       "text": "Text",

@@ -56,6 +56,7 @@ func (h *Hub) removePresence(userID, chID uuid.UUID) {
 	}
 	h.mu.Unlock()
 	if wasIn {
+		h.stage.forget(key)
 		slog.Info("voice leave", "user", userID, "channel", chID)
 		if h.Presence != nil {
 			h.Presence(userID, chID, false)

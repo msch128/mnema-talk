@@ -105,6 +105,11 @@ type Hub struct {
 	// writes of voice time.
 	voiceGate voiceGate
 	vtimes    voiceTimes
+	// stage holds talk power and raised hands of Stage seats; stageGate and
+	// reactionGate limit Stage commands and live reactions per member.
+	stage        stageBook
+	stageGate    windowGate
+	reactionGate windowGate
 	// userBudgets is the per-account flood guard across connections.
 	userBudgets userBudgets
 }
