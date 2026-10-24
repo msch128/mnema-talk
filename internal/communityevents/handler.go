@@ -1,6 +1,7 @@
 package communityevents
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -229,42 +230,59 @@ func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 	if req.Status != nil && !validStatus(*req.Status) {
 		return httpx.ErrInvalidInput("status must be scheduled, active, completed or cancelled")
 	}
-	title := ev.Title
-	if req.Title != nil {
-		title = *req.Title
-	}
-	desc := ev.Description
-	if req.Description != nil {
-		desc = *req.Description
-	}
-	startTime := ev.StartTime
-	if req.StartTime != nil {
-		startTime = *req.StartTime
-	}
-	endTime := ev.EndTime
-	if req.EndTime != nil {
-		endTime = req.EndTime
-	}
-	chID := ev.ChannelID
-	loc := ev.Location
-	if req.ChannelID != nil {
-		chID = req.ChannelID
-		loc = nil
-	} else if req.Location != nil {
-		loc = req.Location
-		chID = nil
-	}
-	if err := h.validateEventPayload(r, title, desc, startTime, endTime, chID, loc); err != nil {
+	m := mergeUpdate(ev, req)
+	if err := h.validateEventPayload(r, m.title, m.desc, m.start, m.end, m.channel, m.location); err != nil {
 		return err
 	}
 	updated, err := h.Store.Update(r.Context(), id, req)
 	if err != nil {
 		return err
 	}
+	if updated.ChannelID != nil && !sameChannel(ev.ChannelID, updated.ChannelID) {
+		// Members who cannot view the new Talk drop their copy.
+		if err := h.retractFor(r.Context(), updated); err != nil {
+			slog.ErrorContext(r.Context(), "retract moved event failed", "event_id", id, "err", err)
+		}
+	}
 	h.auditRecord(r, "event.edit", updated)
 	h.broadcast(updated)
 	httpx.WriteJSON(w, http.StatusOK, updated)
 	return nil
+}
+
+// merged is an event as it would be after applying an update.
+type merged struct {
+	title, desc string
+	start       time.Time
+	end         *time.Time
+	channel     *uuid.UUID
+	location    *string
+}
+
+func mergeUpdate(ev *CommunityEvent, req UpdateEventRequest) merged {
+	m := merged{title: ev.Title, desc: ev.Description, start: ev.StartTime, end: ev.EndTime, channel: ev.ChannelID, location: ev.Location}
+	if req.Title != nil {
+		m.title = *req.Title
+	}
+	if req.Description != nil {
+		m.desc = *req.Description
+	}
+	if req.StartTime != nil {
+		m.start = *req.StartTime
+	}
+	if req.EndTime != nil {
+		m.end = req.EndTime
+	}
+	if req.ChannelID != nil {
+		m.channel, m.location = req.ChannelID, nil
+	} else if req.Location != nil {
+		m.location, m.channel = req.Location, nil
+	}
+	return m
+}
+
+func sameChannel(a, b *uuid.UUID) bool {
+	return a != nil && b != nil && *a == *b
 }
 
 // @Summary Cancel a community event

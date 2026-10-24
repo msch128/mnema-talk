@@ -165,6 +165,15 @@ describe('events store', () => {
     expect(toastSpy).toHaveBeenCalled()
   })
 
+  it('drops an event on event_delete', () => {
+    const store = useEventsStore()
+    const keep = makeEvent({ id: fixtureId(21) })
+    const gone = makeEvent({ id: fixtureId(22) })
+    store.events = [keep, gone]
+    store.handleEventDelete(gone.id)
+    expect(store.events).toEqual([keep])
+  })
+
   it('resets store state', () => {
     const store = useEventsStore()
     store.events = [makeEvent()]

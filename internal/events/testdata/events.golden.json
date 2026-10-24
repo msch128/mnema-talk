@@ -47,6 +47,7 @@
     "TalkLeader": "talk_leader",
     "TalkMoved": "talk_moved",
     "Kicked": "kicked",
+    "EventDelete": "event_delete",
     "EventReminder": "event_reminder",
     "EventUpdate": "event_update"
   },

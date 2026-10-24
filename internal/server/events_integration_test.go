@@ -495,3 +495,88 @@ func TestCommunityEventsListBatchesRSVPs(t *testing.T) {
 		t.Fatalf("event three: %+v", three)
 	}
 }
+
+func TestCommunityEventsRSVPClosedAfterCancelOrCompletion(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	alice := a.register(admin, "alice")
+
+	create := func(title string) communityevents.CommunityEvent {
+		res := admin.post("/api/events", map[string]any{
+			"title": title, "location": "Hall", "start_time": time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		})
+		wantStatus(t, "create", res, http.StatusCreated)
+		var ev communityevents.CommunityEvent
+		res.decode(t, &ev)
+		return ev
+	}
+	cancelled := create("cancelled")
+	wantStatus(t, "cancel", admin.post("/api/events/"+cancelled.ID.String()+"/cancel", nil), http.StatusOK)
+	done := create("done")
+	wantStatus(t, "complete", admin.patch("/api/events/"+done.ID.String(), map[string]any{"status": "completed"}), http.StatusOK)
+	open := create("open")
+
+	for _, ev := range []communityevents.CommunityEvent{cancelled, done} {
+		wantStatus(t, "rsvp "+ev.Title, alice.put("/api/events/"+ev.ID.String()+"/rsvp", map[string]string{"response": "going"}), http.StatusConflict)
+	}
+	wantStatus(t, "rsvp open", alice.put("/api/events/"+open.ID.String()+"/rsvp", map[string]string{"response": "going"}), http.StatusOK)
+}
+
+func deletedFor(a *app, user, event uuid.UUID) bool {
+	for _, rec := range a.events.Snapshot() {
+		if rec.Type != events.EventDelete {
+			continue
+		}
+		p, ok := rec.Payload.(communityevents.EventDeletePayload)
+		if !ok || p.ID != event {
+			continue
+		}
+		for _, r := range rec.Recipients {
+			if r == user {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func TestCommunityEventsRetractWhenHiddenOrMovedIntoHiddenTalk(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	insider := a.register(admin, "insider")
+	outsider := a.register(admin, "outsider")
+	start := time.Now().Add(time.Hour).UTC().Format(time.RFC3339)
+
+	// 1. An event moves into a Talk that only the insider may view.
+	talk := a.hiddenTalk(admin, "vip-lounge")
+	wantStatus(t, "insider view", putOverwrites(admin, "channels", talk,
+		overwrite("role", everyoneID(t, admin), 0, perm.ViewChannel),
+		overwrite("member", insider.user.ID, perm.ViewChannel, 0)), http.StatusNoContent)
+	res := admin.post("/api/events", map[string]any{"title": "Public at first", "location": "Hall", "start_time": start})
+	wantStatus(t, "create", res, http.StatusCreated)
+	var moved communityevents.CommunityEvent
+	res.decode(t, &moved)
+	wantStatus(t, "move into talk", admin.patch("/api/events/"+moved.ID.String(), map[string]any{"channel_id": talk}), http.StatusOK)
+	if !deletedFor(a, outsider.user.ID, moved.ID) {
+		t.Fatal("a member who cannot view the Talk must be told to drop the moved event")
+	}
+	if deletedFor(a, insider.user.ID, moved.ID) {
+		t.Fatal("a member who can view the Talk must keep the event")
+	}
+
+	// 2. A Talk that was visible becomes hidden.
+	open := a.createChannel(admin, "open-talk", "voice")
+	res = admin.post("/api/events", map[string]any{"title": "In open talk", "channel_id": open, "start_time": start})
+	wantStatus(t, "create in talk", res, http.StatusCreated)
+	var inTalk communityevents.CommunityEvent
+	res.decode(t, &inTalk)
+	wantStatus(t, "hide talk", putOverwrites(admin, "channels", open,
+		overwrite("role", everyoneID(t, admin), 0, perm.ViewChannel)), http.StatusNoContent)
+	deadline := time.Now().Add(5 * time.Second)
+	for !deletedFor(a, outsider.user.ID, inTalk.ID) {
+		if time.Now().After(deadline) {
+			t.Fatal("hiding a Talk must retract its events from members who lost the view")
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}

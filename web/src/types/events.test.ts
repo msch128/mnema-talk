@@ -107,6 +107,7 @@ const examples: Record<ServerEventType, unknown[]> = {
       going_members: [{ id, username: 'bob', display_name: 'Bob', avatar_url: null }],
     }
   ],
+  event_delete: [{ id }],
   event_reminder: [
     { event_id: id, title: 'Game Night', start_time: FIXTURE_TIMESTAMP },
     { event_id: id, title: 'Talk Event', start_time: FIXTURE_TIMESTAMP, channel_id: id }

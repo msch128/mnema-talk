@@ -22457,6 +22457,16 @@
               }
             },
             "description": "NOT_FOUND"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the event is cancelled or completed."
           }
         },
         "security": [

@@ -84,6 +84,11 @@ type RSVPItem struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// EventDeletePayload is sent to a member who may no longer see an event.
+type EventDeletePayload struct {
+	ID uuid.UUID `json:"id" format:"uuid"`
+}
+
 // EventReminderPayload is sent over WebSocket when an event is starting in 15 minutes.
 type EventReminderPayload struct {
 	EventID   uuid.UUID  `json:"event_id"`

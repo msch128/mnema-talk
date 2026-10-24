@@ -209,7 +209,7 @@ func (c *components) newBots() {
 	go gw.Run(c.ctx)
 	// Both the hub and the gateway learn about permission changes, and the
 	// gateway sees every event the hub publishes (as outgoing webhooks do).
-	c.permSvc.SetNotifier(notifiers{hub, gw})
+	c.permSvc.SetNotifier(notifiers{hub, gw, eventsNotifier{c}})
 	prevTap := hub.Tap
 	hub.Tap = func(ch uuid.UUID, eventType string, payload any) {
 		if prevTap != nil {

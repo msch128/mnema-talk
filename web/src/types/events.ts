@@ -135,6 +135,7 @@ export interface ServerEventPayloads {
   talk_moved: { from_channel_id: string; channel_id: string }
   media_handshake: { channel_id: string; user_id: string; wire: string }
   event_update: CommunityeventsCommunityEvent
+  event_delete: { id: string }
   event_reminder: { event_id: string; title: string; start_time: string; channel_id?: string }
 }
 
@@ -348,6 +349,7 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['talk_moved', payload => isIdentifier(payload['from_channel_id']) && isIdentifier(payload['channel_id'])],
   ['media_handshake', payload => isIdentifier(payload['channel_id']) && isIdentifier(payload['user_id'])
     && isString(payload['wire'], 48_000) && payload['wire'] !== ''],
+  ['event_delete', payload => isIdentifier(payload['id'])],
   ['event_reminder', payload => isIdentifier(payload['event_id']) && isString(payload['title'], 100)
     && isTimestamp(payload['start_time']) && (!hasOwn(payload, 'channel_id') || isIdentifier(payload['channel_id']))]
 ])
@@ -380,7 +382,7 @@ const SERVER_EVENT_TYPES = new Set<string>([
   'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'media_handshake',
-  'event_update', 'event_reminder'
+  'event_update', 'event_delete', 'event_reminder'
 ])
 
 /** Unknown event names stay ignorable for forward compatibility; malformed

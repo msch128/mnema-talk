@@ -20,6 +20,7 @@ import (
 // @Success 200 {object} CommunityEvent
 // @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT"
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND"
+// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the event is cancelled or completed."
 // @Router /api/events/{id}/rsvp [put]
 func (h *Handler) setRSVP(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
@@ -33,6 +34,9 @@ func (h *Handler) setRSVP(w http.ResponseWriter, r *http.Request) error {
 	}
 	if err := h.requireViewable(r, ev); err != nil {
 		return err
+	}
+	if ev.Status == StatusCancelled || ev.Status == StatusCompleted {
+		return httpx.ErrConflict("this event is " + ev.Status + " and takes no more responses")
 	}
 	var req RSVPRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {

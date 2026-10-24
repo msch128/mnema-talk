@@ -110,6 +110,7 @@ export const useEventsStore = defineStore('communityEvents', () => {
     deleteCover: (id: string) => act(() => apiDeleteCover(id)),
     listRSVPs: (id: string) => apiListRSVPs(id),
     handleEventUpdate: (payload: CommunityEvent) => replaceOrAppend(payload),
+    handleEventDelete: (id: string) => { events.value = events.value.filter(e => e.id !== id) },
     handleEventReminder: (p: ServerEventPayloads['event_reminder']) => {
       useToastStore().info(t('events.reminderToast', { title: p.title }))
     },
