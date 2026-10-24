@@ -25,13 +25,9 @@ in any release.
 
 `GET /api/health` also lists the optional features a server has in `features`.
 Since 1.1 they are `blocks`, `dm`, `reports`, `saved`, `forward`,
-<<<<<<< HEAD
-`search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`
-(`internal/server/health.go`); 1.2 adds `reminders` and `messages.scheduled`. A name never changes meaning and is never
-=======
-`search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`; 1.2 adds `talks.lobby`
+`search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`; 1.2 adds `talks.lobby`,
+`reminders` and `messages.scheduled`
 (`internal/server/health.go`). A name never changes meaning and is never
->>>>>>> origin/release/1.2.0
 removed in 1.x; a client treats a missing list as "none" (a 1.0.x server sends
 no list) and hides what is not listed. A new feature adds a name, never a
 `web_client_api` bump.
