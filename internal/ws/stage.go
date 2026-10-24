@@ -146,6 +146,19 @@ func (h *Hub) mayTalkOnStage(snap *perm.Snapshot, key voiceKey) bool {
 	return h.stage.granted(key) || holds(snap, key.user, key.ch, perm.ManageStage)
 }
 
+// whileSeated runs f under the hub's lock if the member is in the Talk. A
+// leave (removePresence) forgets the seat under the same lock, so state
+// written by f can never outlive the stay it was meant for.
+func (h *Hub) whileSeated(key voiceKey, f func()) bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if _, ok := h.voice[key.ch][key.user]; !ok {
+		return false
+	}
+	f()
+	return true
+}
+
 func (h *Hub) inRoom(ch, user uuid.UUID) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -161,7 +174,8 @@ func (h *Hub) seatStage(user, ch uuid.UUID) (power bool, hand *time.Time) {
 		return false, nil
 	}
 	key := voiceKey{user, ch}
-	h.stage.setShown(key, h.mayTalkOnStage(snap, key))
+	power = h.mayTalkOnStage(snap, key)
+	h.whileSeated(key, func() { h.stage.setShown(key, power) })
 	return h.stage.view(key)
 }
 
@@ -172,7 +186,8 @@ func (h *Hub) refreshStageSeat(snap *perm.Snapshot, key voiceKey) {
 	if power {
 		h.lowerHand(key)
 	}
-	if !h.stage.setShown(key, power) {
+	changed := false
+	if !h.whileSeated(key, func() { changed = h.stage.setShown(key, power) }) || !changed {
 		return
 	}
 	h.sendToVoiceRoom(key.ch, events.StageTalkPower, map[string]any{"channel_id": key.ch, "user_id": key.user, "granted": power})
@@ -182,7 +197,9 @@ func (h *Hub) refreshStageSeat(snap *perm.Snapshot, key voiceKey) {
 }
 
 func (h *Hub) lowerHand(key voiceKey) {
-	if _, changed := h.stage.setHand(key, false, time.Time{}); changed {
+	changed := false
+	h.whileSeated(key, func() { _, changed = h.stage.setHand(key, false, time.Time{}) })
+	if changed {
 		h.sendToVoiceRoom(key.ch, events.StageHand, map[string]any{"channel_id": key.ch, "user_id": key.user, "raised": false})
 	}
 }
@@ -279,11 +296,9 @@ func (c *Client) handleStageHand(payload json.RawMessage) {
 			return
 		}
 	}
-	if !h.inRoom(ch, target) {
-		return
-	}
-	at, changed := h.stage.setHand(key, in.Raised, time.Now())
-	if !changed {
+	var at time.Time
+	changed := false
+	if !h.whileSeated(key, func() { at, changed = h.stage.setHand(key, in.Raised, time.Now()) }) || !changed {
 		return
 	}
 	msg := map[string]any{"channel_id": ch, "user_id": target, "raised": in.Raised}
@@ -307,6 +322,7 @@ func (c *Client) handleStageTalkPower(payload json.RawMessage) {
 		return
 	}
 	key := voiceKey{in.UserID, ch}
-	c.hub.stage.setGrant(key, in.Granted)
-	c.hub.refreshStageSeat(snap, key)
+	if c.hub.whileSeated(key, func() { c.hub.stage.setGrant(key, in.Granted) }) {
+		c.hub.refreshStageSeat(snap, key)
+	}
 }

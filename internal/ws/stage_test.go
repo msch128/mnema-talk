@@ -2,6 +2,7 @@ package ws
 
 import (
 	"encoding/json"
+	"sync"
 	"testing"
 
 	"github.com/google/uuid"
@@ -268,5 +269,36 @@ func TestManageStageChangesFollowThePermissionState(t *testing.T) {
 	w.h.PermissionsChanged(nil)
 	if w.denied(w.outsider) != allMedia() {
 		t.Fatal("losing Manage stage takes the implied talk power")
+	}
+}
+
+// A grant or a raised hand racing the member's leave must not survive into
+// their next stay.
+func TestStageStateCannotOutliveALeaveRacingIt(t *testing.T) {
+	w := newStageWorld(t)
+	user := w.outsider
+	for i := 0; i < 200; i++ {
+		var wg sync.WaitGroup
+		wg.Add(3)
+		go func() {
+			defer wg.Done()
+			w.send(w.manager, events.ClientStageTalkPower, map[string]any{"user_id": user.User.ID, "granted": true})
+		}()
+		go func() { defer wg.Done(); w.send(user, events.ClientStageHand, map[string]any{"raised": true}) }()
+		go func() { defer wg.Done(); w.h.leaveCurrentVoice(user) }()
+		wg.Wait()
+		w.h.leaveCurrentVoice(user) // in case the leave ran before the join state settled
+		w.h.stage.mu.Lock()
+		key := voiceKey{user.User.ID, w.public.ID}
+		leaked := w.h.stage.grant[key] || !w.h.stage.hand[key].IsZero() || w.h.stage.shown[key]
+		w.h.stage.mu.Unlock()
+		if leaked {
+			t.Fatalf("round %d: Stage state survived the leave", i)
+		}
+		w.join(t, user)
+		if w.denied(user) != allMedia() {
+			t.Fatalf("round %d: rejoined with talk power", i)
+		}
+		drainTypes(t, w.manager)
 	}
 }
