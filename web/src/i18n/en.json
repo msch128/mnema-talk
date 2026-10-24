@@ -909,7 +909,32 @@
     "showParticipants": "Show participants",
     "noSpeak": "You don’t have permission to speak here.",
     "noVideo": "You don’t have permission to share video here.",
-    "noConnect": "You don’t have permission to join this Talk."
+    "noConnect": "You don’t have permission to join this Talk.",
+    "lobbyUnavailable": "Couldn’t open a Talk. Try again in a moment.",
+    "lobbyRateLimited": "You’ve opened a lot of Talks lately. Try again in a few minutes.",
+    "leader": "Talk leader",
+    "settings": "Talk settings",
+    "settingsTitle": "Settings for {name}",
+    "lobby": "Create-a-Talk lobby",
+    "lobbyHint": "Joining this Talk opens a new Talk for the member, who leads it. Nobody stays in the lobby, and the new Talk follows the lobby’s permissions and limit.",
+    "lobbyOpens": "Opens a new Talk when you join",
+    "lobbySaved": "Lobby setting saved.",
+    "followsLobby": "This Talk follows its lobby’s permissions. Change them in the lobby.",
+    "presetsTitle": "Who can join",
+    "presetEveryone": "Everyone",
+    "presetEveryoneHint": "All members who can see this place can join.",
+    "presetRoles": "Only these roles",
+    "presetRolesHint": "Members without one of the chosen roles can’t see or join.",
+    "presetNoRoles": "There are no roles you can hand out.",
+    "presetLimit": "Limit",
+    "presetLimitHint": "At most this many members at once. 0 means no limit.",
+    "limitLabel": "Member limit",
+    "presetApply": "Apply",
+    "presetApplied": "Talk updated.",
+    "inviteFrom": "{name} invites you to a Talk",
+    "inviteGeneric": "You’re invited to a Talk",
+    "inviteIn": "You’re here",
+    "inviteUnavailable": "Not available to you"
   },
   "admin": {
     "signedInAs": "Signed in as {name} (Owner)",
@@ -2426,7 +2451,13 @@
       "nobody": "Nobody",
       "nobodyHint": "Nobody can start a conversation with you.",
       "failed": "Couldn’t save the setting. Try again."
-    }
+    },
+    "startTalk": "Start a Talk",
+    "startTalkFailed": "Couldn’t start a Talk.",
+    "noTalkLobby": "This community has no Talk lobby you can use yet. An admin can turn a Talk into one in its settings.",
+    "talkInvited": "Invitation sent.",
+    "inviteToTalk": "Invite to my Talk",
+    "inviteTalkFailed": "Couldn’t send the invitation."
   },
   "blocks": {
     "title": "Blocked members",

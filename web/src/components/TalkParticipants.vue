@@ -9,12 +9,15 @@ import { useVoiceStore } from '../stores/voice'
 import UserAvatar from './UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import MuteMarks from './MuteMarks.vue'
+import TalkLeaderMark from './TalkLeaderMark.vue'
 import { useDismissable } from '../composables/useDismissable'
 
 defineProps({
   users: { type: Array as PropType<TalkParticipant[]>, required: true },
   // When the room got its first member (ISO), for the total time.
-  startedAt: { type: String, default: '' }
+  startedAt: { type: String, default: '' },
+  /** The leader of a temporary Talk, marked in the list. */
+  leaderId: { type: String, default: '' }
 })
 
 const chatStore = useChatStore()
@@ -97,7 +100,7 @@ function onKeydown(e: KeyboardEvent) {
       >
         <UserAvatar :user="u" size="sm" :is-speaking="voiceStore.isSpeaking(u.id)" />
         <span class="flex min-w-0 flex-1 flex-col leading-[18px]">
-          <span class="truncate font-medium text-mnema-text">{{ u.display_name || u.username }}</span>
+          <span class="flex min-w-0 items-center gap-1"><span class="truncate font-medium text-mnema-text">{{ u.display_name || u.username }}</span><TalkLeaderMark v-if="leaderId && u.id === leaderId" /></span>
           <span class="truncate font-mono text-xs text-mnema-tertiary">@{{ u.username }}</span>
         </span>
         <MuteMarks :muted="voiceStore.muteStateOf(u.id).muted" :deafened="voiceStore.muteStateOf(u.id).deafened" />
