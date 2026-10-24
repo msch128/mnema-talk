@@ -181,12 +181,15 @@ the Owner and Administrators have it, other roles only if you gave them
 member's own data export (see [moderation](moderation.md#moderator-notes-are-moderator-data)
 and the privacy page, "Moderation records").
 
-**API.** Additive: the report objects gain `source`, `automod_rule`,
-`automod_outcome` and `hit_count`, `message_id` and `channel_id` may be left out
-(automod entries about a message that was never stored, raid alerts),
-`kind` may be `alert` and `category` `automod`. New routes
-`/api/admin/automod*` and `/api/admin/users/{id}/moderation*`. The health
-`features` list gains `automod` and `moderation.history`.
+**API.** Mostly additive: the report objects gain `source`, `automod_rule`,
+`automod_outcome` and `hit_count`, `kind` may be `alert` and `category`
+`automod`. New routes `/api/admin/automod*` and
+`/api/admin/users/{id}/moderation*`. The health `features` list gains
+`automod` and `moderation.history`. **One contract change:** `message_id` and `channel_id` of an admin
+report entry (`GET /api/admin/reports`, `/reports/{id}`) are now optional: an
+automod entry about a blocked message (never stored) has no `message_id`, and a
+raid alert has neither. Clients must treat both as optional; reports filed by
+members always carry them.
 
 ### 1.0.x → 1.1.0
 
