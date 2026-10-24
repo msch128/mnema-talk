@@ -73,7 +73,7 @@ describe('AdminAutomodTab', () => {
   it('switches a rule off with the whole rule in the body', async () => {
     const w = mount(AdminAutomodTab, { global })
     await flushPromises()
-    await w.get('[data-rule] [data-testid="rule-toggle"]').setValue(false)
+    await w.get('[data-rule] [data-testid="rule-toggle"]').trigger('click')
     await flushPromises()
     const put = http.calls.find(c => c.options?.method === 'PUT')
     expect(put?.url).toBe(`/api/admin/automod/rules/${fixtureId(1)}`)

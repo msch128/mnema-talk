@@ -8,6 +8,7 @@ import { emojiImage } from '../lib/customEmoji'
 import { useEmojiStore, prefersReducedMotion } from '../stores/emoji'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
+import EmptyState from './EmptyState.vue'
 
 const store = useEmojiStore()
 const toasts = useToastStore()
@@ -144,7 +145,7 @@ onMounted(() => { void store.load() })
     <p v-if="full" class="text-xs text-mnema-danger">{{ $t('emoji.admin.full') }}</p>
 
     <div class="bg-mnema-surface rounded-lg border border-mnema-hairline overflow-hidden divide-y divide-mnema-hairline">
-      <div v-if="!store.items.length" class="p-4 text-sm text-mnema-tertiary">{{ $t('emoji.admin.empty') }}</div>
+      <EmptyState v-if="!store.items.length" :icon="Smile" :text="$t('emoji.admin.empty')" :hint="$t('emoji.admin.emptyHint')" />
       <div v-for="e in store.items" :key="e.id" class="px-4 py-2 flex items-center justify-between gap-3 text-sm" data-testid="emoji-row">
         <div class="flex items-center gap-3 min-w-0">
           <img :src="emojiImage(e, prefersReducedMotion()).src" :alt="`:${e.name}:`" class="h-8 w-8 object-contain shrink-0" />

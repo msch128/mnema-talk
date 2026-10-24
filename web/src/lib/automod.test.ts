@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { AutomodRule } from '../types/rest'
-import { emptyForm, formFromRule, formProblem, inputFromForm, ruleSummary, toggled, withCurrent } from './automod'
+import { emptyForm, formFromRule, formProblem, inputFromForm, longDuration, ruleLabel, ruleSummary, toggled, withCurrent } from './automod'
 import { setLocale } from '../i18n'
+import de from '../i18n/de.json'
 
 const rule = (extra: Partial<AutomodRule>): AutomodRule => ({
   id: '00000000-0000-4000-8000-000000000001', kind: 'words', name: 'Words', enabled: true, action: 'block', timeout_seconds: 0,
@@ -58,7 +59,31 @@ describe('automod rule summaries', () => {
     expect(ruleSummary(rule({ kind: 'links', config: { mode: 'block_all' } }))).toBe('Every link')
     expect(ruleSummary(rule({ kind: 'links', config: { mode: 'allow_list', domains: ['a.com'] } }))).toBe('Only links to 1 listed domains')
     expect(ruleSummary(rule({ kind: 'mentions', config: { max_mentions: 10 } }))).toBe('More than 10 different mentions')
-    expect(ruleSummary(rule({ kind: 'new_account', config: { max_age_seconds: 600, restrict: 'links' } }))).toBe('Accounts under 10 min may not post links')
-    expect(ruleSummary(rule({ kind: 'raid', config: { joins: 10, window_seconds: 10, restrict_seconds: 600 } }))).toBe('More than 10 joins within 10 s: newcomers restricted for 10 min')
+    expect(ruleSummary(rule({ kind: 'new_account', config: { max_age_seconds: 600, restrict: 'links' } }))).toBe('Accounts under 10 minutes may not post links')
+    expect(ruleSummary(rule({ kind: 'raid', config: { joins: 10, window_seconds: 10, restrict_seconds: 600 } }))).toBe('More than 10 joins within 10 seconds: newcomers restricted for 10 minutes')
+  })
+})
+
+describe('automod labels', () => {
+  it('shows the seeded English names of built-in rules in the UI language, and leaves custom names alone', () => {
+    setLocale('de')
+    expect(ruleLabel(rule({ kind: 'mentions', name: 'Mention spam' }))).toBe(de.automod.kind.mentions)
+    expect(ruleLabel(rule({ kind: 'raid', name: 'Raid protection' }))).toBe(de.automod.kind.raid)
+    expect(ruleLabel(rule({ kind: 'words', name: 'Custom list' }))).toBe('Custom list')
+    // A custom rule that merely shares a name with another kind's default keeps it.
+    expect(ruleLabel(rule({ kind: 'links', name: 'Mention spam' }))).toBe('Mention spam')
+  })
+
+  it('writes durations out in the UI language', () => {
+    setLocale('de')
+    expect(longDuration(86400)).toBe('1 Tag')
+    expect(longDuration(600)).toBe('10 Minuten')
+    setLocale('en')
+    expect(longDuration(604800)).toBe('1 week')
+    expect(longDuration(45)).toBe('45 seconds')
+  })
+
+  it('says so when a link rule has no domains yet', () => {
+    expect(ruleSummary(rule({ kind: 'links', name: 'Links', config: { mode: 'block_list', domains: [] } }))).toBe('No domains listed yet, nothing is blocked')
   })
 })

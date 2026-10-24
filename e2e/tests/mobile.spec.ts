@@ -197,19 +197,24 @@ test('phone: popovers, emoji picker and the admin console stay on screen', async
   await insideScreen('emoji-picker')
   await page.keyboard.press('Escape')
 
-  // The admin console: every tab fits, the title names the tab, the tab bar
-  // keeps its place and nothing pushes the page sideways.
+  // The admin console is a full-screen sheet: it opens on the list of sections,
+  // each section has a back arrow to that list, the title names the section and
+  // nothing pushes the page sideways.
   await page.goto('/admin/users')
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible()
-  const barTop = (await bounds(page.getByTestId('admin-tabs'))).y
+  await expect(dialog.getByRole('heading', { level: 2 })).toHaveText('Admin-Konsole')
+  const sheet = await bounds(dialog)
+  expect(sheet.x, 'the console fills the screen').toBe(0)
+  expect(sheet.width, 'the console fills the screen').toBe(page.viewportSize()!.width)
   for (const tab of ['users', 'roles', 'channels', 'invites', 'onboarding', 'emoji', 'reports', 'bans', 'bots', 'media', 'audit', 'system']) {
+    if (!(await page.getByTestId('admin-tabs').isVisible())) await page.getByTestId('admin-back').tap()
     const button = page.getByTestId(`tab-${tab}`)
+    await expect(button).toBeVisible()
+    const label = (await button.locator('[data-tab-label]').innerText()).trim()
     await button.tap()
-    await expect(button).toHaveAttribute('aria-pressed', 'true')
-    await expect(button).toBeInViewport()
-    await expect(dialog.getByRole('heading', { level: 2 })).toHaveText((await button.innerText()).trim())
-    expect((await bounds(page.getByTestId('admin-tabs'))).y, `${tab} tab bar position`).toBe(barTop)
+    await expect(page.getByTestId('admin-tabs')).toBeHidden()
+    await expect(dialog.getByRole('heading', { level: 2 })).toHaveText(label)
     await expectNoSidewaysScroll(page)
   }
 })

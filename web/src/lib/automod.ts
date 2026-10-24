@@ -1,8 +1,7 @@
 // Automod rules (internal/automod): the kinds, the ready-made choices of the
 // editor, and the conversion between a rule and the lines of its form.
 import type { AutomodRule, AutomodRuleInput, AutomodSettings } from '../types/rest'
-import { durationLabel } from './moderation'
-import { t } from '../i18n'
+import { locale, t } from '../i18n'
 
 export type AutomodKind = AutomodRule['kind']
 
@@ -39,6 +38,30 @@ export interface RuleForm {
   exemptChannels: string[]
 }
 
+// The names migration 0066 gave the built-in rules. They are stored in English;
+// a rule still carrying one is shown with the title of its kind in the UI language.
+const SEEDED_NAMES: Record<AutomodKind, string> = {
+  words: 'Blocked words', links: 'Links', mentions: 'Mention spam', new_account: 'New accounts', raid: 'Raid protection'
+}
+
+/** The name to show: built-in rules read in the UI language, custom names stay as written. */
+export function ruleLabel(rule: Pick<AutomodRule, 'kind' | 'name'>): string {
+  return rule.name === SEEDED_NAMES[rule.kind] ? t(`automod.kind.${rule.kind}`) : rule.name
+}
+
+/** The same for a rule known only by its stored name (a report keeps the name the rule had). */
+export function storedRuleLabel(name: string): string {
+  const kind = (Object.keys(SEEDED_NAMES) as AutomodKind[]).find(k => SEEDED_NAMES[k] === name)
+  return kind ? t(`automod.kind.${kind}`) : name
+}
+
+/** "1 day", "10 minutes": the long form of a duration in the UI language. */
+export function longDuration(seconds: number): string {
+  const units: Array<[string, number]> = [['week', 604800], ['day', 86400], ['hour', 3600], ['minute', 60]]
+  const [unit, size] = units.find(([, size]) => seconds >= size && seconds % size === 0) ?? ['second', 1]
+  return new Intl.NumberFormat(locale.value, { style: 'unit', unit, unitDisplay: 'long' }).format(seconds / size)
+}
+
 export function emptyForm(kind: AutomodKind): RuleForm {
   return {
     kind, name: t(`automod.kind.${kind}`), enabled: true, action: kind === 'raid' ? 'flag' : 'block', timeoutSeconds: 0,
@@ -54,7 +77,7 @@ export function formFromRule(rule: AutomodRule): RuleForm {
   const c = rule.config
   const base = emptyForm(rule.kind)
   return {
-    ...base, name: rule.name, enabled: rule.enabled, action: rule.action, timeoutSeconds: rule.timeout_seconds,
+    ...base, name: ruleLabel(rule), enabled: rule.enabled, action: rule.action, timeoutSeconds: rule.timeout_seconds,
     words: lines(c.words), mode: c.mode ?? base.mode, domains: lines(c.domains),
     maxMentions: c.max_mentions ?? base.maxMentions, maxAgeSeconds: c.max_age_seconds ?? base.maxAgeSeconds,
     restrict: c.restrict ?? base.restrict, joins: c.joins ?? base.joins, windowSeconds: c.window_seconds ?? base.windowSeconds,
@@ -102,10 +125,14 @@ export function ruleSummary(rule: AutomodRule): string {
   const c = rule.config
   switch (rule.kind) {
     case 'words': return t('automod.summary.words', { count: c.words?.length ?? 0 })
-    case 'links': return t(`automod.summary.links.${c.mode ?? 'block_list'}`, { count: c.domains?.length ?? 0 })
+    case 'links': {
+      const mode = c.mode ?? 'block_list'
+      const count = c.domains?.length ?? 0
+      return t(`automod.summary.links.${mode}${mode !== 'block_all' && count === 0 ? 'Empty' : ''}`, { count })
+    }
     case 'mentions': return t('automod.summary.mentions', { n: c.max_mentions ?? 0 })
-    case 'new_account': return t(`automod.summary.newAccount.${c.restrict ?? 'links'}`, { age: durationLabel(c.max_age_seconds ?? 0) })
-    case 'raid': return t('automod.summary.raid', { joins: c.joins ?? 0, window: durationLabel(c.window_seconds ?? 0), restrict: durationLabel(c.restrict_seconds ?? 0) })
+    case 'new_account': return t(`automod.summary.newAccount.${c.restrict ?? 'links'}`, { age: longDuration(c.max_age_seconds ?? 0) })
+    case 'raid': return t('automod.summary.raid', { joins: c.joins ?? 0, window: longDuration(c.window_seconds ?? 0), restrict: longDuration(c.restrict_seconds ?? 0) })
   }
 }
 

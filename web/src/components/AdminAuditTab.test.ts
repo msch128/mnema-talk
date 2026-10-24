@@ -118,4 +118,33 @@ describe('AdminAuditTab', () => {
     release(page([]))
     await flushPromises()
   })
+
+  it('hides sign-ins until asked, and says how many are hidden', async () => {
+    apiMock.mockResolvedValue(page([entry(2, 'auth.login', { target_name: '' }), entry(1, 'role.update')]))
+    const w = mount(AdminAuditTab)
+    await flushPromises()
+    expect(w.find('[data-testid="audit-entry-2"]').exists()).toBe(false)
+    expect(w.text()).toContain('1 sign-ins hidden')
+    await w.find('[data-testid="audit-hide-signins"]').setValue(false)
+    expect(w.find('[data-testid="audit-entry-2"]').exists()).toBe(true)
+  })
+
+  it('names a report by its reason and a member by name, and never prints an id in the row', async () => {
+    const id = '6bac9b37-9f09-4033-891f-c06f798cf12d'
+    useChatStore().members = [{ ...userFixture({ id: 'u1', username: 'jonas', display_name: '' }), presence: 'online' }] as never
+    apiMock.mockResolvedValue(page([
+      entry(3, 'report.create', { target_type: 'report', target_id: id, target_name: '', details: { category: 'spam' } }),
+      entry(2, 'user.disable', { target_type: 'user', target_id: 'u1', target_name: '' }),
+      entry(1, 'role.update', { target_type: 'invite', target_id: id, target_name: '' })
+    ]))
+    const w = mount(AdminAuditTab)
+    await flushPromises()
+    const row = (n: number) => w.find(`[data-testid="audit-entry-${n}"] button`).text()
+    expect(row(3)).toContain('Report filed')
+    expect(row(3)).toContain('Report (Spam)')
+    expect(row(2)).toContain('jonas')
+    expect(row(1)).not.toContain(id)
+    await w.find('[data-testid="audit-entry-3"] button').trigger('click')
+    expect(w.text()).toContain(id)
+  })
 })
