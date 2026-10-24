@@ -165,7 +165,7 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 		{"reports.json", func() (any, error) { return exportReports(ctx, q, user) }},
 		{"saved.json", func() (any, error) { return exportSaved(ctx, q, user) }},
 		{"reminders.json", func() (any, error) { return exportReminders(ctx, q, user) }},
-		{"scheduled_messages.json", func() (any, error) { return exportScheduled(ctx, q, user) }},
+		{"scheduled_messages.json", func() (any, error) { return exportScheduled(ctx, q, user, viewable) }},
 	}
 	for _, s := range steps {
 		v, err := s.build()

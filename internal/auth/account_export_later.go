@@ -33,8 +33,9 @@ func exportReminders(ctx context.Context, q db.Querier, user uuid.UUID) ([]any, 
 
 // exportScheduled lists the person's scheduled messages that were not sent yet
 // (waiting or failed). The text is the person's own words.
-func exportScheduled(ctx context.Context, q db.Querier, user uuid.UUID) ([]any, error) {
+func exportScheduled(ctx context.Context, q db.Querier, user uuid.UUID, viewable map[uuid.UUID]bool) ([]any, error) {
 	type scheduled struct {
+		ChannelID     uuid.UUID `json:"-" db:"channel_id"`
 		ChannelName   *string   `json:"channel_name" db:"channel_name"`
 		Content       string    `json:"content" db:"content"`
 		SendAt        time.Time `json:"send_at" db:"send_at"`
@@ -42,7 +43,7 @@ func exportScheduled(ctx context.Context, q db.Querier, user uuid.UUID) ([]any, 
 		FailureReason string    `json:"failure_reason" db:"failure_reason"`
 		CreatedAt     time.Time `json:"created_at" db:"created_at"`
 	}
-	rs, err := collect(ctx, q, pgx.RowToStructByName[scheduled], `SELECT CASE WHEN c.type = 'dm' THEN NULL ELSE c.name END AS channel_name,
+	rs, err := collect(ctx, q, pgx.RowToStructByName[scheduled], `SELECT s.channel_id, CASE WHEN c.type = 'dm' THEN NULL ELSE c.name END AS channel_name,
 		s.content, s.send_at, s.state, s.failure_reason, s.created_at
 		FROM scheduled_messages s JOIN channels c ON c.id = s.channel_id WHERE s.user_id = $1 ORDER BY s.created_at LIMIT $2`, user, exportMaxRows)
 	if err != nil {
@@ -50,6 +51,10 @@ func exportScheduled(ctx context.Context, q db.Querier, user uuid.UUID) ([]any, 
 	}
 	out := make([]any, len(rs))
 	for i, r := range rs {
+		// A channel the person can no longer see keeps its name to itself.
+		if !viewable[r.ChannelID] {
+			r.ChannelName = nil
+		}
 		out[i] = r
 	}
 	return out, nil
