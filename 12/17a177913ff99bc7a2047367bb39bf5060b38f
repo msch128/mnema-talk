@@ -1,0 +1,122 @@
+internal/chat/handler_channels.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 122-127,211,245-249,255-259,381-382,399-402
+web/src/stores/voice/room.ts
+  s_06fcde5dbef956::t_1edef4fd97b4f2 210
+web/src/stores/voice/state.ts
+  s_06fcde5dbef956::t_1edef4fd97b4f2 11,60-62
+web/src/types/events.ts
+  s_06fcde5dbef956::t_1edef4fd97b4f2 7-8,143-145,175-177,188-191,368,400
+internal/ws/stage.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 1-328
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_1edef4fd97b4f2 1882-1885
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_fc138d8b910df3 49
+  s_06fcde5dbef956::t_1edef4fd97b4f2 50-51
+internal/db/migrations/0068_talk_stage.sql
+  s_06fcde5dbef956::t_1edef4fd97b4f2 1-9
+doc/talks.md
+  s_06fcde5dbef956::t_1edef4fd97b4f2 85-141,150-151
+internal/ws/voice.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 32-35,47-48
+internal/perm/fixture.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 104-114,169
+web/src/stores/voice/stage.ts
+  s_06fcde5dbef956::t_1edef4fd97b4f2 1-62
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_1edef4fd97b4f2 1251,1270,1350,1360,2424,2434
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_1edef4fd97b4f2 136
+internal/audit/snapshot.go
+  s_06fcde5dbef956::t_edf6db09a8254d 22
+internal/chat/channels.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 59-61,94
+  s_06fcde5dbef956::t_edf6db09a8254d 104
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_1edef4fd97b4f2 51-53,73-76
+internal/ws/voice_presence.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 49
+api/openapi.json
+  s_06fcde5dbef956::t_1edef4fd97b4f2 2105-2108,2268-2271,4053-4056,10244
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_1edef4fd97b4f2 249-251
+internal/server/health.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 57-58
+internal/chat/stage.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 1-28
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_1edef4fd97b4f2 82-84,196-197
+internal/ws/stage_test.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 1-304
+internal/perm/snapshot.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 78-79
+internal/perm/snapshot_channels.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 34-37
+internal/ws/handle.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 57-62
+internal/ws/voice_join.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 37
+internal/ws/reactions_test.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 1-130
+internal/ws/perms.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 97-100,181
+web/src/lib/permissions.ts
+  s_06fcde5dbef956::t_1edef4fd97b4f2 30-31,50,58
+web/src/types/domain.ts
+  s_06fcde5dbef956::t_1edef4fd97b4f2 54-55
+internal/perm/snapshot_load.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 26,103,122,169-170
+  s_06fcde5dbef956::t_cb4dc796088414 171
+internal/perm/perm.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 85-88,127
+internal/chat/talks.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 57,63,73
+doc/api-stability.md
+  s_06fcde5dbef956::t_95b013ad5f18b3 29-30
+internal/chat/database_failures_integration_test.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 74
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 298-299
+web/src/components/AdminRolesTab.test.ts
+  s_06fcde5dbef956::t_1edef4fd97b4f2 64
+doc/upgrade.md
+  s_06fcde5dbef956::t_1edef4fd97b4f2 167,183-194
+web/src/types/stageEvents.ts
+  s_06fcde5dbef956::t_1edef4fd97b4f2 1-21
+web/src/stores/voice/stage.test.ts
+  s_06fcde5dbef956::t_1edef4fd97b4f2 1-82
+internal/ws/stage_integration_test.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 1-158
+internal/chat/access.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 26-27,35
+web/src/stores/voice.ts
+  s_06fcde5dbef956::t_1edef4fd97b4f2 8,68,122-125
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_1edef4fd97b4f2 1882-1885
+internal/chat/stage_integration_test.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 1-103
+internal/events/types.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 63-70,95-97
+internal/perm/snapshot_test.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 36
+internal/ws/hub.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 108-112
+internal/ws/reactions.go
+  s_06fcde5dbef956::t_1edef4fd97b4f2 1-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1217a177913ff99bc7a2047367bb39bf5060b38f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
