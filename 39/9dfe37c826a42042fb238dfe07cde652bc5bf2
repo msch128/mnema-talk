@@ -1,0 +1,21 @@
+web/scripts/check-tailwind.ts
+  s_06fcde5dbef956::t_8388626bb1bf74 74-75
+web/src/lib/tailwindGuard.test.ts
+  s_06fcde5dbef956::t_3902e8b1b0fda0 23-25,52,85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "399dfe37c826a42042fb238dfe07cde652bc5bf2",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
