@@ -74,7 +74,7 @@ function openNotificationMenu(e: MouseEvent) {
 <template>
   <header
     :class="[
-      'px-4 max-md:pl-1 max-md:pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 shrink-0 z-10',
+      'px-3 max-md:pl-1 max-md:pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 shrink-0 z-10',
       panel ? 'h-10' : 'h-12'
     ]"
   >
@@ -114,7 +114,7 @@ function openNotificationMenu(e: MouseEvent) {
     </div>
 
     <!-- Right: Badges & member list toggle -->
-    <div class="flex items-center gap-2 max-md:gap-0 shrink-0">
+    <div class="flex items-center gap-1 max-md:gap-0 shrink-0">
       <MentionsInbox v-if="!panel" />
       <SavedMessages v-if="!panel && serverFeatures.has('saved')" />
       <LaterPopover v-if="!panel" />
