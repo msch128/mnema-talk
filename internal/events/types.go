@@ -53,6 +53,11 @@ const (
 	DMCreated           = "dm_created"
 	DMMemberAdded       = "dm_member_added"
 	DMMemberRemoved     = "dm_member_removed"
+	// TalkLeader says who leads a temporary Talk now (leader_id is null when
+	// nobody does). TalkMoved tells one connection that its join of a Create-a-
+	// Talk lobby opened the Talk channel_id and seated it there.
+	TalkLeader = "talk_leader"
+	TalkMoved  = "talk_moved"
 	// Kicked tells a member a moderator signed them out everywhere; their
 	// connection closes right after.
 	Kicked = "kicked"

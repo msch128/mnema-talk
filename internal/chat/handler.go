@@ -52,6 +52,10 @@ type Handler struct {
 	// DMLimit caps starting direct messages and adding members to them per
 	// member; nil means no cap.
 	DMLimit *httpx.RateLimiter
+	// Talks runs the Create-a-Talk lobbies; nil switches the feature off.
+	Talks *TalkManager
+	// TalkLimit caps Talk edits and invitations per member; nil means no cap.
+	TalkLimit *httpx.RateLimiter
 }
 
 // VoiceRooms acts on live voice rooms (implemented by the WebSocket hub).
@@ -98,6 +102,7 @@ func (h *Handler) Mount(r chi.Router) {
 	h.mountSaved(r)
 	h.mountForward(r)
 	h.mountDMs(r)
+	h.mountTalks(r)
 	history := r
 	if h.EditHistoryLimit != nil {
 		history = r.With(h.EditHistoryLimit.By(auth.UserKey))

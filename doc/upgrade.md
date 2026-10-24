@@ -128,28 +128,42 @@ until the new release has passed your application checks.
 
 ### 1.1.x → 1.2.0
 
-Update with the procedure above and take the backup first. 1.2.0 only adds. A
-1.1.x web app keeps working against a 1.2 server. Nothing in `.env` has to
-change.
+Update with the procedure above and take the backup first. 1.2.0 only adds;
+nothing in `.env` has to change.
 
-#### Sessions: "Where you are signed in" and inactivity sign-out
-
-Two additive migrations run at the first start (forward-only; a rollback to a
-1.1.x image needs the restore of the pre-update backup).
+#### Database
 
 | Migration | Adds |
 |---|---|
+| 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
 | 0064 | `user_sessions`: one row per browser session (device label, created, last active). |
 | 0065 | `instance_settings.session_inactivity_days` (1 to 365, default 7). |
 
-Nobody is signed out by the upgrade. A session that exists at the upgrade has
-no row yet; it gets one on its first request afterwards and its inactivity
-clock starts then, so the earliest anyone can be signed out for inactivity is
-the configured number of days (default 7) after the upgrade. The setting is
+#### Talks
+
+- A Talk can be marked as a lobby; joining it opens a temporary Talk ("Talk 1",
+  "Talk 2", ...) for the member, who leads it. Members need no *Manage channels*
+  for that. Empty temporary Talks are removed after 30 seconds, and the server
+  removes all of them at start.
+- "Start a Talk" in a direct message opens a temporary Talk from the first lobby
+  the member can use and posts an invitation card. The card only links to the Talk;
+  joining runs the usual permission checks.
+- Feature name `talks.lobby` in `GET /api/health`. New events `talk_leader` and
+  `talk_moved`; new `voice_kicked` reasons `talk_rate_limited` and
+  `talk_unavailable`. REST: `PATCH /api/talks/{id}`, `POST /api/talks/{id}/invites`,
+  `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
+  channel (additive).
+
+#### Sessions: "Where you are signed in" and inactivity sign-out
+
+Members see and end their own sessions under *Account & security*, and a
+session that is not used for the inactivity limit (default 7 days) is signed
+out. Nobody is signed out by the upgrade: a session that exists at the upgrade
+has no row yet; it gets one on its first request afterwards and its
+inactivity clock starts then, so the earliest anyone can be signed out for
+inactivity is the configured number of days after the upgrade. The limit is
 under *Admin* > *Welcome & rules*; see "Sessions and inactivity sign-out" in
-[operations.md](operations.md). Members find their sessions under *Account &
-security*. *View server as a role* (role management) is read-only and changes
-no data.
+[operations.md](operations.md).
 
 ### 1.0.x → 1.1.0
 
