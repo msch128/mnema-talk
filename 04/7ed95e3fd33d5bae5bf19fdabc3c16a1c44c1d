@@ -1,0 +1,43 @@
+internal/discordimport/lifecycle_integration_test.go
+  s_06fcde5dbef956::t_4377bbbd2839dc 1-67,69-90,92-104,110,115-116,118-123,126-178
+  s_06fcde5dbef956::t_c5c5ce02171e7a 68,91,105-109,111-114,117,124-125
+internal/server/events_cover_integration_test.go
+  s_06fcde5dbef956::t_9324cb440af65d 98-100
+  s_06fcde5dbef956::t_d595e30aa0ee9b 117-139
+  s_06fcde5dbef956::t_8c96c1e21bfd8d 1-97,101-116
+internal/discordimport/handler_integration_test.go
+  s_06fcde5dbef956::t_cee7ed57c9b08c 1-238
+internal/push/event_reminder_integration_test.go
+  s_06fcde5dbef956::t_d09b9eb52de260 1-115
+internal/discordimport/dbfailure_integration_test.go
+  s_06fcde5dbef956::t_117d56a12cf89e 1-84
+internal/automod/store_integration_test.go
+  s_06fcde5dbef956::t_eca73ac2040d35 1-33,43,45-47,50-193
+  s_06fcde5dbef956::t_42eced11e574e9 34-42,44,48-49
+internal/chat/forum_errors_integration_test.go
+  s_06fcde5dbef956::t_3215755367f305 1-107,110-510
+  s_06fcde5dbef956::t_9434964fc0e961 108-109
+internal/automod/store_failure_integration_test.go
+  s_06fcde5dbef956::t_422583b76c6598 1-52
+internal/server/events_store_integration_test.go
+  s_06fcde5dbef956::t_0208e5d412a80e 13,15,287-303
+  s_06fcde5dbef956::t_9c13c8008b76e4 1-12,14,16-46,52-77,87-265
+  s_06fcde5dbef956::t_d595e30aa0ee9b 266-286,304
+  s_06fcde5dbef956::t_9324cb440af65d 47-51,78-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "047ed95e3fd33d5bae5bf19fdabc3c16a1c44c1d",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
