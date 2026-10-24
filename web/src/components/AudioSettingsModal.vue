@@ -3,9 +3,9 @@ import { onMounted, onUnmounted } from 'vue'
 import { useWebRTC } from '../composables/useWebRTC'
 import BaseDialog from './BaseDialog.vue'
 import AudioInputSection from './AudioInputSection.vue'
+import AudioOutputSection from './AudioOutputSection.vue'
 import AudioProcessingSection from './AudioProcessingSection.vue'
-import AudioSoundsSection from './AudioSoundsSection.vue'
-import AudioDevicesSection from './AudioDevicesSection.vue'
+import AudioAdvancedSection from './AudioAdvancedSection.vue'
 
 const emit = defineEmits<{ close: [] }>()
 const { refreshAudioDevices, stopMicTest } = useWebRTC()
@@ -19,24 +19,25 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <BaseDialog :title="$t('audio.settings')" :subtitle="$t('audio.subtitle')" panel-class="max-w-xl select-none" @close="emit('close')">
+  <BaseDialog :title="$t('audio.settings')" :subtitle="$t('audio.subtitle')" panel-class="max-w-2xl select-none" @close="emit('close')">
     <div class="contents">
-      <!-- Settings Body -->
-      <div class="p-6 space-y-6 overflow-y-auto max-h-[80vh]">
+      <!-- Settings body: input, mic check, output, filter, then Advanced behind a disclosure -->
+      <div class="max-h-[80vh] space-y-8 overflow-y-auto p-6 max-md:p-4">
         <AudioInputSection />
+        <AudioOutputSection />
         <AudioProcessingSection />
-        <AudioSoundsSection />
-        <AudioDevicesSection />
+        <AudioAdvancedSection />
       </div>
 
       <!-- Footer -->
-      <footer class="px-6 py-3.5 border-t border-mnema-hairline bg-mnema-raised flex items-center justify-between">
-        <span class="text-xs text-mnema-tertiary font-mono">
+      <footer class="flex items-center justify-between gap-4 border-t border-mnema-hairline bg-mnema-raised px-6 py-3.5">
+        <span class="font-mono text-xs text-mnema-tertiary">
           {{ $t('audio.liveNote') }}
         </span>
         <button
-          @click="emit('close')"
+          type="button"
           class="btn btn-primary"
+          @click="emit('close')"
         >
           {{ $t('audio.done') }}
         </button>

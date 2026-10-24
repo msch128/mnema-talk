@@ -79,8 +79,8 @@ function role(item: ContextMenuItem) {
     tabindex="-1"
     :disabled="item.disabled"
     :class="[
-      'w-full px-2.5 flex items-center justify-between gap-3 rounded-sm text-left transition-colors font-normal',
-      item.subtitle ? 'min-h-8 py-1.5' : 'h-8',
+      'w-full px-3 flex items-center justify-between gap-3 rounded-lg text-left transition-colors font-normal',
+      item.subtitle ? 'min-h-9 py-2' : 'h-9',
       item.disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
       item.danger
         ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'

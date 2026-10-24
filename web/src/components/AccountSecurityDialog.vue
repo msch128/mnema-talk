@@ -24,8 +24,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <BaseDialog :title="$t('security.title')" :subtitle="$t('security.subtitle')" panel-class="max-w-md" @close="account.close()">
-    <div class="min-h-0 space-y-6 overflow-y-auto p-5" data-testid="account-security">
+  <BaseDialog :title="$t('security.title')" :subtitle="$t('security.subtitle')" panel-class="max-w-xl" @close="account.close()">
+    <div class="min-h-0 space-y-5 overflow-y-auto p-6 max-md:p-4" data-testid="account-security">
       <div v-if="loadError" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-2 text-sm text-mnema-danger">{{ loadError }}</div>
       <p v-else-if="!account.info" role="status" class="text-sm text-mnema-tertiary">{{ $t('security.loading') }}</p>
       <template v-else>

@@ -61,7 +61,7 @@ test('emoji picker, Markdown, admin panels and API reference run under the polic
         groups: root?.querySelector('.picker') ? getComputedStyle(root.querySelector('.picker') as Element).getPropertyValue('--num-groups').trim() : '',
       }
     })
-    expect(state.adopted).toBe(1)
+    expect(state.adopted).toBe(2) // the picker's own sheet and the Mnema look (lib/emojiPickerSheet)
     expect(state.styleElements).toBe(0)
     expect(state.navColumns).toBeGreaterThan(1) // grid-template-columns from the style binding
     expect(Number(state.groups)).toBeGreaterThan(1) // --num-groups from the picker's style binding

@@ -76,6 +76,7 @@ function handleKeyDown(e: KeyboardEvent) {
 
       <textarea
         ref="textAreaEl"
+        data-bare
         v-model="text"
         @keydown="handleKeyDown"
         @input="assist.onInput"
@@ -84,7 +85,6 @@ function handleKeyDown(e: KeyboardEvent) {
         @keyup.right="assist.onInput"
         @blur="assist.close"
         aria-autocomplete="list"
-        :aria-expanded="assist.open.value ? 'true' : 'false'"
         :aria-controls="assist.open.value ? 'thread-mentions' : undefined"
         :aria-activedescendant="assist.open.value ? `thread-mentions-${assist.active.value}` : undefined"
         :placeholder="canSend ? $t('thread.placeholder') : $t('chat.readOnly')"
