@@ -107,8 +107,11 @@ model, in short; the design is in [doc/architecture.md](doc/architecture.md#dire
 A block is private: the blocked member is not told, and nothing about it is
 visible to them (see "Blocks cannot be probed" above). The blocker's web app
 collapses the blocked member's messages, and their mentions, replies and
-messages create no inbox entry, mention count or push for the blocker. This
-is decided when the entry is listed or the push is sent, on the server. Reports are the other
+messages create no inbox entry, mention count or push for the blocker (the
+mentions inbox excludes direct messages entirely; in any conversation, group
+direct messages included, unread counts, mention counts and last-activity time
+leave out messages by members the reader blocked, and push recipients skip
+blockers). This is decided when the entry is listed or the push is sent, on the server. Reports are the other
 way: a member reports a message they can see, and the report stores its own
 copy of that message and up to 20 around it, so editing or deleting the
 original does not change what the moderators read. Only the Owner,
@@ -426,7 +429,8 @@ details and the limits.
   headers on every response. Styles are as strict as scripts: `style-src 'self'`
   and `style-src-attr 'none'`, so there is no `'unsafe-inline'` and no
   `'unsafe-hashes'`; injected markup cannot add a `<style>` element or a
-  `style=""` attribute. The app's own code needs neither (Vue style bindings go
+  `style=""` attribute. The desktop shells apply this strict policy only for
+  web bundles >= 1.1.0; older bundles keep the old policy. The app's own code needs neither (Vue style bindings go
   through the CSSOM, which the policy does not restrict, and component styles
   are files). The one library that wrote inline styles, `emoji-picker-element`,
   is pinned to an exact version and patched while the web app is built
@@ -777,7 +781,11 @@ details and the limits.
   below a signed security floor, or below any bundle version it already
   verified for the server's contract), and reaches the instance only through its own
   proxy, which keeps the session cookie out of the page and hands over anything
-  that could render as a document as a download. An active or compromised
+  that could render as a document as a download. The desktop shells apply the
+  strict web CSP (`style-src 'self'; style-src-attr 'none'`) only for web
+  bundles >= 1.1.0; older bundles keep the old policy. Each server runs in an
+  isolated browser storage; old desktop storage from before multi-server support
+  is wiped once and never handed to a server. An active or compromised
   server therefore cannot inject or replace code in the desktop client; it can
   still do everything else described above (metadata, membership assertions,
   steering newcomers, denial of service, hostile data). Whoever holds the

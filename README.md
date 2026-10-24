@@ -131,10 +131,11 @@ no accounts on someone else's platform.
   a conversation; existing ones go on.
 - **Block** a member from their profile card, their menu, a message's menu or
   the conversation info. Their messages fold into "Blocked message" (one click
-  shows it), they cause no mentions or notifications for you, and a
-  conversation of two with them stops working in both directions. They are not
-  told. The list of blocked members, with a way to unblock, is under *Account &
-  security*.
+  shows it), they cause no mentions or notifications for you (in any conversation,
+  group included, their messages leave unread counts, mentions and last activity
+  untouched), and a conversation of two with them stops working in both directions.
+  They are not told. The list of blocked members, with a way to unblock, is under
+  *Account & security*.
 - **Report** a message from its menu (**Report message**) with a reason and an
   optional note. The moderators see a copy of the message and the ones around
   it in **Admin > Reports**, which needs the permission *Manage reports*; for a
