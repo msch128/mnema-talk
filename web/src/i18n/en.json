@@ -2082,6 +2082,7 @@
     "locationTextPlaceholder": "e.g. Room 42, In-game lobby, or external link",
     "selectTalk": "Select a Talk channel",
     "coverImage": "Cover image (optional)",
+    "coverAlt": "Event cover image",
     "changeCover": "Change cover",
     "removeCover": "Remove cover",
     "uploadCover": "Upload cover",

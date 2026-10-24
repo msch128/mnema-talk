@@ -2082,6 +2082,7 @@
     "locationTextPlaceholder": "z. B. Raum 42, Ingame-Lobby oder externer Link",
     "selectTalk": "Talk-Kanal auswählen",
     "coverImage": "Titelbild (optional)",
+    "coverAlt": "Titelbild der Veranstaltung",
     "changeCover": "Titelbild ändern",
     "removeCover": "Titelbild entfernen",
     "uploadCover": "Titelbild hochladen",

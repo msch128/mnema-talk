@@ -245,7 +245,7 @@ async function submit() {
           {{ $t('events.coverImage') }}
         </label>
         <div v-if="coverPreview" class="relative mb-2 aspect-[3/1] w-full overflow-hidden rounded-lg border border-mnema-border bg-mnema-surface">
-          <img :src="coverPreview" alt="Event Cover" class="h-full w-full object-cover" />
+          <img :src="coverPreview" :alt="t('events.coverAlt')" class="h-full w-full object-cover" />
           <button
             type="button"
             class="absolute top-2 right-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80 transition-colors"

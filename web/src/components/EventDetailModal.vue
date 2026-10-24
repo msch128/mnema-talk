@@ -101,7 +101,7 @@ async function cancelEvent() {
     <div class="flex flex-col overflow-y-auto p-6 max-h-[80vh]">
       <!-- Cover Image -->
       <div v-if="currentEvent.cover_url" class="relative -mx-6 -mt-6 mb-6 aspect-[3/1] w-[calc(100%+3rem)] overflow-hidden border-b border-mnema-hairline bg-mnema-surface">
-        <img :src="currentEvent.cover_url" alt="Event Cover" class="h-full w-full object-cover" />
+        <img :src="currentEvent.cover_url" :alt="t('events.coverAlt')" class="h-full w-full object-cover" />
       </div>
 
       <!-- Status & Time & Location Bar -->
