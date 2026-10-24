@@ -136,6 +136,7 @@ nothing in `.env` has to change.
 | Migration | Adds |
 |---|---|
 | 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
+| 0070 | `events` and `event_rsvps` tables: community events, RSVPs, and adds the `Manage events` permission bit to seeded Admin and Moderator roles (see [events](events.md)). |
 
 #### Talks
 
@@ -151,6 +152,18 @@ nothing in `.env` has to change.
   `talk_unavailable`. REST: `PATCH /api/talks/{id}`, `POST /api/talks/{id}/invites`,
   `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
   channel (additive).
+
+#### Community events
+
+- Scheduled community events with title, markdown description, start and end times, optional cover image (re-encoded 3:1 banner, max 5 MB), and location (see [events](events.md)).
+- Location can be a Talk channel or free text. Talk-based events are only visible to members holding *View channels* on that Talk.
+- New permission `Manage events` (`1 << 24` in `internal/perm`), granted by default to seeded Admin and Moderator roles.
+- RSVPs: `going`, `interested`, and `not_going` responses, with participant counts and avatars.
+- Automated reminders sent 15 minutes before event start via in-app notifications and Web Push to members RSVP'd `going` or `interested`.
+- Automatic transition from `scheduled` to `active` at start time, showing a direct "Join Talk" button for voice events.
+- Feature key `events` in `GET /api/health`. Real-time WebSocket events `event_update` and `event_reminder`.
+- Audit logging for `event.create`, `event.edit`, and `event.cancel`.
+- Account erasure deletes personal RSVPs and clears event creator links; account export includes `rsvps.json`.
 
 ### 1.0.x → 1.1.0
 

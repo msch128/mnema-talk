@@ -78,6 +78,39 @@ const examples: Record<ServerEventType, unknown[]> = {
   talk_leader: [{ channel_id: id, leader_id: id }, { channel_id: id, leader_id: null }],
   talk_moved: [{ from_channel_id: id, channel_id: fixtureId(2) }],
   media_handshake: [{ channel_id: id, user_id: id, wire: 'a' }],
+  event_update: [
+    {
+      id,
+      title: 'Game Night',
+      description: 'Playing games',
+      start_time: FIXTURE_TIMESTAMP,
+      status: 'scheduled',
+      created_at: FIXTURE_TIMESTAMP,
+      updated_at: FIXTURE_TIMESTAMP,
+      rsvp_counts: { going: 1, interested: 0, not_going: 0 },
+    },
+    {
+      id,
+      title: 'Community Call',
+      description: 'Monthly sync',
+      start_time: FIXTURE_TIMESTAMP,
+      end_time: FIXTURE_TIMESTAMP,
+      channel_id: id,
+      location: null,
+      cover_url: '/api/media/x',
+      status: 'active',
+      created_by: id,
+      created_at: FIXTURE_TIMESTAMP,
+      updated_at: FIXTURE_TIMESTAMP,
+      rsvp_counts: { going: 2, interested: 1, not_going: 0 },
+      my_rsvp: 'going',
+      going_members: [{ id, username: 'bob', display_name: 'Bob', avatar_url: null }],
+    }
+  ],
+  event_reminder: [
+    { event_id: id, title: 'Game Night', start_time: FIXTURE_TIMESTAMP },
+    { event_id: id, title: 'Talk Event', start_time: FIXTURE_TIMESTAMP, channel_id: id }
+  ],
 }
 
 describe('WebSocket runtime event contracts', () => {

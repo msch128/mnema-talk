@@ -6,6 +6,7 @@ import { useForwardQuotesStore } from '../forwardQuotes'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
 import { useBlocksStore } from '../blocks'
+import { useEventsStore } from '../events'
 import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../lib/moderation'
 import { snapshotToMap, applyPresenceUpdate } from '../../lib/presence'
 import { MAX_EPHEMERAL } from './types'
@@ -250,7 +251,9 @@ const HANDLERS: Handlers = {
   voice_kicked: ({ cs, voiceStore }, p) => {
     if (cs.voiceKickedHandler) cs.voiceKickedHandler(p)
     else if (voiceStore.currentChannelId) voiceStore.disconnect()
-  }
+  },
+  event_update: (_cx, p) => { if (p) useEventsStore().handleEventUpdate(p) },
+  event_reminder: (_cx, p) => { if (p) useEventsStore().handleEventReminder(p) }
 }
 
 export function handleWSEvent(cx: Cx, event: ServerEvent) {
