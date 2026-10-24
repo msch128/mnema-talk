@@ -1,0 +1,65 @@
+internal/server/router_routes.go
+  s_06fcde5dbef956::t_f9b3d64fb202c1 141
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_f9b3d64fb202c1 965,1108-1148
+  s_06fcde5dbef956::t_10100b7047e1ef 964
+  s_06fcde5dbef956::t_688910969588ff 1149
+web/src/stores/serverFeatures.test.ts
+  s_06fcde5dbef956::t_f9b3d64fb202c1 22,25,30
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_f9b3d64fb202c1 47-48
+doc/operations.md
+  s_06fcde5dbef956::t_f9b3d64fb202c1 575-592
+internal/media/disk_other.go
+  s_06fcde5dbef956::t_f9b3d64fb202c1 11-15
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_f9b3d64fb202c1 3433-3464,3482-3500,3588-3614,3849-3862
+  s_06fcde5dbef956::t_46a3e71217f4f4 3863
+web/src/types/domain.ts
+  s_06fcde5dbef956::t_f9b3d64fb202c1 27,43
+web/src/components/AdminDashboard.vue
+  s_06fcde5dbef956::t_f9b3d64fb202c1 18,55-56,73-74,150-151
+  s_06fcde5dbef956::t_10100b7047e1ef 5,39-40
+internal/media/disk_unix.go
+  s_06fcde5dbef956::t_f9b3d64fb202c1 15-19
+internal/server/health.go
+  s_06fcde5dbef956::t_f9b3d64fb202c1 54
+doc/upgrade.md
+  s_06fcde5dbef956::t_f9b3d64fb202c1 202-204
+  s_06fcde5dbef956::t_43f809f1fd2483 205
+internal/ws/hub_behaviour_test.go
+  s_06fcde5dbef956::t_f9b3d64fb202c1 97
+internal/server/admin_status.go
+  s_06fcde5dbef956::t_f9b3d64fb202c1 1-170
+internal/server/admin_status_integration_test.go
+  s_06fcde5dbef956::t_f9b3d64fb202c1 1-114
+web/src/components/AdminDashboard.test.ts
+  s_06fcde5dbef956::t_f9b3d64fb202c1 13,159-168
+  s_06fcde5dbef956::t_6286e0cec424ec 169
+web/src/components/AdminStatusTab.test.ts
+  s_06fcde5dbef956::t_f9b3d64fb202c1 1-165
+web/src/components/AdminStatusTab.vue
+  s_06fcde5dbef956::t_f9b3d64fb202c1 1-233
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_f9b3d64fb202c1 965,1108-1148
+  s_06fcde5dbef956::t_10100b7047e1ef 964
+  s_06fcde5dbef956::t_586f494c3eebce 1149
+internal/ws/stats.go
+  s_06fcde5dbef956::t_f9b3d64fb202c1 9-10,17,22-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b723099a8ad9631980b659df6e7bfe79ce4b0eab",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
