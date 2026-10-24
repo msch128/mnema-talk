@@ -1,0 +1,34 @@
+Makefile
+  s_06fcde5dbef956::t_25c932908b1e2c 73
+  s_06fcde5dbef956::t_f8cd1794274a8b 6,71-72
+internal/slashcmd/duration_fuzz_test.go
+  s_06fcde5dbef956::t_7fb24e599fda8c 1-23
+internal/update/semver_fuzz_test.go
+  s_06fcde5dbef956::t_b25d62e80bdea4 1-27
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_f8cd1794274a8b 140-144
+internal/ssrf/ssrf_fuzz_test.go
+  s_06fcde5dbef956::t_77babe276f70ac 1-49
+scripts/fuzz-smoke.sh
+  s_06fcde5dbef956::t_f0c154de2b6482 22
+  s_06fcde5dbef956::t_055ab3689f2f99 1-21,23-25
+internal/chat/search_fuzz_test.go
+  s_06fcde5dbef956::t_c91435553d472d 15,122
+  s_06fcde5dbef956::t_5de8a128635ff6 1-14,16-121,123-134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6851eac46a02f75910199fbb9ad8ac43dc6f698d",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
