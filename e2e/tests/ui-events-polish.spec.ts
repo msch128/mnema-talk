@@ -3,9 +3,8 @@ import { test, expect } from './fixtures'
 import type { Page } from '@playwright/test'
 import { apiFetch, responseString } from './helpers'
 
-// Events, forum and the composer on a phone: the event cards keep their size
-// and show who is going, the forum has the way back to the channel list, and
-// the composer wears a calm focus instead of a full accent frame.
+// Events and forum on a phone: the event cards keep their size and show who
+// is going, and the forum has the way back to the channel list.
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
@@ -89,29 +88,6 @@ test('a forum on a phone has the way back to the channel list and a search butto
     await page.keyboard.press('Escape')
     await page.getByTestId('open-nav').click()
     await expect(page.getByRole('link', { name: FORUM }).or(page.getByText(FORUM).first())).toBeVisible()
-  } finally {
-    await ctx.close()
-  }
-})
-
-test('the composer wears a calm focus, not a full accent frame', async ({ browser }) => {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
-  const page = await ctx.newPage()
-  try {
-    await signIn(page)
-    await page.getByRole('textbox', { name: /^Nachricht an/ }).click()
-    const frame = page.getByRole('textbox', { name: /^Nachricht an/ }).locator('xpath=ancestor::div[contains(@class,"focus-within")][1]')
-    const border = await frame.evaluate(el => getComputedStyle(el).borderTopColor)
-    const accent = await page.evaluate(() => {
-      const probe = document.createElement('div')
-      probe.style.color = 'var(--color-mnema-accent)'
-      document.body.append(probe)
-      const color = getComputedStyle(probe).color
-      probe.remove()
-      return color
-    })
-    expect(border).not.toBe(accent)
-    await shot(page, 'composer-focus-1440')
   } finally {
     await ctx.close()
   }

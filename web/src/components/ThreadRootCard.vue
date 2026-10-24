@@ -34,8 +34,7 @@ const { pickerId } = props.actions
 function formatDate(dateStr?: string) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
-  // The same short form as the day dividers in the chat ("24. Okt."), then the time.
-  return d.toLocaleDateString([locale.value], { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString([locale.value], clockTimeOptions(locale.value))
+  return d.toLocaleDateString([locale.value], { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString([locale.value], clockTimeOptions(locale.value))
 }
 </script>
 
