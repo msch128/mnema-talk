@@ -56,6 +56,7 @@ const (
 // @Description - `dm_created`: to every member's sessions; the direct message (`DirectMessage`) a conversation was started with, or the one the receiver was just added to.
 // @Description - `dm_member_added`: to the other members of a group conversation; `{dm_id, member}`.
 // @Description - `dm_member_removed`: to the remaining members and the leaver's sessions; `{dm_id, member}`.
+// @Description - `dm_prefs_updated`: to the user's own sessions only; `{dm_id}` after they closed, reopened or (un)favourited a conversation (refetch GET /api/dms/{id}), or `{dm_id: null}` after their direct message settings changed (refetch GET /api/dms).
 // @Description - `talk_leader`: `{channel_id, leader_id}` to everyone who may view a temporary Talk (opened from a Create-a-Talk lobby) when its leader changes; `leader_id` is null when nobody leads it.
 // @Description - `talk_moved`: `{from_channel_id, channel_id}` to the connection whose `voice_join` of a Create-a-Talk lobby opened the temporary Talk `channel_id`; the client then sends its ordinary `voice_join` for that Talk. The connection is never seated in the lobby itself.
 // @Description - `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}`, or `{refresh: true}` alone after a notification setting changed or everything was marked read (reload read states and notification settings).

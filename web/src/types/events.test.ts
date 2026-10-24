@@ -25,10 +25,11 @@ const examples: Record<ServerEventType, unknown[]> = {
   scheduled_message_update: [{ id, channel_id: id, state: 'sent' }, { id, channel_id: id, state: 'failed', reason: 'slow_mode' }],
   dm_created: [{
     id, group: false, members: [{ id, username: 'bob', display_name: 'Bob' }], created_at: FIXTURE_TIMESTAMP, last_message_at: null,
-    unread_count: 0, mention_count: 0, last_read_at: null, notify_level: 'all', can_send: true
+    unread_count: 0, mention_count: 0, last_read_at: null, notify_level: 'all', can_send: true, hidden: false, favourite_position: null
   }],
   dm_member_added: [{ dm_id: id, member: { id, username: 'bob', display_name: 'Bob', avatar_url: '/api/media/x' } }],
   dm_member_removed: [{ dm_id: id, member: { id, username: 'bob', display_name: 'Bob' } }],
+  dm_prefs_updated: [{ dm_id: id }, { dm_id: null }],
   block_updated: [{ user_id: id, blocked: true }, { user_id: id, blocked: false }],
   typing: [room],
   read_state: [

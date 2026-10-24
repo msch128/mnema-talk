@@ -41,9 +41,9 @@ onMounted(load)
 </script>
 
 <template>
-  <div v-if="loaded" class="settings-sub" data-testid="dm-policy" role="radiogroup" aria-labelledby="dm-policy-title">
-    <p id="dm-policy-title" class="settings-subtitle">{{ $t('dm.policy.title') }}</p>
-    <p class="settings-help">{{ $t('dm.policy.intro') }}</p>
+  <div v-if="loaded" class="mt-3 space-y-2" data-testid="dm-policy" role="radiogroup" aria-labelledby="dm-policy-title">
+    <p id="dm-policy-title" class="settings-row-title">{{ $t('dm.policy.title') }}</p>
+    <p class="settings-hint">{{ $t('dm.policy.intro') }}</p>
     <label
       v-for="option in (['everyone', 'nobody'] as const)"
       :key="option"

@@ -11,7 +11,7 @@ import { locale, t } from '../i18n'
 import { useAccountStore } from '../stores/account'
 import { useAuthStore } from '../stores/auth'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
-import AccountDmPolicy from './AccountDmPolicy.vue'
+import AccountDirectMessages from './AccountDirectMessages.vue'
 import AccountBlockedList from './AccountBlockedList.vue'
 import { useToastStore } from '../stores/toast'
 
@@ -98,7 +98,7 @@ onBeforeUnmount(() => clearTimeout(timer))
     <h3 id="security-privacy-title" class="settings-title">{{ $t('security.privacy.title') }}</h3>
 
     <!-- Who may write to this member, and whom they blocked (only on a server that has them) -->
-    <AccountDmPolicy v-if="features.dm" />
+    <AccountDirectMessages v-if="features.dm" />
     <AccountBlockedList v-if="features.blocks" />
 
     <div class="settings-sub">
