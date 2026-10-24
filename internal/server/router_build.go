@@ -62,8 +62,8 @@ type components struct {
 	outgoing *webhook.Dispatcher
 	webhookH *webhook.Handler
 
-	pushH *push.Handler
-	eventsH *communityevents.Handler
+	pushH           *push.Handler
+	eventsH         *communityevents.Handler
 	eventsScheduler *communityevents.Scheduler
 
 	botH     *bot.Handler

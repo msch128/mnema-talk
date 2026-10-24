@@ -310,3 +310,84 @@ func TestCommunityEventsAccountEraseAndExport(t *testing.T) {
 func strPtr(s string) *string {
 	return &s
 }
+
+func TestCommunityEventsEditValidationAndReminderRearm(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	ctx := context.Background()
+
+	res := admin.post("/api/events", map[string]any{
+		"title": "Soon", "start_time": time.Now().Add(10 * time.Minute).UTC().Format(time.RFC3339), "location": "Hall",
+	})
+	wantStatus(t, "create", res, http.StatusCreated)
+	var ev communityevents.CommunityEvent
+	res.decode(t, &ev)
+	path := "/api/events/" + ev.ID.String()
+
+	wantStatus(t, "unknown status", admin.patch(path, map[string]any{"status": "bogus"}), http.StatusBadRequest)
+	wantStatus(t, "unknown field", admin.patch(path, map[string]any{"owner": "x"}), http.StatusBadRequest)
+	wantStatus(t, "NUL in title", admin.patch(path, map[string]any{"title": "a\u0000b"}), http.StatusBadRequest)
+
+	a.router.EventsScheduler.Tick(ctx, time.Now())
+	var sent *time.Time
+	q := func() {
+		if err := a.router.Events.Store.DB.QueryRow(ctx, `SELECT reminder_sent_at FROM events WHERE id = $1`, ev.ID).Scan(&sent); err != nil {
+			t.Fatal(err)
+		}
+	}
+	q()
+	if sent == nil {
+		t.Fatal("reminder should have been sent")
+	}
+	wantStatus(t, "rename keeps reminder", admin.patch(path, map[string]any{"title": "Soon!"}), http.StatusOK)
+	q()
+	if sent == nil {
+		t.Fatal("renaming must not re-arm the reminder")
+	}
+	wantStatus(t, "move", admin.patch(path, map[string]any{"start_time": time.Now().Add(14 * time.Minute).UTC().Format(time.RFC3339)}), http.StatusOK)
+	q()
+	if sent != nil {
+		t.Fatal("moving the start must re-arm the reminder")
+	}
+}
+
+func TestCommunityEventsHiddenTalkReminderAndAudit(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	insider := a.register(admin, "insider")
+	ctx := context.Background()
+
+	talk := a.hiddenTalk(admin, "vip-lounge")
+	grant := func(allow bool) {
+		ow := []map[string]any{overwrite("role", everyoneID(t, admin), 0, perm.ViewChannel)}
+		if allow {
+			ow = append(ow, overwrite("member", insider.user.ID, perm.ViewChannel, 0))
+		}
+		wantStatus(t, "overwrites", putOverwrites(admin, "channels", talk, ow...), http.StatusNoContent)
+	}
+	grant(true)
+
+	res := admin.post("/api/events", map[string]any{
+		"title": "VIP", "start_time": time.Now().Add(10 * time.Minute).UTC().Format(time.RFC3339), "channel_id": talk,
+	})
+	wantStatus(t, "create", res, http.StatusCreated)
+	var ev communityevents.CommunityEvent
+	res.decode(t, &ev)
+	wantStatus(t, "insider rsvp", insider.put("/api/events/"+ev.ID.String()+"/rsvp", map[string]string{"response": "going"}), http.StatusOK)
+
+	var action string
+	if err := a.router.Events.Store.DB.QueryRow(ctx, `SELECT action FROM audit_log WHERE target_id = $1 ORDER BY id DESC LIMIT 1`, ev.ID.String()).Scan(&action); err != nil {
+		t.Fatal(err)
+	}
+	if action != "event.talk_create" {
+		t.Fatalf("Talk events must use the channel-scoped audit class, got %q", action)
+	}
+
+	grant(false)
+	a.router.EventsScheduler.Tick(ctx, time.Now())
+	for _, rec := range a.events.Snapshot() {
+		if rec.Type == events.EventReminder {
+			t.Fatalf("a member who lost access to the Talk got a reminder: %+v", rec)
+		}
+	}
+}

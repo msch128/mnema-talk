@@ -86,6 +86,13 @@ func (s *Scheduler) processReminders(ctx context.Context, now time.Time) {
 }
 
 func (s *Scheduler) dispatchReminder(ctx context.Context, r DueReminder) {
+	snap, err := s.reminderSnapshot(ctx)
+	if err != nil {
+		// Without the permission state nobody may be told about a Talk event;
+		// the reminder stays due and the next tick tries again.
+		slog.ErrorContext(ctx, "load permissions for event reminder failed", "event_id", r.ID, "err", err)
+		return
+	}
 	if err := s.Handler.Store.MarkReminderSent(ctx, r.ID); err != nil {
 		slog.ErrorContext(ctx, "mark event reminder sent failed", "event_id", r.ID, "err", err)
 		return
@@ -95,26 +102,30 @@ func (s *Scheduler) dispatchReminder(ctx context.Context, r DueReminder) {
 		slog.ErrorContext(ctx, "get rsvp users for reminder failed", "event_id", r.ID, "err", err)
 		return
 	}
-
-	snap, _ := s.Handler.Perms.Snapshot(ctx)
-	payload := EventReminderPayload{
-		EventID:   r.ID,
-		Title:     r.Title,
-		StartTime: r.StartTime,
-		ChannelID: r.ChannelID,
-	}
-
 	for _, uid := range userIDs {
 		if r.ChannelID != nil && snap != nil && !snap.Channel(perm.Subject{ID: uid}, *r.ChannelID).Has(perm.ViewChannel) {
 			continue
 		}
-		if s.Handler.Push != nil {
-			if err := s.Handler.Push.SendEventReminder(ctx, uid, r.ID, r.Title, r.StartTime, r.ChannelID); err != nil {
-				slog.DebugContext(ctx, "send push event reminder failed", "user_id", uid, "err", err)
-			}
+		s.remind(ctx, uid, r)
+	}
+}
+
+func (s *Scheduler) reminderSnapshot(ctx context.Context) (*perm.Snapshot, error) {
+	if s.Handler.Perms == nil {
+		return nil, nil
+	}
+	return s.Handler.Perms.Snapshot(ctx)
+}
+
+func (s *Scheduler) remind(ctx context.Context, uid uuid.UUID, r DueReminder) {
+	if s.Handler.Push != nil {
+		if err := s.Handler.Push.SendEventReminder(ctx, uid, r.ID, r.Title, r.StartTime, r.ChannelID); err != nil {
+			slog.DebugContext(ctx, "send push event reminder failed", "user_id", uid, "err", err)
 		}
-		if s.Handler.Events != nil {
-			s.Handler.Events.SendToUsers([]uuid.UUID{uid}, events.EventReminder, payload)
-		}
+	}
+	if s.Handler.Events != nil {
+		s.Handler.Events.SendToUsers([]uuid.UUID{uid}, events.EventReminder, EventReminderPayload{
+			EventID: r.ID, Title: r.Title, StartTime: r.StartTime, ChannelID: r.ChannelID,
+		})
 	}
 }

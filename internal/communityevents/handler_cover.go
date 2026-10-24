@@ -16,10 +16,16 @@ import (
 
 const maxCoverBytes = 5 << 20
 
-func readAndProcessCover(r *http.Request) (*imgproc.Picture, string, error) {
+func readAndProcessCover(w http.ResponseWriter, r *http.Request) (*imgproc.Picture, string, error) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxCoverBytes+(1<<20))
 	if err := r.ParseMultipartForm(maxCoverBytes); err != nil {
+		var maxErr *http.MaxBytesError
+		if errors.As(err, &maxErr) {
+			return nil, "", httpx.NewAPIError(http.StatusRequestEntityTooLarge, httpx.CodePayloadTooLarge, "cover image exceeds 5 MB")
+		}
 		return nil, "", httpx.ErrInvalidInput("invalid multipart form")
 	}
+	defer r.MultipartForm.RemoveAll()
 	file, _, err := r.FormFile("cover")
 	if err != nil {
 		file, _, err = r.FormFile("image")
@@ -83,11 +89,14 @@ func (h *Handler) uploadCover(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if err := h.requireViewable(r, ev); err != nil {
+		return err
+	}
 	if h.MediaStore == nil {
 		return httpx.ErrUnavailable("file storage is not configured")
 	}
 
-	pic, ext, err := readAndProcessCover(r)
+	pic, ext, err := readAndProcessCover(w, r)
 	if err != nil {
 		return err
 	}
@@ -145,6 +154,13 @@ func (h *Handler) deleteCover(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if err := h.requireManageEvents(r); err != nil {
+		return err
+	}
+	current, err := h.Store.Get(r.Context(), id, nil)
+	if err != nil {
+		return err
+	}
+	if err := h.requireViewable(r, current); err != nil {
 		return err
 	}
 	prevID, err := h.Store.ClearCover(r.Context(), id)

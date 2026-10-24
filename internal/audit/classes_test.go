@@ -38,6 +38,7 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"moderation.unban": VisAuditors, "moderation.ban_expired": VisAuditors,
 		"emoji.create": VisAuditors, "emoji.rename": VisAuditors, "emoji.delete": VisAuditors,
 		"event.create": VisAuditors, "event.edit": VisAuditors, "event.cancel": VisAuditors,
+		"event.talk_create": VisChannel, "event.talk_edit": VisChannel, "event.talk_cancel": VisChannel,
 		"report.create": VisPrivileged, "report.resolve": VisPrivileged, "report.delete": VisPrivileged,
 		"admin.post": VisPrivileged,
 	}

@@ -154,15 +154,15 @@ func NewRouter(d Deps) (*Router, error) {
 	c.uploadsPerUser = httpx.NewRateLimiter(30, time.Minute).Named("upload")
 
 	return &Router{
-		Handler:  c.buildHandler(),
-		Hub:      c.hub,
+		Handler:         c.buildHandler(),
+		Hub:             c.hub,
 		Webhooks:        c.webhookH,
 		Bots:            c.botAuthn,
 		Gateway:         c.gw,
 		Events:          c.eventsH,
 		EventsScheduler: c.eventsScheduler,
 		cancel:          cancel,
-		outgoing: c.outgoing,
-		preview:  PreviewDeps{Accounts: c.authH, Chat: c.chatH, System: c.systemH, PerUser: c.perUser, Trusted: trusted},
+		outgoing:        c.outgoing,
+		preview:         PreviewDeps{Accounts: c.authH, Chat: c.chatH, System: c.systemH, PerUser: c.perUser, Trusted: trusted},
 	}, nil
 }

@@ -1,7 +1,6 @@
 package communityevents
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -36,8 +35,8 @@ func (h *Handler) setRSVP(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var req RSVPRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return httpx.ErrInvalidInput("invalid JSON body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return err
 	}
 	resp := strings.TrimSpace(req.Response)
 	if resp == "not going" {

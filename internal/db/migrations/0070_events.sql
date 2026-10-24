@@ -10,7 +10,7 @@
 -- event and can join it.
 --
 -- The permission MANAGE_EVENTS (1 << 25) allows creating, editing, and cancelling
--- events. It is granted by default to Owner/Admin roles and existing Moderator roles.
+-- events. No role is granted it by name; Administrators and the Owner hold it implicitly.
 
 CREATE TABLE events (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),

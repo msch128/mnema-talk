@@ -252,13 +252,18 @@ func (s *Store) Update(ctx context.Context, id uuid.UUID, req UpdateEventRequest
 	var row eventRow
 	err = s.DB.QueryRow(ctx, `
 		UPDATE events
-		SET title = $1, description = $2, start_time = $3, end_time = $4, channel_id = $5, location = $6, status = $7, updated_at = NOW()
+		SET title = $1, description = $2, end_time = $4, channel_id = $5, location = $6, status = $7, updated_at = NOW(),
+		    reminder_sent_at = CASE WHEN start_time = $3 THEN reminder_sent_at ELSE NULL END,
+		    start_time = $3
 		WHERE id = $8
 		RETURNING id, title, description, start_time, end_time, channel_id, location, cover_media_id, status, created_by, created_at, updated_at`,
 		title, desc, startTime, endTime, channelID, location, status, id,
 	).Scan(&row.ID, &row.Title, &row.Description, &row.StartTime, &row.EndTime, &row.ChannelID, &row.Location, &row.CoverMediaID, &row.Status, &row.CreatedBy, &row.CreatedAt, &row.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("update event: %w", err)
+	}
+	if _, err := s.DB.Exec(ctx, `UPDATE media SET channel_id = $2 WHERE id = (SELECT cover_media_id FROM events WHERE id = $1)`, id, channelID); err != nil {
+		return nil, fmt.Errorf("move event cover: %w", err)
 	}
 	return s.Get(ctx, id, nil)
 }

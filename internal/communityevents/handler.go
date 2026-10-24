@@ -1,11 +1,9 @@
 package communityevents
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -88,16 +86,18 @@ func (h *Handler) listEvents(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	snap, _ := h.Perms.Snapshot(r.Context())
-	var visible []*CommunityEvent
+	var snap *perm.Snapshot
+	if h.Perms != nil {
+		if snap, err = h.Perms.Snapshot(r.Context()); err != nil {
+			return err
+		}
+	}
+	visible := []*CommunityEvent{}
 	for _, ev := range all {
 		if ev.ChannelID != nil && snap != nil && !snap.Channel(user.Subject(), *ev.ChannelID).Has(perm.ViewChannel) {
 			continue
 		}
 		visible = append(visible, ev)
-	}
-	if visible == nil {
-		visible = []*CommunityEvent{}
 	}
 	httpx.WriteJSON(w, http.StatusOK, visible)
 	return nil
@@ -121,9 +121,10 @@ func (h *Handler) createEvent(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var req CreateEventRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return httpx.ErrInvalidInput("invalid JSON body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return err
 	}
+	req.normalize()
 	if err := h.validateEventPayload(r, req.Title, req.Description, req.StartTime, req.EndTime, req.ChannelID, req.Location); err != nil {
 		return err
 	}
@@ -191,9 +192,16 @@ func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if err := h.requireViewable(r, ev); err != nil {
+		return err
+	}
 	var req UpdateEventRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return httpx.ErrInvalidInput("invalid JSON body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return err
+	}
+	req.normalize()
+	if req.Status != nil && !validStatus(*req.Status) {
+		return httpx.ErrInvalidInput("status must be scheduled, active, completed or cancelled")
 	}
 	title := ev.Title
 	if req.Title != nil {
@@ -252,6 +260,13 @@ func (h *Handler) cancelEvent(w http.ResponseWriter, r *http.Request) error {
 	if err := h.requireManageEvents(r); err != nil {
 		return err
 	}
+	current, err := h.Store.Get(r.Context(), id, nil)
+	if err != nil {
+		return err
+	}
+	if err := h.requireViewable(r, current); err != nil {
+		return err
+	}
 	ev, err := h.Store.Cancel(r.Context(), id)
 	if err != nil {
 		return err
@@ -278,14 +293,11 @@ func (h *Handler) requireManageEvents(r *http.Request) error {
 }
 
 func validateEventText(title, desc string) error {
-	trimmedTitle := strings.TrimSpace(title)
-	if trimmedTitle == "" || utf8.RuneCountInString(trimmedTitle) > 100 {
-		return httpx.ErrInvalidInput("title must be between 1 and 100 characters")
+	if _, err := httpx.CleanText("title", title, 100, true); err != nil {
+		return err
 	}
-	if utf8.RuneCountInString(desc) > 2000 {
-		return httpx.ErrInvalidInput("description must not exceed 2000 characters")
-	}
-	return nil
+	_, err := httpx.CleanText("description", desc, 2000, false)
+	return err
 }
 
 func validateEventTimes(start time.Time, end *time.Time) error {
@@ -318,8 +330,10 @@ func (h *Handler) validateEventLocation(r *http.Request, chID *uuid.UUID, loc *s
 			return httpx.ErrForbidden("you cannot view this Talk channel")
 		}
 	}
-	if hasLoc && utf8.RuneCountInString(strings.TrimSpace(*loc)) > 255 {
-		return httpx.ErrInvalidInput("location must not exceed 255 characters")
+	if hasLoc {
+		if _, err := httpx.CleanText("location", *loc, 255, true); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -338,6 +352,11 @@ func (h *Handler) auditRecord(r *http.Request, action string, ev *CommunityEvent
 	if h.Audit == nil || ev == nil {
 		return
 	}
+	if ev.ChannelID != nil {
+		// A Talk event names a possibly private Talk: only auditors who can
+		// view that Talk read it (class event.talk_%).
+		action = "event.talk_" + strings.TrimPrefix(action, "event.")
+	}
 	h.Audit.RecordOrLog(r.Context(), audit.Entry{
 		Action:     action,
 		TargetType: "event",
@@ -352,4 +371,30 @@ func (h *Handler) auditRecord(r *http.Request, action string, ev *CommunityEvent
 			"status":     ev.Status,
 		},
 	})
+}
+
+func validStatus(s string) bool {
+	switch s {
+	case StatusScheduled, StatusActive, StatusCompleted, StatusCancelled:
+		return true
+	}
+	return false
+}
+
+func trimPtr(s *string) {
+	if s != nil {
+		*s = strings.TrimSpace(*s)
+	}
+}
+
+func (r *CreateEventRequest) normalize() {
+	r.Title = strings.TrimSpace(r.Title)
+	r.Description = strings.TrimSpace(r.Description)
+	trimPtr(r.Location)
+}
+
+func (r *UpdateEventRequest) normalize() {
+	trimPtr(r.Title)
+	trimPtr(r.Description)
+	trimPtr(r.Location)
 }
