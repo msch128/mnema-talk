@@ -43,6 +43,7 @@ function formatDate(iso: string) {
       'w-full p-3 rounded-lg text-left transition flex items-start gap-3 group',
       selected ? 'bg-mnema-hover' : 'hover:bg-mnema-hover/60'
     ]"
+    @mousedown.prevent
     @click="emit('select', msg)"
   >
     <UserAvatar :user="{ username: msg.username, display_name: msg.display_name, avatar_url: msg.avatar_url }" size="sm" class="mt-0.5" />

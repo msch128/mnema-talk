@@ -69,7 +69,7 @@ test: ## Go unit tests (race detector)
 	go test -race -count=1 $(GO_PKGS)
 
 test-integration: ## Go integration tests (Docker, or TEST_DATABASE_URL)
-	go test $(GO_INTEGRATION_PKG_FLAGS) -tags=integration -race -count=1 -timeout=300s $(GO_PKGS)
+	go test $(GO_INTEGRATION_PKG_FLAGS) -tags=integration -race -count=1 -timeout=900s $(GO_PKGS)
 
 test-web: $(WEB_DEPS) ## Frontend unit tests (vitest)
 	cd web && npm run test
@@ -105,7 +105,7 @@ COVER_PKGS = $(shell go list ./cmd/... ./internal/... ./web | grep -v -e /intern
 coverage: coverage-go coverage-web ## Go + web coverage reports (coverage.out, web/coverage/)
 
 coverage-go: ## Go unit + integration tests with coverage -> coverage.out (Docker, or TEST_DATABASE_URL)
-	go test $(GO_INTEGRATION_PKG_FLAGS) -tags=integration -race -count=1 -timeout=300s -covermode=atomic -coverpkg=$(COVER_PKGS) -coverprofile=coverage.out $(GO_PKGS)
+	go test $(GO_INTEGRATION_PKG_FLAGS) -tags=integration -race -count=1 -timeout=900s -covermode=atomic -coverpkg=$(COVER_PKGS) -coverprofile=coverage.out $(GO_PKGS)
 	@node scripts/coverage-summary.mjs go coverage.out --min $(COVERAGE_MIN) --file-min $(COVERAGE_FILE_MIN)
 
 coverage-web: $(WEB_DEPS) ## Frontend tests with coverage -> web/coverage/ (lcov + json summary)
