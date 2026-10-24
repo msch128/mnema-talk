@@ -73,6 +73,8 @@ type Notice struct {
 	Sender      string
 	Content     string
 	HasFiles    bool
+	// Forwarded is set when the message forwards another one.
+	Forwarded bool
 	// Poll is set when the message is a poll; its content is the question.
 	Poll bool
 	// DM is set for a message of a direct message conversation: the push
@@ -145,6 +147,9 @@ func previewLine(n Notice, locale string, preview bool) string {
 	}
 	if n.HasFiles {
 		return text(locale, "attachment")
+	}
+	if n.Forwarded {
+		return text(locale, "forward")
 	}
 	return text(locale, "new")
 }

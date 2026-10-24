@@ -73,6 +73,30 @@ func TestPushForAnAttachmentOnlyMessageSaysSo(t *testing.T) {
 	}
 }
 
+func TestPushForAnEmptyForwardedMessageSaysSo(t *testing.T) {
+	n := notice()
+	n.Content = "  "
+	n.Forwarded = true
+	if got := build(n, "en", true).Body; got != "Forwarded message" {
+		t.Fatalf("body %q", got)
+	}
+	if got := build(n, "de", true).Body; got != "Weitergeleitete Nachricht" {
+		t.Fatalf("body %q", got)
+	}
+	n.Content = "Check this out"
+	if got := build(n, "en", true).Body; got != "Check this out" {
+		t.Fatalf("body %q", got)
+	}
+	n.Content = ""
+	if got := build(n, "en", false).Body; got != "New message" {
+		t.Fatalf("body without preview %q", got)
+	}
+	n.Forwarded = false
+	if got := build(n, "en", true).Body; got != "New message" {
+		t.Fatalf("body %q", got)
+	}
+}
+
 func TestPushForAPollShowsTheQuestionAsAPoll(t *testing.T) {
 	n := notice()
 	n.Content, n.Poll = "Pizza or pasta?", true

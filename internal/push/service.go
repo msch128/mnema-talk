@@ -216,7 +216,8 @@ func (s *Service) notify(ctx context.Context, msg chat.Message, chosen []candida
 			user: c.userID, locale: c.locale, preview: c.preview && s.Previews,
 			notice: Notice{
 				AuthorID: msg.UserID, ChannelID: msg.ChannelID, ChannelName: c.channelName, MessageID: msg.ID, ParentID: msg.ParentID,
-				Sender: sender(msg), Content: msg.Content, HasFiles: len(msg.Attachments) > 0 || len(msg.Embeds) > 0, Poll: msg.Poll != nil,
+				Sender: sender(msg), Content: msg.Content, HasFiles: len(msg.Attachments) > 0 || len(msg.Embeds) > 0,
+				Forwarded: msg.Forward != nil && msg.Forward.Forwarded, Poll: msg.Poll != nil,
 				DM: c.dm, Mention: c.mention(msg), Addressed: addressed(msg, c.userID, byName), Count: 1, At: s.Now(),
 			},
 		}
