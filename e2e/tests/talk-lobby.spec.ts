@@ -23,6 +23,7 @@ async function signIn(page: Page, username: string, password: string) {
 }
 
 test('joining a lobby opens a Talk, its leader hands over, and the empty Talk goes away', async ({ browser }) => {
+  test.setTimeout(240_000) // two calls, a hand-over and the removal grace
   const ctxOptions = { permissions: ['microphone' as const], viewport: { width: 1400, height: 900 } }
   const aCtx = await browser.newContext(ctxOptions)
   const bCtx = await browser.newContext(ctxOptions)
@@ -73,6 +74,9 @@ test('joining a lobby opens a Talk, its leader hands over, and the empty Talk go
   await b.getByTestId('talk-name').fill(`Raid ${suffix}`)
   await b.getByTestId('talk-name').press('Enter')
   await expect(b.locator('[data-channel-type="voice"]', { hasText: `Raid ${suffix}` })).toBeVisible()
+  // The dialog stays open after saving and would cover the Leave button.
+  await b.keyboard.press('Escape')
+  await expect(b.getByTestId('talk-name')).toHaveCount(0)
 
   // Everyone leaves: the empty Talk is removed after the grace time.
   await leaveTalks([b])
