@@ -2,8 +2,12 @@
 import type { PropType } from 'vue'
 import type { DraftReply } from '../lib/drafts'
 import { ref } from 'vue'
-import { Plus, ArrowUp, ChartNoAxesColumn } from '@lucide/vue'
+import { Plus, ArrowUp, ChartNoAxesColumn, ChevronDown, CalendarClock } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { openLater } from '../lib/laterDialog'
+import { t } from '../i18n'
+import ContextMenu from './ContextMenu.vue'
 import ReplyComposerBar from './ReplyComposerBar.vue'
 import EmojiButton from './EmojiButton.vue'
 import MarkdownHelp from './MarkdownHelp.vue'
@@ -31,6 +35,7 @@ const props = defineProps({
 const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cancel-reply': []; file: [event: Event] }>()
 
 const chatStore = useChatStore()
+const features = useServerFeaturesStore()
 const text = useDraftModel(() => props.modelValue, value => emit('update:modelValue', value))
 
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -38,6 +43,21 @@ const textAreaEl = ref<HTMLTextAreaElement | null>(null)
 const assist = useComposerAssist(textAreaEl, text)
 const pollOpen = ref(false)
 const slash = useSlashCommands(text, () => chatStore.activeChannel?.id, () => { pollOpen.value = true })
+// "Send later" sits in a small menu next to the send button.
+const laterButton = ref<HTMLElement | null>(null)
+const laterMenuOpen = ref(false)
+const laterItems = [{
+  label: t('later.sendLater'),
+  icon: CalendarClock,
+  action: () => {
+    const channel = chatStore.activeChannel
+    if (!channel || !text.value.trim()) return
+    openLater({
+      kind: 'schedule', channelId: channel.id, content: text.value.trim(), replyToId: props.replyingTo?.id ?? null,
+      onScheduled: () => { emit('update:modelValue', ''); emit('cancel-reply') }
+    })
+  }
+}]
 defineExpose({ textArea: textAreaEl, focus: () => textAreaEl.value?.focus() })
 
 function handleComposerInput() {
@@ -153,6 +173,25 @@ function handleKeyDown(e: KeyboardEvent) {
       >
         <ArrowUp class="w-4 h-4" />
       </button>
+
+      <!-- Send later -->
+      <template v-if="features.has('messages.scheduled') && canSend">
+        <button
+          ref="laterButton"
+          type="button"
+          data-testid="send-later-button"
+          :disabled="!text.trim() || uploading || sending"
+          class="-ml-1 w-5 h-8 max-md:w-8 max-md:h-11 flex items-center justify-center shrink-0 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition disabled:opacity-50"
+          aria-haspopup="menu"
+          :aria-expanded="laterMenuOpen ? 'true' : 'false'"
+          :aria-label="$t('later.sendOptions')"
+          v-tooltip="$t('later.sendOptions')"
+          @click="laterMenuOpen = !laterMenuOpen"
+        >
+          <ChevronDown class="w-4 h-4" />
+        </button>
+        <ContextMenu v-model="laterMenuOpen" :anchor="laterButton" :items="laterItems" :aria-label="$t('later.sendOptions')" />
+      </template>
     </div>
 
     <PollDialog

@@ -126,6 +126,38 @@ until the new release has passed your application checks.
 
 ## Version notes
 
+### 1.1.x → 1.2.0
+
+Update with the procedure above and take the backup first. 1.2.0 only adds. A
+1.1 web app keeps working against a 1.2 server, and a 1.2 web app hides what a
+1.1 server lacks (it reads the `features` list of `GET /api/health`). Nothing
+in `.env` has to change.
+
+#### Reminders and scheduled messages
+
+- **Database.** Migration 0062 adds `message_reminders` and
+  `scheduled_messages`. Additive and forward-only, like every migration; a
+  rollback to a 1.1 image needs the restore of the pre-update backup.
+- **Features.** `reminders` and `messages.scheduled` in `GET /api/health`.
+- **Members get.** *Remind me* in the message menu and *Send later* next to
+  the send button, and one **Reminders and scheduled** popover in the channel
+  header. Both are private. At most 100 reminders and 50 scheduled messages per
+  member. Scheduled messages are text only.
+- **Checks at the due time.** A reminder re-checks that the member can still
+  see the message, otherwise the notification says "a message you can no longer
+  see". A scheduled message is sent as its author through the normal path: a
+  permission, timeout, slow mode or block that applies *then* refuses it, and
+  it stays as a failed draft the author can edit, reschedule or delete.
+- **API and events.** `GET/POST /api/me/reminders`, `DELETE
+  /api/me/reminders/{id}`, `GET /api/me/scheduled`, `POST
+  /api/channels/{id}/scheduled`, `PATCH/DELETE /api/me/scheduled/{id}`; the
+  events `reminder_update` and `scheduled_message_update` go to the member's
+  own sessions only. All additive.
+- **Web Push.** Reminders and refused scheduled messages use the existing push
+  pipeline and the device list of the member; they ignore channel mute levels
+  (the member asked for them) but follow the member's preview setting and the
+  operator's `PUSH_PREVIEWS`.
+
 ### 1.0.x → 1.1.0
 
 Update with the procedure above and take the backup first. 1.1.0 only adds.

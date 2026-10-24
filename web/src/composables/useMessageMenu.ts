@@ -6,10 +6,11 @@ import type { ContextMenuItem } from '../components/menuTypes'
 import type { useMessageActions } from './useMessageActions'
 import {
   MessageSquare, Pencil, Trash2, SmilePlus, Reply,
-  Link as LinkIcon, Copy, Bookmark, BookmarkPlus, BookmarkX, Forward, Pin, PinOff, Eraser, History
+  Link as LinkIcon, Copy, Bookmark, BookmarkPlus, BookmarkX, Forward, Pin, PinOff, Eraser, History, AlarmClock
 } from '@lucide/vue'
 import { openEditHistory } from '../lib/editHistory'
 import { openForward } from '../lib/forwardDialog'
+import { openLater } from '../lib/laterDialog'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
@@ -99,6 +100,12 @@ function basicItems(msg: Message, { actions, reply, copy }: MenuDeps): ContextMe
   items.push(markUnreadItem(msg))
   const features = useServerFeaturesStore()
   if (features.has('saved')) items.push(savedItem(msg))
+  if (features.has('reminders')) {
+    items.push({
+      label: t('later.remindMenu'), icon: AlarmClock,
+      action: () => openLater({ kind: 'remind', messageId: msg.id, excerpt: previewText(msg.content) || t('chat.attachment') })
+    })
+  }
   if (features.has('forward')) {
     items.push({ label: t('forward.menu'), icon: Forward, action: () => openForward({ messageId: msg.id, excerpt: previewText(msg.content) || t('chat.attachment') }) })
   }

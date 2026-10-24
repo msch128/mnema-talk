@@ -9,6 +9,7 @@ import { useNotificationHint } from '../composables/useNotificationHint'
 import { durationLabel } from '../lib/moderation'
 import MentionsInbox from './MentionsInbox.vue'
 import SavedMessages from './SavedMessages.vue'
+import LaterPopover from './LaterPopover.vue'
 import PinnedMessages from './PinnedMessages.vue'
 import TipBar from './TipBar.vue'
 import NavDrawerButton from './NavDrawerButton.vue'
@@ -91,6 +92,7 @@ function openNotificationMenu(e: MouseEvent) {
     <div class="flex items-center gap-2 max-md:gap-0 shrink-0">
       <MentionsInbox v-if="!panel" />
       <SavedMessages v-if="!panel && serverFeatures.has('saved')" />
+      <LaterPopover v-if="!panel" />
       <PinnedMessages v-if="chatStore.activeChannel && !isDm" />
       <button
         v-if="chatStore.activeChannel"

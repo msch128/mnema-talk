@@ -37,7 +37,7 @@ func TestDirectReminderOfAMessageTheMemberCannotSeeSaysNothingAboutIt(t *testing
 func TestDirectScheduledFailureNamesNoMessage(t *testing.T) {
 	d := Direct{Kind: DirectScheduledFailed, ID: uuid.New(), Content: "private draft"}
 	p := buildDirect(d, "de", true, 1)
-	if p.Title != "Geplante Nachricht nicht gesendet" || strings.Contains(p.Body, "private") {
+	if p.Title != texts["de"]["scheduled_failed"] || p.Title == texts["en"]["scheduled_failed"] || strings.Contains(p.Body, "private") {
 		t.Fatalf("%+v", p)
 	}
 }
