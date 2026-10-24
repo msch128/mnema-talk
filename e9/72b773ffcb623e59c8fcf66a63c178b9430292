@@ -1,0 +1,27 @@
+.github/workflows/ci-macos-calls.yml
+  s_06fcde5dbef956::t_c3966fa445a507 1-80
+.release-please-manifest.json
+  s_06fcde5dbef956::t_3289d71164e88e 1
+CHANGELOG.md
+  s_06fcde5dbef956::t_5bf03f35fcb2a3 3-9
+doc/development.md
+  s_06fcde5dbef956::t_80362761fccd03 82-83
+version.txt
+  s_06fcde5dbef956::t_64c80b54ff88fd 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e972b773ffcb623e59c8fcf66a63c178b9430292",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
