@@ -270,6 +270,7 @@ All changes are additive; `web_client_api` is unchanged.
   allows inline styles: `style-src 'unsafe-inline'` became `style-src 'self'`
   plus `style-src-attr 'none'` (see [SECURITY.md](../SECURITY.md#security-model-summary)
   under "Security headers"). Nothing to configure. A browser tab that was
+<<<<<<< HEAD
   loaded before the update may show the emoji picker unstyled until it is
   reloaded; installed apps update on their next start. The desktop client
   serves the signed bundle under its own policy, which still works with the new
@@ -280,6 +281,96 @@ All changes are additive; `web_client_api` is unchanged.
   that were bound by assumption.
 - **Media frame format.** No change. Refusing frame version 2 was re-evaluated
   and deferred to 2.0 (SECURITY.md).
+=======
+  loaded before the update and is still running the old web app may show the
+  emoji picker unstyled until it is reloaded (installed apps update on their
+  next start). The desktop client serves the signed bundle under its
+  own policy, which is unchanged and still works with the new bundle. The
+  bundle's `security_floor` is not raised: the old policy was defense in depth
+  and older bundles are not exploitable because of it.
+- **Migration 0056** adds one column to `bot_tokens` (an "inferred issuer"
+  flag; see bot tokens below). Rolling back to 1.0.x means restoring the
+  pre-upgrade backup: the 1.0.x image refuses a database that a newer version
+  migrated (see "Rollback" above).
+- **Migration 0057** adds the nullable column `users.banner_s3_key` (the profile
+  banner) and extends the tombstone trigger of 0043 so a deleted account keeps
+  none. As with every migration here, a rollback to a 1.0.x image needs the
+  backup restore.
+- **Profile banner** (feature `profile.banner`): a picture across the top of a
+  member's profile, set under **Change banner** next to **Change avatar** and
+  removed with **Remove banner**. `PUT` / `DELETE /api/users/me/banner`
+  (multipart field `banner`; PNG, JPEG, GIF or WebP up to 5 MB and at least
+  300x100 pixels). The server never stores the upload: it crops the centre 3:1,
+  shrinks it to at most 1500x500 and writes a new file, so EXIF and other
+  metadata are gone. An animated GIF stays animated within the same pixel budget
+  as animated emoji (canvas times frames up to 16 million, 100 frames); animated
+  WebP is rejected. `banner_url` is added to `GET /api/users/{userID}` and
+  `GET /api/auth/me` only, never to message, member or event payloads. The file
+  is stored under `banners/` (the daily orphan check covers it), is deleted when
+  replaced or removed, goes into the data export as `banner.*` and is removed
+  when the account is erased. Without the feature (a 1.0.x server) the 1.1 web
+  app shows no banner controls.
+- **Avatars are redrawn (privacy fix).** Until 1.0 an avatar was stored exactly
+  as uploaded, so the EXIF block of a phone photo (GPS position, camera model)
+  was readable by every member. From 1.1 an upload is decoded, cropped to the
+  centre square, shrunk to at most 512x512 (never enlarged) and written again;
+  limits and types are unchanged (5 MB; PNG, JPEG, GIF, WebP). An animated GIF
+  stays animated within the pixel budget animated emoji have (canvas times frames
+  up to 16 million, 100 frames), a one-frame GIF becomes a PNG, animated WebP
+  is rejected. Bot and webhook avatars follow the same rules.
+- **Migration 0058** adds `users.avatar_reencoded_at`. After the update, a
+  background job redraws every avatar stored before, once: 30 seconds after
+  start it processes the accounts without the marker, writes the new file, points
+  the account at it and only then deletes the old object (a short extra copy per
+  avatar exists meanwhile). It repeats hourly until nothing is left, so a storage
+  outage at start only delays it, and it never touches an avatar twice. Old files
+  were accepted without limits, so the job is more lenient than an upload: a
+  canvas of up to 30,000 pixels an edge and 64 million in total, and for a long
+  or large animation only its first frame (as a still picture). An old avatar
+  that cannot be decoded even so is **removed** (the file is deleted, the
+  account has no avatar, an audit entry `media.avatar_removed` with the reason
+  is written, Owner and Administrators only): keeping the original would keep its
+  metadata public. The member can set a new avatar. Take the backup first, as always; a rollback to 1.0.x needs the
+  restore.
+- **`DELETE /api/users/me/avatar`** (feature `profile.avatar_remove`) and a
+  **Remove avatar** button next to **Change avatar**.
+- Custom emoji were never affected: they have always been redrawn, so no
+  metadata survives in them.
+- **Self-update now verifies the image.** If you use the `autoupdate` profile,
+  fetch the compose file of the 1.1 tag and run
+  `docker compose --profile autoupdate up -d` after the update: the `updater`
+  service is now this project's verifying sidecar (started from the app image)
+  and a second service, `recreator` (the Watchtower that used to be the updater),
+  only restarts the app from the image the updater verified. "Update now" refuses
+  an image whose cosign signature or build provenance does not verify. It
+  needs outbound HTTPS from the updater to the registry and to Sigstore. Details:
+  [operations.md](operations.md#verifying-a-release-image),
+  [SECURITY.md](../SECURITY.md#self-update-sidecar). The new networks
+  (`mnema-recreator`, `mnema-updater-egress`) are created by compose; a custom
+  compose file needs the same two services and networks.
+- **Bot tokens issued before 1.0** are bound to their likeliest issuer the first
+  time they are used; nothing is revoked and no token needs regenerating
+  ([bots.md](bots.md#tokens)). The admin console marks tokens that were
+  bound by assumption.
+- **No change to the media frame format.** Refusing frame version 2 was
+  re-evaluated and deferred to 2.0 (SECURITY.md).
+
+- **Migration 0054** adds `thread_follows` and fills it from the existing
+  threads (root authors and repliers), so threads keep notifying the people
+  who took part. From then on a thread reply notifies only its followers (the
+  root's author, repliers, people mentioned in a reply, and anyone who
+  followed it by hand). Nothing else changes for members; 0055 is reserved
+  and unused.
+- The audit log gains `message.edit_history_view` and `poll.end`, and a
+  `message.delete` entry of an edited message carries its earlier versions.
+  Audit retention applies to them as to any entry.
+- New setting `INITIAL_LANGUAGE` (`de` default, or `en`) for the default category and channel names of a brand-new installation. An upgrade never renames anything.
+- Web app: a skip link and a fixed Tab order (channel list, header, messages, message box, member list), the connection banner also on the browser's offline event, Talk controls that stay visible when alone in the call on a phone, the search tip dismissed after the first search, a Follow thread button, and in-page notifications that follow the "show message text" setting. A 1.1 bundle against a 1.0.x server hides the follow button and notifies for every thread reply as before.
+- Search accepts `has=poll`, `has=edit` and `is=pinned`. The new routes
+  (`/api/threads/{id}/follow`, `/api/threads/following`) and the event
+  `thread_follow_updated` are additive; a 1.0.x web bundle ignores them.
+- **Export** also gains `thread_follows.json`.
+>>>>>>> origin/release/1.1.0
 
 ### 1.0.0 → 1.0.1
 

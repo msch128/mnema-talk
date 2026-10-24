@@ -1260,6 +1260,9 @@
     "avatarSaved": "Avatar saved",
     "avatarTooBig": "That image is too large (max. {size} MB).",
     "avatarFailed": "Couldn’t upload your avatar. Try again.",
+    "removeAvatar": "Remove avatar",
+    "avatarRemoved": "Avatar removed",
+    "avatarRemoveFailed": "Couldn’t remove your avatar. Try again.",
     "changeBanner": "Change banner",
     "removeBanner": "Remove banner",
     "bannerSaved": "Banner saved",
@@ -1798,6 +1801,7 @@
       "media": {
         "prune": "Media pruned",
         "orphans_cleanup": "Orphaned files removed",
+        "avatar_removed": "Avatar removed (could not be redrawn without metadata)",
         "delete": "Media deleted"
       },
       "system": {
