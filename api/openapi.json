@@ -192,6 +192,11 @@
             "description": "RulesPending is true while the caller has to accept the community rules\n(POST /api/onboarding/accept) before posting, reacting, uploading or\njoining a Talk. Only set in responses about the caller's own account.",
             "type": "boolean"
           },
+          "status_expires_at": {
+            "description": "StatusExpiresAt is when the status line clears itself; omitted when it\nstays until changed.",
+            "format": "date-time",
+            "type": "string"
+          },
           "status_text": {
             "description": "StatusText is a free-text status line; empty when unset.",
             "maxLength": 32,
@@ -650,6 +655,11 @@
       },
       "auth.SetStatusRequest": {
         "properties": {
+          "expires_at": {
+            "description": "ExpiresAt makes the status clear itself at this absolute time (the client\ncomputes it from the member's time zone). Omitted or null: it stays until\nchanged. Must lie in the future, at most a year ahead; ignored when the\nstatus is cleared and when an admin sets another member's status.",
+            "format": "date-time",
+            "type": "string"
+          },
           "status_text": {
             "description": "StatusText: empty clears the status.",
             "maxLength": 32,
@@ -898,6 +908,11 @@
           "rules_pending": {
             "description": "RulesPending is true while the caller has to accept the community rules\n(POST /api/onboarding/accept) before posting, reacting, uploading or\njoining a Talk. Only set in responses about the caller's own account.",
             "type": "boolean"
+          },
+          "status_expires_at": {
+            "description": "StatusExpiresAt is when the status line clears itself; omitted when it\nstays until changed.",
+            "format": "date-time",
+            "type": "string"
           },
           "status_text": {
             "description": "StatusText is a free-text status line; empty when unset.",
@@ -1818,7 +1833,7 @@
           },
           "slow_mode_seconds": {
             "description": "SlowModeSeconds is the least time between two messages of one member\nin this channel; 0 = off. Members who may manage messages here are\nexempt.",
-            "maximum": 21600,
+            "maximum": 86400,
             "minimum": 0,
             "type": "integer"
           },
@@ -2645,6 +2660,11 @@
           "rules_pending": {
             "description": "RulesPending is true while the caller has to accept the community rules\n(POST /api/onboarding/accept) before posting, reacting, uploading or\njoining a Talk. Only set in responses about the caller's own account.",
             "type": "boolean"
+          },
+          "status_expires_at": {
+            "description": "StatusExpiresAt is when the status line clears itself; omitted when it\nstays until changed.",
+            "format": "date-time",
+            "type": "string"
           },
           "status_text": {
             "description": "StatusText is a free-text status line; empty when unset.",
@@ -3685,7 +3705,7 @@
           },
           "slow_mode_seconds": {
             "description": "SlowModeSeconds sets the least time between two messages of one member\nin the channel (0 turns slow mode off). Members who may manage messages\nin the channel are exempt.",
-            "maximum": 21600,
+            "maximum": 86400,
             "minimum": 0,
             "type": "integer"
           },
@@ -27594,7 +27614,7 @@
     },
     "/api/users/me/status": {
       "put": {
-        "description": "Broadcasts user_update.",
+        "description": "Broadcasts user_update. With expires_at the status clears itself at that time (the server then broadcasts user_update again).",
         "operationId": "setStatus",
         "requestBody": {
           "content": {

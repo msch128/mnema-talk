@@ -128,14 +128,18 @@ until the new release has passed your application checks.
 
 ### 1.1.x → 1.2.0
 
-Update with the procedure above and take the backup first. 1.2.0 only adds;
-nothing in `.env` has to change.
+Update with the procedure above and take the backup first. 1.2.0 only adds. A
+1.1.x web app keeps working against a 1.2 server, and a 1.2 web app hides what
+a 1.1.x server lacks (it reads the `features` list of `GET /api/health`).
+Nothing in `.env` has to change. A rollback to a 1.1.x image needs the restore
+of the pre-update backup (see "Rollback" above).
 
 #### Database
 
 | Migration | Adds |
 |---|---|
 | 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
+| 0061 | `users.status_expires_at` (a status line that clears itself, feature `status.expiry`). It also raises the limit of `channels.slow_mode_seconds` from 6 hours to 24 hours. |
 
 #### Talks
 
@@ -151,6 +155,16 @@ nothing in `.env` has to change.
   `talk_unavailable`. REST: `PATCH /api/talks/{id}`, `POST /api/talks/{id}/invites`,
   `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
   channel (additive).
+
+#### Messaging
+
+- **Status expiry (`status.expiry`).** `PUT /api/users/me/status` takes an
+  optional `expires_at`. A status past its time reads as empty at once; a sweep
+  every 30 seconds clears the row and sends `user_update`.
+- **Slow mode up to 24 hours.** Existing values are unchanged. A 1.1.x web app
+  still offers its own presets up to 6 hours.
+- **Channel descriptions** (the existing topic, at most 255 characters) are
+  shown under the channel name; nothing to migrate.
 
 ### 1.0.x → 1.1.0
 
@@ -223,8 +237,11 @@ access to reports or kicking until a role is given the permission.
   conversations with them. Channels and messages are numbered as before;
   private messages are numbered apart.
 - **Blocking and reports.** Members block each other and report a message to
-  the moderators ([moderation](moderation.md#blocking-and-reports)). The admin
-  console gets a **Reports** tab for holders of *Manage reports*.
+  the moderators ([moderation](moderation.md#blocking-and-reports)). In any
+  direct message conversation (group too), unread counts, mention counts and the
+  last-activity time leave out messages by members the reader blocked, and push
+  recipients skip blockers. The admin console gets a **Reports** tab for
+  holders of *Manage reports*.
 - **Profile banner** (feature `profile.banner`). A picture across the top of a
   member's profile, set under **Change banner** next to **Change avatar** and
   removed with **Remove banner**. The server never stores the upload: it crops
@@ -265,7 +282,8 @@ access to reports or kicking until a role is given the permission.
   comes back as unavailable.
 - **Forwarding and "Pinned by".** A message can be forwarded into a channel or
   a direct message ([architecture](architecture.md#forwarding-and-saved-messages)).
-  Older web apps show a forwarded message as just its comment. The pinned list
+  Older web apps show a forwarded message as just its comment; a forwarded message
+  with an empty comment is pushed as "Forwarded message". The pinned list
   shows who pinned a message and when.
 - **Slash commands.** `/me`, `/shrug`, `/tableflip`, `/unflip`, `/spoiler`,
   `/nick`, `/thread`, `/msg`, `/timeout`, `/ban` and `/kick` join `/poll` in the
@@ -321,9 +339,10 @@ All changes are additive; `web_client_api` is unchanged.
   plus `style-src-attr 'none'` (see [SECURITY.md](../SECURITY.md#security-model-summary)
   under "Security headers"). Nothing to configure. A browser tab that was
   loaded before the update may show the emoji picker unstyled until it is
-  reloaded; installed apps update on their next start. The desktop client
-  serves the signed bundle under its own policy, which still works with the new
-  bundle. The bundle's `security_floor` is not raised.
+  reloaded; installed apps update on their next start. The desktop shells apply
+  the strict web CSP (`style-src 'self'; style-src-attr 'none'`) only for web
+  bundles >= 1.1.0; older bundles keep the old policy. The bundle's
+  `security_floor` is not raised.
 - **Bots and webhooks.** Bot tokens issued before 1.0 are bound to their
   likeliest issuer the first time they are used; nothing is revoked and no token
   needs regenerating ([bots.md](bots.md#tokens)). The admin console marks tokens

@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
@@ -571,4 +572,205 @@ func TestTalksOpenedDuringALobbyChangeEndUpWithTheNewRules(t *testing.T) {
 	if stale != 0 {
 		t.Fatalf("%d temporary Talks missed the lobby change", stale)
 	}
+}
+
+func TestTalkRequestsAreValidatedAndRefusedCalmly(t *testing.T) {
+	w := newTalksWorld(t)
+	ctx := context.Background()
+	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr}
+	talk, err := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dm, _, err := CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := map[string]string{"id": talk.ID.String()}
+	rec := func() *httptest.ResponseRecorder { return httptest.NewRecorder() }
+	invalid := func(err error) bool {
+		var apiErr *httpx.APIError
+		return errors.As(err, &apiErr) && apiErr.Status == http.StatusBadRequest
+	}
+
+	// Bad ids, bad bodies and out-of-range limits are 400s.
+	if err := h.updateTalk(rec(), talkRequest(w.alice, `{}`, map[string]string{"id": "nope"})); !invalid(err) {
+		t.Fatalf("bad id: %v", err)
+	}
+	if err := h.updateTalk(rec(), talkRequest(w.alice, `{"nope":1}`, id)); !invalid(err) {
+		t.Fatalf("unknown field: %v", err)
+	}
+	for _, body := range []string{`{"user_limit":1000}`, `{"user_limit":-1}`, `{"name":""}`} {
+		if err := h.updateTalk(rec(), talkRequest(w.alice, body, id)); !invalid(err) {
+			t.Fatalf("%s: %v", body, err)
+		}
+	}
+	if err := h.updateTalk(rec(), talkRequest(w.alice, `{"user_limit":999}`, id)); err != nil {
+		t.Fatalf("the highest limit is fine: %v", err)
+	}
+	// A Talk that does not exist, and a Talk that is no temporary one.
+	if err := h.updateTalk(rec(), talkRequest(w.alice, `{"name":"x"}`, map[string]string{"id": uuid.NewString()})); err == nil {
+		t.Fatal("unknown Talk")
+	}
+
+	// Invitations: bad id, bad body, unknown Talk, a text channel, a conversation that is no conversation.
+	body := `{"conversation_id":"` + dm.String() + `"}`
+	if err := h.inviteToTalk(rec(), talkRequest(w.alice, body, map[string]string{"id": "nope"})); !invalid(err) {
+		t.Fatalf("bad Talk id: %v", err)
+	}
+	if err := h.inviteToTalk(rec(), talkRequest(w.alice, `{"conversation_id":"x"}`, id)); !invalid(err) {
+		t.Fatalf("bad conversation id: %v", err)
+	}
+	if err := h.inviteToTalk(rec(), talkRequest(w.alice, body, map[string]string{"id": uuid.NewString()})); err == nil {
+		t.Fatal("unknown Talk")
+	}
+	text, _ := CreateChannel(ctx, w.p, nil, "plain-text", ChannelTypeText, "", 0)
+	notDM := `{"conversation_id":"` + text.ID.String() + `"}`
+	if err := h.inviteToTalk(rec(), talkRequest(w.alice, notDM, id)); !errors.Is(err, errChannelNotFound) {
+		t.Fatalf("a channel is no conversation: %v", err)
+	}
+	// A card for a text channel is refused: only Talks are invitable.
+	if _, err := h.postTalkInvite(ctx, dm, w.alice.ID, text.ID); !errors.Is(err, errChannelNotFound) {
+		t.Fatalf("invitation to a text channel: %v", err)
+	}
+	// Someone who is not in the conversation cannot invite into it.
+	carol := newTalksUser(t, w.p, "carol_c")
+	if err := h.inviteToTalk(rec(), talkRequest(carol, body, id)); err == nil {
+		t.Fatal("a stranger invited into a conversation")
+	}
+
+	// Start a Talk: bad id, a channel instead of a conversation, a stranger, and the rate limit.
+	if err := h.startDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": "nope"})); !invalid(err) {
+		t.Fatalf("bad conversation id: %v", err)
+	}
+	if err := h.startDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": text.ID.String()})); !errors.Is(err, errChannelNotFound) {
+		t.Fatalf("a channel: %v", err)
+	}
+	if err := h.startDMTalk(rec(), talkRequest(carol, ``, map[string]string{"id": dm.String()})); err == nil {
+		t.Fatal("a stranger started a Talk in a conversation")
+	}
+	w.mgr.CreateLimit = httpx.NewRateLimiter(1, TalkWindow)
+	if err := h.startDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": dm.String()})); err != nil {
+		t.Fatal(err)
+	}
+	var apiErr *httpx.APIError
+	if err := h.startDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": dm.String()})); !errors.As(err, &apiErr) || apiErr.Code != httpx.CodeRateLimited {
+		t.Fatalf("second Talk: %v", err)
+	}
+}
+
+func TestTalkRoutesExistOnlyWithAManager(t *testing.T) {
+	w := newTalksWorld(t)
+	routes := func(manager *TalkManager) int {
+		h := &Handler{DB: w.p, Events: w.rec, Talks: manager, TalkLimit: httpx.NewRateLimiter(100, time.Minute)}
+		r := chi.NewRouter()
+		h.mountTalks(r)
+		return len(r.Routes())
+	}
+	if n := routes(nil); n != 0 {
+		t.Fatalf("without a manager the feature is off, but %d routes exist", n)
+	}
+	if n := routes(w.mgr); n != 3 {
+		t.Fatalf("with a manager: %d routes; want the three Talk routes", n)
+	}
+}
+
+func TestUsableLobbyWithoutAPermissionModelAcceptsEveryLobby(t *testing.T) {
+	w := newTalksWorld(t)
+	h := &Handler{DB: w.p, Events: w.rec, Talks: w.mgr}
+	if !h.usableLobby(talkRequest(w.alice, ``, nil))(w.lobby.ID) {
+		t.Fatal("no model, no limits")
+	}
+}
+
+func TestTheLiveStateIgnoresWhatItDoesNotKnowAndRecoversFromEmptiness(t *testing.T) {
+	w := newTalksWorld(t)
+	ctx := context.Background()
+	w.mgr.EmptyGrace = time.Hour
+	w.join(uuid.New(), w.alice.ID) // a Talk nobody opened here
+	w.mgr.removeIfEmpty(uuid.New())
+
+	talk, err := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.join(talk.ID, w.alice.ID)
+	w.mgr.removeIfEmpty(talk.ID) // occupied: stays
+	if !w.exists(t, talk.ID) {
+		t.Fatal("an occupied Talk was removed")
+	}
+	// Everyone gone: nobody leads it; the next member to come in does.
+	w.leave(talk.ID, w.alice.ID)
+	if _, ok := w.mgr.Leader(talk.ID); ok {
+		t.Fatal("an empty Talk has no leader")
+	}
+	w.leave(talk.ID, w.bob.ID) // not a member: the countdown just restarts
+	w.join(talk.ID, w.bob.ID)
+	if got, _ := w.mgr.Leader(talk.ID); got != w.bob.ID {
+		t.Fatalf("the first member to come in leads: %v", got)
+	}
+	// A Talk that is gone already is nothing to remove.
+	if err := w.mgr.remove(ctx, uuid.New(), "empty"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestTheManagerFollowsTheHubsEventsInOrder(t *testing.T) {
+	w := newTalksWorld(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	w.mgr.EmptyGrace = time.Hour
+	talk, err := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() { w.mgr.Run(ctx); close(done) }()
+	w.mgr.OnPresence(w.bob.ID, uuid.New(), true) // not one of ours: dropped
+	w.mgr.OnPresence(w.alice.ID, talk.ID, true)
+	w.mgr.OnPresence(w.bob.ID, talk.ID, true)
+	w.mgr.OnPresence(w.alice.ID, talk.ID, false)
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if got, _ := w.mgr.Leader(talk.ID); got == w.bob.ID {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if got, _ := w.mgr.Leader(talk.ID); got != w.bob.ID {
+		t.Fatalf("leader = %v; want bob after alice left", got)
+	}
+	cancel()
+	<-done
+}
+
+func TestDatabaseFailuresLeaveTheLiveStateIntactAndAreRetried(t *testing.T) {
+	w := newTalksWorld(t)
+	ctx := context.Background()
+	talk, err := OpenTempTalk(ctx, w.p, w.lobby.ID, w.alice.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A channels table that can be read but neither updated nor locked.
+	broken := driftPool(t, w.p, map[string]string{"channels": `SELECT DISTINCT id, name, is_temp, leader_id, type, category_id, user_limit, slow_mode_seconds FROM public.channels`})
+	m := NewTalkManager(&TalkManager{DB: broken, Events: w.rec, EmptyGrace: time.Hour})
+	m.talks[talk.ID] = &liveTalk{leader: &w.alice.ID}
+
+	m.persistLeader(talk.ID, &w.bob.ID) // the broadcast goes out although storing failed
+	m.removeIfEmpty(talk.ID)
+	m.mu.Lock()
+	kept := m.talks[talk.ID]
+	m.mu.Unlock()
+	if kept == nil {
+		t.Fatal("a Talk that could not be removed must stay known, to be retried")
+	}
+	if !w.exists(t, talk.ID) {
+		t.Fatal("the Talk was removed in spite of the failure")
+	}
+	m.sweepStale(ctx) // finds the Talk, fails to remove it, and carries on
+	if !w.exists(t, talk.ID) {
+		t.Fatal("the sweep removed a Talk it could not lock")
+	}
+	failing := NewTalkManager(&TalkManager{DB: driftPool(t, w.p, map[string]string{"channels": `SELECT 1 AS x WHERE false AND 1/0 = 1`}), Events: w.rec})
+	failing.sweepStale(ctx)
 }

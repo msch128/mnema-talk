@@ -271,7 +271,9 @@ installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
   category settings apply exactly as in the app (a mute still lets through
   a message addressed to the member by name, role or reply, not `@all` or
   `@here`; Do Not Disturb silences even those). The text of a push is plain: Markdown marks are removed,
-  `||spoilers||` read "Spoiler" and custom emoji read `:name:`. A burst in one channel is
+  `||spoilers||` read "Spoiler" and custom emoji read `:name:`. An
+  attachment-only message reads "Attachment", and a forwarded message with an
+  empty comment reads "Forwarded message". A burst in one channel is
   merged: the first message goes out at once, the rest of the next five
   seconds as one push ("3 new messages"); a mention is never held back. A
   device that is offline gets only the newest push of a channel (push topic),
@@ -519,7 +521,8 @@ committed statement and public key.
   for 2 seconds, so it can't be used to flood the database. `features` lists
   the optional features this build has, so a newer web app can hide what an
   older server lacks. In 1.1 it holds `blocks`, `dm`, `reports`, `saved`,
-  `forward`, `search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`;
+  `forward`, `search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`
+  (1.2 adds `status.expiry`);
   names never change meaning ([api-stability.md](api-stability.md)). A 1.0.x
   server sends no list. The compose
   healthcheck and [`scripts/health-check.sh`](../scripts/health-check.sh)

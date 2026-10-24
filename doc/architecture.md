@@ -135,7 +135,9 @@ conversations nor write in them.
   the answer is the same 403 text, so none can be probed. A block makes an
   existing 1:1 conversation unwritable in both directions, silently; in a
   group, a block between two members does not stop the group, and nobody can
-  add a member who blocked them.
+  add a member who blocked them. In any conversation (group or two-person),
+  unread and mention counts and the last-activity time leave out messages by
+  members the reader blocked, and push notifications skip blockers.
 - 3 tries a minute and 10 new conversations per 24 hours per member, at most
   100 group conversations per member, at most 10 members. The member who
   started a conversation may send 2 messages before anybody else has written
@@ -169,11 +171,13 @@ own messages.
 
 A block (`user_blocks`, migration 0049) is private: the blocked member is not
 told, and nothing they can read depends on it. The server applies it where a
-notification would reach the blocker: the mentions inbox, mention counts and
-push skip the blocked member's messages, decided when the entry is listed or
-the push is sent. The web app collapses their messages to a placeholder the
-blocker can open. A block changes nothing for anybody else. It makes an
-existing 1:1 conversation unwritable in both directions (see
+notification would reach the blocker: the mentions inbox (which excludes direct
+messages), mention counts and push skip the blocked member's messages, decided
+when the entry is listed or the push is sent. In any conversation (group direct
+messages included), unread and mention counts and last activity leave out
+messages by members the reader blocked. The web app collapses their messages to a
+placeholder the blocker can open. A block changes nothing for anybody else. It makes
+an existing 1:1 conversation unwritable in both directions (see
 [Direct messages](#direct-messages)). The `block_updated` event goes to the
 blocker's own sessions only.
 
@@ -202,6 +206,7 @@ Owner has no special access to conversations), otherwise only
 `available: false`. Lists, thread views, pins, search, the mentions inbox, the
 WebSocket events, push notifications, the export and the payloads of bots and
 webhooks therefore cannot show the original to someone who may not see it.
+A forwarded message with an empty comment is pushed as "Forwarded message".
 Edits and deletes of the original show through because the quote is read when
 asked for.
 
@@ -355,6 +360,19 @@ details show a **safety code** for the current epoch so members can compare
 keys out of band. The server validates who may commit but never sees keys.
 The code is [`web/src/lib/media/`](../web/src/lib/media/). Details and limits:
 [SECURITY.md](../SECURITY.md#security-model-summary).
+
+## Status expiry
+
+A custom status may carry `users.status_expires_at` (migration 0061). The
+client works out the absolute time from the member's own time zone ("tonight"
+is 23:59 and "tomorrow morning" 08:00 where they are) and sends it as
+`expires_at`; the server only checks that it lies ahead, at most a year. Two
+mechanisms make the clearing exact without a timer per member: every read of a
+user (`auth.userColumns`, the member list, the native session lease) maps a
+status past its time to an empty one, so nobody sees a stale line even between
+sweeps, and `Handler.RunStatusExpiry` (every 30 seconds, an indexed partial
+scan) clears the rows and broadcasts the usual `user_update`. Setting another
+member's status as a moderator never sets an expiry and always removes it.
 
 ## Notifications, search and onboarding
 

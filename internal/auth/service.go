@@ -70,6 +70,9 @@ type User struct {
 	BannerURL string `json:"banner_url,omitempty" binding:"optional"`
 	// StatusText is a free-text status line; empty when unset.
 	StatusText string `json:"status_text" maxLength:"32"`
+	// StatusExpiresAt is when the status line clears itself; omitted when it
+	// stays until changed.
+	StatusExpiresAt *time.Time `json:"status_expires_at,omitempty" binding:"optional" format:"date-time"`
 	// Presence is the chosen presence, only present in responses about the
 	// caller's own account; others see the live one from the hub.
 	Presence string `json:"presence,omitempty" binding:"optional" enums:"online,away,dnd,focus"`
@@ -202,12 +205,13 @@ func ValidateUsername(username string) error {
 	return nil
 }
 
-const userColumns = `id, username, display_name, bio, role, avatar_s3_key, status_text, presence, locale, created_at`
+// A status line whose time has passed reads as empty before RunStatusExpiry has cleared it.
+var userColumns = `id, username, display_name, bio, role, avatar_s3_key, ` + StatusSQLFor("") + `, presence, locale, created_at`
 
 func scanUser(row pgx.Row, extra ...any) (*User, error) {
 	var u User
 	var avatar *string
-	dest := append([]any{&u.ID, &u.Username, &u.DisplayName, &u.Bio, &u.Role, &avatar, &u.StatusText, &u.Presence, &u.Locale, &u.CreatedAt}, extra...)
+	dest := append([]any{&u.ID, &u.Username, &u.DisplayName, &u.Bio, &u.Role, &avatar, &u.StatusText, &u.StatusExpiresAt, &u.Presence, &u.Locale, &u.CreatedAt}, extra...)
 	if err := row.Scan(dest...); err != nil {
 		return nil, err
 	}
