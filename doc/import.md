@@ -129,7 +129,8 @@ nothing else, in one transaction:
 - A created channel that has **messages** by now needs a second, separate
   confirmation. Undoing deletes the channel and its messages and attachments for
   good.
-- Members who were given an imported role lose it. Roles close the gap they leave,
+- A created role is only removed while you can still manage it, that is while it is below your highest role (the Owner always can). Roles moved above you since stay, and the result reports how many (`kept_roles`).
+- Members who were given an imported role lose it, and their permissions refresh at once. Roles close the gap they leave,
   so the order of the others stays.
 - An import can be undone once. Undoing is audited (`import.discord_undo`).
 

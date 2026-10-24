@@ -96,7 +96,8 @@ async function undo(record: DiscordimportRecord) {
       if (!sure) return
     }
     const result = await undoImport(record.id, withMessages.length > 0)
-    toasts.success(t('discordImport.undo.done', { summary: summary(result.removed) }))
+    toasts.success(t('discordImport.undo.done', { summary: summary(result.removed) })
+      + (result.kept_roles ? t('discordImport.undo.keptRoles', { kept: result.kept_roles }) : ''))
     await loadHistory()
   } catch (e) {
     toasts.error(caughtErrorMessage(e, t('discordImport.undo.failed')))

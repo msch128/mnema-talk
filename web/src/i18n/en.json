@@ -2600,7 +2600,8 @@
       "messagesBody": "These imported channels have messages now. Undoing deletes the channels and their messages for good: {list}",
       "messagesConfirm": "Delete channels and messages",
       "failed": "The import could not be undone.",
-      "done": "Import undone. Removed {summary}."
+      "done": "Import undone. Removed {summary}.",
+      "keptRoles": " {kept} role(s) stay because you can no longer manage them."
     }
   }
 }

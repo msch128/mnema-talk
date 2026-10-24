@@ -213,6 +213,20 @@ describe('AdminImportTab', () => {
       expect(body(`/api/admin/import/discord/imports/${IMPORT_ID}/undo`)).toEqual({ accept_message_loss: true })
     })
 
+    it('says when roles stay because the admin can no longer manage them', async () => {
+      confirmMock.mockResolvedValue(true)
+      const base = apiMock.getMockImplementation()
+      apiMock.mockImplementation(async (path, options) => {
+        const res = await base?.(path, options)
+        return path.endsWith('/undo') ? { ...(res as object), kept_roles: 2 } : res
+      })
+      const w = mount(AdminImportTab)
+      await flushPromises()
+      await w.get('[data-testid="import-undo"]').trigger('click')
+      await flushPromises()
+      expect(useToastStore().toasts.map(x => x.text).join(' ')).toContain('2 role(s) stay because you can no longer manage them.')
+    })
+
     it('does nothing when the first confirmation is declined', async () => {
       confirmMock.mockResolvedValue(false)
       const w = mount(AdminImportTab)

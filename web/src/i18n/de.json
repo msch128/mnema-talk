@@ -2600,7 +2600,8 @@
       "messagesBody": "In diesen importierten Kanälen gibt es jetzt Nachrichten. Beim Rückgängigmachen werden die Kanäle samt Nachrichten endgültig gelöscht: {list}",
       "messagesConfirm": "Kanäle und Nachrichten löschen",
       "failed": "Der Import konnte nicht rückgängig gemacht werden.",
-      "done": "Import rückgängig gemacht. Entfernt: {summary}."
+      "done": "Import rückgängig gemacht. Entfernt: {summary}.",
+      "keptRoles": " {kept} Rolle(n) bleiben, weil du sie nicht mehr verwalten kannst."
     }
   }
 }

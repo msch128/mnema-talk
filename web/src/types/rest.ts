@@ -2577,6 +2577,7 @@ export const decodeDiscordimportUndoRequest = decoder("discordimport.UndoRequest
 export type DiscordimportUndoResult = {
   already_gone: DiscordimportCounts
   kept_categories: Array<string>
+  kept_roles: number
   removed: DiscordimportCounts
 }
 
@@ -2584,6 +2585,7 @@ export function isDiscordimportUndoResult(value: unknown): value is Discordimpor
   return isRecord(value)
     && (hasOwn(value, "already_gone") && isDiscordimportCounts(value["already_gone"]))
     && (hasOwn(value, "kept_categories") && isArrayOf(value["kept_categories"], item => isString(item)))
+    && (hasOwn(value, "kept_roles") && isInteger(value["kept_roles"]))
     && (hasOwn(value, "removed") && isDiscordimportCounts(value["removed"]))
 }
 

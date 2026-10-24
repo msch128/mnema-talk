@@ -4243,6 +4243,10 @@
             },
             "type": "array"
           },
+          "kept_roles": {
+            "description": "KeptRoles counts created roles that stay because the caller can no\nlonger manage them (moved above their highest role since).",
+            "type": "integer"
+          },
           "removed": {
             "$ref": "#/components/schemas/discordimport.Counts"
           }
@@ -4250,6 +4254,7 @@
         "required": [
           "already_gone",
           "kept_categories",
+          "kept_roles",
           "removed"
         ],
         "type": "object"

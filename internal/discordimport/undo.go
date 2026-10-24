@@ -208,6 +208,11 @@ type UndoResult struct {
 	AlreadyGone Counts `json:"already_gone"`
 	// KeptCategories were left in place because they hold other channels now.
 	KeptCategories []string `json:"kept_categories"`
+	// KeptRoles counts created roles that stay because the caller can no
+	// longer manage them (moved above their highest role since).
+	KeptRoles int `json:"kept_roles"`
+
+	holders []uuid.UUID // members who held a removed role
 }
 
 // Undo removes exactly the objects the import created and that still exist.
@@ -222,13 +227,19 @@ func (im *Importer) Undo(ctx context.Context, sub perm.Subject, id uuid.UUID, re
 			return errNotAdmin
 		}
 		var err error
-		res, keys, gone, err = undoTx(ctx, tx, sub, id, req, im.Audit)
+		res, keys, gone, err = undoTx(ctx, tx, snap, sub, id, req, im.Audit)
 		return err
 	})
 	if err != nil {
 		return nil, err
 	}
-	im.Perms.Changed(nil)
+	// Removed channels and categories change what everybody sees (nil: all);
+	// otherwise only the holders of the removed roles are affected.
+	affected := res.holders
+	if res.Removed.Channels+res.Removed.Categories > 0 {
+		affected = nil
+	}
+	im.Perms.Changed(affected)
 	if im.Voice != nil {
 		for _, ch := range gone {
 			im.Voice.CloseVoiceChannel(ch)
@@ -244,7 +255,7 @@ func (im *Importer) Undo(ctx context.Context, sub perm.Subject, id uuid.UUID, re
 	return res, nil
 }
 
-func undoTx(ctx context.Context, tx pgx.Tx, sub perm.Subject, id uuid.UUID, req UndoRequest, log *audit.Log) (*UndoResult, []string, []uuid.UUID, error) {
+func undoTx(ctx context.Context, tx pgx.Tx, snap *perm.Snapshot, sub perm.Subject, id uuid.UUID, req UndoRequest, log *audit.Log) (*UndoResult, []string, []uuid.UUID, error) {
 	rec, err := loadRecord(ctx, tx, id, true)
 	if err != nil {
 		return nil, nil, nil, err
@@ -272,7 +283,7 @@ func undoTx(ctx context.Context, tx pgx.Tx, sub perm.Subject, id uuid.UUID, req 
 	if err := removeCategories(ctx, tx, obj, res); err != nil {
 		return nil, nil, nil, err
 	}
-	if err := removeRoles(ctx, tx, obj, res); err != nil {
+	if err := removeRoles(ctx, tx, snap, sub, obj, res); err != nil {
 		return nil, nil, nil, err
 	}
 	if _, err := tx.Exec(ctx, `UPDATE discord_imports SET undone_at = NOW(), undone_by = $2 WHERE id = $1`, id, sub.ID); err != nil {
@@ -283,7 +294,7 @@ func undoTx(ctx context.Context, tx pgx.Tx, sub perm.Subject, id uuid.UUID, req 
 		Details: map[string]any{
 			"template": rec.TemplateCode, "categories": res.Removed.Categories, "channels": res.Removed.Channels,
 			"roles": res.Removed.Roles, "already_gone_channels": res.AlreadyGone.Channels,
-			"kept_categories": len(res.KeptCategories),
+			"kept_categories": len(res.KeptCategories), "kept_roles": res.KeptRoles,
 		},
 	})
 	if err != nil {
@@ -334,21 +345,49 @@ func removeCategories(ctx context.Context, tx pgx.Tx, obj objectIDs, res *UndoRe
 	return nil
 }
 
-// removeRoles deletes the created roles that still exist and closes the gap
-// they leave, keeping the order of the others.
-func removeRoles(ctx context.Context, tx pgx.Tx, obj objectIDs, res *UndoResult) error {
+// removeRoles deletes the created roles that still exist and that the caller
+// may still manage (below their highest role), and closes the gap they leave,
+// keeping the order of the others. The rest stay and are counted.
+func removeRoles(ctx context.Context, tx pgx.Tx, snap *perm.Snapshot, sub perm.Subject, obj objectIDs, res *UndoResult) error {
 	if len(obj.roles) == 0 {
 		return nil
 	}
-	tag, err := tx.Exec(ctx, `DELETE FROM roles WHERE id = ANY($1) AND NOT is_everyone AND NOT managed`, obj.roles)
+	rows, err := tx.Query(ctx, `SELECT id, position FROM roles WHERE id = ANY($1) AND NOT is_everyone AND NOT managed`, obj.roles)
+	if err != nil {
+		return fmt.Errorf("read created roles: %w", err)
+	}
+	existing, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (perm.Role, error) {
+		var role perm.Role
+		return role, r.Scan(&role.ID, &role.Position)
+	})
+	if err != nil {
+		return fmt.Errorf("read created roles: %w", err)
+	}
+	var deletable []uuid.UUID
+	for _, role := range existing {
+		if snap.CanManageRole(sub, role) == nil {
+			deletable = append(deletable, role.ID)
+		} else {
+			res.KeptRoles++
+		}
+	}
+	res.AlreadyGone.Roles = len(obj.roles) - len(existing)
+	if len(deletable) == 0 {
+		return nil
+	}
+	hrows, err := tx.Query(ctx, `SELECT DISTINCT user_id FROM user_roles WHERE role_id = ANY($1)`, deletable)
+	if err != nil {
+		return fmt.Errorf("role holders: %w", err)
+	}
+	// Never nil: nil would mean "everybody" to the notifier.
+	if res.holders, err = pgx.AppendRows([]uuid.UUID{}, hrows, pgx.RowTo[uuid.UUID]); err != nil {
+		return fmt.Errorf("role holders: %w", err)
+	}
+	tag, err := tx.Exec(ctx, `DELETE FROM roles WHERE id = ANY($1)`, deletable)
 	if err != nil {
 		return fmt.Errorf("delete roles: %w", err)
 	}
 	res.Removed.Roles = int(tag.RowsAffected())
-	res.AlreadyGone.Roles = len(obj.roles) - res.Removed.Roles
-	if res.Removed.Roles == 0 {
-		return nil
-	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE roles r SET position = n.rn
 		FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY position, created_at, id) AS rn FROM roles WHERE NOT is_everyone) n
