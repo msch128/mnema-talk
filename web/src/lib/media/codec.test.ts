@@ -14,9 +14,9 @@ async function ends() {
   const epochKeys = testEpochKeys(await testAesKey(7), alice, { alice })
   const keys = new Map([[1, epochKeys]])
   const stream = new FrameStream()
-  const seal: SealBytes = (plaintext, clear) => sealFrame({ keys: epochKeys, epoch: 1, stream: stream.id, counter: stream.next() ?? 0, channelId: 'channel', senderId: 'alice', plaintext, clear })
+  const seal: SealBytes = (plaintext, clear) => sealFrame({ keys: epochKeys, epoch: 1, stream: stream.id, counter: stream.next() ?? 0, channelId: 'channel', senderId: 'alice', plaintext, clear, source: 0 })
   // Framing is under test here, not replay: every unit may be opened again.
-  const open: OpenBytes = (packet, clear) => openFrame({ keys, channelId: 'channel', senderId: 'alice', packet, clear, replay: new ReplayWindow() })
+  const open: OpenBytes = (packet, clear) => openFrame({ keys, channelId: 'channel', senderId: 'alice', packet, clear, replay: new ReplayWindow(), source: 0 })
   return { seal, open }
 }
 
@@ -144,7 +144,7 @@ describe('sealing video so the network path still parses it', () => {
     const { seal, open } = await ends()
     const opus = Uint8Array.from(fill(40, 1))
     const sealed = await sealMedia(opus, undefined, null, seal)
-    expect([...(sealed ?? new Uint8Array()).subarray(0, 2)]).toEqual([0x4d, 0x32])
+    expect([...(sealed ?? new Uint8Array()).subarray(0, 2)]).toEqual([0x4d, 0x33])
     expect(await openMedia(sealed ?? new Uint8Array(), undefined, null, open)).toEqual(opus)
   })
 

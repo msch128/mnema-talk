@@ -109,26 +109,19 @@ describe('media transform guard', () => {
     expect(created.transforms[2]?.options).toMatchObject({ layer: 0 })
   })
 
-  it('tells every line who opens version 3, and a line armed later too', () => {
+  it('tells every line the key, and a line armed later too', () => {
     installBrowser()
     const guard = createMediaGuard()
     const key = {} as EpochKeys
-    const caps = { members: ['alice'], complete: true }
     expect(guard.armSender({ transform: null } as RTCRtpSender, 'channel', 'alice', 1)).toBe(true)
-    guard.setKey(3, key, false, false, caps)
-    expect(created.channels[0]?.port1.postMessage).toHaveBeenCalledWith({ type: 'key', epoch: 3, key, seq: 1, caps })
-    const more = { members: ['alice', 'bob'], complete: true }
-    guard.setCaps(3, more)
-    expect(created.channels[0]?.port1.postMessage).toHaveBeenLastCalledWith({ type: 'caps', epoch: 3, caps: more, seq: 2 })
-    // A line armed after that hears the key and then the newer advertisement.
+    guard.setKey(3, key)
+    expect(created.channels[0]?.port1.postMessage).toHaveBeenCalledWith({ type: 'key', epoch: 3, key, seq: 1 })
     expect(guard.armReceiver({ transform: null } as RTCRtpReceiver, 'channel', 'bob', 0)).toBe(true)
-    expect(created.channels[1]?.port1.postMessage.mock.calls.map(call => (call[0] as { type: string }).type)).toEqual(['key', 'caps'])
-    // A new key without one starts over; so does a reset.
+    expect(created.channels[1]?.port1.postMessage.mock.calls.map(call => (call[0] as { type: string }).type)).toEqual(['key'])
+    // A new key replaces the one a line armed later hears; so does a reset.
     guard.setKey(4, key)
     expect(guard.armReceiver({ transform: null } as RTCRtpReceiver, 'channel', 'bob', 0)).toBe(true)
-    expect(created.channels[2]?.port1.postMessage.mock.calls.map(call => (call[0] as { type: string }).type)).toEqual(['key'])
-    guard.setCaps(9, more)
-    guard.setKey(5, key)
+    expect(created.channels[2]?.port1.postMessage).toHaveBeenCalledWith({ type: 'key', epoch: 4, key, seq: 2 })
     guard.reset()
   })
 
@@ -178,9 +171,9 @@ describe('media transform guard', () => {
     guard.onStats(senders => seen.push(senders))
     expect(guard.armReceiver({ transform: null } as RTCRtpReceiver, 'channel', 'bob')).toBe(true)
     const worker = created.workers[0] as unknown as { onmessage: (event: { data: unknown }) => void }
-    worker.onmessage({ data: { type: 'stats', senders: { bob: { opened: 3, newer: 1, epoch: 6 }, eve: { opened: -1, newer: 0, epoch: 1 }, mallory: { opened: 1 }, odd: 7 } } })
+    worker.onmessage({ data: { type: 'stats', senders: { bob: { opened: 3, newer: 1, epoch: 6, legacy: 2 }, eve: { opened: -1, newer: 0, epoch: 1, legacy: 0 }, old: { opened: 1, newer: 0, epoch: 1 }, mallory: { opened: 1 }, odd: 7 } } })
     for (const data of [null, 'stats', { type: 'other' }, { type: 'stats' }, { type: 'stats', senders: 3 }]) worker.onmessage({ data })
-    expect(seen).toEqual([{ bob: { opened: 3, newer: 1, epoch: 6 } }])
+    expect(seen).toEqual([{ bob: { opened: 3, newer: 1, epoch: 6, legacy: 2 } }])
     guard.reset()
   })
 })

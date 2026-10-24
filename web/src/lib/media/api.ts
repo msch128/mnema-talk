@@ -4,8 +4,10 @@ import type { FrameSource } from './frame'
 /**
  * Keys changed in a way the member did not ask for: 'removed' by someone else
  * in the call, 'absent' after this browser itself slept and was dropped for silence.
+ * 'outdated' is something else: a member sends media in the retired frame
+ * format (an old client), which this one drops.
  */
-export type MediaNotice = 'removed' | 'absent'
+export type MediaNotice = 'removed' | 'absent' | 'outdated'
 
 export interface MediaCall {
   start(channelId: string, userId: string): void
