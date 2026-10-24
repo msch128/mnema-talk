@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ChatHeader from './ChatHeader.vue'
 import { useChatStore } from '../stores/chat'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { i18nPlugin, setLocale } from '../i18n'
 import { tooltip } from '../directives/tooltip'
 import { channelFixture } from '../test-fixtures.fixture'
@@ -78,6 +79,23 @@ describe('ChatHeader overflow', () => {
     items.find(i => i.id === 'mentions')!.action()
     await wrapper.vm.$nextTick()
     expect(wrapper.find('[data-testid="mentions-inbox"]').exists()).toBe(true)
+  })
+
+  it('lists saved and later in the More menu when the server has them, and marks unread mentions', async () => {
+    width = 500
+    useServerFeaturesStore().list = ['saved', 'reminders']
+    useChatStore().readStates = { c1: { mention_count: 2 } } as never
+    const wrapper = mountHeader()
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="header-more-badge"]').exists()).toBe(true)
+    await wrapper.find('[data-testid="header-more"]').trigger('click')
+    const [, , items] = wrapper.emitted('menu')![0] as [number, number, { id: string; action: () => void }[]]
+    expect(items.map(i => i.id)).toEqual(['mentions', 'saved', 'later'])
+    for (const item of items) {
+      item.action()
+      await wrapper.vm.$nextTick()
+    }
+    expect(wrapper.find('[data-testid="mentions-inbox"]').exists()).toBe(false)
   })
 
   it('unfolds again when the header widens', async () => {
