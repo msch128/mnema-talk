@@ -119,6 +119,18 @@ no accounts on someone else's platform.
   `during:` for a single local day), attachments (`has:file`, `filename:`),
   links, embeds, polls, edited and pinned messages, with a calmer Discord-style
   filter dropdown and sort order (newest, oldest, relevance).
+- **Notification settings per channel, category and server.** Right-click a
+  channel or a category header (or press Shift+F10) and choose
+  **Notifications**: all messages, mentions only, nothing, or "use the
+  category / server default", and **Mute for...** one hour, eight hours, a day
+  or until you turn it back on. **Notification settings** in the server menu
+  (and the account menu) set your default for the whole server, mute the
+  server, and can ignore `@all` and `@here`. A channel's own setting beats its
+  category's, which beats the server default; a small marker in the sidebar
+  shows a muted channel or one that only tells you about mentions. Push,
+  badges and mention counts follow the level that applies.
+- **Search filters** for author, channel, mentions, dates, attachments, links,
+  polls, edited and pinned messages.
 - **Installable web app with Web Push** notifications, and a layout for phones.
 - **Direct messages, blocking and reports.** Private conversations of two to
   ten members that moderators cannot browse, blocking that the other member

@@ -1968,12 +1968,14 @@ export const decodeChatMessageEditHistory = decoder("chat.MessageEditHistory", i
 export type ChatNotificationSettings = {
   categories: Array<ChatCategoryNotifySetting>
   channels: Array<ChatChannelNotifySetting>
+  server: ChatServerNotify
 }
 
 export function isChatNotificationSettings(value: unknown): value is ChatNotificationSettings {
   return isRecord(value)
     && (hasOwn(value, "categories") && isArrayOf(value["categories"], item => isChatCategoryNotifySetting(item)))
     && (hasOwn(value, "channels") && isArrayOf(value["channels"], item => isChatChannelNotifySetting(item)))
+    && (hasOwn(value, "server") && isChatServerNotify(value["server"]))
 }
 
 export const decodeChatNotificationSettings = decoder("chat.NotificationSettings", isChatNotificationSettings)
@@ -2420,6 +2422,21 @@ export function isChatSearchRoot(value: unknown): value is ChatSearchRoot {
 
 export const decodeChatSearchRoot = decoder("chat.SearchRoot", isChatSearchRoot)
 
+export type ChatServerNotify = {
+  level: ChatNotifyLevel
+  muted_until: string | null
+  suppress_everyone: boolean
+}
+
+export function isChatServerNotify(value: unknown): value is ChatServerNotify {
+  return isRecord(value)
+    && (hasOwn(value, "level") && isChatNotifyLevel(value["level"]))
+    && (hasOwn(value, "muted_until") && (isTimestamp(value["muted_until"]) || value["muted_until"] === null))
+    && (hasOwn(value, "suppress_everyone") && typeof value["suppress_everyone"] === 'boolean')
+}
+
+export const decodeChatServerNotify = decoder("chat.ServerNotify", isChatServerNotify)
+
 export type ChatSetNotifyLevelRequest = {
   level: ChatNotifyLevel
   muted_until?: string | null
@@ -2432,6 +2449,21 @@ export function isChatSetNotifyLevelRequest(value: unknown): value is ChatSetNot
 }
 
 export const decodeChatSetNotifyLevelRequest = decoder("chat.SetNotifyLevelRequest", isChatSetNotifyLevelRequest)
+
+export type ChatSetServerNotifyRequest = {
+  level: ChatNotifyLevel
+  muted_until?: string | null
+  suppress_everyone?: boolean
+}
+
+export function isChatSetServerNotifyRequest(value: unknown): value is ChatSetServerNotifyRequest {
+  return isRecord(value)
+    && (hasOwn(value, "level") && isChatNotifyLevel(value["level"]))
+    && (!hasOwn(value, "muted_until") || (isTimestamp(value["muted_until"]) || value["muted_until"] === null))
+    && (!hasOwn(value, "suppress_everyone") || typeof value["suppress_everyone"] === 'boolean')
+}
+
+export const decodeChatSetServerNotifyRequest = decoder("chat.SetServerNotifyRequest", isChatSetServerNotifyRequest)
 
 export type ChatStartTalkResponse = {
   channel_id: string

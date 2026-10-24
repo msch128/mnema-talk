@@ -26,6 +26,10 @@ type candidate struct {
 	dm           bool
 	channelLevel chat.NotifySetting
 	categoryLvl  chat.NotifySetting
+	// serverLvl is the member's server-wide default (never applied to a
+	// conversation); suppressAll ignores @all and @here.
+	serverLvl   chat.NotifySetting
+	suppressAll bool
 	// now is the database's clock, the one the stored mute ends use.
 	now time.Time
 }
@@ -36,11 +40,13 @@ type candidate struct {
 func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.UUID, only *uuid.UUID) ([]candidate, error) {
 	rows, err := q.Query(ctx, `
 		SELECT u.id, u.locale, u.push_preview, u.presence, c.name, c.type = 'dm',
-		       cr.notify_level, cr.muted_until, cn.notify_level, cn.muted_until, NOW()
+		       cr.notify_level, cr.muted_until, cn.notify_level, cn.muted_until,
+		       sn.notify_level, sn.muted_until, COALESCE(sn.suppress_everyone, FALSE), NOW()
 		FROM users u
 		JOIN channels c ON c.id = $1
 		LEFT JOIN channel_reads cr ON cr.user_id = u.id AND cr.channel_id = c.id
 		LEFT JOIN category_notify cn ON cn.user_id = u.id AND cn.category_id = c.category_id
+		LEFT JOIN server_notify sn ON sn.user_id = u.id
 		WHERE u.id <> $2 AND ($3::uuid IS NULL OR u.id = $3) AND u.disabled_at IS NULL
 		  AND NOT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = u.id AND ub.blocked_id = $2)
 		  AND EXISTS (SELECT 1 FROM push_subscriptions s WHERE s.user_id = u.id AND `+validSession+`)`, channelID, authorID, only)
@@ -51,12 +57,16 @@ func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.
 	var out []candidate
 	for rows.Next() {
 		var c candidate
-		var chLevel, catLevel *string
+		var chLevel, catLevel, srvLevel *string
 		if err := rows.Scan(&c.userID, &c.locale, &c.preview, &c.presence, &c.channelName, &c.dm,
-			&chLevel, &c.channelLevel.MutedUntil, &catLevel, &c.categoryLvl.MutedUntil, &c.now); err != nil {
+			&chLevel, &c.channelLevel.MutedUntil, &catLevel, &c.categoryLvl.MutedUntil,
+			&srvLevel, &c.serverLvl.MutedUntil, &c.suppressAll, &c.now); err != nil {
 			return nil, fmt.Errorf("load push candidates: %w", err)
 		}
-		c.channelLevel.Level, c.categoryLvl.Level = levelOf(chLevel), levelOf(catLevel)
+		c.channelLevel.Level, c.categoryLvl.Level, c.serverLvl.Level = levelOf(chLevel), levelOf(catLevel), levelOf(srvLevel)
+		if c.dm {
+			c.serverLvl, c.suppressAll = chat.NotifySetting{}, false
+		}
 		out = append(out, c)
 	}
 	return out, rows.Err()
@@ -71,7 +81,12 @@ func levelOf(stored *string) chat.NotifyLevel {
 
 // mention reports whether msg counts as addressed to the member for the
 // notification level: a mention or reply, or any message of a conversation.
-func (c candidate) mention(msg chat.Message) bool {
+// A member who suppresses @all and @here is only mentioned by name, through a
+// role or as a reply (byName, see namedMentions).
+func (c candidate) mention(msg chat.Message, byName map[uuid.UUID]bool) bool {
+	if c.suppressAll {
+		return c.dm || addressed(msg, c.userID, byName)
+	}
 	return c.dm || mentions(msg, c.userID)
 }
 
@@ -81,7 +96,7 @@ func quiet(presence string) bool {
 }
 
 // wants decides whether the message is pushed to this account: the account's
-// effective level for the channel (own setting, else the category's, else all;
+// effective level for the channel (own setting, else the category's, else the server default, else all;
 // expired mutes ignored) must allow it, and do-not-disturb must be off. A mute
 // still lets through a message addressed to the member (a mention by name or
 // role, or a reply), but not @all or @here.
@@ -89,7 +104,7 @@ func (c candidate) wants(mention, addressed bool) bool {
 	if quiet(c.presence) {
 		return false
 	}
-	switch chat.ResolveNotify(c.now, c.channelLevel, c.categoryLvl) {
+	switch chat.ResolveNotify(c.now, c.channelLevel, c.categoryLvl, c.serverLvl) {
 	case chat.NotifyAll:
 		return true
 	case chat.NotifyMentions:

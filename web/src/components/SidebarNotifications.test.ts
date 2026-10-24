@@ -11,6 +11,8 @@ import { channelFixture, onboardingStateFixture, readStateFixture, userFixture }
 import SidebarCategoryHeader from './SidebarCategoryHeader.vue'
 import SidebarChannelRow from './SidebarChannelRow.vue'
 import SidebarServerMenu from './SidebarServerMenu.vue'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { notifyDialogOpen } from '../lib/notifyDialog'
 
 beforeEach(() => setActivePinia(createPinia()))
 
@@ -24,6 +26,32 @@ describe('category header activity', () => {
     expect(header({ collapsed: true, unreadChannels: 2 }).find('[data-testid="category-unread"]').exists()).toBe(true)
     expect(header({ collapsed: false, mentions: 4, unreadChannels: 2 }).find('[data-testid="category-mentions"]').exists()).toBe(false)
     expect(header({ collapsed: true }).find('[data-testid="category-unread"]').exists()).toBe(false)
+  })
+
+  it('marks a category with its own mute or mentions-only setting', () => {
+    const server = { level: 'all' as const, muted_until: null, suppress_everyone: false }
+    const chat = useChatStore()
+    expect(header({}).find('[data-testid="category-muted"]').exists()).toBe(false)
+    chat.notifySettings = { channels: [], categories: [{ category_id: 'k1', level: 'mute', muted_until: null }], server }
+    expect(header({}).find('[data-testid="category-muted"]').exists()).toBe(true)
+    chat.notifySettings = { channels: [], categories: [{ category_id: 'k1', level: 'mentions', muted_until: null }], server }
+    const marked = header({})
+    expect(marked.find('[data-testid="category-mentions-only"]').exists()).toBe(true)
+    expect(marked.find('[data-testid="category-muted"]').exists()).toBe(false)
+  })
+})
+
+describe('mentions-only channel row', () => {
+  it('shows a calm marker instead of the muted bell', async () => {
+    const chat = useChatStore()
+    const channel = channelFixture({ id: 'c1', name: 'news' })
+    chat.readStates = { c1: readStateFixture({ channel_id: 'c1', unread_count: 4, mention_count: 0, notify_level: 'mentions' }) }
+    const row = mount(SidebarChannelRow, { props: { channel } })
+    expect(row.find('[data-testid="channel-mentions-only"]').exists()).toBe(true)
+    expect(row.find('[data-testid="channel-muted"]').exists()).toBe(false)
+    chat.readStates = { c1: readStateFixture({ channel_id: 'c1', unread_count: 4, mention_count: 0, notify_level: 'all' }) }
+    await nextTick()
+    expect(row.find('[data-testid="channel-mentions-only"]').exists()).toBe(false)
   })
 })
 
@@ -83,6 +111,19 @@ describe('server header subtitle', () => {
 })
 
 describe('server menu', () => {
+  it('opens the notification settings only on a server that has them', async () => {
+    const features = useServerFeaturesStore()
+    const menu = mount(SidebarServerMenu, { attachTo: document.body })
+    await menu.find('[aria-controls="server-menu"]').trigger('click')
+    expect(menu.find('[data-testid="menu-notification-settings"]').exists()).toBe(false)
+    features.list = ['notify.levels.v2']
+    await nextTick()
+    await menu.find('[data-testid="menu-notification-settings"]').trigger('click')
+    expect(notifyDialogOpen.value).toBe(true)
+    notifyDialogOpen.value = false
+    menu.unmount()
+  })
+
   it('offers mark all read to everyone', async () => {
     usePermissionsStore()
     const menu = mount(SidebarServerMenu, { attachTo: document.body })

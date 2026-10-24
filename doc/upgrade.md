@@ -151,6 +151,7 @@ of the pre-update backup (see "Rollback" above).
 | 0070 | `events` and `event_rsvps` tables: community events, RSVPs (see [events](events.md)); the new `Manage events` permission is granted to no role by default. |
 | 0071 | `discord_imports` and `discord_import_objects`: the record of each Discord structure import and the ids it created, for undo (see [Import](import.md)). Nothing existing is touched. |
 | 0072 | `media_original_filename_trgm_idx`: GIN trigram index on `media.original_filename` for fast case-insensitive attachment filename search. |
+| 0073 | `server_notify`: a member's server-wide notification default (see [Notification settings](#notification-settings)). Adds a table only. |
 
 #### Message search
 
@@ -273,6 +274,28 @@ members always carry them.
 - Feature key `events` in `GET /api/health`. Real-time WebSocket events `event_update` and `event_reminder`.
 - Audit logging for `event.create`, `event.edit`, and `event.cancel`.
 - Account erasure deletes personal RSVPs and clears event creator links; account export includes `rsvps.json`.
+
+#### Notification settings
+
+- Migration 0073 adds `server_notify` (one row per member who changed their
+  server-wide default: level, optional mute end, "suppress @all and @here").
+  Without a row a member keeps today's behaviour: every channel without its own
+  or its category's setting notifies for all messages.
+- Precedence: channel, then category, then the server default. The level in
+  `GET /api/read-state` (`notify_level`) is the effective one, so existing
+  clients show it correctly without changes. A server-wide "Nothing" behaves like
+  a channel mute: only messages addressed to the member by name, through a role
+  or as a reply still notify and count. Direct messages ignore the server default.
+- Feature name `notify.levels.v2` in `GET /api/health`. New
+  `PUT /api/notification-settings/server` (`level` `all`, `mentions` or `mute`,
+  `muted_until` for a timed mute, `suppress_everyone`); `GET /api/notification-settings`
+  gains a `server` object (additive). Changes reach the member's other sessions
+  with the existing `read_state` refresh event. Account export and erasure
+  include the new row.
+- Desktop client: the rail's right-click menu can call the same endpoints as the
+  web app (`PUT /api/channels/{id}/notifications`,
+  `PUT /api/categories/{id}/notifications`, `PUT /api/notification-settings/server`);
+  it should hide the server-wide entries when `notify.levels.v2` is missing.
 
 ### 1.0.x → 1.1.0
 

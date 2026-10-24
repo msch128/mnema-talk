@@ -4,7 +4,9 @@ import type { DropIndicator } from './presentationTypes'
 // Header of a sidebar category: collapse toggle, and for admins "+" / delete.
 // Admins can drag the header to move the whole category, or move it with
 // Alt+ArrowUp / Alt+ArrowDown on the toggle.
-import { Plus, Trash2, ChevronDown, ChevronRight } from '@lucide/vue'
+import { computed } from 'vue'
+import { Plus, Trash2, ChevronDown, ChevronRight, BellOff, AtSign } from '@lucide/vue'
+import { useChatStore } from '../stores/chat'
 
 const props = defineProps({
   category: { type: Object as PropType<{ id: string; name: string }>, required: true },
@@ -22,6 +24,10 @@ const props = defineProps({
 })
 
 const emit = defineEmits<{ toggle: []; menu: [event: MouseEvent | KeyboardEvent]; 'create-channel': []; delete: []; 'drag-start': [event: PointerEvent]; move: [direction: -1 | 1] }>()
+
+// The category's own setting, when it has one that is still in force.
+const chatStore = useChatStore()
+const ownLevel = computed(() => chatStore.notifySettings.categories.find(c => c.category_id === props.category.id)?.level)
 
 function moveKey(e: KeyboardEvent, dir: -1 | 1) {
   if (!props.admin) return
@@ -67,6 +73,8 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
       <ChevronRight v-if="collapsed" class="w-3 h-3 shrink-0" />
       <ChevronDown v-else class="w-3 h-3 shrink-0" />
       <span class="truncate">{{ category.name }}</span>
+      <BellOff v-if="ownLevel === 'mute'" class="w-3 h-3 shrink-0 ml-1" data-testid="category-muted" :aria-label="$t('notifications.bellNothing')" />
+      <AtSign v-else-if="ownLevel === 'mentions'" class="w-3 h-3 shrink-0 ml-1" data-testid="category-mentions-only" :aria-label="$t('notifications.bellMentions')" />
       <span
         v-if="collapsed && mentions > 0"
         data-testid="category-mentions"

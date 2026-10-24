@@ -119,7 +119,7 @@ func ListDMs(ctx context.Context, p *db.Pool, user uuid.UUID, only *uuid.UUID) (
 		var now time.Time
 		err := row.Scan(&d.ID, &d.Group, &d.CreatedAt, &d.LastMessageAt, &d.UnreadCount, &d.MentionCount,
 			&d.LastReadAt, &level.Level, &level.MutedUntil, &now)
-		d.NotifyLevel = ResolveNotify(now, level, NotifySetting{})
+		d.NotifyLevel = ResolveNotify(now, level, NotifySetting{}, NotifySetting{})
 		return d, err
 	})
 	if err != nil {

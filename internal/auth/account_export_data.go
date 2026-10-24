@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -136,7 +137,31 @@ func exportSettings(ctx context.Context, q db.Querier, user uuid.UUID, viewable 
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"channels": channels, "categories": categories}, nil
+	server, err := exportServerSetting(ctx, q, user)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"channels": channels, "categories": categories, "server": server}, nil
+}
+
+func exportServerSetting(ctx context.Context, q db.Querier, user uuid.UUID) (map[string]any, error) {
+	rows, err := q.Query(ctx, `SELECT notify_level, muted_until, suppress_everyone FROM server_notify WHERE user_id = $1`, user)
+	if err != nil {
+		return nil, err
+	}
+	type serverSetting struct {
+		Level            string     `json:"notify_level" db:"notify_level"`
+		MutedUntil       *time.Time `json:"muted_until" db:"muted_until"`
+		SuppressEveryone bool       `json:"suppress_everyone" db:"suppress_everyone"`
+	}
+	set, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[serverSetting])
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"notify_level": set.Level, "muted_until": set.MutedUntil, "suppress_everyone": set.SuppressEveryone}, nil
 }
 
 func exportReactions(ctx context.Context, q db.Querier, user uuid.UUID) ([]any, error) {

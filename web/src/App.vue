@@ -30,6 +30,8 @@ import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 import AudioSettingsModal from './components/AudioSettingsModal.vue'
 import AppSettingsModal from './components/AppSettingsModal.vue'
 import { appSettingsOpen } from './lib/appSettings'
+import { notifyDialogOpen } from './lib/notifyDialog'
+import NotificationSettingsDialog from './components/NotificationSettingsDialog.vue'
 import ScreenShareModal from './components/ScreenShareModal.vue'
 import UserProfileModal from './components/UserProfileModal.vue'
 import LegalModal from './components/LegalModal.vue'
@@ -351,6 +353,7 @@ onMounted(async () => {
 
       <!-- Own sign-in security: e-mail address -->
       <AccountSecurityDialog v-if="accountStore.dialogOpen" />
+      <NotificationSettingsDialog v-if="notifyDialogOpen" @close="notifyDialogOpen = false" />
 
       <!-- First run and re-acceptance of changed rules -->
       <WelcomeFlow />

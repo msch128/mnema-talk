@@ -3209,11 +3209,16 @@
               "$ref": "#/components/schemas/chat.ChannelNotifySetting"
             },
             "type": "array"
+          },
+          "server": {
+            "$ref": "#/components/schemas/chat.ServerNotify",
+            "description": "Server is the member's server-wide default (always present)."
           }
         },
         "required": [
           "categories",
-          "channels"
+          "channels",
+          "server"
         ],
         "type": "object"
       },
@@ -3967,6 +3972,34 @@
         ],
         "type": "object"
       },
+      "chat.ServerNotify": {
+        "properties": {
+          "level": {
+            "$ref": "#/components/schemas/chat.NotifyLevel",
+            "enum": [
+              "all",
+              "mentions",
+              "mute"
+            ]
+          },
+          "muted_until": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "suppress_everyone": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "level",
+          "muted_until",
+          "suppress_everyone"
+        ],
+        "type": "object"
+      },
       "chat.SetNotifyLevelRequest": {
         "properties": {
           "level": {
@@ -3979,6 +4012,34 @@
               "string",
               "null"
             ]
+          }
+        },
+        "required": [
+          "level"
+        ],
+        "type": "object"
+      },
+      "chat.SetServerNotifyRequest": {
+        "properties": {
+          "level": {
+            "$ref": "#/components/schemas/chat.NotifyLevel",
+            "enum": [
+              "all",
+              "mentions",
+              "mute"
+            ]
+          },
+          "muted_until": {
+            "description": "MutedUntil ends a mute (level mute only): in the future, at most a year ahead. Null or omitted mutes until unmuted.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "suppress_everyone": {
+            "description": "SuppressEveryone ignores @all and @here for the caller, at every level.",
+            "type": "boolean"
           }
         },
         "required": [
@@ -26463,7 +26524,7 @@
     },
     "/api/notification-settings": {
       "get": {
-        "description": "The caller's stored channel and category settings (level all, mentions or mute, with muted_until for timed mutes). Channels and categories without a setting, and expired mutes, are not listed; the read-state array carries the effective level per channel. Only channels and categories the caller may view.",
+        "description": "The caller's stored channel and category settings (level all, mentions or mute, with muted_until for timed mutes), plus the server-wide default under server. Channels and categories without a setting, and expired mutes, are not listed; the read-state array carries the effective level per channel. Only channels and categories the caller may view.",
         "operationId": "getNotificationSettings",
         "responses": {
           "200": {
@@ -26521,6 +26582,95 @@
           }
         ],
         "summary": "Notification settings",
+        "tags": [
+          "Channels"
+        ]
+      }
+    },
+    "/api/notification-settings/server": {
+      "put": {
+        "description": "The caller's server-wide default: level all, mentions or mute (optionally until muted_until) and whether @all and @here are ignored. Channels and categories without a setting of their own follow it (channel, then category, then this default); conversations are not affected by the level. Notifies the user's other sessions with a read_state refresh.",
+        "operationId": "setServerNotifications",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.SetServerNotifyRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: cross-origin request rejected by the CSRF check."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set server notification default",
         "tags": [
           "Channels"
         ]

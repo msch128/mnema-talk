@@ -64,7 +64,8 @@
   "menu": {
     "adminConsole": "Admin console",
     "legal": "Legal & privacy",
-    "rules": "Community rules"
+    "rules": "Community rules",
+    "notificationSettings": "Notification settings"
   },
   "account": {
     "menu": "Account menu",
@@ -283,10 +284,10 @@
     "granted": "Notifications are enabled.",
     "denied": "Notifications are blocked in the browser.",
     "channelSettings": "Notifications for this channel",
-    "inheritChannel": "Use category setting",
-    "inheritCategory": "Default (all messages)",
-    "muteChannel": "Mute channel",
-    "muteCategory": "Mute category",
+    "inheritChannel": "Use category default",
+    "inheritCategory": "Use server default",
+    "muteChannel": "Mute for…",
+    "muteCategory": "Mute for…",
     "mute_15m": "For 15 minutes",
     "mute_1h": "For 1 hour",
     "mute_8h": "For 8 hours",
@@ -294,7 +295,21 @@
     "mute_forever": "Until I turn it back on",
     "mutedUntil": "Until {time}",
     "mutedIndefinitely": "Muted",
-    "unmute": "Unmute"
+    "unmute": "Unmute",
+    "nothing": "Nothing",
+    "bellMentions": "Mentions only",
+    "bellNothing": "Muted",
+    "serverTitle": "Notification settings",
+    "serverSubtitle": "What may notify you on this server. Channels and categories can override it.",
+    "serverDefault": "Default for all channels",
+    "serverDefaultHint": "Used wherever a channel or its category has no setting of its own. Messages addressed to you by name still get through when you choose Nothing.",
+    "muteServer": "Mute server",
+    "muteServerStatus": "Muted until {time}",
+    "muteServerForever": "Muted until you turn it back on",
+    "unmuteServer": "Turn notifications back on",
+    "suppressEveryone": "Suppress @all and @here",
+    "suppressEveryoneHint": "Announcements to everyone no longer notify you or count as mentions.",
+    "serverSaveFailed": "Couldn’t save the notification settings. Try again."
   },
   "welcome": {
     "progress": "Step {current} of {total}",
