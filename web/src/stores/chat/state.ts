@@ -112,6 +112,7 @@ function socketState() {
     webrtcOfferHandler: null as Handler<'webrtc_offer'>,
     webrtcCandidateHandler: null as Handler<'webrtc_candidate'>,
     voiceKickedHandler: null as Handler<'voice_kicked'>,
+    talkMovedHandler: null as Handler<'talk_moved'>,
     mediaHandshakeHandler: null as Handler<'media_handshake'>
   }
 }

@@ -44,6 +44,7 @@ var Features = []string{
 	"profile.banner",
 	"profile.avatar_remove",
 	"status.expiry",
+	"talks.lobby",
 }
 
 // healthCacheTTL is how long a health result is reused: the endpoint is

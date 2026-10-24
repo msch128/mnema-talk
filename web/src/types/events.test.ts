@@ -74,7 +74,9 @@ const examples: Record<ServerEventType, unknown[]> = {
   screen_layers_wanted: [{ channel_id: id, layers: [] }, { channel_id: id, layers: [0, 2] }],
   voice_speaking: [{ ...room, active: true }],
   voice_mute_state: [{ ...room, muted: true, deafened: false }],
-  voice_kicked: [{ channel_id: id }, { channel_id: id, reason: 'room_full' }, { channel_id: id, reason: 'missing_permission' }],
+  voice_kicked: [{ channel_id: id }, { channel_id: id, reason: 'room_full' }, { channel_id: id, reason: 'missing_permission' }, { channel_id: id, reason: 'talk_rate_limited' }, { channel_id: id, reason: 'talk_unavailable' }],
+  talk_leader: [{ channel_id: id, leader_id: id }, { channel_id: id, leader_id: null }],
+  talk_moved: [{ from_channel_id: id, channel_id: fixtureId(2) }],
   media_handshake: [{ channel_id: id, user_id: id, wire: 'a' }],
 }
 

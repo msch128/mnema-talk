@@ -108,6 +108,11 @@ type Embed struct {
 	Thumbnail   *EmbedMedia  `json:"thumbnail,omitempty" binding:"optional"`
 	Author      *EmbedAuthor `json:"author,omitempty" binding:"optional"`
 	Fields      []EmbedField `json:"fields,omitempty" binding:"optional"`
+	// TalkID turns the embed into an invitation to this Talk: the client
+	// offers a Join button. Only the server sets it (a Talk invitation,
+	// talks_invite.go); webhook payloads cannot. Joining goes through the
+	// ordinary permission checks, the card grants nothing.
+	TalkID *uuid.UUID `json:"talk_id,omitempty" binding:"optional" format:"uuid"`
 }
 
 // EmbedFooter is the small text at the bottom of an embed.

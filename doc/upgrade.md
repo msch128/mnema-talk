@@ -138,7 +138,23 @@ of the pre-update backup (see "Rollback" above).
 
 | Migration | Adds |
 |---|---|
+| 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
 | 0061 | `users.status_expires_at` (a status line that clears itself, feature `status.expiry`). It also raises the limit of `channels.slow_mode_seconds` from 6 hours to 24 hours. |
+
+#### Talks
+
+- A Talk can be marked as a lobby; joining it opens a temporary Talk ("Talk 1",
+  "Talk 2", ...) for the member, who leads it. Members need no *Manage channels*
+  for that. Empty temporary Talks are removed after 30 seconds, and the server
+  removes all of them at start.
+- "Start a Talk" in a direct message opens a temporary Talk from the first lobby
+  the member can use and posts an invitation card. The card only links to the Talk;
+  joining runs the usual permission checks.
+- Feature name `talks.lobby` in `GET /api/health`. New events `talk_leader` and
+  `talk_moved`; new `voice_kicked` reasons `talk_rate_limited` and
+  `talk_unavailable`. REST: `PATCH /api/talks/{id}`, `POST /api/talks/{id}/invites`,
+  `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
+  channel (additive).
 
 #### Messaging
 

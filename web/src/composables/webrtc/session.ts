@@ -8,6 +8,7 @@ import { t } from '../../i18n'
 import { platform } from '../../lib/platform'
 import type { SubscribeRequest, ServerEventPayloads } from '../../types/events'
 import { loadIceServers } from './iceServers'
+import { isLobby, joinViaLobby, lobbyMoved, lobbyRefused } from './lobby'
 import { resumeRemoteAudio as resumeRemotePlayback } from './remoteAudio'
 import { closeMediaRoom, openMediaRoom, resetMediaAnnouncements } from './mediaRoom'
 import type { Cx } from './state'
@@ -25,6 +26,7 @@ function registerSignalingHandlers(cx: Cx) {
     onOffer: offer => handleRemoteOffer(cx, offer),
     onCandidate: candidate => handleRemoteCandidate(cx, candidate),
     onKicked: payload => handleKicked(cx, payload),
+    onTalkMoved: payload => lobbyMoved(cx, payload),
     onMedia(payload) {
       if (payload.channel_id !== voice.currentChannelId) return
       mediaCall().receive(payload.user_id, payload.wire)
@@ -100,8 +102,12 @@ function sealingRefusal(): Promise<boolean> | null {
   })
 }
 
-export async function joinVoiceChannel(cx: Cx, channelId: string) {
+export async function joinVoiceChannel(cx: Cx, channelId: string): Promise<void> {
   if (!canJoinVoiceChannel(cx, channelId)) return
+  if (isLobby(cx, channelId)) {
+    registerSignalingHandlers(cx)
+    return joinViaLobby(cx, channelId, talkId => joinVoiceChannel(cx, talkId))
+  }
   const refusal = sealingRefusal()
   if (refusal && await refusal) return
   const { voice, chat, st } = cx
@@ -193,6 +199,7 @@ export function leaveVoiceChannel(cx: Cx) {
 // already ended or rejected membership, so no voice_leave goes out.
 function handleKicked(cx: Cx, payload: ServerEventPayloads['voice_kicked']) {
   const { voice } = cx
+  if (lobbyRefused(cx, payload)) return
   if (!voice.currentChannelId) return
   if (payload.channel_id !== voice.currentChannelId) return
   endCall(cx, { notifyServer: false })

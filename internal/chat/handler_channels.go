@@ -202,7 +202,7 @@ func (h *Handler) deleteChannel(w http.ResponseWriter, r *http.Request) error {
 // updateChannel handles PATCH /api/admin/channels/{id}.
 //
 // @Summary Rename a channel, change its topic or member limit
-// @Description Requires the Manage channels permission (403 otherwise). user_limit (voice channels only) caps how many members can be in the room at once; 0 removes the limit (the default). A member already in the room always gets back in.
+// @Description Requires the Manage channels permission (403 otherwise). user_limit (voice channels only) caps how many members can be in the room at once; 0 removes the limit (the default). A member already in the room always gets back in. is_lobby (permanent voice channels only) makes the Talk a Create-a-Talk lobby.
 // @ID updateChannel
 // @Tags Admin
 // @Accept json
@@ -231,10 +231,16 @@ func (h *Handler) updateChannel(w http.ResponseWriter, r *http.Request) error {
 	if err := h.require(r, id, perm.ViewChannel); err != nil {
 		return err
 	}
+	if req.IsLobby != nil {
+		if err := SetLobby(r.Context(), h.DB, id, *req.IsLobby); err != nil {
+			return err
+		}
+	}
 	ch, err := UpdateChannel(r.Context(), h.DB, id, req.Name, req.Topic, req.UserLimit, req.SlowModeSeconds)
 	if err != nil {
 		return err
 	}
+	FillTalkFields(r.Context(), h.DB, ch)
 	h.channelsChanged()
 	httpx.WriteJSON(w, http.StatusOK, ch)
 	return nil
@@ -370,6 +376,9 @@ type UpdateChannelRequest struct {
 	// in the channel (0 turns slow mode off). Members who may manage messages
 	// in the channel are exempt.
 	SlowModeSeconds *int `json:"slow_mode_seconds" minimum:"0" maximum:"86400" binding:"optional"`
+	// IsLobby marks a voice channel as a Create-a-Talk lobby (true) or clears
+	// the mark (false): joining a lobby opens a temporary Talk (doc/talks.md).
+	IsLobby *bool `json:"is_lobby" binding:"optional"`
 }
 
 // LayoutRequest is the body of PUT /api/admin/layout: at most 500 entries in

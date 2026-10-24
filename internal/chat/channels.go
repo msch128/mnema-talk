@@ -44,6 +44,15 @@ type Channel struct {
 	// in this channel; 0 = off. Members who may manage messages here are
 	// exempt.
 	SlowModeSeconds int `json:"slow_mode_seconds" minimum:"0" maximum:"86400"`
+	// IsLobby marks a Talk as a "Create a Talk" lobby: joining it opens a
+	// temporary Talk instead of taking a seat (doc/talks.md).
+	IsLobby bool `json:"is_lobby" binding:"optional"`
+	// IsTemp marks a temporary Talk opened from a lobby; it is removed again
+	// once it stays empty.
+	IsTemp bool `json:"is_temp" binding:"optional"`
+	// LeaderID is the leader of a temporary Talk: the member who may rename
+	// it and set its member limit. Absent on every other channel.
+	LeaderID *uuid.UUID `json:"leader_id,omitempty" binding:"optional" format:"uuid"`
 }
 
 type Category struct {
@@ -75,7 +84,8 @@ func loadCategories(ctx context.Context, p *db.Pool) ([]Category, map[uuid.UUID]
 
 func populateChannels(ctx context.Context, p *db.Pool, categories []Category, categoryIdx map[uuid.UUID]int) ([]Channel, error) {
 	chanRows, err := p.Query(ctx, `
-		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds
+		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds,
+		       is_lobby, is_temp, leader_id
 		FROM channels WHERE type <> 'dm' ORDER BY sort_order, created_at`)
 	if err != nil {
 		return nil, fmt.Errorf("query channels: %w", err)
@@ -85,7 +95,7 @@ func populateChannels(ctx context.Context, p *db.Pool, categories []Category, ca
 	uncategorized := make([]Channel, 0)
 	for chanRows.Next() {
 		var ch Channel
-		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds); err != nil {
+		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.IsLobby, &ch.IsTemp, &ch.LeaderID); err != nil {
 			return nil, err
 		}
 		if ch.CategoryID != nil {
