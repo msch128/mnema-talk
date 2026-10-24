@@ -25428,8 +25428,91 @@
       }
     },
     "/api/users/me/avatar": {
+      "delete": {
+        "description": "Deletes the avatar and its stored file. Succeeds when there is none. Needs the profile.avatar_remove feature. Broadcasts user_update.",
+        "operationId": "deleteAvatar",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.User"
+                }
+              }
+            },
+            "description": "Updated user, without avatar_url."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: cross-origin request rejected by the CSRF check."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Remove avatar",
+        "tags": [
+          "Users"
+        ]
+      },
       "post": {
-        "description": "multipart/form-data with an image in field 'avatar' (max 5 MB). Replaces and deletes the previous avatar. Broadcasts user_update.",
+        "description": "multipart/form-data with an image in field 'avatar' (PNG, JPEG, GIF or WebP, max 5 MB). The server never stores the upload: it crops the centre square, shrinks it to at most 512x512 (never enlarged) and writes a new file, so metadata such as EXIF (GPS, camera model) is gone. An animated GIF stays animated within a budget of 16 million pixels (canvas times frames, at most 100 frames); animated WebP is rejected. Replaces and deletes the previous avatar. Broadcasts user_update.",
         "operationId": "uploadAvatar",
         "requestBody": {
           "content": {
@@ -25471,7 +25554,7 @@
                 }
               }
             },
-            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+            "description": "Invalid input (INVALID_INPUT): no file, too many frames, too large in pixels, or the picture cannot be read."
           },
           "401": {
             "content": {

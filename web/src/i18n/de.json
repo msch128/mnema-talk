@@ -1260,6 +1260,9 @@
     "avatarSaved": "Avatar gespeichert",
     "avatarTooBig": "Das Bild ist zu groß (max. {size} MB).",
     "avatarFailed": "Der Avatar konnte nicht hochgeladen werden. Versuche es noch einmal.",
+    "removeAvatar": "Avatar entfernen",
+    "avatarRemoved": "Avatar entfernt",
+    "avatarRemoveFailed": "Der Avatar konnte nicht entfernt werden. Versuche es noch einmal.",
     "changeBanner": "Banner ändern",
     "removeBanner": "Banner entfernen",
     "bannerSaved": "Banner gespeichert",
@@ -1798,6 +1801,7 @@
       "media": {
         "prune": "Medien bereinigt",
         "orphans_cleanup": "Verwaiste Dateien entfernt",
+        "avatar_removed": "Avatar entfernt (ließ sich nicht ohne Metadaten neu zeichnen)",
         "delete": "Medium gelöscht"
       },
       "system": {
