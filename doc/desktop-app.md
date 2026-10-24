@@ -178,7 +178,10 @@ authorities use normal system trust; there is no certificate bypass. Switching
 instances must isolate credentials, device keys, cached data and active connections.
 
 A native session broker must preserve the browser's existing cookie, CSRF, Origin
-and CSP protections. Local Tauri pages cannot reuse the browser transport by
+and CSP protections. The desktop shells apply the strict web CSP (`style-src 'self'; style-src-attr 'none'`)
+only for web bundles >= 1.1.0; older bundles keep the old policy. Old desktop
+storage from before multi-server support is wiped once and never handed to a
+server. Local Tauri pages cannot reuse the browser transport by
 spoofing an Origin or enabling wildcard CORS. Renderer permissions are limited to
 specific commands; there is no generic filesystem, shell or arbitrary HTTP bridge.
 

@@ -180,13 +180,17 @@ blocker it means:
 - the web app collapses the blocked member's messages to "Blocked message ·
   show" (the client reads `GET /api/me/blocks` and the `block_updated` event);
 - the blocked member's mentions and replies create no entry in the mentions
-  inbox, no mention count and no push, whatever the channel's notification
-  level, and a plain message of theirs sends no push either. It is decided
-  when the entry is listed or the push is sent, so it also covers messages
-  that were written before the block;
+  inbox (which excludes direct messages entirely), no mention count and no push,
+  whatever the channel's notification level, and a plain message of theirs sends
+  no push either. It is decided when the entry is listed or the push is sent,
+  so it also covers messages that were written before the block;
+- in any direct message conversation (group or two-person), unread and mention
+  counts and the conversation's last-activity time leave out messages by members
+  the reader blocked, and push recipients skip blockers;
 - in a direct message conversation of two, a block stops writing in both
   directions (the other side only sees that the member cannot be written
-  to), see [Direct messages](#direct-messages);
+  to); in a group, the conversation continues, but nobody can add a member
+  who blocked them;
 - unblocking brings the earlier inbox entries back, because nothing was
   deleted.
 

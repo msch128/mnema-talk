@@ -1,0 +1,80 @@
+name: CI (macOS calls)
+
+# The call specs on macOS WebKit run in their own workflow: they are slow and
+# flaky on hosted macOS runners and not a required check, and release.yml
+# releases on the completion of the "CI" workflow, so a timeout here must not
+# hold back a release.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths-ignore:
+      - CHANGELOG.md
+      - version.txt
+      - .release-please-manifest.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-macos-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # -- The call specs on WebKit. Playwright's Linux WebKit has no
+  # RTCRtpScriptTransform, so they cannot run in `e2e (webkit)`; macOS WebKit
+  # (the engine of Safari) has it. macOS runners have no Docker, so PostgreSQL
+  # and SeaweedFS run as local processes (E2E_NO_DOCKER). Not a required check.
+  e2e-webkit-macos:
+    name: e2e (webkit-macos-calls)
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            e2e/package-lock.json
+
+      # Homebrew can hiccup on the network: a bounded retry, nothing else.
+      - name: Install PostgreSQL and SeaweedFS
+        timeout-minutes: 10
+        run: |
+          for attempt in 1 2 3; do
+            brew install postgresql@18 seaweedfs && break
+            echo "brew install failed (attempt $attempt)" >&2
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 10
+          done
+          echo "E2E_PG_BIN=$(brew --prefix postgresql@18)/bin" >> "$GITHUB_ENV"
+
+      - name: Run the call specs on macOS WebKit
+        # A hang must end this step (and keep its log), not the job.
+        timeout-minutes: 22
+        env:
+          E2E_NO_DOCKER: "1"
+          E2E_INSTALL_BROWSER: "1"
+          E2E_BROWSERS: webkit
+          E2E_ONLY: "--project=webkit browser-sealing.spec.ts key-lifecycle.spec.ts late-join.spec.ts screenshare.spec.ts screen-layers.spec.ts stage-switch.spec.ts talk-extras.spec.ts voice-chat.spec.ts smoke.spec.ts roles.spec.ts"
+        run: e2e/run.sh
+
+      - name: Upload Playwright traces and screenshots
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-results-webkit-macos
+          path: |
+            e2e/test-results/
+            e2e/server.log
+          if-no-files-found: ignore
+          retention-days: 7

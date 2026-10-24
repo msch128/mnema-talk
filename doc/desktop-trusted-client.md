@@ -413,7 +413,8 @@ host:
   paths without a file) `index.html`, exactly as `web/web.go` does. Responses
   carry the SPA CSP of `internal/httpx` (`script-src 'self'
   'wasm-unsafe-eval'`, `connect-src 'self' ipc: ...`) and the same hardening
-  headers.
+  headers (the desktop shells apply the strict web CSP `style-src 'self'; style-src-attr 'none'`
+  only for web bundles >= 1.1.0; older bundles keep the old policy).
 * **`/api/...`**: forwarded to the instance origin with a fixed `reqwest`
   client (system TLS, no redirects, no proxy, timeouts, and bodies buffered in memory up to 128 MiB: the webview protocol cannot stream, so a larger answer is refused up front from its declared length; audio and video arrive in `Range` pieces).
   Only `/api/` paths, no dot segments, are forwarded. The host sets `Origin`
@@ -509,7 +510,8 @@ host:
 * Cookies: unchanged flags; the host is a stricter cookie holder than a
   browser (page cannot read it).
 * CSP: unchanged for browsers; the desktop app gets an equivalent policy
-  from the host.
+  from the host (the desktop shells apply the strict web CSP `style-src 'self'; style-src-attr 'none'`
+  only for web bundles >= 1.1.0; older bundles keep the old policy).
 * Rate limits and lockouts: unchanged; requests come from the user's own
   address and are counted as theirs.
 * No allow-list entry such as `tauri://localhost` is added to
