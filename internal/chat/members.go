@@ -31,7 +31,7 @@ type Member struct {
 // (migration 0012), so this does not scan the messages table.
 func GetAllMembers(ctx context.Context, p *db.Pool) ([]Member, error) {
 	rows, err := p.Query(ctx, `
-		SELECT u.id, u.username, u.display_name, u.bio, u.role, u.avatar_s3_key, u.status_text, u.created_at,
+		SELECT u.id, u.username, u.display_name, u.bio, u.role, u.avatar_s3_key, `+auth.StatusSQLFor("u.")+`, u.created_at,
 		       u.voice_seconds, u.message_count, b.id IS NOT NULL, b.created_by
 		FROM users u LEFT JOIN bots b ON b.user_id = u.id
 		WHERE `+auth.ActiveSQL("u")+` AND (NOT u.is_bot OR (b.id IS NOT NULL AND NOT b.disabled))
@@ -45,7 +45,7 @@ func GetAllMembers(ctx context.Context, p *db.Pool) ([]Member, error) {
 	for rows.Next() {
 		var m Member
 		var avatar *string
-		if err := rows.Scan(&m.ID, &m.Username, &m.DisplayName, &m.Bio, &m.Role, &avatar, &m.StatusText, &m.CreatedAt,
+		if err := rows.Scan(&m.ID, &m.Username, &m.DisplayName, &m.Bio, &m.Role, &avatar, &m.StatusText, &m.StatusExpiresAt, &m.CreatedAt,
 			&m.VoiceSeconds, &m.MessageCount, &m.IsBot, &m.AddedBy); err != nil {
 			return nil, err
 		}

@@ -460,7 +460,9 @@
     "moreActions": "Weitere Aktionen",
     "readOnly": "Du darfst in diesem Kanal nicht schreiben.",
     "noAttach": "Du darfst hier keine Dateien anhängen.",
-    "messageRemoved": "Nachricht entfernt"
+    "messageRemoved": "Nachricht entfernt",
+    "topicExpand": "Ganze Kanalbeschreibung anzeigen",
+    "topicCollapse": "Ganze Kanalbeschreibung ausblenden"
   },
   "thread": {
     "title": "Thread",
@@ -1248,7 +1250,8 @@
     "resetTwoFactorTitle": "Zwei-Faktor-Anmeldung von {name} zurücksetzen?",
     "resetTwoFactorBody": "Schaltet die Zwei-Faktor-Anmeldung aus, löscht das Authenticator-Geheimnis und die Recovery-Codes und meldet das Mitglied überall ab. Gedacht für den Fall, dass beides verloren ist. Danach kann es sie neu einschalten.",
     "resetTwoFactorConfirm": "Zurücksetzen",
-    "twoFactorReset": "Zwei-Faktor-Anmeldung zurückgesetzt."
+    "twoFactorReset": "Zwei-Faktor-Anmeldung zurückgesetzt.",
+    "channelTopicHelp": "Steht unter dem Kanalnamen. Halte sie kurz: wofür der Kanal da ist."
   },
   "profile": {
     "addedBy": "Hinzugefügt von {name}",
@@ -1305,7 +1308,17 @@
     "statusCleared": "Status geleert",
     "displayNameHint": "So sehen dich andere. Dein Username @{username} bleibt gleich. Höchstens {count} Zeichen.",
     "open": "Profil von {name} öffnen",
-    "passwordLink": "Passwort ändern und Anmeldesicherheit"
+    "passwordLink": "Passwort ändern und Anmeldesicherheit",
+    "clearAfter": "Löschen nach",
+    "expiry": {
+      "hour": "1 Stunde",
+      "tonight": "Heute Nacht (23:59)",
+      "tomorrow": "Morgen früh (08:00)",
+      "never": "Nie",
+      "custom": "Datum und Uhrzeit wählen …"
+    },
+    "expiryPast": "Wähle einen Zeitpunkt in der Zukunft.",
+    "clearsAt": "Wird gelöscht: {time}"
   },
   "nav": {
     "channelNotFound": "Diesen Kanal gibt es nicht mehr.",
@@ -2119,7 +2132,11 @@
     "slowMode": "Langsammodus",
     "slowModeOff": "Aus",
     "slowModeHint": "Mitglieder warten so lange zwischen zwei Nachrichten. Mitglieder mit „Nachrichten verwalten“ sind ausgenommen.",
-    "slowModeChip": "Langsammodus {time}"
+    "slowModeChip": "Langsammodus {time}",
+    "slowModeInvalid": "Gib eine ganze Zahl ab 1 ein.",
+    "slowModeTooLong": "Der Langsammodus kann höchstens 24 Stunden dauern.",
+    "slowModeCustom": "Eigener Wert",
+    "slowModeUnit": "Einheit"
   },
   "editHistory": {
     "menu": "Bearbeitungsverlauf",

@@ -39,9 +39,12 @@ function presenceUpdate(path: string, input: Record<string, unknown>, keys: stri
 }
 
 function statusUpdate(path: string, input: Record<string, unknown>, keys: string[]): Record<string, unknown> | null {
-  if (path !== '/api/users/me/status' || keys.length !== 1) return null
+  if (path !== '/api/users/me/status') return null
+  const expires = input['expires_at']
+  const hasExpiry = keys.length === 2 && typeof expires === 'string' && !Number.isNaN(Date.parse(expires)) && expires.length <= 40
+  if (keys.length !== 1 && !hasExpiry) return null
   if (!boundedText(input, 'status_text', 32)) return null
-  return { operation: 'status', status_text: input['status_text'] }
+  return hasExpiry ? { operation: 'status', status_text: input['status_text'], expires_at: expires } : { operation: 'status', status_text: input['status_text'] }
 }
 
 function personalUpdate(path: string, input: Record<string, unknown>): Record<string, unknown> | null {

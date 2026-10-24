@@ -85,6 +85,14 @@ no accounts on someone else's platform.
   messages with an optional note, or forward a message into another channel or
   a direct message. A forward is a reference, so it never shows more than the
   reader may already see.
+- **Status that clears itself.** Set a custom status with **Clear after** one
+  hour, tonight, tomorrow morning, never or a date and time of your own. Your
+  device works out the time in your time zone; the server clears the status
+  when it passes.
+- **Channel descriptions and slow mode presets.** A channel's description sits
+  next to its name (click it to read it in full) and is edited in the channel
+  settings. Slow mode has the presets Off, 10 s, 30 s, 1 min, 5 min, 30 min and
+  24 h, or any value up to 24 hours in seconds, minutes or hours.
 - **Slash commands.** `/poll`, `/me`, `/shrug`, `/tableflip`, `/unflip`,
   `/spoiler`, `/nick`, `/thread` and `/msg` (it needs *Send direct messages*)
   for members; `/timeout`, `/ban` and `/kick` need the matching permission. Bots can add their own

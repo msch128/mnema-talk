@@ -460,7 +460,9 @@
     "moreActions": "More actions",
     "readOnly": "You can’t write in this channel.",
     "noAttach": "You can’t attach files here.",
-    "messageRemoved": "Message removed"
+    "messageRemoved": "Message removed",
+    "topicExpand": "Show the full channel description",
+    "topicCollapse": "Hide the full channel description"
   },
   "thread": {
     "title": "Thread",
@@ -1248,7 +1250,8 @@
     "resetTwoFactorTitle": "Reset two-factor sign-in for {name}?",
     "resetTwoFactorBody": "Turns two-factor sign-in off, deletes the authenticator secret and the recovery codes, and signs the member out everywhere. Use it when they lost both the authenticator and the recovery codes. They can turn it on again afterwards.",
     "resetTwoFactorConfirm": "Reset",
-    "twoFactorReset": "Two-factor sign-in reset."
+    "twoFactorReset": "Two-factor sign-in reset.",
+    "channelTopicHelp": "Shown under the channel name. Keep it short: what this channel is for."
   },
   "profile": {
     "addedBy": "Added by {name}",
@@ -1305,7 +1308,17 @@
     "statusCleared": "Status cleared",
     "displayNameHint": "This is what others see. Your username @{username} stays the same. At most {count} characters.",
     "open": "Open {name}’s profile",
-    "passwordLink": "Change password and sign-in security"
+    "passwordLink": "Change password and sign-in security",
+    "clearAfter": "Clear after",
+    "expiry": {
+      "hour": "1 hour",
+      "tonight": "Tonight (23:59)",
+      "tomorrow": "Tomorrow morning (08:00)",
+      "never": "Never",
+      "custom": "Pick date and time…"
+    },
+    "expiryPast": "Pick a time in the future.",
+    "clearsAt": "Clears {time}"
   },
   "nav": {
     "channelNotFound": "That channel doesn’t exist anymore.",
@@ -2119,7 +2132,11 @@
     "slowMode": "Slow mode",
     "slowModeOff": "Off",
     "slowModeHint": "Members wait this long between two messages. Members with Manage messages are exempt.",
-    "slowModeChip": "Slow mode {time}"
+    "slowModeChip": "Slow mode {time}",
+    "slowModeInvalid": "Enter a whole number of 1 or more.",
+    "slowModeTooLong": "Slow mode can last 24 hours at most.",
+    "slowModeCustom": "Custom",
+    "slowModeUnit": "Unit"
   },
   "editHistory": {
     "menu": "Edit history",
