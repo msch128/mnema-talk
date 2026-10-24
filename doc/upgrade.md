@@ -173,11 +173,14 @@ posting a link, and a burst of invitations used at once (a party of more than 10
 within 10 seconds) is held back for 10 minutes; delete or loosen the rule if
 that does not suit your community. Nothing changes for existing messages.
 
-**API.** Additive: the report objects gain `source`, `automod_rule`,
-`automod_outcome` and `hit_count`, `message_id` and `channel_id` may be left out
-(automod entries about a message that was never stored, raid alerts),
-`kind` may be `alert` and `category` `automod`. New routes
-`/api/admin/automod*`. The health `features` list gains `automod`.
+**API.** Mostly additive: the report objects gain `source`, `automod_rule`,
+`automod_outcome` and `hit_count`, `kind` may be `alert` and `category`
+`automod`. New routes `/api/admin/automod*`. The health `features` list gains
+`automod`. **One contract change:** `message_id` and `channel_id` of an admin
+report entry (`GET /api/admin/reports`, `/reports/{id}`) are now optional: an
+automod entry about a blocked message (never stored) has no `message_id`, and a
+raid alert has neither. Clients must treat both as optional; reports filed by
+members always carry them.
 
 ### 1.0.x → 1.1.0
 
