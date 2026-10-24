@@ -577,10 +577,14 @@ tile's menu. Servers stay fully separate:
   data store is deleted, with a sweep at the next start for what a cut-short
   removal leaves), its sockets, toasts and gaming token, and its entry in the
   list. The list (`instances.json`) holds addresses only.
-* **Updating from the single-server client**: the end-to-end state of that
-  client sits in the engine's default storage. The first server added whose
-  session the old client stored takes that storage over (recorded as `legacy`
-  in the list), so nobody loses a device key by updating.
+* **Updating from the single-server client**: that client kept every server in
+  one shared browser storage and recorded none of them (only trust state,
+  bundles and per-origin sessions), so the storage belongs to no one server and
+  its owner cannot be proven. It is **never handed to a server**: it is wiped
+  once, on the first start of the new version, and every server starts with a
+  storage of its own. Stored sessions stay per exact origin as a sign-in
+  convenience. The cost is one new sign-in and a new device key for the
+  end-to-end media; messages live on the server and are unaffected.
 
 A server that ended the session (the `kicked` event of `/kick`, a password
 change, a sign-out elsewhere) leaves a stale cookie in the jar, as a browser
