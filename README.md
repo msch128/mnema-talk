@@ -113,8 +113,11 @@ no accounts on someone else's platform.
 - **Threads you can follow.** A thread reply notifies the thread's followers:
   the root's author, people who replied, people mentioned in a reply and
   anyone who pressed **Follow thread**.
-- **Search filters** for author, channel, mentions, dates, attachments, links,
-  polls, edited and pinned messages.
+- **Search filters** for author (`from:` and `author:bot|webhook|member`),
+  channel (`in:`), mentions (`mentions:`), dates (`before:`, `after:`, and
+  `during:` for a single local day), attachments (`has:file`, `filename:`),
+  links, embeds, polls, edited and pinned messages, with a calmer Discord-style
+  filter dropdown and sort order (newest, oldest, relevance).
 - **Installable web app with Web Push** notifications, and a layout for phones.
 - **Direct messages, blocking and reports.** Private conversations of two to
   ten members that moderators cannot browse, blocking that the other member

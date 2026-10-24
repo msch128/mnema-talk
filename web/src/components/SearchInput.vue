@@ -6,6 +6,7 @@ import { Search, X, Loader2 } from '@lucide/vue'
 import { FILTER_KEYS, serializeSearchQuery, splitCommitted } from '../lib/searchQuery'
 import { filtersUnsupported } from '../lib/searchSupport'
 import { applySuggestion, suggestFor } from '../lib/searchSuggest'
+import SearchFilterDropdown from './SearchFilterDropdown.vue'
 
 // The query line with its filter chips, the filter shortcuts and the
 // autocomplete of the filter token being typed. The text is the source of
@@ -18,12 +19,16 @@ const props = defineProps<{
   unresolved: FilterKey[]
   /** id of the highlighted result, for aria-activedescendant. */
   activeResultId?: string | undefined
+  v3Supported?: boolean
 }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string]; close: [] }>()
 
+const inputContainerEl = ref<HTMLElement | null>(null)
 const inputEl = ref<HTMLInputElement | null>(null)
 const suggestIndex = ref(0)
 const dismissed = ref(false)
+const isFocused = ref(false)
+const dropdownDismissed = ref(false)
 // What is typed in the field: the line without its finished filters (those are chips).
 const draft = ref(splitCommitted(props.modelValue).rest)
 let emitted = props.modelValue
@@ -34,6 +39,7 @@ const chips = computed(() => FILTER_KEYS.flatMap(key => {
   return value ? [{ key, value, bad: props.unresolved.includes(key) }] : []
 }))
 const suggestions = computed(() => (dismissed.value ? null : suggestFor(draft.value, props.lookup)))
+const showDropdown = computed(() => !!props.v3Supported && isFocused.value && !dropdownDismissed.value && !suggestions.value)
 const activeDescendant = computed(() => (suggestions.value ? `search-suggestion-${suggestIndex.value}` : props.activeResultId))
 
 // A change from outside (prefill, restored session query) replaces the field.
@@ -81,9 +87,32 @@ function addShortcut(key: FilterKey) {
   inputEl.value?.focus()
 }
 
+function onSelectFilter(token: string) {
+  if (token.endsWith(':')) {
+    addShortcut(token.slice(0, -1) as FilterKey)
+  } else {
+    const base = draft.value
+    const sep = base && !/\s$/.test(base) ? ' ' : ''
+    update(`${base}${sep}${token} `)
+  }
+  inputEl.value?.focus()
+}
+
+function onFocusOut(e: FocusEvent) {
+  const next = e.relatedTarget as Node | null
+  const root = inputContainerEl.value
+  if (root && next && root.contains(next)) return
+  isFocused.value = false
+}
+
 // Keys the suggestion list owns while it is open; everything else bubbles on
 // to the dialog (result navigation, Enter on the selected result).
 function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Backspace' && draft.value === '' && chips.value.length > 0) {
+    const last = chips.value[chips.value.length - 1]
+    if (last) removeChip(last.key)
+    return
+  }
   const ctx = suggestions.value
   if (!ctx) return
   const last = ctx.items.length - 1
@@ -102,7 +131,7 @@ defineExpose({ focus: () => inputEl.value?.focus() })
 </script>
 
 <template>
-  <div class="border-b border-mnema-border bg-mnema-surface/50">
+  <div ref="inputContainerEl" class="border-b border-mnema-border bg-mnema-surface/50" @focusin="isFocused = true" @focusout="onFocusOut">
     <div class="relative flex items-center gap-3 px-4 py-3.5">
       <Search class="w-5 h-5 text-mnema-tertiary shrink-0" />
       <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
@@ -155,6 +184,13 @@ defineExpose({ focus: () => inputEl.value?.focus() })
         <X class="w-4 h-4" />
       </button>
 
+      <SearchFilterDropdown
+        :open="showDropdown"
+        :lookup="lookup"
+        @select="onSelectFilter"
+        @close="dropdownDismissed = true"
+      />
+
       <ul
         v-if="suggestions"
         id="search-suggestions"
@@ -177,7 +213,7 @@ defineExpose({ focus: () => inputEl.value?.focus() })
       </ul>
     </div>
 
-    <div class="flex flex-wrap items-center gap-1.5 border-t border-mnema-hairline bg-mnema-raised px-4 py-2 text-xs text-mnema-muted">
+    <div v-if="!v3Supported" class="flex flex-wrap items-center gap-1.5 border-t border-mnema-hairline bg-mnema-raised px-4 py-2 text-xs text-mnema-muted">
       <span>{{ $t('chat.filter') }}:</span>
       <button
         v-for="key in FILTER_KEYS.filter(k => !(k === 'is' && filtersUnsupported))"
@@ -188,6 +224,10 @@ defineExpose({ focus: () => inputEl.value?.focus() })
         @click="addShortcut(key)"
       >{{ key }}:</button>
       <span class="ml-auto font-mono text-mnema-tertiary">Esc {{ $t('common.close') }}</span>
+    </div>
+    <div v-else class="flex items-center justify-between border-t border-mnema-hairline bg-mnema-raised px-4 py-1.5 text-xs text-mnema-muted">
+      <span class="text-mnema-tertiary">{{ $t('chat.searchHint') }}</span>
+      <span class="font-mono text-mnema-tertiary">Esc {{ $t('common.close') }}</span>
     </div>
   </div>
 </template>

@@ -146,6 +146,23 @@ of the pre-update backup (see "Rollback" above).
 | 0065 | `instance_settings.session_inactivity_days` (1 to 365, default 7). |
 | 0066 | `automod_rules` and `automod_state` with the default rules (below), and the columns `source`, `automod_rule`, `automod_outcome` and `hit_count` of `message_reports` (existing reports keep `source = 'member'`). |
 | 0067 | `moderation_notes`: private moderator notes about members. |
+| 0072 | `media_original_filename_trgm_idx`: GIN trigram index on `media.original_filename` for fast case-insensitive attachment filename search. |
+
+#### Message search
+
+- **New search filters and ordering.** The message search API (`GET /api/search`)
+  supports `during:YYYY-MM-DD` (matching messages within a single local day,
+  accepting `tz` offset parameter from the client), `filename:<text>` (matching
+  original filenames of attachments case-insensitively via trigram index),
+  `author:bot|webhook|member` (filtering by author type), `has:embed`, and a
+  `sort=newest|oldest|relevance` parameter (default `newest`).
+- **Interactive filter dropdown and chips.** When the search box is focused,
+  suggestion chips allow quick selection of `from:`, `in:`, `mentions:`, `has:`,
+  `during:`, `author:`, and `filename:` filters, rendered as removable chips in
+  the query line. A sort order toggle in the results header allows switching
+  between Newest, Oldest, and Relevance.
+- **Feature flag.** Advertised as `search.filters.v3` in `GET /api/health`.
+  A web client connected to an older server hides the new dropdown and sort toggle.
 
 #### Talks
 

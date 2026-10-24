@@ -2,6 +2,8 @@ package chat
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -19,7 +21,8 @@ func isSearchEmpty(terms []string, q SearchQuery) bool {
 	if len(terms) > 0 || q.ChannelID != nil || q.AuthorID != nil || q.Mentions != nil {
 		return false
 	}
-	return q.Has == "" && q.Is == "" && q.After == nil && q.BeforeDate == nil
+	return q.Has == "" && q.Is == "" && q.After == nil && q.BeforeDate == nil &&
+		q.DuringStart == nil && q.Filename == "" && q.AuthorType == ""
 }
 
 // validateSearchDates rejects an empty time window (After not before BeforeDate).
@@ -42,9 +45,90 @@ func ParseSearchTime(name, v string) (*time.Time, error) {
 	return &t, nil
 }
 
+var isoOffsetRe = regexp.MustCompile(`^([+-])(\d{1,2})(?::?(\d{2}))?$`)
+
+func parseISOOffset(tz string) (*time.Location, bool) {
+	m := isoOffsetRe.FindStringSubmatch(tz)
+	if m == nil {
+		return nil, false
+	}
+	sign := 1
+	if m[1] == "-" {
+		sign = -1
+	}
+	h, _ := strconv.Atoi(m[2])
+	mins := 0
+	if m[3] != "" {
+		mins, _ = strconv.Atoi(m[3])
+	}
+	if h > 24 || mins > 59 {
+		return nil, false
+	}
+	return time.FixedZone("", sign*(h*3600+mins*60)), true
+}
+
+func parseNumericOffset(tz string) (*time.Location, bool) {
+	n, err := strconv.Atoi(tz)
+	if err != nil {
+		return nil, false
+	}
+	secs := n * 60
+	if n < -14*60 || n > 14*60 {
+		if n < -86400 || n > 86400 {
+			return nil, false
+		}
+		secs = n
+	}
+	return time.FixedZone("", secs), true
+}
+
+func parseTZLocation(tz string) (*time.Location, error) {
+	tz = strings.TrimSpace(tz)
+	if tz == "" || strings.EqualFold(tz, "utc") || tz == "Z" {
+		return time.UTC, nil
+	}
+	if loc, ok := parseISOOffset(tz); ok {
+		return loc, nil
+	}
+	if loc, ok := parseNumericOffset(tz); ok {
+		return loc, nil
+	}
+	if loc, err := time.LoadLocation(tz); err == nil {
+		return loc, nil
+	}
+	return nil, httpx.ErrInvalidInput("invalid tz offset")
+}
+
+// ParseSearchDay parses a YYYY-MM-DD date and a timezone offset, returning the day's UTC window.
+func ParseSearchDay(during, tz string) (*time.Time, *time.Time, error) {
+	if during == "" {
+		return nil, nil, nil
+	}
+	t, err := time.Parse("2006-01-02", during)
+	if err != nil {
+		return nil, nil, httpx.ErrInvalidInput("during must be a YYYY-MM-DD date")
+	}
+	loc, err := parseTZLocation(tz)
+	if err != nil {
+		return nil, nil, err
+	}
+	y, m, d := t.Date()
+	start := time.Date(y, m, d, 0, 0, 0, 0, loc).UTC()
+	end := time.Date(y, m, d+1, 0, 0, 0, 0, loc).UTC()
+	return &start, &end, nil
+}
+
 func validateSearchTerms(q SearchQuery) ([]string, error) {
 	if err := validateSearchDates(q); err != nil {
 		return nil, err
+	}
+	switch q.Sort {
+	case "", "newest", "oldest", "relevance":
+	default:
+		return nil, httpx.ErrInvalidInput("sort must be newest, oldest or relevance")
+	}
+	if utf8.RuneCountInString(q.Filename) > maxSearchQueryLen {
+		return nil, httpx.ErrInvalidInput("filename is too long")
 	}
 	text := strings.TrimSpace(q.Text)
 	if utf8.RuneCountInString(text) > maxSearchQueryLen {
@@ -91,13 +175,28 @@ func (b *searchBuilder) addScope(q SearchQuery) {
 	}
 }
 
-func (b *searchBuilder) addFilters(q SearchQuery) error {
-	b.addScope(q)
-	if q.ChannelID != nil {
-		b.where = append(b.where, "m.channel_id = "+b.addArg(*q.ChannelID))
-	}
+func (b *searchBuilder) addAuthorFilters(q SearchQuery) error {
 	if q.AuthorID != nil {
 		b.where = append(b.where, "m.user_id = "+b.addArg(*q.AuthorID))
+	}
+	switch q.AuthorType {
+	case "":
+		return nil
+	case "bot":
+		b.where = append(b.where, "u.is_bot AND u.username NOT LIKE 'wh-%'")
+	case "webhook":
+		b.where = append(b.where, "u.is_bot AND u.username LIKE 'wh-%'")
+	case "member":
+		b.where = append(b.where, "NOT u.is_bot")
+	default:
+		return httpx.ErrInvalidInput("author must be bot, webhook or member")
+	}
+	return nil
+}
+
+func (b *searchBuilder) addContentFilters(q SearchQuery) error {
+	if q.Filename != "" {
+		b.where = append(b.where, "EXISTS (SELECT 1 FROM media f WHERE f.message_id = m.id AND f.original_filename ILIKE "+b.addArg(likePattern(q.Filename))+` ESCAPE '\')`)
 	}
 	has, err := hasCondition(q.Has)
 	if err != nil {
@@ -116,15 +215,40 @@ func (b *searchBuilder) addFilters(q SearchQuery) error {
 	if q.Mentions != nil {
 		b.where = append(b.where, "EXISTS (SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = "+b.addArg(*q.Mentions)+")")
 	}
+	return nil
+}
+
+func (b *searchBuilder) addDateFilters(q SearchQuery) {
 	if q.After != nil {
 		b.where = append(b.where, "m.created_at > "+b.addArg(*q.After))
 	}
 	if q.BeforeDate != nil {
 		b.where = append(b.where, "m.created_at < "+b.addArg(*q.BeforeDate))
 	}
-	if q.Before != nil {
-		b.where = append(b.where, "(m.created_at, m.id) < (SELECT created_at, id FROM messages WHERE id = "+b.addArg(*q.Before)+")")
+	if q.DuringStart != nil && q.DuringEnd != nil {
+		b.where = append(b.where, "m.created_at >= "+b.addArg(*q.DuringStart)+" AND m.created_at < "+b.addArg(*q.DuringEnd))
 	}
+	if q.Before != nil {
+		op := "<"
+		if q.Sort == "oldest" {
+			op = ">"
+		}
+		b.where = append(b.where, fmt.Sprintf("(m.created_at, m.id) %s (SELECT created_at, id FROM messages WHERE id = %s)", op, b.addArg(*q.Before)))
+	}
+}
+
+func (b *searchBuilder) addFilters(q SearchQuery) error {
+	b.addScope(q)
+	if q.ChannelID != nil {
+		b.where = append(b.where, "m.channel_id = "+b.addArg(*q.ChannelID))
+	}
+	if err := b.addAuthorFilters(q); err != nil {
+		return err
+	}
+	if err := b.addContentFilters(q); err != nil {
+		return err
+	}
+	b.addDateFilters(q)
 	return nil
 }
 
@@ -141,12 +265,14 @@ func hasCondition(has string) (string, error) {
 		return "EXISTS (SELECT 1 FROM media f WHERE f.message_id = m.id AND f.mime_type LIKE 'video/%')", nil
 	case "link":
 		return `m.content ~* 'https?://'`, nil
+	case "embed":
+		return "jsonb_array_length(m.embeds) > 0", nil
 	case "poll":
 		return "EXISTS (SELECT 1 FROM polls p WHERE p.message_id = m.id)", nil
 	case "edit":
 		return "m.is_edited", nil
 	}
-	return "", httpx.ErrInvalidInput("has must be file, image, video, link, poll or edit")
+	return "", httpx.ErrInvalidInput("has must be file, image, video, link, embed, poll or edit")
 }
 
 // isCondition is the WHERE condition of the "is" filter ("" for none).

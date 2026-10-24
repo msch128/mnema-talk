@@ -39,6 +39,7 @@ var Features = []string{
 	"saved",
 	"forward",
 	"search.filters.v2",
+	"search.filters.v3",
 	"threads.follow",
 	"slash.builtins",
 	"profile.banner",

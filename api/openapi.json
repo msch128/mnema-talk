@@ -27581,7 +27581,7 @@
     },
     "/api/search": {
       "get": {
-        "description": "Text channels and voice channels' chats (with dm=true, the caller's direct messages instead), newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id, mentions, has, is, after or before_date is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.",
+        "description": "Text channels and voice channels' chats (with dm=true, the caller's direct messages instead), newest first (or by sort). Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id, mentions, has, is, after, before_date, during, filename or author is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.",
         "operationId": "searchMessages",
         "parameters": [
           {
@@ -27612,7 +27612,20 @@
             }
           },
           {
-            "description": "Only messages with a file, an image, a video, a link, a poll or an edit.",
+            "description": "Only messages by this author type: bot, webhook or member.",
+            "in": "query",
+            "name": "author",
+            "schema": {
+              "enum": [
+                "bot",
+                "webhook",
+                "member"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only messages with a file, an image, a video, a link, an embed, a poll or an edit.",
             "in": "query",
             "name": "has",
             "schema": {
@@ -27621,6 +27634,7 @@
                 "image",
                 "video",
                 "link",
+                "embed",
                 "poll",
                 "edit"
               ],
@@ -27648,6 +27662,15 @@
             }
           },
           {
+            "description": "Only messages with an attachment matching this file name (case-insensitive substring).",
+            "in": "query",
+            "name": "filename",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
             "description": "Only messages created after this instant (RFC 3339); must be earlier than before_date.",
             "in": "query",
             "name": "after",
@@ -27666,11 +27689,42 @@
             }
           },
           {
-            "description": "Page back: only messages older than this message.",
+            "description": "Only messages created during this day (YYYY-MM-DD) in the caller's timezone.",
+            "in": "query",
+            "name": "during",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Timezone offset for during (e.g. +02:00, -05:00, or minutes).",
+            "in": "query",
+            "name": "tz",
+            "schema": {
+              "default": "UTC",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page back: only messages older (or newer, if sort=oldest) than this message.",
             "in": "query",
             "name": "before",
             "schema": {
               "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sort order: newest (default), oldest or relevance.",
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "enum": [
+                "newest",
+                "oldest",
+                "relevance"
+              ],
               "type": "string"
             }
           },
