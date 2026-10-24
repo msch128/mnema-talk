@@ -163,6 +163,7 @@ of the pre-update backup (see "Rollback" above).
   between Newest, Oldest, and Relevance.
 - **Feature flag.** Advertised as `search.filters.v3` in `GET /api/health`.
   A web client connected to an older server hides the new dropdown and sort toggle.
+| 0071 | `discord_imports` and `discord_import_objects`: the record of each Discord structure import and the ids it created, for undo (see [Import](import.md)). Nothing existing is touched. |
 
 #### Talks
 
@@ -219,6 +220,25 @@ members always carry them.
 #### Operator status
 
 - A dedicated **Admin → Status** page (feature key `ops.status`, endpoint `GET /api/admin/status`, Owner and Administrator only) provides an at-a-glance operational overview: version, available updates and auto-deploy status, database size and migration count, storage reachability and disk free space, backup status, live activity (active sessions, WebSocket connections, Talks and participants), and active operator warnings. See [operations.md](operations.md#operator-status).
+
+#### Discord import
+
+- *Admin*, *Import* copies the categories, channels, Talks and roles of a Discord
+  server from a server template link (see [Import](import.md)). It is limited to
+  the Owner and members with *Administrator*, strictly additive (appended at the
+  end, roles below every existing role, never Administrator, `@everyone`
+  untouched), runs after a preview and three confirmations in one transaction, and
+  can be undone.
+- Feature name `import.discord` in `GET /api/health`. REST: `POST
+  /api/admin/import/discord/preview`, `POST /api/admin/import/discord/apply`,
+  `GET /api/admin/import/discord/imports`, `GET
+  /api/admin/import/discord/imports/{id}` and `POST
+  /api/admin/import/discord/imports/{id}/undo` (all additive). Audit actions
+  `import.discord` and `import.discord_undo`, visible to the Owner and
+  Administrators only.
+- The server needs outbound HTTPS access to `discord.com` for the preview and the
+  import. Nothing else is contacted, and nothing is sent to Discord beyond the
+  template code.
 
 ### 1.0.x → 1.1.0
 

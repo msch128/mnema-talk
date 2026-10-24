@@ -108,6 +108,11 @@ var Routes = []Route{
 	{Method: "PATCH", Pattern: "/bots/{id}/commands/{commandID}", Action: "bot.command_update", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
 	{Method: "DELETE", Pattern: "/bots/{id}/commands/{commandID}", Action: "bot.command_delete", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
 
+	// The import writes its own audit entry in the transaction that does the work.
+	{Method: "POST", Pattern: "/import/discord/preview", Skip: true},
+	{Method: "POST", Pattern: "/import/discord/apply", Skip: true},
+	{Method: "POST", Pattern: "/import/discord/imports/{id}/undo", Skip: true},
+
 	{Method: "PUT", Pattern: "/upload-limit", Action: "settings.upload_limit", TargetType: "settings", Snapshot: ResSettings},
 
 	{Method: "PUT", Pattern: "/onboarding", Action: "settings.onboarding", TargetType: "settings", Snapshot: ResOnboarding},

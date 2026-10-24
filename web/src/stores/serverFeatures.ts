@@ -45,6 +45,7 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     channelAutoDelete: computed(() => has('channels.auto_delete')),
     avatarRemove: computed(() => has('profile.avatar_remove')),
     talksLobby: computed(() => has('talks.lobby')),
-    opsStatus: computed(() => has('ops.status'))
+    opsStatus: computed(() => has('ops.status')),
+    importDiscord: computed(() => has('import.discord'))
   }
 })

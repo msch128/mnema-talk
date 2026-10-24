@@ -53,6 +53,7 @@ var Features = []string{
 	"automod",
 	"moderation.history",
 	"ops.status",
+	"import.discord",
 }
 
 // healthCacheTTL is how long a health result is reused: the endpoint is
