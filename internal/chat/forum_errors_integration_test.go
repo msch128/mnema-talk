@@ -477,7 +477,7 @@ func TestForumValidationHelpers(t *testing.T) {
 	if _, err := CleanPostTitle(" \t "); err == nil {
 		t.Fatal("blank title accepted")
 	}
-	if got, err := CleanPostTitle(strings.Repeat("ü", 100)); err != nil || got == "" {
+	if got, err := CleanPostTitle(strings.Repeat("\u00fc", 100)); err != nil || got == "" {
 		t.Fatalf("100-rune title rejected: %v", err)
 	}
 }
