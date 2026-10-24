@@ -1,0 +1,91 @@
+internal/auth/session.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 6,26-28,40-41,66-70
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_f94ef10b5a18f5 275-306,370-380,2593,2604,2616,2627
+internal/auth/user_sessions_integration_test.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 1-325
+doc/operations.md
+  s_06fcde5dbef956::t_f94ef10b5a18f5 46,256-290,348-350
+internal/auth/handler.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 132-134
+internal/auth/account_export_build.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 66,159
+web/src/components/AccountSessions.test.ts
+  s_06fcde5dbef956::t_f94ef10b5a18f5 1-122
+internal/server/session_inactivity_integration_test.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 1-80
+internal/auth/device_label.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 1-56
+web/src/components/AccountSecurityDialog.test.ts
+  s_06fcde5dbef956::t_f94ef10b5a18f5 22
+web/src/components/AccountSessions.vue
+  s_06fcde5dbef956::t_f94ef10b5a18f5 1-115
+internal/db/migrations/0065_session_inactivity.sql
+  s_06fcde5dbef956::t_f94ef10b5a18f5 1-6
+doc/upgrade.md
+  s_06fcde5dbef956::t_f94ef10b5a18f5 143-144,171-180
+  s_06fcde5dbef956::t_8bb170fe908256 181
+internal/db/migrations/0064_user_sessions.sql
+  s_06fcde5dbef956::t_f94ef10b5a18f5 1-27
+internal/auth/device_label_test.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 1-23
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 54
+web/src/components/AccountSecurityDialog.vue
+  s_06fcde5dbef956::t_f94ef10b5a18f5 12,36
+internal/auth/session_sweep_integration_test.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 1-113
+api/openapi.json
+  s_06fcde5dbef956::t_f94ef10b5a18f5 492-544,634-645,4190-4195,4215,4242-4250,11300,16456-16703
+internal/auth/account_export_sessions.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 1-24
+internal/auth/user_sessions.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 1-79
+web/src/components/AdminOnboardingTab.test.ts
+  s_06fcde5dbef956::t_f94ef10b5a18f5 19,60,114-130
+  s_06fcde5dbef956::t_0bc3f726ff6bf0 131
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_f94ef10b5a18f5 1236-1239,1885-1887,2404-2428
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_f94ef10b5a18f5 1236-1239,1885-1887,2404-2428
+web/src/lib/accountApi.ts
+  s_06fcde5dbef956::t_f94ef10b5a18f5 3-4,46-60
+internal/auth/service.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 231-234,241-242
+internal/onboarding/settings.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 22-27,46-48,66-68,71,75,106,155-161,199-200,202
+internal/server/router_build.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 113
+internal/auth/session_sweep.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 1-74
+doc/moderation.md
+  s_06fcde5dbef956::t_f94ef10b5a18f5 288
+web/src/components/ReportsAndPrivacy.test.ts
+  s_06fcde5dbef956::t_f94ef10b5a18f5 320
+internal/auth/claims_version.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 34
+internal/audit/classes_test.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 15
+internal/server/account_export_integration_test.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 365-367
+internal/auth/user_sessions_handler.go
+  s_06fcde5dbef956::t_f94ef10b5a18f5 1-209
+web/src/components/AdminOnboardingTab.vue
+  s_06fcde5dbef956::t_f94ef10b5a18f5 19-20,35-36,44-45,47,59,78,148-154,156
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8f1a28310bf2eeeec8873bd274ce371c0312ed7f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
