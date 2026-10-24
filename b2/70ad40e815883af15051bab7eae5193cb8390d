@@ -1,0 +1,164 @@
+web/src/components/AccountMenu.behavior.test.ts
+  s_06fcde5dbef956::t_828b568093ec81 26,32
+  s_06fcde5dbef956::t_87f8655c9cfe1f 8
+web/src/components/PasswordInput.vue
+  s_06fcde5dbef956::t_5cea8f3423a304 1-27,29-37
+  s_06fcde5dbef956::t_185ada55a3710e 28
+web/src/components/BaseDialog.vue
+  s_06fcde5dbef956::t_ca8716d6fbcb1d 19-21,46,57,65
+web/src/components/smoke.test.ts
+  s_06fcde5dbef956::t_828b568093ec81 21,67
+web/src/lib/welcomeSteps.test.ts
+  s_06fcde5dbef956::t_a151d38a4d74cc 6,31-32
+  s_06fcde5dbef956::t_7c58ab4d6ff85a 33
+web/src/components/WelcomeProfileStep.test.ts
+  s_06fcde5dbef956::t_dcc522c854d1cd 64-72
+web/src/components/AccountTwoFactor.vue
+  s_06fcde5dbef956::t_71b6119271e778 146-147
+  s_06fcde5dbef956::t_78622551852bb2 17-18,114-116,129-131,143-145,148
+web/src/components/AudioSettingsPanel.vue
+  s_06fcde5dbef956::t_1b9a4ef7bef775 18,23
+  s_06fcde5dbef956::t_7700d84a3f7972 1-17,19-22,24-36
+web/src/components/AccountEmail.vue
+  s_06fcde5dbef956::t_78622551852bb2 10-11,98-103
+web/src/components/BaseDialog.test.ts
+  s_06fcde5dbef956::t_dcc522c854d1cd 135-150
+web/src/components/WelcomeProfileStep.vue
+  s_06fcde5dbef956::t_f979015dae3c9a 10,62,66-67,69,72-76,78,83,87,89,92,96,99
+  s_06fcde5dbef956::t_9c03c1eff8db27 81,90
+web/src/components/FormField.vue
+  s_06fcde5dbef956::t_5cea8f3423a304 1-6,9,12-24
+  s_06fcde5dbef956::t_9c03c1eff8db27 7-8,10-11
+web/src/components/AccountMenu.vue
+  s_06fcde5dbef956::t_d60279e2036c18 7,13,148-149
+web/src/components/SettingsDialog.test.ts
+  s_06fcde5dbef956::t_7700d84a3f7972 1-5,7-8,11-28,30-40,42-152,154-159,161-167,238-240
+  s_06fcde5dbef956::t_82963a28bfc7fd 9-10,168-237
+  s_06fcde5dbef956::t_3168c9b0bd5610 6,29,41,153,160
+web/src/lib/settingsDialog.ts
+  s_06fcde5dbef956::t_7700d84a3f7972 1-15
+web/src/components/UserProfileModal.vue
+  s_06fcde5dbef956::t_79900cee4fef55 227
+  s_06fcde5dbef956::t_fabdb7bbf542ef 3,5,26,67-68,82
+  s_06fcde5dbef956::t_c0c08a6c21cd30 10,150-151,189-190,193,195-196,198,201,203
+web/src/components/ProfileAvatar.vue
+  s_06fcde5dbef956::t_1f88fb50da4e91 171,173
+  s_06fcde5dbef956::t_7500b18c841d5e 148,160
+web/src/components/WelcomeFlow.test.ts
+  s_06fcde5dbef956::t_a151d38a4d74cc 109,113-115
+web/src/components/settingsPrimitives.test.ts
+  s_06fcde5dbef956::t_a606a1ac99d221 18,105
+  s_06fcde5dbef956::t_f298b1e8638ec1 53,56
+  s_06fcde5dbef956::t_9aeaaffc39fe85 1-17,19-52,54-55,57-104,106-119
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_f298b1e8638ec1 2731-2732
+  s_06fcde5dbef956::t_f008a01d8cbd3a 320
+  s_06fcde5dbef956::t_185ada55a3710e 77,219-220,318,328-329,1473,1478,1488,2730,3137-3154
+  s_06fcde5dbef956::t_97bda0942529e6 1489-1490
+scripts/english-only-allowlist.txt
+  s_06fcde5dbef956::t_6ea0b39997f0e6 29
+web/src/components/AudioSettingsPanel.test.ts
+  s_06fcde5dbef956::t_7700d84a3f7972 1-5,7-29,31-35,37-49,51-61,63-71,73-82,84-93,95-112,114-125,127-143,145-162,164-180,182-194,196-206,208-217,219-228,230-255,257-259,261-274,276-278,280-294,296-308,310-317,319-327,329-342,344-350
+  s_06fcde5dbef956::t_dcc522c854d1cd 351-363
+  s_06fcde5dbef956::t_e7a431ca162375 6,30,36,50,62,72,83,94,113,126,144,163,181,195,207,218,229,256,260,275,279,295,309,318,328,343
+web/src/App.test.ts
+  s_06fcde5dbef956::t_e552b2dbb95eb2 5,232
+  s_06fcde5dbef956::t_828b568093ec81 230
+  s_06fcde5dbef956::t_1b9a4ef7bef775 231,234
+  s_06fcde5dbef956::t_d3dafe013f4d51 233
+web/src/components/PushSection.vue
+  s_06fcde5dbef956::t_562161977bd4d7 6,63-67,70-72
+  s_06fcde5dbef956::t_3d25d8ef1aefe2 69
+web/src/components/WelcomeFlow.vue
+  s_06fcde5dbef956::t_f008a01d8cbd3a 47
+e2e/tests/mobile.spec.ts
+  s_06fcde5dbef956::t_2c3dcd81a6dcbf 140-154
+web/src/components/AccountDmPolicy.vue
+  s_06fcde5dbef956::t_7d605865faa762 10,45-64
+web/src/components/AppSettingsPanel.vue
+  s_06fcde5dbef956::t_7700d84a3f7972 1-12
+web/src/components/AccountBlockedList.vue
+  s_06fcde5dbef956::t_7d605865faa762 12-16,30
+web/src/components/RadioCard.vue
+  s_06fcde5dbef956::t_5cea8f3423a304 1-23
+web/src/components/AppSettingsPanel.test.ts
+  s_06fcde5dbef956::t_7700d84a3f7972 1-8,10-24,26-27,29-61
+  s_06fcde5dbef956::t_e7a431ca162375 9,25,28
+web/src/components/SettingsDialog.vue
+  s_06fcde5dbef956::t_7700d84a3f7972 1,7,10-11,13-16,21-23,25,59-65,68-70,127-129
+  s_06fcde5dbef956::t_e6b30076bf210f 2
+  s_06fcde5dbef956::t_1b547cd5d0bf3c 3-6,8-9,12,17-20,24,26-58,66-67,71-79,81-126
+  s_06fcde5dbef956::t_ca8716d6fbcb1d 80
+web/src/components/SwitchRow.vue
+  s_06fcde5dbef956::t_a151d38a4d74cc 7-9,13-14,28
+  s_06fcde5dbef956::t_5cea8f3423a304 1-6,10-12,15-21,23-27,29-36
+  s_06fcde5dbef956::t_3d25d8ef1aefe2 22
+web/src/components/AccountData.vue
+  s_06fcde5dbef956::t_7d605865faa762 95
+  s_06fcde5dbef956::t_d23d29aec13672 1-94,96-153
+web/src/lib/welcomeSteps.ts
+  s_06fcde5dbef956::t_f979015dae3c9a 19-22,25
+web/src/components/SecondFactorStep.vue
+  s_06fcde5dbef956::t_07ea3db9af33e6 41
+  s_06fcde5dbef956::t_1dea87b2b1edde 51
+web/src/components/ProfilePassword.vue
+  s_06fcde5dbef956::t_78622551852bb2 9-10,62-70
+web/src/components/AccountPrivacy.vue
+  s_06fcde5dbef956::t_d23d29aec13672 2-3,12,15-16
+web/src/components/LoginModal.vue
+  s_06fcde5dbef956::t_07ea3db9af33e6 11,30,40,74,86,162,176,188-189,191,195-196,198,206,210
+  s_06fcde5dbef956::t_7edcfc29dec856 171,183,218
+web/src/components/AccountMenu.test.ts
+  s_06fcde5dbef956::t_828b568093ec81 11-12,54-55,60-65
+e2e/tests/push.spec.ts
+  s_06fcde5dbef956::t_2c3dcd81a6dcbf 84-86
+e2e/tests/a11y.spec.ts
+  s_06fcde5dbef956::t_2c3dcd81a6dcbf 50-57
+e2e/tests/account-delete.spec.ts
+  s_06fcde5dbef956::t_2c3dcd81a6dcbf 41,43-44
+web/src/components/ProfileMemberActions.vue
+  s_06fcde5dbef956::t_ac90a352d2d75c 1-36,38-42,46-64,67-74,76-80,82
+  s_06fcde5dbef956::t_fabdb7bbf542ef 66
+  s_06fcde5dbef956::t_97bda0942529e6 45
+  s_06fcde5dbef956::t_79900cee4fef55 43
+  s_06fcde5dbef956::t_df38660a4b95c8 37,44,65,75,81
+web/src/components/LoginModal.test.ts
+  s_06fcde5dbef956::t_a151d38a4d74cc 180
+  s_06fcde5dbef956::t_64a2d5da02c29c 137-161
+web/src/components/UserProfileRoles.test.ts
+  s_06fcde5dbef956::t_9aeaaffc39fe85 61-83
+e2e/tests/two-factor.spec.ts
+  s_06fcde5dbef956::t_2c3dcd81a6dcbf 60
+web/src/components/ProfileBannerControls.vue
+  s_06fcde5dbef956::t_79900cee4fef55 11-12,20,68,71,84,86-87
+web/src/App.vue
+  s_06fcde5dbef956::t_d60279e2036c18 26,30,100-101,345-346
+web/src/components/AccountPrivacy.test.ts
+  s_06fcde5dbef956::t_6176f0473a7491 1-2,6,8,15-21,24-28,31-34
+web/src/components/AccountData.test.ts
+  s_06fcde5dbef956::t_d23d29aec13672 1-5,7-25,27-80,82-97,99-144
+  s_06fcde5dbef956::t_cce001c742bd50 81
+  s_06fcde5dbef956::t_bb6997b5d336c1 6,26,98
+web/src/components/ProfilePassword.test.ts
+  s_06fcde5dbef956::t_a151d38a4d74cc 48-49
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_185ada55a3710e 77,219-220,318,320,328-329,1473,1478,1488,2730,3137-3154
+  s_06fcde5dbef956::t_97bda0942529e6 1489-1490
+  s_06fcde5dbef956::t_f298b1e8638ec1 2731-2732
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b270ad40e815883af15051bab7eae5193cb8390d",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
