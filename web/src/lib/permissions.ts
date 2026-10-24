@@ -27,7 +27,8 @@ export const PERMISSION_BITS = {
   manage_emoji: 1048576,
   manage_reports: 2097152,
   send_direct_messages: 4194304,
-  kick_members: 8388608
+  kick_members: 8388608,
+  manage_stage: 16777216
 } as const
 
 export type PermissionKey = keyof typeof PERMISSION_BITS
@@ -46,7 +47,7 @@ export type PermissionGroupId = 'general' | 'text' | 'voice' | 'moderation' | 'a
 export const PERMISSION_GROUPS: readonly { id: PermissionGroupId; keys: readonly PermissionKey[] }[] = [
   { id: 'general', keys: ['view_channel'] },
   { id: 'text', keys: ['send_messages', 'attach_files', 'add_reactions', 'mention_everyone', 'send_direct_messages'] },
-  { id: 'voice', keys: ['connect', 'speak', 'video', 'disconnect_members'] },
+  { id: 'voice', keys: ['connect', 'speak', 'video', 'manage_stage', 'disconnect_members'] },
   { id: 'moderation', keys: ['manage_messages', 'manage_members', 'timeout_members', 'ban_members', 'kick_members'] },
   { id: 'administration', keys: ['administrator', 'manage_channels', 'manage_roles', 'create_invites', 'manage_bots', 'manage_emoji', 'manage_reports', 'view_audit_log'] }
 ]
@@ -54,7 +55,7 @@ export const PERMISSION_GROUPS: readonly { id: PermissionGroupId; keys: readonly
 /** Permissions a category or channel can allow or deny per role or member. */
 export const CHANNEL_PERMISSION_KEYS: readonly PermissionKey[] = [
   'view_channel', 'send_messages', 'attach_files', 'add_reactions', 'manage_messages',
-  'mention_everyone', 'connect', 'speak', 'video', 'disconnect_members'
+  'mention_everyone', 'connect', 'speak', 'video', 'manage_stage', 'disconnect_members'
 ]
 
 /** Any of these opens a part of the admin area. */

@@ -136,6 +136,7 @@ nothing in `.env` has to change.
 | Migration | Adds |
 |---|---|
 | 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
+| 0068 | `channels.is_stage`: Stages. Existing channels keep `false`; a Stage is never a lobby or a temporary Talk. |
 
 #### Talks
 
@@ -151,6 +152,18 @@ nothing in `.env` has to change.
   `talk_unavailable`. REST: `PATCH /api/talks/{id}`, `POST /api/talks/{id}/invites`,
   `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
   channel (additive).
+- A Talk can be a **Stage** (feature `talks.stage`): without talk power nobody sends
+  audio, camera or screen there. The new permission *Manage stage* (bit `1 << 24`, off
+  for everyone but the Owner and Administrators) gives and takes talk power; members
+  raise a hand to ask. Nothing about a Stage session is stored. Existing Talks stay
+  normal Talks. New events `stage_hand`, `stage_talk_power`, `talk_reaction`; REST:
+  the field `is_stage` of a channel and of `POST /api/admin/channels` and
+  `PATCH /api/admin/channels/{id}` (additive).
+- **Live reactions** (feature `talks.reactions`): a member in a Talk sends an emoji
+  that floats over their tile for everyone in that Talk, at most 5 per 10 seconds.
+  The server relays it and keeps nothing.
+- Role and overwrite editors list *Manage stage*. A role that holds *Administrator*
+  has it already; no existing role or overwrite changes.
 
 ### 1.0.x → 1.1.0
 

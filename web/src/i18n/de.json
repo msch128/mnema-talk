@@ -1725,6 +1725,10 @@
       "name": "Mitglieder rauswerfen",
       "desc": "Mitglieder unterhalb deiner höchsten Rolle überall abmelden und aus ihrem Talk werfen. Sie können sich sofort wieder anmelden."
     },
+    "manage_stage": {
+      "name": "Stages verwalten",
+      "desc": "In einer Stage das Rederecht vergeben und entziehen und Handzeichen beantworten. Wer sie hat, darf in einer Stage immer sprechen."
+    },
     "groups": {
       "general": "Allgemein",
       "text": "Text",

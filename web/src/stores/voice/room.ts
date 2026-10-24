@@ -207,6 +207,7 @@ export function disconnect(cs: VoiceState) {
   cs.screenChoice.value = {}
   cs.layersWanted.value = null
   cs.userVideoStreams.value = {}
+  cs.talkReactions.value = []
   cs.subscriptionSink = null
   cs.activeView.value = 'chat'
 }

@@ -119,6 +119,12 @@ func (h *Handler) createChannel(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if req.IsStage {
+		if err := SetStage(r.Context(), h.DB, ch.ID, true); err != nil {
+			return err
+		}
+		ch.IsStage = true
+	}
 	h.structureChanged()
 	httpx.WriteJSON(w, http.StatusCreated, ch)
 	return nil
@@ -202,7 +208,7 @@ func (h *Handler) deleteChannel(w http.ResponseWriter, r *http.Request) error {
 // updateChannel handles PATCH /api/admin/channels/{id}.
 //
 // @Summary Rename a channel, change its topic or member limit
-// @Description Requires the Manage channels permission (403 otherwise). user_limit (voice channels only) caps how many members can be in the room at once; 0 removes the limit (the default). A member already in the room always gets back in. is_lobby (permanent voice channels only) makes the Talk a Create-a-Talk lobby.
+// @Description Requires the Manage channels permission (403 otherwise). user_limit (voice channels only) caps how many members can be in the room at once; 0 removes the limit (the default). A member already in the room always gets back in. is_lobby (permanent voice channels only) makes the Talk a Create-a-Talk lobby. is_stage (permanent voice channels that are no lobby) makes it a Stage, or a normal Talk again.
 // @ID updateChannel
 // @Tags Admin
 // @Accept json
@@ -236,12 +242,21 @@ func (h *Handler) updateChannel(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
+	if req.IsStage != nil {
+		if err := SetStage(r.Context(), h.DB, id, *req.IsStage); err != nil {
+			return err
+		}
+	}
 	ch, err := UpdateChannel(r.Context(), h.DB, id, req.Name, req.Topic, req.UserLimit, req.SlowModeSeconds)
 	if err != nil {
 		return err
 	}
 	FillTalkFields(r.Context(), h.DB, ch)
-	h.channelsChanged()
+	if req.IsStage != nil {
+		h.structureChanged() // the hub re-checks who may still send media
+	} else {
+		h.channelsChanged()
+	}
 	httpx.WriteJSON(w, http.StatusOK, ch)
 	return nil
 }
@@ -363,6 +378,8 @@ type CreateChannelRequest struct {
 	Type       ChannelType `json:"type" default:"text" binding:"optional"`
 	Topic      string      `json:"topic" maxLength:"255" binding:"optional"`
 	SortOrder  int         `json:"sort_order" binding:"optional"`
+	// IsStage creates the Talk as a Stage (voice channels only).
+	IsStage bool `json:"is_stage" binding:"optional"`
 }
 
 // UpdateChannelRequest is the body of PATCH /api/admin/channels/{id}; omitted
@@ -379,6 +396,10 @@ type UpdateChannelRequest struct {
 	// IsLobby marks a voice channel as a Create-a-Talk lobby (true) or clears
 	// the mark (false): joining a lobby opens a temporary Talk (doc/talks.md).
 	IsLobby *bool `json:"is_lobby" binding:"optional"`
+	// IsStage turns a permanent Talk into a Stage (true) or back into a normal
+	// Talk (false); members without talk power lose their microphone, camera
+	// and screen at once (doc/talks.md).
+	IsStage *bool `json:"is_stage" binding:"optional"`
 }
 
 // LayoutRequest is the body of PUT /api/admin/layout: at most 500 entries in

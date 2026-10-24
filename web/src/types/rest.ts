@@ -1106,6 +1106,7 @@ export type ChatChannel = {
   created_at: string
   id: string
   is_lobby?: boolean
+  is_stage?: boolean
   is_temp?: boolean
   leader_id?: string
   name: string
@@ -1123,6 +1124,7 @@ export function isChatChannel(value: unknown): value is ChatChannel {
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (!hasOwn(value, "is_lobby") || typeof value["is_lobby"] === 'boolean')
+    && (!hasOwn(value, "is_stage") || typeof value["is_stage"] === 'boolean')
     && (!hasOwn(value, "is_temp") || typeof value["is_temp"] === 'boolean')
     && (!hasOwn(value, "leader_id") || isIdentifier(value["leader_id"]))
     && (hasOwn(value, "name") && isString(value["name"], 64))
@@ -1202,6 +1204,7 @@ export const decodeChatCreateCategoryRequest = decoder("chat.CreateCategoryReque
 
 export type ChatCreateChannelRequest = {
   category_id?: string | null
+  is_stage?: boolean
   name: string
   sort_order?: number
   topic?: string
@@ -1211,6 +1214,7 @@ export type ChatCreateChannelRequest = {
 export function isChatCreateChannelRequest(value: unknown): value is ChatCreateChannelRequest {
   return isRecord(value)
     && (!hasOwn(value, "category_id") || (isIdentifier(value["category_id"]) || value["category_id"] === null))
+    && (!hasOwn(value, "is_stage") || typeof value["is_stage"] === 'boolean')
     && (hasOwn(value, "name") && isString(value["name"], 64))
     && (!hasOwn(value, "sort_order") || isInteger(value["sort_order"]))
     && (!hasOwn(value, "topic") || isString(value["topic"], 255))
@@ -2256,6 +2260,7 @@ export const decodeChatThreadFollow = decoder("chat.ThreadFollow", isChatThreadF
 
 export type ChatUpdateChannelRequest = {
   is_lobby?: boolean
+  is_stage?: boolean
   name?: string
   slow_mode_seconds?: number
   topic?: string
@@ -2265,6 +2270,7 @@ export type ChatUpdateChannelRequest = {
 export function isChatUpdateChannelRequest(value: unknown): value is ChatUpdateChannelRequest {
   return isRecord(value)
     && (!hasOwn(value, "is_lobby") || typeof value["is_lobby"] === 'boolean')
+    && (!hasOwn(value, "is_stage") || typeof value["is_stage"] === 'boolean')
     && (!hasOwn(value, "name") || isString(value["name"], 64))
     && (!hasOwn(value, "slow_mode_seconds") || (isInteger(value["slow_mode_seconds"]) && value["slow_mode_seconds"] >= 0 && value["slow_mode_seconds"] <= 21600))
     && (!hasOwn(value, "topic") || isString(value["topic"], 255))

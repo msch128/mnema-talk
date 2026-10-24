@@ -49,7 +49,8 @@ import type { AuthUser } from './rest'
 export type Locale = 'de' | 'en'
 export type ChosenPresence = 'online' | 'away' | 'dnd' | 'focus'
 export type Presence = ChosenPresence | 'offline'
-export type VoiceUser = AuthUser & { joined_at: string; muted: boolean; deafened: boolean }
+/** A member of a Talk. In a Stage talk_power says they may speak (given, or implied by Manage stage) and hand_raised_at when they asked to. */
+export type VoiceUser = AuthUser & { joined_at: string; muted: boolean; deafened: boolean; talk_power?: boolean | undefined; hand_raised_at?: string | undefined }
 
 // A partial update is explicitly different from a complete User response.
 export type UserUpdate = AuthUser | { id: string; disabled: boolean }
