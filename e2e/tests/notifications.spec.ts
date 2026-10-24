@@ -79,7 +79,7 @@ test('notification levels, timed mutes, category badges and mark all read', asyn
 
     // A timed mute on one channel: stored with an end, shown dimmed with a bell.
     await member.locator(`[data-drop="channel"][data-id="${one}"]`).click({ button: 'right' })
-    await member.getByRole('menuitem', { name: 'Kanal stummschalten' }).click()
+    await member.getByRole('menuitem', { name: 'Stummschalten für …' }).click()
     await member.getByRole('menuitem', { name: 'Für 1 Stunde' }).click()
     await expect(member.locator(`[data-channel-item="${one}"] [data-testid="channel-muted"]`)).toBeVisible()
     await expect(member.locator(`[data-channel-item="${one}"] [data-testid="channel-unread"]`)).toHaveCount(0)
@@ -100,8 +100,7 @@ test('notification levels, timed mutes, category badges and mark all read', asyn
 
     // The category's own level: channels without a setting follow it.
     await member.locator(`[data-drop="header"][data-id="${categoryId}"]`).click({ button: 'right' })
-    await member.getByRole('menuitem', { name: 'Kategorie stummschalten' }).click()
-    await member.getByRole('menuitem', { name: 'Bis ich es wieder einschalte' }).click()
+    await member.getByRole('menuitemradio', { name: 'Nichts' }).click()
     await expect(member.locator(`[data-channel-item="${two}"] [data-testid="channel-muted"]`)).toBeVisible()
     expect((await settings(member)).categories.some((c) => c.category_id === categoryId && c.level === 'mute')).toBe(true)
 
