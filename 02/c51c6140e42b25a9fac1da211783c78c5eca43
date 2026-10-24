@@ -1,0 +1,68 @@
+api/openapi.json
+  s_06fcde5dbef956::t_d02192527737d3 4799-4978,15678-16148
+internal/audit/classes.go
+  s_06fcde5dbef956::t_d02192527737d3 42
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_d02192527737d3 724-726,1968-1971,2699-2738
+  s_06fcde5dbef956::t_b666c79d4de933 2739-2740
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_d02192527737d3 42
+web/src/components/ProfileModeration.test.ts
+  s_06fcde5dbef956::t_d02192527737d3 1-174
+internal/audit/routes.go
+  s_06fcde5dbef956::t_d02192527737d3 126-130
+doc/moderation.md
+  s_06fcde5dbef956::t_d02192527737d3 25,339,347-383
+  s_06fcde5dbef956::t_a02b156d5d55d9 384
+internal/moderation/automod_rules.go
+  s_06fcde5dbef956::t_d02192527737d3 2-4,12,20,35-40,206-208
+internal/db/migrations/0067_moderation_notes.sql
+  s_06fcde5dbef956::t_d02192527737d3 1-21
+doc/upgrade.md
+  s_06fcde5dbef956::t_d02192527737d3 148,165,185-191,194-196
+internal/moderation/history.go
+  s_06fcde5dbef956::t_d02192527737d3 1-229
+internal/moderation/notes.go
+  s_06fcde5dbef956::t_d02192527737d3 1-287
+internal/server/health.go
+  s_06fcde5dbef956::t_d02192527737d3 53
+web/src/i18n/auditLabels.test.ts
+  s_06fcde5dbef956::t_d02192527737d3 14
+internal/server/moderation_history_integration_test.go
+  s_06fcde5dbef956::t_d02192527737d3 1-321
+internal/audit/classes_test.go
+  s_06fcde5dbef956::t_d02192527737d3 42
+SECURITY.md
+  s_06fcde5dbef956::t_d02192527737d3 134-141
+web/src/components/UserProfileModal.vue
+  s_06fcde5dbef956::t_d02192527737d3 28,97-101,270-287,341
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_d02192527737d3 2882-2971
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_d02192527737d3 724-726,1968-1971,2699-2738
+  s_06fcde5dbef956::t_2ba24266d4d7fe 2739-2740
+web/src/components/ProfileModerationTab.vue
+  s_06fcde5dbef956::t_d02192527737d3 1-176
+web/src/components/LegalModal.vue
+  s_06fcde5dbef956::t_d02192527737d3 199-203
+internal/testutil/db.go
+  s_06fcde5dbef956::t_d02192527737d3 113-115
+doc/api-stability.md
+  s_06fcde5dbef956::t_804f4a6c8ee9ff 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "02c51c6140e42b25a9fac1da211783c78c5eca43",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
