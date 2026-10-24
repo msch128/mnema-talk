@@ -213,3 +213,22 @@ func repeat(s string, n int) string {
 	}
 	return string(out)
 }
+
+func TestADeletedMessageNeverStaysInTheConversationPreview(t *testing.T) {
+	f := newDMFixture(t, false)
+	dm := f.alice.mustDM(t, f.bob)
+	wantStatus(t, "first", f.alice.dmPost(dm.ID, "keep me"), http.StatusCreated)
+	wantStatus(t, "bob answers", f.bob.dmPost(dm.ID, "keep me too"), http.StatusCreated)
+	second := f.bob.dmPost(dm.ID, "delete me")
+	wantStatus(t, "second", second, http.StatusCreated)
+	var id uuid.UUID
+	second.decodeID(t, &id)
+	if got := f.alice.polishList(t)[dm.ID].LastMessage; got == nil || got.Text != "delete me" {
+		t.Fatalf("before: %+v", got)
+	}
+	wantStatus(t, "bob deletes", f.bob.delete("/api/channels/"+dm.ID.String()+"/messages/"+id.String()), http.StatusNoContent)
+	got := f.alice.polishList(t)[dm.ID].LastMessage
+	if got == nil || got.Text != "keep me too" {
+		t.Fatalf("after the delete the preview is %+v, want the message before", got)
+	}
+}

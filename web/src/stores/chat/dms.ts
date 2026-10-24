@@ -238,3 +238,12 @@ export function noteDmMessage(cx: Cx, msg: Message) {
   const latest = { last_message_at: msg.created_at, last_message: lastMessageOf(msg), hidden: false }
   cs.dms.value = sortDms(cs.dms.value.map(d => (d.id === msg.channel_id ? { ...d, ...latest } : d)))
 }
+
+/**
+ * A message of a conversation was edited or deleted. It may be the one the list
+ * previews, so the row is read again: an edit shows its new text, and a
+ * deleted message never stays visible (the preview falls back to the one before).
+ */
+export function noteDmMessageChanged(cx: Cx, channelId: string | null | undefined) {
+  if (channelId && dmById(cx, channelId)) void refreshDm(cx, channelId)
+}

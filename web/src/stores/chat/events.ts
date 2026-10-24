@@ -13,7 +13,7 @@ import { snapshotToMap, applyPresenceUpdate } from '../../lib/presence'
 import { MAX_EPHEMERAL } from './types'
 import type { Cx } from './state'
 import { fetchChannels } from './channels'
-import { fetchDms, isDm, noteDmMessage, onDmCreated, onDmMemberAdded, onDmMemberRemoved } from './dms'
+import { fetchDms, isDm, noteDmMessage, noteDmMessageChanged, onDmCreated, onDmMemberAdded, onDmMemberRemoved } from './dms'
 import { onDmPrefsUpdated } from './dmPrefs'
 import { applyActivity, countMessageOf, fetchMembers, refreshMemberStats, updateUserEverywhere } from './members'
 import { applyToMessage, bumpReplyCount, countReply, insertMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
@@ -160,6 +160,7 @@ function onMessageDelete(cx: Cx, p: Payload<'message_delete'>) {
   cs.threadReplies.value = cs.threadReplies.value.filter(m => m.id !== p.id)
   onOriginalDeleted(cx, p.id)
   if (p.parent_id) bumpReplyCount(cx, p.parent_id, -1)
+  noteDmMessageChanged(cx, p.channel_id)
   if (cs.activeThread.value?.id === p.id) closeThread(cx)
 }
 
@@ -221,6 +222,7 @@ const HANDLERS: Handlers = {
     applyToMessage(cx, p.id, m => Object.assign(m, p))
     useForwardQuotesStore().invalidate()
     onOriginalEdited(cx, p)
+    noteDmMessageChanged(cx, p.channel_id)
   },
   message_delete: onMessageDelete,
   pins_changed: (cx, p) => { if (p) onPinsChanged(cx, p) },

@@ -326,6 +326,32 @@ describe('events from another device', () => {
   })
 })
 
+describe('the preview after an edit or a delete', () => {
+  const preview = (text: string) => ({ ...withAda, last_message: { user_id: ada.id, text, has_attachment: false, has_poll: false } })
+
+  it('shows the edited text and drops a deleted message for the one before', async () => {
+    const chat = setup()
+    chat.dms = [preview('secret')]
+    http.handle = () => preview('fixed')
+    chat.handleWSEvent({ type: 'message_update', payload: messageFixture({ id: fixtureId(9), channel_id: withAda.id, content: 'fixed' }) })
+    await flushPromises()
+    expect(chat.dmById(withAda.id)?.last_message?.text).toBe('fixed')
+    http.handle = () => ({ ...withAda, last_message: undefined })
+    chat.handleWSEvent({ type: 'message_delete', payload: { id: fixtureId(9), channel_id: withAda.id, parent_id: null } })
+    await flushPromises()
+    expect(chat.dmById(withAda.id)?.last_message).toBeUndefined()
+    expect(vi.mocked(api).mock.calls.filter(([url]) => url === `/api/dms/${withAda.id}`)).toHaveLength(2)
+  })
+
+  it('ignores changes in channels', async () => {
+    const chat = setup()
+    chat.dms = [withAda]
+    chat.handleWSEvent({ type: 'message_delete', payload: { id: fixtureId(9), channel_id: fixtureId(50), parent_id: null } })
+    await flushPromises()
+    expect(vi.mocked(api).mock.calls.filter(([url]) => String(url).startsWith('/api/dms/'))).toHaveLength(0)
+  })
+})
+
 describe('the header of a conversation', () => {
   it('shows the face and name of the other member and opens their profile', async () => {
     const chat = setup()
