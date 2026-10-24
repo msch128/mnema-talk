@@ -1,0 +1,23 @@
+internal/chat/forum_integration_test.go
+  s_06fcde5dbef956::t_5d0ef96714dfec 327-356
+internal/chat/forum_tags.go
+  s_06fcde5dbef956::t_ed7c4a10bb43e1 46,82-85
+internal/chat/handler_forum.go
+  s_06fcde5dbef956::t_290fa017321d63 342-344,355-356,358
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e493697459d9d652cf2bbe6ab44e2b32a9960eea",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
