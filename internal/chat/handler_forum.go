@@ -339,6 +339,9 @@ func (h *Handler) updateForumPost(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
+	if err := h.require(r, chID, perm.ViewChannel); err != nil {
+		return notFoundUnlessFailure(err)
+	}
 	if _, err := h.requireForumChannel(r, chID); err != nil {
 		return err
 	}
@@ -349,9 +352,10 @@ func (h *Handler) updateForumPost(w http.ResponseWriter, r *http.Request) error 
 	canManage := false
 	if h.Perms != nil {
 		p, err := h.Perms.Channel(r.Context(), user.Subject(), chID)
-		if err == nil && p.Has(perm.ManageMessages) {
-			canManage = true
+		if err != nil {
+			return err
 		}
+		canManage = p.Has(perm.ManageMessages)
 	} else if user.Role == "admin" {
 		canManage = true
 	}

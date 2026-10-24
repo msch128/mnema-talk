@@ -324,3 +324,33 @@ func TestForumChannelPermissions(t *testing.T) {
 		t.Fatal("expected create post to fail without SendMessages")
 	}
 }
+
+func TestForumPostUpdateNeedsViewChannel(t *testing.T) {
+	f, h, _ := setupForumEnv(t)
+	ch := createTestForum(t, f)
+	chParam := map[string]string{"channelID": ch.ID.String()}
+
+	rec := httptest.NewRecorder()
+	if err := h.createForumPost(rec, chatRequest(f.u, `{"title":"Mine","content":"hello"}`, chParam, "")); err != nil {
+		t.Fatalf("create post: %v", err)
+	}
+	var post Message
+	if err := json.Unmarshal(rec.Body.Bytes(), &post); err != nil {
+		t.Fatal(err)
+	}
+
+	var everyone uuid.UUID
+	if err := f.p.QueryRow(context.Background(), `SELECT id FROM roles WHERE is_everyone`).Scan(&everyone); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.p.Exec(context.Background(), `INSERT INTO permission_overwrites (channel_id, role_id, deny) VALUES ($1, $2, $3)`, ch.ID, everyone, int64(perm.ViewChannel)); err != nil {
+		t.Fatal(err)
+	}
+	h.Perms.Invalidate()
+
+	postParam := map[string]string{"channelID": ch.ID.String(), "messageID": post.ID.String()}
+	err := h.updateForumPost(httptest.NewRecorder(), chatRequest(f.u, `{"title":"Renamed"}`, postParam, ""))
+	if err == nil {
+		t.Fatal("author who can no longer view the forum must not edit the post")
+	}
+}

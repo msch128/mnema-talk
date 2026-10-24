@@ -43,7 +43,7 @@ func CleanTagEmoji(emoji string) (string, error) {
 	if len(emoji) > MaxForumTagEmojiLen {
 		return "", errTagEmojiLength
 	}
-	return emoji, nil
+	return httpx.CleanText("emoji", emoji, MaxForumTagEmojiLen, true)
 }
 
 // ListForumTags loads all tags defined in channelID, ordered by name.
@@ -79,6 +79,10 @@ func CreateForumTag(ctx context.Context, p *db.Pool, channelID uuid.UUID, name, 
 
 	var tag ForumTag
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		// Lock the channel row so concurrent creates cannot pass the cap together.
+		if _, err := tx.Exec(ctx, `SELECT 1 FROM channels WHERE id = $1 FOR UPDATE`, channelID); err != nil {
+			return err
+		}
 		var count int
 		if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM forum_tags WHERE channel_id = $1`, channelID).Scan(&count); err != nil {
 			return err
