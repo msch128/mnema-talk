@@ -1,0 +1,94 @@
+web/src/components/SearchResults.vue
+  s_06fcde5dbef956::t_a56e87c38160a1 4,6,9-14,30,32-37,42-44,47-49,51,53-59,64,69,71-72,75-78,81,84,88-89,93,95,104-162,164-175
+web/src/components/SearchModal.test.ts
+  s_06fcde5dbef956::t_c556884bfacc06 296
+  s_06fcde5dbef956::t_3bfea438f8047a 12,278-295,297-304,306-360,362-372,374-406
+  s_06fcde5dbef956::t_1b51d48c7250fa 305,361,373,407
+web/src/lib/globalSearch.test.ts
+  s_06fcde5dbef956::t_713e041af95950 59-68,71
+  s_06fcde5dbef956::t_50d3781f20d277 69-70
+web/src/components/SearchFilterRow.vue
+  s_06fcde5dbef956::t_86bab0a4c1f648 1-4,6-15,18,20-83,95-147
+  s_06fcde5dbef956::t_e68e14f303f31e 5,84-88,90-94
+  s_06fcde5dbef956::t_944f6183f69099 19,89
+  s_06fcde5dbef956::t_62970f7cb0758f 16-17
+web/src/components/SearchFilterRow.test.ts
+  s_06fcde5dbef956::t_fb0c74bb74820c 1-171
+api/openapi.json
+  s_06fcde5dbef956::t_bbfd94288e355f 30697,30701
+web/src/components/SearchResultItem.vue
+  s_06fcde5dbef956::t_1d3ac51224af7f 32-35,40,45,54,93
+  s_06fcde5dbef956::t_71c0478076970b 55-60,72,92
+web/src/lib/searchProblems.ts
+  s_06fcde5dbef956::t_32a8a8f946b010 1-43,47-49
+  s_06fcde5dbef956::t_206e78623c83e1 44-46
+internal/chat/search_filters_test.go
+  s_06fcde5dbef956::t_bbfd94288e355f 168-175,179-180,182-197,199-206,208-216
+  s_06fcde5dbef956::t_b3202f55b8940e 176-178,181,198,207
+internal/chat/handler_lookup.go
+  s_06fcde5dbef956::t_bbfd94288e355f 186,191
+web/src/components/SearchInput.vue
+  s_06fcde5dbef956::t_e782b535e48cec 165
+  s_06fcde5dbef956::t_944f6183f69099 5,9-10,28,31,34,44,125-133,137-138,156,183,187,193-194,200,217-219,221-227,229-230,240
+  s_06fcde5dbef956::t_9f210ccef7b0b0 11,25-26
+web/src/components/SearchModal.vue
+  s_06fcde5dbef956::t_530dac63d4f898 10-11,53,74,76-77,106-112,170-174,176-178,182,185-186,193-200,238,240,244,246,253-255,269-271,273,281-282,284-288
+web/src/lib/globalSearch.ts
+  s_06fcde5dbef956::t_d6508a4cfed78b 3,32-39,44-46,49
+  s_06fcde5dbef956::t_ae0a5f8c63dac3 40-43
+web/src/lib/searchQuery.test.ts
+  s_06fcde5dbef956::t_98f04c5134a5e1 26,31
+  s_06fcde5dbef956::t_415f8136017c91 3,159-192
+README.md
+  s_06fcde5dbef956::t_99bb944be1799d 120-122
+web/src/components/SearchInput.test.ts
+  s_06fcde5dbef956::t_643b32f7053877 116,119,129,132,134-135,138-142,148-152,155,157-170,173,177-178,181,185-193
+web/src/components/SearchFilterPopover.vue
+  s_06fcde5dbef956::t_d2df62d76bbeb7 1-157
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_decc7d6c6a757d 517-521,549,551-587
+  s_06fcde5dbef956::t_d979652a5934ea 550,588
+web/src/lib/searchSuggest.ts
+  s_06fcde5dbef956::t_db3a08cd816f2d 4-5,24,31,37-39,41,46,50,70-85,93
+web/src/lib/searchQuery.ts
+  s_06fcde5dbef956::t_16e5bef844ade5 38,63-82,118-121,160-181,188,190,210,280-281,283-286,288-304
+web/src/lib/searchSuggest.test.ts
+  s_06fcde5dbef956::t_98f04c5134a5e1 19
+  s_06fcde5dbef956::t_415f8136017c91 2-3,54-75
+web/src/styles/controls.css
+  s_06fcde5dbef956::t_e782b535e48cec 191,197
+web/src/components/SearchFilterFeatures.test.ts
+  s_06fcde5dbef956::t_643b32f7053877 49,55,66
+web/src/lib/searchProblems.test.ts
+  s_06fcde5dbef956::t_415f8136017c91 1-35
+web/src/components/SearchResults.test.ts
+  s_06fcde5dbef956::t_643b32f7053877 116,121,124,129-198
+e2e/tests/search.spec.ts
+  s_06fcde5dbef956::t_8ee57ecc7db2ac 127-186
+  s_06fcde5dbef956::t_4f5654928df2f3 114-126,187-203
+web/src/lib/searchSupport.ts
+  s_06fcde5dbef956::t_d2df62d76bbeb7 27-29
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_decc7d6c6a757d 509,517-521,549-587
+  s_06fcde5dbef956::t_d979652a5934ea 588
+internal/chat/search_filters.go
+  s_06fcde5dbef956::t_3ea7115af7c8d4 9,21-64,164-173,189,209,211-215
+web/src/components/SearchScopeToggle.vue
+  s_06fcde5dbef956::t_19779de337f3f4 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "69a038a870c9fcf78f07a91fe7d92c8c7c6c83a4",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
