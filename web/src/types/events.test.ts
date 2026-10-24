@@ -21,6 +21,8 @@ const examples: Record<ServerEventType, unknown[]> = {
   emoji_changed: [null],
   thread_follow_updated: [{ thread_id: id, channel_id: id, following: true }, { thread_id: id, channel_id: id, following: false }],
   saved_updated: [{ message_id: id, saved: true }, { message_id: id, saved: false }],
+  reminder_update: [{ id, state: 'created' }, { id, state: 'due' }, { id, state: 'removed' }],
+  scheduled_message_update: [{ id, channel_id: id, state: 'sent' }, { id, channel_id: id, state: 'failed', reason: 'slow_mode' }],
   dm_created: [{
     id, group: false, members: [{ id, username: 'bob', display_name: 'Bob' }], created_at: FIXTURE_TIMESTAMP, last_message_at: null,
     unread_count: 0, mention_count: 0, last_read_at: null, notify_level: 'all', can_send: true

@@ -167,7 +167,7 @@ export async function jumpToMessage(cx: Cx, id: string) {
  * Navigates to any message (search result, notification): thread replies
  * open their thread on top of the root message, the only valid jump anchor.
  */
-export function goToMessage(cx: Cx, msg: Message) {
+export function goToMessage(cx: Cx, msg: Pick<Message, 'id' | 'channel_id' | 'parent_id'>) {
   const { cs } = cx
   if (!msg?.id || !msg.channel_id) return
   const rootId = msg.parent_id || msg.id

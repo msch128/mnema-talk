@@ -2,6 +2,7 @@ import type { ServerEvent, ServerEventPayloads, ServerEventType } from '../../ty
 import { useToastStore } from '../toast'
 import { useEmojiStore } from '../emoji'
 import { useSavedStore } from '../saved'
+import { useLaterStore } from '../later'
 import { useForwardQuotesStore } from '../forwardQuotes'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
@@ -188,6 +189,8 @@ const HANDLERS: Handlers = {
   // The caller blocked or unblocked someone in another session.
   block_updated: () => { void useBlocksStore().load() },
   saved_updated: (_cx, p) => { if (p) useSavedStore().onUpdated(p) },
+  reminder_update: (_cx, p) => { if (p) void useLaterStore().onReminderEvent(p) },
+  scheduled_message_update: (_cx, p) => { if (p) void useLaterStore().onScheduledEvent(p) },
   dm_created: (cx, p) => { if (p) onDmCreated(cx, p) },
   dm_member_added: (cx, p) => { if (p) onDmMemberAdded(cx, p) },
   dm_member_removed: (cx, p) => { if (p) onDmMemberRemoved(cx, p) },

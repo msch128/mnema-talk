@@ -43,6 +43,8 @@ var Features = []string{
 	"slash.builtins",
 	"profile.banner",
 	"profile.avatar_remove",
+	"reminders",
+	"messages.scheduled",
 	"talks.lobby",
 }
 

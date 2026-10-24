@@ -70,6 +70,8 @@ direct_messages.json  the direct message conversations you are in (which, when, 
 blocks.json     the members you blocked (their ids and when; no names)
 reports.json    the reports you filed about messages (your reason and note, not the reported text)
 saved.json      the messages you saved (their ids, your note and when; not the saved text)
+reminders.json  your reminders (the message id and the times; not the message text)
+scheduled_messages.json  your scheduled messages that were not sent yet (your text, the time and the state)
 
 The files are meant for machines: file names and keys are in English whatever
 language your account uses, and messages.json keeps your messages as typed,
@@ -162,6 +164,8 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 		{"blocks.json", func() (any, error) { return exportBlocks(ctx, q, user) }},
 		{"reports.json", func() (any, error) { return exportReports(ctx, q, user) }},
 		{"saved.json", func() (any, error) { return exportSaved(ctx, q, user) }},
+		{"reminders.json", func() (any, error) { return exportReminders(ctx, q, user) }},
+		{"scheduled_messages.json", func() (any, error) { return exportScheduled(ctx, q, user, viewable) }},
 	}
 	for _, s := range steps {
 		v, err := s.build()

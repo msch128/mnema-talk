@@ -2,6 +2,7 @@ import { useToastStore } from '../toast'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
 import { useBlocksStore } from '../blocks'
+import { useLaterStore } from '../later'
 import { emptyWindow } from '../../lib/messageWindow'
 import type { Cx } from './state'
 import { resetWindow, setWindow } from './messageWindow'
@@ -43,6 +44,7 @@ export function resetCommunityState(cx: Cx) {
   cs.dmsLoaded.value = false
   ++cs.dmsFetchSeq
   useBlocksStore().reset()
+  useLaterStore().reset()
   usePermissionsStore().reset()
   cs.presenceById.value = {}
   cs.activityById.value = {}
