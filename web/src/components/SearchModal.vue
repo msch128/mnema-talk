@@ -59,7 +59,16 @@ const lookup = computed(() => ({
   channels: inDm.value ? conversations.value : chatStore.allChannels,
 }))
 const parsed = computed(() => parseSearchQuery(searchText.value))
-const built = computed(() => buildSearchParams(parsed.value, lookup.value, inDm.value ? { limit: String(PAGE), dm: 'true' } : { limit: String(PAGE) }))
+const currentSort = ref<'newest' | 'oldest' | 'relevance'>('newest')
+const showV3 = computed(() => serverFeatures.has('search.filters.v3'))
+const built = computed(() => {
+  const extra: Record<string, string> = { limit: String(PAGE) }
+  if (inDm.value) extra.dm = 'true'
+  if (showV3.value && currentSort.value !== 'newest') {
+    extra.sort = currentSort.value
+  }
+  return buildSearchParams(parsed.value, lookup.value, extra)
+})
 const hasCriteria = computed(() => isSearchable(built.value.params))
 const terms = computed(() => parsed.value.text.split(/\s+/).filter(Boolean))
 const channelNames = computed(() => new Map(lookup.value.channels.map(c => [c.id, c.name])))
@@ -177,9 +186,14 @@ watch(inDm, () => {
   if (props.modelValue) void performSearch()
 })
 
+watch(currentSort, () => {
+  if (props.modelValue && hasCriteria.value) void performSearch()
+})
+
 watch(() => props.modelValue, (open) => {
   if (open) {
     selectedIndex.value = 0
+    currentSort.value = 'newest'
     nextTick(() => {
       if (hasCriteria.value) performSearch()
     })
@@ -222,9 +236,12 @@ onUnmounted(() => {
             :loading="isSearching"
             :unresolved="built.unresolved"
             :active-result-id="activeResultId"
+            :v3-supported="showV3"
             @close="close"
           />
           <SearchResults
+            :sort="currentSort"
+            :show-v3="showV3"
             :results="results"
             :roots="roots"
             :has-more="hasMore"
@@ -238,6 +255,7 @@ onUnmounted(() => {
             :channel-names="channelNames"
             :voice-channels="voiceChannels"
             :conversations="inDm"
+            @update:sort="currentSort = $event"
             @select="handleSelect"
             @more="loadMore"
           />

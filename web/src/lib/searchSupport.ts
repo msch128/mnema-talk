@@ -8,7 +8,7 @@ import type { SearchFilters } from './searchQuery'
  * markFiltersSupported is for a server feature list that names the filters
  * (`search.filters.v2`).
  */
-export const NEW_HAS_KINDS: readonly string[] = ['poll', 'edit']
+export const NEW_HAS_KINDS: readonly string[] = ['poll', 'edit', 'embed']
 
 export const filtersUnsupported = ref(false)
 

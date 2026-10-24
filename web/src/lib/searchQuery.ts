@@ -3,13 +3,16 @@
 // parses and serializes the query line and maps parsed filters to request
 // parameters; resolving names to ids is done against the given members/channels.
 
-export const HAS_KINDS = ['file', 'image', 'video', 'link', 'poll', 'edit'] as const
+export const HAS_KINDS = ['file', 'image', 'video', 'link', 'embed', 'poll', 'edit'] as const
 export type HasKind = typeof HAS_KINDS[number]
 
 export const IS_KINDS = ['pinned'] as const
 export type IsKind = typeof IS_KINDS[number]
 
-export const FILTER_KEYS = ['from', 'in', 'has', 'is', 'before', 'after', 'mentions'] as const
+export const AUTHOR_KINDS = ['bot', 'webhook', 'member'] as const
+export type AuthorKind = typeof AUTHOR_KINDS[number]
+
+export const FILTER_KEYS = ['from', 'in', 'has', 'is', 'before', 'after', 'during', 'mentions', 'author', 'filename'] as const
 export type FilterKey = typeof FILTER_KEYS[number]
 
 export interface SearchFilters {
@@ -19,7 +22,10 @@ export interface SearchFilters {
   is?: IsKind
   before?: string // YYYY-MM-DD
   after?: string // YYYY-MM-DD
+  during?: string // YYYY-MM-DD
   mentions?: string
+  author?: AuthorKind
+  filename?: string
 }
 
 export interface ParsedSearch {
@@ -45,9 +51,13 @@ function isIsKind(v: string): v is IsKind {
   return (IS_KINDS as readonly string[]).includes(v)
 }
 
+function isAuthorKind(v: string): v is AuthorKind {
+  return (AUTHOR_KINDS as readonly string[]).includes(v)
+}
+
 /** The keys whose values are a fixed word, written in lower case. */
 function isWordKey(key: string): boolean {
-  return key === 'has' || key === 'is'
+  return key === 'has' || key === 'is' || key === 'author'
 }
 
 /** True for a real calendar date written as YYYY-MM-DD. */
@@ -109,12 +119,21 @@ function validFilterValue(key: FilterKey, value: string): boolean {
   if (!value) return false
   if (key === 'has') return isHasKind(value)
   if (key === 'is') return isIsKind(value)
-  if (key === 'before' || key === 'after') return isSearchDate(value)
+  if (key === 'author') return isAuthorKind(value)
+  if (key === 'before' || key === 'after' || key === 'during') return isSearchDate(value)
   return true
 }
 
 function setFilter(filters: SearchFilters, key: FilterKey, value: string) {
-  if (key === 'has') { if (isHasKind(value)) filters.has = value } else if (key === 'is') { if (isIsKind(value)) filters.is = value } else filters[key] = value
+  if (key === 'has') {
+    if (isHasKind(value)) filters.has = value
+  } else if (key === 'is') {
+    if (isIsKind(value)) filters.is = value
+  } else if (key === 'author') {
+    if (isAuthorKind(value)) filters.author = value
+  } else {
+    filters[key] = value
+  }
 }
 
 /** Parses a query line into free text and filters; later filters of a kind win. */
@@ -205,7 +224,17 @@ export function dayStart(date: string, offsetDays = 0): string {
   return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + offsetDays).toISOString()
 }
 
-const CRITERIA = ['q', 'channel_id', 'author_id', 'mentions', 'has', 'is', 'after', 'before_date']
+/** Local timezone offset as [+-]HH:MM. */
+export function localTimezoneOffset(): string {
+  const offsetMin = -new Date().getTimezoneOffset()
+  const sign = offsetMin >= 0 ? '+' : '-'
+  const abs = Math.abs(offsetMin)
+  const hours = String(Math.floor(abs / 60)).padStart(2, '0')
+  const mins = String(abs % 60).padStart(2, '0')
+  return `${sign}${hours}:${mins}`
+}
+
+const CRITERIA = ['q', 'channel_id', 'author_id', 'mentions', 'has', 'is', 'after', 'before_date', 'during', 'author', 'filename']
 
 /** Whether the parameters hold at least one criterion the server accepts alone. */
 export function isSearchable(params: URLSearchParams): boolean {
@@ -238,5 +267,11 @@ export function buildSearchParams(p: ParsedSearch, lookup: SearchLookup, extra: 
   if (filters.is) params.set('is', filters.is)
   if (filters.after) params.set('after', dayStart(filters.after))
   if (filters.before) params.set('before_date', dayStart(filters.before, 1))
+  if (filters.during) {
+    params.set('during', filters.during)
+    params.set('tz', localTimezoneOffset())
+  }
+  if (filters.author) params.set('author', filters.author)
+  if (filters.filename) params.set('filename', filters.filename)
   return { params, unresolved }
 }
