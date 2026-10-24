@@ -2618,6 +2618,96 @@ export function isModerationAutomodList(value: unknown): value is ModerationAuto
 
 export const decodeModerationAutomodList = decoder("moderation.AutomodList", isModerationAutomodList)
 
+export type ModerationHistory = {
+  events: Array<ModerationHistoryEvent>
+  notes: Array<ModerationNote>
+  strikes: number
+}
+
+export function isModerationHistory(value: unknown): value is ModerationHistory {
+  return isRecord(value)
+    && (hasOwn(value, "events") && isArrayOf(value["events"], item => isModerationHistoryEvent(item)))
+    && (hasOwn(value, "notes") && isArrayOf(value["notes"], item => isModerationNote(item)))
+    && (hasOwn(value, "strikes") && isInteger(value["strikes"]))
+}
+
+export const decodeModerationHistory = decoder("moderation.History", isModerationHistory)
+
+export type ModerationHistoryEvent = {
+  actor?: string
+  added_roles?: Array<string>
+  at: string
+  category?: string
+  duration_seconds?: number
+  hits?: number
+  kind: "timeout" | "timeout_removed" | "ban" | "unban" | "ban_expired" | "kick" | "talk_removal" | "roles" | "report" | "automod"
+  outcome?: "blocked" | "flagged" | "alert"
+  reason?: string
+  removed_roles?: Array<string>
+  report_id?: string
+  rule?: string
+  status?: "open" | "resolved" | "dismissed"
+}
+
+export function isModerationHistoryEvent(value: unknown): value is ModerationHistoryEvent {
+  return isRecord(value)
+    && (!hasOwn(value, "actor") || isString(value["actor"]))
+    && (!hasOwn(value, "added_roles") || isArrayOf(value["added_roles"], item => isString(item)))
+    && (hasOwn(value, "at") && isTimestamp(value["at"]))
+    && (!hasOwn(value, "category") || isString(value["category"]))
+    && (!hasOwn(value, "duration_seconds") || isInteger(value["duration_seconds"]))
+    && (!hasOwn(value, "hits") || isInteger(value["hits"]))
+    && (hasOwn(value, "kind") && (value["kind"] === "timeout" || value["kind"] === "timeout_removed" || value["kind"] === "ban" || value["kind"] === "unban" || value["kind"] === "ban_expired" || value["kind"] === "kick" || value["kind"] === "talk_removal" || value["kind"] === "roles" || value["kind"] === "report" || value["kind"] === "automod"))
+    && (!hasOwn(value, "outcome") || (value["outcome"] === "blocked" || value["outcome"] === "flagged" || value["outcome"] === "alert"))
+    && (!hasOwn(value, "reason") || isString(value["reason"]))
+    && (!hasOwn(value, "removed_roles") || isArrayOf(value["removed_roles"], item => isString(item)))
+    && (!hasOwn(value, "report_id") || isIdentifier(value["report_id"]))
+    && (!hasOwn(value, "rule") || isString(value["rule"]))
+    && (!hasOwn(value, "status") || (value["status"] === "open" || value["status"] === "resolved" || value["status"] === "dismissed"))
+}
+
+export const decodeModerationHistoryEvent = decoder("moderation.HistoryEvent", isModerationHistoryEvent)
+
+export type ModerationNote = {
+  author_id: string
+  author_name: string
+  body: string
+  can_delete: boolean
+  created_at: string
+  id: string
+  mine: boolean
+  strike: boolean
+  updated_at: string
+}
+
+export function isModerationNote(value: unknown): value is ModerationNote {
+  return isRecord(value)
+    && (hasOwn(value, "author_id") && isIdentifier(value["author_id"]))
+    && (hasOwn(value, "author_name") && isString(value["author_name"]))
+    && (hasOwn(value, "body") && isString(value["body"], 1000))
+    && (hasOwn(value, "can_delete") && typeof value["can_delete"] === 'boolean')
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "mine") && typeof value["mine"] === 'boolean')
+    && (hasOwn(value, "strike") && typeof value["strike"] === 'boolean')
+    && (hasOwn(value, "updated_at") && isTimestamp(value["updated_at"]))
+}
+
+export const decodeModerationNote = decoder("moderation.Note", isModerationNote)
+
+export type ModerationNoteRequest = {
+  body: string
+  strike: boolean
+}
+
+export function isModerationNoteRequest(value: unknown): value is ModerationNoteRequest {
+  return isRecord(value)
+    && (hasOwn(value, "body") && isString(value["body"], 1000))
+    && (hasOwn(value, "strike") && typeof value["strike"] === 'boolean')
+}
+
+export const decodeModerationNoteRequest = decoder("moderation.NoteRequest", isModerationNoteRequest)
+
 export type OnboardingAcceptInput = {
   version: number
 }

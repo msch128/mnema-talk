@@ -4324,6 +4324,186 @@
         ],
         "type": "object"
       },
+      "moderation.History": {
+        "properties": {
+          "events": {
+            "description": "Events is the timeline, newest first, at most the latest 200.",
+            "items": {
+              "$ref": "#/components/schemas/moderation.HistoryEvent"
+            },
+            "type": "array"
+          },
+          "notes": {
+            "description": "Notes are the private moderator notes, newest first.",
+            "items": {
+              "$ref": "#/components/schemas/moderation.Note"
+            },
+            "type": "array"
+          },
+          "strikes": {
+            "description": "Strikes counts the notes marked as strikes.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "events",
+          "notes",
+          "strikes"
+        ],
+        "type": "object"
+      },
+      "moderation.HistoryEvent": {
+        "properties": {
+          "actor": {
+            "description": "Actor is the moderator who did it; \"Automod\" for automod's own timeout.",
+            "type": "string"
+          },
+          "added_roles": {
+            "description": "AddedRoles and RemovedRoles name the roles a moderator changed (roles).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "duration_seconds": {
+            "description": "DurationSeconds is the length of a timeout or a ban with an end.",
+            "type": "integer"
+          },
+          "hits": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "timeout",
+              "timeout_removed",
+              "ban",
+              "unban",
+              "ban_expired",
+              "kick",
+              "talk_removal",
+              "roles",
+              "report",
+              "automod"
+            ],
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "blocked",
+              "flagged",
+              "alert"
+            ],
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "removed_roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "report_id": {
+            "description": "ReportID, Category and Status describe a report (report) or an automod hit.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "rule": {
+            "description": "Rule, Outcome and Hits describe an automod hit: the rule's name, what it\ndid and how many hits the entry counts.",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "resolved",
+              "dismissed"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "kind"
+        ],
+        "type": "object"
+      },
+      "moderation.Note": {
+        "properties": {
+          "author_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "author_name": {
+            "type": "string"
+          },
+          "body": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "can_delete": {
+            "description": "CanDelete: the caller wrote it, or is an Administrator.",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "mine": {
+            "description": "Mine: the caller wrote it and may edit and delete it.",
+            "type": "boolean"
+          },
+          "strike": {
+            "description": "Strike counts the note in the member's strikes.",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "author_id",
+          "author_name",
+          "body",
+          "can_delete",
+          "created_at",
+          "id",
+          "mine",
+          "strike",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "moderation.NoteRequest": {
+        "properties": {
+          "body": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "strike": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "body",
+          "strike"
+        ],
+        "type": "object"
+      },
       "onboarding.AcceptInput": {
         "properties": {
           "version": {
@@ -14775,6 +14955,477 @@
         "summary": "Clear an account's login lockout",
         "tags": [
           "Admin"
+        ]
+      }
+    },
+    "/api/admin/users/{id}/moderation": {
+      "get": {
+        "description": "The timeline of what moderators and automod did about a member (timeouts, bans, kicks, role changes by moderators, reports about them, automod hits) and the private moderator notes about them. Needs Manage reports; the member themselves never gets it, not even with the permission. A report appears with its category and status only, never with its message text. The Owner and Administrators always pass.",
+        "operationId": "getModerationHistory",
+        "parameters": [
+          {
+            "description": "User ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/moderation.History"
+                }
+              }
+            },
+            "description": "The history."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Manage reports permission, or the member is yourself."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "A member's moderation history",
+        "tags": [
+          "Moderation"
+        ]
+      }
+    },
+    "/api/admin/users/{id}/moderation/notes": {
+      "post": {
+        "description": "Writes a private note about a member, optionally counted as a strike. Only moderators with Manage reports see it; the member never does, and it is not in their data export. At most 100 notes per member. Recorded in the audit log as moderation.note_add (without the text).",
+        "operationId": "addModerationNote",
+        "parameters": [
+          {
+            "description": "User ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/moderation.NoteRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/moderation.Note"
+                }
+              }
+            },
+            "description": "The note."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Manage reports permission, or the member is yourself."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the member already has 100 notes."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Add a moderator note",
+        "tags": [
+          "Moderation"
+        ]
+      }
+    },
+    "/api/admin/users/{id}/moderation/notes/{noteID}": {
+      "delete": {
+        "description": "Deletes a note you wrote; an Administrator (or the Owner) may delete any note. Needs Manage reports. Recorded in the audit log as moderation.note_delete.",
+        "operationId": "deleteModerationNote",
+        "parameters": [
+          {
+            "description": "User ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Note ID.",
+            "in": "path",
+            "name": "noteID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Manage reports permission, or the note is another moderator's and you are no Administrator."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Delete a moderator note",
+        "tags": [
+          "Moderation"
+        ]
+      },
+      "put": {
+        "description": "Changes the text or the strike flag of a note you wrote. Nobody edits another moderator's note. Needs Manage reports. Recorded in the audit log as moderation.note_edit (without the text).",
+        "operationId": "editModerationNote",
+        "parameters": [
+          {
+            "description": "User ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Note ID.",
+            "in": "path",
+            "name": "noteID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/moderation.NoteRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/moderation.Note"
+                }
+              }
+            },
+            "description": "The note."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Manage reports permission, or the note is another moderator's."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Edit your moderator note",
+        "tags": [
+          "Moderation"
         ]
       }
     },

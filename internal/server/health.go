@@ -45,6 +45,7 @@ var Features = []string{
 	"profile.avatar_remove",
 	"talks.lobby",
 	"automod",
+	"moderation.history",
 }
 
 // healthCacheTTL is how long a health result is reused: the endpoint is

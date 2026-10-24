@@ -717,6 +717,9 @@
       "session": "Session token",
       "sessionPurpose": "Signed session tokens for authentication",
       "sessionRetention": "Up to {days} days or until you sign out",
+      "moderation": "Moderation records",
+      "moderationPurpose": "Reports, automod entries and private notes that moderators keep about members; never part of a data export",
+      "moderationRetention": "Until the moderators delete them; entries about a deleted account stay under “Deleted member”",
       "rightsHeading": "Your rights as a data subject",
       "rights1Before": "Under Art. 15–22 GDPR you have the right at any time, free of charge, to ",
       "rightsAccess": "access",
@@ -1883,7 +1886,10 @@
         "unban": "Member unbanned",
         "kick": "Member kicked",
         "ban_expired": "Ban expired",
-        "bulk_delete": "Messages deleted in bulk"
+        "bulk_delete": "Messages deleted in bulk",
+        "note_add": "Moderator note added",
+        "note_edit": "Moderator note edited",
+        "note_delete": "Moderator note deleted"
       },
       "emoji": {
         "create": "Emoji added",
@@ -2565,6 +2571,48 @@
         "everything": "Accounts under {age} may not post"
       },
       "raid": "More than {joins} joins within {window}: newcomers restricted for {restrict}"
+    }
+  },
+  "modHistory": {
+    "tabs": "Profile sections",
+    "tabProfile": "Profile",
+    "tabModeration": "Moderation",
+    "strikeCount": "{count} strikes",
+    "privacy": "Only moderators see this. The member is never shown it and it is not part of their data export.",
+    "loadFailed": "Couldn’t load the moderation history.",
+    "saveFailed": "Couldn’t save the note. Try again.",
+    "deleteFailed": "Couldn’t delete the note. Try again.",
+    "notes": "Notes",
+    "noteLabel": "Note",
+    "notePlaceholder": "A private note for the moderators…",
+    "asStrike": "Count as a strike",
+    "add": "Add note",
+    "noNotes": "No notes yet.",
+    "strike": "Strike",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteTitle": "Delete this note?",
+    "deleteBody": "The note is removed for good.",
+    "timeline": "History",
+    "noEvents": "Nothing on record.",
+    "someModerator": "A moderator",
+    "reason": "Reason: {reason}",
+    "event": {
+      "timeout": "{actor} timed them out for {duration}",
+      "timeout_removed": "{actor} ended the timeout",
+      "ban": "{actor} banned them",
+      "banTimed": "{actor} banned them for {duration}",
+      "unban": "{actor} lifted the ban",
+      "ban_expired": "The ban ran out",
+      "kick": "{actor} kicked them",
+      "talk_removal": "{actor} removed them from a Talk",
+      "roles": "{actor} changed their roles: {changes}",
+      "report": "Reported ({category}), {status}",
+      "automod": {
+        "blocked": "Automod rule “{rule}” blocked a message",
+        "flagged": "Automod rule “{rule}” flagged a message",
+        "alert": "Automod rule “{rule}” raised an alert"
+      }
     }
   },
   "reports": {

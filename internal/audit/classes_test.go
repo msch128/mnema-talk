@@ -39,6 +39,7 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"emoji.create": VisAuditors, "emoji.rename": VisAuditors, "emoji.delete": VisAuditors,
 		"automod.rule_create": VisAuditors, "automod.rule_update": VisAuditors, "automod.rule_delete": VisAuditors,
 		"automod.timeout": VisAuditors, "automod.raid": VisAuditors,
+		"moderation.note_add": VisPrivileged, "moderation.note_edit": VisPrivileged, "moderation.note_delete": VisPrivileged,
 		"report.create": VisPrivileged, "report.resolve": VisPrivileged, "report.delete": VisPrivileged,
 		"admin.post": VisPrivileged,
 	}

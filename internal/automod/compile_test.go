@@ -176,13 +176,13 @@ func TestLinkHostsAreReadTheWayBrowsersDo(t *testing.T) {
 		blockHit   bool // the block list forbids it
 	}{
 		{"plain allowed link", "http://allowed.com/x", false, false},
-		{"full-width dots", "http://evil．com/x", true, true},
-		{"ideographic dot", "http://evil。com/x", true, true},
+		{"full-width dots", "http://evil\uff0ecom/x", true, true},
+		{"ideographic dot", "http://evil\u3002com/x", true, true},
 		{"percent-encoded host", "http://%65vil.com/x", true, true},
-		{"homograph of an allowed domain", "http://аllowed.com/x", true, false},
+		{"homograph of an allowed domain", "http://\u0430llowed.com/x", true, false},
 		{"userinfo trick", "http://allowed.com@evil.com/x", true, true},
 		{"userinfo trick the other way", "http://evil.com@allowed.com/x", false, false},
-		{"unicode form of a listed domain", "http://bücher.example/x", false, false},
+		{"unicode form of a listed domain", "http://b\u00fccher.example/x", false, false},
 		{"upper case and trailing dot", "HTTP://EVIL.COM./x", true, true},
 		{"backslash ends the host", "http://evil.com\\allowed.com", true, true},
 		{"unparseable token", "http://exa%zzmple.com/x", true, false},
@@ -205,7 +205,7 @@ func TestLinkHostsAreReadTheWayBrowsersDo(t *testing.T) {
 
 func TestListedDomainsAreStoredInPunycode(t *testing.T) {
 	in := RuleInput{Kind: KindLinks, Name: "l", Action: ActionBlock, Config: Settings{Mode: LinksBlockList,
-		Domains: []string{"Bücher.Example", "http://evil．com/x", "xn--bcher-kva.example"}}}
+		Domains: []string{"B\u00fccher.Example", "http://evil\uff0ecom/x", "xn--bcher-kva.example"}}}
 	got, err := in.Normalize()
 	if err != nil {
 		t.Fatal(err)

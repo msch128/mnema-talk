@@ -39,6 +39,7 @@ var Classes = []Class{
 	{"user.lockout_clear", VisPrivileged, "Owner-only, reveals account attacks"},
 	{"auth.%", VisPrivileged, "sign-ins, failures and lockouts are other members' security events"},
 	{"report.%", VisPrivileged, "reports may concern a private channel or a direct message"},
+	{"moderation.note_%", VisPrivileged, "moderator notes are private to the moderators"},
 	{"message.%", VisChannel, "holds message text of one channel"},
 	{"moderation.bulk_delete", VisChannel, "names a channel and a reason that may concern a private channel"},
 	{"poll.%", VisChannel, "names a channel and quotes the question of one of its polls"},

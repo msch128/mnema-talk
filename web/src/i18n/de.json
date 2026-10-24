@@ -717,6 +717,9 @@
       "session": "Sitzungstoken",
       "sessionPurpose": "Signierte Sitzungstoken zur Authentifizierung",
       "sessionRetention": "Max. {days} Tage oder bis zum Abmelden",
+      "moderation": "Moderationsdaten",
+      "moderationPurpose": "Meldungen, Automod-Einträge und private Notizen, die Moderatoren über Mitglieder führen; nie Teil eines Datenexports",
+      "moderationRetention": "Bis die Moderatoren sie löschen; Einträge zu einem gelöschten Konto bleiben unter „Gelöschtes Mitglied“ stehen",
       "rightsHeading": "Ihre Rechte als betroffene Person",
       "rights1Before": "Sie haben nach Art. 15–22 DSGVO jederzeit das Recht auf unentgeltliche ",
       "rightsAccess": "Auskunft",
@@ -1883,7 +1886,10 @@
         "unban": "Mitglied entsperrt",
         "kick": "Mitglied rausgeworfen",
         "ban_expired": "Sperre abgelaufen",
-        "bulk_delete": "Nachrichten gesammelt gelöscht"
+        "bulk_delete": "Nachrichten gesammelt gelöscht",
+        "note_add": "Moderatornotiz hinzugefügt",
+        "note_edit": "Moderatornotiz bearbeitet",
+        "note_delete": "Moderatornotiz gelöscht"
       },
       "emoji": {
         "create": "Emoji hinzugefügt",
@@ -2565,6 +2571,48 @@
         "everything": "Konten unter {age} dürfen nicht schreiben"
       },
       "raid": "Mehr als {joins} Beitritte innerhalb von {window}: Neue eingeschränkt für {restrict}"
+    }
+  },
+  "modHistory": {
+    "tabs": "Profilbereiche",
+    "tabProfile": "Profil",
+    "tabModeration": "Moderation",
+    "strikeCount": "{count} Verwarnungen",
+    "privacy": "Das sehen nur Moderatoren. Das Mitglied bekommt es nie zu sehen, und es ist nicht Teil seines Datenexports.",
+    "loadFailed": "Der Moderationsverlauf konnte nicht geladen werden.",
+    "saveFailed": "Die Notiz konnte nicht gespeichert werden. Versuche es noch einmal.",
+    "deleteFailed": "Die Notiz konnte nicht gelöscht werden. Versuche es noch einmal.",
+    "notes": "Notizen",
+    "noteLabel": "Notiz",
+    "notePlaceholder": "Eine private Notiz für die Moderatoren …",
+    "asStrike": "Als Verwarnung zählen",
+    "add": "Notiz hinzufügen",
+    "noNotes": "Noch keine Notizen.",
+    "strike": "Verwarnung",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "deleteTitle": "Diese Notiz löschen?",
+    "deleteBody": "Die Notiz wird endgültig entfernt.",
+    "timeline": "Verlauf",
+    "noEvents": "Nichts vermerkt.",
+    "someModerator": "Ein Moderator",
+    "reason": "Grund: {reason}",
+    "event": {
+      "timeout": "{actor} hat einen Timeout von {duration} verhängt",
+      "timeout_removed": "{actor} hat den Timeout beendet",
+      "ban": "{actor} hat das Mitglied gesperrt",
+      "banTimed": "{actor} hat das Mitglied für {duration} gesperrt",
+      "unban": "{actor} hat die Sperre aufgehoben",
+      "ban_expired": "Die Sperre ist abgelaufen",
+      "kick": "{actor} hat das Mitglied rausgeworfen",
+      "talk_removal": "{actor} hat das Mitglied aus einem Talk entfernt",
+      "roles": "{actor} hat die Rollen geändert: {changes}",
+      "report": "Gemeldet ({category}), {status}",
+      "automod": {
+        "blocked": "Die Automod-Regel „{rule}“ hat eine Nachricht blockiert",
+        "flagged": "Die Automod-Regel „{rule}“ hat eine Nachricht markiert",
+        "alert": "Die Automod-Regel „{rule}“ hat einen Hinweis ausgelöst"
+      }
     }
   },
   "reports": {

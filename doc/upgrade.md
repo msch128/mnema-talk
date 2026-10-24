@@ -137,6 +137,7 @@ nothing in `.env` has to change.
 |---|---|
 | 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
 | 0066 | `automod_rules` and `automod_state` with the default rules (below), and the columns `source`, `automod_rule`, `automod_outcome` and `hit_count` of `message_reports` (existing reports keep `source = 'member'`). |
+| 0067 | `moderation_notes`: private moderator notes about members. |
 
 #### Talks
 
@@ -153,7 +154,7 @@ nothing in `.env` has to change.
   `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
   channel (additive).
 
-#### Automod
+#### Automod and moderation history
 
 **Defaults at the upgrade.** Automod is on after the upgrade, with conservative
 rules that every server gets the same way (new servers included). Look at
@@ -173,11 +174,19 @@ posting a link, and a burst of invitations used at once (a party of more than 10
 within 10 seconds) is held back for 10 minutes; delete or loosen the rule if
 that does not suit your community. Nothing changes for existing messages.
 
+**Moderation tab.** Members with *Manage reports* get a Moderation tab in the
+profile (history and private moderator notes). No permission changes hands:
+the Owner and Administrators have it, other roles only if you gave them
+*Manage reports*. Notes about a member are moderator data; they are not in the
+member's own data export (see [moderation](moderation.md#moderator-notes-are-moderator-data)
+and the privacy page, "Moderation records").
+
 **API.** Additive: the report objects gain `source`, `automod_rule`,
 `automod_outcome` and `hit_count`, `message_id` and `channel_id` may be left out
 (automod entries about a message that was never stored, raid alerts),
 `kind` may be `alert` and `category` `automod`. New routes
-`/api/admin/automod*`. The health `features` list gains `automod`.
+`/api/admin/automod*` and `/api/admin/users/{id}/moderation*`. The health
+`features` list gains `automod` and `moderation.history`.
 
 ### 1.0.x → 1.1.0
 

@@ -1,15 +1,15 @@
 // Package moderation serves the moderators' tools of 1.2: the automod rules
-// (Administrator). The rules themselves run in internal/automod; this package
-// is only their REST surface.
+// (Administrator) and the per-member moderation history with private
+// moderator notes (Manage reports). The rules themselves run in
+// internal/automod; this package is only their REST surface.
 package moderation
 
 import (
-	"errors"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5"
+	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -17,7 +17,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
-// Handler serves the automod routes.
+// Handler serves the automod and moderation-history routes.
 type Handler struct {
 	DB    *db.Pool
 	Perms *perm.Service
@@ -32,6 +32,12 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	cfg.Post("/automod/rules", httpx.Handle(h.createRule))
 	cfg.Put("/automod/rules/{id}", httpx.Handle(h.updateRule))
 	cfg.Delete("/automod/rules/{id}", httpx.Handle(h.deleteRule))
+
+	mod := r.With(auth.RequirePerm(h.Perms, perm.ManageReports))
+	mod.Get("/users/{id}/moderation", httpx.Handle(h.getHistory))
+	mod.Post("/users/{id}/moderation/notes", httpx.Handle(h.addNote))
+	mod.Put("/users/{id}/moderation/notes/{noteID}", httpx.Handle(h.editNote))
+	mod.Delete("/users/{id}/moderation/notes/{noteID}", httpx.Handle(h.deleteNote))
 }
 
 // AutomodList is the answer of GET /api/admin/automod.
@@ -40,8 +46,6 @@ type AutomodList struct {
 	// RaidUntil is set while raid protection is restricting newcomers.
 	RaidUntil *time.Time `json:"raid_until,omitempty" binding:"optional" format:"date-time"`
 }
-
-func isNoRows(err error) bool { return errors.Is(err, pgx.ErrNoRows) }
 
 // getAutomod handles GET /api/admin/automod.
 //
@@ -199,3 +203,6 @@ func (h *Handler) deleteRule(w http.ResponseWriter, r *http.Request) error {
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
+
+// subjectID reads the member the route is about.
+func subjectID(r *http.Request) (uuid.UUID, error) { return httpx.PathUUID(r, "id") }

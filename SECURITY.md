@@ -118,9 +118,14 @@ direct message shows only that copy, never the rest of the conversation.
 Deleting an account blanks its text in every report copy and cuts the links
 to the account. Details: [doc/moderation.md](doc/moderation.md#blocking-and-reports).
 
-**Automod (1.2).** Automod entries use the same queue. A blocked channel
-message is kept in the entry as the text that was refused; for a direct
-message automod keeps no text at all, only who broke which rule. Details: [doc/moderation.md](doc/moderation.md#automod).
+**Automod and moderator notes (1.2).** Automod entries use the same queue. A
+blocked channel message is kept in the entry as the text that was refused;
+for a direct message automod keeps no text at all, only who broke which rule.
+Moderators with *Manage reports* can also write private notes about a member.
+A note is moderator data: the member never sees it, it is not in their data
+export, the audit log records that it was written but never what it says, and
+when the account is erased the notes stay, attached to the tombstone, until a
+moderator deletes them. Details: [doc/moderation.md](doc/moderation.md#automod).
 
 ## Forwarding (a reference, not a copy)
 

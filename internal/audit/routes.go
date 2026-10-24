@@ -122,6 +122,11 @@ var Routes = []Route{
 	{Method: "PUT", Pattern: "/automod/rules/{id}", Action: "automod.rule_update", TargetType: "automod_rule", IDParam: "id"},
 	{Method: "DELETE", Pattern: "/automod/rules/{id}", Action: "automod.rule_delete", TargetType: "automod_rule", IDParam: "id"},
 
+	// The text of a moderator note never reaches the log.
+	{Method: "POST", Pattern: "/users/{id}/moderation/notes", Action: "moderation.note_add", TargetType: "user", IDParam: "id", NoBody: true},
+	{Method: "PUT", Pattern: "/users/{id}/moderation/notes/{noteID}", Action: "moderation.note_edit", TargetType: "user", IDParam: "id", NoBody: true},
+	{Method: "DELETE", Pattern: "/users/{id}/moderation/notes/{noteID}", Action: "moderation.note_delete", TargetType: "user", IDParam: "id"},
+
 	{Method: "POST", Pattern: "/media/prune", Action: "media.prune", TargetType: "media"},
 	{Method: "POST", Pattern: "/media/orphans/cleanup", Action: "media.orphans_cleanup", TargetType: "media"},
 	{Method: "DELETE", Pattern: "/media/{id}", Action: "media.delete", TargetType: "media", IDParam: "id"},
