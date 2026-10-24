@@ -2370,8 +2370,14 @@
     "rsvpInterested": "Maybe",
     "rsvpNotGoing": "Can’t make it",
     "cancelKeep": "Keep event",
-    "goingCount": "{count} going",
-    "interestedCount": "{count} interested",
+    "goingCount": {
+      "one": "{count} going",
+      "other": "{count} going"
+    },
+    "interestedCount": {
+      "one": "{count} interested",
+      "other": "{count} interested"
+    },
     "reminderToast": "Reminder: “{title}” is starting in 15 minutes!",
     "save": "Save changes",
     "details": "Details",

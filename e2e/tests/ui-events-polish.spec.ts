@@ -53,7 +53,7 @@ for (const viewport of [{ width: 390, height: 844, label: '390' }, { width: 1440
         // A squashed card is cut below its button row (the Details button then sticks out).
         const details = await card.getByRole('button', { name: 'Details' }).boundingBox()
         expect(box && details && details.y + details.height <= box.y + box.height + 1).toBe(true)
-        await expect(card.getByTestId('event-rsvp-summary')).toContainText('1 Zusagen')
+        await expect(card.getByTestId('event-rsvp-summary')).toContainText('1 Zusage')
         await expect(card.getByTestId('event-rsvp-summary').locator('div.rounded-full')).not.toHaveText('?')
       }
       await shot(page, `events-list-${viewport.label}`)

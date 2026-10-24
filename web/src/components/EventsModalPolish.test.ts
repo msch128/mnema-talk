@@ -129,3 +129,19 @@ describe('events: phone layout, avatars and RSVP wording', () => {
     expect(cancel).toHaveLength(1)
   })
 })
+
+describe('events: count wording', () => {
+  it('uses the singular for one answer in German and keeps the English form', async () => {
+    setActivePinia(createPinia())
+    for (const [lang, one, many] of [['de', '1 Zusage · 1 Vielleicht', '2 Zusagen · 1 Vielleicht'], ['en', '1 going · 1 interested', '2 going · 1 interested']] as const) {
+      setLocale(lang)
+      for (const [going, expected] of [[1, one], [2, many]] as const) {
+        const w = mount(EventDetailModal, { props: { event: makeEvent({ rsvp_counts: { going, interested: 1, not_going: 0 } }) } })
+        await flushPromises()
+        expect(w.get('[data-testid="event-rsvp-counts"]').text()).toBe(expected)
+        w.unmount()
+      }
+    }
+    setLocale('en')
+  })
+})
