@@ -34,9 +34,14 @@ const emit = defineEmits<{ close: []; menu: [x: number, y: number, items: Contex
 const NARROW_BELOW = 640
 const headerEl = ref<HTMLElement | null>(null)
 const narrow = ref(false)
+// The three buttons mount only once the width is known, so a narrow header
+// never mounts them in their wide form first (each one loads its data on mount).
+const measured = ref(false)
 let observer: ResizeObserver | null = null
 onMounted(() => {
   const el = headerEl.value
+  if (el && el.clientWidth > 0) narrow.value = el.clientWidth < NARROW_BELOW
+  measured.value = true
   if (!el || typeof ResizeObserver === 'undefined') return
   observer = new ResizeObserver(entries => {
     const width = entries[0]?.contentRect.width ?? el.clientWidth
@@ -137,7 +142,7 @@ function openNotificationMenu(e: MouseEvent) {
           data-testid="channel-topic"
           :aria-expanded="topicOpen ? 'true' : 'false'"
           :aria-label="topicOpen ? $t('chat.topicCollapse') : $t('chat.topicExpand')"
-          class="min-w-0 truncate text-left text-sm text-mnema-muted hover:text-mnema-text md:ml-1 md:border-l md:border-mnema-border md:pl-3 max-md:text-xs"
+          class="min-w-0 max-md:max-w-full truncate text-left text-sm text-mnema-muted hover:text-mnema-text md:ml-1 md:border-l md:border-mnema-border md:pl-3 max-md:text-xs"
           @click="topicOpen = !topicOpen"
         >{{ chatStore.activeChannel?.topic }}</button>
       </div>
@@ -157,12 +162,12 @@ function openNotificationMenu(e: MouseEvent) {
 
     <!-- Right: Badges & member list toggle -->
     <div class="flex items-center gap-2 max-md:gap-0 shrink-0">
-      <template v-if="!panel && !folded">
+      <template v-if="!panel && !folded && measured">
         <MentionsInbox />
         <SavedMessages v-if="hasSaved" />
         <LaterPopover />
       </template>
-      <div v-else-if="!panel" class="relative">
+      <div v-else-if="!panel && measured" class="relative">
         <button
           type="button"
           data-testid="header-more"
