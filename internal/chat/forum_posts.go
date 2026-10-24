@@ -63,10 +63,13 @@ func listPostsByCreation(ctx context.Context, p *db.Pool, where string, args []a
 
 const activityExpr = `COALESCE((SELECT MAX(r.created_at) FROM messages r WHERE r.parent_id = m.id), m.created_at)`
 
+// cursorActivityExpr is activityExpr evaluated for the cursor row (alias a).
+const cursorActivityExpr = `COALESCE((SELECT MAX(r.created_at) FROM messages r WHERE r.parent_id = a.id), a.created_at)`
+
 func listPostsByActivity(ctx context.Context, p *db.Pool, where string, args []any, before *uuid.UUID, limit int) ([]Message, error) {
 	if before != nil {
 		args = append(args, *before)
-		where += fmt.Sprintf(` AND (`+activityExpr+`, m.id) < (SELECT `+activityExpr+`, a.id FROM messages a WHERE a.id = $%d)`, len(args))
+		where += fmt.Sprintf(` AND (`+activityExpr+`, m.id) < (SELECT `+cursorActivityExpr+`, a.id FROM messages a WHERE a.id = $%d)`, len(args))
 	}
 	args = append(args, limit)
 	sql := messageSelect + " " + where + fmt.Sprintf(` ORDER BY `+activityExpr+` DESC, m.id DESC LIMIT $%d`, len(args))
