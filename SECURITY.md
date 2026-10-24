@@ -37,6 +37,15 @@ do not disclose them publicly before a fix is available. Do not run scanners,
 brute-force or load tests against instances you do not operate; run the stack
 locally instead (`make up` or `make dev`).
 
+## Audit package
+
+[doc/security/audit-package.md](doc/security/audit-package.md) collects what an
+external security review needs in one place: scope and versions, architecture
+and data flows, threat model, cryptographic design, a generated inventory of
+routes and events with their authentication, the controls, the results of the
+internal reviews (1.0, 1.1, 1.2), known limitations, how to run a test instance
+and suggested focus areas.
+
 ## 1.0 internal security review
 
 Before 1.0.0 the project reviewed its own code in six lanes: authentication and
