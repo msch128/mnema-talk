@@ -1,0 +1,129 @@
+web/src/components/AdminUserRow.vue
+  s_06fcde5dbef956::t_259befbdbf6af5 84,154
+web/src/components/AdminPermissionsUi.test.ts
+  s_06fcde5dbef956::t_ceb7abc85a6128 117
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_7ea0c0cb51f3d5 1421-1429
+  s_06fcde5dbef956::t_ab8c55df2d7fc8 2042-2045,2190-2206,2208-2212
+  s_06fcde5dbef956::t_49a8d143778280 3095-3096
+  s_06fcde5dbef956::t_8fccd018329891 1430-1442
+  s_06fcde5dbef956::t_146e52bc2931de 2272
+  s_06fcde5dbef956::t_384958c9316aec 2955-2957,2967-2970
+  s_06fcde5dbef956::t_e7a431ca162375 1443-1444,1825-1826,2503-2504,2630-2631,3171-3172
+  s_06fcde5dbef956::t_8a0c8d0554b9b8 2269-2271,2273-2276
+  s_06fcde5dbef956::t_5106cefb738c88 3092-3094
+web/src/components/AdminBansTab.vue
+  s_06fcde5dbef956::t_d820ba4aa19149 60
+  s_06fcde5dbef956::t_782be7235aaec0 13
+web/src/components/AdminAutomodTab.vue
+  s_06fcde5dbef956::t_384958c9316aec 10,16,56,92,94-98,100,102-103,106,110,112-113
+web/src/components/AdminDashboardRouting.test.ts
+  s_06fcde5dbef956::t_6aa616ce21f265 10,82,88-89,93-116,118-126
+  s_06fcde5dbef956::t_6256d9e82b4b7c 117
+web/src/components/AdminRolesTab.test.ts
+  s_06fcde5dbef956::t_cde14b7c6c0f96 320-375
+web/src/components/AdminInvitesTab.test.ts
+  s_06fcde5dbef956::t_bda234de6b55e6 32-33,53-55,82,87,97,104,115,138
+  s_06fcde5dbef956::t_1322584ecc2a08 179-189
+web/src/components/AdminDashboard.vue
+  s_06fcde5dbef956::t_ad4ff2562b7277 167-173
+  s_06fcde5dbef956::t_cd229613be90ef 2-6,8,11-15,20,46,95-101,103-105,108-127,138,142-160,162-166,174-176
+web/src/lib/automod.ts
+  s_06fcde5dbef956::t_42838bd2465be4 4,41-51,58-64,80,128-132,134-135
+  s_06fcde5dbef956::t_6f8df883ded0b2 52-57
+web/src/components/AdminLayoutToolbar.vue
+  s_06fcde5dbef956::t_146e52bc2931de 16
+  s_06fcde5dbef956::t_a33045caa76f66 14,22,28,42
+web/src/components/AdminInvitesTab.vue
+  s_06fcde5dbef956::t_5765f581baeb2b 102
+  s_06fcde5dbef956::t_8fccd018329891 87,89,91-92,110-136,139,142-146,148,150,172-174
+  s_06fcde5dbef956::t_5d5aecb01dcbee 3-4,12,88,90,93-95
+  s_06fcde5dbef956::t_fcb4739521fe0d 96
+web/src/components/AdminImportTab.vue
+  s_06fcde5dbef956::t_e7a431ca162375 13,157
+web/src/components/AdminMediaTab.vue
+  s_06fcde5dbef956::t_e7a431ca162375 12,140-141
+  s_06fcde5dbef956::t_6b5c2bd582d762 4
+web/src/components/AdminBotsTab.vue
+  s_06fcde5dbef956::t_e7a431ca162375 15,91
+web/src/components/RolePermissionPicker.vue
+  s_06fcde5dbef956::t_5c8dec5422a651 1-44
+e2e/tests/mobile.spec.ts
+  s_06fcde5dbef956::t_bb404869cc0de1 214
+  s_06fcde5dbef956::t_48bb3465b614cd 200-202,206-209,211,213,216-217
+web/src/components/AdminSystemTab.vue
+  s_06fcde5dbef956::t_82963a28bfc7fd 4,179
+web/src/components/AdminUsersTab.vue
+  s_06fcde5dbef956::t_259befbdbf6af5 179
+web/src/components/AdminReportDetail.vue
+  s_06fcde5dbef956::t_6f8df883ded0b2 14,127
+  s_06fcde5dbef956::t_49a8d143778280 7,15-16,24,43-52,106-121,145-149,163,165-166,168-169,172-175
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_5106cefb738c88 3092-3094
+  s_06fcde5dbef956::t_384958c9316aec 2955-2957,2967-2970
+  s_06fcde5dbef956::t_49a8d143778280 3095-3096
+  s_06fcde5dbef956::t_146e52bc2931de 2272
+  s_06fcde5dbef956::t_e7a431ca162375 1443-1444,1825-1826,2503-2504,2630-2631,3171-3172
+  s_06fcde5dbef956::t_7ea0c0cb51f3d5 1421-1429
+  s_06fcde5dbef956::t_8a0c8d0554b9b8 2269-2271,2273-2276
+  s_06fcde5dbef956::t_8fccd018329891 1430-1442
+  s_06fcde5dbef956::t_ab8c55df2d7fc8 2042-2045,2190-2206,2208-2212
+web/src/components/AdminReportsTab.vue
+  s_06fcde5dbef956::t_0f2f6b62c11ca7 78,95
+  s_06fcde5dbef956::t_5106cefb738c88 6,12-13,15-16,23-24,58,61-68,99-100,106,109-116,119-123,128,132-133
+  s_06fcde5dbef956::t_6f8df883ded0b2 11,117-118
+web/src/i18n/auditLabels.test.ts
+  s_06fcde5dbef956::t_ab8c55df2d7fc8 11,14
+web/src/components/EmptyState.test.ts
+  s_06fcde5dbef956::t_f0856b09493996 1-19
+web/src/components/ReportsAndPrivacy.test.ts
+  s_06fcde5dbef956::t_5106cefb738c88 133
+  s_06fcde5dbef956::t_a24dd68414f52e 223-250,252-262
+web/src/components/AdminAutomod.test.ts
+  s_06fcde5dbef956::t_384958c9316aec 76
+web/src/components/AutomodRuleDialog.vue
+  s_06fcde5dbef956::t_384958c9316aec 181-184
+web/src/lib/automod.test.ts
+  s_06fcde5dbef956::t_e703a8b8a06718 3,62-63
+  s_06fcde5dbef956::t_9aeaaffc39fe85 5,70-72
+  s_06fcde5dbef956::t_e379626eb40dfa 64-69,73-87
+web/src/components/AdminRolesTab.vue
+  s_06fcde5dbef956::t_8a0c8d0554b9b8 65-67,72-81,287,308,316,327-330
+  s_06fcde5dbef956::t_5c8dec5422a651 13,15,379
+  s_06fcde5dbef956::t_146e52bc2931de 386,390
+  s_06fcde5dbef956::t_ad4ff2562b7277 383,388-389,391-393
+web/src/components/AdminStatusTab.vue
+  s_06fcde5dbef956::t_82963a28bfc7fd 57
+web/src/lib/adminNav.ts
+  s_06fcde5dbef956::t_1acaca703e8f1a 1-13
+web/src/components/AdminNav.vue
+  s_06fcde5dbef956::t_6a77580ca38c9b 1-6,9-45,47-61
+  s_06fcde5dbef956::t_1acaca703e8f1a 7-8
+  s_06fcde5dbef956::t_5765f581baeb2b 46
+web/src/components/AdminAuditTab.vue
+  s_06fcde5dbef956::t_ab8c55df2d7fc8 6,22,32-33,76-96,160-165,167-168,171,175-189,191
+web/src/components/AdminAuditTab.test.ts
+  s_06fcde5dbef956::t_a95f7c7e8095e6 121-149
+web/src/components/AdminEmojiTab.vue
+  s_06fcde5dbef956::t_e7a431ca162375 11,148
+web/src/components/AutomodRuleDialog.test.ts
+  s_06fcde5dbef956::t_384958c9316aec 126
+web/src/components/EmptyState.vue
+  s_06fcde5dbef956::t_f0856b09493996 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "08a5a64ad6b082d9fbcb7c45bc74253cca1aa010",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
