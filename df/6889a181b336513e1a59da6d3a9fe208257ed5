@@ -1,0 +1,88 @@
+internal/server/health.go
+  s_06fcde5dbef956::t_89d9d981be8b48 56
+doc/import.md
+  s_06fcde5dbef956::t_89d9d981be8b48 1-163
+internal/audit/classes_test.go
+  s_06fcde5dbef956::t_89d9d981be8b48 36
+internal/perm/store.go
+  s_06fcde5dbef956::t_89d9d981be8b48 13-15
+internal/discordimport/undo.go
+  s_06fcde5dbef956::t_89d9d981be8b48 1-398
+web/src/components/AdminImportTab.test.ts
+  s_06fcde5dbef956::t_89d9d981be8b48 1-239
+internal/discordimport/plan.go
+  s_06fcde5dbef956::t_89d9d981be8b48 1-366
+web/src/components/DiscordImportPreview.test.ts
+  s_06fcde5dbef956::t_89d9d981be8b48 1-51
+doc/upgrade.md
+  s_06fcde5dbef956::t_89d9d981be8b48 166,224-241
+  s_06fcde5dbef956::t_758c6e302da0e2 242
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_89d9d981be8b48 995,2922-2999
+  s_06fcde5dbef956::t_b5f461d6b73433 994,2921
+internal/discordimport/plan_types.go
+  s_06fcde5dbef956::t_89d9d981be8b48 1-95
+web/src/components/DiscordImportPreview.vue
+  s_06fcde5dbef956::t_89d9d981be8b48 1-93
+internal/chat/channel_layout.go
+  s_06fcde5dbef956::t_89d9d981be8b48 135-138
+internal/audit/routes.go
+  s_06fcde5dbef956::t_89d9d981be8b48 111-115
+internal/audit/classes.go
+  s_06fcde5dbef956::t_89d9d981be8b48 33
+internal/db/migrations/0071_discord_import.sql
+  s_06fcde5dbef956::t_89d9d981be8b48 1-25
+internal/discordimport/fixture_test.go
+  s_06fcde5dbef956::t_89d9d981be8b48 1-70
+internal/discordimport/handler.go
+  s_06fcde5dbef956::t_89d9d981be8b48 1-219
+internal/discordimport/import_test.go
+  s_06fcde5dbef956::t_89d9d981be8b48 1-216
+internal/discordimport/template.go
+  s_06fcde5dbef956::t_89d9d981be8b48 1-218
+internal/server/discord_import_integration_test.go
+  s_06fcde5dbef956::t_89d9d981be8b48 1-63
+internal/server/router_routes.go
+  s_06fcde5dbef956::t_89d9d981be8b48 136
+web/src/components/AdminDashboard.vue
+  s_06fcde5dbef956::t_89d9d981be8b48 26,54,73,151
+  s_06fcde5dbef956::t_b5f461d6b73433 5,40-41
+internal/discordimport/apply.go
+  s_06fcde5dbef956::t_89d9d981be8b48 1-400
+web/src/components/AdminImportTab.vue
+  s_06fcde5dbef956::t_89d9d981be8b48 1-176
+web/src/components/DiscordImportConfirm.vue
+  s_06fcde5dbef956::t_89d9d981be8b48 1-103
+web/src/lib/discordImport.ts
+  s_06fcde5dbef956::t_89d9d981be8b48 1-41
+internal/server/router_build.go
+  s_06fcde5dbef956::t_89d9d981be8b48 7,17,62,150-156,159
+internal/discordimport/undo_roles_integration_test.go
+  s_06fcde5dbef956::t_89d9d981be8b48 1-69
+internal/discordimport/import_integration_test.go
+  s_06fcde5dbef956::t_89d9d981be8b48 1-473
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_89d9d981be8b48 995,2922-2999
+  s_06fcde5dbef956::t_b5f461d6b73433 994,2921
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_b5f461d6b73433 48
+  s_06fcde5dbef956::t_89d9d981be8b48 49
+internal/discordimport/permmap.go
+  s_06fcde5dbef956::t_89d9d981be8b48 1-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "df6889a181b336513e1a59da6d3a9fe208257ed5",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
