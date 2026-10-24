@@ -25,6 +25,7 @@ import { shownName } from '../lib/deletedUser'
 import ActivityStats from './ActivityStats.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import MemberRolesDialog from './MemberRolesDialog.vue'
+import ProfileModerationTab from './ProfileModerationTab.vue'
 import { moderationOffer, openTimeout, openBan, liftTimeout } from '../lib/moderationActions'
 
 const props = defineProps({
@@ -93,6 +94,11 @@ const showBlock = computed(() => dmActions.canBlock(profileId.value) && !isBot.v
 async function handleMessage() {
   if (await dmActions.messageMember(profileId.value)) emit('close')
 }
+// Moderators with Manage reports get a Moderation tab: the member's history and
+// the private notes about them (never shown to the member, never for yourself).
+const tab = ref<'profile' | 'moderation'>('profile')
+const strikes = ref(0)
+const hasModerationTab = computed(() => features.moderationHistory && permissions.can('manage_reports') && !isSelf.value && !isBot.value && !!profileId.value)
 const moderationSubject = computed(() => ({ id: profileId.value, display_name: profileUser.value.display_name, username: profileUser.value.username }))
 
 // Current voice hangout channel of this user
@@ -261,6 +267,24 @@ function handleMention() {
             <p class="mt-1 text-xs text-mnema-tertiary">{{ $t(blocks.isBlocked(profileId) ? 'blocks.blockedHint' : 'blocks.hint') }}</p>
           </div>
 
+          <div v-if="hasModerationTab" role="group" :aria-label="$t('modHistory.tabs')" class="mt-3 flex gap-1" data-testid="profile-tabs">
+            <button
+              v-for="name in (['profile', 'moderation'] as const)"
+              :key="name"
+              type="button"
+              :aria-pressed="tab === name ? 'true' : 'false'"
+              :data-tab="name"
+              :class="['flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-semibold transition max-md:min-h-11', tab === name ? 'border-mnema-accent/40 bg-mnema-accent/15 text-mnema-accent' : 'border-transparent text-mnema-muted hover:text-mnema-text']"
+              @click="tab = name"
+            >
+              {{ $t(name === 'profile' ? 'modHistory.tabProfile' : 'modHistory.tabModeration') }}
+              <span v-if="name === 'moderation' && strikes > 0" class="rounded-full bg-mnema-danger/20 px-1.5 text-xs text-mnema-danger" data-testid="strike-badge" :aria-label="$t('modHistory.strikeCount', { count: strikes })">{{ strikes }}</span>
+            </button>
+          </div>
+
+          <ProfileModerationTab v-if="hasModerationTab" v-show="tab === 'moderation'" class="mt-3" :user-id="profileId" @strikes="strikes = $event" />
+
+          <div v-show="tab === 'profile' || !hasModerationTab">
           <ProfileStatus :profile-user="profileUser" :is-self="!!isSelf" />
 
           <!-- Divider -->
@@ -313,6 +337,7 @@ function handleMention() {
               <Calendar class="w-4 h-4 text-mnema-tertiary" />
               <span>{{ $t('profile.memberSince') }} <strong class="text-mnema-text font-medium">{{ memberSinceFormatted }}</strong></span>
             </div>
+          </div>
           </div>
         </div>
 

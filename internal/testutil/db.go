@@ -110,8 +110,9 @@ func reset(p *db.Pool) error {
 		return err
 	}
 	// Automod starts every test with no rules (the migration seeds defaults
-	// for real servers; a test adds the rules it needs).
-	if _, err := p.Exec(ctx, `DELETE FROM automod_rules;
+	// for real servers; a test adds the rules it needs). Notes refer to
+	// members without a foreign key, so they are removed by hand.
+	if _, err := p.Exec(ctx, `DELETE FROM automod_rules; DELETE FROM moderation_notes;
 		UPDATE automod_state SET raid_until = NULL, raid_report = NULL, version = version + 1`); err != nil {
 		return err
 	}

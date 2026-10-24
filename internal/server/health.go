@@ -50,6 +50,7 @@ var Features = []string{
 	"channels.auto_delete",
 	"talks.lobby",
 	"automod",
+	"moderation.history",
 }
 
 // healthCacheTTL is how long a health result is reused: the endpoint is

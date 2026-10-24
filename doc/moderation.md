@@ -22,6 +22,7 @@ the target out of reach between the check and the write.
 | Remove from a Talk | *Disconnect members* | Removes the member from that Talk only; they stay signed in |
 | Read and close reports | *Manage reports* | See [Blocking and reports](#blocking-and-reports) |
 | Automod rules | *Administrator* | See [Automod](#automod); no new permission bit |
+| Moderation history and notes of a member | *Manage reports* | See [Moderation history and moderator notes](#moderation-history-and-moderator-notes) |
 
 ## Timeouts
 
@@ -335,13 +336,51 @@ New servers and upgraded ones start with the same **conservative** rules
 (block), new accounts under 10 minutes may not post links (block), raid
 protection at more than 10 joins in 10 seconds (restriction of 10 minutes,
 flag). *Blocked words* (empty word list) and *Links* are present and **off**.
-See [the upgrade notes](upgrade.md#automod).
+See [the upgrade notes](upgrade.md#automod-and-moderation-history).
 
 ### API
 
 All under `/api/admin`, **Administrator** only: `GET /automod`,
 `POST /automod/rules`, `PUT /automod/rules/{id}`,
 `DELETE /automod/rules/{id}`. See [`api/openapi.json`](../api/openapi.json).
+
+## Moderation history and moderator notes
+
+A member's profile has a **Moderation** tab for everyone with *Manage reports*
+(never for yourself, for bots, or on a server without the
+`moderation.history` feature). It shows
+
+- a **timeline**: timeouts, ended timeouts, bans, unbans, expired bans, kicks,
+  removals from a Talk, role changes made by moderators, reports about the
+  member (category and status, never the reporter, the note or the text), and
+  automod hits (rule, outcome, count). It is read from the audit log and the
+  reports table; the latest 200 events;
+- **notes**: short private texts (up to 1000 characters, at most 100 per member)
+  that moderators write about a member. A note can **count as a strike**; the
+  strike count is the small badge on the tab.
+
+A moderator **edits and deletes their own** notes; an Administrator (or the
+Owner) **deletes any** note, and edits only their own. Nobody opens the history
+or the notes of themselves, whatever they hold.
+
+`GET /api/admin/users/{id}/moderation`, `POST .../moderation/notes`,
+`PUT` and `DELETE .../moderation/notes/{noteID}`, all *Manage reports*.
+
+### Moderator notes are moderator data
+
+- **Never visible to the member** they are about, in no response, event, list or
+  search, and **never in their data export** (the export holds what the
+  person wrote and what they filed, not what moderators keep about them).
+- **Audited without text**: `moderation.note_add`, `moderation.note_edit` and
+  `moderation.note_delete` are in the audit log for the Owner and
+  Administrators only, and never carry the note.
+- **Erasure.** When an account is erased the notes **stay**, because they are
+  the moderators' record (for example against a returning member): the member
+  they are about is shown as the account's tombstone, "Deleted member", and a
+  note written by an erased moderator shows "Deleted member" as its author.
+  The notes are not erased with the account, and the privacy page lists them
+  under *Moderation records*; an Administrator can delete any of them.
+  Operators who need a shorter retention delete notes by hand.
 
 ## Audit log
 

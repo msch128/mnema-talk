@@ -145,6 +145,7 @@ of the pre-update backup (see "Rollback" above).
 | 0064 | `user_sessions`: one row per browser session (device label, created, last active). |
 | 0065 | `instance_settings.session_inactivity_days` (1 to 365, default 7). |
 | 0066 | `automod_rules` and `automod_state` with the default rules (below), and the columns `source`, `automod_rule`, `automod_outcome` and `hit_count` of `message_reports` (existing reports keep `source = 'member'`). |
+| 0067 | `moderation_notes`: private moderator notes about members. |
 
 #### Talks
 
@@ -161,76 +162,7 @@ of the pre-update backup (see "Rollback" above).
   `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
   channel (additive).
 
-#### Messaging
-
-- **Status expiry (`status.expiry`).** `PUT /api/users/me/status` takes an
-  optional `expires_at`. A status past its time reads as empty at once; a sweep
-  every 30 seconds clears the row and sends `user_update`.
-- **Slow mode up to 24 hours.** Existing values are unchanged. A 1.1.x web app
-  still offers its own presets up to 6 hours.
-- **Channel descriptions** (the existing topic, at most 255 characters) are
-  shown under the channel name; nothing to migrate.
-
-#### Sessions: "Where you are signed in" and inactivity sign-out
-
-Members see and end their own sessions under *Account & security*, and a
-session that is not used for the inactivity limit (default 7 days) is signed
-out. Nobody is signed out by the upgrade: a session that exists at the upgrade
-has no row yet; it gets one on its first request afterwards and its
-inactivity clock starts then, so the earliest anyone can be signed out for
-inactivity is the configured number of days after the upgrade. The limit is
-under *Admin* > *Welcome & rules*; see "Sessions and inactivity sign-out" in
-[operations.md](operations.md).
-
-#### Reminders and scheduled messages
-
-- **Database.** Migration 0062 adds `message_reminders` and
-  `scheduled_messages`. Additive and forward-only, like every migration; a
-  rollback to a 1.1 image needs the restore of the pre-update backup.
-- **Features.** `reminders` and `messages.scheduled` in `GET /api/health`.
-- **Members get.** *Remind me* in the message menu and *Send later* next to
-  the send button, and one **Reminders and scheduled** popover in the channel
-  header. Both are private. At most 100 reminders and 50 scheduled messages per
-  member. Scheduled messages are text only.
-- **Checks at the due time.** A reminder re-checks that the member can still
-  see the message, otherwise the notification says "a message you can no longer
-  see". A scheduled message is sent as its author through the normal path: a
-  permission, timeout, slow mode or block that applies *then* refuses it, and
-  it stays as a failed draft the author can edit, reschedule or delete.
-- **API and events.** `GET/POST /api/me/reminders`, `DELETE
-  /api/me/reminders/{id}`, `GET /api/me/scheduled`, `POST
-  /api/channels/{id}/scheduled`, `PATCH/DELETE /api/me/scheduled/{id}`; the
-  events `reminder_update` and `scheduled_message_update` go to the member's
-  own sessions only. All additive.
-- **Web Push.** Reminders and refused scheduled messages use the existing push
-  pipeline and the device list of the member; they ignore channel mute levels
-  (the member asked for them) but follow the member's preview setting and the
-  operator's `PUSH_PREVIEWS`.
-
-#### Messaging: anonymous polls and auto-delete
-
-- **Anonymous polls no longer keep the choice.** Until 1.1 an anonymous poll
-  stored who voted for what and only hid it in the API. The migration turns
-  every existing anonymous poll into counters plus "has voted" rows and
-  **deletes its named votes**, so the tallies and the participants stay but
-  nobody in the app can be tied to an answer any more, and a database backup
-  taken after the update holds no named vote. Backups taken before the update, and PostgreSQL's
-  own dead rows until autovacuum has run, can still hold the old rows; run
-  `VACUUM FULL poll_votes;` if that matters to you. Members can no longer
-  change a vote in an anonymous poll (the web app says so before they vote);
-  the polls that name their voters are untouched. The data export of a member
-  no longer lists their votes in anonymous polls, because none are stored.
-  New feature name: `polls.anonymous`; a web app without it never offers the
-  toggle.
-- **Auto-delete per channel** (feature `channels.auto_delete`) is off
-  everywhere after the update. Someone with *Manage channels* opts a channel
-  in under its settings; nothing is deleted until then. See
-  [moderation.md](moderation.md#auto-delete) for what stays (pinned messages)
-  and how it is audited (`channel.auto_delete_set`, `channel.auto_delete_run`).
-  New route `PUT /api/admin/channels/{id}/auto-delete` and the additive
-  response field `auto_delete_days` of channels.
-
-#### Automod
+#### Automod and moderation history
 
 **Defaults at the upgrade.** Automod is on after the upgrade, with conservative
 rules that every server gets the same way (new servers included). Look at
@@ -250,10 +182,18 @@ posting a link, and a burst of invitations used at once (a party of more than 10
 within 10 seconds) is held back for 10 minutes; delete or loosen the rule if
 that does not suit your community. Nothing changes for existing messages.
 
+**Moderation tab.** Members with *Manage reports* get a Moderation tab in the
+profile (history and private moderator notes). No permission changes hands:
+the Owner and Administrators have it, other roles only if you gave them
+*Manage reports*. Notes about a member are moderator data; they are not in the
+member's own data export (see [moderation](moderation.md#moderator-notes-are-moderator-data)
+and the privacy page, "Moderation records").
+
 **API.** Mostly additive: the report objects gain `source`, `automod_rule`,
 `automod_outcome` and `hit_count`, `kind` may be `alert` and `category`
-`automod`. New routes `/api/admin/automod*`. The health `features` list gains
-`automod`. **One contract change:** `message_id` and `channel_id` of an admin
+`automod`. New routes `/api/admin/automod*` and
+`/api/admin/users/{id}/moderation*`. The health `features` list gains
+`automod` and `moderation.history`. **One contract change:** `message_id` and `channel_id` of an admin
 report entry (`GET /api/admin/reports`, `/reports/{id}`) are now optional: an
 automod entry about a blocked message (never stored) has no `message_id`, and a
 raid alert has neither. Clients must treat both as optional; reports filed by
