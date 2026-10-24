@@ -183,9 +183,17 @@ describe('useMessageMenu positioning', () => {
     expect(menu.state.value).toMatchObject({ open: true, x: 300, y: 54 })
   })
 
+  it('hands the ⋯ button over as the anchor, so the menu can flip and align to it', () => {
+    const menu = useMessageMenu({ actions: makeActions(), reply: vi.fn() })
+    menu.openFromButton(trigger({}, rect({ left: 300, top: 30, bottom: 50 })), msg)
+    expect(menu.state.value.anchor).toEqual({ left: 300, top: 30, right: 300, bottom: 50 })
+    menu.onContextMenu(trigger({ clientX: 5, clientY: 6 }, rect({})), msg)
+    expect(menu.state.value.anchor).toBeNull()
+  })
+
   it('show() defaults a missing position to the corner', () => {
     const menu = useMessageMenu({ actions: makeActions(), reply: vi.fn() })
     menu.show(0, 0, [{ label: 'x' }])
-    expect(menu.state.value).toEqual({ open: true, x: 0, y: 0, items: [{ label: 'x' }] })
+    expect(menu.state.value).toEqual({ open: true, x: 0, y: 0, anchor: null, items: [{ label: 'x' }] })
   })
 })

@@ -14,6 +14,7 @@ import UserAvatar from './UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import MuteMarks from './MuteMarks.vue'
 import TalkLeaderMark from './TalkLeaderMark.vue'
+import Badge from './Badge.vue'
 
 const props = defineProps({
   channel: { type: Object as PropType<Channel>, required: true },
@@ -68,16 +69,17 @@ const voiceUsers = computed(() => {
   return users ? Object.values(users) : []
 })
 
-// The row leaves room on its right for the buttons that sit beside it (24px each, 44px chat on phones).
-const actionPad = computed(() => {
-  if (isVoice.value && props.admin) return 'pr-[68px] max-md:pr-[58px]'
-  if (isVoice.value) return 'pr-[38px] max-md:pr-[58px]'
-  return props.admin ? 'pr-[38px] max-md:pr-2' : ''
-})
+// Badges and the timer sit at the row's right edge, the same place on every
+// row. The buttons beside the row (24px each) take that place while the
+// pointer is on it or keyboard focus is inside; on phones the voice chat
+// button is always there, so its row leaves room for it.
+const actionPad = computed(() => (isVoice.value ? 'max-md:pr-[58px]' : ''))
+const hasActions = computed(() => props.admin || (isVoice.value && !props.channel.is_lobby))
+const trailingClass = computed(() => (hasActions.value ? 'md:group-hover/row:invisible md:group-focus-within/row:invisible' : ''))
 
 // Shared row styling (34px channel rows, rounded hover/selected states).
 const rowClass = computed(() => [
-  'relative w-full h-[34px] max-md:h-11 flex items-center justify-between gap-1.5 px-2 mb-px rounded-lg text-nav transition-colors motion-reduce:transition-none group cursor-pointer text-left min-w-0 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
+  'relative w-full h-[34px] max-md:h-11 flex items-center justify-between gap-1.5 px-2 mb-px rounded-lg text-nav transition-colors motion-reduce:transition-none group cursor-pointer text-left min-w-0 focus:outline-hidden focus-ring',
   active.value
     ? 'bg-mnema-hover text-mnema-text font-medium shadow-[inset_2px_0_0_0_#2DA771]'
     : unread.value > 0
@@ -175,27 +177,15 @@ const rowClass = computed(() => [
       </div>
 
       <!-- Unread & Mention Badges; for a Talk in use, how long it runs -->
-      <div class="flex items-center gap-1 ml-auto shrink-0">
+      <div :class="['flex items-center gap-1 ml-auto shrink-0', trailingClass]">
         <VoiceTimer
           v-if="isVoice && voiceStore.roomStartedAt[channel.id]"
           :since="voiceStore.roomStartedAt[channel.id]"
           data-testid="sidebar-talk-timer"
           class="text-xs text-mnema-tertiary"
         />
-        <span
-          v-if="mentions > 0 && !reading"
-          data-testid="channel-mentions"
-          class="px-1.5 py-0.5 rounded-full bg-mnema-danger text-white text-xs font-bold leading-none min-w-[18px] text-center"
-        >
-          {{ mentions }}
-        </span>
-        <span
-          v-else-if="unread > 0 && !reading"
-          data-testid="channel-unread"
-          class="px-1.5 py-0.5 rounded-full bg-mnema-surface border border-mnema-border text-mnema-text text-xs font-semibold leading-none min-w-[18px] text-center"
-        >
-          {{ unread }}
-        </span>
+        <Badge v-if="mentions > 0 && !reading" variant="mention" data-testid="channel-mentions">{{ mentions }}</Badge>
+        <Badge v-else-if="unread > 0 && !reading" variant="unread" data-testid="channel-unread">{{ unread }}</Badge>
       </div>
     </div>
 
@@ -234,7 +224,7 @@ const rowClass = computed(() => [
       <div
         v-for="user in voiceUsers"
         :key="user.id"
-        class="min-h-8 max-md:min-h-11 py-1 flex items-center gap-2 px-2 rounded-md text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text transition-colors min-w-0 cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent"
+        class="min-h-8 max-md:min-h-11 py-1 flex items-center gap-2 px-2 rounded-md text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text transition-colors min-w-0 cursor-pointer focus:outline-hidden focus-ring"
         role="button"
         tabindex="0"
         aria-haspopup="menu"

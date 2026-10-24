@@ -12,6 +12,7 @@ import { dmClock, dmPreview } from '../lib/dmList'
 import { dmTitle } from '../lib/dm'
 import { locale, t } from '../i18n'
 import DmAvatar from './DmAvatar.vue'
+import Badge from './Badge.vue'
 
 const props = defineProps({
   dm: { type: Object as PropType<ChatDirectMessage>, required: true },
@@ -71,7 +72,7 @@ function onKey(event: KeyboardEvent) {
     :aria-label="label"
     :draggable="draggable ? 'true' : undefined"
     :class="[
-      'group relative mb-px flex min-h-[46px] w-full min-w-0 cursor-pointer items-center gap-2.5 rounded-md px-2 py-1 text-left transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent max-md:min-h-14 motion-reduce:transition-none',
+      'group relative mb-px flex min-h-[46px] w-full min-w-0 cursor-pointer items-center gap-2.5 rounded-md px-2 py-1 text-left transition-colors focus:outline-hidden focus-ring max-md:min-h-14 motion-reduce:transition-none',
       open
         ? 'bg-mnema-hover text-mnema-text shadow-[inset_2px_0_0_0_#2DA771]'
         : unread > 0 && !muted
@@ -97,20 +98,14 @@ function onKey(event: KeyboardEvent) {
       </div>
       <div class="flex min-h-4 items-center gap-1.5">
         <span class="truncate text-xs text-mnema-tertiary" data-testid="dm-preview">{{ line }}</span>
-        <span
+        <Badge
           v-if="mentions > 0 && !open && !muted"
+          variant="mention"
+          class="ml-auto"
           data-testid="dm-mentions"
-          class="ml-auto min-w-[18px] shrink-0 rounded-full bg-mnema-danger px-1.5 py-0.5 text-center text-xs font-bold leading-none text-white"
           :aria-label="$t('dm.mentionCount', { n: mentions })"
-        >@{{ mentions }}</span>
-        <span
-          v-else-if="unread > 0 && !open"
-          data-testid="dm-unread"
-          :class="[
-            'ml-auto min-w-[18px] shrink-0 rounded-full px-1.5 py-0.5 text-center text-xs font-bold leading-none',
-            muted ? 'bg-mnema-surface text-mnema-muted' : 'bg-mnema-accent/20 text-mnema-accent'
-          ]"
-        >{{ unread }}</span>
+        >@{{ mentions }}</Badge>
+        <Badge v-else-if="unread > 0 && !open" variant="unread" class="ml-auto" data-testid="dm-unread">{{ unread }}</Badge>
       </div>
     </div>
 

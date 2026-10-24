@@ -5,7 +5,7 @@ import { computed, ref } from 'vue'
 import { AlertTriangle, Hash, MessageCircle, Pencil, Trash2 } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
 import { earliestInputValue, fromLocalInputValue, isAcceptableTime, toLocalInputValue } from '../lib/laterTimes'
-import { clockTimeOptions } from '../lib/time'
+import { dateTime } from '../lib/time'
 import { useLaterStore } from '../stores/later'
 import { useToastStore } from '../stores/toast'
 import { locale, t } from '../i18n'
@@ -27,7 +27,7 @@ const error = ref('')
 
 const failed = computed(() => props.item.state === 'failed')
 const reasonKey = computed(() => (['slow_mode', 'not_allowed', 'unavailable'].includes(props.item.failure_reason) ? props.item.failure_reason : 'refused'))
-const whenText = computed(() => new Date(props.item.send_at).toLocaleString(locale.value, { weekday: 'short', day: 'numeric', month: 'short', ...clockTimeOptions(locale.value) }))
+const whenText = computed(() => dateTime(props.item.send_at, locale.value))
 
 function startEdit() {
   text.value = props.item.content

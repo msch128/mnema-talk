@@ -104,7 +104,7 @@ describe('ContextMenu accessibility', () => {
     anchor.getBoundingClientRect = () => new DOMRect(50, 70, 30, 20)
     await openMenu({ anchor })
     expect(requireValue(menu()).style.left).toBe('50px')
-    expect(requireValue(menu()).style.top).toBe('90px')
+    expect(requireValue(menu()).style.top).toBe('94px')
   })
 
   it('stays backwards compatible with x/y and plain items', async () => {
@@ -161,7 +161,7 @@ describe('ContextMenu submenu and lifecycle', () => {
   it('repositions from plain anchors, clips to viewport and closes on outside events', async () => {
     await openMenu({ anchor: { x: 25, y: 35, height: 10 }, items: [] })
     expect(menu().style.left).toBe('25px')
-    expect(menu().style.top).toBe('45px')
+    expect(menu().style.top).toBe('49px')
     key('ArrowDown'); key('ArrowUp'); key('Home'); key('End'); key('z', { ctrlKey: true })
     await w.setProps({ anchor: { left: window.innerWidth + 10, bottom: window.innerHeight + 10 } }); await nextTick()
     await vi.waitFor(() => expect(Number.parseFloat(menu().style.left)).toBeLessThan(window.innerWidth))

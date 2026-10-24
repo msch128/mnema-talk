@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { reactive } from 'vue'
+import { nextTick, reactive } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 import SlashSuggestions from './SlashSuggestions.vue'
 import SlashCommandBar from './SlashCommandBar.vue'
@@ -27,13 +27,43 @@ describe('SlashSuggestions', () => {
     const options = w.findAll('[role="option"]')
     expect(options.map(o => o.text())).toEqual([expect.stringContaining('/ping'), expect.stringContaining('/help')])
     expect(options[0]!.text()).toContain('does ping')
-    expect(options[0]!.text()).toContain('helper')
+    expect(w.findAll('[data-testid="slash-group"]').map(g => g.text())).toEqual(['helper'])
     expect(options.map(o => o.attributes('aria-selected'))).toEqual(['false', 'true'])
     expect(w.get('[role="listbox"]').attributes('aria-label')).toBe('Slash commands')
     await options[1]!.trigger('mousemove')
     expect(w.emitted('hover')).toEqual([[1]])
     await options[0]!.trigger('mousedown')
     expect(w.emitted('pick')).toEqual([[items[0]]])
+  })
+})
+
+describe('SlashSuggestions groups and scrolling', () => {
+  it('names each source once, built-ins first', () => {
+    const builtin = command('poll', [], { builtin: true })
+    const items = [builtin, command('me', [], { builtin: true }), command('ping'), command('help', [], { bot_name: 'other' })]
+    const w = mount(SlashSuggestions, { props: { items } })
+    expect(w.findAll('[data-testid="slash-group"]').map(g => g.text())).toEqual(['Built-in', 'helper', 'other'])
+    expect(w.findAll('[role="option"]')).toHaveLength(4)
+  })
+
+  it('shows a fade while there is more below and keeps the active row in view', async () => {
+    const items = Array.from({ length: 8 }, (_, i) => command(`c${i}`, [], { id: `00000000-0000-4000-8000-00000000010${i}` }))
+    const w = mount(SlashSuggestions, { props: { items, active: 0 }, attachTo: document.body })
+    const list = w.get('[role="listbox"]').element
+    Object.defineProperty(list, 'scrollHeight', { value: 500, configurable: true })
+    Object.defineProperty(list, 'clientHeight', { value: 300, configurable: true })
+    await w.get('[role="listbox"]').trigger('scroll')
+    expect(w.get('[role="listbox"]').attributes('data-more')).toBeDefined()
+    const scrolled = vi.fn()
+    const target = w.get('[id="slash-suggestions-5"]').element
+    target.scrollIntoView = scrolled
+    await w.setProps({ active: 5 })
+    await nextTick()
+    expect(scrolled).toHaveBeenCalledWith({ block: 'nearest' })
+    list.scrollTop = 200
+    await w.get('[role="listbox"]').trigger('scroll')
+    expect(w.get('[role="listbox"]').attributes('data-more')).toBeUndefined()
+    w.unmount()
   })
 })
 

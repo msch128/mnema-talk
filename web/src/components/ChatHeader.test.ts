@@ -8,7 +8,7 @@ import { tooltip } from '../directives/tooltip'
 import { channelFixture } from '../test-fixtures.fixture'
 
 const openSearch = vi.fn()
-vi.mock('../lib/globalSearch', () => ({ openSearch: (q?: string) => openSearch(q) }))
+vi.mock('../lib/globalSearch', async () => ({ openSearch: (q?: string) => openSearch(q), searchOpen: (await import('vue')).ref(false) }))
 
 beforeEach(() => {
   setActivePinia(createPinia())

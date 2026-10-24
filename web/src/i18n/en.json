@@ -8,7 +8,9 @@
     "undo": "Undo",
     "create": "Create",
     "name": "Name",
-    "loadMore": "Load more"
+    "loadMore": "Load more",
+    "retry": "Try again",
+    "loading": "Loading…"
   },
   "language": {
     "de": "Deutsch",

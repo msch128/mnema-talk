@@ -20,6 +20,7 @@ import { useDmChat } from '../composables/useDmChat'
 import { toggleSavedMessage, useMessageMenu } from '../composables/useMessageMenu'
 import { useMessageScroll } from '../composables/useMessageScroll'
 import { useUnreadDivider } from '../composables/useUnreadDivider'
+import { useRovingMessages } from '../composables/useRovingMessages'
 import { useFirstUnreadJump } from '../composables/useFirstUnreadJump'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
 import { useDraftSlot } from '../composables/useDraftSlot'
@@ -85,6 +86,7 @@ const {
   showUnreadPill, highlightedId, messageRows, scrollToBottom, scrollToBottomNow,
   handleScroll, resetUnreadPill
 } = useMessageScroll(messageContainer)
+const { stopId } = useRovingMessages(messageContainer, () => (chatStore.messages || []).map(m => m.id))
 const { dividerSince, dividerBeforeId, dividerLabel, markAllRead } = useUnreadDivider()
 const { showJumpToUnread, jumpToFirstUnread } = useFirstUnreadJump({ container: messageContainer, since: dividerSince, dividerBeforeId })
 
@@ -229,7 +231,7 @@ const groupedIds = computed(() => {
 
     <!-- Message timeline (72px gutter, 40px avatars) -->
     <div class="relative flex-1 min-h-0 flex flex-col">
-    <div ref="messageContainer" class="flex-1 overflow-y-auto overflow-x-hidden pt-2 pb-6" @scroll.passive="handleScroll">
+    <div ref="messageContainer" class="msg-list flex-1 overflow-y-auto overflow-x-hidden pt-2 pb-6" @scroll.passive="handleScroll">
       <!-- Initial / jump loading -->
       <div v-if="!chatStore.messages?.length && chatStore.isLoadingWindow" class="h-full flex items-center justify-center text-mnema-tertiary">
         <Loader2 class="w-6 h-6 animate-spin text-mnema-accent" />
@@ -299,6 +301,7 @@ const groupedIds = computed(() => {
         v-model:edit-text="actions.editText.value"
         :saving="actions.isSavingEdit.value"
         :picker-id="activeReactionPickerMsgId"
+        :tab-stop="stopId === msg.id"
         @contextmenu.prevent="menu.onContextMenu($event, msg)"
         @keydown="onMessageKeydown($event, msg)"
         @reply="startReply(msg)"
@@ -384,6 +387,7 @@ const groupedIds = computed(() => {
       v-model="contextMenu.open"
       :x="contextMenu.x"
       :y="contextMenu.y"
+      :anchor="contextMenu.anchor"
       :items="contextMenu.items"
     />
   </component>

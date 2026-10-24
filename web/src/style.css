@@ -100,6 +100,38 @@
 }
 
 
+/* Focus language. Keyboard focus (:focus-visible) is one frame, --focus-ring,
+   drawn inset so a scroll container never clips it; the focus-ring utility
+   applies it. A text field keeps a calm 1px --focus-within-border (accent, no
+   glow) while it holds focus. Both hold 3:1 against the dark surfaces. */
+:root {
+  --focus-ring: inset 0 0 0 1.5px rgb(45 167 113 / 0.75);
+  --focus-ring-outset: 0 0 0 2px rgb(45 167 113 / 0.75);
+  --focus-within-border: color-mix(in srgb, var(--color-mnema-accent) 60%, var(--color-mnema-border-strong));
+}
+
+@utility focus-ring {
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+}
+
+@utility focus-ring-outset {
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring-outset);
+  }
+}
+
+/* A field-like wrapper (the composer) shows the field focus on its border. */
+@utility field-focus-within {
+  &:focus-within {
+    border-color: var(--focus-within-border);
+  }
+}
+
+
 /* space-y as Tailwind 3 applied it: a top margin on every visible child after the
    first, with enough weight to win against a child's own margin. Tailwind 4
    puts a bottom margin on every child but the last, which an inline first child
@@ -271,13 +303,28 @@
   .vp-narrow-hide { display: none; }
 }
 
-/* A message that mentions the reader (@name, @all, @here or a reply to them). */
+/* A message that mentions the reader (@name, @all, @here or a reply to them):
+   a thin bar and a barely tinted background; the amber chip on the @name itself
+   carries the emphasis, so two such messages in a row stay calm. */
 .msg-mentions-me {
-  background-color: rgba(224, 162, 58, 0.07);
-  box-shadow: inset 2px 0 0 #e0a23a;
+  background-color: rgba(224, 162, 58, 0.035);
+  box-shadow: inset 2px 0 0 rgba(224, 162, 58, 0.6);
 }
 .msg-mentions-me:hover {
-  background-color: rgba(224, 162, 58, 0.11);
+  background-color: rgba(224, 162, 58, 0.06);
+}
+
+/* One toolbar at a time: while the pointer rests on a message, the action bar
+   of a different message that only holds keyboard focus stays hidden. */
+.msg-list:has([data-msg-id]:hover) [data-msg-id]:not(:hover) [data-msg-toolbar]:not([data-open]) {
+  display: none;
+}
+
+/* A fade at the edge of a list that scrolls on, so a half-visible last row
+   reads as "more below". The list sets data-more while there is more. */
+.fade-bottom[data-more] {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
 }
 
 /* Edge fades for a sideways-scrolling strip (admin tab bar on phones). */

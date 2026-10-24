@@ -98,7 +98,7 @@ onBeforeUnmount(() => {
     data-testid="emoji-picker"
     class="z-40 overflow-hidden rounded-xl bg-mnema-elevated shadow-popover pop-in"
   >
-    <div v-if="loading" class="flex h-[360px] w-[340px] max-w-[calc(100vw-16px)] items-center justify-center text-sm text-mnema-tertiary">
+    <div v-if="loading" class="flex h-[377px] w-[340px] max-w-[calc(100vw-16px)] items-center justify-center text-sm text-mnema-tertiary">
       {{ $t('emoji.loading') }}
     </div>
   </div>
@@ -125,7 +125,8 @@ emoji-picker.mnema-emoji-picker {
   --skintone-border-radius: 6px;
   width: 340px;
   max-width: calc(100vw - 16px);
-  height: 360px;
+  /* Six whole rows of the grid between the tabs and the frequent row. */
+  height: 377px;
   font-family: Inter, system-ui, sans-serif;
 }
 </style>
