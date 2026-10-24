@@ -1,0 +1,30 @@
+internal/chat/talks_presence_integration_test.go
+  s_06fcde5dbef956::t_0ceaf3108bc048 1-59
+internal/chat/talks_manager.go
+  s_06fcde5dbef956::t_0ceaf3108bc048 50-54,73,89-91,97-98,101-102,105-106,108-109
+internal/chat/talks_live.go
+  s_06fcde5dbef956::t_0ceaf3108bc048 17-20,22-31,33-35,40-51,121-126,140-142
+  s_06fcde5dbef956::t_076f8e4d8045a9 143
+internal/discordimport/undo.go
+  s_06fcde5dbef956::t_3c72e1092b059c 249-253
+internal/discordimport/undo_kept.go
+  s_06fcde5dbef956::t_617dfd5fb3c82e 1-30
+internal/discordimport/undo_race_integration_test.go
+  s_06fcde5dbef956::t_83ff7e5d59e6c9 1-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2854851ffdb331c7e60e23b493561c5a6cb4cac0",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
