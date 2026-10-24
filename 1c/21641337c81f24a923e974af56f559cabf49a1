@@ -1,0 +1,164 @@
+internal/chat/talks_live.go
+  s_06fcde5dbef956::t_39260d20a2239d 1-165
+internal/chat/channel_layout.go
+  s_06fcde5dbef956::t_39260d20a2239d 78-80,105-127
+  s_06fcde5dbef956::t_1987d4446ad62b 128-129
+web/src/stores/chat/talks.ts
+  s_06fcde5dbef956::t_39260d20a2239d 1-19
+internal/chat/channels.go
+  s_06fcde5dbef956::t_39260d20a2239d 47-55,87-88,98
+internal/perm/store_overwrites.go
+  s_06fcde5dbef956::t_39260d20a2239d 107-109,330-339
+e2e/tests/talk-lobby.spec.ts
+  s_06fcde5dbef956::t_39260d20a2239d 1-82
+web/src/components/TalkLeaderMark.vue
+  s_06fcde5dbef956::t_39260d20a2239d 1-17
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_39260d20a2239d 23,247-249
+web/src/stores/chat/socket.ts
+  s_06fcde5dbef956::t_39260d20a2239d 204,209,216
+api/openapi.json
+  s_06fcde5dbef956::t_b47c128f3f4c8b 498
+  s_06fcde5dbef956::t_39260d20a2239d 1863-1875,2254-2258,2541-2553,3682-3699,3742-3745,3770,3772-3774,3777-3781,3786,3788,3791,3798,3803,3805,8971,21528-21543,21545,21547,21549,21553,21555-21654,25164-25399,28137
+web/src/stores/chat/reset.ts
+  s_06fcde5dbef956::t_39260d20a2239d 76
+web/src/components/DmTalkActions.vue
+  s_06fcde5dbef956::t_39260d20a2239d 1-88
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_39260d20a2239d 912-937,2469-2475
+internal/audit/snapshot.go
+  s_06fcde5dbef956::t_39260d20a2239d 22
+web/src/components/TalkSettingsHost.test.ts
+  s_06fcde5dbef956::t_39260d20a2239d 1-67
+web/src/components/SidebarChannelRowTalks.test.ts
+  s_06fcde5dbef956::t_39260d20a2239d 1-71
+web/src/lib/talkPresets.ts
+  s_06fcde5dbef956::t_39260d20a2239d 1-59
+doc/api-stability.md
+  s_06fcde5dbef956::t_39260d20a2239d 28
+web/src/components/MessageRow.vue
+  s_06fcde5dbef956::t_39260d20a2239d 186
+internal/chat/talks_handler.go
+  s_06fcde5dbef956::t_39260d20a2239d 1-154
+web/src/components/TalkInvite.test.ts
+  s_06fcde5dbef956::t_39260d20a2239d 1-136
+web/src/components/SidebarChannelRow.vue
+  s_06fcde5dbef956::t_39260d20a2239d 8,16,130-135,137,185,229
+web/src/composables/webrtc/lobby.test.ts
+  s_06fcde5dbef956::t_39260d20a2239d 1-100
+web/src/components/TalkAccessPresets.vue
+  s_06fcde5dbef956::t_39260d20a2239d 1-130
+web/src/stores/chatTalkLeader.test.ts
+  s_06fcde5dbef956::t_39260d20a2239d 1-58
+internal/chat/handler.go
+  s_06fcde5dbef956::t_39260d20a2239d 55-58,105
+doc/talks.md
+  s_06fcde5dbef956::t_39260d20a2239d 1-92
+web/src/components/TalkHeader.vue
+  s_06fcde5dbef956::t_39260d20a2239d 4-6,9-12,20,22-23,36-38,56,101-110
+  s_06fcde5dbef956::t_39c14d40c941c5 111-112
+internal/chat/access.go
+  s_06fcde5dbef956::t_39260d20a2239d 24-25,33
+doc/upgrade.md
+  s_06fcde5dbef956::t_39260d20a2239d 131-132,134,138,142-155
+  s_06fcde5dbef956::t_b47c128f3f4c8b 156-164,166
+internal/server/server.go
+  s_06fcde5dbef956::t_39260d20a2239d 134
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_39260d20a2239d 59-60,70
+web/src/components/ChatHeader.vue
+  s_06fcde5dbef956::t_39260d20a2239d 16,96
+web/src/components/TalkSettingsHost.vue
+  s_06fcde5dbef956::t_39260d20a2239d 1-18
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_39260d20a2239d 1151-1153,1168-1170,1379,1394,1578-1588,2259-2271,2301,2310,2319-2330
+  s_06fcde5dbef956::t_d4a36949b6e5d8 2331
+web/src/composables/webrtc/state.ts
+  s_06fcde5dbef956::t_39260d20a2239d 11,79-80,156
+web/src/lib/talks.ts
+  s_06fcde5dbef956::t_39260d20a2239d 1-66
+internal/ws/voice_lobby.go
+  s_06fcde5dbef956::t_39260d20a2239d 1-48
+web/src/composables/useNavMenus.ts
+  s_06fcde5dbef956::t_39260d20a2239d 15,22-23,101-108,139
+web/src/types/events.ts
+  s_06fcde5dbef956::t_39260d20a2239d 131-135,345-347,372-373,379
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_39260d20a2239d 42-43
+web/src/composables/webrtc/lobby.ts
+  s_06fcde5dbef956::t_39260d20a2239d 1-78
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_39260d20a2239d 912-937,2469-2475
+internal/server/health.go
+  s_06fcde5dbef956::t_39260d20a2239d 46
+internal/ws/voice_lobby_test.go
+  s_06fcde5dbef956::t_39260d20a2239d 1-71
+internal/chat/message_types.go
+  s_06fcde5dbef956::t_39260d20a2239d 111-115
+internal/chat/talks.go
+  s_06fcde5dbef956::t_39260d20a2239d 1-203
+web/src/components/MessageEmbeds.vue
+  s_06fcde5dbef956::t_39260d20a2239d 9,12-14,36-37,39,77
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_39260d20a2239d 47-48
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_39260d20a2239d 115
+web/src/components/TalkInviteCard.vue
+  s_06fcde5dbef956::t_39260d20a2239d 1-50
+internal/chat/handler_channels.go
+  s_06fcde5dbef956::t_39260d20a2239d 205,234-238,243,379-381
+web/src/composables/webrtc/session.ts
+  s_06fcde5dbef956::t_39260d20a2239d 11,29,105,107-110,202
+internal/chat/database_failures_integration_test.go
+  s_06fcde5dbef956::t_39260d20a2239d 74
+internal/server/router_talks.go
+  s_06fcde5dbef956::t_39260d20a2239d 1-34
+internal/db/migrations/0059_talk_lobby.sql
+  s_06fcde5dbef956::t_39260d20a2239d 1-15
+internal/ws/hub.go
+  s_06fcde5dbef956::t_39260d20a2239d 41-43
+web/src/components/TalkSettingsDialog.vue
+  s_06fcde5dbef956::t_39260d20a2239d 1-85
+internal/perm/store_overwrites_temp.go
+  s_06fcde5dbef956::t_39260d20a2239d 1-61
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_39260d20a2239d 77-79
+doc/glossary.md
+  s_06fcde5dbef956::t_39260d20a2239d 17-18,33
+internal/chat/talks_invite.go
+  s_06fcde5dbef956::t_39260d20a2239d 1-93
+internal/chat/talks_manager.go
+  s_06fcde5dbef956::t_39260d20a2239d 1-151
+web/src/components/VoiceStage.vue
+  s_06fcde5dbef956::t_39260d20a2239d 254
+web/src/components/TalkParticipants.vue
+  s_06fcde5dbef956::t_39260d20a2239d 12,18-20,103
+internal/events/types.go
+  s_06fcde5dbef956::t_39260d20a2239d 56-60
+web/src/App.vue
+  s_06fcde5dbef956::t_39260d20a2239d 47,382
+web/src/lib/talkPresets.test.ts
+  s_06fcde5dbef956::t_39260d20a2239d 1-58
+web/src/components/TalkSettingsDialog.test.ts
+  s_06fcde5dbef956::t_39260d20a2239d 1-129
+internal/chat/talks_integration_test.go
+  s_06fcde5dbef956::t_39260d20a2239d 1-574
+internal/ws/handle.go
+  s_06fcde5dbef956::t_39260d20a2239d 111-117,119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1c21641337c81f24a923e974af56f559cabf49a1",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
