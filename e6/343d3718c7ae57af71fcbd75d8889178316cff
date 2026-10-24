@@ -1,0 +1,122 @@
+internal/audit/classes_test.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 40-41
+internal/automod/engine.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-266
+internal/server/automod_integration_test.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-494
+internal/automod/hits.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-144
+web/src/components/AdminAutomod.test.ts
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-209
+web/src/lib/automod.ts
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-115
+web/src/lib/errorDetails.ts
+  s_06fcde5dbef956::t_e0ccfa20c63c22 78-79
+internal/db/migrations/0066_automod.sql
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-70
+web/src/components/AdminAutomodTab.vue
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-116
+doc/api-stability.md
+  s_06fcde5dbef956::t_e0ccfa20c63c22 28-29
+internal/moderation/automod_rules.go
+  s_06fcde5dbef956::t_f166a2b90d02ec 44-45
+  s_06fcde5dbef956::t_7e33f8f9bbdd87 20
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-19,21-43,46-201
+web/src/types/rest.test.ts
+  s_06fcde5dbef956::t_e0ccfa20c63c22 67-68
+internal/auth/service_accounts.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 12,60-61
+web/src/i18n/auditLabels.test.ts
+  s_06fcde5dbef956::t_e0ccfa20c63c22 11
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_e0ccfa20c63c22 41
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_e0ccfa20c63c22 604-684,2029-2031,2035,2037-2038,2045,2051-2053,2057,2059-2060,2067,2089-2091,2095,2097-2098,2106,2112-2114,2118,2120-2121,2129,2608-2620
+internal/chat/post.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 13,40-43,45,58,62-69
+  s_06fcde5dbef956::t_ceaf6046e39f2f 70-71
+web/src/components/AdminDashboard.vue
+  s_06fcde5dbef956::t_e0ccfa20c63c22 5,24,38-39,49,66,142
+internal/server/router_routes.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 134
+web/src/components/ReportsAutomod.test.ts
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-83
+internal/chat/reports_view.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-101
+internal/testutil/db.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 112-117
+internal/automod/raid.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-128
+web/src/lib/errorDetails.test.ts
+  s_06fcde5dbef956::t_e0ccfa20c63c22 30-32
+internal/media/handler_upload.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 120
+internal/automod/store.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-154
+internal/automod/compile.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-92,103,106,108-109,113,120-121,124-155
+  s_06fcde5dbef956::t_3bbe9a3bf74c7f 93-102,104-105,107,110-112,114-119,122-123
+internal/server/server.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 13,150,158
+doc/upgrade.md
+  s_06fcde5dbef956::t_e0ccfa20c63c22 139,156-180
+  s_06fcde5dbef956::t_0f3a05c92a66db 181
+internal/chat/messages.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 321-322
+internal/db/automod_seed_integration_test.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-62
+internal/server/health.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 47
+web/src/components/AdminReportDetail.vue
+  s_06fcde5dbef956::t_e0ccfa20c63c22 28-30,95-106,108,115-118,121
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_e0ccfa20c63c22 161-163,956-957,1775-1776,1905-1911,2474-2569,2579-2580,2608-2623
+SECURITY.md
+  s_06fcde5dbef956::t_e0ccfa20c63c22 121-124
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_e0ccfa20c63c22 161-163,956-957,1775-1776,1905-1911,2474-2569,2579-2580,2608-2623
+internal/audit/routes.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 121-124
+web/src/components/AutomodRuleDialog.vue
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-192
+doc/moderation.md
+  s_06fcde5dbef956::t_e0ccfa20c63c22 24,243-320
+  s_06fcde5dbef956::t_0167e44dcc5fa4 321
+web/src/lib/automod.test.ts
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-64
+internal/automod/compile_test.go
+  s_06fcde5dbef956::t_a8a80723774cdf 38
+  s_06fcde5dbef956::t_dfb2444763e122 169-217
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-37,39-168
+internal/server/router_build.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 12,23,62-63,160-165
+  s_06fcde5dbef956::t_b7fc3ec6757a1d 166-167
+api/openapi.json
+  s_06fcde5dbef956::t_e0ccfa20c63c22 952-1149,3368-3380,3386-3387,3403-3406,3412,3415-3416,3421,3446-3453,3494-3506,3512-3513,3529-3532,3538,3541-3542,3547,3575-3582,4308-4326,6727-7123
+internal/chat/message_mutations.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 11,21-26,28-84
+web/src/components/AdminAuditTab.vue
+  s_06fcde5dbef956::t_e0ccfa20c63c22 21
+web/src/components/AdminReportsTab.vue
+  s_06fcde5dbef956::t_e0ccfa20c63c22 54-55,101-106
+internal/automod/rule.go
+  s_06fcde5dbef956::t_e0ccfa20c63c22 1-22,24-260,262-265,268-272,279,282,291,306
+  s_06fcde5dbef956::t_2ee0502154e251 23
+  s_06fcde5dbef956::t_3bbe9a3bf74c7f 261,266-267,273-278,280-281,283-290,292-305
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e6343d3718c7ae57af71fcbd75d8889178316cff",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
