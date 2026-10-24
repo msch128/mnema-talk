@@ -455,3 +455,85 @@ func TestAnInviteCardGrantsNothing(t *testing.T) {
 		t.Fatal("a stranger posted into a conversation")
 	}
 }
+
+func TestTighteningALobbyTightensTheTalksAlreadyOpen(t *testing.T) {
+	w := newTalksWorld(t)
+	ctx := context.Background()
+	svc := perm.NewService(w.p)
+	note := &permNotes{}
+	svc.SetNotifier(note)
+	open, err := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var everyone uuid.UUID
+	_ = w.p.QueryRow(ctx, `SELECT id FROM roles WHERE is_everyone`).Scan(&everyone)
+	owner := perm.Subject{ID: uuid.New(), Owner: true}
+	list := []perm.Overwrite{{Type: "role", ID: everyone, Deny: perm.Connect}}
+	if err := svc.SetOverwrites(ctx, owner, perm.TargetChannel, w.lobby.ID, list); err != nil {
+		t.Fatal(err)
+	}
+	if note.calls.Load() == 0 {
+		t.Fatal("the permission sweep (which disconnects members who lost Connect) did not run")
+	}
+	var deny int64
+	if err := w.p.QueryRow(ctx, `SELECT deny FROM permission_overwrites WHERE channel_id = $1 AND role_id = $2`, open.ID, everyone).Scan(&deny); err != nil {
+		t.Fatalf("the open Talk got the lobby's new rule: %v", err)
+	}
+	if deny != int64(perm.Connect) {
+		t.Fatalf("deny = %d", deny)
+	}
+	got, err := svc.Channel(ctx, w.bob.Subject(), open.ID)
+	if err == nil && got.Has(perm.Connect) {
+		t.Fatal("a member the lobby shuts out still may join the open Talk")
+	}
+	// Loosening it again loosens the Talk too.
+	if err := svc.SetOverwrites(ctx, owner, perm.TargetChannel, w.lobby.ID, nil); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	_ = w.p.QueryRow(ctx, `SELECT count(*) FROM permission_overwrites WHERE channel_id = $1`, open.ID).Scan(&n)
+	if n != 0 {
+		t.Fatalf("overwrites left on the open Talk: %d", n)
+	}
+}
+
+type permNotes struct{ calls atomic.Int32 }
+
+func (n *permNotes) PermissionsChanged([]uuid.UUID) { n.calls.Add(1) }
+
+func TestATemporaryTalksPermissionsCannotBeEditedDirectly(t *testing.T) {
+	w := newTalksWorld(t)
+	ctx := context.Background()
+	svc := perm.NewService(w.p)
+	open, err := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var everyone uuid.UUID
+	_ = w.p.QueryRow(ctx, `SELECT id FROM roles WHERE is_everyone`).Scan(&everyone)
+	list := []perm.Overwrite{{Type: "role", ID: everyone, Deny: perm.Connect}}
+
+	owner := perm.Subject{ID: uuid.New(), Owner: true}
+	var apiErr *httpx.APIError
+	if err := svc.SetOverwrites(ctx, owner, perm.TargetChannel, open.ID, list); !errors.As(err, &apiErr) || apiErr.Status != http.StatusConflict {
+		t.Fatalf("an administrator editing a temporary Talk: %v", err)
+	}
+	// The leader holds no Manage channels, so the permission route is closed to them too.
+	if err := svc.SetOverwrites(ctx, w.alice.Subject(), perm.TargetChannel, open.ID, list); err == nil {
+		t.Fatal("the leader changed a temporary Talk's permissions")
+	}
+	var n int
+	_ = w.p.QueryRow(ctx, `SELECT count(*) FROM permission_overwrites WHERE channel_id = $1`, open.ID).Scan(&n)
+	if n != 0 {
+		t.Fatalf("overwrites written: %d", n)
+	}
+	// A snapshot read right after the lobby change already sees the new rules.
+	if err := svc.SetOverwrites(ctx, owner, perm.TargetChannel, w.lobby.ID, list); err != nil {
+		t.Fatal(err)
+	}
+	got, err := svc.Channel(ctx, w.bob.Subject(), open.ID)
+	if err != nil || got.Has(perm.Connect) {
+		t.Fatalf("snapshot after the lobby change: %v %v", got, err)
+	}
+}

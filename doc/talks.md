@@ -29,6 +29,8 @@ in a lobby. When a member joins it:
 If the lobby opened no Talk, the member gets `voice_kicked` with the reason
 `talk_rate_limited` or `talk_unavailable`.
 
+Changing a lobby's permission overwrites copies them again, in the same transaction, to every temporary Talk that is open from it, and the usual permission sweep disconnects members who lost *View channels* or *Connect*. A temporary Talk's permissions always and only mirror its lobby: `PUT /api/admin/channels/{id}/overwrites` on a temporary Talk answers 409 ("Temporary Talks follow their lobby's permissions"), for everyone. A leader can only rename the Talk and set its limit.
+
 Temporary Talks are not part of the saved layout: a layout change ignores them
 (`PUT /api/admin/layout`), and they are marked with `is_temp` in the channel
 list, next to the lobby's `is_lobby`.
