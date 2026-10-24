@@ -13,6 +13,7 @@ import PinnedMessages from './PinnedMessages.vue'
 import TipBar from './TipBar.vue'
 import NavDrawerButton from './NavDrawerButton.vue'
 import DmInfoDialog from './DmInfoDialog.vue'
+import DmTalkActions from './DmTalkActions.vue'
 import { useDmChat } from '../composables/useDmChat'
 import { openSearch } from '../lib/globalSearch'
 import { quoteValue } from '../lib/searchQuery'
@@ -103,6 +104,7 @@ function openNotificationMenu(e: MouseEvent) {
       <MentionsInbox v-if="!panel" />
       <SavedMessages v-if="!panel && serverFeatures.has('saved')" />
       <PinnedMessages v-if="chatStore.activeChannel && !isDm" />
+      <DmTalkActions v-if="isDm && dm && serverFeatures.talksLobby" :conversation-id="dm.id" :can-send="dm.can_send" />
       <button
         v-if="chatStore.activeChannel"
         type="button"

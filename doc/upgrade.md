@@ -128,16 +128,34 @@ until the new release has passed your application checks.
 
 ### 1.1.x → 1.2.0
 
-Update with the procedure above and take the backup first. A 1.1 web app keeps
-working against a 1.2 server and a 1.2 web app hides what a 1.1 server lacks
-(the `features` list of `GET /api/health`). Nothing in `.env` has to change.
+Update with the procedure above and take the backup first. 1.2.0 only adds;
+nothing in `.env` has to change. A 1.1 web app keeps working against a 1.2 server and a
+1.2 web app hides what a 1.1 server lacks (the `features` list of `GET /api/health`).
 Rolling back to 1.1 needs the restore of the pre-update backup.
 
-#### Messaging: anonymous polls and auto-delete
+#### Database
 
 | Migration | Adds |
 |---|---|
-| 0063 | `poll_voters`, `poll_options.anon_votes`, `polls.anon_voters` and a trigger on `poll_votes` (anonymous polls); `channels.auto_delete_days` with its checks. |
+| 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
+| 0063 | `poll_voters`, `poll_anon_ballots`, `poll_options.anon_votes`, `polls.anon_voters` and a trigger on `poll_votes` (anonymous polls); `channels.auto_delete_days` with its checks. |
+
+#### Talks
+
+- A Talk can be marked as a lobby; joining it opens a temporary Talk ("Talk 1",
+  "Talk 2", ...) for the member, who leads it. Members need no *Manage channels*
+  for that. Empty temporary Talks are removed after 30 seconds, and the server
+  removes all of them at start.
+- "Start a Talk" in a direct message opens a temporary Talk from the first lobby
+  the member can use and posts an invitation card. The card only links to the Talk;
+  joining runs the usual permission checks.
+- Feature name `talks.lobby` in `GET /api/health`. New events `talk_leader` and
+  `talk_moved`; new `voice_kicked` reasons `talk_rate_limited` and
+  `talk_unavailable`. REST: `PATCH /api/talks/{id}`, `POST /api/talks/{id}/invites`,
+  `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
+  channel (additive).
+
+#### Messaging: anonymous polls and auto-delete
 
 - **Anonymous polls no longer keep the choice.** Until 1.1 an anonymous poll
   stored who voted for what and only hid it in the API. The migration turns

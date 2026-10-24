@@ -71,7 +71,7 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 		requireChatError(t, err, "query channels")
 	})
 	t.Run("channel decoding", func(t *testing.T) {
-		p := driftPool(t, f.p, map[string]string{"channels": `SELECT id,number,category_id,NULL::text name,type,topic,sort_order,created_at,user_limit,slow_mode_seconds,auto_delete_days FROM public.channels`})
+		p := driftPool(t, f.p, map[string]string{"channels": `SELECT id,number,category_id,NULL::text name,type,topic,sort_order,created_at,user_limit,slow_mode_seconds,auto_delete_days,is_lobby,is_temp,leader_id FROM public.channels`})
 		_, _, err := GetServerHierarchy(ctx, p)
 		requireChatError(t, err, "NULL")
 	})

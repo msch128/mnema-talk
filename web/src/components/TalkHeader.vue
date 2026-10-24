@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { TalkParticipant } from './presentationTypes'
-import { MessageSquare, UserRoundX, Users, Volume2 } from '@lucide/vue'
+import type { Channel } from '../types/domain'
+import { computed } from 'vue'
+import { MessageSquare, SlidersHorizontal, UserRoundX, Users, Volume2 } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
+import { useAuthStore } from '../stores/auth'
+import { usePermissionsStore } from '../stores/permissions'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { canConfigureTalk, openTalkSettings } from '../lib/talks'
 import TalkParticipants from './TalkParticipants.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import { headerButton, focusRing } from './talkButtons'
@@ -11,8 +17,10 @@ import NavDrawerButton from './NavDrawerButton.vue'
 
 // The Talk's header: its name, who is there and for how long, and the
 // buttons for the Talk's chat, "only participants with video" and the member list.
-defineProps({
+const props = defineProps({
   channelName: { type: String, default: '' },
+  /** The Talk shown, for its leader and settings. */
+  channel: { type: Object as PropType<Channel | null>, default: null },
   users: { type: Array as PropType<TalkParticipant[]>, required: true },
   startedAt: { type: String, default: '' },
   narrow: { type: Boolean, default: false },
@@ -25,6 +33,9 @@ const emit = defineEmits<{ 'update:showChat': [show: boolean]; join: [] }>()
 
 const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
+const permissions = usePermissionsStore()
+const features = useServerFeaturesStore()
+const canSettings = computed(() => features.talksLobby && canConfigureTalk(props.channel, useAuthStore().user?.id, permissions.can('manage_channels')))
 </script>
 
 <template>
@@ -42,7 +53,7 @@ const chatStore = useChatStore()
         <h2 class="font-semibold text-base leading-5 text-mnema-text truncate min-w-12">
           {{ channelName || $t('voice.channelFallback') }}
         </h2>
-        <TalkParticipants class="shrink-0" :users="users" :started-at="startedAt" />
+        <TalkParticipants class="shrink-0" :users="users" :started-at="startedAt" :leader-id="channel?.leader_id ?? ''" />
         <VoiceTimer
           v-if="startedAt && !narrow"
           :since="startedAt"
@@ -85,6 +96,18 @@ const chatStore = useChatStore()
           class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-mnema-danger text-white text-[11px] font-bold leading-[18px] text-center ring-2 ring-mnema-canvas"
           aria-hidden="true"
         >{{ chatUnread }}</span>
+      </button>
+
+      <button
+        v-if="canSettings && channel"
+        type="button"
+        data-testid="talk-settings-button"
+        @click="openTalkSettings(channel.id)"
+        :class="headerButton(false)"
+        v-tooltip="$t('talk.settings')"
+        :aria-label="$t('talk.settings')"
+      >
+        <SlidersHorizontal class="w-4 h-4" />
       </button>
 
       <!-- Only participants with video (per browser) -->

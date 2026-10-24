@@ -73,6 +73,7 @@ export function resetCommunityState(cx: Cx) {
   cs.webrtcOfferHandler = null
   cs.webrtcCandidateHandler = null
   cs.voiceKickedHandler = null
+  cs.talkMovedHandler = null
   const version = useAppVersionStore()
   version.followAdminUpdates(() => false)
   version.setServerVersion('')
