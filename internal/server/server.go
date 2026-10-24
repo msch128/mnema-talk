@@ -13,6 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -81,8 +82,12 @@ type Router struct {
 	// Gateway is the bot gateway (tests adjust its timings).
 	Gateway *gateway.Gateway
 	// Later runs reminders and scheduled messages (tests call Sweep).
-	Later  *later.Service
-	cancel context.CancelFunc
+	Later *later.Service
+	// Events serves community events.
+	Events *communityevents.Handler
+	// EventsScheduler manages event activation and reminders.
+	EventsScheduler *communityevents.Scheduler
+	cancel          context.CancelFunc
 	// outgoing delivers outgoing webhooks; Close waits for it to settle.
 	outgoing *webhook.Dispatcher
 }
@@ -142,6 +147,7 @@ func NewRouter(d Deps) (*Router, error) {
 		cancel()
 		return nil, err
 	}
+	c.newEvents()
 	if err := c.newSystem(); err != nil {
 		cancel()
 		return nil, err
@@ -153,14 +159,16 @@ func NewRouter(d Deps) (*Router, error) {
 	c.newModeration()
 
 	return &Router{
-		Handler:  c.buildHandler(),
-		Hub:      c.hub,
-		Webhooks: c.webhookH,
-		Bots:     c.botAuthn,
-		Gateway:  c.gw,
-		Later:    c.later,
-		cancel:   func() { automod.Detach(d.DB, c.engine); cancel() },
-		outgoing: c.outgoing,
-		preview:  PreviewDeps{Accounts: c.authH, Chat: c.chatH, System: c.systemH, PerUser: c.perUser, Trusted: trusted},
+		Handler:         c.buildHandler(),
+		Hub:             c.hub,
+		Webhooks:        c.webhookH,
+		Bots:            c.botAuthn,
+		Gateway:         c.gw,
+		Later:           c.later,
+		Events:          c.eventsH,
+		EventsScheduler: c.eventsScheduler,
+		cancel:          func() { automod.Detach(d.DB, c.engine); cancel() },
+		outgoing:        c.outgoing,
+		preview:         PreviewDeps{Accounts: c.authH, Chat: c.chatH, System: c.systemH, PerUser: c.perUser, Trusted: trusted},
 	}, nil
 }

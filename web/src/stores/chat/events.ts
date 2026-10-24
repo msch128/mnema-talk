@@ -7,6 +7,7 @@ import { useForwardQuotesStore } from '../forwardQuotes'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
 import { useBlocksStore } from '../blocks'
+import { useEventsStore } from '../events'
 import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../lib/moderation'
 import { snapshotToMap, applyPresenceUpdate } from '../../lib/presence'
 import { MAX_EPHEMERAL } from './types'
@@ -260,7 +261,10 @@ const HANDLERS: Handlers = {
   forum_tags_changed: ({ cs }, p) => {
     cs.forumTagsSignal.value = { channelId: p.channel_id, seq: (cs.forumTagsSignal.value?.seq ?? 0) + 1 }
     cs.forumTagsChangedHandler?.(p)
-  }
+  },
+  event_update: (_cx, p) => { if (p) useEventsStore().handleEventUpdate(p) },
+  event_delete: (_cx, p) => { if (p) useEventsStore().handleEventDelete(p.id) },
+  event_reminder: (_cx, p) => { if (p) useEventsStore().handleEventReminder(p) }
 }
 
 export function handleWSEvent(cx: Cx, event: ServerEvent) {

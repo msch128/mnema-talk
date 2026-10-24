@@ -27,6 +27,13 @@ export type {
   ServerOperatorStatus as OperatorStatus,
   ServerSelfUpdateStatus as SelfUpdateStatus, ServerICEConfig as ICEConfig,
   ServerLegal as Legal,
+  CommunityeventsCommunityEvent as CommunityEvent,
+  CommunityeventsRSVPCounts as RSVPCounts,
+  CommunityeventsRSVPItem as RSVPItem,
+  CommunityeventsCreateEventRequest as CreateEventRequest,
+  CommunityeventsUpdateEventRequest as UpdateEventRequest,
+  CommunityeventsRSVPRequest as RSVPRequest,
+  CommunityeventsUserRef as EventUserRef,
 } from './rest'
 
 export {
@@ -46,6 +53,13 @@ export {
   decodeServerUpdateStatus as decodeUpdateStatus,
   decodeServerSelfUpdateStatus as decodeSelfUpdateStatus,
   decodeServerICEConfig as decodeICEConfig, decodeServerLegal as decodeLegal,
+  decodeCommunityeventsCommunityEvent as decodeCommunityEvent,
+  decodeCommunityeventsRSVPCounts as decodeRSVPCounts,
+  decodeCommunityeventsRSVPItem as decodeRSVPItem,
+  decodeCommunityeventsCreateEventRequest as decodeCreateEventRequest,
+  decodeCommunityeventsUpdateEventRequest as decodeUpdateEventRequest,
+  decodeCommunityeventsRSVPRequest as decodeRSVPRequest,
+  decodeCommunityeventsUserRef as decodeEventUserRef,
 } from './rest'
 
 import type { AuthUser } from './rest'

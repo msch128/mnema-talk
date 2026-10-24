@@ -41,6 +41,8 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"automod.rule_create": VisAuditors, "automod.rule_update": VisAuditors, "automod.rule_delete": VisAuditors,
 		"automod.timeout": VisAuditors, "automod.raid": VisAuditors,
 		"moderation.note_add": VisPrivileged, "moderation.note_edit": VisPrivileged, "moderation.note_delete": VisPrivileged,
+		"event.create": VisAuditors, "event.edit": VisAuditors, "event.cancel": VisAuditors,
+		"event.talk_create": VisChannel, "event.talk_edit": VisChannel, "event.talk_cancel": VisChannel,
 		"report.create": VisPrivileged, "report.resolve": VisPrivileged, "report.delete": VisPrivileged,
 		"admin.post": VisPrivileged,
 	}

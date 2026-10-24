@@ -13,7 +13,8 @@
     "reminder_body": "Du wolltest an eine Nachricht erinnert werden.",
     "reminder_gone": "Eine Nachricht, die du nicht mehr sehen kannst",
     "scheduled_failed": "Geplante Nachricht nicht gesendet",
-    "scheduled_failed_body": "Sie liegt jetzt als Entwurf bereit."
+    "scheduled_failed_body": "Sie liegt jetzt als Entwurf bereit.",
+    "event_reminder": "Beginnt in 15 Minuten"
   },
   "en": {
     "new": "New message",
@@ -29,6 +30,7 @@
     "reminder_body": "You asked to be reminded of a message.",
     "reminder_gone": "A message you can no longer see",
     "scheduled_failed": "Scheduled message not sent",
-    "scheduled_failed_body": "It is waiting as a draft."
+    "scheduled_failed_body": "It is waiting as a draft.",
+    "event_reminder": "Starts in 15 minutes"
   }
 }

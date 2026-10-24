@@ -148,6 +148,7 @@ of the pre-update backup (see "Rollback" above).
 | 0067 | `moderation_notes`: private moderator notes about members. |
 | 0068 | `channels.is_stage`: Stages. Existing channels keep `false`; a Stage is never a lobby or a temporary Talk. |
 | 0069 | `channels.type = 'forum'`, `messages.title`, `messages.is_locked`, `forum_tags` and `forum_post_tags`: Forum channels with tag management and post threads (see [Forum channels](forums.md)). Existing rows keep null and false. |
+| 0070 | `events` and `event_rsvps` tables: community events, RSVPs (see [events](events.md)); the new `Manage events` permission is granted to no role by default. |
 | 0071 | `discord_imports` and `discord_import_objects`: the record of each Discord structure import and the ids it created, for undo (see [Import](import.md)). Nothing existing is touched. |
 | 0072 | `media_original_filename_trgm_idx`: GIN trigram index on `media.original_filename` for fast case-insensitive attachment filename search. |
 
@@ -260,6 +261,18 @@ members always carry them.
 - Up to 20 admin-defined tags per forum channel (name <=20 characters, optional emoji <=32 characters). Members can filter posts by tag and sort by latest activity or creation.
 - Moderation: Members holding *Manage messages* can lock posts to prevent replies from regular users and update tags on others' posts.
 - Feature name `channels.forum` in `GET /api/health`. New event `forum_tags_changed`. REST: `GET/POST /api/channels/{id}/tags`, `PATCH/DELETE /api/channels/{id}/tags/{tagID}`, `GET/POST /api/channels/{id}/posts`, and `PATCH /api/channels/{id}/posts/{postID}`.
+
+#### Community events
+
+- Scheduled community events with title, markdown description, start and end times, optional cover image (re-encoded 3:1 banner, max 5 MB), and location (see [events](events.md)).
+- Location can be a Talk channel or free text. Talk-based events are only visible to members holding *View channels* on that Talk.
+- New permission `Manage events` (`1 << 25` in `internal/perm`); no role gets it by default (Administrators and the Owner have it implicitly).
+- RSVPs: `going`, `interested`, and `not_going` responses, with participant counts and avatars.
+- Automated reminders sent 15 minutes before event start via in-app notifications and Web Push to members RSVP'd `going` or `interested`.
+- Automatic transition from `scheduled` to `active` at start time, showing a direct "Join Talk" button for voice events.
+- Feature key `events` in `GET /api/health`. Real-time WebSocket events `event_update` and `event_reminder`.
+- Audit logging for `event.create`, `event.edit`, and `event.cancel`.
+- Account erasure deletes personal RSVPs and clears event creator links; account export includes `rsvps.json`.
 
 ### 1.0.x → 1.1.0
 

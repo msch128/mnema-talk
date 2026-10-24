@@ -134,6 +134,7 @@ the own role is a convenient place for "this bot may post in #alerts").
 | Manage reports | Read and close member reports of messages, with the copy and context they kept (bit `1 << 21`, [moderation](moderation.md#blocking-and-reports)). Off for @everyone | no |
 | Kick members | Sign members below your highest role out everywhere and drop them from their Talk, with no lasting sanction (bit `1 << 23`, [moderation](moderation.md#kicks)). Off for @everyone and every seeded role; Administrators and the Owner have it implicitly | no |
 | Manage stage | Give and take talk power in a Stage and answer raised hands; holders can always speak there (bit `1 << 24`, [Talks](talks.md#stages)). Off for @everyone and every seeded role; Administrators and the Owner have it implicitly. It is channel-scoped, so it can be allowed for one Stage only | yes |
+| Manage events | Create, edit and cancel community events, and upload or remove their cover images (bit `1 << 25`, [events](events.md)). Off by default; Administrators and the Owner have it implicitly | no |
 
 The bit values are stored in the database and sent over the API; they never
 change meaning (`perm.Catalog` and its test freeze them).
@@ -146,7 +147,7 @@ role either: it is the one account with `users.role = 'admin'`.
 | Who | What it is | Permissions |
 |---|---|---|
 | Member | `@everyone` (position 0, every member has it) | *View channels, Send messages, Attach files, Add reactions, Mention @all and @here, Connect, Speak, Video, Send direct messages* (`perm.DefaultEveryone`) |
-| Moderator | Seeded role, hoisted, not managed, not mentionable | *Manage messages, Disconnect members, Timeout members, View audit log* |
+| Moderator | Seeded role, hoisted, not managed, not mentionable | *Manage messages, Disconnect members, Timeout members, View audit log, Manage events* |
 | Admin | Seeded role, hoisted, not managed, not mentionable, above Moderator when both are new | Moderator's permissions, plus *Manage channels, Manage roles, Manage invites, Manage members, Ban members* |
 | Owner | The account `users.role = 'admin'`, not a role | Every permission, plus the Owner-only powers |
 
@@ -229,6 +230,7 @@ cannot do.
 | WebSocket | Channel events (messages, reactions, typing, who is in a Talk, media state) only reach viewers; the connect snapshot lists only viewable Talks |
 | Talks | *View channels* + *Connect* to join (reading and writing a Talk's chat without joining needs only *View channels* and *Send messages*); the SFU drops audio without *Speak* and camera/screen without *Video*, also while a call is running |
 | `GET /api/admin/roles/{id}/view-as` | *Manage roles*. A preview for a made-up member holding only @everyone and that role, computed by the same resolver (overwrites included) and intersected with what the caller can view: a channel or category the caller cannot see is never in it |
+| Community events (`/api/events`) | Listing, viewing, RSVPing: public if free-text location; if located in a Talk channel, requires *View channels* on that Talk. Creating, editing, cancelling, uploading cover: *Manage events* |
 | Native session API | Uses the same handlers and hub; the opaque ciphertext store checks view/send when given the permission service |
 
 ## View the server as a role
