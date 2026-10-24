@@ -180,3 +180,8 @@ func testPayload(locale string, at time.Time) Payload {
 func (p Payload) encode() ([]byte, error) {
 	return json.Marshal(p)
 }
+
+// plainLine is the readable text of a message for a notification.
+func plainLine(content, locale string) string {
+	return mdplain.Plain(content, text(locale, "spoiler"))
+}

@@ -100,6 +100,7 @@ func (c *components) mountAuthenticated(authed chi.Router) {
 		c.chatH.Mount(j)
 		c.cmds.MountMember(j)
 		c.pollSvc.Mount(j)
+		c.later.Mount(j)
 		c.mediaH.Mount(j)
 		c.emojiH.Mount(j)
 		c.rolesH.Mount(j)

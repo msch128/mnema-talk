@@ -50,6 +50,8 @@ const (
 	ThreadFollowUpdated = "thread_follow_updated"
 	BlockUpdated        = "block_updated"
 	SavedUpdated        = "saved_updated"
+	ReminderUpdate      = "reminder_update"
+	ScheduledUpdate     = "scheduled_message_update"
 	DMCreated           = "dm_created"
 	DMMemberAdded       = "dm_member_added"
 	DMMemberRemoved     = "dm_member_removed"

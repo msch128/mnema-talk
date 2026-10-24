@@ -17,6 +17,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/gateway"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/later"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/push"
 	"github.com/msch128/mnema-talk/internal/sfu"
@@ -78,7 +79,9 @@ type Router struct {
 	Bots *bot.Authenticator
 	// Gateway is the bot gateway (tests adjust its timings).
 	Gateway *gateway.Gateway
-	cancel  context.CancelFunc
+	// Later runs reminders and scheduled messages (tests call Sweep).
+	Later  *later.Service
+	cancel context.CancelFunc
 	// outgoing delivers outgoing webhooks; Close waits for it to settle.
 	outgoing *webhook.Dispatcher
 }
@@ -152,6 +155,7 @@ func NewRouter(d Deps) (*Router, error) {
 		Webhooks: c.webhookH,
 		Bots:     c.botAuthn,
 		Gateway:  c.gw,
+		Later:    c.later,
 		cancel:   cancel,
 		outgoing: c.outgoing,
 		preview:  PreviewDeps{Accounts: c.authH, Chat: c.chatH, System: c.systemH, PerUser: c.perUser, Trusted: trusted},

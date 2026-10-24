@@ -8,7 +8,12 @@
     "poll": "Umfrage",
     "spoiler": "Spoiler",
     "test": "Push funktioniert auf diesem Gerät.",
-    "forward": "Weitergeleitete Nachricht"
+    "forward": "Weitergeleitete Nachricht",
+    "reminder": "Erinnerung",
+    "reminder_body": "Du wolltest an eine Nachricht erinnert werden.",
+    "reminder_gone": "Eine Nachricht, die du nicht mehr sehen kannst",
+    "scheduled_failed": "Geplante Nachricht nicht gesendet",
+    "scheduled_failed_body": "Sie liegt jetzt als Entwurf bereit."
   },
   "en": {
     "new": "New message",
@@ -19,6 +24,11 @@
     "poll": "Poll",
     "spoiler": "Spoiler",
     "test": "Push works on this device.",
-    "forward": "Forwarded message"
+    "forward": "Forwarded message",
+    "reminder": "Reminder",
+    "reminder_body": "You asked to be reminded of a message.",
+    "reminder_gone": "A message you can no longer see",
+    "scheduled_failed": "Scheduled message not sent",
+    "scheduled_failed_body": "It is waiting as a draft."
   }
 }

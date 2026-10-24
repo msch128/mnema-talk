@@ -203,3 +203,9 @@ func setPreview(ctx context.Context, q db.Querier, userID uuid.UUID, on bool) er
 	_, err := q.Exec(ctx, `UPDATE users SET push_preview = $2 WHERE id = $1`, userID, on)
 	return err
 }
+
+// loadPushPrefs reads the language and the preview choice of one member.
+func loadPushPrefs(ctx context.Context, q db.Querier, user uuid.UUID) (locale string, preview bool, err error) {
+	err = q.QueryRow(ctx, `SELECT locale, push_preview FROM users WHERE id = $1 AND disabled_at IS NULL`, user).Scan(&locale, &preview)
+	return locale, preview, err
+}
