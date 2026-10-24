@@ -269,9 +269,10 @@ func (s *Store) SetCover(ctx context.Context, id uuid.UUID, mediaID uuid.UUID) e
 func (s *Store) ClearCover(ctx context.Context, id uuid.UUID) (*uuid.UUID, error) {
 	var prev *uuid.UUID
 	err := s.DB.QueryRow(ctx, `
-		UPDATE events SET cover_media_id = NULL, updated_at = NOW()
-		WHERE id = $1
-		RETURNING cover_media_id`, id).Scan(&prev)
+		UPDATE events e SET cover_media_id = NULL, updated_at = NOW()
+		FROM (SELECT id, cover_media_id FROM events WHERE id = $1 FOR UPDATE) old
+		WHERE e.id = old.id
+		RETURNING old.cover_media_id`, id).Scan(&prev)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound("event not found")
 	}
