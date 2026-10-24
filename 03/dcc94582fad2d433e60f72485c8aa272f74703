@@ -1,0 +1,88 @@
+web/src/lib/media/groupFailure.test.ts
+  s_06fcde5dbef956::t_c5ac8731034c5d 83,85
+web/src/lib/media/lifecycle.test.ts
+  s_06fcde5dbef956::t_c5ac8731034c5d 76,78
+web/src/lib/media/frame.test.ts
+  s_06fcde5dbef956::t_dd734b4d8fd0ca 32,45,51,124-125,127
+  s_06fcde5dbef956::t_75343dbbd5d5a1 25,72-73,121
+  s_06fcde5dbef956::t_acf31d0657c7f9 245
+web/src/lib/media/guard.test.ts
+  s_06fcde5dbef956::t_acf31d0657c7f9 174,176
+  s_06fcde5dbef956::t_560fea4f795d31 112,117-118,120-121,124
+web/src/lib/media/group.test.ts
+  s_06fcde5dbef956::t_c5ac8731034c5d 55,57
+doc/architecture.md
+  s_06fcde5dbef956::t_ed19ea13a1116a 598-600,602-603
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_18dad62e3ca217 517
+web/src/lib/media/callEngine.ts
+  s_06fcde5dbef956::t_ed9d0ad469c14c 143
+  s_06fcde5dbef956::t_ad1f63afe1b202 45,169
+web/src/lib/media/group.welcomes.test.ts
+  s_06fcde5dbef956::t_c5ac8731034c5d 56,58
+web/src/lib/media/browserCall.test.ts
+  s_06fcde5dbef956::t_454f15393ed958 561,584
+  s_06fcde5dbef956::t_dd734b4d8fd0ca 134,138,140,142,145
+  s_06fcde5dbef956::t_560fea4f795d31 22,43,310-311
+  s_06fcde5dbef956::t_63f1751f947aad 460-474
+web/src/lib/media/guard.ts
+  s_06fcde5dbef956::t_ad1f63afe1b202 3,21,24,43,46,49-51,53,74,85,172,174
+web/src/composables/useWebRTC.harness.fixture.ts
+  s_06fcde5dbef956::t_27cf0daea9a5d5 193,203,210
+  s_06fcde5dbef956::t_a7439a8c42827a 6
+web/src/lib/media/group.recovery.test.ts
+  s_06fcde5dbef956::t_c5ac8731034c5d 56,58
+web/src/lib/media/mediaFrameWorker.ts
+  s_06fcde5dbef956::t_ad1f63afe1b202 3,6,58,237,240,242,262,267,269,271
+doc/api-stability.md
+  s_06fcde5dbef956::t_9bff85b938f9f9 104-108
+web/src/composables/webrtc/mediaRoom.ts
+  s_06fcde5dbef956::t_ed9d0ad469c14c 38,55,61,68-73
+  s_06fcde5dbef956::t_a46cf7df5fd1b7 74-75
+web/src/lib/media/frame.ts
+  s_06fcde5dbef956::t_9ad066413c204e 4,11-12,18-19,23-24,31,73-74,93-94,97-98,110,169,176-177,181-186,190-191,194-195,197,202-204,210,226,228,238,243-245,274,278,285,288,290,303-305,308-309,312-314,317-318,328-332,341
+web/src/lib/media/codec.test.ts
+  s_06fcde5dbef956::t_c5ac8731034c5d 17,19
+  s_06fcde5dbef956::t_e00f9c8d8b0b9a 147
+web/src/lib/media/frameWorkerPort.ts
+  s_06fcde5dbef956::t_ad1f63afe1b202 94,100
+web/src/lib/media/frameV3.test.ts
+  s_06fcde5dbef956::t_6974d9e6b4390b 33
+  s_06fcde5dbef956::t_7511b5de23bc5c 32,138
+  s_06fcde5dbef956::t_e00f9c8d8b0b9a 44
+  s_06fcde5dbef956::t_bbca43b964943b 24,26-27,36,72,103,115,117,119-120,125-137,139-154,156-188,191,193-198
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_18dad62e3ca217 517
+doc/upgrade.md
+  s_06fcde5dbef956::t_ed19ea13a1116a 131-133,156-182,364-365
+SECURITY.md
+  s_06fcde5dbef956::t_ed19ea13a1116a 56-58,728-750
+web/src/lib/media/groupBase.ts
+  s_06fcde5dbef956::t_920bf3737cf793 15
+web/src/lib/media/mediaFrameWorker.test.ts
+  s_06fcde5dbef956::t_a6b37583e02a8d 5,23-24,28,43,45,504,512,515-520,525,548,552,560,569,571-582
+  s_06fcde5dbef956::t_acf31d0657c7f9 181,186,194,218,283
+  s_06fcde5dbef956::t_560fea4f795d31 240
+web/src/composables/useWebRTC.e2ee.test.ts
+  s_06fcde5dbef956::t_27cf0daea9a5d5 130-142
+web/src/lib/media/api.ts
+  s_06fcde5dbef956::t_ed9d0ad469c14c 7-8,10
+web/src/lib/media/groupCaps.test.ts
+  s_06fcde5dbef956::t_560fea4f795d31 54-57,71,81,83,86-87,89,91,93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "03dcc94582fad2d433e60f72485c8aa272f74703",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
