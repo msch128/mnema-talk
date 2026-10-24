@@ -1,0 +1,39 @@
+internal/audit/classes.go
+  s_06fcde5dbef956::t_14079c11225dc9 48
+internal/audit/classes_test.go
+  s_06fcde5dbef956::t_c4d8bd4db3af0e 41
+internal/communityevents/handler.go
+  s_06fcde5dbef956::t_f4241c69c9fd22 89-95,124-125,127,195-197,199-204,263-269,296-297,299-300,333-336,355-359,375-400
+internal/communityevents/handler_cover.go
+  s_06fcde5dbef956::t_ea59ec84cb3540 19-20,22-25,28,92-94,99,159-165
+internal/communityevents/handler_rsvp.go
+  s_06fcde5dbef956::t_6364a2ad4da0e8 38-39
+internal/communityevents/scheduler.go
+  s_06fcde5dbef956::t_e1dc6d58da0e19 89-95,109-123,126-130
+internal/communityevents/store.go
+  s_06fcde5dbef956::t_c51b66d9498fc6 255-257,265-267
+internal/db/migrations/0070_events.sql
+  s_06fcde5dbef956::t_3bac617db9151c 13
+internal/server/events_integration_test.go
+  s_06fcde5dbef956::t_65c1ae4a937c5a 313-393
+internal/server/router_build.go
+  s_06fcde5dbef956::t_f39720ca1115de 65-66
+internal/server/server.go
+  s_06fcde5dbef956::t_741b72fe685e82 157-158,165-166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f94fccb6a94901640ff158291cae488cf21043d6",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
