@@ -1,0 +1,47 @@
+api/openapi.json
+  s_06fcde5dbef956::t_a3ae0c525067e0 2406-2430,2454-2470,2491-2497,2502-2505,2511-2514,2551,2553,4157-4183,25762-25850,25948-26058,32764-32912,34344
+internal/chat/dm.go
+  s_06fcde5dbef956::t_f0a0f1597cec36 89-115,125-127,130,132-139,145-146,155,162-192
+internal/chat/dm_gate.go
+  s_06fcde5dbef956::t_ea8c4c2f7cd60e 111-121
+internal/chat/dm_handler.go
+  s_06fcde5dbef956::t_30749fba5f1496 19,192,267
+internal/chat/dm_prefs.go
+  s_06fcde5dbef956::t_c0f1ac2093006d 1-120
+internal/chat/dm_prefs_handler.go
+  s_06fcde5dbef956::t_d9dac9d82362cf 1-172
+internal/chat/notify.go
+  s_06fcde5dbef956::t_5a537423db174f 52-56
+internal/db/migrations/0074_dm_polish.sql
+  s_06fcde5dbef956::t_0e97066bc59f82 1-17
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_67f253c1d66382 49
+internal/events/types.go
+  s_06fcde5dbef956::t_23c596b0689344 58
+internal/push/dm_mute_all_integration_test.go
+  s_06fcde5dbef956::t_ce67afb555d42b 1-34
+internal/push/recipients.go
+  s_06fcde5dbef956::t_7e62c9ca92e2d6 33-36,48,65,68,74,110
+internal/server/dm_polish_integration_test.go
+  s_06fcde5dbef956::t_307c82a657e3bf 1-215
+internal/server/health.go
+  s_06fcde5dbef956::t_03457532b72444 62
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_fbff1523cf4940 59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "66e48571e42551a77c9eebd80d48bc711374af32",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
