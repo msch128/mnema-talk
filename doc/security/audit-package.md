@@ -250,10 +250,10 @@ permission check on the channel.
 
 ### REST routes
 
-217 operations on 176 paths, grouped by API tag.
+261 operations on 209 paths, grouped by API tag.
 
 
-#### Admin (39)
+#### Admin (49)
 
 | Method | Path | Authentication | Summary |
 |---|---|---|---|
@@ -265,7 +265,13 @@ permission check on the channel.
 | POST | `/api/admin/channels` | Session + admin-area permission | Create a channel |
 | PATCH | `/api/admin/channels/{id}` | Session + admin-area permission | Rename a channel, change its topic or member limit |
 | DELETE | `/api/admin/channels/{id}` | Session + admin-area permission | Delete a channel |
+| PUT | `/api/admin/channels/{id}/auto-delete` | Session + admin-area permission | Set a channel's auto-delete |
 | POST | `/api/admin/channels/{id}/duplicate` | Session + admin-area permission | Duplicate a channel |
+| POST | `/api/admin/import/discord/apply` | Session + admin-area permission | Import a Discord server structure |
+| GET | `/api/admin/import/discord/imports` | Session + admin-area permission | List Discord imports |
+| GET | `/api/admin/import/discord/imports/{id}` | Session + admin-area permission | Read a Discord import |
+| POST | `/api/admin/import/discord/imports/{id}/undo` | Session + admin-area permission | Undo a Discord import |
+| POST | `/api/admin/import/discord/preview` | Session + admin-area permission | Preview a Discord server import |
 | GET | `/api/admin/invites` | Session + admin-area permission | List invites |
 | POST | `/api/admin/invites` | Session + admin-area permission | Create an invite |
 | DELETE | `/api/admin/invites/{id}` | Session + admin-area permission | Delete an invite |
@@ -276,6 +282,7 @@ permission check on the channel.
 | POST | `/api/admin/media/prune` | Session + admin-area permission | Delete old chat attachments |
 | GET | `/api/admin/media/stats` | Session + admin-area permission | Storage totals |
 | DELETE | `/api/admin/media/{id}` | Session + admin-area permission | Delete a media object |
+| GET | `/api/admin/status` | Session + admin-area permission | Operator status |
 | GET | `/api/admin/system` | Session + admin-area permission | System status |
 | POST | `/api/admin/system/check` | Session + admin-area permission | Check for a new release now |
 | POST | `/api/admin/system/mail/test` | Session + admin-area permission | Send a test e-mail |
@@ -296,8 +303,11 @@ permission check on the channel.
 | POST | `/api/admin/users/{id}/timeout` | Session + admin-area permission | Time out a member |
 | DELETE | `/api/admin/users/{id}/timeout` | Session + admin-area permission | End a member's timeout |
 | POST | `/api/admin/users/{id}/two-factor/reset` | Session + admin-area permission | Reset a member's two-factor sign-in |
+| POST | `/api/channels/{channelID}/tags` | Session | Create a forum tag |
+| PATCH | `/api/channels/{channelID}/tags/{tagID}` | Session | Update a forum tag |
+| DELETE | `/api/channels/{channelID}/tags/{tagID}` | Session | Delete a forum tag |
 
-#### Auth (12)
+#### Auth (15)
 
 | Method | Path | Authentication | Summary |
 |---|---|---|---|
@@ -312,6 +322,9 @@ permission check on the channel.
 | POST | `/api/auth/password-reset/confirm` | None (public) | Set a new password with a reset link |
 | POST | `/api/auth/password-reset/request` | None (public) | Ask for a password reset mail |
 | POST | `/api/auth/register` | None (public) | Register with an invite code |
+| GET | `/api/auth/sessions` | Session | List my sessions |
+| POST | `/api/auth/sessions/revoke-others` | Session | Sign out all my other sessions |
+| DELETE | `/api/auth/sessions/{id}` | Session | Sign out one of my sessions |
 | GET | `/api/invites/{code}` | None (public) | Preview an invite |
 
 #### Bot API (19)
@@ -358,7 +371,7 @@ permission check on the channel.
 | DELETE | `/api/admin/bots/{id}/tokens/{tokenID}` | Session + admin-area permission | Revoke a token |
 | POST | `/api/admin/bots/{id}/tokens/{tokenID}/regenerate` | Session + admin-area permission | Regenerate a token |
 
-#### Channels (12)
+#### Channels (15)
 
 | Method | Path | Authentication | Summary |
 |---|---|---|---|
@@ -366,10 +379,13 @@ permission check on the channel.
 | GET | `/api/channels` | Session | List categories and channels |
 | GET | `/api/channels/{channelID}/first-unread` | Session | First unread message of a channel |
 | PUT | `/api/channels/{channelID}/notifications` | Session | Set channel notification level |
+| GET | `/api/channels/{channelID}/posts` | Session | List forum posts |
 | POST | `/api/channels/{channelID}/read` | Session | Mark a channel read |
+| GET | `/api/channels/{channelID}/tags` | Session | List forum tags |
 | POST | `/api/channels/{channelID}/unread` | Session | Mark unread from a message |
 | POST | `/api/dms/{id}/talk` | Session | Start a Talk from a direct message conversation |
 | GET | `/api/notification-settings` | Session | Notification settings |
+| PUT | `/api/notification-settings/server` | Session | Set server notification default |
 | GET | `/api/read-state` | Session | Unread summary of all channels |
 | POST | `/api/read-state/read-all` | Session | Mark everything read |
 | PATCH | `/api/talks/{id}` | Session | Rename a temporary Talk or set its member limit |
@@ -403,6 +419,21 @@ permission check on the channel.
 | GET | `/api/emoji/{id}/image` | Session | Custom emoji image |
 | GET | `/api/emoji/{id}/still` | Session | Custom emoji still frame |
 
+#### Events (10)
+
+| Method | Path | Authentication | Summary |
+|---|---|---|---|
+| GET | `/api/events` | Session | List community events |
+| POST | `/api/events` | Session | Create a community event |
+| GET | `/api/events/{id}` | Session | Get a community event |
+| PATCH | `/api/events/{id}` | Session | Update a community event |
+| POST | `/api/events/{id}/cancel` | Session | Cancel a community event |
+| POST | `/api/events/{id}/cover` | Session | Upload event cover image |
+| DELETE | `/api/events/{id}/cover` | Session | Remove event cover image |
+| PUT | `/api/events/{id}/rsvp` | Session | Set RSVP response for an event |
+| DELETE | `/api/events/{id}/rsvp` | Session | Delete RSVP response for an event |
+| GET | `/api/events/{id}/rsvps` | Session | List RSVPs for an event |
+
 #### Media (4)
 
 | Method | Path | Authentication | Summary |
@@ -412,7 +443,7 @@ permission check on the channel.
 | GET | `/api/link-preview/image` | Session | Proxied preview image |
 | GET | `/api/media/{id}` | Session | Download a media object |
 
-#### Messages (23)
+#### Messages (32)
 
 | Method | Path | Authentication | Summary |
 |---|---|---|---|
@@ -425,9 +456,18 @@ permission check on the channel.
 | PUT | `/api/channels/{channelID}/messages/{messageID}/pin` | Session | Pin a message |
 | DELETE | `/api/channels/{channelID}/messages/{messageID}/pin` | Session | Unpin a message |
 | GET | `/api/channels/{channelID}/pins` | Session | List a channel's pinned messages |
+| POST | `/api/channels/{channelID}/posts` | Session | Create a forum post |
+| PATCH | `/api/channels/{channelID}/posts/{messageID}` | Session | Update a forum post |
+| POST | `/api/channels/{channelID}/scheduled` | Session | Schedule a message |
+| GET | `/api/me/reminders` | Session | List my reminders |
+| POST | `/api/me/reminders` | Session | Remind me of a message |
+| DELETE | `/api/me/reminders/{reminderID}` | Session | Cancel or dismiss a reminder |
 | GET | `/api/me/saved` | Session | List saved messages |
 | PUT | `/api/me/saved/{messageID}` | Session | Save a message |
 | DELETE | `/api/me/saved/{messageID}` | Session | Remove a saved message |
+| GET | `/api/me/scheduled` | Session | List my scheduled messages |
+| PATCH | `/api/me/scheduled/{scheduledID}` | Session | Edit a scheduled message |
+| DELETE | `/api/me/scheduled/{scheduledID}` | Session | Delete a scheduled message |
 | GET | `/api/mentions` | Session | Mentions inbox |
 | GET | `/api/messages/by-number/{number}` | Session | Get a message by its link number |
 | GET | `/api/messages/{messageID}/forward` | Session | Read the original of a forwarded message |
@@ -440,14 +480,22 @@ permission check on the channel.
 | PUT | `/api/threads/{threadID}/follow` | Session | Follow a thread |
 | DELETE | `/api/threads/{threadID}/follow` | Session | Unfollow a thread |
 
-#### Moderation (4)
+#### Moderation (12)
 
 | Method | Path | Authentication | Summary |
 |---|---|---|---|
+| GET | `/api/admin/automod` | Session + admin-area permission | List automod rules |
+| POST | `/api/admin/automod/rules` | Session + admin-area permission | Create an automod rule |
+| PUT | `/api/admin/automod/rules/{id}` | Session + admin-area permission | Replace an automod rule |
+| DELETE | `/api/admin/automod/rules/{id}` | Session + admin-area permission | Delete an automod rule |
 | GET | `/api/admin/reports` | Session + admin-area permission | List reports |
 | GET | `/api/admin/reports/{id}` | Session + admin-area permission | Get a report |
 | DELETE | `/api/admin/reports/{id}` | Session + admin-area permission | Delete a report |
 | POST | `/api/admin/reports/{id}/resolve` | Session + admin-area permission | Close a report |
+| GET | `/api/admin/users/{id}/moderation` | Session + admin-area permission | A member's moderation history |
+| POST | `/api/admin/users/{id}/moderation/notes` | Session + admin-area permission | Add a moderator note |
+| PUT | `/api/admin/users/{id}/moderation/notes/{noteID}` | Session + admin-area permission | Edit your moderator note |
+| DELETE | `/api/admin/users/{id}/moderation/notes/{noteID}` | Session + admin-area permission | Delete a moderator note |
 
 #### Onboarding (5)
 
@@ -486,7 +534,7 @@ permission check on the channel.
 | GET | `/api/webrtc/config` | Session | ICE servers for voice |
 | GET | `/api/ws` | Session cookie on upgrade, origin check | WebSocket event stream |
 
-#### Roles (13)
+#### Roles (14)
 
 | Method | Path | Authentication | Summary |
 |---|---|---|---|
@@ -498,6 +546,7 @@ permission check on the channel.
 | PUT | `/api/admin/roles/order` | Session + admin-area permission | Reorder roles |
 | PATCH | `/api/admin/roles/{id}` | Session + admin-area permission | Edit a role |
 | DELETE | `/api/admin/roles/{id}` | Session + admin-area permission | Delete a role |
+| GET | `/api/admin/roles/{id}/view-as` | Session + admin-area permission | View the server as a role |
 | GET | `/api/admin/upload-limit` | Session + admin-area permission | Read the global upload limit |
 | PUT | `/api/admin/upload-limit` | Session + admin-area permission | Set the global upload limit |
 | PUT | `/api/admin/users/{id}/roles` | Session + admin-area permission | Set a member's roles |
@@ -567,10 +616,10 @@ permission check on the channel.
 
 ### WebSocket events
 
-**Server to client (47):** `block_updated`, `channels_changed`, `dm_created`, `dm_member_added`, `dm_member_removed`, `emoji_changed`, `interaction_response`, `kicked`, `media_handshake`, `member_joined`, `member_timeout`, `message_create`, `message_delete`, `message_reaction`, `message_update`, `moderation_notice`, `native_access_renewed`, `permissions_changed`, `pins_changed`, `poll_update`, `pong`, `presence_snapshot`, `presence_update`, `read_state`, `roles_changed`, `saved_updated`, `screen_layers`, `screen_layers_wanted`, `screen_quality`, `screen_viewers`, `server_info`, `system_update`, `talk_leader`, `talk_moved`, `thread_follow_updated`, `typing`, `user_stats`, `user_update`, `voice_kicked`, `voice_mute_state`, `voice_rooms`, `voice_snapshot`, `voice_speaking`, `voice_state_update`, `webrtc_candidate`, `webrtc_media_state`, `webrtc_offer`
+**Server to client (56):** `block_updated`, `channels_changed`, `dm_created`, `dm_member_added`, `dm_member_removed`, `emoji_changed`, `event_delete`, `event_reminder`, `event_update`, `forum_tags_changed`, `interaction_response`, `kicked`, `media_handshake`, `member_joined`, `member_timeout`, `message_create`, `message_delete`, `message_reaction`, `message_update`, `moderation_notice`, `native_access_renewed`, `permissions_changed`, `pins_changed`, `poll_update`, `pong`, `presence_snapshot`, `presence_update`, `read_state`, `reminder_update`, `roles_changed`, `saved_updated`, `scheduled_message_update`, `screen_layers`, `screen_layers_wanted`, `screen_quality`, `screen_viewers`, `server_info`, `stage_hand`, `stage_talk_power`, `system_update`, `talk_leader`, `talk_moved`, `talk_reaction`, `thread_follow_updated`, `typing`, `user_stats`, `user_update`, `voice_kicked`, `voice_mute_state`, `voice_rooms`, `voice_snapshot`, `voice_speaking`, `voice_state_update`, `webrtc_candidate`, `webrtc_media_state`, `webrtc_offer`
 
 
-**Client to server (17):** `media_handshake`, `ping`, `presence_idle`, `typing`, `voice_join`, `voice_leave`, `voice_mute_state`, `voice_speaking`, `webrtc_answer`, `webrtc_camera_stop`, `webrtc_candidate`, `webrtc_diag`, `webrtc_layers`, `webrtc_request_keyframe`, `webrtc_screenshare_start`, `webrtc_screenshare_stop`, `webrtc_subscribe`
+**Client to server (20):** `media_handshake`, `ping`, `presence_idle`, `stage_hand`, `stage_talk_power`, `talk_reaction`, `typing`, `voice_join`, `voice_leave`, `voice_mute_state`, `voice_speaking`, `webrtc_answer`, `webrtc_camera_stop`, `webrtc_candidate`, `webrtc_diag`, `webrtc_layers`, `webrtc_request_keyframe`, `webrtc_screenshare_start`, `webrtc_screenshare_stop`, `webrtc_subscribe`
 
 <!-- attack-surface:end -->
 
@@ -625,26 +674,26 @@ review.
 
 Read-only review of the new routes, WebSocket events, stores and migrations,
 with one targeted test run through a build overlay. No Critical or High
-findings. Status column reflects the time of writing; the maintainers confirm
-each at release freeze, and open items are described only by class here.
+findings. The status column follows the 1.2 security-fix pull request. Items are
+described by class, without exploit detail.
 
 | ID | Severity | Area | Class | Status at time of writing |
 |---|---|---|---|---|
-| M1 | Medium | Automod links | Block-list mode can be bypassed by input the renderer links but the rule does not parse | Reported to 1.2 integration, fix expected before 1.2.0 |
-| M2 | Medium | Events | Broadcast payload carries a viewer-specific field of the acting member | Reported, fix expected before 1.2.0 |
-| M3 | Medium | Erasure/export | A new `messages` column is missing from account erasure and data export | Reported, fix expected before 1.2.0 |
-| L1 | Low | Automod | Some user-supplied text fields (forum titles and tags, poll options) are not screened | Open or documented |
-| L2 | Low | Automod | Word matching does not normalise all Unicode look-alikes and invisible characters | Open or documented |
-| L3 | Low | Scheduled send | Burst of due messages bypasses the request limiter | Open or documented |
-| L4 | Low | Polls | Live tallies allow inference in very small audiences (by design, documented hardening) | Accepted, documented |
-| L5 | Low | Forum | Author edit rights on title and tags are looser than send rights | Open or documented |
-| L6 | Low | Events | Retraction of hidden events can be missed on two quick permission changes (REST stays correct) | Open or documented |
-| L7 | Low | Talks | Presence queue overflow or timer race can mis-remove or keep a Talk | Open or documented |
-| L8 | Low | Discord import | Duplicate ids in a template can make preview and apply disagree | Open or documented |
-| L9 | Low | Discord import | Undo has a small race with new messages | Open or documented |
-| L10 | Low | Privacy | Minor leftovers after erasure/export (names in import records, notes, filenames of removed attachments in search) | Open or documented |
-| L11 | Low | Moderation | Timeline readable with *Manage reports* only, wider than audit classes | By design, documented |
-| L12 | Info | WebSocket | Per-user gates reset on reconnect, bounded by the connect limiter | Accepted |
+| M1 | Medium | Automod links | Block-list mode can be bypassed by input the renderer links but the rule does not parse | Fixed in the 1.2 security-fix pull request, with tests |
+| M2 | Medium | Events | Broadcast payload carries a viewer-specific field of the acting member | Fixed in the 1.2 security-fix pull request, with tests |
+| M3 | Medium | Erasure/export | A new `messages` column is missing from account erasure and data export | Fixed in the 1.2 security-fix pull request, with tests |
+| L1 | Low | Automod | Some user-supplied text fields (forum titles and tags, poll options) are not screened | Fixed in the 1.2 security-fix pull request, with tests |
+| L2 | Low | Automod | Word matching does not normalise all Unicode look-alikes and invisible characters | Fixed in the 1.2 security-fix pull request, with tests |
+| L3 | Low | Scheduled send | Burst of due messages bypasses the request limiter | Accepted, documented in SECURITY.md |
+| L4 | Low | Polls | Live tallies allow inference in very small audiences (by design, documented hardening) | Broadcast tally fixed; counts shown by REST documented as accepted |
+| L5 | Low | Forum | Author edit rights on title and tags are looser than send rights | Fixed in the 1.2 security-fix pull request, with tests |
+| L6 | Low | Events | Retraction of hidden events can be missed on two quick permission changes (REST stays correct) | Fixed in the 1.2 security-fix pull request, with tests |
+| L7 | Low | Talks | Presence queue overflow or timer race can mis-remove or keep a Talk | Fixed in the 1.2 security-fix pull request, with tests |
+| L8 | Low | Discord import | Duplicate ids in a template can make preview and apply disagree | Accepted, documented in SECURITY.md |
+| L9 | Low | Discord import | Undo has a small race with new messages | Fixed in the 1.2 security-fix pull request, with tests |
+| L10 | Low | Privacy | Minor leftovers after erasure/export (names in import records, notes, filenames of removed attachments in search) | Fixed in the 1.2 security-fix pull request, with tests |
+| L11 | Low | Moderation | Timeline readable with *Manage reports* only, wider than audit classes | Accepted, documented in SECURITY.md |
+| L12 | Info | WebSocket | Per-user gates reset on reconnect, bounded by the connect limiter | Accepted, documented in SECURITY.md |
 
 The review also records what it verified clean: Talks, lobbies, leaders and
 invites; Stages; community events on hidden Talks; reminders and scheduled
@@ -660,9 +709,13 @@ auto-delete; search SQL (all user input travels as parameters); and no new
   only on the query's shape, never on user bytes; LIKE wildcards always
   escaped), search time parser and window check, mention scanner, moderation
   duration shorthand, SSRF URL validation (a literal refused address is never
-  accepted) and allow-list parser, release version parser. Targets for automod,
-  Discord template mapping and further 1.2 parsers are to be added when those
-  packages are on the release branch.
+  accepted) and allow-list parser, release version parser, automod host and
+  domain normalisation (IDNA, userinfo, ports, trailing dots), fail-closed link
+  rules and word matching, Discord template link parsing and plan building
+  (never panics, never maps Administrator or an owner-only power, only creates,
+  deterministic hash), the search day and time-zone parser, status expiry and
+  the slow-mode limit. The link-rule target reproduced finding M1 before its
+  fix.
 * **Web property tests** (fixed seed): random, truncated, extended, bit-flipped
   and old-format media units, capability and heartbeat messages and MLS
   handshake wires are refused without throwing.
@@ -678,7 +731,7 @@ auto-delete; search SQL (all user input travels as parameters); and no new
 |---|---|
 | R1 | Signature domains are distinct (`frame-v2`, `frame-v3`, `heartbeat-v1`, `capability-v1`, `safety-v1`), none is a prefix of another, and the version magic byte is inside the signed bytes. No cross-protocol or cross-version signature confusion found. A version 2 and a version 3 AAD can coincide byte for byte for suitable clear bytes, but the signature domain and the signed magic keep the units apart. |
 | R2 | Heartbeat signed bytes are `domain \|\| groupId \|\| userId \|\| body` without length prefixes. Safe today because the group id is 16 bytes and a user id is validated to a fixed 36-character form; a future variable-length field would need prefixes. Recommended hardening, no current exploit. |
-| R3 | Downgrade: while version 2 existed, a server withholding capability messages could keep an epoch on version 2 (no line binding). Removed together with version 2 in 1.2; confirm no residual `acceptV2` path remains at freeze. |
+| R3 | Downgrade: while version 2 existed, a server withholding capability messages could keep an epoch on version 2 (no line binding). Version 2 is no longer opened in 1.2 (such units are only counted); no `acceptV2` path remains in the frame code. |
 | R4 | A removed member's frames under the previous epoch still open at receivers for up to 30 seconds (documented; trade-off for media continuity). The removed member also keeps the old key; the server must stop forwarding. |
 | R5 | An unauthenticated "commit for a newer epoch" from one of the two lowest members makes a receiver start over (rate limited with backoff). A server can do this anyway; availability only. Already listed as RT-6. |
 | R6 | Rival-welcome handling can pull a member out of a group into one built on a key package it offered; rate limited per sender with doubling backoff; requires holding that key package (the relay can). Documented. |

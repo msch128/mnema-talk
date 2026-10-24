@@ -24,14 +24,14 @@ beforeAll(async () => {
 })
 afterAll(() => { vi.stubGlobal('crypto', previous) })
 
-async function sealedUnit(version: 2 | 3, source: FrameSource = SOURCE_MIC, plaintext = Uint8Array.of(1, 2, 3, 4, 5)): Promise<Uint8Array> {
-  const packet = await sealFrame({ keys, epoch: 4, stream: 8, counter: 1, channelId: 'channel', senderId: 'alice', plaintext, version, source })
+async function sealedUnit(source: FrameSource = SOURCE_MIC, plaintext = Uint8Array.of(1, 2, 3, 4, 5)): Promise<Uint8Array> {
+  const packet = await sealFrame({ keys, epoch: 4, stream: 8, counter: 1, channelId: 'channel', senderId: 'alice', plaintext, source })
   if (!packet) throw new Error('expected a sealed frame')
   return packet
 }
 
-function tryOpen(packet: Uint8Array, over: { source?: FrameSource | null, acceptV2?: (epoch: number) => boolean } = {}): Promise<Uint8Array | null> {
-  return openFrame({ keys: new Map([[4, keys]]), channelId: 'channel', senderId: 'alice', packet, replay: new ReplayWindow(), source: over.source ?? SOURCE_MIC, acceptV2: over.acceptV2 })
+function tryOpen(packet: Uint8Array, over: { source?: FrameSource | null, onLegacy?: () => void } = {}): Promise<Uint8Array | null> {
+  return openFrame({ keys: new Map([[4, keys]]), channelId: 'channel', senderId: 'alice', packet, replay: new ReplayWindow(), source: over.source ?? SOURCE_MIC, onLegacy: over.onLegacy })
 }
 
 describe('malformed media units are refused without throwing', () => {
@@ -40,14 +40,14 @@ describe('malformed media units are refused without throwing', () => {
     for (let i = 0; i < 300; i++) {
       const length = Math.floor(random() * 400)
       const packet = bytes(random, length)
-      if (i % 2 === 0 && length >= 2) { packet[0] = 0x4d; packet[1] = random() < 0.5 ? 0x32 : 0x33 }
+      if (i % 2 === 0 && length >= 2) { packet[0] = 0x4d; packet[1] = 0x33 }
       await expect(tryOpen(packet)).resolves.toBeNull()
     }
   })
 
   it('refuses every truncation of a valid unit, in both formats', async () => {
-    for (const version of [2, 3] as const) {
-      const packet = await sealedUnit(version)
+    {
+      const packet = await sealedUnit()
       await expect(tryOpen(packet, { source: SOURCE_MIC })).resolves.toEqual(Uint8Array.of(1, 2, 3, 4, 5))
       for (let length = 0; length < packet.byteLength; length++) {
         await expect(tryOpen(packet.slice(0, length))).resolves.toBeNull()
@@ -57,8 +57,8 @@ describe('malformed media units are refused without throwing', () => {
 
   it('refuses a valid unit with bytes appended or prepended', async () => {
     const random = prng(SEED + 1)
-    for (const version of [2, 3] as const) {
-      const packet = await sealedUnit(version)
+    {
+      const packet = await sealedUnit()
       for (let extra = 1; extra <= 8; extra++) {
         const tail = new Uint8Array(packet.byteLength + extra)
         tail.set(packet)
@@ -74,8 +74,8 @@ describe('malformed media units are refused without throwing', () => {
 
   it('refuses a valid unit with any single byte changed', async () => {
     const random = prng(SEED + 2)
-    for (const version of [2, 3] as const) {
-      const packet = await sealedUnit(version)
+    {
+      const packet = await sealedUnit()
       for (let at = 0; at < packet.byteLength; at++) {
         const copy = packet.slice()
         copy[at] = (copy[at] as number) ^ (1 + Math.floor(random() * 255))
@@ -86,7 +86,7 @@ describe('malformed media units are refused without throwing', () => {
 
   it('refuses a valid unit with several random bytes changed', async () => {
     const random = prng(SEED + 3)
-    const packet = await sealedUnit(3)
+    const packet = await sealedUnit()
     for (let i = 0; i < 100; i++) {
       const copy = packet.slice()
       const flips = 2 + Math.floor(random() * 6)
@@ -96,40 +96,35 @@ describe('malformed media units are refused without throwing', () => {
     }
   })
 
-  it('refuses units of the old format where the epoch is no longer taken in it, and never opens one as version 3', async () => {
-    const v2 = await sealedUnit(2)
-    await expect(tryOpen(v2, { acceptV2: () => false })).resolves.toBeNull()
-    // Relabelled as version 3 (magic and an inserted line byte): the signature domain differs.
-    const lifted = new Uint8Array(v2.byteLength + 1)
-    lifted.set(v2.subarray(0, 14))
-    lifted[1] = 0x33
-    lifted[14] = SOURCE_MIC << 4
-    lifted.set(v2.subarray(14), 15)
-    await expect(tryOpen(lifted)).resolves.toBeNull()
-    const v3 = await sealedUnit(3)
-    // And the other way: a version 3 unit presented as version 2 never opens.
-    const lowered = v3.slice()
-    lowered[1] = 0x32
-    await expect(tryOpen(lowered)).resolves.toBeNull()
-    // Unknown versions.
-    for (const version of [0x00, 0x31, 0x34, 0x4d, 0xff]) {
-      const unknown = v3.slice()
-      unknown[1] = version
-      await expect(tryOpen(unknown)).resolves.toBeNull()
+  it('never opens a unit in the retired version 2 format, and reports it', async () => {
+    const v3 = await sealedUnit()
+    // A version 3 unit presented as version 2, and unknown versions.
+    let legacy = 0
+    for (const version of [0x32, 0x00, 0x31, 0x34, 0x4d, 0xff]) {
+      const other = v3.slice()
+      other[1] = version
+      await expect(tryOpen(other, { onLegacy: () => { legacy++ } })).resolves.toBeNull()
     }
+    expect(legacy).toBe(1)
+    // A version 2 layout (no line byte) with the version 2 magic.
+    const v2 = new Uint8Array(v3.byteLength - 1)
+    v2.set(v3.subarray(0, 14))
+    v2.set(v3.subarray(15), 14)
+    v2[1] = 0x32
+    await expect(tryOpen(v2)).resolves.toBeNull()
   })
 
   it('refuses a version 3 unit on any line it was not sealed for, whatever the line byte says', async () => {
     const lines: FrameSource[] = [SOURCE_MIC, SOURCE_CAMERA, SOURCE_SCREEN, SOURCE_SCREEN_AUDIO]
     for (const sealedFor of lines) {
-      const packet = await sealedUnit(3, sealedFor)
+      const packet = await sealedUnit(sealedFor)
       for (const onLine of lines) {
         const opened = await tryOpen(packet, { source: onLine })
         if (onLine === sealedFor && sealedFor !== SOURCE_SCREEN) expect(opened).toEqual(Uint8Array.of(1, 2, 3, 4, 5))
         else if (onLine !== sealedFor) expect(opened).toBeNull()
       }
     }
-    const mic = await sealedUnit(3, SOURCE_MIC)
+    const mic = await sealedUnit(SOURCE_MIC)
     for (let line = 0; line < 256; line++) {
       const copy = mic.slice()
       copy[14] = line
@@ -138,7 +133,7 @@ describe('malformed media units are refused without throwing', () => {
   })
 
   it('refuses units from a sender or channel other than the one that sealed them', async () => {
-    const packet = await sealedUnit(3)
+    const packet = await sealedUnit()
     const open = (senderId: string, channelId: string) => openFrame({ keys: new Map([[4, keys]]), channelId, senderId, packet, replay: new ReplayWindow(), source: SOURCE_MIC })
     await expect(open('alice', 'channel')).resolves.toEqual(Uint8Array.of(1, 2, 3, 4, 5))
     await expect(open('bob', 'channel')).resolves.toBeNull()

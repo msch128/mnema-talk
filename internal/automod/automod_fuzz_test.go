@@ -11,7 +11,7 @@ import (
 func FuzzHostOf(f *testing.F) {
 	for _, s := range []string{
 		"https://example.com/path", "http://allowed.com@evil.com", "evil.com\\@allowed.com", "https://EXAMPLE.com.", "https://example.com:8080/x",
-		"https://xn--bcher-kva.example", "https://bücher.example", "https://example。com", "https://%65xample.com", "https://[::1]:80/", "https://",
+		"https://xn--bcher-kva.example", "https://b\u00fccher.example", "https://example。com", "https://%65xample.com", "https://[::1]:80/", "https://",
 		"www.example.com", "https://a..b", "https://exa mple.com", "\x00", "https://ｅxample.com", "",
 	} {
 		f.Add(s)
@@ -33,7 +33,7 @@ func FuzzHostOf(f *testing.F) {
 // FuzzCleanDomain checks that a domain accepted for a rule list is already in
 // the form hostOf reads, so a listed domain and a link to it always compare equal.
 func FuzzCleanDomain(f *testing.F) {
-	for _, s := range []string{"example.com", "*.example.com", "https://Example.COM/x", "bücher.example", "xn--bcher-kva.example", "a", "", "-a.com", "a.b"} {
+	for _, s := range []string{"example.com", "*.example.com", "https://Example.COM/x", "b\u00fccher.example", "xn--bcher-kva.example", "a", "", "-a.com", "a.b"} {
 		f.Add(s)
 	}
 	f.Fuzz(func(t *testing.T, s string) {
@@ -92,7 +92,7 @@ func FuzzMatchWords(f *testing.F) {
 			return
 		}
 		_ = c.matchesWords(content)
-		if invisible.Replace(w) == w && c.words != nil && !c.matchesWords(" "+w+" ") {
+		if fold(w) == w && c.words != nil && !c.matchesWords(" "+w+" ") {
 			t.Fatalf("word %q not found between spaces", w)
 		}
 	})
