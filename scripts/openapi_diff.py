@@ -28,6 +28,9 @@ IGNORED_RULES = {
     # 24 h). doc/api-stability.md only counts narrowing a range as breaking;
     # widening one is like a new enum value that clients must tolerate.
     "response-property-max-increased": "widening a documented response range is not breaking",
+    # doc/api-stability.md: adding an enum value is not breaking; clients must
+    # ignore values they do not know.
+    "response-property-enum-value-added": "a new enum value in a response is not breaking",
 }
 
 
