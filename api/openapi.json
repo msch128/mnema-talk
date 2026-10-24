@@ -21897,8 +21897,37 @@
     },
     "/api/events": {
       "get": {
-        "description": "Returns community events visible to the caller. Events located in a Talk channel require ViewChannel on that channel.",
+        "description": "Returns community events visible to the caller, ordered by start time. Events located in a Talk channel require ViewChannel on that channel. By default the window runs from 1 day ago to 90 days ahead; an event is in the window while it has not ended before after and starts before before.",
         "operationId": "listCommunityEvents",
+        "parameters": [
+          {
+            "description": "Earliest end (or start, for events without an end) to include, RFC 3339. Default: now minus 1 day.",
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Events must start before this time, RFC 3339. Default: now plus 90 days.",
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size, 1 to 200.",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -21912,6 +21941,16 @@
               }
             },
             "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT"
           }
         },
         "security": [

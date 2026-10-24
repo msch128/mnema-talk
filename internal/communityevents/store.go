@@ -103,36 +103,6 @@ func (s *Store) Get(ctx context.Context, id uuid.UUID, callerID *uuid.UUID) (*Co
 	return ev, nil
 }
 
-func (s *Store) List(ctx context.Context, callerID *uuid.UUID) ([]*CommunityEvent, error) {
-	rows, err := s.DB.Query(ctx, `
-		SELECT id, title, description, start_time, end_time, channel_id, location, cover_media_id, status, created_by, created_at, updated_at
-		FROM events
-		ORDER BY start_time ASC`)
-	if err != nil {
-		return nil, fmt.Errorf("list events: %w", err)
-	}
-	defer rows.Close()
-
-	var events []*CommunityEvent
-	for rows.Next() {
-		var row eventRow
-		if err := rows.Scan(&row.ID, &row.Title, &row.Description, &row.StartTime, &row.EndTime, &row.ChannelID, &row.Location, &row.CoverMediaID, &row.Status, &row.CreatedBy, &row.CreatedAt, &row.UpdatedAt); err != nil {
-			return nil, err
-		}
-		events = append(events, row.toEvent())
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	for _, ev := range events {
-		if err := s.fillRSVPs(ctx, ev, callerID); err != nil {
-			return nil, err
-		}
-	}
-	return events, nil
-}
-
 func (s *Store) fillRSVPs(ctx context.Context, ev *CommunityEvent, callerID *uuid.UUID) error {
 	if err := s.fillCounts(ctx, ev); err != nil {
 		return err

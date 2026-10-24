@@ -73,34 +73,61 @@ func (h *Handler) broadcast(ev *CommunityEvent) {
 }
 
 // @Summary List community events
-// @Description Returns community events visible to the caller. Events located in a Talk channel require ViewChannel on that channel.
+// @Description Returns community events visible to the caller, ordered by start time. Events located in a Talk channel require ViewChannel on that channel. By default the window runs from 1 day ago to 90 days ahead; an event is in the window while it has not ended before after and starts before before.
 // @ID listCommunityEvents
 // @Tags Events
 // @Produce json
 // @Security cookieAuth
+// @Param after query string false "Earliest end (or start, for events without an end) to include, RFC 3339. Default: now minus 1 day." Format(date-time)
+// @Param before query string false "Events must start before this time, RFC 3339. Default: now plus 90 days." Format(date-time)
+// @Param limit query int false "Page size, 1 to 200." default(50)
 // @Success 200 {array} CommunityEvent
+// @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT"
 // @Router /api/events [get]
 func (h *Handler) listEvents(w http.ResponseWriter, r *http.Request) error {
 	user := auth.UserFrom(r.Context())
-	all, err := h.Store.List(r.Context(), &user.ID)
+	q, err := h.listQuery(r)
 	if err != nil {
 		return err
 	}
-	var snap *perm.Snapshot
-	if h.Perms != nil {
-		if snap, err = h.Perms.Snapshot(r.Context()); err != nil {
-			return err
-		}
+	list, err := h.Store.List(r.Context(), &user.ID, q)
+	if err != nil {
+		return err
 	}
-	visible := []*CommunityEvent{}
-	for _, ev := range all {
-		if ev.ChannelID != nil && snap != nil && !snap.Channel(user.Subject(), *ev.ChannelID).Has(perm.ViewChannel) {
+	httpx.WriteJSON(w, http.StatusOK, list)
+	return nil
+}
+
+// listQuery reads after, before and limit and builds the visibility check
+// from one permission snapshot. Without a snapshot nothing in a Talk is shown.
+func (h *Handler) listQuery(r *http.Request) (ListQuery, error) {
+	now := time.Now()
+	q := ListQuery{
+		After:  now.Add(-listLookBehind),
+		Before: now.Add(listLookAhead),
+		Limit:  httpx.QueryLimit(r, "limit", DefaultListLimit, MaxListLimit),
+	}
+	for name, dst := range map[string]*time.Time{"after": &q.After, "before": &q.Before} {
+		raw := r.URL.Query().Get(name)
+		if raw == "" {
 			continue
 		}
-		visible = append(visible, ev)
+		t, err := time.Parse(time.RFC3339, raw)
+		if err != nil {
+			return q, httpx.ErrInvalidInput(name + " must be an RFC 3339 time")
+		}
+		*dst = t
 	}
-	httpx.WriteJSON(w, http.StatusOK, visible)
-	return nil
+	if h.Perms == nil {
+		return q, nil
+	}
+	snap, err := h.Perms.Snapshot(r.Context())
+	if err != nil {
+		return q, err
+	}
+	sub := auth.UserFrom(r.Context()).Subject()
+	q.Allow = func(id uuid.UUID) bool { return snap.Channel(sub, id).Has(perm.ViewChannel) }
+	return q, nil
 }
 
 // @Summary Create a community event

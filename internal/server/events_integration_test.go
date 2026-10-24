@@ -391,3 +391,107 @@ func TestCommunityEventsHiddenTalkReminderAndAudit(t *testing.T) {
 		}
 	}
 }
+
+func TestCommunityEventsListWindowAndLimit(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	outsider := a.register(admin, "outsider")
+	secret := a.hiddenTalk(admin, "vip-lounge")
+	ctx := context.Background()
+	store := a.router.Events.Store
+
+	mk := func(title string, start time.Time, end *time.Time, ch *uuid.UUID) *communityevents.CommunityEvent {
+		req := communityevents.CreateEventRequest{Title: title, StartTime: start, EndTime: end, ChannelID: ch}
+		if ch == nil {
+			req.Location = strPtr("Hall")
+		}
+		ev, err := store.Create(ctx, req, admin.user.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return ev
+	}
+	now := time.Now()
+	longEnd := now.Add(time.Hour)
+	mk("long-running", now.Add(-5*24*time.Hour), &longEnd, nil)
+	mk("old", now.Add(-5*24*time.Hour), nil, nil)
+	mk("soon", now.Add(time.Hour), nil, nil)
+	mk("far", now.Add(120*24*time.Hour), nil, nil)
+	for i := 0; i < 3; i++ {
+		mk("hidden", now.Add(time.Duration(i)*time.Minute+30*time.Minute), nil, &secret)
+	}
+
+	titles := func(c *client, query string) []string {
+		res := c.get("/api/events" + query)
+		wantStatus(t, "list "+query, res, http.StatusOK)
+		var list []communityevents.CommunityEvent
+		res.decode(t, &list)
+		out := make([]string, len(list))
+		for i, ev := range list {
+			out[i] = ev.Title
+		}
+		return out
+	}
+	if got := titles(outsider, ""); len(got) != 2 || got[0] != "long-running" || got[1] != "soon" {
+		t.Fatalf("default window: got %v, want [long-running soon]", got)
+	}
+	if got := titles(admin, ""); len(got) != 5 {
+		t.Fatalf("admin default window: got %v, want 5 events", got)
+	}
+	after := now.Add(-10 * 24 * time.Hour).UTC().Format(time.RFC3339)
+	before := now.Add(150 * 24 * time.Hour).UTC().Format(time.RFC3339)
+	if got := titles(outsider, "?after="+after+"&before="+before); len(got) != 4 {
+		t.Fatalf("widened window: got %v, want 4 events", got)
+	}
+	// Events the caller may not view must not use up the limit.
+	if got := titles(outsider, "?limit=2"); len(got) != 2 {
+		t.Fatalf("limit=2 for outsider: got %v", got)
+	}
+	if got := titles(admin, "?limit=1"); len(got) != 1 {
+		t.Fatalf("limit=1: got %v", got)
+	}
+	wantStatus(t, "bad after", outsider.get("/api/events?after=yesterday"), http.StatusBadRequest)
+}
+
+func TestCommunityEventsListBatchesRSVPs(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	alice := a.register(admin, "alice")
+	bob := a.register(admin, "bob")
+
+	var ids []uuid.UUID
+	for i, title := range []string{"one", "two", "three"} {
+		res := admin.post("/api/events", map[string]any{
+			"title": title, "location": "Hall", "start_time": time.Now().Add(time.Duration(i+1) * time.Hour).UTC().Format(time.RFC3339),
+		})
+		wantStatus(t, "create", res, http.StatusCreated)
+		var ev communityevents.CommunityEvent
+		res.decode(t, &ev)
+		ids = append(ids, ev.ID)
+	}
+	rsvp := func(c *client, ev uuid.UUID, resp string) {
+		wantStatus(t, "rsvp", c.put("/api/events/"+ev.String()+"/rsvp", map[string]string{"response": resp}), http.StatusOK)
+	}
+	rsvp(alice, ids[0], "going")
+	rsvp(bob, ids[0], "going")
+	rsvp(bob, ids[1], "interested")
+	rsvp(alice, ids[1], "not_going")
+
+	res := alice.get("/api/events")
+	wantStatus(t, "list", res, http.StatusOK)
+	var list []communityevents.CommunityEvent
+	res.decode(t, &list)
+	if len(list) != 3 {
+		t.Fatalf("got %d events", len(list))
+	}
+	one, two, three := list[0], list[1], list[2]
+	if one.RSVPCounts.Going != 2 || len(one.GoingMembers) != 2 || one.MyRSVP == nil || *one.MyRSVP != "going" {
+		t.Fatalf("event one: %+v", one)
+	}
+	if two.RSVPCounts.Interested != 1 || two.RSVPCounts.NotGoing != 1 || len(two.GoingMembers) != 0 || two.MyRSVP == nil || *two.MyRSVP != "not_going" {
+		t.Fatalf("event two: %+v", two)
+	}
+	if three.RSVPCounts != (communityevents.RSVPCounts{}) || three.MyRSVP != nil {
+		t.Fatalf("event three: %+v", three)
+	}
+}
