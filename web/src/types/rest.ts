@@ -601,6 +601,87 @@ export function isAuthVerifyEmailRequest(value: unknown): value is AuthVerifyEma
 
 export const decodeAuthVerifyEmailRequest = decoder("auth.VerifyEmailRequest", isAuthVerifyEmailRequest)
 
+export type AutomodRule = {
+  action: "block" | "flag"
+  config: AutomodSettings
+  enabled: boolean
+  exempt_channels: Array<string>
+  exempt_roles: Array<string>
+  id: string
+  kind: "words" | "links" | "mentions" | "new_account" | "raid"
+  name: string
+  timeout_seconds: number
+  updated_at: string
+}
+
+export function isAutomodRule(value: unknown): value is AutomodRule {
+  return isRecord(value)
+    && (hasOwn(value, "action") && (value["action"] === "block" || value["action"] === "flag"))
+    && (hasOwn(value, "config") && isAutomodSettings(value["config"]))
+    && (hasOwn(value, "enabled") && typeof value["enabled"] === 'boolean')
+    && (hasOwn(value, "exempt_channels") && isArrayOf(value["exempt_channels"], item => isIdentifier(item)))
+    && (hasOwn(value, "exempt_roles") && isArrayOf(value["exempt_roles"], item => isIdentifier(item)))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "kind") && (value["kind"] === "words" || value["kind"] === "links" || value["kind"] === "mentions" || value["kind"] === "new_account" || value["kind"] === "raid"))
+    && (hasOwn(value, "name") && isString(value["name"], 60))
+    && (hasOwn(value, "timeout_seconds") && (isInteger(value["timeout_seconds"]) && value["timeout_seconds"] >= 0 && value["timeout_seconds"] <= 2419200))
+    && (hasOwn(value, "updated_at") && isTimestamp(value["updated_at"]))
+}
+
+export const decodeAutomodRule = decoder("automod.Rule", isAutomodRule)
+
+export type AutomodRuleInput = {
+  action: "block" | "flag"
+  config: AutomodSettings
+  enabled: boolean
+  exempt_channels?: Array<string>
+  exempt_roles?: Array<string>
+  kind: "words" | "links" | "mentions" | "new_account" | "raid"
+  name: string
+  timeout_seconds?: number
+}
+
+export function isAutomodRuleInput(value: unknown): value is AutomodRuleInput {
+  return isRecord(value)
+    && (hasOwn(value, "action") && (value["action"] === "block" || value["action"] === "flag"))
+    && (hasOwn(value, "config") && isAutomodSettings(value["config"]))
+    && (hasOwn(value, "enabled") && typeof value["enabled"] === 'boolean')
+    && (!hasOwn(value, "exempt_channels") || isArrayOf(value["exempt_channels"], item => isIdentifier(item)))
+    && (!hasOwn(value, "exempt_roles") || isArrayOf(value["exempt_roles"], item => isIdentifier(item)))
+    && (hasOwn(value, "kind") && (value["kind"] === "words" || value["kind"] === "links" || value["kind"] === "mentions" || value["kind"] === "new_account" || value["kind"] === "raid"))
+    && (hasOwn(value, "name") && isString(value["name"], 60))
+    && (!hasOwn(value, "timeout_seconds") || (isInteger(value["timeout_seconds"]) && value["timeout_seconds"] >= 0 && value["timeout_seconds"] <= 2419200))
+}
+
+export const decodeAutomodRuleInput = decoder("automod.RuleInput", isAutomodRuleInput)
+
+export type AutomodSettings = {
+  domains?: Array<string>
+  joins?: number
+  max_age_seconds?: number
+  max_mentions?: number
+  mode?: "block_all" | "allow_list" | "block_list"
+  restrict?: "links" | "attachments" | "links_and_attachments" | "everything"
+  restrict_seconds?: number
+  window_seconds?: number
+  words?: Array<string>
+}
+
+export function isAutomodSettings(value: unknown): value is AutomodSettings {
+  return isRecord(value)
+    && (!hasOwn(value, "domains") || isArrayOf(value["domains"], item => isString(item)))
+    && (!hasOwn(value, "joins") || (isInteger(value["joins"]) && value["joins"] >= 2 && value["joins"] <= 200))
+    && (!hasOwn(value, "max_age_seconds") || isInteger(value["max_age_seconds"]))
+    && (!hasOwn(value, "max_mentions") || (isInteger(value["max_mentions"]) && value["max_mentions"] >= 1 && value["max_mentions"] <= 50))
+    && (!hasOwn(value, "mode") || (value["mode"] === "block_all" || value["mode"] === "allow_list" || value["mode"] === "block_list"))
+    && (!hasOwn(value, "restrict") || (value["restrict"] === "links" || value["restrict"] === "attachments" || value["restrict"] === "links_and_attachments" || value["restrict"] === "everything"))
+    && (!hasOwn(value, "restrict_seconds") || isInteger(value["restrict_seconds"]))
+    && (!hasOwn(value, "window_seconds") || (isInteger(value["window_seconds"]) && value["window_seconds"] >= 5 && value["window_seconds"] <= 3600))
+    && (!hasOwn(value, "words") || isArrayOf(value["words"], item => isString(item, 64)))
+}
+
+export const decodeAutomodSettings = decoder("automod.Settings", isAutomodSettings)
+
 export type BotAccess = {
   channels: Array<BotChannelAccess>
   elevated: boolean
@@ -1945,37 +2026,45 @@ export function isChatReplyPreview(value: unknown): value is ChatReplyPreview {
 export const decodeChatReplyPreview = decoder("chat.ReplyPreview", isChatReplyPreview)
 
 export type ChatReport = {
-  category: "spam" | "harassment" | "illegal" | "other"
+  automod_outcome?: "blocked" | "flagged" | "alert"
+  automod_rule?: string
+  category: "spam" | "harassment" | "illegal" | "other" | "automod"
   channel_id?: string
   channel_name?: string
   created_at: string
+  hit_count?: number
   id: string
-  kind: "channel" | "dm"
-  message_id: string
+  kind: "channel" | "dm" | "alert"
+  message_id?: string
   note: string
   reported?: ChatReportParty
   reporter?: ChatReportParty
   resolution_note?: string
   resolved_at?: string
   resolved_by?: ChatReportParty
+  source?: "member" | "automod"
   status: "open" | "resolved" | "dismissed"
 }
 
 export function isChatReport(value: unknown): value is ChatReport {
   return isRecord(value)
-    && (hasOwn(value, "category") && (value["category"] === "spam" || value["category"] === "harassment" || value["category"] === "illegal" || value["category"] === "other"))
+    && (!hasOwn(value, "automod_outcome") || (value["automod_outcome"] === "blocked" || value["automod_outcome"] === "flagged" || value["automod_outcome"] === "alert"))
+    && (!hasOwn(value, "automod_rule") || isString(value["automod_rule"]))
+    && (hasOwn(value, "category") && (value["category"] === "spam" || value["category"] === "harassment" || value["category"] === "illegal" || value["category"] === "other" || value["category"] === "automod"))
     && (!hasOwn(value, "channel_id") || isIdentifier(value["channel_id"]))
     && (!hasOwn(value, "channel_name") || isString(value["channel_name"]))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "hit_count") || isInteger(value["hit_count"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
-    && (hasOwn(value, "kind") && (value["kind"] === "channel" || value["kind"] === "dm"))
-    && (hasOwn(value, "message_id") && isIdentifier(value["message_id"]))
+    && (hasOwn(value, "kind") && (value["kind"] === "channel" || value["kind"] === "dm" || value["kind"] === "alert"))
+    && (!hasOwn(value, "message_id") || isIdentifier(value["message_id"]))
     && (hasOwn(value, "note") && isString(value["note"]))
     && (!hasOwn(value, "reported") || isChatReportParty(value["reported"]))
     && (!hasOwn(value, "reporter") || isChatReportParty(value["reporter"]))
     && (!hasOwn(value, "resolution_note") || isString(value["resolution_note"]))
     && (!hasOwn(value, "resolved_at") || isTimestamp(value["resolved_at"]))
     && (!hasOwn(value, "resolved_by") || isChatReportParty(value["resolved_by"]))
+    && (!hasOwn(value, "source") || (value["source"] === "member" || value["source"] === "automod"))
     && (hasOwn(value, "status") && (value["status"] === "open" || value["status"] === "resolved" || value["status"] === "dismissed"))
 }
 
@@ -1997,13 +2086,16 @@ export function isChatReportAttachment(value: unknown): value is ChatReportAttac
 export const decodeChatReportAttachment = decoder("chat.ReportAttachment", isChatReportAttachment)
 
 export type ChatReportDetail = {
-  category: "spam" | "harassment" | "illegal" | "other"
+  automod_outcome?: "blocked" | "flagged" | "alert"
+  automod_rule?: string
+  category: "spam" | "harassment" | "illegal" | "other" | "automod"
   channel_id?: string
   channel_name?: string
   created_at: string
+  hit_count?: number
   id: string
-  kind: "channel" | "dm"
-  message_id: string
+  kind: "channel" | "dm" | "alert"
+  message_id?: string
   note: string
   reported?: ChatReportParty
   reporter?: ChatReportParty
@@ -2011,18 +2103,22 @@ export type ChatReportDetail = {
   resolved_at?: string
   resolved_by?: ChatReportParty
   snapshot: ChatReportSnapshot
+  source?: "member" | "automod"
   status: "open" | "resolved" | "dismissed"
 }
 
 export function isChatReportDetail(value: unknown): value is ChatReportDetail {
   return isRecord(value)
-    && (hasOwn(value, "category") && (value["category"] === "spam" || value["category"] === "harassment" || value["category"] === "illegal" || value["category"] === "other"))
+    && (!hasOwn(value, "automod_outcome") || (value["automod_outcome"] === "blocked" || value["automod_outcome"] === "flagged" || value["automod_outcome"] === "alert"))
+    && (!hasOwn(value, "automod_rule") || isString(value["automod_rule"]))
+    && (hasOwn(value, "category") && (value["category"] === "spam" || value["category"] === "harassment" || value["category"] === "illegal" || value["category"] === "other" || value["category"] === "automod"))
     && (!hasOwn(value, "channel_id") || isIdentifier(value["channel_id"]))
     && (!hasOwn(value, "channel_name") || isString(value["channel_name"]))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "hit_count") || isInteger(value["hit_count"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
-    && (hasOwn(value, "kind") && (value["kind"] === "channel" || value["kind"] === "dm"))
-    && (hasOwn(value, "message_id") && isIdentifier(value["message_id"]))
+    && (hasOwn(value, "kind") && (value["kind"] === "channel" || value["kind"] === "dm" || value["kind"] === "alert"))
+    && (!hasOwn(value, "message_id") || isIdentifier(value["message_id"]))
     && (hasOwn(value, "note") && isString(value["note"]))
     && (!hasOwn(value, "reported") || isChatReportParty(value["reported"]))
     && (!hasOwn(value, "reporter") || isChatReportParty(value["reporter"]))
@@ -2030,6 +2126,7 @@ export function isChatReportDetail(value: unknown): value is ChatReportDetail {
     && (!hasOwn(value, "resolved_at") || isTimestamp(value["resolved_at"]))
     && (!hasOwn(value, "resolved_by") || isChatReportParty(value["resolved_by"]))
     && (hasOwn(value, "snapshot") && isChatReportSnapshot(value["snapshot"]))
+    && (!hasOwn(value, "source") || (value["source"] === "member" || value["source"] === "automod"))
     && (hasOwn(value, "status") && (value["status"] === "open" || value["status"] === "resolved" || value["status"] === "dismissed"))
 }
 
@@ -2507,6 +2604,19 @@ export function isMediaStats(value: unknown): value is MediaStats {
 }
 
 export const decodeMediaStats = decoder("media.Stats", isMediaStats)
+
+export type ModerationAutomodList = {
+  raid_until?: string
+  rules: Array<AutomodRule>
+}
+
+export function isModerationAutomodList(value: unknown): value is ModerationAutomodList {
+  return isRecord(value)
+    && (!hasOwn(value, "raid_until") || isTimestamp(value["raid_until"]))
+    && (hasOwn(value, "rules") && isArrayOf(value["rules"], item => isAutomodRule(item)))
+}
+
+export const decodeModerationAutomodList = decoder("moderation.AutomodList", isModerationAutomodList)
 
 export type OnboardingAcceptInput = {
   version: number

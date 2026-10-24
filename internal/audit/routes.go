@@ -118,6 +118,10 @@ var Routes = []Route{
 	{Method: "POST", Pattern: "/reports/{id}/resolve", Action: "report.resolve", TargetType: "report", IDParam: "id"},
 	{Method: "DELETE", Pattern: "/reports/{id}", Action: "report.delete", TargetType: "report", IDParam: "id"},
 
+	{Method: "POST", Pattern: "/automod/rules", Action: "automod.rule_create", TargetType: "automod_rule"},
+	{Method: "PUT", Pattern: "/automod/rules/{id}", Action: "automod.rule_update", TargetType: "automod_rule", IDParam: "id"},
+	{Method: "DELETE", Pattern: "/automod/rules/{id}", Action: "automod.rule_delete", TargetType: "automod_rule", IDParam: "id"},
+
 	{Method: "POST", Pattern: "/media/prune", Action: "media.prune", TargetType: "media"},
 	{Method: "POST", Pattern: "/media/orphans/cleanup", Action: "media.orphans_cleanup", TargetType: "media"},
 	{Method: "DELETE", Pattern: "/media/{id}", Action: "media.delete", TargetType: "media", IDParam: "id"},
