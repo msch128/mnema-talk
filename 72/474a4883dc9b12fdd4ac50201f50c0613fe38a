@@ -1,0 +1,32 @@
+README.md
+  h_0ff4f4713441f4 134-138
+SECURITY.md
+  h_0ff4f4713441f4 110-114,432-433,784-788
+doc/architecture.md
+  h_0ff4f4713441f4 138-140,174-180,209
+doc/desktop-app.md
+  h_0ff4f4713441f4 181-184
+doc/desktop-trusted-client.md
+  h_0ff4f4713441f4 416-417,513-514
+doc/moderation.md
+  h_0ff4f4713441f4 183-189,192-193
+doc/operations.md
+  h_0ff4f4713441f4 274-276
+doc/roles-and-permissions.md
+  h_0ff4f4713441f4 220-221
+doc/upgrade.md
+  h_0ff4f4713441f4 200-204,245-246,302-305
+e2e/tests/sidebar-layout.spec.ts
+  h_0ff4f4713441f4 20-24,26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "72474a4883dc9b12fdd4ac50201f50c0613fe38a",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
