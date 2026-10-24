@@ -325,7 +325,10 @@ onMounted(async () => {
       <!-- Editor -->
       <div v-if="selected" class="min-w-0 space-y-4" :aria-label="$t('roles.selected')" role="group">
         <div class="flex items-center justify-between gap-3">
-          <h4 class="min-w-0 truncate text-base font-semibold text-mnema-text" data-testid="role-editor-title">{{ isEveryone ? $t('roles.everyone') : selected.name }}</h4>
+          <div class="flex min-w-0 flex-wrap items-baseline gap-x-3">
+            <h4 class="min-w-0 truncate text-base font-semibold text-mnema-text" data-testid="role-editor-title">{{ isEveryone ? $t('roles.everyone') : selected.name }}</h4>
+            <span v-if="dirty" class="text-xs text-mnema-amber" role="status" data-testid="role-dirty">{{ $t('roles.unsaved') }}</span>
+          </div>
           <button type="button" class="btn btn-secondary btn-sm shrink-0" data-testid="role-view-as" @click="viewingAs = true"><Eye class="h-3.5 w-3.5" aria-hidden="true" />{{ $t('roles.viewAs.open', { name: isEveryone ? $t('roles.everyone') : selected.name }) }}</button>
         </div>
         <p v-if="isEveryone" class="text-sm text-mnema-tertiary">{{ $t('roles.everyoneHint') }}</p>
@@ -387,7 +390,6 @@ onMounted(async () => {
           </button>
           <span v-else></span>
           <div class="flex flex-wrap items-center justify-end gap-3">
-            <span v-if="dirty" class="text-xs text-mnema-amber max-md:order-first max-md:basis-full" role="status" data-testid="role-dirty">{{ $t('roles.unsaved') }}</span>
             <button v-if="dirty" type="button" class="btn btn-ghost" data-testid="role-discard" @click="select(selected.id)">{{ $t('roles.discard') }}</button>
             <button type="button" :disabled="!isDirty(selected) || busy" class="btn btn-primary" @click="save">{{ $t('roles.save') }}</button>
           </div>
