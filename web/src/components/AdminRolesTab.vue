@@ -3,7 +3,7 @@
 // editor for the selected role: name, colour, permissions. The server checks
 // every rule (rank, granting only what you hold); this only offers what fits.
 import { ref, computed, watch, onMounted } from 'vue'
-import { Shield, Plus, GripVertical, ChevronUp, ChevronDown, Trash2, AtSign, Lock } from '@lucide/vue'
+import { Shield, Plus, GripVertical, ChevronUp, ChevronDown, Trash2, AtSign, Lock, Eye } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import { confirm } from '../lib/confirm'
 import { decodeRole } from '../types/domain'
@@ -13,6 +13,7 @@ import { useToastStore } from '../stores/toast'
 import { PERMISSION_BITS, PERMISSION_GROUPS, ROLE_COLOR_PRESETS, parseRoleColor, roleColorCss } from '../lib/permissions'
 import { t } from '../i18n'
 import PermissionToggles from './PermissionToggles.vue'
+import RoleViewAsDialog from './RoleViewAsDialog.vue'
 
 const permissions = usePermissionsStore()
 const toasts = useToastStore()
@@ -27,6 +28,8 @@ const uploadMb = ref<string | number>('')
 const allow = ref(0)
 const busy = ref(false)
 const dragging = ref<string | null>(null)
+// The read-only "view server as this role" preview is open.
+const viewingAs = ref(false)
 
 const everyone = computed(() => permissions.roles.find(r => r.is_everyone))
 // Highest rank first, as the server lists them; @everyone is separate, and
@@ -65,6 +68,7 @@ function fail(e: unknown) {
 
 function select(id: string | null) {
   selectedId.value = id
+  viewingAs.value = false
   const role = permissions.roles.find(r => r.id === id)
   name.value = role?.name ?? ''
   color.value = role?.color ?? 0
@@ -363,6 +367,9 @@ onMounted(async () => {
           </section>
           <p v-if="lockedBits && !readonly" class="text-xs text-mnema-tertiary">{{ $t('roles.cannotGrant') }}</p>
         </div>
+
+        <button type="button" class="btn btn-secondary btn-sm" data-testid="role-view-as" @click="viewingAs = true"><Eye class="h-3.5 w-3.5" aria-hidden="true" />{{ $t('roles.viewAs.open', { name: isEveryone ? $t('roles.everyone') : selected.name }) }}</button>
+        <RoleViewAsDialog v-if="viewingAs" :role-id="selected.id" :role-name="isEveryone ? $t('roles.everyone') : selected.name" @close="viewingAs = false" />
 
         <div v-if="!readonly" class="flex items-center justify-between gap-3">
           <button type="button" :disabled="!isDirty(selected) || busy" class="btn btn-primary" @click="save">{{ $t('roles.save') }}</button>

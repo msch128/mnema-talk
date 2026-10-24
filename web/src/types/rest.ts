@@ -2256,6 +2256,61 @@ export function isChatUserRef(value: unknown): value is ChatUserRef {
 
 export const decodeChatUserRef = decoder("chat.UserRef", isChatUserRef)
 
+export type ChatViewAsCategory = {
+  channels: Array<ChatViewAsChannel>
+  id: string
+  name: string
+}
+
+export function isChatViewAsCategory(value: unknown): value is ChatViewAsCategory {
+  return isRecord(value)
+    && (hasOwn(value, "channels") && isArrayOf(value["channels"], item => isChatViewAsChannel(item)))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "name") && isString(value["name"], 64))
+}
+
+export const decodeChatViewAsCategory = decoder("chat.ViewAsCategory", isChatViewAsCategory)
+
+export type ChatViewAsChannel = {
+  can_join: boolean
+  id: string
+  name: string
+  number: number
+  permissions: Array<string>
+  type: ChatChannelType
+}
+
+export function isChatViewAsChannel(value: unknown): value is ChatViewAsChannel {
+  return isRecord(value)
+    && (hasOwn(value, "can_join") && typeof value["can_join"] === 'boolean')
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "name") && isString(value["name"], 64))
+    && (hasOwn(value, "number") && isInteger(value["number"]))
+    && (hasOwn(value, "permissions") && isArrayOf(value["permissions"], item => isString(item)))
+    && (hasOwn(value, "type") && isChatChannelType(value["type"]))
+}
+
+export const decodeChatViewAsChannel = decoder("chat.ViewAsChannel", isChatViewAsChannel)
+
+export type ChatViewAsRole = {
+  administrator: boolean
+  categories: Array<ChatViewAsCategory>
+  role_id: string
+  role_name: string
+  uncategorized: Array<ChatViewAsChannel>
+}
+
+export function isChatViewAsRole(value: unknown): value is ChatViewAsRole {
+  return isRecord(value)
+    && (hasOwn(value, "administrator") && typeof value["administrator"] === 'boolean')
+    && (hasOwn(value, "categories") && isArrayOf(value["categories"], item => isChatViewAsCategory(item)))
+    && (hasOwn(value, "role_id") && isIdentifier(value["role_id"]))
+    && (hasOwn(value, "role_name") && isString(value["role_name"], 32))
+    && (hasOwn(value, "uncategorized") && isArrayOf(value["uncategorized"], item => isChatViewAsChannel(item)))
+}
+
+export const decodeChatViewAsRole = decoder("chat.ViewAsRole", isChatViewAsRole)
+
 export type EmojiEmoji = {
   animated: boolean
   created_at: string
