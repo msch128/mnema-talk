@@ -89,4 +89,103 @@ describe('SearchInput', () => {
     await wrapper.find('[data-dialog-close]').trigger('click')
     expect(wrapper.emitted('close')).toHaveLength(1)
   })
+  it('removes the last chip with Backspace on an empty field', async () => {
+    make('has:image from:ada ')
+    expect(field().value).toBe('')
+    await wrapper.find('[data-search-input]').trigger('keydown', { key: 'Backspace' })
+    expect(last()).toBe('from:ada ')
+  })
+
+  it('keeps Backspace for the text while the field has some', async () => {
+    make('has:image text')
+    await wrapper.find('[data-search-input]').trigger('keydown', { key: 'Backspace' })
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+  })
+
+  it('picks a suggestion with Tab and wraps the selection upwards and downwards', async () => {
+    make()
+    await type('in:g')
+    await wrapper.find('[data-search-input]').trigger('keydown', { key: 'ArrowUp' })
+    expect(field().getAttribute('aria-activedescendant')).toBe('search-suggestion-0')
+    await wrapper.find('[data-search-input]').trigger('keydown', { key: 'ArrowDown' })
+    expect(field().getAttribute('aria-activedescendant')).toBe('search-suggestion-0')
+    await wrapper.find('[data-search-input]').trigger('keydown', { key: 'Tab' })
+    expect(last()).toBe('in:general ')
+  })
+
+  it('shows the shortcut row and no dropdown without v3', () => {
+    make()
+    expect(wrapper.findAll('[data-search-shortcut]').length).toBeGreaterThan(0)
+    expect(wrapper.find('[data-search-filter-dropdown]').exists()).toBe(false)
+  })
+
+  it('separates a shortcut from the text before it only when needed', async () => {
+    make()
+    await type('text ')
+    await wrapper.findAll('[data-search-shortcut]')[0]!.trigger('click')
+    expect(last()).toBe('text from:')
+  })
+
+  it('opens the filter dropdown on focus with v3 and adds filters from it', async () => {
+    make('', { v3Supported: true })
+    expect(wrapper.find('[data-search-shortcut]').exists()).toBe(false)
+    expect(wrapper.find('[data-search-filter-dropdown]').exists()).toBe(false)
+    await wrapper.find('[data-search-input]').trigger('focusin')
+    expect(wrapper.find('[data-search-filter-dropdown]').exists()).toBe(true)
+
+    await wrapper.find('[data-filter-has="image"]').trigger('click')
+    expect(last()).toBe('has:image ')
+    await wrapper.setProps({ modelValue: last() })
+    await wrapper.find('[data-filter-chip="from"]').trigger('click')
+    expect(last()).toBe('has:image from:')
+  })
+
+  it('adds a finished token directly after existing text with a space', async () => {
+    make('', { v3Supported: true })
+    await type('hello')
+    await wrapper.find('[data-search-input]').trigger('focusin')
+    await wrapper.find('[data-filter-author="bot"]').trigger('click')
+    expect(last()).toBe('author:bot hello ')
+  })
+
+  it('closes the dropdown on Escape and keeps it closed until focus leaves', async () => {
+    make('', { v3Supported: true })
+    await wrapper.find('[data-search-input]').trigger('focusin')
+    await wrapper.find('[data-search-filter-dropdown]').trigger('keydown', { key: 'Escape' })
+    expect(wrapper.find('[data-search-filter-dropdown]').exists()).toBe(false)
+  })
+
+  it('keeps the dropdown while focus moves inside it and drops it when focus leaves', async () => {
+    make('', { v3Supported: true })
+    await wrapper.find('[data-search-input]').trigger('focusin')
+    const inside = wrapper.find<HTMLElement>('[data-filter-chip="in"]')
+    await wrapper.find('[data-search-input]').trigger('focusout', { relatedTarget: inside.element })
+    expect(wrapper.find('[data-search-filter-dropdown]').exists()).toBe(true)
+    await wrapper.find('[data-search-input]').trigger('focusout', { relatedTarget: document.body })
+    expect(wrapper.find('[data-search-filter-dropdown]').exists()).toBe(false)
+    await wrapper.find('[data-search-input]').trigger('focusin')
+    await wrapper.find('[data-search-input]').trigger('focusout')
+    expect(wrapper.find('[data-search-filter-dropdown]').exists()).toBe(false)
+  })
+
+  it('hides the dropdown while suggestions are shown', async () => {
+    make('', { v3Supported: true })
+    await wrapper.find('[data-search-input]').trigger('focusin')
+    await type('from:a')
+    expect(wrapper.find('[data-search-suggestions]').exists()).toBe(true)
+    expect(wrapper.find('[data-search-filter-dropdown]').exists()).toBe(false)
+  })
+
+  it('shows the active result id when no suggestion list is open and a loading spinner', () => {
+    make('', { activeResultId: 'search-result-3', loading: true })
+    expect(field().getAttribute('aria-activedescendant')).toBe('search-result-3')
+    expect(field().getAttribute('aria-controls')).toBe('search-results')
+    expect(wrapper.find('.animate-spin').exists()).toBe(true)
+  })
+
+  it('exposes focus to the dialog', () => {
+    make()
+    ;(wrapper.vm as unknown as { focus: () => void }).focus()
+    expect(document.activeElement).toBe(field())
+  })
 })

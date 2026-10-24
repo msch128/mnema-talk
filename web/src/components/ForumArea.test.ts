@@ -151,4 +151,134 @@ describe('ForumArea', () => {
     expect(wrapper.find('[data-testid="forum-empty"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('No posts yet')
   })
+
+  it('survives failing post and tag requests with an empty list and no tag pills', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(forumApi.fetchForumPosts).mockRejectedValueOnce(new Error('posts down'))
+    vi.mocked(forumApi.fetchForumTags).mockRejectedValueOnce(new Error('tags down'))
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="forum-empty"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="forum-post-card"]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-testid="filter-tag-pill"]')).toHaveLength(0)
+    spy.mockRestore()
+  })
+
+  it('shows the tag-filter empty text and no create button when a tag filters everything out', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce([])
+    await wrapper.findAll('[data-testid="filter-tag-pill"]')[0]!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="forum-empty"]').text()).toContain('No posts match')
+    expect(wrapper.find('[data-testid="forum-empty"] button').exists()).toBe(false)
+  })
+
+  it('offers to start a post from the empty state', async () => {
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce([])
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+
+    await wrapper.find('[data-testid="forum-empty"] button').trigger('click')
+    expect(wrapper.findComponent({ name: 'CreateForumPostModal' }).exists()).toBe(true)
+  })
+
+  it('hides the action buttons without permission and the empty-state button too', async () => {
+    vi.spyOn(permsStore, 'canIn').mockReturnValue(false)
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce([])
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="new-post-btn"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="manage-tags-btn"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="forum-empty"] button').exists()).toBe(false)
+  })
+
+  it('puts a newly created post on top and opens its thread', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    await wrapper.find('[data-testid="new-post-btn"]').trigger('click')
+
+    const created = messageFixture({ id: 'post-3', channel_id: 'forum-chan-1', title: 'Brand new', content: 'fresh' })
+    wrapper.findComponent({ name: 'CreateForumPostModal' }).vm.$emit('created', created)
+    await flushPromises()
+
+    const cards = wrapper.findAll('[data-testid="forum-post-card"]')
+    expect(cards).toHaveLength(3)
+    expect(cards[0]!.text()).toContain('Brand new')
+    expect(chatStore.openThread).toHaveBeenCalledWith(created)
+
+    wrapper.findComponent({ name: 'CreateForumPostModal' }).vm.$emit('close')
+    await flushPromises()
+    expect(wrapper.findComponent({ name: 'CreateForumPostModal' }).exists()).toBe(false)
+  })
+
+  it('does not duplicate a post that is already listed', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    await wrapper.find('[data-testid="new-post-btn"]').trigger('click')
+    wrapper.findComponent({ name: 'CreateForumPostModal' }).vm.$emit('created', mockPosts[1])
+    await flushPromises()
+
+    const cards = wrapper.findAll('[data-testid="forum-post-card"]')
+    expect(cards).toHaveLength(2)
+    expect(cards[0]!.text()).toContain('Need help with setup')
+  })
+
+  it('reloads the tags after the tag manager reports a change and closes it', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    await wrapper.find('[data-testid="manage-tags-btn"]').trigger('click')
+    const modal = wrapper.findComponent({ name: 'ManageForumTagsModal' })
+    expect(modal.exists()).toBe(true)
+
+    vi.mocked(forumApi.fetchForumTags).mockClear()
+    modal.vm.$emit('updated')
+    await flushPromises()
+    expect(forumApi.fetchForumTags).toHaveBeenCalledWith('forum-chan-1')
+
+    modal.vm.$emit('close')
+    await flushPromises()
+    expect(wrapper.findComponent({ name: 'ManageForumTagsModal' }).exists()).toBe(false)
+  })
+
+  it('reloads tags when another client changed them in this channel only', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    vi.mocked(forumApi.fetchForumTags).mockClear()
+
+    chatStore.forumTagsSignal = { channelId: 'other-chan', seq: 1 }
+    await flushPromises()
+    expect(forumApi.fetchForumTags).not.toHaveBeenCalled()
+
+    chatStore.forumTagsSignal = { channelId: 'forum-chan-1', seq: 2 }
+    await flushPromises()
+    expect(forumApi.fetchForumTags).toHaveBeenCalledWith('forum-chan-1')
+  })
+
+  it('resets the tag filter and reloads when the channel changes', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    await wrapper.findAll('[data-testid="filter-tag-pill"]')[0]!.trigger('click')
+    await flushPromises()
+    vi.mocked(forumApi.fetchForumPosts).mockClear()
+    vi.mocked(forumApi.fetchForumTags).mockClear()
+
+    chatStore.activeChannel = channelFixture({ id: 'forum-chan-2', name: 'other', type: 'forum' })
+    await flushPromises()
+
+    expect(forumApi.fetchForumTags).toHaveBeenCalledWith('forum-chan-2')
+    expect(forumApi.fetchForumPosts).toHaveBeenLastCalledWith('forum-chan-2', { sort: 'activity' })
+    expect(wrapper.text()).toContain('other')
+  })
+
+  it('loads nothing without an active channel', async () => {
+    chatStore.activeChannel = null
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    expect(forumApi.fetchForumTags).not.toHaveBeenCalled()
+    expect(forumApi.fetchForumPosts).not.toHaveBeenCalled()
+  })
 })

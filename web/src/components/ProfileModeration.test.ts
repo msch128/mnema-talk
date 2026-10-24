@@ -129,6 +129,91 @@ describe('ProfileModerationTab', () => {
   })
 })
 
+describe('ProfileModerationTab details', () => {
+  async function load(events: unknown[], notes: unknown[] = []) {
+    history = { strikes: 0, notes, events }
+    const w = mount(ProfileModerationTab, { props: { userId: subject.id }, global })
+    await flushPromises()
+    return w
+  }
+
+  it('words every kind of event, with fallbacks for missing details', async () => {
+    const w = await load([
+      event('timeout'),
+      event('ban', { actor: 'Hammer' }),
+      event('ban', { actor: 'Hammer', duration_seconds: 3600 }),
+      event('roles', { added_roles: ['Regular'] }),
+      event('roles', { removed_roles: ['Guest'] }),
+      event('report'),
+      event('automod', { rule: 'No spam' }),
+      event('automod', { rule: 'No spam', outcome: 'blocked', hits: 1 })
+    ])
+    const lines = w.findAll('[data-kind]').map(l => l.text())
+    expect(lines[0]).toMatch(/timed them out/)
+    expect(lines[0]).toContain('A moderator')
+    expect(lines[1]).toContain('Hammer')
+    expect(lines[2]).toContain('Hammer')
+    expect(lines[2]).not.toBe(lines[1])
+    expect(lines[3]).toContain('+Regular')
+    expect(lines[4]).toContain('−Guest')
+    expect(lines[5]).toContain('Reported')
+    expect(lines[6]).toContain('No spam')
+    expect(lines[6]).not.toContain('×')
+    expect(lines[7]).not.toContain('×')
+  })
+
+  it('does not add a blank note', async () => {
+    const w = await load([])
+    await w.get('[data-testid="mod-note-input"]').setValue('   ')
+    await w.get('form').trigger('submit')
+    expect(http.calls.some(c => c.options?.method === 'POST')).toBe(false)
+  })
+
+  it('keeps the draft and toasts when saving a note fails', async () => {
+    const w = await load([])
+    http.handle = (_url, o) => { if (o?.method === 'POST') throw new Error('save broke'); return history }
+    await w.get('[data-testid="mod-note-input"]').setValue('keep me')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect((w.get('[data-testid="mod-note-input"]').element as HTMLTextAreaElement).value).toBe('keep me')
+    expect(useToastStore().toasts.at(-1)?.text).toBe('save broke')
+  })
+
+  it('cancels an edit and refuses an empty edit', async () => {
+    const w = await load([], [note(1)])
+    await w.get('[data-testid="mod-note-edit"]').trigger('click')
+    expect((w.get('[data-testid="mod-note-edit-input"]').element as HTMLTextAreaElement).value).toBe('note 1')
+    await w.get('[data-testid="mod-note-edit-input"]').setValue('  ')
+    await w.get('[data-testid="mod-note-save"]').trigger('click')
+    expect(http.calls.some(c => c.options?.method === 'PUT')).toBe(false)
+    const cancel = w.findAll('[data-note] button').find(b => b.text() === 'Cancel')!
+    await cancel.trigger('click')
+    expect(w.find('[data-testid="mod-note-edit-input"]').exists()).toBe(false)
+    expect(w.get('[data-note]').text()).toContain('note 1')
+  })
+
+  it('toasts when deleting a note fails and leaves the note in place', async () => {
+    const w = await load([], [note(1)])
+    http.handle = (_url, o) => { if (o?.method === 'DELETE') throw new Error('delete broke'); return history }
+    confirmMock.mockResolvedValueOnce(true)
+    await w.get('[data-testid="mod-note-delete"]').trigger('click')
+    await flushPromises()
+    expect(useToastStore().toasts.at(-1)?.text).toBe('delete broke')
+    expect(w.findAll('[data-note]')).toHaveLength(1)
+  })
+
+  it('keeps the loaded history when a refresh after a change fails', async () => {
+    const w = await load([], [note(1)])
+    let fail = false
+    http.handle = (_url, o) => { if (fail && !o?.method) throw new Error('reload broke'); return o?.method === 'DELETE' ? undefined : history }
+    confirmMock.mockResolvedValueOnce(true)
+    fail = true
+    await w.get('[data-testid="mod-note-delete"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[role="alert"]').exists()).toBe(true)
+  })
+})
+
 describe('UserProfileModal moderation tab', () => {
   function open(bits: number, features: string[], viewer = fixtureId(1)) {
     useAuthStore().user = userFixture({ id: viewer, username: 'mod', role: 'user' })

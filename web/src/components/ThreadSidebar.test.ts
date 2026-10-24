@@ -9,7 +9,13 @@ import ThreadSidebar from './ThreadSidebar.vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
+import { useBlocksStore } from '../stores/blocks'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { usePermissionsStore } from '../stores/permissions'
+import * as forumApi from '../lib/forumApi'
 import { setLocale, t } from '../i18n'
+
+vi.mock('../lib/forumApi', () => ({ updateForumPost: vi.fn() }))
 
 let w!: ReturnType<typeof mount<typeof ThreadSidebar>>
 
@@ -509,5 +515,92 @@ describe('ThreadSidebar root poll', () => {
   it('shows no poll card for an ordinary root message', () => {
     setup()
     expect(w.find('[data-testid="poll"]').exists()).toBe(false)
+  })
+})
+
+describe('ThreadSidebar forum posts and follow', () => {
+  function setupPost(opts: { canManage: boolean; locked?: boolean }) {
+    const chat = setup()
+    vi.spyOn(usePermissionsStore(), 'canIn').mockImplementation((_c, perm) => perm === 'manage_messages' ? opts.canManage : true)
+    chat.activeThread = msg('root', 'u2', { title: 'A forum post', is_locked: opts.locked ?? false })
+    return chat
+  }
+  const lockBtn = () => w.find('[data-testid="thread-lock-toggle"]')
+
+  it('offers locking only for forum posts and only to moderators', async () => {
+    setupPost({ canManage: false })
+    await nextTick()
+    expect(lockBtn().exists()).toBe(false)
+    w.unmount()
+    const chat = setupPost({ canManage: true })
+    await nextTick()
+    expect(lockBtn().attributes('aria-label')).toBe(t('forum.lockPost'))
+    chat.activeThread = msg('root', 'u2')
+    await nextTick()
+    expect(lockBtn().exists()).toBe(false)
+  })
+
+  it('locks a post through the API and flips the button', async () => {
+    const chat = setupPost({ canManage: true })
+    vi.mocked(forumApi.updateForumPost).mockResolvedValue(msg('root', 'u2'))
+    await nextTick()
+    await lockBtn().trigger('click')
+    await flushPromises()
+
+    expect(forumApi.updateForumPost).toHaveBeenCalledWith('ch1', 'root', { is_locked: true })
+    expect(chat.activeThread?.is_locked).toBe(true)
+    expect(lockBtn().attributes('aria-label')).toBe(t('forum.unlockPost'))
+  })
+
+  it('unlocks a locked post', async () => {
+    const chat = setupPost({ canManage: true, locked: true })
+    vi.mocked(forumApi.updateForumPost).mockResolvedValue(msg('root', 'u2'))
+    await nextTick()
+    await lockBtn().trigger('click')
+    await flushPromises()
+    expect(forumApi.updateForumPost).toHaveBeenCalledWith('ch1', 'root', { is_locked: false })
+    expect(chat.activeThread?.is_locked).toBe(false)
+  })
+
+  it('keeps the lock state and shows a toast when locking fails', async () => {
+    const chat = setupPost({ canManage: true })
+    vi.mocked(forumApi.updateForumPost).mockRejectedValue(new Error('server said no'))
+    await nextTick()
+    await lockBtn().trigger('click')
+    await flushPromises()
+
+    expect(chat.activeThread?.is_locked).toBe(false)
+    expect(useToastStore().toasts.some(x => x.text.includes('server said no'))).toBe(true)
+  })
+
+  it('toggles following the thread', async () => {
+    const chat = setup()
+    chat.followKnown = true
+    chat.setThreadFollow = vi.fn()
+    await nextTick()
+    const btn = w.find('[data-testid="thread-follow"]')
+    expect(btn.attributes('aria-pressed')).toBe('false')
+    await btn.trigger('click')
+    expect(chat.setThreadFollow).toHaveBeenCalledWith('root', true)
+
+    chat.followedThreads = new Set(['root'])
+    await nextTick()
+    expect(btn.attributes('aria-pressed')).toBe('true')
+    await btn.trigger('click')
+    expect(chat.setThreadFollow).toHaveBeenLastCalledWith('root', false)
+  })
+
+  it('collapses replies of blocked members until they are shown', async () => {
+    setup()
+    useServerFeaturesStore().list = ['blocks']
+    useBlocksStore().blocked = [{ user_id: 'u2', username: 'u2', display_name: 'U2', blocked_at: '2026-01-01T00:00:00Z' }]
+    await nextTick()
+    expect(w.findAll('[data-testid="blocked-message"]')).toHaveLength(2)
+    expect(w.find('[data-reply-id="r1"]').exists()).toBe(false)
+
+    await w.findAll('[data-testid="blocked-message-show"]')[0]!.trigger('click')
+    await nextTick()
+    expect(w.find('[data-reply-id="r1"]').exists()).toBe(true)
+    expect(w.findAll('[data-testid="blocked-message"]')).toHaveLength(1)
   })
 })

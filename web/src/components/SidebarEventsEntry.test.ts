@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import SidebarEventsEntry from './SidebarEventsEntry.vue'
@@ -52,5 +52,29 @@ describe('SidebarEventsEntry', () => {
 
     await wrapper.find('button').trigger('click')
     expect(wrapper.findComponent({ name: 'EventsModal' }).exists()).toBe(true)
+  })
+
+  it('loads the events on mount when the feature is enabled', () => {
+    useServerFeaturesStore().list = ['events']
+    const load = vi.spyOn(useEventsStore(), 'load').mockResolvedValue()
+    mount(SidebarEventsEntry)
+    expect(load).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not load events when the feature is disabled', () => {
+    const load = vi.spyOn(useEventsStore(), 'load').mockResolvedValue()
+    mount(SidebarEventsEntry)
+    expect(load).not.toHaveBeenCalled()
+  })
+
+  it('closes the EventsModal again', async () => {
+    useServerFeaturesStore().list = ['events']
+    vi.spyOn(useEventsStore(), 'load').mockResolvedValue()
+    const wrapper = mount(SidebarEventsEntry, { attachTo: document.body })
+    await wrapper.find('button').trigger('click')
+    wrapper.findComponent({ name: 'EventsModal' }).vm.$emit('close')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.findComponent({ name: 'EventsModal' }).exists()).toBe(false)
+    wrapper.unmount()
   })
 })

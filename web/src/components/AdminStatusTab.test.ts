@@ -162,4 +162,85 @@ describe('AdminStatusTab', () => {
     expect(apiMock).toHaveBeenCalledTimes(2)
     expect(w.find('[data-testid="version-current"]').text()).toBe('1.2.0')
   })
+  it('says the version is up to date when checks are on and nothing is newer', async () => {
+    apiMock.mockResolvedValue(statusFixture())
+    const w = keep(mount(AdminStatusTab))
+    await flushPromises()
+    expect(w.find('[data-testid="status-up-to-date"]').exists()).toBe(true)
+    expect(w.find('[data-testid="status-update-available"]').exists()).toBe(false)
+    expect(w.find('[data-testid="status-auto-deploy"]').text()).toContain('ghcr.io/msch128/mnema-talk:1.2 (yes)')
+  })
+
+  it('says update checks are disabled and hides an empty auto-deploy image', async () => {
+    const base = statusFixture()
+    apiMock.mockResolvedValue(statusFixture({
+      update: { ...base.update, check_enabled: false },
+      auto_deploy: { ...base.auto_deploy, image: '' },
+    }))
+    const w = keep(mount(AdminStatusTab))
+    await flushPromises()
+    expect(w.find('[data-testid="status-check-disabled"]').exists()).toBe(true)
+    expect(w.find('[data-testid="status-auto-deploy"]').text()).toBe('')
+  })
+
+  it('shows an unreachable database and storage with pending migrations', async () => {
+    const base = statusFixture()
+    apiMock.mockResolvedValue(statusFixture({
+      database: { ...base.database, reachable: false, size_bytes: 0, latest_migration: '', pending_migrations: 2 },
+      storage: { ...base.storage, configured: false, reachable: false, used_bytes: 500 },
+    }))
+    const w = keep(mount(AdminStatusTab))
+    await flushPromises()
+    expect(w.find('[data-testid="db-reachable"]').text()).toContain('Not reachable')
+    expect(w.find('[data-testid="db-size"]').text()).toBe('0 B')
+    expect(w.find('[data-testid="db-latest-migration"]').text()).toBe('–')
+    expect(w.find('[data-testid="db-applied-migrations"]').text()).toContain('2')
+    expect(w.find('[data-testid="storage-configured"]').text()).toBe('Not configured')
+    expect(w.find('[data-testid="storage-reachable"]').text()).toContain('Not reachable')
+    expect(w.find('[data-testid="storage-used-bytes"]').text()).toBe('500 B')
+  })
+
+  it('shows a dash for unknown sizes and dates, and omits the free disk when unknown', async () => {
+    const base = statusFixture()
+    const rest: Partial<OperatorStatus> = { ...base }
+    delete rest.disk_free_bytes
+    apiMock.mockResolvedValue({
+      ...rest,
+      version: { ...base.version, revision: '' },
+      database: { ...base.database, size_bytes: null },
+      warnings: [
+        { code: 'no_since', count: 1, since: '' },
+        { code: 'bad_since', count: 2, since: 'not-a-date' },
+      ],
+    })
+    const w = keep(mount(AdminStatusTab))
+    await flushPromises()
+    expect(w.find('[data-testid="db-size"]').text()).toBe('–')
+    expect(w.find('[data-testid="storage-disk-free"]').exists()).toBe(false)
+    expect(w.find('[data-testid="status-warning-no_since"]').text()).toContain('–')
+    expect(w.find('[data-testid="status-warning-bad_since"]').text()).toContain('–')
+    expect(w.find('[data-testid="status-version"]').text()).toContain('–')
+  })
+
+  it('renders only the sections the server sent', async () => {
+    const base = statusFixture()
+    apiMock.mockResolvedValue({ version: base.version, warnings: [] })
+    const w = keep(mount(AdminStatusTab))
+    await flushPromises()
+    expect(w.find('[data-testid="status-version"]').exists()).toBe(true)
+    for (const id of ['activity', 'database', 'storage', 'backup']) expect(w.find(`[data-testid="status-${id}"]`).exists()).toBe(false)
+    expect(w.find('[data-testid="status-up-to-date"]').exists()).toBe(false)
+  })
+
+  it('formats large sizes in the matching unit', async () => {
+    const base = statusFixture()
+    apiMock.mockResolvedValue(statusFixture({
+      database: { ...base.database, size_bytes: 3 * 1024 ** 4 * 2000 },
+      storage: { ...base.storage, used_bytes: 1536 },
+    }))
+    const w = keep(mount(AdminStatusTab))
+    await flushPromises()
+    expect(w.find('[data-testid="db-size"]').text()).toMatch(/TB$/)
+    expect(w.find('[data-testid="storage-used-bytes"]').text()).toBe('1.5 KB')
+  })
 })

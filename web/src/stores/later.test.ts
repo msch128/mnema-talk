@@ -115,4 +115,39 @@ describe('reminders and scheduled messages store', () => {
     expect(later.failed).toBe(true)
     expect(later.loaded).toBe(false)
   })
+
+  it('stays quiet about events for lists it never loaded, and only announces due reminders', async () => {
+    const toasts = useToastStore()
+    const later = useLaterStore()
+    await later.onReminderEvent({ id: fixtureId(1), state: 'created' })
+    await later.onScheduledEvent({ id: fixtureId(2), channel_id: fixtureId(2), state: 'sent' })
+    expect(apiMock).not.toHaveBeenCalled()
+    expect(toasts.toasts).toHaveLength(0)
+    // A due reminder that is not in the list yet still gets a generic notice.
+    await later.onReminderEvent({ id: fixtureId(1), state: 'due' })
+    expect(toasts.toasts.at(-1)).toMatchObject({ type: 'info', text: t('later.reminderDue') })
+  })
+
+  it('keeps its lists when reloading after an event fails', async () => {
+    apiMock.mockResolvedValueOnce({ items: [reminder(1)] })
+    apiMock.mockResolvedValueOnce({ items: [scheduled(2)] })
+    const later = useLaterStore()
+    await later.load({ reminders: true, scheduled: true })
+    apiMock.mockRejectedValue(new Error('offline'))
+    await later.onReminderEvent({ id: fixtureId(1), state: 'removed' })
+    await later.onScheduledEvent({ id: fixtureId(2), channel_id: fixtureId(2), state: 'updated' })
+    expect(later.reminders).toHaveLength(1)
+    expect(later.scheduled).toHaveLength(1)
+  })
+
+  it('replaces an entry that is made twice and shows a refusal without a reason as a plain refusal', async () => {
+    const toasts = useToastStore()
+    const later = useLaterStore()
+    apiMock.mockResolvedValue(reminder(1))
+    await later.remind(fixtureId(40), new Date())
+    await later.remind(fixtureId(40), new Date())
+    expect(later.reminders).toHaveLength(1)
+    await later.onScheduledEvent({ id: fixtureId(2), channel_id: fixtureId(2), state: 'failed' })
+    expect(toasts.toasts.at(-1)?.detail).toBe(t('later.reason.refused'))
+  })
 })

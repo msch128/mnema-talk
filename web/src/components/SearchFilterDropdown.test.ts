@@ -112,4 +112,45 @@ describe('SearchFilterDropdown', () => {
     await w.find('[data-search-filter-dropdown]').trigger('keydown', { key: 'ArrowDown' })
     expect(w.find('[data-search-filter-dropdown]').exists()).toBe(true)
   })
+  it('applies a picked date with the apply button and clears the field', async () => {
+    const w = mount(SearchFilterDropdown, { ...mountOpts, props: { open: true, lookup } })
+    expect(w.find('[data-date-apply]').exists()).toBe(false)
+    await w.find('[data-date-kind="after"]').trigger('click')
+    const input = w.find<HTMLInputElement>('[data-date-input]')
+    input.element.value = '2026-02-03'
+    await input.trigger('input')
+    await w.find('[data-date-apply]').trigger('click')
+    expect(w.emitted('select')?.[0]).toEqual(['after:2026-02-03'])
+    expect(w.find('[data-date-apply]').exists()).toBe(false)
+  })
+
+  it('does not emit a date when none is chosen', async () => {
+    const w = mount(SearchFilterDropdown, { ...mountOpts, props: { open: true, lookup } })
+    await w.find<HTMLInputElement>('[data-date-input]').trigger('change')
+    expect(w.emitted('select')).toBeUndefined()
+  })
+
+  it('moves focus through the controls with the arrow keys and wraps around', async () => {
+    const w = mount(SearchFilterDropdown, { ...mountOpts, props: { open: true, lookup }, attachTo: document.body })
+    const root = w.find('[data-search-filter-dropdown]')
+    const controls = Array.from(root.element.querySelectorAll<HTMLElement>('button, input'))
+    // Nothing focused yet: the first control gets focus.
+    await root.trigger('keydown', { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(controls[0])
+    await root.trigger('keydown', { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(controls[1])
+    await root.trigger('keydown', { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(controls[0])
+    await root.trigger('keydown', { key: 'ArrowLeft' })
+    expect(document.activeElement).toBe(controls.at(-1))
+    await root.trigger('keydown', { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(controls[0])
+    w.unmount()
+  })
+
+  it('ignores other keys', async () => {
+    const w = mount(SearchFilterDropdown, { ...mountOpts, props: { open: true, lookup } })
+    await w.find('[data-search-filter-dropdown]').trigger('keydown', { key: 'a' })
+    expect(w.emitted('close')).toBeUndefined()
+  })
 })
