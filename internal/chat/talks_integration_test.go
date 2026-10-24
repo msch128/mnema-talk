@@ -682,3 +682,95 @@ func TestUsableLobbyWithoutAPermissionModelAcceptsEveryLobby(t *testing.T) {
 		t.Fatal("no model, no limits")
 	}
 }
+
+func TestTheLiveStateIgnoresWhatItDoesNotKnowAndRecoversFromEmptiness(t *testing.T) {
+	w := newTalksWorld(t)
+	ctx := context.Background()
+	w.mgr.EmptyGrace = time.Hour
+	w.join(uuid.New(), w.alice.ID) // a Talk nobody opened here
+	w.mgr.removeIfEmpty(uuid.New())
+
+	talk, err := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.join(talk.ID, w.alice.ID)
+	w.mgr.removeIfEmpty(talk.ID) // occupied: stays
+	if !w.exists(t, talk.ID) {
+		t.Fatal("an occupied Talk was removed")
+	}
+	// Everyone gone: nobody leads it; the next member to come in does.
+	w.leave(talk.ID, w.alice.ID)
+	if _, ok := w.mgr.Leader(talk.ID); ok {
+		t.Fatal("an empty Talk has no leader")
+	}
+	w.leave(talk.ID, w.bob.ID) // not a member: the countdown just restarts
+	w.join(talk.ID, w.bob.ID)
+	if got, _ := w.mgr.Leader(talk.ID); got != w.bob.ID {
+		t.Fatalf("the first member to come in leads: %v", got)
+	}
+	// A Talk that is gone already is nothing to remove.
+	if err := w.mgr.remove(ctx, uuid.New(), "empty"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestTheManagerFollowsTheHubsEventsInOrder(t *testing.T) {
+	w := newTalksWorld(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	w.mgr.EmptyGrace = time.Hour
+	talk, err := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() { w.mgr.Run(ctx); close(done) }()
+	w.mgr.OnPresence(w.bob.ID, uuid.New(), true) // not one of ours: dropped
+	w.mgr.OnPresence(w.alice.ID, talk.ID, true)
+	w.mgr.OnPresence(w.bob.ID, talk.ID, true)
+	w.mgr.OnPresence(w.alice.ID, talk.ID, false)
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if got, _ := w.mgr.Leader(talk.ID); got == w.bob.ID {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if got, _ := w.mgr.Leader(talk.ID); got != w.bob.ID {
+		t.Fatalf("leader = %v; want bob after alice left", got)
+	}
+	cancel()
+	<-done
+}
+
+func TestDatabaseFailuresLeaveTheLiveStateIntactAndAreRetried(t *testing.T) {
+	w := newTalksWorld(t)
+	ctx := context.Background()
+	talk, err := OpenTempTalk(ctx, w.p, w.lobby.ID, w.alice.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A channels table that can be read but neither updated nor locked.
+	broken := driftPool(t, w.p, map[string]string{"channels": `SELECT DISTINCT id, name, is_temp, leader_id, type, category_id, user_limit, slow_mode_seconds FROM public.channels`})
+	m := NewTalkManager(&TalkManager{DB: broken, Events: w.rec, EmptyGrace: time.Hour})
+	m.talks[talk.ID] = &liveTalk{leader: &w.alice.ID}
+
+	m.persistLeader(talk.ID, &w.bob.ID) // the broadcast goes out although storing failed
+	m.removeIfEmpty(talk.ID)
+	m.mu.Lock()
+	kept := m.talks[talk.ID]
+	m.mu.Unlock()
+	if kept == nil {
+		t.Fatal("a Talk that could not be removed must stay known, to be retried")
+	}
+	if !w.exists(t, talk.ID) {
+		t.Fatal("the Talk was removed in spite of the failure")
+	}
+	m.sweepStale(ctx) // finds the Talk, fails to remove it, and carries on
+	if !w.exists(t, talk.ID) {
+		t.Fatal("the sweep removed a Talk it could not lock")
+	}
+	failing := NewTalkManager(&TalkManager{DB: driftPool(t, w.p, map[string]string{"channels": `SELECT 1 AS x WHERE false AND 1/0 = 1`}), Events: w.rec})
+	failing.sweepStale(ctx)
+}
