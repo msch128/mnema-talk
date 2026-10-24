@@ -1,0 +1,119 @@
+web/src/components/ForumArea.test.ts
+  s_06fcde5dbef956::t_5ed47964d774e4 1-154
+web/src/components/SidebarDragGhost.vue
+  s_06fcde5dbef956::t_5ed47964d774e4 3,7,10,33
+internal/chat/messages.go
+  s_06fcde5dbef956::t_5ed47964d774e4 81,323-326,348,350,352
+web/src/components/CreateChannelModal.test.ts
+  s_06fcde5dbef956::t_5ed47964d774e4 11,129-145
+  s_06fcde5dbef956::t_be7f3759b8aea9 146
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_5ed47964d774e4 259-262
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_5ed47964d774e4 38
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_5ed47964d774e4 86
+web/src/components/AdminChannelRow.vue
+  s_06fcde5dbef956::t_5ed47964d774e4 4,36-37
+internal/chat/forum_test.go
+  s_06fcde5dbef956::t_5ed47964d774e4 1-75
+web/src/components/CreateForumPostModal.test.ts
+  s_06fcde5dbef956::t_5ed47964d774e4 1-126
+internal/db/migrations/0069_forum_channels.sql
+  s_06fcde5dbef956::t_5ed47964d774e4 1-27
+doc/glossary.md
+  s_06fcde5dbef956::t_5ed47964d774e4 20-22
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_5ed47964d774e4 39,117-118
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_5ed47964d774e4 1327,1330,1380-1392,1408-1422,1607-1625,1879,1882,1894-1895,1914,1917,1929-1930,2498-2524
+  s_06fcde5dbef956::t_c034d10f9299bb 2525
+web/src/types/domain.ts
+  s_06fcde5dbef956::t_5ed47964d774e4 11,39
+web/src/components/CreateChannelModal.vue
+  s_06fcde5dbef956::t_5ed47964d774e4 6,15,25,44,98,128-143
+  s_06fcde5dbef956::t_9fc45973f4cfc6 144
+internal/chat/forum_integration_test.go
+  s_06fcde5dbef956::t_5ed47964d774e4 1-356
+web/src/components/SidebarChannelRow.vue
+  s_06fcde5dbef956::t_5ed47964d774e4 146-156
+  s_06fcde5dbef956::t_24a246dbd92c84 8
+  s_06fcde5dbef956::t_7107f1c6725b76 157
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_5ed47964d774e4 341-342,358-394
+  s_06fcde5dbef956::t_984bcb1940a681 395
+internal/chat/handler_forum.go
+  s_06fcde5dbef956::t_5ed47964d774e4 1-369
+internal/chat/categories.go
+  s_06fcde5dbef956::t_5ed47964d774e4 1-70
+internal/chat/channels.go
+  s_06fcde5dbef956::t_5ed47964d774e4 20,107-108
+doc/upgrade.md
+  s_06fcde5dbef956::t_fe3de7a69f5f26 149-151
+  s_06fcde5dbef956::t_5ed47964d774e4 257-262
+  s_06fcde5dbef956::t_d36b5b4b23671e 263
+internal/chat/dm_gate.go
+  s_06fcde5dbef956::t_5ed47964d774e4 35-41,48-59
+  s_06fcde5dbef956::t_5cdde571d726b3 60-62
+internal/chat/forum.go
+  s_06fcde5dbef956::t_5ed47964d774e4 1-99
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_5ed47964d774e4 5,9-10,22,32-34,38-48,208-221,249,251-258,300-303,305
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_5ed47964d774e4 341-342,358-394
+  s_06fcde5dbef956::t_84724a3ab384d1 395
+web/src/components/CreateForumPostModal.vue
+  s_06fcde5dbef956::t_5ed47964d774e4 1-172
+internal/chat/message_types.go
+  s_06fcde5dbef956::t_5ed47964d774e4 83-90
+web/src/components/ForumArea.vue
+  s_06fcde5dbef956::t_5ed47964d774e4 1-252
+web/src/App.vue
+  s_06fcde5dbef956::t_5ed47964d774e4 20,295-296
+web/src/components/ThreadRootCard.vue
+  s_06fcde5dbef956::t_5ed47964d774e4 1-129
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_24a246dbd92c84 51
+  s_06fcde5dbef956::t_5ed47964d774e4 52-53
+README.md
+  s_06fcde5dbef956::t_5ed47964d774e4 89
+web/src/components/ForumPostCard.vue
+  s_06fcde5dbef956::t_5ed47964d774e4 1-100
+internal/chat/forum_posts.go
+  s_06fcde5dbef956::t_5ed47964d774e4 1-197
+web/src/components/ManageForumTagsModal.vue
+  s_06fcde5dbef956::t_5ed47964d774e4 1-244
+web/src/lib/forumApi.ts
+  s_06fcde5dbef956::t_5ed47964d774e4 1-88
+doc/forums.md
+  s_06fcde5dbef956::t_5ed47964d774e4 1-46
+web/src/types/events.ts
+  s_06fcde5dbef956::t_5ed47964d774e4 146-147,372-373
+  s_06fcde5dbef956::t_24a246dbd92c84 403
+internal/chat/forum_tags.go
+  s_06fcde5dbef956::t_5ed47964d774e4 1-174
+internal/events/types.go
+  s_06fcde5dbef956::t_5ed47964d774e4 74-76
+internal/server/health.go
+  s_06fcde5dbef956::t_5ed47964d774e4 59
+doc/architecture.md
+  s_06fcde5dbef956::t_5ed47964d774e4 96-104
+internal/chat/handler.go
+  s_06fcde5dbef956::t_5ed47964d774e4 106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "686bf0dbc3470d62f8243c5b1f83ddaf908084dd",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
