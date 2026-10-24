@@ -1,0 +1,53 @@
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_b9ec310a31f802 430
+doc/events.md
+  s_06fcde5dbef956::t_49eae754b8b642 13
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_35f35d861c6af6 137
+doc/upgrade.md
+  s_06fcde5dbef956::t_5a2bd08d1d3edd 151,270
+e2e/tests/mobile.spec.ts
+  s_06fcde5dbef956::t_1ca0f837ca7c5b 3,24-30,32,34-36,38,44-72,74-75,80-91,225-236,242-243,249
+e2e/tests/talk-stage.spec.ts
+  s_06fcde5dbef956::t_91b43f4620446f 2,29-30
+internal/db/events_grant_integration_test.go
+  s_06fcde5dbef956::t_b4cf1a386cac84 1-82
+internal/db/migrations/0070_events.sql
+  s_06fcde5dbef956::t_e5d1f54f112b4c 13-14,51-61
+internal/db/starter_roles_integration_test.go
+  s_06fcde5dbef956::t_b27d5f2a6859bd 194-197
+web/src/components/ChatArea.test.ts
+  s_06fcde5dbef956::t_5527e7d18ce61b 703-704
+web/src/components/ChatAreaBoundaries.test.ts
+  s_06fcde5dbef956::t_e3a2ac15608acf 108-109
+web/src/components/ChatHeader.test.ts
+  s_06fcde5dbef956::t_0f1e21049a3de9 6,42-110
+web/src/components/ChatHeader.vue
+  s_06fcde5dbef956::t_733e37439c13a6 4-5,7-8,33-57,65,97-114,126,150,170-195
+web/src/components/LaterPopover.vue
+  s_06fcde5dbef956::t_530cfd2053bd1c 25-27,70
+web/src/components/MentionsInbox.vue
+  s_06fcde5dbef956::t_1a7f85f558f32d 18-20,49
+web/src/components/SavedMessages.vue
+  s_06fcde5dbef956::t_7d85d929917ea2 24-26,81
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_8fb7504418fe85 540
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_d27cc48e8398fd 540
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87ea62b61457719c78d536b8149deb3421b9a2bc",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
