@@ -1,0 +1,30 @@
+web/src/components/MessageAttachments.test.ts
+  s_06fcde5dbef956::t_99d62cf191939e 53-67,70
+web/src/components/ImageLightbox.vue
+  s_06fcde5dbef956::t_aea49a085238b3 3,33-42
+web/src/components/ImageLightbox.test.ts
+  s_06fcde5dbef956::t_b7679d48f548dd 15-19
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_aea49a085238b3 415
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_aea49a085238b3 415
+web/src/components/MessageAttachments.vue
+  s_06fcde5dbef956::t_aea49a085238b3 4-7,35,48,63-64,74,83,86
+  s_06fcde5dbef956::t_e61fd8820f9ff0 22-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3b62e8e43587bc50b8c617d12b7bc0d0820a94f9",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
