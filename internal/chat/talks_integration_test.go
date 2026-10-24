@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
@@ -570,5 +571,114 @@ func TestTalksOpenedDuringALobbyChangeEndUpWithTheNewRules(t *testing.T) {
 	}
 	if stale != 0 {
 		t.Fatalf("%d temporary Talks missed the lobby change", stale)
+	}
+}
+
+func TestTalkRequestsAreValidatedAndRefusedCalmly(t *testing.T) {
+	w := newTalksWorld(t)
+	ctx := context.Background()
+	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr}
+	talk, err := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dm, _, err := CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := map[string]string{"id": talk.ID.String()}
+	rec := func() *httptest.ResponseRecorder { return httptest.NewRecorder() }
+	invalid := func(err error) bool {
+		var apiErr *httpx.APIError
+		return errors.As(err, &apiErr) && apiErr.Status == http.StatusBadRequest
+	}
+
+	// Bad ids, bad bodies and out-of-range limits are 400s.
+	if err := h.updateTalk(rec(), talkRequest(w.alice, `{}`, map[string]string{"id": "nope"})); !invalid(err) {
+		t.Fatalf("bad id: %v", err)
+	}
+	if err := h.updateTalk(rec(), talkRequest(w.alice, `{"nope":1}`, id)); !invalid(err) {
+		t.Fatalf("unknown field: %v", err)
+	}
+	for _, body := range []string{`{"user_limit":1000}`, `{"user_limit":-1}`, `{"name":""}`} {
+		if err := h.updateTalk(rec(), talkRequest(w.alice, body, id)); !invalid(err) {
+			t.Fatalf("%s: %v", body, err)
+		}
+	}
+	if err := h.updateTalk(rec(), talkRequest(w.alice, `{"user_limit":999}`, id)); err != nil {
+		t.Fatalf("the highest limit is fine: %v", err)
+	}
+	// A Talk that does not exist, and a Talk that is no temporary one.
+	if err := h.updateTalk(rec(), talkRequest(w.alice, `{"name":"x"}`, map[string]string{"id": uuid.NewString()})); err == nil {
+		t.Fatal("unknown Talk")
+	}
+
+	// Invitations: bad id, bad body, unknown Talk, a text channel, a conversation that is no conversation.
+	body := `{"conversation_id":"` + dm.String() + `"}`
+	if err := h.inviteToTalk(rec(), talkRequest(w.alice, body, map[string]string{"id": "nope"})); !invalid(err) {
+		t.Fatalf("bad Talk id: %v", err)
+	}
+	if err := h.inviteToTalk(rec(), talkRequest(w.alice, `{"conversation_id":"x"}`, id)); !invalid(err) {
+		t.Fatalf("bad conversation id: %v", err)
+	}
+	if err := h.inviteToTalk(rec(), talkRequest(w.alice, body, map[string]string{"id": uuid.NewString()})); err == nil {
+		t.Fatal("unknown Talk")
+	}
+	text, _ := CreateChannel(ctx, w.p, nil, "plain-text", ChannelTypeText, "", 0)
+	notDM := `{"conversation_id":"` + text.ID.String() + `"}`
+	if err := h.inviteToTalk(rec(), talkRequest(w.alice, notDM, id)); !errors.Is(err, errChannelNotFound) {
+		t.Fatalf("a channel is no conversation: %v", err)
+	}
+	// A card for a text channel is refused: only Talks are invitable.
+	if _, err := h.postTalkInvite(ctx, dm, w.alice.ID, text.ID); !errors.Is(err, errChannelNotFound) {
+		t.Fatalf("invitation to a text channel: %v", err)
+	}
+	// Someone who is not in the conversation cannot invite into it.
+	carol := newTalksUser(t, w.p, "carol_c")
+	if err := h.inviteToTalk(rec(), talkRequest(carol, body, id)); err == nil {
+		t.Fatal("a stranger invited into a conversation")
+	}
+
+	// Start a Talk: bad id, a channel instead of a conversation, a stranger, and the rate limit.
+	if err := h.startDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": "nope"})); !invalid(err) {
+		t.Fatalf("bad conversation id: %v", err)
+	}
+	if err := h.startDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": text.ID.String()})); !errors.Is(err, errChannelNotFound) {
+		t.Fatalf("a channel: %v", err)
+	}
+	if err := h.startDMTalk(rec(), talkRequest(carol, ``, map[string]string{"id": dm.String()})); err == nil {
+		t.Fatal("a stranger started a Talk in a conversation")
+	}
+	w.mgr.CreateLimit = httpx.NewRateLimiter(1, TalkWindow)
+	if err := h.startDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": dm.String()})); err != nil {
+		t.Fatal(err)
+	}
+	var apiErr *httpx.APIError
+	if err := h.startDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": dm.String()})); !errors.As(err, &apiErr) || apiErr.Code != httpx.CodeRateLimited {
+		t.Fatalf("second Talk: %v", err)
+	}
+}
+
+func TestTalkRoutesExistOnlyWithAManager(t *testing.T) {
+	w := newTalksWorld(t)
+	routes := func(manager *TalkManager) int {
+		h := &Handler{DB: w.p, Events: w.rec, Talks: manager, TalkLimit: httpx.NewRateLimiter(100, time.Minute)}
+		r := chi.NewRouter()
+		h.mountTalks(r)
+		return len(r.Routes())
+	}
+	if n := routes(nil); n != 0 {
+		t.Fatalf("without a manager the feature is off, but %d routes exist", n)
+	}
+	if n := routes(w.mgr); n != 3 {
+		t.Fatalf("with a manager: %d routes; want the three Talk routes", n)
+	}
+}
+
+func TestUsableLobbyWithoutAPermissionModelAcceptsEveryLobby(t *testing.T) {
+	w := newTalksWorld(t)
+	h := &Handler{DB: w.p, Events: w.rec, Talks: w.mgr}
+	if !h.usableLobby(talkRequest(w.alice, ``, nil))(w.lobby.ID) {
+		t.Fatal("no model, no limits")
 	}
 }

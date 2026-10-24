@@ -237,8 +237,11 @@ access to reports or kicking until a role is given the permission.
   conversations with them. Channels and messages are numbered as before;
   private messages are numbered apart.
 - **Blocking and reports.** Members block each other and report a message to
-  the moderators ([moderation](moderation.md#blocking-and-reports)). The admin
-  console gets a **Reports** tab for holders of *Manage reports*.
+  the moderators ([moderation](moderation.md#blocking-and-reports)). In any
+  direct message conversation (group too), unread counts, mention counts and the
+  last-activity time leave out messages by members the reader blocked, and push
+  recipients skip blockers. The admin console gets a **Reports** tab for
+  holders of *Manage reports*.
 - **Profile banner** (feature `profile.banner`). A picture across the top of a
   member's profile, set under **Change banner** next to **Change avatar** and
   removed with **Remove banner**. The server never stores the upload: it crops
@@ -279,7 +282,8 @@ access to reports or kicking until a role is given the permission.
   comes back as unavailable.
 - **Forwarding and "Pinned by".** A message can be forwarded into a channel or
   a direct message ([architecture](architecture.md#forwarding-and-saved-messages)).
-  Older web apps show a forwarded message as just its comment. The pinned list
+  Older web apps show a forwarded message as just its comment; a forwarded message
+  with an empty comment is pushed as "Forwarded message". The pinned list
   shows who pinned a message and when.
 - **Slash commands.** `/me`, `/shrug`, `/tableflip`, `/unflip`, `/spoiler`,
   `/nick`, `/thread`, `/msg`, `/timeout`, `/ban` and `/kick` join `/poll` in the
@@ -335,9 +339,10 @@ All changes are additive; `web_client_api` is unchanged.
   plus `style-src-attr 'none'` (see [SECURITY.md](../SECURITY.md#security-model-summary)
   under "Security headers"). Nothing to configure. A browser tab that was
   loaded before the update may show the emoji picker unstyled until it is
-  reloaded; installed apps update on their next start. The desktop client
-  serves the signed bundle under its own policy, which still works with the new
-  bundle. The bundle's `security_floor` is not raised.
+  reloaded; installed apps update on their next start. The desktop shells apply
+  the strict web CSP (`style-src 'self'; style-src-attr 'none'`) only for web
+  bundles >= 1.1.0; older bundles keep the old policy. The bundle's
+  `security_floor` is not raised.
 - **Bots and webhooks.** Bot tokens issued before 1.0 are bound to their
   likeliest issuer the first time they are used; nothing is revoked and no token
   needs regenerating ([bots.md](bots.md#tokens)). The admin console marks tokens

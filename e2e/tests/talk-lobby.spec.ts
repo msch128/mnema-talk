@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { apiFetch, awaitApiBudget, responseString, suiteMember, leaveTalks, expectTalkLive } from './helpers'
+import { apiFetch, awaitApiBudget, responseString, suiteMember, leaveTalks, expectTalkLive, trackPeerConnections } from './helpers'
 import { test, expect } from './fixtures'
 
 // Create-a-Talk lobbies (doc/talks.md). Joining a lobby opens a temporary Talk;
@@ -11,7 +11,7 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 
 const suffix = Date.now().toString(36)
-const LOBBY = `Create a Talk ${suffix}`
+const LOBBY = `Lobby ${suffix}`
 
 async function signIn(page: Page, username: string, password: string) {
   await page.goto('/')
@@ -26,6 +26,8 @@ test('joining a lobby opens a Talk, its leader hands over, and the empty Talk go
   const ctxOptions = { permissions: ['microphone' as const], viewport: { width: 1400, height: 900 } }
   const aCtx = await browser.newContext(ctxOptions)
   const bCtx = await browser.newContext(ctxOptions)
+  // expectTalkLive reads window.__pcs, which this records.
+  for (const ctx of [aCtx, bCtx]) await ctx.addInitScript(trackPeerConnections)
   const a = await aCtx.newPage()
   const b = await bCtx.newPage()
 
@@ -50,7 +52,7 @@ test('joining a lobby opens a Talk, its leader hands over, and the empty Talk go
   const lobbyRow = (page: Page) => page.locator('[data-channel-type="voice"]', { hasText: LOBBY })
   await lobbyRow(a).click()
   await expectTalkLive(a)
-  const talks = a.locator('[data-channel-type="voice"]', { hasText: /^Talk \d+$/ })
+  const talks = a.locator('[data-channel-type="voice"]', { hasText: /Talk \d+/ })
   await expect(talks.first()).toBeVisible()
   await expect(lobbyRow(a).locator('xpath=..').locator('[data-voice-user]')).toHaveCount(0)
 
@@ -59,7 +61,7 @@ test('joining a lobby opens a Talk, its leader hands over, and the empty Talk go
   await expect(firstTalk.getByTestId('talk-leader-mark')).toBeVisible()
 
   // A second member joins that Talk; the admin leaves; the member leads now.
-  await b.locator('[data-channel-type="voice"]', { hasText: /^Talk \d+$/ }).first().click()
+  await b.locator('[data-channel-type="voice"]', { hasText: /Talk \d+/ }).first().click()
   await expectTalkLive(b)
   await a.getByRole('button', { name: 'Verlassen' }).first().click()
   await expect(b.locator('[data-voice-user]').getByTestId('talk-leader-mark')).toBeVisible({ timeout: 15_000 })
