@@ -80,6 +80,7 @@ export type AuthAdminUser = {
   role: "admin" | "user"
   role_ids?: Array<string>
   rules_pending?: boolean
+  status_expires_at?: string
   status_text: string
   timeout_until?: string
   username: string
@@ -104,6 +105,7 @@ export function isAuthAdminUser(value: unknown): value is AuthAdminUser {
     && (hasOwn(value, "role") && (value["role"] === "admin" || value["role"] === "user"))
     && (!hasOwn(value, "role_ids") || isArrayOf(value["role_ids"], item => isIdentifier(item)))
     && (!hasOwn(value, "rules_pending") || typeof value["rules_pending"] === 'boolean')
+    && (!hasOwn(value, "status_expires_at") || isTimestamp(value["status_expires_at"]))
     && (hasOwn(value, "status_text") && isString(value["status_text"], 32))
     && (!hasOwn(value, "timeout_until") || isTimestamp(value["timeout_until"]))
     && (hasOwn(value, "username") && isString(value["username"]))
@@ -391,11 +393,13 @@ export function isAuthSetPresenceRequest(value: unknown): value is AuthSetPresen
 export const decodeAuthSetPresenceRequest = decoder("auth.SetPresenceRequest", isAuthSetPresenceRequest)
 
 export type AuthSetStatusRequest = {
+  expires_at?: string
   status_text: string
 }
 
 export function isAuthSetStatusRequest(value: unknown): value is AuthSetStatusRequest {
   return isRecord(value)
+    && (!hasOwn(value, "expires_at") || isTimestamp(value["expires_at"]))
     && (hasOwn(value, "status_text") && isString(value["status_text"], 32))
 }
 
@@ -554,6 +558,7 @@ export type AuthUser = {
   presence?: "online" | "away" | "dnd" | "focus"
   role: "admin" | "user"
   rules_pending?: boolean
+  status_expires_at?: string
   status_text: string
   username: string
   voice_seconds?: number
@@ -572,6 +577,7 @@ export function isAuthUser(value: unknown): value is AuthUser {
     && (!hasOwn(value, "presence") || (value["presence"] === "online" || value["presence"] === "away" || value["presence"] === "dnd" || value["presence"] === "focus"))
     && (hasOwn(value, "role") && (value["role"] === "admin" || value["role"] === "user"))
     && (!hasOwn(value, "rules_pending") || typeof value["rules_pending"] === 'boolean')
+    && (!hasOwn(value, "status_expires_at") || isTimestamp(value["status_expires_at"]))
     && (hasOwn(value, "status_text") && isString(value["status_text"], 32))
     && (hasOwn(value, "username") && isString(value["username"]))
     && (!hasOwn(value, "voice_seconds") || isInteger(value["voice_seconds"]))
@@ -1121,7 +1127,7 @@ export function isChatChannel(value: unknown): value is ChatChannel {
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (hasOwn(value, "name") && isString(value["name"], 64))
     && (hasOwn(value, "number") && isInteger(value["number"]))
-    && (hasOwn(value, "slow_mode_seconds") && (isInteger(value["slow_mode_seconds"]) && value["slow_mode_seconds"] >= 0 && value["slow_mode_seconds"] <= 21600))
+    && (hasOwn(value, "slow_mode_seconds") && (isInteger(value["slow_mode_seconds"]) && value["slow_mode_seconds"] >= 0 && value["slow_mode_seconds"] <= 86400))
     && (hasOwn(value, "sort_order") && isInteger(value["sort_order"]))
     && (hasOwn(value, "topic") && isString(value["topic"], 255))
     && (hasOwn(value, "type") && isChatChannelType(value["type"]))
@@ -1606,6 +1612,7 @@ export type ChatMember = {
   role: "admin" | "user"
   role_ids?: Array<string>
   rules_pending?: boolean
+  status_expires_at?: string
   status_text: string
   timeout_until?: string
   username: string
@@ -1628,6 +1635,7 @@ export function isChatMember(value: unknown): value is ChatMember {
     && (hasOwn(value, "role") && (value["role"] === "admin" || value["role"] === "user"))
     && (!hasOwn(value, "role_ids") || isArrayOf(value["role_ids"], item => isIdentifier(item)))
     && (!hasOwn(value, "rules_pending") || typeof value["rules_pending"] === 'boolean')
+    && (!hasOwn(value, "status_expires_at") || isTimestamp(value["status_expires_at"]))
     && (hasOwn(value, "status_text") && isString(value["status_text"], 32))
     && (!hasOwn(value, "timeout_until") || isTimestamp(value["timeout_until"]))
     && (hasOwn(value, "username") && isString(value["username"]))
@@ -2232,7 +2240,7 @@ export type ChatUpdateChannelRequest = {
 export function isChatUpdateChannelRequest(value: unknown): value is ChatUpdateChannelRequest {
   return isRecord(value)
     && (!hasOwn(value, "name") || isString(value["name"], 64))
-    && (!hasOwn(value, "slow_mode_seconds") || (isInteger(value["slow_mode_seconds"]) && value["slow_mode_seconds"] >= 0 && value["slow_mode_seconds"] <= 21600))
+    && (!hasOwn(value, "slow_mode_seconds") || (isInteger(value["slow_mode_seconds"]) && value["slow_mode_seconds"] >= 0 && value["slow_mode_seconds"] <= 86400))
     && (!hasOwn(value, "topic") || isString(value["topic"], 255))
     && (!hasOwn(value, "user_limit") || (isInteger(value["user_limit"]) && value["user_limit"] >= 0 && value["user_limit"] <= 999))
 }

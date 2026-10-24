@@ -7,6 +7,9 @@ import { caughtErrorMessage } from '../lib/api'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { EXPIRY_CHOICES, expiryTime, isFuture, toLocalInput } from '../lib/statusExpiry'
+import type { ExpiryChoice } from '../lib/statusExpiry'
 import { t } from '../i18n'
 
 // The status line of a profile: the user edits their own; an admin may edit or clear anyone's.
@@ -20,23 +23,51 @@ const chatStore = useChatStore()
 const toasts = useToastStore()
 const permissions = usePermissionsStore()
 
-const canEditStatus = computed(() => props.isSelf || (props.profileUser.role !== 'admin' && permissions.can('manage_members') && permissions.outranksMember(props.profileUser.id ?? '')))
+// The feature list is loaded by the chat header; until then no expiry choice shows.
+const serverFeatures = useServerFeaturesStore()
+const canExpire = computed(() => props.isSelf && serverFeatures.has('status.expiry'))
+const expiryChoice = ref<ExpiryChoice>('never')
+const expiryCustom = ref('')
+const expiryError = ref('')
+
+const canEditStatus =computed(() => props.isSelf || (props.profileUser.role !== 'admin' && permissions.can('manage_members') && permissions.outranksMember(props.profileUser.id ?? '')))
 const isEditingStatus = ref(false)
 const editStatus = ref('')
 const isSavingStatus = ref(false)
 
 function startEditStatus() {
   editStatus.value = props.profileUser.status_text || ''
+  expiryChoice.value = 'never'
+  expiryCustom.value = toLocalInput(new Date(Date.now() + 24 * 3_600_000))
+  expiryError.value = ''
   isEditingStatus.value = true
+}
+
+// The absolute clear time, from this device's clock and time zone; null: never.
+function chosenExpiry(text: string): Date | null | undefined {
+  if (!canExpire.value || !text || expiryChoice.value === 'never') return null
+  const at = expiryTime(expiryChoice.value, new Date(), expiryCustom.value)
+  if (isFuture(at, new Date())) return at
+  expiryError.value = t('profile.expiryPast')
+  return undefined
 }
 
 async function saveStatus(text = editStatus.value) {
   const id = props.profileUser.id
   if (!id) return
+  expiryError.value = ''
+  const expiresAt = chosenExpiry(text.trim())
+  if (expiresAt === undefined) return
   isSavingStatus.value = true
   try {
-    const updated = await chatStore.setStatusText(id, text.trim())
-    chatStore.selectedUserProfile = chatStore.selectedUserProfile && { ...chatStore.selectedUserProfile, status_text: updated.status_text }
+    const updated = await chatStore.setStatusText(id, text.trim(), expiresAt)
+    const selected = chatStore.selectedUserProfile
+    if (selected) {
+      const next = { ...selected, status_text: updated.status_text }
+      if (updated.status_expires_at) next.status_expires_at = updated.status_expires_at
+      else delete next.status_expires_at
+      chatStore.selectedUserProfile = next
+    }
     isEditingStatus.value = false
     toasts.success(text.trim() ? t('profile.statusSaved') : t('profile.statusCleared'))
   } catch (err) {
@@ -74,7 +105,7 @@ async function saveStatus(text = editStatus.value) {
         </button>
       </div>
     </div>
-    <form v-if="isEditingStatus" class="flex items-center gap-1.5" @submit.prevent="saveStatus()">
+    <form v-if="isEditingStatus" class="flex flex-wrap items-center gap-1.5" @submit.prevent="saveStatus()">
       <input
         v-model="editStatus"
         data-testid="profile-status-input"
@@ -95,8 +126,33 @@ async function saveStatus(text = editStatus.value) {
         <Save v-else class="h-3.5 w-3.5" />
         <span>{{ $t('common.save') }}</span>
       </button>
+      <div v-if="canExpire && editStatus.trim()" class="flex w-full flex-wrap items-center gap-2 pt-1" data-testid="status-expiry">
+        <label for="status-expiry-choice" class="text-xs text-mnema-tertiary">{{ $t('profile.clearAfter') }}</label>
+        <select
+          id="status-expiry-choice"
+          v-model="expiryChoice"
+          data-testid="status-expiry-choice"
+          class="rounded-lg border border-mnema-border bg-mnema-canvas px-2 py-1 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"
+        >
+          <option v-for="c in EXPIRY_CHOICES" :key="c" :value="c">{{ $t(`profile.expiry.${c}`) }}</option>
+        </select>
+        <input
+          v-if="expiryChoice === 'custom'"
+          v-model="expiryCustom"
+          type="datetime-local"
+          data-testid="status-expiry-custom"
+          :aria-label="$t('profile.clearAfter')"
+          class="rounded-lg border border-mnema-border bg-mnema-canvas px-2 py-1 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"
+        />
+        <p v-if="expiryError" role="alert" class="w-full text-xs text-mnema-danger">{{ expiryError }}</p>
+      </div>
     </form>
-    <p v-else-if="profileUser.status_text" class="wrap-break-word text-sm text-mnema-text">{{ profileUser.status_text }}</p>
+    <template v-else-if="profileUser.status_text">
+      <p class="wrap-break-word text-sm text-mnema-text">{{ profileUser.status_text }}</p>
+      <p v-if="profileUser.status_expires_at" data-testid="profile-status-until" class="mt-0.5 text-xs text-mnema-tertiary">
+        {{ $t('profile.clearsAt', { time: new Date(profileUser.status_expires_at).toLocaleString() }) }}
+      </p>
+    </template>
     <p v-else class="text-sm italic text-mnema-tertiary">{{ $t('profile.noStatus') }}</p>
   </div>
 </template>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
 import type { ContextMenuItem } from './menuTypes'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Hash, Users, Bell, BellOff, AtSign, X, Volume2, Search, MessageCircle, Info } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
@@ -43,10 +43,15 @@ function searchInChannel() {
   else void openSearch(`in:${quoteValue(channel.name)} `)
 }
 
+// The channel description: one truncated line next to the name, in full on click.
+const topicOpen = ref(false)
+const showTopic = computed(() => !props.panel && !isDm.value && !!chatStore.activeChannel?.topic)
+watch(() => chatStore.activeChannel?.id, () => { topicOpen.value = false })
+
 // The name keeps the room it needs; only beside a topic is it capped so the
 // topic stays visible too.
 const titleClass = computed(() => {
-  if (props.panel || !chatStore.activeChannel?.topic) return 'min-w-0'
+  if (!showTopic.value) return 'min-w-0'
   return 'shrink-0 max-w-[60%] max-md:shrink max-md:max-w-none'
 })
 
@@ -70,15 +75,23 @@ function openNotificationMenu(e: MouseEvent) {
     <div class="flex items-center gap-2 min-w-0 flex-1">
       <NavDrawerButton v-if="!panel" />
       <component :is="channelIcon" class="w-5 h-5 max-md:hidden text-mnema-tertiary shrink-0" />
-      <span
-        data-testid="chat-channel-name"
-        :class="['font-semibold text-base text-mnema-text truncate', titleClass]"
-      >
-        {{ chatStore.activeChannel?.name || $t('chat.selectChannel') }}
-      </span>
-      <span v-if="chatStore.activeChannel?.topic && !panel" class="max-md:hidden text-sm text-mnema-muted pl-3 ml-1 border-l border-mnema-border truncate min-w-0">
-        {{ chatStore.activeChannel.topic }}
-      </span>
+      <div class="flex min-w-0 items-center gap-2 max-md:flex-col max-md:items-start max-md:gap-0">
+        <span
+          data-testid="chat-channel-name"
+          :class="['font-semibold text-base text-mnema-text truncate', titleClass]"
+        >
+          {{ chatStore.activeChannel?.name || $t('chat.selectChannel') }}
+        </span>
+        <button
+          v-if="showTopic"
+          type="button"
+          data-testid="channel-topic"
+          :aria-expanded="topicOpen ? 'true' : 'false'"
+          :aria-label="topicOpen ? $t('chat.topicCollapse') : $t('chat.topicExpand')"
+          class="min-w-0 truncate text-left text-sm text-mnema-muted hover:text-mnema-text md:ml-1 md:border-l md:border-mnema-border md:pl-3 max-md:text-xs"
+          @click="topicOpen = !topicOpen"
+        >{{ chatStore.activeChannel?.topic }}</button>
+      </div>
       <span
         v-if="chatStore.activeChannel?.slow_mode_seconds"
         data-testid="slow-mode-chip"
@@ -148,6 +161,13 @@ function openNotificationMenu(e: MouseEvent) {
       </button>
     </div>
   </header>
+
+  <!-- The full channel description, opened by a click on its truncated line in the header -->
+  <div
+    v-if="showTopic && topicOpen"
+    data-testid="channel-topic-full"
+    class="px-4 py-2 border-b border-mnema-hairline bg-mnema-raised text-sm text-mnema-muted whitespace-pre-line wrap-break-word shrink-0"
+  >{{ chatStore.activeChannel?.topic }}</div>
 
   <DmInfoDialog v-if="showInfo && dm" :dm="dm" @close="showInfo = false" />
 

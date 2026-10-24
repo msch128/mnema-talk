@@ -76,7 +76,7 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 		requireChatError(t, err, "NULL")
 	})
 	t.Run("member decoding", func(t *testing.T) {
-		p := driftPool(t, f.p, map[string]string{"users": `SELECT id,username,NULL::text display_name,bio,role,avatar_s3_key,status_text,created_at,voice_seconds,message_count,disabled_at,NULL::timestamptz banned_at,NULL::timestamptz banned_until,NULL::timestamptz deleted_at,is_bot FROM public.users`})
+		p := driftPool(t, f.p, map[string]string{"users": `SELECT id,username,NULL::text display_name,bio,role,avatar_s3_key,status_text,NULL::timestamptz status_expires_at,created_at,voice_seconds,message_count,disabled_at,NULL::timestamptz banned_at,NULL::timestamptz banned_until,NULL::timestamptz deleted_at,is_bot FROM public.users`})
 		_, err := GetAllMembers(ctx, p)
 		requireChatError(t, err, "NULL")
 	})

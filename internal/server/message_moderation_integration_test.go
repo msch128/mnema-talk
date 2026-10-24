@@ -57,9 +57,15 @@ func TestSlowModeHoldsBackMembersButNotModerators(t *testing.T) {
 	if ch.SlowModeSeconds != 2 {
 		t.Fatalf("channel %+v", ch)
 	}
-	for _, bad := range []int{-1, 21601} {
+	for _, bad := range []int{-1, 86401} {
 		if r := f.admin.patch("/api/admin/channels/"+f.channel.String(), map[string]any{"slow_mode_seconds": bad}); r.status != http.StatusBadRequest {
 			t.Errorf("slow mode %d: %d", bad, r.status)
+		}
+	}
+	// Up to 24 hours is allowed; set it and go back to the 2 seconds the rest of the test uses.
+	for _, ok := range []int{86400, 2} {
+		if r := f.admin.patch("/api/admin/channels/"+f.channel.String(), map[string]any{"slow_mode_seconds": ok}); r.status != http.StatusOK {
+			t.Errorf("slow mode %d: %d %s", ok, r.status, r.body)
 		}
 	}
 
