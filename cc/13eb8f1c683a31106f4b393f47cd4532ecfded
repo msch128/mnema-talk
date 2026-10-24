@@ -1,0 +1,98 @@
+web/src/lib/eventAvatar.test.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 1-11
+web/src/components/ChatArea.test.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 703-704
+web/src/components/SavedMessages.vue
+  s_06fcde5dbef956::t_49bc3338f8f838 26-28,81
+web/src/lib/fileSize.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 1-16
+web/src/components/EventDetailModal.test.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 141,153,162
+web/src/components/EventsModalDetails.test.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 174,182
+web/src/components/ChatHeader.test.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 6,42-109
+  s_06fcde5dbef956::t_81db5b9c098b70 110
+web/src/components/MessageAttachments.test.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 18,71
+web/src/lib/eventAvatar.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 1-8
+web/src/components/CreateForumPostModal.vue
+  s_06fcde5dbef956::t_49bc3338f8f838 95,148
+web/src/components/EventDetailModal.vue
+  s_06fcde5dbef956::t_49bc3338f8f838 13-15,60,63-75,94,115,151,195-196,198-199,201-202,204,206-207,210-212,233
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_49bc3338f8f838 430
+web/src/components/EventsModal.test.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 141
+web/src/components/ForumArea.test.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 10,14,286-292
+  s_06fcde5dbef956::t_9e35f7555d1dee 293
+web/src/components/MessageAttachments.vue
+  s_06fcde5dbef956::t_49bc3338f8f838 10-11,67,96
+web/src/components/EventsModalPolish.test.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 1-147
+web/src/stores/toast.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 12,15-16,20-21,27,31-51,59,62,71
+web/src/components/PollCard.vue
+  s_06fcde5dbef956::t_49bc3338f8f838 42,66-67,88
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_49bc3338f8f838 64-67,545,1676-1677,2359,2371-2382
+web/src/components/NotificationSettingsDialog.test.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 97-110
+web/src/components/EventEditDialog.vue
+  s_06fcde5dbef956::t_49bc3338f8f838 151,165,179,189,223,237,247
+e2e/tests/ui-events-polish.spec.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 1-94
+e2e/tests/mobile.spec.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 183-194
+web/src/components/ForumArea.vue
+  s_06fcde5dbef956::t_49bc3338f8f838 3,9-11,65-68,110-112,125-134,139-140,151-152,156,203,226
+web/src/components/ToastHost.test.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 3,63-92
+  s_06fcde5dbef956::t_e5f67253396751 93
+web/src/stores/toast.test.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 50-80
+web/src/components/PollCard.test.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 283-293
+web/src/components/NotificationSettingsDialog.vue
+  s_06fcde5dbef956::t_49bc3338f8f838 79,84-85,92
+web/src/components/ChatHeader.vue
+  s_06fcde5dbef956::t_49bc3338f8f838 4-5,7-8,33-57,65,97-114,126,150,170-195
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_49bc3338f8f838 64-67,545,1676-1677,2359,2371-2382
+web/src/components/ChatAreaBoundaries.test.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 108-109
+web/src/components/LaterPopover.vue
+  s_06fcde5dbef956::t_49bc3338f8f838 28-30,71
+e2e/tests/talk-stage.spec.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 2,29-30
+web/src/lib/eventTime.test.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 1-30
+web/src/lib/eventTime.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 1-26
+web/src/lib/fileSize.test.ts
+  s_06fcde5dbef956::t_49bc3338f8f838 1-22
+web/src/components/EventsModal.vue
+  s_06fcde5dbef956::t_49bc3338f8f838 13-15,41-68,97,106-107,110-111,117,145,157,162,181-182,226-228,232,237,252,256,266,270,299,301-307,309-314
+web/src/components/MentionsInbox.vue
+  s_06fcde5dbef956::t_49bc3338f8f838 21-23,49
+web/src/components/ToastHost.vue
+  s_06fcde5dbef956::t_49bc3338f8f838 12-16,34-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cc13eb8f1c683a31106f4b393f47cd4532ecfded",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
