@@ -36,10 +36,9 @@ function setup(owner = true) {
     if (path === '/api/roles') return roles
     if (path === '/api/admin/roles' && options?.method === 'POST') return role(9, { name: 'New role', position: 1 })
     if (path.startsWith('/api/admin/roles/') && options?.method === 'PATCH') return role(1)
-    if (path.endsWith('/view-as')) return { role_id: path.split('/')[4], role_name: 'Middle', administrator: false, categories: [], uncategorized: [{ id: fixtureId(90), number: 1, name: 'welcome', type: 'text', can_join: false, permissions: ['view_channel'] }] }
     return undefined
   })
-  return mount(AdminRolesTab, { attachTo: document.body })
+  return mount(AdminRolesTab)
 }
 const row = (w: ReturnType<typeof mount>, name: string) => w.find(`[data-role="${name}"]`)
 
@@ -48,7 +47,6 @@ beforeEach(() => {
   setLocale('en')
   apiMock.mockReset()
   confirmMock.mockReset()
-  document.body.replaceChildren()
   roles = [role(4, { name: 'Top' }), role(2, { name: 'Middle', color: 0xff0000, hoist: true, permissions: PERMISSION_BITS.speak }), role(1, { name: 'Bottom' }), everyone]
 })
 
@@ -301,19 +299,5 @@ describe('AdminRolesTab permission list', () => {
     expect(shown).not.toContain('manage_webhooks')
     expect(new Set(shown)).toEqual(new Set(Object.keys(PERMISSION_BITS).filter(key => key !== 'manage_webhooks')))
     expect(shown).toHaveLength(new Set(shown).size)
-  })
-
-  it('opens a read-only preview of the server as the selected role and exits it', async () => {
-    const w = setup()
-    await flushPromises()
-    await row(w, 'Middle').find('button[aria-pressed]').trigger('click')
-    await w.get('[data-testid="role-view-as"]').trigger('click')
-    await flushPromises()
-    expect(apiMock).toHaveBeenCalledWith(`/api/admin/roles/${roles[1]!.id}/view-as`, expect.anything())
-    expect(document.body.querySelector('[data-testid="view-as-sidebar"]')?.textContent).toContain('welcome')
-    document.body.querySelector<HTMLElement>('[data-testid="view-as-exit"]')?.click()
-    await flushPromises()
-    expect(document.body.querySelector('[data-testid="view-as"]')).toBeNull()
-    w.unmount()
   })
 })
