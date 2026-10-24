@@ -146,6 +146,9 @@ of the pre-update backup (see "Rollback" above).
 | 0065 | `instance_settings.session_inactivity_days` (1 to 365, default 7). |
 | 0066 | `automod_rules` and `automod_state` with the default rules (below), and the columns `source`, `automod_rule`, `automod_outcome` and `hit_count` of `message_reports` (existing reports keep `source = 'member'`). |
 | 0067 | `moderation_notes`: private moderator notes about members. |
+| 0068 | `channels.is_stage`: Stages. Existing channels keep `false`; a Stage is never a lobby or a temporary Talk. |
+| 0069 | `channels.type = 'forum'`, `messages.title`, `messages.is_locked`, `forum_tags` and `forum_post_tags`: Forum channels with tag management and post threads (see [Forum channels](forums.md)). Existing rows keep null and false. |
+| 0071 | `discord_imports` and `discord_import_objects`: the record of each Discord structure import and the ids it created, for undo (see [Import](import.md)). Nothing existing is touched. |
 | 0072 | `media_original_filename_trgm_idx`: GIN trigram index on `media.original_filename` for fast case-insensitive attachment filename search. |
 
 #### Message search
@@ -163,8 +166,6 @@ of the pre-update backup (see "Rollback" above).
   between Newest, Oldest, and Relevance.
 - **Feature flag.** Advertised as `search.filters.v3` in `GET /api/health`.
   A web client connected to an older server hides the new dropdown and sort toggle.
-| 0068 | `channels.is_stage`: Stages. Existing channels keep `false`; a Stage is never a lobby or a temporary Talk. |
-| 0071 | `discord_imports` and `discord_import_objects`: the record of each Discord structure import and the ids it created, for undo (see [Import](import.md)). Nothing existing is touched. |
 
 #### Talks
 
@@ -252,6 +253,13 @@ members always carry them.
 - The server needs outbound HTTPS access to `discord.com` for the preview and the
   import. Nothing else is contacted, and nothing is sent to Discord beyond the
   template code.
+
+#### Forum channels
+
+- Admins can create channels with type `'forum'` (`Manage channels`). A forum channel holds posts; each post is a root message with a required title (<=100 characters), an initial message, and up to 5 optional tags. Replies form a standard thread (`messages.parent_id`).
+- Up to 20 admin-defined tags per forum channel (name <=20 characters, optional emoji <=32 characters). Members can filter posts by tag and sort by latest activity or creation.
+- Moderation: Members holding *Manage messages* can lock posts to prevent replies from regular users and update tags on others' posts.
+- Feature name `channels.forum` in `GET /api/health`. New event `forum_tags_changed`. REST: `GET/POST /api/channels/{id}/tags`, `PATCH/DELETE /api/channels/{id}/tags/{tagID}`, `GET/POST /api/channels/{id}/posts`, and `PATCH /api/channels/{id}/posts/{postID}`.
 
 ### 1.0.x → 1.1.0
 

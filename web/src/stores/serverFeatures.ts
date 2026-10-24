@@ -48,6 +48,8 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     opsStatus: computed(() => has('ops.status')),
     importDiscord: computed(() => has('import.discord')),
     talksStage: computed(() => has('talks.stage')),
-    talksReactions: computed(() => has('talks.reactions'))
+    talksReactions: computed(() => has('talks.reactions')),
+    forum: computed(() => has('channels.forum')),
+    channelsForum: computed(() => has('channels.forum'))
   }
 })

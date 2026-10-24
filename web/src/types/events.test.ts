@@ -83,6 +83,7 @@ const examples: Record<ServerEventType, unknown[]> = {
   stage_talk_power: [{ ...room, granted: true }, { ...room, granted: false }],
   talk_reaction: [{ ...room, emoji: '🎉' }, { ...room, emoji: `<:party:${fixtureId(3)}>` }],
   media_handshake: [{ channel_id: id, user_id: id, wire: 'a' }],
+  forum_tags_changed: [{ channel_id: id }],
 }
 
 describe('WebSocket runtime event contracts', () => {

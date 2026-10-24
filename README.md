@@ -86,6 +86,7 @@ no accounts on someone else's platform.
   (so a vote is final). A channel can opt in to auto-delete after 1, 7, 30 or
   90 days; it is shown on the channel, audited, and never touches pinned
   messages or direct messages ([doc/moderation.md](doc/moderation.md#auto-delete)).
+- **Forum channels.** Structured discussions with posts as cards, up to 20 admin tags, tag filtering, sorting by latest activity, and moderation locks ([doc/forums.md](doc/forums.md)).
 - **Saved messages and forwarding.** Keep a private list of up to 1,000
   messages with an optional note, or forward a message into another channel or
   a direct message. A forward is a reference, so it never shows more than the

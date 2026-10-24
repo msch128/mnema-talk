@@ -35,6 +35,7 @@ function exposedState(cs: ChatState) {
     allChannels: cs.allChannels,
     ephemeral: cs.ephemeral,
     pinsSignal: cs.pinsSignal,
+    forumTagsSignal: cs.forumTagsSignal,
     pinNotices: cs.pinNotices,
     uncategorized: cs.uncategorized,
     activeChannel: cs.activeChannel,

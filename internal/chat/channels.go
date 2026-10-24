@@ -17,6 +17,7 @@ type ChannelType string
 const (
 	ChannelTypeText  ChannelType = "text"
 	ChannelTypeVoice ChannelType = "voice"
+	ChannelTypeForum ChannelType = "forum"
 
 	// channelKindDM is the type a direct message conversation has in the
 	// channels table (dm.go). It is deliberately not a ChannelType: it is never
@@ -61,33 +62,6 @@ type Channel struct {
 	IsStage bool `json:"is_stage" binding:"optional"`
 }
 
-type Category struct {
-	ID        uuid.UUID `json:"id" format:"uuid"`
-	Name      string    `json:"name" maxLength:"64"`
-	SortOrder int       `json:"sort_order"`
-	Channels  []Channel `json:"channels"`
-	CreatedAt time.Time `json:"created_at" format:"date-time"`
-}
-
-func loadCategories(ctx context.Context, p *db.Pool) ([]Category, map[uuid.UUID]int, error) {
-	catRows, err := p.Query(ctx, `SELECT id, name, sort_order, created_at FROM categories ORDER BY sort_order, created_at`)
-	if err != nil {
-		return nil, nil, fmt.Errorf("query categories: %w", err)
-	}
-	defer catRows.Close()
-	categories := make([]Category, 0)
-	categoryIdx := make(map[uuid.UUID]int)
-	for catRows.Next() {
-		cat := Category{Channels: make([]Channel, 0)}
-		if err := catRows.Scan(&cat.ID, &cat.Name, &cat.SortOrder, &cat.CreatedAt); err != nil {
-			return nil, nil, err
-		}
-		categoryIdx[cat.ID] = len(categories)
-		categories = append(categories, cat)
-	}
-	return categories, categoryIdx, catRows.Err()
-}
-
 func populateChannels(ctx context.Context, p *db.Pool, categories []Category, categoryIdx map[uuid.UUID]int) ([]Channel, error) {
 	chanRows, err := p.Query(ctx, `
 		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days,
@@ -129,25 +103,9 @@ func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel,
 	return categories, uncategorized, nil
 }
 
-func CreateCategory(ctx context.Context, p *db.Pool, name string, sortOrder int) (*Category, error) {
-	name, err := httpx.CleanText("name", name, MaxChannelNameLen, true)
-	if err != nil {
-		return nil, err
-	}
-	cat := Category{Channels: make([]Channel, 0)}
-	err = p.QueryRow(ctx, `
-		INSERT INTO categories (name, sort_order) VALUES ($1, $2)
-		RETURNING id, name, sort_order, created_at`, name, sortOrder).
-		Scan(&cat.ID, &cat.Name, &cat.SortOrder, &cat.CreatedAt)
-	if err != nil {
-		return nil, fmt.Errorf("create category: %w", err)
-	}
-	return &cat, nil
-}
-
 func cleanChannelInputs(name, topic string, chType ChannelType) (string, string, error) {
-	if chType != ChannelTypeText && chType != ChannelTypeVoice {
-		return "", "", httpx.ErrInvalidInput("type must be 'text' or 'voice'")
+	if chType != ChannelTypeText && chType != ChannelTypeVoice && chType != ChannelTypeForum {
+		return "", "", httpx.ErrInvalidInput("type must be 'text', 'voice' or 'forum'")
 	}
 	cleanName, err := httpx.CleanText("name", name, MaxChannelNameLen, true)
 	if err != nil {
@@ -378,20 +336,4 @@ func validateChannelEdit(name, topic *string, userLimit, slowMode *int) (*string
 		return nil, nil, err
 	}
 	return validName, validTopic, nil
-}
-
-// RenameCategory changes a category's name.
-func RenameCategory(ctx context.Context, p *db.Pool, id uuid.UUID, name string) error {
-	name, err := httpx.CleanText("name", name, MaxChannelNameLen, true)
-	if err != nil {
-		return err
-	}
-	tag, err := p.Exec(ctx, `UPDATE categories SET name = $2 WHERE id = $1`, id, name)
-	if err != nil {
-		return fmt.Errorf("rename category: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return errCategoryNotFound
-	}
-	return nil
 }

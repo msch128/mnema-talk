@@ -78,7 +78,7 @@ func enrich(ctx context.Context, p *db.Pool, msgs []Message) error {
 		ids[i] = m.ID
 	}
 	for _, load := range []func(context.Context, *db.Pool, []Message, map[uuid.UUID]int, []uuid.UUID) error{
-		loadAttachments, loadReactions, loadMentions, loadMentionRoles, loadPolls,
+		loadAttachments, loadReactions, loadMentions, loadMentionRoles, loadPolls, loadForumPostDetails,
 	} {
 		if err := load(ctx, p, msgs, idx, ids); err != nil {
 			return err
@@ -320,6 +320,10 @@ type NewMessage struct {
 	Embeds     []Embed
 	// HasAttachment is set for an upload (automod's new-account rule looks at it).
 	HasAttachment bool
+	// Title is set for root messages in a forum channel.
+	Title *string
+	// IsLocked is set when creating a locked post.
+	IsLocked bool
 }
 
 // CreateMessage inserts a message and returns its ID.
@@ -341,11 +345,11 @@ func CreateMessage(ctx context.Context, q db.Querier, nm NewMessage) (uuid.UUID,
 	// conversations' own sequence, so the public numbering shows nothing of
 	// what is said in private (migration 0050).
 	err := q.QueryRow(ctx, `
-		INSERT INTO messages (number, in_dm, channel_id, user_id, content, parent_id, reply_to_id, webhook_id, author_name, embeds, forward_of, forwarded) OVERRIDING SYSTEM VALUE
+		INSERT INTO messages (number, in_dm, channel_id, user_id, content, parent_id, reply_to_id, webhook_id, author_name, embeds, forward_of, forwarded, title, is_locked) OVERRIDING SYSTEM VALUE
 		SELECT CASE WHEN c.type = 'dm' THEN nextval('dm_number_seq') ELSE nextval(pg_get_serial_sequence('messages', 'number')) END,
-		       c.type = 'dm', c.id, $2, $3, $4, $5, $6, $7, $8, $9::uuid, $9::uuid IS NOT NULL
+		       c.type = 'dm', c.id, $2, $3, $4, $5, $6, $7, $8, $9::uuid, $9::uuid IS NOT NULL, $10, $11
 		FROM channels c WHERE c.id = $1
-		RETURNING id`, nm.ChannelID, nm.UserID, nm.Content, nm.ParentID, nm.ReplyToID, nm.WebhookID, authorName, embeds, nm.ForwardOf).Scan(&id)
+		RETURNING id`, nm.ChannelID, nm.UserID, nm.Content, nm.ParentID, nm.ReplyToID, nm.WebhookID, authorName, embeds, nm.ForwardOf, nm.Title, nm.IsLocked).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, errChannelNotFound
 	}

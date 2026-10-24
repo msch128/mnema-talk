@@ -1,20 +1,14 @@
 <script setup lang="ts">
-import { clockTimeOptions } from '../lib/time'
 import type { Message } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
-import { X, MessageSquare, Loader2, Pin, Reply, Bell, BellOff } from '@lucide/vue'
+import { X, MessageSquare, Loader2, Bell, BellOff, Lock, Unlock } from '@lucide/vue'
 import type { ThreadRoot } from '../stores/chat'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
-import UserAvatar from './UserAvatar.vue'
-import MarkdownContent from './MarkdownContent.vue'
+import { updateForumPost } from '../lib/forumApi'
+import ThreadRootCard from './ThreadRootCard.vue'
 import ImageLightbox from './ImageLightbox.vue'
-import MessageAttachments from './MessageAttachments.vue'
-import MessageEmbeds from './MessageEmbeds.vue'
-import PollCard from './PollCard.vue'
-import BotBadge from './BotBadge.vue'
-import ReactionBar from './ReactionBar.vue'
 import ThreadReply from './ThreadReply.vue'
 import BlockedMessageRow from './BlockedMessageRow.vue'
 import { useBlocksStore } from '../stores/blocks'
@@ -25,7 +19,7 @@ import { handleMessageKeydown } from '../composables/useMessageKeyboard'
 import { useDraftSlot } from '../composables/useDraftSlot'
 import { threadDraftKey, type DraftReply } from '../lib/drafts'
 import { useToastStore } from '../stores/toast'
-import { t, locale } from '../i18n'
+import { t } from '../i18n'
 
 const chatStore = useChatStore()
 const toasts = useToastStore()
@@ -35,9 +29,22 @@ const threadChannel = computed(() => chatStore.activeThread?.channel_id ?? chatS
 const blocks = useBlocksStore()
 // In a direct message conversation the server's own answer decides, not channel permissions.
 const dmChat = useDmChat()
-const canSend = computed(() => (dmChat.isDm.value ? dmChat.canSend.value : permissions.canIn(threadChannel.value, 'send_messages')))
+const canManageMessages = computed(() => permissions.canIn(threadChannel.value, 'manage_messages'))
+const isLockedForMe = computed(() => !!chatStore.activeThread?.is_locked && !canManageMessages.value)
+const canSend = computed(() => !isLockedForMe.value && (dmChat.isDm.value ? dmChat.canSend.value : permissions.canIn(threadChannel.value, 'send_messages')))
 const canAttach = computed(() => canSend.value && (dmChat.isDm.value || permissions.canIn(threadChannel.value, 'attach_files')))
 const canReact = computed(() => (dmChat.isDm.value ? dmChat.canSend.value : permissions.canIn(threadChannel.value, 'add_reactions')))
+
+async function toggleLock() {
+  if (!chatStore.activeThread?.title || !canManageMessages.value) return
+  const newLock = !chatStore.activeThread.is_locked
+  try {
+    await updateForumPost(threadChannel.value, chatStore.activeThread.id, { is_locked: newLock })
+    chatStore.activeThread.is_locked = newLock
+  } catch (err) {
+    toasts.error(caughtErrorMessage(err, t('forum.lockFailed')))
+  }
+}
 
 const followed = computed(() => !!chatStore.activeThread && chatStore.followedThreads.has(chatStore.activeThread.id))
 const replyInput = ref('')
@@ -180,12 +187,6 @@ async function handleFileUpload(e: Event) {
   replyingTo.value = null
   scrollToBottom()
 }
-
-function formatDate(dateStr?: string) {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return d.toLocaleDateString([locale.value], { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString([locale.value], clockTimeOptions(locale.value))
-}
 </script>
 
 <template>
@@ -203,6 +204,20 @@ function formatDate(dateStr?: string) {
           </div>
         </div>
       </div>
+
+      <button
+        v-if="chatStore.activeThread?.title && canManageMessages"
+        type="button"
+        data-testid="thread-lock-toggle"
+        :aria-label="chatStore.activeThread.is_locked ? $t('forum.unlockPost') : $t('forum.lockPost')"
+        class="w-8 h-8 flex items-center justify-center shrink-0 rounded-md hover:bg-mnema-surface transition"
+        :class="chatStore.activeThread.is_locked ? 'text-amber-400' : 'text-mnema-tertiary hover:text-mnema-text'"
+        v-tooltip="chatStore.activeThread.is_locked ? $t('forum.unlockPost') : $t('forum.lockPost')"
+        @click="toggleLock"
+      >
+        <Lock v-if="chatStore.activeThread.is_locked" class="w-[18px] h-[18px]" />
+        <Unlock v-else class="w-[18px] h-[18px]" />
+      </button>
 
       <button
         v-if="chatStore.activeThread && chatStore.followKnown"
@@ -231,76 +246,16 @@ function formatDate(dateStr?: string) {
     <!-- Scrollable Thread Content Area -->
     <div ref="repliesContainer" class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3">
       <!-- Root Message Card -->
-      <div
+      <ThreadRootCard
         v-if="chatStore.activeThread"
-        :data-reply-id="chatStore.activeThread.id"
-        tabindex="0"
-        role="article"
-        @keydown="onRootKeydown($event, chatStore.activeThread)"
-        :class="[
-          'relative group bg-mnema-elevated border border-mnema-border/80 rounded-xl p-3.5 shadow-xs stack-2 focus:outline-hidden focus-visible:border-mnema-accent/60',
-          highlightedId === chatStore.activeThread.id ? 'msg-flash' : ''
-        ]"
-      >
-        <!-- Reply to the thread's root message -->
-        <button
-          type="button"
-          @click.stop="startReply(chatStore.activeThread)"
-          class="btn btn-secondary btn-sm absolute right-2 top-2 hidden group-hover:flex group-focus-within:flex p-1"
-          v-tooltip="$t('chat.reply')"
-        >
-          <Reply class="w-3.5 h-3.5" />
-        </button>
-
-        <div class="flex items-center gap-2.5">
-          <UserAvatar
-            :user="chatStore.activeThread"
-            size="md"
-            class="cursor-pointer hover:opacity-85 transition"
-            @click="chatStore.openUserProfile(chatStore.activeThread)"
-          />
-          <div class="min-w-0">
-            <button
-              type="button"
-              data-testid="author-name"
-              @click="chatStore.openUserProfile(chatStore.activeThread)"
-              class="font-semibold text-message text-mnema-text hover:text-mnema-accent transition-colors cursor-pointer truncate block max-w-full text-left focus-visible:text-mnema-accent"
-            >
-              {{ chatStore.activeThread.display_name || chatStore.activeThread.username }}
-            </button>
-            <BotBadge v-if="chatStore.activeThread.is_bot" :webhook="chatStore.activeThread.is_webhook === true" />
-            <span class="text-xs text-mnema-tertiary font-mono">
-              {{ formatDate(chatStore.activeThread.created_at) }}
-            </span>
-          </div>
-        </div>
-
-        <MarkdownContent v-if="chatStore.activeThread.content" :content="chatStore.activeThread.content" :mention-roles="chatStore.activeThread.mention_roles ?? []" />
-        <MessageEmbeds :embeds="chatStore.activeThread.embeds ?? []" />
-        <!-- A poll that started the thread keeps its options, votes and time left here -->
-        <PollCard v-if="chatStore.activeThread.poll" :msg="chatStore.activeThread as Message" />
-        <span v-if="chatStore.activeThread.is_edited" class="block text-xs text-mnema-tertiary italic">{{ $t('chat.edited') }}</span>
-        <span v-if="chatStore.activeThread.is_pinned" data-testid="thread-root-pinned" class="flex items-center gap-1 text-xs text-mnema-accent">
-          <Pin class="w-3.5 h-3.5" />{{ $t('moderation.pinned') }}
-        </span>
-
-        <!-- Root Message Attachments -->
-        <MessageAttachments
-          :attachments="chatStore.activeThread.attachments ?? []"
-          variant="root"
-          @open-image="selectedImage = $event"
-        />
-        <!-- Root message reactions -->
-        <ReactionBar
-          :reactions="chatStore.activeThread.reactions ?? []"
-          :can-add="canReact"
-          small-icon
-          :picker-open="activeReactionPickerMsgId === `bottom-${chatStore.activeThread.id}`"
-          @toggle="actions.toggleReaction(chatStore.activeThread.id, $event)"
-          @toggle-picker="actions.togglePicker(`bottom-${chatStore.activeThread.id}`)"
-          @close-picker="actions.closePicker()"
-        />
-      </div>
+        :root="chatStore.activeThread"
+        :actions="actions"
+        :can-react="canReact"
+        :highlighted="highlightedId === chatStore.activeThread.id"
+        @reply="startReply"
+        @open-image="selectedImage = $event"
+        @keydown="onRootKeydown"
+      />
 
       <!-- Thread Replies Divider -->
       <div class="flex items-center gap-2 py-1">
@@ -342,7 +297,12 @@ function formatDate(dateStr?: string) {
       </template>
     </div>
 
+    <div v-if="isLockedForMe" class="p-3 bg-amber-400/10 border-t border-mnema-hairline flex items-center gap-2 text-xs text-amber-400 shrink-0">
+      <Lock class="w-4 h-4 shrink-0" />
+      <span>{{ $t('forum.lockedNotice') }}</span>
+    </div>
     <ThreadComposer
+      v-else
       ref="composer"
       v-model="replyInput"
       :replying-to="replyingTo"
