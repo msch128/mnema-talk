@@ -1,0 +1,29 @@
+api/openapi.json
+  s_06fcde5dbef956::t_0ceaf3108bc048 23868
+doc/bots.md
+  s_06fcde5dbef956::t_0ceaf3108bc048 562-565
+internal/poll/handler.go
+  s_06fcde5dbef956::t_8601442277cc49 122
+internal/server/poll_anonymous_integration_test.go
+  s_06fcde5dbef956::t_57d6ce68666181 17,156,169-172,295-317
+web/src/components/PollCard.test.ts
+  s_06fcde5dbef956::t_60eb22ceab30c6 163-175
+web/src/composables/usePoll.ts
+  s_06fcde5dbef956::t_2b7e69d0853203 75-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aa39bc0530010a7697daa390c1eaee60960d9a5a",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
