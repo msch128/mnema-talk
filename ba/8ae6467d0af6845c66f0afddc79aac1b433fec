@@ -1,0 +1,29 @@
+internal/chat/dm.go
+  s_06fcde5dbef956::t_0274f2480e7a14 93-94,104
+internal/push/locales/texts.json
+  s_06fcde5dbef956::t_7f60bfc45474c9 10-11,21-22
+internal/push/payload.go
+  s_06fcde5dbef956::t_e8435e190625ea 76-77,151-153
+internal/push/payload_test.go
+  s_06fcde5dbef956::t_c28851b1f3fbcd 76-99
+internal/push/service.go
+  s_06fcde5dbef956::t_48b8fba50c36aa 219-220
+internal/server/dm_integration_test.go
+  s_06fcde5dbef956::t_0eaae1497076dc 379-391
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ba8ae6467d0af6845c66f0afddc79aac1b433fec",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
