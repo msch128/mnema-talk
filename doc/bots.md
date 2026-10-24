@@ -565,8 +565,10 @@ the voters of each option. An **anonymous** poll never does: not in the
 message, the message list, search, the mentions inbox, the WebSocket, the
 bot gateway or the outgoing webhooks, and not for the author or the Owner.
 Since 1.2 (feature `polls.anonymous`) it does not even store the choice: the
-server keeps only that a member voted and a counter per option, so nobody,
-not even someone with database access, can tell what a member chose. Hence a
+server keeps only that a member voted and a counter per option, so nobody in
+the app, moderators and administrators included, can tell what a member chose
+(an operator with direct database access could in theory correlate vote
+timing; see SECURITY.md). Hence a
 vote in an anonymous poll is final: the second `PUT .../poll/votes` answers
 `409` and an empty `option_ids` list `400`. `GET .../poll` returns the caller's
 own votes in `my_votes` (always empty for an anonymous poll) and `has_voted`,

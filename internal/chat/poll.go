@@ -97,7 +97,7 @@ func loadPollOptions(ctx context.Context, q db.Querier, polls map[uuid.UUID]*Pol
 		ids = append(ids, id)
 	}
 	rows, err := q.Query(ctx, `
-		SELECT o.poll_id, o.id, o.label, CASE WHEN p.anonymous THEN o.anon_votes ELSE COUNT(v.user_id)::int END,
+		SELECT o.poll_id, o.id, o.label, CASE WHEN p.anonymous THEN o.anon_votes + (SELECT COUNT(*)::int FROM poll_anon_ballots b WHERE b.option_id = o.id) ELSE COUNT(v.user_id)::int END,
 		       CASE WHEN p.anonymous THEN NULL
 		            ELSE array_agg(v.user_id ORDER BY v.created_at, v.user_id) FILTER (WHERE v.user_id IS NOT NULL) END
 		FROM poll_options o

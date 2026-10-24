@@ -143,8 +143,8 @@ Rolling back to 1.1 needs the restore of the pre-update backup.
   stored who voted for what and only hid it in the API. The migration turns
   every existing anonymous poll into counters plus "has voted" rows and
   **deletes its named votes**, so the tallies and the participants stay but
-  nobody can be tied to an answer any more, not even from a database backup
-  taken after the update. Backups taken before the update, and PostgreSQL's
+  nobody in the app can be tied to an answer any more, and a database backup
+  taken after the update holds no named vote. Backups taken before the update, and PostgreSQL's
   own dead rows until autovacuum has run, can still hold the old rows; run
   `VACUUM FULL poll_votes;` if that matters to you. Members can no longer
   change a vote in an anonymous poll (the web app says so before they vote);

@@ -1424,7 +1424,7 @@
     },
     "allowMultiple": "Allow several answers",
     "makeAnonymous": "Anonymous poll",
-    "anonymousHint": "Only the totals are stored: nobody can see who voted for what, not even you or administrators. A vote can’t be changed once it is sent.",
+    "anonymousHint": "Only the totals are stored: nobody in the app can see who voted for what, not even you, moderators or administrators, and Mnema never stores which answer a member chose. A vote can’t be changed once it is sent.",
     "post": "Post poll",
     "problem": {
       "question": "Enter a question.",
@@ -1462,7 +1462,7 @@
     "more": "+{count} more",
     "failed": "That didn’t work. Try again.",
     "cannotVote": "You can’t vote in this channel.",
-    "anonymousBadgeHint": "Anonymous poll: the server keeps only how many votes each answer has and that you voted, never what you chose.",
+    "anonymousBadgeHint": "Anonymous poll: nobody in the app, not even moderators or administrators, can see who chose what. Mnema never stores which answer a member chose, only that they voted and how many votes each answer has.",
     "anonymousFinal": "Your vote can’t be changed after you send it.",
     "submitVote": "Vote",
     "youVotedAnonymous": "You voted. Votes in an anonymous poll can’t be changed."

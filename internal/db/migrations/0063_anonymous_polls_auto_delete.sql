@@ -5,8 +5,12 @@
 -- like any poll and only hid them in the API. From now on an anonymous poll
 -- stores two unlinked facts: THAT a member voted (poll_voters: it prevents a
 -- second vote) and HOW MANY votes each option has (poll_options.anon_votes).
--- Nothing connects the two, and poll_voters has no timestamp, so insert order
--- or time cannot be matched against the counters either.
+-- Nothing connects the two. A ballot is appended to poll_anon_ballots (poll and
+-- option only: no member, no timestamp) and is folded into the counters in
+-- batches later, so the voter row and a counter change are not written as one
+-- pair; a periodic fold sums the ballots into anon_votes and deletes them.
+-- This is hardening, not a guarantee against an operator with direct database
+-- access (WAL, transaction ids): see SECURITY.md.
 ALTER TABLE poll_options ADD COLUMN anon_votes INT NOT NULL DEFAULT 0 CHECK (anon_votes >= 0);
 ALTER TABLE polls ADD COLUMN anon_voters INT NOT NULL DEFAULT 0 CHECK (anon_voters >= 0);
 
@@ -16,6 +20,12 @@ CREATE TABLE poll_voters (
     PRIMARY KEY (poll_id, user_id)
 );
 CREATE INDEX poll_voters_user ON poll_voters (user_id);
+
+CREATE TABLE poll_anon_ballots (
+    poll_id   UUID NOT NULL REFERENCES polls(message_id) ON DELETE CASCADE,
+    option_id UUID NOT NULL REFERENCES poll_options(id) ON DELETE CASCADE
+);
+CREATE INDEX poll_anon_ballots_option ON poll_anon_ballots (option_id);
 
 -- Convert the anonymous polls that exist: keep the tallies and who took part,
 -- drop who chose what. Members can no longer change a vote in them.

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -118,13 +120,47 @@ func castAnonymousVote(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UU
 	if tag.RowsAffected() == 0 {
 		return errAlreadyVoted
 	}
-	if _, err := tx.Exec(ctx, `UPDATE poll_options SET anon_votes = anon_votes + 1 WHERE poll_id = $1 AND id = ANY($2)`, messageID, optionIDs); err != nil {
-		return fmt.Errorf("count vote: %w", err)
+	// The ballot carries no member and no time; the statement holding the
+	// options never sees the member, and the one holding the member never sees
+	// the options.
+	if _, err := tx.Exec(ctx, `INSERT INTO poll_anon_ballots (poll_id, option_id) SELECT $1, unnest($2::uuid[])`, messageID, optionIDs); err != nil {
+		return fmt.Errorf("store ballot: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `UPDATE polls SET anon_voters = anon_voters + 1 WHERE message_id = $1`, messageID); err != nil {
 		return fmt.Errorf("count voter: %w", err)
 	}
 	return nil
+}
+
+// FoldBallots adds the ballots of anonymous polls to the option counters and
+// deletes them. Readers add the unfolded ballots to the counters, so a fold
+// changes no result; it only means a vote and a counter change are not
+// written together.
+func FoldBallots(ctx context.Context, p *db.Pool) error {
+	_, err := p.Exec(ctx, `
+		WITH gone AS (DELETE FROM poll_anon_ballots RETURNING option_id),
+		     n AS (SELECT option_id, COUNT(*)::int AS c FROM gone GROUP BY option_id)
+		UPDATE poll_options o SET anon_votes = o.anon_votes + n.c FROM n WHERE o.id = n.option_id`)
+	if err != nil {
+		return fmt.Errorf("fold ballots: %w", err)
+	}
+	return nil
+}
+
+// RunFold folds the ballots every interval until ctx ends.
+func RunFold(ctx context.Context, p *db.Pool, every time.Duration) {
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			if err := FoldBallots(ctx, p); err != nil && ctx.Err() == nil {
+				slog.Error("fold poll ballots failed", "err", err)
+			}
+		}
+	}
 }
 
 // HasVoted tells whether the member voted in the poll. It is all an anonymous

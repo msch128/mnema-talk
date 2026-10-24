@@ -185,11 +185,18 @@ retention and the audit entries are in [moderation](moderation.md#blocking-and-r
 ## Anonymous polls
 
 An anonymous poll (feature `polls.anonymous`) stores two facts that nothing
-connects. `poll_voters (poll_id, user_id)` says that a member voted, which
+in the schema connects. This hides votes from every member, moderator and
+administrator in the app; an operator with direct access to the database
+server (its WAL, transaction ids or statement logs) could, in theory, still
+correlate the timing of a voter row and a ballot. Mnema itself never stores
+which option a member chose. `poll_voters (poll_id, user_id)` says that a member voted, which
 makes a second vote impossible; it has no timestamp, so neither insert order
-nor time can be matched against the other fact. `poll_options.anon_votes` and
-`polls.anon_voters` are plain counters, raised in the same transaction as the
-voter row. No table, log line, audit entry, event, export or data export holds
+nor time can be matched against the other fact. The choice goes to
+`poll_anon_ballots (poll_id, option_id)`: no member, no timestamp, appended in
+the same transaction but by a separate statement. Readers add the unfolded
+ballots to the counter `poll_options.anon_votes`, and `poll.RunFold` sums the
+ballots into it and deletes them every ten minutes. `polls.anon_voters` is the
+participant counter. No table, log line, audit entry, event, export or data export holds
 a member next to a choice; a trigger on `poll_votes` (which still serves polls
 that name their voters) refuses a row for an anonymous poll, and an integration
 test walks every table of the schema to prove that no row mentions a voter and

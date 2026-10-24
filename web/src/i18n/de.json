@@ -1424,7 +1424,7 @@
     },
     "allowMultiple": "Mehrere Antworten erlauben",
     "makeAnonymous": "Anonyme Umfrage",
-    "anonymousHint": "Es werden nur die Summen gespeichert: Niemand sieht, wer wofür gestimmt hat, auch du und Administratoren nicht. Eine abgeschickte Stimme lässt sich nicht mehr ändern.",
+    "anonymousHint": "Es werden nur die Summen gespeichert: Niemand in der App sieht, wer wofür gestimmt hat, auch du, Moderatoren und Administratoren nicht, und Mnema speichert nie, welche Antwort ein Mitglied gewählt hat. Eine abgeschickte Stimme lässt sich nicht mehr ändern.",
     "post": "Umfrage senden",
     "problem": {
       "question": "Gib eine Frage ein.",
@@ -1462,7 +1462,7 @@
     "more": "+{count} weitere",
     "failed": "Das hat nicht geklappt. Versuche es noch einmal.",
     "cannotVote": "In diesem Kanal kannst du nicht abstimmen.",
-    "anonymousBadgeHint": "Anonyme Umfrage: Der Server speichert nur, wie viele Stimmen jede Antwort hat und dass du abgestimmt hast, nie was du gewählt hast.",
+    "anonymousBadgeHint": "Anonyme Umfrage: Niemand in der App, auch keine Moderatoren oder Administratoren, sieht, wer was gewählt hat. Mnema speichert nie, welche Antwort ein Mitglied gewählt hat, nur dass es abgestimmt hat und wie viele Stimmen jede Antwort hat.",
     "anonymousFinal": "Deine Stimme lässt sich nach dem Abschicken nicht mehr ändern.",
     "submitVote": "Abstimmen",
     "youVotedAnonymous": "Du hast abgestimmt. Stimmen in einer anonymen Umfrage lassen sich nicht ändern."

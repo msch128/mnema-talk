@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/poll"
 )
 
 // everyRowMentioning counts, over every table of the schema, the rows whose
@@ -226,5 +227,36 @@ func TestMigrationConvertsAnExistingAnonymousPoll(t *testing.T) {
 	}
 	if got := f.detail(t, f.bob, named); !sameInts(tallies(got.Poll), []int{1, 0, 0}) || len(got.MyVotes) != 1 {
 		t.Fatalf("a named poll was touched: %+v", got)
+	}
+}
+
+// A ballot carries neither a member nor a time, and folding the ballots into
+// the counters changes no result.
+func TestAnonymousBallotsHaveNoMemberAndFoldingChangesNothing(t *testing.T) {
+	f := newPollFixture(t)
+	m := f.basic(t, f.alice, map[string]any{"anonymous": true})
+	wantStatus(t, "bob", f.vote(f.bob, m, f.optionID(m, 0)), http.StatusOK)
+	wantStatus(t, "owner", f.vote(f.owner, m, f.optionID(m, 0)), http.StatusOK)
+
+	if n := f.a.countRows(`SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'poll_anon_ballots' AND column_name NOT IN ('poll_id', 'option_id')`); n != 0 {
+		t.Fatal("poll_anon_ballots has a column that could name a member or a time")
+	}
+	if n := f.a.countRows(`SELECT COUNT(*) FROM poll_anon_ballots WHERE poll_id = $1`, m.ID); n != 2 {
+		t.Fatalf("unfolded ballots: %d", n)
+	}
+	before := tallies(f.detail(t, f.bob, m).Poll)
+	if err := poll.FoldBallots(t.Context(), f.a.db); err != nil {
+		t.Fatal(err)
+	}
+	if n := f.a.countRows(`SELECT COUNT(*) FROM poll_anon_ballots`); n != 0 {
+		t.Fatalf("ballots left after the fold: %d", n)
+	}
+	after := f.detail(t, f.bob, m)
+	if !sameInts(before, tallies(after.Poll)) || !sameInts(before, []int{2, 0, 0}) || after.TotalVoters != 2 {
+		t.Fatalf("fold changed the result: %v -> %+v", before, after)
+	}
+	wantStatus(t, "third voter after a fold", f.vote(f.alice, m, f.optionID(m, 1)), http.StatusOK)
+	if got := tallies(f.detail(t, f.bob, m).Poll); !sameInts(got, []int{2, 1, 0}) {
+		t.Fatalf("after fold and vote: %v", got)
 	}
 }
