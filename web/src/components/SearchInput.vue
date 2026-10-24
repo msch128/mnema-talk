@@ -184,13 +184,6 @@ defineExpose({ focus: () => inputEl.value?.focus() })
         <X class="w-4 h-4" />
       </button>
 
-      <SearchFilterDropdown
-        :open="showDropdown"
-        :lookup="lookup"
-        @select="onSelectFilter"
-        @close="dropdownDismissed = true"
-      />
-
       <ul
         v-if="suggestions"
         id="search-suggestions"
@@ -212,6 +205,13 @@ defineExpose({ focus: () => inputEl.value?.focus() })
         </li>
       </ul>
     </div>
+
+    <SearchFilterDropdown
+      :open="showDropdown"
+      :lookup="lookup"
+      @select="onSelectFilter"
+      @close="dropdownDismissed = true"
+    />
 
     <div v-if="!v3Supported" class="flex flex-wrap items-center gap-1.5 border-t border-mnema-hairline bg-mnema-raised px-4 py-2 text-xs text-mnema-muted">
       <span>{{ $t('chat.filter') }}:</span>
