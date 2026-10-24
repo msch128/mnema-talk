@@ -122,10 +122,11 @@ const rowClass = computed(() => [
       @keydown.alt.up.self="moveKey($event, -1)"
       @keydown.alt.down.self="moveKey($event, 1)"
     >
-      <!-- Unread pip on left edge -->
+      <!-- Unread: a small dot at the left edge, inside the row -->
       <span
         v-if="unread > 0 && !reading"
-        class="absolute -left-1.5 w-1 h-2 rounded-r bg-mnema-text"
+        data-testid="channel-unread-dot"
+        class="absolute left-0.5 w-1.5 h-1.5 rounded-full bg-mnema-text"
       ></span>
 
       <div class="flex items-center gap-1.5 min-w-0">

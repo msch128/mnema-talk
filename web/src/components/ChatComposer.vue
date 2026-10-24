@@ -83,7 +83,7 @@ function handleKeyDown(e: KeyboardEvent) {
     <ReplyComposerBar v-if="replyingTo" :target="replyingTo" @cancel="emit('cancel-reply')" />
     <div
       :class="[
-        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 max-md:py-1 max-md:pr-1 flex items-center gap-1 sm:gap-2 shadow-xs focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
+        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 max-md:py-1 max-md:pr-1 flex items-center gap-1 sm:gap-2 shadow-xs focus-within:border-mnema-border-strong focus-within:ring-2 focus-within:ring-mnema-accent/10 transition',
         replyingTo ? 'rounded-b-lg' : 'rounded-lg'
       ]"
     >

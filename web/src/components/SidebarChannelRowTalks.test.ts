@@ -4,6 +4,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import SidebarChannelRow from './SidebarChannelRow.vue'
 import TalkParticipants from './TalkParticipants.vue'
 import { useVoiceStore } from '../stores/voice'
+import { useChatStore } from '../stores/chat'
 import { canConfigureTalk, isTalkLeader, isTempTalk } from '../lib/talks'
 import { channelFixture, fixtureId, userFixture, voiceUserFixture } from '../test-fixtures.fixture'
 import { setLocale } from '../i18n'
@@ -67,5 +68,18 @@ describe('who sees the Talk settings', () => {
     expect(isTalkLeader(channelFixture({ type: 'voice', leader_id: me }), me)).toBe(false)
     expect(isTempTalk(led)).toBe(true)
     expect(isTempTalk(undefined)).toBe(false)
+  })
+})
+
+describe('unread marker', () => {
+  it('is a small dot inside the row, not a pill cut off at the edge, and gone once read', () => {
+    const channel = channelFixture({ id: fixtureId(7), name: 'general' })
+    useChatStore().readStates = { [channel.id]: { unread_count: 3, mention_count: 0 } } as never
+    const w = mount(SidebarChannelRow, { props: { channel } })
+    const dot = w.get('[data-testid="channel-unread-dot"]')
+    expect(dot.classes()).toContain('rounded-full')
+    expect(dot.classes()).not.toContain('-left-1.5')
+    useChatStore().readStates = {}
+    return w.vm.$nextTick().then(() => expect(w.find('[data-testid="channel-unread-dot"]').exists()).toBe(false))
   })
 })

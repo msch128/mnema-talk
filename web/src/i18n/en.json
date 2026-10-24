@@ -59,7 +59,10 @@
     "deleted": "Deleted member"
   },
   "media": {
-    "sizeMb": "{size} MB"
+    "sizeB": "{size} B",
+    "sizeKb": "{size} KB",
+    "sizeMb": "{size} MB",
+    "sizeGb": "{size} GB"
   },
   "menu": {
     "adminConsole": "Admin console",
@@ -1668,7 +1671,8 @@
     "anonymousBadgeHint": "Anonymous poll: nobody in the app, not even moderators or administrators, can see who chose what. Mnema never stores which answer a member chose, only that they voted and how many votes each answer has.",
     "anonymousFinal": "Your vote can’t be changed after you send it.",
     "submitVote": "Vote",
-    "youVotedAnonymous": "You voted. Votes in an anonymous poll can’t be changed."
+    "youVotedAnonymous": "You voted. Votes in an anonymous poll can’t be changed.",
+    "canChange": "You can change your vote until the poll ends."
   },
   "mention": {
     "title": "Mention",
@@ -2350,7 +2354,7 @@
     "locationType": "Location type",
     "locationTalk": "Talk channel",
     "locationText": "Custom text location",
-    "locationTextPlaceholder": "e.g. Room 42, In-game lobby, or external link",
+    "locationTextPlaceholder": "e.g. Room 42 or a link",
     "selectTalk": "Select a Talk channel",
     "coverImage": "Cover image (optional)",
     "coverAlt": "Event cover image",
@@ -2362,6 +2366,10 @@
     "going": "Going",
     "interested": "Interested",
     "notGoing": "Not going",
+    "rsvpGoing": "I’m going",
+    "rsvpInterested": "Maybe",
+    "rsvpNotGoing": "Can’t make it",
+    "cancelKeep": "Keep event",
     "goingCount": "{count} going",
     "interestedCount": "{count} interested",
     "reminderToast": "Reminder: “{title}” is starting in 15 minutes!",

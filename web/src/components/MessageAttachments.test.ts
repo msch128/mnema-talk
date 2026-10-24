@@ -15,7 +15,7 @@ describe('MessageAttachments', () => {
     expect(mount(MessageAttachments).find('[data-attachment]').exists()).toBe(false)
     const w = mount(MessageAttachments, { props: { attachments: [{ ...file, mime_type: '', size_bytes: 0 }] } })
     expect(w.find('[data-attachment="file"]').exists()).toBe(true)
-    expect(w.text()).toContain('0.00')
+    expect(w.text()).toContain('0 B')
   })
 
   it('uses the chat layout when an untyped parent supplies an unknown variant', () => {
@@ -68,7 +68,7 @@ describe('MessageAttachments', () => {
     const w = mount(MessageAttachments, { props: { attachments: [image, video, file] } })
     const links = w.findAll('a')
     expect(links.map(a => a.text())).toEqual(['clip.mp4', 'doc.pdf'])
-    expect(w.text()).toContain('2.00')
+    expect(w.text()).toContain('2 MB')
     expect(w.find('[data-attachment="file"] img, [data-attachment="file"] video')!.exists()).toBe(false)
   })
 })

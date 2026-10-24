@@ -198,8 +198,9 @@ input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [typ
 textarea:not([data-bare]):focus-visible,
 select:focus-visible {
   outline: none;
-  border-color: var(--color-mnema-accent);
-  box-shadow: 0 0 0 3px rgb(45 167 113 / 0.2);
+  /* Calm: the border takes a hint of the accent and a faint halo, never a full frame. */
+  border-color: color-mix(in srgb, var(--color-mnema-accent) 45%, var(--color-mnema-border-strong));
+  box-shadow: 0 0 0 3px rgb(45 167 113 / 0.1);
 }
 
 input[aria-invalid='true'],
