@@ -2,7 +2,7 @@
 // Admin dashboard shell: the tab bar and one component per tab. Tabs stay
 // alive while the dialog is open, so an unsaved layout survives a tab switch.
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
-import { Users, FolderTree, Link, HardDrive, Server, Shield, ScrollText, Gavel, Bot, Sparkles, Smile, Flag } from '@lucide/vue'
+import { Users, FolderTree, Link, HardDrive, Server, Shield, ScrollText, Gavel, Bot, Sparkles, Smile, Flag, Activity } from '@lucide/vue'
 import { navigate } from '../lib/router'
 import { t } from '../i18n'
 import { useAuthStore } from '../stores/auth'
@@ -15,6 +15,7 @@ import AdminLayoutTab from './AdminLayoutTab.vue'
 import AdminInvitesTab from './AdminInvitesTab.vue'
 import AdminMediaTab from './AdminMediaTab.vue'
 import AdminSystemTab from './AdminSystemTab.vue'
+import AdminStatusTab from './AdminStatusTab.vue'
 import AdminAuditTab from './AdminAuditTab.vue'
 import AdminBansTab from './AdminBansTab.vue'
 import AdminBotsTab from './AdminBotsTab.vue'
@@ -34,8 +35,8 @@ const authStore = useAuthStore()
 const permissions = usePermissionsStore()
 const features = useServerFeaturesStore()
 
-type AdminTab = 'users' | 'roles' | 'channels' | 'invites' | 'onboarding' | 'emoji' | 'reports' | 'bans' | 'bots' | 'media' | 'audit' | 'system'
-const ALL_TABS: readonly AdminTab[] = ['users', 'roles', 'channels', 'invites', 'onboarding', 'emoji', 'reports', 'bans', 'bots', 'media', 'audit', 'system']
+type AdminTab = 'users' | 'roles' | 'channels' | 'invites' | 'onboarding' | 'emoji' | 'reports' | 'bans' | 'bots' | 'media' | 'audit' | 'system' | 'status'
+const ALL_TABS: readonly AdminTab[] = ['users', 'roles', 'channels', 'invites', 'onboarding', 'emoji', 'reports', 'bans', 'bots', 'media', 'audit', 'system', 'status']
 // Each tab needs its own permission; storage and system are the Owner's.
 const ALLOWED: Record<AdminTab, () => boolean> = {
   users: () => permissions.can('manage_members') || permissions.can('manage_roles'),
@@ -49,7 +50,8 @@ const ALLOWED: Record<AdminTab, () => boolean> = {
   bots: () => permissions.can('manage_bots'),
   media: () => permissions.isOwner,
   audit: () => permissions.can('view_audit_log'),
-  system: () => permissions.isOwner
+  system: () => permissions.isOwner,
+  status: () => features.opsStatus && (permissions.isOwner || permissions.can('administrator'))
 }
 const TABS = computed(() => ALL_TABS.filter(tab => ALLOWED[tab]()))
 function isAdminTab(value: string): value is AdminTab { return TABS.value.some(tab => tab === value) }
@@ -65,7 +67,8 @@ const TAB_COMPONENTS = {
   bots: AdminBotsTab,
   media: AdminMediaTab,
   audit: AdminAuditTab,
-  system: AdminSystemTab
+  system: AdminSystemTab,
+  status: AdminStatusTab
 }
 const activeTab = ref<AdminTab>(isAdminTab(props.initialTab) ? props.initialTab : (TABS.value[0] ?? 'users'))
 
@@ -140,7 +143,8 @@ watch(activeTab, (tab) => {
         <Bot v-else-if="tab === 'bots'" class="w-4 h-4" />
         <HardDrive v-else-if="tab === 'media'" class="w-4 h-4" />
         <ScrollText v-else-if="tab === 'audit'" class="w-4 h-4" />
-        <Server v-else class="w-4 h-4" />
+        <Server v-else-if="tab === 'system'" class="w-4 h-4" />
+        <Activity v-else class="w-4 h-4" />
         <span>{{ $t(`admin.tabs.${tab}`) }}</span>
       </button>
     </div>
