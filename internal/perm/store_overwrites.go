@@ -126,8 +126,14 @@ func refuseTempTalk(ctx context.Context, tx pgx.Tx, kind string, id uuid.UUID) e
 	if kind != TargetChannel {
 		return nil
 	}
+	// FOR UPDATE on the channel row serializes this edit with chat.OpenTempTalk,
+	// which holds the same row lock on the lobby while it copies the overwrites:
+	// a Talk opened concurrently with a lobby change either copies the new rules
+	// or is found by syncTempTalks, never neither. Lock order: OpenTempTalk takes
+	// the layout advisory lock, then this row; this path takes only the row (never
+	// the advisory lock), so the two cannot wait on each other in a cycle.
 	var temp bool
-	if err := tx.QueryRow(ctx, `SELECT is_temp FROM channels WHERE id = $1`, id).Scan(&temp); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err := tx.QueryRow(ctx, `SELECT is_temp FROM channels WHERE id = $1 FOR UPDATE`, id).Scan(&temp); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("check temporary Talk: %w", err)
 	}
 	if temp {

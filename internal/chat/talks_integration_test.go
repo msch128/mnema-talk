@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -535,5 +536,39 @@ func TestATemporaryTalksPermissionsCannotBeEditedDirectly(t *testing.T) {
 	got, err := svc.Channel(ctx, w.bob.Subject(), open.ID)
 	if err != nil || got.Has(perm.Connect) {
 		t.Fatalf("snapshot after the lobby change: %v %v", got, err)
+	}
+}
+
+func TestTalksOpenedDuringALobbyChangeEndUpWithTheNewRules(t *testing.T) {
+	w := newTalksWorld(t)
+	ctx := context.Background()
+	svc := perm.NewService(w.p)
+	var everyone uuid.UUID
+	_ = w.p.QueryRow(ctx, `SELECT id FROM roles WHERE is_everyone`).Scan(&everyone)
+	owner := perm.Subject{ID: uuid.New(), Owner: true}
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, err := OpenTempTalk(ctx, w.p, w.lobby.ID, w.alice.ID); err != nil {
+				t.Error(err)
+			}
+		}()
+	}
+	list := []perm.Overwrite{{Type: "role", ID: everyone, Deny: perm.Connect}}
+	if err := svc.SetOverwrites(ctx, owner, perm.TargetChannel, w.lobby.ID, list); err != nil {
+		t.Fatal(err)
+	}
+	wg.Wait()
+	var stale int
+	if err := w.p.QueryRow(ctx, `
+		SELECT count(*) FROM channels t WHERE t.is_temp AND NOT EXISTS (
+			SELECT 1 FROM permission_overwrites o WHERE o.channel_id = t.id AND o.role_id = $1 AND o.deny = $2)`,
+		everyone, int64(perm.Connect)).Scan(&stale); err != nil {
+		t.Fatal(err)
+	}
+	if stale != 0 {
+		t.Fatalf("%d temporary Talks missed the lobby change", stale)
 	}
 }
