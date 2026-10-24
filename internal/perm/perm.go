@@ -82,6 +82,10 @@ const (
 	// sanction: they can sign in again at once (doc/moderation.md). Bit 22 is
 	// the direct-message permission.
 	KickMembers Set = 1 << 23
+	// ManageStage gives and takes talk power in a Stage and answers raised
+	// hands (doc/talks.md). Holders can always speak there. Owner and
+	// Administrators only by default; it can be allowed per Stage.
+	ManageStage Set = 1 << 24
 )
 
 // Info describes one permission for clients.
@@ -120,6 +124,7 @@ var Catalog = []Info{
 	{Key: "manage_reports", Bit: ManageReports, Name: "manage reports"},
 	{Key: "send_direct_messages", Bit: SendDirectMessages, Name: "send direct messages"},
 	{Key: "kick_members", Bit: KickMembers, Name: "kick members"},
+	{Key: "manage_stage", Bit: ManageStage, Name: "manage Stages", Channel: true},
 }
 
 var (

@@ -82,6 +82,63 @@ the member limit, no new permission model:
 On a lobby they decide who may open Talks (its temporary Talks follow it); a temporary Talk itself offers only the limit. They need *Manage channels* (and the rank and permissions that editing overwrites
 needs anyway); a Talk leader can use the limit.
 
+## Stages
+
+A Talk can be a **Stage**: a room with a speakers' row and an audience. Without
+*talk power* nobody sends audio, camera or screen there. A member with
+*Manage channels* turns a permanent Talk into a Stage (and back) with "Make Stage" /
+"Make normal Talk" in the Talk's context menu, or creates a Talk as Stage
+(`is_stage` in `PATCH /api/admin/channels/{id}` and `POST /api/admin/channels`).
+Lobbies and temporary Talks cannot be Stages. Making a Talk a Stage silences its
+audience at once; making it a normal Talk again lifts every limit and forgets all
+talk power and hands. The advertised feature name is `talks.stage`.
+
+**Talk power** belongs to one stay in the Stage. Holders of the permission
+*Manage stage* (bit `1 << 24`, off for @everyone, always held by the Owner and
+Administrators, allowed per Stage through a channel overwrite) have it
+implicitly and can give it to and take it from any member in the Stage. It is
+cleared when the member leaves, and the member still needs *Speak* (and *Video*
+for camera and screen), as in any Talk.
+
+The server decides, not the interface: the media peer of a member without talk
+power is told which sources it may not publish (audio, the sound of a screen
+share, camera, screen), the same mechanism *Speak* and *Video* use, and anything
+already published is unpublished. A client that ignores the interface sends
+nothing anybody hears.
+
+**Raising a hand.** A member without talk power who may speak raises their hand
+(`stage_hand` with `raised: true`). Holders of *Manage stage* see the queue,
+oldest first, and accept with one click (that gives talk power and lowers the
+hand) or dismiss. Everybody in the Talk receives the events and `talk_power` /
+`hand_raised_at` on the members of `voice_snapshot` and `voice_state_update`.
+The hand goes down by itself when talk power is given, and when the member leaves.
+
+| Client event | Payload | Needs |
+|---|---|---|
+| `stage_hand` | `{raised}` for the member's own hand; `{user_id, raised: false}` dismisses another's | being in the Stage and *Speak*; *Manage stage* to dismiss |
+| `stage_talk_power` | `{user_id, granted}` | *Manage stage*; the target is in the Stage |
+
+| Server event | Payload |
+|---|---|
+| `stage_hand` | `{channel_id, user_id, raised, at?}` |
+| `stage_talk_power` | `{channel_id, user_id, granted}`; `granted` is the effective state, so a manager shows as a speaker |
+
+Both go to the members of the Talk only. Commands are limited to 30 per 10 seconds
+per member. Anything the server refuses (a stranger, a missing permission, a normal
+Talk) is dropped without an answer.
+
+## Live reactions
+
+Any member in a Talk, Stage or not, can send a short-lived reaction: an emoji,
+including a custom emoji of the community, which floats briefly over their tile
+(`talk_reaction` with `{emoji}`; the feature name is `talks.reactions`). The server
+sends `{channel_id, user_id, emoji}` to the members of that Talk and stores
+nothing: a reaction is in no history and no export, no webhook or bot sees it. A
+reaction needs *Add reactions* in the Talk (a timeout takes it), at most 5 per 10
+seconds per member are relayed over all their connections, and an invalid or
+unknown emoji (a custom emoji that does not exist) is dropped. With reduced motion
+the web app shows a still badge instead of a floating emoji.
+
 ## Limits
 
 | What | Limit |
@@ -90,3 +147,5 @@ needs anyway); a Talk leader can use the limit.
 | Temporary Talks per lobby | 50 |
 | Edits and invitations per member | 30 per minute |
 | Empty temporary Talk | removed after 30 seconds |
+| Stage commands (hand, talk power) per member | 30 per 10 seconds |
+| Live reactions per member | 5 per 10 seconds |

@@ -164,6 +164,7 @@ of the pre-update backup (see "Rollback" above).
 - **Feature flag.** Advertised as `search.filters.v3` in `GET /api/health`.
   A web client connected to an older server hides the new dropdown and sort toggle.
 | 0071 | `discord_imports` and `discord_import_objects`: the record of each Discord structure import and the ids it created, for undo (see [Import](import.md)). Nothing existing is touched. |
+| 0068 | `channels.is_stage`: Stages. Existing channels keep `false`; a Stage is never a lobby or a temporary Talk. |
 
 #### Talks
 
@@ -179,6 +180,18 @@ of the pre-update backup (see "Rollback" above).
   `talk_unavailable`. REST: `PATCH /api/talks/{id}`, `POST /api/talks/{id}/invites`,
   `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
   channel (additive).
+- A Talk can be a **Stage** (feature `talks.stage`): without talk power nobody sends
+  audio, camera or screen there. The new permission *Manage stage* (bit `1 << 24`, off
+  for everyone but the Owner and Administrators) gives and takes talk power; members
+  raise a hand to ask. Nothing about a Stage session is stored. Existing Talks stay
+  normal Talks. New events `stage_hand`, `stage_talk_power`, `talk_reaction`; REST:
+  the field `is_stage` of a channel and of `POST /api/admin/channels` and
+  `PATCH /api/admin/channels/{id}` (additive).
+- **Live reactions** (feature `talks.reactions`): a member in a Talk sends an emoji
+  that floats over their tile for everyone in that Talk, at most 5 per 10 seconds.
+  The server relays it and keeps nothing.
+- Role and overwrite editors list *Manage stage*. A role that holds *Administrator*
+  has it already; no existing role or overwrite changes.
 
 #### Automod and moderation history
 

@@ -54,6 +54,8 @@ var Features = []string{
 	"moderation.history",
 	"ops.status",
 	"import.discord",
+	"talks.stage",
+	"talks.reactions",
 }
 
 // healthCacheTTL is how long a health result is reused: the endpoint is

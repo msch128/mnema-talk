@@ -246,6 +246,9 @@ const HANDLERS: Handlers = {
   screen_layers_wanted: ({ voiceStore }, p) => voiceStore.handleLayersWanted(p),
   voice_speaking: ({ voiceStore }, p) => voiceStore.handleSpeakingEvent(p),
   voice_mute_state: ({ voiceStore }, p) => voiceStore.handleMuteState(p),
+  stage_hand: ({ voiceStore }, p) => voiceStore.handleStageHand(p),
+  stage_talk_power: ({ voiceStore }, p) => voiceStore.handleStageTalkPower(p),
+  talk_reaction: ({ voiceStore }, p) => voiceStore.handleTalkReaction(p),
   // An admin removed me from voice; the call ends locally.
   talk_leader: onTalkLeader,
   // Joining a Create-a-Talk lobby opened a Talk: the voice layer joins it.

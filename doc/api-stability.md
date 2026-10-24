@@ -26,7 +26,8 @@ in any release.
 `GET /api/health` also lists the optional features a server has in `features`.
 Since 1.1 they are `blocks`, `dm`, `reports`, `saved`, `forward`,
 `search.filters.v2`, `search.filters.v3`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`; 1.2 adds `talks.lobby`,
-`status.expiry`, `reminders`, `messages.scheduled`, `polls.anonymous`, `channels.auto_delete`, `automod` and `moderation.history`
+`status.expiry`, `reminders`, `messages.scheduled`, `polls.anonymous`, `channels.auto_delete`, `automod`, `moderation.history`,
+`ops.status`, `import.discord`, `talks.stage` and `talks.reactions`
 (`internal/server/health.go`). A name never changes meaning and is never
 removed in 1.x; a client treats a missing list as "none" (a 1.0.x server sends
 no list) and hides what is not listed. A new feature adds a name, never a

@@ -4,6 +4,8 @@ import type { ModerationNotice } from '../lib/moderation'
 import type { Message, Poll, ReactionSummary, ReadState, User, UserUpdate, VoiceUser, Presence } from './domain'
 import type { ChatUserRef } from './rest'
 import { isAuthUser, isChatMessage, isChatPoll, isChatReactionSummary, isChatNotifyLevel } from './rest'
+import type { StageHand, StageTalkPower, TalkReaction } from './stageEvents'
+import { STAGE_EVENT_CHECKS } from './stageEvents'
 import { ContractError, hasOwn, isRecord, isIdentifier, isTimestamp, isInteger, isString, isArrayOf, isDictionaryOf } from './validation'
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue | undefined }
@@ -138,6 +140,9 @@ export interface ServerEventPayloads {
   /** Joining a Create-a-Talk lobby opened this Talk: join it like any other. */
   talk_moved: { from_channel_id: string; channel_id: string }
   media_handshake: { channel_id: string; user_id: string; wire: string }
+  stage_hand: StageHand
+  stage_talk_power: StageTalkPower
+  talk_reaction: TalkReaction
 }
 
 export type EventUnion<Payloads> = { [K in keyof Payloads]: { type: K; payload: Payloads[K] } }[keyof Payloads]
@@ -167,6 +172,9 @@ export interface ClientEventPayloads {
   webrtc_screenshare_stop: Record<string, never>
   webrtc_camera_stop: Record<string, never>
   media_handshake: { channel_id: string; wire: string }
+  stage_hand: { raised: boolean; user_id?: string }
+  stage_talk_power: { user_id: string; granted: boolean }
+  talk_reaction: { emoji: string }
 }
 export type ClientEvent = EventUnion<ClientEventPayloads>
 export type ClientEventType = keyof ClientEventPayloads
@@ -177,7 +185,10 @@ export function isPresence(value: unknown): value is Presence {
 
 export function isVoiceUser(value: unknown): value is VoiceUser {
   return isRecord(value) && isTimestamp(value['joined_at'])
-    && typeof value['muted'] === 'boolean' && typeof value['deafened'] === 'boolean' && isAuthUser(value)
+    && typeof value['muted'] === 'boolean' && typeof value['deafened'] === 'boolean'
+    && (!hasOwn(value, 'talk_power') || typeof value['talk_power'] === 'boolean')
+    && (!hasOwn(value, 'hand_raised_at') || isTimestamp(value['hand_raised_at']))
+    && isAuthUser(value)
 }
 
 function isOptionalString(value: unknown, maxLen: number): boolean {
@@ -354,6 +365,7 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
     && (!hasOwn(payload, 'reason') || VOICE_KICK_REASONS.has(payload['reason'] as string))],
   ['talk_leader', payload => isIdentifier(payload['channel_id']) && (payload['leader_id'] === null || isIdentifier(payload['leader_id']))],
   ['talk_moved', payload => isIdentifier(payload['from_channel_id']) && isIdentifier(payload['channel_id'])],
+  ...STAGE_EVENT_CHECKS,
   ['media_handshake', payload => isIdentifier(payload['channel_id']) && isIdentifier(payload['user_id'])
     && isString(payload['wire'], 48_000) && payload['wire'] !== '']
 ])
@@ -385,7 +397,7 @@ const SERVER_EVENT_TYPES = new Set<string>([
   'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'reminder_update', 'scheduled_message_update', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
-  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'media_handshake'
+  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'stage_hand', 'stage_talk_power', 'talk_reaction', 'media_handshake'
 ])
 
 /** Unknown event names stay ignorable for forward compatibility; malformed

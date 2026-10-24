@@ -79,6 +79,9 @@ const examples: Record<ServerEventType, unknown[]> = {
   voice_kicked: [{ channel_id: id }, { channel_id: id, reason: 'room_full' }, { channel_id: id, reason: 'missing_permission' }, { channel_id: id, reason: 'talk_rate_limited' }, { channel_id: id, reason: 'talk_unavailable' }],
   talk_leader: [{ channel_id: id, leader_id: id }, { channel_id: id, leader_id: null }],
   talk_moved: [{ from_channel_id: id, channel_id: fixtureId(2) }],
+  stage_hand: [{ ...room, raised: true, at: FIXTURE_TIMESTAMP }, { ...room, raised: false }],
+  stage_talk_power: [{ ...room, granted: true }, { ...room, granted: false }],
+  talk_reaction: [{ ...room, emoji: '🎉' }, { ...room, emoji: `<:party:${fixtureId(3)}>` }],
   media_handshake: [{ channel_id: id, user_id: id, wire: 'a' }],
 }
 
@@ -190,6 +193,8 @@ describe('ICE, voice-user and presence leaf contracts', () => {
   })
   it('requires a complete user plus joined-at and both boolean mute flags', () => {
     expect(isVoiceUser(voiceUser)).toBe(true)
+    expect(isVoiceUser({ ...voiceUser, talk_power: true, hand_raised_at: FIXTURE_TIMESTAMP })).toBe(true)
+    for (const value of [{ ...voiceUser, talk_power: 1 }, { ...voiceUser, hand_raised_at: 'soon' }]) expect(isVoiceUser(value)).toBe(false)
     for (const value of [null, { ...voiceUser, joined_at: null }, { ...voiceUser, muted: 0 }, { ...voiceUser, deafened: null }, { ...voiceUser, id: 'invalid' }]) expect(isVoiceUser(value)).toBe(false)
   })
 })

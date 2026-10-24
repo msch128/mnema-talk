@@ -2102,6 +2102,10 @@
             "description": "IsLobby marks a Talk as a \"Create a Talk\" lobby: joining it opens a\ntemporary Talk instead of taking a seat (doc/talks.md).",
             "type": "boolean"
           },
+          "is_stage": {
+            "description": "IsStage marks a Talk as a Stage: without talk power nobody speaks or\nshares video there (doc/talks.md).",
+            "type": "boolean"
+          },
           "is_temp": {
             "description": "IsTemp marks a temporary Talk opened from a lobby; it is removed again\nonce it stays empty.",
             "type": "boolean"
@@ -2260,6 +2264,10 @@
               "string",
               "null"
             ]
+          },
+          "is_stage": {
+            "description": "IsStage creates the Talk as a Stage (voice channels only).",
+            "type": "boolean"
           },
           "name": {
             "maxLength": 64,
@@ -4040,6 +4048,10 @@
         "properties": {
           "is_lobby": {
             "description": "IsLobby marks a voice channel as a Create-a-Talk lobby (true) or clears\nthe mark (false): joining a lobby opens a temporary Talk (doc/talks.md).",
+            "type": "boolean"
+          },
+          "is_stage": {
+            "description": "IsStage turns a permanent Talk into a Stage (true) or back into a normal\nTalk (false); members without talk power lose their microphone, camera\nand screen at once (doc/talks.md).",
             "type": "boolean"
           },
           "name": {
@@ -10229,7 +10241,7 @@
         ]
       },
       "patch": {
-        "description": "Requires the Manage channels permission (403 otherwise). user_limit (voice channels only) caps how many members can be in the room at once; 0 removes the limit (the default). A member already in the room always gets back in. is_lobby (permanent voice channels only) makes the Talk a Create-a-Talk lobby.",
+        "description": "Requires the Manage channels permission (403 otherwise). user_limit (voice channels only) caps how many members can be in the room at once; 0 removes the limit (the default). A member already in the room always gets back in. is_lobby (permanent voice channels only) makes the Talk a Create-a-Talk lobby. is_stage (permanent voice channels that are no lobby) makes it a Stage, or a normal Talk again.",
         "operationId": "updateChannel",
         "parameters": [
           {

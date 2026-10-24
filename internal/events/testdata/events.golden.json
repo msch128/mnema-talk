@@ -48,6 +48,9 @@
     "DMMemberRemoved": "dm_member_removed",
     "TalkLeader": "talk_leader",
     "TalkMoved": "talk_moved",
+    "StageHand": "stage_hand",
+    "StageTalkPower": "stage_talk_power",
+    "TalkReaction": "talk_reaction",
     "Kicked": "kicked"
   },
   "client": {
@@ -67,6 +70,9 @@
     "ClientWebrtcScreenshareStart": "webrtc_screenshare_start",
     "ClientWebrtcScreenshareStop": "webrtc_screenshare_stop",
     "ClientWebrtcCameraStop": "webrtc_camera_stop",
-    "ClientMediaHandshake": "media_handshake"
+    "ClientMediaHandshake": "media_handshake",
+    "ClientStageHand": "stage_hand",
+    "ClientStageTalkPower": "stage_talk_power",
+    "ClientTalkReaction": "talk_reaction"
   }
 }

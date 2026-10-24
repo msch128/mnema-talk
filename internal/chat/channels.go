@@ -56,6 +56,9 @@ type Channel struct {
 	// LeaderID is the leader of a temporary Talk: the member who may rename
 	// it and set its member limit. Absent on every other channel.
 	LeaderID *uuid.UUID `json:"leader_id,omitempty" binding:"optional" format:"uuid"`
+	// IsStage marks a Talk as a Stage: without talk power nobody speaks or
+	// shares video there (doc/talks.md).
+	IsStage bool `json:"is_stage" binding:"optional"`
 }
 
 type Category struct {
@@ -88,7 +91,7 @@ func loadCategories(ctx context.Context, p *db.Pool) ([]Category, map[uuid.UUID]
 func populateChannels(ctx context.Context, p *db.Pool, categories []Category, categoryIdx map[uuid.UUID]int) ([]Channel, error) {
 	chanRows, err := p.Query(ctx, `
 		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days,
-		       is_lobby, is_temp, leader_id
+		       is_lobby, is_temp, leader_id, is_stage
 		FROM channels WHERE type <> 'dm' ORDER BY sort_order, created_at`)
 	if err != nil {
 		return nil, fmt.Errorf("query channels: %w", err)
@@ -98,7 +101,7 @@ func populateChannels(ctx context.Context, p *db.Pool, categories []Category, ca
 	uncategorized := make([]Channel, 0)
 	for chanRows.Next() {
 		var ch Channel
-		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays, &ch.IsLobby, &ch.IsTemp, &ch.LeaderID); err != nil {
+		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays, &ch.IsLobby, &ch.IsTemp, &ch.LeaderID, &ch.IsStage); err != nil {
 			return nil, err
 		}
 		if ch.CategoryID != nil {

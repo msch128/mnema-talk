@@ -46,6 +46,8 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     avatarRemove: computed(() => has('profile.avatar_remove')),
     talksLobby: computed(() => has('talks.lobby')),
     opsStatus: computed(() => has('ops.status')),
-    importDiscord: computed(() => has('import.discord'))
+    importDiscord: computed(() => has('import.discord')),
+    talksStage: computed(() => has('talks.stage')),
+    talksReactions: computed(() => has('talks.reactions'))
   }
 })
