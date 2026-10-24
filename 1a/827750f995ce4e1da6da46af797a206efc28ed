@@ -1,0 +1,77 @@
+README.md
+  s_06fcde5dbef956::t_2ef633ee187bc0 95-99
+doc/upgrade.md
+  s_06fcde5dbef956::t_a4b30a637d4fe7 139-155
+internal/chat/handler_lookup.go
+  s_06fcde5dbef956::t_ffbc770b20c77e 186,194-195,198,201-204,216-223,225-231,245-249
+internal/chat/search_filters.go
+  s_06fcde5dbef956::t_bb4f72a317d81e 5-6,24-25,48-120,125-132,178,182-200,218-221,228-230,232-249,251,268-269,275
+internal/chat/search_filters_test.go
+  s_06fcde5dbef956::t_9ad03b0ac0236e 62-167
+internal/db/migrations/0072_media_filename_trgm.sql
+  s_06fcde5dbef956::t_55d3d354ccf5c7 1-2
+internal/server/health.go
+  s_06fcde5dbef956::t_0f7091e0030de8 42
+web/src/components/SearchFilterDropdown.test.ts
+  s_06fcde5dbef956::t_663c10d9278b37 1-115
+web/src/components/SearchFilterDropdown.vue
+  s_06fcde5dbef956::t_58777cdddb2514 1-233
+web/src/components/SearchFilterFeatures.test.ts
+  s_06fcde5dbef956::t_f5a3279c5513c6 48-71
+web/src/components/SearchModal.vue
+  s_06fcde5dbef956::t_69d0a46e2b09cb 62-71,189-192,196,239,243-244,258
+web/src/components/SearchResults.vue
+  s_06fcde5dbef956::t_9804d99e610c85 24-30,35-49,58-88
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_eba3780fc025a9 438-466
+web/src/lib/searchQuery.test.ts
+  s_06fcde5dbef956::t_054dc56a48bce1 3,118-157
+web/src/lib/searchQuery.ts
+  s_06fcde5dbef956::t_9f5ea17518a514 6,12-15,25,27-28,54-57,60,122-123,128-136,227-237,270-275
+web/src/lib/searchSuggest.test.ts
+  s_06fcde5dbef956::t_f75ce20c9bdba4 34-35
+web/src/lib/searchSuggest.ts
+  s_06fcde5dbef956::t_9238a94fb26400 4,23,62-66,77
+api/openapi.json
+  s_77a27b56712f64::t_573d10d14401fe 24650,24681-24694,24703,24730-24738,24758-24776,24784-24796
+doc/api-stability.md
+  s_77a27b56712f64::t_b82c5291a50aea 28
+web/src/components/SearchInput.vue
+  s_77a27b56712f64::t_6d024223191bfe 9,22,26,30-31,42,90-107,111-115,134,187-193,216,228-231
+web/src/i18n/de.json
+  s_42d9b5f7f55f95::t_cf042b56ffb911 438-466
+web/src/lib/searchSupport.ts
+  s_77a27b56712f64::t_db52992dcb7000 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1a827750f995ce4e1da6da46af797a206efc28ed",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_42d9b5f7f55f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "37fe39d5-60df-4f8d-b94e-a31e5ad7b7ec",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_77a27b56712f64": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ab745168e4a9c4fc9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
