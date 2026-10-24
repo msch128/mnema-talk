@@ -75,6 +75,9 @@ func placeChannels(ctx context.Context, tx pgx.Tx, chans []ChannelPlacement) err
 	for _, c := range chans {
 		last[c.ID] = c
 	}
+	if err := dropTempTalks(ctx, tx, last); err != nil {
+		return err
+	}
 	if len(last) == 0 {
 		return nil
 	}
@@ -97,6 +100,31 @@ func placeChannels(ctx context.Context, tx pgx.Tx, chans []ChannelPlacement) err
 		return httpx.ErrNotFound("channel or category not found")
 	}
 	return nil
+}
+
+// dropTempTalks removes the temporary Talks from a layout change: they come
+// and go on their own and never become part of the saved layout.
+func dropTempTalks(ctx context.Context, tx pgx.Tx, placements map[uuid.UUID]ChannelPlacement) error {
+	if len(placements) == 0 {
+		return nil
+	}
+	ids := make([]uuid.UUID, 0, len(placements))
+	for id := range placements {
+		ids = append(ids, id)
+	}
+	rows, err := tx.Query(ctx, `SELECT id FROM channels WHERE id = ANY($1) AND is_temp`, ids)
+	if err != nil {
+		return fmt.Errorf("find temporary Talks: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		delete(placements, id)
+	}
+	return rows.Err()
 }
 
 // channelLayoutLockID is the transaction-scoped advisory lock that serialises

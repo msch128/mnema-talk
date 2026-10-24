@@ -909,7 +909,9 @@
     "showParticipants": "Show participants",
     "noSpeak": "You don’t have permission to speak here.",
     "noVideo": "You don’t have permission to share video here.",
-    "noConnect": "You don’t have permission to join this Talk."
+    "noConnect": "You don’t have permission to join this Talk.",
+    "lobbyUnavailable": "Couldn’t open a Talk. Try again in a moment.",
+    "lobbyRateLimited": "You’ve opened a lot of Talks lately. Try again in a few minutes."
   },
   "admin": {
     "signedInAs": "Signed in as {name} (Owner)",
