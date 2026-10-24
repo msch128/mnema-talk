@@ -775,7 +775,32 @@
     },
     "footer": "© {year} {name} · All rights reserved"
   },
+  "stage": {
+    "make": "Make Stage",
+    "makeNormal": "Make normal Talk",
+    "toggleFailed": "Couldn’t change the Talk.",
+    "createAs": "Create as Stage",
+    "createHint": "Only members you allow can speak; everyone else listens and can raise a hand.",
+    "isStage": "Stage",
+    "speakers": "Speakers",
+    "audience": "Audience",
+    "nobodySpeaking": "Nobody is speaking yet.",
+    "noAudience": "Nobody is listening yet.",
+    "raiseHand": "Raise hand",
+    "lowerHand": "Lower hand",
+    "handRaised": "Hand raised",
+    "listening": "Listening",
+    "noPower": "Only speakers can use this on a Stage. Raise your hand to ask.",
+    "give": "Let {name} speak",
+    "take": "Take back from {name}",
+    "handsTitle": "Raised hands",
+    "noHands": "No raised hands.",
+    "accept": "Let {name} speak",
+    "acceptShort": "Accept",
+    "dismiss": "Dismiss {name}’s hand"
+  },
   "talk": {
+    "react": "React",
     "participants": {
       "one": "{count} participant",
       "other": "{count} participants"

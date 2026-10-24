@@ -11,6 +11,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { MicOff, Eye, EyeOff, Monitor, X } from '@lucide/vue'
 import VoiceTimer from './VoiceTimer.vue'
 import MuteMarks from './MuteMarks.vue'
+import TalkReactionFloat from './TalkReactionFloat.vue'
 
 const props = defineProps({
   user: { type: Object as PropType<AvatarUser & { id: string; joined_at?: string; role?: 'admin' | 'user' }>, required: true },
@@ -38,7 +39,9 @@ const props = defineProps({
   // Screen sharing state
   isScreensharing: { type: Boolean, default: false },
   isWatching: { type: Boolean, default: false },
-  isConnecting: { type: Boolean, default: false }
+  isConnecting: { type: Boolean, default: false },
+  // Live reactions floating over the tile.
+  reactions: { type: Array as PropType<{ id: number; emoji: string }[]>, default: () => [] }
 })
 const emit = defineEmits<{ 'open-profile': [user: { id: string }]; 'toggle-camera': []; 'focus-camera': [id: string]; 'fullscreen-camera': [id: string]; 'watch-stream': [id: string]; 'stop-watching': [id: string]; menu: [event: MouseEvent | KeyboardEvent] }>()
 
@@ -253,6 +256,8 @@ watch(() => props.stream, (stream) => {
         <MuteMarks :muted="muted" :deafened="deafened" :size="compact ? 12 : 14" />
       </div>
     </div>
+
+    <TalkReactionFloat :reactions="reactions" />
 
     <!-- Frame on top of everything (also the camera): green glow while
          speaking, the accent while their camera is on the stage. -->

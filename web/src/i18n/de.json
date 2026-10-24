@@ -775,7 +775,32 @@
     },
     "footer": "© {year} {name} · Alle Rechte vorbehalten"
   },
+  "stage": {
+    "make": "Zur Stage machen",
+    "makeNormal": "Zum normalen Talk machen",
+    "toggleFailed": "Der Talk konnte nicht geändert werden.",
+    "createAs": "Als Stage erstellen",
+    "createHint": "Nur erlaubte Mitglieder sprechen; alle anderen hören zu und können sich melden.",
+    "isStage": "Stage",
+    "speakers": "Sprechende",
+    "audience": "Publikum",
+    "nobodySpeaking": "Noch spricht niemand.",
+    "noAudience": "Noch hört niemand zu.",
+    "raiseHand": "Melden",
+    "lowerHand": "Meldung zurücknehmen",
+    "handRaised": "Hand gehoben",
+    "listening": "Hört zu",
+    "noPower": "Auf einer Stage können nur Sprechende das nutzen. Melde dich, um zu fragen.",
+    "give": "{name} sprechen lassen",
+    "take": "{name} das Wort entziehen",
+    "handsTitle": "Meldungen",
+    "noHands": "Keine Meldungen.",
+    "accept": "{name} sprechen lassen",
+    "acceptShort": "Zulassen",
+    "dismiss": "Meldung von {name} ablehnen"
+  },
   "talk": {
+    "react": "Reagieren",
     "participants": {
       "one": "{count} Teilnehmer",
       "other": "{count} Teilnehmer"

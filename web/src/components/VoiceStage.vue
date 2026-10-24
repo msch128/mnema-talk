@@ -8,7 +8,7 @@ import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useWebRTC } from '../composables/useWebRTC'
-import TalkGrid from './TalkGrid.vue'
+import TalkRoster from './TalkRoster.vue'
 import TalkPlaceholder from './TalkPlaceholder.vue'
 import TalkHeader from './TalkHeader.vue'
 import TalkStageView from './TalkStageView.vue'
@@ -329,8 +329,9 @@ const { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, on
           />
         </div>
 
-        <TalkGrid
+        <TalkRoster
           v-else-if="!hasStage && tileUsers.length"
+          :channel-id="shownChannelId ?? ''"
           :users="tileUsers"
           :connected="isConnectedHere"
           :stream-of="cameraStreamOf"

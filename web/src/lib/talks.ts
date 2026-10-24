@@ -55,6 +55,21 @@ export function setLobby(channelId: string, lobby: boolean): Promise<Channel> {
   return api(`/api/admin/channels/${channelId}`, { method: 'PATCH', json: { is_lobby: lobby }, decode: decodeChannel })
 }
 
+/** Turns a permanent Talk into a Stage, or back into a normal Talk (needs Manage channels). */
+export function setStage(channelId: string, stage: boolean): Promise<Channel> {
+  return api(`/api/admin/channels/${channelId}`, { method: 'PATCH', json: { is_stage: stage }, decode: decodeChannel })
+}
+
+/** A Stage: only members with talk power send audio and video there. */
+export function isStageTalk(channel: Channel | null | undefined): boolean {
+  return channel?.type === 'voice' && channel.is_stage === true
+}
+
+/** Whether the menu offers Make Stage / Make normal Talk: a permanent Talk that is no lobby. */
+export function canToggleStage(channel: Channel | null | undefined): boolean {
+  return channel?.type === 'voice' && !channel.is_lobby && !channel.is_temp
+}
+
 /** "Start a Talk" in a conversation: the new Talk and the invitation posted into it. */
 export function startConversationTalk(conversationId: string) {
   return api(`/api/dms/${conversationId}/talk`, { method: 'POST', decode: decodeChatStartTalkResponse })

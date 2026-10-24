@@ -2,7 +2,7 @@ import { computed } from 'vue'
 import type { User, VoiceUser } from '../types/domain'
 import type { VoiceStore } from '../stores/voice'
 
-export type TalkParticipant = User & Partial<Pick<VoiceUser, 'joined_at' | 'muted' | 'deafened'>>
+export type TalkParticipant = User & Partial<Pick<VoiceUser, 'joined_at' | 'muted' | 'deafened' | 'talk_power' | 'hand_raised_at'>>
 export type TalkScreenCard = { key: 'own'; kind: 'own'; user: null; state: 'queued' } | { key: string; kind: 'remote'; user: TalkParticipant; state: 'idle' | 'pending' | 'queued' }
 interface ScreenCardOptions { users?: TalkParticipant[]; myId?: string | null; stage?: VoiceStore['stage']; ownStream?: MediaStream | null; mediaState?: VoiceStore['mediaState']; watched?: Record<string, boolean>; streams?: Record<string, MediaStream> }
 import { useVoiceStore } from '../stores/voice'
