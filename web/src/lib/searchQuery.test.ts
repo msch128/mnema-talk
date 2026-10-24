@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  buildSearchParams, dayStart, isSearchDate, isSearchable, parseSearchQuery, quoteValue, serializeSearchQuery, splitCommitted,
+  buildSearchParams, dayStart, isSearchDate, isSearchable, localTimezoneOffset, parseSearchQuery, quoteValue, serializeSearchQuery, splitCommitted,
 } from './searchQuery'
 
 const lookup = {
@@ -115,5 +115,45 @@ describe('isSearchable', () => {
   it('needs at least one criterion', () => {
     expect(isSearchable(new URLSearchParams({ limit: '25' }))).toBe(false)
     expect(isSearchable(new URLSearchParams({ limit: '25', has: 'video' }))).toBe(true)
+    expect(isSearchable(new URLSearchParams({ during: '2026-10-24' }))).toBe(true)
+    expect(isSearchable(new URLSearchParams({ filename: 'budget.pdf' }))).toBe(true)
+    expect(isSearchable(new URLSearchParams({ author: 'bot' }))).toBe(true)
+  })
+})
+
+describe('search filters v3', () => {
+  it('parses during, author, filename, and has:embed', () => {
+    const p = parseSearchQuery('during:2026-10-24 author:bot filename:"annual report.pdf" has:embed')
+    expect(p.filters.during).toBe('2026-10-24')
+    expect(p.filters.author).toBe('bot')
+    expect(p.filters.filename).toBe('annual report.pdf')
+    expect(p.filters.has).toBe('embed')
+    expect(p.invalid).toEqual([])
+  })
+
+  it('reports invalid author types and invalid during dates', () => {
+    const p = parseSearchQuery('author:alien during:2026-02-30')
+    expect(p.invalid).toEqual(['author:alien', 'during:2026-02-30'])
+    expect(p.filters).toEqual({})
+  })
+
+  it('builds search parameters with during, tz, filename, and author', () => {
+    const p = parseSearchQuery('during:2026-10-24 filename:budget.xlsx author:member')
+    const { params } = buildSearchParams(p, lookup)
+    expect(params.get('during')).toBe('2026-10-24')
+    expect(params.get('tz')).toBe(localTimezoneOffset())
+    expect(params.get('filename')).toBe('budget.xlsx')
+    expect(params.get('author')).toBe('member')
+  })
+
+  it('splits committed filters including v3 tokens', () => {
+    const res = splitCommitted('author:bot during:2026-10-24 filename:report.pdf typing')
+    expect(res.filters).toEqual({ author: 'bot', during: '2026-10-24', filename: 'report.pdf' })
+    expect(res.rest).toBe('typing')
+  })
+
+  it('formats timezone offset', () => {
+    const tz = localTimezoneOffset()
+    expect(tz).toMatch(/^[+-]\d{2}:\d{2}$/)
   })
 })

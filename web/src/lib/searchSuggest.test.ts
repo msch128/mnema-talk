@@ -31,7 +31,8 @@ describe('suggestFor', () => {
     expect(suggestFor('in:lou', lookup)?.items).toEqual([{ value: 'Lounge', label: '#Lounge' }])
     expect(suggestFor('in:#gen', lookup)?.items[0]?.value).toBe('general')
     expect(suggestFor('has:i', lookup)?.items.map(i => i.value)).toEqual(['image'])
-    expect(suggestFor('has:', lookup)?.items).toHaveLength(6)
+    expect(suggestFor('has:', lookup)?.items).toHaveLength(7)
+    expect(suggestFor('author:', lookup)?.items.map(i => i.value)).toEqual(['bot', 'webhook', 'member'])
   })
 
   it('works inside an open quote and stays quiet for an exact single match or no match', () => {
