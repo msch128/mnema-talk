@@ -166,6 +166,49 @@ verify_onboarding_and_mentions() {
   fi
 }
 
+# Direct messages, blocks, saved messages and health features added in 1.1
+# (migrations 0049-0051). Exercises new features against the upgraded data.
+exercise_110_features() {
+  local health dm dm_id dm_msg dm_msg_id bob_dms
+
+  health="$(curl -fsS "$BASE/api/health")"
+  drill_health_features_ok "$health" dm blocks ||
+    fail 'GET /api/health does not report dm and blocks features'
+
+  ALICE_ID="${ALICE_ID:-$(user_id alice)}"
+  BOB_ID="${BOB_ID:-$(user_id bob)}"
+  need_id "$ALICE_ID" 'alice user id'
+  need_id "$BOB_ID" 'bob user id'
+
+  # 1:1 direct message between alice and bob, with one message from alice.
+  dm="$(post_json alice /api/dms "{\"user_ids\":[\"$BOB_ID\"]}")"
+  dm_id="$(jq -r '.id' <<<"$dm")"
+  need_id "$dm_id" 'direct message id'
+
+  dm_msg="$(post_json alice "/api/channels/$dm_id/messages" "{\"content\":\"dm-$TAG\"}")"
+  dm_msg_id="$(jq -r '.id' <<<"$dm_msg")"
+  need_id "$dm_msg_id" 'direct message message id'
+
+  # Bob sees the conversation with 1 unread message before blocking.
+  bob_dms="$(api bob "$BASE/api/dms")"
+  [ "$(jq -r --arg id "$dm_id" '.[] | select(.id == $id) | .unread_count // empty' <<<"$bob_dms")" = 1 ] ||
+    fail 'GET /api/dms did not report expected unread_count 1 before block'
+
+  # Bob blocks alice, then checks the conversation still lists with unread_count 0.
+  put_json bob "/api/me/blocks/$ALICE_ID" '{}' >/dev/null
+  [ "$(api bob "$BASE/api/me/blocks" | jq -r '.[].user_id' | grep -cx "$ALICE_ID")" = 1 ] ||
+    fail 'bob block of alice not listed in GET /api/me/blocks'
+
+  bob_dms="$(api bob "$BASE/api/dms")"
+  [ "$(jq -r --arg id "$dm_id" '.[] | select(.id == $id) | .unread_count // empty' <<<"$bob_dms")" = 0 ] ||
+    fail 'GET /api/dms did not report expected unread_count 0 after blocking author'
+
+  # Bob saves alice's direct message.
+  put_json bob "/api/me/saved/$dm_msg_id" '{"note":"drill-saved"}' >/dev/null
+  [ "$(api bob "$BASE/api/me/saved" | jq -r --arg id "$dm_msg_id" '.items[] | select(.message_id == $id) | .note // empty')" = 'drill-saved' ] ||
+    fail 'saved direct message not found in /api/me/saved'
+}
+
 # Every leg also writes through the tables of 0035-0037, whatever it started on.
 # Last, because it raises the rules version, which blocks members who have not
 # accepted from posting.
