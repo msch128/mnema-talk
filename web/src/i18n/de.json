@@ -158,7 +158,9 @@
       "replyGone": "Die Nachricht, auf die du antwortest, gibt es nicht mehr.",
       "replyElsewhere": "Du kannst nur auf Nachrichten im selben Gespräch antworten.",
       "inviteExists": "Eine Einladung mit diesem Code gibt es schon.",
-      "usernameReserved": "Dieser Benutzername ist reserviert."
+      "usernameReserved": "Dieser Benutzername ist reserviert.",
+      "automodSend": "Deine Nachricht wurde nicht gesendet: Sie verstößt gegen die Serverregel „{rule}“. Die Moderatoren können das sehen.",
+      "automodEdit": "Deine Änderung wurde nicht gespeichert: Sie verstößt gegen die Serverregel „{rule}“. Die Moderatoren können das sehen."
     },
     "field": {
       "content": "Nachricht",
@@ -715,6 +717,9 @@
       "session": "Sitzungstoken",
       "sessionPurpose": "Signierte Sitzungstoken zur Authentifizierung",
       "sessionRetention": "Max. {days} Tage oder bis zum Abmelden",
+      "moderation": "Moderationsdaten",
+      "moderationPurpose": "Meldungen, Automod-Einträge und private Notizen, die Moderatoren über Mitglieder führen; nie Teil eines Datenexports",
+      "moderationRetention": "Bis die Moderatoren sie löschen; Einträge zu einem gelöschten Konto bleiben unter „Gelöschtes Mitglied“ stehen",
       "rightsHeading": "Ihre Rechte als betroffene Person",
       "rights1Before": "Sie haben nach Art. 15–22 DSGVO jederzeit das Recht auf unentgeltliche ",
       "rightsAccess": "Auskunft",
@@ -951,7 +956,8 @@
       "bots": "Bots",
       "onboarding": "Willkommen & Regeln",
       "emoji": "Emoji",
-      "reports": "Meldungen"
+      "reports": "Meldungen",
+      "automod": "Automod"
     },
     "system": {
       "heading": "System & Version",
@@ -1769,7 +1775,8 @@
       "moderation": "Moderation",
       "emoji": "Emoji",
       "bot": "Bots",
-      "poll": "Umfragen"
+      "poll": "Umfragen",
+      "automod": "Automod"
     },
     "actions": {
       "role": {
@@ -1879,7 +1886,10 @@
         "unban": "Mitglied entsperrt",
         "kick": "Mitglied rausgeworfen",
         "ban_expired": "Sperre abgelaufen",
-        "bulk_delete": "Nachrichten gesammelt gelöscht"
+        "bulk_delete": "Nachrichten gesammelt gelöscht",
+        "note_add": "Moderatornotiz hinzugefügt",
+        "note_edit": "Moderatornotiz bearbeitet",
+        "note_delete": "Moderatornotiz gelöscht"
       },
       "emoji": {
         "create": "Emoji hinzugefügt",
@@ -1897,6 +1907,13 @@
         "token_revoke": "Bot-Token widerrufen",
         "command_update": "Bot-Befehl bearbeitet",
         "command_delete": "Bot-Befehl gelöscht"
+      },
+      "automod": {
+        "rule_create": "Automod-Regel erstellt",
+        "rule_update": "Automod-Regel bearbeitet",
+        "rule_delete": "Automod-Regel gelöscht",
+        "timeout": "Mitglied von Automod in den Timeout geschickt",
+        "raid": "Raid-Schutz ausgelöst"
       },
       "admin": {
         "post": "Admin-Aktion"
@@ -2460,6 +2477,144 @@
     "collapsed": "Blockierte Nachricht",
     "show": "Anzeigen"
   },
+  "automod": {
+    "title": "Automod",
+    "hint": "Regeln, die jede neue oder bearbeitete Nachricht und jede Registrierung prüfen. Ein Treffer wird blockiert oder nur markiert und erscheint immer unter Meldungen, gekennzeichnet als Automod. Der Owner und Administratoren werden von keiner Regel aufgehalten.",
+    "empty": "Noch keine Regeln.",
+    "kind": {
+      "words": "Verbotene Wörter",
+      "links": "Links",
+      "mentions": "Erwähnungs-Spam",
+      "new_account": "Neue Konten",
+      "raid": "Raid-Schutz"
+    },
+    "about": {
+      "words": "Blockiert oder markiert Nachrichten, die eines dieser Wörter oder eine dieser Wendungen enthalten. Nur ganze Wörter; Groß- und Kleinschreibung ist egal.",
+      "links": "Blockiert oder markiert Nachrichten mit Links: jeden Link, jeden Link außer zu den erlaubten Domains oder nur Links zu den aufgelisteten Domains.",
+      "mentions": "Blockiert oder markiert eine Nachricht, die mehr verschiedene Personen erwähnt als erlaubt.",
+      "new_account": "Hindert gerade beigetretene Konten eine Weile daran, Links oder Dateien zu posten oder überhaupt zu schreiben.",
+      "raid": "Wenn viele Konten in kurzer Zeit beitreten, bekommen die Neuen für eine Weile einen Timeout und die Moderatoren einen Hinweis. Ein Moderator kann den Timeout wie jeden anderen aufheben."
+    },
+    "newTitle": "Neue Regel: {kind}",
+    "editTitle": "Regel bearbeiten",
+    "name": "Name",
+    "nameHint": "Wird dem Mitglied gezeigt, dessen Nachricht blockiert wird, und unter Meldungen.",
+    "words": "Wörter und Wendungen",
+    "wordsHint": "Eines pro Zeile. * steht für beliebige Buchstaben oder Ziffern, cheat* erfasst also auch cheating.",
+    "linkMode": "Welche Links",
+    "linkModes": {
+      "block_all": "Jeden Link blockieren",
+      "allow_list": "Nur diese Domains erlauben",
+      "block_list": "Diese Domains blockieren"
+    },
+    "domains": "Domains",
+    "domainsHint": "Eine pro Zeile, zum Beispiel example.com. Eine Domain gilt auch für ihre Subdomains.",
+    "maxMentions": "Meiste verschiedene Erwähnungen in einer Nachricht",
+    "maxMentionsHint": "@all und @here zählen je einmal. Eine Nachricht mit mehr ist ein Treffer.",
+    "accountAge": "Ein Konto gilt als neu für",
+    "restrict": "Neue Konten dürfen nicht",
+    "restricts": {
+      "links": "Links posten",
+      "attachments": "Dateien anhängen",
+      "links_and_attachments": "Links posten oder Dateien anhängen",
+      "everything": "überhaupt schreiben"
+    },
+    "joins": "Beitritte, ab denen es ein Raid ist",
+    "window": "Innerhalb von",
+    "restrictTime": "Neue einschränken für",
+    "raidHint": "Jedes neue Konto zählt. Die Neuen dieser Zeit und alle, die während des Raids beitreten, bekommen einen Timeout.",
+    "action": "Wenn eine Regel trifft",
+    "actions": {
+      "block": "Nachricht blockieren und den Autor informieren",
+      "flag": "Durchlassen und nur markieren",
+      "blockShort": "Blockiert",
+      "flagShort": "Markiert"
+    },
+    "timeout": "Autor zusätzlich in den Timeout schicken",
+    "noTimeout": "Kein Timeout",
+    "timeoutBadge": "Timeout",
+    "exemptRoles": "Ausgenommene Rollen",
+    "noRoles": "Noch keine Rollen.",
+    "exemptChannels": "Ausgenommene Kanäle",
+    "exemptHint": "Mitglieder mit einer ausgenommenen Rolle und alles, was in einem ausgenommenen Kanal geschrieben wird, überspringen diese Regel. In Direktnachrichten gelten nur die Link- und Erwähnungsregeln.",
+    "enabled": "Regel ist an",
+    "saved": "Regel gespeichert.",
+    "saveFailed": "Die Regel konnte nicht gespeichert werden. Versuche es noch einmal.",
+    "loadFailed": "Die Regeln konnten nicht geladen werden.",
+    "deleteFailed": "Die Regel konnte nicht gelöscht werden. Versuche es noch einmal.",
+    "deleteTitle": "Regel „{name}“ löschen?",
+    "deleteBody": "Sie wirkt sofort nicht mehr. Die Einträge, die sie schon unter Meldungen angelegt hat, bleiben.",
+    "delete": "Regel löschen",
+    "toggle": "Regel „{name}“ ist an",
+    "edit": "„{name}“ bearbeiten",
+    "deleteRule": "„{name}“ löschen",
+    "raidOn": "Ein Raid wird bis {time} gebremst. Neue Mitglieder sind eingeschränkt.",
+    "problem": {
+      "name": "Gib der Regel einen Namen.",
+      "tooManyWords": "Höchstens {max} Wörter.",
+      "tooManyDomains": "Höchstens {max} Domains.",
+      "mentions": "Gib eine Zahl von 1 bis 50 ein.",
+      "joins": "Gib eine Zahl von 2 bis 200 ein."
+    },
+    "summary": {
+      "words": "Wörter und Wendungen: {count}",
+      "links": {
+        "block_all": "Jeder Link",
+        "allow_list": "Nur Links zu {count} aufgelisteten Domains",
+        "block_list": "Links zu {count} aufgelisteten Domains"
+      },
+      "mentions": "Mehr als {n} verschiedene Erwähnungen",
+      "newAccount": {
+        "links": "Konten unter {age} dürfen keine Links posten",
+        "attachments": "Konten unter {age} dürfen keine Dateien anhängen",
+        "links_and_attachments": "Konten unter {age} dürfen keine Links oder Dateien posten",
+        "everything": "Konten unter {age} dürfen nicht schreiben"
+      },
+      "raid": "Mehr als {joins} Beitritte innerhalb von {window}: Neue eingeschränkt für {restrict}"
+    }
+  },
+  "modHistory": {
+    "tabs": "Profilbereiche",
+    "tabProfile": "Profil",
+    "tabModeration": "Moderation",
+    "strikeCount": "{count} Verwarnungen",
+    "privacy": "Das sehen nur Moderatoren. Das Mitglied bekommt es nie zu sehen, und es ist nicht Teil seines Datenexports.",
+    "loadFailed": "Der Moderationsverlauf konnte nicht geladen werden.",
+    "saveFailed": "Die Notiz konnte nicht gespeichert werden. Versuche es noch einmal.",
+    "deleteFailed": "Die Notiz konnte nicht gelöscht werden. Versuche es noch einmal.",
+    "notes": "Notizen",
+    "noteLabel": "Notiz",
+    "notePlaceholder": "Eine private Notiz für die Moderatoren …",
+    "asStrike": "Als Verwarnung zählen",
+    "add": "Notiz hinzufügen",
+    "noNotes": "Noch keine Notizen.",
+    "strike": "Verwarnung",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "deleteTitle": "Diese Notiz löschen?",
+    "deleteBody": "Die Notiz wird endgültig entfernt.",
+    "timeline": "Verlauf",
+    "noEvents": "Nichts vermerkt.",
+    "someModerator": "Ein Moderator",
+    "reason": "Grund: {reason}",
+    "event": {
+      "timeout": "{actor} hat einen Timeout von {duration} verhängt",
+      "timeout_removed": "{actor} hat den Timeout beendet",
+      "ban": "{actor} hat das Mitglied gesperrt",
+      "banTimed": "{actor} hat das Mitglied für {duration} gesperrt",
+      "unban": "{actor} hat die Sperre aufgehoben",
+      "ban_expired": "Die Sperre ist abgelaufen",
+      "kick": "{actor} hat das Mitglied rausgeworfen",
+      "talk_removal": "{actor} hat das Mitglied aus einem Talk entfernt",
+      "roles": "{actor} hat die Rollen geändert: {changes}",
+      "report": "Gemeldet ({category}), {status}",
+      "automod": {
+        "blocked": "Die Automod-Regel „{rule}“ hat eine Nachricht blockiert",
+        "flagged": "Die Automod-Regel „{rule}“ hat eine Nachricht markiert",
+        "alert": "Die Automod-Regel „{rule}“ hat einen Hinweis ausgelöst"
+      }
+    }
+  },
   "reports": {
     "menu": "Nachricht melden",
     "title": "Nachricht melden",
@@ -2469,7 +2624,8 @@
       "spam": "Spam",
       "harassment": "Belästigung",
       "illegal": "Illegale Inhalte",
-      "other": "Etwas anderes"
+      "other": "Etwas anderes",
+      "automod": "Automod"
     },
     "categoryHint": {
       "spam": "Unerwünschte Werbung, Links oder wiederholte Nachrichten.",
@@ -2497,6 +2653,22 @@
         "all": "Alle"
       },
       "empty": "Hier gibt es keine Meldungen.",
+      "automod": "Automod",
+      "alertWhere": "Server",
+      "raidAlert": "„{rule}“ hat Neue eingeschränkt",
+      "alertText": "Der Raid-Schutz hat bemerkt, dass viele Konten in kurzer Zeit beigetreten sind. Die Neuen haben für eine Weile einen Timeout bekommen. Einen Timeout hebst du im Profil des Mitglieds auf; schließe diesen Eintrag, wenn du ihn dir angesehen hast.",
+      "automodHit": {
+        "blocked": "„{rule}“ hat eine Nachricht von {reported} blockiert",
+        "flagged": "„{rule}“ hat eine Nachricht von {reported} markiert"
+      },
+      "automodDmNotice": "Automod hat in einer Direktnachricht einen Regelverstoß gefunden. Den Text einer Direktnachricht behält es nie, deshalb gibt es keine Kopie.",
+      "automodBlockedNotice": "Die Nachricht wurde blockiert und nie gespeichert. Das ist der abgelehnte Text.",
+      "outcome": {
+        "blocked": "Blockiert",
+        "flagged": "Markiert",
+        "alert": "Raid-Hinweis"
+      },
+      "hits": "{count} Treffer",
       "by": "{reporter} hat {reported} gemeldet",
       "dm": "Direktnachricht",
       "back": "Zurück zu den Meldungen",

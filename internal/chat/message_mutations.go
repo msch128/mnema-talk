@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/emojitext"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -17,39 +18,70 @@ import (
 // its mentions again, in one transaction. Empty content is only allowed when
 // the message carries an attachment (like an upload without a caption).
 func EditMessage(ctx context.Context, p *db.Pool, online OnlineSource, messageID, userID uuid.UUID, content string) error {
-	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		var author uuid.UUID
-		var hasMedia, isPoll, forwarded bool
-		err := tx.QueryRow(ctx, `
-			SELECT user_id, EXISTS (SELECT 1 FROM media WHERE message_id = messages.id),
-			       EXISTS (SELECT 1 FROM polls WHERE message_id = messages.id), forwarded
-			FROM messages WHERE id = $1 FOR UPDATE`, messageID).Scan(&author, &hasMedia, &isPoll, &forwarded)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return errMessageNotFound
-		}
-		if err != nil {
-			return fmt.Errorf("load message: %w", err)
-		}
-		if author != userID {
-			return httpx.ErrForbidden("only the author can edit this message")
-		}
-		if isPoll {
-			return httpx.ErrInvalidInput("a poll cannot be edited; delete it and ask again")
-		}
-		if content == "" && !hasMedia && !forwarded {
-			_, err := ValidateContent(content, false)
-			return err
-		}
-		if err := recordReplacedVersion(ctx, tx, messageID); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx, `
-			UPDATE messages SET content = $1, is_edited = TRUE, updated_at = NOW()
-			WHERE id = $2`, content, messageID); err != nil {
-			return fmt.Errorf("update message: %w", err)
-		}
-		return RecordMentions(ctx, tx, online, messageID, userID, content)
+	pending, err := checkEditAutomod(ctx, p, messageID, userID, content)
+	if err != nil {
+		return err
+	}
+	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		return editMessageTx(ctx, tx, online, messageID, userID, content)
 	})
+	if err == nil {
+		pending.Commit(ctx, messageID)
+	}
+	return err
+}
+
+// editMessageTx checks that userID may edit the message, keeps the replaced
+// version and stores the new text with its mentions.
+func editMessageTx(ctx context.Context, tx pgx.Tx, online OnlineSource, messageID, userID uuid.UUID, content string) error {
+	var author uuid.UUID
+	var hasMedia, isPoll, forwarded bool
+	err := tx.QueryRow(ctx, `
+		SELECT user_id, EXISTS (SELECT 1 FROM media WHERE message_id = messages.id),
+		       EXISTS (SELECT 1 FROM polls WHERE message_id = messages.id), forwarded
+		FROM messages WHERE id = $1 FOR UPDATE`, messageID).Scan(&author, &hasMedia, &isPoll, &forwarded)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return errMessageNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("load message: %w", err)
+	}
+	if author != userID {
+		return httpx.ErrForbidden("only the author can edit this message")
+	}
+	if isPoll {
+		return httpx.ErrInvalidInput("a poll cannot be edited; delete it and ask again")
+	}
+	if content == "" && !hasMedia && !forwarded {
+		_, err := ValidateContent(content, false)
+		return err
+	}
+	if err := recordReplacedVersion(ctx, tx, messageID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE messages SET content = $1, is_edited = TRUE, updated_at = NOW()
+		WHERE id = $2`, content, messageID); err != nil {
+		return fmt.Errorf("update message: %w", err)
+	}
+	return RecordMentions(ctx, tx, online, messageID, userID, content)
+}
+
+// checkEditAutomod applies the automod rules to the new text of an edit. Only
+// the author's own edit is checked; whoever else tries gets the refusal of the
+// edit itself.
+func checkEditAutomod(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, content string) (*automod.Pending, error) {
+	ref, err := loadMessageRef(ctx, p, messageID)
+	if errors.Is(err, errMessageNotFound) {
+		return nil, nil // the edit itself answers 404
+	}
+	if err != nil {
+		return nil, err
+	}
+	if ref.AuthorID != userID || content == "" {
+		return nil, nil
+	}
+	return automod.Of(p).Check(ctx, automod.Post{ChannelID: ref.ChannelID, UserID: userID, Content: content, MessageID: messageID})
 }
 
 // DeleteMessage removes a message (and its thread replies) if user is its

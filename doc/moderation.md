@@ -21,6 +21,8 @@ the target out of reach between the check and the write.
 | Kick | *Kick members* | `/kick` in the composer, see [Kicks](#kicks) |
 | Remove from a Talk | *Disconnect members* | Removes the member from that Talk only; they stay signed in |
 | Read and close reports | *Manage reports* | See [Blocking and reports](#blocking-and-reports) |
+| Automod rules | *Administrator* | See [Automod](#automod); no new permission bit |
+| Moderation history and notes of a member | *Manage reports* | See [Moderation history and moderator notes](#moderation-history-and-moderator-notes) |
 
 ## Timeouts
 
@@ -242,6 +244,123 @@ channel: a report of a private channel is readable by its handlers.
 - **Erasure.** When an account is erased, its text is blanked in every report
   copy (as the reported message or as context) and its links to reports are
   cut; the reports stay.
+
+## Automod
+
+Automod checks every new and edited message, and every sign-up, against rules
+the Owner or an Administrator sets under **Admin > Automod** (the tab shows
+only where the server lists the `automod` feature). Code:
+[`internal/automod`](../internal/automod/) (the rules), [`internal/moderation`](../internal/moderation/)
+(the REST routes).
+
+### Rules
+
+| Rule | What it does |
+|---|---|
+| **Blocked words** | Words and phrases, matched as **whole words**, without regard to case. `*` in an entry stands for any run of letters and digits (`cheat*` catches *cheat* and *cheating*). Spaces inside a phrase match any white space; invisible characters (zero-width spaces, soft hyphens) are ignored, so they do not hide a word. |
+| **Links** | One mode: block **every** link, allow **only** the listed domains, or block the **listed** domains. A domain covers its subdomains. A link is anything starting with `http://`, `https://` or `www.`; the host is read after any user name and port. |
+| **Mention spam** | A message with **more than N different** mentions (`@name`, `@all` and `@here` count once each; the same name twice counts once). |
+| **New accounts** | Accounts younger than a time (1 minute to 30 days) may not post links, may not attach files, may not do either, or may not post at all. |
+| **Raid protection** | More than N accounts joining within M seconds. Every account of that window, and everyone who joins while the raid lasts, is **timed out** for the restriction time (1 minute to a day), and **one** entry in the reports queue announces the raid. A moderator lifts a timeout like any other. At most one such rule. |
+
+Each rule except raid protection has an **action**: *block* (the message is
+refused with a 400 that names the rule, so the author knows why; nothing is
+stored) or *flag* (the message is delivered and only marked in the queue). It
+may also **time the author out** for a set time. A longer timeout the member
+already has is never shortened. Each rule has **exempt roles** and **exempt
+channels**, which skip it. The Owner, holders of *Administrator*, bots and
+incoming webhooks are never checked.
+
+A rule is edited as a whole (`PUT`); its kind cannot change. At most 25 rules.
+The rules are compiled once per version of the configuration and kept in
+memory; a change through the API takes effect on the next message, and a change
+made behind the server's back (a restore) within 30 seconds. The check in the
+send path reads no table except the creation time of the author's account,
+and that is remembered.
+
+Automod covers every way a member's message is created: plain messages,
+uploads, thread replies, polls, forwards, slash command replies and
+**edits** (an edit that breaks a blocking rule is refused and the message stays
+as it was).
+
+### Direct messages
+
+In a direct message only the **link** and **mention spam** rules apply. A hit
+there is queued **without any text**: the entry says which member broke which
+rule in a direct message, nothing more. Automod never keeps the text of a
+direct message (a blocked one is dropped, a flagged one stays where it was
+written, and the recipients can still report it themselves, which is then the
+only way a moderator reads it).
+
+### The queue
+
+Every hit is an entry in **Admin > Reports**, marked **Automod**, with the rule's
+name as it was when it hit (the entry outlives the rule) and `source: "automod"`
+in the API. It has no reporter. For a blocked message in a channel the entry
+keeps the refused text (and nothing around it: no context), exactly the part a
+member's report would keep; a flagged message is referenced by id. While an
+entry of one member and one rule is open, further hits only count up on it
+(`hit_count`), so a spammer cannot flood the queue; closing it lets the next
+hit open a new one. A raid alert has `kind: "alert"` and no message.
+Closing, dismissing and deleting work as for any report (*Manage reports*).
+
+Audit entries: `automod.rule_create`, `automod.rule_update`,
+`automod.rule_delete` (by the Administrator), `automod.timeout` and
+`automod.raid` (actor *Automod*). Messages and hits are not audited; the
+queue is their record.
+
+### Defaults
+
+New servers and upgraded ones start with the same **conservative** rules
+(migration 0066), all editable and deletable: mention spam above 10 mentions
+(block), new accounts under 10 minutes may not post links (block), raid
+protection at more than 10 joins in 10 seconds (restriction of 10 minutes,
+flag). *Blocked words* (empty word list) and *Links* are present and **off**.
+See [the upgrade notes](upgrade.md#automod-and-moderation-history).
+
+### API
+
+All under `/api/admin`, **Administrator** only: `GET /automod`,
+`POST /automod/rules`, `PUT /automod/rules/{id}`,
+`DELETE /automod/rules/{id}`. See [`api/openapi.json`](../api/openapi.json).
+
+## Moderation history and moderator notes
+
+A member's profile has a **Moderation** tab for everyone with *Manage reports*
+(never for yourself, for bots, or on a server without the
+`moderation.history` feature). It shows
+
+- a **timeline**: timeouts, ended timeouts, bans, unbans, expired bans, kicks,
+  removals from a Talk, role changes made by moderators, reports about the
+  member (category and status, never the reporter, the note or the text), and
+  automod hits (rule, outcome, count). It is read from the audit log and the
+  reports table; the latest 200 events;
+- **notes**: short private texts (up to 1000 characters, at most 100 per member)
+  that moderators write about a member. A note can **count as a strike**; the
+  strike count is the small badge on the tab.
+
+A moderator **edits and deletes their own** notes; an Administrator (or the
+Owner) **deletes any** note, and edits only their own. Nobody opens the history
+or the notes of themselves, whatever they hold.
+
+`GET /api/admin/users/{id}/moderation`, `POST .../moderation/notes`,
+`PUT` and `DELETE .../moderation/notes/{noteID}`, all *Manage reports*.
+
+### Moderator notes are moderator data
+
+- **Never visible to the member** they are about, in no response, event, list or
+  search, and **never in their data export** (the export holds what the
+  person wrote and what they filed, not what moderators keep about them).
+- **Audited without text**: `moderation.note_add`, `moderation.note_edit` and
+  `moderation.note_delete` are in the audit log for the Owner and
+  Administrators only, and never carry the note.
+- **Erasure.** When an account is erased the notes **stay**, because they are
+  the moderators' record (for example against a returning member): the member
+  they are about is shown as the account's tombstone, "Deleted member", and a
+  note written by an erased moderator shows "Deleted member" as its author.
+  The notes are not erased with the account, and the privacy page lists them
+  under *Moderation records*; an Administrator can delete any of them.
+  Operators who need a shorter retention delete notes by hand.
 
 ## Audit log
 

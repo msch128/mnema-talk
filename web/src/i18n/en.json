@@ -158,7 +158,9 @@
       "replyGone": "The message you replied to no longer exists.",
       "replyElsewhere": "You can only reply to a message in the same conversation.",
       "inviteExists": "An invite with this code already exists.",
-      "usernameReserved": "This username is reserved."
+      "usernameReserved": "This username is reserved.",
+      "automodSend": "Your message wasn’t sent: it breaks the server rule “{rule}”. The moderators can see this.",
+      "automodEdit": "Your edit wasn’t saved: it breaks the server rule “{rule}”. The moderators can see this."
     },
     "field": {
       "content": "Message",
@@ -715,6 +717,9 @@
       "session": "Session token",
       "sessionPurpose": "Signed session tokens for authentication",
       "sessionRetention": "Up to {days} days or until you sign out",
+      "moderation": "Moderation records",
+      "moderationPurpose": "Reports, automod entries and private notes that moderators keep about members; never part of a data export",
+      "moderationRetention": "Until the moderators delete them; entries about a deleted account stay under “Deleted member”",
       "rightsHeading": "Your rights as a data subject",
       "rights1Before": "Under Art. 15–22 GDPR you have the right at any time, free of charge, to ",
       "rightsAccess": "access",
@@ -951,7 +956,8 @@
       "bots": "Bots",
       "onboarding": "Welcome & rules",
       "emoji": "Emoji",
-      "reports": "Reports"
+      "reports": "Reports",
+      "automod": "Automod"
     },
     "system": {
       "heading": "System & version",
@@ -1769,7 +1775,8 @@
       "moderation": "Moderation",
       "emoji": "Emoji",
       "bot": "Bots",
-      "poll": "Polls"
+      "poll": "Polls",
+      "automod": "Automod"
     },
     "actions": {
       "role": {
@@ -1879,7 +1886,10 @@
         "unban": "Member unbanned",
         "kick": "Member kicked",
         "ban_expired": "Ban expired",
-        "bulk_delete": "Messages deleted in bulk"
+        "bulk_delete": "Messages deleted in bulk",
+        "note_add": "Moderator note added",
+        "note_edit": "Moderator note edited",
+        "note_delete": "Moderator note deleted"
       },
       "emoji": {
         "create": "Emoji added",
@@ -1897,6 +1907,13 @@
         "token_revoke": "Bot token revoked",
         "command_update": "Bot command edited",
         "command_delete": "Bot command deleted"
+      },
+      "automod": {
+        "rule_create": "Automod rule created",
+        "rule_update": "Automod rule edited",
+        "rule_delete": "Automod rule deleted",
+        "timeout": "Member timed out by automod",
+        "raid": "Raid protection triggered"
       },
       "admin": {
         "post": "Admin action"
@@ -2460,6 +2477,144 @@
     "collapsed": "Blocked message",
     "show": "Show"
   },
+  "automod": {
+    "title": "Automod",
+    "hint": "Rules that check every new or edited message and every sign-up. A hit is blocked or only flagged, and always appears in Reports, marked Automod. The Owner and Administrators are never held back by a rule.",
+    "empty": "No rules yet.",
+    "kind": {
+      "words": "Blocked words",
+      "links": "Links",
+      "mentions": "Mention spam",
+      "new_account": "New accounts",
+      "raid": "Raid protection"
+    },
+    "about": {
+      "words": "Blocks or flags messages that contain one of these words or phrases. Whole words only; capitals do not matter.",
+      "links": "Blocks or flags messages with links: every link, every link except to the allowed domains, or only links to the listed domains.",
+      "mentions": "Blocks or flags a message that mentions more different people than allowed.",
+      "new_account": "Keeps accounts that have just joined from posting links or files, or from posting at all, for a while.",
+      "raid": "When many accounts join in a short time, the newcomers are timed out for a while and the moderators get an alert. A moderator can lift a timeout like any other."
+    },
+    "newTitle": "New rule: {kind}",
+    "editTitle": "Edit rule",
+    "name": "Name",
+    "nameHint": "Shown to the member whose message is blocked, and in Reports.",
+    "words": "Words and phrases",
+    "wordsHint": "One per line. * stands for any letters or digits, so cheat* also catches cheating.",
+    "linkMode": "Which links",
+    "linkModes": {
+      "block_all": "Block every link",
+      "allow_list": "Allow only these domains",
+      "block_list": "Block these domains"
+    },
+    "domains": "Domains",
+    "domainsHint": "One per line, for example example.com. A domain covers its subdomains.",
+    "maxMentions": "Most different mentions in one message",
+    "maxMentionsHint": "@all and @here count as one each. A message with more is a hit.",
+    "accountAge": "An account counts as new for",
+    "restrict": "New accounts may not",
+    "restricts": {
+      "links": "Post links",
+      "attachments": "Attach files",
+      "links_and_attachments": "Post links or attach files",
+      "everything": "Post at all"
+    },
+    "joins": "Joins that count as a raid",
+    "window": "Within",
+    "restrictTime": "Restrict newcomers for",
+    "raidHint": "Every new account counts. The newcomers of that time, and everyone who joins while the raid lasts, are timed out.",
+    "action": "When a rule hits",
+    "actions": {
+      "block": "Block the message and tell the author",
+      "flag": "Let it through and only flag it",
+      "blockShort": "Blocks",
+      "flagShort": "Flags"
+    },
+    "timeout": "Also time the author out",
+    "noTimeout": "No timeout",
+    "timeoutBadge": "Timeout",
+    "exemptRoles": "Exempt roles",
+    "noRoles": "No roles yet.",
+    "exemptChannels": "Exempt channels",
+    "exemptHint": "Members with an exempt role, and everything written in an exempt channel, skip this rule. In direct messages only the link and mention rules apply.",
+    "enabled": "Rule is on",
+    "saved": "Rule saved.",
+    "saveFailed": "Couldn’t save the rule. Try again.",
+    "loadFailed": "Couldn’t load the rules.",
+    "deleteFailed": "Couldn’t delete the rule. Try again.",
+    "deleteTitle": "Delete the rule “{name}”?",
+    "deleteBody": "It stops working at once. The entries it already made in Reports stay.",
+    "delete": "Delete rule",
+    "toggle": "Rule “{name}” is on",
+    "edit": "Edit “{name}”",
+    "deleteRule": "Delete “{name}”",
+    "raidOn": "A raid is being held back until {time}. Newcomers are restricted.",
+    "problem": {
+      "name": "Give the rule a name.",
+      "tooManyWords": "At most {max} words.",
+      "tooManyDomains": "At most {max} domains.",
+      "mentions": "Enter a number from 1 to 50.",
+      "joins": "Enter a number from 2 to 200."
+    },
+    "summary": {
+      "words": "Words and phrases: {count}",
+      "links": {
+        "block_all": "Every link",
+        "allow_list": "Only links to {count} listed domains",
+        "block_list": "Links to {count} listed domains"
+      },
+      "mentions": "More than {n} different mentions",
+      "newAccount": {
+        "links": "Accounts under {age} may not post links",
+        "attachments": "Accounts under {age} may not attach files",
+        "links_and_attachments": "Accounts under {age} may not post links or files",
+        "everything": "Accounts under {age} may not post"
+      },
+      "raid": "More than {joins} joins within {window}: newcomers restricted for {restrict}"
+    }
+  },
+  "modHistory": {
+    "tabs": "Profile sections",
+    "tabProfile": "Profile",
+    "tabModeration": "Moderation",
+    "strikeCount": "{count} strikes",
+    "privacy": "Only moderators see this. The member is never shown it and it is not part of their data export.",
+    "loadFailed": "Couldn’t load the moderation history.",
+    "saveFailed": "Couldn’t save the note. Try again.",
+    "deleteFailed": "Couldn’t delete the note. Try again.",
+    "notes": "Notes",
+    "noteLabel": "Note",
+    "notePlaceholder": "A private note for the moderators…",
+    "asStrike": "Count as a strike",
+    "add": "Add note",
+    "noNotes": "No notes yet.",
+    "strike": "Strike",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteTitle": "Delete this note?",
+    "deleteBody": "The note is removed for good.",
+    "timeline": "History",
+    "noEvents": "Nothing on record.",
+    "someModerator": "A moderator",
+    "reason": "Reason: {reason}",
+    "event": {
+      "timeout": "{actor} timed them out for {duration}",
+      "timeout_removed": "{actor} ended the timeout",
+      "ban": "{actor} banned them",
+      "banTimed": "{actor} banned them for {duration}",
+      "unban": "{actor} lifted the ban",
+      "ban_expired": "The ban ran out",
+      "kick": "{actor} kicked them",
+      "talk_removal": "{actor} removed them from a Talk",
+      "roles": "{actor} changed their roles: {changes}",
+      "report": "Reported ({category}), {status}",
+      "automod": {
+        "blocked": "Automod rule “{rule}” blocked a message",
+        "flagged": "Automod rule “{rule}” flagged a message",
+        "alert": "Automod rule “{rule}” raised an alert"
+      }
+    }
+  },
   "reports": {
     "menu": "Report message",
     "title": "Report message",
@@ -2469,7 +2624,8 @@
       "spam": "Spam",
       "harassment": "Harassment",
       "illegal": "Illegal content",
-      "other": "Something else"
+      "other": "Something else",
+      "automod": "Automod"
     },
     "categoryHint": {
       "spam": "Unwanted ads, links or repeated messages.",
@@ -2497,6 +2653,22 @@
         "all": "All"
       },
       "empty": "No reports here.",
+      "automod": "Automod",
+      "alertWhere": "Server",
+      "raidAlert": "“{rule}” restricted newcomers",
+      "alertText": "Raid protection noticed many accounts joining in a short time. The newcomers were timed out for a while. You can lift a timeout from a member’s profile; close this entry when you have looked at it.",
+      "automodHit": {
+        "blocked": "“{rule}” blocked a message of {reported}",
+        "flagged": "“{rule}” flagged a message of {reported}"
+      },
+      "automodDmNotice": "Automod found a rule broken in a direct message. It never keeps the text of a direct message, so there is no copy.",
+      "automodBlockedNotice": "The message was blocked and never stored. This is the text that was refused.",
+      "outcome": {
+        "blocked": "Blocked",
+        "flagged": "Flagged",
+        "alert": "Raid alert"
+      },
+      "hits": "{count} hits",
       "by": "{reporter} reported {reported}",
       "dm": "Direct message",
       "back": "Back to reports",

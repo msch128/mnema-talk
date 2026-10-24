@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/config"
@@ -146,6 +147,7 @@ func NewRouter(d Deps) (*Router, error) {
 	c.perUser = httpx.NewRateLimiter(600, time.Minute).Named("api_user")
 	c.previewsPerUser = httpx.NewRateLimiter(120, time.Minute).Named("link_preview")
 	c.uploadsPerUser = httpx.NewRateLimiter(30, time.Minute).Named("upload")
+	c.newModeration()
 
 	return &Router{
 		Handler:  c.buildHandler(),
@@ -153,7 +155,7 @@ func NewRouter(d Deps) (*Router, error) {
 		Webhooks: c.webhookH,
 		Bots:     c.botAuthn,
 		Gateway:  c.gw,
-		cancel:   cancel,
+		cancel:   func() { automod.Detach(d.DB, c.engine); cancel() },
 		outgoing: c.outgoing,
 		preview:  PreviewDeps{Accounts: c.authH, Chat: c.chatH, System: c.systemH, PerUser: c.perUser, Trusted: trusted},
 	}, nil

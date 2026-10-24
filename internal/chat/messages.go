@@ -318,6 +318,8 @@ type NewMessage struct {
 	WebhookID  *uuid.UUID
 	AuthorName string
 	Embeds     []Embed
+	// HasAttachment is set for an upload (automod's new-account rule looks at it).
+	HasAttachment bool
 }
 
 // CreateMessage inserts a message and returns its ID.
