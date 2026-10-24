@@ -537,6 +537,7 @@
     "searchUnknownFilter": "No matching member or channel",
     "searchRemoveFilter": "Remove filter {filter}",
     "searchInChannel": "Search in this channel",
+    "headerMore": "More",
     "searchFailed": "Couldn’t search. Try again.",
     "inThread": "in thread",
     "searchPinned": "Pinned",
