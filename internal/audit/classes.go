@@ -45,6 +45,7 @@ var Classes = []Class{
 	{"voice.%", VisChannel, "who was in which Talk"},
 	{"category.%", VisPrivileged, "names and overwrites of a possibly private category"},
 	{"layout.apply", VisPrivileged, "lists channel and category placements, private ones included"},
+	{"event.talk_%", VisChannel, "names and times an event held in a possibly private Talk"},
 	{"channel.%", VisChannel, "names, topics and overwrites of a possibly private channel"},
 	{"%", VisAuditors, "administration and moderation"},
 }

@@ -8,7 +8,8 @@
     "poll": "Umfrage",
     "spoiler": "Spoiler",
     "test": "Push funktioniert auf diesem Gerät.",
-    "forward": "Weitergeleitete Nachricht"
+    "forward": "Weitergeleitete Nachricht",
+    "event_reminder": "Beginnt in 15 Minuten"
   },
   "en": {
     "new": "New message",
@@ -19,6 +20,7 @@
     "poll": "Poll",
     "spoiler": "Spoiler",
     "test": "Push works on this device.",
-    "forward": "Forwarded message"
+    "forward": "Forwarded message",
+    "event_reminder": "Starts in 15 minutes"
   }
 }

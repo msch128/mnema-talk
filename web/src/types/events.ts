@@ -2,8 +2,8 @@
 // internal/ws/{handle,voice,presence,signal,lifecycle}.go and chat publications.
 import type { ModerationNotice } from '../lib/moderation'
 import type { Message, Poll, ReactionSummary, ReadState, User, UserUpdate, VoiceUser, Presence } from './domain'
-import type { ChatUserRef } from './rest'
-import { isAuthUser, isChatMessage, isChatPoll, isChatReactionSummary, isChatNotifyLevel } from './rest'
+import type { ChatUserRef, CommunityeventsCommunityEvent } from './rest'
+import { isAuthUser, isChatMessage, isChatPoll, isChatReactionSummary, isChatNotifyLevel, isCommunityeventsCommunityEvent } from './rest'
 import { ContractError, hasOwn, isRecord, isIdentifier, isTimestamp, isInteger, isString, isArrayOf, isDictionaryOf } from './validation'
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue | undefined }
@@ -134,6 +134,9 @@ export interface ServerEventPayloads {
   /** Joining a Create-a-Talk lobby opened this Talk: join it like any other. */
   talk_moved: { from_channel_id: string; channel_id: string }
   media_handshake: { channel_id: string; user_id: string; wire: string }
+  event_update: CommunityeventsCommunityEvent
+  event_delete: { id: string }
+  event_reminder: { event_id: string; title: string; start_time: string; channel_id?: string }
 }
 
 export type EventUnion<Payloads> = { [K in keyof Payloads]: { type: K; payload: Payloads[K] } }[keyof Payloads]
@@ -228,6 +231,7 @@ const NON_OBJECT_CHECKS = new Map<string, (payload: unknown) => boolean>([
   ['member_joined', isAuthUser],
   ['message_create', isChatMessage],
   ['message_update', isChatMessage],
+  ['event_update', isCommunityeventsCommunityEvent],
   ['presence_snapshot', payload => isArrayOf(payload, isIdentifier) || isDictionaryOf(payload, isPresence)],
   ['voice_snapshot', payload => isDictionaryOf(payload, (users): users is Record<string, VoiceUser> => isDictionaryOf(users, isVoiceUser))]
 ])
@@ -273,9 +277,7 @@ function isInteractionResponse(payload: Record<string, unknown>): boolean {
   return isTimestamp(payload['created_at'])
 }
 
-const MODERATION_NOTICE_KINDS = new Set([
-  'timeout', 'timeout_removed', 'ban', 'message_deleted', 'messages_deleted'
-])
+const MODERATION_NOTICE_KINDS = new Set(['timeout', 'timeout_removed', 'ban', 'message_deleted', 'messages_deleted'])
 
 function isValidModerationTiming(payload: Record<string, unknown>): boolean {
   if (hasOwn(payload, 'until') && !isTimestamp(payload['until'])) return false
@@ -346,7 +348,10 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['talk_leader', payload => isIdentifier(payload['channel_id']) && (payload['leader_id'] === null || isIdentifier(payload['leader_id']))],
   ['talk_moved', payload => isIdentifier(payload['from_channel_id']) && isIdentifier(payload['channel_id'])],
   ['media_handshake', payload => isIdentifier(payload['channel_id']) && isIdentifier(payload['user_id'])
-    && isString(payload['wire'], 48_000) && payload['wire'] !== '']
+    && isString(payload['wire'], 48_000) && payload['wire'] !== ''],
+  ['event_delete', payload => isIdentifier(payload['id'])],
+  ['event_reminder', payload => isIdentifier(payload['event_id']) && isString(payload['title'], 100)
+    && isTimestamp(payload['start_time']) && (!hasOwn(payload, 'channel_id') || isIdentifier(payload['channel_id']))]
 ])
 
 // The check registered for an event type. The wire-controlled name is only
@@ -376,7 +381,8 @@ const SERVER_EVENT_TYPES = new Set<string>([
   'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
-  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'media_handshake'
+  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'media_handshake',
+  'event_update', 'event_delete', 'event_reminder'
 ])
 
 /** Unknown event names stay ignorable for forward compatibility; malformed

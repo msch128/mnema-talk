@@ -61,6 +61,14 @@ const (
 	// Kicked tells a member a moderator signed them out everywhere; their
 	// connection closes right after.
 	Kicked = "kicked"
+	// EventUpdate tells clients that a community event was created, edited,
+	// cancelled, completed or that its RSVPs changed.
+	EventUpdate = "event_update"
+	// EventDelete tells one member that a community event left their view (it
+	// moved into, or its Talk became, something they may not see): drop it.
+	EventDelete = "event_delete"
+	// EventReminder notifies members 15 minutes before an event starts.
+	EventReminder = "event_reminder"
 )
 
 // Client-to-server events.

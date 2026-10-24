@@ -11,6 +11,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/emoji"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -61,7 +62,9 @@ type components struct {
 	outgoing *webhook.Dispatcher
 	webhookH *webhook.Handler
 
-	pushH *push.Handler
+	pushH           *push.Handler
+	eventsH         *communityevents.Handler
+	eventsScheduler *communityevents.Scheduler
 
 	botH     *bot.Handler
 	botAuthn *bot.Authenticator
@@ -206,7 +209,7 @@ func (c *components) newBots() {
 	go gw.Run(c.ctx)
 	// Both the hub and the gateway learn about permission changes, and the
 	// gateway sees every event the hub publishes (as outgoing webhooks do).
-	c.permSvc.SetNotifier(notifiers{hub, gw})
+	c.permSvc.SetNotifier(notifiers{hub, gw, eventsNotifier{c}})
 	prevTap := hub.Tap
 	hub.Tap = func(ch uuid.UUID, eventType string, payload any) {
 		if prevTap != nil {
@@ -262,6 +265,25 @@ func (c *components) newPush() error {
 	}
 	c.pushH = push.NewHandler(h)
 	return nil
+}
+
+func (c *components) newEvents() {
+	var pushSvc *push.Service
+	if c.pushH != nil {
+		pushSvc = c.pushH.Service
+	}
+	c.eventsH = &communityevents.Handler{
+		DB:          c.d.DB,
+		Store:       communityevents.NewStore(c.d.DB),
+		MediaStore:  c.d.Store,
+		MediaBucket: c.cfg.S3Bucket,
+		Events:      c.pub,
+		Perms:       c.permSvc,
+		Audit:       c.auditLog,
+		Push:        pushSvc,
+	}
+	c.eventsScheduler = communityevents.NewScheduler(c.eventsH)
+	c.eventsScheduler.Start(c.ctx)
 }
 
 // newSystem builds the admin System tab's handler, its ops sampler and, when

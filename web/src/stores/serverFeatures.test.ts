@@ -26,6 +26,10 @@ describe('server features', () => {
     await features.load()
     expect(apiMock).toHaveBeenCalledTimes(1)
     expect(features.has('saved')).toBe(true)
+    expect(features.has('events')).toBe(false)
+    expect(features.events).toBe(false)
+    features.list = ['events']
+    expect(features.events).toBe(true)
     expect(features.has('forward')).toBe(false)
     expect(features.loaded).toBe(true)
   })

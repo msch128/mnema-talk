@@ -40,6 +40,7 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     reports: computed(() => has('reports')),
     profileBanner: computed(() => has('profile.banner')),
     avatarRemove: computed(() => has('profile.avatar_remove')),
-    talksLobby: computed(() => has('talks.lobby'))
+    talksLobby: computed(() => has('talks.lobby')),
+    events: computed(() => has('events'))
   }
 })

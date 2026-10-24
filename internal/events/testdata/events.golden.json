@@ -46,7 +46,10 @@
     "DMMemberRemoved": "dm_member_removed",
     "TalkLeader": "talk_leader",
     "TalkMoved": "talk_moved",
-    "Kicked": "kicked"
+    "Kicked": "kicked",
+    "EventDelete": "event_delete",
+    "EventReminder": "event_reminder",
+    "EventUpdate": "event_update"
   },
   "client": {
     "ClientPing": "ping",

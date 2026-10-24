@@ -2303,6 +2303,147 @@ export function isChatUserRef(value: unknown): value is ChatUserRef {
 
 export const decodeChatUserRef = decoder("chat.UserRef", isChatUserRef)
 
+export type CommunityeventsCommunityEvent = {
+  channel_id?: string | null
+  cover_url?: string | null
+  created_at: string
+  created_by?: string | null
+  description: string
+  end_time?: string | null
+  going_members?: Array<CommunityeventsUserRef>
+  id: string
+  location?: string | null
+  my_rsvp?: string | null
+  rsvp_counts: CommunityeventsRSVPCounts
+  start_time: string
+  status: string
+  title: string
+  updated_at: string
+}
+
+export function isCommunityeventsCommunityEvent(value: unknown): value is CommunityeventsCommunityEvent {
+  return isRecord(value)
+    && (!hasOwn(value, "channel_id") || (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (!hasOwn(value, "cover_url") || (isString(value["cover_url"]) || value["cover_url"] === null))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "created_by") || (isIdentifier(value["created_by"]) || value["created_by"] === null))
+    && (hasOwn(value, "description") && isString(value["description"], 2000))
+    && (!hasOwn(value, "end_time") || (isTimestamp(value["end_time"]) || value["end_time"] === null))
+    && (!hasOwn(value, "going_members") || isArrayOf(value["going_members"], item => isCommunityeventsUserRef(item)))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "location") || (isString(value["location"], 255) || value["location"] === null))
+    && (!hasOwn(value, "my_rsvp") || (isString(value["my_rsvp"]) || value["my_rsvp"] === null))
+    && (hasOwn(value, "rsvp_counts") && isCommunityeventsRSVPCounts(value["rsvp_counts"]))
+    && (hasOwn(value, "start_time") && isTimestamp(value["start_time"]))
+    && (hasOwn(value, "status") && isString(value["status"]))
+    && (hasOwn(value, "title") && isString(value["title"], 100))
+    && (hasOwn(value, "updated_at") && isTimestamp(value["updated_at"]))
+}
+
+export const decodeCommunityeventsCommunityEvent = decoder("communityevents.CommunityEvent", isCommunityeventsCommunityEvent)
+
+export type CommunityeventsCreateEventRequest = {
+  channel_id?: string | null
+  description: string
+  end_time?: string | null
+  location?: string | null
+  start_time: string
+  title: string
+}
+
+export function isCommunityeventsCreateEventRequest(value: unknown): value is CommunityeventsCreateEventRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "channel_id") || (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (hasOwn(value, "description") && isString(value["description"], 2000))
+    && (!hasOwn(value, "end_time") || (isTimestamp(value["end_time"]) || value["end_time"] === null))
+    && (!hasOwn(value, "location") || (isString(value["location"], 255) || value["location"] === null))
+    && (hasOwn(value, "start_time") && isTimestamp(value["start_time"]))
+    && (hasOwn(value, "title") && isString(value["title"], 100))
+}
+
+export const decodeCommunityeventsCreateEventRequest = decoder("communityevents.CreateEventRequest", isCommunityeventsCreateEventRequest)
+
+export type CommunityeventsRSVPCounts = {
+  going: number
+  interested: number
+  not_going: number
+}
+
+export function isCommunityeventsRSVPCounts(value: unknown): value is CommunityeventsRSVPCounts {
+  return isRecord(value)
+    && (hasOwn(value, "going") && isInteger(value["going"]))
+    && (hasOwn(value, "interested") && isInteger(value["interested"]))
+    && (hasOwn(value, "not_going") && isInteger(value["not_going"]))
+}
+
+export const decodeCommunityeventsRSVPCounts = decoder("communityevents.RSVPCounts", isCommunityeventsRSVPCounts)
+
+export type CommunityeventsRSVPItem = {
+  response: string
+  updated_at: string
+  user: CommunityeventsUserRef
+}
+
+export function isCommunityeventsRSVPItem(value: unknown): value is CommunityeventsRSVPItem {
+  return isRecord(value)
+    && (hasOwn(value, "response") && isString(value["response"]))
+    && (hasOwn(value, "updated_at") && isString(value["updated_at"]))
+    && (hasOwn(value, "user") && isCommunityeventsUserRef(value["user"]))
+}
+
+export const decodeCommunityeventsRSVPItem = decoder("communityevents.RSVPItem", isCommunityeventsRSVPItem)
+
+export type CommunityeventsRSVPRequest = {
+  response: "going" | "interested" | "not_going"
+}
+
+export function isCommunityeventsRSVPRequest(value: unknown): value is CommunityeventsRSVPRequest {
+  return isRecord(value)
+    && (hasOwn(value, "response") && (value["response"] === "going" || value["response"] === "interested" || value["response"] === "not_going"))
+}
+
+export const decodeCommunityeventsRSVPRequest = decoder("communityevents.RSVPRequest", isCommunityeventsRSVPRequest)
+
+export type CommunityeventsUpdateEventRequest = {
+  channel_id?: string | null
+  description?: string
+  end_time?: string | null
+  location?: string | null
+  start_time?: string
+  status?: string
+  title?: string
+}
+
+export function isCommunityeventsUpdateEventRequest(value: unknown): value is CommunityeventsUpdateEventRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "channel_id") || (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (!hasOwn(value, "description") || isString(value["description"], 2000))
+    && (!hasOwn(value, "end_time") || (isTimestamp(value["end_time"]) || value["end_time"] === null))
+    && (!hasOwn(value, "location") || (isString(value["location"], 255) || value["location"] === null))
+    && (!hasOwn(value, "start_time") || isTimestamp(value["start_time"]))
+    && (!hasOwn(value, "status") || isString(value["status"]))
+    && (!hasOwn(value, "title") || isString(value["title"], 100))
+}
+
+export const decodeCommunityeventsUpdateEventRequest = decoder("communityevents.UpdateEventRequest", isCommunityeventsUpdateEventRequest)
+
+export type CommunityeventsUserRef = {
+  avatar_url?: string | null
+  display_name: string
+  id: string
+  username: string
+}
+
+export function isCommunityeventsUserRef(value: unknown): value is CommunityeventsUserRef {
+  return isRecord(value)
+    && (!hasOwn(value, "avatar_url") || (isString(value["avatar_url"]) || value["avatar_url"] === null))
+    && (hasOwn(value, "display_name") && isString(value["display_name"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "username") && isString(value["username"]))
+}
+
+export const decodeCommunityeventsUserRef = decoder("communityevents.UserRef", isCommunityeventsUserRef)
+
 export type EmojiEmoji = {
   animated: boolean
   created_at: string

@@ -1,0 +1,622 @@
+//go:build integration
+
+package server
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/communityevents"
+	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/perm"
+)
+
+func (a *app) hiddenTalk(admin *client, name string) uuid.UUID {
+	a.t.Helper()
+	ch := a.createChannel(admin, name, "voice")
+	everyone := everyoneID(a.t, admin)
+	wantStatus(a.t, "hide talk", putOverwrites(admin, "channels", ch, overwrite("role", everyone, 0, perm.ViewChannel)), http.StatusNoContent)
+	return ch
+}
+
+func (a *app) roleWithManageEvents(admin *client) uuid.UUID {
+	a.t.Helper()
+	return createRole(a.t, admin, "Event Manager", perm.ManageEvents)
+}
+
+func TestCommunityEventsPermissionMatrix(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	alice := a.register(admin, "alice")
+	bob := a.register(admin, "bob")
+
+	startTime := time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339)
+	createReq := map[string]any{
+		"title":       "Community Gala",
+		"description": "Annual celebration",
+		"start_time":  startTime,
+		"location":    "Main Hall",
+	}
+
+	// 1. Regular member without ManageEvents gets 403
+	wantStatus(t, "member cannot create event", alice.post("/api/events", createReq), http.StatusForbidden)
+
+	// 2. Admin can create event
+	res := admin.post("/api/events", createReq)
+	wantStatus(t, "admin creates event", res, http.StatusCreated)
+	var ev communityevents.CommunityEvent
+	res.decode(t, &ev)
+
+	// 3. Member cannot update or cancel
+	wantStatus(t, "member cannot edit", alice.patch("/api/events/"+ev.ID.String(), map[string]any{"title": "Hacked"}), http.StatusForbidden)
+	wantStatus(t, "member cannot cancel", alice.post("/api/events/"+ev.ID.String()+"/cancel", nil), http.StatusForbidden)
+
+	// 4. Grant ManageEvents to bob via custom role
+	roleID := a.roleWithManageEvents(admin)
+	assignRoles(t, admin, bob, roleID)
+
+	// 5. Bob can edit and cancel
+	wantStatus(t, "bob can edit", bob.patch("/api/events/"+ev.ID.String(), map[string]any{"title": "Gala (Updated)"}), http.StatusOK)
+	wantStatus(t, "bob can cancel", bob.post("/api/events/"+ev.ID.String()+"/cancel", nil), http.StatusOK)
+}
+
+func TestCommunityEventsHiddenTalkMatrix(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	insider := a.register(admin, "insider")
+	outsider := a.register(admin, "outsider")
+
+	publicTalk := a.createChannel(admin, "lobby-talk", "voice")
+	secretTalk := a.hiddenTalk(admin, "vip-lounge")
+
+	// Allow insider to view secret talk
+	wantStatus(t, "grant insider view", putOverwrites(admin, "channels", secretTalk,
+		overwrite("role", everyoneID(t, admin), 0, perm.ViewChannel),
+		overwrite("member", insider.user.ID, perm.ViewChannel, 0),
+	), http.StatusNoContent)
+
+	startTime := time.Now().Add(12 * time.Hour).UTC().Format(time.RFC3339)
+
+	// Event on public Talk
+	res1 := admin.post("/api/events", map[string]any{
+		"title":       "Public Hangout",
+		"description": "Everyone welcome",
+		"start_time":  startTime,
+		"channel_id":  publicTalk,
+	})
+	wantStatus(t, "create public event", res1, http.StatusCreated)
+	var publicEv communityevents.CommunityEvent
+	res1.decode(t, &publicEv)
+
+	// Event on hidden Talk
+	res2 := admin.post("/api/events", map[string]any{
+		"title":       "Secret Meeting",
+		"description": "VIP only",
+		"start_time":  startTime,
+		"channel_id":  secretTalk,
+	})
+	wantStatus(t, "create secret event", res2, http.StatusCreated)
+	var secretEv communityevents.CommunityEvent
+	res2.decode(t, &secretEv)
+
+	// Check insider sees both
+	var insiderList []communityevents.CommunityEvent
+	resIn := insider.get("/api/events")
+	wantStatus(t, "insider list", resIn, http.StatusOK)
+	resIn.decode(t, &insiderList)
+	if len(insiderList) != 2 {
+		t.Fatalf("expected 2 events for insider, got %d", len(insiderList))
+	}
+
+	// Check outsider sees only public event
+	var outsiderList []communityevents.CommunityEvent
+	resOut := outsider.get("/api/events")
+	wantStatus(t, "outsider list", resOut, http.StatusOK)
+	resOut.decode(t, &outsiderList)
+	if len(outsiderList) != 1 || outsiderList[0].ID != publicEv.ID {
+		t.Fatalf("expected 1 public event for outsider, got %v", outsiderList)
+	}
+
+	// Outsider getting secret event returns 404 (NOT 403)
+	wantStatus(t, "outsider get hidden event is 404", outsider.get("/api/events/"+secretEv.ID.String()), http.StatusNotFound)
+	wantStatus(t, "outsider rsvp hidden event is 404", outsider.put("/api/events/"+secretEv.ID.String()+"/rsvp", map[string]string{"response": "going"}), http.StatusNotFound)
+	wantStatus(t, "outsider list rsvps hidden event is 404", outsider.get("/api/events/"+secretEv.ID.String()+"/rsvps"), http.StatusNotFound)
+}
+
+func TestCommunityEventsRSVPFlow(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	alice := a.register(admin, "alice")
+	bob := a.register(admin, "bob")
+
+	startTime := time.Now().Add(48 * time.Hour).UTC().Format(time.RFC3339)
+	res := admin.post("/api/events", map[string]any{
+		"title":       "Board Game Night",
+		"description": "Bring snacks",
+		"start_time":  startTime,
+		"location":    "Clubhouse",
+	})
+	wantStatus(t, "create event", res, http.StatusCreated)
+	var ev communityevents.CommunityEvent
+	res.decode(t, &ev)
+
+	// Alice RSVPs "going"
+	resGoing := alice.put("/api/events/"+ev.ID.String()+"/rsvp", map[string]string{"response": "going"})
+	wantStatus(t, "alice rsvps going", resGoing, http.StatusOK)
+	var evGoing communityevents.CommunityEvent
+	resGoing.decode(t, &evGoing)
+	if evGoing.MyRSVP == nil || *evGoing.MyRSVP != "going" {
+		t.Fatalf("expected my_rsvp=going, got %v", evGoing.MyRSVP)
+	}
+	if evGoing.RSVPCounts.Going != 1 || evGoing.RSVPCounts.Interested != 0 {
+		t.Fatalf("unexpected counts: %+v", evGoing.RSVPCounts)
+	}
+	if len(evGoing.GoingMembers) != 1 || evGoing.GoingMembers[0].Username != "alice" {
+		t.Fatalf("unexpected going members: %+v", evGoing.GoingMembers)
+	}
+
+	// Bob RSVPs "interested"
+	resInt := bob.put("/api/events/"+ev.ID.String()+"/rsvp", map[string]string{"response": "interested"})
+	wantStatus(t, "bob rsvps interested", resInt, http.StatusOK)
+
+	// List RSVPs
+	resList := alice.get("/api/events/" + ev.ID.String() + "/rsvps")
+	wantStatus(t, "list rsvps", resList, http.StatusOK)
+	var rsvps []communityevents.RSVPItem
+	resList.decode(t, &rsvps)
+	if len(rsvps) != 2 {
+		t.Fatalf("expected 2 rsvps, got %d", len(rsvps))
+	}
+
+	// Alice deletes RSVP
+	resDel := alice.delete("/api/events/" + ev.ID.String() + "/rsvp")
+	wantStatus(t, "alice deletes rsvp", resDel, http.StatusOK)
+	var evDel communityevents.CommunityEvent
+	resDel.decode(t, &evDel)
+	if evDel.MyRSVP != nil {
+		t.Fatalf("expected my_rsvp=nil after delete, got %v", evDel.MyRSVP)
+	}
+	if evDel.RSVPCounts.Going != 0 {
+		t.Fatalf("expected 0 going, got %d", evDel.RSVPCounts.Going)
+	}
+}
+
+func TestCommunityEventsActivationAndReminderScheduling(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	alice := a.register(admin, "alice")
+
+	pastStart := time.Now().Add(-1 * time.Minute)
+	evPast, err := a.router.Events.Store.Create(context.Background(), communityevents.CreateEventRequest{
+		Title:       "Past Starting Event",
+		Description: "Should be active",
+		StartTime:   pastStart,
+		Location:    strPtr("Main Stage"),
+	}, admin.user.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 1. Scheduler tick triggers activation
+	a.router.EventsScheduler.Tick(context.Background(), time.Now())
+
+	activeEv, err := a.router.Events.Store.Get(context.Background(), evPast.ID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if activeEv.Status != communityevents.StatusActive {
+		t.Fatalf("expected status=active, got %s", activeEv.Status)
+	}
+
+	// 2. Event starting in 10 minutes (due for reminder)
+	soonStart := time.Now().Add(10 * time.Minute)
+	evSoon, err := a.router.Events.Store.Create(context.Background(), communityevents.CreateEventRequest{
+		Title:       "Imminent Event",
+		Description: "Starts soon",
+		StartTime:   soonStart,
+		Location:    strPtr("Auditorium"),
+	}, admin.user.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Alice RSVPs going
+	wantStatus(t, "alice rsvp", alice.put("/api/events/"+evSoon.ID.String()+"/rsvp", map[string]string{"response": "going"}), http.StatusOK)
+
+	// Tick scheduler: triggers reminder
+	a.router.EventsScheduler.Tick(context.Background(), time.Now())
+
+	// Verify recorder received event_reminder
+	found := false
+	for _, rec := range a.events.Snapshot() {
+		if rec.Type == events.EventReminder {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected EventReminder publication in recorder, found: %+v", a.events.Snapshot())
+	}
+}
+
+func TestCommunityEventsAccountEraseAndExport(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	alice := a.register(admin, "alice")
+	bob := a.register(admin, "bob")
+
+	startTime := time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339)
+
+	// Alice creates an event
+	roleID := a.roleWithManageEvents(admin)
+	assignRoles(t, admin, alice, roleID)
+	res1 := alice.post("/api/events", map[string]any{
+		"title":       "Alice's Workshop",
+		"description": "Painting",
+		"start_time":  startTime,
+		"location":    "Studio",
+	})
+	wantStatus(t, "alice creates event", res1, http.StatusCreated)
+	var aliceEv communityevents.CommunityEvent
+	res1.decode(t, &aliceEv)
+
+	// Alice RSVPs to her own event and Bob RSVPs
+	alice.put("/api/events/"+aliceEv.ID.String()+"/rsvp", map[string]string{"response": "going"})
+	bob.put("/api/events/"+aliceEv.ID.String()+"/rsvp", map[string]string{"response": "interested"})
+
+	// 1. Account export includes rsvps.json
+	wantStatus(t, "request export", a.requestExport(alice, "member-password-123", ""), http.StatusAccepted)
+	a.waitForExport(alice)
+	dl := alice.get("/api/users/me/export/download")
+	wantStatus(t, "download export", dl, http.StatusOK)
+	files := unzipAll(t, dl.body)
+	if _, ok := files["rsvps.json"]; !ok {
+		t.Fatalf("expected rsvps.json in export archive: %+v", files)
+	}
+	var exportedRSVPs []map[string]any
+	if err := json.Unmarshal([]byte(files["rsvps.json"]), &exportedRSVPs); err != nil {
+		t.Fatalf("unmarshal rsvps.json: %v", err)
+	}
+	if len(exportedRSVPs) != 1 || exportedRSVPs[0]["response"] != "going" {
+		t.Fatalf("unexpected exported rsvps: %s", files["rsvps.json"])
+	}
+
+	// 2. Alice deletes her account
+	wantStatus(t, "delete alice account", a.deleteAccount(alice, "member-password-123", ""), http.StatusNoContent)
+
+	// Verify Alice's created event created_by is now NULL
+	evAfter, err := a.router.Events.Store.Get(context.Background(), aliceEv.ID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evAfter.CreatedBy != nil {
+		t.Fatalf("expected created_by to be NULL after erase, got %v", evAfter.CreatedBy)
+	}
+
+	// Verify Bob's RSVP is still present but Alice's is gone
+	rsvpsAfter, err := a.router.Events.Store.ListRSVPs(context.Background(), aliceEv.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rsvpsAfter) != 1 || rsvpsAfter[0].User.Username != "bob" {
+		t.Fatalf("expected only bob's rsvp remaining, got: %+v", rsvpsAfter)
+	}
+}
+
+func strPtr(s string) *string {
+	return &s
+}
+
+func TestCommunityEventsEditValidationAndReminderRearm(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	ctx := context.Background()
+
+	res := admin.post("/api/events", map[string]any{
+		"title": "Soon", "start_time": time.Now().Add(10 * time.Minute).UTC().Format(time.RFC3339), "location": "Hall",
+	})
+	wantStatus(t, "create", res, http.StatusCreated)
+	var ev communityevents.CommunityEvent
+	res.decode(t, &ev)
+	path := "/api/events/" + ev.ID.String()
+
+	wantStatus(t, "unknown status", admin.patch(path, map[string]any{"status": "bogus"}), http.StatusBadRequest)
+	wantStatus(t, "unknown field", admin.patch(path, map[string]any{"owner": "x"}), http.StatusBadRequest)
+	wantStatus(t, "NUL in title", admin.patch(path, map[string]any{"title": "a\u0000b"}), http.StatusBadRequest)
+
+	a.router.EventsScheduler.Tick(ctx, time.Now())
+	var sent *time.Time
+	q := func() {
+		if err := a.router.Events.Store.DB.QueryRow(ctx, `SELECT reminder_sent_at FROM events WHERE id = $1`, ev.ID).Scan(&sent); err != nil {
+			t.Fatal(err)
+		}
+	}
+	q()
+	if sent == nil {
+		t.Fatal("reminder should have been sent")
+	}
+	wantStatus(t, "rename keeps reminder", admin.patch(path, map[string]any{"title": "Soon!"}), http.StatusOK)
+	q()
+	if sent == nil {
+		t.Fatal("renaming must not re-arm the reminder")
+	}
+	wantStatus(t, "move", admin.patch(path, map[string]any{"start_time": time.Now().Add(14 * time.Minute).UTC().Format(time.RFC3339)}), http.StatusOK)
+	q()
+	if sent != nil {
+		t.Fatal("moving the start must re-arm the reminder")
+	}
+}
+
+func TestCommunityEventsHiddenTalkReminderAndAudit(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	insider := a.register(admin, "insider")
+	ctx := context.Background()
+
+	talk := a.hiddenTalk(admin, "vip-lounge")
+	grant := func(allow bool) {
+		ow := []map[string]any{overwrite("role", everyoneID(t, admin), 0, perm.ViewChannel)}
+		if allow {
+			ow = append(ow, overwrite("member", insider.user.ID, perm.ViewChannel, 0))
+		}
+		wantStatus(t, "overwrites", putOverwrites(admin, "channels", talk, ow...), http.StatusNoContent)
+	}
+	grant(true)
+
+	res := admin.post("/api/events", map[string]any{
+		"title": "VIP", "start_time": time.Now().Add(10 * time.Minute).UTC().Format(time.RFC3339), "channel_id": talk,
+	})
+	wantStatus(t, "create", res, http.StatusCreated)
+	var ev communityevents.CommunityEvent
+	res.decode(t, &ev)
+	wantStatus(t, "insider rsvp", insider.put("/api/events/"+ev.ID.String()+"/rsvp", map[string]string{"response": "going"}), http.StatusOK)
+
+	var action string
+	if err := a.router.Events.Store.DB.QueryRow(ctx, `SELECT action FROM audit_log WHERE target_id = $1 ORDER BY id DESC LIMIT 1`, ev.ID.String()).Scan(&action); err != nil {
+		t.Fatal(err)
+	}
+	if action != "event.talk_create" {
+		t.Fatalf("Talk events must use the channel-scoped audit class, got %q", action)
+	}
+
+	grant(false)
+	a.router.EventsScheduler.Tick(ctx, time.Now())
+	for _, rec := range a.events.Snapshot() {
+		if rec.Type == events.EventReminder {
+			t.Fatalf("a member who lost access to the Talk got a reminder: %+v", rec)
+		}
+	}
+}
+
+func TestCommunityEventsListWindowAndLimit(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	outsider := a.register(admin, "outsider")
+	secret := a.hiddenTalk(admin, "vip-lounge")
+	ctx := context.Background()
+	store := a.router.Events.Store
+
+	mk := func(title string, start time.Time, end *time.Time, ch *uuid.UUID) *communityevents.CommunityEvent {
+		req := communityevents.CreateEventRequest{Title: title, StartTime: start, EndTime: end, ChannelID: ch}
+		if ch == nil {
+			req.Location = strPtr("Hall")
+		}
+		ev, err := store.Create(ctx, req, admin.user.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return ev
+	}
+	now := time.Now()
+	longEnd := now.Add(time.Hour)
+	mk("long-running", now.Add(-5*24*time.Hour), &longEnd, nil)
+	mk("old", now.Add(-5*24*time.Hour), nil, nil)
+	mk("soon", now.Add(time.Hour), nil, nil)
+	mk("far", now.Add(120*24*time.Hour), nil, nil)
+	for i := 0; i < 3; i++ {
+		mk("hidden", now.Add(time.Duration(i)*time.Minute+30*time.Minute), nil, &secret)
+	}
+
+	titles := func(c *client, query string) []string {
+		res := c.get("/api/events" + query)
+		wantStatus(t, "list "+query, res, http.StatusOK)
+		var list []communityevents.CommunityEvent
+		res.decode(t, &list)
+		out := make([]string, len(list))
+		for i, ev := range list {
+			out[i] = ev.Title
+		}
+		return out
+	}
+	if got := titles(outsider, ""); len(got) != 2 || got[0] != "long-running" || got[1] != "soon" {
+		t.Fatalf("default window: got %v, want [long-running soon]", got)
+	}
+	if got := titles(admin, ""); len(got) != 5 {
+		t.Fatalf("admin default window: got %v, want 5 events", got)
+	}
+	after := now.Add(-10 * 24 * time.Hour).UTC().Format(time.RFC3339)
+	before := now.Add(150 * 24 * time.Hour).UTC().Format(time.RFC3339)
+	if got := titles(outsider, "?after="+after+"&before="+before); len(got) != 4 {
+		t.Fatalf("widened window: got %v, want 4 events", got)
+	}
+	// Events the caller may not view must not use up the limit.
+	if got := titles(outsider, "?limit=2"); len(got) != 2 {
+		t.Fatalf("limit=2 for outsider: got %v", got)
+	}
+	if got := titles(admin, "?limit=1"); len(got) != 1 {
+		t.Fatalf("limit=1: got %v", got)
+	}
+	wantStatus(t, "bad after", outsider.get("/api/events?after=yesterday"), http.StatusBadRequest)
+}
+
+func TestCommunityEventsListBatchesRSVPs(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	alice := a.register(admin, "alice")
+	bob := a.register(admin, "bob")
+
+	var ids []uuid.UUID
+	for i, title := range []string{"one", "two", "three"} {
+		res := admin.post("/api/events", map[string]any{
+			"title": title, "location": "Hall", "start_time": time.Now().Add(time.Duration(i+1) * time.Hour).UTC().Format(time.RFC3339),
+		})
+		wantStatus(t, "create", res, http.StatusCreated)
+		var ev communityevents.CommunityEvent
+		res.decode(t, &ev)
+		ids = append(ids, ev.ID)
+	}
+	rsvp := func(c *client, ev uuid.UUID, resp string) {
+		wantStatus(t, "rsvp", c.put("/api/events/"+ev.String()+"/rsvp", map[string]string{"response": resp}), http.StatusOK)
+	}
+	rsvp(alice, ids[0], "going")
+	rsvp(bob, ids[0], "going")
+	rsvp(bob, ids[1], "interested")
+	rsvp(alice, ids[1], "not_going")
+
+	res := alice.get("/api/events")
+	wantStatus(t, "list", res, http.StatusOK)
+	var list []communityevents.CommunityEvent
+	res.decode(t, &list)
+	if len(list) != 3 {
+		t.Fatalf("got %d events", len(list))
+	}
+	one, two, three := list[0], list[1], list[2]
+	if one.RSVPCounts.Going != 2 || len(one.GoingMembers) != 2 || one.MyRSVP == nil || *one.MyRSVP != "going" {
+		t.Fatalf("event one: %+v", one)
+	}
+	if two.RSVPCounts.Interested != 1 || two.RSVPCounts.NotGoing != 1 || len(two.GoingMembers) != 0 || two.MyRSVP == nil || *two.MyRSVP != "not_going" {
+		t.Fatalf("event two: %+v", two)
+	}
+	if three.RSVPCounts != (communityevents.RSVPCounts{}) || three.MyRSVP != nil {
+		t.Fatalf("event three: %+v", three)
+	}
+}
+
+func TestCommunityEventsRSVPClosedAfterCancelOrCompletion(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	alice := a.register(admin, "alice")
+
+	create := func(title string) communityevents.CommunityEvent {
+		res := admin.post("/api/events", map[string]any{
+			"title": title, "location": "Hall", "start_time": time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		})
+		wantStatus(t, "create", res, http.StatusCreated)
+		var ev communityevents.CommunityEvent
+		res.decode(t, &ev)
+		return ev
+	}
+	cancelled := create("cancelled")
+	wantStatus(t, "cancel", admin.post("/api/events/"+cancelled.ID.String()+"/cancel", nil), http.StatusOK)
+	done := create("done")
+	wantStatus(t, "complete", admin.patch("/api/events/"+done.ID.String(), map[string]any{"status": "completed"}), http.StatusOK)
+	open := create("open")
+
+	for _, ev := range []communityevents.CommunityEvent{cancelled, done} {
+		wantStatus(t, "rsvp "+ev.Title, alice.put("/api/events/"+ev.ID.String()+"/rsvp", map[string]string{"response": "going"}), http.StatusConflict)
+	}
+	wantStatus(t, "rsvp open", alice.put("/api/events/"+open.ID.String()+"/rsvp", map[string]string{"response": "going"}), http.StatusOK)
+}
+
+func deletedFor(a *app, user, event uuid.UUID) bool {
+	for _, rec := range a.events.Snapshot() {
+		if rec.Type != events.EventDelete {
+			continue
+		}
+		p, ok := rec.Payload.(communityevents.EventDeletePayload)
+		if !ok || p.ID != event {
+			continue
+		}
+		for _, r := range rec.Recipients {
+			if r == user {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func TestCommunityEventsRetractWhenHiddenOrMovedIntoHiddenTalk(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	insider := a.register(admin, "insider")
+	outsider := a.register(admin, "outsider")
+	start := time.Now().Add(time.Hour).UTC().Format(time.RFC3339)
+
+	// 1. An event moves into a Talk that only the insider may view.
+	talk := a.hiddenTalk(admin, "vip-lounge")
+	wantStatus(t, "insider view", putOverwrites(admin, "channels", talk,
+		overwrite("role", everyoneID(t, admin), 0, perm.ViewChannel),
+		overwrite("member", insider.user.ID, perm.ViewChannel, 0)), http.StatusNoContent)
+	res := admin.post("/api/events", map[string]any{"title": "Public at first", "location": "Hall", "start_time": start})
+	wantStatus(t, "create", res, http.StatusCreated)
+	var moved communityevents.CommunityEvent
+	res.decode(t, &moved)
+	wantStatus(t, "move into talk", admin.patch("/api/events/"+moved.ID.String(), map[string]any{"channel_id": talk}), http.StatusOK)
+	if !deletedFor(a, outsider.user.ID, moved.ID) {
+		t.Fatal("a member who cannot view the Talk must be told to drop the moved event")
+	}
+	if deletedFor(a, insider.user.ID, moved.ID) {
+		t.Fatal("a member who can view the Talk must keep the event")
+	}
+
+	// 2. A Talk that was visible becomes hidden.
+	open := a.createChannel(admin, "open-talk", "voice")
+	res = admin.post("/api/events", map[string]any{"title": "In open talk", "channel_id": open, "start_time": start})
+	wantStatus(t, "create in talk", res, http.StatusCreated)
+	var inTalk communityevents.CommunityEvent
+	res.decode(t, &inTalk)
+	wantStatus(t, "hide talk", putOverwrites(admin, "channels", open,
+		overwrite("role", everyoneID(t, admin), 0, perm.ViewChannel)), http.StatusNoContent)
+	deadline := time.Now().Add(5 * time.Second)
+	for !deletedFor(a, outsider.user.ID, inTalk.ID) {
+		if time.Now().After(deadline) {
+			t.Fatal("hiding a Talk must retract its events from members who lost the view")
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+func TestCommunityEventsRetractionNeverReachesThoseWhoNeverSawTheEvent(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	stranger := a.register(admin, "stranger")
+	start := time.Now().Add(time.Hour).UTC().Format(time.RFC3339)
+
+	secretA := a.hiddenTalk(admin, "secret-a")
+	secretB := a.hiddenTalk(admin, "secret-b")
+	res := admin.post("/api/events", map[string]any{"title": "Never seen", "channel_id": secretA, "start_time": start})
+	wantStatus(t, "create", res, http.StatusCreated)
+	var ev communityevents.CommunityEvent
+	res.decode(t, &ev)
+	// The stranger loads the server once, so a snapshot exists to compare.
+	wantStatus(t, "stranger lists", stranger.get("/api/events"), http.StatusOK)
+
+	// A move between two Talks the stranger cannot view.
+	wantStatus(t, "move", admin.patch("/api/events/"+ev.ID.String(), map[string]any{"channel_id": secretB}), http.StatusOK)
+	// Permission changes elsewhere: a third Talk is hidden, then the event's Talk changes.
+	third := a.createChannel(admin, "third", "voice")
+	wantStatus(t, "hide third", putOverwrites(admin, "channels", third,
+		overwrite("role", everyoneID(t, admin), 0, perm.ViewChannel)), http.StatusNoContent)
+	wantStatus(t, "touch secret b", putOverwrites(admin, "channels", secretB,
+		overwrite("role", everyoneID(t, admin), 0, perm.ViewChannel|perm.Connect)), http.StatusNoContent)
+
+	time.Sleep(time.Second) // retraction runs in the background
+	if deletedFor(a, stranger.user.ID, ev.ID) {
+		t.Fatal("a member who never could view the event must not be told about it")
+	}
+	for _, rec := range a.events.Snapshot() {
+		if rec.Type != events.EventDelete {
+			continue
+		}
+		for _, r := range rec.Recipients {
+			if r == stranger.user.ID {
+				t.Fatalf("stranger received %+v", rec)
+			}
+		}
+	}
+}
