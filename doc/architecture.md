@@ -116,10 +116,24 @@ category, no name, no overwrites) with its members in `dm_members`
 one message pipeline, keyed by the conversation's id, so they inherit its
 behaviour; a 1:1 conversation has a `dm_key` (the sorted pair), so a pair has
 exactly one. Conversations have their own routes (`/api/dms`, see the OpenAPI
-document) and events (`dm_created`, `dm_member_added`, `dm_member_removed`);
+document) and events (`dm_created`, `dm_member_added`, `dm_member_removed`, and `dm_prefs_updated` to the
+member's own sessions);
 they appear in no channel list, layout, `channel_*` event, bot or webhook
 payload, public message count or public message number (conversations count
 down from -1 in a sequence of their own, so the public numbers show no gaps).
+
+**The member's own list (1.2, migration 0074).** What a member does to their list
+is stored per member and follows them to every device: `dm_members.hidden_at`
+(a closed conversation, cleared by the next message written in it unless the
+member blocked the sender), `dm_members.favourite_pos` (favourites, at most 25,
+ordered), `users.dm_mute_all` and `users.dm_list_collapsed`. None of it touches
+the conversation or its messages, none of it is visible to other members, and
+every route checks membership first (a conversation you are not in answers 404,
+also for the favourites list). `GET /api/dms` carries `hidden`,
+`favourite_position` and `last_message` (the latest message the caller can see:
+blocked authors are left out); with mute-all on and no setting of the
+conversation's own, `notify_level` reads `mute` and `mention_count` 0, and push
+sends nothing. The feature name is `dm.v2`.
 
 **One access rule: membership.** `perm.Snapshot.Channel` answers for a
 conversation before the Owner shortcut, from membership alone. A member may

@@ -49,37 +49,24 @@ func SetDMHidden(ctx context.Context, p *db.Pool, user, id uuid.UUID, hidden boo
 // always shown, so favouriting reopens a closed conversation. It returns the
 // conversations whose state changed.
 func SetDMFavourites(ctx context.Context, p *db.Pool, user uuid.UUID, ids []uuid.UUID) (changed []uuid.UUID, err error) {
-	if len(ids) > MaxFavouriteDMs {
-		return nil, httpx.ErrInvalidInput(fmt.Sprintf("at most %d favourites", MaxFavouriteDMs))
-	}
-	sorted := slices.Clone(ids)
-	slices.SortFunc(sorted, func(a, b uuid.UUID) int { return slices.Compare(a[:], b[:]) })
-	if len(slices.Compact(sorted)) != len(ids) {
-		return nil, httpx.ErrInvalidInput("ids must not repeat a conversation")
+	if err := checkFavourites(ids); err != nil {
+		return nil, err
 	}
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		// One member's changes are serialized, so the order stays whole.
 		if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = $1 FOR NO KEY UPDATE`, user); err != nil {
 			return err
 		}
-		rows, err := tx.Query(ctx, `
+		old, err := updatedIDs(ctx, tx, `
 			UPDATE dm_members SET favourite_pos = NULL
 			WHERE user_id = $1 AND favourite_pos IS NOT NULL RETURNING channel_id`, user)
 		if err != nil {
 			return err
 		}
-		old, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
-		if err != nil {
-			return err
-		}
-		rows, err = tx.Query(ctx, `
+		added, err := updatedIDs(ctx, tx, `
 			UPDATE dm_members dm SET favourite_pos = f.pos - 1, hidden_at = NULL
 			FROM unnest($2::uuid[]) WITH ORDINALITY AS f(id, pos)
 			WHERE dm.user_id = $1 AND dm.channel_id = f.id RETURNING dm.channel_id`, user, ids)
-		if err != nil {
-			return err
-		}
-		added, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
 		if err != nil {
 			return err
 		}
@@ -95,6 +82,28 @@ func SetDMFavourites(ctx context.Context, p *db.Pool, user uuid.UUID, ids []uuid
 		return nil
 	})
 	return changed, err
+}
+
+// checkFavourites requires at most MaxFavouriteDMs distinct ids.
+func checkFavourites(ids []uuid.UUID) error {
+	if len(ids) > MaxFavouriteDMs {
+		return httpx.ErrInvalidInput(fmt.Sprintf("at most %d favourites", MaxFavouriteDMs))
+	}
+	sorted := slices.Clone(ids)
+	slices.SortFunc(sorted, func(a, b uuid.UUID) int { return slices.Compare(a[:], b[:]) })
+	if len(slices.Compact(sorted)) != len(ids) {
+		return httpx.ErrInvalidInput("ids must not repeat a conversation")
+	}
+	return nil
+}
+
+// updatedIDs runs an UPDATE ... RETURNING that yields conversation ids.
+func updatedIDs(ctx context.Context, tx pgx.Tx, sql string, args ...any) ([]uuid.UUID, error) {
+	rows, err := tx.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
 }
 
 // DMSettings are the member's settings for the list as a whole.

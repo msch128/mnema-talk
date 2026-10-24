@@ -36,7 +36,7 @@ const stack = computed(() => dmPeers(props.dm, me.value).slice(0, 2))
     <span
       v-for="(person, i) in stack"
       :key="person.id"
-      :class="i === 0 ? 'absolute left-0 top-0' : 'absolute bottom-0 right-0 rounded-full ring-2 ring-mnema-raised'"
+      :class="i === 0 ? 'absolute left-0 top-0 origin-top-left scale-[0.8]' : 'absolute bottom-0 right-0 origin-bottom-right scale-[0.8] rounded-full ring-2 ring-mnema-raised'"
     ><UserAvatar :user="person" size="xs" /></span>
   </span>
   <span v-else class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-mnema-surface text-mnema-tertiary" aria-hidden="true">

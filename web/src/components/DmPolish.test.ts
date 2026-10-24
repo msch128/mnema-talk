@@ -338,10 +338,10 @@ describe('the header of a conversation', () => {
     expect(profile).toHaveBeenCalledWith(expect.objectContaining({ id: ada.id }))
   })
 
-  it('names a group’s members and opens its member list', async () => {
+  it('counts a group’s members and opens its member list', async () => {
     setup()
     const w = mount(DmHeaderTitle, { global, props: { dm: crew } })
-    expect(w.get('[data-testid="dm-header-members"]').text()).toBe('4 members · Ada, Bo, Cy')
+    expect(w.get('[data-testid="dm-header-members"]').text()).toBe('4 members')
     await w.get('[data-testid="dm-header-title"]').trigger('click')
     expect(w.emitted('members')).toHaveLength(1)
   })

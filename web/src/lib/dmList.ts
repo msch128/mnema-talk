@@ -66,11 +66,6 @@ export function dmClock(iso: string | null, locale: string, now = Date.now()): s
   return at.toLocaleDateString(locale, { day: 'numeric', month: 'short' })
 }
 
-/** The names of a group's other members, for the line under its title. */
-export function dmMemberNames(dm: Pick<ChatDirectMessage, 'members'>, meId: string | null | undefined): string {
-  return dmPeers(dm, meId).map(m => m.display_name || m.username).join(', ')
-}
-
 /** Conversations matching what was typed into "Find or start a conversation". */
 export function matchDms(dms: readonly ChatDirectMessage[], meId: string | null | undefined, query: string): ChatDirectMessage[] {
   const needle = query.trim().toLowerCase()

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dmClock, dmMemberNames, dmPreview, lastMessageOf, matchDms, splitDms } from './dmList'
+import { dmClock, dmPreview, lastMessageOf, matchDms, splitDms } from './dmList'
 import { dmFixture, dmMemberFixture } from '../dm.fixture'
 import { fixtureId, messageFixture } from '../test-fixtures.fixture'
 
@@ -63,10 +63,6 @@ describe('dmClock', () => {
 })
 
 describe('matching', () => {
-  it('lists the other members of a group by name', () => {
-    expect(dmMemberNames(group, me)).toBe('Ada, Bo')
-  })
-
   it('finds conversations by a member’s name or username, ignoring case', () => {
     expect(matchDms([pair, group], me, ' ADA ').map(d => d.id)).toEqual([pair.id, group.id])
     expect(matchDms([pair, group], me, 'bo').map(d => d.id)).toEqual([group.id])
