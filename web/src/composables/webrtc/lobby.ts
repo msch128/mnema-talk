@@ -1,4 +1,5 @@
 import { useToastStore } from '../../stores/toast'
+import { usePermissionsStore } from '../../stores/permissions'
 import { t } from '../../i18n'
 import { navigate } from '../../lib/router'
 import type { ServerEventPayloads } from '../../types/events'
@@ -66,8 +67,9 @@ export function lobbyRefused(cx: Cx, p: ServerEventPayloads['voice_kicked']): bo
 export async function joinViaLobby(cx: Cx, lobbyId: string, join: (talkId: string) => Promise<void>) {
   const talk = await openFromLobby(cx, lobbyId)
   if (!talk) return
-  // The new Talk is in the channel list once channels_changed was handled.
-  await cx.chat.fetchChannels()
+  // The new Talk is not in the channel list or the permissions yet; the join
+  // needs both (it checks Connect for the Talk).
+  await Promise.all([cx.chat.fetchChannels(), usePermissionsStore().load()])
   const channel = cx.chat.allChannels.find(c => c.id === talk)
   if (channel) cx.chat.selectChannel(channel)
   cx.voice.activeView = 'voice'

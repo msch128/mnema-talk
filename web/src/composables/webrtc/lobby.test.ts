@@ -7,6 +7,8 @@ import { setLocale } from '../../i18n'
 import { fixtureId } from '../../test-fixtures.fixture'
 
 const navigate = vi.fn()
+const loadPermissions = vi.fn(async () => {})
+vi.mock('../../stores/permissions', () => ({ usePermissionsStore: () => ({ load: loadPermissions }) }))
 vi.mock('../../lib/router', () => ({ navigate: (...args: unknown[]) => navigate(...args) }))
 
 const LOBBY = fixtureId(10)
@@ -30,6 +32,7 @@ beforeEach(() => {
   setLocale('en')
   vi.useFakeTimers()
   navigate.mockReset()
+  loadPermissions.mockClear()
 })
 afterEach(() => { vi.useRealTimers() })
 
@@ -51,6 +54,7 @@ describe('Create-a-Talk lobbies in the call layer', () => {
     lobbyMoved(cx, { from_channel_id: LOBBY, channel_id: TALK })
     await joined
     expect(chat.fetchChannels).toHaveBeenCalled()
+    expect(loadPermissions).toHaveBeenCalled()
     expect(chat.selectChannel).toHaveBeenCalledWith({ id: TALK })
     expect(voice.activeView).toBe('voice')
     expect(navigate).toHaveBeenCalledWith(`/v/${TALK}`)
