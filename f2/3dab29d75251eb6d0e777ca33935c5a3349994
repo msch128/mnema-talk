@@ -1,0 +1,140 @@
+doc/api-stability.md
+  s_06fcde5dbef956::t_6e194181527a86 28-29
+internal/server/health.go
+  s_06fcde5dbef956::t_6e194181527a86 47-48
+doc/upgrade.md
+  s_06fcde5dbef956::t_6e194181527a86 183-206
+  s_06fcde5dbef956::t_886511e6b397b7 143,207
+doc/operations.md
+  s_06fcde5dbef956::t_6e194181527a86 561-562
+README.md
+  s_06fcde5dbef956::t_6e194181527a86 96-103
+api/openapi.json
+  s_06fcde5dbef956::t_a62cde877bef2a 4101-4364,21227,21229-21230,21233,21247,21255-21263,21273,21283,21293,21303-21313,21349,21351,21355,21357-21358,21373,21375-21488,23150,23152-23153,23159,23163,23173,23209,23213-23222,23224-23227,23229-23237,23247,23257-23277,23313,23317-23322,23325,23327,23336-23337,23347,23357,23367,23369,23377-23665,23701-23961
+doc/architecture.md
+  s_06fcde5dbef956::t_bfebd91e301a0f 35,219-257
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_005a0206d4e31e 68-69
+internal/auth/account_export_build.go
+  s_06fcde5dbef956::t_99b3f15f26e0f6 74-75,169-170
+internal/auth/account_export_later.go
+  s_06fcde5dbef956::t_cf08bf0b6d3344 1-61
+internal/chat/permissions.go
+  s_06fcde5dbef956::t_ccdb2fb9a52908 54-60
+internal/db/migrations/0062_reminders_scheduled.sql
+  s_06fcde5dbef956::t_abfb2662149dc4 1-43
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_f8f954ab254b73 44-45
+internal/events/types.go
+  s_06fcde5dbef956::t_0958295c35707f 53-54
+internal/later/faults_integration_test.go
+  s_06fcde5dbef956::t_bc9b1396e7dae6 1-133
+internal/later/reminders.go
+  s_06fcde5dbef956::t_43bcc35fc0c5af 1-199
+internal/later/reminders_handler.go
+  s_06fcde5dbef956::t_9eff552d312da8 1-124
+internal/later/scheduled.go
+  s_06fcde5dbef956::t_b949dc26a0ca03 1-202
+internal/later/scheduled_handler.go
+  s_06fcde5dbef956::t_22b90cf9bbc5ca 1-184
+internal/later/scheduled_send.go
+  s_06fcde5dbef956::t_3705d240fd1d52 1-175
+internal/later/service.go
+  s_06fcde5dbef956::t_3385d25dd1945c 1-115
+internal/later/visibility.go
+  s_06fcde5dbef956::t_6b4d03d7b68ee8 1-97
+internal/push/direct.go
+  s_06fcde5dbef956::t_ad174e53f9af79 1-82
+internal/push/direct_integration_test.go
+  s_06fcde5dbef956::t_a48bada37f8f6b 1-59
+internal/push/direct_test.go
+  s_06fcde5dbef956::t_5f53be68432889 1-43
+internal/push/locales/texts.json
+  s_06fcde5dbef956::t_fa7a8ebbc1ea3f 11-16,27-32
+internal/push/payload.go
+  s_06fcde5dbef956::t_77813c87cd93a7 183-187
+internal/push/service.go
+  s_06fcde5dbef956::t_96894cb37fc720 289-293
+internal/push/store.go
+  s_06fcde5dbef956::t_058c6b4b877392 206-211
+internal/server/later_edges_integration_test.go
+  s_06fcde5dbef956::t_af06c9fb4abeb0 1-111
+internal/server/later_export_integration_test.go
+  s_06fcde5dbef956::t_53e95a9984f7f2 1-41
+internal/server/later_integration_test.go
+  s_06fcde5dbef956::t_f5c1f2dd5dfa04 1-422
+internal/server/router_build.go
+  s_06fcde5dbef956::t_e30901d8d5159b 19,66,242,267,270,274-280
+internal/server/router_routes.go
+  s_06fcde5dbef956::t_360ed4d770bfbb 103
+internal/server/server.go
+  s_06fcde5dbef956::t_878b89c114bb89 20,82-84,159
+web/src/App.vue
+  s_06fcde5dbef956::t_cd753c818bd927 47,383
+web/src/components/ChatComposer.vue
+  s_06fcde5dbef956::t_67268221feb775 5,7-10,38,46-60,176-194
+web/src/components/ChatComposerLater.test.ts
+  s_06fcde5dbef956::t_1a9ba3d909cac9 1-56
+web/src/components/ChatHeader.vue
+  s_06fcde5dbef956::t_4f3cddcf843cf7 12,109
+web/src/components/LaterDialog.test.ts
+  s_06fcde5dbef956::t_7a1d4c8be682b2 1-122
+web/src/components/LaterDialog.vue
+  s_06fcde5dbef956::t_1452b528cfc9a9 1-126
+web/src/components/LaterPopover.test.ts
+  s_06fcde5dbef956::t_ceab980902c854 1-156
+web/src/components/LaterPopover.vue
+  s_06fcde5dbef956::t_77f2691fc3541e 1-146
+web/src/components/ScheduledItem.vue
+  s_06fcde5dbef956::t_6988fd27a5ad6d 1-136
+web/src/composables/useMessageMenu.ts
+  s_06fcde5dbef956::t_5043802a7f0440 9,13,103-108
+web/src/composables/useMessageMenuLater.test.ts
+  s_06fcde5dbef956::t_76f289b06c10d0 1-45
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_3359392cd01255 1539-1591
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_e62948d630e539 1539-1591
+web/src/lib/laterApi.ts
+  s_06fcde5dbef956::t_fc6720f8b6ec06 1-35
+web/src/lib/laterDialog.ts
+  s_06fcde5dbef956::t_4a28af1cb24f80 1-32
+web/src/lib/laterNotices.ts
+  s_06fcde5dbef956::t_eb18bd79765eb1 1-19
+web/src/lib/laterTimes.test.ts
+  s_06fcde5dbef956::t_376a874311c1ae 1-43
+web/src/lib/laterTimes.ts
+  s_06fcde5dbef956::t_53552f3f0b7a3f 1-57
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_56dbe38383d03a 5,192-193
+web/src/stores/chat/messageWindow.ts
+  s_06fcde5dbef956::t_6d033bb8ea98ed 170
+web/src/stores/chat/reset.ts
+  s_06fcde5dbef956::t_49941db881b6f9 5,47
+web/src/stores/later.test.ts
+  s_06fcde5dbef956::t_c1c9a8cca3a7df 1-118
+web/src/stores/later.ts
+  s_06fcde5dbef956::t_2964a7fd570914 1-105
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_ee215951024ff3 24-25
+web/src/types/events.ts
+  s_06fcde5dbef956::t_bd5ca456aad0ce 94-97,324-328,385
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_21d0ea714729a8 2524-2665
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f23dab29d75251eb6d0e777ca33935c5a3349994",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
