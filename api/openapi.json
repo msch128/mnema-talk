@@ -3741,6 +3741,104 @@
         ],
         "type": "object"
       },
+      "chat.ViewAsCategory": {
+        "properties": {
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/chat.ViewAsChannel"
+            },
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "channels",
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "chat.ViewAsChannel": {
+        "properties": {
+          "can_join": {
+            "description": "CanJoin is true for a Talk the previewed member may connect to; always\nfalse for a text channel.",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "number": {
+            "type": "integer"
+          },
+          "permissions": {
+            "description": "Permissions are the keys (GET /api/permissions) of the channel\npermissions the previewed member holds here, in catalog order.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": {
+            "$ref": "#/components/schemas/chat.ChannelType"
+          }
+        },
+        "required": [
+          "can_join",
+          "id",
+          "name",
+          "number",
+          "permissions",
+          "type"
+        ],
+        "type": "object"
+      },
+      "chat.ViewAsRole": {
+        "properties": {
+          "administrator": {
+            "description": "Administrator is true when the role carries Administrator: such a member\nsees everything the caller sees and ignores channel overwrites.",
+            "type": "boolean"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/chat.ViewAsCategory"
+            },
+            "type": "array"
+          },
+          "role_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "role_name": {
+            "maxLength": 32,
+            "type": "string"
+          },
+          "uncategorized": {
+            "items": {
+              "$ref": "#/components/schemas/chat.ViewAsChannel"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "administrator",
+          "categories",
+          "role_id",
+          "role_name",
+          "uncategorized"
+        ],
+        "type": "object"
+      },
       "emoji.Emoji": {
         "properties": {
           "animated": {
@@ -12701,6 +12799,113 @@
           }
         ],
         "summary": "Edit a role",
+        "tags": [
+          "Roles"
+        ]
+      }
+    },
+    "/api/admin/roles/{id}/view-as": {
+      "get": {
+        "description": "A read-only preview of the sidebar for a made-up member who holds only @everyone and this role: the categories and channels that member can see, Talks marked can_join, and the channel permissions they hold in each channel, computed by the real permission engine (overwrites included). It never shows more than the caller can see themselves: a channel the caller cannot view is left out whatever the role could see. Needs Manage roles. Nobody is impersonated and nothing changes.",
+        "operationId": "viewServerAsRole",
+        "parameters": [
+          {
+            "description": "Role ID (@everyone included).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.ViewAsRole"
+                }
+              }
+            },
+            "description": "Preview."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Manage roles permission."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "View the server as a role",
         "tags": [
           "Roles"
         ]

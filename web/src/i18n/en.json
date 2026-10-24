@@ -1943,7 +1943,22 @@
     "uploadInvalid": "Enter a whole number of MB, or leave it empty.",
     "botRoles": "Bot roles",
     "botRoleHint": "Managed role of one bot: it cannot be removed.",
-    "botRoleNote": "“{name}” is a bot’s own role. It is created with the bot, follows its name and is deleted with it; only that bot holds it, and it cannot be renamed, given to anyone else, removed from the bot or deleted by hand. You can change its colour and permissions. Nobody can give a bot permissions they lack themselves, and only the Owner can make a bot elevated."
+    "botRoleNote": "“{name}” is a bot’s own role. It is created with the bot, follows its name and is deleted with it; only that bot holds it, and it cannot be renamed, given to anyone else, removed from the bot or deleted by hand. You can change its colour and permissions. Nobody can give a bot permissions they lack themselves, and only the Owner can make a bot elevated.",
+    "viewAs": {
+      "open": "View server as {name}",
+      "title": "Server as {name}",
+      "subtitle": "Read-only preview. Nothing changes and nobody is impersonated.",
+      "loading": "Loading…",
+      "sidebar": "Channels this role can see",
+      "canJoin": "can join",
+      "cannotJoin": "can’t join",
+      "permissionsIn": "Permissions in {name}",
+      "allowed": "allowed",
+      "notAllowed": "not allowed",
+      "administrator": "This role has Administrator: it sees every channel you can see and ignores channel permissions.",
+      "empty": "This role sees no channels you can see.",
+      "exit": "Exit preview"
+    }
   },
   "memberRoles": {
     "title": "Roles of {name}",
