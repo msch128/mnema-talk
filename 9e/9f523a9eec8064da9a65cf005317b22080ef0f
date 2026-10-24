@@ -1,0 +1,125 @@
+web/src/stores/chat/polls.ts
+  s_06fcde5dbef956::t_2cbc106404312d 14,16,24,33
+web/src/stores/chat/channels.ts
+  s_06fcde5dbef956::t_2cbc106404312d 166-176
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_2cbc106404312d 997-1007,1165,1183,3021,3033
+README.md
+  s_06fcde5dbef956::t_2cbc106404312d 84-88
+internal/auth/account_export_polls.go
+  s_06fcde5dbef956::t_2cbc106404312d 12-13,22
+web/src/components/ChannelAutoDelete.test.ts
+  s_06fcde5dbef956::t_2cbc106404312d 1-108
+web/src/components/ChatHeader.vue
+  s_06fcde5dbef956::t_2cbc106404312d 5,35-39,108-113
+doc/moderation.md
+  s_06fcde5dbef956::t_2cbc106404312d 109-128,302-304
+web/src/components/EditNameDialog.vue
+  s_06fcde5dbef956::t_2cbc106404312d 14,117
+  s_06fcde5dbef956::t_39098e5fd88e7d 118
+internal/auth/account_export_activity.go
+  s_06fcde5dbef956::t_2cbc106404312d 56
+doc/upgrade.md
+  s_06fcde5dbef956::t_fa3ca2706c1ffd 144
+  s_06fcde5dbef956::t_2cbc106404312d 209-230
+  s_06fcde5dbef956::t_a77604efeadfac 231
+internal/chat/poll.go
+  s_06fcde5dbef956::t_2cbc106404312d 16-17,66-67,100,107
+internal/poll/handler.go
+  s_06fcde5dbef956::t_2cbc106404312d 31-32,88,122,136
+web/src/components/ChannelAutoDeleteField.vue
+  s_06fcde5dbef956::t_2cbc106404312d 1-76
+internal/audit/routes.go
+  s_06fcde5dbef956::t_2cbc106404312d 81
+internal/audit/snapshot.go
+  s_06fcde5dbef956::t_2cbc106404312d 22
+SECURITY.md
+  s_06fcde5dbef956::t_2cbc106404312d 105-114
+doc/api-stability.md
+  s_06fcde5dbef956::t_fa3ca2706c1ffd 29
+internal/server/poll_votes_integration_test.go
+  s_06fcde5dbef956::t_2cbc106404312d 192,228-229
+doc/operations.md
+  s_06fcde5dbef956::t_fa3ca2706c1ffd 562
+web/src/components/PollCard.vue
+  s_06fcde5dbef956::t_2cbc106404312d 21,47-52,68,89-102
+  s_06fcde5dbef956::t_7fa222a3e1131e 103
+internal/server/auto_delete_integration_test.go
+  s_06fcde5dbef956::t_2cbc106404312d 1-289
+web/src/components/PollDialog.vue
+  s_06fcde5dbef956::t_2cbc106404312d 6,22,43-48,58,144,150
+internal/poll/store.go
+  s_06fcde5dbef956::t_2cbc106404312d 7-8,19,86-87,100-102,107-178
+  s_06fcde5dbef956::t_0744a449108f2c 179
+internal/audit/classes_test.go
+  s_06fcde5dbef956::t_2cbc106404312d 26
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_2cbc106404312d 40
+web/src/components/PollDialog.test.ts
+  s_06fcde5dbef956::t_2cbc106404312d 6,14-15,68,80-88
+  s_06fcde5dbef956::t_4530bb1f3e0ef2 89-90
+internal/server/poll_anonymous_integration_test.go
+  s_06fcde5dbef956::t_2cbc106404312d 1-291
+web/src/lib/autoDelete.ts
+  s_06fcde5dbef956::t_2cbc106404312d 1-2
+internal/chat/handler.go
+  s_06fcde5dbef956::t_2cbc106404312d 144
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_2cbc106404312d 6,127
+internal/server/health.go
+  s_06fcde5dbef956::t_2cbc106404312d 49-50
+doc/architecture.md
+  s_06fcde5dbef956::t_2cbc106404312d 190-227
+web/src/components/PollCard.test.ts
+  s_06fcde5dbef956::t_2cbc106404312d 150-213
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_2cbc106404312d 161-163,1468,1505-1509,1873-1875,2649-2675
+web/src/components/ChannelAutoDeleteNote.vue
+  s_06fcde5dbef956::t_2cbc106404312d 1-24
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_2cbc106404312d 161-163,1468,1505-1509,1873-1875,2649-2675
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_2cbc106404312d 42-43
+doc/bots.md
+  s_06fcde5dbef956::t_2cbc106404312d 567-576
+internal/chat/database_failures_integration_test.go
+  s_06fcde5dbef956::t_2cbc106404312d 74
+internal/server/poll_account_integration_test.go
+  s_06fcde5dbef956::t_2cbc106404312d 18
+internal/server/router_build.go
+  s_06fcde5dbef956::t_2cbc106404312d 135-140
+api/openapi.json
+  s_06fcde5dbef956::t_2cbc106404312d 1614-1632,1882-1887,4934,4986-4989,4995,9498-9615,20595,20799,20893
+internal/chat/auto_delete.go
+  s_06fcde5dbef956::t_2cbc106404312d 1-218
+internal/chat/channels.go
+  s_06fcde5dbef956::t_2cbc106404312d 47-49,90,101,311-312
+internal/chat/handler_auto_delete.go
+  s_06fcde5dbef956::t_2cbc106404312d 1-55
+internal/db/migrations/0063_anonymous_polls_auto_delete.sql
+  s_06fcde5dbef956::t_2cbc106404312d 1-69
+web/src/components/ChatArea.vue
+  s_06fcde5dbef956::t_2cbc106404312d 10,228
+web/src/composables/usePoll.ts
+  s_06fcde5dbef956::t_2cbc106404312d 4,19-38,47,51-55,59,62-63,69,76,80-81,89-99,103
+internal/poll/service.go
+  s_06fcde5dbef956::t_2cbc106404312d 95-96,98-99,111-115
+web/src/lib/errorDetails.ts
+  s_06fcde5dbef956::t_2cbc106404312d 33-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9e9f523a9eec8064da9a65cf005317b22080ef0f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
