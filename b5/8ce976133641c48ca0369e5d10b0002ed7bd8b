@@ -1,0 +1,137 @@
+README.md
+  s_06fcde5dbef956::t_2c08f1db9cb72a 84
+api/openapi.json
+  s_06fcde5dbef956::t_58569f0e5378d2 1928-1929,1934-1935,2001-2017,2047-2071,2346-2375,2819-2822,2830-2834,2887-2898,3800-3832,20427-20430,20441-20451,20454-20461,20463-20483,20487-20490,20494,20504,20514,20524-20558,20560-20574,20582-20586,20588,20591-20592,20594,20602-20612,20620,20622-21172
+doc/architecture.md
+  s_06fcde5dbef956::t_39d5cba920179b 95-103
+doc/forums.md
+  s_06fcde5dbef956::t_425562d7c8b0f9 1-46
+doc/glossary.md
+  s_06fcde5dbef956::t_44b1d3a502ea1a 20-22
+doc/upgrade.md
+  s_06fcde5dbef956::t_347baf82b0596a 139,156-162
+internal/chat/categories.go
+  s_06fcde5dbef956::t_97f44cc51cbe7f 1-70
+internal/chat/channels.go
+  s_06fcde5dbef956::t_0b6b260d163d1c 20,101-102
+internal/chat/dm_gate.go
+  s_06fcde5dbef956::t_276f1d7a690ea7 35-41,48-62
+internal/chat/forum.go
+  s_06fcde5dbef956::t_ca1f419ab33ba4 1-99
+internal/chat/forum_tags.go
+  s_06fcde5dbef956::t_a9fd82492bc885 1-170
+internal/chat/forum_test.go
+  s_06fcde5dbef956::t_a0e64acb7bb7ab 1-75
+internal/chat/handler_forum.go
+  s_06fcde5dbef956::t_a4556eb4c839da 1-365
+internal/chat/message_types.go
+  s_06fcde5dbef956::t_974735d4784bc0 83-90
+internal/db/migrations/0069_forum_channels.sql
+  s_06fcde5dbef956::t_d8e9de94d80305 1-27
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_170090e9c7e819 49-50
+internal/events/types.go
+  s_06fcde5dbef956::t_a8af440fd454c3 64-66
+internal/server/health.go
+  s_06fcde5dbef956::t_9fadd12f584fe3 47
+scripts/openapi_diff.py
+  s_06fcde5dbef956::t_cab512b4ae884f 26-30
+web/src/App.vue
+  s_06fcde5dbef956::t_2fb4a9f5e4be96 20,294-295
+web/src/components/CreateChannelModal.test.ts
+  s_06fcde5dbef956::t_5d3488a153780e 11,129-146
+web/src/components/CreateChannelModal.vue
+  s_06fcde5dbef956::t_29236315ea6881 6,8,15,25,42,95,125-141
+web/src/components/CreateForumPostModal.test.ts
+  s_06fcde5dbef956::t_d481635724b9be 1-126
+web/src/components/CreateForumPostModal.vue
+  s_06fcde5dbef956::t_ffd47a37aa3573 1-172
+web/src/components/ForumArea.test.ts
+  s_06fcde5dbef956::t_59653d7679b5cc 1-154
+web/src/components/ForumPostCard.vue
+  s_06fcde5dbef956::t_e6f84186980aea 1-100
+web/src/components/ThreadRootCard.vue
+  s_06fcde5dbef956::t_af6d6b264b238a 1-129
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_179f9f851a1d43 5,9-10,22,32-34,38-48,208-221,249,251-258,300-303,305
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_8805b0e6a64138 337-338,354-391
+web/src/lib/forumApi.ts
+  s_06fcde5dbef956::t_6885f882376673 1-88
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_62e75f42942ccf 81
+web/src/types/events.ts
+  s_06fcde5dbef956::t_d50ee9662a4ac1 137-138,351-352,382
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_c359782197022f 1182,1185,1233-1245,1261-1275,1460-1478,1730,1733,1745-1746,1765,1768,1780-1781,2331-2358
+internal/chat/forum_integration_test.go
+  s_31631102a2fc9e::t_17cf990578eb44 1-326
+internal/chat/forum_posts.go
+  s_31631102a2fc9e::t_60c64beea63adf 1-197
+internal/chat/handler.go
+  s_fb498ceced760b::t_d31f0aeb7b3d58 106
+internal/chat/messages.go
+  s_1570ea1a19632f::t_f400b051e3d23f 81,321-324,346,348,350
+web/src/components/AdminChannelRow.vue
+  s_fb498ceced760b::t_1e8e480b5ada41 4,36-37
+web/src/components/ForumArea.vue
+  s_31631102a2fc9e::t_b95f5bdfa95a0e 1-252
+web/src/components/ManageForumTagsModal.vue
+  s_06fcde5dbef956::t_4c9d93046041ee 1-244
+web/src/components/SidebarChannelRow.vue
+  s_fb498ceced760b::t_39fb0238fae7c6 8,140-151
+web/src/components/SidebarDragGhost.vue
+  s_31631102a2fc9e::t_15d5d40563a04b 3,7,10,33
+web/src/i18n/en.json
+  s_31631102a2fc9e::t_7f47b3531ded04 337-338,354-391
+web/src/stores/chat.ts
+  s_fb498ceced760b::t_eba2ba5b2f34d0 38
+web/src/stores/chat/events.ts
+  s_fb498ceced760b::t_1c973af2f0fda6 253-256
+web/src/stores/chat/state.ts
+  s_31631102a2fc9e::t_aee9c85090ebdd 39,117-118
+web/src/stores/serverFeatures.ts
+  s_fb498ceced760b::t_2a6ae72a8da9e7 43-45
+web/src/types/domain.ts
+  s_fb498ceced760b::t_2cfbbb2235193f 11,38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b58ce976133641c48ca0369e5d10b0002ed7bd8b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_1570ea1a19632f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4877610f05e36b5c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_31631102a2fc9e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a2ee3cd5188f5c5c7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fb498ceced760b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a741e9519fb6798ce",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
