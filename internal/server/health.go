@@ -51,6 +51,7 @@ var Features = []string{
 	"talks.lobby",
 	"automod",
 	"moderation.history",
+	"ops.status",
 }
 
 // healthCacheTTL is how long a health result is reused: the endpoint is

@@ -199,6 +199,10 @@ automod entry about a blocked message (never stored) has no `message_id`, and a
 raid alert has neither. Clients must treat both as optional; reports filed by
 members always carry them.
 
+#### Operator status
+
+- A dedicated **Admin → Status** page (feature key `ops.status`, endpoint `GET /api/admin/status`, Owner and Administrator only) provides an at-a-glance operational overview: version, available updates and auto-deploy status, database size and migration count, storage reachability and disk free space, backup status, live activity (active sessions, WebSocket connections, Talks and participants), and active operator warnings. See [operations.md](operations.md#operator-status).
+
 ### 1.0.x → 1.1.0
 
 Update with the procedure above and take the backup first. 1.1.0 only adds.

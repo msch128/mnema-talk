@@ -3430,6 +3430,38 @@ export function isRolesUploadLimitInput(value: unknown): value is RolesUploadLim
 
 export const decodeRolesUploadLimitInput = decoder("roles.UploadLimitInput", isRolesUploadLimitInput)
 
+export type ServerActivityStatus = {
+  active_sessions: number
+  active_talks: number
+  connected_websocket_clients: number
+  voice_participants: number
+}
+
+export function isServerActivityStatus(value: unknown): value is ServerActivityStatus {
+  return isRecord(value)
+    && (hasOwn(value, "active_sessions") && isInteger(value["active_sessions"]))
+    && (hasOwn(value, "active_talks") && isInteger(value["active_talks"]))
+    && (hasOwn(value, "connected_websocket_clients") && isInteger(value["connected_websocket_clients"]))
+    && (hasOwn(value, "voice_participants") && isInteger(value["voice_participants"]))
+}
+
+export const decodeServerActivityStatus = decoder("server.ActivityStatus", isServerActivityStatus)
+
+export type ServerBackupStatus = {
+  hint: string
+  last_backup_age: string
+  last_restore_test_age: string
+}
+
+export function isServerBackupStatus(value: unknown): value is ServerBackupStatus {
+  return isRecord(value)
+    && (hasOwn(value, "hint") && isString(value["hint"]))
+    && (hasOwn(value, "last_backup_age") && isString(value["last_backup_age"]))
+    && (hasOwn(value, "last_restore_test_age") && isString(value["last_restore_test_age"]))
+}
+
+export const decodeServerBackupStatus = decoder("server.BackupStatus", isServerBackupStatus)
+
 export type ServerDatabaseHealth = {
   applied_migrations: number
   latest_migration: string
@@ -3446,6 +3478,25 @@ export function isServerDatabaseHealth(value: unknown): value is ServerDatabaseH
 }
 
 export const decodeServerDatabaseHealth = decoder("server.DatabaseHealth", isServerDatabaseHealth)
+
+export type ServerDatabaseStatus = {
+  applied_migrations: number
+  latest_migration: string
+  pending_migrations: number
+  reachable: boolean
+  size_bytes?: number
+}
+
+export function isServerDatabaseStatus(value: unknown): value is ServerDatabaseStatus {
+  return isRecord(value)
+    && (hasOwn(value, "applied_migrations") && isInteger(value["applied_migrations"]))
+    && (hasOwn(value, "latest_migration") && isString(value["latest_migration"]))
+    && (hasOwn(value, "pending_migrations") && isInteger(value["pending_migrations"]))
+    && (hasOwn(value, "reachable") && typeof value["reachable"] === 'boolean')
+    && (!hasOwn(value, "size_bytes") || isInteger(value["size_bytes"]))
+}
+
+export const decodeServerDatabaseStatus = decoder("server.DatabaseStatus", isServerDatabaseStatus)
 
 export type ServerHealth = {
   features?: Array<string>
@@ -3533,6 +3584,33 @@ export function isServerMailStatus(value: unknown): value is ServerMailStatus {
 }
 
 export const decodeServerMailStatus = decoder("server.MailStatus", isServerMailStatus)
+
+export type ServerOperatorStatus = {
+  activity: ServerActivityStatus
+  auto_deploy: ServerSelfUpdateStatus
+  backup: ServerBackupStatus
+  database: ServerDatabaseStatus
+  disk_free_bytes?: number
+  storage: ServerStorageStatus
+  update: ServerUpdateStatus
+  version: ServerSystemVersion
+  warnings: Array<OpwarnWarning>
+}
+
+export function isServerOperatorStatus(value: unknown): value is ServerOperatorStatus {
+  return isRecord(value)
+    && (hasOwn(value, "activity") && isServerActivityStatus(value["activity"]))
+    && (hasOwn(value, "auto_deploy") && isServerSelfUpdateStatus(value["auto_deploy"]))
+    && (hasOwn(value, "backup") && isServerBackupStatus(value["backup"]))
+    && (hasOwn(value, "database") && isServerDatabaseStatus(value["database"]))
+    && (!hasOwn(value, "disk_free_bytes") || isInteger(value["disk_free_bytes"]))
+    && (hasOwn(value, "storage") && isServerStorageStatus(value["storage"]))
+    && (hasOwn(value, "update") && isServerUpdateStatus(value["update"]))
+    && (hasOwn(value, "version") && isServerSystemVersion(value["version"]))
+    && (hasOwn(value, "warnings") && isArrayOf(value["warnings"], item => isOpwarnWarning(item)))
+}
+
+export const decodeServerOperatorStatus = decoder("server.OperatorStatus", isServerOperatorStatus)
 
 export type ServerOpsPool = {
   acquired: number
@@ -3767,6 +3845,21 @@ export function isServerStorageHealth(value: unknown): value is ServerStorageHea
 }
 
 export const decodeServerStorageHealth = decoder("server.StorageHealth", isServerStorageHealth)
+
+export type ServerStorageStatus = {
+  configured: boolean
+  reachable: boolean
+  used_bytes?: number
+}
+
+export function isServerStorageStatus(value: unknown): value is ServerStorageStatus {
+  return isRecord(value)
+    && (hasOwn(value, "configured") && typeof value["configured"] === 'boolean')
+    && (hasOwn(value, "reachable") && typeof value["reachable"] === 'boolean')
+    && (!hasOwn(value, "used_bytes") || isInteger(value["used_bytes"]))
+}
+
+export const decodeServerStorageStatus = decoder("server.StorageStatus", isServerStorageStatus)
 
 export type ServerSystemHealth = {
   database: ServerDatabaseHealth

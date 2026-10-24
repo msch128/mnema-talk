@@ -19,13 +19,15 @@ beforeEach(() => {
 
 describe('server features', () => {
   it('knows the features the server lists and asks only once', async () => {
-    apiMock.mockResolvedValue(health(['saved', 'blocks']))
+    apiMock.mockResolvedValue(health(['saved', 'blocks', 'ops.status']))
     const features = useServerFeaturesStore()
     expect(features.has('saved')).toBe(false)
+    expect(features.opsStatus).toBe(false)
     await Promise.all([features.load(), features.load()])
     await features.load()
     expect(apiMock).toHaveBeenCalledTimes(1)
     expect(features.has('saved')).toBe(true)
+    expect(features.opsStatus).toBe(true)
     expect(features.has('forward')).toBe(false)
     expect(features.loaded).toBe(true)
   })

@@ -24,6 +24,7 @@ export type {
   MediaDashboardItem as MediaDashboardItem, MediaStats as MediaStats,
   ServerSystemStatus as SystemStatus, ServerUpdateStatus as UpdateStatus,
   ServerOpsStatus as OpsStatus, ServerOpsSample as OpsSample,
+  ServerOperatorStatus as OperatorStatus,
   ServerSelfUpdateStatus as SelfUpdateStatus, ServerICEConfig as ICEConfig,
   ServerLegal as Legal,
 } from './rest'
@@ -39,6 +40,7 @@ export {
   decodePollDetail, decodeSlashResult,
   decodeChatThread as decodeThread, decodeChatSearchResult as decodeSearchResult,
   decodeLinkpreviewPreview as decodeLinkPreview,
+  decodeServerOperatorStatus as decodeOperatorStatus,
   decodeServerSystemStatus as decodeSystemStatus, decodeServerOpsStatus as decodeOpsStatus,
   decodeServerUpdateStatus as decodeUpdateStatus,
   decodeServerSelfUpdateStatus as decodeSelfUpdateStatus,

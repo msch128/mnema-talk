@@ -572,6 +572,24 @@ committed statement and public key.
   operator view (uptime, CPU, memory, traffic, errors, ICE failures, charts
   of the last hour). It reads `GET /api/admin/system/ops` (admin session
   only), not the bearer endpoint.
+- **Admin → Status** (feature key `ops.status`, `GET /api/admin/status`, Owner
+  or Administrator only) shows an operator status overview: server version,
+  update state, database size and migration version, storage reachability and
+  disk free space, backup and restore status, live activity (sessions,
+  WebSocket connections, Talks and participants), and active operator warnings.
+  See [Operator status](#operator-status) below.
+
+## Operator status
+
+The **Admin → Status** tab provides an operator status overview in a single view:
+- **Server version & updates**: Running binary version, git commit, Go runtime version, update availability, and auto-deploy container image status.
+- **Database**: Reachability, database size (`pg_database_size`), applied migration count, and latest migration file.
+- **Object storage & disk**: S3-compatible storage reachability and used media bytes, plus free disk space on the data/upload volume (`MEDIA_DISK_PATH`) when configured and statable.
+- **Backups**: Status of host-level backups and restore verification drills (see [Backups and restore](#backups-and-restore)).
+- **Live activity**: Active sessions, connected WebSocket clients, active Talks, and current voice participants.
+- **Operator warnings**: Active configuration warnings collected by the server (e.g. broad trusted proxies, WebRTC reachability).
+
+The tab is gated by the `ops.status` feature key in `/api/health` and backed by `GET /api/admin/status` (restricted to the Owner and members with the *Administrator* permission; other users receive `403 Forbidden`).
 
 ## Monitoring and alerts
 
