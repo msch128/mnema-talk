@@ -1,0 +1,20 @@
+e2e/tests/mobile.spec.ts
+  s_06fcde5dbef956::t_e8cdd88e08356b 3,24-30,32,34-36,38,44-72,74-75,80-91
+  s_06fcde5dbef956::t_e4138e2793e8cc 244-245,253
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ed166e5680249e341edf7ec3892eeb71d6e90a4e",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
