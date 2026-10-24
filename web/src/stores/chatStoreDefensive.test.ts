@@ -16,6 +16,10 @@ vi.mock('../lib/api', async importOriginal => ({
   api: vi.fn((url: string, options?: ApiOptions) => Promise.resolve(http.handle(url, options)))
 }))
 import { api } from '../lib/api'
+import { notifyShowsText } from '../lib/notifyPreview'
+
+// These tests look at the notification text, which is shown when the member's setting allows it.
+notifyShowsText.value = true
 function deferred<T>() {
   let resolve: (value: T) => void = () => { throw new Error('Uninitialized deferred') }
   let reject: (reason: unknown) => void = () => { throw new Error('Uninitialized deferred') }

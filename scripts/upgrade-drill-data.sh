@@ -82,8 +82,13 @@ seed_090() {
   post_message Herzog "$GENERAL" "ping @drillmods $TAG"
 }
 
+# Roles as the drill compares them. Migration 0050 adds one permission, Send
+# direct messages (bit 1 << 22), to @everyone (and so to nothing else): the bit
+# is left out of the comparison and checked on its own in verify_roles.
+ROLES_JQ='map({id, name, color, permissions: (.permissions as $p | if (($p / 4194304 | floor) % 2) == 1 then $p - 4194304 else $p end), mentionable, position}) | sort_by(.id)'
+
 snapshot_integrations() {
-  ROLES_BEFORE="$(api Herzog "$BASE/api/roles" | jq -S 'map({id, name, color, permissions, mentionable, position}) | sort_by(.id)')"
+  ROLES_BEFORE="$(api Herzog "$BASE/api/roles" | jq -S "$ROLES_JQ")"
   OVERWRITES_BEFORE="$(api Herzog "$BASE/api/admin/channels/$PROJECTS/overwrites" | jq -S '.overwrites | sort_by(.id)')"
   CATEGORY_OVERWRITES_BEFORE="$(api Herzog "$BASE/api/admin/categories/$CATEGORY/overwrites" | jq -S '.overwrites | sort_by(.id)')"
   COUNTS_BEFORE="$(count_tables)"
@@ -106,8 +111,10 @@ $(diff <(echo "$COUNTS_BEFORE") <(echo "$after") || true)"
 }
 
 verify_roles() {
-  [ "$(api Herzog "$BASE/api/roles" | jq -S 'map({id, name, color, permissions, mentionable, position}) | sort_by(.id)')" = "$ROLES_BEFORE" ] ||
+  [ "$(api Herzog "$BASE/api/roles" | jq -S "$ROLES_JQ")" = "$ROLES_BEFORE" ] ||
     fail 'the roles changed'
+  api Herzog "$BASE/api/roles" | jq -e 'any(.[]; ((.permissions / 4194304 | floor) % 2) == 1)' >/dev/null ||
+    fail 'no role holds Send direct messages after the upgrade (migration 0050 gives it to @everyone)'
   [ "$(api Herzog "$BASE/api/admin/channels/$PROJECTS/overwrites" | jq -S '.overwrites | sort_by(.id)')" = "$OVERWRITES_BEFORE" ] ||
     fail 'the channel overwrites changed'
   [ "$(api Herzog "$BASE/api/admin/categories/$CATEGORY/overwrites" | jq -S '.overwrites | sort_by(.id)')" = "$CATEGORY_OVERWRITES_BEFORE" ] ||
@@ -157,6 +164,49 @@ verify_onboarding_and_mentions() {
   else
     api alice "$BASE/api/onboarding" >/dev/null || fail 'GET /api/onboarding failed on the migrated database'
   fi
+}
+
+# Direct messages, blocks, saved messages and health features added in 1.1
+# (migrations 0049-0051). Exercises new features against the upgraded data.
+exercise_110_features() {
+  local health dm dm_id dm_msg dm_msg_id bob_dms
+
+  health="$(curl -fsS "$BASE/api/health")"
+  drill_health_features_ok "$health" dm blocks ||
+    fail 'GET /api/health does not report dm and blocks features'
+
+  ALICE_ID="${ALICE_ID:-$(user_id alice)}"
+  BOB_ID="${BOB_ID:-$(user_id bob)}"
+  need_id "$ALICE_ID" 'alice user id'
+  need_id "$BOB_ID" 'bob user id'
+
+  # 1:1 direct message between alice and bob, with one message from alice.
+  dm="$(post_json alice /api/dms "{\"user_ids\":[\"$BOB_ID\"]}")"
+  dm_id="$(jq -r '.id' <<<"$dm")"
+  need_id "$dm_id" 'direct message id'
+
+  dm_msg="$(post_json alice "/api/channels/$dm_id/messages" "{\"content\":\"dm-$TAG\"}")"
+  dm_msg_id="$(jq -r '.id' <<<"$dm_msg")"
+  need_id "$dm_msg_id" 'direct message message id'
+
+  # Bob sees the conversation with 1 unread message before blocking.
+  bob_dms="$(api bob "$BASE/api/dms")"
+  [ "$(jq -r --arg id "$dm_id" '.[] | select(.id == $id) | .unread_count // empty' <<<"$bob_dms")" = 1 ] ||
+    fail 'GET /api/dms did not report expected unread_count 1 before block'
+
+  # Bob blocks alice, then checks the conversation still lists with unread_count 0.
+  put_json bob "/api/me/blocks/$ALICE_ID" '{}' >/dev/null
+  [ "$(api bob "$BASE/api/me/blocks" | jq -r '.[].user_id' | grep -cx "$ALICE_ID")" = 1 ] ||
+    fail 'bob block of alice not listed in GET /api/me/blocks'
+
+  bob_dms="$(api bob "$BASE/api/dms")"
+  [ "$(jq -r --arg id "$dm_id" '.[] | select(.id == $id) | .unread_count // empty' <<<"$bob_dms")" = 0 ] ||
+    fail 'GET /api/dms did not report expected unread_count 0 after blocking author'
+
+  # Bob saves alice's direct message.
+  put_json bob "/api/me/saved/$dm_msg_id" '{"note":"drill-saved"}' >/dev/null
+  [ "$(api bob "$BASE/api/me/saved" | jq -r --arg id "$dm_msg_id" '.items[] | select(.message_id == $id) | .note // empty')" = 'drill-saved' ] ||
+    fail 'saved direct message not found in /api/me/saved'
 }
 
 # Every leg also writes through the tables of 0035-0037, whatever it started on.

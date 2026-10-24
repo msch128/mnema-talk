@@ -116,7 +116,7 @@ function onOverlayPointer(e: PointerEvent, on: boolean) {
 
 <template>
   <div
-    :class="['w-full flex justify-center flex-shrink-0', box.width ? '' : 'flex-1 min-h-0']"
+    :class="['w-full flex justify-center shrink-0', box.width ? '' : 'flex-1 min-h-0']"
     :style="box.height ? { height: `${box.height}px` } : null"
   >
     <div
@@ -173,18 +173,18 @@ function onOverlayPointer(e: PointerEvent, on: boolean) {
       <!-- Top: who is on the stage, and its controls (fade with the call bar) -->
       <div :class="['absolute top-3 inset-x-3 flex items-start justify-between gap-2 z-20 pointer-events-none', fade]">
         <div class="min-w-0 overflow-hidden pointer-events-auto bg-black/80 border border-white/10 h-8 px-2.5 rounded-lg flex items-center gap-2 text-sm text-white">
-          <Video v-if="cameraOnStage" class="w-3.5 h-3.5 text-white/80 flex-shrink-0" />
-          <span v-else class="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 flex-shrink-0">
+          <Video v-if="cameraOnStage" class="w-3.5 h-3.5 text-white/80 shrink-0" />
+          <span v-else class="px-1.5 py-0.5 rounded-sm bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shrink-0">
             <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse motion-reduce:animate-none"></span>
             {{ $t('talk.live') }}
           </span>
-          <ScreenViewers v-if="!cameraOnStage && stage.userId" :user-id="stage.userId" :show-zero="ownOnStage" class="-mx-1 flex-shrink-0" />
+          <ScreenViewers v-if="!cameraOnStage && stage.userId" :user-id="stage.userId" :show-zero="ownOnStage" class="-mx-1 shrink-0" />
           <span v-if="!tiny" class="font-semibold text-xs truncate">{{ stageName }}</span>
-          <span v-if="videoResolution && !narrow" class="text-white/60 text-xs font-mono flex-shrink-0">{{ videoResolution }}</span>
+          <span v-if="videoResolution && !narrow" class="text-white/60 text-xs font-mono shrink-0">{{ videoResolution }}</span>
         </div>
 
         <div
-          class="flex items-center gap-1.5 flex-shrink-0 pointer-events-auto"
+          class="flex items-center gap-1.5 shrink-0 pointer-events-auto"
           @pointerenter="onOverlayPointer($event, true)"
           @pointerleave="onOverlayPointer($event, false)"
         >
@@ -219,7 +219,7 @@ function onOverlayPointer(e: PointerEvent, on: boolean) {
             <button
               type="button"
               data-testid="viewer-stream-audio-mute"
-              class="p-0.5 rounded text-white hover:text-mnema-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+              class="btn btn-icon btn-sm text-white hover:text-mnema-accent"
               :aria-label="isCurrentStreamMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
               :aria-pressed="isCurrentStreamMuted ? 'true' : 'false'"
               v-tooltip="isCurrentStreamMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
@@ -237,7 +237,7 @@ function onOverlayPointer(e: PointerEvent, on: boolean) {
               :aria-valuetext="`${currentStreamVolume}%`"
               :value="currentStreamVolume"
               v-if="!tiny"
-              :class="['h-1 accent-mnema-accent cursor-pointer opacity-80 group-hover/vol:opacity-100 transition-opacity', narrow ? 'w-12' : 'w-16']"
+              :class="['cursor-pointer opacity-80 group-hover/vol:opacity-100 transition-opacity', narrow ? 'w-12' : 'w-16']"
               v-tooltip="`${currentStreamVolume}%`"
               @input="onStreamVolumeChange"
             />

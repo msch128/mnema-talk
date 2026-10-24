@@ -193,12 +193,12 @@ test('the service worker shows a delivered push and keeps quiet for a message wh
     // A message for a channel the page is not showing: the page is on screen, so the page shows it itself.
     const channel = '11111111-1111-4111-8111-111111111111'
     const message = '22222222-2222-4222-8222-222222222222'
-    const chat = JSON.stringify({ v: 1, type: 'message', title: 'Alice (#allgemein)', body: 'Hallo', tag: channel, ts: Date.now(), channel_id: channel, message_id: message })
+    const chat = JSON.stringify({ v: 1, type: 'message', title: 'Alice (#general)', body: 'Hello', tag: channel, ts: Date.now(), channel_id: channel, message_id: message })
     expect(await pushThroughWorker(worker, chat)).toEqual([])
 
     // The test push is always shown.
-    const ping = JSON.stringify({ v: 1, type: 'test', title: 'Mnema Talk', body: 'Push funktioniert auf diesem Gerät.', tag: 'test', ts: Date.now() })
-    expect(await pushThroughWorker(worker, ping)).toEqual([{ title: 'Mnema Talk', body: 'Push funktioniert auf diesem Gerät.', tag: 'test' }])
+    const ping = JSON.stringify({ v: 1, type: 'test', title: 'Mnema Talk', body: 'Push works on this device.', tag: 'test', ts: Date.now() })
+    expect(await pushThroughWorker(worker, ping)).toEqual([{ title: 'Mnema Talk', body: 'Push works on this device.', tag: 'test' }])
 
     // Anything that is not ours still shows something (the browser requires it) and never throws.
     const plain: Shown = { title: 'Mnema Talk', body: '', tag: 'mnema' }

@@ -121,6 +121,10 @@
             "description": "Banned marks a disabled account that was banned (see GET /api/admin/bans).",
             "type": "boolean"
           },
+          "banner_url": {
+            "description": "BannerURL is the API URL of the profile banner (/api/media/{id}); omitted\nwhen none and in every payload but the profile endpoints (GET\n/api/users/{userID}, GET /api/auth/me and the banner routes).",
+            "type": "string"
+          },
           "bio": {
             "maxLength": 250,
             "type": "string"
@@ -846,6 +850,10 @@
             "description": "AvatarURL is the API URL of the avatar (/api/media/{id}); omitted when none.",
             "type": "string"
           },
+          "banner_url": {
+            "description": "BannerURL is the API URL of the profile banner (/api/media/{id}); omitted\nwhen none and in every payload but the profile endpoints (GET\n/api/users/{userID}, GET /api/auth/me and the banner routes).",
+            "type": "string"
+          },
           "bio": {
             "maxLength": 250,
             "type": "string"
@@ -1267,6 +1275,14 @@
             "format": "uuid",
             "type": "string"
           },
+          "issuer_binding": {
+            "description": "IssuerBinding is only set for a token issued before 1.0, which has no\nrecorded issuer: \"unbound\" until it is first used after the upgrade,\nthen \"inferred\" (bound to the bot's creator or the Owner, whoever\nqualified; regenerate it to bind it to its real issuer). Absent for a\ntoken whose issuer was recorded when it was issued.",
+            "enum": [
+              "unbound",
+              "inferred"
+            ],
+            "type": "string"
+          },
           "last_used_at": {
             "format": "date-time",
             "type": "string"
@@ -1438,6 +1454,14 @@
             "format": "uuid",
             "type": "string"
           },
+          "issuer_binding": {
+            "description": "IssuerBinding is only set for a token issued before 1.0, which has no\nrecorded issuer: \"unbound\" until it is first used after the upgrade,\nthen \"inferred\" (bound to the bot's creator or the Owner, whoever\nqualified; regenerate it to bind it to its real issuer). Absent for a\ntoken whose issuer was recorded when it was issued.",
+            "enum": [
+              "unbound",
+              "inferred"
+            ],
+            "type": "string"
+          },
           "last_used_at": {
             "format": "date-time",
             "type": "string"
@@ -1493,6 +1517,46 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "chat.AddDMMemberRequest": {
+        "properties": {
+          "user_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "type": "object"
+      },
+      "chat.BlockedMember": {
+        "properties": {
+          "avatar_url": {
+            "type": "string"
+          },
+          "blocked_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "blocked_at",
+          "display_name",
+          "user_id",
+          "username"
+        ],
         "type": "object"
       },
       "chat.BotAllowedMentions": {
@@ -1903,6 +1967,22 @@
         ],
         "type": "object"
       },
+      "chat.CreateDMRequest": {
+        "properties": {
+          "user_ids": {
+            "description": "UserIDs are the other members: one for a conversation with one person,\ntwo to nine for a group.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "user_ids"
+        ],
+        "type": "object"
+      },
       "chat.CreateMessageRequest": {
         "properties": {
           "content": {
@@ -1932,6 +2012,52 @@
         ],
         "type": "object"
       },
+      "chat.CreateReportRequest": {
+        "properties": {
+          "category": {
+            "description": "Category is why the message is reported.",
+            "enum": [
+              "spam",
+              "harassment",
+              "illegal",
+              "other"
+            ],
+            "type": "string"
+          },
+          "note": {
+            "description": "Note is an optional explanation for the moderators, up to 500 characters.",
+            "maxLength": 500,
+            "type": "string"
+          }
+        },
+        "required": [
+          "category"
+        ],
+        "type": "object"
+      },
+      "chat.DMMember": {
+        "properties": {
+          "avatar_url": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "display_name",
+          "id",
+          "username"
+        ],
+        "type": "object"
+      },
       "chat.DeleteMessageRequest": {
         "properties": {
           "reason": {
@@ -1940,6 +2066,72 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "chat.DirectMessage": {
+        "properties": {
+          "can_send": {
+            "description": "CanSend says whether the caller may write in it now: they hold Send\ndirect messages, the community has direct messages on, and no timeout\nor pending rules apply. It says nothing about the other members; a\nmessage that cannot be sent to them is refused when sent.",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "group": {
+            "description": "Group is true for a conversation that can take more members; a\nconversation with one other person is not.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "ID is the id messages are read and written under, in the message\nroutes (/api/channels/{id}/messages), which accept it for members only.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "last_message_at": {
+            "description": "LastMessageAt is when the latest message was written (null: none yet).",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_read_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "members": {
+            "description": "Members are everybody in it, the caller included.",
+            "items": {
+              "$ref": "#/components/schemas/chat.DMMember"
+            },
+            "type": "array"
+          },
+          "mention_count": {
+            "type": "integer"
+          },
+          "notify_level": {
+            "$ref": "#/components/schemas/chat.NotifyLevel"
+          },
+          "unread_count": {
+            "description": "UnreadCount counts top-level messages of others since the caller last\nread it; MentionCount those of them that mention the caller by name or\nreply to them.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "can_send",
+          "created_at",
+          "group",
+          "id",
+          "last_message_at",
+          "last_read_at",
+          "members",
+          "mention_count",
+          "notify_level",
+          "unread_count"
+        ],
         "type": "object"
       },
       "chat.EditMessageRequest": {
@@ -2071,6 +2263,93 @@
         },
         "required": [
           "message_id"
+        ],
+        "type": "object"
+      },
+      "chat.FollowedThreads": {
+        "properties": {
+          "thread_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "thread_ids"
+        ],
+        "type": "object"
+      },
+      "chat.ForwardQuote": {
+        "properties": {
+          "attachment_count": {
+            "type": "integer"
+          },
+          "author": {
+            "$ref": "#/components/schemas/chat.UserRef"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "channel_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "channel_name": {
+            "type": "string"
+          },
+          "content": {
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "is_edited": {
+            "type": "boolean"
+          },
+          "message_id": {
+            "description": "The rest is set only when Available.",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "available"
+        ],
+        "type": "object"
+      },
+      "chat.ForwardRef": {
+        "properties": {
+          "forwarded": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "forwarded"
+        ],
+        "type": "object"
+      },
+      "chat.ForwardRequest": {
+        "properties": {
+          "channel_id": {
+            "description": "ChannelID is the channel or direct message conversation to forward to.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "comment": {
+            "description": "Comment is the forwarder's own text, optional.",
+            "maxLength": 4000,
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id"
         ],
         "type": "object"
       },
@@ -2275,6 +2554,10 @@
             "description": "AvatarURL is the API URL of the avatar (/api/media/{id}); omitted when none.",
             "type": "string"
           },
+          "banner_url": {
+            "description": "BannerURL is the API URL of the profile banner (/api/media/{id}); omitted\nwhen none and in every payload but the profile endpoints (GET\n/api/users/{userID}, GET /api/auth/me and the banner routes).",
+            "type": "string"
+          },
           "bio": {
             "maxLength": 250,
             "type": "string"
@@ -2413,6 +2696,10 @@
             },
             "type": "array"
           },
+          "forward": {
+            "$ref": "#/components/schemas/chat.ForwardRef",
+            "description": "Forward is set when the message forwards another one. It says so and\nnothing more: no id and no text of the original travels with the\nmessage, because readers differ in what they may see. Each reader gets\nthe original (with its ids) from GET /api/messages/{id}/forward."
+          },
           "id": {
             "format": "uuid",
             "type": "string"
@@ -2454,6 +2741,14 @@
           "parent_id": {
             "format": "uuid",
             "type": "string"
+          },
+          "pinned_at": {
+            "description": "PinnedAt and PinnedBy say when and by whom a pinned message was pinned;\nboth are absent on an unpinned message (PinnedBy also when the member\nis gone).",
+            "format": "date-time",
+            "type": "string"
+          },
+          "pinned_by": {
+            "$ref": "#/components/schemas/chat.UserRef"
           },
           "poll": {
             "$ref": "#/components/schemas/chat.Poll",
@@ -2659,6 +2954,22 @@
         ],
         "type": "object"
       },
+      "chat.Privacy": {
+        "properties": {
+          "dm_policy": {
+            "description": "DMPolicy is everyone (the default) or nobody. It only decides who can\nstart a conversation with the caller or add them to a group; existing\nconversations go on.",
+            "enum": [
+              "everyone",
+              "nobody"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "dm_policy"
+        ],
+        "type": "object"
+      },
       "chat.ReactionRequest": {
         "properties": {
           "emoji": {
@@ -2823,6 +3134,380 @@
         ],
         "type": "object"
       },
+      "chat.Report": {
+        "properties": {
+          "category": {
+            "enum": [
+              "spam",
+              "harassment",
+              "illegal",
+              "other"
+            ],
+            "type": "string"
+          },
+          "channel_id": {
+            "description": "ChannelID and ChannelName are left out for a direct message.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "channel_name": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "channel",
+              "dm"
+            ],
+            "type": "string"
+          },
+          "message_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "note": {
+            "description": "Note is what the reporter wrote.",
+            "type": "string"
+          },
+          "reported": {
+            "$ref": "#/components/schemas/chat.ReportParty"
+          },
+          "reporter": {
+            "$ref": "#/components/schemas/chat.ReportParty"
+          },
+          "resolution_note": {
+            "description": "ResolutionNote is the moderator's note on closing the report.",
+            "type": "string"
+          },
+          "resolved_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "resolved_by": {
+            "$ref": "#/components/schemas/chat.ReportParty"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "resolved",
+              "dismissed"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "created_at",
+          "id",
+          "kind",
+          "message_id",
+          "note",
+          "status"
+        ],
+        "type": "object"
+      },
+      "chat.ReportAttachment": {
+        "properties": {
+          "filename": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "filename",
+          "mime_type",
+          "size_bytes"
+        ],
+        "type": "object"
+      },
+      "chat.ReportDetail": {
+        "properties": {
+          "category": {
+            "enum": [
+              "spam",
+              "harassment",
+              "illegal",
+              "other"
+            ],
+            "type": "string"
+          },
+          "channel_id": {
+            "description": "ChannelID and ChannelName are left out for a direct message.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "channel_name": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "channel",
+              "dm"
+            ],
+            "type": "string"
+          },
+          "message_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "note": {
+            "description": "Note is what the reporter wrote.",
+            "type": "string"
+          },
+          "reported": {
+            "$ref": "#/components/schemas/chat.ReportParty"
+          },
+          "reporter": {
+            "$ref": "#/components/schemas/chat.ReportParty"
+          },
+          "resolution_note": {
+            "description": "ResolutionNote is the moderator's note on closing the report.",
+            "type": "string"
+          },
+          "resolved_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "resolved_by": {
+            "$ref": "#/components/schemas/chat.ReportParty"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/chat.ReportSnapshot"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "resolved",
+              "dismissed"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "created_at",
+          "id",
+          "kind",
+          "message_id",
+          "note",
+          "snapshot",
+          "status"
+        ],
+        "type": "object"
+      },
+      "chat.ReportFiled": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "chat.ReportParty": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username"
+        ],
+        "type": "object"
+      },
+      "chat.ReportSnapshot": {
+        "properties": {
+          "context": {
+            "description": "Context are up to 20 messages of the same channel or conversation\naround the reported one, oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/chat.ReportedMessage"
+            },
+            "type": "array"
+          },
+          "message": {
+            "$ref": "#/components/schemas/chat.ReportedMessage"
+          }
+        },
+        "required": [
+          "context",
+          "message"
+        ],
+        "type": "object"
+      },
+      "chat.ReportedMessage": {
+        "properties": {
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/chat.ReportAttachment"
+            },
+            "type": "array"
+          },
+          "content": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "parent_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "attachments",
+          "content",
+          "created_at",
+          "display_name",
+          "id",
+          "user_id",
+          "username"
+        ],
+        "type": "object"
+      },
+      "chat.ReportsPage": {
+        "properties": {
+          "has_more": {
+            "type": "boolean"
+          },
+          "reports": {
+            "items": {
+              "$ref": "#/components/schemas/chat.Report"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "has_more",
+          "reports"
+        ],
+        "type": "object"
+      },
+      "chat.ResolveReportRequest": {
+        "properties": {
+          "note": {
+            "description": "Note is kept with the report, up to 500 characters.",
+            "maxLength": 500,
+            "type": "string"
+          },
+          "status": {
+            "description": "Status closes the report: resolved (acted on) or dismissed (no action).",
+            "enum": [
+              "resolved",
+              "dismissed"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "chat.SaveRequest": {
+        "properties": {
+          "note": {
+            "description": "Note replaces the note; left out (or null), a saved message keeps its\nnote and a new one starts without.",
+            "maxLength": 200,
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "chat.SavedMessage": {
+        "properties": {
+          "available": {
+            "description": "Available is false when the caller may no longer see the message; then\nMessage is absent and nothing but the id and the note is sent.",
+            "type": "boolean"
+          },
+          "message": {
+            "$ref": "#/components/schemas/chat.Message"
+          },
+          "message_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "note": {
+            "description": "Note is the caller's own note (up to 200 characters), possibly empty.",
+            "maxLength": 200,
+            "type": "string"
+          },
+          "saved_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "available",
+          "message_id",
+          "note",
+          "saved_at"
+        ],
+        "type": "object"
+      },
+      "chat.SavedPage": {
+        "properties": {
+          "has_more": {
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/chat.SavedMessage"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "has_more",
+          "items"
+        ],
+        "type": "object"
+      },
       "chat.SearchResult": {
         "properties": {
           "has_more": {
@@ -2900,6 +3585,10 @@
       },
       "chat.Thread": {
         "properties": {
+          "following": {
+            "description": "Following: replies of this thread notify the caller. Servers before 1.1 do not send it.",
+            "type": "boolean"
+          },
           "replies": {
             "items": {
               "$ref": "#/components/schemas/chat.Message"
@@ -2913,6 +3602,24 @@
         "required": [
           "replies",
           "root"
+        ],
+        "type": "object"
+      },
+      "chat.ThreadFollow": {
+        "properties": {
+          "following": {
+            "description": "Following: replies of the thread notify the caller.",
+            "type": "boolean"
+          },
+          "thread_id": {
+            "description": "ThreadID is the root message of the thread.",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "following",
+          "thread_id"
         ],
         "type": "object"
       },
@@ -2940,6 +3647,29 @@
             "type": "integer"
           }
         },
+        "type": "object"
+      },
+      "chat.UserRef": {
+        "properties": {
+          "avatar_url": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "display_name",
+          "id",
+          "username"
+        ],
         "type": "object"
       },
       "emoji.Emoji": {
@@ -3289,6 +4019,10 @@
             "maxLength": 60,
             "type": "string"
           },
+          "direct_messages_enabled": {
+            "description": "DirectMessagesEnabled is the community's switch for direct messages\n(default on). Off: existing conversations stay readable and members\ncan neither start new ones nor write in them.",
+            "type": "boolean"
+          },
           "rules_text": {
             "description": "RulesText is Markdown. Empty means no rules: nothing is enforced.",
             "maxLength": 10000,
@@ -3315,6 +4049,7 @@
         },
         "required": [
           "community_name",
+          "direct_messages_enabled",
           "rules_text",
           "rules_version",
           "start_channel_id",
@@ -3327,6 +4062,13 @@
           "community_name": {
             "maxLength": 60,
             "type": "string"
+          },
+          "direct_messages_enabled": {
+            "description": "DirectMessagesEnabled switches direct messages on or off for the\ncommunity; left out, it stays as it is.",
+            "type": [
+              "boolean",
+              "null"
+            ]
           },
           "require_reacceptance": {
             "description": "RequireReacceptance raises the rules version, so every member (the Owner\nexcepted) has to accept the rules again. The first time rules are\nwritten the version is raised on its own. Ignored while the rules are\nempty.",
@@ -3923,6 +4665,9 @@
       },
       "roles.PermissionsInfo": {
         "properties": {
+          "can_start_direct_messages": {
+            "type": "boolean"
+          },
           "catalog": {
             "description": "Catalog lists every permission bit.",
             "items": {
@@ -3936,6 +4681,10 @@
               "$ref": "#/components/schemas/roles.ChannelPermissions"
             },
             "type": "array"
+          },
+          "direct_messages_enabled": {
+            "description": "DirectMessagesEnabled is the community's switch for direct messages;\nCanStartDirectMessages says whether the caller may start them and write\nin them now (the switch is on, they hold Send direct messages, and no\ntimeout or pending rules apply).",
+            "type": "boolean"
           },
           "max_upload_mb": {
             "description": "MaxUploadMB is the largest file the caller may upload, in MB: their\nroles' override or the global limit, never above the server's ceiling.\nIt changes with permissions_changed.",
@@ -4047,6 +4796,13 @@
       },
       "server.Health": {
         "properties": {
+          "features": {
+            "description": "Features lists the optional features this server has, so a web app of a\nnewer release can hide what an older server lacks (for example \"blocks\").\nA server of 1.0.x sends no list. See doc/api-stability.md.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "status": {
             "enum": [
               "ok"
@@ -10371,7 +11127,7 @@
         ]
       },
       "put": {
-        "description": "Owner and Administrators only; audited. Replaces the community name, welcome text, rules and start channel. Writing rules for the first time, or `require_reacceptance`, raises the rules version: members then have to accept again before they may post, react, upload or join a Talk (the Owner and bots are exempt). Empty rules enforce nothing. Broadcasts permissions_changed.",
+        "description": "Owner and Administrators only; audited. Replaces the community name, welcome text, rules and start channel; direct_messages_enabled, when given, switches direct messages for the community on or off (existing conversations stay readable when off). Writing rules for the first time, or `require_reacceptance`, raises the rules version: members then have to accept again before they may post, react, upload or join a Talk (the Owner and bots are exempt). Empty rules enforce nothing. Broadcasts permissions_changed.",
         "operationId": "setOnboardingSettings",
         "requestBody": {
           "content": {
@@ -11002,6 +11758,471 @@
         "summary": "Send a test event",
         "tags": [
           "Webhooks"
+        ]
+      }
+    },
+    "/api/admin/reports": {
+      "get": {
+        "description": "The moderation queue, newest first. Needs Manage reports (the Owner and Administrators always). The list holds no message text; open a report for that.",
+        "operationId": "listReports",
+        "parameters": [
+          {
+            "description": "Only reports with this status; all lists every status.",
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "default": "open",
+              "enum": [
+                "open",
+                "resolved",
+                "dismissed",
+                "all"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page back: only reports older than this report.",
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size, at most 100.",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.ReportsPage"
+                }
+              }
+            },
+            "description": "One page of reports."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Manage reports permission."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List reports",
+        "tags": [
+          "Moderation"
+        ]
+      }
+    },
+    "/api/admin/reports/{id}": {
+      "delete": {
+        "description": "Removes a closed report and the copy of the messages it kept. An open report cannot be deleted; close it first. Needs Manage reports. Recorded in the audit log as report.delete.",
+        "operationId": "deleteReport",
+        "parameters": [
+          {
+            "description": "Report ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Manage reports permission."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the report is still open."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Delete a report",
+        "tags": [
+          "Moderation"
+        ]
+      },
+      "get": {
+        "description": "The report with the copy of the reported message and up to 20 messages around it, as they were when it was filed. Needs Manage reports. This is the only way a moderator reads any part of a direct message.",
+        "operationId": "getReport",
+        "parameters": [
+          {
+            "description": "Report ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.ReportDetail"
+                }
+              }
+            },
+            "description": "The report."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Manage reports permission."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Get a report",
+        "tags": [
+          "Moderation"
+        ]
+      }
+    },
+    "/api/admin/reports/{id}/resolve": {
+      "post": {
+        "description": "Marks an open report resolved or dismissed. The reporter is not notified. Needs Manage reports. Recorded in the audit log as report.resolve.",
+        "operationId": "resolveReport",
+        "parameters": [
+          {
+            "description": "Report ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.ResolveReportRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Report"
+                }
+              }
+            },
+            "description": "The closed report."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Manage reports permission."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the report is already closed."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Close a report",
+        "tags": [
+          "Moderation"
         ]
       }
     },
@@ -11848,7 +13069,7 @@
         ]
       },
       "post": {
-        "description": "Asks the optional updater sidecar (compose profile autoupdate, UPDATER_TOKEN) to pull the app image again and restart the app; everyone is disconnected for about 30-60 seconds. Admin only, same-origin only, re-authenticates with the admin's current password (5 wrong passwords lock the action like a password change does), at most once per 5 minutes, only while a newer release is known and target_version names it. Audit-logged. Owner only (403 otherwise).",
+        "description": "Asks the optional updater sidecar (compose profile autoupdate, UPDATER_TOKEN) to verify the new release image (cosign signature and build provenance of this project's release workflow), pull exactly that digest and restart the app; everyone is disconnected for about 30-60 seconds. Admin only, same-origin only, re-authenticates with the admin's current password (5 wrong passwords lock the action like a password change does), at most once per 5 minutes, only while a newer release is known and target_version names it. Audit-logged. Owner only (403 otherwise).",
         "operationId": "startSelfUpdate",
         "requestBody": {
           "content": {
@@ -11948,7 +13169,7 @@
                 }
               }
             },
-            "description": "UNAVAILABLE: the updater is not reachable or rejected the request."
+            "description": "UNAVAILABLE: the updater is not reachable, rejected the request, or refused the new image because its signature or provenance did not verify (nothing was changed)."
           }
         },
         "security": [
@@ -17978,7 +19199,7 @@
     },
     "/api/channels/{channelID}/messages/{messageID}/edits": {
       "get": {
-        "description": "The earlier versions of an edited message, newest first (at most 50). Needs the Manage messages permission in the channel (the Owner always); the author and other members cannot read it. Not searched and not part of any export except the author's own. Rate limited per member. An unedited message has an empty list.",
+        "description": "The earlier versions of an edited message, newest first (at most 50). Needs the Manage messages permission in the channel (the Owner always); the author and other members cannot read it. Not searched and not part of any export except the author's own. Rate limited per member. A read of another member's message is recorded in the audit log (message.edit_history_view), once per reader and message every ten minutes. An unedited message has an empty list.",
         "operationId": "getMessageEditHistory",
         "parameters": [
           {
@@ -18434,7 +19655,7 @@
     },
     "/api/channels/{channelID}/messages/{messageID}/poll/end": {
       "post": {
-        "description": "The poll's author, or a member with Manage messages in the channel, closes voting now. Ending an ended poll changes nothing. Broadcasts poll_update.",
+        "description": "The poll's author, or a member with Manage messages in the channel, closes voting now. Ending an ended poll changes nothing. A moderator ending someone else's poll is recorded in the audit log (poll.end). Broadcasts poll_update.",
         "operationId": "endPoll",
         "parameters": [
           {
@@ -18790,7 +20011,7 @@
     },
     "/api/channels/{channelID}/pins": {
       "get": {
-        "description": "The channel's pinned messages, the most recently pinned first (at most 50). Needs View channel. Deleting a message unpins it.",
+        "description": "The channel's pinned messages, the most recently pinned first (at most 50), each with pinned_at and pinned_by. Needs View channel. Deleting a message unpins it.",
         "operationId": "listPins",
         "parameters": [
           {
@@ -19397,6 +20618,512 @@
         "summary": "Post a message with an attachment",
         "tags": [
           "Media"
+        ]
+      }
+    },
+    "/api/dms": {
+      "get": {
+        "description": "The caller's direct message conversations, the most recently active first (at most 500), with members, unread and mention counts. Conversations are not channels: they appear in no channel list. Messages are read and written under the conversation's id in the message routes, which only members can use. Moderators cannot list or open anybody else's conversations. Needs the direct_messages feature (GET /api/health).",
+        "operationId": "listDirectMessages",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/chat.DirectMessage"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "The caller's conversations."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List direct messages",
+        "tags": [
+          "Direct messages"
+        ]
+      },
+      "post": {
+        "description": "With one other member: that conversation, started now (201) or the existing one (200). With two to nine: a new group (201). Needs Send direct messages and the community's direct messages on. Every refusal about the other members (a block in either direction, their direct message setting, a disabled account, a bot, an unknown id) is the same 403, so none can be probed. At most 10 new conversations per member per 24 hours and 3 tries per minute, and 100 group conversations per member. The first messages are capped (see doc/architecture.md). Sends dm_created to all members' sessions.",
+        "operationId": "createDirectMessage",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.CreateDMRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.DirectMessage"
+                }
+              }
+            },
+            "description": "The existing conversation with that member."
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.DirectMessage"
+                }
+              }
+            },
+            "description": "The new conversation."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the conversation cannot be started (always the same text)."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the caller is in 100 group conversations."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests, or 10 conversations started in 24 hours.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Start a direct message",
+        "tags": [
+          "Direct messages"
+        ]
+      }
+    },
+    "/api/dms/{id}": {
+      "get": {
+        "description": "One conversation of the caller. Anyone who is not in it, the Owner included, gets 404.",
+        "operationId": "getDirectMessage",
+        "parameters": [
+          {
+            "description": "Conversation ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.DirectMessage"
+                }
+              }
+            },
+            "description": "The conversation."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Get a direct message",
+        "tags": [
+          "Direct messages"
+        ]
+      }
+    },
+    "/api/dms/{id}/members": {
+      "post": {
+        "description": "Only group conversations take members, up to 10 in all, and only a member of it can add. The new member can read the whole conversation. The same single 403 as for starting a conversation covers a block in either direction between the adder and the new member, their direct message setting, a disabled account and a bot. Sends dm_created to the new member and dm_member_added to the others.",
+        "operationId": "addDirectMessageMember",
+        "parameters": [
+          {
+            "description": "Conversation ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.AddDMMemberRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.DirectMessage"
+                }
+              }
+            },
+            "description": "The conversation, with the new member."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the member cannot be added (always the same text)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the group is full."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Add a member to a group direct message",
+        "tags": [
+          "Direct messages"
+        ]
+      }
+    },
+    "/api/dms/{id}/members/{user}": {
+      "delete": {
+        "description": "Takes the caller out of a group conversation; they lose its history. When nobody is left the conversation and its messages and attachments are deleted. A conversation with one other person cannot be left (400): block the person instead. Sends dm_member_removed to the remaining members and the leaver's sessions.",
+        "operationId": "leaveDirectMessage",
+        "parameters": [
+          {
+            "description": "Conversation ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Must be the literal @me (or the caller's own id): members can only remove themselves.",
+            "in": "path",
+            "name": "user",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Left."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Leave a group direct message",
+        "tags": [
+          "Direct messages"
         ]
       }
     },
@@ -20052,6 +21779,544 @@
         ]
       }
     },
+    "/api/me/blocks": {
+      "get": {
+        "description": "The members the caller has blocked, newest first. Blocking is private: the blocked member is never told, and nothing they can read depends on it. A blocked member's mentions and replies create no inbox entry, mention count or push for the caller; clients collapse their messages.",
+        "operationId": "listBlocks",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/chat.BlockedMember"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "The caller's blocked members."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List blocked members",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/me/blocks/{userID}": {
+      "delete": {
+        "description": "Idempotent. Broadcasts block_updated to the caller's own sessions.",
+        "operationId": "unblockMember",
+        "parameters": [
+          {
+            "description": "Member ID.",
+            "in": "path",
+            "name": "userID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Unblocked (or was not blocked)."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Unblock a member",
+        "tags": [
+          "Users"
+        ]
+      },
+      "put": {
+        "description": "Idempotent. At most 500 blocks per member. The blocked member is not told and cannot detect the block through this API; direct messages between the two members stop working with a generic error. Broadcasts block_updated to the caller's own sessions.",
+        "operationId": "blockMember",
+        "parameters": [
+          {
+            "description": "Member ID.",
+            "in": "path",
+            "name": "userID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Blocked (or already blocked)."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the block list is full."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Block a member",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/me/saved": {
+      "get": {
+        "description": "The caller's private saved list, newest first. Visibility is checked on every read: a message the caller can no longer see comes back with available=false and no message, only their own note. At most 1,000 messages can be saved.",
+        "operationId": "listSaved",
+        "parameters": [
+          {
+            "description": "Page size. Values below 1 or non-numeric fall back to the default; larger values are clamped to 100.",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page back: only entries older than this saved message.",
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.SavedPage"
+                }
+              }
+            },
+            "description": "One page of the saved list."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List saved messages",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/me/saved/{messageID}": {
+      "delete": {
+        "description": "Idempotent. Works for a message the caller can no longer see. Sends saved_updated to the caller's own sessions.",
+        "operationId": "unsaveMessage",
+        "parameters": [
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed (or was not saved)."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Remove a saved message",
+        "tags": [
+          "Messages"
+        ]
+      },
+      "put": {
+        "description": "Adds the message to the caller's private saved list, or changes the note of a saved one (idempotent; a body without note keeps the note). Needs View channel for the message's channel; otherwise the message does not exist for the caller (404). At most 1,000 saved messages (409 beyond). Sends saved_updated to the caller's own sessions.",
+        "operationId": "saveMessage",
+        "parameters": [
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.SaveRequest"
+              }
+            }
+          },
+          "description": "Optional note."
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.SavedMessage"
+                }
+              }
+            },
+            "description": "The saved entry."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the saved list is full."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Save a message",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
     "/api/media/{id}": {
       "get": {
         "description": "Streams an attachment or avatar. Supports Range and conditional requests. Inline for safe types, attachment otherwise.",
@@ -20444,6 +22709,209 @@
         ]
       }
     },
+    "/api/messages/{messageID}/forward": {
+      "get": {
+        "description": "The original of a forwarded message as the caller may see it right now: its text, author, time and channel when the caller can see it, otherwise only available=false. Edits and deletes of the original show through. Needs View channel for the forwarded message itself.",
+        "operationId": "getForwardQuote",
+        "parameters": [
+          {
+            "description": "ID of the forwarded message.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.ForwardQuote"
+                }
+              }
+            },
+            "description": "The quote."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the message does not exist, is not a forward, or the caller cannot see it."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Read the original of a forwarded message",
+        "tags": [
+          "Messages"
+        ]
+      },
+      "post": {
+        "description": "Posts a new message in the target channel or direct message conversation that points at the original; the original's text is never copied, and every reader sees it only if they may see the original. The caller needs to see the original and to send in the target (and the rules of a conversation apply). Forwarding a forward points at its original. The comment is optional. Every refusal answers the same 403 text. The target's slow mode applies. Broadcasts message_create.",
+        "operationId": "forwardMessage",
+        "parameters": [
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.ForwardRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Message"
+                }
+              }
+            },
+            "description": "The new message."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the same text for every refusal (no access to the original, no right to send in the target, a conversation that does not take the message), or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests, or the target's slow mode.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Forward a message",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
     "/api/messages/{messageID}/reactions": {
       "post": {
         "description": "Adds the caller's reaction, or removes it if already present. A user may add at most 20 different emoji to one message, and a message carries at most 50 different emoji (409 CONFLICT beyond that). Broadcasts message_reaction.",
@@ -20567,6 +23035,124 @@
           }
         ],
         "summary": "Toggle a reaction",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/messages/{messageID}/report": {
+      "post": {
+        "description": "Reports a message of a channel or a direct message to the moderators. The caller must be able to see the message (otherwise 404, as for any message they cannot see). The report keeps a copy of the message and up to 20 messages around it, so it still stands after the author deletes the message; it is the only way a moderator sees any part of a direct message. A member cannot report their own message. Repeating a report of the same message while the first is open returns the first. At most 10 reports per hour and 50 open reports per member. Records the audit entry report.create (without message text).",
+        "operationId": "reportMessage",
+        "parameters": [
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.CreateReportRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.ReportFiled"
+                }
+              }
+            },
+            "description": "The report was filed."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: too many open reports."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Report a message",
         "tags": [
           "Messages"
         ]
@@ -21885,7 +24471,7 @@
     },
     "/api/search": {
       "get": {
-        "description": "Text channels and voice channels' chats, newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id, mentions, has, after or before_date is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.",
+        "description": "Text channels and voice channels' chats (with dm=true, the caller's direct messages instead), newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id, mentions, has, is, after or before_date is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.",
         "operationId": "searchMessages",
         "parameters": [
           {
@@ -21916,7 +24502,7 @@
             }
           },
           {
-            "description": "Only messages with a file, an image, a video or a link.",
+            "description": "Only messages with a file, an image, a video, a link, a poll or an edit.",
             "in": "query",
             "name": "has",
             "schema": {
@@ -21924,7 +24510,20 @@
                 "file",
                 "image",
                 "video",
-                "link"
+                "link",
+                "poll",
+                "edit"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only pinned messages.",
+            "in": "query",
+            "name": "is",
+            "schema": {
+              "enum": [
+                "pinned"
               ],
               "type": "string"
             }
@@ -21963,6 +24562,15 @@
             "schema": {
               "format": "uuid",
               "type": "string"
+            }
+          },
+          {
+            "description": "Search the caller's direct message conversations instead of channels. Only conversations the caller is in are searched; channel_id may name one of them.",
+            "in": "query",
+            "name": "dm",
+            "schema": {
+              "default": false,
+              "type": "boolean"
             }
           },
           {
@@ -22043,6 +24651,263 @@
           }
         ],
         "summary": "Search messages",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/threads/following": {
+      "get": {
+        "description": "The root message IDs of the threads the caller follows in channels they may view, newest follow first, at most 500. A client uses it to decide which thread replies notify.",
+        "operationId": "listFollowedThreads",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.FollowedThreads"
+                }
+              }
+            },
+            "description": "Followed threads."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Threads the caller follows",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/threads/{threadID}/follow": {
+      "delete": {
+        "description": "Replies of the thread stop notifying the caller, except those that mention the caller or quote their message. The choice is kept: a later reply by the caller does not follow the thread again. Needs View channels. Idempotent. Sends thread_follow_updated to the caller's sessions.",
+        "operationId": "unfollowThread",
+        "parameters": [
+          {
+            "description": "ID of the thread's root message.",
+            "in": "path",
+            "name": "threadID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.ThreadFollow"
+                }
+              }
+            },
+            "description": "The follow state."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed ID."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such thread, or its channel is hidden from the caller."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Unfollow a thread",
+        "tags": [
+          "Messages"
+        ]
+      },
+      "put": {
+        "description": "Replies of the thread notify the caller from now on (push and in-page notifications). The root's author, everyone who replies and everyone mentioned in a reply follow automatically. Needs View channels; a reply or an unknown message is 404. Idempotent. Sends thread_follow_updated to the caller's sessions.",
+        "operationId": "followThread",
+        "parameters": [
+          {
+            "description": "ID of the thread's root message.",
+            "in": "path",
+            "name": "threadID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.ThreadFollow"
+                }
+              }
+            },
+            "description": "The follow state."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed ID."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such thread, or its channel is hidden from the caller."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Follow a thread",
         "tags": [
           "Messages"
         ]
@@ -22563,8 +25428,91 @@
       }
     },
     "/api/users/me/avatar": {
+      "delete": {
+        "description": "Deletes the avatar and its stored file. Succeeds when there is none. Needs the profile.avatar_remove feature. Broadcasts user_update.",
+        "operationId": "deleteAvatar",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.User"
+                }
+              }
+            },
+            "description": "Updated user, without avatar_url."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: cross-origin request rejected by the CSRF check."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Remove avatar",
+        "tags": [
+          "Users"
+        ]
+      },
       "post": {
-        "description": "multipart/form-data with an image in field 'avatar' (max 5 MB). Replaces and deletes the previous avatar. Broadcasts user_update.",
+        "description": "multipart/form-data with an image in field 'avatar' (PNG, JPEG, GIF or WebP, max 5 MB). The server never stores the upload: it crops the centre square, shrinks it to at most 512x512 (never enlarged) and writes a new file, so metadata such as EXIF (GPS, camera model) is gone. An animated GIF stays animated within a budget of 16 million pixels (canvas times frames, at most 100 frames); animated WebP is rejected. Replaces and deletes the previous avatar. Broadcasts user_update.",
         "operationId": "uploadAvatar",
         "requestBody": {
           "content": {
@@ -22606,7 +25554,7 @@
                 }
               }
             },
-            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+            "description": "Invalid input (INVALID_INPUT): no file, too many frames, too large in pixels, or the picture cannot be read."
           },
           "401": {
             "content": {
@@ -22693,6 +25641,225 @@
           }
         ],
         "summary": "Upload avatar",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/users/me/banner": {
+      "delete": {
+        "description": "Deletes the banner and its stored file. Succeeds when there is none. Needs the profile.banner feature.",
+        "operationId": "deleteBanner",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.User"
+                }
+              }
+            },
+            "description": "Updated user, without banner_url."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: cross-origin request rejected by the CSRF check."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Remove the profile banner",
+        "tags": [
+          "Users"
+        ]
+      },
+      "put": {
+        "description": "multipart/form-data with an image in field 'banner' (PNG, JPEG, GIF or WebP, at most 5 MB, at least 300x100 pixels). The server never stores the upload: it decodes it, crops the centre 3:1, shrinks it to at most 1500x500 and writes a new file, so metadata such as EXIF is gone. An animated GIF stays animated within a budget of 16 million pixels (canvas times frames, at most 100 frames); animated WebP is rejected. Replaces and deletes the previous banner. Needs the profile.banner feature. Same rate limit as other uploads.",
+        "operationId": "setBanner",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "banner": {
+                    "description": "Image file, at most 5 MB.",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "banner"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Image file, at most 5 MB.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.User"
+                }
+              }
+            },
+            "description": "Updated user, including banner_url."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): no file, too small or too large in pixels, too many frames, or the picture cannot be read."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: cross-origin request rejected by the CSRF check."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "PAYLOAD_TOO_LARGE: body or file exceeds the limit (1 MiB for JSON)."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNSUPPORTED_MEDIA_TYPE: the file type is not allowed."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set the profile banner",
         "tags": [
           "Users"
         ]
@@ -23563,6 +26730,155 @@
         ]
       }
     },
+    "/api/users/me/privacy": {
+      "get": {
+        "description": "Who may start direct messages with the caller.",
+        "operationId": "getPrivacy",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Privacy"
+                }
+              }
+            },
+            "description": "The settings."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Read the privacy settings",
+        "tags": [
+          "Users"
+        ]
+      },
+      "put": {
+        "description": "Sets who may start direct messages with the caller: everyone or nobody.",
+        "operationId": "setPrivacy",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.Privacy"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Privacy"
+                }
+              }
+            },
+            "description": "The settings."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set the privacy settings",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
     "/api/users/me/profile": {
       "put": {
         "description": "Broadcasts user_update.",
@@ -23767,7 +27083,7 @@
     },
     "/api/users/{userID}": {
       "get": {
-        "description": "Includes voice_seconds and message_count. Other users are returned without the private presence choice.",
+        "description": "Includes voice_seconds, message_count and the banner_url of the profile banner. Other users are returned without the private presence choice.",
         "operationId": "getUser",
         "parameters": [
           {
@@ -24077,7 +27393,7 @@
     },
     "/api/ws": {
       "get": {
-        "description": "Upgrades to a WebSocket (requires a same-origin Origin header; a foreign origin is refused with 403 by the upgrade handler). OpenAPI cannot model WebSocket frames, so the protocol is described here.\n\nEvery frame in both directions is a JSON text message `{\"type\": string, \"payload\": any}`. At most a few events per second per connection (and per account across its connections) are processed; excess client events, and events whose payload is over the cap for their type (1 KiB, more only for an SDP answer, ICE candidate, diagnostic and media handshake), are dropped.\n\nServer to client, on connect (to this connection only):\n- `presence_snapshot`: map of user id to live status for every online user.\n- `voice_snapshot`: map of voice channel id to a map of user id to User plus `joined_at`.\n- `voice_rooms`: `{started: {channelId: time}, now}`; the server clock lets clients count up.\n\nServer to client, broadcast to all connections:\nChannel events (`message_*`, `typing`, `voice_state_update`, `webrtc_media_state`) only reach connections whose user may view that channel; the connect snapshots list only the Talks the user may view.\n- `message_create`, `message_update`: Message.\n- `message_delete`: `{id, channel_id, parent_id}`.\n- `message_reaction`: `{message_id, channel_id, reactions}`.\n- `channels_changed`: no payload; refetch GET /api/channels (sent after any category/channel/layout admin change).\n- `permissions_changed`: no payload; refetch GET /api/permissions and GET /api/channels. Sent to the users whose roles or permissions may have changed (everybody after a channel, category, overwrite or @everyone change).\n- `roles_changed`: no payload; refetch GET /api/roles and GET /api/members (a role was created, edited, deleted, reordered or assigned).\n- `emoji_changed`: no payload; refetch GET /api/emoji (a custom emoji was added, renamed or deleted).\n- `member_joined`: public User of a newly registered member.\n- `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.\n- `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.\n- `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline; for a bot that set an activity also `activity: {type, name}` (Discord activity type).\n- `voice_state_update`: `{action: \"join\", channel_id, user, started_at}` or `{action: \"leave\", channel_id, user_id}`.\n- `typing`: `{channel_id, user_id}` (to everyone except the typist).\n\nServer to client, targeted:\n- `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}`, or `{refresh: true}` alone after a notification setting changed or everything was marked read (reload read states and notification settings).\n- `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.\n- `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.\n- `screen_viewers`: `{channel_id, user_id, viewers}` to voice-room members: `viewers` are the distinct users in the room watching `user_id`'s screen share (sorted ids, never the sharer). Sent whenever that set changes (`viewers: []` once when a watched share ends or loses its last viewer), and on `voice_join` one per live share to the joining connection only.\n- `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.\n- `screen_layers`: `{channel_id, user_id, layers}` to voice-room members: the layers of `user_id`'s live screen share, best first, each `{width, height, fps}` as the sharer declared them. Sent when they change, as an empty list once the share ends, and on `voice_join` one per live share to the joining connection only. A share of a client without layers has none.\n- `screen_quality`: `{channel_id, user_id, layer, auto}` to the watching connection only: the layer of `user_id`'s screen share it receives now (`-1` before the first picture) and whether the server chooses it (`auto`).\n- `screen_layers_wanted`: `{channel_id, layers}` to the sharing connection only: the indexes of its layers some viewer receives or is about to. A sender may stop encoding the others; layer 0 is always listed while nobody watches.\n- `media_handshake`: `{channel_id, user_id, wire}` to the other connections in that voice room. `wire` is opaque: the server checks only its framing (an MLS key package, welcome or public message, or a heartbeat or capability message) and never reads or logs the content.\n- `voice_kicked`: `{channel_id, reason?}` when a moderator removes the user from voice, `reason: \"room_full\"` when a voice join is refused because the room is full (the channel's `user_limit`), `reason: \"rules_not_accepted\"` when the community's rules have not been accepted yet (POST /api/onboarding/accept), or `reason: \"missing_permission\"` when the user may not (or no longer may) view and connect to that Talk.\n- `pong`: `{t}` echoing a `ping`.\n\nClient to server:\n- `ping` `{t}`; `presence_idle` `{idle: bool}`.\n- `typing` `{channel_id}` (text and voice channels, rate-limited; ignored without View channels and Send messages).\n- `voice_join` `{channel_id}` (needs View channels and Connect, otherwise `voice_kicked` with `reason: \"missing_permission\"`); `voice_leave`; `voice_speaking` `{active}`. The SFU drops audio without Speak and camera/screen without Video.\n- `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.\n- `media_handshake` `{channel_id, wire}`: opaque handshake bytes for the current voice room.\n- `webrtc_subscribe` `{kind: \"screen\"|\"camera\", user_id, on}` or `{kind: \"camera\", all: true, on}`. A screen subscription may carry `quality`: `\"auto\"` or the index of a layer (0 is the best); it is applied before the first picture and again whenever sent. Without one, or with `\"auto\"`, the server chooses: it starts on the best layer, moves down one layer at a time when the viewer's receiver reports show lasting loss, a rising round trip time or repeated keyframe requests, and tries one layer up again after a long stretch without trouble (a failed attempt makes the next one wait twice as long).\n- `webrtc_layers` `{layers: [{width, height, fps}, ...]}` (1 to 3, best first, strictly shrinking): the layers of the sender's own screen share. They are sent on the SFU's lower video lines.\n- `webrtc_screenshare_stop`, `webrtc_camera_stop`.\n\nUnknown event types are ignored. The server closes the connection when the session is revoked (sign-out of that session, sign-out everywhere, password change) or expires, or the account is disabled. A user keeps at most 8 browser connections: a newer one closes the oldest with close code 4001 (\"too many connections\"), after which that client should not reconnect by itself. Upgrades are rate-limited per address and per user (429), and `voice_join` beyond about one per second (burst 3) is answered with `voice_kicked`.",
+        "description": "Upgrades to a WebSocket (requires a same-origin Origin header; a foreign origin is refused with 403 by the upgrade handler). OpenAPI cannot model WebSocket frames, so the protocol is described here.\n\nEvery frame in both directions is a JSON text message `{\"type\": string, \"payload\": any}`. At most a few events per second per connection (and per account across its connections) are processed; excess client events, and events whose payload is over the cap for their type (1 KiB, more only for an SDP answer, ICE candidate, diagnostic and media handshake), are dropped.\n\nServer to client, on connect (to this connection only):\n- `presence_snapshot`: map of user id to live status for every online user.\n- `voice_snapshot`: map of voice channel id to a map of user id to User plus `joined_at`.\n- `voice_rooms`: `{started: {channelId: time}, now}`; the server clock lets clients count up.\n\nServer to client, broadcast to all connections:\nChannel events (`message_*`, `typing`, `voice_state_update`, `webrtc_media_state`) only reach connections whose user may view that channel; the connect snapshots list only the Talks the user may view.\n- `message_create`, `message_update`: Message.\n- `message_delete`: `{id, channel_id, parent_id}`.\n- `message_reaction`: `{message_id, channel_id, reactions}`.\n- `channels_changed`: no payload; refetch GET /api/channels (sent after any category/channel/layout admin change).\n- `permissions_changed`: no payload; refetch GET /api/permissions and GET /api/channels. Sent to the users whose roles or permissions may have changed (everybody after a channel, category, overwrite or @everyone change).\n- `roles_changed`: no payload; refetch GET /api/roles and GET /api/members (a role was created, edited, deleted, reordered or assigned).\n- `emoji_changed`: no payload; refetch GET /api/emoji (a custom emoji was added, renamed or deleted).\n- `member_joined`: public User of a newly registered member.\n- `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.\n- `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.\n- `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline; for a bot that set an activity also `activity: {type, name}` (Discord activity type).\n- `voice_state_update`: `{action: \"join\", channel_id, user, started_at}` or `{action: \"leave\", channel_id, user_id}`.\n- `typing`: `{channel_id, user_id}` (to everyone except the typist).\n\nServer to client, targeted:\n- `block_updated`: to the user's own sessions only; `{user_id, blocked}` after they blocked or unblocked a member (refetch GET /api/me/blocks). The blocked member is never told.\n- `dm_created`: to every member's sessions; the direct message (`DirectMessage`) a conversation was started with, or the one the receiver was just added to.\n- `dm_member_added`: to the other members of a group conversation; `{dm_id, member}`.\n- `dm_member_removed`: to the remaining members and the leaver's sessions; `{dm_id, member}`.\n- `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}`, or `{refresh: true}` alone after a notification setting changed or everything was marked read (reload read states and notification settings).\n- `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.\n- `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.\n- `screen_viewers`: `{channel_id, user_id, viewers}` to voice-room members: `viewers` are the distinct users in the room watching `user_id`'s screen share (sorted ids, never the sharer). Sent whenever that set changes (`viewers: []` once when a watched share ends or loses its last viewer), and on `voice_join` one per live share to the joining connection only.\n- `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.\n- `screen_layers`: `{channel_id, user_id, layers}` to voice-room members: the layers of `user_id`'s live screen share, best first, each `{width, height, fps}` as the sharer declared them. Sent when they change, as an empty list once the share ends, and on `voice_join` one per live share to the joining connection only. A share of a client without layers has none.\n- `screen_quality`: `{channel_id, user_id, layer, auto}` to the watching connection only: the layer of `user_id`'s screen share it receives now (`-1` before the first picture) and whether the server chooses it (`auto`).\n- `screen_layers_wanted`: `{channel_id, layers}` to the sharing connection only: the indexes of its layers some viewer receives or is about to. A sender may stop encoding the others; layer 0 is always listed while nobody watches.\n- `media_handshake`: `{channel_id, user_id, wire}` to the other connections in that voice room. `wire` is opaque: the server checks only its framing (an MLS key package, welcome or public message, or a heartbeat or capability message) and never reads or logs the content.\n- `voice_kicked`: `{channel_id, reason?}` when a moderator removes the user from voice, `reason: \"room_full\"` when a voice join is refused because the room is full (the channel's `user_limit`), `reason: \"rules_not_accepted\"` when the community's rules have not been accepted yet (POST /api/onboarding/accept), or `reason: \"missing_permission\"` when the user may not (or no longer may) view and connect to that Talk.\n- `pong`: `{t}` echoing a `ping`.\n\nClient to server:\n- `ping` `{t}`; `presence_idle` `{idle: bool}`.\n- `typing` `{channel_id}` (text and voice channels, rate-limited; ignored without View channels and Send messages).\n- `voice_join` `{channel_id}` (needs View channels and Connect, otherwise `voice_kicked` with `reason: \"missing_permission\"`); `voice_leave`; `voice_speaking` `{active}`. The SFU drops audio without Speak and camera/screen without Video.\n- `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.\n- `media_handshake` `{channel_id, wire}`: opaque handshake bytes for the current voice room.\n- `webrtc_subscribe` `{kind: \"screen\"|\"camera\", user_id, on}` or `{kind: \"camera\", all: true, on}`. A screen subscription may carry `quality`: `\"auto\"` or the index of a layer (0 is the best); it is applied before the first picture and again whenever sent. Without one, or with `\"auto\"`, the server chooses: it starts on the best layer, moves down one layer at a time when the viewer's receiver reports show lasting loss, a rising round trip time or repeated keyframe requests, and tries one layer up again after a long stretch without trouble (a failed attempt makes the next one wait twice as long).\n- `webrtc_layers` `{layers: [{width, height, fps}, ...]}` (1 to 3, best first, strictly shrinking): the layers of the sender's own screen share. They are sent on the SFU's lower video lines.\n- `webrtc_screenshare_stop`, `webrtc_camera_stop`.\n\nUnknown event types are ignored. The server closes the connection when the session is revoked (sign-out of that session, sign-out everywhere, password change) or expires, or the account is disabled. A user keeps at most 8 browser connections: a newer one closes the oldest with close code 4001 (\"too many connections\"), after which that client should not reconnect by itself. Upgrades are rate-limited per address and per user (429), and `voice_join` beyond about one per second (burst 3) is answered with `voice_kicked`.",
         "operationId": "connectWebSocket",
         "parameters": [
           {

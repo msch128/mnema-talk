@@ -6,6 +6,7 @@ import { useChatStore } from './stores/chat'
 import { useVoiceStore } from './stores/voice'
 import { useToastStore } from './stores/toast'
 import { usePermissionsStore } from './stores/permissions'
+import { useServerFeaturesStore } from './stores/serverFeatures'
 import { PERMISSION_BITS } from './lib/permissions'
 import * as router from './lib/router'
 import { channelFixture, categoryFixture, messageFixture, userFixture, requireValue } from './test-fixtures.fixture'
@@ -23,6 +24,8 @@ beforeEach(() => {
   window.history.replaceState(null, '', '/')
   router.navigate('/', { replace: true })
   setActivePinia(createPinia())
+  // The health request is not what these tests are about.
+  useServerFeaturesStore().load = vi.fn(async () => {})
 })
 afterEach(() => { wrapper?.unmount(); wrapper = undefined; vi.restoreAllMocks(); vi.useRealTimers(); vi.unstubAllGlobals() })
 

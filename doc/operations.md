@@ -8,7 +8,7 @@ see [upgrade.md](upgrade.md); for the security model see
 ## Configuration reference
 
 All settings are environment variables, read and validated in
-[`internal/config/config.go`](../internal/config/config.go). In the compose
+[`internal/config`](../internal/config/). In the compose
 stack they come from `.env`; [`.env.example`](../.env.example) lists all of
 them with placeholders.
 
@@ -36,7 +36,7 @@ General rules:
 | `PORT` | `8080` | HTTP port, 1–65535. In compose the container always listens on 8080; `PORT` there is the **host** port of the mapping. |
 | `BIND_ADDR` | `127.0.0.1` in development, else `0.0.0.0` | Listen address (outside compose). `APP_ENV=development` refuses any non-loopback address. |
 | `PUBLISH_ADDR` | `127.0.0.1` | Compose only: host address the app port is published on. |
-| `LOG_LEVEL` | empty | `debug`, `info`, `warn` or `error`. Empty = `info` in production/staging, `debug` otherwise. `debug` adds voice connection details (offered addresses, browser diagnostics). |
+| `LOG_LEVEL` | empty | `debug`, `info`, `warn` or `error`. Empty = `info` in production/staging, `debug` otherwise. `debug` adds voice connection details (offered addresses, browser diagnostics) and turns on Pion's ICE log unless `PION_LOG_DEBUG` is set. |
 
 ### Sessions and admin
 
@@ -44,6 +44,7 @@ General rules:
 |---|---|---|
 | `JWT_SECRET` | none | Signs session cookies. In production/staging at least 32 characters and not a placeholder (`openssl rand -hex 32`). In development an empty value means a random per-process secret (sessions reset on restart). Changing it logs everyone out. |
 | `SESSION_EXPIRY_HOURS` | `720` | Session lifetime, 1–8760. |
+| `INITIAL_LANGUAGE` | `de` | `de` or `en`: the language of the default categories and channels ("Text channels", "Voice hangouts", #general, #media, Lounge, Gaming 4K) on a brand-new installation. Used only when the database is still untouched (one account, no messages, the seeded names); an existing installation is never renamed. Any other value is rejected at startup. |
 | `ADMIN_USERNAME` | `Herzog` | The Owner account (all-powerful, cannot be restricted by anyone; see [roles-and-permissions.md](roles-and-permissions.md)), created on first start when none exists. |
 | `ADMIN_INITIAL_PASSWORD` | empty | Only used for that first start, and required then in production. In development, empty = a random password is generated and logged **once**. A placeholder value is rejected. |
 
@@ -83,6 +84,7 @@ General rules:
 | `PUSH_ENABLED` | `true` | Web Push notifications for members' devices while Mnema Talk is closed ([Web Push](#web-push-and-the-installable-app)). `false` turns them off: no key, no subscriptions API, nothing sent. |
 | `PUSH_PREVIEWS` | `user` | `user`: each member chooses whether a push carries the start of the message (default on); `off`: pushes never carry message text. Any other value is rejected at startup. |
 | `PUSH_VAPID_SUBJECT` | empty | Contact in the VAPID header (RFC 8292): an `https://` URL or a `mailto:` address. Empty uses `PUBLIC_URL` when that is `https://`, else a placeholder address (fine for testing; browsers' push services accept it). |
+| `WEBHOOK_ALLOW_PRIVATE_TARGETS` | empty | Comma-separated addresses or CIDR ranges (for example `192.168.1.20,10.0.0.0/24`) that outgoing webhooks may contact besides public addresses. Empty = public addresses only. Cloud metadata and reserved ranges stay closed. Anyone who may manage webhooks (the Owner and Administrators) can then make the server send requests to those addresses, so list only what you need. Web Push and link previews ignore it. |
 | `API_DOCS_ENABLED` | `false` | Swagger UI at `/api/docs` and `/api/openapi.json` for signed-in members. |
 
 ### Voice (WebRTC)
@@ -140,6 +142,7 @@ behind it and so uses the stored language or the default.
 | `MNEMA_IMAGE` | compose: `mnema-talk:local` | Image the `app` service runs; the app reads it to tell whether a re-pull can reach the latest release. See the tag table in the [deployment guide](deployment.md#updates). |
 | `UPDATER_TOKEN` | empty | Turns on "Update now" through the updater sidecar (profile `autoupdate`). At least 32 characters of letters, digits and `._~+/=-`, no placeholder. Empty = feature off, `UPDATER_URL` ignored. |
 | `UPDATER_URL` | `http://mnema-updater:8080` | Where the app reaches the sidecar: `http(s)` without credentials, query or fragment. |
+| `UPDATER_IMAGE_REPOSITORY`, `UPDATER_CERT_IDENTITY_REGEXP`, `UPDATER_CERT_ISSUER`, `UPDATER_SOURCE_URL`, `UPDATER_TRUSTED_ROOT` | empty = this project's release images and workflow | Read by the updater sidecar only, for a fork that publishes its own signed images: the image repository it may pull from, an anchored (`^...$`) pattern for the signing workflow's identity, its OIDC issuer, the repository URL recorded in the build provenance and (optional) a mounted `trusted_root.json`. See [verifying a release image](#verifying-a-release-image). |
 
 ### Legal and privacy page
 
@@ -147,11 +150,14 @@ behind it and so uses the stored language or the default.
 |---|---|
 | `LEGAL_OPERATOR_NAME` | `Community Operator` |
 | `LEGAL_OPERATOR_EMAIL` | `admin@example.com` |
-| `LEGAL_OPERATOR_COUNTRY` | `Deutschland` |
-| `LEGAL_PROJECT_NOTICE` | `Privates, nicht-kommerzielles Projekt` |
+| `LEGAL_OPERATOR_COUNTRY` | empty |
+| `LEGAL_PROJECT_NOTICE` | empty |
 
 Shown in the privacy policy (`GET /api/legal`). Set your real details in
-`.env` only.
+`.env` only. While the country or the project notice is empty, the legal page
+shows a default in the member's language ("Germany" and "Private,
+non-commercial project" in English). Before 1.1 the defaults were German
+texts for both.
 
 ### Container resources (compose only)
 
@@ -258,18 +264,26 @@ installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
 - **Who is notified.** For each new message, every member with a subscribed
   device who may view the channel *at that moment* (the permission snapshot of
   the send, so a member who lost access stops at once), is not the author,
+  has not blocked the author,
   is not on Do Not Disturb or Focus, and whose effective notification level
   for the channel allows it: all messages, or mentions (including `@all`,
   `@here`, roles and replies to their messages) only; mutes, timed mutes and
   category settings apply exactly as in the app (a mute still lets through
   a message addressed to the member by name, role or reply, not `@all` or
   `@here`; Do Not Disturb silences even those). The text of a push is plain: Markdown marks are removed,
-  `||spoilers||` read "Spoiler" and custom emoji read `:name:`. A burst in one channel is
+  `||spoilers||` read "Spoiler" and custom emoji read `:name:`. An
+  attachment-only message reads "Attachment", and a forwarded message with an
+  empty comment reads "Forwarded message". A burst in one channel is
   merged: the first message goes out at once, the rest of the next five
   seconds as one push ("3 new messages"); a mention is never held back. A
   device that is offline gets only the newest push of a channel (push topic),
   mentions separately; a push expires after one hour (a day for mentions).
-- **What a push contains.** Channel name and sender are always in it; the start
+  A thread reply goes only to the thread's followers (the root's author,
+  people who replied, people mentioned in the reply and anyone who followed it
+  by hand), unless the member is addressed by name, role or reply.
+  A message in a direct message conversation counts as a mention for push and
+  is sent urgently; its push names the sender and never a channel.
+- **What a push contains.** Channel name (for a direct message only the sender) and sender are always in it; the start
   of the message (140 characters) only if the member keeps "Show message text"
   on and `PUSH_PREVIEWS` is `user`. The payload is encrypted for the member's
   browser (RFC 8291, `aes128gcm`), so Google, Mozilla, Apple or Microsoft's push
@@ -435,15 +449,36 @@ digest; it says nothing about the code in it beyond that. Pinning the digest in
 from changing under a tag. Images released before signing was added carry no
 signature.
 
-**"Update now" does not run this check.** The updater sidecar only asks the
-Docker daemon to pull the tag again; neither the signature nor the BuildKit
-provenance is verified before the app is recreated, and there is no hook in
-the sidecar for it (see [SECURITY.md](../SECURITY.md#self-update-sidecar)).
-If you want every image verified before it runs, do not enable the `autoupdate`
-profile: for each release run `cosign verify` against the new tag, copy the
-digest it reports into `MNEMA_IMAGE` and run `docker compose pull app && docker
-compose up -d app` (the steps in [upgrade.md](upgrade.md)). A digest-pinned
-install is never touched by "Update now".
+**"Update now" runs this check for you** (since 1.1). The updater sidecar
+resolves the tag to a digest, verifies the cosign signature against the
+workflow identity above and the BuildKit provenance of every platform image,
+checks that the signed release is the one you confirmed and newer than the
+running one (an older signed image is refused, so a moved tag cannot roll the
+app back), then pulls exactly that digest and restarts the app from it. If anything is
+missing or does not match, nothing is pulled or restarted; the System tab
+shows that the update was refused, and the updater's log (`docker compose logs
+updater`) has the reason. Details and limits are in
+[SECURITY.md](../SECURITY.md#self-update-sidecar).
+
+- The updater needs outbound HTTPS to the image registry and to Sigstore's
+  TUF mirror (`tuf-repo-cdn.sigstore.dev`); it has its own network for that. An
+  installation that cannot reach the mirror can mount a `trusted_root.json`
+  into the updater and set `UPDATER_TRUSTED_ROOT` to its path (the operator
+  then keeps it current).
+- The `autoupdate` profile has two services. The `updater` runs from the same
+  image as the app (`MNEMA_IMAGE`) with another entrypoint; it verifies,
+  pulls and moves the local tag. The `recreator` (Watchtower, no pulling, no
+  route to the internet) only restarts the app from that local image. After
+  moving to 1.1, run `docker compose --profile autoupdate up -d` once to
+  start both. The sidecar's own settings (`UPDATER_LISTEN`,
+  `UPDATER_DOCKER_SOCKET`, `UPDATER_SCOPE`, `UPDATER_RECREATOR_URL`,
+  `UPDATER_TUF_CACHE`) are fixed by `docker-compose.yml`; leave them alone.
+- Images released before signing was added carry no signature and are
+  refused; update those by hand. A digest-pinned `MNEMA_IMAGE` is never
+  touched by "Update now".
+- To test the check yourself: pull a signed image, retag an unsigned one as
+  the tag your app runs in a throwaway stack, and press "Update now"; the
+  refusal and the log line show the gate working.
 
 ## Renewing the desktop trust statement
 
@@ -478,10 +513,17 @@ committed statement and public key.
 
 ## Health and metrics
 
-- **`GET /api/health`** (public): `200 {"status":"ok","version":"X.Y.Z"}`
-  when the database answers and object storage is reachable, otherwise `503`
+- **`GET /api/health`** (public): `200` with `status` (`ok`), `version`,
+  `web_client_api` (the contract number the desktop client checks) and
+  `features`, when the database answers and object storage is reachable,
+  otherwise `503`
   (`database unavailable` / `file storage unavailable`). The result is cached
-  for 2 seconds, so it can't be used to flood the database. The compose
+  for 2 seconds, so it can't be used to flood the database. `features` lists
+  the optional features this build has, so a newer web app can hide what an
+  older server lacks. In 1.1 it holds `blocks`, `dm`, `reports`, `saved`,
+  `forward`, `search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`;
+  names never change meaning ([api-stability.md](api-stability.md)). A 1.0.x
+  server sends no list. The compose
   healthcheck and [`scripts/health-check.sh`](../scripts/health-check.sh)
   (cron, Unraid notification, optional webhook) use it.
 - **`GET /api/metrics`** (Prometheus text format), only when `METRICS_TOKEN`
@@ -599,7 +641,7 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_http_requests_total{route,class}` | counter | Requests by chi route pattern (`/api/channels/{channelID}/messages`) and status class `1xx`..`5xx`. Unknown paths are `unmatched`. |
 | `mnema_http_request_duration_seconds{route}` | histogram | Latency per route pattern (WebSocket upgrades are counted but not timed). |
 | `mnema_http_requests_in_flight` | gauge | Requests being served now. |
-| `mnema_ratelimit_hits_total{limiter}` | counter | Requests refused with 429, by limiter: `api_user` (600 a minute per member), `upload`, `link_preview`, `poll_create` (10 a minute), `poll_vote`, `pin` (60 pins or unpins a minute), `emoji_upload` (10 per 10 minutes), `edit_history`, `export_download`, the bot, webhook, gateway, push, e-mail and password-reset limiters, `ws_user` and `ws_ip`, and `other` for the few without a name. |
+| `mnema_ratelimit_hits_total{limiter}` | counter | Requests refused with 429, by limiter: `api_user` (600 a minute per member), `upload`, `link_preview`, `poll_create` (10 a minute), `poll_vote`, `pin` (60 pins or unpins a minute), `emoji_upload` (10 per 10 minutes), `edit_history`, `export_download`, `dm_start` (new conversations), `block`, `report`, `saved`, `forward`, `thread_follow`, `slash_nick`, `test_mail`, the bot, webhook, gateway, push, e-mail and password-reset limiters, `ws_user` and `ws_ip`, and `other` for the few without a name. |
 | `mnema_ws_online_users`, `mnema_ws_connections` | gauge | Distinct online users and open WebSockets. |
 | `mnema_ws_connections_total` | counter | Accepted realtime connections (reconnect churn). |
 | `mnema_ws_events_sent_total`, `mnema_ws_events_received_total` | counter | Event throughput to and from clients. |
@@ -617,17 +659,19 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_sfu_bandwidth_estimate_reports_total{range}` | counter | Bandwidth estimates taken for viewers whose screen layer the server chooses, by range (`lt0.5m` ... `ge16m`, bits per second); `rate()` per range shows how the downlinks are distributed. |
 | `mnema_sfu_bandwidth_layer_moves_total` | counter | Moves to a lower layer caused by the bandwidth estimate (those caused by loss, round trip time or keyframe requests are only in `mnema_sfu_layer_switches_total`). |
 | `mnema_sfu_ice_transitions_total{state}` | counter | `connected`, `failed`, `disconnected` ICE transitions. A rising `failed` share means clients cannot reach the UDP port or TURN. |
+| `mnema_sfu_ingress_dropped_total{reason}` | counter | Publisher packets dropped over the ingress limit: `rate` (a sender above its budget) or `closed` (the peer was already closing). |
 | `mnema_sfu_peer_joins_total` | counter | Media connections created. |
 | `mnema_db_connections_total\|acquired\|idle\|max` | gauge | Database pool. `mnema_db_acquires_total`, `..._waited_total`, `..._canceled_total`, `mnema_db_acquire_seconds_total` count acquisitions, those that had to wait, those abandoned and the time spent. |
 | `mnema_storage_up` | gauge | 1 when object storage answers (the same check as `/api/health`), else 0. |
 | `mnema_s3_operations_total{op,result}` | counter | Object storage calls (`upload`, `get`, `delete`, `list`) by `ok`/`error`. |
+| `mnema_webhook_events_dropped_total{reason}` | counter | Outgoing webhook events dropped or expired unsent: `webhook_cap` and `global_cap` (queue limits), `buffer_full`, `channel_share`, `store_error` and `expired` (older than the retry window). A rising count means a receiver is down or too slow. |
 | `mnema_push_deliveries_total{outcome}` | counter | Web Push deliveries: `ok`, `gone` (the browser ended the subscription; it is removed), `retry` (temporary refusal, retried once), `rejected`, `error` (no answer: blocked address, DNS, connection, TLS, timeout) and `dropped` (a full queue). A rising `rejected` share right after a restore means the VAPID key changed. |
 
 ## Orphaned media
 
 Objects in storage that no media row refers to (a failed delete, a crash
 during an upload) are invisible to members and only take space. Once a day
-the app counts those older than 24 hours under `uploads/` and `avatars/` and
+the app counts those older than 24 hours under `uploads/`, `avatars/` and `banners/` and
 logs a warning when it finds any; it never deletes them on its own.
 
 ```sh
@@ -672,10 +716,16 @@ security (the Owner account cannot be deleted). The export is a ZIP of JSON
 files with the member's profile, settings, messages, earlier versions of
 their edits, reactions, poll votes, uploads, the polls they started, the
 messages they pinned, their push devices (label and dates, no keys), the
-custom emoji they uploaded, audit entries about their account and their
-sign-in setup; nothing of other members. Deleting keeps an anonymised
+custom emoji they uploaded, the members they blocked, the reports they sent,
+their saved messages (ids, notes and times, not the saved text), the threads
+they follow, audit entries about their account and their sign-in setup;
+nothing of other members. Deleting keeps an anonymised
 row and the member's messages without text, removes everything else (see
-[SECURITY.md](../SECURITY.md)) and frees the username; files are removed from
+[SECURITY.md](../SECURITY.md)) and frees the username. Their blocks (in both
+directions), saved list and thread follows go; a direct message conversation
+nobody else is in is deleted with its messages and files, and in the others
+their messages stay without text; reports keep their copies for the
+moderators with the member's text blanked; files are removed from
 object storage in the same request, and anything that could not be removed is
 found by Admin > Media > orphan cleanup. Exports are stored for at most 24 hours
 under `exports/` in the bucket and need object storage; back-ups taken in that

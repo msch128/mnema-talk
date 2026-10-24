@@ -78,12 +78,13 @@ var (
 
 // SearchQuery filters messages in all channels (text and voice channels' chats). Every term of Text must
 // occur in the message (case-insensitive substring); Has is "", "file",
-// "image", "video" or "link". Results are newest first; Before pages further back.
+// "image", "video", "link", "poll" or "edit"; Is is "" or "pinned". Results are newest first; Before pages further back.
 type SearchQuery struct {
 	Text      string
 	ChannelID *uuid.UUID
 	AuthorID  *uuid.UUID
 	Has       string
+	Is        string
 	// Mentions keeps messages that mention this user (directly or via @all/@here).
 	Mentions *uuid.UUID
 	// After and BeforeDate bound created_at (exclusive).
@@ -94,6 +95,11 @@ type SearchQuery struct {
 	// Visible limits the search to these channels; nil searches all of them
 	// (an empty, non-nil list finds nothing).
 	Visible []uuid.UUID
+	// Conversations searches the caller's direct message conversations
+	// instead of channels (never both). Member is the caller: only
+	// conversations they are in are searched, whatever else is asked.
+	Conversations bool
+	Member        uuid.UUID
 }
 
 // Search returns one page of matching messages and whether more exist.

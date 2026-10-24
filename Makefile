@@ -3,7 +3,7 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-web lint complexity-check fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill fresh-install docs-check
+.PHONY: help dev web build run test test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-web lint complexity-check fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill fresh-install docs-check english-check
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -12,8 +12,8 @@ GO_PKGS    := ./...
 # binaries when one is configured; Docker fixtures otherwise remain isolated.
 GO_INTEGRATION_PKG_FLAGS := $(if $(filter undefined,$(origin TEST_DATABASE_URL)),,-p=1)
 # Keep in sync with .github/workflows/ci.yml.
-GOVULNCHECK_VERSION ?= v1.8.0
-GOCOGNIT_VERSION ?= v1.2.0
+GOVULNCHECK_VERSION ?= v1.9.0
+GOCOGNIT_VERSION ?= v1.3.0
 # Pinned oasdiff for make openapi-diff (CI runs the same target).
 OASDIFF_VERSION ?= v1.34.1
 
@@ -100,7 +100,7 @@ COVERAGE_MIN ?= 90
 COVERAGE_FILE_MIN ?= 80
 # Packages counted in the Go coverage total: everything but test helpers and
 # build-time tools.
-COVER_PKGS = $(shell go list ./cmd/... ./internal/... ./web | grep -v -e /internal/testutil -e /internal/mailer/mailtest -e /internal/tools/ | paste -sd, -)
+COVER_PKGS = $(shell go list ./cmd/... ./internal/... ./web | grep -v -e /internal/testutil -e /internal/mailer/mailtest -e /internal/updaterd/daemontest -e /internal/tools/ | paste -sd, -)
 
 coverage: coverage-go coverage-web ## Go + web coverage reports (coverage.out, web/coverage/)
 
@@ -142,7 +142,7 @@ openapi-check: ## Fail when api/openapi.json is stale (regenerates into a temp f
 web-bundle-check: web ## Sign web/dist with a throwaway key and verify the desktop bundle (scripts/web-bundle-check.sh)
 	scripts/web-bundle-check.sh
 
-check: docs-check lint typecheck-web contracts-check openapi-check openapi-diff test test-scripts coverage-go vuln coverage-web web web-bundle-check ## Everything CI runs: backend and web checks, Docker build, smoke, backup, PostgreSQL upgrade and release upgrade drills
+check: docs-check english-check lint typecheck-web contracts-check openapi-check openapi-diff test test-scripts coverage-go vuln coverage-web web web-bundle-check ## Everything CI runs: backend and web checks, Docker build, smoke, backup, PostgreSQL upgrade and release upgrade drills
 	cd web && npm audit --omit=dev --audit-level=high
 	CGO_ENABLED=0 go build ./...
 	docker build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) -t mnema-talk:ci .
@@ -167,6 +167,10 @@ fresh-install: docker ## Follow doc/deployment.md "Fresh install" in an empty di
 docs-check: ## Relative links and anchors in README.md, SECURITY.md and doc/*.md, and no merge-conflict markers in tracked files (no network)
 	node scripts/check-doc-links.mjs
 	node scripts/check-conflict-markers.mjs
+
+english-check: ## No German outside the locale resources and the allowlist (scripts/english-only-allowlist.txt)
+	node --test scripts/check-english-only.test.mjs
+	node scripts/check-english-only.mjs
 
 backup-drill: docker ## Back up, change, verify and restore a throwaway compose stack, then check the data
 	scripts/backup-drill.sh mnema-talk:local

@@ -12,7 +12,7 @@ and screen sharing up to 4K at 60 FPS, in one Go binary.**
 
 Mnema Talk is a self-hosted alternative to Discord for a group that wants its
 own place: friends, a club, a guild or a small team. It has one community
-instead of many servers, no direct messages, no ringing and its own quiet, dark
+instead of many servers, private direct messages without a back door for moderators, no ringing and its own quiet, dark
 design. It keeps the parts that make a community server useful: roles, private
 channels, webhooks, bots and a call you can join with one click. Invite-only,
 no accounts on someone else's platform.
@@ -51,7 +51,11 @@ no accounts on someone else's platform.
 ### Talk (voice, camera, screen)
 
 - **Hangout spots.** Click a Talk and you are in. A reload within 30 seconds
-  puts you back into the call.
+  puts you back into the call. To only read (or write in) a Talk's chat, use
+  the speech-bubble button on the Talk's row: the Talk opens as a preview with
+  its chat, nothing is joined and no microphone is requested until you press
+  **Join** in the Talk's header. Reading needs *View channels*, writing
+  *Send messages*; *Connect* is not required.
 - **Screen sharing up to source quality**, up to 4K at 60 FPS with hardware
   encoding in the browser. A share is sent as the source plus smaller **layers**;
   every viewer picks a layer or leaves it on **Auto**, which follows the
@@ -74,10 +78,27 @@ no accounts on someone else's platform.
   back), threads, reactions, emoji, @mentions, file and image attachments,
   link cards, search, typing notices, unread and mention markers,
   per-channel notification settings and presence with a status line.
-- **Pinned messages, polls and slash commands** (`/poll` and others), **custom
+- **Pinned messages** (with who pinned them and when), **polls**, **custom
   emoji** managed by the community, **edit history** for moderators, **drafts**
   that survive a reload and a **jump to the first unread message**.
+- **Saved messages and forwarding.** Keep a private list of up to 1,000
+  messages with an optional note, or forward a message into another channel or
+  a direct message. A forward is a reference, so it never shows more than the
+  reader may already see.
+- **Slash commands.** `/poll`, `/me`, `/shrug`, `/tableflip`, `/unflip`,
+  `/spoiler`, `/nick`, `/thread` and `/msg` (it needs *Send direct messages*)
+  for members; `/timeout`, `/ban` and `/kick` need the matching permission. Bots can add their own
+  ([doc/bots.md](doc/bots.md#built-in-commands-and-polls)).
+- **Threads you can follow.** A thread reply notifies the thread's followers:
+  the root's author, people who replied, people mentioned in a reply and
+  anyone who pressed **Follow thread**.
+- **Search filters** for author, channel, mentions, dates, attachments, links,
+  polls, edited and pinned messages.
 - **Installable web app with Web Push** notifications, and a layout for phones.
+- **Direct messages, blocking and reports.** Private conversations of two to
+  ten members that moderators cannot browse, blocking that the other member
+  is never told about, and a way to report a message to the moderators (see
+  [Direct messages, blocking and reports](#direct-messages-blocking-and-reports) below).
 - **Rules and onboarding** that new members accept before they write.
 - One community with categories, text channels and Talks. Every Talk has its
   own text chat.
@@ -97,13 +118,43 @@ no accounts on someone else's platform.
 |---|---|
 | ![The emoji picker with the community's custom emoji in its first group](doc/images/emoji-picker.png) | ![#dev-log on a phone: a code block, an @mention and the thread link](doc/images/phone.png) |
 
+### Direct messages, blocking and reports
+
+- **Start a conversation** with the **+** next to "Direct messages" at the top
+  of the sidebar (on a phone: in the channel drawer), or with **Message** on a
+  member's profile card or in their menu. One member makes a conversation of
+  two, several make a group of up to ten people. Members added to a group
+  later read its whole history. A conversation of two cannot be left (block
+  the other member instead); a group can, from the conversation's info.
+- **Who may write to you** is your choice under *Account & security* >
+  *Your data*: everyone (the default) or nobody. It only decides who can start
+  a conversation; existing ones go on.
+- **Block** a member from their profile card, their menu, a message's menu or
+  the conversation info. Their messages fold into "Blocked message" (one click
+  shows it), they cause no mentions or notifications for you (in any conversation,
+  group included, their messages leave unread counts, mentions and last activity
+  untouched), and a conversation of two with them stops working in both directions.
+  They are not told. The list of blocked members, with a way to unblock, is under
+  *Account & security*.
+- **Report** a message from its menu (**Report message**) with a reason and an
+  optional note. The moderators see a copy of the message and the ones around
+  it in **Admin > Reports**, which needs the permission *Manage reports*; for a
+  direct message this copy is the only part of it they can read. The author is
+  not told.
+- **The Owner can switch direct messages off** for the community under
+  **Admin > Welcome & rules**: nothing new can then be started or written, and
+  existing conversations stay readable. A 1.0.x server has none of this, and
+  the web app hides it there.
+
 ### Supported browsers
 
 Chromium-based browsers (Chrome, Edge 137+), Safari 17+ (including iOS 17+ and
 the installed web app) and Firefox 129+ run the whole app. A browser that cannot
-seal media does not join a Talk at all, it never sends unsealed media. Chromium
-is tested in CI; Safari/WebKit and Firefox calls pass locally but are not all
-required CI checks, and nothing is tested on real iOS or Android hardware.
+seal media does not join a Talk at all, it never sends unsealed media. CI runs
+the full end-to-end suite and the phone layout in Chromium, every spec that
+needs no call in WebKit, and a subset in Firefox. Calls in WebKit run in a
+separate macOS job that is not a required check. Nothing is tested on real iOS
+or Android hardware.
 Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 
 ### Encryption and privacy
@@ -178,7 +229,7 @@ build are needed: [Fresh install in doc/deployment.md](doc/deployment.md#fresh-i
 downloads the compose file and `.env.example` of a release, lists the few
 values to set (`PUBLIC_URL`, `JWT_SECRET`, `POSTGRES_PASSWORD`,
 `S3_ACCESS_KEY` / `S3_SECRET_KEY`, `ADMIN_INITIAL_PASSWORD`) and starts the
-published image (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.0`, a pinned patch
+published image (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.1`, a pinned patch
 version or `:latest`). CI runs those exact steps.
 
 Building from source is for development; see [Development](#development).
@@ -221,7 +272,7 @@ proxy settings, TURN and troubleshooting:
 Take a backup before every update (`scripts/backup.sh`; restore with
 `scripts/restore.sh`, which can verify a backup in a disposable container
 first). Migrations run at startup and are forward-only. Per-version notes,
-including the move from 0.9 to 1.0, and the rollback procedure are in
+including the moves from 0.9 to 1.0 and from 1.0 to 1.1, and the rollback procedure are in
 [doc/upgrade.md](doc/upgrade.md). Admins see new releases in the System tab; an
 optional update button needs the `autoupdate` profile.
 
@@ -265,7 +316,7 @@ and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client
 
 | Topic | Where |
 |---|---|
-| **Read first when updating:** what 1.0 promises and what to do before updating | [doc/release-notes-1.0.md](doc/release-notes-1.0.md) |
+| **Read first when updating:** what 1.0 promises and what to do before updating; the 1.1 changes are in the upgrade notes | [doc/release-notes-1.0.md](doc/release-notes-1.0.md), [doc/upgrade.md](doc/upgrade.md) |
 | Components, data flow, capacity | [doc/architecture.md](doc/architecture.md) |
 | Configuration, reverse proxy, TURN, backups, metrics and alerts, troubleshooting | [doc/operations.md](doc/operations.md) |
 | Ports, image tags, platforms, updating | [doc/deployment.md](doc/deployment.md) |
@@ -298,8 +349,8 @@ make check              # everything CI runs
 make e2e                # Playwright against the real binary
 ```
 
-Stack: Go, chi, pgx, Pion WebRTC; Vue 3, Pinia, Vite, Tailwind in strict
-TypeScript; PostgreSQL 18; S3-compatible storage. More in
+Stack: Go, chi, pgx, Pion WebRTC; Vue 3, Pinia, Vite and Tailwind CSS 4 in
+strict TypeScript; PostgreSQL 18; S3-compatible storage. More in
 [doc/development.md](doc/development.md).
 
 ## Contributing

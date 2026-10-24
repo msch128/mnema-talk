@@ -90,6 +90,14 @@ function excerpt(msg: Message) {
   return text || (msg.attachments?.length ? t('chat.attachment') : '')
 }
 
+/** "Pinned by Name · 12 Oct": who pinned it and when, as far as the server says (older servers say nothing). */
+function pinnedLine(msg: Message): string {
+  const name = msg.pinned_by ? msg.pinned_by.display_name || msg.pinned_by.username : ''
+  const day = msg.pinned_at ? when(msg.pinned_at) : ''
+  if (name && day) return t('pins.pinnedByOn', { name, date: day })
+  return name ? t('pins.pinnedBy', { name }) : ''
+}
+
 function when(iso: string) {
   return new Date(iso).toLocaleDateString(locale.value, { month: 'short', day: 'numeric', year: 'numeric' })
 }
@@ -100,7 +108,7 @@ function when(iso: string) {
     <button
       type="button"
       data-testid="pinned-button"
-      class="flex h-8 w-8 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text max-md:h-11 max-md:w-11"
+      class="btn btn-icon max-md:h-11 max-md:w-11"
       :class="open ? 'bg-mnema-surface text-mnema-accent' : ''"
       :aria-label="$t('pins.title')"
       :aria-expanded="open ? 'true' : 'false'"
@@ -116,9 +124,9 @@ function when(iso: string) {
       data-testid="pinned-panel"
       role="dialog"
       :aria-label="$t('pins.title')"
-      class="absolute right-0 top-full z-30 mt-2 flex max-h-[70vh] w-[min(24rem,calc(100vw-1.5rem))] flex-col max-md:fixed max-md:inset-x-3 max-md:top-[calc(3rem+env(safe-area-inset-top))] max-md:mt-0 max-md:max-h-[calc(100dvh-4.5rem-env(safe-area-inset-top))] max-md:w-auto overflow-hidden rounded-[10px] bg-mnema-elevated shadow-[inset_0_0_0_1px_#2B2F2D,0_12px_32px_rgba(0,0,0,0.5)]"
+      class="absolute right-0 top-full z-30 mt-2 flex max-h-[70vh] w-[min(24rem,calc(100vw-1.5rem))] flex-col max-md:fixed max-md:inset-x-3 max-md:top-[calc(3rem+env(safe-area-inset-top))] max-md:mt-0 max-md:max-h-[calc(100dvh-4.5rem-env(safe-area-inset-top))] max-md:w-auto overflow-hidden rounded-xl bg-mnema-elevated shadow-popover pop-in"
     >
-      <div class="border-b border-mnema-hairline px-3 py-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">
+      <div class="border-b border-mnema-hairline px-4 py-3 font-mono text-xs font-semibold uppercase tracking-widest text-mnema-tertiary">
         {{ $t('pins.title') }}
       </div>
       <div class="min-h-0 flex-1 overflow-y-auto p-1.5">
@@ -140,9 +148,10 @@ function when(iso: string) {
             <span class="min-w-0 flex-1">
               <span class="mb-0.5 flex items-center gap-2">
                 <span class="truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
-                <span class="ml-auto flex-shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
+                <span class="ml-auto shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
               </span>
-              <span class="line-clamp-3 break-words text-sm text-mnema-muted">{{ excerpt(msg) }}</span>
+              <span class="line-clamp-3 wrap-break-word text-sm text-mnema-muted">{{ excerpt(msg) }}</span>
+              <span v-if="pinnedLine(msg)" data-testid="pinned-by" class="mt-1 block truncate text-xs text-mnema-tertiary">{{ pinnedLine(msg) }}</span>
               <span v-if="markers(msg).length" data-testid="pinned-markers" class="mt-1 block truncate text-xs text-mnema-tertiary">{{ markers(msg).join(' · ') }}</span>
             </span>
           </button>
@@ -150,7 +159,7 @@ function when(iso: string) {
             v-if="canUnpin"
             type="button"
             data-testid="pinned-unpin"
-            class="mr-1.5 mt-2 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text max-md:h-11 max-md:w-11"
+            class="btn btn-icon mr-1.5 mt-2 h-7 w-7 shrink-0 max-md:h-11 max-md:w-11"
             :aria-label="$t('moderation.unpinMessage')"
             v-tooltip="$t('moderation.unpinMessage')"
             @click="unpin(msg)"

@@ -13,6 +13,8 @@ import (
 )
 
 func TestMetricsExposeProcessBuildAndInstruments(t *testing.T) {
+	// Other tests fill the capped series of this family; start from an empty one.
+	metrics.HTTPRequests.Reset()
 	metrics.ObserveHTTP("/api/test-metrics", http.StatusInternalServerError, 20*time.Millisecond)
 	rec := httptest.NewRecorder()
 	metricsHandler(&opsSource{version: "9.9.9", hasStore: true, storage: func() error { return nil }}).
@@ -49,6 +51,9 @@ func TestMetricsExposeProcessBuildAndInstruments(t *testing.T) {
 }
 
 func TestOpsSamplerDifferencesCountersIntoRates(t *testing.T) {
+	// Earlier tests of the package may have used up the series of the family
+	// (maxSeries); a new route would then count under "other", not "5xx".
+	metrics.HTTPRequests.Reset()
 	o := newOpsSampler(nil)
 	o.sample() // baseline only
 	if len(o.ring.Snapshot()) != 0 {

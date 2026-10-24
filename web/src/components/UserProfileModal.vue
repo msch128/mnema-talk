@@ -7,6 +7,9 @@ import { useAuthStore } from '../stores/auth'
 import { useAccountStore } from '../stores/account'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
+import { useBlocksStore } from '../stores/blocks'
+import { useDmActions } from '../composables/useDmActions'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { usePermissionsStore } from '../stores/permissions'
 import { roleColorCss } from '../lib/permissions'
 import { activityText } from '../lib/presence'
@@ -14,6 +17,7 @@ import { t, locale } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 import PresenceDot from './PresenceDot.vue'
 import ProfileAvatar from './ProfileAvatar.vue'
+import ProfileBannerControls from './ProfileBannerControls.vue'
 import ProfileBio from './ProfileBio.vue'
 import ProfileStatus from './ProfileStatus.vue'
 import BotBadge from './BotBadge.vue'
@@ -80,6 +84,15 @@ const showRolesDialog = ref(false)
 // Roles are given by someone with Manage roles and a higher rank; never the Owner's, never one's own.
 const canGiveRoles = computed(() => !!profileId.value && !isSelf.value && !isBot.value && profileUser.value.role !== 'admin' && permissions.can('manage_roles') && permissions.outranksMember(profileId.value))
 const offer = computed(() => moderationOffer({ id: profileId.value, role: profileUser.value.role, display_name: profileUser.value.display_name, username: profileUser.value.username }))
+// Direct messages and blocking (hidden on a server without them).
+const blocks = useBlocksStore()
+const features = useServerFeaturesStore()
+const dmActions = useDmActions()
+const showMessage = computed(() => dmActions.canMessage(profileId.value))
+const showBlock = computed(() => dmActions.canBlock(profileId.value) && !isBot.value)
+async function handleMessage() {
+  if (await dmActions.messageMember(profileId.value)) emit('close')
+}
 const moderationSubject = computed(() => ({ id: profileId.value, display_name: profileUser.value.display_name, username: profileUser.value.username }))
 
 // Current voice hangout channel of this user
@@ -126,9 +139,16 @@ function handleMention() {
     <template #default="{ titleId }">
     <div class="flex min-h-0 flex-col overflow-y-auto">
       <!-- Top banner -->
-      <div class="h-28 flex-shrink-0 bg-gradient-to-br from-emerald-950 via-mnema-raised to-emerald-900 border-b border-mnema-hairline relative flex items-start justify-end p-3 overflow-hidden">
-        <!-- Background pattern -->
-        <div class="absolute inset-0 opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:12px_12px] pointer-events-none"></div>
+      <div class="h-28 shrink-0 bg-linear-to-br from-emerald-950 via-mnema-raised to-emerald-900 border-b border-mnema-hairline relative flex items-start justify-end p-3 overflow-hidden">
+        <!-- The member's banner, or the default pattern -->
+        <img
+          v-if="profileUser.banner_url"
+          :src="profileUser.banner_url"
+          alt=""
+          class="absolute inset-0 h-full w-full object-cover pointer-events-none"
+          data-testid="profile-banner"
+        />
+        <div v-else class="absolute inset-0 opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] bg-size-[12px_12px] pointer-events-none"></div>
 
         <button 
           @click="emit('close')"
@@ -142,7 +162,8 @@ function handleMention() {
 
       <!-- Profile Header (Avatar overlap & badges) -->
       <div class="px-5 pb-5 pt-0 relative bg-mnema-surface">
-        <ProfileAvatar :profile-user="profileUser" :is-self="!!isSelf" :live-status="liveStatus" @mention="handleMention" />
+        <ProfileAvatar :profile-user="profileUser" :is-self="!!isSelf" :live-status="liveStatus" :can-message="showMessage" @mention="handleMention" @message="handleMessage" />
+        <ProfileBannerControls v-if="isSelf && features.profileBanner" :has-banner="!!profileUser.banner_url" />
 
         <!-- Name & Badges -->
         <div class="bg-mnema-canvas/70 border border-mnema-hairline rounded-xl p-3.5 shadow-inner">
@@ -197,7 +218,7 @@ function handleMention() {
               v-if="canGiveRoles"
               type="button"
               data-testid="profile-edit-roles"
-              class="rounded-md border border-dashed border-mnema-border px-1.5 py-0.5 text-xs text-mnema-tertiary transition hover:border-mnema-accent hover:text-mnema-accent"
+              class="btn btn-secondary btn-sm border-dashed"
               @click="showRolesDialog = true"
             >{{ $t('memberRoles.edit') }}</button>
           </div>
@@ -210,23 +231,34 @@ function handleMention() {
               v-if="offer.timeout"
               type="button"
               data-testid="profile-timeout"
-              class="rounded-md border border-mnema-border px-2 py-1 text-xs text-mnema-text transition hover:border-mnema-danger hover:text-mnema-danger"
+              class="btn btn-secondary btn-sm hover:border-mnema-danger hover:text-mnema-danger"
               @click="openTimeout(moderationSubject)"
             >{{ $t('moderation.timeoutAction') }}</button>
             <button
               v-if="offer.removeTimeout"
               type="button"
               data-testid="profile-untimeout"
-              class="rounded-md border border-mnema-border px-2 py-1 text-xs text-mnema-text transition hover:border-mnema-accent hover:text-mnema-accent"
+              class="btn btn-secondary btn-sm"
               @click="liftTimeout(moderationSubject)"
             >{{ $t('moderation.removeTimeout') }}</button>
             <button
               v-if="offer.ban"
               type="button"
               data-testid="profile-ban"
-              class="rounded-md border border-mnema-border px-2 py-1 text-xs text-mnema-text transition hover:border-mnema-danger hover:text-mnema-danger"
+              class="btn btn-secondary btn-sm hover:border-mnema-danger hover:text-mnema-danger"
               @click="openBan(moderationSubject)"
             >{{ $t('moderation.banAction') }}</button>
+          </div>
+
+          <!-- Blocking is private: they are not told, their messages fold away -->
+          <div v-if="showBlock" class="mt-3" data-testid="profile-block-row">
+            <button
+              type="button"
+              data-testid="profile-block"
+              class="btn btn-secondary btn-sm hover:border-mnema-danger hover:text-mnema-danger max-md:min-h-11"
+              @click="dmActions.toggleBlock(moderationSubject)"
+            >{{ $t(blocks.isBlocked(profileId) ? 'blocks.unblock' : 'blocks.block') }}</button>
+            <p class="mt-1 text-xs text-mnema-tertiary">{{ $t(blocks.isBlocked(profileId) ? 'blocks.blockedHint' : 'blocks.hint') }}</p>
           </div>
 
           <ProfileStatus :profile-user="profileUser" :is-self="!!isSelf" />
@@ -252,7 +284,7 @@ function handleMention() {
               v-if="voiceHangout" 
               class="flex items-center gap-2 p-2 rounded-lg bg-mnema-accent/10 border border-mnema-accent/25 text-mnema-accent text-sm"
             >
-              <Volume2 class="w-4 h-4 flex-shrink-0" />
+              <Volume2 class="w-4 h-4 shrink-0" />
               <div class="truncate">
                 <span class="font-medium">{{ $t('profile.inVoice') }}</span>
                 <span class="font-bold ml-1 text-mnema-text">#{{ voiceHangout.name }}</span>

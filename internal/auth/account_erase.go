@@ -25,7 +25,7 @@ const deletedUsernamePrefix = "deleted-"
 //   - their messages stay, authored by "Deleted member", with the text, link
 //     cards and pins removed, as are the kept earlier versions of their
 //     edits (other members' replies and quotes remain);
-//   - their uploads and avatar are deleted from storage and the database;
+//   - their uploads, avatar and banner are deleted from storage and the database;
 //   - their reactions, poll votes and mentions of them disappear, and so do
 //     the polls they posted (the question was the message text);
 //   - undelivered outgoing webhook events that carry their message text (or
@@ -45,6 +45,7 @@ var eraseSteps = []string{
 	`DELETE FROM invites WHERE created_by = $1`,
 	`DELETE FROM channel_reads WHERE user_id = $1`,
 	`DELETE FROM category_notify WHERE user_id = $1`,
+	`DELETE FROM thread_follows WHERE user_id = $1`,
 	`DELETE FROM slow_mode_posts WHERE user_id = $1`,
 	`DELETE FROM user_roles WHERE user_id = $1`,
 	`DELETE FROM permission_overwrites WHERE user_id = $1`,
@@ -61,7 +62,40 @@ var eraseSteps = []string{
 	`DELETE FROM recovery_codes WHERE user_id = $1`,
 	`DELETE FROM login_challenges WHERE user_id = $1`,
 	`DELETE FROM second_factor_failures WHERE user_id = $1`,
+	`DELETE FROM user_blocks WHERE blocker_id = $1 OR blocked_id = $1`,
+	`DELETE FROM saved_messages WHERE user_id = $1`,
+	// Reports keep their copies of other people's messages, so the person's
+	// own text is blanked in every copy (as reported message or as context),
+	// and the links to their account are cut. The reports stay for the
+	// moderators.
+	`UPDATE message_reports SET reporter_id = NULL, note = '' WHERE reporter_id = $1`,
+	`UPDATE message_reports SET reported_user_id = NULL WHERE reported_user_id = $1`,
+	`UPDATE message_reports SET resolved_by = NULL WHERE resolved_by = $1`,
+	// Direct messages: a conversation nobody else is in goes with its
+	// messages; the others keep theirs (the erased member's words in it are
+	// emptied like everywhere), without the erased member.
+	`DELETE FROM channels WHERE id IN (` + soleDMs + `)`,
+	`DELETE FROM dm_members WHERE user_id = $1`,
+	`UPDATE dm_members SET added_by = NULL WHERE added_by = $1`,
+	`UPDATE channels SET dm_created_by = NULL WHERE dm_created_by = $1`,
 }
+
+// soleDMs selects the direct message conversations in which nobody but $1 is.
+const soleDMs = `SELECT c.id FROM channels c WHERE c.type = 'dm'
+	AND NOT EXISTS (SELECT 1 FROM dm_members m WHERE m.channel_id = c.id AND m.user_id <> $1)`
+
+// scrubReportCopies blanks the text, file names and author names of the
+// account's messages inside the stored copies of message_reports ($1 the
+// account, $2 its tombstone username).
+const scrubReportCopies = `UPDATE message_reports SET snapshot = jsonb_build_object(
+	'message', CASE WHEN snapshot->'message'->>'user_id' = $1::text
+	                THEN snapshot->'message' || jsonb_build_object('content', '', 'attachments', '[]'::jsonb, 'username', $2::text, 'display_name', 'Deleted member')
+	                ELSE snapshot->'message' END,
+	'context', COALESCE((SELECT jsonb_agg(CASE WHEN e->>'user_id' = $1::text
+	                THEN e || jsonb_build_object('content', '', 'attachments', '[]'::jsonb, 'username', $2::text, 'display_name', 'Deleted member')
+	                ELSE e END ORDER BY ord)
+	                FROM jsonb_array_elements(snapshot->'context') WITH ORDINALITY AS t(e, ord)), '[]'::jsonb))
+	WHERE snapshot::text LIKE '%' || $1::text || '%'`
 
 // scrubAudit blanks the names and details of every audit entry that is about
 // the account or mentions its id. The audit trigger allows exactly this while
@@ -73,7 +107,7 @@ const scrubAudit = `UPDATE audit_log SET
 	WHERE actor_id = $1 OR (target_type = 'user' AND target_id = $1::text) OR details::text LIKE '%' || $1::text || '%'`
 
 const anonymise = `UPDATE users SET
-	username = $2, display_name = 'Deleted member', bio = '', avatar_s3_key = NULL, status_text = '',
+	username = $2, display_name = 'Deleted member', bio = '', avatar_s3_key = NULL, banner_s3_key = NULL, status_text = '',
 	password_hash = '!deleted', email = NULL, email_verified_at = NULL, presence = 'online', locale = '',
 	onboarding = '{}'::jsonb, rules_accepted_version = 0, last_seen_at = NULL, voice_seconds = 0,
 	timeout_until = NULL, timeout_reason = '', timeout_by = NULL,
@@ -129,6 +163,8 @@ func eraseAccount(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*erased, error)
 	for _, sql := range []string{
 		`DELETE FROM media WHERE uploader_id = $1 RETURNING s3_key`,
 		`DELETE FROM data_exports WHERE user_id = $1 AND s3_key IS NOT NULL RETURNING s3_key`,
+		// The files of direct messages nobody else is in any more go with them.
+		`DELETE FROM media WHERE message_id IN (SELECT id FROM messages WHERE channel_id IN (` + soleDMs + `)) RETURNING s3_key`,
 	} {
 		rows, err := tx.Query(ctx, sql, id)
 		if err != nil {
@@ -145,6 +181,7 @@ func eraseAccount(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*erased, error)
 		steps = append(steps, eraseStep{sql, byID})
 	}
 	steps = append(steps,
+		eraseStep{scrubReportCopies, func(id uuid.UUID, _ string) []any { return []any{id, deletedUsernamePrefix + shortID(id)} }},
 		eraseStep{`DELETE FROM login_unlock_requests WHERE LOWER(username) = LOWER($1)`, byName},
 		eraseStep{`SELECT set_config('mnema.audit_scrub', 'on', true)`, noArgs},
 		eraseStep{scrubAudit, byID},

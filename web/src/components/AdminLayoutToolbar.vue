@@ -19,13 +19,13 @@ const newCategoryName = defineModel<string>('newCategoryName', { required: true 
         type="text"
         :placeholder="$t('admin.categoryNamePlaceholder')"
         :aria-label="$t('admin.categoryNameLabel')"
-        class="bg-mnema-surface border border-mnema-border-field rounded-md px-2.5 py-1 text-sm text-mnema-text placeholder-mnema-tertiary outline-none focus:border-mnema-accent transition w-44"
+        class="bg-mnema-surface border border-mnema-border-field rounded-md px-2.5 py-1 text-sm text-mnema-text placeholder-mnema-tertiary outline-hidden focus:border-mnema-accent transition w-44"
         @keydown.enter="emit('create')"
       />
       <button
         type="button"
         :disabled="!newCategoryName.trim()"
-        class="bg-mnema-surface border border-mnema-border hover:border-mnema-accent text-mnema-text px-2.5 py-1 rounded-md text-sm transition disabled:opacity-40 flex items-center gap-1"
+        class="btn btn-secondary btn-sm flex items-center gap-1"
         @click="emit('create')"
       >
         <Plus class="w-4 h-4" />
@@ -39,7 +39,7 @@ const newCategoryName = defineModel<string>('newCategoryName', { required: true 
       type="button"
       :disabled="saving"
       :class="[
-        'flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-semibold transition shadow-sm',
+        'flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-semibold transition shadow-xs',
         changed
           ? 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover ring-2 ring-mnema-accent/40'
           : 'bg-mnema-elevated border border-mnema-border text-mnema-muted hover:text-mnema-text'

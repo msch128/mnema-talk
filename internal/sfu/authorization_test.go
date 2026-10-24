@@ -274,6 +274,8 @@ func runNACKRetransmissionScenario(t *testing.T, mode string) {
 	}
 	request()
 	assertNACKPacketDelivery(t, packets, payload) // proves genuine cached NACK resend
+	// Pion's responder suppresses repeats of the same NACK inside rtt+5ms.
+	time.Sleep(25 * time.Millisecond)
 	live.Store(false)
 	request()
 	if mode != "browser" {

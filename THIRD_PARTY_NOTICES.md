@@ -26,17 +26,17 @@ binary release.
 |---|---|---|
 | [Vue](https://vuejs.org) (`vue`, incl. `@vue/*` runtime) | 3.5.44 | MIT |
 | [Pinia](https://pinia.vuejs.org) | 4.1.0 | MIT |
-| [Lucide](https://lucide.dev) (`@lucide/vue`) | 1.57.0 | ISC |
+| [Lucide](https://lucide.dev) (`@lucide/vue`) | 1.61.0 | ISC |
 | [Inter](https://rsms.me/inter/) (`@fontsource/inter`) | 5.3.0 | OFL-1.1 |
 | [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (`@fontsource/jetbrains-mono`) | 5.3.0 | OFL-1.1 |
-| [emoji-picker-element](https://github.com/nolanlawson/emoji-picker-element) | 1.29.1 | Apache-2.0 |
+| [emoji-picker-element](https://github.com/nolanlawson/emoji-picker-element) | 1.29.1 (modified at build time: two small patches so it runs under the Content-Security-Policy, see `web/scripts/emojiPickerCsp.ts`) | Apache-2.0 |
 | [emoji-picker-element-data](https://github.com/nolanlawson/emoji-picker-element-data) (emoji names and keywords built from [Emojibase](https://emojibase.dev) data, MIT, and [Unicode CLDR](https://cldr.unicode.org) annotations, Unicode License v3) | 1.8.0 | Apache-2.0 |
-| [highlight.js](https://highlightjs.org) (syntax highlighting of code blocks in messages; core build with a fixed language list) | 11.11.1 | BSD-3-Clause |
-| [Swagger UI](https://github.com/swagger-api/swagger-ui) (`swagger-ui-dist`, only on the API reference page `/api/docs`; NOTICE: "swagger-ui, Copyright 2020-2021 SmartBear Software Inc.") | 5.33.2 | Apache-2.0 |
-| [Tailwind CSS](https://tailwindcss.com) (only the generated CSS is shipped) | 3.4.19 | MIT |
+| [highlight.js](https://highlightjs.org) (syntax highlighting of code blocks in messages; core build with a fixed language list) | 11.12.0 | BSD-3-Clause |
+| [Swagger UI](https://github.com/swagger-api/swagger-ui) (`swagger-ui-dist`, only on the API reference page `/api/docs`; NOTICE: "swagger-ui, Copyright 2020-2021 SmartBear Software Inc.") | 5.34.0 | Apache-2.0 |
+| [Tailwind CSS](https://tailwindcss.com) (only the generated CSS is shipped) | 4.3.3 | MIT |
 | [ts-mls](https://github.com/LukaJCB/ts-mls) | 1.6.4 | MIT |
 | [@noble/ciphers](https://github.com/paulmillr/noble-ciphers) | 2.1.1 | MIT |
-| [@noble/hashes](https://github.com/paulmillr/noble-hashes) | 2.3.0 | MIT |
+| [@noble/hashes](https://github.com/paulmillr/noble-hashes) | 2.4.0 | MIT |
 | [@noble/curves](https://github.com/paulmillr/noble-curves) | 2.0.1 | MIT |
 | [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (draws the QR code of the two-factor setup in the browser) | 2.0.4 | MIT |
 
@@ -79,24 +79,24 @@ modules are compiled into `mnema-talk`:
 | Module | Version | License |
 |---|---|---|
 | `github.com/SherClockHolmes/webpush-go` | v1.4.0 | MIT |
-| `github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream` | v1.7.20 | Apache-2.0 |
-| `github.com/aws/aws-sdk-go-v2/config` | v1.33.7 | Apache-2.0 |
-| `github.com/aws/aws-sdk-go-v2/credentials` | v1.20.7 | Apache-2.0 |
-| `github.com/aws/aws-sdk-go-v2/feature/ec2/imds` | v1.20.1 | Apache-2.0 |
-| `github.com/aws/aws-sdk-go-v2/internal/configsources` | v1.5.4 | Apache-2.0 |
-| `github.com/aws/aws-sdk-go-v2/internal/endpoints/v2` | v2.8.4 | Apache-2.0 |
-| `github.com/aws/aws-sdk-go-v2/internal/v4a` | v1.5.4 | Apache-2.0 |
-| `github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding` | v1.13.19 | Apache-2.0 |
-| `github.com/aws/aws-sdk-go-v2/service/internal/checksum` | v1.11.5 | Apache-2.0 |
-| `github.com/aws/aws-sdk-go-v2/service/internal/presigned-url` | v1.14.4 | Apache-2.0 |
-| `github.com/aws/aws-sdk-go-v2/service/internal/s3shared` | v1.20.4 | Apache-2.0 |
-| `github.com/aws/aws-sdk-go-v2/service/s3` | v1.114.1 | Apache-2.0 |
-| `github.com/aws/aws-sdk-go-v2/service/signin` | v1.10.2 | Apache-2.0 |
-| `github.com/aws/aws-sdk-go-v2/service/sso` | v1.38.2 | Apache-2.0 |
-| `github.com/aws/aws-sdk-go-v2/service/ssooidc` | v1.43.2 | Apache-2.0 |
-| `github.com/aws/aws-sdk-go-v2/service/sts` | v1.51.2 | Apache-2.0 |
-| `github.com/aws/aws-sdk-go-v2` | v1.47.1 | Apache-2.0 |
-| `github.com/aws/smithy-go` | v1.28.4 | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream` | v1.7.24 | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2/config` | v1.33.10 | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2/credentials` | v1.20.10 | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2/feature/ec2/imds` | v1.20.4 | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2/internal/configsources` | v1.5.7 | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2/internal/endpoints/v2` | v2.8.7 | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2/internal/v4a` | v1.5.7 | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding` | v1.13.22 | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2/service/internal/checksum` | v1.11.8 | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2/service/internal/presigned-url` | v1.14.7 | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2/service/internal/s3shared` | v1.20.7 | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2/service/s3` | v1.114.5 | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2/service/signin` | v1.10.5 | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2/service/sso` | v1.38.5 | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2/service/ssooidc` | v1.43.5 | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2/service/sts` | v1.51.5 | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2` | v1.47.4 | Apache-2.0 |
+| `github.com/aws/smithy-go` | v1.28.6 | Apache-2.0 |
 | `github.com/go-chi/chi/v5` | v5.5.0 | MIT |
 | `github.com/golang-jwt/jwt/v5` | v5.3.1 | MIT |
 | `github.com/google/uuid` | v1.6.0 | BSD-3-Clause |
@@ -107,29 +107,113 @@ modules are compiled into `mnema-talk`:
 | `github.com/jackc/puddle/v2` | v2.2.3 | MIT |
 | `github.com/joho/godotenv` | v1.5.1 | MIT |
 | `github.com/pion/datachannel` | v1.6.3 | MIT |
-| `github.com/pion/dtls/v3` | v3.1.10 | MIT |
-| `github.com/pion/ice/v4` | v4.4.7 | MIT |
-| `github.com/pion/interceptor` | v0.1.49 | MIT |
+| `github.com/pion/dtls/v3` | v3.1.15 | MIT |
+| `github.com/pion/ice/v4` | v4.4.8 | MIT |
+| `github.com/pion/interceptor` | v0.1.51 | MIT |
 | `github.com/pion/logging` | v0.2.4 | MIT |
 | `github.com/pion/mdns/v2` | v2.2.2 | MIT |
 | `github.com/pion/randutil` | v0.1.0 | MIT |
-| `github.com/pion/rtcp` | v1.2.19 | MIT |
-| `github.com/pion/rtp` | v1.10.5 | MIT |
+| `github.com/pion/rtcp` | v1.2.20 | MIT |
+| `github.com/pion/rtp` | v1.10.6 | MIT |
 | `github.com/pion/sctp` | v1.12.0 | MIT |
 | `github.com/pion/sdp/v3` | v3.0.20 | MIT |
 | `github.com/pion/srtp/v3` | v3.1.3 | MIT |
 | `github.com/pion/stun/v4` | v4.0.1 | MIT |
 | `github.com/pion/transport/v5` | v5.1.1 | MIT |
 | `github.com/pion/turn/v5` | v5.1.2 | MIT |
-| `github.com/pion/webrtc/v4` | v4.2.23 | MIT |
+| `github.com/pion/webrtc/v4` | v4.2.25 | MIT |
 | `github.com/wlynxg/anet` | v0.0.5 | BSD-3-Clause |
-| `golang.org/x/crypto` | v0.57.0 | BSD-3-Clause |
+| `golang.org/x/crypto` | v0.58.0 | BSD-3-Clause |
 | `golang.org/x/image` | v0.47.0 | BSD-3-Clause |
-| `golang.org/x/net` | v0.60.0 | BSD-3-Clause |
-| `golang.org/x/sync` | v0.23.0 | BSD-3-Clause |
-| `golang.org/x/sys` | v0.48.0 | BSD-3-Clause |
-| `golang.org/x/text` | v0.42.0 | BSD-3-Clause |
+| `golang.org/x/net` | v0.61.0 | BSD-3-Clause |
+| `golang.org/x/sync` | v0.24.0 | BSD-3-Clause |
+| `golang.org/x/sys` | v0.49.0 | BSD-3-Clause |
+| `golang.org/x/text` | v0.43.0 | BSD-3-Clause |
 | `golang.org/x/time` | v0.16.0 | BSD-3-Clause |
+
+## Updater binary
+
+The self-update sidecar (`mnema-updater`, compose profile `autoupdate`) is a
+second, separate binary in the app image. It verifies the cosign signature and
+build provenance of a new release image (SECURITY.md, "Self-update sidecar").
+Besides the Go standard library and the modules above that it shares with the
+server (`golang.org/x/*`, `github.com/google/uuid`), these modules are compiled
+into it; `go list -deps -f '{{with .Module}}{{.Path}} {{.Version}}{{end}}'
+./cmd/updater | sort -u` lists them:
+
+| Module | Version | License |
+|---|---|---|
+| `github.com/asaskevich/govalidator` | v0.0.0-20230301143203-a9d515a09cc2 | MIT |
+| `github.com/blang/semver` | v3.5.1+incompatible | MIT |
+| `github.com/cenkalti/backoff/v5` | v5.0.3 | MIT |
+| `github.com/cespare/xxhash/v2` | v2.3.0 | MIT |
+| `github.com/cyberphone/json-canonicalization` | v0.0.0-20261011152517-32a48195b9b2 | Apache-2.0 |
+| `github.com/digitorus/pkcs7` | v0.0.0-20260914070511-d678ea5ea03f | MIT |
+| `github.com/digitorus/timestamp` | v0.0.0-20260914073129-b4b58b92aa51 | BSD-2-Clause |
+| `github.com/docker/cli` | v29.9.2+incompatible | Apache-2.0 |
+| `github.com/docker/docker-credential-helpers` | v0.9.12 | MIT |
+| `github.com/go-logr/logr` | v1.4.4 | Apache-2.0 |
+| `github.com/go-logr/stdr` | v1.2.2 | Apache-2.0 |
+| `github.com/go-openapi/analysis` | v1.0.1 | Apache-2.0 |
+| `github.com/go-openapi/errors` | v0.22.9 | Apache-2.0 |
+| `github.com/go-openapi/jsonpointer` | v1.0.2 | Apache-2.0 |
+| `github.com/go-openapi/jsonreference` | v1.0.3 | Apache-2.0 |
+| `github.com/go-openapi/loads` | v0.25.3 | Apache-2.0 |
+| `github.com/go-openapi/runtime` | v0.33.3 | Apache-2.0 |
+| `github.com/go-openapi/runtime/server-middleware` | v0.33.3 | Apache-2.0 |
+| `github.com/go-openapi/spec` | v1.0.1 | Apache-2.0 |
+| `github.com/go-openapi/strfmt` | v0.27.4 | Apache-2.0 |
+| `github.com/go-openapi/swag` | v0.29.2 | Apache-2.0 |
+| `github.com/go-openapi/swag/cmdutils` | v0.29.2 | Apache-2.0 |
+| `github.com/go-openapi/swag/conv` | v0.29.2 | Apache-2.0 |
+| `github.com/go-openapi/swag/fileutils` | v0.29.2 | Apache-2.0 |
+| `github.com/go-openapi/swag/jsonname` | v0.26.1 | Apache-2.0 |
+| `github.com/go-openapi/swag/jsonutils` | v0.29.2 | Apache-2.0 |
+| `github.com/go-openapi/swag/loading` | v0.29.2 | Apache-2.0 |
+| `github.com/go-openapi/swag/mangling` | v0.29.2 | Apache-2.0 |
+| `github.com/go-openapi/swag/netutils` | v0.29.2 | Apache-2.0 |
+| `github.com/go-openapi/swag/pools` | v0.29.2 | Apache-2.0 |
+| `github.com/go-openapi/swag/stringutils` | v0.29.2 | Apache-2.0 |
+| `github.com/go-openapi/swag/typeutils` | v0.29.2 | Apache-2.0 |
+| `github.com/go-openapi/swag/yamlutils` | v0.29.2 | Apache-2.0 |
+| `github.com/go-openapi/validate` | v1.0.1 | Apache-2.0 |
+| `github.com/go-viper/mapstructure/v2` | v2.5.0 | MIT |
+| `github.com/google/certificate-transparency-go` | v1.4.0 | Apache-2.0 |
+| `github.com/google/go-containerregistry` | v0.22.1 | Apache-2.0 |
+| `github.com/grpc-ecosystem/grpc-gateway/v2` | v2.32.0 | BSD-3-Clause |
+| `github.com/in-toto/attestation` | v1.2.0 | Apache-2.0 |
+| `github.com/in-toto/in-toto-golang` | v0.11.0 | Apache-2.0 |
+| `github.com/klauspost/compress` | v1.20.3 | Apache-2.0 |
+| `github.com/oklog/ulid/v2` | v2.1.2 | Apache-2.0 |
+| `github.com/opencontainers/go-digest` | v1.0.0 | Apache-2.0 |
+| `github.com/opencontainers/image-spec` | v1.1.1 | Apache-2.0 |
+| `github.com/pkg/errors` | v0.9.1 | BSD-2-Clause |
+| `github.com/secure-systems-lab/go-securesystemslib` | v0.11.1 | MIT |
+| `github.com/shibumi/go-pathspec` | v1.3.0 | Apache-2.0 |
+| `github.com/sigstore/protobuf-specs` | v0.5.2 | Apache-2.0 |
+| `github.com/sigstore/rekor` | v1.5.5 | Apache-2.0 |
+| `github.com/sigstore/rekor-tiles/v2` | v2.3.0 | Apache-2.0 |
+| `github.com/sigstore/sigstore` | v1.11.1 | Apache-2.0 |
+| `github.com/sigstore/sigstore-go` | v1.3.0 | Apache-2.0 |
+| `github.com/sigstore/timestamp-authority/v2` | v2.2.0 | Apache-2.0 |
+| `github.com/sirupsen/logrus` | v1.10.2 | MIT |
+| `github.com/theupdateframework/go-tuf/v2` | v2.4.2 | Apache-2.0 |
+| `github.com/transparency-dev/formats` | v0.1.1 | Apache-2.0 |
+| `github.com/transparency-dev/merkle` | v0.0.2 | Apache-2.0 |
+| `github.com/youmark/pkcs8` | v0.0.0-20240726163527-a2c0da244d78 | MIT |
+| `go.opentelemetry.io/auto/sdk` | v1.2.1 | Apache-2.0 |
+| `go.opentelemetry.io/otel` | v1.47.0 | Apache-2.0 |
+| `go.opentelemetry.io/otel/log` | v1.47.0 | Apache-2.0 |
+| `go.opentelemetry.io/otel/metric` | v1.47.0 | Apache-2.0 |
+| `go.opentelemetry.io/otel/trace` | v1.47.0 | Apache-2.0 |
+| `go.yaml.in/yaml/v3` | v3.0.5 | Apache-2.0 |
+| `golang.org/x/mod` | v0.42.0 | BSD-3-Clause |
+| `golang.org/x/term` | v0.47.0 | BSD-3-Clause |
+| `google.golang.org/genproto/googleapis/api` | v0.0.0-20261019180522-ce908d29299b | Apache-2.0 |
+| `google.golang.org/genproto/googleapis/rpc` | v0.0.0-20261019180522-ce908d29299b | Apache-2.0 |
+| `google.golang.org/grpc` | v1.84.0 | Apache-2.0 |
+| `google.golang.org/protobuf` | v1.36.12 | BSD-3-Clause |
+| `k8s.io/klog/v2` | v2.140.0 | Apache-2.0 |
 
 ## Bundled services (docker-compose.yml)
 
@@ -141,7 +225,7 @@ binary.
 | [PostgreSQL 18](https://www.postgresql.org) (`postgres:18-alpine`) | PostgreSQL License |
 | [SeaweedFS](https://github.com/seaweedfs/seaweedfs) (`chrislusf/seaweedfs`) | Apache-2.0 |
 | [coturn](https://github.com/coturn/coturn) (`coturn/coturn`, optional `turn` profile) | BSD-3-Clause |
-| [Watchtower](https://github.com/nicholas-fedor/watchtower) (`nickfedor/watchtower`, maintained fork of containrrr/watchtower, optional `autoupdate` profile) | Apache-2.0 |
+| [Watchtower](https://github.com/nicholas-fedor/watchtower) (`nickfedor/watchtower`, maintained fork of containrrr/watchtower, optional `autoupdate` profile; restarts the app from the image the updater verified, never pulls) | Apache-2.0 |
 | [Alpine Linux](https://alpinelinux.org) (base of the app image `alpine:3.24` and the Postgres image) | GPL-2.0 and others, per package |
 
 ## Build and development tools (not shipped)
@@ -167,6 +251,6 @@ The desktop UI bundles unchanged Inter Latin 400/500/600 fonts from the existing
 @fontsource/inter 5.3.0 dependency (OFL-1.1). Full original attribution and license
 are included in `licenses/INTER-OFL.txt` in that repository and the distribution bundle.
 
-The shared Vue client also bundles `@tauri-apps/api` 2.12.1 (MIT OR
+The shared Vue client also bundles `@tauri-apps/api` 2.12.4 (MIT OR
 Apache-2.0) for the experimental desktop IPC adapter. Browser requests retain
 their same-origin transport. License texts ship in `web/dist/licenses/tauri-api/`.

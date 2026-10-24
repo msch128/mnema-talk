@@ -10,10 +10,14 @@ import type { AuthExportStatus } from '../types/rest'
 import { locale, t } from '../i18n'
 import { useAccountStore } from '../stores/account'
 import { useAuthStore } from '../stores/auth'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
+import AccountDmPolicy from './AccountDmPolicy.vue'
+import AccountBlockedList from './AccountBlockedList.vue'
 import { useToastStore } from '../stores/toast'
 
 const account = useAccountStore()
 const authStore = useAuthStore()
+const features = useServerFeaturesStore()
 const toasts = useToastStore()
 
 const POLL_MS = 2000
@@ -90,49 +94,53 @@ onBeforeUnmount(() => clearTimeout(timer))
 </script>
 
 <template>
-  <section class="space-y-4" data-testid="account-privacy" aria-labelledby="security-privacy-title">
-    <h3 id="security-privacy-title" class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('security.privacy.title') }}</h3>
+  <section class="settings-card" data-testid="account-privacy" aria-labelledby="security-privacy-title">
+    <h3 id="security-privacy-title" class="settings-title">{{ $t('security.privacy.title') }}</h3>
 
-    <div class="space-y-2">
-      <p class="text-sm font-medium text-mnema-text">{{ $t('security.privacy.exportTitle') }}</p>
-      <p class="text-sm text-mnema-muted">{{ $t('security.privacy.exportIntro') }}</p>
+    <!-- Who may write to this member, and whom they blocked (only on a server that has them) -->
+    <AccountDmPolicy v-if="features.dm" />
+    <AccountBlockedList v-if="features.blocks" />
+
+    <div class="settings-sub">
+      <p class="settings-subtitle">{{ $t('security.privacy.exportTitle') }}</p>
+      <p class="settings-help">{{ $t('security.privacy.exportIntro') }}</p>
       <p v-if="status?.state === 'pending'" role="status" class="flex items-center gap-2 text-sm text-mnema-text" data-testid="export-pending"><Loader2 class="h-4 w-4 animate-spin" />{{ $t('security.privacy.exportPending') }}</p>
-      <a v-else-if="status?.state === 'ready'" href="/api/users/me/export/download" download class="inline-flex items-center gap-1.5 rounded-md bg-mnema-accent px-3 py-1 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover" data-testid="export-download" @click="afterDownload"><Download class="h-3.5 w-3.5" />{{ $t('security.privacy.exportReady', { when: when(status.expires_at) }) }}</a>
+      <a v-else-if="status?.state === 'ready'" href="/api/users/me/export/download" download class="btn btn-primary" data-testid="export-download" @click="afterDownload"><Download class="h-3.5 w-3.5" />{{ $t('security.privacy.exportReady', { when: when(status.expires_at) }) }}</a>
       <p v-else-if="status?.state === 'failed'" role="alert" class="text-sm text-mnema-danger" data-testid="export-failed">{{ $t('security.privacy.exportFailed') }}</p>
       <p v-else-if="status && status.state !== 'none'" class="text-sm text-mnema-tertiary" data-testid="export-done">{{ $t(status.state === 'downloaded' ? 'security.privacy.exportDownloaded' : 'security.privacy.exportExpired') }}</p>
 
-      <form v-if="asking === 'export'" class="space-y-2" @submit.prevent="requestExport">
-        <input v-model="password" type="password" required autocomplete="current-password" :aria-label="$t('profile.currentPassword')" :placeholder="$t('profile.currentPassword')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-none" data-testid="privacy-password" />
-        <input v-if="needsCode" v-model="code" type="text" required autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="32" :aria-label="$t('security.twoFactor.code')" :placeholder="$t('security.twoFactor.code')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 font-mono text-sm tracking-widest text-mnema-text focus:border-mnema-accent focus:outline-none" data-testid="privacy-code" />
-        <div v-if="error" role="alert" class="rounded border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
-        <div class="flex justify-end gap-1.5 text-xs">
-          <button type="button" class="rounded px-2 py-0.5 text-mnema-muted hover:text-mnema-text" @click="asking = null">{{ $t('common.cancel') }}</button>
-          <button type="submit" :disabled="busy" class="rounded bg-mnema-accent px-2.5 py-1 font-bold text-mnema-canvas hover:brightness-110 disabled:opacity-50" data-testid="export-submit">{{ $t('security.privacy.exportRequest') }}</button>
+      <form v-if="asking === 'export'" class="space-y-3" @submit.prevent="requestExport">
+        <input v-model="password" type="password" required autocomplete="current-password" :aria-label="$t('profile.currentPassword')" :placeholder="$t('profile.currentPassword')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden" data-testid="privacy-password" />
+        <input v-if="needsCode" v-model="code" type="text" required autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="32" :aria-label="$t('security.twoFactor.code')" :placeholder="$t('security.twoFactor.code')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 font-mono text-sm tracking-widest text-mnema-text focus:border-mnema-accent focus:outline-hidden" data-testid="privacy-code" />
+        <div v-if="error" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
+        <div class="flex justify-end gap-2 pt-1">
+          <button type="button" class="btn btn-ghost" @click="asking = null">{{ $t('common.cancel') }}</button>
+          <button type="submit" :disabled="busy" class="btn btn-primary" data-testid="export-submit">{{ $t('security.privacy.exportRequest') }}</button>
         </div>
       </form>
       <template v-else-if="status?.state !== 'pending' && status?.state !== 'ready'">
-        <button v-if="canRequest" type="button" class="rounded-md border border-mnema-border px-2 py-1 text-xs text-mnema-text transition hover:border-mnema-accent hover:text-mnema-accent" data-testid="export-start" @click="ask('export')">{{ $t('security.privacy.exportRequest') }}</button>
+        <button v-if="canRequest" type="button" class="btn btn-secondary" data-testid="export-start" @click="ask('export')">{{ $t('security.privacy.exportRequest') }}</button>
         <p v-else class="text-xs text-mnema-tertiary" data-testid="export-wait">{{ $t('security.privacy.exportNext', { when: when(status?.next_request_at) }) }}</p>
       </template>
     </div>
 
     <!-- The Owner cannot delete the account: this block only explains why, so it is not styled as a live danger. -->
-    <div :class="['space-y-2 rounded-lg border p-3', isOwner ? 'border-mnema-hairline' : 'border-mnema-danger/30']" data-testid="delete-account">
-      <p :class="['text-sm font-medium', isOwner ? 'text-mnema-text' : 'text-mnema-danger']">{{ $t('security.privacy.deleteTitle') }}</p>
-      <p v-if="isOwner" class="text-sm text-mnema-muted" data-testid="delete-owner">{{ $t('security.privacy.deleteOwner') }}</p>
+    <div :class="['settings-sub', !isOwner && 'settings-danger']" data-testid="delete-account">
+      <p :class="['settings-subtitle', !isOwner && 'text-mnema-danger']">{{ $t('security.privacy.deleteTitle') }}</p>
+      <p v-if="isOwner" class="settings-help" data-testid="delete-owner">{{ $t('security.privacy.deleteOwner') }}</p>
       <template v-else>
-        <p class="text-sm text-mnema-muted">{{ $t('security.privacy.deleteIntro') }}</p>
-        <form v-if="asking === 'delete'" class="space-y-2" @submit.prevent="deleteAccount">
-          <input v-model="typedName" type="text" required autocomplete="off" spellcheck="false" :aria-label="$t('security.privacy.deleteType', { name: username })" :placeholder="$t('security.privacy.deleteType', { name: username })" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-danger focus:outline-none" data-testid="delete-name" />
-          <input v-model="password" type="password" required autocomplete="current-password" :aria-label="$t('profile.currentPassword')" :placeholder="$t('profile.currentPassword')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-danger focus:outline-none" data-testid="privacy-password" />
-          <input v-if="needsCode" v-model="code" type="text" required autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="32" :aria-label="$t('security.twoFactor.code')" :placeholder="$t('security.twoFactor.code')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 font-mono text-sm tracking-widest text-mnema-text focus:border-mnema-danger focus:outline-none" data-testid="privacy-code" />
-          <div v-if="error" role="alert" class="rounded border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
-          <div class="flex justify-end gap-1.5 text-xs">
-            <button type="button" class="rounded px-2 py-0.5 text-mnema-muted hover:text-mnema-text" @click="asking = null">{{ $t('common.cancel') }}</button>
-            <button type="submit" :disabled="busy || !deleteReady" class="flex items-center gap-1 rounded bg-mnema-danger px-2.5 py-1 font-bold text-white hover:brightness-110 disabled:opacity-40" data-testid="delete-submit"><Loader2 v-if="busy" class="h-3.5 w-3.5 animate-spin" /><Trash2 v-else class="h-3.5 w-3.5" />{{ $t('security.privacy.deleteConfirm') }}</button>
+        <p class="settings-help">{{ $t('security.privacy.deleteIntro') }}</p>
+        <form v-if="asking === 'delete'" class="space-y-3" @submit.prevent="deleteAccount">
+          <input v-model="typedName" type="text" required autocomplete="off" spellcheck="false" :aria-label="$t('security.privacy.deleteType', { name: username })" :placeholder="$t('security.privacy.deleteType', { name: username })" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 text-sm text-mnema-text focus:border-mnema-danger focus:outline-hidden" data-testid="delete-name" />
+          <input v-model="password" type="password" required autocomplete="current-password" :aria-label="$t('profile.currentPassword')" :placeholder="$t('profile.currentPassword')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 text-sm text-mnema-text focus:border-mnema-danger focus:outline-hidden" data-testid="privacy-password" />
+          <input v-if="needsCode" v-model="code" type="text" required autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="32" :aria-label="$t('security.twoFactor.code')" :placeholder="$t('security.twoFactor.code')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 font-mono text-sm tracking-widest text-mnema-text focus:border-mnema-danger focus:outline-hidden" data-testid="privacy-code" />
+          <div v-if="error" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
+          <div class="flex justify-end gap-2 pt-1">
+            <button type="button" class="btn btn-ghost" @click="asking = null">{{ $t('common.cancel') }}</button>
+            <button type="submit" :disabled="busy || !deleteReady" class="btn btn-danger-solid" data-testid="delete-submit"><Loader2 v-if="busy" class="h-3.5 w-3.5 animate-spin" /><Trash2 v-else class="h-3.5 w-3.5" />{{ $t('security.privacy.deleteConfirm') }}</button>
           </div>
         </form>
-        <button v-else type="button" class="rounded-md border border-mnema-danger/50 px-2 py-1 text-xs text-mnema-danger transition hover:bg-mnema-danger/10" data-testid="delete-start" @click="ask('delete')">{{ $t('security.privacy.deleteButton') }}</button>
+        <button v-else type="button" class="btn btn-danger btn-sm" data-testid="delete-start" @click="ask('delete')">{{ $t('security.privacy.deleteButton') }}</button>
       </template>
     </div>
   </section>

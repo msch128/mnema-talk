@@ -1,13 +1,17 @@
 # Desktop client roadmap
 
-Status: **the desktop client is Beta** (the Windows Desktop DEV client is the furthest along and testable)
-(releases of this repository through v0.7.3 attach its ZIP; later builds come
-from the desktop repository), including the Gaming integration described below.
-The package is unsigned (no Authenticode); the installer of a desktop release updates itself from
-signed releases, see [doc/desktop-trusted-client.md](desktop-trusted-client.md#updating-the-client-itself). Earlier published-client checks cover instance
-selection, login, persisted chat, live peer reception and logout. Physical media
-capture, real-game/fullscreen compatibility, sealed media in WebView2 and complete browser parity
-remain separate acceptance work.
+Status: **the desktop client is Beta.** Windows and macOS run a Tauri host and
+Linux runs an Electron client; Windows is the furthest along. Builds come from
+the [desktop repository](https://github.com/msch128/mnema-talk-desktop/releases)
+(releases of this repository through v0.7.3 attached an older ZIP). The Gaming
+integration described below is Windows only. The installers are not signed with
+a platform certificate (no Authenticode, macOS ad-hoc signed); the program
+updates itself from releases signed with the project's own key, see
+[doc/desktop-trusted-client.md](desktop-trusted-client.md#updating-the-client-itself).
+Published-client checks cover instance selection, login, persisted chat, live
+peer reception and logout. Physical media capture, real-game and fullscreen
+compatibility, sealed media in WebView2 and complete browser parity remain
+separate acceptance work.
 
 The current client source is
 [experimental/app](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/README.md)
@@ -16,6 +20,9 @@ in `web-client` mode, in the
 It runs the shared Vue app from a signed bundle that the client verifies and
 reaches the selected instance through its own proxy; the instance supplies data,
 never executable code ([doc/desktop-trusted-client.md](desktop-trusted-client.md)).
+Since 1.1 it shows several servers side by side, each with its own session,
+browser storage and connection
+([several servers at once](desktop-trusted-client.md#several-servers-at-once)).
 The native-crypto boundary below remains a separate requirement. The older
 [feasibility probe](https://github.com/msch128/mnema-talk-desktop/blob/main/README.md)
 is a historical foundation.
@@ -48,8 +55,8 @@ supported client.
 
 ## Windows Gaming DEV
 
-The shared-client host now connects gaming surfaces to the selected instance's
-actual Vue Talk state. The instance must serve the updated shared web client;
+The shared-client host now connects gaming surfaces to the actual Vue Talk state
+of the server that owns the Talk (with several servers open, only that one). The instance must serve the updated shared web client;
 an older web client without the gaming bridge cannot activate these surfaces.
 
 - Join Talk, then focus a detected game. The passive left-hand sidepeek shows
@@ -59,11 +66,11 @@ an older web client without the gaming bridge cannot activate these surfaces.
   capture chooser in the main client; stopping a share uses the active Talk.
 - Open the overlay settings to rebind overlay, mute, deafen and push-to-talk.
   Defaults are Alt+M, Alt+N, Alt+D and Space. Bindings persist locally.
-- In the next client update, settings also include a global **Gaming overlay and
-  sidepeek** switch and a **background opacity** slider (default 55%). Use the
+- Settings also include a global **Gaming overlay and sidepeek** switch and a
+  **background opacity** slider (default 55%). Use the
   native **Gaming** menu in the main client or instance selector to open these
   settings even without Talk or a game, including when the overlay is disabled.
-- The next client update includes a [300-game executable reference](#windows-game-detection).
+- The client includes a [300-game executable reference](#windows-game-detection).
   Additional executable basenames can be configured for other games or installation
   variants. Existing custom names and shortcuts are preserved.
 - Leaving Talk, losing the connection or moving to another application hides
@@ -84,7 +91,7 @@ hardware. Chat and attachments stay readable by the server.
 
 ### Windows game detection
 
-The next Desktop DEV client update bundles a reference of 300 games. It checks
+The Desktop DEV client bundles a reference of 300 games. It checks
 only the visible foreground window's executable basename against that reference
 and your additional executable names. There is no game injection, background
 process enumeration or runtime catalog download. Paths and window titles are
@@ -109,8 +116,8 @@ and offers no Talk controls or participant roster.
 Background opacity applies to the passive sidepeek; text remains fully opaque.
 The interactive overlay keeps its darker background for readable controls.
 Additional EXE names are entered one per line (up to 32, basenames only).
-Settings are stored locally and require the updated client; a server-only update
-cannot add native detection or replace the bundled Gaming surfaces.
+Settings are stored locally. A server-only update cannot add native detection
+or replace the bundled Gaming surfaces.
 
 #### Reference sources and scope
 
@@ -137,10 +144,10 @@ not qualify every installation variant, anti-cheat system or fullscreen mode.
 ## Product requirements
 
 The desktop app bundles the existing Vue/TypeScript interface locally and connects
-to one self-hosted community. The community supplies API data, never executable
-client code. Tauri v2 is the preferred shell. An Electron fallback requires a
-verified unresolved Tauri limitation; changing shells does not itself solve
-end-to-end encryption or exclusive-fullscreen overlays.
+to self-hosted communities (up to nine side by side, each fully separate). Each community supplies API data, never executable
+client code. Tauri v2 is the shell on Windows and macOS. Linux uses Electron, because
+the WebKitGTK that Tauri uses there has no WebRTC. Changing shells does not
+itself solve end-to-end encryption or exclusive-fullscreen overlays.
 
 Windows is the first implementation target. macOS and Linux, including X11 and
 Wayland, remain required targets. The main app and interactive overlay must expose
@@ -171,7 +178,10 @@ authorities use normal system trust; there is no certificate bypass. Switching
 instances must isolate credentials, device keys, cached data and active connections.
 
 A native session broker must preserve the browser's existing cookie, CSRF, Origin
-and CSP protections. Local Tauri pages cannot reuse the browser transport by
+and CSP protections. The desktop shells apply the strict web CSP (`style-src 'self'; style-src-attr 'none'`)
+only for web bundles >= 1.1.0; older bundles keep the old policy. Old desktop
+storage from before multi-server support is wiped once and never handed to a
+server. Local Tauri pages cannot reuse the browser transport by
 spoofing an Origin or enabling wildcard CORS. Renderer permissions are limited to
 specific commands; there is no generic filesystem, shell or arbitrary HTTP bridge.
 

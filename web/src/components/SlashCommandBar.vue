@@ -54,7 +54,7 @@ function onKey(e: KeyboardEvent) {
       <span class="min-w-0 flex-1 truncate text-xs text-mnema-tertiary">{{ commandDescription(command) }} · {{ command.builtin ? $t('slash.builtinLabel') : command.bot_name }}</span>
       <button
         type="button"
-        class="flex h-7 items-center gap-1 rounded-md bg-mnema-accent px-2.5 text-xs font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40"
+        class="btn btn-primary btn-sm flex h-7 items-center gap-1"
         :disabled="running"
         data-testid="slash-run"
         @click="emit('run')"
@@ -82,7 +82,7 @@ function onKey(e: KeyboardEvent) {
         <input
           v-if="o.type === OPTION.boolean"
           type="checkbox"
-          class="h-4 w-4 self-start accent-mnema-accent"
+          class="h-4 w-4 self-start"
           :checked="values[o.name] === true"
           :data-option="o.name"
           @change="set(o.name, ($event.target as HTMLInputElement).checked)"
@@ -121,7 +121,7 @@ function onKey(e: KeyboardEvent) {
           v-else
           :type="o.type === OPTION.integer ? 'number' : 'text'"
           :inputmode="o.type === OPTION.integer ? 'numeric' : undefined"
-          class="h-8 rounded-md border border-mnema-border bg-mnema-elevated px-2 text-sm text-mnema-text outline-none focus:border-mnema-accent"
+          class="h-8 rounded-md border border-mnema-border bg-mnema-elevated px-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent"
           :value="values[o.name]"
           :data-option="o.name"
           @input="set(o.name, ($event.target as HTMLInputElement).value)"

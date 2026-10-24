@@ -11,7 +11,7 @@ defineProps({
 </script>
 
 <template>
-  <span v-if="muted || deafened" class="inline-flex flex-shrink-0 items-center gap-0.5 text-mnema-danger" data-mute-marks>
+  <span v-if="muted || deafened" class="inline-flex shrink-0 items-center gap-0.5 text-mnema-danger" data-mute-marks>
     <MicOff :style="{ width: `${size}px`, height: `${size}px` }" role="img" :aria-label="$t('voice.memberMuted')" />
     <HeadphoneOff v-if="deafened" :style="{ width: `${size}px`, height: `${size}px` }" role="img" :aria-label="$t('voice.memberDeafened')" />
   </span>

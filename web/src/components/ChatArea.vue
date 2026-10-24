@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { Message } from '../types/domain'
-import { caughtErrorMessage } from '../lib/api'
 import { ref, computed, nextTick, watch, onMounted } from 'vue'
-import { Hash, ArrowDown, ArrowUp, Loader2, Volume2 } from '@lucide/vue'
+import { Hash, ArrowDown, ArrowUp, Loader2, MessageCircle, Volume2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
+import { useBlocksStore } from '../stores/blocks'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import ChatHeader from './ChatHeader.vue'
 import ChatComposer from './ChatComposer.vue'
 import ImageLightbox from './ImageLightbox.vue'
@@ -12,8 +13,10 @@ import ContextMenu from './ContextMenu.vue'
 import EphemeralNotes from './EphemeralNotes.vue'
 import PinNotices from './PinNotices.vue'
 import MessageRow from './MessageRow.vue'
+import BlockedMessageRow from './BlockedMessageRow.vue'
 import { useMessageActions } from '../composables/useMessageActions'
-import { useMessageMenu } from '../composables/useMessageMenu'
+import { useDmChat } from '../composables/useDmChat'
+import { toggleSavedMessage, useMessageMenu } from '../composables/useMessageMenu'
 import { useMessageScroll } from '../composables/useMessageScroll'
 import { useUnreadDivider } from '../composables/useUnreadDivider'
 import { useFirstUnreadJump } from '../composables/useFirstUnreadJump'
@@ -36,20 +39,29 @@ const emit = defineEmits<{ close: [] }>()
 
 const chatStore = useChatStore()
 const authStore = useAuthStore()
+const serverFeatures = useServerFeaturesStore()
 const toasts = useToastStore()
 const permissions = usePermissionsStore()
 
+const blocks = useBlocksStore()
+// A conversation sits in the channel slot: its words, and the server's own answer to "may I write".
+const dmChat = useDmChat()
 const channelName = computed(() => chatStore.activeChannel?.name || '')
-const channelIcon = computed(() => (props.panel ? Volume2 : Hash))
-const welcomeText = computed(() => t(props.panel ? 'talk.chatWelcome' : 'chat.welcome', { channel: channelName.value }))
-const beginningText = computed(() => t(props.panel ? 'talk.chatBeginning' : 'chat.beginning', { channel: channelName.value }))
+const channelIcon = computed(() => {
+  if (props.panel) return Volume2
+  return dmChat.isDm.value ? MessageCircle : Hash
+})
+const welcomeText = computed(() => (dmChat.isDm.value ? dmChat.welcome.value : t(props.panel ? 'talk.chatWelcome' : 'chat.welcome', { channel: channelName.value })))
+const beginningText = computed(() => (dmChat.isDm.value ? dmChat.beginning.value : t(props.panel ? 'talk.chatBeginning' : 'chat.beginning', { channel: channelName.value })))
 // What the member may do here; the server decides, this only hides what would fail.
-const canSend = computed(() => permissions.canIn(chatStore.activeChannel?.id ?? '', 'send_messages'))
-const canAttach = computed(() => canSend.value && permissions.canIn(chatStore.activeChannel?.id ?? '', 'attach_files'))
-const canReact = computed(() => permissions.canIn(chatStore.activeChannel?.id ?? '', 'add_reactions'))
-const placeholder = computed(() => (canSend.value
-  ? t(props.panel ? 'talk.chatPlaceholder' : 'chat.placeholder', { channel: channelName.value })
-  : t('chat.readOnly')))
+const canIn = (key: 'send_messages' | 'attach_files' | 'add_reactions') => permissions.canIn(chatStore.activeChannel?.id ?? '', key)
+const canSend = computed(() => (dmChat.isDm.value ? dmChat.canSend.value : canIn('send_messages')))
+const canAttach = computed(() => canSend.value && (dmChat.isDm.value || canIn('attach_files')))
+const canReact = computed(() => (dmChat.isDm.value ? dmChat.canSend.value : canIn('add_reactions')))
+const placeholder = computed(() => {
+  if (dmChat.isDm.value) return dmChat.placeholder.value
+  return canSend.value ? t(props.panel ? 'talk.chatPlaceholder' : 'chat.placeholder', { channel: channelName.value }) : t('chat.readOnly')
+})
 
 const inputMessage = ref('')
 const messageContainer = ref<HTMLElement | null>(null)
@@ -128,6 +140,7 @@ function onMessageKeydown(e: KeyboardEvent, msg: Message) {
     rows: messageRows,
     menu: (el: HTMLElement) => menu.openAtElement(el, msg),
     reply: () => startReply(msg),
+    ...(serverFeatures.has('saved') ? { save: () => { void toggleSavedMessage(msg) } } : {}),
     edit: () => {
       if (!actions.isOwn(msg)) return false
       actions.startEdit(msg)
@@ -179,7 +192,7 @@ async function handleSend() {
     replyingTo.value = null
     await revealOwnMessage()
   } catch (err) {
-    toasts.error(caughtErrorMessage(err, t('chat.sendFailed')))
+    toasts.error(dmChat.sendError(err, t('chat.sendFailed')))
   } finally {
     isSending.value = false
   }
@@ -205,8 +218,10 @@ const groupedIds = computed(() => {
 <template>
   <component
     :is="panel ? 'section' : 'main'"
+    :id="panel ? undefined : 'main-content'"
+    :tabindex="panel ? undefined : -1"
     :aria-label="panel ? $t('talk.chatPanel', { channel: channelName }) : undefined"
-    class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden"
+    class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden focus:outline-hidden"
   >
     <ChatHeader :panel="panel" @close="emit('close')" @menu="(x, y, items) => menu.show(x, y, items)" />
 
@@ -269,7 +284,9 @@ const groupedIds = computed(() => {
         <span class="text-xs font-semibold text-mnema-accent uppercase tracking-wide">{{ dividerLabel() }}</span>
         <span class="flex-1 h-px bg-mnema-accent/40"></span>
       </div>
+      <BlockedMessageRow v-if="blocks.hides(msg)" :msg="msg" @show="blocks.reveal(msg.id)" />
       <MessageRow
+        v-else
         :msg="msg"
         :grouped="groupedIds.has(msg.id)"
         :highlighted="highlightedId === msg.id"
@@ -320,7 +337,7 @@ const groupedIds = computed(() => {
       <span class="truncate">
         {{ chatStore.missedLiveCount > 0 ? $t('chat.newMessages') : $t('chat.viewingOlder') }}
       </span>
-      <span class="flex items-center gap-1 flex-shrink-0 font-semibold">
+      <span class="flex items-center gap-1 shrink-0 font-semibold">
         {{ $t('chat.jumpToEnd') }}
         <ArrowDown class="w-4 h-4" />
       </span>
@@ -330,7 +347,7 @@ const groupedIds = computed(() => {
     <button
       v-else-if="showUnreadPill"
       type="button"
-      class="absolute left-1/2 -translate-x-1/2 bottom-2 h-8 px-4 flex items-center gap-1.5 rounded-full bg-mnema-accent text-mnema-accent-ink text-sm font-semibold shadow-lg hover:bg-mnema-accent-hover transition z-20"
+      class="btn btn-primary absolute left-1/2 -translate-x-1/2 bottom-2 h-8 flex items-center gap-1.5 rounded-full shadow-lg z-20"
       @click="scrollToBottomNow"
     >
       {{ $t('chat.newMessages') }}

@@ -11,7 +11,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/media"
@@ -66,6 +68,10 @@ func runWithContext(ctx context.Context) error {
 		return err
 	}
 
+	if _, err := chat.LocalizeSeedLayout(ctx, pool, cfg.InitialLanguage); err != nil {
+		return err
+	}
+
 	// Object storage may come up after the app (or be down for a while):
 	// keep retrying in the background; until then uploads answer 503 and
 	// /api/health reports the outage.
@@ -74,6 +80,7 @@ func runWithContext(ctx context.Context) error {
 	}, 2*time.Second, time.Minute)
 	media.StartRetentionWorker(ctx, pool, store, cfg.MediaRetentionDays)
 	media.StartOrphanScan(ctx, pool, store)
+	media.StartAvatarReencode(ctx, pool, store, cfg.S3Bucket, &audit.Log{DB: pool})
 
 	voice, closeVoice, err := startVoice(ctx, cfg)
 	if err != nil {

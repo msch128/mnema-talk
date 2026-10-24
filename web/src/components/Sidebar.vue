@@ -17,6 +17,7 @@ import SidebarChannelRow from './SidebarChannelRow.vue'
 import SidebarCategoryHeader from './SidebarCategoryHeader.vue'
 import SidebarDragGhost from './SidebarDragGhost.vue'
 import SidebarServerMenu from './SidebarServerMenu.vue'
+import SidebarDmSection from './SidebarDmSection.vue'
 import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
 import { loadCollapsed, saveCollapsed } from '../lib/channelTree'
@@ -190,6 +191,12 @@ async function handleVoiceClick(channel: Channel) {
   navigate(`/v/${channel.id}${currentRoute.value.view === 'voice' && currentRoute.value.showChat ? '/chat' : ''}`)
 }
 
+// The Talk's chat without joining: the Talk opens as a preview with its chat.
+function handleOpenTalkChat(channel: Channel) {
+  closeNav()
+  navigate(`/v/${channel.id}/chat`)
+}
+
 function handleTextClick(channel: Channel) {
   chatStore.selectChannel(channel)
   voiceStore.activeView = 'chat'
@@ -261,7 +268,8 @@ function channelIndicator(id: string): '' | 'top' | 'bottom' {
       v-on="navListeners"
       @contextmenu="openListMenu"
     >
-      <div class="flex-shrink-0">
+      <SidebarDmSection />
+      <div class="shrink-0">
         <!-- Uncategorized channels first (headless section), then the categories -->
         <section
           v-for="category in sections"
@@ -300,6 +308,7 @@ function channelIndicator(id: string): '' | 'top' | 'bottom' {
               :flash="flashKey === `channel:${channel.id}`"
               :hint-id="hintId"
               @open="handleChannelClick(channel)"
+              @open-chat="handleOpenTalkChat(channel)"
               @menu="openChannelMenu($event, channel)"
               @delete="handleDeleteChannel(channel)"
               @drag-start="startDrag($event, 'channel', channel)"

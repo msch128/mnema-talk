@@ -34,6 +34,29 @@ export const useAuthStore = defineStore('auth', () => {
     return currentUser
   }
 
+  async function removeAvatar() {
+    const session = core.sessionSnapshot()
+    const currentUser = await api('/api/users/me/avatar', { method: 'DELETE', decode: decodeUser })
+    if (core.isCurrentSession(session) && currentUser.id === session.userId) user.value = currentUser
+    return currentUser
+  }
+
+  async function uploadBanner(file: File) {
+    const session = core.sessionSnapshot()
+    const form = new FormData()
+    form.append('banner', file)
+    const currentUser = await api('/api/users/me/banner', { method: 'PUT', form, decode: decodeUser })
+    if (core.isCurrentSession(session) && currentUser.id === session.userId) user.value = currentUser
+    return currentUser
+  }
+
+  async function removeBanner() {
+    const session = core.sessionSnapshot()
+    const currentUser = await api('/api/users/me/banner', { method: 'DELETE', decode: decodeUser })
+    if (core.isCurrentSession(session) && currentUser.id === session.userId) user.value = currentUser
+    return currentUser
+  }
+
   async function updateProfile({ displayName, bio }: { displayName: string; bio: string }) {
     const session = core.sessionSnapshot()
     const currentUser = await api('/api/users/me/profile', {
@@ -55,6 +78,9 @@ export const useAuthStore = defineStore('auth', () => {
     secondStep: actions.secondStep,
     register: actions.register,
     uploadAvatar,
+    removeAvatar,
+    uploadBanner,
+    removeBanner,
     updateProfile,
     changePassword: actions.changePassword,
     logout: actions.logout,

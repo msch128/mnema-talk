@@ -17,11 +17,11 @@ func TestVoiceChannelHasItsOwnTextChat(t *testing.T) {
 	admin := a.seedAdmin()
 	max := a.register(admin, "max")
 	voice := a.createChannel(admin, "Lounge", "voice")
-	text := a.createChannel(admin, "allgemein", "text")
+	text := a.createChannel(admin, "lobby", "text")
 	base := "/api/channels/" + voice.String()
 
-	first := postMessage(t, admin, voice, map[string]any{"content": "hallo @max, hörst du mich?"})
-	reply := postMessage(t, max, voice, map[string]any{"content": "laut und deutlich", "reply_to_id": first})
+	first := postMessage(t, admin, voice, map[string]any{"content": "hello @max, can you hear me?"})
+	reply := postMessage(t, max, voice, map[string]any{"content": "loud and clear", "reply_to_id": first})
 	thread := postMessage(t, max, voice, map[string]any{"content": "im Thread", "parent_id": first})
 
 	up := admin.upload(base+"/upload", "file", "talk.png", "image/png", pngBytes, map[string]string{"content": "Screenshot vom Stream"})
@@ -34,7 +34,7 @@ func TestVoiceChannelHasItsOwnTextChat(t *testing.T) {
 		t.Fatalf("upload without attachment: %s", up.body)
 	}
 
-	if res := admin.put(base+"/messages/"+first.String(), map[string]string{"content": "hallo @max, hörst du mich jetzt?"}); res.status != http.StatusOK {
+	if res := admin.put(base+"/messages/"+first.String(), map[string]string{"content": "hello @max, can you hear me now?"}); res.status != http.StatusOK {
 		t.Fatalf("edit in a voice channel: %d %s", res.status, res.body)
 	}
 	if res := admin.post("/api/messages/"+reply.String()+"/reactions", map[string]string{"emoji": "👍"}); res.status != http.StatusOK && res.status != http.StatusCreated && res.status != http.StatusNoContent {
@@ -62,7 +62,7 @@ func TestVoiceChannelHasItsOwnTextChat(t *testing.T) {
 	if len(history) != 3 {
 		t.Fatalf("history: %d messages, want 3: %s", len(history), res.body)
 	}
-	if history[0].ID != first || history[0].Content != "hallo @max, hörst du mich jetzt?" || history[0].ReplyCount != 1 {
+	if history[0].ID != first || history[0].Content != "hello @max, can you hear me now?" || history[0].ReplyCount != 1 {
 		t.Errorf("first message: %+v", history[0])
 	}
 	if history[1].ID != reply || history[1].ReplyToID == nil || *history[1].ReplyToID != first {
@@ -92,7 +92,7 @@ func TestVoiceChannelHasItsOwnTextChat(t *testing.T) {
 	}
 
 	// Search covers the voice channel's chat, also filtered to it.
-	if got, status := max.search(t, map[string]string{"q": "deutlich"}); status != http.StatusOK || len(got.Messages) != 1 || got.Messages[0].ChannelID != voice {
+	if got, status := max.search(t, map[string]string{"q": "clear"}); status != http.StatusOK || len(got.Messages) != 1 || got.Messages[0].ChannelID != voice {
 		t.Errorf("search across channels: %d %+v", status, got.Messages)
 	}
 	if got, status := max.search(t, map[string]string{"channel_id": voice.String(), "has": "image"}); status != http.StatusOK || len(got.Messages) != 1 {
@@ -108,7 +108,7 @@ func TestVoiceChannelChatHasReadState(t *testing.T) {
 	max := a.register(admin, "max")
 	voice := a.createChannel(admin, "Lounge", "voice")
 
-	first := postMessage(t, admin, voice, map[string]any{"content": "wer ist da?"})
+	first := postMessage(t, admin, voice, map[string]any{"content": "who is there?"})
 	postMessage(t, admin, voice, map[string]any{"content": "@max kommst du?"})
 	postMessage(t, max, voice, map[string]any{"content": "gleich"})
 

@@ -111,7 +111,7 @@ async function saveProfile() {
           v-model="editDisplayName"
           type="text"
           maxlength="24"
-          class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
+          class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent"
         />
       </div>
       <div>
@@ -121,7 +121,7 @@ async function saveProfile() {
           v-model="editBio"
           rows="3"
           maxlength="250"
-          class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent resize-none"
+          class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent resize-none"
           :placeholder="$t('profile.bioPlaceholder')"
         ></textarea>
         <div class="flex justify-between items-center text-xs text-mnema-tertiary mt-0.5">
@@ -130,14 +130,14 @@ async function saveProfile() {
             <button
               type="button"
               @click="cancelEditBio"
-              class="px-2 py-0.5 rounded text-mnema-muted hover:text-mnema-text"
+              class="btn btn-ghost btn-sm"
             >
               {{ $t('common.cancel') }}
             </button>
             <button
               @click="saveProfile"
               :disabled="isSavingProfile"
-              class="px-2.5 py-1 rounded bg-mnema-accent text-mnema-canvas font-bold flex items-center gap-1 hover:brightness-110 active:scale-95 disabled:opacity-50"
+              class="btn btn-primary btn-sm flex items-center gap-1"
             >
               <Loader2 v-if="isSavingProfile" class="w-3.5 h-3.5 animate-spin" />
               <Save v-else class="w-3.5 h-3.5" />
@@ -148,7 +148,7 @@ async function saveProfile() {
       </div>
     </div>
 
-    <div v-if="profileSaveError" role="alert" class="mt-2 p-1.5 rounded bg-mnema-danger/10 border border-mnema-danger/30 text-mnema-danger text-sm flex items-center gap-1.5">
+    <div v-if="profileSaveError" role="alert" class="mt-2 p-1.5 rounded-sm bg-mnema-danger/10 border border-mnema-danger/30 text-mnema-danger text-sm flex items-center gap-1.5">
       <span>{{ profileSaveError }}</span>
     </div>
   </div>

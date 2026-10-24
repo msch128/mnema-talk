@@ -25,6 +25,14 @@ export interface NotifyAdapter {
   requestPermission(): Promise<NotifyPermission>
   notify(n: OsNotification): void
   setBadge(count: number): void
+  /** Tells the host what is waiting in this instance (the multi-instance client shows it on its server rail). */
+  reportUnread?(counts: UnreadCounts): void
+}
+
+/** What an instance has waiting: channels with unread messages that may notify, and mentions. */
+export interface UnreadCounts {
+  unread: number
+  mentions: number
 }
 
 export const browserNotify: NotifyAdapter = {
@@ -71,6 +79,10 @@ const BADGE_MAX = 999
 
 function pendingKey(channelId: string, messageId: string): string {
   return `${channelId}/${messageId}`
+}
+
+function boundedCount(count: number): number {
+  return Number.isFinite(count) ? Math.min(Math.max(0, Math.trunc(count)), BADGE_MAX) : 0
 }
 
 const PERMISSIONS: readonly NotifyPermission[] = ['granted', 'denied', 'default', 'unsupported']
@@ -136,7 +148,10 @@ export function createHostNotify(): NotifyAdapter {
         .catch(() => { pending.delete(key) })
     },
     setBadge(count) {
-      invoke('desktop_set_badge', { count: Math.min(Math.max(0, Math.trunc(count)), BADGE_MAX) }).catch(() => {})
+      invoke('desktop_set_badge', { count: boundedCount(count) }).catch(() => {})
+    },
+    reportUnread({ unread, mentions }) {
+      invoke('desktop_report_unread', { unread: boundedCount(unread), mentions: boundedCount(mentions) }).catch(() => {})
     },
   }
 }

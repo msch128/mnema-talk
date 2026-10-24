@@ -14,6 +14,7 @@ function isTyping(target: EventTarget | null): boolean {
  * @param handlers.reply   () => void
  * @param handlers.edit    () => boolean, false when the message can't be edited.
  * @param handlers.menu    (rowEl) => void, optional.
+ * @param handlers.save    () => void, saves or unsaves the message; omitted when the server lacks saved messages.
  * @param handlers.escape  () => boolean, true when Escape closed something.
  */
 type KeyboardHandlers = {
@@ -21,6 +22,7 @@ type KeyboardHandlers = {
   reply?: () => void
   edit?: () => boolean | void
   menu?: (row: HTMLElement) => void
+  save?: () => void
   escape?: () => boolean
 }
 
@@ -69,7 +71,12 @@ export function handleMessageKeydown(e: KeyboardEvent, handlers: KeyboardHandler
   handleShortcutKey(e, handlers)
 }
 
-function handleShortcutKey(e: KeyboardEvent, { reply, edit, escape }: KeyboardHandlers) {
+function handleShortcutKey(e: KeyboardEvent, { reply, edit, save, escape }: KeyboardHandlers) {
+  if ((e.key === 's' || e.key === 'S') && save) {
+    e.preventDefault()
+    save()
+    return
+  }
   if (e.key === 'r' || e.key === 'R') {
     e.preventDefault()
     reply?.()

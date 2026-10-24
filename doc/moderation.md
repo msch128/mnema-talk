@@ -1,7 +1,7 @@
 # Moderation and the audit log
 
-This page describes moderation (timeouts, bans, kicking) and the audit log that
-records it. Code: [`internal/auth/moderation.go`](../internal/auth/moderation.go),
+This page describes moderation (timeouts, bans, kicking, message moderation,
+reports) and the audit log that records it. Code: [`internal/auth/moderation.go`](../internal/auth/moderation.go),
 [`internal/perm`](../internal/perm/) and [`internal/audit`](../internal/audit/).
 Permissions and the hierarchy are in [roles-and-permissions.md](roles-and-permissions.md).
 
@@ -15,17 +15,19 @@ the target out of reach between the check and the write.
 
 | Action | Permission | Notes |
 |---|---|---|
-| Timeout, end a timeout | *Timeout members* | `POST` / `DELETE /api/admin/users/{id}/timeout` |
-| Ban, unban, list bans | *Ban members* | `POST` / `DELETE /api/admin/users/{id}/ban`, `GET /api/admin/bans` |
-| Kick from the server | *Manage members* | The existing **Disable**: ends sessions and blocks sign-in until **Enable**. No record beyond the audit log |
-| Remove from a Talk | *Disconnect members* | The existing kick from a Talk |
+| Timeout, end a timeout | *Timeout members* | `POST` / `DELETE /api/admin/users/{id}/timeout`; `/timeout` in the composer |
+| Ban, unban, list bans | *Ban members* | `POST` / `DELETE /api/admin/users/{id}/ban`, `GET /api/admin/bans`; `/ban` in the composer |
+| Disable an account | *Manage members* | **Disable**: ends sessions and blocks sign-in until **Enable**. No record beyond the audit log |
+| Kick | *Kick members* | `/kick` in the composer, see [Kicks](#kicks) |
+| Remove from a Talk | *Disconnect members* | Removes the member from that Talk only; they stay signed in |
+| Read and close reports | *Manage reports* | See [Blocking and reports](#blocking-and-reports) |
 
 ## Timeouts
 
 A timeout silences a member until a time passes: they can still read, and still
 delete or take back their own words, but they lose *Send messages*, *Attach
-files*, *Add reactions*, *Mention @all and @here*, *Connect*, *Speak* and *Video*
-(`perm.TimeoutMask`). Durations run from 5 seconds to 28 days; the interface
+files*, *Add reactions*, *Mention @all and @here*, *Connect*, *Speak*, *Video*
+and *Send direct messages* (`perm.TimeoutMask`). Durations run from 5 seconds to 28 days; the interface
 offers 1 min, 5 min, 1 h, 1 day, 1 week or a custom time, with an optional
 reason of up to 200 characters.
 
@@ -71,6 +73,27 @@ of the ban; with a wrong password the answer does not reveal the ban. The
 admin console has a **Bans** tab (for *Ban members*) listing active bans with
 reason, moderator and end, and **Unban**.
 
+## Kicks
+
+A kick sends a member away for now and leaves no sanction. It is
+the "remove now, may come back" action: every session of the member ends (browser, desktop client and
+push devices), their live connections close, and they leave the Talk they are
+in. They can sign in again at once; nothing is stored against the account
+(compare *Disable*, which blocks sign-in, and *Ban*). The member first receives
+a `kicked` WebSocket event (`{"reason": "..."}`) and the web app shows a calm
+note; the connection closes a moment later.
+
+The permission is *Kick members* (bit `1 << 23`). It is off for @everyone and
+for every seeded role, so by default only the Owner and Administrators can
+kick. The role hierarchy is enforced like for a ban: a highest role strictly
+above the member's, never the Owner, never oneself. The only way to kick is
+the built-in `/kick @member [reason]` command (`POST
+/api/channels/{id}/interactions`, [bots](bots.md#built-in-commands-and-polls)):
+the server checks the permission again inside the command and writes the audit
+entry `moderation.kick` (details: `reason`, `via: slash`). `/timeout` and
+`/ban` run the same actions as the admin console and write the same
+`moderation.timeout` and `moderation.ban` entries, also marked `via: slash`.
+
 ## Slow mode
 
 A text or Talk-chat channel can make members wait between two messages
@@ -99,7 +122,9 @@ Holders of *Manage messages* in a channel can:
   a pin also shows a compact note under the messages of every open client (it
   is not a stored message, so it is gone after a reload; the list is the
   record). Both actions are audited (`message.pin`, `message.unpin`). Deleting a
-  message unpins it.
+  message unpins it. A pinned message carries `pinned_at` and `pinned_by` (the
+  member who pinned it, absent once that account is gone) on every payload and
+  on the `pins_changed` event, and the pinned list shows "Pinned by".
 - **Delete with a reason**: `DELETE /api/channels/{channelID}/messages/{messageID}`
   takes an optional JSON body `{"reason": "..."}`. The author is told through a
   `moderation_notice`; the audit entry (`message.delete`, `moderator: true`)
@@ -120,7 +145,7 @@ Holders of *Manage messages* in a channel can:
 Every edit keeps the version it replaces: its text, when that version was
 written (the creation time for the original) and who wrote it. Only members who
 hold *Manage messages* in the channel and can view it (the Owner always) can
-read the versions, newest first. I decided against a dedicated permission:
+read the versions, newest first. There is no dedicated permission:
 reading what a message used to say is the same trust as deleting it, and a
 new bit would need a default, a migration of existing roles and one more switch
 in the roles screen for no gain. The author and other members get `403`;
@@ -138,9 +163,85 @@ minute per member (`edit_history` in the rate-limit metrics).
   `EDIT_HISTORY_RETENTION_DAYS` (default `0`: keep) additionally drops versions
   replaced longer ago than that many days; the worker runs every six hours.
 - **Removed with their source.** Deleting the message deletes its versions
-  (cascade). Deleting an account deletes the versions of that person's messages
+  (cascade); the `message.delete` entry keeps them first (`edit_versions`, newest
+  first, with the same text policy as the entry's own text). Deleting an account deletes the versions of that person's messages
   together with the message text; the messages stay as emptied tombstones.
   Edits made before this feature (migration 0047) have no history.
+
+## Blocking and reports
+
+### Blocking a member
+
+Any member can block any other member (`PUT /api/me/blocks/{userID}`; at most
+500 blocks). Blocking is **private**: the blocked member is never told, and no
+response, event, list or error text they can read depends on it. For the
+blocker it means:
+
+- the web app collapses the blocked member's messages to "Blocked message ·
+  show" (the client reads `GET /api/me/blocks` and the `block_updated` event);
+- the blocked member's mentions and replies create no entry in the mentions
+  inbox (which excludes direct messages entirely), no mention count and no push,
+  whatever the channel's notification level, and a plain message of theirs sends
+  no push either. It is decided when the entry is listed or the push is sent,
+  so it also covers messages that were written before the block;
+- in any direct message conversation (group or two-person), unread and mention
+  counts and the conversation's last-activity time leave out messages by members
+  the reader blocked, and push recipients skip blockers;
+- in a direct message conversation of two, a block stops writing in both
+  directions (the other side only sees that the member cannot be written
+  to); in a group, the conversation continues, but nobody can add a member
+  who blocked them;
+- unblocking brings the earlier inbox entries back, because nothing was
+  deleted.
+
+A block is not a sanction: it changes nothing for anybody else and is not
+audited. Blocking the Owner or a moderator only mutes them for the blocker.
+Deleting an account removes the blocks to and from it; the export lists the
+member's own blocks by id (`blocks.json`).
+
+### Direct messages
+
+Moderators have no way into a direct message conversation. The Owner and
+Administrators are treated like any other non-member: they get the same answer
+as for a conversation that does not exist. The only route to the text of a
+direct message is a report by one of its members (below). Moderation actions
+that target a member (timeout, ban, kick) work as usual, and a timeout also
+takes *Send direct messages*. The Owner can switch direct messages off for the
+community under **Admin > Welcome & rules**: existing conversations stay
+readable, and nothing new can be started or written.
+
+### Reporting a message
+
+Any member can report a message they can see (`POST
+/api/messages/{messageID}/report`, with a category of `spam`, `harassment`,
+`illegal` or `other` and an optional note of up to 500 characters). A message
+the member cannot see answers 404, like a missing one; their own message is
+refused. At most 10 reports an hour and 50 open reports per member, and
+repeating an open report returns the first one.
+
+The report stores **its own copy** of the message and up to 20 messages around
+it (15 before, 5 after) with author names, text and the names, types and sizes
+of attachments (never the files). The copy is the point: the author deleting or
+editing the message afterwards does not change what was reported. It is also
+the *only* way a moderator ever reads a direct message: moderators and
+Administrators have no path into a direct message conversation, and a report
+shows only what the reporter chose to report and its context.
+
+Members with *Manage reports* (the Owner and Administrators always) work the
+queue under **Admin > Reports** (the tab shows only where the server lists the
+`reports` feature; `GET /api/admin/reports`, status filter,
+newest first; `GET /api/admin/reports/{id}` for the copy). They close a
+report as `resolved` or `dismissed` with an optional note, and can delete a
+closed one, which removes the copy. The reporter is not notified of the
+outcome. Reading a report needs only this permission, not access to the
+channel: a report of a private channel is readable by its handlers.
+
+- **Audited without text.** `report.create`, `report.resolve` and
+  `report.delete` are in the audit log for the Owner and Administrators only,
+  with the category and ids but never message text or the note.
+- **Erasure.** When an account is erased, its text is blanked in every report
+  copy (as the reported message or as context) and its links to reports are
+  cut; the reports stay.
 
 ## Audit log
 
@@ -177,7 +278,10 @@ requests leave no entry. Reading the log is not recorded.
 |---|---|---|
 | `message.delete` | A message is deleted, by its author or a moderator | The **full text**, the attachment names, types and sizes (not the files), author, channel, send time, `moderator` (true when someone else deleted it) and the thread replies (author and text, up to 50) |
 | `message.edit` | An author edits a message | Text `before` and `after`, author, channel |
+| `message.edit_history_view` | A moderator opens the earlier versions of **someone else's** message | Message, author, channel and how many versions were shown, not their text. One entry per reader and message every ten minutes; reading your own message leaves none |
+| `poll.end` | A moderator ends a poll that someone else posted | Message, author, channel and the question. An author ending their own poll is not audited |
 | `voice.join`, `voice.leave` | A member enters or leaves a Talk | Member and Talk with the time. A reload within the grace period is neither. High volume on a busy server: filter by the *Talk presence* group |
+| `report.create`, `report.resolve`, `report.delete` | A member reports a message; a moderator closes or deletes the report | The report id and category (and the closing status). Never message text or notes. See [Blocking and reports](#blocking-and-reports) |
 | `auth.login` | Successful sign-in (browser and native) | The member |
 | `auth.login_failed`, `auth.login_locked` | A wrong password, or a blocked attempt, for an **existing** account | The member. At most one entry per account and kind per minute, and no address, password or typed name; a name that is no account is not stored at all |
 | `auth.register`, `auth.password_change`, `auth.logout_all` | Own-account events | The member |
@@ -238,7 +342,7 @@ quietly default to something wider than intended; this is the same table.
 |---|---|---|
 | Auditors | Every holder of *View audit log* | `role.*`, `user.*` except the Owner-only ones below, `invite.*` (and the moderation actions of later releases) |
 | Channel | Holders of *View audit log* **who can view the entry's channel when they read** | `message.*`, `voice.*`, `channel.*` (a private channel's name, topic and overwrites are private too) |
-| Owner and Administrators only | The Owner and members with *Administrator* | `category.*` and `layout.apply` (a private category's name and overwrites are private too, and a layout lists every placement), `auth.*` (sign-ins, failures, lockouts, password changes of other members), `webhook.*`, `outgoing_webhook.*`, `bot.*`, `media.*`, `settings.*`, `system.*`, `user.password_set`, `user.password_reset`, `user.lockout_clear`, `admin.*` (routes not yet named in the route table) |
+| Owner and Administrators only | The Owner and members with *Administrator* | `category.*` and `layout.apply` (a private category's name and overwrites are private too, and a layout lists every placement), `auth.*` (sign-ins, failures, lockouts, password changes of other members), `webhook.*`, `outgoing_webhook.*`, `bot.*`, `media.*`, `settings.*`, `system.*`, `user.password_set`, `user.password_reset`, `user.lockout_clear`, `report.*` (a report may concern a private channel or a direct message), `admin.*` (routes not yet named in the route table) |
 
 The check runs on every read against the current permissions, so access that is
 granted later also opens the older entries of that channel, and access that is

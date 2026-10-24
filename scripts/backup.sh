@@ -57,7 +57,7 @@ if [ "$seaweed_resume" = true ]; then docker compose stop -t 60 seaweedfs >/dev/
 [ "$(service_running "$seaweed")" = false ] || backup_fail 'seaweedfs did not stop'
 docker compose exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner' </dev/null | gzip > "$dest/postgres.sql.gz"
 docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -v ON_ERROR_STOP=1 -c "SELECT filename, checksum FROM schema_migrations ORDER BY filename"' </dev/null > "$dest/schema.txt"
-docker run --rm --network none --volumes-from "$seaweed":ro -v "$(cd "$dest" && pwd)":/out alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 sh -c 'tar czf /out/seaweedfs.tar.gz -C /data . && chmod 600 /out/seaweedfs.tar.gz && chown "$1:$2" /out/seaweedfs.tar.gz' sh "$(id -u)" "$(id -g)"
+docker run --rm --network none --volumes-from "$seaweed":ro -v "$(cd "$dest" && pwd)":/out alpine:3.24.3@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a sh -c 'tar czf /out/seaweedfs.tar.gz -C /data . && chmod 600 /out/seaweedfs.tar.gz && chown "$1:$2" /out/seaweedfs.tar.gz' sh "$(id -u)" "$(id -g)"
 cp .env "$dest/env"
 docker compose config --no-interpolate </dev/null > "$dest/compose.yaml"
 {

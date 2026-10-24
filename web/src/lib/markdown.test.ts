@@ -53,9 +53,9 @@ describe('renderMarkdown – formatting', () => {
   })
 
   it('does not format inside code', () => {
-    const root = dom(renderMarkdown('`**nicht fett**`'))
+    const root = dom(renderMarkdown('`**not bold**`'))
     expect(root.querySelector<HTMLElement>('strong')).toBeNull()
-    expect(root.querySelector<HTMLElement>('code')?.textContent).toBe('**nicht fett**')
+    expect(root.querySelector<HTMLElement>('code')?.textContent).toBe('**not bold**')
   })
 
   it('links only http(s) URLs and opens them safely', () => {

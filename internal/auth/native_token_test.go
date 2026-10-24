@@ -38,7 +38,7 @@ func TestNativeTokenCanonicalRoundtripAndDigest(t *testing.T) {
 func TestNativeTokenParserRejectsRepairableAndOversizeInputs(t *testing.T) {
 	canonical := strings.Repeat("A", 43)
 	invalid := []string{"", "token", canonical + "=", " " + canonical, canonical + "\n", "\n" + canonical[1:],
-		"\r" + canonical[1:], "+" + canonical[1:], "/" + canonical[1:], "ä" + canonical[2:],
+		"\r" + canonical[1:], "+" + canonical[1:], "/" + canonical[1:], "\u00e4" + canonical[2:],
 		canonical[:42] + "B", canonical[:42] + "\x00", strings.Repeat("a", 1<<20)}
 	for i, wire := range invalid {
 		secret, err := parseNativeSecret(wire)

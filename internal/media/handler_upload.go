@@ -200,7 +200,7 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 // uploadAvatar handles POST /api/users/me/avatar.
 //
 // @Summary Upload avatar
-// @Description multipart/form-data with an image in field 'avatar' (max 5 MB). Replaces and deletes the previous avatar. Broadcasts user_update.
+// @Description multipart/form-data with an image in field 'avatar' (PNG, JPEG, GIF or WebP, max 5 MB). The server never stores the upload: it crops the centre square, shrinks it to at most 512x512 (never enlarged) and writes a new file, so metadata such as EXIF (GPS, camera model) is gone. An animated GIF stays animated within a budget of 16 million pixels (canvas times frames, at most 100 frames); animated WebP is rejected. Replaces and deletes the previous avatar. Broadcasts user_update.
 // @ID uploadAvatar
 // @Tags Users
 // @Accept mpfd
@@ -208,7 +208,7 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 // @Security cookieAuth
 // @Param avatar formData file true "Image file, at most 5 MB."
 // @Success 200 {object} auth.User "Updated user."
-// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): no file, too many frames, too large in pixels, or the picture cannot be read."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: cross-origin request rejected by the CSRF check."
 // @Failure 413 {object} httpx.ErrorResponse "PAYLOAD_TOO_LARGE: body or file exceeds the limit (1 MiB for JSON)."
@@ -235,6 +235,7 @@ func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// deletePreviousAvatar deletes the object of a replaced avatar or banner.
 func (h *Handler) deletePreviousAvatar(ctx context.Context, previous *string) {
 	if previous == nil {
 		return
@@ -248,49 +249,52 @@ func (h *Handler) deletePreviousAvatar(ctx context.Context, previous *string) {
 	}
 }
 
-func (h *Handler) recordAvatarTx(ctx context.Context, userID, mediaID uuid.UUID, key string, in *incomingFile) (*string, error) {
-	var previous *string
-	err := pgx.BeginFunc(ctx, h.DB, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, `SELECT avatar_s3_key FROM users WHERE id = $1 FOR UPDATE`, userID).Scan(&previous); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO media (id, uploader_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			mediaID, userID, h.Bucket, key, in.filename, in.mime, in.size); err != nil {
-			return err
-		}
-		_, err := tx.Exec(ctx, `UPDATE users SET avatar_s3_key = $1, updated_at = NOW() WHERE id = $2`, mediaID.String(), userID)
-		return err
-	})
-	return previous, err
-}
-
 // ReplaceAvatar reads the 'avatar' image of a multipart request (at most
-// MaxAvatarBytes, image types only), makes it userID's avatar and deletes the
-// previous one. Webhooks use it for their bot account.
+// MaxAvatarBytes, image types only), redraws it as a square of at most 512
+// pixels without metadata, makes it userID's avatar and deletes the previous
+// one. Webhooks and bots use it for their account.
 func (h *Handler) ReplaceAvatar(r *http.Request, userID uuid.UUID) error {
 	if h.Store == nil {
 		return httpx.ErrUnavailable("file storage is not configured")
 	}
-	in, err := readFile(r, readFileOptions{field: "avatar", maxBytes: MaxAvatarBytes, allow: avatarMIME, imageOnly: true})
+	pic, err := avatarImage.read(r)
 	if err != nil {
 		return err
 	}
-	defer in.file.Close()
+	return h.setProfileImage(r.Context(), avatarImage, userID, pic)
+}
 
-	mediaID := uuid.New()
-	key := storageKey("avatars", mediaID, in.mime)
-	if err := h.Store.Upload(r.Context(), key, in.file, in.mime, in.size); err != nil {
-		return fmt.Errorf("store avatar: %w", err)
+// deleteAvatar handles DELETE /api/users/me/avatar.
+//
+// @Summary Remove avatar
+// @Description Deletes the avatar and its stored file. Succeeds when there is none. Needs the profile.avatar_remove feature. Broadcasts user_update.
+// @ID deleteAvatar
+// @Tags Users
+// @Produce json
+// @Security cookieAuth
+// @Success 200 {object} auth.User "Updated user, without avatar_url."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: cross-origin request rejected by the CSRF check."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
+// @Router /api/users/me/avatar [delete]
+func (h *Handler) deleteAvatar(w http.ResponseWriter, r *http.Request) error {
+	if h.Store == nil {
+		return httpx.ErrUnavailable("file storage is not configured")
 	}
-
-	previous, err := h.recordAvatarTx(r.Context(), userID, mediaID, key, in)
+	user := auth.UserFrom(r.Context())
+	previous, err := h.clearProfileImage(r.Context(), avatarImage, user.ID)
 	if err != nil {
-		_ = h.Store.Delete(context.WithoutCancel(r.Context()), key)
-		return fmt.Errorf("record avatar: %w", err)
+		return err
 	}
-
 	h.deletePreviousAvatar(r.Context(), previous)
+	updated, err := auth.GetUser(r.Context(), h.DB, user.ID)
+	if err != nil {
+		return err
+	}
+	h.Events.Broadcast(events.UserUpdate, updated.Public())
+	httpx.WriteJSON(w, http.StatusOK, updated)
 	return nil
 }

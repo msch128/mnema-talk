@@ -80,7 +80,7 @@ async function save() {
         v-model="displayName"
         type="text"
         maxlength="24"
-        class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
+        class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent"
       />
     </div>
     <div>
@@ -90,15 +90,15 @@ async function save() {
         v-model="bio"
         rows="3"
         maxlength="250"
-        class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent resize-none"
+        class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent resize-none"
         :placeholder="$t('profile.bioPlaceholder')"
       ></textarea>
     </div>
     <div class="flex justify-end gap-2">
-      <button type="button" class="px-3 py-1.5 rounded-lg text-sm text-mnema-muted hover:text-mnema-text" data-testid="welcome-skip" @click="emit('skip')">
+      <button type="button" class="btn btn-ghost" data-testid="welcome-skip" @click="emit('skip')">
         {{ $t('welcome.skip') }}
       </button>
-      <button type="submit" :disabled="saving" class="px-4 py-1.5 rounded-lg bg-mnema-accent text-mnema-accent-ink text-sm font-semibold hover:bg-mnema-accent-hover transition disabled:opacity-50" data-testid="welcome-profile-save">
+      <button type="submit" :disabled="saving" class="btn btn-primary" data-testid="welcome-profile-save">
         {{ $t('welcome.continue') }}
       </button>
     </div>

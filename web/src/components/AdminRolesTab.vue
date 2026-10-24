@@ -242,7 +242,7 @@ onMounted(async () => {
       <button
         type="button"
         :disabled="busy"
-        class="flex items-center gap-1.5 rounded-md bg-mnema-accent px-3.5 py-1.5 text-sm font-semibold text-mnema-accent-ink shadow-sm transition hover:bg-mnema-accent-hover disabled:opacity-50"
+        class="btn btn-primary flex items-center gap-1.5"
         @click="create"
       >
         <Plus class="h-4 w-4" />
@@ -266,11 +266,11 @@ onMounted(async () => {
             @dragover.prevent
             @drop.prevent="onDrop(role.id)"
           >
-            <GripVertical class="ml-1 h-4 w-4 flex-shrink-0 cursor-grab text-mnema-tertiary" :aria-label="$t('roles.drag', { name: role.name })" role="img" />
+            <GripVertical class="ml-1 h-4 w-4 shrink-0 cursor-grab text-mnema-tertiary" :aria-label="$t('roles.drag', { name: role.name })" role="img" />
             <button type="button" class="flex min-w-0 flex-1 items-center gap-2 py-2 text-left text-sm" :aria-pressed="selectedId === role.id" @click="select(role.id)">
-              <span class="h-3 w-3 flex-shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>
+              <span class="h-3 w-3 shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>
               <span class="truncate text-mnema-text">{{ role.name }}</span>
-              <Lock v-if="role.managed" class="h-3 w-3 flex-shrink-0 text-mnema-tertiary" role="img" v-tooltip="$t('roles.managedHint')" data-testid="role-managed-icon" />
+              <Lock v-if="role.managed" class="h-3 w-3 shrink-0 text-mnema-tertiary" role="img" v-tooltip="$t('roles.managedHint')" data-testid="role-managed-icon" />
             </button>
             <button type="button" class="p-1 text-mnema-tertiary transition hover:text-mnema-text disabled:opacity-30" :disabled="!canMove(index, -1)" :aria-label="$t('roles.moveUp', { name: role.name })" @click="move(index, -1)">
               <ChevronUp class="h-4 w-4" />
@@ -289,15 +289,15 @@ onMounted(async () => {
               :class="['flex items-center gap-1 border-t border-mnema-hairline', selectedId === role.id ? 'bg-mnema-accent-subtle' : '']"
             >
               <button type="button" class="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm" :aria-pressed="selectedId === role.id" @click="select(role.id)">
-                <span class="h-3 w-3 flex-shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>
+                <span class="h-3 w-3 shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>
                 <span class="truncate text-mnema-text">{{ role.name }}</span>
-                <Lock class="h-3 w-3 flex-shrink-0 text-mnema-tertiary" role="img" v-tooltip="$t('roles.botRoleHint')" data-testid="role-managed-icon" />
+                <Lock class="h-3 w-3 shrink-0 text-mnema-tertiary" role="img" v-tooltip="$t('roles.botRoleHint')" data-testid="role-managed-icon" />
               </button>
             </li>
           </template>
           <li v-if="everyone" class="border-t border-mnema-hairline">
             <button type="button" class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm" :class="selectedId === everyone.id ? 'bg-mnema-accent-subtle' : ''" :aria-pressed="selectedId === everyone.id" @click="select(everyone.id)">
-              <AtSign class="h-3.5 w-3.5 flex-shrink-0 text-mnema-tertiary" />
+              <AtSign class="h-3.5 w-3.5 shrink-0 text-mnema-tertiary" />
               <span class="truncate text-mnema-text">{{ $t('roles.everyone') }}</span>
             </button>
           </li>
@@ -309,18 +309,18 @@ onMounted(async () => {
       <div v-if="selected" class="min-w-0 space-y-4" :aria-label="$t('roles.selected')" role="group">
         <p v-if="isEveryone" class="text-sm text-mnema-tertiary">{{ $t('roles.everyoneHint') }}</p>
         <p v-else-if="isManaged" class="flex items-start gap-2 rounded-md border border-mnema-hairline bg-mnema-surface px-3 py-2 text-sm text-mnema-tertiary" data-testid="role-managed-note">
-          <Lock class="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          <Lock class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>{{ isBotRole ? $t('roles.botRoleNote', { name: selected.name }) : $t('roles.managedNote') }}</span>
         </p>
         <p v-if="!isEveryone && readonly" class="rounded-md border border-mnema-hairline bg-mnema-surface px-3 py-2 text-sm text-mnema-tertiary">{{ $t('roles.locked') }}</p>
 
         <template v-if="!isEveryone">
-          <label class="block space-y-1">
+          <label class="block stack-1">
             <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('common.name') }}</span>
-            <input v-model="name" maxlength="32" :disabled="readonly || isManaged" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-none transition focus:border-mnema-accent disabled:opacity-50" />
+            <input v-model="name" maxlength="32" :disabled="readonly || isManaged" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-hidden transition focus:border-mnema-accent disabled:opacity-50" />
           </label>
 
-          <div class="space-y-1">
+          <div class="stack-1">
             <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('roles.color') }}</span>
             <div class="flex flex-wrap items-center gap-2">
               <button type="button" :disabled="readonly" :aria-pressed="color === 0" :aria-label="$t('roles.colorNone')" class="h-6 w-6 rounded-full border border-mnema-border-strong text-xs text-mnema-tertiary disabled:opacity-50" :class="color === 0 ? 'ring-2 ring-mnema-accent' : ''" @click="pickColor(0)">&times;</button>
@@ -336,28 +336,28 @@ onMounted(async () => {
                 :style="{ background: roleColorCss(preset) }"
                 @click="pickColor(preset)"
               ></button>
-              <input v-model="hex" :disabled="readonly" :aria-label="$t('roles.colorCustom')" :placeholder="'#rrggbb'" maxlength="7" class="w-24 rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1 font-mono text-xs text-mnema-text outline-none focus:border-mnema-accent disabled:opacity-50" @input="typeColor" />
+              <input v-model="hex" :disabled="readonly" :aria-label="$t('roles.colorCustom')" :placeholder="'#rrggbb'" maxlength="7" class="w-24 rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1 font-mono text-xs text-mnema-text outline-hidden focus:border-mnema-accent disabled:opacity-50" @input="typeColor" />
             </div>
           </div>
 
           <label class="flex items-center gap-2 text-sm text-mnema-text">
-            <input v-model="hoist" type="checkbox" :disabled="readonly" class="accent-mnema-accent" />
+            <input v-model="hoist" type="checkbox" :disabled="readonly" />
             <span>{{ $t('roles.hoist') }}</span>
           </label>
         </template>
 
-        <label v-if="permissions.isOwner && !isManaged" class="block space-y-1">
+        <label v-if="permissions.isOwner && !isManaged" class="block stack-1">
           <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('roles.uploadLimit') }}</span>
           <span class="flex items-center gap-2">
-            <input v-model="uploadMb" type="number" inputmode="numeric" min="1" step="1" :placeholder="$t('roles.uploadInherit')" :aria-label="$t('roles.uploadLimit')" class="w-32 rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1 text-sm tabular-nums text-mnema-text outline-none focus:border-mnema-accent" />
+            <input v-model="uploadMb" type="number" inputmode="numeric" min="1" step="1" :placeholder="$t('roles.uploadInherit')" :aria-label="$t('roles.uploadLimit')" class="w-32 rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1 text-sm tabular-nums text-mnema-text outline-hidden focus:border-mnema-accent" />
             <span class="text-sm text-mnema-tertiary">MB</span>
           </span>
           <span class="block text-xs text-mnema-tertiary">{{ $t('roles.uploadHint') }}</span>
         </label>
 
-        <div class="space-y-2">
+        <div class="stack-2">
           <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('roles.permissions') }}</span>
-          <section v-for="group in PERMISSION_GROUPS" :key="group.id" class="space-y-1.5" :data-permission-group="group.id">
+          <section v-for="group in PERMISSION_GROUPS" :key="group.id" class="stack-1.5" :data-permission-group="group.id">
             <h4 class="pt-1 text-xs font-medium text-mnema-muted">{{ $t(`perm.groups.${group.id}`) }}</h4>
             <PermissionToggles v-model:allow="allow" :keys="group.keys" :locked="lockedBits" :readonly="readonly" />
           </section>
@@ -365,7 +365,7 @@ onMounted(async () => {
         </div>
 
         <div v-if="!readonly" class="flex items-center justify-between gap-3">
-          <button type="button" :disabled="!isDirty(selected) || busy" class="rounded-md bg-mnema-accent px-3.5 py-1.5 text-sm font-semibold text-mnema-accent-ink shadow-sm transition hover:bg-mnema-accent-hover disabled:opacity-40" @click="save">{{ $t('roles.save') }}</button>
+          <button type="button" :disabled="!isDirty(selected) || busy" class="btn btn-primary" @click="save">{{ $t('roles.save') }}</button>
           <button v-if="!isEveryone && !isManaged" type="button" class="flex items-center gap-1.5 text-sm text-mnema-tertiary transition hover:text-mnema-danger" @click="remove(selected)">
             <Trash2 class="h-4 w-4" />
             <span>{{ $t('roles.delete') }}</span>

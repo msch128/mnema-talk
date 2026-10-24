@@ -38,11 +38,11 @@ function handleKeyDown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="px-4 pb-6 pt-1 flex-shrink-0">
+  <div class="px-4 pb-6 pt-1 shrink-0">
     <ReplyComposerBar v-if="replyingTo" :target="replyingTo" @cancel="emit('cancel-reply')" />
     <div
       :class="[
-        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 flex items-center gap-2 shadow-sm focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
+        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 flex items-center gap-2 shadow-xs focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
         replyingTo ? 'rounded-b-lg' : 'rounded-lg'
       ]"
     >
@@ -68,7 +68,7 @@ function handleKeyDown(e: KeyboardEvent) {
         v-if="canAttach"
         @click="fileInput?.click()"
         :disabled="uploading || sending"
-        class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-full text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition disabled:opacity-50"
+        class="w-8 h-8 flex items-center justify-center shrink-0 rounded-full text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition disabled:opacity-50"
         v-tooltip="$t('thread.upload')"
       >
         <Plus class="w-5 h-5" />
@@ -76,6 +76,7 @@ function handleKeyDown(e: KeyboardEvent) {
 
       <textarea
         ref="textAreaEl"
+        data-bare
         v-model="text"
         @keydown="handleKeyDown"
         @input="assist.onInput"
@@ -84,14 +85,13 @@ function handleKeyDown(e: KeyboardEvent) {
         @keyup.right="assist.onInput"
         @blur="assist.close"
         aria-autocomplete="list"
-        :aria-expanded="assist.open.value ? 'true' : 'false'"
         :aria-controls="assist.open.value ? 'thread-mentions' : undefined"
         :aria-activedescendant="assist.open.value ? `thread-mentions-${assist.active.value}` : undefined"
         :placeholder="canSend ? $t('thread.placeholder') : $t('chat.readOnly')"
         :disabled="!canSend"
         :aria-label="canSend ? $t('thread.placeholder') : $t('chat.readOnly')"
         rows="1"
-        class="bg-transparent flex-1 min-w-0 resize-none outline-none text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
+        class="bg-transparent flex-1 min-w-0 resize-none outline-hidden text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
       ></textarea>
 
       <EmojiButton :disabled="sending || !canSend" @pick="assist.insertText" />
@@ -99,7 +99,7 @@ function handleKeyDown(e: KeyboardEvent) {
       <button
         @click="emit('send')"
         :disabled="!canSend || !text.trim() || uploading || sending"
-        class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold transition disabled:opacity-20 disabled:bg-mnema-surface disabled:text-mnema-tertiary"
+        class="btn btn-primary w-8 h-8 flex items-center justify-center shrink-0 disabled:bg-mnema-surface disabled:text-mnema-tertiary p-0"
         v-tooltip="$t('chat.send')"
       >
         <ArrowUp class="w-4 h-4" />

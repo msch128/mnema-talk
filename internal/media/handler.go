@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -35,6 +36,9 @@ type Handler struct {
 	// Perms decides who may upload to and download from which channel; nil
 	// imposes no channel limits (tests; the router always sets it).
 	Perms *perm.Service
+	// Audit records removals the server does on its own (avatars it cannot
+	// redraw); nil records nothing.
+	Audit *audit.Log
 	// Quota bounds the storage uploads may use; the zero value imposes none.
 	Quota Quota
 
@@ -83,6 +87,9 @@ func (h *Handler) MountUploads(r chi.Router) {
 	// An avatar is parsed in memory (at most 5 MB), never spilled to /tmp:
 	// its body gets a tighter cap than file uploads.
 	r.With(httpx.MaxBody(MaxAvatarBytes+1<<20)).Post("/users/me/avatar", httpx.Handle(h.uploadAvatar))
+	r.With(httpx.MaxBody(MaxBannerBytes+1<<20)).Put("/users/me/banner", httpx.Handle(h.putBanner))
+	r.Delete("/users/me/banner", httpx.Handle(h.deleteBanner))
+	r.Delete("/users/me/avatar", httpx.Handle(h.deleteAvatar))
 }
 
 // Mount registers authenticated media serving.

@@ -4,6 +4,7 @@ import { api } from '../../lib/api'
 import type { ThreadRoot } from './types'
 import type { Cx } from './state'
 import { sendMessage, uploadMedia } from './messageActions'
+import { noteThreadFollowing } from './threadFollow'
 
 function resolveThreadTarget(msg: Message | ThreadRoot | string): { id: string; initial: ThreadRoot } | null {
   if (!msg) return null
@@ -31,6 +32,7 @@ export async function openThread(cx: Cx, msg: Message | ThreadRoot | string) {
     if (!isThreadActive(cs, id, gen)) return
     cs.activeThread.value = data.root
     cs.threadReplies.value = data.replies
+    noteThreadFollowing(cx, id, data.following)
   } catch (e) {
     if (gen === cs.threadGen) console.error('Failed to load thread:', e)
   } finally {

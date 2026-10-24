@@ -26,6 +26,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/push"
 	"github.com/msch128/mnema-talk/internal/roles"
 	"github.com/msch128/mnema-talk/internal/slash"
+	"github.com/msch128/mnema-talk/internal/slashcmd"
 	"github.com/msch128/mnema-talk/internal/ssrf"
 	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/msch128/mnema-talk/internal/webhook"
@@ -119,6 +120,12 @@ func (c *components) newCore() {
 		DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog,
 		EditHistoryLimit: httpx.NewRateLimiter(chat.EditHistoryRate, time.Minute).Named("edit_history"),
 		PinLimit:         httpx.NewRateLimiter(chat.PinChangesPerMinute, time.Minute).Named("pin"),
+		FollowLimit:      httpx.NewRateLimiter(chat.ThreadFollowChangesPerMinute, time.Minute).Named("thread_follow"),
+		BlockLimit:       httpx.NewRateLimiter(chat.BlockChangesPerMinute, time.Minute).Named("block"),
+		ReportLimit:      httpx.NewRateLimiter(chat.ReportsPerHour, time.Hour).Named("report"),
+		SavedLimit:       httpx.NewRateLimiter(chat.SavedChangesPerMinute, time.Minute).Named("saved"),
+		ForwardLimit:     httpx.NewRateLimiter(chat.ForwardsPerMinute, time.Minute).Named("forward"),
+		DMLimit:          httpx.NewRateLimiter(chat.NewDMsPerMinute, time.Minute).Named("dm_start"),
 	}
 	go chat.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour)
 	c.rolesH = &roles.Handler{Perms: c.permSvc, Events: c.pub}
@@ -181,8 +188,8 @@ func (c *components) newBots() {
 	c.botH = &bot.Handler{DB: d.DB, Perms: c.permSvc, Media: c.mediaH, Events: c.pub}
 	c.botAuthn = bot.NewAuthenticator(d.DB)
 	c.botAuthn.Perms = c.permSvc
-	c.pollSvc = poll.NewService(poll.Service{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub})
-	c.cmds = bot.NewCommands(bot.Commands{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Builtins: builtinCommands(c.pollSvc)})
+	c.pollSvc = poll.NewService(poll.Service{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Audit: c.auditLog})
+	c.cmds = bot.NewCommands(bot.Commands{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Builtins: builtinCommands(c.pollSvc, slashcmd.Services{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Auth: c.authH, Chat: c.chatH, Audit: c.auditLog})})
 	gw := gateway.New(gateway.Config{Auth: c.botAuthn, Perms: c.permSvc, DB: d.DB, PublicURL: c.cfg.PublicURL})
 	c.gw = gw
 	c.botH.OnRevoke = gw.Revoke
@@ -206,6 +213,19 @@ func (c *components) newBots() {
 			prevTap(ch, eventType, payload)
 		}
 		gw.Observe(ch, eventType, payload)
+	}
+}
+
+// tapThreadFollows tells open clients which threads they follow after a reply
+// made them follow it (see chat.NewFollowSync).
+func (c *components) tapThreadFollows() {
+	prevTap := c.hub.Tap
+	follows := chat.NewFollowSync(c.ctx, c.d.DB, c.permSvc, c.pub)
+	c.hub.Tap = func(ch uuid.UUID, eventType string, payload any) {
+		if prevTap != nil {
+			prevTap(ch, eventType, payload)
+		}
+		follows(ch, eventType, payload)
 	}
 }
 
@@ -236,6 +256,7 @@ func (c *components) newPush() error {
 			}
 			svc.Observe(ch, eventType, payload)
 		}
+		c.hub.DMTap = svc.Observe // conversations reach no webhook or bot, only push to their members
 		go svc.Run(c.ctx)
 		h.Keys, h.Service = keys, svc
 	}
@@ -305,9 +326,9 @@ func (c *components) newLinkPreviews() {
 
 // builtinCommands is the server's own slash commands, in menu order. Adding a
 // command means implementing slash.Builtin and listing it here.
-func builtinCommands(polls *poll.Service) *slash.Registry {
+func builtinCommands(polls *poll.Service, svc slashcmd.Services) *slash.Registry {
 	reg := slash.NewRegistry()
-	for _, b := range []slash.Builtin{poll.Command{Service: polls}} {
+	for _, b := range append([]slash.Builtin{poll.Command{Service: polls}}, slashcmd.Commands(svc)...) {
 		if err := reg.Add(b); err != nil {
 			panic(err) // a malformed built-in definition is a programming error
 		}

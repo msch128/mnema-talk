@@ -19,7 +19,7 @@ import ContextMenu from './ContextMenu.vue'
 import { useMenuState, buildMemberItems } from '../composables/useNavMenus'
 import { useTalkStage } from '../composables/useTalkStage'
 import { usePictureInPicture } from '../composables/usePictureInPicture'
-import { useAutoHide } from '../composables/useAutoHide'
+import { useTalkControls } from '../composables/useTalkControls'
 import { useElementSize } from '../composables/useElementSize'
 import { useTalkJoin } from '../composables/useTalkJoin'
 import { useStageFullscreen } from '../composables/useStageFullscreen'
@@ -233,26 +233,19 @@ const compactBar = computed(() => {
   return w > 0 && w < COMPACT_BAR_WIDTH
 })
 
-// The floating controls (call bar, stage overlays) fade out after 3 s
-// without activity in the Talk view; never in a preview, never while a menu
-// from them is open or the pointer or keyboard focus is on them.
-const barPinned = ref(false)
-const overlayHover = ref(false)
-const qualityMenuOpen = ref(false)
-const controls = useAutoHide({
-  enabled: () => isConnectedHere.value,
-  pinned: () => barPinned.value || overlayHover.value || qualityMenuOpen.value || menu.state.open
+const { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, onActivity } = useTalkControls({
+  connected: isConnectedHere,
+  others: () => usersInVoice.value.length,
+  menuOpen: () => menu.state.open
 })
-const controlsShown = computed(() => controls.visible.value)
-function onActivity() {
-  controls.show()
-}
 </script>
 
 <template>
   <main
+    id="main-content"
+    tabindex="-1"
     ref="root"
-    class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden select-none"
+    class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden select-none focus:outline-hidden"
     @pointermove="onActivity"
     @pointerdown="onActivity"
     @focusin="onActivity"
@@ -265,6 +258,8 @@ function onActivity() {
       :connected="isConnectedHere"
       :show-chat="showChat"
       :chat-unread="chatUnread"
+      :can-join="!!shownChannelId"
+      @join="join"
       @update:show-chat="emit('update:showChat', $event)"
     />
 
@@ -274,7 +269,7 @@ function onActivity() {
       ref="area"
       data-testid="talk-area"
       :class="[
-        'flex-1 min-h-0 relative flex flex-col bg-gradient-to-b from-mnema-raised/40 to-transparent'
+        'flex-1 min-h-0 relative flex flex-col bg-linear-to-b from-mnema-raised/40 to-transparent'
       ]"
       @dblclick="onAreaDblclick"
     >
@@ -309,7 +304,7 @@ function onActivity() {
         <div
           v-if="screenCards.length"
           ref="cardsEl"
-          :class="['w-full flex flex-wrap justify-center gap-2 flex-shrink-0', hasStage ? '' : 'max-w-5xl']"
+          :class="['w-full flex flex-wrap justify-center gap-2 shrink-0', hasStage ? '' : 'max-w-5xl']"
         >
           <TalkScreenCards :cards="screenCards" @select="onScreenCard" @open-change="qualityMenuOpen = $event" />
         </div>
@@ -320,7 +315,7 @@ function onActivity() {
           v-if="hasStage && tileUsers.length"
           ref="stripRegion"
           data-testid="talk-strip-region"
-          class="w-full flex-shrink-0 flex flex-col items-center"
+          class="w-full shrink-0 flex flex-col items-center"
         >
           <TalkStrip
             :users="tileUsers"
@@ -384,6 +379,12 @@ function onActivity() {
           @update:pinned="barPinned = $event"
         />
       </div>
+
+      <p
+        v-if="showTapHint"
+        data-testid="talk-tap-hint"
+        class="pointer-events-none absolute inset-x-0 bottom-2 z-10 text-center text-xs text-mnema-tertiary"
+      >{{ $t('talk.tapForControls') }}</p>
     </div>
 
     <ContextMenu

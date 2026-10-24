@@ -18,7 +18,7 @@ const toasts = useToastStore()
 const chat = useChatStore()
 
 // Event groups the server understands as a prefix (action=role matches role.*).
-const GROUPS = ['role', 'user', 'channel', 'category', 'layout', 'invite', 'webhook', 'outgoing_webhook', 'media', 'settings', 'moderation', 'message', 'voice', 'auth', 'system', 'emoji', 'bot'] as const
+const GROUPS = ['role', 'user', 'channel', 'category', 'layout', 'invite', 'webhook', 'outgoing_webhook', 'media', 'settings', 'moderation', 'message', 'voice', 'auth', 'system', 'emoji', 'bot', 'poll'] as const
 
 const entries = ref<AuditItem[]>([])
 const next = ref<number | null>(null)
@@ -100,7 +100,7 @@ onMounted(() => load(false))
       <select
         v-model="group"
         :aria-label="$t('audit.filterEvent')"
-        class="bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-1.5 text-sm text-mnema-text outline-none min-w-0 flex-1 basis-40 focus:border-mnema-accent transition"
+        class="bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-1.5 text-sm text-mnema-text outline-hidden min-w-0 flex-1 basis-40 focus:border-mnema-accent transition"
       >
         <option value="">{{ $t('audit.allEvents') }}</option>
         <option v-for="g in GROUPS" :key="g" :value="g">{{ $t(`audit.groups.${g}`) }}</option>
@@ -108,7 +108,7 @@ onMounted(() => load(false))
       <select
         v-model="actor"
         :aria-label="$t('audit.filterActor')"
-        class="bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-1.5 text-sm text-mnema-text outline-none min-w-0 flex-1 basis-40 focus:border-mnema-accent transition"
+        class="bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-1.5 text-sm text-mnema-text outline-hidden min-w-0 flex-1 basis-40 focus:border-mnema-accent transition"
       >
         <option value="">{{ $t('audit.allActors') }}</option>
         <option v-for="a in actors" :key="a.id" :value="a.id">{{ a.name }}</option>
@@ -117,17 +117,17 @@ onMounted(() => load(false))
         v-model="from"
         type="date"
         :aria-label="$t('audit.from')"
-        class="bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-1.5 text-sm text-mnema-text outline-none min-w-0 flex-1 basis-36 focus:border-mnema-accent transition"
+        class="bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-1.5 text-sm text-mnema-text outline-hidden min-w-0 flex-1 basis-36 focus:border-mnema-accent transition"
       />
       <input
         v-model="to"
         type="date"
         :aria-label="$t('audit.to')"
-        class="bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-1.5 text-sm text-mnema-text outline-none min-w-0 flex-1 basis-36 focus:border-mnema-accent transition"
+        class="bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-1.5 text-sm text-mnema-text outline-hidden min-w-0 flex-1 basis-36 focus:border-mnema-accent transition"
       />
       <button
         type="submit"
-        class="bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold px-3.5 py-1.5 rounded-md text-sm transition shadow-sm"
+        class="btn btn-primary"
       >
         {{ $t('audit.apply') }}
       </button>
@@ -142,8 +142,8 @@ onMounted(() => load(false))
           :aria-expanded="open.has(e.id) ? 'true' : 'false'"
           @click="toggle(e.id)"
         >
-          <ChevronDown v-if="open.has(e.id)" class="w-4 h-4 text-mnema-tertiary flex-shrink-0" />
-          <ChevronRight v-else class="w-4 h-4 text-mnema-tertiary flex-shrink-0" />
+          <ChevronDown v-if="open.has(e.id)" class="w-4 h-4 text-mnema-tertiary shrink-0" />
+          <ChevronRight v-else class="w-4 h-4 text-mnema-tertiary shrink-0" />
           <span class="text-mnema-tertiary whitespace-nowrap font-mono text-xs">{{ when(e.created_at) }}</span>
           <span class="text-mnema-text font-medium truncate">{{ e.actor_name || $t('audit.system') }}</span>
           <BotBadge v-if="e.actor_id && botIds.has(e.actor_id)" />
@@ -155,8 +155,8 @@ onMounted(() => load(false))
           <div class="text-xs text-mnema-tertiary font-mono break-all">
             {{ e.action }} · {{ e.target_type }} {{ e.target_id }} · {{ $t('audit.request') }} {{ e.request_id }}
           </div>
-          <p v-if="summary(e.details)" class="text-sm text-mnema-text break-words" :data-testid="`audit-summary-${e.id}`">{{ summary(e.details) }}</p>
-          <pre v-if="Object.keys(e.details).length" class="bg-mnema-canvas border border-mnema-border rounded-md p-3 text-xs text-mnema-text overflow-x-auto whitespace-pre-wrap break-words">{{ pretty(e.details) }}</pre>
+          <p v-if="summary(e.details)" class="text-sm text-mnema-text wrap-break-word" :data-testid="`audit-summary-${e.id}`">{{ summary(e.details) }}</p>
+          <pre v-if="Object.keys(e.details).length" class="bg-mnema-canvas border border-mnema-border rounded-md p-3 text-xs text-mnema-text overflow-x-auto whitespace-pre-wrap wrap-break-word">{{ pretty(e.details) }}</pre>
         </div>
       </div>
     </div>
@@ -165,7 +165,7 @@ onMounted(() => load(false))
       <button
         type="button"
         :disabled="loading"
-        class="px-3.5 py-1.5 rounded-md text-sm border border-mnema-border text-mnema-muted hover:text-mnema-text transition disabled:opacity-50"
+        class="btn btn-secondary"
         @click="load(true)"
       >
         {{ $t('audit.loadMore') }}

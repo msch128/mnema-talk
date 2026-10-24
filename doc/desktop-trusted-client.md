@@ -1,9 +1,9 @@
 # Trusted desktop client: a signed web app instead of server JavaScript
 
-Status: implemented (roadmap item 0.9.1). The release tooling is in this
-repository and needs no server change; the Tauri host that verifies and loads
-the bundle is in
-[mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop).
+Status: implemented and shipped. The release tooling is in this repository and
+needs no server change. The hosts that verify and load the bundle are in
+[mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop): a Tauri
+host for Windows and macOS and an Electron client for Linux.
 
 ## Why
 
@@ -32,15 +32,15 @@ instance supplies data, never code. Browser users are unchanged.
 | How does the local app reach the server? | A **native proxy** in the Tauri host behind a custom protocol, so the WebView still sees one origin and the web app's code (relative URLs, `fetch`, cookies in the browser model) works unchanged. The session cookie lives in the host, never in the page. WebSockets go through three IPC commands. |
 | Server changes | **None to the request path or the browser security model.** The server already advertises `version` and `web_client_api` in `/api/health`. This repository adds the signing tooling, a contract file and tests that keep the two numbers in step. |
 
-## How the desktop client loads the app today
+## How the first desktop client loaded the app
 
-`desktop_open_instance` in the desktop host validates the address (HTTPS
-origin only), reads `GET /api/health` (`status: ok`, `web_client_api: 1`),
-and opens a window on the instance origin. The page is then an ordinary
+Before the signed bundle, `desktop_open_instance` in the desktop host validated the address (HTTPS
+origin only), read `GET /api/health` (`status: ok`, `web_client_api: 1`),
+and opened a window on the instance origin. The page was an ordinary
 browser page: the `__Host-` session cookie, the Origin check
 (`httpx.CSRF`, allow-list from `PUBLIC_URL` / `CORS_ALLOWED_ORIGINS`), the
 SPA CSP (`script-src 'self'`) and the WebSocket at `/api/ws` all behave as in
-a browser, which is why no server change was ever needed. The cost is the
+a browser, which is why no server change was ever needed. The cost was the
 trust model: `script-src 'self'` means *the server's* scripts.
 
 ## The bundle
@@ -413,7 +413,8 @@ host:
   paths without a file) `index.html`, exactly as `web/web.go` does. Responses
   carry the SPA CSP of `internal/httpx` (`script-src 'self'
   'wasm-unsafe-eval'`, `connect-src 'self' ipc: ...`) and the same hardening
-  headers.
+  headers (the desktop shells apply the strict web CSP `style-src 'self'; style-src-attr 'none'`
+  only for web bundles >= 1.1.0; older bundles keep the old policy).
 * **`/api/...`**: forwarded to the instance origin with a fixed `reqwest`
   client (system TLS, no redirects, no proxy, timeouts, and bodies buffered in memory up to 128 MiB: the webview protocol cannot stream, so a larger answer is refused up front from its declared length; audio and video arrive in `Range` pieces).
   Only `/api/` paths, no dot segments, are forwarded. The host sets `Origin`
@@ -440,7 +441,11 @@ host:
   `desktop_ws_open`, `desktop_ws_send`, `desktop_ws_close`, plus a Tauri
   channel for events. The host opens `wss://instance/api/ws` with the jar's
   cookie and the instance `Origin`; frames are text, bounded in size and
-  count. The chat store's existing reconnect logic is untouched.
+  count. The chat store's existing reconnect logic is untouched. The path is
+  `/api/ws`, with the one query the server understands, `?dm=1` (conversation
+  events, 1.1), when the host announces the capability `ws_query` in the
+  instance window's identity; a host without it only gets the plain path, so a
+  1.1 bundle never asks an older client for a socket it would refuse.
 * **Responses are data, not code.** Everything from the server is filtered
   before the page sees it: only an allow-list of headers is passed on,
   `Content-Type` of anything that could render as a document in the app
@@ -485,6 +490,18 @@ host:
   brings the window forward. Windows shows a dot as the taskbar overlay, macOS
   and Linux the count on the dock or launcher icon. This needs no
   `web_client_api` bump: the web app detects the capability.
+* **Unread report** (host capability `unread`, 1.1; the multi-instance
+  client). One window of the client now shows one server out of several, and
+  the client lists them on a rail with an unread dot and a mention count each.
+  A host that announces `unread` in the instance window's `capabilities` gets
+  `desktop_report_unread` (`unread`: channels with unread messages that may
+  notify, `mentions`: unread mentions; both whole numbers, 0 to 999) instead of
+  `desktop_set_badge`, and sums the counts over its instances for the taskbar
+  or dock badge. `Platform.reportUnread` / `supportsUnreadReport`
+  (`web/src/lib/platform.ts`) do the feature detection, so a client without the
+  capability keeps getting `desktop_set_badge`, and a browser gets neither. No
+  `web_client_api` bump. Allowed only in the instance window, like the other
+  notification commands.
 
 ### Why this keeps the browser model intact
 
@@ -493,7 +510,8 @@ host:
 * Cookies: unchanged flags; the host is a stricter cookie holder than a
   browser (page cannot read it).
 * CSP: unchanged for browsers; the desktop app gets an equivalent policy
-  from the host.
+  from the host (the desktop shells apply the strict web CSP `style-src 'self'; style-src-attr 'none'`
+  only for web bundles >= 1.1.0; older bundles keep the old policy).
 * Rate limits and lockouts: unchanged; requests come from the user's own
   address and are counted as theirs.
 * No allow-list entry such as `tauri://localhost` is added to
@@ -510,14 +528,70 @@ initialization script, frozen): `version`, `source` (`builtin` or `cache`),
 menu and to enable the gaming bridge on the local origin. In a browser none
 of this exists and nothing changes.
 
-### Isolation between instances
+### Several servers at once
 
-All instances share the local origin, so browser storage is shared. The MLS
-state database is already named from `(community id, account id, device id)`
-and everything else the app stores is per-account UI preference. A
-per-instance origin is not possible on Windows with Tauri's custom-protocol
-mapping (it filters `https://<scheme>.localhost`, no sub-domains). The
-session cookie and the jar are per instance.
+Since the 1.1 client one window shows several servers: a **rail** on the left
+(a page of the host, independent of every bundle and server) lists them with an
+unread dot and a mention count each, and the page of one server sits next to
+it. One account per server, no federation; at most nine, reached with Ctrl+1 to
+Ctrl+9 (Cmd on macOS), reordered by dragging or Alt+arrow, removed from the
+tile's menu. Servers stay fully separate:
+
+* **A page is tied to its server by its webview label** (`i-<id>`, the id is the
+  first 8 bytes of SHA-256 over the instance address, hex). The protocol
+  handler and every host command look the server up from the label of the
+  calling webview and never from an argument, so a page cannot name another
+  server's session, socket, counters or toasts. The capabilities are by
+  webview: pages (`i-*`) get the socket, notification, unread and gaming-bridge
+  commands, only the rail gets `rail_*` (switch, add, move, remove, reconnect)
+  and only the page for adding a server gets `desktop_open_instance`.
+* **Session**: one cookie jar per server, stored in the keychain under the id
+  of that server (one entry per instance, as before). One per origin: the
+  `/api/health` document carries no community id, so none is part of the key.
+* **Browser storage** is separate per server, because the pages share the
+  local origin and would otherwise share IndexedDB (the MLS state) and
+  `localStorage`: a WebView2 user-data folder per server on Windows, a
+  `WKWebsiteDataStore` per server on macOS 14 and newer, a session partition
+  (`persist:inst-<id>`) per server in the Electron client. Where a platform
+  cannot separate the storage (macOS before 14) the client runs one server
+  rather than share it. The host's own pages use a storage of their own, too.
+* **Sockets**: `desktop_ws_*` act on the calling server's relay only, with its
+  own budget. The relay opens `/api/ws` and, when the page asks, `/api/ws?dm=1`
+  (conversation events); the page announces nothing else the host would accept.
+* **Bundles**: the verified bundle is chosen per server from its own
+  `/api/health`, so a 1.0.x and a 1.1 server can run side by side, each with
+  the web app that fits it and the style policy of that bundle version. The
+  high-water mark stays one per `web_client_api`. A server that is too old or
+  too new keeps its place and shows the refusal in its own tab only; "Reconnect"
+  in its menu asks again.
+* **Counts and the badge**: pages report `unread` and `mentions`; the badge of
+  the taskbar or dock is the sum of the mentions. A toast names its server once
+  there are several, and using it brings that server forward and reaches only
+  its page.
+* **Gaming** (Windows overlay, shortcuts, sidepeek) belongs to one server at a
+  time: the one that owns the Talk the person is in. Another server's state is
+  ignored while that Talk is live, and commands go back to that server's page
+  with its own token.
+* **Background servers** are hidden, not stopped: their relay socket, counters
+  and calls keep running, the engine only stops painting them.
+* **Removing a server** wipes its keychain entry (and the fallback file), its
+  browser storage (the engine's storage is cleared, then the profile folder or
+  data store is deleted, with a sweep at the next start for what a cut-short
+  removal leaves), its sockets, toasts and gaming token, and its entry in the
+  list. The list (`instances.json`) holds addresses only.
+* **Updating from the single-server client**: that client kept every server in
+  one shared browser storage and recorded none of them (only trust state,
+  bundles and per-origin sessions), so the storage belongs to no one server and
+  its owner cannot be proven. It is **never handed to a server**: it is wiped
+  once, on the first start of the new version, and every server starts with a
+  storage of its own. Stored sessions stay per exact origin as a sign-in
+  convenience. The cost is one new sign-in and a new device key for the
+  end-to-end media; messages live on the server and are unaffected.
+
+A server that ended the session (the `kicked` event of `/kick`, a password
+change, a sign-out elsewhere) leaves a stale cookie in the jar, as a browser
+does: requests are answered 401 until the person signs in again, which replaces
+the cookie. Nothing reconnects by itself with a refused session.
 
 ## Updating the client itself
 
@@ -525,7 +599,8 @@ The signed web bundle covers the web app. The program around it (the shell) is
 replaced by its own, separate mechanism, so that users never have to download
 an installer by hand after the first time.
 
-* **Feed and key.** The installer is a per-user NSIS package built by the
+* **Feed and key.** On Windows the installer is a per-user NSIS package; macOS
+  has a signed `.app.tar.gz` and Linux signed AppImages. All are built by the
   [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop) release
   workflow on a `vX.Y.Z` tag. Installed clients read
   `https://github.com/msch128/mnema-talk-desktop/releases/latest/download/latest.json`
@@ -533,7 +608,9 @@ an installer by hand after the first time.
   feed is not trusted: it only names an installer and a minisign signature.
   The updater key (Ed25519, minisign format; the official Tauri updater) is a
   **different key from the bundle key** and its public half is pinned in
-  `tauri.conf.json` of the client.
+  `tauri.conf.json` of the client. The Electron client for Linux applies the same
+  rules in TypeScript; a `.deb` installation is owned by the package manager, so
+  the client only announces a newer version.
 * **What is verified.** The installer runs only if its signature verifies
   against the pinned key, the version recorded inside the signature equals the
   version the feed announces (`requireSignedVersion`: an old signed installer
@@ -544,7 +621,7 @@ an installer by hand after the first time.
   fetched feed before it runs; an installer that changed on disk, or that a newer
   release replaced, is deleted.
 * **Install.** Per user (`currentUser`), passive mode: no administrator prompt,
-  the app restarts afterwards. This does not depend on Authenticode.
+  the app restarts afterwards. This does not depend on a platform signature.
 * **User control.** Update now, On next start, Skip this version (a newer
   version is offered again), retry after a failure.
   `MNEMA_DESKTOP_NO_UPDATE_CHECK=1` turns the check off.
@@ -565,7 +642,7 @@ an installer by hand after the first time.
   and a way around the protected environment, can ship malicious code to every
   installed client. A network attacker can withhold updates (freeze) but not
   forge them. The first installer download still relies on how the user got it
-  (see the Authenticode gap below). macOS and Linux have no builds yet.
+  (see the installer gap below).
 
 ## Threat model for desktop users
 
@@ -578,12 +655,14 @@ an installer by hand after the first time.
 
 Browser users remain exactly as in SECURITY.md: the server serves the code.
 
-### Known gap: the `.exe` has no Authenticode signature
+### Known gap: the installers have no platform signature
 
-The signed bundle protects the web app, not the executable around it. The
-Windows build is not code-signed, because that needs a certificate that has to
-be bought for the project's publisher. Consequences: SmartScreen warns on first
-run, and nothing ties the executable to the publisher on the user's machine.
+The signed bundle protects the web app, not the program around it. The Windows
+installer has no Authenticode signature and the macOS app is ad-hoc signed, not
+notarized, because the project does not buy certificates. Consequences:
+SmartScreen and Gatekeeper warn on first run, and nothing ties the program to
+the publisher on the user's machine. Later updates are verified by the pinned
+minisign key instead.
 The release carries a `SHA256SUMS` file next to the ZIP, which is only
 protection against a corrupted download: it is published by the same account in
 the same release, so whoever can replace the ZIP can replace the checksums.

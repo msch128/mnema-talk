@@ -126,6 +126,190 @@ until the new release has passed your application checks.
 
 ## Version notes
 
+### 1.0.x → 1.1.0
+
+Update with the procedure above and take the backup first. 1.1.0 only adds.
+A 1.0.x web app keeps working against a 1.1 server, and a 1.1 web app hides
+what a 1.0.x server lacks (it reads the `features` list of `GET /api/health`).
+Nothing in `.env` has to change.
+
+#### Database
+
+Eight migrations run at the first start. All are additive and forward-only. A
+rollback to a 1.0.x image needs the restore of the pre-update backup, because
+the 1.0.x image refuses a schema that a newer version migrated (see
+"Rollback" above).
+
+| Migration | Adds |
+|---|---|
+| 0049 | `user_blocks` and `message_reports`. |
+| 0050 | Direct messages: `dm_members`, the `dm` channel type, `users.dm_policy`, `instance_settings.direct_messages_enabled`, `messages.in_dm`. The permission *Send direct messages* is added to @everyone. |
+| 0051 | `saved_messages`. |
+| 0052 | `messages.forward_of` and `messages.forwarded`. |
+| 0054 | `thread_follows`, filled from the existing threads (root authors and repliers) so threads keep notifying the people who took part. |
+| 0056 | `bot_tokens.minter_inferred`, a flag for tokens bound to their likeliest issuer (see "Bots and webhooks"). |
+| 0057 | The nullable column `users.banner_s3_key` (the profile banner). It also extends the tombstone trigger of 0043 so a deleted account keeps no banner. |
+| 0058 | `users.avatar_reencoded_at`, the marker of the one-time avatar redraw (see "Profile pictures"). |
+
+The numbers 0053 and 0055 are unused.
+
+#### New permissions
+
+| Permission | Bit | Default |
+|---|---|---|
+| *Manage reports* | `1 << 21` | Off for @everyone and every existing role. |
+| *Send direct messages* | `1 << 22` | On for @everyone (set by migration 0050). An administrator can take it away. |
+| *Kick members* | `1 << 23` | Off for @everyone and every existing role. |
+
+The Owner and Administrators have all three implicitly, so nobody else gains
+access to reports or kicking until a role is given the permission.
+
+#### Configuration
+
+- **New:** `INITIAL_LANGUAGE` (`de` default, or `en`) names the default
+  categories and channels of a brand-new installation. An upgrade never
+  renames anything.
+- **Changed defaults:** `LEGAL_OPERATOR_COUNTRY` and `LEGAL_PROJECT_NOTICE` are
+  now empty by default. The legal page then shows a translated default (the
+  country "Germany" and "Private, non-commercial project") instead of the former
+  fixed German text. A value you set in `.env` is unchanged. If you relied on
+  the old defaults and use the English interface, set the two variables.
+- **Self-update (profile `autoupdate`):** fetch the compose file of the 1.1
+  tag and run `docker compose --profile autoupdate up -d` after the update. The
+  `updater` service is now this project's verifying sidecar (started from the
+  app image). A second service, `recreator` (the Watchtower that used to be the
+  updater), only restarts the app from the image the updater verified. "Update
+  now" refuses an image whose cosign signature or build provenance does not
+  verify. It needs outbound HTTPS from the updater to the registry and to
+  Sigstore. The new networks `mnema-recreator` and `mnema-updater-egress` are
+  created by compose; a custom compose file needs the same two services and
+  networks. Details: [operations.md](operations.md#verifying-a-release-image),
+  [SECURITY.md](../SECURITY.md#self-update-sidecar).
+
+#### What members and moderators get
+
+- **Direct messages.** Conversations of two to ten members
+  ([architecture](architecture.md#direct-messages),
+  [SECURITY](../SECURITY.md#direct-messages-privacy-model)). The Owner can
+  switch them off for the community (`direct_messages_enabled`, under **Welcome
+  & rules**): existing conversations stay readable and nothing new can be
+  written. Members choose in their privacy setting (`dm_policy`) who may start
+  conversations with them. Channels and messages are numbered as before;
+  private messages are numbered apart.
+- **Blocking and reports.** Members block each other and report a message to
+  the moderators ([moderation](moderation.md#blocking-and-reports)). In any
+  direct message conversation (group too), unread counts, mention counts and the
+  last-activity time leave out messages by members the reader blocked, and push
+  recipients skip blockers. The admin console gets a **Reports** tab for
+  holders of *Manage reports*.
+- **Profile banner** (feature `profile.banner`). A picture across the top of a
+  member's profile, set under **Change banner** next to **Change avatar** and
+  removed with **Remove banner**. The server never stores the upload: it crops
+  the centre 3:1, shrinks it to at most 1500x500 and writes a new file, so EXIF
+  and other metadata are gone. PNG, JPEG, GIF or WebP up to 5 MB and at least
+  300x100 pixels; an animated GIF stays animated within the same pixel budget as
+  animated emoji, an animated WebP is rejected. The file is stored under
+  `banners/` (the daily orphan check covers it), is deleted when replaced or
+  removed, goes into the data export as `banner.*` and is removed when the
+  account is erased. Without the feature (a 1.0.x server) the 1.1 web app shows
+  no banner controls.
+- **Profile pictures** (privacy fix). Until 1.0 an avatar was stored exactly as
+  uploaded, so the EXIF block of a phone photo (GPS position, camera model) was
+  readable by every member. From 1.1 an avatar or banner is decoded, cropped
+  (square, or 3:1 for a banner), shrunk (at most 512x512, or 1500x500, never
+  enlarged) and written again, so EXIF, XMP, trailing bytes and polyglot payloads
+  cannot survive. Limits and types are unchanged (5 MB; PNG, JPEG, GIF, WebP).
+  Animations stay within the pixel budget animated emoji have; a one-frame GIF
+  becomes a PNG and an animated WebP is rejected. Bot and webhook avatars follow
+  the same rules. Chat attachments are stored byte for byte, so a photo sent as
+  a file keeps its metadata. A **Remove avatar** button sits next to **Change
+  avatar** (`DELETE /api/users/me/avatar`, feature `profile.avatar_remove`).
+- **Avatars stored before 1.1 are redrawn** once by a background job (migration
+  0058). It starts 30 seconds after the server, processes the accounts without
+  the marker, writes the new file, points the account at it and only then deletes
+  the old object (a short extra copy per avatar exists meanwhile). It repeats
+  hourly until nothing is left, so a storage outage at start only delays it, and
+  it never touches an avatar twice. Old files were accepted without limits, so
+  the job is more lenient than an upload: a canvas of up to 30,000 pixels an edge
+  and 64 million in total, and for a long or large animation only its first
+  frame. An old avatar that cannot be decoded even so is **removed**: the file is
+  deleted, the account has no avatar, and an audit entry `media.avatar_removed`
+  with the reason is written (Owner and Administrators only). Keeping the original
+  would keep its metadata public. The member can set a new avatar.
+- **Saved messages.** A private list of up to 1,000 messages per member with
+  an optional note of up to 200 characters. A row is a reference, never a copy,
+  and access is checked on every read: a message the member can no longer see
+  comes back as unavailable.
+- **Forwarding and "Pinned by".** A message can be forwarded into a channel or
+  a direct message ([architecture](architecture.md#forwarding-and-saved-messages)).
+  Older web apps show a forwarded message as just its comment; a forwarded message
+  with an empty comment is pushed as "Forwarded message". The pinned list
+  shows who pinned a message and when.
+- **Slash commands.** `/me`, `/shrug`, `/tableflip`, `/unflip`, `/spoiler`,
+  `/nick`, `/thread`, `/msg`, `/timeout`, `/ban` and `/kick` join `/poll` in the
+  menu ([bots](bots.md#built-in-commands-and-polls)). `/kick` signs the member
+  out on every device and drops them from their Talk; they can sign in again.
+- **Threads and search.** A thread reply notifies only the thread's followers:
+  the root's author, repliers, people mentioned in a reply and anyone who
+  followed it by hand. Search gains the filters `has` (file, image, video, link,
+  poll, edit), `is=pinned`, `after` and `before_date` (see `api/openapi.json`).
+- **A Talk's chat without joining.** A chat button on each Talk row opens the
+  Talk's chat with a *Join* button in its header. The chat follows the channel
+  permissions only (*View channels* to read, *Send messages* to write,
+  [roles](roles-and-permissions.md)). No server change.
+- **Web app.** A skip link and a fixed Tab order, the connection banner also
+  on the browser's offline event, Talk controls that stay visible when alone in
+  the call on a phone, and in-page notifications that follow the "show message
+  text" setting. The style is built on Tailwind CSS 4; nothing to configure.
+- **Audit log.** New entries `message.edit_history_view` and `poll.end`; the
+  `message.delete` entry of an edited message carries its earlier versions.
+  Audit retention applies to them as to any entry.
+
+#### API, events and export
+
+All changes are additive; `web_client_api` is unchanged.
+
+- `GET /api/health` has a `features` list: `blocks`, `dm`, `reports`, `saved`,
+  `forward`, `search.filters.v2`, `threads.follow`, `slash.builtins`,
+  `profile.banner`, `profile.avatar_remove`.
+- New routes: `/api/me/saved`, `/api/messages/{messageId}/forward`,
+  `/api/threads/{id}/follow`, `/api/threads/following`, `PUT` / `DELETE
+  /api/users/me/banner` (multipart field `banner`), `DELETE /api/users/me/avatar`, plus the routes for
+  blocks, reports and direct messages (see `api/openapi.json`).
+- `banner_url` is added to `GET /api/users/{userID}` and `GET /api/auth/me` only,
+  never to message, member or event payloads.
+- Messages carry a `forward` marker (`{forwarded: true}`, no ids and no quoted
+  text, for bots and webhooks too). Messages and the pin event carry
+  `pinned_at` and `pinned_by` while pinned.
+- New events: `dm_created`, `dm_member_added`, `dm_member_removed`,
+  `block_updated` (only to the blocker's own sessions), `saved_updated` (only to
+  the member's own sessions), `thread_follow_updated` and `kicked`.
+- The web app asks for conversation events by opening the socket as
+  `/api/ws?dm=1`. A desktop client from before 1.1 forwards the socket without
+  that query, so conversations there do not update live until the client is
+  updated (the list and sending work).
+- The account export gains `blocks.json`, `reports.json`, `saved.json` (ids,
+  notes and times, not the saved text), `thread_follows.json` and `banner.*`. Erasing an
+  account removes the saved list.
+
+#### Security
+
+- **Stricter style policy.** The web app's Content-Security-Policy no longer
+  allows inline styles: `style-src 'unsafe-inline'` became `style-src 'self'`
+  plus `style-src-attr 'none'` (see [SECURITY.md](../SECURITY.md#security-model-summary)
+  under "Security headers"). Nothing to configure. A browser tab that was
+  loaded before the update may show the emoji picker unstyled until it is
+  reloaded; installed apps update on their next start. The desktop shells apply
+  the strict web CSP (`style-src 'self'; style-src-attr 'none'`) only for web
+  bundles >= 1.1.0; older bundles keep the old policy. The bundle's
+  `security_floor` is not raised.
+- **Bots and webhooks.** Bot tokens issued before 1.0 are bound to their
+  likeliest issuer the first time they are used; nothing is revoked and no token
+  needs regenerating ([bots.md](bots.md#tokens)). The admin console marks tokens
+  that were bound by assumption.
+- **Media frame format.** No change. Refusing frame version 2 was re-evaluated
+  and deferred to 2.0 (SECURITY.md).
+
 ### 1.0.0 → 1.0.1
 
 A patch release: fixes and polish, no new features, and nothing in it changes

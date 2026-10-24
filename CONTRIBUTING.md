@@ -10,7 +10,7 @@ and AI agents alike; this page is the short version.
 
 - Bugs and ideas: open an issue first for anything larger than a small fix, so
   we can agree on scope. Mnema Talk is deliberately not a Discord clone: one
-  community, no direct messages, no ringing.
+  community, private conversations only between members, no ringing.
 - Security problems go through the private route in [SECURITY.md](SECURITY.md),
   never into a public issue or pull request.
 - Use the words in [doc/glossary.md](doc/glossary.md) (community, member, Talk,
@@ -46,7 +46,12 @@ Run `make check` before you push: it is what CI runs.
 - **Public API** (REST, WebSocket events, bot and webhook payloads, environment
   variables, metric names) changes incompatibly only in a major release; see
   [doc/api-stability.md](doc/api-stability.md).
-- New UI strings need English and German.
+- New UI strings need English and German. Everything else is English only:
+  code, comments, log and error messages, tests, fixtures, docs and scripts.
+  German belongs in the locale resources and in tests that assert German
+  output. `make english-check` (part of `make check`) fails on German anywhere
+  else; a legitimate exception goes in `scripts/english-only-allowlist.txt`
+  with a reason.
 
 ## Commits and pull requests
 

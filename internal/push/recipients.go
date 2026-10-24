@@ -15,11 +15,15 @@ import (
 // candidate is an account with at least one subscription and what decides
 // whether this message reaches it.
 type candidate struct {
-	userID       uuid.UUID
-	locale       string
-	preview      bool
-	presence     string
-	channelName  string
+	userID      uuid.UUID
+	locale      string
+	preview     bool
+	presence    string
+	channelName string
+	// dm is set when the channel is a direct message conversation: every
+	// message in it is meant for the member (not just a mention), and a
+	// mute still silences it.
+	dm           bool
 	channelLevel chat.NotifySetting
 	categoryLvl  chat.NotifySetting
 	// now is the database's clock, the one the stored mute ends use.
@@ -28,16 +32,17 @@ type candidate struct {
 
 // loadCandidates reads, for one channel, every account with a subscription
 // (except the author) together with its notification settings, in one query.
-// A non-nil only limits the result to that account.
+// A member who blocked the author is never a candidate. A non-nil only limits the result to that account.
 func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.UUID, only *uuid.UUID) ([]candidate, error) {
 	rows, err := q.Query(ctx, `
-		SELECT u.id, u.locale, u.push_preview, u.presence, c.name,
+		SELECT u.id, u.locale, u.push_preview, u.presence, c.name, c.type = 'dm',
 		       cr.notify_level, cr.muted_until, cn.notify_level, cn.muted_until, NOW()
 		FROM users u
 		JOIN channels c ON c.id = $1
 		LEFT JOIN channel_reads cr ON cr.user_id = u.id AND cr.channel_id = c.id
 		LEFT JOIN category_notify cn ON cn.user_id = u.id AND cn.category_id = c.category_id
 		WHERE u.id <> $2 AND ($3::uuid IS NULL OR u.id = $3) AND u.disabled_at IS NULL
+		  AND NOT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = u.id AND ub.blocked_id = $2)
 		  AND EXISTS (SELECT 1 FROM push_subscriptions s WHERE s.user_id = u.id AND `+validSession+`)`, channelID, authorID, only)
 	if err != nil {
 		return nil, fmt.Errorf("load push candidates: %w", err)
@@ -47,7 +52,7 @@ func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.
 	for rows.Next() {
 		var c candidate
 		var chLevel, catLevel *string
-		if err := rows.Scan(&c.userID, &c.locale, &c.preview, &c.presence, &c.channelName,
+		if err := rows.Scan(&c.userID, &c.locale, &c.preview, &c.presence, &c.channelName, &c.dm,
 			&chLevel, &c.channelLevel.MutedUntil, &catLevel, &c.categoryLvl.MutedUntil, &c.now); err != nil {
 			return nil, fmt.Errorf("load push candidates: %w", err)
 		}
@@ -62,6 +67,12 @@ func levelOf(stored *string) chat.NotifyLevel {
 		return chat.NotifyInherit
 	}
 	return chat.NotifyLevel(*stored)
+}
+
+// mention reports whether msg counts as addressed to the member for the
+// notification level: a mention or reply, or any message of a conversation.
+func (c candidate) mention(msg chat.Message) bool {
+	return c.dm || mentions(msg, c.userID)
 }
 
 // quiet reports a presence that silences every notification, like the page does.
@@ -94,6 +105,21 @@ func (c candidate) wants(mention, addressed bool) bool {
 // the subscription, so a member who lost access stops being told at once.
 func canView(snap *perm.Snapshot, userID, channelID uuid.UUID) bool {
 	return snap.Channel(perm.Subject{ID: userID}, channelID).Has(perm.ViewChannel)
+}
+
+// threadAudience returns the followers of the thread a message replies to. A
+// nil map with ok means the message is not a thread reply and has no such
+// limit; ok is false when the followers cannot be read.
+func threadAudience(ctx context.Context, q db.Querier, thread *uuid.UUID) (followers map[uuid.UUID]bool, ok bool) {
+	if thread == nil {
+		return nil, true
+	}
+	followers, err := chat.ThreadFollowers(ctx, q, *thread)
+	if err != nil {
+		slog.Warn("push: load thread followers", "err", err)
+		return nil, false
+	}
+	return followers, true
 }
 
 // namedMentions returns the members msg is addressed to by name or through a

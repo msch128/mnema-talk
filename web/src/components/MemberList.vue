@@ -21,17 +21,17 @@ function openMemberMenu(e: MouseEvent | KeyboardEvent, member: Member) {
   <!-- Member column; width and visibility are controlled by App.vue -->
   <aside class="w-full bg-mnema-raised border-l border-mnema-hairline flex flex-col h-full select-none">
     <!-- 48px header, aligned with the channel header and sidebar header -->
-    <div class="h-12 px-4 border-b border-mnema-hairline flex items-center justify-between gap-2 flex-shrink-0">
+    <div class="h-12 px-4 border-b border-mnema-hairline flex items-center justify-between gap-2 shrink-0">
       <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary truncate">
         {{ $t('members.title') }}
       </span>
-      <span class="ml-auto text-xs text-mnema-tertiary tabular-nums flex-shrink-0">
+      <span class="ml-auto text-xs text-mnema-tertiary tabular-nums shrink-0">
         {{ chatStore.members.length }}
       </span>
       <button
         type="button"
         data-testid="members-close"
-        class="hidden max-md:flex h-11 w-11 -mr-3 flex-shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text"
+        class="hidden max-md:flex h-11 w-11 -mr-3 shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text"
         :aria-label="$t('common.close')"
         @click="chatStore.showMemberList = false"
       >
@@ -44,7 +44,7 @@ function openMemberMenu(e: MouseEvent | KeyboardEvent, member: Member) {
       <!-- 1. Administrators -->
       <section v-if="admins.length">
         <h3 class="pt-6 pb-1 px-2 text-xs font-semibold uppercase tracking-wide text-mnema-amber flex items-center gap-1.5 min-w-0">
-          <Crown class="w-3.5 h-3.5 flex-shrink-0" />
+          <Crown class="w-3.5 h-3.5 shrink-0" />
           <span class="truncate">{{ $t('members.admins', { count: admins.length }) }}</span>
         </h3>
         <MemberRow
@@ -59,7 +59,7 @@ function openMemberMenu(e: MouseEvent | KeyboardEvent, member: Member) {
       <!-- 2. Groups of hoisted roles -->
       <section v-for="group in roleGroups" :key="group.role.id" :data-role-group="group.role.name">
         <h3 class="pt-6 pb-1 px-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary flex items-center gap-1.5 min-w-0">
-          <span class="h-2 w-2 flex-shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(group.role.color) || 'transparent' }"></span>
+          <span class="h-2 w-2 shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(group.role.color) || 'transparent' }"></span>
           <span class="truncate">{{ $t('members.roleGroup', { name: group.role.name, count: group.members.length }) }}</span>
         </h3>
         <MemberRow
@@ -90,7 +90,7 @@ function openMemberMenu(e: MouseEvent | KeyboardEvent, member: Member) {
         <h3 class="pt-6 pb-1 px-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary truncate">
           {{ $t('members.offline', { count: offlineNonAdmins.length }) }}
         </h3>
-        <div class="opacity-60 hover:opacity-100 transition-opacity">
+        <div class="opacity-75 hover:opacity-100 transition-opacity">
           <MemberRow
             v-for="member in offlineNonAdmins"
             :key="member.id"

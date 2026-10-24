@@ -1,0 +1,255 @@
+/* Form controls: checkbox, radio, switch, slider, text fields, select.
+   Native elements keep their semantics and keyboard behaviour; only the
+   painting is ours. Rules that must beat a view's own utility classes
+   (border colour, padding) are unlayered on purpose; the rest sit in @layer
+   base so a utility can still override them. */
+
+@layer base {
+  :root {
+    /* Native pickers, scrollbars and the date icon follow the dark UI. */
+    color-scheme: dark;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-mnema-tertiary);
+    opacity: 1;
+  }
+
+  /* Checkbox: a rounded square with a soft tick. */
+  input[type='checkbox'] {
+    appearance: none;
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    border: 1.5px solid var(--color-mnema-border-field);
+    border-radius: 5px;
+    background-color: var(--color-mnema-canvas);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 0;
+    vertical-align: middle;
+    cursor: pointer;
+    transition-property: background-color, border-color, box-shadow, background-size;
+  }
+  input[type='checkbox']:hover:not(:disabled, :checked) {
+    border-color: var(--color-mnema-muted);
+  }
+  input[type='checkbox']:checked,
+  input[type='checkbox']:indeterminate {
+    border-color: var(--color-mnema-accent);
+    background-color: var(--color-mnema-accent);
+    background-size: 100%;
+  }
+  input[type='checkbox']:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%230A0A0B' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 8.4 2.6 2.6L12 5.4'/%3E%3C/svg%3E");
+  }
+  input[type='checkbox']:indeterminate {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%230A0A0B' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M4.5 8h7'/%3E%3C/svg%3E");
+  }
+  input[type='checkbox']:checked:hover:not(:disabled) {
+    background-color: var(--color-mnema-accent-hover);
+    border-color: var(--color-mnema-accent-hover);
+  }
+
+  /* Radio: a ring that takes a dot. */
+  input[type='radio'] {
+    appearance: none;
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    border: 1.5px solid var(--color-mnema-border-field);
+    border-radius: 9999px;
+    background-color: var(--color-mnema-canvas);
+    vertical-align: middle;
+    cursor: pointer;
+    transition-property: background-color, border-color, box-shadow;
+  }
+  input[type='radio']:hover:not(:disabled, :checked) {
+    border-color: var(--color-mnema-muted);
+  }
+  input[type='radio']:checked {
+    border-color: var(--color-mnema-accent);
+    background-color: var(--color-mnema-accent);
+    background-image: radial-gradient(circle, var(--color-mnema-accent-ink) 0 28%, transparent 32%);
+  }
+
+  input[type='checkbox']:disabled,
+  input[type='radio']:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* Slider: --fill (set by lib/rangeFill) paints the part up to the thumb. */
+  input[type='range'] {
+    appearance: none;
+    width: 100%;
+    height: 1.25rem;
+    margin: 0;
+    background: transparent;
+    cursor: pointer;
+    --fill: 0%;
+  }
+  input[type='range']::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: linear-gradient(to right, var(--color-mnema-accent) var(--fill), var(--color-mnema-border-strong) var(--fill));
+  }
+  input[type='range']::-moz-range-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--color-mnema-border-strong);
+  }
+  input[type='range']::-moz-range-progress {
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--color-mnema-accent);
+  }
+  input[type='range']::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -5px;
+    border: 0;
+    border-radius: 9999px;
+    background: var(--color-mnema-text);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.5), 0 0 0 0 rgb(45 167 113 / 0.3);
+    transition: transform 120ms var(--ease-mnema), box-shadow 120ms var(--ease-mnema);
+  }
+  input[type='range']::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border: 0;
+    border-radius: 9999px;
+    background: var(--color-mnema-text);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+    transition: transform 120ms var(--ease-mnema), box-shadow 120ms var(--ease-mnema);
+  }
+  input[type='range']:hover::-webkit-slider-thumb { transform: scale(1.12); }
+  input[type='range']:active::-webkit-slider-thumb { transform: scale(1.04); box-shadow: 0 1px 3px rgb(0 0 0 / 0.5), 0 0 0 6px rgb(45 167 113 / 0.22); }
+  input[type='range']:focus-visible::-webkit-slider-thumb { box-shadow: 0 1px 3px rgb(0 0 0 / 0.5), 0 0 0 4px rgb(45 167 113 / 0.35); }
+  input[type='range']:hover::-moz-range-thumb { transform: scale(1.12); }
+  input[type='range']:focus-visible::-moz-range-thumb { box-shadow: 0 1px 3px rgb(0 0 0 / 0.5), 0 0 0 4px rgb(45 167 113 / 0.35); }
+  input[type='range']:disabled { opacity: 0.45; cursor: not-allowed; }
+  input[type='range']:focus-visible { outline: none; }
+
+  /* Switch: a button with role="switch" and aria-checked; the thumb is ::before. */
+  .switch {
+    position: relative;
+    flex: none;
+    width: 2.5rem;
+    height: 1.375rem;
+    border: 1px solid var(--color-mnema-border-strong);
+    border-radius: 9999px;
+    background-color: var(--color-mnema-canvas);
+    transition-property: background-color, border-color, box-shadow;
+  }
+  .switch::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 9999px;
+    background-color: var(--color-mnema-muted);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+    transition: transform var(--default-transition-duration) var(--ease-mnema), background-color var(--default-transition-duration) var(--ease-mnema), width 120ms var(--ease-mnema);
+  }
+  .switch:hover:not(:disabled, [aria-checked='true']) {
+    border-color: var(--color-mnema-muted);
+  }
+  .switch:active:not(:disabled)::before { width: 19px; }
+  .switch[aria-checked='true'] {
+    border-color: var(--color-mnema-accent);
+    background-color: var(--color-mnema-accent);
+  }
+  .switch[aria-checked='true']::before {
+    transform: translateX(18px);
+    background-color: #fff;
+  }
+  .switch[aria-checked='true']:active:not(:disabled)::before { transform: translateX(15px); }
+  .switch[aria-checked='true']:hover:not(:disabled) { background-color: var(--color-mnema-accent-hover); }
+  .switch:disabled { opacity: 0.45; cursor: not-allowed; }
+}
+
+/* Text fields: one height, one hover and one focus treatment. Unlayered so
+   the many views' own border/padding utilities cannot flatten them. */
+input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='color'], [type='button'], [type='submit'], [type='hidden'], [type='image'], [type='reset']),
+textarea,
+select {
+  transition-property: border-color, box-shadow, background-color;
+}
+
+input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='color'], [type='button'], [type='submit'], [type='hidden'], [type='image'], [type='reset']),
+select {
+  min-height: 2rem;
+}
+
+input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='color'], [type='button'], [type='submit'], [type='hidden'], [type='image'], [type='reset']):hover:not(:focus, :disabled, [aria-invalid='true']),
+textarea:not([data-bare]):hover:not(:focus, :disabled, [aria-invalid='true']),
+select:hover:not(:focus, :disabled, [aria-invalid='true']) {
+  border-color: color-mix(in srgb, var(--color-mnema-border-field) 55%, var(--color-mnema-muted));
+}
+
+input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='color'], [type='button'], [type='submit'], [type='hidden'], [type='image'], [type='reset']):focus-visible,
+textarea:not([data-bare]):focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--color-mnema-accent);
+  box-shadow: 0 0 0 3px rgb(45 167 113 / 0.2);
+}
+
+input[aria-invalid='true'],
+textarea[aria-invalid='true'],
+select[aria-invalid='true'] {
+  border-color: var(--color-mnema-danger);
+}
+input[aria-invalid='true']:focus-visible,
+textarea[aria-invalid='true']:focus-visible,
+select[aria-invalid='true']:focus-visible {
+  box-shadow: 0 0 0 3px rgb(243 85 73 / 0.2);
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Select: our own chevron instead of the platform arrow. */
+select:not([multiple], [size]) {
+  appearance: none;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23A3B3AA' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.625rem center;
+  background-size: 1rem;
+  cursor: pointer;
+}
+
+/* Field help and error lines under a control. */
+.field-hint {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: var(--color-mnema-tertiary);
+}
+.field-error {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: var(--color-mnema-danger);
+}
+
+/* Touch: larger boxes for checkbox and radio (their label is the rest of the target). */
+@media (pointer: coarse) {
+  input[type='checkbox'],
+  input[type='radio'] {
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+}

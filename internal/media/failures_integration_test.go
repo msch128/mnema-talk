@@ -131,7 +131,7 @@ func TestValidateUploadTargetLoadsThreadAndRejectsMissingTarget(t *testing.T) {
 func TestAvatarStorageAndDatabaseFailures(t *testing.T) {
 	f := mediaDB(t)
 	request := func() *http.Request {
-		return f.req(uploadRequest(t, formPart{name: "avatar", filename: "a.png", mime: "image/png", value: string(pngBytes)}), "", "")
+		return f.req(uploadRequest(t, formPart{name: "avatar", filename: "a.png", mime: "image/png", value: bannerPNG(t, 8, 8)}), "", "")
 	}
 	f.store.uploadErr = errors.New("store rejected upload")
 	if err := f.h.uploadAvatar(httptest.NewRecorder(), request()); err == nil || !strings.Contains(err.Error(), "store avatar") {
@@ -152,7 +152,7 @@ func TestAvatarTransactionRollsBackRejectedMediaInsert(t *testing.T) {
 		execMedia(t, f.p, `DROP TRIGGER reject_test_media ON media`)
 		execMedia(t, f.p, `DROP FUNCTION reject_test_media()`)
 	})
-	r := f.req(uploadRequest(t, formPart{name: "avatar", filename: "a.png", mime: "image/png", value: string(pngBytes)}), "", "")
+	r := f.req(uploadRequest(t, formPart{name: "avatar", filename: "a.png", mime: "image/png", value: bannerPNG(t, 8, 8)}), "", "")
 	if err := f.h.uploadAvatar(httptest.NewRecorder(), r); err == nil || !strings.Contains(err.Error(), "media write rejected") || f.store.Len() != 0 {
 		t.Fatalf("rejected media insert=%v objects=%d", err, f.store.Len())
 	}
@@ -167,7 +167,7 @@ func TestAvatarReplacementDeleteFailureDoesNotUndoNewAvatar(t *testing.T) {
 	old := f.attachment(t, "avatars/old.png", true)
 	execMedia(t, f.p, `UPDATE users SET avatar_s3_key=$1 WHERE id=$2`, old.String(), f.user.ID)
 	f.store.deleteErr = errors.New("old object delete unavailable")
-	r := f.req(uploadRequest(t, formPart{name: "avatar", filename: "a.png", mime: "image/png", value: string(pngBytes)}), "", "")
+	r := f.req(uploadRequest(t, formPart{name: "avatar", filename: "a.png", mime: "image/png", value: bannerPNG(t, 8, 8)}), "", "")
 	w := httptest.NewRecorder()
 	if err := f.h.uploadAvatar(w, r); err != nil || w.Code != 200 || f.store.Len() != 2 {
 		t.Fatalf("replacement=%v code=%d objects=%d", err, w.Code, f.store.Len())
@@ -175,7 +175,7 @@ func TestAvatarReplacementDeleteFailureDoesNotUndoNewAvatar(t *testing.T) {
 	f.store.deleteErr = nil
 	// Deleting the account concurrently with cleanup must be reported when reloading the updated user.
 	f.store.afterDelete = func() { execMedia(t, f.p, `DELETE FROM users WHERE id=$1`, f.user.ID) }
-	r = f.req(uploadRequest(t, formPart{name: "avatar", filename: "b.png", mime: "image/png", value: string(pngBytes)}), "", "")
+	r = f.req(uploadRequest(t, formPart{name: "avatar", filename: "b.png", mime: "image/png", value: bannerPNG(t, 8, 8)}), "", "")
 	if err := f.h.uploadAvatar(httptest.NewRecorder(), r); err == nil {
 		t.Fatal("missing updated user was not reported")
 	}
@@ -426,7 +426,7 @@ func TestMountedMediaRoutesServeUploadAndAdminLifecycle(t *testing.T) {
 	if w := call(http.MethodDelete, "/admin/media/"+id.String(), nil); w.Code != 204 {
 		t.Fatalf("delete=%d %s", w.Code, w.Body.String())
 	}
-	if w := call(http.MethodPost, "/users/me/avatar", uploadRequest(t, formPart{name: "avatar", filename: "a.png", mime: "image/png", value: string(pngBytes)})); w.Code != 200 {
+	if w := call(http.MethodPost, "/users/me/avatar", uploadRequest(t, formPart{name: "avatar", filename: "a.png", mime: "image/png", value: bannerPNG(t, 8, 8)})); w.Code != 200 {
 		t.Fatalf("avatar=%d %s", w.Code, w.Body.String())
 	}
 	recorded := f.h.Events.(*events.Recorder).Snapshot()

@@ -1,0 +1,271 @@
+/* Buttons and the focus ring.
+   One family: .btn plus a variant (-primary, -secondary, -ghost, -danger,
+   -danger-solid) and optionally a size (-sm, -lg). .btn-icon is the square
+   icon button (use with -ghost, the default look). Layout utilities such as
+   w-full or ml-auto still apply on top, so nothing here sets width or margin. */
+
+@layer base {
+  /* The focus ring: visible for the keyboard (and assistive tech), never for a
+     mouse click. 2px accent with a 2px gap reads on every surface (>= 3:1) and
+     follows the control's radius. Components that draw their own focus state
+     opt out with focus:outline-hidden and must give an equivalent. */
+  :where(a, button, summary, [role='button'], [role='tab'], [role='menuitem'], [role='switch'], [tabindex]:not([tabindex='-1'])):focus-visible {
+    outline: 2px solid var(--color-mnema-accent);
+    outline-offset: 2px;
+  }
+
+  :where(input[type='checkbox'], input[type='radio'], input[type='range']):focus-visible {
+    outline: 2px solid var(--color-mnema-accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 2rem;
+    padding: 0.3125rem 0.875rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    white-space: nowrap;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition-property: background-color, border-color, color, box-shadow, transform, opacity;
+  }
+
+  /* Pressed: a hair smaller, never a colour jump. */
+  .btn:not(:disabled, [aria-disabled='true']):active {
+    transform: translateY(0.5px) scale(0.985);
+    transition-duration: 60ms;
+  }
+
+  .btn:disabled,
+  .btn[aria-disabled='true'] {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* Loading: the label stays (so the width does not jump), a small ring leads it. */
+  .btn[aria-busy='true'] {
+    cursor: progress;
+    pointer-events: none;
+  }
+  .btn[aria-busy='true']::before {
+    content: '';
+    flex: none;
+    width: 0.875em;
+    height: 0.875em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 9999px;
+    animation: mnema-spin 0.7s linear infinite;
+  }
+  @keyframes mnema-spin { to { transform: rotate(360deg); } }
+
+  .btn-sm {
+    min-height: 1.75rem;
+    padding: 0.1875rem 0.625rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    border-radius: var(--radius-sm);
+  }
+  .btn-lg {
+    min-height: 2.5rem;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.9375rem;
+  }
+
+  /* Primary: the one call to action of a surface. */
+  .btn-primary {
+    background-color: var(--color-mnema-accent);
+    color: var(--color-mnema-accent-ink);
+    font-weight: 600;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16), 0 1px 2px rgb(0 0 0 / 0.28);
+  }
+  .btn-primary:hover:not(:disabled, [aria-disabled='true']) {
+    background-color: var(--color-mnema-accent-hover);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 2px 6px rgb(45 167 113 / 0.25);
+  }
+  .btn-primary:active:not(:disabled, [aria-disabled='true']) {
+    background-color: color-mix(in srgb, var(--color-mnema-accent) 88%, black);
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.2);
+  }
+
+  /* Secondary: a quiet outline for the other choice next to a primary. */
+  .btn-secondary {
+    background-color: rgb(255 255 255 / 0.03);
+    border-color: var(--color-mnema-border-strong);
+    color: var(--color-mnema-text);
+  }
+  .btn-secondary:hover:not(:disabled, [aria-disabled='true']) {
+    background-color: var(--color-mnema-hover);
+    border-color: color-mix(in srgb, var(--color-mnema-border-strong) 70%, var(--color-mnema-muted));
+  }
+  .btn-secondary:active:not(:disabled, [aria-disabled='true']) {
+    background-color: var(--color-mnema-surface);
+  }
+
+  /* Ghost: no frame until it is pointed at. Cancel, close, tool buttons. */
+  .btn-ghost {
+    color: var(--color-mnema-muted);
+  }
+  .btn-ghost:hover:not(:disabled, [aria-disabled='true']),
+  .btn-ghost[aria-pressed='true'],
+  .btn-ghost[aria-expanded='true'] {
+    background-color: var(--color-mnema-hover);
+    color: var(--color-mnema-text);
+  }
+  .btn-ghost:active:not(:disabled, [aria-disabled='true']) {
+    background-color: var(--color-mnema-surface);
+  }
+
+  /* Danger: tinted, not shouting; -solid is for the final confirmation only. */
+  .btn-danger {
+    background-color: rgb(243 85 73 / 0.08);
+    border-color: rgb(243 85 73 / 0.35);
+    color: var(--color-mnema-danger);
+  }
+  .btn-danger:hover:not(:disabled, [aria-disabled='true']) {
+    background-color: rgb(243 85 73 / 0.16);
+    border-color: rgb(243 85 73 / 0.6);
+  }
+  .btn-danger:active:not(:disabled, [aria-disabled='true']) {
+    background-color: rgb(243 85 73 / 0.22);
+  }
+  .btn-danger-solid {
+    background-color: var(--color-mnema-danger);
+    color: var(--color-mnema-accent-ink);
+    font-weight: 600;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 1px 2px rgb(0 0 0 / 0.28);
+  }
+  .btn-danger-solid:hover:not(:disabled, [aria-disabled='true']) {
+    background-color: color-mix(in srgb, var(--color-mnema-danger) 88%, white);
+  }
+  .btn-danger-solid:active:not(:disabled, [aria-disabled='true']) {
+    background-color: color-mix(in srgb, var(--color-mnema-danger) 86%, black);
+  }
+
+  /* Icon button: square, 32px (44px hit area on touch, see the coarse-pointer rule). */
+  .btn-icon {
+    width: 2rem;
+    height: 2rem;
+    min-height: 0;
+    padding: 0;
+    border-radius: var(--radius-lg);
+    color: var(--color-mnema-tertiary);
+  }
+  .btn-icon:hover:not(:disabled, [aria-disabled='true']),
+  .btn-icon[aria-expanded='true'] {
+    background-color: var(--color-mnema-hover);
+    color: var(--color-mnema-text);
+  }
+  /* A toggled tool (member list, pins) keeps the accent. */
+  .btn-icon[aria-pressed='true'] {
+    background-color: var(--color-mnema-hover);
+    color: var(--color-mnema-accent);
+  }
+  .btn-icon[aria-pressed='true']:hover:not(:disabled) {
+    color: var(--color-mnema-accent);
+  }
+  .btn-icon:active:not(:disabled, [aria-disabled='true']) {
+    background-color: var(--color-mnema-surface);
+  }
+  .btn-icon.btn-sm {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+  .btn-icon > svg {
+    width: 1.125rem;
+    height: 1.125rem;
+    stroke-width: 1.75;
+  }
+  .btn-icon.btn-danger-ghost:hover:not(:disabled) {
+    background-color: rgb(243 85 73 / 0.12);
+    color: var(--color-mnema-danger);
+  }
+
+  /* Chip: a choice in a row of choices (aria-pressed marks the picked one). Also
+     the admin tab bar and the duration pickers. */
+  .chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2rem;
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--color-mnema-border);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    color: var(--color-mnema-muted);
+    white-space: nowrap;
+    transition-property: background-color, border-color, color, box-shadow;
+  }
+  .chip:hover:not(:disabled) {
+    background-color: var(--color-mnema-hover);
+    color: var(--color-mnema-text);
+  }
+  .chip:active:not(:disabled) {
+    background-color: var(--color-mnema-surface);
+  }
+  .chip[aria-pressed='true'] {
+    border-color: rgb(45 167 113 / 0.4);
+    background-color: rgb(45 167 113 / 0.14);
+    color: var(--color-mnema-accent);
+    font-weight: 600;
+  }
+  .chip[aria-pressed='true']:hover:not(:disabled) {
+    background-color: rgb(45 167 113 / 0.2);
+    color: var(--color-mnema-accent-hover);
+  }
+  .chip-bare:not([aria-pressed='true']) { border-color: transparent; }
+  .chip:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* Choice card: one of a few larger options with a title and a hint. */
+  .choice-card {
+    padding: 0.75rem;
+    border: 1px solid var(--color-mnema-hairline);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-mnema-canvas);
+    color: var(--color-mnema-muted);
+    text-align: left;
+    transition-property: background-color, border-color, box-shadow, color;
+  }
+  .choice-card:hover:not(:disabled) {
+    border-color: var(--color-mnema-border-strong);
+    background-color: var(--color-mnema-raised);
+  }
+  .choice-card:active:not(:disabled) { transform: scale(0.99); }
+  .choice-card[aria-pressed='true'] {
+    border-color: var(--color-mnema-accent);
+    background-color: var(--color-mnema-surface);
+    color: var(--color-mnema-text);
+    box-shadow: 0 0 0 1px rgb(45 167 113 / 0.4);
+  }
+
+  /* Link-style button: inline text action inside copy. */
+  .btn-link {
+    display: inline;
+    min-height: 0;
+    padding: 0;
+    border-radius: var(--radius-xs);
+    color: var(--color-mnema-accent);
+    font-size: inherit;
+    text-underline-offset: 3px;
+  }
+  .btn-link:hover { text-decoration: underline; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn:not(:disabled):active { transform: none; }
+  .btn[aria-busy='true']::before { animation-duration: 1.6s; }
+}

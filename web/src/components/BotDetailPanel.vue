@@ -89,13 +89,13 @@ function onRoles(bot: BotBot) {
 </script>
 
 <template>
-  <div class="min-w-0 space-y-6" :aria-label="$t('bots.detail', { name: bot.name })" role="group" data-testid="bot-detail">
+  <div class="min-w-0 stack-6" :aria-label="$t('bots.detail', { name: bot.name })" role="group" data-testid="bot-detail">
     <div class="flex flex-wrap items-center gap-3">
-      <img v-if="bot.avatar_url" :src="bot.avatar_url" alt="" class="h-12 w-12 flex-shrink-0 rounded-full object-cover" />
-      <span v-else class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-mnema-raised text-lg font-semibold text-mnema-muted" aria-hidden="true">{{ botInitial(bot.name) }}</span>
-      <label class="min-w-0 flex-1 space-y-1">
+      <img v-if="bot.avatar_url" :src="bot.avatar_url" alt="" class="h-12 w-12 shrink-0 rounded-full object-cover" />
+      <span v-else class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-mnema-raised text-lg font-semibold text-mnema-muted" aria-hidden="true">{{ botInitial(bot.name) }}</span>
+      <label class="min-w-0 flex-1 stack-1">
         <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('common.name') }}</span>
-        <input v-model="name" maxlength="24" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-none transition focus:border-mnema-accent" data-testid="bot-name" @blur="rename" @keydown.enter.prevent="rename" />
+        <input v-model="name" maxlength="24" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-hidden transition focus:border-mnema-accent" data-testid="bot-name" @blur="rename" @keydown.enter.prevent="rename" />
       </label>
       <label class="flex cursor-pointer items-center gap-1.5 rounded-md border border-mnema-border-strong px-3 py-1.5 text-sm text-mnema-text transition hover:bg-mnema-hover">
         <ImagePlus class="h-4 w-4" aria-hidden="true" />
@@ -105,16 +105,16 @@ function onRoles(bot: BotBot) {
     </div>
 
     <label class="flex items-center gap-2 text-sm text-mnema-text">
-      <input type="checkbox" class="accent-mnema-accent" :checked="!bot.disabled" :disabled="busy" data-testid="bot-enabled" @change="patch({ disabled: !($event.target as HTMLInputElement).checked })" />
+      <input type="checkbox" :checked="!bot.disabled" :disabled="busy" data-testid="bot-enabled" @change="patch({ disabled: !($event.target as HTMLInputElement).checked })" />
       <span>{{ $t('bots.enabledLabel') }}</span>
     </label>
     <p v-if="bot.disabled" class="-mt-4 text-xs text-mnema-tertiary">{{ $t('bots.disabledHint') }}</p>
 
-    <fieldset class="space-y-2">
+    <fieldset class="stack-2">
       <legend class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('bots.intents.title') }}</legend>
       <p class="text-sm text-mnema-tertiary">{{ $t('bots.intents.hint') }}</p>
       <label v-for="intent in BOT_INTENTS" :key="intent.key" class="flex items-start gap-2 text-sm text-mnema-text">
-        <input type="checkbox" class="mt-0.5 accent-mnema-accent" :checked="hasIntent(bot.allowed_intents, intent.bit)" :disabled="busy" :data-intent="intent.key" @change="patch({ allowed_intents: toggleIntent(bot.allowed_intents, intent.bit, ($event.target as HTMLInputElement).checked) })" />
+        <input type="checkbox" class="mt-0.5" :checked="hasIntent(bot.allowed_intents, intent.bit)" :disabled="busy" :data-intent="intent.key" @change="patch({ allowed_intents: toggleIntent(bot.allowed_intents, intent.bit, ($event.target as HTMLInputElement).checked) })" />
         <span>
           <span class="block">{{ $t(`bots.intents.${intent.key}.name`) }}</span>
           <span class="block text-xs text-mnema-tertiary">{{ $t(`bots.intents.${intent.key}.desc`) }}</span>

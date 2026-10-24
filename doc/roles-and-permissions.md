@@ -116,7 +116,7 @@ the own role is a convenient place for "this bot may post in #alerts").
 | Add reactions | Add a reaction (taking back your own always works); vote in a poll | yes |
 | Manage messages | Delete other members' messages (with a reason, or a member's latest ones in bulk), pin messages, exempt from slow mode | yes |
 | Mention @all and @here | `@all` and `@here` notify people | yes |
-| Connect | Join a Talk | yes |
+| Connect | Join a Talk (not needed to read or write the Talk's chat, that follows *View channels* and *Send messages*) | yes |
 | Speak | Send audio in a Talk | yes |
 | Video | Send camera and screen share in a Talk | yes |
 | Disconnect members | Remove members from a Talk | yes |
@@ -130,6 +130,9 @@ the own role is a convenient place for "this bot may post in #alerts").
 | Timeout members | Silence members below your highest role for a while ([moderation](moderation.md)) | no |
 | Ban members | Ban and unban members below your highest role, list the bans | no |
 | Manage emoji | Upload, rename and delete the custom emoji of the community (bit `1 << 20`) | no |
+| Send direct messages | Start direct messages and write in them; reading one you are in never needs it. On for @everyone (migration 0050 adds it to existing databases); a timeout takes it, an administrator can withhold it from new members or onboarding roles (bit `1 << 22`) | no |
+| Manage reports | Read and close member reports of messages, with the copy and context they kept (bit `1 << 21`, [moderation](moderation.md#blocking-and-reports)). Off for @everyone | no |
+| Kick members | Sign members below your highest role out everywhere and drop them from their Talk, with no lasting sanction (bit `1 << 23`, [moderation](moderation.md#kicks)). Off for @everyone and every seeded role; Administrators and the Owner have it implicitly | no |
 
 The bit values are stored in the database and sent over the API; they never
 change meaning (`perm.Catalog` and its test freeze them).
@@ -141,7 +144,7 @@ role either: it is the one account with `users.role = 'admin'`.
 
 | Who | What it is | Permissions |
 |---|---|---|
-| Member | `@everyone` (position 0, every member has it) | *View channels, Send messages, Attach files, Add reactions, Mention @all and @here, Connect, Speak, Video* (`perm.DefaultEveryone`) |
+| Member | `@everyone` (position 0, every member has it) | *View channels, Send messages, Attach files, Add reactions, Mention @all and @here, Connect, Speak, Video, Send direct messages* (`perm.DefaultEveryone`) |
 | Moderator | Seeded role, hoisted, not managed, not mentionable | *Manage messages, Disconnect members, Timeout members, View audit log* |
 | Admin | Seeded role, hoisted, not managed, not mentionable, above Moderator when both are new | Moderator's permissions, plus *Manage channels, Manage roles, Manage invites, Manage members, Ban members* |
 | Owner | The account `users.role = 'admin'`, not a role | Every permission, plus the Owner-only powers |
@@ -213,12 +216,17 @@ cannot do.
 | `GET /api/channels` | Only viewable channels; a category shows if it is viewable or holds a viewable channel |
 | Messages, threads, reactions, search, by-number, read state, notifications | *View channels*; posting *Send messages*; reacting *Add reactions*; deleting others' *Manage messages* |
 | Polls (`/poll`, `POST /api/channels/{id}/polls`) | Posting *Send messages*; voting and reading your own votes *View channels* + *Add reactions* (so a timed-out member cannot vote); ending early the author, or *Manage messages* |
-| Slash commands | Listing *View channels*; running *Send messages* (built-in commands may ask for more, see their `Available` check in `internal/slash`); a bot's commands also need the bot to view and send there |
+| Slash commands | Listing *View channels*; running *Send messages*. `/msg` also needs *Send direct messages*, `/timeout`, `/ban` and `/kick` the matching permission and a higher role than the target (each command's `Available` check, `internal/slashcmd`); a bot's commands also need the bot to view and send there |
+| Direct messages | Membership of the conversation, not a channel permission: only its members read it, and nobody else, not even the Owner or a role with *Administrator*, can browse it. Starting and writing need *Send direct messages* and the other members' privacy setting; a block stops writing in a conversation of two, while in a group it leaves unread counts, mentions and last activity untouched for the blocker. Moderators see only what a reporter shares (*Manage reports*) |
+| Blocks | Private to the blocker. The server drops the blocked member's messages from the blocker's lists, mentions, inbox and push; in any conversation (group direct messages included), unread counts, mention counts and last activity leave out messages by members the reader blocked (the mentions inbox itself excludes direct messages) |
+| Saved messages and forwarding | A saved row is a reference and is checked on every read. Forwarding needs to see the original and to write in the target; the original is shown to each reader only as far as that reader may see it |
+| Thread follow | Following needs *View channels*; a follower who loses access gets nothing |
+| Pins | *Manage messages*; the pin records who pinned and when |
 | Uploads and `GET /api/media/{id}` | *Send messages* + *Attach files* to upload; *View channels* of the message's channel to download (404 otherwise) |
 | Mentions | `@all`/`@here` need *Mention @all and @here*; nobody who cannot view the channel is notified |
 | `/api/admin/*` | Per route: *Manage channels*, *Manage roles*, *Manage invites*, *Manage members*, *Disconnect members*; system, storage and passwords are Owner-only |
 | WebSocket | Channel events (messages, reactions, typing, who is in a Talk, media state) only reach viewers; the connect snapshot lists only viewable Talks |
-| Talks | *View channels* + *Connect* to join; the SFU drops audio without *Speak* and camera/screen without *Video*, also while a call is running |
+| Talks | *View channels* + *Connect* to join (reading and writing a Talk's chat without joining needs only *View channels* and *Send messages*); the SFU drops audio without *Speak* and camera/screen without *Video*, also while a call is running |
 | Native session API | Uses the same handlers and hub; the opaque ciphertext store checks view/send when given the permission service |
 
 ## Community rules

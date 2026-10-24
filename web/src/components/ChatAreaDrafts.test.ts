@@ -11,7 +11,7 @@ import { channelFixture, messageFixture, onboardingStateFixture, userFixture } f
 
 enableAutoUnmount(afterEach)
 
-const general = channelFixture({ id: 'ch1', name: 'allgemein', type: 'text' })
+const general = channelFixture({ id: 'ch1', name: 'lobby', type: 'text' })
 const random = channelFixture({ id: 'ch2', name: 'zufall', type: 'text' })
 
 function open() {

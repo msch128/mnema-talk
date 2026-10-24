@@ -87,6 +87,7 @@ func (r *envReader) textSettings() *Config {
 		TrustedProxies:       SplitList(r.get("TRUSTED_PROXY_CIDRS", defaultTrustedProxies)),
 		JWTSecret:            r.get("JWT_SECRET", ""),
 		AdminUsername:        r.get("ADMIN_USERNAME", "Herzog"),
+		InitialLanguage:      strings.ToLower(r.get("INITIAL_LANGUAGE", "de")),
 		AdminInitialPassword: r.get("ADMIN_INITIAL_PASSWORD", ""),
 		DatabaseURL:          r.get("DATABASE_URL", ""),
 		S3Endpoint:           r.get("S3_ENDPOINT", "http://localhost:8333"),
@@ -104,8 +105,8 @@ func (r *envReader) textSettings() *Config {
 		WebRTCSTUNURLs:       SplitList(r.get("WEBRTC_STUN_URLS", "")),
 		LegalOperatorName:    r.get("LEGAL_OPERATOR_NAME", "Community Operator"),
 		LegalOperatorEmail:   r.get("LEGAL_OPERATOR_EMAIL", "admin@example.com"),
-		LegalOperatorCountry: r.get("LEGAL_OPERATOR_COUNTRY", "Deutschland"),
-		LegalProjectNotice:   r.get("LEGAL_PROJECT_NOTICE", "Privates, nicht-kommerzielles Projekt"),
+		LegalOperatorCountry: r.get("LEGAL_OPERATOR_COUNTRY", ""),
+		LegalProjectNotice:   r.get("LEGAL_PROJECT_NOTICE", ""),
 	}
 }
 

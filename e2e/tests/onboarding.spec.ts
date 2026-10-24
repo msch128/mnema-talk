@@ -39,18 +39,18 @@ async function welcomeFlowPhase(a: Page, b: Page, bCtx: BrowserContext, channelI
   await showWelcomeFlow(bCtx)
   expect((await apiFetch(b, 'PUT', '/api/onboarding/tips', { welcome_done: false })).status).toBe(200)
   expect((await apiFetch(a, 'PUT', '/api/admin/onboarding', {
-    community_name: COMMUNITY, welcome_text: 'Schön, dass du da bist.', rules_text: '# Regeln\nSei nett.', start_channel_id: channelId, require_reacceptance: true,
+    community_name: COMMUNITY, welcome_text: 'Glad you are here.', rules_text: '# Rules\nBe kind.', start_channel_id: channelId, require_reacceptance: true,
   })).status).toBe(200)
 
   await b.goto('/')
   const dialog = b.getByRole('dialog')
   await expect(dialog.getByRole('heading', { name: `Willkommen bei ${COMMUNITY}` })).toBeVisible()
-  await expect(dialog).toContainText('Schön, dass du da bist.')
+  await expect(dialog).toContainText('Glad you are here.')
   await dialog.getByRole('button', { name: 'Weiter' }).click()
 
   // The rules cannot be skipped or closed; reading works, writing waits for the click.
   await expect(dialog.getByRole('heading', { name: 'Die Regeln' })).toBeVisible()
-  await expect(dialog.getByTestId('welcome-rules')).toContainText('Sei nett.')
+  await expect(dialog.getByTestId('welcome-rules')).toContainText('Be kind.')
   await b.keyboard.press('Escape')
   await expect(dialog.getByRole('heading', { name: 'Die Regeln' })).toBeVisible()
   await expect(dialog.getByRole('button', { name: 'Einführung überspringen' })).toHaveCount(0)
@@ -73,12 +73,12 @@ async function welcomeFlowPhase(a: Page, b: Page, bCtx: BrowserContext, channelI
 
   // The Owner raises the rules version: only the rules come back, and block.
   expect((await apiFetch(a, 'PUT', '/api/admin/onboarding', {
-    community_name: COMMUNITY, welcome_text: 'Schön, dass du da bist.', rules_text: '# Regeln\nSei netter.', start_channel_id: channelId, require_reacceptance: true,
+    community_name: COMMUNITY, welcome_text: 'Glad you are here.', rules_text: '# Rules\nBe kinder.', start_channel_id: channelId, require_reacceptance: true,
   })).status).toBe(200)
   await b.reload()
   await expect(dialog.getByRole('heading', { name: 'Die Regeln' })).toBeVisible()
   await expect(dialog.getByTestId('welcome-progress')).toHaveText('Schritt 1 von 1')
-  await expect(dialog.getByTestId('welcome-rules')).toContainText('Sei netter.')
+  await expect(dialog.getByTestId('welcome-rules')).toContainText('Be kinder.')
   await dialog.getByRole('button', { name: 'Ich akzeptiere die Regeln' }).click()
   await expect(dialog).toBeHidden()
   expect((await apiFetch(b, 'POST', `/api/channels/${channelId}/messages`, { content: 'angekommen' })).status).toBe(201)
@@ -101,14 +101,17 @@ test('invite links name the community, rules block a member until accepted, and 
     await ensureSuiteMember(a, b)
     expect((await apiFetch(b, 'POST', `/api/channels/${channelId}/messages`, { content: 'before the rules' })).status).toBe(201)
 
+    // Earlier runs against the same database may have raised the version already.
+    const versionBefore = Number(((await apiFetch(b, 'GET', '/api/onboarding')).json as { rules_version?: number }).rules_version ?? 0)
+
     // The Owner writes the community name and rules in the admin console.
     await a.goto('/admin/onboarding')
     const form = a.getByTestId('onboarding-settings')
     await expect(form).toBeVisible()
     await form.getByLabel('Name der Community').fill(COMMUNITY)
-    await form.getByLabel('Regeln').fill('# Regeln\nSei nett.')
+    await form.getByLabel('Regeln').fill('# Rules\nBe kind.')
     await form.getByRole('button', { name: 'Vorschau' }).nth(1).click()
-    await expect(form.getByTestId('rules-preview')).toContainText('Sei nett.')
+    await expect(form.getByTestId('rules-preview')).toContainText('Be kind.')
     await form.getByTestId('onboarding-save').click()
     await expect(a.getByText('Willkommen und Regeln gespeichert.')).toBeVisible()
 
@@ -128,7 +131,7 @@ test('invite links name the community, rules block a member until accepted, and 
 
     // The existing member must accept first: reading works, writing answers RULES_NOT_ACCEPTED.
     const pending = await apiFetch(b, 'GET', '/api/onboarding')
-    expect(pending.json).toMatchObject({ rules_pending: true, community_name: COMMUNITY, rules_version: 1 })
+    expect(pending.json).toMatchObject({ rules_pending: true, community_name: COMMUNITY, rules_version: versionBefore + 1 })
     const refused = await apiFetch(b, 'POST', `/api/channels/${channelId}/messages`, { content: 'too early' })
     expect(refused.status).toBe(403)
     expect(refused.json).toMatchObject({ error: { code: 'RULES_NOT_ACCEPTED' } })

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { startDesktopGaming } from './lib/desktopGaming'
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useAuthStore } from './stores/auth'
 import { usePermissionsStore } from './stores/permissions'
 import { useChatStore } from './stores/chat'
 import { useVoiceStore } from './stores/voice'
 import { useAccountStore } from './stores/account'
+import { useBlocksStore } from './stores/blocks'
+import { useServerFeaturesStore } from './stores/serverFeatures'
 import { recoveryFromLocation } from './lib/recoveryLink'
 import { currentRoute, navigate, popRedirectRoute, savePendingRoute } from './lib/router'
 import Sidebar from './components/Sidebar.vue'
@@ -35,10 +37,13 @@ import ToastHost from './components/ToastHost.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 import WelcomeFlow from './components/WelcomeFlow.vue'
 import ConnectionBanner from './components/ConnectionBanner.vue'
+import SkipLinks from './components/SkipLinks.vue'
 import TimeoutBanner from './components/TimeoutBanner.vue'
 import ModerationDialog from './components/ModerationDialog.vue'
 import MessageModerationDialog from './components/MessageModerationDialog.vue'
 import EditHistoryDialog from './components/EditHistoryDialog.vue'
+import ReportDialog from './components/ReportDialog.vue'
+import ForwardDialog from './components/ForwardDialog.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
 import PipHost from './components/PipHost.vue'
 import { useResizable } from './composables/useResizable'
@@ -83,6 +88,8 @@ const panels = useResizable([
 // keeps the rest, at least STAGE_MIN_HEIGHT.
 const voiceChatHeight = useResizable([VOICE_CHAT_HEIGHT], { axis: 'y', centerMin: STAGE_MIN_HEIGHT + 48 }).voiceChat
 const showLegalModal = ref(false)
+// A direct message conversation fills the chat area: no community member list beside it.
+const inConversation = computed(() => chatStore.isDm(chatStore.activeChannel?.id))
 // Phones: the channel list is a drawer, the thread and member list fill the screen.
 const { isCompact, navOpen, closeNav } = useCompactLayout()
 if (isCompact.value) chatStore.showMemberList = false
@@ -106,14 +113,21 @@ let resumeAttempted = false
 async function initializeApp() {
   if (!alive) return
   routing.beginFirstRoute()
+  // What the server can do decides what is fetched next and how the socket opens.
+  await useServerFeaturesStore().load()
+  if (!alive) return
   await Promise.all([
     chatStore.fetchChannels(),
     chatStore.fetchMembers(),
     chatStore.fetchReadState(),
-    chatStore.fetchNotificationSettings()
+    chatStore.fetchNotificationSettings(),
+    useBlocksStore().load()
   ])
   if (!alive) return
+  chatStore.dmsLoaded = false
   chatStore.initWebSocket()
+  // The conversations are read as the socket opens; a first route into one needs them.
+  await chatStore.waitForDms(3000)
 }
 
 async function onAuthSuccess() {
@@ -148,6 +162,10 @@ watch(() => authStore.isAuthenticated, async (isAuthed) => {
     savePendingRoute()
     if (voiceStore.currentChannelId) leaveVoiceChannel()
     chatStore.closeWebSocket()
+    // Nothing of this account's private lists stays for the next sign-in.
+    chatStore.dms = []
+    chatStore.dmsLoaded = false
+    useBlocksStore().reset()
   }
 })
 
@@ -224,6 +242,7 @@ onMounted(async () => {
 
     <!-- Main Mnema Talk Layout -->
     <template v-else>
+      <SkipLinks />
       <!-- Left Column: Navigation, Channels & User Controls -->
       <div
         v-if="isCompact && navOpen"
@@ -235,7 +254,7 @@ onMounted(async () => {
       <div
         data-testid="channel-drawer"
         :class="[
-          'relative flex flex-col h-full flex-shrink-0 border-r border-mnema-hairline bg-mnema-raised',
+          'relative flex flex-col h-full shrink-0 border-r border-mnema-hairline bg-mnema-raised',
           'max-md:safe-pad max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:w-[min(86vw,22rem)] max-md:transition-transform max-md:duration-200 motion-reduce:transition-none',
           navOpen ? '' : 'max-md:-translate-x-full'
         ]"
@@ -269,7 +288,7 @@ onMounted(async () => {
           />
         </template>
         <div v-else class="min-h-0 flex flex-1 flex-col">
-          <NativeTrustControl v-if="platform.isDesktop() && authStore.isAdmin && chatStore.activeChannel" :key="authStore.user?.id + ':' + chatStore.activeChannel.id" :channel-id="chatStore.activeChannel.id" @saved="chatStore.activeChannel && chatStore.fetchMessages(chatStore.activeChannel.id)" />
+          <NativeTrustControl v-if="platform.isDesktop() && authStore.isAdmin && chatStore.activeChannel && !inConversation" :key="authStore.user?.id + ':' + chatStore.activeChannel.id" :channel-id="chatStore.activeChannel.id" @saved="chatStore.activeChannel && chatStore.fetchMessages(chatStore.activeChannel.id)" />
           <ChatArea class="min-h-0 flex-1" />
         </div>
       </div>
@@ -277,7 +296,7 @@ onMounted(async () => {
       <!-- Thread panel -->
       <div
         v-if="chatStore.activeThread"
-        class="relative h-full flex-shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas"
+        class="relative h-full shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas"
         :style="isCompact ? undefined : { width: `${panels.thread.width}px` }"
       >
         <ThreadSidebar />
@@ -286,8 +305,8 @@ onMounted(async () => {
 
       <!-- Right column: member list -->
       <div
-        v-if="chatStore.showMemberList"
-        class="relative h-full flex-shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas"
+        v-if="chatStore.showMemberList && !inConversation"
+        class="relative h-full shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas"
         :style="isCompact ? undefined : { width: `${panels.members.width}px` }"
       >
         <MemberList />
@@ -357,5 +376,7 @@ onMounted(async () => {
     <ModerationDialog />
     <MessageModerationDialog />
     <EditHistoryDialog />
+    <ReportDialog />
+    <ForwardDialog />
   </div>
 </template>

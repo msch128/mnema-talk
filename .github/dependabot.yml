@@ -53,19 +53,25 @@ updates:
       npm-dev:
         dependency-type: development
     ignore:
-      # Tailwind 4 is a CSS-first rewrite; migrate deliberately, not via a bot PR.
-      - dependency-name: tailwindcss
-        update-types: ["version-update:semver-major"]
       # Deprecated upstream; the app uses @lucide/vue.
       - dependency-name: lucide-vue-next
-      # typescript-eslint supports TypeScript <6.1; move with it, not ahead.
+      # TypeScript 7 (native compiler) was tried on 2026-10-23 and does not run
+      # here: typescript-eslint 8.72 peers typescript <6.1 and ESLint crashes in
+      # ts-api-utils ("Cannot read properties of undefined (reading 'Intrinsic')"),
+      # and vue-tsc 3.3.13 fails with ERR_PACKAGE_PATH_NOT_EXPORTED for
+      # typescript/lib/tsc. Move when both support it (typescript-eslint #10940).
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
-      # Types follow the Node major of the build image (node:24 in Dockerfile).
+      # Types follow the Node major of the build image (node:26 in Dockerfile and CI).
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
-      # ts-mls pins its @noble peers exactly; they move only with ts-mls.
-      - dependency-name: "@noble/*"
+      # ts-mls 1.6.4 pins @noble/curves 2.0.1 and @noble/ciphers 2.1.1 as exact
+      # peers; they move only with ts-mls. @noble/hashes is not a peer.
+      - dependency-name: "@noble/curves"
+      - dependency-name: "@noble/ciphers"
+      # The CSP build patch (web/scripts/emojiPickerCsp.ts) depends on the
+      # exact 1.29.1 build.
+      - dependency-name: emoji-picker-element
 
   - package-ecosystem: github-actions
     directory: /

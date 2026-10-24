@@ -12,6 +12,7 @@ import App from './App.vue'
 import { gamingSurface } from './lib/desktopGaming'
 import { platform } from './lib/platform'
 import { captureInstallPrompt, registerServiceWorker } from './lib/pwa'
+import { installRangeFill } from './lib/rangeFill'
 import './style.css'
 import { i18nPlugin, setLocale, browserLocale } from './i18n'
 import { tooltip } from './directives/tooltip'
@@ -33,5 +34,6 @@ createApp(root)
   .directive('tooltip', tooltip)
   .mount('#app')
 
+installRangeFill()
 captureInstallPrompt()
 registerServiceWorker()

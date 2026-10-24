@@ -63,7 +63,7 @@ const avatarUrl = computed(() => {
 </script>
 
 <template>
-  <div class="relative inline-block flex-shrink-0">
+  <div class="relative inline-block shrink-0">
     <div 
       :class="[
         'rounded-full flex items-center justify-center font-semibold overflow-hidden border transition-all select-none',

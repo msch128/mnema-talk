@@ -16,7 +16,7 @@ const emit = defineEmits<{ close: [] }>()
       <footer class="px-6 py-3.5 border-t border-mnema-hairline bg-mnema-raised flex justify-end">
         <button
           type="button"
-          class="px-5 py-2 rounded-lg bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold text-sm transition shadow-sm"
+          class="btn btn-primary"
           @click="emit('close')"
         >{{ $t('common.close') }}</button>
       </footer>

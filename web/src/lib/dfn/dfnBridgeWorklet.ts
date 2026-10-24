@@ -3,10 +3,13 @@ import { isDfnConnect, isDfnFailed, isDfnFrameHeader } from './dfnTypes'
 
 // The rendering thread only buffers and copies mono PCM. Three 10 ms frames
 // bound queued work, and replies older than 30 ms cannot add stale audio.
+// While the worker is late the dry microphone is passed through; the filter is
+// given up only after failureSamples (3 s) without a reply or filtered audio, so
+// a stall of the page or a burst of catch-up rendering does not end it for good.
 class DeepFilterBridge extends AudioWorkletProcessor {
   frameLength = 480
   maxFrames = 3
-  failureSamples = 480 * 25
+  failureSamples = 480 * 300
   input = new Float32Array(480)
   inputPos = 0
   output = new Float32Array(1440)
@@ -43,7 +46,7 @@ class DeepFilterBridge extends AudioWorkletProcessor {
     this.processedFrames = 0
     this.droppedFrames = 0
     this.port.onmessage = ({ data }: MessageEvent<unknown>) => {
-      if (isDfnFailed(data)) { this.fail(); return }
+      if (isDfnFailed(data)) { this.fail(data.reason ?? 'closed by the page'); return }
       if (!isDfnConnect(data) || this.workerPort) return
       this.workerPort = data.port
       this.workerPort.onmessage = ({ data: result }: MessageEvent<unknown>) => this.receive(result)
@@ -52,12 +55,12 @@ class DeepFilterBridge extends AudioWorkletProcessor {
 
   validateReceivedFrame(result: unknown): { id: number; samples: Float32Array } | null {
     if (isDfnFailed(result)) {
-      this.fail()
+      this.fail(result.reason ?? 'the worker gave up')
       return null
     }
     if (!isDfnFrameHeader(result) || !this.pending.delete(result.id)) return null
     if (!(result.samples instanceof Float32Array) || result.samples.length !== this.frameLength) {
-      this.fail()
+      this.fail('the worker sent a frame of the wrong kind')
       return null
     }
     return { id: result.id, samples: result.samples }
@@ -95,12 +98,13 @@ class DeepFilterBridge extends AudioWorkletProcessor {
     this.writeOutputSamples(frame.id, frame.samples)
   }
 
-  fail() {
+  // The reason (never audio) tells whoever watches why the filter was given up.
+  fail(reason: string) {
     if (this.failed) return
     this.failed = true
     this.pending.clear()
     this.outputCount = 0
-    this.port.postMessage({ type: 'failed' })
+    this.port.postMessage({ type: 'failed', reason })
   }
 
   process(inputs: Float32Array[][], outputs: Float32Array[][]) {
@@ -125,7 +129,7 @@ class DeepFilterBridge extends AudioWorkletProcessor {
   submitFrame() {
     const id = this.nextFrame++
     const oldest = this.pending.values().next().value
-    if (oldest !== undefined && (id - oldest) * this.frameLength > this.failureSamples) this.fail()
+    if (oldest !== undefined && (id - oldest) * this.frameLength > this.failureSamples) this.fail(`the worker took over ${this.failureSamples / 48} ms for a frame`)
     if (!this.failed && this.workerPort && this.pending.size < this.maxFrames) {
       const samples = this.input
       this.pending.add(id)
@@ -153,7 +157,7 @@ class DeepFilterBridge extends AudioWorkletProcessor {
     const activeUnderrun = this.hasStartedOutput() && underrun
     if (activeUnderrun && !this.failed) {
       this.underrunSamples += inputLength
-      if (this.underrunSamples > this.failureSamples) this.fail()
+      if (this.underrunSamples > this.failureSamples) this.fail(`no filtered audio for ${this.failureSamples / 48} ms`)
     } else if (!underrun) {
       this.underrunSamples = 0
     }

@@ -46,7 +46,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
 </script>
 
 <template>
-  <div ref="root" class="relative flex-shrink-0" @keydown.esc.stop="close(true)">
+  <div ref="root" class="relative shrink-0" @keydown.esc.stop="close(true)">
     <button
       ref="button"
       type="button"
@@ -68,13 +68,13 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
       v-if="open"
       role="dialog"
       :aria-label="$t('format.title')"
-      class="absolute bottom-full right-0 z-30 mb-2 max-h-[min(28rem,60vh)] w-[22rem] max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-lg border border-mnema-border bg-mnema-elevated p-3 shadow-lg"
+      class="absolute bottom-full right-0 z-30 mb-2 max-h-[min(28rem,60vh)] w-88 max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-lg border border-mnema-border bg-mnema-elevated p-3 shadow-lg"
     >
       <div class="mb-2 flex items-start justify-between gap-2">
         <p class="text-xs text-mnema-muted">{{ $t('format.intro') }}</p>
         <button
           type="button"
-          class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-mnema-tertiary hover:bg-mnema-surface hover:text-mnema-text"
+          class="btn btn-icon h-6 w-6 shrink-0"
           :aria-label="$t('format.close')"
           @click="close(true)"
         >

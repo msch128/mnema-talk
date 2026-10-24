@@ -64,7 +64,7 @@ function onKeydown(e: KeyboardEvent) {
       aria-haspopup="menu"
       :aria-expanded="open ? 'true' : 'false'"
       v-tooltip="$t('talk.participantsDetails')"
-      class="text-xs leading-4 px-1.5 rounded-full border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent whitespace-nowrap flex-shrink-0 hover:bg-mnema-accent/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent"
+      class="text-xs leading-4 px-1.5 rounded-full border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent whitespace-nowrap shrink-0 hover:bg-mnema-accent/20 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent"
       :aria-label="$t('talk.participants', { count: users.length })"
       @click="toggle"
     >
@@ -78,7 +78,7 @@ function onKeydown(e: KeyboardEvent) {
       role="menu"
       data-testid="talk-participants-list"
       :aria-label="$t('talk.participantsDetails')"
-      class="absolute left-0 top-full z-40 mt-2 w-[280px] max-w-[calc(100vw-16px)] max-h-[min(420px,calc(100dvh-80px))] overflow-y-auto overscroll-contain rounded-[10px] bg-mnema-elevated p-1.5 shadow-[inset_0_0_0_1px_#2B2F2D,0_12px_32px_rgba(0,0,0,0.5)]"
+      class="absolute left-0 top-full z-40 mt-2 w-[280px] max-w-[calc(100vw-16px)] max-h-[min(420px,calc(100dvh-80px))] overflow-y-auto overscroll-contain rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in"
     >
       <div class="flex items-center justify-between px-2 pb-1.5 pt-1 text-xs text-mnema-tertiary">
         <span class="font-semibold uppercase tracking-wide">{{ $t('talk.participants', { count: users.length }) }}</span>
@@ -92,7 +92,7 @@ function onKeydown(e: KeyboardEvent) {
         role="menuitem"
         tabindex="-1"
         :data-participant="u.username"
-        class="flex h-10 w-full items-center gap-2.5 rounded-md px-2 text-left text-sm transition-colors hover:bg-mnema-hover focus:outline-none focus-visible:bg-mnema-hover"
+        class="flex h-10 w-full items-center gap-2.5 rounded-md px-2 text-left text-sm transition-colors hover:bg-mnema-hover focus:outline-hidden focus-visible:bg-mnema-hover"
         @click="openProfile(u)"
       >
         <UserAvatar :user="u" size="sm" :is-speaking="voiceStore.isSpeaking(u.id)" />

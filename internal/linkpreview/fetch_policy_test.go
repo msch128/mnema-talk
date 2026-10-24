@@ -193,7 +193,7 @@ func TestPreviewClipsUnicodeMetadataAndRejectsUnsafeImageURLs(t *testing.T) {
 			f := New()
 			f.client.Transport = edgePreviewTransport(func(r *http.Request) (*http.Response, error) {
 				html := `<title>` + strings.Repeat("界", maxTitleRunes+10) + `</title>` +
-					`<meta name="description" content="` + strings.Repeat("ä", maxDescRunes+10) + `">` +
+					`<meta name="description" content="` + strings.Repeat("\u00e4", maxDescRunes+10) + `">` +
 					`<meta property="og:site_name" content="` + strings.Repeat("🙂", 100) + `">` +
 					`<meta property="og:image" content="` + image + `">`
 				return edgePreviewResponse(r, "text/html", strings.NewReader(html)), nil

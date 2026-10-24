@@ -57,7 +57,7 @@ async function submitPasswordReset() {
           type="password"
           :placeholder="$t('admin.newPasswordPlaceholder', { count: MIN_PASSWORD_LENGTH })"
           :aria-label="$t('admin.newPasswordLabel')"
-          class="w-full bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary outline-none focus:border-mnema-accent transition"
+          class="w-full bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary outline-hidden focus:border-mnema-accent transition"
         />
         <p v-if="newPasswordInput && passwordTooShort" class="text-xs text-mnema-danger mt-1">
           {{ $t('admin.passwordTooShort', { count: MIN_PASSWORD_LENGTH }) }}
@@ -66,7 +66,7 @@ async function submitPasswordReset() {
       <div class="flex justify-end gap-2 pt-2">
         <button
           type="button"
-          class="px-3.5 py-1.5 rounded-md border border-mnema-border text-sm text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition"
+          class="btn btn-secondary"
           @click="emit('close')"
         >
           {{ $t('common.cancel') }}
@@ -75,7 +75,7 @@ async function submitPasswordReset() {
           data-testid="save-password-button"
           type="submit"
           :disabled="passwordTooShort || isResettingPassword"
-          class="bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold px-4 py-1.5 rounded-md text-sm transition disabled:opacity-40"
+          class="btn btn-primary"
         >
           {{ $t('admin.savePassword') }}
         </button>

@@ -3,10 +3,11 @@ import type { PropType } from 'vue'
 import type { User as ProfileUser } from '../types/domain'
 import type { LivePresence } from './presentationTypes'
 import { ref } from 'vue'
-import { AtSign, Camera, Loader2 } from '@lucide/vue'
+import { AtSign, Camera, Loader2, MessageCircle, Trash2 } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 import PresenceDot from './PresenceDot.vue'
@@ -16,13 +17,16 @@ import PresenceDot from './PresenceDot.vue'
 defineProps({
   profileUser: { type: Object as PropType<Partial<ProfileUser>>, required: true },
   isSelf: { type: Boolean, default: false },
-  liveStatus: { type: String as PropType<LivePresence>, required: true }
+  liveStatus: { type: String as PropType<LivePresence>, required: true },
+  // Offer "Message": direct messages are on and this member can be written to.
+  canMessage: { type: Boolean, default: false }
 })
-const emit = defineEmits<{ mention: [] }>()
+const emit = defineEmits<{ mention: []; message: [] }>()
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 const toasts = useToastStore()
+const features = useServerFeaturesStore()
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const isUploading = ref(false)
@@ -37,9 +41,9 @@ async function onAvatarSelected(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
 
-  // Validate size (max 10MB)
-  if (file.size > 10 * 1024 * 1024) {
-    toasts.error(t('profile.avatarTooBig', { size: 10 }))
+  // Validate size (max 5MB, like the server)
+  if (file.size > 5 * 1024 * 1024) {
+    toasts.error(t('profile.avatarTooBig', { size: 5 }))
     return
   }
 
@@ -57,6 +61,24 @@ async function onAvatarSelected(e: Event) {
   } finally {
     isUploading.value = false
     if (fileInput.value) fileInput.value.value = ''
+  }
+}
+
+async function removeAvatar() {
+  isUploading.value = true
+  try {
+    const updated = await authStore.removeAvatar()
+    if (chatStore.selectedUserProfile) {
+      const next = { ...chatStore.selectedUserProfile, ...updated }
+      // A removed avatar is absent from the answer; the merge must not keep the old one.
+      delete next.avatar_url
+      chatStore.selectedUserProfile = next
+    }
+    toasts.success(t('profile.avatarRemoved'))
+  } catch (err) {
+    toasts.error(caughtErrorMessage(err, t('profile.avatarRemoveFailed')))
+  } finally {
+    isUploading.value = false
   }
 }
 </script>
@@ -123,11 +145,23 @@ async function onAvatarSelected(e: Event) {
       <button
         v-if="!isSelf"
         @click="emit('mention')"
-        class="px-3 py-1.5 rounded-lg bg-mnema-band hover:bg-mnema-raised text-mnema-text text-sm font-medium border border-mnema-border flex items-center gap-1.5 transition active:scale-95 shadow-sm"
+        class="btn btn-secondary bg-mnema-band flex items-center gap-1.5"
         v-tooltip.visual="$t('profile.mentionHint')"
       >
         <AtSign class="w-4 h-4 text-mnema-accent" />
         <span>{{ $t('profile.mention') }}</span>
+      </button>
+
+      <button
+        v-if="canMessage"
+        type="button"
+        data-testid="profile-message"
+        @click="emit('message')"
+        class="px-3 py-1.5 rounded-lg bg-mnema-accent/15 hover:bg-mnema-accent/25 text-mnema-accent text-sm font-medium border border-mnema-accent/30 flex items-center gap-1.5 transition active:scale-95"
+        v-tooltip.visual="$t('dm.messageHint')"
+      >
+        <MessageCircle class="w-4 h-4" />
+        <span>{{ $t('dm.message') }}</span>
       </button>
 
       <button
@@ -138,6 +172,18 @@ async function onAvatarSelected(e: Event) {
       >
         <Camera class="w-4 h-4" />
         <span>{{ $t('profile.changeAvatar') }}</span>
+      </button>
+
+      <button
+        v-if="isSelf && profileUser.avatar_url && features.avatarRemove"
+        type="button"
+        data-testid="avatar-remove"
+        :disabled="isUploading"
+        class="btn btn-ghost btn-sm"
+        @click="removeAvatar"
+      >
+        <Trash2 class="w-4 h-4" aria-hidden="true" />
+        <span>{{ $t('profile.removeAvatar') }}</span>
       </button>
     </div>
   </div>

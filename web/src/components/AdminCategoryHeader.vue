@@ -15,17 +15,17 @@ const emit = defineEmits<{ move: [direction: number]; rename: []; delete: [] }>(
 <template>
   <div class="flex items-center justify-between gap-2 border-b border-mnema-hairline/60 pb-2">
     <div class="flex items-center gap-2 min-w-0">
-      <GripVertical class="w-4 h-4 text-mnema-tertiary cursor-grab active:cursor-grabbing flex-shrink-0" />
+      <GripVertical class="w-4 h-4 text-mnema-tertiary cursor-grab active:cursor-grabbing shrink-0" />
       <span class="text-xs font-semibold uppercase font-mono tracking-wider text-mnema-text truncate">{{ category.name }}</span>
       <span class="text-xs text-mnema-tertiary font-mono">({{ category.channels?.length || 0 }})</span>
     </div>
 
-    <div class="flex items-center gap-1 flex-shrink-0">
+    <div class="flex items-center gap-1 shrink-0">
       <button
         data-testid="move-up-category"
         type="button"
         :disabled="index === 0"
-        class="p-1 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-elevated transition disabled:opacity-30"
+        class="btn btn-icon btn-sm hover:text-mnema-text"
         :title="$t('admin.moveUp')"
         :aria-label="$t('admin.moveUp')"
         @click="emit('move', -1)"
@@ -36,7 +36,7 @@ const emit = defineEmits<{ move: [direction: number]; rename: []; delete: [] }>(
         data-testid="move-down-category"
         type="button"
         :disabled="index === count - 1"
-        class="p-1 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-elevated transition disabled:opacity-30"
+        class="btn btn-icon btn-sm hover:text-mnema-text"
         :title="$t('admin.moveDown')"
         :aria-label="$t('admin.moveDown')"
         @click="emit('move', 1)"
@@ -46,7 +46,7 @@ const emit = defineEmits<{ move: [direction: number]; rename: []; delete: [] }>(
       <button
         data-testid="rename-category"
         type="button"
-        class="p-1 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-elevated transition"
+        class="btn btn-icon btn-sm hover:text-mnema-text"
         :title="$t('admin.renameCategory')"
         :aria-label="$t('admin.renameCategory')"
         @click="emit('rename')"
@@ -56,7 +56,7 @@ const emit = defineEmits<{ move: [direction: number]; rename: []; delete: [] }>(
       <button
         data-testid="delete-category"
         type="button"
-        class="p-1 rounded text-mnema-tertiary hover:text-mnema-danger hover:bg-mnema-elevated transition"
+        class="btn btn-icon btn-sm hover:text-mnema-danger"
         :title="$t('sidebar.deleteCategory')"
         :aria-label="$t('sidebar.deleteCategory')"
         @click="emit('delete')"

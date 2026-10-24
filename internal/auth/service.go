@@ -64,6 +64,10 @@ type User struct {
 	Role string `json:"role" enums:"admin,user"`
 	// AvatarURL is the API URL of the avatar (/api/media/{id}); omitted when none.
 	AvatarURL string `json:"avatar_url,omitempty" binding:"optional"`
+	// BannerURL is the API URL of the profile banner (/api/media/{id}); omitted
+	// when none and in every payload but the profile endpoints (GET
+	// /api/users/{userID}, GET /api/auth/me and the banner routes).
+	BannerURL string `json:"banner_url,omitempty" binding:"optional"`
 	// StatusText is a free-text status line; empty when unset.
 	StatusText string `json:"status_text" maxLength:"32"`
 	// Presence is the chosen presence, only present in responses about the
@@ -114,6 +118,17 @@ func AvatarURL(mediaID *string) string {
 		return ""
 	}
 	return "/api/media/" + *mediaID
+}
+
+// LoadBanner fills u's banner URL; profile endpoints call it, the user
+// columns every other payload is built from do not carry the banner.
+func LoadBanner(ctx context.Context, p db.Querier, u *User) error {
+	var banner *string
+	if err := p.QueryRow(ctx, `SELECT banner_s3_key FROM users WHERE id = $1`, u.ID).Scan(&banner); err != nil {
+		return err
+	}
+	u.BannerURL = AvatarURL(banner)
+	return nil
 }
 
 var (

@@ -22,7 +22,7 @@ function toggleScreenShare() {
   else startScreenShare()
 }
 
-const ib = 'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent'
+const ib = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent'
 </script>
 
 <template>
@@ -35,10 +35,10 @@ const ib = 'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md tr
         type="button"
         data-testid="voice-panel-open"
         v-tooltip.visual="$t('voice.panel.open')"
-        class="flex min-w-0 items-center gap-2 text-left text-sm font-semibold leading-[18px] text-mnema-accent hover:text-mnema-accent-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent"
+        class="flex min-w-0 items-center gap-2 text-left text-sm font-semibold leading-[18px] text-mnema-accent hover:text-mnema-accent-hover focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent"
         @click="voiceStore.activeView = 'voice'"
       >
-        <span class="h-2 w-2 flex-shrink-0 rounded-full bg-mnema-accent"></span>
+        <span class="h-2 w-2 shrink-0 rounded-full bg-mnema-accent"></span>
         <span class="truncate">{{ $t('voice.panel.connected', { channel: channelName }) }}</span>
       </button>
       <!-- The ping opens the connection details. -->
@@ -47,11 +47,11 @@ const ib = 'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md tr
         data-testid="voice-panel-ping"
         :data-tone="pingTone(ping)"
         v-tooltip="$t('voice.panel.details')"
-        class="flex min-w-0 max-w-full items-center gap-1.5 self-start whitespace-nowrap pl-4 text-xs leading-4 rounded-sm hover:underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent"
+        class="flex min-w-0 max-w-full items-center gap-1.5 self-start whitespace-nowrap pl-4 text-xs leading-4 rounded-xs hover:underline underline-offset-2 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent"
         @click="voiceStore.showStatsModal = true"
       >
-        <span :class="['flex-shrink-0 font-mono font-medium tabular-nums', pingClass]">{{ ping == null ? '–' : ping }} ms</span>
-        <span class="vp-narrow-hide flex-shrink-0 text-mnema-border-strong">·</span>
+        <span :class="['shrink-0 font-mono font-medium tabular-nums', pingClass]">{{ ping == null ? '–' : ping }} ms</span>
+        <span class="vp-narrow-hide shrink-0 text-mnema-border-strong">·</span>
         <span class="vp-narrow-hide min-w-0 truncate text-mnema-tertiary">{{ $t('voice.panel.details') }}</span>
       </button>
     </div>
@@ -73,7 +73,7 @@ const ib = 'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md tr
       data-testid="voice-panel-stream-audio"
       v-tooltip="voiceStore.isScreenAudioMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
       :aria-pressed="voiceStore.isScreenAudioMuted ? 'true' : 'false'"
-      :class="[ib, 'vp-narrow-hide', voiceStore.isScreenAudioMuted ? 'text-mnema-danger hover:bg-mnema-danger/[0.12]' : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text']"
+      :class="[ib, 'vp-narrow-hide', voiceStore.isScreenAudioMuted ? 'text-mnema-danger hover:bg-mnema-danger/12' : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text']"
       @click="voiceStore.toggleScreenAudioMute"
     >
       <VolumeX v-if="voiceStore.isScreenAudioMuted" class="h-[18px] w-[18px]" />
@@ -83,7 +83,7 @@ const ib = 'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md tr
       type="button"
       data-testid="voice-panel-leave"
       v-tooltip="$t('voice.leave')"
-      :class="[ib, 'text-mnema-danger hover:bg-mnema-danger/[0.12]']"
+      :class="[ib, 'text-mnema-danger hover:bg-mnema-danger/12']"
       @click="leaveVoiceChannel"
     >
       <PhoneOff class="h-[18px] w-[18px]" />

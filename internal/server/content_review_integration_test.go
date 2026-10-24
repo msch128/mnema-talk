@@ -17,7 +17,7 @@ import (
 func TestEditThroughTheWrongChannelPathIsRejected(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
-	general := a.createChannel(admin, "allgemein", "text")
+	general := a.createChannel(admin, "lobby", "text")
 	other := a.createChannel(admin, "anderes", "text")
 	id := postMessage(t, admin, general, map[string]any{"content": "original"})
 
@@ -38,7 +38,7 @@ func TestEditThroughTheWrongChannelPathIsRejected(t *testing.T) {
 func TestMediaCacheHeaders(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
-	ch := a.createChannel(admin, "allgemein", "text")
+	ch := a.createChannel(admin, "lobby", "text")
 
 	up := admin.upload("/api/channels/"+ch.String()+"/upload", "file", "a.png", "image/png", pngBytes, nil)
 	if up.status != http.StatusCreated {
@@ -60,7 +60,7 @@ func TestMediaCacheHeaders(t *testing.T) {
 		t.Fatalf("revalidation: %d", cond.status)
 	}
 
-	av := admin.upload("/api/users/me/avatar", "avatar", "me.png", "image/png", pngBytes, nil)
+	av := admin.upload("/api/users/me/avatar", "avatar", "me.png", "image/png", bannerPNG(t, 8, 8), nil)
 	if av.status != http.StatusOK {
 		t.Fatalf("avatar: %d %s", av.status, av.body)
 	}
@@ -113,7 +113,7 @@ func TestSearchConcurrencyIsCappedPerUser(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
 	max := a.register(admin, "max")
-	general := a.createChannel(admin, "allgemein", "text")
+	general := a.createChannel(admin, "lobby", "text")
 	postMessage(t, admin, general, map[string]any{"content": "park"})
 
 	// Hold the user's slots the way two slow searches would.

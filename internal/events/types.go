@@ -47,6 +47,15 @@ const (
 	VoiceMuteState      = "voice_mute_state"
 	NativeAccessRenewed = "native_access_renewed"
 	EmojiChanged        = "emoji_changed"
+	ThreadFollowUpdated = "thread_follow_updated"
+	BlockUpdated        = "block_updated"
+	SavedUpdated        = "saved_updated"
+	DMCreated           = "dm_created"
+	DMMemberAdded       = "dm_member_added"
+	DMMemberRemoved     = "dm_member_removed"
+	// Kicked tells a member a moderator signed them out everywhere; their
+	// connection closes right after.
+	Kicked = "kicked"
 )
 
 // Client-to-server events.

@@ -33,7 +33,7 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
 <template>
   <div
     :class="[
-      'relative h-6 max-md:h-11 flex items-center gap-1 pr-1 rounded transition-colors motion-reduce:transition-none',
+      'relative h-6 max-md:h-11 flex items-center gap-1 pr-1 rounded-sm transition-colors motion-reduce:transition-none',
       indicator === 'inside' && 'bg-mnema-accent/15 ring-1 ring-inset ring-mnema-accent',
       dragging && 'opacity-40',
       flash && 'nav-flash'
@@ -52,7 +52,7 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
 
     <button
       type="button"
-      class="flex-1 min-w-0 h-6 max-md:h-11 pl-0.5 flex items-center gap-0.5 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary hover:text-mnema-muted transition-colors focus:outline-none focus-visible:text-mnema-text focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent rounded"
+      class="flex-1 min-w-0 h-6 max-md:h-11 pl-0.5 flex items-center gap-0.5 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary hover:text-mnema-muted transition-colors focus:outline-hidden focus-visible:text-mnema-text focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent rounded-sm"
       :aria-expanded="collapsed ? 'false' : 'true'"
       aria-haspopup="menu"
       :data-category-toggle="category.id"
@@ -64,8 +64,8 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
       @keydown.alt.up="moveKey($event, -1)"
       @keydown.alt.down="moveKey($event, 1)"
     >
-      <ChevronRight v-if="collapsed" class="w-3 h-3 flex-shrink-0" />
-      <ChevronDown v-else class="w-3 h-3 flex-shrink-0" />
+      <ChevronRight v-if="collapsed" class="w-3 h-3 shrink-0" />
+      <ChevronDown v-else class="w-3 h-3 shrink-0" />
       <span class="truncate">{{ category.name }}</span>
       <span
         v-if="collapsed && mentions > 0"
@@ -76,14 +76,14 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
       <span
         v-else-if="collapsed && unreadChannels > 0"
         data-testid="category-unread"
-        class="ml-auto w-2 h-2 mr-1 rounded-full bg-mnema-text flex-shrink-0"
+        class="ml-auto w-2 h-2 mr-1 rounded-full bg-mnema-text shrink-0"
         role="img"
         :aria-label="$t('sidebar.categoryUnread')"
       ></span>
     </button>
     <div
       v-if="admin"
-      class="max-md:hidden flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover/cat:opacity-100 focus-within:opacity-100 transition"
+      class="max-md:hidden flex items-center gap-0.5 shrink-0 opacity-0 group-hover/cat:opacity-100 focus-within:opacity-100 transition"
     >
       <button
         type="button"
@@ -91,7 +91,7 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
         @click.stop="emit('create-channel')"
         v-tooltip="$t('channel.create')"
         :aria-label="$t('channel.create')"
-        class="w-5 h-5 flex items-center justify-center rounded text-mnema-tertiary hover:text-mnema-text transition"
+        class="btn btn-icon w-5 h-5"
       >
         <Plus class="w-4 h-4" />
       </button>
@@ -101,7 +101,7 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
         @click.stop="emit('delete')"
         v-tooltip="$t('sidebar.deleteCategory')"
         :aria-label="$t('sidebar.deleteCategory')"
-        class="w-5 h-5 flex items-center justify-center rounded text-mnema-tertiary hover:text-mnema-danger transition"
+        class="btn btn-icon w-5 h-5 hover:text-mnema-danger"
       >
         <Trash2 class="w-3.5 h-3.5" />
       </button>

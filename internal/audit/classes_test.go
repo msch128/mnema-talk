@@ -8,6 +8,7 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 	want := map[string]Visibility{
 		// Events written by handlers.
 		"message.delete": VisChannel, "message.edit": VisChannel, "message.pin": VisChannel, "message.unpin": VisChannel,
+		"message.edit_history_view": VisChannel, "poll.end": VisChannel,
 		"moderation.bulk_delete": VisChannel,
 		"voice.join":             VisChannel, "voice.leave": VisChannel,
 		"auth.login": VisPrivileged, "auth.login_failed": VisPrivileged, "auth.login_locked": VisPrivileged,
@@ -36,6 +37,7 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"moderation.timeout": VisAuditors, "moderation.timeout_remove": VisAuditors, "moderation.ban": VisAuditors,
 		"moderation.unban": VisAuditors, "moderation.ban_expired": VisAuditors,
 		"emoji.create": VisAuditors, "emoji.rename": VisAuditors, "emoji.delete": VisAuditors,
+		"report.create": VisPrivileged, "report.resolve": VisPrivileged, "report.delete": VisPrivileged,
 		"admin.post": VisPrivileged,
 	}
 	for _, rt := range Routes {

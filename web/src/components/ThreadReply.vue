@@ -38,7 +38,7 @@ const { pickerId, editingId, editText } = props.actions
     role="article"
     @keydown="emit('keydown', $event)"
     :class="[
-      'relative hover:bg-mnema-surface/50 -mx-2 px-2 py-1.5 rounded-md transition-colors group focus:outline-none focus-visible:bg-mnema-surface/40',
+      'relative hover:bg-mnema-surface/50 -mx-2 px-2 py-1.5 rounded-md transition-colors group focus:outline-hidden focus-visible:bg-mnema-surface/40',
       highlighted ? 'msg-flash' : '',
       reply.user_id !== authStore.user?.id && chatStore.messageMentionsMe(reply) ? 'msg-mentions-me' : ''
     ]"
@@ -55,7 +55,7 @@ const { pickerId, editingId, editText } = props.actions
           type="button"
           @click.stop="actions.togglePicker(reply.id)"
           :class="[
-            'p-1 rounded transition',
+            'p-1 rounded-sm transition',
             pickerId === reply.id
               ? 'bg-mnema-surface text-amber-400'
               : 'hover:bg-mnema-surface text-mnema-tertiary hover:text-amber-400'
@@ -75,7 +75,7 @@ const { pickerId, editingId, editText } = props.actions
       <button
         type="button"
         @click.stop="emit('reply')"
-        class="p-1 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
+        class="btn btn-icon btn-sm hover:text-mnema-text"
         v-tooltip="$t('chat.reply')"
       >
         <Reply class="w-3.5 h-3.5" />
@@ -85,7 +85,7 @@ const { pickerId, editingId, editText } = props.actions
         v-if="actions.isOwn(reply)"
         type="button"
         @click.stop="actions.startEdit(reply)"
-        class="p-1 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-accent transition"
+        class="btn btn-icon btn-sm hover:text-mnema-accent"
         v-tooltip="$t('thread.edit')"
       >
         <Pencil class="w-3.5 h-3.5" />
@@ -95,7 +95,7 @@ const { pickerId, editingId, editText } = props.actions
         v-if="actions.canDelete(reply)"
         type="button"
         @click.stop="actions.deleteMessage(reply)"
-        class="p-1 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-red-400 transition"
+        class="btn btn-icon btn-sm hover:text-red-400"
         v-tooltip="$t('thread.delete')"
       >
         <Trash2 class="w-3.5 h-3.5" />
@@ -126,7 +126,7 @@ const { pickerId, editingId, editText } = props.actions
             {{ shownName(reply) }}
           </button>
           <BotBadge v-if="reply.is_bot" :webhook="reply.is_webhook === true" />
-          <span class="text-xs text-mnema-tertiary flex-shrink-0 tabular-nums">{{ formatTime(reply.created_at) }}</span>
+          <span class="text-xs text-mnema-tertiary shrink-0 tabular-nums">{{ formatTime(reply.created_at) }}</span>
           <span v-if="reply.is_edited" class="text-xs text-mnema-tertiary italic">{{ $t('chat.edited') }}</span>
         </div>
 

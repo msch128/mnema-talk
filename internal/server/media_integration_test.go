@@ -90,10 +90,10 @@ func TestAvatarUploadReplacesPrevious(t *testing.T) {
 	if r := admin.upload("/api/users/me/avatar", "avatar", "big.png", "image/png", big, nil); r.status != http.StatusRequestEntityTooLarge {
 		t.Errorf("7 MB avatar: %d, want 413", r.status)
 	}
-	if r := admin.upload("/api/users/me/avatar", "avatar", "a.png", "image/png", pngBytes, nil); r.status != http.StatusOK {
+	if r := admin.upload("/api/users/me/avatar", "avatar", "a.png", "image/png", bannerPNG(t, 8, 8), nil); r.status != http.StatusOK {
 		t.Fatalf("first avatar: %d %s", r.status, r.body)
 	}
-	if r := admin.upload("/api/users/me/avatar", "avatar", "b.png", "image/png", pngBytes, nil); r.status != http.StatusOK {
+	if r := admin.upload("/api/users/me/avatar", "avatar", "b.png", "image/png", bannerPNG(t, 8, 8), nil); r.status != http.StatusOK {
 		t.Fatalf("second avatar: %d %s", r.status, r.body)
 	}
 	if a.store.Len() != 1 {

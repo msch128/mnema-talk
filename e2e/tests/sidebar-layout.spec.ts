@@ -17,13 +17,13 @@ const MEMBER_PASSWORD = `pw-${suffix}-${randomBytes(8).toString('hex')}`
 // The seeded layout: the uncategorized group (U) first, then three categories.
 const CATEGORIES = { A: `Alpha ${suffix}`, B: `Beta ${suffix}`, G: `Gamma ${suffix}` }
 const CHANNELS = {
-  u1: { name: `frei-${suffix}`, type: 'text', cat: null },
-  a1: { name: `a-eins-${suffix}`, type: 'text', cat: 'A' },
-  a2: { name: `a-zwei-${suffix}`, type: 'text', cat: 'A' },
-  a3: { name: `a-drei-${suffix}`, type: 'text', cat: 'A' },
-  b1: { name: `b-eins-${suffix}`, type: 'text', cat: 'B' },
+  u1: { name: `free-${suffix}`, type: 'text', cat: null },
+  a1: { name: `a-one-${suffix}`, type: 'text', cat: 'A' },
+  a2: { name: `a-two-${suffix}`, type: 'text', cat: 'A' },
+  a3: { name: `a-three-${suffix}`, type: 'text', cat: 'A' },
+  b1: { name: `b-one-${suffix}`, type: 'text', cat: 'B' },
   b2: { name: `Beta Talk ${suffix}`, type: 'voice', cat: 'B' },
-  g1: { name: `g-eins-${suffix}`, type: 'text', cat: 'G' },
+  g1: { name: `g-one-${suffix}`, type: 'text', cat: 'G' },
 }
 type Container = 'U' | 'A' | 'B' | 'G'
 type CategoryKey = Exclude<Container, 'U'>
@@ -159,6 +159,10 @@ async function expectNoVoiceUsers(page: Page, snapshotUsers: Promise<number>) {
 async function moveOnto(page: Page, locator: Locator, x: number, yRatio: number, steps = 1) {
   const b = await bounds(locator)
   await page.mouse.move(b.x + x, b.y + b.height * yRatio, { steps })
+  const current = await bounds(locator)
+  if (Math.abs(b.y - current.y) > 0.5) {
+    await page.mouse.move(current.x + x, current.y + current.height * yRatio, { steps: 2 })
+  }
 }
 
 /** Puts the pointer on `locator` once it has stopped moving, then presses: the press lands on that row. */
@@ -174,7 +178,7 @@ async function pressOn(page: Page, locator: Locator) {
  */
 async function dragTo(page: Page, source: Locator, target: Locator, ratio: number) {
   // Both ends on screen first: the list auto-scrolls near its edges.
-  await target.scrollIntoViewIfNeeded()
+  await target.evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => target.scrollIntoViewIfNeeded())
   await expect(source).toBeInViewport()
   // hover() waits until the row has stopped moving and puts the pointer on it
   // as it is at that moment. Rows above it come and go (a caller leaving a
@@ -195,6 +199,7 @@ async function dragTo(page: Page, source: Locator, target: Locator, ratio: numbe
 async function dropOn(page: Page, source: Locator, target: Locator, ratio: number) {
   await dragTo(page, source, target, ratio)
   await expect(indicator(page)).toBeVisible()
+  await moveOnto(page, target, 40, ratio, 2)
   const saved = page.waitForResponse((res) => isLayoutSave(res.request()))
   await page.mouse.up()
   expect((await saved).status()).toBe(204)
@@ -220,8 +225,8 @@ test.describe.configure({ mode: 'serial' })
 test.beforeAll(async ({ browser }) => {
   // Tall enough that the whole channel list (other specs add channels too) fits,
   // with room to spare: a list that scrolls makes a drag auto-scroll under the mouse.
-  adminCtx = await browser.newContext({ viewport: { width: 1280, height: 1500 } })
-  memberCtx = await browser.newContext({ viewport: { width: 1280, height: 1500 } })
+  adminCtx = await browser.newContext({ viewport: { width: 1280, height: 2200 } })
+  memberCtx = await browser.newContext({ viewport: { width: 1280, height: 2200 } })
   admin = await adminCtx.newPage()
   member = await memberCtx.newPage()
   const adminVoice = firstVoiceSnapshot(admin)
@@ -370,7 +375,7 @@ test('drag feedback: indicator, Escape cancels, a click still opens', async () =
     const a3 = await bounds(row(admin, 'a3'))
     return Math.abs(line.y + line.height / 2 - (a3.y + a3.height))
   }, { message: 'indicator sits at the bottom edge of a3' }).toBeLessThanOrEqual(4)
-  await expect(row(admin, 'a1').locator('..')).toHaveClass(/opacity-40/)
+  await expect(row(admin, 'a1').locator('xpath=ancestor::*[@data-channel-item][1]')).toHaveClass(/opacity-40/)
 
   // Escape cancels: nothing moves, nothing is saved, releasing does nothing.
   await admin.keyboard.press('Escape')

@@ -4,15 +4,10 @@ import type { NoiseMode } from '../stores/voice'
 import { useVoiceStore, NOISE_MODES } from '../stores/voice'
 import { useActiveAudioSettings } from '../composables/useActiveAudioSettings'
 
-// Audio processing (gain, noise suppression, echo, packet priority) and the warnings.
+// The noise filter and echo cancellation. The rarely used processing options
+// (gain control, packet priority) are in the Advanced section.
 const voiceStore = useVoiceStore()
 const applyActiveAudioSettings = useActiveAudioSettings()
-
-async function toggleAgc() {
-  voiceStore.autoGainControl = !voiceStore.autoGainControl
-  voiceStore.saveSettings()
-  await applyActiveAudioSettings()
-}
 
 async function setNoiseMode(mode: NoiseMode) {
   if (voiceStore.noiseMode === mode) return
@@ -25,82 +20,37 @@ async function toggleEcho() {
   voiceStore.saveSettings()
   await applyActiveAudioSettings()
 }
-
-async function toggleQos() {
-  voiceStore.qosHighPriority = !voiceStore.qosHighPriority
-  voiceStore.saveSettings()
-  await applyActiveAudioSettings()
-}
-
-function toggleWarnNoAudio() {
-  voiceStore.warnNoAudioDetected = !voiceStore.warnNoAudioDetected
-  voiceStore.saveSettings()
-}
-
-function toggleWarnSwitchChannel() {
-  voiceStore.warnSwitchChannel = !voiceStore.warnSwitchChannel
-  voiceStore.saveSettings()
-}
 </script>
 
 <template>
-  <!-- 3. Audio processing -->
-  <div class="space-y-2">
-    <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
-      {{ $t('audio.processing') }}
-    </label>
+  <section class="settings-group" aria-labelledby="audio-group-processing">
+    <h3 id="audio-group-processing" class="settings-label">{{ $t('audio.groupProcessing') }}</h3>
+    <p class="settings-help">{{ $t('audio.groupProcessingHelp') }}</p>
 
-    <div class="rounded-lg bg-mnema-surface border border-mnema-hairline divide-y divide-mnema-hairline">
-      <!-- Automatic gain control -->
-      <div class="p-3.5 flex items-start justify-between gap-4">
-        <div class="space-y-0.5">
-          <div class="text-sm font-semibold text-mnema-text flex items-center gap-1.5">
-            <span>{{ $t('audio.agc') }}</span>
-            <span class="text-xs px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-400 font-mono">{{ $t('audio.agcBadge') }}</span>
-          </div>
-          <p class="text-xs text-mnema-tertiary leading-relaxed">
-            {{ $t('audio.agcHint') }}
-          </p>
-        </div>
-        <button
-          @click="toggleAgc"
-          role="switch"
-          :aria-checked="voiceStore.autoGainControl ? 'true' : 'false'"
-          :aria-label="$t('audio.agc')"
-          :class="[
-            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
-            voiceStore.autoGainControl ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
-          ]"
-        >
-          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', voiceStore.autoGainControl ? 'translate-x-5' : 'translate-x-0']"></div>
-        </button>
-      </div>
-
+    <div class="settings-card">
       <!-- Noise suppression -->
-      <div class="p-3.5 space-y-2.5">
-        <div class="space-y-0.5">
-          <div class="text-sm font-semibold text-mnema-text flex items-center gap-1.5">
-            <Sparkles class="w-4 h-4 text-mnema-mint" />
+      <div class="stack-3">
+        <div class="settings-row-text">
+          <div class="settings-row-title flex items-center gap-2">
+            <Sparkles class="h-4 w-4 text-mnema-mint" />
             <span id="noise-mode-label">{{ $t('audio.noise') }}</span>
           </div>
-          <p class="text-xs text-mnema-tertiary leading-relaxed">
-            {{ $t(`audio.noiseHint_${voiceStore.noiseMode}`) }}
-          </p>
+          <p class="settings-hint mt-0.5">{{ $t(`audio.noiseHint_${voiceStore.noiseMode}`) }}</p>
         </div>
-        <div role="radiogroup" aria-labelledby="noise-mode-label" class="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 rounded-lg bg-mnema-canvas border border-mnema-hairline">
+        <div role="radiogroup" aria-labelledby="noise-mode-label" class="grid grid-cols-2 gap-1 rounded-xl border border-mnema-hairline bg-mnema-canvas p-1 sm:grid-cols-4">
           <button
             v-for="mode in NOISE_MODES"
             :key="mode"
             type="button"
             role="radio"
             :aria-checked="voiceStore.noiseMode === mode ? 'true' : 'false'"
-            @click="setNoiseMode(mode)"
             :class="[
-              'px-2 py-1.5 rounded-md text-xs font-semibold transition',
+              'rounded-lg px-3 py-2 text-sm font-medium transition',
               voiceStore.noiseMode === mode
-                ? 'bg-mnema-surface text-mnema-text ring-1 ring-mnema-accent/40'
-                : 'text-mnema-muted hover:text-mnema-text'
+                ? 'bg-mnema-surface text-mnema-text shadow-sm ring-1 ring-mnema-accent/40'
+                : 'text-mnema-muted hover:bg-mnema-hover/60 hover:text-mnema-text'
             ]"
+            @click="setNoiseMode(mode)"
           >
             {{ $t(`audio.noiseMode_${mode}`) }}
           </button>
@@ -108,100 +58,22 @@ function toggleWarnSwitchChannel() {
       </div>
 
       <!-- Echo cancellation -->
-      <div class="p-3.5 flex items-start justify-between gap-4">
-        <div class="space-y-0.5">
-          <div class="text-sm font-semibold text-mnema-text">{{ $t('audio.echo') }}</div>
-          <p class="text-xs text-mnema-tertiary leading-relaxed">
-            {{ $t('audio.echoHint') }}
-          </p>
+      <div class="settings-sub">
+        <div class="flex items-start justify-between gap-6">
+          <div class="settings-row-text">
+            <div class="settings-row-title">{{ $t('audio.echo') }}</div>
+            <p class="settings-hint">{{ $t('audio.echoHint') }}</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            :aria-checked="voiceStore.echoCancellation ? 'true' : 'false'"
+            :aria-label="$t('audio.echo')"
+            class="switch mt-0.5"
+            @click="toggleEcho"
+          ></button>
         </div>
-        <button
-          @click="toggleEcho"
-          role="switch"
-          :aria-checked="voiceStore.echoCancellation ? 'true' : 'false'"
-          :aria-label="$t('audio.echo')"
-          :class="[
-            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
-            voiceStore.echoCancellation ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
-          ]"
-        >
-          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', voiceStore.echoCancellation ? 'translate-x-5' : 'translate-x-0']"></div>
-        </button>
-      </div>
-
-      <!-- Quality of Service (High Packet Priority) -->
-      <div class="p-3.5 flex items-start justify-between gap-4">
-        <div class="space-y-0.5">
-          <div class="text-sm font-semibold text-mnema-text">{{ $t('audio.qosTitle') }}</div>
-          <p class="text-xs text-mnema-tertiary leading-relaxed">
-            {{ $t('audio.qosHint') }}
-          </p>
-        </div>
-        <button
-          @click="toggleQos"
-          role="switch"
-          :aria-checked="voiceStore.qosHighPriority ? 'true' : 'false'"
-          :aria-label="$t('audio.qosTitle')"
-          :class="[
-            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
-            voiceStore.qosHighPriority ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
-          ]"
-        >
-          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', voiceStore.qosHighPriority ? 'translate-x-5' : 'translate-x-0']"></div>
-        </button>
       </div>
     </div>
-  </div>
-
-  <!-- 5. Warnings & Prompts -->
-  <div class="space-y-2">
-    <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
-      {{ $t('audio.warnings') }}
-    </label>
-    <div class="rounded-lg bg-mnema-surface border border-mnema-hairline divide-y divide-mnema-hairline">
-      <!-- No audio detected warning -->
-      <div class="p-3.5 flex items-start justify-between gap-4">
-        <div class="space-y-0.5">
-          <div class="text-sm font-semibold text-mnema-text">{{ $t('audio.noAudioWarningTitle') }}</div>
-          <p class="text-xs text-mnema-tertiary leading-relaxed">
-            {{ $t('audio.noAudioWarningHint') }}
-          </p>
-        </div>
-        <button
-          @click="toggleWarnNoAudio"
-          role="switch"
-          :aria-checked="voiceStore.warnNoAudioDetected ? 'true' : 'false'"
-          :aria-label="$t('audio.noAudioWarningTitle')"
-          :class="[
-            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
-            voiceStore.warnNoAudioDetected ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
-          ]"
-        >
-          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', voiceStore.warnNoAudioDetected ? 'translate-x-5' : 'translate-x-0']"></div>
-        </button>
-      </div>
-
-      <!-- Switch voice channel warning -->
-      <div class="p-3.5 flex items-start justify-between gap-4">
-        <div class="space-y-0.5">
-          <div class="text-sm font-semibold text-mnema-text">{{ $t('audio.switchChannelWarningTitle') }}</div>
-          <p class="text-xs text-mnema-tertiary leading-relaxed">
-            {{ $t('audio.switchChannelWarningHint') }}
-          </p>
-        </div>
-        <button
-          @click="toggleWarnSwitchChannel"
-          role="switch"
-          :aria-checked="voiceStore.warnSwitchChannel ? 'true' : 'false'"
-          :aria-label="$t('audio.switchChannelWarningTitle')"
-          :class="[
-            'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
-            voiceStore.warnSwitchChannel ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
-          ]"
-        >
-          <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', voiceStore.warnSwitchChannel ? 'translate-x-5' : 'translate-x-0']"></div>
-        </button>
-      </div>
-    </div>
-  </div>
+  </section>
 </template>

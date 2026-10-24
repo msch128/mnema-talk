@@ -13,11 +13,14 @@ const props = defineProps<{
   loadingMore: boolean
   searching: boolean
   failed: boolean
+  filterUnsupported?: boolean
   hasCriteria: boolean
   selectedIndex: number
   terms: string[]
   channelNames: Map<string, string>
   voiceChannels: Set<string>
+  // The results are direct messages, not channel messages.
+  conversations?: boolean
 }>()
 const emit = defineEmits<{ select: [msg: Message]; more: [] }>()
 
@@ -32,6 +35,7 @@ watch(() => props.selectedIndex, async () => {
 <template>
   <div id="search-results" ref="listEl" role="listbox" class="flex-1 overflow-y-auto p-2 space-y-1">
     <div v-if="!hasCriteria" class="py-12 text-center text-sm text-mnema-tertiary">{{ $t('chat.searchHint') }}</div>
+    <div v-else-if="failed && filterUnsupported" class="py-12 text-center text-sm text-mnema-tertiary" role="alert" data-testid="search-filter-unsupported">{{ $t('chat.searchFilterUnsupported') }}</div>
     <div v-else-if="failed" class="py-12 text-center text-sm text-mnema-tertiary" role="alert">{{ $t('chat.searchFailed') }}</div>
     <div v-else-if="!results.length && !searching" class="py-12 text-center text-sm text-mnema-tertiary">{{ $t('chat.noResults') }}</div>
 
@@ -43,6 +47,7 @@ watch(() => props.selectedIndex, async () => {
       :selected="selectedIndex === idx"
       :channel-name="channelNames.get(msg.channel_id)"
       :voice="voiceChannels.has(msg.channel_id)"
+      :conversation="conversations === true"
       :terms="terms"
       :root="msg.parent_id ? roots[msg.parent_id] : undefined"
       @select="emit('select', $event)"
@@ -52,7 +57,7 @@ watch(() => props.selectedIndex, async () => {
       v-if="hasMore"
       type="button"
       :disabled="loadingMore"
-      class="w-full py-2 rounded-lg text-sm text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition flex items-center justify-center gap-2 disabled:opacity-50"
+      class="btn btn-ghost w-full flex items-center justify-center gap-2"
       @click="emit('more')"
     >
       <Loader2 v-if="loadingMore" class="w-4 h-4 animate-spin" />

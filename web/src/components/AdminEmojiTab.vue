@@ -117,7 +117,7 @@ onMounted(() => { void store.load() })
           type="button"
           :disabled="full"
           data-testid="emoji-choose"
-          class="flex-shrink-0 rounded-md border border-mnema-border bg-mnema-elevated px-3 py-1.5 text-sm text-mnema-text transition hover:border-mnema-accent disabled:opacity-50"
+          class="btn btn-secondary shrink-0"
           @click="fileInput?.click()"
         >{{ $t('emoji.admin.choose') }}</button>
         <span class="min-w-0 truncate text-sm text-mnema-muted" data-testid="emoji-file-name">{{ file?.name ?? $t('emoji.admin.noFile') }}</span>
@@ -130,13 +130,13 @@ onMounted(() => { void store.load() })
         :placeholder="$t('emoji.admin.name')"
         :aria-label="$t('emoji.admin.name')"
         :disabled="full"
-        class="bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-1.5 text-sm text-mnema-text placeholder-mnema-tertiary outline-none min-w-0 flex-1 basis-40 focus:border-mnema-accent transition"
+        class="bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-1.5 text-sm text-mnema-text placeholder-mnema-tertiary outline-hidden min-w-0 flex-1 basis-40 focus:border-mnema-accent transition"
       />
       <button
         type="submit"
         data-testid="emoji-upload"
         :disabled="!file || !nameOk || busy || full"
-        class="bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold px-3.5 py-1.5 rounded-md text-sm transition shadow-sm disabled:opacity-50"
+        class="btn btn-primary"
       >
         {{ $t('emoji.admin.add') }}
       </button>
@@ -147,14 +147,14 @@ onMounted(() => { void store.load() })
       <div v-if="!store.items.length" class="p-4 text-sm text-mnema-tertiary">{{ $t('emoji.admin.empty') }}</div>
       <div v-for="e in store.items" :key="e.id" class="px-4 py-2 flex items-center justify-between gap-3 text-sm" data-testid="emoji-row">
         <div class="flex items-center gap-3 min-w-0">
-          <img :src="emojiImage(e, prefersReducedMotion()).src" :alt="`:${e.name}:`" class="h-8 w-8 object-contain flex-shrink-0" />
+          <img :src="emojiImage(e, prefersReducedMotion()).src" :alt="`:${e.name}:`" class="h-8 w-8 object-contain shrink-0" />
           <form v-if="editing === e.id" class="flex items-center gap-1.5" @submit.prevent="saveRename(e.id)">
             <input
               v-model="draft"
               type="text"
               maxlength="32"
               :aria-label="$t('emoji.admin.name')"
-              class="bg-mnema-elevated border border-mnema-border-field rounded-md px-2 py-1 text-sm text-mnema-text outline-none focus:border-mnema-accent"
+              class="bg-mnema-elevated border border-mnema-border-field rounded-md px-2 py-1 text-sm text-mnema-text outline-hidden focus:border-mnema-accent"
             />
             <button type="submit" class="text-mnema-accent" :aria-label="$t('common.save')"><Check class="w-4 h-4" /></button>
             <button type="button" class="text-mnema-tertiary" :aria-label="$t('common.cancel')" @click="editing = null"><X class="w-4 h-4" /></button>
@@ -162,7 +162,7 @@ onMounted(() => { void store.load() })
           <span v-else class="font-mono text-mnema-text truncate">:{{ e.name }}:</span>
           <span v-if="e.animated" class="text-xs text-mnema-tertiary">{{ $t('emoji.admin.animated') }}</span>
         </div>
-        <div v-if="editing !== e.id" class="flex items-center gap-3 flex-shrink-0">
+        <div v-if="editing !== e.id" class="flex items-center gap-3 shrink-0">
           <button type="button" class="text-mnema-tertiary hover:text-mnema-accent transition" :title="$t('emoji.admin.rename')" :aria-label="$t('emoji.admin.rename')" @click="startRename(e.id, e.name)">
             <Pencil class="w-4 h-4" />
           </button>

@@ -17,7 +17,7 @@ useDialog(root, { onClose: () => emit('close'), initialFocus: '[data-autofocus]'
     aria-modal="true"
     :aria-label="$t('chat.enlargedImage')"
     tabindex="-1"
-    class="fixed inset-0 z-50 flex cursor-pointer items-center justify-center bg-black/90 p-4 focus:outline-none"
+    class="fixed inset-0 z-50 flex cursor-pointer items-center justify-center bg-black/90 p-4 focus:outline-hidden"
     @click="emit('close')"
   >
     <button

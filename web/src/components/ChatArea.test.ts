@@ -27,8 +27,8 @@ function setup({ lastReadAt = null, notifPermission = 'granted' }: { lastReadAt?
   useOnboardingStore().state = onboardingStateFixture({ dismissed_tips: ['search', 'mention', 'talk'] })
   const chat = useChatStore()
   chat.notificationPermission = notifPermission
-  chat.categories = [categoryFixture({ id: 'c', channels: [channelFixture({ id: 'ch1', name: 'allgemein', type: 'text' })] })]
-  chat.activeChannel = channelFixture({ id: 'ch1', name: 'allgemein', type: 'text' })
+  chat.categories = [categoryFixture({ id: 'c', channels: [channelFixture({ id: 'ch1', name: 'lobby', type: 'text' })] })]
+  chat.activeChannel = channelFixture({ id: 'ch1', name: 'lobby', type: 'text' })
   chat.activeChannelLastReadAt = lastReadAt
   chat.members = [userFixture({ id: 'u2', username: 'anna', display_name: 'Anna' })]
   chat.messages = [msg('a', 'u2', 0), msg('b', 'u2', 30), msg('c', 'me', 40), msg('d', 'u2', 50)]

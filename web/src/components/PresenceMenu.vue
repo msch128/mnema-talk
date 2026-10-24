@@ -81,7 +81,7 @@ onMounted(() => {
 })
 onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown))
 
-const item = 'flex w-full items-start gap-2.5 rounded-md px-2 py-1.5 text-left text-sm text-mnema-body-ink transition-colors hover:bg-mnema-hover hover:text-mnema-text focus:outline-none focus-visible:bg-mnema-hover focus-visible:text-mnema-text'
+const item = 'flex w-full items-start gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-mnema-body-ink transition-colors hover:bg-mnema-hover hover:text-mnema-text focus:outline-hidden focus-visible:bg-mnema-hover focus-visible:text-mnema-text'
 </script>
 
 <template>
@@ -90,7 +90,7 @@ const item = 'flex w-full items-start gap-2.5 rounded-md px-2 py-1.5 text-left t
     role="menu"
     data-testid="presence-menu"
     :aria-label="$t('presence.choose')"
-    class="absolute bottom-full left-2 z-40 mb-1 flex w-[260px] max-w-[calc(100vw-16px)] flex-col rounded-[10px] bg-mnema-elevated p-1.5 shadow-[inset_0_0_0_1px_#2B2F2D,0_12px_32px_rgba(0,0,0,0.5)]"
+    class="absolute bottom-full left-2 z-40 mb-1 flex w-[260px] max-w-[calc(100vw-16px)] flex-col rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in"
     @keydown="onKeydown"
   >
     <button
@@ -112,7 +112,7 @@ const item = 'flex w-full items-start gap-2.5 rounded-md px-2 py-1.5 text-left t
     </button>
     <div class="mx-0.5 my-1 h-px bg-mnema-hairline" role="separator"></div>
     <button type="button" role="menuitem" tabindex="-1" :class="[item, 'items-center']" @click="editStatus">
-      <MessageSquareText class="h-4 w-4 flex-shrink-0 text-mnema-tertiary" />
+      <MessageSquareText class="h-4 w-4 shrink-0 text-mnema-tertiary" />
       <span class="truncate">{{ authStore.user?.status_text ? $t('presence.editStatus') : $t('presence.setStatus') }}</span>
     </button>
   </div>

@@ -3,14 +3,19 @@ import { decodeServerEvent } from '../../types/events'
 import type { ServerEventPayloads, ClientEventPayloads } from '../../types/events'
 import { useEmojiStore } from '../emoji'
 import { usePermissionsStore } from '../permissions'
+import { useBlocksStore } from '../blocks'
+import { useServerFeaturesStore } from '../serverFeatures'
 import { installGlobalSearch, uninstallGlobalSearch } from '../../lib/globalSearch'
 import type { Cx } from './state'
 import { fetchChannels } from './channels'
+import { fetchDms } from './dms'
 import { handleWSEvent } from './events'
 import { fetchMembers } from './members'
 import { fetchMessages } from './messageWindow'
 import { fetchReadState } from './readState'
 import { fetchNotificationSettings } from './notifySettings'
+import { fetchFollowedThreads } from './threadFollow'
+import { loadNotifyPreview } from '../../lib/notifyPreview'
 import { openThread } from './threads'
 
 function startPingHeartbeat(cx: Cx) {
@@ -40,6 +45,12 @@ function resyncState(cx: Cx) {
   fetchMembers(cx)
   fetchReadState(cx)
   fetchNotificationSettings(cx)
+  // Read after the socket is open (and every time it reopens), so no conversation created in between is missed.
+  void fetchDms(cx)
+  // Blocks only reach this member's own sessions; a first open follows the sign-in snapshot by an instant.
+  if (cs.reconnectCount.value > 0) void useBlocksStore().load()
+  void fetchFollowedThreads(cx)
+  void loadNotifyPreview()
   const channel = cs.activeChannel.value
   if (channel && channel.type === 'text' && !cs.hasMoreAfter.value) fetchMessages(cx, channel.id)
   if (cs.activeThread.value) openThread(cx, cs.activeThread.value)
@@ -140,7 +151,9 @@ function handleSocketClose(
 
 function socketUrl(): string {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${protocol}//${window.location.host}/api/ws`
+  // Conversations are only sent to sockets that ask for them (dm=1), and only a server that has them understands the question.
+  const dm = useServerFeaturesStore().dm ? '?dm=1' : ''
+  return `${protocol}//${window.location.host}/api/ws${dm}`
 }
 
 export function initWebSocket(cx: Cx) {
@@ -212,6 +225,14 @@ export function installVisibilityRetry(cx: Cx) {
           sendWSEvent(cx, 'ping', { t: Date.now() })
         }
       }
+    })
+  }
+  if (typeof window !== 'undefined') {
+    // The network is back: reconnect at once, or find out whether a socket that looks open still works.
+    window.addEventListener('online', () => {
+      if (!authStore.isAuthenticated) return
+      if (!cs.ws.value || !cs.isConnected.value) retryNow(cx)
+      else sendWSEvent(cx, 'ping', { t: Date.now() })
     })
   }
 }

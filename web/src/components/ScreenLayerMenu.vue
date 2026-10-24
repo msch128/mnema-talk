@@ -37,7 +37,7 @@ watch(layerMenu.available, available => { if (!available) menu.state.open = fals
     :aria-expanded="menu.state.open ? 'true' : 'false'"
     :aria-label="`${t('talk.layers.title')}: ${layerMenu.buttonLabel.value}`"
     v-tooltip="t('talk.layers.title')"
-    class="h-8 px-2 flex items-center justify-center gap-1.5 rounded-lg bg-black/75 hover:bg-black/90 text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+    class="h-8 px-2 flex items-center justify-center gap-1.5 rounded-lg bg-black/75 hover:bg-black/90 text-white transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/80"
     @pointerdown="onPointerDown"
     @click="toggle"
   >

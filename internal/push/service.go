@@ -181,9 +181,16 @@ func (s *Service) handle(ctx context.Context, msg chat.Message) {
 		return // fail closed: nobody is told what they may not see
 	}
 	byName := namedMentions(ctx, s.DB, msg.ID)
+	followers, ok := threadAudience(ctx, s.DB, msg.ParentID)
+	if !ok {
+		return // fail closed: a thread reply with unknown followers tells nobody
+	}
 	var chosen []candidate
 	for _, c := range cands {
-		if canView(snap, c.userID, msg.ChannelID) && c.wants(mentions(msg, c.userID), addressed(msg, c.userID, byName)) {
+		if followers != nil && !followers[c.userID] && !addressed(msg, c.userID, byName) {
+			continue
+		}
+		if canView(snap, c.userID, msg.ChannelID) && c.wants(c.mention(msg), addressed(msg, c.userID, byName)) {
 			chosen = append(chosen, c)
 		}
 	}
@@ -208,9 +215,10 @@ func (s *Service) notify(ctx context.Context, msg chat.Message, chosen []candida
 		h := held{
 			user: c.userID, locale: c.locale, preview: c.preview && s.Previews,
 			notice: Notice{
-				ChannelID: msg.ChannelID, ChannelName: c.channelName, MessageID: msg.ID, ParentID: msg.ParentID,
-				Sender: sender(msg), Content: msg.Content, HasFiles: len(msg.Attachments) > 0 || len(msg.Embeds) > 0, Poll: msg.Poll != nil,
-				Mention: mentions(msg, c.userID), Addressed: addressed(msg, c.userID, byName), Count: 1, At: s.Now(),
+				AuthorID: msg.UserID, ChannelID: msg.ChannelID, ChannelName: c.channelName, MessageID: msg.ID, ParentID: msg.ParentID,
+				Sender: sender(msg), Content: msg.Content, HasFiles: len(msg.Attachments) > 0 || len(msg.Embeds) > 0,
+				Forwarded: msg.Forward != nil && msg.Forward.Forwarded, Poll: msg.Poll != nil,
+				DM: c.dm, Mention: c.mention(msg), Addressed: addressed(msg, c.userID, byName), Count: 1, At: s.Now(),
 			},
 		}
 		if now := s.co.add(key{c.userID, msg.ChannelID}, h, s.flush); now != nil {
@@ -248,7 +256,7 @@ func (s *Service) flush(h held) {
 // stillQualifies repeats the message-time checks for a held push. It fails
 // closed: when the state cannot be read, nothing is sent.
 func (s *Service) stillQualifies(ctx context.Context, h held) bool {
-	cands, err := loadCandidates(ctx, s.DB, h.notice.ChannelID, uuid.Nil, &h.user)
+	cands, err := loadCandidates(ctx, s.DB, h.notice.ChannelID, h.notice.AuthorID, &h.user)
 	if err != nil {
 		slog.Warn("push: recheck recipient", "err", err)
 		return false
@@ -257,6 +265,12 @@ func (s *Service) stillQualifies(ctx context.Context, h held) bool {
 	if err != nil {
 		slog.Warn("push: permission snapshot", "err", err)
 		return false
+	}
+	if !h.notice.Addressed {
+		followers, ok := threadAudience(ctx, s.DB, h.notice.ParentID)
+		if !ok || (followers != nil && !followers[h.user]) {
+			return false // unfollowed inside the window
+		}
 	}
 	return len(cands) == 1 && canView(snap, h.user, h.notice.ChannelID) && cands[0].wants(h.notice.Mention, h.notice.Addressed)
 }
@@ -268,8 +282,8 @@ func (s *Service) enqueue(h held, targets []target) {
 		slog.Warn("push: encode payload", "err", err)
 		return
 	}
-	opts := Options{TTL: messageTTL, Urgent: h.notice.Mention, Topic: topic(h.notice.ChannelID, h.notice.Mention), Timeout: sendTimeout}
-	if h.notice.Mention {
+	opts := Options{TTL: messageTTL, Urgent: h.notice.Mention || h.notice.DM, Topic: topic(h.notice.ChannelID, h.notice.Mention), Timeout: sendTimeout}
+	if h.notice.Mention || h.notice.DM {
 		opts.TTL = mentionTTL
 	}
 	for _, t := range targets {

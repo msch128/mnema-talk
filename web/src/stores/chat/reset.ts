@@ -1,6 +1,7 @@
 import { useToastStore } from '../toast'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
+import { useBlocksStore } from '../blocks'
 import { emptyWindow } from '../../lib/messageWindow'
 import type { Cx } from './state'
 import { resetWindow, setWindow } from './messageWindow'
@@ -26,6 +27,8 @@ export function resetCommunityState(cx: Cx) {
   ++cs.reconnectCheckSeq
   closeWebSocket(cx)
   closeThread(cx)
+  cs.followedThreads.value = new Set()
+  cs.followKnown.value = false
   cs.pendingThreadOpen = null
   cs.pendingLive = []
   resetWindow(cx)
@@ -36,6 +39,10 @@ export function resetCommunityState(cx: Cx) {
   cs.uncategorized.value = []
   cs.activeChannel.value = null
   cs.members.value = []
+  cs.dms.value = []
+  cs.dmsLoaded.value = false
+  ++cs.dmsFetchSeq
+  useBlocksStore().reset()
   usePermissionsStore().reset()
   cs.presenceById.value = {}
   cs.activityById.value = {}

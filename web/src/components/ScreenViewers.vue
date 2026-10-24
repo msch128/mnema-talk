@@ -90,7 +90,7 @@ onUnmounted(() => clearTimeout(hoverTimer))
       :aria-expanded="open ? 'true' : 'false'"
       :aria-controls="open ? popoverId : undefined"
       :class="[
-        'flex items-center gap-1 rounded tabular-nums font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent',
+        'flex items-center gap-1 rounded-sm tabular-nums font-semibold transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent',
         variant === 'stage'
           ? 'px-1.5 py-0.5 text-xs text-white/90 hover:text-white hover:bg-white/10'
           : 'h-7 px-2 text-xs text-mnema-accent hover:bg-mnema-accent/15'
@@ -105,7 +105,7 @@ onUnmounted(() => clearTimeout(hoverTimer))
       v-if="open"
       :id="popoverId"
       data-testid="screen-viewers-list"
-      class="absolute left-0 top-full z-40 mt-1.5 w-56 max-w-[calc(100vw-16px)] rounded-[10px] bg-mnema-elevated p-1.5 text-left shadow-[inset_0_0_0_1px_#2B2F2D,0_12px_32px_rgba(0,0,0,0.5)] select-none"
+      class="absolute left-0 top-full z-40 mt-1.5 w-56 max-w-[calc(100vw-16px)] rounded-xl bg-mnema-elevated p-1.5 text-left shadow-popover pop-in select-none"
     >
       <p class="px-2 pb-1 pt-0.5 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">
         {{ count ? $t('talk.viewersTitle', { count }) : $t('talk.viewersNone') }}

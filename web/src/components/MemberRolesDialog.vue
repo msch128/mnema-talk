@@ -68,16 +68,16 @@ async function save() {
       <ul v-else class="divide-y divide-mnema-hairline rounded-lg border border-mnema-hairline bg-mnema-surface">
         <li v-for="role in roles" :key="role.id" :data-role="role.name">
           <label class="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm" :class="locked(role.id) ? 'cursor-not-allowed opacity-60' : ''">
-            <input type="checkbox" class="accent-mnema-accent" :checked="chosen.includes(role.id)" :disabled="locked(role.id)" @change="toggle(role.id)" />
-            <span class="h-3 w-3 flex-shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>
+            <input type="checkbox" :checked="chosen.includes(role.id)" :disabled="locked(role.id)" @change="toggle(role.id)" />
+            <span class="h-3 w-3 shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>
             <span class="min-w-0 flex-1 truncate text-mnema-text">{{ role.name }}</span>
-            <span v-if="locked(role.id) && !frozen" class="flex-shrink-0 text-xs text-mnema-tertiary">{{ $t('memberRoles.locked') }}</span>
+            <span v-if="locked(role.id) && !frozen" class="shrink-0 text-xs text-mnema-tertiary">{{ $t('memberRoles.locked') }}</span>
           </label>
         </li>
       </ul>
       <div class="flex justify-end gap-2 pt-1">
-        <button type="button" class="rounded-md px-3.5 py-1.5 text-sm text-mnema-muted transition hover:text-mnema-text" @click="emit('close')">{{ $t('common.cancel') }}</button>
-        <button type="button" :disabled="busy || frozen" class="rounded-md bg-mnema-accent px-3.5 py-1.5 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover disabled:opacity-40" @click="save">{{ $t('common.save') }}</button>
+        <button type="button" class="btn btn-ghost" @click="emit('close')">{{ $t('common.cancel') }}</button>
+        <button type="button" :disabled="busy || frozen" class="btn btn-primary" @click="save">{{ $t('common.save') }}</button>
       </div>
     </div>
   </BaseDialog>

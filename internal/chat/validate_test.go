@@ -15,7 +15,7 @@ func TestValidateContent(t *testing.T) {
 	if _, err := ValidateContent(strings.Repeat("x", MaxMessageLen+1), false); err == nil {
 		t.Error("over-long message accepted")
 	}
-	if _, err := ValidateContent(strings.Repeat("ä", MaxMessageLen), false); err != nil {
+	if _, err := ValidateContent(strings.Repeat("\u00e4", MaxMessageLen), false); err != nil {
 		t.Errorf("limit must count characters: %v", err)
 	}
 }

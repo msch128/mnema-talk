@@ -29,21 +29,21 @@ async function copy(text: string) {
   <BaseDialog :title="$t('bots.secret.title', { name: botName })" panel-class="max-w-lg" @close="emit('close')">
     <div class="space-y-4 p-5" data-testid="bot-secret">
       <p class="flex items-start gap-2 rounded-md border border-mnema-danger/40 bg-mnema-danger/10 px-3 py-2 text-sm text-mnema-text" role="alert">
-        <TriangleAlert class="mt-0.5 h-4 w-4 flex-shrink-0 text-mnema-danger" aria-hidden="true" />
+        <TriangleAlert class="mt-0.5 h-4 w-4 shrink-0 text-mnema-danger" aria-hidden="true" />
         <span>{{ $t('bots.secret.once') }}</span>
       </p>
       <div class="flex items-center gap-2">
-        <code class="min-w-0 flex-1 select-all break-all rounded bg-mnema-surface px-2 py-1.5 font-mono text-xs text-mnema-text" data-testid="bot-secret-value">{{ secret }}</code>
-        <button type="button" class="rounded-md border border-mnema-border-strong p-2 text-mnema-text transition hover:bg-mnema-hover" :aria-label="$t('bots.secret.copy')" data-testid="bot-secret-copy" @click="copy(secret)">
+        <code class="min-w-0 flex-1 select-all break-all rounded-sm bg-mnema-surface px-2 py-1.5 font-mono text-xs text-mnema-text" data-testid="bot-secret-value">{{ secret }}</code>
+        <button type="button" class="btn btn-secondary p-2" :aria-label="$t('bots.secret.copy')" data-testid="bot-secret-copy" @click="copy(secret)">
           <Copy class="h-4 w-4" />
         </button>
       </div>
       <div class="space-y-1">
         <p class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('bots.secret.try') }}</p>
-        <pre class="overflow-x-auto rounded bg-mnema-surface px-2 py-1.5 font-mono text-xs text-mnema-text" data-testid="bot-secret-curl">{{ curl }}</pre>
+        <pre class="overflow-x-auto rounded-sm bg-mnema-surface px-2 py-1.5 font-mono text-xs text-mnema-text" data-testid="bot-secret-curl">{{ curl }}</pre>
       </div>
       <div class="flex justify-end">
-        <button type="button" class="rounded-md bg-mnema-accent px-3.5 py-1.5 text-sm font-semibold text-mnema-accent-ink transition hover:bg-mnema-accent-hover" data-testid="bot-secret-done" @click="emit('close')">{{ $t('bots.secret.done') }}</button>
+        <button type="button" class="btn btn-primary" data-testid="bot-secret-done" @click="emit('close')">{{ $t('bots.secret.done') }}</button>
       </div>
     </div>
   </BaseDialog>

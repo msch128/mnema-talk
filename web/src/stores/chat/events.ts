@@ -1,15 +1,20 @@
 import type { ServerEvent, ServerEventPayloads, ServerEventType } from '../../types/events'
 import { useToastStore } from '../toast'
 import { useEmojiStore } from '../emoji'
+import { useSavedStore } from '../saved'
+import { useForwardQuotesStore } from '../forwardQuotes'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
-import { noticeText } from '../../lib/moderation'
+import { useBlocksStore } from '../blocks'
+import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../lib/moderation'
 import { snapshotToMap, applyPresenceUpdate } from '../../lib/presence'
 import { MAX_EPHEMERAL } from './types'
 import type { Cx } from './state'
 import { fetchChannels } from './channels'
+import { fetchDms, isDm, noteDmMessage, onDmCreated, onDmMemberAdded, onDmMemberRemoved } from './dms'
 import { applyActivity, countMessageOf, fetchMembers, refreshMemberStats, updateUserEverywhere } from './members'
 import { applyToMessage, bumpReplyCount, countReply, insertMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
+import { onThreadFollowUpdated } from './threadFollow'
 import { messageMentionsMe, messageMentionsMeDirectly, triggerBrowserNotification } from './notifications'
 import { fetchReadState, isReadingActiveChannel } from './readState'
 import { notificationLevel, refreshNotifications } from './notifySettings'
@@ -109,6 +114,7 @@ function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
   const { cs, authStore } = cx
   countReply(cx, p)
   insertMessage(cx, p)
+  noteDmMessage(cx, p)
   countMessageOf(cx, p.user_id)
   clearTypingForUser(cx, p.channel_id, p.user_id)
 
@@ -118,9 +124,15 @@ function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
   const muted = notificationLevel(cx, p.channel_id) === 'mute'
   const isMention = muted ? messageMentionsMeDirectly(cx, p) : messageMentionsMe(cx, p)
 
+  // A blocked member's message is folded in the list; it adds no unread, mention or notification.
+  if (!isOwn && useBlocksStore().isBlocked(p.user_id)) {
+    if (isCurrentChannel && isReadingActiveChannel(cx)) cs.markReadThrottled.call(p.channel_id)
+    return
+  }
   handleIncomingMessageReadState(cx, { channelId: p.channel_id, isOwn, isCurrentChannel, isMention, isThreadReply: !!p.parent_id })
   if (!isOwn && p.channel_id) {
-    triggerBrowserNotification(cx, p, isMention)
+    // Everything somebody writes in a conversation is addressed to me.
+    triggerBrowserNotification(cx, p, isMention || isDm(cx, p.channel_id))
   }
 }
 
@@ -135,6 +147,7 @@ function onMemberTimeout({ cs }: Cx, p: Payload<'member_timeout'>) {
 }
 
 function onMessageDelete(cx: Cx, p: Payload<'message_delete'>) {
+  useForwardQuotesStore().invalidate()
   const { cs } = cx
   if (!p?.id) return
   removeFromWindow(cx, p.id)
@@ -166,8 +179,17 @@ const HANDLERS: Handlers = {
   permissions_changed: cx => {
     usePermissionsStore().load()
     fetchChannels(cx)
+    // Whether I may write in a conversation follows the same permissions and the community's switch.
+    void fetchDms(cx)
   },
   emoji_changed: () => { void useEmojiStore().load() },
+  thread_follow_updated: onThreadFollowUpdated,
+  // The caller blocked or unblocked someone in another session.
+  block_updated: () => { void useBlocksStore().load() },
+  saved_updated: (_cx, p) => { if (p) useSavedStore().onUpdated(p) },
+  dm_created: (cx, p) => { if (p) onDmCreated(cx, p) },
+  dm_member_added: (cx, p) => { if (p) onDmMemberAdded(cx, p) },
+  dm_member_removed: (cx, p) => { if (p) onDmMemberRemoved(cx, p) },
   roles_changed: cx => {
     const permissions = usePermissionsStore()
     permissions.loadRoles()
@@ -183,9 +205,14 @@ const HANDLERS: Handlers = {
     useToastStore().info(noticeText(p))
     usePermissionsStore().load()
   },
+  // Signed out everywhere by a moderator: a calm note that stays long enough to read, no sanction.
+  kicked: (_cx, p) => {
+    useToastStore().info(kickedText(p?.reason ?? ''), { duration: KICKED_NOTICE_MS })
+  },
   message_update: (cx, p) => {
     if (!p) return
     applyToMessage(cx, p.id, m => Object.assign(m, p))
+    useForwardQuotesStore().invalidate()
     onOriginalEdited(cx, p)
   },
   message_delete: onMessageDelete,

@@ -3,7 +3,7 @@ import { clockTimeOptions } from '../lib/time'
 import type { Message } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
-import { X, MessageSquare, Loader2, Pin, Reply } from '@lucide/vue'
+import { X, MessageSquare, Loader2, Pin, Reply, Bell, BellOff } from '@lucide/vue'
 import type { ThreadRoot } from '../stores/chat'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
@@ -16,6 +16,9 @@ import PollCard from './PollCard.vue'
 import BotBadge from './BotBadge.vue'
 import ReactionBar from './ReactionBar.vue'
 import ThreadReply from './ThreadReply.vue'
+import BlockedMessageRow from './BlockedMessageRow.vue'
+import { useBlocksStore } from '../stores/blocks'
+import { useDmChat } from '../composables/useDmChat'
 import ThreadComposer from './ThreadComposer.vue'
 import { useMessageActions } from '../composables/useMessageActions'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
@@ -29,10 +32,14 @@ const toasts = useToastStore()
 const permissions = usePermissionsStore()
 // The thread lives in a channel; the server decides, this hides what would fail.
 const threadChannel = computed(() => chatStore.activeThread?.channel_id ?? chatStore.activeChannel?.id ?? '')
-const canSend = computed(() => permissions.canIn(threadChannel.value, 'send_messages'))
-const canAttach = computed(() => canSend.value && permissions.canIn(threadChannel.value, 'attach_files'))
-const canReact = computed(() => permissions.canIn(threadChannel.value, 'add_reactions'))
+const blocks = useBlocksStore()
+// In a direct message conversation the server's own answer decides, not channel permissions.
+const dmChat = useDmChat()
+const canSend = computed(() => (dmChat.isDm.value ? dmChat.canSend.value : permissions.canIn(threadChannel.value, 'send_messages')))
+const canAttach = computed(() => canSend.value && (dmChat.isDm.value || permissions.canIn(threadChannel.value, 'attach_files')))
+const canReact = computed(() => (dmChat.isDm.value ? dmChat.canSend.value : permissions.canIn(threadChannel.value, 'add_reactions')))
 
+const followed = computed(() => !!chatStore.activeThread && chatStore.followedThreads.has(chatStore.activeThread.id))
 const replyInput = ref('')
 const repliesContainer = ref<HTMLElement | null>(null)
 const isSending = ref(false)
@@ -184,12 +191,12 @@ function formatDate(dateStr?: string) {
 <template>
   <aside class="w-full min-w-0 bg-mnema-canvas border-l border-mnema-hairline flex flex-col h-full select-none">
     <!-- Thread Header -->
-    <header class="h-12 pl-4 pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-2 flex-shrink-0">
+    <header class="h-12 pl-4 pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-2 shrink-0">
       <div class="flex items-center gap-2 min-w-0">
-        <MessageSquare class="w-5 h-5 text-mnema-accent flex-shrink-0" />
+        <MessageSquare class="w-5 h-5 text-mnema-accent shrink-0" />
         <div class="flex flex-col min-w-0">
           <div class="flex items-center gap-1.5 min-w-0">
-            <span class="font-semibold text-base text-mnema-text flex-shrink-0">{{ $t('thread.title') }}</span>
+            <span class="font-semibold text-base text-mnema-text shrink-0">{{ $t('thread.title') }}</span>
             <span class="text-sm text-mnema-tertiary truncate">
               #{{ chatStore.activeChannel?.name || '' }}
             </span>
@@ -198,8 +205,23 @@ function formatDate(dateStr?: string) {
       </div>
 
       <button
+        v-if="chatStore.activeThread && chatStore.followKnown"
+        type="button"
+        data-testid="thread-follow"
+        :aria-pressed="followed ? 'true' : 'false'"
+        :aria-label="followed ? $t('thread.unfollow') : $t('thread.follow')"
+        class="w-8 h-8 flex items-center justify-center shrink-0 rounded-md hover:bg-mnema-surface transition"
+        :class="followed ? 'text-mnema-accent' : 'text-mnema-tertiary hover:text-mnema-text'"
+        v-tooltip="followed ? $t('thread.following') : $t('thread.notFollowing')"
+        @click="chatStore.activeThread && chatStore.setThreadFollow(chatStore.activeThread.id, !followed)"
+      >
+        <Bell v-if="followed" class="w-[18px] h-[18px]" />
+        <BellOff v-else class="w-[18px] h-[18px]" />
+      </button>
+
+      <button
         @click="chatStore.closeThread"
-        class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+        class="btn btn-icon w-8 h-8 shrink-0"
         v-tooltip="$t('thread.close')"
       >
         <X class="w-5 h-5" />
@@ -216,7 +238,7 @@ function formatDate(dateStr?: string) {
         role="article"
         @keydown="onRootKeydown($event, chatStore.activeThread)"
         :class="[
-          'relative group bg-mnema-elevated border border-mnema-border/80 rounded-xl p-3.5 shadow-sm space-y-2 focus:outline-none focus-visible:border-mnema-accent/60',
+          'relative group bg-mnema-elevated border border-mnema-border/80 rounded-xl p-3.5 shadow-xs stack-2 focus:outline-hidden focus-visible:border-mnema-accent/60',
           highlightedId === chatStore.activeThread.id ? 'msg-flash' : ''
         ]"
       >
@@ -224,7 +246,7 @@ function formatDate(dateStr?: string) {
         <button
           type="button"
           @click.stop="startReply(chatStore.activeThread)"
-          class="absolute right-2 top-2 hidden group-hover:flex group-focus-within:flex p-1 rounded bg-mnema-elevated border border-mnema-border text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+          class="btn btn-secondary btn-sm absolute right-2 top-2 hidden group-hover:flex group-focus-within:flex p-1"
           v-tooltip="$t('chat.reply')"
         >
           <Reply class="w-3.5 h-3.5" />
@@ -304,9 +326,10 @@ function formatDate(dateStr?: string) {
       </div>
 
       <!-- Replies List -->
+      <template v-for="reply in chatStore.threadReplies" :key="reply.id">
+      <BlockedMessageRow v-if="blocks.hides(reply)" :msg="reply" compact @show="blocks.reveal(reply.id)" />
       <ThreadReply
-        v-for="reply in chatStore.threadReplies"
-        :key="reply.id"
+        v-else
         :reply="reply"
         :actions="actions"
         :can-react="canReact"
@@ -316,6 +339,7 @@ function formatDate(dateStr?: string) {
         @jump="jumpToReplied(reply)"
         @open-image="selectedImage = $event"
       />
+      </template>
     </div>
 
     <ThreadComposer

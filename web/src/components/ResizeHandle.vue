@@ -30,7 +30,7 @@ const edge = {
     :aria-valuemax="panel.maxNow"
     tabindex="0"
     :class="[
-      'group/handle absolute z-30 touch-none select-none outline-none',
+      'group/handle absolute z-30 touch-none select-none outline-hidden',
       horizontal ? 'inset-x-0 h-2 cursor-row-resize' : 'inset-y-0 w-2 cursor-col-resize',
       edge[panel.side] || '-left-1'
     ]"

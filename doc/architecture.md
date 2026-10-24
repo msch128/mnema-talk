@@ -2,7 +2,7 @@
 
 Mnema Talk is one Go binary that serves the REST API, a WebSocket hub, a
 WebRTC selective forwarding unit (SFU) and the built Vue web app. State lives
-in PostgreSQL; uploads and avatars live in S3-compatible object storage
+in PostgreSQL; uploads, avatars and profile banners live in S3-compatible object storage
 (SeaweedFS in the default `docker compose` stack).
 
 ```
@@ -31,7 +31,7 @@ in PostgreSQL; uploads and avatars live in S3-compatible object storage
 | [`internal/httpx`](../internal/httpx/middleware.go) | Middleware: request IDs, security headers (CSP, HSTS in production), CORS, CSRF origin check, body limits, rate limits ([`ratelimit.go`](../internal/httpx/ratelimit.go)), client IP from trusted proxies ([`request.go`](../internal/httpx/request.go)), JSON errors. |
 | [`internal/auth`](../internal/auth/service.go) | Password hashing, signed session cookies with a per-user `token_version` (revocation), login lockout, invite codes, admin seeding, user administration, password re-authentication for sensitive actions ([`reauth.go`](../internal/auth/reauth.go)). |
 | [`internal/perm`](../internal/perm/perm.go), [`internal/roles`](../internal/roles/handler.go) | Roles and permissions: the permission bits, the in-memory `Snapshot` that resolves base, role and overwrite permissions (and the hierarchy rules), the cache with live invalidation, and the HTTP API for roles, member roles and channel overwrites. See [roles-and-permissions.md](roles-and-permissions.md). |
-| [`internal/chat`](../internal/chat/handler.go) | Categories, channels (text and voice), layout, messages, replies, threads, reactions, mentions (by name, `@all`/`@here` and `@Role`, with a fan-out cap) and the mentions inbox, read state, notification levels ([`notify.go`](../internal/chat/notify.go)), search ([`search.go`](../internal/chat/search.go)), members. |
+| [`internal/chat`](../internal/chat/handler.go) | Categories, channels (text and voice), layout, messages, replies, threads, reactions, mentions (by name, `@all`/`@here` and `@Role`, with a fan-out cap) and the mentions inbox, read state, notification levels ([`notify.go`](../internal/chat/notify.go)), search ([`search.go`](../internal/chat/search.go), filters in [`search_filters.go`](../internal/chat/search_filters.go)), members. Since 1.1 also direct messages (`dm*.go`), blocks ([`blocks.go`](../internal/chat/blocks.go)), reports ([`reports.go`](../internal/chat/reports.go)), saved messages ([`saved.go`](../internal/chat/saved.go)), forwarding ([`forward.go`](../internal/chat/forward.go)) and thread follow ([`thread_follow.go`](../internal/chat/thread_follow.go)). |
 | [`internal/onboarding`](../internal/onboarding/handler.go) | The first-run side of the community: name, welcome text and rules, who accepted which rules version, dismissed tips and the public invite preview. |
 | [`internal/media`](../internal/media/handler.go) | Uploads with content sniffing and an allow-list ([`policy.go`](../internal/media/policy.go)), authenticated media serving through the app, admin storage stats and pruning, and the retention worker (off unless `MEDIA_RETENTION_DAYS > 0`). |
 | [`internal/s3`](../internal/s3/s3.go) | S3 client (AWS SDK v2); creates the bucket only when missing. |
@@ -40,12 +40,16 @@ in PostgreSQL; uploads and avatars live in S3-compatible object storage
 | [`internal/ws`](../internal/ws/hub.go) | WebSocket hub: one connection per browser session; chat events, presence and idle state, typing, voice rooms ([`voice.go`](../internal/ws/voice.go)), mute/deafen state, speaking indicators and WebRTC signaling for the SFU. |
 | [`internal/sfu`](../internal/sfu/sfu.go) | Pion WebRTC SFU: one room per voice channel, forwards RTP without transcoding; per-viewer subscriptions ([`subscriptions.go`](../internal/sfu/subscriptions.go)); announced addresses from `WEBRTC_NAT_1TO1_IP`, re-resolved every 5 minutes ([`announce.go`](../internal/sfu/announce.go)). |
 | [`internal/webhook`](../internal/webhook/), [`internal/ssrf`](../internal/ssrf/) | Webhooks: incoming URLs per channel in Discord's execute format (messages authored by a hidden bot account per webhook), outgoing signed events with a durable retry queue and delivery log, and the guard for outbound requests to member-chosen addresses (resolves names itself, refuses non-public addresses, connects to the vetted address). See [webhooks.md](webhooks.md). |
-| [`internal/slash`](../internal/slash/slash.go), [`internal/poll`](../internal/poll/service.go) | The built-in slash commands: a registry of server-side commands that share the composer menu and the invoke route with bot commands (adding one is a `slash.Builtin` and a line in the server wiring), and polls, the first of them. See [polls and built-in commands](bots.md#built-in-commands-and-polls). |
+| [`internal/slash`](../internal/slash/slash.go), [`internal/slashcmd`](../internal/slashcmd/slashcmd.go), [`internal/poll`](../internal/poll/service.go) | The built-in slash commands: a registry of server-side commands that share the composer menu and the invoke route with bot commands (adding one is a `slash.Builtin` and a line in the server wiring). `slashcmd` holds `/me`, `/shrug`, `/tableflip`, `/unflip`, `/spoiler`, `/nick`, `/thread`, `/msg` and the moderation shortcuts `/timeout`, `/ban` and `/kick`; `poll` holds `/poll`. A command never decides on its own what a member may do. See [built-in commands and polls](bots.md#built-in-commands-and-polls). |
+| [`internal/push`](../internal/push/handler.go), [`internal/mailer`](../internal/mailer/mailer.go), [`internal/mdplain`](../internal/mdplain/plain.go) | Web Push (VAPID keys, subscriptions, payloads in the account's language, previews cut to plain text by `mdplain`), and the few plain-text e-mails (address confirmation, password reset, two-factor alert, test message) sent through the operator's SMTP server. Without `SMTP_HOST` nothing is sent. German and English mail and push texts live in `locales/` files next to the code. |
+| [`internal/emoji`](../internal/emoji/handler.go), [`internal/emojitext`](../internal/emojitext/emojitext.go), [`internal/opwarn`](../internal/opwarn/opwarn.go) | Custom emoji (uploads are redrawn, never stored as sent; `<:name:id>` in text), and operator warnings (configuration problems registered under a stable code and shown in the admin System tab). |
 | [`internal/audit`](../internal/audit/), [`internal/bot`](../internal/bot/), [`internal/gateway`](../internal/gateway/) | The audit log with per-entry visibility classes, bot accounts, tokens (bound to the member who issued them) and slash commands, and the Discord-style bot gateway. See [bots.md](bots.md) and [moderation.md](moderation.md). |
 | [`internal/metrics`](../internal/metrics/) | Process-wide counters (HTTP, realtime, SFU, storage, rate limits) rendered in the Prometheus text format without a client library; every labelled family has a series cap. Feeds `/api/metrics` and the live operator view in the admin System tab. See [operations.md](operations.md#monitoring-and-alerts). |
 | [`internal/webbundle`](../internal/webbundle/), [`cmd/webbundle`](../cmd/webbundle/) | Builds, signs (Ed25519) and verifies the web app bundle that the [trusted desktop client](desktop-trusted-client.md) runs instead of server-served JavaScript. |
 | [`internal/linkpreview`](../internal/linkpreview/linkpreview.go) | Link cards: fetches title, description and image of public pages with an SSRF guard (http(s) on 80/443 only, every resolved address checked, also on redirects) and a cache. |
-| [`internal/update`](../internal/update/checker.go) | Release check against GitHub every 30 minutes (ETag, backoff on 403/429), image-tag reach analysis ([`image.go`](../internal/update/image.go)) and the client for the optional updater sidecar ([`updater.go`](../internal/update/updater.go)). |
+| [`internal/imageverify`](../internal/imageverify/verifier.go), [`internal/updaterd`](../internal/updaterd/server.go) | The self-update sidecar ([`cmd/updater`](../cmd/updater/main.go)): checks the cosign signature and SLSA provenance of a new release image against the pinned release workflow identity, then pulls that digest and has the recreator restart the app. |
+| [`internal/update`](../internal/update/checker.go) | Release check against GitHub every 30 minutes (ETag, backoff on 403/429), image-tag reach analysis ([`image.go`](../internal/update/image.go)) and the client for the optional updater sidecar ([`updater.go`](../internal/update/updater.go)).|
+| [`internal/nativepreview`](../internal/nativepreview/), [`internal/repo`](../internal/repo/limits_test.go) | The isolated native preview transport (experimental, not public API) and the repository-wide checks: size limits for Go files and functions ([AGENTS.md](../AGENTS.md)). |
 | [`internal/version`](../internal/version/version.go) | Version and commit baked in at build time (`VERSION` / `REVISION` build args). |
 | [`web/web.go`](../web/web.go) | Embeds `web/dist` with `//go:embed` and serves the SPA. |
 
@@ -81,10 +85,135 @@ and the "Jump to first unread" pill loads the history around it. Numbers:
 [Capacity](#unread-tracking-with-10000-members).
 
 Every channel has a text chat, voice channels included (the chat panel under
-the Talk stage). Edits, deletes, reactions, typing and read state follow the
+the Talk stage). The chat of a Talk follows the channel permissions only
+(*View channels* to read, *Send messages* to write), not *Connect*, so a
+member can read it from the Talk's row in the sidebar without joining. Edits, deletes, reactions, typing and read state follow the
 same pattern: REST for changes, WebSocket events for fan-out. Media is never
 served from S3 directly: `GET /api/media/{id}` checks the session and streams
 the object through the app.
+
+## Direct messages
+
+Direct messages (1.1) are conversations of two to ten members. They are a
+**deliberate reversal of migration 0003**, which removed the earlier 1:1 model
+(recorded as a decision in the repository's decision store): the product
+position changed from "no direct messages" to private conversations that
+moderators cannot browse.
+
+**Model.** A conversation is a row of `channels` with `type = 'dm'` (no
+category, no name, no overwrites) with its members in `dm_members`
+(migration 0050). Messages, reactions, attachments, polls and threads use the
+one message pipeline, keyed by the conversation's id, so they inherit its
+behaviour; a 1:1 conversation has a `dm_key` (the sorted pair), so a pair has
+exactly one. Conversations have their own routes (`/api/dms`, see the OpenAPI
+document) and events (`dm_created`, `dm_member_added`, `dm_member_removed`);
+they appear in no channel list, layout, `channel_*` event, bot or webhook
+payload, public message count or public message number (conversations count
+down from -1 in a sequence of their own, so the public numbers show no gaps).
+
+**One access rule: membership.** `perm.Snapshot.Channel` answers for a
+conversation before the Owner shortcut, from membership alone. A member may
+read; writing, reacting and attaching also need *Send direct messages*, the
+community switch `direct_messages_enabled` to be on, and no timeout or pending
+rules. A non-member, the Owner and Administrators included, gets 0 and the
+same 404 as for a missing channel, on every path that asks the snapshot (REST,
+the WebSocket hub, media, push, reports). Searching a conversation also tests
+membership in SQL, so a mistake in one layer does not open another. Nobody can
+moderate a conversation: *Manage messages* never applies in it.
+
+**Fan-out.** The hub delivers a conversation's events to its members' sockets
+that asked for them (`/api/ws?dm=1`; a bundle from before direct messages
+never receives one). They are never shown to the hub's `Tap` (outgoing
+webhooks, bot gateway); only Web Push listens (`DMTap`), and it pushes to
+members only, without a channel name. Bots and webhooks can neither open
+conversations nor write in them.
+
+**Starting and writing (the rules in `internal/chat/dm*.go`).**
+- Whatever the reason a conversation cannot be started or a message cannot be
+  sent because of *another member* (a block in either direction, their
+  `dm_policy` of `nobody`, a disabled or erased account, a bot, an unknown id)
+  the answer is the same 403 text, so none can be probed. A block makes an
+  existing 1:1 conversation unwritable in both directions, silently; in a
+  group, a block between two members does not stop the group, and nobody can
+  add a member who blocked them. In any conversation (group or two-person),
+  unread and mention counts and the last-activity time leave out messages by
+  members the reader blocked, and push notifications skip blockers.
+- 3 tries a minute and 10 new conversations per 24 hours per member, at most
+  100 group conversations per member, at most 10 members. The member who
+  started a conversation may send 2 messages before anybody else has written
+  in it (counted in `channels.dm_creator_sent`, so deleting messages does not
+  reset it).
+- A conversation with one other person cannot be left; a group can, and when
+  nobody is left it and its attachments are deleted. A member added to a group
+  reads its whole history.
+
+**What is never done with conversations.** They are not audited (an edit or
+deletion leaves no `message.*` entry with text), not counted in `message_count`,
+not in the mentions inbox or the channels' read states (`GET /api/dms` carries
+its own unread and mention counts), not searchable except by their members
+(`dm=true`), not shown in the admin media list, and not listed by the
+administrative channel routes (they answer 404 for a conversation id).
+
+**Moderation.** The only way a moderator reads anything of a conversation is a
+*report* by a member (`POST /api/messages/{id}/report`): it keeps its own copy
+of the message and up to 20 around it ([moderation](moderation.md#blocking-and-reports)).
+
+**Privacy model.** Messages are readable by the server and by whoever holds
+the database or backups, like channel messages: there is **no end-to-end
+encryption of text** (see SECURITY.md). Account erasure blanks the member's
+words in conversations (the others keep theirs) and deletes conversations
+nobody is left in; the export lists the member's conversations by id and their
+own messages.
+
+**Calls** in conversations are not part of 1.1.
+
+## Blocking and reports
+
+A block (`user_blocks`, migration 0049) is private: the blocked member is not
+told, and nothing they can read depends on it. The server applies it where a
+notification would reach the blocker: the mentions inbox (which excludes direct
+messages), mention counts and push skip the blocked member's messages, decided
+when the entry is listed or the push is sent. In any conversation (group direct
+messages included), unread and mention counts and last activity leave out
+messages by members the reader blocked. The web app collapses their messages to a
+placeholder the blocker can open. A block changes nothing for anybody else. It makes
+an existing 1:1 conversation unwritable in both directions (see
+[Direct messages](#direct-messages)). The `block_updated` event goes to the
+blocker's own sessions only.
+
+A report (`message_reports`, migration 0049, permission *Manage reports*,
+`1 << 21`) keeps its own copy of the message and up to 20 around it, so it survives an
+edit or a delete. It is the only way a moderator reads anything of a conversation. Rules,
+retention and the audit entries are in [moderation](moderation.md#blocking-and-reports).
+
+## Forwarding and saved messages
+
+**A forward is a reference, never a copy.** `POST /api/messages/{id}/forward`
+creates an ordinary message in the target (a channel or a direct message) whose
+text is only the forwarder's own comment. `messages.forward_of` points at the
+root of what was forwarded (forwarding a forward points at the same root) and
+`messages.forwarded` stays set when the original is later deleted
+(`ON DELETE SET NULL`). The forwarder needs to see the original and to send in
+the target, the target's slow mode and a conversation's rules apply, and every
+refusal answers one 403 text.
+
+**The visibility rule.** Nothing about the original is in the forwarded
+message's payload, not even an id: only `forward: {forwarded: true}`. What a reader sees of the
+original, with its ids, is returned by `GET /api/messages/{id}/forward`, decided for that
+reader at that moment: the text, author and channel when they may see the
+original (a channel they can view, or a conversation they are a member of; the
+Owner has no special access to conversations), otherwise only
+`available: false`. Lists, thread views, pins, search, the mentions inbox, the
+WebSocket events, push notifications, the export and the payloads of bots and
+webhooks therefore cannot show the original to someone who may not see it.
+A forwarded message with an empty comment is pushed as "Forwarded message".
+Edits and deletes of the original show through because the quote is read when
+asked for.
+
+**Saved messages** (`saved_messages`, migration 0051) are the same idea: a row
+holds a reference and the member's note. `GET /api/me/saved` joins the messages
+the member may see now; a conversation's messages need membership, tested in
+SQL like search does.
 
 ## Data flow: voice, cameras and screen share
 
@@ -232,7 +361,7 @@ keys out of band. The server validates who may commit but never sees keys.
 The code is [`web/src/lib/media/`](../web/src/lib/media/). Details and limits:
 [SECURITY.md](../SECURITY.md#security-model-summary).
 
-## Notifications, search and onboarding (0.9)
+## Notifications, search and onboarding
 
 Three features that cut across the chat path. All of them are enforced on the
 server; the client only renders the result.
@@ -251,6 +380,20 @@ Do Not Disturb silences everything. Unread counts and the mentions inbox
 (`GET /api/mentions`) are independent of the level, so a muted channel still
 shows what was addressed to the member.
 
+**Thread follow (1.1).** A reply notifies only the thread's followers (push and
+the in-page notification alike). The author of the root, everyone who replies
+and everyone mentioned in a reply follow automatically, in the reply's own
+transaction (`thread_follows`, migration 0054, backfilled for existing
+threads). `PUT`/`DELETE /api/threads/{id}/follow` change it; an explicit
+unfollow is kept and a later reply does not undo it, but a reply that mentions
+the member by name or quotes their message still reaches them. A change, and
+a reply that makes someone follow, is sent to that member's own sessions as
+`thread_follow_updated` (a hub tap, [`thread_follow_sync.go`](../internal/chat/thread_follow_sync.go)), and
+`GET /api/threads/following` lists the followed threads for clients. The
+in-page OS notification shows the message text only when the member's
+"show message text" setting is on and the operator has not set
+`PUSH_PREVIEWS=off`, like Web Push.
+
 **Mentions.** A message stores one `message_mentions` row per notified member,
 with a `kind` (by name, `@all`/`@here`, through a role) and the mentioned roles
 in `message_role_mentions` (migration 0036), so a pill survives a role rename.
@@ -260,7 +403,8 @@ without the right to mention everyone notifies at most 50 members per message
 
 **Search.** `GET /api/search` runs trigram-indexed substring matching on
 message text (`pg_trgm`, one index since migration 0038) with filters (channel,
-author, mentions, attachment kind, date window). Results are limited to the
+author, mentions, attachment kind, date window; since 1.1 also `has=poll`,
+`has=edit` and `is=pinned`). Results are limited to the
 channels the caller can read, using the same permission snapshot as message
 listing; a query has a length and term cap, a database statement timeout and
 at most two searches in flight per member.
@@ -276,7 +420,7 @@ nothing, which is why an upgrade never locks anyone out; the Owner and bots are
 exempt. `GET /api/invites/{code}` (the one public read) serves the community
 name for the sign-up page; it is rate limited and refuses weak legacy codes.
 
-## The 1.0 contract
+## The API contract
 
 From 1.0.0 the public surfaces are versioned with semantic versioning
 ([api-stability.md](api-stability.md)): the REST API as `api/openapi.json`, the
@@ -294,6 +438,7 @@ names. The contract is enforced mechanically, not by convention:
 - The alert rules in [`deploy/monitoring/mnema-alerts.yml`](../deploy/monitoring/mnema-alerts.yml)
   are checked with `promtool`, and an integration test fails when a rule names
   a metric `/api/metrics` does not export.
+- `GET /api/health` lists optional features by name (`internal/server/health.go`); a new feature adds a name and never bumps `web_client_api`.
 - Upgrade and restore drills install each supported release from GHCR, seed
   data through its own API, move to the build under test and check the data;
   a fresh-install check follows [deployment.md](deployment.md) on an empty
@@ -396,6 +541,27 @@ it is paid once per page load or reconnect, not per message.
   [`voiceSession.ts`](../web/src/lib/voiceSession.ts) (rejoin within 30 s),
   [`noiseSuppressor.ts`](../web/src/lib/noiseSuppressor.ts),
   [`thirdParty.ts`](../web/src/lib/thirdParty.ts) (in-app license list).
+- **Styles**: Tailwind CSS 4 (`@import 'tailwindcss'` in
+  [`style.css`](../web/src/style.css), the `@tailwindcss/vite` plugin; no
+  `tailwind.config`). The Mnema design tokens are in its `@theme` block. The
+  shared UI building blocks are plain CSS files in
+  [`styles/`](../web/src/styles): `buttons.css` (the `.btn` family and the focus
+  ring), `controls.css` (checkbox, radio, switch, slider, fields, select),
+  `surfaces.css` (dialogs, menus, popovers, tooltips, toasts, list rows,
+  elevation and motion) and `settings.css` (the cards and groups of the
+  account and audio settings pages). They use tokens only and no inline style, because the
+  Content-Security-Policy forbids it.
+- **1.1 features in the UI**: direct messages
+  ([`DmCreateDialog.vue`](../web/src/components/DmCreateDialog.vue),
+  [`DmInfoDialog.vue`](../web/src/components/DmInfoDialog.vue)), blocking and
+  reports ([`BlockedMessageRow.vue`](../web/src/components/BlockedMessageRow.vue),
+  [`ReportDialog.vue`](../web/src/components/ReportDialog.vue)), saved messages
+  ([`SavedMessages.vue`](../web/src/components/SavedMessages.vue)), forwarding
+  ([`ForwardDialog.vue`](../web/src/components/ForwardDialog.vue),
+  [`ForwardedQuote.vue`](../web/src/components/ForwardedQuote.vue)), pinned
+  messages with "Pinned by" ([`PinnedMessages.vue`](../web/src/components/PinnedMessages.vue))
+  and the slash bar ([`SlashCommandBar.vue`](../web/src/components/SlashCommandBar.vue)).
+  Each shows only when `GET /api/health` lists its feature.
 - **i18n**: [`i18n/de.json`](../web/src/i18n/de.json) and
   [`i18n/en.json`](../web/src/i18n/en.json); tests fail on hard-coded UI text
   and unused keys.
@@ -449,12 +615,21 @@ it is paid once per page load or reconnect, not per message.
   sockets ([`session.go`](../internal/auth/session.go), [`token.go`](../internal/auth/token.go)).
 - **Forward-only, checksummed migrations** run at startup
   ([`db.go`](../internal/db/db.go)); never edit an applied one.
+- **A strict page policy.** The web app is served with `script-src 'self'
+  'wasm-unsafe-eval'`, `style-src 'self'` and `style-src-attr 'none'`
+  ([`SPAContentSecurityPolicy`](../internal/httpx/middleware.go)): no inline
+  script or style, so the Vue code sets no `style` attributes and uses classes
+  and custom properties set from script. [SECURITY.md](../SECURITY.md#security-model-summary)
+  has the full header list.
 - **Retention off by default.** `MEDIA_RETENTION_DAYS=0` deletes nothing
   ([`admin.go`](../internal/media/admin.go)).
 - **The app never touches Docker.** Self-update goes through an opt-in
   sidecar on an internal network with a token, admin password re-auth, a
-  5-minute cooldown and an audit log entry
-  ([`system_selfupdate.go`](../internal/server/system_selfupdate.go),
+  5-minute cooldown and an audit log entry; the sidecar verifies the new
+  image's cosign signature and provenance before it pulls anything
+  ([`internal/imageverify`](../internal/imageverify/verifier.go),
+  [`internal/updaterd`](../internal/updaterd/server.go),
+  [`system_selfupdate.go`](../internal/server/system_selfupdate.go),
   [`docker-compose.yml`](../docker-compose.yml),
   [SECURITY.md](../SECURITY.md#self-update-sidecar)).
 - **Reload, never auto-reload.** The server sends its version on every

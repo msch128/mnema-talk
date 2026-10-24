@@ -81,25 +81,21 @@ async function submit() {
 
 onBeforeUnmount(() => request.value?.resolve(false))
 
-const inputClass = 'w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-none focus:border-mnema-accent'
-const chipClass = (on: boolean) => [
-  'h-8 rounded-md border px-3 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mnema-accent',
-  on ? 'border-mnema-accent/40 bg-mnema-accent/15 text-mnema-accent' : 'border-mnema-border text-mnema-muted hover:text-mnema-text'
-]
+const inputClass = 'w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-hidden focus:border-mnema-accent'
 </script>
 
 <template>
   <BaseDialog v-if="request" :key="request.target.id" panel-class="max-w-[480px]" @close="close(false)">
     <template #default="{ titleId }">
       <form class="space-y-4 overflow-y-auto p-5" @submit.prevent="submit">
-        <h2 :id="titleId" class="break-words text-lg font-semibold text-mnema-text">
+        <h2 :id="titleId" class="wrap-break-word text-lg font-semibold text-mnema-text">
           {{ isBan ? $t('moderation.banTitle', { name: request.target.name }) : $t('moderation.timeoutTitle', { name: request.target.name }) }}
         </h2>
         <p class="text-sm text-mnema-muted">{{ isBan ? $t('moderation.banBody') : $t('moderation.timeoutBody') }}</p>
 
         <div v-if="error" role="alert" class="rounded-lg border border-mnema-danger/30 bg-mnema-danger/10 p-2.5 text-sm text-mnema-danger">{{ error }}</div>
 
-        <fieldset class="space-y-2">
+        <fieldset class="stack-2">
           <legend class="font-mono text-xs font-medium uppercase tracking-wider text-mnema-tertiary">{{ $t('moderation.duration') }}</legend>
           <div class="flex flex-wrap gap-2">
             <button
@@ -108,7 +104,7 @@ const chipClass = (on: boolean) => [
               type="button"
               :data-testid="`duration-${d}`"
               :aria-pressed="choice === String(d) ? 'true' : 'false'"
-              :class="chipClass(choice === String(d))"
+              class="chip"
               @click="choice = String(d)"
             >{{ durationLabel(d) }}</button>
             <button
@@ -116,14 +112,14 @@ const chipClass = (on: boolean) => [
               type="button"
               data-testid="duration-forever"
               :aria-pressed="choice === 'forever' ? 'true' : 'false'"
-              :class="chipClass(choice === 'forever')"
+              class="chip"
               @click="choice = 'forever'"
             >{{ $t('moderation.forever') }}</button>
             <button
               type="button"
               data-testid="duration-custom"
               :aria-pressed="choice === 'custom' ? 'true' : 'false'"
-              :class="chipClass(choice === 'custom')"
+              class="chip"
               @click="choice = 'custom'"
             >{{ $t('moderation.custom') }}</button>
           </div>
@@ -146,7 +142,7 @@ const chipClass = (on: boolean) => [
           </p>
         </fieldset>
 
-        <div class="space-y-1.5">
+        <div class="stack-1.5">
           <label for="moderation-reason" class="font-mono text-xs font-medium uppercase tracking-wider text-mnema-tertiary">{{ $t('moderation.reason') }}</label>
           <input
             id="moderation-reason"
@@ -167,14 +163,14 @@ const chipClass = (on: boolean) => [
         <div class="flex items-center justify-end gap-2 border-t border-mnema-hairline pt-3">
           <button
             type="button"
-            class="h-8 rounded-md border border-mnema-border px-3 text-sm font-semibold text-mnema-text transition hover:bg-mnema-hover"
+            class="btn btn-secondary h-8"
             @click="close(false)"
           >{{ $t('common.cancel') }}</button>
           <button
             type="submit"
             data-testid="moderation-submit"
             :disabled="!valid || saving"
-            class="h-8 rounded-md bg-mnema-danger px-3 text-sm font-semibold text-mnema-accent-ink transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-30"
+            class="btn btn-danger-solid"
           >{{ isBan ? $t('moderation.banConfirm') : $t('moderation.timeoutConfirm') }}</button>
         </div>
       </form>

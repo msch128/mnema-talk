@@ -12,8 +12,8 @@ const suffix = Date.now().toString(36)
 const USER = `friend_${suffix}`
 const USER_DISPLAY = `Friend ${suffix}`
 const USER_PASSWORD = `pw-${suffix}-${randomBytes(8).toString('hex')}`
-const TEXT_CHANNEL = 'allgemein'
-const VOICE_CHANNEL = 'Smoke Talk'
+const TEXT_CHANNEL = `general-${suffix}`
+const VOICE_CHANNEL = `Smoke Talk ${suffix}`
 
 // Same-origin fetch from inside the page, so cookies and the Origin header
 // behave exactly like the real app (CSRF origin check included).
@@ -73,7 +73,7 @@ test('login, chat and talk', async ({ browser }) => {
   await sidebarText(admin).click()
   await sidebarText(user).click()
 
-  const message = `Hallo aus dem Smoke-Test ${suffix}`
+  const message = `Hello from the smoke test ${suffix}`
   const composer = user.getByRole('textbox', { name: `Nachricht an #${TEXT_CHANNEL}` })
   await composer.fill(message)
   await composer.press('Enter')
@@ -97,7 +97,7 @@ test('login, chat and talk', async ({ browser }) => {
       .toBe(true)
   }
   // Both participants are listed under the voice channel for everyone.
-  const members = (page: Page) => sidebarVoice(page).locator('xpath=following-sibling::div[1]')
+  const members = (page: Page) => page.locator('[data-channel-item]', { has: sidebarVoice(page) }) // the Talk's row, its buttons and its members
   await expect(members(admin)).toContainText(USER_DISPLAY)
   await expect(members(admin)).toContainText(ADMIN_USER)
 

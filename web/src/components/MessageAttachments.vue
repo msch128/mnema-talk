@@ -16,15 +16,15 @@ const emit = defineEmits<{ 'open-image': [src: string] }>()
 const STYLES = {
   chat: {
     list: 'mt-2 space-y-2',
-    card: 'max-w-md rounded-lg overflow-hidden border border-mnema-border bg-mnema-elevated shadow-sm',
+    card: 'max-w-md rounded-lg overflow-hidden border border-mnema-border bg-mnema-elevated shadow-xs',
     imageButton: 'block max-w-full',
     image: 'max-h-80 w-auto max-w-full rounded-t object-cover cursor-pointer hover:opacity-95 transition',
     video: 'max-h-80 w-full rounded-t',
     footer: 'p-2.5 flex items-center justify-between text-sm bg-mnema-raised border-t border-mnema-hairline',
     name: 'flex items-center gap-2 truncate',
-    icon: 'w-4 h-4 text-mnema-tertiary flex-shrink-0',
+    icon: 'w-4 h-4 text-mnema-tertiary shrink-0',
     link: 'text-mnema-text hover:text-mnema-accent hover:underline truncate text-sm',
-    size: 'text-xs font-mono text-mnema-tertiary pl-2 flex-shrink-0'
+    size: 'text-xs font-mono text-mnema-tertiary pl-2 shrink-0'
   },
   reply: {
     list: 'mt-1.5 space-y-1.5',
@@ -34,7 +34,7 @@ const STYLES = {
     video: 'max-h-40 w-full',
     footer: 'p-1.5 flex items-center justify-between text-xs bg-mnema-raised border-t border-mnema-hairline',
     name: 'flex items-center gap-1.5 truncate',
-    icon: 'w-3.5 h-3.5 text-mnema-tertiary flex-shrink-0',
+    icon: 'w-3.5 h-3.5 text-mnema-tertiary shrink-0',
     link: 'text-mnema-text hover:text-mnema-accent hover:underline truncate',
     size: 'text-xs font-mono text-mnema-tertiary'
   },
@@ -46,7 +46,7 @@ const STYLES = {
     video: 'max-h-48 w-full',
     footer: 'p-2 flex items-center justify-between text-xs',
     name: 'flex items-center gap-1.5 truncate',
-    icon: 'w-3.5 h-3.5 text-mnema-tertiary flex-shrink-0',
+    icon: 'w-3.5 h-3.5 text-mnema-tertiary shrink-0',
     link: 'text-mnema-text hover:text-mnema-accent hover:underline truncate',
     size: 'text-xs font-mono text-mnema-tertiary'
   }
@@ -70,7 +70,7 @@ const sizeMb = (att: MediaAttachment) => ((att.size_bytes || 0) / 1024 / 1024).t
       <button
         v-if="kind(att) === 'image'"
         type="button"
-        :class="[s.imageButton, 'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent']"
+        :class="[s.imageButton, 'focus:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent']"
         @click="emit('open-image', att.url)"
       >
         <img :src="att.url" :alt="att.original_filename" :class="s.image" loading="lazy" />

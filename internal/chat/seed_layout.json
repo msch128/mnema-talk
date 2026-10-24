@@ -1,0 +1,20 @@
+{
+  "de": {
+    "categories": {"text": "Text-Kanäle", "voice": "Voice-Hangouts"},
+    "channels": {
+      "general": {"name": "general", "topic": "Allgemeine Diskussionen & Chat"},
+      "media": {"name": "medien", "topic": "Bilder, Screenshots & Clips"},
+      "lounge": {"name": "Lounge", "topic": "Offener Sprach-Hangout"},
+      "gaming": {"name": "Gaming 4K", "topic": "Source-Quality Screen & Gaming Hangout"}
+    }
+  },
+  "en": {
+    "categories": {"text": "Text channels", "voice": "Voice hangouts"},
+    "channels": {
+      "general": {"name": "general", "topic": "General discussion and chat"},
+      "media": {"name": "media", "topic": "Pictures, screenshots and clips"},
+      "lounge": {"name": "Lounge", "topic": "Open voice hangout"},
+      "gaming": {"name": "Gaming 4K", "topic": "Source-quality screen sharing and gaming hangout"}
+    }
+  }
+}

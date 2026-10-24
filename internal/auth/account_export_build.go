@@ -52,6 +52,7 @@ func (b *budgetWriter) Write(p []byte) (int, error) {
 const exportReadme = `Your data from Mnema Talk (GDPR Art. 20).
 
 profile.json    your account: names, bio, status, language, role, e-mail address, settings
+banner.*        your profile banner, if you set one (as stored; the file name is in profile.json)
 settings.json   notification levels per channel and category
 messages.json   the messages you wrote (channel_name is empty for channels you cannot see any more)
 edits.json      the earlier versions of the messages you edited (newest first)
@@ -60,10 +61,15 @@ poll_votes.json the options you voted for in polls
 uploads.json    the files you uploaded, with links while they still exist
 polls.json      the polls you started: settings, end time and the number of votes per option
 pins.json       the messages you pinned (which message, where, when; not their text)
+thread_follows.json the threads you follow or turned off (the first message id of the thread and the state)
 push.json       your push notification devices (label, added, last delivery; no keys) and whether message text is shown
 emoji.json      the custom emoji you uploaded; the image files are in the emoji folder
 audit.json      administrative log entries about your account (no other person's name)
 security.json   what is set up for signing in (no secrets)
+direct_messages.json  the direct message conversations you are in (which, when, who by id; the messages you wrote are in messages.json)
+blocks.json     the members you blocked (their ids and when; no names)
+reports.json    the reports you filed about messages (your reason and note, not the reported text)
+saved.json      the messages you saved (their ids, your note and when; not the saved text)
 
 The files are meant for machines: file names and keys are in English whatever
 language your account uses, and messages.json keeps your messages as typed,
@@ -139,7 +145,7 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 		name  string
 		build func() (any, error)
 	}{
-		{"profile.json", func() (any, error) { return exportProfile(ctx, q, user) }},
+		{"profile.json", func() (any, error) { return h.exportProfileWithBanner(ctx, z, user) }},
 		{"settings.json", func() (any, error) { return exportSettings(ctx, q, user, viewable) }},
 		{"edits.json", func() (any, error) { return exportEdits(ctx, q, user) }},
 		{"reactions.json", func() (any, error) { return exportReactions(ctx, q, user) }},
@@ -147,10 +153,15 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 		{"uploads.json", func() (any, error) { return exportUploads(ctx, q, user) }},
 		{"polls.json", func() (any, error) { return exportPolls(ctx, q, user, viewable) }},
 		{"pins.json", func() (any, error) { return exportPins(ctx, q, user, viewable) }},
+		{"thread_follows.json", func() (any, error) { return exportThreadFollows(ctx, q, user) }},
 		{"push.json", func() (any, error) { return exportPush(ctx, q, user) }},
 		{"emoji.json", func() (any, error) { return h.exportEmoji(ctx, z, user) }},
 		{"audit.json", func() (any, error) { return exportAudit(ctx, q, user) }},
 		{"security.json", func() (any, error) { return h.exportSecurity(ctx, user) }},
+		{"direct_messages.json", func() (any, error) { return exportDirectMessages(ctx, q, user) }},
+		{"blocks.json", func() (any, error) { return exportBlocks(ctx, q, user) }},
+		{"reports.json", func() (any, error) { return exportReports(ctx, q, user) }},
+		{"saved.json", func() (any, error) { return exportSaved(ctx, q, user) }},
 	}
 	for _, s := range steps {
 		v, err := s.build()

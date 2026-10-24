@@ -48,12 +48,12 @@ async function submit() {
         autocapitalize="none"
         spellcheck="false"
         maxlength="32"
-        class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 font-mono text-sm tracking-widest text-mnema-text outline-none transition focus:border-mnema-accent"
+        class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 font-mono text-sm tracking-widest text-mnema-text outline-hidden transition focus:border-mnema-accent"
         data-testid="second-factor-code"
       />
     </div>
     <div v-if="error" role="alert" class="rounded-md border border-mnema-danger/30 bg-mnema-danger/10 p-2.5 text-sm text-mnema-danger">{{ error }}</div>
-    <button type="submit" :disabled="busy" class="flex w-full items-center justify-center gap-2 rounded-md bg-mnema-accent py-2 text-sm font-semibold text-mnema-accent-ink shadow-sm transition hover:bg-mnema-accent-hover disabled:opacity-50">
+    <button type="submit" :disabled="busy" class="btn btn-primary flex w-full items-center justify-center gap-2">
       <Loader2 v-if="busy" class="h-3.5 w-3.5 animate-spin" /><ShieldCheck v-else class="h-3.5 w-3.5" />
       <span>{{ $t('security.twoFactor.verify') }}</span>
     </button>

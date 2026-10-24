@@ -28,7 +28,9 @@ builds only `web/dist`).
 
 `main` is protected: changes land through a pull request (no approvals
 required) once the `secret-scan`, `backend`, `frontend`, `govulncheck`,
-`docker`, `e2e` and CodeQL `analyze` checks are green; squash merge only.
+`docker`, `upgrade-drill (<version>)`, `e2e` and CodeQL `analyze` checks are
+green; squash merge only. Work for the next minor goes to its `release/X.Y.0`
+branch the same way.
 
 Frontend source uses strict TypeScript, including Vue scripts, media workers,
 browser tests and build tools. See [the TypeScript contract](typescript.md)
@@ -47,14 +49,16 @@ make coverage          # Go (unit + integration) and web coverage: coverage.out,
                        # (Go: COVERAGE_MIN / COVERAGE_FILE_MIN in the Makefile;
                        # web: web/scripts/check-coverage.ts, all four metrics)
 make lint              # gofmt, go vet, eslint
+make docs-check        # relative links and anchors in the docs, no merge-conflict markers
+make english-check     # no German outside the locale resources and scripts/english-only-allowlist.txt
 make typecheck-web     # complete frontend source and strict compiler checks
 make contracts-check   # generated frontend REST contract drift check
-make check             # everything CI runs: lint, tests, govulncheck, builds,
+make check             # everything CI runs: docs and English checks, lint, tests, govulncheck, builds,
                        # npm audit, docker build
 make e2e               # Playwright (Chromium) against the real binary, see below
 make load-test         # voice/screen-share load test, see loadtest/README.md
-make upgrade-drill     # 0.8.16 and 0.9.0 images -> this build with seeded data (FROM_VERSIONS=0.9.0 for one)
-make backup-drill      # backup -> change -> restore on a throwaway stack (FROM_VERSION=0.9.0: back up on that release, restore into this build, check the downgrade refusal)
+make upgrade-drill     # 0.8.16, 0.9.0 and 1.0.0 images -> this build with seeded data (FROM_VERSIONS=1.0.0 for one)
+make backup-drill      # backup -> change -> restore on a throwaway stack (FROM_VERSION=1.0.0: back up on that release, restore into this build, check the downgrade refusal)
 make postgres-upgrade-drill # the one-time PostgreSQL 17 -> 18 move
 ```
 
@@ -70,9 +74,14 @@ everything down again. `SKIP_BUILD=1` reuses the last build,
 `E2E_ONLY="--project=webkit"` another engine. Without it only the `chromium`
 project runs.
 
-The suite has three Playwright projects. **Chromium** is the required check and
+The suite has five Playwright projects (`chromium`, `webkit`, `firefox` and the two phone projects below). **Chromium** is the required check and
 runs everything. **WebKit** (what Safari, iOS and installed iOS web apps use)
-runs the whole suite in CI as `e2e (webkit)`; **Firefox** runs a smoke subset
+runs every spec that does not join a call in CI as `e2e (webkit)` (Playwright's
+Linux WebKit has no `RTCRtpScriptTransform`, so a sealed call cannot happen
+there, see [Browsers](product-status.md#browsers); the call specs run in the separate
+`e2e (webkit-macos-calls)` job on a macOS runner, which starts PostgreSQL and
+SeaweedFS as local processes with `E2E_NO_DOCKER=1`; both jobs are not required
+checks; Playwright stays at 1.63.0 because the WebKit 27.2 of 1.64.x reports a `style-src-attr` violation whenever a `<select>` is added to a page under `style-src-attr 'none'`, which the CSP guard in the specs rightly fails on); **Firefox** runs a smoke subset
 (sign-in, chat, search, mentions, sealed Talk, key rotation, screen share) as
 `e2e (firefox)`. Neither is a required check yet. Engine differences the specs
 account for: Firefox has no context-level camera/microphone grants (its fake
@@ -131,7 +140,9 @@ these jobs in parallel (rough wall times with warm caches):
 | `govulncheck` | Go vulnerability scan | 1–2 min |
 | `frontend` | eslint, strict TypeScript, contract drift, vitest with coverage, build, `npm audit` | 2–3 min |
 | `docker` | image build for linux/amd64 + linux/arm64, not pushed | 2–4 min |
-| `e2e` | Playwright smoke test against the real binary | 4–6 min |
+| `upgrade-drill (<version>)` | One leg per supported source release (0.8.16, 0.9.0, 1.0.0): install it, seed data through its API, upgrade to this build, back up and restore, check the old release refuses the migrated data | per leg, in parallel |
+| `e2e` | Playwright against the real binary: all specs on Chromium plus the phone projects | longest job |
+| `e2e (webkit)`, `e2e (firefox)`, `e2e (webkit-macos-calls)` | Other engines, see above; not required checks | in parallel |
 
 `codeql.yml` (actions, Go incl. tests and the integration tag, JS) runs on the
 same events plus weekly. Caches: Go modules and build cache per job (keyed on
@@ -141,6 +152,18 @@ shared with the release build). A new push to a pull request cancels its
 running CI; runs for pushes to `main` always finish, because the release
 workflow starts from their result. Every job has a `timeout-minutes`; tests are
 never retried.
+
+## Web UI building blocks
+
+The look of the web client comes from tokens and a few shared classes, not from per-view tweaks. The client uses Tailwind CSS 4: there is no `tailwind.config`, the tokens are in `@theme`,.
+
+- `web/src/style.css` `@theme`: colours, radius scale (`rounded-sm` to `rounded-2xl`), elevation scale (`shadow-xs` to `shadow-2xl`), motion (`--ease-mnema`, 150 ms default, `animate-*` entry animations).
+- `web/src/styles/buttons.css`: `.btn` with `-primary`, `-secondary`, `-ghost`, `-danger`, `-danger-solid`, sizes `-sm`/`-lg`, `.btn-icon`, `.btn-link`, `.chip` (a choice in a row), `.choice-card`, and the keyboard focus ring. A loading button sets `aria-busy="true"`.
+- `web/src/styles/controls.css`: checkbox, radio, slider, select and text fields are styled on the elements themselves (no class needed); `.switch` is the toggle (`role="switch"` and `aria-checked`). Slider fill is painted by `lib/rangeFill.ts`.
+- `web/src/styles/surfaces.css`: dialog scrim and panel (`BaseDialog`), `.pop-in` for menus and popovers, toast motion, the `shadow-popover` utility, and the single `prefers-reduced-motion` rule.
+- `web/src/styles/settings.css`: `.settings-group` and its label, card, help and row classes for the account and audio settings pages.
+
+All of it respects the CSP (`style-src 'self'; style-src-attr 'none'`): no inline styles, only classes, tokens and CSSOM. `e2e/tests/a11y.spec.ts` runs axe (contrast and accessible names) over the main surfaces.
 
 ## Releases
 
@@ -171,12 +194,8 @@ breaks in a major release: `make openapi-diff` fails a change that breaks
    (`internal/version`, via the `VERSION`/`REVISION` build args) and the same
    version into the web app, so the app can tell browsers when a newer
    version is running.
-4. Windows Desktop DEV builds are published from
-   [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop).
-   Releases through v0.7.3 still carry
-   `Mnema-Desktop-DEV-vX.Y.Z-windows-x64.zip` on this repository.
-   Extract that ZIP and run `Mnema Desktop DEV.exe`, then enter your HTTPS
-   instance address. These are unsigned DEV packages with no automatic updater.
-   See [desktop client status](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/README.md)
-   for verification limits. The server ships through Docker; new releases do not
-   publish standalone server binaries for Windows or macOS.
+4. Desktop builds are published from
+   [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop); this
+   repository's releases stopped attaching them after v0.7.3. They are unsigned
+   Beta packages (see [desktop-app.md](desktop-app.md)). The server ships
+   through Docker; releases do not publish standalone server binaries.

@@ -37,6 +37,21 @@ type Handler struct {
 	EditHistoryLimit *httpx.RateLimiter
 	// PinLimit caps pinning and unpinning per member (each change is broadcast); nil means no cap.
 	PinLimit *httpx.RateLimiter
+	// FollowLimit caps thread follow changes per member; nil means no cap.
+	FollowLimit *httpx.RateLimiter
+
+	historyViews historyViews
+	// BlockLimit caps blocking and unblocking per member; nil means no cap.
+	BlockLimit *httpx.RateLimiter
+	// ReportLimit caps message reports per member; nil means no cap.
+	ReportLimit *httpx.RateLimiter
+	// SavedLimit caps saving and removing saved messages per member; nil means no cap.
+	SavedLimit *httpx.RateLimiter
+	// ForwardLimit caps forwarding per member; nil means no cap.
+	ForwardLimit *httpx.RateLimiter
+	// DMLimit caps starting direct messages and adding members to them per
+	// member; nil means no cap.
+	DMLimit *httpx.RateLimiter
 }
 
 // VoiceRooms acts on live voice rooms (implemented by the WebSocket hub).
@@ -78,6 +93,11 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Put("/channels/{channelID}/messages/{messageID}", httpx.Handle(h.editMessage))
 	r.Delete("/channels/{channelID}/messages/{messageID}", httpx.Handle(h.deleteMessage))
 	h.mountModeration(r)
+	h.mountBlocks(r)
+	h.mountReports(r)
+	h.mountSaved(r)
+	h.mountForward(r)
+	h.mountDMs(r)
 	history := r
 	if h.EditHistoryLimit != nil {
 		history = r.With(h.EditHistoryLimit.By(auth.UserKey))
@@ -85,6 +105,13 @@ func (h *Handler) Mount(r chi.Router) {
 	history.Get("/channels/{channelID}/messages/{messageID}/edits", httpx.Handle(h.getEditHistory))
 	r.Post("/messages/{messageID}/reactions", httpx.Handle(h.toggleReaction))
 	r.Get("/messages/{messageID}/thread", httpx.Handle(h.getThread))
+	follow := r
+	if h.FollowLimit != nil {
+		follow = r.With(h.FollowLimit.By(auth.UserKey))
+	}
+	follow.Put("/threads/{threadID}/follow", httpx.Handle(h.putThreadFollow))
+	follow.Delete("/threads/{threadID}/follow", httpx.Handle(h.deleteThreadFollow))
+	r.Get("/threads/following", httpx.Handle(h.listFollowedThreads))
 	r.Get("/messages/by-number/{number}", httpx.Handle(h.getMessageByNumber))
 	r.Get("/read-state", httpx.Handle(h.readState))
 	r.Get("/search", httpx.Handle(h.search))
@@ -101,6 +128,7 @@ func (h *Handler) Mount(r chi.Router) {
 // MountAdmin registers channel and category management (the Manage channels
 // permission applies).
 func (h *Handler) MountAdmin(r chi.Router) {
+	h.mountReportsAdmin(r)
 	r = r.With(auth.RequirePerm(h.Perms, perm.ManageChannels))
 	r.Post("/categories", httpx.Handle(h.createCategory))
 	r.Delete("/categories/{id}", httpx.Handle(h.deleteCategory))

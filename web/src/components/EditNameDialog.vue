@@ -77,7 +77,7 @@ async function submit() {
         {{ error }}
       </div>
 
-      <div class="space-y-1.5">
+      <div class="stack-1.5">
         <label for="edit-name" class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
           {{ $t(isChannel ? 'admin.channelNameLabel' : 'admin.categoryNameLabel') }}
         </label>
@@ -87,11 +87,11 @@ async function submit() {
           type="text"
           maxlength="64"
           :placeholder="isCreate ? $t('admin.categoryNamePlaceholder') : undefined"
-          class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-none focus:border-mnema-accent"
+          class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-hidden focus:border-mnema-accent"
         />
       </div>
 
-      <div v-if="isChannel && entity && 'type' in entity && entity.type !== 'voice'" class="space-y-1.5">
+      <div v-if="isChannel && entity && 'type' in entity && entity.type !== 'voice'" class="stack-1.5">
         <label for="edit-topic" class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
           {{ $t('admin.channelTopicLabel') }}
         </label>
@@ -101,11 +101,11 @@ async function submit() {
           type="text"
           maxlength="200"
           :placeholder="$t('admin.channelTopicPlaceholder')"
-          class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-none focus:border-mnema-accent"
+          class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-hidden focus:border-mnema-accent"
         />
       </div>
 
-      <div v-if="isChannel" class="space-y-1.5">
+      <div v-if="isChannel" class="stack-1.5">
         <label for="edit-slow-mode" class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
           {{ $t('moderation.slowMode') }}
         </label>
@@ -113,7 +113,7 @@ async function submit() {
           id="edit-slow-mode"
           v-model.number="slowMode"
           data-testid="slow-mode"
-          class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text focus:outline-none focus:border-mnema-accent"
+          class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text focus:outline-hidden focus:border-mnema-accent"
         >
           <option v-for="s in slowModeChoices" :key="s" :value="s">{{ slowModeLabel(s) }}</option>
         </select>
@@ -123,7 +123,7 @@ async function submit() {
       <div class="pt-3 flex items-center justify-end gap-2 border-t border-mnema-hairline">
         <button
           type="button"
-          class="h-8 px-3 rounded-md border border-mnema-border hover:bg-mnema-hover text-mnema-text text-sm font-semibold transition"
+          class="btn btn-secondary h-8"
           @click="emit('close')"
         >
           {{ $t('common.cancel') }}
@@ -131,7 +131,7 @@ async function submit() {
         <button
           type="submit"
           :disabled="saving || !name.trim()"
-          class="h-8 px-3 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold text-sm transition disabled:opacity-30 disabled:cursor-not-allowed"
+          class="btn btn-primary h-8 disabled:cursor-not-allowed"
         >
           {{ isCreate ? $t('common.create') : $t('common.save') }}
         </button>

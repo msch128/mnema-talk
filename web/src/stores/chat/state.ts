@@ -1,6 +1,7 @@
 import { computed, ref, shallowRef } from 'vue'
 import type { Category, Channel, Member, Message, NotificationSettings, Presence, ReadState, User } from '../../types/domain'
 import type { ServerEventPayloads } from '../../types/events'
+import type { ChatDirectMessage } from '../../types/rest'
 import { platform, type PlatformSocket } from '../../lib/platform'
 import { createKeyedThrottle } from '../../lib/chatLogic'
 import type { useAuthStore } from '../auth'
@@ -30,6 +31,9 @@ function channelState() {
     latestLoadSeq: ref(0),
     jumpTarget: ref<{ id: string; seq: number } | null>(null),
     activeThread: ref<ThreadRoot | null>(null),
+    // Root ids of the threads I follow, and whether the server told me (older servers do not).
+    followedThreads: ref<ReadonlySet<string>>(new Set()),
+    followKnown: ref(false),
     // Pinned messages: bumped when the pins of a channel changed, so an open pinned list refetches; plus the notes about new pins.
     pinsSignal: ref<{ channelId: string; seq: number } | null>(null),
     pinNotices: ref<PinNotice[]>([]),
@@ -85,6 +89,15 @@ function memberState() {
     notificationPermission: ref<string>(platform.notificationPermission()),
     // Thread to open once the jump to its root message has landed (search / notification targets).
     pendingThreadOpen: null as { rootId: string; channelId: string } | null
+  }
+}
+
+/** The direct message conversations of the caller (they are not channels). */
+function dmState() {
+  return {
+    dms: ref<ChatDirectMessage[]>([]),
+    dmsLoaded: ref(false),
+    dmsFetchSeq: 0
   }
 }
 
@@ -148,6 +161,7 @@ export function createChatState(markRead: (channelId: string) => void) {
   const base = {
     ...channelState(),
     ...memberState(),
+    ...dmState(),
     ...socketState(),
     ...syncState(markRead)
   }

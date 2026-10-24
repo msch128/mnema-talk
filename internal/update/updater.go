@@ -12,23 +12,34 @@ import (
 	"time"
 )
 
-// updaterTimeout bounds one call to the sidecar. The call is asynchronous on
-// the sidecar's side (?async=true), so it returns as soon as the update was
-// accepted; the pull and restart happen afterwards.
-const updaterTimeout = 15 * time.Second
+// updaterTimeout bounds one call to the sidecar. The sidecar checks the
+// image's signature and provenance before it answers (a few registry round
+// trips, at most 90 seconds on its side); the pull and restart happen after
+// the answer (?async=true).
+const updaterTimeout = 120 * time.Second
 
 var (
 	// ErrUpdaterBusy: the sidecar is already running an update.
 	ErrUpdaterBusy = errors.New("an update is already running")
 	// ErrUpdaterAuth: the sidecar rejected UPDATER_TOKEN.
 	ErrUpdaterAuth = errors.New("the updater rejected the token; check UPDATER_TOKEN on both containers")
+	// ErrUpdaterUntrusted: the sidecar examined the new image and it did not
+	// pass the signature or provenance check; nothing was changed.
+	ErrUpdaterUntrusted = errors.New("the updater refused the update: the new image's signature or build provenance did not verify; nothing was changed")
+	// ErrUpdaterRequest: the sidecar did not understand the request (an
+	// updater older than the app).
+	ErrUpdaterRequest = errors.New("the updater did not accept the request; update the updater (docker compose --profile autoupdate up -d)")
+	// ErrUpdaterUnverified: the sidecar could not carry the check out
+	// (registry or Sigstore unreachable); nothing was changed.
+	ErrUpdaterUnverified = errors.New("the updater could not verify the new image (registry or Sigstore unreachable); nothing was changed")
 	// ErrUpdaterUnreachable: no answer (sidecar not started, wrong URL).
 	ErrUpdaterUnreachable = errors.New("the updater is not reachable; is the autoupdate profile running?")
 )
 
-// Updater asks the optional updater sidecar (a Watchtower with only its
-// HTTP update endpoint enabled, see docker-compose.yml) to re-pull and
-// restart the containers it is scoped to. The app holds no Docker access:
+// Updater asks the optional updater sidecar (cmd/updater in front of a
+// Watchtower, see docker-compose.yml) to update the containers it is scoped
+// to: it verifies the new image's cosign signature and provenance, and only
+// then pulls that digest and restarts the app. The app holds no Docker access:
 // the sidecar alone decides what it may update (label + scope), the app can
 // only say "now".
 type Updater struct {
@@ -52,7 +63,6 @@ func NewUpdater(baseURL, token string) (*Updater, error) {
 		return nil, errors.New("UPDATER_URL must be an http(s) URL without credentials")
 	}
 	u.Path += "/v1/update"
-	u.RawQuery = "async=true"
 	return &Updater{
 		endpoint: u.String(),
 		token:    token,
@@ -66,8 +76,9 @@ func NewUpdater(baseURL, token string) (*Updater, error) {
 
 // Trigger starts an update. It never returns the sidecar's response body or
 // the token in an error.
-func (u *Updater) Trigger(ctx context.Context) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.endpoint, nil)
+func (u *Updater) Trigger(ctx context.Context, targetVersion string) error {
+	q := url.Values{"async": {"true"}, "target_version": {targetVersion}}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.endpoint+"?"+q.Encode(), nil)
 	if err != nil {
 		return fmt.Errorf("build updater request: %w", err)
 	}
@@ -88,6 +99,12 @@ func (u *Updater) Trigger(ctx context.Context) error {
 		return ErrUpdaterAuth
 	case http.StatusTooManyRequests:
 		return ErrUpdaterBusy
+	case http.StatusUnprocessableEntity:
+		return ErrUpdaterUntrusted
+	case http.StatusBadRequest:
+		return ErrUpdaterRequest
+	case http.StatusBadGateway:
+		return ErrUpdaterUnverified
 	default:
 		return fmt.Errorf("the updater answered HTTP %d", res.StatusCode)
 	}

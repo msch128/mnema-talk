@@ -38,14 +38,14 @@ func TestSearchFindsMessagesWithFilters(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
 	max := a.register(admin, "max")
-	general := a.createChannel(admin, "allgemein", "text")
-	music := a.createChannel(admin, "musik", "text")
+	general := a.createChannel(admin, "lobby", "text")
+	music := a.createChannel(admin, "music", "text")
 
-	postMessage(t, admin, general, map[string]any{"content": "Treffen um 20 Uhr im Park"})
-	postMessage(t, max, general, map[string]any{"content": "park ist gut, 100% dabei"})
-	postMessage(t, max, music, map[string]any{"content": "Neues Album vom Park-Quartett"})
-	postMessage(t, admin, general, map[string]any{"content": "ganz anderes Thema"})
-	img := admin.upload("/api/channels/"+general.String()+"/upload", "file", "park.png", "image/png", pngBytes, map[string]string{"content": "Foto vom Park"})
+	postMessage(t, admin, general, map[string]any{"content": "Meeting at 8 pm in the park"})
+	postMessage(t, max, general, map[string]any{"content": "park sounds good, 100% in"})
+	postMessage(t, max, music, map[string]any{"content": "New album by the Park Quartet"})
+	postMessage(t, admin, general, map[string]any{"content": "a different topic entirely"})
+	img := admin.upload("/api/channels/"+general.String()+"/upload", "file", "park.png", "image/png", pngBytes, map[string]string{"content": "Photo of the park"})
 	if img.status != http.StatusCreated {
 		t.Fatalf("upload: %d", img.status)
 	}
@@ -54,7 +54,7 @@ func TestSearchFindsMessagesWithFilters(t *testing.T) {
 	if len(got.Messages) != 4 {
 		t.Fatalf("q=PARK: %d results, want 4: %+v", len(got.Messages), got.Messages)
 	}
-	if got.Messages[0].Content != "Foto vom Park" {
+	if got.Messages[0].Content != "Photo of the park" {
 		t.Fatalf("newest first expected, got %q", got.Messages[0].Content)
 	}
 
@@ -67,10 +67,10 @@ func TestSearchFindsMessagesWithFilters(t *testing.T) {
 		t.Fatalf("author filter: %+v", got.Messages)
 	}
 	got, _ = max.search(t, map[string]string{"has": "image"})
-	if len(got.Messages) != 1 || got.Messages[0].Content != "Foto vom Park" {
+	if len(got.Messages) != 1 || got.Messages[0].Content != "Photo of the park" {
 		t.Fatalf("has=image: %+v", got.Messages)
 	}
-	got, _ = max.search(t, map[string]string{"q": "uhr park"})
+	got, _ = max.search(t, map[string]string{"q": "pm park"})
 	if len(got.Messages) != 1 {
 		t.Fatalf("all terms must match: %+v", got.Messages)
 	}
@@ -102,7 +102,7 @@ func TestSearchThreadReplyCarriesParentForJump(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
 	max := a.register(admin, "max")
-	ch := a.createChannel(admin, "allgemein", "text")
+	ch := a.createChannel(admin, "lobby", "text")
 
 	root := postMessage(t, admin, ch, map[string]any{"content": "Wurzel der Diskussion"})
 	reply := postMessage(t, max, ch, map[string]any{"content": "Zebrastreifen in der Antwort", "parent_id": root})

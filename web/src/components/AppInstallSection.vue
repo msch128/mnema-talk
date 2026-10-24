@@ -23,7 +23,7 @@ async function install() {
         v-if="state === 'available'"
         type="button"
         data-testid="app-install-button"
-        class="px-4 py-2 rounded-lg bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold text-sm transition shadow-sm"
+        class="btn btn-primary"
         @click="install"
       >{{ $t('appSettings.installAction') }}</button>
     </div>

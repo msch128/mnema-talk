@@ -9,6 +9,7 @@ import { installActivityListeners, setMyPresence, setStatusText } from './chat/p
 import { fetchMessages, goToMessage, jumpToLatest, jumpToMessage, loadNewer, loadOlder, showToast } from './chat/messageWindow'
 import { createPoll, endPoll, fetchPoll, votePoll } from './chat/polls'
 import { deleteMessage, editMessage, sendMessage, setPinned, toggleReaction, uploadMedia } from './chat/messageActions'
+import { fetchFollowedThreads, setThreadFollow } from './chat/threadFollow'
 import { closeThread, openThread, sendThreadReply, uploadThreadMedia } from './chat/threads'
 import { closeWebSocket, initWebSocket, installVisibilityRetry, retryNow, sendWSEvent, setWebRTCHandlers } from './chat/socket'
 import { handleWSEvent } from './chat/events'
@@ -18,6 +19,7 @@ import { sendTyping } from './chat/typing'
 import { messageMentionsMe, refreshNotificationPermission, requestNotificationPermission } from './chat/notifications'
 import { dismissEphemeral, resetCommunityState } from './chat/reset'
 import { dismissPinNotice, fetchPins } from './chat/pins'
+import { addDmMember, waitForDms, dmById, dmChannel, fetchDms, isDm, leaveDm, openDm, startDm } from './chat/dms'
 
 export type { EphemeralNote, ProfilePreview, ThreadRoot } from './chat/types'
 export { MARK_READ_INTERVAL_MS, TYPING_EXPIRY_MS } from './chat/types'
@@ -48,6 +50,8 @@ function exposedState(cs: ChatState) {
     jumpTarget: cs.jumpTarget,
     isConnected: cs.isConnected,
     members: cs.members,
+    dms: cs.dms,
+    dmsLoaded: cs.dmsLoaded,
     presenceById: cs.presenceById,
     activityById: cs.activityById,
     onlineUserIds: cs.onlineUserIds,
@@ -63,6 +67,8 @@ function exposedState(cs: ChatState) {
     notificationPermission: cs.notificationPermission,
     typingByChannel: cs.typingByChannel,
     activeThread: cs.activeThread,
+    followedThreads: cs.followedThreads,
+    followKnown: cs.followKnown,
     threadReplies: cs.threadReplies,
     isThreadLoading: cs.isThreadLoading
   }
@@ -78,6 +84,15 @@ function exposedActions(cx: Cx) {
     dismissPinNotice: bind(dismissPinNotice),
     fetchPins: bind(fetchPins),
     isVoiceChannel: bind(isVoiceChannel),
+    isDm: bind(isDm),
+    dmById: bind(dmById),
+    dmChannel: bind(dmChannel),
+    fetchDms: bind(fetchDms),
+    waitForDms: bind(waitForDms),
+    openDm: bind(openDm),
+    startDm: bind(startDm),
+    addDmMember: bind(addDmMember),
+    leaveDm: bind(leaveDm),
     showToast,
     loadOlder: bind(loadOlder),
     loadNewer: bind(loadNewer),
@@ -126,6 +141,8 @@ function exposedActions(cx: Cx) {
     refreshNotificationPermission: bind(refreshNotificationPermission),
     requestNotificationPermission: bind(requestNotificationPermission),
     openThread: bind(openThread),
+    setThreadFollow: bind(setThreadFollow),
+    fetchFollowedThreads: bind(fetchFollowedThreads),
     closeThread: bind(closeThread),
     sendThreadReply: bind(sendThreadReply),
     uploadThreadMedia: bind(uploadThreadMedia),

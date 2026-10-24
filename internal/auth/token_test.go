@@ -75,7 +75,7 @@ func TestPasswordPolicy(t *testing.T) {
 }
 
 func TestUsernamePolicy(t *testing.T) {
-	for _, bad := range []string{"ab", "has space", "<script>", strings.Repeat("a", 33), "ünï"} {
+	for _, bad := range []string{"ab", "has space", "<script>", strings.Repeat("a", 33), "\u00fcnï"} {
 		if ValidateUsername(bad) == nil {
 			t.Errorf("username %q accepted", bad)
 		}

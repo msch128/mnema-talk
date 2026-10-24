@@ -104,11 +104,17 @@ services:
     container_name: $COMPOSE_PROJECT_NAME-coturn
   updater:
     container_name: $COMPOSE_PROJECT_NAME-updater
+  recreator:
+    container_name: $COMPOSE_PROJECT_NAME-recreator
 networks:
   mnema-network:
     name: $COMPOSE_PROJECT_NAME-network
   mnema-updater:
     name: $COMPOSE_PROJECT_NAME-updater
+  mnema-recreator:
+    name: $COMPOSE_PROJECT_NAME-recreator
+  mnema-updater-egress:
+    name: $COMPOSE_PROJECT_NAME-updater-egress
 EOF
 cd "$DEPLOY"
 
@@ -230,6 +236,9 @@ verify_integration_data
 echo "==> the upgraded server takes new writes"
 post_message bob "$GENERAL" "after-upgrade-$TAG"
 messages alice "$GENERAL" | grep -qx "after-upgrade-$TAG" || { echo "a new message was not stored" >&2; exit 1; }
+
+echo "==> direct messages, blocks, saved messages and 1.1 features"
+exercise_110_features
 
 echo "==> the new tables take writes after the upgrade"
 exercise_new_tables

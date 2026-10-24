@@ -11,23 +11,26 @@ entire communication path.
 | Beta | Usable and maintained, but outstanding acceptance (for example platform signing) keeps it out of Supported. Expect rough edges. |
 | Planned | Requirements exist, but no qualified usable product path is available. |
 
-## Status at 1.0
+## Status at 1.1
 
-Mnema Talk 1.0 is the first release under the
+Mnema Talk 1.0 was the first release under the
 [API stability contract](api-stability.md): its public surfaces change
-incompatibly only in a major release. What the 1.0 label does and does not say:
+incompatibly only in a major release. 1.1 keeps that contract and only adds to
+it. What the 1.x label does and does not say:
 
 **Supported versions.** Security fixes go to the latest 1.x minor and, once a
 newer minor exists, to the previous minor for 90 days
-([SECURITY.md](../SECURITY.md#supported-versions)). Until 1.1 is out, 0.9.x and
-older get no fixes: update to 1.0.x. CI still upgrades from 0.8.16, 0.9.x and
-1.0.0 to prove the upgrade path; that is a test, not a support promise.
+([SECURITY.md](../SECURITY.md#supported-versions)). Once 1.1.0 is published,
+that means 1.1.x and, for 90 days, 1.0.x; 0.9.x and older get no fixes. CI
+upgrades from 0.8.16, 0.9.0 and 1.0.0 to prove the upgrade path; that is a
+test, not a support promise.
 
-| Area | Category at 1.0 |
+| Area | Category at 1.1 |
 | --- | --- |
 | Server (Docker, linux/amd64 and arm64), browser app, text chat, roles and permissions, webhooks and bots, notifications, search and onboarding, voice, cameras and screen share in Chromium-based browsers | Supported |
-| Browser app on WebKit (Safari, iOS, installed iOS web apps) and Firefox: text chat, search, voice, cameras and screen share with sealed media, as tested in [Browsers](#browsers) | Supported for text chat, search and administration. Sealed calls pass on macOS WebKit locally, but the CI WebKit job does not run the call specs because they fail on Linux WebKit; see the limits there (not yet tested on real iOS or Android hardware) |
-| Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), backup and restore, upgrade tested from 0.8.16, 0.9.x and 1.0.0, cosign-signed images | Supported |
+| Direct messages (two to ten members), blocking and reports, saved messages, forwarding, thread follow, search filters, built-in slash commands, reading a Talk's chat without joining | Supported (new in 1.1; each has server tests and a browser spec) |
+| Browser app on WebKit (Safari, iOS, installed iOS web apps) and Firefox: text chat, search, voice, cameras and screen share with sealed media, as tested in [Browsers](#browsers) | Supported for text chat, search and administration. Sealed calls pass on macOS WebKit locally; the CI WebKit job cannot run them because Playwright's Linux WebKit build has no encoded-media API (`RTCRtpScriptTransform`); see the limits there (not yet tested on real iOS or Android hardware) |
+| Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), backup and restore, upgrade tested from 0.8.16, 0.9.0 and 1.0.0, cosign-signed images, self-update that verifies the image's signature and provenance before it restarts the app | Supported |
 | Native mobile apps, text end-to-end encryption | Not offered. Text stays readable by the server, by design. The browser app has a phone layout (channel list as a drawer, full-screen thread and member list, 44 px touch targets, safe areas) that is covered by the `mobile-*` e2e projects in Chromium and WebKit device emulation, not by tests on real phones. |
 | Desktop client on Windows | Beta (unsigned, no Authenticode; SmartScreen warns) |
 | Desktop client on macOS and Linux | Beta (DEV builds, not qualified on real hardware; not notarised; Gatekeeper warns) |
@@ -41,7 +44,7 @@ deliberately deferred (see the
 done by the project itself with automated help. It is **not an independent or
 external audit**, and none has been commissioned.
 
-What 1.0 does not claim: real 4K/60 capture, system audio from physical
+What 1.x does not claim: real 4K/60 capture, system audio from physical
 hardware, an external security audit, the 250-endpoint capacity target, load
 results on dedicated hardware, Authenticode or notarised desktop signing, and
 sealed media qualified in WebView2 on real hardware. These stay outstanding
@@ -80,7 +83,7 @@ Other capabilities on this path, each with automated tests:
 
 Not covered by these tests: real 4K/60 capture, system audio from physical
 hardware, an external security audit and capacity beyond the recorded runs.
-A six-lane internal security review preceded 1.0 (see "Status at 1.0"); it is
+A six-lane internal security review preceded 1.0 (see "Status at 1.1"); it is
 not an independent audit.
 
 ## Browsers
@@ -93,17 +96,17 @@ join a call at all**: the join is refused with a message, no microphone is
 requested and nothing is sent. Media is never sent unsealed, in any engine.
 
 What the end-to-end suite showed (Playwright with the engines it ships:
-Chromium 153, WebKit 26.6, Firefox 155, two members per call with fake
+Chromium 156, WebKit 27.2, Firefox 157, two members per call with fake
 devices; run `make e2e` or see [development](development.md#browser-tests-e2e)):
 
 | | Chromium (Chrome, Edge) | WebKit (Safari, iOS) | Firefox |
 | --- | --- | --- | --- |
 | Sign-in, chat, search, roles, moderation, webhooks, notifications | Supported | Supported | Supported |
-| Microphone and camera, sealed on every line, with key rotation, late join and reload | Supported | Passes on macOS WebKit locally; not run in CI (the call specs fail on Linux WebKit) | Supported |
-| Screen share with viewer-chosen layers (simulcast) | Supported | Passes on macOS WebKit locally; not run in CI | Supported (VP8) |
-| Screen share frames advance for the viewer | Supported | Passes on macOS WebKit locally; not run in CI | Supported |
-| Required CI check | Yes | No (`e2e (webkit)`: text and admin specs only) | No (`e2e (firefox)`, smoke and sealed-call subset) |
-| Not covered by the suite | | Real Safari and iOS hardware; calls on Linux WebKit (the specs fail there, they pass on macOS WebKit) | Real screen capture |
+| Microphone and camera, sealed on every line, with key rotation, late join and reload | Supported | Passes on macOS WebKit; in CI only in `e2e (webkit-macos-calls)` (Playwright's Linux WebKit has no `RTCRtpScriptTransform`, so the app refuses the join there, see below) | Supported |
+| Screen share with viewer-chosen layers (simulcast) | Supported | Passes on macOS WebKit; in CI only in `e2e (webkit-macos-calls)` | Supported (VP8) |
+| Screen share frames advance for the viewer | Supported | Passes on macOS WebKit; in CI only in `e2e (webkit-macos-calls)` | Supported |
+| Required CI check | Yes | No (`e2e (webkit)`: every spec that does not join a call, plus the refusal spec) | No (`e2e (firefox)`, smoke and sealed-call subset) |
+| Not covered by the suite | | Real Safari and iOS hardware; calls on Linux WebKit (no frame transform in that build, they pass on macOS WebKit) | Real screen capture |
 
 A real-device call (real camera and microphone, real Google Chrome on macOS,
 sealed both ways) was verified on 2026-10-22.
@@ -117,11 +120,39 @@ What it took:
 - **All engines, joining.** A browser that cannot seal media is refused at the
   join (before any device is requested) instead of joining with microphone,
   camera and screen switched off.
+- **Linux WebKit in CI cannot take part in a sealed call.** This is the engine
+  build, not the app. Playwright's Linux WebKit (26.6 in 1.63, 27.2 in 1.64.1, in
+  both cases the version of its macOS build) reports `RTCPeerConnection` and `getUserMedia`, but
+  `RTCRtpScriptTransform`, `RTCRtpSender.prototype.createEncodedStreams` and
+  `RTCEncodedAudioFrame` are all `undefined` (checked on x64 and arm64 Linux
+  with both versions; the macOS build has `RTCRtpScriptTransform` and `RTCEncodedAudioFrame`). With
+  no way to reach encoded media the app does what it promises for such a
+  browser: it refuses the join with a message, requests no microphone and sends
+  nothing (`browser-sealing.spec.ts`, second spec, runs in the WebKit CI job). The
+  first spec of that file skips itself only on Linux WebKit and only while
+  `RTCRtpScriptTransform` is missing, so a build that gains it runs the call
+  again. Every spec that joins a call (calls, screen share, Talk chat, roles
+  rights) stays out of `e2e (webkit)` and runs in `e2e (webkit-macos-calls)` on a macOS runner, a separate job that is not a required check.
+- **WebKit 27.2, `<select>` and the style policy.** Playwright 1.64's WebKit
+  (27.2) reports one `style-src-attr` violation for every `<select>` a page
+  builds (empty sample, the script that created the select as source; the
+  browser's own shadow tree sets an inline style). Nothing is refused: a page
+  with selects renders pixel-identically under `'unsafe-inline'` and under
+  `style-src-attr 'none'`, and 26.6 does not report it. The policy is left as
+  it is; the e2e fixtures ignore this one signature in WebKit only (the
+  Chromium and Firefox jobs run the same code and still fail on any
+  `style-src-attr` event). Not yet checked in a release Safari 27.
+- **Firefox, navigations the driver loses.** On Linux Firefox (Playwright 1.63
+  and later) `page.goto` sometimes never resolves although the server answered
+  200 and `document.readyState` is `complete`: the driver's frame stays on
+  about:blank (no `navigated` event; 3 to 12 of 40 navigations of a bare page
+  on a 2-CPU container). Not specific to this app; the e2e fixtures retry the
+  navigation once the first attempt has timed out (`tests/navigation-diagnostics.ts`).
 - WebKit mutes the microphone of all but one page per browser process (as
   Safari does between tabs). That limits two members in one Safari window, not
   two devices; the suite therefore runs each WebKit member in its own process.
 
-Stability: Chromium passed 41 of 41 specs on every run. Firefox passed the
+Stability: Chromium passed every spec on every run. Firefox passed the
 whole suite apart from the specs that need Chrome's DevTools protocol, and its
 CI subset (7 files) 10 of 10. WebKit passed the suite apart from those too,
 but with one or two timing failures per full run on a loaded machine (a sealed

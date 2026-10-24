@@ -17,7 +17,7 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/backup-common.sh"
 
 # The image that wrote the old volume (Mnema Talk 0.4.x).
-PG17_IMAGE=postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+PG17_IMAGE=postgres:17-alpine@sha256:eee6c6e1b0894fa4fe0075eb054af9fd1cf39a35321c2d4110626cfe506411fb
 BACKUP_DIR=${BACKUP_DIR:-$HOME/mnema-talk-backups}
 
 [ -f .env ] && [ ! -L .env ] || backup_fail 'run this in the deployment directory (a regular .env is required)'

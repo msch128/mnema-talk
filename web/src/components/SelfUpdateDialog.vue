@@ -43,7 +43,7 @@ async function submit() {
 
 <template>
   <BaseDialog :title="$t('admin.system.selfUpdateTitle')" role="alertdialog" initial-focus="#self-update-password" @close="emit('close')">
-    <form class="p-5 space-y-4 overflow-y-auto" data-testid="self-update-dialog" @submit.prevent="submit">
+    <form class="p-5 stack-4 overflow-y-auto" data-testid="self-update-dialog" @submit.prevent="submit">
       <p class="text-base font-mono text-mnema-text" data-testid="self-update-versions">{{ currentVersion }} → {{ targetVersion }}</p>
       <a
         v-if="releaseUrl"
@@ -53,13 +53,13 @@ async function submit() {
         class="text-sm text-mnema-accent hover:underline"
       >{{ $t('admin.system.releaseNotesLink', { version: targetVersion }) }}</a>
       <div class="flex gap-2 rounded-lg border border-mnema-warning/35 bg-mnema-warning/10 p-3 text-sm text-mnema-text">
-        <AlertTriangle class="h-4 w-4 flex-shrink-0 text-mnema-warning mt-0.5" />
+        <AlertTriangle class="h-4 w-4 shrink-0 text-mnema-warning mt-0.5" />
         <span>{{ $t('admin.system.selfUpdateWarning') }}</span>
       </div>
       <div v-if="error" role="alert" class="p-2.5 rounded-lg bg-mnema-danger/10 border border-mnema-danger/30 text-mnema-danger text-sm" data-testid="self-update-error">
         {{ error }}
       </div>
-      <div class="space-y-1.5">
+      <div class="stack-1.5">
         <label for="self-update-password" class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
           {{ $t('admin.system.selfUpdatePassword') }}
         </label>
@@ -69,18 +69,18 @@ async function submit() {
           type="password"
           autocomplete="current-password"
           required
-          class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text outline-none focus:border-mnema-accent"
+          class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent"
         />
       </div>
       <div class="flex justify-end gap-2 pt-1">
-        <button type="button" class="px-3 py-1.5 rounded-md text-sm text-mnema-muted hover:text-mnema-text" @click="emit('close')">
+        <button type="button" class="btn btn-ghost" @click="emit('close')">
           {{ $t('common.cancel') }}
         </button>
         <button
           type="submit"
           data-testid="self-update-confirm"
           :disabled="!password || busy"
-          class="px-4 py-1.5 rounded-md bg-mnema-accent hover:bg-mnema-accent-hover text-mnema-accent-ink text-sm font-semibold transition disabled:opacity-40"
+          class="btn btn-primary"
         >
           {{ busy ? $t('admin.system.selfUpdateStarting') : $t('admin.system.selfUpdateButton') }}
         </button>

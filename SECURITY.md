@@ -9,9 +9,10 @@ to:
 - the **previous minor release for 90 days** after the newer minor was
   published, so an operator has a quarter to move up.
 
-Fixes land on `main` first and reach those lines as patch releases. Until 1.1
-is published, only 1.0.x is supported: `0.9.x` and older releases get no fixes,
-and neither do forks or unreleased commits. Update to a supported line
+Fixes land on `main` first and reach those lines as patch releases. With 1.1
+published, 1.1.x is the latest line and 1.0.x gets fixes for 90 days after the
+1.1.0 release. `0.9.x` and older releases get no fixes, and neither do forks or
+unreleased commits. Update to a supported line
 ([doc/upgrade.md](doc/upgrade.md)). Desktop clients refuse
 web bundles below the release that carries the latest marked security fix, see
 [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md).
@@ -52,24 +53,87 @@ Result: 0 Critical, 0 High. Every Medium finding is fixed, with a test that
 fails without the fix, and the behaviour changes are listed in
 [doc/upgrade.md](doc/upgrade.md#09x--100). Deliberately deferred past 1.0:
 
-- **CSP `style-src 'unsafe-inline'`.** Kept because the bundled
-  `emoji-picker-element` writes inline styles and has no nonce support (see
-  Security headers below for the plan to remove it and the browser test that
-  must come with it).
 - **RT-4, frame format version 2.** Version 2 media frames (no line binding)
-  are still accepted for mixed-version Talks; refusing them is a protocol
-  change that would cut old tabs off (see the media frame section below).
+  are still accepted. Re-evaluated for 1.1 and deferred to 2.0: every 1.0.x
+  sender still seals version 2 at the start of each epoch, so refusing it would
+  break 1.0.x tabs (see the media frame section below for the evidence).
 - **RT-6, regroup collusion** (Info). Two colluding members, or the server, can
   make a listener who hears nobody else regroup; rate-limited, no worse than the
   denial of service the server already has.
-- **SUP-05, image signature check in the updater.** "Update now" does not verify
-  the cosign signature or provenance of the pulled image; see
-  [Self-update sidecar](#self-update-sidecar). Verify by hand and pin the digest.
-- **Legacy bot tokens without an issuer.** Tokens created before 1.0 have no
-  recorded issuer and are not re-checked against it until they are regenerated;
-  new tokens are bound to their issuer ([doc/bots.md](doc/bots.md#tokens)).
+
+Closed in 1.1:
+
+- **SUP-05, image signature check in the updater.** "Update now" now verifies
+  the cosign signature and the build provenance of the new image before
+  anything is pulled or restarted, and refuses otherwise; see
+  [Self-update sidecar](#self-update-sidecar).
+- **Legacy bot tokens without an issuer.** A token created before 1.0 is bound
+  to its likeliest issuer the first time it is used after the upgrade, and the
+  admin console lists the ones not bound yet; see
+  [doc/bots.md](doc/bots.md#tokens). No token was revoked for this.
 
 Remaining Info-level items of the review are not listed individually.
+
+## Direct messages (privacy model)
+
+Direct messages (1.1) are conversations of two to ten members. Their privacy
+model, in short; the design is in [doc/architecture.md](doc/architecture.md#direct-messages).
+
+- **Who can read.** Members of the conversation, nobody else: the Owner,
+  Administrators and moderators have no route to it (REST, WebSocket, search,
+  media, push, audit all test membership). A moderator sees only what a member
+  chose to report: the reported message and up to 20 around it, copied at the
+  time of the report.
+- **Not end-to-end encrypted.** Like channel text, a conversation is readable
+  by the server and by whoever operates it or holds a backup or database
+  dump. Operators can read the `messages` table; this is the same trust as for
+  channel text, and there is no plan for text E2EE. Attachments of a
+  conversation are served only to its members.
+- **Blocks cannot be probed.** Every refusal about another member (a block,
+  their `dm_policy`, a disabled account, an unknown id) is one 403 text, and
+  `can_send` and every list say nothing about a block.
+- **Abuse limits.** 3 tries a minute and 10 new conversations a day, a cap of
+  two messages before the other side has answered, at most 10 members per
+  conversation and 100 group conversations per member, *Send direct messages* as a permission (default on),
+  a community switch (default on) and a per-member `dm_policy`.
+- **Side channels removed.** Private messages do not move the public message
+  counters or the public message numbering, are absent from the audit log,
+  bot and webhook events and the admin media list.
+- **Server-side enforcement** of all of it; the UI only hides what a member
+  cannot do.
+
+## Blocks and reports
+
+A block is private: the blocked member is not told, and nothing about it is
+visible to them (see "Blocks cannot be probed" above). The blocker's web app
+collapses the blocked member's messages, and their mentions, replies and
+messages create no inbox entry, mention count or push for the blocker (the
+mentions inbox excludes direct messages entirely; in any conversation, group
+direct messages included, unread counts, mention counts and last-activity time
+leave out messages by members the reader blocked, and push recipients skip
+blockers). This is decided when the entry is listed or the push is sent, on the server. Reports are the other
+way: a member reports a message they can see, and the report stores its own
+copy of that message and up to 20 around it, so editing or deleting the
+original does not change what the moderators read. Only the Owner,
+Administrators and holders of *Manage reports* (off by default) can open the
+queue, and reading a report needs no access to the channel. A report of a
+direct message shows only that copy, never the rest of the conversation.
+Deleting an account blanks its text in every report copy and cuts the links
+to the account. Details: [doc/moderation.md](doc/moderation.md#blocking-and-reports).
+
+## Forwarding (a reference, not a copy)
+
+A forwarded message stores a reference to the original (`forward_of`) and the
+forwarder's own comment, never the original's text. The quote is produced when
+a reader asks for it (`GET /api/messages/{id}/forward`) from what that reader
+may see at that moment, so a hidden channel's text cannot reach someone through
+a forward, whoever forwarded it: not in message lists, search, the inbox, push,
+the export, WebSocket events, or the payloads of bots and webhooks, none of which holds an id or any text of
+the original (only `forward: {forwarded: true}`). Every refusal of a
+forward is one 403 text, so a forward cannot probe channels, conversations or
+blocks. The ids of the original are returned only to readers who may see it. Saved messages are a
+private list of references with the same read-time check, conversations by
+membership.
 
 ## Security model (summary)
 
@@ -228,10 +292,14 @@ details and the limits.
   usual lockouts), so a stolen session cookie alone cannot do either.
   *Deletion* runs in one transaction and cannot be undone. The Owner account
   cannot be deleted (ownership is not transferable). What goes: profile,
-  avatar, e-mail address, sessions (native ones too), tokens, invites,
-  reactions, mentions of the member, settings, roles and overwrites, every file
+  avatar, banner, e-mail address, sessions (native ones too), tokens, invites,
+  reactions, mentions of the member, settings, roles and overwrites, blocks (as
+  blocker and as blocked), the saved list, thread follows, direct message
+  memberships (a conversation nobody else is in goes with its messages and
+  files), every file
   the member uploaded (database rows and objects), pending and finished exports,
-  and the second factor. What stays: the account row as an anonymised tombstone
+  and the second factor. Reports the member sent or received stay for the
+  moderators with the member's text, note and links blanked. What stays: the account row as an anonymised tombstone
   (`deleted-<id>`, "Deleted member", disabled, unusable password hash) and the
   member's messages, emptied of text, link cards and pins (and of the earlier
   versions kept for moderators' edit history), so threads and other
@@ -256,7 +324,8 @@ details and the limits.
   another site (`Sec-Fetch-Site`), so a link or image on another page cannot
   burn it.
   It holds the member's own profile, settings, roles, messages (channel names
-  only for channels they can still view), reactions, upload list, a security
+  only for channels they can still view), reactions, upload list, blocks,
+  reports they sent, saved message ids and notes, thread follows, a security
   summary and audit entries about the account as "you"/"staff" without any
   other person's name; it is bounded to 200 000 messages and 64 MiB.
 - **WebSocket flood limits.** Every client event has a payload cap (1 KiB for
@@ -316,9 +385,14 @@ details and the limits.
   a session whose token was revoked. Slash commands are run only by members
   who may send in the channel, only for bots that can view and send there,
   and an admin can switch any command off; ephemeral replies are never stored.
-  Built-in commands (`/poll`) run on the server behind the same checks: the
-  right to send in the channel, a rate limit and options validated against the
-  command's definition. **Polls** keep anonymous votes anonymous by
+  Built-in commands (`/poll`, `/me`, `/shrug`, `/tableflip`, `/unflip`,
+  `/spoiler`, `/nick`, `/thread`, `/msg`, `/timeout`, `/ban` and `/kick`) run on the server behind the
+  same checks: the right to send in the channel, a rate limit and options
+  validated against the command's definition. The moderation commands check the
+  global permission first (*Timeout members*, *Ban members*, *Kick members*;
+  the last is off for @everyone and every existing role), then call the same
+  service as the admin routes, so the role hierarchy and the Owner's
+  protection hold, and write the same audit entry. **Polls** keep anonymous votes anonymous by
   construction: the query that builds a poll never selects voter ids for an
   anonymous poll, so the message, lists, search, the mentions inbox, the
   WebSocket, the gateway, outgoing webhooks and the data export of other
@@ -352,13 +426,21 @@ details and the limits.
   JS eval; `'wasm-unsafe-eval'` only so the bundled noise filter can compile
   its WebAssembly),
   `frame-ancestors 'none'`, `nosniff`, a restrictive referrer policy and related
-  headers on every response. `style-src` still allows `'unsafe-inline'`, only
-  because the emoji picker library writes a `<style>` element and inline style
-  attributes itself and has no nonce support; the app's own code needs none,
-  and images, fonts, media and connections are same-origin, so injected CSS
-  cannot send data to a third party. Dropping it (a hash for the picker's style
-  text plus a patched or replaced picker, with a browser test that fails on any
-  CSP violation) is planned after 1.0.
+  headers on every response. Styles are as strict as scripts: `style-src 'self'`
+  and `style-src-attr 'none'`, so there is no `'unsafe-inline'` and no
+  `'unsafe-hashes'`; injected markup cannot add a `<style>` element or a
+  `style=""` attribute. The desktop shells apply this strict policy only for
+  web bundles >= 1.1.0; older bundles keep the old policy. The app's own code needs neither (Vue style bindings go
+  through the CSSOM, which the policy does not restrict, and component styles
+  are files). The one library that wrote inline styles, `emoji-picker-element`,
+  is pinned to an exact version and patched while the web app is built
+  (`web/scripts/emojiPickerCsp.ts`): its stylesheet becomes a constructable
+  stylesheet (`adoptedStyleSheets`) and its `style` bindings are applied through
+  the CSSOM. Each of the two patches must match the package source exactly
+  once, or the build fails. The Playwright fixtures fail every end-to-end spec
+  on any `securitypolicyviolation` event or CSP console message, and
+  `e2e/tests/csp.spec.ts` visits the emoji picker, Markdown and code blocks,
+  every admin panel and the API reference under the real policy.
 - **Message rendering.** Markdown is parsed into a tree of plain nodes
   (`web/src/lib/markdown/`) and only one module turns that tree into HTML: every
   string is escaped, tags come from a fixed table, and generated elements (mention
@@ -386,7 +468,9 @@ details and the limits.
   service (Google, Mozilla, Apple, Microsoft) cannot read them; they carry the
   channel name and sender and, unless the member or `PUSH_PREVIEWS=off` says
   otherwise, the first 140 characters of the message. Recipients are decided on
-  the server when a message is sent: the author never, only members who may
+  the server when a message is sent: the author never, never a member who
+  blocked the author, a thread reply only to the thread's followers (unless the
+  member is addressed), only members who may
   view the channel in the current permission snapshot (a failed snapshot sends
   nothing), with the member's effective notification level, mutes and Do Not
   Disturb applied. The VAPID private key lives in the database (`push_vapid`),
@@ -413,6 +497,15 @@ details and the limits.
   from the app's own origin with their stored type, `nosniff` and a sandbox CSP.
   Only the Owner and holders of *Manage emoji* can change them; every change is
   in the audit log.
+- **Profile pictures.** Avatars and banners are never stored as uploaded: the
+  server decodes them, crops (square, or 3:1 for a banner), shrinks (512x512,
+  or 1500x500) and writes a new file, so EXIF (GPS position, camera model),
+  XMP, trailing bytes and polyglot payloads cannot survive. Animations stay
+  within a pixel and frame budget before any frame is decoded. Avatars stored
+  before 1.1 were redrawn by a one-time background job after the update
+  ([upgrade notes](doc/upgrade.md#10x--110)). Chat attachments are the
+  exception: they are stored byte for byte, so a photo sent as a file keeps its
+  metadata.
 - **Uploads.** File types are detected by content sniffing, not by the
   client-supplied name or MIME type. Risky types (HTML, SVG, scripts, unknown
   binaries, ...) are only ever served as downloads, never rendered inline. Media is
@@ -651,14 +744,23 @@ details and the limits.
   (the same denial of service it has by dropping any message) keeps an epoch
   on version 2, and a version 2 unit carries no line, so in such an epoch its
   units can still be moved between lines, exactly as before.
-  Planned (phase B, a later release): refuse version 2 entirely and stop
-  sending it, once older tabs and desktop clients have aged out. Every bundle
-  since 0.8.2 speaks version 3, but a Talk member that does not advertise it
-  (an old tab, or a hostile client that stays silent) keeps its epoch on
-  version 2 by design; the 1.0 review kept this as is, because removing
-  version 2 is a protocol change that would cut such members off, and the
-  party that could exploit it (moving units between a sender's lines) is the
-  active server, which is already outside the model.
+  Planned (phase B, 2.0): refuse version 2 entirely and stop sending it.
+  Re-evaluated for 1.1 (RT-4) and **not done**, because it cannot be shown to
+  be safe. Every bundle since 0.8.2 can *open* version 3, but a sender seals it
+  only after it has heard every member's capability message
+  (`frameVersion` and `applyCaps` in `mediaFrameWorker.ts`): each epoch of every
+  1.0.x tab starts on version 2, and stays there while any member is silent or
+  has not been heard yet. The behaviour is pinned by tests ("seals version 2
+  until every member of the epoch advertised version 3", "never goes back to
+  version 2 within an epoch, and decides again for the next one",
+  `mediaFrameWorker.test.ts`). A receiver that refused version 2 would
+  therefore drop 1.0.x tabs' media at every epoch start (every join, leave and
+  key rotation) and for as long as a capability message is delayed. Refusing it
+  safely needs senders that default to version 3, which is a change in the
+  client that the 1.0.x tabs in a mixed-version Talk do not have, so it waits
+  for 2.0 when those tabs are unsupported. The party that could exploit the
+  gap (moving units between a sender's lines) is the active server, which is
+  already outside the model.
   Also known and accepted: two colluding members, or the server, can make a
   listener who hears nobody else regroup by naming a newer epoch in unopened
   frames; this is rate-limited with a backoff and no more than the denial of
@@ -679,12 +781,16 @@ details and the limits.
   below a signed security floor, or below any bundle version it already
   verified for the server's contract), and reaches the instance only through its own
   proxy, which keeps the session cookie out of the page and hands over anything
-  that could render as a document as a download. An active or compromised
+  that could render as a document as a download. The desktop shells apply the
+  strict web CSP (`style-src 'self'; style-src-attr 'none'`) only for web
+  bundles >= 1.1.0; older bundles keep the old policy. Each server runs in an
+  isolated browser storage; old desktop storage from before multi-server support
+  is wiped once and never handed to a server. An active or compromised
   server therefore cannot inject or replace code in the desktop client; it can
   still do everything else described above (metadata, membership assertions,
   steering newcomers, denial of service, hostile data). Whoever holds the
   bundle signing key, which is not on any server, can still ship a malicious
-  app, and the Windows `.exe` has no Authenticode signature (a known gap: it needs a code-signing certificate that must be bought; the `SHA256SUMS` file in the same release detects a damaged download but is no proof of origin, because whoever can replace the ZIP can replace the checksums). **Desktop self-update.** The client replaces itself through the official Tauri
+  app, and the desktop installers are unsigned at the operating-system level (no Authenticode on Windows, no notarization on macOS, no package signature on Linux; a known gap: it needs code-signing certificates that must be bought; the `SHA256SUMS` file in the same release detects a damaged download but is no proof of origin, because whoever can replace the ZIP can replace the checksums). **Desktop self-update.** The client replaces itself through the official Tauri
   updater: the installer runs only if its minisign signature verifies against a
   public key pinned in the client (not the bundle key), the signed version equals the
   announced one, the version is newer than the installed one, and the download is HTTPS from
@@ -700,8 +806,9 @@ details and the limits.
 - **Data retention.** Nothing is deleted automatically by default
   (`MEDIA_RETENTION_DAYS=0`). Operators who enable pruning must say so in their
   privacy notice.
-- **Moderation.** Timeouts and bans need their own permissions and a higher
-  role than the member; the Owner cannot be targeted. A timeout is applied in
+- **Moderation.** Timeouts, bans and kicks need their own permissions and a
+  higher role than the member; the Owner cannot be targeted. A kick signs the
+  member out everywhere and drops them from their Talk; they can sign in again. A timeout is applied in
   the permission snapshot, so REST, the WebSocket hub and the SFU all honour it
   and overwrites cannot undo it. A ban is a separate state from a disabled
   account and is checked wherever an account may act (sign-in, sessions,
@@ -753,24 +860,29 @@ profile `autoupdate`, `UPDATER_TOKEN`). How it is built and why:
 
 - **The Docker socket is root on the host.** Whoever can talk to it can start
   a privileged container that mounts `/`. So the app container never gets the
-  socket or any other Docker API access. A separate container, the updater
-  (`nickfedor/watchtower`, the maintained fork of the archived
-  containrrr/watchtower, pinned by version and digest), holds it, and only
-  when the operator opts in.
-- **What the updater may do.** It runs with `--label-enable` and
-  `--scope mnema-talk`: only containers carrying both labels
-  (`com.centurylinklabs.watchtower.enable=true`, `...scope=mnema-talk`) are
-  touched, which in `docker-compose.yml` is the app alone (not PostgreSQL,
-  SeaweedFS, coturn, the updater itself or anything else on the host). It
-  re-pulls the image tag the app already runs and recreates the container
-  with the same configuration; it cannot be told to run another image.
+  socket or any other Docker API access. Separate containers (below) hold it,
+  and only when the operator opts in.
+- **Two containers.** The *updater* (`cmd/updater`, started from the app
+  image with another entrypoint) decides: it verifies the new image (below),
+  pulls it and moves the local tag. The *recreator* (`nickfedor/watchtower`,
+  the maintained fork of the archived containrrr/watchtower, pinned by version
+  and digest, `WATCHTOWER_NO_PULL`) only restarts the app from the local image;
+  it never fetches anything and has no network route out.
+- **What they may do.** Both only touch containers carrying the labels
+  `com.centurylinklabs.watchtower.enable=true` and `...scope=mnema-talk`,
+  which in `docker-compose.yml` is the app alone (not PostgreSQL, SeaweedFS,
+  coturn, themselves or anything else on the host). They update the image tag
+  the app already runs and recreate the container with the same
+  configuration; they cannot be told to run another image, and the updater
+  refuses any image outside the configured release repository.
 - **When it acts.** Never on a schedule (`WATCHTOWER_HTTP_API_PERIODIC_POLLS=false`):
   only on `POST /v1/update` with `Authorization: Bearer <UPDATER_TOKEN>`.
-- **Who can reach it.** No published port. It is only attached to the
+- **Who can reach it.** No published port. The updater is attached to the
   `internal` network `mnema-updater`, which it shares with the app and
-  nothing else, and which has no route to the internet or the LAN (image
-  pulls are done by the Docker daemon). The container runs read-only, with all
-  capabilities dropped, `no-new-privileges`, and memory and PID limits.
+  nothing else, to an `internal` network shared with the recreator only, and
+  to `mnema-updater-egress`, its only way out (image registry and Sigstore).
+  The recreator has no route out. Both run read-only, with all capabilities
+  dropped, `no-new-privileges`, and memory and PID limits.
 - **Token.** `UPDATER_TOKEN` is shared by app and updater through `.env`
   only, must have at least 32 characters (`openssl rand -hex 32`), is
   rejected if it is a public example value, never appears in API responses
@@ -787,18 +899,50 @@ profile `autoupdate`, `UPDATER_TOKEN`). How it is built and why:
   address) whether it succeeds or not. A stolen admin session therefore cannot
   update without the password, and even then can only restart the app on the
   image tag the operator configured.
-- **Residual risk.** A compromised updater image, or anyone who obtains both
-  the token and a foothold on the `mnema-updater` network, could have
-  containers in scope recreated; anyone who compromises the updater container
-  has root on the host. Leave the profile off if you update by hand anyway.
-- **No signature check on the pulled image (known limit).** The sidecar asks
-  the Docker daemon to pull the tag again; nothing on the host checks the
-  cosign signature or the provenance that `release.yml` attaches to every
-  release image before the app is recreated. Watchtower has no hook for such
-  a check, and a verifying wrapper around the pull would be new infrastructure
-  on the one container that holds the Docker socket, so this is documented
-  rather than built. The trust is the same as for installing the image at all
-  (GHCR plus this repository's release workflow). Operators who want the
-  check update by hand: verify the digest with `cosign verify` and pin it in
-  `MNEMA_IMAGE` ([doc/operations.md](doc/operations.md#verifying-a-release-image));
-  a digest-pinned install is excluded from "Update now" by design.
+- **Residual risk.** A compromised updater or recreator image, or anyone who
+  obtains both the token and a foothold on the `mnema-updater` network, could
+  have containers in scope recreated; anyone who compromises either container
+  has root on the host (both hold the Docker socket; the updater, which also
+  talks to the internet and parses registry and Sigstore data, is the larger
+  surface of the two). Leave the profile off if you update by hand anyway.
+- **Image verification (SUP-05, since 1.1).** Before anything is pulled or
+  restarted the updater resolves the tag the app runs to one digest and checks
+  that digest, and only that one:
+  - the keyless cosign signature that `release.yml` stores next to the image
+    (a Sigstore bundle with the Fulcio certificate, the Rekor entry and an
+    RFC 3161 timestamp, checked offline against the Sigstore trusted root,
+    fetched through TUF) was made by this repository's release workflow:
+    issuer `https://token.actions.githubusercontent.com`, subject exactly
+    `https://github.com/msch128/mnema-talk/.github/workflows/release.yml@refs/heads/main`;
+  - the BuildKit SLSA v1 provenance exists for every platform image, names that
+    image as its subject, and records a GitHub Actions run and source
+    repository of this project. BuildKit does not sign it; it is covered by
+    the signature because the signed index lists it by digest;
+  - **the release is the one that was asked for, and a newer one.** A valid
+    signature says who built an image, not which release it is, so a tag that
+    is moved back (or a registry mix-up) could offer an older, signed, known-
+    vulnerable release. The release version recorded in the signed provenance
+    must equal the version the admin confirmed (the app sends it with the
+    request) and be strictly newer than the version the running container
+    reports; an unknown version on either side is refused, so there is no
+    downgrade through "Update now".
+  Only then it pulls `repository@digest` (the Docker daemon re-checks the
+  content hash), points the local tag at it and lets the recreator restart
+  the app from the local image without pulling, so the bytes that run are the
+  bytes that were verified and a tag that moves meanwhile changes nothing.
+  The check **fails closed**: an unsigned, wrongly signed or tampered image,
+  missing or foreign provenance, an image of another repository, or a registry
+  or Sigstore that cannot be reached all end with HTTP 422 or 502, no pull,
+  no restart and an error in the updater's log. The admin who pressed
+  "Update now" sees that the update was refused and that nothing changed, and
+  the app logs `SELF-UPDATE REFUSED` with the audit fields. The identity is
+  pinned in the code and cannot be changed from the admin console; a fork that
+  publishes its own images sets `UPDATER_IMAGE_REPOSITORY`,
+  `UPDATER_CERT_IDENTITY_REGEXP` (anchored) and `UPDATER_SOURCE_URL`
+  ([doc/operations.md](doc/operations.md#verifying-a-release-image)).
+  What it does not give: the signature proves that this workflow built the
+  digest, not that the code in it is free of bugs; Sigstore's public-good
+  instance and the registry are trusted; the image that is already running is
+  not re-checked; and images released before signing was added carry no
+  signature, so "Update now" refuses them (update by hand). A digest-pinned
+  install is excluded from "Update now" by design.

@@ -49,9 +49,9 @@ func TestSlowModeReportsDatabaseDrift(t *testing.T) {
 	ctx := context.Background()
 	check := func(views map[string]string) error {
 		p := driftPool(t, f.p, views)
-		return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error { return enforceSlowMode(ctx, tx, f.c.ID, f.u.ID) })
+		return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error { return gatePost(ctx, tx, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID}) })
 	}
-	if err := check(map[string]string{"channels": `SELECT id FROM public.channels`}); err == nil || !strings.Contains(err.Error(), "load slow mode") {
+	if err := check(map[string]string{"channels": `SELECT id FROM public.channels`}); err == nil || !strings.Contains(err.Error(), "load channel") {
 		t.Fatalf("channel drift: %v", err)
 	}
 	if err := check(nil); err != nil {

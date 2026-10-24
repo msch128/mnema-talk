@@ -75,11 +75,17 @@ services:
     container_name: $COMPOSE_PROJECT_NAME-coturn
   updater:
     container_name: $COMPOSE_PROJECT_NAME-updater
+  recreator:
+    container_name: $COMPOSE_PROJECT_NAME-recreator
 networks:
   mnema-network:
     name: $COMPOSE_PROJECT_NAME-network
   mnema-updater:
     name: $COMPOSE_PROJECT_NAME-updater
+  mnema-recreator:
+    name: $COMPOSE_PROJECT_NAME-recreator
+  mnema-updater-egress:
+    name: $COMPOSE_PROJECT_NAME-updater-egress
 EOF
 cd "$DEPLOY"
 
@@ -87,8 +93,8 @@ cd "$DEPLOY"
 docker compose config --quiet
 for kind in container network volume; do
   case "$kind" in
-    container) names="$COMPOSE_PROJECT_NAME-app $COMPOSE_PROJECT_NAME-postgres $COMPOSE_PROJECT_NAME-seaweedfs $COMPOSE_PROJECT_NAME-coturn $COMPOSE_PROJECT_NAME-updater" ;;
-    network) names="$COMPOSE_PROJECT_NAME-network $COMPOSE_PROJECT_NAME-updater" ;;
+    container) names="$COMPOSE_PROJECT_NAME-app $COMPOSE_PROJECT_NAME-postgres $COMPOSE_PROJECT_NAME-seaweedfs $COMPOSE_PROJECT_NAME-coturn $COMPOSE_PROJECT_NAME-updater $COMPOSE_PROJECT_NAME-recreator" ;;
+    network) names="$COMPOSE_PROJECT_NAME-network $COMPOSE_PROJECT_NAME-updater $COMPOSE_PROJECT_NAME-recreator $COMPOSE_PROJECT_NAME-updater-egress" ;;
     volume) names="${COMPOSE_PROJECT_NAME}_postgres18-data ${COMPOSE_PROJECT_NAME}_postgres-data ${COMPOSE_PROJECT_NAME}_seaweedfs-data" ;;
   esac
   if [ "$kind" = container ]; then
