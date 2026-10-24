@@ -123,7 +123,8 @@ onMounted(() => { void loadOpenReports() })
 const badges = computed<Partial<Record<AdminTab, string>>>(() =>
   openReports.value > 0 ? { reports: openReportsMore.value ? `${openReports.value}+` : String(openReports.value) } : {})
 
-const dialogTitle = computed(() => onList.value ? t('menu.adminConsole') : t(`admin.tabs.${activeTab.value}`))
+// Focus starts on the dialog itself: no focus frame on a nav item or a button that was not asked for.
+const focusDialog = (root: HTMLElement) => root
 const signedInAs = computed(() => t('admin.nav.signedIn', { name: authStore.user?.display_name || authStore.user?.username || '' }))
 
 watch(activeTab, (tab) => {
@@ -136,7 +137,7 @@ watch(activeTab, (tab) => {
 <template>
   <BaseDialog
     panel-class="max-w-5xl h-[85vh] max-h-[860px] max-md:fixed max-md:inset-0 max-md:h-auto max-md:max-h-none max-md:max-w-none max-md:rounded-none max-md:border-0 max-md:pt-[env(safe-area-inset-top)] max-md:pb-[env(safe-area-inset-bottom)]"
-    initial-focus="[data-testid=admin-tabs] [aria-pressed=true]"
+    :initial-focus="focusDialog"
     @close="emit('close')"
   >
     <template #default="{ titleId, close }">
@@ -144,7 +145,7 @@ watch(activeTab, (tab) => {
         <button v-if="isCompact && !onList" type="button" data-testid="admin-back" class="btn btn-icon max-md:h-11 max-md:w-11 shrink-0" :aria-label="$t('admin.nav.back')" @click="backToList">
           <ArrowLeft class="h-[18px] w-[18px]" />
         </button>
-        <h2 :id="titleId" class="min-w-0 flex-1 truncate text-lg font-semibold text-mnema-text max-md:px-1">{{ dialogTitle }}</h2>
+        <h2 :id="titleId" class="min-w-0 flex-1 truncate text-lg font-semibold text-mnema-text max-md:px-1">{{ $t('menu.adminConsole') }}</h2>
         <button type="button" data-dialog-close v-tooltip="$t('common.close')" class="btn btn-icon max-md:h-11 max-md:w-11 shrink-0" @click="close">
           <X class="h-[18px] w-[18px]" />
         </button>

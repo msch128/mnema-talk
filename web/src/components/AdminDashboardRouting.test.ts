@@ -79,16 +79,17 @@ describe('dashboard route synchronization', () => {
     )
     expect(w.text()).toContain('Signed in as')
   })
-  it('names the dialog after the active tab and shows who is signed in once, in the sidebar', async () => {
+  it('keeps the console title and shows who is signed in once, in the sidebar', async () => {
     apiMock.mockResolvedValue([])
     const w = keep(
       mount(AdminDashboard, { global: { stubs: { AdminUsersTab: true, AdminSystemTab: true } } }),
     )
-    expect(w.get('h2').text()).toBe('Members')
+    expect(w.get('h2').text()).toBe('Admin console')
+    expect(w.get('[data-testid="tab-users"]').attributes('aria-pressed')).toBe('true')
     expect(w.findAll('[data-testid="admin-signed-in"]')).toHaveLength(1)
     expect(w.get('[data-testid="admin-signed-in"]').text()).toContain('Signed in as')
     await w.get('[data-testid="tab-system"]').trigger('click')
-    expect(w.get('h2').text()).toBe('System')
+    expect(w.get('[data-testid="tab-system"]').attributes('aria-pressed')).toBe('true')
   })
 
   it('groups the tabs by purpose', () => {
@@ -110,7 +111,7 @@ describe('dashboard on a phone', () => {
     expect(w.get('h2').text()).toBe('Admin console')
     expect(w.find('[data-testid="admin-back"]').exists()).toBe(false)
     await w.get('[data-testid="tab-system"]').trigger('click')
-    expect(w.get('h2').text()).toBe('System')
+    expect(w.find('[data-testid="admin-back"]').exists()).toBe(true)
     expect(w.find('[data-testid="admin-tabs"]').exists()).toBe(false)
     await w.get('[data-testid="admin-back"]').trigger('click')
     expect(w.get('h2').text()).toBe('Admin console')
@@ -121,7 +122,7 @@ describe('dashboard on a phone', () => {
     isCompact.value = true
     apiMock.mockResolvedValue([])
     const w = keep(mount(AdminDashboard, { props: { initialTab: 'system' }, global: { stubs: { AdminSystemTab: true } } }))
-    expect(w.get('h2').text()).toBe('System')
+    expect(w.get('h2').text()).toBe('Admin console')
     expect(w.find('[data-testid="admin-back"]').exists()).toBe(true)
   })
 })

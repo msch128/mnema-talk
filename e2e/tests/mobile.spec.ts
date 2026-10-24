@@ -254,10 +254,9 @@ test('phone: popovers, emoji picker and the admin console stay on screen', async
     if (!(await page.getByTestId('admin-tabs').isVisible())) await page.getByTestId('admin-back').tap()
     const button = page.getByTestId(`tab-${tab}`)
     await expect(button).toBeVisible()
-    const label = (await button.locator('[data-tab-label]').innerText()).trim()
     await button.tap()
     await expect(page.getByTestId('admin-tabs')).toBeHidden()
-    await expect(dialog.getByRole('heading', { level: 2 })).toHaveText(label)
+    await expect(page.getByTestId('admin-back')).toBeVisible()
     await expectNoSidewaysScroll(page)
   }
 })
