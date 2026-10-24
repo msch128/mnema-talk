@@ -133,7 +133,7 @@ describe('malformed media units are refused without throwing', () => {
     for (let line = 0; line < 256; line++) {
       const copy = mic.slice()
       copy[14] = line
-      if (line !== 0) await expect(tryOpen(copy, { source: line >> 4 })).resolves.toBeNull()
+      if (line !== 0) await expect(tryOpen(copy, { source: (line >> 4) as FrameSource })).resolves.toBeNull()
     }
   })
 
