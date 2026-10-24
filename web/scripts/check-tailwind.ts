@@ -51,7 +51,6 @@ function resolveReplacement(base: string): string | null {
   if (base === 'flex-shrink') return 'shrink'
   if (base === 'flex-grow') return 'grow'
   if (base === 'flex-grow-0') return 'grow-0'
-  if (base === 'shadow-sm') return 'shadow-xs'
   if (base === 'overflow-ellipsis') return 'text-ellipsis'
   if (base === 'decoration-slice') return 'box-decoration-slice'
   if (base === 'decoration-clone') return 'box-decoration-clone'
@@ -72,7 +71,8 @@ export function matchTailwind3Class(className: string): string | null {
   if (!parsed) return null
   const { variants, base, hasImportant } = parsed
 
-  if (base === 'rounded-sm' && !hasImportant) return null
+  // rounded-sm and shadow-sm exist in v4 with a new size, so they are not flagged.
+  if ((base === 'rounded-sm' || base === 'shadow-sm') && !hasImportant) return null
 
   const replacementBase = resolveReplacement(base)
   if (replacementBase) {

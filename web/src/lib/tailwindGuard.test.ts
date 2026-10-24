@@ -20,9 +20,9 @@ describe('matchTailwind3Class', () => {
     expect(matchTailwind3Class('hover:flex-grow')).toBe('hover:grow')
   })
 
-  it('flags shadow-sm and suggests shadow-xs replacement', () => {
-    expect(matchTailwind3Class('shadow-sm')).toBe('shadow-xs')
-    expect(matchTailwind3Class('max-md:shadow-sm')).toBe('max-md:shadow-xs')
+  it('leaves shadow-sm alone because v4 has its own shadow-sm', () => {
+    expect(matchTailwind3Class('shadow-sm')).toBeNull()
+    expect(matchTailwind3Class('max-md:shadow-sm')).toBeNull()
   })
 
   it('skips rounded-sm because its old meaning is ambiguous in v4', () => {
@@ -49,7 +49,7 @@ describe('matchTailwind3Class', () => {
     expect(matchTailwind3Class('!block')).toBe('block!')
     expect(matchTailwind3Class('hover:!bg-red-500')).toBe('hover:bg-red-500!')
     expect(matchTailwind3Class('!hover:bg-red-500')).toBe('hover:bg-red-500!')
-    expect(matchTailwind3Class('!shadow-sm')).toBe('shadow-xs!')
+    expect(matchTailwind3Class('!shadow-sm')).toBe('shadow-sm!')
     expect(matchTailwind3Class('!flex-shrink-0')).toBe('shrink-0!')
   })
 
@@ -82,8 +82,7 @@ const item = 'flex-grow'
     expect(violations).toEqual([
       { file: 'test.vue', line: 7, className: 'flex-grow', replacement: 'grow' },
       { file: 'test.vue', line: 2, className: 'outline-none', replacement: 'outline-hidden' },
-      { file: 'test.vue', line: 3, className: '!block', replacement: 'block!' },
-      { file: 'test.vue', line: 3, className: 'shadow-sm', replacement: 'shadow-xs' }
+      { file: 'test.vue', line: 3, className: '!block', replacement: 'block!' }
     ])
   })
 
