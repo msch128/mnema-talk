@@ -12,13 +12,15 @@ interface ChannelHandlers { onPermissions?: (channel: Channel) => void; onWebhoo
 interface CategoryHandlers { onPermissions?: (category: Category) => void; onCollapseAll?: () => void; onExpandAll?: () => void; allCollapsed?: boolean; noneCollapsed?: boolean; onCreateChannel?: (category: Category) => void; onCreateCategory?: (category: Category) => void; onEdit?: (category: Category) => void; onDelete?: (category: Category) => void }
 import {
   CheckCheck, Link, Pencil, Trash2, User, AtSign, Volume2, VolumeX, Eye, EyeOff, UserX, Ban, LogOut,
-  CopyPlus, Plus, FolderPlus, ChevronsDownUp, ChevronsUpDown, Shield, Webhook, Clock, Gavel
+  CopyPlus, Plus, FolderPlus, ChevronsDownUp, ChevronsUpDown, Shield, Webhook, Clock, Gavel, SlidersHorizontal
 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { canConfigureTalk, openTalkSettings } from '../lib/talks'
 import { api } from '../lib/api'
 import { confirm } from '../lib/confirm'
 import { menuPointFromEvent } from '../lib/contextMenuPoint'
@@ -96,6 +98,14 @@ function basicChannelItems(channel: Channel): ContextMenuItem[] {
   ]
 }
 
+/** "Talk settings" for a Talk the member manages, or a temporary Talk they lead. */
+function talkSettingsItems(channel: Channel): ContextMenuItem[] {
+  if (!useServerFeaturesStore().talksLobby) return []
+  const canManage = usePermissionsStore().can('manage_channels')
+  if (!canConfigureTalk(channel, useAuthStore().user?.id, canManage)) return []
+  return [{ id: 'talk-settings', label: t('talk.settings'), icon: SlidersHorizontal, action: () => openTalkSettings(channel.id) }]
+}
+
 function channelManagementItems(channel: Channel, handlers: ChannelHandlers): ContextMenuItem[] {
   const permissions = usePermissionsStore()
   const canAdmin = permissions.can('administrator')
@@ -126,6 +136,7 @@ export function buildChannelItems(channel: Channel, handlers: ChannelHandlers = 
     ...basicChannelItems(channel),
     { type: 'separator' },
     ...notifyMenuItems({ kind: 'channel', id: channel.id }),
+    ...talkSettingsItems(channel),
     ...channelManagementItems(channel, handlers)
   ]
 }

@@ -79,7 +79,7 @@ the member limit, no new permission model:
 - **Only these roles** denies both to @everyone and allows them for the chosen roles.
 - **Limit** sets the member limit.
 
-They need *Manage channels* (and the rank and permissions that editing overwrites
+On a lobby they decide who may open Talks (its temporary Talks follow it); a temporary Talk itself offers only the limit. They need *Manage channels* (and the rank and permissions that editing overwrites
 needs anyway); a Talk leader can use the limit.
 
 ## Limits

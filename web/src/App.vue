@@ -44,6 +44,7 @@ import MessageModerationDialog from './components/MessageModerationDialog.vue'
 import EditHistoryDialog from './components/EditHistoryDialog.vue'
 import ReportDialog from './components/ReportDialog.vue'
 import ForwardDialog from './components/ForwardDialog.vue'
+import TalkSettingsHost from './components/TalkSettingsHost.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
 import PipHost from './components/PipHost.vue'
 import { useResizable } from './composables/useResizable'
@@ -378,5 +379,6 @@ onMounted(async () => {
     <EditHistoryDialog />
     <ReportDialog />
     <ForwardDialog />
+    <TalkSettingsHost />
   </div>
 </template>
