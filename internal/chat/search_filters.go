@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -17,8 +18,50 @@ func likePattern(term string) string {
 	return "%" + r.Replace(term) + "%"
 }
 
-func isSearchEmpty(terms []string, q SearchQuery) bool {
-	if len(terms) > 0 || q.ChannelID != nil || q.AuthorID != nil || q.Mentions != nil {
+// searchTerm is one word or "quoted phrase" of the text; Exclude is set for -term.
+type searchTerm struct {
+	Text    string
+	Exclude bool
+}
+
+// parseSearchTerms splits the text into words, "quoted phrases" and -excluded
+// words. A leading minus only excludes when something follows it; "-" alone,
+// "a-b" and a quoted "-x" stay literal text.
+func parseSearchTerms(text string) []searchTerm {
+	var terms []searchTerm
+	rs := []rune(text)
+	for i := 0; i < len(rs); {
+		if unicode.IsSpace(rs[i]) {
+			i++
+			continue
+		}
+		exclude := rs[i] == '-' && i+1 < len(rs) && !unicode.IsSpace(rs[i+1])
+		if exclude {
+			i++
+		}
+		start, end := i, i
+		if rs[i] == '"' {
+			start = i + 1
+			end = start
+			for end < len(rs) && rs[end] != '"' {
+				end++
+			}
+			i = min(end+1, len(rs))
+		} else {
+			for end < len(rs) && !unicode.IsSpace(rs[end]) {
+				end++
+			}
+			i = end
+		}
+		if t := strings.TrimSpace(string(rs[start:end])); t != "" {
+			terms = append(terms, searchTerm{Text: t, Exclude: exclude})
+		}
+	}
+	return terms
+}
+
+func isSearchEmpty(terms []searchTerm, q SearchQuery) bool {
+	if hasIncluded(terms) || q.ChannelID != nil || q.AuthorID != nil || q.Mentions != nil {
 		return false
 	}
 	return q.Has == "" && q.Is == "" && q.After == nil && q.BeforeDate == nil &&
@@ -118,7 +161,16 @@ func ParseSearchDay(during, tz string) (*time.Time, *time.Time, error) {
 	return &start, &end, nil
 }
 
-func validateSearchTerms(q SearchQuery) ([]string, error) {
+func hasIncluded(terms []searchTerm) bool {
+	for _, t := range terms {
+		if !t.Exclude {
+			return true
+		}
+	}
+	return false
+}
+
+func validateSearchTerms(q SearchQuery) ([]searchTerm, error) {
 	if err := validateSearchDates(q); err != nil {
 		return nil, err
 	}
@@ -134,7 +186,7 @@ func validateSearchTerms(q SearchQuery) ([]string, error) {
 	if utf8.RuneCountInString(text) > maxSearchQueryLen {
 		return nil, httpx.ErrInvalidInput("search text is too long")
 	}
-	terms := strings.Fields(text)
+	terms := parseSearchTerms(text)
 	if len(terms) > maxSearchTerms {
 		terms = terms[:maxSearchTerms]
 	}
@@ -154,9 +206,13 @@ func (b *searchBuilder) addArg(v any) string {
 	return fmt.Sprintf("$%d", len(b.args))
 }
 
-func (b *searchBuilder) addTerms(terms []string) {
+func (b *searchBuilder) addTerms(terms []searchTerm) {
 	for _, t := range terms {
-		b.where = append(b.where, "m.content ILIKE "+b.addArg(likePattern(t))+` ESCAPE '\'`)
+		not := ""
+		if t.Exclude {
+			not = "NOT "
+		}
+		b.where = append(b.where, "m.content "+not+"ILIKE "+b.addArg(likePattern(t.Text))+` ESCAPE '\'`)
 	}
 }
 

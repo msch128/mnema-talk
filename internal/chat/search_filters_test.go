@@ -165,3 +165,52 @@ func TestSearchFiltersV3SQLAndCriteria(t *testing.T) {
 		t.Fatal("invalid sort accepted")
 	}
 }
+
+func TestParseSearchTerms(t *testing.T) {
+	cases := []struct {
+		in   string
+		want []searchTerm
+	}{
+		{"", nil},
+		{"a  b", []searchTerm{{"a", false}, {"b", false}}},
+		{`"short status" point`, []searchTerm{{"short status", false}, {"point", false}}},
+		{"status -Release", []searchTerm{{"status", false}, {"Release", true}}},
+		{`-"old status"`, []searchTerm{{"old status", true}}},
+		{"- a-b", []searchTerm{{"-", false}, {"a-b", false}}},
+		{`"-x"`, []searchTerm{{"-x", false}}},
+		{`"open without end`, []searchTerm{{"open without end", false}}},
+		{`"" x`, []searchTerm{{"x", false}}},
+	}
+	for _, c := range cases {
+		got := parseSearchTerms(c.in)
+		if len(got) != len(c.want) {
+			t.Fatalf("%q: got %v want %v", c.in, got, c.want)
+		}
+		for i := range got {
+			if got[i] != c.want[i] {
+				t.Fatalf("%q: got %v want %v", c.in, got, c.want)
+			}
+		}
+	}
+}
+
+func TestBuildSearchSQLPhraseAndExclusion(t *testing.T) {
+	sql, args, err := buildSearchSQL(SearchQuery{Text: `"short status" -Release`})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(sql, "m.content ILIKE") || !strings.Contains(sql, "m.content NOT ILIKE") {
+		t.Fatalf("sql lacks include/exclude: %s", sql)
+	}
+	var phrase, excluded bool
+	for _, a := range args {
+		phrase = phrase || a == "%short status%"
+		excluded = excluded || a == "%Release%"
+	}
+	if !phrase || !excluded {
+		t.Fatalf("args %v", args)
+	}
+	if _, _, err := buildSearchSQL(SearchQuery{Text: "-Release"}); err == nil {
+		t.Fatal("an exclusion alone must not be a search")
+	}
+}

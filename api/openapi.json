@@ -30694,11 +30694,11 @@
     },
     "/api/search": {
       "get": {
-        "description": "Text channels and voice channels' chats (with dm=true, the caller's direct messages instead), newest first (or by sort). Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id, mentions, has, is, after, before_date, during, filename or author is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.",
+        "description": "Text channels and voice channels' chats (with dm=true, the caller's direct messages instead), newest first (or by sort). Every term (max 8) must occur case-insensitively; a quoted phrase is one term and a leading minus excludes messages containing it. At least one of q, channel_id, author_id, mentions, has, is, after, before_date, during, filename or author is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.",
         "operationId": "searchMessages",
         "parameters": [
           {
-            "description": "Search terms, whitespace separated.",
+            "description": "Search terms, whitespace separated; a quoted phrase is one term, a leading minus excludes a word.",
             "in": "query",
             "name": "q",
             "schema": {

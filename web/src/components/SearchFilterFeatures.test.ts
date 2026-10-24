@@ -46,13 +46,13 @@ describe('search filters and the server feature list', () => {
     w.unmount()
   })
 
-  it('hides v3 filter dropdown and sort toggle without search.filters.v3', async () => {
+  it('hides the v3 filter row and sort toggle without search.filters.v3', async () => {
     const features = useServerFeaturesStore()
     features.list = ['dm', 'search.filters.v2']
     features.loaded = true
     const w = mount(SearchModal, { ...mountOpts, attachTo: document.body, props: { modelValue: true } })
     await nextTick()
-    expect(document.querySelector('[data-search-filter-dropdown]')).toBeNull()
+    expect(document.querySelector('[data-search-filter-row]')).toBeNull()
     expect(document.querySelector('[data-testid="search-results-header"]')).toBeNull()
     w.unmount()
   })
@@ -63,10 +63,7 @@ describe('search filters and the server feature list', () => {
     features.loaded = true
     const w = mount(SearchModal, { ...mountOpts, attachTo: document.body, props: { modelValue: true } })
     await nextTick()
-    const input = document.querySelector<HTMLInputElement>('[data-search-input]')
-    input?.dispatchEvent(new FocusEvent('focusin'))
-    await nextTick()
-    expect(document.querySelector('[data-search-filter-dropdown]')).not.toBeNull()
+    expect(document.querySelector('[data-search-filter-row]')).not.toBeNull()
     w.unmount()
   })
 })

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { applySuggestion, suggestFor } from './searchSuggest'
+import { applySuggestion, suggestFor, valueItems } from './searchSuggest'
+import { isoDay } from './searchQuery'
 
 const lookup = {
   members: [
@@ -15,7 +16,7 @@ describe('suggestFor', () => {
     expect(suggestFor('', lookup)).toBeNull()
     expect(suggestFor('hello', lookup)).toBeNull()
     expect(suggestFor('from:ada done', lookup)).toBeNull()
-    expect(suggestFor('before:2026', lookup)).toBeNull()
+    expect(suggestFor('before:x', lookup)).toBeNull()
   })
 
   it('suggests members by username or display name', () => {
@@ -50,3 +51,25 @@ describe('applySuggestion', () => {
     expect(applySuggestion('from:Ad', quoted, { value: 'Ada Lovelace', label: 'x' })).toBe('from:"Ada Lovelace" ')
   })
 })
+
+describe('suggestions for days and members', () => {
+  it('offers today and yesterday after before:, after: and during:', () => {
+    for (const key of ['before', 'after', 'during']) {
+      expect(suggestFor(`${key}:`, lookup)?.items.map(i => i.value)).toEqual([isoDay(0), isoDay(-1)])
+    }
+    expect(suggestFor(`before:${isoDay(-1)}`, lookup)).toBeNull()
+  })
+
+  it('shows the username as a detail only when it differs from the name shown', () => {
+    const same = { members: [{ id: 'u', username: 'Herzog', display_name: 'Herzog' }], channels: [] }
+    expect(valueItems('from', same, '')).toEqual([{ value: 'Herzog', label: 'Herzog', detail: undefined }])
+    expect(valueItems('from', lookup, 'ada')[0]).toMatchObject({ label: 'Ada Lovelace', detail: '@ada' })
+  })
+
+  it('has no suggestions for file names and honours the requested size', () => {
+    expect(valueItems('filename', lookup, '')).toEqual([])
+    expect(valueItems('mentions', lookup, 'zed', 3)).toHaveLength(3)
+    expect(valueItems('in', lookup, 'lou', 3).map(i => i.value)).toEqual(['Lounge'])
+  })
+})
+
