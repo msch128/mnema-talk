@@ -132,6 +132,10 @@ func dropTempTalks(ctx context.Context, tx pgx.Tx, placements map[uuid.UUID]Chan
 // interleave and cannot deadlock on each other's row locks.
 const channelLayoutLockID = 0x6d6e6c6179
 
+// LockChannelLayout takes the layout lock for the rest of the transaction, for
+// callers that append to the layout (the Discord import).
+func LockChannelLayout(ctx context.Context, tx pgx.Tx) error { return lockChannelLayout(ctx, tx) }
+
 func lockChannelLayout(ctx context.Context, tx pgx.Tx) error {
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, channelLayoutLockID); err != nil {
 		return fmt.Errorf("lock channel layout: %w", err)

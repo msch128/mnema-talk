@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"net/url"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,6 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/msch128/mnema-talk/internal/discordimport"
 	"github.com/msch128/mnema-talk/internal/emoji"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/gateway"
@@ -54,6 +56,7 @@ type components struct {
 	authH    *auth.Handler
 	chatH    *chat.Handler
 	rolesH   *roles.Handler
+	importH  *discordimport.Handler
 	onboardH *onboarding.Handler
 	mediaH   *media.Handler
 	emojiH   *emoji.Handler
@@ -130,8 +133,16 @@ func (c *components) newCore() {
 	go chat.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour)
 	c.rolesH = &roles.Handler{Perms: c.permSvc, Events: c.pub}
 	c.onboardH = onboarding.NewHandler(d.DB, c.permSvc)
+	c.importH = &discordimport.Handler{
+		Perms: c.permSvc, Limit: httpx.NewRateLimiter(discordimport.ImportsPerMinute, time.Minute).Named("discord_import"),
+		Importer: &discordimport.Importer{
+			DB: d.DB, Perms: c.permSvc, Events: c.pub, Audit: c.auditLog, Voice: hub,
+			Features: func(name string) bool { return slices.Contains(Features, name) },
+		},
+	}
 	if d.Store != nil {
 		c.chatH.Objects = d.Store
+		c.importH.Importer.Objects = d.Store
 	}
 	c.emojiH = &emoji.Handler{DB: d.DB, Store: d.Store, Events: c.pub, Perms: c.permSvc, Max: cfg.EmojiMax,
 		UploadLimit: httpx.NewRateLimiter(emoji.UploadsPer10Minutes, 10*time.Minute).Named("emoji_upload")}

@@ -10,6 +10,9 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
+// MaxRoles is the most roles a server holds (managed roles included).
+const MaxRoles = maxRoles
+
 const (
 	// lockKey serializes every permission change (pg_advisory_xact_lock), so
 	// the hierarchy checks below see the state they write into.

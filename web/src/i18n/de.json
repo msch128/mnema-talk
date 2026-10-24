@@ -951,7 +951,8 @@
       "bots": "Bots",
       "onboarding": "Willkommen & Regeln",
       "emoji": "Emoji",
-      "reports": "Meldungen"
+      "reports": "Meldungen",
+      "import": "Import"
     },
     "system": {
       "heading": "System & Version",
@@ -2522,6 +2523,85 @@
       "deleteFailed": "Die Meldung konnte nicht gelöscht werden. Versuche es noch einmal.",
       "closeFailed": "Die Meldung konnte nicht abgeschlossen werden. Versuche es noch einmal.",
       "loadFailed": "Die Meldungen konnten nicht geladen werden. Versuche es noch einmal."
+    }
+  },
+  "discordImport": {
+    "title": "Struktur eines Discord-Servers importieren",
+    "intro": "Übernimmt die Struktur eines Discord-Servers: Kategorien, Kanäle, Talks und Rollen. Importiert wird nur, was eine Discord-Servervorlage enthält, also keine Nachrichten, Mitglieder oder Emoji. Bestehendes wird nicht verändert, und alles Hinzugefügte lässt sich rückgängig machen.",
+    "howTo": "In Discord: Servereinstellungen, dann Servervorlage öffnen und den Vorlagenlink kopieren.",
+    "linkLabel": "Vorlagenlink oder -code",
+    "linkPlaceholder": "discord.new/abcdef12345",
+    "preview": "Vorschau",
+    "previewing": "Lädt …",
+    "previewFailed": "Die Vorlage konnte nicht angezeigt werden.",
+    "previewTitle": "Das würde angelegt",
+    "previewNote": "Bisher wurde nichts geschrieben.",
+    "counts": {
+      "categories": {
+        "one": "{count} Kategorie",
+        "other": "{count} Kategorien"
+      },
+      "channels": {
+        "one": "{count} Kanal",
+        "other": "{count} Kanäle"
+      },
+      "roles": {
+        "one": "{count} Rolle",
+        "other": "{count} Rollen"
+      }
+    },
+    "structure": "Kategorien und Kanäle",
+    "noCategory": "Ohne Kategorie",
+    "typeText": "Text",
+    "typeVoice": "Talk",
+    "private": "privat",
+    "limit": "bis zu {n} Mitglieder",
+    "rolesTitle": "Rollen",
+    "rolesHint": "Werden unter allen bestehenden Rollen angelegt. Keine davon ist Administrator.",
+    "noPermissions": "Keine Berechtigungen",
+    "notImported": "Nicht importiert: {list}",
+    "adminDropped": "Administrator wird nie importiert.",
+    "everyoneTitle": "@everyone von Discord",
+    "everyoneBody": "Nur zur Information: Deine eigene @everyone-Rolle bleibt unverändert. Bei Discord hatte sie: {list}",
+    "skippedTitle": "Übersprungen, hier ohne Entsprechung",
+    "review": "Prüfen und importieren …",
+    "history": {
+      "title": "Frühere Importe",
+      "empty": "Noch keine Importe.",
+      "row": "{name} · {when}",
+      "undone": "Rückgängig gemacht {when}",
+      "undo": "Import rückgängig machen"
+    },
+    "confirm": {
+      "title": "Discord-Struktur importieren",
+      "step": "Schritt {n} von 3",
+      "back": "Zurück",
+      "step1": "Das fügt {categories}, {channels} und {roles} am Ende deines Servers hinzu. Bestehendes wird nicht verändert, umbenannt oder entfernt.",
+      "step1Yes": "Ja, hinzufügen",
+      "step2": "Die neuen Rollen erhalten genau diese Berechtigungen und keine anderen. Sie werden unter allen bestehenden Rollen angelegt, und keine davon ist Administrator.",
+      "step2Dropped": "Verworfen, weil Mnema Talk keine sichere Entsprechung hat: {list}",
+      "step2AdminDropped": "Die Administrator-Berechtigung von Discord wird bei jeder Rolle verworfen.",
+      "step2Yes": "Ja, diese Berechtigungen verwenden",
+      "step3Named": "Letzter Schritt. Zur Bestätigung den Servernamen „{name}“ oder IMPORT eingeben.",
+      "step3": "Letzter Schritt. Zur Bestätigung IMPORT eingeben.",
+      "typeLabel": "Bestätigung",
+      "go": "Jetzt importieren",
+      "working": "Importiert …",
+      "failed": "Der Import ist fehlgeschlagen.",
+      "stale": "Die Vorlage oder dieser Server hat sich seit der Vorschau geändert. Bitte die Vorschau neu laden.",
+      "done": "Importiert: {summary}. Unten lässt sich das rückgängig machen."
+    },
+    "undo": {
+      "title": "Diesen Import rückgängig machen?",
+      "body": "Das entfernt genau die Kategorien, Kanäle und Rollen, die dieser Import angelegt hat, und sonst nichts. Was du inzwischen von Hand gelöscht habt, wird übersprungen. Mitglieder, denen eine importierte Rolle zugewiesen wurde, verlieren sie.",
+      "kept": " Bleiben erhalten, weil sie jetzt andere Kanäle enthalten: {list}.",
+      "confirm": "Import rückgängig machen",
+      "messagesTitle": "Kanäle mit Nachrichten löschen?",
+      "messagesBody": "In diesen importierten Kanälen gibt es jetzt Nachrichten. Beim Rückgängigmachen werden die Kanäle samt Nachrichten endgültig gelöscht: {list}",
+      "messagesConfirm": "Kanäle und Nachrichten löschen",
+      "failed": "Der Import konnte nicht rückgängig gemacht werden.",
+      "done": "Import rückgängig gemacht. Entfernt: {summary}.",
+      "keptRoles": " {kept} Rolle(n) bleiben, weil du sie nicht mehr verwalten kannst."
     }
   }
 }
