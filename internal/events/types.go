@@ -55,6 +55,7 @@ const (
 	DMCreated           = "dm_created"
 	DMMemberAdded       = "dm_member_added"
 	DMMemberRemoved     = "dm_member_removed"
+	DMPrefsUpdated      = "dm_prefs_updated"
 	// TalkLeader says who leads a temporary Talk now (leader_id is null when
 	// nobody does). TalkMoved tells one connection that its join of a Create-a-
 	// Talk lobby opened the Talk channel_id and seated it there.

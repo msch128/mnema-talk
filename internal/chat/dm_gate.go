@@ -108,7 +108,17 @@ func gateDM(ctx context.Context, tx pgx.Tx, nm NewMessage) error {
 	if err := checkDMReachable(ctx, tx, nm.UserID, others, st.group); err != nil {
 		return err
 	}
-	return countDMMessage(ctx, tx, nm, st)
+	if err := countDMMessage(ctx, tx, nm, st); err != nil {
+		return err
+	}
+	// A new message opens the conversation again for whoever closed it (not for
+	// a member who blocked the sender: they would see nothing new).
+	_, err = tx.Exec(ctx, `
+		UPDATE dm_members SET hidden_at = NULL
+		WHERE channel_id = $1 AND hidden_at IS NOT NULL
+		  AND NOT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = dm_members.user_id AND ub.blocked_id = $2)`,
+		nm.ChannelID, nm.UserID)
+	return err
 }
 
 // checkDMReachable requires the switch to be on and somebody to write to: in a
