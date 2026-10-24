@@ -17,13 +17,13 @@ const MEMBER_PASSWORD = `pw-${suffix}-${randomBytes(8).toString('hex')}`
 // The seeded layout: the uncategorized group (U) first, then three categories.
 const CATEGORIES = { A: `Alpha ${suffix}`, B: `Beta ${suffix}`, G: `Gamma ${suffix}` }
 const CHANNELS = {
-  u1: { name: `frei-${suffix}`, type: 'text', cat: null },
-  a1: { name: `a-eins-${suffix}`, type: 'text', cat: 'A' },
-  a2: { name: `a-zwei-${suffix}`, type: 'text', cat: 'A' },
-  a3: { name: `a-drei-${suffix}`, type: 'text', cat: 'A' },
-  b1: { name: `b-eins-${suffix}`, type: 'text', cat: 'B' },
+  u1: { name: `free-${suffix}`, type: 'text', cat: null },
+  a1: { name: `a-one-${suffix}`, type: 'text', cat: 'A' },
+  a2: { name: `a-two-${suffix}`, type: 'text', cat: 'A' },
+  a3: { name: `a-three-${suffix}`, type: 'text', cat: 'A' },
+  b1: { name: `b-one-${suffix}`, type: 'text', cat: 'B' },
   b2: { name: `Beta Talk ${suffix}`, type: 'voice', cat: 'B' },
-  g1: { name: `g-eins-${suffix}`, type: 'text', cat: 'G' },
+  g1: { name: `g-one-${suffix}`, type: 'text', cat: 'G' },
 }
 type Container = 'U' | 'A' | 'B' | 'G'
 type CategoryKey = Exclude<Container, 'U'>
