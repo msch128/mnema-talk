@@ -1,0 +1,47 @@
+api/openapi.json
+  s_06fcde5dbef956::t_9b08fff7cf11bd 22460-22469
+internal/communityevents/handler.go
+  s_06fcde5dbef956::t_a60e2e14ef2a50 4,233-263,265,268,271,274,277,279,281-285
+internal/communityevents/handler_rsvp.go
+  s_06fcde5dbef956::t_0765caa670060a 23,38-40
+internal/communityevents/model.go
+  s_06fcde5dbef956::t_b3d3d5df9acf49 87-91
+internal/communityevents/retract.go
+  s_06fcde5dbef956::t_2277c98893a141 1-115
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_1d95090647a497 50
+internal/events/types.go
+  s_06fcde5dbef956::t_f54228e950873d 67-69
+internal/server/events_integration_test.go
+  s_06fcde5dbef956::t_da74efc53fa9d6 498-582
+internal/server/hooks.go
+  s_06fcde5dbef956::t_98bad1e0360098 65-74
+internal/server/router_build.go
+  s_06fcde5dbef956::t_b74fb70eea12d5 212
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_a078ea8b466e57 256
+web/src/stores/events.test.ts
+  s_06fcde5dbef956::t_4ddb63ec29d740 168-176
+web/src/stores/events.ts
+  s_06fcde5dbef956::t_4e5747f90126e4 113
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_d7ca351c816b29 110
+web/src/types/events.ts
+  s_06fcde5dbef956::t_d5fe9757acce30 138,352,385
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b42a5e6fb479aff7b3a4ecd7e29c359a527faba7",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
