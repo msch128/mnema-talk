@@ -604,6 +604,7 @@
     "mediaUnsupported": "This browser cannot protect the media of a Talk, so it cannot join. Use Chrome or Edge 137+, Safari 17+ or Firefox 129+.",
     "mediaUnprotected": "This browser cannot protect the Talk. Microphone, camera and screen stay off.",
     "mediaRekeyed": "The media keys of this Talk were reset by someone in it or by the server. The Talk sets up new keys by itself.",
+    "mediaOutdatedClient": "Someone in this Talk uses an outdated Mnema client that can no longer take part in Talks securely, so you cannot hear or see them. Ask them to update or reload the app.",
     "mediaRefreshed": "The Talk was refreshed after a period of inactivity. Its media keys were renewed.",
     "noPermission": "You don’t have permission to join or speak in this Talk."
   },

@@ -604,6 +604,7 @@
     "mediaUnsupported": "Dieser Browser kann die Medien eines Talks nicht schützen und kann deshalb nicht beitreten. Nutze Chrome oder Edge ab 137, Safari ab 17 oder Firefox ab 129.",
     "mediaUnprotected": "Dieser Browser kann den Talk nicht schützen. Mikrofon, Kamera und Bildschirm bleiben aus.",
     "mediaRekeyed": "Die Medienschlüssel dieses Talks wurden von jemandem im Talk oder vom Server zurückgesetzt. Der Talk richtet neue Schlüssel selbst ein.",
+    "mediaOutdatedClient": "Jemand in diesem Talk nutzt einen veralteten Mnema-Client, der nicht mehr sicher an Talks teilnehmen kann, deshalb kannst du ihn weder hören noch sehen. Bitte ihn, die App zu aktualisieren oder neu zu laden.",
     "mediaRefreshed": "Der Talk wurde nach einer Zeit der Inaktivität aufgefrischt. Seine Medienschlüssel wurden erneuert.",
     "noPermission": "Du darfst diesem Talk nicht beitreten oder darin sprechen."
   },

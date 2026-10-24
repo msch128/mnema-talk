@@ -701,14 +701,12 @@ it is paid once per page load or reconnect, not per message.
   SFU names for its line, so a unit moved to another line does not open
   ([`frame.ts`](../web/src/lib/media/frame.ts),
   [`mediaFrameWorker.ts`](../web/src/lib/media/mediaFrameWorker.ts)). Version 2
-  (`M2`, no line) is still sent and accepted for mixed-version Talks: members
-  sign a capability message
+  (`M2`, no line) was removed in 1.2.0: it is neither sent nor opened, and a
+  unit that carries it is counted and reported to the member as coming from an
+  outdated client. Members still sign a capability message
   ([`capability.ts`](../web/src/lib/media/capability.ts), `M` `C`, next to the
-  heartbeat), a sender seals version 3 only in an epoch where every member
-  advertised it (decided per epoch, never downgraded within one), and a
-  receiver refuses version 2 in an epoch where every member has.
-  Refusing version 2 outright is planned for a later release
-  ([SECURITY.md](../SECURITY.md)).
+  heartbeat) so that older clients, which choose their format by it, switch to
+  version 3 ([SECURITY.md](../SECURITY.md)).
 - **Screen shares are opt-in per viewer** so an idle viewer costs no
   bandwidth ([`subscriptions.go`](../internal/sfu/subscriptions.go)).
 - **Invite-only, one Owner.** No public registration; the Owner is seeded

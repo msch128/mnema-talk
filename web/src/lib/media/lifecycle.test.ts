@@ -73,9 +73,9 @@ async function pair(over: Partial<MediaTiming> = {}) {
 
 async function roundTrip(sealer: EpochKeys | null, keys: Map<number, EpochKeys>, epoch: number, sender: string) {
   if (!sealer) throw new Error('expected keys')
-  const packet = await sealFrame({ keys: sealer, epoch, stream: 1, counter: 0, channelId, senderId: sender, plaintext: new Uint8Array([4, 2]) })
+  const packet = await sealFrame({ keys: sealer, epoch, stream: 1, counter: 0, channelId, senderId: sender, plaintext: new Uint8Array([4, 2]), source: 0 })
   if (!packet) throw new Error('expected a frame')
-  const opened = await openFrame({ keys, channelId, senderId: sender, packet, replay: new ReplayWindow() })
+  const opened = await openFrame({ keys, channelId, senderId: sender, packet, replay: new ReplayWindow(), source: 0 })
   return opened ? [...opened] : null
 }
 

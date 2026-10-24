@@ -80,9 +80,9 @@ function wireAt(wires: Uint8Array[], index: number): Uint8Array {
 /** Seals as `sender` with its keys `left` and opens with `right`. */
 async function roundTrip(left: EpochKeys | null, right: EpochKeys | null, epoch: number, sender = aliceId) {
   if (!left || !right) throw new Error('expected epoch keys')
-  const packet = await sealFrame({ keys: left, epoch, stream: 1, counter: 0, channelId, senderId: sender, plaintext: new Uint8Array([9, 8, 7]) })
+  const packet = await sealFrame({ keys: left, epoch, stream: 1, counter: 0, channelId, senderId: sender, plaintext: new Uint8Array([9, 8, 7]), source: 0 })
   if (!packet) throw new Error('expected a sealed frame')
-  const openedFrame = await openFrame({ keys: new Map([[epoch, right]]), channelId, senderId: sender, packet, replay: new ReplayWindow() })
+  const openedFrame = await openFrame({ keys: new Map([[epoch, right]]), channelId, senderId: sender, packet, replay: new ReplayWindow(), source: 0 })
   return openedFrame ? [...openedFrame] : null
 }
 
