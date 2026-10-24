@@ -17,6 +17,7 @@ import { useMenuState } from '../composables/useNavMenus'
 import ContextMenu from './ContextMenu.vue'
 import TalkReactButton from './TalkReactButton.vue'
 import { useStage } from '../composables/useStage'
+import { blockedButton } from './talkButtons'
 import { t } from '../i18n'
 
 const props = defineProps({
@@ -128,6 +129,7 @@ function onClickCapture(e: MouseEvent) {
 const btn = 'inline-flex items-center justify-center gap-1.5 rounded-full shrink-0 transition active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent focus-visible:ring-offset-2 focus-visible:ring-offset-mnema-elevated'
 const icon = computed(() => `${btn} ${props.compact ? 'w-9 h-9 max-md:w-11 max-md:h-11' : 'w-10 h-10 max-md:w-11 max-md:h-11'}`)
 const wide = computed(() => `${btn} ${props.compact ? 'w-9 h-9 max-md:w-11 max-md:h-11' : 'h-10 max-md:h-11 px-4 text-sm font-semibold'}`)
+const sep = 'w-px h-6 bg-mnema-border mx-0.5 shrink-0'
 const neutral = 'bg-mnema-surface text-mnema-text hover:bg-mnema-hover'
 const danger = 'bg-mnema-danger text-white hover:bg-mnema-danger/90'
 const accent = 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover'
@@ -155,7 +157,7 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
     <button
       type="button"
       data-testid="talk-mute"
-      :class="[icon, voiceStore.isMuted ? danger : neutral]"
+      :class="[icon, !canSpeak ? blockedButton : voiceStore.isMuted ? danger : neutral]"
       :aria-pressed="voiceStore.isMuted ? 'true' : 'false'"
       :disabled="!canSpeak"
       v-tooltip="!canSpeak ? speakHint : voiceStore.isMuted ? t('voice.unmute') : t('voice.mute')"
@@ -177,6 +179,8 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
       <Headphones v-else class="w-5 h-5" aria-hidden="true" />
     </button>
 
+    <div v-if="!compact" :class="sep" aria-hidden="true"></div>
+
     <button
       type="button"
       :class="[icon, voiceStore.isCameraOn ? accent : neutral]"
@@ -187,18 +191,6 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
     >
       <Video v-if="voiceStore.isCameraOn" class="w-5 h-5" aria-hidden="true" />
       <VideoOff v-else class="w-5 h-5" aria-hidden="true" />
-    </button>
-
-    <button
-      v-if="!compact"
-      type="button"
-      :class="[icon, voiceStore.allCamerasOff ? accent : neutral]"
-      :aria-pressed="voiceStore.allCamerasOff ? 'true' : 'false'"
-      v-tooltip="voiceStore.allCamerasOff ? t('talk.allCamerasOn') : t('talk.allCamerasOff')"
-      @click="voiceStore.setAllCamerasOff(!voiceStore.allCamerasOff)"
-    >
-      <EyeOff v-if="voiceStore.allCamerasOff" class="w-5 h-5" aria-hidden="true" />
-      <Eye v-else class="w-5 h-5" aria-hidden="true" />
     </button>
 
     <button
@@ -216,6 +208,19 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
     <TalkReactButton :button-class="[icon, neutral].join(' ')" @update:open="reactOpen = $event" />
 
     <template v-if="!compact">
+      <div :class="sep" aria-hidden="true"></div>
+
+      <button
+        type="button"
+        :class="[icon, voiceStore.allCamerasOff ? accent : neutral]"
+        :aria-pressed="voiceStore.allCamerasOff ? 'true' : 'false'"
+        v-tooltip="voiceStore.allCamerasOff ? t('talk.allCamerasOn') : t('talk.allCamerasOff')"
+        @click="voiceStore.setAllCamerasOff(!voiceStore.allCamerasOff)"
+      >
+        <EyeOff v-if="voiceStore.allCamerasOff" class="w-5 h-5" aria-hidden="true" />
+        <Eye v-else class="w-5 h-5" aria-hidden="true" />
+      </button>
+
       <button
         v-if="voiceStore.isScreenSharing"
         type="button"
@@ -264,7 +269,7 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
       <Ellipsis class="w-5 h-5" aria-hidden="true" />
     </button>
 
-    <div class="w-px h-6 bg-mnema-border mx-0.5 shrink-0" aria-hidden="true"></div>
+    <div :class="sep" aria-hidden="true"></div>
 
     <button
       type="button"

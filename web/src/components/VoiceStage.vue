@@ -17,7 +17,7 @@ import TalkStrip from './TalkStrip.vue'
 import TalkControlBar from './TalkControlBar.vue'
 import ContextMenu from './ContextMenu.vue'
 import { useMenuState, buildMemberItems } from '../composables/useNavMenus'
-import { useTalkStage } from '../composables/useTalkStage'
+import { useTalkStage, orderParticipants } from '../composables/useTalkStage'
 import { usePictureInPicture } from '../composables/usePictureInPicture'
 import { useTalkControls } from '../composables/useTalkControls'
 import { useElementSize } from '../composables/useElementSize'
@@ -80,7 +80,7 @@ const activeVoiceChannel = computed(() => {
 const usersInVoice = computed(() => {
   const id = shownChannelId.value
   if (!id) return []
-  const list: TalkParticipant[] = Object.values(voiceStore.channelUsers[id] || {})
+  const list: TalkParticipant[] = orderParticipants(Object.values(voiceStore.channelUsers[id] || {}))
 
   // Ensure the current user is always included visually while connected
   if (isConnectedHere.value && authStore.user && !list.some(u => u.id === authStore.user?.id)) {
@@ -213,10 +213,7 @@ const areaSize = useElementSize(area)
 const cardsSize = useElementSize(cardsEl)
 const stripSize = useElementSize(stripRegion)
 const rootSize = useElementSize(root)
-const AREA_PAD_X = 16
-const AREA_PAD_TOP = 16
-const AREA_PAD_BOTTOM = 12
-const AREA_GAP = 12
+const [AREA_PAD_X, AREA_PAD_TOP, AREA_PAD_BOTTOM, AREA_GAP] = [16, 16, 12, 12]
 const hasStage = computed(() => !!activeScreenStream.value && isConnectedHere.value)
 const stageSpace = computed(() => {
   const a = areaSize.value
@@ -233,7 +230,7 @@ const compactBar = computed(() => {
   return w > 0 && w < COMPACT_BAR_WIDTH
 })
 
-const { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, onActivity } = useTalkControls({
+const { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, onActivity, onTapStart, onTapCapture } = useTalkControls({
   connected: isConnectedHere,
   others: () => usersInVoice.value.length,
   menuOpen: () => menu.state.open
@@ -247,6 +244,8 @@ const { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, on
     ref="root"
     class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden select-none focus:outline-hidden"
     @pointermove="onActivity"
+    @pointerdown.capture="onTapStart"
+    @click.capture="onTapCapture"
     @pointerdown="onActivity"
     @focusin="onActivity"
   >
@@ -268,15 +267,14 @@ const { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, on
     <div
       ref="area"
       data-testid="talk-area"
-      :class="[
-        'flex-1 min-h-0 relative flex flex-col bg-linear-to-b from-mnema-raised/40 to-transparent'
-      ]"
+      class="flex-1 min-h-0 relative flex flex-col bg-linear-to-b from-mnema-raised/40 to-transparent"
       @dblclick="onAreaDblclick"
     >
       <div
         :class="[
           'flex-1 min-h-0 flex flex-col items-center gap-3 px-4 pt-4',
-          hasStage ? 'pb-3 justify-center' : !isConnectedHere && usersInVoice.length ? 'pb-28' : isConnectedHere ? 'pb-20' : 'pb-4'
+          hasStage || (showChat && isConnectedHere) ? 'pb-3' : !isConnectedHere && usersInVoice.length ? 'pb-28' : isConnectedHere ? 'pb-20' : 'pb-4',
+          hasStage ? 'justify-center' : ''
         ]"
       >
         <TalkStageView
@@ -368,10 +366,11 @@ const { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, on
         </button>
       </div>
 
-      <!-- Connected, no stage: the call controls float at the bottom -->
+      <!-- Connected, no stage: the call controls float at the bottom, or with
+           the chat open sit in a row of their own between tiles and chat -->
       <div
         v-else-if="isConnectedHere && !hasStage"
-        class="absolute inset-x-0 bottom-3 px-3 flex justify-center pointer-events-none z-20"
+        :class="['px-3 flex justify-center', showChat ? 'relative shrink-0 pb-3' : 'absolute inset-x-0 bottom-3 pointer-events-none z-20']"
       >
         <TalkControlBar
           class="pointer-events-auto"
