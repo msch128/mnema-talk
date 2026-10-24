@@ -8,7 +8,7 @@ of the change carries a `BREAKING CHANGE:` footer; CI passes the commit range
 in OPENAPI_DIFF_RANGE, locally the range is origin/main..HEAD.
 
 IGNORED_RULES lists oasdiff rule IDs that are known noise for the swag-generated
-document. Every entry needs a reason; the list is empty until one is justified.
+document. Every entry needs a reason; only justified entries go in.
 """
 import json
 import os
@@ -23,7 +23,12 @@ FOOTER = re.compile(r"^BREAKING[ -]CHANGE:\s*\S", re.MULTILINE)
 ERR_LEVEL = 3
 
 # rule id -> why it is not a real break of the public contract
-IGNORED_RULES = {}
+IGNORED_RULES = {
+    # A response value may now be larger than before (e.g. slow mode up to
+    # 24 h). doc/api-stability.md only counts narrowing a range as breaking;
+    # widening one is like a new enum value that clients must tolerate.
+    "response-property-max-increased": "widening a documented response range is not breaking",
+}
 
 
 def latest_tag(tags):
