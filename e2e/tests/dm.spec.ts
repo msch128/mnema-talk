@@ -90,13 +90,13 @@ test('two members start a direct message and write to each other', async ({ brow
     await picker.getByTestId('dm-submit').click()
     await expect(owner).toHaveURL(/\/c\/[0-9a-f-]{36}$/)
     await expect(owner.getByTestId('chat-channel-name')).toHaveText(suiteMember.username)
-    await write(owner, `hallo ${suffix}`)
-    await expect(owner.getByText(`hallo ${suffix}`, { exact: true })).toBeVisible()
+    await write(owner, `hello ${suffix}`)
+    await expect(owner.getByText(`hello ${suffix}`, { exact: true })).toBeVisible()
 
     // It reaches the member live (the socket asked for conversations), with a badge.
     await expect(member.locator('[data-testid="dm-unread"]').first()).toHaveText('1')
     await rowOf(member, ADMIN_USER).click()
-    await expect(member.getByText(`hallo ${suffix}`, { exact: true })).toBeVisible()
+    await expect(member.getByText(`hello ${suffix}`, { exact: true })).toBeVisible()
     await expect(member.getByTestId('dm-unread')).toHaveCount(0)
     await write(member, `antwort ${suffix}`)
     await expect(owner.getByText(`antwort ${suffix}`, { exact: true })).toBeVisible()

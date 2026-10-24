@@ -8,7 +8,7 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 
 const suffix = Date.now().toString(36)
-const MEMBER = `zwei_${suffix}`
+const MEMBER = `second_${suffix}`
 const PASSWORD = `pw-${suffix}-two-factor-test`
 
 // RFC 6238, independent of the app: base32 secret in, six digits out.

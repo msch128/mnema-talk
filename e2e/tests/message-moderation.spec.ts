@@ -45,47 +45,47 @@ test('slow mode, pinning, deleting with a reason and clearing a member are visib
 
     // Slow mode holds the member back, not the Owner.
     const composer = member.getByRole('textbox', { name: `Nachricht an #${CHANNEL}` })
-    await composer.fill('eins')
+    await composer.fill('one')
     await composer.press('Enter')
-    await expect(member.getByText('eins', { exact: true })).toBeVisible()
+    await expect(member.getByText('one', { exact: true })).toBeVisible()
     await composer.fill('zu schnell')
     await composer.press('Enter')
     await expect(member.getByText(/Langsammodus: bitte warte noch/)).toBeVisible()
     await composer.fill('')
     await member.waitForTimeout(5200)
-    await composer.fill('zwei')
+    await composer.fill('two')
     await composer.press('Enter')
-    await expect(member.getByText('zwei', { exact: true })).toBeVisible()
+    await expect(member.getByText('two', { exact: true })).toBeVisible()
     expect((await apiFetch(mod, 'PATCH', `/api/admin/channels/${channelId}`, { slow_mode_seconds: 0 })).status).toBe(200)
 
     // Pinning shows a marker to everybody.
-    await mod.getByText('zwei', { exact: true }).click({ button: 'right' })
+    await mod.getByText('two', { exact: true }).click({ button: 'right' })
     await mod.getByRole('menuitem', { name: 'Nachricht anheften' }).click()
     await expect(member.getByTestId('pinned')).toHaveCount(1)
-    await mod.getByText('zwei', { exact: true }).click({ button: 'right' })
+    await mod.getByText('two', { exact: true }).click({ button: 'right' })
     await mod.getByRole('menuitem', { name: 'Anheftung aufheben' }).click()
     await expect(member.getByTestId('pinned')).toHaveCount(0)
 
     // Deleting with a reason tells the author.
-    await mod.getByText('eins', { exact: true }).click({ button: 'right' })
+    await mod.getByText('one', { exact: true }).click({ button: 'right' })
     await mod.getByRole('menuitem', { name: 'Mit Grund löschen …' }).click()
     await mod.getByTestId('reason').fill('Test')
     await mod.getByTestId('message-moderation-submit').click()
-    await expect(member.getByText('eins', { exact: true })).toHaveCount(0)
+    await expect(member.getByText('one', { exact: true })).toHaveCount(0)
     await expect(member.getByText(`Deine Nachricht in ${CHANNEL} wurde vom Moderationsteam entfernt: Test`)).toBeVisible()
 
     // Clearing a member's latest messages.
-    for (const text of ['drei', 'vier']) {
+    for (const text of ['three', 'four']) {
       await composer.fill(text)
       await composer.press('Enter')
       await expect(member.getByText(text, { exact: true })).toBeVisible()
     }
-    await mod.getByText('vier', { exact: true }).click({ button: 'right' })
+    await mod.getByText('four', { exact: true }).click({ button: 'right' })
     await mod.getByRole('menuitem', { name: 'Letzte Nachrichten dieser Person löschen …' }).click()
     await mod.getByTestId('bulk-count').fill('5')
     await mod.getByTestId('reason').fill('Aufräumen')
     await mod.getByTestId('message-moderation-submit').click()
-    for (const text of ['zwei', 'drei', 'vier']) await expect(member.getByText(text, { exact: true })).toHaveCount(0)
+    for (const text of ['two', 'three', 'four']) await expect(member.getByText(text, { exact: true })).toHaveCount(0)
 
     // The audit log kept the texts.
     await mod.goto('/admin/audit')
