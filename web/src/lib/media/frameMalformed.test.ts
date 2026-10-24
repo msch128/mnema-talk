@@ -31,7 +31,7 @@ async function sealedUnit(source: FrameSource = SOURCE_MIC, plaintext = Uint8Arr
 }
 
 function tryOpen(packet: Uint8Array, over: { source?: FrameSource | null, onLegacy?: () => void } = {}): Promise<Uint8Array | null> {
-  return openFrame({ keys: new Map([[4, keys]]), channelId: 'channel', senderId: 'alice', packet, replay: new ReplayWindow(), source: over.source ?? SOURCE_MIC, onLegacy: over.onLegacy })
+  return openFrame({ keys: new Map([[4, keys]]), channelId: 'channel', senderId: 'alice', packet, replay: new ReplayWindow(), source: over.source ?? SOURCE_MIC, ...(over.onLegacy ? { onLegacy: over.onLegacy } : {}) })
 }
 
 describe('malformed media units are refused without throwing', () => {
