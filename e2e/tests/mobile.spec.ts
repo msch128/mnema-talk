@@ -180,13 +180,18 @@ test('phone: popovers, emoji picker and the admin console stay on screen', async
     expect(box.x, `${testId} left edge`).toBeGreaterThanOrEqual(0)
     expect(box.x + box.width, `${testId} right edge`).toBeLessThanOrEqual(width + 1)
   }
-  for (const [button, panel] of [['mentions-inbox-button', 'mentions-inbox'], ['pinned-button', 'pinned-panel']] as const) {
-    await page.getByTestId(button).tap()
-    await expect(page.getByTestId(panel)).toBeVisible()
-    await insideScreen(panel)
-    await page.getByTestId(button).tap()
-    await expect(page.getByTestId(panel)).toBeHidden()
-  }
+  // On a phone the mentions inbox sits in the header's More menu.
+  await page.getByTestId('header-more').tap()
+  await page.getByRole('menuitem', { name: /Erwähnungen|Mentions/ }).tap()
+  await expect(page.getByTestId('mentions-inbox')).toBeVisible()
+  await insideScreen('mentions-inbox')
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('mentions-inbox')).toBeHidden()
+  await page.getByTestId('pinned-button').tap()
+  await expect(page.getByTestId('pinned-panel')).toBeVisible()
+  await insideScreen('pinned-panel')
+  await page.getByTestId('pinned-button').tap()
+  await expect(page.getByTestId('pinned-panel')).toBeHidden()
   await page.getByTestId('emoji-button').tap()
   await expect(page.getByTestId('emoji-picker')).toBeVisible()
   await insideScreen('emoji-picker')
