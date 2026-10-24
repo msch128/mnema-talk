@@ -363,6 +363,10 @@ A moderator **edits and deletes their own** notes; an Administrator (or the
 Owner) **deletes any** note, and edits only their own. Nobody opens the history
 or the notes of themselves, whatever they hold.
 
+The timeline needs *Manage reports* only, not *View audit log*, even though it shows
+reasons, role changes and Talk kicks: handling a report needs the history. Grant
+*Manage reports* with that in mind.
+
 `GET /api/admin/users/{id}/moderation`, `POST .../moderation/notes`,
 `PUT` and `DELETE .../moderation/notes/{noteID}`, all *Manage reports*.
 
