@@ -1,0 +1,66 @@
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_15196dda283e36 442-470
+web/src/lib/searchSupport.ts
+  s_06fcde5dbef956::t_15196dda283e36 11
+internal/chat/search.go
+  s_06fcde5dbef956::t_15196dda283e36 81,83-90,94-99,153-157,161
+internal/chat/search_filters.go
+  s_06fcde5dbef956::t_15196dda283e36 5-6,24-25,48-120,125-132,178,182-200,218-221,228-230,232-249,251,268-269,275
+internal/chat/search_filters_test.go
+  s_06fcde5dbef956::t_15196dda283e36 62-167
+web/src/components/SearchModal.vue
+  s_06fcde5dbef956::t_15196dda283e36 62-71,189-192,196,239,243-244,258
+web/src/lib/searchSuggest.ts
+  s_06fcde5dbef956::t_15196dda283e36 4,23,62-66,77
+internal/server/health.go
+  s_06fcde5dbef956::t_15196dda283e36 42
+internal/db/migrations/0072_media_filename_trgm.sql
+  s_06fcde5dbef956::t_15196dda283e36 1-2
+internal/chat/handler_lookup.go
+  s_06fcde5dbef956::t_15196dda283e36 186,194-195,198,201-204,216-223,225-231,245-249
+internal/server/search_filters_integration_test.go
+  s_06fcde5dbef956::t_15196dda283e36 9-10,88-232
+web/src/components/SearchResults.vue
+  s_06fcde5dbef956::t_15196dda283e36 24-30,35-49,58-88
+web/src/components/SearchFilterDropdown.test.ts
+  s_06fcde5dbef956::t_15196dda283e36 1-115
+doc/upgrade.md
+  s_06fcde5dbef956::t_15196dda283e36 149-165
+web/src/lib/searchQuery.test.ts
+  s_06fcde5dbef956::t_15196dda283e36 3,118-157
+web/src/components/SearchInput.vue
+  s_06fcde5dbef956::t_15196dda283e36 9,22,26,30-31,42,90-107,111-115,134,187-193,216,228-230
+  s_06fcde5dbef956::t_26b05ee88e8e5b 231
+README.md
+  s_06fcde5dbef956::t_15196dda283e36 116-120
+web/src/components/SearchFilterDropdown.vue
+  s_06fcde5dbef956::t_15196dda283e36 1-233
+web/src/lib/searchQuery.ts
+  s_06fcde5dbef956::t_15196dda283e36 6,12-15,25,27-28,54-57,60,122-123,128-136,227-237,270-275
+api/openapi.json
+  s_06fcde5dbef956::t_15196dda283e36 27584,27615-27628,27637,27664-27672,27692-27710,27718-27730
+doc/api-stability.md
+  s_06fcde5dbef956::t_15196dda283e36 28
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_15196dda283e36 442-470
+web/src/lib/searchSuggest.test.ts
+  s_06fcde5dbef956::t_15196dda283e36 34-35
+web/src/components/SearchFilterFeatures.test.ts
+  s_06fcde5dbef956::t_15196dda283e36 48-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dc995e647e46e6689b2ef7f5add78b0c9cc99df3",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
