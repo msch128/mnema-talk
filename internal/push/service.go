@@ -286,6 +286,11 @@ func (s *Service) enqueue(h held, targets []target) {
 	if h.notice.Mention || h.notice.DM {
 		opts.TTL = mentionTTL
 	}
+	s.queue(targets, body, opts)
+}
+
+// queue hands one job per device to the senders; a full queue drops it.
+func (s *Service) queue(targets []target, body []byte, opts Options) {
 	for _, t := range targets {
 		select {
 		case s.jobs <- job{target: t, payload: body, opts: opts}:

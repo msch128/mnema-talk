@@ -2521,6 +2521,148 @@ export function isHttpxErrorResponse(value: unknown): value is HttpxErrorRespons
 
 export const decodeHttpxErrorResponse = decoder("httpx.ErrorResponse", isHttpxErrorResponse)
 
+export type LaterCreateReminderRequest = {
+  message_id: string
+  remind_at: string
+}
+
+export function isLaterCreateReminderRequest(value: unknown): value is LaterCreateReminderRequest {
+  return isRecord(value)
+    && (hasOwn(value, "message_id") && isIdentifier(value["message_id"]))
+    && (hasOwn(value, "remind_at") && isTimestamp(value["remind_at"]))
+}
+
+export const decodeLaterCreateReminderRequest = decoder("later.CreateReminderRequest", isLaterCreateReminderRequest)
+
+export type LaterCreateScheduledRequest = {
+  content: string
+  parent_id?: string | null
+  reply_to_id?: string | null
+  send_at: string
+}
+
+export function isLaterCreateScheduledRequest(value: unknown): value is LaterCreateScheduledRequest {
+  return isRecord(value)
+    && (hasOwn(value, "content") && isString(value["content"], 4000))
+    && (!hasOwn(value, "parent_id") || (isIdentifier(value["parent_id"]) || value["parent_id"] === null))
+    && (!hasOwn(value, "reply_to_id") || (isIdentifier(value["reply_to_id"]) || value["reply_to_id"] === null))
+    && (hasOwn(value, "send_at") && isTimestamp(value["send_at"]))
+}
+
+export const decodeLaterCreateScheduledRequest = decoder("later.CreateScheduledRequest", isLaterCreateScheduledRequest)
+
+export type LaterMessageRef = {
+  author: string
+  channel_id: string
+  channel_name: string
+  dm: boolean
+  id: string
+  parent_id: string | null
+  snippet: string
+}
+
+export function isLaterMessageRef(value: unknown): value is LaterMessageRef {
+  return isRecord(value)
+    && (hasOwn(value, "author") && isString(value["author"]))
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (hasOwn(value, "channel_name") && isString(value["channel_name"]))
+    && (hasOwn(value, "dm") && typeof value["dm"] === 'boolean')
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "parent_id") && (isIdentifier(value["parent_id"]) || value["parent_id"] === null))
+    && (hasOwn(value, "snippet") && isString(value["snippet"]))
+}
+
+export const decodeLaterMessageRef = decoder("later.MessageRef", isLaterMessageRef)
+
+export type LaterReminder = {
+  available: boolean
+  created_at: string
+  delivered_at: string | null
+  id: string
+  message?: LaterMessageRef
+  remind_at: string
+}
+
+export function isLaterReminder(value: unknown): value is LaterReminder {
+  return isRecord(value)
+    && (hasOwn(value, "available") && typeof value["available"] === 'boolean')
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "delivered_at") && (isTimestamp(value["delivered_at"]) || value["delivered_at"] === null))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "message") || isLaterMessageRef(value["message"]))
+    && (hasOwn(value, "remind_at") && isTimestamp(value["remind_at"]))
+}
+
+export const decodeLaterReminder = decoder("later.Reminder", isLaterReminder)
+
+export type LaterReminderList = {
+  items: Array<LaterReminder>
+}
+
+export function isLaterReminderList(value: unknown): value is LaterReminderList {
+  return isRecord(value)
+    && (hasOwn(value, "items") && isArrayOf(value["items"], item => isLaterReminder(item)))
+}
+
+export const decodeLaterReminderList = decoder("later.ReminderList", isLaterReminderList)
+
+export type LaterScheduled = {
+  channel_id: string
+  channel_name: string
+  content: string
+  created_at: string
+  dm: boolean
+  failure_reason: "" | "slow_mode" | "not_allowed" | "unavailable" | "refused"
+  id: string
+  parent_id: string | null
+  reply_to_id: string | null
+  send_at: string
+  state: "pending" | "failed"
+  updated_at: string
+}
+
+export function isLaterScheduled(value: unknown): value is LaterScheduled {
+  return isRecord(value)
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (hasOwn(value, "channel_name") && isString(value["channel_name"]))
+    && (hasOwn(value, "content") && isString(value["content"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "dm") && typeof value["dm"] === 'boolean')
+    && (hasOwn(value, "failure_reason") && (value["failure_reason"] === "" || value["failure_reason"] === "slow_mode" || value["failure_reason"] === "not_allowed" || value["failure_reason"] === "unavailable" || value["failure_reason"] === "refused"))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "parent_id") && (isIdentifier(value["parent_id"]) || value["parent_id"] === null))
+    && (hasOwn(value, "reply_to_id") && (isIdentifier(value["reply_to_id"]) || value["reply_to_id"] === null))
+    && (hasOwn(value, "send_at") && isTimestamp(value["send_at"]))
+    && (hasOwn(value, "state") && (value["state"] === "pending" || value["state"] === "failed"))
+    && (hasOwn(value, "updated_at") && isTimestamp(value["updated_at"]))
+}
+
+export const decodeLaterScheduled = decoder("later.Scheduled", isLaterScheduled)
+
+export type LaterScheduledList = {
+  items: Array<LaterScheduled>
+}
+
+export function isLaterScheduledList(value: unknown): value is LaterScheduledList {
+  return isRecord(value)
+    && (hasOwn(value, "items") && isArrayOf(value["items"], item => isLaterScheduled(item)))
+}
+
+export const decodeLaterScheduledList = decoder("later.ScheduledList", isLaterScheduledList)
+
+export type LaterUpdateScheduledRequest = {
+  content?: string | null
+  send_at?: string | null
+}
+
+export function isLaterUpdateScheduledRequest(value: unknown): value is LaterUpdateScheduledRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "content") || (isString(value["content"], 4000) || value["content"] === null))
+    && (!hasOwn(value, "send_at") || (isTimestamp(value["send_at"]) || value["send_at"] === null))
+}
+
+export const decodeLaterUpdateScheduledRequest = decoder("later.UpdateScheduledRequest", isLaterUpdateScheduledRequest)
+
 export type LinkpreviewPreview = {
   description?: string
   image?: string

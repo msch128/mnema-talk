@@ -91,6 +91,10 @@ export interface ServerEventPayloads {
   block_updated: { user_id: string; blocked: boolean }
   /** The caller saved or removed a message (own sessions only): refetch GET /api/me/saved. */
   saved_updated: { message_id: string; saved: boolean }
+  /** The caller's reminder was made, fell due or was removed (own sessions only): refetch GET /api/me/reminders. */
+  reminder_update: { id: string; state: 'created' | 'due' | 'removed' }
+  /** The caller's scheduled message was made, changed, sent or refused (own sessions only): refetch GET /api/me/scheduled. */
+  scheduled_message_update: { id: string; channel_id: string; state: 'created' | 'updated' | 'sent' | 'failed' | 'deleted'; reason?: string }
   /** A direct message was started with the receiver, or the receiver was added to a group: a DirectMessage as GET /api/dms/{id} returns it. */
   dm_created: DirectMessageRef
   /** A member joined a group direct message the receiver is in. */
@@ -317,6 +321,11 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
     && onlyFields(payload, ['id', 'timeout_until'])],
   ['moderation_notice', isModerationNotice],
   ['kicked', payload => isString(payload['reason'], 400) && onlyFields(payload, ['reason'])],
+  ['reminder_update', payload => isIdentifier(payload['id']) && (payload['state'] === 'created' || payload['state'] === 'due' || payload['state'] === 'removed')
+    && onlyFields(payload, ['id', 'state'])],
+  ['scheduled_message_update', payload => isIdentifier(payload['id']) && isIdentifier(payload['channel_id'])
+    && ['created', 'updated', 'sent', 'failed', 'deleted'].includes(String(payload['state']))
+    && (!hasOwn(payload, 'reason') || isString(payload['reason'], 64)) && onlyFields(payload, ['id', 'channel_id', 'state', 'reason'])],
   ['saved_updated', payload => isIdentifier(payload['message_id']) && typeof payload['saved'] === 'boolean' && onlyFields(payload, ['message_id', 'saved'])],
   ['dm_created', payload => isIdentifier(payload['id']) && typeof payload['group'] === 'boolean' && isArrayOf(payload['members'], isDirectMessageMember)
     && isTimestamp(payload['created_at']) && (payload['last_message_at'] === null || isTimestamp(payload['last_message_at']))
@@ -373,7 +382,7 @@ const VOICE_KICK_REASONS = new Set(['room_full', 'missing_permission', 'rules_no
 
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
-  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
+  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'reminder_update', 'scheduled_message_update', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'media_handshake'

@@ -32,6 +32,7 @@ in PostgreSQL; uploads, avatars and profile banners live in S3-compatible object
 | [`internal/auth`](../internal/auth/service.go) | Password hashing, signed session cookies with a per-user `token_version` (revocation), login lockout, invite codes, admin seeding, user administration, password re-authentication for sensitive actions ([`reauth.go`](../internal/auth/reauth.go)). |
 | [`internal/perm`](../internal/perm/perm.go), [`internal/roles`](../internal/roles/handler.go) | Roles and permissions: the permission bits, the in-memory `Snapshot` that resolves base, role and overwrite permissions (and the hierarchy rules), the cache with live invalidation, and the HTTP API for roles, member roles and channel overwrites. See [roles-and-permissions.md](roles-and-permissions.md). |
 | [`internal/chat`](../internal/chat/handler.go) | Categories, channels (text and voice), layout, messages, replies, threads, reactions, mentions (by name, `@all`/`@here` and `@Role`, with a fan-out cap) and the mentions inbox, read state, notification levels ([`notify.go`](../internal/chat/notify.go)), search ([`search.go`](../internal/chat/search.go), filters in [`search_filters.go`](../internal/chat/search_filters.go)), members. Since 1.1 also direct messages (`dm*.go`), blocks ([`blocks.go`](../internal/chat/blocks.go)), reports ([`reports.go`](../internal/chat/reports.go)), saved messages ([`saved.go`](../internal/chat/saved.go)), forwarding ([`forward.go`](../internal/chat/forward.go)) and thread follow ([`thread_follow.go`](../internal/chat/thread_follow.go)). |
+| [`internal/later`](../internal/later/service.go) | Reminders and scheduled messages: private per-member lists, the sweep that delivers and sends them, and their REST routes (see "Reminders and scheduled messages"). |
 | [`internal/onboarding`](../internal/onboarding/handler.go) | The first-run side of the community: name, welcome text and rules, who accepted which rules version, dismissed tips and the public invite preview. |
 | [`internal/media`](../internal/media/handler.go) | Uploads with content sniffing and an allow-list ([`policy.go`](../internal/media/policy.go)), authenticated media serving through the app, admin storage stats and pruning, and the retention worker (off unless `MEDIA_RETENTION_DAYS > 0`). |
 | [`internal/s3`](../internal/s3/s3.go) | S3 client (AWS SDK v2); creates the bucket only when missing. |
@@ -214,6 +215,45 @@ asked for.
 holds a reference and the member's note. `GET /api/me/saved` joins the messages
 the member may see now; a conversation's messages need membership, tested in
 SQL like search does.
+
+## Reminders and scheduled messages
+
+Both live in [`internal/later`](../internal/later/service.go) (migration 0062)
+and are private to their owner. A background loop (every 15 seconds, started by
+the router, `Service.Sweep`) delivers the due reminders and sends the due
+scheduled messages. Times are absolute: the web app works them out in the
+member's own time zone ("tomorrow morning" is 08:00 local) and the server only
+checks that they lie between 10 seconds and a year ahead.
+
+**A reminder is a reference** (`message_reminders`): at most 100 per member. The
+message may be deleted later (`ON DELETE SET NULL`). `GET /api/me/reminders`
+checks the member's access on every read, as saved messages do, and answers
+`available: false` without text for a message they cannot see. When a reminder
+falls due the row is claimed first (`delivered_at`, at most once), then the
+member's sessions get `reminder_update` (`due`) and the push pipeline gets a
+`push.Direct`. The access check runs again at that moment against the
+permission snapshot (a conversation needs membership); a message the member can
+no longer see is announced as "a message you can no longer see", with no ids,
+author or text. A delivered reminder stays in the list until dismissed (or for
+30 days) so a member who was offline finds it.
+
+**A scheduled message is sent by the server as its author through the normal
+send path** (`scheduled_messages`, at most 50 per member, text only). Creating
+one needs Send messages in the channel, but nothing is promised: at `send_at`
+the worker loads the account (disabled, banned and deleted accounts do not
+send), builds the same send context as a request (`chat.SendContextFor`, so a
+changed role, channel overwrite, pending rules or a timeout apply), validates
+the reply and thread target again and inserts the message with
+`chat.InsertMessage`, whose transaction applies slow mode and the direct message
+rules (blocks, closed conversations). The scheduled row is deleted in the same
+transaction, so a message is neither sent twice nor lost half-way, and a row
+edited meanwhile is not sent in its old version. A refusal turns the row into a
+failed draft with a reason code (`slow_mode`, `not_allowed`, `unavailable`,
+`refused`; a 403 never says which rule, because it can concern another member)
+and tells the author with `scheduled_message_update` (`failed`) and a push. The
+author can edit the text, set a new time (which puts it back to waiting) or
+delete it. A failure of the server itself (the database) leaves the message
+waiting for the next round.
 
 ## Data flow: voice, cameras and screen share
 

@@ -4098,6 +4098,270 @@
         ],
         "type": "object"
       },
+      "later.CreateReminderRequest": {
+        "properties": {
+          "message_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "remind_at": {
+            "description": "RemindAt is the absolute time to remind at. The client works it out in the\nmember's own time zone (\"tomorrow\", \"in 3 hours\").",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message_id",
+          "remind_at"
+        ],
+        "type": "object"
+      },
+      "later.CreateScheduledRequest": {
+        "properties": {
+          "content": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "parent_id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reply_to_id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "send_at": {
+            "description": "SendAt is the absolute time to send at, worked out by the client in the\nmember's own time zone.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content",
+          "send_at"
+        ],
+        "type": "object"
+      },
+      "later.MessageRef": {
+        "properties": {
+          "author": {
+            "type": "string"
+          },
+          "channel_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "channel_name": {
+            "description": "ChannelName is empty for a direct message conversation.",
+            "type": "string"
+          },
+          "dm": {
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "parent_id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "snippet": {
+            "description": "Snippet is the start of the message text (up to 200 characters).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "author",
+          "channel_id",
+          "channel_name",
+          "dm",
+          "id",
+          "parent_id",
+          "snippet"
+        ],
+        "type": "object"
+      },
+      "later.Reminder": {
+        "properties": {
+          "available": {
+            "description": "Available is false when the caller may no longer see the message (it was\ndeleted, or they lost access); then Message is absent.",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "delivered_at": {
+            "description": "DeliveredAt is set once the reminder fell due; it then waits in the list\nuntil the caller dismisses it.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "message": {
+            "$ref": "#/components/schemas/later.MessageRef"
+          },
+          "remind_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "available",
+          "created_at",
+          "delivered_at",
+          "id",
+          "remind_at"
+        ],
+        "type": "object"
+      },
+      "later.ReminderList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/later.Reminder"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "later.Scheduled": {
+        "properties": {
+          "channel_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "channel_name": {
+            "description": "ChannelName is empty for a conversation and for a channel the caller can\nno longer see.",
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "dm": {
+            "type": "boolean"
+          },
+          "failure_reason": {
+            "description": "FailureReason is set when State is failed: slow_mode, not_allowed,\nunavailable or refused.",
+            "enum": [
+              "",
+              "slow_mode",
+              "not_allowed",
+              "unavailable",
+              "refused"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "parent_id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reply_to_id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "send_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "state": {
+            "description": "State is \"pending\" (waiting for send_at) or \"failed\" (the server refused\nto send it; it stays as a draft the caller can edit, reschedule or delete).",
+            "enum": [
+              "pending",
+              "failed"
+            ],
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id",
+          "channel_name",
+          "content",
+          "created_at",
+          "dm",
+          "failure_reason",
+          "id",
+          "parent_id",
+          "reply_to_id",
+          "send_at",
+          "state",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "later.ScheduledList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/later.Scheduled"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "later.UpdateScheduledRequest": {
+        "properties": {
+          "content": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "send_at": {
+            "description": "SendAt moves the message; for a failed one it also puts it back to waiting.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
       "linkpreview.Preview": {
         "properties": {
           "description": {
@@ -20960,6 +21224,134 @@
         ]
       }
     },
+    "/api/channels/{channelID}/scheduled": {
+      "post": {
+        "description": "Stores a message that the server sends at send_at as the caller, through the normal send path: permissions, slow mode, timeouts, blocks and the direct message rules are checked again at send time, and a refusal turns it into a failed draft (scheduled_message_update with state failed). Needs Send messages in the channel now. Works in channels and conversations. Text only. send_at lies at least 10 seconds and at most a year ahead. At most 50 per member (409 beyond).",
+        "operationId": "createScheduledMessage",
+        "parameters": [
+          {
+            "description": "Channel or conversation ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/later.CreateScheduledRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/later.Scheduled"
+                }
+              }
+            },
+            "description": "The scheduled message."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): bad content, a time that is not in the future or too far ahead, an unknown reply target."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Send messages permission in the channel. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such channel, or it is hidden from the caller."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the member has 50 scheduled messages already."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Schedule a message",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
     "/api/channels/{channelID}/unread": {
       "post": {
         "description": "Sets the marker just before the message so it and everything after it counts as unread.",
@@ -22755,6 +23147,265 @@
         ]
       }
     },
+    "/api/me/reminders": {
+      "get": {
+        "description": "The caller's reminders: delivered ones first (they wait until dismissed), then waiting ones by time. Visibility is checked on every read: a message the caller can no longer see comes back with available=false and no message. At most 100 reminders.",
+        "operationId": "listReminders",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/later.ReminderList"
+                }
+              }
+            },
+            "description": "The reminders."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List my reminders",
+        "tags": [
+          "Messages"
+        ]
+      },
+      "post": {
+        "description": "Stores a private reminder. At remind_at the caller gets an in-app notification (reminder_update with state due) and a Web Push; the message is checked against their access at that moment, and a message they can no longer see is described as such. The message must be visible to the caller now (404 otherwise). remind_at lies at least 10 seconds and at most a year ahead. At most 100 reminders per member (409 beyond); at most 60 changes a minute.",
+        "operationId": "createReminder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/later.CreateReminderRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/later.Reminder"
+                }
+              }
+            },
+            "description": "The reminder."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, or a time that is not in the future or too far ahead."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such message, or the channel is hidden from the caller."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the member has 100 reminders already."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Remind me of a message",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/me/reminders/{reminderID}": {
+      "delete": {
+        "description": "Cancels a waiting reminder or dismisses a delivered one. Sends reminder_update (removed) to the caller's own sessions.",
+        "operationId": "deleteReminder",
+        "parameters": [
+          {
+            "description": "Reminder ID.",
+            "in": "path",
+            "name": "reminderID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): bad ID."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the caller has no such reminder."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Cancel or dismiss a reminder",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
     "/api/me/saved": {
       "get": {
         "description": "The caller's private saved list, newest first. Visibility is checked on every read: a message the caller can no longer see comes back with available=false and no message, only their own note. At most 1,000 messages can be saved.",
@@ -23042,6 +23693,267 @@
           }
         ],
         "summary": "Save a message",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/me/scheduled": {
+      "get": {
+        "description": "The caller's scheduled messages in channels and conversations: failed ones first (the server refused to send them at the set time and kept them as drafts), then waiting ones by time. At most 50.",
+        "operationId": "listScheduledMessages",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/later.ScheduledList"
+                }
+              }
+            },
+            "description": "The scheduled messages."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List my scheduled messages",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/me/scheduled/{scheduledID}": {
+      "delete": {
+        "description": "Removes a waiting or failed scheduled message.",
+        "operationId": "deleteScheduledMessage",
+        "parameters": [
+          {
+            "description": "Scheduled message ID.",
+            "in": "path",
+            "name": "scheduledID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): bad ID."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the caller has no such scheduled message (it may have been sent)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Delete a scheduled message",
+        "tags": [
+          "Messages"
+        ]
+      },
+      "patch": {
+        "description": "Changes the text and/or the time of a waiting or failed scheduled message. A new time puts a failed message back to waiting. Checks run at send time, not here.",
+        "operationId": "updateScheduledMessage",
+        "parameters": [
+          {
+            "description": "Scheduled message ID.",
+            "in": "path",
+            "name": "scheduledID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/later.UpdateScheduledRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/later.Scheduled"
+                }
+              }
+            },
+            "description": "The scheduled message."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): bad content or time."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the caller has no such scheduled message (it may have been sent)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Edit a scheduled message",
         "tags": [
           "Messages"
         ]

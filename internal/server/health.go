@@ -44,6 +44,8 @@ var Features = []string{
 	"profile.banner",
 	"profile.avatar_remove",
 	"status.expiry",
+	"reminders",
+	"messages.scheduled",
 	"talks.lobby",
 }
 

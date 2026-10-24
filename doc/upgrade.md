@@ -140,6 +140,7 @@ of the pre-update backup (see "Rollback" above).
 |---|---|
 | 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
 | 0061 | `users.status_expires_at` (a status line that clears itself, feature `status.expiry`). It also raises the limit of `channels.slow_mode_seconds` from 6 hours to 24 hours. |
+| 0062 | `message_reminders` and `scheduled_messages` (see "Reminders and scheduled messages"). |
 | 0064 | `user_sessions`: one row per browser session (device label, created, last active). |
 | 0065 | `instance_settings.session_inactivity_days` (1 to 365, default 7). |
 
@@ -178,6 +179,31 @@ inactivity clock starts then, so the earliest anyone can be signed out for
 inactivity is the configured number of days after the upgrade. The limit is
 under *Admin* > *Welcome & rules*; see "Sessions and inactivity sign-out" in
 [operations.md](operations.md).
+
+#### Reminders and scheduled messages
+
+- **Database.** Migration 0062 adds `message_reminders` and
+  `scheduled_messages`. Additive and forward-only, like every migration; a
+  rollback to a 1.1 image needs the restore of the pre-update backup.
+- **Features.** `reminders` and `messages.scheduled` in `GET /api/health`.
+- **Members get.** *Remind me* in the message menu and *Send later* next to
+  the send button, and one **Reminders and scheduled** popover in the channel
+  header. Both are private. At most 100 reminders and 50 scheduled messages per
+  member. Scheduled messages are text only.
+- **Checks at the due time.** A reminder re-checks that the member can still
+  see the message, otherwise the notification says "a message you can no longer
+  see". A scheduled message is sent as its author through the normal path: a
+  permission, timeout, slow mode or block that applies *then* refuses it, and
+  it stays as a failed draft the author can edit, reschedule or delete.
+- **API and events.** `GET/POST /api/me/reminders`, `DELETE
+  /api/me/reminders/{id}`, `GET /api/me/scheduled`, `POST
+  /api/channels/{id}/scheduled`, `PATCH/DELETE /api/me/scheduled/{id}`; the
+  events `reminder_update` and `scheduled_message_update` go to the member's
+  own sessions only. All additive.
+- **Web Push.** Reminders and refused scheduled messages use the existing push
+  pipeline and the device list of the member; they ignore channel mute levels
+  (the member asked for them) but follow the member's preview setting and the
+  operator's `PUSH_PREVIEWS`.
 
 ### 1.0.x → 1.1.0
 

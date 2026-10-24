@@ -93,6 +93,14 @@ no accounts on someone else's platform.
   next to its name (click it to read it in full) and is edited in the channel
   settings. Slow mode has the presets Off, 10 s, 30 s, 1 min, 5 min, 30 min and
   24 h, or any value up to 24 hours in seconds, minutes or hours.
+- **Reminders and scheduled messages.** *Remind me* on a message (in 20
+  minutes, 1 hour, 3 hours, tomorrow morning or at a time you pick) notifies
+  you in the app and by Web Push; *Send later* next to the send button sends a
+  message for you at a chosen time, in channels and direct messages. Both are
+  private to you, are worked out in your own time zone, and are checked again
+  when they fall due: a reminder never shows a message you can no longer see,
+  and a scheduled message that the channel's rules refuse at that time stays
+  as a draft instead of being posted.
 - **Slash commands.** `/poll`, `/me`, `/shrug`, `/tableflip`, `/unflip`,
   `/spoiler`, `/nick`, `/thread` and `/msg` (it needs *Send direct messages*)
   for members; `/timeout`, `/ban` and `/kick` need the matching permission. Bots can add their own

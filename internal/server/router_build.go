@@ -16,6 +16,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/gateway"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/later"
 	"github.com/msch128/mnema-talk/internal/linkpreview"
 	"github.com/msch128/mnema-talk/internal/mailer"
 	"github.com/msch128/mnema-talk/internal/media"
@@ -62,6 +63,7 @@ type components struct {
 	webhookH *webhook.Handler
 
 	pushH *push.Handler
+	later *later.Service
 
 	botH     *bot.Handler
 	botAuthn *bot.Authenticator
@@ -237,6 +239,7 @@ func (c *components) tapThreadFollows() {
 // that allows public addresses alone.
 func (c *components) newPush() error {
 	cfg := c.cfg
+	var pusher later.Notifier
 	h := push.Handler{DB: c.d.DB, Sessions: c.sessions, Enabled: cfg.PushEnabled, PreviewsAllowed: cfg.PushPreviews == "user"}
 	if cfg.PushEnabled {
 		keys, err := push.LoadKeys(c.ctx, c.d.DB)
@@ -261,9 +264,18 @@ func (c *components) newPush() error {
 		c.hub.DMTap = svc.Observe // conversations reach no webhook or bot, only push to their members
 		go svc.Run(c.ctx)
 		h.Keys, h.Service = keys, svc
+		pusher = svc
 	}
 	c.pushH = push.NewHandler(h)
+	c.newLater(pusher)
 	return nil
+}
+
+// newLater builds reminders and scheduled messages; pusher is nil when Web
+// Push is off.
+func (c *components) newLater(pusher later.Notifier) {
+	c.later = later.NewService(later.Service{DB: c.d.DB, Perms: c.permSvc, Events: c.pub, Online: c.hub, Push: pusher})
+	go c.later.Run(c.ctx)
 }
 
 // newSystem builds the admin System tab's handler, its ops sampler and, when
