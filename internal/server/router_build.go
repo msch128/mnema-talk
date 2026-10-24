@@ -110,6 +110,7 @@ func (c *components) newCore() {
 	c.authH.Audit = c.auditLog
 	go c.authH.RunBanExpiry(c.ctx, time.Minute)
 	go c.authH.RunStatusExpiry(c.ctx, 0)
+	go c.authH.RunSessionSweep(c.ctx, auth.DefaultSessionSweepEvery)
 	// `mnema-talk unlock` runs in another process and queues requests here.
 	go c.authH.RunUnlockWorker(c.ctx, auth.UnlockPollInterval)
 	if d.Store != nil {

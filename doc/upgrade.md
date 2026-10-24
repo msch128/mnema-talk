@@ -140,6 +140,8 @@ of the pre-update backup (see "Rollback" above).
 |---|---|
 | 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
 | 0061 | `users.status_expires_at` (a status line that clears itself, feature `status.expiry`). It also raises the limit of `channels.slow_mode_seconds` from 6 hours to 24 hours. |
+| 0064 | `user_sessions`: one row per browser session (device label, created, last active). |
+| 0065 | `instance_settings.session_inactivity_days` (1 to 365, default 7). |
 
 #### Talks
 
@@ -165,6 +167,17 @@ of the pre-update backup (see "Rollback" above).
   still offers its own presets up to 6 hours.
 - **Channel descriptions** (the existing topic, at most 255 characters) are
   shown under the channel name; nothing to migrate.
+
+#### Sessions: "Where you are signed in" and inactivity sign-out
+
+Members see and end their own sessions under *Account & security*, and a
+session that is not used for the inactivity limit (default 7 days) is signed
+out. Nobody is signed out by the upgrade: a session that exists at the upgrade
+has no row yet; it gets one on its first request afterwards and its
+inactivity clock starts then, so the earliest anyone can be signed out for
+inactivity is the configured number of days after the upgrade. The limit is
+under *Admin* > *Welcome & rules*; see "Sessions and inactivity sign-out" in
+[operations.md](operations.md).
 
 ### 1.0.x → 1.1.0
 

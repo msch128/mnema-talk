@@ -51,6 +51,7 @@ var eraseSteps = []string{
 	`DELETE FROM permission_overwrites WHERE user_id = $1`,
 	`DELETE FROM native_session_families WHERE user_id = $1`,
 	`DELETE FROM push_subscriptions WHERE user_id = $1`,
+	`DELETE FROM user_sessions WHERE user_id = $1`,
 	`DELETE FROM native_ciphertext_events WHERE user_id = $1`,
 	`DELETE FROM bot_tokens WHERE created_by = $1`,
 	`UPDATE bots SET created_by = NULL WHERE created_by = $1`,

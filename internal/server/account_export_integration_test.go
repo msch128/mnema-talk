@@ -362,6 +362,9 @@ func TestAnExportCoversPollsPinsPushDevicesAndEmojiOfTheMember(t *testing.T) {
 	if !strings.Contains(files["push.json"], "Alice phone") || !strings.Contains(files["push.json"], `"show_message_text": true`) {
 		t.Errorf("push devices: %s", files["push.json"])
 	}
+	if !strings.Contains(files["sessions.json"], `"last_active_at"`) || strings.Contains(files["sessions.json"], `"jti"`) {
+		t.Errorf("sessions: %s", files["sessions.json"])
+	}
 	if !strings.Contains(files["emoji.json"], `"name": "party"`) || !strings.Contains(files["emoji.json"], "emoji/party.png") ||
 		!strings.HasPrefix(files["emoji/party.png"], "\x89PNG") {
 		t.Errorf("emoji: %s", files["emoji.json"])

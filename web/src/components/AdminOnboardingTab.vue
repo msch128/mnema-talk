@@ -16,6 +16,8 @@ import MarkdownContent from './MarkdownContent.vue'
 const MAX_NAME = 60
 const MAX_WELCOME = 4000
 const MAX_RULES = 10000
+const MIN_DAYS = 1
+const MAX_DAYS = 365
 
 const chat = useChatStore()
 const toasts = useToastStore()
@@ -30,6 +32,8 @@ const startChannel = ref('')
 const reaccept = ref(false)
 // The community's switch for direct messages (existing conversations stay readable when it is off).
 const dmEnabled = ref(true)
+// Days without a request after which a session is signed out.
+const inactivityDays = ref(7)
 const previewing = ref<'' | 'welcome' | 'rules'>('')
 const busy = ref(false)
 
@@ -37,8 +41,10 @@ const textChannels = computed(() => chat.allChannels.filter(c => c.type === 'tex
 const dirty = computed(() => !!loaded.value && (
   name.value !== loaded.value.community_name || welcome.value !== loaded.value.welcome_text ||
   rules.value !== loaded.value.rules_text || startChannel.value !== (loaded.value.start_channel_id ?? '') || reaccept.value ||
-  (features.dm && dmEnabled.value !== loaded.value.direct_messages_enabled)
+  (features.dm && dmEnabled.value !== loaded.value.direct_messages_enabled) ||
+  inactivityDays.value !== loaded.value.session_inactivity_days
 ))
+const daysInvalid = computed(() => !Number.isInteger(inactivityDays.value) || inactivityDays.value < MIN_DAYS || inactivityDays.value > MAX_DAYS)
 const tooLong = computed(() => name.value.length > MAX_NAME || welcome.value.length > MAX_WELCOME || rules.value.length > MAX_RULES)
 const hasRules = computed(() => rules.value.trim() !== '')
 
@@ -50,6 +56,7 @@ function apply(s: OnboardingSettings) {
   startChannel.value = s.start_channel_id ?? ''
   reaccept.value = false
   dmEnabled.value = s.direct_messages_enabled
+  inactivityDays.value = s.session_inactivity_days
 }
 
 async function load() {
@@ -68,6 +75,7 @@ async function save() {
       json: {
         community_name: name.value, welcome_text: welcome.value, rules_text: rules.value,
         start_channel_id: startChannel.value || null, require_reacceptance: reaccept.value && hasRules.value,
+        session_inactivity_days: inactivityDays.value,
         ...(features.dm ? { direct_messages_enabled: dmEnabled.value } : {})
       },
       decode: decodeOnboardingSettings
@@ -137,7 +145,14 @@ onMounted(load)
       <p class="text-xs text-mnema-tertiary">{{ $t('admin.onboarding.dmEnabledHint') }}</p>
     </div>
 
+    <div class="space-y-1" data-testid="inactivity-setting">
+      <label for="onb-inactivity" class="block text-xs font-medium text-mnema-muted font-mono uppercase tracking-wider">{{ $t('admin.onboarding.inactivity') }}</label>
+      <input id="onb-inactivity" v-model.number="inactivityDays" type="number" :min="MIN_DAYS" :max="MAX_DAYS" step="1" inputmode="numeric" :aria-invalid="daysInvalid ? 'true' : 'false'" class="w-28 rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" data-testid="inactivity-days" />
+      <p class="text-xs text-mnema-tertiary">{{ $t('admin.onboarding.inactivityHint') }}</p>
+      <p v-if="daysInvalid" class="text-xs text-mnema-danger" role="alert">{{ $t('admin.onboarding.inactivityRange', { min: MIN_DAYS, max: MAX_DAYS }) }}</p>
+    </div>
+
     <p v-if="tooLong" class="text-xs text-mnema-danger" role="alert">{{ $t('admin.onboarding.tooLong') }}</p>
-    <button type="submit" :disabled="!dirty || busy || tooLong" class="btn btn-primary" data-testid="onboarding-save">{{ $t('common.save') }}</button>
+    <button type="submit" :disabled="!dirty || busy || tooLong || daysInvalid" class="btn btn-primary" data-testid="onboarding-save">{{ $t('common.save') }}</button>
   </form>
 </template>

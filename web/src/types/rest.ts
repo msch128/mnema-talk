@@ -272,6 +272,38 @@ export function isAuthLoginRequest(value: unknown): value is AuthLoginRequest {
 
 export const decodeAuthLoginRequest = decoder("auth.LoginRequest", isAuthLoginRequest)
 
+export type AuthMemberSession = {
+  created_at: string
+  current: boolean
+  device: string
+  id: string
+  last_active_at: string
+  push: boolean
+}
+
+export function isAuthMemberSession(value: unknown): value is AuthMemberSession {
+  return isRecord(value)
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "current") && typeof value["current"] === 'boolean')
+    && (hasOwn(value, "device") && isString(value["device"], 64))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "last_active_at") && isTimestamp(value["last_active_at"]))
+    && (hasOwn(value, "push") && typeof value["push"] === 'boolean')
+}
+
+export const decodeAuthMemberSession = decoder("auth.MemberSession", isAuthMemberSession)
+
+export type AuthMemberSessionList = {
+  sessions: Array<AuthMemberSession>
+}
+
+export function isAuthMemberSessionList(value: unknown): value is AuthMemberSessionList {
+  return isRecord(value)
+    && (hasOwn(value, "sessions") && isArrayOf(value["sessions"], item => isAuthMemberSession(item)))
+}
+
+export const decodeAuthMemberSessionList = decoder("auth.MemberSessionList", isAuthMemberSessionList)
+
 export type AuthPasswordConfirmRequest = {
   current_password: string
 }
@@ -334,6 +366,17 @@ export function isAuthRegisterRequest(value: unknown): value is AuthRegisterRequ
 }
 
 export const decodeAuthRegisterRequest = decoder("auth.RegisterRequest", isAuthRegisterRequest)
+
+export type AuthRevokedSessions = {
+  revoked: number
+}
+
+export function isAuthRevokedSessions(value: unknown): value is AuthRevokedSessions {
+  return isRecord(value)
+    && (hasOwn(value, "revoked") && (isInteger(value["revoked"]) && value["revoked"] >= 0))
+}
+
+export const decodeAuthRevokedSessions = decoder("auth.RevokedSessions", isAuthRevokedSessions)
 
 export type AuthSecurityNotice = {
   failed_attempts: number
@@ -2547,6 +2590,7 @@ export type OnboardingSettings = {
   direct_messages_enabled: boolean
   rules_text: string
   rules_version: number
+  session_inactivity_days: number
   start_channel_id: string | null
   welcome_text: string
 }
@@ -2557,6 +2601,7 @@ export function isOnboardingSettings(value: unknown): value is OnboardingSetting
     && (hasOwn(value, "direct_messages_enabled") && typeof value["direct_messages_enabled"] === 'boolean')
     && (hasOwn(value, "rules_text") && isString(value["rules_text"], 10000))
     && (hasOwn(value, "rules_version") && (isInteger(value["rules_version"]) && value["rules_version"] >= 0))
+    && (hasOwn(value, "session_inactivity_days") && (isInteger(value["session_inactivity_days"]) && value["session_inactivity_days"] >= 1 && value["session_inactivity_days"] <= 365))
     && (hasOwn(value, "start_channel_id") && (isIdentifier(value["start_channel_id"]) || value["start_channel_id"] === null))
     && (hasOwn(value, "welcome_text") && isString(value["welcome_text"], 4000))
 }
@@ -2568,6 +2613,7 @@ export type OnboardingSettingsInput = {
   direct_messages_enabled?: boolean | null
   require_reacceptance?: boolean
   rules_text: string
+  session_inactivity_days?: number | null
   start_channel_id: string | null
   welcome_text: string
 }
@@ -2578,6 +2624,7 @@ export function isOnboardingSettingsInput(value: unknown): value is OnboardingSe
     && (!hasOwn(value, "direct_messages_enabled") || (typeof value["direct_messages_enabled"] === 'boolean' || value["direct_messages_enabled"] === null))
     && (!hasOwn(value, "require_reacceptance") || typeof value["require_reacceptance"] === 'boolean')
     && (hasOwn(value, "rules_text") && isString(value["rules_text"], 10000))
+    && (!hasOwn(value, "session_inactivity_days") || ((isInteger(value["session_inactivity_days"]) && value["session_inactivity_days"] >= 1 && value["session_inactivity_days"] <= 365) || value["session_inactivity_days"] === null))
     && (hasOwn(value, "start_channel_id") && (isIdentifier(value["start_channel_id"]) || value["start_channel_id"] === null))
     && (hasOwn(value, "welcome_text") && isString(value["welcome_text"], 4000))
 }

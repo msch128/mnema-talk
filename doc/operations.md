@@ -43,7 +43,7 @@ General rules:
 | Variable | Default | Meaning and validation |
 |---|---|---|
 | `JWT_SECRET` | none | Signs session cookies. In production/staging at least 32 characters and not a placeholder (`openssl rand -hex 32`). In development an empty value means a random per-process secret (sessions reset on restart). Changing it logs everyone out. |
-| `SESSION_EXPIRY_HOURS` | `720` | Session lifetime, 1–8760. |
+| `SESSION_EXPIRY_HOURS` | `720` | Session lifetime, 1–8760. An upper bound: a session that is not used for the inactivity limit (see "Sessions and inactivity sign-out") ends earlier. |
 | `INITIAL_LANGUAGE` | `de` | `de` or `en`: the language of the default categories and channels ("Text channels", "Voice hangouts", #general, #media, Lounge, Gaming 4K) on a brand-new installation. Used only when the database is still untouched (one account, no messages, the seeded names); an existing installation is never renamed. Any other value is rejected at startup. |
 | `ADMIN_USERNAME` | `Herzog` | The Owner account (all-powerful, cannot be restricted by anyone; see [roles-and-permissions.md](roles-and-permissions.md)), created on first start when none exists. |
 | `ADMIN_INITIAL_PASSWORD` | empty | Only used for that first start, and required then in production. In development, empty = a random password is generated and logged **once**. A placeholder value is rejected. |
@@ -253,6 +253,41 @@ System; it does not refuse to start, so a trusted-LAN install over `http://`
 keeps working. Behind a TLS-terminating reverse proxy, set `PUBLIC_URL` to the
 public `https://` address.
 
+## Sessions and inactivity sign-out
+
+Each browser sign-in is a session. Members see their own sessions under
+*Account & security* > *Where you are signed in*: a coarse device label
+("Firefox · Linux", parsed from the user agent; neither the raw user agent nor
+an IP address is stored), when the session was created and last used (accurate
+to a few minutes), whether its device gets push notifications, and which one is
+this device. A member can sign one out, which also deletes its push devices, or
+sign out all others. Only a member's own sessions are ever listed or ended
+(`GET /api/auth/sessions`, `DELETE /api/auth/sessions/{id}`,
+`POST /api/auth/sessions/revoke-others`). The admin action "end sessions" on a
+member (`POST /api/admin/users/{id}/sessions/revoke`) is unchanged and ends all
+of them.
+
+A session that makes no authenticated request for more than the **inactivity
+limit** is signed out. It is inactivity, not age: every request or page load
+keeps the session alive, and `SESSION_EXPIRY_HOURS` still caps the total. The
+Owner and Administrators set the limit under *Admin* > *Welcome & rules* (the community
+settings; `session_inactivity_days` of `PUT /api/admin/onboarding`), 1 to 365
+days, default 7. A change applies to running sessions at once.
+
+- A request from an over-limit session is refused (401) immediately; a sweeper
+  (every 10 minutes and at start) then ends it for good, closes its WebSockets
+  and deletes its push devices. Rows of sessions that expired or were replaced
+  by a password change are dropped at the same time.
+- The last use is written at most every 5 minutes per session, so the check
+  costs no write per request. Downtime counts: after a server that was off for
+  longer than the limit starts, sessions idle for that long are signed out.
+- Sessions that were issued before the 1.2 upgrade start their inactivity
+  clock the first time they make a request afterwards. Nobody is signed out by
+  the upgrade itself. A pre-upgrade session that has not made a request since
+  is not listed yet, so "sign out all other sessions" does not reach it; use
+  "Sign out everywhere" (or the admin action) to end those too.
+- The desktop client's native sessions are separate and not affected.
+
 ## Web Push and the installable app
 
 Mnema Talk is an installable web app (manifest, icons and a service worker at
@@ -310,7 +345,9 @@ installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
 - **Sessions.** A device belongs to the session that registered it. When that
   session is signed out, expires, or is revoked (password change or reset, "log
   out everywhere", admin revoke, disabled account), its device stops receiving
-  pushes at once and is deleted within a minute.
+  pushes at once and is deleted within a minute. A session signed out for
+  inactivity, or from "Where you are signed in", loses its devices in the same
+  step.
 - **Housekeeping.** A push service answering 404 or 410 removes the device at
   once; any other refusal or failure counts, and ten in a row remove it. An
   account has at most 10 devices. Deleting a member removes theirs. Signing out

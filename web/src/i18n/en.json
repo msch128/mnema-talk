@@ -1233,7 +1233,10 @@
       "tooLong": "One of the texts is too long.",
       "saved": "Welcome and rules saved.",
       "dmEnabled": "Allow direct messages",
-      "dmEnabledHint": "When off, nobody can start or write direct messages. Existing conversations stay readable."
+      "dmEnabledHint": "When off, nobody can start or write direct messages. Existing conversations stay readable.",
+      "inactivity": "Sign out after inactivity (days)",
+      "inactivityHint": "A session that makes no request for this many days is signed out and its notifications stop. Counted from the last use, not from sign-in. 1 to 365.",
+      "inactivityRange": "Enter a whole number from {min} to {max}."
     },
     "mail": {
       "title": "E-mail (SMTP)",
@@ -1879,7 +1882,9 @@
         "two_factor_alert": "Repeated wrong two-factor codes",
         "recovery_code_used": "Recovery code used",
         "recovery_codes_regenerated": "Recovery codes renewed",
-        "password_reset_mail": "Password reset by e-mail"
+        "password_reset_mail": "Password reset by e-mail",
+        "session_revoke": "Signed out a session",
+        "sessions_revoke_others": "Signed out all other sessions"
       },
       "settings": {
         "upload_limit": "Upload limit changed",
@@ -2396,6 +2401,31 @@
       "deleteButton": "Delete my account…",
       "deleteType": "Type your username ({name}) to confirm",
       "deleteConfirm": "Delete for good"
+    },
+    "sessions": {
+      "title": "Where you are signed in",
+      "intro": "The devices and browsers signed in to your account on this server. If you do not recognise one, sign it out.",
+      "thisDevice": "This device",
+      "unknownDevice": "Unknown device",
+      "push": "Notifications on",
+      "justNow": "just now",
+      "activity": "Active {active} · signed in {since}",
+      "signOut": "Sign out",
+      "signOutLabel": "Sign out {device}",
+      "signOutTitle": "Sign out {device}?",
+      "signOutBody": "That device is signed out and stops getting notifications. It can sign in again with your password.",
+      "signOutThisTitle": "Sign out this device?",
+      "signOutThisBody": "You will be signed out here and have to sign in again.",
+      "signedOut": "{device} signed out.",
+      "signOutOthers": "Sign out all other sessions",
+      "signOutOthersTitle": "Sign out all other sessions?",
+      "signOutOthersBody": "Every other device is signed out and stops getting notifications. This device stays signed in.",
+      "signedOutOthers": {
+        "one": "One other session signed out.",
+        "other": "{count} other sessions signed out."
+      },
+      "onlyThis": "This is the only device signed in.",
+      "inactivity": "Sessions that are not used for a while are signed out automatically. The Owner sets how long."
     }
   },
   "rules": {

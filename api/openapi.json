@@ -489,6 +489,59 @@
         ],
         "type": "object"
       },
+      "auth.MemberSession": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "current": {
+            "description": "Current marks the session this request was made with.",
+            "type": "boolean"
+          },
+          "device": {
+            "description": "Device is a coarse label (\"Firefox · Linux\") parsed from the user\nagent, empty when it is not recognised. No address and no raw user\nagent are stored.",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "last_active_at": {
+            "description": "LastActiveAt is when the session last made an authenticated request,\naccurate to a few minutes.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "push": {
+            "description": "Push tells whether the session's device receives Web Push notifications.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "created_at",
+          "current",
+          "device",
+          "id",
+          "last_active_at",
+          "push"
+        ],
+        "type": "object"
+      },
+      "auth.MemberSessionList": {
+        "properties": {
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/auth.MemberSession"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "sessions"
+        ],
+        "type": "object"
+      },
       "auth.PasswordConfirmRequest": {
         "properties": {
           "current_password": {
@@ -575,6 +628,18 @@
           "invite_code",
           "password",
           "username"
+        ],
+        "type": "object"
+      },
+      "auth.RevokedSessions": {
+        "properties": {
+          "revoked": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revoked"
         ],
         "type": "object"
       },
@@ -4122,6 +4187,12 @@
             "minimum": 0,
             "type": "integer"
           },
+          "session_inactivity_days": {
+            "description": "SessionInactivityDays is how many days without an authenticated request\nsign a session out (1 to 365, default 7). Inactivity, not age.",
+            "maximum": 365,
+            "minimum": 1,
+            "type": "integer"
+          },
           "start_channel_id": {
             "description": "StartChannelID is the text channel new members land in; null for the\nfirst channel they can see.",
             "format": "uuid",
@@ -4141,6 +4212,7 @@
           "direct_messages_enabled",
           "rules_text",
           "rules_version",
+          "session_inactivity_days",
           "start_channel_id",
           "welcome_text"
         ],
@@ -4166,6 +4238,15 @@
           "rules_text": {
             "maxLength": 10000,
             "type": "string"
+          },
+          "session_inactivity_days": {
+            "description": "SessionInactivityDays sets the inactivity sign-out (1 to 365 days); left\nout, it stays as it is. It applies to running sessions at once.",
+            "maximum": 365,
+            "minimum": 1,
+            "type": [
+              "integer",
+              "null"
+            ]
           },
           "start_channel_id": {
             "format": "uuid",
@@ -11216,7 +11297,7 @@
         ]
       },
       "put": {
-        "description": "Owner and Administrators only; audited. Replaces the community name, welcome text, rules and start channel; direct_messages_enabled, when given, switches direct messages for the community on or off (existing conversations stay readable when off). Writing rules for the first time, or `require_reacceptance`, raises the rules version: members then have to accept again before they may post, react, upload or join a Talk (the Owner and bots are exempt). Empty rules enforce nothing. Broadcasts permissions_changed.",
+        "description": "Owner and Administrators only; audited. Replaces the community name, welcome text, rules and start channel; direct_messages_enabled, when given, switches direct messages for the community on or off (existing conversations stay readable when off). Writing rules for the first time, or `require_reacceptance`, raises the rules version: members then have to accept again before they may post, react, upload or join a Talk (the Owner and bots are exempt). session_inactivity_days (1 to 365, default 7), when given, sets after how many days without an authenticated request a session is signed out. Empty rules enforce nothing. Broadcasts permissions_changed.",
         "operationId": "setOnboardingSettings",
         "requestBody": {
           "content": {
@@ -16367,6 +16448,254 @@
         },
         "security": [],
         "summary": "Register with an invite code",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/sessions": {
+      "get": {
+        "description": "The caller's own sessions on this server, most recently active first: a coarse device label, when each was created and last used, whether it is the one making this request and whether its device receives push notifications. Sessions of other members are never listed.",
+        "operationId": "listMySessions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.MemberSessionList"
+                }
+              }
+            },
+            "description": "Sessions."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List my sessions",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/sessions/revoke-others": {
+      "post": {
+        "description": "Ends every session of the caller except the one making the request, and removes their push subscriptions. A session that has not made a request since the 1.2 upgrade is not listed yet and is not covered; \"Sign out everywhere\" (POST /api/auth/logout-all) ends those too.",
+        "operationId": "revokeOtherSessions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.RevokedSessions"
+                }
+              }
+            },
+            "description": "How many sessions ended."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Sign out all my other sessions",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/sessions/{id}": {
+      "delete": {
+        "description": "Ends one of the caller's own sessions and removes its push subscriptions; its open WebSockets are closed. Signing out the session the request was made with is allowed and clears the cookie. A session that belongs to someone else answers 404 like one that does not exist.",
+        "operationId": "revokeMySession",
+        "parameters": [
+          {
+            "description": "Session ID from the list.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Session ended.",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Expired session cookie when the current session was ended.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Sign out one of my sessions",
         "tags": [
           "Auth"
         ]
