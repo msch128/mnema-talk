@@ -121,6 +121,7 @@ function handleKeyDown(e: KeyboardEvent) {
       <!-- Text Input -->
       <textarea
         ref="textAreaEl"
+        data-bare
         data-composer-input
         v-model="text"
         @keydown="handleKeyDown"

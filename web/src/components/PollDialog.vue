@@ -59,14 +59,14 @@ async function submit() {
 </script>
 
 <template>
-  <BaseDialog :title="$t('poll.createTitle')" @close="emit('close')">
-    <form class="space-y-4 overflow-y-auto p-5" data-testid="poll-dialog" @submit.prevent="submit">
+  <BaseDialog :title="$t('poll.createTitle')" panel-class="max-w-lg" @close="emit('close')">
+    <form class="space-y-6 overflow-y-auto p-6 max-md:p-5" data-testid="poll-dialog" @submit.prevent="submit">
       <div v-if="error" role="alert" class="flex items-center gap-2 rounded-lg border border-mnema-danger/30 bg-mnema-danger/10 p-2.5 text-sm text-mnema-danger">
         <AlertCircle class="h-4 w-4 shrink-0" />
         <span>{{ error }}</span>
       </div>
 
-      <div class="stack-1.5">
+      <div class="stack-2">
         <label for="poll-question" class="font-mono text-xs font-medium uppercase tracking-wider text-mnema-tertiary">{{ $t('poll.question') }}</label>
         <input
           id="poll-question"
@@ -74,15 +74,16 @@ async function submit() {
           type="text"
           :maxlength="POLL_MAX_QUESTION"
           :placeholder="$t('poll.questionPlaceholder')"
-          class="h-9 w-full rounded-md border border-mnema-border bg-mnema-canvas px-3 text-sm text-mnema-text outline-hidden focus:border-mnema-accent"
+          class="h-11 w-full rounded-lg border border-mnema-border bg-mnema-canvas px-4 text-base text-mnema-text"
           autocomplete="off"
         />
       </div>
 
-      <fieldset class="stack-1.5">
-        <legend class="mb-1.5 font-mono text-xs font-medium uppercase tracking-wider text-mnema-tertiary">{{ $t('poll.answers') }}</legend>
-        <div ref="list" class="space-y-1.5">
-          <div v-for="(_, i) in draft.options" :key="i" class="flex items-center gap-1.5">
+      <fieldset class="stack-2">
+        <legend class="mb-2 font-mono text-xs font-medium uppercase tracking-wider text-mnema-tertiary">{{ $t('poll.answers') }}</legend>
+        <div ref="list" class="space-y-2.5">
+          <div v-for="(_, i) in draft.options" :key="i" class="flex items-center gap-2">
+            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-mnema-surface font-mono text-xs text-mnema-tertiary" aria-hidden="true">{{ i + 1 }}</span>
             <input
               v-model="draft.options[i]"
               type="text"
@@ -90,14 +91,14 @@ async function submit() {
               :aria-label="$t('poll.answerN', { n: i + 1 })"
               :placeholder="$t('poll.answerN', { n: i + 1 })"
               data-testid="poll-answer"
-              class="h-9 min-w-0 flex-1 rounded-md border border-mnema-border bg-mnema-canvas px-3 text-sm text-mnema-text outline-hidden focus:border-mnema-accent"
+              class="h-11 min-w-0 flex-1 rounded-lg border border-mnema-border bg-mnema-canvas px-4 text-sm text-mnema-text"
               autocomplete="off"
             />
             <button
               type="button"
               :disabled="draft.options.length <= POLL_MIN_OPTIONS"
               :aria-label="$t('poll.removeAnswer', { n: i + 1 })"
-              class="btn btn-icon h-9 w-9 shrink-0 disabled:opacity-30"
+              class="btn btn-icon h-9 w-9 shrink-0 rounded-full opacity-70 hover:opacity-100 disabled:opacity-20"
               @click="removeOption(i)"
             >
               <X class="h-4 w-4" />
@@ -108,46 +109,46 @@ async function submit() {
           type="button"
           :disabled="!canAdd"
           data-testid="poll-add"
-          class="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-mnema-accent transition hover:bg-mnema-surface disabled:opacity-40"
+          class="btn btn-ghost mt-3 w-full justify-start border border-dashed border-mnema-border text-mnema-accent hover:border-mnema-accent/50 hover:bg-mnema-accent/5 hover:text-mnema-accent"
           @click="addOption"
         >
           <Plus class="h-4 w-4" />{{ $t('poll.addAnswer') }}
         </button>
       </fieldset>
 
-      <div class="grid gap-3 sm:grid-cols-2">
-        <div class="stack-1.5">
+      <div class="grid gap-5 sm:grid-cols-2">
+        <div class="stack-2">
           <label for="poll-duration" class="font-mono text-xs font-medium uppercase tracking-wider text-mnema-tertiary">{{ $t('poll.duration') }}</label>
           <select
             id="poll-duration"
             :value="draft.duration"
-            class="h-9 w-full rounded-md border border-mnema-border bg-mnema-canvas px-2 text-sm text-mnema-text"
+            class="h-11 w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 text-sm text-mnema-text"
             @change="setDuration(($event.target as HTMLSelectElement).value)"
           >
             <option v-for="d in POLL_DURATIONS" :key="d" :value="d">{{ $t(`poll.durations.${d}`) }}</option>
           </select>
         </div>
-        <div class="space-y-2 pt-1 sm:pt-5">
-          <label class="flex items-center gap-2 text-sm text-mnema-body-ink">
-            <input v-model="draft.multiple" type="checkbox" class="h-4 w-4" data-testid="poll-multiple" />
+        <div class="space-y-3 pt-1 sm:pt-6">
+          <label class="flex cursor-pointer items-center gap-3 text-sm text-mnema-body-ink">
+            <input v-model="draft.multiple" type="checkbox" data-testid="poll-multiple" />
             {{ $t('poll.allowMultiple') }}
           </label>
-          <label class="flex items-center gap-2 text-sm text-mnema-body-ink">
-            <input v-model="draft.anonymous" type="checkbox" class="h-4 w-4" data-testid="poll-anonymous-toggle" />
+          <label class="flex cursor-pointer items-center gap-3 text-sm text-mnema-body-ink">
+            <input v-model="draft.anonymous" type="checkbox" data-testid="poll-anonymous-toggle" />
             {{ $t('poll.makeAnonymous') }}
           </label>
         </div>
       </div>
-      <p v-if="draft.anonymous" class="text-xs text-mnema-tertiary">{{ $t('poll.anonymousHint') }}</p>
+      <p v-if="draft.anonymous" class="settings-hint">{{ $t('poll.anonymousHint') }}</p>
 
-      <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
+      <div class="flex flex-wrap items-center justify-end gap-3 border-t border-mnema-hairline pt-5">
         <span v-if="problemText" class="max-sm:w-full sm:mr-auto text-xs text-mnema-tertiary" data-testid="poll-problem">{{ problemText }}</span>
-        <button type="button" class="btn btn-ghost h-9 whitespace-nowrap" @click="emit('close')">{{ $t('common.cancel') }}</button>
+        <button type="button" class="btn btn-ghost whitespace-nowrap" @click="emit('close')">{{ $t('common.cancel') }}</button>
         <button
           type="submit"
           :disabled="!!problem || busy"
           data-testid="poll-post"
-          class="btn btn-primary h-9 whitespace-nowrap"
+          class="btn btn-primary whitespace-nowrap"
         >{{ $t('poll.post') }}</button>
       </div>
     </form>

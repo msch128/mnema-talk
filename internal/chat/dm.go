@@ -90,7 +90,8 @@ type DirectMessage struct {
 
 const dmSelect = `
 	SELECT c.id, c.dm_key IS NULL, c.created_at,
-	       (SELECT MAX(m.created_at) FROM messages m WHERE m.channel_id = c.id),
+	       (SELECT MAX(m.created_at) FROM messages m WHERE m.channel_id = c.id AND NOT EXISTS (
+	           SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = m.user_id)),
 	       count(um.id) FILTER (WHERE um.parent_id IS NULL),
 	       count(um.id) FILTER (WHERE orig.user_id = $1 OR EXISTS (
 	           SELECT 1 FROM message_mentions mm WHERE mm.message_id = um.id AND mm.user_id = $1)),
@@ -100,6 +101,7 @@ const dmSelect = `
 	LEFT JOIN channel_reads cr ON cr.channel_id = c.id AND cr.user_id = $1
 	LEFT JOIN messages um ON um.channel_id = c.id AND um.user_id <> $1
 	     AND um.created_at > COALESCE(cr.last_read_at, me.joined_at)
+	     AND NOT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = um.user_id)
 	LEFT JOIN messages orig ON orig.id = um.reply_to_id
 	WHERE c.type = 'dm' AND ($2::uuid IS NULL OR c.id = $2)
 	GROUP BY c.id, me.joined_at, cr.last_read_at, cr.notify_level, cr.muted_until`

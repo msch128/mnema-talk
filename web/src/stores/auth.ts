@@ -34,6 +34,13 @@ export const useAuthStore = defineStore('auth', () => {
     return currentUser
   }
 
+  async function removeAvatar() {
+    const session = core.sessionSnapshot()
+    const currentUser = await api('/api/users/me/avatar', { method: 'DELETE', decode: decodeUser })
+    if (core.isCurrentSession(session) && currentUser.id === session.userId) user.value = currentUser
+    return currentUser
+  }
+
   async function uploadBanner(file: File) {
     const session = core.sessionSnapshot()
     const form = new FormData()
@@ -71,6 +78,7 @@ export const useAuthStore = defineStore('auth', () => {
     secondStep: actions.secondStep,
     register: actions.register,
     uploadAvatar,
+    removeAvatar,
     uploadBanner,
     removeBanner,
     updateProfile,

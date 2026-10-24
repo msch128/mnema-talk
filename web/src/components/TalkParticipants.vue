@@ -78,7 +78,7 @@ function onKeydown(e: KeyboardEvent) {
       role="menu"
       data-testid="talk-participants-list"
       :aria-label="$t('talk.participantsDetails')"
-      class="absolute left-0 top-full z-40 mt-2 w-[280px] max-w-[calc(100vw-16px)] max-h-[min(420px,calc(100dvh-80px))] overflow-y-auto overscroll-contain rounded-lg bg-mnema-elevated p-1.5 shadow-popover pop-in"
+      class="absolute left-0 top-full z-40 mt-2 w-[280px] max-w-[calc(100vw-16px)] max-h-[min(420px,calc(100dvh-80px))] overflow-y-auto overscroll-contain rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in"
     >
       <div class="flex items-center justify-between px-2 pb-1.5 pt-1 text-xs text-mnema-tertiary">
         <span class="font-semibold uppercase tracking-wide">{{ $t('talk.participants', { count: users.length }) }}</span>
