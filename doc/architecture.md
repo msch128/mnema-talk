@@ -361,6 +361,19 @@ keys out of band. The server validates who may commit but never sees keys.
 The code is [`web/src/lib/media/`](../web/src/lib/media/). Details and limits:
 [SECURITY.md](../SECURITY.md#security-model-summary).
 
+## Status expiry
+
+A custom status may carry `users.status_expires_at` (migration 0061). The
+client works out the absolute time from the member's own time zone ("tonight"
+is 23:59 and "tomorrow morning" 08:00 where they are) and sends it as
+`expires_at`; the server only checks that it lies ahead, at most a year. Two
+mechanisms make the clearing exact without a timer per member: every read of a
+user (`auth.userColumns`, the member list, the native session lease) maps a
+status past its time to an empty one, so nobody sees a stale line even between
+sweeps, and `Handler.RunStatusExpiry` (every 30 seconds, an indexed partial
+scan) clears the rows and broadcasts the usual `user_update`. Setting another
+member's status as a moderator never sets an expiry and always removes it.
+
 ## Notifications, search and onboarding
 
 Three features that cut across the chat path. All of them are enforced on the

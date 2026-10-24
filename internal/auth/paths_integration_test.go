@@ -266,7 +266,7 @@ func TestAuthNotFoundAndConflicts(t *testing.T) {
 	for name, call := range map[string]func() error{
 		"locale":              func() error { _, e := SetLocale(ctx, p, uuid.New(), "en"); return e },
 		"presence":            func() error { _, e := SetPresence(ctx, p, uuid.New(), PresenceAway); return e },
-		"status":              func() error { _, e := SetStatusText(ctx, p, uuid.New(), "hello"); return e },
+		"status":              func() error { _, e := SetStatusText(ctx, p, uuid.New(), "hello", nil); return e },
 		"reset":               func() error { _, e := ResetPassword(ctx, p, uuid.New()); return e },
 		"set password target": func() error { return SetPassword(ctx, p, uuid.New(), testPassword) },
 	} {
@@ -444,7 +444,7 @@ func TestAuthListRejectsIncompatibleDatabaseColumnTypes(t *testing.T) {
 		0::int AS uses_count, NULL::timestamptz AS expires_at, NOW() AS created_at;
 		CREATE VIEW auth_scan_fixture.users AS SELECT
 		'invalid-uuid'::text AS id, 'testuser'::text AS username, 'testuser'::text AS display_name,
-		''::text AS bio, 'user'::text AS role, NULL::text AS avatar_s3_key, ''::text AS status_text,
+		''::text AS bio, 'user'::text AS role, NULL::text AS avatar_s3_key, ''::text AS status_text, NULL::timestamptz AS status_expires_at,
 		'online'::text AS presence, ''::text AS locale, NOW() AS created_at,
 		NULL::timestamptz AS disabled_at, NULL::timestamptz AS banned_at, NULL::timestamptz AS banned_until, NULL::timestamptz AS timeout_until, NULL::timestamptz AS last_seen_at, FALSE AS is_bot`)
 	if err != nil {

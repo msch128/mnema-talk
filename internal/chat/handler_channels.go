@@ -375,7 +375,7 @@ type UpdateChannelRequest struct {
 	// SlowModeSeconds sets the least time between two messages of one member
 	// in the channel (0 turns slow mode off). Members who may manage messages
 	// in the channel are exempt.
-	SlowModeSeconds *int `json:"slow_mode_seconds" minimum:"0" maximum:"21600" binding:"optional"`
+	SlowModeSeconds *int `json:"slow_mode_seconds" minimum:"0" maximum:"86400" binding:"optional"`
 	// IsLobby marks a voice channel as a Create-a-Talk lobby (true) or clears
 	// the mark (false): joining a lobby opens a temporary Talk (doc/talks.md).
 	IsLobby *bool `json:"is_lobby" binding:"optional"`

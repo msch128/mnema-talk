@@ -43,7 +43,7 @@ type Channel struct {
 	// SlowModeSeconds is the least time between two messages of one member
 	// in this channel; 0 = off. Members who may manage messages here are
 	// exempt.
-	SlowModeSeconds int `json:"slow_mode_seconds" minimum:"0" maximum:"21600"`
+	SlowModeSeconds int `json:"slow_mode_seconds" minimum:"0" maximum:"86400"`
 	// IsLobby marks a Talk as a "Create a Talk" lobby: joining it opens a
 	// temporary Talk instead of taking a seat (doc/talks.md).
 	IsLobby bool `json:"is_lobby" binding:"optional"`
@@ -289,8 +289,8 @@ var errCategoryNotFound = httpx.ErrNotFound("category not found")
 // MaxUserLimit is the highest member limit a voice channel can have.
 const MaxUserLimit = 999
 
-// MaxSlowModeSeconds is the longest slow mode: six hours.
-const MaxSlowModeSeconds = 21600
+// MaxSlowModeSeconds is the longest slow mode: 24 hours.
+const MaxSlowModeSeconds = 86400
 
 // UpdateChannel renames a channel, changes its topic, its member limit
 // (voice channels only; 0 removes it) and/or its slow mode (0 turns it off);

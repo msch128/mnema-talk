@@ -69,13 +69,13 @@ export async function setMyPresence(cx: Cx, presence: ChosenPresence) {
 }
 
 /** Sets a status line: the user's own, or (admins) anyone's. */
-export async function setStatusText(cx: Cx, userId: string, text: string) {
+export async function setStatusText(cx: Cx, userId: string, text: string, expiresAt?: Date | null) {
   const { cs, authStore } = cx
   const community = cs.communityGeneration
   const own = userId === authStore.user?.id
   const updated = await api(own ? '/api/users/me/status' : `/api/admin/users/${userId}/status`, {
     method: 'PUT',
-    json: { status_text: text }, decode: decodeUser
+    json: own && expiresAt ? { status_text: text, expires_at: expiresAt.toISOString() } : { status_text: text }, decode: decodeUser
   })
   assertCommunity(cx, community)
   updateUserEverywhere(cx, updated)

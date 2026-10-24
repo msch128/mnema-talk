@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -246,7 +247,7 @@ func (h *Handler) setPresence(w http.ResponseWriter, r *http.Request) error {
 // admin (see setUserStatus).
 //
 // @Summary Set own status line
-// @Description Broadcasts user_update.
+// @Description Broadcasts user_update. With expires_at the status clears itself at that time (the server then broadcasts user_update again).
 // @ID setStatus
 // @Tags Users
 // @Accept json
@@ -277,11 +278,11 @@ func (h *Handler) writeStatus(w http.ResponseWriter, r *http.Request, userID uui
 	var err error
 	if moderating {
 		err = h.moderated(r, userID, func(q db.Querier) (e error) {
-			u, e = SetStatusText(r.Context(), q, userID, req.StatusText)
+			u, e = SetStatusText(r.Context(), q, userID, req.StatusText, nil)
 			return e
 		})
 	} else {
-		u, err = SetStatusText(r.Context(), h.Sessions.DB, userID, req.StatusText)
+		u, err = SetStatusText(r.Context(), h.Sessions.DB, userID, req.StatusText, req.ExpiresAt)
 	}
 	if err != nil {
 		return err
@@ -329,4 +330,9 @@ type SetPresenceRequest struct {
 type SetStatusRequest struct {
 	// StatusText: empty clears the status.
 	StatusText string `json:"status_text" maxLength:"32"`
+	// ExpiresAt makes the status clear itself at this absolute time (the client
+	// computes it from the member's time zone). Omitted or null: it stays until
+	// changed. Must lie in the future, at most a year ahead; ignored when the
+	// status is cleared and when an admin sets another member's status.
+	ExpiresAt *time.Time `json:"expires_at,omitempty" binding:"optional" format:"date-time"`
 }

@@ -42,7 +42,7 @@ func (s *NativeSessions) authenticateNativeHash(ctx context.Context, hash [32]by
 	var principal NativePrincipal
 	var databaseNow time.Time
 	user, err := scanUser(s.pool.QueryRow(ctx, `SELECT u.id,u.username,u.display_name,u.bio,u.role,
-		u.avatar_s3_key,u.status_text,u.presence,u.locale,u.created_at,
+		u.avatar_s3_key,`+StatusSQLFor("u.")+`,u.presence,u.locale,u.created_at,
 		f.id,f.client_instance_id,f.issued_token_version,a.expires_at,f.expires_at,clock_timestamp()
 		FROM native_access_tokens a JOIN native_session_families f ON f.id=a.family_id
 		JOIN users u ON u.id=f.user_id WHERE a.token_hash=$1

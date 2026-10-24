@@ -19,7 +19,7 @@ func TestSlowModePostTimesArePruned(t *testing.T) {
 	if err := f.p.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash) VALUES ('other','Other','x') RETURNING id`).Scan(&other); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.p.Exec(ctx, `INSERT INTO slow_mode_posts (channel_id, user_id, last_post_at) VALUES ($1, $2, NOW() - INTERVAL '7 hours'), ($1, $3, NOW() - INTERVAL '1 minute')`, f.c.ID, f.u.ID, other); err != nil {
+	if _, err := f.p.Exec(ctx, `INSERT INTO slow_mode_posts (channel_id, user_id, last_post_at) VALUES ($1, $2, NOW() - INTERVAL '25 hours'), ($1, $3, NOW() - INTERVAL '1 minute')`, f.c.ID, f.u.ID, other); err != nil {
 		t.Fatal(err)
 	}
 	if n, err := PruneSlowMode(ctx, f.p); err != nil || n != 1 {
@@ -27,7 +27,7 @@ func TestSlowModePostTimesArePruned(t *testing.T) {
 	}
 
 	// The loop prunes on its tick and stops with its context.
-	if _, err := f.p.Exec(ctx, `UPDATE slow_mode_posts SET last_post_at = NOW() - INTERVAL '8 hours'`); err != nil {
+	if _, err := f.p.Exec(ctx, `UPDATE slow_mode_posts SET last_post_at = NOW() - INTERVAL '26 hours'`); err != nil {
 		t.Fatal(err)
 	}
 	rctx, cancel := context.WithCancel(ctx)

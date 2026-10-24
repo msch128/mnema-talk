@@ -25,7 +25,7 @@ in any release.
 
 `GET /api/health` also lists the optional features a server has in `features`.
 Since 1.1 they are `blocks`, `dm`, `reports`, `saved`, `forward`,
-`search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`; 1.2 adds `talks.lobby`
+`search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`; 1.2 adds `talks.lobby` and `status.expiry`
 (`internal/server/health.go`). A name never changes meaning and is never
 removed in 1.x; a client treats a missing list as "none" (a 1.0.x server sends
 no list) and hides what is not listed. A new feature adds a name, never a
@@ -75,7 +75,7 @@ These change whenever the code needs it, also in a patch release:
 
 Not breaking: adding an optional request field, a response field, an event, an
 endpoint, an enum value (clients must ignore what they do not know), a metric or
-a variable.
+a variable, or widening a value range (a larger maximum a response may carry).
 
 ## Versioning rules
 

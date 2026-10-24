@@ -97,7 +97,7 @@ entry `moderation.kick` (details: `reason`, `via: slash`). `/timeout` and
 ## Slow mode
 
 A text or Talk-chat channel can make members wait between two messages
-(`slow_mode_seconds`, 0 to 21600, set with the channel edit by *Manage
+(`slow_mode_seconds`, 0 to 86400, set with the channel edit by *Manage
 channels*; a channel chip shows it). It counts posts, thread replies and
 uploads of one member in that channel. Anyone who holds *Manage messages* in
 the channel (the Owner always) is exempt, and so are webhooks. The refusal is
