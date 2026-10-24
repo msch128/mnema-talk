@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { TalkParticipant } from './presentationTypes'
+import { computed } from 'vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
@@ -20,6 +21,8 @@ const emit = defineEmits<{ 'focus-camera': []; 'fullscreen-camera': []; 'watch-s
 const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
 const authStore = useAuthStore()
+
+const reactions = computed(() => voiceStore.talkReactions.filter(r => r.user_id === props.user.id))
 
 function cameraAvailable() {
   return !voiceStore.allCamerasOff && !!voiceStore.mediaState[props.user.id]?.camera
@@ -42,6 +45,7 @@ function cameraAvailable() {
     :is-connecting="voiceStore.remoteScreenUserId === user.id && !voiceStore.remoteScreenStream"
     :camera-focusable="cameraFocusable"
     :camera-focused="cameraFocused"
+    :reactions="reactions"
     @toggle-camera="voiceStore.toggleCameraHidden(user.id)"
     @focus-camera="emit('focus-camera')"
     @fullscreen-camera="emit('fullscreen-camera')"

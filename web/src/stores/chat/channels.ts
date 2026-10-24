@@ -94,12 +94,12 @@ export async function selectChannel(cx: Cx, channel: Channel | null) {
   }
 }
 
-export async function createChannel(cx: Cx, { categoryId, name, type, topic, sortOrder = 0 }: { categoryId?: string | null; name: string; type?: Channel['type']; topic?: string; sortOrder?: number }) {
+export async function createChannel(cx: Cx, { categoryId, name, type, topic, sortOrder = 0, isStage = false }: { categoryId?: string | null; name: string; type?: Channel['type']; topic?: string; sortOrder?: number; isStage?: boolean }) {
   const { cs } = cx
   const community = cs.communityGeneration
   const channel = await api('/api/admin/channels', {
     method: 'POST',
-    json: { category_id: categoryId || null, name, type: type || 'text', topic: topic || '', sort_order: sortOrder }, decode: decodeChannel
+    json: { category_id: categoryId || null, name, type: type || 'text', topic: topic || '', sort_order: sortOrder, ...(isStage ? { is_stage: true } : {}) }, decode: decodeChannel
   })
   assertCommunity(cx, community)
   await fetchChannels(cx)

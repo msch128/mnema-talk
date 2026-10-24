@@ -5,6 +5,7 @@ import { caughtErrorMessage } from '../lib/api'
 import { ref } from 'vue'
 import { Hash, Volume2, FolderPlus, Plus, AlertCircle } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 
@@ -26,6 +27,8 @@ const channelType = ref(props.initialType || 'text')
 const channelName = ref('')
 const selectedCategoryId = ref(props.initialCategoryId || '')
 const channelTopic = ref('')
+const asStage = ref(false)
+const features = useServerFeaturesStore()
 const isCreatingCategory = ref(false)
 const newCategoryName = ref('')
 const error = ref('')
@@ -65,7 +68,8 @@ async function handleSubmit() {
       categoryId: catId,
       name: channelName.value.trim(),
       type: channelType.value,
-      topic: channelTopic.value.trim()
+      topic: channelTopic.value.trim(),
+      ...(asStage.value && channelType.value === 'voice' && features.talksStage ? { isStage: true } : {})
     })
 
     emit('created', createdChannel)
@@ -122,6 +126,14 @@ async function handleSubmit() {
           </button>
         </div>
       </fieldset>
+
+      <label v-if="channelType === 'voice' && features.talksStage" class="flex items-start gap-2.5 text-sm cursor-pointer">
+        <input v-model="asStage" type="checkbox" data-testid="create-stage" class="mt-0.5" />
+        <span>
+          <span class="font-semibold text-mnema-text">{{ $t('stage.createAs') }}</span>
+          <span class="block text-xs text-mnema-tertiary">{{ $t('stage.createHint') }}</span>
+        </span>
+      </label>
 
       <!-- 2. Category -->
       <div class="space-y-1.5">

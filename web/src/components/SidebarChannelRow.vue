@@ -5,7 +5,7 @@ import type { Channel, VoiceUser } from '../types/domain'
 // it for a voice channel. Admins can drag the row (and its users with it) or
 // move it with Alt+ArrowUp / Alt+ArrowDown.
 import { computed } from 'vue'
-import { Hash, Volume2, Trash2, Monitor, BellOff, MessageSquare, CirclePlus } from '@lucide/vue'
+import { Hash, Volume2, Radio, Trash2, Monitor, BellOff, MessageSquare, CirclePlus } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
@@ -132,6 +132,12 @@ const rowClass = computed(() => [
           data-testid="lobby-icon"
           class="w-5 h-5 shrink-0 text-mnema-accent"
           v-tooltip="$t('talk.lobbyOpens')"
+        />
+        <Radio
+          v-else-if="isVoice && channel.is_stage"
+          data-testid="stage-icon"
+          :class="['w-5 h-5 shrink-0 transition-colors', voiceStore.currentChannelId === channel.id ? 'text-mnema-accent' : 'text-mnema-tertiary group-hover:text-mnema-text']"
+          v-tooltip="$t('stage.isStage')"
         />
         <Volume2
           v-else-if="isVoice"
