@@ -1,0 +1,25 @@
+web/src/components/AdminRolesTab.vue
+  s_06fcde5dbef956::t_c13aaf3e45ebb9 6
+web/src/components/AdminRolesTab.test.ts
+  s_06fcde5dbef956::t_c13aaf3e45ebb9 41
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_6b28e22e7af7e2 1926
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_a30eb4efd275db 1926
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7554c44fe2678266d15ddcea6c81ba21aa6283ca",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
