@@ -19,6 +19,12 @@ const (
 	maxRulesText     = 10000
 )
 
+// Bounds of the inactivity sign-out, in days.
+const (
+	MinSessionInactivityDays = 1
+	MaxSessionInactivityDays = 365
+)
+
 // Settings is the community's onboarding configuration.
 type Settings struct {
 	CommunityName string `json:"community_name" maxLength:"60"`
@@ -37,6 +43,9 @@ type Settings struct {
 	// (default on). Off: existing conversations stay readable and members
 	// can neither start new ones nor write in them.
 	DirectMessagesEnabled bool `json:"direct_messages_enabled"`
+	// SessionInactivityDays is how many days without an authenticated request
+	// sign a session out (1 to 365, default 7). Inactivity, not age.
+	SessionInactivityDays int `json:"session_inactivity_days" minimum:"1" maximum:"365"`
 }
 
 // SettingsInput is the body of PUT /api/admin/onboarding; it replaces the
@@ -54,13 +63,16 @@ type SettingsInput struct {
 	// DirectMessagesEnabled switches direct messages on or off for the
 	// community; left out, it stays as it is.
 	DirectMessagesEnabled *bool `json:"direct_messages_enabled" binding:"optional" extensions:"x-nullable"`
+	// SessionInactivityDays sets the inactivity sign-out (1 to 365 days); left
+	// out, it stays as it is. It applies to running sessions at once.
+	SessionInactivityDays *int `json:"session_inactivity_days" binding:"optional" minimum:"1" maximum:"365" extensions:"x-nullable"`
 }
 
-const settingsColumns = `community_name, welcome_text, rules_text, rules_version, start_channel_id, direct_messages_enabled`
+const settingsColumns = `community_name, welcome_text, rules_text, rules_version, start_channel_id, direct_messages_enabled, session_inactivity_days`
 
 func scanSettings(row pgx.Row) (Settings, error) {
 	var s Settings
-	err := row.Scan(&s.CommunityName, &s.WelcomeText, &s.RulesText, &s.RulesVersion, &s.StartChannelID, &s.DirectMessagesEnabled)
+	err := row.Scan(&s.CommunityName, &s.WelcomeText, &s.RulesText, &s.RulesVersion, &s.StartChannelID, &s.DirectMessagesEnabled, &s.SessionInactivityDays)
 	return s, err
 }
 
@@ -91,7 +103,7 @@ func (h *Handler) getSettings(w http.ResponseWriter, r *http.Request) error {
 // putSettings handles PUT /api/admin/onboarding.
 //
 // @Summary Set the onboarding settings
-// @Description Owner and Administrators only; audited. Replaces the community name, welcome text, rules and start channel; direct_messages_enabled, when given, switches direct messages for the community on or off (existing conversations stay readable when off). Writing rules for the first time, or `require_reacceptance`, raises the rules version: members then have to accept again before they may post, react, upload or join a Talk (the Owner and bots are exempt). Empty rules enforce nothing. Broadcasts permissions_changed.
+// @Description Owner and Administrators only; audited. Replaces the community name, welcome text, rules and start channel; direct_messages_enabled, when given, switches direct messages for the community on or off (existing conversations stay readable when off). Writing rules for the first time, or `require_reacceptance`, raises the rules version: members then have to accept again before they may post, react, upload or join a Talk (the Owner and bots are exempt). session_inactivity_days (1 to 365, default 7), when given, sets after how many days without an authenticated request a session is signed out. Empty rules enforce nothing. Broadcasts permissions_changed.
 // @ID setOnboardingSettings
 // @Tags Onboarding
 // @Accept json
@@ -140,8 +152,13 @@ func cleanSettings(in *SettingsInput) error {
 	if in.WelcomeText, err = httpx.CleanText("welcome_text", in.WelcomeText, maxWelcomeText, false); err != nil {
 		return err
 	}
-	in.RulesText, err = httpx.CleanText("rules_text", in.RulesText, maxRulesText, false)
-	return err
+	if in.RulesText, err = httpx.CleanText("rules_text", in.RulesText, maxRulesText, false); err != nil {
+		return err
+	}
+	if d := in.SessionInactivityDays; d != nil && (*d < MinSessionInactivityDays || *d > MaxSessionInactivityDays) {
+		return httpx.ErrInvalidInput("session_inactivity_days must be between 1 and 365")
+	}
+	return nil
 }
 
 // checkStartChannel requires the start channel to be an existing text channel.
@@ -179,9 +196,10 @@ func applySettings(ctx context.Context, tx pgx.Tx, in SettingsInput) (Settings, 
 		return Settings{}, fmt.Errorf("lock onboarding settings: %w", err)
 	}
 	row := tx.QueryRow(ctx, `UPDATE instance_settings SET community_name = $1, welcome_text = $2, rules_text = $3,
-		rules_version = $4, start_channel_id = $5, direct_messages_enabled = COALESCE($6, direct_messages_enabled), updated_at = NOW()
+		rules_version = $4, start_channel_id = $5, direct_messages_enabled = COALESCE($6, direct_messages_enabled),
+		session_inactivity_days = COALESCE($7, session_inactivity_days), updated_at = NOW()
 		RETURNING `+settingsColumns,
-		in.CommunityName, in.WelcomeText, in.RulesText, nextRulesVersion(current, in), in.StartChannelID, in.DirectMessagesEnabled)
+		in.CommunityName, in.WelcomeText, in.RulesText, nextRulesVersion(current, in), in.StartChannelID, in.DirectMessagesEnabled, in.SessionInactivityDays)
 	s, err := scanSettings(row)
 	if err != nil {
 		return Settings{}, fmt.Errorf("write onboarding settings: %w", err)

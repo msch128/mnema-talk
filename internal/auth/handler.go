@@ -129,6 +129,9 @@ func (h *Handler) MountPublic(r chi.Router) {
 func (h *Handler) MountAuthenticated(r chi.Router) {
 	r.Get("/auth/me", httpx.Handle(h.me))
 	r.Post("/auth/logout-all", httpx.Handle(h.logoutAll))
+	r.Get("/auth/sessions", httpx.Handle(h.listSessions))
+	r.Post("/auth/sessions/revoke-others", httpx.Handle(h.revokeOtherSessions))
+	r.Delete("/auth/sessions/{id}", httpx.Handle(h.revokeSession))
 	r.Put("/auth/password", httpx.Handle(h.changePassword))
 	r.Get("/users/{userID}", httpx.Handle(h.getUser))
 	r.Put("/users/me/profile", httpx.Handle(h.updateProfile))

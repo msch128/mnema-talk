@@ -136,6 +136,8 @@ nothing in `.env` has to change.
 | Migration | Adds |
 |---|---|
 | 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
+| 0064 | `user_sessions`: one row per browser session (device label, created, last active). |
+| 0065 | `instance_settings.session_inactivity_days` (1 to 365, default 7). |
 
 #### Talks
 
@@ -151,6 +153,17 @@ nothing in `.env` has to change.
   `talk_unavailable`. REST: `PATCH /api/talks/{id}`, `POST /api/talks/{id}/invites`,
   `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
   channel (additive).
+
+#### Sessions: "Where you are signed in" and inactivity sign-out
+
+Members see and end their own sessions under *Account & security*, and a
+session that is not used for the inactivity limit (default 7 days) is signed
+out. Nobody is signed out by the upgrade: a session that exists at the upgrade
+has no row yet; it gets one on its first request afterwards and its
+inactivity clock starts then, so the earliest anyone can be signed out for
+inactivity is the configured number of days after the upgrade. The limit is
+under *Admin* > *Welcome & rules*; see "Sessions and inactivity sign-out" in
+[operations.md](operations.md).
 
 ### 1.0.x → 1.1.0
 

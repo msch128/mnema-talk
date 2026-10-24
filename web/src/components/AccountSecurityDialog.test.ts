@@ -19,7 +19,7 @@ const none: Info = { email_verified: false, mail_available: true }
 const unconfirmed: Info = { email: 'me@example.org', email_verified: false, mail_available: true }
 
 function respond(info: Info) {
-  apiMock.mockImplementation(async (path) => (path === '/api/users/me/account' ? info : info))
+  apiMock.mockImplementation(async (path) => (path === '/api/auth/sessions' ? { sessions: [] } : info))
 }
 
 async function open(info: Info) {
