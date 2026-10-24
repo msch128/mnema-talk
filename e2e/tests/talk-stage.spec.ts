@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { apiFetch, awaitApiBudget, responseString, suiteMember, expectTalkLive, leaveTalks } from './helpers'
+import { apiFetch, awaitApiBudget, responseString, suiteMember, expectTalkLive, leaveTalks, trackPeerConnections } from './helpers'
 import { test, expect } from './fixtures'
 
 // Stages (doc/talks.md): the audience cannot speak until a Stage manager gives
@@ -26,6 +26,8 @@ test('the audience of a Stage asks to speak, is accepted, and reacts', async ({ 
   const ctxOptions = { permissions: ['microphone' as const], viewport: { width: 1400, height: 900 } }
   const aCtx = await browser.newContext(ctxOptions)
   const bCtx = await browser.newContext(ctxOptions)
+  await aCtx.addInitScript(trackPeerConnections)
+  await bCtx.addInitScript(trackPeerConnections)
   const a = await aCtx.newPage()
   const b = await bCtx.newPage()
 

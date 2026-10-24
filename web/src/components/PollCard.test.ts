@@ -280,4 +280,15 @@ describe('PollCard', () => {
     expect(w.text()).toContain('Umfrage')
     expect(w.get('[data-testid="poll-left"]').text()).toBe('Endet in 2 Stunden')
   })
+
+  it('tells a member who voted in an open, named poll that the vote can still be changed', () => {
+    const { w } = mountCard()
+    expect(w.get('[data-testid="poll-can-change"]').text()).toBe('You can change your vote until the poll ends.')
+    expect(w.attributes('aria-busy')).toBe('false')
+  })
+
+  it('does not promise a change in an anonymous poll or after the poll ended', () => {
+    expect(mountCard({ poll: poll({ anonymous: true }) }).w.find('[data-testid="poll-can-change"]').exists()).toBe(false)
+    expect(mountCard({ poll: poll({ closed: true }) }).w.find('[data-testid="poll-can-change"]').exists()).toBe(false)
+  })
 })

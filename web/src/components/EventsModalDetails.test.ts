@@ -171,7 +171,7 @@ describe('EventsModal details and editing', () => {
     const store = seed([makeEvent({ my_rsvp: 'going' })])
     const del = vi.spyOn(store, 'deleteRSVP').mockResolvedValue(makeEvent())
     wrapper = mount(EventsModal)
-    await button('Going')?.trigger('click')
+    await button('I’m going')?.trigger('click')
     expect(del).toHaveBeenCalledWith(fixtureId(1))
   })
 
@@ -179,7 +179,7 @@ describe('EventsModal details and editing', () => {
     const store = seed([makeEvent()])
     vi.spyOn(store, 'setRSVP').mockRejectedValue(new Error('Full'))
     wrapper = mount(EventsModal)
-    await button('Interested')?.trigger('click')
+    await button('Maybe')?.trigger('click')
     await flushPromises()
     expect(useToastStore().toasts.some(t => t.text === 'Full')).toBe(true)
   })

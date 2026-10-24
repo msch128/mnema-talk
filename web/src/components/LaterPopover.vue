@@ -25,7 +25,9 @@ const chatStore = useChatStore()
 const later = useLaterStore()
 const features = useServerFeaturesStore()
 const toasts = useToastStore()
-const open = ref(false)
+// Open from the header's More menu when the header is narrow: no button of its own then.
+defineProps<{ bare?: boolean }>()
+const open = defineModel<boolean>('open', { default: false })
 const root = ref<HTMLElement | null>(null)
 
 const hasReminders = computed(() => features.has('reminders'))
@@ -66,6 +68,7 @@ async function dismiss(entry: LaterReminder) {
 <template>
   <div v-if="enabled" ref="root" class="relative">
     <button
+      v-if="!bare"
       type="button"
       data-testid="later-button"
       class="btn btn-icon relative max-md:h-11 max-md:w-11"
