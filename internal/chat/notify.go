@@ -50,13 +50,14 @@ func (s NotifySetting) active(now time.Time) NotifyLevel {
 }
 
 // ResolveNotify is the effective level of a channel: its own setting, else its
-// category's, else "all". Expired mutes are skipped.
-func ResolveNotify(now time.Time, channel, category NotifySetting) NotifyLevel {
-	if l := channel.active(now); l != NotifyInherit {
-		return l
-	}
-	if l := category.active(now); l != NotifyInherit {
-		return l
+// category's, else the member's server default, else "all". Expired mutes are
+// skipped. Pass the zero NotifySetting as server for conversations, which the
+// server default does not reach.
+func ResolveNotify(now time.Time, channel, category, server NotifySetting) NotifyLevel {
+	for _, s := range [...]NotifySetting{channel, category, server} {
+		if l := s.active(now); l != NotifyInherit {
+			return l
+		}
 	}
 	return NotifyAll
 }
@@ -137,6 +138,8 @@ type CategoryNotifySetting struct {
 type NotificationSettings struct {
 	Channels   []ChannelNotifySetting  `json:"channels"`
 	Categories []CategoryNotifySetting `json:"categories"`
+	// Server is the member's server-wide default (always present).
+	Server ServerNotify `json:"server"`
 }
 
 // settingRows lists the user's active settings of one table. A nil allowed
@@ -169,7 +172,10 @@ func GetNotificationSettings(ctx context.Context, p *db.Pool, userID uuid.UUID, 
 	if out.Channels, err = settingRows[ChannelNotifySetting](ctx, p, "channel_reads", "channel_id", userID, visible); err != nil {
 		return out, err
 	}
-	out.Categories, err = settingRows[CategoryNotifySetting](ctx, p, "category_notify", "category_id", userID, visibleCats)
+	if out.Categories, err = settingRows[CategoryNotifySetting](ctx, p, "category_notify", "category_id", userID, visibleCats); err != nil {
+		return out, err
+	}
+	out.Server, err = GetServerNotify(ctx, p, userID)
 	return out, err
 }
 

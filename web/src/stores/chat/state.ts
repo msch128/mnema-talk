@@ -8,6 +8,11 @@ import type { useAuthStore } from '../auth'
 import type { useVoiceStore } from '../voice'
 import { MARK_READ_INTERVAL_MS, type EphemeralNote, type PinNotice, type ProfilePreview, type ThreadRoot, type Timer, type TypingUser } from './types'
 
+/** No stored settings: every channel follows the server default, which is "all messages". */
+export function emptyNotificationSettings(): NotificationSettings {
+  return { channels: [], categories: [], server: { level: 'all', muted_until: null, suppress_everyone: false } }
+}
+
 type Handler<K extends keyof ServerEventPayloads> = ((payload: ServerEventPayloads[K]) => void | Promise<void>) | null
 
 /** The channels, the open channel with its windowed history and thread, and the socket. */
@@ -71,7 +76,7 @@ function memberState() {
     // Read states per channel: channel_id -> { channel_id, unread_count, mention_count, last_read_at, notify_level }
     readStates: ref<Record<string, ReadState>>({}),
     // The caller's stored notification settings (the read states carry the effective level).
-    notifySettings: ref<NotificationSettings>({ channels: [], categories: [] }),
+    notifySettings: ref<NotificationSettings>(emptyNotificationSettings()),
     // Re-reads read states and settings when the next timed mute runs out.
     notifyExpiryTimer: undefined as Timer | undefined,
     activeChannelLastReadAt: ref<string | null>(null),

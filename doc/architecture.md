@@ -361,7 +361,7 @@ The code is [`web/src/lib/media/`](../web/src/lib/media/). Details and limits:
 Three features that cut across the chat path. All of them are enforced on the
 server; the client only renders the result.
 
-**Notification levels.** A member sets `all`, `mentions` or `mute` per channel
+**Notification levels.** A member sets `all`, `mentions` or `mute` ("Nothing") per channel
 and per category, a mute optionally with an end time. The stored value
 `inherit` (the default) follows the category, then `all`; the level a client
 receives is always the effective one. Settings are rows in `channel_reads` and a
@@ -371,7 +371,13 @@ Levels decide who is *notified* and what the mention badge counts. A mute stays
 silent except for a message addressed to the member (by name, through a role
 they hold, or as a reply); `@all` and `@here` do not break a mute. Both the
 badge (`mention_count` in `GET /api/read-state`) and the push follow this rule.
-Do Not Disturb silences everything. Unread counts and the mentions inbox
+Do Not Disturb silences everything. Since 1.2 a member also has a server-wide
+default (`server_notify`, migration 0073; `PUT /api/notification-settings/server`,
+`GET /api/notification-settings` lists it under `server`): the precedence is
+channel, then category, then that default, then `all`. The default has no
+`inherit` and does not reach direct messages. Its *Suppress @all and @here*
+switch makes those two mention kinds count for nothing, at every level: no push
+and no mention badge. Unread counts and the mentions inbox
 (`GET /api/mentions`) are independent of the level, so a muted channel still
 shows what was addressed to the member.
 

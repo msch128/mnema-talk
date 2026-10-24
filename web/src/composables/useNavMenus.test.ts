@@ -173,7 +173,7 @@ describe('menu actions and state', () => {
   })
 })
 
-const NOTIFY_IDS = ['notify-inherit', 'notify-all', 'notify-mentions', 'notify-mute']
+const NOTIFY_IDS = ['notify-inherit', 'notify-all', 'notify-mentions', 'notify-nothing', 'notify-mute']
 
 /** The entries of the "mute" submenu. */
 function muteItems(list: ContextMenuItem[]): ContextMenuItem[] {
@@ -183,7 +183,7 @@ function muteItems(list: ContextMenuItem[]): ContextMenuItem[] {
 
 describe('channel menu', () => {
   it('gives members read, link and notification options only', () => {
-    expect(ids(buildChannelItems(textCh))).toEqual(['mark-read', 'copy-link', 'notify-inherit', 'notify-all', 'notify-mentions', 'notify-mute'])
+    expect(ids(buildChannelItems(textCh))).toEqual(['mark-read', 'copy-link', 'notify-inherit', 'notify-all', 'notify-mentions', 'notify-nothing', 'notify-mute'])
   })
 
   it('adds edit, duplicate and delete for admins', () => {
@@ -198,7 +198,7 @@ describe('channel menu', () => {
   })
 
   it('voice channels have a chat, so read state and notifications too', () => {
-    expect(ids(buildChannelItems(voiceCh))).toEqual(['mark-read', 'copy-link', 'notify-inherit', 'notify-all', 'notify-mentions', 'notify-mute'])
+    expect(ids(buildChannelItems(voiceCh))).toEqual(['mark-read', 'copy-link', 'notify-inherit', 'notify-all', 'notify-mentions', 'notify-nothing', 'notify-mute'])
     chat.readStates = { [voiceCh.id]: readStateFixture({ channel_id: voiceCh.id, unread_count: 1, mention_count: 0 }) }
     chat.setNotificationLevel = vi.fn()
     const list = buildChannelItems(voiceCh)
@@ -212,13 +212,13 @@ describe('channel menu', () => {
 
   it('marks the current notification level and sets a new one', () => {
     chat.readStates = { t1: readStateFixture({ channel_id: 't1', unread_count: 2, mention_count: 0, notify_level: 'mentions' }) }
-    chat.notifySettings = { channels: [{ channel_id: 't1', level: 'mentions', muted_until: null }], categories: [] }
+    chat.notifySettings = { channels: [{ channel_id: 't1', level: 'mentions', muted_until: null }], categories: [], server: { level: 'all', muted_until: null, suppress_everyone: false } }
     chat.setNotificationLevel = vi.fn()
     const list = buildChannelItems(textCh)
     expect(checkedItem(list, 'notify-mentions').checked).toBe(true)
     expect(checkedItem(list, 'notify-all').checked).toBe(false)
     expect(menuItem(list, 'mark-read').disabled).toBe(false)
-    required(muteItems(list).at(-1)?.action)()
+    required(menuItem(list, 'notify-nothing').action)()
     expect(chat.setNotificationLevel).toHaveBeenCalledWith('t1', 'mute', null)
   })
 

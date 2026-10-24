@@ -365,7 +365,7 @@ describe('read state, presence and typing', () => {
   it('fetches read state and tolerates failed optimistic writes and empty action identifiers', async () => {
     const chat = setup()
     hidden(true)
-    http.handle = url => url === '/api/notification-settings' ? { channels: [], categories: [] } : [readStateFixture({ channel_id: ch.id, unread_count: 3, mention_count: 1 })]
+    http.handle = url => url === '/api/notification-settings' ? { channels: [], categories: [], server: { level: 'all', muted_until: null, suppress_everyone: false } } : [readStateFixture({ channel_id: ch.id, unread_count: 3, mention_count: 1 })]
     expect(await chat.fetchReadState()).toEqual({ [ch.id]: expect.objectContaining({ unread_count: 3 }) })
     await chat.setNotificationLevel(ch.id, 'mentions')
     expect(chat.notificationLevel(ch.id)).toBe('mentions')

@@ -92,6 +92,16 @@ no accounts on someone else's platform.
 - **Threads you can follow.** A thread reply notifies the thread's followers:
   the root's author, people who replied, people mentioned in a reply and
   anyone who pressed **Follow thread**.
+- **Notification settings per channel, category and server.** Right-click a
+  channel or a category header (or press Shift+F10) and choose
+  **Notifications**: all messages, mentions only, nothing, or "use the
+  category / server default", and **Mute for...** one hour, eight hours, a day
+  or until you turn it back on. **Notification settings** in the server menu
+  (and the account menu) set your default for the whole server, mute the
+  server, and can ignore `@all` and `@here`. A channel's own setting beats its
+  category's, which beats the server default; a small marker in the sidebar
+  shows a muted channel or one that only tells you about mentions. Push,
+  badges and mention counts follow the level that applies.
 - **Search filters** for author, channel, mentions, dates, attachments, links,
   polls, edited and pinned messages.
 - **Installable web app with Web Push** notifications, and a layout for phones.

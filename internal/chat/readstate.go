@@ -26,47 +26,50 @@ type ReadState struct {
 // voice channel's chat counts like a text channel).
 // Unread counts top-level messages by others since the last read; mentions
 // count any message (also thread replies) that mentions the user (@username,
-// @all, @here; see message_mentions) or replies to one of their messages. In a
+// @all, @here unless the member suppresses them; see message_mentions) or replies to one of their messages. In a
 // muted channel only messages addressed to the user count (by name, through a
 // role or as a reply; not @all or @here), the same ones that still notify.
 // Before the first read, "last read" is the sign-up.
 // Messages of members the caller blocked never count as mentions.
 // NotifyLevel is the effective level: the channel's own setting, else its
-// category's, else "all"; an expired mute counts as none (see ResolveNotify).
+// category's, else the member's server default, else "all"; an expired mute counts as none (see ResolveNotify).
 func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadState, error) {
 	rows, err := p.Query(ctx, `
 		SELECT c.id,
 		       count(m.id) FILTER (WHERE m.parent_id IS NULL),
 		       count(m.id) FILTER (WHERE NOT blocked.is_blocked AND (orig.user_id = $1 OR EXISTS (
-		           SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = $1))),
+		           SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = $1
+		             AND (mm.kind <> 1 OR NOT COALESCE(sn.suppress_everyone, FALSE))))),
 		       count(m.id) FILTER (WHERE NOT blocked.is_blocked AND (orig.user_id = $1 OR EXISTS (
 		           SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = $1 AND mm.kind <> 1))),
 		       cr.last_read_at,
 		       COALESCE(cr.notify_level, 'inherit'), cr.muted_until,
 		       COALESCE(cn.notify_level, 'inherit'), cn.muted_until,
+		       COALESCE(sn.notify_level, 'all'), sn.muted_until,
 		       NOW()
 		FROM channels c
 		JOIN users me ON me.id = $1
 		LEFT JOIN channel_reads cr ON cr.channel_id = c.id AND cr.user_id = $1
 		LEFT JOIN category_notify cn ON cn.category_id = c.category_id AND cn.user_id = $1
+		LEFT JOIN server_notify sn ON sn.user_id = $1
 		LEFT JOIN messages m ON m.channel_id = c.id AND m.user_id <> $1
 		     AND m.created_at > COALESCE(cr.last_read_at, me.created_at)
 		LEFT JOIN messages orig ON orig.id = m.reply_to_id
 		CROSS JOIN LATERAL (SELECT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = m.user_id) AS is_blocked) blocked
 		WHERE c.type <> 'dm'
-		GROUP BY c.id, cr.last_read_at, cr.notify_level, cr.muted_until, cn.notify_level, cn.muted_until
+		GROUP BY c.id, cr.last_read_at, cr.notify_level, cr.muted_until, cn.notify_level, cn.muted_until, sn.notify_level, sn.muted_until, sn.suppress_everyone
 		ORDER BY c.id`, user.ID)
 	if err != nil {
 		return nil, fmt.Errorf("read states: %w", err)
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (ReadState, error) {
 		var s ReadState
-		var ch, cat NotifySetting
+		var ch, cat, srv NotifySetting
 		var now time.Time
 		var addressed int
 		err := row.Scan(&s.ChannelID, &s.UnreadCount, &s.MentionCount, &addressed, &s.LastReadAt,
-			&ch.Level, &ch.MutedUntil, &cat.Level, &cat.MutedUntil, &now)
-		s.NotifyLevel = ResolveNotify(now, ch, cat)
+			&ch.Level, &ch.MutedUntil, &cat.Level, &cat.MutedUntil, &srv.Level, &srv.MutedUntil, &now)
+		s.NotifyLevel = ResolveNotify(now, ch, cat, srv)
 		if s.NotifyLevel == NotifyMute {
 			s.MentionCount = addressed
 		}

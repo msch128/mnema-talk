@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { ShieldCheck, Crown, Plus, FolderPlus, ChevronDown, X, CheckCheck, ScrollText } from '@lucide/vue'
+import { ShieldCheck, Crown, Plus, FolderPlus, ChevronDown, X, CheckCheck, ScrollText, Bell } from '@lucide/vue'
 import { usePermissionsStore } from '../stores/permissions'
 import { useOnboardingStore } from '../stores/onboarding'
 import { useAppVersionStore } from '../stores/appVersion'
 import { rulesOpen } from '../lib/communityRules'
+import { notifyDialogOpen } from '../lib/notifyDialog'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { t } from '../i18n'
 import { useDismissable } from '../composables/useDismissable'
 
@@ -15,11 +17,13 @@ const SERVER_NAME = 'Mnema Talk'
 const emit = defineEmits<{ 'open-admin': []; 'open-legal': []; 'create-channel': []; 'create-category': []; 'mark-all-read': [] }>()
 
 const permissions = usePermissionsStore()
+const features = useServerFeaturesStore()
 const onboarding = useOnboardingStore()
 // Only people who may open the console see that a new release is out.
 const versionStore = useAppVersionStore()
 const updateHint = computed(() => permissions.canOpenAdmin && versionStore.adminUpdateAvailable)
 const showRules = () => { rulesOpen.value = true }
+const showNotifications = () => { notifyDialogOpen.value = true }
 // The community's own name (Admin > Welcome & rules) sits under the product name.
 const subtitle = computed(() => onboarding.state?.community_name.trim() || t('sidebar.subtitle'))
 
@@ -162,6 +166,10 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('mark-all-read'))">
         <span class="truncate">{{ $t('sidebar.markAllRead') }}</span>
         <CheckCheck class="w-4 h-4 shrink-0" />
+      </button>
+      <button v-if="features.notifyLevelsV2" type="button" role="menuitem" tabindex="-1" :class="menuItemClass" data-testid="menu-notification-settings" @click="runMenuAction(showNotifications)">
+        <span class="truncate">{{ $t('menu.notificationSettings') }}</span>
+        <Bell class="w-4 h-4 shrink-0" />
       </button>
       <button v-if="onboarding.state?.rules_text" type="button" role="menuitem" tabindex="-1" :class="menuItemClass" data-testid="menu-community-rules" @click="runMenuAction(showRules)">
         <span class="truncate">{{ $t('menu.rules') }}</span>
