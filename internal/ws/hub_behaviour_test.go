@@ -94,7 +94,7 @@ func TestStatsCountDistinctUsersAndOccupiedRooms(t *testing.T) {
 	h.joinVoice(a, first)
 	h.joinVoice(b, second)
 	h.joinVoice(c, first)
-	want := Stats{Connections: 3, OnlineUsers: 2, VoiceRooms: 2, VoiceParticipants: 3}
+	want := Stats{Connections: 3, OnlineUsers: 2, Sessions: 2, VoiceRooms: 2, VoiceParticipants: 3}
 	if got := h.Stats(); got != want {
 		t.Fatalf("stats = %+v, want %+v", got, want)
 	}

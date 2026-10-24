@@ -152,6 +152,10 @@ nothing in `.env` has to change.
   `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
   channel (additive).
 
+#### Operator status
+
+- A dedicated **Admin → Status** page (feature key `ops.status`, endpoint `GET /api/admin/status`, Owner and Administrator only) provides an at-a-glance operational overview: version, available updates and auto-deploy status, database size and migration count, storage reachability and disk free space, backup status, live activity (active sessions, WebSocket connections, Talks and participants), and active operator warnings. See [operations.md](operations.md#operator-status).
+
 ### 1.0.x → 1.1.0
 
 Update with the procedure above and take the backup first. 1.1.0 only adds.

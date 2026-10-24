@@ -136,5 +136,6 @@ func (c *components) mountAdmin(adm chi.Router) {
 	c.botH.MountAdmin(adm)
 	c.mediaH.MountAdmin(adm)
 	c.emojiH.MountAdmin(adm)
+	adm.With(auth.RequirePerm(c.permSvc, perm.Administrator)).Get("/status", httpx.Handle(c.systemH.operatorStatus))
 	c.systemH.mountAdmin(adm)
 }

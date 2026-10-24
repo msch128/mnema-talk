@@ -4838,6 +4838,51 @@
         ],
         "type": "object"
       },
+      "server.ActivityStatus": {
+        "properties": {
+          "active_sessions": {
+            "type": "integer"
+          },
+          "active_talks": {
+            "type": "integer"
+          },
+          "connected_websocket_clients": {
+            "type": "integer"
+          },
+          "voice_participants": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "active_sessions",
+          "active_talks",
+          "connected_websocket_clients",
+          "voice_participants"
+        ],
+        "type": "object"
+      },
+      "server.BackupStatus": {
+        "properties": {
+          "hint": {
+            "example": "doc/operations.md#backups-and-restore",
+            "type": "string"
+          },
+          "last_backup_age": {
+            "example": "unknown",
+            "type": "string"
+          },
+          "last_restore_test_age": {
+            "example": "unknown",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hint",
+          "last_backup_age",
+          "last_restore_test_age"
+        ],
+        "type": "object"
+      },
       "server.DatabaseHealth": {
         "properties": {
           "applied_migrations": {
@@ -4853,6 +4898,32 @@
           },
           "reachable": {
             "type": "boolean"
+          }
+        },
+        "required": [
+          "applied_migrations",
+          "latest_migration",
+          "pending_migrations",
+          "reachable"
+        ],
+        "type": "object"
+      },
+      "server.DatabaseStatus": {
+        "properties": {
+          "applied_migrations": {
+            "type": "integer"
+          },
+          "latest_migration": {
+            "type": "string"
+          },
+          "pending_migrations": {
+            "type": "integer"
+          },
+          "reachable": {
+            "type": "boolean"
+          },
+          "size_bytes": {
+            "type": "integer"
           }
         },
         "required": [
@@ -5003,6 +5074,51 @@
           "configured",
           "from",
           "tls"
+        ],
+        "type": "object"
+      },
+      "server.OperatorStatus": {
+        "properties": {
+          "activity": {
+            "$ref": "#/components/schemas/server.ActivityStatus"
+          },
+          "auto_deploy": {
+            "$ref": "#/components/schemas/server.SelfUpdateStatus"
+          },
+          "backup": {
+            "$ref": "#/components/schemas/server.BackupStatus"
+          },
+          "database": {
+            "$ref": "#/components/schemas/server.DatabaseStatus"
+          },
+          "disk_free_bytes": {
+            "type": "integer"
+          },
+          "storage": {
+            "$ref": "#/components/schemas/server.StorageStatus"
+          },
+          "update": {
+            "$ref": "#/components/schemas/server.UpdateStatus"
+          },
+          "version": {
+            "$ref": "#/components/schemas/server.SystemVersion"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/opwarn.Warning"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "activity",
+          "auto_deploy",
+          "backup",
+          "database",
+          "storage",
+          "update",
+          "version",
+          "warnings"
         ],
         "type": "object"
       },
@@ -5400,6 +5516,24 @@
           "files",
           "reachable",
           "total_bytes"
+        ],
+        "type": "object"
+      },
+      "server.StorageStatus": {
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "reachable": {
+            "type": "boolean"
+          },
+          "used_bytes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "configured",
+          "reachable"
         ],
         "type": "object"
       },
@@ -12703,6 +12837,71 @@
         "summary": "Edit a role",
         "tags": [
           "Roles"
+        ]
+      }
+    },
+    "/api/admin/status": {
+      "get": {
+        "description": "Operator status overview: server version, update state, database and storage stats, backup state, activity counts and warnings. Owner or Administrator only (403 otherwise).",
+        "operationId": "getAdminStatus",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.OperatorStatus"
+                }
+              }
+            },
+            "description": "Operator status overview.",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and members with the Administrator permission may do this."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Operator status",
+        "tags": [
+          "Admin"
         ]
       }
     },
