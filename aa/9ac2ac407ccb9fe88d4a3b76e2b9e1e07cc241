@@ -1,0 +1,76 @@
+web/src/components/TalkAccessPresets.vue
+  s_06fcde5dbef956::t_024087ad2316ae 1-66,68-130
+  s_06fcde5dbef956::t_75d606625ed8ac 67
+web/src/components/VoiceStage.vue
+  s_06fcde5dbef956::t_5568821b7e3db6 254
+web/src/components/TalkSettingsDialog.vue
+  s_06fcde5dbef956::t_c0d703539db1f0 1-80,83-85
+  s_06fcde5dbef956::t_ac4b5c96bf9cea 81-82
+web/src/App.vue
+  s_06fcde5dbef956::t_e77143f4f91b28 47,382
+web/src/components/SidebarChannelRowTalks.test.ts
+  s_06fcde5dbef956::t_8c1a21a6e50360 1-71
+web/src/components/TalkParticipants.vue
+  s_06fcde5dbef956::t_5568821b7e3db6 12,18-20,103
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_bd5394f091694e 2439-2445
+  s_06fcde5dbef956::t_acfe6a1e6c2a37 914-937
+web/src/components/TalkHeader.vue
+  s_06fcde5dbef956::t_5568821b7e3db6 4-6,9-12,20,22-23,36-38,56,101-110
+  s_06fcde5dbef956::t_14c17b8fcaadda 111-112
+web/src/components/TalkSettingsDialog.test.ts
+  s_06fcde5dbef956::t_21a29644e5418a 76
+  s_06fcde5dbef956::t_8b52abf45cfddb 1-75,77-129
+web/src/composables/useNavMenus.ts
+  s_06fcde5dbef956::t_e77143f4f91b28 15,22-23,101-108,139
+web/src/components/MessageRow.vue
+  s_06fcde5dbef956::t_668d07cfbf2ad8 186
+web/src/components/TalkSettingsHost.vue
+  s_06fcde5dbef956::t_1c34160619a132 1-18
+web/src/components/DmTalkActions.vue
+  s_06fcde5dbef956::t_a5b222b40f8579 1-88
+e2e/tests/talk-lobby.spec.ts
+  s_06fcde5dbef956::t_51ef3a2ee92421 1-82
+web/src/lib/talkPresets.test.ts
+  s_06fcde5dbef956::t_a8f6e12f75a354 1-58
+web/src/components/TalkLeaderMark.vue
+  s_06fcde5dbef956::t_c8155692a70318 1-17
+web/src/components/MessageEmbeds.vue
+  s_06fcde5dbef956::t_668d07cfbf2ad8 9,12-14,36-37,39,77
+web/src/components/TalkInvite.test.ts
+  s_06fcde5dbef956::t_fb54bae1a1448c 1-136
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_bd5394f091694e 2439-2445
+  s_06fcde5dbef956::t_acfe6a1e6c2a37 914-937
+web/src/lib/talkPresets.ts
+  s_06fcde5dbef956::t_9b18cecd00ff35 1-59
+web/src/lib/talks.ts
+  s_06fcde5dbef956::t_d16a6666454df1 1-66
+web/src/components/SidebarChannelRow.vue
+  s_06fcde5dbef956::t_5568821b7e3db6 8,16,130-135,137,185,229
+web/src/components/TalkInviteCard.vue
+  s_06fcde5dbef956::t_3e77148be2fb91 1-50
+web/src/components/TalkSettingsHost.test.ts
+  s_06fcde5dbef956::t_78752a7e4a5ea6 62,64
+  s_06fcde5dbef956::t_6a6d07a5cc91de 1-61,63,65-67
+doc/talks.md
+  s_06fcde5dbef956::t_08bdb1096b54ee 82
+web/src/components/ChatHeader.vue
+  s_06fcde5dbef956::t_b88957bf3e2bf7 16,96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aa9ac2ac407ccb9fe88d4a3b76e2b9e1e07cc241",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
