@@ -1,0 +1,123 @@
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_2c791be852b3ce 463-465,1228-1229,1286-1296,2110-2114
+internal/auth/service.go
+  s_06fcde5dbef956::t_2cabf4e8ebd98f 73-75
+  s_06fcde5dbef956::t_b98c6f2ec160d4 208-209
+  s_06fcde5dbef956::t_2abc47d8dc64ae 214
+web/src/lib/native/nativeRoutes.ts
+  s_06fcde5dbef956::t_2e82a3fe930227 42-45,47
+internal/auth/status_expiry.go
+  s_06fcde5dbef956::t_8d4f0d88affcc6 1-62
+internal/auth/native_lease.go
+  s_06fcde5dbef956::t_755e89f8956558 45
+web/src/components/EditNameDialog.test.ts
+  s_06fcde5dbef956::t_a1274f342c7edd 84,87-90,94-113
+api/openapi.json
+  s_06fcde5dbef956::t_34cc4011b0567f 195-199,658-662,912-916,1823,2633-2637,3655,27000
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_2c791be852b3ce 463-465,1228-1229,1286-1296,2110-2114
+web/src/lib/statusExpiry.ts
+  s_06fcde5dbef956::t_58bce31f0a23e3 1-41
+internal/chat/channels.go
+  s_06fcde5dbef956::t_a81ee4935138fc 46,282-283
+doc/architecture.md
+  s_06fcde5dbef956::t_5ff6f8e62b7cb9 359-371
+web/src/lib/statusExpiry.test.ts
+  s_06fcde5dbef956::t_c6e06259cb3907 1-33
+doc/operations.md
+  s_06fcde5dbef956::t_b14dc0f34a778b 522-523
+internal/server/health.go
+  s_06fcde5dbef956::t_06753bf0138761 46
+web/src/components/ProfileStatusExpiry.test.ts
+  s_06fcde5dbef956::t_b15ab691c9d53f 1-96
+internal/auth/service_accounts.go
+  s_06fcde5dbef956::t_919fbb2d3d7aa2 220-242,247-250,252-253
+internal/chat/database_failures_integration_test.go
+  s_06fcde5dbef956::t_ecb1e24211b9ec 79
+README.md
+  s_06fcde5dbef956::t_db07a3f17b657a 88-95
+web/src/components/ChatHeader.vue
+  s_06fcde5dbef956::t_4f62c2fe2aafea 4
+  s_06fcde5dbef956::t_7417c6942732b4 78-94
+  s_06fcde5dbef956::t_3aebd4f560a46b 165-171
+  s_06fcde5dbef956::t_89fc9b10bbf5e8 46-50,54
+internal/server/router_build.go
+  s_06fcde5dbef956::t_c4de54db07698c 112
+doc/moderation.md
+  s_06fcde5dbef956::t_a81ee4935138fc 100
+web/src/components/SlowModePicker.vue
+  s_06fcde5dbef956::t_b89dab839d130f 24-25,28-29
+  s_06fcde5dbef956::t_f39866b5c44ac7 1-2,4-23,26-27,30-95
+  s_06fcde5dbef956::t_e2c9faacd99df7 3
+internal/db/migrations/0061_status_expiry.sql
+  s_06fcde5dbef956::t_5868fd17446c00 1-9
+  s_06fcde5dbef956::t_22b8db5af723f8 10-13
+internal/auth/validation_paths_test.go
+  s_06fcde5dbef956::t_fdd2b61b847628 167
+web/src/components/ProfileStatus.vue
+  s_06fcde5dbef956::t_3fb93173c059ad 129-148,150-155
+  s_06fcde5dbef956::t_784f02d392131a 40-42,46-54,58-60,63
+  s_06fcde5dbef956::t_ad5304f22c2c7c 66-69
+  s_06fcde5dbef956::t_6d1776ec299ed0 108
+  s_06fcde5dbef956::t_a74c845a568a38 26
+  s_06fcde5dbef956::t_b160a97660114a 10-12
+  s_06fcde5dbef956::t_afd3680a78fd34 64-65,70
+  s_06fcde5dbef956::t_21244e06dbca53 27-33
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_15b6ab0df96f39 110
+internal/server/message_moderation_integration_test.go
+  s_06fcde5dbef956::t_ee8def5cd0344d 60,65-68
+  s_06fcde5dbef956::t_9b6702c146a24a 69-70
+internal/auth/paths_integration_test.go
+  s_06fcde5dbef956::t_ecb1e24211b9ec 447
+  s_06fcde5dbef956::t_cf4c80bb55b489 269
+doc/upgrade.md
+  s_06fcde5dbef956::t_565bb19cd201fa 129-152
+internal/chat/slowmode_integration_test.go
+  s_06fcde5dbef956::t_ecb1e24211b9ec 22,30
+web/src/components/EditNameDialog.vue
+  s_06fcde5dbef956::t_0b7de4a53e370b 94,97-98,100-106
+  s_06fcde5dbef956::t_248f42de3d80ce 110,112-113
+  s_06fcde5dbef956::t_0b8dada992acd9 13
+  s_06fcde5dbef956::t_cfc3b11a7f52f1 126
+  s_06fcde5dbef956::t_6230da083efb8d 27,30
+internal/auth/handler_profile.go
+  s_06fcde5dbef956::t_513686e9c4ebd9 333-337
+  s_06fcde5dbef956::t_b95669d4abcc93 281
+  s_06fcde5dbef956::t_2d6bc1c60394e2 250
+  s_06fcde5dbef956::t_a62e75e585dee5 7
+  s_06fcde5dbef956::t_e724ddb2952c0c 285
+internal/server/status_expiry_integration_test.go
+  s_06fcde5dbef956::t_810b0787074569 1-51,56,60-136
+  s_06fcde5dbef956::t_118c7ef2d5ad7e 52-55,57-59
+internal/chat/handler_channels.go
+  s_06fcde5dbef956::t_a81ee4935138fc 372
+web/src/stores/chat/presence.ts
+  s_06fcde5dbef956::t_a873058d8f98ac 72
+  s_06fcde5dbef956::t_4e9407fa3a376d 78
+doc/api-stability.md
+  s_06fcde5dbef956::t_dc5948b65fb958 29
+web/src/components/ChatHeaderTopic.test.ts
+  s_06fcde5dbef956::t_66303a59ad1a8e 1-40
+internal/chat/members.go
+  s_06fcde5dbef956::t_fa0a76e37baf7c 34
+  s_06fcde5dbef956::t_360f821834b307 48
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_8be20dc45ca9fd 83,108,396,402,561,580,1130,1615,1638,2243
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "846d41ba6ba404e0d6ee85e064554628cc3c1289",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
