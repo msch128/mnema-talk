@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
+import type { ChannelType } from '../types/domain'
 // The channel or category being dragged, following the pointer (above the
 // finger on touch, so it stays visible).
 import { computed } from 'vue'
-import { ChevronDown, Hash, Volume2 } from '@lucide/vue'
+import { ChevronDown, Hash, Volume2, MessagesSquare } from '@lucide/vue'
 
 const props = defineProps({
-  item: { type: Object as PropType<{ kind: 'channel' | 'category'; name: string; type?: 'text' | 'voice' }>, required: true }, // { kind, name, type }
+  item: { type: Object as PropType<{ kind: 'channel' | 'category'; name: string; type?: ChannelType }>, required: true }, // { kind, name, type }
   x: { type: Number, default: 0 },
   y: { type: Number, default: 0 },
   touch: { type: Boolean, default: false }
@@ -29,6 +30,7 @@ const style = computed(() => {
     >
       <ChevronDown v-if="item.kind === 'category'" class="w-3.5 h-3.5 shrink-0 text-mnema-tertiary" />
       <Volume2 v-else-if="item.type === 'voice'" class="w-4 h-4 shrink-0 text-mnema-tertiary" />
+      <MessagesSquare v-else-if="item.type === 'forum'" class="w-4 h-4 shrink-0 text-mnema-tertiary" />
       <Hash v-else class="w-4 h-4 shrink-0 text-mnema-tertiary" />
       <span :class="['truncate', item.kind === 'category' && 'text-xs font-semibold uppercase tracking-wide']">{{ item.name }}</span>
     </div>

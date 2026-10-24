@@ -134,6 +134,8 @@ export interface ServerEventPayloads {
   /** Joining a Create-a-Talk lobby opened this Talk: join it like any other. */
   talk_moved: { from_channel_id: string; channel_id: string }
   media_handshake: { channel_id: string; user_id: string; wire: string }
+  /** Tags in a forum channel changed. */
+  forum_tags_changed: { channel_id: string }
 }
 
 export type EventUnion<Payloads> = { [K in keyof Payloads]: { type: K; payload: Payloads[K] } }[keyof Payloads]
@@ -346,7 +348,8 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['talk_leader', payload => isIdentifier(payload['channel_id']) && (payload['leader_id'] === null || isIdentifier(payload['leader_id']))],
   ['talk_moved', payload => isIdentifier(payload['from_channel_id']) && isIdentifier(payload['channel_id'])],
   ['media_handshake', payload => isIdentifier(payload['channel_id']) && isIdentifier(payload['user_id'])
-    && isString(payload['wire'], 48_000) && payload['wire'] !== '']
+    && isString(payload['wire'], 48_000) && payload['wire'] !== ''],
+  ['forum_tags_changed', payload => isIdentifier(payload['channel_id']) && onlyFields(payload, ['channel_id'])],
 ])
 
 // The check registered for an event type. The wire-controlled name is only
@@ -376,7 +379,7 @@ const SERVER_EVENT_TYPES = new Set<string>([
   'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
-  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'media_handshake'
+  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'media_handshake', 'forum_tags_changed'
 ])
 
 /** Unknown event names stay ignorable for forward compatibility; malformed

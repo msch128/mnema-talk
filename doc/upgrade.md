@@ -136,6 +136,7 @@ nothing in `.env` has to change.
 | Migration | Adds |
 |---|---|
 | 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
+| 0069 | `channels.type = 'forum'`, `messages.title`, `messages.is_locked`, `forum_tags` and `forum_post_tags`: Forum channels with tag management and post threads (see [Forum channels](forums.md)). Existing rows keep null and false. |
 
 #### Talks
 
@@ -151,6 +152,13 @@ nothing in `.env` has to change.
   `talk_unavailable`. REST: `PATCH /api/talks/{id}`, `POST /api/talks/{id}/invites`,
   `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
   channel (additive).
+
+#### Forum channels
+
+- Admins can create channels with type `'forum'` (`Manage channels`). A forum channel holds posts; each post is a root message with a required title (<=100 characters), an initial message, and up to 5 optional tags. Replies form a standard thread (`messages.parent_id`).
+- Up to 20 admin-defined tags per forum channel (name <=20 characters, optional emoji <=32 characters). Members can filter posts by tag and sort by latest activity or creation.
+- Moderation: Members holding *Manage messages* can lock posts to prevent replies from regular users and update tags on others' posts.
+- Feature name `channels.forum` in `GET /api/health`. New event `forum_tags_changed`. REST: `GET/POST /api/channels/{id}/tags`, `PATCH/DELETE /api/channels/{id}/tags/{tagID}`, `GET/POST /api/channels/{id}/posts`, and `PATCH /api/channels/{id}/posts/{postID}`.
 
 ### 1.0.x → 1.1.0
 

@@ -103,6 +103,7 @@ func (h *Handler) Mount(r chi.Router) {
 	h.mountForward(r)
 	h.mountDMs(r)
 	h.mountTalks(r)
+	h.mountForum(r)
 	history := r
 	if h.EditHistoryLimit != nil {
 		history = r.With(h.EditHistoryLimit.By(auth.UserKey))

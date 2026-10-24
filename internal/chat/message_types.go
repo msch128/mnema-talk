@@ -80,6 +80,14 @@ type Message struct {
 	// message, because readers differ in what they may see. Each reader gets
 	// the original (with its ids) from GET /api/messages/{id}/forward.
 	Forward *ForwardRef `json:"forward,omitempty" binding:"optional"`
+	// Title is the required title of a root post in a forum channel (max 100 characters).
+	Title *string `json:"title,omitempty" binding:"optional" maxLength:"100"`
+	// IsLocked marks a forum post as locked: only moderators can post replies.
+	IsLocked bool `json:"is_locked,omitempty" binding:"optional"`
+	// Tags are the forum tags attached to a forum post (up to 5 tags).
+	Tags []ForumTag `json:"tags,omitempty" binding:"optional"`
+	// LastActivityAt is the timestamp of the latest reply in the thread, or the post's creation time.
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty" binding:"optional" format:"date-time"`
 }
 
 // ForwardRef marks a forwarded message.
