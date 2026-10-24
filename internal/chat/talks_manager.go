@@ -2,7 +2,6 @@ package chat
 
 import (
 	"context"
-	"log/slog"
 	"sync"
 	"time"
 
@@ -48,7 +47,11 @@ type TalkManager struct {
 
 	mu    sync.Mutex
 	talks map[uuid.UUID]*liveTalk
-	queue chan presenceEvent
+	// pending holds the join and leave events not applied yet, oldest first.
+	// It never drops one: a lost join would let an occupied Talk be removed,
+	// a lost leave would keep an empty one forever.
+	pending []presenceEvent
+	wake    chan struct{}
 }
 
 // liveTalk is what the manager knows of one open temporary Talk.
@@ -67,7 +70,7 @@ type presenceEvent struct {
 // NewTalkManager readies m for use; Run starts it.
 func NewTalkManager(m *TalkManager) *TalkManager {
 	m.talks = map[uuid.UUID]*liveTalk{}
-	m.queue = make(chan presenceEvent, 1024)
+	m.wake = make(chan struct{}, 1)
 	if m.EmptyGrace <= 0 {
 		m.EmptyGrace = DefaultTalkEmptyGrace
 	}
@@ -83,25 +86,27 @@ func (m *TalkManager) Run(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case ev := <-m.queue:
-			m.apply(ev)
+		case <-m.wake:
+			for m.applyNext() {
+			}
 		}
 	}
 }
 
 // OnPresence is the hub's Presence hook. It must not block, so the event is
-// queued; when the queue is full the event is dropped and logged.
+// queued (without a bound: only events of open temporary Talks are kept, and
+// joining them is rate limited) and applied by Run.
 func (m *TalkManager) OnPresence(user, channel uuid.UUID, joined bool) {
 	m.mu.Lock()
-	_, ours := m.talks[channel]
-	m.mu.Unlock()
-	if !ours {
+	if _, ours := m.talks[channel]; !ours {
+		m.mu.Unlock()
 		return
 	}
+	m.pending = append(m.pending, presenceEvent{user, channel, joined})
+	m.mu.Unlock()
 	select {
-	case m.queue <- presenceEvent{user, channel, joined}:
-	default:
-		slog.Warn("talks: presence queue full, event dropped", "channel", channel)
+	case m.wake <- struct{}{}:
+	default: // Run is already woken and drains everything pending
 	}
 }
 
