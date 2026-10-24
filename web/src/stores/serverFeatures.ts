@@ -38,6 +38,7 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     dm: computed(() => has('dm')),
     blocks: computed(() => has('blocks')),
     reports: computed(() => has('reports')),
+    automod: computed(() => has('automod')),
     profileBanner: computed(() => has('profile.banner')),
     anonymousPolls: computed(() => has('polls.anonymous')),
     channelAutoDelete: computed(() => has('channels.auto_delete')),

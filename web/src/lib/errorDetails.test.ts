@@ -27,7 +27,9 @@ describe('server reasons reach the user in their language', () => {
     ['INVALID_INPUT', 'the image must be between 1 and 4096 pixels on each edge', /4096 Pixel/],
     ['INVALID_INPUT', 'endpoint must be an https URL of a push service on a public address', /Push-Abo/],
     ['INVALID_INPUT', 'p256dh must be a P-256 public key and auth a 16 byte secret, both base64url', /Push-Abo/],
-    ['INVALID_INPUT', 'duration must be one of 1h, 1d', /Laufzeiten/]
+    ['INVALID_INPUT', 'duration must be one of 1h, 1d', /Laufzeiten/],
+    ['INVALID_INPUT', 'Your message was not sent: it breaks the server rule "No spam" (automod). The moderators can see this.', /Serverregel „No spam“/],
+    ['INVALID_INPUT', 'Your edit was not saved: it breaks the server rule "Links" (automod). The moderators can see this.', /Änderung wurde nicht gespeichert.*„Links“/]
   ])('%s "%s"', (code, message, expected) => {
     expect(errorMessage(code, message)).toMatch(expected)
   })

@@ -144,6 +144,7 @@ of the pre-update backup (see "Rollback" above).
 | 0063 | `poll_voters`, `poll_anon_ballots`, `poll_options.anon_votes`, `polls.anon_voters` and a trigger on `poll_votes` (anonymous polls); `channels.auto_delete_days` with its checks. |
 | 0064 | `user_sessions`: one row per browser session (device label, created, last active). |
 | 0065 | `instance_settings.session_inactivity_days` (1 to 365, default 7). |
+| 0066 | `automod_rules` and `automod_state` with the default rules (below), and the columns `source`, `automod_rule`, `automod_outcome` and `hit_count` of `message_reports` (existing reports keep `source = 'member'`). |
 
 #### Talks
 
@@ -228,6 +229,35 @@ under *Admin* > *Welcome & rules*; see "Sessions and inactivity sign-out" in
   and how it is audited (`channel.auto_delete_set`, `channel.auto_delete_run`).
   New route `PUT /api/admin/channels/{id}/auto-delete` and the additive
   response field `auto_delete_days` of channels.
+
+#### Automod
+
+**Defaults at the upgrade.** Automod is on after the upgrade, with conservative
+rules that every server gets the same way (new servers included). Look at
+them under **Admin > Automod** and change or delete what does not suit you:
+
+| Rule | Default |
+|---|---|
+| Mention spam | on: a message with more than **10** different mentions is blocked |
+| New accounts | on: accounts younger than **10 minutes** cannot post links (blocked) |
+| Raid protection | on: more than **10 joins within 10 seconds** time the newcomers out for 10 minutes and add one alert to the reports queue |
+| Blocked words | **off**, word list empty |
+| Links | **off** (block-list mode, empty list) |
+
+The Owner and Administrators are never checked. The effect you may notice: a
+member who joined a few minutes ago gets "it breaks the server rule" when
+posting a link, and a burst of invitations used at once (a party of more than 10
+within 10 seconds) is held back for 10 minutes; delete or loosen the rule if
+that does not suit your community. Nothing changes for existing messages.
+
+**API.** Mostly additive: the report objects gain `source`, `automod_rule`,
+`automod_outcome` and `hit_count`, `kind` may be `alert` and `category`
+`automod`. New routes `/api/admin/automod*`. The health `features` list gains
+`automod`. **One contract change:** `message_id` and `channel_id` of an admin
+report entry (`GET /api/admin/reports`, `/reports/{id}`) are now optional: an
+automod entry about a blocked message (never stored) has no `message_id`, and a
+raid alert has neither. Clients must treat both as optional; reports filed by
+members always carry them.
 
 ### 1.0.x → 1.1.0
 

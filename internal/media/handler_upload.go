@@ -117,7 +117,7 @@ func (h *Handler) prepareUploadRequest(w http.ResponseWriter, r *http.Request, u
 
 func (h *Handler) insertUploadMessage(ctx context.Context, chID uuid.UUID, user *auth.User, in *storedUpload, target *uploadTarget) (uuid.UUID, error) {
 	msgID, err := chat.InsertMessage(ctx, h.DB, h.Online, chat.NewMessage{
-		ChannelID: chID, UserID: user.ID, Content: target.content, ParentID: target.parentID, ReplyToID: target.replyToID,
+		ChannelID: chID, UserID: user.ID, Content: target.content, ParentID: target.parentID, ReplyToID: target.replyToID, HasAttachment: true,
 	}, func(tx pgx.Tx, msgID uuid.UUID) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO media (id, uploader_id, channel_id, message_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes)

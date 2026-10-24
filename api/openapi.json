@@ -1029,6 +1029,204 @@
         ],
         "type": "object"
       },
+      "automod.Rule": {
+        "properties": {
+          "action": {
+            "description": "Action is what a hit does to the message; raid protection only flags.",
+            "enum": [
+              "block",
+              "flag"
+            ],
+            "type": "string"
+          },
+          "config": {
+            "$ref": "#/components/schemas/automod.Settings"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "exempt_channels": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "exempt_roles": {
+            "description": "ExemptRoles and ExemptChannels are skipped by the rule.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "words",
+              "links",
+              "mentions",
+              "new_account",
+              "raid"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "description": "TimeoutSeconds, when above 0, also times the author out for that long.",
+            "maximum": 2419200,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "config",
+          "enabled",
+          "exempt_channels",
+          "exempt_roles",
+          "id",
+          "kind",
+          "name",
+          "timeout_seconds",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "automod.RuleInput": {
+        "properties": {
+          "action": {
+            "enum": [
+              "block",
+              "flag"
+            ],
+            "type": "string"
+          },
+          "config": {
+            "$ref": "#/components/schemas/automod.Settings"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "exempt_channels": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "exempt_roles": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "words",
+              "links",
+              "mentions",
+              "new_account",
+              "raid"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "maximum": 2419200,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "action",
+          "config",
+          "enabled",
+          "kind",
+          "name"
+        ],
+        "type": "object"
+      },
+      "automod.Settings": {
+        "properties": {
+          "domains": {
+            "description": "Domains (links): the domains of the lists; a domain covers its subdomains.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "joins": {
+            "description": "Joins and WindowSeconds (raid): more than Joins new accounts within\nWindowSeconds count as a raid.",
+            "maximum": 200,
+            "minimum": 2,
+            "type": "integer"
+          },
+          "max_age_seconds": {
+            "description": "MaxAgeSeconds (new_account): accounts younger than this are restricted\n(60 seconds to 30 days).",
+            "type": "integer"
+          },
+          "max_mentions": {
+            "description": "MaxMentions (mentions): a message with more distinct mentions breaks the rule.",
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "mode": {
+            "description": "Mode (links): block all links, allow only the listed domains, or block\nthe listed domains.",
+            "enum": [
+              "block_all",
+              "allow_list",
+              "block_list"
+            ],
+            "type": "string"
+          },
+          "restrict": {
+            "description": "Restrict (new_account): what a young account may not do.",
+            "enum": [
+              "links",
+              "attachments",
+              "links_and_attachments",
+              "everything"
+            ],
+            "type": "string"
+          },
+          "restrict_seconds": {
+            "description": "RestrictSeconds (raid): how long new joiners stay restricted (timed out),\n60 seconds to a day.",
+            "type": "integer"
+          },
+          "window_seconds": {
+            "maximum": 3600,
+            "minimum": 5,
+            "type": "integer"
+          },
+          "words": {
+            "description": "Words (words): blocked words and phrases, matched as whole words without\nregard to case; \"*\" in an entry stands for any run of letters and digits.",
+            "items": {
+              "maxLength": 64,
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "bot.Access": {
         "properties": {
           "channels": {
@@ -3277,12 +3475,26 @@
       },
       "chat.Report": {
         "properties": {
+          "automod_outcome": {
+            "description": "AutomodOutcome says what the rule did: blocked the message, only\nflagged it, or raised a raid alert.",
+            "enum": [
+              "blocked",
+              "flagged",
+              "alert"
+            ],
+            "type": "string"
+          },
+          "automod_rule": {
+            "description": "AutomodRule names the rule of an automod entry, as it was when it hit.",
+            "type": "string"
+          },
           "category": {
             "enum": [
               "spam",
               "harassment",
               "illegal",
-              "other"
+              "other",
+              "automod"
             ],
             "type": "string"
           },
@@ -3298,18 +3510,25 @@
             "format": "date-time",
             "type": "string"
           },
+          "hit_count": {
+            "description": "HitCount counts the hits merged into an automod entry (1 for a report).",
+            "type": "integer"
+          },
           "id": {
             "format": "uuid",
             "type": "string"
           },
           "kind": {
+            "description": "Kind is channel or dm for a reported message, alert for an automod\nalert that is about no message (a raid).",
             "enum": [
               "channel",
-              "dm"
+              "dm",
+              "alert"
             ],
             "type": "string"
           },
           "message_id": {
+            "description": "MessageID is left out for an automod entry about a blocked message\n(it was never stored) and for an alert.",
             "format": "uuid",
             "type": "string"
           },
@@ -3334,6 +3553,14 @@
           "resolved_by": {
             "$ref": "#/components/schemas/chat.ReportParty"
           },
+          "source": {
+            "description": "Source is member for a report a member filed, automod for an entry the\nautomod rules made (no Reporter then).",
+            "enum": [
+              "member",
+              "automod"
+            ],
+            "type": "string"
+          },
           "status": {
             "enum": [
               "open",
@@ -3348,7 +3575,6 @@
           "created_at",
           "id",
           "kind",
-          "message_id",
           "note",
           "status"
         ],
@@ -3375,12 +3601,26 @@
       },
       "chat.ReportDetail": {
         "properties": {
+          "automod_outcome": {
+            "description": "AutomodOutcome says what the rule did: blocked the message, only\nflagged it, or raised a raid alert.",
+            "enum": [
+              "blocked",
+              "flagged",
+              "alert"
+            ],
+            "type": "string"
+          },
+          "automod_rule": {
+            "description": "AutomodRule names the rule of an automod entry, as it was when it hit.",
+            "type": "string"
+          },
           "category": {
             "enum": [
               "spam",
               "harassment",
               "illegal",
-              "other"
+              "other",
+              "automod"
             ],
             "type": "string"
           },
@@ -3396,18 +3636,25 @@
             "format": "date-time",
             "type": "string"
           },
+          "hit_count": {
+            "description": "HitCount counts the hits merged into an automod entry (1 for a report).",
+            "type": "integer"
+          },
           "id": {
             "format": "uuid",
             "type": "string"
           },
           "kind": {
+            "description": "Kind is channel or dm for a reported message, alert for an automod\nalert that is about no message (a raid).",
             "enum": [
               "channel",
-              "dm"
+              "dm",
+              "alert"
             ],
             "type": "string"
           },
           "message_id": {
+            "description": "MessageID is left out for an automod entry about a blocked message\n(it was never stored) and for an alert.",
             "format": "uuid",
             "type": "string"
           },
@@ -3435,6 +3682,14 @@
           "snapshot": {
             "$ref": "#/components/schemas/chat.ReportSnapshot"
           },
+          "source": {
+            "description": "Source is member for a report a member filed, automod for an entry the\nautomod rules made (no Reporter then).",
+            "enum": [
+              "member",
+              "automod"
+            ],
+            "type": "string"
+          },
           "status": {
             "enum": [
               "open",
@@ -3449,7 +3704,6 @@
           "created_at",
           "id",
           "kind",
-          "message_id",
           "note",
           "snapshot",
           "status"
@@ -4520,6 +4774,25 @@
           "deleted_files",
           "total_files",
           "total_size_bytes"
+        ],
+        "type": "object"
+      },
+      "moderation.AutomodList": {
+        "properties": {
+          "raid_until": {
+            "description": "RaidUntil is set while raid protection is restricting newcomers.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/automod.Rule"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "rules"
         ],
         "type": "object"
       },
@@ -6940,6 +7213,403 @@
         "summary": "List audit log entries",
         "tags": [
           "Admin"
+        ]
+      }
+    },
+    "/api/admin/automod": {
+      "get": {
+        "description": "The automod rules in the order they were made, and the end of the running raid restriction if there is one. Needs the Administrator permission (the Owner always). The rules check every new or edited message and every sign-up; see doc/moderation.md.",
+        "operationId": "getAutomod",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/moderation.AutomodList"
+                }
+              }
+            },
+            "description": "The rules."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Administrator permission."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List automod rules",
+        "tags": [
+          "Moderation"
+        ]
+      }
+    },
+    "/api/admin/automod/rules": {
+      "post": {
+        "description": "Adds a rule: blocked words, link filter, mention spam, new-account protection or raid protection (only one). At most 25 rules. Needs the Administrator permission. Recorded in the audit log as automod.rule_create.",
+        "operationId": "createAutomodRule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/automod.RuleInput"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/automod.Rule"
+                }
+              }
+            },
+            "description": "The rule."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Administrator permission."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: 25 rules exist, or raid protection exists already."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Create an automod rule",
+        "tags": [
+          "Moderation"
+        ]
+      }
+    },
+    "/api/admin/automod/rules/{id}": {
+      "delete": {
+        "description": "Removes a rule. The entries it already made in the moderation queue stay. Needs the Administrator permission. Recorded in the audit log as automod.rule_delete.",
+        "operationId": "deleteAutomodRule",
+        "parameters": [
+          {
+            "description": "Rule ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Administrator permission."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Delete an automod rule",
+        "tags": [
+          "Moderation"
+        ]
+      },
+      "put": {
+        "description": "Replaces every setting of a rule; its kind cannot change. Needs the Administrator permission. Recorded in the audit log as automod.rule_update.",
+        "operationId": "updateAutomodRule",
+        "parameters": [
+          {
+            "description": "Rule ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/automod.RuleInput"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/automod.Rule"
+                }
+              }
+            },
+            "description": "The rule."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Administrator permission."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Replace an automod rule",
+        "tags": [
+          "Moderation"
         ]
       }
     },

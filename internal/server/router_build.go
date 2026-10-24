@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/config"
@@ -20,6 +21,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/linkpreview"
 	"github.com/msch128/mnema-talk/internal/mailer"
 	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/msch128/mnema-talk/internal/moderation"
 	"github.com/msch128/mnema-talk/internal/onboarding"
 	"github.com/msch128/mnema-talk/internal/opwarn"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -58,6 +60,8 @@ type components struct {
 	onboardH *onboarding.Handler
 	mediaH   *media.Handler
 	emojiH   *emoji.Handler
+	modH     *moderation.Handler
+	engine   *automod.Engine
 
 	outgoing *webhook.Dispatcher
 	webhookH *webhook.Handler
@@ -161,6 +165,14 @@ func (c *components) newCore() {
 			DiskPath:     cfg.MediaDiskPath,
 		},
 	}
+}
+
+// newModeration builds the automod engine, makes the message and sign-up paths
+// use it and creates the handler of the moderators' routes.
+func (c *components) newModeration() {
+	c.engine = automod.New(c.d.DB, c.permSvc, c.pub, c.auditLog)
+	automod.Attach(c.d.DB, c.engine)
+	c.modH = &moderation.Handler{DB: c.d.DB, Perms: c.permSvc, Engine: c.engine}
 }
 
 // newMail builds the SMTP client when configured and hands it to the account
