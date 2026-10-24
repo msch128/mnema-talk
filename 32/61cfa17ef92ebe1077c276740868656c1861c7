@@ -1,0 +1,69 @@
+internal/push/direct.go
+  s_06fcde5dbef956::t_70c845c69a4646 1-82
+internal/push/direct_test.go
+  s_06fcde5dbef956::t_4f89b98372aac8 1-43
+internal/events/types.go
+  s_06fcde5dbef956::t_639576fcd150fb 53-54
+internal/later/visibility.go
+  s_06fcde5dbef956::t_d73b945aa4c5d7 1-97
+internal/later/scheduled_send.go
+  s_06fcde5dbef956::t_1c4c6a1f73e44e 1-175
+internal/later/scheduled.go
+  s_06fcde5dbef956::t_3178deebc65b1d 1-202
+api/openapi.json
+  s_06fcde5dbef956::t_f76bf681e80c6b 3849-4112,20604,20606-20607,20610,20624,20632-20640,20650,20660,20670,20680-20690,20726,20728,20732,20734-20735,20750,20752-20865,22420,22422-22423,22429,22433,22443,22479,22483-22492,22494-22497,22499-22507,22517,22527-22547,22583,22587-22592,22595,22597,22606-22607,22617,22627,22637,22639,22647-22935,22971-23231
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_fdd5351de0985e 44-45
+internal/later/service.go
+  s_06fcde5dbef956::t_b3771b61e61a95 88-90
+  s_06fcde5dbef956::t_042a06852273a4 1-87,91-95,99-115
+  s_06fcde5dbef956::t_639576fcd150fb 96-98
+internal/push/locales/texts.json
+  s_06fcde5dbef956::t_2adc1d037ddfac 11-16,27-32
+internal/later/reminders.go
+  s_06fcde5dbef956::t_647555330ec948 1-199
+internal/push/store.go
+  s_06fcde5dbef956::t_2adc1d037ddfac 206-211
+internal/later/scheduled_handler.go
+  s_06fcde5dbef956::t_7e184510bb948e 1-184
+internal/server/router_build.go
+  s_06fcde5dbef956::t_2e34ff702ee991 19,66,240,265,268,272-276
+  s_06fcde5dbef956::t_18617627ebba4e 277-278
+internal/push/payload.go
+  s_06fcde5dbef956::t_2adc1d037ddfac 183-187
+internal/server/health.go
+  s_06fcde5dbef956::t_2e34ff702ee991 46-47
+internal/server/router_routes.go
+  s_06fcde5dbef956::t_2e34ff702ee991 103
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_4b14bdabc074e5 2371-2512
+internal/push/service.go
+  s_06fcde5dbef956::t_2adc1d037ddfac 289-293
+internal/server/later_integration_test.go
+  s_06fcde5dbef956::t_8c42834df20557 1-422
+internal/chat/permissions.go
+  s_06fcde5dbef956::t_f182546c20bbc2 54-60
+internal/later/reminders_handler.go
+  s_06fcde5dbef956::t_92b4653bce2fdb 1-124
+internal/server/server.go
+  s_06fcde5dbef956::t_77778d31702e1c 20,82-84,158
+internal/db/migrations/0062_reminders_scheduled.sql
+  s_06fcde5dbef956::t_020f447bd16c98 23-25,32-33
+  s_06fcde5dbef956::t_31a8c9572b8738 1-22,26-31,34-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3261cfa17ef92ebe1077c276740868656c1861c7",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
