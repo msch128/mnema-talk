@@ -163,8 +163,8 @@ of the pre-update backup (see "Rollback" above).
   between Newest, Oldest, and Relevance.
 - **Feature flag.** Advertised as `search.filters.v3` in `GET /api/health`.
   A web client connected to an older server hides the new dropdown and sort toggle.
-| 0071 | `discord_imports` and `discord_import_objects`: the record of each Discord structure import and the ids it created, for undo (see [Import](import.md)). Nothing existing is touched. |
 | 0068 | `channels.is_stage`: Stages. Existing channels keep `false`; a Stage is never a lobby or a temporary Talk. |
+| 0071 | `discord_imports` and `discord_import_objects`: the record of each Discord structure import and the ids it created, for undo (see [Import](import.md)). Nothing existing is touched. |
 
 #### Talks
 
