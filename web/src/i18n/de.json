@@ -909,7 +909,32 @@
     "showParticipants": "Teilnehmer einblenden",
     "noSpeak": "Du darfst hier nicht sprechen.",
     "noVideo": "Du darfst hier kein Video teilen.",
-    "noConnect": "Du darfst diesem Talk nicht beitreten."
+    "noConnect": "Du darfst diesem Talk nicht beitreten.",
+    "lobbyUnavailable": "Der Talk konnte nicht geöffnet werden. Versuch es gleich noch einmal.",
+    "lobbyRateLimited": "Du hast in letzter Zeit viele Talks geöffnet. Versuch es in ein paar Minuten noch einmal.",
+    "leader": "Talk-Leitung",
+    "settings": "Talk-Einstellungen",
+    "settingsTitle": "Einstellungen für {name}",
+    "lobby": "Talk-Lobby („Talk erstellen“)",
+    "lobbyHint": "Wer diesem Talk beitritt, bekommt einen neuen Talk und leitet ihn. Niemand bleibt in der Lobby, und der neue Talk übernimmt Rechte und Limit der Lobby.",
+    "lobbyOpens": "Öffnet beim Beitreten einen neuen Talk",
+    "lobbySaved": "Lobby-Einstellung gespeichert.",
+    "followsLobby": "Dieser Talk übernimmt die Rechte seiner Lobby. Ändere sie in der Lobby.",
+    "presetsTitle": "Wer beitreten darf",
+    "presetEveryone": "Alle",
+    "presetEveryoneHint": "Alle Mitglieder, die diesen Ort sehen, dürfen beitreten.",
+    "presetRoles": "Nur diese Rollen",
+    "presetRolesHint": "Mitglieder ohne eine der gewählten Rollen sehen den Talk nicht und können nicht beitreten.",
+    "presetNoRoles": "Du kannst keine Rollen vergeben.",
+    "presetLimit": "Limit",
+    "presetLimitHint": "Höchstens so viele Mitglieder gleichzeitig. 0 heißt kein Limit.",
+    "limitLabel": "Mitgliederlimit",
+    "presetApply": "Übernehmen",
+    "presetApplied": "Talk aktualisiert.",
+    "inviteFrom": "{name} lädt dich in einen Talk ein",
+    "inviteGeneric": "Du bist in einen Talk eingeladen",
+    "inviteIn": "Du bist dabei",
+    "inviteUnavailable": "Für dich nicht verfügbar"
   },
   "admin": {
     "signedInAs": "Angemeldet als {name} (Owner)",
@@ -2411,7 +2436,13 @@
       "nobody": "Niemand",
       "nobodyHint": "Niemand kann ein Gespräch mit dir beginnen.",
       "failed": "Die Einstellung konnte nicht gespeichert werden. Versuche es noch einmal."
-    }
+    },
+    "startTalk": "Talk starten",
+    "startTalkFailed": "Der Talk konnte nicht gestartet werden.",
+    "noTalkLobby": "Diese Community hat noch keine Talk-Lobby, die du nutzen kannst. Admins können in den Einstellungen eines Talks eine daraus machen.",
+    "talkInvited": "Einladung gesendet.",
+    "inviteToTalk": "In meinen Talk einladen",
+    "inviteTalkFailed": "Die Einladung konnte nicht gesendet werden."
   },
   "blocks": {
     "title": "Blockierte Mitglieder",

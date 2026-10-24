@@ -8,6 +8,7 @@ import { createStatsPolling } from './statsPolling'
 import { playPausedRemoteAudio } from './remoteAudio'
 import type { AudioGuard } from './senderTuning'
 import { setGamingPttLease } from './voiceAudio'
+import type { PendingLobby } from './lobby'
 
 export type VoiceStore = ReturnType<typeof useVoiceStore>
 export type ChatStore = ReturnType<typeof useChatStore>
@@ -75,6 +76,8 @@ export interface RtcState {
   pendingCandidates: RTCIceCandidateInit[]
   /** Bumped by every join and leave: an older join that is still awaiting the microphone sees the change and backs out instead of finishing. */
   joinGeneration: number
+  /** The join of a Create-a-Talk lobby that waits for its Talk (lobby.ts). */
+  pendingLobby: PendingLobby | null
   screenAudioGuard: AudioGuard | null
   warnedScreenAudioTracks: WeakSet<MediaStreamTrack>
 
@@ -150,6 +153,7 @@ export function createRtcState(): RtcState {
     signalingChain: Promise.resolve(),
     pendingCandidates: [],
     joinGeneration: 0,
+    pendingLobby: null,
     screenAudioGuard: null,
     warnedScreenAudioTracks: new WeakSet(),
     testAudioStream: null,
