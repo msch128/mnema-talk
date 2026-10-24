@@ -1,0 +1,33 @@
+doc/events.md
+  s_06fcde5dbef956::t_49ac7f6336db7e 13
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_4f7f45cb4632ff 136
+doc/upgrade.md
+  s_06fcde5dbef956::t_139a04e5fa43a4 139,160
+internal/db/migrations/0070_events.sql
+  s_06fcde5dbef956::t_31f98af7e9ee6f 12,50-51
+internal/perm/perm.go
+  s_06fcde5dbef956::t_7cc6b10e0ea664 86
+internal/perm/snapshot_test.go
+  s_06fcde5dbef956::t_977ce51dd3d1d3 36
+web/src/components/EventsModal.test.ts
+  s_06fcde5dbef956::t_6df15fe0059d43 85
+web/src/lib/permissions.ts
+  s_06fcde5dbef956::t_a2daec79200d55 31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ddef485af04f75d93a5394ddfed6b29326eefad8",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
