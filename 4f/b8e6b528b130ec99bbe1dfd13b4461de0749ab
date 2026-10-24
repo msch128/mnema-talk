@@ -1,0 +1,70 @@
+internal/server/health.go
+  s_06fcde5dbef956::t_b2749beb5b57fa 48
+internal/audit/classes.go
+  s_06fcde5dbef956::t_b2749beb5b57fa 42
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_b2749beb5b57fa 720-722,1889-1892,2576-2615
+  s_06fcde5dbef956::t_d857ae6c7062a5 2616-2617
+internal/db/migrations/0067_moderation_notes.sql
+  s_06fcde5dbef956::t_b2749beb5b57fa 1-21
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_b2749beb5b57fa 42
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_b2749beb5b57fa 2621-2710
+internal/server/moderation_history_integration_test.go
+  s_06fcde5dbef956::t_b2749beb5b57fa 1-321
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_b2749beb5b57fa 720-722,1889-1892,2576-2615
+  s_06fcde5dbef956::t_027e21eb911f70 2616-2617
+internal/automod/compile_test.go
+  s_06fcde5dbef956::t_a9c2bcea8c6487 179-180,182,185,208
+web/src/i18n/auditLabels.test.ts
+  s_06fcde5dbef956::t_b2749beb5b57fa 14
+SECURITY.md
+  s_06fcde5dbef956::t_b2749beb5b57fa 121-128
+web/src/components/ProfileModerationTab.vue
+  s_06fcde5dbef956::t_b2749beb5b57fa 1-176
+doc/upgrade.md
+  s_06fcde5dbef956::t_b2749beb5b57fa 140,157,177-183,188-189
+internal/audit/routes.go
+  s_06fcde5dbef956::t_b2749beb5b57fa 125-129
+internal/moderation/history.go
+  s_06fcde5dbef956::t_b2749beb5b57fa 1-229
+doc/api-stability.md
+  s_06fcde5dbef956::t_b2749beb5b57fa 29
+internal/audit/classes_test.go
+  s_06fcde5dbef956::t_b2749beb5b57fa 42
+api/openapi.json
+  s_06fcde5dbef956::t_b2749beb5b57fa 4327-4506,14961-15431
+doc/moderation.md
+  s_06fcde5dbef956::t_b2749beb5b57fa 25,315,323-359
+  s_06fcde5dbef956::t_f2e5daade3d544 360
+internal/moderation/notes.go
+  s_06fcde5dbef956::t_b2749beb5b57fa 1-287
+internal/testutil/db.go
+  s_06fcde5dbef956::t_b2749beb5b57fa 113-115
+internal/moderation/automod_rules.go
+  s_06fcde5dbef956::t_b2749beb5b57fa 2-4,12,20,35-40,206-208
+web/src/components/LegalModal.vue
+  s_06fcde5dbef956::t_b2749beb5b57fa 199-203
+web/src/components/ProfileModeration.test.ts
+  s_06fcde5dbef956::t_b2749beb5b57fa 1-174
+web/src/components/UserProfileModal.vue
+  s_06fcde5dbef956::t_b2749beb5b57fa 28,97-101,270-287,341
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4fb8e6b528b130ec99bbe1dfd13b4461de0749ab",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
