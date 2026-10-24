@@ -295,6 +295,8 @@ func (h *Hub) unregister(c *Client) {
 		delete(h.chosen, c.User.ID)
 		delete(h.profiles, c.User.ID)
 		h.voiceGate.forget(c.User.ID)
+		h.stageGate.forget(c.User.ID)
+		h.reactionGate.forget(c.User.ID)
 		h.userBudgets.forget(c.User.ID)
 	}
 	after := h.statusLocked(c.User.ID)

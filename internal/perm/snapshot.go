@@ -75,6 +75,8 @@ type Snapshot struct {
 	// bots are bot accounts: they do not inherit @everyone.
 	bots       map[uuid.UUID]bool
 	channelCat map[uuid.UUID]uuid.UUID // uuid.Nil: uncategorized
+	// stages are the Talks that are Stages (doc/talks.md).
+	stages map[uuid.UUID]bool
 	// dms are the direct message conversations with their members (see
 	// snapshot_dm.go); dmEnabled is the community's switch for them.
 	dms        map[uuid.UUID]map[uuid.UUID]bool

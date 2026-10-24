@@ -78,6 +78,7 @@ var Routes = []Route{
 
 	{Method: "POST", Pattern: "/channels", Action: "channel.create", TargetType: "channel"},
 	{Method: "PATCH", Pattern: "/channels/{id}", Action: "channel.update", TargetType: "channel", IDParam: "id", Snapshot: ResChannel},
+	{Method: "PUT", Pattern: "/channels/{id}/auto-delete", Action: "channel.auto_delete_set", TargetType: "channel", IDParam: "id", Snapshot: ResChannel},
 	{Method: "DELETE", Pattern: "/channels/{id}", Action: "channel.delete", TargetType: "channel", IDParam: "id", Snapshot: ResChannel},
 	{Method: "POST", Pattern: "/channels/{id}/duplicate", Action: "channel.duplicate", TargetType: "channel", IDParam: "id", Snapshot: ResChannel},
 	{Method: "POST", Pattern: "/categories", Action: "category.create", TargetType: "category"},
@@ -107,6 +108,11 @@ var Routes = []Route{
 	{Method: "PATCH", Pattern: "/bots/{id}/commands/{commandID}", Action: "bot.command_update", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
 	{Method: "DELETE", Pattern: "/bots/{id}/commands/{commandID}", Action: "bot.command_delete", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
 
+	// The import writes its own audit entry in the transaction that does the work.
+	{Method: "POST", Pattern: "/import/discord/preview", Skip: true},
+	{Method: "POST", Pattern: "/import/discord/apply", Skip: true},
+	{Method: "POST", Pattern: "/import/discord/imports/{id}/undo", Skip: true},
+
 	{Method: "PUT", Pattern: "/upload-limit", Action: "settings.upload_limit", TargetType: "settings", Snapshot: ResSettings},
 
 	{Method: "PUT", Pattern: "/onboarding", Action: "settings.onboarding", TargetType: "settings", Snapshot: ResOnboarding},
@@ -117,6 +123,15 @@ var Routes = []Route{
 
 	{Method: "POST", Pattern: "/reports/{id}/resolve", Action: "report.resolve", TargetType: "report", IDParam: "id"},
 	{Method: "DELETE", Pattern: "/reports/{id}", Action: "report.delete", TargetType: "report", IDParam: "id"},
+
+	{Method: "POST", Pattern: "/automod/rules", Action: "automod.rule_create", TargetType: "automod_rule"},
+	{Method: "PUT", Pattern: "/automod/rules/{id}", Action: "automod.rule_update", TargetType: "automod_rule", IDParam: "id"},
+	{Method: "DELETE", Pattern: "/automod/rules/{id}", Action: "automod.rule_delete", TargetType: "automod_rule", IDParam: "id"},
+
+	// The text of a moderator note never reaches the log.
+	{Method: "POST", Pattern: "/users/{id}/moderation/notes", Action: "moderation.note_add", TargetType: "user", IDParam: "id", NoBody: true},
+	{Method: "PUT", Pattern: "/users/{id}/moderation/notes/{noteID}", Action: "moderation.note_edit", TargetType: "user", IDParam: "id", NoBody: true},
+	{Method: "DELETE", Pattern: "/users/{id}/moderation/notes/{noteID}", Action: "moderation.note_delete", TargetType: "user", IDParam: "id"},
 
 	{Method: "POST", Pattern: "/media/prune", Action: "media.prune", TargetType: "media"},
 	{Method: "POST", Pattern: "/media/orphans/cleanup", Action: "media.orphans_cleanup", TargetType: "media"},

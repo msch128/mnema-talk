@@ -53,10 +53,9 @@ Result: 0 Critical, 0 High. Every Medium finding is fixed, with a test that
 fails without the fix, and the behaviour changes are listed in
 [doc/upgrade.md](doc/upgrade.md#09x--100). Deliberately deferred past 1.0:
 
-- **RT-4, frame format version 2.** Version 2 media frames (no line binding)
-  are still accepted. Re-evaluated for 1.1 and deferred to 2.0: every 1.0.x
-  sender still seals version 2 at the start of each epoch, so refusing it would
-  break 1.0.x tabs (see the media frame section below for the evidence).
+- **RT-4, frame format version 2.** Closed in 1.2.0: version 2 media frames
+  (no line binding) are neither sent nor opened any more (see the media frame
+  section below).
 - **RT-6, regroup collusion** (Info). Two colluding members, or the server, can
   make a listener who hears nobody else regroup; rate-limited, no worse than the
   denial of service the server already has.
@@ -102,6 +101,16 @@ model, in short; the design is in [doc/architecture.md](doc/architecture.md#dire
 - **Server-side enforcement** of all of it; the UI only hides what a member
   cannot do.
 
+## Anonymous polls
+
+An anonymous poll hides who chose what from every member, moderator and
+administrator in the app. Mnema never stores which option a member chose: only
+that the member voted (`poll_voters`, no timestamp) and ballots without a
+member (`poll_anon_ballots`) that are folded into per-option counters. An
+operator with direct access to the database server (WAL, transaction ids or
+statement logs) could, in theory, still correlate the timing of a vote. Do not
+rely on it against that operator.
+
 ## Blocks and reports
 
 A block is private: the blocked member is not told, and nothing about it is
@@ -120,6 +129,15 @@ queue, and reading a report needs no access to the channel. A report of a
 direct message shows only that copy, never the rest of the conversation.
 Deleting an account blanks its text in every report copy and cuts the links
 to the account. Details: [doc/moderation.md](doc/moderation.md#blocking-and-reports).
+
+**Automod and moderator notes (1.2).** Automod entries use the same queue. A
+blocked channel message is kept in the entry as the text that was refused;
+for a direct message automod keeps no text at all, only who broke which rule.
+Moderators with *Manage reports* can also write private notes about a member.
+A note is moderator data: the member never sees it, it is not in their data
+export, the audit log records that it was written but never what it says, and
+when the account is erased the notes stay, attached to the tombstone, until a
+moderator deletes them. Details: [doc/moderation.md](doc/moderation.md#automod).
 
 ## Forwarding (a reference, not a copy)
 
@@ -726,41 +744,29 @@ details and the limits.
   sealed and signed but does not open. Only the sender's own MLS leaf key
   can sign for a line. The replay windows, stream retirement, nonces and key
   lifecycle are unchanged.
-  **Rollout, and what it does not yet cover.** Frame version 2 (no line)
-  is still understood, so Talks of mixed versions interoperate and tabs
-  that predate version 3 keep working. Each member signs a small capability
-  message (`M` `C`, bits, Ed25519 signature over group, id and bits, with its
-  leaf key) when it joins or meets a member it has not told, and with each
-  heartbeat; older clients ignore it. A sender seals version 3 in an epoch only
-  when every member of that epoch has advertised it, decides again at each
-  epoch, and never goes back to version 2 within an epoch; a member that
-  joins without advertising (an older tab) makes the next epoch version 2
-  until it leaves. A receiver takes version 3 always, and version 2 only in an
-  epoch where some member has not advertised version 3 (the senders seal
-  version 2 for that member); in an epoch where every member has, version 2 is
-  refused after a 3 second grace (while senders learn the last advertisement),
-  so a downgrade or replay of a capable sender's frames opens nothing. Until
-  version 2 is refused entirely, a server that withholds capability messages
-  (the same denial of service it has by dropping any message) keeps an epoch
-  on version 2, and a version 2 unit carries no line, so in such an epoch its
-  units can still be moved between lines, exactly as before.
-  Planned (phase B, 2.0): refuse version 2 entirely and stop sending it.
-  Re-evaluated for 1.1 (RT-4) and **not done**, because it cannot be shown to
-  be safe. Every bundle since 0.8.2 can *open* version 3, but a sender seals it
-  only after it has heard every member's capability message
-  (`frameVersion` and `applyCaps` in `mediaFrameWorker.ts`): each epoch of every
-  1.0.x tab starts on version 2, and stays there while any member is silent or
-  has not been heard yet. The behaviour is pinned by tests ("seals version 2
-  until every member of the epoch advertised version 3", "never goes back to
-  version 2 within an epoch, and decides again for the next one",
-  `mediaFrameWorker.test.ts`). A receiver that refused version 2 would
-  therefore drop 1.0.x tabs' media at every epoch start (every join, leave and
-  key rotation) and for as long as a capability message is delayed. Refusing it
-  safely needs senders that default to version 3, which is a change in the
-  client that the 1.0.x tabs in a mixed-version Talk do not have, so it waits
-  for 2.0 when those tabs are unsupported. The party that could exploit the
-  gap (moving units between a sender's lines) is the active server, which is
-  already outside the model.
+  **Version 2 is gone (1.2.0).** Frames before version 3 carried no line, so an
+  active SFU could move a sender's units between its lines. Since 1.2.0 a
+  sender seals version 3 always and a receiver opens nothing else: a unit with
+  the old `M` `2` magic is dropped without opening and counted per publisher, and
+  the web app tells the member once per call that someone uses an outdated
+  client ("Someone in this Talk uses an outdated Mnema client ..."). There is no
+  negotiation left to attack, so a downgrade or a replay of old frames opens
+  nothing, and a server that withholds capability messages can no longer keep an
+  epoch on a weaker format. The version-3 signature domain and wire layout are
+  unchanged, so 1.0.x and 1.1.x tabs (which open version 3 and send it once every
+  member has advertised it) still hear a 1.2 member. What breaks is the other
+  direction: a tab that predates 0.8.2 cannot open version 3 at all, and a 1.0.x
+  or 1.1.x tab seals version 2 at the start of every epoch until it has heard a
+  capability message from each member, so its media is dropped by 1.2 members
+  for that moment (usually a second or two; longer if the server delays the
+  message). Members therefore keep sending the capability message (`M` `C`, bits,
+  Ed25519 signature over group, id and bits, with the member's leaf key) when they
+  join or meet a member they have not told, and with each heartbeat; older clients
+  decide their format by it, and a 1.2 member answers it like any other. The security floor of the signed web
+  bundle is raised to 1.2.0 with this change (`Security-Floor: raise`), so a
+  desktop client that has run a 1.2 bundle never falls back to an older bundle
+  that still sealed version 2. The server cannot enforce this: it relays media it
+  cannot read, and the format is checked by the receiving clients.
   Also known and accepted: two colluding members, or the server, can make a
   listener who hears nobody else regroup by naming a newer epoch in unopened
   frames; this is rate-limited with a backoff and no more than the denial of

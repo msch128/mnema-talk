@@ -1,0 +1,29 @@
+// Notices to members and community content events: moderation notices, forum
+// tag changes and community events (internal/moderation, internal/chat,
+// internal/communityevents). Runtime checks by event name.
+import { hasOwn, isIdentifier, isInteger, isString, isTimestamp, onlyFields } from './validation'
+
+const MODERATION_NOTICE_KINDS = new Set(['timeout', 'timeout_removed', 'ban', 'message_deleted', 'messages_deleted'])
+
+function isValidModerationTiming(payload: Record<string, unknown>): boolean {
+  if (hasOwn(payload, 'until') && !isTimestamp(payload['until'])) return false
+  if (hasOwn(payload, 'duration_seconds') && !isInteger(payload['duration_seconds'])) return false
+  return true
+}
+
+function isModerationNotice(payload: Record<string, unknown>): boolean {
+  if (!MODERATION_NOTICE_KINDS.has(String(payload['kind']))) return false
+  if (!isString(payload['reason'], 400)) return false
+  if (hasOwn(payload, 'channel_name') && !isString(payload['channel_name'], 128)) return false
+  if (hasOwn(payload, 'count') && !isInteger(payload['count'])) return false
+  return isValidModerationTiming(payload)
+}
+
+/** Runtime checks of the notice and community events, by event name. */
+export const NOTICE_EVENT_CHECKS: [string, (payload: Record<string, unknown>) => boolean][] = [
+  ['moderation_notice', isModerationNotice],
+  ['forum_tags_changed', payload => isIdentifier(payload['channel_id']) && onlyFields(payload, ['channel_id'])],
+  ['event_delete', payload => isIdentifier(payload['id'])],
+  ['event_reminder', payload => isIdentifier(payload['event_id']) && isString(payload['title'], 100)
+    && isTimestamp(payload['start_time']) && (!hasOwn(payload, 'channel_id') || isIdentifier(payload['channel_id']))]
+]

@@ -94,6 +94,10 @@ func (c *Client) mediaDenied(snap *perm.Snapshot, ch uuid.UUID) sfu.SourceSet {
 	if !p.Has(perm.Video) {
 		denied = denied.With(sfu.SourceScreen).With(sfu.SourceScreenAudio).With(sfu.SourceCamera)
 	}
+	if snap.IsStage(ch) && !c.hub.mayTalkOnStage(snap, voiceKey{c.User.ID, ch}) {
+		// A Stage is quiet without talk power: no sound, no camera, no screen.
+		denied = denied.With(sfu.SourceAudio).With(sfu.SourceScreenAudio).With(sfu.SourceScreen).With(sfu.SourceCamera)
+	}
 	return denied
 }
 
@@ -174,6 +178,7 @@ func (h *Hub) PermissionsChanged(userIDs []uuid.UUID) {
 	if h.Perms == nil {
 		return
 	}
+	h.sweepStages(snap, want)
 	h.enforceVoiceAccess(snap, want)
 }
 

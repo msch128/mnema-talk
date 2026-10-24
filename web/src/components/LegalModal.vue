@@ -196,6 +196,11 @@ onMounted(() => {
                   <td class="p-2.5">{{ $t('legal.privacy.sessionPurpose') }}</td>
                   <td class="p-2.5">{{ $t('legal.privacy.sessionRetention', { days: sessionExpiryDays }) }}</td>
                 </tr>
+                <tr>
+                  <td class="p-2.5 font-medium text-mnema-text">{{ $t('legal.privacy.moderation') }}</td>
+                  <td class="p-2.5">{{ $t('legal.privacy.moderationPurpose') }}</td>
+                  <td class="p-2.5">{{ $t('legal.privacy.moderationRetention') }}</td>
+                </tr>
               </tbody>
             </table>
           </div>

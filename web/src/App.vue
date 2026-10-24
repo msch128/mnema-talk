@@ -17,6 +17,7 @@ import NativeTrustControl from './components/NativeTrustControl.vue'
 import { platform } from './lib/platform'
 import VoiceStage from './components/VoiceStage.vue'
 import VoiceChatPanel from './components/VoiceChatPanel.vue'
+import ForumArea from './components/ForumArea.vue'
 import MemberList from './components/MemberList.vue'
 import ThreadSidebar from './components/ThreadSidebar.vue'
 import InviteLanding from './components/InviteLanding.vue'
@@ -29,6 +30,8 @@ import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 import AudioSettingsModal from './components/AudioSettingsModal.vue'
 import AppSettingsModal from './components/AppSettingsModal.vue'
 import { appSettingsOpen } from './lib/appSettings'
+import { notifyDialogOpen } from './lib/notifyDialog'
+import NotificationSettingsDialog from './components/NotificationSettingsDialog.vue'
 import ScreenShareModal from './components/ScreenShareModal.vue'
 import UserProfileModal from './components/UserProfileModal.vue'
 import LegalModal from './components/LegalModal.vue'
@@ -44,6 +47,7 @@ import MessageModerationDialog from './components/MessageModerationDialog.vue'
 import EditHistoryDialog from './components/EditHistoryDialog.vue'
 import ReportDialog from './components/ReportDialog.vue'
 import ForwardDialog from './components/ForwardDialog.vue'
+import LaterDialog from './components/LaterDialog.vue'
 import TalkSettingsHost from './components/TalkSettingsHost.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
 import PipHost from './components/PipHost.vue'
@@ -290,7 +294,8 @@ onMounted(async () => {
         </template>
         <div v-else class="min-h-0 flex flex-1 flex-col">
           <NativeTrustControl v-if="platform.isDesktop() && authStore.isAdmin && chatStore.activeChannel && !inConversation" :key="authStore.user?.id + ':' + chatStore.activeChannel.id" :channel-id="chatStore.activeChannel.id" @saved="chatStore.activeChannel && chatStore.fetchMessages(chatStore.activeChannel.id)" />
-          <ChatArea class="min-h-0 flex-1" />
+          <ForumArea v-if="chatStore.activeChannel?.type === 'forum'" class="min-h-0 flex-1" />
+          <ChatArea v-else class="min-h-0 flex-1" />
         </div>
       </div>
 
@@ -348,6 +353,7 @@ onMounted(async () => {
 
       <!-- Own sign-in security: e-mail address -->
       <AccountSecurityDialog v-if="accountStore.dialogOpen" />
+      <NotificationSettingsDialog v-if="notifyDialogOpen" @close="notifyDialogOpen = false" />
 
       <!-- First run and re-acceptance of changed rules -->
       <WelcomeFlow />
@@ -379,6 +385,7 @@ onMounted(async () => {
     <EditHistoryDialog />
     <ReportDialog />
     <ForwardDialog />
+    <LaterDialog />
     <TalkSettingsHost />
   </div>
 </template>

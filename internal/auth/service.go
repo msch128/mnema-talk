@@ -228,13 +228,18 @@ func GetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
 	return u, err
 }
 
+// inactiveSQL is true for a user_sessions row that has had no request for
+// longer than the community's inactivity limit.
+const inactiveSQL = `last_active_at < NOW() - make_interval(days => (SELECT session_inactivity_days FROM instance_settings LIMIT 1))`
+
 // sessionUser loads the user behind a session and its current token version.
 // A session whose jti was revoked by logout (or a bot account) does not load.
 func sessionUser(ctx context.Context, p *db.Pool, id uuid.UUID, jti string) (*User, int, error) {
 	var tv int
 	u, err := scanUser(p.QueryRow(ctx, `SELECT `+userColumns+`, token_version FROM users
 		WHERE id = $1 AND `+ActiveSQL("")+` AND NOT is_bot
-		AND NOT EXISTS (SELECT 1 FROM revoked_sessions WHERE jti = $2)`, id, jti), &tv)
+		AND NOT EXISTS (SELECT 1 FROM revoked_sessions WHERE jti = $2)
+		AND NOT EXISTS (SELECT 1 FROM user_sessions WHERE jti = $2 AND `+inactiveSQL+`)`, id, jti), &tv)
 	return u, tv, err
 }
 

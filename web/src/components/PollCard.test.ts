@@ -147,16 +147,70 @@ describe('PollCard', () => {
     expect(w.find('[data-testid="poll-cannot-vote"]').exists()).toBe(false)
   })
 
-  it('asks the server for my own choice in an anonymous poll, and never lists voters', async () => {
-    const anon = poll({ anonymous: true, options: [{ id: A, label: 'Pizza', votes: 1 }, { id: B, label: 'Pasta', votes: 1 }, { id: C, label: 'Salad', votes: 0 }] })
-    replies['/poll'] = { ...anon, my_votes: [A] }
-    const { w } = mountCard({ poll: anon })
-    await flushPromises()
-    expect(requests.map(r => `${r.method} ${r.url}`)).toEqual([`GET /api/channels/${CH}/messages/${fixtureId(3)}/poll`])
-    expect(option(w, A).attributes('aria-pressed')).toBe('true')
-    expect(option(w, B).attributes('aria-pressed')).toBe('false')
-    expect(w.find('[data-testid="poll-anonymous"]').exists()).toBe(true)
-    expect(w.find('[data-testid="poll-voters"]').exists()).toBe(false)
+  describe('anonymous polls', () => {
+    const anon = () => poll({ anonymous: true, options: [{ id: A, label: 'Pizza', votes: 1 }, { id: B, label: 'Pasta', votes: 1 }, { id: C, label: 'Salad', votes: 0 }] })
+
+    it('asks only whether I voted, never lists voters, and wears the badge', async () => {
+      replies['/poll'] = { ...anon(), my_votes: [], has_voted: false }
+      const { w } = mountCard({ poll: anon() })
+      await flushPromises()
+      expect(requests.map(r => `${r.method} ${r.url}`)).toEqual([`GET /api/channels/${CH}/messages/${fixtureId(3)}/poll`])
+      expect(w.find('[data-testid="poll-anonymous"]').exists()).toBe(true)
+      expect(w.find('[data-testid="poll-voters"]').exists()).toBe(false)
+      expect(w.get('[data-testid="poll-final-hint"]').text()).toBe('Your vote can’t be changed after you send it.')
+    })
+
+    it('only ticks an answer on click and sends the vote with the button', async () => {
+      replies['/poll'] = { ...anon(), my_votes: [], has_voted: false }
+      const { w } = mountCard({ poll: anon() })
+      await flushPromises()
+      requests.length = 0
+      expect(w.get('[data-testid="poll-submit"]').attributes('disabled')).toBeDefined()
+      await option(w, A).trigger('click')
+      expect(requests).toEqual([])
+      expect(option(w, A).attributes('aria-pressed')).toBe('true')
+      await option(w, B).trigger('click')
+      expect(option(w, A).attributes('aria-pressed')).toBe('false')
+
+      replies['/poll/votes'] = { ...anon(), total_voters: 3, options: [{ id: A, label: 'Pizza', votes: 1 }, { id: B, label: 'Pasta', votes: 2 }, { id: C, label: 'Salad', votes: 0 }], my_votes: [], has_voted: true }
+      await w.get('[data-testid="poll-submit"]').trigger('click')
+      await flushPromises()
+      expect(requests).toEqual([{ url: `/api/channels/${CH}/messages/${fixtureId(3)}/poll/votes`, method: 'PUT', body: { option_ids: [B] } }])
+      expect(w.get('[data-testid="poll-voted"]').text()).toBe('You voted. Votes in an anonymous poll can’t be changed.')
+      expect(w.find('[data-testid="poll-submit"]').exists()).toBe(false)
+      expect(option(w, B).text()).toContain('2 · 67%')
+      expect(option(w, B).attributes('disabled')).toBeDefined()
+      expect(option(w, B).attributes('aria-pressed')).toBe('false')
+    })
+
+    it('takes several ticks in a multiple-choice poll and sends them together', async () => {
+      const multi = { ...anon(), multiple: true }
+      replies['/poll'] = { ...multi, my_votes: [], has_voted: false }
+      const { w } = mountCard({ poll: multi })
+      await flushPromises()
+      await option(w, A).trigger('click')
+      await option(w, C).trigger('click')
+      replies['/poll/votes'] = { ...multi, my_votes: [], has_voted: true }
+      await w.get('[data-testid="poll-submit"]').trigger('click')
+      await flushPromises()
+      expect(requests.at(-1)?.body).toEqual({ option_ids: [A, C] })
+    })
+
+    it('shows a member who already voted the answers locked, with no way to vote again', async () => {
+      replies['/poll'] = { ...anon(), my_votes: [], has_voted: true }
+      const { w } = mountCard({ poll: anon() })
+      await flushPromises()
+      expect(w.find('[data-testid="poll-voted"]').exists()).toBe(true)
+      expect(w.find('[data-testid="poll-submit"]').exists()).toBe(false)
+      expect(option(w, A).attributes('disabled')).toBeDefined()
+    })
+
+    it('offers no vote button once the poll has ended', async () => {
+      replies['/poll'] = { ...anon(), closed: true, my_votes: [], has_voted: false }
+      const { w } = mountCard({ poll: { ...anon(), closed: true } })
+      await flushPromises()
+      expect(w.find('[data-testid="poll-submit"]').exists()).toBe(false)
+    })
   })
 
   it('does not ask for votes in a poll that names its voters', () => {

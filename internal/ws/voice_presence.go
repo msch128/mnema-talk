@@ -46,6 +46,7 @@ func (h *Hub) removePresence(userID, chID uuid.UUID) {
 	if wasIn {
 		delete(h.voiceSince, key)
 		delete(h.voiceMute, key)
+		h.stage.forget(key) // under the lock: no grant can land after it
 	}
 	if users, ok := h.voice[chID]; ok {
 		delete(users, userID)

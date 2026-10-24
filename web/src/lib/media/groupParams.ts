@@ -43,8 +43,6 @@ export interface MediaStep {
    * sealing under the epoch it left for a moment (SEND_GRACE_MS).
    */
   soft?: boolean
-  /** Members of the epoch known to open frame version 3, and whether that is all of them. */
-  caps?: { members: string[], complete: boolean }
 }
 
 export interface OwnPackage {

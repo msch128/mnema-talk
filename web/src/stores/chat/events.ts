@@ -2,10 +2,12 @@ import type { ServerEvent, ServerEventPayloads, ServerEventType } from '../../ty
 import { useToastStore } from '../toast'
 import { useEmojiStore } from '../emoji'
 import { useSavedStore } from '../saved'
+import { useLaterStore } from '../later'
 import { useForwardQuotesStore } from '../forwardQuotes'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
 import { useBlocksStore } from '../blocks'
+import { useEventsStore } from '../events'
 import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../lib/moderation'
 import { snapshotToMap, applyPresenceUpdate } from '../../lib/presence'
 import { MAX_EPHEMERAL } from './types'
@@ -188,6 +190,8 @@ const HANDLERS: Handlers = {
   // The caller blocked or unblocked someone in another session.
   block_updated: () => { void useBlocksStore().load() },
   saved_updated: (_cx, p) => { if (p) useSavedStore().onUpdated(p) },
+  reminder_update: (_cx, p) => { if (p) void useLaterStore().onReminderEvent(p) },
+  scheduled_message_update: (_cx, p) => { if (p) void useLaterStore().onScheduledEvent(p) },
   dm_created: (cx, p) => { if (p) onDmCreated(cx, p) },
   dm_member_added: (cx, p) => { if (p) onDmMemberAdded(cx, p) },
   dm_member_removed: (cx, p) => { if (p) onDmMemberRemoved(cx, p) },
@@ -243,6 +247,9 @@ const HANDLERS: Handlers = {
   screen_layers_wanted: ({ voiceStore }, p) => voiceStore.handleLayersWanted(p),
   voice_speaking: ({ voiceStore }, p) => voiceStore.handleSpeakingEvent(p),
   voice_mute_state: ({ voiceStore }, p) => voiceStore.handleMuteState(p),
+  stage_hand: ({ voiceStore }, p) => voiceStore.handleStageHand(p),
+  stage_talk_power: ({ voiceStore }, p) => voiceStore.handleStageTalkPower(p),
+  talk_reaction: ({ voiceStore }, p) => voiceStore.handleTalkReaction(p),
   // An admin removed me from voice; the call ends locally.
   talk_leader: onTalkLeader,
   // Joining a Create-a-Talk lobby opened a Talk: the voice layer joins it.
@@ -250,7 +257,14 @@ const HANDLERS: Handlers = {
   voice_kicked: ({ cs, voiceStore }, p) => {
     if (cs.voiceKickedHandler) cs.voiceKickedHandler(p)
     else if (voiceStore.currentChannelId) voiceStore.disconnect()
-  }
+  },
+  forum_tags_changed: ({ cs }, p) => {
+    cs.forumTagsSignal.value = { channelId: p.channel_id, seq: (cs.forumTagsSignal.value?.seq ?? 0) + 1 }
+    cs.forumTagsChangedHandler?.(p)
+  },
+  event_update: (_cx, p) => { if (p) useEventsStore().handleEventUpdate(p) },
+  event_delete: (_cx, p) => { if (p) useEventsStore().handleEventDelete(p.id) },
+  event_reminder: (_cx, p) => { if (p) useEventsStore().handleEventReminder(p) }
 }
 
 export function handleWSEvent(cx: Cx, event: ServerEvent) {

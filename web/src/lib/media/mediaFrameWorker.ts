@@ -1,9 +1,9 @@
 import { sealMedia, openMedia, videoCodecOf, type FrameKind } from './codec'
 import { openFrame, ReplayWindow, sealFrame, type EpochKeys, type FrameSource, type FrameStream } from './frame'
-import { PREVIOUS_EPOCH_MS, PREVIOUS_GROUP_MS, SEND_GRACE_MS, STALE_SEAL_MS, V2_GRACE_MS } from './bounds'
+import { PREVIOUS_EPOCH_MS, PREVIOUS_GROUP_MS, SEND_GRACE_MS, STALE_SEAL_MS } from './bounds'
 import { clock } from './clock'
 import { lineFrom, type Line, type TransformOptions } from './frameWorkerLine'
-import { onLineMessage, type Caps, type LineActions, type RememberedKey } from './frameWorkerPort'
+import { onLineMessage, type LineActions, type RememberedKey } from './frameWorkerPort'
 
 interface EncodedFrame {
   data: ArrayBuffer
@@ -41,10 +41,6 @@ function replayOf(senderId: string): ReplayWindow {
   }
   return window
 }
-// Epochs in which every member opens version 3, with when this worker heard
-// so: sealed as version 3 from then on, never as version 2 again in that
-// epoch, and version 2 units of that epoch stop opening shortly after.
-const v3Epochs = new Map<number, number>()
 let sendEpoch: number | null = null
 // When each epoch that is no longer the newest of its group was left, so its
 // key stops opening frames PREVIOUS_EPOCH_MS later.
@@ -59,7 +55,7 @@ function newest(map: ReadonlyMap<number, EpochKeys>): number | null {
   return map.size ? Math.max(...map.keys()) : null
 }
 
-/** False when this delivery is a repeat of a key or capability message already applied. */
+/** False when this delivery is a repeat of a key message already applied. */
 function noteSeq(seq: number | null): boolean {
   if (seq === null) return true
   if (seq <= lastSeq) return false
@@ -83,7 +79,6 @@ function resetGroup() {
   keys = new Map()
   retiredAt = new Map()
   sendHold = null
-  v3Epochs.clear()
 }
 
 function retireOlderEpochs(epoch: number, now: number) {
@@ -123,24 +118,6 @@ function remember(item: RememberedKey) {
   dropExpired()
   staleSince = null
   retainReplays()
-  if (item.caps) applyCaps(item.epoch, item.caps)
-}
-
-/** Whether all of this epoch's members open version 3. Once they do, that stays so for the epoch. */
-function applyCaps(epoch: number, caps: Caps) {
-  if (caps.complete && keys.has(epoch) && !v3Epochs.has(epoch)) v3Epochs.set(epoch, clock.now())
-}
-
-/**
- * Version 2 units open while some member of their epoch cannot open version
- * 3 (their senders seal version 2 for it). Once every member can, senders
- * switch within a moment (V2_GRACE_MS, while they hear the others' messages)
- * and version 2 of that epoch opens no more: nobody honest makes it, so it is
- * a downgrade or a replay.
- */
-function acceptsV2(epoch: number): boolean {
-  const since = v3Epochs.get(epoch)
-  return since === undefined || clock.now() - since < V2_GRACE_MS
 }
 
 /** The epoch before the newest opens frames only briefly (PREVIOUS_EPOCH_MS); then its key and verifiers are gone. */
@@ -152,7 +129,6 @@ function dropExpired() {
     retiredAt.delete(epoch)
     if (keys.delete(epoch)) dropped = true
   }
-  for (const epoch of [...v3Epochs.keys()]) if (!keys.has(epoch)) v3Epochs.delete(epoch)
   if (dropped) retainReplays()
 }
 
@@ -179,7 +155,6 @@ function forget() {
   sendHold = null
   regroupedAt = -Infinity
   sendEpoch = null
-  v3Epochs.clear()
   replays.clear()
 }
 
@@ -228,10 +203,6 @@ function sealReady(line: Line): SealReady | null {
   return { epoch, epochKeys, stream, source, channelId: line.channelId, layer: line.layer }
 }
 
-function frameVersion(epoch: number): 2 | 3 {
-  return v3Epochs.has(epoch) ? 3 : 2
-}
-
 function sealUnit(ready: SealReady, senderId: string, plaintext: Uint8Array, clear: Uint8Array): Promise<Uint8Array | null> {
   const counter = ready.stream.next()
   if (counter === null) return Promise.resolve(null)
@@ -244,7 +215,6 @@ function sealUnit(ready: SealReady, senderId: string, plaintext: Uint8Array, cle
     senderId,
     plaintext,
     clear,
-    version: frameVersion(ready.epoch),
     source: ready.source,
     layer: ready.layer,
   })
@@ -264,11 +234,12 @@ async function openIncoming(data: Uint8Array, kind: FrameKind, codec: ReturnType
   const replay = replayOf(senderId)
   dropExpired()
   let unknown = -1
+  let legacy = false
   const before = previousKeys()
   const opened = await openMedia(data, kind, codec, (sealed, clear) => openFrame({
-    keys, previous: before, channelId, senderId, packet: sealed, clear, replay, source: line.source, acceptV2: acceptsV2, onUnknownEpoch: (epoch) => { unknown = Math.max(unknown, epoch) },
+    keys, previous: before, channelId, senderId, packet: sealed, clear, replay, source: line.source, onLegacy: () => { legacy = true }, onUnknownEpoch: (epoch) => { unknown = Math.max(unknown, epoch) },
   }))
-  count(senderId, opened !== null, unknown)
+  count(senderId, opened !== null, unknown, legacy)
   return opened ? packet(opened) : null
 }
 
@@ -288,15 +259,16 @@ async function protect(frame: EncodedFrame, line: Line): Promise<ArrayBuffer | n
 // frames opened and how many came from an epoch newer than any key held. A
 // frame names its own epoch before it can be checked, so one frame proves
 // nothing; the call weighs this against the roster.
-interface SenderStats { opened: number, newer: number, epoch: number }
+interface SenderStats { opened: number, newer: number, epoch: number, legacy: number }
 const STATS_MS = 1000
 const stats = new Map<string, SenderStats>()
 let lastStats = -Infinity
 
-function count(senderId: string, opened: boolean, unknownEpoch: number) {
+function count(senderId: string, opened: boolean, unknownEpoch: number, legacy: boolean) {
   const latest = newest(keys) ?? -1
-  const entry = stats.get(senderId) ?? { opened: 0, newer: 0, epoch: -1 }
+  const entry = stats.get(senderId) ?? { opened: 0, newer: 0, epoch: -1, legacy: 0 }
   if (opened) entry.opened++
+  else if (legacy) entry.legacy++
   else if (unknownEpoch > latest) {
     entry.newer++
     entry.epoch = Math.max(entry.epoch, unknownEpoch)
@@ -318,7 +290,6 @@ const lineActions: LineActions = {
   stale() { staleSince ??= clock.now() },
   remember,
   noteSeq,
-  applyCaps,
 }
 
 scope.onrtctransform = (event) => {

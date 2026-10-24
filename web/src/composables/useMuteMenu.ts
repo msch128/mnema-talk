@@ -8,7 +8,8 @@ import { useChatStore } from '../stores/chat'
 import { t } from '../i18n'
 import { clockTimeOptions } from '../lib/time'
 
-export type NotifyTarget = { kind: 'channel' | 'category'; id: string }
+// A channel outside any category inherits from the server default directly.
+export type NotifyTarget = { kind: 'channel' | 'category'; id: string; inCategory?: boolean }
 
 const MINUTE = 60_000
 
@@ -45,14 +46,18 @@ function apply(target: NotifyTarget, level: NotifyLevel, until: string | null) {
   return chatStore.setCategoryNotificationLevel(target.id, level, until)
 }
 
-function levelRows(target: NotifyTarget, current: NotifyLevel): ContextMenuItem[] {
-  const inheritLabel = target.kind === 'channel' ? t('notifications.inheritChannel') : t('notifications.inheritCategory')
-  const rows: Array<[NotifyLevel, string]> = [['inherit', inheritLabel], ['all', t('notifications.all')], ['mentions', t('notifications.mentions')]]
+function levelRows(target: NotifyTarget, current: NotifyLevel, muted_until: string | null): ContextMenuItem[] {
+  const fromCategory = target.kind === 'channel' && target.inCategory !== false
+  const inheritLabel = fromCategory ? t('notifications.inheritChannel') : t('notifications.inheritCategory')
+  const rows: Array<[NotifyLevel, string]> = [
+    ['inherit', inheritLabel], ['all', t('notifications.all')], ['mentions', t('notifications.mentions')], ['mute', t('notifications.nothing')]
+  ]
   return rows.map(([level, label]): ContextMenuItem => ({
-    id: `notify-${level}`,
+    id: level === 'mute' ? 'notify-nothing' : `notify-${level}`,
     type: 'radio',
     label,
-    checked: current === level,
+    // "Nothing" is the indefinite mute; a timed one is shown in the "Mute for…" row.
+    checked: current === level && (level !== 'mute' || !muted_until),
     action: () => { void apply(target, level, null) }
   }))
 }
@@ -64,7 +69,7 @@ function muteSubmenu(target: NotifyTarget, muted: boolean, until: string | null)
     label: t(target.kind === 'channel' ? 'notifications.muteChannel' : 'notifications.muteCategory'),
     icon: BellOff,
     value: muted ? (until ? t('notifications.mutedUntil', { time: formatMuteEnd(until) }) : t('notifications.mutedIndefinitely')) : null,
-    items: MUTE_DURATIONS.map((d): ContextMenuItem => ({
+    items: MUTE_DURATIONS.filter(d => d.ms !== null).map((d): ContextMenuItem => ({
       id: `mute-${d.id}`,
       label: t(`notifications.mute_${d.id}`),
       action: () => { void apply(target, 'mute', d.ms === null ? null : new Date(Date.now() + d.ms).toISOString()) }
@@ -78,7 +83,7 @@ export function notifyMenuItems(target: NotifyTarget): ContextMenuItem[] {
   const muted = level === 'mute'
   const items: ContextMenuItem[] = [
     { type: 'label', label: t('notifications.title') },
-    ...levelRows(target, level),
+    ...levelRows(target, level, muted_until),
     muteSubmenu(target, muted, muted_until)
   ]
   if (muted) {

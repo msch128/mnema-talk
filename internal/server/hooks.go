@@ -62,3 +62,13 @@ func refreshPreviewDeny(ctx context.Context, interval time.Duration, deny func()
 		}
 	}
 }
+
+// eventsNotifier lets community events retract the events a permission change
+// hid. The handler is built after the hub, so it is looked up on use.
+type eventsNotifier struct{ c *components }
+
+func (n eventsNotifier) PermissionsChanged(userIDs []uuid.UUID) {
+	if n.c.eventsH != nil {
+		n.c.eventsH.PermissionsChanged(userIDs)
+	}
+}

@@ -9,16 +9,21 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/msch128/mnema-talk/internal/discordimport"
 	"github.com/msch128/mnema-talk/internal/emoji"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/gateway"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/later"
 	"github.com/msch128/mnema-talk/internal/linkpreview"
 	"github.com/msch128/mnema-talk/internal/mailer"
 	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/msch128/mnema-talk/internal/moderation"
 	"github.com/msch128/mnema-talk/internal/onboarding"
 	"github.com/msch128/mnema-talk/internal/opwarn"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -54,14 +59,20 @@ type components struct {
 	authH    *auth.Handler
 	chatH    *chat.Handler
 	rolesH   *roles.Handler
+	importH  *discordimport.Handler
 	onboardH *onboarding.Handler
 	mediaH   *media.Handler
 	emojiH   *emoji.Handler
+	modH     *moderation.Handler
+	engine   *automod.Engine
 
 	outgoing *webhook.Dispatcher
 	webhookH *webhook.Handler
 
-	pushH *push.Handler
+	pushH           *push.Handler
+	later           *later.Service
+	eventsH         *communityevents.Handler
+	eventsScheduler *communityevents.Scheduler
 
 	botH     *bot.Handler
 	botAuthn *bot.Authenticator
@@ -110,6 +121,7 @@ func (c *components) newCore() {
 	c.authH.Audit = c.auditLog
 	go c.authH.RunBanExpiry(c.ctx, time.Minute)
 	go c.authH.RunStatusExpiry(c.ctx, 0)
+	go c.authH.RunSessionSweep(c.ctx, auth.DefaultSessionSweepEvery)
 	// `mnema-talk unlock` runs in another process and queues requests here.
 	go c.authH.RunUnlockWorker(c.ctx, auth.UnlockPollInterval)
 	if d.Store != nil {
@@ -117,22 +129,13 @@ func (c *components) newCore() {
 		go c.authH.RunExportSweep(c.ctx, 0)
 	}
 	go chat.RunSlowModePrune(c.ctx, d.DB, time.Hour)
-	c.chatH = &chat.Handler{
-		DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog,
-		EditHistoryLimit: httpx.NewRateLimiter(chat.EditHistoryRate, time.Minute).Named("edit_history"),
-		PinLimit:         httpx.NewRateLimiter(chat.PinChangesPerMinute, time.Minute).Named("pin"),
-		FollowLimit:      httpx.NewRateLimiter(chat.ThreadFollowChangesPerMinute, time.Minute).Named("thread_follow"),
-		BlockLimit:       httpx.NewRateLimiter(chat.BlockChangesPerMinute, time.Minute).Named("block"),
-		ReportLimit:      httpx.NewRateLimiter(chat.ReportsPerHour, time.Hour).Named("report"),
-		SavedLimit:       httpx.NewRateLimiter(chat.SavedChangesPerMinute, time.Minute).Named("saved"),
-		ForwardLimit:     httpx.NewRateLimiter(chat.ForwardsPerMinute, time.Minute).Named("forward"),
-		DMLimit:          httpx.NewRateLimiter(chat.NewDMsPerMinute, time.Minute).Named("dm_start"),
-	}
-	go chat.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour)
+	c.newChat()
 	c.rolesH = &roles.Handler{Perms: c.permSvc, Events: c.pub}
 	c.onboardH = onboarding.NewHandler(d.DB, c.permSvc)
+	c.newImport()
 	if d.Store != nil {
 		c.chatH.Objects = d.Store
+		c.importH.Importer.Objects = d.Store
 	}
 	c.emojiH = &emoji.Handler{DB: d.DB, Store: d.Store, Events: c.pub, Perms: c.permSvc, Max: cfg.EmojiMax,
 		UploadLimit: httpx.NewRateLimiter(emoji.UploadsPer10Minutes, 10*time.Minute).Named("emoji_upload")}
@@ -207,7 +210,7 @@ func (c *components) newBots() {
 	go gw.Run(c.ctx)
 	// Both the hub and the gateway learn about permission changes, and the
 	// gateway sees every event the hub publishes (as outgoing webhooks do).
-	c.permSvc.SetNotifier(notifiers{hub, gw})
+	c.permSvc.SetNotifier(notifiers{hub, gw, eventsNotifier{c}})
 	prevTap := hub.Tap
 	hub.Tap = func(ch uuid.UUID, eventType string, payload any) {
 		if prevTap != nil {
@@ -236,6 +239,7 @@ func (c *components) tapThreadFollows() {
 // that allows public addresses alone.
 func (c *components) newPush() error {
 	cfg := c.cfg
+	var pusher later.Notifier
 	h := push.Handler{DB: c.d.DB, Sessions: c.sessions, Enabled: cfg.PushEnabled, PreviewsAllowed: cfg.PushPreviews == "user"}
 	if cfg.PushEnabled {
 		keys, err := push.LoadKeys(c.ctx, c.d.DB)
@@ -260,8 +264,10 @@ func (c *components) newPush() error {
 		c.hub.DMTap = svc.Observe // conversations reach no webhook or bot, only push to their members
 		go svc.Run(c.ctx)
 		h.Keys, h.Service = keys, svc
+		pusher = svc
 	}
 	c.pushH = push.NewHandler(h)
+	c.newLater(pusher)
 	return nil
 }
 

@@ -8,6 +8,7 @@ import CreateChannelModal from './CreateChannelModal.vue'
 import BaseDialog from './BaseDialog.vue'
 import { setLocale } from '../i18n'
 import { useChatStore } from '../stores/chat'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 
 vi.mock('../lib/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/api')>()),
@@ -124,6 +125,24 @@ describe('CreateChannelModal', () => {
     const w = mountModal()
     await w.findAll('button').find(b => b.text() === 'Cancel')!.trigger('click')
     expect(w.emitted('close')!).toHaveLength(1)
+  })
+
+  it('creates forum channel when selected', async () => {
+    useServerFeaturesStore().list = ['channels.forum']
+    const w = mountModal()
+    const forumBtn = w.find('[data-testid="channel-type-forum"]')
+    expect(forumBtn.exists()).toBe(true)
+    await forumBtn.trigger('click')
+    expect(forumBtn.attributes('aria-pressed')).toBe('true')
+    await w.find<HTMLInputElement>('#channel-name')!.setValue('Discussions')
+    await w.find('form')!.trigger('submit')
+    await flushPromises()
+    expect(chat.createChannel).toHaveBeenCalledWith({
+      categoryId: null,
+      name: 'discussions',
+      type: 'forum',
+      topic: ''
+    })
   })
 })
 

@@ -10,6 +10,7 @@ import AdminDashboard from './AdminDashboard.vue'
 import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
 import { setLocale } from '../i18n'
 
@@ -154,6 +155,17 @@ describe('AdminDashboard - Tabs Navigation', () => {
 
     await w.find('[data-testid="tab-media"]')!.trigger('click')
     expect(w.find('[data-testid="tab-media"]')!.attributes('aria-pressed')).toBe('true')
+  })
+
+  it('renders status tab when ops.status feature is present', async () => {
+    useServerFeaturesStore().list = ['ops.status']
+    const w = await createWrapper()
+    await nextTick()
+    await nextTick()
+
+    expect(w.find('[data-testid="tab-status"]')!.exists()).toBe(true)
+    await w.find('[data-testid="tab-status"]')!.trigger('click')
+    expect(w.find('[data-testid="tab-status"]')!.attributes('aria-pressed')).toBe('true')
   })
 })
 

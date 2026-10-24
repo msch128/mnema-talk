@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { Channel } from '../types/domain'
-import { Trash2, Edit2, ArrowUp, ArrowDown, Hash, Volume2, GripVertical } from '@lucide/vue'
+import { Trash2, Edit2, ArrowUp, ArrowDown, Hash, Volume2, MessagesSquare, GripVertical } from '@lucide/vue'
 
 // One channel of the layout editor: draggable, with arrows, rename and delete.
 // Its drag events stop here, so the category around it keeps only its own.
@@ -33,7 +33,8 @@ const emit = defineEmits<{
     <div class="flex items-center gap-2 min-w-0 flex-1">
       <GripVertical class="w-4 h-4 text-mnema-tertiary group-hover:text-mnema-muted shrink-0" />
       <Hash v-if="channel.type === 'text'" class="w-4 h-4 text-mnema-tertiary shrink-0" />
-      <Volume2 v-else class="w-4 h-4 text-mnema-accent shrink-0" />
+      <Volume2 v-else-if="channel.type === 'voice'" class="w-4 h-4 text-mnema-accent shrink-0" />
+      <MessagesSquare v-else class="w-4 h-4 text-mnema-accent shrink-0" />
       <span class="text-sm font-medium text-mnema-text truncate">{{ channel.name }}</span>
       <span v-if="channel.topic" class="max-md:hidden text-xs text-mnema-tertiary truncate">({{ channel.topic }})</span>
     </div>

@@ -78,20 +78,25 @@ var (
 
 // SearchQuery filters messages in all channels (text and voice channels' chats). Every term of Text must
 // occur in the message (case-insensitive substring); Has is "", "file",
-// "image", "video", "link", "poll" or "edit"; Is is "" or "pinned". Results are newest first; Before pages further back.
+// "image", "video", "link", "embed", "poll" or "edit"; Is is "" or "pinned". Results are newest first (or by Sort); Before pages further.
 type SearchQuery struct {
-	Text      string
-	ChannelID *uuid.UUID
-	AuthorID  *uuid.UUID
-	Has       string
-	Is        string
+	Text       string
+	ChannelID  *uuid.UUID
+	AuthorID   *uuid.UUID
+	AuthorType string
+	Has        string
+	Is         string
+	Filename   string
+	Sort       string
 	// Mentions keeps messages that mention this user (directly or via @all/@here).
 	Mentions *uuid.UUID
 	// After and BeforeDate bound created_at (exclusive).
-	After      *time.Time
-	BeforeDate *time.Time
-	Before     *uuid.UUID
-	Limit      int
+	After       *time.Time
+	BeforeDate  *time.Time
+	DuringStart *time.Time
+	DuringEnd   *time.Time
+	Before      *uuid.UUID
+	Limit       int
 	// Visible limits the search to these channels; nil searches all of them
 	// (an empty, non-nil list finds nothing).
 	Visible []uuid.UUID
@@ -145,10 +150,15 @@ func buildSearchSQL(q SearchQuery) (string, []any, error) {
 		return "", nil, err
 	}
 
+	order := "ORDER BY m.created_at DESC, m.id DESC"
+	if q.Sort == "oldest" {
+		order = "ORDER BY m.created_at ASC, m.id ASC"
+	}
+
 	sql := messageSelect + `
 	JOIN channels c ON c.id = m.channel_id
 	WHERE ` + strings.Join(b.where, " AND ") + `
-	ORDER BY m.created_at DESC, m.id DESC
+	` + order + `
 	LIMIT ` + b.addArg(q.Limit+1)
 	return sql, b.args, nil
 }

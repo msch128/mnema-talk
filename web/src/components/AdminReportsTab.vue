@@ -51,7 +51,8 @@ function onChanged() {
 }
 
 const when = (iso: string) => new Date(iso).toLocaleString(locale.value, { dateStyle: 'medium', timeStyle: 'short' })
-const where = (report: ChatReport) => (report.kind === 'dm' ? t('reports.admin.dm') : `#${report.channel_name ?? ''}`)
+const where = (report: ChatReport) => (report.kind === 'dm' ? t('reports.admin.dm') : report.kind === 'alert' ? t('reports.admin.alertWhere') : `#${report.channel_name ?? ''}`)
+const isAutomod = (report: ChatReport) => report.source === 'automod'
 
 onMounted(() => load())
 </script>
@@ -97,7 +98,12 @@ onMounted(() => load())
             </span>
             <span class="text-xs text-mnema-tertiary">{{ when(report.created_at) }}</span>
           </span>
-          <span class="block truncate text-xs text-mnema-muted">
+          <span v-if="isAutomod(report)" class="block truncate text-xs text-mnema-muted" data-testid="report-automod">
+            <span class="mr-1.5 rounded-sm bg-mnema-accent/15 px-1.5 py-0.5 font-semibold text-mnema-accent">{{ $t('reports.admin.automod') }}</span>{{ report.kind === 'alert'
+              ? $t('reports.admin.raidAlert', { rule: report.automod_rule ?? '' })
+              : $t(`reports.admin.automodHit.${report.automod_outcome ?? 'flagged'}`, { rule: report.automod_rule ?? '', reported: report.reported?.username ?? '' }) }}<template v-if="(report.hit_count ?? 1) > 1"> ×{{ report.hit_count }}</template>
+          </span>
+          <span v-else class="block truncate text-xs text-mnema-muted">
             {{ $t('reports.admin.by', { reporter: report.reporter?.username ?? '', reported: report.reported?.username ?? '' }) }}
           </span>
           <span v-if="report.note" class="block truncate text-xs text-mnema-tertiary">{{ report.note }}</span>

@@ -3,7 +3,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { TestTrack, TestStream, present } from '../media-test.fixture'
 import type { ClientEventPayloads } from '../types/events'
 import { installMediaCall } from '../lib/media/api'
-import type { MediaCall } from '../lib/media/api'
+import type { MediaCall, MediaNotice } from '../lib/media/api'
 import type { MediaVerification } from '../lib/media/verify'
 import { useWebRTC } from './useWebRTC'
 import { useVoiceStore } from '../stores/voice'
@@ -190,7 +190,7 @@ export const permissiveMediaCall: MediaCall = {
 export function installRecordingCall(allow = true) {
   let onKeyListener: (() => void) | null = null
   let onWireListener: ((channelId: string, wire: string) => void) | null = null
-  let onNoticeListener: ((notice: 'removed' | 'absent') => void) | null = null
+  let onNoticeListener: ((notice: MediaNotice) => void) | null = null
   let onVerificationListener: ((verification: MediaVerification | null) => void) | null = null
   const call = {
     start: vi.fn(),
@@ -200,14 +200,14 @@ export function installRecordingCall(allow = true) {
     stop: vi.fn(),
     onKey: vi.fn((listener: () => void) => { onKeyListener = listener }),
     onWire: vi.fn((listener: (channelId: string, wire: string) => void) => { onWireListener = listener }),
-    onNotice: vi.fn((listener: (notice: 'removed' | 'absent') => void) => { onNoticeListener = listener }),
+    onNotice: vi.fn((listener: (notice: MediaNotice) => void) => { onNoticeListener = listener }),
     onVerification: vi.fn((listener: (verification: MediaVerification | null) => void) => { onVerificationListener = listener }),
     protectSender: vi.fn((_sender: RTCRtpSender, _source: number, _layer?: number) => allow),
     prepareIncoming: vi.fn((_receiver: RTCRtpReceiver) => allow),
     protectIncoming: vi.fn((_receiver: RTCRtpReceiver | undefined, _senderId: string, _source: number) => allow),
     fireKey() { onKeyListener?.() },
     fireWire(channelId: string, wire: string) { onWireListener?.(channelId, wire) },
-    fireNotice(notice: 'removed' | 'absent' = 'removed') { onNoticeListener?.(notice) },
+    fireNotice(notice: MediaNotice = 'removed') { onNoticeListener?.(notice) },
     fireVerification(verification: MediaVerification | null) { onVerificationListener?.(verification) },
   }
   installMediaCall(call)

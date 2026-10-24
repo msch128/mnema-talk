@@ -190,7 +190,7 @@ func (s *Service) handle(ctx context.Context, msg chat.Message) {
 		if followers != nil && !followers[c.userID] && !addressed(msg, c.userID, byName) {
 			continue
 		}
-		if canView(snap, c.userID, msg.ChannelID) && c.wants(c.mention(msg), addressed(msg, c.userID, byName)) {
+		if canView(snap, c.userID, msg.ChannelID) && c.wants(c.mention(msg, byName), addressed(msg, c.userID, byName)) {
 			chosen = append(chosen, c)
 		}
 	}
@@ -218,7 +218,7 @@ func (s *Service) notify(ctx context.Context, msg chat.Message, chosen []candida
 				AuthorID: msg.UserID, ChannelID: msg.ChannelID, ChannelName: c.channelName, MessageID: msg.ID, ParentID: msg.ParentID,
 				Sender: sender(msg), Content: msg.Content, HasFiles: len(msg.Attachments) > 0 || len(msg.Embeds) > 0,
 				Forwarded: msg.Forward != nil && msg.Forward.Forwarded, Poll: msg.Poll != nil,
-				DM: c.dm, Mention: c.mention(msg), Addressed: addressed(msg, c.userID, byName), Count: 1, At: s.Now(),
+				DM: c.dm, Mention: c.mention(msg, byName), Addressed: addressed(msg, c.userID, byName), Count: 1, At: s.Now(),
 			},
 		}
 		if now := s.co.add(key{c.userID, msg.ChannelID}, h, s.flush); now != nil {
@@ -286,6 +286,11 @@ func (s *Service) enqueue(h held, targets []target) {
 	if h.notice.Mention || h.notice.DM {
 		opts.TTL = mentionTTL
 	}
+	s.queue(targets, body, opts)
+}
+
+// queue hands one job per device to the senders; a full queue drops it.
+func (s *Service) queue(targets []target, body []byte, opts Options) {
 	for _, t := range targets {
 		select {
 		case s.jobs <- job{target: t, payload: body, opts: opts}:

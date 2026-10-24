@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/auth'
 import { useBlocksStore } from '../stores/blocks'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import ChatHeader from './ChatHeader.vue'
+import ChannelAutoDeleteNote from './ChannelAutoDeleteNote.vue'
 import ChatComposer from './ChatComposer.vue'
 import ImageLightbox from './ImageLightbox.vue'
 import ContextMenu from './ContextMenu.vue'
@@ -224,6 +225,7 @@ const groupedIds = computed(() => {
     class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden focus:outline-hidden"
   >
     <ChatHeader :panel="panel" @close="emit('close')" @menu="(x, y, items) => menu.show(x, y, items)" />
+    <ChannelAutoDeleteNote v-if="!panel" />
 
     <!-- Message timeline (72px gutter, 40px avatars) -->
     <div class="relative flex-1 min-h-0 flex flex-col">

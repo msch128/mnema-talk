@@ -8,10 +8,10 @@ import de from './de.json'
 import en from './en.json'
 
 const GROUPS = ['role', 'user', 'channel', 'category', 'layout', 'invite', 'webhook', 'outgoing_webhook', 'media',
-  'settings', 'moderation', 'message', 'voice', 'auth', 'system', 'emoji', 'bot', 'poll', 'admin']
+  'settings', 'moderation', 'message', 'voice', 'auth', 'system', 'emoji', 'bot', 'poll', 'automod', 'admin']
 const ACTION = new RegExp(`"((?:${GROUPS.join('|')})\\.[a-z_]+)"`, 'g')
 // Filenames and similar strings that look like an action.
-const NOT_ACTIONS = new Set(['settings.json', 'emoji.json'])
+const NOT_ACTIONS = new Set(['settings.json', 'emoji.json', 'moderation.history'])
 
 function goFiles(dir: string): string[] {
   return readdirSync(dir).flatMap(name => {

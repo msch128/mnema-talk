@@ -32,6 +32,7 @@ in PostgreSQL; uploads, avatars and profile banners live in S3-compatible object
 | [`internal/auth`](../internal/auth/service.go) | Password hashing, signed session cookies with a per-user `token_version` (revocation), login lockout, invite codes, admin seeding, user administration, password re-authentication for sensitive actions ([`reauth.go`](../internal/auth/reauth.go)). |
 | [`internal/perm`](../internal/perm/perm.go), [`internal/roles`](../internal/roles/handler.go) | Roles and permissions: the permission bits, the in-memory `Snapshot` that resolves base, role and overwrite permissions (and the hierarchy rules), the cache with live invalidation, and the HTTP API for roles, member roles and channel overwrites. See [roles-and-permissions.md](roles-and-permissions.md). |
 | [`internal/chat`](../internal/chat/handler.go) | Categories, channels (text and voice), layout, messages, replies, threads, reactions, mentions (by name, `@all`/`@here` and `@Role`, with a fan-out cap) and the mentions inbox, read state, notification levels ([`notify.go`](../internal/chat/notify.go)), search ([`search.go`](../internal/chat/search.go), filters in [`search_filters.go`](../internal/chat/search_filters.go)), members. Since 1.1 also direct messages (`dm*.go`), blocks ([`blocks.go`](../internal/chat/blocks.go)), reports ([`reports.go`](../internal/chat/reports.go)), saved messages ([`saved.go`](../internal/chat/saved.go)), forwarding ([`forward.go`](../internal/chat/forward.go)) and thread follow ([`thread_follow.go`](../internal/chat/thread_follow.go)). |
+| [`internal/later`](../internal/later/service.go) | Reminders and scheduled messages: private per-member lists, the sweep that delivers and sends them, and their REST routes (see "Reminders and scheduled messages"). |
 | [`internal/onboarding`](../internal/onboarding/handler.go) | The first-run side of the community: name, welcome text and rules, who accepted which rules version, dismissed tips and the public invite preview. |
 | [`internal/media`](../internal/media/handler.go) | Uploads with content sniffing and an allow-list ([`policy.go`](../internal/media/policy.go)), authenticated media serving through the app, admin storage stats and pruning, and the retention worker (off unless `MEDIA_RETENTION_DAYS > 0`). |
 | [`internal/s3`](../internal/s3/s3.go) | S3 client (AWS SDK v2); creates the bucket only when missing. |
@@ -91,6 +92,15 @@ member can read it from the Talk's row in the sidebar without joining. Edits, de
 same pattern: REST for changes, WebSocket events for fan-out. Media is never
 served from S3 directly: `GET /api/media/{id}` checks the session and streams
 the object through the app.
+
+## Forum channels
+
+Forum channels (`channels.type = 'forum'`, 1.2) are structured discussion spaces. Instead of an unthreaded message stream, a forum channel holds posts displayed as cards, each with an associated thread.
+
+- **Post model**: A post reuses the existing thread model. It is a root message (`parent_id IS NULL`) in a forum channel with a required `title` (1..100 characters), an initial body (1..4000 characters), and up to 5 optional tags. Replies to the post form the thread (`messages.parent_id`).
+- **Tags**: Each forum channel can define up to 20 admin-curated tags (`forum_tags`, name <= 20 characters, optional emoji <= 32 characters). Posts associate with tags via `forum_post_tags`.
+- **Permissions**: *View channels* gates reading posts and tags; *Send messages* gates creating posts and posting replies in threads. Moderation (*Manage messages*) allows locking posts (`messages.is_locked = TRUE`), which restricts replies to moderators only, and editing tags on other members' posts.
+- **Search and Unread**: Because posts are root messages, unread tracking, mentions, search indexing, and thread follows integrate seamlessly without a secondary store.
 
 ## Direct messages
 
@@ -186,6 +196,44 @@ A report (`message_reports`, migration 0049, permission *Manage reports*,
 edit or a delete. It is the only way a moderator reads anything of a conversation. Rules,
 retention and the audit entries are in [moderation](moderation.md#blocking-and-reports).
 
+## Anonymous polls
+
+An anonymous poll (feature `polls.anonymous`) stores two facts that nothing
+in the schema connects. This hides votes from every member, moderator and
+administrator in the app; an operator with direct access to the database
+server (its WAL, transaction ids or statement logs) could, in theory, still
+correlate the timing of a voter row and a ballot. Mnema itself never stores
+which option a member chose. `poll_voters (poll_id, user_id)` says that a member voted, which
+makes a second vote impossible; it has no timestamp, so neither insert order
+nor time can be matched against the other fact. The choice goes to
+`poll_anon_ballots (poll_id, option_id)`: no member, no timestamp, appended in
+the same transaction but by a separate statement. Readers add the unfolded
+ballots to the counter `poll_options.anon_votes`, and `poll.RunFold` sums the
+ballots into it and deletes them every ten minutes. `polls.anon_voters` is the
+participant counter. No table, log line, audit entry, event, export or data export holds
+a member next to a choice; a trigger on `poll_votes` (which still serves polls
+that name their voters) refuses a row for an anonymous poll, and an integration
+test walks every table of the schema to prove that no row mentions a voter and
+an option together. Because a choice is never known, a vote cannot be changed
+or withdrawn and the data export of a member has no entry for anonymous
+polls. Erasing an account deletes its `poll_voters` rows and leaves the
+counters, as a tally is not personal data. Migration 0063 converted the
+anonymous polls that existed before 1.2 the same way (see
+[upgrade.md](upgrade.md#11x--120)).
+
+## Per-channel auto-delete
+
+`channels.auto_delete_days` (0, 1, 7, 30 or 90; a check constraint also
+forbids it on direct messages) is read by `chat.AutoDeleter`
+([`internal/chat/auto_delete.go`](../internal/chat/auto_delete.go)), a
+background loop started with the router. Each pass lists the channels that
+opted in and works through each in transactions of at most 200 messages:
+lock the expired rows (`FOR UPDATE ... SKIP LOCKED`, which also holds off
+concurrent replies and uploads, so the list of attachment keys is complete),
+collect their media keys, delete the rows, then delete the objects and
+broadcast `message_delete`. The setting is re-checked inside every batch.
+The audit entry per run is written by the sweeper itself.
+
 ## Forwarding and saved messages
 
 **A forward is a reference, never a copy.** `POST /api/messages/{id}/forward`
@@ -214,6 +262,45 @@ asked for.
 holds a reference and the member's note. `GET /api/me/saved` joins the messages
 the member may see now; a conversation's messages need membership, tested in
 SQL like search does.
+
+## Reminders and scheduled messages
+
+Both live in [`internal/later`](../internal/later/service.go) (migration 0062)
+and are private to their owner. A background loop (every 15 seconds, started by
+the router, `Service.Sweep`) delivers the due reminders and sends the due
+scheduled messages. Times are absolute: the web app works them out in the
+member's own time zone ("tomorrow morning" is 08:00 local) and the server only
+checks that they lie between 10 seconds and a year ahead.
+
+**A reminder is a reference** (`message_reminders`): at most 100 per member. The
+message may be deleted later (`ON DELETE SET NULL`). `GET /api/me/reminders`
+checks the member's access on every read, as saved messages do, and answers
+`available: false` without text for a message they cannot see. When a reminder
+falls due the row is claimed first (`delivered_at`, at most once), then the
+member's sessions get `reminder_update` (`due`) and the push pipeline gets a
+`push.Direct`. The access check runs again at that moment against the
+permission snapshot (a conversation needs membership); a message the member can
+no longer see is announced as "a message you can no longer see", with no ids,
+author or text. A delivered reminder stays in the list until dismissed (or for
+30 days) so a member who was offline finds it.
+
+**A scheduled message is sent by the server as its author through the normal
+send path** (`scheduled_messages`, at most 50 per member, text only). Creating
+one needs Send messages in the channel, but nothing is promised: at `send_at`
+the worker loads the account (disabled, banned and deleted accounts do not
+send), builds the same send context as a request (`chat.SendContextFor`, so a
+changed role, channel overwrite, pending rules or a timeout apply), validates
+the reply and thread target again and inserts the message with
+`chat.InsertMessage`, whose transaction applies slow mode and the direct message
+rules (blocks, closed conversations). The scheduled row is deleted in the same
+transaction, so a message is neither sent twice nor lost half-way, and a row
+edited meanwhile is not sent in its old version. A refusal turns the row into a
+failed draft with a reason code (`slow_mode`, `not_allowed`, `unavailable`,
+`refused`; a 403 never says which rule, because it can concern another member)
+and tells the author with `scheduled_message_update` (`failed`) and a push. The
+author can edit the text, set a new time (which puts it back to waiting) or
+delete it. A failure of the server itself (the database) leaves the message
+waiting for the next round.
 
 ## Data flow: voice, cameras and screen share
 
@@ -379,7 +466,7 @@ member's status as a moderator never sets an expiry and always removes it.
 Three features that cut across the chat path. All of them are enforced on the
 server; the client only renders the result.
 
-**Notification levels.** A member sets `all`, `mentions` or `mute` per channel
+**Notification levels.** A member sets `all`, `mentions` or `mute` ("Nothing") per channel
 and per category, a mute optionally with an end time. The stored value
 `inherit` (the default) follows the category, then `all`; the level a client
 receives is always the effective one. Settings are rows in `channel_reads` and a
@@ -389,7 +476,13 @@ Levels decide who is *notified* and what the mention badge counts. A mute stays
 silent except for a message addressed to the member (by name, through a role
 they hold, or as a reply); `@all` and `@here` do not break a mute. Both the
 badge (`mention_count` in `GET /api/read-state`) and the push follow this rule.
-Do Not Disturb silences everything. Unread counts and the mentions inbox
+Do Not Disturb silences everything. Since 1.2 a member also has a server-wide
+default (`server_notify`, migration 0073; `PUT /api/notification-settings/server`,
+`GET /api/notification-settings` lists it under `server`): the precedence is
+channel, then category, then that default, then `all`. The default has no
+`inherit` and does not reach direct messages. Its *Suppress @all and @here*
+switch makes those two mention kinds count for nothing, at every level: no push
+and no mention badge. Unread counts and the mentions inbox
 (`GET /api/mentions`) are independent of the level, so a muted channel still
 shows what was addressed to the member.
 
@@ -608,14 +701,12 @@ it is paid once per page load or reconnect, not per message.
   SFU names for its line, so a unit moved to another line does not open
   ([`frame.ts`](../web/src/lib/media/frame.ts),
   [`mediaFrameWorker.ts`](../web/src/lib/media/mediaFrameWorker.ts)). Version 2
-  (`M2`, no line) is still sent and accepted for mixed-version Talks: members
-  sign a capability message
+  (`M2`, no line) was removed in 1.2.0: it is neither sent nor opened, and a
+  unit that carries it is counted and reported to the member as coming from an
+  outdated client. Members still sign a capability message
   ([`capability.ts`](../web/src/lib/media/capability.ts), `M` `C`, next to the
-  heartbeat), a sender seals version 3 only in an epoch where every member
-  advertised it (decided per epoch, never downgraded within one), and a
-  receiver refuses version 2 in an epoch where every member has.
-  Refusing version 2 outright is planned for a later release
-  ([SECURITY.md](../SECURITY.md)).
+  heartbeat) so that older clients, which choose their format by it, switch to
+  version 3 ([SECURITY.md](../SECURITY.md)).
 - **Screen shares are opt-in per viewer** so an idle viewer costs no
   bandwidth ([`subscriptions.go`](../internal/sfu/subscriptions.go)).
 - **Invite-only, one Owner.** No public registration; the Owner is seeded

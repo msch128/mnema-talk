@@ -25,6 +25,9 @@ const failed = ref(false)
 
 const when = (iso: string) => new Date(iso).toLocaleString(locale.value, { dateStyle: 'medium', timeStyle: 'medium' })
 const isOpen = computed(() => report.value?.status === 'open')
+const isAutomod = computed(() => report.value?.source === 'automod')
+// A raid alert is about no message, and automod never keeps the text of a direct message.
+const hasCopy = computed(() => !!report.value && report.value.kind !== 'alert' && !(isAutomod.value && report.value.kind === 'dm'))
 // The messages around the reported one, with the reported one in its place (the server keeps it apart).
 const copy = computed(() => {
   const snapshot = report.value?.snapshot
@@ -89,21 +92,33 @@ onMounted(load)
       <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt class="text-mnema-tertiary">{{ $t('reports.admin.reason') }}</dt>
         <dd class="text-mnema-text">{{ $t(`reports.category.${report.category}`) }}</dd>
-        <dt class="text-mnema-tertiary">{{ $t('reports.admin.reporter') }}</dt>
-        <dd class="text-mnema-text">{{ report.reporter?.username }}</dd>
-        <dt class="text-mnema-tertiary">{{ $t('reports.admin.reported') }}</dt>
-        <dd class="text-mnema-text">{{ report.reported?.username }}</dd>
+        <template v-if="isAutomod">
+          <dt class="text-mnema-tertiary">{{ $t('reports.admin.automod') }}</dt>
+          <dd class="text-mnema-text" data-testid="report-automod-rule">{{ report.automod_rule }} · {{ $t(`reports.admin.outcome.${report.automod_outcome ?? 'flagged'}`) }}<template v-if="(report.hit_count ?? 1) > 1"> · {{ $t('reports.admin.hits', { count: report.hit_count }) }}</template></dd>
+        </template>
+        <template v-else>
+          <dt class="text-mnema-tertiary">{{ $t('reports.admin.reporter') }}</dt>
+          <dd class="text-mnema-text">{{ report.reporter?.username }}</dd>
+        </template>
+        <template v-if="report.reported">
+          <dt class="text-mnema-tertiary">{{ $t('reports.admin.reported') }}</dt>
+          <dd class="text-mnema-text">{{ report.reported.username }}</dd>
+        </template>
         <dt class="text-mnema-tertiary">{{ $t('reports.admin.where') }}</dt>
-        <dd class="text-mnema-text">{{ report.kind === 'dm' ? $t('reports.admin.dm') : `#${report.channel_name ?? ''}` }}</dd>
+        <dd class="text-mnema-text">{{ report.kind === 'dm' ? $t('reports.admin.dm') : report.kind === 'alert' ? $t('reports.admin.alertWhere') : `#${report.channel_name ?? ''}` }}</dd>
         <template v-if="report.note">
           <dt class="text-mnema-tertiary">{{ $t('reports.admin.note') }}</dt>
           <dd class="wrap-break-word text-mnema-text" data-testid="report-note-text">{{ report.note }}</dd>
         </template>
       </dl>
 
-      <section :aria-label="$t('reports.admin.copy')">
+      <p v-if="report.kind === 'alert'" class="text-sm text-mnema-muted" data-testid="report-alert-text">{{ $t('reports.admin.alertText') }}</p>
+      <p v-else-if="isAutomod && report.kind === 'dm'" class="text-sm text-mnema-muted" data-testid="report-dm-automod">{{ $t('reports.admin.automodDmNotice') }}</p>
+
+      <section v-if="hasCopy" :aria-label="$t('reports.admin.copy')">
         <h4 class="mb-1 text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('reports.admin.copy') }}</h4>
         <p v-if="report.kind === 'dm'" class="mb-2 text-xs text-mnema-tertiary">{{ $t('reports.admin.dmNotice') }}</p>
+        <p v-if="isAutomod && report.automod_outcome === 'blocked'" class="mb-2 text-xs text-mnema-tertiary">{{ $t('reports.admin.automodBlockedNotice') }}</p>
         <ol class="max-h-96 space-y-1 overflow-y-auto rounded-lg border border-mnema-hairline bg-mnema-surface p-2" data-testid="report-context">
           <li
             v-for="msg in copy"

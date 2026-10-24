@@ -51,7 +51,13 @@ func (h *Handler) sendContext(r *http.Request, ch uuid.UUID, need perm.Set) (con
 }
 
 func sendContext(perms *perm.Service, r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
-	ctx := r.Context()
+	return SendContextFor(perms, r.Context(), ch, need)
+}
+
+// SendContextFor is SendContext for work that runs without a request (a
+// scheduled message): ctx carries the author (auth.WithUser) and the
+// permission state is read now, so a later change of rights applies.
+func SendContextFor(perms *perm.Service, ctx context.Context, ch uuid.UUID, need perm.Set) (context.Context, error) {
 	if perms == nil {
 		return ctx, nil
 	}

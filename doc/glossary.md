@@ -17,6 +17,9 @@ in the legal texts (Impressum, Datenschutz, AGB), which are formal by design.
 | Lobby that opens Talks | Talk lobby | Talk-Lobby | Create-a-Talk room, Warteraum | A Talk marked as a lobby: joining it opens a temporary Talk ("Talk 1", "Talk 2", ...) instead of a seat. Shown as "Create a Talk" / „Talk erstellen“ in the sidebar when named so. |
 | Who may rename and limit a temporary Talk | Talk leader | Talk-Leitung | host, owner, Talk-Admin | The member who opened a temporary Talk, then the member who has been in it longest. Tooltip "Talk leader" / „Talk-Leitung“. |
 | Text room | channel | Kanal | | Group of rooms: category / Kategorie. |
+| Structured discussion room | forum channel | Forum-Kanal | | A channel of posts as cards with threads and tags. |
+| Discussion starter in a forum | post | Beitrag | thread (for the root message) | A root message in a forum channel with a required title and initial message. |
+| Forum tag | tag | Tag | label, category | Up to 20 admin-defined tags per forum channel. |
 | Screen broadcast | screen share | Bildschirmübertragung | stream (as a noun for your own share) | A viewer watches a screen share / sieht eine Übertragung; "Nicht mehr ansehen" stops watching. |
 | Mute your own microphone | mute / unmute | stummschalten / Stummschaltung aufheben | | Deafen = "Ton aus". Only for audio. |
 | Silence notifications | mute notifications | Benachrichtigungen aus / stumm | | |

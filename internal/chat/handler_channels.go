@@ -3,7 +3,6 @@ package chat
 import (
 	"net/http"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -119,6 +118,12 @@ func (h *Handler) createChannel(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if req.IsStage {
+		if err := SetStage(r.Context(), h.DB, ch.ID, true); err != nil {
+			return err
+		}
+		ch.IsStage = true
+	}
 	h.structureChanged()
 	httpx.WriteJSON(w, http.StatusCreated, ch)
 	return nil
@@ -202,7 +207,7 @@ func (h *Handler) deleteChannel(w http.ResponseWriter, r *http.Request) error {
 // updateChannel handles PATCH /api/admin/channels/{id}.
 //
 // @Summary Rename a channel, change its topic or member limit
-// @Description Requires the Manage channels permission (403 otherwise). user_limit (voice channels only) caps how many members can be in the room at once; 0 removes the limit (the default). A member already in the room always gets back in. is_lobby (permanent voice channels only) makes the Talk a Create-a-Talk lobby.
+// @Description Requires the Manage channels permission (403 otherwise). user_limit (voice channels only) caps how many members can be in the room at once; 0 removes the limit (the default). A member already in the room always gets back in. is_lobby (permanent voice channels only) makes the Talk a Create-a-Talk lobby. is_stage (permanent voice channels that are no lobby) makes it a Stage, or a normal Talk again.
 // @ID updateChannel
 // @Tags Admin
 // @Accept json
@@ -236,12 +241,21 @@ func (h *Handler) updateChannel(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
+	if req.IsStage != nil {
+		if err := SetStage(r.Context(), h.DB, id, *req.IsStage); err != nil {
+			return err
+		}
+	}
 	ch, err := UpdateChannel(r.Context(), h.DB, id, req.Name, req.Topic, req.UserLimit, req.SlowModeSeconds)
 	if err != nil {
 		return err
 	}
 	FillTalkFields(r.Context(), h.DB, ch)
-	h.channelsChanged()
+	if req.IsStage != nil {
+		h.structureChanged() // the hub re-checks who may still send media
+	} else {
+		h.channelsChanged()
+	}
 	httpx.WriteJSON(w, http.StatusOK, ch)
 	return nil
 }
@@ -331,59 +345,4 @@ func (h *Handler) applyLayout(w http.ResponseWriter, r *http.Request) error {
 	h.structureChanged()
 	w.WriteHeader(http.StatusNoContent)
 	return nil
-}
-
-// ChannelHierarchy is the response of GET /api/channels.
-type ChannelHierarchy struct {
-	Categories    []Category `json:"categories"`
-	Uncategorized []Channel  `json:"uncategorized"`
-}
-
-// CreateCategoryRequest is the body of POST /api/admin/categories.
-type CreateCategoryRequest struct {
-	Name      string `json:"name" minLength:"1" maxLength:"64"`
-	SortOrder int    `json:"sort_order" binding:"optional"`
-}
-
-// RenameCategoryRequest is the body of PATCH /api/admin/categories/{id}.
-type RenameCategoryRequest struct {
-	Name string `json:"name" minLength:"1" maxLength:"64"`
-}
-
-// RenamedCategory is the response of PATCH /api/admin/categories/{id}.
-type RenamedCategory struct {
-	ID   uuid.UUID `json:"id" format:"uuid"`
-	Name string    `json:"name"`
-}
-
-// CreateChannelRequest is the body of POST /api/admin/channels.
-type CreateChannelRequest struct {
-	CategoryID *uuid.UUID  `json:"category_id" format:"uuid" binding:"optional" extensions:"x-nullable"`
-	Name       string      `json:"name" minLength:"1" maxLength:"64"`
-	Type       ChannelType `json:"type" default:"text" binding:"optional"`
-	Topic      string      `json:"topic" maxLength:"255" binding:"optional"`
-	SortOrder  int         `json:"sort_order" binding:"optional"`
-}
-
-// UpdateChannelRequest is the body of PATCH /api/admin/channels/{id}; omitted
-// fields are kept.
-type UpdateChannelRequest struct {
-	Name  *string `json:"name" minLength:"1" maxLength:"64" binding:"optional"`
-	Topic *string `json:"topic" maxLength:"255" binding:"optional"`
-	// UserLimit caps a voice channel's members at once; 0 removes the limit.
-	UserLimit *int `json:"user_limit" minimum:"0" maximum:"999" binding:"optional"`
-	// SlowModeSeconds sets the least time between two messages of one member
-	// in the channel (0 turns slow mode off). Members who may manage messages
-	// in the channel are exempt.
-	SlowModeSeconds *int `json:"slow_mode_seconds" minimum:"0" maximum:"86400" binding:"optional"`
-	// IsLobby marks a voice channel as a Create-a-Talk lobby (true) or clears
-	// the mark (false): joining a lobby opens a temporary Talk (doc/talks.md).
-	IsLobby *bool `json:"is_lobby" binding:"optional"`
-}
-
-// LayoutRequest is the body of PUT /api/admin/layout: at most 500 entries in
-// total; an unknown ID rejects the whole change.
-type LayoutRequest struct {
-	Categories []CategoryOrder    `json:"categories" binding:"optional"`
-	Channels   []ChannelPlacement `json:"channels" binding:"optional"`
 }

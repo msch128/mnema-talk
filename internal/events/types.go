@@ -50,6 +50,8 @@ const (
 	ThreadFollowUpdated = "thread_follow_updated"
 	BlockUpdated        = "block_updated"
 	SavedUpdated        = "saved_updated"
+	ReminderUpdate      = "reminder_update"
+	ScheduledUpdate     = "scheduled_message_update"
 	DMCreated           = "dm_created"
 	DMMemberAdded       = "dm_member_added"
 	DMMemberRemoved     = "dm_member_removed"
@@ -58,9 +60,28 @@ const (
 	// Talk lobby opened the Talk channel_id and seated it there.
 	TalkLeader = "talk_leader"
 	TalkMoved  = "talk_moved"
+	// StageHand says a member raised or lowered their hand in a Stage;
+	// StageTalkPower says whether a member may speak there now (explicitly
+	// granted, or holding Manage stage). TalkReaction is a short-lived emoji
+	// a member sent to the Talk they are in. All three go to that Talk's
+	// members only and are never stored.
+	StageHand      = "stage_hand"
+	StageTalkPower = "stage_talk_power"
+	TalkReaction   = "talk_reaction"
 	// Kicked tells a member a moderator signed them out everywhere; their
 	// connection closes right after.
 	Kicked = "kicked"
+	// ForumTagsChanged announces that tags were created, edited or removed
+	// in a forum channel.
+	ForumTagsChanged = "forum_tags_changed"
+	// EventUpdate tells clients that a community event was created, edited,
+	// cancelled, completed or that its RSVPs changed.
+	EventUpdate = "event_update"
+	// EventDelete tells one member that a community event left their view (it
+	// moved into, or its Talk became, something they may not see): drop it.
+	EventDelete = "event_delete"
+	// EventReminder notifies members 15 minutes before an event starts.
+	EventReminder = "event_reminder"
 )
 
 // Client-to-server events.
@@ -82,4 +103,7 @@ const (
 	ClientWebrtcScreenshareStop  = "webrtc_screenshare_stop"
 	ClientWebrtcCameraStop       = "webrtc_camera_stop"
 	ClientMediaHandshake         = "media_handshake"
+	ClientStageHand              = "stage_hand"
+	ClientStageTalkPower         = "stage_talk_power"
+	ClientTalkReaction           = "talk_reaction"
 )

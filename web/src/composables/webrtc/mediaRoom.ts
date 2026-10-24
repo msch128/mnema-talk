@@ -35,6 +35,7 @@ export function closeMediaRoom() {
 
 let unprotectedAnnounced = false
 let rekeyAnnounced = false
+let outdatedAnnounced = false
 let releaseUnprotected: () => void = () => {}
 
 /** What to stop when the call turns out to carry media unprotected. */
@@ -51,15 +52,25 @@ export function mediaUnprotected() {
 export function resetMediaAnnouncements() {
   unprotectedAnnounced = false
   rekeyAnnounced = false
+  outdatedAnnounced = false
 }
 
 // The group dropped this member without being asked: whoever relays the call
 // can do that, so say so once per call.
 export function announceMediaRekeyed(notice: MediaNotice) {
+  if (notice === 'outdated') return announceOutdatedClient()
   if (rekeyAnnounced) return
   rekeyAnnounced = true
   // A member dropped after its own browser slept was not removed by anyone hostile.
   useToastStore().info(t(notice === 'absent' ? 'voice.mediaRefreshed' : 'voice.mediaRekeyed'))
+}
+
+// Someone's client still seals media in the retired frame format: it is
+// dropped, so say once per call why that member is silent.
+function announceOutdatedClient() {
+  if (outdatedAnnounced) return
+  outdatedAnnounced = true
+  useToastStore().error(t('voice.mediaOutdatedClient'))
 }
 
 export function announceMediaUnprotected() {

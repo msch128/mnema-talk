@@ -21,19 +21,19 @@ async function keysOf(byte = 7): Promise<EpochKeys> {
   return testEpochKeys(await testAesKey(byte), alice, { alice, bob })
 }
 
-interface Made { version?: 2 | 3, source?: FrameSource, layer?: number | undefined, stream?: number, counter?: number }
+interface Made { source?: FrameSource, layer?: number | undefined, stream?: number, counter?: number }
 
-async function made(keys: EpochKeys, { version = 3, source = SOURCE_MIC, layer, stream = 9, counter = 0 }: Made = {}) {
-  const packet = await sealFrame({ keys, epoch: 4, stream, counter, channelId: 'channel', senderId: 'alice', plaintext: Uint8Array.of(1, 2, 3), version, source, layer })
+async function made(keys: EpochKeys, { source = SOURCE_MIC, layer, stream = 9, counter = 0 }: Made = {}) {
+  const packet = await sealFrame({ keys, epoch: 4, stream, counter, channelId: 'channel', senderId: 'alice', plaintext: Uint8Array.of(1, 2, 3), source, layer })
   if (!packet) throw new Error('expected a sealed frame')
   return packet
 }
 
-function open(keys: EpochKeys, packet: Uint8Array, over: { source?: FrameSource | null, acceptV2?: (epoch: number) => boolean, replay?: ReplayWindow } = {}) {
-  return openFrame({ keys: new Map([[4, keys]]), channelId: 'channel', senderId: 'alice', packet, replay: over.replay ?? new ReplayWindow(), source: over.source, acceptV2: over.acceptV2 })
+function open(keys: EpochKeys, packet: Uint8Array, over: { source?: FrameSource | null, onLegacy?: (() => void) | undefined, replay?: ReplayWindow } = {}) {
+  return openFrame({ keys: new Map([[4, keys]]), channelId: 'channel', senderId: 'alice', packet, replay: over.replay ?? new ReplayWindow(), source: over.source, ...(over.onLegacy ? { onLegacy: over.onLegacy } : {}) })
 }
 
-describe('frame version 3 binds the line', () => {
+describe('the frame binds the line', () => {
   it('seals a line byte and opens it on the line it names', async () => {
     const keys = await keysOf()
     for (const source of [SOURCE_MIC, SOURCE_CAMERA, SOURCE_SCREEN, SOURCE_SCREEN_AUDIO] as const) {
@@ -41,7 +41,7 @@ describe('frame version 3 binds the line', () => {
       const packet = await made(keys, { source, stream })
       expect([...packet.subarray(0, 2)]).toEqual([0x4d, 0x33])
       expect(packet[14]).toBe(lineByte(source))
-      expect(packet.byteLength).toBe(3 + FRAME_OVERHEAD_BYTES + 1)
+      expect(packet.byteLength).toBe(3 + FRAME_OVERHEAD_BYTES)
       await expect(open(keys, packet, { source })).resolves.toEqual(Uint8Array.of(1, 2, 3))
     }
     expect(isFrameSource(3)).toBe(true)
@@ -69,15 +69,7 @@ describe('frame version 3 binds the line', () => {
     const forged = mic.slice()
     forged[14] = lineByte(SOURCE_SCREEN_AUDIO)
     await expect(open(keys, forged, { source: SOURCE_SCREEN_AUDIO })).resolves.toBeNull()
-    // A version 2 unit given a version 3 magic is no version 3 unit either.
-    const v2 = await made(keys, { version: 2 })
-    const lifted = new Uint8Array(v2.byteLength + 1)
-    lifted.set(v2.subarray(0, 14))
-    lifted[1] = 0x33
-    lifted[14] = lineByte(SOURCE_SCREEN_AUDIO)
-    lifted.set(v2.subarray(14), 15)
-    await expect(open(keys, lifted, { source: SOURCE_SCREEN_AUDIO })).resolves.toBeNull()
-    // And a version 3 unit made to look like version 2 loses its line byte's place.
+    // A unit made to look like the retired version 2 is not opened.
     const lowered = mic.slice()
     lowered[1] = 0x32
     await expect(open(keys, lowered, { source: SOURCE_MIC })).resolves.toBeNull()
@@ -108,7 +100,7 @@ describe('frame version 3 binds the line', () => {
     await expect(open(keys, nowhere, { source: SOURCE_MIC })).resolves.toBeNull()
   })
 
-  it('keeps the replay window: a unit opens once, whatever its version', async () => {
+  it('keeps the replay window: a unit opens once, whatever its line', async () => {
     const keys = await keysOf()
     const replay = new ReplayWindow()
     const packet = await made(keys, { counter: 5 })
@@ -120,37 +112,89 @@ describe('frame version 3 binds the line', () => {
     await expect(open(keys, other, { source: SOURCE_MIC, replay })).resolves.toEqual(Uint8Array.of(1, 2, 3))
   })
 
-  it('seals version 3 only for a source, and short units do not open', async () => {
+  it('seals only for a source, and short units do not open', async () => {
     const keys = await keysOf()
-    await expect(sealFrame({ keys, epoch: 4, stream: 1, counter: 0, channelId: 'channel', senderId: 'alice', plaintext: Uint8Array.of(1), version: 3 })).resolves.toBeNull()
+    await expect(sealFrame({ keys, epoch: 4, stream: 1, counter: 0, channelId: 'channel', senderId: 'alice', plaintext: Uint8Array.of(1), source: 9 as FrameSource })).resolves.toBeNull()
     const packet = await made(keys)
-    // The smallest version 2 unit that is one byte short of a version 3 unit.
-    const short = packet.subarray(0, FRAME_OVERHEAD_BYTES)
+    // One byte short of the smallest unit.
+    const short = packet.subarray(0, FRAME_OVERHEAD_BYTES - 1)
     await expect(open(keys, short, { source: SOURCE_MIC })).resolves.toBeNull()
   })
 })
 
-describe('frame version 2 is still taken while a member of its epoch cannot open version 3', () => {
-  it('opens version 2 by default, and refuses the epochs acceptV2 names', async () => {
+/** What the retired version 2 unit looked like: no line byte, magic 'M' '2'. */
+function legacyOf(packet: Uint8Array): Uint8Array {
+  const legacy = new Uint8Array(packet.byteLength - 1)
+  legacy.set(packet.subarray(0, 14))
+  legacy.set(packet.subarray(15), 14)
+  legacy[1] = 0x32
+  return legacy
+}
+
+describe('the retired frame version 2', () => {
+  it('is not opened on any line, however it is relabelled, and is reported', async () => {
     const keys = await keysOf()
-    const v2 = await made(keys, { version: 2 })
-    expect([...v2.subarray(0, 2)]).toEqual([0x4d, 0x32])
-    await expect(open(keys, v2)).resolves.toEqual(Uint8Array.of(1, 2, 3))
-    await expect(open(keys, v2, { source: SOURCE_SCREEN, acceptV2: () => true })).resolves.toEqual(Uint8Array.of(1, 2, 3))
-    await expect(open(keys, v2, { acceptV2: () => false })).resolves.toBeNull()
-    // The question is about the unit's own epoch (4), not another.
-    await expect(open(keys, v2, { acceptV2: epoch => epoch !== 4 })).resolves.toBeNull()
-    await expect(open(keys, v2, { acceptV2: epoch => epoch === 4 })).resolves.toEqual(Uint8Array.of(1, 2, 3))
-    // Version 3 always opens, so a capable sender that is slow to switch is not cut off from itself.
-    const v3 = await made(keys)
-    await expect(open(keys, v3, { source: SOURCE_MIC, acceptV2: () => false })).resolves.toEqual(Uint8Array.of(1, 2, 3))
+    const legacy = legacyOf(await made(keys))
+    for (const source of [SOURCE_MIC, SOURCE_CAMERA, SOURCE_SCREEN, SOURCE_SCREEN_AUDIO, null, undefined] as (FrameSource | null | undefined)[]) {
+      let reported = 0
+      await expect(open(keys, legacy, { ...(source === undefined ? {} : { source }), onLegacy: () => { reported++ } })).resolves.toBeNull()
+      expect(reported).toBe(1)
+    }
   })
 
-  it('cannot move a version 2 unit onto another line by relabelling, and counts as it did', async () => {
+  it('is not sealed: the output is always version 3', async () => {
     const keys = await keysOf()
-    const v2 = await made(keys, { version: 2, source: SOURCE_MIC })
-    // Version 2 never knew a line: this is exactly what version 3 closes, and it is refused only in an epoch where every member can open version 3.
-    await expect(open(keys, v2, { source: SOURCE_SCREEN_AUDIO, acceptV2: () => true })).resolves.toEqual(Uint8Array.of(1, 2, 3))
-    await expect(open(keys, v2, { source: SOURCE_SCREEN_AUDIO, acceptV2: () => false })).resolves.toBeNull()
+    for (const source of [SOURCE_MIC, SOURCE_CAMERA, SOURCE_SCREEN_AUDIO] as const) {
+      expect([...(await made(keys, { source })).subarray(0, 2)]).toEqual([0x4d, 0x33])
+    }
+  })
+})
+
+describe('malformed units are refused without a crash', () => {
+  it('refuses empty, truncated, mismagicked and bit-flipped units, and reports only version 2', async () => {
+    const keys = await keysOf()
+    const good = await made(keys)
+    let legacyReports = 0
+    const cases: [string, Uint8Array][] = [
+      ['empty', new Uint8Array()],
+      ['one byte', Uint8Array.of(0x4d)],
+      ['magic only', Uint8Array.of(0x4d, 0x33)],
+      ['wrong magic', Uint8Array.from(good, (byte, at) => (at === 0 ? 0x00 : byte))],
+      ['unknown version', Uint8Array.from(good, (byte, at) => (at === 1 ? 0x34 : byte))],
+      ['version 1', Uint8Array.from(good, (byte, at) => (at === 1 ? 0x31 : byte))],
+      ['all zero', new Uint8Array(good.byteLength)],
+      ['all ones', new Uint8Array(good.byteLength).fill(0xff)],
+      ['header only', good.subarray(0, 27)],
+      ['signature missing', good.subarray(0, good.byteLength - 64)],
+      ['one byte short', good.subarray(0, good.byteLength - 1)],
+    ]
+    for (let length = 0; length < FRAME_OVERHEAD_BYTES; length++) cases.push([`truncated to ${length}`, good.subarray(0, length)])
+    // A deterministic spread of random bodies behind a valid magic.
+    let state = 0x9e3779b9
+    for (let round = 0; round < 24; round++) {
+      const body = new Uint8Array(FRAME_OVERHEAD_BYTES + (round % 5) * 7)
+      for (let at = 0; at < body.length; at++) {
+        state = (Math.imul(state, 1664525) + 1013904223) >>> 0
+        body[at] = state >>> 24
+      }
+      body[0] = 0x4d
+      body[1] = 0x33
+      cases.push([`random ${round}`, body])
+    }
+    for (const [name, packet] of cases) {
+      await expect(open(keys, packet, { source: SOURCE_MIC, onLegacy: () => { legacyReports++ } }), name).resolves.toBeNull()
+    }
+    expect(legacyReports).toBe(0)
+    await expect(open(keys, good, { source: SOURCE_MIC })).resolves.toEqual(Uint8Array.of(1, 2, 3))
+  })
+
+  it('refuses units too short or oddly shaped as version 2 too', async () => {
+    const keys = await keysOf()
+    const legacy = legacyOf(await made(keys))
+    let reported = 0
+    for (const length of [2, 3, 13, 14, 26, legacy.byteLength - 1]) {
+      await expect(open(keys, legacy.subarray(0, length), { source: SOURCE_MIC, onLegacy: () => { reported++ } })).resolves.toBeNull()
+    }
+    expect(reported).toBe(6)
   })
 })

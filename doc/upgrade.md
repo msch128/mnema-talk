@@ -128,8 +128,8 @@ until the new release has passed your application checks.
 
 ### 1.1.x → 1.2.0
 
-Update with the procedure above and take the backup first. 1.2.0 only adds. A
-1.1.x web app keeps working against a 1.2 server, and a 1.2 web app hides what
+Update with the procedure above and take the backup first. 1.2.0 only adds, apart from raising the security floor (see "Calls and the
+security floor" below). A 1.1.x web app keeps working against a 1.2 server, and a 1.2 web app hides what
 a 1.1.x server lacks (it reads the `features` list of `GET /api/health`).
 Nothing in `.env` has to change. A rollback to a 1.1.x image needs the restore
 of the pre-update backup (see "Rollback" above).
@@ -140,6 +140,34 @@ of the pre-update backup (see "Rollback" above).
 |---|---|
 | 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
 | 0061 | `users.status_expires_at` (a status line that clears itself, feature `status.expiry`). It also raises the limit of `channels.slow_mode_seconds` from 6 hours to 24 hours. |
+| 0062 | `message_reminders` and `scheduled_messages` (see "Reminders and scheduled messages"). |
+| 0063 | `poll_voters`, `poll_anon_ballots`, `poll_options.anon_votes`, `polls.anon_voters` and a trigger on `poll_votes` (anonymous polls); `channels.auto_delete_days` with its checks. |
+| 0064 | `user_sessions`: one row per browser session (device label, created, last active). |
+| 0065 | `instance_settings.session_inactivity_days` (1 to 365, default 7). |
+| 0066 | `automod_rules` and `automod_state` with the default rules (below), and the columns `source`, `automod_rule`, `automod_outcome` and `hit_count` of `message_reports` (existing reports keep `source = 'member'`). |
+| 0067 | `moderation_notes`: private moderator notes about members. |
+| 0068 | `channels.is_stage`: Stages. Existing channels keep `false`; a Stage is never a lobby or a temporary Talk. |
+| 0069 | `channels.type = 'forum'`, `messages.title`, `messages.is_locked`, `forum_tags` and `forum_post_tags`: Forum channels with tag management and post threads (see [Forum channels](forums.md)). Existing rows keep null and false. |
+| 0070 | `events` and `event_rsvps` tables: community events, RSVPs (see [events](events.md)); the new `Manage events` permission is granted to every non-bot role that holds *Timeout members* (the seeded Moderator and Admin roles). |
+| 0071 | `discord_imports` and `discord_import_objects`: the record of each Discord structure import and the ids it created, for undo (see [Import](import.md)). Nothing existing is touched. |
+| 0072 | `media_original_filename_trgm_idx`: GIN trigram index on `media.original_filename` for fast case-insensitive attachment filename search. |
+| 0073 | `server_notify`: a member's server-wide notification default (see [Notification settings](#notification-settings)). Adds a table only. |
+
+#### Message search
+
+- **New search filters and ordering.** The message search API (`GET /api/search`)
+  supports `during:YYYY-MM-DD` (matching messages within a single local day,
+  accepting `tz` offset parameter from the client), `filename:<text>` (matching
+  original filenames of attachments case-insensitively via trigram index),
+  `author:bot|webhook|member` (filtering by author type), `has:embed`, and a
+  `sort=newest|oldest|relevance` parameter (default `newest`).
+- **Interactive filter dropdown and chips.** When the search box is focused,
+  suggestion chips allow quick selection of `from:`, `in:`, `mentions:`, `has:`,
+  `during:`, `author:`, and `filename:` filters, rendered as removable chips in
+  the query line. A sort order toggle in the results header allows switching
+  between Newest, Oldest, and Relevance.
+- **Feature flag.** Advertised as `search.filters.v3` in `GET /api/health`.
+  A web client connected to an older server hides the new dropdown and sort toggle.
 
 #### Talks
 
@@ -155,16 +183,146 @@ of the pre-update backup (see "Rollback" above).
   `talk_unavailable`. REST: `PATCH /api/talks/{id}`, `POST /api/talks/{id}/invites`,
   `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
   channel (additive).
+- A Talk can be a **Stage** (feature `talks.stage`): without talk power nobody sends
+  audio, camera or screen there. The new permission *Manage stage* (bit `1 << 24`, off
+  for everyone but the Owner and Administrators) gives and takes talk power; members
+  raise a hand to ask. Nothing about a Stage session is stored. Existing Talks stay
+  normal Talks. New events `stage_hand`, `stage_talk_power`, `talk_reaction`; REST:
+  the field `is_stage` of a channel and of `POST /api/admin/channels` and
+  `PATCH /api/admin/channels/{id}` (additive).
+- **Live reactions** (feature `talks.reactions`): a member in a Talk sends an emoji
+  that floats over their tile for everyone in that Talk, at most 5 per 10 seconds.
+  The server relays it and keeps nothing.
+- Role and overwrite editors list *Manage stage*. A role that holds *Administrator*
+  has it already; no existing role or overwrite changes.
 
-#### Messaging
+#### Automod and moderation history
 
-- **Status expiry (`status.expiry`).** `PUT /api/users/me/status` takes an
-  optional `expires_at`. A status past its time reads as empty at once; a sweep
-  every 30 seconds clears the row and sends `user_update`.
-- **Slow mode up to 24 hours.** Existing values are unchanged. A 1.1.x web app
-  still offers its own presets up to 6 hours.
-- **Channel descriptions** (the existing topic, at most 255 characters) are
-  shown under the channel name; nothing to migrate.
+**Defaults at the upgrade.** Automod is on after the upgrade, with conservative
+rules that every server gets the same way (new servers included). Look at
+them under **Admin > Automod** and change or delete what does not suit you:
+
+| Rule | Default |
+|---|---|
+| Mention spam | on: a message with more than **10** different mentions is blocked |
+| New accounts | on: accounts younger than **10 minutes** cannot post links (blocked) |
+| Raid protection | on: more than **10 joins within 10 seconds** time the newcomers out for 10 minutes and add one alert to the reports queue |
+| Blocked words | **off**, word list empty |
+| Links | **off** (block-list mode, empty list) |
+
+The Owner and Administrators are never checked. The effect you may notice: a
+member who joined a few minutes ago gets "it breaks the server rule" when
+posting a link, and a burst of invitations used at once (a party of more than 10
+within 10 seconds) is held back for 10 minutes; delete or loosen the rule if
+that does not suit your community. Nothing changes for existing messages.
+
+**Moderation tab.** Members with *Manage reports* get a Moderation tab in the
+profile (history and private moderator notes). No permission changes hands:
+the Owner and Administrators have it, other roles only if you gave them
+*Manage reports*. Notes about a member are moderator data; they are not in the
+member's own data export (see [moderation](moderation.md#moderator-notes-are-moderator-data)
+and the privacy page, "Moderation records").
+
+**API.** Mostly additive: the report objects gain `source`, `automod_rule`,
+`automod_outcome` and `hit_count`, `kind` may be `alert` and `category`
+`automod`. New routes `/api/admin/automod*` and
+`/api/admin/users/{id}/moderation*`. The health `features` list gains
+`automod` and `moderation.history`. **One contract change:** `message_id` and `channel_id` of an admin
+report entry (`GET /api/admin/reports`, `/reports/{id}`) are now optional: an
+automod entry about a blocked message (never stored) has no `message_id`, and a
+raid alert has neither. Clients must treat both as optional; reports filed by
+members always carry them.
+
+#### Operator status
+
+- A dedicated **Admin → Status** page (feature key `ops.status`, endpoint `GET /api/admin/status`, Owner and Administrator only) provides an at-a-glance operational overview: version, available updates and auto-deploy status, database size and migration count, storage reachability and disk free space, backup status, live activity (active sessions, WebSocket connections, Talks and participants), and active operator warnings. See [operations.md](operations.md#operator-status).
+
+#### Discord import
+
+- *Admin*, *Import* copies the categories, channels, Talks and roles of a Discord
+  server from a server template link (see [Import](import.md)). It is limited to
+  the Owner and members with *Administrator*, strictly additive (appended at the
+  end, roles below every existing role, never Administrator, `@everyone`
+  untouched), runs after a preview and three confirmations in one transaction, and
+  can be undone.
+- Feature name `import.discord` in `GET /api/health`. REST: `POST
+  /api/admin/import/discord/preview`, `POST /api/admin/import/discord/apply`,
+  `GET /api/admin/import/discord/imports`, `GET
+  /api/admin/import/discord/imports/{id}` and `POST
+  /api/admin/import/discord/imports/{id}/undo` (all additive). Audit actions
+  `import.discord` and `import.discord_undo`, visible to the Owner and
+  Administrators only.
+- The server needs outbound HTTPS access to `discord.com` for the preview and the
+  import. Nothing else is contacted, and nothing is sent to Discord beyond the
+  template code.
+
+#### Forum channels
+
+- Admins can create channels with type `'forum'` (`Manage channels`). A forum channel holds posts; each post is a root message with a required title (<=100 characters), an initial message, and up to 5 optional tags. Replies form a standard thread (`messages.parent_id`).
+- Up to 20 admin-defined tags per forum channel (name <=20 characters, optional emoji <=32 characters). Members can filter posts by tag and sort by latest activity or creation.
+- Moderation: Members holding *Manage messages* can lock posts to prevent replies from regular users and update tags on others' posts.
+- Feature name `channels.forum` in `GET /api/health`. New event `forum_tags_changed`. REST: `GET/POST /api/channels/{id}/tags`, `PATCH/DELETE /api/channels/{id}/tags/{tagID}`, `GET/POST /api/channels/{id}/posts`, and `PATCH /api/channels/{id}/posts/{postID}`.
+
+#### Community events
+
+- Scheduled community events with title, markdown description, start and end times, optional cover image (re-encoded 3:1 banner, max 5 MB), and location (see [events](events.md)).
+- Location can be a Talk channel or free text. Talk-based events are only visible to members holding *View channels* on that Talk.
+- New permission `Manage events` (`1 << 25` in `internal/perm`); granted by the migration to every non-bot role that holds *Timeout members*, such as the seeded Moderator and Admin roles (Administrators and the Owner have it implicitly).
+- RSVPs: `going`, `interested`, and `not_going` responses, with participant counts and avatars.
+- Automated reminders sent 15 minutes before event start via in-app notifications and Web Push to members RSVP'd `going` or `interested`.
+- Automatic transition from `scheduled` to `active` at start time, showing a direct "Join Talk" button for voice events.
+- Feature key `events` in `GET /api/health`. Real-time WebSocket events `event_update` and `event_reminder`.
+- Audit logging for `event.create`, `event.edit`, and `event.cancel`.
+- Account erasure deletes personal RSVPs and clears event creator links; account export includes `rsvps.json`.
+
+#### Notification settings
+
+- Migration 0073 adds `server_notify` (one row per member who changed their
+  server-wide default: level, optional mute end, "suppress @all and @here").
+  Without a row a member keeps today's behaviour: every channel without its own
+  or its category's setting notifies for all messages.
+- Precedence: channel, then category, then the server default. The level in
+  `GET /api/read-state` (`notify_level`) is the effective one, so existing
+  clients show it correctly without changes. A server-wide "Nothing" behaves like
+  a channel mute: only messages addressed to the member by name, through a role
+  or as a reply still notify and count. Direct messages ignore the server default.
+- Feature name `notify.levels.v2` in `GET /api/health`. New
+  `PUT /api/notification-settings/server` (`level` `all`, `mentions` or `mute`,
+  `muted_until` for a timed mute, `suppress_everyone`); `GET /api/notification-settings`
+  gains a `server` object (additive). Changes reach the member's other sessions
+  with the existing `read_state` refresh event. Account export and erasure
+  include the new row.
+- Desktop client: the rail's right-click menu can call the same endpoints as the
+  web app (`PUT /api/channels/{id}/notifications`,
+  `PUT /api/categories/{id}/notifications`, `PUT /api/notification-settings/server`);
+  it should hide the server-wide entries when `notify.levels.v2` is missing.
+
+#### Calls and the security floor
+
+- **Media frame format 2 is removed.** The end-to-end encryption of call media
+  now speaks only frame format 3 (the one that binds a unit to its line). Clients
+  that can only send or open the old format can no longer take part in calls:
+  a web tab that predates 0.8.2, and any browser or desktop shell that still runs
+  such a bundle. A 1.0.x or 1.1.x tab keeps working in a Talk with 1.2 members
+  once it has heard every member's capability message, but its media is dropped
+  for the first moment of each epoch (join, leave, key rotation), usually a
+  second or two. Members see a notice once per call ("Someone in this Talk uses
+  an outdated Mnema client ...") when a unit in the old format arrives. Fix: reload the
+  app, or update the desktop client; there is nothing to configure on the server,
+  which only relays media it cannot read.
+- **Security floor raised to 1.2.0.** The release is committed with a
+  `Security-Floor: raise` trailer, so the signed web bundle of 1.2.0 carries
+  `security_floor` 1.2.0. A desktop client that has run it refuses every older
+  bundle: it will not connect to a server that still serves a 1.1.x bundle until
+  that server is updated, and it never runs a bundle that seals the old format.
+  Update the server before (or together with) the clients. `web_client_api` is
+  unchanged (still 1), so older desktop clients keep loading the 1.2 bundle.
+  Why this is allowed under [API stability](api-stability.md): it is a security
+  fix (RT-4 in [SECURITY.md](../SECURITY.md)), the floor is the documented tool
+  for it, and no public API, event or bridge contract changes.
+- **Rollback.** Going back to 1.1.x is possible for the server, but desktop
+  clients that already saw the 1.2.0 bundle will refuse the older one (the
+  floor is a high-water mark); web tabs reload into the older bundle.
 
 ### 1.0.x → 1.1.0
 
@@ -347,8 +505,8 @@ All changes are additive; `web_client_api` is unchanged.
   likeliest issuer the first time they are used; nothing is revoked and no token
   needs regenerating ([bots.md](bots.md#tokens)). The admin console marks tokens
   that were bound by assumption.
-- **Media frame format.** No change. Refusing frame version 2 was re-evaluated
-  and deferred to 2.0 (SECURITY.md).
+- **Media frame format.** No change in 1.0.x. Refusing frame version 2 was
+  re-evaluated for 1.1 and done in 1.2.0 (see "1.1.x → 1.2.0").
 
 ### 1.0.0 → 1.0.1
 

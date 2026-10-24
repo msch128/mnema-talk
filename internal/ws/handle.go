@@ -54,6 +54,12 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 		if json.Unmarshal(payload, &st) == nil {
 			c.hub.setMuteState(c, st)
 		}
+	case events.ClientStageHand:
+		c.handleStageHand(payload)
+	case events.ClientStageTalkPower:
+		c.handleStageTalkPower(payload)
+	case events.ClientTalkReaction:
+		c.handleTalkReaction(ctx, payload)
 	case events.ClientWebrtcAnswer:
 		c.handleAnswer(payload)
 	case events.ClientWebrtcCandidate:

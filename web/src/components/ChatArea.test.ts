@@ -477,7 +477,7 @@ describe('ChatArea notification settings and presentation', () => {
     const chat = setup()
     const set = vi.spyOn(chat, 'setNotificationLevel').mockResolvedValue(true)
     for (const level of ['inherit', 'all', 'mentions'] as const) {
-      chat.notifySettings = { channels: level === 'inherit' ? [] : [{ channel_id: 'ch1', level, muted_until: null }], categories: [] }
+      chat.notifySettings = { channels: level === 'inherit' ? [] : [{ channel_id: 'ch1', level, muted_until: null }], categories: [], server: { level: 'all', muted_until: null, suppress_everyone: false } }
       await nextTick()
       await w.find('[aria-haspopup=menu]').trigger('click')
       await nextTick()
@@ -700,7 +700,8 @@ describe('ChatArea history scrolling', () => {
     const cancel = vi.spyOn(window, 'cancelAnimationFrame')
     el.dispatchEvent(new Event('scroll'))
     w.unmount()
-    expect(disconnect).toHaveBeenCalledTimes(1)
+    // The timeline and the header each watch their size.
+    expect(disconnect).toHaveBeenCalledTimes(2)
     expect(cancel).toHaveBeenCalled()
   })
 })

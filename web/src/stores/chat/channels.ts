@@ -94,12 +94,12 @@ export async function selectChannel(cx: Cx, channel: Channel | null) {
   }
 }
 
-export async function createChannel(cx: Cx, { categoryId, name, type, topic, sortOrder = 0 }: { categoryId?: string | null; name: string; type?: Channel['type']; topic?: string; sortOrder?: number }) {
+export async function createChannel(cx: Cx, { categoryId, name, type, topic, sortOrder = 0, isStage = false }: { categoryId?: string | null; name: string; type?: Channel['type']; topic?: string; sortOrder?: number; isStage?: boolean }) {
   const { cs } = cx
   const community = cs.communityGeneration
   const channel = await api('/api/admin/channels', {
     method: 'POST',
-    json: { category_id: categoryId || null, name, type: type || 'text', topic: topic || '', sort_order: sortOrder }, decode: decodeChannel
+    json: { category_id: categoryId || null, name, type: type || 'text', topic: topic || '', sort_order: sortOrder, ...(isStage ? { is_stage: true } : {}) }, decode: decodeChannel
   })
   assertCommunity(cx, community)
   await fetchChannels(cx)
@@ -157,6 +157,17 @@ export async function updateChannel(cx: Cx, channelId: string, { name, topic, sl
     method: 'PATCH',
     json: slow_mode_seconds === undefined ? { name, topic } : { name, topic, slow_mode_seconds }, decode: decodeChannel
   })
+  assertCommunity(cx, community)
+  await fetchChannels(cx)
+  assertCommunity(cx, community)
+  return updated
+}
+
+/** Sets how long a channel keeps its messages: 1, 7, 30 or 90 days; 0 keeps them for good. */
+export async function setChannelAutoDelete(cx: Cx, channelId: string, days: number) {
+  const { cs } = cx
+  const community = cs.communityGeneration
+  const updated = await api(`/api/admin/channels/${channelId}/auto-delete`, { method: 'PUT', json: { days }, decode: decodeChannel })
   assertCommunity(cx, community)
   await fetchChannels(cx)
   assertCommunity(cx, community)

@@ -3,7 +3,7 @@ import { useAuthStore } from './auth'
 import { useVoiceStore } from './voice'
 import type { ClientEventPayloads } from '../types/events'
 import { createChatState, type ChatState, type Cx } from './chat/state'
-import { createCategory, createChannel, deleteCategory, deleteChannel, duplicateChannel, fetchChannels, isVoiceChannel, selectChannel, updateCategory, updateChannel } from './chat/channels'
+import { createCategory, createChannel, deleteCategory, deleteChannel, duplicateChannel, fetchChannels, isVoiceChannel, selectChannel, setChannelAutoDelete, updateCategory, updateChannel } from './chat/channels'
 import { activityOfUser, closeUserProfile, fetchMembers, insertMention, openUserProfile, presenceOf } from './chat/members'
 import { installActivityListeners, setMyPresence, setStatusText } from './chat/presence'
 import { fetchMessages, goToMessage, jumpToLatest, jumpToMessage, loadNewer, loadOlder, showToast } from './chat/messageWindow'
@@ -14,7 +14,7 @@ import { closeThread, openThread, sendThreadReply, uploadThreadMedia } from './c
 import { closeWebSocket, initWebSocket, installVisibilityRetry, retryNow, sendWSEvent, setWebRTCHandlers } from './chat/socket'
 import { handleWSEvent } from './chat/events'
 import { fetchReadState, markActiveChannelReadIfReading, markChannelRead, markChannelUnread, setReturnToTabHandler, setVoiceChatReading } from './chat/readState'
-import { fetchNotificationSettings, markAllRead, notificationLevel, setCategoryNotificationLevel, setNotificationLevel } from './chat/notifySettings'
+import { fetchNotificationSettings, markAllRead, notificationLevel, setCategoryNotificationLevel, setNotificationLevel, setServerNotification } from './chat/notifySettings'
 import { sendTyping } from './chat/typing'
 import { messageMentionsMe, refreshNotificationPermission, requestNotificationPermission } from './chat/notifications'
 import { dismissEphemeral, resetCommunityState } from './chat/reset'
@@ -35,6 +35,7 @@ function exposedState(cs: ChatState) {
     allChannels: cs.allChannels,
     ephemeral: cs.ephemeral,
     pinsSignal: cs.pinsSignal,
+    forumTagsSignal: cs.forumTagsSignal,
     pinNotices: cs.pinNotices,
     uncategorized: cs.uncategorized,
     activeChannel: cs.activeChannel,
@@ -124,6 +125,7 @@ function exposedActions(cx: Cx) {
     duplicateChannel: bind(duplicateChannel),
     deleteChannel: bind(deleteChannel),
     updateChannel: bind(updateChannel),
+    setChannelAutoDelete: bind(setChannelAutoDelete),
     createCategory: bind(createCategory),
     deleteCategory: bind(deleteCategory),
     updateCategory: bind(updateCategory),
@@ -134,6 +136,7 @@ function exposedActions(cx: Cx) {
     fetchNotificationSettings: bind(fetchNotificationSettings),
     setNotificationLevel: bind(setNotificationLevel),
     setCategoryNotificationLevel: bind(setCategoryNotificationLevel),
+    setServerNotification: bind(setServerNotification),
     markAllRead: bind(markAllRead),
     notificationLevel: bind(notificationLevel),
     goToMessage: bind(goToMessage),

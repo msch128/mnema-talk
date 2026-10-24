@@ -81,6 +81,12 @@ no accounts on someone else's platform.
 - **Pinned messages** (with who pinned them and when), **polls**, **custom
   emoji** managed by the community, **edit history** for moderators, **drafts**
   that survive a reload and a **jump to the first unread message**.
+- **Anonymous polls and channels that forget.** An anonymous poll stores only
+  that a member voted and how many votes each answer has, never the choice
+  (so a vote is final). A channel can opt in to auto-delete after 1, 7, 30 or
+  90 days; it is shown on the channel, audited, and never touches pinned
+  messages or direct messages ([doc/moderation.md](doc/moderation.md#auto-delete)).
+- **Forum channels.** Structured discussions with posts as cards, up to 20 admin tags, tag filtering, sorting by latest activity, and moderation locks ([doc/forums.md](doc/forums.md)).
 - **Saved messages and forwarding.** Keep a private list of up to 1,000
   messages with an optional note, or forward a message into another channel or
   a direct message. A forward is a reference, so it never shows more than the
@@ -93,6 +99,14 @@ no accounts on someone else's platform.
   next to its name (click it to read it in full) and is edited in the channel
   settings. Slow mode has the presets Off, 10 s, 30 s, 1 min, 5 min, 30 min and
   24 h, or any value up to 24 hours in seconds, minutes or hours.
+- **Reminders and scheduled messages.** *Remind me* on a message (in 20
+  minutes, 1 hour, 3 hours, tomorrow morning or at a time you pick) notifies
+  you in the app and by Web Push; *Send later* next to the send button sends a
+  message for you at a chosen time, in channels and direct messages. Both are
+  private to you, are worked out in your own time zone, and are checked again
+  when they fall due: a reminder never shows a message you can no longer see,
+  and a scheduled message that the channel's rules refuse at that time stays
+  as a draft instead of being posted.
 - **Slash commands.** `/poll`, `/me`, `/shrug`, `/tableflip`, `/unflip`,
   `/spoiler`, `/nick`, `/thread` and `/msg` (it needs *Send direct messages*)
   for members; `/timeout`, `/ban` and `/kick` need the matching permission. Bots can add their own
@@ -100,6 +114,21 @@ no accounts on someone else's platform.
 - **Threads you can follow.** A thread reply notifies the thread's followers:
   the root's author, people who replied, people mentioned in a reply and
   anyone who pressed **Follow thread**.
+- **Search filters** for author (`from:` and `author:bot|webhook|member`),
+  channel (`in:`), mentions (`mentions:`), dates (`before:`, `after:`, and
+  `during:` for a single local day), attachments (`has:file`, `filename:`),
+  links, embeds, polls, edited and pinned messages, with a calmer Discord-style
+  filter dropdown and sort order (newest, oldest, relevance).
+- **Notification settings per channel, category and server.** Right-click a
+  channel or a category header (or press Shift+F10) and choose
+  **Notifications**: all messages, mentions only, nothing, or "use the
+  category / server default", and **Mute for...** one hour, eight hours, a day
+  or until you turn it back on. **Notification settings** in the server menu
+  (and the account menu) set your default for the whole server, mute the
+  server, and can ignore `@all` and `@here`. A channel's own setting beats its
+  category's, which beats the server default; a small marker in the sidebar
+  shows a muted channel or one that only tells you about mentions. Push,
+  badges and mention counts follow the level that applies.
 - **Search filters** for author, channel, mentions, dates, attachments, links,
   polls, edited and pinned messages.
 - **Installable web app with Web Push** notifications, and a layout for phones.

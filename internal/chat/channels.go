@@ -17,6 +17,7 @@ type ChannelType string
 const (
 	ChannelTypeText  ChannelType = "text"
 	ChannelTypeVoice ChannelType = "voice"
+	ChannelTypeForum ChannelType = "forum"
 
 	// channelKindDM is the type a direct message conversation has in the
 	// channels table (dm.go). It is deliberately not a ChannelType: it is never
@@ -44,6 +45,9 @@ type Channel struct {
 	// in this channel; 0 = off. Members who may manage messages here are
 	// exempt.
 	SlowModeSeconds int `json:"slow_mode_seconds" minimum:"0" maximum:"86400"`
+	// AutoDeleteDays removes messages older than this many days (1, 7, 30 or
+	// 90; pinned messages stay); 0 = off. Never set on direct messages.
+	AutoDeleteDays int `json:"auto_delete_days" minimum:"0" maximum:"90" binding:"optional"`
 	// IsLobby marks a Talk as a "Create a Talk" lobby: joining it opens a
 	// temporary Talk instead of taking a seat (doc/talks.md).
 	IsLobby bool `json:"is_lobby" binding:"optional"`
@@ -53,39 +57,15 @@ type Channel struct {
 	// LeaderID is the leader of a temporary Talk: the member who may rename
 	// it and set its member limit. Absent on every other channel.
 	LeaderID *uuid.UUID `json:"leader_id,omitempty" binding:"optional" format:"uuid"`
-}
-
-type Category struct {
-	ID        uuid.UUID `json:"id" format:"uuid"`
-	Name      string    `json:"name" maxLength:"64"`
-	SortOrder int       `json:"sort_order"`
-	Channels  []Channel `json:"channels"`
-	CreatedAt time.Time `json:"created_at" format:"date-time"`
-}
-
-func loadCategories(ctx context.Context, p *db.Pool) ([]Category, map[uuid.UUID]int, error) {
-	catRows, err := p.Query(ctx, `SELECT id, name, sort_order, created_at FROM categories ORDER BY sort_order, created_at`)
-	if err != nil {
-		return nil, nil, fmt.Errorf("query categories: %w", err)
-	}
-	defer catRows.Close()
-	categories := make([]Category, 0)
-	categoryIdx := make(map[uuid.UUID]int)
-	for catRows.Next() {
-		cat := Category{Channels: make([]Channel, 0)}
-		if err := catRows.Scan(&cat.ID, &cat.Name, &cat.SortOrder, &cat.CreatedAt); err != nil {
-			return nil, nil, err
-		}
-		categoryIdx[cat.ID] = len(categories)
-		categories = append(categories, cat)
-	}
-	return categories, categoryIdx, catRows.Err()
+	// IsStage marks a Talk as a Stage: without talk power nobody speaks or
+	// shares video there (doc/talks.md).
+	IsStage bool `json:"is_stage" binding:"optional"`
 }
 
 func populateChannels(ctx context.Context, p *db.Pool, categories []Category, categoryIdx map[uuid.UUID]int) ([]Channel, error) {
 	chanRows, err := p.Query(ctx, `
-		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds,
-		       is_lobby, is_temp, leader_id
+		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days,
+		       is_lobby, is_temp, leader_id, is_stage
 		FROM channels WHERE type <> 'dm' ORDER BY sort_order, created_at`)
 	if err != nil {
 		return nil, fmt.Errorf("query channels: %w", err)
@@ -95,7 +75,7 @@ func populateChannels(ctx context.Context, p *db.Pool, categories []Category, ca
 	uncategorized := make([]Channel, 0)
 	for chanRows.Next() {
 		var ch Channel
-		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.IsLobby, &ch.IsTemp, &ch.LeaderID); err != nil {
+		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays, &ch.IsLobby, &ch.IsTemp, &ch.LeaderID, &ch.IsStage); err != nil {
 			return nil, err
 		}
 		if ch.CategoryID != nil {
@@ -123,25 +103,9 @@ func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel,
 	return categories, uncategorized, nil
 }
 
-func CreateCategory(ctx context.Context, p *db.Pool, name string, sortOrder int) (*Category, error) {
-	name, err := httpx.CleanText("name", name, MaxChannelNameLen, true)
-	if err != nil {
-		return nil, err
-	}
-	cat := Category{Channels: make([]Channel, 0)}
-	err = p.QueryRow(ctx, `
-		INSERT INTO categories (name, sort_order) VALUES ($1, $2)
-		RETURNING id, name, sort_order, created_at`, name, sortOrder).
-		Scan(&cat.ID, &cat.Name, &cat.SortOrder, &cat.CreatedAt)
-	if err != nil {
-		return nil, fmt.Errorf("create category: %w", err)
-	}
-	return &cat, nil
-}
-
 func cleanChannelInputs(name, topic string, chType ChannelType) (string, string, error) {
-	if chType != ChannelTypeText && chType != ChannelTypeVoice {
-		return "", "", httpx.ErrInvalidInput("type must be 'text' or 'voice'")
+	if chType != ChannelTypeText && chType != ChannelTypeVoice && chType != ChannelTypeForum {
+		return "", "", httpx.ErrInvalidInput("type must be 'text', 'voice' or 'forum'")
 	}
 	cleanName, err := httpx.CleanText("name", name, MaxChannelNameLen, true)
 	if err != nil {
@@ -305,8 +269,8 @@ func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *s
 		UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic),
 			user_limit = COALESCE($4, user_limit), slow_mode_seconds = COALESCE($5, slow_mode_seconds)
 		WHERE id = $1 AND type <> 'dm' AND ($4::int IS NULL OR $4 = 0 OR type = 'voice')
-		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`, id, name, topic, userLimit, slowMode).
-		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds)
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days`, id, name, topic, userLimit, slowMode).
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays)
 	if errors.Is(err, pgx.ErrNoRows) {
 		if userLimit != nil && *userLimit > 0 {
 			if _, lerr := LoadChannel(ctx, p, id); lerr == nil {
@@ -372,20 +336,4 @@ func validateChannelEdit(name, topic *string, userLimit, slowMode *int) (*string
 		return nil, nil, err
 	}
 	return validName, validTopic, nil
-}
-
-// RenameCategory changes a category's name.
-func RenameCategory(ctx context.Context, p *db.Pool, id uuid.UUID, name string) error {
-	name, err := httpx.CleanText("name", name, MaxChannelNameLen, true)
-	if err != nil {
-		return err
-	}
-	tag, err := p.Exec(ctx, `UPDATE categories SET name = $2 WHERE id = $1`, id, name)
-	if err != nil {
-		return fmt.Errorf("rename category: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return errCategoryNotFound
-	}
-	return nil
 }
