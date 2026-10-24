@@ -121,6 +121,10 @@ direct message shows only that copy, never the rest of the conversation.
 Deleting an account blanks its text in every report copy and cuts the links
 to the account. Details: [doc/moderation.md](doc/moderation.md#blocking-and-reports).
 
+**Automod (1.2).** Automod entries use the same queue. A blocked channel
+message is kept in the entry as the text that was refused; for a direct
+message automod keeps no text at all, only who broke which rule. Details: [doc/moderation.md](doc/moderation.md#automod).
+
 ## Forwarding (a reference, not a copy)
 
 A forwarded message stores a reference to the original (`forward_of`) and the

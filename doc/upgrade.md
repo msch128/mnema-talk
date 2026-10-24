@@ -136,6 +136,7 @@ nothing in `.env` has to change.
 | Migration | Adds |
 |---|---|
 | 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
+| 0066 | `automod_rules` and `automod_state` with the default rules (below), and the columns `source`, `automod_rule`, `automod_outcome` and `hit_count` of `message_reports` (existing reports keep `source = 'member'`). |
 
 #### Talks
 
@@ -151,6 +152,35 @@ nothing in `.env` has to change.
   `talk_unavailable`. REST: `PATCH /api/talks/{id}`, `POST /api/talks/{id}/invites`,
   `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
   channel (additive).
+
+#### Automod
+
+**Defaults at the upgrade.** Automod is on after the upgrade, with conservative
+rules that every server gets the same way (new servers included). Look at
+them under **Admin > Automod** and change or delete what does not suit you:
+
+| Rule | Default |
+|---|---|
+| Mention spam | on: a message with more than **10** different mentions is blocked |
+| New accounts | on: accounts younger than **10 minutes** cannot post links (blocked) |
+| Raid protection | on: more than **10 joins within 10 seconds** time the newcomers out for 10 minutes and add one alert to the reports queue |
+| Blocked words | **off**, word list empty |
+| Links | **off** (block-list mode, empty list) |
+
+The Owner and Administrators are never checked. The effect you may notice: a
+member who joined a few minutes ago gets "it breaks the server rule" when
+posting a link, and a burst of invitations used at once (a party of more than 10
+within 10 seconds) is held back for 10 minutes; delete or loosen the rule if
+that does not suit your community. Nothing changes for existing messages.
+
+**API.** Mostly additive: the report objects gain `source`, `automod_rule`,
+`automod_outcome` and `hit_count`, `kind` may be `alert` and `category`
+`automod`. New routes `/api/admin/automod*`. The health `features` list gains
+`automod`. **One contract change:** `message_id` and `channel_id` of an admin
+report entry (`GET /api/admin/reports`, `/reports/{id}`) are now optional: an
+automod entry about a blocked message (never stored) has no `message_id`, and a
+raid alert has neither. Clients must treat both as optional; reports filed by
+members always carry them.
 
 ### 1.0.x → 1.1.0
 

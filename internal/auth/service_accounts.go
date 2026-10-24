@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -56,6 +57,8 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 	if err != nil {
 		return nil, err
 	}
+	// Raid protection counts the join and may restrict the newcomer.
+	automod.Of(p).OnJoin(ctx, user.ID)
 	return user, nil
 }
 
