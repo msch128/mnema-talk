@@ -78,6 +78,7 @@ const examples: Record<ServerEventType, unknown[]> = {
   talk_leader: [{ channel_id: id, leader_id: id }, { channel_id: id, leader_id: null }],
   talk_moved: [{ from_channel_id: id, channel_id: fixtureId(2) }],
   media_handshake: [{ channel_id: id, user_id: id, wire: 'a' }],
+  forum_tags_changed: [{ channel_id: id }],
 }
 
 describe('WebSocket runtime event contracts', () => {

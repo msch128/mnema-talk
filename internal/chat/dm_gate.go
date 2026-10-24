@@ -32,8 +32,30 @@ func gatePost(ctx context.Context, tx pgx.Tx, nm NewMessage) error {
 	if kind == channelKindDM {
 		return gateDM(ctx, tx, nm)
 	}
+	if nm.ParentID != nil {
+		if err := gateReply(ctx, tx, *nm.ParentID); err != nil {
+			return err
+		}
+	} else if kind == "forum" && (nm.Title == nil || *nm.Title == "") {
+		return httpx.ErrInvalidInput("title is required for forum posts")
+	}
 	if nm.WebhookID == nil && !slowModeExempt(ctx) {
 		return enforceSlowMode(ctx, tx, nm.ChannelID, nm.UserID, seconds)
+	}
+	return nil
+}
+
+func gateReply(ctx context.Context, tx pgx.Tx, parentID uuid.UUID) error {
+	var isLocked bool
+	err := tx.QueryRow(ctx, `SELECT is_locked FROM messages WHERE id = $1`, parentID).Scan(&isLocked)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return httpx.ErrInvalidInput("parent message not found")
+	}
+	if err != nil {
+		return fmt.Errorf("check thread lock: %w", err)
+	}
+	if isLocked && !slowModeExempt(ctx) {
+		return httpx.ErrForbidden("this post is locked")
 	}
 	return nil
 }

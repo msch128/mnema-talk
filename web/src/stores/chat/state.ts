@@ -36,6 +36,7 @@ function channelState() {
     followKnown: ref(false),
     // Pinned messages: bumped when the pins of a channel changed, so an open pinned list refetches; plus the notes about new pins.
     pinsSignal: ref<{ channelId: string; seq: number } | null>(null),
+    forumTagsSignal: ref<{ channelId: string; seq: number } | null>(null),
     pinNotices: ref<PinNotice[]>([]),
     pinNoticeSeq: 0,
     threadReplies: ref<Message[]>([]),
@@ -113,7 +114,8 @@ function socketState() {
     webrtcCandidateHandler: null as Handler<'webrtc_candidate'>,
     voiceKickedHandler: null as Handler<'voice_kicked'>,
     talkMovedHandler: null as Handler<'talk_moved'>,
-    mediaHandshakeHandler: null as Handler<'media_handshake'>
+    mediaHandshakeHandler: null as Handler<'media_handshake'>,
+    forumTagsChangedHandler: null as Handler<'forum_tags_changed'>
   }
 }
 

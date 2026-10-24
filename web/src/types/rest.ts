@@ -1179,10 +1179,10 @@ export function isChatChannelPlacement(value: unknown): value is ChatChannelPlac
 
 export const decodeChatChannelPlacement = decoder("chat.ChannelPlacement", isChatChannelPlacement)
 
-export type ChatChannelType = "text" | "voice"
+export type ChatChannelType = "text" | "voice" | "forum"
 
 export function isChatChannelType(value: unknown): value is ChatChannelType {
-  return (value === "text" || value === "voice")
+  return (value === "text" || value === "voice" || value === "forum")
 }
 
 export const decodeChatChannelType = decoder("chat.ChannelType", isChatChannelType)
@@ -1230,6 +1230,19 @@ export function isChatCreateDMRequest(value: unknown): value is ChatCreateDMRequ
 
 export const decodeChatCreateDMRequest = decoder("chat.CreateDMRequest", isChatCreateDMRequest)
 
+export type ChatCreateForumTagRequest = {
+  emoji?: string
+  name: string
+}
+
+export function isChatCreateForumTagRequest(value: unknown): value is ChatCreateForumTagRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "emoji") || isString(value["emoji"], 32))
+    && (hasOwn(value, "name") && isString(value["name"], 20))
+}
+
+export const decodeChatCreateForumTagRequest = decoder("chat.CreateForumTagRequest", isChatCreateForumTagRequest)
+
 export type ChatCreateMessageRequest = {
   content: string
   parent_id?: string | null
@@ -1244,6 +1257,21 @@ export function isChatCreateMessageRequest(value: unknown): value is ChatCreateM
 }
 
 export const decodeChatCreateMessageRequest = decoder("chat.CreateMessageRequest", isChatCreateMessageRequest)
+
+export type ChatCreatePostRequest = {
+  content: string
+  tag_ids?: Array<string>
+  title: string
+}
+
+export function isChatCreatePostRequest(value: unknown): value is ChatCreatePostRequest {
+  return isRecord(value)
+    && (hasOwn(value, "content") && isString(value["content"], 4000))
+    && (!hasOwn(value, "tag_ids") || isArrayOf(value["tag_ids"], item => isString(item)))
+    && (hasOwn(value, "title") && isString(value["title"], 100))
+}
+
+export const decodeChatCreatePostRequest = decoder("chat.CreatePostRequest", isChatCreatePostRequest)
 
 export type ChatCreateReportRequest = {
   category: "spam" | "harassment" | "illegal" | "other"
@@ -1428,6 +1456,25 @@ export function isChatFollowedThreads(value: unknown): value is ChatFollowedThre
 }
 
 export const decodeChatFollowedThreads = decoder("chat.FollowedThreads", isChatFollowedThreads)
+
+export type ChatForumTag = {
+  channel_id: string
+  created_at: string
+  emoji?: string
+  id: string
+  name: string
+}
+
+export function isChatForumTag(value: unknown): value is ChatForumTag {
+  return isRecord(value)
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "emoji") || isString(value["emoji"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "name") && isString(value["name"], 20))
+}
+
+export const decodeChatForumTag = decoder("chat.ForumTag", isChatForumTag)
 
 export type ChatForwardQuote = {
   attachment_count?: number
@@ -1680,8 +1727,10 @@ export type ChatMessage = {
   id: string
   is_bot?: boolean
   is_edited: boolean
+  is_locked?: boolean
   is_pinned: boolean
   is_webhook?: boolean
+  last_activity_at?: string
   mention_roles?: Array<string>
   mentions: Array<string>
   number: number
@@ -1693,6 +1742,8 @@ export type ChatMessage = {
   reply_count: number
   reply_to?: ChatReplyPreview
   reply_to_id?: string
+  tags?: Array<ChatForumTag>
+  title?: string
   updated_at: string
   user_id: string
   username: string
@@ -1711,8 +1762,10 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (!hasOwn(value, "is_bot") || typeof value["is_bot"] === 'boolean')
     && (hasOwn(value, "is_edited") && typeof value["is_edited"] === 'boolean')
+    && (!hasOwn(value, "is_locked") || typeof value["is_locked"] === 'boolean')
     && (hasOwn(value, "is_pinned") && typeof value["is_pinned"] === 'boolean')
     && (!hasOwn(value, "is_webhook") || typeof value["is_webhook"] === 'boolean')
+    && (!hasOwn(value, "last_activity_at") || isTimestamp(value["last_activity_at"]))
     && (!hasOwn(value, "mention_roles") || isArrayOf(value["mention_roles"], item => isIdentifier(item)))
     && (hasOwn(value, "mentions") && isArrayOf(value["mentions"], item => isIdentifier(item)))
     && (hasOwn(value, "number") && isInteger(value["number"]))
@@ -1724,6 +1777,8 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (hasOwn(value, "reply_count") && isInteger(value["reply_count"]))
     && (!hasOwn(value, "reply_to") || isChatReplyPreview(value["reply_to"]))
     && (!hasOwn(value, "reply_to_id") || isIdentifier(value["reply_to_id"]))
+    && (!hasOwn(value, "tags") || isArrayOf(value["tags"], item => isChatForumTag(item)))
+    && (!hasOwn(value, "title") || isString(value["title"], 100))
     && (hasOwn(value, "updated_at") && isTimestamp(value["updated_at"]))
     && (hasOwn(value, "user_id") && isIdentifier(value["user_id"]))
     && (hasOwn(value, "username") && isString(value["username"]))
@@ -2272,6 +2327,34 @@ export function isChatUpdateChannelRequest(value: unknown): value is ChatUpdateC
 }
 
 export const decodeChatUpdateChannelRequest = decoder("chat.UpdateChannelRequest", isChatUpdateChannelRequest)
+
+export type ChatUpdateForumTagRequest = {
+  emoji?: string
+  name?: string
+}
+
+export function isChatUpdateForumTagRequest(value: unknown): value is ChatUpdateForumTagRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "emoji") || isString(value["emoji"], 32))
+    && (!hasOwn(value, "name") || isString(value["name"], 20))
+}
+
+export const decodeChatUpdateForumTagRequest = decoder("chat.UpdateForumTagRequest", isChatUpdateForumTagRequest)
+
+export type ChatUpdatePostRequest = {
+  is_locked?: boolean
+  tag_ids?: Array<string>
+  title?: string
+}
+
+export function isChatUpdatePostRequest(value: unknown): value is ChatUpdatePostRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "is_locked") || typeof value["is_locked"] === 'boolean')
+    && (!hasOwn(value, "tag_ids") || isArrayOf(value["tag_ids"], item => isString(item)))
+    && (!hasOwn(value, "title") || isString(value["title"], 100))
+}
+
+export const decodeChatUpdatePostRequest = decoder("chat.UpdatePostRequest", isChatUpdatePostRequest)
 
 export type ChatUpdateTalkRequest = {
   name?: string

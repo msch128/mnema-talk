@@ -17,6 +17,7 @@ import NativeTrustControl from './components/NativeTrustControl.vue'
 import { platform } from './lib/platform'
 import VoiceStage from './components/VoiceStage.vue'
 import VoiceChatPanel from './components/VoiceChatPanel.vue'
+import ForumArea from './components/ForumArea.vue'
 import MemberList from './components/MemberList.vue'
 import ThreadSidebar from './components/ThreadSidebar.vue'
 import InviteLanding from './components/InviteLanding.vue'
@@ -290,7 +291,8 @@ onMounted(async () => {
         </template>
         <div v-else class="min-h-0 flex flex-1 flex-col">
           <NativeTrustControl v-if="platform.isDesktop() && authStore.isAdmin && chatStore.activeChannel && !inConversation" :key="authStore.user?.id + ':' + chatStore.activeChannel.id" :channel-id="chatStore.activeChannel.id" @saved="chatStore.activeChannel && chatStore.fetchMessages(chatStore.activeChannel.id)" />
-          <ChatArea class="min-h-0 flex-1" />
+          <ForumArea v-if="chatStore.activeChannel?.type === 'forum'" class="min-h-0 flex-1" />
+          <ChatArea v-else class="min-h-0 flex-1" />
         </div>
       </div>
 

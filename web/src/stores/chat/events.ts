@@ -250,6 +250,10 @@ const HANDLERS: Handlers = {
   voice_kicked: ({ cs, voiceStore }, p) => {
     if (cs.voiceKickedHandler) cs.voiceKickedHandler(p)
     else if (voiceStore.currentChannelId) voiceStore.disconnect()
+  },
+  forum_tags_changed: ({ cs }, p) => {
+    cs.forumTagsSignal.value = { channelId: p.channel_id, seq: (cs.forumTagsSignal.value?.seq ?? 0) + 1 }
+    cs.forumTagsChangedHandler?.(p)
   }
 }
 

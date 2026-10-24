@@ -1925,12 +1925,14 @@
       "chat.ChannelType": {
         "enum": [
           "text",
-          "voice"
+          "voice",
+          "forum"
         ],
         "type": "string",
         "x-enum-varnames": [
           "ChannelTypeText",
-          "ChannelTypeVoice"
+          "ChannelTypeVoice",
+          "ChannelTypeForum"
         ]
       },
       "chat.CreateCategoryRequest": {
@@ -1996,6 +1998,23 @@
         ],
         "type": "object"
       },
+      "chat.CreateForumTagRequest": {
+        "properties": {
+          "emoji": {
+            "maxLength": 32,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 20,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "chat.CreateMessageRequest": {
         "properties": {
           "content": {
@@ -2022,6 +2041,31 @@
         },
         "required": [
           "content"
+        ],
+        "type": "object"
+      },
+      "chat.CreatePostRequest": {
+        "properties": {
+          "content": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "tag_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "content",
+          "title"
         ],
         "type": "object"
       },
@@ -2296,6 +2340,36 @@
         },
         "required": [
           "thread_ids"
+        ],
+        "type": "object"
+      },
+      "chat.ForumTag": {
+        "properties": {
+          "channel_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "emoji": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 20,
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id",
+          "created_at",
+          "id",
+          "name"
         ],
         "type": "object"
       },
@@ -2742,12 +2816,21 @@
           "is_edited": {
             "type": "boolean"
           },
+          "is_locked": {
+            "description": "IsLocked marks a forum post as locked: only moderators can post replies.",
+            "type": "boolean"
+          },
           "is_pinned": {
             "type": "boolean"
           },
           "is_webhook": {
             "description": "IsWebhook narrows IsBot: the author is an incoming webhook (shown with\na Webhook label), not a bot account (shown with a BOT label).",
             "type": "boolean"
+          },
+          "last_activity_at": {
+            "description": "LastActivityAt is the timestamp of the latest reply in the thread, or the post's creation time.",
+            "format": "date-time",
+            "type": "string"
           },
           "mention_roles": {
             "description": "MentionRoles are the roles this message mentions (@Role); the client\ndraws them as role pills. A role that was deleted since drops out. The\nserver always sends it; it is optional for clients that build messages\nthemselves (the desktop app's native chat path).",
@@ -2799,6 +2882,18 @@
           },
           "reply_to_id": {
             "format": "uuid",
+            "type": "string"
+          },
+          "tags": {
+            "description": "Tags are the forum tags attached to a forum post (up to 5 tags).",
+            "items": {
+              "$ref": "#/components/schemas/chat.ForumTag"
+            },
+            "type": "array"
+          },
+          "title": {
+            "description": "Title is the required title of a root post in a forum channel (max 100 characters).",
+            "maxLength": 100,
             "type": "string"
           },
           "updated_at": {
@@ -3698,6 +3793,39 @@
             "maximum": 999,
             "minimum": 0,
             "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "chat.UpdateForumTagRequest": {
+        "properties": {
+          "emoji": {
+            "maxLength": 32,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 20,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "chat.UpdatePostRequest": {
+        "properties": {
+          "is_locked": {
+            "type": "boolean"
+          },
+          "tag_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
           }
         },
         "type": "object"
@@ -20296,6 +20424,305 @@
         ]
       }
     },
+    "/api/channels/{channelID}/posts": {
+      "get": {
+        "description": "Root posts in a forum channel, ordered by latest activity or creation. Supports tag filtering and pagination. Requires View channel.",
+        "operationId": "listForumPosts",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sort order: 'latest_activity' (default) or 'newest'.",
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "enum": [
+                "latest_activity",
+                "newest"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by tag ID.",
+            "in": "query",
+            "name": "tag_id",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size.",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Posts older than this post.",
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/chat.Message"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Posts."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List forum posts",
+        "tags": [
+          "Channels"
+        ]
+      },
+      "post": {
+        "description": "Creates a new post (thread root) with title, content and optional tags. Requires Send messages.",
+        "operationId": "createForumPost",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.CreatePostRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Message"
+                }
+              }
+            },
+            "description": "Created post."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Create a forum post",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/channels/{channelID}/posts/{messageID}": {
+      "patch": {
+        "description": "Updates a post's title, tags or lock status. Author or Manage messages for title/tags; Manage messages for lock status.",
+        "operationId": "updateForumPost",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.UpdatePostRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Message"
+                }
+              }
+            },
+            "description": "Updated post."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Update a forum post",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
     "/api/channels/{channelID}/read": {
       "post": {
         "description": "Moves the read marker forward to the given message, or to now when the body is omitted. Never moves backwards. Text and voice channels. Notifies the user's other sessions.",
@@ -20403,6 +20830,346 @@
         "summary": "Mark a channel read",
         "tags": [
           "Channels"
+        ]
+      }
+    },
+    "/api/channels/{channelID}/tags": {
+      "get": {
+        "description": "Admin-defined tags in a forum channel. Requires View channel.",
+        "operationId": "listForumTags",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/chat.ForumTag"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Tags."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List forum tags",
+        "tags": [
+          "Channels"
+        ]
+      },
+      "post": {
+        "description": "Adds a new tag to the forum channel (up to 20). Requires Manage channels.",
+        "operationId": "createForumTag",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.CreateForumTagRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.ForumTag"
+                }
+              }
+            },
+            "description": "Created tag."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Create a forum tag",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/channels/{channelID}/tags/{tagID}": {
+      "delete": {
+        "description": "Removes a tag from the forum channel. Requires Manage channels.",
+        "operationId": "deleteForumTag",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Tag ID.",
+            "in": "path",
+            "name": "tagID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Delete a forum tag",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "patch": {
+        "description": "Updates tag name or emoji. Requires Manage channels.",
+        "operationId": "updateForumTag",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Tag ID.",
+            "in": "path",
+            "name": "tagID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.UpdateForumTagRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.ForumTag"
+                }
+              }
+            },
+            "description": "Updated tag."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Update a forum tag",
+        "tags": [
+          "Admin"
         ]
       }
     },

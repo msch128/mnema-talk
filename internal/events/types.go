@@ -61,6 +61,9 @@ const (
 	// Kicked tells a member a moderator signed them out everywhere; their
 	// connection closes right after.
 	Kicked = "kicked"
+	// ForumTagsChanged announces that tags were created, edited or removed
+	// in a forum channel.
+	ForumTagsChanged = "forum_tags_changed"
 )
 
 // Client-to-server events.

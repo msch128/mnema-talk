@@ -23,7 +23,11 @@ FOOTER = re.compile(r"^BREAKING[ -]CHANGE:\s*\S", re.MULTILINE)
 ERR_LEVEL = 3
 
 # rule id -> why it is not a real break of the public contract
-IGNORED_RULES = {}
+IGNORED_RULES = {
+    # Adding an enum value to a response is explicitly non-breaking per doc/api-stability.md:
+    # "Not breaking: adding ... an enum value (clients must ignore what they do not know)".
+    "response-property-enum-value-added": "additive enum values in responses are non-breaking per doc/api-stability.md",
+}
 
 
 def latest_tag(tags):

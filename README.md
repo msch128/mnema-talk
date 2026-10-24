@@ -81,6 +81,7 @@ no accounts on someone else's platform.
 - **Pinned messages** (with who pinned them and when), **polls**, **custom
   emoji** managed by the community, **edit history** for moderators, **drafts**
   that survive a reload and a **jump to the first unread message**.
+- **Forum channels.** Structured discussions with posts as cards, up to 20 admin tags, tag filtering, sorting by latest activity, and moderation locks ([doc/forums.md](doc/forums.md)).
 - **Saved messages and forwarding.** Keep a private list of up to 1,000
   messages with an optional note, or forward a message into another channel or
   a direct message. A forward is a reference, so it never shows more than the

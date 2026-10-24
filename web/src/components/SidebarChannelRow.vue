@@ -5,7 +5,7 @@ import type { Channel, VoiceUser } from '../types/domain'
 // it for a voice channel. Admins can drag the row (and its users with it) or
 // move it with Alt+ArrowUp / Alt+ArrowDown.
 import { computed } from 'vue'
-import { Hash, Volume2, Trash2, Monitor, BellOff, MessageSquare, CirclePlus } from '@lucide/vue'
+import { Hash, Volume2, Trash2, Monitor, BellOff, MessageSquare, CirclePlus, MessagesSquare } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
@@ -136,6 +136,18 @@ const rowClass = computed(() => [
         <Volume2
           v-else-if="isVoice"
           :class="['w-5 h-5 shrink-0 transition-colors', voiceStore.currentChannelId === channel.id ? 'text-mnema-accent' : 'text-mnema-tertiary group-hover:text-mnema-text']"
+        />
+        <MessagesSquare
+          v-else-if="channel.type === 'forum'"
+          data-testid="forum-icon"
+          :class="[
+            'w-5 h-5 shrink-0 transition-colors',
+            chatStore.activeChannel?.id === channel.id
+              ? 'text-mnema-accent'
+              : unread > 0
+                ? 'text-mnema-text'
+                : 'text-mnema-tertiary group-hover:text-mnema-text'
+          ]"
         />
         <Hash
           v-else
