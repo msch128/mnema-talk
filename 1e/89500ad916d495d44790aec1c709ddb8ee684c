@@ -1,0 +1,107 @@
+doc/talks.md
+  s_06fcde5dbef956::t_88e69e23626aef 85-141,150-151
+doc/api-stability.md
+  s_06fcde5dbef956::t_88e69e23626aef 28
+internal/ws/hub.go
+  s_06fcde5dbef956::t_9eabd6279594a5 108-112
+internal/ws/stage_test.go
+  s_06fcde5dbef956::t_cf3eb8021e4496 27
+  s_06fcde5dbef956::t_92319a875a38fc 51-54
+  s_06fcde5dbef956::t_69cfe9492365ce 1-26,28-50,55-272
+internal/chat/stage_integration_test.go
+  s_06fcde5dbef956::t_a2ec679898ca62 85
+  s_06fcde5dbef956::t_c026e84c5a71bc 1-84,86-103
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_b1384252657fd5 43-45
+internal/db/migrations/0068_talk_stage.sql
+  s_06fcde5dbef956::t_7c5991dea064aa 1-9
+internal/chat/handler_channels.go
+  s_06fcde5dbef956::t_3abff8ddfa6bdf 122-127,211,245-249,255-259,381-382,399-402
+internal/ws/stage_integration_test.go
+  s_06fcde5dbef956::t_8d34f278a97bd4 1-89,91-93,95-100,102-158
+  s_06fcde5dbef956::t_92319a875a38fc 90,94,101
+internal/audit/snapshot.go
+  s_06fcde5dbef956::t_3abff8ddfa6bdf 22
+internal/ws/perms.go
+  s_06fcde5dbef956::t_9eabd6279594a5 97-100,181
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_57d0f0e5d07af6 1728-1731
+internal/chat/stage.go
+  s_06fcde5dbef956::t_3abff8ddfa6bdf 1-28
+internal/perm/perm.go
+  s_06fcde5dbef956::t_7c5991dea064aa 85-88,127
+internal/ws/voice_join.go
+  s_06fcde5dbef956::t_9eabd6279594a5 37
+internal/perm/snapshot_channels.go
+  s_06fcde5dbef956::t_7c5991dea064aa 34-37
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_9eabd6279594a5 298-299
+internal/ws/stage.go
+  s_06fcde5dbef956::t_10c30f5e0763b9 1-239,241-312
+  s_06fcde5dbef956::t_9eabd6279594a5 240
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_57d0f0e5d07af6 1728,1731
+  s_06fcde5dbef956::t_a8e3226eea05f7 1729-1730
+internal/perm/fixture.go
+  s_06fcde5dbef956::t_a416ff62a7f1da 104-114,169
+internal/perm/snapshot_load.go
+  s_06fcde5dbef956::t_7c5991dea064aa 26,103,122,169-170
+  s_06fcde5dbef956::t_cbb13ca81bc997 171
+internal/server/health.go
+  s_06fcde5dbef956::t_b1384252657fd5 47-48
+internal/chat/database_failures_integration_test.go
+  s_06fcde5dbef956::t_399759252ed9b7 74
+internal/perm/snapshot.go
+  s_06fcde5dbef956::t_7c5991dea064aa 78-79
+internal/ws/voice.go
+  s_06fcde5dbef956::t_9eabd6279594a5 32-35,47-48
+internal/chat/access.go
+  s_06fcde5dbef956::t_3abff8ddfa6bdf 26-27,35
+internal/chat/talks.go
+  s_06fcde5dbef956::t_361004e4aa7e66 57
+  s_06fcde5dbef956::t_fd5146290cdf64 63
+  s_06fcde5dbef956::t_3abff8ddfa6bdf 73
+internal/perm/snapshot_test.go
+  s_06fcde5dbef956::t_0d45946ce38386 36
+web/src/lib/permissions.ts
+  s_06fcde5dbef956::t_0d45946ce38386 30-31,50,58
+internal/ws/reactions_test.go
+  s_06fcde5dbef956::t_543ce092e850d4 48
+  s_06fcde5dbef956::t_8d042a7a3ccca0 1-47,49-130
+api/openapi.json
+  s_06fcde5dbef956::t_a2ec679898ca62 1802-1805,1965-1968,3689-3692,8902
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_88e69e23626aef 136
+internal/ws/voice_presence.go
+  s_06fcde5dbef956::t_9eabd6279594a5 59
+internal/chat/channels.go
+  s_06fcde5dbef956::t_3abff8ddfa6bdf 56-58,91,101
+doc/upgrade.md
+  s_06fcde5dbef956::t_88e69e23626aef 139,155-166
+internal/events/types.go
+  s_06fcde5dbef956::t_9fbea9f50e61f7 61-68,93-95
+internal/ws/reactions.go
+  s_06fcde5dbef956::t_3f7f45c345e444 1-95
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_9fbea9f50e61f7 49-51,71-74
+internal/ws/handle.go
+  s_06fcde5dbef956::t_9eabd6279594a5 57-62
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_2184c185020028 1109,1127,1207,1217,2263,2273
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1e89500ad916d495d44790aec1c709ddb8ee684c",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
