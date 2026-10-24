@@ -56,13 +56,13 @@ against those exports. The unused original worklet remains an upstream
 comparison artifact. This exception does not allow new first-party JavaScript.
 
 Compiler and lint dependencies are exact-pinned in `package.json` and locked.
-TypeScript 6.0.3 is compatible with the selected vue-tsc 3.3.12 and
-TypeScript-ESLint 8.71.1 peer ranges. The REST generator needs no new runtime
+TypeScript 6.0.3 is compatible with the selected vue-tsc 3.3.13 and
+TypeScript-ESLint 8.72.0 peer ranges. The REST generator needs no new runtime
 library. Upgrading tooling requires repeating type checks, lint, tests and the
 production build; remaining dependency advisories are reported separately from
 production dependency results.
 
-## Migration acceptance
+## Coverage gate
 
 Frontend coverage is enforced by `npm run test:coverage`, `make coverage-web`,
 `make check` and CI. Statements, branches, functions and lines must each reach
@@ -72,7 +72,7 @@ the measured source inventory. An executable module with missing or zero
 instrumentation fails the gate, even if the coverage tool displays 100%.
 Type-only modules and re-export barrels have no statement body to instrument.
 
-`web/coverage-policy.json` is an explicit per-file exception registry. Each
+The file `web/coverage-policy.json` is an explicit per-file exception registry. Each
 exception must name a concrete limitation, its author and two
 distinct independent reviewers and set every metric's floor to at least 80%.
 An exception cannot lower global thresholds, exclude code, or cover a wildcard.
@@ -83,13 +83,11 @@ for the required two review rounds.
 If a review is conditional on precise uncovered counters, `approvedCounts`
 records those counters and the gate rejects a different measured deficit.
 
-A partially converted branch is not a completed migration. During isolated
-work on a slice, a temporary ignored compiler configuration may permit legacy
-JavaScript dependencies for diagnostics. Such configurations are not shipped.
-The final integrated branch must pass source completeness, generated-contract
-drift, all strict compiler projects, lint, existing behavior tests, native media
-checks and `make check`. Changing a filename or weakening a compiler flag is
-not sufficient evidence of preserved behavior.
+`web/coverage-policy.json` holds no exception today. The tooling scripts in
+`web/scripts` have their own tests (`npm run test:tooling`, part of `npm test`).
+The checks above stay in force for every change: source completeness,
+generated-contract drift, all strict compiler projects, lint, behaviour tests
+and `make check`.
 
 Primary tooling references:
 [Vue TypeScript overview](https://vuejs.org/guide/typescript/overview.html),

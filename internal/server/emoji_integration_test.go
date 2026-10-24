@@ -117,7 +117,7 @@ func TestEmojiUploadRefusesWhatIsNotAnImage(t *testing.T) {
 func TestEmojiNamesAreValidatedAndUnique(t *testing.T) {
 	_, _, manager := emojiFixture(t, nil)
 	data := squarePNG(t, 32)
-	for _, bad := range []string{"", "a", "has space", "dash-ed", strings.Repeat("a", 33), "ümlaut"} {
+	for _, bad := range []string{"", "a", "has space", "dash-ed", strings.Repeat("a", 33), "\u00fcmlaut"} {
 		if res := uploadEmoji(manager, bad, "x.png", "image/png", data); res.status != http.StatusBadRequest {
 			t.Errorf("name %q: %d", bad, res.status)
 		}

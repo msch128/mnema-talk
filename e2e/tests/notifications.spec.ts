@@ -66,13 +66,13 @@ test('notification levels, timed mutes, category badges and mark all read', asyn
 
     // News in the category: a collapsed category shows a dot, then the mentions.
     const post = (channel: string, content: string) => apiFetch(owner, 'POST', `/api/channels/${channel}/messages`, { content })
-    expect((await post(one, 'hallo eins')).status).toBe(201)
+    expect((await post(one, 'hello one')).status).toBe(201)
     const toggle = member.locator(`[data-category-toggle="${categoryId}"]`)
     await expect(member.locator(`[data-channel-item="${one}"] [data-testid="channel-unread"]`)).toHaveText('1')
     await toggle.click()
     await expect(member.getByTestId('category-unread')).toBeVisible()
     await expect(member).toHaveTitle(/^• /)
-    expect((await post(two, `hallo @${suiteMember.username}`)).status).toBe(201)
+    expect((await post(two, `hello @${suiteMember.username}`)).status).toBe(201)
     await expect(member.getByTestId('category-mentions')).toHaveText('1')
     await expect(member).toHaveTitle(/^\(1\) /)
     await toggle.click()

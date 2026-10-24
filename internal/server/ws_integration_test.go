@@ -242,7 +242,7 @@ func TestTypingIsRelayedToOthersAndThrottled(t *testing.T) {
 	a := newApp(t, true)
 	admin := a.seedAdmin()
 	max := a.register(admin, "max")
-	text := a.createChannel(admin, "allgemein", "text")
+	text := a.createChannel(admin, "lobby", "text")
 	voice := a.createChannel(admin, "Lounge", "voice")
 
 	watcher, _, err := admin.dialWS(a.origin())

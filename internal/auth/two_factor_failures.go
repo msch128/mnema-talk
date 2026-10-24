@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/mailer"
 )
 
 // Wrong second-factor codes are kept in the database, so a restart does not
@@ -113,19 +112,8 @@ func (h *Handler) raiseAlert(ctx context.Context, u *User) {
 		if err != nil || st.Address == "" || !st.Verified {
 			return
 		}
-		_ = h.sendMail(bg, h.alertMail(st.Address, mailLocale(st.Locale, ""), st.Username))
+		_ = h.sendMail(bg, alertMail(st.Address, mailLocale(st.Locale, ""), st.Username))
 	})
-}
-
-func (h *Handler) alertMail(to, locale, username string) mailer.Message {
-	if locale == "de" {
-		return mailer.Message{To: to, Subject: serviceName + ": falsche Anmeldecodes für dein Konto", Body: "Hallo " + username + ",\n\n" +
-			"für dein Konto bei " + serviceName + " wurden mehrfach falsche Codes für die Zwei-Faktor-Anmeldung eingegeben. " +
-			"Jemand kennt möglicherweise dein Passwort. Ändere es und prüfe deine Recovery-Codes unter Konto & Sicherheit.\n"}
-	}
-	return mailer.Message{To: to, Subject: serviceName + ": wrong sign-in codes for your account", Body: "Hello " + username + ",\n\n" +
-		"several wrong two-factor codes were entered for your account at " + serviceName + ". " +
-		"Somebody may know your password. Change it and review your recovery codes under Account & security.\n"}
 }
 
 func logFailureError(err error) {

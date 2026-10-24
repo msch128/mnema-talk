@@ -63,8 +63,8 @@ test('forwarding quotes the original per reader: visible to who may see it, "not
     await expect(member.getByTestId('forwarded')).toContainText('oeffentliche Zeile')
 
     // The Owner forwards a message of a channel the member cannot see.
-    expect((await apiFetch(owner, 'POST', `/api/messages/${secret}/forward`, { channel_id: target, comment: 'zur Info' })).status).toBe(201)
-    await expect(member.getByText('zur Info', { exact: true })).toBeVisible()
+    expect((await apiFetch(owner, 'POST', `/api/messages/${secret}/forward`, { channel_id: target, comment: 'for your information' })).status).toBe(201)
+    await expect(member.getByText('for your information', { exact: true })).toBeVisible()
     const unavailable = member.getByTestId('forwarded-unavailable')
     await expect(unavailable).toHaveText('Das Original ist nicht verfügbar.')
     await expect(member.locator('body')).not.toContainText('GEHEIMER-WORTLAUT')

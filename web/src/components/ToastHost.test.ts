@@ -12,13 +12,13 @@ describe('ToastHost', () => {
     const toasts = useToastStore()
     const w = mount(ToastHost)
     expect(w.attributes('aria-live')).toBe('polite')
-    toasts.success('Link kopiert')
-    toasts.error('Datei ist zu groß (max. 50 MB).', { detail: 'urlaub.mov hat 212 MB.' })
+    toasts.success('Link copied')
+    toasts.error('File is too large (max. 50 MB).', { detail: 'holiday.mov is 212 MB.' })
     await w.vm.$nextTick()
     const items = w.findAll('[data-toast]')
     expect(requireValue(items[0]).attributes('role')).toBe('status')
     expect(requireValue(items[1]).attributes('role')).toBe('alert')
-    expect(requireValue(items[1]).text()).toContain('urlaub.mov')
+    expect(requireValue(items[1]).text()).toContain('holiday.mov')
     // errors can be closed
     await requireValue(items[1]).find('button').trigger('click')
     expect(w.findAll('[data-toast]')).toHaveLength(1)
@@ -27,7 +27,7 @@ describe('ToastHost', () => {
   it('runs a toast action once and dismisses the toast', async () => {
     const toasts = useToastStore()
     let called = 0
-    toasts.info('Neue Version', { action: { label: 'Neu laden', onClick: () => { called++ } } })
+    toasts.info('New version', { action: { label: 'Reload', onClick: () => { called++ } } })
     const w = mount(ToastHost)
     await w.find('[data-toast] button').trigger('click')
     expect(called).toBe(1)
@@ -37,12 +37,12 @@ describe('ToastHost', () => {
   it('keeps a persistent warning dismissible without running its action', async () => {
     const toasts = useToastStore()
     let muted = false
-    toasts.info('Bei dieser Aufnahme ist kein Schutz vor erneut aufgenommenem Gesprächston bestätigt.', {
-      action: { label: 'Stream-Audio stummschalten', onClick: () => { muted = true } },
+    toasts.info('This recording has no confirmed protection against echo.', {
+      action: { label: 'Mute stream audio', onClick: () => { muted = true } },
     })
-    const w = mount(ToastHost, { global: { mocks: { $t: () => 'Schließen' } } })
-    expect(w.find('[role="status"]').text()).toContain('Gesprächston')
-    const close = w.find('button[aria-label="Schließen"]')
+    const w = mount(ToastHost, { global: { mocks: { $t: () => 'Close' } } })
+    expect(w.find('[role="status"]').text()).toContain('echo')
+    const close = w.find('button[aria-label="Close"]')
     expect(close.exists()).toBe(true)
     await close.trigger('click')
     expect(muted).toBe(false)

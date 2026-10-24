@@ -10,23 +10,29 @@ import (
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
-func seedGermanLayout(t *testing.T, p *db.Pool) {
+// seedBaselineLayout recreates what migration 0001 seeds: the baseline-language names.
+func seedBaselineLayout(t *testing.T, p *db.Pool) {
 	t.Helper()
 	ctx := context.Background()
 	testutil.Reset(t, p)
-	for _, q := range []string{
-		`DELETE FROM channels`, `DELETE FROM categories`,
-		`INSERT INTO users (username, display_name, password_hash, role) VALUES ('owner', 'Owner', 'x', 'admin')`,
-		`INSERT INTO categories (name, sort_order) VALUES ('Text-Kanäle', 0), ('Voice-Hangouts', 1)`,
-		`INSERT INTO channels (category_id, name, type, topic, sort_order)
+	base := seedLayouts[seedBaseline]
+	text, voice := base.Categories["text"], base.Categories["voice"]
+	ch := func(key string) seedChannel { return base.Channels[key] }
+	for _, q := range []struct {
+		sql  string
+		args []any
+	}{
+		{`DELETE FROM channels`, nil}, {`DELETE FROM categories`, nil},
+		{`INSERT INTO users (username, display_name, password_hash, role) VALUES ('owner', 'Owner', 'x', 'admin')`, nil},
+		{`INSERT INTO categories (name, sort_order) VALUES ($1, 0), ($2, 1)`, []any{text, voice}},
+		{`INSERT INTO channels (category_id, name, type, topic, sort_order)
 		 SELECT c.id, v.name, v.type, v.topic, 0 FROM categories c JOIN (VALUES
-		   ('Text-Kanäle', 'general', 'text', 'Allgemeine Diskussionen & Chat'),
-		   ('Text-Kanäle', 'medien', 'text', 'Bilder, Screenshots & Clips'),
-		   ('Voice-Hangouts', 'Lounge', 'voice', 'Offener Sprach-Hangout'),
-		   ('Voice-Hangouts', 'Gaming 4K', 'voice', 'Source-Quality Screen & Gaming Hangout')) AS v(cat, name, type, topic) ON v.cat = c.name`,
+		   ($1, $3, 'text', $4), ($1, $5, 'text', $6), ($2, $7, 'voice', $8), ($2, $9, 'voice', $10)) AS v(cat, name, type, topic) ON v.cat = c.name`,
+			[]any{text, voice, ch("general").Name, ch("general").Topic, ch("media").Name, ch("media").Topic,
+				ch("lounge").Name, ch("lounge").Topic, ch("gaming").Name, ch("gaming").Topic}},
 	} {
-		if _, err := p.Exec(ctx, q); err != nil {
-			t.Fatalf("%s: %v", q, err)
+		if _, err := p.Exec(ctx, q.sql, q.args...); err != nil {
+			t.Fatalf("%s: %v", q.sql, err)
 		}
 	}
 }
@@ -53,11 +59,11 @@ func TestAFreshInstallGetsEnglishDefaultNamesOnlyWhenAskedAndUntouched(t *testin
 	p := testutil.DB(t)
 	ctx := context.Background()
 
-	seedGermanLayout(t, p)
+	seedBaselineLayout(t, p)
 	if did, err := LocalizeSeedLayout(ctx, p, "de"); err != nil || did {
-		t.Fatalf("German keeps the names: %v %v", did, err)
+		t.Fatalf("the baseline language keeps the names: %v %v", did, err)
 	}
-	if got := names(t, p, `SELECT name FROM categories ORDER BY sort_order`); got[0] != "Text-Kanäle" {
+	if got := names(t, p, `SELECT name FROM categories ORDER BY sort_order`); got[0] != seedLayouts[seedBaseline].Categories["text"] {
 		t.Fatalf("categories: %v", got)
 	}
 
@@ -80,7 +86,7 @@ func TestExistingDataIsNeverRenamed(t *testing.T) {
 	p := testutil.DB(t)
 	ctx := context.Background()
 
-	seedGermanLayout(t, p)
+	seedBaselineLayout(t, p)
 	if _, err := p.Exec(ctx, `INSERT INTO users (username, display_name, password_hash) VALUES ('member', 'Member', 'x')`); err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +94,7 @@ func TestExistingDataIsNeverRenamed(t *testing.T) {
 		t.Fatalf("a second account: %v %v", did, err)
 	}
 
-	seedGermanLayout(t, p)
+	seedBaselineLayout(t, p)
 	if _, err := p.Exec(ctx, `INSERT INTO messages (channel_id, user_id, content) SELECT c.id, u.id, 'hi' FROM channels c, users u LIMIT 1`); err != nil {
 		t.Fatal(err)
 	}
@@ -96,14 +102,14 @@ func TestExistingDataIsNeverRenamed(t *testing.T) {
 		t.Fatalf("a message exists: %v %v", did, err)
 	}
 
-	seedGermanLayout(t, p)
-	if _, err := p.Exec(ctx, `UPDATE channels SET name = 'allgemein' WHERE name = 'general'`); err != nil {
+	seedBaselineLayout(t, p)
+	if _, err := p.Exec(ctx, `UPDATE channels SET name = 'renamed' WHERE name = 'general'`); err != nil {
 		t.Fatal(err)
 	}
 	if did, err := LocalizeSeedLayout(ctx, p, "en"); err != nil || did {
 		t.Fatalf("an edited layout: %v %v", did, err)
 	}
-	if got := names(t, p, `SELECT name FROM categories ORDER BY sort_order`); got[0] != "Text-Kanäle" {
+	if got := names(t, p, `SELECT name FROM categories ORDER BY sort_order`); got[0] != seedLayouts[seedBaseline].Categories["text"] {
 		t.Errorf("categories: %v", got)
 	}
 }

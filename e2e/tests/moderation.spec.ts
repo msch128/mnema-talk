@@ -41,9 +41,9 @@ test('a moderator times out and bans a member; they see it, recover, and the aud
     for (const page of [mod, member]) await page.locator('[data-channel-type="text"]', { hasText: CHANNEL }).click()
 
     const composer = member.getByRole('textbox', { name: `Nachricht an #${CHANNEL}` })
-    await composer.fill('vor dem Timeout')
+    await composer.fill('before the timeout')
     await composer.press('Enter')
-    await expect(member.getByText('vor dem Timeout')).toBeVisible()
+    await expect(member.getByText('before the timeout')).toBeVisible()
 
     // The moderator times the member out for a few seconds from the member list.
     await mod.locator(`[data-member="${suiteMember.username}"]`).click({ button: 'right' })
@@ -61,14 +61,14 @@ test('a moderator times out and bans a member; they see it, recover, and the aud
     await expect(banner).toBeVisible()
     await expect(banner).toContainText('zu laut')
     await expect(member.getByTestId('timeout-remaining')).toHaveText(/^0:0[0-8]$/)
-    const refused = await apiFetch(member, 'POST', `/api/channels/${responseString(channel, 'id')}/messages`, { content: 'darf nicht' })
+    const refused = await apiFetch(member, 'POST', `/api/channels/${responseString(channel, 'id')}/messages`, { content: 'not allowed' })
     expect(refused.status).toBe(403)
 
     // When the time is up the banner goes and posting works again.
     await expect(banner).toBeHidden({ timeout: 20_000 })
-    await composer.fill('nach dem Timeout')
+    await composer.fill('after the timeout')
     await composer.press('Enter')
-    await expect(member.getByText('nach dem Timeout')).toBeVisible()
+    await expect(member.getByText('after the timeout')).toBeVisible()
 
     // A ban ends the member's session; unbanning in the admin console lets them back in.
     await mod.locator(`[data-member="${suiteMember.username}"]`).click({ button: 'right' })

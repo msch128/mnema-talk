@@ -46,12 +46,12 @@ function setup() {
   chat.categories = [categoryFixture({
     id: 'c',
     channels: [
-      channelFixture({ id: 'ch1', name: 'allgemein', type: 'text' }),
+      channelFixture({ id: 'ch1', name: 'lobby', type: 'text' }),
       channelFixture({ id: 'ch2', name: 'musik', type: 'text' }),
       channelFixture({ id: 'v1', name: 'talk', type: 'voice' })
     ]
   })]
-  chat.activeChannel = channelFixture({ id: 'ch1', name: 'allgemein', type: 'text' })
+  chat.activeChannel = channelFixture({ id: 'ch1', name: 'lobby', type: 'text' })
   chat.messages = []
   // An already connected socket that records what the store sends. Socket
   // initialization and its snapshot refresh are covered in connection.test.
@@ -161,7 +161,7 @@ describe('channel list refresh', () => {
     setDraft('me', channelDraftKey('deleted'), { text: 'orphan', reply: null })
     setDraft('me', threadDraftKey('some-thread'), { text: 'thread', reply: null })
     const fetching = chat.fetchChannels()
-    answer('/api/channels', { categories: [categoryFixture({ id: 'c', channels: [channelFixture({ id: 'ch1', name: 'allgemein', type: 'text' })] })], uncategorized: [] })
+    answer('/api/channels', { categories: [categoryFixture({ id: 'c', channels: [channelFixture({ id: 'ch1', name: 'lobby', type: 'text' })] })], uncategorized: [] })
     await fetching
     expect(hasDraft('me', channelDraftKey('ch1'))).toBe(true)
     expect(hasDraft('me', channelDraftKey('deleted'))).toBe(false)

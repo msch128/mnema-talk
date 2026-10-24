@@ -30,7 +30,7 @@ function setup() {
   const chat = useChatStore()
   const auth = useAuthStore()
   auth.user = userFixture({ id: 'me', username: 'max', role: 'user' })
-  chat.categories = [categoryFixture({ id: 'c', channels: [channelFixture({ id: 'ch1', name: 'allgemein', type: 'text' }), channelFixture({ id: 'ch2', name: 'musik', type: 'text' })] })]
+  chat.categories = [categoryFixture({ id: 'c', channels: [channelFixture({ id: 'ch1', name: 'lobby', type: 'text' }), channelFixture({ id: 'ch2', name: 'musik', type: 'text' })] })]
   chat.activeChannel = channelFixture({ id: 'ch1', type: 'text' })
   chat.messages = []
   chat.members = [userFixture({ id: 'u2', username: 'anna', display_name: 'Anna' }), userFixture({ id: 'u3', username: 'ben' })]
@@ -223,7 +223,7 @@ describe('desktop notifications', () => {
   it('notifies for other channels and uses the svg icon', () => {
     stubNotification('granted')
     const chat = setup()
-    chat.handleWSEvent({ type: 'message_create', payload: msg({ channel_id: 'ch2', display_name: 'Anna', content: 'hallo' }) })
+    chat.handleWSEvent({ type: 'message_create', payload: msg({ channel_id: 'ch2', display_name: 'Anna', content: 'hello' }) })
     expect(made).toHaveLength(1)
     expect(required(made[0]).opts.icon).toBe('/favicon.svg')
     expect(required(made[0]).title).toContain('#musik')

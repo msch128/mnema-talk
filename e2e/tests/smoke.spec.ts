@@ -12,7 +12,7 @@ const suffix = Date.now().toString(36)
 const USER = `friend_${suffix}`
 const USER_DISPLAY = `Friend ${suffix}`
 const USER_PASSWORD = `pw-${suffix}-${randomBytes(8).toString('hex')}`
-const TEXT_CHANNEL = `allgemein-${suffix}`
+const TEXT_CHANNEL = `general-${suffix}`
 const VOICE_CHANNEL = `Smoke Talk ${suffix}`
 
 // Same-origin fetch from inside the page, so cookies and the Origin header
@@ -73,7 +73,7 @@ test('login, chat and talk', async ({ browser }) => {
   await sidebarText(admin).click()
   await sidebarText(user).click()
 
-  const message = `Hallo aus dem Smoke-Test ${suffix}`
+  const message = `Hello from the smoke test ${suffix}`
   const composer = user.getByRole('textbox', { name: `Nachricht an #${TEXT_CHANNEL}` })
   await composer.fill(message)
   await composer.press('Enter')

@@ -23,7 +23,7 @@ function msg(id: string, user: string, extra: Partial<Message> = {}) {
 function setup() {
   useAuthStore().user = userFixture({ id: 'me', username: 'me', role: 'user' })
   const chat = useChatStore()
-  chat.activeChannel = channelFixture({ id: 'ch1', name: 'allgemein', type: 'text' })
+  chat.activeChannel = channelFixture({ id: 'ch1', name: 'lobby', type: 'text' })
   chat.activeThread = msg('root', 'u2')
   chat.threadReplies = [msg('r1', 'u2'), msg('r2', 'me'), msg('r3', 'u2')]
   w = mount(ThreadSidebar, { attachTo: document.body })
@@ -147,12 +147,12 @@ describe('ThreadSidebar replies', () => {
     await flushPromises()
     expect(send).not.toHaveBeenCalled()
 
-    await textarea().setValue('  hallo thread  ')
+    await textarea().setValue('  hello thread  ')
     expect(key(textarea(), { key: 'Enter', shiftKey: true }).defaultPrevented).toBe(false)
     expect(send).not.toHaveBeenCalled()
     expect(key(textarea(), { key: 'Enter' }).defaultPrevented).toBe(true)
     await flushPromises()
-    expect(send).toHaveBeenCalledWith('hallo thread', null)
+    expect(send).toHaveBeenCalledWith('hello thread', null)
     expect(textarea().element.value).toBe('')
   })
 
@@ -207,7 +207,7 @@ describe('ThreadSidebar replies', () => {
   it('jumps to the replied message, or says it is gone', async () => {
     useAuthStore().user = userFixture({ id: 'me', username: 'me', role: 'user' })
     const chat = useChatStore()
-    chat.activeChannel = channelFixture({ id: 'ch1', name: 'allgemein', type: 'text' })
+    chat.activeChannel = channelFixture({ id: 'ch1', name: 'lobby', type: 'text' })
     chat.activeThread = msg('root', 'u2')
     chat.threadReplies = [
       msg('r1', 'u2'),

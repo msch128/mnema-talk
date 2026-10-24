@@ -47,12 +47,12 @@ func postMessage(t *testing.T, c *client, ch uuid.UUID, body map[string]any) uui
 func TestUnreadAndMentionCounts(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
-	ch := a.createChannel(admin, "allgemein", "text")
+	ch := a.createChannel(admin, "lobby", "text")
 	postMessage(t, admin, ch, map[string]any{"content": "before max existed"})
 	time.Sleep(10 * time.Millisecond)
 
 	max := a.register(admin, "max")
-	own := postMessage(t, max, ch, map[string]any{"content": "hallo zusammen"})
+	own := postMessage(t, max, ch, map[string]any{"content": "hello everyone"})
 	first := postMessage(t, admin, ch, map[string]any{"content": "hi"})
 	postMessage(t, admin, ch, map[string]any{"content": "hey @max, schau mal"})
 	postMessage(t, admin, ch, map[string]any{"content": "genau", "reply_to_id": own})

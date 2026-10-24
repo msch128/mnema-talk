@@ -13,7 +13,7 @@ if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2
 
 const suffix = Date.now().toString(36)
 // 20 characters: the longest name that must stay whole beside the open member list at 1000px.
-const LONG_NAME = `ohne-thema-kanal-${suffix.slice(-3)}`
+const LONG_NAME = `no-topic-channel-${suffix.slice(-3)}`
 const IMAGE_CHANNEL = `bilder-${suffix}`
 const TABS = ['users', 'roles', 'channels', 'invites', 'onboarding', 'emoji', 'bans', 'bots', 'media', 'audit', 'system']
 

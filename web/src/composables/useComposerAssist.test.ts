@@ -136,10 +136,10 @@ describe('useComposerAssist', () => {
 
   it('inserts emoji at the caret', async () => {
     const w = mount(Harness, { attachTo: document.body })
-    await type(w, 'hallo welt')
+    await type(w, 'hello world')
     w.find('textarea').element.setSelectionRange(5, 5)
     await w.vm.assist.insertText(' 👋')
-    expect(w.vm.text).toBe('hallo 👋 welt')
+    expect(w.vm.text).toBe('hello 👋 world')
     w.unmount()
   })
 })

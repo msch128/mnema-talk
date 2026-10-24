@@ -401,7 +401,7 @@ func TestVerifyReportsDamagedEntries(t *testing.T) {
 }
 
 func TestValidPath(t *testing.T) {
-	for _, p := range []string{"index.html", "assets/a-b.js", "ünï/x.js"} {
+	for _, p := range []string{"index.html", "assets/a-b.js", "\u00fcnï/x.js"} {
 		if !ValidPath(p) {
 			t.Errorf("%q should be valid", p)
 		}

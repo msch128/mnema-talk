@@ -90,7 +90,7 @@ test('phone: sign in, drawer, message, thread, settings, Talk', async ({ page, b
 
   // Send a message with the composer; its send button is a proper touch target.
   const composer = page.getByRole('textbox', { name: `Nachricht an #${TEXT_CHANNEL}` })
-  const message = `Hallo vom Telefon ${suffix}`
+  const message = `Hello from the phone ${suffix}`
   await composer.fill(message)
   await expectTouchSize(page, 'Senden')
   await page.getByRole('button', { name: 'Senden' }).tap()
@@ -226,7 +226,7 @@ test('phone: direct messages live in the drawer', async ({ page, browser }) => {
     const memberId = responseUserId(await apiFetch(member, 'GET', '/api/auth/me'))
     const started = await apiFetch(page, 'POST', '/api/dms', { user_ids: [memberId] })
     expect([200, 201]).toContain(started.status)
-    const message = `Hallo aus der Direktnachricht ${suffix}`
+    const message = `Hello from the direct message ${suffix}`
     expect((await apiFetch(member, 'POST', `/api/channels/${responseString(started, 'id')}/messages`, { content: message })).status).toBe(201)
     await page.reload()
 

@@ -168,7 +168,7 @@ async function handleStart() {
         </div>
       </div>
 
-      <!-- 2. Resolution (Auflösung) -->
+      <!-- 2. Resolution -->
       <div class="stack-2">
         <label class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
           {{ t('talk.quality.resolution') }}

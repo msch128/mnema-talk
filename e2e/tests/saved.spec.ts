@@ -41,18 +41,18 @@ test('a member saves a message, opens it from the saved list, loses access and r
       expect((await apiFetch(member, 'POST', '/api/auth/register', { username: suiteMember.username, password: suiteMember.password, invite_code: responseString(invite, 'code') })).status).toBe(201)
       suiteMember.registered = true
     }
-    const posted = await apiFetch(owner, 'POST', `/api/channels/${channelId}/messages`, { content: 'merke dir diese Zeile' })
+    const posted = await apiFetch(owner, 'POST', `/api/channels/${channelId}/messages`, { content: 'remember this line' })
     expect(posted.status).toBe(201)
     const messageId = responseString(posted, 'id')
 
     // Save from the message menu.
     await member.goto(`/c/${channelId}`)
-    await member.getByText('merke dir diese Zeile', { exact: true }).click({ button: 'right' })
+    await member.getByText('remember this line', { exact: true }).click({ button: 'right' })
     await member.getByRole('menuitem', { name: 'Nachricht speichern' }).click()
     await member.getByTestId('saved-button').click()
     const item = member.getByTestId('saved-item')
     await expect(item).toHaveCount(1)
-    await expect(item).toContainText('merke dir diese Zeile')
+    await expect(item).toContainText('remember this line')
 
     // A note, only for the member.
     await item.getByTestId('saved-note-edit').click()
@@ -80,7 +80,7 @@ test('a member saves a message, opens it from the saved list, loses access and r
     await member.goto('/')
     await member.getByTestId('saved-button').click()
     await expect(member.getByTestId('saved-unavailable')).toBeVisible()
-    await expect(member.getByTestId('saved-panel')).not.toContainText('merke dir diese Zeile')
+    await expect(member.getByTestId('saved-panel')).not.toContainText('remember this line')
     await expect(member.getByTestId('saved-note')).toHaveText('fuer morgen')
     await member.getByTestId('saved-remove').click()
     await expect(member.getByTestId('saved-empty')).toBeVisible()

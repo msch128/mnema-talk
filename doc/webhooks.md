@@ -139,8 +139,7 @@ guessed by hammering the route (it has 256 random bits anyway).
 
 ## Outgoing webhooks
 
-An outgoing webhook sends events of a channel (or of the whole server) to a
-URL of yours. Administrators create them under **Webhooks** in a channel's menu, or
+An outgoing webhook sends the events of one channel to a URL of yours. Administrators create them under **Webhooks** in a channel's menu, or
 through the API:
 
 ```
@@ -161,8 +160,6 @@ and whether it is enabled. Deleting the channel deletes it.
 | `MESSAGE_CREATE` | a message is posted in the channel (messages posted by an incoming webhook are not sent, so two webhooks cannot feed each other) | the message, as in `GET /api/channels/{id}/messages` |
 | `MESSAGE_UPDATE` | a message is edited | the message |
 
-A forwarded message carries `forward: {forwarded: true}` and its own comment as `content`; neither the forwarded text nor its ids are part of the payload, because a receiver may not be allowed to see the original.
-
 | `MESSAGE_DELETE` | a message is deleted | `{id, channel_id, parent_id}` |
 | `MESSAGE_REACTIONS_UPDATE` | someone reacts or takes a reaction back | `{message_id, channel_id, reactions}` |
 | `VOICE_STATE_UPDATE` | a member joins or leaves a Talk of the channel | `{action: "join"\|"leave", channel_id, user...}` |
@@ -171,6 +168,14 @@ A forwarded message carries `forward: {forwarded: true}` and its own comment as 
 `d` is exactly the object the WebSocket sends for that event, so the
 OpenAPI schemas of the messages apply. Typing, presence and similar
 short-lived events are not offered.
+
+A forwarded message carries `forward: {forwarded: true}` and its own comment
+as `content`. Neither the forwarded text nor its ids are part of the payload,
+because the receiver may not be allowed to see the original. A pinned message
+carries `pinned_at` and `pinned_by` like any message payload.
+
+Outgoing webhooks never receive messages of direct message conversations, and
+an incoming webhook cannot post into one: webhooks belong to channels.
 
 ### The request
 
@@ -311,6 +316,6 @@ ranges cannot be opened this way.
 
 See the *Webhooks* paragraph in [SECURITY.md](../SECURITY.md). In short: the
 URL is a bearer secret, treat it like a password; tokens are stored hashed and
-compared in constant time; a webhook cannot sign in, appear as a member, or
-notify everyone unless its maker could; embeds are rendered as sanitized text
+compared in constant time; a webhook cannot sign in or appear as a member, and
+it can notify everyone only when its own `allow_everyone` setting is on; embeds are rendered as sanitized text
 and links, nothing is fetched from the senders' hosts.
