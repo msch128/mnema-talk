@@ -317,7 +317,7 @@ describe('AccountBlockedList', () => {
 })
 
 describe('the kill switch in the welcome settings', () => {
-  const settings = { community_name: 'Home', welcome_text: '', rules_text: '', rules_version: 0, start_channel_id: null, direct_messages_enabled: true }
+  const settings = { community_name: 'Home', welcome_text: '', rules_text: '', rules_version: 0, start_channel_id: null, direct_messages_enabled: true, session_inactivity_days: 7 }
 
   it('is offered on a server with direct messages and saved with the other settings', async () => {
     useServerFeaturesStore().list = ['dm']

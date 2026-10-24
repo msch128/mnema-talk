@@ -126,6 +126,31 @@ until the new release has passed your application checks.
 
 ## Version notes
 
+### 1.1.x → 1.2.0
+
+Update with the procedure above and take the backup first. 1.2.0 only adds. A
+1.1.x web app keeps working against a 1.2 server. Nothing in `.env` has to
+change.
+
+#### Sessions: "Where you are signed in" and inactivity sign-out
+
+Two additive migrations run at the first start (forward-only; a rollback to a
+1.1.x image needs the restore of the pre-update backup).
+
+| Migration | Adds |
+|---|---|
+| 0064 | `user_sessions`: one row per browser session (device label, created, last active). |
+| 0065 | `instance_settings.session_inactivity_days` (1 to 365, default 7). |
+
+Nobody is signed out by the upgrade. A session that exists at the upgrade has
+no row yet; it gets one on its first request afterwards and its inactivity
+clock starts then, so the earliest anyone can be signed out for inactivity is
+the configured number of days (default 7) after the upgrade. The setting is
+under *Admin* > *Welcome & rules*; see "Sessions and inactivity sign-out" in
+[operations.md](operations.md). Members find their sessions under *Account &
+security*. *View server as a role* (role management) is read-only and changes
+no data.
+
 ### 1.0.x → 1.1.0
 
 Update with the procedure above and take the backup first. 1.1.0 only adds.

@@ -281,6 +281,7 @@ requests leave no entry. Reading the log is not recorded.
 | `auth.login` | Successful sign-in (browser and native) | The member |
 | `auth.login_failed`, `auth.login_locked` | A wrong password, or a blocked attempt, for an **existing** account | The member. At most one entry per account and kind per minute, and no address, password or typed name; a name that is no account is not stored at all |
 | `auth.register`, `auth.password_change`, `auth.logout_all` | Own-account events | The member |
+| `auth.session_revoke`, `auth.sessions_revoke_others` | A member signs out one of their sessions, or all others, under *Where you are signed in* | The member |
 | `auth.email_set`, `auth.email_remove`, `auth.email_verified`, `auth.password_reset_mail` | A member sets, removes or confirms an e-mail address, or resets the password through the link in a mail | The member. The address itself is never stored in the log |
 | `auth.two_factor_enabled`, `auth.two_factor_disabled`, `auth.recovery_codes_regenerated`, `auth.recovery_code_used` | A member changes or uses their second factor | The member. Never a code or secret |
 | `auth.two_factor_failed`, `auth.two_factor_alert` | A wrong second-step code (at most one entry per account and minute); five or more not yet reported | The member. No code |

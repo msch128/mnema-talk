@@ -1,7 +1,7 @@
 import { api } from './api'
 import {
-  decodeAuthExportStatus, decodeAuthRecoveryCodes, decodeAuthTwoFactorSetup,
-  type AuthExportStatus, type AuthTwoFactorSetup
+  decodeAuthExportStatus, decodeAuthMemberSessionList, decodeAuthRecoveryCodes, decodeAuthRevokedSessions, decodeAuthTwoFactorSetup,
+  type AuthExportStatus, type AuthMemberSession, type AuthTwoFactorSetup
 } from '../types/rest'
 
 // Calls for the sensitive account actions. Each one proves who is asking with
@@ -42,4 +42,19 @@ export function exportStatus(): Promise<AuthExportStatus> {
 /** Erases the account for good; the session ends with it. */
 export async function deleteAccount(currentPassword: string, code: string): Promise<void> {
   await api('/api/users/me/delete', { method: 'POST', json: withCode(currentPassword, code) })
+}
+
+/** The member's own sessions on this server, most recently active first. */
+export async function listSessions(): Promise<AuthMemberSession[]> {
+  return (await api('/api/auth/sessions', { decode: decodeAuthMemberSessionList })).sessions
+}
+
+/** Signs out one of the member's own sessions (also removes its push subscriptions). */
+export async function revokeSession(id: string): Promise<void> {
+  await api(`/api/auth/sessions/${id}`, { method: 'DELETE' })
+}
+
+/** Signs out every session except the one making the request; returns how many ended. */
+export async function revokeOtherSessions(): Promise<number> {
+  return (await api('/api/auth/sessions/revoke-others', { method: 'POST', decode: decodeAuthRevokedSessions })).revoked
 }

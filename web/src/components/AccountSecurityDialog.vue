@@ -9,6 +9,7 @@ import ProfilePassword from './ProfilePassword.vue'
 import AccountEmail from './AccountEmail.vue'
 import AccountTwoFactor from './AccountTwoFactor.vue'
 import AccountPrivacy from './AccountPrivacy.vue'
+import AccountSessions from './AccountSessions.vue'
 import BaseDialog from './BaseDialog.vue'
 
 const account = useAccountStore()
@@ -32,6 +33,7 @@ onMounted(async () => {
         <ProfilePassword />
         <AccountTwoFactor />
         <AccountEmail />
+        <AccountSessions />
         <AccountPrivacy />
       </template>
     </div>

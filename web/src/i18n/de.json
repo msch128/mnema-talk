@@ -1206,7 +1206,10 @@
       "tooLong": "Einer der Texte ist zu lang.",
       "saved": "Willkommen und Regeln gespeichert.",
       "dmEnabled": "Direktnachrichten erlauben",
-      "dmEnabledHint": "Wenn aus, kann niemand Direktnachrichten beginnen oder schreiben. Bestehende Gespräche bleiben lesbar."
+      "dmEnabledHint": "Wenn aus, kann niemand Direktnachrichten beginnen oder schreiben. Bestehende Gespräche bleiben lesbar.",
+      "inactivity": "Nach Inaktivität abmelden (Tage)",
+      "inactivityHint": "Eine Sitzung, die so viele Tage keine Anfrage stellt, wird abgemeldet und bekommt keine Benachrichtigungen mehr. Gezählt ab der letzten Nutzung, nicht ab der Anmeldung. 1 bis 365.",
+      "inactivityRange": "Gib eine ganze Zahl von {min} bis {max} ein."
     },
     "mail": {
       "title": "E-Mail (SMTP)",
@@ -1841,7 +1844,9 @@
         "two_factor_alert": "Wiederholt falsche Zwei-Faktor-Codes",
         "recovery_code_used": "Recovery-Code verwendet",
         "recovery_codes_regenerated": "Recovery-Codes erneuert",
-        "password_reset_mail": "Passwort per E-Mail zurückgesetzt"
+        "password_reset_mail": "Passwort per E-Mail zurückgesetzt",
+        "session_revoke": "Eine Sitzung abgemeldet",
+        "sessions_revoke_others": "Alle anderen Sitzungen abgemeldet"
       },
       "settings": {
         "upload_limit": "Upload-Limit geändert",
@@ -1918,7 +1923,22 @@
     "uploadInvalid": "Gib eine ganze Zahl in MB ein oder lass das Feld leer.",
     "botRoles": "Bot-Rollen",
     "botRoleHint": "Verwaltete Rolle eines Bots: sie lässt sich nicht entfernen.",
-    "botRoleNote": "„{name}“ ist die eigene Rolle eines Bots. Sie entsteht mit dem Bot, folgt seinem Namen und wird mit ihm gelöscht; nur dieser Bot hat sie, und sie lässt sich nicht von Hand umbenennen, jemand anderem geben, dem Bot wegnehmen oder löschen. Farbe und Rechte kannst du ändern. Niemand kann einem Bot Rechte geben, die er selbst nicht hat, und nur der Owner kann einen Bot erhöhen."
+    "botRoleNote": "„{name}“ ist die eigene Rolle eines Bots. Sie entsteht mit dem Bot, folgt seinem Namen und wird mit ihm gelöscht; nur dieser Bot hat sie, und sie lässt sich nicht von Hand umbenennen, jemand anderem geben, dem Bot wegnehmen oder löschen. Farbe und Rechte kannst du ändern. Niemand kann einem Bot Rechte geben, die er selbst nicht hat, und nur der Owner kann einen Bot erhöhen.",
+    "viewAs": {
+      "open": "Server als {name} ansehen",
+      "title": "Server als {name}",
+      "subtitle": "Nur Vorschau. Nichts ändert sich und niemand wird nachgeahmt.",
+      "loading": "Lädt …",
+      "sidebar": "Kanäle, die diese Rolle sieht",
+      "canJoin": "kann beitreten",
+      "cannotJoin": "kann nicht beitreten",
+      "permissionsIn": "Berechtigungen in {name}",
+      "allowed": "erlaubt",
+      "notAllowed": "nicht erlaubt",
+      "administrator": "Diese Rolle hat Administrator: Sie sieht jeden Kanal, den du siehst, und ignoriert Kanalberechtigungen.",
+      "empty": "Diese Rolle sieht keine Kanäle, die du siehst.",
+      "exit": "Vorschau beenden"
+    }
   },
   "memberRoles": {
     "title": "Rollen von {name}",
@@ -2354,6 +2374,31 @@
       "deleteButton": "Mein Konto löschen …",
       "deleteType": "Tippe zur Bestätigung deinen Benutzernamen ({name})",
       "deleteConfirm": "Endgültig löschen"
+    },
+    "sessions": {
+      "title": "Wo du angemeldet bist",
+      "intro": "Die Geräte und Browser, die auf diesem Server in deinem Konto angemeldet sind. Erkennst du eines nicht, melde es ab.",
+      "thisDevice": "Dieses Gerät",
+      "unknownDevice": "Unbekanntes Gerät",
+      "push": "Benachrichtigungen an",
+      "justNow": "gerade eben",
+      "activity": "Aktiv {active} · angemeldet seit {since}",
+      "signOut": "Abmelden",
+      "signOutLabel": "{device} abmelden",
+      "signOutTitle": "{device} abmelden?",
+      "signOutBody": "Dieses Gerät wird abgemeldet und bekommt keine Benachrichtigungen mehr. Mit deinem Passwort kann es sich wieder anmelden.",
+      "signOutThisTitle": "Dieses Gerät abmelden?",
+      "signOutThisBody": "Du wirst hier abgemeldet und musst dich neu anmelden.",
+      "signedOut": "{device} abgemeldet.",
+      "signOutOthers": "Alle anderen Sitzungen abmelden",
+      "signOutOthersTitle": "Alle anderen Sitzungen abmelden?",
+      "signOutOthersBody": "Jedes andere Gerät wird abgemeldet und bekommt keine Benachrichtigungen mehr. Dieses Gerät bleibt angemeldet.",
+      "signedOutOthers": {
+        "one": "Eine andere Sitzung abgemeldet.",
+        "other": "{count} andere Sitzungen abgemeldet."
+      },
+      "onlyThis": "Nur dieses Gerät ist angemeldet.",
+      "inactivity": "Sitzungen, die eine Weile nicht benutzt werden, werden automatisch abgemeldet. Wie lange, legt der Owner fest."
     }
   },
   "rules": {
