@@ -189,7 +189,7 @@ func TestVotingBroadcastsTalliesToTheChannel(t *testing.T) {
 
 // An anonymous poll never lets a voter id out: not in the message, the list,
 // the poll route, the broadcast, a search hit or the mentions inbox, not even
-// for the author or an administrator; a member sees only their own choice.
+// for the author or an administrator; a member learns only that they voted.
 func TestAnonymousPollNeverRevealsWhoVoted(t *testing.T) {
 	f := newPollFixture(t)
 	m := f.basic(t, f.alice, map[string]any{"anonymous": true, "question": "Secret pineapple ballot"})
@@ -225,7 +225,8 @@ func TestAnonymousPollNeverRevealsWhoVoted(t *testing.T) {
 			assertNoVoters("event "+e.Type, raw)
 		}
 	}
-	if d := f.detail(t, f.bob, m); len(d.MyVotes) != 1 || d.MyVotes[0] != f.optionID(m, 0) || !sameInts(tallies(d.Poll), []int{1, 1, 0}) {
+	// The server does not know the choice, only that bob took part.
+	if d := f.detail(t, f.bob, m); len(d.MyVotes) != 0 || !d.HasVoted || !sameInts(tallies(d.Poll), []int{1, 1, 0}) {
 		t.Fatalf("bob's own view: %+v", d)
 	}
 	if d := f.detail(t, f.alice, m); len(d.MyVotes) != 0 {

@@ -19,7 +19,7 @@ var snapshotSQL = map[Resource]string{
 		'permissions', permissions, 'hoist', hoist, 'mentionable', mentionable, 'max_upload_mb', max_upload_mb), name
 		FROM roles WHERE id = $1`,
 	ResChannel: `SELECT jsonb_build_object('name', name, 'type', type, 'topic', topic,
-		'category_id', category_id, 'user_limit', user_limit, 'slow_mode_seconds', slow_mode_seconds, 'sort_order', sort_order, 'is_lobby', is_lobby), name
+		'category_id', category_id, 'user_limit', user_limit, 'slow_mode_seconds', slow_mode_seconds, 'auto_delete_days', auto_delete_days, 'sort_order', sort_order, 'is_lobby', is_lobby), name
 		FROM channels WHERE id = $1`,
 	ResCategory: `SELECT jsonb_build_object('name', name, 'sort_order', sort_order), name
 		FROM categories WHERE id = $1`,

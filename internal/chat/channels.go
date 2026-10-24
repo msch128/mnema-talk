@@ -44,6 +44,9 @@ type Channel struct {
 	// in this channel; 0 = off. Members who may manage messages here are
 	// exempt.
 	SlowModeSeconds int `json:"slow_mode_seconds" minimum:"0" maximum:"21600"`
+	// AutoDeleteDays removes messages older than this many days (1, 7, 30 or
+	// 90; pinned messages stay); 0 = off. Never set on direct messages.
+	AutoDeleteDays int `json:"auto_delete_days" minimum:"0" maximum:"90" binding:"optional"`
 	// IsLobby marks a Talk as a "Create a Talk" lobby: joining it opens a
 	// temporary Talk instead of taking a seat (doc/talks.md).
 	IsLobby bool `json:"is_lobby" binding:"optional"`
@@ -84,7 +87,7 @@ func loadCategories(ctx context.Context, p *db.Pool) ([]Category, map[uuid.UUID]
 
 func populateChannels(ctx context.Context, p *db.Pool, categories []Category, categoryIdx map[uuid.UUID]int) ([]Channel, error) {
 	chanRows, err := p.Query(ctx, `
-		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds,
+		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days,
 		       is_lobby, is_temp, leader_id
 		FROM channels WHERE type <> 'dm' ORDER BY sort_order, created_at`)
 	if err != nil {
@@ -95,7 +98,7 @@ func populateChannels(ctx context.Context, p *db.Pool, categories []Category, ca
 	uncategorized := make([]Channel, 0)
 	for chanRows.Next() {
 		var ch Channel
-		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.IsLobby, &ch.IsTemp, &ch.LeaderID); err != nil {
+		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays, &ch.IsLobby, &ch.IsTemp, &ch.LeaderID); err != nil {
 			return nil, err
 		}
 		if ch.CategoryID != nil {
@@ -305,8 +308,8 @@ func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *s
 		UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic),
 			user_limit = COALESCE($4, user_limit), slow_mode_seconds = COALESCE($5, slow_mode_seconds)
 		WHERE id = $1 AND type <> 'dm' AND ($4::int IS NULL OR $4 = 0 OR type = 'voice')
-		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`, id, name, topic, userLimit, slowMode).
-		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds)
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days`, id, name, topic, userLimit, slowMode).
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays)
 	if errors.Is(err, pgx.ErrNoRows) {
 		if userLimit != nil && *userLimit > 0 {
 			if _, lerr := LoadChannel(ctx, p, id); lerr == nil {

@@ -78,6 +78,7 @@ var Routes = []Route{
 
 	{Method: "POST", Pattern: "/channels", Action: "channel.create", TargetType: "channel"},
 	{Method: "PATCH", Pattern: "/channels/{id}", Action: "channel.update", TargetType: "channel", IDParam: "id", Snapshot: ResChannel},
+	{Method: "PUT", Pattern: "/channels/{id}/auto-delete", Action: "channel.auto_delete_set", TargetType: "channel", IDParam: "id", Snapshot: ResChannel},
 	{Method: "DELETE", Pattern: "/channels/{id}", Action: "channel.delete", TargetType: "channel", IDParam: "id", Snapshot: ResChannel},
 	{Method: "POST", Pattern: "/channels/{id}/duplicate", Action: "channel.duplicate", TargetType: "channel", IDParam: "id", Snapshot: ResChannel},
 	{Method: "POST", Pattern: "/categories", Action: "category.create", TargetType: "category"},

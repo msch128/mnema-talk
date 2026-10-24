@@ -945,6 +945,17 @@ export function isChatAddDMMemberRequest(value: unknown): value is ChatAddDMMemb
 
 export const decodeChatAddDMMemberRequest = decoder("chat.AddDMMemberRequest", isChatAddDMMemberRequest)
 
+export type ChatAutoDeleteRequest = {
+  days: 0 | 1 | 7 | 30 | 90
+}
+
+export function isChatAutoDeleteRequest(value: unknown): value is ChatAutoDeleteRequest {
+  return isRecord(value)
+    && (hasOwn(value, "days") && (value["days"] === 0 || value["days"] === 1 || value["days"] === 7 || value["days"] === 30 || value["days"] === 90))
+}
+
+export const decodeChatAutoDeleteRequest = decoder("chat.AutoDeleteRequest", isChatAutoDeleteRequest)
+
 export type ChatBlockedMember = {
   avatar_url?: string
   blocked_at: string
@@ -1102,6 +1113,7 @@ export function isChatCategoryOrder(value: unknown): value is ChatCategoryOrder 
 export const decodeChatCategoryOrder = decoder("chat.CategoryOrder", isChatCategoryOrder)
 
 export type ChatChannel = {
+  auto_delete_days?: number
   category_id: string | null
   created_at: string
   id: string
@@ -1119,6 +1131,7 @@ export type ChatChannel = {
 
 export function isChatChannel(value: unknown): value is ChatChannel {
   return isRecord(value)
+    && (!hasOwn(value, "auto_delete_days") || (isInteger(value["auto_delete_days"]) && value["auto_delete_days"] >= 0 && value["auto_delete_days"] <= 90))
     && (hasOwn(value, "category_id") && (isIdentifier(value["category_id"]) || value["category_id"] === null))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
@@ -2753,6 +2766,7 @@ export type PollDetail = {
   anonymous: boolean
   closed: boolean
   closes_at: string
+  has_voted?: boolean
   multiple: boolean
   my_votes: Array<string>
   options: Array<ChatPollOption>
@@ -2764,6 +2778,7 @@ export function isPollDetail(value: unknown): value is PollDetail {
     && (hasOwn(value, "anonymous") && typeof value["anonymous"] === 'boolean')
     && (hasOwn(value, "closed") && typeof value["closed"] === 'boolean')
     && (hasOwn(value, "closes_at") && isTimestamp(value["closes_at"]))
+    && (!hasOwn(value, "has_voted") || typeof value["has_voted"] === 'boolean')
     && (hasOwn(value, "multiple") && typeof value["multiple"] === 'boolean')
     && (hasOwn(value, "my_votes") && isArrayOf(value["my_votes"], item => isIdentifier(item)))
     && (hasOwn(value, "options") && isArrayOf(value["options"], item => isChatPollOption(item)))
