@@ -332,6 +332,7 @@ func talkRequest(u *auth.User, body string, params map[string]string) *http.Requ
 
 func TestOnlyTheLeaderEditsATemporaryTalk(t *testing.T) {
 	w := newTalksWorld(t)
+	w.mgr.EmptyGrace = time.Hour // nobody joins here: the Talk must not vanish while the test runs
 	ctx := context.Background()
 	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr}
 	talk, _ := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
