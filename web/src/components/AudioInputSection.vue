@@ -4,12 +4,14 @@ import { Mic, Radio, Square, HelpCircle, Volume2 } from '@lucide/vue'
 import type { InputMode } from '../stores/voice'
 import { useVoiceStore } from '../stores/voice'
 import { useWebRTC } from '../composables/useWebRTC'
+import { useActiveAudioSettings } from '../composables/useActiveAudioSettings'
 import { effectiveThreshold, createPeakHold } from '../lib/levelMeter'
 
-// Input mode (voice activity or push-to-talk), the push-to-talk key, the mic
-// test and the sensitivity meter.
+// Input: the microphone, its volume, voice activity or push-to-talk, and the
+// mic test with the sensitivity meter.
 const voiceStore = useVoiceStore()
 const { stopMicTest, toggleMicTest } = useWebRTC()
+const applyActiveAudioSettings = useActiveAudioSettings()
 
 const isRecordingPttKey = ref(false)
 
@@ -51,194 +53,210 @@ function handleKeyRecord(e: KeyboardEvent) {
   isRecordingPttKey.value = false
   voiceStore.saveSettings()
 }
+
+async function handleDeviceChange() {
+  voiceStore.saveSettings()
+  await applyActiveAudioSettings()
+}
 </script>
 
 <template>
-  <!-- 1. Input mode (voice activity or push-to-talk) -->
-  <div class="stack-2">
-    <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
-      {{ $t('audio.inputMode') }}
-    </label>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <button
-        type="button"
-        @click="handleInputModeChange('activity')"
-        :class="[
-          'p-3 rounded-lg border text-left transition flex items-center gap-3',
-          voiceStore.inputMode === 'activity'
-            ? 'bg-mnema-surface border-mnema-accent text-mnema-text ring-1 ring-mnema-accent/40'
-            : 'bg-mnema-canvas border-mnema-hairline text-mnema-muted hover:border-mnema-border'
-        ]"
-      >
-        <div :class="['w-8 h-8 rounded-md flex items-center justify-center shrink-0', voiceStore.inputMode === 'activity' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
-          <Mic class="w-4 h-4" />
-        </div>
-        <div>
-          <div class="text-sm font-semibold">{{ $t('audio.activity') }}</div>
-          <div class="text-xs text-mnema-tertiary">{{ $t('audio.activityHint') }}</div>
-        </div>
-      </button>
+  <!-- 1. Input: device, volume, how speaking is triggered -->
+  <section class="settings-group" aria-labelledby="audio-group-input">
+    <h3 id="audio-group-input" class="settings-label">{{ $t('audio.groupInput') }}</h3>
+    <p class="settings-help">{{ $t('audio.groupInputHelp') }}</p>
 
-      <button
-        type="button"
-        @click="handleInputModeChange('ptt')"
-        :class="[
-          'p-3 rounded-lg border text-left transition flex items-center gap-3',
-          voiceStore.inputMode === 'ptt'
-            ? 'bg-mnema-surface border-mnema-accent text-mnema-text ring-1 ring-mnema-accent/40'
-            : 'bg-mnema-canvas border-mnema-hairline text-mnema-muted hover:border-mnema-border'
-        ]"
-      >
-        <div :class="['w-8 h-8 rounded-md flex items-center justify-center shrink-0', voiceStore.inputMode === 'ptt' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
-          <Radio class="w-4 h-4" />
-        </div>
-        <div>
-          <div class="text-sm font-semibold">{{ $t('audio.ptt') }}</div>
-          <div class="text-xs text-mnema-tertiary">{{ $t('audio.pttHint') }}</div>
-        </div>
-      </button>
-    </div>
-  </div>
-
-  <!-- Push-to-talk key (if active) -->
-  <div v-if="voiceStore.inputMode === 'ptt'" class="p-3 rounded-lg bg-mnema-surface border border-mnema-hairline space-y-2">
-    <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
-      <span class="text-mnema-tertiary font-medium">{{ $t('audio.pttKey') }}</span>
-      <button
-        @click="isRecordingPttKey = true"
-        @keydown="handleKeyRecord"
-        :class="[
-          'px-3 py-1 rounded-sm border font-mono text-sm font-semibold transition',
-          isRecordingPttKey 
-            ? 'bg-mnema-accent text-mnema-accent-ink border-mnema-accent animate-pulse' 
-            : 'bg-mnema-canvas border-mnema-border text-mnema-text hover:border-mnema-accent'
-        ]"
-      >
-        {{ isRecordingPttKey ? $t('audio.pressKey') : voiceStore.pttKey }}
-      </button>
-    </div>
-    <p class="text-xs text-mnema-tertiary">
-      {{ $t('audio.pttKeyHint') }}
-    </p>
-  </div>
-
-  <!-- 2. Mic Test (Discord-like level check and channel mute) -->
-  <div class="stack-2">
-    <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
-      {{ $t('audio.micTest') }}
-    </label>
-    <div class="p-3.5 rounded-lg bg-mnema-surface border border-mnema-hairline stack-2.5">
-      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
-        <div class="min-w-0 space-y-0.5">
-          <div class="text-sm font-semibold text-mnema-text flex items-center gap-2">
-            <Volume2 class="w-4 h-4 text-mnema-accent" />
-            <span>{{ $t('audio.micTest') }}</span>
-            <span
-              v-if="voiceStore.isMicTesting"
-              class="text-xs px-2 py-0.5 rounded-sm bg-amber-500/15 text-amber-400 font-mono font-medium animate-pulse"
-            >
-              {{ $t('audio.micTestActiveBadge') }}
-            </span>
-          </div>
-          <p class="text-xs text-mnema-tertiary leading-relaxed">
-            {{ $t('audio.micTestHint') }}
-          </p>
-        </div>
-        <button
-          type="button"
-          @click="handleMicTest"
-          data-testid="mic-test-toggle"
-          :aria-pressed="voiceStore.isMicTesting ? 'true' : 'false'"
-          :class="[
-            'px-3.5 py-1.5 max-sm:py-2.5 max-sm:w-full max-sm:justify-center rounded-lg font-semibold text-xs transition flex items-center gap-1.5 shrink-0 shadow-xs sm:mt-0.5',
-            voiceStore.isMicTesting
-              ? 'bg-amber-600 hover:bg-amber-500 text-white'
-              : 'bg-mnema-accent hover:bg-mnema-accent-hover text-mnema-accent-ink'
-          ]"
+    <div class="settings-card">
+      <div class="stack-2">
+        <label for="audio-input-device" class="settings-row-title block">{{ $t('audio.inputDevice') }}</label>
+        <select
+          id="audio-input-device"
+          v-model="voiceStore.selectedInputDeviceId"
+          class="w-full rounded-md border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text"
+          @change="handleDeviceChange"
         >
-          <Square v-if="voiceStore.isMicTesting" class="w-3.5 h-3.5 fill-current" />
-          <Volume2 v-else class="w-3.5 h-3.5" />
-          <span>{{ voiceStore.isMicTesting ? $t('audio.micTestStop') : $t('audio.micTestStart') }}</span>
-        </button>
+          <option value="">{{ $t('audio.defaultDevice') }}</option>
+          <option
+            v-for="dev in voiceStore.availableInputDevices"
+            :key="dev.deviceId"
+            :value="dev.deviceId"
+          >
+            {{ dev.label || $t('audio.deviceFallback', { id: dev.deviceId.slice(0, 5) }) }}
+          </option>
+        </select>
+      </div>
+
+      <div class="stack-2">
+        <div class="flex items-center justify-between gap-3">
+          <label for="audio-input-volume" class="settings-row-title">{{ $t('audio.inputVolume') }}</label>
+          <span class="font-mono text-xs tabular-nums text-mnema-text">{{ voiceStore.inputVolume }} %</span>
+        </div>
+        <input
+          id="audio-input-volume"
+          v-model.number="voiceStore.inputVolume"
+          type="range"
+          min="0"
+          max="200"
+          step="5"
+          data-testid="input-volume"
+        />
+      </div>
+
+      <div class="settings-sub">
+        <div class="settings-row-title">{{ $t('audio.inputMode') }}</div>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            :aria-pressed="voiceStore.inputMode === 'activity' ? 'true' : 'false'"
+            class="choice-card flex items-center gap-3"
+            @click="handleInputModeChange('activity')"
+          >
+            <div :class="['flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', voiceStore.inputMode === 'activity' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
+              <Mic class="h-4 w-4" />
+            </div>
+            <div>
+              <div class="text-sm font-semibold">{{ $t('audio.activity') }}</div>
+              <div class="text-xs text-mnema-tertiary">{{ $t('audio.activityHint') }}</div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            :aria-pressed="voiceStore.inputMode === 'ptt' ? 'true' : 'false'"
+            class="choice-card flex items-center gap-3"
+            @click="handleInputModeChange('ptt')"
+          >
+            <div :class="['flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', voiceStore.inputMode === 'ptt' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
+              <Radio class="h-4 w-4" />
+            </div>
+            <div>
+              <div class="text-sm font-semibold">{{ $t('audio.ptt') }}</div>
+              <div class="text-xs text-mnema-tertiary">{{ $t('audio.pttHint') }}</div>
+            </div>
+          </button>
+        </div>
+
+        <!-- Push-to-talk key (if active) -->
+        <div v-if="voiceStore.inputMode === 'ptt'" class="stack-2 rounded-lg border border-mnema-hairline bg-mnema-canvas/50 px-4 py-3">
+          <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
+            <span class="settings-row-title">{{ $t('audio.pttKey') }}</span>
+            <button
+              type="button"
+              :class="['btn', isRecordingPttKey ? 'btn-primary animate-pulse' : 'btn-secondary font-mono']"
+              @click="isRecordingPttKey = true"
+              @keydown="handleKeyRecord"
+            >
+              {{ isRecordingPttKey ? $t('audio.pressKey') : voiceStore.pttKey }}
+            </button>
+          </div>
+          <p class="settings-hint">{{ $t('audio.pttKeyHint') }}</p>
+        </div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- 3. Input sensitivity and live meter (voice activity mode) -->
-  <div v-if="voiceStore.inputMode === 'activity'" class="space-y-3">
-    <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-      <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
-        {{ $t('audio.sensitivity') }}
-      </label>
-      <label class="flex items-center gap-2 cursor-pointer text-sm text-mnema-tertiary hover:text-mnema-text">
-        <input
-          type="checkbox"
-          v-model="voiceStore.autoSensitivity"
-          @change="voiceStore.saveSettings"
-          class="rounded-sm border-mnema-border bg-mnema-canvas text-mnema-accent focus:ring-0"
-        />
-        <span>{{ $t('audio.auto') }}</span>
-      </label>
-    </div>
+  <!-- 2. Check the microphone: the test button and the level meter, up front -->
+  <section class="settings-group" aria-labelledby="audio-group-meter">
+    <h3 id="audio-group-meter" class="settings-label">{{ $t('audio.groupMeter') }}</h3>
+    <p class="settings-help">{{ $t('audio.groupMeterHelp') }}</p>
 
-    <!-- Live level meter and threshold slider -->
-    <div class="space-y-2">
+    <div class="settings-card">
       <!-- Level bar: amber below the threshold (not transmitted), green above it (transmitted) -->
-      <div class="relative h-6 bg-mnema-canvas rounded-lg border border-mnema-border overflow-hidden p-0.5 flex items-center">
-        <!-- Live level fill -->
+      <div
+        class="relative flex h-9 items-center overflow-hidden rounded-lg border border-mnema-border bg-mnema-canvas p-1"
+        role="meter"
+        :aria-label="$t('audio.levelLabel')"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        :aria-valuenow="voiceStore.currentInputLevel"
+      >
         <div
-          class="h-full rounded-sm transition-all duration-75"
+          class="h-full rounded-md transition-all duration-75"
           :class="isAboveThreshold ? 'bg-mnema-accent' : 'bg-mnema-warning'"
           :style="{ width: `${voiceStore.currentInputLevel}%` }"
         ></div>
 
-        <!-- Peak Marker (loudest level of the last moments) -->
+        <!-- Peak marker (loudest level of the last moments) -->
         <div
           v-if="peakLevel > 0"
-          class="absolute top-1 bottom-1 w-0.5 rounded-sm pointer-events-none"
+          class="pointer-events-none absolute top-1.5 bottom-1.5 w-0.5 rounded-sm"
           :class="peakLevel >= threshold ? 'bg-mnema-accent-hover' : 'bg-mnema-amber'"
           :style="{ left: `${peakLevel}%` }"
         ></div>
 
         <!-- Threshold marker -->
         <div
-          class="absolute top-0 bottom-0 w-1 bg-white shadow-lg pointer-events-none z-10 transition-all"
+          class="pointer-events-none absolute top-0 bottom-0 z-10 w-1 bg-white shadow-lg transition-all"
           :style="{ left: `${threshold}%` }"
         ></div>
       </div>
 
-      <div class="flex items-center justify-between text-xs font-mono text-mnema-tertiary">
-        <span :class="isAboveThreshold ? 'text-mnema-accent font-bold' : 'text-mnema-warning'">
+      <div class="flex items-center justify-between font-mono text-xs text-mnema-tertiary">
+        <span :class="isAboveThreshold ? 'font-bold text-mnema-accent' : 'text-mnema-warning'">
           {{ $t('audio.level', { level: voiceStore.currentInputLevel, peak: peakLevel }) }}
         </span>
-        <span class="text-mnema-text font-bold">
+        <span class="font-bold text-mnema-text">
           {{ $t('audio.threshold', { value: threshold }) }}
         </span>
       </div>
 
-      <!-- Manual slider -->
-      <div v-if="!voiceStore.autoSensitivity" class="space-y-1">
+      <!-- The test: prominent, with what it does in one line -->
+      <div class="flex flex-col gap-3 rounded-lg border border-mnema-hairline bg-mnema-canvas/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
+        <div class="min-w-0 space-y-0.5">
+          <div class="flex items-center gap-2 text-sm font-semibold text-mnema-text">
+            <Volume2 class="h-4 w-4 text-mnema-accent" />
+            <span>{{ $t('audio.micTest') }}</span>
+            <span
+              v-if="voiceStore.isMicTesting"
+              class="animate-pulse rounded-sm bg-amber-500/15 px-2 py-0.5 font-mono text-xs font-medium text-amber-400"
+            >
+              {{ $t('audio.micTestActiveBadge') }}
+            </span>
+          </div>
+          <p class="settings-hint">{{ $t('audio.micTestHint') }}</p>
+        </div>
+        <button
+          type="button"
+          data-testid="mic-test-toggle"
+          :aria-pressed="voiceStore.isMicTesting ? 'true' : 'false'"
+          :class="['btn btn-lg shrink-0 max-sm:w-full', voiceStore.isMicTesting ? 'btn-danger-solid' : 'btn-primary']"
+          @click="handleMicTest"
+        >
+          <Square v-if="voiceStore.isMicTesting" class="h-3.5 w-3.5 fill-current" />
+          <Volume2 v-else class="h-4 w-4" />
+          <span>{{ voiceStore.isMicTesting ? $t('audio.micTestStop') : $t('audio.micTestStart') }}</span>
+        </button>
+      </div>
+
+      <!-- Sensitivity (voice activity mode) -->
+      <div v-if="voiceStore.inputMode === 'activity'" class="settings-sub">
+        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <span class="settings-row-title">{{ $t('audio.sensitivity') }}</span>
+          <label class="flex cursor-pointer items-center gap-2 text-sm text-mnema-muted hover:text-mnema-text">
+            <input
+              v-model="voiceStore.autoSensitivity"
+              type="checkbox"
+              @change="voiceStore.saveSettings"
+            />
+            <span>{{ $t('audio.auto') }}</span>
+          </label>
+        </div>
+
         <input
+          v-if="!voiceStore.autoSensitivity"
+          v-model="voiceStore.sensitivityThreshold"
           type="range"
           :aria-label="$t('audio.sensitivity')"
           min="0"
           max="100"
-          v-model="voiceStore.sensitivityThreshold"
           @input="handleSliderChange"
-          class="w-full cursor-pointer"
         />
-      </div>
 
-      <!-- Advice for shared rooms -->
-      <div class="p-3 rounded-lg bg-mnema-surface border border-mnema-hairline text-sm text-mnema-tertiary space-y-1">
-        <div class="flex items-center gap-1.5 text-mnema-text font-semibold text-xs">
-          <HelpCircle class="w-4 h-4 text-mnema-mint" />
-          <span>{{ $t('audio.adviceTitle') }}</span>
+        <div class="flex gap-2 text-mnema-tertiary">
+          <HelpCircle class="mt-0.5 h-4 w-4 shrink-0 text-mnema-mint" />
+          <p class="settings-hint"><strong class="font-semibold text-mnema-text">{{ $t('audio.adviceTitle') }}.</strong> {{ $t('audio.advice') }}</p>
         </div>
-        <p class="text-xs leading-relaxed">
-          {{ $t('audio.advice') }}
-        </p>
       </div>
     </div>
-  </div>
+  </section>
 </template>
