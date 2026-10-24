@@ -71,13 +71,13 @@ func TestBannerThatCannotBeRecordedIsRemovedFromStorage(t *testing.T) {
 		t.Fatal(err)
 	}
 	// No such account: the row cannot be written, so the object must not stay.
-	if err := f.h.replaceBanner(context.Background(), uuid.New(), banner); err == nil {
+	if err := f.h.setProfileImage(context.Background(), bannerImage, uuid.New(), banner); err == nil {
 		t.Fatal("recording a banner for an unknown account must fail")
 	}
 	if f.store.Len() != 0 {
 		t.Fatalf("the unreferenced object stayed in storage: %d", f.store.Len())
 	}
-	if _, err := f.h.clearBanner(context.Background(), uuid.New()); err == nil {
+	if _, err := f.h.clearProfileImage(context.Background(), bannerImage, uuid.New()); err == nil {
 		t.Fatal("clearing the banner of an unknown account must fail")
 	}
 }

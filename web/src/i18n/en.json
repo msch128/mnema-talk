@@ -520,6 +520,17 @@
   "audio": {
     "settings": "Audio settings",
     "subtitle": "Input and room acoustics",
+    "groupInput": "Input",
+    "groupInputHelp": "Which microphone you use and how speaking is triggered.",
+    "groupMeter": "Check your microphone",
+    "groupMeterHelp": "Say a few words. The bar shows what your microphone hears; above the white mark you are transmitting.",
+    "groupOutput": "Output",
+    "groupOutputHelp": "What you hear the others on, how loud, and with which sounds.",
+    "groupProcessing": "Noise filter and echo",
+    "groupProcessingHelp": "Removes background noise from your microphone before others hear it.",
+    "advanced": "Advanced",
+    "advancedHelp": "Rarely needed: gain control, network priority, warnings and individual sounds.",
+    "levelLabel": "Microphone level",
     "inputMode": "Input mode",
     "activity": "Voice activity",
     "activityHint": "The mic opens above a set level",
@@ -1249,6 +1260,9 @@
     "avatarSaved": "Avatar saved",
     "avatarTooBig": "That image is too large (max. {size} MB).",
     "avatarFailed": "Couldn’t upload your avatar. Try again.",
+    "removeAvatar": "Remove avatar",
+    "avatarRemoved": "Avatar removed",
+    "avatarRemoveFailed": "Couldn’t remove your avatar. Try again.",
     "changeBanner": "Change banner",
     "removeBanner": "Remove banner",
     "bannerSaved": "Banner saved",
@@ -1787,6 +1801,7 @@
       "media": {
         "prune": "Media pruned",
         "orphans_cleanup": "Orphaned files removed",
+        "avatar_removed": "Avatar removed (could not be redrawn without metadata)",
         "delete": "Media deleted"
       },
       "system": {

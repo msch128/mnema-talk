@@ -520,6 +520,17 @@
   "audio": {
     "settings": "Audio-Einstellungen",
     "subtitle": "Eingabe und Raumakustik",
+    "groupInput": "Eingang",
+    "groupInputHelp": "Welches Mikrofon du nutzt und wie du das Sprechen auslöst.",
+    "groupMeter": "Mikrofon prüfen",
+    "groupMeterHelp": "Sprich ein paar Worte. Die Leiste zeigt, was dein Mikrofon hört; über der weißen Marke wird gesendet.",
+    "groupOutput": "Ausgabe",
+    "groupOutputHelp": "Worüber du die anderen hörst, wie laut und mit welchen Tönen.",
+    "groupProcessing": "Rauschfilter und Echo",
+    "groupProcessingHelp": "Filtert Störgeräusche aus deinem Mikrofon, bevor andere sie hören.",
+    "advanced": "Erweitert",
+    "advancedHelp": "Selten nötig: Lautstärkeregelung, Netzwerkpriorität, Hinweise und einzelne Töne.",
+    "levelLabel": "Mikrofonpegel",
     "inputMode": "Eingabemodus",
     "activity": "Sprachaktivierung",
     "activityHint": "Das Mikrofon öffnet ab einem Pegel",
@@ -1249,6 +1260,9 @@
     "avatarSaved": "Avatar gespeichert",
     "avatarTooBig": "Das Bild ist zu groß (max. {size} MB).",
     "avatarFailed": "Der Avatar konnte nicht hochgeladen werden. Versuche es noch einmal.",
+    "removeAvatar": "Avatar entfernen",
+    "avatarRemoved": "Avatar entfernt",
+    "avatarRemoveFailed": "Der Avatar konnte nicht entfernt werden. Versuche es noch einmal.",
     "changeBanner": "Banner ändern",
     "removeBanner": "Banner entfernen",
     "bannerSaved": "Banner gespeichert",
@@ -1787,6 +1801,7 @@
       "media": {
         "prune": "Medien bereinigt",
         "orphans_cleanup": "Verwaiste Dateien entfernt",
+        "avatar_removed": "Avatar entfernt (ließ sich nicht ohne Metadaten neu zeichnen)",
         "delete": "Medium gelöscht"
       },
       "system": {

@@ -51,9 +51,9 @@ function onScrimUp(e: PointerEvent) {
       :aria-labelledby="titleId"
       :aria-describedby="describedby || undefined"
       tabindex="-1"
-      :class="['dialog-panel flex max-h-full w-full flex-col overflow-hidden rounded-xl border border-mnema-border bg-mnema-elevated shadow-2xl focus:outline-hidden', panelClass]"
+      :class="['dialog-panel flex max-h-full w-full flex-col overflow-hidden rounded-2xl border border-mnema-border bg-mnema-elevated shadow-2xl focus:outline-hidden', panelClass]"
     >
-      <header v-if="title" class="flex items-center justify-between gap-3 border-b border-mnema-hairline bg-mnema-raised px-5 py-4">
+      <header v-if="title" class="flex items-center justify-between gap-3 border-b border-mnema-hairline bg-mnema-raised px-6 py-5">
         <div class="min-w-0">
           <div class="flex min-w-0 items-center gap-2">
             <h2 :id="titleId" class="truncate text-lg font-semibold text-mnema-text">{{ title }}</h2>

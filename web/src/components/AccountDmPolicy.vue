@@ -41,13 +41,13 @@ onMounted(load)
 </script>
 
 <template>
-  <div v-if="loaded" class="space-y-2" data-testid="dm-policy" role="radiogroup" aria-labelledby="dm-policy-title">
-    <p id="dm-policy-title" class="text-sm font-medium text-mnema-text">{{ $t('dm.policy.title') }}</p>
-    <p class="text-sm text-mnema-muted">{{ $t('dm.policy.intro') }}</p>
+  <div v-if="loaded" class="settings-sub" data-testid="dm-policy" role="radiogroup" aria-labelledby="dm-policy-title">
+    <p id="dm-policy-title" class="settings-subtitle">{{ $t('dm.policy.title') }}</p>
+    <p class="settings-help">{{ $t('dm.policy.intro') }}</p>
     <label
       v-for="option in (['everyone', 'nobody'] as const)"
       :key="option"
-      :class="['flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 transition max-md:min-h-11', policy === option ? 'border-mnema-accent/50 bg-mnema-accent/10' : 'border-mnema-border hover:bg-mnema-hover']"
+      :class="['flex cursor-pointer items-start gap-3 rounded-lg border px-4 py-3 transition max-md:min-h-11', policy === option ? 'border-mnema-accent/50 bg-mnema-accent/10' : 'border-mnema-border hover:bg-mnema-hover']"
     >
       <input type="radio" name="dm-policy" :value="option" :checked="policy === option" :disabled="busy" :data-dm-policy="option" class="mt-1" @change="choose(option)" />
       <span>

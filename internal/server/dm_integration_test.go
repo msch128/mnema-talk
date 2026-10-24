@@ -376,3 +376,16 @@ func TestStartingDirectMessagesIsLimited(t *testing.T) {
 		t.Errorf("body %s", res.body)
 	}
 }
+
+func TestAGroupConversationCountsNothingFromSomeoneTheReaderBlocked(t *testing.T) {
+	f := newDMFixture(t, false)
+	dm := f.alice.mustDM(t, f.bob, f.carol)
+	wantStatus(t, "carol writes", f.carol.dmPost(dm.ID, "hey @bobby"), http.StatusCreated)
+	wantStatus(t, "bob blocks carol", f.bob.put("/api/me/blocks/"+f.carol.user.ID.String(), nil), http.StatusNoContent)
+	wantStatus(t, "alice writes", f.alice.dmPost(dm.ID, "hello"), http.StatusCreated)
+	var mine []dmView
+	f.bob.get("/api/dms").decode(t, &mine)
+	if len(mine) != 1 || mine[0].UnreadCount != 1 || mine[0].MentionCount != 0 {
+		t.Errorf("bob's list counts carol: %+v", mine)
+	}
+}

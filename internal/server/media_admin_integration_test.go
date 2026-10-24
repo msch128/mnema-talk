@@ -28,7 +28,7 @@ func TestAdminMediaDashboard(t *testing.T) {
 		res.decode(t, &msg)
 		ids = append(ids, msg.Attachments[0].ID)
 	}
-	if r := admin.upload("/api/users/me/avatar", "avatar", "me.png", "image/png", pngBytes, nil); r.status != http.StatusOK {
+	if r := admin.upload("/api/users/me/avatar", "avatar", "me.png", "image/png", bannerPNG(t, 8, 8), nil); r.status != http.StatusOK {
 		t.Fatalf("avatar: %d %s", r.status, r.body)
 	}
 
@@ -38,7 +38,7 @@ func TestAdminMediaDashboard(t *testing.T) {
 
 	var stats media.Stats
 	admin.get("/api/admin/media/stats").decode(t, &stats)
-	if stats.TotalFiles != 4 || stats.TotalSizeBytes != 4*int64(len(pngBytes)) || stats.DeletedFiles != 0 {
+	if stats.TotalFiles != 4 || stats.TotalSizeBytes <= 3*int64(len(pngBytes)) || stats.DeletedFiles != 0 {
 		t.Fatalf("stats: %+v", stats)
 	}
 
@@ -101,10 +101,10 @@ func TestPruneRemovesOldAttachmentsButNeverAvatars(t *testing.T) {
 			t.Fatalf("upload: %d %s", r.status, r.body)
 		}
 	}
-	if r := admin.upload("/api/users/me/avatar", "avatar", "me.png", "image/png", pngBytes, nil); r.status != http.StatusOK {
+	if r := admin.upload("/api/users/me/avatar", "avatar", "me.png", "image/png", bannerPNG(t, 8, 8), nil); r.status != http.StatusOK {
 		t.Fatalf("avatar: %d %s", r.status, r.body)
 	}
-	if _, err := a.db.Exec(ctx, `UPDATE media SET created_at = NOW() - INTERVAL '40 days' WHERE original_filename IN ('old.png', 'me.png')`); err != nil {
+	if _, err := a.db.Exec(ctx, `UPDATE media SET created_at = NOW() - INTERVAL '40 days' WHERE original_filename IN ('old.png', 'avatar.png')`); err != nil {
 		t.Fatal(err)
 	}
 
@@ -131,7 +131,7 @@ func TestPruneRemovesOldAttachmentsButNeverAvatars(t *testing.T) {
 		}
 		left = append(left, s)
 	}
-	if len(left) != 2 || left[0] != "me.png" || left[1] != "new.png" {
+	if len(left) != 2 || left[0] != "avatar.png" || left[1] != "new.png" {
 		t.Fatalf("kept %v, want the avatar and the fresh attachment", left)
 	}
 	if a.store.Len() != 2 {
