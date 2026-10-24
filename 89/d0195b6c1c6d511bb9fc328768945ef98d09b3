@@ -1,0 +1,79 @@
+SECURITY.md
+  s_06fcde5dbef956::t_ef7c569997b969 496-504
+api/openapi.json
+  s_06fcde5dbef956::t_cab15600c7c3c7 25431-25513,25515,25557
+cmd/server/main.go
+  s_06fcde5dbef956::t_87b4b5840fbc5a 14,83
+doc/desktop-trusted-client.md
+  s_06fcde5dbef956::t_017b05d62b436e 580-587
+doc/upgrade.md
+  s_06fcde5dbef956::t_4d88eeedabfdab 273,284-373
+internal/db/migrations/0058_avatar_reencoded.sql
+  s_06fcde5dbef956::t_1608107181cdee 1-5
+internal/imgproc/avatar_test.go
+  s_06fcde5dbef956::t_c78a4f2ce7c97e 1-47
+internal/imgproc/firstframe.go
+  s_06fcde5dbef956::t_fefef4512e63bb 1-91
+internal/imgproc/legacy_test.go
+  s_06fcde5dbef956::t_a9df7ab2e134ff 1-83
+internal/imgproc/picture.go
+  s_06fcde5dbef956::t_7b832dfc2827d8 18-21,23-33,43-44,52-84,87,89,91-94,97-99,102,108-110,112-117,122-123,125,127,133-134,136,144-157,162,169,172,175,179,182,185,187,192,195-197,199-200,206,208,214
+internal/imgproc/sizes.go
+  s_06fcde5dbef956::t_18a597a187344f 1-18
+internal/media/avatar_reencode.go
+  s_06fcde5dbef956::t_0178ceba8b5ded 1-161
+internal/media/avatar_reencode_integration_test.go
+  s_06fcde5dbef956::t_f206fffa36d762 1-182
+internal/media/avatar_reencode_start_integration_test.go
+  s_06fcde5dbef956::t_c92a175355deeb 1-40
+internal/media/banner.go
+  s_06fcde5dbef956::t_a5775428e20def 40,44,71
+internal/media/banner_integration_test.go
+  s_06fcde5dbef956::t_9ba8cb230d222c 74,80
+internal/media/failures_integration_test.go
+  s_06fcde5dbef956::t_4afdfd9c384364 134,155,170,178,429
+internal/media/handler.go
+  s_06fcde5dbef956::t_a91754f30751a1 9,39-41,92
+internal/media/handler_upload.go
+  s_06fcde5dbef956::t_19200894b86143 203,211,253-255,260,264-265,267-285,287-288,290,293-298
+internal/media/profile_image.go
+  s_06fcde5dbef956::t_4981219868b68f 1-123
+internal/server/avatar_integration_test.go
+  s_06fcde5dbef956::t_7decfdf5dffa0c 1-92
+internal/server/content_review_integration_test.go
+  s_06fcde5dbef956::t_a31c505ed8750b 63
+internal/server/health.go
+  s_06fcde5dbef956::t_dbefdd4d922b5a 45
+internal/server/media_admin_integration_test.go
+  s_06fcde5dbef956::t_0021e221be452c 31,41,104,107,134
+internal/server/media_integration_test.go
+  s_06fcde5dbef956::t_0ea9c39efcdf3e 93,96
+web/src/components/ProfileAvatar.vue
+  s_06fcde5dbef956::t_f9fcb5320ca1e9 6,10,29,44-46,66-83,176-187
+web/src/components/ProfileAvatarRemove.test.ts
+  s_06fcde5dbef956::t_2433368c6e5198 1-75
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_784594b92aa1f3 1263-1265,1804
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_35ec699f08d443 1263-1265,1804
+web/src/stores/auth.ts
+  s_06fcde5dbef956::t_91b1a438e586e8 37-43,81
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_e195e6ec628889 41-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "89d0195b6c1c6d511bb9fc328768945ef98d09b3",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
