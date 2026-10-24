@@ -1,0 +1,39 @@
+README.md
+  s_06fcde5dbef956::t_0341584206c64c 166-188
+doc/api-stability.md
+  s_06fcde5dbef956::t_a3cb42590460c7 30
+doc/architecture.md
+  s_06fcde5dbef956::t_5454eb62dbfb58 119-120,125-137
+doc/operations.md
+  s_06fcde5dbef956::t_251f5288eb85c9 562
+doc/upgrade.md
+  s_06fcde5dbef956::t_2f04ddc6831ce2 300-321
+e2e/tests/dm-polish.spec.ts
+  s_06fcde5dbef956::t_55ad5bb1d6a11b 1-155
+internal/chat/dm_prefs.go
+  s_06fcde5dbef956::t_fa704933b70232 52-53,60,66,87-108
+web/src/components/DmAvatar.vue
+  s_06fcde5dbef956::t_2e82d8bae9a2fd 39
+web/src/components/DmHeaderTitle.vue
+  s_06fcde5dbef956::t_1bf158549f7edb 44
+web/src/components/DmPolish.test.ts
+  s_06fcde5dbef956::t_6d161ae17d93f6 341,344
+web/src/lib/dmList.test.ts
+  s_06fcde5dbef956::t_c16327739dc189 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e1b10dea22c197c5d2fc535fa012c9b39ee553b4",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
