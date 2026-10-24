@@ -1,0 +1,49 @@
+internal/chat/view_as_role.go
+  s_06fcde5dbef956::t_b807cbec6b69df 1-132
+internal/chat/handler.go
+  s_06fcde5dbef956::t_b807cbec6b69df 132
+internal/perm/snapshot_viewas_test.go
+  s_06fcde5dbef956::t_b807cbec6b69df 1-57
+web/src/components/AdminRolesTab.vue
+  s_06fcde5dbef956::t_b807cbec6b69df 6,16,31-32,71,371-372
+  s_06fcde5dbef956::t_06d9f7ee574795 373
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_83b06f9c1b3041 1921-1936
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_83b06f9c1b3041 1921-1936
+web/src/components/RoleViewAsDialog.test.ts
+  s_06fcde5dbef956::t_b807cbec6b69df 1-88
+internal/perm/snapshot_viewas.go
+  s_06fcde5dbef956::t_b807cbec6b69df 1-30
+api/openapi.json
+  s_06fcde5dbef956::t_10a5f3c93d14b0 3675-3772,12738-12839
+  s_06fcde5dbef956::t_c1f8a1398e64b1 12840-12844
+web/src/components/RoleViewAsDialog.vue
+  s_06fcde5dbef956::t_b807cbec6b69df 1-82
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_10a5f3c93d14b0 2259-2313
+web/src/components/AdminRolesTab.test.ts
+  s_06fcde5dbef956::t_b807cbec6b69df 39,42,51,305-317
+  s_06fcde5dbef956::t_f92af41c87f633 318
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_b807cbec6b69df 230,233-247
+  s_06fcde5dbef956::t_6762eaf2439259 248
+internal/server/view_as_role_integration_test.go
+  s_06fcde5dbef956::t_b807cbec6b69df 1-166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9fa463b095cffebfa2e884c3624aa4b435e51447",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
