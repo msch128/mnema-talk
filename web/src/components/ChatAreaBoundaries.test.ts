@@ -105,7 +105,8 @@ describe('ChatArea boundary and teardown behavior', () => {
     const timeline = w.find<HTMLElement>('.overflow-y-auto').element
     const rectangle = vi.spyOn(timeline, 'getBoundingClientRect')
     w.unmount()
-    expect(disconnected).toHaveBeenCalledOnce()
+    // The timeline and the header each watch their size.
+    expect(disconnected).toHaveBeenCalledTimes(2)
     rectangle.mockClear()
     notify()
     expect(rectangle).not.toHaveBeenCalled()

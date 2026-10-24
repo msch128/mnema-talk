@@ -537,6 +537,7 @@
     "searchUnknownFilter": "Kein passendes Mitglied oder Kanal",
     "searchRemoveFilter": "Filter {filter} entfernen",
     "searchInChannel": "In diesem Kanal suchen",
+    "headerMore": "Mehr",
     "searchFailed": "Die Suche hat nicht geklappt. Versuche es noch einmal.",
     "inThread": "im Thread",
     "searchPinned": "Angeheftet",

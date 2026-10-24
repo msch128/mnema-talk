@@ -91,7 +91,9 @@ func TestSearchFiltersV3DuringAndDates(t *testing.T) {
 	open := f.a.createChannel(f.owner, "open", "text")
 	postMessage(t, f.owner, open, map[string]any{"content": "message posted today"})
 
-	today := time.Now().UTC().Format("2006-01-02")
+	// "Today" is the day in the zone the search names, not in UTC: between
+	// 22:00 and midnight UTC it is already tomorrow at +02:00.
+	today := time.Now().In(time.FixedZone("", 2*60*60)).Format("2006-01-02")
 	got, status := f.owner.search(t, map[string]string{"during": today, "tz": "+02:00"})
 	if status != http.StatusOK || len(got.Messages) != 1 {
 		t.Fatalf("during today: status=%d, count=%d", status, len(got.Messages))

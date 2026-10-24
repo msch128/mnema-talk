@@ -191,8 +191,10 @@ func assertSeededStarterRoles(t *testing.T, ctx context.Context, q db.Querier) (
 	assertNoAccountRoles(t, ctx, q)
 	pair[0] = readNamed(t, ctx, q, "Moderator")
 	pair[1] = readNamed(t, ctx, q, "Admin")
-	assertEmptySeed(t, pair[0], moderatorBits(), moderatorAmber)
-	assertEmptySeed(t, pair[1], adminBits(), adminBlue)
+	// Migration 0070 later grants Manage events to every role that can time
+	// members out, which both seeded roles can.
+	assertEmptySeed(t, pair[0], moderatorBits()|perm.ManageEvents, moderatorAmber)
+	assertEmptySeed(t, pair[1], adminBits()|perm.ManageEvents, adminBlue)
 	var below int
 	err := q.QueryRow(ctx, `SELECT COALESCE(MAX(position), 0) FROM roles WHERE id <> $1 AND id <> $2`, pair[0].id, pair[1].id).Scan(&below)
 	if err != nil {

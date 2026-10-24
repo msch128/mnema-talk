@@ -10,7 +10,8 @@
 -- event and can join it.
 --
 -- The permission MANAGE_EVENTS (1 << 25) allows creating, editing, and cancelling
--- events. No role is granted it by name; Administrators and the Owner hold it implicitly.
+-- events. Administrators and the Owner hold it implicitly. By default it also goes to every
+-- moderating role (see the grant at the end of this file).
 
 CREATE TABLE events (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -47,5 +48,14 @@ CREATE TABLE event_rsvps (
 
 CREATE INDEX event_rsvps_user ON event_rsvps (user_id);
 
--- New permission ManageEvents (1 << 25): no role gets it by default;
--- Administrators and the Owner have it implicitly.
+-- New permission ManageEvents (1 << 25). Events are a moderator tool, so it goes by
+-- default to every role that can already moderate members: a role holding Timeout
+-- members (1 << 18), which the seeded Moderator and Admin roles have (0034). The grant
+-- follows that capability, not a role name, so a renamed role keeps it and a role
+-- that merely carries the name "Moderator" without moderation rights does not get it.
+-- @everyone and managed (bot) roles never get it.
+UPDATE roles
+SET permissions = permissions | (1 << 25)
+WHERE NOT is_everyone
+  AND NOT managed
+  AND (permissions & (1 << 18)) <> 0;
