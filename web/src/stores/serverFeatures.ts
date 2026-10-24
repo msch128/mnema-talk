@@ -36,6 +36,7 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
   return {
     list, loaded, has, load,
     dm: computed(() => has('dm')),
+    dmV2: computed(() => has('dm.v2')),
     blocks: computed(() => has('blocks')),
     reports: computed(() => has('reports')),
     automod: computed(() => has('automod')),

@@ -3,12 +3,14 @@
 // are read and written under its id with the channel routes, so the open
 // conversation sits in the chat area's channel slot (see lib/dm).
 import type { Channel, Message, ReadState } from '../../types/domain'
-import { decodeChatDirectMessage, isChatDirectMessage, type ChatDirectMessage, type ChatDMMember } from '../../types/rest'
+import { decodeChatDMSettings, decodeChatDirectMessage, isChatDirectMessage, type ChatDirectMessage, type ChatDMMember } from '../../types/rest'
 import { arrayDecoder } from '../../types/validation'
 import { api } from '../../lib/api'
 import { dmAsChannel, sortDms } from '../../lib/dm'
+import { lastMessageOf } from '../../lib/dmList'
 import { emptyWindow } from '../../lib/messageWindow'
 import { navigate } from '../../lib/router'
+import { useBlocksStore } from '../blocks'
 import { useServerFeaturesStore } from '../serverFeatures'
 import { watch } from 'vue'
 import { assertCommunity, type Cx } from './state'
@@ -73,7 +75,7 @@ function refreshActiveDm(cx: Cx) {
 }
 
 /** fresh: the counts come from a list the server just answered; otherwise only conversations new to this client get theirs. */
-function setDms(cx: Cx, list: readonly ChatDirectMessage[], fresh = false) {
+export function setDms(cx: Cx, list: readonly ChatDirectMessage[], fresh = false) {
   const { cs } = cx
   const next = sortDms(list)
   const states = { ...cs.readStates.value }
@@ -82,6 +84,20 @@ function setDms(cx: Cx, list: readonly ChatDirectMessage[], fresh = false) {
   cs.dms.value = next
   cs.readStates.value = states
   refreshActiveDm(cx)
+}
+
+export async function fetchDmSettings(cx: Cx) {
+  const { cs } = cx
+  if (!useServerFeaturesStore().dmV2) return
+  const community = cs.communityGeneration
+  try {
+    const settings = await api('/api/users/me/dm-settings', { decode: decodeChatDMSettings })
+    if (community !== cs.communityGeneration) return
+    cs.dmSettings.value = settings
+    cs.dmSettingsLoaded.value = true
+  } catch (error) {
+    console.warn('Failed to read the direct message settings:', error)
+  }
 }
 
 export async function fetchDms(cx: Cx) {
@@ -93,6 +109,7 @@ export async function fetchDms(cx: Cx) {
     const list = await api('/api/dms', { decode: decodeDms })
     if (seq !== cs.dmsFetchSeq || community !== cs.communityGeneration) return
     setDms(cx, list, true)
+    void fetchDmSettings(cx)
     markActiveChannelReadIfReading(cx)
   } catch (error) {
     console.warn('Failed to fetch direct messages:', error)
@@ -101,15 +118,31 @@ export async function fetchDms(cx: Cx) {
   }
 }
 
-function upsertDm(cx: Cx, dm: ChatDirectMessage) {
+export function upsertDm(cx: Cx, dm: ChatDirectMessage) {
   const rest = cx.cs.dms.value.filter(d => d.id !== dm.id)
   setDms(cx, [...rest, dm])
 }
 
-/** Opens a conversation in the chat area. */
+/** Closes a conversation in the caller's list, or shows it again; only their own view changes. */
+export async function setDmHidden(cx: Cx, id: string, hidden: boolean) {
+  const community = cx.cs.communityGeneration
+  const before = dmById(cx, id)
+  if (!before || before.hidden === hidden) return
+  upsertDm(cx, { ...before, hidden })
+  try {
+    await api(`/api/dms/${id}/hidden`, { method: 'PUT', json: { hidden } })
+    assertCommunity(cx, community)
+  } catch (error) {
+    if (community === cx.cs.communityGeneration) upsertDm(cx, before)
+    throw error
+  }
+}
+
+/** Opens a conversation in the chat area; one the caller closed is in their list again. */
 export async function openDm(cx: Cx, id: string) {
   const channel = dmChannel(cx, id)
   if (!channel) return
+  if (dmById(cx, id)?.hidden) void setDmHidden(cx, id, false).catch(error => console.warn('Failed to reopen the conversation:', error))
   cx.voiceStore.activeView = 'chat'
   await selectChannel(cx, channel)
 }
@@ -163,6 +196,19 @@ function withMembers(cx: Cx, id: string, change: (members: ChatDMMember[]) => Ch
 /** dm_created: the caller started a conversation elsewhere, or somebody started one with them. */
 export function onDmCreated(cx: Cx, dm: ChatDirectMessage) {
   upsertDm(cx, dm)
+  // Added to a group with history: the event carries no preview, as it depends on whom the receiver blocked.
+  if (dm.last_message_at) void refreshDm(cx, dm.id)
+}
+
+/** Reads one conversation again (its preview, or what the member did to it on another device). */
+export async function refreshDm(cx: Cx, id: string) {
+  const community = cx.cs.communityGeneration
+  try {
+    const dm = await api(`/api/dms/${id}`, { decode: decodeChatDirectMessage })
+    if (community === cx.cs.communityGeneration) upsertDm(cx, dm)
+  } catch (error) {
+    console.warn('Failed to read the conversation:', error)
+  }
 }
 
 export function onDmMemberAdded(cx: Cx, p: { dm_id: string; member: ChatDMMember }) {
@@ -186,5 +232,9 @@ export function noteDmMessage(cx: Cx, msg: Message) {
     if (!known && msg.channel_id) void fetchDms(cx)
     return
   }
-  cs.dms.value = sortDms(cs.dms.value.map(d => (d.id === msg.channel_id ? { ...d, last_message_at: msg.created_at } : d)))
+  // A blocked member's message stays folded away: it neither shows in the preview nor opens the conversation.
+  if (msg.user_id && useBlocksStore().isBlocked(msg.user_id)) return
+  // The server opens a closed conversation with the message; so does the list here.
+  const latest = { last_message_at: msg.created_at, last_message: lastMessageOf(msg), hidden: false }
+  cs.dms.value = sortDms(cs.dms.value.map(d => (d.id === msg.channel_id ? { ...d, ...latest } : d)))
 }

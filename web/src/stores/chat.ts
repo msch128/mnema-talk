@@ -19,7 +19,7 @@ import { sendTyping } from './chat/typing'
 import { messageMentionsMe, refreshNotificationPermission, requestNotificationPermission } from './chat/notifications'
 import { dismissEphemeral, resetCommunityState } from './chat/reset'
 import { dismissPinNotice, fetchPins } from './chat/pins'
-import { addDmMember, waitForDms, dmById, dmChannel, fetchDms, isDm, leaveDm, openDm, startDm } from './chat/dms'
+import { dmActions } from './chat/dmActions'
 
 export type { EphemeralNote, ProfilePreview, ThreadRoot } from './chat/types'
 export { MARK_READ_INTERVAL_MS, TYPING_EXPIRY_MS } from './chat/types'
@@ -53,6 +53,8 @@ function exposedState(cs: ChatState) {
     members: cs.members,
     dms: cs.dms,
     dmsLoaded: cs.dmsLoaded,
+    dmSettings: cs.dmSettings,
+    dmSettingsLoaded: cs.dmSettingsLoaded,
     presenceById: cs.presenceById,
     activityById: cs.activityById,
     onlineUserIds: cs.onlineUserIds,
@@ -79,21 +81,13 @@ function exposedState(cs: ChatState) {
 function exposedActions(cx: Cx) {
   const bind = <A extends unknown[], R>(fn: (cx: Cx, ...args: A) => R) => (...args: A): R => fn(cx, ...args)
   return {
+    ...dmActions(cx),
     resetCommunityState: bind(resetCommunityState),
     retryNow: bind(retryNow),
     dismissEphemeral: bind(dismissEphemeral),
     dismissPinNotice: bind(dismissPinNotice),
     fetchPins: bind(fetchPins),
     isVoiceChannel: bind(isVoiceChannel),
-    isDm: bind(isDm),
-    dmById: bind(dmById),
-    dmChannel: bind(dmChannel),
-    fetchDms: bind(fetchDms),
-    waitForDms: bind(waitForDms),
-    openDm: bind(openDm),
-    startDm: bind(startDm),
-    addDmMember: bind(addDmMember),
-    leaveDm: bind(leaveDm),
     showToast,
     loadOlder: bind(loadOlder),
     loadNewer: bind(loadNewer),

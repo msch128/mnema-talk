@@ -14,6 +14,7 @@ import { MAX_EPHEMERAL } from './types'
 import type { Cx } from './state'
 import { fetchChannels } from './channels'
 import { fetchDms, isDm, noteDmMessage, onDmCreated, onDmMemberAdded, onDmMemberRemoved } from './dms'
+import { onDmPrefsUpdated } from './dmPrefs'
 import { applyActivity, countMessageOf, fetchMembers, refreshMemberStats, updateUserEverywhere } from './members'
 import { applyToMessage, bumpReplyCount, countReply, insertMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
 import { onThreadFollowUpdated } from './threadFollow'
@@ -195,6 +196,7 @@ const HANDLERS: Handlers = {
   dm_created: (cx, p) => { if (p) onDmCreated(cx, p) },
   dm_member_added: (cx, p) => { if (p) onDmMemberAdded(cx, p) },
   dm_member_removed: (cx, p) => { if (p) onDmMemberRemoved(cx, p) },
+  dm_prefs_updated: (cx, p) => { if (p) onDmPrefsUpdated(cx, p) },
   roles_changed: cx => {
     const permissions = usePermissionsStore()
     permissions.loadRoles()

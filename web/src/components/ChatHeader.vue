@@ -15,6 +15,8 @@ import TipBar from './TipBar.vue'
 import NavDrawerButton from './NavDrawerButton.vue'
 import DmInfoDialog from './DmInfoDialog.vue'
 import DmTalkActions from './DmTalkActions.vue'
+import DmHeaderTitle from './DmHeaderTitle.vue'
+import DmMuteButton from './DmMuteButton.vue'
 import { useDmChat } from '../composables/useDmChat'
 import { openSearch } from '../lib/globalSearch'
 import { quoteValue } from '../lib/searchQuery'
@@ -31,6 +33,8 @@ const chatStore = useChatStore()
 const { dm, isDm } = useDmChat()
 const showInfo = ref(false)
 const serverFeatures = useServerFeaturesStore()
+// A conversation shows its face, presence and mute button on servers that have them.
+const richDm = computed(() => isDm.value && serverFeatures.dmV2 && !props.panel)
 onMounted(() => { void serverFeatures.load() })
 // Auto-delete is shown wherever it applies, so nobody posts in a channel unaware that it forgets.
 const autoDeleteDays = computed(() => {
@@ -81,8 +85,9 @@ function openNotificationMenu(e: MouseEvent) {
     <!-- Left: Channel name & topic -->
     <div class="flex items-center gap-2 min-w-0 flex-1">
       <NavDrawerButton v-if="!panel" />
-      <component :is="channelIcon" class="w-5 h-5 max-md:hidden text-mnema-tertiary shrink-0" />
-      <div class="flex min-w-0 items-center gap-2 max-md:flex-col max-md:items-start max-md:gap-0">
+      <DmHeaderTitle v-if="richDm && dm" :dm="dm" @members="showInfo = true" />
+      <component :is="channelIcon" v-if="!richDm" class="w-5 h-5 max-md:hidden text-mnema-tertiary shrink-0" />
+      <div v-if="!richDm" class="flex min-w-0 items-center gap-2 max-md:flex-col max-md:items-start max-md:gap-0">
         <span
           data-testid="chat-channel-name"
           :class="['font-semibold text-base text-mnema-text truncate', titleClass]"
@@ -119,6 +124,7 @@ function openNotificationMenu(e: MouseEvent) {
       <SavedMessages v-if="!panel && serverFeatures.has('saved')" />
       <LaterPopover v-if="!panel" />
       <PinnedMessages v-if="chatStore.activeChannel && !isDm" />
+      <DmMuteButton v-if="richDm && dm" :dm="dm" />
       <DmTalkActions v-if="isDm && dm && serverFeatures.talksLobby" :conversation-id="dm.id" :can-send="dm.can_send" />
       <button
         v-if="chatStore.activeChannel"
