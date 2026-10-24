@@ -75,7 +75,7 @@ test('the Talk has its own text chat under the stage', async ({ browser }) => {
   await expect(a.getByRole('button', { name: 'Verlassen' }).first()).toBeVisible()
 
   // A writes; the message really reaches the server and B.
-  const first = `Hört ihr mich? ${suffix}`
+  const first = `Can you hear me? ${suffix}`
   const aComposer = aPanel.getByRole('textbox', { name: `Nachricht an ${CHANNEL}` })
   await aComposer.fill(first)
   await aComposer.press('Enter')
@@ -96,7 +96,7 @@ test('the Talk has its own text chat under the stage', async ({ browser }) => {
   await expect(b.getByTestId('voice-chat-unread')).toHaveCount(0)
 
   // B answers; A sees it live.
-  const answer = `Laut und deutlich ${suffix}`
+  const answer = `Loud and clear ${suffix}`
   const bComposer = bPanel.getByRole('textbox', { name: `Nachricht an ${CHANNEL}` })
   await bComposer.fill(answer)
   await bComposer.press('Enter')

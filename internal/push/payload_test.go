@@ -12,15 +12,15 @@ import (
 
 func notice() Notice {
 	return Notice{
-		ChannelID: uuid.New(), ChannelName: "allgemein", MessageID: uuid.New(),
-		Sender: "Alice", Content: "Hallo zusammen", Count: 1, At: time.UnixMilli(1_700_000_000_000),
+		ChannelID: uuid.New(), ChannelName: "general", MessageID: uuid.New(),
+		Sender: "Alice", Content: "Hello everyone", Count: 1, At: time.UnixMilli(1_700_000_000_000),
 	}
 }
 
 func TestPushNamesSenderAndChannelAndCarriesTheText(t *testing.T) {
 	n := notice()
 	p := build(n, "de", true)
-	if p.Title != "Alice (#allgemein)" || p.Body != "Hallo zusammen" {
+	if p.Title != "Alice (#general)" || p.Body != "Hello everyone" {
 		t.Fatalf("title %q body %q", p.Title, p.Body)
 	}
 	if p.Tag != n.ChannelID.String() || p.Type != "message" || p.Version != 1 || p.Timestamp != 1_700_000_000_000 {
@@ -33,7 +33,7 @@ func TestPushNamesSenderAndChannelAndCarriesTheText(t *testing.T) {
 
 func TestPushWithoutPreviewNeverCarriesTheText(t *testing.T) {
 	n := notice()
-	n.Content = "geheimes Passwort"
+	n.Content = "secret password"
 	for _, c := range []struct {
 		locale, want string
 		mention      bool
@@ -50,11 +50,11 @@ func TestPushWithoutPreviewNeverCarriesTheText(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if strings.Contains(string(raw), "Passwort") {
+		if strings.Contains(string(raw), "password") {
 			t.Fatalf("%s: the text leaked into %s", c.locale, raw)
 		}
 		var p Payload
-		if err := json.Unmarshal(raw, &p); err != nil || p.Body != c.wantBody || p.Title != "Alice (#allgemein)" {
+		if err := json.Unmarshal(raw, &p); err != nil || p.Body != c.wantBody || p.Title != "Alice (#general)" {
 			t.Fatalf("%s: %+v (%v)", c.locale, p, err)
 		}
 	}
@@ -73,13 +73,37 @@ func TestPushForAnAttachmentOnlyMessageSaysSo(t *testing.T) {
 	}
 }
 
-func TestPushForAPollShowsTheQuestionAsAPoll(t *testing.T) {
+func TestPushForAnEmptyForwardedMessageSaysSo(t *testing.T) {
 	n := notice()
-	n.Content, n.Poll = "Pizza oder Pasta?", true
-	if got := build(n, "de", true).Body; got != "Umfrage: Pizza oder Pasta?" {
+	n.Content = "  "
+	n.Forwarded = true
+	if got := build(n, "en", true).Body; got != "Forwarded message" {
 		t.Fatalf("body %q", got)
 	}
-	if got := build(n, "en", true).Body; got != "Poll: Pizza oder Pasta?" {
+	if got := build(n, "de", true).Body; got != "Weitergeleitete Nachricht" {
+		t.Fatalf("body %q", got)
+	}
+	n.Content = "Check this out"
+	if got := build(n, "en", true).Body; got != "Check this out" {
+		t.Fatalf("body %q", got)
+	}
+	n.Content = ""
+	if got := build(n, "en", false).Body; got != "New message" {
+		t.Fatalf("body without preview %q", got)
+	}
+	n.Forwarded = false
+	if got := build(n, "en", true).Body; got != "New message" {
+		t.Fatalf("body %q", got)
+	}
+}
+
+func TestPushForAPollShowsTheQuestionAsAPoll(t *testing.T) {
+	n := notice()
+	n.Content, n.Poll = "Pizza or pasta?", true
+	if got := build(n, "de", true).Body; got != "Umfrage: Pizza or pasta?" {
+		t.Fatalf("body %q", got)
+	}
+	if got := build(n, "en", true).Body; got != "Poll: Pizza or pasta?" {
 		t.Fatalf("body %q", got)
 	}
 	if got := build(n, "en", false).Body; strings.Contains(got, "Pizza") {
@@ -91,7 +115,7 @@ func TestAGroupOfMessagesIsOnePush(t *testing.T) {
 	n := notice()
 	n.Count = 3
 	withText := build(n, "en", true)
-	if withText.Title != "#allgemein" || withText.Body != "3 new messages\nAlice: Hallo zusammen" {
+	if withText.Title != "#general" || withText.Body != "3 new messages\nAlice: Hello everyone" {
 		t.Fatalf("%q / %q", withText.Title, withText.Body)
 	}
 	if got := build(n, "de", false).Body; got != "3 neue Nachrichten" {

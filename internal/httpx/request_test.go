@@ -62,7 +62,7 @@ func TestCleanText(t *testing.T) {
 	if _, err := CleanText("bio", "a\x00b", 10, false); err == nil {
 		t.Error("NUL byte accepted")
 	}
-	if _, err := CleanText("bio", "äöü", 3, false); err != nil {
+	if _, err := CleanText("bio", "\u00e4\u00f6\u00fc", 3, false); err != nil {
 		t.Errorf("limit counts runes, not bytes: %v", err)
 	}
 	if _, err := CleanText("bio", "abcd", 3, false); err == nil {
@@ -89,7 +89,7 @@ func TestSanitizeFilename(t *testing.T) {
 			t.Errorf("SanitizeFilename(%q) = %q, want %q", in, got, want)
 		}
 	}
-	long := strings.Repeat("ä", 200)
+	long := strings.Repeat("\u00e4", 200)
 	if got := SanitizeFilename(long, 255); len(got) > 255 || !utf8.ValidString(got) {
 		t.Errorf("truncation broke UTF-8 or limit: len=%d", len(got))
 	}

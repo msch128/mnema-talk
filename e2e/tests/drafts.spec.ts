@@ -34,7 +34,7 @@ test('an unsent message waits in its channel across switching and reload, and le
 
     await page.goto(`/c/${first}`)
     const composer = page.getByRole('textbox', { name: `Nachricht an #${FIRST}` })
-    await composer.fill('noch nicht fertig')
+    await composer.fill('not finished yet')
 
     // Another channel starts empty and marks the first as having a draft.
     await page.locator(`[data-channel-item="${second}"]`).click()
@@ -43,11 +43,11 @@ test('an unsent message waits in its channel across switching and reload, and le
 
     // Back again, and after a reload, the text is still there.
     await page.locator(`[data-channel-item="${first}"]`).click()
-    await expect(composer).toHaveValue('noch nicht fertig')
+    await expect(composer).toHaveValue('not finished yet')
     await page.locator(`[data-channel-item="${second}"]`).click()
     await page.reload()
     await page.locator(`[data-channel-item="${first}"]`).click()
-    await expect(page.getByRole('textbox', { name: `Nachricht an #${FIRST}` })).toHaveValue('noch nicht fertig')
+    await expect(page.getByRole('textbox', { name: `Nachricht an #${FIRST}` })).toHaveValue('not finished yet')
 
     // Sending clears it for good.
     await composer.press('Enter')
@@ -56,7 +56,7 @@ test('an unsent message waits in its channel across switching and reload, and le
     await expect(page.locator(`[data-channel-item="${first}"]`).getByTestId('channel-draft')).toHaveCount(0)
 
     // Sign-out removes drafts from this browser.
-    await page.getByRole('textbox', { name: `Nachricht an #${SECOND}` }).fill('bleibt nicht')
+    await page.getByRole('textbox', { name: `Nachricht an #${SECOND}` }).fill('will not stay')
     await expect.poll(() => draftKeys(page)).not.toEqual([])
     await page.getByTestId('account-menu-button').click()
     await page.getByRole('menuitem', { name: 'Abmelden' }).click()

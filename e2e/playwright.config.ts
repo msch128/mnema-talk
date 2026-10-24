@@ -6,6 +6,7 @@ const baseURL = process.env.E2E_BASE_URL || 'http://127.0.0.1:58080'
 // default route; VM/VPN interfaces whose UDP writes can stall on developer
 // machines are excluded unless E2E_WEBRTC_ALL_INTERFACES=1.
 const chromiumArgs = [
+  '--mute-audio',
   '--use-fake-ui-for-media-stream',
   '--use-fake-device-for-media-stream',
   ...(process.env.E2E_WEBRTC_ALL_INTERFACES === '1'

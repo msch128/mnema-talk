@@ -40,7 +40,7 @@ test('emoji picker, Markdown, admin panels and API reference run under the polic
   expect(made.status).toBe(201)
   const id = responseString(made, 'id')
   try {
-    const markdown = '**fett** `code`\n\n```go\nfunc main() { println("hi") }\n```\n\n> zitat\n\n- eins\n- zwei'
+    const markdown = '**bold** `code`\n\n```go\nfunc main() { println("hi") }\n```\n\n> quote\n\n- one\n- two'
     expect((await apiFetch(page, 'POST', `/api/channels/${id}/messages`, { content: markdown })).status).toBe(201)
     await page.goto(`/c/${id}`)
     const block = page.locator('pre code').first()

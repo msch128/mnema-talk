@@ -49,10 +49,10 @@ test('built-in commands post for the caller, and /kick signs a member out with a
     // A text command posts a message of its own.
     await owner.goto(`/c/${channelId}`)
     await runCommand(owner, CHANNEL, '/shrug')
-    await owner.getByTestId('slash-bar').locator('[data-option="text"]').fill('keine Ahnung')
+    await owner.getByTestId('slash-bar').locator('[data-option="text"]').fill('no idea')
     await owner.getByTestId('slash-run').click()
-    await expect(owner.getByRole('article').filter({ hasText: 'keine Ahnung' })).toContainText('¯\\_(ツ)_/¯')
-    await expect(member.getByRole('article').filter({ hasText: 'keine Ahnung' })).toBeVisible()
+    await expect(owner.getByRole('article').filter({ hasText: 'no idea' })).toContainText('¯\\_(ツ)_/¯')
+    await expect(member.getByRole('article').filter({ hasText: 'no idea' })).toBeVisible()
 
     // The Owner kicks the member.
     await runCommand(owner, CHANNEL, '/kick')

@@ -50,7 +50,7 @@ func postLogin(h *Handler, ip, username, password string) int {
 
 func TestLoginRejectsImplausibleUsernamesWithoutTracking(t *testing.T) {
 	h := newLoginHandler()
-	for _, name := range []string{strings.Repeat("a", 1<<20), strings.Repeat("b", 33), "has space", "ü-umlaut", ""} {
+	for _, name := range []string{strings.Repeat("a", 1<<20), strings.Repeat("b", 33), "has space", "\u00fc-umlaut", ""} {
 		if code := postLogin(h, "203.0.113.5", name, "whatever-password"); code != http.StatusUnauthorized {
 			t.Fatalf("username of %d bytes: got %d, want 401", len(name), code)
 		}

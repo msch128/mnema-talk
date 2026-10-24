@@ -1,6 +1,7 @@
 package push
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -40,18 +41,19 @@ const (
 	maxNameRunes    = 64
 )
 
-// texts are the few strings a push shows, by language (the account's
+// textsJSON holds the few strings a push shows, by language (the account's
 // language; German is the app's default).
-var texts = map[string]map[string]string{
-	"de": {
-		"new": "Neue Nachricht", "mention": "Hat dich erwähnt", "attachment": "Anhang",
-		"dm": "Direktnachricht", "group": "%d neue Nachrichten", "poll": "Umfrage", "spoiler": "Spoiler", "test": "Push funktioniert auf diesem Gerät.",
-	},
-	"en": {
-		"new": "New message", "mention": "Mentioned you", "attachment": "Attachment",
-		"dm": "Direct message", "group": "%d new messages", "poll": "Poll", "spoiler": "Spoiler", "test": "Push works on this device.",
-	},
-}
+//
+//go:embed locales/texts.json
+var textsJSON []byte
+
+var texts = func() map[string]map[string]string {
+	var out map[string]map[string]string
+	if err := json.Unmarshal(textsJSON, &out); err != nil {
+		panic("push: locales/texts.json: " + err.Error())
+	}
+	return out
+}()
 
 func text(locale, key string) string {
 	if t, ok := texts[locale]; ok {
@@ -71,6 +73,8 @@ type Notice struct {
 	Sender      string
 	Content     string
 	HasFiles    bool
+	// Forwarded is set when the message forwards another one.
+	Forwarded bool
 	// Poll is set when the message is a poll; its content is the question.
 	Poll bool
 	// DM is set for a message of a direct message conversation: the push
@@ -143,6 +147,9 @@ func previewLine(n Notice, locale string, preview bool) string {
 	}
 	if n.HasFiles {
 		return text(locale, "attachment")
+	}
+	if n.Forwarded {
+		return text(locale, "forward")
 	}
 	return text(locale, "new")
 }
