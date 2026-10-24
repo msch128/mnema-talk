@@ -2640,6 +2640,435 @@ export function isChatViewAsRole(value: unknown): value is ChatViewAsRole {
 
 export const decodeChatViewAsRole = decoder("chat.ViewAsRole", isChatViewAsRole)
 
+export type CommunityeventsCommunityEvent = {
+  channel_id?: string | null
+  cover_url?: string | null
+  created_at: string
+  created_by?: string | null
+  description: string
+  end_time?: string | null
+  going_members?: Array<CommunityeventsUserRef>
+  id: string
+  location?: string | null
+  my_rsvp?: string | null
+  rsvp_counts: CommunityeventsRSVPCounts
+  start_time: string
+  status: string
+  title: string
+  updated_at: string
+}
+
+export function isCommunityeventsCommunityEvent(value: unknown): value is CommunityeventsCommunityEvent {
+  return isRecord(value)
+    && (!hasOwn(value, "channel_id") || (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (!hasOwn(value, "cover_url") || (isString(value["cover_url"]) || value["cover_url"] === null))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "created_by") || (isIdentifier(value["created_by"]) || value["created_by"] === null))
+    && (hasOwn(value, "description") && isString(value["description"], 2000))
+    && (!hasOwn(value, "end_time") || (isTimestamp(value["end_time"]) || value["end_time"] === null))
+    && (!hasOwn(value, "going_members") || isArrayOf(value["going_members"], item => isCommunityeventsUserRef(item)))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "location") || (isString(value["location"], 255) || value["location"] === null))
+    && (!hasOwn(value, "my_rsvp") || (isString(value["my_rsvp"]) || value["my_rsvp"] === null))
+    && (hasOwn(value, "rsvp_counts") && isCommunityeventsRSVPCounts(value["rsvp_counts"]))
+    && (hasOwn(value, "start_time") && isTimestamp(value["start_time"]))
+    && (hasOwn(value, "status") && isString(value["status"]))
+    && (hasOwn(value, "title") && isString(value["title"], 100))
+    && (hasOwn(value, "updated_at") && isTimestamp(value["updated_at"]))
+}
+
+export const decodeCommunityeventsCommunityEvent = decoder("communityevents.CommunityEvent", isCommunityeventsCommunityEvent)
+
+export type CommunityeventsCreateEventRequest = {
+  channel_id?: string | null
+  description: string
+  end_time?: string | null
+  location?: string | null
+  start_time: string
+  title: string
+}
+
+export function isCommunityeventsCreateEventRequest(value: unknown): value is CommunityeventsCreateEventRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "channel_id") || (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (hasOwn(value, "description") && isString(value["description"], 2000))
+    && (!hasOwn(value, "end_time") || (isTimestamp(value["end_time"]) || value["end_time"] === null))
+    && (!hasOwn(value, "location") || (isString(value["location"], 255) || value["location"] === null))
+    && (hasOwn(value, "start_time") && isTimestamp(value["start_time"]))
+    && (hasOwn(value, "title") && isString(value["title"], 100))
+}
+
+export const decodeCommunityeventsCreateEventRequest = decoder("communityevents.CreateEventRequest", isCommunityeventsCreateEventRequest)
+
+export type CommunityeventsRSVPCounts = {
+  going: number
+  interested: number
+  not_going: number
+}
+
+export function isCommunityeventsRSVPCounts(value: unknown): value is CommunityeventsRSVPCounts {
+  return isRecord(value)
+    && (hasOwn(value, "going") && isInteger(value["going"]))
+    && (hasOwn(value, "interested") && isInteger(value["interested"]))
+    && (hasOwn(value, "not_going") && isInteger(value["not_going"]))
+}
+
+export const decodeCommunityeventsRSVPCounts = decoder("communityevents.RSVPCounts", isCommunityeventsRSVPCounts)
+
+export type CommunityeventsRSVPItem = {
+  response: string
+  updated_at: string
+  user: CommunityeventsUserRef
+}
+
+export function isCommunityeventsRSVPItem(value: unknown): value is CommunityeventsRSVPItem {
+  return isRecord(value)
+    && (hasOwn(value, "response") && isString(value["response"]))
+    && (hasOwn(value, "updated_at") && isString(value["updated_at"]))
+    && (hasOwn(value, "user") && isCommunityeventsUserRef(value["user"]))
+}
+
+export const decodeCommunityeventsRSVPItem = decoder("communityevents.RSVPItem", isCommunityeventsRSVPItem)
+
+export type CommunityeventsRSVPRequest = {
+  response: "going" | "interested" | "not_going"
+}
+
+export function isCommunityeventsRSVPRequest(value: unknown): value is CommunityeventsRSVPRequest {
+  return isRecord(value)
+    && (hasOwn(value, "response") && (value["response"] === "going" || value["response"] === "interested" || value["response"] === "not_going"))
+}
+
+export const decodeCommunityeventsRSVPRequest = decoder("communityevents.RSVPRequest", isCommunityeventsRSVPRequest)
+
+export type CommunityeventsUpdateEventRequest = {
+  channel_id?: string | null
+  description?: string
+  end_time?: string | null
+  location?: string | null
+  start_time?: string
+  status?: string
+  title?: string
+}
+
+export function isCommunityeventsUpdateEventRequest(value: unknown): value is CommunityeventsUpdateEventRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "channel_id") || (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (!hasOwn(value, "description") || isString(value["description"], 2000))
+    && (!hasOwn(value, "end_time") || (isTimestamp(value["end_time"]) || value["end_time"] === null))
+    && (!hasOwn(value, "location") || (isString(value["location"], 255) || value["location"] === null))
+    && (!hasOwn(value, "start_time") || isTimestamp(value["start_time"]))
+    && (!hasOwn(value, "status") || isString(value["status"]))
+    && (!hasOwn(value, "title") || isString(value["title"], 100))
+}
+
+export const decodeCommunityeventsUpdateEventRequest = decoder("communityevents.UpdateEventRequest", isCommunityeventsUpdateEventRequest)
+
+export type CommunityeventsUserRef = {
+  avatar_url?: string | null
+  display_name: string
+  id: string
+  username: string
+}
+
+export function isCommunityeventsUserRef(value: unknown): value is CommunityeventsUserRef {
+  return isRecord(value)
+    && (!hasOwn(value, "avatar_url") || (isString(value["avatar_url"]) || value["avatar_url"] === null))
+    && (hasOwn(value, "display_name") && isString(value["display_name"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "username") && isString(value["username"]))
+}
+
+export const decodeCommunityeventsUserRef = decoder("communityevents.UserRef", isCommunityeventsUserRef)
+
+export type DiscordimportApplyRequest = {
+  confirm_additive: boolean
+  confirm_roles: boolean
+  confirm_text: string
+  plan_hash: string
+  template: string
+}
+
+export function isDiscordimportApplyRequest(value: unknown): value is DiscordimportApplyRequest {
+  return isRecord(value)
+    && (hasOwn(value, "confirm_additive") && typeof value["confirm_additive"] === 'boolean')
+    && (hasOwn(value, "confirm_roles") && typeof value["confirm_roles"] === 'boolean')
+    && (hasOwn(value, "confirm_text") && isString(value["confirm_text"], 100))
+    && (hasOwn(value, "plan_hash") && isString(value["plan_hash"], 64))
+    && (hasOwn(value, "template") && isString(value["template"], 300))
+}
+
+export const decodeDiscordimportApplyRequest = decoder("discordimport.ApplyRequest", isDiscordimportApplyRequest)
+
+export type DiscordimportChannelMessages = {
+  messages: number
+  name: string
+}
+
+export function isDiscordimportChannelMessages(value: unknown): value is DiscordimportChannelMessages {
+  return isRecord(value)
+    && (hasOwn(value, "messages") && isInteger(value["messages"]))
+    && (hasOwn(value, "name") && isString(value["name"]))
+}
+
+export const decodeDiscordimportChannelMessages = decoder("discordimport.ChannelMessages", isDiscordimportChannelMessages)
+
+export type DiscordimportCounts = {
+  categories: number
+  channels: number
+  roles: number
+}
+
+export function isDiscordimportCounts(value: unknown): value is DiscordimportCounts {
+  return isRecord(value)
+    && (hasOwn(value, "categories") && isInteger(value["categories"]))
+    && (hasOwn(value, "channels") && isInteger(value["channels"]))
+    && (hasOwn(value, "roles") && isInteger(value["roles"]))
+}
+
+export const decodeDiscordimportCounts = decoder("discordimport.Counts", isDiscordimportCounts)
+
+export type DiscordimportDetail = {
+  channels_with_messages: Array<DiscordimportChannelMessages>
+  counts: DiscordimportCounts
+  created_at: string
+  created_by_name: string
+  id: string
+  kept_categories: Array<string>
+  remaining: DiscordimportCounts
+  template_code: string
+  template_name: string
+  undone_at: string | null
+}
+
+export function isDiscordimportDetail(value: unknown): value is DiscordimportDetail {
+  return isRecord(value)
+    && (hasOwn(value, "channels_with_messages") && isArrayOf(value["channels_with_messages"], item => isDiscordimportChannelMessages(item)))
+    && (hasOwn(value, "counts") && isDiscordimportCounts(value["counts"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "created_by_name") && isString(value["created_by_name"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "kept_categories") && isArrayOf(value["kept_categories"], item => isString(item)))
+    && (hasOwn(value, "remaining") && isDiscordimportCounts(value["remaining"]))
+    && (hasOwn(value, "template_code") && isString(value["template_code"]))
+    && (hasOwn(value, "template_name") && isString(value["template_name"]))
+    && (hasOwn(value, "undone_at") && (isTimestamp(value["undone_at"]) || value["undone_at"] === null))
+}
+
+export const decodeDiscordimportDetail = decoder("discordimport.Detail", isDiscordimportDetail)
+
+export type DiscordimportEveryoneInfo = {
+  applied: boolean
+  dropped: Array<string>
+  permission_keys: Array<string>
+}
+
+export function isDiscordimportEveryoneInfo(value: unknown): value is DiscordimportEveryoneInfo {
+  return isRecord(value)
+    && (hasOwn(value, "applied") && typeof value["applied"] === 'boolean')
+    && (hasOwn(value, "dropped") && isArrayOf(value["dropped"], item => isString(item)))
+    && (hasOwn(value, "permission_keys") && isArrayOf(value["permission_keys"], item => isString(item)))
+}
+
+export const decodeDiscordimportEveryoneInfo = decoder("discordimport.EveryoneInfo", isDiscordimportEveryoneInfo)
+
+export type DiscordimportPlan = {
+  administrator_dropped: boolean
+  categories: Array<DiscordimportPlanCategory>
+  channels: Array<DiscordimportPlanChannel>
+  code: string
+  counts: DiscordimportCounts
+  dropped_bits: Array<string>
+  everyone: DiscordimportEveryoneInfo
+  hash: string
+  roles: Array<DiscordimportPlanRole>
+  server_name: string
+  skipped: Array<string>
+  source_name: string
+  template_name: string
+}
+
+export function isDiscordimportPlan(value: unknown): value is DiscordimportPlan {
+  return isRecord(value)
+    && (hasOwn(value, "administrator_dropped") && typeof value["administrator_dropped"] === 'boolean')
+    && (hasOwn(value, "categories") && isArrayOf(value["categories"], item => isDiscordimportPlanCategory(item)))
+    && (hasOwn(value, "channels") && isArrayOf(value["channels"], item => isDiscordimportPlanChannel(item)))
+    && (hasOwn(value, "code") && isString(value["code"]))
+    && (hasOwn(value, "counts") && isDiscordimportCounts(value["counts"]))
+    && (hasOwn(value, "dropped_bits") && isArrayOf(value["dropped_bits"], item => isString(item)))
+    && (hasOwn(value, "everyone") && isDiscordimportEveryoneInfo(value["everyone"]))
+    && (hasOwn(value, "hash") && isString(value["hash"]))
+    && (hasOwn(value, "roles") && isArrayOf(value["roles"], item => isDiscordimportPlanRole(item)))
+    && (hasOwn(value, "server_name") && isString(value["server_name"]))
+    && (hasOwn(value, "skipped") && isArrayOf(value["skipped"], item => isString(item)))
+    && (hasOwn(value, "source_name") && isString(value["source_name"]))
+    && (hasOwn(value, "template_name") && isString(value["template_name"]))
+}
+
+export const decodeDiscordimportPlan = decoder("discordimport.Plan", isDiscordimportPlan)
+
+export type DiscordimportPlanCategory = {
+  name: string
+  overwrites: Array<DiscordimportPlanOverwrite>
+  source_id: string
+}
+
+export function isDiscordimportPlanCategory(value: unknown): value is DiscordimportPlanCategory {
+  return isRecord(value)
+    && (hasOwn(value, "name") && isString(value["name"], 64))
+    && (hasOwn(value, "overwrites") && isArrayOf(value["overwrites"], item => isDiscordimportPlanOverwrite(item)))
+    && (hasOwn(value, "source_id") && isString(value["source_id"]))
+}
+
+export const decodeDiscordimportPlanCategory = decoder("discordimport.PlanCategory", isDiscordimportPlanCategory)
+
+export type DiscordimportPlanChannel = {
+  category: string
+  category_source_id: string
+  name: string
+  notes: Array<string>
+  overwrites: Array<DiscordimportPlanOverwrite>
+  private: boolean
+  slow_mode_seconds: number
+  source_id: string
+  source_type: string
+  topic: string
+  type: string
+  user_limit: number
+}
+
+export function isDiscordimportPlanChannel(value: unknown): value is DiscordimportPlanChannel {
+  return isRecord(value)
+    && (hasOwn(value, "category") && isString(value["category"]))
+    && (hasOwn(value, "category_source_id") && isString(value["category_source_id"]))
+    && (hasOwn(value, "name") && isString(value["name"], 64))
+    && (hasOwn(value, "notes") && isArrayOf(value["notes"], item => isString(item)))
+    && (hasOwn(value, "overwrites") && isArrayOf(value["overwrites"], item => isDiscordimportPlanOverwrite(item)))
+    && (hasOwn(value, "private") && typeof value["private"] === 'boolean')
+    && (hasOwn(value, "slow_mode_seconds") && isInteger(value["slow_mode_seconds"]))
+    && (hasOwn(value, "source_id") && isString(value["source_id"]))
+    && (hasOwn(value, "source_type") && isString(value["source_type"]))
+    && (hasOwn(value, "topic") && isString(value["topic"], 255))
+    && (hasOwn(value, "type") && isString(value["type"]))
+    && (hasOwn(value, "user_limit") && isInteger(value["user_limit"]))
+}
+
+export const decodeDiscordimportPlanChannel = decoder("discordimport.PlanChannel", isDiscordimportPlanChannel)
+
+export type DiscordimportPlanOverwrite = {
+  allow: number
+  allow_keys: Array<string>
+  deny: number
+  deny_keys: Array<string>
+  everyone: boolean
+  role_name: string
+  role_source_id: string
+}
+
+export function isDiscordimportPlanOverwrite(value: unknown): value is DiscordimportPlanOverwrite {
+  return isRecord(value)
+    && (hasOwn(value, "allow") && (isInteger(value["allow"]) && value["allow"] >= 0))
+    && (hasOwn(value, "allow_keys") && isArrayOf(value["allow_keys"], item => isString(item)))
+    && (hasOwn(value, "deny") && (isInteger(value["deny"]) && value["deny"] >= 0))
+    && (hasOwn(value, "deny_keys") && isArrayOf(value["deny_keys"], item => isString(item)))
+    && (hasOwn(value, "everyone") && typeof value["everyone"] === 'boolean')
+    && (hasOwn(value, "role_name") && isString(value["role_name"]))
+    && (hasOwn(value, "role_source_id") && isString(value["role_source_id"]))
+}
+
+export const decodeDiscordimportPlanOverwrite = decoder("discordimport.PlanOverwrite", isDiscordimportPlanOverwrite)
+
+export type DiscordimportPlanRole = {
+  administrator_dropped: boolean
+  color: number
+  dropped: Array<string>
+  hoist: boolean
+  mentionable: boolean
+  name: string
+  permission_keys: Array<string>
+  permissions: number
+  source_id: string
+  source_name: string
+}
+
+export function isDiscordimportPlanRole(value: unknown): value is DiscordimportPlanRole {
+  return isRecord(value)
+    && (hasOwn(value, "administrator_dropped") && typeof value["administrator_dropped"] === 'boolean')
+    && (hasOwn(value, "color") && (isInteger(value["color"]) && value["color"] >= 0 && value["color"] <= 16777215))
+    && (hasOwn(value, "dropped") && isArrayOf(value["dropped"], item => isString(item)))
+    && (hasOwn(value, "hoist") && typeof value["hoist"] === 'boolean')
+    && (hasOwn(value, "mentionable") && typeof value["mentionable"] === 'boolean')
+    && (hasOwn(value, "name") && isString(value["name"], 32))
+    && (hasOwn(value, "permission_keys") && isArrayOf(value["permission_keys"], item => isString(item)))
+    && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
+    && (hasOwn(value, "source_id") && isString(value["source_id"]))
+    && (hasOwn(value, "source_name") && isString(value["source_name"]))
+}
+
+export const decodeDiscordimportPlanRole = decoder("discordimport.PlanRole", isDiscordimportPlanRole)
+
+export type DiscordimportPreviewRequest = {
+  template: string
+}
+
+export function isDiscordimportPreviewRequest(value: unknown): value is DiscordimportPreviewRequest {
+  return isRecord(value)
+    && (hasOwn(value, "template") && isString(value["template"], 300))
+}
+
+export const decodeDiscordimportPreviewRequest = decoder("discordimport.PreviewRequest", isDiscordimportPreviewRequest)
+
+export type DiscordimportRecord = {
+  counts: DiscordimportCounts
+  created_at: string
+  created_by_name: string
+  id: string
+  template_code: string
+  template_name: string
+  undone_at: string | null
+}
+
+export function isDiscordimportRecord(value: unknown): value is DiscordimportRecord {
+  return isRecord(value)
+    && (hasOwn(value, "counts") && isDiscordimportCounts(value["counts"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "created_by_name") && isString(value["created_by_name"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "template_code") && isString(value["template_code"]))
+    && (hasOwn(value, "template_name") && isString(value["template_name"]))
+    && (hasOwn(value, "undone_at") && (isTimestamp(value["undone_at"]) || value["undone_at"] === null))
+}
+
+export const decodeDiscordimportRecord = decoder("discordimport.Record", isDiscordimportRecord)
+
+export type DiscordimportUndoRequest = {
+  accept_message_loss: boolean
+}
+
+export function isDiscordimportUndoRequest(value: unknown): value is DiscordimportUndoRequest {
+  return isRecord(value)
+    && (hasOwn(value, "accept_message_loss") && typeof value["accept_message_loss"] === 'boolean')
+}
+
+export const decodeDiscordimportUndoRequest = decoder("discordimport.UndoRequest", isDiscordimportUndoRequest)
+
+export type DiscordimportUndoResult = {
+  already_gone: DiscordimportCounts
+  kept_categories: Array<string>
+  kept_roles: number
+  removed: DiscordimportCounts
+}
+
+export function isDiscordimportUndoResult(value: unknown): value is DiscordimportUndoResult {
+  return isRecord(value)
+    && (hasOwn(value, "already_gone") && isDiscordimportCounts(value["already_gone"]))
+    && (hasOwn(value, "kept_categories") && isArrayOf(value["kept_categories"], item => isString(item)))
+    && (hasOwn(value, "kept_roles") && isInteger(value["kept_roles"]))
+    && (hasOwn(value, "removed") && isDiscordimportCounts(value["removed"]))
+}
+
+export const decodeDiscordimportUndoResult = decoder("discordimport.UndoResult", isDiscordimportUndoResult)
+
 export type EmojiEmoji = {
   animated: boolean
   created_at: string

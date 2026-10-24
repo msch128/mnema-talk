@@ -43,7 +43,7 @@ const sampleTemplate = `{
       {"id": 6, "type": 13, "name": "Stage", "position": 1, "parent_id": 4, "permission_overwrites": []},
       {"id": 7, "type": 15, "name": "ideas", "position": 0, "parent_id": 1, "topic": "x", "permission_overwrites": []},
       {"id": 9, "type": 11, "name": "a thread", "position": 0, "parent_id": 1, "permission_overwrites": []},
-      {"id": 10, "type": 0, "name": "general", "position": 0, "rate_limit_per_user": 43200, "nsfw": true, "permission_overwrites": []}
+      {"id": 10, "type": 0, "name": "general", "position": 0, "rate_limit_per_user": 100000, "nsfw": true, "permission_overwrites": []}
     ]
   }
 }`

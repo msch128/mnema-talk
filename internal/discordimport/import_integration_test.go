@@ -471,3 +471,24 @@ func TestUndoKeepsACategoryThatHoldsOtherChannels(t *testing.T) {
 		t.Fatal("the foreign channel was touched")
 	}
 }
+
+func TestStagesAndForumsAreCreatedWhenTheServerHasThem(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	w.im.Features = func(name string) bool { return name == "talks.stage" || name == "channels.forum" }
+	plan := w.preview(w.admin)
+	if _, err := w.im.Apply(ctx, w.admin, "adm", applyReq(plan)); err != nil {
+		t.Fatal(err)
+	}
+	var stageType string
+	var isStage bool
+	w.must(w.p.QueryRow(ctx, `SELECT type, is_stage FROM channels WHERE name = 'Stage'`).Scan(&stageType, &isStage))
+	if stageType != "voice" || !isStage {
+		t.Fatalf("stage imported as type %q is_stage %v, want a voice channel that is a Stage", stageType, isStage)
+	}
+	var forumType string
+	w.must(w.p.QueryRow(ctx, `SELECT type FROM channels WHERE name = 'ideas'`).Scan(&forumType))
+	if forumType != "forum" {
+		t.Fatalf("forum imported as type %q", forumType)
+	}
+}

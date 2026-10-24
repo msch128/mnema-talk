@@ -26,19 +26,21 @@ func (s *Service) SendEventReminder(ctx context.Context, userID uuid.UUID, event
 	}
 
 	if channelID != nil {
-		var chLvl, catLvl *string
-		var chSetting, catSetting chat.NotifySetting
+		var chLvl, catLvl, srvLvl *string
+		var chSetting, catSetting, srvSetting chat.NotifySetting
 		var dbNow time.Time
 		_ = s.DB.QueryRow(ctx, `
-			SELECT r.notify_level, r.muted_until, cn.notify_level, cn.muted_until, NOW()
+			SELECT r.notify_level, r.muted_until, cn.notify_level, cn.muted_until, sn.notify_level, sn.muted_until, NOW()
 			FROM channels c
 			LEFT JOIN channel_reads r ON r.channel_id = c.id AND r.user_id = $1
 			LEFT JOIN category_notify cn ON cn.category_id = c.category_id AND cn.user_id = $1
-			WHERE c.id = $2`, userID, *channelID).Scan(&chLvl, &chSetting.MutedUntil, &catLvl, &catSetting.MutedUntil, &dbNow)
+			LEFT JOIN server_notify sn ON sn.user_id = $1
+			WHERE c.id = $2`, userID, *channelID).Scan(&chLvl, &chSetting.MutedUntil, &catLvl, &catSetting.MutedUntil, &srvLvl, &srvSetting.MutedUntil, &dbNow)
 
 		chSetting.Level = levelOf(chLvl)
 		catSetting.Level = levelOf(catLvl)
-		if chat.ResolveNotify(dbNow, chSetting, catSetting) == chat.NotifyMute {
+		srvSetting.Level = levelOf(srvLvl)
+		if chat.ResolveNotify(dbNow, chSetting, catSetting, srvSetting) == chat.NotifyMute {
 			return nil
 		}
 	}

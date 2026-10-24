@@ -6,7 +6,8 @@ import type { ChatUserRef, CommunityeventsCommunityEvent } from './rest'
 import { isAuthUser, isChatMessage, isChatPoll, isChatReactionSummary, isChatNotifyLevel, isCommunityeventsCommunityEvent } from './rest'
 import type { StageHand, StageTalkPower, TalkReaction } from './stageEvents'
 import { STAGE_EVENT_CHECKS } from './stageEvents'
-import { ContractError, hasOwn, isRecord, isIdentifier, isTimestamp, isInteger, isString, isArrayOf, isDictionaryOf } from './validation'
+import { NOTICE_EVENT_CHECKS } from './noticeEvents'
+import { ContractError, onlyFields, hasOwn, isRecord, isIdentifier, isTimestamp, isInteger, isString, isArrayOf, isDictionaryOf } from './validation'
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue | undefined }
 export interface MediaState { channel_id: string; user_id: string; screen: boolean; camera: boolean }
@@ -216,9 +217,6 @@ export function isIceCandidate(value: unknown): value is RTCIceCandidateInit {
 
 // Variant payloads are spread into stores, so every retained field must belong
 // to the validated variant. Go publishes these exact read-state/admin shapes.
-function onlyFields(value: Record<string, unknown>, fields: readonly string[]): boolean {
-  return Object.keys(value).every(key => fields.includes(key))
-}
 
 /** A screen share has at most this many layers (internal/sfu MaxLayers). */
 export const MAX_SCREEN_LAYERS = 3
@@ -294,22 +292,6 @@ function isInteractionResponse(payload: Record<string, unknown>): boolean {
   return isTimestamp(payload['created_at'])
 }
 
-const MODERATION_NOTICE_KINDS = new Set(['timeout', 'timeout_removed', 'ban', 'message_deleted', 'messages_deleted'])
-
-function isValidModerationTiming(payload: Record<string, unknown>): boolean {
-  if (hasOwn(payload, 'until') && !isTimestamp(payload['until'])) return false
-  if (hasOwn(payload, 'duration_seconds') && !isInteger(payload['duration_seconds'])) return false
-  return true
-}
-
-function isModerationNotice(payload: Record<string, unknown>): boolean {
-  if (!MODERATION_NOTICE_KINDS.has(String(payload['kind']))) return false
-  if (!isString(payload['reason'], 400)) return false
-  if (hasOwn(payload, 'channel_name') && !isString(payload['channel_name'], 128)) return false
-  if (hasOwn(payload, 'count') && !isInteger(payload['count'])) return false
-  return isValidModerationTiming(payload)
-}
-
 // Events whose payload is a JSON object, by event type.
 const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['pong', payload => typeof payload['t'] === 'number' && Number.isFinite(payload['t'])],
@@ -334,7 +316,6 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
     : isAuthUser(payload)],
   ['member_timeout', payload => isIdentifier(payload['id']) && (payload['timeout_until'] === null || isTimestamp(payload['timeout_until']))
     && onlyFields(payload, ['id', 'timeout_until'])],
-  ['moderation_notice', isModerationNotice],
   ['kicked', payload => isString(payload['reason'], 400) && onlyFields(payload, ['reason'])],
   ['reminder_update', payload => isIdentifier(payload['id']) && (payload['state'] === 'created' || payload['state'] === 'due' || payload['state'] === 'removed')
     && onlyFields(payload, ['id', 'state'])],
@@ -372,10 +353,7 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ...STAGE_EVENT_CHECKS,
   ['media_handshake', payload => isIdentifier(payload['channel_id']) && isIdentifier(payload['user_id'])
     && isString(payload['wire'], 48_000) && payload['wire'] !== ''],
-  ['forum_tags_changed', payload => isIdentifier(payload['channel_id']) && onlyFields(payload, ['channel_id'])],
-  ['event_delete', payload => isIdentifier(payload['id'])],
-  ['event_reminder', payload => isIdentifier(payload['event_id']) && isString(payload['title'], 100)
-    && isTimestamp(payload['start_time']) && (!hasOwn(payload, 'channel_id') || isIdentifier(payload['channel_id']))]
+  ...NOTICE_EVENT_CHECKS
 ])
 
 // The check registered for an event type. The wire-controlled name is only

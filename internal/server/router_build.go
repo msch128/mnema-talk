@@ -4,7 +4,6 @@ import (
 	"context"
 	"net"
 	"net/url"
-	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -130,33 +129,10 @@ func (c *components) newCore() {
 		go c.authH.RunExportSweep(c.ctx, 0)
 	}
 	go chat.RunSlowModePrune(c.ctx, d.DB, time.Hour)
-	c.chatH = &chat.Handler{
-		DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog,
-		EditHistoryLimit: httpx.NewRateLimiter(chat.EditHistoryRate, time.Minute).Named("edit_history"),
-		PinLimit:         httpx.NewRateLimiter(chat.PinChangesPerMinute, time.Minute).Named("pin"),
-		FollowLimit:      httpx.NewRateLimiter(chat.ThreadFollowChangesPerMinute, time.Minute).Named("thread_follow"),
-		BlockLimit:       httpx.NewRateLimiter(chat.BlockChangesPerMinute, time.Minute).Named("block"),
-		ReportLimit:      httpx.NewRateLimiter(chat.ReportsPerHour, time.Hour).Named("report"),
-		SavedLimit:       httpx.NewRateLimiter(chat.SavedChangesPerMinute, time.Minute).Named("saved"),
-		ForwardLimit:     httpx.NewRateLimiter(chat.ForwardsPerMinute, time.Minute).Named("forward"),
-		DMLimit:          httpx.NewRateLimiter(chat.NewDMsPerMinute, time.Minute).Named("dm_start"),
-	}
-	go chat.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour)
-	go poll.RunFold(c.ctx, d.DB, 10*time.Minute)
-	autoDelete := &chat.AutoDeleter{DB: d.DB, Events: c.pub, Audit: c.auditLog}
-	if d.Store != nil {
-		autoDelete.Objects = d.Store
-	}
-	go autoDelete.Run(c.ctx, chat.AutoDeleteEvery)
+	c.newChat()
 	c.rolesH = &roles.Handler{Perms: c.permSvc, Events: c.pub}
 	c.onboardH = onboarding.NewHandler(d.DB, c.permSvc)
-	c.importH = &discordimport.Handler{
-		Perms: c.permSvc, Limit: httpx.NewRateLimiter(discordimport.ImportsPerMinute, time.Minute).Named("discord_import"),
-		Importer: &discordimport.Importer{
-			DB: d.DB, Perms: c.permSvc, Events: c.pub, Audit: c.auditLog, Voice: hub,
-			Features: func(name string) bool { return slices.Contains(Features, name) },
-		},
-	}
+	c.newImport()
 	if d.Store != nil {
 		c.chatH.Objects = d.Store
 		c.importH.Importer.Objects = d.Store
@@ -179,14 +155,6 @@ func (c *components) newCore() {
 			DiskPath:     cfg.MediaDiskPath,
 		},
 	}
-}
-
-// newModeration builds the automod engine, makes the message and sign-up paths
-// use it and creates the handler of the moderators' routes.
-func (c *components) newModeration() {
-	c.engine = automod.New(c.d.DB, c.permSvc, c.pub, c.auditLog)
-	automod.Attach(c.d.DB, c.engine)
-	c.modH = &moderation.Handler{DB: c.d.DB, Perms: c.permSvc, Engine: c.engine}
 }
 
 // newMail builds the SMTP client when configured and hands it to the account
@@ -301,32 +269,6 @@ func (c *components) newPush() error {
 	c.pushH = push.NewHandler(h)
 	c.newLater(pusher)
 	return nil
-}
-
-// newLater builds reminders and scheduled messages; pusher is nil when Web
-// Push is off.
-func (c *components) newLater(pusher later.Notifier) {
-	c.later = later.NewService(later.Service{DB: c.d.DB, Perms: c.permSvc, Events: c.pub, Online: c.hub, Push: pusher})
-	go c.later.Run(c.ctx)
-}
-
-func (c *components) newEvents() {
-	var pushSvc *push.Service
-	if c.pushH != nil {
-		pushSvc = c.pushH.Service
-	}
-	c.eventsH = &communityevents.Handler{
-		DB:          c.d.DB,
-		Store:       communityevents.NewStore(c.d.DB),
-		MediaStore:  c.d.Store,
-		MediaBucket: c.cfg.S3Bucket,
-		Events:      c.pub,
-		Perms:       c.permSvc,
-		Audit:       c.auditLog,
-		Push:        pushSvc,
-	}
-	c.eventsScheduler = communityevents.NewScheduler(c.eventsH)
-	c.eventsScheduler.Start(c.ctx)
 }
 
 // newSystem builds the admin System tab's handler, its ops sampler and, when

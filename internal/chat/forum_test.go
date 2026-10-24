@@ -25,7 +25,7 @@ func TestCleanPostTitle(t *testing.T) {
 		t.Error("expected error for overlong title")
 	}
 
-	exact := strings.Repeat("ä", MaxPostTitleLen)
+	exact := strings.Repeat("\u00e4", MaxPostTitleLen)
 	if got, err := CleanPostTitle(exact); err != nil || got != exact {
 		t.Errorf("expected exact unicode title accepted: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestCleanTagName(t *testing.T) {
 		t.Error("expected error for overlong tag name")
 	}
 
-	exact := strings.Repeat("ü", MaxForumTagNameLen)
+	exact := strings.Repeat("\u00fc", MaxForumTagNameLen)
 	if got, err := CleanTagName(exact); err != nil || got != exact {
 		t.Errorf("expected exact tag name accepted: %v", err)
 	}

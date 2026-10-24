@@ -51,7 +51,11 @@
     "StageHand": "stage_hand",
     "StageTalkPower": "stage_talk_power",
     "TalkReaction": "talk_reaction",
-    "Kicked": "kicked"
+    "Kicked": "kicked",
+    "ForumTagsChanged": "forum_tags_changed",
+    "EventUpdate": "event_update",
+    "EventDelete": "event_delete",
+    "EventReminder": "event_reminder"
   },
   "client": {
     "ClientPing": "ping",

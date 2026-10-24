@@ -34,7 +34,8 @@ no list) and hides what is not listed. A new feature adds a name, never a
 `web_client_api` bump.
 
 Permission bits are public too. 1.1 added *Manage reports* (`1 << 21`), *Send
-direct messages* (`1 << 22`) and *Kick members* (`1 << 23`); the meaning of a
+direct messages* (`1 << 22`) and *Kick members* (`1 << 23`); 1.2 adds *Manage
+stage* (`1 << 24`) and *Manage events* (`1 << 25`). The meaning of a
 bit never changes ([roles and permissions](roles-and-permissions.md)).
 
 Documented behaviour is part of the contract, such as permission checks, limits

@@ -170,7 +170,7 @@ onMounted(refresh)
         </div>
         <div>
           <dt class="text-mnema-tertiary text-xs">{{ $t('admin.operatorStatus.appliedMigrations') }}</dt>
-          <dd class="font-mono text-mnema-text" data-testid="db-applied-migrations">{{ db.applied_migrations }} <span v-if="db.pending_migrations" class="text-mnema-warning font-normal text-xs">({{ db.pending_migrations }} pending)</span></dd>
+          <dd class="font-mono text-mnema-text" data-testid="db-applied-migrations">{{ db.applied_migrations }} <span v-if="db.pending_migrations" class="text-mnema-warning font-normal text-xs">({{ $t('admin.system.pendingMigrations', { count: db.pending_migrations }) }})</span></dd>
         </div>
       </dl>
     </div>
