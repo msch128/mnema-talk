@@ -136,6 +136,7 @@ nothing in `.env` has to change.
 | Migration | Adds |
 |---|---|
 | 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
+| 0071 | `discord_imports` and `discord_import_objects`: the record of each Discord structure import and the ids it created, for undo (see [Import](import.md)). Nothing existing is touched. |
 
 #### Talks
 
@@ -151,6 +152,25 @@ nothing in `.env` has to change.
   `talk_unavailable`. REST: `PATCH /api/talks/{id}`, `POST /api/talks/{id}/invites`,
   `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
   channel (additive).
+
+#### Discord import
+
+- *Admin*, *Import* copies the categories, channels, Talks and roles of a Discord
+  server from a server template link (see [Import](import.md)). It is limited to
+  the Owner and members with *Administrator*, strictly additive (appended at the
+  end, roles below every existing role, never Administrator, `@everyone`
+  untouched), runs after a preview and three confirmations in one transaction, and
+  can be undone.
+- Feature name `import.discord` in `GET /api/health`. REST: `POST
+  /api/admin/import/discord/preview`, `POST /api/admin/import/discord/apply`,
+  `GET /api/admin/import/discord/imports`, `GET
+  /api/admin/import/discord/imports/{id}` and `POST
+  /api/admin/import/discord/imports/{id}/undo` (all additive). Audit actions
+  `import.discord` and `import.discord_undo`, visible to the Owner and
+  Administrators only.
+- The server needs outbound HTTPS access to `discord.com` for the preview and the
+  import. Nothing else is contacted, and nothing is sent to Discord beyond the
+  template code.
 
 ### 1.0.x → 1.1.0
 

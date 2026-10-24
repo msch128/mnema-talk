@@ -3741,6 +3741,519 @@
         ],
         "type": "object"
       },
+      "discordimport.ApplyRequest": {
+        "properties": {
+          "confirm_additive": {
+            "description": "ConfirmAdditive: the administrator confirmed what is added.",
+            "type": "boolean"
+          },
+          "confirm_roles": {
+            "description": "ConfirmRoles: the administrator confirmed the role permissions.",
+            "type": "boolean"
+          },
+          "confirm_text": {
+            "description": "ConfirmText is the server name or IMPORT.",
+            "maxLength": 100,
+            "type": "string"
+          },
+          "plan_hash": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "template": {
+            "maxLength": 300,
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm_additive",
+          "confirm_roles",
+          "confirm_text",
+          "plan_hash",
+          "template"
+        ],
+        "type": "object"
+      },
+      "discordimport.ChannelMessages": {
+        "properties": {
+          "messages": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "messages",
+          "name"
+        ],
+        "type": "object"
+      },
+      "discordimport.Counts": {
+        "properties": {
+          "categories": {
+            "type": "integer"
+          },
+          "channels": {
+            "type": "integer"
+          },
+          "roles": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "categories",
+          "channels",
+          "roles"
+        ],
+        "type": "object"
+      },
+      "discordimport.Detail": {
+        "properties": {
+          "channels_with_messages": {
+            "description": "ChannelsWithMessages must be confirmed separately: undoing deletes their messages.",
+            "items": {
+              "$ref": "#/components/schemas/discordimport.ChannelMessages"
+            },
+            "type": "array"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/discordimport.Counts"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "created_by_name": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kept_categories": {
+            "description": "KeptCategories are created categories an undo leaves in place because\nthey now hold channels that are not part of the import.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "remaining": {
+            "$ref": "#/components/schemas/discordimport.Counts",
+            "description": "Remaining are the created objects that still exist."
+          },
+          "template_code": {
+            "type": "string"
+          },
+          "template_name": {
+            "type": "string"
+          },
+          "undone_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "channels_with_messages",
+          "counts",
+          "created_at",
+          "created_by_name",
+          "id",
+          "kept_categories",
+          "remaining",
+          "template_code",
+          "template_name",
+          "undone_at"
+        ],
+        "type": "object"
+      },
+      "discordimport.EveryoneInfo": {
+        "properties": {
+          "applied": {
+            "type": "boolean"
+          },
+          "dropped": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "permission_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "applied",
+          "dropped",
+          "permission_keys"
+        ],
+        "type": "object"
+      },
+      "discordimport.Plan": {
+        "properties": {
+          "administrator_dropped": {
+            "type": "boolean"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/discordimport.PlanCategory"
+            },
+            "type": "array"
+          },
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/discordimport.PlanChannel"
+            },
+            "type": "array"
+          },
+          "code": {
+            "type": "string"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/discordimport.Counts"
+          },
+          "dropped_bits": {
+            "description": "DroppedBits names every Discord permission dropped from the roles and overwrites.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "everyone": {
+            "$ref": "#/components/schemas/discordimport.EveryoneInfo"
+          },
+          "hash": {
+            "description": "Hash identifies this exact plan; the apply request must repeat it.",
+            "type": "string"
+          },
+          "roles": {
+            "description": "Roles are listed highest first; they are created below every existing role.",
+            "items": {
+              "$ref": "#/components/schemas/discordimport.PlanRole"
+            },
+            "type": "array"
+          },
+          "server_name": {
+            "description": "ServerName is what the third confirmation accepts besides \"IMPORT\".",
+            "type": "string"
+          },
+          "skipped": {
+            "description": "Skipped lists template channels that have no counterpart (threads and the like).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "source_name": {
+            "type": "string"
+          },
+          "template_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "administrator_dropped",
+          "categories",
+          "channels",
+          "code",
+          "counts",
+          "dropped_bits",
+          "everyone",
+          "hash",
+          "roles",
+          "server_name",
+          "skipped",
+          "source_name",
+          "template_name"
+        ],
+        "type": "object"
+      },
+      "discordimport.PlanCategory": {
+        "properties": {
+          "name": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "overwrites": {
+            "items": {
+              "$ref": "#/components/schemas/discordimport.PlanOverwrite"
+            },
+            "type": "array"
+          },
+          "source_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "overwrites",
+          "source_id"
+        ],
+        "type": "object"
+      },
+      "discordimport.PlanChannel": {
+        "properties": {
+          "category": {
+            "description": "Category is the name of the category it goes into (\"\" for none).",
+            "type": "string"
+          },
+          "category_source_id": {
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "overwrites": {
+            "items": {
+              "$ref": "#/components/schemas/discordimport.PlanOverwrite"
+            },
+            "type": "array"
+          },
+          "private": {
+            "type": "boolean"
+          },
+          "slow_mode_seconds": {
+            "type": "integer"
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "source_type": {
+            "description": "SourceType names the Discord kind it came from.",
+            "type": "string"
+          },
+          "topic": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "type": {
+            "description": "Type is the Mnema type: text or voice (a Talk).",
+            "type": "string"
+          },
+          "user_limit": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "category",
+          "category_source_id",
+          "name",
+          "notes",
+          "overwrites",
+          "private",
+          "slow_mode_seconds",
+          "source_id",
+          "source_type",
+          "topic",
+          "type",
+          "user_limit"
+        ],
+        "type": "object"
+      },
+      "discordimport.PlanOverwrite": {
+        "properties": {
+          "allow": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "allow_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "deny": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "deny_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "everyone": {
+            "type": "boolean"
+          },
+          "role_name": {
+            "type": "string"
+          },
+          "role_source_id": {
+            "description": "RoleSourceID is the template id of the role; Everyone marks @everyone.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "allow",
+          "allow_keys",
+          "deny",
+          "deny_keys",
+          "everyone",
+          "role_name",
+          "role_source_id"
+        ],
+        "type": "object"
+      },
+      "discordimport.PlanRole": {
+        "properties": {
+          "administrator_dropped": {
+            "type": "boolean"
+          },
+          "color": {
+            "maximum": 16777215,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "dropped": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "hoist": {
+            "type": "boolean"
+          },
+          "mentionable": {
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 32,
+            "type": "string"
+          },
+          "permission_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "permissions": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "source_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "administrator_dropped",
+          "color",
+          "dropped",
+          "hoist",
+          "mentionable",
+          "name",
+          "permission_keys",
+          "permissions",
+          "source_id",
+          "source_name"
+        ],
+        "type": "object"
+      },
+      "discordimport.PreviewRequest": {
+        "properties": {
+          "template": {
+            "description": "Template is a Discord server template link (discord.new/<code>,\ndiscord.com/template/<code>) or the bare code.",
+            "maxLength": 300,
+            "type": "string"
+          }
+        },
+        "required": [
+          "template"
+        ],
+        "type": "object"
+      },
+      "discordimport.Record": {
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/discordimport.Counts"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "created_by_name": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "template_code": {
+            "type": "string"
+          },
+          "template_name": {
+            "type": "string"
+          },
+          "undone_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "counts",
+          "created_at",
+          "created_by_name",
+          "id",
+          "template_code",
+          "template_name",
+          "undone_at"
+        ],
+        "type": "object"
+      },
+      "discordimport.UndoRequest": {
+        "properties": {
+          "accept_message_loss": {
+            "description": "AcceptMessageLoss is required when a created channel has messages now.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "accept_message_loss"
+        ],
+        "type": "object"
+      },
+      "discordimport.UndoResult": {
+        "properties": {
+          "already_gone": {
+            "$ref": "#/components/schemas/discordimport.Counts",
+            "description": "AlreadyGone are created objects that had been deleted by hand before."
+          },
+          "kept_categories": {
+            "description": "KeptCategories were left in place because they hold other channels now.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "removed": {
+            "$ref": "#/components/schemas/discordimport.Counts"
+          }
+        },
+        "required": [
+          "already_gone",
+          "kept_categories",
+          "removed"
+        ],
+        "type": "object"
+      },
       "emoji.Emoji": {
         "properties": {
           "animated": {
@@ -10174,6 +10687,581 @@
         "summary": "Rename a custom emoji",
         "tags": [
           "Emoji"
+        ]
+      }
+    },
+    "/api/admin/import/discord/apply": {
+      "post": {
+        "description": "Downloads the template again and creates the categories, channels and roles of the plan in one transaction, strictly additively: categories and channels are appended at the end of the layout, roles are created below every existing role without Administrator, and @everyone is not touched. The request must repeat the plan_hash of the preview and carry all three confirmations (confirm_additive, confirm_roles, and confirm_text: the server name or IMPORT); a changed template or server state answers 409 and needs a new preview. Writes one audit entry (import.discord). Owner and Administrators only.",
+        "operationId": "applyDiscordImport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/discordimport.ApplyRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/discordimport.Record"
+                }
+              }
+            },
+            "description": "The recorded import."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): a confirmation is missing or wrong, or the template contains nothing to import."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and Administrators may import, or cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the template does not exist or is no longer shared."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the preview is out of date, or the import would exceed the role limit."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "The template is too large."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Discord could not be reached."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Import a Discord server structure",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/import/discord/imports": {
+      "get": {
+        "description": "The recorded imports, newest first (at most 100). Owner and Administrators only.",
+        "operationId": "listDiscordImports",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/discordimport.Record"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Imports."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and Administrators may read it."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List Discord imports",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/import/discord/imports/{id}": {
+      "get": {
+        "description": "The import and what an undo would do now: how much of it still exists, which created channels have messages (those need a separate confirmation) and which created categories stay because they hold other channels. Owner and Administrators only.",
+        "operationId": "getDiscordImport",
+        "parameters": [
+          {
+            "description": "Resource ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/discordimport.Detail"
+                }
+              }
+            },
+            "description": "The import."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and Administrators may read it."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Read a Discord import",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/import/discord/imports/{id}/undo": {
+      "post": {
+        "description": "Removes exactly the categories, channels and roles this import created and nothing else. Objects deleted by hand since are skipped; a created category that now holds other channels stays. A created channel that has messages now needs accept_message_loss (409 otherwise): its messages are deleted with it. Members who were given a created role lose it. Writes one audit entry (import.discord_undo). Owner and Administrators only.",
+        "operationId": "undoDiscordImport",
+        "parameters": [
+          {
+            "description": "Resource ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/discordimport.UndoRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/discordimport.UndoResult"
+                }
+              }
+            },
+            "description": "What was removed."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and Administrators may undo an import, or cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: already undone, or created channels have messages and accept_message_loss is not set."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Undo a Discord import",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/import/discord/preview": {
+      "post": {
+        "description": "Downloads the Discord server template (discord.com only, 2 MB at most, no redirects) and returns exactly what importing it would create: categories, channels, roles with their mapped permissions, and the Discord permissions that are dropped. Writes nothing and is not audited. Owner and Administrators only. 404 when the template does not exist or is not shared, 502/503 when Discord cannot be reached.",
+        "operationId": "previewDiscordImport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/discordimport.PreviewRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/discordimport.Plan"
+                }
+              }
+            },
+            "description": "The plan."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): not a template link or code, malformed JSON or unknown JSON fields."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and Administrators may import, or cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the template does not exist or is no longer shared."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "The template is larger than 2 MB or has more channels or roles than Discord allows."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Discord could not be reached."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Preview a Discord server import",
+        "tags": [
+          "Admin"
         ]
       }
     },

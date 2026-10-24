@@ -30,6 +30,7 @@ var Classes = []Class{
 	{"outgoing_webhook.%", VisPrivileged, "webhook addresses and secrets are credentials"},
 	{"bot.%", VisPrivileged, "bots hold tokens"},
 	{"system.%", VisPrivileged, "updates and server operation"},
+	{"import.%", VisPrivileged, "names and permissions of possibly private channels and roles"},
 	{"settings.%", VisPrivileged, "instance settings"},
 	{"media.%", VisPrivileged, "storage administration"},
 	{"admin.%", VisPrivileged, "unlisted admin routes are not known to be harmless"},

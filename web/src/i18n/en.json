@@ -951,7 +951,8 @@
       "bots": "Bots",
       "onboarding": "Welcome & rules",
       "emoji": "Emoji",
-      "reports": "Reports"
+      "reports": "Reports",
+      "import": "Import"
     },
     "system": {
       "heading": "System & version",
@@ -2522,6 +2523,84 @@
       "deleteFailed": "Couldn’t delete the report. Try again.",
       "closeFailed": "Couldn’t close the report. Try again.",
       "loadFailed": "Couldn’t load the reports. Try again."
+    }
+  },
+  "discordImport": {
+    "title": "Import a Discord server structure",
+    "intro": "Copies the structure of a Discord server into this one: categories, channels, Talks and roles. Only what a Discord server template contains is imported, so no messages, members or emoji. Nothing existing is changed, and everything that is added can be undone.",
+    "howTo": "In Discord, open Server Settings, then Server Template, and copy the template link.",
+    "linkLabel": "Template link or code",
+    "linkPlaceholder": "discord.new/abcdef12345",
+    "preview": "Preview",
+    "previewing": "Loading…",
+    "previewFailed": "The template could not be previewed.",
+    "previewTitle": "This is what would be created",
+    "previewNote": "Nothing has been written yet.",
+    "counts": {
+      "categories": {
+        "one": "{count} category",
+        "other": "{count} categories"
+      },
+      "channels": {
+        "one": "{count} channel",
+        "other": "{count} channels"
+      },
+      "roles": {
+        "one": "{count} role",
+        "other": "{count} roles"
+      }
+    },
+    "structure": "Categories and channels",
+    "noCategory": "Without a category",
+    "typeText": "Text",
+    "typeVoice": "Talk",
+    "private": "private",
+    "limit": "up to {n} members",
+    "rolesTitle": "Roles",
+    "rolesHint": "Created below all your existing roles. None of them is an Administrator.",
+    "noPermissions": "No permissions",
+    "notImported": "Not imported: {list}",
+    "adminDropped": "Administrator is never imported.",
+    "everyoneTitle": "Discord’s @everyone",
+    "everyoneBody": "For information only: your own @everyone role is not changed. Discord’s had: {list}",
+    "skippedTitle": "Skipped, no counterpart here",
+    "review": "Review and import…",
+    "history": {
+      "title": "Earlier imports",
+      "empty": "No imports yet.",
+      "row": "{name} · {when}",
+      "undone": "Undone {when}",
+      "undo": "Undo import"
+    },
+    "confirm": {
+      "title": "Import Discord structure",
+      "step": "Step {n} of 3",
+      "back": "Back",
+      "step1": "This adds {categories}, {channels} and {roles} at the end of your server. Nothing existing is changed, renamed or removed.",
+      "step1Yes": "Yes, add them",
+      "step2": "The new roles get exactly these permissions and no others. They are created below all your existing roles, and none of them is an Administrator.",
+      "step2Dropped": "Dropped, because Mnema Talk has no safe equivalent: {list}",
+      "step2AdminDropped": "Discord’s Administrator permission is dropped from every role.",
+      "step2Yes": "Yes, use these permissions",
+      "step3Named": "Last step. Type the server name “{name}” or IMPORT to confirm.",
+      "step3": "Last step. Type IMPORT to confirm.",
+      "typeLabel": "Confirmation",
+      "go": "Import now",
+      "working": "Importing…",
+      "failed": "The import failed.",
+      "stale": "The template or this server changed since the preview. Preview it again.",
+      "done": "Imported {summary}. You can undo it below."
+    },
+    "undo": {
+      "title": "Undo this import?",
+      "body": "This removes exactly the categories, channels and roles this import created and nothing else. Things you deleted by hand since are skipped. Members who were given an imported role lose it.",
+      "kept": " Kept because they now hold other channels: {list}.",
+      "confirm": "Undo import",
+      "messagesTitle": "Delete channels with messages?",
+      "messagesBody": "These imported channels have messages now. Undoing deletes the channels and their messages for good: {list}",
+      "messagesConfirm": "Delete channels and messages",
+      "failed": "The import could not be undone.",
+      "done": "Import undone. Removed {summary}."
     }
   }
 }

@@ -131,6 +131,7 @@ func (c *components) mountAdmin(adm chi.Router) {
 	c.authH.MountAdmin(adm)
 	c.chatH.MountAdmin(adm)
 	c.rolesH.MountAdmin(adm)
+	c.importH.MountAdmin(adm)
 	c.onboardH.MountAdmin(adm)
 	c.webhookH.MountAdmin(adm)
 	c.botH.MountAdmin(adm)
