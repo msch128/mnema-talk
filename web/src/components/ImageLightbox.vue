@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { X } from '@lucide/vue'
+import { ExternalLink, X } from '@lucide/vue'
 import { useDialog } from '../composables/useDialog'
 
 defineProps({ src: { type: String, required: true } })
@@ -30,6 +30,16 @@ useDialog(root, { onClose: () => emit('close'), initialFocus: '[data-autofocus]'
     >
       <X class="h-5 w-5" />
     </button>
+    <a
+      :href="src"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="absolute right-16 top-4 flex h-10 items-center gap-2 rounded-md px-3 text-sm text-mnema-text hover:bg-mnema-hover"
+      @click.stop
+    >
+      <ExternalLink class="h-4 w-4" />
+      {{ $t('chat.openOriginal') }}
+    </a>
     <img
       :src="src"
       :alt="$t('chat.enlargedImage')"
