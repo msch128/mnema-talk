@@ -112,7 +112,7 @@ export const useEventsStore = defineStore('communityEvents', () => {
     // A pushed event carries no one's own answer: keep the one this client knows.
     handleEventUpdate: (payload: CommunityEvent) => {
       const known = events.value.find(e => e.id === payload.id)
-      replaceOrAppend(known ? { ...payload, my_rsvp: known.my_rsvp } : payload)
+      replaceOrAppend(known?.my_rsvp != null ? { ...payload, my_rsvp: known.my_rsvp } : payload)
     },
     handleEventDelete: (id: string) => { events.value = events.value.filter(e => e.id !== id) },
     handleEventReminder: (p: ServerEventPayloads['event_reminder']) => {

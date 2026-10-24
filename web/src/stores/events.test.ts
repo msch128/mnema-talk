@@ -153,10 +153,10 @@ describe('events store', () => {
     const store = useEventsStore()
     const id = fixtureId(21)
     store.handleEventUpdate(makeEvent({ id, title: 'Quiz' }))
-    store.events[0] = { ...store.events[0], my_rsvp: 'not_going' }
+    store.events[0] = makeEvent({ id, title: 'Quiz', my_rsvp: 'not_going' })
     store.handleEventUpdate(makeEvent({ id, title: 'Quiz', rsvp_counts: { going: 3, interested: 0, not_going: 1 } }))
-    expect(store.events[0].my_rsvp).toBe('not_going')
-    expect(store.events[0].rsvp_counts.going).toBe(3)
+    expect(store.events[0]?.my_rsvp).toBe('not_going')
+    expect(store.events[0]?.rsvp_counts.going).toBe(3)
   })
 
   it('handles event_update and event_reminder events', () => {
