@@ -251,7 +251,7 @@ const { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, on
     @focusin="onActivity"
   >
     <TalkHeader
-      :channel-name="activeVoiceChannel?.name || ''"
+      :channel-name="activeVoiceChannel?.name || ''" :channel="activeVoiceChannel ?? null"
       :users="usersInVoice"
       :started-at="roomStartedAt"
       :narrow="headerNarrow"

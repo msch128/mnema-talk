@@ -5,7 +5,7 @@ import type { Channel, VoiceUser } from '../types/domain'
 // it for a voice channel. Admins can drag the row (and its users with it) or
 // move it with Alt+ArrowUp / Alt+ArrowDown.
 import { computed } from 'vue'
-import { Hash, Volume2, Trash2, Monitor, BellOff, MessageSquare } from '@lucide/vue'
+import { Hash, Volume2, Trash2, Monitor, BellOff, MessageSquare, CirclePlus } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
@@ -13,6 +13,7 @@ import { channelDraftKey, hasDraft } from '../lib/drafts'
 import UserAvatar from './UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import MuteMarks from './MuteMarks.vue'
+import TalkLeaderMark from './TalkLeaderMark.vue'
 
 const props = defineProps({
   channel: { type: Object as PropType<Channel>, required: true },
@@ -126,8 +127,14 @@ const rowClass = computed(() => [
       ></span>
 
       <div class="flex items-center gap-1.5 min-w-0">
+        <CirclePlus
+          v-if="channel.is_lobby"
+          data-testid="lobby-icon"
+          class="w-5 h-5 shrink-0 text-mnema-accent"
+          v-tooltip="$t('talk.lobbyOpens')"
+        />
         <Volume2
-          v-if="isVoice"
+          v-else-if="isVoice"
           :class="['w-5 h-5 shrink-0 transition-colors', voiceStore.currentChannelId === channel.id ? 'text-mnema-accent' : 'text-mnema-tertiary group-hover:text-mnema-text']"
         />
         <Hash
@@ -175,7 +182,7 @@ const rowClass = computed(() => [
       <div v-if="isVoice || admin" class="pointer-events-none absolute inset-y-0 right-2 mb-px flex items-center gap-1.5">
       <!-- A Talk's chat can be read without joining the Talk -->
       <button
-        v-if="isVoice"
+        v-if="isVoice && !channel.is_lobby"
         type="button"
         data-no-drag
         data-testid="talk-open-chat"
@@ -219,7 +226,7 @@ const rowClass = computed(() => [
       >
         <UserAvatar :user="user" size="xs" :is-speaking="voiceStore.isSpeaking(user.id)" />
         <span class="flex min-w-0 flex-col leading-4">
-          <span class="truncate text-sm">{{ user.display_name || user.username }}</span>
+          <span class="flex min-w-0 items-center gap-1"><span class="truncate text-sm">{{ user.display_name || user.username }}</span><TalkLeaderMark v-if="channel.leader_id === user.id" /></span>
           <VoiceTimer :since="user.joined_at" class="text-[11px] text-mnema-tertiary" />
         </span>
         <span class="ml-auto flex shrink-0 items-center gap-1.5">

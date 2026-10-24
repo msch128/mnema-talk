@@ -1105,6 +1105,9 @@ export type ChatChannel = {
   category_id: string | null
   created_at: string
   id: string
+  is_lobby?: boolean
+  is_temp?: boolean
+  leader_id?: string
   name: string
   number: number
   slow_mode_seconds: number
@@ -1119,6 +1122,9 @@ export function isChatChannel(value: unknown): value is ChatChannel {
     && (hasOwn(value, "category_id") && (isIdentifier(value["category_id"]) || value["category_id"] === null))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "is_lobby") || typeof value["is_lobby"] === 'boolean')
+    && (!hasOwn(value, "is_temp") || typeof value["is_temp"] === 'boolean')
+    && (!hasOwn(value, "leader_id") || isIdentifier(value["leader_id"]))
     && (hasOwn(value, "name") && isString(value["name"], 64))
     && (hasOwn(value, "number") && isInteger(value["number"]))
     && (hasOwn(value, "slow_mode_seconds") && (isInteger(value["slow_mode_seconds"]) && value["slow_mode_seconds"] >= 0 && value["slow_mode_seconds"] <= 21600))
@@ -1327,6 +1333,7 @@ export type ChatEmbed = {
   fields?: Array<ChatEmbedField>
   footer?: ChatEmbedFooter
   image?: ChatEmbedMedia
+  talk_id?: string
   thumbnail?: ChatEmbedMedia
   timestamp?: string
   title?: string
@@ -1341,6 +1348,7 @@ export function isChatEmbed(value: unknown): value is ChatEmbed {
     && (!hasOwn(value, "fields") || isArrayOf(value["fields"], item => isChatEmbedField(item)))
     && (!hasOwn(value, "footer") || isChatEmbedFooter(value["footer"]))
     && (!hasOwn(value, "image") || isChatEmbedMedia(value["image"]))
+    && (!hasOwn(value, "talk_id") || isIdentifier(value["talk_id"]))
     && (!hasOwn(value, "thumbnail") || isChatEmbedMedia(value["thumbnail"]))
     && (!hasOwn(value, "timestamp") || isString(value["timestamp"]))
     && (!hasOwn(value, "title") || isString(value["title"], 256))
@@ -1523,6 +1531,17 @@ export function isChatInEmbed(value: unknown): value is ChatInEmbed {
 }
 
 export const decodeChatInEmbed = decoder("chat.InEmbed", isChatInEmbed)
+
+export type ChatInviteToTalkRequest = {
+  conversation_id: string
+}
+
+export function isChatInviteToTalkRequest(value: unknown): value is ChatInviteToTalkRequest {
+  return isRecord(value)
+    && (hasOwn(value, "conversation_id") && isIdentifier(value["conversation_id"]))
+}
+
+export const decodeChatInviteToTalkRequest = decoder("chat.InviteToTalkRequest", isChatInviteToTalkRequest)
 
 export type ChatLayoutRequest = {
   categories?: Array<ChatCategoryOrder>
@@ -2194,6 +2213,19 @@ export function isChatSetNotifyLevelRequest(value: unknown): value is ChatSetNot
 
 export const decodeChatSetNotifyLevelRequest = decoder("chat.SetNotifyLevelRequest", isChatSetNotifyLevelRequest)
 
+export type ChatStartTalkResponse = {
+  channel_id: string
+  message: ChatMessage
+}
+
+export function isChatStartTalkResponse(value: unknown): value is ChatStartTalkResponse {
+  return isRecord(value)
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (hasOwn(value, "message") && isChatMessage(value["message"]))
+}
+
+export const decodeChatStartTalkResponse = decoder("chat.StartTalkResponse", isChatStartTalkResponse)
+
 export type ChatThread = {
   following?: boolean
   replies: Array<ChatMessage>
@@ -2223,6 +2255,7 @@ export function isChatThreadFollow(value: unknown): value is ChatThreadFollow {
 export const decodeChatThreadFollow = decoder("chat.ThreadFollow", isChatThreadFollow)
 
 export type ChatUpdateChannelRequest = {
+  is_lobby?: boolean
   name?: string
   slow_mode_seconds?: number
   topic?: string
@@ -2231,6 +2264,7 @@ export type ChatUpdateChannelRequest = {
 
 export function isChatUpdateChannelRequest(value: unknown): value is ChatUpdateChannelRequest {
   return isRecord(value)
+    && (!hasOwn(value, "is_lobby") || typeof value["is_lobby"] === 'boolean')
     && (!hasOwn(value, "name") || isString(value["name"], 64))
     && (!hasOwn(value, "slow_mode_seconds") || (isInteger(value["slow_mode_seconds"]) && value["slow_mode_seconds"] >= 0 && value["slow_mode_seconds"] <= 21600))
     && (!hasOwn(value, "topic") || isString(value["topic"], 255))
@@ -2238,6 +2272,19 @@ export function isChatUpdateChannelRequest(value: unknown): value is ChatUpdateC
 }
 
 export const decodeChatUpdateChannelRequest = decoder("chat.UpdateChannelRequest", isChatUpdateChannelRequest)
+
+export type ChatUpdateTalkRequest = {
+  name?: string
+  user_limit?: number
+}
+
+export function isChatUpdateTalkRequest(value: unknown): value is ChatUpdateTalkRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "name") || isString(value["name"], 64))
+    && (!hasOwn(value, "user_limit") || (isInteger(value["user_limit"]) && value["user_limit"] >= 0 && value["user_limit"] <= 999))
+}
+
+export const decodeChatUpdateTalkRequest = decoder("chat.UpdateTalkRequest", isChatUpdateTalkRequest)
 
 export type ChatUserRef = {
   avatar_url?: string

@@ -46,6 +46,8 @@
     "DMCreated": "dm_created",
     "DMMemberAdded": "dm_member_added",
     "DMMemberRemoved": "dm_member_removed",
+    "TalkLeader": "talk_leader",
+    "TalkMoved": "talk_moved",
     "Kicked": "kicked"
   },
   "client": {

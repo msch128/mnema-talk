@@ -6,9 +6,12 @@ import type { ChatEmbed } from '../types/rest'
 // as links the reader chooses to open.
 import { ExternalLink } from '@lucide/vue'
 import MarkdownContent from './MarkdownContent.vue'
+import TalkInviteCard from './TalkInviteCard.vue'
 
 defineProps({
-  embeds: { type: Array as PropType<ChatEmbed[]>, default: () => [] }
+  embeds: { type: Array as PropType<ChatEmbed[]>, default: () => [] },
+  /** Who wrote the message, for Talk invitations. */
+  author: { type: String, default: '' }
 })
 
 function accent(color: number): string {
@@ -30,9 +33,10 @@ function when(timestamp: string): string {
 
 <template>
   <div v-if="embeds.length" class="mt-2 space-y-2" data-testid="embeds">
+    <template v-for="(embed, i) in embeds" :key="i">
+    <TalkInviteCard v-if="embed.talk_id" :talk-id="embed.talk_id" :title="embed.title ?? ''" :from="author" />
     <article
-      v-for="(embed, i) in embeds"
-      :key="i"
+      v-else
       data-testid="embed"
       class="max-w-lg rounded-lg border border-mnema-border border-l-4 bg-mnema-elevated/70 p-3 text-left select-text"
       :style="embed.color === undefined ? undefined : { borderLeftColor: accent(embed.color) }"
@@ -70,5 +74,6 @@ function when(timestamp: string): string {
         <time v-if="embed.timestamp" :datetime="embed.timestamp">{{ when(embed.timestamp) }}</time>
       </p>
     </article>
+    </template>
   </div>
 </template>

@@ -21,6 +21,7 @@ import { fetchReadState, isReadingActiveChannel } from './readState'
 import { notificationLevel, refreshNotifications } from './notifySettings'
 import { applyPoll } from './polls'
 import { onPinnedMaybeDeleted, onPinsChanged } from './pins'
+import { onTalkLeader } from './talks'
 import { closeThread } from './threads'
 import { clearTypingForUser, handleTypingEvent } from './typing'
 
@@ -246,6 +247,9 @@ const HANDLERS: Handlers = {
   voice_speaking: ({ voiceStore }, p) => voiceStore.handleSpeakingEvent(p),
   voice_mute_state: ({ voiceStore }, p) => voiceStore.handleMuteState(p),
   // An admin removed me from voice; the call ends locally.
+  talk_leader: onTalkLeader,
+  // Joining a Create-a-Talk lobby opened a Talk: the voice layer joins it.
+  talk_moved: ({ cs }, p) => { cs.talkMovedHandler?.(p) },
   voice_kicked: ({ cs, voiceStore }, p) => {
     if (cs.voiceKickedHandler) cs.voiceKickedHandler(p)
     else if (voiceStore.currentChannelId) voiceStore.disconnect()

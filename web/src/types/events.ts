@@ -132,7 +132,11 @@ export interface ServerEventPayloads {
   screen_layers_wanted: ScreenLayersWanted
   voice_speaking: SpeakingState
   voice_mute_state: MuteState
-  voice_kicked: { channel_id: string; reason?: 'room_full' | 'missing_permission' }
+  voice_kicked: { channel_id: string; reason?: 'room_full' | 'missing_permission' | 'rules_not_accepted' | 'talk_rate_limited' | 'talk_unavailable' }
+  /** Who leads a temporary Talk now (null: nobody). */
+  talk_leader: { channel_id: string; leader_id: string | null }
+  /** Joining a Create-a-Talk lobby opened this Talk: join it like any other. */
+  talk_moved: { from_channel_id: string; channel_id: string }
   media_handshake: { channel_id: string; user_id: string; wire: string }
 }
 
@@ -347,7 +351,9 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['voice_speaking', payload => roomUser(payload) && typeof payload['active'] === 'boolean'],
   ['voice_mute_state', payload => roomUser(payload) && typeof payload['muted'] === 'boolean' && typeof payload['deafened'] === 'boolean'],
   ['voice_kicked', payload => isIdentifier(payload['channel_id'])
-    && (!hasOwn(payload, 'reason') || payload['reason'] === 'room_full' || payload['reason'] === 'missing_permission')],
+    && (!hasOwn(payload, 'reason') || VOICE_KICK_REASONS.has(payload['reason'] as string))],
+  ['talk_leader', payload => isIdentifier(payload['channel_id']) && (payload['leader_id'] === null || isIdentifier(payload['leader_id']))],
+  ['talk_moved', payload => isIdentifier(payload['from_channel_id']) && isIdentifier(payload['channel_id'])],
   ['media_handshake', payload => isIdentifier(payload['channel_id']) && isIdentifier(payload['user_id'])
     && isString(payload['wire'], 48_000) && payload['wire'] !== '']
 ])
@@ -372,12 +378,14 @@ function isNoteEmbed(value: unknown): boolean {
   return isRecord(value) && (!hasOwn(value, 'title') || isString(value['title'], 1_000)) && (!hasOwn(value, 'description') || isString(value['description'], 8_000))
 }
 
+const VOICE_KICK_REASONS = new Set(['room_full', 'missing_permission', 'rules_not_accepted', 'talk_rate_limited', 'talk_unavailable'])
+
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
   'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'reminder_update', 'scheduled_message_update', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
-  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'media_handshake'
+  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'media_handshake'
 ])
 
 /** Unknown event names stay ignorable for forward compatibility; malformed

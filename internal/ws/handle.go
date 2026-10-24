@@ -108,9 +108,15 @@ func (c *Client) handleVoiceJoin(ctx context.Context, channelID uuid.UUID) {
 		c.SendEvent(events.VoiceKicked, map[string]any{"channel_id": channelID})
 		return
 	}
-	if ch, ok := h.voiceChannel(ctx, channelID); ok {
-		h.joinVoice(c, ch)
+	ch, ok := h.voiceChannel(ctx, channelID)
+	if !ok {
+		return
 	}
+	if ch.IsLobby && h.Lobby != nil {
+		h.enterLobby(c, ch)
+		return
+	}
+	h.joinVoice(c, ch)
 }
 
 func (c *Client) handleTyping(ctx context.Context, channelID uuid.UUID) {
