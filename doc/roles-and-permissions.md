@@ -227,7 +227,24 @@ cannot do.
 | `/api/admin/*` | Per route: *Manage channels*, *Manage roles*, *Manage invites*, *Manage members*, *Disconnect members*; system, storage and passwords are Owner-only |
 | WebSocket | Channel events (messages, reactions, typing, who is in a Talk, media state) only reach viewers; the connect snapshot lists only viewable Talks |
 | Talks | *View channels* + *Connect* to join (reading and writing a Talk's chat without joining needs only *View channels* and *Send messages*); the SFU drops audio without *Speak* and camera/screen without *Video*, also while a call is running |
+| `GET /api/admin/roles/{id}/view-as` | *Manage roles*. A preview for a made-up member holding only @everyone and that role, computed by the same resolver (overwrites included) and intersected with what the caller can view: a channel or category the caller cannot see is never in it |
 | Native session API | Uses the same handlers and hub; the opaque ciphertext store checks view/send when given the permission service |
+
+## View the server as a role
+
+In *Admin* > *Roles*, **View server as <role>** opens a read-only preview of the
+sidebar for a made-up member who holds only @everyone and that role. It shows
+the categories and channels that member can see, marks every Talk *can join* or
+*can't join*, and lists, for the channel you select, which channel permissions
+they hold there. The server computes it with the real permission resolver, so
+category and channel overwrites count. A role with *Administrator* sees (and
+may do) everything the caller sees, ignoring overwrites.
+
+It is a preview of a role, never of a person: nobody is impersonated, no
+session or setting changes, and it cannot show more than you can see yourself
+(the result is intersected with your own view, so a hidden channel does not
+appear even when the role could see it). It needs *Manage roles*. *Exit
+preview* returns to the role editor.
 
 ## Community rules
 

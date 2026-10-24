@@ -134,6 +134,7 @@ func (h *Handler) Mount(r chi.Router) {
 // permission applies).
 func (h *Handler) MountAdmin(r chi.Router) {
 	h.mountReportsAdmin(r)
+	r.With(auth.RequirePerm(h.Perms, perm.ManageRoles)).Get("/roles/{id}/view-as", httpx.Handle(h.viewAsRole))
 	r = r.With(auth.RequirePerm(h.Perms, perm.ManageChannels))
 	r.Post("/categories", httpx.Handle(h.createCategory))
 	r.Delete("/categories/{id}", httpx.Handle(h.deleteCategory))
