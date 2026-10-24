@@ -130,7 +130,7 @@ func TestNilLogAndSnapshotEdges(t *testing.T) {
 	if m, name := Snapshot(ctx, nil, ResNone, "00000000-0000-0000-0000-000000000000"); m != nil || name != "" {
 		t.Fatal("no resource")
 	}
-	if clip("äöü", 2) != "äö" || clip("a", 2) != "a" {
+	if clip("\u00e4\u00f6\u00fc", 2) != "\u00e4\u00f6" || clip("a", 2) != "a" {
 		t.Fatal("clip")
 	}
 	c := &capped{max: 4}

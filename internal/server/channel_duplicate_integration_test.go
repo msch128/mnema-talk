@@ -90,7 +90,7 @@ func TestDuplicateChannelInCategory(t *testing.T) {
 	one, two, three := mk("eins", 0), mk("zwei", 1), mk("drei", 2)
 
 	// State that belongs to the source and its members must not be copied.
-	a.send(admin, two, "hallo")
+	a.send(admin, two, "hello")
 	if res := max.put("/api/channels/"+two.String()+"/notifications", map[string]any{"level": "mute"}); res.status != http.StatusNoContent && res.status != http.StatusOK {
 		t.Fatalf("mute: %d %s", res.status, res.body)
 	}
@@ -170,7 +170,7 @@ func TestDuplicateChannelErrors(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
 	max := a.register(admin, "max")
-	ch := a.createChannel(admin, "allgemein", "text")
+	ch := a.createChannel(admin, "lobby", "text")
 	before := len(a.events.Snapshot())
 
 	if res := max.post("/api/admin/channels/"+ch.String()+"/duplicate", nil); res.status != http.StatusForbidden {

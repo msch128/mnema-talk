@@ -103,5 +103,23 @@ class PullRetry(unittest.TestCase):
         self.assertIn('does not exist', r.stderr)
 
 
+class HealthFeatures(unittest.TestCase):
+    def test_reports_ok_when_all_features_present(self):
+        json_str = '{"features": ["blocks", "dm", "saved"]}'
+        r = run_shell(f'drill_health_features_ok \'{json_str}\' dm blocks')
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_fails_when_feature_missing(self):
+        json_str = '{"features": ["blocks"]}'
+        r = run_shell(f'drill_health_features_ok \'{json_str}\' dm blocks')
+        self.assertNotEqual(r.returncode, 0)
+
+    def test_fails_on_empty_or_missing_features(self):
+        for bad in ('{}', '{"features": []}', '', '{"features": null}'):
+            with self.subTest(bad=bad):
+                r = run_shell(f'drill_health_features_ok \'{bad}\' dm')
+                self.assertNotEqual(r.returncode, 0)
+
+
 if __name__ == '__main__':
     unittest.main()

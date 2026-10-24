@@ -1,7 +1,7 @@
 # Moderation and the audit log
 
-This page describes moderation (timeouts, bans, kicking) and the audit log that
-records it. Code: [`internal/auth/moderation.go`](../internal/auth/moderation.go),
+This page describes moderation (timeouts, bans, kicking, message moderation,
+reports) and the audit log that records it. Code: [`internal/auth/moderation.go`](../internal/auth/moderation.go),
 [`internal/perm`](../internal/perm/) and [`internal/audit`](../internal/audit/).
 Permissions and the hierarchy are in [roles-and-permissions.md](roles-and-permissions.md).
 
@@ -15,18 +15,19 @@ the target out of reach between the check and the write.
 
 | Action | Permission | Notes |
 |---|---|---|
-| Timeout, end a timeout | *Timeout members* | `POST` / `DELETE /api/admin/users/{id}/timeout` |
-| Ban, unban, list bans | *Ban members* | `POST` / `DELETE /api/admin/users/{id}/ban`, `GET /api/admin/bans` |
+| Timeout, end a timeout | *Timeout members* | `POST` / `DELETE /api/admin/users/{id}/timeout`; `/timeout` in the composer |
+| Ban, unban, list bans | *Ban members* | `POST` / `DELETE /api/admin/users/{id}/ban`, `GET /api/admin/bans`; `/ban` in the composer |
 | Disable an account | *Manage members* | **Disable**: ends sessions and blocks sign-in until **Enable**. No record beyond the audit log |
 | Kick | *Kick members* | `/kick` in the composer, see [Kicks](#kicks) |
-| Remove from a Talk | *Disconnect members* | The existing kick from a Talk |
+| Remove from a Talk | *Disconnect members* | Removes the member from that Talk only; they stay signed in |
+| Read and close reports | *Manage reports* | See [Blocking and reports](#blocking-and-reports) |
 
 ## Timeouts
 
 A timeout silences a member until a time passes: they can still read, and still
 delete or take back their own words, but they lose *Send messages*, *Attach
-files*, *Add reactions*, *Mention @all and @here*, *Connect*, *Speak* and *Video*
-(`perm.TimeoutMask`). Durations run from 5 seconds to 28 days; the interface
+files*, *Add reactions*, *Mention @all and @here*, *Connect*, *Speak*, *Video*
+and *Send direct messages* (`perm.TimeoutMask`). Durations run from 5 seconds to 28 days; the interface
 offers 1 min, 5 min, 1 h, 1 day, 1 week or a custom time, with an optional
 reason of up to 200 characters.
 
@@ -89,7 +90,9 @@ above the member's, never the Owner, never oneself. The only way to kick is
 the built-in `/kick @member [reason]` command (`POST
 /api/channels/{id}/interactions`, [bots](bots.md#built-in-commands-and-polls)):
 the server checks the permission again inside the command and writes the audit
-entry `moderation.kick` (details: `reason`, `via: slash`).
+entry `moderation.kick` (details: `reason`, `via: slash`). `/timeout` and
+`/ban` run the same actions as the admin console and write the same
+`moderation.timeout` and `moderation.ban` entries, also marked `via: slash`.
 
 ## Slow mode
 
@@ -142,7 +145,7 @@ Holders of *Manage messages* in a channel can:
 Every edit keeps the version it replaces: its text, when that version was
 written (the creation time for the original) and who wrote it. Only members who
 hold *Manage messages* in the channel and can view it (the Owner always) can
-read the versions, newest first. I decided against a dedicated permission:
+read the versions, newest first. There is no dedicated permission:
 reading what a message used to say is the same trust as deleting it, and a
 new bit would need a default, a migration of existing roles and one more switch
 in the roles screen for no gain. The author and other members get `403`;
@@ -181,6 +184,9 @@ blocker it means:
   level, and a plain message of theirs sends no push either. It is decided
   when the entry is listed or the push is sent, so it also covers messages
   that were written before the block;
+- in a direct message conversation of two, a block stops writing in both
+  directions (the other side only sees that the member cannot be written
+  to), see [Direct messages](#direct-messages);
 - unblocking brings the earlier inbox entries back, because nothing was
   deleted.
 
@@ -188,6 +194,17 @@ A block is not a sanction: it changes nothing for anybody else and is not
 audited. Blocking the Owner or a moderator only mutes them for the blocker.
 Deleting an account removes the blocks to and from it; the export lists the
 member's own blocks by id (`blocks.json`).
+
+### Direct messages
+
+Moderators have no way into a direct message conversation. The Owner and
+Administrators are treated like any other non-member: they get the same answer
+as for a conversation that does not exist. The only route to the text of a
+direct message is a report by one of its members (below). Moderation actions
+that target a member (timeout, ban, kick) work as usual, and a timeout also
+takes *Send direct messages*. The Owner can switch direct messages off for the
+community under **Admin > Welcome & rules**: existing conversations stay
+readable, and nothing new can be started or written.
 
 ### Reporting a message
 

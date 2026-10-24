@@ -64,3 +64,17 @@ drill_pull_image() {
     n=$((n + 1))
   done
 }
+
+# drill_health_features_ok JSON FEATURE [FEATURE...]
+# Reports whether a /api/health JSON payload lists all named features.
+drill_health_features_ok() {
+  local json="${1:-}" feat
+  shift || return 1
+  [ -n "$json" ] || return 1
+  for feat in "$@"; do
+    # shellcheck disable=SC2016
+    jq -e --arg f "$feat" '(.features // []) | index($f) != null' <<<"$json" >/dev/null 2>&1 || return 1
+  done
+  return 0
+}
+

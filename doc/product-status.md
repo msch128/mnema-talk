@@ -11,23 +11,26 @@ entire communication path.
 | Beta | Usable and maintained, but outstanding acceptance (for example platform signing) keeps it out of Supported. Expect rough edges. |
 | Planned | Requirements exist, but no qualified usable product path is available. |
 
-## Status at 1.0
+## Status at 1.1
 
-Mnema Talk 1.0 is the first release under the
+Mnema Talk 1.0 was the first release under the
 [API stability contract](api-stability.md): its public surfaces change
-incompatibly only in a major release. What the 1.0 label does and does not say:
+incompatibly only in a major release. 1.1 keeps that contract and only adds to
+it. What the 1.x label does and does not say:
 
 **Supported versions.** Security fixes go to the latest 1.x minor and, once a
 newer minor exists, to the previous minor for 90 days
-([SECURITY.md](../SECURITY.md#supported-versions)). Until 1.1 is out, 0.9.x and
-older get no fixes: update to 1.0.x. CI still upgrades from 0.8.16, 0.9.x and
-1.0.0 to prove the upgrade path; that is a test, not a support promise.
+([SECURITY.md](../SECURITY.md#supported-versions)). Once 1.1.0 is published,
+that means 1.1.x and, for 90 days, 1.0.x; 0.9.x and older get no fixes. CI
+upgrades from 0.8.16, 0.9.0 and 1.0.0 to prove the upgrade path; that is a
+test, not a support promise.
 
-| Area | Category at 1.0 |
+| Area | Category at 1.1 |
 | --- | --- |
 | Server (Docker, linux/amd64 and arm64), browser app, text chat, roles and permissions, webhooks and bots, notifications, search and onboarding, voice, cameras and screen share in Chromium-based browsers | Supported |
+| Direct messages (two to ten members), blocking and reports, saved messages, forwarding, thread follow, search filters, built-in slash commands, reading a Talk's chat without joining | Supported (new in 1.1; each has server tests and a browser spec) |
 | Browser app on WebKit (Safari, iOS, installed iOS web apps) and Firefox: text chat, search, voice, cameras and screen share with sealed media, as tested in [Browsers](#browsers) | Supported for text chat, search and administration. Sealed calls pass on macOS WebKit locally; the CI WebKit job cannot run them because Playwright's Linux WebKit build has no encoded-media API (`RTCRtpScriptTransform`); see the limits there (not yet tested on real iOS or Android hardware) |
-| Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), backup and restore, upgrade tested from 0.8.16, 0.9.x and 1.0.0, cosign-signed images | Supported |
+| Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), backup and restore, upgrade tested from 0.8.16, 0.9.0 and 1.0.0, cosign-signed images, self-update that verifies the image's signature and provenance before it restarts the app | Supported |
 | Native mobile apps, text end-to-end encryption | Not offered. Text stays readable by the server, by design. The browser app has a phone layout (channel list as a drawer, full-screen thread and member list, 44 px touch targets, safe areas) that is covered by the `mobile-*` e2e projects in Chromium and WebKit device emulation, not by tests on real phones. |
 | Desktop client on Windows | Beta (unsigned, no Authenticode; SmartScreen warns) |
 | Desktop client on macOS and Linux | Beta (DEV builds, not qualified on real hardware; not notarised; Gatekeeper warns) |
@@ -41,7 +44,7 @@ deliberately deferred (see the
 done by the project itself with automated help. It is **not an independent or
 external audit**, and none has been commissioned.
 
-What 1.0 does not claim: real 4K/60 capture, system audio from physical
+What 1.x does not claim: real 4K/60 capture, system audio from physical
 hardware, an external security audit, the 250-endpoint capacity target, load
 results on dedicated hardware, Authenticode or notarised desktop signing, and
 sealed media qualified in WebView2 on real hardware. These stay outstanding
@@ -80,7 +83,7 @@ Other capabilities on this path, each with automated tests:
 
 Not covered by these tests: real 4K/60 capture, system audio from physical
 hardware, an external security audit and capacity beyond the recorded runs.
-A six-lane internal security review preceded 1.0 (see "Status at 1.0"); it is
+A six-lane internal security review preceded 1.0 (see "Status at 1.1"); it is
 not an independent audit.
 
 ## Browsers
@@ -149,7 +152,7 @@ What it took:
   Safari does between tabs). That limits two members in one Safari window, not
   two devices; the suite therefore runs each WebKit member in its own process.
 
-Stability: Chromium passed 41 of 41 specs on every run. Firefox passed the
+Stability: Chromium passed every spec on every run. Firefox passed the
 whole suite apart from the specs that need Chrome's DevTools protocol, and its
 CI subset (7 files) 10 of 10. WebKit passed the suite apart from those too,
 but with one or two timing failures per full run on a loaded machine (a sealed

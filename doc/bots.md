@@ -7,8 +7,9 @@ follows Discord where it maps (bot users, roles and channel overwrites,
 smaller (one community, UUID ids); the
 [compatibility table](#differences-from-discord) lists the differences.
 
-This page describes accounts, access and tokens. The REST API, the gateway
-and commands are described in the sections that follow them as they ship.
+This page describes accounts, access and tokens, then the REST API, the
+gateway, slash commands (a bot's own and the server's built-in ones), what
+bots do not see (direct messages) and the management API.
 
 ## Who may create bots
 

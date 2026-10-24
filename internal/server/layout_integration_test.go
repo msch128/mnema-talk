@@ -34,12 +34,12 @@ func TestAdminRenamesAndReordersChannels(t *testing.T) {
 	admin.post("/api/admin/categories", map[string]any{"name": "Text", "sort_order": 0}).decode(t, &catA)
 	admin.post("/api/admin/categories", map[string]any{"name": "Spiele", "sort_order": 1}).decode(t, &catB)
 	one := a.createChannel(admin, "eins", "text")
-	two := a.createChannel(admin, "zwei", "text")
+	two := a.createChannel(admin, "two", "text")
 
 	if res := max.patch("/api/admin/channels/"+one.String(), map[string]any{"name": "x"}); res.status != http.StatusForbidden {
 		t.Fatalf("member renamed a channel: %d", res.status)
 	}
-	if res := admin.patch("/api/admin/channels/"+one.String(), map[string]any{"name": "allgemein", "topic": "Alles Mögliche"}); res.status != http.StatusOK {
+	if res := admin.patch("/api/admin/channels/"+one.String(), map[string]any{"name": "lobby", "topic": "Anything goes"}); res.status != http.StatusOK {
 		t.Fatalf("rename channel: %d %s", res.status, res.body)
 	}
 	if res := admin.patch("/api/admin/categories/"+catB.ID.String(), map[string]any{"name": "Games"}); res.status != http.StatusOK {
@@ -49,7 +49,7 @@ func TestAdminRenamesAndReordersChannels(t *testing.T) {
 		t.Fatalf("empty name accepted: %d", res.status)
 	}
 
-	// Games first; zwei moves into Games, allgemein into Text.
+	// Games first; two moves into Games, lobby into Text.
 	layout := map[string]any{
 		"categories": []map[string]any{{"id": catB.ID, "sort_order": 0}, {"id": catA.ID, "sort_order": 1}},
 		"channels": []map[string]any{
@@ -66,10 +66,10 @@ func TestAdminRenamesAndReordersChannels(t *testing.T) {
 		t.Fatalf("category order: %+v", got.Categories)
 	}
 	if len(got.Categories[0].Channels) != 1 || got.Categories[0].Channels[0].ID != two {
-		t.Fatalf("zwei not in Games: %+v", got.Categories[0].Channels)
+		t.Fatalf("two not in Games: %+v", got.Categories[0].Channels)
 	}
-	if c := got.Categories[1].Channels; len(c) != 1 || c[0].Name != "allgemein" || c[0].Topic != "Alles Mögliche" {
-		t.Fatalf("allgemein not renamed/moved: %+v", c)
+	if c := got.Categories[1].Channels; len(c) != 1 || c[0].Name != "lobby" || c[0].Topic != "Anything goes" {
+		t.Fatalf("lobby not renamed/moved: %+v", c)
 	}
 
 	bad := map[string]any{"channels": []map[string]any{{"id": uuid.New(), "sort_order": 0}}}

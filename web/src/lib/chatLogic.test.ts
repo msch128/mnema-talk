@@ -19,7 +19,7 @@ describe('escapeRegExp / mentionsUser', () => {
   })
 
   it('is case-insensitive and needs a word boundary', () => {
-    expect(mentionsUser('@Max hallo', 'max')).toBe(true)
+    expect(mentionsUser('@Max hello', 'max')).toBe(true)
     expect(mentionsUser('mail@max.de', 'max')).toBe(false)
     expect(mentionsUser('@maxine', 'max')).toBe(false)
     expect(mentionsUser('', 'max')).toBe(false)

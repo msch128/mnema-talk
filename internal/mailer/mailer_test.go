@@ -230,7 +230,7 @@ func TestSendDeliversOverEveryTransportMode(t *testing.T) {
 		t.Run(mode, func(t *testing.T) {
 			srv := newSMTPServer(t, mode)
 			m := srv.mailer(mode)
-			err := m.Send(context.Background(), Message{To: "member@example.org", Subject: "Hallo Zürich", Body: "Line one\nLine two with ä\n"})
+			err := m.Send(context.Background(), Message{To: "member@example.org", Subject: "Hello Zurich", Body: "Line one\nLine two with \u00e4\n"})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -250,14 +250,14 @@ func assertMessage(t *testing.T, data string) {
 		t.Fatal(err)
 	}
 	subject, err := new(mime.WordDecoder).DecodeHeader(msg.Header.Get("Subject"))
-	if err != nil || subject != "Hallo Zürich" {
+	if err != nil || subject != "Hello Zurich" {
 		t.Fatalf("subject %q: %v", subject, err)
 	}
 	if msg.Header.Get("Message-ID") == "" || msg.Header.Get("Date") == "" {
 		t.Fatal("Message-ID and Date are required")
 	}
 	body, _ := io.ReadAll(quotedprintable.NewReader(msg.Body))
-	if string(body) != "Line one\r\nLine two with ä\r\n" {
+	if string(body) != "Line one\r\nLine two with \u00e4\r\n" {
 		t.Fatalf("body %q", body)
 	}
 }

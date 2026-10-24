@@ -101,8 +101,8 @@ services:
       - SMTP_FROM=${SMTP_FROM:-}
       - LEGAL_OPERATOR_NAME=${LEGAL_OPERATOR_NAME:-Community Operator}
       - LEGAL_OPERATOR_EMAIL=${LEGAL_OPERATOR_EMAIL:-admin@example.com}
-      - LEGAL_OPERATOR_COUNTRY=${LEGAL_OPERATOR_COUNTRY:-Deutschland}
-      - LEGAL_PROJECT_NOTICE=${LEGAL_PROJECT_NOTICE:-Privates, nicht-kommerzielles Projekt}
+      - LEGAL_OPERATOR_COUNTRY=${LEGAL_OPERATOR_COUNTRY:-}
+      - LEGAL_PROJECT_NOTICE=${LEGAL_PROJECT_NOTICE:-}
     # The app writes nothing to disk: uploads stream to S3 in 5 MB parts.
     # /tmp is a small RAM-backed scratch area, capped like everything else.
     read_only: true

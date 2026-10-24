@@ -73,7 +73,7 @@ func (h *systemHandler) sendTestMail(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 	locale := owner.Locale
-	if err := h.mail.Send(r.Context(), testMessage(to, locale)); err != nil {
+	if err := h.mail.Send(r.Context(), auth.TestMail(to, locale)); err != nil {
 		var se *mailer.SendError
 		if errors.As(err, &se) {
 			return httpx.ErrUnavailable(se.Error())
@@ -97,11 +97,4 @@ func (h *systemHandler) testMailRecipient(r *http.Request, owner *auth.User, exp
 		return "", httpx.ErrInvalidInput("add an e-mail address to your account or name a recipient")
 	}
 	return *stored, nil
-}
-
-func testMessage(to, locale string) mailer.Message {
-	if locale == "de" {
-		return mailer.Message{To: to, Subject: "Mnema Talk: Testnachricht", Body: "Diese Nachricht zeigt, dass dein Server E-Mails senden kann.\n"}
-	}
-	return mailer.Message{To: to, Subject: "Mnema Talk: test message", Body: "This message shows that your server can send e-mail.\n"}
 }

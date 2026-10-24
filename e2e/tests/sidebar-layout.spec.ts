@@ -159,6 +159,10 @@ async function expectNoVoiceUsers(page: Page, snapshotUsers: Promise<number>) {
 async function moveOnto(page: Page, locator: Locator, x: number, yRatio: number, steps = 1) {
   const b = await bounds(locator)
   await page.mouse.move(b.x + x, b.y + b.height * yRatio, { steps })
+  const current = await bounds(locator)
+  if (Math.abs(b.y - current.y) > 0.5) {
+    await page.mouse.move(current.x + x, current.y + current.height * yRatio, { steps: 2 })
+  }
 }
 
 /** Puts the pointer on `locator` once it has stopped moving, then presses: the press lands on that row. */
@@ -174,7 +178,7 @@ async function pressOn(page: Page, locator: Locator) {
  */
 async function dragTo(page: Page, source: Locator, target: Locator, ratio: number) {
   // Both ends on screen first: the list auto-scrolls near its edges.
-  await target.scrollIntoViewIfNeeded()
+  await target.evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => target.scrollIntoViewIfNeeded())
   await expect(source).toBeInViewport()
   // hover() waits until the row has stopped moving and puts the pointer on it
   // as it is at that moment. Rows above it come and go (a caller leaving a
@@ -195,6 +199,7 @@ async function dragTo(page: Page, source: Locator, target: Locator, ratio: numbe
 async function dropOn(page: Page, source: Locator, target: Locator, ratio: number) {
   await dragTo(page, source, target, ratio)
   await expect(indicator(page)).toBeVisible()
+  await moveOnto(page, target, 40, ratio, 2)
   const saved = page.waitForResponse((res) => isLayoutSave(res.request()))
   await page.mouse.up()
   expect((await saved).status()).toBe(204)
@@ -220,8 +225,8 @@ test.describe.configure({ mode: 'serial' })
 test.beforeAll(async ({ browser }) => {
   // Tall enough that the whole channel list (other specs add channels too) fits,
   // with room to spare: a list that scrolls makes a drag auto-scroll under the mouse.
-  adminCtx = await browser.newContext({ viewport: { width: 1280, height: 1700 } })
-  memberCtx = await browser.newContext({ viewport: { width: 1280, height: 1700 } })
+  adminCtx = await browser.newContext({ viewport: { width: 1280, height: 2200 } })
+  memberCtx = await browser.newContext({ viewport: { width: 1280, height: 2200 } })
   admin = await adminCtx.newPage()
   member = await memberCtx.newPage()
   const adminVoice = firstVoiceSnapshot(admin)
