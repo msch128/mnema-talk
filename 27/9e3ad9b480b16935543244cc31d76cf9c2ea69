@@ -1,0 +1,100 @@
+web/src/components/ThreadRootCard.vue
+  s_06fcde5dbef956::t_341e5bab4f9383 37-38
+e2e/tests/ui-events-polish.spec.ts
+  s_06fcde5dbef956::t_f50eb3f15a0177 36-50
+  s_06fcde5dbef956::t_6168aadcf0876e 114
+  s_06fcde5dbef956::t_b127d867fa9109 1-35,51-113,115-118
+web/src/components/EventsModalPolish.test.ts
+  s_06fcde5dbef956::t_ee1e193801564c 74
+  s_06fcde5dbef956::t_d94f9ed1dee04f 1-73,75-131
+web/src/lib/eventTime.ts
+  s_06fcde5dbef956::t_4f629b816372c3 1-26
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_4f629b816372c3 62-65
+  s_06fcde5dbef956::t_d2175238219848 1674-1675,2357
+  s_06fcde5dbef956::t_8ccf8bc1bdef63 2369-2372
+web/src/components/EventsModal.vue
+  s_06fcde5dbef956::t_6757b6ac97e5c9 14-15,41-68,97,106-107,110-111,117,145,157,162,181-182,226-228,237,252,256,266,270,299,301-307,309-314
+  s_06fcde5dbef956::t_5469bd4bb5bb45 13,232
+web/src/components/NotificationSettingsDialog.vue
+  s_06fcde5dbef956::t_8b468c5bda91dd 79,84-85,92
+web/src/components/PollCard.vue
+  s_06fcde5dbef956::t_8b468c5bda91dd 42,66-67,88
+web/src/components/EventDetailModal.test.ts
+  s_06fcde5dbef956::t_d832f83593a5dd 141,153,162
+web/src/components/PollCard.test.ts
+  s_06fcde5dbef956::t_e68e9c29efe6c5 283-293
+web/src/components/ChatComposer.vue
+  s_06fcde5dbef956::t_f5e3093d8227a4 86
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_4f629b816372c3 62-65
+  s_06fcde5dbef956::t_8ccf8bc1bdef63 1674-1675,2357,2369-2372
+web/src/components/EventsModalDetails.test.ts
+  s_06fcde5dbef956::t_d832f83593a5dd 174,182
+web/src/components/MessageAttachments.vue
+  s_06fcde5dbef956::t_4f629b816372c3 10-11,67,96
+web/src/components/EventDetailModal.vue
+  s_06fcde5dbef956::t_b810f2bbf782eb 94
+  s_06fcde5dbef956::t_b4cc2fa763d41d 14-15,60,63-74,115,151,195-196,198-199,202,204,206,210-212
+  s_06fcde5dbef956::t_f5e3093d8227a4 201,207
+  s_06fcde5dbef956::t_5e4438e49f580a 13,75,233
+web/src/components/ToastHost.vue
+  s_06fcde5dbef956::t_71efe0b637fb4e 34-37,39
+  s_06fcde5dbef956::t_5d1f520d06185e 12-16,38
+web/src/components/EventEditDialog.vue
+  s_06fcde5dbef956::t_b810f2bbf782eb 247
+  s_06fcde5dbef956::t_ac8d9cdd2701b6 151,165,179,189,223,237
+web/src/stores/toast.ts
+  s_06fcde5dbef956::t_71efe0b637fb4e 12,15-16,20-21,27,31-51,59,62,71
+web/src/components/CreateForumPostModal.vue
+  s_06fcde5dbef956::t_ac8d9cdd2701b6 95,148
+web/src/components/EventsModal.test.ts
+  s_06fcde5dbef956::t_d832f83593a5dd 141
+web/src/components/MessageAttachments.test.ts
+  s_06fcde5dbef956::t_d832f83593a5dd 18,71
+web/src/components/SidebarChannelRowTalks.test.ts
+  s_06fcde5dbef956::t_e68e9c29efe6c5 7,73-83
+  s_06fcde5dbef956::t_1359abc64aeaa8 84-85
+web/src/components/ForumArea.vue
+  s_06fcde5dbef956::t_341e5bab4f9383 139-140,151-152,156
+  s_06fcde5dbef956::t_ac8d9cdd2701b6 203
+  s_06fcde5dbef956::t_272b4762a1aaf5 3,9-11,65-68,110-112,125-134,226
+web/src/lib/fileSize.ts
+  s_06fcde5dbef956::t_4f629b816372c3 1-16
+web/src/components/SidebarChannelRow.vue
+  s_06fcde5dbef956::t_341e5bab4f9383 125,128-129
+web/src/styles/controls.css
+  s_06fcde5dbef956::t_5d1f520d06185e 201-203
+web/src/components/ForumArea.test.ts
+  s_06fcde5dbef956::t_47db48f44df14b 10,14,286-293
+web/src/components/NotificationSettingsDialog.test.ts
+  s_06fcde5dbef956::t_d5f0450852883a 97-110
+web/src/components/ToastHost.test.ts
+  s_06fcde5dbef956::t_7e18e49465503e 3,63-93
+web/src/lib/eventAvatar.test.ts
+  s_06fcde5dbef956::t_01b87dc9a3fa47 1-11
+web/src/lib/eventAvatar.ts
+  s_06fcde5dbef956::t_2d69ed355601e3 1-8
+web/src/lib/eventTime.test.ts
+  s_06fcde5dbef956::t_6b44294a2154c4 1-30
+web/src/lib/fileSize.test.ts
+  s_06fcde5dbef956::t_5f08fbc0f2839b 1-22
+web/src/stores/toast.test.ts
+  s_06fcde5dbef956::t_bfda2ad752a22f 50-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "279e3ad9b480b16935543244cc31d76cf9c2ea69",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
