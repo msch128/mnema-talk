@@ -11,6 +11,7 @@ import { nextSortOrder } from '../lib/channelLayout'
 import { durationLabel } from '../lib/moderation'
 import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
+import ChannelAutoDeleteField from './ChannelAutoDeleteField.vue'
 
 const props = defineProps({
   kind: { type: String as PropType<'channel' | 'category'>, default: 'channel' }, // 'channel' | 'category'
@@ -119,6 +120,8 @@ async function submit() {
         </select>
         <p class="text-xs text-mnema-tertiary">{{ $t('moderation.slowModeHint') }}</p>
       </div>
+
+      <ChannelAutoDeleteField v-if="isChannel && entity && 'type' in entity" :channel="entity" />
 
       <div class="pt-3 flex items-center justify-end gap-2 border-t border-mnema-hairline">
         <button

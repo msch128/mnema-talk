@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import PollDialog from './PollDialog.vue'
 import { useChatStore } from '../stores/chat'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { setLocale, i18nPlugin } from '../i18n'
 import { channelFixture, fixtureId, messageFixture } from '../test-fixtures.fixture'
 
@@ -10,7 +11,8 @@ const CH = fixtureId(2)
 let requests: { url: string; method: string; body: unknown }[]
 let status: number
 
-function mountDialog() {
+function mountDialog(features: string[] = ['polls.anonymous']) {
+  useServerFeaturesStore().list = features
   const chat = useChatStore()
   chat.activeChannel = channelFixture({ id: CH })
   return mount(PollDialog, { props: { channelId: CH }, attachTo: document.body, global: { plugins: [i18nPlugin] } })
@@ -63,7 +65,7 @@ describe('PollDialog', () => {
     await w.get('#poll-duration').setValue('3d')
     await w.get('[data-testid="poll-multiple"]').setValue(true)
     await w.get('[data-testid="poll-anonymous-toggle"]').setValue(true)
-    expect(w.text()).toContain('Nobody sees who voted for what')
+    expect(w.get('[data-testid="poll-anonymous-hint"]').text()).toContain('A vote can’t be changed once it is sent.')
 
     await w.get('[data-testid="poll-dialog"]').trigger('submit')
     await flushPromises()
@@ -73,6 +75,17 @@ describe('PollDialog', () => {
     }])
     expect(w.emitted('posted')).toHaveLength(1)
     expect(w.emitted('close')).toHaveLength(1)
+  })
+
+  it('offers no anonymous toggle without the server feature and never asks for one', async () => {
+    const w = mountDialog([])
+    expect(w.find('[data-testid="poll-anonymous-toggle"]').exists()).toBe(false)
+    await w.get('#poll-question').setValue('Lunch?')
+    await answers(w)[0]!.setValue('Pizza')
+    await answers(w)[1]!.setValue('Pasta')
+    await w.get('[data-testid="poll-dialog"]').trigger('submit')
+    await flushPromises()
+    expect(requests[0]?.body).toMatchObject({ anonymous: false })
   })
 
   it('does not post twice or an invalid poll', async () => {

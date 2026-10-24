@@ -13,8 +13,8 @@ import (
 // poll button; the message's content is the question). It is the same for
 // every viewer, so it travels in message_create and in message lists: counts,
 // and for a poll that is not anonymous the voters of each option. A viewer's
-// own votes are asked for separately (GET .../poll), which is how an
-// anonymous poll shows a member their own choice and nobody else's.
+// own votes are asked for separately (GET .../poll). An anonymous poll stores
+// no choice at all: only the counters and that a member voted.
 type Poll struct {
 	// Multiple lets a member vote for several options.
 	Multiple bool `json:"multiple"`
@@ -63,7 +63,8 @@ func loadPollsFor(ctx context.Context, q db.Querier, ids []uuid.UUID) (map[uuid.
 	out := map[uuid.UUID]*Poll{}
 	rows, err := q.Query(ctx, `
 		SELECT message_id, multiple, anonymous, closes_at, closes_at <= clock_timestamp(),
-		       (SELECT COUNT(DISTINCT v.user_id) FROM poll_votes v JOIN poll_options o ON o.id = v.option_id WHERE o.poll_id = polls.message_id)
+		       CASE WHEN anonymous THEN anon_voters
+			            ELSE (SELECT COUNT(DISTINCT v.user_id) FROM poll_votes v JOIN poll_options o ON o.id = v.option_id WHERE o.poll_id = polls.message_id) END
 		FROM polls WHERE message_id = ANY($1)`, ids)
 	if err != nil {
 		return nil, fmt.Errorf("load polls: %w", err)
@@ -96,14 +97,14 @@ func loadPollOptions(ctx context.Context, q db.Querier, polls map[uuid.UUID]*Pol
 		ids = append(ids, id)
 	}
 	rows, err := q.Query(ctx, `
-		SELECT o.poll_id, o.id, o.label, COUNT(v.user_id),
+		SELECT o.poll_id, o.id, o.label, CASE WHEN p.anonymous THEN o.anon_votes ELSE COUNT(v.user_id)::int END,
 		       CASE WHEN p.anonymous THEN NULL
 		            ELSE array_agg(v.user_id ORDER BY v.created_at, v.user_id) FILTER (WHERE v.user_id IS NOT NULL) END
 		FROM poll_options o
 		JOIN polls p ON p.message_id = o.poll_id
 		LEFT JOIN poll_votes v ON v.option_id = o.id
 		WHERE o.poll_id = ANY($1)
-		GROUP BY o.poll_id, o.id, o.label, o.position, p.anonymous
+		GROUP BY o.poll_id, o.id, o.label, o.position, o.anon_votes, p.anonymous
 		ORDER BY o.poll_id, o.position`, ids)
 	if err != nil {
 		return fmt.Errorf("load poll options: %w", err)

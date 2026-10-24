@@ -128,6 +128,11 @@ func (c *components) newCore() {
 		DMLimit:          httpx.NewRateLimiter(chat.NewDMsPerMinute, time.Minute).Named("dm_start"),
 	}
 	go chat.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour)
+	autoDelete := &chat.AutoDeleter{DB: d.DB, Events: c.pub, Audit: c.auditLog}
+	if d.Store != nil {
+		autoDelete.Objects = d.Store
+	}
+	go autoDelete.Run(c.ctx, chat.AutoDeleteEvery)
 	c.rolesH = &roles.Handler{Perms: c.permSvc, Events: c.pub}
 	c.onboardH = onboarding.NewHandler(d.DB, c.permSvc)
 	if d.Store != nil {

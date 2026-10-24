@@ -11,8 +11,9 @@ export function applyPoll(cx: Cx, messageId: string, poll: Poll) {
   applyToMessage(cx, messageId, m => { m.poll = poll })
 }
 
-function tallies({ my_votes, ...poll }: PollDetail): Poll {
+function tallies({ my_votes, has_voted, ...poll }: PollDetail): Poll {
   void my_votes
+  void has_voted
   return poll
 }
 
@@ -20,7 +21,7 @@ function pollPath(channelId: string, messageId: string) {
   return `/api/channels/${channelId}/messages/${messageId}/poll`
 }
 
-/** The poll with the caller's own votes, the only place an anonymous poll shows them. */
+/** The poll with the caller's own votes and whether they voted (an anonymous poll knows only the latter). */
 export async function fetchPoll(cx: Cx, channelId: string, messageId: string): Promise<PollDetail> {
   const community = cx.cs.communityGeneration
   const detail = await api(pollPath(channelId, messageId), { decode: decodePollDetail })
@@ -29,7 +30,7 @@ export async function fetchPoll(cx: Cx, channelId: string, messageId: string): P
   return detail
 }
 
-/** Replaces the caller's votes (an empty list withdraws them). */
+/** Replaces the caller's votes (an empty list withdraws them); the one vote of an anonymous poll is final. */
 export async function votePoll(cx: Cx, channelId: string, messageId: string, optionIds: string[]): Promise<PollDetail> {
   const community = cx.cs.communityGeneration
   const detail = await api(`${pollPath(channelId, messageId)}/votes`, { method: 'PUT', json: { option_ids: optionIds }, decode: decodePollDetail })

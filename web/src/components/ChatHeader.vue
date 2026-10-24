@@ -2,7 +2,7 @@
 import type { Component } from 'vue'
 import type { ContextMenuItem } from './menuTypes'
 import { computed, onMounted, ref } from 'vue'
-import { Hash, Users, Bell, BellOff, AtSign, X, Volume2, Search, MessageCircle, Info } from '@lucide/vue'
+import { Hash, Users, Bell, BellOff, AtSign, X, Volume2, Search, MessageCircle, Info, Timer } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useNotificationHint } from '../composables/useNotificationHint'
@@ -30,6 +30,11 @@ const { dm, isDm } = useDmChat()
 const showInfo = ref(false)
 const serverFeatures = useServerFeaturesStore()
 onMounted(() => { void serverFeatures.load() })
+// Auto-delete is shown wherever it applies, so nobody posts in a channel unaware that it forgets.
+const autoDeleteDays = computed(() => {
+  const days = chatStore.activeChannel?.auto_delete_days ?? 0
+  return days > 0 && serverFeatures.channelAutoDelete && !isDm.value ? days : 0
+})
 const channelIcon = computed<Component>(() => {
   if (props.panel) return Volume2
   return isDm.value ? MessageCircle : Hash
@@ -85,6 +90,12 @@ function openNotificationMenu(e: MouseEvent) {
         class="shrink-0 rounded-md border border-mnema-border px-1.5 py-0.5 font-mono text-xs text-mnema-muted"
         v-tooltip="$t('moderation.slowModeHint')"
       >{{ $t('moderation.slowModeChip', { time: durationLabel(chatStore.activeChannel.slow_mode_seconds) }) }}</span>
+      <span
+        v-if="autoDeleteDays"
+        data-testid="auto-delete-chip"
+        class="inline-flex shrink-0 items-center gap-1 rounded-md border border-mnema-border px-1.5 py-0.5 font-mono text-xs text-mnema-muted"
+        v-tooltip="$t('autoDelete.tooltip', { period: $t(`autoDelete.periods.${autoDeleteDays}`) })"
+      ><Timer class="h-3 w-3" aria-hidden="true" />{{ $t(`autoDelete.periods.${autoDeleteDays}`) }}</span>
     </div>
 
     <!-- Right: Badges & member list toggle -->

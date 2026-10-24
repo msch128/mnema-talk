@@ -15,7 +15,7 @@ func TestAnExportHoldsTheMembersOwnPollVotesAndNobodyElses(t *testing.T) {
 	a, _ := mailApp(t)
 	owner := a.seedAdmin()
 	f := pollFixture{a: a, owner: owner, alice: a.register(owner, "alice"), bob: a.register(owner, "bob"), channel: a.createChannel(owner, "general", "text")}
-	m := f.basic(t, f.owner, map[string]any{"anonymous": true, "multiple": true})
+	m := f.basic(t, f.owner, map[string]any{"multiple": true})
 	wantStatus(t, "alice votes", f.vote(f.alice, m, f.optionID(m, 0), f.optionID(m, 2)), http.StatusOK)
 	wantStatus(t, "bob votes", f.vote(f.bob, m, f.optionID(m, 1)), http.StatusOK)
 

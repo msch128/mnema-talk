@@ -81,6 +81,11 @@ no accounts on someone else's platform.
 - **Pinned messages** (with who pinned them and when), **polls**, **custom
   emoji** managed by the community, **edit history** for moderators, **drafts**
   that survive a reload and a **jump to the first unread message**.
+- **Anonymous polls and channels that forget.** An anonymous poll stores only
+  that a member voted and how many votes each answer has, never the choice
+  (so a vote is final). A channel can opt in to auto-delete after 1, 7, 30 or
+  90 days; it is shown on the channel, audited, and never touches pinned
+  messages or direct messages ([doc/moderation.md](doc/moderation.md#auto-delete)).
 - **Saved messages and forwarding.** Keep a private list of up to 1,000
   messages with an optional note, or forward a message into another channel or
   a direct message. A forward is a reference, so it never shows more than the

@@ -3,6 +3,7 @@ import { computed, nextTick, reactive, ref } from 'vue'
 import { AlertCircle, Plus, X } from '@lucide/vue'
 import BaseDialog from './BaseDialog.vue'
 import { useChatStore } from '../stores/chat'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { caughtErrorMessage } from '../lib/api'
 import {
   POLL_DURATIONS, POLL_MAX_LABEL, POLL_MAX_OPTIONS, POLL_MAX_QUESTION, POLL_MIN_OPTIONS,
@@ -18,6 +19,7 @@ const props = defineProps({
 const emit = defineEmits<{ close: []; posted: [] }>()
 
 const chat = useChatStore()
+const features = useServerFeaturesStore()
 const draft = reactive(emptyDraft())
 const busy = ref(false)
 const error = ref('')
@@ -38,6 +40,12 @@ function removeOption(i: number) {
   if (draft.options.length > POLL_MIN_OPTIONS) draft.options.splice(i, 1)
 }
 
+// A server without the feature would still make the poll anonymous in the old, weaker way: never ask for it.
+function request() {
+  const body = draftRequest(draft)
+  return features.anonymousPolls ? body : { ...body, anonymous: false }
+}
+
 function setDuration(value: string) {
   if (isPollDuration(value)) draft.duration = value
 }
@@ -47,7 +55,7 @@ async function submit() {
   busy.value = true
   error.value = ''
   try {
-    await chat.createPoll(props.channelId, draftRequest(draft))
+    await chat.createPoll(props.channelId, request())
     emit('posted')
     emit('close')
   } catch (err) {
@@ -133,13 +141,13 @@ async function submit() {
             <input v-model="draft.multiple" type="checkbox" data-testid="poll-multiple" />
             {{ $t('poll.allowMultiple') }}
           </label>
-          <label class="flex cursor-pointer items-center gap-3 text-sm text-mnema-body-ink">
+          <label v-if="features.anonymousPolls" class="flex cursor-pointer items-center gap-3 text-sm text-mnema-body-ink">
             <input v-model="draft.anonymous" type="checkbox" data-testid="poll-anonymous-toggle" />
             {{ $t('poll.makeAnonymous') }}
           </label>
         </div>
       </div>
-      <p v-if="draft.anonymous" class="settings-hint">{{ $t('poll.anonymousHint') }}</p>
+      <p v-if="features.anonymousPolls && draft.anonymous" class="settings-hint" data-testid="poll-anonymous-hint">{{ $t('poll.anonymousHint') }}</p>
 
       <div class="flex flex-wrap items-center justify-end gap-3 border-t border-mnema-hairline pt-5">
         <span v-if="problemText" class="max-sm:w-full sm:mr-auto text-xs text-mnema-tertiary" data-testid="poll-problem">{{ problemText }}</span>

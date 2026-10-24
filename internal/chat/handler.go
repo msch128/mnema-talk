@@ -135,6 +135,7 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	r.Post("/channels", httpx.Handle(h.createChannel))
 	r.Delete("/channels/{id}", httpx.Handle(h.deleteChannel))
 	r.Patch("/channels/{id}", httpx.Handle(h.updateChannel))
+	r.Put("/channels/{id}/auto-delete", httpx.Handle(h.setAutoDelete))
 	r.Post("/channels/{id}/duplicate", httpx.Handle(h.duplicateChannel))
 	r.Patch("/categories/{id}", httpx.Handle(h.renameCategory))
 	r.Put("/layout", httpx.Handle(h.applyLayout))

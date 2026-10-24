@@ -53,7 +53,7 @@ func exportPolls(ctx context.Context, q db.Querier, user uuid.UUID, viewable map
 	rows, err := collect(ctx, q, pgx.RowToStructByName[pollRow], `
 		SELECT p.message_id, m.channel_id, c.name AS channel_name, m.content AS question, p.multiple, p.anonymous, p.created_at, p.closes_at,
 		       array_agg(o.label ORDER BY o.position) AS labels,
-		       array_agg((SELECT count(*)::int FROM poll_votes v WHERE v.option_id = o.id) ORDER BY o.position) AS votes
+		       array_agg(CASE WHEN p.anonymous THEN o.anon_votes ELSE (SELECT count(*)::int FROM poll_votes v WHERE v.option_id = o.id) END ORDER BY o.position) AS votes
 		FROM polls p
 		JOIN messages m ON m.id = p.message_id
 		JOIN channels c ON c.id = m.channel_id

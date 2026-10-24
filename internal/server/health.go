@@ -43,6 +43,8 @@ var Features = []string{
 	"slash.builtins",
 	"profile.banner",
 	"profile.avatar_remove",
+	"polls.anonymous",
+	"channels.auto_delete",
 }
 
 // healthCacheTTL is how long a health result is reused: the endpoint is
