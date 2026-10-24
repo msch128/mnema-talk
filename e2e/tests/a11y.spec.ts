@@ -47,9 +47,14 @@ test('the main surfaces meet WCAG AA: chat, menus, settings, admin', async ({ pa
   await page.keyboard.press('Escape')
 
   await page.getByRole('button', { name: /Konto-Menü|Konto/ }).last().click()
-  await page.getByRole('menuitem', { name: 'Audio' }).click()
-  await expect(page.getByRole('dialog', { name: 'Audio-Einstellungen' })).toBeVisible()
-  await expectNoViolations(page, 'the audio settings')
+  await page.getByRole('menuitem', { name: 'Einstellungen' }).click()
+  await expect(page.getByRole('dialog', { name: 'Einstellungen' })).toBeVisible()
+  await expectNoViolations(page, 'the settings (sign-in)')
+  for (const tab of ['sessions', 'privacy', 'data', 'audio']) {
+    await page.getByTestId(`settings-tab-${tab}`).click()
+    await expect(page.getByTestId(`settings-tab-${tab}`)).toHaveAttribute('aria-selected', 'true')
+    await expectNoViolations(page, `the settings (${tab})`)
+  }
   await page.keyboard.press('Escape')
 
   for (const tab of ['users', 'roles', 'channels', 'invites']) {

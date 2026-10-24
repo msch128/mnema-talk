@@ -45,7 +45,8 @@ it('matches the server password minimum', () => {
 describe('changing the password', () => {
   it('rejects passwords shorter than the server minimum', async () => {
     await fill('a'.repeat(MIN_PASSWORD_LENGTH - 1))
-    expect(wrapper.get('input[autocomplete="new-password"]').attributes('placeholder')).toBe(`Neues Passwort (mind. ${MIN_PASSWORD_LENGTH} Zeichen)`)
+    const field = wrapper.get('input[autocomplete="new-password"]')
+    expect(wrapper.get(`label[for="${field.attributes('id')}"]`).text()).toBe(`Neues Passwort (mind. ${MIN_PASSWORD_LENGTH} Zeichen)`)
     await wrapper.get('form').trigger('submit')
     expect(wrapper.get('[role="alert"]').text()).toBe(`Das neue Passwort braucht mindestens ${MIN_PASSWORD_LENGTH} Zeichen.`)
     expect(mockApi).not.toHaveBeenCalled()

@@ -132,3 +132,19 @@ it('accepts custom slot headings and explicit initial focus', async () => {
   expect(wrapper.find('header').exists()).toBe(false)
   expect(document.activeElement?.id).toBe('custom')
 })
+
+it('lets a long subtitle wrap instead of cutting it with an ellipsis', () => {
+  wrapper = mount(BaseDialog, { props: { title: 'Title', subtitle: 'A long explanation that has to fit on a phone without being cut off at the end.' }, slots: { default: '<p>Body</p>' }, attachTo: document.body })
+  const subtitle = wrapper.get('header p')
+  expect(subtitle.classes()).not.toContain('truncate')
+  expect(subtitle.text()).toContain('without being cut off at the end.')
+})
+
+it('fills the phone screen only when it is a sheet', async () => {
+  wrapper = mount(BaseDialog, { props: { title: 'Title' }, slots: { default: '<p>Body</p>' }, attachTo: document.body })
+  expect(wrapper.get('[role="dialog"]').classes()).not.toContain('max-md:rounded-none')
+  expect(wrapper.classes()).not.toContain('max-md:items-stretch')
+  await wrapper.setProps({ sheet: true })
+  expect(wrapper.get('[role="dialog"]').classes()).toContain('max-md:rounded-none')
+  expect(wrapper.classes()).toContain('max-md:items-stretch')
+})

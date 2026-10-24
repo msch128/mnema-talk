@@ -44,8 +44,7 @@ const quiet = 'btn btn-ghost'
 
       <div class="min-h-0 flex-1 overflow-y-auto px-5 py-4 text-sm text-mnema-muted">
         <div v-if="step === 'welcome'" data-testid="welcome-text">
-          <MarkdownContent v-if="onboarding.state.welcome_text" :content="onboarding.state.welcome_text" />
-          <p v-else>{{ $t('welcome.welcome.fallback') }}</p>
+          <MarkdownContent :content="onboarding.state.welcome_text" />
         </div>
 
         <div v-else-if="step === 'rules'" data-testid="welcome-rules">

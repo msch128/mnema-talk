@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { Trash2 } from '@lucide/vue'
 import { usePushSettings } from '../composables/usePushSettings'
 import { locale } from '../i18n'
+import SwitchRow from './SwitchRow.vue'
 
 // Push notifications: turn them on for this device, send a test, choose
 // whether they carry the message text, and see or remove the devices.
@@ -59,24 +60,16 @@ function created(value: string): string {
           </template>
         </div>
 
-        <div class="flex items-start justify-between gap-4 border-t border-mnema-hairline pt-3">
-          <div class="space-y-0.5">
-            <div class="text-sm font-semibold text-mnema-text">{{ $t('push.previewTitle') }}</div>
-            <p class="text-xs text-mnema-tertiary leading-relaxed" data-testid="push-preview-hint">
-              {{ previewLocked ? $t('push.previewLocked') : $t('push.previewHint') }}
-            </p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            data-testid="push-preview"
-            :aria-checked="preview && !previewLocked ? 'true' : 'false'"
-            :aria-label="$t('push.previewTitle')"
+        <div class="border-t border-mnema-hairline pt-3">
+          <SwitchRow
+            :model-value="preview && !previewLocked"
+            :title="$t('push.previewTitle')"
+            :hint="previewLocked ? $t('push.previewLocked') : $t('push.previewHint')"
             :disabled="busy || previewLocked"
-            class="switch mt-1"
-            @click="push.setText(!preview)"
-          >
-          </button>
+            hint-testid="push-preview-hint"
+            data-testid="push-preview"
+            @toggle="push.setText"
+          />
         </div>
       </template>
 

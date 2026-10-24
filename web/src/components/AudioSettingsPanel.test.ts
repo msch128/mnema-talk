@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
-import AudioSettingsModal from './AudioSettingsModal.vue'
+import AudioSettingsPanel from './AudioSettingsPanel.vue'
 import { useVoiceStore } from '../stores/voice'
 import { AUTO_THRESHOLD } from '../lib/levelMeter'
 import { i18nPlugin, t } from '../i18n'
@@ -27,13 +27,13 @@ vi.mock('../composables/useWebRTC', () => ({
   }),
 }))
 
-function meter(wrapper: ReturnType<typeof mount<typeof AudioSettingsModal>>) {
+function meter(wrapper: ReturnType<typeof mount<typeof AudioSettingsPanel>>) {
   const bar = wrapper.find('[role="meter"]')
   const [fill, ...markers] = bar.findAll('div')
   return { fill, threshold: markers.at(-1) }
 }
 
-describe('AudioSettingsModal level meter', () => {
+describe('AudioSettingsPanel level meter', () => {
   let voice!: ReturnType<typeof useVoiceStore>
 
   beforeEach(() => {
@@ -47,7 +47,7 @@ describe('AudioSettingsModal level meter', () => {
 
   it('shows the level visibly when it is below a high threshold', async () => {
     voice.sensitivityThreshold = 80
-    const wrapper = mount(AudioSettingsModal, mountOpts)
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
     voice.currentInputLevel = 40
     await nextTick()
 
@@ -59,7 +59,7 @@ describe('AudioSettingsModal level meter', () => {
 
   it('turns green once the level reaches the threshold', async () => {
     voice.sensitivityThreshold = 30
-    const wrapper = mount(AudioSettingsModal, mountOpts)
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
     voice.currentInputLevel = 45
     await nextTick()
 
@@ -69,7 +69,7 @@ describe('AudioSettingsModal level meter', () => {
   it('places the marker at the threshold the gate uses in auto mode', async () => {
     voice.sensitivityThreshold = 80
     voice.autoSensitivity = true
-    const wrapper = mount(AudioSettingsModal, mountOpts)
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
     voice.currentInputLevel = 40
     await nextTick()
 
@@ -80,7 +80,7 @@ describe('AudioSettingsModal level meter', () => {
   })
 })
 
-describe('AudioSettingsModal mic test and extra settings', () => {
+describe('AudioSettingsPanel mic test and extra settings', () => {
   let voice!: ReturnType<typeof useVoiceStore>
 
   beforeEach(() => {
@@ -91,7 +91,7 @@ describe('AudioSettingsModal mic test and extra settings', () => {
   })
 
   it('triggers toggleMicTest when clicking mic test button', async () => {
-    const wrapper = mount(AudioSettingsModal, mountOpts)
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
     expect(wrapper.text()).toContain('Mikrofon testen')
 
     const btn = wrapper.findAll('button').find(b => b.text().includes('Mikrofon testen'))
@@ -110,7 +110,7 @@ describe('AudioSettingsModal mic test and extra settings', () => {
 
   it('toggles QoS high priority and applies settings', async () => {
     voice.localAudioStream = new MediaStream()
-    const wrapper = mount(AudioSettingsModal, mountOpts)
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
     const qosBtn = wrapper.find('button[aria-label="Netzwerkpriorität für Sprache und Video"]')
     expect(qosBtn.exists()).toBe(true)
     expect(qosBtn.attributes('aria-checked')).toBe('true')
@@ -123,7 +123,7 @@ describe('AudioSettingsModal mic test and extra settings', () => {
   })
 
   it('toggles warning switches and persists to voiceStore', async () => {
-    const wrapper = mount(AudioSettingsModal, mountOpts)
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
     const noAudioBtn = wrapper.find('button[aria-label="Warnung bei fehlendem Tonsignal"]')
     const switchChBtn = wrapper.find('button[aria-label="Bestätigung beim Talk-Wechsel"]')
 
@@ -141,7 +141,7 @@ describe('AudioSettingsModal mic test and extra settings', () => {
   })
 
   it('toggles sound effects and updates volume slider', async () => {
-    const wrapper = mount(AudioSettingsModal, mountOpts)
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
     const soundsBtn = wrapper.find('button[aria-label="Soundeffekte"]')
     expect(soundsBtn.exists()).toBe(true)
     expect(voice.soundEffectsEnabled).toBe(true)
@@ -160,7 +160,7 @@ describe('AudioSettingsModal mic test and extra settings', () => {
   })
 
   it('allows toggling individual sound events granularly', async () => {
-    const wrapper = mount(AudioSettingsModal, mountOpts)
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
     expect(wrapper.text()).toContain('Einzelne Töne')
 
     const muteSoundBtn = wrapper.find('button[aria-label="Stummschalten"]')
@@ -178,7 +178,7 @@ describe('AudioSettingsModal mic test and extra settings', () => {
   })
 })
 
-describe('AudioSettingsModal mic test lifecycle', () => {
+describe('AudioSettingsPanel mic test lifecycle', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
@@ -192,7 +192,7 @@ describe('AudioSettingsModal mic test lifecycle', () => {
   }
 
   it('lists devices without starting capture or loopback when opened', async () => {
-    const wrapper = mount(AudioSettingsModal, mountOpts)
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
     await nextTick()
     expect(mockRefreshAudioDevices).toHaveBeenCalledTimes(1)
     expect(mockStartMicTest).not.toHaveBeenCalled()
@@ -204,7 +204,7 @@ describe('AudioSettingsModal mic test lifecycle', () => {
 
   it('saves input preferences without starting capture outside a call or test', async () => {
     const voice = useVoiceStore()
-    const wrapper = mount(AudioSettingsModal, mountOpts)
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
     await wrapper.get('button[aria-label="Netzwerkpriorität für Sprache und Video"]').trigger('click')
     expect(voice.qosHighPriority).toBe(false)
     expect(mockApplyAudioSettings).not.toHaveBeenCalled()
@@ -215,7 +215,7 @@ describe('AudioSettingsModal mic test lifecycle', () => {
   it('never starts the mic test when closed while devices are loading', async () => {
     const devices = deferred()
     mockRefreshAudioDevices.mockReturnValueOnce(devices.promise)
-    const wrapper = mount(AudioSettingsModal, mountOpts)
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
     wrapper.unmount()
     devices.resolve(true)
     await devices.promise
@@ -226,7 +226,7 @@ describe('AudioSettingsModal mic test lifecycle', () => {
   it('stops immediately when closed during test startup without late global cleanup', async () => {
     const started = deferred()
     mockToggleMicTest.mockReturnValueOnce(started.promise)
-    const wrapper = mount(AudioSettingsModal, mountOpts)
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
     await wrapper.get('[data-testid="mic-test-toggle"]').trigger('click')
     expect(mockToggleMicTest).toHaveBeenCalledTimes(1)
     wrapper.unmount()
@@ -253,11 +253,11 @@ describe('AudioSettingsModal mic test lifecycle', () => {
     const release = () => { owner = null; voice.isMicTesting = false }
     mockStopMicTest.mockImplementationOnce(release).mockImplementationOnce(release)
 
-    const previous = mount(AudioSettingsModal, mountOpts)
+    const previous = mount(AudioSettingsPanel, mountOpts)
     await previous.get('[data-testid="mic-test-toggle"]').trigger('click')
     previous.unmount()
     expect(owner).toBeNull()
-    const current = mount(AudioSettingsModal, mountOpts)
+    const current = mount(AudioSettingsPanel, mountOpts)
     await current.get('[data-testid="mic-test-toggle"]').trigger('click')
     expect(owner).toBe('new')
     started.resolve(false)
@@ -272,11 +272,11 @@ describe('AudioSettingsModal mic test lifecycle', () => {
   })
 })
 
-describe('AudioSettingsModal preference interactions', () => {
+describe('AudioSettingsPanel preference interactions', () => {
   beforeEach(() => { localStorage.clear(); setActivePinia(createPinia()); vi.clearAllMocks() })
   it('switches input mode, records code or key, ignores keys while not recording, changes manual sensitivity', async () => {
     const voice = useVoiceStore(); voice.inputMode = 'activity'; voice.autoSensitivity = false
-    const wrapper = mount(AudioSettingsModal, mountOpts)
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
     const ptt = requireValue(wrapper.findAll('button').find(b => b.text().includes('Push-to-Talk')))
     await ptt.trigger('click'); expect(voice.inputMode).toBe('ptt')
     const record = requireValue(wrapper.findAll('button').find(b => b.text() === voice.pttKey))
@@ -292,7 +292,7 @@ describe('AudioSettingsModal preference interactions', () => {
   })
   it('applies AGC/echo/noise only to a running call or local mic test and ignores unchanged noise', async () => {
     const voice = useVoiceStore(); voice.isMicTesting = true
-    const wrapper = mount(AudioSettingsModal, mountOpts)
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
     const agc = wrapper.get(`button[aria-label="${t('audio.agc')}"]`)
     const echo = wrapper.get('button[aria-label="Echounterdrückung"]')
     const initialAgc = voice.autoGainControl; const initialEcho = voice.echoCancellation
@@ -306,17 +306,16 @@ describe('AudioSettingsModal preference interactions', () => {
   })
   it('changes input/output volumes, enables sound effects, previews default and individual sound events', async () => {
     const voice = useVoiceStore(); voice.soundEffectsEnabled = false
-    const wrapper = mount(AudioSettingsModal, mountOpts)
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
     await wrapper.get('[data-testid="input-volume"]').setValue(150); await wrapper.get('[data-testid="output-volume"]').setValue(75)
     expect(voice.inputVolume).toBe(150); expect(voice.outputVolume).toBe(75)
     await wrapper.get('button[aria-label="Soundeffekte"]').trigger('click'); expect(voice.soundEffectsEnabled).toBe(true)
     for (const button of wrapper.findAll('button')) { if (button.attributes('aria-label')?.startsWith(t('audio.soundsTest')) || button.text() === t('audio.soundsTest')) await button.trigger('click') }
-    wrapper.findComponent({ name: 'BaseDialog' }).vm.$emit('close'); expect(wrapper.emitted('close')).toEqual([[]])
     wrapper.unmount()
   })
 })
 
-describe('AudioSettingsModal device selection', () => {
+describe('AudioSettingsPanel device selection', () => {
   function device(deviceId: string, kind: MediaDeviceKind, label: string): MediaDeviceInfo {
     return { deviceId, kind, label, groupId: 'test-device-group', toJSON: () => ({ deviceId, kind, label, groupId: 'test-device-group' }) }
   }
@@ -326,13 +325,12 @@ describe('AudioSettingsModal device selection', () => {
     voice.availableInputDevices = [device('mic-a', 'audioinput', 'Microphone A'), device('mic-b', 'audioinput', '')]
     voice.availableOutputDevices = [device('', 'audiooutput', 'Empty'), device('default', 'audiooutput', 'Default'), device('speaker-a', 'audiooutput', 'Speaker A'), device('speaker-b', 'audiooutput', '')]
     voice.localAudioStream = new MediaStream()
-    const wrapper = mount(AudioSettingsModal, mountOpts)
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
     const input = wrapper.get('#audio-input-device'); const output = wrapper.get('[data-testid="output-device"]')
     expect(input.text()).toContain('Microphone A'); expect(input.text()).toContain('mic-b')
     expect(output.findAll('option')).toHaveLength(3); expect(output.text()).toContain('Speaker A'); expect(output.text()).toContain('speak')
     await input.setValue('mic-b'); expect(voice.selectedInputDeviceId).toBe('mic-b'); expect(mockApplyAudioSettings).toHaveBeenCalledOnce()
     await output.setValue('speaker-a'); expect(voice.selectedOutputDeviceId).toBe('speaker-a')
-    await requireValue(wrapper.findAll('button').find(b => b.text() === 'Fertig')).trigger('click'); expect(wrapper.emitted('close')).toEqual([[]])
     wrapper.unmount()
   })
 })
@@ -342,11 +340,24 @@ it('explains system output routing when the browser has no device selection API'
   Reflect.deleteProperty(HTMLMediaElement.prototype, 'setSinkId')
   try {
     setActivePinia(createPinia())
-    const w = mount(AudioSettingsModal, mountOpts)
+    const w = mount(AudioSettingsPanel, mountOpts)
     expect(w.find('[data-testid="output-device"]').exists()).toBe(false)
     expect(w.text()).toContain(t('audio.outputDeviceUnsupported'))
     w.unmount()
   } finally {
     if (descriptor) Object.defineProperty(HTMLMediaElement.prototype, 'setSinkId', descriptor)
   }
+})
+
+describe('AudioSettingsPanel as a section of the settings', () => {
+  beforeEach(() => { localStorage.clear(); setActivePinia(createPinia()); vi.clearAllMocks() })
+
+  it('tells the call code to publish the input level while it is shown, and stops when left', () => {
+    const voice = useVoiceStore()
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
+    expect(voice.showAudioSettings).toBe(true)
+    wrapper.unmount()
+    expect(voice.showAudioSettings).toBe(false)
+    expect(mockStopMicTest).toHaveBeenCalledTimes(1)
+  })
 })

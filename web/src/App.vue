@@ -23,13 +23,11 @@ import ThreadSidebar from './components/ThreadSidebar.vue'
 import InviteLanding from './components/InviteLanding.vue'
 import RecoveryPage from './components/RecoveryPage.vue'
 import { rulesOpen } from './lib/communityRules'
-import AccountSecurityDialog from './components/AccountSecurityDialog.vue'
+import SettingsDialog from './components/SettingsDialog.vue'
 import CommunityRulesDialog from './components/CommunityRulesDialog.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
-import AudioSettingsModal from './components/AudioSettingsModal.vue'
-import AppSettingsModal from './components/AppSettingsModal.vue'
-import { appSettingsOpen } from './lib/appSettings'
+import { openSettings } from './lib/settingsDialog'
 import { notifyDialogOpen } from './lib/notifyDialog'
 import NotificationSettingsDialog from './components/NotificationSettingsDialog.vue'
 import ScreenShareModal from './components/ScreenShareModal.vue'
@@ -99,6 +97,8 @@ const inConversation = computed(() => chatStore.isDm(chatStore.activeChannel?.id
 const { isCompact, navOpen, closeNav } = useCompactLayout()
 if (isCompact.value) chatStore.showMemberList = false
 watch(() => [chatStore.activeChannel?.id, voiceStore.currentChannelId, voiceStore.activeView], closeNav)
+// The Talk bar asks for the audio settings with this flag; they live in the settings dialog.
+watch(() => voiceStore.showAudioSettings, open => { if (open) openSettings('audio') })
 watch(() => chatStore.activeThread, thread => { if (thread && isCompact.value) chatStore.showMemberList = false })
 function onWindowKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && navOpen.value) closeNav()
@@ -328,15 +328,6 @@ onMounted(async () => {
         @close="voiceStore.showStatsModal = false" 
       />
 
-      <!-- Audio settings dialog -->
-      <AudioSettingsModal 
-        v-if="voiceStore.showAudioSettings" 
-        @close="voiceStore.showAudioSettings = false" 
-      />
-
-      <!-- App dialog: install on this device -->
-      <AppSettingsModal v-if="appSettingsOpen" @close="appSettingsOpen = false" />
-
       <!-- Screen share quality dialog -->
       <ScreenShareModal
         v-if="voiceStore.showScreenShareModal"
@@ -351,8 +342,8 @@ onMounted(async () => {
         @mention="(uname) => chatStore.insertMention(uname)"
       />
 
-      <!-- Own sign-in security: e-mail address -->
-      <AccountSecurityDialog v-if="accountStore.dialogOpen" />
+      <!-- Settings: account, privacy, push and app, audio -->
+      <SettingsDialog v-if="accountStore.dialogOpen" />
       <NotificationSettingsDialog v-if="notifyDialogOpen" @close="notifyDialogOpen = false" />
 
       <!-- First run and re-acceptance of changed rules -->

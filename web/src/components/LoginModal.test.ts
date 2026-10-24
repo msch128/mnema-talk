@@ -134,6 +134,31 @@ describe('LoginModal', () => {
     expect(w.find<HTMLInputElement>('#login-invite')!.element.value).toBe('hash-code')
   })
 
+  it('lets the password be shown and keeps its field free of placeholder dots', async () => {
+    const w = mountLogin()
+    const input = w.get('#login-password')
+    expect(input.attributes('placeholder')).toBeUndefined()
+    expect(w.get('label[for="login-password"]').text()).toBe('Password')
+    expect(input.attributes('type')).toBe('password')
+    await w.get('[data-testid="password-toggle"]').trigger('click')
+    expect(input.attributes('type')).toBe('text')
+  })
+
+  it('says whom to ask when the server cannot reset passwords by mail', async () => {
+    apiMock.mockResolvedValue({ password_reset: false })
+    const w = mountLogin()
+    await flushPromises()
+    expect(w.get('[data-testid="forgot-password-hint"]').text()).toContain('Someone with admin rights')
+    expect(w.find('[data-testid="forgot-password-link"]').exists()).toBe(false)
+  })
+
+  it('does not guess before the server options are known', async () => {
+    apiMock.mockRejectedValue(new Error('offline'))
+    const w = mountLogin()
+    await flushPromises()
+    expect(w.find('[data-testid="forgot-password-hint"]').exists()).toBe(false)
+  })
+
   it('switches the language and opens the legal notice', async () => {
     const w = mountLogin()
     const de = w.find('button[lang="de"]')!
@@ -152,7 +177,7 @@ it('saves an explicit registration display name and closes both legal entrypoint
   await w.findAll('button').find(b => b.text().startsWith('Have an invite code'))!.trigger('click')
   await w.find('#login-username').setValue('max'); await w.find('#login-displayname').setValue('Max Display')
   await w.find('#login-password').setValue('member-password-123'); await w.find('#login-invite').setValue('team-code')
-  await w.find('form button[type="button"]').trigger('click')
+  await w.find('form button[type="button"]:not([data-testid="password-toggle"])').trigger('click')
   await w.find('[data-testid="legal"]').trigger('click'); expect(w.find('[data-testid="legal"]').exists()).toBe(false)
   await submit(w); await flushPromises()
   expect(apiMock).toHaveBeenCalledWith('/api/auth/register', expect.objectContaining({ json: expect.objectContaining({ display_name: 'Max Display' }) }))

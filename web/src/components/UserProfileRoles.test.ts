@@ -58,6 +58,29 @@ describe('UserProfileModal roles', () => {
     expect(wrapper.findComponent({ name: 'MemberRolesDialog' }).exists()).toBe(false)
   })
 
+  it('names the highest role in the badge instead of the base role', async () => {
+    chat.selectedUserProfile = { ...other }
+    wrapper = mount(UserProfileModal, { attachTo: document.body })
+    expect(wrapper.get('[data-testid="profile-role-badge"]').text()).toBe('Role 2')
+    wrapper.unmount()
+    permissions.setMemberRoles([{ id: other.id, role_ids: [] }])
+    wrapper = mount(UserProfileModal, { attachTo: document.body })
+    expect(wrapper.get('[data-testid="profile-role-badge"]').text()).toBe('Member')
+    wrapper.unmount()
+    chat.selectedUserProfile = { ...other, role: 'admin' }
+    wrapper = mount(UserProfileModal, { attachTo: document.body })
+    expect(wrapper.get('[data-testid="profile-role-badge"]').text()).toBe('Owner')
+  })
+
+  it('keeps roles, moderation and blocking in separate labelled zones', async () => {
+    chat.selectedUserProfile = { ...other }
+    wrapper = mount(UserProfileModal, { attachTo: document.body })
+    const roles = wrapper.get('[data-testid="profile-roles"]')
+    expect(roles.find('h3').text()).toBe('Roles')
+    expect(roles.find('[data-testid="profile-block"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="profile-edit-roles"]').element.closest('[data-testid="profile-moderation"]')).toBeNull()
+  })
+
   it('offers no role editing for the Owner, for oneself or without the permission', async () => {
     chat.selectedUserProfile = { ...other, role: 'admin' }
     wrapper = mount(UserProfileModal, { attachTo: document.body })

@@ -4,14 +4,13 @@ import type { Locale } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
 // The ⋯ menu of the user bar: profile, audio, language, admin, legal, sign out.
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
-import { User, KeyRound, Sliders, Smartphone, Languages, ShieldCheck, HelpCircle, LogOut, ChevronRight, Activity, Monitor, MonitorOff, Bell } from '@lucide/vue'
+import { User, Settings, Languages, ShieldCheck, HelpCircle, LogOut, ChevronRight, Activity, Monitor, MonitorOff, Bell } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
-import { useAccountStore } from '../stores/account'
 import { useToastStore } from '../stores/toast'
 import { platform } from '../lib/platform'
-import { appSettingsOpen } from '../lib/appSettings'
+import { openSettings } from '../lib/settingsDialog'
 import { notifyDialogOpen } from '../lib/notifyDialog'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useWebRTC } from '../composables/useWebRTC'
@@ -26,7 +25,6 @@ const authStore = useAuthStore()
 const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
 const toasts = useToastStore()
-const accountStore = useAccountStore()
 const features = useServerFeaturesStore()
 // Set only in the trusted desktop client, which runs a bundle it verified.
 const verified = platform.trustedApp()
@@ -147,17 +145,11 @@ const item = 'flex min-h-9 w-full items-center gap-3 rounded-lg px-2.5 py-2 text
     <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(openOwnProfile)">
       <User class="h-4 w-4 shrink-0 text-mnema-tertiary" />{{ $t('account.editProfile') }}
     </button>
-    <button type="button" role="menuitem" tabindex="-1" :class="item" data-testid="menu-account-security" @click="run(() => accountStore.open())">
-      <KeyRound class="h-4 w-4 shrink-0 text-mnema-tertiary" />{{ $t('security.menu') }}
-    </button>
-    <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(() => { voiceStore.showAudioSettings = true })">
-      <Sliders class="h-4 w-4 shrink-0 text-mnema-tertiary" />{{ $t('account.audio') }}
+    <button type="button" role="menuitem" tabindex="-1" :class="item" data-testid="menu-settings" @click="run(() => openSettings())">
+      <Settings class="h-4 w-4 shrink-0 text-mnema-tertiary" />{{ $t('account.settings') }}
     </button>
     <button v-if="features.notifyLevelsV2" type="button" role="menuitem" tabindex="-1" :class="item" data-testid="menu-notification-settings" @click="run(() => { notifyDialogOpen = true })">
       <Bell class="h-4 w-4 shrink-0 text-mnema-tertiary" />{{ $t('menu.notificationSettings') }}
-    </button>
-    <button v-if="!platform.isDesktop() && !platform.isTrustedDesktop()" type="button" role="menuitem" tabindex="-1" data-testid="account-app" :class="item" @click="run(() => { appSettingsOpen = true })">
-      <Smartphone class="h-4 w-4 shrink-0 text-mnema-tertiary" />{{ $t('account.app') }}
     </button>
     <template v-if="voiceStore.isConnected">
       <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(() => { voiceStore.showStatsModal = true })">

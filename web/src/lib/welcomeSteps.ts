@@ -16,10 +16,13 @@ export function isFirstRun(state: OnboardingState, createdAt: string, now = Date
   return Number.isNaN(created) || now - created < FIRST_RUN_WINDOW_MS
 }
 
-/** The steps to show: everything on a first run, only the rules when they are pending later. */
+/**
+ * The steps to show: everything on a first run, only the rules when they are
+ * pending later. A welcome page without a welcome text would be empty, so it is skipped.
+ */
 export function welcomeSteps(state: OnboardingState, opts: { firstRun: boolean; canAskNotifications: boolean }): WelcomeStep[] {
   const steps: WelcomeStep[] = []
-  if (opts.firstRun) steps.push('welcome')
+  if (opts.firstRun && state.welcome_text.trim() !== '') steps.push('welcome')
   if (state.rules_pending) steps.push('rules')
   if (opts.firstRun) steps.push('profile')
   if (opts.firstRun && opts.canAskNotifications) steps.push('notifications')

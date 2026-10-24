@@ -81,8 +81,9 @@ async function fakePushManager(context: BrowserContext) {
 
 async function openAppDialog(page: Page) {
   await page.getByTestId('account-menu-button').click()
-  await page.getByTestId('account-app').click()
-  await expect(page.getByRole('dialog', { name: 'App & Benachrichtigungen' })).toBeVisible()
+  await page.getByTestId('menu-settings').click()
+  await expect(page.getByRole('dialog', { name: 'Einstellungen' })).toBeVisible()
+  await page.getByTestId('settings-tab-app').click()
 }
 
 test('a member turns push on and off for this device', async ({ browser }) => {

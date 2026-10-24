@@ -38,9 +38,10 @@ test('a member deletes the account; the thread stays, the words and the name are
     expect((await apiFetch(m, 'POST', `/api/channels/${channelId}/messages`, { content: WORDS })).status).toBe(201)
     await m.reload()
 
-    // Delete from the Account & security dialog.
+    // Delete from the "Data & account" section of the settings.
     await m.getByTestId('account-menu-button').click()
-    await m.getByTestId('menu-account-security').click()
+    await m.getByTestId('menu-settings').click()
+    await m.getByTestId('settings-tab-data').click()
     await m.getByTestId('delete-start').click()
     await expect(m.getByTestId('delete-submit')).toBeDisabled()
     await m.getByTestId('delete-name').fill(MEMBER)

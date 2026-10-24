@@ -106,12 +106,13 @@ describe('WelcomeFlow on a first run', () => {
     expect(document.body.textContent).toContain('Step 1 of 2')
   })
 
-  it('says something friendly when the Owner wrote no welcome text', async () => {
+  it('skips the empty welcome page when the Owner wrote no welcome text', async () => {
     server = state({ welcome_text: '', community_name: '' })
     account()
     await flow()
-    expect(title()).toBe('Welcome to Mnema Talk')
-    expect(document.querySelector('[data-testid="welcome-text"]')?.textContent).toContain('Glad you are here')
+    expect(title()).toBe('Your profile')
+    expect(document.querySelector('[data-testid="welcome-text"]')).toBeNull()
+    expect(document.body.textContent).toContain('Step 1 of 2')
   })
 
   it('saves a changed profile before moving on', async () => {

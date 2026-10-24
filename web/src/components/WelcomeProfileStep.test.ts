@@ -61,6 +61,15 @@ describe('WelcomeProfileStep', () => {
     expect(w.emitted('skip')).toHaveLength(1)
   })
 
+  it('makes the avatar itself the way to change it', async () => {
+    const w = step()
+    const click = vi.spyOn(w.get<HTMLInputElement>('[data-testid="welcome-avatar"]').element, 'click')
+    const button = w.get('[data-testid="welcome-avatar-button"]')
+    expect(button.attributes('aria-label')).toBe(t('profile.changeAvatar'))
+    await button.trigger('click')
+    expect(click).toHaveBeenCalledOnce()
+  })
+
   it('uploads a chosen avatar', async () => {
     const upload = vi.spyOn(useAuthStore(), 'uploadAvatar').mockResolvedValue(userFixture())
     const file = new File(['x'], 'me.png', { type: 'image/png' })

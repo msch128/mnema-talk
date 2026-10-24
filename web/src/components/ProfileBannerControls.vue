@@ -8,8 +8,8 @@ import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 
-// "Change banner" and "Remove banner" on one's own profile, next to the avatar
-// controls. The server crops the picture to 3:1 and strips its metadata.
+// "Change banner" and "Remove banner" on one's own profile, as quiet pills on
+// the banner itself. The server crops the picture to 3:1 and strips its metadata.
 defineProps<{ hasBanner: boolean }>()
 
 const MAX_MB = 5
@@ -17,6 +17,7 @@ const authStore = useAuthStore()
 const chatStore = useChatStore()
 const toasts = useToastStore()
 
+const pill = 'btn btn-sm border-white/10 bg-black/50 text-mnema-text backdrop-blur-xs hover:bg-black/75 max-md:min-h-11'
 const fileInput = ref<HTMLInputElement | null>(null)
 const busy = ref(false)
 
@@ -64,10 +65,10 @@ async function remove() {
 </script>
 
 <template>
-  <div class="mb-3 flex flex-wrap items-center gap-2" data-testid="profile-banner-controls">
+  <div class="absolute bottom-2.5 left-3 z-10 flex items-center gap-1.5" data-testid="profile-banner-controls">
     <button
       type="button"
-      class="btn btn-secondary btn-sm"
+      :class="pill"
       :disabled="busy"
       :aria-busy="busy"
       data-testid="banner-change"
@@ -80,13 +81,14 @@ async function remove() {
     <button
       v-if="hasBanner"
       type="button"
-      class="btn btn-ghost btn-sm"
+      :class="pill"
       :disabled="busy"
+      :aria-label="$t('profile.removeBanner')"
+      v-tooltip="$t('profile.removeBanner')"
       data-testid="banner-remove"
       @click="remove"
     >
       <Trash2 class="h-4 w-4" aria-hidden="true" />
-      <span>{{ $t('profile.removeBanner') }}</span>
     </button>
     <input
       ref="fileInput"
