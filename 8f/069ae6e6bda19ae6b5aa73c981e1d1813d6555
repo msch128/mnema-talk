@@ -1,0 +1,29 @@
+web/src/lib/talkPresets.test.ts
+  s_06fcde5dbef956::t_a8f6e12f75a354 1-58
+web/src/lib/talks.ts
+  s_06fcde5dbef956::t_d16a6666454df1 1-66
+internal/perm/store_overwrites.go
+  s_06fcde5dbef956::t_9df1bae524a7dd 327-356
+internal/chat/talks_integration_test.go
+  s_06fcde5dbef956::t_a765a138e4d9e6 458-494
+doc/talks.md
+  s_06fcde5dbef956::t_d57288f6f94c19 32-33
+web/src/lib/talkPresets.ts
+  s_06fcde5dbef956::t_9b18cecd00ff35 1-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8f069ae6e6bda19ae6b5aa73c981e1d1813d6555",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
