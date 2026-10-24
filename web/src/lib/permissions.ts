@@ -28,7 +28,7 @@ export const PERMISSION_BITS = {
   manage_reports: 2097152,
   send_direct_messages: 4194304,
   kick_members: 8388608,
-  manage_events: 16777216
+  manage_events: 33554432
 } as const
 
 export type PermissionKey = keyof typeof PERMISSION_BITS

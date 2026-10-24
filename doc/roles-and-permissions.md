@@ -133,7 +133,7 @@ the own role is a convenient place for "this bot may post in #alerts").
 | Send direct messages | Start direct messages and write in them; reading one you are in never needs it. On for @everyone (migration 0050 adds it to existing databases); a timeout takes it, an administrator can withhold it from new members or onboarding roles (bit `1 << 22`) | no |
 | Manage reports | Read and close member reports of messages, with the copy and context they kept (bit `1 << 21`, [moderation](moderation.md#blocking-and-reports)). Off for @everyone | no |
 | Kick members | Sign members below your highest role out everywhere and drop them from their Talk, with no lasting sanction (bit `1 << 23`, [moderation](moderation.md#kicks)). Off for @everyone and every seeded role; Administrators and the Owner have it implicitly | no |
-| Manage events | Create, edit and cancel community events, and upload or remove their cover images (bit `1 << 24`, [events](events.md)). Off for @everyone; seeded Admin and Moderator roles hold it by default; Administrators and the Owner have it implicitly | no |
+| Manage events | Create, edit and cancel community events, and upload or remove their cover images (bit `1 << 25`, [events](events.md)). Off by default; Administrators and the Owner have it implicitly | no |
 
 The bit values are stored in the database and sent over the API; they never
 change meaning (`perm.Catalog` and its test freeze them).

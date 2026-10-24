@@ -9,7 +9,7 @@
 -- If the location is a Talk, only members with ViewChannel permission on that Talk see the
 -- event and can join it.
 --
--- The permission MANAGE_EVENTS (1 << 24 = 16777216) allows creating, editing, and cancelling
+-- The permission MANAGE_EVENTS (1 << 25) allows creating, editing, and cancelling
 -- events. It is granted by default to Owner/Admin roles and existing Moderator roles.
 
 CREATE TABLE events (
@@ -47,6 +47,5 @@ CREATE TABLE event_rsvps (
 
 CREATE INDEX event_rsvps_user ON event_rsvps (user_id);
 
--- New permission ManageEvents (1 << 24 = 16777216).
--- Default granted to Admin and Moderator roles.
-UPDATE roles SET permissions = permissions | 16777216 WHERE name IN ('Admin', 'Moderator');
+-- New permission ManageEvents (1 << 25): no role gets it by default;
+-- Administrators and the Owner have it implicitly.

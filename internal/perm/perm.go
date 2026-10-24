@@ -83,7 +83,7 @@ const (
 	// the direct-message permission.
 	KickMembers Set = 1 << 23
 	// ManageEvents creates, edits and cancels community events.
-	ManageEvents Set = 1 << 24
+	ManageEvents Set = 1 << 25
 )
 
 // Info describes one permission for clients.

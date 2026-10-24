@@ -82,7 +82,7 @@ describe('EventsModal', () => {
     wrapper = mount(EventsModal)
     expect(wrapper.text()).not.toContain('Create event')
 
-    perms.info = makePermsInfo(16777216) // manage_events
+    perms.info = makePermsInfo(33554432) // manage_events
     wrapper = mount(EventsModal)
     expect(wrapper.text()).toContain('Create event')
   })

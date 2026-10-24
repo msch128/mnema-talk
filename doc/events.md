@@ -10,7 +10,7 @@ Community events let organizers schedule voice hangouts or server-wide activitie
 
 ## Managing events
 
-Creating, editing, cancelling events, or uploading cover images requires the **Manage events** permission (`1 << 24` in `internal/perm`). Seeded Admin and Moderator roles hold this permission by default; `@everyone` does not.
+Creating, editing, cancelling events, or uploading cover images requires the **Manage events** permission (`1 << 25` in `internal/perm`). Administrators and the Owner have it implicitly; grant it to other roles in the role settings. `@everyone` does not have it.
 
 - **Title**: Up to 100 characters.
 - **Description**: Up to 2,000 characters of Markdown (same formatting as chat messages).
