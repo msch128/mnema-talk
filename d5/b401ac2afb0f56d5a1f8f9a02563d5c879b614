@@ -1,0 +1,24 @@
+internal/server/auto_delete_integration_test.go
+  s_06fcde5dbef956::t_673c3546b32a68 6
+  s_06fcde5dbef956::t_66e6da1983e65d 220-289
+internal/server/poll_anonymous_integration_test.go
+  s_06fcde5dbef956::t_6d1594a11fd9a6 6
+  s_06fcde5dbef956::t_bdc8c70f5615b9 13
+  s_06fcde5dbef956::t_2e7b823d2d8649 265-291
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d5b401ac2afb0f56d5a1f8f9a02563d5c879b614",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
