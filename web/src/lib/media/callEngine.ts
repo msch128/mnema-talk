@@ -25,7 +25,6 @@ export interface CallState {
   roster: string[]
   appliedEpoch: number | null
   appliedKey: EpochKeys | null
-  appliedCaps: string | null
   generation: number
   opening: Promise<void>
   tail: Promise<void>
@@ -43,7 +42,7 @@ export interface CallState {
 export function newCallState(guard: MediaGuard, pacer: WirePacer): CallState {
   return {
     guard, pacer, call: null, group: null, channelId: null, userId: null, roster: [],
-    appliedEpoch: null, appliedKey: null, appliedCaps: null, generation: 0,
+    appliedEpoch: null, appliedKey: null, generation: 0,
     opening: Promise.resolve(), tail: Promise.resolve(), inbox: [],
     keyListener: null, wireListener: null, lastOpenedAt: clock.now(), newerFrom: new Map(),
     noticeListener: null, verificationListener: null, appliedCode: null
@@ -98,10 +97,6 @@ export function track(s: CallState, pending: Promise<void>) {
   if (s.call) work.set(s.call, s.tail)
 }
 
-function capsId(step: MediaStep): string | null {
-  return step.caps ? `${step.caps.complete}:${step.caps.members.join(',')}` : null
-}
-
 export function verify(s: CallState, verification: MediaVerification | null) {
   const code = verification ? `${verification.epoch}:${verification.code}` : null
   if (code === s.appliedCode) return
@@ -145,6 +140,7 @@ function hasRecoveryConsensus(fresh: string[], committer: string | null, userId:
 export function handleStats(s: CallState, senders: Record<string, FrameStats>) {
   const live = s.group
   if (!live) return
+  if (Object.values(senders).some(stats => stats.legacy > 0)) s.noticeListener?.('outdated')
   const now = clock.now()
   noteNewerEpochs(s, senders, live, now)
   if (now - s.lastOpenedAt < EVIDENCE_MS) return
@@ -170,13 +166,8 @@ function applyStepKey(s: CallState, step: MediaStep & { key: EpochKeys; epoch: n
     const replace = s.appliedEpoch === null || step.epoch <= s.appliedEpoch
     s.appliedEpoch = step.epoch
     s.appliedKey = step.key
-    s.appliedCaps = capsId(step)
-    s.guard.setKey(step.epoch, step.key, replace, step.soft === true, step.caps)
+    s.guard.setKey(step.epoch, step.key, replace, step.soft === true)
     s.keyListener?.()
-  } else if (step.caps && capsId(step) !== s.appliedCaps) {
-    // A member's advertisement arrived: the epoch is the same, the keys stay.
-    s.appliedCaps = capsId(step)
-    s.guard.setCaps(step.epoch, step.caps)
   }
   verify(s, step.verification ?? null)
 }

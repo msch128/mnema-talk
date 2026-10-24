@@ -51,33 +51,24 @@ async function room(ids: string[]) {
   return groups
 }
 
-const caps = (group: MediaGroup, roster: string[]) => group.sync(roster).then(step => step.caps)
-
-describe('who opens frame version 3', () => {
-  it('knows only itself at first: nothing is complete until every member said so', async () => {
+// The capability message stays: members that still decide their frame format
+// by it (older clients) learn from it that this one opens version 3.
+describe('the capability message', () => {
+  it('is sent on the first tick and answered once when a member is heard for the first time', async () => {
     const roster = [aliceId, bobId]
     const groups = await room(roster)
     const alice = groups.get(aliceId) as MediaGroup
     const bob = groups.get(bobId) as MediaGroup
-    expect(await caps(alice, roster)).toEqual({ members: [aliceId], complete: false })
-    // A group of one is complete by itself.
-    const solo = await room([aliceId])
-    expect(await caps(solo.get(aliceId) as MediaGroup, [aliceId])).toEqual({ members: [aliceId], complete: true })
-    // The first tick tells the other member what this one supports.
     const told = await alice.maintain()
     expect(told.wires.filter(isCapability)).toHaveLength(1)
-    expect(await caps(alice, roster)).toEqual({ members: [aliceId], complete: false })
     const reply = await bob.receive(aliceId, told.wires[0] as Uint8Array)
-    expect(reply.caps).toEqual({ members: [aliceId, bobId].sort(), complete: true })
-    // Hearing a member for the first time is answered at once, and only once.
     expect(reply.wires.filter(isCapability)).toHaveLength(1)
     const back = await alice.receive(bobId, reply.wires[0] as Uint8Array)
-    expect(back.caps).toEqual({ members: [aliceId, bobId].sort(), complete: true })
     // The answer to the answer is the last one: a member already known is not answered.
     expect(back.wires.filter(isCapability)).toHaveLength(1)
     expect((await bob.receive(aliceId, back.wires[0] as Uint8Array)).wires).toEqual([])
     expect((await bob.receive(aliceId, told.wires[0] as Uint8Array)).wires).toEqual([])
-    await Promise.all([...groups.values(), ...solo.values()].map(group => group.close()))
+    await Promise.all([...groups.values()].map(group => group.close()))
   }, 60_000)
 
   it('ignores a capability nobody in the epoch signed, one with other bits and one of a stranger', async () => {
@@ -87,69 +78,19 @@ describe('who opens frame version 3', () => {
     const bob = groups.get(bobId) as MediaGroup
     const groupId = mediaGroupId(channelId) as Uint8Array
     const mallory = await testMember()
+    const answered = async (from: string, wire: Uint8Array) => (await alice.receive(from, wire)).wires.some(isCapability)
     // Signed with a key that is not Bob's leaf key.
-    const forged = await sealCapability(mallory.signer, groupId, bobId) as Uint8Array
-    expect((await alice.receive(bobId, forged)).caps?.complete).toBe(false)
+    expect(await answered(bobId, await sealCapability(mallory.signer, groupId, bobId) as Uint8Array)).toBe(false)
     // Bob's real message, claimed by Carol (not in the group) or replayed for another group.
     const real = (await bob.maintain()).wires.find(isCapability) as Uint8Array
-    expect((await alice.receive(carolId, real)).caps?.complete).toBe(false)
-    const other = await sealCapability(mallory.signer, new Uint8Array(16), aliceId) as Uint8Array
-    expect((await alice.receive(bobId, other)).caps?.complete).toBe(false)
+    expect(await answered(carolId, real)).toBe(false)
+    expect(await answered(bobId, await sealCapability(mallory.signer, new Uint8Array(16), aliceId) as Uint8Array)).toBe(false)
     // A member that signed no bits at all is not capable.
-    const nothing = await sealCapability(mallory.signer, groupId, bobId, 0) as Uint8Array
-    expect((await alice.receive(bobId, nothing)).caps?.complete).toBe(false)
+    expect(await answered(bobId, await sealCapability(mallory.signer, groupId, bobId, 0) as Uint8Array)).toBe(false)
     // Garbage with the right magic.
-    expect((await alice.receive(bobId, Uint8Array.of(0x4d, 0x43, CAP_FRAME_V3))).caps?.complete).toBe(false)
+    expect(await answered(bobId, Uint8Array.of(0x4d, 0x43, CAP_FRAME_V3))).toBe(false)
     // The real one counts.
-    expect((await alice.receive(bobId, real)).caps?.complete).toBe(true)
-    await Promise.all([...groups.values()].map(group => group.close()))
-  }, 60_000)
-
-  it('decides per epoch: a newcomer that never advertised makes the next epoch incomplete, and its leaving makes it complete again', async () => {
-    const roster = [aliceId, bobId]
-    const groups = await room(roster)
-    const alice = groups.get(aliceId) as MediaGroup
-    const bob = groups.get(bobId) as MediaGroup
-    for (const [id, group] of groups) await deliver(groups, id, (await group.maintain()).wires, roster)
-    expect((await caps(alice, roster))?.complete).toBe(true)
-    const epoch = (await alice.sync(roster)).epoch
-    // Carol joins and speaks MLS but never sends a capability (an older tab).
-    const carol = await open(carolId)
-    groups.set(carolId, carol)
-    const three = [aliceId, bobId, carolId]
-    const silent = (wire: Uint8Array) => isCapability(wire)
-    await deliver(groups, carolId, (await carol.sync(three)).wires, three, (wire, to) => silent(wire) && to === carolId)
-    const joined = await alice.sync(three)
-    expect(joined.epoch).not.toBe(epoch)
-    expect(joined.caps).toEqual({ members: [aliceId, bobId].sort(), complete: false })
-    expect((await bob.sync(three)).caps?.complete).toBe(false)
-    // Carol leaves: the next epoch is complete again, from what was learned before.
-    groups.delete(carolId)
-    await carol.close()
-    const removal = await alice.sync(roster)
-    await deliver(groups, aliceId, removal.wires, roster)
-    const after = await bob.sync(roster)
-    expect(after.epoch).toBe((await alice.sync(roster)).epoch)
-    expect(after.caps).toEqual({ members: [aliceId, bobId].sort(), complete: true })
-    await Promise.all([...groups.values()].map(group => group.close()))
-  }, 60_000)
-
-  it('forgets a member that comes back with a new leaf until it speaks again', async () => {
-    const roster = [aliceId, bobId]
-    const groups = await room(roster)
-    const alice = groups.get(aliceId) as MediaGroup
-    for (const [id, group] of groups) await deliver(groups, id, (await group.maintain()).wires, roster)
-    expect((await caps(alice, roster))?.complete).toBe(true)
-    // Bob reloads (an older tab, say): a new leaf key, and no advertisement.
-    const bob = groups.get(bobId) as MediaGroup
-    groups.delete(bobId)
-    await bob.close()
-    const reloaded = await open(bobId)
-    groups.set(bobId, reloaded)
-    const noCaps = (wire: Uint8Array) => isCapability(wire)
-    await deliver(groups, bobId, (await reloaded.sync(roster)).wires, roster, wire => noCaps(wire))
-    const step = await alice.sync(roster)
-    expect(step.caps).toEqual({ members: [aliceId], complete: false })
+    expect(await answered(bobId, real)).toBe(true)
     await Promise.all([...groups.values()].map(group => group.close()))
   }, 60_000)
 })

@@ -12,13 +12,7 @@ import { Backoff } from './backoff'
 import { type EpochKeys } from './frame'
 import { type MediaVerification } from './verify'
 import { SWAP_BASE_MS, RESET_BASE_MS, BACKOFF_MAX_MS, RIVAL_BASE_MS, RIVAL_MAX_MS, type MediaStep, type OwnPackage } from './groupParams'
-import { sameBytes, wipeConsumed, treeMembers, treeLeafSigner, lowest, encodeWire } from './groupTree'
-
-function isCapableMember(id: string, userId: string, signer: Uint8Array | undefined, leaf: Uint8Array | null): boolean {
-  if (id === userId) return true
-  if (signer === undefined || leaf === null) return false
-  return sameBytes(signer, leaf)
-}
+import { sameBytes, wipeConsumed, treeMembers, lowest, encodeWire } from './groupTree'
 
 function stateSecrets(state: ClientState): Uint8Array[] {
   const schedule = state.keySchedule
@@ -155,24 +149,7 @@ export abstract class GroupBase {
   protected step(wires: Uint8Array[] = []): MediaStep {
     const step: MediaStep = { wires, epoch: this.current?.epoch ?? null, key: this.current?.key ?? null, verification: this.current?.verification ?? null }
     if (this.current?.soft) step.soft = true
-    if (this.current && this.state) step.caps = this.capabilities(this.current.key, this.state)
     return step
-  }
-
-  /**
-   * Who can open frame version 3 in the current epoch (this member always
-   * can), and whether that is every member: only then may anyone seal it.
-   */
-  protected capabilities(key: EpochKeys, state: ClientState): { members: string[], complete: boolean } {
-    const members: string[] = []
-    let complete = true
-    for (const id of key.verifiers.keys()) {
-      const signer = this.capable.get(id)
-      const leaf = id === this.userId ? null : treeLeafSigner(state, id)
-      if (isCapableMember(id, this.userId, signer, leaf)) members.push(id)
-      else complete = false
-    }
-    return { members: members.sort(), complete }
   }
 
   /**

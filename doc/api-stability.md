@@ -101,7 +101,11 @@ a variable.
   [desktop-trusted-client.md](desktop-trusted-client.md).
 - **Security fixes** may change a public behaviour when a vulnerability cannot be
   closed otherwise. The release notes say so, and the change is marked
-  `fix(security):`.
+  `fix(security):`. Example: 1.2.0 stops sending and opening media frame
+  format 2 and raises the bundle `security_floor` to 1.2.0 (RT-4); the REST API,
+  the events, `web_client_api` and the health features are untouched, and the
+  clients that can no longer join calls are listed in
+  [upgrade.md](upgrade.md#11x--120).
 
 ## How it is enforced
 

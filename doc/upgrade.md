@@ -128,8 +128,9 @@ until the new release has passed your application checks.
 
 ### 1.1.x → 1.2.0
 
-Update with the procedure above and take the backup first. 1.2.0 only adds;
-nothing in `.env` has to change.
+Update with the procedure above and take the backup first. 1.2.0 adds and
+changes nothing in `.env`, and it raises the security floor (see "Calls and the
+security floor" below).
 
 #### Database
 
@@ -151,6 +152,33 @@ nothing in `.env` has to change.
   `talk_unavailable`. REST: `PATCH /api/talks/{id}`, `POST /api/talks/{id}/invites`,
   `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
   channel (additive).
+
+#### Calls and the security floor
+
+- **Media frame format 2 is removed.** The end-to-end encryption of call media
+  now speaks only frame format 3 (the one that binds a unit to its line). Clients
+  that can only send or open the old format can no longer take part in calls:
+  a web tab that predates 0.8.2, and any browser or desktop shell that still runs
+  such a bundle. A 1.0.x or 1.1.x tab keeps working in a Talk with 1.2 members
+  once it has heard every member's capability message, but its media is dropped
+  for the first moment of each epoch (join, leave, key rotation), usually a
+  second or two. Members see a notice once per call ("Someone in this Talk uses
+  an outdated Mnema client ...") when a unit in the old format arrives. Fix: reload the
+  app, or update the desktop client; there is nothing to configure on the server,
+  which only relays media it cannot read.
+- **Security floor raised to 1.2.0.** The release is committed with a
+  `Security-Floor: raise` trailer, so the signed web bundle of 1.2.0 carries
+  `security_floor` 1.2.0. A desktop client that has run it refuses every older
+  bundle: it will not connect to a server that still serves a 1.1.x bundle until
+  that server is updated, and it never runs a bundle that seals the old format.
+  Update the server before (or together with) the clients. `web_client_api` is
+  unchanged (still 1), so older desktop clients keep loading the 1.2 bundle.
+  Why this is allowed under [API stability](api-stability.md): it is a security
+  fix (RT-4 in [SECURITY.md](../SECURITY.md)), the floor is the documented tool
+  for it, and no public API, event or bridge contract changes.
+- **Rollback.** Going back to 1.1.x is possible for the server, but desktop
+  clients that already saw the 1.2.0 bundle will refuse the older one (the
+  floor is a high-water mark); web tabs reload into the older bundle.
 
 ### 1.0.x → 1.1.0
 
@@ -333,8 +361,8 @@ All changes are additive; `web_client_api` is unchanged.
   likeliest issuer the first time they are used; nothing is revoked and no token
   needs regenerating ([bots.md](bots.md#tokens)). The admin console marks tokens
   that were bound by assumption.
-- **Media frame format.** No change. Refusing frame version 2 was re-evaluated
-  and deferred to 2.0 (SECURITY.md).
+- **Media frame format.** No change in 1.0.x. Refusing frame version 2 was
+  re-evaluated for 1.1 and done in 1.2.0 (see "1.1.x → 1.2.0").
 
 ### 1.0.0 → 1.0.1
 

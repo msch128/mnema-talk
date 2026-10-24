@@ -127,6 +127,19 @@ describe('protected media', () => {
     expect(t('voice.mediaRefreshed')).not.toBe(t('voice.mediaRekeyed'))
   })
 
+  it('tells the member once per call that someone uses an outdated client, apart from the rekey notices', async () => {
+    const call = installRecordingCall()
+    const { rtc } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    call.fireNotice('outdated')
+    call.fireNotice('outdated')
+    expect(useToastStore().toasts.map(toast => toast.text)).toEqual([t('voice.mediaOutdatedClient')])
+    call.fireNotice('removed')
+    expect(useToastStore().toasts.map(toast => toast.text)).toEqual([t('voice.mediaOutdatedClient'), t('voice.mediaRekeyed')])
+  })
+
   it('arms every receiver before it answers the offer', async () => {
     const call = installRecordingCall()
     const { rtc } = setup()
