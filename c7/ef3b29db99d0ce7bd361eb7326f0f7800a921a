@@ -1,0 +1,130 @@
+internal/communityevents/store_list.go
+  s_06fcde5dbef956::t_f568f1cc652844 1-182
+internal/perm/service.go
+  s_06fcde5dbef956::t_f568f1cc652844 41,192-204
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_f568f1cc652844 71-72
+internal/communityevents/handler_rsvp.go
+  s_06fcde5dbef956::t_f568f1cc652844 1-131
+internal/perm/perm.go
+  s_06fcde5dbef956::t_f568f1cc652844 89-90,130
+internal/communityevents/model.go
+  s_06fcde5dbef956::t_f568f1cc652844 1-98
+internal/communityevents/scheduler.go
+  s_06fcde5dbef956::t_f568f1cc652844 1-131
+internal/communityevents/retract.go
+  s_06fcde5dbef956::t_f568f1cc652844 1-126
+internal/server/router_build.go
+  s_06fcde5dbef956::t_c4e6cb697d2bc6 74
+  s_06fcde5dbef956::t_f568f1cc652844 16,73,75-76,245,313-329
+  s_06fcde5dbef956::t_b24fc7e02eab48 330-331
+internal/server/server.go
+  s_06fcde5dbef956::t_f568f1cc652844 16,86-90,150,162-166,168-169,171-172
+  s_06fcde5dbef956::t_c4e6cb697d2bc6 85,167,170
+web/src/components/EventDetailModal.vue
+  s_06fcde5dbef956::t_f568f1cc652844 1-288
+web/src/components/Sidebar.vue
+  s_06fcde5dbef956::t_f568f1cc652844 20,272
+internal/audit/classes.go
+  s_06fcde5dbef956::t_f568f1cc652844 50
+internal/push/event_reminder.go
+  s_06fcde5dbef956::t_f568f1cc652844 1-82
+web/src/components/SidebarEventsEntry.test.ts
+  s_06fcde5dbef956::t_f568f1cc652844 1-56
+internal/auth/account_export_build.go
+  s_06fcde5dbef956::t_f568f1cc652844 76,172
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_f568f1cc652844 1951-1954,2310-2355
+  s_06fcde5dbef956::t_75a9e8f1589aae 2356
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_8a2a683d92f7f0 53
+  s_06fcde5dbef956::t_f568f1cc652844 54
+web/src/types/domain.ts
+  s_06fcde5dbef956::t_f568f1cc652844 30-36,56-62
+doc/events.md
+  s_06fcde5dbef956::t_f568f1cc652844 1-43
+web/src/components/EventEditDialog.vue
+  s_06fcde5dbef956::t_f568f1cc652844 1-298
+web/src/components/SidebarEventsEntry.vue
+  s_06fcde5dbef956::t_f568f1cc652844 1-41
+web/src/stores/serverFeatures.test.ts
+  s_06fcde5dbef956::t_f568f1cc652844 31-34
+internal/communityevents/handler_validation_test.go
+  s_06fcde5dbef956::t_f568f1cc652844 1-70
+internal/communityevents/store_scheduler.go
+  s_06fcde5dbef956::t_f568f1cc652844 1-107
+internal/server/router_routes.go
+  s_06fcde5dbef956::t_f568f1cc652844 109
+internal/server/health.go
+  s_06fcde5dbef956::t_f568f1cc652844 60
+web/src/types/events.ts
+  s_06fcde5dbef956::t_f568f1cc652844 5-6,148-150,251,297,376-378,409
+  s_06fcde5dbef956::t_ad1975ccb21660 408
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_f568f1cc652844 10,265-267
+  s_06fcde5dbef956::t_8a2a683d92f7f0 264
+internal/db/migrations/0070_events.sql
+  s_06fcde5dbef956::t_f568f1cc652844 1-51
+internal/communityevents/handler_validate.go
+  s_06fcde5dbef956::t_f568f1cc652844 1-118
+web/src/components/EventsModal.vue
+  s_06fcde5dbef956::t_f568f1cc652844 1-288
+web/src/stores/events.ts
+  s_06fcde5dbef956::t_f568f1cc652844 1-119
+doc/upgrade.md
+  s_06fcde5dbef956::t_8a2a683d92f7f0 151
+  s_06fcde5dbef956::t_f568f1cc652844 265-275
+  s_06fcde5dbef956::t_0e3b1df7915ccf 276
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_f568f1cc652844 137,150,233
+internal/audit/classes_test.go
+  s_06fcde5dbef956::t_f568f1cc652844 44-45
+internal/server/events_integration_test.go
+  s_06fcde5dbef956::t_f568f1cc652844 1-622
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_f568f1cc652844 87-120
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_f568f1cc652844 1951-1954,2310-2355
+  s_06fcde5dbef956::t_259a920848e43a 2356
+internal/auth/account_export_events.go
+  s_06fcde5dbef956::t_f568f1cc652844 1-30
+internal/push/locales/texts.json
+  s_06fcde5dbef956::t_f568f1cc652844 17,34
+  s_06fcde5dbef956::t_8a2a683d92f7f0 16,33
+internal/server/hooks.go
+  s_06fcde5dbef956::t_f568f1cc652844 65-74
+internal/communityevents/store.go
+  s_06fcde5dbef956::t_f568f1cc652844 1-325
+web/src/components/EventsModal.test.ts
+  s_06fcde5dbef956::t_f568f1cc652844 1-146
+web/src/lib/permissions.ts
+  s_06fcde5dbef956::t_f568f1cc652844 32,53
+  s_06fcde5dbef956::t_8a2a683d92f7f0 31
+web/src/stores/events.test.ts
+  s_06fcde5dbef956::t_f568f1cc652844 1-188
+internal/perm/snapshot_test.go
+  s_06fcde5dbef956::t_f568f1cc652844 37
+  s_06fcde5dbef956::t_f34a39af3fdc0c 36
+internal/communityevents/handler_cover.go
+  s_06fcde5dbef956::t_f568f1cc652844 1-192
+internal/events/types.go
+  s_06fcde5dbef956::t_f568f1cc652844 77-84
+internal/communityevents/handler.go
+  s_06fcde5dbef956::t_f568f1cc652844 1-337
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c7ef3b29db99d0ce7bd361eb7326f0f7800a921a",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
