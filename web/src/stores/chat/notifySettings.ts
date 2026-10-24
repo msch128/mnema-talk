@@ -33,9 +33,9 @@ export async function refreshNotifications(cx: Cx) {
 
 /** The next moment a timed mute ends, in epoch milliseconds, or null. */
 export function nextMuteEnd(cx: Cx, now = Date.now()): number | null {
-  const { channels, categories } = cx.cs.notifySettings.value
+  const { channels, categories, server } = cx.cs.notifySettings.value
   let next: number | null = null
-  for (const s of [...channels, ...categories]) {
+  for (const s of [...channels, ...categories, server]) {
     if (!s.muted_until) continue
     const at = Date.parse(s.muted_until)
     if (Number.isFinite(at) && at > now && (next === null || at < next)) next = at
@@ -54,10 +54,10 @@ function armExpiryTimer(cx: Cx) {
 
 // A setting that decides by itself is already shown; "inherit" and category
 // changes move other channels' effective levels, so the server's answer is read.
-async function putSetting(cx: Cx, path: string, level: NotifyLevel, mutedUntil: string | null, readStatesChanged: boolean) {
+async function putSetting(cx: Cx, path: string, level: NotifyLevel, mutedUntil: string | null, readStatesChanged: boolean, extra: Record<string, unknown> = {}) {
   const community = cx.cs.communityGeneration
   try {
-    await api(path, { method: 'PUT', json: { level, muted_until: mutedUntil } })
+    await api(path, { method: 'PUT', json: { level, muted_until: mutedUntil, ...extra } })
     assertCommunity(cx, community)
     if (readStatesChanged) await refreshNotifications(cx)
     else await fetchNotificationSettings(cx)
@@ -96,6 +96,21 @@ function restoreLevel(cx: Cx, channelId: string, before: ReadState | undefined) 
 export async function setCategoryNotificationLevel(cx: Cx, categoryId: string, level: NotifyLevel, mutedUntil: string | null = null) {
   if (!categoryId || !level) return false
   return putSetting(cx, `/api/categories/${categoryId}/notifications`, level, mutedUntil, true)
+}
+
+/**
+ * Set the member's server-wide default: a level (all, mentions, mute), the end
+ * of a timed mute (null mutes until turned back on) and whether @all and @here
+ * are ignored. Every channel without a setting follows it, so the server's
+ * answer is read afterwards.
+ */
+export async function setServerNotification(
+  cx: Cx,
+  level: Exclude<NotifyLevel, 'inherit'>,
+  mutedUntil: string | null,
+  suppressEveryone: boolean
+) {
+  return putSetting(cx, '/api/notification-settings/server', level, mutedUntil, true, { suppress_everyone: suppressEveryone })
 }
 
 /** The effective level of a channel: 'all' | 'mentions' | 'mute'. */

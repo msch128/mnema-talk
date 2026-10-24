@@ -5,7 +5,7 @@ import type { Channel, VoiceUser } from '../types/domain'
 // it for a voice channel. Admins can drag the row (and its users with it) or
 // move it with Alt+ArrowUp / Alt+ArrowDown.
 import { computed } from 'vue'
-import { Hash, Volume2, Trash2, Monitor, BellOff, MessageSquare, CirclePlus } from '@lucide/vue'
+import { Hash, Volume2, Trash2, Monitor, BellOff, MessageSquare, CirclePlus, AtSign } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
@@ -57,6 +57,8 @@ const reading = computed(() =>
 const draft = computed(() => !reading.value && hasDraft(authStore.user?.id, channelDraftKey(props.channel.id)))
 // Voice channels have their own text chat, so unreads and mentions too.
 const muted = computed(() => chatStore.readStates[props.channel.id]?.notify_level === 'mute')
+// The effective level also shows when it is "mentions only" (a calm marker, no badge).
+const mentionsOnly = computed(() => chatStore.readStates[props.channel.id]?.notify_level === 'mentions')
 // A muted channel keeps its mentions but does not announce plain unreads.
 const unread = computed(() => (muted.value ? 0 : chatStore.readStates[props.channel.id]?.unread_count || 0))
 const mentions = computed(() => chatStore.readStates[props.channel.id]?.mention_count || 0)
@@ -150,7 +152,8 @@ const rowClass = computed(() => [
         />
         <span class="truncate">{{ channel.name }}</span>
         <span v-if="draft" class="shrink-0 rounded-sm bg-mnema-surface px-1 text-[10px] font-semibold uppercase tracking-wide text-mnema-tertiary" data-testid="channel-draft">{{ $t('sidebar.draft') }}</span>
-        <BellOff v-if="muted" class="w-3.5 h-3.5 shrink-0 text-mnema-tertiary" data-testid="channel-muted" :aria-label="$t('notifications.mute')" />
+        <BellOff v-if="muted" class="w-3.5 h-3.5 shrink-0 text-mnema-tertiary" data-testid="channel-muted" :aria-label="$t('notifications.bellNothing')" />
+        <AtSign v-else-if="mentionsOnly" class="w-3.5 h-3.5 shrink-0 text-mnema-tertiary" data-testid="channel-mentions-only" :aria-label="$t('notifications.bellMentions')" />
       </div>
 
       <!-- Unread & Mention Badges; for a Talk in use, how long it runs -->

@@ -26,7 +26,7 @@ func TestResolveNotifyOrderAndExpiry(t *testing.T) {
 		{"indefinite mute", set(NotifyMute, nil), set(NotifyInherit, nil), NotifyMute},
 	}
 	for _, c := range cases {
-		if got := ResolveNotify(now, c.channel, c.cat); got != c.want {
+		if got := ResolveNotify(now, c.channel, c.cat, NotifySetting{}); got != c.want {
 			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
 		}
 	}

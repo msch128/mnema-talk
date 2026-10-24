@@ -64,7 +64,8 @@
   "menu": {
     "adminConsole": "Admin-Konsole",
     "legal": "Rechtliches & Datenschutz",
-    "rules": "Community-Regeln"
+    "rules": "Community-Regeln",
+    "notificationSettings": "Benachrichtigungen"
   },
   "account": {
     "menu": "Konto-Menü",
@@ -279,10 +280,10 @@
     "granted": "Benachrichtigungen sind aktiviert.",
     "denied": "Benachrichtigungen sind im Browser blockiert.",
     "channelSettings": "Benachrichtigungen für diesen Kanal",
-    "inheritChannel": "Einstellung der Kategorie verwenden",
-    "inheritCategory": "Standard (alle Nachrichten)",
-    "muteChannel": "Kanal stummschalten",
-    "muteCategory": "Kategorie stummschalten",
+    "inheritChannel": "Standard der Kategorie verwenden",
+    "inheritCategory": "Standard des Servers verwenden",
+    "muteChannel": "Stummschalten für …",
+    "muteCategory": "Stummschalten für …",
     "mute_15m": "Für 15 Minuten",
     "mute_1h": "Für 1 Stunde",
     "mute_8h": "Für 8 Stunden",
@@ -290,7 +291,21 @@
     "mute_forever": "Bis ich es wieder einschalte",
     "mutedUntil": "Bis {time}",
     "mutedIndefinitely": "Stumm",
-    "unmute": "Stummschaltung aufheben"
+    "unmute": "Stummschaltung aufheben",
+    "nothing": "Nichts",
+    "bellMentions": "Nur Erwähnungen",
+    "bellNothing": "Stumm",
+    "serverTitle": "Benachrichtigungen",
+    "serverSubtitle": "Was dich auf diesem Server benachrichtigen darf. Kanäle und Kategorien können das überschreiben.",
+    "serverDefault": "Standard für alle Kanäle",
+    "serverDefaultHint": "Gilt überall dort, wo weder der Kanal noch seine Kategorie eine eigene Einstellung hat. Nachrichten, die dich namentlich ansprechen, kommen bei „Nichts“ weiterhin an.",
+    "muteServer": "Server stummschalten",
+    "muteServerStatus": "Stumm bis {time}",
+    "muteServerForever": "Stumm, bis du es wieder einschaltest",
+    "unmuteServer": "Benachrichtigungen wieder einschalten",
+    "suppressEveryone": "@all und @here unterdrücken",
+    "suppressEveryoneHint": "Ansagen an alle benachrichtigen dich nicht mehr und zählen nicht als Erwähnung.",
+    "serverSaveFailed": "Die Benachrichtigungen konnten nicht gespeichert werden. Versuche es erneut."
   },
   "welcome": {
     "progress": "Schritt {current} von {total}",

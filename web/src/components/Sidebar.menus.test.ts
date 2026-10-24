@@ -203,7 +203,7 @@ describe('Sidebar context menus', () => {
   it('category menu: everyone can collapse and expand all', async () => {
     await mountSidebar({ role: 'user' })
     await contextMenu(headerOf('voice'))
-    expect(menuLabels()).toEqual(['Alle als gelesen markieren', 'Standard (alle Nachrichten)', 'Alle Nachrichten', 'Nur Erwähnungen', 'Kategorie stummschalten', 'Alle einklappen', 'Alle ausklappen'])
+    expect(menuLabels()).toEqual(['Alle als gelesen markieren', 'Standard des Servers verwenden', 'Alle Nachrichten', 'Nur Erwähnungen', 'Nichts', 'Stummschalten für …', 'Alle einklappen', 'Alle ausklappen'])
     expect(menuItems().find(b => (b.textContent ?? '').includes('Alle ausklappen'))!.disabled).toBe(true)
     await choose('Alle einklappen')
     expect(JSON.parse(requireValue(localStorage.getItem(COLLAPSED_KEY)))).toEqual(['text', 'voice', 'empty'])
@@ -222,7 +222,7 @@ describe('Sidebar context menus', () => {
     await mountSidebar()
     await contextMenu(headerOf('voice'))
     expect(menuLabels()).toEqual([
-      'Alle als gelesen markieren', 'Standard (alle Nachrichten)', 'Alle Nachrichten', 'Nur Erwähnungen', 'Kategorie stummschalten', 'Alle einklappen', 'Alle ausklappen',
+      'Alle als gelesen markieren', 'Standard des Servers verwenden', 'Alle Nachrichten', 'Nur Erwähnungen', 'Nichts', 'Stummschalten für …', 'Alle einklappen', 'Alle ausklappen',
       'Rechte …', 'Kanal erstellen', 'Kategorie erstellen', 'Kategorie bearbeiten', 'Kategorie löschen'
     ])
     await choose('Kanal erstellen')

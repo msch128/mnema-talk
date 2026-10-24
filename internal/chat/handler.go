@@ -127,6 +127,7 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Put("/channels/{channelID}/notifications", httpx.Handle(h.setNotifyLevel))
 	r.Put("/categories/{id}/notifications", httpx.Handle(h.setCategoryNotify))
 	r.Get("/notification-settings", httpx.Handle(h.notificationSettings))
+	r.Put("/notification-settings/server", httpx.Handle(h.setServerNotify))
 	r.Post("/read-state/read-all", httpx.Handle(h.markAllRead))
 }
 

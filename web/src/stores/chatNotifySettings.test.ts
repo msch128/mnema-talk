@@ -36,7 +36,7 @@ beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(NOW)
   setActivePinia(createPinia())
-  http.handle = url => url === '/api/notification-settings' ? { channels: [], categories: [] } : []
+  http.handle = url => url === '/api/notification-settings' ? { channels: [], categories: [], server: { level: 'all', muted_until: null, suppress_everyone: false } } : []
   vi.mocked(api).mockClear()
   vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
@@ -49,7 +49,7 @@ afterEach(() => {
 describe('notification settings', () => {
   it('loads the stored settings and ignores a failed load', async () => {
     const chat = setup()
-    const stored = { channels: [{ channel_id: one.id, level: 'mentions', muted_until: null }], categories: [] }
+    const stored = { channels: [{ channel_id: one.id, level: 'mentions', muted_until: null }], categories: [], server: { level: 'all', muted_until: null, suppress_everyone: false } }
     http.handle = () => stored
     await chat.fetchNotificationSettings()
     expect(chat.notifySettings).toEqual(stored)
@@ -90,6 +90,29 @@ describe('notification settings', () => {
     expect(vi.mocked(api).mock.calls.some(([u]) => u === '/api/read-state')).toBe(true)
   })
 
+  it('saves the server default with its mute end and suppression, then reads the effective levels', async () => {
+    const chat = setup()
+    const until = new Date(NOW.getTime() + 3_600_000).toISOString()
+    expect(await chat.setServerNotification('mute', until, true)).toBe(true)
+    const [url, options] = calls('PUT')[0]!
+    expect(url).toBe('/api/notification-settings/server')
+    expect(options?.json).toEqual({ level: 'mute', muted_until: until, suppress_everyone: true })
+    expect(vi.mocked(api).mock.calls.some(([u]) => u === '/api/read-state')).toBe(true)
+  })
+
+  it('reloads when a timed server mute has run out', async () => {
+    const chat = setup()
+    const end = new Date(NOW.getTime() + 60_000).toISOString()
+    http.handle = url => url === '/api/notification-settings'
+      ? { channels: [], categories: [], server: { level: 'mute', muted_until: end, suppress_everyone: false } }
+      : []
+    await chat.fetchNotificationSettings()
+    vi.mocked(api).mockClear()
+    http.handle = () => []
+    await vi.advanceTimersByTimeAsync(62_000)
+    expect(vi.mocked(api).mock.calls.some(([u]) => u === '/api/read-state')).toBe(true)
+  })
+
   it('reports a failed write', async () => {
     const chat = setup()
     http.handle = () => Promise.reject(new Error('forbidden'))
@@ -115,7 +138,7 @@ describe('notification settings', () => {
     const chat = setup()
     const end = new Date(NOW.getTime() + 60_000).toISOString()
     http.handle = url => url === '/api/notification-settings'
-      ? { channels: [{ channel_id: one.id, level: 'mute', muted_until: end }], categories: [{ category_id: category.id, level: 'mute', muted_until: new Date(NOW.getTime() + 120_000).toISOString() }] }
+      ? { channels: [{ channel_id: one.id, level: 'mute', muted_until: end }], categories: [{ category_id: category.id, level: 'mute', muted_until: new Date(NOW.getTime() + 120_000).toISOString() }], server: { level: 'all', muted_until: null, suppress_everyone: false } }
       : []
     await chat.fetchNotificationSettings()
     vi.mocked(api).mockClear()
@@ -129,7 +152,7 @@ describe('notification settings', () => {
   it('does not arm a timer without a timed mute', async () => {
     const chat = setup()
     const before = vi.getTimerCount()
-    http.handle = () => ({ channels: [{ channel_id: one.id, level: 'mute', muted_until: null }], categories: [] })
+    http.handle = () => ({ channels: [{ channel_id: one.id, level: 'mute', muted_until: null }], categories: [], server: { level: 'all', muted_until: null, suppress_everyone: false } })
     await chat.fetchNotificationSettings()
     expect(vi.getTimerCount()).toBe(before)
   })

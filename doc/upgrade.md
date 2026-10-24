@@ -136,6 +136,7 @@ nothing in `.env` has to change.
 | Migration | Adds |
 |---|---|
 | 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
+| 0073 | `server_notify`: a member's server-wide notification default (see [Notification settings](#notification-settings)). Adds a table only. |
 
 #### Talks
 
@@ -151,6 +152,28 @@ nothing in `.env` has to change.
   `talk_unavailable`. REST: `PATCH /api/talks/{id}`, `POST /api/talks/{id}/invites`,
   `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
   channel (additive).
+
+#### Notification settings
+
+- Migration 0073 adds `server_notify` (one row per member who changed their
+  server-wide default: level, optional mute end, "suppress @all and @here").
+  Without a row a member keeps today's behaviour: every channel without its own
+  or its category's setting notifies for all messages.
+- Precedence: channel, then category, then the server default. The level in
+  `GET /api/read-state` (`notify_level`) is the effective one, so existing
+  clients show it correctly without changes. A server-wide "Nothing" behaves like
+  a channel mute: only messages addressed to the member by name, through a role
+  or as a reply still notify and count. Direct messages ignore the server default.
+- Feature name `notify.levels.v2` in `GET /api/health`. New
+  `PUT /api/notification-settings/server` (`level` `all`, `mentions` or `mute`,
+  `muted_until` for a timed mute, `suppress_everyone`); `GET /api/notification-settings`
+  gains a `server` object (additive). Changes reach the member's other sessions
+  with the existing `read_state` refresh event. Account export and erasure
+  include the new row.
+- Desktop client: the rail's right-click menu can call the same endpoints as the
+  web app (`PUT /api/channels/{id}/notifications`,
+  `PUT /api/categories/{id}/notifications`, `PUT /api/notification-settings/server`);
+  it should hide the server-wide entries when `notify.levels.v2` is missing.
 
 ### 1.0.x → 1.1.0
 

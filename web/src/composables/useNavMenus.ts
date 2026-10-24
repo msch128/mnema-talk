@@ -135,7 +135,7 @@ export function buildChannelItems(channel: Channel, handlers: ChannelHandlers = 
   return [
     ...basicChannelItems(channel),
     { type: 'separator' },
-    ...notifyMenuItems({ kind: 'channel', id: channel.id }),
+    ...notifyMenuItems({ kind: 'channel', id: channel.id, inCategory: !!channel.category_id }),
     ...talkSettingsItems(channel),
     ...channelManagementItems(channel, handlers)
   ]
