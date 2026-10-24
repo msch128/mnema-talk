@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/msch128/mnema-talk/compare/v1.0.1...v1.1.0) (2026-10-24)
+
+
+### Features
+
+* 1.1.0 direct messages, blocking and community features ([#401](https://github.com/msch128/mnema-talk/issues/401)) ([cd6cd53](https://github.com/msch128/mnema-talk/commit/cd6cd53d224bb707cc85dd57fd8b4ed1ee842d60))
+
 ## [1.0.1](https://github.com/msch128/mnema-talk/compare/v1.0.0...v1.0.1) (2026-10-23)
 
 
