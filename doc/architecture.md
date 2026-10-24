@@ -187,6 +187,44 @@ A report (`message_reports`, migration 0049, permission *Manage reports*,
 edit or a delete. It is the only way a moderator reads anything of a conversation. Rules,
 retention and the audit entries are in [moderation](moderation.md#blocking-and-reports).
 
+## Anonymous polls
+
+An anonymous poll (feature `polls.anonymous`) stores two facts that nothing
+in the schema connects. This hides votes from every member, moderator and
+administrator in the app; an operator with direct access to the database
+server (its WAL, transaction ids or statement logs) could, in theory, still
+correlate the timing of a voter row and a ballot. Mnema itself never stores
+which option a member chose. `poll_voters (poll_id, user_id)` says that a member voted, which
+makes a second vote impossible; it has no timestamp, so neither insert order
+nor time can be matched against the other fact. The choice goes to
+`poll_anon_ballots (poll_id, option_id)`: no member, no timestamp, appended in
+the same transaction but by a separate statement. Readers add the unfolded
+ballots to the counter `poll_options.anon_votes`, and `poll.RunFold` sums the
+ballots into it and deletes them every ten minutes. `polls.anon_voters` is the
+participant counter. No table, log line, audit entry, event, export or data export holds
+a member next to a choice; a trigger on `poll_votes` (which still serves polls
+that name their voters) refuses a row for an anonymous poll, and an integration
+test walks every table of the schema to prove that no row mentions a voter and
+an option together. Because a choice is never known, a vote cannot be changed
+or withdrawn and the data export of a member has no entry for anonymous
+polls. Erasing an account deletes its `poll_voters` rows and leaves the
+counters, as a tally is not personal data. Migration 0063 converted the
+anonymous polls that existed before 1.2 the same way (see
+[upgrade.md](upgrade.md#11x--120)).
+
+## Per-channel auto-delete
+
+`channels.auto_delete_days` (0, 1, 7, 30 or 90; a check constraint also
+forbids it on direct messages) is read by `chat.AutoDeleter`
+([`internal/chat/auto_delete.go`](../internal/chat/auto_delete.go)), a
+background loop started with the router. Each pass lists the channels that
+opted in and works through each in transactions of at most 200 messages:
+lock the expired rows (`FOR UPDATE ... SKIP LOCKED`, which also holds off
+concurrent replies and uploads, so the list of attachment keys is complete),
+collect their media keys, delete the rows, then delete the objects and
+broadcast `message_delete`. The setting is re-checked inside every batch.
+The audit entry per run is written by the sweeper itself.
+
 ## Forwarding and saved messages
 
 **A forward is a reference, never a copy.** `POST /api/messages/{id}/forward`

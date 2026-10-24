@@ -559,7 +559,7 @@ committed statement and public key.
   the optional features this build has, so a newer web app can hide what an
   older server lacks. In 1.1 it holds `blocks`, `dm`, `reports`, `saved`,
   `forward`, `search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`;
-  1.2 adds `talks.lobby`, `status.expiry`, `reminders` and `messages.scheduled`;
+  1.2 adds `talks.lobby`, `status.expiry`, `reminders`, `messages.scheduled`, `polls.anonymous` and `channels.auto_delete`;
   names never change meaning ([api-stability.md](api-stability.md)). A 1.0.x
   server sends no list. The compose
   healthcheck and [`scripts/health-check.sh`](../scripts/health-check.sh)

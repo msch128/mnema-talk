@@ -46,6 +46,8 @@ var Features = []string{
 	"status.expiry",
 	"reminders",
 	"messages.scheduled",
+	"polls.anonymous",
+	"channels.auto_delete",
 	"talks.lobby",
 }
 

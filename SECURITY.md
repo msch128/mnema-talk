@@ -102,6 +102,16 @@ model, in short; the design is in [doc/architecture.md](doc/architecture.md#dire
 - **Server-side enforcement** of all of it; the UI only hides what a member
   cannot do.
 
+## Anonymous polls
+
+An anonymous poll hides who chose what from every member, moderator and
+administrator in the app. Mnema never stores which option a member chose: only
+that the member voted (`poll_voters`, no timestamp) and ballots without a
+member (`poll_anon_ballots`) that are folded into per-option counters. An
+operator with direct access to the database server (WAL, transaction ids or
+statement logs) could, in theory, still correlate the timing of a vote. Do not
+rely on it against that operator.
+
 ## Blocks and reports
 
 A block is private: the blocked member is not told, and nothing about it is

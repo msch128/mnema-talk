@@ -141,6 +141,7 @@ of the pre-update backup (see "Rollback" above).
 | 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
 | 0061 | `users.status_expires_at` (a status line that clears itself, feature `status.expiry`). It also raises the limit of `channels.slow_mode_seconds` from 6 hours to 24 hours. |
 | 0062 | `message_reminders` and `scheduled_messages` (see "Reminders and scheduled messages"). |
+| 0063 | `poll_voters`, `poll_anon_ballots`, `poll_options.anon_votes`, `polls.anon_voters` and a trigger on `poll_votes` (anonymous polls); `channels.auto_delete_days` with its checks. |
 | 0064 | `user_sessions`: one row per browser session (device label, created, last active). |
 | 0065 | `instance_settings.session_inactivity_days` (1 to 365, default 7). |
 
@@ -204,6 +205,29 @@ under *Admin* > *Welcome & rules*; see "Sessions and inactivity sign-out" in
   pipeline and the device list of the member; they ignore channel mute levels
   (the member asked for them) but follow the member's preview setting and the
   operator's `PUSH_PREVIEWS`.
+
+#### Messaging: anonymous polls and auto-delete
+
+- **Anonymous polls no longer keep the choice.** Until 1.1 an anonymous poll
+  stored who voted for what and only hid it in the API. The migration turns
+  every existing anonymous poll into counters plus "has voted" rows and
+  **deletes its named votes**, so the tallies and the participants stay but
+  nobody in the app can be tied to an answer any more, and a database backup
+  taken after the update holds no named vote. Backups taken before the update, and PostgreSQL's
+  own dead rows until autovacuum has run, can still hold the old rows; run
+  `VACUUM FULL poll_votes;` if that matters to you. Members can no longer
+  change a vote in an anonymous poll (the web app says so before they vote);
+  the polls that name their voters are untouched. The data export of a member
+  no longer lists their votes in anonymous polls, because none are stored.
+  New feature name: `polls.anonymous`; a web app without it never offers the
+  toggle.
+- **Auto-delete per channel** (feature `channels.auto_delete`) is off
+  everywhere after the update. Someone with *Manage channels* opts a channel
+  in under its settings; nothing is deleted until then. See
+  [moderation.md](moderation.md#auto-delete) for what stays (pinned messages)
+  and how it is audited (`channel.auto_delete_set`, `channel.auto_delete_run`).
+  New route `PUT /api/admin/channels/{id}/auto-delete` and the additive
+  response field `auto_delete_days` of channels.
 
 ### 1.0.x → 1.1.0
 

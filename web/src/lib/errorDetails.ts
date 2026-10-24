@@ -30,6 +30,8 @@ export const DETAILS: Readonly<Record<string, string>> = {
   'poll not found': 'pollGone',
   'this poll takes one answer': 'pollOneAnswer',
   'an option is given twice': 'pollOptionTwice',
+  'you have already voted in this anonymous poll; a vote there cannot be changed': 'pollAlreadyVoted',
+  'a vote in an anonymous poll cannot be withdrawn': 'pollNoWithdraw',
   'unknown option': 'pollUnknownOption',
   'a poll has 2 to 10 options': 'pollOptionCount',
   'an option is one line of text': 'pollOptionLine',

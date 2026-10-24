@@ -158,7 +158,9 @@
       "replyGone": "The message you replied to no longer exists.",
       "replyElsewhere": "You can only reply to a message in the same conversation.",
       "inviteExists": "An invite with this code already exists.",
-      "usernameReserved": "This username is reserved."
+      "usernameReserved": "This username is reserved.",
+      "pollAlreadyVoted": "You already voted in this anonymous poll. A vote there can’t be changed.",
+      "pollNoWithdraw": "A vote in an anonymous poll can’t be withdrawn."
     },
     "field": {
       "content": "Message",
@@ -1463,7 +1465,7 @@
     },
     "allowMultiple": "Allow several answers",
     "makeAnonymous": "Anonymous poll",
-    "anonymousHint": "Nobody sees who voted for what, not even you or administrators. Only the totals are shown.",
+    "anonymousHint": "Only the totals are stored: nobody in the app can see who voted for what, not even you, moderators or administrators, and Mnema never stores which answer a member chose. A vote can’t be changed once it is sent.",
     "post": "Post poll",
     "problem": {
       "question": "Enter a question.",
@@ -1500,7 +1502,11 @@
     "someone": "Someone",
     "more": "+{count} more",
     "failed": "That didn’t work. Try again.",
-    "cannotVote": "You can’t vote in this channel."
+    "cannotVote": "You can’t vote in this channel.",
+    "anonymousBadgeHint": "Anonymous poll: nobody in the app, not even moderators or administrators, can see who chose what. Mnema never stores which answer a member chose, only that they voted and how many votes each answer has.",
+    "anonymousFinal": "Your vote can’t be changed after you send it.",
+    "submitVote": "Vote",
+    "youVotedAnonymous": "You voted. Votes in an anonymous poll can’t be changed."
   },
   "mention": {
     "title": "Mention",
@@ -1864,7 +1870,9 @@
         "update": "Channel edited",
         "delete": "Channel deleted",
         "duplicate": "Channel duplicated",
-        "overwrites_set": "Channel permissions changed"
+        "overwrites_set": "Channel permissions changed",
+        "auto_delete_set": "Channel auto-delete changed",
+        "auto_delete_run": "Old messages deleted automatically"
       },
       "category": {
         "overwrites_set": "Category permissions changed",
@@ -2638,5 +2646,32 @@
       "closeFailed": "Couldn’t close the report. Try again.",
       "loadFailed": "Couldn’t load the reports. Try again."
     }
+  },
+  "autoDelete": {
+    "title": "Auto-delete",
+    "label": "Delete old messages",
+    "off": "Off, keep messages",
+    "choices": {
+      "1": "After 1 day",
+      "7": "After 7 days",
+      "30": "After 30 days",
+      "90": "After 90 days"
+    },
+    "periods": {
+      "1": "1 day",
+      "7": "7 days",
+      "30": "30 days",
+      "90": "90 days"
+    },
+    "hint": "Messages older than this are deleted automatically with their attachments, and this can’t be undone. Pinned messages stay. Direct messages are never affected.",
+    "apply": "Apply",
+    "confirmTitle": "Delete old messages automatically?",
+    "confirmBody": "Every message in {name} older than {period} will be deleted permanently, starting within a few minutes. Members will see this notice in the channel.",
+    "confirmAction": "Turn on",
+    "saved": "Auto-delete updated.",
+    "failed": "Couldn’t change auto-delete. Try again.",
+    "chip": "Auto-delete: {period}",
+    "tooltip": "Messages older than {period} are deleted automatically.",
+    "line": "Messages in this channel are deleted automatically once they are older than {period}."
   }
 }

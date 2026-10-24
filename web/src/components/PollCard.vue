@@ -18,7 +18,7 @@ const props = defineProps({
 })
 
 const chat = useChatStore()
-const { poll, ended, left, mine, busy, canVote, votingBlocked, canEnd, vote, end } = usePoll(() => props.msg)
+const { poll, ended, left, mine, busy, canVote, votingBlocked, canEnd, hasVoted, submitsLater, pick, submit, end } = usePoll(() => props.msg)
 const winners = computed(() => (ended.value ? leaders(poll.value) : []))
 const interactive = computed(() => canVote.value && !busy.value)
 
@@ -44,7 +44,12 @@ async function confirmEnd() {
       <ChartNoAxesColumn class="h-3.5 w-3.5 text-mnema-accent" aria-hidden="true" />
       <span class="font-medium uppercase tracking-wide">{{ $t('poll.title') }}</span>
       <span>{{ poll.multiple ? $t('poll.multiple') : $t('poll.single') }}</span>
-      <span v-if="poll.anonymous" class="inline-flex items-center gap-1" data-testid="poll-anonymous"><EyeOff class="h-3 w-3" aria-hidden="true" />{{ $t('poll.anonymous') }}</span>
+      <span
+        v-if="poll.anonymous"
+        class="inline-flex items-center gap-1 rounded-md border border-mnema-border px-1.5 py-0.5 text-mnema-muted"
+        data-testid="poll-anonymous"
+        v-tooltip="$t('poll.anonymousBadgeHint')"
+      ><EyeOff class="h-3 w-3" aria-hidden="true" />{{ $t('poll.anonymous') }}</span>
     </p>
 
     <div role="group" :aria-label="$t('poll.options')">
@@ -60,7 +65,7 @@ async function confirmEnd() {
             mine.includes(o.id) ? 'border-mnema-accent' : 'border-mnema-hairline',
             interactive ? 'cursor-pointer hover:border-mnema-accent/70' : 'cursor-default'
           ]"
-          @click="vote(o.id)"
+          @click="pick(o.id)"
         >
           <span
             aria-hidden="true"
@@ -80,6 +85,21 @@ async function confirmEnd() {
     </div>
 
     <p v-if="votingBlocked" class="mt-2 text-xs text-mnema-tertiary" data-testid="poll-cannot-vote">{{ $t('poll.cannotVote') }}</p>
+
+    <!-- An anonymous vote is final, so it is sent with a button after ticking, and the card says so. -->
+    <div v-if="submitsLater && !ended && !votingBlocked" class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+      <template v-if="!hasVoted">
+        <button
+          type="button"
+          data-testid="poll-submit"
+          class="btn btn-primary btn-sm"
+          :disabled="busy || mine.length === 0"
+          @click="submit"
+        >{{ $t('poll.submitVote') }}</button>
+        <span class="text-xs text-mnema-tertiary" data-testid="poll-final-hint">{{ $t('poll.anonymousFinal') }}</span>
+      </template>
+      <span v-else class="inline-flex items-center gap-1 text-xs text-mnema-muted" data-testid="poll-voted"><Check class="h-3.5 w-3.5 text-mnema-accent" aria-hidden="true" />{{ $t('poll.youVotedAnonymous') }}</span>
+    </div>
 
     <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-mnema-tertiary">
       <span data-testid="poll-total">{{ $t('poll.voters', { count: poll.total_voters }) }}</span>

@@ -106,6 +106,26 @@ transaction and concurrent posts of one member in one channel are serialized
 with an advisory lock, so a burst cannot slip several messages through the same
 gap.
 
+## Auto-delete
+
+*Manage channels* can let a channel forget: **Channel settings > Delete old
+messages** with *1 day*, *7 days*, *30 days* or *90 days* (off by default, and
+never for direct messages, which the database refuses). Turning it on asks
+for confirmation, because the deletion cannot be undone. The channel then
+shows a timer chip in its header and a line under it, so nobody writes
+unaware.
+
+A sweeper runs every ten minutes, removes the messages older than the period
+in batches of 200 (at most 25 batches per channel and run, the rest on the next
+run) and deletes their attachments through the same path as a deleted message.
+Clients get `message_delete` for each. **Pinned messages stay**, and so does a
+thread root while it has a reply that is newer than the period or pinned; the
+old replies of such a thread go. Turning auto-delete off stops a run at once.
+Every run that removed something is one `channel.auto_delete_run` audit entry
+with the counts; changing the setting is `channel.auto_delete_set`. The
+audit entries of `message.delete` are *not* written for these deletions (they
+would hold the text of everything the channel was told to forget).
+
 ## Message moderation
 
 Holders of *Manage messages* in a channel can:
@@ -279,7 +299,9 @@ requests leave no entry. Reading the log is not recorded.
 | `message.delete` | A message is deleted, by its author or a moderator | The **full text**, the attachment names, types and sizes (not the files), author, channel, send time, `moderator` (true when someone else deleted it) and the thread replies (author and text, up to 50) |
 | `message.edit` | An author edits a message | Text `before` and `after`, author, channel |
 | `message.edit_history_view` | A moderator opens the earlier versions of **someone else's** message | Message, author, channel and how many versions were shown, not their text. One entry per reader and message every ten minutes; reading your own message leaves none |
-| `poll.end` | A moderator ends a poll that someone else posted | Message, author, channel and the question. An author ending their own poll is not audited |
+| `poll.end` | A moderator ends a poll that someone else posted | Message, author, channel and the question. An author ending their own poll is not audited. No entry of any poll ever holds a vote: an anonymous poll does not store who chose what |
+| `channel.auto_delete_set` | Someone with *Manage channels* turns a channel's auto-delete on, off or to another period | The channel with its settings before and after (`auto_delete_days`) |
+| `channel.auto_delete_run` | The sweeper removed messages of a channel | The channel, the period (`days`), how many `messages` and `attachments` went, and whether the run finished (`complete`). Written by the server itself, without an actor; a run that removes nothing writes nothing. Never the text |
 | `voice.join`, `voice.leave` | A member enters or leaves a Talk | Member and Talk with the time. A reload within the grace period is neither. High volume on a busy server: filter by the *Talk presence* group |
 | `report.create`, `report.resolve`, `report.delete` | A member reports a message; a moderator closes or deletes the report | The report id and category (and the closing status). Never message text or notes. See [Blocking and reports](#blocking-and-reports) |
 | `auth.login` | Successful sign-in (browser and native) | The member |

@@ -11,6 +11,7 @@ import { nextSortOrder } from '../lib/channelLayout'
 import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 import SlowModePicker from './SlowModePicker.vue'
+import ChannelAutoDeleteField from './ChannelAutoDeleteField.vue'
 
 const props = defineProps({
   kind: { type: String as PropType<'channel' | 'category'>, default: 'channel' }, // 'channel' | 'category'
@@ -112,6 +113,8 @@ async function submit() {
         </span>
         <SlowModePicker v-model="slowMode" v-model:valid="slowModeValid" />
       </div>
+
+      <ChannelAutoDeleteField v-if="isChannel && entity && 'type' in entity" :channel="entity" />
 
       <div class="pt-3 flex items-center justify-end gap-2 border-t border-mnema-hairline">
         <button

@@ -1611,6 +1611,25 @@
         ],
         "type": "object"
       },
+      "chat.AutoDeleteRequest": {
+        "properties": {
+          "days": {
+            "description": "Days is how long messages stay: 1, 7, 30 or 90; 0 turns auto-delete off.",
+            "enum": [
+              0,
+              1,
+              7,
+              30,
+              90
+            ],
+            "type": "integer"
+          }
+        },
+        "required": [
+          "days"
+        ],
+        "type": "object"
+      },
       "chat.BlockedMember": {
         "properties": {
           "avatar_url": {
@@ -1860,6 +1879,12 @@
       },
       "chat.Channel": {
         "properties": {
+          "auto_delete_days": {
+            "description": "AutoDeleteDays removes messages older than this many days (1, 7, 30 or\n90; pinned messages stay); 0 = off. Never set on direct messages.",
+            "maximum": 90,
+            "minimum": 0,
+            "type": "integer"
+          },
           "category_id": {
             "format": "uuid",
             "type": [
@@ -4906,7 +4931,7 @@
       "poll.CreateRequest": {
         "properties": {
           "anonymous": {
-            "description": "Anonymous hides who voted for what, from everyone.",
+            "description": "Anonymous stores only that a member voted and the count per option, never\nthe choice; a vote in it cannot be changed. Offered with the polls.anonymous feature.",
             "type": "boolean"
           },
           "duration": {
@@ -4958,12 +4983,16 @@
             "format": "date-time",
             "type": "string"
           },
+          "has_voted": {
+            "description": "HasVoted says that the caller voted, also in an anonymous poll.",
+            "type": "boolean"
+          },
           "multiple": {
             "description": "Multiple lets a member vote for several options.",
             "type": "boolean"
           },
           "my_votes": {
-            "description": "MyVotes are the options the caller voted for (also in an anonymous poll).",
+            "description": "MyVotes are the options the caller voted for. It is always empty in an\nanonymous poll, which does not know the choice.",
             "items": {
               "format": "uuid",
               "type": "string"
@@ -9461,6 +9490,124 @@
           }
         ],
         "summary": "Rename a channel, change its topic or member limit",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/channels/{id}/auto-delete": {
+      "put": {
+        "description": "Opt-in per channel: a background sweeper removes messages older than 1, 7, 30 or 90 days, attachments included, and broadcasts message_delete for each. Pinned messages and thread roots that still have a newer or pinned reply stay. 0 turns it off. Direct messages never take part (404). Requires the Manage channels permission. Changing the setting is written to the audit log (channel.auto_delete_set), and every sweep that removed messages as channel.auto_delete_run with the counts. Needs the channels.auto_delete feature.",
+        "operationId": "setChannelAutoDelete",
+        "parameters": [
+          {
+            "description": "Resource ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.AutoDeleteRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Channel"
+                }
+              }
+            },
+            "description": "Updated channel."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or days other than 0, 1, 7, 30, 90."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Manage channels permission, or cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set a channel's auto-delete",
         "tags": [
           "Admin"
         ]
@@ -20445,7 +20592,7 @@
     },
     "/api/channels/{channelID}/messages/{messageID}/poll": {
       "get": {
-        "description": "The poll as in the message, plus the options the caller voted for. This is the only place an anonymous poll shows a member their own choice. Needs View channels.",
+        "description": "The poll as in the message, plus the options the caller voted for (my_votes) and whether they voted at all (has_voted). An anonymous poll stores no choices: my_votes is empty there and only has_voted tells that the caller took part. Needs View channels.",
         "operationId": "getPoll",
         "parameters": [
           {
@@ -20649,7 +20796,7 @@
     },
     "/api/channels/{channelID}/messages/{messageID}/poll/votes": {
       "put": {
-        "description": "Replaces the caller's votes with option_ids (one for a single-choice poll, any number of distinct options for a multiple-choice one; an empty list withdraws the vote). Allowed until the poll ends (409 afterwards). Needs View channels and Add reactions. Broadcasts poll_update with the new tallies; in an anonymous poll nobody learns who voted. At most 60 a minute per member.",
+        "description": "Replaces the caller's votes with option_ids (one for a single-choice poll, any number of distinct options for a multiple-choice one; an empty list withdraws the vote). Allowed until the poll ends (409 afterwards). In an anonymous poll exactly one vote is possible and it cannot be changed or withdrawn (409 on a second vote, 400 on an empty list); the server records only that the member voted and raises the option counters. Needs View channels and Add reactions. Broadcasts poll_update with the new tallies; in an anonymous poll nobody learns who voted for what. At most 60 a minute per member.",
         "operationId": "votePoll",
         "parameters": [
           {
@@ -20743,7 +20890,7 @@
                 }
               }
             },
-            "description": "CONFLICT: the poll has ended."
+            "description": "CONFLICT: the poll has ended, or the caller already voted in an anonymous poll."
           },
           "429": {
             "content": {
