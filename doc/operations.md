@@ -256,7 +256,7 @@ public `https://` address.
 ## Sessions and inactivity sign-out
 
 Each browser sign-in is a session. Members see their own sessions under
-*Account & security* > *Where you are signed in*: a coarse device label
+*Settings* > *Sessions* ("Where you are signed in"): a coarse device label
 ("Firefox · Linux", parsed from the user agent; neither the raw user agent nor
 an IP address is stored), when the session was created and last used (accurate
 to a few minutes), whether its device gets push notifications, and which one is
@@ -291,8 +291,7 @@ days, default 7. A change applies to running sessions at once.
 ## Web Push and the installable app
 
 Mnema Talk is an installable web app (manifest, icons and a service worker at
-`/sw.js`). Members can install it from the browser (Account menu > App &
-notifications) and turn on push notifications per device, so they hear about
+`/sw.js`). Members can install it from the browser (*Settings* > *Push & app*) and turn on push notifications per device, so they hear about
 messages while the app is closed. On iPhone and iPad this works for the
 installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
 

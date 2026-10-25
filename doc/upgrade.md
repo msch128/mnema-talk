@@ -179,6 +179,10 @@ of the pre-update backup (see "Rollback" above).
   (permissions, slow mode, timeout, blocks) runs at send time, not when the message
   is scheduled. A message the server has to refuse is not lost: it becomes `failed`
   and stays as a draft to edit, reschedule or delete.
+- Editing a scheduled message keeps its time unless the member changed it: the
+  web app sends a new time only when it differs (or when the message had
+  failed), and the server keeps the stored time and state when `send_at` is absent.
+  A failed message edited only in its text stays a draft.
 - Both belong to their owner only. Account erasure deletes them and the account
   export includes them.
 
@@ -209,7 +213,7 @@ of the pre-update backup (see "Rollback" above).
 #### Sessions and inactivity sign-out
 
 - **Where you are signed in** (migrations 0064 and 0065). Members see and end
-  their own browser sessions, including the push devices of a session
+  their own browser sessions under *Settings* > *Sessions*, including the push devices of a session
   (`GET /api/auth/sessions`, `DELETE /api/auth/sessions/{id}`,
   `POST /api/auth/sessions/revoke-others`). Only a coarse device label is stored,
   never the user agent or an IP address.
@@ -238,6 +242,11 @@ of the pre-update backup (see "Rollback" above).
   `during:`, `author:`, and `filename:` filters, rendered as removable chips in
   the query line. A sort order toggle in the results header allows switching
   between Newest, Oldest, and Relevance.
+- **One filter row, quoted phrases, exclusions.** The search dialog shows a single
+  filter row. In `q`, a quoted phrase is one term and a leading minus excludes
+  messages containing a word or phrase (`"build failed" -nightly`); a lone `-`,
+  `a-b` and a quoted `-x` stay literal text. This is handled by the server
+  (`GET /api/search`, at most 8 terms), so any client gets it.
 - **Earlier filters.** `search.filters.v2` (1.1) is unchanged and still advertised; a client that only knows it keeps working.
 - **Feature flag.** Advertised as `search.filters.v3` in `GET /api/health`.
   A web client connected to an older server hides the new dropdown and sort toggle.
@@ -388,7 +397,7 @@ members always carry them.
   with no mention count in the list, unless the conversation has a setting of
   its own (which wins). Unread counts are unchanged. The existing
   *who may start a conversation* setting (`dm_policy`) is unchanged and now sits
-  in the same *Direct messages* section of the privacy settings.
+  in the same *Direct messages* section (*Settings* > *Privacy*).
 - A 1.1.x web app on a 1.2 server works as before; a 1.2 web app on an older
   server hides the new parts.
 
@@ -709,7 +718,7 @@ operator is below. Update with the procedure above; take the backup first.
 - **Desktop client is Beta.** The Windows desktop client stays Beta at 1.0.0;
   see [desktop-app.md](desktop-app.md).
 - **Optional e-mail, SMTP and password reset by mail.** Members may now add an
-  e-mail address in Account & security (never required, never shown to other
+  e-mail address in the account settings (*Sign-in*) (never required, never shown to other
   members or to the Owner). Setting `SMTP_HOST` (see
   [operations.md](operations.md#outgoing-e-mail)) lets the server confirm an
   address by a single-use link and lets members reset a forgotten password with
@@ -729,7 +738,7 @@ operator is below. Update with the procedure above; take the backup first.
   the accounts that use it (Admin > Members, or `mnema-talk reset-2fa <username>`
   for the Owner). See [operations.md](operations.md).
 - **Members can delete their account and export their data.** Both are in
-  Account & security; the Owner account cannot be deleted. A deleted account
+  the account settings (*Data & account*); the Owner account cannot be deleted. A deleted account
   leaves its messages in place without text, written by "Deleted member" (1.0.0
   stored "Deleted user" and keeps it for accounts deleted before 1.0.1; the web
   app ignores the stored text and names a deleted author in the member's
@@ -796,7 +805,7 @@ operator is below. Update with the procedure above; take the backup first.
   checked with `promtool` and against `/api/metrics` in CI. Metric names are
   part of the stability contract.
 - **Web Push (migration 0042).** Members can turn on push notifications per
-  device (Account menu > App & notifications) and get messages while the app
+  device (*Settings* > *Push & app*) and get messages while the app
   is closed; on iPhone and iPad only for the installed app. The migration
   creates `push_vapid` (the server's VAPID key, generated on first start: it
   is in your database backups, so restores keep working subscriptions),

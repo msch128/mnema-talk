@@ -191,8 +191,8 @@ no accounts on someone else's platform.
   in the menu (Alt+Arrow keys on a focused row). Favourites stay in the list and
   follow you to every device.
 - **Mute** one conversation from the bell in its header or its menu, or all of
-  them with **Mute all direct messages** in your account settings, in the
-  privacy section *Direct messages*: no sound, no notification and no highlight, but
+  them with **Mute all direct messages** under *Settings* > *Privacy* >
+  *Direct messages*: no sound, no notification and no highlight, but
   unread messages still count. A conversation you muted or unmuted yourself keeps
   its own setting.
 - **Who may write to you** is your choice in the same place: everyone (the
@@ -204,7 +204,7 @@ no accounts on someone else's platform.
   group included, their messages leave unread counts, mentions and last activity
   untouched), and a conversation of two with them stops working in both directions.
   They are not told. The list of blocked members, with a way to unblock, is under
-  *Account & security*.
+  *Settings* > *Privacy*.
 - **Report** a message from its menu (**Report message**) with a reason and an
   optional note. The moderators see a copy of the message and the ones around
   it in **Admin > Reports**, which needs the permission *Manage reports*; for a
