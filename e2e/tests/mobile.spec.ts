@@ -179,6 +179,21 @@ test('phone: sign in, drawer, message, thread, settings, Talk', async ({ page, b
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
 
+  // The settings are a full-screen sheet on a phone, sections as a wrapped row (no sideways scrolling).
+  await openDrawer(page)
+  await page.getByTestId('account-menu-button').tap()
+  await page.getByTestId('menu-settings').tap()
+  const sheet = page.getByRole('dialog', { name: 'Einstellungen' })
+  await expect(sheet).toBeVisible()
+  const sheetBox = await bounds(sheet)
+  expect(sheetBox.x).toBeLessThanOrEqual(1)
+  expect(sheetBox.width).toBeGreaterThanOrEqual((viewport?.width ?? 0) - 1)
+  await page.getByTestId('settings-tab-sessions').tap()
+  await expect(page.getByTestId('account-sessions')).toBeVisible()
+  await expectNoSidewaysScroll(page)
+  await page.keyboard.press('Escape')
+  await expect(sheet).toBeHidden()
+
   // Talk: join from the drawer, the control bar stays on screen, leave.
   await openDrawer(page)
   await page.locator('[data-channel-type="voice"]', { hasText: VOICE_CHANNEL }).tap()

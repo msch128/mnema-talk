@@ -7,14 +7,15 @@ import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 import AccountDmPolicy from './AccountDmPolicy.vue'
+import SwitchRow from './SwitchRow.vue'
 
 const chat = useChatStore()
 const features = useServerFeaturesStore()
 const toasts = useToastStore()
 const busy = ref(false)
 
+// The switch is disabled while a save runs, so no second call can start.
 async function toggleMuteAll() {
-  if (busy.value) return
   busy.value = true
   try {
     await chat.saveDmSettings({ mute_all: !chat.dmSettings.mute_all })
@@ -27,24 +28,18 @@ async function toggleMuteAll() {
 </script>
 
 <template>
-  <div class="settings-sub" data-testid="account-dm">
-    <p class="settings-subtitle">{{ $t('dm.settings.title') }}</p>
+  <section class="settings-card" data-testid="account-dm" aria-labelledby="dm-settings-title">
+    <h3 id="dm-settings-title" class="settings-title">{{ $t('dm.settings.title') }}</h3>
     <AccountDmPolicy />
-    <section v-if="features.dmV2" class="mt-4 flex items-start justify-between gap-6">
-      <div class="settings-row-text">
-        <div id="dm-mute-all-title" class="settings-row-title">{{ $t('dm.settings.muteAll') }}</div>
-        <p class="settings-hint">{{ $t('dm.settings.muteAllHint') }}</p>
-      </div>
-      <button
-        type="button"
-        role="switch"
-        :aria-checked="chat.dmSettings.mute_all ? 'true' : 'false'"
-        aria-labelledby="dm-mute-all-title"
+    <div v-if="features.dmV2" class="border-t border-mnema-hairline pt-4">
+      <SwitchRow
+        :model-value="chat.dmSettings.mute_all"
+        :title="$t('dm.settings.muteAll')"
+        :hint="$t('dm.settings.muteAllHint')"
         :disabled="busy"
-        class="switch mt-0.5"
         data-testid="dm-mute-all"
-        @click="toggleMuteAll"
-      ></button>
-    </section>
-  </div>
+        @toggle="toggleMuteAll"
+      />
+    </div>
+  </section>
 </template>

@@ -75,12 +75,11 @@
   "account": {
     "menu": "Konto-Menü",
     "editProfile": "Profil bearbeiten",
-    "audio": "Audio",
     "language": "Sprache",
     "signOut": "Abmelden",
     "languageSet": "Sprache auf {language} gestellt. Für dieses Konto gespeichert.",
     "languageFailed": "Die Sprache konnte nicht gespeichert werden. Versuche es noch einmal.",
-    "app": "App & Benachrichtigungen"
+    "settings": "Einstellungen"
   },
   "errors": {
     "unknown": "Unbekannter Fehler",
@@ -222,7 +221,8 @@
     "inviteChecking": "Einladung wird geprüft …",
     "inviteInvalid": "Diese Einladung gilt nicht mehr. Frag nach einer neuen, oder melde dich an, wenn du schon ein Konto hast.",
     "inviteExpires": "Gültig bis {when}",
-    "passwordHint": "Mindestens {count} Zeichen."
+    "passwordHint": "Mindestens {count} Zeichen.",
+    "forgotNoMail": "Passwort vergessen? Dieser Server kann keine E-Mails senden. Eine Person mit Admin-Rechten kann es für dich zurücksetzen."
   },
   "sidebar": {
     "subtitle": "Private Community",
@@ -320,10 +320,9 @@
     "progress": "Schritt {current} von {total}",
     "close": "Einführung überspringen",
     "continue": "Weiter",
-    "skip": "Überspringen",
+    "skip": "Später",
     "welcome": {
-      "title": "Willkommen bei {name}",
-      "fallback": "Schön, dass du da bist. Ein paar kurze Schritte, dann kann es losgehen."
+      "title": "Willkommen bei {name}"
     },
     "rules": {
       "title": "Die Regeln",
@@ -331,7 +330,8 @@
       "accept": "Ich akzeptiere die Regeln"
     },
     "profile": {
-      "title": "Dein Profil"
+      "title": "Dein Profil",
+      "avatarHint": "Klicke auf das Bild, um ein Profilbild hochzuladen. Alles hier kannst du später ändern."
     },
     "notifications": {
       "title": "Immer auf dem Laufenden",
@@ -1531,12 +1531,12 @@
     "statusPlaceholder": "Was machst du gerade?",
     "noStatus": "Kein Status gesetzt",
     "clearStatus": "Leeren",
-    "moderateStatus": "Bearbeiten (Moderation)",
+    "moderateStatus": "Status ändern",
     "statusSaved": "Status gespeichert",
     "statusCleared": "Status geleert",
     "displayNameHint": "So sehen dich andere. Dein Username @{username} bleibt gleich. Höchstens {count} Zeichen.",
     "open": "Profil von {name} öffnen",
-    "passwordLink": "Passwort ändern und Anmeldesicherheit",
+    "passwordLink": "Passwort und Konto in den Einstellungen",
     "clearAfter": "Löschen nach",
     "expiry": {
       "hour": "1 Stunde",
@@ -1546,7 +1546,9 @@
       "custom": "Datum und Uhrzeit wählen …"
     },
     "expiryPast": "Wähle einen Zeitpunkt in der Zukunft.",
-    "clearsAt": "Wird gelöscht: {time}"
+    "clearsAt": "Wird gelöscht: {time}",
+    "moderationTitle": "Moderation",
+    "rolesTitle": "Rollen"
   },
   "nav": {
     "channelNotFound": "Diesen Kanal gibt es nicht mehr.",
@@ -2680,8 +2682,6 @@
     "emptyHint": "Gib oben einem Bot einen Namen, um ihn anzulegen und sein Token zu erhalten."
   },
   "appSettings": {
-    "title": "App & Benachrichtigungen",
-    "subtitle": "Mnema Talk installieren und auch bei geschlossener App benachrichtigt werden.",
     "installTitle": "Installieren",
     "install_installed": "Mnema Talk ist auf diesem Gerät installiert und läuft in einem eigenen Fenster.",
     "install_available": "Installiere Mnema Talk, um es ohne Browserleiste vom Home-Bildschirm, Dock oder Startmenü zu öffnen.",
@@ -2738,9 +2738,6 @@
     "continue": "Weiter zur Anmeldung"
   },
   "security": {
-    "menu": "Konto & Sicherheit",
-    "title": "Konto & Sicherheit",
-    "subtitle": "Das siehst nur du",
     "email": {
       "title": "E-Mail-Adresse",
       "intro": "Freiwillig. Wird nur zum Bestätigen und zum Zurücksetzen deines Passworts verwendet. Niemand sonst sieht sie, auch der Owner nicht.",
@@ -2836,7 +2833,9 @@
       },
       "onlyThis": "Nur dieses Gerät ist angemeldet.",
       "inactivity": "Sitzungen, die eine Weile nicht benutzt werden, werden automatisch abgemeldet. Wie lange, legt der Owner fest."
-    }
+    },
+    "showPassword": "Zeichen anzeigen",
+    "hidePassword": "Zeichen verbergen"
   },
   "rules": {
     "title": "Community-Regeln"
@@ -3280,5 +3279,23 @@
       "done": "Import rückgängig gemacht. Entfernt: {summary}.",
       "keptRoles": " {kept} Rolle(n) bleiben, weil du sie nicht mehr verwalten kannst."
     }
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "subtitle": "Dein Konto und dieses Gerät. Das siehst nur du.",
+    "nav": "Bereiche der Einstellungen",
+    "group": {
+      "account": "Konto",
+      "device": "Dieses Gerät"
+    },
+    "tab": {
+      "signin": "Anmeldung",
+      "sessions": "Sitzungen",
+      "privacy": "Privatsphäre",
+      "data": "Daten & Konto",
+      "app": "Push & App",
+      "audio": "Audio"
+    },
+    "privacyEmpty": "Auf diesem Server gibt es hier nichts einzustellen."
   }
 }

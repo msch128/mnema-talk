@@ -7,6 +7,7 @@ import { caughtErrorMessage } from '../lib/api'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
+import FormField from './FormField.vue'
 import UserAvatar from './UserAvatar.vue'
 
 const MAX_AVATAR_BYTES = 10 * 1024 * 1024
@@ -58,42 +59,44 @@ async function save() {
 </script>
 
 <template>
-  <form class="space-y-4" data-testid="welcome-profile" @submit.prevent="save">
+  <form class="space-y-5" data-testid="welcome-profile" @submit.prevent="save">
     <div class="flex items-center gap-4">
-      <UserAvatar :user="auth.user" size="xl" />
       <button
         type="button"
-        class="px-3 py-1.5 rounded-lg bg-mnema-accent/15 hover:bg-mnema-accent/25 text-mnema-accent text-sm font-medium border border-mnema-accent/30 flex items-center gap-1.5 transition disabled:opacity-50"
+        class="group relative shrink-0 rounded-full focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent"
+        :aria-label="$t('profile.changeAvatar')"
         :disabled="uploading"
+        data-testid="welcome-avatar-button"
         @click="fileInput?.click()"
       >
-        <Loader2 v-if="uploading" class="w-4 h-4 animate-spin" />
-        <Camera v-else class="w-4 h-4" />
-        <span>{{ $t('profile.changeAvatar') }}</span>
+        <UserAvatar :user="auth.user" size="xl" />
+        <span class="absolute inset-0 flex items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 max-md:opacity-100">
+          <Loader2 v-if="uploading" class="h-5 w-5 animate-spin" aria-hidden="true" />
+          <Camera v-else class="h-5 w-5" aria-hidden="true" />
+        </span>
       </button>
+      <p class="text-sm text-mnema-muted">{{ $t('welcome.profile.avatarHint') }}</p>
       <input ref="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden" data-testid="welcome-avatar" @change="onAvatar" />
     </div>
-    <div>
-      <label for="welcome-displayname" class="text-xs text-mnema-tertiary block mb-0.5">{{ $t('profile.displayName') }}</label>
+    <FormField v-slot="{ id }" input-id="welcome-displayname" :label="$t('profile.displayName')">
       <input
-        id="welcome-displayname"
+        :id="id"
         v-model="displayName"
         type="text"
         maxlength="24"
-        class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent"
+        class="w-full rounded-lg border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text"
       />
-    </div>
-    <div>
-      <label for="welcome-bio" class="text-xs text-mnema-tertiary block mb-0.5">{{ $t('profile.bioLabel', { count: 250 }) }}</label>
+    </FormField>
+    <FormField v-slot="{ id }" input-id="welcome-bio" :label="$t('profile.bioLabel', { count: 250 })">
       <textarea
-        id="welcome-bio"
+        :id="id"
         v-model="bio"
         rows="3"
         maxlength="250"
-        class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent resize-none"
+        class="w-full resize-none rounded-lg border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text"
         :placeholder="$t('profile.bioPlaceholder')"
       ></textarea>
-    </div>
+    </FormField>
     <div class="flex justify-end gap-2">
       <button type="button" class="btn btn-ghost" data-testid="welcome-skip" @click="emit('skip')">
         {{ $t('welcome.skip') }}

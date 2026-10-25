@@ -8,7 +8,8 @@ import { nextTick } from 'vue'
 import UserBar from './UserBar.vue'
 import { useAuthStore } from '../stores/auth'
 import { setLocale, locale } from '../i18n'
-import { appSettingsOpen } from '../lib/appSettings'
+import { settingsTab } from '../lib/settingsDialog'
+import { useAccountStore } from '../stores/account'
 
 vi.mock('../composables/useWebRTC', () => ({
   useWebRTC: () => ({ leaveVoiceChannel: vi.fn(), startScreenShare: vi.fn(), stopScreenShare: vi.fn() })
@@ -50,16 +51,18 @@ describe('verified app line', () => {
   })
 })
 
-describe('app entry', () => {
-  it('opens the app dialog from the menu in a browser', async () => {
+describe('settings entry', () => {
+  it('opens the settings dialog from the menu, one entry instead of separate audio and app dialogs', async () => {
     const auth = useAuthStore()
     auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member', id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Herzog', role: 'user', locale: 'de' })
     w = mount(UserBar, { attachTo: document.body })
     await w.find('[data-testid="account-menu-button"]')!.trigger('click')
-    expect(w.find('[data-testid="account-app"]').text()).toBe('App & Benachrichtigungen')
-    await w.find('[data-testid="account-app"]').trigger('click')
-    expect(appSettingsOpen.value).toBe(true)
-    appSettingsOpen.value = false
+    expect(w.find('[data-testid="menu-settings"]').text()).toBe('Einstellungen')
+    expect(w.find('[data-testid="account-app"]').exists()).toBe(false)
+    await w.find('[data-testid="menu-settings"]').trigger('click')
+    expect(useAccountStore().dialogOpen).toBe(true)
+    expect(settingsTab.value).toBe('signin')
+    useAccountStore().close()
   })
 })
 

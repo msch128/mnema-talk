@@ -75,12 +75,11 @@
   "account": {
     "menu": "Account menu",
     "editProfile": "Edit profile",
-    "audio": "Audio",
     "language": "Language",
     "signOut": "Sign out",
     "languageSet": "Language set to {language}. Saved for this account.",
     "languageFailed": "Couldn’t save the language. Try again.",
-    "app": "App & notifications"
+    "settings": "Settings"
   },
   "errors": {
     "unknown": "Unknown error",
@@ -222,7 +221,8 @@
     "inviteChecking": "Checking your invite…",
     "inviteInvalid": "This invite is not valid any more. Ask for a new one, or sign in if you already have an account.",
     "inviteExpires": "Valid until {when}",
-    "passwordHint": "At least {count} characters."
+    "passwordHint": "At least {count} characters.",
+    "forgotNoMail": "Forgot your password? This server cannot send e-mail. Someone with admin rights can reset it for you."
   },
   "sidebar": {
     "subtitle": "Private community",
@@ -320,10 +320,9 @@
     "progress": "Step {current} of {total}",
     "close": "Skip the introduction",
     "continue": "Continue",
-    "skip": "Skip",
+    "skip": "Later",
     "welcome": {
-      "title": "Welcome to {name}",
-      "fallback": "Glad you are here. A few quick steps and you are set."
+      "title": "Welcome to {name}"
     },
     "rules": {
       "title": "The rules",
@@ -331,7 +330,8 @@
       "accept": "I accept the rules"
     },
     "profile": {
-      "title": "Your profile"
+      "title": "Your profile",
+      "avatarHint": "Click the picture to upload a profile photo. You can change everything here later."
     },
     "notifications": {
       "title": "Stay in the loop",
@@ -1531,12 +1531,12 @@
     "statusPlaceholder": "What are you up to?",
     "noStatus": "No status set",
     "clearStatus": "Clear",
-    "moderateStatus": "Edit (moderation)",
+    "moderateStatus": "Change status",
     "statusSaved": "Status saved",
     "statusCleared": "Status cleared",
     "displayNameHint": "This is what others see. Your username @{username} stays the same. At most {count} characters.",
     "open": "Open {name}’s profile",
-    "passwordLink": "Change password and sign-in security",
+    "passwordLink": "Password and account in settings",
     "clearAfter": "Clear after",
     "expiry": {
       "hour": "1 hour",
@@ -1546,7 +1546,9 @@
       "custom": "Pick date and time…"
     },
     "expiryPast": "Pick a time in the future.",
-    "clearsAt": "Clears {time}"
+    "clearsAt": "Clears {time}",
+    "moderationTitle": "Moderation",
+    "rolesTitle": "Roles"
   },
   "nav": {
     "channelNotFound": "That channel doesn’t exist anymore.",
@@ -2680,8 +2682,6 @@
     "emptyHint": "Name a bot above to create it and get its token."
   },
   "appSettings": {
-    "title": "App & notifications",
-    "subtitle": "Install Mnema Talk and get notified while it is closed.",
     "installTitle": "Install",
     "install_installed": "Mnema Talk is installed on this device and runs in its own window.",
     "install_available": "Install Mnema Talk to open it from your home screen, dock or start menu without the browser bar.",
@@ -2738,9 +2738,6 @@
     "continue": "Continue to sign in"
   },
   "security": {
-    "menu": "Account & security",
-    "title": "Account & security",
-    "subtitle": "Only you see this",
     "email": {
       "title": "E-mail address",
       "intro": "Optional. Only used to confirm it and to reset your password. Nobody else sees it, not even the Owner.",
@@ -2836,7 +2833,9 @@
       },
       "onlyThis": "This is the only device signed in.",
       "inactivity": "Sessions that are not used for a while are signed out automatically. The Owner sets how long."
-    }
+    },
+    "showPassword": "Show characters",
+    "hidePassword": "Hide characters"
   },
   "rules": {
     "title": "Community rules"
@@ -3280,5 +3279,23 @@
       "done": "Import undone. Removed {summary}.",
       "keptRoles": " {kept} role(s) stay because you can no longer manage them."
     }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Your account and this device. Only you see this.",
+    "nav": "Settings sections",
+    "group": {
+      "account": "Account",
+      "device": "This device"
+    },
+    "tab": {
+      "signin": "Sign-in",
+      "sessions": "Sessions",
+      "privacy": "Privacy",
+      "data": "Data & account",
+      "app": "Push & app",
+      "audio": "Audio"
+    },
+    "privacyEmpty": "There is nothing to set here on this server."
   }
 }

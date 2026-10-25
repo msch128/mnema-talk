@@ -145,7 +145,7 @@ async function removeAvatar() {
       <button
         v-if="!isSelf"
         @click="emit('mention')"
-        class="btn btn-secondary bg-mnema-band flex items-center gap-1.5"
+        class="btn btn-secondary btn-sm max-md:min-h-11"
         v-tooltip.visual="$t('profile.mentionHint')"
       >
         <AtSign class="w-4 h-4 text-mnema-accent" />
@@ -157,7 +157,7 @@ async function removeAvatar() {
         type="button"
         data-testid="profile-message"
         @click="emit('message')"
-        class="px-3 py-1.5 rounded-lg bg-mnema-accent/15 hover:bg-mnema-accent/25 text-mnema-accent text-sm font-medium border border-mnema-accent/30 flex items-center gap-1.5 transition active:scale-95"
+        class="btn btn-sm max-md:min-h-11 border-mnema-accent/30 bg-mnema-accent/15 text-mnema-accent hover:bg-mnema-accent/25"
         v-tooltip.visual="$t('dm.messageHint')"
       >
         <MessageCircle class="w-4 h-4" />
@@ -168,9 +168,9 @@ async function removeAvatar() {
         v-if="isSelf"
         @click="triggerAvatarUpload"
         :disabled="isUploading"
-        class="px-3 py-1.5 rounded-lg bg-mnema-accent/15 hover:bg-mnema-accent/25 text-mnema-accent text-sm font-medium border border-mnema-accent/30 flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
+        class="btn btn-secondary btn-sm max-md:min-h-11"
       >
-        <Camera class="w-4 h-4" />
+        <Camera class="w-4 h-4" aria-hidden="true" />
         <span>{{ $t('profile.changeAvatar') }}</span>
       </button>
 

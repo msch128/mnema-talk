@@ -3,9 +3,11 @@ import type { ApiOptions } from '../lib/api'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import AccountSecurityDialog from './AccountSecurityDialog.vue'
+import SettingsDialog from './SettingsDialog.vue'
 import { setLocale } from '../i18n'
 import { useAccountStore } from '../stores/account'
+import { settingsTab } from '../lib/settingsDialog'
+import { platform } from '../lib/platform'
 import { useToastStore } from '../stores/toast'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
@@ -24,7 +26,7 @@ function respond(info: Info) {
 
 async function open(info: Info) {
   respond(info)
-  const w = mount(AccountSecurityDialog, { attachTo: document.body })
+  const w = mount(SettingsDialog, { attachTo: document.body })
   await flushPromises()
   return w
 }
@@ -36,7 +38,7 @@ beforeEach(() => {
   document.body.replaceChildren()
 })
 
-describe('AccountSecurityDialog e-mail section', () => {
+describe('SettingsDialog e-mail section', () => {
   it('offers to add an address when there is none', async () => {
     const w = await open(none)
     expect(w.find('[data-testid="account-email-none"]').exists()).toBe(true)
@@ -148,14 +150,14 @@ describe('AccountSecurityDialog e-mail section', () => {
 
   it('shows why the state could not be loaded', async () => {
     apiMock.mockRejectedValue(new Error('Cannot reach the server'))
-    const w = mount(AccountSecurityDialog, { attachTo: document.body })
+    const w = mount(SettingsDialog, { attachTo: document.body })
     await flushPromises()
     expect(w.get('[role="alert"]').text()).toBe('Cannot reach the server')
     w.unmount()
   })
 })
 
-describe('AccountSecurityDialog password', () => {
+describe('SettingsDialog password', () => {
   it('keeps the password next to two-factor sign-in and the e-mail address', async () => {
     const w = await open(none)
     const text = w.text()
@@ -163,6 +165,76 @@ describe('AccountSecurityDialog password', () => {
     expect(text.indexOf('Password')).toBeLessThan(text.indexOf('E-mail address'))
     await w.findAll('button').find(b => b.text() === 'Change')!.trigger('click')
     expect(w.find('input[autocomplete="current-password"]').exists()).toBe(true)
+    w.unmount()
+  })
+})
+
+describe('SettingsDialog sections', () => {
+  const stubs = { AudioSettingsPanel: true, AppSettingsPanel: true, AccountPrivacy: true, AccountData: true, AccountSessions: true }
+
+  async function openAt(tab: typeof settingsTab.value) {
+    settingsTab.value = tab
+    respond(none)
+    const w = mount(SettingsDialog, { attachTo: document.body, global: { stubs } })
+    await flushPromises()
+    return w
+  }
+
+  it('shows one section at a time instead of one long scroll', async () => {
+    const w = await openAt('signin')
+    expect(w.find('[data-testid="account-password"]').exists()).toBe(true)
+    expect(w.findComponent({ name: 'AccountSessions' }).exists()).toBe(false)
+    await w.get('[data-testid="settings-tab-sessions"]').trigger('click')
+    expect(w.findComponent({ name: 'AccountSessions' }).exists()).toBe(true)
+    expect(w.find('[data-testid="account-password"]').exists()).toBe(false)
+    expect(settingsTab.value).toBe('sessions')
+    w.unmount()
+  })
+
+  it('opens on the section it was asked for and marks it selected', async () => {
+    const w = await openAt('data')
+    expect(w.get('[data-testid="settings-tab-data"]').attributes('aria-selected')).toBe('true')
+    expect(w.get('[data-testid="settings-tab-signin"]').attributes('aria-selected')).toBe('false')
+    expect(w.get('[role="tabpanel"]').attributes('aria-labelledby')).toBe('settings-tab-data')
+    expect(w.findComponent({ name: 'AccountData' }).exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('moves between sections with the arrow keys, wrapping at both ends', async () => {
+    const w = await openAt('signin')
+    const list = w.get('[role="tablist"]')
+    await list.trigger('keydown', { key: 'ArrowDown' })
+    expect(settingsTab.value).toBe('sessions')
+    await list.trigger('keydown', { key: 'End' })
+    expect(settingsTab.value).toBe('audio')
+    await list.trigger('keydown', { key: 'ArrowRight' })
+    expect(settingsTab.value).toBe('signin')
+    await list.trigger('keydown', { key: 'ArrowUp' })
+    expect(settingsTab.value).toBe('audio')
+    await list.trigger('keydown', { key: 'Home' })
+    expect(settingsTab.value).toBe('signin')
+    await list.trigger('keydown', { key: 'x' })
+    expect(settingsTab.value).toBe('signin')
+    w.unmount()
+  })
+
+  it('offers no install section in the desktop client, which has its own notifications', async () => {
+    const desktop = vi.spyOn(platform, 'isDesktop').mockReturnValue(true)
+    const w = await openAt('app')
+    expect(w.find('[data-testid="settings-tab-app"]').exists()).toBe(false)
+    expect(w.get('[data-testid="settings-tab-signin"]').attributes('aria-selected')).toBe('true')
+    w.unmount()
+    desktop.mockRestore()
+  })
+
+  it('waits for the account only where it is needed', async () => {
+    apiMock.mockImplementation(() => new Promise(() => undefined))
+    settingsTab.value = 'sessions'
+    const w = mount(SettingsDialog, { attachTo: document.body, global: { stubs } })
+    await flushPromises()
+    expect(w.findComponent({ name: 'AccountSessions' }).exists()).toBe(true)
+    await w.get('[data-testid="settings-tab-signin"]').trigger('click')
+    expect(w.get('[role="status"]').text()).toBe('Loading…')
     w.unmount()
   })
 })
