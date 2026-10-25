@@ -137,6 +137,11 @@ jobs:
       - name: Unit tests
         run: go test -race -count=1 ./...
 
+      # Mutation fuzzing of the parsers (search, mentions, durations, URL guard,
+      # versions) for 1 s each on top of the seed corpora that `go test` ran.
+      - name: Fuzz smoke
+        run: FUZZTIME=1s make fuzz-smoke
+
       - name: Backup and restore fault tests
         run: make test-scripts
 
