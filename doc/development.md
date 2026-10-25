@@ -137,13 +137,17 @@ these jobs in parallel (rough wall times with warm caches):
 | Job | What | Time |
 |-----|------|------|
 | `secret-scan` | gitleaks (pinned, checksum verified) over the tree and the history | < 1 min |
-| `backend` | gofmt, go vet, OpenAPI check, unit tests, unit + integration tests with coverage (Postgres service), build | 4–6 min |
+| `backend` | Verdict of `backend-checks` (gofmt, go vet, OpenAPI check, unit tests, build), three parallel `backend-integration` shards (unit + integration tests with coverage, a Postgres service each) and `backend-coverage` (merges the profiles, applies the coverage gates) | 6–8 min |
 | `govulncheck` | Go vulnerability scan | 1–2 min |
 | `frontend` | eslint, strict TypeScript, contract drift, vitest with coverage, build, `npm audit` | 2–3 min |
-| `docker` | image build for linux/amd64 + linux/arm64, not pushed | 2–4 min |
+| `docker` | Image build for linux/amd64 + linux/arm64 (`docker-image`, not pushed), then smoke, install, backup, PostgreSQL upgrade drills and image scan | 6–9 min |
 | `upgrade-drill (<version>)` | One leg per supported source release (0.8.16, 0.9.0, 1.0.0, 1.1.0): install it, seed data through its API, upgrade to this build, back up and restore, check the old release refuses the migrated data | per leg, in parallel |
-| `e2e` | Playwright against the real binary: all specs on Chromium plus the phone projects | longest job |
-| `e2e (webkit)`, `e2e (firefox)`, `e2e (webkit-macos-calls)` | Other engines, see above; not required checks | in parallel |
+| `e2e` | Verdict of four `e2e-shard (i/4)` jobs: Playwright against the real binary, each shard with its own stack and Owner; all specs on Chromium plus the phone projects. `e2e-report` merges the shards' blob reports into one HTML report artifact | 8–11 min |
+| `e2e (webkit 1/2)`, `e2e (webkit 2/2)`, `e2e (firefox)`, `e2e (webkit-macos-calls)` | Other engines, see above; not required checks | in parallel |
+
+Pull requests that change only README/SECURITY/`doc/` Markdown skip the heavy
+steps (the `changes` job); every required check still reports success, and the
+links, conflict-marker and English-only checks run regardless.
 
 `codeql.yml` (actions, Go incl. tests and the integration tag, JS) runs on the
 same events plus weekly. Caches: Go modules and build cache per job (keyed on

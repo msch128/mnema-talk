@@ -9,6 +9,8 @@ on:
     branches: [main]
   pull_request:
     paths-ignore:
+      - doc/**
+      - '*.md'
       - CHANGELOG.md
       - version.txt
       - .release-please-manifest.json
