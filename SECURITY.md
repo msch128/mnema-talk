@@ -193,6 +193,24 @@ blocks. The ids of the original are returned only to readers who may see it. Sav
 private list of references with the same read-time check, conversations by
 membership.
 
+## Channel slugs (speaking addresses)
+
+Channel addresses (`/c/general`) are slugs. What they could reveal, and what limits it:
+
+- **Visibility.** `slug` and `previous_slugs` are part of the channel object, so only members who may see a
+  channel receive them. There is no endpoint that resolves a slug; the web app resolves against the channels it
+  already holds, and an unknown address and a channel the member may not see give the same answer.
+- **Collisions.** A slug is unique on the server, former slugs included. When a name collides, the channel's own
+  slug gets a suffix from the first characters of its own id (`plans-0f3a`), never a running number, so the
+  suffix does not count other channels. A channel manager (the *Manage channels* permission) can still infer that
+  some channel already uses a slug when theirs gets a suffix; this is accepted, as managers administer the
+  channel structure.
+- **Temporary Talks.** The leader of a temporary Talk may rename it without *Manage channels*. Its slug is fixed
+  at creation (`talk-` and the first 8 hex characters of its id), is never changed by a rename and never enters
+  the slug history, so a leader learns nothing about other channels. No name-based slug can take that shape.
+- **Hoarding.** A channel keeps its newest ten former slugs; older ones become free again and their links no longer
+  resolve. Only renames by members with *Manage channels* reach the history.
+
 ## Security model (summary)
 
 In short: members join by invitation only. Microphone, camera, screen video

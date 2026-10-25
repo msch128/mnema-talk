@@ -4,8 +4,8 @@ package chat
 
 import (
 	"context"
+	"fmt"
 	"reflect"
-	"strings"
 	"sync"
 	"testing"
 
@@ -54,7 +54,8 @@ func TestChannelSlugsFollowNamesAndKeepHistory(t *testing.T) {
 
 	general := mustCreate(t, ctx, p, "General", ChannelTypeText)
 	requireSlug(t, general, "general")
-	requireSlug(t, mustCreate(t, ctx, p, "general", ChannelTypeVoice), "general-2")
+	second := mustCreate(t, ctx, p, "general", ChannelTypeVoice)
+	requireSlug(t, second, "general-"+hexOf(second.ID)[:4])
 	requireSlug(t, mustCreate(t, ctx, p, "Gr\u00f6\u00dfe", ChannelTypeForum), "groesse")
 	requireSlug(t, mustCreate(t, ctx, p, "🎮", ChannelTypeText), "channel")
 
@@ -65,7 +66,8 @@ func TestChannelSlugsFollowNamesAndKeepHistory(t *testing.T) {
 	requireSlug(t, renamed, "lobby", "general")
 
 	// The freed slug is not handed to another channel: old links never move.
-	requireSlug(t, mustCreate(t, ctx, p, "General", ChannelTypeText), "general-3")
+	third := mustCreate(t, ctx, p, "General", ChannelTypeText)
+	requireSlug(t, third, "general-"+hexOf(third.ID)[:4])
 
 	// Renaming back takes the channel's own old slug again.
 	requireSlug(t, mustRename(t, ctx, p, general.ID, "general"), "general", "lobby")
@@ -139,8 +141,81 @@ func TestDuplicatedAndTemporaryChannelsGetSlugs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	requireSlug(t, talk, "talk-1")
-	if strings.Contains(talk.Slug, lobby.ID.String()) {
-		t.Fatal("slug leaks an id")
+	requireSlug(t, talk, TempTalkSlug(talk.ID))
+}
+
+// A temporary Talk's leader may rename it without Manage channels. Neither
+// the slug nor the slug history may react to the name they choose, or the
+// rename would tell them which slugs other channels hold.
+func TestLeaderRenameOfATempTalkLeaksNothing(t *testing.T) {
+	ctx, p := slugWorld(t)
+	secret := mustCreate(t, ctx, p, "geheim", ChannelTypeText)
+	lobby := mustCreate(t, ctx, p, "Create a Talk", ChannelTypeVoice)
+	if err := SetLobby(ctx, p, lobby.ID, true); err != nil {
+		t.Fatal(err)
 	}
+	leader := uuid.New()
+	if _, err := p.Exec(ctx, `INSERT INTO users (id, username, display_name, password_hash) VALUES ($1, 'slugleader', 'L', 'x')`, leader); err != nil {
+		t.Fatal(err)
+	}
+	talk, err := OpenTempTalk(ctx, p, lobby.ID, leader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixed := TempTalkSlug(talk.ID)
+	for _, name := range []string{"geheim", "Geheim 2", "free name", TempTalkSlug(uuid.New())} {
+		renamed := mustRename(t, ctx, p, talk.ID, name)
+		requireSlug(t, renamed, fixed)
+	}
+	var rows int
+	if err := p.QueryRow(ctx, `SELECT count(*) FROM channel_slugs WHERE channel_id = $1`, talk.ID).Scan(&rows); err != nil || rows != 0 {
+		t.Fatalf("history rows of a temporary Talk = %d, err %v", rows, err)
+	}
+	// The channel that holds "geheim" is untouched.
+	requireSlug(t, mustRename(t, ctx, p, secret.ID, "Geheim"), "geheim")
+}
+
+// No channel can take the shape of a temporary Talk's slug.
+func TestNameBasedSlugNeverLooksLikeATempTalk(t *testing.T) {
+	ctx, p := slugWorld(t)
+	ch := mustCreate(t, ctx, p, "Talk 0f3a9c1e", ChannelTypeText)
+	if tempSlugPattern.MatchString(ch.Slug) || ch.Slug != "talk-0f3a9c1e-x" {
+		t.Fatalf("slug %q", ch.Slug)
+	}
+}
+
+// The suffix of a collision comes from the channel's own id: the same name
+// gets the same slug whatever other channels exist.
+func TestCollisionSuffixIgnoresOtherChannels(t *testing.T) {
+	ctx, p := slugWorld(t)
+	mustCreate(t, ctx, p, "Plans", ChannelTypeText)
+	first := mustCreate(t, ctx, p, "Plans", ChannelTypeText)
+	for i := 0; i < 3; i++ {
+		mustCreate(t, ctx, p, "Plans", ChannelTypeText)
+	}
+	if first.Slug != "plans-"+hexOf(first.ID)[:4] {
+		t.Fatalf("slug %q", first.Slug)
+	}
+	last := mustCreate(t, ctx, p, "Plans", ChannelTypeText)
+	if last.Slug != "plans-"+hexOf(last.ID)[:4] {
+		t.Fatalf("slug %q", last.Slug)
+	}
+}
+
+func TestSlugHistoryKeepsTheNewestTen(t *testing.T) {
+	ctx, p := slugWorld(t)
+	ch := mustCreate(t, ctx, p, "name 0", ChannelTypeText)
+	var last *Channel
+	for i := 1; i <= 14; i++ {
+		last = mustRename(t, ctx, p, ch.ID, fmt.Sprintf("name %d", i))
+	}
+	if last.Slug != "name-14" || len(last.PreviousSlugs) != MaxFormerSlugs {
+		t.Fatalf("slug %q previous %v", last.Slug, last.PreviousSlugs)
+	}
+	if last.PreviousSlugs[0] != "name-4" || last.PreviousSlugs[MaxFormerSlugs-1] != "name-13" {
+		t.Fatalf("previous %v", last.PreviousSlugs)
+	}
+	// A dropped slug is free again.
+	other := mustCreate(t, ctx, p, "name 0", ChannelTypeText)
+	requireSlug(t, other, "name-0")
 }

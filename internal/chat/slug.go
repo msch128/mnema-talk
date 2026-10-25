@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 	"unicode"
 
@@ -29,7 +28,6 @@ var (
 	slugReplacer = strings.NewReplacer("ä", "ae", "ö", "oe", "ü", "ue", "ß", "ss", "æ", "ae", "œ", "oe", "ø", "o", "ł", "l", "đ", "d", "ð", "d", "þ", "th")
 	slugRuns     = regexp.MustCompile(`[^a-z0-9]+`)
 	uuidShaped   = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
-	slugSuffixed = regexp.MustCompile(`^-[0-9]+$`)
 )
 
 // Slugify turns a channel name into the base of its slug: lowercase ASCII
@@ -64,49 +62,99 @@ func truncate(s string, n int) string {
 	return s
 }
 
-// slugCandidate is the n-th choice for base: base, base-2, base-3 ... the
-// base is shortened so the result stays within MaxSlugLength.
-func slugCandidate(base string, n int) string {
-	if n <= 1 {
+// MaxFormerSlugs is how many former slugs a channel keeps reserved; older ones
+// are dropped and free again (their old links stop resolving).
+const MaxFormerSlugs = 10
+
+// tempSlugPattern is the fixed slug of a temporary Talk: "talk-" and the first
+// 8 hex characters of its id. Name-based slugs never take this shape.
+var tempSlugPattern = regexp.MustCompile(`^talk-[0-9a-f]{8}$`)
+
+// suffixLengths are the id characters tried, in turn, as a collision suffix.
+var suffixLengths = []int{4, 6, 8, 12, 32}
+
+// TempTalkSlug is the slug of a temporary Talk. It is set once, never changes
+// on a rename and is never recorded in the slug history: a leader who may
+// rename a Talk but not manage channels can learn nothing about other slugs.
+func TempTalkSlug(id uuid.UUID) string {
+	return "talk-" + hexOf(id)[:8]
+}
+
+func hexOf(id uuid.UUID) string { return strings.ReplaceAll(id.String(), "-", "") }
+
+// slugCandidate is the n-th choice for base (n counts from 0): base itself,
+// then base-<first 4, 6, 8 ... characters of the channel's own id>. The
+// suffix comes from the channel's id, never from a count of other channels,
+// so a collision does not reveal how many channels use a slug. base is
+// shortened so the result stays within MaxSlugLength.
+func slugCandidate(base string, id uuid.UUID, n int) string {
+	if n <= 0 {
 		return base
 	}
-	suffix := "-" + strconv.Itoa(n)
+	suffix := "-" + hexOf(id)[:suffixLengths[n-1]]
 	return strings.Trim(truncate(base, MaxSlugLength-len(suffix)), "-") + suffix
 }
 
 // keepsSlug reports whether current is still a fitting slug for base: base
-// itself or base with a collision suffix. A rename that changes only case or
-// punctuation keeps the slug, so it does not grow the history.
-func keepsSlug(current, base string) bool {
-	if current == base {
-		return true
+// itself or base with this channel's collision suffix. A rename that changes
+// only case or punctuation keeps the slug, so it does not grow the history.
+func keepsSlug(current, base string, id uuid.UUID) bool {
+	for n := 0; n <= len(suffixLengths); n++ {
+		if current == slugCandidate(base, id, n) {
+			return true
+		}
 	}
-	rest, ok := strings.CutPrefix(current, base)
-	return ok && slugSuffixed.MatchString(rest)
+	return false
 }
 
 // assignSlug gives the channel the slug for name inside tx: a free one (the
-// base, else base-2, base-3 ...) or one of its own earlier slugs. Slugs of
-// other channels, current or former, are never taken. The channel keeps its
-// slug when the name still fits it.
+// base, else base with its own id suffix) or one of its own earlier slugs.
+// Slugs of other channels, current or former, are never taken. The channel
+// keeps its slug when the name still fits it; a temporary Talk keeps its
+// fixed slug whatever its name.
 func assignSlug(ctx context.Context, tx pgx.Tx, id uuid.UUID, name string) error {
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, slugLockKey); err != nil {
 		return fmt.Errorf("lock slugs: %w", err)
 	}
 	var current *string
-	if err := tx.QueryRow(ctx, `SELECT slug FROM channels WHERE id = $1`, id).Scan(&current); err != nil {
+	var temp bool
+	if err := tx.QueryRow(ctx, `SELECT slug, is_temp FROM channels WHERE id = $1`, id).Scan(&current, &temp); err != nil {
 		return fmt.Errorf("read slug: %w", err)
 	}
+	if temp {
+		return nil
+	}
 	base := Slugify(name)
-	if current != nil && keepsSlug(*current, base) {
+	if tempSlugPattern.MatchString(base) {
+		base += "-x"
+	}
+	if current != nil && keepsSlug(*current, base, id) {
 		return nil
 	}
 	slug, err := freeSlug(ctx, tx, id, base)
 	if err != nil {
 		return err
 	}
+	return switchSlug(ctx, tx, id, current, slug)
+}
+
+// switchSlug makes slug the channel's current one. The slug it leaves becomes
+// a former slug; only the newest MaxFormerSlugs are kept.
+func switchSlug(ctx context.Context, tx pgx.Tx, id uuid.UUID, old *string, slug string) error {
 	if _, err := tx.Exec(ctx, `UPDATE channels SET slug = $2 WHERE id = $1`, id, slug); err != nil {
 		return fmt.Errorf("set slug: %w", err)
+	}
+	if old != nil {
+		if _, err := tx.Exec(ctx, `UPDATE channel_slugs SET used_at = clock_timestamp() WHERE slug = $1`, *old); err != nil {
+			return fmt.Errorf("retire slug: %w", err)
+		}
+	}
+	_, err := tx.Exec(ctx, `
+		DELETE FROM channel_slugs WHERE channel_id = $1 AND slug <> $2 AND slug NOT IN (
+			SELECT slug FROM channel_slugs WHERE channel_id = $1 AND slug <> $2
+			ORDER BY used_at DESC, slug DESC LIMIT $3)`, id, slug, MaxFormerSlugs)
+	if err != nil {
+		return fmt.Errorf("trim slug history: %w", err)
 	}
 	return nil
 }
@@ -114,22 +162,27 @@ func assignSlug(ctx context.Context, tx pgx.Tx, id uuid.UUID, name string) error
 // freeSlug picks the first candidate nobody else holds or held, and records
 // it in the channel's history.
 func freeSlug(ctx context.Context, tx pgx.Tx, id uuid.UUID, base string) (string, error) {
-	for n := 1; n <= 10_000; n++ {
-		cand := slugCandidate(base, n)
+	for n := 0; n <= len(suffixLengths); n++ {
+		cand := slugCandidate(base, id, n)
 		var owner uuid.UUID
-		err := tx.QueryRow(ctx, `SELECT channel_id FROM channel_slugs WHERE slug = $1`, cand).Scan(&owner)
-		if errors.Is(err, pgx.ErrNoRows) {
-			if _, err := tx.Exec(ctx, `INSERT INTO channel_slugs (slug, channel_id) VALUES ($1, $2)`, cand, id); err != nil {
-				return "", fmt.Errorf("record slug: %w", err)
-			}
-			return cand, nil
-		}
+		var taken bool
+		// channels.slug is checked too: a temporary Talk's fixed slug has no history row.
+		err := tx.QueryRow(ctx, `
+			SELECT COALESCE((SELECT channel_id FROM channel_slugs WHERE slug = $1), '00000000-0000-0000-0000-000000000000'),
+			       EXISTS (SELECT 1 FROM channels WHERE slug = $1 AND id <> $2)`, cand, id).Scan(&owner, &taken)
 		if err != nil {
 			return "", fmt.Errorf("check slug: %w", err)
 		}
 		if owner == id {
 			return cand, nil
 		}
+		if owner != uuid.Nil || taken {
+			continue
+		}
+		if _, err := tx.Exec(ctx, `INSERT INTO channel_slugs (slug, channel_id) VALUES ($1, $2)`, cand, id); err != nil {
+			return "", fmt.Errorf("record slug: %w", err)
+		}
+		return cand, nil
 	}
 	return "", errors.New("no free channel slug")
 }
@@ -147,26 +200,27 @@ func AssignSlugs(ctx context.Context, tx pgx.Tx, ids []uuid.UUID, names []string
 
 // FillSlugs loads the slug and the former slugs of ch.
 func FillSlugs(ctx context.Context, q db.Querier, ch *Channel) error {
+	var slug *string
+	if err := q.QueryRow(ctx, `SELECT slug FROM channels WHERE id = $1`, ch.ID).Scan(&slug); err != nil {
+		return fmt.Errorf("load slug: %w", err)
+	}
+	ch.Slug = ""
+	if slug != nil {
+		ch.Slug = *slug
+	}
 	rows, err := q.Query(ctx, `
-		SELECT s.slug, s.slug IS NOT DISTINCT FROM c.slug
-		FROM channel_slugs s JOIN channels c ON c.id = s.channel_id
-		WHERE s.channel_id = $1 ORDER BY s.created_at, s.slug`, ch.ID)
+		SELECT slug FROM channel_slugs WHERE channel_id = $1 AND slug IS DISTINCT FROM $2 ORDER BY used_at, slug`, ch.ID, slug)
 	if err != nil {
 		return fmt.Errorf("load slugs: %w", err)
 	}
 	defer rows.Close()
 	ch.PreviousSlugs = []string{}
 	for rows.Next() {
-		var slug string
-		var current bool
-		if err := rows.Scan(&slug, &current); err != nil {
+		var former string
+		if err := rows.Scan(&former); err != nil {
 			return err
 		}
-		if current {
-			ch.Slug = slug
-		} else {
-			ch.PreviousSlugs = append(ch.PreviousSlugs, slug)
-		}
+		ch.PreviousSlugs = append(ch.PreviousSlugs, former)
 	}
 	return rows.Err()
 }

@@ -4,6 +4,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"io/fs"
 	"strings"
 	"testing"
@@ -43,12 +44,16 @@ func TestChannelSlugBackfill(t *testing.T) {
 	}
 	long := strings.Repeat("x", 64)
 	names := []string{"General", "general", "Gr\u00f6\u00dfe & \u00c4rger", "Café", "🎮", "general!", long, long, "123e4567-e89b-12d3-a456-426614174000"}
-	want := []string{"general", "general-2", "groesse-aerger", "cafe", "channel", "general-3", long[:60], long[:58] + "-2", "channel-123e4567-e89b-12d3-a456-426614174000"}
+	// The collision suffix is the first four hex characters of the channel's own id.
+	want := []string{"general", "general-0002", "groesse-aerger", "cafe", "channel", "general-0006", long[:60], long[:55] + "-0008", "channel-123e4567-e89b-12d3-a456-426614174000"}
 	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	for i, name := range names {
-		if _, err := p.Exec(ctx, `INSERT INTO channels (name, type, created_at) VALUES ($1, 'text', $2)`, name, start.Add(time.Duration(i)*time.Minute)); err != nil {
+		if _, err := p.Exec(ctx, `INSERT INTO channels (id, name, type, created_at) VALUES ($1, $2, 'text', $3)`, fmt.Sprintf("%04x0000-0000-4000-8000-000000000000", i+1), name, start.Add(time.Duration(i)*time.Minute)); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if _, err := p.Exec(ctx, `INSERT INTO channels (id, name, type, is_temp, created_at) VALUES ('abcdef12-0000-4000-8000-000000000000', 'Talk 1', 'voice', TRUE, $1)`, start); err != nil {
+		t.Fatal(err)
 	}
 	if _, err := p.Exec(ctx, `INSERT INTO channels (number, name, type, dm_key) OVERRIDING SYSTEM VALUE VALUES (9999, '', 'dm', 'a:b')`); err != nil {
 		t.Fatal(err)
@@ -68,6 +73,11 @@ func TestChannelSlugBackfill(t *testing.T) {
 		if got != want[i] || history != 1 {
 			t.Errorf("channel %q: slug %q (history %d), want %q", name, got, history, want[i])
 		}
+	}
+	var talk string
+	var rows int
+	if err := p.QueryRow(ctx, `SELECT slug, (SELECT count(*) FROM channel_slugs WHERE channel_id = c.id) FROM channels c WHERE is_temp`).Scan(&talk, &rows); err != nil || talk != "talk-abcdef12" || rows != 0 {
+		t.Fatalf("temporary Talk: slug %q, history %d, err %v", talk, rows, err)
 	}
 	var dm *string
 	if err := p.QueryRow(ctx, `SELECT slug FROM channels WHERE type = 'dm'`).Scan(&dm); err != nil || dm != nil {

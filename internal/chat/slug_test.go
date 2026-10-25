@@ -3,6 +3,8 @@ package chat
 import (
 	"strings"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 func TestSlugify(t *testing.T) {
@@ -29,37 +31,50 @@ func TestSlugify(t *testing.T) {
 	}
 }
 
-func TestSlugCandidateStaysWithinTheLimit(t *testing.T) {
+func TestSlugCandidateSuffixComesFromTheChannelsOwnID(t *testing.T) {
+	id := uuid.MustParse("0f3a9c1e-1111-4222-8333-444455556666")
 	long := strings.Repeat("x", MaxSlugLength)
-	for n, want := range map[int]string{1: long, 2: long[:MaxSlugLength-2] + "-2", 10: long[:MaxSlugLength-3] + "-10"} {
-		got := slugCandidate(long, n)
+	for n, want := range map[int]string{0: long, 1: long[:MaxSlugLength-5] + "-0f3a", 2: long[:MaxSlugLength-7] + "-0f3a9c", 3: long[:MaxSlugLength-9] + "-0f3a9c1e"} {
+		got := slugCandidate(long, id, n)
 		if got != want || len(got) > MaxSlugLength {
 			t.Errorf("slugCandidate(long, %d) = %q, want %q", n, got, want)
 		}
 	}
-	if got := slugCandidate("general", 3); got != "general-3" {
+	if got := slugCandidate("general", id, 1); got != "general-0f3a" {
 		t.Errorf("got %q", got)
 	}
 	// A cut that ends in a dash drops it before the suffix.
-	if got := slugCandidate(strings.Repeat("a", 57)+"-bb", 2); got != strings.Repeat("a", 57)+"-2" {
+	if got := slugCandidate(strings.Repeat("a", 54)+"-bb", id, 1); got != strings.Repeat("a", 54)+"-0f3a" {
 		t.Errorf("got %q", got)
 	}
 }
 
 func TestKeepsSlug(t *testing.T) {
+	id := uuid.MustParse("0f3a9c1e-1111-4222-8333-444455556666")
 	for _, c := range []struct {
 		current, base string
 		want          bool
 	}{
 		{"general", "general", true},
-		{"general-2", "general", true},
-		{"general-x", "general", false},
-		{"general", "general-2", false},
+		{"general-0f3a", "general", true},
+		{"general-0f3a9c", "general", true},
+		{"general-2", "general", false},
+		{"general-beef", "general", false},
+		{"general", "general-0f3a", false},
 		{"lobby", "general", false},
-		{"general-2-2", "general", false},
 	} {
-		if got := keepsSlug(c.current, c.base); got != c.want {
+		if got := keepsSlug(c.current, c.base, id); got != c.want {
 			t.Errorf("keepsSlug(%q, %q) = %v, want %v", c.current, c.base, got, c.want)
 		}
+	}
+}
+
+func TestTempTalkSlugIsFixedAndReserved(t *testing.T) {
+	id := uuid.MustParse("0f3a9c1e-1111-4222-8333-444455556666")
+	if got := TempTalkSlug(id); got != "talk-0f3a9c1e" || !tempSlugPattern.MatchString(got) {
+		t.Fatalf("slug %q", got)
+	}
+	if tempSlugPattern.MatchString("talk-1") || tempSlugPattern.MatchString("talk-0f3a9c1") {
+		t.Fatal("pattern too wide")
 	}
 }

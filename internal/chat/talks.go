@@ -94,7 +94,7 @@ func OpenTempTalk(ctx context.Context, p *db.Pool, lobbyID, creator uuid.UUID) (
 		if err != nil {
 			return err
 		}
-		if ch, err = insertChannelCopy(ctx, tx, lobby, lobby.SortOrder); err != nil {
+		if ch, err = insertChannelCopy(ctx, tx, lobby, lobby.SortOrder, true); err != nil {
 			return err
 		}
 		return markTemp(ctx, tx, ch, lobbyID, creator)

@@ -72,7 +72,7 @@ func populateChannels(ctx context.Context, p *db.Pool, categories []Category, ca
 	chanRows, err := p.Query(ctx, `
 		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days,
 		       is_lobby, is_temp, leader_id, is_stage, COALESCE(slug, ''),
-		       COALESCE((SELECT array_agg(s.slug ORDER BY s.created_at, s.slug) FROM channel_slugs s
+		       COALESCE((SELECT array_agg(s.slug ORDER BY s.used_at, s.slug) FROM channel_slugs s
 		                 WHERE s.channel_id = channels.id AND s.slug IS DISTINCT FROM channels.slug), '{}')
 		FROM channels WHERE type <> 'dm' ORDER BY sort_order, created_at`)
 	if err != nil {

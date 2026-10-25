@@ -169,10 +169,10 @@ slug is only an address.
 
 - **Slugs.** Lowercase ASCII (`a-z`, `0-9`, `-`), at most 60 characters: German umlauts and the sharp s are spelled out (a-umlaut gives `ae`, the
   sharp s gives `ss`), other accents are dropped, anything else becomes one dash; a name without a usable character gives
-  `channel`. A slug is unique on the server (`-2`, `-3` ... on a collision). It is set when the channel is created or
+  `channel`. A slug is unique on the server; on a collision the channel's own slug gets the first characters of its own id (`plans-0f3a`). A temporary Talk has the fixed slug `talk-` and the first 8 hex characters of its id, never changed by a rename and not kept in the history. It is set when the channel is created or
   renamed, in the same transaction. Migration 0075 backfills existing channels in the order (`created_at`, `id`).
-- **Renames keep old links alive.** Every slug a channel ever had stays reserved for it (`channel_slugs`), so a freed
-  slug is never handed to another channel and an old link never opens something else. The web app rewrites an old slug
+- **Renames keep old links alive.** Former slugs stay reserved for their channel (`channel_slugs`), so a freed
+  slug is never handed to another channel and an old link never opens something else (a channel keeps its newest ten former slugs; older ones are free again). The web app rewrites an old slug
   to the current one (replacing the history entry). The rows go with the channel when it is deleted.
 - **Old links keep working.** `/c/<id>` and `/v/<id>` (bookmarks, shared links, notifications of older clients) open the
   channel and are rewritten to the slug address; so are `/c/<conversation id>` links, which move to `/dm/...`.
