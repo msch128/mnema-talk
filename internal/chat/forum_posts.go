@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -111,16 +112,22 @@ func CreateForumPost(ctx context.Context, p *db.Pool, online OnlineSource, chann
 
 // UpdateForumPost updates a post's title, tags, or lock status.
 func UpdateForumPost(ctx context.Context, p *db.Pool, channelID, messageID, actorID uuid.UUID, canManage bool, title *string, tagIDs *[]uuid.UUID, isLocked *bool) (*Message, error) {
-	authorID, err := getForumPostAuthor(ctx, p, channelID, messageID)
+	authorID, locked, err := getForumPostAuthor(ctx, p, channelID, messageID)
 	if err != nil {
 		return nil, err
 	}
-	if err := checkPostUpdatePerms(actorID, authorID, canManage, title, tagIDs, isLocked); err != nil {
+	if err := checkPostUpdatePerms(actorID, authorID, canManage, locked, title, tagIDs, isLocked); err != nil {
 		return nil, err
 	}
 	cleanTitle, err := validatePostUpdates(ctx, p, channelID, title, tagIDs)
 	if err != nil {
 		return nil, err
+	}
+	var pending *automod.Pending
+	if cleanTitle != nil {
+		if pending, err = screenText(ctx, p, channelID, actorID, messageID, *cleanTitle); err != nil {
+			return nil, err
+		}
 	}
 
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
@@ -129,31 +136,34 @@ func UpdateForumPost(ctx context.Context, p *db.Pool, channelID, messageID, acto
 	if err != nil {
 		return nil, err
 	}
+	pending.Commit(ctx, messageID)
 
 	return GetMessage(ctx, p, messageID)
 }
 
-func getForumPostAuthor(ctx context.Context, p *db.Pool, channelID, messageID uuid.UUID) (uuid.UUID, error) {
-	var authorID, curChannelID uuid.UUID
+func getForumPostAuthor(ctx context.Context, p *db.Pool, channelID, messageID uuid.UUID) (authorID uuid.UUID, locked bool, err error) {
+	var curChannelID uuid.UUID
 	var parentID *uuid.UUID
-	var curTitle *string
-	err := p.QueryRow(ctx, `SELECT channel_id, user_id, parent_id, title FROM messages WHERE id = $1`, messageID).
-		Scan(&curChannelID, &authorID, &parentID, &curTitle)
-	if errors.Is(err, pgx.ErrNoRows) || curChannelID != channelID || parentID != nil {
-		return uuid.Nil, errMessageNotFound
+	err = p.QueryRow(ctx, `SELECT channel_id, user_id, parent_id, is_locked FROM messages WHERE id = $1`, messageID).
+		Scan(&curChannelID, &authorID, &parentID, &locked)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && (curChannelID != channelID || parentID != nil)) {
+		return uuid.Nil, false, errMessageNotFound
 	}
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("load post: %w", err)
+		return uuid.Nil, false, fmt.Errorf("load post: %w", err)
 	}
-	return authorID, nil
+	return authorID, locked, nil
 }
 
-func checkPostUpdatePerms(actorID, authorID uuid.UUID, canManage bool, title *string, tagIDs *[]uuid.UUID, isLocked *bool) error {
+func checkPostUpdatePerms(actorID, authorID uuid.UUID, canManage, locked bool, title *string, tagIDs *[]uuid.UUID, isLocked *bool) error {
 	if isLocked != nil && !canManage {
 		return httpx.ErrForbidden("missing permission to lock or unlock posts")
 	}
 	if (title != nil || tagIDs != nil) && actorID != authorID && !canManage {
 		return httpx.ErrForbidden("missing permission to edit others' posts")
+	}
+	if (title != nil || tagIDs != nil) && locked && !canManage {
+		return httpx.ErrForbidden("the post is locked")
 	}
 	return nil
 }

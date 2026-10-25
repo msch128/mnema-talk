@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/poll"
 )
 
@@ -152,7 +153,7 @@ func TestADatabaseRefusesNamedVotesInAnAnonymousPoll(t *testing.T) {
 	}
 }
 
-func TestAnonymousPollIsOffTheMembersExportAndTheirErasureKeepsTheCounts(t *testing.T) {
+func TestAnonymousVoteIsInTheMembersExportOnlyAsParticipationAndTheirErasureKeepsTheCounts(t *testing.T) {
 	a, _ := mailApp(t)
 	owner := a.seedAdmin()
 	f := pollFixture{a: a, owner: owner, alice: a.register(owner, "alice"), bob: a.register(owner, "bob"), channel: a.createChannel(owner, "general", "text")}
@@ -165,8 +166,10 @@ func TestAnonymousPollIsOffTheMembersExportAndTheirErasureKeepsTheCounts(t *test
 		t.Fatalf("export: %+v", st)
 	}
 	files := unzipAll(t, f.alice.get("/api/users/me/export/download").body)
-	if got := strings.TrimSpace(files["poll_votes.json"]); got != "[]" && got != "null" && got != "" {
-		t.Fatalf("an anonymous vote is in the export: %s", got)
+	// The export says that alice took part, never which option she chose.
+	got := files["poll_votes.json"]
+	if !strings.Contains(got, m.ID.String()) || strings.Contains(got, f.optionID(m, 0).String()) || strings.Contains(got, `"option"`) {
+		t.Fatalf("the export of an anonymous vote: %s", got)
 	}
 
 	wantStatus(t, "delete alice", a.deleteAccount(f.alice, memberPassword, ""), http.StatusNoContent)
@@ -287,5 +290,28 @@ func TestBallotFoldLoopRunsAndStops(t *testing.T) {
 	}
 	if got := tallies(f.detail(t, f.bob, m).Poll); !sameInts(got, []int{0, 0, 1}) {
 		t.Fatalf("after the loop: %v", got)
+	}
+}
+
+// A running tally pushed at each vote would let a small audience infer the
+// choice behind it, so an anonymous poll announces its result only at the end.
+func TestAnonymousPollPushesNoRunningTally(t *testing.T) {
+	f := newPollFixture(t)
+	m := f.basic(t, f.alice, map[string]any{"anonymous": true})
+	updates := func() (n int) {
+		for _, e := range f.a.events.Snapshot() {
+			if e.Type == events.PollUpdate {
+				n++
+			}
+		}
+		return n
+	}
+	wantStatus(t, "vote", f.vote(f.bob, m, f.optionID(m, 0)), http.StatusOK)
+	if got := updates(); got != 0 {
+		t.Fatalf("a vote pushed %d poll_update events", got)
+	}
+	wantStatus(t, "end", f.alice.post(f.base()+"/messages/"+m.ID.String()+"/poll/end", nil), http.StatusOK)
+	if got := updates(); got != 1 {
+		t.Fatalf("ending pushed %d poll_update events", got)
 	}
 }

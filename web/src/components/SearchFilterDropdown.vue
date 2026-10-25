@@ -77,7 +77,7 @@ function onKeydown(e: KeyboardEvent) {
     data-search-filter-dropdown
     role="region"
     :aria-label="$t('chat.filterOptions')"
-    class="absolute left-4 right-4 top-full z-20 mt-1 space-y-3 rounded-lg border border-mnema-border bg-mnema-raised p-3 shadow-xl"
+    class="mx-4 mb-3 space-y-3 rounded-lg border border-mnema-border bg-mnema-raised p-3 shadow-xl"
     @keydown="onKeydown"
   >
     <div>

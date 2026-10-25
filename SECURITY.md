@@ -82,6 +82,34 @@ Closed in 1.1:
 
 Remaining Info-level items of the review are not listed individually.
 
+## 1.2 internal security review
+
+The 1.2 additions (Talks and lobbies, stages, automod, sessions, scheduled
+messages and reminders, forum and poll changes, the Discord structure import,
+account export and deletion extensions) went through the same kind of
+**internal review**, not an external audit. Result: 0 Critical, 0 High. Every
+Medium and the Low findings that name a concrete misuse are fixed with a test
+that fails without the fix. Deliberately accepted:
+
+- **Scheduled messages burst.** Messages scheduled for the same second go out
+  in one sweep per member (at most 50 pending per member). Slow mode, the
+  direct message gate, blocks, automod and the permission checks still apply at
+  send time; only the per-request rate limiter does not, because there is no
+  request. The cap bounds the burst.
+- **Duplicate ids in a Discord template.** A template with two roles or
+  channels of the same Discord id can attach overwrites to the wrong imported
+  object. Real templates have unique ids and the fetch is pinned to
+  discord.com; the preview and the plan hash only guard against a change
+  between preview and apply. Review the imported channels' permissions after
+  an import, as the import page says.
+- **Moderation timeline and Manage reports.** The per-member moderation
+  timeline (reasons, role changes, Talk kicks) is readable with *Manage
+  reports* alone, independent of *View audit log*. This is intended: handling
+  a report needs the history. Grant the permission accordingly.
+- **Stage and reaction rate gates reset on reconnect.** The windows for stage
+  commands and reactions start over when a member's last connection closes.
+  They are bounded by the connection rate limit, like the voice gate.
+
 ## Direct messages (privacy model)
 
 Direct messages (1.1) are conversations of two to ten members. Their privacy
@@ -118,7 +146,10 @@ that the member voted (`poll_voters`, no timestamp) and ballots without a
 member (`poll_anon_ballots`) that are folded into per-option counters. An
 operator with direct access to the database server (WAL, transaction ids or
 statement logs) could, in theory, still correlate the timing of a vote. Do not
-rely on it against that operator.
+rely on it against that operator. An anonymous poll pushes no running tally
+at each vote (it announces the result when it ends), but the counts of a
+running poll are readable, so in a very small audience the choice of the last
+voter follows from the result.
 
 ## Blocks and reports
 

@@ -57,7 +57,7 @@ settings.json   notification levels per channel and category
 messages.json   the messages you wrote (channel_name is empty for channels you cannot see any more)
 edits.json      the earlier versions of the messages you edited (newest first)
 reactions.json  the reactions you gave
-poll_votes.json the options you voted for in polls
+poll_votes.json the options you voted for in polls (only that you took part in anonymous ones)
 uploads.json    the files you uploaded, with links while they still exist
 polls.json      the polls you started: settings, end time and the number of votes per option
 pins.json       the messages you pinned (which message, where, when; not their text)
