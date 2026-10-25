@@ -1,0 +1,25 @@
+internal/chat/slug_test.go
+  s_06fcde5dbef956::t_9da4fddde054ce 11-12
+internal/chat/slug_integration_test.go
+  s_06fcde5dbef956::t_9da4fddde054ce 58
+internal/db/channel_slug_backfill_integration_test.go
+  s_06fcde5dbef956::t_9da4fddde054ce 45
+scripts/english-only-allowlist.txt
+  s_06fcde5dbef956::t_07d89b72ae6e29 65-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "45a5338272f807cb7cd1079dd0e048504e20ab2b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
