@@ -1,0 +1,22 @@
+internal/chat/search_filters.go
+  s_06fcde5dbef956::t_43e41284150e44 38-40,42,47-65
+  s_06fcde5dbef956::t_2115f8acb5980b 66-67
+internal/chat/search_fuzz_test.go
+  s_06fcde5dbef956::t_1c006cdb78eafa 12-13,37-39,44,46-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6d5ca7853adde6590826ea07f8ca417eba9779e4",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
