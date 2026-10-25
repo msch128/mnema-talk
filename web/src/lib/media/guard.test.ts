@@ -132,6 +132,25 @@ describe('media transform guard', () => {
     warn.mockRestore()
   })
 
+  it('tries a refused key message once more before giving up on a line', () => {
+    installBrowser()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const guard = createMediaGuard()
+    const key = {} as EpochKeys
+    expect(guard.armSender({ transform: null } as RTCRtpSender, 'channel', 'alice', 0)).toBe(true)
+    const port = created.channels[0]?.port1
+    port?.postMessage.mockImplementationOnce(() => { throw new DOMException('The object can not be cloned.', 'DataCloneError') })
+    guard.setKey(7, key)
+    expect(port?.postMessage).toHaveBeenCalledTimes(2)
+    expect(warn).not.toHaveBeenCalled()
+    port?.postMessage.mockImplementation(() => { throw new DOMException('The object can not be cloned.', 'DataCloneError') })
+    guard.setKey(8, key)
+    expect(port?.postMessage).toHaveBeenCalledTimes(4)
+    expect(warn).toHaveBeenCalledTimes(1)
+    guard.reset()
+    warn.mockRestore()
+  })
+
   it('names the layer of a screen share line in the transform, and only then', () => {
     installBrowser()
     const guard = createMediaGuard()
