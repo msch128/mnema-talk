@@ -1,0 +1,23 @@
+web/src/lib/media/browserCall.test.ts
+  s_06fcde5dbef956::t_6bdd9d7b17cab7 323,431,559,582
+web/src/lib/media/group.recovery.test.ts
+  s_06fcde5dbef956::t_6bdd9d7b17cab7 214,369,439
+web/src/lib/media/group.welcomes.test.ts
+  s_06fcde5dbef956::t_6bdd9d7b17cab7 142,158
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f0d33ada68a7c6cfed7ff181f3b08f2a721b8b7f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
