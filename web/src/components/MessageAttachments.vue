@@ -7,6 +7,8 @@ import type { MediaAttachment } from '../types/domain'
 // Videos and files keep the card with the file name and size.
 import { computed } from 'vue'
 import { FileText } from '@lucide/vue'
+import { formatFileSize } from '../lib/fileSize'
+import { locale } from '../i18n'
 
 const props = defineProps({
   attachments: { type: Array as PropType<MediaAttachment[]>, default: () => [] },
@@ -62,7 +64,7 @@ const s = computed(() => STYLES[props.variant] || STYLES.chat)
 const kind = (att: MediaAttachment) => (att.mime_type?.startsWith('image/') ? 'image' : att.mime_type?.startsWith('video/') ? 'video' : 'file')
 // Only the chat layout shows images without the card and file row.
 const bare = (att: MediaAttachment) => kind(att) === 'image' && s.value.bareImage !== ''
-const sizeMb = (att: MediaAttachment) => ((att.size_bytes || 0) / 1024 / 1024).toFixed(2)
+const sizeText = (att: MediaAttachment) => formatFileSize(att.size_bytes, locale.value)
 </script>
 
 <template>
@@ -91,7 +93,7 @@ const sizeMb = (att: MediaAttachment) => ((att.size_bytes || 0) / 1024 / 1024).t
           </a>
         </div>
         <span :class="s.size">
-          {{ $t('media.sizeMb', { size: sizeMb(att) }) }}
+          {{ sizeText(att) }}
         </span>
       </div>
     </div>

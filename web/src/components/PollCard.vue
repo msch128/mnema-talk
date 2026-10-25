@@ -39,7 +39,7 @@ async function confirmEnd() {
 </script>
 
 <template>
-  <section data-testid="poll" class="mt-2 max-w-md rounded-xl border border-mnema-border bg-mnema-raised p-4 select-text" :aria-label="$t('poll.title')">
+  <section data-testid="poll" :aria-busy="busy ? 'true' : 'false'" class="mt-2 max-w-md rounded-xl border border-mnema-border bg-mnema-raised p-4 select-text" :aria-label="$t('poll.title')">
     <p class="mb-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-mnema-tertiary">
       <ChartNoAxesColumn class="h-3.5 w-3.5 text-mnema-accent" aria-hidden="true" />
       <span class="font-medium uppercase tracking-wide">{{ $t('poll.title') }}</span>
@@ -63,7 +63,8 @@ async function confirmEnd() {
           :class="[
             'relative block w-full overflow-hidden rounded-lg border px-3.5 py-2.5 text-left text-sm transition',
             mine.includes(o.id) ? 'border-mnema-accent' : 'border-mnema-hairline',
-            interactive ? 'cursor-pointer hover:border-mnema-accent/70' : 'cursor-default'
+            interactive ? 'cursor-pointer hover:border-mnema-accent/70' : 'cursor-default',
+            busy ? 'opacity-70' : ''
           ]"
           @click="pick(o.id)"
         >
@@ -84,6 +85,7 @@ async function confirmEnd() {
     </ul>
     </div>
 
+    <p v-if="!poll.anonymous && !ended && canVote && mine.length > 0" class="mt-2 text-xs text-mnema-tertiary" data-testid="poll-can-change">{{ $t('poll.canChange') }}</p>
     <p v-if="votingBlocked" class="mt-2 text-xs text-mnema-tertiary" data-testid="poll-cannot-vote">{{ $t('poll.cannotVote') }}</p>
 
     <!-- An anonymous vote is final, so it is sent with a button after ticking, and the card says so. -->

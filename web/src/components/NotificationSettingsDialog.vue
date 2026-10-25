@@ -76,19 +76,20 @@ const rowClass = (on: boolean) => [
 
         <section class="space-y-2">
           <h3 class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">{{ $t('notifications.muteServer') }}</h3>
-          <div class="flex flex-wrap gap-2">
+          <div class="grid grid-cols-2 gap-2">
             <button
               v-for="d in MUTE_DURATIONS.filter(x => x.id !== '15m')"
               :key="d.id"
               type="button"
-              class="btn"
+              :class="['btn btn-secondary h-auto min-h-10 whitespace-normal text-center', d.ms === null && muted && !server.muted_until ? 'border-mnema-accent bg-mnema-accent/10' : '']"
+              :aria-pressed="d.ms === null && muted && !server.muted_until ? 'true' : 'false'"
               :data-testid="`notify-server-mute-${d.id}`"
               @click="muteFor(d.ms)"
             >{{ $t(`notifications.mute_${d.id}`) }}</button>
           </div>
           <div v-if="muted" class="flex items-center justify-between gap-3 rounded-lg bg-mnema-surface border border-mnema-hairline px-3 py-2" data-testid="notify-server-status">
             <span class="flex min-w-0 items-center gap-2 text-sm text-mnema-text"><BellOff class="w-4 h-4 shrink-0 text-mnema-tertiary" /><span class="truncate">{{ muteStatus }}</span></span>
-            <button type="button" class="btn" data-testid="notify-server-unmute" @click="chooseLevel('all')">
+            <button type="button" class="btn btn-secondary" data-testid="notify-server-unmute" @click="chooseLevel('all')">
               <Bell class="w-4 h-4" />{{ $t('notifications.unmuteServer') }}
             </button>
           </div>

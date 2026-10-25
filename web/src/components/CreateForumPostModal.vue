@@ -92,7 +92,7 @@ async function handleSubmit() {
           type="text"
           maxlength="100"
           :placeholder="$t('forum.titlePlaceholder')"
-          class="w-full bg-mnema-surface border border-mnema-border rounded-lg px-3 py-2 text-sm text-mnema-text placeholder:text-mnema-tertiary focus:outline-hidden focus:border-mnema-accent"
+          class="w-full bg-mnema-surface border border-mnema-border rounded-lg px-3 py-2 text-sm text-mnema-text placeholder:text-mnema-tertiary focus:outline-hidden"
           autofocus
         />
       </div>
@@ -145,7 +145,7 @@ async function handleSubmit() {
           maxlength="4000"
           rows="5"
           :placeholder="$t('forum.contentPlaceholder')"
-          class="w-full bg-mnema-surface border border-mnema-border rounded-lg p-3 text-sm text-mnema-text placeholder:text-mnema-tertiary focus:outline-hidden focus:border-mnema-accent resize-y min-h-[100px]"
+          class="w-full bg-mnema-surface border border-mnema-border rounded-lg p-3 text-sm text-mnema-text placeholder:text-mnema-tertiary focus:outline-hidden resize-y min-h-[100px]"
         ></textarea>
       </div>
 

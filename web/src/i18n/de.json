@@ -59,7 +59,10 @@
     "deleted": "Gelöschtes Mitglied"
   },
   "media": {
-    "sizeMb": "{size} MB"
+    "sizeB": "{size} B",
+    "sizeKb": "{size} KB",
+    "sizeMb": "{size} MB",
+    "sizeGb": "{size} GB"
   },
   "menu": {
     "adminConsole": "Admin-Konsole",
@@ -1668,7 +1671,8 @@
     "anonymousBadgeHint": "Anonyme Umfrage: Niemand in der App, auch keine Moderatoren oder Administratoren, sieht, wer was gewählt hat. Mnema speichert nie, welche Antwort ein Mitglied gewählt hat, nur dass es abgestimmt hat und wie viele Stimmen jede Antwort hat.",
     "anonymousFinal": "Deine Stimme lässt sich nach dem Abschicken nicht mehr ändern.",
     "submitVote": "Abstimmen",
-    "youVotedAnonymous": "Du hast abgestimmt. Stimmen in einer anonymen Umfrage lassen sich nicht ändern."
+    "youVotedAnonymous": "Du hast abgestimmt. Stimmen in einer anonymen Umfrage lassen sich nicht ändern.",
+    "canChange": "Du kannst deine Stimme ändern, bis die Umfrage endet."
   },
   "mention": {
     "title": "Erwähnen",
@@ -2350,7 +2354,7 @@
     "locationType": "Ortstyp",
     "locationTalk": "Talk-Kanal",
     "locationText": "Freitext-Ort",
-    "locationTextPlaceholder": "z. B. Raum 42, Ingame-Lobby oder externer Link",
+    "locationTextPlaceholder": "z. B. Raum 42 oder ein Link",
     "selectTalk": "Talk-Kanal auswählen",
     "coverImage": "Titelbild (optional)",
     "coverAlt": "Titelbild der Veranstaltung",
@@ -2362,8 +2366,18 @@
     "going": "Zusagen",
     "interested": "Interessiert",
     "notGoing": "Absagen",
-    "goingCount": "{count} Zusagen",
-    "interestedCount": "{count} Interessiert",
+    "rsvpGoing": "Ich komme",
+    "rsvpInterested": "Vielleicht",
+    "rsvpNotGoing": "Kann nicht",
+    "cancelKeep": "Veranstaltung behalten",
+    "goingCount": {
+      "one": "{count} Zusage",
+      "other": "{count} Zusagen"
+    },
+    "interestedCount": {
+      "one": "{count} Vielleicht",
+      "other": "{count} Vielleicht"
+    },
     "reminderToast": "Erinnerung: „{title}“ beginnt in 15 Minuten!",
     "save": "Änderungen speichern",
     "details": "Details",
