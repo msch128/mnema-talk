@@ -74,9 +74,9 @@ describe('native gaming surfaces', () => {
     await ask().trigger('click'); await flushPromises(); await w.get('[data-testid="add-cancel"]').trigger('click')
     expect(ipc.invoke).not.toHaveBeenCalledWith('desktop_gaming_add_game', expect.anything()); expect(w.get('textarea').element.value).toBe('Wow.exe')
     ipc.invoke.mockImplementation((command: string) => Promise.resolve(command === 'desktop_gaming_snapshot' ? structuredClone(snapshot) : command === 'desktop_gaming_candidate' ? null : undefined))
-    await ask().trigger('click'); await flushPromises(); expect(w.get('[role="status"]').exists()).toBe(true)
+    await ask().trigger('click'); await flushPromises(); expect(w.find('[role="status"]').exists()).toBe(true)
     ipc.invoke.mockImplementation((command: string) => command === 'desktop_gaming_snapshot' ? Promise.resolve(structuredClone(snapshot)) : Promise.reject(new Error('old host')))
-    await ask().trigger('click'); await flushPromises(); expect(w.get('[role="status"]').exists()).toBe(true)
+    await ask().trigger('click'); await flushPromises(); expect(w.find('[role="status"]').exists()).toBe(true)
   })
   it('shows save failures without discarding the draft and clears unavailable snapshots', async () => {
     const w = await open(true); await w.findAll('button')[0]!.trigger('click'); ipc.invoke.mockRejectedValueOnce(new Error('duplicate')); await w.get('form').trigger('submit'); await flushPromises()
