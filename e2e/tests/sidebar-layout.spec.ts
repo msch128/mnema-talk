@@ -35,7 +35,7 @@ const SEED: Layout = { cats: ['A', 'B', 'G'], U: ['u1'], A: ['a1', 'a2', 'a3'], 
 const ids: Record<string, string> = {}
 function idFor(key: string): string { const value = ids[key]; if (!value) throw new Error(`Missing synthetic fixture: ${key}`); return value } // key → server id (channels and categories)
 // The address of a channel is its slug: the lowercase name, as these names are plain.
-function slugFor(key: string): string { return (CHANNELS[key]?.name ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-') }
+function slugFor(key: keyof typeof CHANNELS): string { return CHANNELS[key].name.toLowerCase().replace(/[^a-z0-9]+/g, '-') }
 const keyOf = (id: string | null) => Object.keys(ids).find((k) => ids[k] === id)
 
 const isLayoutSave = (req: Request) => req.method() === 'PUT' && new URL(req.url()).pathname === '/api/admin/layout'
