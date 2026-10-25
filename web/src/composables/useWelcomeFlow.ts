@@ -63,7 +63,7 @@ export function useWelcomeFlow() {
 
   function openStartChannel() {
     const id = onboarding.state?.start_channel_id
-    if (id && chat.allChannels.some(c => c.id === id)) navigate(`/c/${id}`)
+    if (id && chat.allChannels.some(c => c.id === id)) navigate(chat.linkTo(id))
   }
 
   function finish() {

@@ -36,7 +36,9 @@ test('search filters, results and jumping to an old message', async ({ browser }
   const b = await bCtx.newPage()
   try {
     await signIn(a, ADMIN_USER, ADMIN_PASSWORD)
-    const open = responseString(await apiFetch(a, 'POST', '/api/admin/channels', { name: OPEN, type: 'text' }), 'id')
+    const openChannel = await apiFetch(a, 'POST', '/api/admin/channels', { name: OPEN, type: 'text' })
+    const open = responseString(openChannel, 'id')
+    const openSlug = responseString(openChannel, 'slug')
     const hidden = responseString(await apiFetch(a, 'POST', '/api/admin/channels', { name: HIDDEN, type: 'text' }), 'id')
     const roles = await apiFetch(a, 'GET', '/api/roles')
     const list = (roles.json as { roles?: { id: string; is_everyone: boolean }[] }).roles ?? (roles.json as { id: string; is_everyone: boolean }[])
@@ -80,7 +82,7 @@ test('search filters, results and jumping to an old message', async ({ browser }
 
     // Jump to the old message: the surrounding history loads with it.
     await dialog.locator('#search-result-0').click()
-    await expect(a).toHaveURL(new RegExp(`/c/${open}/m/`))
+    await expect(a).toHaveURL(new RegExp(`/c/${openSlug}/m/`))
     await expect(a.getByText(`${OLD_WORD}-danach direkt dahinter`, { exact: true })).toBeVisible()
 
     // Date filters: nothing before the year 2000, everything after it.
@@ -119,7 +121,9 @@ test('the search dialog stays put, explains filters and works from the keyboard'
   const word = `ruhig${suffix}`
   try {
     await signIn(page, ADMIN_USER, ADMIN_PASSWORD)
-    const channel = responseString(await apiFetch(page, 'POST', '/api/admin/channels', { name: `ruhig-${suffix}`, type: 'text' }), 'id')
+    const created = await apiFetch(page, 'POST', '/api/admin/channels', { name: `ruhig-${suffix}`, type: 'text' })
+    const channel = responseString(created, 'id')
+    const channelSlug = responseString(created, 'slug')
     await post(page, channel, `${word} alpha beta gamma`)
     await post(page, channel, `${word} beta alpha`)
     for (let i = 0; i < 12; i++) await post(page, channel, `${word} eintrag ${i}`)
@@ -189,7 +193,7 @@ test('the search dialog stays put, explains filters and works from the keyboard'
     await page.keyboard.press('ArrowDown')
     await expect(input).toHaveAttribute('aria-activedescendant', 'search-result-1')
     await page.keyboard.press('Enter')
-    await expect(page).toHaveURL(new RegExp(`/c/${channel}/m/`))
+    await expect(page).toHaveURL(new RegExp(`/c/${channelSlug}/m/`))
     await expect(dialog).toBeHidden()
 
     // Reopened from the header, the query is kept and only the channel is set.

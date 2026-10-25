@@ -336,7 +336,7 @@ describe('history and races', () => {
     const chat = setup(), root = message({ id: fixtureId(10) })
     chat.messages = [root]
     chat.goToMessage(message({ parent_id: root.id }))
-    expect(currentRoute.value).toEqual(expect.objectContaining({ channelId: ch.id, messageId: root.id }))
+    expect(currentRoute.value).toEqual(expect.objectContaining({ channelRef: ch.id, messageId: root.id }))
     http.handle = () => ({ root, replies: [message({ parent_id: root.id })] })
     expect(await chat.jumpToMessage(root.id)).toBe(true)
     await tick()
@@ -486,7 +486,7 @@ describe('browser notifications', () => {
     notification.onclick?.()
     expect(focus).toHaveBeenCalled()
     expect(notification.close).toHaveBeenCalled()
-    expect(currentRoute.value).toEqual(expect.objectContaining({ channelId: remote.id, messageId: msg.id }))
+    expect(currentRoute.value).toEqual(expect.objectContaining({ channelRef: remote.id, messageId: msg.id }))
     useAuthStore().user = { ...me, presence: 'focus' }
     chat.handleWSEvent({ type: 'message_create', payload: message({ id: fixtureId(31), channel_id: remote.id }) })
     expect(BrowserNotification.items).toHaveLength(1)

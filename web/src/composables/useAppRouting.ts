@@ -8,6 +8,7 @@ import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
 import { currentRoute, navigate, canGoBackInApp } from '../lib/router'
+import { postPath, talkPath } from '../lib/routePaths'
 import { loadVoiceChatOpen, saveVoiceChatOpen } from '../lib/voiceChatPanel'
 
 /** Writes what the UI shows back to the address whenever any of it changes. */
@@ -36,12 +37,21 @@ function watchStateForRoute(ctx: RoutingContext, sync: () => void) {
 function statePath(ctx: RoutingContext, voiceChannelId: string | null) {
   const { chatStore, voiceStore } = ctx
   if (voiceStore.activeView === 'voice' && voiceChannelId) {
-    return ctx.voiceShowChat.value ? `/v/${voiceChannelId}/chat` : `/v/${voiceChannelId}`
+    return talkPath(chatStore.allChannels.find(c => c.id === voiceChannelId) ?? { id: voiceChannelId }, { chat: ctx.voiceShowChat.value })
   }
   const channel = chatStore.activeChannel
   if (!channel) return '/'
-  if (chatStore.activeThread) return `/c/${channel.id}/t/${chatStore.activeThread.id}`
-  return `/c/${channel.id}`
+  const thread = chatStore.activeThread
+  if (thread && channel.type === 'forum' && thread.title) return postPath(channel, thread)
+  return chatStore.linkTo(channel.id, thread ? { threadId: thread.id } : {})
+}
+
+/** Whether the address names a channel by a slug it has since replaced. */
+function onFormerSlug(ctx: RoutingContext): boolean {
+  const route = currentRoute.value
+  if (route.view !== 'chat' && route.view !== 'voice') return false
+  const ref = route.channelRef.toLowerCase()
+  return ctx.chatStore.allChannels.some(c => c.slug !== ref && c.previous_slugs?.includes(ref))
 }
 
 function syncStateToRoute(ctx: RoutingContext) {
@@ -49,7 +59,8 @@ function syncStateToRoute(ctx: RoutingContext) {
   if (!ctx.authStore.isAuthenticated) return
   const targetPath = ctx.showAdminModal.value ? `/admin/${ctx.adminTab.value || 'users'}` : ctx.currentStatePath()
   if (targetPath !== '/' && window.location.pathname !== targetPath) {
-    navigate(targetPath, { replace: false })
+    // A rename moves the address from a former slug to the new one: that is no new page.
+    navigate(targetPath, { replace: onFormerSlug(ctx) })
   }
 }
 

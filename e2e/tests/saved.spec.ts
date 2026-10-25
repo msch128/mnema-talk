@@ -31,6 +31,7 @@ test('a member saves a message, opens it from the saved list, loses access and r
     const channel = await apiFetch(owner, 'POST', '/api/admin/channels', { name: CHANNEL, type: 'text' })
     expect(channel.status).toBe(201)
     const channelId = responseString(channel, 'id')
+    const channelSlug = responseString(channel, 'slug')
     created.push(channelId)
 
     await member.goto('/')
@@ -65,7 +66,7 @@ test('a member saves a message, opens it from the saved list, loses access and r
     await member.goto('/')
     await member.getByTestId('saved-button').click()
     await member.getByTestId('saved-open').click()
-    await expect(member).toHaveURL(new RegExp(`/c/${channelId}/m/`))
+    await expect(member).toHaveURL(new RegExp(`/c/${channelSlug}/m/`))
 
     // Pinned by: the pinned list names the Owner.
     expect((await apiFetch(owner, 'PUT', `/api/channels/${channelId}/messages/${messageId}/pin`)).status).toBe(200)

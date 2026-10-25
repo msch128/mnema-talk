@@ -39,7 +39,7 @@ describe('reading a push', () => {
   it('accepts the server payload and normalises the ids', () => {
     expect(parsePush(payload({ parent_id: ROOT.toUpperCase(), mention: true }))).toEqual({
       type: 'message', title: 'Alice (#general)', body: 'Hello', tag: CHANNEL, timestamp: 1_700_000_000_000,
-      channelId: CHANNEL, messageId: MESSAGE, parentId: ROOT, mention: true,
+      channelId: CHANNEL, channelSlug: null, messageId: MESSAGE, parentId: ROOT, mention: true,
     })
   })
 
@@ -51,14 +51,14 @@ describe('reading a push', () => {
 
   it('drops ids that are not UUIDs, so they cannot shape a URL', () => {
     const parsed = parsePush(payload({ channel_id: '../../admin', message_id: 'x', parent_id: 5, tag: undefined, ts: 'now' }))
-    expect(parsed).toMatchObject({ channelId: null, messageId: null, parentId: null, tag: 'message' })
+    expect(parsed).toMatchObject({ channelId: null, channelSlug: null, messageId: null, parentId: null, tag: 'message' })
     expect(Number.isFinite(parsed?.timestamp)).toBe(true)
   })
 
   it('tags the notification with the channel so the page\'s own one replaces it', () => {
     const options = notificationOptions(parsePush(payload())!)
     expect(options).toMatchObject({ body: 'Hello', tag: CHANNEL, renotify: true, icon: '/pwa-icon-192.png', badge: '/pwa-badge-96.png' })
-    expect(options['data']).toEqual({ channel_id: CHANNEL, message_id: MESSAGE, parent_id: null })
+    expect(options['data']).toEqual({ channel_id: CHANNEL, channel_slug: null, message_id: MESSAGE, parent_id: null })
   })
 })
 

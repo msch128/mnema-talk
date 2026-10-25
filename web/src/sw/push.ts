@@ -10,6 +10,8 @@ export interface PushMessage {
   tag: string
   timestamp: number
   channelId: string | null
+  /** The channel's web address (absent for direct messages). */
+  channelSlug: string | null
   messageId: string | null
   parentId: string | null
   mention: boolean
@@ -65,9 +67,14 @@ export interface SubscriptionChangeEventLike {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MAX_TEXT = 512
+const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 function text(value: unknown): string | null {
   return typeof value === 'string' && value.length <= MAX_TEXT ? value : null
+}
+
+function slug(value: unknown): string | null {
+  return typeof value === 'string' && value.length <= 60 && SLUG.test(value) ? value : null
 }
 
 function id(value: unknown): string | null {
@@ -88,6 +95,7 @@ export function parsePush(raw: unknown): PushMessage | null {
     tag: text(p['tag']) ?? p['type'],
     timestamp: typeof p['ts'] === 'number' && Number.isFinite(p['ts']) ? p['ts'] : Date.now(),
     channelId: id(p['channel_id']),
+    channelSlug: slug(p['channel_slug']),
     messageId: id(p['message_id']),
     parentId: id(p['parent_id']),
     mention: p['mention'] === true,
@@ -111,7 +119,7 @@ export function notificationOptions(message: PushMessage): Record<string, unknow
     icon: '/pwa-icon-192.png',
     badge: '/pwa-badge-96.png',
     timestamp: message.timestamp,
-    data: { channel_id: message.channelId, message_id: message.messageId, parent_id: message.parentId },
+    data: { channel_id: message.channelId, channel_slug: message.channelSlug, message_id: message.messageId, parent_id: message.parentId },
   }
 }
 
@@ -135,7 +143,7 @@ async function updateBadge(scope: PushScope): Promise<void> {
 export async function onPush(scope: PushScope, event: PushEventLike): Promise<void> {
   const message = parsePush(readPayload(event))
   if (message?.type === 'message' && await appIsOnScreen(scope)) return
-  const shown = message ?? { type: 'message' as const, title: 'Mnema Talk', body: '', tag: 'mnema', timestamp: Date.now(), channelId: null, messageId: null, parentId: null, mention: false }
+  const shown = message ?? { type: 'message' as const, title: 'Mnema Talk', body: '', tag: 'mnema', timestamp: Date.now(), channelId: null, channelSlug: null, messageId: null, parentId: null, mention: false }
   await scope.registration.showNotification(shown.title, notificationOptions(shown))
   await updateBadge(scope)
 }
@@ -148,7 +156,9 @@ export function openTarget(data: unknown): { url: string, message: OpenMessage |
   if (!channel || !message) return { url: '/', message: null }
   const parent = id(d['parent_id'])
   return {
-    url: `/c/${channel}/m/${parent ?? message}`,
+    // The slug is the canonical address; without it (a conversation) the id
+    // route opens and the app rewrites it.
+    url: `/c/${slug(d['channel_slug']) ?? channel}/m/${parent ?? message}`,
     message: { type: 'mnema:open-message', channel_id: channel, message_id: message, parent_id: parent },
   }
 }

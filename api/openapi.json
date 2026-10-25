@@ -2123,11 +2123,23 @@
             "description": "Number is the channel's short, stable link number (/c/12-general).",
             "type": "integer"
           },
+          "previous_slugs": {
+            "description": "PreviousSlugs are the slugs the channel had before a rename, oldest\nfirst. Old links resolve through them; no other channel ever takes one.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "slow_mode_seconds": {
             "description": "SlowModeSeconds is the least time between two messages of one member\nin this channel; 0 = off. Members who may manage messages here are\nexempt.",
             "maximum": 86400,
             "minimum": 0,
             "type": "integer"
+          },
+          "slug": {
+            "description": "Slug is the channel's address in the web app (/c/general, /v/lounge):\nunique server-wide, lowercase ASCII. The id stays the key everywhere.",
+            "maxLength": 60,
+            "type": "string"
           },
           "sort_order": {
             "type": "integer"

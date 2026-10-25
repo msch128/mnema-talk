@@ -24,10 +24,12 @@ type Payload struct {
 	Body      string     `json:"body"`
 	Tag       string     `json:"tag"`
 	ChannelID *uuid.UUID `json:"channel_id,omitempty"`
-	MessageID *uuid.UUID `json:"message_id,omitempty"`
-	ParentID  *uuid.UUID `json:"parent_id,omitempty"`
-	Mention   bool       `json:"mention,omitempty"`
-	Timestamp int64      `json:"ts"`
+	// ChannelSlug lets a click open /c/<slug> directly; absent for direct messages.
+	ChannelSlug string     `json:"channel_slug,omitempty"`
+	MessageID   *uuid.UUID `json:"message_id,omitempty"`
+	ParentID    *uuid.UUID `json:"parent_id,omitempty"`
+	Mention     bool       `json:"mention,omitempty"`
+	Timestamp   int64      `json:"ts"`
 }
 
 // Payload types.
@@ -68,6 +70,8 @@ type Notice struct {
 	AuthorID    uuid.UUID
 	ChannelID   uuid.UUID
 	ChannelName string
+	// ChannelSlug is the channel's web address; empty for a conversation.
+	ChannelSlug string
 	MessageID   uuid.UUID
 	ParentID    *uuid.UUID
 	Sender      string
@@ -93,7 +97,7 @@ type Notice struct {
 func build(n Notice, locale string, preview bool) Payload {
 	p := Payload{
 		Version: 1, Type: typeMessage, Tag: n.ChannelID.String(),
-		ChannelID: &n.ChannelID, MessageID: &n.MessageID, ParentID: n.ParentID,
+		ChannelID: &n.ChannelID, ChannelSlug: n.ChannelSlug, MessageID: &n.MessageID, ParentID: n.ParentID,
 		Mention: n.Mention, Timestamp: n.At.UnixMilli(),
 	}
 	sender, channel := clean(n.Sender, maxNameRunes), clean(n.ChannelName, maxNameRunes)

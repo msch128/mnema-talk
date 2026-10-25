@@ -153,6 +153,35 @@ of the pre-update backup (see "Rollback" above).
 | 0071 | `discord_imports` and `discord_import_objects`: the record of each Discord structure import and the ids it created, for undo (see [Import](import.md)). Nothing existing is touched. |
 | 0072 | `media_original_filename_trgm_idx`: GIN trigram index on `media.original_filename` for fast case-insensitive attachment filename search. |
 | 0073 | `server_notify`: a member's server-wide notification default (see [Notification settings](#notification-settings)). Adds a table only. |
+| 0075 | `channels.slug` and `channel_slugs`: the speaking addresses of channels (see "Speaking URLs"). Every existing channel except a direct message gets its slug in the same migration. |
+
+#### Speaking URLs
+
+Channels, Talks, forum posts and conversations have readable web addresses. The id stays the key everywhere; the
+slug is only an address.
+
+| Address | Opens |
+|---|---|
+| `/c/general`, `/c/general/m/<message id>`, `/c/general/t/<thread id>` | a text channel, a message in it, a thread |
+| `/v/lounge`, `/v/lounge/chat`, `/v/lounge/chat/m/<message id>` | a Talk, its chat, a message in it |
+| `/c/ideas/p/neue-kueche-0f3a9c1e` | a forum post: its title and the first 8 characters of its id |
+| `/dm/alice`, `/dm/g/0f3a9c1e` | a conversation of two (the other member's username) and a group (first 8 characters of its id) |
+
+- **Slugs.** Lowercase ASCII (`a-z`, `0-9`, `-`), at most 60 characters: German umlauts and the sharp s are spelled out (a-umlaut gives `ae`, the
+  sharp s gives `ss`), other accents are dropped, anything else becomes one dash; a name without a usable character gives
+  `channel`. A slug is unique on the server (`-2`, `-3` ... on a collision). It is set when the channel is created or
+  renamed, in the same transaction. Migration 0075 backfills existing channels in the order (`created_at`, `id`).
+- **Renames keep old links alive.** Every slug a channel ever had stays reserved for it (`channel_slugs`), so a freed
+  slug is never handed to another channel and an old link never opens something else. The web app rewrites an old slug
+  to the current one (replacing the history entry). The rows go with the channel when it is deleted.
+- **Old links keep working.** `/c/<id>` and `/v/<id>` (bookmarks, shared links, notifications of older clients) open the
+  channel and are rewritten to the slug address; so are `/c/<conversation id>` links, which move to `/dm/...`.
+- **API.** Channel objects carry `slug` and `previous_slugs` (additive). They come with the channel, so a member only
+  learns them for channels they may see; there is no endpoint that resolves a slug, and an unknown address and a
+  channel the member may not see give the same answer in the app. Web Push payloads carry `channel_slug` so a click
+  opens the address directly.
+- **Conversations.** `/dm/<username>` is resolved from the member's own conversation list. After the other member changes
+  their username the old address no longer matches and is treated as unknown; `/c/<conversation id>` still works.
 
 #### Small additions: emoji shortcodes, past events, avatar updates
 

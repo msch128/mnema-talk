@@ -223,6 +223,9 @@ func insertChannelCopy(ctx context.Context, tx pgx.Tx, src *Channel, sortOrder i
 	if err != nil {
 		return nil, fmt.Errorf("duplicate channel: %w", err)
 	}
+	if err := assignAndFillSlugs(ctx, tx, &ch); err != nil {
+		return nil, err
+	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO permission_overwrites (channel_id, role_id, user_id, allow, deny)
 		SELECT $1, role_id, user_id, allow, deny FROM permission_overwrites WHERE channel_id = $2`,

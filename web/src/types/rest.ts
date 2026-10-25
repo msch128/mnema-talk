@@ -1253,7 +1253,9 @@ export type ChatChannel = {
   leader_id?: string
   name: string
   number: number
+  previous_slugs?: Array<string>
   slow_mode_seconds: number
+  slug?: string
   sort_order: number
   topic: string
   type: ChatChannelType
@@ -1272,7 +1274,9 @@ export function isChatChannel(value: unknown): value is ChatChannel {
     && (!hasOwn(value, "leader_id") || isIdentifier(value["leader_id"]))
     && (hasOwn(value, "name") && isString(value["name"], 64))
     && (hasOwn(value, "number") && isInteger(value["number"]))
+    && (!hasOwn(value, "previous_slugs") || isArrayOf(value["previous_slugs"], item => isString(item)))
     && (hasOwn(value, "slow_mode_seconds") && (isInteger(value["slow_mode_seconds"]) && value["slow_mode_seconds"] >= 0 && value["slow_mode_seconds"] <= 86400))
+    && (!hasOwn(value, "slug") || isString(value["slug"], 60))
     && (hasOwn(value, "sort_order") && isInteger(value["sort_order"]))
     && (hasOwn(value, "topic") && isString(value["topic"], 255))
     && (hasOwn(value, "type") && isChatChannelType(value["type"]))

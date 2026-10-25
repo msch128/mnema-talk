@@ -32,7 +32,7 @@ function join() {
   void chat.selectChannel(talk.value)
   void joinVoiceChannel(props.talkId)
   voice.activeView = 'voice'
-  navigate(`/v/${props.talkId}`)
+  navigate(chat.linkTo(props.talkId))
 }
 </script>
 

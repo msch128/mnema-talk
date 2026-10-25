@@ -20,6 +20,7 @@ type candidate struct {
 	preview     bool
 	presence    string
 	channelName string
+	channelSlug string
 	// dm is set when the channel is a direct message conversation: every
 	// message in it is meant for the member (not just a mention), and a
 	// mute still silences it.
@@ -43,7 +44,7 @@ type candidate struct {
 // A member who blocked the author is never a candidate. A non-nil only limits the result to that account.
 func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.UUID, only *uuid.UUID) ([]candidate, error) {
 	rows, err := q.Query(ctx, `
-		SELECT u.id, u.locale, u.push_preview, u.presence, c.name, c.type = 'dm',
+		SELECT u.id, u.locale, u.push_preview, u.presence, c.name, COALESCE(c.slug, ''), c.type = 'dm',
 		       cr.notify_level, cr.muted_until, cn.notify_level, cn.muted_until,
 		       sn.notify_level, sn.muted_until, COALESCE(sn.suppress_everyone, FALSE), NOW(), u.dm_mute_all
 		FROM users u
@@ -63,7 +64,7 @@ func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.
 		var c candidate
 		var chLevel, catLevel, srvLevel *string
 		var muteAll bool
-		if err := rows.Scan(&c.userID, &c.locale, &c.preview, &c.presence, &c.channelName, &c.dm,
+		if err := rows.Scan(&c.userID, &c.locale, &c.preview, &c.presence, &c.channelName, &c.channelSlug, &c.dm,
 			&chLevel, &c.channelLevel.MutedUntil, &catLevel, &c.categoryLvl.MutedUntil,
 			&srvLevel, &c.serverLvl.MutedUntil, &c.suppressAll, &c.now, &muteAll); err != nil {
 			return nil, fmt.Errorf("load push candidates: %w", err)

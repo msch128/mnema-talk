@@ -41,7 +41,7 @@ test('read and write a Talk chat from its row, then join from the header', async
   await signIn(page)
   const created = await apiFetch(page, 'POST', '/api/admin/channels', { name: CHANNEL, type: 'voice' })
   expect(created.status).toBe(201)
-  const channelId = responseString(created, 'id')
+  const channelSlug = responseString(created, 'slug')
   await page.reload()
 
   const row = page.locator('[data-channel-type="voice"]', { hasText: CHANNEL })
@@ -52,7 +52,7 @@ test('read and write a Talk chat from its row, then join from the header', async
   await chatButton.click()
 
   // The Talk is shown as a preview with its chat; nothing joined.
-  await expect(page).toHaveURL(new RegExp(`/v/${channelId}/chat$`))
+  await expect(page).toHaveURL(new RegExp(`/v/${channelSlug}/chat$`))
   const panel = page.getByTestId('voice-chat-panel')
   await expect(panel).toBeVisible()
   await expect(page.getByTestId('talk-header-join')).toBeVisible()

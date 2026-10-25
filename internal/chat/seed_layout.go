@@ -4,8 +4,10 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
 )
@@ -63,8 +65,8 @@ func LocalizeSeedLayout(ctx context.Context, p *db.Pool, language string) (bool,
 		}
 		for key, from := range base.Channels {
 			to := target.Channels[key]
-			if _, err := tx.Exec(ctx, `UPDATE channels SET name = $2, topic = $3 WHERE name = $1`, from.Name, to.Name, to.Topic); err != nil {
-				return fmt.Errorf("rename seeded channel: %w", err)
+			if err := renameSeededChannel(ctx, tx, from.Name, to); err != nil {
+				return err
 			}
 		}
 		renamed = true
@@ -94,4 +96,18 @@ func isUntouchedSeed(ctx context.Context, tx pgx.Tx, base seedLayout) (bool, err
 		return false, fmt.Errorf("check seeded layout: %w", err)
 	}
 	return ok, nil
+}
+
+// renameSeededChannel renames the seeded channel called from to the target
+// layout's name and topic, and moves its slug along.
+func renameSeededChannel(ctx context.Context, tx pgx.Tx, from string, to seedChannel) error {
+	var id uuid.UUID
+	err := tx.QueryRow(ctx, `UPDATE channels SET name = $2, topic = $3 WHERE name = $1 RETURNING id`, from, to.Name, to.Topic).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("rename seeded channel: %w", err)
+	}
+	return assignSlug(ctx, tx, id, to.Name)
 }

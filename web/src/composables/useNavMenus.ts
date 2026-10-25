@@ -22,6 +22,7 @@ import { useToastStore } from '../stores/toast'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { canConfigureTalk, canToggleStage, isStageTalk, openTalkSettings, setStage } from '../lib/talks'
 import { api } from '../lib/api'
+import { channelPath } from '../lib/routePaths'
 import { confirm } from '../lib/confirm'
 import { menuPointFromEvent } from '../lib/contextMenuPoint'
 import type { MenuTrigger } from '../lib/contextMenuPoint'
@@ -52,7 +53,7 @@ export function useMenuState() {
 
 export function channelLink(channel: Channel) {
   const base = typeof window !== 'undefined' ? window.location.origin : ''
-  return `${base}/${channel.type === 'voice' ? 'v' : 'c'}/${channel.id}`
+  return `${base}${channelPath(channel)}`
 }
 
 async function copyText(text: string, okMessage: string) {
