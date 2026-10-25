@@ -51,6 +51,19 @@ describe('ScheduledItem', () => {
     expect(w.find('form').exists()).toBe(false)
   })
 
+  it('keeps an untouched time as it is instead of reading it back from the clock', async () => {
+    // The input shows minutes only, so a time with seconds does not survive a
+    // round trip; the same happens to a time in the hour that repeats when
+    // daylight saving ends. An untouched field must not move the message.
+    const update = vi.spyOn(later, 'updateScheduled').mockResolvedValue(item())
+    const w = mountItem({ send_at: new Date(inHours(3).setSeconds(30, 0)).toISOString() })
+    await w.get('[data-testid=scheduled-edit]').trigger('click')
+    await w.get('[data-testid=scheduled-text]').setValue('only the words')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(update).toHaveBeenCalledWith(fixtureId(2), { content: 'only the words' })
+  })
+
   it('saves a new time and leaves an unchanged text out', async () => {
     const update = vi.spyOn(later, 'updateScheduled').mockResolvedValue(item())
     const w = mountItem()
