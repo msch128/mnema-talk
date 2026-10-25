@@ -171,3 +171,20 @@ func TestPushGroupLineHidesSpoilersToo(t *testing.T) {
 		t.Fatalf("body %q", p.Body)
 	}
 }
+
+func TestPushCarriesTheChannelSlugForTheClickAddress(t *testing.T) {
+	n := notice()
+	n.ChannelSlug = "general"
+	raw, err := build(n, "en", true).encode()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"channel_slug":"general"`) {
+		t.Fatalf("payload %s lacks the slug", raw)
+	}
+	n.ChannelSlug = ""
+	raw, err = build(n, "en", true).encode()
+	if err != nil || strings.Contains(string(raw), "channel_slug") {
+		t.Fatalf("a conversation has no slug: %s, %v", raw, err)
+	}
+}

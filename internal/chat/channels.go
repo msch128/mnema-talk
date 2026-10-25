@@ -60,12 +60,20 @@ type Channel struct {
 	// IsStage marks a Talk as a Stage: without talk power nobody speaks or
 	// shares video there (doc/talks.md).
 	IsStage bool `json:"is_stage" binding:"optional"`
+	// Slug is the channel's address in the web app (/c/general, /v/lounge):
+	// unique server-wide, lowercase ASCII. The id stays the key everywhere.
+	Slug string `json:"slug" maxLength:"60" binding:"optional"`
+	// PreviousSlugs are the slugs the channel had before a rename, oldest
+	// first. Old links resolve through them; no other channel ever takes one.
+	PreviousSlugs []string `json:"previous_slugs" binding:"optional"`
 }
 
 func populateChannels(ctx context.Context, p *db.Pool, categories []Category, categoryIdx map[uuid.UUID]int) ([]Channel, error) {
 	chanRows, err := p.Query(ctx, `
 		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days,
-		       is_lobby, is_temp, leader_id, is_stage
+		       is_lobby, is_temp, leader_id, is_stage, COALESCE(slug, ''),
+		       COALESCE((SELECT array_agg(s.slug ORDER BY s.used_at, s.slug) FROM channel_slugs s
+		                 WHERE s.channel_id = channels.id AND s.slug IS DISTINCT FROM channels.slug), '{}')
 		FROM channels WHERE type <> 'dm' ORDER BY sort_order, created_at`)
 	if err != nil {
 		return nil, fmt.Errorf("query channels: %w", err)
@@ -75,7 +83,7 @@ func populateChannels(ctx context.Context, p *db.Pool, categories []Category, ca
 	uncategorized := make([]Channel, 0)
 	for chanRows.Next() {
 		var ch Channel
-		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays, &ch.IsLobby, &ch.IsTemp, &ch.LeaderID, &ch.IsStage); err != nil {
+		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays, &ch.IsLobby, &ch.IsTemp, &ch.LeaderID, &ch.IsStage, &ch.Slug, &ch.PreviousSlugs); err != nil {
 			return nil, err
 		}
 		if ch.CategoryID != nil {
@@ -141,15 +149,28 @@ func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name 
 		return nil, err
 	}
 	var ch Channel
-	err = p.QueryRow(ctx, `
-		INSERT INTO channels (category_id, name, type, topic, sort_order) VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`,
-		categoryID, name, chType, topic, sortOrder).
-		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds)
+	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO channels (category_id, name, type, topic, sort_order) VALUES ($1, $2, $3, $4, $5)
+			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`,
+			categoryID, name, chType, topic, sortOrder).
+			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds); err != nil {
+			return err
+		}
+		return assignAndFillSlugs(ctx, tx, &ch)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create channel: %w", err)
 	}
 	return &ch, nil
+}
+
+// assignAndFillSlugs gives ch the slug for its name and loads it into ch.
+func assignAndFillSlugs(ctx context.Context, tx pgx.Tx, ch *Channel) error {
+	if err := assignSlug(ctx, tx, ch.ID, ch.Name); err != nil {
+		return err
+	}
+	return FillSlugs(ctx, tx, ch)
 }
 
 // DeleteChannel removes a channel and, by cascade, its messages. It returns
@@ -265,12 +286,17 @@ func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *s
 		return nil, err
 	}
 	var ch Channel
-	err = p.QueryRow(ctx, `
-		UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic),
-			user_limit = COALESCE($4, user_limit), slow_mode_seconds = COALESCE($5, slow_mode_seconds)
-		WHERE id = $1 AND type <> 'dm' AND ($4::int IS NULL OR $4 = 0 OR type = 'voice')
-		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days`, id, name, topic, userLimit, slowMode).
-		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays)
+	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `
+			UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic),
+				user_limit = COALESCE($4, user_limit), slow_mode_seconds = COALESCE($5, slow_mode_seconds)
+			WHERE id = $1 AND type <> 'dm' AND ($4::int IS NULL OR $4 = 0 OR type = 'voice')
+			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days`, id, name, topic, userLimit, slowMode).
+			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays); err != nil {
+			return err
+		}
+		return assignAndFillSlugs(ctx, tx, &ch)
+	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		if userLimit != nil && *userLimit > 0 {
 			if _, lerr := LoadChannel(ctx, p, id); lerr == nil {

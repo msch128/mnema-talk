@@ -32,7 +32,7 @@ async function ensureSuiteMember(admin: Page, member: Page) {
 
 // The same member, once more as a brand-new one: the welcome flow walks them
 // through every step, and a raised rules version asks only for the rules.
-async function welcomeFlowPhase(a: Page, b: Page, bCtx: BrowserContext, channelId: string) {
+async function welcomeFlowPhase(a: Page, b: Page, bCtx: BrowserContext, channelId: string, channelSlug: string) {
   // Headless Chromium reports notifications as blocked; a real new member is still undecided.
   await bCtx.addInitScript(() => Object.defineProperty(Notification, 'permission', { get: () => 'default', configurable: true }))
   // Other specs hide the flow so it cannot cover their pages; this one wants it.
@@ -64,7 +64,7 @@ async function welcomeFlowPhase(a: Page, b: Page, bCtx: BrowserContext, channelI
   await dialog.getByRole('button', { name: 'Nicht jetzt' }).click()
 
   await expect(dialog).toBeHidden()
-  await expect(b).toHaveURL(new RegExp(`/c/${channelId}$`))
+  await expect(b).toHaveURL(new RegExp(`/c/${channelSlug}$`))
   expect((await apiFetch(b, 'GET', '/api/onboarding')).json).toMatchObject({ rules_pending: false })
 
   // Done is stored on the account: a reload shows nothing.
@@ -96,6 +96,7 @@ test('invite links name the community, rules block a member until accepted, and 
     const channel = await apiFetch(a, 'POST', '/api/admin/channels', { name: CHANNEL, type: 'text' })
     expect(channel.status).toBe(201)
     const channelId = responseString(channel, 'id')
+    const channelSlug = responseString(channel, 'slug')
 
     // The member of this suite exists before any rules do.
     await ensureSuiteMember(a, b)
@@ -142,7 +143,7 @@ test('invite links name the community, rules block a member until accepted, and 
     // The Owner was never asked.
     expect((await apiFetch(a, 'POST', `/api/channels/${channelId}/messages`, { content: 'owner' })).status).toBe(201)
 
-    await welcomeFlowPhase(a, b, bCtx, channelId)
+    await welcomeFlowPhase(a, b, bCtx, channelId, channelSlug)
   } finally {
     // Other specs post as this member: leave the instance without rules.
     await apiFetch(a, 'PUT', '/api/admin/onboarding', { community_name: '', welcome_text: '', rules_text: '', start_channel_id: null })

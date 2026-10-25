@@ -48,7 +48,7 @@ describe('the push bridge', () => {
   it('navigates for real through the chat store', () => {
     const w = mount(Host)
     lib.listener?.({ channel_id: 'ch9', message_id: 'mx', parent_id: null })
-    expect(currentRoute.value).toMatchObject({ view: 'chat', channelId: 'ch9', messageId: 'mx' })
+    expect(currentRoute.value).toMatchObject({ view: 'chat', channelRef: 'ch9', messageId: 'mx' })
     w.unmount()
   })
 

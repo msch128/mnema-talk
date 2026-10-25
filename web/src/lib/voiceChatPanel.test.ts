@@ -44,15 +44,15 @@ describe('voice chat open state', () => {
 
 describe('voice chat routes', () => {
   it('parses the chat and a message in it', () => {
-    expect(parseRoute('/v/v1/chat')).toEqual({ view: 'voice', channelId: 'v1', showChat: true, watching: true })
-    expect(parseRoute('/v/v1/chat/m/m9')).toEqual({ view: 'voice', channelId: 'v1', showChat: true, messageId: 'm9', watching: true })
+    expect(parseRoute('/v/v1/chat')).toEqual({ view: 'voice', channelRef: 'v1', showChat: true, watching: true })
+    expect(parseRoute('/v/v1/chat/m/m9')).toEqual({ view: 'voice', channelRef: 'v1', showChat: true, messageId: 'm9', watching: true })
   })
 
   it('sends a message link of a voice channel to its Talk\'s chat', () => {
     const channels: Pick<Channel, 'id' | 'type'>[] = [{ id: 'v1', type: 'voice' }]
-    expect(resolveRoute({ view: 'chat', channelId: 'v1', messageId: 'm9' }, { channels }))
+    expect(resolveRoute({ view: 'chat', channelRef: 'v1', messageId: 'm9' }, { channels }))
       .toEqual({ redirect: '/v/v1/chat/m/m9', reason: null })
-    expect(resolveRoute({ view: 'chat', channelId: 'v1' }, { channels }))
+    expect(resolveRoute({ view: 'chat', channelRef: 'v1' }, { channels }))
       .toEqual({ redirect: '/v/v1', reason: null })
   })
 })

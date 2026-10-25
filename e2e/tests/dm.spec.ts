@@ -88,7 +88,7 @@ test('two members start a direct message and write to each other', async ({ brow
     const picker = owner.getByTestId('dm-create')
     await picker.locator(`[data-dm-candidate="${suiteMember.username}"]`).click()
     await picker.getByTestId('dm-submit').click()
-    await expect(owner).toHaveURL(/\/c\/[0-9a-f-]{36}$/)
+    await expect(owner).toHaveURL(new RegExp(`/dm/${suiteMember.username}$`))
     await expect(owner.getByTestId('chat-channel-name')).toHaveText(suiteMember.username)
     await write(owner, `hello ${suffix}`)
     await expect(owner.locator('#main-content').getByText(`hello ${suffix}`, { exact: true })).toBeVisible()
@@ -148,7 +148,9 @@ test('a block folds the messages and makes the composer refuse', async ({ browse
     await expect(member.locator('#main-content').getByText(`in the channel ${suffix}`, { exact: true })).toBeVisible()
 
     // Both sides are refused with the same calm sentence; nothing arrives.
+    // An old /c/<id> link to a conversation moves to /dm/<member>.
     await owner.goto(`/c/${dmId}`)
+    await expect(owner).toHaveURL(new RegExp(`/dm/${suiteMember.username}$`))
     await expect(owner.getByTestId('chat-channel-name')).toHaveText(suiteMember.username)
     await write(owner, `after the block ${suffix}`)
     await expect(owner.getByText(REFUSED)).toBeVisible()
@@ -162,6 +164,8 @@ test('a block folds the messages and makes the composer refuse', async ({ browse
     // Lifting the block (from the conversation's info) makes the conversation work again.
     await member.getByTestId('dm-info-button').click()
     await member.getByTestId('dm-unblock').click()
+    // The block is gone once the dialog offers to block again; writing sooner races the request.
+    await expect(member.getByTestId('dm-block')).toBeVisible()
     await member.keyboard.press('Escape')
     await write(member, `wieder da ${suffix}`)
     await expect(owner.locator('#main-content').getByText(`wieder da ${suffix}`, { exact: true })).toBeVisible()
@@ -191,7 +195,7 @@ test('a group takes a member who reads its history, and a member can leave it', 
     await picker.locator(`[data-dm-candidate="${secondName}"]`).click()
     await expect(picker.getByTestId('dm-submit')).toHaveText('Gruppengespräch beginnen')
     await picker.getByTestId('dm-submit').click()
-    await expect(owner).toHaveURL(/\/c\/[0-9a-f-]{36}$/)
+    await expect(owner).toHaveURL(/\/dm\/g\/[0-9a-f]{8}$/)
     await expect(owner.getByTestId('chat-channel-name')).toContainText(secondName)
     await write(owner, `willkommen ${suffix}`)
     await expect(owner.locator('#main-content').getByText(`willkommen ${suffix}`, { exact: true })).toBeVisible()

@@ -8,6 +8,7 @@ import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
 import { currentRoute, navigate, canGoBackInApp } from '../lib/router'
+import { postPath, talkPath } from '../lib/routePaths'
 import { loadVoiceChatOpen, saveVoiceChatOpen } from '../lib/voiceChatPanel'
 
 /** Writes what the UI shows back to the address whenever any of it changes. */
@@ -32,16 +33,32 @@ function watchStateForRoute(ctx: RoutingContext, sync: () => void) {
   watch(ctx.adminTab, () => sync())
 }
 
-/** Path of whatever the UI currently shows (to leave the admin console, or to give "/" an address). */
-function statePath(ctx: RoutingContext, voiceChannelId: string | null) {
+/**
+ * Path of whatever the UI currently shows (to leave the admin console, or to give "/" an address).
+ * A channel that is gone (deleted while open) has no address: "/" keeps the
+ * address from being rewritten to an id that names nothing, which would send
+ * the router round in circles.
+ */
+export function statePath(ctx: Pick<RoutingContext, 'chatStore' | 'voiceStore' | 'voiceShowChat'>, voiceChannelId: string | null) {
   const { chatStore, voiceStore } = ctx
   if (voiceStore.activeView === 'voice' && voiceChannelId) {
-    return ctx.voiceShowChat.value ? `/v/${voiceChannelId}/chat` : `/v/${voiceChannelId}`
+    const talk = chatStore.allChannels.find(c => c.id === voiceChannelId)
+    return talk ? talkPath(talk, { chat: ctx.voiceShowChat.value }) : '/'
   }
   const channel = chatStore.activeChannel
   if (!channel) return '/'
-  if (chatStore.activeThread) return `/c/${channel.id}/t/${chatStore.activeThread.id}`
-  return `/c/${channel.id}`
+  if (!chatStore.allChannels.some(c => c.id === channel.id) && !chatStore.isDm(channel.id)) return '/'
+  const thread = chatStore.activeThread
+  if (thread && channel.type === 'forum' && thread.title) return postPath(channel, thread)
+  return chatStore.linkTo(channel.id, thread ? { threadId: thread.id } : {})
+}
+
+/** Whether the address names a channel by a slug it has since replaced. */
+function onFormerSlug(ctx: RoutingContext): boolean {
+  const route = currentRoute.value
+  if (route.view !== 'chat' && route.view !== 'voice') return false
+  const ref = route.channelRef.toLowerCase()
+  return ctx.chatStore.allChannels.some(c => c.slug !== ref && c.previous_slugs?.includes(ref))
 }
 
 function syncStateToRoute(ctx: RoutingContext) {
@@ -49,7 +66,8 @@ function syncStateToRoute(ctx: RoutingContext) {
   if (!ctx.authStore.isAuthenticated) return
   const targetPath = ctx.showAdminModal.value ? `/admin/${ctx.adminTab.value || 'users'}` : ctx.currentStatePath()
   if (targetPath !== '/' && window.location.pathname !== targetPath) {
-    navigate(targetPath, { replace: false })
+    // A rename moves the address from a former slug to the new one: that is no new page.
+    navigate(targetPath, { replace: onFormerSlug(ctx) })
   }
 }
 
@@ -117,7 +135,7 @@ export function useAppRouting(alive: () => boolean) {
     adminTab,
     voiceShowChat,
     voiceChannelId,
-    applyRoute: (route: Route) => applyRoute(ctx, route),
+    applyRoute: (route: Route): Promise<boolean> => applyRoute(ctx, route),
     syncCurrentStateToRoute,
     currentStatePath,
     openAdmin,

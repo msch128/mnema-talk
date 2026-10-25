@@ -647,6 +647,14 @@ and Administrators) gathers version, update state, database, storage, backup and
 
 - **Entry**: [`main.ts`](../web/src/main.ts), [`App.vue`](../web/src/App.vue)
   (routing via [`lib/router.ts`](../web/src/lib/router.ts), layout, dialogs).
+- **Addresses**: [`lib/routePaths.ts`](../web/src/lib/routePaths.ts) builds every
+  address (`/c/:slug`, `/v/:slug`, `/c/:forum/p/:title-:shortId`, `/dm/:username`,
+  `/dm/g/:shortId`) and `lib/router.ts` parses and resolves them client-side against the
+  channels and conversations the member already sees: the current slug, then
+  `previous_slugs`, then a legacy id; the last two are rewritten (replace) to the
+  canonical address. The server has no slug-resolving endpoint. Slugs are assigned by
+  `chat.assignSlug` inside the transaction that creates or renames a channel and are
+  never reused (`channel_slugs`).
 - **Stores (Pinia)**:
   [`auth`](../web/src/stores/auth.ts) (current user; the session itself is an
   HttpOnly cookie), [`chat`](../web/src/stores/chat.ts) (channels, messages,

@@ -38,7 +38,7 @@ async function start() {
     if (talk) void chat.selectChannel(talk)
     void joinVoiceChannel(started.channel_id)
     voice.activeView = 'voice'
-    navigate(`/v/${started.channel_id}`)
+    navigate(chat.linkTo(started.channel_id))
   } catch (e) {
     toasts.error(isApiError(e) && e.status === 409 ? t('dm.noTalkLobby') : caughtErrorMessage(e, t('dm.startTalkFailed')))
   } finally {

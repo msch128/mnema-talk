@@ -1,6 +1,7 @@
 import { useToastStore } from '../../stores/toast'
 import { usePermissionsStore } from '../../stores/permissions'
 import { t } from '../../i18n'
+import { talkPath } from '../../lib/routePaths'
 import { navigate } from '../../lib/router'
 import type { ServerEventPayloads } from '../../types/events'
 import type { Cx } from './state'
@@ -73,6 +74,6 @@ export async function joinViaLobby(cx: Cx, lobbyId: string, join: (talkId: strin
   const channel = cx.chat.allChannels.find(c => c.id === talk)
   if (channel) cx.chat.selectChannel(channel)
   cx.voice.activeView = 'voice'
-  navigate(`/v/${talk}`)
+  navigate(talkPath(channel ?? { id: talk }))
   await join(talk)
 }

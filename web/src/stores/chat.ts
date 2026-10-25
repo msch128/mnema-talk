@@ -3,7 +3,7 @@ import { useAuthStore } from './auth'
 import { useVoiceStore } from './voice'
 import type { ClientEventPayloads } from '../types/events'
 import { createChatState, type ChatState, type Cx } from './chat/state'
-import { createCategory, createChannel, deleteCategory, deleteChannel, duplicateChannel, fetchChannels, isVoiceChannel, selectChannel, setChannelAutoDelete, updateCategory, updateChannel } from './chat/channels'
+import { createCategory, createChannel, deleteCategory, deleteChannel, duplicateChannel, fetchChannels, isVoiceChannel, linkTo, selectChannel, setChannelAutoDelete, updateCategory, updateChannel } from './chat/channels'
 import { activityOfUser, closeUserProfile, fetchMembers, insertMention, openUserProfile, presenceOf } from './chat/members'
 import { installActivityListeners, setMyPresence, setStatusText } from './chat/presence'
 import { fetchMessages, goToMessage, jumpToLatest, jumpToMessage, loadNewer, loadOlder, showToast } from './chat/messageWindow'
@@ -88,6 +88,7 @@ function exposedActions(cx: Cx) {
     dismissPinNotice: bind(dismissPinNotice),
     fetchPins: bind(fetchPins),
     isVoiceChannel: bind(isVoiceChannel),
+    linkTo: bind(linkTo),
     showToast,
     loadOlder: bind(loadOlder),
     loadNewer: bind(loadNewer),
