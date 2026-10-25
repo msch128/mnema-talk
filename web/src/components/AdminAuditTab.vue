@@ -3,6 +3,7 @@
 // on the server, so there is nothing to edit or delete here.
 import { ref, computed, onMounted } from 'vue'
 import { ScrollText, ChevronRight, ChevronDown } from '@lucide/vue'
+import EmptyState from './EmptyState.vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import type { AuditItem, AuditPage } from '../types/rest'
 import { isAuditPage } from '../types/rest'
@@ -18,7 +19,7 @@ const toasts = useToastStore()
 const chat = useChatStore()
 
 // Event groups the server understands as a prefix (action=role matches role.*).
-const GROUPS = ['role', 'user', 'channel', 'category', 'layout', 'invite', 'webhook', 'outgoing_webhook', 'media', 'settings', 'moderation', 'message', 'voice', 'auth', 'system', 'emoji', 'bot', 'poll', 'automod'] as const
+const GROUPS = ['role', 'user', 'channel', 'category', 'layout', 'invite', 'webhook', 'outgoing_webhook', 'media', 'settings', 'moderation', 'message', 'voice', 'auth', 'system', 'emoji', 'bot', 'poll', 'automod', 'report', 'event', 'import'] as const
 
 const entries = ref<AuditItem[]>([])
 const next = ref<number | null>(null)
@@ -28,6 +29,8 @@ const actor = ref('')
 const from = ref('')
 const to = ref('')
 const open = ref<Set<number>>(new Set())
+// Sign-ins fill the first screen of a busy server and say little: hidden until asked for.
+const hideSignIns = ref(true)
 
 // Bots appear in the log by name too; the member list says who is one.
 const botIds = computed(() => new Set(chat.members.filter(m => m.is_bot).map(m => m.id)))
@@ -68,6 +71,27 @@ function actionLabel(action: string): string {
   const key = `audit.actions.${action}`
   const label = t(key)
   return label === key ? action : label
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const isSignIn = (e: AuditItem) => e.action === 'auth.login'
+const shown = computed(() => hideSignIns.value ? entries.value.filter(e => !isSignIn(e)) : entries.value)
+const hiddenSignIns = computed(() => hideSignIns.value ? entries.value.length - shown.value.length : 0)
+
+// What an entry is about, by name. The server names most targets; a member
+// is looked up, a report is told by its reason, and an id never stands in
+// the row (it stays in the details).
+function targetLabel(e: AuditItem): string {
+  if (e.target_name) return e.target_name
+  if (e.target_type === 'user') {
+    const member = chat.members.find(m => m.id === e.target_id)
+    if (member) return member.display_name || member.username
+  }
+  if (e.target_type === 'report') {
+    const category = e.details['category']
+    return typeof category === 'string' ? t('audit.reportTarget', { category: t(`reports.category.${category}`) }) : ''
+  }
+  return e.target_id && !UUID.test(e.target_id) ? e.target_id : ''
 }
 
 function when(iso: string): string {
@@ -133,25 +157,38 @@ onMounted(() => load(false))
       </button>
     </form>
 
+    <label class="flex items-center gap-2 text-xs text-mnema-muted">
+      <input v-model="hideSignIns" type="checkbox" data-testid="audit-hide-signins" />
+      <span>{{ $t('audit.hideSignIns') }}</span>
+      <span v-if="hiddenSignIns" class="text-mnema-tertiary">· {{ $t('audit.signInsHidden', { count: hiddenSignIns }) }}</span>
+    </label>
+
     <div class="bg-mnema-surface rounded-lg border border-mnema-hairline overflow-hidden divide-y divide-mnema-hairline">
-      <div v-if="!entries.length && !loading" class="p-4 text-sm text-mnema-tertiary">{{ $t('audit.empty') }}</div>
-      <div v-for="e in entries" :key="e.id" :data-testid="`audit-entry-${e.id}`">
+      <EmptyState v-if="!shown.length && !loading" :icon="ScrollText" :text="$t('audit.empty')" :hint="$t('audit.emptyHint')" />
+      <div v-for="e in shown" :key="e.id" :data-testid="`audit-entry-${e.id}`">
         <button
           type="button"
-          class="w-full px-4 py-2.5 flex items-center gap-3 text-sm text-left hover:bg-mnema-elevated/50 transition"
+          class="w-full px-4 py-2.5 flex items-start gap-3 text-sm text-left hover:bg-mnema-elevated/50 transition"
           :aria-expanded="open.has(e.id) ? 'true' : 'false'"
           @click="toggle(e.id)"
         >
-          <ChevronDown v-if="open.has(e.id)" class="w-4 h-4 text-mnema-tertiary shrink-0" />
-          <ChevronRight v-else class="w-4 h-4 text-mnema-tertiary shrink-0" />
-          <span class="text-mnema-tertiary whitespace-nowrap font-mono text-xs">{{ when(e.created_at) }}</span>
-          <span class="text-mnema-text font-medium truncate">{{ e.actor_name || $t('audit.system') }}</span>
-          <BotBadge v-if="e.actor_id && botIds.has(e.actor_id)" />
-          <span class="text-mnema-accent truncate">{{ actionLabel(e.action) }}</span>
-          <span v-if="e.target_name || e.target_id" class="text-mnema-muted truncate">{{ e.target_name || e.target_id }}</span>
-          <BotBadge v-if="e.target_id && botIds.has(e.target_id)" />
+          <ChevronDown v-if="open.has(e.id)" class="mt-0.5 w-4 h-4 text-mnema-tertiary shrink-0" />
+          <ChevronRight v-else class="mt-0.5 w-4 h-4 text-mnema-tertiary shrink-0" />
+          <!-- Two lines on a phone (when and who, then what), one line from md up. -->
+          <span class="min-w-0 flex-1 flex flex-col gap-0.5 md:flex-row md:items-baseline md:gap-x-3">
+            <span class="flex min-w-0 flex-wrap items-baseline gap-x-3 md:shrink-0">
+              <span class="text-mnema-tertiary whitespace-nowrap font-mono text-xs">{{ when(e.created_at) }}</span>
+              <span class="text-mnema-text font-medium wrap-break-word">{{ e.actor_name || $t('audit.system') }}</span>
+              <BotBadge v-if="e.actor_id && botIds.has(e.actor_id)" />
+            </span>
+            <span class="flex min-w-0 flex-wrap items-baseline gap-x-2">
+              <span class="text-mnema-accent wrap-break-word">{{ actionLabel(e.action) }}</span>
+              <span v-if="targetLabel(e)" class="text-mnema-muted wrap-break-word">{{ targetLabel(e) }}</span>
+              <BotBadge v-if="e.target_id && botIds.has(e.target_id)" />
+            </span>
+          </span>
         </button>
-        <div v-if="open.has(e.id)" class="px-4 pb-3 space-y-1.5">
+        <div v-if="open.has(e.id)" class="pl-11 pr-4 pb-3 space-y-1.5 max-md:pl-10">
           <div class="text-xs text-mnema-tertiary font-mono break-all">
             {{ e.action }} · {{ e.target_type }} {{ e.target_id }} · {{ $t('audit.request') }} {{ e.request_id }}
           </div>

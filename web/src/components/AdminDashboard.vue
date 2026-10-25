@@ -1,14 +1,23 @@
 <script setup lang="ts">
-// Admin dashboard shell: the tab bar and one component per tab. Tabs stay
-// alive while the dialog is open, so an unsaved layout survives a tab switch.
+// Admin dashboard shell: the grouped navigation and one component per tab. On a
+// desktop the navigation is a sidebar; on a phone the console is a full-screen
+// sheet that opens on the list of sections and shows one section at a time.
+// Tabs stay alive while the dialog is open, so an unsaved layout survives a tab
+// switch.
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
-import { Users, FolderTree, Link, HardDrive, Server, Shield, ScrollText, Gavel, Bot, Sparkles, Smile, Flag, ShieldCheck, Activity, Download } from '@lucide/vue'
+import { ArrowLeft, X } from '@lucide/vue'
 import { navigate } from '../lib/router'
 import { t } from '../i18n'
+import { api } from '../lib/api'
+import { decodeChatReportsPage } from '../types/rest'
+import { ALL_TABS } from '../lib/adminNav'
+import type { AdminTab } from '../lib/adminNav'
+import { useCompactLayout } from '../composables/useCompactLayout'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import BaseDialog from './BaseDialog.vue'
+import AdminNav from './AdminNav.vue'
 import AdminUsersTab from './AdminUsersTab.vue'
 import AdminRolesTab from './AdminRolesTab.vue'
 import AdminLayoutTab from './AdminLayoutTab.vue'
@@ -34,11 +43,10 @@ const props = defineProps({
 
 const emit = defineEmits<{ close: [] }>()
 const authStore = useAuthStore()
+const { isCompact } = useCompactLayout()
 const permissions = usePermissionsStore()
 const features = useServerFeaturesStore()
 
-type AdminTab = 'users' | 'roles' | 'channels' | 'invites' | 'onboarding' | 'emoji' | 'reports' | 'automod' | 'bans' | 'bots' | 'import' | 'media' | 'audit' | 'system' | 'status'
-const ALL_TABS: readonly AdminTab[] = ['users', 'roles', 'channels', 'invites', 'onboarding', 'emoji', 'reports', 'automod', 'bans', 'bots', 'import', 'media', 'audit', 'system', 'status']
 // Each tab needs its own permission; storage and system are the Owner's.
 const ALLOWED: Record<AdminTab, () => boolean> = {
   users: () => permissions.can('manage_members') || permissions.can('manage_roles'),
@@ -84,30 +92,42 @@ watch(() => props.initialTab, (newTab) => {
   }
 })
 
-// Phone widths: the tab bar scrolls sideways, so fade the edge that has more
-// tabs behind it and keep the active tab in view.
-const tabBar = ref<HTMLElement | null>(null)
-const fadeStart = ref(false)
-const fadeEnd = ref(false)
-function updateFades() {
-  const bar = tabBar.value
-  if (!bar) return
-  fadeStart.value = bar.scrollLeft > 4
-  fadeEnd.value = bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 4
+// Phone: the sheet opens on the list of sections (unless the address names
+// another one) and each section has a back arrow to that list.
+const showList = ref(isCompact.value && activeTab.value === 'users')
+const onList = computed(() => isCompact.value && showList.value)
+function select(tab: AdminTab) {
+  activeTab.value = tab
+  showList.value = false
 }
-async function revealActiveTab() {
-  await nextTick()
-  tabBar.value?.querySelector('[aria-pressed="true"]')?.scrollIntoView?.({ block: 'nearest', inline: 'center' })
-  updateFades()
+function backToList() {
+  showList.value = true
+  void nextTick(() => document.querySelector<HTMLElement>('[data-testid=admin-tabs] [aria-pressed=true]')?.focus())
 }
-onMounted(revealActiveTab)
 
-// The title names the tab you are on; the subtitle names the console.
-const dialogTitle = computed(() => t(`admin.tabs.${activeTab.value}`))
-const dialogSubtitle = computed(() => `${t('menu.adminConsole')} · ${t('admin.signedInAs', { name: authStore.user?.display_name || authStore.user?.username || '' })}`)
+// The open-report count beside "Reports": one cheap look when the console opens,
+// and again whenever a report was closed.
+const openReports = ref(0)
+const openReportsMore = ref(false)
+async function loadOpenReports() {
+  if (!ALLOWED.reports()) return
+  try {
+    const page = await api('/api/admin/reports?status=open&limit=100', { decode: decodeChatReportsPage })
+    openReports.value = page.reports.length
+    openReportsMore.value = page.has_more
+  } catch {
+    openReports.value = 0
+  }
+}
+onMounted(() => { void loadOpenReports() })
+const badges = computed<Partial<Record<AdminTab, string>>>(() =>
+  openReports.value > 0 ? { reports: openReportsMore.value ? `${openReports.value}+` : String(openReports.value) } : {})
+
+// Focus starts on the dialog itself: no focus frame on a nav item or a button that was not asked for.
+const focusDialog = (root: HTMLElement) => root
+const signedInAs = computed(() => t('admin.nav.signedIn', { name: authStore.user?.display_name || authStore.user?.username || '' }))
 
 watch(activeTab, (tab) => {
-  void revealActiveTab()
   if (typeof window !== 'undefined' && window.location.pathname !== `/admin/${tab}`) {
     navigate(`/admin/${tab}`, { replace: true })
   }
@@ -116,52 +136,44 @@ watch(activeTab, (tab) => {
 
 <template>
   <BaseDialog
-    :title="dialogTitle"
-    :subtitle="dialogSubtitle"
-    panel-class="max-w-5xl h-[85vh] max-h-[860px]"
-    initial-focus="[data-testid=admin-tabs] [aria-pressed=true]"
+    panel-class="max-w-5xl h-[85vh] max-h-[860px] max-md:fixed max-md:inset-0 max-md:h-auto max-md:max-h-none max-md:max-w-none max-md:rounded-none max-md:border-0 max-md:pt-[env(safe-area-inset-top)] max-md:pb-[env(safe-area-inset-bottom)]"
+    :initial-focus="focusDialog"
     @close="emit('close')"
   >
-    <!-- Navigation tabs -->
-    <div
-      ref="tabBar"
-      data-testid="admin-tabs"
-      :class="['admin-tabs flex items-center gap-1 px-6 max-md:px-3 py-2.5 border-b border-mnema-hairline bg-mnema-canvas/40 text-sm shrink-0 md:flex-wrap max-md:overflow-x-auto', fadeStart && 'fade-start', fadeEnd && 'fade-end']"
-      @scroll.passive="updateFades"
-    >
-      <button
-        v-for="tab in TABS"
-        :key="tab"
-        :data-testid="`tab-${tab}`"
-        type="button"
-        :aria-pressed="activeTab === tab ? 'true' : 'false'"
-        class="chip chip-bare"
-        @click="activeTab = tab"
-      >
-        <Users v-if="tab === 'users'" class="w-4 h-4" />
-        <Shield v-else-if="tab === 'roles'" class="w-4 h-4" />
-        <FolderTree v-else-if="tab === 'channels'" class="w-4 h-4" />
-        <Link v-else-if="tab === 'invites'" class="w-4 h-4" />
-        <Sparkles v-else-if="tab === 'onboarding'" class="w-4 h-4" />
-        <Smile v-else-if="tab === 'emoji'" class="w-4 h-4" />
-        <Flag v-else-if="tab === 'reports'" class="w-4 h-4" />
-        <ShieldCheck v-else-if="tab === 'automod'" class="w-4 h-4" />
-        <Gavel v-else-if="tab === 'bans'" class="w-4 h-4" />
-        <Bot v-else-if="tab === 'bots'" class="w-4 h-4" />
-        <Download v-else-if="tab === 'import'" class="w-4 h-4" />
-        <HardDrive v-else-if="tab === 'media'" class="w-4 h-4" />
-        <ScrollText v-else-if="tab === 'audit'" class="w-4 h-4" />
-        <Server v-else-if="tab === 'system'" class="w-4 h-4" />
-        <Activity v-else class="w-4 h-4" />
-        <span>{{ $t(`admin.tabs.${tab}`) }}</span>
-      </button>
-    </div>
+    <template #default="{ titleId, close }">
+      <header class="flex shrink-0 items-center gap-2 border-b border-mnema-hairline bg-mnema-raised px-6 py-4 max-md:px-3">
+        <button v-if="isCompact && !onList" type="button" data-testid="admin-back" class="btn btn-icon max-md:h-11 max-md:w-11 shrink-0" :aria-label="$t('admin.nav.back')" @click="backToList">
+          <ArrowLeft class="h-[18px] w-[18px]" />
+        </button>
+        <h2 :id="titleId" class="min-w-0 flex-1 truncate text-lg font-semibold text-mnema-text max-md:px-1">{{ $t('menu.adminConsole') }}</h2>
+        <button type="button" data-dialog-close v-tooltip="$t('common.close')" class="btn btn-icon max-md:h-11 max-md:w-11 shrink-0" @click="close">
+          <X class="h-[18px] w-[18px]" />
+        </button>
+      </header>
 
-    <!-- Scrollable tab body -->
-    <div class="flex-1 overflow-y-auto p-6 space-y-6">
-      <KeepAlive>
-        <component :is="TAB_COMPONENTS[activeTab]" :key="activeTab" />
-      </KeepAlive>
-    </div>
+      <div class="flex min-h-0 flex-1">
+        <!-- Desktop sidebar -->
+        <aside v-if="!isCompact" class="flex w-56 shrink-0 flex-col border-r border-mnema-hairline bg-mnema-canvas/40">
+          <div class="min-h-0 flex-1 overflow-y-auto">
+            <AdminNav :tabs="TABS" :active="activeTab" :badges="badges" @select="select" />
+          </div>
+          <p class="truncate border-t border-mnema-hairline px-4 py-3 font-mono text-xs text-mnema-tertiary" data-testid="admin-signed-in">{{ signedInAs }}</p>
+        </aside>
+
+        <!-- Phone: the list of sections, or the chosen one -->
+        <div v-if="onList" class="min-h-0 flex-1 overflow-y-auto">
+          <AdminNav :tabs="TABS" :active="activeTab" :badges="badges" list @select="select" />
+          <p class="px-5 pb-6 font-mono text-xs text-mnema-tertiary">{{ signedInAs }}</p>
+        </div>
+        <!-- The padding is the inner box's, so a sticky action bar sits flush with the bottom edge. -->
+        <div v-else class="min-w-0 flex-1 overflow-y-auto">
+          <div class="space-y-6 p-6 max-md:p-4">
+            <KeepAlive>
+              <component :is="TAB_COMPONENTS[activeTab]" :key="activeTab" @changed="loadOpenReports" />
+            </KeepAlive>
+          </div>
+        </div>
+      </div>
+    </template>
   </BaseDialog>
 </template>

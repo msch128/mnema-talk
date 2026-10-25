@@ -1454,7 +1454,30 @@
     "resetTwoFactorBody": "Schaltet die Zwei-Faktor-Anmeldung aus, löscht das Authenticator-Geheimnis und die Recovery-Codes und meldet das Mitglied überall ab. Gedacht für den Fall, dass beides verloren ist. Danach kann es sie neu einschalten.",
     "resetTwoFactorConfirm": "Zurücksetzen",
     "twoFactorReset": "Zwei-Faktor-Anmeldung zurückgesetzt.",
-    "channelTopicHelp": "Steht unter dem Kanalnamen. Halte sie kurz: wofür der Kanal da ist."
+    "channelTopicHelp": "Steht unter dem Kanalnamen. Halte sie kurz: wofür der Kanal da ist.",
+    "nav": {
+      "community": "Community",
+      "moderation": "Moderation",
+      "integrations": "Integrationen",
+      "operations": "Betrieb",
+      "back": "Zurück zu den Bereichen",
+      "signedIn": "Angemeldet als {name}",
+      "openReports": "{count} offen"
+    },
+    "maxUsesLabel": "Nutzungen",
+    "maxUsesPlaceholder": "Unbegrenzt",
+    "validHoursLabel": "Gültig für (Stunden)",
+    "validHoursPlaceholder": "Unbegrenzt",
+    "presets": "Gültigkeit",
+    "preset": {
+      "day": "1 Tag",
+      "week": "7 Tage",
+      "never": "Unbegrenzt"
+    },
+    "noInvitesHint": "Erstelle oben eine und teile ihren Link.",
+    "showSpent": "{count} verbrauchte oder abgelaufene anzeigen",
+    "hideSpent": "Verbrauchte und abgelaufene ausblenden",
+    "noMediaHint": "Hochgeladene Bilder und Dateien erscheinen hier."
   },
   "profile": {
     "addedBy": "Hinzugefügt von {name}",
@@ -1836,7 +1859,8 @@
       "empty": "Noch keine eigenen Emojis.",
       "full": "Das Limit ist erreicht. Lösche ein Emoji, um Platz zu schaffen.",
       "choose": "Datei wählen",
-      "noFile": "Noch keine Datei"
+      "noFile": "Noch keine Datei",
+      "emptyHint": "Lade oben ein Bild hoch, um das erste hinzuzufügen."
     }
   },
   "activity": {
@@ -2052,7 +2076,10 @@
       "emoji": "Emoji",
       "bot": "Bots",
       "poll": "Umfragen",
-      "automod": "Automod"
+      "automod": "Automod",
+      "report": "Meldungen",
+      "event": "Events",
+      "import": "Importe"
     },
     "actions": {
       "role": {
@@ -2197,8 +2224,29 @@
       },
       "admin": {
         "post": "Admin-Aktion"
+      },
+      "report": {
+        "create": "Meldung eingegangen",
+        "resolve": "Meldung abgeschlossen",
+        "delete": "Meldung gelöscht"
+      },
+      "event": {
+        "create": "Event erstellt",
+        "edit": "Event bearbeitet",
+        "cancel": "Event abgesagt",
+        "talk_create": "Talk-Event erstellt",
+        "talk_edit": "Talk-Event bearbeitet",
+        "talk_cancel": "Talk-Event abgesagt"
+      },
+      "import": {
+        "discord": "Discord-Vorlage importiert",
+        "discord_undo": "Discord-Import rückgängig gemacht"
       }
-    }
+    },
+    "hideSignIns": "Anmeldungen ausblenden",
+    "signInsHidden": "{count} Anmeldungen ausgeblendet",
+    "emptyHint": "Änderungen an Rollen, Kanälen, Mitgliedern und Einstellungen werden hier festgehalten.",
+    "reportTarget": "Meldung ({category})"
   },
   "roles": {
     "managedHint": "Verwaltete Rolle: Jeder Bot hat sie, sie lässt sich nicht entfernen.",
@@ -2255,7 +2303,14 @@
       "administrator": "Diese Rolle hat Administrator: Sie sieht jeden Kanal, den du siehst, und ignoriert Kanalberechtigungen.",
       "empty": "Diese Rolle sieht keine Kanäle, die du siehst.",
       "exit": "Vorschau beenden"
-    }
+    },
+    "unsavedTitle": "Ungespeicherte Änderungen verwerfen?",
+    "unsavedBody": "Diese Rolle hat Änderungen, die nicht gespeichert sind. Beim Wechsel zu einer anderen Rolle gehen sie verloren.",
+    "discard": "Verwerfen",
+    "keepEditing": "Weiter bearbeiten",
+    "unsaved": "Ungespeicherte Änderungen",
+    "searchPermissions": "Berechtigungen suchen",
+    "noPermissionMatch": "Keine Berechtigung passt."
   },
   "memberRoles": {
     "title": "Rollen von {name}",
@@ -2492,7 +2547,8 @@
     "slowModeInvalid": "Gib eine ganze Zahl ab 1 ein.",
     "slowModeTooLong": "Der Langsammodus kann höchstens 24 Stunden dauern.",
     "slowModeCustom": "Eigener Wert",
-    "slowModeUnit": "Einheit"
+    "slowModeUnit": "Einheit",
+    "noBansHint": "Gesperrte Mitglieder erscheinen hier, und du kannst eine Sperre aufheben."
   },
   "editHistory": {
     "menu": "Bearbeitungsverlauf",
@@ -2618,7 +2674,8 @@
       "deleteFor": "Befehl {name} löschen",
       "deleteTitle": "Befehl /{name} löschen?",
       "deleteBody": "Der Bot kann ihn erneut registrieren."
-    }
+    },
+    "emptyHint": "Gib oben einem Bot einen Namen, um ihn anzulegen und sein Token zu erhalten."
   },
   "appSettings": {
     "title": "App & Benachrichtigungen",
@@ -2971,7 +3028,9 @@
       "links": {
         "block_all": "Jeder Link",
         "allow_list": "Nur Links zu {count} aufgelisteten Domains",
-        "block_list": "Links zu {count} aufgelisteten Domains"
+        "block_list": "Links zu {count} aufgelisteten Domains",
+        "block_listEmpty": "Noch keine Domains aufgelistet, nichts wird blockiert",
+        "allow_listEmpty": "Keine Domain erlaubt, jeder Link wird blockiert"
       },
       "mentions": "Mehr als {n} verschiedene Erwähnungen",
       "newAccount": {
@@ -2981,7 +3040,10 @@
         "everything": "Konten unter {age} dürfen nicht schreiben"
       },
       "raid": "Mehr als {joins} Beitritte innerhalb von {window}: Neue eingeschränkt für {restrict}"
-    }
+    },
+    "emptyHint": "Regeln prüfen jede Nachricht und Registrierung. Füge oben eine hinzu.",
+    "enabledState": "An",
+    "disabledState": "Aus"
   },
   "modHistory": {
     "tabs": "Profilbereiche",
@@ -3103,7 +3165,11 @@
       "deleteBody": "Die Meldung und ihre Kopie der Nachrichten werden endgültig entfernt.",
       "deleteFailed": "Die Meldung konnte nicht gelöscht werden. Versuche es noch einmal.",
       "closeFailed": "Die Meldung konnte nicht abgeschlossen werden. Versuche es noch einmal.",
-      "loadFailed": "Die Meldungen konnten nicht geladen werden. Versuche es noch einmal."
+      "loadFailed": "Die Meldungen konnten nicht geladen werden. Versuche es noch einmal.",
+      "emptyHint": "Wenn ein Mitglied eine Nachricht meldet oder Automod eine markiert, erscheint sie hier zur Prüfung.",
+      "quoted": "Gemeldete Nachricht",
+      "timeout": "Auszeit verhängen …",
+      "ban": "Sperren …"
     }
   },
   "autoDelete": {
@@ -3178,7 +3244,8 @@
       "empty": "Noch keine Importe.",
       "row": "{name} · {when}",
       "undone": "Rückgängig gemacht {when}",
-      "undo": "Import rückgängig machen"
+      "undo": "Import rückgängig machen",
+      "emptyHint": "Importe einer Discord-Server-Vorlage stehen hier, mit Rückgängig."
     },
     "confirm": {
       "title": "Discord-Struktur importieren",
