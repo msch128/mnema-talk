@@ -96,8 +96,8 @@ no accounts on someone else's platform.
 - **Forum channels.** Structured discussions with posts as cards, up to 20 admin tags, tag filtering, sorting by latest activity, and moderation locks ([doc/forums.md](doc/forums.md)).
 - **Community events.** Scheduled events with a description, a cover image, a
   location (a Talk or free text), RSVPs and a reminder 15 minutes before the
-  start. Creating them needs the *Manage events* permission, which no role has
-  by default ([doc/events.md](doc/events.md)).
+  start. Creating them needs the *Manage events* permission, which the seeded Moderator
+  and Admin roles (every role with *Timeout members*) get at the upgrade ([doc/events.md](doc/events.md)).
 - **Saved messages and forwarding.** Keep a private list of up to 1,000
   messages with an optional note, or forward a message into another channel or
   a direct message. A forward is a reference, so it never shows more than the
@@ -190,8 +190,8 @@ no accounts on someone else's platform.
   in the menu (Alt+Arrow keys on a focused row). Favourites stay in the list and
   follow you to every device.
 - **Mute** one conversation from the bell in its header or its menu, or all of
-  them with **Mute all direct messages** under *Account & security* > *Your
-  data* > *Direct messages*: no sound, no notification and no highlight, but
+  them with **Mute all direct messages** in your account settings, in the
+  privacy section *Direct messages*: no sound, no notification and no highlight, but
   unread messages still count. A conversation you muted or unmuted yourself keeps
   its own setting.
 - **Who may write to you** is your choice in the same place: everyone (the

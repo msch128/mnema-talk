@@ -174,6 +174,8 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 1.0.0 on, the public API listed in [api-stability.md](api-stability.md) only
 breaks in a major release: `make openapi-diff` fails a change that breaks
 `api/openapi.json` unless a commit carries a `BREAKING CHANGE:` footer.
+A breaking change already present at the start of the checked range (the base
+branch) was waived when it landed there and is not reported again.
 
 1. After CI passes on a push to `main`, release-please opens or updates a
    **release PR** that bumps `version.txt` and `CHANGELOG.md`. Only the CI run
