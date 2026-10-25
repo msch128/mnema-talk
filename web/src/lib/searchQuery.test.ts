@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  buildSearchParams, dayStart, isSearchDate, isSearchable, localTimezoneOffset, parseSearchQuery, quoteValue, serializeSearchQuery, splitCommitted,
+  buildSearchParams, dayStart, filterTokens, isoDay, isSearchDate, isSearchable, localTimezoneOffset, parseSearchQuery, quoteValue, serializeSearchQuery, splitCommitted, textTerms,
 } from './searchQuery'
 
 const lookup = {
@@ -23,12 +23,12 @@ describe('parseSearchQuery', () => {
     const p = parseSearchQuery('from:"Ada Lovelace" "two words" in:"a \\"b\\""')
     expect(p.filters.from).toBe('Ada Lovelace')
     expect(p.filters.in).toBe('a "b"')
-    expect(p.text).toBe('two words')
+    expect(p.text).toBe('"two words"')
   })
 
   it('tolerates an unterminated quote', () => {
     expect(parseSearchQuery('from:"Ada Lo').filters.from).toBe('Ada Lo')
-    expect(parseSearchQuery('"open phrase').text).toBe('open phrase')
+    expect(parseSearchQuery('"open phrase').text).toBe('"open phrase"')
   })
 
   it('keeps unknown keys as text, lets the last filter of a kind win and ignores key case', () => {
@@ -155,5 +155,39 @@ describe('search filters v3', () => {
   it('formats timezone offset', () => {
     const tz = localTimezoneOffset()
     expect(tz).toMatch(/^[+-]\d{2}:\d{2}$/)
+  })
+
+  it('keeps phrases and exclusions as the server reads them', () => {
+    const p = parseSearchQuery('"Kurzer Stand" Punkt -Release -"alter Stand" "-x" "solo"')
+    expect(p.text).toBe('"Kurzer Stand" Punkt -Release -"alter Stand" "-x" solo')
+  })
+
+  it('lists the terms to highlight: words and phrases, never the excluded ones', () => {
+    expect(textTerms('"Kurzer Stand" Punkt -Release -"alter Stand" "-x" a-b -')).toEqual(['Kurzer Stand', 'Punkt', '-x', 'a-b', '-'])
+    expect(textTerms('')).toEqual([])
+  })
+
+  it('reads today and yesterday (English and German) as dates', () => {
+    expect(parseSearchQuery('before:heute after:Gestern during:today').filters).toEqual({ before: isoDay(0), after: isoDay(-1), during: isoDay(0) })
+    expect(parseSearchQuery('before:yesterday').filters.before).toBe(isoDay(-1))
+    expect(splitCommitted('before:gestern ').filters.before).toBe(isoDay(-1))
+    expect(isSearchDate(isoDay(0))).toBe(true)
+  })
+
+  it('needs two characters of text or a filter before it searches', () => {
+    const params = (q: string, extra = '') => buildSearchParams(parseSearchQuery(`${q} ${extra}`), lookup).params
+    expect(isSearchable(params('a'))).toBe(false)
+    expect(isSearchable(params('ab'))).toBe(true)
+    expect(isSearchable(params('"a b"'))).toBe(true)
+    expect(isSearchable(params('-release'))).toBe(false)
+    expect(isSearchable(params('a', 'has:image'))).toBe(true)
+    expect(isSearchable(params('-release', 'in:general'))).toBe(true)
+  })
+
+  it('tells finished filter tokens from the one still being typed', () => {
+    expect(filterTokens('in:gen')).toMatchObject([{ key: 'in', value: 'gen', valid: true, open: true }])
+    expect(filterTokens('has:foo ')).toMatchObject([{ key: 'has', valid: false, open: false }])
+    expect(filterTokens('from:ada has:im')).toMatchObject([{ open: false }, { key: 'has', valid: false, open: true }])
+    expect(filterTokens('plain words')).toEqual([])
   })
 })

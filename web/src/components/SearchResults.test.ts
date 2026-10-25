@@ -113,17 +113,87 @@ describe('SearchResults', () => {
     expect(wrapper.find('[data-testid="search-results-header"]').exists()).toBe(false)
   })
 
-  it('moves the sort with the arrow keys and wraps around', async () => {
+  it('moves the sort with Left and Right and wraps around; Up and Down stay with the results', async () => {
     make({ showV3: true, results: [hit(1)] })
     const group = wrapper.get('[role="radiogroup"]')
     await group.trigger('keydown', { key: 'ArrowRight' })
-    await group.trigger('keydown', { key: 'ArrowDown' })
     await group.trigger('keydown', { key: 'ArrowLeft' })
+    await group.trigger('keydown', { key: 'ArrowDown' })
     await group.trigger('keydown', { key: 'ArrowUp' })
     await group.trigger('keydown', { key: 'a' })
-    expect(sortEmits()).toEqual(['oldest', 'oldest', 'relevance', 'relevance'])
+    expect(sortEmits()).toEqual(['oldest', 'relevance'])
     await wrapper.setProps({ sort: 'relevance' })
     await group.trigger('keydown', { key: 'ArrowRight' })
     expect(sortEmits()?.at(-1)).toBe('newest')
+  })
+
+  it('keeps one tab stop on the sort choice and one on the result list', () => {
+    make({ showV3: true, results: [hit(1), hit(2)], sort: 'oldest' })
+    expect(sortButtons().map(b => b.attributes('tabindex'))).toEqual(['-1', '0', '-1'])
+    expect(wrapper.get('#search-results').attributes('tabindex')).toBe('0')
+    expect(wrapper.findAll('[role="option"]').every(o => o.attributes('tabindex') === undefined)).toBe(true)
+    wrapper.unmount()
+    make({ results: [] })
+    expect(wrapper.get('#search-results').attributes('tabindex')).toBe('-1')
+  })
+
+  it('says how many results there are, with the plural, and that there are more', () => {
+    make({ showV3: true, results: [hit(1)] })
+    expect(wrapper.get('[data-testid="search-results-header"]').text()).toContain('1 result')
+    expect(wrapper.get('[data-testid="search-results-header"]').text()).not.toContain('1 results')
+    wrapper.unmount()
+    make({ showV3: true, results: [hit(1), hit(2)], hasMore: true })
+    expect(wrapper.get('[data-testid="search-results-header"]').text()).toContain('2+ results')
+  })
+
+  it('shows a skeleton while the first page loads and dims the old hits while searching again', async () => {
+    make({ showV3: true, results: [], searching: true })
+    expect(wrapper.find('[data-testid="search-skeleton"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="search-results-header"]').text()).toContain('Searching')
+    wrapper.unmount()
+    make({ showV3: true, results: [hit(1)], searching: true })
+    expect(wrapper.find('[data-testid="search-skeleton"]').exists()).toBe(false)
+    expect(wrapper.get('#search-results').classes()).toContain('opacity-60')
+    expect(wrapper.get('#search-results').attributes('aria-busy')).toBe('true')
+  })
+
+  it('offers a retry on failure', async () => {
+    make({ failed: true })
+    await wrapper.get('[data-search-retry]').trigger('click')
+    expect(wrapper.emitted('retry')).toHaveLength(1)
+  })
+
+  it('says what was searched when nothing is found and offers to remove the filters', async () => {
+    make({ queryText: 'Stand', filterCount: 1 })
+    expect(wrapper.get('[data-testid="search-no-results"]').text()).toContain('No messages found')
+    expect(wrapper.get('[data-testid="search-no-results"]').text()).toContain('Nothing found for “Stand”')
+    await wrapper.get('[data-search-clear-filters]').trigger('click')
+    expect(wrapper.emitted('clear-filters')).toHaveLength(1)
+    wrapper.unmount()
+    make({ queryText: '', filterCount: 0 })
+    expect(wrapper.get('[data-testid="search-no-results"]').text()).toContain('Nothing matches these filters')
+    expect(wrapper.find('[data-search-clear-filters]').exists()).toBe(false)
+  })
+
+  it('explains filters that cannot be applied instead of listing anything', () => {
+    make({
+      showV3: true,
+      results: [],
+      problems: [
+        { kind: 'member', filter: 'from', value: 'nobody' },
+        { kind: 'channel', filter: 'in', value: 'nowhere' },
+        { kind: 'date', filter: 'before', value: 'soon' },
+        { kind: 'option', filter: 'has', value: 'foo', options: 'file, image' },
+        { kind: 'empty', filter: 'is', value: '' },
+      ],
+    })
+    const text = wrapper.get('[data-testid="search-problems"]').text()
+    expect(text).toContain('No member “nobody” found')
+    expect(text).toContain('No channel “nowhere” found')
+    expect(text).toContain('Can’t read the date “soon” after before:')
+    expect(text).toContain('Choose one of: file, image')
+    expect(text).toContain('is: needs a value')
+    expect(wrapper.find('[data-testid="search-results-header"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="search-no-results"]').exists()).toBe(false)
   })
 })

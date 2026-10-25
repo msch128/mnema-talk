@@ -1,7 +1,8 @@
 // Autocomplete for the filter token being typed at the end of the search line.
 
 import type { FilterKey, SearchLookup } from './searchQuery'
-import { AUTHOR_KINDS, HAS_KINDS, IS_KINDS, quoteValue } from './searchQuery'
+import { AUTHOR_KINDS, HAS_KINDS, IS_KINDS, isoDay, quoteValue } from './searchQuery'
+import { t } from '../i18n'
 import { NEW_HAS_KINDS, filtersUnsupported } from './searchSupport'
 
 export interface SearchSuggestion {
@@ -20,31 +21,33 @@ export interface SuggestionContext {
   items: SearchSuggestion[]
 }
 
-const OPEN = /(^|\s)(from|in|has|is|mentions|author):("([^"]*)|([^\s"]*))$/i
+const OPEN = /(^|\s)(from|in|has|is|mentions|author|before|after|during):("([^"]*)|([^\s"]*))$/i
 const MAX = 6
 
 function fold(s: string): string {
   return s.toLowerCase().replace(/^[@#]/, '')
 }
 
-function memberItems(lookup: SearchLookup, partial: string): SearchSuggestion[] {
+function memberItems(lookup: SearchLookup, partial: string, max = MAX): SearchSuggestion[] {
   const p = fold(partial)
   const out: SearchSuggestion[] = []
   for (const m of lookup.members) {
     const display = m.display_name || ''
     if (!p || m.username.toLowerCase().includes(p) || display.toLowerCase().includes(p)) {
-      out.push({ value: m.username, label: display || m.username, detail: display ? `@${m.username}` : undefined })
+      // The username is a detail only when it differs from the name shown.
+      const differs = display !== '' && display.toLowerCase() !== m.username.toLowerCase()
+      out.push({ value: m.username, label: display || m.username, detail: differs ? `@${m.username}` : undefined })
     }
-    if (out.length === MAX) break
+    if (out.length === max) break
   }
   return out
 }
 
-function channelItems(lookup: SearchLookup, partial: string): SearchSuggestion[] {
+function channelItems(lookup: SearchLookup, partial: string, max = MAX): SearchSuggestion[] {
   const p = fold(partial)
   return lookup.channels
     .filter(c => !p || c.name.toLowerCase().includes(p))
-    .slice(0, MAX)
+    .slice(0, max)
     .map(c => ({ value: c.name, label: `#${c.name}` }))
 }
 
@@ -64,6 +67,22 @@ function authorItems(partial: string): SearchSuggestion[] {
   return AUTHOR_KINDS.filter(k => k.startsWith(p)).map(k => ({ value: k, label: k }))
 }
 
+function dayItems(partial: string): SearchSuggestion[] {
+  const days = [{ offset: 0, label: t('chat.filterDateToday') }, { offset: -1, label: t('chat.filterDateYesterday') }]
+  return days.map(d => ({ value: isoDay(d.offset), label: d.label, detail: isoDay(d.offset) }))
+    .filter(d => !partial || d.value.startsWith(partial))
+}
+
+/** The values a filter key can take that match what is typed so far. */
+export function valueItems(key: FilterKey, lookup: SearchLookup, partial: string, max = MAX): SearchSuggestion[] {
+  if (key === 'has') return hasItems(partial)
+  if (key === 'is') return isItems(partial)
+  if (key === 'author') return authorItems(partial)
+  if (key === 'in') return channelItems(lookup, partial, max)
+  if (key === 'before' || key === 'after' || key === 'during') return dayItems(partial)
+  return key === 'filename' ? [] : memberItems(lookup, partial, max)
+}
+
 /** Suggestions for the filter value under the end of the input, or null. */
 export function suggestFor(input: string, lookup: SearchLookup): SuggestionContext | null {
   const m = OPEN.exec(input)
@@ -71,12 +90,7 @@ export function suggestFor(input: string, lookup: SearchLookup): SuggestionConte
   const key = (m[2] ?? '').toLowerCase() as FilterKey
   const partial = m[4] ?? m[5] ?? ''
   const start = (m.index ?? 0) + (m[1]?.length ?? 0)
-  let items: SearchSuggestion[]
-  if (key === 'has') items = hasItems(partial)
-  else if (key === 'is') items = isItems(partial)
-  else if (key === 'author') items = authorItems(partial)
-  else if (key === 'in') items = channelItems(lookup, partial)
-  else items = memberItems(lookup, partial)
+  const items = valueItems(key, lookup, partial)
   // A fully typed value that is the only match needs no list.
   if (items.length === 1 && items[0]?.value.toLowerCase() === partial.toLowerCase()) return null
   return items.length ? { key, start, items } : null

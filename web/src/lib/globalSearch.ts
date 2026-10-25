@@ -1,5 +1,6 @@
 import { createApp, ref } from 'vue'
 import { i18nPlugin } from '../i18n'
+import { parseSearchQuery, serializeSearchQuery } from './searchQuery'
 import { tooltip } from '../directives/tooltip'
 
 // Ctrl/⌘+K opens the message search from every view while signed in.
@@ -28,10 +29,24 @@ function ensureMounted() {
   return mounting
 }
 
-/** Opens the search, optionally with a new query line (e.g. "in:general "). */
+/**
+ * Merges a prefill into the kept query line: its filters replace the filters
+ * of the same kind, its text (if any) replaces the text. "in:general " thus
+ * adds or swaps the channel and keeps the rest, like reopening with Ctrl+K.
+ */
+function mergePrefill(kept: string, prefill: string): string {
+  const old = parseSearchQuery(kept)
+  const add = parseSearchQuery(prefill)
+  const text = add.text || old.text
+  const line = serializeSearchQuery({ text, filters: { ...old.filters, ...add.filters } })
+  // A trailing space finishes the last filter, so it becomes a chip.
+  return text ? line : `${line} `
+}
+
+/** Opens the search, optionally adding a prefill such as "in:general " to the last query. */
 export function openSearch(prefill?: string, scope: SearchScope = 'channels') {
   searchScope.value = scope
-  if (prefill !== undefined) searchText.value = prefill
+  if (prefill !== undefined) searchText.value = mergePrefill(searchText.value, prefill)
   return ensureMounted().then(() => { searchOpen.value = true })
 }
 
