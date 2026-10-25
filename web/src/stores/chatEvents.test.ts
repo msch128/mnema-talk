@@ -87,13 +87,24 @@ describe('other live updates', () => {
     expect(load).toHaveBeenCalledTimes(1)
   })
 
-  it('reloads roles and permissions when roles changed', () => {
-    const permissions = usePermissionsStore()
-    const roles = vi.spyOn(permissions, 'loadRoles').mockResolvedValue()
-    const load = vi.spyOn(permissions, 'load').mockResolvedValue()
-    useChatStore().handleWSEvent({ type: 'roles_changed', payload: null })
-    expect(roles).toHaveBeenCalledTimes(1)
-    expect(load).toHaveBeenCalledTimes(1)
+  it('reloads roles, permissions and members when roles changed', async () => {
+    // The member list is read over the network: answered here, and awaited, so nothing outlives the test.
+    const fetchMock = vi.fn(async (_url: string) => new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    try {
+      const permissions = usePermissionsStore()
+      const roles = vi.spyOn(permissions, 'loadRoles').mockResolvedValue()
+      const load = vi.spyOn(permissions, 'load').mockResolvedValue()
+      const chat = useChatStore()
+      chat.members = [{ id: fixtureId(9) } as never]
+      chat.handleWSEvent({ type: 'roles_changed', payload: null })
+      expect(roles).toHaveBeenCalledTimes(1)
+      expect(load).toHaveBeenCalledTimes(1)
+      await vi.waitFor(() => expect(chat.members).toEqual([]))
+      expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/api/members')
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it('collects a bot interaction response as an ephemeral message', () => {
