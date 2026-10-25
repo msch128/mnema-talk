@@ -94,3 +94,17 @@ describe('server notification settings', () => {
     expect(w.emitted('close')).toBeTruthy()
   })
 })
+
+describe('mute durations', () => {
+  it('are outlined buttons in a grid, and the open-ended one shows when it is on', () => {
+    open({ level: 'all' })
+    const buttons = ['1h', '8h', '24h', 'forever'].map(id => byId(`notify-server-mute-${id}`))
+    for (const b of buttons) expect(b.classes()).toContain('btn-secondary')
+    expect(buttons[3]?.attributes('aria-pressed')).toBe('false')
+    w.unmount()
+    open({ level: 'mute', muted_until: null })
+    expect(byId('notify-server-mute-forever').attributes('aria-pressed')).toBe('true')
+    expect(byId('notify-server-mute-1h').attributes('aria-pressed')).toBe('false')
+    expect(byId('notify-server-unmute').classes()).toContain('btn-secondary')
+  })
+})

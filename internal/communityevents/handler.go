@@ -61,10 +61,16 @@ func (h *Handler) requireViewable(r *http.Request, ev *CommunityEvent) error {
 	return nil
 }
 
+// broadcast sends the event to everyone who may see it. The caller's own
+// answer (MyRSVP) belongs to the caller only, so it is cleared on the copy that
+// goes out; every client keeps its own.
 func (h *Handler) broadcast(ev *CommunityEvent) {
 	if h.Events == nil {
 		return
 	}
+	shared := *ev
+	shared.MyRSVP = nil
+	ev = &shared
 	if ev.ChannelID != nil {
 		h.Events.BroadcastChannel(*ev.ChannelID, events.EventUpdate, ev)
 	} else {

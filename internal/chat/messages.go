@@ -324,6 +324,9 @@ type NewMessage struct {
 	Title *string
 	// IsLocked is set when creating a locked post.
 	IsLocked bool
+	// ScreenText is more member-written text of the message (poll options)
+	// that automod reads together with Title and Content.
+	ScreenText []string
 }
 
 // CreateMessage inserts a message and returns its ID.

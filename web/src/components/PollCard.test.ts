@@ -160,6 +160,19 @@ describe('PollCard', () => {
       expect(w.get('[data-testid="poll-final-hint"]').text()).toBe('Your vote can’t be changed after you send it.')
     })
 
+    it('fetches the result once an anonymous poll runs out, because no running tally is pushed', async () => {
+      replies['/poll'] = { ...anon(), my_votes: [], has_voted: false }
+      const { w } = mountCard({ poll: anon() })
+      await flushPromises()
+      requests.length = 0
+      const final = [{ id: A, label: 'Pizza', votes: 4 }, { id: B, label: 'Pasta', votes: 1 }, { id: C, label: 'Salad', votes: 0 }]
+      replies['/poll'] = { ...anon(), closed: true, total_voters: 5, options: final, my_votes: [], has_voted: false }
+      await vi.advanceTimersByTimeAsync(2 * 3600 * 1000 + 100)
+      await flushPromises()
+      expect(requests.map(r => r.method)).toEqual(['GET'])
+      expect(option(w, A).text()).toContain('4 · 80%')
+    })
+
     it('only ticks an answer on click and sends the vote with the button', async () => {
       replies['/poll'] = { ...anon(), my_votes: [], has_voted: false }
       const { w } = mountCard({ poll: anon() })
@@ -279,5 +292,16 @@ describe('PollCard', () => {
     const { w } = mountCard()
     expect(w.text()).toContain('Umfrage')
     expect(w.get('[data-testid="poll-left"]').text()).toBe('Endet in 2 Stunden')
+  })
+
+  it('tells a member who voted in an open, named poll that the vote can still be changed', () => {
+    const { w } = mountCard()
+    expect(w.get('[data-testid="poll-can-change"]').text()).toBe('You can change your vote until the poll ends.')
+    expect(w.attributes('aria-busy')).toBe('false')
+  })
+
+  it('does not promise a change in an anonymous poll or after the poll ended', () => {
+    expect(mountCard({ poll: poll({ anonymous: true }) }).w.find('[data-testid="poll-can-change"]').exists()).toBe(false)
+    expect(mountCard({ poll: poll({ closed: true }) }).w.find('[data-testid="poll-can-change"]').exists()).toBe(false)
   })
 })

@@ -82,10 +82,14 @@ seed_090() {
   post_message Herzog "$GENERAL" "ping @drillmods $TAG"
 }
 
-# Roles as the drill compares them. Migration 0050 adds one permission, Send
-# direct messages (bit 1 << 22), to @everyone (and so to nothing else): the bit
-# is left out of the comparison and checked on its own in verify_roles.
-ROLES_JQ='map({id, name, color, permissions: (.permissions as $p | if (($p / 4194304 | floor) % 2) == 1 then $p - 4194304 else $p end), mentionable, position}) | sort_by(.id)'
+# Roles as the drill compares them. Two upgrades add a permission on purpose,
+# so those bits are left out of the comparison and checked on their own in
+# verify_roles: migration 0050 gives Send direct messages (bit 1 << 22) to
+# @everyone, and migration 0070 gives Manage events (bit 1 << 25) to every role
+# that holds Timeout members (bit 1 << 18).
+ROLES_JQ='map({id, name, color, permissions: (.permissions as $p | (if (($p / 4194304 | floor) % 2) == 1 then $p - 4194304 else $p end) as $q | if (($q / 33554432 | floor) % 2) == 1 then $q - 33554432 else $q end), mentionable, position}) | sort_by(.id)'
+# Holds Manage events exactly when it can time members out.
+EVENTS_GRANT_JQ='all(.[]; (((.permissions / 33554432 | floor) % 2) == 1) == (((.permissions / 262144 | floor) % 2) == 1))'
 
 snapshot_integrations() {
   ROLES_BEFORE="$(api Herzog "$BASE/api/roles" | jq -S "$ROLES_JQ")"
@@ -115,6 +119,8 @@ verify_roles() {
     fail 'the roles changed'
   api Herzog "$BASE/api/roles" | jq -e 'any(.[]; ((.permissions / 4194304 | floor) % 2) == 1)' >/dev/null ||
     fail 'no role holds Send direct messages after the upgrade (migration 0050 gives it to @everyone)'
+  api Herzog "$BASE/api/roles" | jq -e "$EVENTS_GRANT_JQ" >/dev/null ||
+    fail 'Manage events does not match Timeout members after the upgrade (migration 0070)'
   [ "$(api Herzog "$BASE/api/admin/channels/$PROJECTS/overwrites" | jq -S '.overwrites | sort_by(.id)')" = "$OVERWRITES_BEFORE" ] ||
     fail 'the channel overwrites changed'
   [ "$(api Herzog "$BASE/api/admin/categories/$CATEGORY/overwrites" | jq -S '.overwrites | sort_by(.id)')" = "$CATEGORY_OVERWRITES_BEFORE" ] ||

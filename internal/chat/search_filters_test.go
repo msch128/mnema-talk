@@ -120,7 +120,7 @@ func TestSearchFiltersV3SQLAndCriteria(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(sql, "original_filename ILIKE $1 ESCAPE '\\'") || len(args) != 2 {
+	if !strings.Contains(sql, "NOT f.is_deleted AND f.original_filename ILIKE $1 ESCAPE '\\'") || len(args) != 2 {
 		t.Fatalf("filename sql: %s args: %v", sql, args)
 	}
 	if args[0] != "%a\\_100\\%%" {

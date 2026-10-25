@@ -196,7 +196,7 @@ func (b *searchBuilder) addAuthorFilters(q SearchQuery) error {
 
 func (b *searchBuilder) addContentFilters(q SearchQuery) error {
 	if q.Filename != "" {
-		b.where = append(b.where, "EXISTS (SELECT 1 FROM media f WHERE f.message_id = m.id AND f.original_filename ILIKE "+b.addArg(likePattern(q.Filename))+` ESCAPE '\')`)
+		b.where = append(b.where, "EXISTS (SELECT 1 FROM media f WHERE f.message_id = m.id AND NOT f.is_deleted AND f.original_filename ILIKE "+b.addArg(likePattern(q.Filename))+` ESCAPE '\')`)
 	}
 	has, err := hasCondition(q.Has)
 	if err != nil {

@@ -107,27 +107,6 @@ func existingChannels(ctx context.Context, q db.Querier, ids []uuid.UUID) ([]cha
 	return out, rows.Err()
 }
 
-// keptCategories names the created categories that hold a channel which is
-// not one of ours.
-func keptCategories(ctx context.Context, q db.Querier, cats, ours []uuid.UUID) ([]string, error) {
-	rows, err := q.Query(ctx, `
-		SELECT DISTINCT ca.name FROM categories ca JOIN channels ch ON ch.category_id = ca.id
-		WHERE ca.id = ANY($1) AND NOT (ch.id = ANY($2)) ORDER BY ca.name`, cats, ours)
-	if err != nil {
-		return nil, fmt.Errorf("read kept categories: %w", err)
-	}
-	defer rows.Close()
-	out := []string{}
-	for rows.Next() {
-		var n string
-		if err := rows.Scan(&n); err != nil {
-			return nil, err
-		}
-		out = append(out, n)
-	}
-	return out, rows.Err()
-}
-
 func countExisting(ctx context.Context, q db.Querier, table string, ids []uuid.UUID) (int, error) {
 	var n int
 	err := q.QueryRow(ctx, `SELECT COUNT(*) FROM `+table+` WHERE id = ANY($1)`, ids).Scan(&n)
@@ -266,6 +245,11 @@ func undoTx(ctx context.Context, tx pgx.Tx, snap *perm.Snapshot, sub perm.Subjec
 	obj, err := loadObjects(ctx, tx, id)
 	if err != nil {
 		return nil, nil, nil, err
+	}
+	// Lock the channels first: a message in flight holds a share lock on its
+	// channel, so the count below sees it and a later one waits for this undo.
+	if _, err := tx.Exec(ctx, `SELECT id FROM channels WHERE id = ANY($1) ORDER BY id FOR UPDATE`, obj.channels); err != nil {
+		return nil, nil, nil, fmt.Errorf("lock created channels: %w", err)
 	}
 	chans, err := existingChannels(ctx, tx, obj.channels)
 	if err != nil {

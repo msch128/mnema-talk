@@ -15,7 +15,9 @@ import { previewText } from '../lib/replies'
 // unread mentions and a popover listing them; a click jumps to the message.
 const chatStore = useChatStore()
 const inbox = useMentionsInbox()
-const open = ref(false)
+// Open from the header's More menu when the header is narrow: no button of its own then.
+defineProps<{ bare?: boolean }>()
+const open = defineModel<boolean>('open', { default: false })
 const root = ref<HTMLElement | null>(null)
 
 // Unread mentions over all channels, from the read state (the server counts
@@ -44,6 +46,7 @@ function when(iso: string) {
 <template>
   <div ref="root" class="relative">
     <button
+      v-if="!bare"
       type="button"
       data-testid="mentions-inbox-button"
       class="btn btn-icon max-md:h-11 max-md:w-11"

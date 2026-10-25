@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { MessagesSquare, Plus, Tags, ArrowUpDown, Loader2, MessageSquareOff } from '@lucide/vue'
+import { MessagesSquare, Plus, Tags, ArrowUpDown, Loader2, Search } from '@lucide/vue'
 import type { ForumTag, Message } from '../types/domain'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
 import { fetchForumTags, fetchForumPosts } from '../lib/forumApi'
 import { caughtErrorMessage } from '../lib/api'
+import { openSearch } from '../lib/globalSearch'
+import { quoteValue } from '../lib/searchQuery'
+import NavDrawerButton from './NavDrawerButton.vue'
 import ForumPostCard from './ForumPostCard.vue'
 import CreateForumPostModal from './CreateForumPostModal.vue'
 import ManageForumTagsModal from './ManageForumTagsModal.vue'
@@ -59,6 +62,10 @@ async function loadPosts() {
   }
 }
 
+function searchInForum() {
+  if (channelName.value) void openSearch(`in:${quoteValue(channelName.value)} `)
+}
+
 function handleSelectPost(post: Message) {
   chatStore.openThread(post)
 }
@@ -100,8 +107,9 @@ onMounted(() => {
     class="flex-1 flex flex-col h-full min-w-0 bg-mnema-canvas overflow-hidden"
   >
     <!-- Header -->
-    <header class="h-14 px-4 border-b border-mnema-hairline bg-mnema-raised flex items-center justify-between gap-3 shrink-0">
-      <div class="flex items-center gap-2.5 min-w-0">
+    <header class="h-14 px-4 max-md:pl-1.5 max-md:pr-3 border-b border-mnema-hairline bg-mnema-raised flex items-center justify-between gap-3 shrink-0">
+      <div class="flex items-center gap-2.5 max-md:gap-1.5 min-w-0">
+        <NavDrawerButton />
         <MessagesSquare class="w-5 h-5 text-mnema-accent shrink-0" />
         <div class="min-w-0">
           <h1 class="text-base font-semibold text-mnema-text truncate">
@@ -115,10 +123,21 @@ onMounted(() => {
 
       <div class="flex items-center gap-2 shrink-0">
         <button
+          type="button"
+          data-testid="search-in-channel"
+          class="btn btn-icon w-9 h-9 max-md:w-11 max-md:h-11"
+          v-tooltip="$t('chat.searchInChannel')"
+          :aria-label="$t('chat.searchInChannel')"
+          @click="searchInForum"
+        >
+          <Search class="w-5 h-5" />
+        </button>
+        <button
           v-if="canManageTags"
           type="button"
           data-testid="manage-tags-btn"
-          class="btn btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5"
+          class="btn btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5 max-sm:h-11 max-sm:w-11 max-sm:p-0"
+          :aria-label="$t('forum.manageTags')"
           @click="showManageTagsModal = true"
         >
           <Tags class="w-3.5 h-3.5" />
@@ -129,11 +148,12 @@ onMounted(() => {
           v-if="canPost"
           type="button"
           data-testid="new-post-btn"
-          class="btn btn-primary px-3 py-1.5 text-xs flex items-center gap-1.5"
+          class="btn btn-primary px-3 py-1.5 text-xs flex items-center gap-1.5 max-sm:h-11 max-sm:w-11 max-sm:p-0"
+          :aria-label="$t('forum.newPost')"
           @click="showCreateModal = true"
         >
           <Plus class="w-4 h-4" />
-          <span>{{ $t('forum.newPost') }}</span>
+          <span class="max-sm:hidden">{{ $t('forum.newPost') }}</span>
         </button>
       </div>
     </header>
@@ -180,7 +200,7 @@ onMounted(() => {
         <select
           v-model="sortMode"
           data-testid="forum-sort-select"
-          class="bg-mnema-surface border border-mnema-border rounded-md px-2 py-1 text-xs text-mnema-text focus:outline-hidden focus:border-mnema-accent cursor-pointer"
+          class="bg-mnema-surface border border-mnema-border rounded-md px-2 py-1 text-xs text-mnema-text focus:outline-hidden cursor-pointer"
         >
           <option value="activity">{{ $t('forum.sortActivity') }}</option>
           <option value="newest">{{ $t('forum.sortNewest') }}</option>
@@ -203,7 +223,7 @@ onMounted(() => {
         class="h-64 flex flex-col items-center justify-center text-center p-6 gap-3"
       >
         <div class="w-12 h-12 rounded-full bg-mnema-raised border border-mnema-hairline flex items-center justify-center text-mnema-tertiary">
-          <MessageSquareOff class="w-6 h-6" />
+          <MessagesSquare class="w-6 h-6" />
         </div>
         <div class="space-y-1">
           <h2 class="text-sm font-semibold text-mnema-text">{{ $t('forum.emptyTitle') }}</h2>

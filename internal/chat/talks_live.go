@@ -14,21 +14,41 @@ import (
 // apply folds one join or leave into the live state.
 func (m *TalkManager) apply(ev presenceEvent) {
 	m.mu.Lock()
-	t := m.talks[ev.channel]
-	if t == nil {
-		m.mu.Unlock()
-		return
-	}
-	var change leaderChange
-	if ev.joined {
-		change = m.joinLocked(t, ev.user)
-	} else {
-		change = m.leaveLocked(ev.channel, t, ev.user)
-	}
+	change := m.applyLocked(ev)
 	m.mu.Unlock()
 	if change.changed {
 		m.persistLeader(ev.channel, change.leader)
 	}
+}
+
+// applyNext applies the oldest pending event; it reports false when there is
+// none. The event leaves the queue and takes effect under one lock, so the
+// countdown of an empty Talk never sees a join that is neither pending nor applied.
+func (m *TalkManager) applyNext() bool {
+	m.mu.Lock()
+	if len(m.pending) == 0 {
+		m.mu.Unlock()
+		return false
+	}
+	ev := m.pending[0]
+	m.pending = m.pending[1:]
+	change := m.applyLocked(ev)
+	m.mu.Unlock()
+	if change.changed {
+		m.persistLeader(ev.channel, change.leader)
+	}
+	return true
+}
+
+func (m *TalkManager) applyLocked(ev presenceEvent) leaderChange {
+	t := m.talks[ev.channel]
+	if t == nil {
+		return leaderChange{}
+	}
+	if ev.joined {
+		return m.joinLocked(t, ev.user)
+	}
+	return m.leaveLocked(ev.channel, t, ev.user)
 }
 
 type leaderChange struct {
@@ -98,6 +118,12 @@ func (m *TalkManager) removeIfEmpty(ch uuid.UUID) {
 		m.mu.Unlock()
 		return
 	}
+	if m.hasPendingLocked(ch) {
+		// A join is on its way: the Talk is not empty, only not counted yet.
+		m.armLocked(ch, t)
+		m.mu.Unlock()
+		return
+	}
 	delete(m.talks, ch)
 	m.mu.Unlock()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -109,6 +135,10 @@ func (m *TalkManager) removeIfEmpty(ch uuid.UUID) {
 		m.armLocked(ch, t)
 		m.mu.Unlock()
 	}
+}
+
+func (m *TalkManager) hasPendingLocked(ch uuid.UUID) bool {
+	return slices.ContainsFunc(m.pending, func(ev presenceEvent) bool { return ev.channel == ch })
 }
 
 // remove deletes a temporary Talk and records that the system did it.

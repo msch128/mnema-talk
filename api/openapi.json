@@ -23951,7 +23951,7 @@
     },
     "/api/channels/{channelID}/messages/{messageID}/poll/votes": {
       "put": {
-        "description": "Replaces the caller's votes with option_ids (one for a single-choice poll, any number of distinct options for a multiple-choice one; an empty list withdraws the vote). Allowed until the poll ends (409 afterwards). In an anonymous poll exactly one vote is possible and it cannot be changed or withdrawn (409 on a second vote, 400 on an empty list); the server records only that the member voted and raises the option counters. Needs View channels and Add reactions. Broadcasts poll_update with the new tallies; in an anonymous poll nobody learns who voted for what. At most 60 a minute per member.",
+        "description": "Replaces the caller's votes with option_ids (one for a single-choice poll, any number of distinct options for a multiple-choice one; an empty list withdraws the vote). Allowed until the poll ends (409 afterwards). In an anonymous poll exactly one vote is possible and it cannot be changed or withdrawn (409 on a second vote, 400 on an empty list); the server records only that the member voted and raises the option counters. Needs View channels and Add reactions. Broadcasts poll_update with the new tallies; an anonymous poll broadcasts nothing per vote (it would let a small audience infer the choice) and announces the result when it is ended, and nobody learns who voted for what. At most 60 a minute per member.",
         "operationId": "votePoll",
         "parameters": [
           {

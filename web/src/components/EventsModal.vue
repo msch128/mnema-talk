@@ -10,6 +10,9 @@ import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { useWebRTC } from '../composables/useWebRTC'
+import { eventAvatar } from '../lib/eventAvatar'
+import { formatEventStart, relativeEventDay } from '../lib/eventTime'
+import { locale, t } from '../i18n'
 import type { CommunityEvent } from '../types/domain'
 
 const emit = defineEmits<{
@@ -35,12 +38,34 @@ const displayedEvents = computed(() => {
   return activeTab.value === 'upcoming' ? eventsStore.upcomingEvents : eventsStore.pastEvents
 })
 
-function formatDateTime(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleString(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short'
-  })
+// One dialog at a time: the list gives way to the detail or the form and
+// comes back when that closes, so no title shows through from underneath.
+const childOpen = computed(() => !!selectedEvent.value || !!editingEvent.value || creatingEvent.value)
+
+function startText(iso: string): string {
+  return formatEventStart(iso, locale.value)
+}
+
+function whenHint(event: CommunityEvent): string {
+  return event.status === 'scheduled' || event.status === 'active' ? relativeEventDay(event.start_time, Date.now(), locale.value) : ''
+}
+
+function rsvpSummary(event: CommunityEvent): string {
+  const parts = []
+  if (event.rsvp_counts.going > 0) parts.push(t('events.goingCount', { count: event.rsvp_counts.going }))
+  if (event.rsvp_counts.interested > 0) parts.push(t('events.interestedCount', { count: event.rsvp_counts.interested }))
+  return parts.join(' · ')
+}
+
+function closeChild() {
+  selectedEvent.value = null
+  editingEvent.value = null
+  creatingEvent.value = false
+}
+
+function editFromDetail(event: CommunityEvent) {
+  selectedEvent.value = null
+  editingEvent.value = event
 }
 
 function getChannelName(id?: string | null): string {
@@ -69,6 +94,7 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
 
 <template>
   <BaseDialog
+    v-if="!childOpen"
     :title="$t('events.events')"
     panel-class="max-w-2xl max-h-[85vh]"
     @close="emit('close')"
@@ -77,17 +103,18 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
       <button
         v-if="permissions.can('manage_events')"
         type="button"
-        class="flex items-center gap-1 rounded-md bg-mnema-accent px-2.5 py-1 text-xs font-semibold text-white hover:opacity-90 transition-opacity"
+        class="flex items-center justify-center gap-1 rounded-md bg-mnema-accent px-2.5 py-1 text-xs font-semibold text-white hover:opacity-90 transition-opacity max-md:h-9 max-md:w-9 max-md:p-0"
+        :aria-label="$t('events.create')"
         @click="creatingEvent = true"
       >
-        <Plus class="w-3.5 h-3.5" />
-        <span>{{ $t('events.create') }}</span>
+        <Plus class="w-3.5 h-3.5 max-md:h-4 max-md:w-4" />
+        <span class="max-md:hidden">{{ $t('events.create') }}</span>
       </button>
     </template>
 
     <div class="flex flex-col min-h-0 flex-1 overflow-hidden">
       <!-- Tabs -->
-      <div class="flex border-b border-mnema-hairline px-6 pt-3">
+      <div class="flex shrink-0 border-b border-mnema-hairline px-4 pt-3 sm:px-6">
         <button
           type="button"
           :class="[
@@ -115,7 +142,7 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
       </div>
 
       <!-- Events List -->
-      <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+      <div class="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-4">
         <div v-if="eventsStore.loading && eventsStore.events.length === 0" class="py-8 text-center text-sm text-mnema-tertiary">
           ...
         </div>
@@ -127,12 +154,12 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
         <article
           v-for="event in displayedEvents"
           :key="event.id"
-          class="flex flex-col overflow-hidden rounded-xl border border-mnema-border bg-mnema-surface shadow-xs hover:border-mnema-hairline transition-colors"
+          class="flex shrink-0 flex-col overflow-hidden rounded-xl border border-mnema-border bg-mnema-surface shadow-xs hover:border-mnema-hairline transition-colors"
         >
           <!-- Cover -->
           <div
             v-if="event.cover_url"
-            class="aspect-[3/1] w-full overflow-hidden bg-mnema-raised cursor-pointer"
+            class="aspect-[3/1] w-full shrink-0 overflow-hidden bg-mnema-raised cursor-pointer"
             @click="selectedEvent = event"
           >
             <img :src="event.cover_url" :alt="event.title" class="h-full w-full object-cover" />
@@ -151,7 +178,8 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
                 <div class="mt-1 flex flex-wrap items-center gap-3 text-xs text-mnema-secondary">
                   <div class="flex items-center gap-1">
                     <Calendar class="w-3.5 h-3.5 text-mnema-tertiary" />
-                    <span>{{ formatDateTime(event.start_time) }}</span>
+                    <span>{{ startText(event.start_time) }}</span>
+                    <span v-if="whenHint(event)" class="text-mnema-tertiary">· {{ whenHint(event) }}</span>
                   </div>
                   <div v-if="event.channel_id" class="flex items-center gap-1 font-medium text-mnema-accent">
                     <Volume2 class="w-3.5 h-3.5" />
@@ -195,20 +223,18 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
               {{ event.description }}
             </p>
 
-            <!-- Going Members Preview -->
-            <div v-if="event.going_members && event.going_members.length > 0" class="flex items-center gap-2">
-              <div class="flex -space-x-1.5 overflow-hidden">
+            <!-- Who answered: avatars of the members who are going, and the counts -->
+            <div v-if="event.rsvp_counts.going > 0 || event.rsvp_counts.interested > 0" class="flex items-center gap-2" data-testid="event-rsvp-summary">
+              <div v-if="event.going_members?.length" class="flex -space-x-1.5 overflow-hidden">
                 <UserAvatar
                   v-for="m in event.going_members.slice(0, 5)"
                   :key="m.id"
-                  :user-id="m.id"
-                  :avatar-url="m.avatar_url"
-                  :display-name="m.display_name || m.username"
+                  :user="eventAvatar(m)"
                   size="xs"
                 />
               </div>
               <span class="text-xs text-mnema-tertiary">
-                {{ $t('events.goingCount', { count: event.rsvp_counts.going }) }}
+                {{ rsvpSummary(event) }}
               </span>
             </div>
 
@@ -223,10 +249,11 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
                       ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
                       : 'bg-mnema-raised text-mnema-secondary hover:bg-mnema-hover'
                   ]"
+                  :aria-pressed="event.my_rsvp === 'going' ? 'true' : 'false'"
                   @click="quickRSVP(event, 'going')"
                 >
                   <Check class="w-3.5 h-3.5" />
-                  <span>{{ $t('events.going') }} ({{ event.rsvp_counts.going }})</span>
+                  <span>{{ $t('events.rsvpGoing') }}</span>
                 </button>
                 <button
                   type="button"
@@ -236,10 +263,11 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
                       ? 'bg-amber-500/20 text-amber-400 font-semibold'
                       : 'bg-mnema-raised text-mnema-secondary hover:bg-mnema-hover'
                   ]"
+                  :aria-pressed="event.my_rsvp === 'interested' ? 'true' : 'false'"
                   @click="quickRSVP(event, 'interested')"
                 >
                   <HelpCircle class="w-3.5 h-3.5" />
-                  <span>{{ $t('events.interested') }} ({{ event.rsvp_counts.interested }})</span>
+                  <span>{{ $t('events.rsvpInterested') }}</span>
                 </button>
               </div>
 
@@ -268,21 +296,19 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
         </article>
       </div>
     </div>
-
-    <!-- Modals -->
-    <EventDetailModal
-      v-if="selectedEvent"
-      :event="selectedEvent"
-      @close="selectedEvent = null"
-      @join="handleJoin"
-      @edit="selectedEvent = null; editingEvent = $event"
-    />
-
-    <EventEditDialog
-      v-if="creatingEvent || editingEvent"
-      :event="editingEvent"
-      @close="creatingEvent = false; editingEvent = null"
-      @saved="selectedEvent = null"
-    />
   </BaseDialog>
+
+  <EventDetailModal
+    v-else-if="selectedEvent"
+    :event="selectedEvent"
+    @close="closeChild"
+    @join="handleJoin"
+    @edit="editFromDetail"
+  />
+
+  <EventEditDialog
+    v-else
+    :event="editingEvent"
+    @close="closeChild"
+  />
 </template>

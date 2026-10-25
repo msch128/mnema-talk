@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures'
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString, responseUserId, suiteMember } from './helpers'
+import { apiFetch, responseString, responseUserId } from './helpers'
 
 // The list of direct messages (1.2): folding it, closing a conversation and
 // seeing it return with the next message, favourites, and muting all of them.
@@ -24,26 +24,35 @@ async function signIn(page: Page, username: string, password: string) {
   await expect(dialog).toBeHidden()
 }
 
-async function joinSuiteMember(owner: Page, page: Page): Promise<string> {
+/**
+ * A member of this spec's own, so the suite member's conversations (which dm.spec.ts counts unread
+ * messages in) are left alone. Registered by the first test, signed in by the second.
+ */
+const polish = { username: `dmp${suffix}`, password: `pw-${suffix}-dmp-x1`, registered: false }
+
+async function joinPolishMember(owner: Page, page: Page): Promise<string> {
   await page.goto('/')
-  if (suiteMember.registered) {
-    expect((await apiFetch(page, 'POST', '/api/auth/login', { username: suiteMember.username, password: suiteMember.password })).status).toBe(200)
+  if (polish.registered) {
+    expect((await apiFetch(page, 'POST', '/api/auth/login', { username: polish.username, password: polish.password })).status).toBe(200)
   } else {
     const invite = await apiFetch(owner, 'POST', '/api/admin/invites', { max_uses: 1 })
-    expect((await apiFetch(page, 'POST', '/api/auth/register', { username: suiteMember.username, password: suiteMember.password, invite_code: responseString(invite, 'code') })).status).toBe(201)
-    suiteMember.registered = true
+    expect((await apiFetch(page, 'POST', '/api/auth/register', { username: polish.username, password: polish.password, invite_code: responseString(invite, 'code') })).status).toBe(201)
+    polish.registered = true
   }
   const id = responseUserId(await apiFetch(page, 'GET', '/api/auth/me'))
   await page.goto('/')
   return id
 }
 
-/** The conversation of two with this member; an existing one is reused (starting counts against daily limits). */
-async function startDm(owner: Page, memberId: string): Promise<string> {
-  const mine = (await apiFetch(owner, 'GET', '/api/dms')).json as { id: string; group: boolean; members: { id: string }[] }[]
-  const existing = mine.find(dm => !dm.group && dm.members.some(m => m.id === memberId))
+/**
+ * The conversation of two. This spec's own member starts it: the Owner's few starts per minute
+ * are what dm.spec.ts needs, and starting counts against them.
+ */
+async function startDm(starter: Page, otherId: string): Promise<string> {
+  const mine = (await apiFetch(starter, 'GET', '/api/dms')).json as { id: string; group: boolean; members: { id: string }[] }[]
+  const existing = mine.find(dm => !dm.group && dm.members.some(m => m.id === otherId))
   if (existing) return existing.id
-  const started = await apiFetch(owner, 'POST', '/api/dms', { user_ids: [memberId] })
+  const started = await apiFetch(starter, 'POST', '/api/dms', { user_ids: [otherId] })
   expect([200, 201]).toContain(started.status)
   return responseString(started, 'id')
 }
@@ -64,8 +73,9 @@ test('the list folds, closes a conversation until the next message, and keeps fa
   let dmId = ''
   try {
     await signIn(owner, ADMIN_USER, ADMIN_PASSWORD)
-    const memberId = await joinSuiteMember(owner, member)
-    dmId = await startDm(owner, memberId)
+    const ownerId = responseUserId(await apiFetch(owner, 'GET', '/api/auth/me'))
+    await joinPolishMember(owner, member)
+    dmId = await startDm(member, ownerId)
     expect((await apiFetch(owner, 'POST', `/api/channels/${dmId}/messages`, { content: `erste ${suffix}` })).status).toBe(201)
     await member.goto('/')
     await expect(rowOf(member, dmId)).toBeVisible()
@@ -119,8 +129,9 @@ test('muting all direct messages keeps the unread count but drops sound and high
   let dmId = ''
   try {
     await signIn(owner, ADMIN_USER, ADMIN_PASSWORD)
-    const memberId = await joinSuiteMember(owner, member)
-    dmId = await startDm(owner, memberId)
+    const ownerId = responseUserId(await apiFetch(owner, 'GET', '/api/auth/me'))
+    await joinPolishMember(owner, member)
+    dmId = await startDm(member, ownerId)
     await member.goto('/')
     await expect(rowOf(member, dmId)).toBeVisible()
 
@@ -136,7 +147,7 @@ test('muting all direct messages keeps the unread count but drops sound and high
     // (The conversation's starter may write only twice before anybody answers, so the member answers first.)
     expect((await apiFetch(member, 'POST', `/api/channels/${dmId}/messages`, { content: `hallo ${suffix}` })).status).toBe(201)
     expect((await apiFetch(member, 'POST', `/api/channels/${dmId}/read`, {})).status).toBe(204)
-    const mention = (await apiFetch(owner, 'POST', `/api/channels/${dmId}/messages`, { content: `@${suiteMember.username} hallo ${suffix}` }))
+    const mention = (await apiFetch(owner, 'POST', `/api/channels/${dmId}/messages`, { content: `@${polish.username} hallo ${suffix}` }))
     expect(mention.status).toBe(201)
     const mine = async () => ((await apiFetch(member, 'GET', '/api/dms')).json as { id: string; unread_count: number; mention_count: number; notify_level: string }[]).find(dm => dm.id === dmId)
     await expect.poll(async () => (await mine())?.unread_count).toBe(1)

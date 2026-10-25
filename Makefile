@@ -3,7 +3,7 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-web lint complexity-check fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill fresh-install docs-check english-check
+.PHONY: help dev web build run test fuzz-smoke test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-web lint complexity-check fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill fresh-install docs-check english-check
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -67,6 +67,9 @@ run: build ## Build and run the binary (reads .env)
 
 test: ## Go unit tests (race detector)
 	go test -race -count=1 $(GO_PKGS)
+
+fuzz-smoke: ## Run every Go fuzz target for a few seconds (FUZZTIME=5s); FUZZTIME=60s for a longer run
+	scripts/fuzz-smoke.sh
 
 test-integration: ## Go integration tests (Docker, or TEST_DATABASE_URL)
 	go test $(GO_INTEGRATION_PKG_FLAGS) -tags=integration -race -count=1 -timeout=900s $(GO_PKGS)

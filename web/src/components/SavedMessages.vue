@@ -21,7 +21,9 @@ const NOTE_MAX = 200
 const chatStore = useChatStore()
 const saved = useSavedStore()
 const toasts = useToastStore()
-const open = ref(false)
+// Open from the header's More menu when the header is narrow: no button of its own then.
+defineProps<{ bare?: boolean }>()
+const open = defineModel<boolean>('open', { default: false })
 const root = ref<HTMLElement | null>(null)
 const editing = ref<string | null>(null)
 const draft = ref('')
@@ -76,6 +78,7 @@ function when(iso: string) {
 <template>
   <div ref="root" class="relative">
     <button
+      v-if="!bare"
       type="button"
       data-testid="saved-button"
       class="btn btn-icon max-md:h-11 max-md:w-11"
