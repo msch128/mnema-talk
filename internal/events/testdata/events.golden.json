@@ -46,6 +46,7 @@
     "DMCreated": "dm_created",
     "DMMemberAdded": "dm_member_added",
     "DMMemberRemoved": "dm_member_removed",
+    "DMPrefsUpdated": "dm_prefs_updated",
     "TalkLeader": "talk_leader",
     "TalkMoved": "talk_moved",
     "StageHand": "stage_hand",

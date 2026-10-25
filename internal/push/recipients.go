@@ -30,6 +30,10 @@ type candidate struct {
 	// conversation); suppressAll ignores @all and @here.
 	serverLvl   chat.NotifySetting
 	suppressAll bool
+	// silenced is set for a conversation when the member muted all direct
+	// messages and the conversation has no setting of its own: nothing is
+	// pushed, not even a mention.
+	silenced bool
 	// now is the database's clock, the one the stored mute ends use.
 	now time.Time
 }
@@ -41,7 +45,7 @@ func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.
 	rows, err := q.Query(ctx, `
 		SELECT u.id, u.locale, u.push_preview, u.presence, c.name, c.type = 'dm',
 		       cr.notify_level, cr.muted_until, cn.notify_level, cn.muted_until,
-		       sn.notify_level, sn.muted_until, COALESCE(sn.suppress_everyone, FALSE), NOW()
+		       sn.notify_level, sn.muted_until, COALESCE(sn.suppress_everyone, FALSE), NOW(), u.dm_mute_all
 		FROM users u
 		JOIN channels c ON c.id = $1
 		LEFT JOIN channel_reads cr ON cr.user_id = u.id AND cr.channel_id = c.id
@@ -58,14 +62,16 @@ func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.
 	for rows.Next() {
 		var c candidate
 		var chLevel, catLevel, srvLevel *string
+		var muteAll bool
 		if err := rows.Scan(&c.userID, &c.locale, &c.preview, &c.presence, &c.channelName, &c.dm,
 			&chLevel, &c.channelLevel.MutedUntil, &catLevel, &c.categoryLvl.MutedUntil,
-			&srvLevel, &c.serverLvl.MutedUntil, &c.suppressAll, &c.now); err != nil {
+			&srvLevel, &c.serverLvl.MutedUntil, &c.suppressAll, &c.now, &muteAll); err != nil {
 			return nil, fmt.Errorf("load push candidates: %w", err)
 		}
 		c.channelLevel.Level, c.categoryLvl.Level, c.serverLvl.Level = levelOf(chLevel), levelOf(catLevel), levelOf(srvLevel)
 		if c.dm {
 			c.serverLvl, c.suppressAll = chat.NotifySetting{}, false
+			c.silenced = muteAll && !c.channelLevel.Decides(c.now)
 		}
 		out = append(out, c)
 	}
@@ -101,7 +107,7 @@ func quiet(presence string) bool {
 // still lets through a message addressed to the member (a mention by name or
 // role, or a reply), but not @all or @here.
 func (c candidate) wants(mention, addressed bool) bool {
-	if quiet(c.presence) {
+	if quiet(c.presence) || c.silenced {
 		return false
 	}
 	switch chat.ResolveNotify(c.now, c.channelLevel, c.categoryLvl, c.serverLvl) {

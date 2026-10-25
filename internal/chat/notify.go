@@ -49,6 +49,11 @@ func (s NotifySetting) active(now time.Time) NotifyLevel {
 	return s.Level
 }
 
+// Decides reports whether the setting, after expiry, sets a level of its own.
+func (s NotifySetting) Decides(now time.Time) bool {
+	return s.active(now) != NotifyInherit
+}
+
 // ResolveNotify is the effective level of a channel: its own setting, else its
 // category's, else the member's server default, else "all". Expired mutes are
 // skipped. Pass the zero NotifySetting as server for conversations, which the
