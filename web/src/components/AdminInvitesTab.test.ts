@@ -29,6 +29,8 @@ const invites = () => [
 
 const rows = (w: VueWrapper) => w.findAll('.divide-y > div').filter(r => r.find('.font-mono')!.exists())
 const row = (w: VueWrapper, code: string) => rows(w).find(r => r.find('.font-mono')!.text() === code)!
+const showAll = async (w: VueWrapper) => { await w.get('[data-testid="invites-spent-toggle"]').trigger('click') }
+const submit = (w: VueWrapper) => w.get('button[type="submit"]')
 const toastTexts = () => useToastStore().toasts.map(t => t.text)
 
 beforeEach(() => {
@@ -48,6 +50,9 @@ describe('AdminInvitesTab', () => {
     const w = mount(AdminInvitesTab)
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith('/api/admin/invites', { decode: expect.any(Function) })
+    expect(rows(w)).toHaveLength(2)
+    expect(w.get('[data-testid="invites-spent-toggle"]').text()).toBe('Show 2 used up or expired')
+    await showAll(w)
     expect(rows(w)).toHaveLength(4)
     expect(row(w, 'open-code').text()).toContain('Uses: 4 / ∞')
     expect(row(w, 'open-code').text()).toContain('no expiry')
@@ -74,11 +79,12 @@ describe('AdminInvitesTab', () => {
     await uses!.setValue('10')
     await hours!.setValue('48')
     apiMock.mockResolvedValueOnce({}).mockResolvedValueOnce(invites())
-    await w.find('button')!.trigger('click')
+    await submit(w).trigger('submit')
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith('/api/admin/invites', { method: 'POST', json: { max_uses: 10, expires_in_hours: 48 } })
     expect(uses!.element.value).toBe('')
     expect(hours!.element.value).toBe('')
+    await showAll(w)
     expect(rows(w)).toHaveLength(4)
     expect(toastTexts()).toContain('Invite created')
   })
@@ -88,14 +94,14 @@ describe('AdminInvitesTab', () => {
     const w = mount(AdminInvitesTab)
     await flushPromises()
     apiMock.mockResolvedValueOnce({}).mockResolvedValueOnce([])
-    await w.find('button')!.trigger('click')
+    await submit(w).trigger('submit')
     await flushPromises()
     expect(apiMock).toHaveBeenNthCalledWith(2, '/api/admin/invites', { method: 'POST', json: {} })
 
     await w.findAll<HTMLInputElement>('input')[0]!.setValue('2000')
     apiMock.mockRejectedValueOnce(new Error('max_uses must be between 1 and 1000'))
     const calls = apiMock.mock.calls.length
-    await w.find('button')!.trigger('click')
+    await submit(w).trigger('submit')
     await flushPromises()
     expect(apiMock.mock.calls.length).toBe(calls + 1) // no reload after a failure
     expect(w.findAll<HTMLInputElement>('input')[0]!.element.value).toBe('2000')
@@ -106,6 +112,7 @@ describe('AdminInvitesTab', () => {
     apiMock.mockResolvedValueOnce(invites())
     const w = mount(AdminInvitesTab)
     await flushPromises()
+    await showAll(w)
 
     confirmMock.mockResolvedValueOnce(false)
     await row(w, 'gone-code').find('button[aria-label="Delete invite"]')!.trigger('click')
@@ -128,6 +135,7 @@ describe('AdminInvitesTab', () => {
     apiMock.mockResolvedValueOnce(invites())
     const w = mount(AdminInvitesTab)
     await flushPromises()
+    await showAll(w)
     confirmMock.mockResolvedValueOnce(true)
     apiMock.mockRejectedValueOnce(new Error('invite not found'))
     await row(w, 'open-code').find('button[aria-label="Delete invite"]')!.trigger('click')
@@ -167,5 +175,16 @@ describe('AdminInvitesTab', () => {
     expect(toast!.detail).toBe(`${window.location.origin}/?invite=abc123`)
     expect(rows(w)[0]!.text()).toContain('Copy link')
     vi.unstubAllGlobals()
+  })
+
+  it('fills the validity from a preset and clears it for no expiry', async () => {
+    apiMock.mockResolvedValueOnce([])
+    const w = mount(AdminInvitesTab)
+    await flushPromises()
+    await w.get('[data-preset="week"]').trigger('click')
+    expect(w.get<HTMLInputElement>('#invite-hours').element.value).toBe('168')
+    expect(w.get('[data-preset="week"]').attributes('aria-pressed')).toBe('true')
+    await w.get('[data-preset="never"]').trigger('click')
+    expect(w.get<HTMLInputElement>('#invite-hours').element.value).toBe('')
   })
 })

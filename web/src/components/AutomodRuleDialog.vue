@@ -178,9 +178,10 @@ const label = 'block text-xs font-medium text-mnema-muted font-mono uppercase tr
         <p class="text-xs text-mnema-tertiary">{{ $t('automod.exemptHint') }}</p>
       </fieldset>
 
-      <label class="flex items-center gap-2 text-sm text-mnema-text">
-        <input v-model="form.enabled" type="checkbox" data-testid="am-enabled" /><span>{{ $t('automod.enabled') }}</span>
-      </label>
+      <div class="flex items-center gap-3 text-sm text-mnema-text">
+        <button id="am-enabled" type="button" role="switch" class="switch" :aria-checked="form.enabled ? 'true' : 'false'" aria-labelledby="am-enabled-label" data-testid="am-enabled" @click="form.enabled = !form.enabled"></button>
+        <span id="am-enabled-label">{{ $t('automod.enabled') }}</span>
+      </div>
 
       <p v-if="problem" class="text-xs text-mnema-danger" role="alert" data-testid="am-problem">{{ problem }}</p>
       <div class="flex justify-end gap-2">

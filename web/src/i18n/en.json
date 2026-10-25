@@ -1421,7 +1421,30 @@
     "resetTwoFactorBody": "Turns two-factor sign-in off, deletes the authenticator secret and the recovery codes, and signs the member out everywhere. Use it when they lost both the authenticator and the recovery codes. They can turn it on again afterwards.",
     "resetTwoFactorConfirm": "Reset",
     "twoFactorReset": "Two-factor sign-in reset.",
-    "channelTopicHelp": "Shown under the channel name. Keep it short: what this channel is for."
+    "channelTopicHelp": "Shown under the channel name. Keep it short: what this channel is for.",
+    "nav": {
+      "community": "Community",
+      "moderation": "Moderation",
+      "integrations": "Integrations",
+      "operations": "Operations",
+      "back": "Back to sections",
+      "signedIn": "Signed in as {name}",
+      "openReports": "{count} open"
+    },
+    "maxUsesLabel": "Uses",
+    "maxUsesPlaceholder": "Unlimited",
+    "validHoursLabel": "Valid for (hours)",
+    "validHoursPlaceholder": "No expiry",
+    "presets": "Validity presets",
+    "preset": {
+      "day": "1 day",
+      "week": "7 days",
+      "never": "No expiry"
+    },
+    "noInvitesHint": "Create one above and share its link.",
+    "showSpent": "Show {count} used up or expired",
+    "hideSpent": "Hide used up and expired",
+    "noMediaHint": "Uploaded images and files show up here."
   },
   "profile": {
     "addedBy": "Added by {name}",
@@ -1803,7 +1826,8 @@
       "empty": "No custom emoji yet.",
       "full": "The limit is reached. Delete an emoji to make room.",
       "choose": "Choose file",
-      "noFile": "No file yet"
+      "noFile": "No file yet",
+      "emptyHint": "Upload an image above to add the first one."
     }
   },
   "activity": {
@@ -2019,7 +2043,10 @@
       "emoji": "Emoji",
       "bot": "Bots",
       "poll": "Polls",
-      "automod": "Automod"
+      "automod": "Automod",
+      "report": "Reports",
+      "event": "Events",
+      "import": "Imports"
     },
     "actions": {
       "role": {
@@ -2164,8 +2191,29 @@
       },
       "admin": {
         "post": "Admin action"
+      },
+      "report": {
+        "create": "Report filed",
+        "resolve": "Report closed",
+        "delete": "Report deleted"
+      },
+      "event": {
+        "create": "Event created",
+        "edit": "Event edited",
+        "cancel": "Event cancelled",
+        "talk_create": "Talk event created",
+        "talk_edit": "Talk event edited",
+        "talk_cancel": "Talk event cancelled"
+      },
+      "import": {
+        "discord": "Discord template imported",
+        "discord_undo": "Discord import undone"
       }
-    }
+    },
+    "hideSignIns": "Hide sign-ins",
+    "signInsHidden": "{count} sign-ins hidden",
+    "emptyHint": "Changes to roles, channels, members and settings are recorded here.",
+    "reportTarget": "Report ({category})"
   },
   "roles": {
     "managedHint": "Managed role: held by every bot, cannot be removed.",
@@ -2222,7 +2270,14 @@
       "administrator": "This role has Administrator: it sees every channel you can see and ignores channel permissions.",
       "empty": "This role sees no channels you can see.",
       "exit": "Exit preview"
-    }
+    },
+    "unsavedTitle": "Discard unsaved changes?",
+    "unsavedBody": "This role has changes you have not saved. Switching to another role drops them.",
+    "discard": "Discard",
+    "keepEditing": "Keep editing",
+    "unsaved": "Unsaved changes",
+    "searchPermissions": "Search permissions",
+    "noPermissionMatch": "No permission matches."
   },
   "memberRoles": {
     "title": "Roles of {name}",
@@ -2459,7 +2514,8 @@
     "slowModeInvalid": "Enter a whole number of 1 or more.",
     "slowModeTooLong": "Slow mode can last 24 hours at most.",
     "slowModeCustom": "Custom",
-    "slowModeUnit": "Unit"
+    "slowModeUnit": "Unit",
+    "noBansHint": "Banned members are listed here, and you can lift a ban."
   },
   "editHistory": {
     "menu": "Edit history",
@@ -2585,7 +2641,8 @@
       "deleteFor": "Delete command {name}",
       "deleteTitle": "Delete command /{name}?",
       "deleteBody": "The bot can register it again."
-    }
+    },
+    "emptyHint": "Name a bot above to create it and get its token."
   },
   "appSettings": {
     "title": "App & notifications",
@@ -2938,7 +2995,9 @@
       "links": {
         "block_all": "Every link",
         "allow_list": "Only links to {count} listed domains",
-        "block_list": "Links to {count} listed domains"
+        "block_list": "Links to {count} listed domains",
+        "block_listEmpty": "No domains listed yet, nothing is blocked",
+        "allow_listEmpty": "No domains allowed, every link is blocked"
       },
       "mentions": "More than {n} different mentions",
       "newAccount": {
@@ -2948,7 +3007,10 @@
         "everything": "Accounts under {age} may not post"
       },
       "raid": "More than {joins} joins within {window}: newcomers restricted for {restrict}"
-    }
+    },
+    "emptyHint": "Rules check every message and sign-up. Add one with the buttons above.",
+    "enabledState": "On",
+    "disabledState": "Off"
   },
   "modHistory": {
     "tabs": "Profile sections",
@@ -3070,7 +3132,11 @@
       "deleteBody": "The report and its copy of the messages are removed for good.",
       "deleteFailed": "Couldn’t delete the report. Try again.",
       "closeFailed": "Couldn’t close the report. Try again.",
-      "loadFailed": "Couldn’t load the reports. Try again."
+      "loadFailed": "Couldn’t load the reports. Try again.",
+      "emptyHint": "When a member reports a message or automod flags one, it shows up here for you to look at.",
+      "quoted": "Reported message",
+      "timeout": "Time out…",
+      "ban": "Ban…"
     }
   },
   "autoDelete": {
@@ -3145,7 +3211,8 @@
       "empty": "No imports yet.",
       "row": "{name} · {when}",
       "undone": "Undone {when}",
-      "undo": "Undo import"
+      "undo": "Undo import",
+      "emptyHint": "Imports of a Discord server template are listed here, with an undo."
     },
     "confirm": {
       "title": "Import Discord structure",
