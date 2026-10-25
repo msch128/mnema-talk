@@ -18,7 +18,7 @@ const describedby = computed(() => [props.hint && hintId, props.error && errorId
   <div class="space-y-1.5">
     <label :for="id" class="block text-sm font-medium text-mnema-body-ink">{{ label }}</label>
     <slot :id="id" :describedby="describedby" :invalid="!!error" />
-    <p v-if="hint" :id="hintId" class="field-hint !mt-1">{{ hint }}</p>
-    <p v-if="error" :id="errorId" role="alert" class="field-error !mt-1">{{ error }}</p>
+    <p v-if="hint" :id="hintId" class="field-hint mt-1!">{{ hint }}</p>
+    <p v-if="error" :id="errorId" role="alert" class="field-error mt-1!">{{ error }}</p>
   </div>
 </template>

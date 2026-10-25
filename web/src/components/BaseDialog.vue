@@ -43,7 +43,7 @@ function onScrimUp(e: PointerEvent) {
 
 <template>
   <div
-    :class="['dialog-scrim fixed inset-0 z-50 flex justify-center scrim', align === 'top' ? 'items-start pt-20 max-md:pt-[max(1rem,env(safe-area-inset-top))]' : 'items-center', sheet && 'max-md:items-stretch']"
+    :class="['dialog-scrim fixed inset-0 z-50 flex justify-center scrim', align === 'top' ? 'items-start pt-20 max-md:pt-[max(1rem,env(safe-area-inset-top))]' : 'items-center', sheet && 'max-md:items-stretch max-md:p-0!']"
     @pointerdown="onScrimDown"
     @pointerup="onScrimUp"
   >
@@ -54,7 +54,7 @@ function onScrimUp(e: PointerEvent) {
       :aria-labelledby="titleId"
       :aria-describedby="describedby || undefined"
       tabindex="-1"
-      :class="['dialog-panel flex max-h-full w-full flex-col overflow-hidden rounded-2xl border border-mnema-border bg-mnema-elevated shadow-2xl focus:outline-hidden', sheet && 'max-md:max-w-none max-md:rounded-none max-md:border-0 max-md:pt-[env(safe-area-inset-top)]', panelClass]"
+      :class="['dialog-panel flex max-h-full w-full flex-col overflow-hidden rounded-2xl border border-mnema-border bg-mnema-elevated shadow-2xl focus:outline-hidden', sheet && 'max-md:max-w-none max-md:rounded-none max-md:border-0 max-md:pt-[env(safe-area-inset-top)] max-md:pb-[env(safe-area-inset-bottom)]', panelClass]"
     >
       <header v-if="title" class="flex items-center justify-between gap-3 border-b border-mnema-hairline bg-mnema-raised px-6 py-5">
         <div class="min-w-0">
