@@ -120,13 +120,28 @@ function closeQuietly(port: KeyedPort) {
   try { port.close() } catch (error) { ignoreClosedPort(error) }
 }
 
+/**
+ * Posts to a line's port. WebKit sometimes refuses to clone the CryptoKeys of a
+ * key message ("The object can not be cloned", seen in about one macOS WebKit
+ * call in two, on any page), and the next attempt goes through; so a refused
+ * post is tried once more before it is given up. The call's one worker also
+ * has the key from any other line that delivered it (seq), so a line that
+ * stays refused is keyless only until the next key.
+ */
 function postOrWarn(port: KeyedPort, message: unknown) {
-  try {
-    port.postMessage(message)
-  } catch (error) {
-    console.warn('[media] Could not hand the key to a line:', error)
+  for (let attempt = 1; ; attempt++) {
+    try {
+      port.postMessage(message)
+      return
+    } catch (error) {
+      if (attempt < POST_ATTEMPTS) continue
+      console.warn('[media] Could not hand the key to a line:', error)
+      return
+    }
   }
 }
+
+const POST_ATTEMPTS = 2
 
 function isValidArmTarget(direction: 'send' | 'recv', channelId: string, senderId: string | null, source?: FrameSource): boolean {
   if (!channelId || senderId === '') return false
