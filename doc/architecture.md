@@ -33,6 +33,9 @@ in PostgreSQL; uploads, avatars and profile banners live in S3-compatible object
 | [`internal/perm`](../internal/perm/perm.go), [`internal/roles`](../internal/roles/handler.go) | Roles and permissions: the permission bits, the in-memory `Snapshot` that resolves base, role and overwrite permissions (and the hierarchy rules), the cache with live invalidation, and the HTTP API for roles, member roles and channel overwrites. See [roles-and-permissions.md](roles-and-permissions.md). |
 | [`internal/chat`](../internal/chat/handler.go) | Categories, channels (text and voice), layout, messages, replies, threads, reactions, mentions (by name, `@all`/`@here` and `@Role`, with a fan-out cap) and the mentions inbox, read state, notification levels ([`notify.go`](../internal/chat/notify.go)), search ([`search.go`](../internal/chat/search.go), filters in [`search_filters.go`](../internal/chat/search_filters.go)), members. Since 1.1 also direct messages (`dm*.go`), blocks ([`blocks.go`](../internal/chat/blocks.go)), reports ([`reports.go`](../internal/chat/reports.go)), saved messages ([`saved.go`](../internal/chat/saved.go)), forwarding ([`forward.go`](../internal/chat/forward.go)) and thread follow ([`thread_follow.go`](../internal/chat/thread_follow.go)). |
 | [`internal/later`](../internal/later/service.go) | Reminders and scheduled messages: private per-member lists, the sweep that delivers and sends them, and their REST routes (see "Reminders and scheduled messages"). |
+| [`internal/automod`](../internal/automod/rule.go), [`internal/moderation`](../internal/moderation/automod_rules.go) | Automod (1.2): rules compiled once per configuration version and checked in the send and sign-up paths (mention spam, new accounts, raid protection, word and link lists); a hit blocks or flags a message and adds an entry to the reports queue. `moderation` is the REST surface of the rules and of the per-member moderation history with private moderator notes. See [moderation.md](moderation.md). |
+| [`internal/communityevents`](../internal/communityevents/handler.go) | Community events (1.2): events, RSVPs, cover images, the scheduler that starts events and sends reminders 15 minutes ahead. See [events.md](events.md). |
+| [`internal/discordimport`](../internal/discordimport/template.go) | Discord structure import (1.2): preview, apply and undo of categories, channels, Talks and roles from a template link. See [import.md](import.md). |
 | [`internal/onboarding`](../internal/onboarding/handler.go) | The first-run side of the community: name, welcome text and rules, who accepted which rules version, dismissed tips and the public invite preview. |
 | [`internal/media`](../internal/media/handler.go) | Uploads with content sniffing and an allow-list ([`policy.go`](../internal/media/policy.go)), authenticated media serving through the app, admin storage stats and pruning, and the retention worker (off unless `MEDIA_RETENTION_DAYS > 0`). |
 | [`internal/s3`](../internal/s3/s3.go) | S3 client (AWS SDK v2); creates the bucket only when missing. |
@@ -228,7 +231,8 @@ participant counter. No table, log line, audit entry, event, export or data expo
 a member next to a choice; a trigger on `poll_votes` (which still serves polls
 that name their voters) refuses a row for an anonymous poll, and an integration
 test walks every table of the schema to prove that no row mentions a voter and
-an option together. Because a choice is never known, a vote cannot be changed
+an option together. A running anonymous poll broadcasts no tally at each vote, since in a small audience the
+last vote would follow from it; the result goes out when the poll ends. Because a choice is never known, a vote cannot be changed
 or withdrawn and the data export of a member has no entry for anonymous
 polls. Erasing an account deletes its `poll_voters` rows and leaves the
 counters, as a tally is not personal data. Migration 0063 converted the
@@ -617,6 +621,27 @@ printed by the test with `-v`). The remaining cost that grows with unread
 volume is the count in `GET /api/read-state`, linear in the unread messages of
 a member who has been away for a long time (about 30 to 45 ms for 50,000);
 it is paid once per page load or reconnect, not per message.
+
+## Talks, sessions and operator status (1.2)
+
+**Lobbies, Talks and Stages.** A lobby channel (`channels.is_lobby`, migration 0059) opens a temporary Talk
+(`is_temp`, `leader_id`) for the member who joins it. `chat.TalkManager` creates it, removes an empty one
+after `DefaultTalkEmptyGrace` (30 seconds) and removes every temporary Talk at start. A Stage
+(`channels.is_stage`, migration 0068) is a Talk in which talk power decides who may send
+media; the permission *Manage stage* (`1 << 24`) grants it, hands raised and reactions are relayed over
+the hub and kept nowhere. See [talks.md](talks.md).
+
+**Sessions.** `user_sessions` (migrations 0064 and 0065) describes each signed cookie by its `jti`: a coarse
+device label, creation and last activity. The cookie stays the credential; a periodic sweep
+(`Handler.RunSessionSweep` in `internal/auth`) signs out a session that was inactive for longer than
+`instance_settings.session_inactivity_days` (default 7), and the same condition is checked when the cookie is
+used. See [operations.md](operations.md#sessions-and-inactivity-sign-out).
+
+**View as role.** `GET /api/admin/roles/{id}/view-as` runs the normal permission resolver for a made-up member
+that holds @everyone and the role, intersected with what the caller can view. It reads, it changes nothing.
+
+**Operator status.** `GET /api/admin/status` (`internal/server/admin_status.go`, feature `ops.status`, Owner
+and Administrators) gathers version, update state, database, storage, backup and live activity for the Status page.
 
 ## Frontend structure (`web/src`)
 

@@ -56,6 +56,13 @@ no accounts on someone else's platform.
   its chat, nothing is joined and no microphone is requested until you press
   **Join** in the Talk's header. Reading needs *View channels*, writing
   *Send messages*; *Connect* is not required.
+- **Create-a-Talk lobbies, Stages and live reactions.** Joining a lobby opens a
+  temporary Talk ("Talk 1", "Talk 2", ...) that you lead; it disappears when it
+  is empty. *Start a Talk* in a direct message opens one and invites the
+  conversation. A Talk can be a **Stage**: only members with talk power speak,
+  others raise a hand and a member with *Manage stage* accepts it. Members in a
+  Talk can send emoji reactions that float over their tile. Details in
+  [doc/talks.md](doc/talks.md).
 - **Screen sharing up to source quality**, up to 4K at 60 FPS with hardware
   encoding in the browser. A share is sent as the source plus smaller **layers**;
   every viewer picks a layer or leaves it on **Auto**, which follows the
@@ -87,6 +94,10 @@ no accounts on someone else's platform.
   90 days; it is shown on the channel, audited, and never touches pinned
   messages or direct messages ([doc/moderation.md](doc/moderation.md#auto-delete)).
 - **Forum channels.** Structured discussions with posts as cards, up to 20 admin tags, tag filtering, sorting by latest activity, and moderation locks ([doc/forums.md](doc/forums.md)).
+- **Community events.** Scheduled events with a description, a cover image, a
+  location (a Talk or free text), RSVPs and a reminder 15 minutes before the
+  start. Creating them needs the *Manage events* permission, which the seeded Moderator
+  and Admin roles (every role with *Timeout members*) get at the upgrade ([doc/events.md](doc/events.md)).
 - **Saved messages and forwarding.** Keep a private list of up to 1,000
   messages with an optional note, or forward a message into another channel or
   a direct message. A forward is a reference, so it never shows more than the
@@ -180,8 +191,8 @@ no accounts on someone else's platform.
   in the menu (Alt+Arrow keys on a focused row). Favourites stay in the list and
   follow you to every device.
 - **Mute** one conversation from the bell in its header or its menu, or all of
-  them with **Mute all direct messages** under *Account & security* > *Your
-  data* > *Direct messages*: no sound, no notification and no highlight, but
+  them with **Mute all direct messages** under *Settings* > *Privacy* >
+  *Direct messages*: no sound, no notification and no highlight, but
   unread messages still count. A conversation you muted or unmuted yourself keeps
   its own setting.
 - **Who may write to you** is your choice in the same place: everyone (the
@@ -193,7 +204,7 @@ no accounts on someone else's platform.
   group included, their messages leave unread counts, mentions and last activity
   untouched), and a conversation of two with them stops working in both directions.
   They are not told. The list of blocked members, with a way to unblock, is under
-  *Account & security*.
+  *Settings* > *Privacy*.
 - **Report** a message from its menu (**Report message**) with a reason and an
   optional note. The moderators see a copy of the message and the ones around
   it in **Admin > Reports**, which needs the permission *Manage reports*; for a
@@ -221,6 +232,9 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
   group: microphone, camera, screen video and screen audio. Keys rotate every
   30 minutes, every sealed frame is signed by its sender, and a **safety code**
   in the connection details lets members compare keys out of band.
+  The old media frame format 2 is gone in 1.2: only format 3 is sealed or
+  opened, so a client that old must be reloaded or updated
+  ([doc/upgrade.md](doc/upgrade.md#calls-and-the-security-floor)).
 - **Invite-only.** There is no public registration.
 - **Accounts you control.** Optional e-mail (password reset needs SMTP),
   two-factor sign-in with recovery codes, and self-service export and deletion
@@ -244,6 +258,17 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
   categories and channels can allow or deny them per role or member, which
   makes **private channels and Talks**. Changes apply live, also in a call.
 - **Moderation.** Timeouts (a minute to four weeks, lifted automatically, enforced in REST, the hub and the SFU), bans with reason and duration, and kicking, all bound by the role hierarchy and written to the audit log.
+- **Automod and moderation history.** Automod is on by default with
+  conservative rules (mention spam, links from accounts younger than 10
+  minutes, raid protection) plus optional word and link lists; hits land in the
+  reports queue. Members with *Manage reports* see a per-member history and
+  keep private moderator notes ([doc/moderation.md](doc/moderation.md)).
+- **Sessions and view-as-role.** Members see and end their own sessions
+  (*Where you are signed in*), and a session unused for 7 days (adjustable)
+  signs out. In the role editor, **View server as** previews what a role sees.
+- **Discord import.** An admin can copy the categories, channels, Talks and roles
+  of a Discord server from a template link: additive, after a preview and
+  three confirmations, and it can be undone ([doc/import.md](doc/import.md)).
 - **Audit log.** An append-only record of administrative and moderation
   actions with who, what, before and after, filterable in the admin console.
   It also holds deleted message text and Talk presence history, so mention it
@@ -254,7 +279,8 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 - **Bots.** Bot accounts with API tokens, scoped by roles and channel overwrites like members, a REST API and a gateway modelled on Discord's (see [doc/bots.md](doc/bots.md)); only the Owner and *Manage bots* create them.
 - **Admin console** for members (disable, kick, reset password, revoke
   sessions), roles, channel layout, invites, media and storage, and a System
-  tab with health and a live operator view. The sidebar supports drag and drop
+  tab with health and a live operator view, and a Status page (version,
+  updates, database, storage, backups and live activity). The sidebar supports drag and drop
   with undo.
 
 | Roles and permissions | Webhook settings |

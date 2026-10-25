@@ -139,6 +139,7 @@ of the pre-update backup (see "Rollback" above).
 | Migration | Adds |
 |---|---|
 | 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
+| 0060 | Unused: the number was reserved while 1.2 was planned and no change needed it. The gap is intentional; migrations are applied in order and nothing depends on it. |
 | 0061 | `users.status_expires_at` (a status line that clears itself, feature `status.expiry`). It also raises the limit of `channels.slow_mode_seconds` from 6 hours to 24 hours. |
 | 0062 | `message_reminders` and `scheduled_messages` (see "Reminders and scheduled messages"). |
 | 0063 | `poll_voters`, `poll_anon_ballots`, `poll_options.anon_votes`, `polls.anon_voters` and a trigger on `poll_votes` (anonymous polls); `channels.auto_delete_days` with its checks. |
@@ -153,6 +154,81 @@ of the pre-update backup (see "Rollback" above).
 | 0072 | `media_original_filename_trgm_idx`: GIN trigram index on `media.original_filename` for fast case-insensitive attachment filename search. |
 | 0073 | `server_notify`: a member's server-wide notification default (see [Notification settings](#notification-settings)). Adds a table only. |
 
+#### Everyday features: status, reminders, polls, auto-delete
+
+- **Status that clears itself** (feature `status.expiry`). A member can give a
+  status line an end time, at most 366 days ahead; the status disappears then.
+  An empty status carries no expiry. Existing statuses keep no end time.
+- **Slow mode up to 24 hours.** `slow_mode_seconds` may now be 0 to 86400 (it was
+  6 hours at most); existing values stay.
+
+##### Reminders and scheduled messages
+
+- **Remind me** (feature `reminders`) points at a message without copying it.
+  What the member sees when it falls due depends on their access at that
+  moment; if the message is gone the reminder still arrives, as "a message you
+  can no longer see". A due reminder is announced in the app (event
+  `reminder_update`) and by Web Push when that is on, and stays until dismissed
+  (removed after 30 days at the latest). Routes: `GET` and `POST /api/me/reminders`,
+  `DELETE /api/me/reminders/{id}`. At most 100 per member.
+- **Send later** (feature `messages.scheduled`) lets a member write a message
+  for a channel or conversation and have the server send it as them at a chosen
+  time (10 seconds to 366 days ahead). Routes: `POST /api/channels/{id}/scheduled`,
+  `GET /api/me/scheduled`, `PATCH` and `DELETE /api/me/scheduled/{id}`; event
+  `scheduled_message_update`. At most 50 waiting or failed per member. Every check
+  (permissions, slow mode, timeout, blocks) runs at send time, not when the message
+  is scheduled. A message the server has to refuse is not lost: it becomes `failed`
+  and stays as a draft to edit, reschedule or delete.
+- Editing a scheduled message keeps its time unless the member changed it: the
+  web app sends a new time only when it differs (or when the message had
+  failed), and the server keeps the stored time and state when `send_at` is absent.
+  A failed message edited only in its text stays a draft.
+- Both belong to their owner only. Account erasure deletes them and the account
+  export includes them.
+
+##### Anonymous polls
+
+- **Anonymous polls keep no link between a member and a choice** (feature
+  `polls.anonymous`). The server stores only *that* a member voted and *how many*
+  votes each option has. A vote in an anonymous poll cannot be changed or
+  withdrawn, and a running anonymous poll pushes no tally at each vote: the
+  result is announced when it ends. This is hardening, not a guarantee against an
+  operator with direct database access (see [SECURITY.md](../SECURITY.md)).
+- **Existing anonymous polls are converted by migration 0063 and this cannot be
+  undone:** the tallies and who took part stay, who chose what is deleted, and
+  votes in them can no longer be changed. Keep the pre-update backup if you may
+  want the old rows.
+
+##### Auto-delete
+
+- **Auto-delete** (feature `channels.auto_delete`) removes messages older than 1, 7,
+  30 or 90 days from a text channel. It is off everywhere after the upgrade and
+  always an explicit choice of someone with *Manage channels*
+  (`PUT /api/admin/channels/{id}/auto-delete`, audited as `channel.auto_delete_set`;
+  the channel settings ask for a confirmation). Direct messages never take part.
+  Pinned messages stay, and so does a thread root that still has a younger or
+  pinned reply; the attachments of deleted messages are deleted with them. Each
+  run that removes something is audited (`channel.auto_delete_run`).
+
+#### Sessions and inactivity sign-out
+
+- **Where you are signed in** (migrations 0064 and 0065). Members see and end
+  their own browser sessions under *Settings* > *Sessions*, including the push devices of a session
+  (`GET /api/auth/sessions`, `DELETE /api/auth/sessions/{id}`,
+  `POST /api/auth/sessions/revoke-others`). Only a coarse device label is stored,
+  never the user agent or an IP address.
+- **Sessions that are not used for 7 days end.** The limit is
+  `session_inactivity_days` (1 to 365, default 7) in `PUT /api/admin/onboarding`, set
+  by the Owner and Administrators; `SESSION_EXPIRY_HOURS` still caps the total.
+  A session that exists at the upgrade gets its record on its first request
+  afterwards and its clock starts then, so nobody is signed out by the upgrade
+  itself; a member who then stays away for a week signs in again. See
+  [Operations](operations.md#sessions-and-inactivity-sign-out).
+- **View server as role.** In *Admin* > *Roles*, a read-only preview of what a
+  member holding only @everyone and a given role would see and may do
+  (`GET /api/admin/roles/{id}/view-as`, *Manage roles*). It changes nothing and has
+  no health key.
+
 #### Message search
 
 - **New search filters and ordering.** The message search API (`GET /api/search`)
@@ -166,6 +242,12 @@ of the pre-update backup (see "Rollback" above).
   `during:`, `author:`, and `filename:` filters, rendered as removable chips in
   the query line. A sort order toggle in the results header allows switching
   between Newest, Oldest, and Relevance.
+- **One filter row, quoted phrases, exclusions.** The search dialog shows a single
+  filter row. In `q`, a quoted phrase is one term and a leading minus excludes
+  messages containing a word or phrase (`"build failed" -nightly`); a lone `-`,
+  `a-b` and a quoted `-x` stay literal text. This is handled by the server
+  (`GET /api/search`, at most 8 terms), so any client gets it.
+- **Earlier filters.** `search.filters.v2` (1.1) is unchanged and still advertised; a client that only knows it keeps working.
 - **Feature flag.** Advertised as `search.filters.v3` in `GET /api/health`.
   A web client connected to an older server hides the new dropdown and sort toggle.
 
@@ -315,7 +397,7 @@ members always carry them.
   with no mention count in the list, unless the conversation has a setting of
   its own (which wins). Unread counts are unchanged. The existing
   *who may start a conversation* setting (`dm_policy`) is unchanged and now sits
-  in the same *Direct messages* section of the privacy settings.
+  in the same *Direct messages* section (*Settings* > *Privacy*).
 - A 1.1.x web app on a 1.2 server works as before; a 1.2 web app on an older
   server hides the new parts.
 
@@ -636,7 +718,7 @@ operator is below. Update with the procedure above; take the backup first.
 - **Desktop client is Beta.** The Windows desktop client stays Beta at 1.0.0;
   see [desktop-app.md](desktop-app.md).
 - **Optional e-mail, SMTP and password reset by mail.** Members may now add an
-  e-mail address in Account & security (never required, never shown to other
+  e-mail address in the account settings (*Sign-in*) (never required, never shown to other
   members or to the Owner). Setting `SMTP_HOST` (see
   [operations.md](operations.md#outgoing-e-mail)) lets the server confirm an
   address by a single-use link and lets members reset a forgotten password with
@@ -656,7 +738,7 @@ operator is below. Update with the procedure above; take the backup first.
   the accounts that use it (Admin > Members, or `mnema-talk reset-2fa <username>`
   for the Owner). See [operations.md](operations.md).
 - **Members can delete their account and export their data.** Both are in
-  Account & security; the Owner account cannot be deleted. A deleted account
+  the account settings (*Data & account*); the Owner account cannot be deleted. A deleted account
   leaves its messages in place without text, written by "Deleted member" (1.0.0
   stored "Deleted user" and keeps it for accounts deleted before 1.0.1; the web
   app ignores the stored text and names a deleted author in the member's
@@ -723,7 +805,7 @@ operator is below. Update with the procedure above; take the backup first.
   checked with `promtool` and against `/api/metrics` in CI. Metric names are
   part of the stability contract.
 - **Web Push (migration 0042).** Members can turn on push notifications per
-  device (Account menu > App & notifications) and get messages while the app
+  device (*Settings* > *Push & app*) and get messages while the app
   is closed; on iPhone and iPad only for the installed app. The migration
   creates `push_vapid` (the server's VAPID key, generated on first start: it
   is in your database backups, so restores keep working subscriptions),

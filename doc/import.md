@@ -57,6 +57,9 @@ An import never changes, renames, reorders or removes anything that exists:
   template or the roles on this server changed since the preview, the import is
   refused with a conflict and you preview again. What you confirmed is exactly
   what is created.
+- A template that contains two roles or channels with the same Discord id (real
+  templates do not; only a forged one) can attach overwrites to the wrong
+  imported object. Review the permissions of the imported channels after an import.
 
 ## What becomes what
 

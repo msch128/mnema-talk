@@ -57,7 +57,7 @@ make check             # everything CI runs: docs and English checks, lint, test
                        # npm audit, docker build
 make e2e               # Playwright (Chromium) against the real binary, see below
 make load-test         # voice/screen-share load test, see loadtest/README.md
-make upgrade-drill     # 0.8.16, 0.9.0 and 1.0.0 images -> this build with seeded data (FROM_VERSIONS=1.0.0 for one)
+make upgrade-drill     # 0.8.16, 0.9.0, 1.0.0 and 1.1.0 images -> this build with seeded data (FROM_VERSIONS=1.0.0 for one)
 make backup-drill      # backup -> change -> restore on a throwaway stack (FROM_VERSION=1.0.0: back up on that release, restore into this build, check the downgrade refusal)
 make postgres-upgrade-drill # the one-time PostgreSQL 17 -> 18 move
 ```
@@ -141,7 +141,7 @@ these jobs in parallel (rough wall times with warm caches):
 | `govulncheck` | Go vulnerability scan | 1–2 min |
 | `frontend` | eslint, strict TypeScript, contract drift, vitest with coverage, build, `npm audit` | 2–3 min |
 | `docker` | image build for linux/amd64 + linux/arm64, not pushed | 2–4 min |
-| `upgrade-drill (<version>)` | One leg per supported source release (0.8.16, 0.9.0, 1.0.0): install it, seed data through its API, upgrade to this build, back up and restore, check the old release refuses the migrated data | per leg, in parallel |
+| `upgrade-drill (<version>)` | One leg per supported source release (0.8.16, 0.9.0, 1.0.0, 1.1.0): install it, seed data through its API, upgrade to this build, back up and restore, check the old release refuses the migrated data | per leg, in parallel |
 | `e2e` | Playwright against the real binary: all specs on Chromium plus the phone projects | longest job |
 | `e2e (webkit)`, `e2e (firefox)`, `e2e (webkit-macos-calls)` | Other engines, see above; not required checks | in parallel |
 
@@ -174,6 +174,8 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 1.0.0 on, the public API listed in [api-stability.md](api-stability.md) only
 breaks in a major release: `make openapi-diff` fails a change that breaks
 `api/openapi.json` unless a commit carries a `BREAKING CHANGE:` footer.
+A breaking change already present at the start of the checked range (the base
+branch) was waived when it landed there and is not reported again.
 
 1. After CI passes on a push to `main`, release-please opens or updates a
    **release PR** that bumps `version.txt` and `CHANGELOG.md`. Only the CI run
