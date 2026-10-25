@@ -72,10 +72,27 @@ func newTalksWorld(t *testing.T) *talksWorld {
 	w.alice, w.bob = newTalksUser(t, p, "alice_t"), newTalksUser(t, p, "bob_t")
 	w.mgr = NewTalkManager(&TalkManager{
 		DB: p, Events: w.rec, Perms: perm.NewService(p), Audit: &audit.Log{DB: p},
-		Voice: voiceCloser{w}, EmptyGrace: 40 * time.Millisecond,
+		Voice: voiceCloser{w}, EmptyGrace: time.Hour, // shortGrace: tests about the grace
 	})
+	t.Cleanup(w.mgr.stopTimers)
 	return w
 }
+
+// stopTimers ends the countdowns of a test's manager, so none fires into the
+// next test's database.
+func (m *TalkManager) stopTimers() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, t := range m.talks {
+		if t.timer != nil {
+			t.timer.Stop()
+		}
+	}
+}
+
+// shortGrace lets an empty Talk go within moments. Every other test keeps the
+// hour: a Talk nobody joins must not vanish under it on a slow machine.
+func (w *talksWorld) shortGrace() { w.mgr.EmptyGrace = 40 * time.Millisecond }
 
 func (w *talksWorld) join(ch, user uuid.UUID)  { w.mgr.apply(presenceEvent{user, ch, true}) }
 func (w *talksWorld) leave(ch, user uuid.UUID) { w.mgr.apply(presenceEvent{user, ch, false}) }
@@ -250,6 +267,7 @@ func TestLeadershipPassesToTheLongestMemberAndIsBroadcast(t *testing.T) {
 
 func TestAnEmptyTalkIsRemovedAfterTheGraceAndAuditedAsTheSystem(t *testing.T) {
 	w := newTalksWorld(t)
+	w.shortGrace()
 	ctx := context.Background()
 	kept, _ := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
 	gone, _ := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
@@ -271,8 +289,14 @@ func TestAnEmptyTalkIsRemovedAfterTheGraceAndAuditedAsTheSystem(t *testing.T) {
 	}
 	var actor, name string
 	var actorID *uuid.UUID
-	if err := w.p.QueryRow(ctx, `SELECT actor_name, actor_id, target_name FROM audit_log WHERE action = 'channel.delete' AND target_id = $1`, gone.ID.String()).Scan(&actor, &actorID, &name); err != nil {
-		t.Fatalf("the removal is audited: %v", err)
+	var auditErr error
+	for auditDeadline := time.Now().Add(5 * time.Second); time.Now().Before(auditDeadline); time.Sleep(20 * time.Millisecond) {
+		if auditErr = w.p.QueryRow(ctx, `SELECT actor_name, actor_id, target_name FROM audit_log WHERE action = 'channel.delete' AND target_id = $1`, gone.ID.String()).Scan(&actor, &actorID, &name); auditErr == nil {
+			break
+		}
+	}
+	if auditErr != nil {
+		t.Fatalf("the removal is audited: %v", auditErr)
 	}
 	if actor != "system" || actorID != nil || name != "Talk 2" {
 		t.Fatalf("audit entry: %q %v %q", actor, actorID, name)
@@ -284,6 +308,7 @@ func TestAnEmptyTalkIsRemovedAfterTheGraceAndAuditedAsTheSystem(t *testing.T) {
 
 func TestATalkNobodyEntersIsRemovedAndRestartsLeaveNoTalksBehind(t *testing.T) {
 	w := newTalksWorld(t)
+	w.shortGrace()
 	ctx := context.Background()
 	unused, _ := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
 	deadline := time.Now().Add(5 * time.Second)
@@ -332,7 +357,6 @@ func talkRequest(u *auth.User, body string, params map[string]string) *http.Requ
 
 func TestOnlyTheLeaderEditsATemporaryTalk(t *testing.T) {
 	w := newTalksWorld(t)
-	w.mgr.EmptyGrace = time.Hour // nobody joins here: the Talk must not vanish while the test runs
 	ctx := context.Background()
 	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr}
 	talk, _ := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
@@ -687,7 +711,6 @@ func TestUsableLobbyWithoutAPermissionModelAcceptsEveryLobby(t *testing.T) {
 func TestTheLiveStateIgnoresWhatItDoesNotKnowAndRecoversFromEmptiness(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
-	w.mgr.EmptyGrace = time.Hour
 	w.join(uuid.New(), w.alice.ID) // a Talk nobody opened here
 	w.mgr.removeIfEmpty(uuid.New())
 
@@ -720,7 +743,6 @@ func TestTheManagerFollowsTheHubsEventsInOrder(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	w.mgr.EmptyGrace = time.Hour
 	talk, err := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -755,6 +777,7 @@ func TestDatabaseFailuresLeaveTheLiveStateIntactAndAreRetried(t *testing.T) {
 	// A channels table that can be read but neither updated nor locked.
 	broken := driftPool(t, w.p, map[string]string{"channels": `SELECT DISTINCT id, name, is_temp, leader_id, type, category_id, user_limit, slow_mode_seconds FROM public.channels`})
 	m := NewTalkManager(&TalkManager{DB: broken, Events: w.rec, EmptyGrace: time.Hour})
+	t.Cleanup(m.stopTimers)
 	m.talks[talk.ID] = &liveTalk{leader: &w.alice.ID}
 
 	m.persistLeader(talk.ID, &w.bob.ID) // the broadcast goes out although storing failed

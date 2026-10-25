@@ -220,6 +220,17 @@ let member: Page
 let layoutSaves = 0
 const pageErrors: string[] = []
 
+// A reload (every test starts with one) cancels the requests still on their
+// way; WebKit reports such a cancelled API request as a page error of its own,
+// "Fetch API cannot load <url> due to access control checks", although the app
+// handles the failed request. Only that signature, only for the app's own API,
+// is not an app error; every other uncaught error still fails the test.
+const CANCELLED_API_REQUEST = /^Fetch API cannot load https?:\/\/127\.0\.0\.1:\d+\/api\/\S+ due to access control checks\.$/
+
+function collectPageErrors(page: Page) {
+  page.on('pageerror', (err) => { if (!CANCELLED_API_REQUEST.test(err.message)) pageErrors.push(err.message) })
+}
+
 test.describe.configure({ mode: 'serial' })
 
 test.beforeAll(async ({ browser }) => {
@@ -231,7 +242,7 @@ test.beforeAll(async ({ browser }) => {
   member = await memberCtx.newPage()
   const adminVoice = firstVoiceSnapshot(admin)
   admin.on('request', (req) => { if (isLayoutSave(req)) layoutSaves++ })
-  for (const page of [admin, member]) page.on('pageerror', (err) => pageErrors.push(err.message))
+  for (const page of [admin, member]) collectPageErrors(page)
 
   await signIn(admin, ADMIN_USER, ADMIN_PASSWORD)
   for (const [key, name] of Object.entries(CATEGORIES)) {
@@ -540,7 +551,7 @@ test('touch: long press drags, a quick swipe scrolls', async ({ browser, browser
   // A small touch screen: the channel list is taller than its viewport.
   const ctx = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 900, height: 480 } })
   const page = await ctx.newPage()
-  page.on('pageerror', (err) => pageErrors.push(err.message))
+  collectPageErrors(page)
   let saves = 0
   page.on('request', (req) => { if (isLayoutSave(req)) saves++ })
   await signIn(page, ADMIN_USER, ADMIN_PASSWORD)
