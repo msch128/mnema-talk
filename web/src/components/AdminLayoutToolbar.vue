@@ -11,21 +11,21 @@ const newCategoryName = defineModel<string>('newCategoryName', { required: true 
 </script>
 
 <template>
-  <div class="flex flex-wrap items-center gap-2 ml-auto">
+  <div class="flex w-full min-w-0 flex-wrap items-center gap-2 md:ml-auto md:w-auto">
     <!-- Add Category form -->
-    <div class="flex items-center gap-1.5">
+    <div class="flex min-w-0 items-center gap-1.5 max-md:basis-full md:flex-none">
       <input
         v-model="newCategoryName"
         type="text"
         :placeholder="$t('admin.categoryNamePlaceholder')"
         :aria-label="$t('admin.categoryNameLabel')"
-        class="bg-mnema-surface border border-mnema-border-field rounded-md px-2.5 py-1 text-sm text-mnema-text placeholder-mnema-tertiary outline-hidden focus:border-mnema-accent transition w-44"
+        class="bg-mnema-surface border border-mnema-border-field rounded-md px-2.5 py-1 text-sm text-mnema-text placeholder-mnema-tertiary outline-hidden focus:border-mnema-accent transition min-w-0 flex-1 md:w-44 md:flex-none"
         @keydown.enter="emit('create')"
       />
       <button
         type="button"
         :disabled="!newCategoryName.trim()"
-        class="btn btn-secondary btn-sm flex items-center gap-1"
+        class="btn btn-secondary btn-sm flex shrink-0 items-center gap-1"
         @click="emit('create')"
       >
         <Plus class="w-4 h-4" />
@@ -39,7 +39,7 @@ const newCategoryName = defineModel<string>('newCategoryName', { required: true 
       type="button"
       :disabled="saving"
       :class="[
-        'flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-semibold transition shadow-xs',
+        'flex shrink-0 items-center justify-center gap-1.5 px-3 py-1 rounded-md text-sm font-semibold transition shadow-xs',
         changed
           ? 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover ring-2 ring-mnema-accent/40'
           : 'bg-mnema-elevated border border-mnema-border text-mnema-muted hover:text-mnema-text'

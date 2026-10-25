@@ -10,9 +10,9 @@ import { decodeRole } from '../types/domain'
 import type { Role } from '../types/domain'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
-import { PERMISSION_BITS, PERMISSION_GROUPS, ROLE_COLOR_PRESETS, parseRoleColor, roleColorCss } from '../lib/permissions'
+import { PERMISSION_BITS, ROLE_COLOR_PRESETS, parseRoleColor, roleColorCss } from '../lib/permissions'
 import { t } from '../i18n'
-import PermissionToggles from './PermissionToggles.vue'
+import RolePermissionPicker from './RolePermissionPicker.vue'
 import RoleViewAsDialog from './RoleViewAsDialog.vue'
 
 const permissions = usePermissionsStore()
@@ -62,8 +62,21 @@ function isDirty(role: Role) {
     || (!role.is_everyone && (name.value.trim() !== role.name || color.value !== role.color || hoist.value !== role.hoist))
 }
 
+// Unsaved edits to the open role: marked in the editor, asked about before they are dropped.
+const dirty = computed(() => !!selected.value && !readonly.value && isDirty(selected.value))
+
 function fail(e: unknown) {
   toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
+}
+
+// Switching roles with unsaved edits asks first.
+async function choose(id: string) {
+  if (id === selectedId.value) return
+  if (dirty.value) {
+    const ok = await confirm({ title: t('roles.unsavedTitle'), body: t('roles.unsavedBody'), confirmLabel: t('roles.discard'), cancelLabel: t('roles.keepEditing'), danger: true })
+    if (!ok) return
+  }
+  select(id)
 }
 
 function select(id: string | null) {
@@ -271,7 +284,7 @@ onMounted(async () => {
             @drop.prevent="onDrop(role.id)"
           >
             <GripVertical class="ml-1 h-4 w-4 shrink-0 cursor-grab text-mnema-tertiary" :aria-label="$t('roles.drag', { name: role.name })" role="img" />
-            <button type="button" class="flex min-w-0 flex-1 items-center gap-2 py-2 text-left text-sm" :aria-pressed="selectedId === role.id" @click="select(role.id)">
+            <button type="button" class="flex min-w-0 flex-1 items-center gap-2 py-2 text-left text-sm" :aria-pressed="selectedId === role.id" @click="choose(role.id)">
               <span class="h-3 w-3 shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>
               <span class="truncate text-mnema-text">{{ role.name }}</span>
               <Lock v-if="role.managed" class="h-3 w-3 shrink-0 text-mnema-tertiary" role="img" v-tooltip="$t('roles.managedHint')" data-testid="role-managed-icon" />
@@ -292,7 +305,7 @@ onMounted(async () => {
               data-bot-role
               :class="['flex items-center gap-1 border-t border-mnema-hairline', selectedId === role.id ? 'bg-mnema-accent-subtle' : '']"
             >
-              <button type="button" class="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm" :aria-pressed="selectedId === role.id" @click="select(role.id)">
+              <button type="button" class="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm" :aria-pressed="selectedId === role.id" @click="choose(role.id)">
                 <span class="h-3 w-3 shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>
                 <span class="truncate text-mnema-text">{{ role.name }}</span>
                 <Lock class="h-3 w-3 shrink-0 text-mnema-tertiary" role="img" v-tooltip="$t('roles.botRoleHint')" data-testid="role-managed-icon" />
@@ -300,7 +313,7 @@ onMounted(async () => {
             </li>
           </template>
           <li v-if="everyone" class="border-t border-mnema-hairline">
-            <button type="button" class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm" :class="selectedId === everyone.id ? 'bg-mnema-accent-subtle' : ''" :aria-pressed="selectedId === everyone.id" @click="select(everyone.id)">
+            <button type="button" class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm" :class="selectedId === everyone.id ? 'bg-mnema-accent-subtle' : ''" :aria-pressed="selectedId === everyone.id" @click="choose(everyone.id)">
               <AtSign class="h-3.5 w-3.5 shrink-0 text-mnema-tertiary" />
               <span class="truncate text-mnema-text">{{ $t('roles.everyone') }}</span>
             </button>
@@ -311,6 +324,13 @@ onMounted(async () => {
 
       <!-- Editor -->
       <div v-if="selected" class="min-w-0 space-y-4" :aria-label="$t('roles.selected')" role="group">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex min-w-0 flex-wrap items-baseline gap-x-3">
+            <h4 class="min-w-0 truncate text-base font-semibold text-mnema-text" data-testid="role-editor-title">{{ isEveryone ? $t('roles.everyone') : selected.name }}</h4>
+            <span v-if="dirty" class="text-xs text-mnema-amber" role="status" data-testid="role-dirty">{{ $t('roles.unsaved') }}</span>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm shrink-0" data-testid="role-view-as" @click="viewingAs = true"><Eye class="h-3.5 w-3.5" aria-hidden="true" />{{ $t('roles.viewAs.open', { name: isEveryone ? $t('roles.everyone') : selected.name }) }}</button>
+        </div>
         <p v-if="isEveryone" class="text-sm text-mnema-tertiary">{{ $t('roles.everyoneHint') }}</p>
         <p v-else-if="isManaged" class="flex items-start gap-2 rounded-md border border-mnema-hairline bg-mnema-surface px-3 py-2 text-sm text-mnema-tertiary" data-testid="role-managed-note">
           <Lock class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -359,24 +379,20 @@ onMounted(async () => {
           <span class="block text-xs text-mnema-tertiary">{{ $t('roles.uploadHint') }}</span>
         </label>
 
-        <div class="stack-2">
-          <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('roles.permissions') }}</span>
-          <section v-for="group in PERMISSION_GROUPS" :key="group.id" class="stack-1.5" :data-permission-group="group.id">
-            <h4 class="pt-1 text-xs font-medium text-mnema-muted">{{ $t(`perm.groups.${group.id}`) }}</h4>
-            <PermissionToggles v-model:allow="allow" :keys="group.keys" :locked="lockedBits" :readonly="readonly" />
-          </section>
-          <p v-if="lockedBits && !readonly" class="text-xs text-mnema-tertiary">{{ $t('roles.cannotGrant') }}</p>
-        </div>
+        <RolePermissionPicker :key="selected.id" v-model:allow="allow" :locked="lockedBits" :readonly="readonly" />
 
-        <button type="button" class="btn btn-secondary btn-sm" data-testid="role-view-as" @click="viewingAs = true"><Eye class="h-3.5 w-3.5" aria-hidden="true" />{{ $t('roles.viewAs.open', { name: isEveryone ? $t('roles.everyone') : selected.name }) }}</button>
         <RoleViewAsDialog v-if="viewingAs" :role-id="selected.id" :role-name="isEveryone ? $t('roles.everyone') : selected.name" @close="viewingAs = false" />
 
-        <div v-if="!readonly" class="flex items-center justify-between gap-3">
-          <button type="button" :disabled="!isDirty(selected) || busy" class="btn btn-primary" @click="save">{{ $t('roles.save') }}</button>
+        <div v-if="!readonly" class="sticky bottom-0 -mb-6 flex flex-wrap items-center justify-between gap-3 border-t border-mnema-hairline bg-mnema-elevated py-3 max-md:-mb-4" data-testid="role-actions">
           <button v-if="!isEveryone && !isManaged" type="button" class="flex items-center gap-1.5 text-sm text-mnema-tertiary transition hover:text-mnema-danger" @click="remove(selected)">
             <Trash2 class="h-4 w-4" />
-            <span>{{ $t('roles.delete') }}</span>
+            <span class="max-md:sr-only">{{ $t('roles.delete') }}</span>
           </button>
+          <span v-else></span>
+          <div class="flex flex-wrap items-center justify-end gap-3">
+            <button v-if="dirty" type="button" class="btn btn-ghost" data-testid="role-discard" @click="select(selected.id)">{{ $t('roles.discard') }}</button>
+            <button type="button" :disabled="!isDirty(selected) || busy" class="btn btn-primary" @click="save">{{ $t('roles.save') }}</button>
+          </div>
         </div>
       </div>
     </div>

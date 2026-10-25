@@ -7,6 +7,20 @@ export type TalkScreenCard = { key: 'own'; kind: 'own'; user: null; state: 'queu
 interface ScreenCardOptions { users?: TalkParticipant[]; myId?: string | null; stage?: VoiceStore['stage']; ownStream?: MediaStream | null; mediaState?: VoiceStore['mediaState']; watched?: Record<string, boolean>; streams?: Record<string, MediaStream> }
 import { useVoiceStore } from '../stores/voice'
 
+/**
+ * A stable order for the tiles: who joined first comes first, then by ID, so
+ * nobody jumps around while others turn a camera on or off. Members without a
+ * join time yet (just joined, not in the server's list) come last.
+ */
+export function orderParticipants<T extends { id: string; joined_at?: string | undefined }>(list: T[]): T[] {
+  const at = (u: T) => (u.joined_at ? Date.parse(u.joined_at) || Infinity : Infinity)
+  return [...list].sort((a, b) => {
+    const diff = at(a) - at(b)
+    if (diff !== 0 && !Number.isNaN(diff)) return diff
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+  })
+}
+
 function resolveScreenCardState(userId: string, watched: Record<string, boolean>, streams: Record<string, MediaStream>): 'idle' | 'pending' | 'queued' {
   if (!watched[userId]) return 'idle'
   return streams[userId] ? 'queued' : 'pending'
