@@ -1,0 +1,134 @@
+e2e/tests/dm-polish.spec.ts
+  s_06fcde5dbef956::t_ae755998a42623 1-166
+doc/upgrade.md
+  s_06fcde5dbef956::t_ae755998a42623 300-321
+web/src/components/ContextMenu.vue
+  s_06fcde5dbef956::t_ae755998a42623 151-153,156-157,300,304,311
+internal/db/migrations/0074_dm_polish.sql
+  s_06fcde5dbef956::t_ae755998a42623 1-17
+web/src/stores/chat/dmActions.ts
+  s_06fcde5dbef956::t_ae755998a42623 1-24
+doc/operations.md
+  s_06fcde5dbef956::t_ae755998a42623 562
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_ae755998a42623 59
+web/src/components/DmHeaderTitle.vue
+  s_06fcde5dbef956::t_ae755998a42623 1-48
+web/src/lib/dmList.test.ts
+  s_06fcde5dbef956::t_ae755998a42623 1-72
+web/src/components/AccountDmPolicy.vue
+  s_06fcde5dbef956::t_ae755998a42623 64
+  s_06fcde5dbef956::t_b7e3b4b0443217 45,47
+web/src/components/DmSidebarAndDialogs.test.ts
+  s_06fcde5dbef956::t_ae755998a42623 79-80,105,109,112-118
+web/src/components/SidebarDmSection.vue
+  s_06fcde5dbef956::t_ae755998a42623 3-9,13,17-19,21-24,33,37,39-44,46,51-55,57-58,60,62,66-75,78-79,83-85,87-89,95-139,174-201,204-220,222,232
+web/src/components/AccountPrivacy.vue
+  s_06fcde5dbef956::t_ae755998a42623 5
+  s_06fcde5dbef956::t_c29b8b7a09a6f1 13
+internal/chat/dm.go
+  s_06fcde5dbef956::t_ae755998a42623 89-115,125-127,130,132-139,145-146,155,162-191
+  s_06fcde5dbef956::t_8deca673b3112a 192
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_ae755998a42623 39
+web/src/components/SearchConversationJump.vue
+  s_06fcde5dbef956::t_ae755998a42623 1-47
+internal/push/dm_mute_all_integration_test.go
+  s_06fcde5dbef956::t_ae755998a42623 1-34
+web/src/dm.fixture.ts
+  s_06fcde5dbef956::t_ae755998a42623 13
+web/src/stores/chat/dms.ts
+  s_06fcde5dbef956::t_ae755998a42623 6,10,13,78,89-102,112,121,126-141,145,199-211,235-248
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_ae755998a42623 22,56-57,84
+web/src/components/DmListRow.vue
+  s_06fcde5dbef956::t_ae755998a42623 1-153
+web/src/components/SearchModal.vue
+  s_06fcde5dbef956::t_ae755998a42623 19,243
+web/src/components/DmPolish.test.ts
+  s_06fcde5dbef956::t_ae755998a42623 1-526
+web/src/composables/useDmListActions.ts
+  s_06fcde5dbef956::t_ae755998a42623 1-56
+internal/chat/notify.go
+  s_06fcde5dbef956::t_ae755998a42623 52-56
+web/src/stores/chat/dmPrefs.ts
+  s_06fcde5dbef956::t_ae755998a42623 1-77
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_ae755998a42623 1436-1452,1470-1482,1497,1499,1501,1514,1516,1518,2476-2496
+  s_06fcde5dbef956::t_463bd17b00a478 2497
+internal/chat/dm_prefs.go
+  s_06fcde5dbef956::t_ae755998a42623 1-129
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_ae755998a42623 28,32
+web/src/components/AccountDirectMessages.vue
+  s_06fcde5dbef956::t_b7e3b4b0443217 10,31-32,34-38,41-44
+  s_06fcde5dbef956::t_ae755998a42623 1-9,11-30,33,39-40,45
+api/openapi.json
+  s_06fcde5dbef956::t_ae755998a42623 2406-2430,2454-2470,2491-2497,2502-2505,2511-2514,2551,2553,4157-4183,25762-25850,25948-26058,32764-32912,34344
+web/src/components/DmMuteButton.vue
+  s_06fcde5dbef956::t_ae755998a42623 1-34
+internal/chat/dm_handler.go
+  s_06fcde5dbef956::t_ae755998a42623 19,192,267
+web/src/components/ChatHeader.vue
+  s_06fcde5dbef956::t_ae755998a42623 20-21,63-64,135-137,197
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_ae755998a42623 16-17,163,200,225
+web/src/stores/chat/reset.ts
+  s_06fcde5dbef956::t_ae755998a42623 45-46
+web/src/components/DmFindBox.vue
+  s_06fcde5dbef956::t_ae755998a42623 1-117
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_ae755998a42623 2782,2795-2824
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_ae755998a42623 2782,2795-2824
+internal/server/dm_polish_integration_test.go
+  s_06fcde5dbef956::t_ae755998a42623 1-234
+web/src/lib/dmList.ts
+  s_06fcde5dbef956::t_ae755998a42623 1-74
+web/src/types/events.ts
+  s_06fcde5dbef956::t_ae755998a42623 47,107-108,332-333,336,387
+internal/events/types.go
+  s_06fcde5dbef956::t_ae755998a42623 58
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_ae755998a42623 4,106-108
+internal/chat/dm_gate.go
+  s_06fcde5dbef956::t_ae755998a42623 111-121
+e2e/tests/dm.spec.ts
+  s_06fcde5dbef956::t_ae755998a42623 94,99,102-103,136,143,146,148,159-160,167-168,197,210,250,282,335,344
+web/src/components/DmAvatar.vue
+  s_06fcde5dbef956::t_ae755998a42623 1-45
+web/src/components/ContextMenu.test.ts
+  s_06fcde5dbef956::t_ae755998a42623 43-44,174,185-192
+  s_06fcde5dbef956::t_e35d0839129cb6 193-194
+doc/api-stability.md
+  s_06fcde5dbef956::t_ae755998a42623 30
+doc/architecture.md
+  s_06fcde5dbef956::t_ae755998a42623 119-120,125-136
+  s_06fcde5dbef956::t_7be352481cb910 137
+internal/chat/dm_prefs_handler.go
+  s_06fcde5dbef956::t_ae755998a42623 1-172
+internal/server/health.go
+  s_06fcde5dbef956::t_ae755998a42623 62
+internal/push/recipients.go
+  s_06fcde5dbef956::t_ae755998a42623 33-36,48,65,68,74,110
+README.md
+  s_06fcde5dbef956::t_ae755998a42623 166-188
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_ae755998a42623 49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5a6934f6f15ff03fae02082a9db6f4e9b812d6e8",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
