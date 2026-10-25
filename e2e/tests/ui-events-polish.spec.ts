@@ -44,6 +44,8 @@ for (const viewport of [{ width: 390, height: 844, label: '390' }, { width: 1440
         expect((await apiFetch(page, 'PUT', `/api/events/${responseString(created, 'id')}/rsvp`, { response: 'going' })).status).toBe(200)
       }
       await page.goto('/')
+      // Opening a channel closes the phone's drawer: let the first route settle before opening it.
+      await expect(page).toHaveURL(/\/c\//)
       if (viewport.width < 768) await page.getByTestId('open-nav').click()
       await page.getByRole('button', { name: 'Veranstaltungen' }).click()
       const cards = page.locator('article').filter({ hasText: tag })
