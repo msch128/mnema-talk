@@ -116,6 +116,18 @@ function ignoreClosedPort(error: unknown) {
   void error
 }
 
+function closeQuietly(port: KeyedPort) {
+  try { port.close() } catch (error) { ignoreClosedPort(error) }
+}
+
+function postOrWarn(port: KeyedPort, message: unknown) {
+  try {
+    port.postMessage(message)
+  } catch (error) {
+    console.warn('[media] Could not hand the key to a line:', error)
+  }
+}
+
 function isValidArmTarget(direction: 'send' | 'recv', channelId: string, senderId: string | null, source?: FrameSource): boolean {
   if (!channelId || senderId === '') return false
   if (direction === 'send') {
@@ -146,9 +158,19 @@ export function createMediaGuard(): MediaGuard {
     const currentWorker = sharedWorker()
     if (!currentWorker) return false
     const channel = new MessageChannel()
-    target.transform = new RTCRtpScriptTransform(currentWorker, transformOptions(channel.port2, direction, channelId, senderId, source, layer), [channel.port2])
-    if (current) channel.port1.postMessage(current)
+    try {
+      target.transform = new RTCRtpScriptTransform(currentWorker, transformOptions(channel.port2, direction, channelId, senderId, source, layer), [channel.port2])
+    } catch (error) {
+      // The line stays unprotected, which every caller already refuses; the
+      // rest of the negotiation (and the other lines) must not be lost to it.
+      console.warn('[media] Could not arm a line:', error)
+      closeQuietly(channel.port1)
+      return false
+    }
     ports.push(channel.port1)
+    // A browser that cannot clone the key message (it holds CryptoKeys) leaves
+    // the line without a key: it opens and seals nothing until setKey reaches it.
+    if (current) postOrWarn(channel.port1, current)
     if (direction === 'recv') armed.set(target as RTCRtpReceiver, channel.port1)
     return true
   }
@@ -173,7 +195,7 @@ export function createMediaGuard(): MediaGuard {
       seq += 1
       const message = keyMessage({ epoch, key, seq, replace, soft })
       current = message
-      for (const port of ports) port.postMessage(message)
+      for (const port of ports) postOrWarn(port, message)
     },
     staleKeys() {
       for (const port of ports) port.postMessage({ type: 'stale' })
