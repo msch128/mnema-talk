@@ -1,0 +1,21 @@
+web/src/components/DesktopGamingOverlay.test.ts
+  s_06fcde5dbef956::t_0cc2ac4358f515 62-63,65,68,73-74,77,79
+web/src/components/DesktopGamingOverlay.vue
+  s_06fcde5dbef956::t_9248cc04cf64d0 95-96,98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "70990e52cc313f4ab4878bac389b5fc383e2f0aa",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
