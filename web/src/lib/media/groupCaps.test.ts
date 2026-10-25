@@ -42,7 +42,7 @@ async function deliver(groups: Map<string, MediaGroup>, from: string, wires: Uin
 }
 
 async function room(ids: string[]) {
-  vi.useFakeTimers({ toFake: ['Date'], now: START })
+  vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: START })
   const groups = new Map<string, MediaGroup>()
   for (const id of ids) groups.set(id, await open(id))
   await (groups.get(ids[0] as string) as MediaGroup).sync([ids[0] as string])

@@ -139,7 +139,7 @@ describe('what a flood or a forgery can reset', () => {
 
   it('resets at most once per window and then waits longer', async () => {
     const { alice, bob, roster, carol, dave } = await ahead()
-    vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: Date.now() })
     const resets: number[] = []
     for (let second = 0; second < 100; second++) {
       if ((await bob.recover(roster)).wires.length) resets.push(second)
@@ -155,7 +155,7 @@ describe('what a flood or a forgery can reset', () => {
     const { alice, bob } = await joinedPair()
     const notices: string[] = []
     bob.onNotice(notice => notices.push(notice))
-    vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: Date.now() })
     const roster = [aliceId, bobId]
     const removal = async () => {
       const removed = await alice.sync([aliceId])

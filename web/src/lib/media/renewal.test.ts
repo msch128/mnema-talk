@@ -46,7 +46,9 @@ async function deliver(groups: Map<string, MediaGroup>, from: string, wires: Uin
 
 async function trio() {
   vi.spyOn(Math, 'random').mockReturnValue(0)
-  vi.useFakeTimers({ toFake: ['Date'], now: START })
+  // The groups tick on a real setTimeout. On a slow machine a tick would run between two steps of a test, against the
+  // faked wall clock, and rotate an epoch the test is still working with: so no timer fires unless the test says so.
+  vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: START })
   const groups = new Map<string, MediaGroup>()
   for (const id of roster) groups.set(id, await open(id))
   await (groups.get(aliceId) as MediaGroup).sync([aliceId])

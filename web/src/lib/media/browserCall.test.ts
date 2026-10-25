@@ -320,7 +320,7 @@ describe('browser media call', () => {
       bob.roster(roster)
       await mediaSettled(bob)
       expect(wires).toHaveLength(1)
-      vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+      vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: Date.now() })
       return { guard, bob, wires }
     }
 
@@ -428,7 +428,7 @@ describe('browser media call', () => {
       alice.roster([aliceId])
       await mediaSettled(alice)
       expect(guard.keys.map(item => item.epoch)).toEqual([0])
-      vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+      vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: Date.now() })
       const recover = vi.spyOn(MediaGroup.prototype, 'recover')
       for (let second = 0; second < 8; second++) {
         guard.stats({ [bobId]: newer(0), [carolId]: newer(0) })
@@ -556,7 +556,7 @@ describe('browser media call', () => {
       call.roster([lowIdFor, bobId])
       await mediaSettled(call)
       const recover = vi.spyOn(MediaGroup.prototype, 'recover')
-      vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+      vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: Date.now() })
       for (let second = 0; second < 6; second++) {
         guard.stats({ [lowIdFor]: { opened: 0, newer: 3, epoch: 5, legacy: 0 } })
         vi.setSystemTime(Date.now() + 1000)
@@ -579,7 +579,7 @@ describe('browser media call', () => {
       const slow = held<{ wires: Uint8Array[], epoch: number | null, key: EpochKeys | null }>()
       const started = vi.fn()
       vi.spyOn(MediaGroup.prototype, 'recover').mockImplementationOnce(() => { started(); return slow.promise })
-      vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+      vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: Date.now() })
       for (let second = 0; second < 7; second++) {
         guard.stats({ [lowIdFor]: { opened: 0, newer: 3, epoch: 5, legacy: 0 } })
         vi.setSystemTime(Date.now() + 1000)
