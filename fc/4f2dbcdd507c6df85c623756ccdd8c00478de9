@@ -1,0 +1,21 @@
+web/src/components/ScheduledItem.vue
+  s_06fcde5dbef956::t_97a9bcee0ed355 25-28,40,48-50
+web/src/components/ScheduledItem.test.ts
+  s_06fcde5dbef956::t_75b725c274dfc5 54-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fc4f2dbcdd507c6df85c623756ccdd8c00478de9",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
