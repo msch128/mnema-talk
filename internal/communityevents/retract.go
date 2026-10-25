@@ -15,25 +15,28 @@ type talkEvent struct{ id, channel uuid.UUID }
 
 // PermissionsChanged (perm.Notifier) tells members who can no longer view the
 // Talk of an event to drop it. nil userIDs means everybody. It runs in the
-// background: the permission change must not wait for it.
+// background: the permission change must not wait for it. The snapshot from
+// before the change is taken here, while the notifier call still follows the
+// change directly: read later, a second change would already be in it.
 func (h *Handler) PermissionsChanged(userIDs []uuid.UUID) {
 	if h.Events == nil || h.Perms == nil {
 		return
 	}
+	prev := h.Perms.Previous()
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		if err := h.RetractHidden(ctx, userIDs); err != nil {
+		if err := h.RetractHidden(ctx, prev, userIDs); err != nil {
 			slog.ErrorContext(ctx, "retract hidden events failed", "err", err)
 		}
 	}()
 }
 
 // RetractHidden sends event_delete, per event, to the members among userIDs
-// (all members when nil) who could view its Talk before the change and cannot
-// now. Members who never saw the event learn nothing. Only events the client
+// (all members when nil) who could view its Talk in prev (the snapshot from
+// before the change) and cannot now. Members who never saw the event learn nothing. Only events the client
 // can still list (not ended more than a day ago) are covered.
-func (h *Handler) RetractHidden(ctx context.Context, userIDs []uuid.UUID) error {
+func (h *Handler) RetractHidden(ctx context.Context, prev *perm.Snapshot, userIDs []uuid.UUID) error {
 	rows, err := h.DB.Query(ctx, `
 		SELECT id, channel_id FROM events
 		WHERE channel_id IS NOT NULL AND COALESCE(end_time, start_time) >= $1`, time.Now().Add(-listLookBehind))
@@ -53,7 +56,6 @@ func (h *Handler) RetractHidden(ctx context.Context, userIDs []uuid.UUID) error 
 	if err := rows.Err(); err != nil || len(list) == 0 {
 		return err
 	}
-	prev := h.Perms.Previous()
 	if prev == nil {
 		return nil // nothing is known about who saw what before
 	}

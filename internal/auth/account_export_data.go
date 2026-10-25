@@ -27,6 +27,7 @@ type exportedMessage struct {
 	// DirectMessage marks a message of a conversation; its channel_id is the
 	// conversation's id and channel_name is empty.
 	DirectMessage bool      `json:"direct_message" db:"direct_message"`
+	Title         *string   `json:"title,omitempty" db:"title"`
 	Content       string    `json:"content" db:"content"`
 	Edited        bool      `json:"edited" db:"is_edited"`
 	Pinned        bool      `json:"pinned" db:"is_pinned"`
@@ -60,7 +61,7 @@ func (ms *messageStream) add(m exportedMessage) (bool, error) {
 }
 
 const messagePageSQL = `SELECT m.id, m.channel_id, c.name AS channel_name, m.parent_id, m.reply_to_id, m.in_dm AS direct_message,
-	m.content, m.is_edited, m.is_pinned, m.created_at, m.updated_at
+	m.title, m.content, m.is_edited, m.is_pinned, m.created_at, m.updated_at
 	FROM messages m JOIN channels c ON c.id = m.channel_id
 	WHERE m.user_id = $1 AND (m.created_at, m.id) > ($2, $3) ORDER BY m.created_at, m.id LIMIT $4`
 

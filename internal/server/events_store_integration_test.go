@@ -103,7 +103,7 @@ func TestEventStoreFailsWhenTheDatabaseCallIsCancelled(t *testing.T) {
 		}
 	}
 	a.router.EventsScheduler.Tick(ctx, time.Now()) // logs, must not panic
-	if err := a.router.Events.RetractHidden(ctx, nil); err == nil {
+	if err := a.router.Events.RetractHidden(ctx, nil, nil); err == nil {
 		t.Error("retracting with a cancelled context must fail")
 	}
 }
@@ -256,7 +256,7 @@ func TestEventRetractHiddenForNamedMembers(t *testing.T) {
 	if _, err := h.Perms.Snapshot(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if err := h.RetractHidden(context.Background(), []uuid.UUID{outsider.user.ID}); err != nil {
+	if err := h.RetractHidden(context.Background(), h.Perms.Previous(), []uuid.UUID{outsider.user.ID}); err != nil {
 		t.Fatal(err)
 	}
 	if !deletedFor(a, outsider.user.ID, ev.ID) {
@@ -270,12 +270,12 @@ func TestEventRetractionIsANoOpWithoutHistory(t *testing.T) {
 	ctx := context.Background()
 	bare := &communityevents.Handler{DB: a.db, Store: a.router.Events.Store}
 
-	if err := bare.RetractHidden(ctx, nil); err != nil {
+	if err := bare.RetractHidden(ctx, nil, nil); err != nil {
 		t.Fatalf("no events: %v", err)
 	}
 	talk := a.createChannel(admin, "open-talk", "voice")
 	a.coverEvent(admin, &talk)
-	if err := bare.RetractHidden(ctx, nil); err != nil {
+	if err := bare.RetractHidden(ctx, nil, nil); err != nil {
 		t.Fatalf("no earlier permission state: %v", err)
 	}
 	bare.PermissionsChanged(nil) // nothing to publish with, must return at once
@@ -296,7 +296,7 @@ func TestEventRetractionFailureIsLoggedNotFatal(t *testing.T) {
 	broken := &db.Pool{Pool: pool}
 	h := &communityevents.Handler{DB: broken, Store: communityevents.NewStore(broken), Events: a.events, Perms: a.router.Events.Perms}
 
-	if err := h.RetractHidden(context.Background(), nil); err == nil {
+	if err := h.RetractHidden(context.Background(), nil, nil); err == nil {
 		t.Fatal("a closed database must be reported")
 	}
 	h.PermissionsChanged(nil) // runs in the background and only logs

@@ -215,3 +215,27 @@ func TestListedDomainsAreStoredInPunycode(t *testing.T) {
 		t.Fatalf("domains: %v", got.Config.Domains)
 	}
 }
+
+func TestUnicodeSpacesDoNotEndALinkLate(t *testing.T) {
+	r := linksRule(LinksBlockList, "evil.com")
+	for _, sep := range []string{" ", " ", " ", " ", "　", " "} {
+		if !r.matchesLinks("visit https://evil.com" + sep + "now") {
+			t.Errorf("separator %U let a blocked link through", []rune(sep)[0])
+		}
+	}
+}
+
+func TestInvisibleAndCompatibilityFormsDoNotHideWords(t *testing.T) {
+	r := wordsRule(t, "badword")
+	for _, content := range []string{
+		"bad͏word", // combining grapheme joiner
+		"bad⁢word", // invisible times
+		"bad‎word", // left-to-right mark
+		"ｂａｄｗｏｒｄ",  // fullwidth letters
+		"bad́word", // stray combining accent
+	} {
+		if !r.matchesWords(content) {
+			t.Errorf("%q was not matched", content)
+		}
+	}
+}
