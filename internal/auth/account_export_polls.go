@@ -9,8 +9,8 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
-// exportPollVotes lists the person's own poll votes. Anonymous polls are not
-// in it: they never stored what the person chose.
+// exportPollVotes lists the person's own poll votes. For anonymous polls it
+// lists only that the person took part: what they chose was never stored.
 func exportPollVotes(ctx context.Context, q db.Querier, user uuid.UUID) ([]any, error) {
 	type vote struct {
 		MessageID uuid.UUID `json:"message_id" db:"message_id"`
@@ -27,6 +27,18 @@ func exportPollVotes(ctx context.Context, q db.Querier, user uuid.UUID) ([]any, 
 	out := make([]any, len(vs))
 	for i, v := range vs {
 		out[i] = v
+	}
+	type participation struct {
+		MessageID uuid.UUID `json:"message_id" db:"message_id"`
+		Anonymous bool      `json:"anonymous" db:"anonymous"`
+	}
+	ps, err := collect(ctx, q, pgx.RowToStructByName[participation], `SELECT poll_id AS message_id, TRUE AS anonymous
+		FROM poll_voters WHERE user_id = $1 LIMIT $2`, user, exportMaxRows)
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range ps {
+		out = append(out, p)
 	}
 	return out, nil
 }

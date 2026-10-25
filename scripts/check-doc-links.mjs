@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Checks relative links in README.md, SECURITY.md and doc/*.md: the target
+// Checks relative links in README.md, SECURITY.md, doc/*.md and doc/security/*.md: the target
 // file must exist and a #fragment must match a heading of the target (GitHub's
 // slug rules). No network access; http(s) and mailto links are ignored.
 // Usage: node scripts/check-doc-links.mjs
@@ -14,6 +14,9 @@ const files = [
   ...readdirSync(join(root, 'doc'))
     .filter((f) => f.endsWith('.md'))
     .map((f) => `doc/${f}`),
+  ...readdirSync(join(root, 'doc', 'security'))
+    .filter((f) => f.endsWith('.md'))
+    .map((f) => `doc/security/${f}`),
 ]
 
 function withoutFences(text) {

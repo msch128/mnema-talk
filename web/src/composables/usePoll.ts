@@ -72,6 +72,8 @@ export function usePoll(message: () => Message) {
     }
   }
   watch(() => message().id, loadMine, { immediate: true })
+  // An anonymous poll pushes no running tally; when it ends, fetch the result.
+  watch(ended, done => { if (done && poll.value.anonymous) void loadMine() })
 
   async function run(action: () => Promise<{ has_voted?: boolean }>) {
     if (busy.value) return

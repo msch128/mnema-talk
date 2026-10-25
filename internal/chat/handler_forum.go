@@ -2,6 +2,7 @@ package chat
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -124,6 +125,9 @@ func (h *Handler) createForumTag(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
+	if err := h.screenTag(r, chID, req.Name, req.Emoji); err != nil {
+		return err
+	}
 	tag, err := CreateForumTag(r.Context(), h.DB, chID, req.Name, req.Emoji)
 	if err != nil {
 		return err
@@ -168,6 +172,9 @@ func (h *Handler) updateForumTag(w http.ResponseWriter, r *http.Request) error {
 	}
 	var req UpdateForumTagRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return err
+	}
+	if err := h.screenTag(r, chID, deref(req.Name), deref(req.Emoji)); err != nil {
 		return err
 	}
 	tag, err := UpdateForumTag(r.Context(), h.DB, chID, tagID, req.Name, req.Emoji)
@@ -359,11 +366,26 @@ func (h *Handler) updateForumPost(w http.ResponseWriter, r *http.Request) error 
 	} else if user.Role == "admin" {
 		canManage = true
 	}
-	msg, err := UpdateForumPost(r.Context(), h.DB, chID, msgID, user.ID, canManage, req.Title, req.TagIDs, req.IsLocked)
+	ctx := r.Context()
+	if !canManage && (req.Title != nil || req.TagIDs != nil) {
+		// An author who may no longer write here (timeout, lost Send messages)
+		// does not get to rename or retag the post either.
+		if ctx, err = h.sendContext(r, chID, perm.SendMessages); err != nil {
+			return err
+		}
+	}
+	msg, err := UpdateForumPost(ctx, h.DB, chID, msgID, user.ID, canManage, req.Title, req.TagIDs, req.IsLocked)
 	if err != nil {
 		return err
 	}
 	h.Events.BroadcastChannel(chID, events.MessageUpdate, msg)
 	httpx.WriteJSON(w, http.StatusOK, msg)
 	return nil
+}
+
+// screenTag applies the automod rules to a tag's name and emoji; a tag is text
+// every member of the forum reads.
+func (h *Handler) screenTag(r *http.Request, chID uuid.UUID, texts ...string) error {
+	_, err := screenText(r.Context(), h.DB, chID, auth.UserFrom(r.Context()).ID, uuid.Nil, strings.Join(texts, "\n"))
+	return err
 }
