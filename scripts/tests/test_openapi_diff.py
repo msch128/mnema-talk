@@ -76,3 +76,19 @@ class WaiverTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RangeBaseTest(unittest.TestCase):
+    def test_changes_already_on_the_base_are_not_new(self):
+        old = {"id": "response-property-became-optional", "operation": "GET", "path": "/a", "text": "x"}
+        fresh = {"id": "api-path-removed-without-deprecation", "operation": "GET", "path": "/b", "text": "y"}
+        self.assertEqual(openapi_diff.new_changes([old, fresh], [old]), [fresh])
+        self.assertEqual(openapi_diff.new_changes([old], [old]), [])
+
+    def test_unknown_base_means_every_change_is_new(self):
+        change = {"id": "api-path-removed-without-deprecation", "operation": "GET", "path": "/b", "text": "y"}
+        self.assertEqual(openapi_diff.new_changes([change], []), [change])
+
+    def test_range_without_a_start_has_no_base_changes(self):
+        self.assertEqual(openapi_diff.breaking_at_range_base("{}", "..HEAD"), [])
+
