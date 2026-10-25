@@ -1,0 +1,28 @@
+web/src/composables/appRoutingApply.ts
+  s_06fcde5dbef956::t_d5cc07c554ebbb 248-255,259-261,264,269
+web/src/composables/useAppRouting.ts
+  s_06fcde5dbef956::t_d5cc07c554ebbb 131
+web/src/composables/appRoutingApply.test.ts
+  s_06fcde5dbef956::t_6c3bfb4acc12d6 17,62,64,80
+web/src/App.vue
+  s_06fcde5dbef956::t_9dd01bc561f813 150
+  s_06fcde5dbef956::t_d5cc07c554ebbb 152-153
+e2e/tests/speaking-urls.spec.ts
+  s_06fcde5dbef956::t_bd39e643c0ca2f 58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b5dcc3337576fa11971c2da7d2cf808835eccdbb",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
