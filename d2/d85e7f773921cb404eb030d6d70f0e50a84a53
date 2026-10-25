@@ -1,0 +1,38 @@
+doc/product-status.md
+  s_06fcde5dbef956::t_5ef4616f536182 108,135
+Makefile
+  s_06fcde5dbef956::t_a2d9f476babbae 6
+  s_06fcde5dbef956::t_f5d2fef68738ef 110-117
+.github/workflows/ci-macos-calls.yml
+  s_06fcde5dbef956::t_f5d2fef68738ef 12-13
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_1f0df028209e2c 134-135,143-144,154-155,162-163,168-169,172-173,178-179,184-185,190-191,194-195,198-199,223-224,375-376,384-385,395-396,412-413,419-422,425-428,430-431,433-434,437-438,458-459,464-465,482-483,487-488,506-507,509-510,540-541,554-555,561-562,567-568,574-575,578-579,592-593,625-626,628-629,640-641,649-650,679-680,688-689,699-700,710-711,715-716,727-728,734-735,739-740,856-857,865-866,876-877,887-888,892-893,904-905,911-912,916-917
+  s_06fcde5dbef956::t_c8193546d14e05 466,470-481
+  s_06fcde5dbef956::t_034bb5c7f3a0e4 825,831-837,847-848,921
+  s_06fcde5dbef956::t_0eae02f056b6c3 495-497,524-537,611,659-664,666,670-673,744-745,748-757,762,769-818
+  s_06fcde5dbef956::t_4f1ba000bd1f30 101-105,108,231-334,336-363
+  s_06fcde5dbef956::t_56bc2a525d8785 64-100,106,367,401,498,613,665,667,824
+  s_06fcde5dbef956::t_2ed29a2bc57aef 335
+  s_06fcde5dbef956::t_f3f1c226262a9d 364,819
+doc/development.md
+  s_06fcde5dbef956::t_2ed29a2bc57aef 146
+  s_06fcde5dbef956::t_5ef4616f536182 140,143,145,147-150
+e2e/playwright.config.ts
+  s_06fcde5dbef956::t_f5d2fef68738ef 35-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d2d85e7f773921cb404eb030d6d70f0e50a84a53",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
