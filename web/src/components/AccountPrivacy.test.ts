@@ -5,7 +5,7 @@ import AccountPrivacy from './AccountPrivacy.vue'
 import { setLocale } from '../i18n'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 
-const stubs = { AccountDmPolicy: true, AccountBlockedList: true }
+const stubs = { AccountDirectMessages: true, AccountBlockedList: true }
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -16,7 +16,7 @@ describe('privacy section', () => {
   it('shows the direct-message policy and the blocked list where the server has them', () => {
     useServerFeaturesStore().list = ['dm', 'blocks']
     const w = mount(AccountPrivacy, { global: { stubs } })
-    expect(w.findComponent({ name: 'AccountDmPolicy' }).exists()).toBe(true)
+    expect(w.findComponent({ name: 'AccountDirectMessages' }).exists()).toBe(true)
     expect(w.findComponent({ name: 'AccountBlockedList' }).exists()).toBe(true)
     expect(w.find('[data-testid="privacy-empty"]').exists()).toBe(false)
   })
@@ -24,7 +24,7 @@ describe('privacy section', () => {
   it('shows only what exists', () => {
     useServerFeaturesStore().list = ['blocks']
     const w = mount(AccountPrivacy, { global: { stubs } })
-    expect(w.findComponent({ name: 'AccountDmPolicy' }).exists()).toBe(false)
+    expect(w.findComponent({ name: 'AccountDirectMessages' }).exists()).toBe(false)
     expect(w.findComponent({ name: 'AccountBlockedList' }).exists()).toBe(true)
   })
 
