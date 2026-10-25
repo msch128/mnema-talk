@@ -105,7 +105,7 @@ devices; run `make e2e` or see [development](development.md#browser-tests-e2e)):
 | Microphone and camera, sealed on every line, with key rotation, late join and reload | Supported | Passes on macOS WebKit; in CI only in `e2e (webkit-macos-calls)` (Playwright's Linux WebKit has no `RTCRtpScriptTransform`, so the app refuses the join there, see below) | Supported |
 | Screen share with viewer-chosen layers (simulcast) | Supported | Passes on macOS WebKit; in CI only in `e2e (webkit-macos-calls)` | Supported (VP8) |
 | Screen share frames advance for the viewer | Supported | Passes on macOS WebKit; in CI only in `e2e (webkit-macos-calls)` | Supported |
-| Required CI check | Yes | No (`e2e (webkit)`: every spec that does not join a call, plus the refusal spec) | No (`e2e (firefox)`, smoke and sealed-call subset) |
+| Required CI check | Yes | No (`e2e (webkit 1/2)` and `e2e (webkit 2/2)`: every spec that does not join a call, plus the refusal spec) | No (`e2e (firefox)`, smoke and sealed-call subset) |
 | Not covered by the suite | | Real Safari and iOS hardware; calls on Linux WebKit (no frame transform in that build, they pass on macOS WebKit) | Real screen capture |
 
 A real-device call (real camera and microphone, real Google Chrome on macOS,
@@ -132,7 +132,7 @@ What it took:
   first spec of that file skips itself only on Linux WebKit and only while
   `RTCRtpScriptTransform` is missing, so a build that gains it runs the call
   again. Every spec that joins a call (calls, screen share, Talk chat, roles
-  rights) stays out of `e2e (webkit)` and runs in `e2e (webkit-macos-calls)` on a macOS runner, a separate job that is not a required check.
+  rights) stays out of `e2e (webkit 1/2)` and `e2e (webkit 2/2)` and runs in `e2e (webkit-macos-calls)` on a macOS runner, a separate job that is not a required check.
 - **WebKit 27.2, `<select>` and the style policy.** Playwright 1.64's WebKit
   (27.2) reports one `style-src-attr` violation for every `<select>` a page
   builds (empty sample, the script that created the select as source; the
