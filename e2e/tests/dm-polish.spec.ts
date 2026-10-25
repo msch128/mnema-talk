@@ -137,7 +137,8 @@ test('muting all direct messages keeps the unread count but drops sound and high
 
     // The switch in the settings is the member's own and reaches the list at once.
     await member.getByTestId('account-menu-button').click()
-    await member.getByTestId('menu-account-security').click()
+    await member.getByTestId('menu-settings').click()
+    await member.getByTestId('settings-tab-privacy').click()
     await member.getByTestId('dm-mute-all').click()
     await expect(member.getByTestId('dm-mute-all')).toHaveAttribute('aria-checked', 'true')
     await member.keyboard.press('Escape')
