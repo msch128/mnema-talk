@@ -25,6 +25,9 @@ jobs:
   # RTCRtpScriptTransform, so they cannot run in `e2e (webkit)`; macOS WebKit
   # (the engine of Safari) has it. macOS runners have no Docker, so PostgreSQL
   # and SeaweedFS run as local processes (E2E_NO_DOCKER). Not a required check.
+  # The hosted runner has two cores and no GPU: the specs that encode a 720p/1080p
+  # screen in three simulcast layers or poll a 1080p sender's stats (screen-layers,
+  # "stream quality") wedge it, so they run on Chromium and Linux WebKit only.
   e2e-webkit-macos:
     name: e2e (webkit-macos-calls)
     runs-on: macos-latest
@@ -67,8 +70,25 @@ jobs:
           E2E_NO_DOCKER: "1"
           E2E_INSTALL_BROWSER: "1"
           E2E_BROWSERS: webkit
-          E2E_ONLY: "--project=webkit browser-sealing.spec.ts key-lifecycle.spec.ts late-join.spec.ts screenshare.spec.ts screen-layers.spec.ts stage-switch.spec.ts talk-extras.spec.ts voice-chat.spec.ts smoke.spec.ts roles.spec.ts"
-        run: e2e/run.sh
+          E2E_ONLY: "--project=webkit --grep-invert=picks.the.stream.quality browser-sealing.spec.ts key-lifecycle.spec.ts late-join.spec.ts screenshare.spec.ts stage-switch.spec.ts talk-extras.spec.ts voice-chat.spec.ts smoke.spec.ts roles.spec.ts"
+        # A wedged runner never reports a step timeout, so the run is killed from
+        # inside after 20 minutes, with what macOS says about capture access.
+        run: |
+          set -m
+          e2e/run.sh &
+          run_pid=$!
+          (
+            sleep 1200
+            echo "::error::watchdog: the call specs did not finish in 20 minutes"
+            ps -axo pid,pcpu,pmem,etime,command | sort -k2 -nr | head -15
+            log show --last 5m --predicate 'subsystem == "com.apple.TCC"' 2>&1 | tail -40
+            kill -TERM -- "-$run_pid"; sleep 10; kill -KILL -- "-$run_pid"
+          ) &
+          watchdog_pid=$!
+          status=0
+          wait "$run_pid" || status=$?
+          kill "$watchdog_pid" 2>/dev/null || true
+          exit "$status"
 
       - name: Upload Playwright traces and screenshots
         if: failure()
