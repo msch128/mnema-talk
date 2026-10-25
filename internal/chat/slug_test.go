@@ -8,8 +8,8 @@ import (
 func TestSlugify(t *testing.T) {
 	uuidName := "123e4567-e89b-12d3-a456-426614174000"
 	for name, want := range map[string]string{
-		"General":                         "general",
-		"Größe & Ärger über Öl":           "groesse-aerger-ueber-oel",
+		"General": "general",
+		"Gr\u00f6\u00dfe & \u00c4rger \u00fcber \u00d6l": "groesse-aerger-ueber-oel",
 		"Café Crème":                      "cafe-creme",
 		"Łódź Ørsted":                     "lodz-orsted",
 		"  Game --- Night 🎮 ":             "game-night",

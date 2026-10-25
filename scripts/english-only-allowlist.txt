@@ -62,3 +62,10 @@ path: internal/server/account_email_edges_integration_test.go | asserts the Germ
 path: scripts/check-english-only.mjs | lists the German words and characters it detects
 path: scripts/english-only-allowlist.txt | quotes the names it allows
 path: scripts/check-english-only.test.mjs | feeds the guard German samples
+
+# Speaking URLs: the slug rules spell out German umlauts and the tests feed them.
+path: internal/chat/slug.go | the transliteration table of channel slugs
+path: internal/db/migrations/0075_channel_slugs.sql | the same transliteration, in SQL
+path: web/src/lib/routePaths.ts | the same transliteration, for forum post addresses
+path: web/src/lib/routePaths.test.ts | feeds the transliteration German and accented samples
+path: web/src/composables/appRoutingApply.test.ts | a German forum post title in the address

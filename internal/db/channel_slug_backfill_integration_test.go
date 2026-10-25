@@ -42,7 +42,7 @@ func TestChannelSlugBackfill(t *testing.T) {
 		t.Fatal(err)
 	}
 	long := strings.Repeat("x", 64)
-	names := []string{"General", "general", "Größe & Ärger", "Café", "🎮", "general!", long, long, "123e4567-e89b-12d3-a456-426614174000"}
+	names := []string{"General", "general", "Gr\u00f6\u00dfe & \u00c4rger", "Café", "🎮", "general!", long, long, "123e4567-e89b-12d3-a456-426614174000"}
 	want := []string{"general", "general-2", "groesse-aerger", "cafe", "channel", "general-3", long[:60], long[:58] + "-2", "channel-123e4567-e89b-12d3-a456-426614174000"}
 	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	for i, name := range names {

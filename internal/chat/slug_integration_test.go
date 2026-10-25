@@ -55,7 +55,7 @@ func TestChannelSlugsFollowNamesAndKeepHistory(t *testing.T) {
 	general := mustCreate(t, ctx, p, "General", ChannelTypeText)
 	requireSlug(t, general, "general")
 	requireSlug(t, mustCreate(t, ctx, p, "general", ChannelTypeVoice), "general-2")
-	requireSlug(t, mustCreate(t, ctx, p, "Größe", ChannelTypeForum), "groesse")
+	requireSlug(t, mustCreate(t, ctx, p, "Gr\u00f6\u00dfe", ChannelTypeForum), "groesse")
 	requireSlug(t, mustCreate(t, ctx, p, "🎮", ChannelTypeText), "channel")
 
 	// A rename that keeps the slug fitting does not grow the history.
