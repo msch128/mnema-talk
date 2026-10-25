@@ -100,6 +100,8 @@ watch(() => [chatStore.activeChannel?.id, voiceStore.currentChannelId, voiceStor
 // The Talk bar asks for the audio settings with this flag; they live in the settings dialog.
 watch(() => voiceStore.showAudioSettings, open => { if (open) openSettings('audio') })
 watch(() => chatStore.activeThread, thread => { if (thread && isCompact.value) chatStore.showMemberList = false })
+// A Talk needs the width: below 1100 px the member list starts closed (the header button opens it).
+watch(() => voiceStore.activeView, view => { if (view === 'voice' && window.innerWidth < 1100) chatStore.showMemberList = false })
 function onWindowKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && navOpen.value) closeNav()
 }

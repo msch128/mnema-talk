@@ -123,7 +123,7 @@ describe('AutomodRuleDialog', () => {
     expect((w.get('[data-exempt-role="Trusted"]').element as HTMLInputElement).checked).toBe(true)
     await w.get('[data-exempt-role="Trusted"]').setValue(false)
     await w.get('[data-exempt-channel="general"]').setValue(true)
-    await w.get('[data-testid="am-enabled"]').setValue(false)
+    await w.get('[data-testid="am-enabled"]').trigger('click')
     await w.get('[data-testid="am-action-flag"]').setValue(true)
     await w.get('[data-testid="automod-form"]').trigger('submit')
     await flushPromises()

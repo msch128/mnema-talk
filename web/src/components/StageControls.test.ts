@@ -61,6 +61,10 @@ describe('the call controls on a Stage', () => {
     expect(camera.length).toBeGreaterThanOrEqual(3)
     // Whoever joins without talk power starts muted.
     expect(voice.isMuted).toBe(true)
+    // "Not allowed" is the quiet grey, never the red of "muted".
+    const mic = wrapper.get('[data-testid="talk-mute"]').classes()
+    expect(mic).toContain('cursor-not-allowed')
+    expect(mic).not.toContain('bg-mnema-danger')
   })
 
   it('give a member with talk power their microphone back, still muted until they choose', async () => {
@@ -100,22 +104,60 @@ describe('live reactions', () => {
     const party = wrapper.findAll('[data-testid="reaction-palette"] button').find(b => b.text() === '🎉')!
     await party.trigger('click')
     expect(sent).toHaveBeenCalledWith('talk_reaction', { emoji: '🎉' })
-    expect(wrapper.emitted('update:open')?.at(-1)).toEqual([true])
-    await wrapper.get('[data-testid="talk-react"]').trigger('click')
     expect(wrapper.emitted('update:open')?.at(-1)).toEqual([false])
+    expect(wrapper.find('[data-testid="reaction-palette"]').exists()).toBe(false)
   })
 
-  it('close with Escape or when the palette asks to', async () => {
-    inStage(SPEAKING)
-    wrapper = mount(TalkReactButton)
-    await wrapper.get('[data-testid="talk-react"]').trigger('click')
-    expect(wrapper.find('[data-testid="reaction-palette"]').exists()).toBe(true)
-    await wrapper.get('div').trigger('keydown', { key: 'Escape' })
-    expect(wrapper.find('[data-testid="reaction-palette"]').exists()).toBe(false)
-    await wrapper.get('[data-testid="talk-react"]').trigger('click')
-    wrapper.findComponent({ name: 'ReactionPalette' }).vm.$emit('close')
-    await nextTick()
-    expect(wrapper.find('[data-testid="reaction-palette"]').exists()).toBe(false)
+  describe('palette closing', () => {
+    async function openPalette() {
+      inStage(SPEAKING)
+      const w = mount(TalkReactButton)
+      wrapper = w
+      await w.get('[data-testid="talk-react"]').trigger('click')
+      expect(w.find('[data-testid="reaction-palette"]').exists()).toBe(true)
+      return w
+    }
+    const gone = (w: { find: (s: string) => { exists: () => boolean } }) => !w.find('[data-testid="reaction-palette"]').exists()
+
+    it('closes on Escape wherever the focus is', async () => {
+      const w = await openPalette()
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+      await nextTick()
+      expect(gone(w)).toBe(true)
+    })
+
+    it('closes on a press outside, not on one inside', async () => {
+      const w = await openPalette()
+      await w.get('[data-testid="reaction-palette"]').trigger('pointerdown')
+      expect(gone(w)).toBe(false)
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+      await nextTick()
+      expect(gone(w)).toBe(true)
+    })
+
+    it('closes after a quiet moment and when the palette asks to', async () => {
+      vi.useFakeTimers()
+      let w: Awaited<ReturnType<typeof openPalette>> | undefined
+      try {
+        w = await openPalette()
+        vi.advanceTimersByTime(8001)
+        await nextTick()
+        expect(w && gone(w)).toBe(true)
+      } finally {
+        vi.useRealTimers()
+      }
+      const again = mount(TalkReactButton)
+      wrapper = again
+      await again.get('[data-testid="talk-react"]').trigger('click')
+      again.findComponent({ name: 'ReactionPalette' }).vm.$emit('close')
+      await nextTick()
+      expect(gone(again)).toBe(true)
+    })
+
+    it('is a sheet on phones so it stays inside the screen', async () => {
+      const w = await openPalette()
+      expect(w.get('[data-testid="reaction-palette"]').classes()).toContain('max-md:fixed')
+    })
   })
 
   it('stop at the allowance the server enforces, so nothing dropped is sent', () => {

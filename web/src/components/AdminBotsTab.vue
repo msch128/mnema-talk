@@ -12,6 +12,7 @@ import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 import BotDetailPanel from './BotDetailPanel.vue'
+import EmptyState from './EmptyState.vue'
 
 const permissions = usePermissionsStore()
 const toasts = useToastStore()
@@ -87,7 +88,7 @@ onMounted(async () => {
             <span>{{ $t('bots.new') }}</span>
           </button>
         </form>
-        <p v-if="loaded && !bots.length" class="text-sm text-mnema-tertiary">{{ $t('bots.empty') }}</p>
+        <EmptyState v-if="loaded && !bots.length" :icon="Bot" :text="$t('bots.empty')" :hint="$t('bots.emptyHint')" class="rounded-lg border border-mnema-hairline bg-mnema-surface" />
         <ul v-if="bots.length" :aria-label="$t('bots.list')" class="overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
           <li v-for="bot in bots" :key="bot.id" :class="['border-b border-mnema-hairline last:border-b-0', selectedId === bot.id ? 'bg-mnema-accent-subtle' : '']" data-testid="bot-row">
             <button type="button" class="flex w-full items-start gap-3 p-3 text-left" :aria-pressed="selectedId === bot.id" @click="selectedId = bot.id">

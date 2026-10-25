@@ -148,7 +148,7 @@ async function submit() {
           maxlength="100"
           required
           :placeholder="$t('events.titlePlaceholder')"
-          class="w-full rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:border-mnema-accent focus:outline-hidden"
+          class="w-full rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-hidden"
         />
       </div>
 
@@ -162,7 +162,7 @@ async function submit() {
           rows="3"
           maxlength="2000"
           :placeholder="$t('events.descriptionPlaceholder')"
-          class="w-full resize-none rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:border-mnema-accent focus:outline-hidden"
+          class="w-full resize-none rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-hidden"
         ></textarea>
       </div>
 
@@ -176,7 +176,7 @@ async function submit() {
             v-model="startTime"
             type="datetime-local"
             required
-            class="w-full rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"
+            class="w-full rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text focus:outline-hidden"
           />
         </div>
         <div>
@@ -186,7 +186,7 @@ async function submit() {
           <input
             v-model="endTime"
             type="datetime-local"
-            class="w-full rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"
+            class="w-full rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text focus:outline-hidden"
           />
         </div>
       </div>
@@ -220,7 +220,7 @@ async function submit() {
         <div v-if="locationType === 'talk'">
           <select
             v-model="channelId"
-            class="w-full rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"
+            class="w-full rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text focus:outline-hidden"
           >
             <option value="" disabled>{{ $t('events.selectTalk') }}</option>
             <option v-for="ch in voiceChannels" :key="ch.id" :value="ch.id">
@@ -234,7 +234,7 @@ async function submit() {
             type="text"
             maxlength="255"
             :placeholder="$t('events.locationTextPlaceholder')"
-            class="w-full rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:border-mnema-accent focus:outline-hidden"
+            class="w-full rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-hidden"
           />
         </div>
       </div>
@@ -244,7 +244,7 @@ async function submit() {
         <label class="mb-1 block text-sm font-medium text-mnema-text">
           {{ $t('events.coverImage') }}
         </label>
-        <div v-if="coverPreview" class="relative mb-2 aspect-[3/1] w-full overflow-hidden rounded-lg border border-mnema-border bg-mnema-surface">
+        <div v-if="coverPreview" class="relative mb-2 aspect-[3/1] w-full shrink-0 overflow-hidden rounded-lg border border-mnema-border bg-mnema-surface">
           <img :src="coverPreview" :alt="t('events.coverAlt')" class="h-full w-full object-cover" />
           <button
             type="button"

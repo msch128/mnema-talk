@@ -68,14 +68,37 @@ describe('TalkSettingsDialog', () => {
     expect(w.find('[data-testid="preset-roles"]').exists()).toBe(false)
 
     await w.find('[data-testid="preset-limit-input"]').setValue(7)
-    await w.find('[data-testid="preset-apply"]').trigger('click')
+    await w.find('[data-testid="talk-save"]').trigger('click')
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith(`/api/talks/${talk.id}`, expect.objectContaining({ method: 'PATCH', json: { user_limit: 7 } }))
 
     await w.find('[data-testid="talk-name"]').setValue('Raid night')
-    await w.find('form').trigger('submit')
+    await w.find('[data-testid="talk-save"]').trigger('click')
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith(`/api/talks/${talk.id}`, expect.objectContaining({ json: { name: 'Raid night' } }))
+  })
+
+  it('has one Save for name and access, enabled only once something changed', async () => {
+    const talk = channelFixture({ type: 'voice', name: 'Games' })
+    const w = setup(talk, { manager: true })
+    await flushPromises()
+    const save = () => w.find<HTMLButtonElement>('[data-testid="talk-save"]').element
+    expect(w.findAll('button').filter(b => b.text() === 'Save')).toHaveLength(1)
+    expect(save().disabled).toBe(true)
+    await w.find('[data-testid="talk-name"]').setValue('Board games')
+    expect(save().disabled).toBe(false)
+    await w.find('[data-testid="preset-roles"]').setValue(true)
+    await w.find('[data-testid="preset-role-list"] input').setValue(true)
+    await w.find('[data-testid="talk-save"]').trigger('click')
+    await flushPromises()
+    expect(apiMock).toHaveBeenCalledWith(`/api/admin/channels/${talk.id}`, expect.objectContaining({ method: 'PATCH', json: expect.objectContaining({ name: 'Board games' }) }))
+    expect(apiMock).toHaveBeenCalledWith(`/api/admin/channels/${talk.id}/overwrites`, expect.objectContaining({ method: 'PUT' }))
+  })
+
+  it('titles the section "Limit" for the leader of a temporary Talk', async () => {
+    const w = setup(channelFixture({ type: 'voice', name: 'Talk 1', is_temp: true, leader_id: me }), { manager: false })
+    await flushPromises()
+    expect(w.find('legend').text()).toBe('Limit')
   })
 
   it('hides the lobby switch without the feature', async () => {
@@ -90,9 +113,9 @@ describe('TalkSettingsDialog', () => {
     const w = setup(talk, { manager: true })
     await flushPromises()
     await w.find('[data-testid="preset-roles"]').setValue(true)
-    expect(w.find<HTMLButtonElement>('[data-testid="preset-apply"]').element.disabled).toBe(true)
+    expect(w.find<HTMLButtonElement>('[data-testid="talk-save"]').element.disabled).toBe(true)
     await w.find('[data-testid="preset-role-list"] input').setValue(true)
-    await w.find('[data-testid="preset-apply"]').trigger('click')
+    await w.find('[data-testid="talk-save"]').trigger('click')
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith(`/api/admin/channels/${talk.id}/overwrites`, {
       method: 'PUT',
@@ -106,7 +129,7 @@ describe('TalkSettingsDialog', () => {
     await flushPromises()
     expect(w.find<HTMLInputElement>('[data-testid="preset-roles"]').element.checked).toBe(true)
     await w.find('[data-testid="preset-everyone"]').setValue(true)
-    await w.find('[data-testid="preset-apply"]').trigger('click')
+    await w.find('[data-testid="talk-save"]').trigger('click')
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith(`/api/admin/channels/${talk.id}/overwrites`, { method: 'PUT', json: { overwrites: [] } })
   })

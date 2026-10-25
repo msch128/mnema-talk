@@ -24,7 +24,7 @@ defineProps({
       v-for="reaction in reactions"
       :key="reaction.id"
       data-testid="talk-reaction"
-      :class="['reaction-float absolute leading-none drop-shadow-sm', compact ? 'bottom-1 text-lg' : 'bottom-8 text-2xl', `reaction-slot-${reaction.id % 4}`]"
+      :class="['reaction-float absolute leading-none drop-shadow-sm', compact ? 'bottom-full text-2xl' : 'bottom-12 text-4xl', `reaction-slot-${reaction.id % 4}`]"
     ><EmojiGlyph :value="reaction.emoji" /></span>
   </div>
 </template>
@@ -40,19 +40,19 @@ defineProps({
 .reaction-compact .reaction-float {
   animation-name: reaction-rise-small;
 }
-.reaction-compact .reaction-slot-0 { left: 2.5rem; }
-.reaction-compact .reaction-slot-1 { left: 3.75rem; }
-.reaction-compact .reaction-slot-2 { left: 5rem; }
-.reaction-compact .reaction-slot-3 { left: 6.25rem; }
+.reaction-compact .reaction-slot-0 { left: 1rem; }
+.reaction-compact .reaction-slot-1 { left: 2.5rem; }
+.reaction-compact .reaction-slot-2 { left: 4rem; }
+.reaction-compact .reaction-slot-3 { left: 5.5rem; }
 @keyframes reaction-rise-small {
   0% { opacity: 0; transform: translateY(0) scale(0.8); }
   12% { opacity: 1; transform: translateY(-0.25rem) scale(1); }
-  100% { opacity: 0; transform: translateY(-1.75rem) scale(1.1); }
+  100% { opacity: 0; transform: translateY(-2.5rem) scale(1.1); }
 }
 @keyframes reaction-rise {
   0% { opacity: 0; transform: translateY(0) scale(0.8); }
   12% { opacity: 1; transform: translateY(-0.5rem) scale(1); }
-  100% { opacity: 0; transform: translateY(-4.5rem) scale(1.15); }
+  100% { opacity: 0; transform: translateY(-5.5rem) scale(1.15); }
 }
 /* Reduced motion: a still badge in the corner for as long as the reaction lasts. */
 @media (prefers-reduced-motion: reduce) {
@@ -61,10 +61,10 @@ defineProps({
     animation: none;
     left: auto;
     right: 0.5rem;
-    bottom: 2.5rem;
+    bottom: 3rem;
   }
   .reaction-compact .reaction-float {
-    bottom: 0.25rem;
+    bottom: 100%;
   }
 }
 </style>

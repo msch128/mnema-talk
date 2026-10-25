@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Admin dashboard: version, health and load of the server (GET /api/admin/system).
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { RefreshCw, CheckCircle2, XCircle, TriangleAlert } from '@lucide/vue'
+import { RefreshCw, CheckCircle2, XCircle, TriangleAlert, Server } from '@lucide/vue'
 import { api, caughtErrorMessage, isApiError } from '../lib/api'
 import type { SystemStatus } from '../types/domain'
 import { decodeServerSystemStatus, decodeServerUpdateStatus, decodeServerHealth, type ServerSelfUpdateStarted } from '../types/rest'
@@ -176,7 +176,7 @@ onMounted(refresh)
 <template>
   <section class="space-y-5" data-testid="admin-system">
     <div class="flex items-center justify-between gap-3">
-      <h3 class="text-sm font-semibold text-mnema-text uppercase font-mono tracking-wider">{{ $t('admin.system.heading') }}</h3>
+      <h3 class="flex items-center gap-2 text-sm font-semibold text-mnema-text uppercase font-mono tracking-wider"><Server class="w-4 h-4 text-mnema-accent" /><span>{{ $t('admin.system.heading') }}</span></h3>
       <button
         type="button"
         class="btn btn-icon btn-sm hover:text-mnema-text"

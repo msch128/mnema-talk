@@ -56,6 +56,26 @@ function mountLayout(users: ReturnType<typeof world>['users'], connected = true)
 beforeEach(() => { localStorage.clear(); setActivePinia(createPinia()); setLocale('en'); sent.mockClear() })
 afterEach(() => { wrapper?.unmount() })
 
+describe('speaker tile size', () => {
+  const widths = (speakers: number) => {
+    const { users } = world()
+    const picked = users.map((u, i) => (i === 0 || i <= speakers - 1 ? { ...u, talk_power: true } : { ...u, talk_power: false }))
+    mountLayout(picked.map(u => (u.talk_power ? u : { ...u, hand_raised_at: undefined })))
+    return wrapper!.findAll('[data-testid="stage-speakers"] > div').map(d => d.classes().find(c => c.startsWith('w-[')))
+  }
+
+  it('grows with the room: one speaker is large, more share the width in smaller tiles', () => {
+    const [one] = widths(1)
+    expect(one).toContain('30rem')
+    wrapper?.unmount()
+    const two = widths(2)
+    expect(two).toHaveLength(2)
+    expect(two[0]).toContain('22.5rem')
+    wrapper?.unmount()
+    expect(widths(4)[0]).toContain('17.5rem')
+  })
+})
+
 describe('the Stage layout', () => {
   it('puts members with talk power in the speakers row and the rest in the audience', () => {
     const { users } = world()

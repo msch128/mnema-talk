@@ -317,3 +317,59 @@ describe('AdminRolesTab permission list', () => {
     w.unmount()
   })
 })
+
+describe('AdminRolesTab unsaved edits', () => {
+  const pick = async (w: ReturnType<typeof mount>, name: string) => {
+    await row(w, name).find('button[aria-pressed]').trigger('click')
+    await flushPromises()
+  }
+
+  it('marks unsaved edits, offers to discard them and clears the mark on discard', async () => {
+    const w = setup()
+    await flushPromises()
+    await pick(w, 'Middle')
+    expect(w.find('[data-testid="role-dirty"]').exists()).toBe(false)
+    await w.find('input[maxlength="32"]').setValue('Renamed')
+    expect(w.get('[data-testid="role-dirty"]').text()).toBe('Unsaved changes')
+    await w.get('[data-testid="role-discard"]').trigger('click')
+    expect(w.find<HTMLInputElement>('input[maxlength="32"]').element.value).toBe('Middle')
+    expect(w.find('[data-testid="role-dirty"]').exists()).toBe(false)
+  })
+
+  it('asks before another role replaces unsaved edits, and keeps them on cancel', async () => {
+    const w = setup()
+    await flushPromises()
+    await pick(w, 'Middle')
+    await w.find('input[maxlength="32"]').setValue('Renamed')
+    confirmMock.mockResolvedValueOnce(false)
+    await pick(w, 'Bottom')
+    expect(confirmMock).toHaveBeenCalledTimes(1)
+    expect(w.find<HTMLInputElement>('input[maxlength="32"]').element.value).toBe('Renamed')
+    confirmMock.mockResolvedValueOnce(true)
+    await pick(w, 'Bottom')
+    expect(w.find<HTMLInputElement>('input[maxlength="32"]').element.value).toBe('Bottom')
+  })
+
+  it('switches without asking when nothing changed', async () => {
+    const w = setup()
+    await flushPromises()
+    await pick(w, 'Middle')
+    await pick(w, 'Bottom')
+    expect(confirmMock).not.toHaveBeenCalled()
+    expect(w.find<HTMLInputElement>('input[maxlength="32"]').element.value).toBe('Bottom')
+  })
+
+  it('narrows the permission list by what is typed', async () => {
+    const w = setup()
+    await flushPromises()
+    const all = w.findAll('[data-permission]').length
+    await w.get('[data-testid="role-permission-search"]').setValue('speak')
+    const some = w.findAll('[data-permission]').length
+    expect(some).toBeGreaterThan(0)
+    expect(some).toBeLessThan(all)
+    await w.get('[data-testid="role-permission-search"]').setValue('zzzz-nothing')
+    expect(w.findAll('[data-permission]')).toHaveLength(0)
+    expect(w.get('[data-testid="role-permission-none"]').text()).toBe('No permission matches.')
+  })
+})
+

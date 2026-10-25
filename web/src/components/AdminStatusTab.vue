@@ -54,7 +54,7 @@ onMounted(refresh)
 <template>
   <section class="space-y-5" data-testid="admin-status">
     <div class="flex items-center justify-between gap-3">
-      <h3 class="text-sm font-semibold text-mnema-text uppercase font-mono tracking-wider">{{ $t('admin.operatorStatus.heading') }}</h3>
+      <h3 class="flex items-center gap-2 text-sm font-semibold text-mnema-text uppercase font-mono tracking-wider"><Activity class="w-4 h-4 text-mnema-accent" /><span>{{ $t('admin.operatorStatus.heading') }}</span></h3>
       <button
         type="button"
         class="btn btn-icon btn-sm hover:text-mnema-text"
