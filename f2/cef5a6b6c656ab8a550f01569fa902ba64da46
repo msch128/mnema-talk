@@ -1,0 +1,31 @@
+internal/db/channel_slug_backfill_integration_test.go
+  s_06fcde5dbef956::t_c962f12c58e692 47-48
+SECURITY.md
+  s_06fcde5dbef956::t_c962f12c58e692 204
+internal/chat/slug_test.go
+  s_06fcde5dbef956::t_c962f12c58e692 37,43,47,60,63
+internal/chat/slug.go
+  s_06fcde5dbef956::t_29f66e4058554d 74,86
+internal/db/migrations/0075_channel_slugs.sql
+  s_06fcde5dbef956::t_29f66e4058554d 52,54
+doc/upgrade.md
+  s_06fcde5dbef956::t_c962f12c58e692 172
+internal/chat/slug_integration_test.go
+  s_06fcde5dbef956::t_29f66e4058554d 58,70,196,200
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f2cef5a6b6c656ab8a550f01569fa902ba64da46",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
