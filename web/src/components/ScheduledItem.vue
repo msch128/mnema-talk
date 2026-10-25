@@ -22,6 +22,10 @@ const toasts = useToastStore()
 const editing = ref(false)
 const text = ref('')
 const when = ref('')
+// The input value as editing started. An untouched time is kept as it is and
+// never read back from local wall time: in the hour that repeats when daylight
+// saving ends, that would pick the other of the two equal clock times.
+const initialWhen = ref('')
 const busy = ref(false)
 const error = ref('')
 
@@ -33,6 +37,7 @@ function startEdit() {
   text.value = props.item.content
   // A failed draft has no time that still lies ahead; the member picks one to send it again.
   when.value = failed.value ? '' : toLocalInputValue(new Date(props.item.send_at))
+  initialWhen.value = when.value
   error.value = ''
   editing.value = true
 }
@@ -40,8 +45,9 @@ function startEdit() {
 async function save() {
   const content = text.value.trim()
   if (!content || busy.value) return
-  const at = when.value ? fromLocalInputValue(when.value) : null
-  if (when.value && (!at || !isAcceptableTime(at))) {
+  const touched = failed.value || when.value !== initialWhen.value
+  const at = when.value && touched ? fromLocalInputValue(when.value) : null
+  if (when.value && touched && (!at || !isAcceptableTime(at))) {
     error.value = t('later.pastTime')
     return
   }
