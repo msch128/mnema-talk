@@ -148,8 +148,18 @@ function cancelHoverClose() {
   clearTimeout(hoverTimer)
 }
 
+// A scroll that was started just before the menu opened (the row was scrolled
+// into view for the click) reaches the page a frame or two late; it must not
+// close the menu that has only just appeared.
+let settling = false
+function settleAfterOpen() {
+  settling = true
+  requestAnimationFrame(() => requestAnimationFrame(() => { settling = false }))
+}
+
 watch(() => props.modelValue, (open) => {
   if (open) {
+    settleAfterOpen()
     opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const p = basePoint()
     posX.value = p.x
@@ -292,17 +302,21 @@ function handleOutsideDismiss(e: Event) {
   }
 }
 
+function handleScrollDismiss(e: Event) {
+  if (!settling) handleOutsideDismiss(e)
+}
+
 onMounted(() => {
   document.addEventListener('mousedown', handleOutsideDismiss, true)
   document.addEventListener('contextmenu', handleOutsideDismiss, true)
-  window.addEventListener('scroll', handleOutsideDismiss, true)
+  window.addEventListener('scroll', handleScrollDismiss, true)
 })
 
 onUnmounted(() => {
   closeSubmenu()
   document.removeEventListener('mousedown', handleOutsideDismiss, true)
   document.removeEventListener('contextmenu', handleOutsideDismiss, true)
-  window.removeEventListener('scroll', handleOutsideDismiss, true)
+  window.removeEventListener('scroll', handleScrollDismiss, true)
 })
 
 const panelClass = 'p-2 rounded-xl bg-mnema-elevated border border-mnema-border shadow-lg text-sm text-mnema-muted font-sans'
