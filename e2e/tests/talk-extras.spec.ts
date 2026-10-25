@@ -294,6 +294,8 @@ test('picture-in-picture keeps playing after leaving the Talk view', async ({ br
   await bTile.click({ position: { x: 20, y: 20 } })
   const aStage = a.getByTestId('stage')
   await expect(aStage).toHaveAttribute('data-stage-source', `camera:${bId}`)
+  // The camera's first frame has to arrive before PiP can open: the browser needs the video's size.
+  await expect.poll(() => aStage.locator('video').evaluate(v => (v as HTMLVideoElement).videoWidth), { timeout: 20_000 }).toBeGreaterThan(0)
   await aStage.getByRole('button', { name: 'Bild-im-Bild' }).click()
   await expect.poll(pipState).toMatchObject({ inPip: true, live: true, playing: true, requests: 1 })
   // The stage says where the video is now.
