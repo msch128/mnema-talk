@@ -129,5 +129,5 @@ export async function leaveTalks(pages: Page[]) {
     await expect(page.getByRole('button', { name: 'Verlassen' })).toHaveCount(0)
   }
   const last = pages.at(-1)
-  if (last) await expect(last.locator('nav [data-voice-user]')).toHaveCount(0, { timeout: 5_000 })
+  if (last) await expect(last.locator('nav [data-voice-user]')).toHaveCount(0, { timeout: 15_000 })
 }

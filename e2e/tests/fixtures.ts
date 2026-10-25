@@ -147,13 +147,33 @@ function grantable(browser: Browser, options: Parameters<Browser['newContext']>[
 // the others, as Safari does with its tabs. Two members of a call in one test
 // therefore each get their own WebKit process, which is also how two people
 // would join: from two devices.
+const ownProcesses = new Set<Browser>()
+
+// A WebKit that is busy encoding or has lost its page can ignore a close for
+// minutes, and a test that timed out never reached its own cleanup. Closing is
+// therefore bounded: what does not close in time is left to the operating
+// system when the worker ends, instead of holding the run.
+const CLOSE_BUDGET_MS = 15_000
+
+async function closeBounded(close: () => Promise<unknown>): Promise<void> {
+  let timer: NodeJS.Timeout | undefined
+  const budget = new Promise<void>((resolve) => { timer = setTimeout(resolve, CLOSE_BUDGET_MS) })
+  try {
+    await Promise.race([close().catch(() => undefined), budget])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 async function contextOwnProcess(browser: Browser, options: Parameters<Browser['newContext']>[0]): Promise<BrowserContext> {
   const own = await browser.browserType().launch()
+  ownProcesses.add(own)
   const context = await own.newContext(options)
   const close = context.close.bind(context)
   context.close = async (...args: Parameters<BrowserContext['close']>) => {
-    await close(...args)
-    await own.close()
+    await closeBounded(() => close(...args))
+    await closeBounded(() => own.close())
+    ownProcesses.delete(own)
   }
   return context
 }
@@ -202,11 +222,18 @@ function counted(browser: Browser): Browser {
   return browser
 }
 
-export const test = base.extend<{ apiHeadroom: void; cspViolations: void }, { browser: Browser }>({
+export const test = base.extend<{ apiHeadroom: void; cspViolations: void; ownProcessesClosed: void }, { browser: Browser }>({
   browser: [async ({ browser }, use) => { await use(counted(browser)) }, { scope: 'worker' }],
   // Playwright insists on a destructuring pattern, even an empty one.
   // eslint-disable-next-line no-empty-pattern
   apiHeadroom: [async ({}, use) => { await awaitApiHeadroom(); await use() }, { auto: true }],
+  // The browsers a test opened for its members go with the test, also when it
+  // failed or timed out before its own cleanup.
+  // eslint-disable-next-line no-empty-pattern
+  ownProcessesClosed: [async ({}, use) => {
+    await use()
+    await Promise.all([...ownProcesses].map(async (own) => { await closeBounded(() => own.close()); ownProcesses.delete(own) }))
+  }, { auto: true }],
   // eslint-disable-next-line no-empty-pattern
   cspViolations: [async ({}, use) => {
     cspViolations = []

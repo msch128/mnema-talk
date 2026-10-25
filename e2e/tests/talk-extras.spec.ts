@@ -324,7 +324,9 @@ test('the streamer picks the stream quality, the viewer sets the stream volume',
     if (!sender?.track) return null
     const enc = sender.getParameters().encodings?.[0] || {}
     let frameHeight = 0
-    for (const s of (await sender.getStats()).values()) {
+    // A stats call that never answers must fail the poll, not hang the page.
+    const stats = await Promise.race([sender.getStats(), new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getStats timed out')), 5_000))])
+    for (const s of stats.values()) {
       if (s.type === 'outbound-rtp' && s.frameHeight) frameHeight = Math.max(frameHeight, s.frameHeight)
     }
     const settings = sender.track.getSettings()
@@ -386,6 +388,8 @@ test('the streamer picks the stream quality, the viewer sets the stream volume',
   await expect(menu).toBeHidden()
 
   // B still gets the video, now at most 720 lines.
+  // (A height of 0 is a video that has not decoded a frame yet, not a small one.)
+  await expect.poll(() => bVideo.evaluate(v => { if (!(v instanceof HTMLVideoElement)) throw new Error("Expected video"); return v.videoHeight }), { timeout: 20_000 }).toBeGreaterThan(0)
   await expect.poll(() => bVideo.evaluate(v => { if (!(v instanceof HTMLVideoElement)) throw new Error("Expected video"); return v.videoHeight }), { timeout: 20_000 }).toBeLessThanOrEqual(720)
   expect(await bVideo.evaluate(v => { if (!(v instanceof HTMLVideoElement)) throw new Error("Expected video"); return v.videoWidth })).toBeGreaterThan(0)
 

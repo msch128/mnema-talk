@@ -26,6 +26,9 @@ const firefoxPrefs = {
 export default defineConfig({
   testDir: './tests',
   timeout: 90_000,
+  // A run that hangs ends with the results of the specs that finished (and
+  // their traces) instead of being cancelled by the CI job; 0 = no limit.
+  globalTimeout: Number(process.env.E2E_GLOBAL_TIMEOUT_MS ?? 0),
   expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: 1,

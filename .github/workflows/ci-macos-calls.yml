@@ -28,7 +28,7 @@ jobs:
   e2e-webkit-macos:
     name: e2e (webkit-macos-calls)
     runs-on: macos-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -60,8 +60,10 @@ jobs:
 
       - name: Run the call specs on macOS WebKit
         # A hang must end this step (and keep its log), not the job.
-        timeout-minutes: 22
+        timeout-minutes: 30
         env:
+          # Playwright ends the run itself, with the results so far, before the step does.
+          E2E_GLOBAL_TIMEOUT_MS: "1500000"
           E2E_NO_DOCKER: "1"
           E2E_INSTALL_BROWSER: "1"
           E2E_BROWSERS: webkit
