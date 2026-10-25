@@ -14,6 +14,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 const exifMarker = "camera-model-and-place-in-exif"
@@ -62,6 +64,7 @@ func TestOldAvatarsLoseTheirMetadataOnceAfterTheUpdate(t *testing.T) {
 	if err != nil || done != 1 || failed != 0 {
 		t.Fatalf("job: done=%d failed=%d err=%v", done, failed, err)
 	}
+	f.wantUserUpdate(t)
 	newKey, marked := f.avatarState(t)
 	if newKey == oldKey || !marked {
 		t.Fatalf("the account points at the redrawn file and is marked: %s marked=%v", newKey, marked)
@@ -143,8 +146,22 @@ func TestOldAvatarThatCannotBeReadAtAllIsRemoved(t *testing.T) {
 	if err := f.p.QueryRow(context.Background(), `SELECT action, details->>'reason' FROM audit_log ORDER BY id DESC LIMIT 1`).Scan(&action, &reason); err != nil || action != "media.avatar_removed" || reason == "" {
 		t.Fatalf("audited with a reason: %q %q %v", action, reason, err)
 	}
+	f.wantUserUpdate(t)
 	if done, _, _ := f.h.ReencodeAvatars(context.Background()); done != 0 {
 		t.Fatal("nothing left to do")
+	}
+}
+
+// wantUserUpdate checks the job announced the owner's new profile, as a
+// manual change does.
+func (f *mediaFixture) wantUserUpdate(t *testing.T) {
+	t.Helper()
+	sent := f.h.Events.(*events.Recorder).Snapshot()
+	if len(sent) != 1 || sent[0].Type != events.UserUpdate {
+		t.Fatalf("want one user_update, got %+v", sent)
+	}
+	if u, ok := sent[0].Payload.(auth.User); !ok || u.ID != f.user.ID {
+		t.Fatalf("payload is the owner's public profile: %#v", sent[0].Payload)
 	}
 }
 

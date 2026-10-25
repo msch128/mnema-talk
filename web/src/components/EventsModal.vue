@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Calendar, Check, HelpCircle, MapPin, Plus, Volume2 } from '@lucide/vue'
 import BaseDialog from './BaseDialog.vue'
 import EventDetailModal from './EventDetailModal.vue'
@@ -32,6 +32,10 @@ const creatingEvent = ref(false)
 
 onMounted(() => {
   void eventsStore.load()
+})
+
+watch(activeTab, tab => {
+  if (tab === 'past' && !eventsStore.pastLoaded) void eventsStore.loadPast()
 })
 
 const displayedEvents = computed(() => {
@@ -143,7 +147,7 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
 
       <!-- Events List -->
       <div class="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-4">
-        <div v-if="eventsStore.loading && eventsStore.events.length === 0" class="py-8 text-center text-sm text-mnema-tertiary">
+        <div v-if="(activeTab === 'past' ? eventsStore.pastLoading && !eventsStore.pastLoaded : eventsStore.loading) && displayedEvents.length === 0" class="py-8 text-center text-sm text-mnema-tertiary">
           ...
         </div>
 
@@ -294,6 +298,17 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
             </div>
           </div>
         </article>
+
+        <button
+          v-if="activeTab === 'past' && eventsStore.pastHasMore && displayedEvents.length > 0"
+          type="button"
+          data-testid="events-load-more"
+          :disabled="eventsStore.pastLoading"
+          class="shrink-0 self-center rounded-lg px-4 py-2 text-sm font-medium text-mnema-tertiary transition-colors hover:text-mnema-text disabled:opacity-60 cursor-pointer"
+          @click="eventsStore.loadPast(true)"
+        >
+          {{ $t('events.loadMorePast') }}
+        </button>
       </div>
     </div>
   </BaseDialog>

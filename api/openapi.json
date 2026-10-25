@@ -26751,6 +26751,27 @@
             }
           },
           {
+            "description": "upcoming (default) or past. past lists events that are over (completed, cancelled or ended), newest first, and ignores after; page it with before and before_id.",
+            "in": "query",
+            "name": "when",
+            "schema": {
+              "enum": [
+                "upcoming",
+                "past"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "With when=past: id of the last event of the previous page; together with before (its start time) it continues the list.",
+            "in": "query",
+            "name": "before_id",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
             "description": "Page size, 1 to 200.",
             "in": "query",
             "name": "limit",

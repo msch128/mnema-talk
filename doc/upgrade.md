@@ -154,6 +154,23 @@ of the pre-update backup (see "Rollback" above).
 | 0072 | `media_original_filename_trgm_idx`: GIN trigram index on `media.original_filename` for fast case-insensitive attachment filename search. |
 | 0073 | `server_notify`: a member's server-wide notification default (see [Notification settings](#notification-settings)). Adds a table only. |
 
+#### Small additions: emoji shortcodes, past events, avatar updates
+
+No migration and no setting.
+
+- **Emoji shortcodes.** Typing `:smi` in the composer also suggests standard
+  emoji (`:smile:` gives 😄) after the community's custom emoji; Enter or Tab
+  inserts the character itself. The table (about 1,900 GitHub-style shortcodes)
+  ships with the web app and loads on first use.
+- **Past events.** `GET /api/events?when=past` lists events that are over
+  (completed, cancelled or ended), newest first, with `limit` and the cursor
+  `before` and `before_id` (start time and id of the last event of the previous
+  page). The same visibility rules as for upcoming events apply. Without `when`
+  the endpoint answers as before; the events dialog's *Past* tab uses it.
+- **Avatar re-encode job.** When the hourly job redraws or removes an old
+  avatar it now broadcasts `user_update`, as a manual change does, so open
+  clients refresh the picture without a reload.
+
 #### Everyday features: status, reminders, polls, auto-delete
 
 - **Status that clears itself** (feature `status.expiry`). A member can give a

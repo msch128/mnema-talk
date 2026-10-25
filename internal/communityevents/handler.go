@@ -86,6 +86,8 @@ func (h *Handler) broadcast(ev *CommunityEvent) {
 // @Security cookieAuth
 // @Param after query string false "Earliest end (or start, for events without an end) to include, RFC 3339. Default: now minus 1 day." Format(date-time)
 // @Param before query string false "Events must start before this time, RFC 3339. Default: now plus 90 days." Format(date-time)
+// @Param when query string false "upcoming (default) or past. past lists events that are over (completed, cancelled or ended), newest first, and ignores after; page it with before and before_id." Enums(upcoming, past)
+// @Param before_id query string false "With when=past: id of the last event of the previous page; together with before (its start time) it continues the list." Format(uuid)
 // @Param limit query int false "Page size, 1 to 200." default(50)
 // @Success 200 {array} CommunityEvent
 // @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT"
@@ -112,6 +114,21 @@ func (h *Handler) listQuery(r *http.Request) (ListQuery, error) {
 		After:  now.Add(-listLookBehind),
 		Before: now.Add(listLookAhead),
 		Limit:  httpx.QueryLimit(r, "limit", DefaultListLimit, MaxListLimit),
+	}
+	switch when := r.URL.Query().Get("when"); when {
+	case "", "upcoming":
+	case "past":
+		q.Past = true
+		q.Before = now.AddDate(100, 0, 0) // no cursor: start from the newest
+	default:
+		return q, httpx.ErrInvalidInput("when must be upcoming or past")
+	}
+	if raw := r.URL.Query().Get("before_id"); raw != "" {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return q, httpx.ErrInvalidInput("before_id must be a UUID")
+		}
+		q.BeforeID = id
 	}
 	for name, dst := range map[string]*time.Time{"after": &q.After, "before": &q.Before} {
 		raw := r.URL.Query().Get(name)

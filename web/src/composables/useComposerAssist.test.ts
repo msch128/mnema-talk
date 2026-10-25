@@ -1,5 +1,5 @@
 import { userFixture } from '../test-fixtures.fixture'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { defineComponent, ref, h, nextTick } from 'vue'
@@ -173,12 +173,44 @@ describe('role suggestions in the composer', () => {
     const w = mount(Harness, { attachTo: document.body })
     await type(w, 'hello :pa')
     expect(w.vm.assist.open.value).toBe(true)
-    expect(w.vm.assist.suggestions.value.map(s => s.emoji?.name)).toEqual(['party_parrot'])
+    expect(w.vm.assist.suggestions.value[0]?.emoji?.name).toBe('party_parrot')
     await w.vm.assist.pick(w.vm.assist.suggestions.value[0])
     expect(w.vm.text).toBe('hello :party_parrot: ')
     expect(w.vm.assist.open.value).toBe(false)
     await type(w, ':pa')
     w.vm.assist.close()
+    expect(w.vm.assist.open.value).toBe(false)
+    w.unmount()
+  })
+
+  it('suggests standard emoji by shortcode, custom ones first, and inserts the glyph', async () => {
+    useEmojiStore().items = [{ id: 'e1', name: 'smirk_cat_party', animated: false, url: '/a' }]
+    const w = mount(Harness, { attachTo: document.body })
+    await type(w, 'hi :smi')
+    await vi.waitFor(() => expect(w.vm.assist.suggestions.value.length).toBeGreaterThan(1))
+    const list = w.vm.assist.suggestions.value
+    expect(list[0]?.emoji?.name).toBe('smirk_cat_party')
+    const smile = list.find(s => s.username === 'smile')
+    expect(smile?.standard).toBe('😄')
+    expect(list.length).toBeLessThanOrEqual(8)
+
+    w.vm.assist.active.value = list.indexOf(smile!)
+    const key = (k: string) => new KeyboardEvent('keydown', { key: k, cancelable: true })
+    expect(w.vm.assist.onKeydown(key('Enter'))).toBe(true)
+    await nextTick()
+    await nextTick()
+    expect(w.vm.text).toBe('hi 😄 ')
+    expect(w.vm.assist.open.value).toBe(false)
+    w.unmount()
+  })
+
+  it('hides a standard emoji whose shortcode a custom emoji already uses, and closes on Escape', async () => {
+    useEmojiStore().items = [{ id: 'e1', name: 'smile', animated: false, url: '/a' }]
+    const w = mount(Harness, { attachTo: document.body })
+    await type(w, ':smile')
+    await vi.waitFor(() => expect(w.vm.assist.suggestions.value.length).toBeGreaterThan(0))
+    expect(w.vm.assist.suggestions.value.filter(s => s.username === 'smile')).toHaveLength(1)
+    expect(w.vm.assist.onKeydown(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }))).toBe(true)
     expect(w.vm.assist.open.value).toBe(false)
     w.unmount()
   })

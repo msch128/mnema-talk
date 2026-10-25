@@ -8,6 +8,10 @@ Community events let organizers schedule voice hangouts or server-wide activitie
 - **Events list & detail**: Members can browse upcoming and past events, view full details, read markdown descriptions, see participant counts, and RSVP.
 - **Access control**: An event's location can be either a **Talk (voice channel)** or **free text**. When linked to a Talk, only members with *View channels* on that Talk can see the event, view its cover image, or RSVP. Free-text location events are visible to all server members.
 
+### Past events
+
+The **Past** tab lists events that are over (completed, cancelled, or ended), newest first, and loads older ones with **Show older events**. It uses `GET /api/events?when=past` with `limit` (1 to 200) and the cursor `before` / `before_id`: the start time and id of the last event of the previous page. Visibility is the same as for upcoming events: an event in a Talk shows only to members who may view that channel. Without `when` the endpoint keeps returning the window from one day ago to 90 days ahead.
+
 ## Managing events
 
 Creating, editing, cancelling events, or uploading cover images requires the **Manage events** permission (`1 << 25` in `internal/perm`). Administrators and the Owner have it implicitly. On upgrade and on a new server it is granted to every role that holds *Timeout members* (the seeded Moderator and Admin roles); grant or remove it for other roles in the role settings. `@everyone` does not have it.

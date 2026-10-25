@@ -12,7 +12,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/imgproc"
 )
 
@@ -30,11 +32,12 @@ const (
 )
 
 // StartAvatarReencode redraws every avatar that still is the uploaded file.
-func StartAvatarReencode(ctx context.Context, p *db.Pool, store Store, bucket string, log *audit.Log) {
+// pub announces the avatars the job changes or removes as user_update.
+func StartAvatarReencode(ctx context.Context, p *db.Pool, store Store, bucket string, log *audit.Log, pub events.Publisher) {
 	if store == nil {
 		return
 	}
-	h := &Handler{DB: p, Store: store, Bucket: bucket, Audit: log}
+	h := &Handler{DB: p, Store: store, Bucket: bucket, Audit: log, Events: pub}
 	go runPeriodically(ctx, avatarReencodeFirstRun, avatarReencodeInterval, func(ctx context.Context) {
 		done, failed, err := h.ReencodeAvatars(ctx)
 		switch {
@@ -135,7 +138,22 @@ func (h *Handler) removeUnreadableAvatar(ctx context.Context, a storedAvatar, re
 		Details: map[string]any{"reason": "the stored avatar could not be re-encoded without its metadata: " + reason.Error()},
 	})
 	slog.Warn("an old avatar could not be redrawn and was removed", "user_id", a.userID, "err", reason)
+	h.announceUser(ctx, a.userID)
 	return nil
+}
+
+// announceUser broadcasts the user's public profile, as a manual avatar change
+// does, so other clients drop the picture they still show.
+func (h *Handler) announceUser(ctx context.Context, id uuid.UUID) {
+	if h.Events == nil {
+		return
+	}
+	u, err := auth.GetUser(ctx, h.DB, id)
+	if err != nil {
+		slog.Warn("could not announce the avatar change", "user_id", id, "err", err)
+		return
+	}
+	h.Events.Broadcast(events.UserUpdate, u.Public())
 }
 
 // swapAvatar writes the redrawn picture, points the account at it and only
@@ -157,5 +175,6 @@ func (h *Handler) swapAvatar(ctx context.Context, a storedAvatar, pic *imgproc.P
 		return fmt.Errorf("record avatar: %w", err)
 	}
 	h.deletePreviousAvatar(ctx, previous)
+	h.announceUser(ctx, a.userID)
 	return nil
 }
