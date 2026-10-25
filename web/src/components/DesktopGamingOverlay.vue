@@ -92,10 +92,10 @@ onBeforeUnmount(() => { alive = false; clearInterval(timer) })
       <p class="text-xs text-mnema-muted">{{ $t('gaming.gamesHint') }}</p>
       <div v-if="candidate" class="flex items-center gap-2" role="group" :aria-label="$t('gaming.addLast')">
         <span class="flex-1 truncate">{{ $t('gaming.addLastConfirm', { name: candidate }) }}</span>
-        <button type="button" @click="addCandidate">{{ $t('gaming.addConfirm') }}</button>
-        <button type="button" @click="candidate = null">{{ $t('gaming.addCancel') }}</button>
+        <button type="button" data-testid="add-confirm" @click="addCandidate">{{ $t('gaming.addConfirm') }}</button>
+        <button type="button" data-testid="add-cancel" @click="candidate = null">{{ $t('gaming.addCancel') }}</button>
       </div>
-      <button v-else type="button" @click="askCandidate">{{ $t('gaming.addLast') }}</button>
+      <button v-else type="button" data-testid="add-last" @click="askCandidate">{{ $t('gaming.addLast') }}</button>
       <p v-if="addNote" role="status" class="text-xs text-mnema-muted">{{ addNote === 'none' ? $t('gaming.addLastNone') : $t('gaming.addFailed') }}</p>
       <button type="submit">{{ $t('common.save') }}</button>
     </form>
