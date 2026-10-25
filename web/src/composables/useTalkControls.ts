@@ -31,5 +31,21 @@ export function useTalkControls({ connected, others, menuOpen }: {
   })
   const controlsShown = computed(() => controls.visible.value)
   const showTapHint = computed(() => isCompact.value && toValue(connected) && !controlsShown.value)
-  return { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, onActivity: () => controls.show() }
+
+  // A tap on a tile while the controls are hidden only brings them back: it
+  // must not also open the profile under them. Pointerdown (capture) notes
+  // that they were hidden, before the activity shows them.
+  let tapRevealed = false
+  function onTapStart(e: PointerEvent) {
+    tapRevealed = e.pointerType === 'touch' && toValue(connected) && !controlsShown.value
+  }
+  function onTapCapture(e: MouseEvent) {
+    if (!tapRevealed) return
+    tapRevealed = false
+    if (e.target instanceof Element && e.target.closest('[data-participant-tile]')) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+  }
+  return { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, onActivity: () => controls.show(), onTapStart, onTapCapture }
 }

@@ -5,19 +5,25 @@ import { ref } from 'vue'
 import { Plus } from '@lucide/vue'
 import EmojiPicker from './EmojiPicker.vue'
 
-defineProps({
-  align: { type: String as PropType<'left' | 'right'>, default: 'right' }
+const props = defineProps({
+  align: { type: String as PropType<'left' | 'right'>, default: 'right' },
+  // Phones: a sheet centred over the bottom of the screen instead of
+  // hanging off the trigger (the Talk's controls sit near the screen's edge).
+  sheet: { type: Boolean, default: false }
 })
 const emit = defineEmits<{ pick: [emoji: string]; close: [] }>()
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '🔥', '🎉', '🚀']
 const full = ref(false)
+const position = props.sheet
+  ? 'absolute bottom-full mb-1 max-md:fixed max-md:inset-x-2 max-md:bottom-24 max-md:mb-0 max-md:mx-auto max-md:w-fit max-md:max-w-[calc(100vw-1rem)]'
+  : 'absolute bottom-full mb-1'
 </script>
 
 <template>
   <EmojiPicker
     v-if="full"
-    :class="['absolute bottom-full mb-1', align === 'left' ? 'left-0' : 'right-0']"
+    :class="[position, align === 'left' ? 'left-0' : 'right-0']"
     @pick="emit('pick', $event)"
     @close="emit('close')"
   />
@@ -25,7 +31,9 @@ const full = ref(false)
     v-else
     data-testid="reaction-palette"
     :class="[
-      'absolute bottom-full mb-1 flex items-center gap-1 bg-mnema-elevated border border-mnema-border rounded-lg p-1.5 shadow-xl z-30 after:absolute after:top-full after:left-0 after:right-0 after:h-2 after:content-[\'\']',
+      position,
+      'flex items-center gap-1 bg-mnema-elevated border border-mnema-border rounded-lg p-1.5 shadow-xl z-30 after:absolute after:top-full after:left-0 after:right-0 after:h-2 after:content-[\'\']',
+      props.sheet ? 'max-md:justify-center max-md:flex-wrap' : '',
       align === 'left' ? 'left-0' : 'right-0'
     ]"
   >

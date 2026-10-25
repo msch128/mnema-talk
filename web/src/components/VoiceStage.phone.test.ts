@@ -71,6 +71,35 @@ describe('Talk controls on a phone', () => {
     w.unmount()
   })
 
+  it('a tap on a tile only brings hidden controls back; it does not open the profile', async () => {
+    connectedWith(['alice'])
+    const profile = vi.spyOn(useChatStore(), 'openUserProfile').mockResolvedValue(undefined)
+    const w = mount(VoiceStage, { props: { channelId: 'v1' }, attachTo: document.body })
+    await nextTick()
+    vi.advanceTimersByTime(3100)
+    await nextTick()
+    const tile = () => w.get<HTMLElement>('[data-user-id="alice"]').element
+    tile().dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }))
+    tile().click()
+    await nextTick()
+    expect(bar(w).attributes('data-visible')).toBe('true')
+    expect(profile).not.toHaveBeenCalled()
+    tile().dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }))
+    tile().click()
+    expect(profile).toHaveBeenCalledTimes(1)
+    w.unmount()
+  })
+
+  it('sit in a row of their own, not over the tiles, while the Talk chat is open', async () => {
+    connectedWith(['alice'])
+    const w = mount(VoiceStage, { props: { channelId: 'v1', showChat: true }, attachTo: document.body })
+    await nextTick()
+    expect(bar(w).element.parentElement?.className).not.toContain('absolute')
+    await w.setProps({ showChat: false })
+    expect(bar(w).element.parentElement?.className).toContain('absolute')
+    w.unmount()
+  })
+
   it('keep hiding on a wide screen, where hover brings them back and no hint is shown', async () => {
     layout.compact.value = false
     connectedWith([])

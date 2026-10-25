@@ -42,3 +42,13 @@ describe('TalkParticipants keyboard and dismissal', () => {
     rootElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
   })
 })
+describe('TalkParticipants on a phone', () => {
+  it('opens as a sheet across the screen from a trigger with a full touch target', async () => {
+    wrapper = mount(TalkParticipants, { props: { users: [alice] }, attachTo: document.body })
+    const button = wrapper.get('[data-testid="talk-participants"]')
+    expect(button.classes()).toContain('max-md:after:-inset-y-3')
+    await button.trigger('click')
+    const list = wrapper.get('[data-testid="talk-participants-list"]').classes()
+    expect(list).toEqual(expect.arrayContaining(['max-md:fixed', 'max-md:inset-x-2']))
+  })
+})

@@ -15,6 +15,8 @@ import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 import TalkAccessPresets from './TalkAccessPresets.vue'
 
+type PresetsHandle = { save: () => Promise<void>; canSave: boolean }
+
 const props = defineProps({
   channel: { type: Object as PropType<Channel>, required: true }
 })
@@ -31,12 +33,19 @@ const name = ref(props.channel.name)
 const lobby = ref(props.channel.is_lobby === true)
 const busy = ref(false)
 
-async function run(work: () => Promise<unknown>, done: string) {
+const presets = ref<PresetsHandle | null>(null)
+const nameChanged = computed(() => !!name.value.trim() && name.value.trim() !== props.channel.name)
+const canSave = computed(() => !busy.value && (nameChanged.value || !!presets.value?.canSave))
+
+// One Save for the whole form: the name and, when it changed, who may join.
+async function save() {
+  if (!canSave.value) return
   busy.value = true
   try {
-    await work()
+    if (nameChanged.value) await updateTalk(props.channel.id, { name: name.value.trim() }, canManage.value)
+    await presets.value?.save()
     await chat.fetchChannels()
-    toasts.success(done)
+    toasts.success(t('talk.presetApplied'))
   } catch (e) {
     toasts.error(caughtErrorMessage(e, t('sidebar.updateFailed')))
   } finally {
@@ -44,15 +53,18 @@ async function run(work: () => Promise<unknown>, done: string) {
   }
 }
 
-function saveName() {
-  const trimmed = name.value.trim()
-  if (!trimmed || trimmed === props.channel.name) return
-  return run(() => updateTalk(props.channel.id, { name: trimmed }, canManage.value), t('sidebar.channelUpdated'))
-}
-
 async function toggleLobby() {
   const wanted = lobby.value
-  await run(() => setLobby(props.channel.id, wanted), t('talk.lobbySaved'))
+  busy.value = true
+  try {
+    await setLobby(props.channel.id, wanted)
+    await chat.fetchChannels()
+    toasts.success(t('talk.lobbySaved'))
+  } catch (e) {
+    toasts.error(caughtErrorMessage(e, t('sidebar.updateFailed')))
+  } finally {
+    busy.value = false
+  }
   lobby.value = props.channel.is_lobby === true
 }
 
@@ -62,12 +74,9 @@ const field = 'w-full rounded-md border border-mnema-border-field bg-mnema-canva
 <template>
   <BaseDialog :title="$t('talk.settingsTitle', { name: channel.name })" panel-class="max-w-md" @close="emit('close')">
     <div class="space-y-5 overflow-y-auto p-5" data-testid="talk-settings">
-      <form class="space-y-1.5" @submit.prevent="saveName">
+      <form class="space-y-1.5" @submit.prevent="save">
         <label for="talk-name" class="font-mono text-xs font-medium uppercase tracking-wider text-mnema-tertiary">{{ $t('admin.channelNameLabel') }}</label>
-        <div class="flex gap-2">
-          <input id="talk-name" v-model="name" type="text" maxlength="64" data-testid="talk-name" :class="field" />
-          <button type="submit" class="btn btn-secondary h-9 shrink-0" data-testid="talk-name-save" :disabled="busy || !name.trim() || name.trim() === channel.name">{{ $t('common.save') }}</button>
-        </div>
+        <input id="talk-name" v-model="name" type="text" maxlength="64" data-testid="talk-name" :class="field" />
       </form>
 
       <label v-if="canMakeLobby" class="flex items-start gap-3">
@@ -78,8 +87,11 @@ const field = 'w-full rounded-md border border-mnema-border-field bg-mnema-canva
         </span>
       </label>
 
-      <TalkAccessPresets :channel="channel" :can-access="canManage && !channel.is_temp" />
+      <TalkAccessPresets ref="presets" :channel="channel" :can-access="canManage && !channel.is_temp" />
       <p v-if="channel.is_temp && canManage" class="text-xs text-mnema-tertiary">{{ $t('talk.followsLobby') }}</p>
+    </div>
+    <div class="flex justify-end border-t border-mnema-hairline px-5 py-3">
+      <button type="button" class="btn btn-primary h-9" data-testid="talk-save" :disabled="!canSave" @click="save">{{ $t('common.save') }}</button>
     </div>
   </BaseDialog>
 </template>

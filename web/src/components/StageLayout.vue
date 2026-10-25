@@ -32,6 +32,13 @@ const reactionsOf = (userId: string) => voice.talkReactions.filter(r => r.user_i
 const seats = computed(() => props.users.map(u => (u.id === me.value && stage.iAmSpeaker.value ? { ...u, talk_power: true } : u)))
 const split = computed(() => splitStage(seats.value))
 const showHandButton = computed(() => props.connected && !stage.iAmSpeaker.value)
+// Speaker tiles use the canvas: one speaker is large, more share the width.
+const speakerWidth = computed(() => {
+  const n = split.value.speakers.length
+  if (n <= 1) return 'w-[min(100%,30rem)]'
+  if (n === 2) return 'w-[min(calc(50%-0.375rem),22.5rem)]'
+  return n <= 4 ? 'w-[min(calc(50%-0.375rem),17.5rem)]' : 'w-[min(calc(50%-0.375rem),14rem)]'
+})
 const name = (user: { display_name?: string | undefined; username?: string | undefined }) => user.display_name || user.username || ''
 </script>
 
@@ -40,7 +47,7 @@ const name = (user: { display_name?: string | undefined; username?: string | und
     <section :aria-label="$t('stage.speakers')" class="shrink-0">
       <h2 class="mb-2 text-xs font-semibold uppercase tracking-wider text-mnema-tertiary">{{ $t('stage.speakers') }}</h2>
       <div v-if="split.speakers.length" data-testid="stage-speakers" class="flex flex-wrap justify-center gap-3">
-        <div v-for="user in split.speakers" :key="user.id" class="flex w-56 shrink-0 flex-col gap-1">
+        <div v-for="user in split.speakers" :key="user.id" :class="[speakerWidth, 'flex shrink-0 flex-col gap-1']">
           <TalkTile
             :user="user"
             :stream="connected ? streamOf(user) : null"
