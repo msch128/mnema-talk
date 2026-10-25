@@ -1,0 +1,28 @@
+README.md
+  h_0ff4f4713441f4 223-224,315,402
+doc/api-stability.md
+  h_0ff4f4713441f4 27-28
+doc/architecture.md
+  h_0ff4f4713441f4 656-659
+doc/development.md
+  h_0ff4f4713441f4 79,81-85,146
+doc/operations.md
+  h_0ff4f4713441f4 320,561
+doc/product-status.md
+  h_0ff4f4713441f4 135-136
+doc/upgrade.md
+  h_0ff4f4713441f4 156,173,203-206
+internal/db/checksum_test.go
+  h_0ff4f4713441f4 4-5,65-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f1e45d4d864b100813578365c18a59821c21ca6c",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
