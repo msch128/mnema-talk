@@ -128,7 +128,7 @@ export function useAppRouting(alive: () => boolean) {
     adminTab,
     voiceShowChat,
     voiceChannelId,
-    applyRoute: (route: Route) => applyRoute(ctx, route),
+    applyRoute: (route: Route): Promise<boolean> => applyRoute(ctx, route),
     syncCurrentStateToRoute,
     currentStatePath,
     openAdmin,

@@ -14,7 +14,7 @@ const DM = 'aaaaaaaa-0000-4000-8000-000000000001'
 
 function makeCtx() {
   const channels = [
-    { id: 'c1', type: 'text', slug: 'general', previous_slugs: ['allgemein'] },
+    { id: 'c1', type: 'text', slug: 'general', previous_slugs: ['old-name'] },
     { id: 'f1', type: 'forum', slug: 'ideas', previous_slugs: [] },
     { id: 'v1', type: 'voice', slug: 'lounge', previous_slugs: [] },
   ]
@@ -59,9 +59,9 @@ beforeEach(() => {
 describe('applying a speaking address', () => {
   it('rewrites a former slug and a legacy id to the canonical address', async () => {
     const { ctx, chatStore } = makeCtx()
-    await applyRoute(ctx, parseRoute('/c/allgemein/t/t1'))
+    expect(await applyRoute(ctx, parseRoute('/c/old-name/t/t1'))).toBe(true)
     expect(navigate).toHaveBeenCalledWith('/c/general/t/t1', { replace: true })
-    await applyRoute(ctx, parseRoute('/c/c1'))
+    expect(await applyRoute(ctx, parseRoute('/c/c1'))).toBe(true)
     expect(navigate).toHaveBeenCalledWith('/c/general', { replace: true })
     expect(chatStore.selectChannel).not.toHaveBeenCalled()
   })
@@ -77,7 +77,7 @@ describe('applying a speaking address', () => {
 
   it('selects the channel behind the slug and the conversation behind the member', async () => {
     const { ctx, chatStore } = makeCtx()
-    await applyRoute(ctx, parseRoute('/c/general/m/m1'))
+    expect(await applyRoute(ctx, parseRoute('/c/general/m/m1'))).toBe(false)
     expect(chatStore.selectChannel).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'c1' }))
     expect(chatStore.jumpToMessage).toHaveBeenCalledWith('m1')
     await applyRoute(ctx, parseRoute('/dm/alice'))

@@ -147,13 +147,10 @@ async function onAuthSuccess() {
     routing.endFirstRoute()
     navigate(redirect, { replace: true })
   } else {
-    try {
-      await applyRoute(currentRoute.value)
-    } finally {
-      routing.endFirstRoute()
-    }
+    const rewritten = await applyRoute(currentRoute.value).finally(() => routing.endFirstRoute())
     if (!alive) return
-    syncCurrentStateToRoute()
+    // A rewritten address is applied on its own; the screen shows a stand-in until then.
+    if (!rewritten) syncCurrentStateToRoute()
   }
 }
 

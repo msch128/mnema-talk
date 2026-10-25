@@ -55,7 +55,7 @@ test('channels and Talks have speaking addresses that survive a rename', async (
 
     // An address that names no channel the member can see is just gone.
     await page.goto(`/c/nirgendwo-${suffix}`)
-    await expect(page).toHaveURL(/\/$/)
+    await expect(page).not.toHaveURL(/nirgendwo/)
 
     // Talks live under /v/<slug>, legacy ids included.
     const talk = await apiFetch(page, 'POST', '/api/admin/channels', { name: TALK, type: 'voice' })

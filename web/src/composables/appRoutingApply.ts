@@ -245,20 +245,26 @@ async function runSyncedDispatch(
   }
 }
 
-/** Shows what the address says: the channel, thread, Talk or admin console. */
-export async function applyRoute(ctx: RoutingContext, route: Route) {
-  if (!ctx.alive() || !ctx.authStore.isAuthenticated) return
+/**
+ * Shows what the address says: the channel, thread, Talk or admin console.
+ * Returns true when the address was rewritten instead: the rewritten route is
+ * applied by the router's own watcher, and until it is, the screen does not
+ * yet show what the address will say.
+ */
+export async function applyRoute(ctx: RoutingContext, route: Route): Promise<boolean> {
+  if (!ctx.alive() || !ctx.authStore.isAuthenticated) return false
   const gen = ++ctx.routeGen
   const superseded = () => !ctx.alive() || gen !== ctx.routeGen
 
-  if (!(await admitRoute(ctx, route, superseded))) return
-  if (!ctx.chatStore.allChannels.length) return
-  if (handleRouteRedirect(ctx, route)) return
+  if (!(await admitRoute(ctx, route, superseded))) return false
+  if (!ctx.chatStore.allChannels.length) return false
+  if (handleRouteRedirect(ctx, route)) return true
 
   const target = targetOf(route, routeLookups(ctx))
-  if (!target) return
+  if (!target) return false
   const previousVoiceChannel = ctx.lastVoiceRouteChannel
   ctx.lastVoiceRouteChannel = target.view === 'voice' ? target.channelId : null
 
   await runSyncedDispatch(ctx, target, previousVoiceChannel, superseded)
+  return false
 }
