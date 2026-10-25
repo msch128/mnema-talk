@@ -1,0 +1,21 @@
+web/src/lib/media/guard.ts
+  s_06fcde5dbef956::t_a9c0b85c50beb7 119-130,161-169,171-173,198
+web/src/lib/media/guard.test.ts
+  s_06fcde5dbef956::t_38afaa606aa670 98-134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fb97369ae2a7491a2bb4698d172b19e8969c96ce",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
