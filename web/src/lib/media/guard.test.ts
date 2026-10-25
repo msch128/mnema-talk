@@ -95,6 +95,43 @@ describe('media transform guard', () => {
     expect(created.workers).toHaveLength(2)
   })
 
+  it('does not lose the negotiation when a browser refuses to clone what a line needs', () => {
+    installBrowser()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const refused = () => { throw new DOMException('The object can not be cloned.', 'DataCloneError') }
+    const guard = createMediaGuard()
+    const key = {} as EpochKeys
+    guard.setKey(2, key)
+
+    // The key message cannot be cloned for a new line: the line is armed and keyless.
+    const first = { transform: null } as RTCRtpSender
+    vi.stubGlobal('MessageChannel', function MessageChannel(this: { port1: Port, port2: Port }) {
+      this.port1 = { postMessage: vi.fn(refused), close: vi.fn() }
+      this.port2 = { postMessage: vi.fn(), close: vi.fn() }
+      created.channels.push(this)
+    })
+    expect(guard.armSender(first, 'channel', 'alice', 0)).toBe(true)
+    expect(first.transform).not.toBeNull()
+    expect(warn).toHaveBeenCalledWith('[media] Could not hand the key to a line:', expect.any(DOMException))
+
+    // A later key still reaches every other line, and the refusing one does not stop it.
+    const second = { transform: null } as RTCRtpReceiver
+    installBrowser()
+    expect(guard.armReceiver(second, 'channel', 'bob', 0)).toBe(true)
+    expect(() => guard.setKey(3, key)).not.toThrow()
+    expect(created.channels[0]?.port1.postMessage).toHaveBeenCalledWith({ type: 'key', epoch: 3, key, seq: 2 })
+
+    // The transform itself cannot be built: the line stays unprotected, the caller is told, nothing leaks.
+    vi.stubGlobal('RTCRtpScriptTransform', function RTCRtpScriptTransform() { refused() })
+    const third = { transform: null } as RTCRtpSender
+    expect(guard.armSender(third, 'channel', 'alice', 0)).toBe(false)
+    expect(third.transform).toBeNull()
+    expect(created.channels.at(-1)?.port1.close).toHaveBeenCalled()
+    expect(warn).toHaveBeenCalledWith('[media] Could not arm a line:', expect.any(DOMException))
+    guard.reset()
+    warn.mockRestore()
+  })
+
   it('names the layer of a screen share line in the transform, and only then', () => {
     installBrowser()
     const guard = createMediaGuard()
