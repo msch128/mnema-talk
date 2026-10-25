@@ -1,7 +1,7 @@
 import { computed, ref, shallowRef } from 'vue'
 import type { Category, Channel, Member, Message, NotificationSettings, Presence, ReadState, User } from '../../types/domain'
 import type { ServerEventPayloads } from '../../types/events'
-import type { ChatDirectMessage } from '../../types/rest'
+import type { ChatDMSettings, ChatDirectMessage } from '../../types/rest'
 import { platform, type PlatformSocket } from '../../lib/platform'
 import { createKeyedThrottle } from '../../lib/chatLogic'
 import type { useAuthStore } from '../auth'
@@ -103,6 +103,9 @@ function dmState() {
   return {
     dms: ref<ChatDirectMessage[]>([]),
     dmsLoaded: ref(false),
+    // The member's list-wide settings (mute all, folded section), read with the list.
+    dmSettings: ref<ChatDMSettings>({ mute_all: false, list_collapsed: false }),
+    dmSettingsLoaded: ref(false),
     dmsFetchSeq: 0
   }
 }

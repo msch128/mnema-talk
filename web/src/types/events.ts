@@ -44,7 +44,7 @@ export interface DirectMessageRef {
   mention_count: number
   last_read_at: string | null
   notify_level: 'all' | 'mentions' | 'mute' | 'inherit'
-  can_send: boolean
+  can_send: boolean; hidden: boolean; favourite_position: number | null
 }
 
 function isDirectMessageMember(value: unknown): value is DirectMessageMember {
@@ -104,6 +104,8 @@ export interface ServerEventPayloads {
   dm_member_added: { dm_id: string; member: DirectMessageMember }
   /** A member left a group direct message the receiver is in (or the receiver left it on another device). */
   dm_member_removed: { dm_id: string; member: DirectMessageMember }
+  /** The caller closed, reopened or favourited a conversation (own sessions only): read it again; dm_id null: the whole list (their settings changed). */
+  dm_prefs_updated: { dm_id: string | null }
   typing: { channel_id: string; user_id: string }
   read_state: ReadStateUpdate
   message_create: Message
@@ -327,9 +329,11 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
     && isTimestamp(payload['created_at']) && (payload['last_message_at'] === null || isTimestamp(payload['last_message_at']))
     && isInteger(payload['unread_count']) && isInteger(payload['mention_count'])
     && (payload['last_read_at'] === null || isTimestamp(payload['last_read_at']))
-    && isChatNotifyLevel(payload['notify_level']) && typeof payload['can_send'] === 'boolean'],
+    && isChatNotifyLevel(payload['notify_level']) && typeof payload['can_send'] === 'boolean' && typeof payload['hidden'] === 'boolean'
+    && (payload['favourite_position'] === null || isInteger(payload['favourite_position']))],
   ['dm_member_added', payload => isIdentifier(payload['dm_id']) && isDirectMessageMember(payload['member'])],
   ['dm_member_removed', payload => isIdentifier(payload['dm_id']) && isDirectMessageMember(payload['member'])],
+  ['dm_prefs_updated', payload => (payload['dm_id'] === null || isIdentifier(payload['dm_id'])) && onlyFields(payload, ['dm_id'])],
   ['block_updated', payload => isIdentifier(payload['user_id']) && typeof payload['blocked'] === 'boolean' && onlyFields(payload, ['user_id', 'blocked'])],
   ['webrtc_offer', payload => payload['type'] === 'offer' && isString(payload['sdp'], 262_144)],
   ['webrtc_candidate', isIceCandidate],
@@ -380,7 +384,7 @@ const VOICE_KICK_REASONS = new Set(['room_full', 'missing_permission', 'rules_no
 
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
-  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'reminder_update', 'scheduled_message_update', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
+  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'reminder_update', 'scheduled_message_update', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'dm_prefs_updated', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'stage_hand', 'stage_talk_power', 'talk_reaction', 'media_handshake', 'forum_tags_changed',

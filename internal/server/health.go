@@ -59,6 +59,7 @@ var Features = []string{
 	"channels.forum",
 	"events",
 	"notify.levels.v2",
+	"dm.v2",
 }
 
 // healthCacheTTL is how long a health result is reused: the endpoint is

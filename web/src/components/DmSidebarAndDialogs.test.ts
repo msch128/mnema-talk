@@ -76,7 +76,8 @@ describe('SidebarDmSection', () => {
     chat.readStates = { [pair.id]: { channel_id: pair.id, unread_count: 2, mention_count: 2, notify_level: 'all', last_read_at: null } }
     const w = mount(SidebarDmSection, { global })
     expect(w.findAll('[data-testid="dm-title"]').map(t => t.text())).toEqual(['Ada', 'Ada, Bo'])
-    expect(w.get('[data-testid="dm-unread"]').text()).toBe('2')
+    expect(w.find('[data-testid="dm-unread"]').exists()).toBe(false)
+    expect(w.get('[data-testid="dm-mentions"]').text()).toBe('@2')
   })
 
   it('opens a conversation on click and on Enter', async () => {
@@ -101,15 +102,20 @@ describe('SidebarDmSection', () => {
     expect(document.querySelector('[data-testid="dm-create"]')).not.toBeNull()
   })
 
-  it('collapses to the open conversation and the ones with news, remembering the choice', async () => {
+  it('folds away completely, showing only what is new in its header, and remembers the choice per member', async () => {
     const chat = setup()
     chat.dms = [pair, group]
     chat.readStates = { [pair.id]: { channel_id: pair.id, unread_count: 2, mention_count: 2, notify_level: 'all', last_read_at: null } }
+    chat.activeChannel = chat.dmChannel(group.id)
     const w = mount(SidebarDmSection, { global })
     await w.get('[data-testid="dm-toggle"]').trigger('click')
-    expect(w.findAll('[data-dm]').map(r => r.attributes('data-dm'))).toEqual([pair.id])
-    expect(localStorage.getItem('mnema_dm_collapsed')).toBe('1')
-    expect(mount(SidebarDmSection, { global }).findAll('[data-dm]')).toHaveLength(1)
+    expect(w.findAll('[data-dm]')).toHaveLength(0)
+    expect(w.get('[data-testid="dm-toggle"]').attributes('aria-expanded')).toBe('false')
+    expect(w.get('[data-testid="dm-toggle"]').text()).toContain('2')
+    expect(localStorage.getItem(`mnema_dm_collapsed:${me}`)).toBe('1')
+    expect(mount(SidebarDmSection, { global }).findAll('[data-dm]')).toHaveLength(0)
+    await w.get('[data-testid="dm-toggle"]').trigger('click')
+    expect(w.findAll('[data-dm]')).toHaveLength(2)
   })
 
   it('shows the newest eight and a button for the rest', async () => {

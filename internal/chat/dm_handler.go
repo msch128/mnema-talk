@@ -16,6 +16,7 @@ func (h *Handler) mountDMs(r chi.Router) {
 	r.Delete("/dms/{id}/members/{user}", httpx.Handle(h.leaveDM))
 	r.Get("/users/me/privacy", httpx.Handle(h.getPrivacy))
 	r.Put("/users/me/privacy", httpx.Handle(h.setPrivacy))
+	h.mountDMPrefs(r)
 	starts := r
 	if h.DMLimit != nil {
 		starts = r.With(h.DMLimit.By(auth.UserKey))
@@ -188,7 +189,7 @@ func (h *Handler) announceDM(dm DirectMessage) {
 		ids[i] = m.ID
 	}
 	// Counts are the starter's to see; the others fetch their own.
-	dm.UnreadCount, dm.MentionCount, dm.LastReadAt = 0, 0, nil
+	dm = dm.forOthers()
 	h.Events.SendToUsers(ids, events.DMCreated, dm)
 }
 
@@ -263,7 +264,7 @@ func (h *Handler) announceAdded(dm DirectMessage, added uuid.UUID) {
 			others = append(others, m.ID)
 		}
 	}
-	dm.UnreadCount, dm.MentionCount, dm.LastReadAt = 0, 0, nil
+	dm = dm.forOthers()
 	h.Events.SendToUsers([]uuid.UUID{added}, events.DMCreated, dm)
 	h.Events.SendToUsers(others, events.DMMemberAdded, DMMemberChange{DMID: dm.ID, Member: joined})
 }

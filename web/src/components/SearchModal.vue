@@ -17,6 +17,7 @@ import { useOnboardingStore } from '../stores/onboarding'
 import BaseDialog from './BaseDialog.vue'
 import SearchInput from './SearchInput.vue'
 import SearchResults from './SearchResults.vue'
+import SearchConversationJump from './SearchConversationJump.vue'
 
 const props = defineProps({
   modelValue: {
@@ -255,6 +256,7 @@ onUnmounted(() => {
             @update:scope="searchScope = $event"
             @close="close"
           />
+          <SearchConversationJump :text="parsed.text" @jumped="close" />
           <SearchResults
             :sort="currentSort"
             :show-v3="showV3"

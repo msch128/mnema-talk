@@ -7,9 +7,11 @@ import { setLocale } from '../i18n'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
 import * as forumApi from '../lib/forumApi'
+import { openSearch } from '../lib/globalSearch'
 import type { ForumTag } from '../types/domain'
 import { channelFixture, messageFixture } from '../test-fixtures.fixture'
 
+vi.mock('../lib/globalSearch', () => ({ openSearch: vi.fn() }))
 vi.mock('../lib/forumApi', () => ({
   createForumPost: vi.fn(),
   fetchForumPosts: vi.fn(),
@@ -280,5 +282,13 @@ describe('ForumArea', () => {
     await flushPromises()
     expect(forumApi.fetchForumTags).not.toHaveBeenCalled()
     expect(forumApi.fetchForumPosts).not.toHaveBeenCalled()
+  })
+
+  it('has the way back to the channel list on a phone and a search button like other channels', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="open-nav"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="search-in-channel"]').trigger('click')
+    expect(openSearch).toHaveBeenCalledWith('in:general-discussions ')
   })
 })

@@ -91,16 +91,16 @@ test('two members start a direct message and write to each other', async ({ brow
     await expect(owner).toHaveURL(/\/c\/[0-9a-f-]{36}$/)
     await expect(owner.getByTestId('chat-channel-name')).toHaveText(suiteMember.username)
     await write(owner, `hello ${suffix}`)
-    await expect(owner.getByText(`hello ${suffix}`, { exact: true })).toBeVisible()
+    await expect(owner.locator('#main-content').getByText(`hello ${suffix}`, { exact: true })).toBeVisible()
 
     // It reaches the member live (the socket asked for conversations), with a badge.
     await expect(member.locator('[data-testid="dm-unread"]').first()).toHaveText('1')
     await rowOf(member, ADMIN_USER).click()
-    await expect(member.getByText(`hello ${suffix}`, { exact: true })).toBeVisible()
+    await expect(member.locator('#main-content').getByText(`hello ${suffix}`, { exact: true })).toBeVisible()
     await expect(member.getByTestId('dm-unread')).toHaveCount(0)
     await write(member, `antwort ${suffix}`)
-    await expect(owner.getByText(`antwort ${suffix}`, { exact: true })).toBeVisible()
-    await expect(member.getByText(`antwort ${suffix}`, { exact: true })).toBeVisible()
+    await expect(owner.locator('#main-content').getByText(`antwort ${suffix}`, { exact: true })).toBeVisible()
+    await expect(member.locator('#main-content').getByText(`antwort ${suffix}`, { exact: true })).toBeVisible()
 
     // A conversation of two cannot be left; the member list of the community is not shown beside it.
     await member.getByTestId('dm-info-button').click()
@@ -133,19 +133,19 @@ test('a block folds the messages and makes the composer refuse', async ({ browse
     expect((await apiFetch(owner, 'POST', `/api/channels/${channelId}/messages`, { content: `in the channel ${suffix}` })).status).toBe(201)
 
     await member.goto(`/c/${dmId}`)
-    await expect(member.getByText(`before the block ${suffix}`, { exact: true })).toBeVisible()
+    await expect(member.locator('#main-content').getByText(`before the block ${suffix}`, { exact: true })).toBeVisible()
     await member.getByTestId('dm-info-button').click()
     await member.getByTestId('dm-block').click()
     await member.keyboard.press('Escape')
 
     // Their messages fold away in the conversation and in channels; one can be shown again.
     await expect(member.getByTestId('blocked-message').first()).toBeVisible()
-    await expect(member.getByText(`before the block ${suffix}`, { exact: true })).toHaveCount(0)
+    await expect(member.locator('#main-content').getByText(`before the block ${suffix}`, { exact: true })).toHaveCount(0)
     await member.goto(`/c/${channelId}`)
     await expect(member.getByTestId('blocked-message')).toHaveCount(1)
-    await expect(member.getByText(`in the channel ${suffix}`, { exact: true })).toHaveCount(0)
+    await expect(member.locator('#main-content').getByText(`in the channel ${suffix}`, { exact: true })).toHaveCount(0)
     await member.getByTestId('blocked-message-show').click()
-    await expect(member.getByText(`in the channel ${suffix}`, { exact: true })).toBeVisible()
+    await expect(member.locator('#main-content').getByText(`in the channel ${suffix}`, { exact: true })).toBeVisible()
 
     // Both sides are refused with the same calm sentence; nothing arrives.
     await owner.goto(`/c/${dmId}`)
@@ -156,16 +156,16 @@ test('a block folds the messages and makes the composer refuse', async ({ browse
     await expect(member.getByTestId('chat-channel-name')).toHaveText(ADMIN_USER)
     await write(member, `me too ${suffix}`)
     await expect(member.getByText(REFUSED)).toBeVisible()
-    await expect(owner.getByText(`me too ${suffix}`, { exact: true })).toHaveCount(0)
-    await expect(member.getByText(`after the block ${suffix}`, { exact: true })).toHaveCount(0)
+    await expect(owner.locator('#main-content').getByText(`me too ${suffix}`, { exact: true })).toHaveCount(0)
+    await expect(member.locator('#main-content').getByText(`after the block ${suffix}`, { exact: true })).toHaveCount(0)
 
     // Lifting the block (from the conversation's info) makes the conversation work again.
     await member.getByTestId('dm-info-button').click()
     await member.getByTestId('dm-unblock').click()
     await member.keyboard.press('Escape')
     await write(member, `wieder da ${suffix}`)
-    await expect(owner.getByText(`wieder da ${suffix}`, { exact: true })).toBeVisible()
-    await expect(member.getByText(`before the block ${suffix}`, { exact: true })).toBeVisible()
+    await expect(owner.locator('#main-content').getByText(`wieder da ${suffix}`, { exact: true })).toBeVisible()
+    await expect(member.locator('#main-content').getByText(`before the block ${suffix}`, { exact: true })).toBeVisible()
   } finally {
     if (ownerId) await apiFetch(member, 'DELETE', `/api/me/blocks/${ownerId}`)
     await ownerCtx.close()
@@ -194,7 +194,7 @@ test('a group takes a member who reads its history, and a member can leave it', 
     await expect(owner).toHaveURL(/\/c\/[0-9a-f-]{36}$/)
     await expect(owner.getByTestId('chat-channel-name')).toContainText(secondName)
     await write(owner, `willkommen ${suffix}`)
-    await expect(owner.getByText(`willkommen ${suffix}`, { exact: true })).toBeVisible()
+    await expect(owner.locator('#main-content').getByText(`willkommen ${suffix}`, { exact: true })).toBeVisible()
     await expect(rowOf(first, secondName)).toBeVisible()
     await expect(rowOf(second, suiteMember.username)).toBeVisible()
 
@@ -207,7 +207,7 @@ test('a group takes a member who reads its history, and a member can leave it', 
     await owner.keyboard.press('Escape')
     await expect(rowOf(third, secondName)).toBeVisible()
     await rowOf(third, secondName).click()
-    await expect(third.getByText(`willkommen ${suffix}`, { exact: true })).toBeVisible()
+    await expect(third.locator('#main-content').getByText(`willkommen ${suffix}`, { exact: true })).toBeVisible()
 
     // A member leaves: the group disappears for them and shrinks for the others.
     await rowOf(second, suiteMember.username).click()
@@ -247,7 +247,7 @@ test('the Owner switches direct messages off and on again', async ({ browser }) 
     await expect(composer).toBeDisabled()
     await expect(composer).toHaveAttribute('placeholder', 'Du kannst gerade keine Direktnachrichten schreiben.')
     await expect(member.getByTestId('dm-new')).toHaveCount(0)
-    await expect(member.getByText(`lesbar ${suffix}`, { exact: true })).toBeVisible()
+    await expect(member.locator('#main-content').getByText(`lesbar ${suffix}`, { exact: true })).toBeVisible()
 
     // On again.
     await owner.getByTestId('dm-enabled').check()
@@ -279,7 +279,7 @@ test('a reported direct message reaches the moderators, who read the copy and re
 
     // The Owner reports it from the message menu.
     await owner.goto(`/c/${dmId}`)
-    await owner.getByText(text, { exact: true }).click({ button: 'right' })
+    await owner.locator('#main-content').getByText(text, { exact: true }).click({ button: 'right' })
     await owner.getByRole('menuitem', { name: 'Nachricht melden' }).click()
     const dialog = owner.getByTestId('report-dialog')
     await dialog.locator('[data-report-category="harassment"]').check()
@@ -332,7 +332,7 @@ test('a message forwarded into a direct message shows its quote to the recipient
 
     // The member forwards it to the conversation with the Owner; the dialog lists conversations next to channels.
     await member.goto(`/c/${channelId}`)
-    await member.getByText(original, { exact: true }).click({ button: 'right' })
+    await member.locator('#main-content').getByText(original, { exact: true }).click({ button: 'right' })
     await member.getByRole('menuitem', { name: 'Weiterleiten …' }).click()
     await member.getByTestId(`forward-target-${ADMIN_USER}`).check()
     await member.getByTestId('forward-comment').fill(`schau mal ${suffix}`)
@@ -341,7 +341,7 @@ test('a message forwarded into a direct message shows its quote to the recipient
 
     // The recipient sees the comment and the quote of the original.
     await owner.goto(`/c/${dmId}`)
-    await expect(owner.getByText(`schau mal ${suffix}`, { exact: true })).toBeVisible()
+    await expect(owner.locator('#main-content').getByText(`schau mal ${suffix}`, { exact: true })).toBeVisible()
     await expect(owner.getByTestId('forwarded')).toContainText(original)
   } finally {
     if (channelId) await apiFetch(owner, 'DELETE', `/api/admin/channels/${channelId}`)

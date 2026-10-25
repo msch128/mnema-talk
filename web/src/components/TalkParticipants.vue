@@ -67,7 +67,7 @@ function onKeydown(e: KeyboardEvent) {
       aria-haspopup="menu"
       :aria-expanded="open ? 'true' : 'false'"
       v-tooltip="$t('talk.participantsDetails')"
-      class="text-xs leading-4 px-1.5 rounded-full border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent whitespace-nowrap shrink-0 hover:bg-mnema-accent/20 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent"
+      class="text-xs leading-4 px-1.5 max-md:relative max-md:after:absolute max-md:after:-inset-x-1 max-md:after:-inset-y-3 rounded-full border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent whitespace-nowrap shrink-0 hover:bg-mnema-accent/20 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent"
       :aria-label="$t('talk.participants', { count: users.length })"
       @click="toggle"
     >
@@ -81,7 +81,7 @@ function onKeydown(e: KeyboardEvent) {
       role="menu"
       data-testid="talk-participants-list"
       :aria-label="$t('talk.participantsDetails')"
-      class="absolute left-0 top-full z-40 mt-2 w-[280px] max-w-[calc(100vw-16px)] max-h-[min(420px,calc(100dvh-80px))] overflow-y-auto overscroll-contain rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in"
+      class="absolute left-0 top-full z-40 mt-2 w-[280px] max-md:fixed max-md:inset-x-2 max-md:top-14 max-md:mt-0 max-md:w-auto max-h-[min(420px,calc(100dvh-80px))] overflow-y-auto overscroll-contain rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in"
     >
       <div class="flex items-center justify-between px-2 pb-1.5 pt-1 text-xs text-mnema-tertiary">
         <span class="font-semibold uppercase tracking-wide">{{ $t('talk.participants', { count: users.length }) }}</span>

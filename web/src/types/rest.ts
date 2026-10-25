@@ -1433,6 +1433,23 @@ export function isChatCreateReportRequest(value: unknown): value is ChatCreateRe
 
 export const decodeChatCreateReportRequest = decoder("chat.CreateReportRequest", isChatCreateReportRequest)
 
+export type ChatDMLastMessage = {
+  has_attachment: boolean
+  has_poll: boolean
+  text: string
+  user_id: string
+}
+
+export function isChatDMLastMessage(value: unknown): value is ChatDMLastMessage {
+  return isRecord(value)
+    && (hasOwn(value, "has_attachment") && typeof value["has_attachment"] === 'boolean')
+    && (hasOwn(value, "has_poll") && typeof value["has_poll"] === 'boolean')
+    && (hasOwn(value, "text") && isString(value["text"]))
+    && (hasOwn(value, "user_id") && isIdentifier(value["user_id"]))
+}
+
+export const decodeChatDMLastMessage = decoder("chat.DMLastMessage", isChatDMLastMessage)
+
 export type ChatDMMember = {
   avatar_url?: string
   display_name: string
@@ -1450,6 +1467,19 @@ export function isChatDMMember(value: unknown): value is ChatDMMember {
 
 export const decodeChatDMMember = decoder("chat.DMMember", isChatDMMember)
 
+export type ChatDMSettings = {
+  list_collapsed: boolean
+  mute_all: boolean
+}
+
+export function isChatDMSettings(value: unknown): value is ChatDMSettings {
+  return isRecord(value)
+    && (hasOwn(value, "list_collapsed") && typeof value["list_collapsed"] === 'boolean')
+    && (hasOwn(value, "mute_all") && typeof value["mute_all"] === 'boolean')
+}
+
+export const decodeChatDMSettings = decoder("chat.DMSettings", isChatDMSettings)
+
 export type ChatDeleteMessageRequest = {
   reason?: string
 }
@@ -1464,8 +1494,11 @@ export const decodeChatDeleteMessageRequest = decoder("chat.DeleteMessageRequest
 export type ChatDirectMessage = {
   can_send: boolean
   created_at: string
+  favourite_position: number | null
   group: boolean
+  hidden: boolean
   id: string
+  last_message?: ChatDMLastMessage
   last_message_at: string | null
   last_read_at: string | null
   members: Array<ChatDMMember>
@@ -1478,8 +1511,11 @@ export function isChatDirectMessage(value: unknown): value is ChatDirectMessage 
   return isRecord(value)
     && (hasOwn(value, "can_send") && typeof value["can_send"] === 'boolean')
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "favourite_position") && (isInteger(value["favourite_position"]) || value["favourite_position"] === null))
     && (hasOwn(value, "group") && typeof value["group"] === 'boolean')
+    && (hasOwn(value, "hidden") && typeof value["hidden"] === 'boolean')
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "last_message") || isChatDMLastMessage(value["last_message"]))
     && (hasOwn(value, "last_message_at") && (isTimestamp(value["last_message_at"]) || value["last_message_at"] === null))
     && (hasOwn(value, "last_read_at") && (isTimestamp(value["last_read_at"]) || value["last_read_at"] === null))
     && (hasOwn(value, "members") && isArrayOf(value["members"], item => isChatDMMember(item)))
@@ -2436,6 +2472,28 @@ export function isChatServerNotify(value: unknown): value is ChatServerNotify {
 }
 
 export const decodeChatServerNotify = decoder("chat.ServerNotify", isChatServerNotify)
+
+export type ChatSetDMFavouritesRequest = {
+  ids: Array<string>
+}
+
+export function isChatSetDMFavouritesRequest(value: unknown): value is ChatSetDMFavouritesRequest {
+  return isRecord(value)
+    && (hasOwn(value, "ids") && isArrayOf(value["ids"], item => isIdentifier(item)))
+}
+
+export const decodeChatSetDMFavouritesRequest = decoder("chat.SetDMFavouritesRequest", isChatSetDMFavouritesRequest)
+
+export type ChatSetDMHiddenRequest = {
+  hidden: boolean
+}
+
+export function isChatSetDMHiddenRequest(value: unknown): value is ChatSetDMHiddenRequest {
+  return isRecord(value)
+    && (hasOwn(value, "hidden") && typeof value["hidden"] === 'boolean')
+}
+
+export const decodeChatSetDMHiddenRequest = decoder("chat.SetDMHiddenRequest", isChatSetDMHiddenRequest)
 
 export type ChatSetNotifyLevelRequest = {
   level: ChatNotifyLevel

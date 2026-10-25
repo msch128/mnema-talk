@@ -59,7 +59,10 @@
     "deleted": "Gelöschtes Mitglied"
   },
   "media": {
-    "sizeMb": "{size} MB"
+    "sizeB": "{size} B",
+    "sizeKb": "{size} KB",
+    "sizeMb": "{size} MB",
+    "sizeGb": "{size} GB"
   },
   "menu": {
     "adminConsole": "Admin-Konsole",
@@ -1701,7 +1704,8 @@
     "anonymousBadgeHint": "Anonyme Umfrage: Niemand in der App, auch keine Moderatoren oder Administratoren, sieht, wer was gewählt hat. Mnema speichert nie, welche Antwort ein Mitglied gewählt hat, nur dass es abgestimmt hat und wie viele Stimmen jede Antwort hat.",
     "anonymousFinal": "Deine Stimme lässt sich nach dem Abschicken nicht mehr ändern.",
     "submitVote": "Abstimmen",
-    "youVotedAnonymous": "Du hast abgestimmt. Stimmen in einer anonymen Umfrage lassen sich nicht ändern."
+    "youVotedAnonymous": "Du hast abgestimmt. Stimmen in einer anonymen Umfrage lassen sich nicht ändern.",
+    "canChange": "Du kannst deine Stimme ändern, bis die Umfrage endet."
   },
   "mention": {
     "title": "Erwähnen",
@@ -2383,7 +2387,7 @@
     "locationType": "Ortstyp",
     "locationTalk": "Talk-Kanal",
     "locationText": "Freitext-Ort",
-    "locationTextPlaceholder": "z. B. Raum 42, Ingame-Lobby oder externer Link",
+    "locationTextPlaceholder": "z. B. Raum 42 oder ein Link",
     "selectTalk": "Talk-Kanal auswählen",
     "coverImage": "Titelbild (optional)",
     "coverAlt": "Titelbild der Veranstaltung",
@@ -2395,8 +2399,18 @@
     "going": "Zusagen",
     "interested": "Interessiert",
     "notGoing": "Absagen",
-    "goingCount": "{count} Zusagen",
-    "interestedCount": "{count} Interessiert",
+    "rsvpGoing": "Ich komme",
+    "rsvpInterested": "Vielleicht",
+    "rsvpNotGoing": "Kann nicht",
+    "cancelKeep": "Veranstaltung behalten",
+    "goingCount": {
+      "one": "{count} Zusage",
+      "other": "{count} Zusagen"
+    },
+    "interestedCount": {
+      "one": "{count} Vielleicht",
+      "other": "{count} Vielleicht"
+    },
     "reminderToast": "Erinnerung: „{title}“ beginnt in 15 Minuten!",
     "save": "Änderungen speichern",
     "details": "Details",
@@ -2813,7 +2827,7 @@
     "slowDown": "Zu viele Versuche. Warte einen Moment und versuche es dann noch einmal.",
     "searchScope": "Wo gesucht wird",
     "policy": {
-      "title": "Direktnachrichten",
+      "title": "Wer mir Direktnachrichten schicken darf",
       "intro": "Lege fest, wer eine Direktnachricht mit dir beginnen darf. Bestehende Gespräche laufen weiter, und du kannst weiterhin selbst welche beginnen.",
       "everyone": "Alle",
       "everyoneHint": "Jedes Mitglied kann ein Gespräch mit dir beginnen.",
@@ -2826,7 +2840,36 @@
     "noTalkLobby": "Diese Community hat noch keine Talk-Lobby, die du nutzen kannst. Admins können in den Einstellungen eines Talks eine daraus machen.",
     "talkInvited": "Einladung gesendet.",
     "inviteToTalk": "In meinen Talk einladen",
-    "inviteTalkFailed": "Die Einladung konnte nicht gesendet werden."
+    "inviteTalkFailed": "Die Einladung konnte nicht gesendet werden.",
+    "previewYou": "Du: {text}",
+    "previewFrom": "{name}: {text}",
+    "previewAttachment": "Anhang",
+    "previewPoll": "Umfrage",
+    "unreadCount": "{n} ungelesen",
+    "mentionCount": "{n} ungelesene Erwähnungen",
+    "memberCount": "{n} Mitglieder",
+    "favourites": "Favoriten",
+    "recent": "Gespräche",
+    "favourite": "Zu den Favoriten",
+    "unfavourite": "Aus den Favoriten entfernen",
+    "moveUp": "Nach oben",
+    "moveDown": "Nach unten",
+    "close": "Gespräch schließen",
+    "actions": "Aktionen für das Gespräch",
+    "markRead": "Als gelesen markieren",
+    "mute": "Gespräch stummschalten",
+    "unmute": "Stummschaltung aufheben",
+    "find": "Gespräch suchen oder beginnen",
+    "findStart": "Beginnen",
+    "findNone": "Kein Treffer",
+    "prefsFailed": "Die Liste konnte nicht geändert werden. Versuche es noch einmal.",
+    "openProfile": "Profil von {name} öffnen",
+    "jumpTo": "Gespräche",
+    "settings": {
+      "title": "Direktnachrichten",
+      "muteAll": "Alle Direktnachrichten stummschalten",
+      "muteAllHint": "Kein Ton, keine Benachrichtigung und keine Hervorhebung für Gespräche. Ungelesene Nachrichten werden weiter gezählt. Ein Gespräch, das du selbst stummschaltest oder wieder laut stellst, behält seine eigene Einstellung."
+    }
   },
   "blocks": {
     "title": "Blockierte Mitglieder",

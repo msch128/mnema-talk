@@ -59,7 +59,10 @@
     "deleted": "Deleted member"
   },
   "media": {
-    "sizeMb": "{size} MB"
+    "sizeB": "{size} B",
+    "sizeKb": "{size} KB",
+    "sizeMb": "{size} MB",
+    "sizeGb": "{size} GB"
   },
   "menu": {
     "adminConsole": "Admin console",
@@ -1701,7 +1704,8 @@
     "anonymousBadgeHint": "Anonymous poll: nobody in the app, not even moderators or administrators, can see who chose what. Mnema never stores which answer a member chose, only that they voted and how many votes each answer has.",
     "anonymousFinal": "Your vote can’t be changed after you send it.",
     "submitVote": "Vote",
-    "youVotedAnonymous": "You voted. Votes in an anonymous poll can’t be changed."
+    "youVotedAnonymous": "You voted. Votes in an anonymous poll can’t be changed.",
+    "canChange": "You can change your vote until the poll ends."
   },
   "mention": {
     "title": "Mention",
@@ -2383,7 +2387,7 @@
     "locationType": "Location type",
     "locationTalk": "Talk channel",
     "locationText": "Custom text location",
-    "locationTextPlaceholder": "e.g. Room 42, In-game lobby, or external link",
+    "locationTextPlaceholder": "e.g. Room 42 or a link",
     "selectTalk": "Select a Talk channel",
     "coverImage": "Cover image (optional)",
     "coverAlt": "Event cover image",
@@ -2395,8 +2399,18 @@
     "going": "Going",
     "interested": "Interested",
     "notGoing": "Not going",
-    "goingCount": "{count} going",
-    "interestedCount": "{count} interested",
+    "rsvpGoing": "I’m going",
+    "rsvpInterested": "Maybe",
+    "rsvpNotGoing": "Can’t make it",
+    "cancelKeep": "Keep event",
+    "goingCount": {
+      "one": "{count} going",
+      "other": "{count} going"
+    },
+    "interestedCount": {
+      "one": "{count} interested",
+      "other": "{count} interested"
+    },
     "reminderToast": "Reminder: “{title}” is starting in 15 minutes!",
     "save": "Save changes",
     "details": "Details",
@@ -2813,7 +2827,7 @@
     "slowDown": "Too many tries. Wait a moment, then try again.",
     "searchScope": "Where to search",
     "policy": {
-      "title": "Direct messages",
+      "title": "Who can send me direct messages",
       "intro": "Choose who may start a direct message with you. Conversations you already have go on, and you can still start your own.",
       "everyone": "Everyone",
       "everyoneHint": "Any member can start a conversation with you.",
@@ -2826,7 +2840,36 @@
     "noTalkLobby": "This community has no Talk lobby you can use yet. An admin can turn a Talk into one in its settings.",
     "talkInvited": "Invitation sent.",
     "inviteToTalk": "Invite to my Talk",
-    "inviteTalkFailed": "Couldn’t send the invitation."
+    "inviteTalkFailed": "Couldn’t send the invitation.",
+    "previewYou": "You: {text}",
+    "previewFrom": "{name}: {text}",
+    "previewAttachment": "Attachment",
+    "previewPoll": "Poll",
+    "unreadCount": "{n} unread",
+    "mentionCount": "{n} unread mentions",
+    "memberCount": "{n} members",
+    "favourites": "Favourites",
+    "recent": "Conversations",
+    "favourite": "Add to favourites",
+    "unfavourite": "Remove from favourites",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "close": "Close conversation",
+    "actions": "Conversation actions",
+    "markRead": "Mark as read",
+    "mute": "Mute conversation",
+    "unmute": "Unmute conversation",
+    "find": "Find or start a conversation",
+    "findStart": "Start",
+    "findNone": "No match",
+    "prefsFailed": "Couldn’t change the list. Try again.",
+    "openProfile": "Open the profile of {name}",
+    "jumpTo": "Conversations",
+    "settings": {
+      "title": "Direct messages",
+      "muteAll": "Mute all direct messages",
+      "muteAllHint": "No sound, no notification and no highlight for any conversation. Unread messages are still counted. A conversation you mute or unmute yourself keeps its own setting."
+    }
   },
   "blocks": {
     "title": "Blocked members",

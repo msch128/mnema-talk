@@ -138,7 +138,7 @@ describe('EventsModal', () => {
     const rsvpSpy = vi.spyOn(store, 'setRSVP').mockResolvedValue({ ...ev, my_rsvp: 'going' })
 
     wrapper = mount(EventsModal)
-    const goingBtn = wrapper.findAll('button').find(b => b.text().includes('Going'))
+    const goingBtn = wrapper.findAll('button').find(b => b.text().includes('I’m going'))
     await goingBtn?.trigger('click')
 
     expect(rsvpSpy).toHaveBeenCalledWith(fixtureId(1), 'going')

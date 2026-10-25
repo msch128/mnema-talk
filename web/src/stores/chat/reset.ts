@@ -42,6 +42,8 @@ export function resetCommunityState(cx: Cx) {
   cs.members.value = []
   cs.dms.value = []
   cs.dmsLoaded.value = false
+  cs.dmSettings.value = { mute_all: false, list_collapsed: false }
+  cs.dmSettingsLoaded.value = false
   ++cs.dmsFetchSeq
   useBlocksStore().reset()
   useLaterStore().reset()

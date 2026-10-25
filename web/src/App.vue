@@ -100,6 +100,8 @@ const { isCompact, navOpen, closeNav } = useCompactLayout()
 if (isCompact.value) chatStore.showMemberList = false
 watch(() => [chatStore.activeChannel?.id, voiceStore.currentChannelId, voiceStore.activeView], closeNav)
 watch(() => chatStore.activeThread, thread => { if (thread && isCompact.value) chatStore.showMemberList = false })
+// A Talk needs the width: below 1100 px the member list starts closed (the header button opens it).
+watch(() => voiceStore.activeView, view => { if (view === 'voice' && window.innerWidth < 1100) chatStore.showMemberList = false })
 function onWindowKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && navOpen.value) closeNav()
 }

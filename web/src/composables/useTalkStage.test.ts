@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { ref } from 'vue'
 import { useVoiceStore } from '../stores/voice'
-import { screenCardsFor, useTalkStage } from './useTalkStage'
+import { orderParticipants, screenCardsFor, useTalkStage } from './useTalkStage'
 
 const me = userFixture({ id: 'me', username: 'me' })
 const alice = userFixture({ id: 'a', username: 'alice' })
@@ -158,5 +158,21 @@ describe('screen card empty and camera stages', () => {
     voice.watchScreen('a')
     voice.setRemoteScreen('a', streamFixture())
     expect(s.remoteScreenUserId.value).toBe('a')
+  })
+})
+
+describe('orderParticipants', () => {
+  const at = (id: string, joined_at?: string) => ({ id, ...(joined_at ? { joined_at } : {}) })
+
+  it('puts who joined first first, then by id, whatever order the server sent', () => {
+    const list = [at('z', '2026-01-01T10:05:00Z'), at('b', '2026-01-01T10:00:00Z'), at('a', '2026-01-01T10:00:00Z')]
+    expect(orderParticipants(list).map(u => u.id)).toEqual(['a', 'b', 'z'])
+    expect(orderParticipants([...list].reverse()).map(u => u.id)).toEqual(['a', 'b', 'z'])
+  })
+
+  it('puts members without a join time last, and leaves the input alone', () => {
+    const list = [at('n'), at('a', '2026-01-01T10:00:00Z'), at('m', 'garbage')]
+    expect(orderParticipants(list).map(u => u.id)).toEqual(['a', 'm', 'n'])
+    expect(list.map(u => u.id)).toEqual(['n', 'a', 'm'])
   })
 })

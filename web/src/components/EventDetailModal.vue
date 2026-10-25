@@ -10,7 +10,9 @@ import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { confirm } from '../lib/confirm'
 import type { CommunityEvent, RSVPItem } from '../types/domain'
-import { t } from '../i18n'
+import { eventAvatar } from '../lib/eventAvatar'
+import { formatEventStart, relativeEventDay } from '../lib/eventTime'
+import { locale, t } from '../i18n'
 
 const props = defineProps<{
   event: CommunityEvent
@@ -55,12 +57,21 @@ onMounted(() => {
 })
 
 function formatDateTime(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleString(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short'
-  })
+  return formatEventStart(iso, locale.value)
 }
+
+const whenHint = computed(() => {
+  const status = currentEvent.value.status
+  return status === 'scheduled' || status === 'active' ? relativeEventDay(currentEvent.value.start_time, Date.now(), locale.value) : ''
+})
+
+// The RSVP buttons are the member's own answer; the counts sit in a line of their own.
+const rsvpChoices = computed(() => [
+  { id: 'going' as const, label: t('events.rsvpGoing'), icon: Check, on: 'border-emerald-500 bg-emerald-500/10 text-emerald-400' },
+  { id: 'interested' as const, label: t('events.rsvpInterested'), icon: HelpCircle, on: 'border-amber-500 bg-amber-500/10 text-amber-400' },
+  { id: 'not_going' as const, label: t('events.rsvpNotGoing'), icon: X, on: 'border-red-500 bg-red-500/10 text-red-400' }
+])
+const counts = computed(() => currentEvent.value.rsvp_counts)
 
 async function setRSVP(response: 'going' | 'interested' | 'not_going') {
   try {
@@ -80,6 +91,7 @@ async function cancelEvent() {
     title: t('events.cancel'),
     body: t('events.cancelConfirm'),
     confirmLabel: t('events.cancel'),
+    cancelLabel: t('events.cancelKeep'),
     danger: true
   })
   if (!confirmed) return
@@ -100,7 +112,7 @@ async function cancelEvent() {
   >
     <div class="flex flex-col overflow-y-auto p-6 max-h-[80vh]">
       <!-- Cover Image -->
-      <div v-if="currentEvent.cover_url" class="relative -mx-6 -mt-6 mb-6 aspect-[3/1] w-[calc(100%+3rem)] overflow-hidden border-b border-mnema-hairline bg-mnema-surface">
+      <div v-if="currentEvent.cover_url" class="relative -mx-6 -mt-6 mb-6 aspect-[3/1] w-[calc(100%+3rem)] shrink-0 overflow-hidden border-b border-mnema-hairline bg-mnema-surface">
         <img :src="currentEvent.cover_url" :alt="t('events.coverAlt')" class="h-full w-full object-cover" />
       </div>
 
@@ -136,6 +148,7 @@ async function cancelEvent() {
         <div class="flex items-center gap-1.5 text-sm text-mnema-secondary">
           <Calendar class="w-4 h-4 text-mnema-tertiary" />
           <span>{{ formatDateTime(currentEvent.start_time) }}</span>
+          <span v-if="whenHint" class="text-mnema-tertiary">· {{ whenHint }}</span>
           <span v-if="currentEvent.end_time">- {{ formatDateTime(currentEvent.end_time) }}</span>
         </div>
 
@@ -179,47 +192,24 @@ async function cancelEvent() {
         <div class="text-sm font-medium text-mnema-text">{{ $t('events.rsvp') }}</div>
         <div class="grid grid-cols-3 gap-2">
           <button
+            v-for="c in rsvpChoices"
+            :key="c.id"
             type="button"
+            :data-rsvp="c.id"
+            :aria-pressed="currentEvent.my_rsvp === c.id ? 'true' : 'false'"
             :class="[
-              'flex items-center justify-center gap-1.5 rounded-lg border py-2 text-sm font-medium transition-colors',
-              currentEvent.my_rsvp === 'going'
-                ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400 font-semibold'
-                : 'border-mnema-border hover:bg-mnema-hover text-mnema-secondary'
+              'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border px-1 py-2 text-center text-xs font-medium leading-tight transition-colors sm:flex-row sm:gap-1.5 sm:text-sm',
+              currentEvent.my_rsvp === c.id ? `${c.on} font-semibold` : 'border-mnema-border hover:bg-mnema-hover text-mnema-secondary'
             ]"
-            @click="setRSVP('going')"
+            @click="setRSVP(c.id)"
           >
-            <Check class="w-4 h-4" />
-            <span>{{ $t('events.going') }} ({{ currentEvent.rsvp_counts.going }})</span>
-          </button>
-
-          <button
-            type="button"
-            :class="[
-              'flex items-center justify-center gap-1.5 rounded-lg border py-2 text-sm font-medium transition-colors',
-              currentEvent.my_rsvp === 'interested'
-                ? 'border-amber-500 bg-amber-500/10 text-amber-400 font-semibold'
-                : 'border-mnema-border hover:bg-mnema-hover text-mnema-secondary'
-            ]"
-            @click="setRSVP('interested')"
-          >
-            <HelpCircle class="w-4 h-4" />
-            <span>{{ $t('events.interested') }} ({{ currentEvent.rsvp_counts.interested }})</span>
-          </button>
-
-          <button
-            type="button"
-            :class="[
-              'flex items-center justify-center gap-1.5 rounded-lg border py-2 text-sm font-medium transition-colors',
-              currentEvent.my_rsvp === 'not_going'
-                ? 'border-red-500 bg-red-500/10 text-red-400 font-semibold'
-                : 'border-mnema-border hover:bg-mnema-hover text-mnema-secondary'
-            ]"
-            @click="setRSVP('not_going')"
-          >
-            <X class="w-4 h-4" />
-            <span>{{ $t('events.notGoing') }}</span>
+            <component :is="c.icon" class="h-4 w-4 shrink-0" />
+            <span class="wrap-break-word">{{ c.label }}</span>
           </button>
         </div>
+        <p class="text-xs text-mnema-tertiary" data-testid="event-rsvp-counts">
+          {{ $t('events.goingCount', { count: counts.going }) }} · {{ $t('events.interestedCount', { count: counts.interested }) }}
+        </p>
       </div>
 
       <!-- Participants List -->
@@ -240,12 +230,7 @@ async function cancelEvent() {
             class="flex items-center justify-between p-2.5 text-sm"
           >
             <div class="flex items-center gap-2 min-w-0">
-              <UserAvatar
-                :user-id="item.user.id"
-                :avatar-url="item.user.avatar_url"
-                :display-name="item.user.display_name || item.user.username"
-                size="sm"
-              />
+              <UserAvatar :user="eventAvatar(item.user)" size="sm" />
               <span class="truncate font-medium text-mnema-text">
                 {{ item.user.display_name || item.user.username }}
               </span>

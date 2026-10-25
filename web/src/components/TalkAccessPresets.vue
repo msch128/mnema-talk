@@ -10,7 +10,6 @@ import type { Channel, Overwrite } from '../types/domain'
 import { currentPreset, presetEveryone, presetOnlyRoles, rolesLetIn } from '../lib/talkPresets'
 import { updateTalk } from '../lib/talks'
 import { usePermissionsStore } from '../stores/permissions'
-import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 
@@ -19,10 +18,7 @@ const props = defineProps({
   /** The member may change who can join (Manage channels). */
   canAccess: { type: Boolean, default: false }
 })
-const emit = defineEmits<{ applied: [] }>()
-
 const permissions = usePermissionsStore()
-const chat = useChatStore()
 const toasts = useToastStore()
 
 type Choice = 'everyone' | 'roles' | 'limit'
@@ -32,6 +28,10 @@ const limit = ref(props.channel.user_limit || 0)
 const entries = ref<Overwrite[]>([])
 const loaded = ref(!props.canAccess)
 const busy = ref(false)
+// What is stored now: the form only has something to save once it differs.
+const snapshot = () => JSON.stringify([choice.value, [...chosenRoles.value].sort(), limit.value])
+const baseline = ref(snapshot())
+const dirty = computed(() => loaded.value && snapshot() !== baseline.value)
 
 const everyoneId = computed(() => permissions.roles.find(r => r.is_everyone)?.id ?? '')
 const base = computed(() => `/api/admin/channels/${props.channel.id}/overwrites`)
@@ -49,6 +49,7 @@ async function load() {
     toasts.error(caughtErrorMessage(e, t('overwrites.loadFailed')))
   } finally {
     loaded.value = true
+    baseline.value = snapshot()
   }
 }
 
@@ -60,22 +61,20 @@ async function writeAccess() {
   entries.value = next
 }
 
-async function apply() {
-  if (busy.value || needsRole.value) return
+// Writes the choice; the dialog's one Save button calls it and reports the result.
+async function save() {
+  if (busy.value || needsRole.value || !dirty.value) return
   busy.value = true
   try {
     if (choice.value === 'limit') await updateTalk(props.channel.id, { user_limit: Math.max(0, Math.min(999, Math.trunc(limit.value) || 0)) }, permissions.can('manage_channels'))
     else await writeAccess()
-    await chat.fetchChannels()
     await permissions.load()
-    toasts.success(t('talk.presetApplied'))
-    emit('applied')
-  } catch (e) {
-    toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
+    baseline.value = snapshot()
   } finally {
     busy.value = false
   }
 }
+defineExpose({ save, canSave: computed(() => dirty.value && !needsRole.value) })
 
 onMounted(load)
 
@@ -84,7 +83,7 @@ const option = 'flex items-start gap-3 rounded-lg border border-mnema-hairline b
 
 <template>
   <fieldset class="space-y-2" data-testid="talk-presets" :disabled="!loaded || busy">
-    <legend class="mb-1.5 font-mono text-xs font-medium uppercase tracking-wider text-mnema-tertiary">{{ $t('talk.presetsTitle') }}</legend>
+    <legend class="mb-1.5 font-mono text-xs font-medium uppercase tracking-wider text-mnema-tertiary">{{ canAccess ? $t('talk.presetsTitle') : $t('talk.presetLimit') }}</legend>
 
     <label v-if="canAccess" :class="option">
       <input v-model="choice" type="radio" value="everyone" name="talk-preset" class="mt-1 accent-mnema-accent" data-testid="preset-everyone" />
@@ -106,9 +105,9 @@ const option = 'flex items-start gap-3 rounded-lg border border-mnema-hairline b
     </label>
 
     <label :class="option">
-      <input v-model="choice" type="radio" value="limit" name="talk-preset" class="mt-1 accent-mnema-accent" data-testid="preset-limit" />
+      <input v-if="canAccess" v-model="choice" type="radio" value="limit" name="talk-preset" class="mt-1 accent-mnema-accent" data-testid="preset-limit" />
       <span>
-        <span class="block text-sm font-medium text-mnema-text">{{ $t('talk.presetLimit') }}</span>
+        <span v-if="canAccess" class="block text-sm font-medium text-mnema-text">{{ $t('talk.presetLimit') }}</span>
         <span class="text-xs text-mnema-tertiary">{{ $t('talk.presetLimitHint') }}</span>
         <input
           v-if="choice === 'limit'"
@@ -123,8 +122,5 @@ const option = 'flex items-start gap-3 rounded-lg border border-mnema-hairline b
       </span>
     </label>
 
-    <div class="flex justify-end pt-1">
-      <button type="button" class="btn btn-primary h-8" data-testid="preset-apply" :disabled="busy || !loaded || needsRole" @click="apply">{{ $t('talk.presetApply') }}</button>
-    </div>
   </fieldset>
 </template>

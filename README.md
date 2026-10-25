@@ -164,9 +164,29 @@ no accounts on someone else's platform.
   two, several make a group of up to ten people. Members added to a group
   later read its whole history. A conversation of two cannot be left (block
   the other member instead); a group can, from the conversation's info.
-- **Who may write to you** is your choice under *Account & security* >
-  *Your data*: everyone (the default) or nobody. It only decides who can start
-  a conversation; existing ones go on.
+- **The list** shows each conversation with its face (and presence), the
+  start of the latest message (with "You:" or, in a group, who wrote it),
+  when, and what is new: a number for unread messages, a red @ number for
+  mentions. Groups show two faces and how many people are in them. The section
+  folds away with the arrow next to its name, and stays folded on all your
+  devices. The box at the top (**Find or start a conversation**) finds
+  conversations and members; Enter opens the first match. Ctrl/Cmd+K offers
+  matching conversations too.
+- **Close a conversation** with the **x** on its row or **Close conversation**
+  in its menu (right-click, or the three dots on a phone). Nothing is deleted;
+  the conversation comes back with the next message, or when you open it from
+  the search. **Favourites**: the star puts a conversation at the top, in its
+  own section (up to 25); drag to reorder, or use **Move up** and **Move down**
+  in the menu (Alt+Arrow keys on a focused row). Favourites stay in the list and
+  follow you to every device.
+- **Mute** one conversation from the bell in its header or its menu, or all of
+  them with **Mute all direct messages** under *Account & security* > *Your
+  data* > *Direct messages*: no sound, no notification and no highlight, but
+  unread messages still count. A conversation you muted or unmuted yourself keeps
+  its own setting.
+- **Who may write to you** is your choice in the same place: everyone (the
+  default) or nobody. It only decides who can start a conversation; existing
+  ones go on.
 - **Block** a member from their profile card, their menu, a message's menu or
   the conversation info. Their messages fold into "Blocked message" (one click
   shows it), they cause no mentions or notifications for you (in any conversation,
