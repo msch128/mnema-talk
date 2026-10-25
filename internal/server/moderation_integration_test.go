@@ -274,10 +274,7 @@ func TestBanBlocksSessionsLoginAndSocketsAndUnbanRestores(t *testing.T) {
 	var reg struct{ User struct{ ID uuid.UUID } }
 	res.decode(t, &reg)
 	outlaw := reg.User.ID.String()
-	conn, _, err := viaInvite.dialWS(a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
+	conn := viaInvite.dialLiveWS(a.origin())
 
 	if res := f.mod.post("/api/admin/users/"+outlaw+"/ban", map[string]any{"reason": "ban evasion"}); res.status != http.StatusNoContent {
 		t.Fatalf("ban: %d %s", res.status, res.body)

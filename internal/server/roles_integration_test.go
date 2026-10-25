@@ -362,10 +362,7 @@ func TestKickNeedsDisconnectMembersAndRank(t *testing.T) {
 	role := createRole(t, owner, "Talk mod", perm.ViewChannel|perm.DisconnectMembers)
 	assignRoles(t, owner, mod, role)
 
-	watcher, _, err := owner.dialWS(a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
+	watcher := owner.dialLiveWS(a.origin())
 	conn, _, err := max.dialWS(a.origin())
 	if err != nil {
 		t.Fatal(err)

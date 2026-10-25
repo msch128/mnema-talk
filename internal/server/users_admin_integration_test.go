@@ -202,10 +202,7 @@ func TestAdminKicksFromVoiceAndLastSeen(t *testing.T) {
 	max := a.register(admin, "max")
 	voice := a.createChannel(admin, "Lounge", "voice")
 
-	watcher, _, err := admin.dialWS(a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
+	watcher := admin.dialLiveWS(a.origin())
 	ws, _, err := max.dialWS(a.origin())
 	if err != nil {
 		t.Fatal(err)
