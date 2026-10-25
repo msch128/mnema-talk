@@ -109,7 +109,11 @@ export const useEventsStore = defineStore('communityEvents', () => {
     uploadCover: (id: string, file: File) => act(() => apiUploadCover(id, file)),
     deleteCover: (id: string) => act(() => apiDeleteCover(id)),
     listRSVPs: (id: string) => apiListRSVPs(id),
-    handleEventUpdate: (payload: CommunityEvent) => replaceOrAppend(payload),
+    // A pushed event carries no one's own answer: keep the one this client knows.
+    handleEventUpdate: (payload: CommunityEvent) => {
+      const known = events.value.find(e => e.id === payload.id)
+      replaceOrAppend(known?.my_rsvp != null ? { ...payload, my_rsvp: known.my_rsvp } : payload)
+    },
     handleEventDelete: (id: string) => { events.value = events.value.filter(e => e.id !== id) },
     handleEventReminder: (p: ServerEventPayloads['event_reminder']) => {
       useToastStore().info(t('events.reminderToast', { title: p.title }))

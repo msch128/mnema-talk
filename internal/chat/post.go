@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -66,7 +67,19 @@ func checkAutomod(ctx context.Context, p *db.Pool, nm NewMessage) (*automod.Pend
 	if nm.WebhookID != nil {
 		return nil, nil
 	}
-	return automod.Of(p).Check(ctx, automod.Post{ChannelID: nm.ChannelID, UserID: nm.UserID, Content: nm.Content, HasAttachment: nm.HasAttachment})
+	parts := append([]string{}, nm.ScreenText...)
+	if nm.Title != nil {
+		parts = append(parts, *nm.Title)
+	}
+	content := strings.Join(append(parts, nm.Content), "\n")
+	return automod.Of(p).Check(ctx, automod.Post{ChannelID: nm.ChannelID, UserID: nm.UserID, Content: content, HasAttachment: nm.HasAttachment})
+}
+
+// screenText applies the automod rules to member-written text that is not a
+// message body (a forum title edit, a tag name). messageID is the post being
+// edited, or uuid.Nil.
+func screenText(ctx context.Context, p *db.Pool, channelID, userID, messageID uuid.UUID, text string) (*automod.Pending, error) {
+	return automod.Of(p).Check(ctx, automod.Post{ChannelID: channelID, UserID: userID, Content: text, MessageID: messageID})
 }
 
 // insertMessageTx stores the message, its mentions and, for a thread reply,

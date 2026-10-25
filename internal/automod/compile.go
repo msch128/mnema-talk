@@ -3,8 +3,10 @@ package automod
 import (
 	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/google/uuid"
+	"golang.org/x/text/unicode/norm"
 )
 
 // compiled is a rule ready to run: the patterns are built once, when the
@@ -50,7 +52,7 @@ func set(ids []uuid.UUID) map[uuid.UUID]bool {
 func compileWords(words []string) (*regexp.Regexp, error) {
 	var alts []string
 	for _, w := range words {
-		parts := strings.Split(w, "*")
+		parts := strings.Split(fold(w), "*")
 		for i, p := range parts {
 			parts[i] = phrasePart(p)
 		}
@@ -79,13 +81,25 @@ func phrasePart(p string) string {
 	return out
 }
 
-// invisible are the characters that make no difference to a reader but would
-// let a blocked word slip through when put inside it.
-var invisible = strings.NewReplacer("\u200b", "", "\u200c", "", "\u200d", "", "\u2060", "", "\ufeff", "", "\u00ad", "")
+// fold prepares text for matching: compatibility forms (fullwidth letters,
+// no-break spaces) are normalised, every kind of space becomes a plain one and
+// invisible format characters and stray combining marks are dropped, so none of
+// them can hide a blocked word or end a link early.
+func fold(s string) string {
+	return strings.Map(func(r rune) rune {
+		switch {
+		case unicode.IsSpace(r) || unicode.Is(unicode.Z, r):
+			return ' '
+		case unicode.Is(unicode.Cf, r) || unicode.Is(unicode.Mn, r):
+			return -1
+		}
+		return r
+	}, norm.NFKC.String(s))
+}
 
 // matchesWords reports whether content contains a blocked word.
 func (c *compiled) matchesWords(content string) bool {
-	return c.words != nil && c.words.MatchString(invisible.Replace(content))
+	return c.words != nil && c.words.MatchString(fold(content))
 }
 
 var linkToken = regexp.MustCompile(`(?i)\b(?:https?://|www\.)[^\s<>"'\x60]+`)
@@ -100,7 +114,7 @@ type link struct {
 // links lists the links in content.
 func links(content string) []link {
 	var out []link
-	for _, m := range linkToken.FindAllString(invisible.Replace(content), -1) {
+	for _, m := range linkToken.FindAllString(fold(content), -1) {
 		host, ok := hostOf(strings.TrimRight(m, ".,;:!?)]}"))
 		out = append(out, link{host, ok})
 	}
