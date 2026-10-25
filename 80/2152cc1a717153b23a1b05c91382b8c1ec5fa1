@@ -1,0 +1,43 @@
+doc/upgrade.md
+  s_06fcde5dbef956::t_32d72113bca506 172,175
+  s_06fcde5dbef956::t_7714c899d304c2 174
+internal/chat/slug.go
+  s_06fcde5dbef956::t_7714c899d304c2 168-172,179-185
+  s_06fcde5dbef956::t_e5fecd1a3cadb3 203-210,212,219-220,223
+  s_06fcde5dbef956::t_710aa1bba0bce6 65-91,94,99-107,111-114,120-121,124-126,128-131,138-143,147-158,165-166
+internal/chat/talks.go
+  s_06fcde5dbef956::t_710aa1bba0bce6 97
+internal/chat/slug_test.go
+  s_06fcde5dbef956::t_ef8eb0cb64ad7b 6-7,34-35,37-38,43,53,59-63,66,71-79
+  s_06fcde5dbef956::t_9f5eeaaed8d50f 47
+  s_06fcde5dbef956::t_b75c3fe7399483 80
+internal/chat/slug_integration_test.go
+  s_06fcde5dbef956::t_4524de7b1e09c1 7,57-58,69-70,144-216,218-220
+internal/db/migrations/0075_channel_slugs.sql
+  s_06fcde5dbef956::t_710aa1bba0bce6 7,12-15,17,22,29,46-47,51-52,54-55
+  s_06fcde5dbef956::t_ef8eb0cb64ad7b 31-36
+SECURITY.md
+  s_06fcde5dbef956::t_32d72113bca506 196-213
+internal/chat/channels.go
+  s_06fcde5dbef956::t_710aa1bba0bce6 75
+internal/chat/channel_layout.go
+  s_06fcde5dbef956::t_710aa1bba0bce6 165,216,226-232
+internal/db/channel_slug_backfill_integration_test.go
+  s_06fcde5dbef956::t_e38bd7e2bf3e4b 7,47-48,51,55-57,77-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "802152cc1a717153b23a1b05c91382b8c1ec5fa1",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
