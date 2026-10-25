@@ -35,29 +35,34 @@ func parseSearchTerms(text string) []searchTerm {
 			i++
 			continue
 		}
-		exclude := rs[i] == '-' && i+1 < len(rs) && !unicode.IsSpace(rs[i+1])
-		if exclude {
-			i++
+		term, next := scanSearchTerm(rs, i)
+		if term.Text != "" {
+			terms = append(terms, term)
 		}
-		start, end := i, i
-		if rs[i] == '"' {
-			start = i + 1
-			end = start
-			for end < len(rs) && rs[end] != '"' {
-				end++
-			}
-			i = min(end+1, len(rs))
-		} else {
-			for end < len(rs) && !unicode.IsSpace(rs[end]) {
-				end++
-			}
-			i = end
-		}
-		if t := strings.TrimSpace(string(rs[start:end])); t != "" {
-			terms = append(terms, searchTerm{Text: t, Exclude: exclude})
-		}
+		i = next
 	}
 	return terms
+}
+
+// scanSearchTerm reads the term that starts at rs[i] (not a space) and
+// returns it with the index just after it.
+func scanSearchTerm(rs []rune, i int) (searchTerm, int) {
+	exclude := rs[i] == '-' && i+1 < len(rs) && !unicode.IsSpace(rs[i+1])
+	if exclude {
+		i++
+	}
+	if rs[i] == '"' {
+		end := i + 1
+		for end < len(rs) && rs[end] != '"' {
+			end++
+		}
+		return searchTerm{Text: strings.TrimSpace(string(rs[i+1 : end])), Exclude: exclude}, min(end+1, len(rs))
+	}
+	end := i
+	for end < len(rs) && !unicode.IsSpace(rs[end]) {
+		end++
+	}
+	return searchTerm{Text: strings.TrimSpace(string(rs[i:end])), Exclude: exclude}, end
 }
 
 func isSearchEmpty(terms []searchTerm, q SearchQuery) bool {
