@@ -550,8 +550,6 @@
     "readOnly": "Du darfst in diesem Kanal nicht schreiben.",
     "noAttach": "Du darfst hier keine Dateien anhängen.",
     "messageRemoved": "Nachricht entfernt",
-    "topicExpand": "Ganze Kanalbeschreibung anzeigen",
-    "topicCollapse": "Ganze Kanalbeschreibung ausblenden",
     "searchSyntaxTip": "Tipp: „genaue Wendung“ sucht eine Wendung, -Wort schließt ein Wort aus.",
     "resultsCountMore": {
       "one": "{count}+ Ergebnis",
@@ -1846,7 +1844,7 @@
     "open": "Emoji einfügen",
     "more": "Weitere Emojis",
     "loading": "Emojis werden geladen …",
-    "suggestTitle": "Eigene Emojis",
+    "suggestTitle": "Emojis",
     "admin": {
       "title": "Eigene Emojis",
       "hint": "PNG, GIF oder WebP bis 256 KiB. Bilder werden auf dem Server neu gezeichnet und auf höchstens 128 × 128 Pixel verkleinert. Mitglieder nutzen sie mit :name:. Animierte Emojis müssen GIFs sein.",
@@ -2427,6 +2425,7 @@
     "past": "Vergangen",
     "noUpcoming": "Keine bevorstehenden Veranstaltungen geplant.",
     "noPast": "Keine vergangenen Veranstaltungen.",
+    "loadMorePast": "Ältere Veranstaltungen anzeigen",
     "create": "Veranstaltung erstellen",
     "createTitle": "Community-Veranstaltung erstellen",
     "edit": "Veranstaltung bearbeiten",

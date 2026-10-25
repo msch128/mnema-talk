@@ -196,3 +196,56 @@ describe('events store', () => {
     expect(store.error).toBeNull()
   })
 })
+
+describe('past events', () => {
+  it('pages past events with a cursor and merges them with the loaded ones', async () => {
+    const page = Array.from({ length: 30 }, (_, i) => makeEvent({ id: fixtureId(100 + i), start_time: `2026-09-${String(30 - i).padStart(2, '0')}T18:00:00Z`, status: 'completed' }))
+    const rest = [makeEvent({ id: fixtureId(200), start_time: '2026-08-01T18:00:00Z', status: 'cancelled' })]
+    apiMock.mockResolvedValueOnce(page).mockResolvedValueOnce(rest)
+    const store = useEventsStore()
+
+    await store.loadPast()
+    expect(apiMock.mock.calls[0]?.[0]).toBe('/api/events?when=past&limit=30')
+    expect(store.pastHasMore).toBe(true)
+    expect(store.pastLoaded).toBe(true)
+
+    await store.loadPast(true)
+    const url = String(apiMock.mock.calls[1]?.[0])
+    expect(url).toContain(`before_id=${page[29]?.id}`)
+    expect(url).toContain('before=2026-09-01T18%3A00%3A00Z')
+    expect(store.pastHasMore).toBe(false)
+    expect(store.pastEvents).toHaveLength(31)
+    expect(store.pastEvents[0]?.id).toBe(page[0]?.id)
+    expect(store.pastEvents.at(-1)?.id).toBe(fixtureId(200))
+
+    await store.loadPast(true)
+    expect(apiMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not list an event twice and applies live updates and deletes to fetched pages', async () => {
+    const old = makeEvent({ id: fixtureId(5), status: 'completed', title: 'Old' })
+    apiMock.mockResolvedValueOnce([old])
+    const store = useEventsStore()
+    await store.loadPast()
+
+    store.handleEventUpdate({ ...old, title: 'Renamed' })
+    expect(store.pastEvents.map(e => e.title)).toEqual(['Renamed'])
+    store.handleEventDelete(old.id)
+    expect(store.pastEvents).toEqual([])
+  })
+
+  it('keeps the error and allows a retry when a page fails', async () => {
+    apiMock.mockRejectedValueOnce(new Error('offline'))
+    const store = useEventsStore()
+    await store.loadPast()
+    expect(store.error).toBe('offline')
+    expect(store.pastLoading).toBe(false)
+    expect(store.pastLoaded).toBe(false)
+  })
+
+  it('does nothing while the feature is off', async () => {
+    useServerFeaturesStore().list = []
+    await useEventsStore().loadPast()
+    expect(apiMock).not.toHaveBeenCalled()
+  })
+})

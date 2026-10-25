@@ -302,3 +302,67 @@ func TestEventRetractionFailureIsLoggedNotFatal(t *testing.T) {
 	h.PermissionsChanged(nil) // runs in the background and only logs
 	time.Sleep(200 * time.Millisecond)
 }
+
+func (a *app) pastPage(c *client, query string) []communityevents.CommunityEvent {
+	a.t.Helper()
+	res := c.get("/api/events?when=past&" + query)
+	wantStatus(a.t, "past list", res, http.StatusOK)
+	var list []communityevents.CommunityEvent
+	res.decode(a.t, &list)
+	return list
+}
+
+func TestPastEventsArePagedNewestFirstAndRespectVisibility(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	member := a.register(admin, "member")
+	secret := a.hiddenTalk(admin, "vip-lounge")
+
+	now := time.Now()
+	var ids []uuid.UUID
+	for i := 1; i <= 3; i++ {
+		start := now.Add(-time.Duration(i) * 72 * time.Hour)
+		end := start.Add(time.Hour)
+		ev := a.coverEventAt(admin, start, &end)
+		a.setStatus(ev.ID, communityevents.StatusCompleted)
+		ids = append(ids, ev.ID)
+	}
+	cancelled := a.coverEventAt(admin, now.Add(48*time.Hour), nil)
+	a.setStatus(cancelled.ID, communityevents.StatusCancelled)
+	upcoming := a.coverEventAt(admin, now.Add(24*time.Hour), nil)
+	hidden := a.coverEvent(admin, &secret)
+	a.setStatus(hidden.ID, communityevents.StatusCompleted)
+
+	all := a.pastPage(member, "")
+	want := []uuid.UUID{cancelled.ID, ids[0], ids[1], ids[2]}
+	if len(all) != len(want) {
+		t.Fatalf("member sees %d past events, want %d", len(all), len(want))
+	}
+	for i, ev := range all {
+		if ev.ID != want[i] {
+			t.Fatalf("position %d: got %s, want %s (newest first, no upcoming, no hidden Talk)", i, ev.ID, want[i])
+		}
+		if ev.ID == upcoming.ID || ev.ID == hidden.ID {
+			t.Fatal("an upcoming or hidden event leaked into the past list")
+		}
+	}
+	if got := a.pastPage(admin, ""); len(got) != 5 {
+		t.Fatalf("a member who can view the Talk also sees its event: %d", len(got))
+	}
+
+	first := a.pastPage(member, "limit=2")
+	last := first[len(first)-1]
+	second := a.pastPage(member, "limit=2&before="+last.StartTime.UTC().Format(time.RFC3339Nano)+"&before_id="+last.ID.String())
+	if len(first) != 2 || len(second) != 2 || second[0].ID != ids[1] || second[1].ID != ids[2] {
+		t.Fatalf("pages do not continue seamlessly: %v / %v", first, second)
+	}
+	if rest := a.pastPage(member, "limit=2&before="+second[1].StartTime.UTC().Format(time.RFC3339Nano)+"&before_id="+second[1].ID.String()); len(rest) != 0 {
+		t.Fatalf("past the oldest event the page is empty, got %d", len(rest))
+	}
+
+	wantStatus(t, "bad when", member.get("/api/events?when=sometime"), http.StatusBadRequest)
+	wantStatus(t, "bad before_id", member.get("/api/events?when=past&before_id=x"), http.StatusBadRequest)
+	if def := member.get("/api/events"); def.status != http.StatusOK {
+		t.Fatal("default listing unchanged")
+	}
+}

@@ -86,7 +86,7 @@ no accounts on someone else's platform.
   link cards, search, typing notices, unread and mention markers,
   per-channel notification settings and presence with a status line.
 - **Pinned messages** (with who pinned them and when), **polls**, **custom
-  emoji** managed by the community, **edit history** for moderators, **drafts**
+  emoji** managed by the community (and `:shortcode` suggestions for standard emoji), **edit history** for moderators, **drafts**
   that survive a reload and a **jump to the first unread message**.
 - **Anonymous polls and channels that forget.** An anonymous poll stores only
   that a member voted and how many votes each answer has, never the choice

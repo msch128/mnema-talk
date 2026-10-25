@@ -1,3 +1,5 @@
+# Deferred: chrislusf/seaweedfs stays on 4.48 for 1.2 (4.50 was one day old with
+# listen, raft and fsync behaviour changes); re-check at least 2 weeks after 4.50.
 # Weekly dependency updates, grouped so each ecosystem yields one PR.
 # Security updates are opened immediately regardless of this schedule.
 # Go and npm updates wait 5 days after a release (cooldown) so a hijacked or
@@ -66,7 +68,8 @@ updates:
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
       # ts-mls 1.6.4 pins @noble/curves 2.0.1 and @noble/ciphers 2.1.1 as exact
-      # peers; they move only with ts-mls. @noble/hashes is not a peer.
+      # peers (2.4.0 of both makes npm ci fail with ERESOLVE); they move only with
+      # ts-mls. @noble/hashes is not a peer.
       - dependency-name: "@noble/curves"
       - dependency-name: "@noble/ciphers"
       # The CSP build patch (web/scripts/emojiPickerCsp.ts) depends on the

@@ -13,6 +13,7 @@ import {
 } from '../types/rest'
 import type { ServerEventPayloads } from '../types/events'
 import { useServerFeaturesStore } from './serverFeatures'
+import { usePastEvents } from './eventsPast'
 import { useToastStore } from './toast'
 import { t } from '../i18n'
 
@@ -71,13 +72,15 @@ export const useEventsStore = defineStore('communityEvents', () => {
   const upcomingCount = computed(() => (enabled.value ? events.value.filter(isOngoing).length : 0))
   const upcomingEvents = computed(() => events.value.filter(isOngoing)
     .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()))
-  const pastEvents = computed(() => events.value.filter(e => !isOngoing(e))
+  const past = usePastEvents(enabled, error)
+  const pastEvents = computed(() => [...events.value.filter(e => !isOngoing(e)), ...past.fetched.value.filter(o => !events.value.some(e => e.id === o.id))]
     .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()))
 
   function replaceOrAppend(item: CommunityEvent) {
     const idx = events.value.findIndex(e => e.id === item.id)
     if (idx >= 0) events.value.splice(idx, 1, item)
     else events.value.push(item)
+    past.replace(item)
   }
 
   async function load() {
@@ -100,7 +103,7 @@ export const useEventsStore = defineStore('communityEvents', () => {
   }
 
   return {
-    events, loading, error, enabled, upcomingCount, upcomingEvents, pastEvents, load,
+    events, loading, error, enabled, upcomingCount, upcomingEvents, pastEvents, pastLoading: past.loading, pastLoaded: past.loaded, pastHasMore: past.hasMore, load, loadPast: past.load,
     create: (data: CreateEventRequest) => act(() => apiCreate(data)),
     update: (id: string, data: UpdateEventRequest) => act(() => apiUpdate(id, data)),
     cancel: (id: string) => act(() => apiCancel(id)),
@@ -114,10 +117,18 @@ export const useEventsStore = defineStore('communityEvents', () => {
       const known = events.value.find(e => e.id === payload.id)
       replaceOrAppend(known?.my_rsvp != null ? { ...payload, my_rsvp: known.my_rsvp } : payload)
     },
-    handleEventDelete: (id: string) => { events.value = events.value.filter(e => e.id !== id) },
+    handleEventDelete: (id: string) => {
+      events.value = events.value.filter(e => e.id !== id)
+      past.remove(id)
+    },
     handleEventReminder: (p: ServerEventPayloads['event_reminder']) => {
       useToastStore().info(t('events.reminderToast', { title: p.title }))
     },
-    reset: () => { events.value = []; loading.value = false; error.value = null }
+    reset: () => {
+      events.value = []
+      past.reset()
+      loading.value = false
+      error.value = null
+    }
   }
 })

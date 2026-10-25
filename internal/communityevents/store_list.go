@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 )
 
@@ -20,14 +21,26 @@ const (
 // ListQuery selects the events a member sees: those that start before Before
 // and have not ended before After (an event without an end counts as ended
 // when it starts). Allow decides which Talk channels the caller may view.
+//
+// With Past set the window is instead every event that is over (completed,
+// cancelled, or ended before Now), newest first. Before and BeforeID then act
+// as a keyset cursor: only events sorting strictly after (Before, BeforeID)
+// in that order are returned, and After is ignored.
 type ListQuery struct {
-	After  time.Time
-	Before time.Time
-	Limit  int
-	Allow  func(channelID uuid.UUID) bool
+	After    time.Time
+	Before   time.Time
+	BeforeID uuid.UUID
+	Limit    int
+	Past     bool
+	Allow    func(channelID uuid.UUID) bool
 }
 
-const eventWindow = `COALESCE(end_time, start_time) >= $1 AND start_time < $2`
+const (
+	eventWindow = `COALESCE(end_time, start_time) >= $1 AND start_time < $2`
+	// pastWindow takes the cursor as $1 (time) and $2 (id), now as $3.
+	pastWindow = `(status IN ('completed', 'cancelled') OR COALESCE(end_time, start_time + INTERVAL '2 hours') < $3)
+		AND (start_time, id) < ($1, $2)`
+)
 
 // List returns the events in the window ordered by start, at most q.Limit.
 // Events in Talks the caller may not view are filtered in SQL, so they never
@@ -38,12 +51,7 @@ func (s *Store) List(ctx context.Context, callerID *uuid.UUID, q ListQuery) ([]*
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.DB.Query(ctx, `
-		SELECT id, title, description, start_time, end_time, channel_id, location, cover_media_id, status, created_by, created_at, updated_at
-		FROM events
-		WHERE `+eventWindow+` AND (channel_id IS NULL OR channel_id = ANY($3))
-		ORDER BY start_time ASC, id ASC
-		LIMIT $4`, q.After, q.Before, allowed, q.Limit)
+	rows, err := s.queryWindow(ctx, q, allowed)
 	if err != nil {
 		return nil, fmt.Errorf("list events: %w", err)
 	}
@@ -63,10 +71,33 @@ func (s *Store) List(ctx context.Context, callerID *uuid.UUID, q ListQuery) ([]*
 	return list, s.fillRSVPsBatch(ctx, list, callerID)
 }
 
+const eventColumns = `id, title, description, start_time, end_time, channel_id, location, cover_media_id, status, created_by, created_at, updated_at`
+
+// queryWindow selects the rows of the window q describes, restricted to events
+// without a Talk or in one of the allowed Talks.
+func (s *Store) queryWindow(ctx context.Context, q ListQuery, allowed []uuid.UUID) (pgx.Rows, error) {
+	if q.Past {
+		return s.DB.Query(ctx, `SELECT `+eventColumns+` FROM events
+			WHERE `+pastWindow+` AND (channel_id IS NULL OR channel_id = ANY($4))
+			ORDER BY start_time DESC, id DESC
+			LIMIT $5`, q.Before, q.BeforeID, time.Now(), allowed, q.Limit)
+	}
+	return s.DB.Query(ctx, `SELECT `+eventColumns+` FROM events
+		WHERE `+eventWindow+` AND (channel_id IS NULL OR channel_id = ANY($3))
+		ORDER BY start_time ASC, id ASC
+		LIMIT $4`, q.After, q.Before, allowed, q.Limit)
+}
+
 // allowedChannels returns the Talks used by events in the window that the
 // caller may view.
 func (s *Store) allowedChannels(ctx context.Context, q ListQuery) ([]uuid.UUID, error) {
-	rows, err := s.DB.Query(ctx, `SELECT DISTINCT channel_id FROM events WHERE channel_id IS NOT NULL AND `+eventWindow, q.After, q.Before)
+	var rows pgx.Rows
+	var err error
+	if q.Past {
+		rows, err = s.DB.Query(ctx, `SELECT DISTINCT channel_id FROM events WHERE channel_id IS NOT NULL AND `+pastWindow, q.Before, q.BeforeID, time.Now())
+	} else {
+		rows, err = s.DB.Query(ctx, `SELECT DISTINCT channel_id FROM events WHERE channel_id IS NOT NULL AND `+eventWindow, q.After, q.Before)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("list event channels: %w", err)
 	}

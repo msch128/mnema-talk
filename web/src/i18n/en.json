@@ -550,8 +550,6 @@
     "readOnly": "You can’t write in this channel.",
     "noAttach": "You can’t attach files here.",
     "messageRemoved": "Message removed",
-    "topicExpand": "Show the full channel description",
-    "topicCollapse": "Hide the full channel description",
     "searchSyntaxTip": "Tip: “exact phrase” finds a phrase, -word leaves a word out.",
     "resultsCountMore": {
       "one": "{count}+ result",
@@ -1846,7 +1844,7 @@
     "open": "Insert emoji",
     "more": "More emojis",
     "loading": "Loading emojis…",
-    "suggestTitle": "Custom emoji",
+    "suggestTitle": "Emoji",
     "admin": {
       "title": "Custom emoji",
       "hint": "PNG, GIF or WebP up to 256 KiB. Pictures are redrawn on the server and shrunk to at most 128 × 128 pixels. Members type :name: to use them. Animated emoji must be GIFs.",
@@ -2427,6 +2425,7 @@
     "past": "Past",
     "noUpcoming": "No upcoming events scheduled.",
     "noPast": "No past events.",
+    "loadMorePast": "Show older events",
     "create": "Create event",
     "createTitle": "Create community event",
     "edit": "Edit event",
