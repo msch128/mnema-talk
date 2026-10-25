@@ -177,10 +177,7 @@ func TestPresenceOverWebSocket(t *testing.T) {
 	if res := max.put("/api/users/me/presence", map[string]string{"presence": "dnd"}); res.status != http.StatusOK {
 		t.Fatalf("set dnd: %d", res.status)
 	}
-	conn, _, err := max.dialWS(a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
+	conn := max.dialLiveWS(a.origin())
 	waitStatus := func(want string) {
 		t.Helper()
 		deadline := time.After(3 * time.Second)
@@ -225,14 +222,9 @@ func TestVoiceTimeAndMessageCounts(t *testing.T) {
 	a.send(max, text, "eins")
 	a.send(max, text, "zwei")
 
-	watcher, _, err := admin.dialWS(a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
-	joiner, _, err := max.dialWS(a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Registered sockets: an event published before the hub registers one never reaches it.
+	watcher := admin.dialLiveWS(a.origin())
+	joiner := max.dialLiveWS(a.origin())
 	joiner.send("voice_join", map[string]any{"channel_id": voice})
 	raw, ok := watcher.expect("voice_state_update", 2*time.Second)
 	if !ok {
