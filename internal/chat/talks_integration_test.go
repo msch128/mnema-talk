@@ -72,7 +72,7 @@ func newTalksWorld(t *testing.T) *talksWorld {
 	w.alice, w.bob = newTalksUser(t, p, "alice_t"), newTalksUser(t, p, "bob_t")
 	w.mgr = NewTalkManager(&TalkManager{
 		DB: p, Events: w.rec, Perms: perm.NewService(p), Audit: &audit.Log{DB: p},
-		Voice: voiceCloser{w}, EmptyGrace: time.Hour, // tests about the grace shorten it (shortGrace)
+		Voice: voiceCloser{w}, EmptyGrace: time.Hour, // shortGrace: tests about the grace
 	})
 	t.Cleanup(w.mgr.stopTimers)
 	return w
@@ -289,7 +289,6 @@ func TestAnEmptyTalkIsRemovedAfterTheGraceAndAuditedAsTheSystem(t *testing.T) {
 	}
 	var actor, name string
 	var actorID *uuid.UUID
-	// The entry is written right after the Talk goes: wait for it.
 	var auditErr error
 	for auditDeadline := time.Now().Add(5 * time.Second); time.Now().Before(auditDeadline); time.Sleep(20 * time.Millisecond) {
 		if auditErr = w.p.QueryRow(ctx, `SELECT actor_name, actor_id, target_name FROM audit_log WHERE action = 'channel.delete' AND target_id = $1`, gone.ID.String()).Scan(&actor, &actorID, &name); auditErr == nil {
