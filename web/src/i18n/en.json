@@ -550,8 +550,6 @@
     "readOnly": "You can’t write in this channel.",
     "noAttach": "You can’t attach files here.",
     "messageRemoved": "Message removed",
-    "topicExpand": "Show the full channel description",
-    "topicCollapse": "Hide the full channel description",
     "searchSyntaxTip": "Tip: “exact phrase” finds a phrase, -word leaves a word out.",
     "resultsCountMore": {
       "one": "{count}+ result",

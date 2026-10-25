@@ -550,8 +550,6 @@
     "readOnly": "Du darfst in diesem Kanal nicht schreiben.",
     "noAttach": "Du darfst hier keine Dateien anhängen.",
     "messageRemoved": "Nachricht entfernt",
-    "topicExpand": "Ganze Kanalbeschreibung anzeigen",
-    "topicCollapse": "Ganze Kanalbeschreibung ausblenden",
     "searchSyntaxTip": "Tipp: „genaue Wendung“ sucht eine Wendung, -Wort schließt ein Wort aus.",
     "resultsCountMore": {
       "one": "{count}+ Ergebnis",

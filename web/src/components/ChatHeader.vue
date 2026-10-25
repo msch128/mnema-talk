@@ -146,7 +146,6 @@ function openNotificationMenu(e: MouseEvent) {
           type="button"
           data-testid="channel-topic"
           :aria-expanded="topicOpen ? 'true' : 'false'"
-          :aria-label="topicOpen ? $t('chat.topicCollapse') : $t('chat.topicExpand')"
           class="min-w-0 max-md:max-w-full truncate text-left text-sm text-mnema-muted hover:text-mnema-text md:ml-1 md:border-l md:border-mnema-border md:pl-3 max-md:text-xs"
           @click="topicOpen = !topicOpen"
         >{{ chatStore.activeChannel?.topic }}</button>
