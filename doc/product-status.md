@@ -132,7 +132,8 @@ What it took:
   first spec of that file skips itself only on Linux WebKit and only while
   `RTCRtpScriptTransform` is missing, so a build that gains it runs the call
   again. Every spec that joins a call (calls, screen share, Talk chat, roles
-  rights) stays out of `e2e (webkit 1/2)` and `e2e (webkit 2/2)` and runs in `e2e (webkit-macos-calls)` on a macOS runner, a separate job that is not a required check.
+  rights) stays out of `e2e (webkit 1/2)` and `e2e (webkit 2/2)` and runs in
+  four short `e2e (webkit-macos-calls, <group>)` jobs on macOS runners, not a required check.
 - **WebKit 27.2, `<select>` and the style policy.** Playwright 1.64's WebKit
   (27.2) reports one `style-src-attr` violation for every `<select>` a page
   builds (empty sample, the script that created the select as source; the

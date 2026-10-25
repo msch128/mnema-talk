@@ -317,7 +317,7 @@ installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
   by hand), unless the member is addressed by name, role or reply.
   A message in a direct message conversation counts as a mention for push and
   is sent urgently; its push names the sender and never a channel.
-- **What a push contains.** Channel name (for a direct message only the sender) and sender are always in it; the start
+- **What a push contains.** Channel name (for a direct message only the sender), channel slug (for direct navigation) and sender are always in it; the start
   of the message (140 characters) only if the member keeps "Show message text"
   on and `PUSH_PREVIEWS` is `user`. The payload is encrypted for the member's
   browser (RFC 8291, `aes128gcm`), so Google, Mozilla, Apple or Microsoft's push
@@ -558,7 +558,7 @@ committed statement and public key.
   the optional features this build has, so a newer web app can hide what an
   older server lacks. In 1.1 it holds `blocks`, `dm`, `reports`, `saved`,
   `forward`, `search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`;
-  1.2 adds `talks.lobby`, `status.expiry`, `reminders`, `messages.scheduled`, `polls.anonymous`, `channels.auto_delete`, `automod`, `moderation.history`, `ops.status`, `import.discord`, `talks.stage`, `talks.reactions`, `channels.forum`, `events`, `notify.levels.v2` and `dm.v2`;
+  1.2 adds `search.filters.v3`, `talks.lobby`, `status.expiry`, `reminders`, `messages.scheduled`, `polls.anonymous`, `channels.auto_delete`, `automod`, `moderation.history`, `ops.status`, `import.discord`, `talks.stage`, `talks.reactions`, `channels.forum`, `events`, `notify.levels.v2` and `dm.v2`;
   names never change meaning ([api-stability.md](api-stability.md)). A 1.0.x
   server sends no list. The compose
   healthcheck and [`scripts/health-check.sh`](../scripts/health-check.sh)

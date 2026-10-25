@@ -76,13 +76,13 @@ project runs.
 
 The suite has five Playwright projects (`chromium`, `webkit`, `firefox` and the two phone projects below). **Chromium** is the required check and
 runs everything. **WebKit** (what Safari, iOS and installed iOS web apps use)
-runs every spec that does not join a call in CI as `e2e (webkit)` (Playwright's
+runs every spec that does not join a call in CI as `e2e (webkit 1/2)` and `e2e (webkit 2/2)` (Playwright's
 Linux WebKit has no `RTCRtpScriptTransform`, so a sealed call cannot happen
-there, see [Browsers](product-status.md#browsers); the call specs run in the separate
-`e2e (webkit-macos-calls)` job on a macOS runner (its own workflow,
-`ci-macos-calls.yml`, so a timeout there never holds back a release), which starts PostgreSQL and
-SeaweedFS as local processes with `E2E_NO_DOCKER=1`; both jobs are not required
-checks; the macOS job leaves out the two specs that encode a 1080p or three-layer simulcast screen share (`screen-layers.spec.ts` and the stream-quality spec of `talk-extras.spec.ts`): the two-core hosted runner wedges on them, and Chromium and Linux WebKit cover those paths; Playwright stays at 1.63.0 because the WebKit 27.2 of 1.64.x reports a `style-src-attr` violation whenever a `<select>` is added to a page under `style-src-attr 'none'`, which the CSP guard in the specs rightly fails on); **Firefox** runs a smoke subset
+there, see [Browsers](product-status.md#browsers); the call specs run in four short
+`e2e (webkit-macos-calls, <group>)` jobs on fresh macOS runners (its own workflow,
+`ci-macos-calls.yml`, so a timeout there never holds back a release), which start PostgreSQL and
+SeaweedFS as local processes with `E2E_NO_DOCKER=1` and are killed from inside by a watchdog after 13 minutes if wedged; neither is a required
+check; the macOS jobs leave out the two specs that encode a 1080p or three-layer simulcast screen share (`screen-layers.spec.ts` and the stream-quality spec of `talk-extras.spec.ts`): the two-core hosted runner wedges on them, and Chromium and Linux WebKit cover those paths; Playwright stays at 1.63.0 because the WebKit 27.2 of 1.64.x reports a `style-src-attr` violation whenever a `<select>` is added to a page under `style-src-attr 'none'`, which the CSP guard in the specs rightly fails on); **Firefox** runs a smoke subset
 (sign-in, chat, search, mentions, sealed Talk, key rotation, screen share) as
 `e2e (firefox)`. Neither is a required check yet. Engine differences the specs
 account for: Firefox has no context-level camera/microphone grants (its fake
@@ -143,7 +143,7 @@ these jobs in parallel (rough wall times with warm caches):
 | `docker` | Image build for linux/amd64 + linux/arm64 (`docker-image`, not pushed), then smoke, install, backup, PostgreSQL upgrade drills and image scan | 6–9 min |
 | `upgrade-drill (<version>)` | One leg per supported source release (0.8.16, 0.9.0, 1.0.0, 1.1.0): install it, seed data through its API, upgrade to this build, back up and restore, check the old release refuses the migrated data | per leg, in parallel |
 | `e2e` | Verdict of four `e2e-shard (i/4)` jobs: Playwright against the real binary, each shard with its own stack and Owner; all specs on Chromium plus the phone projects. `e2e-report` merges the shards' blob reports into one HTML report artifact | 8–11 min |
-| `e2e (webkit 1/2)`, `e2e (webkit 2/2)`, `e2e (firefox)`, `e2e (webkit-macos-calls)` | Other engines, see above; not required checks | in parallel |
+| `e2e (webkit 1/2)`, `e2e (webkit 2/2)`, `e2e (firefox)`, `e2e (webkit-macos-calls, <group>)` | Other engines, see above; not required checks | in parallel |
 
 Pull requests that change only README/SECURITY/`doc/` Markdown skip the heavy
 steps (the `changes` job); every required check still reports success, and the

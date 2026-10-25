@@ -153,6 +153,7 @@ of the pre-update backup (see "Rollback" above).
 | 0071 | `discord_imports` and `discord_import_objects`: the record of each Discord structure import and the ids it created, for undo (see [Import](import.md)). Nothing existing is touched. |
 | 0072 | `media_original_filename_trgm_idx`: GIN trigram index on `media.original_filename` for fast case-insensitive attachment filename search. |
 | 0073 | `server_notify`: a member's server-wide notification default (see [Notification settings](#notification-settings)). Adds a table only. |
+| 0074 | `dm_members.hidden_at` and `dm_members.favourite_pos`, `users.dm_mute_all` and `users.dm_list_collapsed`: member-local direct message list preferences (see [Direct message list](#direct-message-list-close-favourites-mute-all)). |
 | 0075 | `channels.slug` and `channel_slugs`: the speaking addresses of channels (see "Speaking URLs"). Every existing channel except a direct message gets its slug in the same migration. |
 
 #### Speaking URLs
@@ -169,7 +170,7 @@ slug is only an address.
 
 - **Slugs.** Lowercase ASCII (`a-z`, `0-9`, `-`), at most 60 characters: German umlauts and the sharp s are spelled out (a-umlaut gives `ae`, the
   sharp s gives `ss`), other accents are dropped, anything else becomes one dash; a name without a usable character gives
-  `channel`. A slug is unique on the server; on a collision the channel's own slug gets the first characters of its own id (`plans-0f3a9c`). A temporary Talk has the fixed slug `talk-` and the first 8 hex characters of its id, never changed by a rename and not kept in the history. It is set when the channel is created or
+  `channel`. A slug is unique on the server; on a collision the channel's own slug gets the first 6 hex characters of its own id (`plans-0f3a9c`). A temporary Talk has the fixed slug `talk-` and the first 8 hex characters of its id, never changed by a rename and not kept in the history. It is set when the channel is created or
   renamed, in the same transaction. Migration 0075 backfills existing channels in the order (`created_at`, `id`).
 - **Renames keep old links alive.** Former slugs stay reserved for their channel (`channel_slugs`), so a freed
   slug is never handed to another channel and an old link never opens something else (a channel keeps its newest ten former slugs; older ones are free again). The web app rewrites an old slug
@@ -199,6 +200,10 @@ No migration and no setting.
 - **Avatar re-encode job.** When the hourly job redraws or removes an old
   avatar it now broadcasts `user_update`, as a manual change does, so open
   clients refresh the picture without a reload.
+- **Desktop gaming settings: add the last app.** In the desktop client's gaming
+  settings, *Add the app I was just in* detects the executable that was in front
+  before switching to Mnema Talk and offers to add it after confirmation, so
+  custom games and non-Steam launchers do not have to be entered by hand.
 
 #### Everyday features: status, reminders, polls, auto-delete
 
