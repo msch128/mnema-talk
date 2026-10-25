@@ -1,0 +1,24 @@
+web/src/composables/useAppRouting.ts
+  s_06fcde5dbef956::t_cc2b1a686cb6e9 36-42,45-46,50
+e2e/tests/dm.spec.ts
+  s_06fcde5dbef956::t_c3e85662c5dd4c 167-168
+web/src/composables/useAppRouting.test.ts
+  s_06fcde5dbef956::t_cc2b1a686cb6e9 1-8,10-34,36-43
+  s_06fcde5dbef956::t_fa3f9fbb641e3a 9,35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f94b36d0abc53e36287a2940a350521aac6e71a2",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
