@@ -1923,7 +1923,13 @@
     "error": "Unable to apply. Check the connection and choose different supported shortcuts.",
     "enabled": "Enable gaming overlay and sidepeek",
     "opacity": "Sidepeek background opacity",
-    "gamesHint": "300 games are included. Add executable names for other games or installation variants."
+    "gamesHint": "Hundreds of games are included, and games from your Steam, Epic, GOG and EA libraries are found automatically. Add executable names for any other game.",
+    "addLast": "Add the app I was just in",
+    "addLastConfirm": "Add {name} as a game?",
+    "addLastNone": "No other app was in front yet. Switch to the game, then open the overlay again.",
+    "addConfirm": "Add",
+    "addCancel": "Cancel",
+    "addFailed": "Could not add this app."
   },
   "perm": {
     "administrator": {

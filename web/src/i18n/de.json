@@ -1923,7 +1923,13 @@
     "error": "Nicht übernommen. Verbindung prüfen und unterschiedliche unterstützte Tasten wählen.",
     "enabled": "Gaming-Overlay und Sidepeek aktivieren",
     "opacity": "Deckkraft des Sidepeek-Hintergrunds",
-    "gamesHint": "300 Spiele sind enthalten. Ergänze EXE-Namen für weitere Spiele oder Installationsvarianten."
+    "gamesHint": "Hunderte Spiele sind enthalten, Spiele aus deinen Steam-, Epic-, GOG- und EA-Bibliotheken werden automatisch erkannt. Ergänze EXE-Namen für alle anderen Spiele.",
+    "addLast": "Zuletzt genutzte App hinzufügen",
+    "addLastConfirm": "{name} als Spiel hinzufügen?",
+    "addLastNone": "Noch keine andere App im Vordergrund. Wechsle zum Spiel und öffne das Overlay erneut.",
+    "addConfirm": "Hinzufügen",
+    "addCancel": "Abbrechen",
+    "addFailed": "Diese App konnte nicht hinzugefügt werden."
   },
   "perm": {
     "administrator": {

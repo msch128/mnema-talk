@@ -11,6 +11,20 @@ const labels = computed(() => ({ overlay: t('gaming.overlay'), mute: t('gaming.m
 const editing = ref(settingsOnly)
 const draft = ref<GamingSettings | null>(null)
 const error = ref(false)
+// The last other app in front, offered by the host only when asked, for the person to confirm.
+const candidate = ref<string | null>(null)
+const addNote = ref<'none' | 'failed' | null>(null)
+async function askCandidate() {
+  addNote.value = null; candidate.value = null
+  try { const name = await platform.invoke<string | null>('desktop_gaming_candidate'); if (name) candidate.value = name; else addNote.value = 'none' }
+  catch { addNote.value = 'failed' }
+}
+async function addCandidate() {
+  const name = candidate.value
+  if (!name || !draft.value) return
+  try { draft.value.games = await platform.invoke<string[]>('desktop_gaming_add_game', { name }); candidate.value = null; addNote.value = null }
+  catch { candidate.value = null; addNote.value = 'failed' }
+}
 const members = computed(() => interactive ? snapshot.value?.voice.members ?? [] : (snapshot.value?.voice.members ?? []).slice(0, 12))
 let timer: ReturnType<typeof setInterval> | undefined
 let pending = false; let alive = true
@@ -76,6 +90,13 @@ onBeforeUnmount(() => { alive = false; clearInterval(timer) })
       </label>
       <label class="block">{{ $t('gaming.games') }}<textarea :value="draft.games.join('\n')" class="block w-full rounded-sm bg-mnema-canvas p-2" @input="draft.games = ($event.target as HTMLTextAreaElement).value.split('\n').map(s => s.trim()).filter(Boolean)" /></label>
       <p class="text-xs text-mnema-muted">{{ $t('gaming.gamesHint') }}</p>
+      <div v-if="candidate" class="flex items-center gap-2" role="group" :aria-label="$t('gaming.addLast')">
+        <span class="flex-1 truncate">{{ $t('gaming.addLastConfirm', { name: candidate }) }}</span>
+        <button type="button" @click="addCandidate">{{ $t('gaming.addConfirm') }}</button>
+        <button type="button" @click="candidate = null">{{ $t('gaming.addCancel') }}</button>
+      </div>
+      <button v-else type="button" @click="askCandidate">{{ $t('gaming.addLast') }}</button>
+      <p v-if="addNote" role="status" class="text-xs text-mnema-muted">{{ addNote === 'none' ? $t('gaming.addLastNone') : $t('gaming.addFailed') }}</p>
       <button type="submit">{{ $t('common.save') }}</button>
     </form>
     <p v-if="error" role="alert" class="text-sm text-mnema-danger mt-3">{{ $t('gaming.error') }}</p>
