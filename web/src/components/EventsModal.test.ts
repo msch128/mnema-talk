@@ -76,6 +76,26 @@ describe('EventsModal', () => {
     expect(wrapper.text()).not.toContain('Upcoming Gala')
   })
 
+  it('loads the past events from the server when the tab opens and pages on request', async () => {
+    const store = useEventsStore()
+    vi.spyOn(store, 'load').mockResolvedValue()
+    const loadPast = vi.spyOn(store, 'loadPast').mockImplementation(async () => {
+      store.pastLoaded = true
+    })
+    store.pastHasMore = true
+
+    wrapper = mount(EventsModal, { attachTo: document.body })
+    expect(loadPast).not.toHaveBeenCalled()
+    await wrapper.findAll('button').find(b => b.text().includes('Past'))?.trigger('click')
+    expect(loadPast).toHaveBeenCalledTimes(1)
+    expect(wrapper.find('[data-testid="events-load-more"]').exists()).toBe(false)
+
+    store.events = [makeEvent({ id: fixtureId(7), title: 'Long Ago', status: 'completed' })]
+    await wrapper.vm.$nextTick()
+    await wrapper.find('[data-testid="events-load-more"]').trigger('click')
+    expect(loadPast).toHaveBeenLastCalledWith(true)
+  })
+
   it('shows create button only when member has manage_events permission', async () => {
     const perms = usePermissionsStore()
     perms.info = makePermsInfo(0)

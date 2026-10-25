@@ -7,7 +7,8 @@ import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import { findMentionQuery, suggestMentions, applyMention } from '../lib/mentionQuery'
-import { findEmojiQuery, suggestEmoji, applyEmoji } from '../lib/emojiQuery'
+import { findEmojiQuery, suggestEmoji, suggestStandardEmoji, applyEmoji, applyStandardEmoji } from '../lib/emojiQuery'
+import { useEmojiShortcodes } from '../lib/emojiShortcodes'
 import { useEmojiStore } from '../stores/emoji'
 import type { CustomEmoji } from '../lib/customEmoji'
 
@@ -37,8 +38,16 @@ function useMentionableRoles() {
   })
 }
 
-function emojiSuggestions(query: string, items: CustomEmoji[]): MentionSuggestion[] {
-  return suggestEmoji(query, items).map(emoji => ({ username: emoji.name, display_name: `:${emoji.name}:`, emoji }))
+const EMOJI_LIMIT = 8
+
+/** The community's custom emoji first, then standard ones, at most EMOJI_LIMIT together. */
+function emojiSuggestions(query: string, items: CustomEmoji[], standard: Readonly<Record<string, string>>): MentionSuggestion[] {
+  const custom: MentionSuggestion[] = suggestEmoji(query, items, EMOJI_LIMIT).map(emoji => ({ username: emoji.name, display_name: `:${emoji.name}:`, emoji }))
+  const named = new Set(items.map(e => e.name))
+  const plain: MentionSuggestion[] = suggestStandardEmoji(query, standard, EMOJI_LIMIT)
+    .filter(e => !named.has(e.code))
+    .map(e => ({ username: e.code, display_name: `:${e.code}:`, standard: e.glyph }))
+  return [...custom, ...plain].slice(0, EMOJI_LIMIT)
 }
 
 /**
@@ -55,11 +64,12 @@ export function useComposerAssist(textarea: Ref<HTMLTextAreaElement | null>, mod
 
   const query = ref<ReturnType<typeof findMentionQuery>>(null) // { start, query } while a mention is being typed
   const emojiQuery = ref<ReturnType<typeof findEmojiQuery>>(null) // the same for a custom emoji (":que")
+  const { table: standardTable, ensure: loadStandardEmoji } = useEmojiShortcodes() // ":smile:" -> glyph, loaded on first ":"
   const active = ref(0)
   const dismissedAt = ref(-1)
 
   const suggestions = computed((): MentionSuggestion[] => {
-    if (emojiQuery.value) return emojiSuggestions(emojiQuery.value.query, emojiStore.items)
+    if (emojiQuery.value) return emojiSuggestions(emojiQuery.value.query, emojiStore.items, standardTable.value)
     if (!query.value) return []
     return suggestMentions(query.value.query, chatStore.members, { selfId: authStore.user?.id ?? null, roles: mentionableRoles.value })
   })
@@ -72,6 +82,7 @@ export function useComposerAssist(textarea: Ref<HTMLTextAreaElement | null>, mod
     query.value = q && q.start !== dismissedAt.value ? q : null
     const e = q ? null : findEmojiQuery(model.value, el.selectionStart)
     emojiQuery.value = e && e.start !== dismissedAt.value ? e : null
+    if (emojiQuery.value) void loadStandardEmoji()
     if (!q && !e) dismissedAt.value = -1
     if (active.value >= suggestions.value.length) active.value = 0
   }
@@ -84,19 +95,17 @@ export function useComposerAssist(textarea: Ref<HTMLTextAreaElement | null>, mod
   function close() {
     const typing = query.value ?? emojiQuery.value
     if (typing) dismissedAt.value = typing.start
-    query.value = null
-    emojiQuery.value = null
+    query.value = emojiQuery.value = null
   }
 
   async function pick(item: MentionSuggestion | undefined) {
     const el = textarea.value
     const typing = query.value ?? emojiQuery.value
     if (!typing || !el || !item) return
-    const apply = item.emoji ? applyEmoji : applyMention
-    const { text, caret } = apply(model.value, typing.start, el.selectionStart, item.username)
+    const apply = item.standard ? applyStandardEmoji : item.emoji ? applyEmoji : applyMention
+    const { text, caret } = apply(model.value, typing.start, el.selectionStart, item.standard ?? item.username)
     model.value = text
-    query.value = null
-    emojiQuery.value = null
+    query.value = emojiQuery.value = null
     await nextTick()
     el.focus()
     el.setSelectionRange(caret, caret)

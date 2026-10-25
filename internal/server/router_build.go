@@ -155,6 +155,7 @@ func (c *components) newCore() {
 			DiskPath:     cfg.MediaDiskPath,
 		},
 	}
+	media.StartAvatarReencode(c.ctx, d.DB, d.Store, cfg.S3Bucket, &audit.Log{DB: d.DB}, c.pub)
 }
 
 // newMail builds the SMTP client when configured and hands it to the account

@@ -6,12 +6,14 @@ import type { CustomEmoji } from './customEmoji'
 
 type Mentionable = User & { is_bot?: boolean }
 export type MentionSuggestion =
-  | { username: 'here' | 'all'; display_name: string; group: true; user?: never; role?: never; emoji?: never }
-  | { username: string; display_name: string; user: Mentionable; group?: false; role?: never; emoji?: never }
+  | { username: 'here' | 'all'; display_name: string; group: true; user?: never; role?: never; emoji?: never; standard?: never }
+  | { username: string; display_name: string; user: Mentionable; group?: false; role?: never; emoji?: never; standard?: never }
   // A role: username holds the role's name, which is what gets inserted.
-  | { username: string; display_name: string; role: Role; user?: never; group?: false; emoji?: never }
+  | { username: string; display_name: string; role: Role; user?: never; group?: false; emoji?: never; standard?: never }
   // A custom emoji (typed as ":que"): username holds its name.
-  | { username: string; display_name: string; emoji: CustomEmoji; role?: never; user?: never; group?: false }
+  | { username: string; display_name: string; emoji: CustomEmoji; role?: never; user?: never; group?: false; standard?: never }
+  // A standard emoji (typed as ":smi"): username holds its shortcode, standard the glyph.
+  | { username: string; display_name: string; standard: string; emoji?: never; role?: never; user?: never; group?: false }
 const NAME_CHARS = /[A-Za-z0-9_.-]/
 
 function findAtPosition(text: string, caret: number): number {

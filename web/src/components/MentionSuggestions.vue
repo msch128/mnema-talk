@@ -27,11 +27,11 @@ const chatStore = useChatStore()
     :aria-label="$t('mention.listLabel')"
     class="absolute bottom-full left-0 right-0 z-30 mb-1.5 max-h-72 overflow-y-auto rounded-xl bg-mnema-elevated p-2 shadow-popover pop-in"
   >
-    <div class="px-3 pb-2 pt-1 font-mono text-xs font-semibold uppercase tracking-widest text-mnema-tertiary">{{ items[0]?.emoji ? $t('emoji.suggestTitle') : $t('mention.title') }}</div>
+    <div class="px-3 pb-2 pt-1 font-mono text-xs font-semibold uppercase tracking-widest text-mnema-tertiary">{{ items[0]?.emoji || items[0]?.standard ? $t('emoji.suggestTitle') : $t('mention.title') }}</div>
     <div
       v-for="(item, i) in items"
       :id="`${id}-${i}`"
-      :key="`${item.group ? 'g' : item.role ? 'r' : item.emoji ? 'e' : 'u'}:${item.username}`"
+      :key="`${item.group ? 'g' : item.role ? 'r' : item.emoji ? 'e' : item.standard ? 's' : 'u'}:${item.username}`"
       role="option"
       :aria-selected="i === active ? 'true' : 'false'"
       :data-mention-option="item.username"
@@ -53,6 +53,10 @@ const chatStore = useChatStore()
       <template v-else-if="item.emoji">
         <EmojiGlyph :value="`<:${item.emoji.name}:${item.emoji.id}>`" class="h-6! w-6!" />
         <span class="truncate font-semibold text-mnema-text">:{{ item.emoji.name }}:</span>
+      </template>
+      <template v-else-if="item.standard !== undefined">
+        <span class="flex h-6 w-6 items-center justify-center text-xl leading-none" aria-hidden="true">{{ item.standard }}</span>
+        <span class="truncate font-semibold text-mnema-text">:{{ item.username }}:</span>
       </template>
       <template v-else-if="item.role">
         <span class="flex h-6 w-6 items-center justify-center rounded-full bg-mnema-band text-mnema-mint">
