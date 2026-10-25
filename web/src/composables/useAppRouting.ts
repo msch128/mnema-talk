@@ -33,14 +33,21 @@ function watchStateForRoute(ctx: RoutingContext, sync: () => void) {
   watch(ctx.adminTab, () => sync())
 }
 
-/** Path of whatever the UI currently shows (to leave the admin console, or to give "/" an address). */
-function statePath(ctx: RoutingContext, voiceChannelId: string | null) {
+/**
+ * Path of whatever the UI currently shows (to leave the admin console, or to give "/" an address).
+ * A channel that is gone (deleted while open) has no address: "/" keeps the
+ * address from being rewritten to an id that names nothing, which would send
+ * the router round in circles.
+ */
+export function statePath(ctx: Pick<RoutingContext, 'chatStore' | 'voiceStore' | 'voiceShowChat'>, voiceChannelId: string | null) {
   const { chatStore, voiceStore } = ctx
   if (voiceStore.activeView === 'voice' && voiceChannelId) {
-    return talkPath(chatStore.allChannels.find(c => c.id === voiceChannelId) ?? { id: voiceChannelId }, { chat: ctx.voiceShowChat.value })
+    const talk = chatStore.allChannels.find(c => c.id === voiceChannelId)
+    return talk ? talkPath(talk, { chat: ctx.voiceShowChat.value }) : '/'
   }
   const channel = chatStore.activeChannel
   if (!channel) return '/'
+  if (!chatStore.allChannels.some(c => c.id === channel.id) && !chatStore.isDm(channel.id)) return '/'
   const thread = chatStore.activeThread
   if (thread && channel.type === 'forum' && thread.title) return postPath(channel, thread)
   return chatStore.linkTo(channel.id, thread ? { threadId: thread.id } : {})

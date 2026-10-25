@@ -164,6 +164,8 @@ test('a block folds the messages and makes the composer refuse', async ({ browse
     // Lifting the block (from the conversation's info) makes the conversation work again.
     await member.getByTestId('dm-info-button').click()
     await member.getByTestId('dm-unblock').click()
+    // The block is gone once the dialog offers to block again; writing sooner races the request.
+    await expect(member.getByTestId('dm-block')).toBeVisible()
     await member.keyboard.press('Escape')
     await write(member, `wieder da ${suffix}`)
     await expect(owner.locator('#main-content').getByText(`wieder da ${suffix}`, { exact: true })).toBeVisible()
