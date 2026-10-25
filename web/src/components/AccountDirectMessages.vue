@@ -14,8 +14,8 @@ const features = useServerFeaturesStore()
 const toasts = useToastStore()
 const busy = ref(false)
 
+// The switch is disabled while a save runs, so no second call can start.
 async function toggleMuteAll() {
-  if (busy.value) return
   busy.value = true
   try {
     await chat.saveDmSettings({ mute_all: !chat.dmSettings.mute_all })
