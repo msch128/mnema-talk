@@ -1,0 +1,96 @@
+web/src/lib/mentionQuery.ts
+  s_06fcde5dbef956::t_cd2e9d2cb86ca3 9-10,12,14-16
+web/src/stores/events.ts
+  s_06fcde5dbef956::t_a3d29e01707af7 16,75-76,83,106,122,129
+  s_06fcde5dbef956::t_4a7f0030f9d06d 120-121,127-128,130-132
+  s_06fcde5dbef956::t_e4766497c43c6a 123
+web/src/lib/emojiShortcodes.ts
+  s_06fcde5dbef956::t_cd2e9d2cb86ca3 1-3,6-10,25
+  s_06fcde5dbef956::t_c1c11e89b62d8e 4-5,11-24
+web/src/components/EventsModal.test.ts
+  s_06fcde5dbef956::t_0ad947f7e39dbc 93
+  s_06fcde5dbef956::t_dd550541bcc044 79-92,94-98
+e2e/tests/small-1-2.spec.ts
+  s_06fcde5dbef956::t_f02821221d7365 1-64,66-70
+  s_06fcde5dbef956::t_361226656fffdd 65
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_e9872171f22ff5 2430
+  s_06fcde5dbef956::t_8d55ad04e38b78 1849
+doc/events.md
+  s_06fcde5dbef956::t_7ff6153886f07d 11-14
+doc/upgrade.md
+  s_06fcde5dbef956::t_7ff6153886f07d 157-173
+web/scripts/genEmojiShortcodes.ts
+  s_06fcde5dbef956::t_659a14e32348f3 1-16
+api/openapi.json
+  s_06fcde5dbef956::t_a441fc442bc3af 26753-26773
+internal/media/avatar_reencode_integration_test.go
+  s_06fcde5dbef956::t_ee6475715a0de1 156
+  s_06fcde5dbef956::t_ea473dabe920e1 17-18,67,149,155,157-162,164-165
+  s_06fcde5dbef956::t_aa5899acd5e6e4 163
+  s_06fcde5dbef956::t_469bb429cafaab 166-167
+web/src/composables/useComposerAssist.ts
+  s_06fcde5dbef956::t_c1c11e89b62d8e 11,67
+  s_06fcde5dbef956::t_8d55ad04e38b78 10,41-50,72,85,105-106
+  s_06fcde5dbef956::t_950b5ac0de38ca 98,108
+README.md
+  s_06fcde5dbef956::t_7ff6153886f07d 89
+internal/media/avatar_reencode_start_integration_test.go
+  s_06fcde5dbef956::t_d1560f478a1f77 15-16
+web/src/lib/emojiQuery.test.ts
+  s_06fcde5dbef956::t_ab709c67c228ed 21,23
+  s_06fcde5dbef956::t_fa1c9c0c76e8e7 1-20,22,24-25
+web/src/lib/emojiQuery.ts
+  s_06fcde5dbef956::t_cd2e9d2cb86ca3 39-66
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_e9872171f22ff5 2430
+  s_06fcde5dbef956::t_8d55ad04e38b78 1849
+internal/server/events_store_integration_test.go
+  s_06fcde5dbef956::t_da3bbb369a28e1 305-364,366-368
+  s_06fcde5dbef956::t_2268d03271feca 365
+THIRD_PARTY_NOTICES.md
+  s_06fcde5dbef956::t_659a14e32348f3 34
+web/src/stores/events.test.ts
+  s_06fcde5dbef956::t_e9872171f22ff5 199-251
+internal/communityevents/store_list.go
+  s_06fcde5dbef956::t_c9408f98256b1f 40-41,81,83,97
+  s_06fcde5dbef956::t_64b7e22156460d 9,24-28,30-35,38-39,42-43,54,74-80,82,84-90,94-96,98-100
+internal/server/router_build.go
+  s_06fcde5dbef956::t_d1560f478a1f77 158
+internal/communityevents/handler.go
+  s_06fcde5dbef956::t_da3bbb369a28e1 122
+  s_06fcde5dbef956::t_64b7e22156460d 89-90,118-121,123-132
+internal/media/avatar_reencode.go
+  s_06fcde5dbef956::t_d1560f478a1f77 15,17,35-36,40,141,145-158,178
+web/src/stores/eventsPast.ts
+  s_06fcde5dbef956::t_a3d29e01707af7 1-60
+web/src/components/EventsModal.vue
+  s_06fcde5dbef956::t_e9872171f22ff5 2,301-311
+  s_06fcde5dbef956::t_4a7f0030f9d06d 37-40,150
+web/src/lib/emojiShortcodes.test.ts
+  s_06fcde5dbef956::t_04fb05de3def4a 1-20
+web/src/components/MentionSuggestions.vue
+  s_06fcde5dbef956::t_8d55ad04e38b78 30,34,58-59
+  s_06fcde5dbef956::t_53f52df0d1aa6d 57
+  s_06fcde5dbef956::t_d8686c4c425e41 60
+web/src/composables/useComposerAssist.test.ts
+  s_06fcde5dbef956::t_fa1c9c0c76e8e7 2,176,185-216
+web/src/lib/emojiShortcodes.json
+  s_06fcde5dbef956::t_92ea0fabe73e38 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c046a57f7792b7e6408d82bd5fe0e853a89eba2f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
