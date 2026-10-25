@@ -90,7 +90,7 @@ func runSeaweedContainer(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("dockertest pool: %w", err)
 	}
 	res, err := pool.Run(ctx, "chrislusf/seaweedfs",
-		dockertest.WithTag("4.50"),
+		dockertest.WithTag("4.48"),
 		dockertest.WithCmd([]string{"server", "-s3", "-s3.port=8333", "-dir=/data"}),
 		dockertest.WithLabels(map[string]string{"mnema-talk.testutil": "seaweedfs"}),
 		dockertest.WithoutReuse(),
