@@ -10,7 +10,7 @@ export function dmMemberFixture(index: number, overrides: Partial<ChatDMMember> 
 export function dmFixture(overrides: Partial<ChatDirectMessage> = {}): ChatDirectMessage {
   return {
     id: fixtureId(100), group: false, can_send: true, created_at: FIXTURE_TIMESTAMP,
-    last_message_at: null, last_read_at: null, unread_count: 0, mention_count: 0, notify_level: 'inherit',
+    last_message_at: null, last_read_at: null, unread_count: 0, mention_count: 0, notify_level: 'inherit', hidden: false, favourite_position: null,
     members: [dmMemberFixture(1), dmMemberFixture(2)],
     ...overrides
   }

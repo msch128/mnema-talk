@@ -40,6 +40,8 @@ const menu = () => requireValue(document.querySelector<HTMLElement>('[role="menu
 const rows = () => [...document.querySelectorAll('[data-menu-nav]')]
 const key = (k: string, init: KeyboardEventInit = {}) => requireValue(menu()).dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, ...init }))
 
+const frames = () => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+
 describe('ContextMenu accessibility', () => {
   it('exposes menu, menuitem and menuitemradio roles', async () => {
     await openMenu()
@@ -169,6 +171,7 @@ describe('ContextMenu submenu and lifecycle', () => {
     menu().dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
     menu().dispatchEvent(new Event('scroll', { bubbles: true }))
     expect(w.emitted('close')).toBeUndefined()
+    await frames()
     document.body.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }))
     expect(w.emitted('close')).toHaveLength(1)
     window.dispatchEvent(new Event('scroll'))
@@ -177,6 +180,16 @@ describe('ContextMenu submenu and lifecycle', () => {
     window.dispatchEvent(new Event('scroll'))
     document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
     expect(w.emitted('close')).toHaveLength(2)
+  })
+
+  it('ignores a scroll that arrives right after opening but closes on a later one', async () => {
+    await openMenu({ items: items() })
+    window.dispatchEvent(new Event('scroll'))
+    expect(w.emitted('close')).toBeUndefined()
+    expect(document.querySelector('[role="menu"]')).not.toBeNull()
+    await frames()
+    window.dispatchEvent(new Event('scroll'))
+    expect(w.emitted('close')).toHaveLength(1)
   })
 
   it('keeps action focus and closes an open submenu when hidden or unmounted', async () => {

@@ -42,9 +42,9 @@ onMounted(load)
 </script>
 
 <template>
-  <section v-if="loaded" class="settings-card" data-testid="dm-policy" aria-labelledby="dm-policy-title">
+  <div v-if="loaded" class="space-y-3" data-testid="dm-policy">
     <div>
-      <h3 id="dm-policy-title" class="settings-title">{{ $t('dm.policy.title') }}</h3>
+      <h4 id="dm-policy-title" class="settings-subtitle">{{ $t('dm.policy.title') }}</h4>
       <p class="settings-help">{{ $t('dm.policy.intro') }}</p>
     </div>
     <div role="radiogroup" aria-labelledby="dm-policy-title" class="space-y-2">
@@ -61,5 +61,5 @@ onMounted(load)
         @select="choose(option)"
       />
     </div>
-  </section>
+  </div>
 </template>

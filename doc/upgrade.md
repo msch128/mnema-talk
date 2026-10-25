@@ -297,6 +297,28 @@ members always carry them.
   `PUT /api/categories/{id}/notifications`, `PUT /api/notification-settings/server`);
   it should hide the server-wide entries when `notify.levels.v2` is missing.
 
+#### Direct message list: close, favourites, mute all
+
+- Migration 0074 adds `dm_members.hidden_at` and `dm_members.favourite_pos`
+  (a member's closed and favourite conversations) and `users.dm_mute_all` and
+  `users.dm_list_collapsed`. Nothing changes for anybody until they use it:
+  every conversation stays in the list, nothing is muted. Nothing is deleted by
+  closing a conversation; the next message in it shows it again.
+- Feature name `dm.v2` in `GET /api/health`. New routes, all for the caller's
+  own list and all answering 404 for a conversation they are not in:
+  `PUT /api/dms/{id}/hidden`, `PUT /api/dms/favourites` (at most 25, in order),
+  `GET` and `PUT /api/users/me/dm-settings` (`mute_all`, `list_collapsed`).
+  `GET /api/dms` and `GET /api/dms/{id}` gain `hidden`, `favourite_position`
+  and `last_message` (additive); a new event `dm_prefs_updated` reaches the
+  member's own sessions only.
+- **Mute all direct messages** sends no push, and reads as `notify_level: mute`
+  with no mention count in the list, unless the conversation has a setting of
+  its own (which wins). Unread counts are unchanged. The existing
+  *who may start a conversation* setting (`dm_policy`) is unchanged and now sits
+  in the same *Direct messages* section of the privacy settings.
+- A 1.1.x web app on a 1.2 server works as before; a 1.2 web app on an older
+  server hides the new parts.
+
 #### Calls and the security floor
 
 - **Media frame format 2 is removed.** The end-to-end encryption of call media
