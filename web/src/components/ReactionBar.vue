@@ -50,7 +50,7 @@ function gone(reaction: ReactionSummary) {
       :aria-pressed="reacted(r) ? 'true' : 'false'"
       @click.stop="emit('toggle', r.emoji)"
       :class="[
-        'inline-flex items-center gap-1 py-0.5 rounded-full border transition cursor-pointer active:scale-95',
+        'focus-ring inline-flex items-center gap-1 py-0.5 rounded-full border transition cursor-pointer active:scale-95',
         compact ? 'px-1.5 text-xs' : 'px-2 text-sm',
         reacted(r)
           ? 'bg-mnema-accent/20 border-mnema-accent/40 text-mnema-accent font-semibold'

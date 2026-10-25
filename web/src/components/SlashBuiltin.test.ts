@@ -31,9 +31,10 @@ describe('built-in commands in the menu', () => {
     const w = mount(SlashSuggestions, { props: { items: [poll, bots] }, global: { plugins: [i18nPlugin] } })
     const [first, second] = w.findAll('[role="option"]')
     expect(first!.text()).toContain('Stelle dem Kanal eine Frage')
-    expect(first!.text()).toContain('Eingebaut')
+    expect(first!.text()).not.toContain('Eingebaut')
     expect(second!.text()).toContain('The bot\'s own poll')
-    expect(second!.text()).toContain('helper')
+    // The source is named once per group, not on every row.
+    expect(w.findAll('[data-testid="slash-group"]').map(g => g.text())).toEqual(['Eingebaut', 'helper'])
   })
 
   it('fall back to the server text when no translation exists', () => {

@@ -39,7 +39,10 @@ const props = defineProps({
   editing: { type: Boolean, default: false },
   saving: { type: Boolean, default: false },
   // Id of the open reaction picker in the list (see useMessageActions).
-  pickerId: { type: String as PropType<string | null>, default: null }
+  pickerId: { type: String as PropType<string | null>, default: null },
+  // The list has one Tab stop: the row that is the stop is tabbable, the others
+  // are reached with the arrow keys (see useRovingMessages).
+  tabStop: { type: Boolean, default: true }
 })
 const editText = defineModel<string>('editText', { type: String, default: '' })
 const emit = defineEmits<{ reply: []; edit: []; save: []; 'cancel-edit': []; more: [event: MouseEvent]; react: [emoji: string]; 'toggle-picker': [id: string]; 'close-picker': []; 'open-thread': []; 'open-profile': []; 'open-image': [src: string]; jump: [] }>()
@@ -55,10 +58,10 @@ defineExpose({ el: row })
   <div
     ref="row"
     :data-msg-id="msg.id"
-    tabindex="0"
+    :tabindex="tabStop ? 0 : -1"
     role="article"
     :class="[
-      'relative mx-2 rounded-lg pl-16 pr-10 max-md:mx-0 max-md:rounded-none max-md:pl-[60px] max-md:pr-3 py-0.5 hover:bg-mnema-surface/60 transition-colors group focus:outline-hidden focus-visible:bg-mnema-surface/40',
+      'relative mx-2 rounded-lg pl-16 pr-10 max-md:mx-0 max-md:rounded-none max-md:pl-[60px] max-md:pr-3 py-0.5 hover:bg-mnema-surface/60 transition-colors group focus:outline-hidden focus-ring focus-visible:bg-mnema-surface/40',
       grouped ? '' : 'mt-[17px] first:mt-2',
       highlighted ? 'msg-flash' : '',
       mentionsMe ? 'msg-mentions-me' : ''
@@ -66,8 +69,10 @@ defineExpose({ el: row })
   >
     <!-- Hover Quick Actions Bar -->
     <div
+      data-msg-toolbar
+      :data-open="pickerId === msg.id ? '' : undefined"
       :class="[
-        'absolute right-4 max-md:right-2 -top-4 items-center gap-0.5 bg-mnema-elevated border border-mnema-border rounded-lg p-1 shadow-lg z-20 before:absolute before:-inset-2 before:content-[\'\'] before:-z-10',
+        'absolute right-4 max-md:right-2 -top-4 max-md:-top-14 items-center gap-0.5 bg-mnema-elevated border border-mnema-border rounded-lg p-1 shadow-lg z-20 before:absolute before:-inset-2 before:content-[\'\'] before:-z-10',
         pickerId === msg.id ? 'flex' : 'hidden group-hover:flex group-focus-within:flex'
       ]"
     >
