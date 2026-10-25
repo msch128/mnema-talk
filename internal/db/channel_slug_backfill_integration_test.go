@@ -44,8 +44,8 @@ func TestChannelSlugBackfill(t *testing.T) {
 	}
 	long := strings.Repeat("x", 64)
 	names := []string{"General", "general", "Gr\u00f6\u00dfe & \u00c4rger", "Café", "🎮", "general!", long, long, "123e4567-e89b-12d3-a456-426614174000"}
-	// The collision suffix is the first four hex characters of the channel's own id.
-	want := []string{"general", "general-0002", "groesse-aerger", "cafe", "channel", "general-0006", long[:60], long[:55] + "-0008", "channel-123e4567-e89b-12d3-a456-426614174000"}
+	// The collision suffix is the first six hex characters of the channel's own id.
+	want := []string{"general", "general-000200", "groesse-aerger", "cafe", "channel", "general-000600", long[:60], long[:53] + "-000800", "channel-123e4567-e89b-12d3-a456-426614174000"}
 	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	for i, name := range names {
 		if _, err := p.Exec(ctx, `INSERT INTO channels (id, name, type, created_at) VALUES ($1, $2, 'text', $3)`, fmt.Sprintf("%04x0000-0000-4000-8000-000000000000", i+1), name, start.Add(time.Duration(i)*time.Minute)); err != nil {

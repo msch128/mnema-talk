@@ -34,17 +34,17 @@ func TestSlugify(t *testing.T) {
 func TestSlugCandidateSuffixComesFromTheChannelsOwnID(t *testing.T) {
 	id := uuid.MustParse("0f3a9c1e-1111-4222-8333-444455556666")
 	long := strings.Repeat("x", MaxSlugLength)
-	for n, want := range map[int]string{0: long, 1: long[:MaxSlugLength-5] + "-0f3a", 2: long[:MaxSlugLength-7] + "-0f3a9c", 3: long[:MaxSlugLength-9] + "-0f3a9c1e"} {
+	for n, want := range map[int]string{0: long, 1: long[:MaxSlugLength-7] + "-0f3a9c", 2: long[:MaxSlugLength-9] + "-0f3a9c1e", 3: long[:MaxSlugLength-13] + "-0f3a9c1e1111"} {
 		got := slugCandidate(long, id, n)
 		if got != want || len(got) > MaxSlugLength {
 			t.Errorf("slugCandidate(long, %d) = %q, want %q", n, got, want)
 		}
 	}
-	if got := slugCandidate("general", id, 1); got != "general-0f3a" {
+	if got := slugCandidate("general", id, 1); got != "general-0f3a9c" {
 		t.Errorf("got %q", got)
 	}
 	// A cut that ends in a dash drops it before the suffix.
-	if got := slugCandidate(strings.Repeat("a", 54)+"-bb", id, 1); got != strings.Repeat("a", 54)+"-0f3a" {
+	if got := slugCandidate(strings.Repeat("a", 52)+"-bb", id, 1); got != strings.Repeat("a", 52)+"-0f3a9c" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -56,11 +56,11 @@ func TestKeepsSlug(t *testing.T) {
 		want          bool
 	}{
 		{"general", "general", true},
-		{"general-0f3a", "general", true},
 		{"general-0f3a9c", "general", true},
+		{"general-0f3a9c1e", "general", true},
 		{"general-2", "general", false},
 		{"general-beef", "general", false},
-		{"general", "general-0f3a", false},
+		{"general", "general-0f3a9c", false},
 		{"lobby", "general", false},
 	} {
 		if got := keepsSlug(c.current, c.base, id); got != c.want {

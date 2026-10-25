@@ -49,9 +49,9 @@ BEGIN
         IF base ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN base := 'channel-' || base; END IF;
         cand := base;
         n := 0;
-        WHILE EXISTS (SELECT 1 FROM channel_slugs WHERE slug = cand) AND n < 5 LOOP
+        WHILE EXISTS (SELECT 1 FROM channel_slugs WHERE slug = cand) AND n < 4 LOOP
             n := n + 1;
-            sfx := '-' || left(replace(r.id::text, '-', ''), (ARRAY[4, 6, 8, 12, 32])[n]);
+            sfx := '-' || left(replace(r.id::text, '-', ''), (ARRAY[6, 8, 12, 32])[n]);
             cand := trim(both '-' from left(base, 60 - length(sfx))) || sfx;
         END LOOP;
         INSERT INTO channel_slugs (slug, channel_id) VALUES (cand, r.id);

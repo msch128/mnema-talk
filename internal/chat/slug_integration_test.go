@@ -55,7 +55,7 @@ func TestChannelSlugsFollowNamesAndKeepHistory(t *testing.T) {
 	general := mustCreate(t, ctx, p, "General", ChannelTypeText)
 	requireSlug(t, general, "general")
 	second := mustCreate(t, ctx, p, "general", ChannelTypeVoice)
-	requireSlug(t, second, "general-"+hexOf(second.ID)[:4])
+	requireSlug(t, second, "general-"+hexOf(second.ID)[:6])
 	requireSlug(t, mustCreate(t, ctx, p, "Gr\u00f6\u00dfe", ChannelTypeForum), "groesse")
 	requireSlug(t, mustCreate(t, ctx, p, "🎮", ChannelTypeText), "channel")
 
@@ -67,7 +67,7 @@ func TestChannelSlugsFollowNamesAndKeepHistory(t *testing.T) {
 
 	// The freed slug is not handed to another channel: old links never move.
 	third := mustCreate(t, ctx, p, "General", ChannelTypeText)
-	requireSlug(t, third, "general-"+hexOf(third.ID)[:4])
+	requireSlug(t, third, "general-"+hexOf(third.ID)[:6])
 
 	// Renaming back takes the channel's own old slug again.
 	requireSlug(t, mustRename(t, ctx, p, general.ID, "general"), "general", "lobby")
@@ -193,11 +193,11 @@ func TestCollisionSuffixIgnoresOtherChannels(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		mustCreate(t, ctx, p, "Plans", ChannelTypeText)
 	}
-	if first.Slug != "plans-"+hexOf(first.ID)[:4] {
+	if first.Slug != "plans-"+hexOf(first.ID)[:6] {
 		t.Fatalf("slug %q", first.Slug)
 	}
 	last := mustCreate(t, ctx, p, "Plans", ChannelTypeText)
-	if last.Slug != "plans-"+hexOf(last.ID)[:4] {
+	if last.Slug != "plans-"+hexOf(last.ID)[:6] {
 		t.Fatalf("slug %q", last.Slug)
 	}
 }

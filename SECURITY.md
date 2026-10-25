@@ -201,7 +201,7 @@ Channel addresses (`/c/general`) are slugs. What they could reveal, and what lim
   channel receive them. There is no endpoint that resolves a slug; the web app resolves against the channels it
   already holds, and an unknown address and a channel the member may not see give the same answer.
 - **Collisions.** A slug is unique on the server, former slugs included. When a name collides, the channel's own
-  slug gets a suffix from the first characters of its own id (`plans-0f3a`), never a running number, so the
+  slug gets a suffix from the first 6 hex characters of its own id (more only if that collides too) (`plans-0f3a9c`), never a running number, so the
   suffix does not count other channels. A channel manager (the *Manage channels* permission) can still infer that
   some channel already uses a slug when theirs gets a suffix; this is accepted, as managers administer the
   channel structure.

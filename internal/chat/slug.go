@@ -71,7 +71,7 @@ const MaxFormerSlugs = 10
 var tempSlugPattern = regexp.MustCompile(`^talk-[0-9a-f]{8}$`)
 
 // suffixLengths are the id characters tried, in turn, as a collision suffix.
-var suffixLengths = []int{4, 6, 8, 12, 32}
+var suffixLengths = []int{6, 8, 12, 32}
 
 // TempTalkSlug is the slug of a temporary Talk. It is set once, never changes
 // on a rename and is never recorded in the slug history: a leader who may
@@ -83,7 +83,7 @@ func TempTalkSlug(id uuid.UUID) string {
 func hexOf(id uuid.UUID) string { return strings.ReplaceAll(id.String(), "-", "") }
 
 // slugCandidate is the n-th choice for base (n counts from 0): base itself,
-// then base-<first 4, 6, 8 ... characters of the channel's own id>. The
+// then base-<first 6, 8, 12 ... characters of the channel's own id>. The
 // suffix comes from the channel's id, never from a count of other channels,
 // so a collision does not reveal how many channels use a slug. base is
 // shortened so the result stays within MaxSlugLength.
