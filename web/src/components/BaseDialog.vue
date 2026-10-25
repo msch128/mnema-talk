@@ -16,6 +16,9 @@ const props = defineProps({
   // Tailwind classes for the panel (width etc.)
   panelClass: { type: String, default: 'max-w-md' },
   closeOnScrim: { type: Boolean, default: true },
+  // Phone variant for long, form-like dialogs: fills the screen below md
+  // instead of floating as an inset card over the app.
+  sheet: { type: Boolean, default: false },
   // 'center' (default) or 'top' for palette-style dialogs such as search
   align: { type: String as PropType<'center' | 'top'>, default: 'center' },
   initialFocus: { type: [String, Function] as PropType<string | ((root: HTMLElement) => HTMLElement | null | undefined)>, default: undefined }
@@ -40,7 +43,7 @@ function onScrimUp(e: PointerEvent) {
 
 <template>
   <div
-    :class="['dialog-scrim fixed inset-0 z-50 flex justify-center scrim', align === 'top' ? 'items-start pt-20 max-md:pt-[max(1rem,env(safe-area-inset-top))]' : 'items-center']"
+    :class="['dialog-scrim fixed inset-0 z-50 flex justify-center scrim', align === 'top' ? 'items-start pt-20 max-md:pt-[max(1rem,env(safe-area-inset-top))]' : 'items-center', sheet && 'max-md:items-stretch max-md:p-0!']"
     @pointerdown="onScrimDown"
     @pointerup="onScrimUp"
   >
@@ -51,7 +54,7 @@ function onScrimUp(e: PointerEvent) {
       :aria-labelledby="titleId"
       :aria-describedby="describedby || undefined"
       tabindex="-1"
-      :class="['dialog-panel flex max-h-full w-full flex-col overflow-hidden rounded-2xl border border-mnema-border bg-mnema-elevated shadow-2xl focus:outline-hidden', panelClass]"
+      :class="['dialog-panel flex max-h-full w-full flex-col overflow-hidden rounded-2xl border border-mnema-border bg-mnema-elevated shadow-2xl focus:outline-hidden', sheet && 'max-md:max-w-none max-md:rounded-none max-md:border-0 max-md:pt-[env(safe-area-inset-top)] max-md:pb-[env(safe-area-inset-bottom)]', panelClass]"
     >
       <header v-if="title" class="flex items-center justify-between gap-3 border-b border-mnema-hairline bg-mnema-raised px-6 py-5">
         <div class="min-w-0">
@@ -59,7 +62,7 @@ function onScrimUp(e: PointerEvent) {
             <h2 :id="titleId" class="truncate text-lg font-semibold text-mnema-text">{{ title }}</h2>
             <slot name="badge" />
           </div>
-          <p v-if="subtitle" class="truncate font-mono text-xs text-mnema-tertiary">{{ subtitle }}</p>
+          <p v-if="subtitle" class="mt-0.5 text-pretty text-[13px] leading-snug text-mnema-tertiary">{{ subtitle }}</p>
         </div>
         <button
           type="button"

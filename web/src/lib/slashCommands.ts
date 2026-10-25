@@ -16,11 +16,17 @@ export function slashQuery(text: string): string | null {
   return text.slice(1).toLowerCase()
 }
 
-/** Commands whose name starts with the query first, then those containing it. */
+/**
+ * Commands whose name starts with the query first, then those containing it;
+ * commands of one source (the built-ins, one bot) stay together, in the order
+ * their source first appears, because the list names each source once.
+ */
 export function filterCommands(list: readonly BotChannelCommand[], query: string): BotChannelCommand[] {
   const starts = list.filter(c => c.name.startsWith(query))
   const contains = list.filter(c => !c.name.startsWith(query) && c.name.includes(query))
-  return [...starts, ...contains].slice(0, MAX_SUGGESTIONS)
+  const ranked = [...starts, ...contains].slice(0, MAX_SUGGESTIONS)
+  const sources = [...new Set(ranked.map(c => (c.builtin ? '' : c.bot_name)))]
+  return sources.flatMap(source => ranked.filter(c => (c.builtin ? '' : c.bot_name) === source))
 }
 
 export type OptionValues = Record<string, string | boolean>

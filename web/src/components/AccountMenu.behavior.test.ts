@@ -5,6 +5,7 @@ import { nextTick } from 'vue'
 import AccountMenu from './AccountMenu.vue'
 import UserBar from './UserBar.vue'
 import { userFixture, fixtureId } from '../test-fixtures.fixture'
+import { useAccountStore } from '../stores/account'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
@@ -22,13 +23,13 @@ afterEach(() => { w?.unmount(); document.body.innerHTML = ''; vi.restoreAllMocks
 function mountMenu() { w = mount(AccountMenu, { props: { trigger }, attachTo: document.body }); return w }
 function item(text: string) { const found = w.findAll('button').find(b => b.text().includes(text)); if (!found) throw new Error(`Missing action ${text}`); return found }
 async function key(key: string) { await w.trigger('keydown', { key }); await nextTick() }
-it('opens profile, audio, connection details, screen share, admin, legal and logout actions', async () => {
+it('opens profile, settings, connection details, screen share, admin, legal and logout actions', async () => {
   const auth = useAuthStore(); const chat = useChatStore(); const voice = useVoiceStore()
   const profile = vi.spyOn(chat, 'openUserProfile').mockResolvedValue(); const logout = vi.spyOn(auth, 'logout').mockResolvedValue()
   voice.setChannel(fixtureId(2))
   mountMenu(); await flushPromises()
   await item(t('account.editProfile')).trigger('click'); expect(profile).toHaveBeenCalledWith(auth.user)
-  await item(t('account.audio')).trigger('click'); expect(voice.showAudioSettings).toBe(true)
+  await item(t('account.settings')).trigger('click'); expect(useAccountStore().dialogOpen).toBe(true)
   await item(t('voice.panel.details')).trigger('click'); expect(voice.showStatsModal).toBe(true)
   await item(t('voice.share')).trigger('click'); expect(voice.showScreenShareModal).toBe(true)
   voice.isScreenSharing = true; await nextTick(); await item(t('voice.stopShare')).trigger('click'); expect(h.stop).toHaveBeenCalledTimes(1)

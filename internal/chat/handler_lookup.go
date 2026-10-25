@@ -183,12 +183,12 @@ func (h *Handler) getMessageByNumber(w http.ResponseWriter, r *http.Request) err
 // search handles GET /api/search.
 //
 // @Summary Search messages
-// @Description Text channels and voice channels' chats (with dm=true, the caller's direct messages instead), newest first (or by sort). Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id, mentions, has, is, after, before_date, during, filename or author is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.
+// @Description Text channels and voice channels' chats (with dm=true, the caller's direct messages instead), newest first (or by sort). Every term (max 8) must occur case-insensitively; a quoted phrase is one term and a leading minus excludes messages containing it. At least one of q, channel_id, author_id, mentions, has, is, after, before_date, during, filename or author is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.
 // @ID searchMessages
 // @Tags Messages
 // @Produce json
 // @Security cookieAuth
-// @Param q query string false "Search terms, whitespace separated." maxlength(200)
+// @Param q query string false "Search terms, whitespace separated; a quoted phrase is one term, a leading minus excludes a word." maxlength(200)
 // @Param channel_id query string false "Only messages of this channel." Format(uuid)
 // @Param author_id query string false "Only messages of this author." Format(uuid)
 // @Param author query string false "Only messages by this author type: bot, webhook or member." Enums(bot,webhook,member)

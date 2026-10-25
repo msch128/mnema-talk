@@ -38,7 +38,7 @@ async function submit() {
   <form class="space-y-3.5" data-testid="second-factor" @submit.prevent="submit">
     <p class="text-sm text-mnema-muted">{{ $t('security.twoFactor.loginIntro') }}</p>
     <div>
-      <label for="login-code" class="mb-1 block font-mono text-xs font-medium uppercase tracking-wider text-mnema-muted">{{ $t('security.twoFactor.code') }}</label>
+      <label for="login-code" class="mb-1 block text-sm font-medium text-mnema-body-ink">{{ $t('security.twoFactor.code') }}</label>
       <input
         id="login-code"
         v-model="code"
@@ -48,7 +48,7 @@ async function submit() {
         autocapitalize="none"
         spellcheck="false"
         maxlength="32"
-        class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 font-mono text-sm tracking-widest text-mnema-text outline-hidden transition focus:border-mnema-accent"
+        class="w-full rounded-lg border border-mnema-border-field bg-mnema-canvas px-3 py-2 font-mono text-sm tracking-widest text-mnema-text"
         data-testid="second-factor-code"
       />
     </div>

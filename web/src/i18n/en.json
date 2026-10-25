@@ -8,7 +8,9 @@
     "undo": "Undo",
     "create": "Create",
     "name": "Name",
-    "loadMore": "Load more"
+    "loadMore": "Load more",
+    "retry": "Try again",
+    "loading": "Loading…"
   },
   "language": {
     "de": "Deutsch",
@@ -73,12 +75,11 @@
   "account": {
     "menu": "Account menu",
     "editProfile": "Edit profile",
-    "audio": "Audio",
     "language": "Language",
     "signOut": "Sign out",
     "languageSet": "Language set to {language}. Saved for this account.",
     "languageFailed": "Couldn’t save the language. Try again.",
-    "app": "App & notifications"
+    "settings": "Settings"
   },
   "errors": {
     "unknown": "Unknown error",
@@ -220,7 +221,8 @@
     "inviteChecking": "Checking your invite…",
     "inviteInvalid": "This invite is not valid any more. Ask for a new one, or sign in if you already have an account.",
     "inviteExpires": "Valid until {when}",
-    "passwordHint": "At least {count} characters."
+    "passwordHint": "At least {count} characters.",
+    "forgotNoMail": "Forgot your password? This server cannot send e-mail. Someone with admin rights can reset it for you."
   },
   "sidebar": {
     "subtitle": "Private community",
@@ -318,10 +320,9 @@
     "progress": "Step {current} of {total}",
     "close": "Skip the introduction",
     "continue": "Continue",
-    "skip": "Skip",
+    "skip": "Later",
     "welcome": {
-      "title": "Welcome to {name}",
-      "fallback": "Glad you are here. A few quick steps and you are set."
+      "title": "Welcome to {name}"
     },
     "rules": {
       "title": "The rules",
@@ -329,7 +330,8 @@
       "accept": "I accept the rules"
     },
     "profile": {
-      "title": "Your profile"
+      "title": "Your profile",
+      "avatarHint": "Click the picture to upload a profile photo. You can change everything here later."
     },
     "notifications": {
       "title": "Stay in the loop",
@@ -498,14 +500,10 @@
     "search": "Search",
     "searchPlaceholder": "Search messages…",
     "filter": "Filter",
-    "filterOptions": "Filter options",
     "filterSuggestionsTitle": "Search filters",
     "filterFrom": "From",
-    "filterFromHint": "user",
     "filterIn": "In",
-    "filterInHint": "channel",
     "filterMentions": "Mentions",
-    "filterMentionsHint": "user",
     "filterHas": "Has",
     "filterDate": "Date",
     "filterDateDuring": "During",
@@ -513,21 +511,19 @@
     "filterDateAfter": "After",
     "filterDateToday": "Today",
     "chooseDate": "Pick a date",
-    "applyDate": "Add date",
     "filterAuthor": "Author type",
-    "authorMember": "member",
-    "authorBot": "bot",
-    "authorWebhook": "webhook",
     "filterFilename": "File name",
-    "filterFilenameHint": "name",
     "sortBy": "Sort",
     "sortLabel": "Sort results by",
     "sortNewest": "Newest",
     "sortOldest": "Oldest",
     "sortRelevance": "Relevance",
     "searchResults": "Results",
-    "resultsCount": "{count} results",
-    "searchHint": "Type a search term or a filter such as from: or in:",
+    "resultsCount": {
+      "one": "{count} result",
+      "other": "{count} results"
+    },
+    "searchHint": "Type at least two characters or choose a filter",
     "noResults": "No messages found",
     "isTyping": "{name} is typing…",
     "severalTyping": "Several people are typing…",
@@ -555,7 +551,46 @@
     "noAttach": "You can’t attach files here.",
     "messageRemoved": "Message removed",
     "topicExpand": "Show the full channel description",
-    "topicCollapse": "Hide the full channel description"
+    "topicCollapse": "Hide the full channel description",
+    "searchSyntaxTip": "Tip: “exact phrase” finds a phrase, -word leaves a word out.",
+    "resultsCountMore": {
+      "one": "{count}+ result",
+      "other": "{count}+ results"
+    },
+    "searchSearching": "Searching…",
+    "noResultsFor": "Nothing found for “{query}”.",
+    "noResultsFiltered": "Nothing matches these filters.",
+    "searchClearFilters": "Remove filters",
+    "searchRetry": "Try again",
+    "searchKeyNavigate": "navigate",
+    "searchKeyOpen": "open",
+    "filterMore": "More",
+    "filterPinned": "Pinned",
+    "filterDateYesterday": "Yesterday",
+    "filterPickMember": "Find a member…",
+    "filterPickChannel": "Find a channel…",
+    "filterFilenamePlaceholder": "File name…",
+    "filterNoMatch": "No matches",
+    "filterApply": "Apply",
+    "filterHasKinds": {
+      "file": "File",
+      "image": "Image",
+      "video": "Video",
+      "link": "Link",
+      "embed": "Embed",
+      "poll": "Poll",
+      "edit": "Edited"
+    },
+    "filterAuthorKinds": {
+      "member": "Member",
+      "bot": "Bot",
+      "webhook": "Webhook"
+    },
+    "searchProblemMember": "No member “{value}” found. Check the name after {filter}:.",
+    "searchProblemChannel": "No channel “{value}” found. Check the name after {filter}:.",
+    "searchProblemDate": "Can’t read the date “{value}” after {filter}:. Use YYYY-MM-DD, today or yesterday.",
+    "searchProblemOption": "“{value}” is not a value for {filter}:. Choose one of: {options}.",
+    "searchProblemEmpty": "{filter}: needs a value."
   },
   "thread": {
     "title": "Thread",
@@ -1421,7 +1456,30 @@
     "resetTwoFactorBody": "Turns two-factor sign-in off, deletes the authenticator secret and the recovery codes, and signs the member out everywhere. Use it when they lost both the authenticator and the recovery codes. They can turn it on again afterwards.",
     "resetTwoFactorConfirm": "Reset",
     "twoFactorReset": "Two-factor sign-in reset.",
-    "channelTopicHelp": "Shown under the channel name. Keep it short: what this channel is for."
+    "channelTopicHelp": "Shown under the channel name. Keep it short: what this channel is for.",
+    "nav": {
+      "community": "Community",
+      "moderation": "Moderation",
+      "integrations": "Integrations",
+      "operations": "Operations",
+      "back": "Back to sections",
+      "signedIn": "Signed in as {name}",
+      "openReports": "{count} open"
+    },
+    "maxUsesLabel": "Uses",
+    "maxUsesPlaceholder": "Unlimited",
+    "validHoursLabel": "Valid for (hours)",
+    "validHoursPlaceholder": "No expiry",
+    "presets": "Validity presets",
+    "preset": {
+      "day": "1 day",
+      "week": "7 days",
+      "never": "No expiry"
+    },
+    "noInvitesHint": "Create one above and share its link.",
+    "showSpent": "Show {count} used up or expired",
+    "hideSpent": "Hide used up and expired",
+    "noMediaHint": "Uploaded images and files show up here."
   },
   "profile": {
     "addedBy": "Added by {name}",
@@ -1473,12 +1531,12 @@
     "statusPlaceholder": "What are you up to?",
     "noStatus": "No status set",
     "clearStatus": "Clear",
-    "moderateStatus": "Edit (moderation)",
+    "moderateStatus": "Change status",
     "statusSaved": "Status saved",
     "statusCleared": "Status cleared",
     "displayNameHint": "This is what others see. Your username @{username} stays the same. At most {count} characters.",
     "open": "Open {name}’s profile",
-    "passwordLink": "Change password and sign-in security",
+    "passwordLink": "Password and account in settings",
     "clearAfter": "Clear after",
     "expiry": {
       "hour": "1 hour",
@@ -1488,7 +1546,9 @@
       "custom": "Pick date and time…"
     },
     "expiryPast": "Pick a time in the future.",
-    "clearsAt": "Clears {time}"
+    "clearsAt": "Clears {time}",
+    "moderationTitle": "Moderation",
+    "rolesTitle": "Roles"
   },
   "nav": {
     "channelNotFound": "That channel doesn’t exist anymore.",
@@ -1803,7 +1863,8 @@
       "empty": "No custom emoji yet.",
       "full": "The limit is reached. Delete an emoji to make room.",
       "choose": "Choose file",
-      "noFile": "No file yet"
+      "noFile": "No file yet",
+      "emptyHint": "Upload an image above to add the first one."
     }
   },
   "activity": {
@@ -2019,7 +2080,10 @@
       "emoji": "Emoji",
       "bot": "Bots",
       "poll": "Polls",
-      "automod": "Automod"
+      "automod": "Automod",
+      "report": "Reports",
+      "event": "Events",
+      "import": "Imports"
     },
     "actions": {
       "role": {
@@ -2164,8 +2228,29 @@
       },
       "admin": {
         "post": "Admin action"
+      },
+      "report": {
+        "create": "Report filed",
+        "resolve": "Report closed",
+        "delete": "Report deleted"
+      },
+      "event": {
+        "create": "Event created",
+        "edit": "Event edited",
+        "cancel": "Event cancelled",
+        "talk_create": "Talk event created",
+        "talk_edit": "Talk event edited",
+        "talk_cancel": "Talk event cancelled"
+      },
+      "import": {
+        "discord": "Discord template imported",
+        "discord_undo": "Discord import undone"
       }
-    }
+    },
+    "hideSignIns": "Hide sign-ins",
+    "signInsHidden": "{count} sign-ins hidden",
+    "emptyHint": "Changes to roles, channels, members and settings are recorded here.",
+    "reportTarget": "Report ({category})"
   },
   "roles": {
     "managedHint": "Managed role: held by every bot, cannot be removed.",
@@ -2222,7 +2307,14 @@
       "administrator": "This role has Administrator: it sees every channel you can see and ignores channel permissions.",
       "empty": "This role sees no channels you can see.",
       "exit": "Exit preview"
-    }
+    },
+    "unsavedTitle": "Discard unsaved changes?",
+    "unsavedBody": "This role has changes you have not saved. Switching to another role drops them.",
+    "discard": "Discard",
+    "keepEditing": "Keep editing",
+    "unsaved": "Unsaved changes",
+    "searchPermissions": "Search permissions",
+    "noPermissionMatch": "No permission matches."
   },
   "memberRoles": {
     "title": "Roles of {name}",
@@ -2459,7 +2551,8 @@
     "slowModeInvalid": "Enter a whole number of 1 or more.",
     "slowModeTooLong": "Slow mode can last 24 hours at most.",
     "slowModeCustom": "Custom",
-    "slowModeUnit": "Unit"
+    "slowModeUnit": "Unit",
+    "noBansHint": "Banned members are listed here, and you can lift a ban."
   },
   "editHistory": {
     "menu": "Edit history",
@@ -2585,11 +2678,10 @@
       "deleteFor": "Delete command {name}",
       "deleteTitle": "Delete command /{name}?",
       "deleteBody": "The bot can register it again."
-    }
+    },
+    "emptyHint": "Name a bot above to create it and get its token."
   },
   "appSettings": {
-    "title": "App & notifications",
-    "subtitle": "Install Mnema Talk and get notified while it is closed.",
     "installTitle": "Install",
     "install_installed": "Mnema Talk is installed on this device and runs in its own window.",
     "install_available": "Install Mnema Talk to open it from your home screen, dock or start menu without the browser bar.",
@@ -2646,9 +2738,6 @@
     "continue": "Continue to sign in"
   },
   "security": {
-    "menu": "Account & security",
-    "title": "Account & security",
-    "subtitle": "Only you see this",
     "email": {
       "title": "E-mail address",
       "intro": "Optional. Only used to confirm it and to reset your password. Nobody else sees it, not even the Owner.",
@@ -2744,7 +2833,9 @@
       },
       "onlyThis": "This is the only device signed in.",
       "inactivity": "Sessions that are not used for a while are signed out automatically. The Owner sets how long."
-    }
+    },
+    "showPassword": "Show characters",
+    "hidePassword": "Hide characters"
   },
   "rules": {
     "title": "Community rules"
@@ -2938,7 +3029,9 @@
       "links": {
         "block_all": "Every link",
         "allow_list": "Only links to {count} listed domains",
-        "block_list": "Links to {count} listed domains"
+        "block_list": "Links to {count} listed domains",
+        "block_listEmpty": "No domains listed yet, nothing is blocked",
+        "allow_listEmpty": "No domains allowed, every link is blocked"
       },
       "mentions": "More than {n} different mentions",
       "newAccount": {
@@ -2948,7 +3041,10 @@
         "everything": "Accounts under {age} may not post"
       },
       "raid": "More than {joins} joins within {window}: newcomers restricted for {restrict}"
-    }
+    },
+    "emptyHint": "Rules check every message and sign-up. Add one with the buttons above.",
+    "enabledState": "On",
+    "disabledState": "Off"
   },
   "modHistory": {
     "tabs": "Profile sections",
@@ -3070,7 +3166,11 @@
       "deleteBody": "The report and its copy of the messages are removed for good.",
       "deleteFailed": "Couldn’t delete the report. Try again.",
       "closeFailed": "Couldn’t close the report. Try again.",
-      "loadFailed": "Couldn’t load the reports. Try again."
+      "loadFailed": "Couldn’t load the reports. Try again.",
+      "emptyHint": "When a member reports a message or automod flags one, it shows up here for you to look at.",
+      "quoted": "Reported message",
+      "timeout": "Time out…",
+      "ban": "Ban…"
     }
   },
   "autoDelete": {
@@ -3145,7 +3245,8 @@
       "empty": "No imports yet.",
       "row": "{name} · {when}",
       "undone": "Undone {when}",
-      "undo": "Undo import"
+      "undo": "Undo import",
+      "emptyHint": "Imports of a Discord server template are listed here, with an undo."
     },
     "confirm": {
       "title": "Import Discord structure",
@@ -3178,5 +3279,23 @@
       "done": "Import undone. Removed {summary}.",
       "keptRoles": " {kept} role(s) stay because you can no longer manage them."
     }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Your account and this device. Only you see this.",
+    "nav": "Settings sections",
+    "group": {
+      "account": "Account",
+      "device": "This device"
+    },
+    "tab": {
+      "signin": "Sign-in",
+      "sessions": "Sessions",
+      "privacy": "Privacy",
+      "data": "Data & account",
+      "app": "Push & app",
+      "audio": "Audio"
+    },
+    "privacyEmpty": "There is nothing to set here on this server."
   }
 }

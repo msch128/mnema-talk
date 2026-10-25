@@ -4,7 +4,7 @@ import { Reply, Pin } from '@lucide/vue'
 import type { Message } from '../types/domain'
 import type { ThreadRoot } from '../stores/chat'
 import { useChatStore } from '../stores/chat'
-import { clockTimeOptions } from '../lib/time'
+import { dateTime } from '../lib/time'
 import { locale } from '../i18n'
 import type { useMessageActions } from '../composables/useMessageActions'
 import UserAvatar from './UserAvatar.vue'
@@ -31,11 +31,7 @@ const emit = defineEmits<{
 const chatStore = useChatStore()
 const { pickerId } = props.actions
 
-function formatDate(dateStr?: string) {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return d.toLocaleDateString([locale.value], { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString([locale.value], clockTimeOptions(locale.value))
-}
+const formatDate = (dateStr?: string) => dateTime(dateStr, locale.value)
 </script>
 
 <template>
@@ -45,7 +41,7 @@ function formatDate(dateStr?: string) {
     role="article"
     @keydown="emit('keydown', $event, root)"
     :class="[
-      'relative group bg-mnema-elevated border border-mnema-border/80 rounded-xl p-3.5 shadow-xs stack-2 focus:outline-hidden focus-visible:border-mnema-accent/60',
+      'relative group bg-mnema-elevated border border-mnema-border/80 rounded-xl p-3.5 shadow-xs stack-2 focus:outline-hidden focus-ring',
       highlighted ? 'msg-flash' : ''
     ]"
   >

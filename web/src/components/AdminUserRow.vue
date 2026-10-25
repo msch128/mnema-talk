@@ -81,7 +81,7 @@ function roles() {
     </td>
 
     <!-- Display name -->
-    <td class="py-3 px-4 max-md:block max-md:px-0 max-md:py-1">
+    <td class="py-3 px-4 md:max-xl:hidden max-md:block max-md:px-0 max-md:py-1">
       <span data-testid="user-displayname" class="text-mnema-text font-medium truncate block max-w-[160px]">{{ user.display_name || user.username }}</span>
     </td>
 
@@ -151,7 +151,7 @@ function roles() {
 
     <!-- Actions -->
     <td class="py-3 px-4 max-md:block max-md:px-0 max-md:py-1 text-right whitespace-nowrap">
-      <div class="flex flex-wrap items-center justify-end max-md:justify-start gap-1">
+      <div class="flex flex-wrap items-center justify-end gap-1 md:flex-nowrap max-md:justify-start">
         <!-- Kick from voice -->
         <button
           v-if="inVoice() && permissions.can('disconnect_members')"

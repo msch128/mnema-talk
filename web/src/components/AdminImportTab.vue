@@ -10,6 +10,7 @@ import { previewImport, listImports, importDetail, undoImport } from '../lib/dis
 import type { DiscordimportPlan, DiscordimportRecord, DiscordimportCounts } from '../types/rest'
 import DiscordImportPreview from './DiscordImportPreview.vue'
 import DiscordImportConfirm from './DiscordImportConfirm.vue'
+import EmptyState from './EmptyState.vue'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 
@@ -153,7 +154,7 @@ onMounted(() => { void loadHistory() })
     <div class="space-y-2">
       <h4 class="text-xs font-mono uppercase tracking-wider text-mnema-muted">{{ $t('discordImport.history.title') }}</h4>
       <div class="divide-y divide-mnema-hairline overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
-        <div v-if="!imports.length" class="p-4 text-sm text-mnema-tertiary" data-testid="import-history-empty">{{ $t('discordImport.history.empty') }}</div>
+        <EmptyState v-if="!imports.length" :icon="Download" :text="$t('discordImport.history.empty')" :hint="$t('discordImport.history.emptyHint')" data-testid="import-history-empty" />
         <div v-for="rec in imports" :key="rec.id" class="flex items-center justify-between gap-3 px-4 py-2 text-sm" data-testid="import-record">
           <div class="min-w-0">
             <div class="truncate text-mnema-text">{{ $t('discordImport.history.row', { name: rec.template_name || rec.template_code, when: when(rec.created_at) }) }}</div>

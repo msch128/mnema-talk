@@ -20,6 +20,7 @@ import { t } from '../i18n'
 import DmCreateDialog from './DmCreateDialog.vue'
 import DmFindBox from './DmFindBox.vue'
 import DmListRow from './DmListRow.vue'
+import Badge from './Badge.vue'
 import ContextMenu from './ContextMenu.vue'
 import type { ContextMenuItem } from './menuTypes'
 
@@ -144,7 +145,7 @@ function onDragEnd() {
     <div class="relative flex h-6 items-center gap-1 pr-1 max-md:h-11">
       <button
         type="button"
-        class="flex h-6 min-w-0 flex-1 items-center gap-0.5 rounded-sm pl-0.5 text-left text-xs font-semibold uppercase tracking-wide text-mnema-tertiary transition-colors hover:text-mnema-muted focus:outline-hidden focus-visible:text-mnema-text focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent max-md:h-11"
+        class="flex h-6 min-w-0 flex-1 items-center gap-0.5 rounded-sm pl-0.5 text-left text-xs font-semibold uppercase tracking-wide text-mnema-tertiary transition-colors hover:text-mnema-muted focus:outline-hidden focus-visible:text-mnema-text focus-ring max-md:h-11"
         :aria-expanded="collapsed ? 'false' : 'true'"
         data-testid="dm-toggle"
         @click="toggle"
@@ -152,11 +153,12 @@ function onDragEnd() {
         <ChevronRight v-if="collapsed" class="h-3 w-3 shrink-0" />
         <ChevronDown v-else class="h-3 w-3 shrink-0" />
         <span class="truncate">{{ $t('dm.section') }}</span>
-        <span
+        <Badge
           v-if="collapsed && unreadTotal > 0"
-          class="ml-auto min-w-[18px] rounded-full bg-mnema-danger px-1.5 py-0.5 text-center text-xs font-bold normal-case leading-none tracking-normal text-white"
+          variant="mention"
+          class="ml-auto normal-case tracking-normal"
           :aria-label="$t('dm.unreadTotal', { n: unreadTotal })"
-        >{{ unreadTotal }}</span>
+        >{{ unreadTotal }}</Badge>
       </button>
       <button
         v-if="canStart"
@@ -223,7 +225,7 @@ function onDragEnd() {
       <button
         v-if="hiddenCount > 0"
         type="button"
-        class="w-full rounded-md px-2 py-1 text-left text-xs text-mnema-tertiary transition hover:text-mnema-text focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent max-md:h-11"
+        class="w-full rounded-md px-2 py-1 text-left text-xs text-mnema-tertiary transition hover:text-mnema-text focus-ring max-md:h-11"
         data-testid="dm-more"
         @click="showAll = true"
       >{{ $t('dm.showMore', { n: hiddenCount }) }}</button>

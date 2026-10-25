@@ -7,7 +7,8 @@ import { isChatSearchRoot } from '../types/rest'
 import { api, isApiError } from '../lib/api'
 import { searchScope, searchText } from '../lib/globalSearch'
 import { dmAsChannel } from '../lib/dm'
-import { buildSearchParams, isSearchable, parseSearchQuery } from '../lib/searchQuery'
+import { buildSearchParams, isSearchable, parseSearchQuery, serializeSearchQuery, textTerms } from '../lib/searchQuery'
+import { diagnoseSearch } from '../lib/searchProblems'
 import { markFiltersSupported, markFiltersUnsupported, usesNewFilters } from '../lib/searchSupport'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useChatStore } from '../stores/chat'
@@ -50,6 +51,7 @@ const isLoadingMore = ref(false)
 const failed = ref(false)
 const filterUnsupported = ref(false)
 const selectedIndex = ref(0)
+const inputRef = ref<InstanceType<typeof SearchInput> | null>(null)
 
 const inDm = computed(() => features.dm && searchScope.value === 'dm')
 // The conversations take the channels' place in the "in:" filter when searching them.
@@ -70,8 +72,10 @@ const built = computed(() => {
   }
   return buildSearchParams(parsed.value, lookup.value, extra)
 })
+const diagnosis = computed(() => diagnoseSearch(searchText.value, parsed.value.filters, built.value.unresolved))
 const hasCriteria = computed(() => isSearchable(built.value.params))
-const terms = computed(() => parsed.value.text.split(/\s+/).filter(Boolean))
+const terms = computed(() => textTerms(parsed.value.text))
+const filterCount = computed(() => Object.keys(parsed.value.filters).length)
 const channelNames = computed(() => new Map(lookup.value.channels.map(c => [c.id, c.name])))
 const voiceChannels = computed(() => new Set(inDm.value ? [] : chatStore.allChannels.filter(c => c.type === 'voice').map(c => c.id)))
 const activeResultId = computed(() => (results.value.length ? `search-result-${selectedIndex.value}` : undefined))
@@ -100,7 +104,13 @@ async function performSearch() {
   const seq = ++searchSeq
   failed.value = false
   filterUnsupported.value = false
-  if (!hasCriteria.value) {
+  // A token still being typed: keep what is shown until it is finished.
+  if (diagnosis.value.pending && !diagnosis.value.problems.length) {
+    isSearching.value = false
+    return
+  }
+  // A filter that cannot be applied is explained, never searched without it.
+  if (!hasCriteria.value || diagnosis.value.problems.length) {
     results.value = []
     roots.value = {}
     hasMore.value = false
@@ -158,22 +168,35 @@ function handleSelect(msg: Message) {
   close()
 }
 
-// Escape, the focus trap and focus restore come from BaseDialog. The input
-// handles its own suggestion keys and stops them before they reach this.
+// The input owns the keyboard: Up and Down move through the results (the
+// suggestion list and the filter popover take their own keys first), Enter
+// opens the selected one. Focus on the sort choice or "load more" keeps the
+// button's own Enter. Escape peels one layer (popover, suggestions) before the
+// dialog closes.
 function handleKeydown(e: KeyboardEvent) {
-  if (!results.value.length) return
+  if (!results.value.length || !(e.target instanceof HTMLElement)) return
+  if (e.target.closest('[data-search-popover]')) return
+  const n = results.value.length
 
   if (e.key === 'ArrowDown') {
     e.preventDefault()
-    selectedIndex.value = (selectedIndex.value + 1) % results.value.length
+    selectedIndex.value = (selectedIndex.value + 1) % n
   } else if (e.key === 'ArrowUp') {
     e.preventDefault()
-    selectedIndex.value = (selectedIndex.value - 1 + results.value.length) % results.value.length
-  } else if (e.key === 'Enter' && e.target instanceof HTMLInputElement) {
+    selectedIndex.value = (selectedIndex.value - 1 + n) % n
+  } else if (e.key === 'Enter' && (e.target instanceof HTMLInputElement || e.target.id === 'search-results')) {
     e.preventDefault()
     const selected = results.value[selectedIndex.value]
     if (selected) handleSelect(selected)
   }
+}
+
+function dismiss() {
+  if (!inputRef.value?.dismissLayer()) close()
+}
+
+function clearFilters() {
+  searchText.value = serializeSearchQuery({ text: parsed.value.text, filters: {} })
 }
 
 // The query line drives the search; the request is sent when typing pauses.
@@ -213,31 +236,24 @@ onUnmounted(() => {
     <BaseDialog
       v-if="modelValue"
       align="top"
-      panel-class="max-w-2xl"
+      panel-class="max-w-2xl h-192"
       initial-focus="[data-search-input]"
-      @close="close"
+      @close="dismiss"
     >
       <template #default="{ titleId }">
         <h2 :id="titleId" class="sr-only">{{ $t('chat.search') }}</h2>
-        <div class="flex max-h-[75vh] min-h-0 flex-col" @keydown="handleKeydown">
-          <div v-if="features.dm" role="group" :aria-label="$t('dm.searchScope')" class="flex gap-1 px-3 pt-3" data-testid="search-scope">
-            <button
-              v-for="scope in (['channels', 'dm'] as const)"
-              :key="scope"
-              type="button"
-              :aria-pressed="(scope === 'dm') === inDm ? 'true' : 'false'"
-              :data-scope="scope"
-              :class="['rounded-md border px-2.5 py-1 text-xs font-semibold transition max-md:min-h-11', (scope === 'dm') === inDm ? 'border-mnema-accent/40 bg-mnema-accent/15 text-mnema-accent' : 'border-transparent text-mnema-muted hover:text-mnema-text']"
-              @click="searchScope = scope"
-            >{{ $t(scope === 'dm' ? 'dm.section' : 'sidebar.channels') }}</button>
-          </div>
+        <div class="flex h-full min-h-0 flex-col" @keydown="handleKeydown">
           <SearchInput
+            ref="inputRef"
             v-model="searchText"
             :lookup="lookup"
             :loading="isSearching"
             :unresolved="built.unresolved"
             :active-result-id="activeResultId"
             :v3-supported="showV3"
+            :show-scope="features.dm"
+            :scope="searchScope"
+            @update:scope="searchScope = $event"
             @close="close"
           />
           <SearchConversationJump :text="parsed.text" @jumped="close" />
@@ -252,7 +268,11 @@ onUnmounted(() => {
             :failed="failed"
             :filter-unsupported="filterUnsupported"
             :has-criteria="hasCriteria"
+            :problems="diagnosis.problems"
+            :query-text="parsed.text"
+            :filter-count="filterCount"
             :selected-index="selectedIndex"
+            :active-result-id="activeResultId"
             :terms="terms"
             :channel-names="channelNames"
             :voice-channels="voiceChannels"
@@ -260,7 +280,14 @@ onUnmounted(() => {
             @update:sort="currentSort = $event"
             @select="handleSelect"
             @more="loadMore"
+            @retry="performSearch"
+            @clear-filters="clearFilters"
           />
+          <div v-if="showV3" class="hidden shrink-0 items-center gap-4 border-t border-mnema-hairline bg-mnema-raised px-4 py-1.5 font-mono text-xs text-mnema-tertiary md:flex" data-testid="search-keys">
+            <span>↑↓ {{ $t('chat.searchKeyNavigate') }}</span>
+            <span>↵ {{ $t('chat.searchKeyOpen') }}</span>
+            <span class="ml-auto">Esc {{ $t('common.close') }}</span>
+          </div>
         </div>
       </template>
     </BaseDialog>

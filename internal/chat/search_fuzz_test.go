@@ -9,7 +9,8 @@ import (
 
 // FuzzBuildSearchSQL checks that whatever the text and the filters are, the
 // builder never panics and the SQL text depends only on the shape of the
-// query (how many terms, which filters are set), never on user bytes: those
+// query (how many terms, which are excluded, which filters are set), never on
+// user bytes: those
 // travel as arguments.
 func FuzzBuildSearchSQL(f *testing.F) {
 	for _, s := range []string{"", "hello", "a b c d e f g h i j", "100%", "_", `\`, "'; DROP TABLE messages; --", "$1 $2", "\x00", "\u00e9 \u00fc \u00df", "💥 emoji", strings.Repeat("x ", 300)} {
@@ -33,13 +34,18 @@ func FuzzBuildSearchSQL(f *testing.F) {
 		if (has != "" && !validHas(has)) || (is != "" && is != "pinned") {
 			t.Fatalf("filter %q/%q accepted", has, is)
 		}
-		terms := strings.Fields(strings.TrimSpace(text))
+		// The shape is the parsed terms: how many, and which are excluded
+		// (-term). Their text is replaced by a fixed word.
+		terms := parseSearchTerms(text)
 		if len(terms) > maxSearchTerms {
 			terms = terms[:maxSearchTerms]
 		}
 		canon := make([]string, len(terms))
-		for i := range canon {
+		for i, term := range terms {
 			canon[i] = "a"
+			if term.Exclude {
+				canon[i] = "-a"
+			}
 		}
 		q.Text = strings.Join(canon, " ")
 		want, wantArgs, err := buildSearchSQL(q)

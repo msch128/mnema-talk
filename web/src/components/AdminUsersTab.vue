@@ -176,7 +176,7 @@ onMounted(async () => {
           <thead class="max-md:hidden bg-mnema-canvas/50 text-xs uppercase font-mono text-mnema-tertiary tracking-wider select-none">
             <tr>
               <th scope="col" class="py-3 px-4">{{ $t('admin.username') }}</th>
-              <th scope="col" class="py-3 px-4">{{ $t('admin.displayName') }}</th>
+              <th scope="col" class="py-3 px-4 md:max-xl:hidden">{{ $t('admin.displayName') }}</th>
               <th scope="col" class="py-3 px-4">{{ $t('admin.role') }}</th>
               <th scope="col" class="py-3 px-4">{{ $t('admin.lastSeen') }}</th>
               <th scope="col" class="py-3 px-4">{{ $t('admin.status') }}</th>

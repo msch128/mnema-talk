@@ -24,3 +24,6 @@ export function markFiltersUnsupported() {
 export function markFiltersSupported() {
   filtersUnsupported.value = false
 }
+
+/** What the popover of the filter row is asked for: one filter, or the menu of the rarer ones. */
+export type FilterPopKind = 'from' | 'in' | 'has' | 'date' | 'more' | 'mentions' | 'author' | 'filename'

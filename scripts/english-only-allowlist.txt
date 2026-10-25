@@ -26,7 +26,7 @@ text: Schr(ö|oe)der|Schr(ö|oe)ter | surnames of the author and of a third-part
 path: e2e/tests/** | Playwright specs drive the German UI through its visible labels
 path: web/src/components/AccountMenu.test.ts | asserts German UI output
 path: web/src/components/AdminLockoutAndWarnings.test.ts | asserts German UI output
-path: web/src/components/AudioSettingsModal.test.ts | asserts German UI output
+path: web/src/components/AudioSettingsPanel.test.ts | asserts German UI output
 path: web/src/components/ChatArea.test.ts | asserts German UI output
 path: web/src/components/ConfirmDialog.test.ts | asserts German UI output
 path: web/src/components/ConnectionBanner.test.ts | asserts German UI output

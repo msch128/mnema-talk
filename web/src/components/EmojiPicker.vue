@@ -31,13 +31,17 @@ watch(() => store.items, syncCustomEmoji)
 const host = ref<HTMLElement | null>(null)
 
 // Anchored to its button, the picker can end up partly off screen on a phone:
-// slide it back inside the viewport with a margin.
+// slide it back inside the viewport with a margin. It is placed as soon as it
+// is mounted (the loading box is already on screen) and again when the window
+// changes. The right edge comes from the layout width, not the painted box: the
+// pop-in animation scales the painted box while it runs.
 const EDGE = 8
 function keepInViewport() {
   const el = host.value
   if (!el) return
   el.style.translate = ''
-  const { left, right } = el.getBoundingClientRect()
+  const { left } = el.getBoundingClientRect()
+  const right = left + el.offsetWidth
   const over = right - (window.innerWidth - EDGE)
   const shift = left < EDGE ? EDGE - left : over > 0 ? -Math.min(over, left - EDGE) : 0
   if (shift !== 0) el.style.translate = `${Math.round(shift)}px 0`
@@ -81,12 +85,15 @@ async function create() {
 useDismissable(() => [host.value, props.trigger], () => emit('close'))
 
 onMounted(() => {
+  keepInViewport()
+  window.addEventListener('resize', keepInViewport)
   create().catch(err => {
     console.warn('Emoji picker failed to load:', err)
     emit('close')
   })
 })
 onBeforeUnmount(() => {
+  window.removeEventListener('resize', keepInViewport)
   picker?.remove()
   picker = null
 })
@@ -98,7 +105,7 @@ onBeforeUnmount(() => {
     data-testid="emoji-picker"
     class="z-40 overflow-hidden rounded-xl bg-mnema-elevated shadow-popover pop-in"
   >
-    <div v-if="loading" class="flex h-[360px] w-[340px] max-w-[calc(100vw-16px)] items-center justify-center text-sm text-mnema-tertiary">
+    <div v-if="loading" class="flex h-[377px] w-[340px] max-w-[calc(100vw-16px)] items-center justify-center text-sm text-mnema-tertiary">
       {{ $t('emoji.loading') }}
     </div>
   </div>
@@ -125,7 +132,8 @@ emoji-picker.mnema-emoji-picker {
   --skintone-border-radius: 6px;
   width: 340px;
   max-width: calc(100vw - 16px);
-  height: 360px;
+  /* Six whole rows of the grid between the tabs and the frequent row. */
+  height: 377px;
   font-family: Inter, system-ui, sans-serif;
 }
 </style>

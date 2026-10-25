@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Admin dashboard: storage summary, manual prune and the media list.
 import { ref, onMounted } from 'vue'
-import { RefreshCw, Trash2 } from '@lucide/vue'
+import { RefreshCw, Trash2, Image, HardDrive } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import type { MediaDashboardItem } from '../types/domain'
 import { decodeMediaStats, decodeMediaPruneResult, isMediaDashboardItem } from '../types/rest'
@@ -9,6 +9,7 @@ import { arrayDecoder } from '../types/validation'
 import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
+import EmptyState from './EmptyState.vue'
 
 const EMPTY_STATS = { total_files: 0, total_size_bytes: 0, deleted_files: 0 }
 
@@ -136,10 +137,8 @@ onMounted(refresh)
 
     <!-- Media Grid -->
     <div class="space-y-3">
-      <h3 class="text-sm font-semibold text-mnema-text uppercase font-mono tracking-wider">{{ $t('admin.media') }}</h3>
-      <div v-if="!mediaItems.length" class="p-6 text-center text-sm text-mnema-tertiary bg-mnema-surface rounded-lg border border-mnema-hairline">
-        {{ $t('admin.noMedia') }}
-      </div>
+      <h3 class="flex items-center gap-2 text-sm font-semibold text-mnema-text uppercase font-mono tracking-wider"><HardDrive class="w-4 h-4 text-mnema-accent" /><span>{{ $t('admin.media') }}</span></h3>
+      <EmptyState v-if="!mediaItems.length" :icon="Image" :text="$t('admin.noMedia')" :hint="$t('admin.noMediaHint')" class="bg-mnema-surface rounded-lg border border-mnema-hairline" />
       <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         <div
           v-for="item in mediaItems"

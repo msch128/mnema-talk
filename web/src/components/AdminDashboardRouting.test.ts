@@ -7,6 +7,7 @@ import BaseDialog from './BaseDialog.vue'
 import { userFixture } from '../test-fixtures.fixture'
 import { useAuthStore } from '../stores/auth'
 import { setLocale } from '../i18n'
+import { useCompactLayout } from '../composables/useCompactLayout'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
 vi.mock('../lib/api', async (original) => ({
@@ -78,14 +79,50 @@ describe('dashboard route synchronization', () => {
     )
     expect(w.text()).toContain('Signed in as')
   })
-  it('names the dialog after the active tab and the console in the subtitle', async () => {
+  it('keeps the console title and shows who is signed in once, in the sidebar', async () => {
     apiMock.mockResolvedValue([])
     const w = keep(
       mount(AdminDashboard, { global: { stubs: { AdminUsersTab: true, AdminSystemTab: true } } }),
     )
-    expect(w.get('h2').text()).toBe('Members')
-    expect(w.text()).toContain('Admin console · Signed in as')
+    expect(w.get('h2').text()).toBe('Admin console')
+    expect(w.get('[data-testid="tab-users"]').attributes('aria-pressed')).toBe('true')
+    expect(w.findAll('[data-testid="admin-signed-in"]')).toHaveLength(1)
+    expect(w.get('[data-testid="admin-signed-in"]').text()).toContain('Signed in as')
     await w.get('[data-testid="tab-system"]').trigger('click')
-    expect(w.get('h2').text()).toBe('System')
+    expect(w.get('[data-testid="tab-system"]').attributes('aria-pressed')).toBe('true')
+  })
+
+  it('groups the tabs by purpose', () => {
+    apiMock.mockResolvedValue([])
+    const w = keep(mount(AdminDashboard, { global: { stubs: { AdminUsersTab: true } } }))
+    const groups = w.findAll('[data-group]').map(g => g.attributes('data-group'))
+    expect(groups).toEqual(['community', 'moderation', 'integrations', 'operations'])
+  })
+})
+
+describe('dashboard on a phone', () => {
+  const { isCompact } = useCompactLayout()
+  afterEach(() => { isCompact.value = false })
+
+  it('opens on the list of sections, shows one section with a back arrow and returns to the list', async () => {
+    isCompact.value = true
+    apiMock.mockResolvedValue([])
+    const w = keep(mount(AdminDashboard, { global: { stubs: { AdminUsersTab: true, AdminSystemTab: true } } }))
+    expect(w.get('h2').text()).toBe('Admin console')
+    expect(w.find('[data-testid="admin-back"]').exists()).toBe(false)
+    await w.get('[data-testid="tab-system"]').trigger('click')
+    expect(w.find('[data-testid="admin-back"]').exists()).toBe(true)
+    expect(w.find('[data-testid="admin-tabs"]').exists()).toBe(false)
+    await w.get('[data-testid="admin-back"]').trigger('click')
+    expect(w.get('h2').text()).toBe('Admin console')
+    expect(w.find('[data-testid="tab-system"]').attributes('aria-current')).toBe('page')
+  })
+
+  it('opens the section named by the address straight away', () => {
+    isCompact.value = true
+    apiMock.mockResolvedValue([])
+    const w = keep(mount(AdminDashboard, { props: { initialTab: 'system' }, global: { stubs: { AdminSystemTab: true } } }))
+    expect(w.get('h2').text()).toBe('Admin console')
+    expect(w.find('[data-testid="admin-back"]').exists()).toBe(true)
   })
 })

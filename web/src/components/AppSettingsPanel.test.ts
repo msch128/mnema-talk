@@ -6,7 +6,7 @@ import { setLocale } from '../i18n'
 const pwa = vi.hoisted(() => ({ state: 'unavailable', prompt: vi.fn(async () => true) }))
 vi.mock('../lib/pwa', () => ({ installState: () => pwa.state, promptInstall: pwa.prompt }))
 
-import AppSettingsModal from './AppSettingsModal.vue'
+import AppSettingsPanel from './AppSettingsPanel.vue'
 import { useToastStore } from '../stores/toast'
 
 let w: VueWrapper
@@ -22,10 +22,10 @@ afterEach(() => {
 function open(state: string) {
   pwa.state = state
   // The push section has its own tests; here it is a stand-in.
-  w = mount(AppSettingsModal, { attachTo: document.body, global: { stubs: { PushSection: true } } })
+  w = mount(AppSettingsPanel, { attachTo: document.body, global: { stubs: { PushSection: true } } })
 }
 
-describe('installing the app from the dialog', () => {
+describe('installing the app from the settings', () => {
   it('offers the install button when the browser can install the app', async () => {
     open('available')
     expect(w.find('[data-testid="app-install-state"]').text()).toContain('Install Mnema Talk')
@@ -57,12 +57,5 @@ describe('installing the app from the dialog', () => {
   it('points to the browser menu when it offers no install', () => {
     open('unavailable')
     expect(w.find('[data-testid="app-install-state"]').text()).toContain('does not offer to install')
-  })
-
-  it('closes with the button and with the header cross', async () => {
-    open('unavailable')
-    await w.find('footer button').trigger('click')
-    await w.find('[data-dialog-close]').trigger('click')
-    expect(w.emitted('close')).toHaveLength(2)
   })
 })

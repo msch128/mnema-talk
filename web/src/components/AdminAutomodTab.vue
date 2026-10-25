@@ -7,12 +7,13 @@ import { Plus, ShieldCheck, Loader2, Pencil, Trash2 } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import { decodeModerationAutomodList, type AutomodRule } from '../types/rest'
 import type { ModerationAutomodList } from '../types/rest'
-import { AUTOMOD_KINDS, ruleSummary, toggled } from '../lib/automod'
+import { AUTOMOD_KINDS, ruleLabel, ruleSummary, toggled } from '../lib/automod'
 import type { AutomodKind } from '../lib/automod'
 import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { locale, t } from '../i18n'
 import AutomodRuleDialog from './AutomodRuleDialog.vue'
+import EmptyState from './EmptyState.vue'
 
 const toasts = useToastStore()
 const state = ref<ModerationAutomodList | null>(null)
@@ -52,7 +53,7 @@ async function flip(rule: AutomodRule) {
 
 async function remove(rule: AutomodRule) {
   const ok = await confirm({
-    title: t('automod.deleteTitle', { name: rule.name }),
+    title: t('automod.deleteTitle', { name: ruleLabel(rule) }),
     body: t('automod.deleteBody'),
     confirmLabel: t('automod.delete'),
     cancelLabel: t('common.cancel'),
@@ -88,26 +89,28 @@ onMounted(load)
     <p v-if="failed" role="alert" class="text-sm text-mnema-danger">{{ $t('automod.loadFailed') }}</p>
     <Loader2 v-else-if="!state" class="h-5 w-5 animate-spin text-mnema-accent" />
     <ul v-else class="divide-y divide-mnema-hairline overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
-      <li v-if="!rules.length" class="p-4 text-sm text-mnema-tertiary" data-testid="automod-empty">{{ $t('automod.empty') }}</li>
+      <li v-if="!rules.length" data-testid="automod-empty"><EmptyState :icon="ShieldCheck" :text="$t('automod.empty')" :hint="$t('automod.emptyHint')" /></li>
       <li v-for="rule in rules" :key="rule.id" :data-rule="rule.id" class="flex items-center gap-3 px-4 py-3">
-        <input
-          type="checkbox"
-          :checked="rule.enabled"
+        <button
+          type="button"
+          role="switch"
+          class="switch"
+          :aria-checked="rule.enabled ? 'true' : 'false'"
           :disabled="busyId === rule.id"
-          :aria-label="$t('automod.toggle', { name: rule.name })"
+          :aria-label="$t('automod.toggle', { name: ruleLabel(rule) })"
           data-testid="rule-toggle"
-          @change="flip(rule)"
-        />
+          @click="flip(rule)"
+        ></button>
         <div class="min-w-0 flex-1">
           <p class="flex flex-wrap items-center gap-2 text-sm font-semibold text-mnema-text">
-            <span class="truncate">{{ rule.name }}</span>
+            <span class="wrap-break-word">{{ ruleLabel(rule) }}</span>
             <span v-if="rule.kind !== 'raid'" class="rounded-sm bg-mnema-band px-1.5 py-0.5 text-xs font-semibold text-mnema-muted">{{ $t(`automod.actions.${rule.action}Short`) }}</span>
             <span v-if="rule.timeout_seconds > 0" class="rounded-sm bg-mnema-band px-1.5 py-0.5 text-xs font-semibold text-mnema-muted">{{ $t('automod.timeoutBadge') }}</span>
           </p>
-          <p class="truncate text-xs text-mnema-tertiary" data-testid="rule-summary">{{ ruleSummary(rule) }}</p>
+          <p class="text-xs text-mnema-tertiary wrap-break-word" data-testid="rule-summary">{{ ruleSummary(rule) }}</p>
         </div>
-        <button type="button" class="btn btn-ghost btn-sm max-md:min-h-11" :aria-label="$t('automod.edit', { name: rule.name })" data-testid="rule-edit" @click="editing = { rule, kind: rule.kind }"><Pencil class="h-4 w-4" /></button>
-        <button type="button" class="btn btn-ghost btn-sm max-md:min-h-11 hover:text-mnema-danger" :aria-label="$t('automod.deleteRule', { name: rule.name })" data-testid="rule-delete" @click="remove(rule)"><Trash2 class="h-4 w-4" /></button>
+        <button type="button" class="btn btn-ghost btn-sm max-md:min-h-11" :aria-label="$t('automod.edit', { name: ruleLabel(rule) })" data-testid="rule-edit" @click="editing = { rule, kind: rule.kind }"><Pencil class="h-4 w-4" /></button>
+        <button type="button" class="btn btn-ghost btn-sm max-md:min-h-11 hover:text-mnema-danger" :aria-label="$t('automod.deleteRule', { name: ruleLabel(rule) })" data-testid="rule-delete" @click="remove(rule)"><Trash2 class="h-4 w-4" /></button>
       </li>
     </ul>
 

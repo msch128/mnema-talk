@@ -128,8 +128,9 @@ no accounts on someone else's platform.
 - **Search filters** for author (`from:` and `author:bot|webhook|member`),
   channel (`in:`), mentions (`mentions:`), dates (`before:`, `after:`, and
   `during:` for a single local day), attachments (`has:file`, `filename:`),
-  links, embeds, polls, edited and pinned messages, with a calmer Discord-style
-  filter dropdown and sort order (newest, oldest, relevance).
+  links, embeds, polls, edited and pinned messages, one compact filter row with
+  small pickers, `"exact phrases"`, `-excluded` words and a sort order (newest,
+  oldest, relevance). A filter that matches nothing is explained, not ignored.
 - **Notification settings per channel, category and server.** Right-click a
   channel or a category header (or press Shift+F10) and choose
   **Notifications**: all messages, mentions only, nothing, or "use the

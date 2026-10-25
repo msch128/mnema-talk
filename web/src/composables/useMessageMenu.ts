@@ -21,6 +21,7 @@ import { previewText } from '../lib/replies'
 import { shortcodesForEditing } from '../lib/customEmoji'
 import { t } from '../i18n'
 import { messageSafetyItems } from './dmMenuItems'
+import { boxOf, type AnchorBox } from '../lib/floatingPosition'
 
 type MessageActions = ReturnType<typeof useMessageActions>
 
@@ -188,10 +189,10 @@ export function useMessageMenu({ actions, reply }: { actions: MessageActions; re
   const toasts = useToastStore()
 
   // Bound to <ContextMenu>; also used for other menus of the view.
-  const state = ref<{ open: boolean; x: number; y: number; items: ContextMenuItem[] }>({ open: false, x: 0, y: 0, items: [] })
+  const state = ref<{ open: boolean; x: number; y: number; anchor: AnchorBox | null; items: ContextMenuItem[] }>({ open: false, x: 0, y: 0, anchor: null, items: [] })
 
-  function show(x: number, y: number, items: ContextMenuItem[]) {
-    state.value = { open: true, x: x || 0, y: y || 0, items }
+  function show(x: number, y: number, items: ContextMenuItem[], anchor: AnchorBox | null = null) {
+    state.value = { open: true, x: x || 0, y: y || 0, anchor, items }
   }
 
   function close() {
@@ -209,9 +210,9 @@ export function useMessageMenu({ actions, reply }: { actions: MessageActions; re
 
   const itemsFor = (msg: Message) => messageItems(msg, { actions, reply, copy })
 
-  function openAt(x: number, y: number, msg: Message) {
+  function openAt(x: number, y: number, msg: Message, anchor: AnchorBox | null = null) {
     actions.closePicker()
-    show(x, y, itemsFor(msg))
+    show(x, y, itemsFor(msg), anchor)
   }
 
   // Keyboard (no pointer position): at the message's own position.
@@ -226,11 +227,12 @@ export function useMessageMenu({ actions, reply }: { actions: MessageActions; re
     else openAt(e.clientX, e.clientY, msg)
   }
 
-  // The ⋯ button in the hover bar: below the button.
+  // The ⋯ button in the hover bar: the menu belongs to the button (below it,
+  // or above it and against its right edge when there is no room).
   function openFromButton(e: MouseEvent, msg: Message) {
     if (!(e.currentTarget instanceof Element)) return
     const rect = e.currentTarget.getBoundingClientRect()
-    openAt(rect.left, rect.bottom + 4, msg)
+    openAt(rect.left, rect.bottom + 4, msg, boxOf(rect))
   }
 
   return { state, show, close, itemsFor, onContextMenu, openFromButton, openAtElement }

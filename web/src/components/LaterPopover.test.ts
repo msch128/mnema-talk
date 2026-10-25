@@ -151,6 +151,16 @@ describe('the reminders and scheduled popover', () => {
     apiMock.mockRejectedValue(new Error('offline'))
     await w.find('[data-testid="later-button"]').trigger('click')
     await openPanel(w)
-    expect(w.find('[role="alert"]').text()).toBe(t('later.failed'))
+    expect(w.find('[role="alert"]').text()).toContain(t('later.failed'))
+  })
+
+  it('offers to try again after a failed load', async () => {
+    apiMock.mockRejectedValue(new Error('offline'))
+    const w = mountPopover()
+    await openPanel(w)
+    answer([reminder(1)], [])
+    await w.get('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="reminder-item"]').exists()).toBe(true)
   })
 })

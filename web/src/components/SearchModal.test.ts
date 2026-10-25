@@ -9,6 +9,7 @@ import SearchModal from './SearchModal.vue'
 import GlobalSearch from './GlobalSearch.vue'
 import { searchOpen, searchText } from '../lib/globalSearch'
 import { useChatStore } from '../stores/chat'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { channelFixture, messageFixture, userFixture, fixtureId, requireValue } from '../test-fixtures.fixture'
 import { i18nPlugin, setLocale } from '../i18n'
 import { tooltip } from '../directives/tooltip'
@@ -273,4 +274,134 @@ it('searches by channel alone without sending an empty text query', async () => 
   const params = new URL(request[0], 'http://localhost').searchParams
   expect(params.get('channel_id')).toBe(ch.id)
   expect(params.has('q')).toBe(false)
+})
+
+describe('SearchModal calm behaviour', () => {
+  it('has a fixed height, so the dialog does not move when the content changes', async () => {
+    await open()
+    expect(dialog()!.className).toContain('h-192')
+    expect(document.querySelector('[data-search-filter-row]')).toBeNull()
+  })
+
+  it('explains a filter that matches nothing and does not search at all', async () => {
+    setLocale('en')
+    useChatStore().members = [userFixture({ username: 'ada' })]
+    mockApi.mockResolvedValue({ messages: [], has_more: false, roots: {} })
+    await open()
+    await query('Stand from:nobody ')
+    expect(mockApi).not.toHaveBeenCalled()
+    expect(requireValue(document.querySelector('[data-testid="search-problems"]')).textContent).toContain('No member “nobody” found')
+    await query('Stand in:nowhere has:foo before:soon ')
+    expect(mockApi).not.toHaveBeenCalled()
+    expect(document.querySelectorAll('[data-search-problem]')).toHaveLength(4)
+  })
+
+  it('waits quietly while a filter value is still being typed', async () => {
+    mockApi.mockResolvedValue({ messages: [messageFixture()], has_more: false, roots: {} })
+    await open()
+    await query('hello')
+    expect(mockApi).toHaveBeenCalledTimes(1)
+    await query('hello in:gen')
+    await query('hello has:fo')
+    expect(mockApi).toHaveBeenCalledTimes(1)
+    expect(document.querySelector('[data-testid="search-problems"]')).toBeNull()
+    expect(document.querySelectorAll('[role="option"]')).toHaveLength(1)
+  })
+
+  it('understands today and yesterday as dates', async () => {
+    mockApi.mockResolvedValue({ messages: [], has_more: false, roots: {} })
+    await open()
+    await query('hello after:gestern ')
+    const params = new URL(requireValue(mockApi.mock.calls.at(-1))[0], 'http://localhost').searchParams
+    expect(params.get('after')).toBeTruthy()
+    expect(document.querySelector('[data-testid="search-problems"]')).toBeNull()
+  })
+
+  it('does not search for a single character, and sends phrases and exclusions on as typed', async () => {
+    mockApi.mockResolvedValue({ messages: [], has_more: false, roots: {} })
+    await open()
+    await query('a')
+    expect(mockApi).not.toHaveBeenCalled()
+    await query('"kurzer Stand" -Release')
+    const params = new URL(requireValue(mockApi.mock.calls.at(-1))[0], 'http://localhost').searchParams
+    expect(params.get('q')).toBe('"kurzer Stand" -Release')
+  })
+
+  it('retries a failed search with the same query', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    mockApi.mockRejectedValueOnce(new Error('synthetic failure')).mockResolvedValueOnce({ messages: [messageFixture()], has_more: false, roots: {} })
+    await open()
+    await query('hello')
+    expect(requireValue(document.querySelector('[data-testid="search-failed"]')).textContent).toContain('Suche')
+    click('[data-search-retry]')
+    await flushPromises()
+    expect(document.querySelector('[data-testid="search-failed"]')).toBeNull()
+    expect(document.querySelectorAll('[role="option"]')).toHaveLength(1)
+    expect(mockApi).toHaveBeenCalledTimes(2)
+    warn.mockRestore()
+  })
+
+  it('removes the filters from an empty result with one click', async () => {
+    setLocale('en')
+    const ch = channelFixture()
+    useChatStore().uncategorized = [ch]
+    mockApi.mockResolvedValue({ messages: [], has_more: false, roots: {} })
+    await open()
+    await query(`hello in:${ch.name} `)
+    click('[data-search-clear-filters]')
+    await new Promise(resolve => setTimeout(resolve, 280)); await flushPromises()
+    expect(searchText.value).toBe('hello')
+    expect(document.querySelectorAll('[data-search-chip]')).toHaveLength(0)
+  })
+
+  it('opens the selected result with Enter from the list, but leaves Enter on a button alone', async () => {
+    const chat = useChatStore()
+    chat.goToMessage = vi.fn()
+    const first = messageFixture()
+    useServerFeaturesStore().list = ['search.filters.v3']
+    mockApi.mockResolvedValue({ messages: [first], has_more: false, roots: {} })
+    await open(); await query('hello')
+    const list = requireValue(document.querySelector<HTMLElement>('#search-results'))
+    expect(list.getAttribute('tabindex')).toBe('0')
+    key('Enter', requireValue(document.querySelector<HTMLElement>('[data-sort="oldest"]')))
+    expect(chat.goToMessage).not.toHaveBeenCalled()
+    key('Enter', list)
+    expect(chat.goToMessage).toHaveBeenCalledWith(first)
+  })
+
+  it('moves through the results with the arrows from the sort choice, too', async () => {
+    useServerFeaturesStore().list = ['search.filters.v3']
+    mockApi.mockResolvedValue({ messages: [messageFixture(), messageFixture({ id: fixtureId(34), content: 'second hello' })], has_more: false, roots: {} })
+    await open(); await query('hello')
+    key('ArrowDown', requireValue(document.querySelector<HTMLElement>('[data-sort="newest"]')))
+    await nextTick()
+    expect(input().getAttribute('aria-activedescendant')).toBe('search-result-1')
+  })
+
+  it('lets Escape peel one layer at a time: suggestions first, then the dialog', async () => {
+    useChatStore().members = [userFixture({ username: 'ada' })]
+    await open()
+    input().value = 'from:a'
+    input().dispatchEvent(new Event('input'))
+    await nextTick()
+    expect(document.querySelector('[data-search-suggestions]')).not.toBeNull()
+    key('Escape'); await nextTick()
+    expect(document.querySelector('[data-search-suggestions]')).toBeNull()
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    key('Escape')
+    expect(wrapper.emitted('update:modelValue')).toEqual([[false]])
+  })
+
+  it('does not lose a click on the sort choice: the first click sorts', async () => {
+    useServerFeaturesStore().list = ['search.filters.v3']
+    mockApi.mockResolvedValue({ messages: [messageFixture()], has_more: false, roots: {} })
+    await open(); await query('hello')
+    const oldest = requireValue(document.querySelector<HTMLElement>('[data-sort="oldest"]'))
+    const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true })
+    oldest.dispatchEvent(down)
+    expect(down.defaultPrevented).toBe(true)
+    oldest.click()
+    await new Promise(resolve => setTimeout(resolve, 10)); await flushPromises()
+    expect(requireValue(mockApi.mock.calls.at(-1))[0]).toContain('sort=oldest')
+  })
 })
