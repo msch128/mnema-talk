@@ -3,7 +3,7 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test fuzz-smoke test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-web lint complexity-check fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill fresh-install docs-check english-check
+.PHONY: help dev web build run test fuzz-smoke test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-go-profile coverage-web lint complexity-check fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill fresh-install docs-check english-check
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -107,8 +107,14 @@ COVER_PKGS = $(shell go list ./cmd/... ./internal/... ./web | grep -v -e /intern
 
 coverage: coverage-go coverage-web ## Go + web coverage reports (coverage.out, web/coverage/)
 
-coverage-go: ## Go unit + integration tests with coverage -> coverage.out (Docker, or TEST_DATABASE_URL)
-	go test $(GO_INTEGRATION_PKG_FLAGS) -tags=integration -race -count=1 -timeout=900s -covermode=atomic -coverpkg=$(COVER_PKGS) -coverprofile=coverage.out $(GO_PKGS)
+COVERAGE_OUT ?= coverage.out
+
+# The test run alone, for a subset of packages (GO_PKGS=...; CI runs the
+# integration tests as parallel shards and applies the gates to the merged profiles).
+coverage-go-profile: ## Go unit + integration tests with coverage -> $(COVERAGE_OUT), no gate
+	go test $(GO_INTEGRATION_PKG_FLAGS) -tags=integration -race -count=1 -timeout=900s -covermode=atomic -coverpkg=$(COVER_PKGS) -coverprofile=$(COVERAGE_OUT) $(GO_PKGS)
+
+coverage-go: coverage-go-profile ## Go unit + integration tests with coverage -> coverage.out (Docker, or TEST_DATABASE_URL)
 	@node scripts/coverage-summary.mjs go coverage.out --min $(COVERAGE_MIN) --file-min $(COVERAGE_FILE_MIN)
 
 coverage-web: $(WEB_DEPS) ## Frontend tests with coverage -> web/coverage/ (lcov + json summary)

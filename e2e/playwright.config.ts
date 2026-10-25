@@ -32,7 +32,8 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: 1,
-  reporter: [['list']],
+  // CI shards the run over several jobs and merges their blob reports (E2E_BLOB=1).
+  reporter: process.env.E2E_BLOB === '1' ? [['list'], ['blob']] : [['list']],
   outputDir: 'test-results',
   use: {
     baseURL,
