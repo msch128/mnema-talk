@@ -653,8 +653,10 @@ and Administrators) gathers version, update state, database, storage, backup and
   channels and conversations the member already sees: the current slug, then
   `previous_slugs`, then a legacy id; the last two are rewritten (replace) to the
   canonical address. The server has no slug-resolving endpoint. Slugs are assigned by
-  `chat.assignSlug` inside the transaction that creates or renames a channel and are
-  never reused (`channel_slugs`).
+  `chat.assignSlug` inside the transaction that creates or renames a channel; former
+  slugs stay reserved for the channel in `channel_slugs` (up to 10 newest, older ones
+  are freed; temporary Talks keep a fixed `talk-<8hex>` slug that is never changed on
+  rename and not kept in the history).
 - **Stores (Pinia)**:
   [`auth`](../web/src/stores/auth.ts) (current user; the session itself is an
   HttpOnly cookie), [`chat`](../web/src/stores/chat.ts) (channels, messages,

@@ -1,6 +1,8 @@
 package db
 
 import (
+	"fmt"
+	"os"
 	"strings"
 	"testing"
 )
@@ -58,5 +60,19 @@ func TestEmbeddedMigrationsAreNumbered(t *testing.T) {
 			t.Errorf("%s and %s share the number %s", prev, f, num)
 		}
 		seen[num] = f
+	}
+}
+
+func TestUpgradeDocListsAll12Migrations(t *testing.T) {
+	data, err := os.ReadFile("../../doc/upgrade.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(data)
+	for i := 59; i <= 75; i++ {
+		num := fmt.Sprintf("%04d", i)
+		if !strings.Contains(content, "| "+num+" |") {
+			t.Errorf("doc/upgrade.md does not document migration %s in the 1.2 table", num)
+		}
 	}
 }

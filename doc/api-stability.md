@@ -24,8 +24,8 @@ in any release.
 | **Backup layout** | [operations.md](operations.md#backups-and-restore) | What the backup and restore scripts write and read. |
 
 `GET /api/health` also lists the optional features a server has in `features`.
-Since 1.1 they are `blocks`, `dm`, `reports`, `saved`, `forward`,
-`search.filters.v2`, `search.filters.v3`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`; 1.2 adds `talks.lobby`,
+In 1.1 they were `blocks`, `dm`, `reports`, `saved`, `forward`,
+`search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`; 1.2 adds `search.filters.v3`, `talks.lobby`,
 `status.expiry`, `reminders`, `messages.scheduled`, `polls.anonymous`, `channels.auto_delete`, `automod`, `moderation.history`,
 `ops.status`, `import.discord`, `talks.stage`, `talks.reactions`, `channels.forum`, `events`, `notify.levels.v2` and `dm.v2`
 (`internal/server/health.go`). A name never changes meaning and is never
