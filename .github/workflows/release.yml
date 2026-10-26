@@ -441,7 +441,7 @@ jobs:
             printf '%s\n\n' "$body"
             printf '%s\n' "$marker"
             printf '%s\n\n' "### Desktop app (Beta)"
-            printf '%s\n' "The desktop app (Windows, macOS, Linux; Beta, unsigned) is published in its own repository: [latest desktop release]($url)."
+            printf '%s\n' "The desktop app (Windows only, Beta, unsigned; macOS and Linux builds are paused) is published in its own repository: [latest desktop release]($url)."
             printf '%s\n' "This server release carries the Docker image (\`ghcr.io/msch128/mnema-talk:$VERSION\`) and the signed web bundle that the desktop app verifies, not desktop installers."
           } > notes.md
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
