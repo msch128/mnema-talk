@@ -187,7 +187,12 @@ branch) was waived when it landed there and is not reported again.
    run for the newer commit decides.
 2. The release workflow merges that PR right away and publishes the GitHub
    Release and tag `vX.Y.Z`, so every green push to
-   `main` that contains a `feat:` or `fix:` becomes a release. A PR opened
+   `main` that contains a `feat:` or `fix:` becomes a release (`perf:`, `revert:`, `refactor:` and `docs:` also count; `chore:`,
+   `test:`, `build:`, `ci:` and `style:` do not). A
+   commit of a non-releasing type that lands after a release leaves `main`'s
+   tip without a release, so the NAS poller deploys nothing until the next
+   release; merge such commits before a releasing one, or close the line with
+   an empty commit carrying a `Release-As: X.Y.Z` footer. A PR opened
    with `GITHUB_TOKEN` starts no workflows, so the workflow reports the tested
    CI run's result as commit statuses on the release commit (only after
    checking that it touches nothing but `version.txt`, `CHANGELOG.md` and the
