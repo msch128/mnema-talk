@@ -11,38 +11,51 @@ entire communication path.
 | Beta | Usable and maintained, but outstanding acceptance (for example platform signing) keeps it out of Supported. Expect rough edges. |
 | Planned | Requirements exist, but no qualified usable product path is available. |
 
-## Status at 1.1
+## Status at 1.2.0
 
 Mnema Talk 1.0 was the first release under the
 [API stability contract](api-stability.md): its public surfaces change
-incompatibly only in a major release. 1.1 keeps that contract and only adds to
-it. What the 1.x label does and does not say:
+incompatibly only in a major release. 1.1 and 1.2 keep that contract and only
+add to it (with one announced exception in 1.2.0 for automod report entries,
+see below). What the 1.x label does and does not say:
 
 **Supported versions.** Security fixes go to the latest 1.x minor and, once a
 newer minor exists, to the previous minor for 90 days
-([SECURITY.md](../SECURITY.md#supported-versions)). Once 1.1.0 is published,
-that means 1.1.x and, for 90 days, 1.0.x; 0.9.x and older get no fixes. CI
-upgrades from 0.8.16, 0.9.0 and 1.0.0 to prove the upgrade path; that is a
+([SECURITY.md](../SECURITY.md#supported-versions)). Once 1.2.0 is published,
+that means 1.2.x and, for 90 days, 1.1.x; 1.0.x and older get no fixes. CI
+upgrades from 0.8.16, 0.9.0, 1.0.0 and 1.1.0 to prove the upgrade path; that is a
 test, not a support promise.
 
-| Area | Category at 1.1 |
+| Area | Category at 1.2.0 |
 | --- | --- |
 | Server (Docker, linux/amd64 and arm64), browser app, text chat, roles and permissions, webhooks and bots, notifications, search and onboarding, voice, cameras and screen share in Chromium-based browsers | Supported |
-| Direct messages (two to ten members), blocking and reports, saved messages, forwarding, thread follow, search filters, built-in slash commands, reading a Talk's chat without joining | Supported (new in 1.1; each has server tests and a browser spec) |
-| Browser app on WebKit (Safari, iOS, installed iOS web apps) and Firefox: text chat, search, voice, cameras and screen share with sealed media, as tested in [Browsers](#browsers) | Supported for text chat, search and administration. Sealed calls pass on macOS WebKit locally; the CI WebKit job cannot run them because Playwright's Linux WebKit build has no encoded-media API (`RTCRtpScriptTransform`); see the limits there (not yet tested on real iOS or Android hardware) |
-| Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), backup and restore, upgrade tested from 0.8.16, 0.9.0 and 1.0.0, cosign-signed images, self-update that verifies the image's signature and provenance before it restarts the app | Supported |
-| Native mobile apps, text end-to-end encryption | Not offered. Text stays readable by the server, by design. The browser app has a phone layout (channel list as a drawer, full-screen thread and member list, 44 px touch targets, safe areas) that is covered by the `mobile-*` e2e projects in Chromium and WebKit device emulation, not by tests on real phones. |
-| Desktop client on Windows | Beta (unsigned, no Authenticode; SmartScreen warns) |
-| Desktop client on macOS and Linux | Beta (DEV builds, not qualified on real hardware; not notarised; Gatekeeper warns) |
+| Direct messages (two to ten members), blocking and reports, saved messages, forwarding, thread follow, search filters v2, built-in slash commands, reading a Talk's chat without joining | Supported (surfaces introduced in 1.1) |
+| 1.2 surfaces: Talk lobbies and temporary Talks, Stages with talk power/raised hands/reactions, forum channels, community events incl. past events, Discord structure import with undo, automod, moderation history/notes, view as role, sessions + inactivity sign-out, operator status page, reminders/scheduled messages, anonymous polls, auto-delete, search filters v3 with phrases/-term, notification levels v2, DM list v2 with favourites and mute-all, speaking URLs, emoji shortcodes | Supported (new in 1.2, released 2026-10-26, not yet proven in long-term community use; covered by automated backend and web tests and database migrations 0059–0075) |
+| Browser app on WebKit (Safari, iOS, installed iOS web apps) and Firefox: text chat, search, voice, cameras and screen share with sealed media, as tested in [Browsers](#browsers) | Supported for text chat, search and administration. Sealed calls pass on macOS WebKit locally; the CI WebKit job cannot run them because Playwright's Linux WebKit build has no encoded-media API (`RTCRtpScriptTransform`); see the limits there (not yet tested on real iOS or Android hardware). WebKit occasionally refuses to clone the media key message (`web/src/lib/media/guard.ts` retries once; if the retry fails the line stays keyless until the next key, the call no longer aborts; seen on macOS WebKit CI runners, not verified on real Safari devices). |
+| Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), operator status page, backup and restore, upgrade tested from 0.8.16, 0.9.0, 1.0.0 and 1.1.0, cosign-signed images, self-update that verifies the image's signature and provenance before it restarts the app | Supported |
+| Native mobile apps, text end-to-end encryption | Not offered. Text stays readable by the server, by design. The browser app has a phone layout (channel list as a drawer, full-screen thread and member list, 44 px touch targets, safe areas) that is covered by the `mobile-*` e2e projects in Chromium and WebKit device emulation, not by tests on real phones (no real iOS/Android hardware qualification). |
+| Desktop client on Windows | Beta (unsigned, no Authenticode; SmartScreen warns; sealed media in WebView2 not verified on real Windows hardware) |
+| Desktop client on macOS and Linux | Paused (macOS and Linux desktop builds paused; DEV builds were not qualified on real hardware, not notarised, Gatekeeper warns) |
 
-**Internal security review, 2026-10-22.** Before 1.0 the code was reviewed in
+**Internal security reviews.** Before 1.0 the code was reviewed in
 six lanes (authentication and sessions, permissions, content and media,
 integrations, realtime and voice, supply chain and updates). It found no
-Critical and no High issue; every Medium finding is fixed, and a short list is
+Critical and no High issue; every Medium finding is fixed, and a short list was
 deliberately deferred (see the
-[summary in SECURITY.md](../SECURITY.md#10-internal-security-review)). This was
-done by the project itself with automated help. It is **not an independent or
-external audit**, and none has been commissioned.
+[summary in SECURITY.md](../SECURITY.md#10-internal-security-review)). The 1.2
+additions went through the same kind of internal review (0 Critical, 0 High; see
+[SECURITY.md](../SECURITY.md#12-internal-security-review) and the
+[audit package](security/audit-package.md)). These reviews were
+done by the project itself with automated help. They are **not an independent or
+external security audit**, and none has been commissioned.
+
+**API compatibility note for 1.2.0.** 1.2.0 made `message_id` optional in
+`GET /api/admin/reports`, `GET /api/admin/reports/{id}` and
+`POST /api/admin/reports/{id}/resolve` (automod entries have no message) — a
+breaking change in a minor release, announced via the `BREAKING CHANGE:` footer;
+strict third-party clients must treat the field as optional (see
+[upgrade.md](upgrade.md#automod-and-moderation-history) and
+[api-stability.md](api-stability.md)).
 
 What 1.x does not claim: real 4K/60 capture, system audio from physical
 hardware, an external security audit, the 250-endpoint capacity target, load
@@ -83,8 +96,8 @@ Other capabilities on this path, each with automated tests:
 
 Not covered by these tests: real 4K/60 capture, system audio from physical
 hardware, an external security audit and capacity beyond the recorded runs.
-A six-lane internal security review preceded 1.0 (see "Status at 1.1"); it is
-not an independent audit.
+Internal security reviews preceded 1.0 and 1.2 (see "Status at 1.2.0"); neither is
+an independent audit.
 
 ## Browsers
 
@@ -149,6 +162,10 @@ What it took:
   about:blank (no `navigated` event; 3 to 12 of 40 navigations of a bare page
   on a 2-CPU container). Not specific to this app; the e2e fixtures retry the
   navigation once the first attempt has timed out (`tests/navigation-diagnostics.ts`).
+- **WebKit media key cloning.** WebKit occasionally refuses to clone the
+  media key message (`web/src/lib/media/guard.ts` retries once; if the retry
+  fails the line stays keyless until the next key, the call no longer aborts;
+  seen on macOS WebKit CI runners, not verified on real Safari devices).
 - WebKit mutes the microphone of all but one page per browser process (as
   Safari does between tabs). That limits two members in one Safari window, not
   two devices; the suite therefore runs each WebKit member in its own process.
@@ -159,8 +176,8 @@ CI subset (7 files) 10 of 10. WebKit passed the suite apart from those too,
 but with one or two timing failures per full run on a loaded machine (a sealed
 call taking longer than the spec waits to re-key after a reload, a simulcast
 layer not up in time, a voice-chat leave); each passes when run alone. They are
-retried once in CI, and the WebKit and Firefox jobs stay out of the required
-checks until they have gone green for a while.
+retried once in CI, and the WebKit and Firefox e2e jobs use one retry and are not
+required checks until they have gone green for a while.
 
 The AI noise filter's worker pipeline was seen processing audio on macOS
 Firefox but not on CI's Linux Firefox, so its spec (`late-join`) is not in the
@@ -169,19 +186,21 @@ Firefox CI subset.
 Known limits: Firefox's fake microphone is a steady tone, which the AI noise
 filter removes, so the specs measure decoded samples rather than loudness.
 Real-device behaviour of iOS audio sessions, background tabs and installed web
-apps is not covered by the suite and stays on the "Remaining acceptance" list.
+apps is not covered by the suite (no real iOS or Android testing) and stays on
+the "Remaining acceptance" list.
 
 ## Beta desktop path
 
-The desktop client is Beta on every platform. It is unsigned by decision: no paid code-signing certificate will be bought (see [installing the unsigned Beta](desktop-app.md#installing-the-unsigned-beta)). The Windows path is the
-furthest along and is described first; macOS and Linux builds are published by
-the desktop repository as DEV builds (a macOS disk image, Linux AppImage and
-.deb packages, each with an updater signature) and run the same signed web
-bundle. That repository's CI builds the packages and has a Linux workflow, but
+The desktop client is Beta on Windows. macOS and Linux desktop builds are
+paused (earlier DEV builds in the desktop repository were not qualified on real
+hardware, not notarised, Gatekeeper warns). The desktop client is unsigned by
+decision: no paid code-signing certificate will be bought (see [installing the unsigned Beta](desktop-app.md#installing-the-unsigned-beta)). The Windows path is the
+furthest along and is described first; macOS and Linux desktop builds are paused.
+That repository's CI built the packages and has a Linux workflow, but
 they are not qualified on real hardware, are not
 notarised or otherwise platform-signed, and desktop-specific features such as
 the gaming integration are Windows only. Everything below about the signed
-bundle, the security floor and updates applies to all three.
+bundle, the security floor and updates applies to the Windows client.
 
 ### Windows
 
@@ -253,10 +272,11 @@ The remaining fixes and acceptance work follow:
    microphone on WebView2's own prompt, and that the selector and the gaming
    surfaces refuse one. The check uses a synthetic capture device and does
    not click the prompt. A human prompt, a physical microphone or camera,
-   display capture, sealed media on real hardware and a signed installer
-   remain outstanding. The macOS and Linux builds have no hardware qualification either.
-2. Chat messages and attachments stay readable by the server and are not deleted by age. Sealed media is verified in Chromium, WebKit and Firefox (see [Browsers](#browsers)), and in Chromium for calls between current and one-release-older tabs; it is not yet qualified in WebView2 on real Windows hardware, and no external audit has reviewed it.
-3. Capacity: [`make load-test`](../loadtest/README.md) is reproducible (smoke, the 100-member `full` profile, join and reload stall checks, packet loss and jitter on the lightweight viewers, a two-hour `long` profile). On a loaded single test machine the `full` profile misses its gap and heap thresholds while all 84 viewers stay connected, so what remains is recording results on dedicated hardware with more real decrypting viewers ([capacity notes](architecture.md#capacity)). A viewer's bad reports move only that viewer to a lower screen layer (`TestOneViewersTroubleLeavesTheOtherOnTheHighLayer`); voice forwarding does not follow screen layers. The additional 250-endpoint target is deferred.
+   display capture, sealed media in WebView2 on real Windows hardware and a signed installer
+   remain outstanding (desktop = Windows Beta, unsigned, SmartScreen warns). Desktop builds
+   for macOS and Linux are paused and have no hardware qualification either.
+2. Chat messages and attachments stay readable by the server and are not deleted by age (unless per-channel auto-delete is configured). Sealed media is verified in Chromium, WebKit and Firefox (see [Browsers](#browsers)), and in Chromium for calls between current and one-release-older tabs. WebKit occasionally refuses to clone the media key message (`web/src/lib/media/guard.ts` retries once; if the retry fails the line stays keyless until the next key, the call no longer aborts; seen on macOS WebKit CI runners, not verified on real Safari devices). The e2e WebKit and Firefox jobs use one retry and are not required checks. Sealed media in WebView2 is not verified on real Windows hardware, no real iOS/Android testing exists, and no external security audit has reviewed the app.
+3. Capacity: [`make load-test`](../loadtest/README.md) is reproducible (smoke, the 100-member `full` profile, join and reload stall checks, packet loss and jitter on the lightweight viewers, a two-hour `long` profile). On a single machine `make load-test full` is not met: it misses its gap and heap thresholds while all 84 viewers stay connected, so what remains is recording results on dedicated hardware with more real decrypting viewers ([capacity notes](architecture.md#capacity)). A viewer's bad reports move only that viewer to a lower screen layer (`TestOneViewersTroubleLeavesTheOtherOnTheHighLayer`); voice forwarding does not follow screen layers. The additional 250-endpoint target is deferred.
 4. Independent operation. `main` is protected by a ruleset (pull request required, CI and CodeQL checks must pass, squash merge only). Review approvals are not required. Dependency advisories remain part of release checks; a green build does not mean zero risk.
 
 [Desktop requirements](desktop-app.md) and [the native research checkpoint](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/README.md) describe

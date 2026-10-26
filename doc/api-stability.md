@@ -109,6 +109,12 @@ a variable, or widening a value range (a larger maximum a response may carry).
   the events, `web_client_api` and the health features are untouched, and the
   clients that can no longer join calls are listed in
   [upgrade.md](upgrade.md#11x--120).
+- **Exceptions in minor releases:** 1.2.0 made `message_id` optional in
+  `GET /api/admin/reports`, `GET /api/admin/reports/{id}` and
+  `POST /api/admin/reports/{id}/resolve` (automod entries have no message) — a
+  breaking change in a minor release, announced via the `BREAKING CHANGE:`
+  footer; strict third-party clients must treat the field as optional (see
+  [upgrade.md](upgrade.md#automod-and-moderation-history)).
 
 ## How it is enforced
 
