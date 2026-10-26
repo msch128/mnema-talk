@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/msch128/mnema-talk/compare/v1.2.1...v1.2.2) (2026-10-26)
+
+
+### Bug Fixes
+
+* **web:** navigate to text channel on sidebar click and settle initial route ([#459](https://github.com/msch128/mnema-talk/issues/459)) ([891a923](https://github.com/msch128/mnema-talk/commit/891a9232f71e6d3ced1c824e48037b396aff3c12))
+
 ## [1.2.1](https://github.com/msch128/mnema-talk/compare/v1.2.0...v1.2.1) (2026-10-26)
 
 
