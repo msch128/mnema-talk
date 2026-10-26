@@ -1,0 +1,16 @@
+web/scripts/testConfig.test.ts
+  h_0ff4f4713441f4 1-23
+web/vite.config.ts
+  h_0ff4f4713441f4 105,109-124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4c8bea4cac94e7c248f2b49e18409f4a727e005f",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
