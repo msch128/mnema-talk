@@ -102,6 +102,10 @@ export default defineConfig(({ mode }) => ({
     }
   },
   test: {
+    // Every test file runs in its own process, not a worker thread: a V8
+    // fatal error in one file (a SIGTRAP was seen once in CI) then cannot take
+    // a shared worker down mid-run, and native/WASM state never leaks between files.
+    pool: 'forks',
     maxWorkers: 4,
     environment: 'happy-dom',
     include: ['src/**/*.test.{js,ts}'],
