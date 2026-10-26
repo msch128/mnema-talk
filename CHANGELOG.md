@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1](https://github.com/msch128/mnema-talk/compare/v1.2.0...v1.2.1) (2026-10-26)
+
+
+### Documentation
+
+* update desktop availability, 1.2 upgrade notes and admin screenshots ([#457](https://github.com/msch128/mnema-talk/issues/457)) ([3100759](https://github.com/msch128/mnema-talk/commit/3100759f585750457466936adade6fdf01ea0e24))
+* update product status and api stability for 1.2.0 ([#456](https://github.com/msch128/mnema-talk/issues/456)) ([fa2d447](https://github.com/msch128/mnema-talk/commit/fa2d4472e4162ce4637d95f59049eb576eb65e4d))
+
 ## [1.2.0](https://github.com/msch128/mnema-talk/compare/v1.1.0...v1.2.0) (2026-10-26)
 
 
