@@ -17,7 +17,7 @@ design. It keeps the parts that make a community server useful: roles, private
 channels, webhooks, bots and a call you can join with one click. Invite-only,
 no accounts on someone else's platform.
 
-**[Download the desktop app (Beta, unsigned)](https://github.com/msch128/mnema-talk-desktop/releases/latest)**: Windows, macOS and Linux installers live in their own repository; releases here carry the Docker image and the signed web bundle. Prefer the browser? Nothing to install, see [Quick start](#quick-start) to host it.
+**[Download the desktop app (Beta, unsigned)](https://github.com/msch128/mnema-talk-desktop/releases/latest)**: Windows installer and portable ZIP live in their own repository (macOS and Linux are paused, code kept, no new builds); releases here carry the Docker image and the signed web bundle. Prefer the browser? Nothing to install, see [Quick start](#quick-start) to host it.
 
 [Why Mnema](#why-mnema) · [Features](#features) · [Quick start](#quick-start) ·
 [Desktop (Beta)](#desktop-beta) · [Documentation](#documentation) ·
@@ -355,7 +355,7 @@ proxy settings, TURN and troubleshooting:
 Take a backup before every update (`scripts/backup.sh`; restore with
 `scripts/restore.sh`, which can verify a backup in a disposable container
 first). Migrations run at startup and are forward-only. Per-version notes,
-including the moves from 0.9 to 1.0 and from 1.0 to 1.1, and the rollback procedure are in
+including the move from 1.1 to 1.2 ([1.1.x → 1.2.0](doc/upgrade.md#11x--120)), and the rollback procedure are in
 [doc/upgrade.md](doc/upgrade.md). Admins see new releases in the System tab; an
 optional update button needs the `autoupdate` profile.
 
@@ -384,14 +384,15 @@ The full model, its limits and how to report a vulnerability privately are in
 
 ## Desktop (Beta)
 
-The [desktop client](https://github.com/msch128/mnema-talk-desktop) for Windows,
-macOS and Linux (**Beta**, unsigned) wraps the same web app. Instead of loading code from
+The [desktop client](https://github.com/msch128/mnema-talk-desktop) for Windows
+(**Beta**, unsigned; installer and portable ZIP; macOS and Linux are paused,
+code kept, no new builds) wraps the same web app. Instead of loading code from
 your server it runs a **signed bundle** that it verifies on every start, with
 rollback protection and a security floor, and keeps the session in the OS
 keychain. On Windows it adds a gaming sidepeek and an `Alt+M` overlay for your Talk. The
-browser app remains the primary, fully supported client. The installers are
-not code-signed (no paid certificate), so Windows SmartScreen and macOS
-Gatekeeper warn on first start; the steps are in
+browser app remains the primary, fully supported client. The installer is
+not code-signed (no paid certificate), so Windows SmartScreen warns on first
+start; the steps are in
 [doc/desktop-app.md](doc/desktop-app.md#installing-the-unsigned-beta). Details
 and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md).
 

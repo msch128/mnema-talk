@@ -77,6 +77,7 @@ const shot = async (page, name) => {
 const browser = await chromium.launch({ args: [
   '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream',
   '--force-webrtc-ip-handling-policy=default_public_and_private_interfaces',
+  '--mute-audio',
 ] })
 const newPage = async (init) => {
   const ctx = await browser.newContext({ locale: 'en-US', viewport: size, permissions: ['microphone'], serviceWorkers: 'block' })
