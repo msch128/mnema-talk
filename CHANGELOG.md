@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3](https://github.com/msch128/mnema-talk/compare/v1.2.2...v1.2.3) (2026-10-26)
+
+
+### Miscellaneous Chores
+
+* release 1.2.3 ([#462](https://github.com/msch128/mnema-talk/issues/462)) ([9d94230](https://github.com/msch128/mnema-talk/commit/9d94230ddd03cdbf71a010929de713aa1f03fbe3))
+
 ## [1.2.2](https://github.com/msch128/mnema-talk/compare/v1.2.1...v1.2.2) (2026-10-26)
 
 
