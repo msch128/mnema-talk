@@ -43,7 +43,7 @@ async function deliver(groups: Map<string, MediaGroup>, from: string, wires: Uin
 }
 
 async function trio() {
-  vi.useFakeTimers({ toFake: ['Date'], now: START })
+  vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: START })
   const groups = new Map<string, MediaGroup>()
   for (const id of roster) groups.set(id, await open(id))
   const alice = groups.get(aliceId) as MediaGroup
