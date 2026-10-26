@@ -226,10 +226,7 @@ func TestPinAndUnpinNeedManageMessages(t *testing.T) {
 func TestModeratorDeleteKeepsTheReasonAndTellsTheAuthor(t *testing.T) {
 	f := newMessageModerationFixture(t, true)
 	id := f.a.send(f.user, f.channel, "rude words")
-	conn, _, err := f.user.dialWS(f.a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
+	conn := f.user.dialLiveWS(f.a.origin())
 	url := f.path("/messages/" + id.String())
 	if r := f.mod.do(http.MethodDelete, url, strings.NewReader(`{"reason":"`+strings.Repeat("x", 201)+`"}`), map[string]string{"Content-Type": "application/json"}); r.status != http.StatusBadRequest {
 		t.Fatalf("long reason: %d", r.status)
@@ -425,10 +422,7 @@ func TestBulkDeleteRemovesTheLatestMessagesOfOneMember(t *testing.T) {
 	}
 	var replied struct{ ID uuid.UUID }
 	replyRes.decode(t, &replied)
-	conn, _, err := f.user.dialWS(f.a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
+	conn := f.user.dialLiveWS(f.a.origin())
 	url := f.path("/messages/bulk-delete")
 
 	verifyBulkDeleteValidations(t, f, url)

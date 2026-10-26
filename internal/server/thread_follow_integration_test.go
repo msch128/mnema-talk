@@ -182,14 +182,8 @@ func TestSearchFiltersPinnedPollAndEdited(t *testing.T) {
 func TestOpenSessionsLearnAboutTheThreadsAReplyMakesThemFollow(t *testing.T) {
 	f := newMessageModerationFixture(t, true)
 	root := f.a.send(f.user, f.channel, "question")
-	author, _, err := f.user.dialWS(f.a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
-	bystander, _, err := f.admin.dialWS(f.a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
+	author := f.user.dialLiveWS(f.a.origin())
+	bystander := f.admin.dialLiveWS(f.a.origin())
 	f.reply(f.peer, root, "an answer for @msgmod")
 
 	raw, ok := author.expect("thread_follow_updated", 2*time.Second)
@@ -205,10 +199,7 @@ func TestAMemberWhoLostTheChannelGetsNoThreadFollowEvents(t *testing.T) {
 	f := newMessageModerationFixture(t, true)
 	root := f.a.send(f.user, f.channel, "question")
 	f.reply(f.peer, root, "first answer")
-	author, _, err := f.user.dialWS(f.a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
+	author := f.user.dialLiveWS(f.a.origin())
 	hide := putOverwrites(f.admin, "channels", f.channel, overwrite("member", f.user.user.ID, 0, perm.ViewChannel))
 	if hide.status != http.StatusNoContent {
 		t.Fatalf("hide: %d %s", hide.status, hide.body)
