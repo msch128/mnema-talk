@@ -218,6 +218,7 @@ describe('Sidebar basics', () => {
     await rowOf('random').trigger('click')
     expect(select).toHaveBeenCalledWith(expect.objectContaining({ id: 'random' }))
     expect(voice.activeView).toBe('chat')
+    expect(window.location.pathname).toBe('/c/random')
     await rowOf('lounge').trigger('click')
     await flushPromises()
     expect(joinVoiceChannel).toHaveBeenCalledWith('lounge')

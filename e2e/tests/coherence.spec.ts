@@ -19,6 +19,7 @@ async function signIn(page: Page) {
   await dialog.getByLabel('Passwort').fill(ADMIN_PASSWORD)
   await dialog.getByRole('button', { name: 'Anmelden' }).click()
   await expect(dialog).toBeHidden()
+  await expect(page.getByTestId('chat-channel-name')).toBeVisible()
 }
 
 test('the browser going offline shows the connection banner at once, and it clears when the network is back', async ({ page, context }) => {
@@ -56,6 +57,7 @@ test('skip links come first and Tab runs sidebar, header, messages, composer, th
   try {
     expect((await apiFetch(page, 'POST', `/api/channels/${id}/messages`, { content: `Tastatur ${suffix}` })).status).toBe(201)
     await page.reload()
+    await expect(page.getByTestId('chat-channel-name')).toBeVisible()
     await page.locator('[data-channel-type="text"]', { hasText: CHANNEL }).click()
     await expect(page.locator('[data-msg-id]', { hasText: `Tastatur ${suffix}` })).toBeVisible()
 

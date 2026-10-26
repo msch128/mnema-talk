@@ -26,7 +26,7 @@ import { aggregateActivity } from '../lib/channelActivity'
 import { useToastStore } from '../stores/toast'
 import { locateCategory, moveCategory } from '../lib/channelLayout'
 import { currentRoute, navigate } from '../lib/router'
-import { talkPath } from '../lib/routePaths'
+import { talkPath, textPath } from '../lib/routePaths'
 import {
   useMenuState, buildChannelItems, buildCategoryItems, buildMemberItems, buildSidebarItems
 } from '../composables/useNavMenus'
@@ -202,6 +202,7 @@ function handleOpenTalkChat(channel: Channel) {
 function handleTextClick(channel: Channel) {
   chatStore.selectChannel(channel)
   voiceStore.activeView = 'chat'
+  navigate(textPath(channel))
 }
 
 const { closeNav } = useCompactLayout()
