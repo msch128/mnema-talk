@@ -10,6 +10,16 @@ import { channelFixture } from '../test-fixtures.fixture'
 
 const openSearch = vi.fn()
 vi.mock('../lib/globalSearch', async () => ({ openSearch: (q?: string) => openSearch(q), searchOpen: (await import('vue')).ref(false) }))
+vi.mock('../lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../lib/api')>()),
+  api: vi.fn((url: string) => {
+    if (url === '/api/health') return Promise.resolve({ features: useServerFeaturesStore().list })
+    if (url.startsWith('/api/me/saved')) return Promise.resolve({ entries: [], has_more: false })
+    if (url.startsWith('/api/mentions')) return Promise.resolve({ messages: [], has_more: false })
+    if (url.startsWith('/api/me/reminders') || url.startsWith('/api/me/scheduled')) return Promise.resolve({ items: [] })
+    return Promise.resolve([])
+  })
+}))
 
 beforeEach(() => {
   setActivePinia(createPinia())

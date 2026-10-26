@@ -7,6 +7,11 @@ import { useEventsStore } from '../stores/events'
 import { setLocale } from '../i18n'
 import { fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 
+vi.mock('../lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../lib/api')>()),
+  api: vi.fn(() => Promise.resolve([]))
+}))
+
 describe('SidebarEventsEntry', () => {
   beforeEach(() => {
     setActivePinia(createPinia())

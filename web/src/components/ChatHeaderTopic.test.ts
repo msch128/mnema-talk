@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ChatHeader from './ChatHeader.vue'
@@ -6,6 +6,14 @@ import { useChatStore } from '../stores/chat'
 import { i18nPlugin, setLocale } from '../i18n'
 import { tooltip } from '../directives/tooltip'
 import { channelFixture } from '../test-fixtures.fixture'
+
+vi.mock('../lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../lib/api')>()),
+  api: vi.fn((url: string) => {
+    if (url === '/api/health') return Promise.resolve({ features: [] })
+    return Promise.resolve([])
+  })
+}))
 
 const mountOpts = { global: { plugins: [i18nPlugin], directives: { tooltip } } }
 
