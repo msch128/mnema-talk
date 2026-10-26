@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.0](https://github.com/msch128/mnema-talk/compare/v1.1.0...v1.2.0) (2026-10-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* admin report entries created by automod carry no message_id, so message_id is optional in GET /api/admin/reports, GET /api/admin/reports/{id} and POST /api/admin/reports/{id}/resolve.
+
+### Features
+
+* 1.2.0 community, moderation, Talks and a calmer UI ([#448](https://github.com/msch128/mnema-talk/issues/448)) ([c50b688](https://github.com/msch128/mnema-talk/commit/c50b6886e87cc1171cc458ec8e372393f0e45963))
+
 ## [1.1.0](https://github.com/msch128/mnema-talk/compare/v1.0.1...v1.1.0) (2026-10-24)
 
 
