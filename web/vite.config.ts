@@ -102,26 +102,14 @@ export default defineConfig(({ mode }) => ({
     }
   },
   test: {
+    // Every test file runs in its own process, not a worker thread: a V8
+    // fatal error in one file (a SIGTRAP was seen once in CI) then cannot take
+    // a shared worker down mid-run, and native/WASM state never leaks between files.
     pool: 'forks',
     maxWorkers: 4,
     environment: 'happy-dom',
+    include: ['src/**/*.test.{js,ts}'],
     setupFiles: ['./src/test-setup.ts'],
-    projects: [
-      {
-        test: {
-          name: 'media',
-          include: ['src/lib/media/**/*.test.{js,ts}', 'src/lib/dfn/**/*.test.{js,ts}', 'src/lib/noiseSuppressor.test.{js,ts}'],
-          pool: 'forks'
-        }
-      },
-      {
-        test: {
-          name: 'unit',
-          include: ['src/**/*.test.{js,ts}'],
-          exclude: ['src/lib/media/**/*.test.{js,ts}', 'src/lib/dfn/**/*.test.{js,ts}', 'src/lib/noiseSuppressor.test.{js,ts}']
-        }
-      }
-    ],
     // `npm run test:coverage` (CI): every source file counts, tested or not,
     // so the totals show untested code instead of hiding it.
     coverage: {
