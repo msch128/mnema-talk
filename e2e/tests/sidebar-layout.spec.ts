@@ -34,6 +34,8 @@ const SEED: Layout = { cats: ['A', 'B', 'G'], U: ['u1'], A: ['a1', 'a2', 'a3'], 
 
 const ids: Record<string, string> = {}
 function idFor(key: string): string { const value = ids[key]; if (!value) throw new Error(`Missing synthetic fixture: ${key}`); return value } // key → server id (channels and categories)
+// The address of a channel is its slug: the lowercase name, as these names are plain.
+function slugFor(key: keyof typeof CHANNELS): string { return CHANNELS[key].name.toLowerCase().replace(/[^a-z0-9]+/g, '-') }
 const keyOf = (id: string | null) => Object.keys(ids).find((k) => ids[k] === id)
 
 const isLayoutSave = (req: Request) => req.method() === 'PUT' && new URL(req.url()).pathname === '/api/admin/layout'
@@ -220,6 +222,17 @@ let member: Page
 let layoutSaves = 0
 const pageErrors: string[] = []
 
+// A reload (every test starts with one) cancels the requests still on their
+// way; WebKit reports such a cancelled API request as a page error of its own,
+// "Fetch API cannot load <url> due to access control checks", although the app
+// handles the failed request. Only that signature, only for the app's own API,
+// is not an app error; every other uncaught error still fails the test.
+const CANCELLED_API_REQUEST = /^Fetch API cannot load https?:\/\/127\.0\.0\.1:\d+\/api\/\S+ due to access control checks\.$/
+
+function collectPageErrors(page: Page) {
+  page.on('pageerror', (err) => { if (!CANCELLED_API_REQUEST.test(err.message)) pageErrors.push(err.message) })
+}
+
 test.describe.configure({ mode: 'serial' })
 
 test.beforeAll(async ({ browser }) => {
@@ -231,7 +244,7 @@ test.beforeAll(async ({ browser }) => {
   member = await memberCtx.newPage()
   const adminVoice = firstVoiceSnapshot(admin)
   admin.on('request', (req) => { if (isLayoutSave(req)) layoutSaves++ })
-  for (const page of [admin, member]) page.on('pageerror', (err) => pageErrors.push(err.message))
+  for (const page of [admin, member]) collectPageErrors(page)
 
   await signIn(admin, ADMIN_USER, ADMIN_PASSWORD)
   for (const [key, name] of Object.entries(CATEGORIES)) {
@@ -397,7 +410,7 @@ test('drag feedback: indicator, Escape cancels, a click still opens', async () =
   await pressOn(admin, row(admin, 'g1'))
   await row(admin, 'g1').hover({ position: { x: 32, y: 13 } })
   await admin.mouse.up()
-  await expect(admin).toHaveURL(new RegExp(`/c/${idFor('g1')}$`))
+  await expect(admin).toHaveURL(new RegExp(`/c/${slugFor('g1')}$`))
   await expect(admin.getByRole('textbox', { name: `Nachricht an #${CHANNELS.g1.name}` })).toBeVisible()
   await expect(ghost(admin)).toBeHidden()
 
@@ -476,7 +489,7 @@ test('context menus: create, collapse and duplicate', async () => {
 
   // Channel menu → "Kanal duplizieren": the copy sits right below, nothing navigates.
   await row(admin, 'b1').click()
-  await expect(admin).toHaveURL(new RegExp(`/c/${idFor('b1')}$`))
+  await expect(admin).toHaveURL(new RegExp(`/c/${slugFor('b1')}$`))
   await row(admin, 'a2').click({ button: 'right' })
   const dup = admin.waitForResponse((res) => res.request().method() === 'POST' && res.url().endsWith(`/api/admin/channels/${idFor('a2')}/duplicate`))
   await menu.getByRole('menuitem', { name: 'Kanal duplizieren' }).click()
@@ -490,7 +503,7 @@ test('context menus: create, collapse and duplicate', async () => {
     const { json } = await apiFetch(admin, 'GET', '/api/channels')
     return (json.categories.find((c) => c.id === idFor('A'))?.channels ?? []).map((c) => c.id)
   }).toEqual([idFor('a1'), idFor('a2'), copy.id, idFor('a3')])
-  await expect(admin).toHaveURL(new RegExp(`/c/${idFor('b1')}$`))
+  await expect(admin).toHaveURL(new RegExp(`/c/${slugFor('b1')}$`))
   await expect(admin.getByRole('textbox', { name: `Nachricht an #${CHANNELS.b1.name}` })).toBeVisible()
 
   // Clean up what this test created.
@@ -540,7 +553,7 @@ test('touch: long press drags, a quick swipe scrolls', async ({ browser, browser
   // A small touch screen: the channel list is taller than its viewport.
   const ctx = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 900, height: 480 } })
   const page = await ctx.newPage()
-  page.on('pageerror', (err) => pageErrors.push(err.message))
+  collectPageErrors(page)
   let saves = 0
   page.on('request', (req) => { if (isLayoutSave(req)) saves++ })
   await signIn(page, ADMIN_USER, ADMIN_PASSWORD)
@@ -578,7 +591,7 @@ test('touch: long press drags, a quick swipe scrolls', async ({ browser, browser
   await expectLayout(page, { ...SEED, A: ['a2', 'a3', 'a1'] })
   // Neither the long press nor the drop opened a menu or a channel.
   await expect(page.getByRole('menu')).toHaveCount(0)
-  await expect(page).not.toHaveURL(new RegExp(idFor('a1')))
+  await expect(page).not.toHaveURL(new RegExp(slugFor('a1')))
 
   // Holding without moving and letting go opens the channel's menu instead.
   await row(page, 'a2').scrollIntoViewIfNeeded()

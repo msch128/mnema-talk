@@ -12,3 +12,8 @@ func freeDiskBytes(path string) (uint64, error) {
 	}
 	return uint64(st.Bavail) * uint64(st.Bsize), nil //nolint:gosec // block counts are not negative
 }
+
+// FreeDiskBytes is the space available to unprivileged writers at path.
+func FreeDiskBytes(path string) (uint64, error) {
+	return freeDiskBytes(path)
+}

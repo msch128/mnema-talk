@@ -104,6 +104,9 @@ func (s *Service) SetOverwrites(ctx context.Context, actor Subject, kind string,
 		if err != nil {
 			return nil, err
 		}
+		if err := refuseTempTalk(ctx, tx, kind, id); err != nil {
+			return nil, err
+		}
 		next, err := validateOverwrites(ctx, tx, snap, list)
 		if err != nil {
 			return nil, err
@@ -324,6 +327,16 @@ func authorizeOverwriteSubject(snap *Snapshot, actor Subject, k overwriteKey) er
 // replaceOverwrites rewrites the stored overwrites of the target with the list:
 // one statement clears the old ones, one inserts every non-empty new one.
 func replaceOverwrites(ctx context.Context, tx pgx.Tx, col string, id uuid.UUID, list []Overwrite) error {
+	if err := rewriteOverwrites(ctx, tx, col, id, list); err != nil {
+		return err
+	}
+	if col != "channel_id" {
+		return nil
+	}
+	return syncTempTalks(ctx, tx, id)
+}
+
+func rewriteOverwrites(ctx context.Context, tx pgx.Tx, col string, id uuid.UUID, list []Overwrite) error {
 	if _, err := tx.Exec(ctx, `DELETE FROM permission_overwrites WHERE `+col+` = $1`, id); err != nil {
 		return fmt.Errorf("clear overwrites: %w", err)
 	}

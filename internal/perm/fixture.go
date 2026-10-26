@@ -101,6 +101,17 @@ func (f *Fixture) Channel(category uuid.UUID) uuid.UUID {
 	return id
 }
 
+// Stage makes a channel a Stage (or, with false, a normal Talk again).
+func (f *Fixture) Stage(ch uuid.UUID, on bool) *Fixture {
+	f.s.stages = maps.Clone(f.s.stages)
+	if on {
+		f.s.stages[ch] = true
+	} else {
+		delete(f.s.stages, ch)
+	}
+	return f
+}
+
 func (f *Fixture) scope(channel bool, target uuid.UUID) *scope {
 	m := f.s.categoryOv
 	if channel {
@@ -155,7 +166,7 @@ func (f *Fixture) Fork() *Fixture {
 	s := *f.s
 	s.roles, s.userRoles, s.owners, s.bots = maps.Clone(s.roles), maps.Clone(s.userRoles), maps.Clone(s.owners), maps.Clone(s.bots)
 	s.channelCat, s.categories = maps.Clone(s.channelCat), maps.Clone(s.categories)
-	s.dms = maps.Clone(s.dms)
+	s.dms, s.stages = maps.Clone(s.dms), maps.Clone(s.stages)
 	s.timeouts, s.rulesAccepted = maps.Clone(s.timeouts), maps.Clone(s.rulesAccepted)
 	s.channelOv, s.categoryOv = cloneScopes(s.channelOv), cloneScopes(s.categoryOv)
 	return &Fixture{s: &s}

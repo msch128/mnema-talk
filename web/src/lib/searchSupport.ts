@@ -8,7 +8,7 @@ import type { SearchFilters } from './searchQuery'
  * markFiltersSupported is for a server feature list that names the filters
  * (`search.filters.v2`).
  */
-export const NEW_HAS_KINDS: readonly string[] = ['poll', 'edit']
+export const NEW_HAS_KINDS: readonly string[] = ['poll', 'edit', 'embed']
 
 export const filtersUnsupported = ref(false)
 
@@ -24,3 +24,6 @@ export function markFiltersUnsupported() {
 export function markFiltersSupported() {
   filtersUnsupported.value = false
 }
+
+/** What the popover of the filter row is asked for: one filter, or the menu of the rarer ones. */
+export type FilterPopKind = 'from' | 'in' | 'has' | 'date' | 'more' | 'mentions' | 'author' | 'filename'

@@ -559,14 +559,23 @@ deletes it. Members vote with `PUT .../messages/{id}/poll/votes`
 (`{"option_ids": [...]}` replaces their votes, an empty list withdraws them;
 `409` once the poll has ended). The author, or anyone with *Manage messages*,
 ends it early with `POST .../poll/end`. Every change is broadcast as a
-`poll_update` event (the poll as every viewer sees it). Results are live while
-the poll is open and stay after it ended. A poll that is not anonymous lists
+`poll_update` event (the poll as every viewer sees it); an anonymous poll
+broadcasts only when it ends, so a small audience cannot infer a choice from
+the tally moving. Results are live while the poll is open and stay after it
+ended. A poll that is not anonymous lists
 the voters of each option. An **anonymous** poll never does: not in the
 message, the message list, search, the mentions inbox, the WebSocket, the
 bot gateway or the outgoing webhooks, and not for the author or the Owner.
-`GET .../poll` returns the caller's own votes (the only place an anonymous
-poll shows a member their choice). Push and desktop notifications read
-"Poll: question".
+Since 1.2 (feature `polls.anonymous`) it does not even store the choice: the
+server keeps only that a member voted and a counter per option, so nobody in
+the app, moderators and administrators included, can tell what a member chose
+(an operator with direct database access could in theory correlate vote
+timing; see SECURITY.md). Hence a
+vote in an anonymous poll is final: the second `PUT .../poll/votes` answers
+`409` and an empty `option_ids` list `400`. `GET .../poll` returns the caller's
+own votes in `my_votes` (always empty for an anonymous poll) and `has_voted`,
+which is how a client knows that the caller took part. Push and desktop
+notifications read "Poll: question".
 
 ## Direct messages
 

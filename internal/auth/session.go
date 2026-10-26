@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/db"
@@ -22,6 +23,9 @@ type Sessions struct {
 	Secret string
 	TTL    time.Duration
 	Secure bool
+
+	// touched throttles the activity writes (see touch); its zero value works.
+	touched sync.Map
 }
 
 // CookieName uses the __Host- prefix on HTTPS, which forces Secure, Path=/ and
@@ -33,7 +37,8 @@ func (s *Sessions) CookieName() string {
 	return "mnema_session"
 }
 
-// Start issues a session for the user and sets the cookie.
+// Start issues a session for the user and sets the cookie. The session list
+// learns of it with the session's first authenticated request (see touch).
 func (s *Sessions) Start(w http.ResponseWriter, u *User, tokenVersion int) error {
 	token, err := IssueToken(u.ID, tokenVersion, s.Secret, s.TTL)
 	if err != nil {
@@ -58,8 +63,11 @@ func (s *Sessions) Revoke(r *http.Request) error {
 	if _, err := s.DB.Exec(r.Context(), `DELETE FROM revoked_sessions WHERE expires_at < NOW()`); err != nil {
 		return err
 	}
-	_, err = s.DB.Exec(r.Context(), `INSERT INTO revoked_sessions (jti, expires_at) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-		claims.ID, claims.ExpiresAt.Time)
+	if _, err = s.DB.Exec(r.Context(), `INSERT INTO revoked_sessions (jti, expires_at) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+		claims.ID, claims.ExpiresAt.Time); err != nil {
+		return err
+	}
+	_, err = s.DB.Exec(r.Context(), `DELETE FROM user_sessions WHERE jti = $1`, claims.ID)
 	return err
 }
 

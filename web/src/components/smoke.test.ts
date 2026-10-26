@@ -18,7 +18,7 @@ import CreateChannelModal from './CreateChannelModal.vue'
 import ConnectionStatsModal from './ConnectionStatsModal.vue'
 import AdminDashboard from './AdminDashboard.vue'
 import UserProfileModal from './UserProfileModal.vue'
-import AudioSettingsModal from './AudioSettingsModal.vue'
+import SettingsDialog from './SettingsDialog.vue'
 import ChatArea from './ChatArea.vue'
 import ThreadSidebar from './ThreadSidebar.vue'
 import MemberList from './MemberList.vue'
@@ -64,7 +64,7 @@ const views = {
   ConnectionStatsModal: () => mount(ConnectionStatsModal, { attachTo: document.body }),
   AdminDashboard: () => mount(AdminDashboard, { attachTo: document.body }),
   UserProfileModal: () => mount(UserProfileModal, { attachTo: document.body, props: { user: userFixture({ id: 'u1', username: 'herzog', display_name: 'Herzog', role: 'admin' }) } }),
-  AudioSettingsModal: () => mount(AudioSettingsModal, { attachTo: document.body }),
+  SettingsDialog: () => mount(SettingsDialog, { attachTo: document.body }),
   ChatArea: () => mount(ChatArea, { attachTo: document.body }),
   ThreadSidebar: () => mount(ThreadSidebar, { attachTo: document.body }),
   MemberList: () => mount(MemberList, { attachTo: document.body }),

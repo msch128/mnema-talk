@@ -21,10 +21,13 @@ input.search:focus { border-color: #2DA771; box-shadow: 0 0 0 3px rgb(45 167 113
 .indicator { height: 3px; border-radius: 3px; }
 .category {
   padding: 12px 8px 4px;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  letter-spacing: 0.08em;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+.favorites { border-top: 1px solid #2B2F2D; padding: 2px 8px; }
 .emoji { border-radius: 10px; transition: background-color 120ms, transform 120ms; }
 .emoji:hover { transform: scale(1.14); }
 .emoji:focus-visible { outline: 2px solid #2DA771; outline-offset: -2px; }

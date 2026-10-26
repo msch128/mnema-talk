@@ -23,6 +23,7 @@ func newSnapshot(now time.Time) *Snapshot {
 		owners:     map[uuid.UUID]bool{},
 		bots:       map[uuid.UUID]bool{},
 		channelCat: map[uuid.UUID]uuid.UUID{},
+		stages:     map[uuid.UUID]bool{},
 		dms:        map[uuid.UUID]map[uuid.UUID]bool{},
 		dmEnabled:  true,
 		categories: map[uuid.UUID]bool{},
@@ -99,6 +100,7 @@ type acceptedRow struct {
 type channelRow struct {
 	ID       uuid.UUID
 	Category *uuid.UUID
+	Stage    bool
 }
 
 type overwriteRow struct {
@@ -117,7 +119,7 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	accepted := load(r, `SELECT id, rules_accepted_version FROM users WHERE rules_accepted_version > 0`, pgx.RowToStructByPos[acceptedRow])
 	bots := load(r, `SELECT user_id FROM bots`, pgx.RowTo[uuid.UUID])
 	cats := load(r, `SELECT id FROM categories`, pgx.RowTo[uuid.UUID])
-	chans := load(r, `SELECT id, category_id FROM channels WHERE type <> 'dm'`, pgx.RowToStructByPos[channelRow])
+	chans := load(r, `SELECT id, category_id, is_stage FROM channels WHERE type <> 'dm'`, pgx.RowToStructByPos[channelRow])
 	dmRows := load(r, `SELECT channel_id, user_id FROM dm_members`, pgx.RowToStructByPos[dmMemberRow])
 	dmOn := load(r, `SELECT direct_messages_enabled FROM instance_settings`, pgx.RowTo[bool])
 	ows := load(r, `SELECT channel_id, category_id, role_id, user_id, allow, deny FROM permission_overwrites`, pgx.RowToStructByPos[overwriteRow])
@@ -163,6 +165,9 @@ func (s *Snapshot) addChannels(rows []channelRow) {
 		s.channelCat[c.ID] = uuid.Nil
 		if c.Category != nil {
 			s.channelCat[c.ID] = *c.Category
+		}
+		if c.Stage {
+			s.stages[c.ID] = true
 		}
 	}
 }

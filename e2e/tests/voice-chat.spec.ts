@@ -39,6 +39,7 @@ test('the Talk has its own text chat under the stage', async ({ browser }) => {
   const created = await apiFetch(a, 'POST', '/api/admin/channels', { name: CHANNEL, type: 'voice' })
   expect(created.status).toBe(201)
   const channelId = responseString(created, 'id')
+  const channelSlug = responseString(created, 'slug')
   await b.goto('/')
   // The suite's shared member: registrations are limited to ten an hour from
   // one address and the whole suite shares them (see helpers.ts).
@@ -58,14 +59,14 @@ test('the Talk has its own text chat under the stage', async ({ browser }) => {
   for (const page of [a, b]) {
     await expect(page.getByRole('button', { name: 'Verlassen' }).first()).toBeVisible()
     await expect(page.getByTestId('voice-chat-panel')).toHaveCount(0)
-    await expect(page).toHaveURL(new RegExp(`/v/${channelId}$`))
+    await expect(page).toHaveURL(new RegExp(`/v/${channelSlug}$`))
   }
 
   // A opens it with the chat button in the Talk header: Discord's empty state.
   await a.getByTestId('voice-chat-toggle').click()
   const aPanel = a.getByTestId('voice-chat-panel')
   await expect(aPanel).toBeVisible()
-  await expect(a).toHaveURL(new RegExp(`/v/${channelId}/chat$`))
+  await expect(a).toHaveURL(new RegExp(`/v/${channelSlug}/chat$`))
   await expect(aPanel.getByText(`Willkommen in ${CHANNEL}!`)).toBeVisible()
   await expect(aPanel.getByText(`Das ist der Anfang des Kanals ${CHANNEL}.`)).toBeVisible()
   // The stage stays above the chat with the control dock, not covered by it.
@@ -124,7 +125,7 @@ test('the Talk has its own text chat under the stage', async ({ browser }) => {
   // The X in the chat's header closes it; closed is remembered too.
   await aPanel.getByRole('button', { name: 'Chat schließen' }).click()
   await expect(aPanel).toHaveCount(0)
-  await expect(a).toHaveURL(new RegExp(`/v/${channelId}$`))
+  await expect(a).toHaveURL(new RegExp(`/v/${channelSlug}$`))
   await a.reload()
   await expect(a.getByTestId('voice-chat-toggle')).toBeVisible()
   await expect(aPanel).toHaveCount(0)

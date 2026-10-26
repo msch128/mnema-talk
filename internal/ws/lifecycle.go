@@ -56,6 +56,9 @@ const (
 // @Description - `dm_created`: to every member's sessions; the direct message (`DirectMessage`) a conversation was started with, or the one the receiver was just added to.
 // @Description - `dm_member_added`: to the other members of a group conversation; `{dm_id, member}`.
 // @Description - `dm_member_removed`: to the remaining members and the leaver's sessions; `{dm_id, member}`.
+// @Description - `dm_prefs_updated`: to the user's own sessions only; `{dm_id}` after they closed, reopened or (un)favourited a conversation (refetch GET /api/dms/{id}), or `{dm_id: null}` after their direct message settings changed (refetch GET /api/dms).
+// @Description - `talk_leader`: `{channel_id, leader_id}` to everyone who may view a temporary Talk (opened from a Create-a-Talk lobby) when its leader changes; `leader_id` is null when nobody leads it.
+// @Description - `talk_moved`: `{from_channel_id, channel_id}` to the connection whose `voice_join` of a Create-a-Talk lobby opened the temporary Talk `channel_id`; the client then sends its ordinary `voice_join` for that Talk. The connection is never seated in the lobby itself.
 // @Description - `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}`, or `{refresh: true}` alone after a notification setting changed or everything was marked read (reload read states and notification settings).
 // @Description - `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.
 // @Description - `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.
@@ -65,7 +68,7 @@ const (
 // @Description - `screen_quality`: `{channel_id, user_id, layer, auto}` to the watching connection only: the layer of `user_id`'s screen share it receives now (`-1` before the first picture) and whether the server chooses it (`auto`).
 // @Description - `screen_layers_wanted`: `{channel_id, layers}` to the sharing connection only: the indexes of its layers some viewer receives or is about to. A sender may stop encoding the others; layer 0 is always listed while nobody watches.
 // @Description - `media_handshake`: `{channel_id, user_id, wire}` to the other connections in that voice room. `wire` is opaque: the server checks only its framing (an MLS key package, welcome or public message, or a heartbeat or capability message) and never reads or logs the content.
-// @Description - `voice_kicked`: `{channel_id, reason?}` when a moderator removes the user from voice, `reason: "room_full"` when a voice join is refused because the room is full (the channel's `user_limit`), `reason: "rules_not_accepted"` when the community's rules have not been accepted yet (POST /api/onboarding/accept), or `reason: "missing_permission"` when the user may not (or no longer may) view and connect to that Talk.
+// @Description - `voice_kicked`: `{channel_id, reason?}` when a moderator removes the user from voice, `reason: "room_full"` when a voice join is refused because the room is full (the channel's `user_limit`), `reason: "rules_not_accepted"` when the community's rules have not been accepted yet (POST /api/onboarding/accept), `reason: "talk_rate_limited"` or `"talk_unavailable"` when joining a Create-a-Talk lobby opened no Talk (5 new Talks per 10 minutes and member, 50 open Talks per lobby), or or `reason: "missing_permission"` when the user may not (or no longer may) view and connect to that Talk.
 // @Description - `pong`: `{t}` echoing a `ping`.
 // @Description
 // @Description Client to server:
@@ -293,6 +296,8 @@ func (h *Hub) unregister(c *Client) {
 		delete(h.chosen, c.User.ID)
 		delete(h.profiles, c.User.ID)
 		h.voiceGate.forget(c.User.ID)
+		h.stageGate.forget(c.User.ID)
+		h.reactionGate.forget(c.User.ID)
 		h.userBudgets.forget(c.User.ID)
 	}
 	after := h.statusLocked(c.User.ID)

@@ -57,12 +57,13 @@ settings.json   notification levels per channel and category
 messages.json   the messages you wrote (channel_name is empty for channels you cannot see any more)
 edits.json      the earlier versions of the messages you edited (newest first)
 reactions.json  the reactions you gave
-poll_votes.json the options you voted for in polls
+poll_votes.json the options you voted for in polls (only that you took part in anonymous ones)
 uploads.json    the files you uploaded, with links while they still exist
 polls.json      the polls you started: settings, end time and the number of votes per option
 pins.json       the messages you pinned (which message, where, when; not their text)
 thread_follows.json the threads you follow or turned off (the first message id of the thread and the state)
 push.json       your push notification devices (label, added, last delivery; no keys) and whether message text is shown
+sessions.json   the devices signed in to your account (coarse device label, created, last active, expires)
 emoji.json      the custom emoji you uploaded; the image files are in the emoji folder
 audit.json      administrative log entries about your account (no other person's name)
 security.json   what is set up for signing in (no secrets)
@@ -70,6 +71,9 @@ direct_messages.json  the direct message conversations you are in (which, when, 
 blocks.json     the members you blocked (their ids and when; no names)
 reports.json    the reports you filed about messages (your reason and note, not the reported text)
 saved.json      the messages you saved (their ids, your note and when; not the saved text)
+reminders.json  your reminders (the message id and the times; not the message text)
+scheduled_messages.json  your scheduled messages that were not sent yet (your text, the time and the state)
+rsvps.json      your RSVPs to community events
 
 The files are meant for machines: file names and keys are in English whatever
 language your account uses, and messages.json keeps your messages as typed,
@@ -155,6 +159,7 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 		{"pins.json", func() (any, error) { return exportPins(ctx, q, user, viewable) }},
 		{"thread_follows.json", func() (any, error) { return exportThreadFollows(ctx, q, user) }},
 		{"push.json", func() (any, error) { return exportPush(ctx, q, user) }},
+		{"sessions.json", func() (any, error) { return exportSessions(ctx, q, user) }},
 		{"emoji.json", func() (any, error) { return h.exportEmoji(ctx, z, user) }},
 		{"audit.json", func() (any, error) { return exportAudit(ctx, q, user) }},
 		{"security.json", func() (any, error) { return h.exportSecurity(ctx, user) }},
@@ -162,6 +167,9 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 		{"blocks.json", func() (any, error) { return exportBlocks(ctx, q, user) }},
 		{"reports.json", func() (any, error) { return exportReports(ctx, q, user) }},
 		{"saved.json", func() (any, error) { return exportSaved(ctx, q, user) }},
+		{"reminders.json", func() (any, error) { return exportReminders(ctx, q, user) }},
+		{"scheduled_messages.json", func() (any, error) { return exportScheduled(ctx, q, user, viewable) }},
+		{"rsvps.json", func() (any, error) { return exportRSVPs(ctx, q, user) }},
 	}
 	for _, s := range steps {
 		v, err := s.build()

@@ -86,6 +86,33 @@ type DirectMessage struct {
 	// or pending rules apply. It says nothing about the other members; a
 	// message that cannot be sent to them is refused when sent.
 	CanSend bool `json:"can_send"`
+	// Hidden says the caller closed the conversation in their list; the next
+	// message written in it opens it again. It is the caller's view only.
+	Hidden bool `json:"hidden"`
+	// FavouritePosition is the conversation's place in the caller's
+	// favourites, 0 first (null: not a favourite).
+	FavouritePosition *int `json:"favourite_position" extensions:"x-nullable"`
+	// LastMessage is the latest message the caller can see, for a preview
+	// (absent: none yet). Messages of members the caller blocked are left out.
+	LastMessage *DMLastMessage `json:"last_message,omitempty" binding:"optional"`
+}
+
+// DMLastMessage is the preview of a conversation's latest message.
+type DMLastMessage struct {
+	UserID uuid.UUID `json:"user_id" format:"uuid"`
+	// Text is the start of the message text (at most 200 characters).
+	Text          string `json:"text"`
+	HasAttachment bool   `json:"has_attachment"`
+	HasPoll       bool   `json:"has_poll"`
+}
+
+// forOthers drops what is the caller's own, for the events that tell the
+// other members about a conversation.
+func (d DirectMessage) forOthers() DirectMessage {
+	d.UnreadCount, d.MentionCount, d.LastReadAt = 0, 0, nil
+	d.Hidden, d.FavouritePosition = false, nil
+	d.LastMessage = nil // chosen by the caller's blocks; each member fetches their own
+	return d
 }
 
 const dmSelect = `
@@ -95,16 +122,28 @@ const dmSelect = `
 	       count(um.id) FILTER (WHERE um.parent_id IS NULL),
 	       count(um.id) FILTER (WHERE orig.user_id = $1 OR EXISTS (
 	           SELECT 1 FROM message_mentions mm WHERE mm.message_id = um.id AND mm.user_id = $1)),
-	       cr.last_read_at, COALESCE(cr.notify_level, 'inherit'), cr.muted_until, NOW()
+	       cr.last_read_at, COALESCE(cr.notify_level, 'inherit'), cr.muted_until, NOW(),
+	       me.hidden_at IS NOT NULL, me.favourite_pos, usr.dm_mute_all,
+	       lm.user_id, COALESCE(lm.text, ''), COALESCE(lm.has_media, FALSE), COALESCE(lm.has_poll, FALSE)
 	FROM channels c
 	JOIN dm_members me ON me.channel_id = c.id AND me.user_id = $1
+	JOIN users usr ON usr.id = me.user_id
 	LEFT JOIN channel_reads cr ON cr.channel_id = c.id AND cr.user_id = $1
+	LEFT JOIN LATERAL (
+	    SELECT m.user_id, left(m.content, 200) AS text,
+	           EXISTS (SELECT 1 FROM media md WHERE md.message_id = m.id) AS has_media,
+	           EXISTS (SELECT 1 FROM polls pl WHERE pl.message_id = m.id) AS has_poll
+	    FROM messages m
+	    WHERE m.channel_id = c.id AND NOT EXISTS (
+	        SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = m.user_id)
+	    ORDER BY m.created_at DESC LIMIT 1) lm ON TRUE
 	LEFT JOIN messages um ON um.channel_id = c.id AND um.user_id <> $1
 	     AND um.created_at > COALESCE(cr.last_read_at, me.joined_at)
 	     AND NOT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = um.user_id)
 	LEFT JOIN messages orig ON orig.id = um.reply_to_id
 	WHERE c.type = 'dm' AND ($2::uuid IS NULL OR c.id = $2)
-	GROUP BY c.id, me.joined_at, cr.last_read_at, cr.notify_level, cr.muted_until`
+	GROUP BY c.id, me.joined_at, me.hidden_at, me.favourite_pos, usr.dm_mute_all, cr.last_read_at, cr.notify_level,
+	         cr.muted_until, lm.user_id, lm.text, lm.has_media, lm.has_poll`
 
 // ListDMs returns the caller's conversations, the most recently active first.
 // With only set, just that conversation (nil result: the caller is not in it).
@@ -113,19 +152,42 @@ func ListDMs(ctx context.Context, p *db.Pool, user uuid.UUID, only *uuid.UUID) (
 	if err != nil {
 		return nil, fmt.Errorf("list direct messages: %w", err)
 	}
-	dms, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (DirectMessage, error) {
-		var d DirectMessage
-		var level NotifySetting
-		var now time.Time
-		err := row.Scan(&d.ID, &d.Group, &d.CreatedAt, &d.LastMessageAt, &d.UnreadCount, &d.MentionCount,
-			&d.LastReadAt, &level.Level, &level.MutedUntil, &now)
-		d.NotifyLevel = ResolveNotify(now, level, NotifySetting{})
-		return d, err
-	})
+	dms, err := pgx.CollectRows(rows, scanDM)
 	if err != nil {
 		return nil, fmt.Errorf("list direct messages: %w", err)
 	}
 	return withDMMembers(ctx, p, dms)
+}
+
+// scanDM reads one row of dmSelect.
+func scanDM(row pgx.CollectableRow) (DirectMessage, error) {
+	var d DirectMessage
+	var level NotifySetting
+	var now time.Time
+	var muteAll bool
+	var pos *int16
+	var last DMLastMessage
+	var lastUser *uuid.UUID
+	err := row.Scan(&d.ID, &d.Group, &d.CreatedAt, &d.LastMessageAt, &d.UnreadCount, &d.MentionCount,
+		&d.LastReadAt, &level.Level, &level.MutedUntil, &now, &d.Hidden, &pos, &muteAll,
+		&lastUser, &last.Text, &last.HasAttachment, &last.HasPoll)
+	server := NotifySetting{}
+	if muteAll {
+		server.Level = NotifyMute
+		if !level.Decides(now) {
+			d.MentionCount = 0 // muted for all conversations: nothing to highlight
+		}
+	}
+	d.NotifyLevel = ResolveNotify(now, level, NotifySetting{}, server)
+	if pos != nil {
+		p := int(*pos)
+		d.FavouritePosition = &p
+	}
+	if lastUser != nil {
+		last.UserID = *lastUser
+		d.LastMessage = &last
+	}
+	return d, err
 }
 
 // withDMMembers fills the members of each conversation, oldest member first.

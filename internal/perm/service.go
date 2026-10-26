@@ -38,6 +38,7 @@ type Service struct {
 	mu         sync.Mutex // serializes loads
 	lastForced time.Time  // guarded by mu
 	cur        atomic.Pointer[Snapshot]
+	prev       atomic.Pointer[Snapshot] // the snapshot in force before the latest Invalidate
 	gen        atomic.Uint64
 
 	uploadCeilingMB atomic.Int64
@@ -188,7 +189,19 @@ func (s *Service) Invalidate() {
 		return
 	}
 	s.gen.Add(1)
-	s.cur.Store(nil)
+	if old := s.cur.Swap(nil); old != nil {
+		s.prev.Store(old)
+	}
+}
+
+// Previous returns the snapshot that was current before the latest change, or
+// nil when none was loaded. Notifiers compare it with the new one to find out
+// what a change took away from whom.
+func (s *Service) Previous() *Snapshot {
+	if s == nil {
+		return nil
+	}
+	return s.prev.Load()
 }
 
 // Changed invalidates the snapshot and tells the notifier that the given

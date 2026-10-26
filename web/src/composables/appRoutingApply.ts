@@ -1,12 +1,15 @@
 import type { Ref } from 'vue'
-import type { Route } from '../lib/router'
+import type { Route, TargetRoute } from '../lib/router'
 import { nextTick } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
-import { navigate, resolveRoute } from '../lib/router'
+import { navigate, resolveRoute, targetOf } from '../lib/router'
+import { pathDms } from '../lib/dm'
+import { channelPath, postPath, postShortId, isUuid, textPath, talkPath } from '../lib/routePaths'
+import { fetchForumPosts } from '../lib/forumApi'
 import { voiceChatOpenFor } from '../lib/voiceChatPanel'
 import { t } from '../i18n'
 
@@ -50,20 +53,58 @@ function isThreadEmptyStub(th: { id: string; user_id?: string; content?: string 
   return !th.user_id && !th.content
 }
 
-async function openRouteThread(ctx: RoutingContext, channelId: string, threadId: string, superseded: Superseded) {
+async function openRouteThread(ctx: RoutingContext, channel: ChannelLike, threadId: string, superseded: Superseded) {
   const { chatStore } = ctx
-  if (chatStore.activeThread?.id === threadId) return
-  await chatStore.openThread(threadId)
-  if (superseded()) return
+  if (chatStore.activeThread?.id !== threadId) {
+    await chatStore.openThread(threadId)
+    if (superseded()) return
+  }
   // A thread that failed to load only has its id.
   if (isThreadEmptyStub(chatStore.activeThread, threadId)) {
     chatStore.closeThread()
     ctx.toasts.error(t('chat.messageNotFound'))
-    navigate(`/c/${channelId}`, { replace: true })
+    navigate(textPath(channel), { replace: true })
+    return
   }
+  // A forum post has a speaking address of its own.
+  const post = chatStore.activeThread
+  if (channel.type === 'forum' && post?.title) navigate(postPath(channel, post), { replace: true })
 }
 
-async function applyChatRoute(ctx: RoutingContext, route: Route & { view: 'chat' }, superseded: Superseded) {
+type ChannelLike = { id: string; type: string; slug?: string | undefined }
+
+/** The post a /p/:title-:shortId address names, looked up in the forum's newest posts; null when none or several match. */
+async function findForumPost(channelId: string, ref: string): Promise<string | null> {
+  if (isUuid(ref)) return ref.toLowerCase()
+  const short = postShortId(ref)
+  if (!short) return null
+  let before: string | undefined
+  for (let page = 0; page < MAX_POST_PAGES; page++) {
+    const posts = await fetchForumPosts(channelId, { sort: 'newest', limit: 100, ...(before ? { before } : {}) })
+    const hits = posts.filter(p => p.id.startsWith(short))
+    if (hits.length > 1) return null
+    if (hits[0]) return hits[0].id
+    const last = posts[posts.length - 1]
+    if (posts.length < 100 || !last) return null
+    before = last.id
+  }
+  return null
+}
+
+const MAX_POST_PAGES = 5
+
+async function openRoutePost(ctx: RoutingContext, channel: ChannelLike, ref: string, superseded: Superseded) {
+  const id = await findForumPost(channel.id, ref).catch(() => null)
+  if (superseded()) return
+  if (!id) {
+    ctx.toasts.error(t('chat.messageNotFound'))
+    navigate(textPath(channel), { replace: true })
+    return
+  }
+  await openRouteThread(ctx, channel, id, superseded)
+}
+
+async function applyChatRoute(ctx: RoutingContext, route: TargetRoute & { view: 'chat' }, superseded: Superseded) {
   const { chatStore } = ctx
   ctx.showAdminModal.value = false
   ctx.previewVoiceChannelId.value = null
@@ -74,9 +115,11 @@ async function applyChatRoute(ctx: RoutingContext, route: Route & { view: 'chat'
     const found = await chatStore.jumpToMessage(route.messageId)
     if (superseded()) return
     // jumpToMessage already toasted; leave the dead /m/:id address.
-    if (found === false) navigate(`/c/${targetChannel.id}`, { replace: true })
+    if (found === false) navigate(textPath(targetChannel), { replace: true })
   } else if (route.threadId) {
-    await openRouteThread(ctx, targetChannel.id, route.threadId, superseded)
+    await openRouteThread(ctx, targetChannel, route.threadId, superseded)
+  } else if (route.postRef) {
+    await openRoutePost(ctx, targetChannel, route.postRef, superseded)
   } else if (chatStore.activeThread) {
     chatStore.closeThread()
   }
@@ -84,7 +127,7 @@ async function applyChatRoute(ctx: RoutingContext, route: Route & { view: 'chat'
 
 function syncVoiceViewState(
   ctx: RoutingContext,
-  route: Route & { view: 'voice' },
+  route: TargetRoute & { view: 'voice' },
   previousVoiceChannel: string | null
 ): boolean {
   ctx.showAdminModal.value = false
@@ -96,7 +139,7 @@ function syncVoiceViewState(
     remembered: ctx.voiceShowChat.value
   })
   if (ctx.voiceShowChat.value && !route.showChat) {
-    navigate(`/v/${route.channelId}/chat`, { replace: true })
+    navigate(talkPath(channelOf(ctx, route.channelId), { chat: true }), { replace: true })
     return true
   }
   return false
@@ -104,7 +147,7 @@ function syncVoiceViewState(
 
 async function jumpToVoiceMessage(
   ctx: RoutingContext,
-  targetChannelId: string,
+  targetChannel: ChannelLike,
   messageId: string,
   superseded: Superseded
 ) {
@@ -112,19 +155,19 @@ async function jumpToVoiceMessage(
   if (superseded()) return
   const found = await ctx.chatStore.jumpToMessage(messageId)
   if (superseded()) return
-  if (found === false) navigate(`/v/${targetChannelId}/chat`, { replace: true })
+  if (found === false) navigate(talkPath(targetChannel, { chat: true }), { replace: true })
 }
 
 async function applyVoiceRoute(
   ctx: RoutingContext,
-  route: Route & { view: 'voice' },
+  route: TargetRoute & { view: 'voice' },
   previousVoiceChannel: string | null,
   superseded: Superseded
 ) {
   if (syncVoiceViewState(ctx, route, previousVoiceChannel)) return
   const targetChannel = await selectChannelFor(ctx, route.channelId, superseded)
   if (!targetChannel || !route.messageId) return
-  await jumpToVoiceMessage(ctx, targetChannel.id, route.messageId, superseded)
+  await jumpToVoiceMessage(ctx, targetChannel, route.messageId, superseded)
 }
 
 function applyRootRoute(ctx: RoutingContext) {
@@ -136,7 +179,7 @@ function applyRootRoute(ctx: RoutingContext) {
   }
   const channels = ctx.chatStore.allChannels
   const first = channels.find(c => c.type === 'text') || channels[0]
-  if (first) navigate(`/${first.type === 'voice' ? 'v' : 'c'}/${first.id}`, { replace: true })
+  if (first) navigate(channelPath(first), { replace: true })
 }
 
 /** Admin console is checked before anything renders, so non-admins never see it. */
@@ -155,7 +198,7 @@ async function admitRoute(ctx: RoutingContext, route: Route, superseded: Superse
   return false
 }
 
-async function dispatchRoute(ctx: RoutingContext, route: Route, previousVoiceChannel: string | null, superseded: Superseded) {
+async function dispatchRoute(ctx: RoutingContext, route: TargetRoute, previousVoiceChannel: string | null, superseded: Superseded) {
   if (route.view === 'chat' && route.channelId) {
     await applyChatRoute(ctx, route, superseded)
   } else if (route.view === 'voice' && route.channelId) {
@@ -168,10 +211,16 @@ async function dispatchRoute(ctx: RoutingContext, route: Route, previousVoiceCha
   }
 }
 
+function routeLookups(ctx: RoutingContext) {
+  return { channels: ctx.chatStore.allChannels, dms: pathDms(ctx.chatStore.dms, ctx.authStore.user?.id) }
+}
+
+function channelOf(ctx: RoutingContext, id: string): ChannelLike {
+  return ctx.chatStore.allChannels.find(c => c.id === id) ?? { id, type: 'voice' }
+}
+
 function handleRouteRedirect(ctx: RoutingContext, route: Route): boolean {
-  // A conversation opens at /c/:id like a text channel.
-  const conversations = ctx.chatStore.dms.map(d => ({ id: d.id, type: 'text' as const }))
-  const fix = resolveRoute(route, { isAdmin: ctx.permissions.canOpenAdmin, channels: [...ctx.chatStore.allChannels, ...conversations] })
+  const fix = resolveRoute(route, { isAdmin: ctx.permissions.canOpenAdmin, ...routeLookups(ctx) })
   if (!fix) return false
   if (fix.reason) ctx.toasts.error(t(`nav.${fix.reason}`))
   navigate(fix.redirect, { replace: true })
@@ -180,7 +229,7 @@ function handleRouteRedirect(ctx: RoutingContext, route: Route): boolean {
 
 async function runSyncedDispatch(
   ctx: RoutingContext,
-  route: Route,
+  route: TargetRoute,
   previousVoiceChannel: string | null,
   superseded: Superseded
 ) {
@@ -196,18 +245,26 @@ async function runSyncedDispatch(
   }
 }
 
-/** Shows what the address says: the channel, thread, Talk or admin console. */
-export async function applyRoute(ctx: RoutingContext, route: Route) {
-  if (!ctx.alive() || !ctx.authStore.isAuthenticated) return
+/**
+ * Shows what the address says: the channel, thread, Talk or admin console.
+ * Returns true when the address was rewritten instead: the rewritten route is
+ * applied by the router's own watcher, and until it is, the screen does not
+ * yet show what the address will say.
+ */
+export async function applyRoute(ctx: RoutingContext, route: Route): Promise<boolean> {
+  if (!ctx.alive() || !ctx.authStore.isAuthenticated) return false
   const gen = ++ctx.routeGen
   const superseded = () => !ctx.alive() || gen !== ctx.routeGen
 
-  if (!(await admitRoute(ctx, route, superseded))) return
-  if (!ctx.chatStore.allChannels.length) return
-  if (handleRouteRedirect(ctx, route)) return
+  if (!(await admitRoute(ctx, route, superseded))) return false
+  if (!ctx.chatStore.allChannels.length) return false
+  if (handleRouteRedirect(ctx, route)) return true
 
+  const target = targetOf(route, routeLookups(ctx))
+  if (!target) return false
   const previousVoiceChannel = ctx.lastVoiceRouteChannel
-  ctx.lastVoiceRouteChannel = route.view === 'voice' ? route.channelId : null
+  ctx.lastVoiceRouteChannel = target.view === 'voice' ? target.channelId : null
 
-  await runSyncedDispatch(ctx, route, previousVoiceChannel, superseded)
+  await runSyncedDispatch(ctx, target, previousVoiceChannel, superseded)
+  return false
 }

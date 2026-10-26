@@ -67,9 +67,25 @@ describe('EmojiPicker and trigger', () => {
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
       return this.dataset['testid'] === 'emoji-picker' ? { ...rect, top: 0, bottom: 360, width: 340, height: 360, x: rect.left, y: 0, toJSON: () => ({}) } : new DOMRect()
     })
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(340)
     wrapper = mount(EmojiPicker, { attachTo: document.body })
+    // Placed at once, while the loading box is all there is on screen.
+    expect((wrapper.element as HTMLElement).style.translate).toBe(translate)
     await vi.waitFor(() => expect(wrapper.element.querySelector('synthetic-emoji-picker')).not.toBeNull())
     expect((wrapper.element as HTMLElement).style.translate).toBe(translate)
+  })
+
+  it('is placed again when the window changes size', async () => {
+    let left = 100
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return this.dataset['testid'] === 'emoji-picker' ? { left, right: left + 340, top: 0, bottom: 360, width: 340, height: 360, x: left, y: 0, toJSON: () => ({}) } : new DOMRect()
+    })
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(340)
+    wrapper = mount(EmojiPicker, { attachTo: document.body })
+    expect((wrapper.element as HTMLElement).style.translate).toBe('')
+    left = -30
+    window.dispatchEvent(new Event('resize'))
+    expect((wrapper.element as HTMLElement).style.translate).toBe('38px 0')
   })
 
   it('reports a load failure by closing the picker', async () => {

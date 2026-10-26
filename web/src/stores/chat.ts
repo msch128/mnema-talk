@@ -3,7 +3,7 @@ import { useAuthStore } from './auth'
 import { useVoiceStore } from './voice'
 import type { ClientEventPayloads } from '../types/events'
 import { createChatState, type ChatState, type Cx } from './chat/state'
-import { createCategory, createChannel, deleteCategory, deleteChannel, duplicateChannel, fetchChannels, isVoiceChannel, selectChannel, updateCategory, updateChannel } from './chat/channels'
+import { createCategory, createChannel, deleteCategory, deleteChannel, duplicateChannel, fetchChannels, isVoiceChannel, linkTo, selectChannel, setChannelAutoDelete, updateCategory, updateChannel } from './chat/channels'
 import { activityOfUser, closeUserProfile, fetchMembers, insertMention, openUserProfile, presenceOf } from './chat/members'
 import { installActivityListeners, setMyPresence, setStatusText } from './chat/presence'
 import { fetchMessages, goToMessage, jumpToLatest, jumpToMessage, loadNewer, loadOlder, showToast } from './chat/messageWindow'
@@ -14,12 +14,12 @@ import { closeThread, openThread, sendThreadReply, uploadThreadMedia } from './c
 import { closeWebSocket, initWebSocket, installVisibilityRetry, retryNow, sendWSEvent, setWebRTCHandlers } from './chat/socket'
 import { handleWSEvent } from './chat/events'
 import { fetchReadState, markActiveChannelReadIfReading, markChannelRead, markChannelUnread, setReturnToTabHandler, setVoiceChatReading } from './chat/readState'
-import { fetchNotificationSettings, markAllRead, notificationLevel, setCategoryNotificationLevel, setNotificationLevel } from './chat/notifySettings'
+import { fetchNotificationSettings, markAllRead, notificationLevel, setCategoryNotificationLevel, setNotificationLevel, setServerNotification } from './chat/notifySettings'
 import { sendTyping } from './chat/typing'
 import { messageMentionsMe, refreshNotificationPermission, requestNotificationPermission } from './chat/notifications'
 import { dismissEphemeral, resetCommunityState } from './chat/reset'
 import { dismissPinNotice, fetchPins } from './chat/pins'
-import { addDmMember, waitForDms, dmById, dmChannel, fetchDms, isDm, leaveDm, openDm, startDm } from './chat/dms'
+import { dmActions } from './chat/dmActions'
 
 export type { EphemeralNote, ProfilePreview, ThreadRoot } from './chat/types'
 export { MARK_READ_INTERVAL_MS, TYPING_EXPIRY_MS } from './chat/types'
@@ -35,6 +35,7 @@ function exposedState(cs: ChatState) {
     allChannels: cs.allChannels,
     ephemeral: cs.ephemeral,
     pinsSignal: cs.pinsSignal,
+    forumTagsSignal: cs.forumTagsSignal,
     pinNotices: cs.pinNotices,
     uncategorized: cs.uncategorized,
     activeChannel: cs.activeChannel,
@@ -52,6 +53,8 @@ function exposedState(cs: ChatState) {
     members: cs.members,
     dms: cs.dms,
     dmsLoaded: cs.dmsLoaded,
+    dmSettings: cs.dmSettings,
+    dmSettingsLoaded: cs.dmSettingsLoaded,
     presenceById: cs.presenceById,
     activityById: cs.activityById,
     onlineUserIds: cs.onlineUserIds,
@@ -78,21 +81,14 @@ function exposedState(cs: ChatState) {
 function exposedActions(cx: Cx) {
   const bind = <A extends unknown[], R>(fn: (cx: Cx, ...args: A) => R) => (...args: A): R => fn(cx, ...args)
   return {
+    ...dmActions(cx),
     resetCommunityState: bind(resetCommunityState),
     retryNow: bind(retryNow),
     dismissEphemeral: bind(dismissEphemeral),
     dismissPinNotice: bind(dismissPinNotice),
     fetchPins: bind(fetchPins),
     isVoiceChannel: bind(isVoiceChannel),
-    isDm: bind(isDm),
-    dmById: bind(dmById),
-    dmChannel: bind(dmChannel),
-    fetchDms: bind(fetchDms),
-    waitForDms: bind(waitForDms),
-    openDm: bind(openDm),
-    startDm: bind(startDm),
-    addDmMember: bind(addDmMember),
-    leaveDm: bind(leaveDm),
+    linkTo: bind(linkTo),
     showToast,
     loadOlder: bind(loadOlder),
     loadNewer: bind(loadNewer),
@@ -124,6 +120,7 @@ function exposedActions(cx: Cx) {
     duplicateChannel: bind(duplicateChannel),
     deleteChannel: bind(deleteChannel),
     updateChannel: bind(updateChannel),
+    setChannelAutoDelete: bind(setChannelAutoDelete),
     createCategory: bind(createCategory),
     deleteCategory: bind(deleteCategory),
     updateCategory: bind(updateCategory),
@@ -134,6 +131,7 @@ function exposedActions(cx: Cx) {
     fetchNotificationSettings: bind(fetchNotificationSettings),
     setNotificationLevel: bind(setNotificationLevel),
     setCategoryNotificationLevel: bind(setCategoryNotificationLevel),
+    setServerNotification: bind(setServerNotification),
     markAllRead: bind(markAllRead),
     notificationLevel: bind(notificationLevel),
     goToMessage: bind(goToMessage),

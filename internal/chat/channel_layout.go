@@ -75,6 +75,9 @@ func placeChannels(ctx context.Context, tx pgx.Tx, chans []ChannelPlacement) err
 	for _, c := range chans {
 		last[c.ID] = c
 	}
+	if err := dropTempTalks(ctx, tx, last); err != nil {
+		return err
+	}
 	if len(last) == 0 {
 		return nil
 	}
@@ -99,10 +102,39 @@ func placeChannels(ctx context.Context, tx pgx.Tx, chans []ChannelPlacement) err
 	return nil
 }
 
+// dropTempTalks removes the temporary Talks from a layout change: they come
+// and go on their own and never become part of the saved layout.
+func dropTempTalks(ctx context.Context, tx pgx.Tx, placements map[uuid.UUID]ChannelPlacement) error {
+	if len(placements) == 0 {
+		return nil
+	}
+	ids := make([]uuid.UUID, 0, len(placements))
+	for id := range placements {
+		ids = append(ids, id)
+	}
+	rows, err := tx.Query(ctx, `SELECT id FROM channels WHERE id = ANY($1) AND is_temp`, ids)
+	if err != nil {
+		return fmt.Errorf("find temporary Talks: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		delete(placements, id)
+	}
+	return rows.Err()
+}
+
 // channelLayoutLockID is the transaction-scoped advisory lock that serialises
 // changes to channel placement (layout drags and duplications), so they never
 // interleave and cannot deadlock on each other's row locks.
 const channelLayoutLockID = 0x6d6e6c6179
+
+// LockChannelLayout takes the layout lock for the rest of the transaction, for
+// callers that append to the layout (the Discord import).
+func LockChannelLayout(ctx context.Context, tx pgx.Tx) error { return lockChannelLayout(ctx, tx) }
 
 func lockChannelLayout(ctx context.Context, tx pgx.Tx) error {
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, channelLayoutLockID); err != nil {
@@ -130,7 +162,7 @@ func DuplicateChannel(ctx context.Context, p *db.Pool, sourceID uuid.UUID) (*Cha
 		if err != nil {
 			return err
 		}
-		ch, err = insertChannelCopy(ctx, tx, src, newOrder)
+		ch, err = insertChannelCopy(ctx, tx, src, newOrder, false)
 		return err
 	})
 	if err != nil {
@@ -181,7 +213,7 @@ func makeRoomBelow(ctx context.Context, tx pgx.Tx, src *Channel) (int, error) {
 
 // insertChannelCopy creates the copy of src at sortOrder, with the same
 // permission overwrites: a copy of a private channel stays private.
-func insertChannelCopy(ctx context.Context, tx pgx.Tx, src *Channel, sortOrder int) (*Channel, error) {
+func insertChannelCopy(ctx context.Context, tx pgx.Tx, src *Channel, sortOrder int, temp bool) (*Channel, error) {
 	var ch Channel
 	err := tx.QueryRow(ctx, `
 		INSERT INTO channels (category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds) VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -190,6 +222,15 @@ func insertChannelCopy(ctx context.Context, tx pgx.Tx, src *Channel, sortOrder i
 		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds)
 	if err != nil {
 		return nil, fmt.Errorf("duplicate channel: %w", err)
+	}
+	if temp {
+		// A temporary Talk gets its fixed slug and no history.
+		if _, err := tx.Exec(ctx, `UPDATE channels SET slug = $2 WHERE id = $1`, ch.ID, TempTalkSlug(ch.ID)); err != nil {
+			return nil, fmt.Errorf("set Talk slug: %w", err)
+		}
+		ch.Slug, ch.PreviousSlugs = TempTalkSlug(ch.ID), []string{}
+	} else if err := assignAndFillSlugs(ctx, tx, &ch); err != nil {
+		return nil, err
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO permission_overwrites (channel_id, role_id, user_id, allow, deny)

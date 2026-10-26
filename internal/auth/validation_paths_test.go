@@ -164,7 +164,7 @@ func TestServiceValidationRejectsBeforeDatabaseAccess(t *testing.T) {
 	if _, err := SetPresence(ctx, nil, uuid.Nil, "offline"); err == nil {
 		t.Fatal("offline presence accepted")
 	}
-	if _, err := SetStatusText(ctx, nil, uuid.Nil, strings.Repeat("x", MaxStatusTextLen+1)); err == nil {
+	if _, err := SetStatusText(ctx, nil, uuid.Nil, strings.Repeat("x", MaxStatusTextLen+1), nil); err == nil {
 		t.Fatal("long status accepted")
 	}
 }

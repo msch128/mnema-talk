@@ -8,6 +8,7 @@ import { isRecord } from '../../types/validation'
 import { usePlaybackPrefs, readJson } from '../../lib/voicePlayback'
 import { useVoiceSettings } from '../voiceSettings'
 import { useAuthStore } from '../auth'
+import type { LiveReaction } from './stage'
 
 // Cameras of others are on by default; what I opted out of is remembered.
 export const HIDDEN_CAMERAS_KEY = 'mnema_hidden_cameras'
@@ -56,7 +57,9 @@ function mediaState() {
     // Map of userId -> boolean (true if speaking)
     speakingUsers: ref<Record<string, boolean>>({}),
     // channelId -> ISO time the room got its first member (for the Talk timer).
-    roomStartedAt: ref<Record<string, string>>({})
+    roomStartedAt: ref<Record<string, string>>({}),
+    // Live reactions floating over the tiles of the Talk (a few seconds each).
+    talkReactions: ref<LiveReaction[]>([])
   }
 }
 

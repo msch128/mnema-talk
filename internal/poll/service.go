@@ -55,7 +55,7 @@ func (s *Service) Create(ctx context.Context, user *auth.User, channel uuid.UUID
 	if _, err := chat.ChannelForMessages(ctx, s.DB, channel); err != nil {
 		return nil, err
 	}
-	id, err := chat.InsertMessage(ctx, s.DB, s.Online, chat.NewMessage{ChannelID: channel, UserID: user.ID, Content: c.Question},
+	id, err := chat.InsertMessage(ctx, s.DB, s.Online, chat.NewMessage{ChannelID: channel, UserID: user.ID, Content: c.Question, ScreenText: c.Options},
 		func(tx pgx.Tx, messageID uuid.UUID) error { return insertPoll(ctx, tx, messageID, c) })
 	if err != nil {
 		return nil, err
@@ -85,6 +85,12 @@ func (s *Service) announce(ctx context.Context, channel, messageID uuid.UUID) (*
 	if p == nil {
 		return nil, errPollNotFound
 	}
+	if p.Anonymous && !p.Closed {
+		// A running tally pushed at the moment of each vote would let a small
+		// audience work out the choice behind it; the result goes out when the
+		// poll ends.
+		return p, nil
+	}
 	s.Events.BroadcastChannel(channel, events.PollUpdate, Update{MessageID: messageID, ChannelID: channel, Poll: *p})
 	return p, nil
 }
@@ -92,8 +98,11 @@ func (s *Service) announce(ctx context.Context, channel, messageID uuid.UUID) (*
 // Detail is a poll with the caller's own votes.
 type Detail struct {
 	chat.Poll
-	// MyVotes are the options the caller voted for (also in an anonymous poll).
+	// MyVotes are the options the caller voted for. It is always empty in an
+	// anonymous poll, which does not know the choice.
 	MyVotes []uuid.UUID `json:"my_votes" format:"uuid"`
+	// HasVoted says that the caller voted, also in an anonymous poll.
+	HasVoted bool `json:"has_voted" binding:"optional"`
 }
 
 func (s *Service) detail(ctx context.Context, messageID, userID uuid.UUID) (Detail, error) {
@@ -105,7 +114,11 @@ func (s *Service) detail(ctx context.Context, messageID, userID uuid.UUID) (Deta
 		return Detail{}, errPollNotFound
 	}
 	mine, err := MyVotes(ctx, s.DB, messageID, userID)
-	return Detail{Poll: *p, MyVotes: mine}, err
+	if err != nil {
+		return Detail{}, err
+	}
+	voted, err := HasVoted(ctx, s.DB, messageID, userID)
+	return Detail{Poll: *p, MyVotes: mine, HasVoted: voted}, err
 }
 
 // find resolves {channelID}/{messageID} of a request to a poll the caller may

@@ -46,7 +46,7 @@
 [role='menuitem']:focus-visible,
 [role='option']:focus-visible {
   outline: none;
-  box-shadow: inset 0 0 0 1.5px rgb(45 167 113 / 0.75);
+  box-shadow: var(--focus-ring);
 }
 
 /* Toasts slide up a few pixels while they fade in. */

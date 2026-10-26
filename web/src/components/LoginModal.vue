@@ -8,6 +8,7 @@ import LegalModal from './LegalModal.vue'
 import ForgotPasswordDialog from './ForgotPasswordDialog.vue'
 import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
 import SecondFactorStep from './SecondFactorStep.vue'
+import PasswordInput from './PasswordInput.vue'
 import { useDialog } from '../composables/useDialog'
 import { t, locale, chooseLocale, SUPPORTED } from '../i18n'
 import type { InviteContext } from '../lib/inviteLink'
@@ -26,6 +27,7 @@ const isRegister = ref(false)
 const showLegalModal = ref(false)
 // Offered only when the server can send mail (GET /api/auth/options).
 const canResetPassword = ref(false)
+const optionsLoaded = ref(false)
 const showForgot = ref(false)
 // Set after a correct password for an account with two-factor sign-in.
 const challenge = ref('')
@@ -35,7 +37,7 @@ const password = ref('')
 const inviteCode = ref('')
 const usernameInput = ref<HTMLInputElement | null>(null)
 const displayNameInput = ref<HTMLInputElement | null>(null)
-const passwordInput = ref<HTMLInputElement | null>(null)
+const passwordField = ref<{ el: HTMLInputElement | null } | null>(null)
 const inviteCodeInput = ref<HTMLInputElement | null>(null)
 const errorMsg = ref('')
 const isLoading = ref(false)
@@ -69,6 +71,7 @@ onMounted(() => {
 async function loadOptions() {
   try {
     canResetPassword.value = (await api('/api/auth/options', { decode: decodeAuthAuthOptions })).password_reset
+    optionsLoaded.value = true
   } catch {
     // Offline or limited: the form works without the link.
   }
@@ -80,7 +83,7 @@ async function handleSubmit() {
   // synchronize the models so a pending render cannot restore older values.
   // Password bytes are preserved exactly; native validation stays authoritative.
   const submittedUsername = usernameInput.value?.value ?? ''
-  const submittedPassword = passwordInput.value?.value ?? ''
+  const submittedPassword = passwordField.value?.el?.value ?? ''
   const submittedDisplayName = displayNameInput.value?.value ?? ''
   const submittedInviteCode = inviteCodeInput.value?.value ?? ''
   username.value = submittedUsername
@@ -156,7 +159,7 @@ async function handleSubmit() {
       <SecondFactorStep v-if="challenge" :challenge="challenge" @back="challenge = ''" />
       <form v-else @submit.prevent="handleSubmit" class="space-y-3.5">
         <div>
-          <label for="login-username" class="block text-xs font-medium text-mnema-muted mb-1 font-mono uppercase tracking-wider">{{ $t('login.username') }}</label>
+          <label for="login-username" class="block text-sm font-medium text-mnema-body-ink mb-1">{{ $t('login.username') }}</label>
           <input
             id="login-username"
             ref="usernameInput"
@@ -165,35 +168,34 @@ async function handleSubmit() {
             required
             autocomplete="username"
             :placeholder="$t('login.usernamePlaceholder')"
-            class="w-full bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary outline-hidden focus:border-mnema-accent transition"
+            class="w-full bg-mnema-canvas border border-mnema-border-field rounded-lg px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary"
           />
         </div>
 
         <div v-if="isRegister">
-          <label for="login-displayname" class="block text-xs font-medium text-mnema-muted mb-1 font-mono uppercase tracking-wider">{{ $t('login.displayName') }}</label>
+          <label for="login-displayname" class="block text-sm font-medium text-mnema-body-ink mb-1">{{ $t('login.displayName') }}</label>
           <input
             id="login-displayname"
             ref="displayNameInput"
             v-model="displayName"
             type="text"
             :placeholder="$t('login.displayNamePlaceholder')"
-            class="w-full bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary outline-hidden focus:border-mnema-accent transition"
+            class="w-full bg-mnema-canvas border border-mnema-border-field rounded-lg px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary"
           />
         </div>
 
         <div>
-          <label for="login-password" class="block text-xs font-medium text-mnema-muted mb-1 font-mono uppercase tracking-wider">{{ $t('login.password') }}</label>
-          <input
+          <label for="login-password" class="block text-sm font-medium text-mnema-body-ink mb-1">{{ $t('login.password') }}</label>
+          <PasswordInput
             id="login-password"
-            ref="passwordInput"
+            ref="passwordField"
             v-model="password"
-            type="password"
             required
             :autocomplete="isRegister ? 'new-password' : 'current-password'"
-            placeholder="••••••••"
-            class="w-full bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary outline-hidden focus:border-mnema-accent transition"
+            :aria-describedby="isRegister ? 'login-password-hint' : undefined"
+            class="w-full"
           />
-          <p v-if="isRegister" class="mt-1.5 text-xs text-mnema-tertiary" data-testid="password-hint">{{ $t('login.passwordHint', { count: MIN_PASSWORD_LENGTH }) }}</p>
+          <p v-if="isRegister" id="login-password-hint" class="mt-1.5 text-xs text-mnema-tertiary" data-testid="password-hint">{{ $t('login.passwordHint', { count: MIN_PASSWORD_LENGTH }) }}</p>
           <button
             v-if="!isRegister && canResetPassword"
             type="button"
@@ -201,10 +203,11 @@ async function handleSubmit() {
             class="mt-1.5 text-xs text-mnema-tertiary hover:text-mnema-accent transition cursor-pointer"
             @click="showForgot = true"
           >{{ $t('recovery.forgotLink') }}</button>
+          <p v-else-if="!isRegister && optionsLoaded" class="mt-1.5 text-xs text-mnema-tertiary" data-testid="forgot-password-hint">{{ $t('login.forgotNoMail') }}</p>
         </div>
 
         <div v-if="isRegister">
-          <label for="login-invite" class="block text-xs font-medium text-mnema-muted mb-1 font-mono uppercase tracking-wider">{{ $t('login.inviteCode') }}</label>
+          <label for="login-invite" class="block text-sm font-medium text-mnema-body-ink mb-1">{{ $t('login.inviteCode') }}</label>
           <input
             id="login-invite"
             ref="inviteCodeInput"
@@ -212,7 +215,7 @@ async function handleSubmit() {
             type="text"
             required
             :placeholder="$t('login.inviteCodePlaceholder')"
-            class="w-full bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary outline-hidden focus:border-mnema-accent transition font-mono"
+            class="w-full bg-mnema-canvas border border-mnema-border-field rounded-lg px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary font-mono"
           />
         </div>
 

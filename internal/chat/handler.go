@@ -52,6 +52,10 @@ type Handler struct {
 	// DMLimit caps starting direct messages and adding members to them per
 	// member; nil means no cap.
 	DMLimit *httpx.RateLimiter
+	// Talks runs the Create-a-Talk lobbies; nil switches the feature off.
+	Talks *TalkManager
+	// TalkLimit caps Talk edits and invitations per member; nil means no cap.
+	TalkLimit *httpx.RateLimiter
 }
 
 // VoiceRooms acts on live voice rooms (implemented by the WebSocket hub).
@@ -98,6 +102,8 @@ func (h *Handler) Mount(r chi.Router) {
 	h.mountSaved(r)
 	h.mountForward(r)
 	h.mountDMs(r)
+	h.mountTalks(r)
+	h.mountForum(r)
 	history := r
 	if h.EditHistoryLimit != nil {
 		history = r.With(h.EditHistoryLimit.By(auth.UserKey))
@@ -122,6 +128,7 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Put("/channels/{channelID}/notifications", httpx.Handle(h.setNotifyLevel))
 	r.Put("/categories/{id}/notifications", httpx.Handle(h.setCategoryNotify))
 	r.Get("/notification-settings", httpx.Handle(h.notificationSettings))
+	r.Put("/notification-settings/server", httpx.Handle(h.setServerNotify))
 	r.Post("/read-state/read-all", httpx.Handle(h.markAllRead))
 }
 
@@ -129,12 +136,14 @@ func (h *Handler) Mount(r chi.Router) {
 // permission applies).
 func (h *Handler) MountAdmin(r chi.Router) {
 	h.mountReportsAdmin(r)
+	r.With(auth.RequirePerm(h.Perms, perm.ManageRoles)).Get("/roles/{id}/view-as", httpx.Handle(h.viewAsRole))
 	r = r.With(auth.RequirePerm(h.Perms, perm.ManageChannels))
 	r.Post("/categories", httpx.Handle(h.createCategory))
 	r.Delete("/categories/{id}", httpx.Handle(h.deleteCategory))
 	r.Post("/channels", httpx.Handle(h.createChannel))
 	r.Delete("/channels/{id}", httpx.Handle(h.deleteChannel))
 	r.Patch("/channels/{id}", httpx.Handle(h.updateChannel))
+	r.Put("/channels/{id}/auto-delete", httpx.Handle(h.setAutoDelete))
 	r.Post("/channels/{id}/duplicate", httpx.Handle(h.duplicateChannel))
 	r.Patch("/categories/{id}", httpx.Handle(h.renameCategory))
 	r.Put("/layout", httpx.Handle(h.applyLayout))

@@ -2,9 +2,12 @@
 // internal/ws/{handle,voice,presence,signal,lifecycle}.go and chat publications.
 import type { ModerationNotice } from '../lib/moderation'
 import type { Message, Poll, ReactionSummary, ReadState, User, UserUpdate, VoiceUser, Presence } from './domain'
-import type { ChatUserRef } from './rest'
-import { isAuthUser, isChatMessage, isChatPoll, isChatReactionSummary, isChatNotifyLevel } from './rest'
-import { ContractError, hasOwn, isRecord, isIdentifier, isTimestamp, isInteger, isString, isArrayOf, isDictionaryOf } from './validation'
+import type { ChatUserRef, CommunityeventsCommunityEvent } from './rest'
+import { isAuthUser, isChatMessage, isChatPoll, isChatReactionSummary, isChatNotifyLevel, isCommunityeventsCommunityEvent } from './rest'
+import type { StageHand, StageTalkPower, TalkReaction } from './stageEvents'
+import { STAGE_EVENT_CHECKS } from './stageEvents'
+import { NOTICE_EVENT_CHECKS } from './noticeEvents'
+import { ContractError, onlyFields, hasOwn, isRecord, isIdentifier, isTimestamp, isInteger, isString, isArrayOf, isDictionaryOf } from './validation'
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue | undefined }
 export interface MediaState { channel_id: string; user_id: string; screen: boolean; camera: boolean }
@@ -41,7 +44,7 @@ export interface DirectMessageRef {
   mention_count: number
   last_read_at: string | null
   notify_level: 'all' | 'mentions' | 'mute' | 'inherit'
-  can_send: boolean
+  can_send: boolean; hidden: boolean; favourite_position: number | null
 }
 
 function isDirectMessageMember(value: unknown): value is DirectMessageMember {
@@ -91,12 +94,18 @@ export interface ServerEventPayloads {
   block_updated: { user_id: string; blocked: boolean }
   /** The caller saved or removed a message (own sessions only): refetch GET /api/me/saved. */
   saved_updated: { message_id: string; saved: boolean }
+  /** The caller's reminder was made, fell due or was removed (own sessions only): refetch GET /api/me/reminders. */
+  reminder_update: { id: string; state: 'created' | 'due' | 'removed' }
+  /** The caller's scheduled message was made, changed, sent or refused (own sessions only): refetch GET /api/me/scheduled. */
+  scheduled_message_update: { id: string; channel_id: string; state: 'created' | 'updated' | 'sent' | 'failed' | 'deleted'; reason?: string }
   /** A direct message was started with the receiver, or the receiver was added to a group: a DirectMessage as GET /api/dms/{id} returns it. */
   dm_created: DirectMessageRef
   /** A member joined a group direct message the receiver is in. */
   dm_member_added: { dm_id: string; member: DirectMessageMember }
   /** A member left a group direct message the receiver is in (or the receiver left it on another device). */
   dm_member_removed: { dm_id: string; member: DirectMessageMember }
+  /** The caller closed, reopened or favourited a conversation (own sessions only): read it again; dm_id null: the whole list (their settings changed). */
+  dm_prefs_updated: { dm_id: string | null }
   typing: { channel_id: string; user_id: string }
   read_state: ReadStateUpdate
   message_create: Message
@@ -128,8 +137,20 @@ export interface ServerEventPayloads {
   screen_layers_wanted: ScreenLayersWanted
   voice_speaking: SpeakingState
   voice_mute_state: MuteState
-  voice_kicked: { channel_id: string; reason?: 'room_full' | 'missing_permission' }
+  voice_kicked: { channel_id: string; reason?: 'room_full' | 'missing_permission' | 'rules_not_accepted' | 'talk_rate_limited' | 'talk_unavailable' }
+  /** Who leads a temporary Talk now (null: nobody). */
+  talk_leader: { channel_id: string; leader_id: string | null }
+  /** Joining a Create-a-Talk lobby opened this Talk: join it like any other. */
+  talk_moved: { from_channel_id: string; channel_id: string }
   media_handshake: { channel_id: string; user_id: string; wire: string }
+  stage_hand: StageHand
+  stage_talk_power: StageTalkPower
+  talk_reaction: TalkReaction
+  /** Tags in a forum channel changed. */
+  forum_tags_changed: { channel_id: string }
+  event_update: CommunityeventsCommunityEvent
+  event_delete: { id: string }
+  event_reminder: { event_id: string; title: string; start_time: string; channel_id?: string }
 }
 
 export type EventUnion<Payloads> = { [K in keyof Payloads]: { type: K; payload: Payloads[K] } }[keyof Payloads]
@@ -159,6 +180,9 @@ export interface ClientEventPayloads {
   webrtc_screenshare_stop: Record<string, never>
   webrtc_camera_stop: Record<string, never>
   media_handshake: { channel_id: string; wire: string }
+  stage_hand: { raised: boolean; user_id?: string }
+  stage_talk_power: { user_id: string; granted: boolean }
+  talk_reaction: { emoji: string }
 }
 export type ClientEvent = EventUnion<ClientEventPayloads>
 export type ClientEventType = keyof ClientEventPayloads
@@ -169,7 +193,10 @@ export function isPresence(value: unknown): value is Presence {
 
 export function isVoiceUser(value: unknown): value is VoiceUser {
   return isRecord(value) && isTimestamp(value['joined_at'])
-    && typeof value['muted'] === 'boolean' && typeof value['deafened'] === 'boolean' && isAuthUser(value)
+    && typeof value['muted'] === 'boolean' && typeof value['deafened'] === 'boolean'
+    && (!hasOwn(value, 'talk_power') || typeof value['talk_power'] === 'boolean')
+    && (!hasOwn(value, 'hand_raised_at') || isTimestamp(value['hand_raised_at']))
+    && isAuthUser(value)
 }
 
 function isOptionalString(value: unknown, maxLen: number): boolean {
@@ -192,9 +219,6 @@ export function isIceCandidate(value: unknown): value is RTCIceCandidateInit {
 
 // Variant payloads are spread into stores, so every retained field must belong
 // to the validated variant. Go publishes these exact read-state/admin shapes.
-function onlyFields(value: Record<string, unknown>, fields: readonly string[]): boolean {
-  return Object.keys(value).every(key => fields.includes(key))
-}
 
 /** A screen share has at most this many layers (internal/sfu MaxLayers). */
 export const MAX_SCREEN_LAYERS = 3
@@ -224,6 +248,7 @@ const NON_OBJECT_CHECKS = new Map<string, (payload: unknown) => boolean>([
   ['member_joined', isAuthUser],
   ['message_create', isChatMessage],
   ['message_update', isChatMessage],
+  ['event_update', isCommunityeventsCommunityEvent],
   ['presence_snapshot', payload => isArrayOf(payload, isIdentifier) || isDictionaryOf(payload, isPresence)],
   ['voice_snapshot', payload => isDictionaryOf(payload, (users): users is Record<string, VoiceUser> => isDictionaryOf(users, isVoiceUser))]
 ])
@@ -269,24 +294,6 @@ function isInteractionResponse(payload: Record<string, unknown>): boolean {
   return isTimestamp(payload['created_at'])
 }
 
-const MODERATION_NOTICE_KINDS = new Set([
-  'timeout', 'timeout_removed', 'ban', 'message_deleted', 'messages_deleted'
-])
-
-function isValidModerationTiming(payload: Record<string, unknown>): boolean {
-  if (hasOwn(payload, 'until') && !isTimestamp(payload['until'])) return false
-  if (hasOwn(payload, 'duration_seconds') && !isInteger(payload['duration_seconds'])) return false
-  return true
-}
-
-function isModerationNotice(payload: Record<string, unknown>): boolean {
-  if (!MODERATION_NOTICE_KINDS.has(String(payload['kind']))) return false
-  if (!isString(payload['reason'], 400)) return false
-  if (hasOwn(payload, 'channel_name') && !isString(payload['channel_name'], 128)) return false
-  if (hasOwn(payload, 'count') && !isInteger(payload['count'])) return false
-  return isValidModerationTiming(payload)
-}
-
 // Events whose payload is a JSON object, by event type.
 const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['pong', payload => typeof payload['t'] === 'number' && Number.isFinite(payload['t'])],
@@ -311,16 +318,22 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
     : isAuthUser(payload)],
   ['member_timeout', payload => isIdentifier(payload['id']) && (payload['timeout_until'] === null || isTimestamp(payload['timeout_until']))
     && onlyFields(payload, ['id', 'timeout_until'])],
-  ['moderation_notice', isModerationNotice],
   ['kicked', payload => isString(payload['reason'], 400) && onlyFields(payload, ['reason'])],
+  ['reminder_update', payload => isIdentifier(payload['id']) && (payload['state'] === 'created' || payload['state'] === 'due' || payload['state'] === 'removed')
+    && onlyFields(payload, ['id', 'state'])],
+  ['scheduled_message_update', payload => isIdentifier(payload['id']) && isIdentifier(payload['channel_id'])
+    && ['created', 'updated', 'sent', 'failed', 'deleted'].includes(String(payload['state']))
+    && (!hasOwn(payload, 'reason') || isString(payload['reason'], 64)) && onlyFields(payload, ['id', 'channel_id', 'state', 'reason'])],
   ['saved_updated', payload => isIdentifier(payload['message_id']) && typeof payload['saved'] === 'boolean' && onlyFields(payload, ['message_id', 'saved'])],
   ['dm_created', payload => isIdentifier(payload['id']) && typeof payload['group'] === 'boolean' && isArrayOf(payload['members'], isDirectMessageMember)
     && isTimestamp(payload['created_at']) && (payload['last_message_at'] === null || isTimestamp(payload['last_message_at']))
     && isInteger(payload['unread_count']) && isInteger(payload['mention_count'])
     && (payload['last_read_at'] === null || isTimestamp(payload['last_read_at']))
-    && isChatNotifyLevel(payload['notify_level']) && typeof payload['can_send'] === 'boolean'],
+    && isChatNotifyLevel(payload['notify_level']) && typeof payload['can_send'] === 'boolean' && typeof payload['hidden'] === 'boolean'
+    && (payload['favourite_position'] === null || isInteger(payload['favourite_position']))],
   ['dm_member_added', payload => isIdentifier(payload['dm_id']) && isDirectMessageMember(payload['member'])],
   ['dm_member_removed', payload => isIdentifier(payload['dm_id']) && isDirectMessageMember(payload['member'])],
+  ['dm_prefs_updated', payload => (payload['dm_id'] === null || isIdentifier(payload['dm_id'])) && onlyFields(payload, ['dm_id'])],
   ['block_updated', payload => isIdentifier(payload['user_id']) && typeof payload['blocked'] === 'boolean' && onlyFields(payload, ['user_id', 'blocked'])],
   ['webrtc_offer', payload => payload['type'] === 'offer' && isString(payload['sdp'], 262_144)],
   ['webrtc_candidate', isIceCandidate],
@@ -338,9 +351,13 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['voice_speaking', payload => roomUser(payload) && typeof payload['active'] === 'boolean'],
   ['voice_mute_state', payload => roomUser(payload) && typeof payload['muted'] === 'boolean' && typeof payload['deafened'] === 'boolean'],
   ['voice_kicked', payload => isIdentifier(payload['channel_id'])
-    && (!hasOwn(payload, 'reason') || payload['reason'] === 'room_full' || payload['reason'] === 'missing_permission')],
+    && (!hasOwn(payload, 'reason') || VOICE_KICK_REASONS.has(payload['reason'] as string))],
+  ['talk_leader', payload => isIdentifier(payload['channel_id']) && (payload['leader_id'] === null || isIdentifier(payload['leader_id']))],
+  ['talk_moved', payload => isIdentifier(payload['from_channel_id']) && isIdentifier(payload['channel_id'])],
+  ...STAGE_EVENT_CHECKS,
   ['media_handshake', payload => isIdentifier(payload['channel_id']) && isIdentifier(payload['user_id'])
-    && isString(payload['wire'], 48_000) && payload['wire'] !== '']
+    && isString(payload['wire'], 48_000) && payload['wire'] !== ''],
+  ...NOTICE_EVENT_CHECKS
 ])
 
 // The check registered for an event type. The wire-controlled name is only
@@ -363,12 +380,15 @@ function isNoteEmbed(value: unknown): boolean {
   return isRecord(value) && (!hasOwn(value, 'title') || isString(value['title'], 1_000)) && (!hasOwn(value, 'description') || isString(value['description'], 8_000))
 }
 
+const VOICE_KICK_REASONS = new Set(['room_full', 'missing_permission', 'rules_not_accepted', 'talk_rate_limited', 'talk_unavailable'])
+
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
-  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
+  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'reminder_update', 'scheduled_message_update', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'dm_prefs_updated', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
-  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'media_handshake'
+  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'stage_hand', 'stage_talk_power', 'talk_reaction', 'media_handshake', 'forum_tags_changed',
+  'event_update', 'event_delete', 'event_reminder'
 ])
 
 /** Unknown event names stay ignorable for forward compatibility; malformed

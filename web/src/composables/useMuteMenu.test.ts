@@ -29,7 +29,8 @@ describe('stored setting', () => {
     const chat = useChatStore()
     chat.notifySettings = {
       channels: [{ channel_id: 'x', level: 'mentions', muted_until: null }],
-      categories: [{ category_id: 'x', level: 'mute', muted_until: '2026-01-01T13:00:00Z' }]
+      categories: [{ category_id: 'x', level: 'mute', muted_until: '2026-01-01T13:00:00Z' }],
+      server: { level: 'all', muted_until: null, suppress_everyone: false }
     }
     expect(storedSetting({ kind: 'channel', id: 'x' }).level).toBe('mentions')
     expect(storedSetting({ kind: 'category', id: 'x' })).toEqual({ level: 'mute', muted_until: '2026-01-01T13:00:00Z' })
@@ -49,9 +50,13 @@ describe('notification menu', () => {
   it('offers the levels and every duration, with category wording for a category', () => {
     const channel = notifyMenuItems({ kind: 'channel', id: 'c1' })
     const category = notifyMenuItems({ kind: 'category', id: 'k1' })
-    expect(channel.filter(i => i.type === 'radio').map(i => i.id)).toEqual(['notify-inherit', 'notify-all', 'notify-mentions'])
-    expect(submenu(channel).items.map(i => i.id)).toEqual(MUTE_DURATIONS.map(d => `mute-${d.id}`))
-    expect(submenu(channel).label).not.toBe(submenu(category).label)
+    expect(channel.filter(i => i.type === 'radio').map(i => i.id)).toEqual(['notify-inherit', 'notify-all', 'notify-mentions', 'notify-nothing'])
+    // "Nothing" is the open-ended mute, so the "Mute for…" list only has the timed ones.
+    expect(submenu(channel).items.map(i => i.id)).toEqual(MUTE_DURATIONS.filter(d => d.ms !== null).map(d => `mute-${d.id}`))
+    const label = (items: ContextMenuItem[]) => items.find(i => i.id === 'notify-inherit')?.label
+    // A channel follows its category; a category, or a channel outside any, follows the server default.
+    expect(label(channel)).not.toBe(label(category))
+    expect(label(notifyMenuItems({ kind: 'channel', id: 'c2', inCategory: false }))).toBe(label(category))
     expect(channel.find(i => i.id === 'notify-unmute')).toBeUndefined()
   })
 
@@ -64,7 +69,7 @@ describe('notification menu', () => {
     expect(set).toHaveBeenLastCalledWith('c1', 'mute', new Date(NOW.getTime() + 15 * 60_000).toISOString())
     items[3]!.action?.()
     expect(set).toHaveBeenLastCalledWith('c1', 'mute', new Date(NOW.getTime() + 24 * 3_600_000).toISOString())
-    items[4]!.action?.()
+    notifyMenuItems({ kind: 'channel', id: 'c1' }).find(i => i.id === 'notify-nothing')!.action?.()
     expect(set).toHaveBeenLastCalledWith('c1', 'mute', null)
     submenu(notifyMenuItems({ kind: 'category', id: 'k1' })).items[1]!.action?.()
     expect(setCategory).toHaveBeenCalledWith('k1', 'mute', new Date(NOW.getTime() + 3_600_000).toISOString())
@@ -73,13 +78,13 @@ describe('notification menu', () => {
   it('shows when a mute ends and offers to unmute', () => {
     const chat = useChatStore()
     const set = vi.spyOn(chat, 'setNotificationLevel').mockResolvedValue(true)
-    chat.notifySettings = { channels: [{ channel_id: 'c1', level: 'mute', muted_until: '2026-01-01T13:00:00Z' }], categories: [] }
+    chat.notifySettings = { channels: [{ channel_id: 'c1', level: 'mute', muted_until: '2026-01-01T13:00:00Z' }], categories: [], server: { level: 'all', muted_until: null, suppress_everyone: false } }
     const items = notifyMenuItems({ kind: 'channel', id: 'c1' })
     expect(submenu(items).value).toContain(formatMuteEnd('2026-01-01T13:00:00Z', NOW))
     items.find(i => i.id === 'notify-unmute')!.action?.()
     expect(set).toHaveBeenCalledWith('c1', 'inherit', null)
 
-    chat.notifySettings = { channels: [{ channel_id: 'c1', level: 'mute', muted_until: null }], categories: [] }
+    chat.notifySettings = { channels: [{ channel_id: 'c1', level: 'mute', muted_until: null }], categories: [], server: { level: 'all', muted_until: null, suppress_everyone: false } }
     expect(submenu(notifyMenuItems({ kind: 'channel', id: 'c1' })).value).toBeTruthy()
   })
 })

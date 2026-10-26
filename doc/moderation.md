@@ -21,6 +21,8 @@ the target out of reach between the check and the write.
 | Kick | *Kick members* | `/kick` in the composer, see [Kicks](#kicks) |
 | Remove from a Talk | *Disconnect members* | Removes the member from that Talk only; they stay signed in |
 | Read and close reports | *Manage reports* | See [Blocking and reports](#blocking-and-reports) |
+| Automod rules | *Administrator* | See [Automod](#automod); no new permission bit |
+| Moderation history and notes of a member | *Manage reports* | See [Moderation history and moderator notes](#moderation-history-and-moderator-notes) |
 
 ## Timeouts
 
@@ -97,7 +99,7 @@ entry `moderation.kick` (details: `reason`, `via: slash`). `/timeout` and
 ## Slow mode
 
 A text or Talk-chat channel can make members wait between two messages
-(`slow_mode_seconds`, 0 to 21600, set with the channel edit by *Manage
+(`slow_mode_seconds`, 0 to 86400, set with the channel edit by *Manage
 channels*; a channel chip shows it). It counts posts, thread replies and
 uploads of one member in that channel. Anyone who holds *Manage messages* in
 the channel (the Owner always) is exempt, and so are webhooks. The refusal is
@@ -105,6 +107,26 @@ the channel (the Owner always) is exempt, and so are webhooks. The refusal is
 transaction and concurrent posts of one member in one channel are serialized
 with an advisory lock, so a burst cannot slip several messages through the same
 gap.
+
+## Auto-delete
+
+*Manage channels* can let a channel forget: **Channel settings > Delete old
+messages** with *1 day*, *7 days*, *30 days* or *90 days* (off by default, and
+never for direct messages, which the database refuses). Turning it on asks
+for confirmation, because the deletion cannot be undone. The channel then
+shows a timer chip in its header and a line under it, so nobody writes
+unaware.
+
+A sweeper runs every ten minutes, removes the messages older than the period
+in batches of 200 (at most 25 batches per channel and run, the rest on the next
+run) and deletes their attachments through the same path as a deleted message.
+Clients get `message_delete` for each. **Pinned messages stay**, and so does a
+thread root while it has a reply that is newer than the period or pinned; the
+old replies of such a thread go. Turning auto-delete off stops a run at once.
+Every run that removed something is one `channel.auto_delete_run` audit entry
+with the counts; changing the setting is `channel.auto_delete_set`. The
+audit entries of `message.delete` are *not* written for these deletions (they
+would hold the text of everything the channel was told to forget).
 
 ## Message moderation
 
@@ -243,6 +265,127 @@ channel: a report of a private channel is readable by its handlers.
   copy (as the reported message or as context) and its links to reports are
   cut; the reports stay.
 
+## Automod
+
+Automod checks every new and edited message, and every sign-up, against rules
+the Owner or an Administrator sets under **Admin > Automod** (the tab shows
+only where the server lists the `automod` feature). Code:
+[`internal/automod`](../internal/automod/) (the rules), [`internal/moderation`](../internal/moderation/)
+(the REST routes).
+
+### Rules
+
+| Rule | What it does |
+|---|---|
+| **Blocked words** | Words and phrases, matched as **whole words**, without regard to case. `*` in an entry stands for any run of letters and digits (`cheat*` catches *cheat* and *cheating*). Spaces inside a phrase match any white space; invisible characters (zero-width spaces, soft hyphens) are ignored, so they do not hide a word. |
+| **Links** | One mode: block **every** link, allow **only** the listed domains, or block the **listed** domains. A domain covers its subdomains. A link is anything starting with `http://`, `https://` or `www.`; the host is read after any user name and port. |
+| **Mention spam** | A message with **more than N different** mentions (`@name`, `@all` and `@here` count once each; the same name twice counts once). |
+| **New accounts** | Accounts younger than a time (1 minute to 30 days) may not post links, may not attach files, may not do either, or may not post at all. |
+| **Raid protection** | More than N accounts joining within M seconds. Every account of that window, and everyone who joins while the raid lasts, is **timed out** for the restriction time (1 minute to a day), and **one** entry in the reports queue announces the raid. A moderator lifts a timeout like any other. At most one such rule. |
+
+Each rule except raid protection has an **action**: *block* (the message is
+refused with a 400 that names the rule, so the author knows why; nothing is
+stored) or *flag* (the message is delivered and only marked in the queue). It
+may also **time the author out** for a set time. A longer timeout the member
+already has is never shortened. Each rule has **exempt roles** and **exempt
+channels**, which skip it. The Owner, holders of *Administrator*, bots and
+incoming webhooks are never checked.
+
+A rule is edited as a whole (`PUT`); its kind cannot change. At most 25 rules.
+The rules are compiled once per version of the configuration and kept in
+memory; a change through the API takes effect on the next message, and a change
+made behind the server's back (a restore) within 30 seconds. The check in the
+send path reads no table except the creation time of the author's account,
+and that is remembered.
+
+Automod covers every way a member's message is created: plain messages,
+uploads, thread replies, polls, forwards, slash command replies and
+**edits** (an edit that breaks a blocking rule is refused and the message stays
+as it was).
+
+### Direct messages
+
+In a direct message only the **link** and **mention spam** rules apply. A hit
+there is queued **without any text**: the entry says which member broke which
+rule in a direct message, nothing more. Automod never keeps the text of a
+direct message (a blocked one is dropped, a flagged one stays where it was
+written, and the recipients can still report it themselves, which is then the
+only way a moderator reads it).
+
+### The queue
+
+Every hit is an entry in **Admin > Reports**, marked **Automod**, with the rule's
+name as it was when it hit (the entry outlives the rule) and `source: "automod"`
+in the API. It has no reporter. For a blocked message in a channel the entry
+keeps the refused text (and nothing around it: no context), exactly the part a
+member's report would keep; a flagged message is referenced by id. While an
+entry of one member and one rule is open, further hits only count up on it
+(`hit_count`), so a spammer cannot flood the queue; closing it lets the next
+hit open a new one. A raid alert has `kind: "alert"` and no message.
+Closing, dismissing and deleting work as for any report (*Manage reports*).
+
+Audit entries: `automod.rule_create`, `automod.rule_update`,
+`automod.rule_delete` (by the Administrator), `automod.timeout` and
+`automod.raid` (actor *Automod*). Messages and hits are not audited; the
+queue is their record.
+
+### Defaults
+
+New servers and upgraded ones start with the same **conservative** rules
+(migration 0066), all editable and deletable: mention spam above 10 mentions
+(block), new accounts under 10 minutes may not post links (block), raid
+protection at more than 10 joins in 10 seconds (restriction of 10 minutes,
+flag). *Blocked words* (empty word list) and *Links* are present and **off**.
+See [the upgrade notes](upgrade.md#automod-and-moderation-history).
+
+### API
+
+All under `/api/admin`, **Administrator** only: `GET /automod`,
+`POST /automod/rules`, `PUT /automod/rules/{id}`,
+`DELETE /automod/rules/{id}`. See [`api/openapi.json`](../api/openapi.json).
+
+## Moderation history and moderator notes
+
+A member's profile has a **Moderation** tab for everyone with *Manage reports*
+(never for yourself, for bots, or on a server without the
+`moderation.history` feature). It shows
+
+- a **timeline**: timeouts, ended timeouts, bans, unbans, expired bans, kicks,
+  removals from a Talk, role changes made by moderators, reports about the
+  member (category and status, never the reporter, the note or the text), and
+  automod hits (rule, outcome, count). It is read from the audit log and the
+  reports table; the latest 200 events;
+- **notes**: short private texts (up to 1000 characters, at most 100 per member)
+  that moderators write about a member. A note can **count as a strike**; the
+  strike count is the small badge on the tab.
+
+A moderator **edits and deletes their own** notes; an Administrator (or the
+Owner) **deletes any** note, and edits only their own. Nobody opens the history
+or the notes of themselves, whatever they hold.
+
+The timeline needs *Manage reports* only, not *View audit log*, even though it shows
+reasons, role changes and Talk kicks: handling a report needs the history. Grant
+*Manage reports* with that in mind.
+
+`GET /api/admin/users/{id}/moderation`, `POST .../moderation/notes`,
+`PUT` and `DELETE .../moderation/notes/{noteID}`, all *Manage reports*.
+
+### Moderator notes are moderator data
+
+- **Never visible to the member** they are about, in no response, event, list or
+  search, and **never in their data export** (the export holds what the
+  person wrote and what they filed, not what moderators keep about them).
+- **Audited without text**: `moderation.note_add`, `moderation.note_edit` and
+  `moderation.note_delete` are in the audit log for the Owner and
+  Administrators only, and never carry the note.
+- **Erasure.** When an account is erased the notes **stay**, because they are
+  the moderators' record (for example against a returning member): the member
+  they are about is shown as the account's tombstone, "Deleted member", and a
+  note written by an erased moderator shows "Deleted member" as its author.
+  The notes are not erased with the account, and the privacy page lists them
+  under *Moderation records*; an Administrator can delete any of them.
+  Operators who need a shorter retention delete notes by hand.
+
 ## Audit log
 
 An append-only record of what was done to the instance and by whom.
@@ -279,12 +422,15 @@ requests leave no entry. Reading the log is not recorded.
 | `message.delete` | A message is deleted, by its author or a moderator | The **full text**, the attachment names, types and sizes (not the files), author, channel, send time, `moderator` (true when someone else deleted it) and the thread replies (author and text, up to 50) |
 | `message.edit` | An author edits a message | Text `before` and `after`, author, channel |
 | `message.edit_history_view` | A moderator opens the earlier versions of **someone else's** message | Message, author, channel and how many versions were shown, not their text. One entry per reader and message every ten minutes; reading your own message leaves none |
-| `poll.end` | A moderator ends a poll that someone else posted | Message, author, channel and the question. An author ending their own poll is not audited |
+| `poll.end` | A moderator ends a poll that someone else posted | Message, author, channel and the question. An author ending their own poll is not audited. No entry of any poll ever holds a vote: an anonymous poll does not store who chose what |
+| `channel.auto_delete_set` | Someone with *Manage channels* turns a channel's auto-delete on, off or to another period | The channel with its settings before and after (`auto_delete_days`) |
+| `channel.auto_delete_run` | The sweeper removed messages of a channel | The channel, the period (`days`), how many `messages` and `attachments` went, and whether the run finished (`complete`). Written by the server itself, without an actor; a run that removes nothing writes nothing. Never the text |
 | `voice.join`, `voice.leave` | A member enters or leaves a Talk | Member and Talk with the time. A reload within the grace period is neither. High volume on a busy server: filter by the *Talk presence* group |
 | `report.create`, `report.resolve`, `report.delete` | A member reports a message; a moderator closes or deletes the report | The report id and category (and the closing status). Never message text or notes. See [Blocking and reports](#blocking-and-reports) |
 | `auth.login` | Successful sign-in (browser and native) | The member |
 | `auth.login_failed`, `auth.login_locked` | A wrong password, or a blocked attempt, for an **existing** account | The member. At most one entry per account and kind per minute, and no address, password or typed name; a name that is no account is not stored at all |
 | `auth.register`, `auth.password_change`, `auth.logout_all` | Own-account events | The member |
+| `auth.session_revoke`, `auth.sessions_revoke_others` | A member signs out one of their sessions, or all others, under *Settings* > *Sessions* | The member |
 | `auth.email_set`, `auth.email_remove`, `auth.email_verified`, `auth.password_reset_mail` | A member sets, removes or confirms an e-mail address, or resets the password through the link in a mail | The member. The address itself is never stored in the log |
 | `auth.two_factor_enabled`, `auth.two_factor_disabled`, `auth.recovery_codes_regenerated`, `auth.recovery_code_used` | A member changes or uses their second factor | The member. Never a code or secret |
 | `auth.two_factor_failed`, `auth.two_factor_alert` | A wrong second-step code (at most one entry per account and minute); five or more not yet reported | The member. No code |

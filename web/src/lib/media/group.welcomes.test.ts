@@ -53,9 +53,9 @@ async function deliver(groups: Map<string, MediaGroup>, from: string, wires: Uin
 /** Seals as `sender` with its keys `left` and opens with `right`. */
 async function roundTrip(left: EpochKeys | null, right: EpochKeys | null, epoch: number, sender = aliceId) {
   if (!left || !right) throw new Error('expected epoch keys')
-  const packet = await sealFrame({ keys: left, epoch, stream: 1, counter: 0, channelId, senderId: sender, plaintext: new Uint8Array([9, 8, 7]) })
+  const packet = await sealFrame({ keys: left, epoch, stream: 1, counter: 0, channelId, senderId: sender, plaintext: new Uint8Array([9, 8, 7]), source: 0 })
   if (!packet) throw new Error('expected a sealed frame')
-  const opened = await openFrame({ keys: new Map([[epoch, right]]), channelId, senderId: sender, packet, replay: new ReplayWindow() })
+  const opened = await openFrame({ keys: new Map([[epoch, right]]), channelId, senderId: sender, packet, replay: new ReplayWindow(), source: 0 })
   return opened ? [...opened] : null
 }
 
@@ -139,7 +139,7 @@ describe('what a flood or a forgery can reset', () => {
 
   it('resets at most once per window and then waits longer', async () => {
     const { alice, bob, roster, carol, dave } = await ahead()
-    vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: Date.now() })
     const resets: number[] = []
     for (let second = 0; second < 100; second++) {
       if ((await bob.recover(roster)).wires.length) resets.push(second)
@@ -155,7 +155,7 @@ describe('what a flood or a forgery can reset', () => {
     const { alice, bob } = await joinedPair()
     const notices: string[] = []
     bob.onNotice(notice => notices.push(notice))
-    vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: Date.now() })
     const roster = [aliceId, bobId]
     const removal = async () => {
       const removed = await alice.sync([aliceId])

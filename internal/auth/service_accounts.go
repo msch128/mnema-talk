@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -56,6 +57,8 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 	if err != nil {
 		return nil, err
 	}
+	// Raid protection counts the join and may restrict the newcomer.
+	automod.Of(p).OnJoin(ctx, user.ID)
 	return user, nil
 }
 
@@ -217,15 +220,40 @@ func SetPresence(ctx context.Context, p *db.Pool, userID uuid.UUID, presence str
 	return u, err
 }
 
-// SetStatusText stores userID's status line; an empty text clears it.
-func SetStatusText(ctx context.Context, p db.Querier, userID uuid.UUID, text string) (*User, error) {
+// MaxStatusExpiry is how far ahead a status line may be set to clear itself.
+const MaxStatusExpiry = 366 * 24 * time.Hour
+
+// checkStatusExpiry accepts nil (never) or a time between now and
+// MaxStatusExpiry ahead; an empty status carries no expiry.
+func checkStatusExpiry(text string, expiresAt *time.Time) (*time.Time, error) {
+	if expiresAt == nil || text == "" {
+		return nil, nil
+	}
+	now := time.Now()
+	if !expiresAt.After(now) {
+		return nil, httpx.ErrInvalidInput("expires_at must be in the future")
+	}
+	if expiresAt.After(now.Add(MaxStatusExpiry)) {
+		return nil, httpx.ErrInvalidInput("expires_at is too far ahead")
+	}
+	t := expiresAt.UTC().Truncate(time.Second)
+	return &t, nil
+}
+
+// SetStatusText stores userID's status line; an empty text clears it. A
+// non-nil expiresAt makes the line clear itself at that time.
+func SetStatusText(ctx context.Context, p db.Querier, userID uuid.UUID, text string, expiresAt *time.Time) (*User, error) {
 	text, err := httpx.CleanText("status_text", text, MaxStatusTextLen, false)
 	if err != nil {
 		return nil, err
 	}
+	expiresAt, err = checkStatusExpiry(text, expiresAt)
+	if err != nil {
+		return nil, err
+	}
 	u, err := scanUser(p.QueryRow(ctx, `
-		UPDATE users SET status_text = $1, updated_at = NOW() WHERE id = $2
-		RETURNING `+userColumns, text, userID))
+		UPDATE users SET status_text = $1, status_expires_at = $3, updated_at = NOW() WHERE id = $2
+		RETURNING `+userColumns, text, userID, expiresAt))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound("user not found")
 	}

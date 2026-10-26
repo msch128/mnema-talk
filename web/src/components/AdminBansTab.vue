@@ -10,6 +10,7 @@ import { arrayDecoder } from '../types/validation'
 import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
+import EmptyState from './EmptyState.vue'
 
 const toasts = useToastStore()
 const bans = ref<AuthBan[]>([])
@@ -56,7 +57,7 @@ onMounted(load)
     </div>
 
     <div class="divide-y divide-mnema-hairline overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
-      <div v-if="!bans.length && !loading" class="p-4 text-sm text-mnema-tertiary">{{ $t('moderation.noBans') }}</div>
+      <EmptyState v-if="!bans.length && !loading" :icon="Gavel" :text="$t('moderation.noBans')" :hint="$t('moderation.noBansHint')" data-testid="bans-empty" />
       <div v-for="ban in bans" :key="ban.user_id" class="flex items-center justify-between gap-3 px-4 py-2.5 text-sm" :data-testid="`ban-${ban.user_id}`">
         <div class="min-w-0 space-y-0.5">
           <div class="flex min-w-0 items-center gap-2">

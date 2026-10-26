@@ -9,6 +9,11 @@ const toastStore = useToastStore()
 const icons: Record<Toast['type'], Component> = { error: AlertCircle, success: Check, info: Info }
 const tones: Record<Toast['type'], string> = { error: 'text-mnema-danger', success: 'text-mnema-accent', info: 'text-mnema-mint' }
 
+// A plain toast closes with a click; errors and toasts with an action have their own button.
+function dismissPlain(toast: Toast) {
+  if (toast.type !== 'error' && !toast.action) toastStore.dismiss(toast.id)
+}
+
 function runAction(toast: Toast) {
   toast.action?.onClick?.()
   toastStore.dismiss(toast.id)
@@ -26,7 +31,12 @@ function runAction(toast: Toast) {
       :role="toast.type === 'error' ? 'alert' : 'status'"
       data-toast
       :data-type="toast.type"
-      class="pointer-events-none grid grid-cols-[1rem_minmax(0,1fr)_1.75rem] items-start gap-x-2.5 gap-y-2 rounded-lg bg-mnema-elevated py-3 pl-3.5 pr-2 shadow-popover"
+      @mouseenter="toastStore.pause(toast.id)"
+      @mouseleave="toastStore.resume(toast.id)"
+      @focusin="toastStore.pause(toast.id)"
+      @focusout="toastStore.resume(toast.id)"
+      @click="dismissPlain(toast)"
+      class="pointer-events-auto grid grid-cols-[1rem_minmax(0,1fr)_1.75rem] items-start gap-x-2.5 gap-y-2 rounded-lg bg-mnema-elevated py-3 pl-3.5 pr-2 shadow-popover"
     >
       <component :is="icons[toast.type] || Info" :class="['col-start-1 row-start-1 mt-0.5 h-4 w-4', tones[toast.type] || tones.info]" />
       <div class="col-start-2 row-start-1 min-w-0 text-sm">

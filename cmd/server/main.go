@@ -11,7 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/config"
@@ -80,7 +79,6 @@ func runWithContext(ctx context.Context) error {
 	}, 2*time.Second, time.Minute)
 	media.StartRetentionWorker(ctx, pool, store, cfg.MediaRetentionDays)
 	media.StartOrphanScan(ctx, pool, store)
-	media.StartAvatarReencode(ctx, pool, store, cfg.S3Bucket, &audit.Log{DB: pool})
 
 	voice, closeVoice, err := startVoice(ctx, cfg)
 	if err != nil {

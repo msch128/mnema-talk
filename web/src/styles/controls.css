@@ -188,18 +188,18 @@ select {
   min-height: 2rem;
 }
 
-input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='color'], [type='button'], [type='submit'], [type='hidden'], [type='image'], [type='reset']):hover:not(:focus, :disabled, [aria-invalid='true']),
+input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='color'], [type='button'], [type='submit'], [type='hidden'], [type='image'], [type='reset'], [data-bare]):hover:not(:focus, :disabled, [aria-invalid='true']),
 textarea:not([data-bare]):hover:not(:focus, :disabled, [aria-invalid='true']),
 select:hover:not(:focus, :disabled, [aria-invalid='true']) {
   border-color: color-mix(in srgb, var(--color-mnema-border-field) 55%, var(--color-mnema-muted));
 }
 
-input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='color'], [type='button'], [type='submit'], [type='hidden'], [type='image'], [type='reset']):focus-visible,
+input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='color'], [type='button'], [type='submit'], [type='hidden'], [type='image'], [type='reset'], [data-bare]):focus-visible,
 textarea:not([data-bare]):focus-visible,
 select:focus-visible {
   outline: none;
-  border-color: var(--color-mnema-accent);
-  box-shadow: 0 0 0 3px rgb(45 167 113 / 0.2);
+  border-color: var(--focus-within-border);
+  box-shadow: none;
 }
 
 input[aria-invalid='true'],

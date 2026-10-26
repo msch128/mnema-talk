@@ -34,6 +34,7 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 	}
 	id := ch.ID
 	c.setVoice(&id)
+	seat.joined.TalkPower, seat.joined.HandRaisedAt = h.seatStage(c.User.ID, id)
 
 	if !h.finalizeVoiceSeat(c, ch.ID) {
 		return

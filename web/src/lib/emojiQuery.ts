@@ -36,3 +36,31 @@ export function applyEmoji(text: string, start: number, caret: number, name: str
   const insert = `:${name}:` + (after.startsWith(' ') ? '' : ' ')
   return { text: before + insert + after, caret: before.length + insert.length }
 }
+
+/** A standard emoji offered for the typed ":que": its shortcode and glyph. */
+export interface StandardEmoji {
+  code: string
+  glyph: string
+}
+
+/** Shortcodes that start with the query, then those that contain it (sorted table in, ranked list out). */
+export function suggestStandardEmoji(query: string, table: Readonly<Record<string, string>>, limit = 8): StandardEmoji[] {
+  const q = query.toLowerCase()
+  const starts: StandardEmoji[] = []
+  const contains: StandardEmoji[] = []
+  for (const [code, glyph] of Object.entries(table)) {
+    if (code.startsWith(q)) starts.push({ code, glyph })
+    else if (code.includes(q)) contains.push({ code, glyph })
+    if (starts.length >= limit) break
+  }
+  return [...starts, ...contains].slice(0, limit)
+}
+
+/** Replaces the ":que" at start..caret with the glyph and a space, like applyEmoji does for a custom emoji. */
+export function applyStandardEmoji(text: string, start: number, caret: number, glyph: string) {
+  const before = text.slice(0, start)
+  let after = text.slice(caret)
+  after = after.slice(after.match(/^[a-z0-9_]*/i)?.[0].length ?? 0)
+  const insert = glyph + (after.startsWith(' ') ? '' : ' ')
+  return { text: before + insert + after, caret: before.length + insert.length }
+}

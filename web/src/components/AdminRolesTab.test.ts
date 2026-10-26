@@ -36,9 +36,10 @@ function setup(owner = true) {
     if (path === '/api/roles') return roles
     if (path === '/api/admin/roles' && options?.method === 'POST') return role(9, { name: 'New role', position: 1 })
     if (path.startsWith('/api/admin/roles/') && options?.method === 'PATCH') return role(1)
+    if (path.endsWith('/view-as')) return { role_id: path.split('/')[4], role_name: 'Middle', administrator: false, categories: [], uncategorized: [{ id: fixtureId(90), number: 1, name: 'welcome', type: 'text', can_join: false, permissions: ['view_channel'] }] }
     return undefined
   })
-  return mount(AdminRolesTab)
+  return mount(AdminRolesTab, { attachTo: document.body })
 }
 const row = (w: ReturnType<typeof mount>, name: string) => w.find(`[data-role="${name}"]`)
 
@@ -47,6 +48,7 @@ beforeEach(() => {
   setLocale('en')
   apiMock.mockReset()
   confirmMock.mockReset()
+  document.body.replaceChildren()
   roles = [role(4, { name: 'Top' }), role(2, { name: 'Middle', color: 0xff0000, hoist: true, permissions: PERMISSION_BITS.speak }), role(1, { name: 'Bottom' }), everyone]
 })
 
@@ -59,7 +61,7 @@ describe('AdminRolesTab', () => {
     expect(w.text()).toContain('What every member has.')
     // only the permissions of @everyone are editable
     expect(w.find('input[maxlength="32"]').exists()).toBe(false)
-    expect(w.findAll('[role="switch"]')).toHaveLength(23)
+    expect(w.findAll('[role="switch"]')).toHaveLength(25)
   })
 
   it('shows the empty state', async () => {
@@ -300,4 +302,74 @@ describe('AdminRolesTab permission list', () => {
     expect(new Set(shown)).toEqual(new Set(Object.keys(PERMISSION_BITS).filter(key => key !== 'manage_webhooks')))
     expect(shown).toHaveLength(new Set(shown).size)
   })
+
+  it('opens a read-only preview of the server as the selected role and exits it', async () => {
+    const w = setup()
+    await flushPromises()
+    await row(w, 'Middle').find('button[aria-pressed]').trigger('click')
+    await w.get('[data-testid="role-view-as"]').trigger('click')
+    await flushPromises()
+    expect(apiMock).toHaveBeenCalledWith(`/api/admin/roles/${roles[1]!.id}/view-as`, expect.anything())
+    expect(document.body.querySelector('[data-testid="view-as-sidebar"]')?.textContent).toContain('welcome')
+    document.body.querySelector<HTMLElement>('[data-testid="view-as-exit"]')?.click()
+    await flushPromises()
+    expect(document.body.querySelector('[data-testid="view-as"]')).toBeNull()
+    w.unmount()
+  })
 })
+
+describe('AdminRolesTab unsaved edits', () => {
+  const pick = async (w: ReturnType<typeof mount>, name: string) => {
+    await row(w, name).find('button[aria-pressed]').trigger('click')
+    await flushPromises()
+  }
+
+  it('marks unsaved edits, offers to discard them and clears the mark on discard', async () => {
+    const w = setup()
+    await flushPromises()
+    await pick(w, 'Middle')
+    expect(w.find('[data-testid="role-dirty"]').exists()).toBe(false)
+    await w.find('input[maxlength="32"]').setValue('Renamed')
+    expect(w.get('[data-testid="role-dirty"]').text()).toBe('Unsaved changes')
+    await w.get('[data-testid="role-discard"]').trigger('click')
+    expect(w.find<HTMLInputElement>('input[maxlength="32"]').element.value).toBe('Middle')
+    expect(w.find('[data-testid="role-dirty"]').exists()).toBe(false)
+  })
+
+  it('asks before another role replaces unsaved edits, and keeps them on cancel', async () => {
+    const w = setup()
+    await flushPromises()
+    await pick(w, 'Middle')
+    await w.find('input[maxlength="32"]').setValue('Renamed')
+    confirmMock.mockResolvedValueOnce(false)
+    await pick(w, 'Bottom')
+    expect(confirmMock).toHaveBeenCalledTimes(1)
+    expect(w.find<HTMLInputElement>('input[maxlength="32"]').element.value).toBe('Renamed')
+    confirmMock.mockResolvedValueOnce(true)
+    await pick(w, 'Bottom')
+    expect(w.find<HTMLInputElement>('input[maxlength="32"]').element.value).toBe('Bottom')
+  })
+
+  it('switches without asking when nothing changed', async () => {
+    const w = setup()
+    await flushPromises()
+    await pick(w, 'Middle')
+    await pick(w, 'Bottom')
+    expect(confirmMock).not.toHaveBeenCalled()
+    expect(w.find<HTMLInputElement>('input[maxlength="32"]').element.value).toBe('Bottom')
+  })
+
+  it('narrows the permission list by what is typed', async () => {
+    const w = setup()
+    await flushPromises()
+    const all = w.findAll('[data-permission]').length
+    await w.get('[data-testid="role-permission-search"]').setValue('speak')
+    const some = w.findAll('[data-permission]').length
+    expect(some).toBeGreaterThan(0)
+    expect(some).toBeLessThan(all)
+    await w.get('[data-testid="role-permission-search"]').setValue('zzzz-nothing')
+    expect(w.findAll('[data-permission]')).toHaveLength(0)
+    expect(w.get('[data-testid="role-permission-none"]').text()).toBe('No permission matches.')
+  })
+})
+

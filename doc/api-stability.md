@@ -24,15 +24,18 @@ in any release.
 | **Backup layout** | [operations.md](operations.md#backups-and-restore) | What the backup and restore scripts write and read. |
 
 `GET /api/health` also lists the optional features a server has in `features`.
-Since 1.1 they are `blocks`, `dm`, `reports`, `saved`, `forward`,
-`search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`
+In 1.1 they were `blocks`, `dm`, `reports`, `saved`, `forward`,
+`search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`; 1.2 adds `search.filters.v3`, `talks.lobby`,
+`status.expiry`, `reminders`, `messages.scheduled`, `polls.anonymous`, `channels.auto_delete`, `automod`, `moderation.history`,
+`ops.status`, `import.discord`, `talks.stage`, `talks.reactions`, `channels.forum`, `events`, `notify.levels.v2` and `dm.v2`
 (`internal/server/health.go`). A name never changes meaning and is never
 removed in 1.x; a client treats a missing list as "none" (a 1.0.x server sends
 no list) and hides what is not listed. A new feature adds a name, never a
 `web_client_api` bump.
 
 Permission bits are public too. 1.1 added *Manage reports* (`1 << 21`), *Send
-direct messages* (`1 << 22`) and *Kick members* (`1 << 23`); the meaning of a
+direct messages* (`1 << 22`) and *Kick members* (`1 << 23`); 1.2 adds *Manage
+stage* (`1 << 24`) and *Manage events* (`1 << 25`). The meaning of a
 bit never changes ([roles and permissions](roles-and-permissions.md)).
 
 Documented behaviour is part of the contract, such as permission checks, limits
@@ -75,7 +78,7 @@ These change whenever the code needs it, also in a patch release:
 
 Not breaking: adding an optional request field, a response field, an event, an
 endpoint, an enum value (clients must ignore what they do not know), a metric or
-a variable.
+a variable, or widening a value range (a larger maximum a response may carry).
 
 ## Versioning rules
 
@@ -101,7 +104,11 @@ a variable.
   [desktop-trusted-client.md](desktop-trusted-client.md).
 - **Security fixes** may change a public behaviour when a vulnerability cannot be
   closed otherwise. The release notes say so, and the change is marked
-  `fix(security):`.
+  `fix(security):`. Example: 1.2.0 stops sending and opening media frame
+  format 2 and raises the bundle `security_floor` to 1.2.0 (RT-4); the REST API,
+  the events, `web_client_api` and the health features are untouched, and the
+  clients that can no longer join calls are listed in
+  [upgrade.md](upgrade.md#11x--120).
 
 ## How it is enforced
 

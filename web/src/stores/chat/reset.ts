@@ -2,8 +2,9 @@ import { useToastStore } from '../toast'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
 import { useBlocksStore } from '../blocks'
+import { useLaterStore } from '../later'
 import { emptyWindow } from '../../lib/messageWindow'
-import type { Cx } from './state'
+import { emptyNotificationSettings, type Cx } from './state'
 import { resetWindow, setWindow } from './messageWindow'
 import { closeWebSocket } from './socket'
 import { closeThread } from './threads'
@@ -41,8 +42,11 @@ export function resetCommunityState(cx: Cx) {
   cs.members.value = []
   cs.dms.value = []
   cs.dmsLoaded.value = false
+  cs.dmSettings.value = { mute_all: false, list_collapsed: false }
+  cs.dmSettingsLoaded.value = false
   ++cs.dmsFetchSeq
   useBlocksStore().reset()
+  useLaterStore().reset()
   usePermissionsStore().reset()
   cs.presenceById.value = {}
   cs.activityById.value = {}
@@ -51,7 +55,7 @@ export function resetCommunityState(cx: Cx) {
   cs.memberProfileUpdates.clear()
   cs.countedReplies.clear()
   cs.readStates.value = {}
-  cs.notifySettings.value = { channels: [], categories: [] }
+  cs.notifySettings.value = emptyNotificationSettings()
   clearTimeout(cs.notifyExpiryTimer)
   cs.activeChannelLastReadAt.value = null
   cs.voiceChatReading.value = false
@@ -73,6 +77,7 @@ export function resetCommunityState(cx: Cx) {
   cs.webrtcOfferHandler = null
   cs.webrtcCandidateHandler = null
   cs.voiceKickedHandler = null
+  cs.talkMovedHandler = null
   const version = useAppVersionStore()
   version.followAdminUpdates(() => false)
   version.setServerVersion('')

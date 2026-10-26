@@ -6,11 +6,11 @@ import { useToastStore } from '../toast'
 import { t } from '../../i18n'
 import { PAGE_SIZE, WINDOW_CAP, emptyWindow, fromLatest, fromAround, prependOlder, appendNewer, appendLive, removeMessage } from '../../lib/messageWindow'
 import { markPreviewEdited, markPreviewDeleted } from '../../lib/replies'
-import { navigate, voiceMessagePath } from '../../lib/router'
+import { navigate } from '../../lib/router'
 import { MAX_PENDING_LIVE } from './types'
 import type { ThreadRoot, MessageWindow } from './types'
 import type { ChatState, Cx } from './state'
-import { isVoiceChannel } from './channels'
+import { linkTo } from './channels'
 import { markActiveChannelReadIfReading } from './readState'
 import { openThread } from './threads'
 
@@ -167,13 +167,13 @@ export async function jumpToMessage(cx: Cx, id: string) {
  * Navigates to any message (search result, notification): thread replies
  * open their thread on top of the root message, the only valid jump anchor.
  */
-export function goToMessage(cx: Cx, msg: Message) {
+export function goToMessage(cx: Cx, msg: Pick<Message, 'id' | 'channel_id' | 'parent_id'>) {
   const { cs } = cx
   if (!msg?.id || !msg.channel_id) return
   const rootId = msg.parent_id || msg.id
   cs.pendingThreadOpen = msg.parent_id ? { channelId: msg.channel_id, rootId } : null
   // A voice channel's messages live in the chat next to its Talk.
-  navigate(isVoiceChannel(cx, msg.channel_id) ? voiceMessagePath(msg.channel_id, rootId) : `/c/${msg.channel_id}/m/${rootId}`)
+  navigate(linkTo(cx, msg.channel_id, { messageId: rootId }))
 }
 
 function rememberJump(cs: ChatState, id: string) {

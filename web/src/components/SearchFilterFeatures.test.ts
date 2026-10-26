@@ -45,4 +45,25 @@ describe('search filters and the server feature list', () => {
     expect(filtersUnsupported.value).toBe(false)
     w.unmount()
   })
+
+  it('hides the v3 filter row and sort toggle without search.filters.v3', async () => {
+    const features = useServerFeaturesStore()
+    features.list = ['dm', 'search.filters.v2']
+    features.loaded = true
+    const w = mount(SearchModal, { ...mountOpts, attachTo: document.body, props: { modelValue: true } })
+    await nextTick()
+    expect(document.querySelector('[data-search-filter-row]')).toBeNull()
+    expect(document.querySelector('[data-testid="search-results-header"]')).toBeNull()
+    w.unmount()
+  })
+
+  it('shows v3 features when search.filters.v3 is present', async () => {
+    const features = useServerFeaturesStore()
+    features.list = ['dm', 'search.filters.v2', 'search.filters.v3']
+    features.loaded = true
+    const w = mount(SearchModal, { ...mountOpts, attachTo: document.body, props: { modelValue: true } })
+    await nextTick()
+    expect(document.querySelector('[data-search-filter-row]')).not.toBeNull()
+    w.unmount()
+  })
 })

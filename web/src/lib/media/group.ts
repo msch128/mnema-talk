@@ -39,6 +39,15 @@ import {
 export { frameVerifiers, onlyRenewsLeaf, keepsEveryLeaf } from './groupTree'
 export type { MediaStep } from './groupParams'
 
+/** The MLS message in a handshake wire; null for bytes that are none (the decoder throws on some). */
+function decodeHandshake(wire: Uint8Array): MlsMessage | null {
+  try {
+    return decodeMlsMessage(wire, 0)?.[0] ?? null
+  } catch {
+    return null
+  }
+}
+
 /**
  * One browser's membership in one voice channel.
  * Whoever finds the room empty founds the group; everyone who arrives later
@@ -77,9 +86,8 @@ export class MediaGroup extends GroupSync {
     this.dropSelfUpdate(true)
     if (isHeartbeat(wire)) return this.beatNow(sender, wire)
     if (isCapability(wire)) return this.capNow(sender, wire)
-    const decoded = decodeMlsMessage(wire, 0)
-    if (!decoded) return this.step()
-    const [message] = decoded
+    const message = decodeHandshake(wire)
+    if (!message) return this.step()
     this.heard.add(sender)
     this.lastHandshakeAt = clock.now()
     const members = this.state ? treeMembers(this.state) : null

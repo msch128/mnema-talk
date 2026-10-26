@@ -1,5 +1,6 @@
 import { requireValue } from '../test-fixtures.fixture'
 import { describe, it, expect, beforeEach } from 'vitest'
+import { vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import ToastHost from './ToastHost.vue'
@@ -58,4 +59,35 @@ it('uses informational icon and tone for a malformed runtime toast type', () => 
   expect(w.find('[data-toast] svg').classes()).toContain('text-mnema-mint')
   expect(w.find('[data-toast]').attributes('role')).toBe('status')
   w.unmount()
+})
+
+describe('ToastHost interaction', () => {
+  it('pauses a plain toast under the pointer and closes it with a click', async () => {
+    vi.useFakeTimers()
+    const toasts = useToastStore()
+    toasts.success('Saved')
+    const w = mount(ToastHost)
+    const item = w.get('[data-toast]')
+    await item.trigger('mouseenter')
+    vi.advanceTimersByTime(20000)
+    expect(toasts.toasts).toHaveLength(1)
+    await item.trigger('mouseleave')
+    vi.advanceTimersByTime(5100)
+    expect(toasts.toasts).toHaveLength(0)
+    toasts.info('Second')
+    await w.vm.$nextTick()
+    await w.get('[data-toast]').trigger('click')
+    expect(toasts.toasts).toHaveLength(0)
+    vi.useRealTimers()
+    w.unmount()
+  })
+
+  it('keeps an error open when its text is clicked', async () => {
+    const toasts = useToastStore()
+    toasts.error('Upload failed')
+    const w = mount(ToastHost)
+    await w.get('[data-toast]').trigger('click')
+    expect(toasts.toasts).toHaveLength(1)
+    w.unmount()
+  })
 })

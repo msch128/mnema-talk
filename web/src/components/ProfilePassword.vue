@@ -6,6 +6,8 @@ import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
+import FormField from './FormField.vue'
+import PasswordInput from './PasswordInput.vue'
 
 // Changing one's own password (own profile only).
 const authStore = useAuthStore()
@@ -57,27 +59,15 @@ async function savePassword() {
     </div>
 
     <form v-if="isChangingPassword" class="space-y-3" @submit.prevent="savePassword">
-      <input
-        v-model="currentPassword"
-        type="password"
-        autocomplete="current-password"
-        :placeholder="$t('profile.currentPassword')" :aria-label="$t('profile.currentPassword')"
-        class="w-full text-sm px-3 py-2 rounded-md bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent"
-      />
-      <input
-        v-model="newPassword"
-        type="password"
-        autocomplete="new-password"
-        :placeholder="$t('profile.newPassword', { count: MIN_PASSWORD_LENGTH })" :aria-label="$t('profile.newPassword', { count: MIN_PASSWORD_LENGTH })"
-        class="w-full text-sm px-3 py-2 rounded-md bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent"
-      />
-      <input
-        v-model="newPasswordRepeat"
-        type="password"
-        autocomplete="new-password"
-        :placeholder="$t('profile.repeatPassword')" :aria-label="$t('profile.repeatPassword')"
-        class="w-full text-sm px-3 py-2 rounded-md bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent"
-      />
+      <FormField v-slot="{ id }" :label="$t('profile.currentPassword')">
+        <PasswordInput :id="id" v-model="currentPassword" autocomplete="current-password" />
+      </FormField>
+      <FormField v-slot="{ id }" :label="$t('profile.newPassword', { count: MIN_PASSWORD_LENGTH })">
+        <PasswordInput :id="id" v-model="newPassword" autocomplete="new-password" />
+      </FormField>
+      <FormField v-slot="{ id }" :label="$t('profile.repeatPassword')">
+        <PasswordInput :id="id" v-model="newPasswordRepeat" autocomplete="new-password" />
+      </FormField>
       <div class="flex justify-end items-center gap-2 pt-1">
         <button
           type="button"

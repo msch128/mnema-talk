@@ -29,6 +29,10 @@ type VoiceUser struct {
 	auth.User
 	JoinedAt time.Time `json:"joined_at"`
 	MuteState
+	// TalkPower is whether the member may speak in a Stage; HandRaisedAt is
+	// when they raised their hand there. Both stay empty outside a Stage.
+	TalkPower    bool       `json:"talk_power,omitempty"`
+	HandRaisedAt *time.Time `json:"hand_raised_at,omitempty"`
 }
 
 // voiceSnapshot copies the current voice rooms (channel → users).
@@ -40,7 +44,8 @@ func (h *Hub) voiceSnapshot() map[uuid.UUID]map[uuid.UUID]VoiceUser {
 		cp := make(map[uuid.UUID]VoiceUser, len(users))
 		for id, u := range users {
 			k := voiceKey{id, chID}
-			cp[id] = VoiceUser{User: u.Public(), JoinedAt: h.voiceSince[k], MuteState: h.voiceMute[k]}
+			power, hand := h.stage.view(k)
+			cp[id] = VoiceUser{User: u.Public(), JoinedAt: h.voiceSince[k], MuteState: h.voiceMute[k], TalkPower: power, HandRaisedAt: hand}
 		}
 		out[chID] = cp
 	}

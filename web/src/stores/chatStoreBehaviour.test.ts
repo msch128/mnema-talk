@@ -336,7 +336,7 @@ describe('history and races', () => {
     const chat = setup(), root = message({ id: fixtureId(10) })
     chat.messages = [root]
     chat.goToMessage(message({ parent_id: root.id }))
-    expect(currentRoute.value).toEqual(expect.objectContaining({ channelId: ch.id, messageId: root.id }))
+    expect(currentRoute.value).toEqual(expect.objectContaining({ channelRef: ch.id, messageId: root.id }))
     http.handle = () => ({ root, replies: [message({ parent_id: root.id })] })
     expect(await chat.jumpToMessage(root.id)).toBe(true)
     await tick()
@@ -365,7 +365,7 @@ describe('read state, presence and typing', () => {
   it('fetches read state and tolerates failed optimistic writes and empty action identifiers', async () => {
     const chat = setup()
     hidden(true)
-    http.handle = url => url === '/api/notification-settings' ? { channels: [], categories: [] } : [readStateFixture({ channel_id: ch.id, unread_count: 3, mention_count: 1 })]
+    http.handle = url => url === '/api/notification-settings' ? { channels: [], categories: [], server: { level: 'all', muted_until: null, suppress_everyone: false } } : [readStateFixture({ channel_id: ch.id, unread_count: 3, mention_count: 1 })]
     expect(await chat.fetchReadState()).toEqual({ [ch.id]: expect.objectContaining({ unread_count: 3 }) })
     await chat.setNotificationLevel(ch.id, 'mentions')
     expect(chat.notificationLevel(ch.id)).toBe('mentions')
@@ -486,7 +486,7 @@ describe('browser notifications', () => {
     notification.onclick?.()
     expect(focus).toHaveBeenCalled()
     expect(notification.close).toHaveBeenCalled()
-    expect(currentRoute.value).toEqual(expect.objectContaining({ channelId: remote.id, messageId: msg.id }))
+    expect(currentRoute.value).toEqual(expect.objectContaining({ channelRef: remote.id, messageId: msg.id }))
     useAuthStore().user = { ...me, presence: 'focus' }
     chat.handleWSEvent({ type: 'message_create', payload: message({ id: fixtureId(31), channel_id: remote.id }) })
     expect(BrowserNotification.items).toHaveLength(1)

@@ -7,6 +7,8 @@ import { caughtErrorMessage } from '../lib/api'
 import { t } from '../i18n'
 import { useAccountStore } from '../stores/account'
 import { useToastStore } from '../stores/toast'
+import FormField from './FormField.vue'
+import PasswordInput from './PasswordInput.vue'
 
 const account = useAccountStore()
 const toasts = useToastStore()
@@ -93,8 +95,12 @@ async function resend() {
     </div>
 
     <form v-else class="space-y-3" novalidate @submit.prevent="submit">
-      <input v-if="mode === 'edit'" v-model="email" type="email" required maxlength="254" autocomplete="email" :aria-label="$t('security.email.address')" :placeholder="$t('security.email.address')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden" data-testid="account-email-input" />
-      <input v-model="password" type="password" required autocomplete="current-password" :aria-label="$t('profile.currentPassword')" :placeholder="$t('profile.currentPassword')" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden" data-testid="account-email-password" />
+      <FormField v-if="mode === 'edit'" v-slot="{ id }" :label="$t('security.email.address')">
+        <input :id="id" v-model="email" type="email" required maxlength="254" autocomplete="email" class="w-full rounded-lg border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text" data-testid="account-email-input" />
+      </FormField>
+      <FormField v-slot="{ id }" :label="$t('profile.currentPassword')">
+        <PasswordInput :id="id" v-model="password" required autocomplete="current-password" data-testid="account-email-password" />
+      </FormField>
       <div v-if="error" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
       <div class="flex items-center justify-end gap-2 pt-1">
         <button type="button" class="btn btn-ghost" @click="start('view')">{{ $t('common.cancel') }}</button>

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -14,6 +16,7 @@ import (
 var (
 	errPollNotFound = httpx.ErrNotFound("poll not found")
 	errPollEnded    = httpx.ErrConflict("the poll has ended")
+	errAlreadyVoted = httpx.ErrConflict("you have already voted in this anonymous poll; a vote there cannot be changed")
 )
 
 // insertPoll stores the poll and its options for a message created in tx.
@@ -80,8 +83,8 @@ func Vote(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, optionID
 		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1::text || $2::text, 0))`, messageID, userID); err != nil {
 			return fmt.Errorf("lock votes: %w", err)
 		}
-		var multiple, ended bool
-		err := tx.QueryRow(ctx, `SELECT multiple, closes_at <= clock_timestamp() FROM polls WHERE message_id = $1 FOR SHARE`, messageID).Scan(&multiple, &ended)
+		var multiple, ended, anonymous bool
+		err := tx.QueryRow(ctx, `SELECT multiple, closes_at <= clock_timestamp(), anonymous FROM polls WHERE message_id = $1 FOR SHARE`, messageID).Scan(&multiple, &ended, &anonymous)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errPollNotFound
 		}
@@ -94,8 +97,84 @@ func Vote(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, optionID
 		if err := checkChoice(ctx, tx, messageID, multiple, optionIDs); err != nil {
 			return err
 		}
+		if anonymous {
+			return castAnonymousVote(ctx, tx, messageID, userID, optionIDs)
+		}
 		return replaceVotes(ctx, tx, messageID, userID, optionIDs)
 	})
+}
+
+// castAnonymousVote counts a vote in an anonymous poll without recording what
+// the member chose: poll_voters remembers that they voted (so they cannot vote
+// twice), the options only get their counters raised. The statements share no
+// key, and a vote cannot be changed or withdrawn, because that would need the
+// choice to be known.
+func castAnonymousVote(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, optionIDs []uuid.UUID) error {
+	if len(optionIDs) == 0 {
+		return httpx.ErrInvalidInput("a vote in an anonymous poll cannot be withdrawn")
+	}
+	tag, err := tx.Exec(ctx, `INSERT INTO poll_voters (poll_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, messageID, userID)
+	if err != nil {
+		return fmt.Errorf("record voter: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return errAlreadyVoted
+	}
+	// The ballot carries no member and no time; the statement holding the
+	// options never sees the member, and the one holding the member never sees
+	// the options.
+	if _, err := tx.Exec(ctx, `INSERT INTO poll_anon_ballots (poll_id, option_id) SELECT $1, unnest($2::uuid[])`, messageID, optionIDs); err != nil {
+		return fmt.Errorf("store ballot: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE polls SET anon_voters = anon_voters + 1 WHERE message_id = $1`, messageID); err != nil {
+		return fmt.Errorf("count voter: %w", err)
+	}
+	return nil
+}
+
+// FoldBallots adds the ballots of anonymous polls to the option counters and
+// deletes them. Readers add the unfolded ballots to the counters, so a fold
+// changes no result; it only means a vote and a counter change are not
+// written together.
+func FoldBallots(ctx context.Context, p *db.Pool) error {
+	_, err := p.Exec(ctx, `
+		WITH gone AS (DELETE FROM poll_anon_ballots RETURNING option_id),
+		     n AS (SELECT option_id, COUNT(*)::int AS c FROM gone GROUP BY option_id)
+		UPDATE poll_options o SET anon_votes = o.anon_votes + n.c FROM n WHERE o.id = n.option_id`)
+	if err != nil {
+		return fmt.Errorf("fold ballots: %w", err)
+	}
+	return nil
+}
+
+// RunFold folds the ballots every interval until ctx ends.
+func RunFold(ctx context.Context, p *db.Pool, every time.Duration) {
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			if err := FoldBallots(ctx, p); err != nil && ctx.Err() == nil {
+				slog.Error("fold poll ballots failed", "err", err)
+			}
+		}
+	}
+}
+
+// HasVoted tells whether the member voted in the poll. It is all an anonymous
+// poll knows about a member's participation.
+func HasVoted(ctx context.Context, q db.Querier, messageID, userID uuid.UUID) (bool, error) {
+	var voted bool
+	err := q.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM poll_voters WHERE poll_id = $1 AND user_id = $2)
+		    OR EXISTS (SELECT 1 FROM poll_votes v JOIN poll_options o ON o.id = v.option_id WHERE o.poll_id = $1 AND v.user_id = $2)`,
+		messageID, userID).Scan(&voted)
+	if err != nil {
+		return false, fmt.Errorf("load voted: %w", err)
+	}
+	return voted, nil
 }
 
 // checkChoice requires distinct options of this poll, one for a single-choice poll.

@@ -8,7 +8,9 @@
     "undo": "Undo",
     "create": "Create",
     "name": "Name",
-    "loadMore": "Load more"
+    "loadMore": "Load more",
+    "retry": "Try again",
+    "loading": "Loading…"
   },
   "language": {
     "de": "Deutsch",
@@ -59,22 +61,25 @@
     "deleted": "Deleted member"
   },
   "media": {
-    "sizeMb": "{size} MB"
+    "sizeB": "{size} B",
+    "sizeKb": "{size} KB",
+    "sizeMb": "{size} MB",
+    "sizeGb": "{size} GB"
   },
   "menu": {
     "adminConsole": "Admin console",
     "legal": "Legal & privacy",
-    "rules": "Community rules"
+    "rules": "Community rules",
+    "notificationSettings": "Notification settings"
   },
   "account": {
     "menu": "Account menu",
     "editProfile": "Edit profile",
-    "audio": "Audio",
     "language": "Language",
     "signOut": "Sign out",
     "languageSet": "Language set to {language}. Saved for this account.",
     "languageFailed": "Couldn’t save the language. Try again.",
-    "app": "App & notifications"
+    "settings": "Settings"
   },
   "errors": {
     "unknown": "Unknown error",
@@ -158,7 +163,11 @@
       "replyGone": "The message you replied to no longer exists.",
       "replyElsewhere": "You can only reply to a message in the same conversation.",
       "inviteExists": "An invite with this code already exists.",
-      "usernameReserved": "This username is reserved."
+      "usernameReserved": "This username is reserved.",
+      "pollAlreadyVoted": "You already voted in this anonymous poll. A vote there can’t be changed.",
+      "pollNoWithdraw": "A vote in an anonymous poll can’t be withdrawn.",
+      "automodSend": "Your message wasn’t sent: it breaks the server rule “{rule}”. The moderators can see this.",
+      "automodEdit": "Your edit wasn’t saved: it breaks the server rule “{rule}”. The moderators can see this."
     },
     "field": {
       "content": "Message",
@@ -212,7 +221,8 @@
     "inviteChecking": "Checking your invite…",
     "inviteInvalid": "This invite is not valid any more. Ask for a new one, or sign in if you already have an account.",
     "inviteExpires": "Valid until {when}",
-    "passwordHint": "At least {count} characters."
+    "passwordHint": "At least {count} characters.",
+    "forgotNoMail": "Forgot your password? This server cannot send e-mail. Someone with admin rights can reset it for you."
   },
   "sidebar": {
     "subtitle": "Private community",
@@ -279,10 +289,10 @@
     "granted": "Notifications are enabled.",
     "denied": "Notifications are blocked in the browser.",
     "channelSettings": "Notifications for this channel",
-    "inheritChannel": "Use category setting",
-    "inheritCategory": "Default (all messages)",
-    "muteChannel": "Mute channel",
-    "muteCategory": "Mute category",
+    "inheritChannel": "Use category default",
+    "inheritCategory": "Use server default",
+    "muteChannel": "Mute for…",
+    "muteCategory": "Mute for…",
     "mute_15m": "For 15 minutes",
     "mute_1h": "For 1 hour",
     "mute_8h": "For 8 hours",
@@ -290,16 +300,29 @@
     "mute_forever": "Until I turn it back on",
     "mutedUntil": "Until {time}",
     "mutedIndefinitely": "Muted",
-    "unmute": "Unmute"
+    "unmute": "Unmute",
+    "nothing": "Nothing",
+    "bellMentions": "Mentions only",
+    "bellNothing": "Muted",
+    "serverTitle": "Notification settings",
+    "serverSubtitle": "What may notify you on this server. Channels and categories can override it.",
+    "serverDefault": "Default for all channels",
+    "serverDefaultHint": "Used wherever a channel or its category has no setting of its own. Messages addressed to you by name still get through when you choose Nothing.",
+    "muteServer": "Mute server",
+    "muteServerStatus": "Muted until {time}",
+    "muteServerForever": "Muted until you turn it back on",
+    "unmuteServer": "Turn notifications back on",
+    "suppressEveryone": "Suppress @all and @here",
+    "suppressEveryoneHint": "Announcements to everyone no longer notify you or count as mentions.",
+    "serverSaveFailed": "Couldn’t save the notification settings. Try again."
   },
   "welcome": {
     "progress": "Step {current} of {total}",
     "close": "Skip the introduction",
     "continue": "Continue",
-    "skip": "Skip",
+    "skip": "Later",
     "welcome": {
-      "title": "Welcome to {name}",
-      "fallback": "Glad you are here. A few quick steps and you are set."
+      "title": "Welcome to {name}"
     },
     "rules": {
       "title": "The rules",
@@ -307,7 +330,8 @@
       "accept": "I accept the rules"
     },
     "profile": {
-      "title": "Your profile"
+      "title": "Your profile",
+      "avatarHint": "Click the picture to upload a profile photo. You can change everything here later."
     },
     "notifications": {
       "title": "Stay in the loop",
@@ -334,6 +358,8 @@
     "typeTextHint": "Messages and files",
     "typeVoice": "Talk (voice)",
     "typeVoiceHint": "Talk, chat and share your screen",
+    "typeForum": "Forum",
+    "typeForumHint": "Discussions with posts and tags",
     "category": "Category",
     "noCategory": "No category",
     "newCategory": "+ New category",
@@ -348,6 +374,44 @@
     "topicPlaceholder": "What is this about?",
     "nameRequired": "Enter a name.",
     "createFailed": "Couldn’t create the channel. Try again."
+  },
+  "forum": {
+    "untitled": "Untitled post",
+    "lockedBadge": "Locked",
+    "replyCount": "{count} replies",
+    "activity": "Activity",
+    "newPostTitle": "New post",
+    "titleLabel": "Post Title",
+    "titlePlaceholder": "What’s on your mind?",
+    "tagsLabel": "Tags (up to 5)",
+    "contentLabel": "First message",
+    "contentPlaceholder": "Provide more details or start the discussion…",
+    "submitPost": "Post",
+    "createFailed": "Couldn’t create the post. Try again.",
+    "manageTagsTitle": "Manage Forum Tags",
+    "addTag": "Add tag",
+    "add": "Add",
+    "edit": "Edit",
+    "emojiPlaceholder": "Emoji",
+    "tagNamePlaceholder": "Tag name",
+    "maxTagsReached": "Maximum number of tags reached",
+    "noTags": "No tags created yet.",
+    "addTagFailed": "Couldn’t create the tag. Try again.",
+    "updateTagFailed": "Couldn’t update the tag. Try again.",
+    "deleteTagFailed": "Couldn’t delete the tag. Try again.",
+    "manageTags": "Manage tags",
+    "newPost": "New post",
+    "allTags": "All",
+    "sortActivity": "Latest activity",
+    "sortNewest": "Newest",
+    "loadingPosts": "Loading posts…",
+    "emptyTitle": "No posts yet",
+    "emptyDescription": "Start the conversation by creating the first post in this forum.",
+    "emptyTagFilter": "No posts match the selected tag filter.",
+    "lockPost": "Lock post",
+    "unlockPost": "Unlock post",
+    "lockedNotice": "This post is locked. Only moderators can reply.",
+    "lockFailed": "Couldn’t update post lock status. Try again."
   },
   "members": {
     "title": "Members",
@@ -412,6 +476,7 @@
     "jumpToEnd": "Jump to latest",
     "jumpToFirstUnread": "Jump to first unread",
     "enlargedImage": "Enlarged image",
+    "openOriginal": "Open original",
     "attachment": "Attachment",
     "unknownUser": "Unknown",
     "message": "Message",
@@ -435,7 +500,30 @@
     "search": "Search",
     "searchPlaceholder": "Search messages…",
     "filter": "Filter",
-    "searchHint": "Type a search term or a filter such as from: or in:",
+    "filterSuggestionsTitle": "Search filters",
+    "filterFrom": "From",
+    "filterIn": "In",
+    "filterMentions": "Mentions",
+    "filterHas": "Has",
+    "filterDate": "Date",
+    "filterDateDuring": "During",
+    "filterDateBefore": "Before",
+    "filterDateAfter": "After",
+    "filterDateToday": "Today",
+    "chooseDate": "Pick a date",
+    "filterAuthor": "Author type",
+    "filterFilename": "File name",
+    "sortBy": "Sort",
+    "sortLabel": "Sort results by",
+    "sortNewest": "Newest",
+    "sortOldest": "Oldest",
+    "sortRelevance": "Relevance",
+    "searchResults": "Results",
+    "resultsCount": {
+      "one": "{count} result",
+      "other": "{count} results"
+    },
+    "searchHint": "Type at least two characters or choose a filter",
     "noResults": "No messages found",
     "isTyping": "{name} is typing…",
     "severalTyping": "Several people are typing…",
@@ -448,6 +536,7 @@
     "searchUnknownFilter": "No matching member or channel",
     "searchRemoveFilter": "Remove filter {filter}",
     "searchInChannel": "Search in this channel",
+    "headerMore": "More",
     "searchFailed": "Couldn’t search. Try again.",
     "inThread": "in thread",
     "searchPinned": "Pinned",
@@ -460,7 +549,46 @@
     "moreActions": "More actions",
     "readOnly": "You can’t write in this channel.",
     "noAttach": "You can’t attach files here.",
-    "messageRemoved": "Message removed"
+    "messageRemoved": "Message removed",
+    "searchSyntaxTip": "Tip: “exact phrase” finds a phrase, -word leaves a word out.",
+    "resultsCountMore": {
+      "one": "{count}+ result",
+      "other": "{count}+ results"
+    },
+    "searchSearching": "Searching…",
+    "noResultsFor": "Nothing found for “{query}”.",
+    "noResultsFiltered": "Nothing matches these filters.",
+    "searchClearFilters": "Remove filters",
+    "searchRetry": "Try again",
+    "searchKeyNavigate": "navigate",
+    "searchKeyOpen": "open",
+    "filterMore": "More",
+    "filterPinned": "Pinned",
+    "filterDateYesterday": "Yesterday",
+    "filterPickMember": "Find a member…",
+    "filterPickChannel": "Find a channel…",
+    "filterFilenamePlaceholder": "File name…",
+    "filterNoMatch": "No matches",
+    "filterApply": "Apply",
+    "filterHasKinds": {
+      "file": "File",
+      "image": "Image",
+      "video": "Video",
+      "link": "Link",
+      "embed": "Embed",
+      "poll": "Poll",
+      "edit": "Edited"
+    },
+    "filterAuthorKinds": {
+      "member": "Member",
+      "bot": "Bot",
+      "webhook": "Webhook"
+    },
+    "searchProblemMember": "No member “{value}” found. Check the name after {filter}:.",
+    "searchProblemChannel": "No channel “{value}” found. Check the name after {filter}:.",
+    "searchProblemDate": "Can’t read the date “{value}” after {filter}:. Use YYYY-MM-DD, today or yesterday.",
+    "searchProblemOption": "“{value}” is not a value for {filter}:. Choose one of: {options}.",
+    "searchProblemEmpty": "{filter}: needs a value."
   },
   "thread": {
     "title": "Thread",
@@ -514,6 +642,7 @@
     "mediaUnsupported": "This browser cannot protect the media of a Talk, so it cannot join. Use Chrome or Edge 137+, Safari 17+ or Firefox 129+.",
     "mediaUnprotected": "This browser cannot protect the Talk. Microphone, camera and screen stay off.",
     "mediaRekeyed": "The media keys of this Talk were reset by someone in it or by the server. The Talk sets up new keys by itself.",
+    "mediaOutdatedClient": "Someone in this Talk uses an outdated Mnema client that can no longer take part in Talks securely, so you cannot hear or see them. Ask them to update or reload the app.",
     "mediaRefreshed": "The Talk was refreshed after a period of inactivity. Its media keys were renewed.",
     "noPermission": "You don’t have permission to join or speak in this Talk."
   },
@@ -715,6 +844,9 @@
       "session": "Session token",
       "sessionPurpose": "Signed session tokens for authentication",
       "sessionRetention": "Up to {days} days or until you sign out",
+      "moderation": "Moderation records",
+      "moderationPurpose": "Reports, automod entries and private notes that moderators keep about members; never part of a data export",
+      "moderationRetention": "Until the moderators delete them; entries about a deleted account stay under “Deleted member”",
       "rightsHeading": "Your rights as a data subject",
       "rights1Before": "Under Art. 15–22 GDPR you have the right at any time, free of charge, to ",
       "rightsAccess": "access",
@@ -775,7 +907,32 @@
     },
     "footer": "© {year} {name} · All rights reserved"
   },
+  "stage": {
+    "make": "Make Stage",
+    "makeNormal": "Make normal Talk",
+    "toggleFailed": "Couldn’t change the Talk.",
+    "createAs": "Create as Stage",
+    "createHint": "Only members you allow can speak; everyone else listens and can raise a hand.",
+    "isStage": "Stage",
+    "speakers": "Speakers",
+    "audience": "Audience",
+    "nobodySpeaking": "Nobody is speaking yet.",
+    "noAudience": "Nobody is listening yet.",
+    "raiseHand": "Raise hand",
+    "lowerHand": "Lower hand",
+    "handRaised": "Hand raised",
+    "listening": "Listening",
+    "noPower": "Only speakers can use this on a Stage. Raise your hand to ask.",
+    "give": "Let {name} speak",
+    "take": "Take back from {name}",
+    "handsTitle": "Raised hands",
+    "noHands": "No raised hands.",
+    "accept": "Let {name} speak",
+    "acceptShort": "Accept",
+    "dismiss": "Dismiss {name}’s hand"
+  },
   "talk": {
+    "react": "React",
     "participants": {
       "one": "{count} participant",
       "other": "{count} participants"
@@ -909,7 +1066,32 @@
     "showParticipants": "Show participants",
     "noSpeak": "You don’t have permission to speak here.",
     "noVideo": "You don’t have permission to share video here.",
-    "noConnect": "You don’t have permission to join this Talk."
+    "noConnect": "You don’t have permission to join this Talk.",
+    "lobbyUnavailable": "Couldn’t open a Talk. Try again in a moment.",
+    "lobbyRateLimited": "You’ve opened a lot of Talks lately. Try again in a few minutes.",
+    "leader": "Talk leader",
+    "settings": "Talk settings",
+    "settingsTitle": "Settings for {name}",
+    "lobby": "Create-a-Talk lobby",
+    "lobbyHint": "Joining this Talk opens a new Talk for the member, who leads it. Nobody stays in the lobby, and the new Talk follows the lobby’s permissions and limit.",
+    "lobbyOpens": "Opens a new Talk when you join",
+    "lobbySaved": "Lobby setting saved.",
+    "followsLobby": "This Talk follows its lobby’s permissions. Change them in the lobby.",
+    "presetsTitle": "Who can join",
+    "presetEveryone": "Everyone",
+    "presetEveryoneHint": "All members who can see this place can join.",
+    "presetRoles": "Only these roles",
+    "presetRolesHint": "Members without one of the chosen roles can’t see or join.",
+    "presetNoRoles": "There are no roles you can hand out.",
+    "presetLimit": "Limit",
+    "presetLimitHint": "At most this many members at once. 0 means no limit.",
+    "limitLabel": "Member limit",
+    "presetApply": "Apply",
+    "presetApplied": "Talk updated.",
+    "inviteFrom": "{name} invites you to a Talk",
+    "inviteGeneric": "You’re invited to a Talk",
+    "inviteIn": "You’re here",
+    "inviteUnavailable": "Not available to you"
   },
   "admin": {
     "signedInAs": "Signed in as {name} (Owner)",
@@ -926,7 +1108,10 @@
       "bots": "Bots",
       "onboarding": "Welcome & rules",
       "emoji": "Emoji",
-      "reports": "Reports"
+      "reports": "Reports",
+      "automod": "Automod",
+      "status": "Status",
+      "import": "Import"
     },
     "system": {
       "heading": "System & version",
@@ -1069,6 +1254,48 @@
         }
       }
     },
+    "operatorStatus": {
+      "heading": "Operator status",
+      "version": "Version & build",
+      "revision": "Commit",
+      "goVersion": "Go version",
+      "updates": "Updates",
+      "updateAvailable": "Update available: {latest}",
+      "upToDate": "Server is up to date",
+      "checkDisabled": "Release checks disabled",
+      "autoDeploy": "Auto-deploy",
+      "reach": "Image reachability: {reach}",
+      "reachReason": "Reason: {reason}",
+      "sidecarConfigured": "Sidecar configured",
+      "sidecarNotConfigured": "Sidecar not configured",
+      "database": "Database",
+      "reachable": "Reachable",
+      "unreachable": "Not reachable",
+      "dbSize": "Database size",
+      "latestMigration": "Latest migration",
+      "appliedMigrations": "Applied migrations",
+      "pendingMigrations": "Pending migrations",
+      "storage": "Object storage",
+      "configured": "Configured",
+      "notConfigured": "Not configured",
+      "storageUsed": "Used bytes",
+      "diskFree": "Disk free space",
+      "backup": "Backups & disaster recovery",
+      "lastBackupAge": "Last backup",
+      "lastRestoreTestAge": "Last restore test",
+      "backupHostManaged": "Host-managed",
+      "backupDocsHint": "Backups run on the host; see",
+      "backupDocsLink": "operations guide",
+      "activity": "Live activity",
+      "activeSessions": "Active sessions",
+      "connectedWs": "Connected WebSocket clients",
+      "activeTalks": "Active Talks",
+      "voiceParticipants": "Voice participants",
+      "warnings": "Operator warnings",
+      "noWarnings": "No active operator warnings",
+      "count": "Occurrences: {count}",
+      "since": "Active since: {since}"
+    },
     "users": "Member management",
     "searchUsers": "Search members…",
     "searchUsersLabel": "Search members",
@@ -1206,7 +1433,10 @@
       "tooLong": "One of the texts is too long.",
       "saved": "Welcome and rules saved.",
       "dmEnabled": "Allow direct messages",
-      "dmEnabledHint": "When off, nobody can start or write direct messages. Existing conversations stay readable."
+      "dmEnabledHint": "When off, nobody can start or write direct messages. Existing conversations stay readable.",
+      "inactivity": "Sign out after inactivity (days)",
+      "inactivityHint": "A session that makes no request for this many days is signed out and its notifications stop. Counted from the last use, not from sign-in. 1 to 365.",
+      "inactivityRange": "Enter a whole number from {min} to {max}."
     },
     "mail": {
       "title": "E-mail (SMTP)",
@@ -1223,7 +1453,31 @@
     "resetTwoFactorTitle": "Reset two-factor sign-in for {name}?",
     "resetTwoFactorBody": "Turns two-factor sign-in off, deletes the authenticator secret and the recovery codes, and signs the member out everywhere. Use it when they lost both the authenticator and the recovery codes. They can turn it on again afterwards.",
     "resetTwoFactorConfirm": "Reset",
-    "twoFactorReset": "Two-factor sign-in reset."
+    "twoFactorReset": "Two-factor sign-in reset.",
+    "channelTopicHelp": "Shown under the channel name. Keep it short: what this channel is for.",
+    "nav": {
+      "community": "Community",
+      "moderation": "Moderation",
+      "integrations": "Integrations",
+      "operations": "Operations",
+      "back": "Back to sections",
+      "signedIn": "Signed in as {name}",
+      "openReports": "{count} open"
+    },
+    "maxUsesLabel": "Uses",
+    "maxUsesPlaceholder": "Unlimited",
+    "validHoursLabel": "Valid for (hours)",
+    "validHoursPlaceholder": "No expiry",
+    "presets": "Validity presets",
+    "preset": {
+      "day": "1 day",
+      "week": "7 days",
+      "never": "No expiry"
+    },
+    "noInvitesHint": "Create one above and share its link.",
+    "showSpent": "Show {count} used up or expired",
+    "hideSpent": "Hide used up and expired",
+    "noMediaHint": "Uploaded images and files show up here."
   },
   "profile": {
     "addedBy": "Added by {name}",
@@ -1275,12 +1529,24 @@
     "statusPlaceholder": "What are you up to?",
     "noStatus": "No status set",
     "clearStatus": "Clear",
-    "moderateStatus": "Edit (moderation)",
+    "moderateStatus": "Change status",
     "statusSaved": "Status saved",
     "statusCleared": "Status cleared",
     "displayNameHint": "This is what others see. Your username @{username} stays the same. At most {count} characters.",
     "open": "Open {name}’s profile",
-    "passwordLink": "Change password and sign-in security"
+    "passwordLink": "Password and account in settings",
+    "clearAfter": "Clear after",
+    "expiry": {
+      "hour": "1 hour",
+      "tonight": "Tonight (23:59)",
+      "tomorrow": "Tomorrow morning (08:00)",
+      "never": "Never",
+      "custom": "Pick date and time…"
+    },
+    "expiryPast": "Pick a time in the future.",
+    "clearsAt": "Clears {time}",
+    "moderationTitle": "Moderation",
+    "rolesTitle": "Roles"
   },
   "nav": {
     "channelNotFound": "That channel doesn’t exist anymore.",
@@ -1422,7 +1688,7 @@
     },
     "allowMultiple": "Allow several answers",
     "makeAnonymous": "Anonymous poll",
-    "anonymousHint": "Nobody sees who voted for what, not even you or administrators. Only the totals are shown.",
+    "anonymousHint": "Only the totals are stored: nobody in the app can see who voted for what, not even you, moderators or administrators, and Mnema never stores which answer a member chose. A vote can’t be changed once it is sent.",
     "post": "Post poll",
     "problem": {
       "question": "Enter a question.",
@@ -1459,7 +1725,12 @@
     "someone": "Someone",
     "more": "+{count} more",
     "failed": "That didn’t work. Try again.",
-    "cannotVote": "You can’t vote in this channel."
+    "cannotVote": "You can’t vote in this channel.",
+    "anonymousBadgeHint": "Anonymous poll: nobody in the app, not even moderators or administrators, can see who chose what. Mnema never stores which answer a member chose, only that they voted and how many votes each answer has.",
+    "anonymousFinal": "Your vote can’t be changed after you send it.",
+    "submitVote": "Vote",
+    "youVotedAnonymous": "You voted. Votes in an anonymous poll can’t be changed.",
+    "canChange": "You can change your vote until the poll ends."
   },
   "mention": {
     "title": "Mention",
@@ -1495,6 +1766,59 @@
     "unavailable": "The original isn’t available.",
     "deleted": "The original was deleted."
   },
+  "later": {
+    "title": "Reminders and scheduled",
+    "reminders": "Reminders",
+    "scheduled": "Scheduled messages",
+    "empty": "Nothing here. Use “Remind me” on a message, or “Send later” next to the send button.",
+    "failed": "Couldn’t load your reminders and scheduled messages. Try again.",
+    "due": "Due",
+    "unavailable": "A message you can no longer see",
+    "dismiss": "Dismiss",
+    "cancel": "Cancel reminder",
+    "edit": "Edit",
+    "delete": "Delete",
+    "editText": "Message text",
+    "rescheduleLabel": "Send again at (optional)",
+    "customLabel": "Date and time",
+    "draft": "Draft",
+    "failedAt": "Wasn’t sent at {time}.",
+    "directMessage": "Direct message",
+    "channelGone": "A channel you can’t see",
+    "removeFailed": "Couldn’t remove it. Try again.",
+    "reason": {
+      "slow_mode": "Slow mode held it back. Edit it and pick a new time.",
+      "not_allowed": "You can’t send there right now. It is kept as a draft.",
+      "unavailable": "The channel or the message you replied to is gone.",
+      "refused": "The server refused to send it. It is kept as a draft."
+    },
+    "remindMenu": "Remind me",
+    "sendLater": "Send later",
+    "sendOptions": "More ways to send",
+    "remindTitle": "Remind me",
+    "scheduleTitle": "Send later",
+    "remindHint": "Only you will see the reminder. You get a notification at that time.",
+    "scheduleHint": "Sent as you at that time. Your permissions are checked then, not now. Text only, attachments aren’t kept.",
+    "when": "When",
+    "preset": {
+      "in20m": "In 20 minutes",
+      "in30m": "In 30 minutes",
+      "in1h": "In 1 hour",
+      "in3h": "In 3 hours",
+      "tomorrow": "Tomorrow morning",
+      "custom": "Pick date and time…"
+    },
+    "remindConfirm": "Set reminder",
+    "scheduleConfirm": "Schedule",
+    "pastTime": "Pick a time that is still ahead (and within a year).",
+    "reminderSet": "We’ll remind you on {time}.",
+    "scheduledSet": "Scheduled for {time}.",
+    "reminderFailed": "Couldn’t set the reminder. Try again.",
+    "scheduleFailed": "Couldn’t schedule the message. Try again.",
+    "reminderDue": "Reminder: a message is waiting for you.",
+    "reminderDueWith": "Reminder: {text}",
+    "scheduledFailed": "A scheduled message wasn’t sent"
+  },
   "saved": {
     "title": "Saved messages",
     "empty": "Nothing saved yet. Save a message from its menu to keep it here, just for you.",
@@ -1520,7 +1844,7 @@
     "open": "Insert emoji",
     "more": "More emojis",
     "loading": "Loading emojis…",
-    "suggestTitle": "Custom emoji",
+    "suggestTitle": "Emoji",
     "admin": {
       "title": "Custom emoji",
       "hint": "PNG, GIF or WebP up to 256 KiB. Pictures are redrawn on the server and shrunk to at most 128 × 128 pixels. Members type :name: to use them. Animated emoji must be GIFs.",
@@ -1537,7 +1861,8 @@
       "empty": "No custom emoji yet.",
       "full": "The limit is reached. Delete an emoji to make room.",
       "choose": "Choose file",
-      "noFile": "No file yet"
+      "noFile": "No file yet",
+      "emptyHint": "Upload an image above to add the first one."
     }
   },
   "activity": {
@@ -1598,7 +1923,13 @@
     "error": "Unable to apply. Check the connection and choose different supported shortcuts.",
     "enabled": "Enable gaming overlay and sidepeek",
     "opacity": "Sidepeek background opacity",
-    "gamesHint": "300 games are included. Add executable names for other games or installation variants."
+    "gamesHint": "Hundreds of games are included, and games from your Steam, Epic, GOG and EA libraries are found automatically. Add executable names for any other game.",
+    "addLast": "Add the app I was just in",
+    "addLastConfirm": "Add {name} as a game?",
+    "addLastNone": "No other app was in front yet. Switch to the game, then open the overlay again.",
+    "addConfirm": "Add",
+    "addCancel": "Cancel",
+    "addFailed": "Could not add this app."
   },
   "perm": {
     "administrator": {
@@ -1700,6 +2031,14 @@
       "name": "Kick members",
       "desc": "Sign members below your highest role out everywhere and drop them from their Talk. They can sign in again at once."
     },
+    "manage_stage": {
+      "name": "Manage Stages",
+      "desc": "Give and take talk power in a Stage and answer raised hands. Holders can always speak on a Stage."
+    },
+    "manage_events": {
+      "name": "Manage events",
+      "desc": "Create, edit and cancel community events."
+    },
     "groups": {
       "general": "General",
       "text": "Text",
@@ -1744,7 +2083,11 @@
       "moderation": "Moderation",
       "emoji": "Emoji",
       "bot": "Bots",
-      "poll": "Polls"
+      "poll": "Polls",
+      "automod": "Automod",
+      "report": "Reports",
+      "event": "Events",
+      "import": "Imports"
     },
     "actions": {
       "role": {
@@ -1770,7 +2113,9 @@
         "update": "Channel edited",
         "delete": "Channel deleted",
         "duplicate": "Channel duplicated",
-        "overwrites_set": "Channel permissions changed"
+        "overwrites_set": "Channel permissions changed",
+        "auto_delete_set": "Channel auto-delete changed",
+        "auto_delete_run": "Old messages deleted automatically"
       },
       "category": {
         "overwrites_set": "Category permissions changed",
@@ -1841,7 +2186,9 @@
         "two_factor_alert": "Repeated wrong two-factor codes",
         "recovery_code_used": "Recovery code used",
         "recovery_codes_regenerated": "Recovery codes renewed",
-        "password_reset_mail": "Password reset by e-mail"
+        "password_reset_mail": "Password reset by e-mail",
+        "session_revoke": "Signed out a session",
+        "sessions_revoke_others": "Signed out all other sessions"
       },
       "settings": {
         "upload_limit": "Upload limit changed",
@@ -1854,7 +2201,10 @@
         "unban": "Member unbanned",
         "kick": "Member kicked",
         "ban_expired": "Ban expired",
-        "bulk_delete": "Messages deleted in bulk"
+        "bulk_delete": "Messages deleted in bulk",
+        "note_add": "Moderator note added",
+        "note_edit": "Moderator note edited",
+        "note_delete": "Moderator note deleted"
       },
       "emoji": {
         "create": "Emoji added",
@@ -1873,10 +2223,38 @@
         "command_update": "Bot command edited",
         "command_delete": "Bot command deleted"
       },
+      "automod": {
+        "rule_create": "Automod rule created",
+        "rule_update": "Automod rule edited",
+        "rule_delete": "Automod rule deleted",
+        "timeout": "Member timed out by automod",
+        "raid": "Raid protection triggered"
+      },
       "admin": {
         "post": "Admin action"
+      },
+      "report": {
+        "create": "Report filed",
+        "resolve": "Report closed",
+        "delete": "Report deleted"
+      },
+      "event": {
+        "create": "Event created",
+        "edit": "Event edited",
+        "cancel": "Event cancelled",
+        "talk_create": "Talk event created",
+        "talk_edit": "Talk event edited",
+        "talk_cancel": "Talk event cancelled"
+      },
+      "import": {
+        "discord": "Discord template imported",
+        "discord_undo": "Discord import undone"
       }
-    }
+    },
+    "hideSignIns": "Hide sign-ins",
+    "signInsHidden": "{count} sign-ins hidden",
+    "emptyHint": "Changes to roles, channels, members and settings are recorded here.",
+    "reportTarget": "Report ({category})"
   },
   "roles": {
     "managedHint": "Managed role: held by every bot, cannot be removed.",
@@ -1918,7 +2296,29 @@
     "uploadInvalid": "Enter a whole number of MB, or leave it empty.",
     "botRoles": "Bot roles",
     "botRoleHint": "Managed role of one bot: it cannot be removed.",
-    "botRoleNote": "“{name}” is a bot’s own role. It is created with the bot, follows its name and is deleted with it; only that bot holds it, and it cannot be renamed, given to anyone else, removed from the bot or deleted by hand. You can change its colour and permissions. Nobody can give a bot permissions they lack themselves, and only the Owner can make a bot elevated."
+    "botRoleNote": "“{name}” is a bot’s own role. It is created with the bot, follows its name and is deleted with it; only that bot holds it, and it cannot be renamed, given to anyone else, removed from the bot or deleted by hand. You can change its colour and permissions. Nobody can give a bot permissions they lack themselves, and only the Owner can make a bot elevated.",
+    "viewAs": {
+      "open": "View server as {name}",
+      "title": "Server as {name}",
+      "subtitle": "Read-only preview. Nothing changes and nobody is impersonated.",
+      "loading": "Loading…",
+      "sidebar": "Channels this role can see",
+      "canJoin": "can join",
+      "cannotJoin": "can’t join",
+      "permissionsIn": "Permissions in {name}",
+      "allowed": "allowed",
+      "notAllowed": "not allowed",
+      "administrator": "This role has Administrator: it sees every channel you can see and ignores channel permissions.",
+      "empty": "This role sees no channels you can see.",
+      "exit": "Exit preview"
+    },
+    "unsavedTitle": "Discard unsaved changes?",
+    "unsavedBody": "This role has changes you have not saved. Switching to another role drops them.",
+    "discard": "Discard",
+    "keepEditing": "Keep editing",
+    "unsaved": "Unsaved changes",
+    "searchPermissions": "Search permissions",
+    "noPermissionMatch": "No permission matches."
   },
   "memberRoles": {
     "title": "Roles of {name}",
@@ -2025,6 +2425,64 @@
       "allow_identity_override": "Allow posts to set their own username"
     }
   },
+  "events": {
+    "events": "Events",
+    "upcoming": "Upcoming",
+    "past": "Past",
+    "noUpcoming": "No upcoming events scheduled.",
+    "noPast": "No past events.",
+    "loadMorePast": "Show older events",
+    "create": "Create event",
+    "createTitle": "Create community event",
+    "edit": "Edit event",
+    "editTitle": "Edit community event",
+    "cancel": "Cancel event",
+    "cancelConfirm": "Are you sure you want to cancel this event?",
+    "cancelled": "Cancelled",
+    "active": "Live",
+    "scheduled": "Scheduled",
+    "completed": "Completed",
+    "title": "Title",
+    "titlePlaceholder": "e.g. Game night or Community talk",
+    "description": "Description",
+    "descriptionPlaceholder": "What is this event about? (Markdown supported)",
+    "startTime": "Start time",
+    "endTime": "End time (optional)",
+    "locationType": "Location type",
+    "locationTalk": "Talk channel",
+    "locationText": "Custom text location",
+    "locationTextPlaceholder": "e.g. Room 42 or a link",
+    "selectTalk": "Select a Talk channel",
+    "coverImage": "Cover image (optional)",
+    "coverAlt": "Event cover image",
+    "changeCover": "Change cover",
+    "removeCover": "Remove cover",
+    "uploadCover": "Upload cover",
+    "join": "Join",
+    "rsvp": "RSVP",
+    "going": "Going",
+    "interested": "Interested",
+    "notGoing": "Not going",
+    "rsvpGoing": "I’m going",
+    "rsvpInterested": "Maybe",
+    "rsvpNotGoing": "Can’t make it",
+    "cancelKeep": "Keep event",
+    "goingCount": {
+      "one": "{count} going",
+      "other": "{count} going"
+    },
+    "interestedCount": {
+      "one": "{count} interested",
+      "other": "{count} interested"
+    },
+    "reminderToast": "Reminder: “{title}” is starting in 15 minutes!",
+    "save": "Save changes",
+    "details": "Details",
+    "participants": "Responses",
+    "noResponses": "No responses yet.",
+    "created": "Event created",
+    "updated": "Event updated"
+  },
   "moderation": {
     "timeoutAction": "Time out…",
     "removeTimeout": "End timeout",
@@ -2094,7 +2552,12 @@
     "slowMode": "Slow mode",
     "slowModeOff": "Off",
     "slowModeHint": "Members wait this long between two messages. Members with Manage messages are exempt.",
-    "slowModeChip": "Slow mode {time}"
+    "slowModeChip": "Slow mode {time}",
+    "slowModeInvalid": "Enter a whole number of 1 or more.",
+    "slowModeTooLong": "Slow mode can last 24 hours at most.",
+    "slowModeCustom": "Custom",
+    "slowModeUnit": "Unit",
+    "noBansHint": "Banned members are listed here, and you can lift a ban."
   },
   "editHistory": {
     "menu": "Edit history",
@@ -2220,11 +2683,10 @@
       "deleteFor": "Delete command {name}",
       "deleteTitle": "Delete command /{name}?",
       "deleteBody": "The bot can register it again."
-    }
+    },
+    "emptyHint": "Name a bot above to create it and get its token."
   },
   "appSettings": {
-    "title": "App & notifications",
-    "subtitle": "Install Mnema Talk and get notified while it is closed.",
     "installTitle": "Install",
     "install_installed": "Mnema Talk is installed on this device and runs in its own window.",
     "install_available": "Install Mnema Talk to open it from your home screen, dock or start menu without the browser bar.",
@@ -2281,9 +2743,6 @@
     "continue": "Continue to sign in"
   },
   "security": {
-    "menu": "Account & security",
-    "title": "Account & security",
-    "subtitle": "Only you see this",
     "email": {
       "title": "E-mail address",
       "intro": "Optional. Only used to confirm it and to reset your password. Nobody else sees it, not even the Owner.",
@@ -2354,7 +2813,34 @@
       "deleteButton": "Delete my account…",
       "deleteType": "Type your username ({name}) to confirm",
       "deleteConfirm": "Delete for good"
-    }
+    },
+    "sessions": {
+      "title": "Where you are signed in",
+      "intro": "The devices and browsers signed in to your account on this server. If you do not recognise one, sign it out.",
+      "thisDevice": "This device",
+      "unknownDevice": "Unknown device",
+      "push": "Notifications on",
+      "justNow": "just now",
+      "activity": "Active {active} · signed in {since}",
+      "signOut": "Sign out",
+      "signOutLabel": "Sign out {device}",
+      "signOutTitle": "Sign out {device}?",
+      "signOutBody": "That device is signed out and stops getting notifications. It can sign in again with your password.",
+      "signOutThisTitle": "Sign out this device?",
+      "signOutThisBody": "You will be signed out here and have to sign in again.",
+      "signedOut": "{device} signed out.",
+      "signOutOthers": "Sign out all other sessions",
+      "signOutOthersTitle": "Sign out all other sessions?",
+      "signOutOthersBody": "Every other device is signed out and stops getting notifications. This device stays signed in.",
+      "signedOutOthers": {
+        "one": "One other session signed out.",
+        "other": "{count} other sessions signed out."
+      },
+      "onlyThis": "This is the only device signed in.",
+      "inactivity": "Sessions that are not used for a while are signed out automatically. The Owner sets how long."
+    },
+    "showPassword": "Show characters",
+    "hidePassword": "Hide characters"
   },
   "rules": {
     "title": "Community rules"
@@ -2404,13 +2890,48 @@
     "slowDown": "Too many tries. Wait a moment, then try again.",
     "searchScope": "Where to search",
     "policy": {
-      "title": "Direct messages",
+      "title": "Who can send me direct messages",
       "intro": "Choose who may start a direct message with you. Conversations you already have go on, and you can still start your own.",
       "everyone": "Everyone",
       "everyoneHint": "Any member can start a conversation with you.",
       "nobody": "Nobody",
       "nobodyHint": "Nobody can start a conversation with you.",
       "failed": "Couldn’t save the setting. Try again."
+    },
+    "startTalk": "Start a Talk",
+    "startTalkFailed": "Couldn’t start a Talk.",
+    "noTalkLobby": "This community has no Talk lobby you can use yet. An admin can turn a Talk into one in its settings.",
+    "talkInvited": "Invitation sent.",
+    "inviteToTalk": "Invite to my Talk",
+    "inviteTalkFailed": "Couldn’t send the invitation.",
+    "previewYou": "You: {text}",
+    "previewFrom": "{name}: {text}",
+    "previewAttachment": "Attachment",
+    "previewPoll": "Poll",
+    "unreadCount": "{n} unread",
+    "mentionCount": "{n} unread mentions",
+    "memberCount": "{n} members",
+    "favourites": "Favourites",
+    "recent": "Conversations",
+    "favourite": "Add to favourites",
+    "unfavourite": "Remove from favourites",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "close": "Close conversation",
+    "actions": "Conversation actions",
+    "markRead": "Mark as read",
+    "mute": "Mute conversation",
+    "unmute": "Unmute conversation",
+    "find": "Find or start a conversation",
+    "findStart": "Start",
+    "findNone": "No match",
+    "prefsFailed": "Couldn’t change the list. Try again.",
+    "openProfile": "Open the profile of {name}",
+    "jumpTo": "Conversations",
+    "settings": {
+      "title": "Direct messages",
+      "muteAll": "Mute all direct messages",
+      "muteAllHint": "No sound, no notification and no highlight for any conversation. Unread messages are still counted. A conversation you mute or unmute yourself keeps its own setting."
     }
   },
   "blocks": {
@@ -2429,6 +2950,149 @@
     "collapsed": "Blocked message",
     "show": "Show"
   },
+  "automod": {
+    "title": "Automod",
+    "hint": "Rules that check every new or edited message and every sign-up. A hit is blocked or only flagged, and always appears in Reports, marked Automod. The Owner and Administrators are never held back by a rule.",
+    "empty": "No rules yet.",
+    "kind": {
+      "words": "Blocked words",
+      "links": "Links",
+      "mentions": "Mention spam",
+      "new_account": "New accounts",
+      "raid": "Raid protection"
+    },
+    "about": {
+      "words": "Blocks or flags messages that contain one of these words or phrases. Whole words only; capitals do not matter.",
+      "links": "Blocks or flags messages with links: every link, every link except to the allowed domains, or only links to the listed domains.",
+      "mentions": "Blocks or flags a message that mentions more different people than allowed.",
+      "new_account": "Keeps accounts that have just joined from posting links or files, or from posting at all, for a while.",
+      "raid": "When many accounts join in a short time, the newcomers are timed out for a while and the moderators get an alert. A moderator can lift a timeout like any other."
+    },
+    "newTitle": "New rule: {kind}",
+    "editTitle": "Edit rule",
+    "name": "Name",
+    "nameHint": "Shown to the member whose message is blocked, and in Reports.",
+    "words": "Words and phrases",
+    "wordsHint": "One per line. * stands for any letters or digits, so cheat* also catches cheating.",
+    "linkMode": "Which links",
+    "linkModes": {
+      "block_all": "Block every link",
+      "allow_list": "Allow only these domains",
+      "block_list": "Block these domains"
+    },
+    "domains": "Domains",
+    "domainsHint": "One per line, for example example.com. A domain covers its subdomains.",
+    "maxMentions": "Most different mentions in one message",
+    "maxMentionsHint": "@all and @here count as one each. A message with more is a hit.",
+    "accountAge": "An account counts as new for",
+    "restrict": "New accounts may not",
+    "restricts": {
+      "links": "Post links",
+      "attachments": "Attach files",
+      "links_and_attachments": "Post links or attach files",
+      "everything": "Post at all"
+    },
+    "joins": "Joins that count as a raid",
+    "window": "Within",
+    "restrictTime": "Restrict newcomers for",
+    "raidHint": "Every new account counts. The newcomers of that time, and everyone who joins while the raid lasts, are timed out.",
+    "action": "When a rule hits",
+    "actions": {
+      "block": "Block the message and tell the author",
+      "flag": "Let it through and only flag it",
+      "blockShort": "Blocks",
+      "flagShort": "Flags"
+    },
+    "timeout": "Also time the author out",
+    "noTimeout": "No timeout",
+    "timeoutBadge": "Timeout",
+    "exemptRoles": "Exempt roles",
+    "noRoles": "No roles yet.",
+    "exemptChannels": "Exempt channels",
+    "exemptHint": "Members with an exempt role, and everything written in an exempt channel, skip this rule. In direct messages only the link and mention rules apply.",
+    "enabled": "Rule is on",
+    "saved": "Rule saved.",
+    "saveFailed": "Couldn’t save the rule. Try again.",
+    "loadFailed": "Couldn’t load the rules.",
+    "deleteFailed": "Couldn’t delete the rule. Try again.",
+    "deleteTitle": "Delete the rule “{name}”?",
+    "deleteBody": "It stops working at once. The entries it already made in Reports stay.",
+    "delete": "Delete rule",
+    "toggle": "Rule “{name}” is on",
+    "edit": "Edit “{name}”",
+    "deleteRule": "Delete “{name}”",
+    "raidOn": "A raid is being held back until {time}. Newcomers are restricted.",
+    "problem": {
+      "name": "Give the rule a name.",
+      "tooManyWords": "At most {max} words.",
+      "tooManyDomains": "At most {max} domains.",
+      "mentions": "Enter a number from 1 to 50.",
+      "joins": "Enter a number from 2 to 200."
+    },
+    "summary": {
+      "words": "Words and phrases: {count}",
+      "links": {
+        "block_all": "Every link",
+        "allow_list": "Only links to {count} listed domains",
+        "block_list": "Links to {count} listed domains",
+        "block_listEmpty": "No domains listed yet, nothing is blocked",
+        "allow_listEmpty": "No domains allowed, every link is blocked"
+      },
+      "mentions": "More than {n} different mentions",
+      "newAccount": {
+        "links": "Accounts under {age} may not post links",
+        "attachments": "Accounts under {age} may not attach files",
+        "links_and_attachments": "Accounts under {age} may not post links or files",
+        "everything": "Accounts under {age} may not post"
+      },
+      "raid": "More than {joins} joins within {window}: newcomers restricted for {restrict}"
+    },
+    "emptyHint": "Rules check every message and sign-up. Add one with the buttons above.",
+    "enabledState": "On",
+    "disabledState": "Off"
+  },
+  "modHistory": {
+    "tabs": "Profile sections",
+    "tabProfile": "Profile",
+    "tabModeration": "Moderation",
+    "strikeCount": "{count} strikes",
+    "privacy": "Only moderators see this. The member is never shown it and it is not part of their data export.",
+    "loadFailed": "Couldn’t load the moderation history.",
+    "saveFailed": "Couldn’t save the note. Try again.",
+    "deleteFailed": "Couldn’t delete the note. Try again.",
+    "notes": "Notes",
+    "noteLabel": "Note",
+    "notePlaceholder": "A private note for the moderators…",
+    "asStrike": "Count as a strike",
+    "add": "Add note",
+    "noNotes": "No notes yet.",
+    "strike": "Strike",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteTitle": "Delete this note?",
+    "deleteBody": "The note is removed for good.",
+    "timeline": "History",
+    "noEvents": "Nothing on record.",
+    "someModerator": "A moderator",
+    "reason": "Reason: {reason}",
+    "event": {
+      "timeout": "{actor} timed them out for {duration}",
+      "timeout_removed": "{actor} ended the timeout",
+      "ban": "{actor} banned them",
+      "banTimed": "{actor} banned them for {duration}",
+      "unban": "{actor} lifted the ban",
+      "ban_expired": "The ban ran out",
+      "kick": "{actor} kicked them",
+      "talk_removal": "{actor} removed them from a Talk",
+      "roles": "{actor} changed their roles: {changes}",
+      "report": "Reported ({category}), {status}",
+      "automod": {
+        "blocked": "Automod rule “{rule}” blocked a message",
+        "flagged": "Automod rule “{rule}” flagged a message",
+        "alert": "Automod rule “{rule}” raised an alert"
+      }
+    }
+  },
   "reports": {
     "menu": "Report message",
     "title": "Report message",
@@ -2438,7 +3102,8 @@
       "spam": "Spam",
       "harassment": "Harassment",
       "illegal": "Illegal content",
-      "other": "Something else"
+      "other": "Something else",
+      "automod": "Automod"
     },
     "categoryHint": {
       "spam": "Unwanted ads, links or repeated messages.",
@@ -2466,6 +3131,22 @@
         "all": "All"
       },
       "empty": "No reports here.",
+      "automod": "Automod",
+      "alertWhere": "Server",
+      "raidAlert": "“{rule}” restricted newcomers",
+      "alertText": "Raid protection noticed many accounts joining in a short time. The newcomers were timed out for a while. You can lift a timeout from a member’s profile; close this entry when you have looked at it.",
+      "automodHit": {
+        "blocked": "“{rule}” blocked a message of {reported}",
+        "flagged": "“{rule}” flagged a message of {reported}"
+      },
+      "automodDmNotice": "Automod found a rule broken in a direct message. It never keeps the text of a direct message, so there is no copy.",
+      "automodBlockedNotice": "The message was blocked and never stored. This is the text that was refused.",
+      "outcome": {
+        "blocked": "Blocked",
+        "flagged": "Flagged",
+        "alert": "Raid alert"
+      },
+      "hits": "{count} hits",
       "by": "{reporter} reported {reported}",
       "dm": "Direct message",
       "back": "Back to reports",
@@ -2490,7 +3171,136 @@
       "deleteBody": "The report and its copy of the messages are removed for good.",
       "deleteFailed": "Couldn’t delete the report. Try again.",
       "closeFailed": "Couldn’t close the report. Try again.",
-      "loadFailed": "Couldn’t load the reports. Try again."
+      "loadFailed": "Couldn’t load the reports. Try again.",
+      "emptyHint": "When a member reports a message or automod flags one, it shows up here for you to look at.",
+      "quoted": "Reported message",
+      "timeout": "Time out…",
+      "ban": "Ban…"
     }
+  },
+  "autoDelete": {
+    "title": "Auto-delete",
+    "label": "Delete old messages",
+    "off": "Off, keep messages",
+    "choices": {
+      "1": "After 1 day",
+      "7": "After 7 days",
+      "30": "After 30 days",
+      "90": "After 90 days"
+    },
+    "periods": {
+      "1": "1 day",
+      "7": "7 days",
+      "30": "30 days",
+      "90": "90 days"
+    },
+    "hint": "Messages older than this are deleted automatically with their attachments, and this can’t be undone. Pinned messages stay. Direct messages are never affected.",
+    "apply": "Apply",
+    "confirmTitle": "Delete old messages automatically?",
+    "confirmBody": "Every message in {name} older than {period} will be deleted permanently, starting within a few minutes. Members will see this notice in the channel.",
+    "confirmAction": "Turn on",
+    "saved": "Auto-delete updated.",
+    "failed": "Couldn’t change auto-delete. Try again.",
+    "chip": "Auto-delete: {period}",
+    "tooltip": "Messages older than {period} are deleted automatically.",
+    "line": "Messages in this channel are deleted automatically once they are older than {period}."
+  },
+  "discordImport": {
+    "title": "Import a Discord server structure",
+    "intro": "Copies the structure of a Discord server into this one: categories, channels, Talks and roles. Only what a Discord server template contains is imported, so no messages, members or emoji. Nothing existing is changed, and everything that is added can be undone.",
+    "howTo": "In Discord, open Server Settings, then Server Template, and copy the template link.",
+    "linkLabel": "Template link or code",
+    "linkPlaceholder": "discord.new/abcdef12345",
+    "preview": "Preview",
+    "previewing": "Loading…",
+    "previewFailed": "The template could not be previewed.",
+    "previewTitle": "This is what would be created",
+    "previewNote": "Nothing has been written yet.",
+    "counts": {
+      "categories": {
+        "one": "{count} category",
+        "other": "{count} categories"
+      },
+      "channels": {
+        "one": "{count} channel",
+        "other": "{count} channels"
+      },
+      "roles": {
+        "one": "{count} role",
+        "other": "{count} roles"
+      }
+    },
+    "structure": "Categories and channels",
+    "noCategory": "Without a category",
+    "typeText": "Text",
+    "typeVoice": "Talk",
+    "private": "private",
+    "limit": "up to {n} members",
+    "rolesTitle": "Roles",
+    "rolesHint": "Created below all your existing roles. None of them is an Administrator.",
+    "noPermissions": "No permissions",
+    "notImported": "Not imported: {list}",
+    "adminDropped": "Administrator is never imported.",
+    "everyoneTitle": "Discord’s @everyone",
+    "everyoneBody": "For information only: your own @everyone role is not changed. Discord’s had: {list}",
+    "skippedTitle": "Skipped, no counterpart here",
+    "review": "Review and import…",
+    "history": {
+      "title": "Earlier imports",
+      "empty": "No imports yet.",
+      "row": "{name} · {when}",
+      "undone": "Undone {when}",
+      "undo": "Undo import",
+      "emptyHint": "Imports of a Discord server template are listed here, with an undo."
+    },
+    "confirm": {
+      "title": "Import Discord structure",
+      "step": "Step {n} of 3",
+      "back": "Back",
+      "step1": "This adds {categories}, {channels} and {roles} at the end of your server. Nothing existing is changed, renamed or removed.",
+      "step1Yes": "Yes, add them",
+      "step2": "The new roles get exactly these permissions and no others. They are created below all your existing roles, and none of them is an Administrator.",
+      "step2Dropped": "Dropped, because Mnema Talk has no safe equivalent: {list}",
+      "step2AdminDropped": "Discord’s Administrator permission is dropped from every role.",
+      "step2Yes": "Yes, use these permissions",
+      "step3Named": "Last step. Type the server name “{name}” or IMPORT to confirm.",
+      "step3": "Last step. Type IMPORT to confirm.",
+      "typeLabel": "Confirmation",
+      "go": "Import now",
+      "working": "Importing…",
+      "failed": "The import failed.",
+      "stale": "The template or this server changed since the preview. Preview it again.",
+      "done": "Imported {summary}. You can undo it below."
+    },
+    "undo": {
+      "title": "Undo this import?",
+      "body": "This removes exactly the categories, channels and roles this import created and nothing else. Things you deleted by hand since are skipped. Members who were given an imported role lose it.",
+      "kept": " Kept because they now hold other channels: {list}.",
+      "confirm": "Undo import",
+      "messagesTitle": "Delete channels with messages?",
+      "messagesBody": "These imported channels have messages now. Undoing deletes the channels and their messages for good: {list}",
+      "messagesConfirm": "Delete channels and messages",
+      "failed": "The import could not be undone.",
+      "done": "Import undone. Removed {summary}.",
+      "keptRoles": " {kept} role(s) stay because you can no longer manage them."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Your account and this device. Only you see this.",
+    "nav": "Settings sections",
+    "group": {
+      "account": "Account",
+      "device": "This device"
+    },
+    "tab": {
+      "signin": "Sign-in",
+      "sessions": "Sessions",
+      "privacy": "Privacy",
+      "data": "Data & account",
+      "app": "Push & app",
+      "audio": "Audio"
+    },
+    "privacyEmpty": "There is nothing to set here on this server."
   }
 }

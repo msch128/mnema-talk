@@ -9,12 +9,15 @@ import { useVoiceStore } from '../stores/voice'
 import UserAvatar from './UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import MuteMarks from './MuteMarks.vue'
+import TalkLeaderMark from './TalkLeaderMark.vue'
 import { useDismissable } from '../composables/useDismissable'
 
 defineProps({
   users: { type: Array as PropType<TalkParticipant[]>, required: true },
   // When the room got its first member (ISO), for the total time.
-  startedAt: { type: String, default: '' }
+  startedAt: { type: String, default: '' },
+  /** The leader of a temporary Talk, marked in the list. */
+  leaderId: { type: String, default: '' }
 })
 
 const chatStore = useChatStore()
@@ -64,7 +67,7 @@ function onKeydown(e: KeyboardEvent) {
       aria-haspopup="menu"
       :aria-expanded="open ? 'true' : 'false'"
       v-tooltip="$t('talk.participantsDetails')"
-      class="text-xs leading-4 px-1.5 rounded-full border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent whitespace-nowrap shrink-0 hover:bg-mnema-accent/20 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent"
+      class="text-xs leading-4 px-1.5 max-md:relative max-md:after:absolute max-md:after:-inset-x-1 max-md:after:-inset-y-3 rounded-full border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent whitespace-nowrap shrink-0 hover:bg-mnema-accent/20 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent"
       :aria-label="$t('talk.participants', { count: users.length })"
       @click="toggle"
     >
@@ -78,7 +81,7 @@ function onKeydown(e: KeyboardEvent) {
       role="menu"
       data-testid="talk-participants-list"
       :aria-label="$t('talk.participantsDetails')"
-      class="absolute left-0 top-full z-40 mt-2 w-[280px] max-w-[calc(100vw-16px)] max-h-[min(420px,calc(100dvh-80px))] overflow-y-auto overscroll-contain rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in"
+      class="absolute left-0 top-full z-40 mt-2 w-[280px] max-md:fixed max-md:inset-x-2 max-md:top-14 max-md:mt-0 max-md:w-auto max-h-[min(420px,calc(100dvh-80px))] overflow-y-auto overscroll-contain rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in"
     >
       <div class="flex items-center justify-between px-2 pb-1.5 pt-1 text-xs text-mnema-tertiary">
         <span class="font-semibold uppercase tracking-wide">{{ $t('talk.participants', { count: users.length }) }}</span>
@@ -97,7 +100,7 @@ function onKeydown(e: KeyboardEvent) {
       >
         <UserAvatar :user="u" size="sm" :is-speaking="voiceStore.isSpeaking(u.id)" />
         <span class="flex min-w-0 flex-1 flex-col leading-[18px]">
-          <span class="truncate font-medium text-mnema-text">{{ u.display_name || u.username }}</span>
+          <span class="flex min-w-0 items-center gap-1"><span class="truncate font-medium text-mnema-text">{{ u.display_name || u.username }}</span><TalkLeaderMark v-if="leaderId && u.id === leaderId" /></span>
           <span class="truncate font-mono text-xs text-mnema-tertiary">@{{ u.username }}</span>
         </span>
         <MuteMarks :muted="voiceStore.muteStateOf(u.id).muted" :deafened="voiceStore.muteStateOf(u.id).deafened" />

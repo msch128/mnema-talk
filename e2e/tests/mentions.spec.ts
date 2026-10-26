@@ -32,6 +32,7 @@ test('a role mention reaches its members, shows as a pill and lands in the inbox
     const channel = await apiFetch(owner, 'POST', '/api/admin/channels', { name: CHANNEL, type: 'text' })
     expect(channel.status).toBe(201)
     const channelId = responseString(channel, 'id')
+    const channelSlug = responseString(channel, 'slug')
     const hidden = await apiFetch(owner, 'POST', '/api/admin/channels', { name: PRIVATE, type: 'text' })
     expect(hidden.status).toBe(201)
     const hiddenId = responseString(hidden, 'id')
@@ -81,7 +82,7 @@ test('a role mention reaches its members, shows as a pill and lands in the inbox
     await expect(items.first()).toContainText('please read')
     await expect(member.getByTestId('mentions-inbox')).not.toContainText('geheim')
     await items.first().click()
-    await expect(member).toHaveURL(new RegExp(`/c/${channelId}/m/`))
+    await expect(member).toHaveURL(new RegExp(`/c/${channelSlug}/m/`))
     await expect(member.locator('.md-mention-role', { hasText: `@${ROLE}` })).toBeVisible()
     expect((await apiFetch(owner, 'DELETE', `/api/admin/roles/${responseString(role, 'id')}`)).status).toBe(204)
   } finally {

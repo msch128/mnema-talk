@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import type { Cookie, Page } from '@playwright/test'
+import { randomBytes } from 'node:crypto'
 import { apiFetch, bounds, responseString, responseUserId } from './helpers'
 import { test, expect } from './fixtures'
 
@@ -20,33 +21,74 @@ const MIN_TARGET = 44
 // WebKit and on Chromium. Same limit as the CI WebKit job, which skips the call specs.
 const isLinuxWebkit = (browserName: string) => browserName === 'webkit' && process.platform === 'linux'
 
-// The login allows 60 attempts per 15 minutes from one address and the whole
-// suite shares them. The first mobile project signs in through the dialog and
-// leaves its session here; the next one reuses it (and signs in itself if the
-// session is no longer valid) instead of spending another attempt.
+// The API allows 600 requests a minute per account and the whole suite signs in
+// as the Owner, so the phone specs, which run last, can find that budget spent.
+// They use an administrator account of their own instead (made through the
+// API, so the server's limits stay as they are). The login allows 60 attempts
+// per 15 minutes from one address and the suite shares them: the first mobile
+// project creates the account and leaves its session here; the next one reuses
+// it (and signs in itself if the session is no longer valid).
 const SESSION_FILE = 'test-results/.mobile-session.json'
+const ADMINISTRATOR = 1 << 0
 
-async function savedSession(): Promise<Cookie[] | null> {
+interface MobileAccount { username: string; password: string; cookies: Cookie[] }
+
+async function savedAccount(): Promise<MobileAccount | null> {
   try {
-    return JSON.parse(await readFile(SESSION_FILE, 'utf8')) as Cookie[]
+    return JSON.parse(await readFile(SESSION_FILE, 'utf8')) as MobileAccount
   } catch {
     return null
   }
 }
 
+async function createAccount(page: Page): Promise<MobileAccount> {
+  const username = `mobile_${suffix}`
+  const password = `pw-${suffix}-${randomBytes(8).toString('hex')}`
+  await page.goto('/')
+  expect((await apiFetch(page, 'POST', '/api/auth/login', { username: ADMIN_USER, password: ADMIN_PASSWORD })).status).toBe(200)
+  const invite = responseString(await apiFetch(page, 'POST', '/api/admin/invites', { max_uses: 1 }), 'code')
+  const role = responseString(await apiFetch(page, 'POST', '/api/admin/roles', { name: `Phone ${suffix}`, permissions: ADMINISTRATOR }), 'id')
+  // The registration signs the new account in, so it gets a context of its own.
+  const other = await page.context().browser()!.newContext()
+  try {
+    const fresh = await other.newPage()
+    await fresh.goto('/')
+    const registered = await apiFetch(fresh, 'POST', '/api/auth/register', { username, password, invite_code: invite })
+    expect(registered.status).toBe(201)
+    // Registration answers with the user in an envelope.
+    const id = responseString({ ...registered, json: Object.getOwnPropertyDescriptor(registered.json, 'user')?.value }, 'id')
+    expect((await apiFetch(page, 'PUT', `/api/admin/users/${id}/roles`, { role_ids: [role] })).status).toBe(204)
+  } finally {
+    await other.close()
+  }
+  await page.context().clearCookies()
+  await page.goto('/')
+  expect((await apiFetch(page, 'POST', '/api/auth/login', { username, password })).status).toBe(200)
+  const account = { username, password, cookies: await page.context().cookies() }
+  await mkdir('test-results', { recursive: true })
+  await writeFile(SESSION_FILE, JSON.stringify(account))
+  return account
+}
+
 async function signIn(page: Page) {
-  const saved = await savedSession()
-  if (saved) await page.context().addCookies(saved)
+  const saved = await savedAccount()
+  if (saved) await page.context().addCookies(saved.cookies)
   await page.goto('/')
   const dialog = page.getByRole('dialog')
   await expect(dialog.or(page.getByTestId('open-nav'))).toBeVisible()
   if (!(await dialog.isVisible())) return
-  await dialog.getByLabel('Benutzername').fill(ADMIN_USER)
-  await dialog.getByLabel('Passwort').fill(ADMIN_PASSWORD)
-  await dialog.getByRole('button', { name: 'Anmelden' }).click()
-  await expect(dialog).toBeHidden()
-  await mkdir('test-results', { recursive: true })
-  await writeFile(SESSION_FILE, JSON.stringify(await page.context().cookies()))
+  if (!saved) {
+    await createAccount(page)
+  } else {
+    await dialog.getByLabel('Benutzername').fill(saved.username)
+    await dialog.getByLabel('Passwort').fill(saved.password)
+    await dialog.getByRole('button', { name: 'Anmelden' }).click()
+    await expect(dialog).toBeHidden()
+    await writeFile(SESSION_FILE, JSON.stringify({ ...saved, cookies: await page.context().cookies() }))
+    return
+  }
+  await page.goto('/')
+  await expect(page.getByTestId('open-nav')).toBeVisible()
 }
 
 async function expectNoSidewaysScroll(page: Page) {
@@ -137,6 +179,21 @@ test('phone: sign in, drawer, message, thread, settings, Talk', async ({ page, b
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
 
+  // The settings are a full-screen sheet on a phone, sections as a wrapped row (no sideways scrolling).
+  await openDrawer(page)
+  await page.getByTestId('account-menu-button').tap()
+  await page.getByTestId('menu-settings').tap()
+  const sheet = page.getByRole('dialog', { name: 'Einstellungen' })
+  await expect(sheet).toBeVisible()
+  const sheetBox = await bounds(sheet)
+  expect(sheetBox.x).toBeLessThanOrEqual(1)
+  expect(sheetBox.width).toBeGreaterThanOrEqual((viewport?.width ?? 0) - 1)
+  await page.getByTestId('settings-tab-sessions').tap()
+  await expect(page.getByTestId('account-sessions')).toBeVisible()
+  await expectNoSidewaysScroll(page)
+  await page.keyboard.press('Escape')
+  await expect(sheet).toBeHidden()
+
   // Talk: join from the drawer, the control bar stays on screen, leave.
   await openDrawer(page)
   await page.locator('[data-channel-type="voice"]', { hasText: VOICE_CHANNEL }).tap()
@@ -180,31 +237,41 @@ test('phone: popovers, emoji picker and the admin console stay on screen', async
     expect(box.x, `${testId} left edge`).toBeGreaterThanOrEqual(0)
     expect(box.x + box.width, `${testId} right edge`).toBeLessThanOrEqual(width + 1)
   }
-  for (const [button, panel] of [['mentions-inbox-button', 'mentions-inbox'], ['pinned-button', 'pinned-panel']] as const) {
-    await page.getByTestId(button).tap()
-    await expect(page.getByTestId(panel)).toBeVisible()
-    await insideScreen(panel)
-    await page.getByTestId(button).tap()
-    await expect(page.getByTestId(panel)).toBeHidden()
-  }
+  // On a phone the mentions inbox sits in the header's More menu.
+  await page.getByTestId('header-more').tap()
+  await page.getByRole('menuitem', { name: /Erwähnungen|Mentions/ }).tap()
+  await expect(page.getByTestId('mentions-inbox')).toBeVisible()
+  await insideScreen('mentions-inbox')
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('mentions-inbox')).toBeHidden()
+  await page.getByTestId('pinned-button').tap()
+  await expect(page.getByTestId('pinned-panel')).toBeVisible()
+  await insideScreen('pinned-panel')
+  await page.getByTestId('pinned-button').tap()
+  await expect(page.getByTestId('pinned-panel')).toBeHidden()
   await page.getByTestId('emoji-button').tap()
   await expect(page.getByTestId('emoji-picker')).toBeVisible()
   await insideScreen('emoji-picker')
   await page.keyboard.press('Escape')
 
-  // The admin console: every tab fits, the title names the tab, the tab bar
-  // keeps its place and nothing pushes the page sideways.
+  // The admin console is a full-screen sheet: it opens on the list of sections,
+  // each section has a back arrow to that list, the title names the section and
+  // nothing pushes the page sideways (the phone account is an Administrator, so
+  // the Owner-only media and system sections are left to the desktop specs).
   await page.goto('/admin/users')
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible()
-  const barTop = (await bounds(page.getByTestId('admin-tabs'))).y
-  for (const tab of ['users', 'roles', 'channels', 'invites', 'onboarding', 'emoji', 'reports', 'bans', 'bots', 'media', 'audit', 'system']) {
+  await expect(dialog.getByRole('heading', { level: 2 })).toHaveText('Admin-Konsole')
+  const sheet = await bounds(dialog)
+  expect(sheet.x, 'the console fills the screen').toBe(0)
+  expect(sheet.width, 'the console fills the screen').toBe(page.viewportSize()!.width)
+  for (const tab of ['users', 'roles', 'channels', 'invites', 'onboarding', 'emoji', 'reports', 'bans', 'bots', 'audit']) {
+    if (!(await page.getByTestId('admin-tabs').isVisible())) await page.getByTestId('admin-back').tap()
     const button = page.getByTestId(`tab-${tab}`)
+    await expect(button).toBeVisible()
     await button.tap()
-    await expect(button).toHaveAttribute('aria-pressed', 'true')
-    await expect(button).toBeInViewport()
-    await expect(dialog.getByRole('heading', { level: 2 })).toHaveText((await button.innerText()).trim())
-    expect((await bounds(page.getByTestId('admin-tabs'))).y, `${tab} tab bar position`).toBe(barTop)
+    await expect(page.getByTestId('admin-tabs')).toBeHidden()
+    await expect(page.getByTestId('admin-back')).toBeVisible()
     await expectNoSidewaysScroll(page)
   }
 })
@@ -273,7 +340,7 @@ test('phone: the drawer row opens a Talk chat without joining', async ({ page })
   const name = `${VOICE_CHANNEL} lesen`
   const voice = await apiFetch(page, 'POST', '/api/admin/channels', { name, type: 'voice' })
   expect(voice.status).toBe(201)
-  const channelId = responseString(voice, 'id')
+  const channelSlug = responseString(voice, 'slug')
   await page.reload()
   await page.getByTestId('open-nav').tap()
   await expect(page.getByTestId('channel-drawer')).toBeInViewport({ ratio: 0.9 })
@@ -283,7 +350,7 @@ test('phone: the drawer row opens a Talk chat without joining', async ({ page })
   expect(box.width).toBeGreaterThanOrEqual(MIN_TARGET)
   expect(box.height).toBeGreaterThanOrEqual(MIN_TARGET)
   await chatButton.tap()
-  await expect(page).toHaveURL(new RegExp(`/v/${channelId}/chat$`))
+  await expect(page).toHaveURL(new RegExp(`/v/${channelSlug}/chat$`))
   await expect(page.getByTestId('channel-drawer')).not.toBeInViewport()
   await expect(page.getByTestId('voice-chat-panel')).toBeVisible()
   const join = page.getByTestId('talk-header-join')

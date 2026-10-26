@@ -12,14 +12,17 @@ interface ChannelHandlers { onPermissions?: (channel: Channel) => void; onWebhoo
 interface CategoryHandlers { onPermissions?: (category: Category) => void; onCollapseAll?: () => void; onExpandAll?: () => void; allCollapsed?: boolean; noneCollapsed?: boolean; onCreateChannel?: (category: Category) => void; onCreateCategory?: (category: Category) => void; onEdit?: (category: Category) => void; onDelete?: (category: Category) => void }
 import {
   CheckCheck, Link, Pencil, Trash2, User, AtSign, Volume2, VolumeX, Eye, EyeOff, UserX, Ban, LogOut,
-  CopyPlus, Plus, FolderPlus, ChevronsDownUp, ChevronsUpDown, Shield, Webhook, Clock, Gavel
+  CopyPlus, Radio, Plus, FolderPlus, ChevronsDownUp, ChevronsUpDown, Shield, Webhook, Clock, Gavel, SlidersHorizontal
 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { canConfigureTalk, canToggleStage, isStageTalk, openTalkSettings, setStage } from '../lib/talks'
 import { api } from '../lib/api'
+import { channelPath } from '../lib/routePaths'
 import { confirm } from '../lib/confirm'
 import { menuPointFromEvent } from '../lib/contextMenuPoint'
 import type { MenuTrigger } from '../lib/contextMenuPoint'
@@ -50,7 +53,7 @@ export function useMenuState() {
 
 export function channelLink(channel: Channel) {
   const base = typeof window !== 'undefined' ? window.location.origin : ''
-  return `${base}/${channel.type === 'voice' ? 'v' : 'c'}/${channel.id}`
+  return `${base}${channelPath(channel)}`
 }
 
 async function copyText(text: string, okMessage: string) {
@@ -96,6 +99,22 @@ function basicChannelItems(channel: Channel): ContextMenuItem[] {
   ]
 }
 
+/** "Talk settings" for a Talk the member manages, or a temporary Talk they lead. */
+function talkSettingsItems(channel: Channel): ContextMenuItem[] {
+  if (!useServerFeaturesStore().talksLobby) return []
+  const canManage = usePermissionsStore().can('manage_channels')
+  if (!canConfigureTalk(channel, useAuthStore().user?.id, canManage)) return []
+  return [{ id: 'talk-settings', label: t('talk.settings'), icon: SlidersHorizontal, action: () => openTalkSettings(channel.id) }]
+}
+
+/** "Make Stage" / "Make normal Talk" for a permanent Talk. */
+function stageToggleItems(channel: Channel): ContextMenuItem[] {
+  if (!useServerFeaturesStore().talksStage || !canToggleStage(channel)) return []
+  const stage = !isStageTalk(channel)
+  const failed = () => useToastStore().error(t('stage.toggleFailed'))
+  return [{ id: 'stage-toggle', label: t(stage ? 'stage.make' : 'stage.makeNormal'), icon: Radio, action: () => { void setStage(channel.id, stage).catch(failed) } }]
+}
+
 function channelManagementItems(channel: Channel, handlers: ChannelHandlers): ContextMenuItem[] {
   const permissions = usePermissionsStore()
   const canAdmin = permissions.can('administrator')
@@ -106,6 +125,7 @@ function channelManagementItems(channel: Channel, handlers: ChannelHandlers): Co
   if (canManage) {
     items.push(
       { id: 'permissions', label: t('overwrites.menu'), icon: Shield, action: () => handlers.onPermissions?.(channel) },
+      ...stageToggleItems(channel),
       { id: 'edit', label: t('sidebar.editChannel'), icon: Pencil, action: () => handlers.onEdit?.(channel) },
       { id: 'duplicate', label: t('sidebar.duplicateChannel'), icon: CopyPlus, action: () => handlers.onDuplicate?.(channel) },
       {
@@ -125,7 +145,8 @@ export function buildChannelItems(channel: Channel, handlers: ChannelHandlers = 
   return [
     ...basicChannelItems(channel),
     { type: 'separator' },
-    ...notifyMenuItems({ kind: 'channel', id: channel.id }),
+    ...notifyMenuItems({ kind: 'channel', id: channel.id, inCategory: !!channel.category_id }),
+    ...talkSettingsItems(channel),
     ...channelManagementItems(channel, handlers)
   ]
 }

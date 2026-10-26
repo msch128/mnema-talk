@@ -44,7 +44,7 @@ class ResolveVersions(unittest.TestCase):
     def test_default_matrix_is_the_supported_sources(self):
         r = self.resolve('')
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(r.stdout.split(), ['0.8.16', '0.9.0', '1.0.0'])
+        self.assertEqual(r.stdout.split(), ['0.8.16', '0.9.0', '1.0.0', '1.1.0'])
 
     def test_commas_spaces_prefix_and_duplicates(self):
         r = self.resolve('v0.9.0, 0.8.16 0.9.0')

@@ -10,13 +10,16 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/gateway"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/later"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/push"
 	"github.com/msch128/mnema-talk/internal/sfu"
@@ -78,7 +81,13 @@ type Router struct {
 	Bots *bot.Authenticator
 	// Gateway is the bot gateway (tests adjust its timings).
 	Gateway *gateway.Gateway
-	cancel  context.CancelFunc
+	// Later runs reminders and scheduled messages (tests call Sweep).
+	Later *later.Service
+	// Events serves community events.
+	Events *communityevents.Handler
+	// EventsScheduler manages event activation and reminders.
+	EventsScheduler *communityevents.Scheduler
+	cancel          context.CancelFunc
 	// outgoing delivers outgoing webhooks; Close waits for it to settle.
 	outgoing *webhook.Dispatcher
 }
@@ -131,12 +140,14 @@ func NewRouter(d Deps) (*Router, error) {
 		return nil, err
 	}
 	c.newWebhooks()
+	c.newTalks()
 	c.newBots()
 	c.tapThreadFollows()
 	if err := c.newPush(); err != nil {
 		cancel()
 		return nil, err
 	}
+	c.newEvents()
 	if err := c.newSystem(); err != nil {
 		cancel()
 		return nil, err
@@ -145,15 +156,19 @@ func NewRouter(d Deps) (*Router, error) {
 	c.perUser = httpx.NewRateLimiter(600, time.Minute).Named("api_user")
 	c.previewsPerUser = httpx.NewRateLimiter(120, time.Minute).Named("link_preview")
 	c.uploadsPerUser = httpx.NewRateLimiter(30, time.Minute).Named("upload")
+	c.newModeration()
 
 	return &Router{
-		Handler:  c.buildHandler(),
-		Hub:      c.hub,
-		Webhooks: c.webhookH,
-		Bots:     c.botAuthn,
-		Gateway:  c.gw,
-		cancel:   cancel,
-		outgoing: c.outgoing,
-		preview:  PreviewDeps{Accounts: c.authH, Chat: c.chatH, System: c.systemH, PerUser: c.perUser, Trusted: trusted},
+		Handler:         c.buildHandler(),
+		Hub:             c.hub,
+		Webhooks:        c.webhookH,
+		Bots:            c.botAuthn,
+		Gateway:         c.gw,
+		Later:           c.later,
+		Events:          c.eventsH,
+		EventsScheduler: c.eventsScheduler,
+		cancel:          func() { automod.Detach(d.DB, c.engine); cancel() },
+		outgoing:        c.outgoing,
+		preview:         PreviewDeps{Accounts: c.authH, Chat: c.chatH, System: c.systemH, PerUser: c.perUser, Trusted: trusted},
 	}, nil
 }

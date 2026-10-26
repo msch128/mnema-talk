@@ -274,7 +274,7 @@ describe('desktop notifications', () => {
     chat.handleWSEvent({ type: 'message_create', payload: msg({ id: 'mx', channel_id: 'ch2' }) })
     required(made[0]).onclick?.()
     expect(focus).toHaveBeenCalled()
-    expect(currentRoute.value).toMatchObject({ view: 'chat', channelId: 'ch2', messageId: 'mx' })
+    expect(currentRoute.value).toMatchObject({ view: 'chat', channelRef: 'ch2', messageId: 'mx' })
   })
 
   it('leaves a hidden page to the service worker when push is on for this device, and still speaks for a visible one', () => {
@@ -361,8 +361,8 @@ describe('goToMessage', () => {
   it('routes thread replies to their root message', () => {
     const chat = setup()
     chat.goToMessage(messageFixture({ id: 'reply', channel_id: 'ch2', parent_id: 'root' }))
-    expect(currentRoute.value).toMatchObject({ channelId: 'ch2', messageId: 'root' })
+    expect(currentRoute.value).toMatchObject({ channelRef: 'ch2', messageId: 'root' })
     chat.goToMessage(messageFixture({ id: 'plain', channel_id: 'ch1' }))
-    expect(currentRoute.value).toMatchObject({ channelId: 'ch1', messageId: 'plain' })
+    expect(currentRoute.value).toMatchObject({ channelRef: 'ch1', messageId: 'plain' })
   })
 })

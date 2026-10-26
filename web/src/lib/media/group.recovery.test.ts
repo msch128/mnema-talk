@@ -53,9 +53,9 @@ async function deliver(groups: Map<string, MediaGroup>, from: string, wires: Uin
 /** Seals as `sender` with its keys `left` and opens with `right`. */
 async function roundTrip(left: EpochKeys | null, right: EpochKeys | null, epoch: number, sender = aliceId) {
   if (!left || !right) throw new Error('expected epoch keys')
-  const packet = await sealFrame({ keys: left, epoch, stream: 1, counter: 0, channelId, senderId: sender, plaintext: new Uint8Array([9, 8, 7]) })
+  const packet = await sealFrame({ keys: left, epoch, stream: 1, counter: 0, channelId, senderId: sender, plaintext: new Uint8Array([9, 8, 7]), source: 0 })
   if (!packet) throw new Error('expected a sealed frame')
-  const opened = await openFrame({ keys: new Map([[epoch, right]]), channelId, senderId: sender, packet, replay: new ReplayWindow() })
+  const opened = await openFrame({ keys: new Map([[epoch, right]]), channelId, senderId: sender, packet, replay: new ReplayWindow(), source: 0 })
   return opened ? [...opened] : null
 }
 
@@ -211,7 +211,7 @@ describe('a member who starts over inside the grace period', () => {
     const firstOffer = wireAt((await first.sync(roster)).wires, 0)
     await groups.get(bobId)?.close()
     groups.set(bobId, first)
-    vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: Date.now() })
     const swapped = await alice.receive(bobId, firstOffer)
     expect(swapped.wires).toHaveLength(2)
     expect((await alice.receive(bobId, firstOffer)).wires).toEqual([])
@@ -366,7 +366,7 @@ describe('a member who missed a commit', () => {
       const { carol, dave } = await laterPair()
       const roster = [aliceId, carolId, daveId]
       const before = (await carol.sync(roster)).epoch
-      vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+      vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: Date.now() })
       const channel = mediaGroupId(channelId) as Uint8Array
       // A welcome for somebody else's package spends the sender's allowance and changes nothing.
       const stranger = await opened(bobId)
@@ -436,7 +436,7 @@ describe('a member who missed a commit', () => {
     expect(asked.wires).toHaveLength(1)
     // Asking again right away changes nothing; later it is a new request with a new package.
     expect((await bob.recover([aliceId, bobId, carolId])).wires).toEqual([])
-    vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: Date.now() })
     expect((await bob.recover([aliceId, bobId, carolId])).wires).toEqual([])
     vi.setSystemTime(Date.now() + 11_000)
     const again = await bob.recover([aliceId, bobId, carolId])

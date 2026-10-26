@@ -5,7 +5,7 @@ import type { Channel, VoiceUser } from '../types/domain'
 // it for a voice channel. Admins can drag the row (and its users with it) or
 // move it with Alt+ArrowUp / Alt+ArrowDown.
 import { computed } from 'vue'
-import { Hash, Volume2, Trash2, Monitor, BellOff, MessageSquare } from '@lucide/vue'
+import { Hash, Volume2, Radio, Trash2, Monitor, BellOff, MessageSquare, CirclePlus, MessagesSquare, AtSign } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
@@ -13,6 +13,8 @@ import { channelDraftKey, hasDraft } from '../lib/drafts'
 import UserAvatar from './UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import MuteMarks from './MuteMarks.vue'
+import TalkLeaderMark from './TalkLeaderMark.vue'
+import Badge from './Badge.vue'
 
 const props = defineProps({
   channel: { type: Object as PropType<Channel>, required: true },
@@ -56,6 +58,8 @@ const reading = computed(() =>
 const draft = computed(() => !reading.value && hasDraft(authStore.user?.id, channelDraftKey(props.channel.id)))
 // Voice channels have their own text chat, so unreads and mentions too.
 const muted = computed(() => chatStore.readStates[props.channel.id]?.notify_level === 'mute')
+// The effective level also shows when it is "mentions only" (a calm marker, no badge).
+const mentionsOnly = computed(() => chatStore.readStates[props.channel.id]?.notify_level === 'mentions')
 // A muted channel keeps its mentions but does not announce plain unreads.
 const unread = computed(() => (muted.value ? 0 : chatStore.readStates[props.channel.id]?.unread_count || 0))
 const mentions = computed(() => chatStore.readStates[props.channel.id]?.mention_count || 0)
@@ -65,16 +69,17 @@ const voiceUsers = computed(() => {
   return users ? Object.values(users) : []
 })
 
-// The row leaves room on its right for the buttons that sit beside it (24px each, 44px chat on phones).
-const actionPad = computed(() => {
-  if (isVoice.value && props.admin) return 'pr-[68px] max-md:pr-[58px]'
-  if (isVoice.value) return 'pr-[38px] max-md:pr-[58px]'
-  return props.admin ? 'pr-[38px] max-md:pr-2' : ''
-})
+// Badges and the timer sit at the row's right edge, the same place on every
+// row. The buttons beside the row (24px each) take that place while the
+// pointer is on it or keyboard focus is inside; on phones the voice chat
+// button is always there, so its row leaves room for it.
+const actionPad = computed(() => (isVoice.value ? 'max-md:pr-[58px]' : ''))
+const hasActions = computed(() => props.admin || (isVoice.value && !props.channel.is_lobby))
+const trailingClass = computed(() => (hasActions.value ? 'md:group-hover/row:invisible md:group-focus-within/row:invisible' : ''))
 
 // Shared row styling (34px channel rows, rounded hover/selected states).
 const rowClass = computed(() => [
-  'relative w-full h-[34px] max-md:h-11 flex items-center justify-between gap-1.5 px-2 mb-px rounded-lg text-nav transition-colors motion-reduce:transition-none group cursor-pointer text-left min-w-0 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
+  'relative w-full h-[34px] max-md:h-11 flex items-center justify-between gap-1.5 px-2 mb-px rounded-lg text-nav transition-colors motion-reduce:transition-none group cursor-pointer text-left min-w-0 focus:outline-hidden focus-ring',
   active.value
     ? 'bg-mnema-hover text-mnema-text font-medium shadow-[inset_2px_0_0_0_#2DA771]'
     : unread.value > 0
@@ -126,9 +131,33 @@ const rowClass = computed(() => [
       ></span>
 
       <div class="flex items-center gap-1.5 min-w-0">
-        <Volume2
-          v-if="isVoice"
+        <CirclePlus
+          v-if="channel.is_lobby"
+          data-testid="lobby-icon"
+          class="w-5 h-5 shrink-0 text-mnema-accent"
+          v-tooltip="$t('talk.lobbyOpens')"
+        />
+        <Radio
+          v-else-if="isVoice && channel.is_stage"
+          data-testid="stage-icon"
           :class="['w-5 h-5 shrink-0 transition-colors', voiceStore.currentChannelId === channel.id ? 'text-mnema-accent' : 'text-mnema-tertiary group-hover:text-mnema-text']"
+          v-tooltip="$t('stage.isStage')"
+        />
+        <Volume2
+          v-else-if="isVoice"
+          :class="['w-5 h-5 shrink-0 transition-colors', voiceStore.currentChannelId === channel.id ? 'text-mnema-accent' : 'text-mnema-tertiary group-hover:text-mnema-text']"
+        />
+        <MessagesSquare
+          v-else-if="channel.type === 'forum'"
+          data-testid="forum-icon"
+          :class="[
+            'w-5 h-5 shrink-0 transition-colors',
+            chatStore.activeChannel?.id === channel.id
+              ? 'text-mnema-accent'
+              : unread > 0
+                ? 'text-mnema-text'
+                : 'text-mnema-tertiary group-hover:text-mnema-text'
+          ]"
         />
         <Hash
           v-else
@@ -143,31 +172,20 @@ const rowClass = computed(() => [
         />
         <span class="truncate">{{ channel.name }}</span>
         <span v-if="draft" class="shrink-0 rounded-sm bg-mnema-surface px-1 text-[10px] font-semibold uppercase tracking-wide text-mnema-tertiary" data-testid="channel-draft">{{ $t('sidebar.draft') }}</span>
-        <BellOff v-if="muted" class="w-3.5 h-3.5 shrink-0 text-mnema-tertiary" data-testid="channel-muted" :aria-label="$t('notifications.mute')" />
+        <BellOff v-if="muted" class="w-3.5 h-3.5 shrink-0 text-mnema-tertiary" data-testid="channel-muted" :aria-label="$t('notifications.bellNothing')" />
+        <AtSign v-else-if="mentionsOnly" class="w-3.5 h-3.5 shrink-0 text-mnema-tertiary" data-testid="channel-mentions-only" :aria-label="$t('notifications.bellMentions')" />
       </div>
 
       <!-- Unread & Mention Badges; for a Talk in use, how long it runs -->
-      <div class="flex items-center gap-1 ml-auto shrink-0">
+      <div :class="['flex items-center gap-1 ml-auto shrink-0', trailingClass]">
         <VoiceTimer
           v-if="isVoice && voiceStore.roomStartedAt[channel.id]"
           :since="voiceStore.roomStartedAt[channel.id]"
           data-testid="sidebar-talk-timer"
           class="text-xs text-mnema-tertiary"
         />
-        <span
-          v-if="mentions > 0 && !reading"
-          data-testid="channel-mentions"
-          class="px-1.5 py-0.5 rounded-full bg-mnema-danger text-white text-xs font-bold leading-none min-w-[18px] text-center"
-        >
-          {{ mentions }}
-        </span>
-        <span
-          v-else-if="unread > 0 && !reading"
-          data-testid="channel-unread"
-          class="px-1.5 py-0.5 rounded-full bg-mnema-surface border border-mnema-border text-mnema-text text-xs font-semibold leading-none min-w-[18px] text-center"
-        >
-          {{ unread }}
-        </span>
+        <Badge v-if="mentions > 0 && !reading" variant="mention" data-testid="channel-mentions">{{ mentions }}</Badge>
+        <Badge v-else-if="unread > 0 && !reading" variant="unread" data-testid="channel-unread">{{ unread }}</Badge>
       </div>
     </div>
 
@@ -175,7 +193,7 @@ const rowClass = computed(() => [
       <div v-if="isVoice || admin" class="pointer-events-none absolute inset-y-0 right-2 mb-px flex items-center gap-1.5">
       <!-- A Talk's chat can be read without joining the Talk -->
       <button
-        v-if="isVoice"
+        v-if="isVoice && !channel.is_lobby"
         type="button"
         data-no-drag
         data-testid="talk-open-chat"
@@ -206,7 +224,7 @@ const rowClass = computed(() => [
       <div
         v-for="user in voiceUsers"
         :key="user.id"
-        class="min-h-8 max-md:min-h-11 py-1 flex items-center gap-2 px-2 rounded-md text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text transition-colors min-w-0 cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent"
+        class="min-h-8 max-md:min-h-11 py-1 flex items-center gap-2 px-2 rounded-md text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text transition-colors min-w-0 cursor-pointer focus:outline-hidden focus-ring"
         role="button"
         tabindex="0"
         aria-haspopup="menu"
@@ -219,7 +237,7 @@ const rowClass = computed(() => [
       >
         <UserAvatar :user="user" size="xs" :is-speaking="voiceStore.isSpeaking(user.id)" />
         <span class="flex min-w-0 flex-col leading-4">
-          <span class="truncate text-sm">{{ user.display_name || user.username }}</span>
+          <span class="flex min-w-0 items-center gap-1"><span class="truncate text-sm">{{ user.display_name || user.username }}</span><TalkLeaderMark v-if="channel.leader_id === user.id" /></span>
           <VoiceTimer :since="user.joined_at" class="text-[11px] text-mnema-tertiary" />
         </span>
         <span class="ml-auto flex shrink-0 items-center gap-1.5">

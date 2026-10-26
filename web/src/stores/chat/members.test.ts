@@ -29,16 +29,22 @@ describe('members', () => {
 
   describe('opening a profile', () => {
     it('falls back to the candidate username, not the known member, for the display name', async () => {
-      vi.spyOn(console, 'warn').mockImplementation(() => {})
       const id = fixtureId(7)
-      cx.cs.members.value = [userFixture({ id, username: 'known', display_name: '' })]
-      const opening = openUserProfile(cx, { id, username: 'given' })
-      expect(cx.cs.selectedUserProfile.value).toMatchObject({ username: 'given', display_name: 'given' })
-      await opening
-      cx.cs.selectedUserProfile.value = null
-      const bare = openUserProfile(cx, { id })
-      expect(cx.cs.selectedUserProfile.value).toMatchObject({ username: 'known', display_name: '' })
-      await bare
+      const fetchMock = vi.fn(async () => new Response(JSON.stringify(userFixture({ id, username: 'known' })), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      vi.stubGlobal('fetch', fetchMock)
+      try {
+        cx.cs.members.value = [userFixture({ id, username: 'known', display_name: '' })]
+        const opening = openUserProfile(cx, { id, username: 'given' })
+        expect(cx.cs.selectedUserProfile.value).toMatchObject({ username: 'given', display_name: 'given' })
+        await opening
+        cx.cs.selectedUserProfile.value = null
+        const bare = openUserProfile(cx, { id })
+        expect(cx.cs.selectedUserProfile.value).toMatchObject({ username: 'known', display_name: '' })
+        await bare
+        expect(fetchMock).toHaveBeenCalledTimes(2)
+      } finally {
+        vi.unstubAllGlobals()
+      }
     })
   })
 

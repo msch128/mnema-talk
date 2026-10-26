@@ -56,6 +56,19 @@ describe('global search keyboard lifecycle', () => {
     uninstallGlobalSearch()
     expect(searchText.value).toBe('')
   })
+  it('adds the channel of the header search to the kept query instead of replacing it', async () => {
+    searchText.value = 'Stand from:ada in:lounge'
+    await openSearch('in:general ')
+    expect(searchText.value).toBe('from:ada in:general Stand')
+    searchText.value = 'from:ada'
+    await openSearch('in:"my room" ')
+    expect(searchText.value).toBe('from:ada in:"my room" ')
+    searchText.value = ''
+    await openSearch('in:general ')
+    expect(searchText.value).toBe('in:general ')
+    searchOpen.value = false
+    searchText.value = ''
+  })
   it('does not install a browser listener in a server-side environment', () => {
     uninstallGlobalSearch()
     vi.stubGlobal('window', undefined)

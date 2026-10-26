@@ -59,3 +59,158 @@ func TestSearchNewFiltersCountAsCriteriaAndStayParameterised(t *testing.T) {
 		t.Fatal("empty search accepted")
 	}
 }
+
+func TestParseSearchDay(t *testing.T) {
+	if s, e, err := ParseSearchDay("", ""); s != nil || e != nil || err != nil {
+		t.Fatalf("empty: %v %v %v", s, e, err)
+	}
+	s, e, err := ParseSearchDay("2026-10-24", "+02:00")
+	if err != nil || s == nil || e == nil {
+		t.Fatalf("valid: %v %v %v", s, e, err)
+	}
+	// 2026-10-24 00:00:00 +02:00 is 2026-10-23 22:00:00 UTC
+	if s.UTC().Day() != 23 || s.UTC().Hour() != 22 {
+		t.Fatalf("start UTC: %v", s.UTC())
+	}
+	if e.UTC().Day() != 24 || e.UTC().Hour() != 22 {
+		t.Fatalf("end UTC: %v", e.UTC())
+	}
+	// Test integer minutes offset (120 minutes = +02:00)
+	s2, e2, err := ParseSearchDay("2026-10-24", "120")
+	if err != nil || !s2.Equal(*s) || !e2.Equal(*e) {
+		t.Fatalf("minutes offset mismatch: %v %v %v", s2, e2, err)
+	}
+	// Test UTC and Z
+	for _, z := range []string{"", "Z", "UTC", "+00:00"} {
+		sz, ez, err := ParseSearchDay("2026-10-24", z)
+		if err != nil || sz.UTC().Hour() != 0 || ez.Sub(*sz) != 24*time.Hour {
+			t.Fatalf("z=%q: %v %v %v", z, sz, ez, err)
+		}
+	}
+	// Bad inputs
+	for _, bad := range []string{"2026-13-01", "not-a-date", "2026-02-31"} {
+		if _, _, err := ParseSearchDay(bad, ""); err == nil {
+			t.Errorf("accepted bad date %q", bad)
+		}
+	}
+	for _, badTz := range []string{"bad-tz", "+25:00", "+02:70"} {
+		if _, _, err := ParseSearchDay("2026-10-24", badTz); err == nil {
+			t.Errorf("accepted bad tz %q", badTz)
+		}
+	}
+}
+
+func TestSearchFiltersV3SQLAndCriteria(t *testing.T) {
+	d := time.Now().UTC()
+	de := d.Add(24 * time.Hour)
+	// Each filter counts as criteria alone
+	for name, q := range map[string]SearchQuery{
+		"during":   {DuringStart: &d, DuringEnd: &de, Limit: 5},
+		"filename": {Filename: "report.pdf", Limit: 5},
+		"author":   {AuthorType: "bot", Limit: 5},
+		"embed":    {Has: "embed", Limit: 5},
+	} {
+		if _, _, err := buildSearchSQL(q); err != nil {
+			t.Fatalf("%s alone: %v", name, err)
+		}
+	}
+
+	// Filename escaping and parameterisation
+	sql, args, err := buildSearchSQL(SearchQuery{Filename: "a_100%", Limit: 5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(sql, "NOT f.is_deleted AND f.original_filename ILIKE $1 ESCAPE '\\'") || len(args) != 2 {
+		t.Fatalf("filename sql: %s args: %v", sql, args)
+	}
+	if args[0] != "%a\\_100\\%%" {
+		t.Fatalf("filename likePattern escaped: %v", args[0])
+	}
+
+	// Author types
+	for _, typ := range []string{"bot", "webhook", "member"} {
+		sql, _, err := buildSearchSQL(SearchQuery{AuthorType: typ, Limit: 5})
+		if err != nil {
+			t.Fatalf("author=%s: %v", typ, err)
+		}
+		if typ == "bot" && (!strings.Contains(sql, "u.is_bot") || !strings.Contains(sql, "NOT LIKE 'wh-%'")) {
+			t.Fatalf("author=bot sql: %s", sql)
+		}
+		if typ == "webhook" && (!strings.Contains(sql, "u.is_bot") || !strings.Contains(sql, "LIKE 'wh-%'")) {
+			t.Fatalf("author=webhook sql: %s", sql)
+		}
+		if typ == "member" && !strings.Contains(sql, "NOT u.is_bot") {
+			t.Fatalf("author=member sql: %s", sql)
+		}
+	}
+	if _, _, err := buildSearchSQL(SearchQuery{AuthorType: "alien", Limit: 5}); err == nil {
+		t.Fatal("invalid author type accepted")
+	}
+
+	// Sorts and pagination with before
+	msgID := uuid.New()
+	sqlNew, _, err := buildSearchSQL(SearchQuery{Text: "hi", Before: &msgID, Sort: "newest", Limit: 5})
+	if err != nil || !strings.Contains(sqlNew, "ORDER BY m.created_at DESC") || !strings.Contains(sqlNew, "< (SELECT") {
+		t.Fatalf("sort newest: %v, sql: %s", err, sqlNew)
+	}
+	sqlOld, _, err := buildSearchSQL(SearchQuery{Text: "hi", Before: &msgID, Sort: "oldest", Limit: 5})
+	if err != nil || !strings.Contains(sqlOld, "ORDER BY m.created_at ASC") || !strings.Contains(sqlOld, "> (SELECT") {
+		t.Fatalf("sort oldest: %v, sql: %s", err, sqlOld)
+	}
+	sqlRel, _, err := buildSearchSQL(SearchQuery{Text: "hi", Sort: "relevance", Limit: 5})
+	if err != nil || !strings.Contains(sqlRel, "ORDER BY m.created_at DESC") {
+		t.Fatalf("sort relevance: %v, sql: %s", err, sqlRel)
+	}
+	if _, _, err := buildSearchSQL(SearchQuery{Text: "hi", Sort: "bad", Limit: 5}); err == nil {
+		t.Fatal("invalid sort accepted")
+	}
+}
+
+func TestParseSearchTerms(t *testing.T) {
+	cases := []struct {
+		in   string
+		want []searchTerm
+	}{
+		{"", nil},
+		{"a  b", []searchTerm{{"a", false}, {"b", false}}},
+		{`"short status" point`, []searchTerm{{"short status", false}, {"point", false}}},
+		{"status -Release", []searchTerm{{"status", false}, {"Release", true}}},
+		{`-"old status"`, []searchTerm{{"old status", true}}},
+		{"- a-b", []searchTerm{{"-", false}, {"a-b", false}}},
+		{`"-x"`, []searchTerm{{"-x", false}}},
+		{`"open without end`, []searchTerm{{"open without end", false}}},
+		{`"" x`, []searchTerm{{"x", false}}},
+	}
+	for _, c := range cases {
+		got := parseSearchTerms(c.in)
+		if len(got) != len(c.want) {
+			t.Fatalf("%q: got %v want %v", c.in, got, c.want)
+		}
+		for i := range got {
+			if got[i] != c.want[i] {
+				t.Fatalf("%q: got %v want %v", c.in, got, c.want)
+			}
+		}
+	}
+}
+
+func TestBuildSearchSQLPhraseAndExclusion(t *testing.T) {
+	sql, args, err := buildSearchSQL(SearchQuery{Text: `"short status" -Release`})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(sql, "m.content ILIKE") || !strings.Contains(sql, "m.content NOT ILIKE") {
+		t.Fatalf("sql lacks include/exclude: %s", sql)
+	}
+	var phrase, excluded bool
+	for _, a := range args {
+		phrase = phrase || a == "%short status%"
+		excluded = excluded || a == "%Release%"
+	}
+	if !phrase || !excluded {
+		t.Fatalf("args %v", args)
+	}
+	if _, _, err := buildSearchSQL(SearchQuery{Text: "-Release"}); err == nil {
+		t.Fatal("an exclusion alone must not be a search")
+	}
+}

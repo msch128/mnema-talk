@@ -80,6 +80,7 @@ export type AuthAdminUser = {
   role: "admin" | "user"
   role_ids?: Array<string>
   rules_pending?: boolean
+  status_expires_at?: string
   status_text: string
   timeout_until?: string
   username: string
@@ -104,6 +105,7 @@ export function isAuthAdminUser(value: unknown): value is AuthAdminUser {
     && (hasOwn(value, "role") && (value["role"] === "admin" || value["role"] === "user"))
     && (!hasOwn(value, "role_ids") || isArrayOf(value["role_ids"], item => isIdentifier(item)))
     && (!hasOwn(value, "rules_pending") || typeof value["rules_pending"] === 'boolean')
+    && (!hasOwn(value, "status_expires_at") || isTimestamp(value["status_expires_at"]))
     && (hasOwn(value, "status_text") && isString(value["status_text"], 32))
     && (!hasOwn(value, "timeout_until") || isTimestamp(value["timeout_until"]))
     && (hasOwn(value, "username") && isString(value["username"]))
@@ -270,6 +272,38 @@ export function isAuthLoginRequest(value: unknown): value is AuthLoginRequest {
 
 export const decodeAuthLoginRequest = decoder("auth.LoginRequest", isAuthLoginRequest)
 
+export type AuthMemberSession = {
+  created_at: string
+  current: boolean
+  device: string
+  id: string
+  last_active_at: string
+  push: boolean
+}
+
+export function isAuthMemberSession(value: unknown): value is AuthMemberSession {
+  return isRecord(value)
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "current") && typeof value["current"] === 'boolean')
+    && (hasOwn(value, "device") && isString(value["device"], 64))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "last_active_at") && isTimestamp(value["last_active_at"]))
+    && (hasOwn(value, "push") && typeof value["push"] === 'boolean')
+}
+
+export const decodeAuthMemberSession = decoder("auth.MemberSession", isAuthMemberSession)
+
+export type AuthMemberSessionList = {
+  sessions: Array<AuthMemberSession>
+}
+
+export function isAuthMemberSessionList(value: unknown): value is AuthMemberSessionList {
+  return isRecord(value)
+    && (hasOwn(value, "sessions") && isArrayOf(value["sessions"], item => isAuthMemberSession(item)))
+}
+
+export const decodeAuthMemberSessionList = decoder("auth.MemberSessionList", isAuthMemberSessionList)
+
 export type AuthPasswordConfirmRequest = {
   current_password: string
 }
@@ -333,6 +367,17 @@ export function isAuthRegisterRequest(value: unknown): value is AuthRegisterRequ
 
 export const decodeAuthRegisterRequest = decoder("auth.RegisterRequest", isAuthRegisterRequest)
 
+export type AuthRevokedSessions = {
+  revoked: number
+}
+
+export function isAuthRevokedSessions(value: unknown): value is AuthRevokedSessions {
+  return isRecord(value)
+    && (hasOwn(value, "revoked") && (isInteger(value["revoked"]) && value["revoked"] >= 0))
+}
+
+export const decodeAuthRevokedSessions = decoder("auth.RevokedSessions", isAuthRevokedSessions)
+
 export type AuthSecurityNotice = {
   failed_attempts: number
 }
@@ -391,11 +436,13 @@ export function isAuthSetPresenceRequest(value: unknown): value is AuthSetPresen
 export const decodeAuthSetPresenceRequest = decoder("auth.SetPresenceRequest", isAuthSetPresenceRequest)
 
 export type AuthSetStatusRequest = {
+  expires_at?: string
   status_text: string
 }
 
 export function isAuthSetStatusRequest(value: unknown): value is AuthSetStatusRequest {
   return isRecord(value)
+    && (!hasOwn(value, "expires_at") || isTimestamp(value["expires_at"]))
     && (hasOwn(value, "status_text") && isString(value["status_text"], 32))
 }
 
@@ -554,6 +601,7 @@ export type AuthUser = {
   presence?: "online" | "away" | "dnd" | "focus"
   role: "admin" | "user"
   rules_pending?: boolean
+  status_expires_at?: string
   status_text: string
   username: string
   voice_seconds?: number
@@ -572,6 +620,7 @@ export function isAuthUser(value: unknown): value is AuthUser {
     && (!hasOwn(value, "presence") || (value["presence"] === "online" || value["presence"] === "away" || value["presence"] === "dnd" || value["presence"] === "focus"))
     && (hasOwn(value, "role") && (value["role"] === "admin" || value["role"] === "user"))
     && (!hasOwn(value, "rules_pending") || typeof value["rules_pending"] === 'boolean')
+    && (!hasOwn(value, "status_expires_at") || isTimestamp(value["status_expires_at"]))
     && (hasOwn(value, "status_text") && isString(value["status_text"], 32))
     && (hasOwn(value, "username") && isString(value["username"]))
     && (!hasOwn(value, "voice_seconds") || isInteger(value["voice_seconds"]))
@@ -600,6 +649,87 @@ export function isAuthVerifyEmailRequest(value: unknown): value is AuthVerifyEma
 }
 
 export const decodeAuthVerifyEmailRequest = decoder("auth.VerifyEmailRequest", isAuthVerifyEmailRequest)
+
+export type AutomodRule = {
+  action: "block" | "flag"
+  config: AutomodSettings
+  enabled: boolean
+  exempt_channels: Array<string>
+  exempt_roles: Array<string>
+  id: string
+  kind: "words" | "links" | "mentions" | "new_account" | "raid"
+  name: string
+  timeout_seconds: number
+  updated_at: string
+}
+
+export function isAutomodRule(value: unknown): value is AutomodRule {
+  return isRecord(value)
+    && (hasOwn(value, "action") && (value["action"] === "block" || value["action"] === "flag"))
+    && (hasOwn(value, "config") && isAutomodSettings(value["config"]))
+    && (hasOwn(value, "enabled") && typeof value["enabled"] === 'boolean')
+    && (hasOwn(value, "exempt_channels") && isArrayOf(value["exempt_channels"], item => isIdentifier(item)))
+    && (hasOwn(value, "exempt_roles") && isArrayOf(value["exempt_roles"], item => isIdentifier(item)))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "kind") && (value["kind"] === "words" || value["kind"] === "links" || value["kind"] === "mentions" || value["kind"] === "new_account" || value["kind"] === "raid"))
+    && (hasOwn(value, "name") && isString(value["name"], 60))
+    && (hasOwn(value, "timeout_seconds") && (isInteger(value["timeout_seconds"]) && value["timeout_seconds"] >= 0 && value["timeout_seconds"] <= 2419200))
+    && (hasOwn(value, "updated_at") && isTimestamp(value["updated_at"]))
+}
+
+export const decodeAutomodRule = decoder("automod.Rule", isAutomodRule)
+
+export type AutomodRuleInput = {
+  action: "block" | "flag"
+  config: AutomodSettings
+  enabled: boolean
+  exempt_channels?: Array<string>
+  exempt_roles?: Array<string>
+  kind: "words" | "links" | "mentions" | "new_account" | "raid"
+  name: string
+  timeout_seconds?: number
+}
+
+export function isAutomodRuleInput(value: unknown): value is AutomodRuleInput {
+  return isRecord(value)
+    && (hasOwn(value, "action") && (value["action"] === "block" || value["action"] === "flag"))
+    && (hasOwn(value, "config") && isAutomodSettings(value["config"]))
+    && (hasOwn(value, "enabled") && typeof value["enabled"] === 'boolean')
+    && (!hasOwn(value, "exempt_channels") || isArrayOf(value["exempt_channels"], item => isIdentifier(item)))
+    && (!hasOwn(value, "exempt_roles") || isArrayOf(value["exempt_roles"], item => isIdentifier(item)))
+    && (hasOwn(value, "kind") && (value["kind"] === "words" || value["kind"] === "links" || value["kind"] === "mentions" || value["kind"] === "new_account" || value["kind"] === "raid"))
+    && (hasOwn(value, "name") && isString(value["name"], 60))
+    && (!hasOwn(value, "timeout_seconds") || (isInteger(value["timeout_seconds"]) && value["timeout_seconds"] >= 0 && value["timeout_seconds"] <= 2419200))
+}
+
+export const decodeAutomodRuleInput = decoder("automod.RuleInput", isAutomodRuleInput)
+
+export type AutomodSettings = {
+  domains?: Array<string>
+  joins?: number
+  max_age_seconds?: number
+  max_mentions?: number
+  mode?: "block_all" | "allow_list" | "block_list"
+  restrict?: "links" | "attachments" | "links_and_attachments" | "everything"
+  restrict_seconds?: number
+  window_seconds?: number
+  words?: Array<string>
+}
+
+export function isAutomodSettings(value: unknown): value is AutomodSettings {
+  return isRecord(value)
+    && (!hasOwn(value, "domains") || isArrayOf(value["domains"], item => isString(item)))
+    && (!hasOwn(value, "joins") || (isInteger(value["joins"]) && value["joins"] >= 2 && value["joins"] <= 200))
+    && (!hasOwn(value, "max_age_seconds") || isInteger(value["max_age_seconds"]))
+    && (!hasOwn(value, "max_mentions") || (isInteger(value["max_mentions"]) && value["max_mentions"] >= 1 && value["max_mentions"] <= 50))
+    && (!hasOwn(value, "mode") || (value["mode"] === "block_all" || value["mode"] === "allow_list" || value["mode"] === "block_list"))
+    && (!hasOwn(value, "restrict") || (value["restrict"] === "links" || value["restrict"] === "attachments" || value["restrict"] === "links_and_attachments" || value["restrict"] === "everything"))
+    && (!hasOwn(value, "restrict_seconds") || isInteger(value["restrict_seconds"]))
+    && (!hasOwn(value, "window_seconds") || (isInteger(value["window_seconds"]) && value["window_seconds"] >= 5 && value["window_seconds"] <= 3600))
+    && (!hasOwn(value, "words") || isArrayOf(value["words"], item => isString(item, 64)))
+}
+
+export const decodeAutomodSettings = decoder("automod.Settings", isAutomodSettings)
 
 export type BotAccess = {
   channels: Array<BotChannelAccess>
@@ -945,6 +1075,17 @@ export function isChatAddDMMemberRequest(value: unknown): value is ChatAddDMMemb
 
 export const decodeChatAddDMMemberRequest = decoder("chat.AddDMMemberRequest", isChatAddDMMemberRequest)
 
+export type ChatAutoDeleteRequest = {
+  days: 0 | 1 | 7 | 30 | 90
+}
+
+export function isChatAutoDeleteRequest(value: unknown): value is ChatAutoDeleteRequest {
+  return isRecord(value)
+    && (hasOwn(value, "days") && (value["days"] === 0 || value["days"] === 1 || value["days"] === 7 || value["days"] === 30 || value["days"] === 90))
+}
+
+export const decodeChatAutoDeleteRequest = decoder("chat.AutoDeleteRequest", isChatAutoDeleteRequest)
+
 export type ChatBlockedMember = {
   avatar_url?: string
   blocked_at: string
@@ -1102,12 +1243,19 @@ export function isChatCategoryOrder(value: unknown): value is ChatCategoryOrder 
 export const decodeChatCategoryOrder = decoder("chat.CategoryOrder", isChatCategoryOrder)
 
 export type ChatChannel = {
+  auto_delete_days?: number
   category_id: string | null
   created_at: string
   id: string
+  is_lobby?: boolean
+  is_stage?: boolean
+  is_temp?: boolean
+  leader_id?: string
   name: string
   number: number
+  previous_slugs?: Array<string>
   slow_mode_seconds: number
+  slug?: string
   sort_order: number
   topic: string
   type: ChatChannelType
@@ -1116,12 +1264,19 @@ export type ChatChannel = {
 
 export function isChatChannel(value: unknown): value is ChatChannel {
   return isRecord(value)
+    && (!hasOwn(value, "auto_delete_days") || (isInteger(value["auto_delete_days"]) && value["auto_delete_days"] >= 0 && value["auto_delete_days"] <= 90))
     && (hasOwn(value, "category_id") && (isIdentifier(value["category_id"]) || value["category_id"] === null))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "is_lobby") || typeof value["is_lobby"] === 'boolean')
+    && (!hasOwn(value, "is_stage") || typeof value["is_stage"] === 'boolean')
+    && (!hasOwn(value, "is_temp") || typeof value["is_temp"] === 'boolean')
+    && (!hasOwn(value, "leader_id") || isIdentifier(value["leader_id"]))
     && (hasOwn(value, "name") && isString(value["name"], 64))
     && (hasOwn(value, "number") && isInteger(value["number"]))
-    && (hasOwn(value, "slow_mode_seconds") && (isInteger(value["slow_mode_seconds"]) && value["slow_mode_seconds"] >= 0 && value["slow_mode_seconds"] <= 21600))
+    && (!hasOwn(value, "previous_slugs") || isArrayOf(value["previous_slugs"], item => isString(item)))
+    && (hasOwn(value, "slow_mode_seconds") && (isInteger(value["slow_mode_seconds"]) && value["slow_mode_seconds"] >= 0 && value["slow_mode_seconds"] <= 86400))
+    && (!hasOwn(value, "slug") || isString(value["slug"], 60))
     && (hasOwn(value, "sort_order") && isInteger(value["sort_order"]))
     && (hasOwn(value, "topic") && isString(value["topic"], 255))
     && (hasOwn(value, "type") && isChatChannelType(value["type"]))
@@ -1173,10 +1328,10 @@ export function isChatChannelPlacement(value: unknown): value is ChatChannelPlac
 
 export const decodeChatChannelPlacement = decoder("chat.ChannelPlacement", isChatChannelPlacement)
 
-export type ChatChannelType = "text" | "voice"
+export type ChatChannelType = "text" | "voice" | "forum"
 
 export function isChatChannelType(value: unknown): value is ChatChannelType {
-  return (value === "text" || value === "voice")
+  return (value === "text" || value === "voice" || value === "forum")
 }
 
 export const decodeChatChannelType = decoder("chat.ChannelType", isChatChannelType)
@@ -1196,6 +1351,7 @@ export const decodeChatCreateCategoryRequest = decoder("chat.CreateCategoryReque
 
 export type ChatCreateChannelRequest = {
   category_id?: string | null
+  is_stage?: boolean
   name: string
   sort_order?: number
   topic?: string
@@ -1205,6 +1361,7 @@ export type ChatCreateChannelRequest = {
 export function isChatCreateChannelRequest(value: unknown): value is ChatCreateChannelRequest {
   return isRecord(value)
     && (!hasOwn(value, "category_id") || (isIdentifier(value["category_id"]) || value["category_id"] === null))
+    && (!hasOwn(value, "is_stage") || typeof value["is_stage"] === 'boolean')
     && (hasOwn(value, "name") && isString(value["name"], 64))
     && (!hasOwn(value, "sort_order") || isInteger(value["sort_order"]))
     && (!hasOwn(value, "topic") || isString(value["topic"], 255))
@@ -1224,6 +1381,19 @@ export function isChatCreateDMRequest(value: unknown): value is ChatCreateDMRequ
 
 export const decodeChatCreateDMRequest = decoder("chat.CreateDMRequest", isChatCreateDMRequest)
 
+export type ChatCreateForumTagRequest = {
+  emoji?: string
+  name: string
+}
+
+export function isChatCreateForumTagRequest(value: unknown): value is ChatCreateForumTagRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "emoji") || isString(value["emoji"], 32))
+    && (hasOwn(value, "name") && isString(value["name"], 20))
+}
+
+export const decodeChatCreateForumTagRequest = decoder("chat.CreateForumTagRequest", isChatCreateForumTagRequest)
+
 export type ChatCreateMessageRequest = {
   content: string
   parent_id?: string | null
@@ -1239,6 +1409,21 @@ export function isChatCreateMessageRequest(value: unknown): value is ChatCreateM
 
 export const decodeChatCreateMessageRequest = decoder("chat.CreateMessageRequest", isChatCreateMessageRequest)
 
+export type ChatCreatePostRequest = {
+  content: string
+  tag_ids?: Array<string>
+  title: string
+}
+
+export function isChatCreatePostRequest(value: unknown): value is ChatCreatePostRequest {
+  return isRecord(value)
+    && (hasOwn(value, "content") && isString(value["content"], 4000))
+    && (!hasOwn(value, "tag_ids") || isArrayOf(value["tag_ids"], item => isString(item)))
+    && (hasOwn(value, "title") && isString(value["title"], 100))
+}
+
+export const decodeChatCreatePostRequest = decoder("chat.CreatePostRequest", isChatCreatePostRequest)
+
 export type ChatCreateReportRequest = {
   category: "spam" | "harassment" | "illegal" | "other"
   note?: string
@@ -1251,6 +1436,23 @@ export function isChatCreateReportRequest(value: unknown): value is ChatCreateRe
 }
 
 export const decodeChatCreateReportRequest = decoder("chat.CreateReportRequest", isChatCreateReportRequest)
+
+export type ChatDMLastMessage = {
+  has_attachment: boolean
+  has_poll: boolean
+  text: string
+  user_id: string
+}
+
+export function isChatDMLastMessage(value: unknown): value is ChatDMLastMessage {
+  return isRecord(value)
+    && (hasOwn(value, "has_attachment") && typeof value["has_attachment"] === 'boolean')
+    && (hasOwn(value, "has_poll") && typeof value["has_poll"] === 'boolean')
+    && (hasOwn(value, "text") && isString(value["text"]))
+    && (hasOwn(value, "user_id") && isIdentifier(value["user_id"]))
+}
+
+export const decodeChatDMLastMessage = decoder("chat.DMLastMessage", isChatDMLastMessage)
 
 export type ChatDMMember = {
   avatar_url?: string
@@ -1269,6 +1471,19 @@ export function isChatDMMember(value: unknown): value is ChatDMMember {
 
 export const decodeChatDMMember = decoder("chat.DMMember", isChatDMMember)
 
+export type ChatDMSettings = {
+  list_collapsed: boolean
+  mute_all: boolean
+}
+
+export function isChatDMSettings(value: unknown): value is ChatDMSettings {
+  return isRecord(value)
+    && (hasOwn(value, "list_collapsed") && typeof value["list_collapsed"] === 'boolean')
+    && (hasOwn(value, "mute_all") && typeof value["mute_all"] === 'boolean')
+}
+
+export const decodeChatDMSettings = decoder("chat.DMSettings", isChatDMSettings)
+
 export type ChatDeleteMessageRequest = {
   reason?: string
 }
@@ -1283,8 +1498,11 @@ export const decodeChatDeleteMessageRequest = decoder("chat.DeleteMessageRequest
 export type ChatDirectMessage = {
   can_send: boolean
   created_at: string
+  favourite_position: number | null
   group: boolean
+  hidden: boolean
   id: string
+  last_message?: ChatDMLastMessage
   last_message_at: string | null
   last_read_at: string | null
   members: Array<ChatDMMember>
@@ -1297,8 +1515,11 @@ export function isChatDirectMessage(value: unknown): value is ChatDirectMessage 
   return isRecord(value)
     && (hasOwn(value, "can_send") && typeof value["can_send"] === 'boolean')
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "favourite_position") && (isInteger(value["favourite_position"]) || value["favourite_position"] === null))
     && (hasOwn(value, "group") && typeof value["group"] === 'boolean')
+    && (hasOwn(value, "hidden") && typeof value["hidden"] === 'boolean')
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "last_message") || isChatDMLastMessage(value["last_message"]))
     && (hasOwn(value, "last_message_at") && (isTimestamp(value["last_message_at"]) || value["last_message_at"] === null))
     && (hasOwn(value, "last_read_at") && (isTimestamp(value["last_read_at"]) || value["last_read_at"] === null))
     && (hasOwn(value, "members") && isArrayOf(value["members"], item => isChatDMMember(item)))
@@ -1327,6 +1548,7 @@ export type ChatEmbed = {
   fields?: Array<ChatEmbedField>
   footer?: ChatEmbedFooter
   image?: ChatEmbedMedia
+  talk_id?: string
   thumbnail?: ChatEmbedMedia
   timestamp?: string
   title?: string
@@ -1341,6 +1563,7 @@ export function isChatEmbed(value: unknown): value is ChatEmbed {
     && (!hasOwn(value, "fields") || isArrayOf(value["fields"], item => isChatEmbedField(item)))
     && (!hasOwn(value, "footer") || isChatEmbedFooter(value["footer"]))
     && (!hasOwn(value, "image") || isChatEmbedMedia(value["image"]))
+    && (!hasOwn(value, "talk_id") || isIdentifier(value["talk_id"]))
     && (!hasOwn(value, "thumbnail") || isChatEmbedMedia(value["thumbnail"]))
     && (!hasOwn(value, "timestamp") || isString(value["timestamp"]))
     && (!hasOwn(value, "title") || isString(value["title"], 256))
@@ -1420,6 +1643,25 @@ export function isChatFollowedThreads(value: unknown): value is ChatFollowedThre
 }
 
 export const decodeChatFollowedThreads = decoder("chat.FollowedThreads", isChatFollowedThreads)
+
+export type ChatForumTag = {
+  channel_id: string
+  created_at: string
+  emoji?: string
+  id: string
+  name: string
+}
+
+export function isChatForumTag(value: unknown): value is ChatForumTag {
+  return isRecord(value)
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "emoji") || isString(value["emoji"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "name") && isString(value["name"], 20))
+}
+
+export const decodeChatForumTag = decoder("chat.ForumTag", isChatForumTag)
 
 export type ChatForwardQuote = {
   attachment_count?: number
@@ -1524,6 +1766,17 @@ export function isChatInEmbed(value: unknown): value is ChatInEmbed {
 
 export const decodeChatInEmbed = decoder("chat.InEmbed", isChatInEmbed)
 
+export type ChatInviteToTalkRequest = {
+  conversation_id: string
+}
+
+export function isChatInviteToTalkRequest(value: unknown): value is ChatInviteToTalkRequest {
+  return isRecord(value)
+    && (hasOwn(value, "conversation_id") && isIdentifier(value["conversation_id"]))
+}
+
+export const decodeChatInviteToTalkRequest = decoder("chat.InviteToTalkRequest", isChatInviteToTalkRequest)
+
 export type ChatLayoutRequest = {
   categories?: Array<ChatCategoryOrder>
   channels?: Array<ChatChannelPlacement>
@@ -1606,6 +1859,7 @@ export type ChatMember = {
   role: "admin" | "user"
   role_ids?: Array<string>
   rules_pending?: boolean
+  status_expires_at?: string
   status_text: string
   timeout_until?: string
   username: string
@@ -1628,6 +1882,7 @@ export function isChatMember(value: unknown): value is ChatMember {
     && (hasOwn(value, "role") && (value["role"] === "admin" || value["role"] === "user"))
     && (!hasOwn(value, "role_ids") || isArrayOf(value["role_ids"], item => isIdentifier(item)))
     && (!hasOwn(value, "rules_pending") || typeof value["rules_pending"] === 'boolean')
+    && (!hasOwn(value, "status_expires_at") || isTimestamp(value["status_expires_at"]))
     && (hasOwn(value, "status_text") && isString(value["status_text"], 32))
     && (!hasOwn(value, "timeout_until") || isTimestamp(value["timeout_until"]))
     && (hasOwn(value, "username") && isString(value["username"]))
@@ -1661,8 +1916,10 @@ export type ChatMessage = {
   id: string
   is_bot?: boolean
   is_edited: boolean
+  is_locked?: boolean
   is_pinned: boolean
   is_webhook?: boolean
+  last_activity_at?: string
   mention_roles?: Array<string>
   mentions: Array<string>
   number: number
@@ -1674,6 +1931,8 @@ export type ChatMessage = {
   reply_count: number
   reply_to?: ChatReplyPreview
   reply_to_id?: string
+  tags?: Array<ChatForumTag>
+  title?: string
   updated_at: string
   user_id: string
   username: string
@@ -1692,8 +1951,10 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (!hasOwn(value, "is_bot") || typeof value["is_bot"] === 'boolean')
     && (hasOwn(value, "is_edited") && typeof value["is_edited"] === 'boolean')
+    && (!hasOwn(value, "is_locked") || typeof value["is_locked"] === 'boolean')
     && (hasOwn(value, "is_pinned") && typeof value["is_pinned"] === 'boolean')
     && (!hasOwn(value, "is_webhook") || typeof value["is_webhook"] === 'boolean')
+    && (!hasOwn(value, "last_activity_at") || isTimestamp(value["last_activity_at"]))
     && (!hasOwn(value, "mention_roles") || isArrayOf(value["mention_roles"], item => isIdentifier(item)))
     && (hasOwn(value, "mentions") && isArrayOf(value["mentions"], item => isIdentifier(item)))
     && (hasOwn(value, "number") && isInteger(value["number"]))
@@ -1705,6 +1966,8 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (hasOwn(value, "reply_count") && isInteger(value["reply_count"]))
     && (!hasOwn(value, "reply_to") || isChatReplyPreview(value["reply_to"]))
     && (!hasOwn(value, "reply_to_id") || isIdentifier(value["reply_to_id"]))
+    && (!hasOwn(value, "tags") || isArrayOf(value["tags"], item => isChatForumTag(item)))
+    && (!hasOwn(value, "title") || isString(value["title"], 100))
     && (hasOwn(value, "updated_at") && isTimestamp(value["updated_at"]))
     && (hasOwn(value, "user_id") && isIdentifier(value["user_id"]))
     && (hasOwn(value, "username") && isString(value["username"]))
@@ -1745,12 +2008,14 @@ export const decodeChatMessageEditHistory = decoder("chat.MessageEditHistory", i
 export type ChatNotificationSettings = {
   categories: Array<ChatCategoryNotifySetting>
   channels: Array<ChatChannelNotifySetting>
+  server: ChatServerNotify
 }
 
 export function isChatNotificationSettings(value: unknown): value is ChatNotificationSettings {
   return isRecord(value)
     && (hasOwn(value, "categories") && isArrayOf(value["categories"], item => isChatCategoryNotifySetting(item)))
     && (hasOwn(value, "channels") && isArrayOf(value["channels"], item => isChatChannelNotifySetting(item)))
+    && (hasOwn(value, "server") && isChatServerNotify(value["server"]))
 }
 
 export const decodeChatNotificationSettings = decoder("chat.NotificationSettings", isChatNotificationSettings)
@@ -1926,37 +2191,45 @@ export function isChatReplyPreview(value: unknown): value is ChatReplyPreview {
 export const decodeChatReplyPreview = decoder("chat.ReplyPreview", isChatReplyPreview)
 
 export type ChatReport = {
-  category: "spam" | "harassment" | "illegal" | "other"
+  automod_outcome?: "blocked" | "flagged" | "alert"
+  automod_rule?: string
+  category: "spam" | "harassment" | "illegal" | "other" | "automod"
   channel_id?: string
   channel_name?: string
   created_at: string
+  hit_count?: number
   id: string
-  kind: "channel" | "dm"
-  message_id: string
+  kind: "channel" | "dm" | "alert"
+  message_id?: string
   note: string
   reported?: ChatReportParty
   reporter?: ChatReportParty
   resolution_note?: string
   resolved_at?: string
   resolved_by?: ChatReportParty
+  source?: "member" | "automod"
   status: "open" | "resolved" | "dismissed"
 }
 
 export function isChatReport(value: unknown): value is ChatReport {
   return isRecord(value)
-    && (hasOwn(value, "category") && (value["category"] === "spam" || value["category"] === "harassment" || value["category"] === "illegal" || value["category"] === "other"))
+    && (!hasOwn(value, "automod_outcome") || (value["automod_outcome"] === "blocked" || value["automod_outcome"] === "flagged" || value["automod_outcome"] === "alert"))
+    && (!hasOwn(value, "automod_rule") || isString(value["automod_rule"]))
+    && (hasOwn(value, "category") && (value["category"] === "spam" || value["category"] === "harassment" || value["category"] === "illegal" || value["category"] === "other" || value["category"] === "automod"))
     && (!hasOwn(value, "channel_id") || isIdentifier(value["channel_id"]))
     && (!hasOwn(value, "channel_name") || isString(value["channel_name"]))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "hit_count") || isInteger(value["hit_count"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
-    && (hasOwn(value, "kind") && (value["kind"] === "channel" || value["kind"] === "dm"))
-    && (hasOwn(value, "message_id") && isIdentifier(value["message_id"]))
+    && (hasOwn(value, "kind") && (value["kind"] === "channel" || value["kind"] === "dm" || value["kind"] === "alert"))
+    && (!hasOwn(value, "message_id") || isIdentifier(value["message_id"]))
     && (hasOwn(value, "note") && isString(value["note"]))
     && (!hasOwn(value, "reported") || isChatReportParty(value["reported"]))
     && (!hasOwn(value, "reporter") || isChatReportParty(value["reporter"]))
     && (!hasOwn(value, "resolution_note") || isString(value["resolution_note"]))
     && (!hasOwn(value, "resolved_at") || isTimestamp(value["resolved_at"]))
     && (!hasOwn(value, "resolved_by") || isChatReportParty(value["resolved_by"]))
+    && (!hasOwn(value, "source") || (value["source"] === "member" || value["source"] === "automod"))
     && (hasOwn(value, "status") && (value["status"] === "open" || value["status"] === "resolved" || value["status"] === "dismissed"))
 }
 
@@ -1978,13 +2251,16 @@ export function isChatReportAttachment(value: unknown): value is ChatReportAttac
 export const decodeChatReportAttachment = decoder("chat.ReportAttachment", isChatReportAttachment)
 
 export type ChatReportDetail = {
-  category: "spam" | "harassment" | "illegal" | "other"
+  automod_outcome?: "blocked" | "flagged" | "alert"
+  automod_rule?: string
+  category: "spam" | "harassment" | "illegal" | "other" | "automod"
   channel_id?: string
   channel_name?: string
   created_at: string
+  hit_count?: number
   id: string
-  kind: "channel" | "dm"
-  message_id: string
+  kind: "channel" | "dm" | "alert"
+  message_id?: string
   note: string
   reported?: ChatReportParty
   reporter?: ChatReportParty
@@ -1992,18 +2268,22 @@ export type ChatReportDetail = {
   resolved_at?: string
   resolved_by?: ChatReportParty
   snapshot: ChatReportSnapshot
+  source?: "member" | "automod"
   status: "open" | "resolved" | "dismissed"
 }
 
 export function isChatReportDetail(value: unknown): value is ChatReportDetail {
   return isRecord(value)
-    && (hasOwn(value, "category") && (value["category"] === "spam" || value["category"] === "harassment" || value["category"] === "illegal" || value["category"] === "other"))
+    && (!hasOwn(value, "automod_outcome") || (value["automod_outcome"] === "blocked" || value["automod_outcome"] === "flagged" || value["automod_outcome"] === "alert"))
+    && (!hasOwn(value, "automod_rule") || isString(value["automod_rule"]))
+    && (hasOwn(value, "category") && (value["category"] === "spam" || value["category"] === "harassment" || value["category"] === "illegal" || value["category"] === "other" || value["category"] === "automod"))
     && (!hasOwn(value, "channel_id") || isIdentifier(value["channel_id"]))
     && (!hasOwn(value, "channel_name") || isString(value["channel_name"]))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "hit_count") || isInteger(value["hit_count"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
-    && (hasOwn(value, "kind") && (value["kind"] === "channel" || value["kind"] === "dm"))
-    && (hasOwn(value, "message_id") && isIdentifier(value["message_id"]))
+    && (hasOwn(value, "kind") && (value["kind"] === "channel" || value["kind"] === "dm" || value["kind"] === "alert"))
+    && (!hasOwn(value, "message_id") || isIdentifier(value["message_id"]))
     && (hasOwn(value, "note") && isString(value["note"]))
     && (!hasOwn(value, "reported") || isChatReportParty(value["reported"]))
     && (!hasOwn(value, "reporter") || isChatReportParty(value["reporter"]))
@@ -2011,6 +2291,7 @@ export function isChatReportDetail(value: unknown): value is ChatReportDetail {
     && (!hasOwn(value, "resolved_at") || isTimestamp(value["resolved_at"]))
     && (!hasOwn(value, "resolved_by") || isChatReportParty(value["resolved_by"]))
     && (hasOwn(value, "snapshot") && isChatReportSnapshot(value["snapshot"]))
+    && (!hasOwn(value, "source") || (value["source"] === "member" || value["source"] === "automod"))
     && (hasOwn(value, "status") && (value["status"] === "open" || value["status"] === "resolved" || value["status"] === "dismissed"))
 }
 
@@ -2181,6 +2462,43 @@ export function isChatSearchRoot(value: unknown): value is ChatSearchRoot {
 
 export const decodeChatSearchRoot = decoder("chat.SearchRoot", isChatSearchRoot)
 
+export type ChatServerNotify = {
+  level: ChatNotifyLevel
+  muted_until: string | null
+  suppress_everyone: boolean
+}
+
+export function isChatServerNotify(value: unknown): value is ChatServerNotify {
+  return isRecord(value)
+    && (hasOwn(value, "level") && isChatNotifyLevel(value["level"]))
+    && (hasOwn(value, "muted_until") && (isTimestamp(value["muted_until"]) || value["muted_until"] === null))
+    && (hasOwn(value, "suppress_everyone") && typeof value["suppress_everyone"] === 'boolean')
+}
+
+export const decodeChatServerNotify = decoder("chat.ServerNotify", isChatServerNotify)
+
+export type ChatSetDMFavouritesRequest = {
+  ids: Array<string>
+}
+
+export function isChatSetDMFavouritesRequest(value: unknown): value is ChatSetDMFavouritesRequest {
+  return isRecord(value)
+    && (hasOwn(value, "ids") && isArrayOf(value["ids"], item => isIdentifier(item)))
+}
+
+export const decodeChatSetDMFavouritesRequest = decoder("chat.SetDMFavouritesRequest", isChatSetDMFavouritesRequest)
+
+export type ChatSetDMHiddenRequest = {
+  hidden: boolean
+}
+
+export function isChatSetDMHiddenRequest(value: unknown): value is ChatSetDMHiddenRequest {
+  return isRecord(value)
+    && (hasOwn(value, "hidden") && typeof value["hidden"] === 'boolean')
+}
+
+export const decodeChatSetDMHiddenRequest = decoder("chat.SetDMHiddenRequest", isChatSetDMHiddenRequest)
+
 export type ChatSetNotifyLevelRequest = {
   level: ChatNotifyLevel
   muted_until?: string | null
@@ -2193,6 +2511,34 @@ export function isChatSetNotifyLevelRequest(value: unknown): value is ChatSetNot
 }
 
 export const decodeChatSetNotifyLevelRequest = decoder("chat.SetNotifyLevelRequest", isChatSetNotifyLevelRequest)
+
+export type ChatSetServerNotifyRequest = {
+  level: ChatNotifyLevel
+  muted_until?: string | null
+  suppress_everyone?: boolean
+}
+
+export function isChatSetServerNotifyRequest(value: unknown): value is ChatSetServerNotifyRequest {
+  return isRecord(value)
+    && (hasOwn(value, "level") && isChatNotifyLevel(value["level"]))
+    && (!hasOwn(value, "muted_until") || (isTimestamp(value["muted_until"]) || value["muted_until"] === null))
+    && (!hasOwn(value, "suppress_everyone") || typeof value["suppress_everyone"] === 'boolean')
+}
+
+export const decodeChatSetServerNotifyRequest = decoder("chat.SetServerNotifyRequest", isChatSetServerNotifyRequest)
+
+export type ChatStartTalkResponse = {
+  channel_id: string
+  message: ChatMessage
+}
+
+export function isChatStartTalkResponse(value: unknown): value is ChatStartTalkResponse {
+  return isRecord(value)
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (hasOwn(value, "message") && isChatMessage(value["message"]))
+}
+
+export const decodeChatStartTalkResponse = decoder("chat.StartTalkResponse", isChatStartTalkResponse)
 
 export type ChatThread = {
   following?: boolean
@@ -2223,6 +2569,8 @@ export function isChatThreadFollow(value: unknown): value is ChatThreadFollow {
 export const decodeChatThreadFollow = decoder("chat.ThreadFollow", isChatThreadFollow)
 
 export type ChatUpdateChannelRequest = {
+  is_lobby?: boolean
+  is_stage?: boolean
   name?: string
   slow_mode_seconds?: number
   topic?: string
@@ -2231,13 +2579,56 @@ export type ChatUpdateChannelRequest = {
 
 export function isChatUpdateChannelRequest(value: unknown): value is ChatUpdateChannelRequest {
   return isRecord(value)
+    && (!hasOwn(value, "is_lobby") || typeof value["is_lobby"] === 'boolean')
+    && (!hasOwn(value, "is_stage") || typeof value["is_stage"] === 'boolean')
     && (!hasOwn(value, "name") || isString(value["name"], 64))
-    && (!hasOwn(value, "slow_mode_seconds") || (isInteger(value["slow_mode_seconds"]) && value["slow_mode_seconds"] >= 0 && value["slow_mode_seconds"] <= 21600))
+    && (!hasOwn(value, "slow_mode_seconds") || (isInteger(value["slow_mode_seconds"]) && value["slow_mode_seconds"] >= 0 && value["slow_mode_seconds"] <= 86400))
     && (!hasOwn(value, "topic") || isString(value["topic"], 255))
     && (!hasOwn(value, "user_limit") || (isInteger(value["user_limit"]) && value["user_limit"] >= 0 && value["user_limit"] <= 999))
 }
 
 export const decodeChatUpdateChannelRequest = decoder("chat.UpdateChannelRequest", isChatUpdateChannelRequest)
+
+export type ChatUpdateForumTagRequest = {
+  emoji?: string
+  name?: string
+}
+
+export function isChatUpdateForumTagRequest(value: unknown): value is ChatUpdateForumTagRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "emoji") || isString(value["emoji"], 32))
+    && (!hasOwn(value, "name") || isString(value["name"], 20))
+}
+
+export const decodeChatUpdateForumTagRequest = decoder("chat.UpdateForumTagRequest", isChatUpdateForumTagRequest)
+
+export type ChatUpdatePostRequest = {
+  is_locked?: boolean
+  tag_ids?: Array<string>
+  title?: string
+}
+
+export function isChatUpdatePostRequest(value: unknown): value is ChatUpdatePostRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "is_locked") || typeof value["is_locked"] === 'boolean')
+    && (!hasOwn(value, "tag_ids") || isArrayOf(value["tag_ids"], item => isString(item)))
+    && (!hasOwn(value, "title") || isString(value["title"], 100))
+}
+
+export const decodeChatUpdatePostRequest = decoder("chat.UpdatePostRequest", isChatUpdatePostRequest)
+
+export type ChatUpdateTalkRequest = {
+  name?: string
+  user_limit?: number
+}
+
+export function isChatUpdateTalkRequest(value: unknown): value is ChatUpdateTalkRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "name") || isString(value["name"], 64))
+    && (!hasOwn(value, "user_limit") || (isInteger(value["user_limit"]) && value["user_limit"] >= 0 && value["user_limit"] <= 999))
+}
+
+export const decodeChatUpdateTalkRequest = decoder("chat.UpdateTalkRequest", isChatUpdateTalkRequest)
 
 export type ChatUserRef = {
   avatar_url?: string
@@ -2255,6 +2646,490 @@ export function isChatUserRef(value: unknown): value is ChatUserRef {
 }
 
 export const decodeChatUserRef = decoder("chat.UserRef", isChatUserRef)
+
+export type ChatViewAsCategory = {
+  channels: Array<ChatViewAsChannel>
+  id: string
+  name: string
+}
+
+export function isChatViewAsCategory(value: unknown): value is ChatViewAsCategory {
+  return isRecord(value)
+    && (hasOwn(value, "channels") && isArrayOf(value["channels"], item => isChatViewAsChannel(item)))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "name") && isString(value["name"], 64))
+}
+
+export const decodeChatViewAsCategory = decoder("chat.ViewAsCategory", isChatViewAsCategory)
+
+export type ChatViewAsChannel = {
+  can_join: boolean
+  id: string
+  name: string
+  number: number
+  permissions: Array<string>
+  type: ChatChannelType
+}
+
+export function isChatViewAsChannel(value: unknown): value is ChatViewAsChannel {
+  return isRecord(value)
+    && (hasOwn(value, "can_join") && typeof value["can_join"] === 'boolean')
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "name") && isString(value["name"], 64))
+    && (hasOwn(value, "number") && isInteger(value["number"]))
+    && (hasOwn(value, "permissions") && isArrayOf(value["permissions"], item => isString(item)))
+    && (hasOwn(value, "type") && isChatChannelType(value["type"]))
+}
+
+export const decodeChatViewAsChannel = decoder("chat.ViewAsChannel", isChatViewAsChannel)
+
+export type ChatViewAsRole = {
+  administrator: boolean
+  categories: Array<ChatViewAsCategory>
+  role_id: string
+  role_name: string
+  uncategorized: Array<ChatViewAsChannel>
+}
+
+export function isChatViewAsRole(value: unknown): value is ChatViewAsRole {
+  return isRecord(value)
+    && (hasOwn(value, "administrator") && typeof value["administrator"] === 'boolean')
+    && (hasOwn(value, "categories") && isArrayOf(value["categories"], item => isChatViewAsCategory(item)))
+    && (hasOwn(value, "role_id") && isIdentifier(value["role_id"]))
+    && (hasOwn(value, "role_name") && isString(value["role_name"], 32))
+    && (hasOwn(value, "uncategorized") && isArrayOf(value["uncategorized"], item => isChatViewAsChannel(item)))
+}
+
+export const decodeChatViewAsRole = decoder("chat.ViewAsRole", isChatViewAsRole)
+
+export type CommunityeventsCommunityEvent = {
+  channel_id?: string | null
+  cover_url?: string | null
+  created_at: string
+  created_by?: string | null
+  description: string
+  end_time?: string | null
+  going_members?: Array<CommunityeventsUserRef>
+  id: string
+  location?: string | null
+  my_rsvp?: string | null
+  rsvp_counts: CommunityeventsRSVPCounts
+  start_time: string
+  status: string
+  title: string
+  updated_at: string
+}
+
+export function isCommunityeventsCommunityEvent(value: unknown): value is CommunityeventsCommunityEvent {
+  return isRecord(value)
+    && (!hasOwn(value, "channel_id") || (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (!hasOwn(value, "cover_url") || (isString(value["cover_url"]) || value["cover_url"] === null))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "created_by") || (isIdentifier(value["created_by"]) || value["created_by"] === null))
+    && (hasOwn(value, "description") && isString(value["description"], 2000))
+    && (!hasOwn(value, "end_time") || (isTimestamp(value["end_time"]) || value["end_time"] === null))
+    && (!hasOwn(value, "going_members") || isArrayOf(value["going_members"], item => isCommunityeventsUserRef(item)))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "location") || (isString(value["location"], 255) || value["location"] === null))
+    && (!hasOwn(value, "my_rsvp") || (isString(value["my_rsvp"]) || value["my_rsvp"] === null))
+    && (hasOwn(value, "rsvp_counts") && isCommunityeventsRSVPCounts(value["rsvp_counts"]))
+    && (hasOwn(value, "start_time") && isTimestamp(value["start_time"]))
+    && (hasOwn(value, "status") && isString(value["status"]))
+    && (hasOwn(value, "title") && isString(value["title"], 100))
+    && (hasOwn(value, "updated_at") && isTimestamp(value["updated_at"]))
+}
+
+export const decodeCommunityeventsCommunityEvent = decoder("communityevents.CommunityEvent", isCommunityeventsCommunityEvent)
+
+export type CommunityeventsCreateEventRequest = {
+  channel_id?: string | null
+  description: string
+  end_time?: string | null
+  location?: string | null
+  start_time: string
+  title: string
+}
+
+export function isCommunityeventsCreateEventRequest(value: unknown): value is CommunityeventsCreateEventRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "channel_id") || (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (hasOwn(value, "description") && isString(value["description"], 2000))
+    && (!hasOwn(value, "end_time") || (isTimestamp(value["end_time"]) || value["end_time"] === null))
+    && (!hasOwn(value, "location") || (isString(value["location"], 255) || value["location"] === null))
+    && (hasOwn(value, "start_time") && isTimestamp(value["start_time"]))
+    && (hasOwn(value, "title") && isString(value["title"], 100))
+}
+
+export const decodeCommunityeventsCreateEventRequest = decoder("communityevents.CreateEventRequest", isCommunityeventsCreateEventRequest)
+
+export type CommunityeventsRSVPCounts = {
+  going: number
+  interested: number
+  not_going: number
+}
+
+export function isCommunityeventsRSVPCounts(value: unknown): value is CommunityeventsRSVPCounts {
+  return isRecord(value)
+    && (hasOwn(value, "going") && isInteger(value["going"]))
+    && (hasOwn(value, "interested") && isInteger(value["interested"]))
+    && (hasOwn(value, "not_going") && isInteger(value["not_going"]))
+}
+
+export const decodeCommunityeventsRSVPCounts = decoder("communityevents.RSVPCounts", isCommunityeventsRSVPCounts)
+
+export type CommunityeventsRSVPItem = {
+  response: string
+  updated_at: string
+  user: CommunityeventsUserRef
+}
+
+export function isCommunityeventsRSVPItem(value: unknown): value is CommunityeventsRSVPItem {
+  return isRecord(value)
+    && (hasOwn(value, "response") && isString(value["response"]))
+    && (hasOwn(value, "updated_at") && isString(value["updated_at"]))
+    && (hasOwn(value, "user") && isCommunityeventsUserRef(value["user"]))
+}
+
+export const decodeCommunityeventsRSVPItem = decoder("communityevents.RSVPItem", isCommunityeventsRSVPItem)
+
+export type CommunityeventsRSVPRequest = {
+  response: "going" | "interested" | "not_going"
+}
+
+export function isCommunityeventsRSVPRequest(value: unknown): value is CommunityeventsRSVPRequest {
+  return isRecord(value)
+    && (hasOwn(value, "response") && (value["response"] === "going" || value["response"] === "interested" || value["response"] === "not_going"))
+}
+
+export const decodeCommunityeventsRSVPRequest = decoder("communityevents.RSVPRequest", isCommunityeventsRSVPRequest)
+
+export type CommunityeventsUpdateEventRequest = {
+  channel_id?: string | null
+  description?: string
+  end_time?: string | null
+  location?: string | null
+  start_time?: string
+  status?: string
+  title?: string
+}
+
+export function isCommunityeventsUpdateEventRequest(value: unknown): value is CommunityeventsUpdateEventRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "channel_id") || (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (!hasOwn(value, "description") || isString(value["description"], 2000))
+    && (!hasOwn(value, "end_time") || (isTimestamp(value["end_time"]) || value["end_time"] === null))
+    && (!hasOwn(value, "location") || (isString(value["location"], 255) || value["location"] === null))
+    && (!hasOwn(value, "start_time") || isTimestamp(value["start_time"]))
+    && (!hasOwn(value, "status") || isString(value["status"]))
+    && (!hasOwn(value, "title") || isString(value["title"], 100))
+}
+
+export const decodeCommunityeventsUpdateEventRequest = decoder("communityevents.UpdateEventRequest", isCommunityeventsUpdateEventRequest)
+
+export type CommunityeventsUserRef = {
+  avatar_url?: string | null
+  display_name: string
+  id: string
+  username: string
+}
+
+export function isCommunityeventsUserRef(value: unknown): value is CommunityeventsUserRef {
+  return isRecord(value)
+    && (!hasOwn(value, "avatar_url") || (isString(value["avatar_url"]) || value["avatar_url"] === null))
+    && (hasOwn(value, "display_name") && isString(value["display_name"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "username") && isString(value["username"]))
+}
+
+export const decodeCommunityeventsUserRef = decoder("communityevents.UserRef", isCommunityeventsUserRef)
+
+export type DiscordimportApplyRequest = {
+  confirm_additive: boolean
+  confirm_roles: boolean
+  confirm_text: string
+  plan_hash: string
+  template: string
+}
+
+export function isDiscordimportApplyRequest(value: unknown): value is DiscordimportApplyRequest {
+  return isRecord(value)
+    && (hasOwn(value, "confirm_additive") && typeof value["confirm_additive"] === 'boolean')
+    && (hasOwn(value, "confirm_roles") && typeof value["confirm_roles"] === 'boolean')
+    && (hasOwn(value, "confirm_text") && isString(value["confirm_text"], 100))
+    && (hasOwn(value, "plan_hash") && isString(value["plan_hash"], 64))
+    && (hasOwn(value, "template") && isString(value["template"], 300))
+}
+
+export const decodeDiscordimportApplyRequest = decoder("discordimport.ApplyRequest", isDiscordimportApplyRequest)
+
+export type DiscordimportChannelMessages = {
+  messages: number
+  name: string
+}
+
+export function isDiscordimportChannelMessages(value: unknown): value is DiscordimportChannelMessages {
+  return isRecord(value)
+    && (hasOwn(value, "messages") && isInteger(value["messages"]))
+    && (hasOwn(value, "name") && isString(value["name"]))
+}
+
+export const decodeDiscordimportChannelMessages = decoder("discordimport.ChannelMessages", isDiscordimportChannelMessages)
+
+export type DiscordimportCounts = {
+  categories: number
+  channels: number
+  roles: number
+}
+
+export function isDiscordimportCounts(value: unknown): value is DiscordimportCounts {
+  return isRecord(value)
+    && (hasOwn(value, "categories") && isInteger(value["categories"]))
+    && (hasOwn(value, "channels") && isInteger(value["channels"]))
+    && (hasOwn(value, "roles") && isInteger(value["roles"]))
+}
+
+export const decodeDiscordimportCounts = decoder("discordimport.Counts", isDiscordimportCounts)
+
+export type DiscordimportDetail = {
+  channels_with_messages: Array<DiscordimportChannelMessages>
+  counts: DiscordimportCounts
+  created_at: string
+  created_by_name: string
+  id: string
+  kept_categories: Array<string>
+  remaining: DiscordimportCounts
+  template_code: string
+  template_name: string
+  undone_at: string | null
+}
+
+export function isDiscordimportDetail(value: unknown): value is DiscordimportDetail {
+  return isRecord(value)
+    && (hasOwn(value, "channels_with_messages") && isArrayOf(value["channels_with_messages"], item => isDiscordimportChannelMessages(item)))
+    && (hasOwn(value, "counts") && isDiscordimportCounts(value["counts"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "created_by_name") && isString(value["created_by_name"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "kept_categories") && isArrayOf(value["kept_categories"], item => isString(item)))
+    && (hasOwn(value, "remaining") && isDiscordimportCounts(value["remaining"]))
+    && (hasOwn(value, "template_code") && isString(value["template_code"]))
+    && (hasOwn(value, "template_name") && isString(value["template_name"]))
+    && (hasOwn(value, "undone_at") && (isTimestamp(value["undone_at"]) || value["undone_at"] === null))
+}
+
+export const decodeDiscordimportDetail = decoder("discordimport.Detail", isDiscordimportDetail)
+
+export type DiscordimportEveryoneInfo = {
+  applied: boolean
+  dropped: Array<string>
+  permission_keys: Array<string>
+}
+
+export function isDiscordimportEveryoneInfo(value: unknown): value is DiscordimportEveryoneInfo {
+  return isRecord(value)
+    && (hasOwn(value, "applied") && typeof value["applied"] === 'boolean')
+    && (hasOwn(value, "dropped") && isArrayOf(value["dropped"], item => isString(item)))
+    && (hasOwn(value, "permission_keys") && isArrayOf(value["permission_keys"], item => isString(item)))
+}
+
+export const decodeDiscordimportEveryoneInfo = decoder("discordimport.EveryoneInfo", isDiscordimportEveryoneInfo)
+
+export type DiscordimportPlan = {
+  administrator_dropped: boolean
+  categories: Array<DiscordimportPlanCategory>
+  channels: Array<DiscordimportPlanChannel>
+  code: string
+  counts: DiscordimportCounts
+  dropped_bits: Array<string>
+  everyone: DiscordimportEveryoneInfo
+  hash: string
+  roles: Array<DiscordimportPlanRole>
+  server_name: string
+  skipped: Array<string>
+  source_name: string
+  template_name: string
+}
+
+export function isDiscordimportPlan(value: unknown): value is DiscordimportPlan {
+  return isRecord(value)
+    && (hasOwn(value, "administrator_dropped") && typeof value["administrator_dropped"] === 'boolean')
+    && (hasOwn(value, "categories") && isArrayOf(value["categories"], item => isDiscordimportPlanCategory(item)))
+    && (hasOwn(value, "channels") && isArrayOf(value["channels"], item => isDiscordimportPlanChannel(item)))
+    && (hasOwn(value, "code") && isString(value["code"]))
+    && (hasOwn(value, "counts") && isDiscordimportCounts(value["counts"]))
+    && (hasOwn(value, "dropped_bits") && isArrayOf(value["dropped_bits"], item => isString(item)))
+    && (hasOwn(value, "everyone") && isDiscordimportEveryoneInfo(value["everyone"]))
+    && (hasOwn(value, "hash") && isString(value["hash"]))
+    && (hasOwn(value, "roles") && isArrayOf(value["roles"], item => isDiscordimportPlanRole(item)))
+    && (hasOwn(value, "server_name") && isString(value["server_name"]))
+    && (hasOwn(value, "skipped") && isArrayOf(value["skipped"], item => isString(item)))
+    && (hasOwn(value, "source_name") && isString(value["source_name"]))
+    && (hasOwn(value, "template_name") && isString(value["template_name"]))
+}
+
+export const decodeDiscordimportPlan = decoder("discordimport.Plan", isDiscordimportPlan)
+
+export type DiscordimportPlanCategory = {
+  name: string
+  overwrites: Array<DiscordimportPlanOverwrite>
+  source_id: string
+}
+
+export function isDiscordimportPlanCategory(value: unknown): value is DiscordimportPlanCategory {
+  return isRecord(value)
+    && (hasOwn(value, "name") && isString(value["name"], 64))
+    && (hasOwn(value, "overwrites") && isArrayOf(value["overwrites"], item => isDiscordimportPlanOverwrite(item)))
+    && (hasOwn(value, "source_id") && isString(value["source_id"]))
+}
+
+export const decodeDiscordimportPlanCategory = decoder("discordimport.PlanCategory", isDiscordimportPlanCategory)
+
+export type DiscordimportPlanChannel = {
+  category: string
+  category_source_id: string
+  name: string
+  notes: Array<string>
+  overwrites: Array<DiscordimportPlanOverwrite>
+  private: boolean
+  slow_mode_seconds: number
+  source_id: string
+  source_type: string
+  topic: string
+  type: string
+  user_limit: number
+}
+
+export function isDiscordimportPlanChannel(value: unknown): value is DiscordimportPlanChannel {
+  return isRecord(value)
+    && (hasOwn(value, "category") && isString(value["category"]))
+    && (hasOwn(value, "category_source_id") && isString(value["category_source_id"]))
+    && (hasOwn(value, "name") && isString(value["name"], 64))
+    && (hasOwn(value, "notes") && isArrayOf(value["notes"], item => isString(item)))
+    && (hasOwn(value, "overwrites") && isArrayOf(value["overwrites"], item => isDiscordimportPlanOverwrite(item)))
+    && (hasOwn(value, "private") && typeof value["private"] === 'boolean')
+    && (hasOwn(value, "slow_mode_seconds") && isInteger(value["slow_mode_seconds"]))
+    && (hasOwn(value, "source_id") && isString(value["source_id"]))
+    && (hasOwn(value, "source_type") && isString(value["source_type"]))
+    && (hasOwn(value, "topic") && isString(value["topic"], 255))
+    && (hasOwn(value, "type") && isString(value["type"]))
+    && (hasOwn(value, "user_limit") && isInteger(value["user_limit"]))
+}
+
+export const decodeDiscordimportPlanChannel = decoder("discordimport.PlanChannel", isDiscordimportPlanChannel)
+
+export type DiscordimportPlanOverwrite = {
+  allow: number
+  allow_keys: Array<string>
+  deny: number
+  deny_keys: Array<string>
+  everyone: boolean
+  role_name: string
+  role_source_id: string
+}
+
+export function isDiscordimportPlanOverwrite(value: unknown): value is DiscordimportPlanOverwrite {
+  return isRecord(value)
+    && (hasOwn(value, "allow") && (isInteger(value["allow"]) && value["allow"] >= 0))
+    && (hasOwn(value, "allow_keys") && isArrayOf(value["allow_keys"], item => isString(item)))
+    && (hasOwn(value, "deny") && (isInteger(value["deny"]) && value["deny"] >= 0))
+    && (hasOwn(value, "deny_keys") && isArrayOf(value["deny_keys"], item => isString(item)))
+    && (hasOwn(value, "everyone") && typeof value["everyone"] === 'boolean')
+    && (hasOwn(value, "role_name") && isString(value["role_name"]))
+    && (hasOwn(value, "role_source_id") && isString(value["role_source_id"]))
+}
+
+export const decodeDiscordimportPlanOverwrite = decoder("discordimport.PlanOverwrite", isDiscordimportPlanOverwrite)
+
+export type DiscordimportPlanRole = {
+  administrator_dropped: boolean
+  color: number
+  dropped: Array<string>
+  hoist: boolean
+  mentionable: boolean
+  name: string
+  permission_keys: Array<string>
+  permissions: number
+  source_id: string
+  source_name: string
+}
+
+export function isDiscordimportPlanRole(value: unknown): value is DiscordimportPlanRole {
+  return isRecord(value)
+    && (hasOwn(value, "administrator_dropped") && typeof value["administrator_dropped"] === 'boolean')
+    && (hasOwn(value, "color") && (isInteger(value["color"]) && value["color"] >= 0 && value["color"] <= 16777215))
+    && (hasOwn(value, "dropped") && isArrayOf(value["dropped"], item => isString(item)))
+    && (hasOwn(value, "hoist") && typeof value["hoist"] === 'boolean')
+    && (hasOwn(value, "mentionable") && typeof value["mentionable"] === 'boolean')
+    && (hasOwn(value, "name") && isString(value["name"], 32))
+    && (hasOwn(value, "permission_keys") && isArrayOf(value["permission_keys"], item => isString(item)))
+    && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
+    && (hasOwn(value, "source_id") && isString(value["source_id"]))
+    && (hasOwn(value, "source_name") && isString(value["source_name"]))
+}
+
+export const decodeDiscordimportPlanRole = decoder("discordimport.PlanRole", isDiscordimportPlanRole)
+
+export type DiscordimportPreviewRequest = {
+  template: string
+}
+
+export function isDiscordimportPreviewRequest(value: unknown): value is DiscordimportPreviewRequest {
+  return isRecord(value)
+    && (hasOwn(value, "template") && isString(value["template"], 300))
+}
+
+export const decodeDiscordimportPreviewRequest = decoder("discordimport.PreviewRequest", isDiscordimportPreviewRequest)
+
+export type DiscordimportRecord = {
+  counts: DiscordimportCounts
+  created_at: string
+  created_by_name: string
+  id: string
+  template_code: string
+  template_name: string
+  undone_at: string | null
+}
+
+export function isDiscordimportRecord(value: unknown): value is DiscordimportRecord {
+  return isRecord(value)
+    && (hasOwn(value, "counts") && isDiscordimportCounts(value["counts"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "created_by_name") && isString(value["created_by_name"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "template_code") && isString(value["template_code"]))
+    && (hasOwn(value, "template_name") && isString(value["template_name"]))
+    && (hasOwn(value, "undone_at") && (isTimestamp(value["undone_at"]) || value["undone_at"] === null))
+}
+
+export const decodeDiscordimportRecord = decoder("discordimport.Record", isDiscordimportRecord)
+
+export type DiscordimportUndoRequest = {
+  accept_message_loss: boolean
+}
+
+export function isDiscordimportUndoRequest(value: unknown): value is DiscordimportUndoRequest {
+  return isRecord(value)
+    && (hasOwn(value, "accept_message_loss") && typeof value["accept_message_loss"] === 'boolean')
+}
+
+export const decodeDiscordimportUndoRequest = decoder("discordimport.UndoRequest", isDiscordimportUndoRequest)
+
+export type DiscordimportUndoResult = {
+  already_gone: DiscordimportCounts
+  kept_categories: Array<string>
+  kept_roles: number
+  removed: DiscordimportCounts
+}
+
+export function isDiscordimportUndoResult(value: unknown): value is DiscordimportUndoResult {
+  return isRecord(value)
+    && (hasOwn(value, "already_gone") && isDiscordimportCounts(value["already_gone"]))
+    && (hasOwn(value, "kept_categories") && isArrayOf(value["kept_categories"], item => isString(item)))
+    && (hasOwn(value, "kept_roles") && isInteger(value["kept_roles"]))
+    && (hasOwn(value, "removed") && isDiscordimportCounts(value["removed"]))
+}
+
+export const decodeDiscordimportUndoResult = decoder("discordimport.UndoResult", isDiscordimportUndoResult)
 
 export type EmojiEmoji = {
   animated: boolean
@@ -2368,6 +3243,148 @@ export function isHttpxErrorResponse(value: unknown): value is HttpxErrorRespons
 
 export const decodeHttpxErrorResponse = decoder("httpx.ErrorResponse", isHttpxErrorResponse)
 
+export type LaterCreateReminderRequest = {
+  message_id: string
+  remind_at: string
+}
+
+export function isLaterCreateReminderRequest(value: unknown): value is LaterCreateReminderRequest {
+  return isRecord(value)
+    && (hasOwn(value, "message_id") && isIdentifier(value["message_id"]))
+    && (hasOwn(value, "remind_at") && isTimestamp(value["remind_at"]))
+}
+
+export const decodeLaterCreateReminderRequest = decoder("later.CreateReminderRequest", isLaterCreateReminderRequest)
+
+export type LaterCreateScheduledRequest = {
+  content: string
+  parent_id?: string | null
+  reply_to_id?: string | null
+  send_at: string
+}
+
+export function isLaterCreateScheduledRequest(value: unknown): value is LaterCreateScheduledRequest {
+  return isRecord(value)
+    && (hasOwn(value, "content") && isString(value["content"], 4000))
+    && (!hasOwn(value, "parent_id") || (isIdentifier(value["parent_id"]) || value["parent_id"] === null))
+    && (!hasOwn(value, "reply_to_id") || (isIdentifier(value["reply_to_id"]) || value["reply_to_id"] === null))
+    && (hasOwn(value, "send_at") && isTimestamp(value["send_at"]))
+}
+
+export const decodeLaterCreateScheduledRequest = decoder("later.CreateScheduledRequest", isLaterCreateScheduledRequest)
+
+export type LaterMessageRef = {
+  author: string
+  channel_id: string
+  channel_name: string
+  dm: boolean
+  id: string
+  parent_id: string | null
+  snippet: string
+}
+
+export function isLaterMessageRef(value: unknown): value is LaterMessageRef {
+  return isRecord(value)
+    && (hasOwn(value, "author") && isString(value["author"]))
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (hasOwn(value, "channel_name") && isString(value["channel_name"]))
+    && (hasOwn(value, "dm") && typeof value["dm"] === 'boolean')
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "parent_id") && (isIdentifier(value["parent_id"]) || value["parent_id"] === null))
+    && (hasOwn(value, "snippet") && isString(value["snippet"]))
+}
+
+export const decodeLaterMessageRef = decoder("later.MessageRef", isLaterMessageRef)
+
+export type LaterReminder = {
+  available: boolean
+  created_at: string
+  delivered_at: string | null
+  id: string
+  message?: LaterMessageRef
+  remind_at: string
+}
+
+export function isLaterReminder(value: unknown): value is LaterReminder {
+  return isRecord(value)
+    && (hasOwn(value, "available") && typeof value["available"] === 'boolean')
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "delivered_at") && (isTimestamp(value["delivered_at"]) || value["delivered_at"] === null))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "message") || isLaterMessageRef(value["message"]))
+    && (hasOwn(value, "remind_at") && isTimestamp(value["remind_at"]))
+}
+
+export const decodeLaterReminder = decoder("later.Reminder", isLaterReminder)
+
+export type LaterReminderList = {
+  items: Array<LaterReminder>
+}
+
+export function isLaterReminderList(value: unknown): value is LaterReminderList {
+  return isRecord(value)
+    && (hasOwn(value, "items") && isArrayOf(value["items"], item => isLaterReminder(item)))
+}
+
+export const decodeLaterReminderList = decoder("later.ReminderList", isLaterReminderList)
+
+export type LaterScheduled = {
+  channel_id: string
+  channel_name: string
+  content: string
+  created_at: string
+  dm: boolean
+  failure_reason: "" | "slow_mode" | "not_allowed" | "unavailable" | "refused"
+  id: string
+  parent_id: string | null
+  reply_to_id: string | null
+  send_at: string
+  state: "pending" | "failed"
+  updated_at: string
+}
+
+export function isLaterScheduled(value: unknown): value is LaterScheduled {
+  return isRecord(value)
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (hasOwn(value, "channel_name") && isString(value["channel_name"]))
+    && (hasOwn(value, "content") && isString(value["content"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "dm") && typeof value["dm"] === 'boolean')
+    && (hasOwn(value, "failure_reason") && (value["failure_reason"] === "" || value["failure_reason"] === "slow_mode" || value["failure_reason"] === "not_allowed" || value["failure_reason"] === "unavailable" || value["failure_reason"] === "refused"))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "parent_id") && (isIdentifier(value["parent_id"]) || value["parent_id"] === null))
+    && (hasOwn(value, "reply_to_id") && (isIdentifier(value["reply_to_id"]) || value["reply_to_id"] === null))
+    && (hasOwn(value, "send_at") && isTimestamp(value["send_at"]))
+    && (hasOwn(value, "state") && (value["state"] === "pending" || value["state"] === "failed"))
+    && (hasOwn(value, "updated_at") && isTimestamp(value["updated_at"]))
+}
+
+export const decodeLaterScheduled = decoder("later.Scheduled", isLaterScheduled)
+
+export type LaterScheduledList = {
+  items: Array<LaterScheduled>
+}
+
+export function isLaterScheduledList(value: unknown): value is LaterScheduledList {
+  return isRecord(value)
+    && (hasOwn(value, "items") && isArrayOf(value["items"], item => isLaterScheduled(item)))
+}
+
+export const decodeLaterScheduledList = decoder("later.ScheduledList", isLaterScheduledList)
+
+export type LaterUpdateScheduledRequest = {
+  content?: string | null
+  send_at?: string | null
+}
+
+export function isLaterUpdateScheduledRequest(value: unknown): value is LaterUpdateScheduledRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "content") || (isString(value["content"], 4000) || value["content"] === null))
+    && (!hasOwn(value, "send_at") || (isTimestamp(value["send_at"]) || value["send_at"] === null))
+}
+
+export const decodeLaterUpdateScheduledRequest = decoder("later.UpdateScheduledRequest", isLaterUpdateScheduledRequest)
+
 export type LinkpreviewPreview = {
   description?: string
   image?: string
@@ -2461,6 +3478,109 @@ export function isMediaStats(value: unknown): value is MediaStats {
 
 export const decodeMediaStats = decoder("media.Stats", isMediaStats)
 
+export type ModerationAutomodList = {
+  raid_until?: string
+  rules: Array<AutomodRule>
+}
+
+export function isModerationAutomodList(value: unknown): value is ModerationAutomodList {
+  return isRecord(value)
+    && (!hasOwn(value, "raid_until") || isTimestamp(value["raid_until"]))
+    && (hasOwn(value, "rules") && isArrayOf(value["rules"], item => isAutomodRule(item)))
+}
+
+export const decodeModerationAutomodList = decoder("moderation.AutomodList", isModerationAutomodList)
+
+export type ModerationHistory = {
+  events: Array<ModerationHistoryEvent>
+  notes: Array<ModerationNote>
+  strikes: number
+}
+
+export function isModerationHistory(value: unknown): value is ModerationHistory {
+  return isRecord(value)
+    && (hasOwn(value, "events") && isArrayOf(value["events"], item => isModerationHistoryEvent(item)))
+    && (hasOwn(value, "notes") && isArrayOf(value["notes"], item => isModerationNote(item)))
+    && (hasOwn(value, "strikes") && isInteger(value["strikes"]))
+}
+
+export const decodeModerationHistory = decoder("moderation.History", isModerationHistory)
+
+export type ModerationHistoryEvent = {
+  actor?: string
+  added_roles?: Array<string>
+  at: string
+  category?: string
+  duration_seconds?: number
+  hits?: number
+  kind: "timeout" | "timeout_removed" | "ban" | "unban" | "ban_expired" | "kick" | "talk_removal" | "roles" | "report" | "automod"
+  outcome?: "blocked" | "flagged" | "alert"
+  reason?: string
+  removed_roles?: Array<string>
+  report_id?: string
+  rule?: string
+  status?: "open" | "resolved" | "dismissed"
+}
+
+export function isModerationHistoryEvent(value: unknown): value is ModerationHistoryEvent {
+  return isRecord(value)
+    && (!hasOwn(value, "actor") || isString(value["actor"]))
+    && (!hasOwn(value, "added_roles") || isArrayOf(value["added_roles"], item => isString(item)))
+    && (hasOwn(value, "at") && isTimestamp(value["at"]))
+    && (!hasOwn(value, "category") || isString(value["category"]))
+    && (!hasOwn(value, "duration_seconds") || isInteger(value["duration_seconds"]))
+    && (!hasOwn(value, "hits") || isInteger(value["hits"]))
+    && (hasOwn(value, "kind") && (value["kind"] === "timeout" || value["kind"] === "timeout_removed" || value["kind"] === "ban" || value["kind"] === "unban" || value["kind"] === "ban_expired" || value["kind"] === "kick" || value["kind"] === "talk_removal" || value["kind"] === "roles" || value["kind"] === "report" || value["kind"] === "automod"))
+    && (!hasOwn(value, "outcome") || (value["outcome"] === "blocked" || value["outcome"] === "flagged" || value["outcome"] === "alert"))
+    && (!hasOwn(value, "reason") || isString(value["reason"]))
+    && (!hasOwn(value, "removed_roles") || isArrayOf(value["removed_roles"], item => isString(item)))
+    && (!hasOwn(value, "report_id") || isIdentifier(value["report_id"]))
+    && (!hasOwn(value, "rule") || isString(value["rule"]))
+    && (!hasOwn(value, "status") || (value["status"] === "open" || value["status"] === "resolved" || value["status"] === "dismissed"))
+}
+
+export const decodeModerationHistoryEvent = decoder("moderation.HistoryEvent", isModerationHistoryEvent)
+
+export type ModerationNote = {
+  author_id: string
+  author_name: string
+  body: string
+  can_delete: boolean
+  created_at: string
+  id: string
+  mine: boolean
+  strike: boolean
+  updated_at: string
+}
+
+export function isModerationNote(value: unknown): value is ModerationNote {
+  return isRecord(value)
+    && (hasOwn(value, "author_id") && isIdentifier(value["author_id"]))
+    && (hasOwn(value, "author_name") && isString(value["author_name"]))
+    && (hasOwn(value, "body") && isString(value["body"], 1000))
+    && (hasOwn(value, "can_delete") && typeof value["can_delete"] === 'boolean')
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "mine") && typeof value["mine"] === 'boolean')
+    && (hasOwn(value, "strike") && typeof value["strike"] === 'boolean')
+    && (hasOwn(value, "updated_at") && isTimestamp(value["updated_at"]))
+}
+
+export const decodeModerationNote = decoder("moderation.Note", isModerationNote)
+
+export type ModerationNoteRequest = {
+  body: string
+  strike: boolean
+}
+
+export function isModerationNoteRequest(value: unknown): value is ModerationNoteRequest {
+  return isRecord(value)
+    && (hasOwn(value, "body") && isString(value["body"], 1000))
+    && (hasOwn(value, "strike") && typeof value["strike"] === 'boolean')
+}
+
+export const decodeModerationNoteRequest = decoder("moderation.NoteRequest", isModerationNoteRequest)
+
 export type OnboardingAcceptInput = {
   version: number
 }
@@ -2492,6 +3612,7 @@ export type OnboardingSettings = {
   direct_messages_enabled: boolean
   rules_text: string
   rules_version: number
+  session_inactivity_days: number
   start_channel_id: string | null
   welcome_text: string
 }
@@ -2502,6 +3623,7 @@ export function isOnboardingSettings(value: unknown): value is OnboardingSetting
     && (hasOwn(value, "direct_messages_enabled") && typeof value["direct_messages_enabled"] === 'boolean')
     && (hasOwn(value, "rules_text") && isString(value["rules_text"], 10000))
     && (hasOwn(value, "rules_version") && (isInteger(value["rules_version"]) && value["rules_version"] >= 0))
+    && (hasOwn(value, "session_inactivity_days") && (isInteger(value["session_inactivity_days"]) && value["session_inactivity_days"] >= 1 && value["session_inactivity_days"] <= 365))
     && (hasOwn(value, "start_channel_id") && (isIdentifier(value["start_channel_id"]) || value["start_channel_id"] === null))
     && (hasOwn(value, "welcome_text") && isString(value["welcome_text"], 4000))
 }
@@ -2513,6 +3635,7 @@ export type OnboardingSettingsInput = {
   direct_messages_enabled?: boolean | null
   require_reacceptance?: boolean
   rules_text: string
+  session_inactivity_days?: number | null
   start_channel_id: string | null
   welcome_text: string
 }
@@ -2523,6 +3646,7 @@ export function isOnboardingSettingsInput(value: unknown): value is OnboardingSe
     && (!hasOwn(value, "direct_messages_enabled") || (typeof value["direct_messages_enabled"] === 'boolean' || value["direct_messages_enabled"] === null))
     && (!hasOwn(value, "require_reacceptance") || typeof value["require_reacceptance"] === 'boolean')
     && (hasOwn(value, "rules_text") && isString(value["rules_text"], 10000))
+    && (!hasOwn(value, "session_inactivity_days") || ((isInteger(value["session_inactivity_days"]) && value["session_inactivity_days"] >= 1 && value["session_inactivity_days"] <= 365) || value["session_inactivity_days"] === null))
     && (hasOwn(value, "start_channel_id") && (isIdentifier(value["start_channel_id"]) || value["start_channel_id"] === null))
     && (hasOwn(value, "welcome_text") && isString(value["welcome_text"], 4000))
 }
@@ -2706,6 +3830,7 @@ export type PollDetail = {
   anonymous: boolean
   closed: boolean
   closes_at: string
+  has_voted?: boolean
   multiple: boolean
   my_votes: Array<string>
   options: Array<ChatPollOption>
@@ -2717,6 +3842,7 @@ export function isPollDetail(value: unknown): value is PollDetail {
     && (hasOwn(value, "anonymous") && typeof value["anonymous"] === 'boolean')
     && (hasOwn(value, "closed") && typeof value["closed"] === 'boolean')
     && (hasOwn(value, "closes_at") && isTimestamp(value["closes_at"]))
+    && (!hasOwn(value, "has_voted") || typeof value["has_voted"] === 'boolean')
     && (hasOwn(value, "multiple") && typeof value["multiple"] === 'boolean')
     && (hasOwn(value, "my_votes") && isArrayOf(value["my_votes"], item => isIdentifier(item)))
     && (hasOwn(value, "options") && isArrayOf(value["options"], item => isChatPollOption(item)))
@@ -2916,6 +4042,38 @@ export function isRolesUploadLimitInput(value: unknown): value is RolesUploadLim
 
 export const decodeRolesUploadLimitInput = decoder("roles.UploadLimitInput", isRolesUploadLimitInput)
 
+export type ServerActivityStatus = {
+  active_sessions: number
+  active_talks: number
+  connected_websocket_clients: number
+  voice_participants: number
+}
+
+export function isServerActivityStatus(value: unknown): value is ServerActivityStatus {
+  return isRecord(value)
+    && (hasOwn(value, "active_sessions") && isInteger(value["active_sessions"]))
+    && (hasOwn(value, "active_talks") && isInteger(value["active_talks"]))
+    && (hasOwn(value, "connected_websocket_clients") && isInteger(value["connected_websocket_clients"]))
+    && (hasOwn(value, "voice_participants") && isInteger(value["voice_participants"]))
+}
+
+export const decodeServerActivityStatus = decoder("server.ActivityStatus", isServerActivityStatus)
+
+export type ServerBackupStatus = {
+  hint: string
+  last_backup_age: string
+  last_restore_test_age: string
+}
+
+export function isServerBackupStatus(value: unknown): value is ServerBackupStatus {
+  return isRecord(value)
+    && (hasOwn(value, "hint") && isString(value["hint"]))
+    && (hasOwn(value, "last_backup_age") && isString(value["last_backup_age"]))
+    && (hasOwn(value, "last_restore_test_age") && isString(value["last_restore_test_age"]))
+}
+
+export const decodeServerBackupStatus = decoder("server.BackupStatus", isServerBackupStatus)
+
 export type ServerDatabaseHealth = {
   applied_migrations: number
   latest_migration: string
@@ -2932,6 +4090,25 @@ export function isServerDatabaseHealth(value: unknown): value is ServerDatabaseH
 }
 
 export const decodeServerDatabaseHealth = decoder("server.DatabaseHealth", isServerDatabaseHealth)
+
+export type ServerDatabaseStatus = {
+  applied_migrations: number
+  latest_migration: string
+  pending_migrations: number
+  reachable: boolean
+  size_bytes?: number
+}
+
+export function isServerDatabaseStatus(value: unknown): value is ServerDatabaseStatus {
+  return isRecord(value)
+    && (hasOwn(value, "applied_migrations") && isInteger(value["applied_migrations"]))
+    && (hasOwn(value, "latest_migration") && isString(value["latest_migration"]))
+    && (hasOwn(value, "pending_migrations") && isInteger(value["pending_migrations"]))
+    && (hasOwn(value, "reachable") && typeof value["reachable"] === 'boolean')
+    && (!hasOwn(value, "size_bytes") || isInteger(value["size_bytes"]))
+}
+
+export const decodeServerDatabaseStatus = decoder("server.DatabaseStatus", isServerDatabaseStatus)
 
 export type ServerHealth = {
   features?: Array<string>
@@ -3019,6 +4196,33 @@ export function isServerMailStatus(value: unknown): value is ServerMailStatus {
 }
 
 export const decodeServerMailStatus = decoder("server.MailStatus", isServerMailStatus)
+
+export type ServerOperatorStatus = {
+  activity: ServerActivityStatus
+  auto_deploy: ServerSelfUpdateStatus
+  backup: ServerBackupStatus
+  database: ServerDatabaseStatus
+  disk_free_bytes?: number
+  storage: ServerStorageStatus
+  update: ServerUpdateStatus
+  version: ServerSystemVersion
+  warnings: Array<OpwarnWarning>
+}
+
+export function isServerOperatorStatus(value: unknown): value is ServerOperatorStatus {
+  return isRecord(value)
+    && (hasOwn(value, "activity") && isServerActivityStatus(value["activity"]))
+    && (hasOwn(value, "auto_deploy") && isServerSelfUpdateStatus(value["auto_deploy"]))
+    && (hasOwn(value, "backup") && isServerBackupStatus(value["backup"]))
+    && (hasOwn(value, "database") && isServerDatabaseStatus(value["database"]))
+    && (!hasOwn(value, "disk_free_bytes") || isInteger(value["disk_free_bytes"]))
+    && (hasOwn(value, "storage") && isServerStorageStatus(value["storage"]))
+    && (hasOwn(value, "update") && isServerUpdateStatus(value["update"]))
+    && (hasOwn(value, "version") && isServerSystemVersion(value["version"]))
+    && (hasOwn(value, "warnings") && isArrayOf(value["warnings"], item => isOpwarnWarning(item)))
+}
+
+export const decodeServerOperatorStatus = decoder("server.OperatorStatus", isServerOperatorStatus)
 
 export type ServerOpsPool = {
   acquired: number
@@ -3253,6 +4457,21 @@ export function isServerStorageHealth(value: unknown): value is ServerStorageHea
 }
 
 export const decodeServerStorageHealth = decoder("server.StorageHealth", isServerStorageHealth)
+
+export type ServerStorageStatus = {
+  configured: boolean
+  reachable: boolean
+  used_bytes?: number
+}
+
+export function isServerStorageStatus(value: unknown): value is ServerStorageStatus {
+  return isRecord(value)
+    && (hasOwn(value, "configured") && typeof value["configured"] === 'boolean')
+    && (hasOwn(value, "reachable") && typeof value["reachable"] === 'boolean')
+    && (!hasOwn(value, "used_bytes") || isInteger(value["used_bytes"]))
+}
+
+export const decodeServerStorageStatus = decoder("server.StorageStatus", isServerStorageStatus)
 
 export type ServerSystemHealth = {
   database: ServerDatabaseHealth

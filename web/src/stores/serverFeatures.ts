@@ -36,9 +36,23 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
   return {
     list, loaded, has, load,
     dm: computed(() => has('dm')),
+    dmV2: computed(() => has('dm.v2')),
     blocks: computed(() => has('blocks')),
     reports: computed(() => has('reports')),
+    automod: computed(() => has('automod')),
+    moderationHistory: computed(() => has('moderation.history')),
     profileBanner: computed(() => has('profile.banner')),
-    avatarRemove: computed(() => has('profile.avatar_remove'))
+    anonymousPolls: computed(() => has('polls.anonymous')),
+    channelAutoDelete: computed(() => has('channels.auto_delete')),
+    avatarRemove: computed(() => has('profile.avatar_remove')),
+    talksLobby: computed(() => has('talks.lobby')),
+    opsStatus: computed(() => has('ops.status')),
+    importDiscord: computed(() => has('import.discord')),
+    talksStage: computed(() => has('talks.stage')),
+    talksReactions: computed(() => has('talks.reactions')),
+    forum: computed(() => has('channels.forum')),
+    channelsForum: computed(() => has('channels.forum')),
+    events: computed(() => has('events')),
+    notifyLevelsV2: computed(() => has('notify.levels.v2'))
   }
 })

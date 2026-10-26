@@ -21,12 +21,15 @@ const examples: Record<ServerEventType, unknown[]> = {
   emoji_changed: [null],
   thread_follow_updated: [{ thread_id: id, channel_id: id, following: true }, { thread_id: id, channel_id: id, following: false }],
   saved_updated: [{ message_id: id, saved: true }, { message_id: id, saved: false }],
+  reminder_update: [{ id, state: 'created' }, { id, state: 'due' }, { id, state: 'removed' }],
+  scheduled_message_update: [{ id, channel_id: id, state: 'sent' }, { id, channel_id: id, state: 'failed', reason: 'slow_mode' }],
   dm_created: [{
     id, group: false, members: [{ id, username: 'bob', display_name: 'Bob' }], created_at: FIXTURE_TIMESTAMP, last_message_at: null,
-    unread_count: 0, mention_count: 0, last_read_at: null, notify_level: 'all', can_send: true
+    unread_count: 0, mention_count: 0, last_read_at: null, notify_level: 'all', can_send: true, hidden: false, favourite_position: null
   }],
   dm_member_added: [{ dm_id: id, member: { id, username: 'bob', display_name: 'Bob', avatar_url: '/api/media/x' } }],
   dm_member_removed: [{ dm_id: id, member: { id, username: 'bob', display_name: 'Bob' } }],
+  dm_prefs_updated: [{ dm_id: id }, { dm_id: null }],
   block_updated: [{ user_id: id, blocked: true }, { user_id: id, blocked: false }],
   typing: [room],
   read_state: [
@@ -74,8 +77,48 @@ const examples: Record<ServerEventType, unknown[]> = {
   screen_layers_wanted: [{ channel_id: id, layers: [] }, { channel_id: id, layers: [0, 2] }],
   voice_speaking: [{ ...room, active: true }],
   voice_mute_state: [{ ...room, muted: true, deafened: false }],
-  voice_kicked: [{ channel_id: id }, { channel_id: id, reason: 'room_full' }, { channel_id: id, reason: 'missing_permission' }],
+  voice_kicked: [{ channel_id: id }, { channel_id: id, reason: 'room_full' }, { channel_id: id, reason: 'missing_permission' }, { channel_id: id, reason: 'talk_rate_limited' }, { channel_id: id, reason: 'talk_unavailable' }],
+  talk_leader: [{ channel_id: id, leader_id: id }, { channel_id: id, leader_id: null }],
+  talk_moved: [{ from_channel_id: id, channel_id: fixtureId(2) }],
+  stage_hand: [{ ...room, raised: true, at: FIXTURE_TIMESTAMP }, { ...room, raised: false }],
+  stage_talk_power: [{ ...room, granted: true }, { ...room, granted: false }],
+  talk_reaction: [{ ...room, emoji: '🎉' }, { ...room, emoji: `<:party:${fixtureId(3)}>` }],
   media_handshake: [{ channel_id: id, user_id: id, wire: 'a' }],
+  forum_tags_changed: [{ channel_id: id }],
+  event_update: [
+    {
+      id,
+      title: 'Game Night',
+      description: 'Playing games',
+      start_time: FIXTURE_TIMESTAMP,
+      status: 'scheduled',
+      created_at: FIXTURE_TIMESTAMP,
+      updated_at: FIXTURE_TIMESTAMP,
+      rsvp_counts: { going: 1, interested: 0, not_going: 0 },
+    },
+    {
+      id,
+      title: 'Community Call',
+      description: 'Monthly sync',
+      start_time: FIXTURE_TIMESTAMP,
+      end_time: FIXTURE_TIMESTAMP,
+      channel_id: id,
+      location: null,
+      cover_url: '/api/media/x',
+      status: 'active',
+      created_by: id,
+      created_at: FIXTURE_TIMESTAMP,
+      updated_at: FIXTURE_TIMESTAMP,
+      rsvp_counts: { going: 2, interested: 1, not_going: 0 },
+      my_rsvp: 'going',
+      going_members: [{ id, username: 'bob', display_name: 'Bob', avatar_url: null }],
+    }
+  ],
+  event_delete: [{ id }],
+  event_reminder: [
+    { event_id: id, title: 'Game Night', start_time: FIXTURE_TIMESTAMP },
+    { event_id: id, title: 'Talk Event', start_time: FIXTURE_TIMESTAMP, channel_id: id }
+  ],
 }
 
 describe('WebSocket runtime event contracts', () => {
@@ -186,6 +229,8 @@ describe('ICE, voice-user and presence leaf contracts', () => {
   })
   it('requires a complete user plus joined-at and both boolean mute flags', () => {
     expect(isVoiceUser(voiceUser)).toBe(true)
+    expect(isVoiceUser({ ...voiceUser, talk_power: true, hand_raised_at: FIXTURE_TIMESTAMP })).toBe(true)
+    for (const value of [{ ...voiceUser, talk_power: 1 }, { ...voiceUser, hand_raised_at: 'soon' }]) expect(isVoiceUser(value)).toBe(false)
     for (const value of [null, { ...voiceUser, joined_at: null }, { ...voiceUser, muted: 0 }, { ...voiceUser, deafened: null }, { ...voiceUser, id: 'invalid' }]) expect(isVoiceUser(value)).toBe(false)
   })
 })

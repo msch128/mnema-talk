@@ -5,6 +5,8 @@ import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import MentionsInbox from './MentionsInbox.vue'
 import { useChatStore } from '../stores/chat'
+import { dateTime } from '../lib/time'
+import { locale } from '../i18n'
 import { channelFixture, fixtureId, messageFixture, readStateFixture } from '../test-fixtures.fixture'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
@@ -89,6 +91,18 @@ describe('MentionsInbox', () => {
     await flushPromises()
     expect(w.findAll('[data-testid="mentions-inbox-item"]')).toHaveLength(2)
     expect(w.find('[data-testid="mentions-inbox-more"]').exists()).toBe(false)
+  })
+
+  it('offers to try again after a failed load, and writes the date like the other lists', async () => {
+    apiMock.mockRejectedValueOnce(new Error('offline'))
+    const w = mountInbox()
+    await w.find('[data-testid="mentions-inbox-button"]').trigger('click')
+    await flushPromises()
+    const now = new Date().toISOString()
+    apiMock.mockResolvedValueOnce({ messages: [messageFixture({ id: fixtureId(31), created_at: now })], has_more: false })
+    await w.get('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(w.get('[data-testid="mentions-inbox-item"]').text()).toContain(dateTime(now, locale.value))
   })
 
   it('closes on a press outside', async () => {

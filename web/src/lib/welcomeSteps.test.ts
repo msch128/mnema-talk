@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { FIRST_RUN_WINDOW_MS, isFirstRun, welcomeSteps } from './welcomeSteps'
 
 const base: OnboardingState = {
-  community_name: '', welcome_text: '', rules_text: '', rules_version: 0, rules_accepted_version: 0,
+  community_name: '', welcome_text: 'Hello', rules_text: '', rules_version: 0, rules_accepted_version: 0,
   rules_pending: false, start_channel_id: null, dismissed_tips: [], welcome_done: false
 }
 const now = Date.parse('2030-01-10T12:00:00Z')
@@ -27,6 +27,9 @@ describe('welcomeSteps', () => {
   it('runs everything on a first run, rules only when pending', () => {
     expect(welcomeSteps(base, { firstRun: true, canAskNotifications: true })).toEqual(['welcome', 'profile', 'notifications'])
     expect(welcomeSteps({ ...base, rules_pending: true }, { firstRun: true, canAskNotifications: false })).toEqual(['welcome', 'rules', 'profile'])
+  })
+  it('skips the welcome page when there is no welcome text to show', () => {
+    expect(welcomeSteps({ ...base, welcome_text: '  ' }, { firstRun: true, canAskNotifications: true })).toEqual(['profile', 'notifications'])
   })
   it('asks only for the rules later', () => {
     expect(welcomeSteps({ ...base, welcome_done: true, rules_pending: true }, { firstRun: false, canAskNotifications: true })).toEqual(['rules'])

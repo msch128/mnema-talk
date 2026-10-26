@@ -15,7 +15,7 @@ describe('MessageAttachments', () => {
     expect(mount(MessageAttachments).find('[data-attachment]').exists()).toBe(false)
     const w = mount(MessageAttachments, { props: { attachments: [{ ...file, mime_type: '', size_bytes: 0 }] } })
     expect(w.find('[data-attachment="file"]').exists()).toBe(true)
-    expect(w.text()).toContain('0.00')
+    expect(w.text()).toContain('0 B')
   })
 
   it('uses the chat layout when an untyped parent supplies an unknown variant', () => {
@@ -50,11 +50,25 @@ describe('MessageAttachments', () => {
     expect(el.attributes('controls')).toBeDefined()
   })
 
-  it('links every file with its size', () => {
+  it('shows a chat image on its own, without the card or file row', () => {
+    const w = mount(MessageAttachments, { props: { attachments: [image] } })
+    const el = w.find('[data-attachment="image"]')
+    expect(el.classes()).not.toContain('border')
+    expect(el.find('a').exists()).toBe(false)
+    expect(el.find('img').attributes('title')).toBe('shot.png')
+    expect(el.find('img').classes()).toEqual(expect.arrayContaining(['h-auto', 'w-auto', 'min-h-24', 'object-cover']))
+  })
+
+  it.each(['reply', 'root'] as const)('keeps the image card and file row in the %s variant', variant => {
+    const w = mount(MessageAttachments, { props: { attachments: [image], variant } })
+    expect(w.find('[data-attachment="image"] a').text()).toBe('shot.png')
+  })
+
+  it('links every non-image file with its size', () => {
     const w = mount(MessageAttachments, { props: { attachments: [image, video, file] } })
     const links = w.findAll('a')
-    expect(links.map(a => a.text())).toEqual(['shot.png', 'clip.mp4', 'doc.pdf'])
-    expect(w.text()).toContain('2.00')
+    expect(links.map(a => a.text())).toEqual(['clip.mp4', 'doc.pdf'])
+    expect(w.text()).toContain('2 MB')
     expect(w.find('[data-attachment="file"] img, [data-attachment="file"] video')!.exists()).toBe(false)
   })
 })

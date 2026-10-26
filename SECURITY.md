@@ -37,6 +37,15 @@ do not disclose them publicly before a fix is available. Do not run scanners,
 brute-force or load tests against instances you do not operate; run the stack
 locally instead (`make up` or `make dev`).
 
+## Audit package
+
+[doc/security/audit-package.md](doc/security/audit-package.md) collects what an
+external security review needs in one place: scope and versions, architecture
+and data flows, threat model, cryptographic design, a generated inventory of
+routes and events with their authentication, the controls, the results of the
+internal reviews (1.0, 1.1, 1.2), known limitations, how to run a test instance
+and suggested focus areas.
+
 ## 1.0 internal security review
 
 Before 1.0.0 the project reviewed its own code in six lanes: authentication and
@@ -53,10 +62,9 @@ Result: 0 Critical, 0 High. Every Medium finding is fixed, with a test that
 fails without the fix, and the behaviour changes are listed in
 [doc/upgrade.md](doc/upgrade.md#09x--100). Deliberately deferred past 1.0:
 
-- **RT-4, frame format version 2.** Version 2 media frames (no line binding)
-  are still accepted. Re-evaluated for 1.1 and deferred to 2.0: every 1.0.x
-  sender still seals version 2 at the start of each epoch, so refusing it would
-  break 1.0.x tabs (see the media frame section below for the evidence).
+- **RT-4, frame format version 2.** Closed in 1.2.0: version 2 media frames
+  (no line binding) are neither sent nor opened any more (see the media frame
+  section below).
 - **RT-6, regroup collusion** (Info). Two colluding members, or the server, can
   make a listener who hears nobody else regroup; rate-limited, no worse than the
   denial of service the server already has.
@@ -73,6 +81,34 @@ Closed in 1.1:
   [doc/bots.md](doc/bots.md#tokens). No token was revoked for this.
 
 Remaining Info-level items of the review are not listed individually.
+
+## 1.2 internal security review
+
+The 1.2 additions (Talks and lobbies, stages, automod, sessions, scheduled
+messages and reminders, forum and poll changes, the Discord structure import,
+account export and deletion extensions) went through the same kind of
+**internal review**, not an external audit. Result: 0 Critical, 0 High. Every
+Medium and the Low findings that name a concrete misuse are fixed with a test
+that fails without the fix. Deliberately accepted:
+
+- **Scheduled messages burst.** Messages scheduled for the same second go out
+  in one sweep per member (at most 50 pending per member). Slow mode, the
+  direct message gate, blocks, automod and the permission checks still apply at
+  send time; only the per-request rate limiter does not, because there is no
+  request. The cap bounds the burst.
+- **Duplicate ids in a Discord template.** A template with two roles or
+  channels of the same Discord id can attach overwrites to the wrong imported
+  object. Real templates have unique ids and the fetch is pinned to
+  discord.com; the preview and the plan hash only guard against a change
+  between preview and apply. Review the imported channels' permissions after
+  an import, as the import page says.
+- **Moderation timeline and Manage reports.** The per-member moderation
+  timeline (reasons, role changes, Talk kicks) is readable with *Manage
+  reports* alone, independent of *View audit log*. This is intended: handling
+  a report needs the history. Grant the permission accordingly.
+- **Stage and reaction rate gates reset on reconnect.** The windows for stage
+  commands and reactions start over when a member's last connection closes.
+  They are bounded by the connection rate limit, like the voice gate.
 
 ## Direct messages (privacy model)
 
@@ -102,6 +138,19 @@ model, in short; the design is in [doc/architecture.md](doc/architecture.md#dire
 - **Server-side enforcement** of all of it; the UI only hides what a member
   cannot do.
 
+## Anonymous polls
+
+An anonymous poll hides who chose what from every member, moderator and
+administrator in the app. Mnema never stores which option a member chose: only
+that the member voted (`poll_voters`, no timestamp) and ballots without a
+member (`poll_anon_ballots`) that are folded into per-option counters. An
+operator with direct access to the database server (WAL, transaction ids or
+statement logs) could, in theory, still correlate the timing of a vote. Do not
+rely on it against that operator. An anonymous poll pushes no running tally
+at each vote (it announces the result when it ends), but the counts of a
+running poll are readable, so in a very small audience the choice of the last
+voter follows from the result.
+
 ## Blocks and reports
 
 A block is private: the blocked member is not told, and nothing about it is
@@ -121,6 +170,15 @@ direct message shows only that copy, never the rest of the conversation.
 Deleting an account blanks its text in every report copy and cuts the links
 to the account. Details: [doc/moderation.md](doc/moderation.md#blocking-and-reports).
 
+**Automod and moderator notes (1.2).** Automod entries use the same queue. A
+blocked channel message is kept in the entry as the text that was refused;
+for a direct message automod keeps no text at all, only who broke which rule.
+Moderators with *Manage reports* can also write private notes about a member.
+A note is moderator data: the member never sees it, it is not in their data
+export, the audit log records that it was written but never what it says, and
+when the account is erased the notes stay, attached to the tombstone, until a
+moderator deletes them. Details: [doc/moderation.md](doc/moderation.md#automod).
+
 ## Forwarding (a reference, not a copy)
 
 A forwarded message stores a reference to the original (`forward_of`) and the
@@ -134,6 +192,24 @@ forward is one 403 text, so a forward cannot probe channels, conversations or
 blocks. The ids of the original are returned only to readers who may see it. Saved messages are a
 private list of references with the same read-time check, conversations by
 membership.
+
+## Channel slugs (speaking addresses)
+
+Channel addresses (`/c/general`) are slugs. What they could reveal, and what limits it:
+
+- **Visibility.** `slug` and `previous_slugs` are part of the channel object, so only members who may see a
+  channel receive them. There is no endpoint that resolves a slug; the web app resolves against the channels it
+  already holds, and an unknown address and a channel the member may not see give the same answer.
+- **Collisions.** A slug is unique on the server, former slugs included. When a name collides, the channel's own
+  slug gets a suffix from the first 6 hex characters of its own id (more only if that collides too) (`plans-0f3a9c`), never a running number, so the
+  suffix does not count other channels. A channel manager (the *Manage channels* permission) can still infer that
+  some channel already uses a slug when theirs gets a suffix; this is accepted, as managers administer the
+  channel structure.
+- **Temporary Talks.** The leader of a temporary Talk may rename it without *Manage channels*. Its slug is fixed
+  at creation (`talk-` and the first 8 hex characters of its id), is never changed by a rename and never enters
+  the slug history, so a leader learns nothing about other channels. No name-based slug can take that shape.
+- **Hoarding.** A channel keeps its newest ten former slugs; older ones become free again and their links no longer
+  resolve. Only renames by members with *Manage channels* reach the history.
 
 ## Security model (summary)
 
@@ -726,41 +802,29 @@ details and the limits.
   sealed and signed but does not open. Only the sender's own MLS leaf key
   can sign for a line. The replay windows, stream retirement, nonces and key
   lifecycle are unchanged.
-  **Rollout, and what it does not yet cover.** Frame version 2 (no line)
-  is still understood, so Talks of mixed versions interoperate and tabs
-  that predate version 3 keep working. Each member signs a small capability
-  message (`M` `C`, bits, Ed25519 signature over group, id and bits, with its
-  leaf key) when it joins or meets a member it has not told, and with each
-  heartbeat; older clients ignore it. A sender seals version 3 in an epoch only
-  when every member of that epoch has advertised it, decides again at each
-  epoch, and never goes back to version 2 within an epoch; a member that
-  joins without advertising (an older tab) makes the next epoch version 2
-  until it leaves. A receiver takes version 3 always, and version 2 only in an
-  epoch where some member has not advertised version 3 (the senders seal
-  version 2 for that member); in an epoch where every member has, version 2 is
-  refused after a 3 second grace (while senders learn the last advertisement),
-  so a downgrade or replay of a capable sender's frames opens nothing. Until
-  version 2 is refused entirely, a server that withholds capability messages
-  (the same denial of service it has by dropping any message) keeps an epoch
-  on version 2, and a version 2 unit carries no line, so in such an epoch its
-  units can still be moved between lines, exactly as before.
-  Planned (phase B, 2.0): refuse version 2 entirely and stop sending it.
-  Re-evaluated for 1.1 (RT-4) and **not done**, because it cannot be shown to
-  be safe. Every bundle since 0.8.2 can *open* version 3, but a sender seals it
-  only after it has heard every member's capability message
-  (`frameVersion` and `applyCaps` in `mediaFrameWorker.ts`): each epoch of every
-  1.0.x tab starts on version 2, and stays there while any member is silent or
-  has not been heard yet. The behaviour is pinned by tests ("seals version 2
-  until every member of the epoch advertised version 3", "never goes back to
-  version 2 within an epoch, and decides again for the next one",
-  `mediaFrameWorker.test.ts`). A receiver that refused version 2 would
-  therefore drop 1.0.x tabs' media at every epoch start (every join, leave and
-  key rotation) and for as long as a capability message is delayed. Refusing it
-  safely needs senders that default to version 3, which is a change in the
-  client that the 1.0.x tabs in a mixed-version Talk do not have, so it waits
-  for 2.0 when those tabs are unsupported. The party that could exploit the
-  gap (moving units between a sender's lines) is the active server, which is
-  already outside the model.
+  **Version 2 is gone (1.2.0).** Frames before version 3 carried no line, so an
+  active SFU could move a sender's units between its lines. Since 1.2.0 a
+  sender seals version 3 always and a receiver opens nothing else: a unit with
+  the old `M` `2` magic is dropped without opening and counted per publisher, and
+  the web app tells the member once per call that someone uses an outdated
+  client ("Someone in this Talk uses an outdated Mnema client ..."). There is no
+  negotiation left to attack, so a downgrade or a replay of old frames opens
+  nothing, and a server that withholds capability messages can no longer keep an
+  epoch on a weaker format. The version-3 signature domain and wire layout are
+  unchanged, so 1.0.x and 1.1.x tabs (which open version 3 and send it once every
+  member has advertised it) still hear a 1.2 member. What breaks is the other
+  direction: a tab that predates 0.8.2 cannot open version 3 at all, and a 1.0.x
+  or 1.1.x tab seals version 2 at the start of every epoch until it has heard a
+  capability message from each member, so its media is dropped by 1.2 members
+  for that moment (usually a second or two; longer if the server delays the
+  message). Members therefore keep sending the capability message (`M` `C`, bits,
+  Ed25519 signature over group, id and bits, with the member's leaf key) when they
+  join or meet a member they have not told, and with each heartbeat; older clients
+  decide their format by it, and a 1.2 member answers it like any other. The security floor of the signed web
+  bundle is raised to 1.2.0 with this change (`Security-Floor: raise`), so a
+  desktop client that has run a 1.2 bundle never falls back to an older bundle
+  that still sealed version 2. The server cannot enforce this: it relays media it
+  cannot read, and the format is checked by the receiving clients.
   Also known and accepted: two colluding members, or the server, can make a
   listener who hears nobody else regroup by naming a newer epoch in unopened
   frames; this is rate-limited with a backoff and no more than the denial of

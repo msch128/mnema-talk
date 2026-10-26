@@ -11,6 +11,11 @@ export function hasOwn(value: Record<string, unknown>, key: string): boolean {
 const MAX_STRING_LENGTH = 1_048_576
 const MAX_COLLECTION_LENGTH = 10_000
 
+/** True when the object has no field outside the given list (payloads are spread into stores). */
+export function onlyFields(value: Record<string, unknown>, fields: readonly string[]): boolean {
+  return Object.keys(value).every(key => fields.includes(key))
+}
+
 export function isString(value: unknown, maxCodePoints?: number): value is string {
   if (typeof value !== 'string' || value.length > MAX_STRING_LENGTH) return false
   return maxCodePoints === undefined || [...value].length <= maxCodePoints

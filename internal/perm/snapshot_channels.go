@@ -31,6 +31,10 @@ func (s *Snapshot) KnowsChannel(ch uuid.UUID) bool {
 	return ok
 }
 
+// IsStage reports whether the channel is a Stage: a Talk where only members
+// with talk power may send audio, camera or screen.
+func (s *Snapshot) IsStage(ch uuid.UUID) bool { return s.stages[ch] }
+
 // CategoryOf returns the category of a channel (uuid.Nil: none).
 func (s *Snapshot) CategoryOf(ch uuid.UUID) (uuid.UUID, bool) {
 	cat, ok := s.channelCat[ch]

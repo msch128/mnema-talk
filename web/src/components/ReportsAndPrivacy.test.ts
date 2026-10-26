@@ -130,7 +130,7 @@ describe('AdminReportsTab', () => {
     http.handle = () => ({ has_more: false, reports: [] })
     const empty = mount(AdminReportsTab, { global })
     await flushPromises()
-    expect(empty.get('[data-testid="reports-empty"]').text()).toBe('No reports here.')
+    expect(empty.get('[data-testid="reports-empty"]').text()).toContain('No reports here.')
 
     const urls: string[] = []
     http.handle = url => { urls.push(url); return { has_more: urls.length === 1, reports: [report(urls.length === 1 ? 10 : 12)] } }
@@ -220,7 +220,46 @@ describe('AdminReportsTab', () => {
   })
 })
 
+describe('report detail layout', () => {
+  it('quotes the reported message first and keeps the closing actions in a sticky footer', async () => {
+    http.handle = url => {
+      if (url === `/api/admin/reports/${fixtureId(10)}`) return detail(10, { kind: 'channel', channel_name: 'general' })
+      return { has_more: false, reports: [report(10, { kind: 'channel', channel_name: 'general' })] }
+    }
+    const w = mount(AdminReportsTab, { global })
+    await flushPromises()
+    await w.get(`[data-report="${fixtureId(10)}"]`).trigger('click')
+    await flushPromises()
+    const html = w.html()
+    expect(w.get('[data-testid="report-quote"]').text()).toContain('bad words')
+    expect(html.indexOf('data-testid="report-quote"')).toBeLessThan(html.indexOf('data-testid="report-context"'))
+    expect(w.get('[data-testid="report-actions"]').classes()).toContain('sticky')
+    expect(w.get('[data-testid="report-actions"]').find('[data-testid="report-resolve"]').exists()).toBe(true)
+  })
+
+  it('offers no sanction to someone without timeout or ban rights', async () => {
+    usePermissionsStore().info = { owner: false, permissions: PERMISSION_BITS.manage_reports, max_upload_mb: 50, role_ids: [], top_position: 0, catalog: [], channels: [] }
+    http.handle = url => (url === `/api/admin/reports/${fixtureId(10)}` ? detail(10) : { has_more: false, reports: [report(10)] })
+    const w = mount(AdminReportsTab, { global })
+    await flushPromises()
+    await w.get(`[data-report="${fixtureId(10)}"]`).trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="report-sanction"]').exists()).toBe(false)
+  })
+})
+
 describe('AdminDashboard reports tab', () => {
+  it('counts the open reports beside the tab', async () => {
+    useAuthStore().user = userFixture({ id: fixtureId(1) })
+    usePermissionsStore().info = { owner: false, permissions: PERMISSION_BITS.manage_reports, max_upload_mb: 50, role_ids: [], top_position: 0, catalog: [], channels: [] }
+    useServerFeaturesStore().list = ['reports']
+    http.handle = url => (url.startsWith('/api/admin/reports') ? { has_more: false, reports: [report(10), report(11)] } : [])
+    const w = mount(AdminDashboard, { global, attachTo: document.body, shallow: false })
+    await flushPromises()
+    expect(document.querySelector('[data-badge="reports"]')?.textContent).toBe('2')
+    w.unmount()
+  })
+
   it('shows the tab to a member who manages reports on a server that has them', async () => {
     useAuthStore().user = userFixture({ id: fixtureId(1) })
     usePermissionsStore().info = { owner: false, permissions: PERMISSION_BITS.manage_reports, max_upload_mb: 50, role_ids: [], top_position: 0, catalog: [], channels: [] }
@@ -317,7 +356,7 @@ describe('AccountBlockedList', () => {
 })
 
 describe('the kill switch in the welcome settings', () => {
-  const settings = { community_name: 'Home', welcome_text: '', rules_text: '', rules_version: 0, start_channel_id: null, direct_messages_enabled: true }
+  const settings = { community_name: 'Home', welcome_text: '', rules_text: '', rules_version: 0, start_channel_id: null, direct_messages_enabled: true, session_inactivity_days: 7 }
 
   it('is offered on a server with direct messages and saved with the other settings', async () => {
     useServerFeaturesStore().list = ['dm']

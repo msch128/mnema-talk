@@ -71,12 +71,12 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 		requireChatError(t, err, "query channels")
 	})
 	t.Run("channel decoding", func(t *testing.T) {
-		p := driftPool(t, f.p, map[string]string{"channels": `SELECT id,number,category_id,NULL::text name,type,topic,sort_order,created_at,user_limit,slow_mode_seconds FROM public.channels`})
+		p := driftPool(t, f.p, map[string]string{"channels": `SELECT id,number,category_id,NULL::text name,type,topic,sort_order,created_at,user_limit,slow_mode_seconds,auto_delete_days,is_lobby,is_temp,leader_id,is_stage,slug FROM public.channels`})
 		_, _, err := GetServerHierarchy(ctx, p)
 		requireChatError(t, err, "NULL")
 	})
 	t.Run("member decoding", func(t *testing.T) {
-		p := driftPool(t, f.p, map[string]string{"users": `SELECT id,username,NULL::text display_name,bio,role,avatar_s3_key,status_text,created_at,voice_seconds,message_count,disabled_at,NULL::timestamptz banned_at,NULL::timestamptz banned_until,NULL::timestamptz deleted_at,is_bot FROM public.users`})
+		p := driftPool(t, f.p, map[string]string{"users": `SELECT id,username,NULL::text display_name,bio,role,avatar_s3_key,status_text,NULL::timestamptz status_expires_at,created_at,voice_seconds,message_count,disabled_at,NULL::timestamptz banned_at,NULL::timestamptz banned_until,NULL::timestamptz deleted_at,is_bot FROM public.users`})
 		_, err := GetAllMembers(ctx, p)
 		requireChatError(t, err, "NULL")
 	})

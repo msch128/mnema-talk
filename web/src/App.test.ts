@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, flushPromises, type VueWrapper } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from './stores/auth'
+import { useAccountStore } from './stores/account'
 import { useChatStore } from './stores/chat'
 import { useVoiceStore } from './stores/voice'
 import { useToastStore } from './stores/toast'
@@ -226,7 +227,11 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     await w.find('button').trigger('click')
     expect(rtc.resumeRemoteAudio).toHaveBeenCalledOnce()
     w.findComponent({ name: 'ConnectionStatsModal' }).vm.$emit('close')
-    w.findComponent({ name: 'AudioSettingsModal' }).vm.$emit('close')
+    expect(w.findComponent({ name: 'SettingsDialog' }).exists()).toBe(true)
+    // The Talk bar's audio flag opens the settings dialog (stubbed here); closing is the account store's.
+    useAccountStore().close()
+    await flushPromises()
+    expect(w.findComponent({ name: 'SettingsDialog' }).exists()).toBe(false)
     w.findComponent({ name: 'ScreenShareModal' }).vm.$emit('close')
     w.findComponent({ name: 'UserProfileModal' }).vm.$emit('mention', 'member')
     w.findComponent({ name: 'UserProfileModal' }).vm.$emit('close')
@@ -234,7 +239,6 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     expect(mention).toHaveBeenCalledWith('member')
     expect(screenClose).toHaveBeenCalledOnce()
     expect(voice.showStatsModal).toBe(false)
-    expect(voice.showAudioSettings).toBe(false)
     for (const name of ['Sidebar', 'UserBar']) {
       w.findComponent({ name }).vm.$emit('open-legal')
       await flushPromises()

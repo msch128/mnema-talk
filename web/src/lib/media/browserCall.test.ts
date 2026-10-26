@@ -19,12 +19,11 @@ const channelId = fixtureId(9)
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
 afterAll(() => { vi.stubGlobal('crypto', previous) })
 
-function recordingGuard(): MediaGuard & { capsSeen: [number, boolean, number][], keys: { epoch: number, key: EpochKeys, replace: boolean, soft?: boolean }[], stale: number[], sends: string[], receives: string[], stats(senders: Record<string, FrameStats>): void } {
+function recordingGuard(): MediaGuard & { keys: { epoch: number, key: EpochKeys, replace: boolean, soft?: boolean }[], stale: number[], sends: string[], receives: string[], stats(senders: Record<string, FrameStats>): void } {
   const keys: { epoch: number, key: EpochKeys, replace: boolean, soft?: boolean }[] = []
   const stale: number[] = []
   const sends: string[] = []
   const receives: string[] = []
-  const capsSeen: [number, boolean, number][] = []
   let statsListener: (senders: Record<string, FrameStats>) => void = () => {}
   return {
     stats: senders => statsListener(senders),
@@ -41,12 +40,9 @@ function recordingGuard(): MediaGuard & { capsSeen: [number, boolean, number][],
       receives.push(`${channelId}:${senderId}${source === undefined ? '' : `/${source}`}`)
       return true
     },
-    setKey(epoch, key, replace = false, soft = false, caps) {
+    setKey(epoch, key, replace = false, soft = false) {
       keys.push({ epoch, key, replace, ...(soft ? { soft } : {}) })
-      if (caps) capsSeen.push([epoch, caps.complete, caps.members.length])
     },
-    setCaps(epoch, caps) { capsSeen.push([epoch, caps.complete, caps.members.length]) },
-    capsSeen,
     staleKeys() { stale.push(keys.length) },
     reset() { keys.length = 0 },
   }
@@ -135,18 +131,18 @@ describe('browser media call', () => {
     expect(aliceCodes.at(-1)).toMatchObject({ epoch: aliceKey.epoch, members: [aliceId, bobId] })
     expect(new Set(aliceCodes.map(code => code?.code ?? null)).size).toBe(aliceCodes.length)
     const packet = await sealFrame({
-      keys: aliceKey.key, epoch: aliceKey.epoch, stream: 1, counter: 0, channelId, senderId: aliceId, plaintext: new Uint8Array([1, 2]),
+      keys: aliceKey.key, epoch: aliceKey.epoch, stream: 1, counter: 0, channelId, senderId: aliceId, plaintext: new Uint8Array([1, 2]), source: 0,
     })
     if (!packet) throw new Error('expected a sealed frame')
     const bobKeys = new Map([[bobKey.epoch, bobKey.key]])
-    await expect(openFrame({ keys: bobKeys, channelId, senderId: aliceId, packet, replay: new ReplayWindow() })).resolves.toEqual(new Uint8Array([1, 2]))
+    await expect(openFrame({ keys: bobKeys, channelId, senderId: aliceId, packet, replay: new ReplayWindow(), source: 0 })).resolves.toEqual(new Uint8Array([1, 2]))
     // Alice's MLS leaf key signed it: bob cannot pass it off as his, nor alice as bob.
-    await expect(openFrame({ keys: bobKeys, channelId, senderId: bobId, packet, replay: new ReplayWindow() })).resolves.toBeNull()
+    await expect(openFrame({ keys: bobKeys, channelId, senderId: bobId, packet, replay: new ReplayWindow(), source: 0 })).resolves.toBeNull()
     const forged = await sealFrame({
-      keys: bobKey.key, epoch: bobKey.epoch, stream: 1, counter: 0, channelId, senderId: aliceId, plaintext: new Uint8Array([6]),
+      keys: bobKey.key, epoch: bobKey.epoch, stream: 1, counter: 0, channelId, senderId: aliceId, plaintext: new Uint8Array([6]), source: 0,
     })
     if (!forged) throw new Error('expected a sealed frame')
-    await expect(openFrame({ keys: new Map([[aliceKey.epoch, aliceKey.key]]), channelId, senderId: aliceId, packet: forged, replay: new ReplayWindow() })).resolves.toBeNull()
+    await expect(openFrame({ keys: new Map([[aliceKey.epoch, aliceKey.key]]), channelId, senderId: aliceId, packet: forged, replay: new ReplayWindow(), source: 0 })).resolves.toBeNull()
     const sender = { transform: null } as RTCRtpSender
     const receiver = { transform: null } as RTCRtpReceiver
     expect(alice.protectSender(sender, 0)).toBe(true)
@@ -251,41 +247,6 @@ describe('browser media call', () => {
     await mediaSettled(call)
   }, 30_000)
 
-  it('tells the guard who opens version 3 with the key, and again when only that changed', async () => {
-    const guard = recordingGuard()
-    const call = browserMediaCall(guard)
-    call.start(channelId, aliceId)
-    call.roster([aliceId])
-    await mediaSettled(call)
-    const current = guard.keys.at(-1)
-    if (!current) throw new Error('expected an epoch key')
-    const seen = guard.capsSeen.length
-    let step: MediaStep = { wires: [], epoch: current.epoch, key: current.key, caps: { members: [aliceId], complete: false } }
-    const sync = vi.spyOn(MediaGroup.prototype, 'sync').mockImplementation(() => Promise.resolve(step))
-    call.resume()
-    await mediaSettled(call)
-    // Same epoch, same key: the guard hears only about the advertisement.
-    expect(guard.keys.at(-1)?.epoch).toBe(current.epoch)
-    expect(guard.capsSeen.slice(seen)).toEqual([[current.epoch, false, 1]])
-    call.resume()
-    await mediaSettled(call)
-    expect(guard.capsSeen.slice(seen)).toHaveLength(1)
-    step = { ...step, caps: { members: [aliceId, bobId], complete: true } }
-    call.resume()
-    await mediaSettled(call)
-    expect(guard.capsSeen.slice(seen)).toEqual([[current.epoch, false, 1], [current.epoch, true, 2]])
-    // A new epoch brings its own, with the key.
-    const epochs = guard.keys.length
-    step = { wires: [], epoch: current.epoch + 1, key: { ...current.key }, caps: { members: [aliceId], complete: false } }
-    call.resume()
-    await mediaSettled(call)
-    expect(guard.keys).toHaveLength(epochs + 1)
-    expect(guard.capsSeen.at(-1)).toEqual([current.epoch + 1, false, 1])
-    sync.mockRestore()
-    call.stop()
-    await mediaSettled(call)
-  }, 30_000)
-
   it('settles a call it does not own', async () => {
     await expect(mediaSettled({} as MediaCall)).resolves.toBeUndefined()
   })
@@ -346,8 +307,8 @@ describe('browser media call', () => {
 
   describe('frames of an epoch the call has no key for', () => {
     afterEach(() => { vi.useRealTimers() })
-    const newer = (epoch: number): FrameStats => ({ opened: 0, newer: 5, epoch })
-    const opens: FrameStats = { opened: 5, newer: 0, epoch: -1 }
+    const newer = (epoch: number): FrameStats => ({ opened: 0, newer: 5, epoch, legacy: 0 })
+    const opens: FrameStats = { opened: 5, newer: 0, epoch: -1, legacy: 0 }
     const lowId = '00000000-0000-4000-8000-000000000001'
 
     async function waitingJoiner(roster: string[]) {
@@ -359,7 +320,7 @@ describe('browser media call', () => {
       bob.roster(roster)
       await mediaSettled(bob)
       expect(wires).toHaveLength(1)
-      vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+      vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: Date.now() })
       return { guard, bob, wires }
     }
 
@@ -467,7 +428,7 @@ describe('browser media call', () => {
       alice.roster([aliceId])
       await mediaSettled(alice)
       expect(guard.keys.map(item => item.epoch)).toEqual([0])
-      vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+      vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: Date.now() })
       const recover = vi.spyOn(MediaGroup.prototype, 'recover')
       for (let second = 0; second < 8; second++) {
         guard.stats({ [bobId]: newer(0), [carolId]: newer(0) })
@@ -492,6 +453,21 @@ describe('browser media call', () => {
     ;(listener as ((notice: 'removed') => void) | null)?.('removed')
     expect(seen).toEqual(['removed'])
     spy.mockRestore()
+    call.stop()
+    await mediaSettled(call)
+  }, 30_000)
+
+  it('says so when a member still sends the retired frame format', async () => {
+    const guard = recordingGuard()
+    const call = browserMediaCall(guard)
+    const seen: string[] = []
+    call.onNotice(notice => seen.push(notice))
+    call.start(channelId, bobId)
+    await mediaSettled(call)
+    guard.stats({ [aliceId]: { opened: 5, newer: 0, epoch: -1, legacy: 0 } })
+    expect(seen).toEqual([])
+    guard.stats({ [aliceId]: { opened: 0, newer: 0, epoch: -1, legacy: 3 } })
+    expect(seen).toEqual(['outdated'])
     call.stop()
     await mediaSettled(call)
   }, 30_000)
@@ -580,9 +556,9 @@ describe('browser media call', () => {
       call.roster([lowIdFor, bobId])
       await mediaSettled(call)
       const recover = vi.spyOn(MediaGroup.prototype, 'recover')
-      vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+      vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: Date.now() })
       for (let second = 0; second < 6; second++) {
-        guard.stats({ [lowIdFor]: { opened: 0, newer: 3, epoch: 5 } })
+        guard.stats({ [lowIdFor]: { opened: 0, newer: 3, epoch: 5, legacy: 0 } })
         vi.setSystemTime(Date.now() + 1000)
       }
       call.stop()
@@ -603,9 +579,9 @@ describe('browser media call', () => {
       const slow = held<{ wires: Uint8Array[], epoch: number | null, key: EpochKeys | null }>()
       const started = vi.fn()
       vi.spyOn(MediaGroup.prototype, 'recover').mockImplementationOnce(() => { started(); return slow.promise })
-      vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+      vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: Date.now() })
       for (let second = 0; second < 7; second++) {
-        guard.stats({ [lowIdFor]: { opened: 0, newer: 3, epoch: 5 } })
+        guard.stats({ [lowIdFor]: { opened: 0, newer: 3, epoch: 5, legacy: 0 } })
         vi.setSystemTime(Date.now() + 1000)
       }
       await vi.waitFor(() => expect(started).toHaveBeenCalled())

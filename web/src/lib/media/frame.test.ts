@@ -22,14 +22,14 @@ async function aliceKeys(byte = 7): Promise<EpochKeys> {
 }
 
 async function sealed(keys: EpochKeys, { epoch = 4, stream = 9, counter = 0, senderId = 'alice', plaintext = Uint8Array.of(1, 2, 3) } = {}) {
-  const packet = await sealFrame({ keys, epoch, stream, counter, channelId: 'channel', senderId, plaintext })
+  const packet = await sealFrame({ keys, epoch, stream, counter, channelId: 'channel', senderId, plaintext, source: 0 })
   if (!packet) throw new Error('expected a sealed frame')
   return packet
 }
 
 function open(keys: EpochKeys | ReadonlyMap<number, EpochKeys>, packet: Uint8Array, { senderId = 'alice', channelId = 'channel', replay = new ReplayWindow(), epoch = 4 } = {}) {
   const map = keys instanceof Map ? keys : new Map([[epoch, keys as EpochKeys]])
-  return openFrame({ keys: map, channelId, senderId, packet, replay })
+  return openFrame({ keys: map, channelId, senderId, packet, replay, source: 0 })
 }
 
 function flipped(packet: Uint8Array, index: number): Uint8Array {
@@ -42,13 +42,13 @@ describe('media frames', () => {
   it('opens a frame signed by its sender for the same channel, epoch and key', async () => {
     const keys = await aliceKeys()
     const packet = await sealed(keys)
-    expect([...packet.subarray(0, 2)]).toEqual([0x4d, 0x32])
+    expect([...packet.subarray(0, 2)]).toEqual([0x4d, 0x33])
     expect(packet.byteLength).toBe(3 + FRAME_OVERHEAD_BYTES)
     await expect(open(keys, packet)).resolves.toEqual(Uint8Array.of(1, 2, 3))
     await expect(open(keys, packet, { channelId: 'other' })).resolves.toBeNull()
     await expect(open(await aliceKeys(8), packet)).resolves.toBeNull()
     const missed: number[] = []
-    await expect(openFrame({ keys: new Map(), channelId: 'channel', senderId: 'alice', packet, replay: new ReplayWindow(), onUnknownEpoch: epoch => missed.push(epoch) })).resolves.toBeNull()
+    await expect(openFrame({ keys: new Map(), channelId: 'channel', senderId: 'alice', packet, replay: new ReplayWindow(), source: 0, onUnknownEpoch: epoch => missed.push(epoch) })).resolves.toBeNull()
     expect(missed).toEqual([4])
     await expect(openFrame({ keys: new Map(), channelId: 'channel', senderId: 'alice', packet, replay: new ReplayWindow() })).resolves.toBeNull()
   })
@@ -69,8 +69,8 @@ describe('media frames', () => {
   it('refuses any changed byte of the header, ciphertext or signature', async () => {
     const keys = await aliceKeys()
     const packet = await sealed(keys, { counter: 5 })
-    // epoch, stream, counter, nonce, ciphertext, tag, signature
-    for (const index of [2, 6, 9, 13, 14, 26, packet.byteLength - SIGNATURE_BYTES - 1, packet.byteLength - 1]) {
+    // epoch, stream, counter, line, nonce, ciphertext, tag, signature
+    for (const index of [2, 6, 9, 13, 14, 15, 26, 27, packet.byteLength - SIGNATURE_BYTES - 1, packet.byteLength - 1]) {
       await expect(open(keys, flipped(packet, index)), `byte ${index}`).resolves.toBeNull()
     }
     await expect(open(keys, packet.slice(0, FRAME_OVERHEAD_BYTES - 1))).resolves.toBeNull()
@@ -118,13 +118,13 @@ describe('media frames', () => {
   it('seals nothing for an epoch, stream or counter out of range, or without usable keys', async () => {
     const keys = await aliceKeys()
     for (const range of [{ epoch: -1 }, { epoch: 1.5 }, { epoch: 0x1_0000_0000 }, { stream: -1 }, { counter: 0x1_0000_0000 }]) {
-      await expect(sealFrame({ keys, epoch: 1, stream: 1, counter: 1, channelId: 'c', senderId: 'a', plaintext: new Uint8Array(), ...range })).resolves.toBeNull()
+      await expect(sealFrame({ keys, epoch: 1, stream: 1, counter: 1, channelId: 'c', senderId: 'a', plaintext: new Uint8Array(), source: 0, ...range })).resolves.toBeNull()
     }
     const decryptOnly = await crypto.subtle.importKey('raw', new Uint8Array(16), 'AES-GCM', false, ['decrypt'])
-    await expect(sealFrame({ keys: { ...keys, key: decryptOnly }, epoch: 1, stream: 1, counter: 1, channelId: 'c', senderId: 'a', plaintext: Uint8Array.of(1) })).resolves.toBeNull()
-    await expect(sealFrame({ keys: { ...keys, signer: bob.verifier }, epoch: 1, stream: 1, counter: 1, channelId: 'c', senderId: 'a', plaintext: Uint8Array.of(1) })).resolves.toBeNull()
+    await expect(sealFrame({ keys: { ...keys, key: decryptOnly }, epoch: 1, stream: 1, counter: 1, channelId: 'c', senderId: 'a', plaintext: Uint8Array.of(1), source: 0 })).resolves.toBeNull()
+    await expect(sealFrame({ keys: { ...keys, signer: bob.verifier }, epoch: 1, stream: 1, counter: 1, channelId: 'c', senderId: 'a', plaintext: Uint8Array.of(1), source: 0 })).resolves.toBeNull()
     const shortSignature = vi.spyOn(crypto.subtle, 'sign').mockResolvedValueOnce(new ArrayBuffer(10))
-    await expect(sealFrame({ keys, epoch: 1, stream: 1, counter: 1, channelId: 'c', senderId: 'a', plaintext: Uint8Array.of(1) })).resolves.toBeNull()
+    await expect(sealFrame({ keys, epoch: 1, stream: 1, counter: 1, channelId: 'c', senderId: 'a', plaintext: Uint8Array.of(1), source: 0 })).resolves.toBeNull()
     shortSignature.mockRestore()
   })
 
@@ -242,7 +242,7 @@ describe('media frames', () => {
 // does not depend on the layer at all; the stream ID and counter only drive
 // the replay window and are bound into the authenticated data.
 describe('layers of a screen share', () => {
-  const NONCE_OFFSET = 14
+  const NONCE_OFFSET = 15
   const NONCE_BYTES = 12
 
   it('puts the layer in the stream ID, so two layers can never share a stream', () => {

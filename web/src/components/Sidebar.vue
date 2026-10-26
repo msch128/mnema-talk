@@ -17,6 +17,7 @@ import SidebarChannelRow from './SidebarChannelRow.vue'
 import SidebarCategoryHeader from './SidebarCategoryHeader.vue'
 import SidebarDragGhost from './SidebarDragGhost.vue'
 import SidebarServerMenu from './SidebarServerMenu.vue'
+import SidebarEventsEntry from './SidebarEventsEntry.vue'
 import SidebarDmSection from './SidebarDmSection.vue'
 import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
@@ -25,6 +26,7 @@ import { aggregateActivity } from '../lib/channelActivity'
 import { useToastStore } from '../stores/toast'
 import { locateCategory, moveCategory } from '../lib/channelLayout'
 import { currentRoute, navigate } from '../lib/router'
+import { talkPath } from '../lib/routePaths'
 import {
   useMenuState, buildChannelItems, buildCategoryItems, buildMemberItems, buildSidebarItems
 } from '../composables/useNavMenus'
@@ -188,13 +190,13 @@ async function handleVoiceClick(channel: Channel) {
   joinVoiceChannel(channel.id)
   voiceStore.activeView = 'voice'
   // /v/:id keeps the Talk's chat toggle as it is.
-  navigate(`/v/${channel.id}${currentRoute.value.view === 'voice' && currentRoute.value.showChat ? '/chat' : ''}`)
+  navigate(talkPath(channel, { chat: currentRoute.value.view === 'voice' && !!currentRoute.value.showChat }))
 }
 
 // The Talk's chat without joining: the Talk opens as a preview with its chat.
 function handleOpenTalkChat(channel: Channel) {
   closeNav()
-  navigate(`/v/${channel.id}/chat`)
+  navigate(talkPath(channel, { chat: true }))
 }
 
 function handleTextClick(channel: Channel) {
@@ -268,6 +270,7 @@ function channelIndicator(id: string): '' | 'top' | 'bottom' {
       v-on="navListeners"
       @contextmenu="openListMenu"
     >
+      <SidebarEventsEntry />
       <SidebarDmSection />
       <div class="shrink-0">
         <!-- Uncategorized channels first (headless section), then the categories -->

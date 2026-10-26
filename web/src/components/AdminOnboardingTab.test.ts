@@ -16,7 +16,7 @@ vi.mock('../lib/api', async (importOriginal) => ({
 
 const CH_TEXT = '00000000-0000-4000-8000-0000000000a1'
 const CH_VOICE = '00000000-0000-4000-8000-0000000000a2'
-const settings = { community_name: 'Home', welcome_text: 'Hi', rules_text: '', rules_version: 0, start_channel_id: null }
+const settings = { community_name: 'Home', welcome_text: 'Hi', rules_text: '', rules_version: 0, start_channel_id: null, session_inactivity_days: 7 }
 const stubs = { MarkdownContent: { props: ['content'], template: '<div class="md">{{ content }}</div>' } }
 
 async function mountTab(initial: Record<string, unknown> = settings) {
@@ -57,7 +57,7 @@ describe('AdminOnboardingTab', () => {
     await flushPromises()
     expect(apiMock).toHaveBeenLastCalledWith('/api/admin/onboarding', {
       method: 'PUT', decode: expect.any(Function),
-      json: { community_name: 'Home', welcome_text: 'Hi', rules_text: 'Be kinder', start_channel_id: CH_TEXT, require_reacceptance: true }
+      json: { community_name: 'Home', welcome_text: 'Hi', rules_text: 'Be kinder', start_channel_id: CH_TEXT, require_reacceptance: true, session_inactivity_days: 7 }
     })
     expect(useToastStore().toasts.length).toBe(1)
     expect(w.find('[data-testid="reaccept"]').exists()).toBe(true)
@@ -110,5 +110,23 @@ describe('AdminOnboardingTab', () => {
     await w.find('#onb-name').setValue('x'.repeat(61))
     expect(w.find('[role="alert"]').exists()).toBe(true)
     expect(w.find('[data-testid="onboarding-save"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('sets the inactivity sign-out and refuses days outside 1 to 365', async () => {
+    const w = await mountTab()
+    expect(w.find<HTMLInputElement>('[data-testid="inactivity-days"]').element.value).toBe('7')
+    for (const bad of ['0', '366']) {
+      await w.find('[data-testid="inactivity-days"]').setValue(bad)
+      expect(w.find('[data-testid="onboarding-save"]').attributes('disabled')).toBeDefined()
+      expect(w.find('[role="alert"]').text()).toContain('1 to 365')
+    }
+    await w.find('[data-testid="inactivity-days"]').setValue('30')
+    apiMock.mockResolvedValue({ ...settings, session_inactivity_days: 30 })
+    await w.find('form').trigger('submit')
+    await flushPromises()
+    expect(apiMock).toHaveBeenLastCalledWith('/api/admin/onboarding', expect.objectContaining({
+      json: expect.objectContaining({ session_inactivity_days: 30 })
+    }))
+    expect(w.find<HTMLInputElement>('[data-testid="inactivity-days"]').element.value).toBe('30')
   })
 })

@@ -4,6 +4,7 @@ import type { ContextMenuItem, MenuAnchor, MenuItemId, MenuSubmenu } from './men
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ChevronRight } from '@lucide/vue'
 import ContextMenuRow from './ContextMenuRow.vue'
+import { placeNear, pointBox, type AnchorBox } from '../lib/floatingPosition'
 
 // Context menu. Items: { label, icon, shortcut, action, danger, disabled },
 // { type: 'separator' }, { type: 'label', label }, { type: 'slider', ... },
@@ -41,28 +42,26 @@ const subFlip = ref(false)
 const subShift = ref(0)
 let hoverTimer: ReturnType<typeof setTimeout> | undefined
 
-function basePoint() {
+// What the menu belongs to: the anchor's box, or the point it was asked at.
+function baseBox(): AnchorBox {
   const a = props.anchor
-  if (a) {
-    const r = 'getBoundingClientRect' in a ? a.getBoundingClientRect() : a
-    const left = r.left ?? r.x ?? 0
-    const bottom = r.bottom ?? ((r.top ?? r.y ?? 0) + (r.height ?? 0))
-    return { x: left, y: bottom }
-  }
-  return { x: props.x, y: props.y }
+  if (!a) return pointBox(props.x, props.y)
+  const r = 'getBoundingClientRect' in a ? a.getBoundingClientRect() : a
+  const left = r.left ?? r.x ?? 0
+  const top = r.top ?? r.y ?? 0
+  return { left, top, right: r.right ?? left, bottom: r.bottom ?? top + (r.height ?? 0) }
 }
 
+// Below and left-aligned to the anchor; flipped above and/or right-aligned when
+// that would leave the window (see lib/floatingPosition).
 function adjustPosition() {
   if (!menuEl.value) return
   const rect = menuEl.value.getBoundingClientRect()
-  const pad = 8
-  const { x, y } = basePoint()
-  let newX = x
-  let newY = y
-  if (newX + rect.width > window.innerWidth - pad) newX = Math.max(pad, window.innerWidth - rect.width - pad)
-  if (newY + rect.height > window.innerHeight - pad) newY = Math.max(pad, window.innerHeight - rect.height - pad)
-  posX.value = newX
-  posY.value = newY
+  const box = baseBox()
+  // A gap between the menu and what it belongs to; a point has no edge to keep clear of.
+  const { x, y } = placeNear(box, rect, { width: window.innerWidth, height: window.innerHeight }, { gap: box.bottom > box.top ? 4 : 0 })
+  posX.value = x
+  posY.value = y
 }
 
 // The menu level the focus is in: the root or an open submenu.
@@ -148,12 +147,17 @@ function cancelHoverClose() {
   clearTimeout(hoverTimer)
 }
 
+// A scroll begun just before opening (the row was scrolled into view for the click) arrives a frame late and must not close the new menu.
+let settling = false
+
 watch(() => props.modelValue, (open) => {
   if (open) {
+    settling = true
+    requestAnimationFrame(() => requestAnimationFrame(() => { settling = false }))
     opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    const p = basePoint()
-    posX.value = p.x
-    posY.value = p.y
+    const box = baseBox()
+    posX.value = box.left
+    posY.value = box.bottom
     nextTick(() => {
       adjustPosition()
       // The container holds focus until an arrow key moves into the items.
@@ -166,9 +170,9 @@ watch(() => props.modelValue, (open) => {
 
 watch([() => props.x, () => props.y, () => props.anchor], () => {
   if (props.modelValue) {
-    const p = basePoint()
-    posX.value = p.x
-    posY.value = p.y
+    const box = baseBox()
+    posX.value = box.left
+    posY.value = box.bottom
     nextTick(adjustPosition)
   }
 })
@@ -292,17 +296,18 @@ function handleOutsideDismiss(e: Event) {
   }
 }
 
+const handleScrollDismiss = (e: Event) => { if (!settling) handleOutsideDismiss(e) }
 onMounted(() => {
   document.addEventListener('mousedown', handleOutsideDismiss, true)
   document.addEventListener('contextmenu', handleOutsideDismiss, true)
-  window.addEventListener('scroll', handleOutsideDismiss, true)
+  window.addEventListener('scroll', handleScrollDismiss, true)
 })
 
 onUnmounted(() => {
   closeSubmenu()
   document.removeEventListener('mousedown', handleOutsideDismiss, true)
   document.removeEventListener('contextmenu', handleOutsideDismiss, true)
-  window.removeEventListener('scroll', handleOutsideDismiss, true)
+  window.removeEventListener('scroll', handleScrollDismiss, true)
 })
 
 const panelClass = 'p-2 rounded-xl bg-mnema-elevated border border-mnema-border shadow-lg text-sm text-mnema-muted font-sans'

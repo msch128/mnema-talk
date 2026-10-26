@@ -126,6 +126,359 @@ until the new release has passed your application checks.
 
 ## Version notes
 
+### 1.1.x → 1.2.0
+
+Update with the procedure above and take the backup first. 1.2.0 only adds, apart from raising the security floor (see "Calls and the
+security floor" below). A 1.1.x web app keeps working against a 1.2 server, and a 1.2 web app hides what
+a 1.1.x server lacks (it reads the `features` list of `GET /api/health`).
+Nothing in `.env` has to change. A rollback to a 1.1.x image needs the restore
+of the pre-update backup (see "Rollback" above).
+
+#### Database
+
+| Migration | Adds |
+|---|---|
+| 0059 | `channels.is_lobby`, `is_temp`, `lobby_id` and `leader_id`: Create-a-Talk lobbies and the temporary Talks they open (see [Talks](talks.md)). Existing channels keep `false` and null. |
+| 0060 | Unused: the number was reserved while 1.2 was planned and no change needed it. The gap is intentional; migrations are applied in order and nothing depends on it. |
+| 0061 | `users.status_expires_at` (a status line that clears itself, feature `status.expiry`). It also raises the limit of `channels.slow_mode_seconds` from 6 hours to 24 hours. |
+| 0062 | `message_reminders` and `scheduled_messages` (see "Reminders and scheduled messages"). |
+| 0063 | `poll_voters`, `poll_anon_ballots`, `poll_options.anon_votes`, `polls.anon_voters` and a trigger on `poll_votes` (anonymous polls); `channels.auto_delete_days` with its checks. |
+| 0064 | `user_sessions`: one row per browser session (device label, created, last active). |
+| 0065 | `instance_settings.session_inactivity_days` (1 to 365, default 7). |
+| 0066 | `automod_rules` and `automod_state` with the default rules (below), and the columns `source`, `automod_rule`, `automod_outcome` and `hit_count` of `message_reports` (existing reports keep `source = 'member'`). |
+| 0067 | `moderation_notes`: private moderator notes about members. |
+| 0068 | `channels.is_stage`: Stages. Existing channels keep `false`; a Stage is never a lobby or a temporary Talk. |
+| 0069 | `channels.type = 'forum'`, `messages.title`, `messages.is_locked`, `forum_tags` and `forum_post_tags`: Forum channels with tag management and post threads (see [Forum channels](forums.md)). Existing rows keep null and false. |
+| 0070 | `events` and `event_rsvps` tables: community events, RSVPs (see [events](events.md)); the new `Manage events` permission is granted to every non-bot role that holds *Timeout members* (the seeded Moderator and Admin roles). |
+| 0071 | `discord_imports` and `discord_import_objects`: the record of each Discord structure import and the ids it created, for undo (see [Import](import.md)). Nothing existing is touched. |
+| 0072 | `media_original_filename_trgm_idx`: GIN trigram index on `media.original_filename` for fast case-insensitive attachment filename search. |
+| 0073 | `server_notify`: a member's server-wide notification default (see [Notification settings](#notification-settings)). Adds a table only. |
+| 0074 | `dm_members.hidden_at` and `dm_members.favourite_pos`, `users.dm_mute_all` and `users.dm_list_collapsed`: member-local direct message list preferences (see [Direct message list](#direct-message-list-close-favourites-mute-all)). |
+| 0075 | `channels.slug` and `channel_slugs`: the speaking addresses of channels (see "Speaking URLs"). Every existing channel except a direct message gets its slug in the same migration. |
+
+#### Speaking URLs
+
+Channels, Talks, forum posts and conversations have readable web addresses. The id stays the key everywhere; the
+slug is only an address.
+
+| Address | Opens |
+|---|---|
+| `/c/general`, `/c/general/m/<message id>`, `/c/general/t/<thread id>` | a text channel, a message in it, a thread |
+| `/v/lounge`, `/v/lounge/chat`, `/v/lounge/chat/m/<message id>` | a Talk, its chat, a message in it |
+| `/c/ideas/p/neue-kueche-0f3a9c1e` | a forum post: its title and the first 8 characters of its id |
+| `/dm/alice`, `/dm/g/0f3a9c1e` | a conversation of two (the other member's username) and a group (first 8 characters of its id) |
+
+- **Slugs.** Lowercase ASCII (`a-z`, `0-9`, `-`), at most 60 characters: German umlauts and the sharp s are spelled out (a-umlaut gives `ae`, the
+  sharp s gives `ss`), other accents are dropped, anything else becomes one dash; a name without a usable character gives
+  `channel`. A slug is unique on the server; on a collision the channel's own slug gets the first 6 hex characters of its own id (`plans-0f3a9c`). A temporary Talk has the fixed slug `talk-` and the first 8 hex characters of its id, never changed by a rename and not kept in the history. It is set when the channel is created or
+  renamed, in the same transaction. Migration 0075 backfills existing channels in the order (`created_at`, `id`).
+- **Renames keep old links alive.** Former slugs stay reserved for their channel (`channel_slugs`), so a freed
+  slug is never handed to another channel and an old link never opens something else (a channel keeps its newest ten former slugs; older ones are free again). The web app rewrites an old slug
+  to the current one (replacing the history entry). The rows go with the channel when it is deleted.
+- **Old links keep working.** `/c/<id>` and `/v/<id>` (bookmarks, shared links, notifications of older clients) open the
+  channel and are rewritten to the slug address; so are `/c/<conversation id>` links, which move to `/dm/...`.
+- **API.** Channel objects carry `slug` and `previous_slugs` (additive). They come with the channel, so a member only
+  learns them for channels they may see; there is no endpoint that resolves a slug, and an unknown address and a
+  channel the member may not see give the same answer in the app. Web Push payloads carry `channel_slug` so a click
+  opens the address directly.
+- **Conversations.** `/dm/<username>` is resolved from the member's own conversation list. After the other member changes
+  their username the old address no longer matches and is treated as unknown; `/c/<conversation id>` still works.
+
+#### Small additions: emoji shortcodes, past events, avatar updates
+
+No migration and no setting.
+
+- **Emoji shortcodes.** Typing `:smi` in the composer also suggests standard
+  emoji (`:smile:` gives 😄) after the community's custom emoji; Enter or Tab
+  inserts the character itself. The table (about 1,900 GitHub-style shortcodes)
+  ships with the web app and loads on first use.
+- **Past events.** `GET /api/events?when=past` lists events that are over
+  (completed, cancelled or ended), newest first, with `limit` and the cursor
+  `before` and `before_id` (start time and id of the last event of the previous
+  page). The same visibility rules as for upcoming events apply. Without `when`
+  the endpoint answers as before; the events dialog's *Past* tab uses it.
+- **Avatar re-encode job.** When the hourly job redraws or removes an old
+  avatar it now broadcasts `user_update`, as a manual change does, so open
+  clients refresh the picture without a reload.
+- **Desktop gaming settings: add the last app.** In the desktop client's gaming
+  settings, *Add the app I was just in* detects the executable that was in front
+  before switching to Mnema Talk and offers to add it after confirmation, so
+  custom games and non-Steam launchers do not have to be entered by hand.
+
+#### Everyday features: status, reminders, polls, auto-delete
+
+- **Status that clears itself** (feature `status.expiry`). A member can give a
+  status line an end time, at most 366 days ahead; the status disappears then.
+  An empty status carries no expiry. Existing statuses keep no end time.
+- **Slow mode up to 24 hours.** `slow_mode_seconds` may now be 0 to 86400 (it was
+  6 hours at most); existing values stay.
+
+##### Reminders and scheduled messages
+
+- **Remind me** (feature `reminders`) points at a message without copying it.
+  What the member sees when it falls due depends on their access at that
+  moment; if the message is gone the reminder still arrives, as "a message you
+  can no longer see". A due reminder is announced in the app (event
+  `reminder_update`) and by Web Push when that is on, and stays until dismissed
+  (removed after 30 days at the latest). Routes: `GET` and `POST /api/me/reminders`,
+  `DELETE /api/me/reminders/{id}`. At most 100 per member.
+- **Send later** (feature `messages.scheduled`) lets a member write a message
+  for a channel or conversation and have the server send it as them at a chosen
+  time (10 seconds to 366 days ahead). Routes: `POST /api/channels/{id}/scheduled`,
+  `GET /api/me/scheduled`, `PATCH` and `DELETE /api/me/scheduled/{id}`; event
+  `scheduled_message_update`. At most 50 waiting or failed per member. Every check
+  (permissions, slow mode, timeout, blocks) runs at send time, not when the message
+  is scheduled. A message the server has to refuse is not lost: it becomes `failed`
+  and stays as a draft to edit, reschedule or delete.
+- Editing a scheduled message keeps its time unless the member changed it: the
+  web app sends a new time only when it differs (or when the message had
+  failed), and the server keeps the stored time and state when `send_at` is absent.
+  A failed message edited only in its text stays a draft.
+- Both belong to their owner only. Account erasure deletes them and the account
+  export includes them.
+
+##### Anonymous polls
+
+- **Anonymous polls keep no link between a member and a choice** (feature
+  `polls.anonymous`). The server stores only *that* a member voted and *how many*
+  votes each option has. A vote in an anonymous poll cannot be changed or
+  withdrawn, and a running anonymous poll pushes no tally at each vote: the
+  result is announced when it ends. This is hardening, not a guarantee against an
+  operator with direct database access (see [SECURITY.md](../SECURITY.md)).
+- **Existing anonymous polls are converted by migration 0063 and this cannot be
+  undone:** the tallies and who took part stay, who chose what is deleted, and
+  votes in them can no longer be changed. Keep the pre-update backup if you may
+  want the old rows.
+
+##### Auto-delete
+
+- **Auto-delete** (feature `channels.auto_delete`) removes messages older than 1, 7,
+  30 or 90 days from a text channel. It is off everywhere after the upgrade and
+  always an explicit choice of someone with *Manage channels*
+  (`PUT /api/admin/channels/{id}/auto-delete`, audited as `channel.auto_delete_set`;
+  the channel settings ask for a confirmation). Direct messages never take part.
+  Pinned messages stay, and so does a thread root that still has a younger or
+  pinned reply; the attachments of deleted messages are deleted with them. Each
+  run that removes something is audited (`channel.auto_delete_run`).
+
+#### Sessions and inactivity sign-out
+
+- **Where you are signed in** (migrations 0064 and 0065). Members see and end
+  their own browser sessions under *Settings* > *Sessions*, including the push devices of a session
+  (`GET /api/auth/sessions`, `DELETE /api/auth/sessions/{id}`,
+  `POST /api/auth/sessions/revoke-others`). Only a coarse device label is stored,
+  never the user agent or an IP address.
+- **Sessions that are not used for 7 days end.** The limit is
+  `session_inactivity_days` (1 to 365, default 7) in `PUT /api/admin/onboarding`, set
+  by the Owner and Administrators; `SESSION_EXPIRY_HOURS` still caps the total.
+  A session that exists at the upgrade gets its record on its first request
+  afterwards and its clock starts then, so nobody is signed out by the upgrade
+  itself; a member who then stays away for a week signs in again. See
+  [Operations](operations.md#sessions-and-inactivity-sign-out).
+- **View server as role.** In *Admin* > *Roles*, a read-only preview of what a
+  member holding only @everyone and a given role would see and may do
+  (`GET /api/admin/roles/{id}/view-as`, *Manage roles*). It changes nothing and has
+  no health key.
+
+#### Message search
+
+- **New search filters and ordering.** The message search API (`GET /api/search`)
+  supports `during:YYYY-MM-DD` (matching messages within a single local day,
+  accepting `tz` offset parameter from the client), `filename:<text>` (matching
+  original filenames of attachments case-insensitively via trigram index),
+  `author:bot|webhook|member` (filtering by author type), `has:embed`, and a
+  `sort=newest|oldest|relevance` parameter (default `newest`).
+- **Interactive filter dropdown and chips.** When the search box is focused,
+  suggestion chips allow quick selection of `from:`, `in:`, `mentions:`, `has:`,
+  `during:`, `author:`, and `filename:` filters, rendered as removable chips in
+  the query line. A sort order toggle in the results header allows switching
+  between Newest, Oldest, and Relevance.
+- **One filter row, quoted phrases, exclusions.** The search dialog shows a single
+  filter row. In `q`, a quoted phrase is one term and a leading minus excludes
+  messages containing a word or phrase (`"build failed" -nightly`); a lone `-`,
+  `a-b` and a quoted `-x` stay literal text. This is handled by the server
+  (`GET /api/search`, at most 8 terms), so any client gets it.
+- **Earlier filters.** `search.filters.v2` (1.1) is unchanged and still advertised; a client that only knows it keeps working.
+- **Feature flag.** Advertised as `search.filters.v3` in `GET /api/health`.
+  A web client connected to an older server hides the new dropdown and sort toggle.
+
+#### Talks
+
+- A Talk can be marked as a lobby; joining it opens a temporary Talk ("Talk 1",
+  "Talk 2", ...) for the member, who leads it. Members need no *Manage channels*
+  for that. Empty temporary Talks are removed after 30 seconds, and the server
+  removes all of them at start.
+- "Start a Talk" in a direct message opens a temporary Talk from the first lobby
+  the member can use and posts an invitation card. The card only links to the Talk;
+  joining runs the usual permission checks.
+- Feature name `talks.lobby` in `GET /api/health`. New events `talk_leader` and
+  `talk_moved`; new `voice_kicked` reasons `talk_rate_limited` and
+  `talk_unavailable`. REST: `PATCH /api/talks/{id}`, `POST /api/talks/{id}/invites`,
+  `POST /api/dms/{id}/talk`, and the fields `is_lobby`, `is_temp`, `leader_id` of a
+  channel (additive).
+- A Talk can be a **Stage** (feature `talks.stage`): without talk power nobody sends
+  audio, camera or screen there. The new permission *Manage stage* (bit `1 << 24`, off
+  for everyone but the Owner and Administrators) gives and takes talk power; members
+  raise a hand to ask. Nothing about a Stage session is stored. Existing Talks stay
+  normal Talks. New events `stage_hand`, `stage_talk_power`, `talk_reaction`; REST:
+  the field `is_stage` of a channel and of `POST /api/admin/channels` and
+  `PATCH /api/admin/channels/{id}` (additive).
+- **Live reactions** (feature `talks.reactions`): a member in a Talk sends an emoji
+  that floats over their tile for everyone in that Talk, at most 5 per 10 seconds.
+  The server relays it and keeps nothing.
+- Role and overwrite editors list *Manage stage*. A role that holds *Administrator*
+  has it already; no existing role or overwrite changes.
+
+#### Automod and moderation history
+
+**Defaults at the upgrade.** Automod is on after the upgrade, with conservative
+rules that every server gets the same way (new servers included). Look at
+them under **Admin > Automod** and change or delete what does not suit you:
+
+| Rule | Default |
+|---|---|
+| Mention spam | on: a message with more than **10** different mentions is blocked |
+| New accounts | on: accounts younger than **10 minutes** cannot post links (blocked) |
+| Raid protection | on: more than **10 joins within 10 seconds** time the newcomers out for 10 minutes and add one alert to the reports queue |
+| Blocked words | **off**, word list empty |
+| Links | **off** (block-list mode, empty list) |
+
+The Owner and Administrators are never checked. The effect you may notice: a
+member who joined a few minutes ago gets "it breaks the server rule" when
+posting a link, and a burst of invitations used at once (a party of more than 10
+within 10 seconds) is held back for 10 minutes; delete or loosen the rule if
+that does not suit your community. Nothing changes for existing messages.
+
+**Moderation tab.** Members with *Manage reports* get a Moderation tab in the
+profile (history and private moderator notes). No permission changes hands:
+the Owner and Administrators have it, other roles only if you gave them
+*Manage reports*. Notes about a member are moderator data; they are not in the
+member's own data export (see [moderation](moderation.md#moderator-notes-are-moderator-data)
+and the privacy page, "Moderation records").
+
+**API.** Mostly additive: the report objects gain `source`, `automod_rule`,
+`automod_outcome` and `hit_count`, `kind` may be `alert` and `category`
+`automod`. New routes `/api/admin/automod*` and
+`/api/admin/users/{id}/moderation*`. The health `features` list gains
+`automod` and `moderation.history`. **One contract change:** `message_id` and `channel_id` of an admin
+report entry (`GET /api/admin/reports`, `/reports/{id}`) are now optional: an
+automod entry about a blocked message (never stored) has no `message_id`, and a
+raid alert has neither. Clients must treat both as optional; reports filed by
+members always carry them.
+
+#### Operator status
+
+- A dedicated **Admin → Status** page (feature key `ops.status`, endpoint `GET /api/admin/status`, Owner and Administrator only) provides an at-a-glance operational overview: version, available updates and auto-deploy status, database size and migration count, storage reachability and disk free space, backup status, live activity (active sessions, WebSocket connections, Talks and participants), and active operator warnings. See [operations.md](operations.md#operator-status).
+
+#### Discord import
+
+- *Admin*, *Import* copies the categories, channels, Talks and roles of a Discord
+  server from a server template link (see [Import](import.md)). It is limited to
+  the Owner and members with *Administrator*, strictly additive (appended at the
+  end, roles below every existing role, never Administrator, `@everyone`
+  untouched), runs after a preview and three confirmations in one transaction, and
+  can be undone.
+- Feature name `import.discord` in `GET /api/health`. REST: `POST
+  /api/admin/import/discord/preview`, `POST /api/admin/import/discord/apply`,
+  `GET /api/admin/import/discord/imports`, `GET
+  /api/admin/import/discord/imports/{id}` and `POST
+  /api/admin/import/discord/imports/{id}/undo` (all additive). Audit actions
+  `import.discord` and `import.discord_undo`, visible to the Owner and
+  Administrators only.
+- The server needs outbound HTTPS access to `discord.com` for the preview and the
+  import. Nothing else is contacted, and nothing is sent to Discord beyond the
+  template code.
+
+#### Forum channels
+
+- Admins can create channels with type `'forum'` (`Manage channels`). A forum channel holds posts; each post is a root message with a required title (<=100 characters), an initial message, and up to 5 optional tags. Replies form a standard thread (`messages.parent_id`).
+- Up to 20 admin-defined tags per forum channel (name <=20 characters, optional emoji <=32 characters). Members can filter posts by tag and sort by latest activity or creation.
+- Moderation: Members holding *Manage messages* can lock posts to prevent replies from regular users and update tags on others' posts.
+- Feature name `channels.forum` in `GET /api/health`. New event `forum_tags_changed`. REST: `GET/POST /api/channels/{id}/tags`, `PATCH/DELETE /api/channels/{id}/tags/{tagID}`, `GET/POST /api/channels/{id}/posts`, and `PATCH /api/channels/{id}/posts/{postID}`.
+
+#### Community events
+
+- Scheduled community events with title, markdown description, start and end times, optional cover image (re-encoded 3:1 banner, max 5 MB), and location (see [events](events.md)).
+- Location can be a Talk channel or free text. Talk-based events are only visible to members holding *View channels* on that Talk.
+- New permission `Manage events` (`1 << 25` in `internal/perm`); granted by the migration to every non-bot role that holds *Timeout members*, such as the seeded Moderator and Admin roles (Administrators and the Owner have it implicitly).
+- RSVPs: `going`, `interested`, and `not_going` responses, with participant counts and avatars.
+- Automated reminders sent 15 minutes before event start via in-app notifications and Web Push to members RSVP'd `going` or `interested`.
+- Automatic transition from `scheduled` to `active` at start time, showing a direct "Join Talk" button for voice events.
+- Feature key `events` in `GET /api/health`. Real-time WebSocket events `event_update` and `event_reminder`.
+- Audit logging for `event.create`, `event.edit`, and `event.cancel`.
+- Account erasure deletes personal RSVPs and clears event creator links; account export includes `rsvps.json`.
+
+#### Notification settings
+
+- Migration 0073 adds `server_notify` (one row per member who changed their
+  server-wide default: level, optional mute end, "suppress @all and @here").
+  Without a row a member keeps today's behaviour: every channel without its own
+  or its category's setting notifies for all messages.
+- Precedence: channel, then category, then the server default. The level in
+  `GET /api/read-state` (`notify_level`) is the effective one, so existing
+  clients show it correctly without changes. A server-wide "Nothing" behaves like
+  a channel mute: only messages addressed to the member by name, through a role
+  or as a reply still notify and count. Direct messages ignore the server default.
+- Feature name `notify.levels.v2` in `GET /api/health`. New
+  `PUT /api/notification-settings/server` (`level` `all`, `mentions` or `mute`,
+  `muted_until` for a timed mute, `suppress_everyone`); `GET /api/notification-settings`
+  gains a `server` object (additive). Changes reach the member's other sessions
+  with the existing `read_state` refresh event. Account export and erasure
+  include the new row.
+- Desktop client: the rail's right-click menu can call the same endpoints as the
+  web app (`PUT /api/channels/{id}/notifications`,
+  `PUT /api/categories/{id}/notifications`, `PUT /api/notification-settings/server`);
+  it should hide the server-wide entries when `notify.levels.v2` is missing.
+
+#### Direct message list: close, favourites, mute all
+
+- Migration 0074 adds `dm_members.hidden_at` and `dm_members.favourite_pos`
+  (a member's closed and favourite conversations) and `users.dm_mute_all` and
+  `users.dm_list_collapsed`. Nothing changes for anybody until they use it:
+  every conversation stays in the list, nothing is muted. Nothing is deleted by
+  closing a conversation; the next message in it shows it again.
+- Feature name `dm.v2` in `GET /api/health`. New routes, all for the caller's
+  own list and all answering 404 for a conversation they are not in:
+  `PUT /api/dms/{id}/hidden`, `PUT /api/dms/favourites` (at most 25, in order),
+  `GET` and `PUT /api/users/me/dm-settings` (`mute_all`, `list_collapsed`).
+  `GET /api/dms` and `GET /api/dms/{id}` gain `hidden`, `favourite_position`
+  and `last_message` (additive); a new event `dm_prefs_updated` reaches the
+  member's own sessions only.
+- **Mute all direct messages** sends no push, and reads as `notify_level: mute`
+  with no mention count in the list, unless the conversation has a setting of
+  its own (which wins). Unread counts are unchanged. The existing
+  *who may start a conversation* setting (`dm_policy`) is unchanged and now sits
+  in the same *Direct messages* section (*Settings* > *Privacy*).
+- A 1.1.x web app on a 1.2 server works as before; a 1.2 web app on an older
+  server hides the new parts.
+
+#### Calls and the security floor
+
+- **Media frame format 2 is removed.** The end-to-end encryption of call media
+  now speaks only frame format 3 (the one that binds a unit to its line). Clients
+  that can only send or open the old format can no longer take part in calls:
+  a web tab that predates 0.8.2, and any browser or desktop shell that still runs
+  such a bundle. A 1.0.x or 1.1.x tab keeps working in a Talk with 1.2 members
+  once it has heard every member's capability message, but its media is dropped
+  for the first moment of each epoch (join, leave, key rotation), usually a
+  second or two. Members see a notice once per call ("Someone in this Talk uses
+  an outdated Mnema client ...") when a unit in the old format arrives. Fix: reload the
+  app, or update the desktop client; there is nothing to configure on the server,
+  which only relays media it cannot read.
+- **Security floor raised to 1.2.0.** The release is committed with a
+  `Security-Floor: raise` trailer, so the signed web bundle of 1.2.0 carries
+  `security_floor` 1.2.0. A desktop client that has run it refuses every older
+  bundle: it will not connect to a server that still serves a 1.1.x bundle until
+  that server is updated, and it never runs a bundle that seals the old format.
+  Update the server before (or together with) the clients. `web_client_api` is
+  unchanged (still 1), so older desktop clients keep loading the 1.2 bundle.
+  Why this is allowed under [API stability](api-stability.md): it is a security
+  fix (RT-4 in [SECURITY.md](../SECURITY.md)), the floor is the documented tool
+  for it, and no public API, event or bridge contract changes.
+- **Rollback.** Going back to 1.1.x is possible for the server, but desktop
+  clients that already saw the 1.2.0 bundle will refuse the older one (the
+  floor is a high-water mark); web tabs reload into the older bundle.
+
 ### 1.0.x → 1.1.0
 
 Update with the procedure above and take the backup first. 1.1.0 only adds.
@@ -307,8 +660,8 @@ All changes are additive; `web_client_api` is unchanged.
   likeliest issuer the first time they are used; nothing is revoked and no token
   needs regenerating ([bots.md](bots.md#tokens)). The admin console marks tokens
   that were bound by assumption.
-- **Media frame format.** No change. Refusing frame version 2 was re-evaluated
-  and deferred to 2.0 (SECURITY.md).
+- **Media frame format.** No change in 1.0.x. Refusing frame version 2 was
+  re-evaluated for 1.1 and done in 1.2.0 (see "1.1.x → 1.2.0").
 
 ### 1.0.0 → 1.0.1
 
@@ -416,7 +769,7 @@ operator is below. Update with the procedure above; take the backup first.
 - **Desktop client is Beta.** The Windows desktop client stays Beta at 1.0.0;
   see [desktop-app.md](desktop-app.md).
 - **Optional e-mail, SMTP and password reset by mail.** Members may now add an
-  e-mail address in Account & security (never required, never shown to other
+  e-mail address in the account settings (*Sign-in*) (never required, never shown to other
   members or to the Owner). Setting `SMTP_HOST` (see
   [operations.md](operations.md#outgoing-e-mail)) lets the server confirm an
   address by a single-use link and lets members reset a forgotten password with
@@ -436,7 +789,7 @@ operator is below. Update with the procedure above; take the backup first.
   the accounts that use it (Admin > Members, or `mnema-talk reset-2fa <username>`
   for the Owner). See [operations.md](operations.md).
 - **Members can delete their account and export their data.** Both are in
-  Account & security; the Owner account cannot be deleted. A deleted account
+  the account settings (*Data & account*); the Owner account cannot be deleted. A deleted account
   leaves its messages in place without text, written by "Deleted member" (1.0.0
   stored "Deleted user" and keeps it for accounts deleted before 1.0.1; the web
   app ignores the stored text and names a deleted author in the member's
@@ -503,7 +856,7 @@ operator is below. Update with the procedure above; take the backup first.
   checked with `promtool` and against `/api/metrics` in CI. Metric names are
   part of the stability contract.
 - **Web Push (migration 0042).** Members can turn on push notifications per
-  device (Account menu > App & notifications) and get messages while the app
+  device (*Settings* > *Push & app*) and get messages while the app
   is closed; on iPhone and iPad only for the installed app. The migration
   creates `push_vapid` (the server's VAPID key, generated on first start: it
   is in your database backups, so restores keep working subscriptions),

@@ -56,6 +56,13 @@ no accounts on someone else's platform.
   its chat, nothing is joined and no microphone is requested until you press
   **Join** in the Talk's header. Reading needs *View channels*, writing
   *Send messages*; *Connect* is not required.
+- **Create-a-Talk lobbies, Stages and live reactions.** Joining a lobby opens a
+  temporary Talk ("Talk 1", "Talk 2", ...) that you lead; it disappears when it
+  is empty. *Start a Talk* in a direct message opens one and invites the
+  conversation. A Talk can be a **Stage**: only members with talk power speak,
+  others raise a hand and a member with *Manage stage* accepts it. Members in a
+  Talk can send emoji reactions that float over their tile. Details in
+  [doc/talks.md](doc/talks.md).
 - **Screen sharing up to source quality**, up to 4K at 60 FPS with hardware
   encoding in the browser. A share is sent as the source plus smaller **layers**;
   every viewer picks a layer or leaves it on **Auto**, which follows the
@@ -79,12 +86,39 @@ no accounts on someone else's platform.
   link cards, search, typing notices, unread and mention markers,
   per-channel notification settings and presence with a status line.
 - **Pinned messages** (with who pinned them and when), **polls**, **custom
-  emoji** managed by the community, **edit history** for moderators, **drafts**
+  emoji** managed by the community (and `:shortcode` suggestions for standard emoji), **edit history** for moderators, **drafts**
   that survive a reload and a **jump to the first unread message**.
+- **Anonymous polls and channels that forget.** An anonymous poll stores only
+  that a member voted and how many votes each answer has, never the choice
+  (so a vote is final). A channel can opt in to auto-delete after 1, 7, 30 or
+  90 days; it is shown on the channel, audited, and never touches pinned
+  messages or direct messages ([doc/moderation.md](doc/moderation.md#auto-delete)).
+- **Speaking addresses.** Channels, Talks, forum posts and conversations have readable web addresses (`/c/general`, `/v/lounge`, `/c/ideas/p/new-kitchen-0f3a9c1e`, `/dm/alice`) that survive renames; old links by id keep working ([doc/upgrade.md](doc/upgrade.md#speaking-urls)).
+- **Forum channels.** Structured discussions with posts as cards, up to 20 admin tags, tag filtering, sorting by latest activity, and moderation locks ([doc/forums.md](doc/forums.md)).
+- **Community events.** Scheduled events with a description, a cover image, a
+  location (a Talk or free text), RSVPs and a reminder 15 minutes before the
+  start. Creating them needs the *Manage events* permission, which the seeded Moderator
+  and Admin roles (every role with *Timeout members*) get at the upgrade ([doc/events.md](doc/events.md)).
 - **Saved messages and forwarding.** Keep a private list of up to 1,000
   messages with an optional note, or forward a message into another channel or
   a direct message. A forward is a reference, so it never shows more than the
   reader may already see.
+- **Status that clears itself.** Set a custom status with **Clear after** one
+  hour, tonight, tomorrow morning, never or a date and time of your own. Your
+  device works out the time in your time zone; the server clears the status
+  when it passes.
+- **Channel descriptions and slow mode presets.** A channel's description sits
+  next to its name (click it to read it in full) and is edited in the channel
+  settings. Slow mode has the presets Off, 10 s, 30 s, 1 min, 5 min, 30 min and
+  24 h, or any value up to 24 hours in seconds, minutes or hours.
+- **Reminders and scheduled messages.** *Remind me* on a message (in 20
+  minutes, 1 hour, 3 hours, tomorrow morning or at a time you pick) notifies
+  you in the app and by Web Push; *Send later* next to the send button sends a
+  message for you at a chosen time, in channels and direct messages. Both are
+  private to you, are worked out in your own time zone, and are checked again
+  when they fall due: a reminder never shows a message you can no longer see,
+  and a scheduled message that the channel's rules refuse at that time stays
+  as a draft instead of being posted.
 - **Slash commands.** `/poll`, `/me`, `/shrug`, `/tableflip`, `/unflip`,
   `/spoiler`, `/nick`, `/thread` and `/msg` (it needs *Send direct messages*)
   for members; `/timeout`, `/ban` and `/kick` need the matching permission. Bots can add their own
@@ -92,8 +126,22 @@ no accounts on someone else's platform.
 - **Threads you can follow.** A thread reply notifies the thread's followers:
   the root's author, people who replied, people mentioned in a reply and
   anyone who pressed **Follow thread**.
-- **Search filters** for author, channel, mentions, dates, attachments, links,
-  polls, edited and pinned messages.
+- **Search filters** for author (`from:` and `author:bot|webhook|member`),
+  channel (`in:`), mentions (`mentions:`), dates (`before:`, `after:`, and
+  `during:` for a single local day), attachments (`has:file`, `filename:`),
+  links, embeds, polls, edited and pinned messages, one compact filter row with
+  small pickers, `"exact phrases"`, `-excluded` words and a sort order (newest,
+  oldest, relevance). A filter that matches nothing is explained, not ignored.
+- **Notification settings per channel, category and server.** Right-click a
+  channel or a category header (or press Shift+F10) and choose
+  **Notifications**: all messages, mentions only, nothing, or "use the
+  category / server default", and **Mute for...** one hour, eight hours, a day
+  or until you turn it back on. **Notification settings** in the server menu
+  (and the account menu) set your default for the whole server, mute the
+  server, and can ignore `@all` and `@here`. A channel's own setting beats its
+  category's, which beats the server default; a small marker in the sidebar
+  shows a muted channel or one that only tells you about mentions. Push,
+  badges and mention counts follow the level that applies.
 - **Installable web app with Web Push** notifications, and a layout for phones.
 - **Direct messages, blocking and reports.** Private conversations of two to
   ten members that moderators cannot browse, blocking that the other member
@@ -126,16 +174,36 @@ no accounts on someone else's platform.
   two, several make a group of up to ten people. Members added to a group
   later read its whole history. A conversation of two cannot be left (block
   the other member instead); a group can, from the conversation's info.
-- **Who may write to you** is your choice under *Account & security* >
-  *Your data*: everyone (the default) or nobody. It only decides who can start
-  a conversation; existing ones go on.
+- **The list** shows each conversation with its face (and presence), the
+  start of the latest message (with "You:" or, in a group, who wrote it),
+  when, and what is new: a number for unread messages, a red @ number for
+  mentions. Groups show two faces and how many people are in them. The section
+  folds away with the arrow next to its name, and stays folded on all your
+  devices. The box at the top (**Find or start a conversation**) finds
+  conversations and members; Enter opens the first match. Ctrl/Cmd+K offers
+  matching conversations too.
+- **Close a conversation** with the **x** on its row or **Close conversation**
+  in its menu (right-click, or the three dots on a phone). Nothing is deleted;
+  the conversation comes back with the next message, or when you open it from
+  the search. **Favourites**: the star puts a conversation at the top, in its
+  own section (up to 25); drag to reorder, or use **Move up** and **Move down**
+  in the menu (Alt+Arrow keys on a focused row). Favourites stay in the list and
+  follow you to every device.
+- **Mute** one conversation from the bell in its header or its menu, or all of
+  them with **Mute all direct messages** under *Settings* > *Privacy* >
+  *Direct messages*: no sound, no notification and no highlight, but
+  unread messages still count. A conversation you muted or unmuted yourself keeps
+  its own setting.
+- **Who may write to you** is your choice in the same place: everyone (the
+  default) or nobody. It only decides who can start a conversation; existing
+  ones go on.
 - **Block** a member from their profile card, their menu, a message's menu or
   the conversation info. Their messages fold into "Blocked message" (one click
   shows it), they cause no mentions or notifications for you (in any conversation,
   group included, their messages leave unread counts, mentions and last activity
   untouched), and a conversation of two with them stops working in both directions.
   They are not told. The list of blocked members, with a way to unblock, is under
-  *Account & security*.
+  *Settings* > *Privacy*.
 - **Report** a message from its menu (**Report message**) with a reason and an
   optional note. The moderators see a copy of the message and the ones around
   it in **Admin > Reports**, which needs the permission *Manage reports*; for a
@@ -152,8 +220,8 @@ Chromium-based browsers (Chrome, Edge 137+), Safari 17+ (including iOS 17+ and
 the installed web app) and Firefox 129+ run the whole app. A browser that cannot
 seal media does not join a Talk at all, it never sends unsealed media. CI runs
 the full end-to-end suite and the phone layout in Chromium, every spec that
-needs no call in WebKit, and a subset in Firefox. Calls in WebKit run in a
-separate macOS job that is not a required check. Nothing is tested on real iOS
+needs no call in WebKit, and a subset in Firefox. Calls in WebKit run in
+separate macOS jobs (not a required check). Nothing is tested on real iOS
 or Android hardware.
 Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 
@@ -163,6 +231,9 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
   group: microphone, camera, screen video and screen audio. Keys rotate every
   30 minutes, every sealed frame is signed by its sender, and a **safety code**
   in the connection details lets members compare keys out of band.
+  The old media frame format 2 is gone in 1.2: only format 3 is sealed or
+  opened, so a client that old must be reloaded or updated
+  ([doc/upgrade.md](doc/upgrade.md#calls-and-the-security-floor)).
 - **Invite-only.** There is no public registration.
 - **Accounts you control.** Optional e-mail (password reset needs SMTP),
   two-factor sign-in with recovery codes, and self-service export and deletion
@@ -186,6 +257,17 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
   categories and channels can allow or deny them per role or member, which
   makes **private channels and Talks**. Changes apply live, also in a call.
 - **Moderation.** Timeouts (a minute to four weeks, lifted automatically, enforced in REST, the hub and the SFU), bans with reason and duration, and kicking, all bound by the role hierarchy and written to the audit log.
+- **Automod and moderation history.** Automod is on by default with
+  conservative rules (mention spam, links from accounts younger than 10
+  minutes, raid protection) plus optional word and link lists; hits land in the
+  reports queue. Members with *Manage reports* see a per-member history and
+  keep private moderator notes ([doc/moderation.md](doc/moderation.md)).
+- **Sessions and view-as-role.** Members see and end their own sessions
+  (*Where you are signed in*), and a session unused for 7 days (adjustable)
+  signs out. In the role editor, **View server as** previews what a role sees.
+- **Discord import.** An admin can copy the categories, channels, Talks and roles
+  of a Discord server from a template link: additive, after a preview and
+  three confirmations, and it can be undone ([doc/import.md](doc/import.md)).
 - **Audit log.** An append-only record of administrative and moderation
   actions with who, what, before and after, filterable in the admin console.
   It also holds deleted message text and Talk presence history, so mention it
@@ -196,7 +278,8 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 - **Bots.** Bot accounts with API tokens, scoped by roles and channel overwrites like members, a REST API and a gateway modelled on Discord's (see [doc/bots.md](doc/bots.md)); only the Owner and *Manage bots* create them.
 - **Admin console** for members (disable, kick, reset password, revoke
   sessions), roles, channel layout, invites, media and storage, and a System
-  tab with health and a live operator view. The sidebar supports drag and drop
+  tab with health and a live operator view, and a Status page (version,
+  updates, database, storage, backups and live activity). The sidebar supports drag and drop
   with undo.
 
 | Roles and permissions | Webhook settings |
@@ -229,7 +312,7 @@ build are needed: [Fresh install in doc/deployment.md](doc/deployment.md#fresh-i
 downloads the compose file and `.env.example` of a release, lists the few
 values to set (`PUBLIC_URL`, `JWT_SECRET`, `POSTGRES_PASSWORD`,
 `S3_ACCESS_KEY` / `S3_SECRET_KEY`, `ADMIN_INITIAL_PASSWORD`) and starts the
-published image (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.1`, a pinned patch
+published image (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.2`, a pinned patch
 version or `:latest`). CI runs those exact steps.
 
 Building from source is for development; see [Development](#development).
@@ -316,7 +399,7 @@ and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client
 
 | Topic | Where |
 |---|---|
-| **Read first when updating:** what 1.0 promises and what to do before updating; the 1.1 changes are in the upgrade notes | [doc/release-notes-1.0.md](doc/release-notes-1.0.md), [doc/upgrade.md](doc/upgrade.md) |
+| **Read first when updating:** what 1.0 promises and what to do before updating; the 1.1 and 1.2 changes are in the upgrade notes | [doc/release-notes-1.0.md](doc/release-notes-1.0.md), [doc/upgrade.md](doc/upgrade.md) |
 | Components, data flow, capacity | [doc/architecture.md](doc/architecture.md) |
 | Configuration, reverse proxy, TURN, backups, metrics and alerts, troubleshooting | [doc/operations.md](doc/operations.md) |
 | Ports, image tags, platforms, updating | [doc/deployment.md](doc/deployment.md) |

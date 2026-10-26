@@ -32,8 +32,30 @@ func gatePost(ctx context.Context, tx pgx.Tx, nm NewMessage) error {
 	if kind == channelKindDM {
 		return gateDM(ctx, tx, nm)
 	}
+	if nm.ParentID != nil {
+		if err := gateReply(ctx, tx, *nm.ParentID); err != nil {
+			return err
+		}
+	} else if kind == "forum" && (nm.Title == nil || *nm.Title == "") {
+		return httpx.ErrInvalidInput("title is required for forum posts")
+	}
 	if nm.WebhookID == nil && !slowModeExempt(ctx) {
 		return enforceSlowMode(ctx, tx, nm.ChannelID, nm.UserID, seconds)
+	}
+	return nil
+}
+
+func gateReply(ctx context.Context, tx pgx.Tx, parentID uuid.UUID) error {
+	var isLocked bool
+	err := tx.QueryRow(ctx, `SELECT is_locked FROM messages WHERE id = $1`, parentID).Scan(&isLocked)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return httpx.ErrInvalidInput("parent message not found")
+	}
+	if err != nil {
+		return fmt.Errorf("check thread lock: %w", err)
+	}
+	if isLocked && !slowModeExempt(ctx) {
+		return httpx.ErrForbidden("this post is locked")
 	}
 	return nil
 }
@@ -86,7 +108,17 @@ func gateDM(ctx context.Context, tx pgx.Tx, nm NewMessage) error {
 	if err := checkDMReachable(ctx, tx, nm.UserID, others, st.group); err != nil {
 		return err
 	}
-	return countDMMessage(ctx, tx, nm, st)
+	if err := countDMMessage(ctx, tx, nm, st); err != nil {
+		return err
+	}
+	// A new message opens the conversation again for whoever closed it (not for
+	// a member who blocked the sender: they would see nothing new).
+	_, err = tx.Exec(ctx, `
+		UPDATE dm_members SET hidden_at = NULL
+		WHERE channel_id = $1 AND hidden_at IS NOT NULL
+		  AND NOT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = dm_members.user_id AND ub.blocked_id = $2)`,
+		nm.ChannelID, nm.UserID)
+	return err
 }
 
 // checkDMReachable requires the switch to be on and somebody to write to: in a

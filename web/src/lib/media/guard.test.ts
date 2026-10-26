@@ -95,6 +95,62 @@ describe('media transform guard', () => {
     expect(created.workers).toHaveLength(2)
   })
 
+  it('does not lose the negotiation when a browser refuses to clone what a line needs', () => {
+    installBrowser()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const refused = () => { throw new DOMException('The object can not be cloned.', 'DataCloneError') }
+    const guard = createMediaGuard()
+    const key = {} as EpochKeys
+    guard.setKey(2, key)
+
+    // The key message cannot be cloned for a new line: the line is armed and keyless.
+    const first = { transform: null } as RTCRtpSender
+    vi.stubGlobal('MessageChannel', function MessageChannel(this: { port1: Port, port2: Port }) {
+      this.port1 = { postMessage: vi.fn(refused), close: vi.fn() }
+      this.port2 = { postMessage: vi.fn(), close: vi.fn() }
+      created.channels.push(this)
+    })
+    expect(guard.armSender(first, 'channel', 'alice', 0)).toBe(true)
+    expect(first.transform).not.toBeNull()
+    expect(warn).toHaveBeenCalledWith('[media] Could not hand the key to a line:', expect.any(DOMException))
+
+    // A later key still reaches every other line, and the refusing one does not stop it.
+    const second = { transform: null } as RTCRtpReceiver
+    installBrowser()
+    expect(guard.armReceiver(second, 'channel', 'bob', 0)).toBe(true)
+    expect(() => guard.setKey(3, key)).not.toThrow()
+    expect(created.channels[0]?.port1.postMessage).toHaveBeenCalledWith({ type: 'key', epoch: 3, key, seq: 2 })
+
+    // The transform itself cannot be built: the line stays unprotected, the caller is told, nothing leaks.
+    vi.stubGlobal('RTCRtpScriptTransform', function RTCRtpScriptTransform() { refused() })
+    const third = { transform: null } as RTCRtpSender
+    expect(guard.armSender(third, 'channel', 'alice', 0)).toBe(false)
+    expect(third.transform).toBeNull()
+    expect(created.channels.at(-1)?.port1.close).toHaveBeenCalled()
+    expect(warn).toHaveBeenCalledWith('[media] Could not arm a line:', expect.any(DOMException))
+    guard.reset()
+    warn.mockRestore()
+  })
+
+  it('tries a refused key message once more before giving up on a line', () => {
+    installBrowser()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const guard = createMediaGuard()
+    const key = {} as EpochKeys
+    expect(guard.armSender({ transform: null } as RTCRtpSender, 'channel', 'alice', 0)).toBe(true)
+    const port = created.channels[0]?.port1
+    port?.postMessage.mockImplementationOnce(() => { throw new DOMException('The object can not be cloned.', 'DataCloneError') })
+    guard.setKey(7, key)
+    expect(port?.postMessage).toHaveBeenCalledTimes(2)
+    expect(warn).not.toHaveBeenCalled()
+    port?.postMessage.mockImplementation(() => { throw new DOMException('The object can not be cloned.', 'DataCloneError') })
+    guard.setKey(8, key)
+    expect(port?.postMessage).toHaveBeenCalledTimes(4)
+    expect(warn).toHaveBeenCalledTimes(1)
+    guard.reset()
+    warn.mockRestore()
+  })
+
   it('names the layer of a screen share line in the transform, and only then', () => {
     installBrowser()
     const guard = createMediaGuard()
@@ -109,26 +165,19 @@ describe('media transform guard', () => {
     expect(created.transforms[2]?.options).toMatchObject({ layer: 0 })
   })
 
-  it('tells every line who opens version 3, and a line armed later too', () => {
+  it('tells every line the key, and a line armed later too', () => {
     installBrowser()
     const guard = createMediaGuard()
     const key = {} as EpochKeys
-    const caps = { members: ['alice'], complete: true }
     expect(guard.armSender({ transform: null } as RTCRtpSender, 'channel', 'alice', 1)).toBe(true)
-    guard.setKey(3, key, false, false, caps)
-    expect(created.channels[0]?.port1.postMessage).toHaveBeenCalledWith({ type: 'key', epoch: 3, key, seq: 1, caps })
-    const more = { members: ['alice', 'bob'], complete: true }
-    guard.setCaps(3, more)
-    expect(created.channels[0]?.port1.postMessage).toHaveBeenLastCalledWith({ type: 'caps', epoch: 3, caps: more, seq: 2 })
-    // A line armed after that hears the key and then the newer advertisement.
+    guard.setKey(3, key)
+    expect(created.channels[0]?.port1.postMessage).toHaveBeenCalledWith({ type: 'key', epoch: 3, key, seq: 1 })
     expect(guard.armReceiver({ transform: null } as RTCRtpReceiver, 'channel', 'bob', 0)).toBe(true)
-    expect(created.channels[1]?.port1.postMessage.mock.calls.map(call => (call[0] as { type: string }).type)).toEqual(['key', 'caps'])
-    // A new key without one starts over; so does a reset.
+    expect(created.channels[1]?.port1.postMessage.mock.calls.map(call => (call[0] as { type: string }).type)).toEqual(['key'])
+    // A new key replaces the one a line armed later hears; so does a reset.
     guard.setKey(4, key)
     expect(guard.armReceiver({ transform: null } as RTCRtpReceiver, 'channel', 'bob', 0)).toBe(true)
-    expect(created.channels[2]?.port1.postMessage.mock.calls.map(call => (call[0] as { type: string }).type)).toEqual(['key'])
-    guard.setCaps(9, more)
-    guard.setKey(5, key)
+    expect(created.channels[2]?.port1.postMessage).toHaveBeenCalledWith({ type: 'key', epoch: 4, key, seq: 2 })
     guard.reset()
   })
 
@@ -178,9 +227,9 @@ describe('media transform guard', () => {
     guard.onStats(senders => seen.push(senders))
     expect(guard.armReceiver({ transform: null } as RTCRtpReceiver, 'channel', 'bob')).toBe(true)
     const worker = created.workers[0] as unknown as { onmessage: (event: { data: unknown }) => void }
-    worker.onmessage({ data: { type: 'stats', senders: { bob: { opened: 3, newer: 1, epoch: 6 }, eve: { opened: -1, newer: 0, epoch: 1 }, mallory: { opened: 1 }, odd: 7 } } })
+    worker.onmessage({ data: { type: 'stats', senders: { bob: { opened: 3, newer: 1, epoch: 6, legacy: 2 }, eve: { opened: -1, newer: 0, epoch: 1, legacy: 0 }, old: { opened: 1, newer: 0, epoch: 1 }, mallory: { opened: 1 }, odd: 7 } } })
     for (const data of [null, 'stats', { type: 'other' }, { type: 'stats' }, { type: 'stats', senders: 3 }]) worker.onmessage({ data })
-    expect(seen).toEqual([{ bob: { opened: 3, newer: 1, epoch: 6 } }])
+    expect(seen).toEqual([{ bob: { opened: 3, newer: 1, epoch: 6, legacy: 2 } }])
     guard.reset()
   })
 })

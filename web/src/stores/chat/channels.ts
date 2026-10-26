@@ -4,7 +4,9 @@ import { decodeChatRenamedCategory } from '../../types/rest'
 import { api } from '../../lib/api'
 import { emptyWindow } from '../../lib/messageWindow'
 import { pruneChannelDrafts } from '../../lib/drafts'
-import { currentRoute } from '../../lib/router'
+import { currentRoute, findChannel } from '../../lib/router'
+import { channelPath, dmPath, textPath, type ChannelTail } from '../../lib/routePaths'
+import { pathDms } from '../../lib/dm'
 import { useServerFeaturesStore } from '../serverFeatures'
 import { assertCommunity, type Cx } from './state'
 import { fetchMessages, resetWindow, setWindow } from './messageWindow'
@@ -17,6 +19,19 @@ export function isVoiceChannel(cx: Cx, channelId: string) {
   return cs.allChannels.value.some(c => c.id === channelId && c.type === 'voice')
 }
 
+/**
+ * The canonical address of a channel, Talk or conversation, by id: /c/:slug,
+ * /v/:slug or /dm/…. An id the client does not know yet gets the legacy
+ * /c/:id address, which the router rewrites once it does.
+ */
+export function linkTo(cx: Cx, channelId: string, tail: ChannelTail = {}): string {
+  const channel = cx.cs.allChannels.value.find(c => c.id === channelId)
+  if (channel) return channelPath(channel, tail)
+  const dms = pathDms(cx.cs.dms.value, cx.authStore.user?.id)
+  const dm = dms.find(d => d.id === channelId)
+  return dm ? dmPath(dm, dms, tail) : textPath({ id: channelId }, tail)
+}
+
 export function fetchChannels(cx: Cx): Promise<void> {
   const { cs } = cx
   const fetching = loadChannels(cx, ++cs.channelsFetchSeq)
@@ -26,8 +41,7 @@ export function fetchChannels(cx: Cx): Promise<void> {
 
 function resolveFallbackChannel(channels: Channel[]): Channel | null {
   const route = currentRoute.value
-  const routeId = 'channelId' in route ? route.channelId : null
-  const routeCh = channels.find(c => c.id === routeId)
+  const routeCh = 'channelRef' in route ? findChannel(channels, route.channelRef)?.channel : undefined
   return routeCh ?? channels.find(c => c.type === 'text') ?? channels[0] ?? null
 }
 
@@ -94,12 +108,12 @@ export async function selectChannel(cx: Cx, channel: Channel | null) {
   }
 }
 
-export async function createChannel(cx: Cx, { categoryId, name, type, topic, sortOrder = 0 }: { categoryId?: string | null; name: string; type?: Channel['type']; topic?: string; sortOrder?: number }) {
+export async function createChannel(cx: Cx, { categoryId, name, type, topic, sortOrder = 0, isStage = false }: { categoryId?: string | null; name: string; type?: Channel['type']; topic?: string; sortOrder?: number; isStage?: boolean }) {
   const { cs } = cx
   const community = cs.communityGeneration
   const channel = await api('/api/admin/channels', {
     method: 'POST',
-    json: { category_id: categoryId || null, name, type: type || 'text', topic: topic || '', sort_order: sortOrder }, decode: decodeChannel
+    json: { category_id: categoryId || null, name, type: type || 'text', topic: topic || '', sort_order: sortOrder, ...(isStage ? { is_stage: true } : {}) }, decode: decodeChannel
   })
   assertCommunity(cx, community)
   await fetchChannels(cx)
@@ -157,6 +171,17 @@ export async function updateChannel(cx: Cx, channelId: string, { name, topic, sl
     method: 'PATCH',
     json: slow_mode_seconds === undefined ? { name, topic } : { name, topic, slow_mode_seconds }, decode: decodeChannel
   })
+  assertCommunity(cx, community)
+  await fetchChannels(cx)
+  assertCommunity(cx, community)
+  return updated
+}
+
+/** Sets how long a channel keeps its messages: 1, 7, 30 or 90 days; 0 keeps them for good. */
+export async function setChannelAutoDelete(cx: Cx, channelId: string, days: number) {
+  const { cs } = cx
+  const community = cs.communityGeneration
+  const updated = await api(`/api/admin/channels/${channelId}/auto-delete`, { method: 'PUT', json: { days }, decode: decodeChannel })
   assertCommunity(cx, community)
   await fetchChannels(cx)
   assertCommunity(cx, community)

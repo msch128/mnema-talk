@@ -28,7 +28,8 @@ type CreateRequest struct {
 	Options  []string `json:"options" minItems:"2" maxItems:"10"`
 	// Multiple lets members vote for several options.
 	Multiple bool `json:"multiple" binding:"optional"`
-	// Anonymous hides who voted for what, from everyone.
+	// Anonymous stores only that a member voted and the count per option, never
+	// the choice; a vote in it cannot be changed. Offered with the polls.anonymous feature.
 	Anonymous bool `json:"anonymous" binding:"optional"`
 	// Duration is how long voting stays open; 24h when omitted.
 	Duration string `json:"duration" binding:"optional" enums:"1h,4h,8h,24h,3d,1w"`
@@ -84,7 +85,7 @@ func (s *Service) create(w http.ResponseWriter, r *http.Request) error {
 // get handles GET /api/channels/{channelID}/messages/{messageID}/poll.
 //
 // @Summary Get a poll with my votes
-// @Description The poll as in the message, plus the options the caller voted for. This is the only place an anonymous poll shows a member their own choice. Needs View channels.
+// @Description The poll as in the message, plus the options the caller voted for (my_votes) and whether they voted at all (has_voted). An anonymous poll stores no choices: my_votes is empty there and only has_voted tells that the caller took part. Needs View channels.
 // @ID getPoll
 // @Tags Polls
 // @Produce json
@@ -118,7 +119,7 @@ const votePermissions = perm.ViewChannel | perm.AddReactions
 // vote handles PUT /api/channels/{channelID}/messages/{messageID}/poll/votes.
 //
 // @Summary Vote in a poll
-// @Description Replaces the caller's votes with option_ids (one for a single-choice poll, any number of distinct options for a multiple-choice one; an empty list withdraws the vote). Allowed until the poll ends (409 afterwards). Needs View channels and Add reactions. Broadcasts poll_update with the new tallies; in an anonymous poll nobody learns who voted. At most 60 a minute per member.
+// @Description Replaces the caller's votes with option_ids (one for a single-choice poll, any number of distinct options for a multiple-choice one; an empty list withdraws the vote). Allowed until the poll ends (409 afterwards). In an anonymous poll exactly one vote is possible and it cannot be changed or withdrawn (409 on a second vote, 400 on an empty list); the server records only that the member voted and raises the option counters. Needs View channels and Add reactions. Broadcasts poll_update with the new tallies; an anonymous poll broadcasts nothing per vote (it would let a small audience infer the choice) and announces the result when it is ended, and nobody learns who voted for what. At most 60 a minute per member.
 // @ID votePoll
 // @Tags Polls
 // @Accept json
@@ -132,7 +133,7 @@ const votePermissions = perm.ViewChannel | perm.AddReactions
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the View channels or Add reactions permission in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such poll, or the channel is hidden from the caller."
-// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the poll has ended."
+// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the poll has ended, or the caller already voted in an anonymous poll."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."

@@ -201,17 +201,19 @@ export function sendWSEvent<K extends keyof ClientEventPayloads>(cx: Cx, type: K
   }
 }
 
-export function setWebRTCHandlers(cx: Cx, { onOffer, onCandidate, onKicked, onMedia }: {
+export function setWebRTCHandlers(cx: Cx, { onOffer, onCandidate, onKicked, onMedia, onTalkMoved }: {
   onOffer: (payload: ServerEventPayloads['webrtc_offer']) => void | Promise<void>
   onCandidate: (payload: ServerEventPayloads['webrtc_candidate']) => void | Promise<void>
   onKicked?: (payload: ServerEventPayloads['voice_kicked']) => void | Promise<void>
   onMedia?: (payload: ServerEventPayloads['media_handshake']) => void | Promise<void>
+  onTalkMoved?: (payload: ServerEventPayloads['talk_moved']) => void | Promise<void>
 }) {
   const { cs } = cx
   cs.webrtcOfferHandler = onOffer
   cs.webrtcCandidateHandler = onCandidate
   cs.voiceKickedHandler = onKicked || null
   cs.mediaHandshakeHandler = onMedia || null
+  cs.talkMovedHandler = onTalkMoved || null
 }
 
 export function installVisibilityRetry(cx: Cx) {

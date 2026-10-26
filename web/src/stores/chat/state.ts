@@ -1,12 +1,17 @@
 import { computed, ref, shallowRef } from 'vue'
 import type { Category, Channel, Member, Message, NotificationSettings, Presence, ReadState, User } from '../../types/domain'
 import type { ServerEventPayloads } from '../../types/events'
-import type { ChatDirectMessage } from '../../types/rest'
+import type { ChatDMSettings, ChatDirectMessage } from '../../types/rest'
 import { platform, type PlatformSocket } from '../../lib/platform'
 import { createKeyedThrottle } from '../../lib/chatLogic'
 import type { useAuthStore } from '../auth'
 import type { useVoiceStore } from '../voice'
 import { MARK_READ_INTERVAL_MS, type EphemeralNote, type PinNotice, type ProfilePreview, type ThreadRoot, type Timer, type TypingUser } from './types'
+
+/** No stored settings: every channel follows the server default, which is "all messages". */
+export function emptyNotificationSettings(): NotificationSettings {
+  return { channels: [], categories: [], server: { level: 'all', muted_until: null, suppress_everyone: false } }
+}
 
 type Handler<K extends keyof ServerEventPayloads> = ((payload: ServerEventPayloads[K]) => void | Promise<void>) | null
 
@@ -36,6 +41,7 @@ function channelState() {
     followKnown: ref(false),
     // Pinned messages: bumped when the pins of a channel changed, so an open pinned list refetches; plus the notes about new pins.
     pinsSignal: ref<{ channelId: string; seq: number } | null>(null),
+    forumTagsSignal: ref<{ channelId: string; seq: number } | null>(null),
     pinNotices: ref<PinNotice[]>([]),
     pinNoticeSeq: 0,
     threadReplies: ref<Message[]>([]),
@@ -71,7 +77,7 @@ function memberState() {
     // Read states per channel: channel_id -> { channel_id, unread_count, mention_count, last_read_at, notify_level }
     readStates: ref<Record<string, ReadState>>({}),
     // The caller's stored notification settings (the read states carry the effective level).
-    notifySettings: ref<NotificationSettings>({ channels: [], categories: [] }),
+    notifySettings: ref<NotificationSettings>(emptyNotificationSettings()),
     // Re-reads read states and settings when the next timed mute runs out.
     notifyExpiryTimer: undefined as Timer | undefined,
     activeChannelLastReadAt: ref<string | null>(null),
@@ -97,6 +103,9 @@ function dmState() {
   return {
     dms: ref<ChatDirectMessage[]>([]),
     dmsLoaded: ref(false),
+    // The member's list-wide settings (mute all, folded section), read with the list.
+    dmSettings: ref<ChatDMSettings>({ mute_all: false, list_collapsed: false }),
+    dmSettingsLoaded: ref(false),
     dmsFetchSeq: 0
   }
 }
@@ -112,7 +121,9 @@ function socketState() {
     webrtcOfferHandler: null as Handler<'webrtc_offer'>,
     webrtcCandidateHandler: null as Handler<'webrtc_candidate'>,
     voiceKickedHandler: null as Handler<'voice_kicked'>,
-    mediaHandshakeHandler: null as Handler<'media_handshake'>
+    talkMovedHandler: null as Handler<'talk_moved'>,
+    mediaHandshakeHandler: null as Handler<'media_handshake'>,
+    forumTagsChangedHandler: null as Handler<'forum_tags_changed'>
   }
 }
 

@@ -61,11 +61,51 @@ jobs:
           "$RUNNER_TEMP/gitleaks" dir --no-banner --redact --exit-code 1 --config .gitleaks.toml .
           "$RUNNER_TEMP/gitleaks" git --no-banner --redact --exit-code 1 --config .gitleaks.toml .
 
-  # -- Backend: vet, format, unit + integration tests, build -----------------
-  backend:
-    # Integration tests share one database and run package by package (~17 min in 1.1), so leave headroom.
+  # -- What changed: docs-only pull requests skip the heavy work -------------
+  # Every required check still reports: the jobs below run, skip their steps
+  # (a job-level `if` would leave matrix legs such as `upgrade-drill (1.1.0)`
+  # unreported and block the merge) and succeed. Only README/SECURITY and doc/
+  # Markdown count as docs; no test reads them (the docs links, conflict marker
+  # and English-only checks run in every case), so anything else, a workflow
+  # file included, is code. Pushes to main always run everything.
+  changes:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The merge commit of the pull request and its two parents.
+          fetch-depth: 2
+
+      - name: Filter
+        id: filter
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          code=true
+          if [ "$EVENT" = pull_request ] && git rev-parse --verify --quiet HEAD^2 >/dev/null; then
+            # HEAD^1 is the base branch, so this is what the pull request changes.
+            changed="$(git diff --name-only HEAD^1 HEAD)"
+            echo "$changed"
+            if [ -n "$changed" ] && ! grep -qvE '^(doc/.*\.md|[^/]+\.md)$' <<<"$changed"; then
+              code=false
+            fi
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "code changed: $code" >> "$GITHUB_STEP_SUMMARY"
+
+  # -- Backend: vet, format, unit tests, build; the integration tests with
+  # coverage run in parallel shards (backend-integration) and the coverage
+  # gates on their merged profiles (backend-coverage). The required check
+  # `backend` succeeds only if all three jobs did.
+  backend-checks:
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:18-alpine
@@ -91,7 +131,8 @@ jobs:
           # and reads the commit messages of the change.
           fetch-depth: 0
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         id: go
         with:
           go-version-file: go.mod
@@ -99,7 +140,8 @@ jobs:
           # job, so whichever job finished first decided what all of them got.
           cache: false
 
-      - name: Go module + build cache
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Go module + build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -109,58 +151,52 @@ jobs:
           restore-keys: |
             go-${{ runner.os }}-backend-${{ steps.go.outputs.go-version }}-
 
-      - name: gofmt
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: gofmt
         run: |
           out="$(gofmt -l cmd internal web/web.go)"
           if [ -n "$out" ]; then
             echo "::error::gofmt needed on:"; echo "$out"; exit 1
           fi
 
-      - name: go vet
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: go vet
         run: |
           go vet ./...
           go vet -tags=integration ./...
 
-      - name: Cognitive complexity
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Cognitive complexity
         run: make complexity-check
 
-      - name: OpenAPI description is up to date
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: OpenAPI description is up to date
         run: make openapi-check
 
       # Fails on breaking changes of the REST contract since the latest release
       # tag (doc/api-stability.md); a BREAKING CHANGE: commit footer waives it.
-      - name: OpenAPI has no breaking changes
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: OpenAPI has no breaking changes
         env:
           OPENAPI_DIFF_RANGE: ${{ github.event_name == 'pull_request' && format('{0}..{1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || format('{0}..{1}', github.event.before, github.sha) }}
         run: make openapi-diff
 
-      - name: Unit tests
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Unit tests
         run: go test -race -count=1 ./...
 
-      - name: Backup and restore fault tests
+      # Mutation fuzzing of the parsers (search, mentions, durations, URL guard,
+      # versions) for 1 s each on top of the seed corpora that `go test` ran.
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Fuzz smoke
+        run: FUZZTIME=1s make fuzz-smoke
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Backup and restore fault tests
         run: make test-scripts
 
-      # Runs unit and integration tests together and records which code they
-      # reach: the coverage report (job summary + artifact) counts both.
-      - name: Integration tests (with coverage)
-        run: make coverage-go
-
-      # make coverage-go fails below 90 % in total or 80 % in any file; the summary and the report are
-      # still published then, so the job summary shows what is missing.
-      - name: Coverage summary
-        if: ${{ !cancelled() && hashFiles('coverage.out') != '' }}
-        run: node scripts/coverage-summary.mjs go coverage.out --min 90 --file-min 80 >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload coverage report
-        if: ${{ !cancelled() && hashFiles('coverage.out') != '' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: coverage-go
-          path: coverage.out
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Build
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Build
         run: CGO_ENABLED=0 go build -trimpath -o /dev/null ./cmd/server
 
       # Relative links and #anchors in README.md, SECURITY.md and doc/*.md; no
@@ -184,23 +220,53 @@ jobs:
       # The alert rules operators copy (doc/operations.md). The image is pinned
       # by digest (prom/prometheus v3.15.1); the metrics they name are checked
       # against /api/metrics by TestAlertRulesNameOnlyExportedMetrics above.
-      - name: Alert rules (promtool)
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Alert rules (promtool)
         run: |
           docker run --rm --entrypoint promtool \
             -v "$PWD/deploy/monitoring:/rules:ro" \
             prom/prometheus@sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2 \
             check rules /rules/mnema-alerts.yml
 
-  # -- Go vulnerability scan (reachable symbols only) ------------------------
-  govulncheck:
+  # Unit and integration tests together record which code they reach. The
+  # integration tests of a package reset the database they are given, so each
+  # shard has a PostgreSQL of its own and runs its packages one after another.
+  # The shards are balanced by hand (internal/server alone takes about as long
+  # as the other two groups); `rest` is every package not named elsewhere, so a
+  # new package is always tested.
+  backend-integration:
+    name: backend-integration (${{ matrix.shard }})
+    needs: changes
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [server, realtime, rest]
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: mnema
+          POSTGRES_PASSWORD: mnema
+          POSTGRES_DB: mnema_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mnema -d mnema_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Throwaway CI-only database credentials for the service container above.
+      TEST_DATABASE_URL: postgres://mnema:mnema@localhost:5432/mnema_test?sslmode=disable
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         id: go
         with:
           go-version-file: go.mod
@@ -208,7 +274,115 @@ jobs:
           # job, so whichever job finished first decided what all of them got.
           cache: false
 
-      - name: Go module + build cache
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Go module + build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-backend-integration-${{ matrix.shard }}-${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-backend-integration-${{ matrix.shard }}-${{ steps.go.outputs.go-version }}-
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Integration tests (with coverage)
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          set -euo pipefail
+          case "$SHARD" in
+            server) pkgs='./internal/server' ;;
+            realtime) pkgs='./internal/nativepreview ./internal/bot ./internal/chat' ;;
+            rest) pkgs="$(go list ./... | grep -v -E '/internal/(server|nativepreview|bot|chat)$' | tr '\n' ' ')" ;;
+          esac
+          make coverage-go-profile GO_PKGS="$pkgs" COVERAGE_OUT="coverage-$SHARD.out"
+
+      - name: Upload coverage profile
+        if: ${{ !cancelled() && hashFiles('coverage-*.out') != '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-go-profile-${{ matrix.shard }}
+          path: coverage-${{ matrix.shard }}.out
+          if-no-files-found: error
+          retention-days: 7
+
+  # make coverage-go used to fail below 90 % in total or 80 % in any file; the
+  # same gates now apply to the merged profiles (scripts/coverage-summary.mjs
+  # keeps the highest count of every block, which is how it already read the
+  # profile of one run with several test binaries). The summary and the report
+  # are published even when a gate fails.
+  backend-coverage:
+    needs: [changes, backend-integration]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: coverage-go-profile-*
+          path: profiles
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Merge the profiles
+        run: |
+          set -euo pipefail
+          echo "mode: atomic" > coverage.out
+          for f in profiles/*/coverage-*.out; do tail -n +2 "$f" >> coverage.out; done
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Coverage summary
+        run: node scripts/coverage-summary.mjs go coverage.out --min 90 --file-min 80 >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        if: ${{ !cancelled() && hashFiles('coverage.out') != '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-go
+          path: coverage.out
+          if-no-files-found: error
+          retention-days: 30
+
+  # The required check: unchanged name, one verdict for the three jobs above.
+  backend:
+    needs: [backend-checks, backend-integration, backend-coverage]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All backend jobs succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "results: $RESULTS"
+          for r in $RESULTS; do [ "$r" = success ] || exit 1; done
+
+  # -- Go vulnerability scan (reachable symbols only) ------------------------
+  govulncheck:
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        id: go
+        with:
+          go-version-file: go.mod
+          # Cached per job below: setup-go's cache key is the same for every
+          # job, so whichever job finished first decided what all of them got.
+          cache: false
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Go module + build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -218,11 +392,13 @@ jobs:
           restore-keys: |
             go-${{ runner.os }}-govulncheck-${{ steps.go.outputs.go-version }}-
 
-      - name: govulncheck
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: govulncheck
         run: go run "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}" ./...
 
   # -- Frontend: lint, test, build, audit ------------------------------------
   frontend:
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -233,25 +409,33 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
           cache: npm
           cache-dependency-path: web/package-lock.json
 
-      - run: npm ci --no-audit --no-fund
-      - name: Browser test compiler dependencies
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        run: npm ci --no-audit --no-fund
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Browser test compiler dependencies
         working-directory: e2e
         run: npm ci --no-audit --no-fund
-      - run: npm run lint
-      - name: Generated frontend contracts are up to date
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        run: npm run lint
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Generated frontend contracts are up to date
         run: npm run contracts:check
-      - name: Strict TypeScript checks
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Strict TypeScript checks
         run: npm run typecheck
-      - name: Strict browser test TypeScript checks
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Strict browser test TypeScript checks
         working-directory: e2e
         run: npm run typecheck
-      - run: npm run test:coverage
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        run: npm run test:coverage
 
       # Require 90% on all four totals and 80% in every module; reviewed
       # per-module exceptions may lower individual thresholds to 60%, never the totals.
@@ -271,27 +455,47 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - run: npm run build
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        run: npm run build
 
       # The desktop client runs a signed bundle of this build. Sign it with a
       # throwaway key and verify it, so a change that breaks the bundle (or
       # web/desktop-compat.json) fails here and not in the release workflow.
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        id: go
         with:
           go-version-file: go.mod
           cache: false
-      - name: Desktop bundle round trip
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Go module + build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-frontend-${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-frontend-${{ steps.go.outputs.go-version }}-
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Desktop bundle round trip
         working-directory: .
         run: scripts/web-bundle-check.sh
 
-      - name: npm audit (runtime deps)
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: npm audit (runtime deps)
         run: npm audit --omit=dev --audit-level=high
 
   # -- Container image (build only, never pushed) ----------------------------
   # Same platforms as the release image, so a Dockerfile change that breaks
   # one of them fails here and not in the release. The Go binary is
   # cross-compiled on the runner (no QEMU), so arm64 adds about one compile.
-  docker:
+  # The build runs first and alone, so the drills (docker and upgrade-drill
+  # below) start together from its layer cache instead of one after the other.
+  docker-image:
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -299,9 +503,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           platforms: linux/amd64,linux/arm64
@@ -315,9 +521,24 @@ jobs:
           cache-from: type=gha,scope=image
           cache-to: type=gha,scope=image,mode=max
 
+  # The required check `docker`: smoke test, install, backup, PostgreSQL
+  # upgrade and image scan against the amd64 image from that cache.
+  docker:
+    needs: [changes, docker-image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
       # The runner's architecture again, from the cache above, into the local
       # Docker daemon for the smoke test and the scan.
-      - name: Load the amd64 image
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Load the amd64 image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -330,27 +551,32 @@ jobs:
 
       # The production docker-compose.yml with throwaway secrets: healthcheck,
       # /api/health and an admin login against the real image.
-      - name: Smoke test (compose stack)
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Smoke test (compose stack)
         run: scripts/smoke-image.sh mnema-talk:ci
 
       # doc/deployment.md "Fresh install" in an empty directory: the compose
       # file and .env.example of this checkout, throwaway secrets, up --wait,
       # health and the Owner's sign-in.
-      - name: Fresh install (doc/deployment.md)
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Fresh install (doc/deployment.md)
         run: scripts/fresh-install-check.sh mnema-talk:ci
 
       # scripts/backup.sh and restore.sh (--verify and --yes) end to end:
       # seeded message and upload come back, later changes are gone.
-      - name: Backup/restore drill (compose stack)
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Backup/restore drill (compose stack)
         run: scripts/backup-drill.sh mnema-talk:ci
 
       # Mnema Talk 0.4 ran PostgreSQL 17 on another volume: the current
       # compose file must refuse to start on it, and upgrade-postgres.sh
       # must carry the data over.
-      - name: PostgreSQL 17 -> 18 upgrade drill
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: PostgreSQL 17 -> 18 upgrade drill
         run: scripts/postgres-upgrade-drill.sh mnema-talk:ci
 
-      - name: Install trivy (pinned, checksum verified)
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Install trivy (pinned, checksum verified)
         run: |
           set -euo pipefail
           archive="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
@@ -363,7 +589,8 @@ jobs:
 
       # Fixable HIGH/CRITICAL vulnerabilities in the OS packages and the Go
       # binary fail the build (and so the release, which waits for CI).
-      - name: Scan image
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Scan image
         run: |
           "$RUNNER_TEMP/trivy" image --scanners vuln --severity HIGH,CRITICAL \
             --ignore-unfixed --exit-code 1 --no-progress mnema-talk:ci
@@ -381,23 +608,25 @@ jobs:
   # A registry outage is retried a few times and then fails the leg with a
   # clear message; nothing is skipped and the job is not continue-on-error.
   # The required checks are named "upgrade-drill (<version>)", one per leg.
-  # Waits for the docker job so the image layers come from its build cache.
+  # Waits for the docker-image job so the image layers come from its build cache.
   upgrade-drill:
-    needs: docker
+    needs: [changes, docker-image]
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        from: ['0.8.16', '0.9.0', '1.0.0']
+        from: ['0.8.16', '0.9.0', '1.0.0', '1.1.0']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - name: Load the amd64 image
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Load the amd64 image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -408,7 +637,8 @@ jobs:
             REVISION=${{ github.sha }}
           cache-from: type=gha,scope=image
 
-      - name: Upgrade drill (${{ matrix.from }} -> this build)
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Upgrade drill (${{ matrix.from }} -> this build)
         env:
           FROM_VERSIONS: ${{ matrix.from }}
         run: |
@@ -416,7 +646,8 @@ jobs:
           scripts/upgrade-drill.sh mnema-talk:ci | tee "$RUNNER_TEMP/upgrade-drill.log"
           echo "- upgrade ${{ matrix.from }}: $(grep -E '^==> upgrade drill passed' "$RUNNER_TEMP/upgrade-drill.log")" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Restore drill (back up on ${{ matrix.from }}, restore into this build, refuse downgrade)
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Restore drill (back up on ${{ matrix.from }}, restore into this build, refuse downgrade)
         env:
           FROM_VERSION: ${{ matrix.from }}
         run: |
@@ -425,15 +656,28 @@ jobs:
           echo "- restore ${{ matrix.from }}: $(grep -E '^==> backup drill passed' "$RUNNER_TEMP/backup-drill.log")" >> "$GITHUB_STEP_SUMMARY"
 
   # -- Browser smoke test: login, chat message, talk, against the real binary -
-  e2e:
+  # Four jobs, each with a server, database and Owner of its own: the 85-odd
+  # specs used to run one after another on one worker, all as the same account
+  # and so on one API rate budget (tests/fixtures.ts paces them). A shard is a
+  # fresh stack, so nothing is shared between them and fixtures.ts is untouched.
+  # Playwright deals the spec files out evenly (--shard=i/4). The required check
+  # `e2e` is the job at the end of this section.
+  e2e-chromium:
+    name: e2e-shard (${{ matrix.shard }}/4)
+    needs: changes
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         id: go
         with:
           go-version-file: go.mod
@@ -441,7 +685,8 @@ jobs:
           # job, so whichever job finished first decided what all of them got.
           cache: false
 
-      - name: Go module + build cache
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Go module + build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -451,7 +696,8 @@ jobs:
           restore-keys: |
             go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
           cache: npm
@@ -461,11 +707,13 @@ jobs:
 
       # Browsers only; the system packages come from the step below, and
       # e2e/run.sh skips the browser download when the cached revision is present.
-      - name: Playwright version
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Playwright version
         id: playwright
         run: echo "version=$(jq -r '.packages["node_modules/playwright-core"].version' e2e/package-lock.json)" >> "$GITHUB_OUTPUT"
 
-      - name: Playwright browser cache
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Playwright browser cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
@@ -476,44 +724,117 @@ jobs:
       # e2e/run.sh until the job timed out. e2e/ci-install-deps.sh bounds each
       # attempt, retries on another mirror, and the downloaded .debs are cached
       # per Playwright version and browser.
-      - name: Playwright system dependencies cache
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Playwright system dependencies cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/apt-archives
           key: apt-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-webkit
 
-      - name: Install browser system dependencies
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Install browser system dependencies
         timeout-minutes: 10
         run: e2e/ci-install-deps.sh chromium webkit
 
-      - name: Run browser smoke test
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Run browser smoke test
         env:
           E2E_INSTALL_BROWSER: "1"
           E2E_BROWSERS: chromium webkit
-          E2E_ONLY: --project=chromium --project=mobile-chromium --project=mobile-webkit
+          E2E_BLOB: "1"
+          E2E_ONLY: --project=chromium --project=mobile-chromium --project=mobile-webkit --shard=${{ matrix.shard }}/4
         run: e2e/run.sh
+
+      # The blob report of every shard, merged by e2e-report into one HTML report.
+      - name: Upload Playwright blob report
+        if: ${{ !cancelled() && hashFiles('e2e/blob-report/*') != '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-blob-report-${{ matrix.shard }}
+          path: e2e/blob-report/
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Upload Playwright traces and screenshots
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: e2e-results
+          name: e2e-results-${{ matrix.shard }}
           path: |
             e2e/test-results/
             e2e/server.log
           if-no-files-found: ignore
           retention-days: 7
 
+  # One readable report (failures with traces and screenshots) for all shards.
+  e2e-report:
+    needs: [changes, e2e-chromium]
+    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - run: npm ci --no-audit --no-fund
+        working-directory: e2e
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: e2e-blob-report-*
+          path: e2e/all-blob-reports
+          merge-multiple: true
+
+      - name: Merge the shard reports
+        working-directory: e2e
+        run: npx playwright merge-reports --reporter=html ./all-blob-reports
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-report
+          path: e2e/playwright-report/
+          if-no-files-found: error
+          retention-days: 7
+
+  # The required check: unchanged name, succeeds only if every shard did.
+  e2e:
+    needs: [e2e-chromium]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All e2e shards succeeded
+        env:
+          RESULT: ${{ needs.e2e-chromium.result }}
+        run: |
+          echo "result: $RESULT"
+          [ "$RESULT" = success ]
+
   # -- Other engines: every spec that does not need a sealed call on WebKit (iOS,
   # Safari, installed PWAs) and a smoke subset on Firefox. Not a required check
   # until both have run stable (see doc/product-status.md).
   e2e-browsers:
-    name: e2e (${{ matrix.label }})
+    needs: changes
+    name: e2e (${{ matrix.browser }}${{ matrix.browser == 'webkit' && format(' {0}', matrix.shard) || '' }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
+        browser: [webkit, firefox]
+        # WebKit runs in two halves (about 16 minutes as one job); Firefox is
+        # short and runs whole, so its second half is dropped.
+        shard: ['1/2', '2/2']
+        exclude:
+          - browser: firefox
+            shard: '2/2'
         include:
           # Playwright's Linux WebKit has no RTCRtpScriptTransform (nor
           # createEncodedStreams or RTCEncodedAudioFrame; same 26.6 build as on
@@ -522,19 +843,18 @@ jobs:
           # runs on macOS WebKit locally (evidence in doc/product-status.md); this
           # list is every other spec, plus browser-sealing.spec.ts for the refusal.
           - browser: webkit
-            label: webkit
             only: "--project=webkit account-delete.spec.ts active-members.spec.ts audit.spec.ts bot-members.spec.ts bots.spec.ts browser-sealing.spec.ts crypto-state.spec.ts drafts.spec.ts layout.spec.ts mentions.spec.ts message-moderation.spec.ts moderation.spec.ts notifications.spec.ts onboarding.spec.ts polls.spec.ts pwa.spec.ts search.spec.ts sidebar-layout.spec.ts two-factor.spec.ts unread-jump.spec.ts upload-limit.spec.ts webhooks-outgoing.spec.ts webhooks-ui.spec.ts webhooks.spec.ts"
+          # late-join.spec.ts also asserts the AI noise filter, which does not run
+          # on the Linux Firefox of CI; it passes on macOS (see doc/product-status.md).
           - browser: firefox
-            # late-join.spec.ts also asserts the AI noise filter, which does not run
-            # on the Linux Firefox of CI; it passes on macOS (see doc/product-status.md).
-            label: firefox
             only: "--project=firefox smoke.spec.ts browser-sealing.spec.ts key-lifecycle.spec.ts search.spec.ts mentions.spec.ts screenshare.spec.ts"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         id: go
         with:
           go-version-file: go.mod
@@ -542,7 +862,8 @@ jobs:
           # job, so whichever job finished first decided what all of them got.
           cache: false
 
-      - name: Go module + build cache
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Go module + build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -552,7 +873,8 @@ jobs:
           restore-keys: |
             go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
           cache: npm
@@ -562,11 +884,13 @@ jobs:
 
       # Browsers only; the system packages come from the step below, and
       # e2e/run.sh skips the browser download when the cached revision is present.
-      - name: Playwright version
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Playwright version
         id: playwright
         run: echo "version=$(jq -r '.packages["node_modules/playwright-core"].version' e2e/package-lock.json)" >> "$GITHUB_OUTPUT"
 
-      - name: Playwright browser cache
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Playwright browser cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
@@ -577,21 +901,24 @@ jobs:
       # e2e/run.sh until the job timed out. e2e/ci-install-deps.sh bounds each
       # attempt, retries on another mirror, and the downloaded .debs are cached
       # per Playwright version and browser.
-      - name: Playwright system dependencies cache
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Playwright system dependencies cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/apt-archives
           key: apt-${{ runner.os }}-${{ steps.playwright.outputs.version }}-${{ matrix.browser }}
 
-      - name: Install browser system dependencies
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Install browser system dependencies
         timeout-minutes: 10
         run: e2e/ci-install-deps.sh ${{ matrix.browser }}
 
-      - name: Run browser smoke test
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Run browser smoke test
         env:
           E2E_INSTALL_BROWSER: "1"
           E2E_BROWSERS: ${{ matrix.browser }}
-          E2E_ONLY: ${{ matrix.only }}
+          E2E_ONLY: ${{ matrix.only }} ${{ matrix.browser == 'webkit' && format('--shard={0}', matrix.shard) || '' }}
         run: e2e/run.sh
 
       - name: Upload Playwright traces and screenshots

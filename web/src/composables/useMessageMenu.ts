@@ -6,10 +6,11 @@ import type { ContextMenuItem } from '../components/menuTypes'
 import type { useMessageActions } from './useMessageActions'
 import {
   MessageSquare, Pencil, Trash2, SmilePlus, Reply,
-  Link as LinkIcon, Copy, Bookmark, BookmarkPlus, BookmarkX, Forward, Pin, PinOff, Eraser, History
+  Link as LinkIcon, Copy, Bookmark, BookmarkPlus, BookmarkX, Forward, Pin, PinOff, Eraser, History, AlarmClock
 } from '@lucide/vue'
 import { openEditHistory } from '../lib/editHistory'
 import { openForward } from '../lib/forwardDialog'
+import { openLater } from '../lib/laterDialog'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
@@ -20,6 +21,7 @@ import { previewText } from '../lib/replies'
 import { shortcodesForEditing } from '../lib/customEmoji'
 import { t } from '../i18n'
 import { messageSafetyItems } from './dmMenuItems'
+import { boxOf, type AnchorBox } from '../lib/floatingPosition'
 
 type MessageActions = ReturnType<typeof useMessageActions>
 
@@ -94,11 +96,17 @@ function basicItems(msg: Message, { actions, reply, copy }: MenuDeps): ContextMe
   items.push({
     label: t('chat.copyLink'),
     icon: LinkIcon,
-    action: () => copy(`${window.location.origin}/c/${chatStore.activeChannel?.id}/m/${msg.id}`, 'chat.copiedLink')
+    action: () => copy(`${window.location.origin}${chatStore.linkTo(chatStore.activeChannel?.id ?? msg.channel_id, { messageId: msg.id })}`, 'chat.copiedLink')
   })
   items.push(markUnreadItem(msg))
   const features = useServerFeaturesStore()
   if (features.has('saved')) items.push(savedItem(msg))
+  if (features.has('reminders')) {
+    items.push({
+      label: t('later.remindMenu'), icon: AlarmClock,
+      action: () => openLater({ kind: 'remind', messageId: msg.id, excerpt: previewText(msg.content) || t('chat.attachment') })
+    })
+  }
   if (features.has('forward')) {
     items.push({ label: t('forward.menu'), icon: Forward, action: () => openForward({ messageId: msg.id, excerpt: previewText(msg.content) || t('chat.attachment') }) })
   }
@@ -181,10 +189,10 @@ export function useMessageMenu({ actions, reply }: { actions: MessageActions; re
   const toasts = useToastStore()
 
   // Bound to <ContextMenu>; also used for other menus of the view.
-  const state = ref<{ open: boolean; x: number; y: number; items: ContextMenuItem[] }>({ open: false, x: 0, y: 0, items: [] })
+  const state = ref<{ open: boolean; x: number; y: number; anchor: AnchorBox | null; items: ContextMenuItem[] }>({ open: false, x: 0, y: 0, anchor: null, items: [] })
 
-  function show(x: number, y: number, items: ContextMenuItem[]) {
-    state.value = { open: true, x: x || 0, y: y || 0, items }
+  function show(x: number, y: number, items: ContextMenuItem[], anchor: AnchorBox | null = null) {
+    state.value = { open: true, x: x || 0, y: y || 0, anchor, items }
   }
 
   function close() {
@@ -202,9 +210,9 @@ export function useMessageMenu({ actions, reply }: { actions: MessageActions; re
 
   const itemsFor = (msg: Message) => messageItems(msg, { actions, reply, copy })
 
-  function openAt(x: number, y: number, msg: Message) {
+  function openAt(x: number, y: number, msg: Message, anchor: AnchorBox | null = null) {
     actions.closePicker()
-    show(x, y, itemsFor(msg))
+    show(x, y, itemsFor(msg), anchor)
   }
 
   // Keyboard (no pointer position): at the message's own position.
@@ -219,11 +227,12 @@ export function useMessageMenu({ actions, reply }: { actions: MessageActions; re
     else openAt(e.clientX, e.clientY, msg)
   }
 
-  // The ⋯ button in the hover bar: below the button.
+  // The ⋯ button in the hover bar: the menu belongs to the button (below it,
+  // or above it and against its right edge when there is no room).
   function openFromButton(e: MouseEvent, msg: Message) {
     if (!(e.currentTarget instanceof Element)) return
     const rect = e.currentTarget.getBoundingClientRect()
-    openAt(rect.left, rect.bottom + 4, msg)
+    openAt(rect.left, rect.bottom + 4, msg, boxOf(rect))
   }
 
   return { state, show, close, itemsFor, onContextMenu, openFromButton, openAtElement }

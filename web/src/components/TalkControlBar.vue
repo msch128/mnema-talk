@@ -15,6 +15,9 @@ import { usePermissionsStore } from '../stores/permissions'
 import { useWebRTC } from '../composables/useWebRTC'
 import { useMenuState } from '../composables/useNavMenus'
 import ContextMenu from './ContextMenu.vue'
+import TalkReactButton from './TalkReactButton.vue'
+import { useStage } from '../composables/useStage'
+import { blockedButton } from './talkButtons'
 import { t } from '../i18n'
 
 const props = defineProps({
@@ -29,8 +32,14 @@ const voiceStore = useVoiceStore()
 const permissions = usePermissionsStore()
 // The server drops what the member may not send; these only say so up front.
 const room = computed(() => voiceStore.currentChannelId ?? '')
-const canSpeak = computed(() => permissions.canIn(room.value, 'speak'))
-const canVideo = computed(() => permissions.canIn(room.value, 'video'))
+// In a Stage, talk power comes on top of Speak and Video.
+const stage = useStage(() => voiceStore.currentChannelId)
+stage.muteWithoutTalkPower(() => voiceStore.isConnected)
+const canSpeak = computed(() => permissions.canIn(room.value, 'speak') && stage.iAmSpeaker.value)
+const canVideo = computed(() => permissions.canIn(room.value, 'video') && stage.iAmSpeaker.value)
+const speakHint = computed(() => (stage.isStage.value && !stage.iAmSpeaker.value ? t('stage.noPower') : t('talk.noSpeak')))
+const videoHint = computed(() => (stage.isStage.value && !stage.iAmSpeaker.value ? t('stage.noPower') : t('talk.noVideo')))
+const reactOpen = ref(false)
 const { leaveVoiceChannel, startScreenShare, stopScreenShare, applyAudioSettings, toggleCamera } = useWebRTC()
 
 function toggleScreenShare() {
@@ -100,7 +109,7 @@ function onFocusIn(e: FocusEvent) {
 function onFocusOut(e: FocusEvent) {
   if (!(e.currentTarget instanceof Node && e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget))) keyboardFocus.value = false
 }
-const pinned = computed(() => hovered.value || keyboardFocus.value || more.state.open)
+const pinned = computed(() => hovered.value || keyboardFocus.value || more.state.open || reactOpen.value)
 watch(pinned, v => emit('update:pinned', v), { immediate: true })
 
 // A tap on the hidden bar only brings it back: no invisible button fires.
@@ -120,6 +129,7 @@ function onClickCapture(e: MouseEvent) {
 const btn = 'inline-flex items-center justify-center gap-1.5 rounded-full shrink-0 transition active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent focus-visible:ring-offset-2 focus-visible:ring-offset-mnema-elevated'
 const icon = computed(() => `${btn} ${props.compact ? 'w-9 h-9 max-md:w-11 max-md:h-11' : 'w-10 h-10 max-md:w-11 max-md:h-11'}`)
 const wide = computed(() => `${btn} ${props.compact ? 'w-9 h-9 max-md:w-11 max-md:h-11' : 'h-10 max-md:h-11 px-4 text-sm font-semibold'}`)
+const sep = 'w-px h-6 bg-mnema-border mx-0.5 shrink-0'
 const neutral = 'bg-mnema-surface text-mnema-text hover:bg-mnema-hover'
 const danger = 'bg-mnema-danger text-white hover:bg-mnema-danger/90'
 const accent = 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover'
@@ -147,10 +157,10 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
     <button
       type="button"
       data-testid="talk-mute"
-      :class="[icon, voiceStore.isMuted ? danger : neutral]"
+      :class="[icon, !canSpeak ? blockedButton : voiceStore.isMuted ? danger : neutral]"
       :aria-pressed="voiceStore.isMuted ? 'true' : 'false'"
       :disabled="!canSpeak"
-      v-tooltip="!canSpeak ? t('talk.noSpeak') : voiceStore.isMuted ? t('voice.unmute') : t('voice.mute')"
+      v-tooltip="!canSpeak ? speakHint : voiceStore.isMuted ? t('voice.unmute') : t('voice.mute')"
       @click="voiceStore.toggleMute"
     >
       <MicOff v-if="voiceStore.isMuted" class="w-5 h-5" aria-hidden="true" />
@@ -169,12 +179,14 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
       <Headphones v-else class="w-5 h-5" aria-hidden="true" />
     </button>
 
+    <div v-if="!compact" :class="sep" aria-hidden="true"></div>
+
     <button
       type="button"
       :class="[icon, voiceStore.isCameraOn ? accent : neutral]"
       :aria-pressed="voiceStore.isCameraOn ? 'true' : 'false'"
       :disabled="!canVideo && !voiceStore.isCameraOn"
-      v-tooltip="!canVideo ? t('talk.noVideo') : voiceStore.isCameraOn ? t('talk.stopCamera') : t('talk.startCamera')"
+      v-tooltip="!canVideo ? videoHint : voiceStore.isCameraOn ? t('talk.stopCamera') : t('talk.startCamera')"
       @click="toggleCamera"
     >
       <Video v-if="voiceStore.isCameraOn" class="w-5 h-5" aria-hidden="true" />
@@ -182,30 +194,33 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
     </button>
 
     <button
-      v-if="!compact"
-      type="button"
-      :class="[icon, voiceStore.allCamerasOff ? accent : neutral]"
-      :aria-pressed="voiceStore.allCamerasOff ? 'true' : 'false'"
-      v-tooltip="voiceStore.allCamerasOff ? t('talk.allCamerasOn') : t('talk.allCamerasOff')"
-      @click="voiceStore.setAllCamerasOff(!voiceStore.allCamerasOff)"
-    >
-      <EyeOff v-if="voiceStore.allCamerasOff" class="w-5 h-5" aria-hidden="true" />
-      <Eye v-else class="w-5 h-5" aria-hidden="true" />
-    </button>
-
-    <button
       type="button"
       :class="[wide, voiceStore.isScreenSharing ? accent : neutral]"
       :aria-pressed="voiceStore.isScreenSharing ? 'true' : 'false'"
       :disabled="!canVideo && !voiceStore.isScreenSharing"
-      v-tooltip="!canVideo ? t('talk.noVideo') : voiceStore.isScreenSharing ? t('voice.stopShare') : t('voice.share')"
+      v-tooltip="!canVideo ? videoHint : voiceStore.isScreenSharing ? t('voice.stopShare') : t('voice.share')"
       @click="toggleScreenShare"
     >
       <Monitor class="w-5 h-5" aria-hidden="true" />
       <span v-if="!compact">{{ voiceStore.isScreenSharing ? t('talk.stopShareShort') : t('talk.shareShort') }}</span>
     </button>
 
+    <TalkReactButton :button-class="[icon, neutral].join(' ')" @update:open="reactOpen = $event" />
+
     <template v-if="!compact">
+      <div :class="sep" aria-hidden="true"></div>
+
+      <button
+        type="button"
+        :class="[icon, voiceStore.allCamerasOff ? accent : neutral]"
+        :aria-pressed="voiceStore.allCamerasOff ? 'true' : 'false'"
+        v-tooltip="voiceStore.allCamerasOff ? t('talk.allCamerasOn') : t('talk.allCamerasOff')"
+        @click="voiceStore.setAllCamerasOff(!voiceStore.allCamerasOff)"
+      >
+        <EyeOff v-if="voiceStore.allCamerasOff" class="w-5 h-5" aria-hidden="true" />
+        <Eye v-else class="w-5 h-5" aria-hidden="true" />
+      </button>
+
       <button
         v-if="voiceStore.isScreenSharing"
         type="button"
@@ -254,7 +269,7 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
       <Ellipsis class="w-5 h-5" aria-hidden="true" />
     </button>
 
-    <div class="w-px h-6 bg-mnema-border mx-0.5 shrink-0" aria-hidden="true"></div>
+    <div :class="sep" aria-hidden="true"></div>
 
     <button
       type="button"

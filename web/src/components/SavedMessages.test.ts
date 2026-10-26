@@ -7,7 +7,8 @@ import SavedMessages from './SavedMessages.vue'
 import { useChatStore } from '../stores/chat'
 import { useSavedStore } from '../stores/saved'
 import { useToastStore } from '../stores/toast'
-import { t } from '../i18n'
+import { dateTime } from '../lib/time'
+import { locale, t } from '../i18n'
 import { channelFixture, fixtureId, messageFixture, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
@@ -59,7 +60,18 @@ describe('SavedMessages', () => {
     await w.find('[data-testid="saved-button"]').trigger('click')
     apiMock.mockRejectedValueOnce(new Error('offline'))
     await openPanel(w)
-    expect(w.find('[role="alert"]').text()).toBe(t('saved.failed'))
+    expect(w.find('[role="alert"]').text()).toContain(t('saved.failed'))
+  })
+
+  it('offers to try again after a failed load, and writes the date like the other lists', async () => {
+    apiMock.mockRejectedValueOnce(new Error('offline'))
+    const w = mountSaved()
+    await openPanel(w)
+    const now = new Date().toISOString()
+    apiMock.mockResolvedValueOnce(page([{ ...entry(30, 'back again'), message: messageFixture({ id: fixtureId(30), content: 'back again', created_at: now }) }]))
+    await w.get('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(w.get('[data-testid="saved-open"]').text()).toContain(dateTime(now, locale.value))
   })
 
   it('shows a message the member can no longer see as unavailable and lets them remove it', async () => {

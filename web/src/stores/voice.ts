@@ -5,6 +5,7 @@ import { setSubscriptionSink, isCameraHidden, setCameraHidden, toggleCameraHidde
 import { watchScreen, unwatchScreen, focusScreen, focusOwnScreen, setRemoteScreen, removeRemoteScreen, handleMediaState, handleScreenViewers, handleScreenLayers, handleScreenQuality, handleLayersWanted, setScreenChoice, viewersOf, resetRemoteMedia } from './voice/screens'
 import { updateUser, setVoiceRooms, joinedAtOf, setVoiceSnapshot, handleVoiceStateUpdate, handleSpeakingEvent, handleMuteState, muteStateOf, isSpeaking, setChannel, disconnect } from './voice/room'
 import { installStage } from './voice/cameras'
+import { handleStageHand, handleStageTalkPower, handleTalkReaction, hasTalkPower } from './voice/stage'
 
 export type { RTCConnectionStats } from '../lib/rtcStats'
 export type { ScreenQuality } from '../lib/streamQuality'
@@ -64,6 +65,7 @@ function exposedState(cs: VoiceState, stage: ReturnType<typeof installStage>) {
     remoteScreenStream: cs.remoteScreenStream,
     channelUsers: cs.channelUsers,
     roomStartedAt: cs.roomStartedAt,
+    talkReactions: cs.talkReactions,
     speakingUsers: cs.speakingUsers
   }
 }
@@ -117,6 +119,10 @@ function exposedActions(cs: VoiceState) {
     handleSpeakingEvent: bind(handleSpeakingEvent),
     handleMuteState: bind(handleMuteState),
     muteStateOf: bind(muteStateOf),
+    handleStageHand: bind(handleStageHand),
+    handleStageTalkPower: bind(handleStageTalkPower),
+    handleTalkReaction: bind(handleTalkReaction),
+    hasTalkPower: bind(hasTalkPower),
     isSpeaking: bind(isSpeaking),
     toggleMute: bind(toggleMute),
     toggleDeafen: bind(toggleDeafen),

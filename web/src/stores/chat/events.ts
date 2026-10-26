@@ -2,16 +2,19 @@ import type { ServerEvent, ServerEventPayloads, ServerEventType } from '../../ty
 import { useToastStore } from '../toast'
 import { useEmojiStore } from '../emoji'
 import { useSavedStore } from '../saved'
+import { useLaterStore } from '../later'
 import { useForwardQuotesStore } from '../forwardQuotes'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
 import { useBlocksStore } from '../blocks'
+import { useEventsStore } from '../events'
 import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../lib/moderation'
 import { snapshotToMap, applyPresenceUpdate } from '../../lib/presence'
 import { MAX_EPHEMERAL } from './types'
 import type { Cx } from './state'
 import { fetchChannels } from './channels'
-import { fetchDms, isDm, noteDmMessage, onDmCreated, onDmMemberAdded, onDmMemberRemoved } from './dms'
+import { fetchDms, isDm, noteDmMessage, noteDmMessageChanged, onDmCreated, onDmMemberAdded, onDmMemberRemoved } from './dms'
+import { onDmPrefsUpdated } from './dmPrefs'
 import { applyActivity, countMessageOf, fetchMembers, refreshMemberStats, updateUserEverywhere } from './members'
 import { applyToMessage, bumpReplyCount, countReply, insertMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
 import { onThreadFollowUpdated } from './threadFollow'
@@ -20,6 +23,7 @@ import { fetchReadState, isReadingActiveChannel } from './readState'
 import { notificationLevel, refreshNotifications } from './notifySettings'
 import { applyPoll } from './polls'
 import { onPinnedMaybeDeleted, onPinsChanged } from './pins'
+import { onTalkLeader } from './talks'
 import { closeThread } from './threads'
 import { clearTypingForUser, handleTypingEvent } from './typing'
 
@@ -156,6 +160,7 @@ function onMessageDelete(cx: Cx, p: Payload<'message_delete'>) {
   cs.threadReplies.value = cs.threadReplies.value.filter(m => m.id !== p.id)
   onOriginalDeleted(cx, p.id)
   if (p.parent_id) bumpReplyCount(cx, p.parent_id, -1)
+  noteDmMessageChanged(cx, p.channel_id)
   if (cs.activeThread.value?.id === p.id) closeThread(cx)
 }
 
@@ -187,9 +192,12 @@ const HANDLERS: Handlers = {
   // The caller blocked or unblocked someone in another session.
   block_updated: () => { void useBlocksStore().load() },
   saved_updated: (_cx, p) => { if (p) useSavedStore().onUpdated(p) },
+  reminder_update: (_cx, p) => { if (p) void useLaterStore().onReminderEvent(p) },
+  scheduled_message_update: (_cx, p) => { if (p) void useLaterStore().onScheduledEvent(p) },
   dm_created: (cx, p) => { if (p) onDmCreated(cx, p) },
   dm_member_added: (cx, p) => { if (p) onDmMemberAdded(cx, p) },
   dm_member_removed: (cx, p) => { if (p) onDmMemberRemoved(cx, p) },
+  dm_prefs_updated: (cx, p) => { if (p) onDmPrefsUpdated(cx, p) },
   roles_changed: cx => {
     const permissions = usePermissionsStore()
     permissions.loadRoles()
@@ -214,6 +222,7 @@ const HANDLERS: Handlers = {
     applyToMessage(cx, p.id, m => Object.assign(m, p))
     useForwardQuotesStore().invalidate()
     onOriginalEdited(cx, p)
+    noteDmMessageChanged(cx, p.channel_id)
   },
   message_delete: onMessageDelete,
   pins_changed: (cx, p) => { if (p) onPinsChanged(cx, p) },
@@ -242,11 +251,24 @@ const HANDLERS: Handlers = {
   screen_layers_wanted: ({ voiceStore }, p) => voiceStore.handleLayersWanted(p),
   voice_speaking: ({ voiceStore }, p) => voiceStore.handleSpeakingEvent(p),
   voice_mute_state: ({ voiceStore }, p) => voiceStore.handleMuteState(p),
+  stage_hand: ({ voiceStore }, p) => voiceStore.handleStageHand(p),
+  stage_talk_power: ({ voiceStore }, p) => voiceStore.handleStageTalkPower(p),
+  talk_reaction: ({ voiceStore }, p) => voiceStore.handleTalkReaction(p),
   // An admin removed me from voice; the call ends locally.
+  talk_leader: onTalkLeader,
+  // Joining a Create-a-Talk lobby opened a Talk: the voice layer joins it.
+  talk_moved: ({ cs }, p) => { cs.talkMovedHandler?.(p) },
   voice_kicked: ({ cs, voiceStore }, p) => {
     if (cs.voiceKickedHandler) cs.voiceKickedHandler(p)
     else if (voiceStore.currentChannelId) voiceStore.disconnect()
-  }
+  },
+  forum_tags_changed: ({ cs }, p) => {
+    cs.forumTagsSignal.value = { channelId: p.channel_id, seq: (cs.forumTagsSignal.value?.seq ?? 0) + 1 }
+    cs.forumTagsChangedHandler?.(p)
+  },
+  event_update: (_cx, p) => { if (p) useEventsStore().handleEventUpdate(p) },
+  event_delete: (_cx, p) => { if (p) useEventsStore().handleEventDelete(p.id) },
+  event_reminder: (_cx, p) => { if (p) useEventsStore().handleEventReminder(p) }
 }
 
 export function handleWSEvent(cx: Cx, event: ServerEvent) {

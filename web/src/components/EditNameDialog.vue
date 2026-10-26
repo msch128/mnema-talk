@@ -8,9 +8,10 @@ import { ref, computed } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { nextSortOrder } from '../lib/channelLayout'
-import { durationLabel } from '../lib/moderation'
 import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
+import SlowModePicker from './SlowModePicker.vue'
+import ChannelAutoDeleteField from './ChannelAutoDeleteField.vue'
 
 const props = defineProps({
   kind: { type: String as PropType<'channel' | 'category'>, default: 'channel' }, // 'channel' | 'category'
@@ -24,14 +25,10 @@ const isCreate = computed(() => !props.entity)
 const isChannel = computed(() => !isCreate.value && props.kind === 'channel')
 const name = ref(props.entity?.name || '')
 const topic = ref((props.entity && 'topic' in props.entity ? props.entity.topic : '') || '')
+const MAX_TOPIC = 255
 // Slow mode (seconds between two messages of a member); 0 = off.
-const SLOW_MODE_CHOICES = [0, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 21600] as const
 const slowMode = ref(props.entity && 'slow_mode_seconds' in props.entity ? props.entity.slow_mode_seconds : 0)
-const slowModeChoices = computed(() => (SLOW_MODE_CHOICES as readonly number[]).includes(slowMode.value) ? SLOW_MODE_CHOICES : [...SLOW_MODE_CHOICES, slowMode.value].sort((a, b) => a - b))
-function slowModeLabel(seconds: number): string {
-  if (seconds === 0) return t('moderation.slowModeOff')
-  return durationLabel(seconds)
-}
+const slowModeValid = ref(true)
 const error = ref('')
 const saving = ref(false)
 
@@ -95,30 +92,29 @@ async function submit() {
         <label for="edit-topic" class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
           {{ $t('admin.channelTopicLabel') }}
         </label>
-        <input
+        <textarea
           id="edit-topic"
           v-model="topic"
-          type="text"
-          maxlength="200"
+          rows="2"
+          :maxlength="MAX_TOPIC"
           :placeholder="$t('admin.channelTopicPlaceholder')"
-          class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-hidden focus:border-mnema-accent"
-        />
+          aria-describedby="edit-topic-help"
+          class="w-full resize-none bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-hidden focus:border-mnema-accent"
+        ></textarea>
+        <p id="edit-topic-help" class="flex justify-between gap-2 text-xs text-mnema-tertiary">
+          <span>{{ $t('admin.channelTopicHelp') }}</span>
+          <span class="tabular-nums shrink-0">{{ topic.length }}/{{ MAX_TOPIC }}</span>
+        </p>
       </div>
 
       <div v-if="isChannel" class="stack-1.5">
-        <label for="edit-slow-mode" class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
+        <span class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
           {{ $t('moderation.slowMode') }}
-        </label>
-        <select
-          id="edit-slow-mode"
-          v-model.number="slowMode"
-          data-testid="slow-mode"
-          class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text focus:outline-hidden focus:border-mnema-accent"
-        >
-          <option v-for="s in slowModeChoices" :key="s" :value="s">{{ slowModeLabel(s) }}</option>
-        </select>
-        <p class="text-xs text-mnema-tertiary">{{ $t('moderation.slowModeHint') }}</p>
+        </span>
+        <SlowModePicker v-model="slowMode" v-model:valid="slowModeValid" />
       </div>
+
+      <ChannelAutoDeleteField v-if="isChannel && entity && 'type' in entity" :channel="entity" />
 
       <div class="pt-3 flex items-center justify-end gap-2 border-t border-mnema-hairline">
         <button
@@ -130,7 +126,7 @@ async function submit() {
         </button>
         <button
           type="submit"
-          :disabled="saving || !name.trim()"
+          :disabled="saving || !name.trim() || !slowModeValid"
           class="btn btn-primary h-8 disabled:cursor-not-allowed"
         >
           {{ isCreate ? $t('common.create') : $t('common.save') }}

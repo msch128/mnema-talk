@@ -128,10 +128,7 @@ func TestVoiceJoinOnlyForVoiceChannels(t *testing.T) {
 	text := a.createChannel(admin, "general", "text")
 	voice := a.createChannel(admin, "Lounge", "voice")
 
-	watcher, _, err := admin.dialWS(a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
+	watcher := admin.dialLiveWS(a.origin())
 	joiner, _, err := max.dialWS(a.origin())
 	if err != nil {
 		t.Fatal(err)
@@ -165,10 +162,7 @@ func TestVoiceSurvivesReconnectWithinGrace(t *testing.T) {
 	max := a.register(admin, "max")
 	voice := a.createChannel(admin, "Lounge", "voice")
 
-	watcher, _, err := admin.dialWS(a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
+	watcher := admin.dialLiveWS(a.origin())
 	first, _, err := max.dialWS(a.origin())
 	if err != nil {
 		t.Fatal(err)
@@ -212,10 +206,7 @@ func TestVoiceSurvivesLateUnregisterOfOldSocket(t *testing.T) {
 	max := a.register(admin, "max")
 	voice := a.createChannel(admin, "Lounge", "voice")
 
-	watcher, _, err := admin.dialWS(a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
+	watcher := admin.dialLiveWS(a.origin())
 	old, _, err := max.dialWS(a.origin())
 	if err != nil {
 		t.Fatal(err)
@@ -245,14 +236,8 @@ func TestTypingIsRelayedToOthersAndThrottled(t *testing.T) {
 	text := a.createChannel(admin, "lobby", "text")
 	voice := a.createChannel(admin, "Lounge", "voice")
 
-	watcher, _, err := admin.dialWS(a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
-	typer, _, err := max.dialWS(a.origin())
-	if err != nil {
-		t.Fatal(err)
-	}
+	watcher := admin.dialLiveWS(a.origin())
+	typer := max.dialLiveWS(a.origin())
 
 	typer.send("typing", map[string]any{"channel_id": uuid.New()})
 	if payload, got := watcher.expect("typing", 400*time.Millisecond); got {

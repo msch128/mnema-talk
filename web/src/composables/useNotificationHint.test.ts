@@ -101,12 +101,12 @@ describe('useNotificationHint', () => {
 
   it('builds the level menu with the stored setting ticked and a mute submenu', () => {
     const setLevel = vi.spyOn(chat, 'setNotificationLevel').mockResolvedValue(true)
-    chat.notifySettings = { channels: [{ channel_id: 'ch1', level: 'mentions', muted_until: null }], categories: [] }
+    chat.notifySettings = { channels: [{ channel_id: 'ch1', level: 'mentions', muted_until: null }], categories: [], server: { level: 'all', muted_until: null, suppress_everyone: false } }
     const items = setup().notificationMenuItems('ch1')
     const radios = items.filter(i => i.type === 'radio')
-    expect(radios.map(i => i.type === 'radio' && i.checked)).toEqual([false, false, true])
+    expect(radios.map(i => i.type === 'radio' && i.checked)).toEqual([false, false, true, false])
     const mute = items.find(i => i.type === 'submenu')
-    expect(mute && 'items' in mute ? mute.items.map(i => i.id) : []).toEqual(['mute-15m', 'mute-1h', 'mute-8h', 'mute-24h', 'mute-forever'])
+    expect(mute && 'items' in mute ? mute.items.map(i => i.id) : []).toEqual(['mute-15m', 'mute-1h', 'mute-8h', 'mute-24h'])
     radios[1]?.action?.()
     expect(setLevel).toHaveBeenCalledWith('ch1', 'all', null)
   })

@@ -4,6 +4,7 @@ import type { Channel } from '../types/domain'
 import type { ChatDMMember, ChatDirectMessage } from '../types/rest'
 import { isApiError } from './api'
 import { t } from '../i18n'
+import type { PathDm } from './routePaths'
 
 /** The most members a conversation takes, the caller included (the server's limit). */
 export const DM_MAX_MEMBERS = 10
@@ -52,6 +53,11 @@ export function dmAsChannel(dm: ChatDirectMessage, meId: string | null | undefin
     sort_order: 0,
     user_limit: 0
   }
+}
+
+/** The conversations as addresses name them (/dm/:username, /dm/g/:shortId). */
+export function pathDms(dms: readonly ChatDirectMessage[], meId: string | null | undefined): PathDm[] {
+  return dms.map(dm => ({ id: dm.id, group: dm.group, peer: dmPeer(dm, meId)?.username ?? null }))
 }
 
 const FAILED = { start: 'dm.startFailed', add: 'dm.addFailed', send: 'dm.sendFailed' } as const

@@ -6,10 +6,12 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -36,8 +38,12 @@ func ValidateTarget(ctx context.Context, p *db.Pool, chID uuid.UUID, parentID, r
 // transaction. also, when set, runs in the same transaction (e.g. to record
 // an attachment).
 func InsertMessage(ctx context.Context, p *db.Pool, online OnlineSource, nm NewMessage, also func(tx pgx.Tx, messageID uuid.UUID) error) (uuid.UUID, error) {
+	pending, err := checkAutomod(ctx, p, nm)
+	if err != nil {
+		return uuid.Nil, err
+	}
 	var id uuid.UUID
-	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		var err error
 		if id, err = insertMessageTx(ctx, tx, online, nm); err != nil {
 			return err
@@ -50,7 +56,30 @@ func InsertMessage(ctx context.Context, p *db.Pool, online OnlineSource, nm NewM
 	if err != nil {
 		return uuid.Nil, err
 	}
+	pending.Commit(ctx, id)
 	return id, nil
+}
+
+// checkAutomod applies the automod rules to a member's new message before it
+// is stored: a rule that blocks refuses it, one that only flags is recorded
+// once the message exists (Pending.Commit). Webhook messages are not checked.
+func checkAutomod(ctx context.Context, p *db.Pool, nm NewMessage) (*automod.Pending, error) {
+	if nm.WebhookID != nil {
+		return nil, nil
+	}
+	parts := append([]string{}, nm.ScreenText...)
+	if nm.Title != nil {
+		parts = append(parts, *nm.Title)
+	}
+	content := strings.Join(append(parts, nm.Content), "\n")
+	return automod.Of(p).Check(ctx, automod.Post{ChannelID: nm.ChannelID, UserID: nm.UserID, Content: content, HasAttachment: nm.HasAttachment})
+}
+
+// screenText applies the automod rules to member-written text that is not a
+// message body (a forum title edit, a tag name). messageID is the post being
+// edited, or uuid.Nil.
+func screenText(ctx context.Context, p *db.Pool, channelID, userID, messageID uuid.UUID, text string) (*automod.Pending, error) {
+	return automod.Of(p).Check(ctx, automod.Post{ChannelID: channelID, UserID: userID, Content: text, MessageID: messageID})
 }
 
 // insertMessageTx stores the message, its mentions and, for a thread reply,

@@ -27,6 +27,11 @@ describe('filterCommands', () => {
     expect(filterCommands(list, '').map(c => c.name)).toEqual(['help', 'ping', 'shipping', 'pong'])
     expect(filterCommands(list, 'zzz')).toEqual([])
   })
+  it('keeps the commands of one source together', () => {
+    const builtin = (name: string): BotChannelCommand => ({ ...command(name), builtin: true, bot_name: 'Mnema' })
+    const mixed = [builtin('poll'), { ...command('ping'), bot_name: 'other' }, builtin('pin'), command('pong')]
+    expect(filterCommands(mixed, 'p').map(c => `${c.builtin ? '' : c.bot_name}/${c.name}`)).toEqual(['/poll', '/pin', 'other/ping', 'helper/pong'])
+  })
   it('shows at most eight', () => {
     const many = Array.from({ length: 12 }, (_, i) => command(`c${i}`))
     expect(filterCommands(many, 'c')).toHaveLength(8)

@@ -8,7 +8,9 @@
     "undo": "Rückgängig",
     "create": "Erstellen",
     "name": "Name",
-    "loadMore": "Mehr laden"
+    "loadMore": "Mehr laden",
+    "retry": "Erneut versuchen",
+    "loading": "Wird geladen …"
   },
   "language": {
     "de": "Deutsch",
@@ -59,22 +61,25 @@
     "deleted": "Gelöschtes Mitglied"
   },
   "media": {
-    "sizeMb": "{size} MB"
+    "sizeB": "{size} B",
+    "sizeKb": "{size} KB",
+    "sizeMb": "{size} MB",
+    "sizeGb": "{size} GB"
   },
   "menu": {
     "adminConsole": "Admin-Konsole",
     "legal": "Rechtliches & Datenschutz",
-    "rules": "Community-Regeln"
+    "rules": "Community-Regeln",
+    "notificationSettings": "Benachrichtigungen"
   },
   "account": {
     "menu": "Konto-Menü",
     "editProfile": "Profil bearbeiten",
-    "audio": "Audio",
     "language": "Sprache",
     "signOut": "Abmelden",
     "languageSet": "Sprache auf {language} gestellt. Für dieses Konto gespeichert.",
     "languageFailed": "Die Sprache konnte nicht gespeichert werden. Versuche es noch einmal.",
-    "app": "App & Benachrichtigungen"
+    "settings": "Einstellungen"
   },
   "errors": {
     "unknown": "Unbekannter Fehler",
@@ -158,7 +163,11 @@
       "replyGone": "Die Nachricht, auf die du antwortest, gibt es nicht mehr.",
       "replyElsewhere": "Du kannst nur auf Nachrichten im selben Gespräch antworten.",
       "inviteExists": "Eine Einladung mit diesem Code gibt es schon.",
-      "usernameReserved": "Dieser Benutzername ist reserviert."
+      "usernameReserved": "Dieser Benutzername ist reserviert.",
+      "pollAlreadyVoted": "Du hast in dieser anonymen Umfrage schon abgestimmt. Eine Stimme lässt sich dort nicht ändern.",
+      "pollNoWithdraw": "Eine Stimme in einer anonymen Umfrage lässt sich nicht zurücknehmen.",
+      "automodSend": "Deine Nachricht wurde nicht gesendet: Sie verstößt gegen die Serverregel „{rule}“. Die Moderatoren können das sehen.",
+      "automodEdit": "Deine Änderung wurde nicht gespeichert: Sie verstößt gegen die Serverregel „{rule}“. Die Moderatoren können das sehen."
     },
     "field": {
       "content": "Nachricht",
@@ -212,7 +221,8 @@
     "inviteChecking": "Einladung wird geprüft …",
     "inviteInvalid": "Diese Einladung gilt nicht mehr. Frag nach einer neuen, oder melde dich an, wenn du schon ein Konto hast.",
     "inviteExpires": "Gültig bis {when}",
-    "passwordHint": "Mindestens {count} Zeichen."
+    "passwordHint": "Mindestens {count} Zeichen.",
+    "forgotNoMail": "Passwort vergessen? Dieser Server kann keine E-Mails senden. Eine Person mit Admin-Rechten kann es für dich zurücksetzen."
   },
   "sidebar": {
     "subtitle": "Private Community",
@@ -279,10 +289,10 @@
     "granted": "Benachrichtigungen sind aktiviert.",
     "denied": "Benachrichtigungen sind im Browser blockiert.",
     "channelSettings": "Benachrichtigungen für diesen Kanal",
-    "inheritChannel": "Einstellung der Kategorie verwenden",
-    "inheritCategory": "Standard (alle Nachrichten)",
-    "muteChannel": "Kanal stummschalten",
-    "muteCategory": "Kategorie stummschalten",
+    "inheritChannel": "Standard der Kategorie verwenden",
+    "inheritCategory": "Standard des Servers verwenden",
+    "muteChannel": "Stummschalten für …",
+    "muteCategory": "Stummschalten für …",
     "mute_15m": "Für 15 Minuten",
     "mute_1h": "Für 1 Stunde",
     "mute_8h": "Für 8 Stunden",
@@ -290,16 +300,29 @@
     "mute_forever": "Bis ich es wieder einschalte",
     "mutedUntil": "Bis {time}",
     "mutedIndefinitely": "Stumm",
-    "unmute": "Stummschaltung aufheben"
+    "unmute": "Stummschaltung aufheben",
+    "nothing": "Nichts",
+    "bellMentions": "Nur Erwähnungen",
+    "bellNothing": "Stumm",
+    "serverTitle": "Benachrichtigungen",
+    "serverSubtitle": "Was dich auf diesem Server benachrichtigen darf. Kanäle und Kategorien können das überschreiben.",
+    "serverDefault": "Standard für alle Kanäle",
+    "serverDefaultHint": "Gilt überall dort, wo weder der Kanal noch seine Kategorie eine eigene Einstellung hat. Nachrichten, die dich namentlich ansprechen, kommen bei „Nichts“ weiterhin an.",
+    "muteServer": "Server stummschalten",
+    "muteServerStatus": "Stumm bis {time}",
+    "muteServerForever": "Stumm, bis du es wieder einschaltest",
+    "unmuteServer": "Benachrichtigungen wieder einschalten",
+    "suppressEveryone": "@all und @here unterdrücken",
+    "suppressEveryoneHint": "Ansagen an alle benachrichtigen dich nicht mehr und zählen nicht als Erwähnung.",
+    "serverSaveFailed": "Die Benachrichtigungen konnten nicht gespeichert werden. Versuche es erneut."
   },
   "welcome": {
     "progress": "Schritt {current} von {total}",
     "close": "Einführung überspringen",
     "continue": "Weiter",
-    "skip": "Überspringen",
+    "skip": "Später",
     "welcome": {
-      "title": "Willkommen bei {name}",
-      "fallback": "Schön, dass du da bist. Ein paar kurze Schritte, dann kann es losgehen."
+      "title": "Willkommen bei {name}"
     },
     "rules": {
       "title": "Die Regeln",
@@ -307,7 +330,8 @@
       "accept": "Ich akzeptiere die Regeln"
     },
     "profile": {
-      "title": "Dein Profil"
+      "title": "Dein Profil",
+      "avatarHint": "Klicke auf das Bild, um ein Profilbild hochzuladen. Alles hier kannst du später ändern."
     },
     "notifications": {
       "title": "Immer auf dem Laufenden",
@@ -334,6 +358,8 @@
     "typeTextHint": "Nachrichten und Dateien",
     "typeVoice": "Talk (Sprache)",
     "typeVoiceHint": "Sprechen, chatten und Bildschirm teilen",
+    "typeForum": "Forum",
+    "typeForumHint": "Diskussionen mit Beiträgen und Tags",
     "category": "Kategorie",
     "noCategory": "Ohne Kategorie",
     "newCategory": "+ Neue Kategorie",
@@ -348,6 +374,44 @@
     "topicPlaceholder": "Worum geht es hier?",
     "nameRequired": "Bitte gib einen Namen an.",
     "createFailed": "Der Kanal konnte nicht erstellt werden. Versuche es noch einmal."
+  },
+  "forum": {
+    "untitled": "Unbenannter Beitrag",
+    "lockedBadge": "Gesperrt",
+    "replyCount": "{count} Antworten",
+    "activity": "Aktivität",
+    "newPostTitle": "Neuer Beitrag",
+    "titleLabel": "Titel des Beitrags",
+    "titlePlaceholder": "Worüber möchtest du sprechen?",
+    "tagsLabel": "Tags (bis zu 5)",
+    "contentLabel": "Erste Nachricht",
+    "contentPlaceholder": "Beschreibe dein Thema oder starte die Diskussion …",
+    "submitPost": "Veröffentlichen",
+    "createFailed": "Der Beitrag konnte nicht erstellt werden. Versuche es noch einmal.",
+    "manageTagsTitle": "Forum-Tags verwalten",
+    "addTag": "Tag hinzufügen",
+    "add": "Hinzufügen",
+    "edit": "Bearbeiten",
+    "emojiPlaceholder": "Emoji",
+    "tagNamePlaceholder": "Tag-Name",
+    "maxTagsReached": "Maximale Anzahl an Tags erreicht",
+    "noTags": "Noch keine Tags erstellt.",
+    "addTagFailed": "Der Tag konnte nicht erstellt werden. Versuche es noch einmal.",
+    "updateTagFailed": "Der Tag konnte nicht aktualisiert werden. Versuche es noch einmal.",
+    "deleteTagFailed": "Der Tag konnte nicht gelöscht werden. Versuche es noch einmal.",
+    "manageTags": "Tags verwalten",
+    "newPost": "Neuer Beitrag",
+    "allTags": "Alle",
+    "sortActivity": "Letzte Aktivität",
+    "sortNewest": "Neueste",
+    "loadingPosts": "Beiträge werden geladen …",
+    "emptyTitle": "Noch keine Beiträge",
+    "emptyDescription": "Starte die Unterhaltung und erstelle den ersten Beitrag in diesem Forum.",
+    "emptyTagFilter": "Keine Beiträge für den ausgewählten Tag-Filter gefunden.",
+    "lockPost": "Beitrag sperren",
+    "unlockPost": "Beitrag entsperren",
+    "lockedNotice": "Dieser Beitrag ist gesperrt. Nur Moderatorinnen und Moderatoren können antworten.",
+    "lockFailed": "Der Status konnte nicht geändert werden. Versuche es noch einmal."
   },
   "members": {
     "title": "Mitglieder",
@@ -412,6 +476,7 @@
     "jumpToEnd": "Zum Ende springen",
     "jumpToFirstUnread": "Zur ersten ungelesenen Nachricht",
     "enlargedImage": "Vergrößertes Bild",
+    "openOriginal": "Original öffnen",
     "attachment": "Anhang",
     "unknownUser": "Unbekannt",
     "message": "Nachricht",
@@ -435,7 +500,30 @@
     "search": "Suche",
     "searchPlaceholder": "Nachrichten durchsuchen …",
     "filter": "Filter",
-    "searchHint": "Gib einen Suchbegriff oder einen Filter wie from: oder in: ein",
+    "filterSuggestionsTitle": "Suchfilter",
+    "filterFrom": "Von",
+    "filterIn": "In",
+    "filterMentions": "Erwähnt",
+    "filterHas": "Enthält",
+    "filterDate": "Datum",
+    "filterDateDuring": "Am",
+    "filterDateBefore": "Vor",
+    "filterDateAfter": "Nach",
+    "filterDateToday": "Heute",
+    "chooseDate": "Datum wählen",
+    "filterAuthor": "Absender-Art",
+    "filterFilename": "Dateiname",
+    "sortBy": "Sortierung",
+    "sortLabel": "Ergebnisse sortieren nach",
+    "sortNewest": "Neueste",
+    "sortOldest": "Älteste",
+    "sortRelevance": "Relevanz",
+    "searchResults": "Ergebnisse",
+    "resultsCount": {
+      "one": "{count} Ergebnis",
+      "other": "{count} Ergebnisse"
+    },
+    "searchHint": "Mindestens zwei Zeichen eingeben oder einen Filter wählen",
     "noResults": "Keine Nachrichten gefunden",
     "isTyping": "{name} tippt …",
     "severalTyping": "Mehrere Personen tippen …",
@@ -448,6 +536,7 @@
     "searchUnknownFilter": "Kein passendes Mitglied oder Kanal",
     "searchRemoveFilter": "Filter {filter} entfernen",
     "searchInChannel": "In diesem Kanal suchen",
+    "headerMore": "Mehr",
     "searchFailed": "Die Suche hat nicht geklappt. Versuche es noch einmal.",
     "inThread": "im Thread",
     "searchPinned": "Angeheftet",
@@ -460,7 +549,46 @@
     "moreActions": "Weitere Aktionen",
     "readOnly": "Du darfst in diesem Kanal nicht schreiben.",
     "noAttach": "Du darfst hier keine Dateien anhängen.",
-    "messageRemoved": "Nachricht entfernt"
+    "messageRemoved": "Nachricht entfernt",
+    "searchSyntaxTip": "Tipp: „genaue Wendung“ sucht eine Wendung, -Wort schließt ein Wort aus.",
+    "resultsCountMore": {
+      "one": "{count}+ Ergebnis",
+      "other": "{count}+ Ergebnisse"
+    },
+    "searchSearching": "Suche läuft …",
+    "noResultsFor": "Nichts gefunden für „{query}“.",
+    "noResultsFiltered": "Zu diesen Filtern gibt es keine Treffer.",
+    "searchClearFilters": "Filter entfernen",
+    "searchRetry": "Erneut versuchen",
+    "searchKeyNavigate": "wählen",
+    "searchKeyOpen": "öffnen",
+    "filterMore": "Mehr",
+    "filterPinned": "Angeheftet",
+    "filterDateYesterday": "Gestern",
+    "filterPickMember": "Mitglied suchen …",
+    "filterPickChannel": "Kanal suchen …",
+    "filterFilenamePlaceholder": "Dateiname …",
+    "filterNoMatch": "Keine Treffer",
+    "filterApply": "Übernehmen",
+    "filterHasKinds": {
+      "file": "Datei",
+      "image": "Bild",
+      "video": "Video",
+      "link": "Link",
+      "embed": "Einbettung",
+      "poll": "Umfrage",
+      "edit": "Bearbeitet"
+    },
+    "filterAuthorKinds": {
+      "member": "Mitglied",
+      "bot": "Bot",
+      "webhook": "Webhook"
+    },
+    "searchProblemMember": "Kein Mitglied „{value}“ gefunden. Prüfe den Namen nach {filter}:.",
+    "searchProblemChannel": "Kein Kanal „{value}“ gefunden. Prüfe den Namen nach {filter}:.",
+    "searchProblemDate": "Das Datum „{value}“ nach {filter}: ist nicht lesbar. Nutze JJJJ-MM-TT, heute oder gestern.",
+    "searchProblemOption": "„{value}“ ist kein Wert für {filter}:. Wähle einen von: {options}.",
+    "searchProblemEmpty": "{filter}: braucht einen Wert."
   },
   "thread": {
     "title": "Thread",
@@ -514,6 +642,7 @@
     "mediaUnsupported": "Dieser Browser kann die Medien eines Talks nicht schützen und kann deshalb nicht beitreten. Nutze Chrome oder Edge ab 137, Safari ab 17 oder Firefox ab 129.",
     "mediaUnprotected": "Dieser Browser kann den Talk nicht schützen. Mikrofon, Kamera und Bildschirm bleiben aus.",
     "mediaRekeyed": "Die Medienschlüssel dieses Talks wurden von jemandem im Talk oder vom Server zurückgesetzt. Der Talk richtet neue Schlüssel selbst ein.",
+    "mediaOutdatedClient": "Jemand in diesem Talk nutzt einen veralteten Mnema-Client, der nicht mehr sicher an Talks teilnehmen kann, deshalb kannst du ihn weder hören noch sehen. Bitte ihn, die App zu aktualisieren oder neu zu laden.",
     "mediaRefreshed": "Der Talk wurde nach einer Zeit der Inaktivität aufgefrischt. Seine Medienschlüssel wurden erneuert.",
     "noPermission": "Du darfst diesem Talk nicht beitreten oder darin sprechen."
   },
@@ -715,6 +844,9 @@
       "session": "Sitzungstoken",
       "sessionPurpose": "Signierte Sitzungstoken zur Authentifizierung",
       "sessionRetention": "Max. {days} Tage oder bis zum Abmelden",
+      "moderation": "Moderationsdaten",
+      "moderationPurpose": "Meldungen, Automod-Einträge und private Notizen, die Moderatoren über Mitglieder führen; nie Teil eines Datenexports",
+      "moderationRetention": "Bis die Moderatoren sie löschen; Einträge zu einem gelöschten Konto bleiben unter „Gelöschtes Mitglied“ stehen",
       "rightsHeading": "Ihre Rechte als betroffene Person",
       "rights1Before": "Sie haben nach Art. 15–22 DSGVO jederzeit das Recht auf unentgeltliche ",
       "rightsAccess": "Auskunft",
@@ -775,7 +907,32 @@
     },
     "footer": "© {year} {name} · Alle Rechte vorbehalten"
   },
+  "stage": {
+    "make": "Zur Stage machen",
+    "makeNormal": "Zum normalen Talk machen",
+    "toggleFailed": "Der Talk konnte nicht geändert werden.",
+    "createAs": "Als Stage erstellen",
+    "createHint": "Nur erlaubte Mitglieder sprechen; alle anderen hören zu und können sich melden.",
+    "isStage": "Stage",
+    "speakers": "Sprechende",
+    "audience": "Publikum",
+    "nobodySpeaking": "Noch spricht niemand.",
+    "noAudience": "Noch hört niemand zu.",
+    "raiseHand": "Melden",
+    "lowerHand": "Meldung zurücknehmen",
+    "handRaised": "Hand gehoben",
+    "listening": "Hört zu",
+    "noPower": "Auf einer Stage können nur Sprechende das nutzen. Melde dich, um zu fragen.",
+    "give": "{name} sprechen lassen",
+    "take": "{name} das Wort entziehen",
+    "handsTitle": "Meldungen",
+    "noHands": "Keine Meldungen.",
+    "accept": "{name} sprechen lassen",
+    "acceptShort": "Zulassen",
+    "dismiss": "Meldung von {name} ablehnen"
+  },
   "talk": {
+    "react": "Reagieren",
     "participants": {
       "one": "{count} Teilnehmer",
       "other": "{count} Teilnehmer"
@@ -909,7 +1066,32 @@
     "showParticipants": "Teilnehmer einblenden",
     "noSpeak": "Du darfst hier nicht sprechen.",
     "noVideo": "Du darfst hier kein Video teilen.",
-    "noConnect": "Du darfst diesem Talk nicht beitreten."
+    "noConnect": "Du darfst diesem Talk nicht beitreten.",
+    "lobbyUnavailable": "Der Talk konnte nicht geöffnet werden. Versuch es gleich noch einmal.",
+    "lobbyRateLimited": "Du hast in letzter Zeit viele Talks geöffnet. Versuch es in ein paar Minuten noch einmal.",
+    "leader": "Talk-Leitung",
+    "settings": "Talk-Einstellungen",
+    "settingsTitle": "Einstellungen für {name}",
+    "lobby": "Talk-Lobby („Talk erstellen“)",
+    "lobbyHint": "Wer diesem Talk beitritt, bekommt einen neuen Talk und leitet ihn. Niemand bleibt in der Lobby, und der neue Talk übernimmt Rechte und Limit der Lobby.",
+    "lobbyOpens": "Öffnet beim Beitreten einen neuen Talk",
+    "lobbySaved": "Lobby-Einstellung gespeichert.",
+    "followsLobby": "Dieser Talk übernimmt die Rechte seiner Lobby. Ändere sie in der Lobby.",
+    "presetsTitle": "Wer beitreten darf",
+    "presetEveryone": "Alle",
+    "presetEveryoneHint": "Alle Mitglieder, die diesen Ort sehen, dürfen beitreten.",
+    "presetRoles": "Nur diese Rollen",
+    "presetRolesHint": "Mitglieder ohne eine der gewählten Rollen sehen den Talk nicht und können nicht beitreten.",
+    "presetNoRoles": "Du kannst keine Rollen vergeben.",
+    "presetLimit": "Limit",
+    "presetLimitHint": "Höchstens so viele Mitglieder gleichzeitig. 0 heißt kein Limit.",
+    "limitLabel": "Mitgliederlimit",
+    "presetApply": "Übernehmen",
+    "presetApplied": "Talk aktualisiert.",
+    "inviteFrom": "{name} lädt dich in einen Talk ein",
+    "inviteGeneric": "Du bist in einen Talk eingeladen",
+    "inviteIn": "Du bist dabei",
+    "inviteUnavailable": "Für dich nicht verfügbar"
   },
   "admin": {
     "signedInAs": "Angemeldet als {name} (Owner)",
@@ -926,7 +1108,10 @@
       "bots": "Bots",
       "onboarding": "Willkommen & Regeln",
       "emoji": "Emoji",
-      "reports": "Meldungen"
+      "reports": "Meldungen",
+      "automod": "Automod",
+      "status": "Status",
+      "import": "Import"
     },
     "system": {
       "heading": "System & Version",
@@ -1069,6 +1254,48 @@
         }
       }
     },
+    "operatorStatus": {
+      "heading": "Betriebsstatus",
+      "version": "Version & Build",
+      "revision": "Commit",
+      "goVersion": "Go-Version",
+      "updates": "Updates",
+      "updateAvailable": "Update verfügbar: {latest}",
+      "upToDate": "Server ist aktuell",
+      "checkDisabled": "Release-Prüfung deaktiviert",
+      "autoDeploy": "Auto-Deploy",
+      "reach": "Image-Erreichbarkeit: {reach}",
+      "reachReason": "Grund: {reason}",
+      "sidecarConfigured": "Sidecar konfiguriert",
+      "sidecarNotConfigured": "Sidecar nicht konfiguriert",
+      "database": "Datenbank",
+      "reachable": "Erreichbar",
+      "unreachable": "Nicht erreichbar",
+      "dbSize": "Datenbankgröße",
+      "latestMigration": "Neueste Migration",
+      "appliedMigrations": "Angewandte Migrationen",
+      "pendingMigrations": "Ausstehende Migrationen",
+      "storage": "Objektspeicher",
+      "configured": "Konfiguriert",
+      "notConfigured": "Nicht konfiguriert",
+      "storageUsed": "Belegter Speicher",
+      "diskFree": "Freier Festplattenspeicher",
+      "backup": "Backups & Wiederherstellung",
+      "lastBackupAge": "Letztes Backup",
+      "lastRestoreTestAge": "Letzter Wiederherstellungstest",
+      "backupHostManaged": "Vom Host verwaltet",
+      "backupDocsHint": "Backups laufen auf dem Host; siehe",
+      "backupDocsLink": "Betriebshandbuch",
+      "activity": "Live-Aktivität",
+      "activeSessions": "Aktive Sitzungen",
+      "connectedWs": "Verbundene WebSocket-Clients",
+      "activeTalks": "Aktive Talks",
+      "voiceParticipants": "Sprachteilnehmer",
+      "warnings": "Betreiber-Warnungen",
+      "noWarnings": "Keine aktiven Betreiber-Warnungen",
+      "count": "Häufigkeit: {count}",
+      "since": "Aktiv seit: {since}"
+    },
     "users": "Mitgliederverwaltung",
     "searchUsers": "Mitglieder suchen …",
     "searchUsersLabel": "Mitglieder suchen",
@@ -1206,7 +1433,10 @@
       "tooLong": "Einer der Texte ist zu lang.",
       "saved": "Willkommen und Regeln gespeichert.",
       "dmEnabled": "Direktnachrichten erlauben",
-      "dmEnabledHint": "Wenn aus, kann niemand Direktnachrichten beginnen oder schreiben. Bestehende Gespräche bleiben lesbar."
+      "dmEnabledHint": "Wenn aus, kann niemand Direktnachrichten beginnen oder schreiben. Bestehende Gespräche bleiben lesbar.",
+      "inactivity": "Nach Inaktivität abmelden (Tage)",
+      "inactivityHint": "Eine Sitzung, die so viele Tage keine Anfrage stellt, wird abgemeldet und bekommt keine Benachrichtigungen mehr. Gezählt ab der letzten Nutzung, nicht ab der Anmeldung. 1 bis 365.",
+      "inactivityRange": "Gib eine ganze Zahl von {min} bis {max} ein."
     },
     "mail": {
       "title": "E-Mail (SMTP)",
@@ -1223,7 +1453,31 @@
     "resetTwoFactorTitle": "Zwei-Faktor-Anmeldung von {name} zurücksetzen?",
     "resetTwoFactorBody": "Schaltet die Zwei-Faktor-Anmeldung aus, löscht das Authenticator-Geheimnis und die Recovery-Codes und meldet das Mitglied überall ab. Gedacht für den Fall, dass beides verloren ist. Danach kann es sie neu einschalten.",
     "resetTwoFactorConfirm": "Zurücksetzen",
-    "twoFactorReset": "Zwei-Faktor-Anmeldung zurückgesetzt."
+    "twoFactorReset": "Zwei-Faktor-Anmeldung zurückgesetzt.",
+    "channelTopicHelp": "Steht unter dem Kanalnamen. Halte sie kurz: wofür der Kanal da ist.",
+    "nav": {
+      "community": "Community",
+      "moderation": "Moderation",
+      "integrations": "Integrationen",
+      "operations": "Betrieb",
+      "back": "Zurück zu den Bereichen",
+      "signedIn": "Angemeldet als {name}",
+      "openReports": "{count} offen"
+    },
+    "maxUsesLabel": "Nutzungen",
+    "maxUsesPlaceholder": "Unbegrenzt",
+    "validHoursLabel": "Gültig für (Stunden)",
+    "validHoursPlaceholder": "Unbegrenzt",
+    "presets": "Gültigkeit",
+    "preset": {
+      "day": "1 Tag",
+      "week": "7 Tage",
+      "never": "Unbegrenzt"
+    },
+    "noInvitesHint": "Erstelle oben eine und teile ihren Link.",
+    "showSpent": "{count} verbrauchte oder abgelaufene anzeigen",
+    "hideSpent": "Verbrauchte und abgelaufene ausblenden",
+    "noMediaHint": "Hochgeladene Bilder und Dateien erscheinen hier."
   },
   "profile": {
     "addedBy": "Hinzugefügt von {name}",
@@ -1275,12 +1529,24 @@
     "statusPlaceholder": "Was machst du gerade?",
     "noStatus": "Kein Status gesetzt",
     "clearStatus": "Leeren",
-    "moderateStatus": "Bearbeiten (Moderation)",
+    "moderateStatus": "Status ändern",
     "statusSaved": "Status gespeichert",
     "statusCleared": "Status geleert",
     "displayNameHint": "So sehen dich andere. Dein Username @{username} bleibt gleich. Höchstens {count} Zeichen.",
     "open": "Profil von {name} öffnen",
-    "passwordLink": "Passwort ändern und Anmeldesicherheit"
+    "passwordLink": "Passwort und Konto in den Einstellungen",
+    "clearAfter": "Löschen nach",
+    "expiry": {
+      "hour": "1 Stunde",
+      "tonight": "Heute Nacht (23:59)",
+      "tomorrow": "Morgen früh (08:00)",
+      "never": "Nie",
+      "custom": "Datum und Uhrzeit wählen …"
+    },
+    "expiryPast": "Wähle einen Zeitpunkt in der Zukunft.",
+    "clearsAt": "Wird gelöscht: {time}",
+    "moderationTitle": "Moderation",
+    "rolesTitle": "Rollen"
   },
   "nav": {
     "channelNotFound": "Diesen Kanal gibt es nicht mehr.",
@@ -1422,7 +1688,7 @@
     },
     "allowMultiple": "Mehrere Antworten erlauben",
     "makeAnonymous": "Anonyme Umfrage",
-    "anonymousHint": "Niemand sieht, wer wofür gestimmt hat, auch du und Administratoren nicht. Es werden nur die Summen angezeigt.",
+    "anonymousHint": "Es werden nur die Summen gespeichert: Niemand in der App sieht, wer wofür gestimmt hat, auch du, Moderatoren und Administratoren nicht, und Mnema speichert nie, welche Antwort ein Mitglied gewählt hat. Eine abgeschickte Stimme lässt sich nicht mehr ändern.",
     "post": "Umfrage senden",
     "problem": {
       "question": "Gib eine Frage ein.",
@@ -1459,7 +1725,12 @@
     "someone": "Jemand",
     "more": "+{count} weitere",
     "failed": "Das hat nicht geklappt. Versuche es noch einmal.",
-    "cannotVote": "In diesem Kanal kannst du nicht abstimmen."
+    "cannotVote": "In diesem Kanal kannst du nicht abstimmen.",
+    "anonymousBadgeHint": "Anonyme Umfrage: Niemand in der App, auch keine Moderatoren oder Administratoren, sieht, wer was gewählt hat. Mnema speichert nie, welche Antwort ein Mitglied gewählt hat, nur dass es abgestimmt hat und wie viele Stimmen jede Antwort hat.",
+    "anonymousFinal": "Deine Stimme lässt sich nach dem Abschicken nicht mehr ändern.",
+    "submitVote": "Abstimmen",
+    "youVotedAnonymous": "Du hast abgestimmt. Stimmen in einer anonymen Umfrage lassen sich nicht ändern.",
+    "canChange": "Du kannst deine Stimme ändern, bis die Umfrage endet."
   },
   "mention": {
     "title": "Erwähnen",
@@ -1495,6 +1766,59 @@
     "unavailable": "Das Original ist nicht verfügbar.",
     "deleted": "Das Original wurde gelöscht."
   },
+  "later": {
+    "title": "Erinnerungen und Geplantes",
+    "reminders": "Erinnerungen",
+    "scheduled": "Geplante Nachrichten",
+    "empty": "Hier ist nichts. Nutze „Erinnere mich“ an einer Nachricht oder „Später senden“ neben dem Senden-Knopf.",
+    "failed": "Erinnerungen und geplante Nachrichten ließen sich nicht laden. Versuche es erneut.",
+    "due": "Fällig",
+    "unavailable": "Eine Nachricht, die du nicht mehr sehen kannst",
+    "dismiss": "Ausblenden",
+    "cancel": "Erinnerung abbrechen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "editText": "Nachrichtentext",
+    "rescheduleLabel": "Erneut senden um (optional)",
+    "customLabel": "Datum und Uhrzeit",
+    "draft": "Entwurf",
+    "failedAt": "Wurde um {time} nicht gesendet.",
+    "directMessage": "Direktnachricht",
+    "channelGone": "Ein Kanal, den du nicht sehen kannst",
+    "removeFailed": "Das ließ sich nicht entfernen. Versuche es erneut.",
+    "reason": {
+      "slow_mode": "Der Langsam-Modus hat sie gebremst. Bearbeite sie und wähle eine neue Zeit.",
+      "not_allowed": "Du darfst dort gerade nicht schreiben. Sie bleibt als Entwurf erhalten.",
+      "unavailable": "Der Kanal oder die Nachricht, auf die du antwortest, existiert nicht mehr.",
+      "refused": "Der Server hat das Senden abgelehnt. Sie bleibt als Entwurf erhalten."
+    },
+    "remindMenu": "Erinnere mich",
+    "sendLater": "Später senden",
+    "sendOptions": "Weitere Sendeoptionen",
+    "remindTitle": "Erinnere mich",
+    "scheduleTitle": "Später senden",
+    "remindHint": "Nur du siehst die Erinnerung. Du wirst dann benachrichtigt.",
+    "scheduleHint": "Wird zu dieser Zeit als du gesendet. Deine Rechte werden dann geprüft, nicht jetzt. Nur Text, Anhänge werden nicht gespeichert.",
+    "when": "Wann",
+    "preset": {
+      "in20m": "In 20 Minuten",
+      "in30m": "In 30 Minuten",
+      "in1h": "In 1 Stunde",
+      "in3h": "In 3 Stunden",
+      "tomorrow": "Morgen früh",
+      "custom": "Datum und Uhrzeit wählen …"
+    },
+    "remindConfirm": "Erinnerung setzen",
+    "scheduleConfirm": "Planen",
+    "pastTime": "Wähle einen Zeitpunkt in der Zukunft (höchstens ein Jahr).",
+    "reminderSet": "Wir erinnern dich am {time}.",
+    "scheduledSet": "Geplant für {time}.",
+    "reminderFailed": "Die Erinnerung ließ sich nicht setzen. Versuche es erneut.",
+    "scheduleFailed": "Die Nachricht ließ sich nicht planen. Versuche es erneut.",
+    "reminderDue": "Erinnerung: Eine Nachricht wartet auf dich.",
+    "reminderDueWith": "Erinnerung: {text}",
+    "scheduledFailed": "Eine geplante Nachricht wurde nicht gesendet"
+  },
   "saved": {
     "title": "Gespeicherte Nachrichten",
     "empty": "Noch nichts gespeichert. Speichere eine Nachricht über ihr Menü, um sie hier nur für dich aufzubewahren.",
@@ -1520,7 +1844,7 @@
     "open": "Emoji einfügen",
     "more": "Weitere Emojis",
     "loading": "Emojis werden geladen …",
-    "suggestTitle": "Eigene Emojis",
+    "suggestTitle": "Emojis",
     "admin": {
       "title": "Eigene Emojis",
       "hint": "PNG, GIF oder WebP bis 256 KiB. Bilder werden auf dem Server neu gezeichnet und auf höchstens 128 × 128 Pixel verkleinert. Mitglieder nutzen sie mit :name:. Animierte Emojis müssen GIFs sein.",
@@ -1537,7 +1861,8 @@
       "empty": "Noch keine eigenen Emojis.",
       "full": "Das Limit ist erreicht. Lösche ein Emoji, um Platz zu schaffen.",
       "choose": "Datei wählen",
-      "noFile": "Noch keine Datei"
+      "noFile": "Noch keine Datei",
+      "emptyHint": "Lade oben ein Bild hoch, um das erste hinzuzufügen."
     }
   },
   "activity": {
@@ -1598,7 +1923,13 @@
     "error": "Nicht übernommen. Verbindung prüfen und unterschiedliche unterstützte Tasten wählen.",
     "enabled": "Gaming-Overlay und Sidepeek aktivieren",
     "opacity": "Deckkraft des Sidepeek-Hintergrunds",
-    "gamesHint": "300 Spiele sind enthalten. Ergänze EXE-Namen für weitere Spiele oder Installationsvarianten."
+    "gamesHint": "Hunderte Spiele sind enthalten, Spiele aus deinen Steam-, Epic-, GOG- und EA-Bibliotheken werden automatisch erkannt. Ergänze EXE-Namen für alle anderen Spiele.",
+    "addLast": "Zuletzt genutzte App hinzufügen",
+    "addLastConfirm": "{name} als Spiel hinzufügen?",
+    "addLastNone": "Noch keine andere App im Vordergrund. Wechsle zum Spiel und öffne das Overlay erneut.",
+    "addConfirm": "Hinzufügen",
+    "addCancel": "Abbrechen",
+    "addFailed": "Diese App konnte nicht hinzugefügt werden."
   },
   "perm": {
     "administrator": {
@@ -1700,6 +2031,14 @@
       "name": "Mitglieder rauswerfen",
       "desc": "Mitglieder unterhalb deiner höchsten Rolle überall abmelden und aus ihrem Talk werfen. Sie können sich sofort wieder anmelden."
     },
+    "manage_stage": {
+      "name": "Stages verwalten",
+      "desc": "In einer Stage das Rederecht vergeben und entziehen und Handzeichen beantworten. Wer sie hat, darf in einer Stage immer sprechen."
+    },
+    "manage_events": {
+      "name": "Events verwalten",
+      "desc": "Community-Events erstellen, bearbeiten und absagen."
+    },
     "groups": {
       "general": "Allgemein",
       "text": "Text",
@@ -1744,7 +2083,11 @@
       "moderation": "Moderation",
       "emoji": "Emoji",
       "bot": "Bots",
-      "poll": "Umfragen"
+      "poll": "Umfragen",
+      "automod": "Automod",
+      "report": "Meldungen",
+      "event": "Events",
+      "import": "Importe"
     },
     "actions": {
       "role": {
@@ -1770,7 +2113,9 @@
         "update": "Kanal bearbeitet",
         "delete": "Kanal gelöscht",
         "duplicate": "Kanal dupliziert",
-        "overwrites_set": "Kanalrechte geändert"
+        "overwrites_set": "Kanalrechte geändert",
+        "auto_delete_set": "Automatisches Löschen des Kanals geändert",
+        "auto_delete_run": "Alte Nachrichten automatisch gelöscht"
       },
       "category": {
         "overwrites_set": "Kategorierechte geändert",
@@ -1841,7 +2186,9 @@
         "two_factor_alert": "Wiederholt falsche Zwei-Faktor-Codes",
         "recovery_code_used": "Recovery-Code verwendet",
         "recovery_codes_regenerated": "Recovery-Codes erneuert",
-        "password_reset_mail": "Passwort per E-Mail zurückgesetzt"
+        "password_reset_mail": "Passwort per E-Mail zurückgesetzt",
+        "session_revoke": "Eine Sitzung abgemeldet",
+        "sessions_revoke_others": "Alle anderen Sitzungen abgemeldet"
       },
       "settings": {
         "upload_limit": "Upload-Limit geändert",
@@ -1854,7 +2201,10 @@
         "unban": "Mitglied entsperrt",
         "kick": "Mitglied rausgeworfen",
         "ban_expired": "Sperre abgelaufen",
-        "bulk_delete": "Nachrichten gesammelt gelöscht"
+        "bulk_delete": "Nachrichten gesammelt gelöscht",
+        "note_add": "Moderatornotiz hinzugefügt",
+        "note_edit": "Moderatornotiz bearbeitet",
+        "note_delete": "Moderatornotiz gelöscht"
       },
       "emoji": {
         "create": "Emoji hinzugefügt",
@@ -1873,10 +2223,38 @@
         "command_update": "Bot-Befehl bearbeitet",
         "command_delete": "Bot-Befehl gelöscht"
       },
+      "automod": {
+        "rule_create": "Automod-Regel erstellt",
+        "rule_update": "Automod-Regel bearbeitet",
+        "rule_delete": "Automod-Regel gelöscht",
+        "timeout": "Mitglied von Automod in den Timeout geschickt",
+        "raid": "Raid-Schutz ausgelöst"
+      },
       "admin": {
         "post": "Admin-Aktion"
+      },
+      "report": {
+        "create": "Meldung eingegangen",
+        "resolve": "Meldung abgeschlossen",
+        "delete": "Meldung gelöscht"
+      },
+      "event": {
+        "create": "Event erstellt",
+        "edit": "Event bearbeitet",
+        "cancel": "Event abgesagt",
+        "talk_create": "Talk-Event erstellt",
+        "talk_edit": "Talk-Event bearbeitet",
+        "talk_cancel": "Talk-Event abgesagt"
+      },
+      "import": {
+        "discord": "Discord-Vorlage importiert",
+        "discord_undo": "Discord-Import rückgängig gemacht"
       }
-    }
+    },
+    "hideSignIns": "Anmeldungen ausblenden",
+    "signInsHidden": "{count} Anmeldungen ausgeblendet",
+    "emptyHint": "Änderungen an Rollen, Kanälen, Mitgliedern und Einstellungen werden hier festgehalten.",
+    "reportTarget": "Meldung ({category})"
   },
   "roles": {
     "managedHint": "Verwaltete Rolle: Jeder Bot hat sie, sie lässt sich nicht entfernen.",
@@ -1918,7 +2296,29 @@
     "uploadInvalid": "Gib eine ganze Zahl in MB ein oder lass das Feld leer.",
     "botRoles": "Bot-Rollen",
     "botRoleHint": "Verwaltete Rolle eines Bots: sie lässt sich nicht entfernen.",
-    "botRoleNote": "„{name}“ ist die eigene Rolle eines Bots. Sie entsteht mit dem Bot, folgt seinem Namen und wird mit ihm gelöscht; nur dieser Bot hat sie, und sie lässt sich nicht von Hand umbenennen, jemand anderem geben, dem Bot wegnehmen oder löschen. Farbe und Rechte kannst du ändern. Niemand kann einem Bot Rechte geben, die er selbst nicht hat, und nur der Owner kann einen Bot erhöhen."
+    "botRoleNote": "„{name}“ ist die eigene Rolle eines Bots. Sie entsteht mit dem Bot, folgt seinem Namen und wird mit ihm gelöscht; nur dieser Bot hat sie, und sie lässt sich nicht von Hand umbenennen, jemand anderem geben, dem Bot wegnehmen oder löschen. Farbe und Rechte kannst du ändern. Niemand kann einem Bot Rechte geben, die er selbst nicht hat, und nur der Owner kann einen Bot erhöhen.",
+    "viewAs": {
+      "open": "Server als {name} ansehen",
+      "title": "Server als {name}",
+      "subtitle": "Nur Vorschau. Nichts ändert sich und niemand wird nachgeahmt.",
+      "loading": "Lädt …",
+      "sidebar": "Kanäle, die diese Rolle sieht",
+      "canJoin": "kann beitreten",
+      "cannotJoin": "kann nicht beitreten",
+      "permissionsIn": "Berechtigungen in {name}",
+      "allowed": "erlaubt",
+      "notAllowed": "nicht erlaubt",
+      "administrator": "Diese Rolle hat Administrator: Sie sieht jeden Kanal, den du siehst, und ignoriert Kanalberechtigungen.",
+      "empty": "Diese Rolle sieht keine Kanäle, die du siehst.",
+      "exit": "Vorschau beenden"
+    },
+    "unsavedTitle": "Ungespeicherte Änderungen verwerfen?",
+    "unsavedBody": "Diese Rolle hat Änderungen, die nicht gespeichert sind. Beim Wechsel zu einer anderen Rolle gehen sie verloren.",
+    "discard": "Verwerfen",
+    "keepEditing": "Weiter bearbeiten",
+    "unsaved": "Ungespeicherte Änderungen",
+    "searchPermissions": "Berechtigungen suchen",
+    "noPermissionMatch": "Keine Berechtigung passt."
   },
   "memberRoles": {
     "title": "Rollen von {name}",
@@ -2025,6 +2425,64 @@
       "allow_identity_override": "Beiträge dürfen ihren Benutzernamen selbst festlegen"
     }
   },
+  "events": {
+    "events": "Veranstaltungen",
+    "upcoming": "Bevorstehend",
+    "past": "Vergangen",
+    "noUpcoming": "Keine bevorstehenden Veranstaltungen geplant.",
+    "noPast": "Keine vergangenen Veranstaltungen.",
+    "loadMorePast": "Ältere Veranstaltungen anzeigen",
+    "create": "Veranstaltung erstellen",
+    "createTitle": "Community-Veranstaltung erstellen",
+    "edit": "Veranstaltung bearbeiten",
+    "editTitle": "Community-Veranstaltung bearbeiten",
+    "cancel": "Veranstaltung absagen",
+    "cancelConfirm": "Möchtest du diese Veranstaltung wirklich absagen?",
+    "cancelled": "Abgesagt",
+    "active": "Live",
+    "scheduled": "Geplant",
+    "completed": "Beendet",
+    "title": "Titel",
+    "titlePlaceholder": "z. B. Spieleabend oder Community-Talk",
+    "description": "Beschreibung",
+    "descriptionPlaceholder": "Worum geht es bei der Veranstaltung? (Markdown unterstützt)",
+    "startTime": "Startzeit",
+    "endTime": "Endzeit (optional)",
+    "locationType": "Ortstyp",
+    "locationTalk": "Talk-Kanal",
+    "locationText": "Freitext-Ort",
+    "locationTextPlaceholder": "z. B. Raum 42 oder ein Link",
+    "selectTalk": "Talk-Kanal auswählen",
+    "coverImage": "Titelbild (optional)",
+    "coverAlt": "Titelbild der Veranstaltung",
+    "changeCover": "Titelbild ändern",
+    "removeCover": "Titelbild entfernen",
+    "uploadCover": "Titelbild hochladen",
+    "join": "Beitreten",
+    "rsvp": "Rückmeldung",
+    "going": "Zusagen",
+    "interested": "Interessiert",
+    "notGoing": "Absagen",
+    "rsvpGoing": "Ich komme",
+    "rsvpInterested": "Vielleicht",
+    "rsvpNotGoing": "Kann nicht",
+    "cancelKeep": "Veranstaltung behalten",
+    "goingCount": {
+      "one": "{count} Zusage",
+      "other": "{count} Zusagen"
+    },
+    "interestedCount": {
+      "one": "{count} Vielleicht",
+      "other": "{count} Vielleicht"
+    },
+    "reminderToast": "Erinnerung: „{title}“ beginnt in 15 Minuten!",
+    "save": "Änderungen speichern",
+    "details": "Details",
+    "participants": "Rückmeldungen",
+    "noResponses": "Noch keine Rückmeldungen.",
+    "created": "Veranstaltung erstellt",
+    "updated": "Veranstaltung aktualisiert"
+  },
   "moderation": {
     "timeoutAction": "Auszeit verhängen …",
     "removeTimeout": "Auszeit beenden",
@@ -2094,7 +2552,12 @@
     "slowMode": "Langsammodus",
     "slowModeOff": "Aus",
     "slowModeHint": "Mitglieder warten so lange zwischen zwei Nachrichten. Mitglieder mit „Nachrichten verwalten“ sind ausgenommen.",
-    "slowModeChip": "Langsammodus {time}"
+    "slowModeChip": "Langsammodus {time}",
+    "slowModeInvalid": "Gib eine ganze Zahl ab 1 ein.",
+    "slowModeTooLong": "Der Langsammodus kann höchstens 24 Stunden dauern.",
+    "slowModeCustom": "Eigener Wert",
+    "slowModeUnit": "Einheit",
+    "noBansHint": "Gesperrte Mitglieder erscheinen hier, und du kannst eine Sperre aufheben."
   },
   "editHistory": {
     "menu": "Bearbeitungsverlauf",
@@ -2220,11 +2683,10 @@
       "deleteFor": "Befehl {name} löschen",
       "deleteTitle": "Befehl /{name} löschen?",
       "deleteBody": "Der Bot kann ihn erneut registrieren."
-    }
+    },
+    "emptyHint": "Gib oben einem Bot einen Namen, um ihn anzulegen und sein Token zu erhalten."
   },
   "appSettings": {
-    "title": "App & Benachrichtigungen",
-    "subtitle": "Mnema Talk installieren und auch bei geschlossener App benachrichtigt werden.",
     "installTitle": "Installieren",
     "install_installed": "Mnema Talk ist auf diesem Gerät installiert und läuft in einem eigenen Fenster.",
     "install_available": "Installiere Mnema Talk, um es ohne Browserleiste vom Home-Bildschirm, Dock oder Startmenü zu öffnen.",
@@ -2281,9 +2743,6 @@
     "continue": "Weiter zur Anmeldung"
   },
   "security": {
-    "menu": "Konto & Sicherheit",
-    "title": "Konto & Sicherheit",
-    "subtitle": "Das siehst nur du",
     "email": {
       "title": "E-Mail-Adresse",
       "intro": "Freiwillig. Wird nur zum Bestätigen und zum Zurücksetzen deines Passworts verwendet. Niemand sonst sieht sie, auch der Owner nicht.",
@@ -2354,7 +2813,34 @@
       "deleteButton": "Mein Konto löschen …",
       "deleteType": "Tippe zur Bestätigung deinen Benutzernamen ({name})",
       "deleteConfirm": "Endgültig löschen"
-    }
+    },
+    "sessions": {
+      "title": "Wo du angemeldet bist",
+      "intro": "Die Geräte und Browser, die auf diesem Server in deinem Konto angemeldet sind. Erkennst du eines nicht, melde es ab.",
+      "thisDevice": "Dieses Gerät",
+      "unknownDevice": "Unbekanntes Gerät",
+      "push": "Benachrichtigungen an",
+      "justNow": "gerade eben",
+      "activity": "Aktiv {active} · angemeldet seit {since}",
+      "signOut": "Abmelden",
+      "signOutLabel": "{device} abmelden",
+      "signOutTitle": "{device} abmelden?",
+      "signOutBody": "Dieses Gerät wird abgemeldet und bekommt keine Benachrichtigungen mehr. Mit deinem Passwort kann es sich wieder anmelden.",
+      "signOutThisTitle": "Dieses Gerät abmelden?",
+      "signOutThisBody": "Du wirst hier abgemeldet und musst dich neu anmelden.",
+      "signedOut": "{device} abgemeldet.",
+      "signOutOthers": "Alle anderen Sitzungen abmelden",
+      "signOutOthersTitle": "Alle anderen Sitzungen abmelden?",
+      "signOutOthersBody": "Jedes andere Gerät wird abgemeldet und bekommt keine Benachrichtigungen mehr. Dieses Gerät bleibt angemeldet.",
+      "signedOutOthers": {
+        "one": "Eine andere Sitzung abgemeldet.",
+        "other": "{count} andere Sitzungen abgemeldet."
+      },
+      "onlyThis": "Nur dieses Gerät ist angemeldet.",
+      "inactivity": "Sitzungen, die eine Weile nicht benutzt werden, werden automatisch abgemeldet. Wie lange, legt der Owner fest."
+    },
+    "showPassword": "Zeichen anzeigen",
+    "hidePassword": "Zeichen verbergen"
   },
   "rules": {
     "title": "Community-Regeln"
@@ -2404,13 +2890,48 @@
     "slowDown": "Zu viele Versuche. Warte einen Moment und versuche es dann noch einmal.",
     "searchScope": "Wo gesucht wird",
     "policy": {
-      "title": "Direktnachrichten",
+      "title": "Wer mir Direktnachrichten schicken darf",
       "intro": "Lege fest, wer eine Direktnachricht mit dir beginnen darf. Bestehende Gespräche laufen weiter, und du kannst weiterhin selbst welche beginnen.",
       "everyone": "Alle",
       "everyoneHint": "Jedes Mitglied kann ein Gespräch mit dir beginnen.",
       "nobody": "Niemand",
       "nobodyHint": "Niemand kann ein Gespräch mit dir beginnen.",
       "failed": "Die Einstellung konnte nicht gespeichert werden. Versuche es noch einmal."
+    },
+    "startTalk": "Talk starten",
+    "startTalkFailed": "Der Talk konnte nicht gestartet werden.",
+    "noTalkLobby": "Diese Community hat noch keine Talk-Lobby, die du nutzen kannst. Admins können in den Einstellungen eines Talks eine daraus machen.",
+    "talkInvited": "Einladung gesendet.",
+    "inviteToTalk": "In meinen Talk einladen",
+    "inviteTalkFailed": "Die Einladung konnte nicht gesendet werden.",
+    "previewYou": "Du: {text}",
+    "previewFrom": "{name}: {text}",
+    "previewAttachment": "Anhang",
+    "previewPoll": "Umfrage",
+    "unreadCount": "{n} ungelesen",
+    "mentionCount": "{n} ungelesene Erwähnungen",
+    "memberCount": "{n} Mitglieder",
+    "favourites": "Favoriten",
+    "recent": "Gespräche",
+    "favourite": "Zu den Favoriten",
+    "unfavourite": "Aus den Favoriten entfernen",
+    "moveUp": "Nach oben",
+    "moveDown": "Nach unten",
+    "close": "Gespräch schließen",
+    "actions": "Aktionen für das Gespräch",
+    "markRead": "Als gelesen markieren",
+    "mute": "Gespräch stummschalten",
+    "unmute": "Stummschaltung aufheben",
+    "find": "Gespräch suchen oder beginnen",
+    "findStart": "Beginnen",
+    "findNone": "Kein Treffer",
+    "prefsFailed": "Die Liste konnte nicht geändert werden. Versuche es noch einmal.",
+    "openProfile": "Profil von {name} öffnen",
+    "jumpTo": "Gespräche",
+    "settings": {
+      "title": "Direktnachrichten",
+      "muteAll": "Alle Direktnachrichten stummschalten",
+      "muteAllHint": "Kein Ton, keine Benachrichtigung und keine Hervorhebung für Gespräche. Ungelesene Nachrichten werden weiter gezählt. Ein Gespräch, das du selbst stummschaltest oder wieder laut stellst, behält seine eigene Einstellung."
     }
   },
   "blocks": {
@@ -2429,6 +2950,149 @@
     "collapsed": "Blockierte Nachricht",
     "show": "Anzeigen"
   },
+  "automod": {
+    "title": "Automod",
+    "hint": "Regeln, die jede neue oder bearbeitete Nachricht und jede Registrierung prüfen. Ein Treffer wird blockiert oder nur markiert und erscheint immer unter Meldungen, gekennzeichnet als Automod. Der Owner und Administratoren werden von keiner Regel aufgehalten.",
+    "empty": "Noch keine Regeln.",
+    "kind": {
+      "words": "Verbotene Wörter",
+      "links": "Links",
+      "mentions": "Erwähnungs-Spam",
+      "new_account": "Neue Konten",
+      "raid": "Raid-Schutz"
+    },
+    "about": {
+      "words": "Blockiert oder markiert Nachrichten, die eines dieser Wörter oder eine dieser Wendungen enthalten. Nur ganze Wörter; Groß- und Kleinschreibung ist egal.",
+      "links": "Blockiert oder markiert Nachrichten mit Links: jeden Link, jeden Link außer zu den erlaubten Domains oder nur Links zu den aufgelisteten Domains.",
+      "mentions": "Blockiert oder markiert eine Nachricht, die mehr verschiedene Personen erwähnt als erlaubt.",
+      "new_account": "Hindert gerade beigetretene Konten eine Weile daran, Links oder Dateien zu posten oder überhaupt zu schreiben.",
+      "raid": "Wenn viele Konten in kurzer Zeit beitreten, bekommen die Neuen für eine Weile einen Timeout und die Moderatoren einen Hinweis. Ein Moderator kann den Timeout wie jeden anderen aufheben."
+    },
+    "newTitle": "Neue Regel: {kind}",
+    "editTitle": "Regel bearbeiten",
+    "name": "Name",
+    "nameHint": "Wird dem Mitglied gezeigt, dessen Nachricht blockiert wird, und unter Meldungen.",
+    "words": "Wörter und Wendungen",
+    "wordsHint": "Eines pro Zeile. * steht für beliebige Buchstaben oder Ziffern, cheat* erfasst also auch cheating.",
+    "linkMode": "Welche Links",
+    "linkModes": {
+      "block_all": "Jeden Link blockieren",
+      "allow_list": "Nur diese Domains erlauben",
+      "block_list": "Diese Domains blockieren"
+    },
+    "domains": "Domains",
+    "domainsHint": "Eine pro Zeile, zum Beispiel example.com. Eine Domain gilt auch für ihre Subdomains.",
+    "maxMentions": "Meiste verschiedene Erwähnungen in einer Nachricht",
+    "maxMentionsHint": "@all und @here zählen je einmal. Eine Nachricht mit mehr ist ein Treffer.",
+    "accountAge": "Ein Konto gilt als neu für",
+    "restrict": "Neue Konten dürfen nicht",
+    "restricts": {
+      "links": "Links posten",
+      "attachments": "Dateien anhängen",
+      "links_and_attachments": "Links posten oder Dateien anhängen",
+      "everything": "überhaupt schreiben"
+    },
+    "joins": "Beitritte, ab denen es ein Raid ist",
+    "window": "Innerhalb von",
+    "restrictTime": "Neue einschränken für",
+    "raidHint": "Jedes neue Konto zählt. Die Neuen dieser Zeit und alle, die während des Raids beitreten, bekommen einen Timeout.",
+    "action": "Wenn eine Regel trifft",
+    "actions": {
+      "block": "Nachricht blockieren und den Autor informieren",
+      "flag": "Durchlassen und nur markieren",
+      "blockShort": "Blockiert",
+      "flagShort": "Markiert"
+    },
+    "timeout": "Autor zusätzlich in den Timeout schicken",
+    "noTimeout": "Kein Timeout",
+    "timeoutBadge": "Timeout",
+    "exemptRoles": "Ausgenommene Rollen",
+    "noRoles": "Noch keine Rollen.",
+    "exemptChannels": "Ausgenommene Kanäle",
+    "exemptHint": "Mitglieder mit einer ausgenommenen Rolle und alles, was in einem ausgenommenen Kanal geschrieben wird, überspringen diese Regel. In Direktnachrichten gelten nur die Link- und Erwähnungsregeln.",
+    "enabled": "Regel ist an",
+    "saved": "Regel gespeichert.",
+    "saveFailed": "Die Regel konnte nicht gespeichert werden. Versuche es noch einmal.",
+    "loadFailed": "Die Regeln konnten nicht geladen werden.",
+    "deleteFailed": "Die Regel konnte nicht gelöscht werden. Versuche es noch einmal.",
+    "deleteTitle": "Regel „{name}“ löschen?",
+    "deleteBody": "Sie wirkt sofort nicht mehr. Die Einträge, die sie schon unter Meldungen angelegt hat, bleiben.",
+    "delete": "Regel löschen",
+    "toggle": "Regel „{name}“ ist an",
+    "edit": "„{name}“ bearbeiten",
+    "deleteRule": "„{name}“ löschen",
+    "raidOn": "Ein Raid wird bis {time} gebremst. Neue Mitglieder sind eingeschränkt.",
+    "problem": {
+      "name": "Gib der Regel einen Namen.",
+      "tooManyWords": "Höchstens {max} Wörter.",
+      "tooManyDomains": "Höchstens {max} Domains.",
+      "mentions": "Gib eine Zahl von 1 bis 50 ein.",
+      "joins": "Gib eine Zahl von 2 bis 200 ein."
+    },
+    "summary": {
+      "words": "Wörter und Wendungen: {count}",
+      "links": {
+        "block_all": "Jeder Link",
+        "allow_list": "Nur Links zu {count} aufgelisteten Domains",
+        "block_list": "Links zu {count} aufgelisteten Domains",
+        "block_listEmpty": "Noch keine Domains aufgelistet, nichts wird blockiert",
+        "allow_listEmpty": "Keine Domain erlaubt, jeder Link wird blockiert"
+      },
+      "mentions": "Mehr als {n} verschiedene Erwähnungen",
+      "newAccount": {
+        "links": "Konten unter {age} dürfen keine Links posten",
+        "attachments": "Konten unter {age} dürfen keine Dateien anhängen",
+        "links_and_attachments": "Konten unter {age} dürfen keine Links oder Dateien posten",
+        "everything": "Konten unter {age} dürfen nicht schreiben"
+      },
+      "raid": "Mehr als {joins} Beitritte innerhalb von {window}: Neue eingeschränkt für {restrict}"
+    },
+    "emptyHint": "Regeln prüfen jede Nachricht und Registrierung. Füge oben eine hinzu.",
+    "enabledState": "An",
+    "disabledState": "Aus"
+  },
+  "modHistory": {
+    "tabs": "Profilbereiche",
+    "tabProfile": "Profil",
+    "tabModeration": "Moderation",
+    "strikeCount": "{count} Verwarnungen",
+    "privacy": "Das sehen nur Moderatoren. Das Mitglied bekommt es nie zu sehen, und es ist nicht Teil seines Datenexports.",
+    "loadFailed": "Der Moderationsverlauf konnte nicht geladen werden.",
+    "saveFailed": "Die Notiz konnte nicht gespeichert werden. Versuche es noch einmal.",
+    "deleteFailed": "Die Notiz konnte nicht gelöscht werden. Versuche es noch einmal.",
+    "notes": "Notizen",
+    "noteLabel": "Notiz",
+    "notePlaceholder": "Eine private Notiz für die Moderatoren …",
+    "asStrike": "Als Verwarnung zählen",
+    "add": "Notiz hinzufügen",
+    "noNotes": "Noch keine Notizen.",
+    "strike": "Verwarnung",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "deleteTitle": "Diese Notiz löschen?",
+    "deleteBody": "Die Notiz wird endgültig entfernt.",
+    "timeline": "Verlauf",
+    "noEvents": "Nichts vermerkt.",
+    "someModerator": "Ein Moderator",
+    "reason": "Grund: {reason}",
+    "event": {
+      "timeout": "{actor} hat einen Timeout von {duration} verhängt",
+      "timeout_removed": "{actor} hat den Timeout beendet",
+      "ban": "{actor} hat das Mitglied gesperrt",
+      "banTimed": "{actor} hat das Mitglied für {duration} gesperrt",
+      "unban": "{actor} hat die Sperre aufgehoben",
+      "ban_expired": "Die Sperre ist abgelaufen",
+      "kick": "{actor} hat das Mitglied rausgeworfen",
+      "talk_removal": "{actor} hat das Mitglied aus einem Talk entfernt",
+      "roles": "{actor} hat die Rollen geändert: {changes}",
+      "report": "Gemeldet ({category}), {status}",
+      "automod": {
+        "blocked": "Die Automod-Regel „{rule}“ hat eine Nachricht blockiert",
+        "flagged": "Die Automod-Regel „{rule}“ hat eine Nachricht markiert",
+        "alert": "Die Automod-Regel „{rule}“ hat einen Hinweis ausgelöst"
+      }
+    }
+  },
   "reports": {
     "menu": "Nachricht melden",
     "title": "Nachricht melden",
@@ -2438,7 +3102,8 @@
       "spam": "Spam",
       "harassment": "Belästigung",
       "illegal": "Illegale Inhalte",
-      "other": "Etwas anderes"
+      "other": "Etwas anderes",
+      "automod": "Automod"
     },
     "categoryHint": {
       "spam": "Unerwünschte Werbung, Links oder wiederholte Nachrichten.",
@@ -2466,6 +3131,22 @@
         "all": "Alle"
       },
       "empty": "Hier gibt es keine Meldungen.",
+      "automod": "Automod",
+      "alertWhere": "Server",
+      "raidAlert": "„{rule}“ hat Neue eingeschränkt",
+      "alertText": "Der Raid-Schutz hat bemerkt, dass viele Konten in kurzer Zeit beigetreten sind. Die Neuen haben für eine Weile einen Timeout bekommen. Einen Timeout hebst du im Profil des Mitglieds auf; schließe diesen Eintrag, wenn du ihn dir angesehen hast.",
+      "automodHit": {
+        "blocked": "„{rule}“ hat eine Nachricht von {reported} blockiert",
+        "flagged": "„{rule}“ hat eine Nachricht von {reported} markiert"
+      },
+      "automodDmNotice": "Automod hat in einer Direktnachricht einen Regelverstoß gefunden. Den Text einer Direktnachricht behält es nie, deshalb gibt es keine Kopie.",
+      "automodBlockedNotice": "Die Nachricht wurde blockiert und nie gespeichert. Das ist der abgelehnte Text.",
+      "outcome": {
+        "blocked": "Blockiert",
+        "flagged": "Markiert",
+        "alert": "Raid-Hinweis"
+      },
+      "hits": "{count} Treffer",
       "by": "{reporter} hat {reported} gemeldet",
       "dm": "Direktnachricht",
       "back": "Zurück zu den Meldungen",
@@ -2490,7 +3171,136 @@
       "deleteBody": "Die Meldung und ihre Kopie der Nachrichten werden endgültig entfernt.",
       "deleteFailed": "Die Meldung konnte nicht gelöscht werden. Versuche es noch einmal.",
       "closeFailed": "Die Meldung konnte nicht abgeschlossen werden. Versuche es noch einmal.",
-      "loadFailed": "Die Meldungen konnten nicht geladen werden. Versuche es noch einmal."
+      "loadFailed": "Die Meldungen konnten nicht geladen werden. Versuche es noch einmal.",
+      "emptyHint": "Wenn ein Mitglied eine Nachricht meldet oder Automod eine markiert, erscheint sie hier zur Prüfung.",
+      "quoted": "Gemeldete Nachricht",
+      "timeout": "Auszeit verhängen …",
+      "ban": "Sperren …"
     }
+  },
+  "autoDelete": {
+    "title": "Automatisch löschen",
+    "label": "Alte Nachrichten löschen",
+    "off": "Aus, Nachrichten behalten",
+    "choices": {
+      "1": "Nach 1 Tag",
+      "7": "Nach 7 Tagen",
+      "30": "Nach 30 Tagen",
+      "90": "Nach 90 Tagen"
+    },
+    "periods": {
+      "1": "1 Tag",
+      "7": "7 Tage",
+      "30": "30 Tage",
+      "90": "90 Tage"
+    },
+    "hint": "Nachrichten, die älter sind, werden samt Anhängen automatisch gelöscht, das lässt sich nicht rückgängig machen. Angepinnte Nachrichten bleiben. Direktnachrichten sind nie betroffen.",
+    "apply": "Übernehmen",
+    "confirmTitle": "Alte Nachrichten automatisch löschen?",
+    "confirmBody": "Jede Nachricht in {name}, die älter ist als {period}, wird endgültig gelöscht, innerhalb weniger Minuten. Die Mitglieder sehen dazu einen Hinweis im Kanal.",
+    "confirmAction": "Einschalten",
+    "saved": "Automatisches Löschen aktualisiert.",
+    "failed": "Automatisches Löschen konnte nicht geändert werden. Versuche es erneut.",
+    "chip": "Auto-Löschen: {period}",
+    "tooltip": "Nachrichten, die älter sind als {period}, werden automatisch gelöscht.",
+    "line": "Nachrichten in diesem Kanal werden automatisch gelöscht, sobald sie älter sind als {period}."
+  },
+  "discordImport": {
+    "title": "Struktur eines Discord-Servers importieren",
+    "intro": "Übernimmt die Struktur eines Discord-Servers: Kategorien, Kanäle, Talks und Rollen. Importiert wird nur, was eine Discord-Servervorlage enthält, also keine Nachrichten, Mitglieder oder Emoji. Bestehendes wird nicht verändert, und alles Hinzugefügte lässt sich rückgängig machen.",
+    "howTo": "In Discord: Servereinstellungen, dann Servervorlage öffnen und den Vorlagenlink kopieren.",
+    "linkLabel": "Vorlagenlink oder -code",
+    "linkPlaceholder": "discord.new/abcdef12345",
+    "preview": "Vorschau",
+    "previewing": "Lädt …",
+    "previewFailed": "Die Vorlage konnte nicht angezeigt werden.",
+    "previewTitle": "Das würde angelegt",
+    "previewNote": "Bisher wurde nichts geschrieben.",
+    "counts": {
+      "categories": {
+        "one": "{count} Kategorie",
+        "other": "{count} Kategorien"
+      },
+      "channels": {
+        "one": "{count} Kanal",
+        "other": "{count} Kanäle"
+      },
+      "roles": {
+        "one": "{count} Rolle",
+        "other": "{count} Rollen"
+      }
+    },
+    "structure": "Kategorien und Kanäle",
+    "noCategory": "Ohne Kategorie",
+    "typeText": "Text",
+    "typeVoice": "Talk",
+    "private": "privat",
+    "limit": "bis zu {n} Mitglieder",
+    "rolesTitle": "Rollen",
+    "rolesHint": "Werden unter allen bestehenden Rollen angelegt. Keine davon ist Administrator.",
+    "noPermissions": "Keine Berechtigungen",
+    "notImported": "Nicht importiert: {list}",
+    "adminDropped": "Administrator wird nie importiert.",
+    "everyoneTitle": "@everyone von Discord",
+    "everyoneBody": "Nur zur Information: Deine eigene @everyone-Rolle bleibt unverändert. Bei Discord hatte sie: {list}",
+    "skippedTitle": "Übersprungen, hier ohne Entsprechung",
+    "review": "Prüfen und importieren …",
+    "history": {
+      "title": "Frühere Importe",
+      "empty": "Noch keine Importe.",
+      "row": "{name} · {when}",
+      "undone": "Rückgängig gemacht {when}",
+      "undo": "Import rückgängig machen",
+      "emptyHint": "Importe einer Discord-Server-Vorlage stehen hier, mit Rückgängig."
+    },
+    "confirm": {
+      "title": "Discord-Struktur importieren",
+      "step": "Schritt {n} von 3",
+      "back": "Zurück",
+      "step1": "Das fügt {categories}, {channels} und {roles} am Ende deines Servers hinzu. Bestehendes wird nicht verändert, umbenannt oder entfernt.",
+      "step1Yes": "Ja, hinzufügen",
+      "step2": "Die neuen Rollen erhalten genau diese Berechtigungen und keine anderen. Sie werden unter allen bestehenden Rollen angelegt, und keine davon ist Administrator.",
+      "step2Dropped": "Verworfen, weil Mnema Talk keine sichere Entsprechung hat: {list}",
+      "step2AdminDropped": "Die Administrator-Berechtigung von Discord wird bei jeder Rolle verworfen.",
+      "step2Yes": "Ja, diese Berechtigungen verwenden",
+      "step3Named": "Letzter Schritt. Zur Bestätigung den Servernamen „{name}“ oder IMPORT eingeben.",
+      "step3": "Letzter Schritt. Zur Bestätigung IMPORT eingeben.",
+      "typeLabel": "Bestätigung",
+      "go": "Jetzt importieren",
+      "working": "Importiert …",
+      "failed": "Der Import ist fehlgeschlagen.",
+      "stale": "Die Vorlage oder dieser Server hat sich seit der Vorschau geändert. Bitte die Vorschau neu laden.",
+      "done": "Importiert: {summary}. Unten lässt sich das rückgängig machen."
+    },
+    "undo": {
+      "title": "Diesen Import rückgängig machen?",
+      "body": "Das entfernt genau die Kategorien, Kanäle und Rollen, die dieser Import angelegt hat, und sonst nichts. Was du inzwischen von Hand gelöscht habt, wird übersprungen. Mitglieder, denen eine importierte Rolle zugewiesen wurde, verlieren sie.",
+      "kept": " Bleiben erhalten, weil sie jetzt andere Kanäle enthalten: {list}.",
+      "confirm": "Import rückgängig machen",
+      "messagesTitle": "Kanäle mit Nachrichten löschen?",
+      "messagesBody": "In diesen importierten Kanälen gibt es jetzt Nachrichten. Beim Rückgängigmachen werden die Kanäle samt Nachrichten endgültig gelöscht: {list}",
+      "messagesConfirm": "Kanäle und Nachrichten löschen",
+      "failed": "Der Import konnte nicht rückgängig gemacht werden.",
+      "done": "Import rückgängig gemacht. Entfernt: {summary}.",
+      "keptRoles": " {kept} Rolle(n) bleiben, weil du sie nicht mehr verwalten kannst."
+    }
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "subtitle": "Dein Konto und dieses Gerät. Das siehst nur du.",
+    "nav": "Bereiche der Einstellungen",
+    "group": {
+      "account": "Konto",
+      "device": "Dieses Gerät"
+    },
+    "tab": {
+      "signin": "Anmeldung",
+      "sessions": "Sitzungen",
+      "privacy": "Privatsphäre",
+      "data": "Daten & Konto",
+      "app": "Push & App",
+      "audio": "Audio"
+    },
+    "privacyEmpty": "Auf diesem Server gibt es hier nichts einzustellen."
   }
 }

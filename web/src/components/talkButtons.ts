@@ -12,3 +12,7 @@ export function headerButton(active: boolean) {
 }
 
 export const overlayButton = 'w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-lg text-white transition-colors motion-reduce:transition-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/80'
+
+// A control the member may not use here (an audience member's microphone on a
+// Stage): the quiet grey of "not available", never the red of "muted".
+export const blockedButton = 'bg-mnema-surface text-mnema-tertiary opacity-60 cursor-not-allowed'

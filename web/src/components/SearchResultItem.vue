@@ -29,32 +29,35 @@ const rootParts = computed(() => splitHighlight(previewText(props.root?.snippet)
 
 function formatDate(iso: string) {
   if (!iso) return ''
-  return new Date(iso).toLocaleDateString(locale.value, { month: 'short', day: 'numeric', ...clockTimeOptions(locale.value) })
+  const at = new Date(iso)
+  // Older hits carry their year, so "24 Oct" is never ambiguous.
+  const year = at.getFullYear() === new Date().getFullYear() ? {} : { year: 'numeric' as const }
+  return at.toLocaleDateString(locale.value, { month: 'short', day: 'numeric', ...year, ...clockTimeOptions(locale.value) })
 }
 </script>
 
 <template>
-  <button
+  <div
     :id="`search-result-${index}`"
-    type="button"
     role="option"
     :aria-selected="selected ? 'true' : 'false'"
     :class="[
-      'w-full p-3 rounded-lg text-left transition flex items-start gap-3 group',
+      'flex w-full cursor-pointer items-start gap-3 rounded-lg px-3 py-2 text-left transition',
       selected ? 'bg-mnema-hover' : 'hover:bg-mnema-hover/60'
     ]"
+    @mousedown.prevent
     @click="emit('select', msg)"
   >
     <UserAvatar :user="{ username: msg.username, display_name: msg.display_name, avatar_url: msg.avatar_url }" size="sm" class="mt-0.5" />
 
     <div class="flex-1 min-w-0">
-      <div class="flex items-center gap-2 mb-1">
-        <span class="font-medium text-sm text-mnema-text truncate">{{ shownName(msg) }}</span>
-        <span v-if="channelName" class="px-1.5 py-0.5 rounded-sm bg-mnema-surface border border-mnema-border text-xs text-mnema-muted flex items-center gap-1">
-          <MessageCircle v-if="conversation" class="w-2.5 h-2.5 text-mnema-tertiary" />
-          <Volume2 v-else-if="voice" class="w-2.5 h-2.5 text-mnema-tertiary" />
-          <Hash v-else class="w-2.5 h-2.5 text-mnema-tertiary" />
-          {{ channelName }}
+      <div class="mb-0.5 flex items-center gap-2">
+        <span class="min-w-0 truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
+        <span v-if="channelName" class="flex min-w-0 max-w-[45%] items-center gap-1 rounded-sm border border-mnema-border bg-mnema-surface px-1.5 py-0.5 text-xs text-mnema-muted">
+          <MessageCircle v-if="conversation" class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" />
+          <Volume2 v-else-if="voice" class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" />
+          <Hash v-else class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" />
+          <span class="truncate">{{ channelName }}</span>
         </span>
         <span v-if="msg.parent_id" class="text-xs text-mnema-tertiary flex items-center gap-1">
           <CornerDownRight class="w-3 h-3" />
@@ -66,7 +69,7 @@ function formatDate(iso: string) {
         <span v-if="msg.poll" data-search-marker="poll" class="flex items-center gap-1 text-xs text-mnema-accent">
           <ChartNoAxesColumn class="w-3 h-3" aria-hidden="true" />{{ $t('poll.title') }}
         </span>
-        <span class="text-xs text-mnema-tertiary ml-auto">{{ formatDate(msg.created_at) }}</span>
+        <span class="ml-auto shrink-0 whitespace-nowrap text-xs text-mnema-tertiary">{{ formatDate(msg.created_at) }}</span>
       </div>
 
       <p v-if="root" data-search-root class="mb-1 flex min-w-0 items-baseline gap-1 border-l-2 border-mnema-border pl-2 text-xs text-mnema-tertiary">
@@ -86,6 +89,6 @@ function formatDate(iso: string) {
       </div>
     </div>
 
-    <ArrowRight class="w-4 h-4 text-mnema-tertiary group-hover:text-mnema-text mt-1 opacity-0 group-hover:opacity-100 transition shrink-0" />
-  </button>
+    <ArrowRight v-if="selected" class="mt-1 h-4 w-4 shrink-0 text-mnema-tertiary max-md:hidden" aria-hidden="true" />
+  </div>
 </template>

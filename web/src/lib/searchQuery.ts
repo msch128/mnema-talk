@@ -3,13 +3,16 @@
 // parses and serializes the query line and maps parsed filters to request
 // parameters; resolving names to ids is done against the given members/channels.
 
-export const HAS_KINDS = ['file', 'image', 'video', 'link', 'poll', 'edit'] as const
+export const HAS_KINDS = ['file', 'image', 'video', 'link', 'embed', 'poll', 'edit'] as const
 export type HasKind = typeof HAS_KINDS[number]
 
 export const IS_KINDS = ['pinned'] as const
 export type IsKind = typeof IS_KINDS[number]
 
-export const FILTER_KEYS = ['from', 'in', 'has', 'is', 'before', 'after', 'mentions'] as const
+export const AUTHOR_KINDS = ['bot', 'webhook', 'member'] as const
+export type AuthorKind = typeof AUTHOR_KINDS[number]
+
+export const FILTER_KEYS = ['from', 'in', 'has', 'is', 'before', 'after', 'during', 'mentions', 'author', 'filename'] as const
 export type FilterKey = typeof FILTER_KEYS[number]
 
 export interface SearchFilters {
@@ -19,7 +22,10 @@ export interface SearchFilters {
   is?: IsKind
   before?: string // YYYY-MM-DD
   after?: string // YYYY-MM-DD
+  during?: string // YYYY-MM-DD
   mentions?: string
+  author?: AuthorKind
+  filename?: string
 }
 
 export interface ParsedSearch {
@@ -29,7 +35,7 @@ export interface ParsedSearch {
   invalid: string[]
 }
 
-interface Token { raw: string; key: string; value: string; quoted: boolean }
+interface Token { raw: string; key: string; value: string; quoted: boolean; exclude?: boolean }
 
 const DATE = /^(\d{4})-(\d{2})-(\d{2})$/
 
@@ -45,9 +51,33 @@ function isIsKind(v: string): v is IsKind {
   return (IS_KINDS as readonly string[]).includes(v)
 }
 
+function isAuthorKind(v: string): v is AuthorKind {
+  return (AUTHOR_KINDS as readonly string[]).includes(v)
+}
+
 /** The keys whose values are a fixed word, written in lower case. */
 function isWordKey(key: string): boolean {
-  return key === 'has' || key === 'is'
+  return key === 'has' || key === 'is' || key === 'author'
+}
+
+/** Local calendar day, offsetDays from today, as YYYY-MM-DD. */
+export function isoDay(offsetDays = 0): string {
+  const d = new Date()
+  d.setDate(d.getDate() + offsetDays)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+const DAY_WORDS: Record<string, number> = { today: 0, heute: 0, yesterday: -1, gestern: -1 }
+
+function isDateKey(key: string): boolean {
+  return key === 'before' || key === 'after' || key === 'during'
+}
+
+/** The value as written after "key:", with day words and word values normalized. */
+function readValue(key: FilterKey, value: string): string {
+  if (isWordKey(key)) return value.toLowerCase()
+  const offset = isDateKey(key) ? DAY_WORDS[value.toLowerCase()] : undefined
+  return offset === undefined ? value : isoDay(offset)
 }
 
 /** True for a real calendar date written as YYYY-MM-DD. */
@@ -85,9 +115,10 @@ function readToken(input: string, start: number): { token: Token; end: number } 
     const part = quoted ? readQuoted(input, valueStart) : readWord(input, valueStart)
     return { token: { raw: input.slice(start, part.end), key, value: part.value, quoted }, end: part.end }
   }
-  if (input[start] === '"') {
-    const part = readQuoted(input, start)
-    return { token: { raw: input.slice(start, part.end), key: '', value: part.value, quoted: true }, end: part.end }
+  const exclude = input[start] === '-' && input[start + 1] === '"'
+  if (input[start] === '"' || exclude) {
+    const part = readQuoted(input, exclude ? start + 1 : start)
+    return { token: { raw: input.slice(start, part.end), key: '', value: part.value, quoted: true, exclude }, end: part.end }
   }
   const part = readWord(input, start)
   return { token: { raw: part.value, key: '', value: part.value, quoted: false }, end: part.end }
@@ -109,12 +140,43 @@ function validFilterValue(key: FilterKey, value: string): boolean {
   if (!value) return false
   if (key === 'has') return isHasKind(value)
   if (key === 'is') return isIsKind(value)
-  if (key === 'before' || key === 'after') return isSearchDate(value)
+  if (key === 'author') return isAuthorKind(value)
+  if (key === 'before' || key === 'after' || key === 'during') return isSearchDate(value)
   return true
 }
 
 function setFilter(filters: SearchFilters, key: FilterKey, value: string) {
-  if (key === 'has') { if (isHasKind(value)) filters.has = value } else if (key === 'is') { if (isIsKind(value)) filters.is = value } else filters[key] = value
+  if (key === 'has') {
+    if (isHasKind(value)) filters.has = value
+  } else if (key === 'is') {
+    if (isIsKind(value)) filters.is = value
+  } else if (key === 'author') {
+    if (isAuthorKind(value)) filters.author = value
+  } else {
+    filters[key] = value
+  }
+}
+
+/**
+ * A free-text token as the server reads it: a "quoted phrase" is one term and
+ * -word (or -"phrase") excludes. Quotes are kept only where they carry meaning.
+ */
+function plainTerm(t: Token): string {
+  if (!t.quoted) return t.value
+  const inner = t.value.replace(/"/g, '')
+  if (t.exclude) return `-"${inner}"`
+  return /\s/.test(inner) || inner.startsWith('-') ? `"${inner}"` : inner
+}
+
+/** Terms of the free text worth highlighting in a hit: words and phrases, never excluded ones. */
+export function textTerms(text: string): string[] {
+  const out: string[] = []
+  for (const m of text.matchAll(/(-?)(?:"([^"]*)"?|(\S+))/g)) {
+    if (m[1] && (m[3] || m[2] !== undefined)) continue
+    const term = (m[2] ?? m[3] ?? '').trim()
+    if (term) out.push(term)
+  }
+  return out
 }
 
 /** Parses a query line into free text and filters; later filters of a kind win. */
@@ -123,9 +185,9 @@ export function parseSearchQuery(input: string): ParsedSearch {
   const words: string[] = []
   const invalid: string[] = []
   for (const t of tokenize(input)) {
-    if (!t.key) { words.push(t.value); continue }
+    if (!t.key) { words.push(plainTerm(t)); continue }
     const key = t.key as FilterKey
-    const value = isWordKey(key) ? t.value.toLowerCase() : t.value
+    const value = readValue(key, t.value)
     if (!validFilterValue(key, value)) { invalid.push(t.raw); continue }
     setFilter(filters, key, value)
   }
@@ -145,7 +207,7 @@ export function splitCommitted(input: string): SplitQuery {
   const rest: string[] = []
   tokens.forEach((t, i) => {
     const key = t.key as FilterKey
-    const value = isWordKey(key) ? t.value.toLowerCase() : t.value
+    const value = readValue(key, t.value)
     const done = i < tokens.length - 1 || !endsOpen
     if (t.key && done && validFilterValue(key, value)) setFilter(filters, key, value)
     else rest.push(t.raw)
@@ -205,11 +267,41 @@ export function dayStart(date: string, offsetDays = 0): string {
   return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + offsetDays).toISOString()
 }
 
-const CRITERIA = ['q', 'channel_id', 'author_id', 'mentions', 'has', 'is', 'after', 'before_date']
+/** Local timezone offset as [+-]HH:MM. */
+export function localTimezoneOffset(): string {
+  const offsetMin = -new Date().getTimezoneOffset()
+  const sign = offsetMin >= 0 ? '+' : '-'
+  const abs = Math.abs(offsetMin)
+  const hours = String(Math.floor(abs / 60)).padStart(2, '0')
+  const mins = String(abs % 60).padStart(2, '0')
+  return `${sign}${hours}:${mins}`
+}
 
-/** Whether the parameters hold at least one criterion the server accepts alone. */
+const CRITERIA = ['channel_id', 'author_id', 'mentions', 'has', 'is', 'after', 'before_date', 'during', 'author', 'filename']
+const MIN_TEXT = 2
+
+/**
+ * Whether the parameters hold a criterion the server accepts alone: a filter,
+ * or text with at least two characters that is not only exclusions.
+ */
 export function isSearchable(params: URLSearchParams): boolean {
-  return CRITERIA.some(k => params.has(k))
+  if (CRITERIA.some(k => params.has(k))) return true
+  const wanted = textTerms(params.get('q') ?? '').join('')
+  return [...wanted].length >= MIN_TEXT
+}
+
+export interface ClosedFilterToken { key: FilterKey; value: string; raw: string; valid: boolean; open: boolean }
+
+/** The filter tokens of the line; open is the one still being typed at its end. */
+export function filterTokens(input: string): ClosedFilterToken[] {
+  const tokens = tokenize(input)
+  const endsOpen = !/\s$/.test(input)
+  return tokens.flatMap((t, i) => {
+    if (!t.key) return []
+    const key = t.key as FilterKey
+    const value = readValue(key, t.value)
+    return [{ key, value, raw: t.raw, valid: validFilterValue(key, value), open: endsOpen && i === tokens.length - 1 }]
+  })
 }
 
 /**
@@ -238,5 +330,11 @@ export function buildSearchParams(p: ParsedSearch, lookup: SearchLookup, extra: 
   if (filters.is) params.set('is', filters.is)
   if (filters.after) params.set('after', dayStart(filters.after))
   if (filters.before) params.set('before_date', dayStart(filters.before, 1))
+  if (filters.during) {
+    params.set('during', filters.during)
+    params.set('tz', localTimezoneOffset())
+  }
+  if (filters.author) params.set('author', filters.author)
+  if (filters.filename) params.set('filename', filters.filename)
   return { params, unresolved }
 }

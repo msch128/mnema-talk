@@ -24,7 +24,7 @@ const deletedUsernamePrefix = "deleted-"
 // What happens to what the person wrote:
 //   - their messages stay, authored by "Deleted member", with the text, link
 //     cards and pins removed, as are the kept earlier versions of their
-//     edits (other members' replies and quotes remain);
+//     edits and forum post titles (other members' replies and quotes remain);
 //   - their uploads, avatar and banner are deleted from storage and the database;
 //   - their reactions, poll votes and mentions of them disappear, and so do
 //     the polls they posted (the question was the message text);
@@ -37,20 +37,24 @@ var eraseSteps = []string{
 	`DELETE FROM message_reactions WHERE user_id = $1`,
 	`DELETE FROM message_mentions WHERE user_id = $1`,
 	`DELETE FROM poll_votes WHERE user_id = $1`,
+	`DELETE FROM poll_voters WHERE user_id = $1`,
 	`DELETE FROM polls WHERE message_id IN (SELECT id FROM messages WHERE user_id = $1)`,
 	`DELETE FROM message_edits WHERE editor_id = $1 OR message_id IN (SELECT id FROM messages WHERE user_id = $1)`,
-	`UPDATE messages SET content = '', embeds = '[]'::jsonb, author_name = NULL, is_pinned = FALSE, pinned_at = NULL, pinned_by = NULL, is_edited = FALSE WHERE user_id = $1`,
+	`UPDATE messages SET content = '', title = NULL, embeds = '[]'::jsonb, author_name = NULL, is_pinned = FALSE, pinned_at = NULL, pinned_by = NULL, is_edited = FALSE WHERE user_id = $1`,
 	`DELETE FROM outgoing_queue WHERE convert_from(data, 'UTF8')::jsonb->>'user_id' = $1::text
 		OR convert_from(data, 'UTF8')::jsonb->'reply_to'->>'user_id' = $1::text`,
+	`UPDATE discord_imports SET created_by_name = '' WHERE created_by = $1`,
 	`DELETE FROM invites WHERE created_by = $1`,
 	`DELETE FROM channel_reads WHERE user_id = $1`,
 	`DELETE FROM category_notify WHERE user_id = $1`,
+	`DELETE FROM server_notify WHERE user_id = $1`,
 	`DELETE FROM thread_follows WHERE user_id = $1`,
 	`DELETE FROM slow_mode_posts WHERE user_id = $1`,
 	`DELETE FROM user_roles WHERE user_id = $1`,
 	`DELETE FROM permission_overwrites WHERE user_id = $1`,
 	`DELETE FROM native_session_families WHERE user_id = $1`,
 	`DELETE FROM push_subscriptions WHERE user_id = $1`,
+	`DELETE FROM user_sessions WHERE user_id = $1`,
 	`DELETE FROM native_ciphertext_events WHERE user_id = $1`,
 	`DELETE FROM bot_tokens WHERE created_by = $1`,
 	`UPDATE bots SET created_by = NULL WHERE created_by = $1`,
@@ -64,6 +68,10 @@ var eraseSteps = []string{
 	`DELETE FROM second_factor_failures WHERE user_id = $1`,
 	`DELETE FROM user_blocks WHERE blocker_id = $1 OR blocked_id = $1`,
 	`DELETE FROM saved_messages WHERE user_id = $1`,
+	`DELETE FROM message_reminders WHERE user_id = $1`,
+	`DELETE FROM scheduled_messages WHERE user_id = $1`,
+	`DELETE FROM event_rsvps WHERE user_id = $1`,
+	`UPDATE events SET created_by = NULL WHERE created_by = $1`,
 	// Reports keep their copies of other people's messages, so the person's
 	// own text is blanked in every copy (as reported message or as context),
 	// and the links to their account are cut. The reports stay for the
@@ -107,7 +115,7 @@ const scrubAudit = `UPDATE audit_log SET
 	WHERE actor_id = $1 OR (target_type = 'user' AND target_id = $1::text) OR details::text LIKE '%' || $1::text || '%'`
 
 const anonymise = `UPDATE users SET
-	username = $2, display_name = 'Deleted member', bio = '', avatar_s3_key = NULL, banner_s3_key = NULL, status_text = '',
+	username = $2, display_name = 'Deleted member', bio = '', avatar_s3_key = NULL, banner_s3_key = NULL, status_text = '', status_expires_at = NULL,
 	password_hash = '!deleted', email = NULL, email_verified_at = NULL, presence = 'online', locale = '',
 	onboarding = '{}'::jsonb, rules_accepted_version = 0, last_seen_at = NULL, voice_seconds = 0,
 	timeout_until = NULL, timeout_reason = '', timeout_by = NULL,

@@ -43,7 +43,7 @@ General rules:
 | Variable | Default | Meaning and validation |
 |---|---|---|
 | `JWT_SECRET` | none | Signs session cookies. In production/staging at least 32 characters and not a placeholder (`openssl rand -hex 32`). In development an empty value means a random per-process secret (sessions reset on restart). Changing it logs everyone out. |
-| `SESSION_EXPIRY_HOURS` | `720` | Session lifetime, 1–8760. |
+| `SESSION_EXPIRY_HOURS` | `720` | Session lifetime, 1–8760. An upper bound: a session that is not used for the inactivity limit (see "Sessions and inactivity sign-out") ends earlier. |
 | `INITIAL_LANGUAGE` | `de` | `de` or `en`: the language of the default categories and channels ("Text channels", "Voice hangouts", #general, #media, Lounge, Gaming 4K) on a brand-new installation. Used only when the database is still untouched (one account, no messages, the seeded names); an existing installation is never renamed. Any other value is rejected at startup. |
 | `ADMIN_USERNAME` | `Herzog` | The Owner account (all-powerful, cannot be restricted by anyone; see [roles-and-permissions.md](roles-and-permissions.md)), created on first start when none exists. |
 | `ADMIN_INITIAL_PASSWORD` | empty | Only used for that first start, and required then in production. In development, empty = a random password is generated and logged **once**. A placeholder value is rejected. |
@@ -253,11 +253,45 @@ System; it does not refuse to start, so a trusted-LAN install over `http://`
 keeps working. Behind a TLS-terminating reverse proxy, set `PUBLIC_URL` to the
 public `https://` address.
 
+## Sessions and inactivity sign-out
+
+Each browser sign-in is a session. Members see their own sessions under
+*Settings* > *Sessions* ("Where you are signed in"): a coarse device label
+("Firefox · Linux", parsed from the user agent; neither the raw user agent nor
+an IP address is stored), when the session was created and last used (accurate
+to a few minutes), whether its device gets push notifications, and which one is
+this device. A member can sign one out, which also deletes its push devices, or
+sign out all others. Only a member's own sessions are ever listed or ended
+(`GET /api/auth/sessions`, `DELETE /api/auth/sessions/{id}`,
+`POST /api/auth/sessions/revoke-others`). The admin action "end sessions" on a
+member (`POST /api/admin/users/{id}/sessions/revoke`) is unchanged and ends all
+of them.
+
+A session that makes no authenticated request for more than the **inactivity
+limit** is signed out. It is inactivity, not age: every request or page load
+keeps the session alive, and `SESSION_EXPIRY_HOURS` still caps the total. The
+Owner and Administrators set the limit under *Admin* > *Welcome & rules* (the community
+settings; `session_inactivity_days` of `PUT /api/admin/onboarding`), 1 to 365
+days, default 7. A change applies to running sessions at once.
+
+- A request from an over-limit session is refused (401) immediately; a sweeper
+  (every 10 minutes and at start) then ends it for good, closes its WebSockets
+  and deletes its push devices. Rows of sessions that expired or were replaced
+  by a password change are dropped at the same time.
+- The last use is written at most every 5 minutes per session, so the check
+  costs no write per request. Downtime counts: after a server that was off for
+  longer than the limit starts, sessions idle for that long are signed out.
+- Sessions that were issued before the 1.2 upgrade start their inactivity
+  clock the first time they make a request afterwards. Nobody is signed out by
+  the upgrade itself. A pre-upgrade session that has not made a request since
+  is not listed yet, so "sign out all other sessions" does not reach it; use
+  "Sign out everywhere" (or the admin action) to end those too.
+- The desktop client's native sessions are separate and not affected.
+
 ## Web Push and the installable app
 
 Mnema Talk is an installable web app (manifest, icons and a service worker at
-`/sw.js`). Members can install it from the browser (Account menu > App &
-notifications) and turn on push notifications per device, so they hear about
+`/sw.js`). Members can install it from the browser (*Settings* > *Push & app*) and turn on push notifications per device, so they hear about
 messages while the app is closed. On iPhone and iPad this works for the
 installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
 
@@ -283,7 +317,7 @@ installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
   by hand), unless the member is addressed by name, role or reply.
   A message in a direct message conversation counts as a mention for push and
   is sent urgently; its push names the sender and never a channel.
-- **What a push contains.** Channel name (for a direct message only the sender) and sender are always in it; the start
+- **What a push contains.** Channel name (for a direct message only the sender), channel slug (for direct navigation) and sender are always in it; the start
   of the message (140 characters) only if the member keeps "Show message text"
   on and `PUSH_PREVIEWS` is `user`. The payload is encrypted for the member's
   browser (RFC 8291, `aes128gcm`), so Google, Mozilla, Apple or Microsoft's push
@@ -310,7 +344,9 @@ installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
 - **Sessions.** A device belongs to the session that registered it. When that
   session is signed out, expires, or is revoked (password change or reset, "log
   out everywhere", admin revoke, disabled account), its device stops receiving
-  pushes at once and is deleted within a minute.
+  pushes at once and is deleted within a minute. A session signed out for
+  inactivity, or from "Where you are signed in", loses its devices in the same
+  step.
 - **Housekeeping.** A push service answering 404 or 410 removes the device at
   once; any other refusal or failure counts, and ten in a row remove it. An
   account has at most 10 devices. Deleting a member removes theirs. Signing out
@@ -522,6 +558,7 @@ committed statement and public key.
   the optional features this build has, so a newer web app can hide what an
   older server lacks. In 1.1 it holds `blocks`, `dm`, `reports`, `saved`,
   `forward`, `search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`;
+  1.2 adds `search.filters.v3`, `talks.lobby`, `status.expiry`, `reminders`, `messages.scheduled`, `polls.anonymous`, `channels.auto_delete`, `automod`, `moderation.history`, `ops.status`, `import.discord`, `talks.stage`, `talks.reactions`, `channels.forum`, `events`, `notify.levels.v2` and `dm.v2`;
   names never change meaning ([api-stability.md](api-stability.md)). A 1.0.x
   server sends no list. The compose
   healthcheck and [`scripts/health-check.sh`](../scripts/health-check.sh)
@@ -534,6 +571,24 @@ committed statement and public key.
   operator view (uptime, CPU, memory, traffic, errors, ICE failures, charts
   of the last hour). It reads `GET /api/admin/system/ops` (admin session
   only), not the bearer endpoint.
+- **Admin → Status** (feature key `ops.status`, `GET /api/admin/status`, Owner
+  or Administrator only) shows an operator status overview: server version,
+  update state, database size and migration version, storage reachability and
+  disk free space, backup and restore status, live activity (sessions,
+  WebSocket connections, Talks and participants), and active operator warnings.
+  See [Operator status](#operator-status) below.
+
+## Operator status
+
+The **Admin → Status** tab provides an operator status overview in a single view:
+- **Server version & updates**: Running binary version, git commit, Go runtime version, update availability, and auto-deploy container image status.
+- **Database**: Reachability, database size (`pg_database_size`), applied migration count, and latest migration file.
+- **Object storage & disk**: S3-compatible storage reachability and used media bytes, plus free disk space on the data/upload volume (`MEDIA_DISK_PATH`) when configured and statable.
+- **Backups**: Status of host-level backups and restore verification drills (see [Backups and restore](#backups-and-restore)).
+- **Live activity**: Active sessions, connected WebSocket clients, active Talks, and current voice participants.
+- **Operator warnings**: Active configuration warnings collected by the server (e.g. broad trusted proxies, WebRTC reachability).
+
+The tab is gated by the `ops.status` feature key in `/api/health` and backed by `GET /api/admin/status` (restricted to the Owner and members with the *Administrator* permission; other users receive `403 Forbidden`).
 
 ## Monitoring and alerts
 

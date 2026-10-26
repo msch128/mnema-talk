@@ -7,6 +7,7 @@ import { api } from '../lib/api'
 import { decodeChatPrivacy, type ChatPrivacy } from '../types/rest'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
+import RadioCard from './RadioCard.vue'
 
 const toasts = useToastStore()
 const policy = ref<ChatPrivacy['dm_policy']>('everyone')
@@ -41,19 +42,24 @@ onMounted(load)
 </script>
 
 <template>
-  <div v-if="loaded" class="settings-sub" data-testid="dm-policy" role="radiogroup" aria-labelledby="dm-policy-title">
-    <p id="dm-policy-title" class="settings-subtitle">{{ $t('dm.policy.title') }}</p>
-    <p class="settings-help">{{ $t('dm.policy.intro') }}</p>
-    <label
-      v-for="option in (['everyone', 'nobody'] as const)"
-      :key="option"
-      :class="['flex cursor-pointer items-start gap-3 rounded-lg border px-4 py-3 transition max-md:min-h-11', policy === option ? 'border-mnema-accent/50 bg-mnema-accent/10' : 'border-mnema-border hover:bg-mnema-hover']"
-    >
-      <input type="radio" name="dm-policy" :value="option" :checked="policy === option" :disabled="busy" :data-dm-policy="option" class="mt-1" @change="choose(option)" />
-      <span>
-        <span class="block text-sm font-medium text-mnema-text">{{ $t(`dm.policy.${option}`) }}</span>
-        <span class="block text-xs text-mnema-tertiary">{{ $t(`dm.policy.${option}Hint`) }}</span>
-      </span>
-    </label>
+  <div v-if="loaded" class="space-y-3" data-testid="dm-policy">
+    <div>
+      <h4 id="dm-policy-title" class="settings-subtitle">{{ $t('dm.policy.title') }}</h4>
+      <p class="settings-help">{{ $t('dm.policy.intro') }}</p>
+    </div>
+    <div role="radiogroup" aria-labelledby="dm-policy-title" class="space-y-2">
+      <RadioCard
+        v-for="option in (['everyone', 'nobody'] as const)"
+        :key="option"
+        name="dm-policy"
+        :value="option"
+        :selected="policy === option"
+        :disabled="busy"
+        :title="$t(`dm.policy.${option}`)"
+        :description="$t(`dm.policy.${option}Hint`)"
+        :data-dm-policy="option"
+        @select="choose(option)"
+      />
+    </div>
   </div>
 </template>

@@ -38,6 +38,9 @@ type Hub struct {
 	// Presence, when set, hears every join and leave of a Talk (a quick
 	// rejoin is neither). The audit log listens here. It must not block.
 	Presence func(userID, channelID uuid.UUID, joined bool)
+	// Lobby, when set, opens the temporary Talk a join of a Create-a-Talk
+	// lobby leads to. Without it a lobby is an ordinary Talk.
+	Lobby LobbyOpener
 
 	mu      sync.RWMutex
 	closed  bool // guarded by mu; shutdown rejects further registrations
@@ -102,6 +105,11 @@ type Hub struct {
 	// writes of voice time.
 	voiceGate voiceGate
 	vtimes    voiceTimes
+	// stage holds talk power and raised hands of Stage seats; stageGate and
+	// reactionGate limit Stage commands and live reactions per member.
+	stage        stageBook
+	stageGate    windowGate
+	reactionGate windowGate
 	// userBudgets is the per-account flood guard across connections.
 	userBudgets userBudgets
 }

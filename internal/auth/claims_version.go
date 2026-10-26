@@ -31,6 +31,7 @@ func (s *Sessions) AuthenticateRequest(r *http.Request) (*User, int, error) {
 	if tv != claims.TokenVersion {
 		return nil, 0, errNoSession
 	}
+	s.touch(r, claims)
 	return u, claims.TokenVersion, nil
 }
 

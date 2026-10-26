@@ -7,7 +7,8 @@ import PinnedMessages from './PinnedMessages.vue'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
-import { t } from '../i18n'
+import { dateTime, dayLabel } from '../lib/time'
+import { locale, t } from '../i18n'
 import { channelFixture, fixtureId, messageFixture } from '../test-fixtures.fixture'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
@@ -57,6 +58,29 @@ describe('PinnedMessages', () => {
     await w.find('[data-testid="pinned-button"]').trigger('click')
     await flushPromises()
     expect(w.find('[role="alert"]').exists()).toBe(true)
+  })
+
+  it('offers to try again after a failed load', async () => {
+    apiMock.mockRejectedValueOnce(new Error('offline'))
+    const w = mountPins()
+    await w.find('[data-testid="pinned-button"]').trigger('click')
+    await flushPromises()
+    apiMock.mockResolvedValueOnce([pinned(30, 'back again')])
+    await w.get('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[role="alert"]').exists()).toBe(false)
+    expect(w.get('[data-testid="pinned-item"]').text()).toContain('back again')
+  })
+
+  it('writes dates the way every other list does', async () => {
+    const now = new Date().toISOString()
+    apiMock.mockResolvedValue([messageFixture({ id: fixtureId(30), content: 'x', is_pinned: true, created_at: now, pinned_at: now, pinned_by: { id: fixtureId(4), username: 'mod', display_name: 'Mod' } })])
+    const w = mountPins()
+    await w.find('[data-testid="pinned-button"]').trigger('click')
+    await flushPromises()
+    const item = w.get('[data-testid="pinned-item"]')
+    expect(item.text()).toContain(dateTime(now, locale.value))
+    expect(w.get('[data-testid="pinned-by"]').text()).toContain(dayLabel(now, locale.value))
   })
 
   it('refetches an open list when the server reports a pin change', async () => {

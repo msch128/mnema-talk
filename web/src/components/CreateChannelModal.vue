@@ -3,15 +3,16 @@ import type { PropType } from 'vue'
 import type { Channel, ChannelType } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
 import { ref } from 'vue'
-import { Hash, Volume2, FolderPlus, Plus, AlertCircle } from '@lucide/vue'
+import { Hash, Volume2, MessagesSquare, FolderPlus, Plus, AlertCircle } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 
 const props = defineProps({
   initialType: {
     type: String as PropType<ChannelType>,
-    default: 'text' // 'text' | 'voice'
+    default: 'text' // 'text' | 'voice' | 'forum'
   },
   initialCategoryId: {
     type: String,
@@ -21,11 +22,13 @@ const props = defineProps({
 
 const emit = defineEmits<{ close: []; created: [channel: Channel] }>()
 const chatStore = useChatStore()
+const features = useServerFeaturesStore()
 
 const channelType = ref(props.initialType || 'text')
 const channelName = ref('')
 const selectedCategoryId = ref(props.initialCategoryId || '')
 const channelTopic = ref('')
+const asStage = ref(false)
 const isCreatingCategory = ref(false)
 const newCategoryName = ref('')
 const error = ref('')
@@ -37,7 +40,7 @@ function formatName(val: string) {
 }
 
 function handleNameInput(e: Event) {
-  if (channelType.value === 'text') {
+  if (channelType.value === 'text' || channelType.value === 'forum') {
     channelName.value = formatName((e.target as HTMLInputElement).value)
   } else {
     channelName.value = (e.target as HTMLInputElement).value
@@ -65,7 +68,8 @@ async function handleSubmit() {
       categoryId: catId,
       name: channelName.value.trim(),
       type: channelType.value,
-      topic: channelTopic.value.trim()
+      topic: channelTopic.value.trim(),
+      ...(asStage.value && channelType.value === 'voice' && features.talksStage ? { isStage: true } : {})
     })
 
     emit('created', createdChannel)
@@ -90,7 +94,7 @@ async function handleSubmit() {
       <!-- 1. Channel type -->
       <fieldset class="stack-1.5">
         <legend class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono mb-1.5">{{ $t('channel.type') }}</legend>
-        <div class="grid grid-cols-2 gap-2">
+        <div :class="['grid gap-2', features.forum ? 'grid-cols-3' : 'grid-cols-2']">
           <button
             type="button"
             @click="channelType = 'text'"
@@ -120,8 +124,33 @@ async function handleSubmit() {
               <div class="text-xs text-mnema-tertiary">{{ $t('channel.typeVoiceHint') }}</div>
             </div>
           </button>
+
+          <button
+            v-if="features.forum"
+            type="button"
+            @click="channelType = 'forum'"
+            :aria-pressed="channelType === 'forum' ? 'true' : 'false'"
+            class="choice-card flex items-center gap-2.5 min-w-0"
+            data-testid="channel-type-forum"
+          >
+            <div :class="['w-7 h-7 rounded-md flex items-center justify-center shrink-0', channelType === 'forum' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
+              <MessagesSquare class="w-4 h-4" />
+            </div>
+            <div class="min-w-0">
+              <div class="text-sm font-semibold truncate">{{ $t('channel.typeForum') }}</div>
+              <div class="text-xs text-mnema-tertiary">{{ $t('channel.typeForumHint') }}</div>
+            </div>
+          </button>
         </div>
       </fieldset>
+
+      <label v-if="channelType === 'voice' && features.talksStage" class="flex items-start gap-2.5 text-sm cursor-pointer">
+        <input v-model="asStage" type="checkbox" data-testid="create-stage" class="mt-0.5" />
+        <span>
+          <span class="font-semibold text-mnema-text">{{ $t('stage.createAs') }}</span>
+          <span class="block text-xs text-mnema-tertiary">{{ $t('stage.createHint') }}</span>
+        </span>
+      </label>
 
       <!-- 2. Category -->
       <div class="space-y-1.5">
