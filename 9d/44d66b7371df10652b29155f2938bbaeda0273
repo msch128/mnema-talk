@@ -1,0 +1,16 @@
+README.md
+  h_0ff4f4713441f4 20,358,387-389,393-395
+scripts/screenshots/capture.mjs
+  h_0ff4f4713441f4 80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9d44d66b7371df10652b29155f2938bbaeda0273",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
