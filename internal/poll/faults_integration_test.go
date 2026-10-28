@@ -194,3 +194,20 @@ func TestMessagesWithoutAPollHaveNoPollToAnnounceOrShow(t *testing.T) {
 		t.Fatalf("ending a poll that does not exist: %v, %v", changed, err)
 	}
 }
+
+func TestAnnounceOrLogSwallowsAFailureAfterTheCommit(t *testing.T) {
+	f := newFixture(t)
+	m := f.newPoll(t)
+	ctx := context.Background()
+	rec := &events.Recorder{}
+	broken := NewService(Service{DB: drift(t, f.p, brokenPolls), Events: rec})
+	broken.announceOrLog(ctx, f.channel, m.ID)
+	if n := len(rec.Snapshot()); n != 0 {
+		t.Fatalf("a failed announcement broadcast %d events", n)
+	}
+	good := NewService(Service{DB: f.p, Events: rec})
+	good.announceOrLog(ctx, f.channel, m.ID)
+	if n := len(rec.Snapshot()); n != 1 {
+		t.Fatalf("events after a working announcement = %d, want 1", n)
+	}
+}

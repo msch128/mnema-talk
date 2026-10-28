@@ -3,6 +3,7 @@ package poll
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -155,9 +156,7 @@ func (s *Service) vote(w http.ResponseWriter, r *http.Request) error {
 	if err := Vote(r.Context(), s.DB, rf.message, user.ID, req.OptionIDs); err != nil {
 		return err
 	}
-	if _, err := s.announce(r.Context(), rf.channel, rf.message); err != nil {
-		return err
-	}
+	s.announceOrLog(r.Context(), rf.channel, rf.message)
 	d, err := s.detail(r.Context(), rf.message, user.ID)
 	if err != nil {
 		return err
@@ -169,8 +168,11 @@ func (s *Service) vote(w http.ResponseWriter, r *http.Request) error {
 // auditEnd records that a moderator closed another member's poll.
 func (s *Service) auditEnd(ctx context.Context, rf ref) {
 	var channel, author, question string
-	_ = s.DB.QueryRow(ctx, `SELECT c.name, u.display_name, m.content FROM messages m
-		JOIN channels c ON c.id = m.channel_id JOIN users u ON u.id = m.user_id WHERE m.id = $1`, rf.message).Scan(&channel, &author, &question)
+	if err := s.DB.QueryRow(ctx, `SELECT c.name, u.display_name, m.content FROM messages m
+		JOIN channels c ON c.id = m.channel_id JOIN users u ON u.id = m.user_id WHERE m.id = $1`, rf.message).Scan(&channel, &author, &question); err != nil {
+		// The entry is still worth recording: the ids identify what happened.
+		slog.Warn("load poll for audit failed", "message_id", rf.message, "err", err)
+	}
 	s.Audit.RecordOrLog(ctx, audit.Entry{
 		Action: "poll.end", TargetType: "message", TargetID: rf.message.String(), TargetName: channel, ChannelID: &rf.channel,
 		Details: map[string]any{"channel_id": rf.channel, "channel_name": channel, "author_id": rf.author, "author_name": author, "question": audit.Content(question)},
@@ -211,9 +213,7 @@ func (s *Service) end(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if changed {
-		if _, err := s.announce(r.Context(), rf.channel, rf.message); err != nil {
-			return err
-		}
+		s.announceOrLog(r.Context(), rf.channel, rf.message)
 		if rf.author != user.ID {
 			s.auditEnd(r.Context(), rf)
 		}

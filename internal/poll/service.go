@@ -2,6 +2,7 @@ package poll
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -62,7 +63,13 @@ func (s *Service) Create(ctx context.Context, user *auth.User, channel uuid.UUID
 	}
 	msg, err := chat.GetMessage(ctx, s.DB, id)
 	if err != nil {
-		return nil, err
+		// The poll exists: report it instead of an error that invites a retry
+		// and a second poll. Clients see it on their next load.
+		slog.Error("load created poll message failed", "message_id", id, "err", err)
+		return &chat.Message{
+			ID: id, ChannelID: channel, UserID: user.ID, Content: c.Question,
+			Attachments: []chat.MediaAttachment{}, Reactions: []chat.ReactionSummary{}, Mentions: []uuid.UUID{}, MentionRoles: []uuid.UUID{},
+		}, nil
 	}
 	s.Events.BroadcastChannel(channel, events.MessageCreate, msg)
 	return msg, nil
@@ -93,6 +100,14 @@ func (s *Service) announce(ctx context.Context, channel, messageID uuid.UUID) (*
 	}
 	s.Events.BroadcastChannel(channel, events.PollUpdate, Update{MessageID: messageID, ChannelID: channel, Poll: *p})
 	return p, nil
+}
+
+// announceOrLog announces a poll change that is already committed: a failed
+// announcement must not turn the request into an error, so it is logged.
+func (s *Service) announceOrLog(ctx context.Context, channel, messageID uuid.UUID) {
+	if _, err := s.announce(ctx, channel, messageID); err != nil {
+		slog.Error("announce poll update failed", "message_id", messageID, "err", err)
+	}
 }
 
 // Detail is a poll with the caller's own votes.

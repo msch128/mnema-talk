@@ -76,3 +76,18 @@ func TestSplitAnswersDropsEmptyPieces(t *testing.T) {
 		t.Fatal("empty input gives answers")
 	}
 }
+
+func TestLookAlikeOptionsAreDuplicates(t *testing.T) {
+	for name, pair := range map[string][2]string{
+		"case":                {"Yes", "YES"},
+		"composed/decomposed": {"Café", "Café"},
+		"invisible joiner":    {"Pizza", "Piz​za"},
+		"fullwidth":           {"Pizza", "Ｐizza"},
+	} {
+		in := valid()
+		in.Options = []string{pair[0], pair[1]}
+		if _, err := in.clean(); err == nil {
+			t.Errorf("%s: %q and %q were both accepted", name, pair[0], pair[1])
+		}
+	}
+}
