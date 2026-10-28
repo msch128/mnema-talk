@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.3.0](https://github.com/msch128/mnema-talk/compare/v1.2.6...v1.3.0) (2026-10-28)
+
+
+### Features
+
+* **voice:** disconnect members per Talk through role overwrites ([#472](https://github.com/msch128/mnema-talk/issues/472)) ([f3d9e0b](https://github.com/msch128/mnema-talk/commit/f3d9e0ba72c1377123746166299807865323f4fc))
+
+
+### Performance Improvements
+
+* **chat:** count unread messages through a covering index ([#471](https://github.com/msch128/mnema-talk/issues/471)) ([e1fb7bc](https://github.com/msch128/mnema-talk/commit/e1fb7bc559c093b58dc8180befe2d6a441fd5fba))
+
+
+### Code Refactoring
+
+* **perm:** move the test fixture into permtest ([#473](https://github.com/msch128/mnema-talk/issues/473)) ([3c217d0](https://github.com/msch128/mnema-talk/commit/3c217d0658eec7203c9547ae723b4b1e3aba358c))
+
 ## [1.2.6](https://github.com/msch128/mnema-talk/compare/v1.2.5...v1.2.6) (2026-10-28)
 
 
