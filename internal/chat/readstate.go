@@ -13,18 +13,10 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
-// readStateCountCap bounds the messages counted per channel: a member who
-// never opens a busy channel would otherwise make every read-state request join
-// everything posted since they signed up. Counts stop at the newest cap
-// messages since the last read.
-const readStateCountCap = 1000
-
 // ReadState is one channel's unread summary for one user.
 type ReadState struct {
-	ChannelID uuid.UUID `json:"channel_id" format:"uuid"`
-	// UnreadCount stops at 1000 (the newest unread messages are counted).
-	UnreadCount int `json:"unread_count"`
-	// MentionCount is counted among those messages too.
+	ChannelID    uuid.UUID   `json:"channel_id" format:"uuid"`
+	UnreadCount  int         `json:"unread_count"`
 	MentionCount int         `json:"mention_count"`
 	LastReadAt   *time.Time  `json:"last_read_at" format:"date-time" extensions:"x-nullable"`
 	NotifyLevel  NotifyLevel `json:"notify_level"`
@@ -37,8 +29,7 @@ type ReadState struct {
 // @all, @here unless the member suppresses them; see message_mentions) or replies to one of their messages. In a
 // muted channel only messages addressed to the user count (by name, through a
 // role or as a reply; not @all or @here), the same ones that still notify.
-// Before the first read, "last read" is the sign-up. Counting stops at
-// readStateCountCap messages per channel.
+// Before the first read, "last read" is the sign-up.
 // Messages of members the caller blocked never count as mentions.
 // NotifyLevel is the effective level: the channel's own setting, else its
 // category's, else the member's server default, else "all"; an expired mute counts as none (see ResolveNotify).
@@ -61,15 +52,13 @@ func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadStat
 		LEFT JOIN channel_reads cr ON cr.channel_id = c.id AND cr.user_id = $1
 		LEFT JOIN category_notify cn ON cn.category_id = c.category_id AND cn.user_id = $1
 		LEFT JOIN server_notify sn ON sn.user_id = $1
-		LEFT JOIN LATERAL (
-		    SELECT m0.id, m0.parent_id, m0.reply_to_id, m0.user_id FROM messages m0
-		    WHERE m0.channel_id = c.id AND m0.user_id <> $1 AND m0.created_at > COALESCE(cr.last_read_at, me.created_at)
-		    ORDER BY m0.created_at DESC LIMIT $2) m ON TRUE
+		LEFT JOIN messages m ON m.channel_id = c.id AND m.user_id <> $1
+		     AND m.created_at > COALESCE(cr.last_read_at, me.created_at)
 		LEFT JOIN messages orig ON orig.id = m.reply_to_id
 		CROSS JOIN LATERAL (SELECT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = m.user_id) AS is_blocked) blocked
 		WHERE c.type <> 'dm'
 		GROUP BY c.id, cr.last_read_at, cr.notify_level, cr.muted_until, cn.notify_level, cn.muted_until, sn.notify_level, sn.muted_until, sn.suppress_everyone
-		ORDER BY c.id`, user.ID, readStateCountCap)
+		ORDER BY c.id`, user.ID)
 	if err != nil {
 		return nil, fmt.Errorf("read states: %w", err)
 	}
