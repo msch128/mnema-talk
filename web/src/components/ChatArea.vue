@@ -24,7 +24,7 @@ import { useRovingMessages } from '../composables/useRovingMessages'
 import { useFirstUnreadJump } from '../composables/useFirstUnreadJump'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
 import { useDraftSlot } from '../composables/useDraftSlot'
-import { channelDraftKey, type DraftReply } from '../lib/drafts'
+import { channelDraftKey, setDraft, type DraftReply } from '../lib/drafts'
 import { useEscapeMarksRead } from '../composables/useComposerKeys'
 import { continuationIds } from '../lib/messageGrouping'
 import { typingLine } from '../lib/chatLogic'
@@ -184,16 +184,33 @@ function isSendBlocked(text: string): boolean {
   return isUploading.value || isSending.value
 }
 
+// The composer refs belong to whichever channel is open now, so a send that
+// resolves after a channel switch must not touch them.
+function stillIn(channelId: string | undefined): boolean {
+  return chatStore.activeChannel?.id === channelId
+}
+
+// The switch already saved the sent text as the old channel's draft; drop it.
+function dropSentDraft(channelId: string | undefined) {
+  const uid = authStore.user?.id
+  if (uid && channelId) setDraft(uid, channelDraftKey(channelId), null)
+}
+
 async function handleSend() {
   const text = inputMessage.value.trim()
   if (isSendBlocked(text)) return
 
   isSending.value = true
+  const sentIn = chatStore.activeChannel?.id
   try {
     await chatStore.sendMessage(text, null, replyingTo.value?.id || null)
-    inputMessage.value = ''
-    replyingTo.value = null
-    await revealOwnMessage()
+    if (stillIn(sentIn)) {
+      inputMessage.value = ''
+      replyingTo.value = null
+      await revealOwnMessage()
+    } else {
+      dropSentDraft(sentIn)
+    }
   } catch (err) {
     toasts.error(dmChat.sendError(err, t('chat.sendFailed')))
   } finally {
@@ -203,8 +220,10 @@ async function handleSend() {
 
 async function handleFileUpload(e: Event) {
   const replyId = replyingTo.value?.id || null
+  const uploadedIn = chatStore.activeChannel?.id
   const ok = await actions.upload(e.target as HTMLInputElement, (file: File) => chatStore.uploadMedia(file, '', null, replyId))
   if (!ok) return
+  if (!stillIn(uploadedIn)) return
   replyingTo.value = null
   await revealOwnMessage()
 }

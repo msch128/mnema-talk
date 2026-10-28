@@ -33,17 +33,26 @@ function fail(e: unknown) {
   toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
 }
 
-async function patch(json: { name?: string; allowed_intents?: number; disabled?: boolean }) {
-  if (busy.value) return
+async function patch(json: { name?: string; allowed_intents?: number; disabled?: boolean }): Promise<boolean> {
+  if (busy.value) return false
   busy.value = true
   try {
     emit('updated', await api(base, { method: 'PATCH', json, decode: decodeBotBot }))
+    return true
   } catch (e) {
     fail(e)
     name.value = props.bot.name
+    return false
   } finally {
     busy.value = false
   }
+}
+
+// Vue does not re-patch `checked` when the bound value is unchanged, so a failed toggle is undone by hand.
+async function patchToggle(event: Event, json: { allowed_intents?: number; disabled?: boolean }) {
+  const input = event.target as HTMLInputElement
+  const next = input.checked
+  if (!(await patch(json))) input.checked = !next
 }
 
 function rename() {
@@ -105,7 +114,7 @@ function onRoles(bot: BotBot) {
     </div>
 
     <label class="flex items-center gap-2 text-sm text-mnema-text">
-      <input type="checkbox" :checked="!bot.disabled" :disabled="busy" data-testid="bot-enabled" @change="patch({ disabled: !($event.target as HTMLInputElement).checked })" />
+      <input type="checkbox" :checked="!bot.disabled" :disabled="busy" data-testid="bot-enabled" @change="patchToggle($event, { disabled: !($event.target as HTMLInputElement).checked })" />
       <span>{{ $t('bots.enabledLabel') }}</span>
     </label>
     <p v-if="bot.disabled" class="-mt-4 text-xs text-mnema-tertiary">{{ $t('bots.disabledHint') }}</p>
@@ -114,7 +123,7 @@ function onRoles(bot: BotBot) {
       <legend class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('bots.intents.title') }}</legend>
       <p class="text-sm text-mnema-tertiary">{{ $t('bots.intents.hint') }}</p>
       <label v-for="intent in BOT_INTENTS" :key="intent.key" class="flex items-start gap-2 text-sm text-mnema-text">
-        <input type="checkbox" class="mt-0.5" :checked="hasIntent(bot.allowed_intents, intent.bit)" :disabled="busy" :data-intent="intent.key" @change="patch({ allowed_intents: toggleIntent(bot.allowed_intents, intent.bit, ($event.target as HTMLInputElement).checked) })" />
+        <input type="checkbox" class="mt-0.5" :checked="hasIntent(bot.allowed_intents, intent.bit)" :disabled="busy" :data-intent="intent.key" @change="patchToggle($event, { allowed_intents: toggleIntent(bot.allowed_intents, intent.bit, ($event.target as HTMLInputElement).checked) })" />
         <span>
           <span class="block">{{ $t(`bots.intents.${intent.key}.name`) }}</span>
           <span class="block text-xs text-mnema-tertiary">{{ $t(`bots.intents.${intent.key}.desc`) }}</span>

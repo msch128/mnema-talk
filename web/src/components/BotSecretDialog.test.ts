@@ -32,6 +32,15 @@ describe('BotSecretDialog', () => {
     expect(write).toHaveBeenCalledWith('mb_secret123')
   })
 
+  it('keeps the show-once token when the scrim is clicked', async () => {
+    const w = mount(BotSecretDialog, { props: { secret: 'mb_secret123', botName: 'Echo' }, attachTo: document.body })
+    const scrim = w.get('.dialog-scrim')
+    await scrim.trigger('pointerdown')
+    await scrim.trigger('pointerup')
+    expect(w.emitted('close')).toBeUndefined()
+    w.unmount()
+  })
+
   it('closes from the done button', async () => {
     const w = mountDialog()
     await w.get('[data-testid="bot-secret-done"]').trigger('click')
