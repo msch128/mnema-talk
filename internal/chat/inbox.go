@@ -35,6 +35,9 @@ type InboxQuery struct {
 // Mentions returns one page of the caller's mentions inbox and whether older
 // entries exist. Messages by the user themselves never appear.
 func Mentions(ctx context.Context, p *db.Pool, q InboxQuery) ([]Message, bool, error) {
+	if err := messageCursorExists(ctx, p, q.Before); err != nil {
+		return nil, false, err
+	}
 	msgs, err := queryMessages(ctx, p, inboxSQL(), inboxArgs(q)...)
 	if err != nil {
 		return nil, false, err
@@ -89,6 +92,7 @@ func inboxSQL() string {
 // @Success 200 {object} MentionsPage "One page of mentions."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the before cursor no longer exists (it was deleted since the previous page); reload the list."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."

@@ -9,8 +9,8 @@ import SearchResultItem from './SearchResultItem.vue'
 // The result list with its header (count, sort) and its empty, loading, error
 // and "problem with a filter" states. The area keeps its size in every state,
 // so the dialog never changes height.
-type Sort = 'newest' | 'oldest' | 'relevance'
-const SORTS: readonly Sort[] = ['newest', 'oldest', 'relevance']
+type Sort = 'newest' | 'oldest'
+const SORTS: readonly Sort[] = ['newest', 'oldest']
 
 const props = defineProps<{
   results: Message[]

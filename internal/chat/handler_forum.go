@@ -239,7 +239,7 @@ func (h *Handler) deleteForumTag(w http.ResponseWriter, r *http.Request) error {
 // @Success 200 {array} Message "Posts."
 // @Failure 401 {object} httpx.ErrorResponse "UNAUTHORIZED"
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN"
-// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND"
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the channel, or the before post (deleted since the previous page), does not exist."
 // @Router /api/channels/{channelID}/posts [get]
 func (h *Handler) listForumPosts(w http.ResponseWriter, r *http.Request) error {
 	chID, err := httpx.PathUUID(r, "channelID")

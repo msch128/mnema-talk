@@ -113,6 +113,9 @@ func Search(ctx context.Context, p *db.Pool, q SearchQuery) ([]Message, bool, er
 	if err != nil {
 		return nil, false, err
 	}
+	if err := messageCursorExists(ctx, p, q.Before); err != nil {
+		return nil, false, err
+	}
 	var msgs []Message
 	err = pgx.BeginTxFunc(ctx, p, pgx.TxOptions{AccessMode: pgx.ReadOnly}, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, "SET LOCAL statement_timeout = '"+searchStatementTimeout+"'"); err != nil {
@@ -151,7 +154,7 @@ func buildSearchSQL(q SearchQuery) (string, []any, error) {
 	}
 
 	order := "ORDER BY m.created_at DESC, m.id DESC"
-	if q.Sort == "oldest" {
+	if q.oldestFirst() {
 		order = "ORDER BY m.created_at ASC, m.id ASC"
 	}
 
