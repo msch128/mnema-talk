@@ -23,20 +23,33 @@ export function usePastEvents(enabled: Readonly<Ref<boolean>>, error: Ref<string
   const loading = ref(false)
   const loaded = ref(false)
   const hasMore = ref(true)
+  // The last event of the newest page fetched: live removals must not move it.
+  let cursor: CommunityEvent | null = null
+  // Bumped by reset(): a page asked for before must not fill the list afterwards.
+  let generation = 0
 
   /** The first page, or the next one when more is true. */
   async function load(more = false) {
     if (!enabled.value || loading.value || (more && !hasMore.value)) return
+    const mine = generation
     loading.value = true
     try {
-      const page = await fetchPast(more ? (fetched.value.at(-1) ?? null) : null)
-      fetched.value = more ? [...fetched.value, ...page] : page
+      const page = await fetchPast(more ? (cursor ?? null) : null)
+      if (mine !== generation) return
+      if (more) {
+        const known = new Set(fetched.value.map(e => e.id))
+        fetched.value = [...fetched.value, ...page.filter(e => !known.has(e.id))]
+      } else {
+        fetched.value = page
+      }
+      cursor = page.at(-1) ?? cursor
       hasMore.value = page.length === PAST_PAGE
       loaded.value = true
     } catch (err) {
+      if (mine !== generation) return
       error.value = err instanceof Error ? err.message : 'Failed to load events'
     } finally {
-      loading.value = false
+      if (mine === generation) loading.value = false
     }
   }
 
@@ -50,6 +63,8 @@ export function usePastEvents(enabled: Readonly<Ref<boolean>>, error: Ref<string
   }
 
   function reset() {
+    ++generation
+    cursor = null
     fetched.value = []
     loading.value = false
     loaded.value = false

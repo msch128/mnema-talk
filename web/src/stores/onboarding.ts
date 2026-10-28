@@ -58,7 +58,19 @@ export const useOnboardingStore = defineStore('onboarding', () => {
   async function save(input: OnboardingTipsInput) {
     const userId = auth.user?.id
     const next = await api('/api/onboarding/tips', { method: 'PUT', json: input, decode: decodeOnboardingState })
-    if (userId && auth.user?.id === userId) state.value = adopt(userId, next)
+    if (!userId || auth.user?.id !== userId) return
+    // Tips only get closed, never reopened: an answer to an earlier save must not bring back one closed since.
+    const closed = new Set([...next.dismissed_tips, ...(state.value?.dismissed_tips ?? [])])
+    state.value = adopt(userId, { ...next, dismissed_tips: [...closed] })
+  }
+
+  /** Forgets the signed-in account's record (sign-out). */
+  function reset() {
+    state.value = null
+    welcomeOpen.value = false
+    loadedFor = ''
+    finishedFor = ''
+    pending.clear()
   }
 
   /** The welcome flow is done: kept locally at once (a tab switch must not reopen it), then stored with a few retries. */
@@ -90,5 +102,5 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     return true
   }
 
-  return { state, welcomeOpen, ensureLoaded, reload, save, markWelcomeDone, dismiss, acceptRules }
+  return { state, welcomeOpen, ensureLoaded, reload, save, markWelcomeDone, dismiss, acceptRules, reset }
 })

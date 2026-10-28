@@ -3,11 +3,25 @@ import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
 import { useBlocksStore } from '../blocks'
 import { useLaterStore } from '../later'
+import { useSavedStore } from '../saved'
+import { useForwardQuotesStore } from '../forwardQuotes'
+import { useEventsStore } from '../events'
+import { useOnboardingStore } from '../onboarding'
+import { useAccountStore } from '../account'
 import { emptyWindow } from '../../lib/messageWindow'
 import { emptyNotificationSettings, type Cx } from './state'
 import { resetWindow, setWindow } from './messageWindow'
 import { closeWebSocket } from './socket'
 import { closeThread } from './threads'
+
+/** Drops what the stores keep of the signed-in member: saved list, quotes, events, onboarding record, account dialog. */
+export function resetMemberStores() {
+  useSavedStore().reset()
+  useForwardQuotesStore().reset()
+  useEventsStore().reset()
+  useOnboardingStore().reset()
+  useAccountStore().reset()
+}
 
 /** Retire all instance data and pending work before selecting another origin. */
 export function dismissEphemeral(cx: Cx, id: number) {
@@ -47,6 +61,7 @@ export function resetCommunityState(cx: Cx) {
   ++cs.dmsFetchSeq
   useBlocksStore().reset()
   useLaterStore().reset()
+  resetMemberStores()
   usePermissionsStore().reset()
   cs.presenceById.value = {}
   cs.activityById.value = {}

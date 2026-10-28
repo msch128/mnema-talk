@@ -4,6 +4,7 @@ import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useAuthStore } from './stores/auth'
 import { usePermissionsStore } from './stores/permissions'
 import { useChatStore } from './stores/chat'
+import { resetMemberStores } from './stores/chat/reset'
 import { useVoiceStore } from './stores/voice'
 import { useAccountStore } from './stores/account'
 import { useBlocksStore } from './stores/blocks'
@@ -170,6 +171,7 @@ watch(() => authStore.isAuthenticated, async (isAuthed) => {
     chatStore.dms = []
     chatStore.dmsLoaded = false
     useBlocksStore().reset()
+    resetMemberStores()
   }
 })
 
