@@ -1,0 +1,19 @@
+doc/roles-and-permissions.md
+  s_5f3060f697443d::t_591db65f3c2303 203-206
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "840a792ebe7f62b16fbceab227b51fc9c8595968",
+  "prompts": {},
+  "sessions": {
+    "s_5f3060f697443d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-zip-vectors-6e00f6c5314709e3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
