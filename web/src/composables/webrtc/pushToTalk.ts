@@ -1,5 +1,6 @@
 import { playSoundEffect } from '../../lib/soundEffects'
 import type { useVoiceStore } from '../../stores/voice'
+import { isTypingEvent } from '../../lib/typingTarget'
 
 type VoiceStore = ReturnType<typeof useVoiceStore>
 
@@ -10,11 +11,6 @@ interface PushToTalkHooks {
   wake: (inCall: boolean) => void
 }
 
-function isTypingTarget(el: EventTarget | null) {
-  if (!(el instanceof HTMLElement)) return false
-  return ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable
-}
-
 function matchesPttKey(e: KeyboardEvent, pttKey: string): boolean {
   return (e.code || e.key) === pttKey
 }
@@ -23,7 +19,7 @@ function shouldHandlePtt(store: VoiceStore | null, e: KeyboardEvent): boolean {
   if (!store) return false
   if (store.inputMode !== 'ptt') return false
   if (e.repeat) return false
-  if (isTypingTarget(e.target)) return false
+  if (isTypingEvent(e)) return false
   return matchesPttKey(e, store.pttKey)
 }
 

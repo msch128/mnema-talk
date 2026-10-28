@@ -71,6 +71,31 @@ describe('handleMessageKeydown', () => {
     expect(reply).not.toHaveBeenCalled()
   })
 
+  it('leaves keys typed into a picker or pressed on a control inside the row alone', () => {
+    const [row] = rows(1)
+    const save = vi.fn()
+    const reply = vi.fn()
+    const picker = document.createElement('div')
+    const search = document.createElement('input')
+    picker.attachShadow({ mode: 'open' }).appendChild(search)
+    const button = document.createElement('button')
+    required(row).append(picker, button)
+    // As in a browser: the row sees the picker host as the target, and the
+    // composed path starts at the search input inside its shadow root.
+    const ev = new KeyboardEvent('keydown', { key: 's', bubbles: true, cancelable: true })
+    Object.defineProperty(ev, 'composedPath', { value: () => [search, picker, row] })
+    const listener = (e: KeyboardEvent) => handleMessageKeydown(e, { save, reply })
+    required(row).addEventListener('keydown', listener)
+    picker.dispatchEvent(ev)
+    required(row).removeEventListener('keydown', listener)
+    expect(ev.defaultPrevented).toBe(false)
+    press(row, { key: 'r' }, { save, reply }, button)
+    expect(save).not.toHaveBeenCalled()
+    expect(reply).not.toHaveBeenCalled()
+    expect(press(row, { key: 's' }, { save }).defaultPrevented).toBe(true)
+    expect(save).toHaveBeenCalledOnce()
+  })
+
   it('opens the menu with the menu key or Shift+F10', () => {
     const [row] = rows(1)
     const menu = vi.fn()
