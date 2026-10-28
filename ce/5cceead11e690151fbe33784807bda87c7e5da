@@ -1,0 +1,51 @@
+internal/push/coalesce.go
+  s_06c7db26fa9ea8::t_fb6fa3353b999b 27-28,64-66,86-88,92
+internal/push/coalesce_test.go
+  s_06c7db26fa9ea8::t_ee0f5960a44a15 113-141
+internal/push/direct.go
+  s_06c7db26fa9ea8::t_ea2e4c94bd92a1 5,63-65,67-70,72-84,86,88,90-91,93,95,97-98
+internal/push/event_reminder.go
+  s_06c7db26fa9ea8::t_1ffdd6cddb4209 5,10,22-23,34,41-46,56-78,80
+internal/push/event_reminder_integration_test.go
+  s_06c7db26fa9ea8::t_424bee4b520f63 28,116-151
+internal/push/payload.go
+  s_06c7db26fa9ea8::t_9f33879b501d23 18-20,40,148,163-171,174
+internal/push/payload_test.go
+  s_06c7db26fa9ea8::t_546b6967d1a788 191-204
+internal/push/recipients.go
+  s_06c7db26fa9ea8::t_60978f2f6441ab 42-66,69-70,80
+internal/push/sender.go
+  s_06c7db26fa9ea8::t_df3d09075f27ba 21,105,110-118,120
+internal/push/sender_test.go
+  s_f8e7d3bc1f8ddb::t_bc016c9185d035 162,167-168,258-278
+internal/push/service.go
+  s_06c7db26fa9ea8::t_8886e9659e41b3 169-174,177-192,206,275,287
+web/src/sw/push.test.ts
+  s_06c7db26fa9ea8::t_0272e2f46c52b8 87-93
+web/src/sw/push.ts
+  s_06c7db26fa9ea8::t_b1f16a669e15c1 7,90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ce5cceead11e690151fbe33784807bda87c7e5da",
+  "prompts": {},
+  "sessions": {
+    "s_06c7db26fa9ea8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afbd24a5d4933bf79",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_f8e7d3bc1f8ddb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a22d32b6f61e75622",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
