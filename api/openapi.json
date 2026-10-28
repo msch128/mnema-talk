@@ -10615,7 +10615,7 @@
     },
     "/api/admin/bots/{id}/tokens/{tokenID}/regenerate": {
       "post": {
-        "description": "Issues a new token with the same name and expiry and revokes the old one at once (its gateway connections close).",
+        "description": "Issues a new token with the same name and expiry and revokes the old one at once (its gateway connections close), in one step. Only an active token can be regenerated.",
         "operationId": "regenerateBotToken",
         "parameters": [
           {
@@ -10649,6 +10649,16 @@
               }
             },
             "description": "Issued; the secret is shown once."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT: the token is expired or revoked."
           },
           "401": {
             "content": {

@@ -8,7 +8,7 @@ import (
 
 // CommandPatch changes a command; only an admin can.
 type CommandPatch struct {
-	Disabled bool `json:"disabled"`
+	Disabled *bool `json:"disabled" binding:"required"`
 }
 
 // listCommands handles GET /api/admin/bots/{id}/commands.
@@ -75,7 +75,10 @@ func (h *Handler) patchCommand(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	c, err := SetCommandDisabled(r.Context(), h.DB, b.ID, id, req.Disabled)
+	if req.Disabled == nil {
+		return httpx.ErrInvalidInput("disabled is required")
+	}
+	c, err := SetCommandDisabled(r.Context(), h.DB, b.ID, id, *req.Disabled)
 	if err != nil {
 		return err
 	}

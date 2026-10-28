@@ -133,7 +133,7 @@ onMounted(load)
             <td class="px-3 py-2 text-mnema-muted">{{ token.last_used_at ? day(token.last_used_at) : $t('bots.tokens.never') }}</td>
             <td class="px-3 py-2">
               <div class="flex justify-end gap-1 text-mnema-tertiary">
-                <button type="button" class="btn btn-icon btn-sm hover:text-mnema-text" :aria-label="$t('bots.tokens.regenerateFor', { name: label(token) })" data-action="regenerate" @click="regenerate(token)"><RefreshCw class="h-4 w-4" /></button>
+                <button type="button" :disabled="token.state !== 'active'" class="btn btn-icon btn-sm hover:text-mnema-text" :aria-label="$t('bots.tokens.regenerateFor', { name: label(token) })" data-action="regenerate" @click="regenerate(token)"><RefreshCw class="h-4 w-4" /></button>
                 <button type="button" :disabled="token.state === 'revoked'" class="btn btn-icon btn-sm hover:text-mnema-danger" :aria-label="$t('bots.tokens.revokeFor', { name: label(token) })" data-action="revoke" @click="revoke(token)"><Ban class="h-4 w-4" /></button>
               </div>
             </td>

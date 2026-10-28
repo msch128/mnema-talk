@@ -293,10 +293,11 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) error {
 		h.OnRevoke(b.ID, nil)
 	}
 	h.Perms.Changed(nil)
-	h.membersChanged()
 	return h.writeCurrent(w, r, b.ID)
 }
 
+// writeCurrent announces the change to the member list and answers with the
+// bot as it is now.
 func (h *Handler) writeCurrent(w http.ResponseWriter, r *http.Request, id uuid.UUID) error {
 	h.membersChanged() // avatar and role changes show in the member list
 	cur, err := Get(r.Context(), h.DB, id)

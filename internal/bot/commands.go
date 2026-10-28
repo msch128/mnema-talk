@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -158,10 +159,26 @@ func cleanOptions(opts []Option) error {
 
 const commandColumns = `id, bot_id, name, description, options, disabled, created_at`
 
+// commandColumnsAs is commandColumns with every column qualified by a table alias.
+func commandColumnsAs(alias string) string {
+	cols := strings.Split(commandColumns, ", ")
+	for i, c := range cols {
+		cols[i] = alias + "." + c
+	}
+	return strings.Join(cols, ", ")
+}
+
 func scanCommand(row pgx.Row) (Command, error) {
+	return scanCommandWith(row)
+}
+
+// scanCommandWith scans the commandColumns, then the extra destinations the
+// query selects after them.
+func scanCommandWith(row pgx.Row, extra ...any) (Command, error) {
 	var c Command
 	// options is a JSON array (a check constraint), scanned straight into the slice.
-	err := row.Scan(&c.ID, &c.BotID, &c.Name, &c.Description, &c.Options, &c.Disabled, &c.CreatedAt)
+	dest := append([]any{&c.ID, &c.BotID, &c.Name, &c.Description, &c.Options, &c.Disabled, &c.CreatedAt}, extra...)
+	err := row.Scan(dest...)
 	return c, err
 }
 
@@ -309,11 +326,9 @@ func SetCommandDisabled(ctx context.Context, q db.Querier, botID, id uuid.UUID, 
 func getCommand(ctx context.Context, q db.Querier, id uuid.UUID) (Command, uuid.UUID, bool, error) {
 	var userID uuid.UUID
 	var botDisabled bool
-	var c Command
-	err := q.QueryRow(ctx, `
-		SELECT c.id, c.bot_id, c.name, c.description, c.options, c.disabled, c.created_at, b.user_id, b.disabled
-		FROM bot_commands c JOIN bots b ON b.id = c.bot_id WHERE c.id = $1`, id).Scan(
-		&c.ID, &c.BotID, &c.Name, &c.Description, &c.Options, &c.Disabled, &c.CreatedAt, &userID, &botDisabled)
+	c, err := scanCommandWith(q.QueryRow(ctx, `
+		SELECT `+commandColumnsAs("c")+`, b.user_id, b.disabled
+		FROM bot_commands c JOIN bots b ON b.id = c.bot_id WHERE c.id = $1`, id), &userID, &botDisabled)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return c, uuid.Nil, false, errCommandNotFound
 	}
