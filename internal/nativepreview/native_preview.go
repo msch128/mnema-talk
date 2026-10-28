@@ -3,6 +3,7 @@ package nativepreview
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -203,19 +204,13 @@ func (p *NativePreviewRouter) nativeRoutes(deps server.Deps) (chi.Router, error)
 	browser, native := p.Router, p.Native
 	trusted := browser.PreviewDeps().Trusted
 	routes := chi.NewRouter()
-	routes.Use(httpx.RequestID, httpx.ClientIPMiddleware(trusted), httpx.Logger, httpx.Recover(deps.Config.IsProduction()), httpx.SecurityHeaders(trusted, deps.Config.IsProduction()), p.boundary)
+	routes.Use(append(nativeBaseMiddleware(deps, trusted), p.boundary)...)
 	routes.Get("/ws", browser.Hub.NativeMetadataWebSocketHandler(native).ServeHTTP)
-	nativeAuth := native.Handler()
-	authDispatch := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// A fresh chi route context preserves the fixed relative /auth path and
-		// existing request/IP context without inheriting the enclosing matcher.
-		ctx := context.WithValue(r.Context(), chi.RouteCtxKey, (*chi.Context)(nil))
-		nativeAuth.ServeHTTP(w, r.WithContext(ctx))
-	})
-	routes.Method(http.MethodPost, "/auth/login", authDispatch)
-	routes.Method(http.MethodPost, "/auth/refresh", authDispatch)
-	routes.Method(http.MethodGet, "/auth/me", authDispatch)
-	routes.Method(http.MethodPost, "/auth/logout", authDispatch)
+	dispatch := authDispatch(native.Handler())
+	routes.Method(http.MethodPost, "/auth/login", dispatch)
+	routes.Method(http.MethodPost, "/auth/refresh", dispatch)
+	routes.Method(http.MethodGet, "/auth/me", dispatch)
+	routes.Method(http.MethodPost, "/auth/logout", dispatch)
 	metadataHandlers, err := nativeMetadataHandlers(browser.PreviewDeps())
 	if err != nil {
 		return nil, err
@@ -231,11 +226,71 @@ func (p *NativePreviewRouter) nativeRoutes(deps server.Deps) (chi.Router, error)
 			}
 			metadata.Method(route.Method, route.Path, handler)
 		}
+		// The catch-all matches every method, so chi never reaches its own
+		// MethodNotAllowed: a wrong verb on a registered path is answered here.
 		metadata.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if nativeMetadataPathRegistered(r.URL.Path) {
+				nativeMethodNotAllowed(w, r)
+				return
+			}
 			httpx.WriteError(w, httpx.ErrUnavailable("native content authorization unavailable"))
 		}))
 	})
 	return routes, nil
+}
+
+// nativeBaseMiddleware is the chain every native route set starts with.
+func nativeBaseMiddleware(deps server.Deps, trusted []*net.IPNet) []func(http.Handler) http.Handler {
+	return []func(http.Handler) http.Handler{
+		httpx.RequestID, httpx.ClientIPMiddleware(trusted), httpx.Logger, httpx.Recover(deps.Config.IsProduction()), httpx.SecurityHeaders(trusted, deps.Config.IsProduction()),
+	}
+}
+
+// nativeMetadataPathRegistered reports whether path is a metadata route under
+// some method (the health and legal pair included).
+func nativeMetadataPathRegistered(path string) bool {
+	known := chi.NewRouter()
+	noop := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+	known.Method(http.MethodGet, "/health", noop)
+	known.Method(http.MethodGet, "/legal", noop)
+	for _, route := range nativeMetadataRoutes {
+		known.Method(route.Method, route.Path, noop)
+	}
+	for _, method := range []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete} {
+		if known.Match(chi.NewRouteContext(), method, path) {
+			return true
+		}
+	}
+	return false
+}
+
+// nativeNoStoreHeaders marks a native response as uncacheable and unframeable.
+func nativeNoStoreHeaders(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+}
+
+func nativeMethodNotAllowed(w http.ResponseWriter, _ *http.Request) {
+	httpx.WriteError(w, httpx.NewAPIError(http.StatusMethodNotAllowed, httpx.CodeInvalidInput, "method not allowed"))
+}
+
+// nativeBodyPresent reports whether the request declares or carries a body.
+// The native wire accepts known-empty bodies only on these routes.
+func nativeBodyPresent(r *http.Request) bool {
+	if r.ContentLength != 0 || len(r.TransferEncoding) != 0 {
+		return true
+	}
+	return r.Body != nil && r.Body != http.NoBody
+}
+
+// authDispatch runs h with a fresh chi route context, which preserves the
+// fixed relative path and the request/IP context without inheriting the
+// enclosing matcher.
+func authDispatch(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), chi.RouteCtxKey, (*chi.Context)(nil))
+		h.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 func nativePreviewHeaderPresent(r *http.Request, name string) bool {
@@ -269,8 +324,7 @@ func previewTransportRejected(r *http.Request) bool {
 
 func (r *NativePreviewRouter) boundary(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
-		w.Header().Set("Cache-Control", "no-store")
-		w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+		nativeNoStoreHeaders(w)
 		if previewTransportRejected(request) {
 			httpx.WriteError(w, httpx.ErrForbidden("native transport request rejected"))
 			return

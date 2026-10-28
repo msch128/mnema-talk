@@ -51,3 +51,13 @@ func TestNativePreviewRegistryIsClosedAndCopied(t *testing.T) {
 		t.Fatal("caller mutated registry")
 	}
 }
+
+func TestNativeMetadataPathRegistered(t *testing.T) {
+	for path, want := range map[string]bool{
+		"/members": true, "/health": true, "/users/abc": true, "/admin/invites/x": true, "/no-such-route": false, "/members/extra": false,
+	} {
+		if got := nativeMetadataPathRegistered(path); got != want {
+			t.Errorf("%s: got %v, want %v", path, got, want)
+		}
+	}
+}

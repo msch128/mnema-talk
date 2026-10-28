@@ -37,10 +37,9 @@ func discoveryTransportRejected(request *http.Request) bool {
 }
 
 func (r *NativePreviewRouter) discovery(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+	nativeNoStoreHeaders(w)
 	if request.Method != http.MethodGet {
-		httpx.WriteError(w, httpx.NewAPIError(http.StatusMethodNotAllowed, httpx.CodeInvalidInput, "method not allowed"))
+		nativeMethodNotAllowed(w, request)
 		return
 	}
 	if discoveryTransportRejected(request) {

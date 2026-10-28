@@ -5,13 +5,12 @@ import "strings"
 // safeHref mirrors the client: http(s) with a host, or mailto:, without
 // spaces, quotes, backslashes or control characters.
 func safeHref(raw string) bool {
-	lower := strings.ToLower(raw)
 	switch {
-	case strings.HasPrefix(lower, "https://"):
+	case hasPrefixFold(raw, "https://"):
 		raw = raw[len("https://"):]
-	case strings.HasPrefix(lower, "http://"):
+	case hasPrefixFold(raw, "http://"):
 		raw = raw[len("http://"):]
-	case strings.HasPrefix(lower, "mailto:"):
+	case hasPrefixFold(raw, "mailto:"):
 		raw = raw[len("mailto:"):]
 	default:
 		return false
@@ -22,6 +21,24 @@ func safeHref(raw string) bool {
 	return !strings.ContainsFunc(raw, func(r rune) bool {
 		return r <= 0x1f || r == 0x7f || r == ' ' || strings.ContainsRune("<>\"'`\\", r)
 	})
+}
+
+// hasPrefixFold reports whether s starts with the lower-case ASCII prefix,
+// ignoring case, without copying s.
+func hasPrefixFold(s, prefix string) bool {
+	if len(s) < len(prefix) {
+		return false
+	}
+	for i := 0; i < len(prefix); i++ {
+		c := s[i]
+		if 'A' <= c && c <= 'Z' {
+			c += 'a' - 'A'
+		}
+		if c != prefix[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // autolink reads <https://example.com>: the address is the text.
@@ -68,8 +85,7 @@ func bareURL(src string, i int, noLinks bool) (string, int, bool) {
 		return "", i, false
 	}
 	rest := src[i:]
-	lower := strings.ToLower(rest)
-	if !strings.HasPrefix(lower, "http://") && !strings.HasPrefix(lower, "https://") {
+	if !hasPrefixFold(rest, "http://") && !hasPrefixFold(rest, "https://") {
 		return "", i, false
 	}
 	end := strings.IndexAny(rest, " \t\r\n<")
