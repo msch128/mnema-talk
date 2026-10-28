@@ -1,0 +1,109 @@
+api/openapi.json
+  s_b24e177dc9e749::t_3ca9424c393efd 34377
+internal/sfu/adapt.go
+  s_7375f2539c4104::t_3fe7f2bd4287f4 172-174,176-178
+internal/sfu/announce.go
+  s_9df22b27f2327e::t_8f1684dd2237ac 48-51,53-54,56
+internal/sfu/announce_test.go
+  s_9df22b27f2327e::t_8e475042ebc539 52,54,66,69
+internal/sfu/authorization.go
+  s_7375f2539c4104::t_5c957fb4ab2dd4 13-16
+internal/sfu/helpers_test.go
+  s_f8e7d3bc1f8ddb::t_3e04631b13fb01 23-38
+internal/sfu/layer_wanted.go
+  s_7375f2539c4104::t_29d24357c4e8d9 151
+internal/sfu/layers.go
+  s_7375f2539c4104::t_275596a0bc4acc 230-234,274
+internal/sfu/layers_test.go
+  s_f8e7d3bc1f8ddb::t_4df9fe54ad151c 372-373
+internal/sfu/room_attach.go
+  s_abe6d26c4f054b::t_ab8133517d72a8 52-55,155-157,159-163,166-167,169-186
+internal/sfu/room_signal.go
+  s_7375f2539c4104::t_863d0102155c9a 26,54,59-72,94-95,99-118,200-204,261-266,270,274,285,293-295,320-321
+internal/sfu/room_tracks.go
+  s_7375f2539c4104::t_70223f6e82e179 272-274,280-289,331-357
+internal/sfu/sfu.go
+  s_f8e7d3bc1f8ddb::t_ba39ee939c7a53 36-42,109-114,135-140
+internal/sfu/sources.go
+  s_abe6d26c4f054b::t_8a89baff2a6a59 61-64,67-69,74,82
+internal/ws/lifecycle.go
+  s_5e74eb91b1beec::t_0f9274ae78eb27 71
+internal/ws/voice_join.go
+  s_9df22b27f2327e::t_b4776c7bd8c025 203-207
+internal/ws/voice_kick.go
+  s_9df22b27f2327e::t_f5f3856c19aa25 6,18-31,34
+web/src/composables/webrtc/session.ts
+  s_7ad149a25819f7::t_209b3d12442d82 198-204,213
+web/src/i18n/de.json
+  s_5e74eb91b1beec::t_5ce267e451b941 642
+web/src/i18n/en.json
+  s_7ad149a25819f7::t_a348055d90f205 642
+web/src/types/events.test.ts
+  s_5e74eb91b1beec::t_277ab6ca1a928c 80
+web/src/types/events.ts
+  s_7ad149a25819f7::t_315041c9ce4713 140,383
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3459ff2162775109d98bd68c4629d7394a566c6a",
+  "prompts": {},
+  "sessions": {
+    "s_5e74eb91b1beec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a38bb58581f273dc2",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7375f2539c4104": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad698788cf33a7188",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7ad149a25819f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8752352772233b1c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_9df22b27f2327e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af345ded314039cb4",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_abe6d26c4f054b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aeaddb1300c6c2b75",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_b24e177dc9e749": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aba95caf6bcffba7c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_f8e7d3bc1f8ddb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a22d32b6f61e75622",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
