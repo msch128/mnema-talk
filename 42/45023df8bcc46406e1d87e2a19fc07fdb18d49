@@ -1,0 +1,67 @@
+api/openapi.json
+  s_a58f07db94e311::t_463d36eda5a019 7554-7557,27512
+internal/bot/faults_integration_test.go
+  s_a58f07db94e311::t_ec26f5c3b93df8 111
+internal/bot/guards_integration_test.go
+  s_a58f07db94e311::t_976344954bc7e2 73,122
+internal/bot/handler.go
+  s_a58f07db94e311::t_3a7c47e4333d0f 45-50,72
+internal/communityevents/handler.go
+  s_a58f07db94e311::t_630f8a2f7f1182 44-53
+internal/communityevents/handler_cover.go
+  s_a58f07db94e311::t_d1e6976528db31 22
+internal/discordimport/plan.go
+  s_a58f07db94e311::t_39bdf5c9976664 79,107
+internal/httpx/response.go
+  s_a58f07db94e311::t_bc9d6ddc507ed9 183-190
+internal/roles/handler_overwrites.go
+  s_a58f07db94e311::t_52f72dd6ae5f0e 123
+internal/roles/handler_permissions.go
+  s_a58f07db94e311::t_90efcb3c49ee02 89
+internal/server/admin_status.go
+  s_a58f07db94e311::t_ca81230e082c06 5,125-128,142-143
+internal/server/health.go
+  s_a58f07db94e311::t_4b23d4536d4fa2 116
+internal/server/metrics.go
+  s_a58f07db94e311::t_cf61c799674e89 30-32,44
+internal/server/metrics_scrape_test.go
+  s_a58f07db94e311::t_6610fdfc2dcaee 1-22
+internal/server/public.go
+  s_a58f07db94e311::t_706ccafc74e554 68,81
+internal/server/router_build.go
+  s_a58f07db94e311::t_999be6e004c9e6 185,217-226,228,235,259
+internal/server/router_routes.go
+  s_a58f07db94e311::t_064de67f3198d9 9,11,47,51,128-133,138-150
+internal/server/system.go
+  s_a58f07db94e311::t_8f09e0a7c05e2c 5,102-104,210-213,215-220,222-256,259-260
+internal/server/system_edges_test.go
+  s_a58f07db94e311::t_de50377385e00e 22
+internal/server/system_selfupdate.go
+  s_a58f07db94e311::t_bdbe2c06722bec 127-129,134,206-208,215,218,221-223
+internal/server/system_selfupdate_integration_test.go
+  s_a58f07db94e311::t_51e6e1c6def5ec 204-217
+internal/server/system_usage_test.go
+  s_a58f07db94e311::t_afe853221e727d 1-36
+internal/server/upload_body_limit_integration_test.go
+  s_a58f07db94e311::t_456cb5a05f0f82 1-51
+internal/webhook/handler.go
+  s_a58f07db94e311::t_0f34f306ac0a35 80-85
+web/src/types/rest.ts
+  s_a58f07db94e311::t_59e8fcdc2a5501 4455,4466
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4245023df8bcc46406e1d87e2a19fc07fdb18d49",
+  "prompts": {},
+  "sessions": {
+    "s_a58f07db94e311": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aintegrate-desktop-0629b15836aecec2",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
