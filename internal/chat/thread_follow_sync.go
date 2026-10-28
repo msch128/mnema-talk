@@ -14,6 +14,16 @@ import (
 // followSyncTimeout bounds the lookup behind one thread reply.
 const followSyncTimeout = 5 * time.Second
 
+const (
+	// followSyncWorkers run the lookups side by side, so a burst of replies
+	// cannot take the pool's connections from the request handlers.
+	followSyncWorkers = 4
+	// followSyncQueue is how many replies wait for a worker. A reply beyond
+	// it is skipped: the follow itself is stored, only the live update to
+	// open clients is lost and the next list load shows it.
+	followSyncQueue = 256
+)
+
 // NewFollowSync returns a hub tap that keeps the followed-thread lists of open
 // clients current. A reply makes the root's author, the replier and the members
 // it mentions follow the thread (see followOnReply), so their sessions are told
@@ -21,6 +31,19 @@ const followSyncTimeout = 5 * time.Second
 // replies notify them. Only members who really follow are told, and members who can no longer view the channel are
 // skipped, and the lookup runs off the publishing path.
 func NewFollowSync(ctx context.Context, p *db.Pool, perms *perm.Service, pub events.Publisher) func(channel uuid.UUID, eventType string, payload any) {
+	queue := make(chan Message, followSyncQueue)
+	for range followSyncWorkers {
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case msg := <-queue:
+					syncFollowers(ctx, p, perms, pub, msg)
+				}
+			}
+		}()
+	}
 	return func(_ uuid.UUID, eventType string, payload any) {
 		if eventType != events.MessageCreate {
 			return
@@ -29,7 +52,11 @@ func NewFollowSync(ctx context.Context, p *db.Pool, perms *perm.Service, pub eve
 		if !ok || msg.ParentID == nil {
 			return
 		}
-		go syncFollowers(ctx, p, perms, pub, msg)
+		select {
+		case queue <- msg:
+		default:
+			slog.Warn("thread follow sync: queue full, reply skipped", "thread", *msg.ParentID)
+		}
 	}
 }
 
@@ -60,11 +87,8 @@ func syncFollowers(parent context.Context, p *db.Pool, perms *perm.Service, pub 
 	}
 	rows, err := p.Query(ctx, `
 		SELECT f.user_id FROM thread_follows f
-		WHERE f.thread_id = $1 AND f.following AND (
-			f.user_id = $2
-			OR f.user_id = (SELECT user_id FROM messages WHERE id = $1)
-			OR f.user_id IN (SELECT user_id FROM message_mentions WHERE message_id = $3 AND kind <> 1))`,
-		thread, msg.UserID, msg.ID)
+		WHERE f.thread_id = $1 AND f.following AND f.user_id IN (`+replyFollowersSQL+`)`,
+		thread, msg.UserID, msg.ID, MentionKindGroup)
 	if err != nil {
 		slog.Warn("thread follow sync", "err", err)
 		return

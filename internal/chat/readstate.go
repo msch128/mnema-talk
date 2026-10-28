@@ -39,9 +39,9 @@ func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadStat
 		       count(m.id) FILTER (WHERE m.parent_id IS NULL),
 		       count(m.id) FILTER (WHERE NOT blocked.is_blocked AND (orig.user_id = $1 OR EXISTS (
 		           SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = $1
-		             AND (mm.kind <> 1 OR NOT COALESCE(sn.suppress_everyone, FALSE))))),
+		             AND (mm.kind <> $2 OR NOT COALESCE(sn.suppress_everyone, FALSE))))),
 		       count(m.id) FILTER (WHERE NOT blocked.is_blocked AND (orig.user_id = $1 OR EXISTS (
-		           SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = $1 AND mm.kind <> 1))),
+		           SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = $1 AND mm.kind <> $2))),
 		       cr.last_read_at,
 		       COALESCE(cr.notify_level, 'inherit'), cr.muted_until,
 		       COALESCE(cn.notify_level, 'inherit'), cn.muted_until,
@@ -58,7 +58,7 @@ func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadStat
 		CROSS JOIN LATERAL (SELECT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = m.user_id) AS is_blocked) blocked
 		WHERE c.type <> 'dm'
 		GROUP BY c.id, cr.last_read_at, cr.notify_level, cr.muted_until, cn.notify_level, cn.muted_until, sn.notify_level, sn.muted_until, sn.suppress_everyone
-		ORDER BY c.id`, user.ID)
+		ORDER BY c.id`, user.ID, MentionKindGroup)
 	if err != nil {
 		return nil, fmt.Errorf("read states: %w", err)
 	}

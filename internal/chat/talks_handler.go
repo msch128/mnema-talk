@@ -79,7 +79,9 @@ func (h *Handler) updateTalk(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	FillTalkFields(r.Context(), h.DB, ch)
+	if err := FillTalkFields(r.Context(), h.DB, ch); err != nil {
+		return err
+	}
 	h.Audit.RecordOrLog(r.Context(), audit.Entry{
 		Action: "channel.update", TargetType: "channel", TargetID: id.String(), TargetName: ch.Name,
 		ChannelID: &id, Details: map[string]any{"temporary": true, "user_limit": ch.UserLimit},

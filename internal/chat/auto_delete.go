@@ -55,7 +55,9 @@ func SetAutoDelete(ctx context.Context, p *db.Pool, id uuid.UUID, days int) (*Ch
 	if err != nil {
 		return nil, fmt.Errorf("set auto-delete: %w", err)
 	}
-	FillTalkFields(ctx, p, &ch)
+	if err := FillTalkFields(ctx, p, &ch); err != nil {
+		return nil, err
+	}
 	if err := FillSlugs(ctx, p, &ch); err != nil {
 		return nil, err
 	}
