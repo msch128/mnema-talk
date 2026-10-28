@@ -1,0 +1,34 @@
+web/src/lib/media/callEngine.ts
+  s_06fcde5dbef956::t_41c879edea8c5e 161
+  s_06fcde5dbef956::t_02873a0b250fb9 3,187,204,213,215,220,241
+.github/workflows/dbg-reload.yml
+  s_06fcde5dbef956::t_41c879edea8c5e 1-85
+e2e/tests/late-join.spec.ts
+  s_06fcde5dbef956::t_41c879edea8c5e 164
+web/src/lib/media/group.ts
+  s_06fcde5dbef956::t_41c879edea8c5e 1,92
+web/src/lib/media/dbg.ts
+  s_06fcde5dbef956::t_42e0ba02456ca9 1
+web/src/lib/media/groupSync.ts
+  s_06fcde5dbef956::t_f62b5b16c2e3dd 8,89,154,223
+web/src/lib/media/guard.ts
+  s_06fcde5dbef956::t_5cffd04f4d3a46 1,109-110,142,192,216
+web/src/lib/media/mediaFrameWorker.ts
+  s_06fcde5dbef956::t_51eab25a7d393b 101-104,106,231-236,309
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "238ad126886174f13a5e551590cd95bb9a04c3b5",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
