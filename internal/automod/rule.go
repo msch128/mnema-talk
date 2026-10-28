@@ -246,7 +246,7 @@ func cleanWord(s string) (string, error) {
 			return "", httpx.ErrInvalidInput("words must not contain control characters")
 		}
 	}
-	if s != "" && strings.Trim(s, "* ") == "" {
+	if s != "" && strings.Trim(fold(s), "* ") == "" {
 		return "", httpx.ErrInvalidInput("a word needs at least one letter or digit besides *")
 	}
 	if utf8.RuneCountInString(s) > MaxWordLen {
@@ -270,6 +270,10 @@ func cleanDomain(s string) (string, error) {
 	return host, nil
 }
 
+// schemePrefix is a URL scheme at the very start; a "://" further in (a
+// redirect target in a query) is not the link's own.
+var schemePrefix = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*://`)
+
 // hostOf reads the host a browser would connect to from a link or bare
 // domain: the part after the last "@" of the authority (so
 // http://allowed.com@evil.com is evil.com), without port, percent-decoded,
@@ -277,8 +281,8 @@ func cleanDomain(s string) (string, error) {
 // lower case, without a trailing dot. ok is false when it cannot be read.
 func hostOf(link string) (string, bool) {
 	l := strings.TrimSpace(link)
-	if i := strings.Index(l, "://"); i >= 0 {
-		l = l[i+3:]
+	if loc := schemePrefix.FindStringIndex(l); loc != nil {
+		l = l[loc[1]:]
 	}
 	if i := strings.IndexAny(l, "/?#\\"); i >= 0 {
 		l = l[:i]
