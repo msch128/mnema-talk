@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -200,8 +199,7 @@ func insertReport(ctx context.Context, p *db.Pool, nr NewReport, ref *messageRef
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
 			nr.Reporter, ref.AuthorID, nr.MessageID, ref.ChannelID, kind, name, nr.Category, nr.Note, snapshot).Scan(&id)
 	})
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+	if db.IsUniqueViolation(err) {
 		return uuid.Nil, httpx.ErrConflict("this message is already reported")
 	}
 	return id, err

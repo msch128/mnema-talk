@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -260,8 +259,7 @@ func CreateDM(ctx context.Context, p *db.Pool, nd NewDM) (id uuid.UUID, created 
 	nd.Others = others
 	for range 2 {
 		id, created, err = createDMOnce(ctx, p, nd)
-		var pgErr *pgconn.PgError
-		if !errors.As(err, &pgErr) || pgErr.Code != "23505" {
+		if !db.IsUniqueViolation(err) {
 			return id, created, err
 		}
 		// Somebody started the same pair a moment ago: use that one.

@@ -12,7 +12,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"golang.org/x/crypto/bcrypt"
@@ -161,13 +160,6 @@ func newDummyHash() []byte {
 		return nil
 	}
 	return h
-}
-
-// isUniqueViolation reports a unique-constraint violation (SQLSTATE 23505),
-// e.g. on the username or its case-insensitive index.
-func isUniqueViolation(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
 // ValidatePassword enforces the password policy for regular accounts.

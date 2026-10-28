@@ -99,7 +99,7 @@ func confirmEmail(ctx context.Context, tx pgx.Tx, plain string) (uuid.UUID, erro
 	tag, err := tx.Exec(ctx, `UPDATE users SET email_verified_at = NOW(), updated_at = NOW()
 		WHERE id = $1 AND LOWER(email) = LOWER($2) AND email_verified_at IS NULL AND `+ActiveSQL("")+` AND NOT is_bot`,
 		claim.UserID, claim.Email)
-	if isUniqueViolation(err) {
+	if db.IsUniqueViolation(err) {
 		return uuid.Nil, errAddressInUse
 	}
 	if err != nil {

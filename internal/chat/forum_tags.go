@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -83,19 +82,13 @@ func CreateForumTag(ctx context.Context, p *db.Pool, channelID uuid.UUID, name, 
 			RETURNING id, channel_id, name, emoji, created_at`,
 			channelID, cleanName, cleanEmoji).Scan(&tag.ID, &tag.ChannelID, &tag.Name, &tag.Emoji, &tag.CreatedAt)
 	})
-	if isUniqueViolation(err) {
+	if db.IsUniqueViolation(err) {
 		return nil, errTagNameTaken
 	}
 	if err != nil {
 		return nil, err
 	}
 	return &tag, nil
-}
-
-// isUniqueViolation reports whether err is a PostgreSQL unique violation.
-func isUniqueViolation(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
 // UpdateForumTag updates an existing tag's name and/or emoji and returns the
@@ -133,7 +126,7 @@ func UpdateForumTag(ctx context.Context, q db.Querier, channelID, tagID uuid.UUI
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		return nil, nil, errForumTagNotFound
-	case isUniqueViolation(err):
+	case db.IsUniqueViolation(err):
 		return nil, nil, errTagNameTaken
 	case err != nil:
 		return nil, nil, fmt.Errorf("update forum tag: %w", err)

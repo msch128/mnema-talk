@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -119,8 +117,7 @@ func mapInsertInviteError(err error) error {
 	if err == nil {
 		return nil
 	}
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+	if db.IsUniqueViolation(err) {
 		return httpx.ErrConflict("invite code already exists")
 	}
 	return fmt.Errorf("insert invite: %w", err)

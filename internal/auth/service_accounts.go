@@ -131,7 +131,7 @@ func insertInvitedUser(ctx context.Context, tx pgx.Tx, username, displayName, ha
 	if err != nil {
 		// Also covers a concurrent sign-up racing past the check above,
 		// whichever unique index on the username catches it.
-		if isUniqueViolation(err) {
+		if db.IsUniqueViolation(err) {
 			return nil, ErrUsernameTaken
 		}
 		return nil, fmt.Errorf("insert user: %w", err)
