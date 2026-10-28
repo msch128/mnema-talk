@@ -1,9 +1,7 @@
 package httpx
 
 import (
-	"log/slog"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -30,7 +28,7 @@ type DiscordRateLimit struct {
 
 // WriteDiscordRateLimit answers 429 in Discord's shape with Retry-After.
 func WriteDiscordRateLimit(w http.ResponseWriter, retry time.Duration, global bool) {
-	w.Header().Set("Retry-After", strconv.Itoa(int(retry.Seconds())+1))
+	w.Header().Set("Retry-After", retryAfterSeconds(retry))
 	if global {
 		w.Header().Set("X-RateLimit-Global", "true")
 	}
@@ -48,8 +46,21 @@ func WriteDiscordError(w http.ResponseWriter, err error) {
 	WriteJSON(w, ae.Status, DiscordError{Message: ae.Message, Code: discordCode(ae)})
 }
 
-// discordCode maps an error to the nearest Discord JSON error code.
+// Discord JSON error codes the bot API reports.
+const (
+	DiscordCodeUnknownChannel = 10003
+	DiscordCodeUnknownMessage = 10008
+	DiscordCodeUnknownUser    = 10013
+	DiscordCodeEmptyMessage   = 50006
+)
+
+// discordCode maps an error to the nearest Discord JSON error code. An error
+// that carries its own code (WithDiscordCode) wins; otherwise the code is
+// derived from the status and, for 400 and 404, from the message wording.
 func discordCode(e *APIError) int {
+	if e.DiscordCode != 0 {
+		return e.DiscordCode
+	}
 	switch e.Status {
 	case http.StatusBadRequest:
 		if strings.Contains(e.Message, "empty") {
@@ -75,14 +86,5 @@ func discordCode(e *APIError) int {
 
 // HandleDiscord is Handle with Discord-shaped errors, for the bot API.
 func HandleDiscord(h HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if err := h(w, r); err != nil {
-			if _, ok := AsAPIError(err); !ok {
-				slog.ErrorContext(r.Context(), "request failed",
-					"request_id", RequestIDFromContext(r.Context()), "method", r.Method, "path", LogPath(r.URL.Path), "err", err)
-				err = ErrInternal("internal server error")
-			}
-			WriteDiscordError(w, err)
-		}
-	}
+	return handleWith(h, WriteDiscordError)
 }

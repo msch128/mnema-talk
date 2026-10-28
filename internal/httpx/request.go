@@ -30,12 +30,13 @@ func DecodeJSON(r *http.Request, dst any) error {
 		case errors.As(err, &maxErr):
 			return ErrPayloadTooLarge("request body too large")
 		case errors.Is(err, io.EOF):
-			return ErrInvalidInput("request body is empty")
+			return ErrInvalidInput("request body is empty").WithDiscordCode(DiscordCodeEmptyMessage)
 		default:
 			return ErrInvalidInput("invalid JSON body")
 		}
 	}
-	if dec.More() {
+	// More() would not see a stray closing brace or bracket after the value.
+	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
 		return ErrInvalidInput("request body must contain a single JSON object")
 	}
 	return nil
@@ -100,19 +101,31 @@ func CleanText(field, s string, maxRunes int, required bool) (string, error) {
 // CleanName is CleanText for display names that others read as an identity
 // (webhook, bot and username overrides): invisible and bidirectional format
 // characters (Unicode Cf, such as U+202E and U+200B), private-use characters
-// and C1 controls are removed first, so a name cannot be spoofed with text
+// C1 controls and blank-glyph characters are removed first, so a name cannot be spoofed with text
 // that renders differently from what it spells. Only the joiners that a script
 // or an emoji sequence really needs survive (see stripInvisible).
 func CleanName(field, s string, maxRunes int, required bool) (string, error) {
+	// A C0 control (a line break, ESC, BEL) cannot be part of a one-line name.
+	s = strings.TrimSpace(s)
+	if strings.ContainsFunc(s, func(r rune) bool { return r < 0x20 || r == 0x7f }) {
+		return "", ErrInvalidInput(field + " contains invalid characters")
+	}
 	if utf8.ValidString(s) {
 		s = stripInvisible(s)
 	}
 	return CleanText(field, s, maxRunes, required)
 }
 
-// isInvisibleRune reports format, private-use and C1 control characters.
+// isInvisibleRune reports characters that render as nothing or break a line in
+// a name: C1 controls, format and private-use characters, the line and
+// paragraph separators, and the letters and symbols with a blank glyph that
+// Unicode does not class as format (Hangul fillers, braille blank).
 func isInvisibleRune(r rune) bool {
-	return unicode.In(r, unicode.Cf, unicode.Co) || (r >= 0x80 && r <= 0x9f) || r == 0x2028 || r == 0x2029
+	switch r {
+	case 0x115f, 0x1160, 0x2800, 0x3164, 0xffa0, 0x2028, 0x2029:
+		return true
+	}
+	return (r >= 0x80 && r <= 0x9f) || unicode.In(r, unicode.Cf, unicode.Co)
 }
 
 // SanitizeFilename strips path components, control characters and leading

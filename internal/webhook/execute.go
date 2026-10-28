@@ -65,12 +65,11 @@ func writeDiscordError(w http.ResponseWriter, status, code int, msg string) {
 	httpx.WriteJSON(w, status, DiscordError{Message: msg, Code: code})
 }
 
+// writeDiscordRateLimit answers with the shared bot-API 429 (never global:
+// limits are per webhook and per channel). DiscordRateLimit above documents
+// the body in the OpenAPI spec.
 func writeDiscordRateLimit(w http.ResponseWriter, retry time.Duration) {
-	w.Header().Set("Retry-After", strconv.Itoa(int(retry.Seconds())+1))
-	w.Header().Set("X-RateLimit-Scope", "user")
-	httpx.WriteJSON(w, http.StatusTooManyRequests, DiscordRateLimit{
-		Message: "You are being rate limited.", RetryAfter: retry.Seconds(),
-	})
+	httpx.WriteDiscordRateLimit(w, retry, false)
 }
 
 // writeFailure maps an error to Discord's shape.

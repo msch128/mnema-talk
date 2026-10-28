@@ -47,7 +47,7 @@ func GetMember(ctx context.Context, p *db.Pool, id uuid.UUID) (*Member, error) {
 	return &list[0], nil
 }
 
-var errUnknownUser = httpx.ErrNotFound("unknown user")
+var errUnknownUser = httpx.ErrNotFound("unknown user").WithDiscordCode(httpx.DiscordCodeUnknownUser)
 
 // queryMembers runs the member query; extra narrows its WHERE clause.
 func queryMembers(ctx context.Context, p *db.Pool, extra string, args ...any) ([]Member, error) {

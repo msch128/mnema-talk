@@ -205,7 +205,7 @@ func ValidateBotMessage(rawContent string, rawEmbeds []InEmbed) (string, []Embed
 		return "", nil, httpx.ErrInvalidInput(err.Error())
 	}
 	if content == "" && len(embeds) == 0 {
-		return "", nil, httpx.ErrInvalidInput("Cannot send an empty message")
+		return "", nil, httpx.ErrInvalidInput("Cannot send an empty message").WithDiscordCode(httpx.DiscordCodeEmptyMessage)
 	}
 	return content, embeds, nil
 }

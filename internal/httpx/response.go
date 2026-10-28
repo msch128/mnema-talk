@@ -50,6 +50,17 @@ type APIError struct {
 	Message string `json:"message"`
 	// RetryAfter, when set, is sent as the Retry-After header (seconds).
 	RetryAfter time.Duration `json:"-"`
+	// DiscordCode is the Discord JSON error code the bot API reports for this
+	// error; 0 lets WriteDiscordError derive it from the status.
+	DiscordCode int `json:"-"`
+}
+
+// WithDiscordCode returns a copy of e that carries the given Discord error
+// code (see the DiscordCode* constants).
+func (e *APIError) WithDiscordCode(code int) *APIError {
+	c := *e
+	c.DiscordCode = code
+	return &c
 }
 
 // ErrorResponse is the JSON envelope every error response carries.
@@ -135,7 +146,7 @@ func WriteError(w http.ResponseWriter, err error) {
 		ae = ErrServer(err)
 	}
 	if ae.RetryAfter > 0 {
-		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(ae.RetryAfter.Seconds()))))
+		w.Header().Set("Retry-After", retryAfterSeconds(ae.RetryAfter))
 	}
 	WriteJSON(w, ae.Status, ErrorResponse{Error: ae})
 }
@@ -145,6 +156,13 @@ func WriteError(w http.ResponseWriter, err error) {
 type HandlerFunc func(w http.ResponseWriter, r *http.Request) error
 
 func Handle(h HandlerFunc) http.HandlerFunc {
+	return handleWith(h, WriteError)
+}
+
+// handleWith is the error tail shared by Handle and HandleDiscord: errors that
+// are not an *APIError are logged and replaced by a sanitized 500 before write
+// renders them.
+func handleWith(h HandlerFunc, write func(http.ResponseWriter, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := h(w, r); err != nil {
 			if _, ok := AsAPIError(err); !ok {
@@ -152,7 +170,13 @@ func Handle(h HandlerFunc) http.HandlerFunc {
 					"request_id", RequestIDFromContext(r.Context()), "method", r.Method, "path", LogPath(r.URL.Path), "err", err)
 				err = ErrInternal("internal server error")
 			}
-			WriteError(w, err)
+			write(w, err)
 		}
 	}
+}
+
+// retryAfterSeconds renders a wait as whole seconds for the Retry-After
+// header, rounded up so a client never retries early.
+func retryAfterSeconds(d time.Duration) string {
+	return strconv.Itoa(int(math.Ceil(d.Seconds())))
 }
