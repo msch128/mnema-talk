@@ -1,0 +1,69 @@
+internal/chat/access.go
+  s_19ca66a63b57e6::t_ac1aef037a44c2 74,77-79
+internal/httpx/request.go
+  s_19ca66a63b57e6::t_ce94e25dc22765 37
+internal/httpx/request_test.go
+  s_5e74eb91b1beec::t_83119b3d5f8ce8 25-26
+internal/push/sender.go
+  s_19ca66a63b57e6::t_df5f6744e19b71 123,126-127
+internal/ssrf/ssrf.go
+  s_19ca66a63b57e6::t_79951bfe29a0b4 31-58
+internal/ssrf/ssrf_test.go
+  s_5e74eb91b1beec::t_b6c72958556ad4 6,356-375
+internal/update/checker.go
+  s_19ca66a63b57e6::t_7b2ab62939f343 315
+internal/webhook/dispatch_delivery.go
+  s_19ca66a63b57e6::t_b05a4904feb45a 21-23,36,57-59
+internal/webhook/dispatch_test.go
+  s_5e74eb91b1beec::t_cfc0bec534b6d6 15,42,53-55,285-297
+internal/webhook/execute.go
+  s_5e74eb91b1beec::t_e5a25ab20b112f 6,225-230,239-240,271-278,364-369
+internal/webhook/execute_request.go
+  s_19ca66a63b57e6::t_53293933b3efc5 78
+internal/webhook/faults_integration_test.go
+  s_06fcde5dbef956::t_f730876b6f6c71 262-263,265-269
+internal/webhook/review_fixes_integration_test.go
+  s_5e74eb91b1beec::t_ebcc62d5ed2cea 1-136
+internal/webhook/store.go
+  s_7375f2539c4104::t_3a72ea270a5ddb 210-214,274-283,287-308,311,318-319,322-325
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "20be661a5b1f9f5aaad832a12e0974aee8765a32",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_19ca66a63b57e6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa4cb870620abc635",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5e74eb91b1beec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a38bb58581f273dc2",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7375f2539c4104": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad698788cf33a7188",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
