@@ -1,0 +1,27 @@
+web/src/composables/webrtc/session.ts
+  s_7ad149a25819f7::t_93d59134957510 198-204,213
+web/src/i18n/de.json
+  s_7ad149a25819f7::t_6183a694e1515d 642-643
+web/src/i18n/en.json
+  s_7ad149a25819f7::t_d1b7b735b7cec8 642-643
+web/src/types/events.test.ts
+  s_7ad149a25819f7::t_ab93ec1597a618 80
+web/src/types/events.ts
+  s_7ad149a25819f7::t_a414b883494998 140,383
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f20c0c2ce195ca5756a9d22b85dd7f6a6ea8a0e9",
+  "prompts": {},
+  "sessions": {
+    "s_7ad149a25819f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8752352772233b1c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
