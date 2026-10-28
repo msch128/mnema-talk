@@ -1,0 +1,19 @@
+internal/chat/forum_review_integration_test.go
+  s_1888f569b71f01::t_0a71dbcc6c9fa4 203-204,216,218
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "284b6c89472350cba74c80710b74bd18812f4c16",
+  "prompts": {},
+  "sessions": {
+    "s_1888f569b71f01": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aintegrate-server-60fe71aa50757d20",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
