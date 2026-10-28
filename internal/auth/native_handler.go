@@ -93,15 +93,25 @@ func nativeHeaderPresent(r *http.Request, name string) bool {
 	return false
 }
 
+// nativeBoundaryError is the one native request boundary: no browser headers
+// (403) and a plain target without query, bare "?", userinfo, fragment or
+// escaped path (400). Every native entry point goes through it.
+func nativeBoundaryError(r *http.Request) error {
+	if nativeHeaderPresent(r, "Origin") || nativeHeaderPresent(r, "Cookie") {
+		return httpx.ErrForbidden("native transport request rejected")
+	}
+	u := r.URL
+	if u.RawQuery != "" || u.ForceQuery || u.User != nil || u.Fragment != "" || u.RawPath != "" {
+		return httpx.ErrInvalidInput("invalid native request target")
+	}
+	return nil
+}
+
 func nativeRequestBoundary(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
-		if nativeHeaderPresent(r, "Origin") || nativeHeaderPresent(r, "Cookie") {
-			httpx.WriteError(w, httpx.ErrForbidden("native transport request rejected"))
-			return
-		}
-		if r.URL.RawQuery != "" || r.URL.User != nil || r.URL.Fragment != "" {
-			httpx.WriteError(w, httpx.ErrInvalidInput("invalid native request target"))
+		if err := nativeBoundaryError(r); err != nil {
+			httpx.WriteError(w, err)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -109,10 +119,7 @@ func nativeRequestBoundary(next http.Handler) http.Handler {
 }
 
 func nativeTransportRejected(r *http.Request) bool {
-	if nativeHeaderPresent(r, "Origin") || nativeHeaderPresent(r, "Cookie") {
-		return true
-	}
-	return r.URL.RawQuery != "" || r.URL.User != nil || r.URL.Fragment != ""
+	return nativeBoundaryError(r) != nil
 }
 
 func nativeBearer(r *http.Request) (string, error) {

@@ -40,6 +40,9 @@ func (h *NativeHandler) PasswordChangeHandler() (http.Handler, error) {
 	return nativePasswordRouter(h, control), nil
 }
 
+// passNative is the guard of a native router that needs none beyond the boundary.
+func passNative(next http.Handler) http.Handler { return next }
+
 func nativeRouter(guard func(http.Handler) http.Handler, missing string) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(nativeRequestBoundary)
@@ -50,7 +53,7 @@ func nativeRouter(guard func(http.Handler) http.Handler, missing string) *chi.Mu
 }
 
 func nativePasswordRouter(h *NativeHandler, control NativeCredentialControl) http.Handler {
-	r := nativeRouter(rejectNativePasswordQuery, "native password route not found")
+	r := nativeRouter(passNative, "native password route not found")
 	// These local request budgets complement the shared wrong-password account
 	// lockout; constructing the router once preserves their state across calls.
 	ip := httpx.NewRateLimiter(60, time.Minute)
@@ -72,21 +75,6 @@ func nativeMethodRejected(w http.ResponseWriter, _ *http.Request) {
 
 func nativePasswordUser(r *http.Request) string {
 	return UserFrom(r.Context()).ID.String()
-}
-
-// rejectForcedNativeTarget refuses a bare "?" or an escaped path before the route.
-func rejectForcedNativeTarget(next http.Handler, message string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
-		if request.URL.ForceQuery || request.URL.RawPath != "" {
-			httpx.WriteError(w, httpx.ErrInvalidInput(message))
-			return
-		}
-		next.ServeHTTP(w, request)
-	})
-}
-
-func rejectNativePasswordQuery(next http.Handler) http.Handler {
-	return rejectForcedNativeTarget(next, "invalid native password target")
 }
 
 // changePassword is the PUT /auth/password handler: it counts wrong passwords

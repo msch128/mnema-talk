@@ -26,10 +26,6 @@ func requireAnonymousNative(next http.Handler) http.Handler {
 	})
 }
 
-func rejectNativeRegistration(next http.Handler) http.Handler {
-	return rejectForcedNativeTarget(requireAnonymousNative(next), "invalid native registration target")
-}
-
 // RegistrationHandler is an explicit native-only account creation preview.
 // It shares invite consumption and the browser registration IP budget. It
 // creates neither a cookie nor a native session; a separate login is required.
@@ -37,7 +33,7 @@ func (h *NativeHandler) RegistrationHandler() (http.Handler, error) {
 	if invalidRegistrationHandler(h) {
 		return nil, errors.New("invalid native registration dependencies")
 	}
-	r := nativeRouter(rejectNativeRegistration, "native registration route not found")
+	r := nativeRouter(requireAnonymousNative, "native registration route not found")
 	r.With(h.accounts.registerPerIP.PerIP).Post("/auth/register", httpx.Handle(h.registerNative))
 	return r, nil
 }
