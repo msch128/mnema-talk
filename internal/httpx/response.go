@@ -180,3 +180,11 @@ func handleWith(h HandlerFunc, write func(http.ResponseWriter, error)) http.Hand
 func retryAfterSeconds(d time.Duration) string {
 	return strconv.Itoa(int(math.Ceil(d.Seconds())))
 }
+
+// NonNil returns s, or an empty slice for nil, so JSON encodes [] rather than null.
+func NonNil[T any](s []T) []T {
+	if s == nil {
+		return []T{}
+	}
+	return s
+}

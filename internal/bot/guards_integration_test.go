@@ -70,7 +70,7 @@ func seedManagerAndElevatedBot(t *testing.T, e *env) (*auth.User, fixtureBot) {
 func verifyMountedRoutesMatchGuards(t *testing.T, h *Handler) {
 	t.Helper()
 	mounted := chi.NewRouter()
-	mounted.Route("/admin", func(a chi.Router) { h.MountAdmin(a) })
+	mounted.Route("/admin", func(a chi.Router) { h.MountAdmin(a); h.MountAdminUploads(a) })
 	var got []string
 	if err := chi.Walk(mounted, func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
 		got = append(got, method+" "+strings.ReplaceAll(route, "/*", ""))
@@ -119,6 +119,7 @@ func executeGuardedRoute(h *Handler, manager *auth.User, method, path, body stri
 			})
 		})
 		h.MountAdmin(a)
+		h.MountAdminUploads(a)
 	})
 	r.ServeHTTP(w, req)
 	return w

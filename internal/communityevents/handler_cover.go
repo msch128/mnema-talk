@@ -19,7 +19,7 @@ const maxCoverBytes = 5 << 20
 // readCover reads the cover picture of the request (field "cover", or "image")
 // with the checks every uploaded picture gets, and crops it to the banner ratio.
 func readCover(w http.ResponseWriter, r *http.Request) (*imgproc.Picture, error) {
-	r.Body = http.MaxBytesReader(w, r.Body, maxCoverBytes+(1<<20))
+	r.Body = http.MaxBytesReader(w, r.Body, CoverBodyLimit)
 	return media.ReadPicture(r, media.PictureUpload{Fields: []string{"cover", "image"}, MaxBytes: maxCoverBytes, Process: imgproc.ProcessBanner})
 }
 

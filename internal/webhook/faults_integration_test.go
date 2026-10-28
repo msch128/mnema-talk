@@ -92,6 +92,7 @@ func (f *fixture) serve(h *Handler, method, path string, body io.Reader, hdr map
 			})
 		})
 		h.MountAdmin(a)
+		h.MountAdminUploads(a)
 	})
 	req := httptest.NewRequest(method, path, body)
 	for k, v := range hdr {

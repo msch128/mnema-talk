@@ -27,8 +27,9 @@ import (
 func metricsHandler(src *opsSource) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var b strings.Builder
-		writeProcessMetrics(&b, src)
-		writeDependencyMetrics(&b, src.read())
+		rd := src.read() // once per scrape: it stops the world and probes storage
+		writeProcessMetrics(&b, src, rd)
+		writeDependencyMetrics(&b, rd)
 		metrics.WriteInstruments(&b)
 
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
@@ -40,8 +41,7 @@ func metricsHandler(src *opsSource) http.HandlerFunc {
 }
 
 // writeProcessMetrics writes build, process and Go runtime metrics.
-func writeProcessMetrics(b *strings.Builder, src *opsSource) {
-	rd := src.read()
+func writeProcessMetrics(b *strings.Builder, src *opsSource, rd opsReading) {
 	ver := "dev"
 	if src != nil && src.version != "" {
 		ver = src.version

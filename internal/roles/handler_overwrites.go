@@ -120,7 +120,7 @@ func (h *Handler) listOverwrites(w http.ResponseWriter, r *http.Request, kind st
 	if err != nil {
 		return err
 	}
-	httpx.WriteJSON(w, http.StatusOK, OverwritesBody{Overwrites: nonNil(list)})
+	httpx.WriteJSON(w, http.StatusOK, OverwritesBody{Overwrites: httpx.NonNil(list)})
 	return nil
 }
 

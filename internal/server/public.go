@@ -65,7 +65,7 @@ type ICEConfig struct {
 // @Success 200 {object} Legal "Legal information."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/legal [get]
-func legal(cfg *config.Config) http.HandlerFunc {
+func LegalHandler(cfg *config.Config) http.HandlerFunc {
 	stun := cfg.WebRTCSTUNURLs
 	if stun == nil {
 		stun = []string{}
@@ -78,25 +78,13 @@ func legal(cfg *config.Config) http.HandlerFunc {
 		MediaRetentionDays: cfg.MediaRetentionDays,
 		SessionExpiryDays:  (cfg.SessionExpiryHours + 23) / 24,
 		STUNServers:        stun,
-		TURNServers:        nonNil(cfg.WebRTCTURNURLs),
+		TURNServers:        httpx.NonNil(cfg.WebRTCTURNURLs),
 		UpdateCheck:        cfg.UpdateCheck,
 		LegalVersion:       LegalVersion,
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, body)
 	}
-}
-
-// LegalHandler returns the public legal information handler.
-func LegalHandler(cfg *config.Config) http.HandlerFunc {
-	return legal(cfg)
-}
-
-func nonNil(s []string) []string {
-	if s == nil {
-		return []string{}
-	}
-	return s
 }
 
 // turnCredentials returns time-limited TURN credentials in coturn's REST

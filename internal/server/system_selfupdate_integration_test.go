@@ -201,6 +201,20 @@ func TestSelfUpdateRefusals(t *testing.T) {
 			t.Fatalf("update: %d %s", res.status, res.body)
 		}
 	})
+	t.Run("a failed trigger keeps no cooldown", func(t *testing.T) {
+		sidecar := newFakeSidecar(t)
+		sidecar.status.Store(http.StatusUnauthorized)
+		a := selfUpdateApp(t, sidecar, "ghcr.io/msch128/mnema-talk:latest")
+		admin := a.seedAdmin()
+		wantStatus(t, "failed trigger", admin.post("/api/admin/system/update", updateBody("admin-password-123")), http.StatusServiceUnavailable)
+		var st SystemStatus
+		admin.get("/api/admin/system").decode(t, &st)
+		if !st.SelfUpdate.Available || st.SelfUpdate.NextAllowedAt != nil {
+			t.Fatalf("after a failed trigger: %+v", st.SelfUpdate)
+		}
+		sidecar.status.Store(http.StatusAccepted)
+		wantStatus(t, "retry", admin.post("/api/admin/system/update", updateBody("admin-password-123")), http.StatusAccepted)
+	})
 	t.Run("sidecar refuses an unverified image", func(t *testing.T) {
 		sidecar := newFakeSidecar(t)
 		sidecar.status.Store(http.StatusUnprocessableEntity)

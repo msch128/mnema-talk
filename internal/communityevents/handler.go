@@ -38,8 +38,17 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Put("/events/{id}/rsvp", httpx.Handle(h.setRSVP))
 	r.Delete("/events/{id}/rsvp", httpx.Handle(h.deleteRSVP))
 	r.Get("/events/{id}/rsvps", httpx.Handle(h.listRSVPs))
-	r.Post("/events/{id}/cover", httpx.Handle(h.uploadCover))
 	r.Delete("/events/{id}/cover", httpx.Handle(h.deleteCover))
+}
+
+// CoverBodyLimit is the body ceiling of the cover upload: the image plus the
+// multipart framing.
+const CoverBodyLimit = maxCoverBytes + 1<<20
+
+// MountUploads registers the multipart cover upload; the caller wraps it in a
+// MaxBody of CoverBodyLimit instead of the JSON default.
+func (h *Handler) MountUploads(r chi.Router) {
+	r.Post("/events/{id}/cover", httpx.Handle(h.uploadCover))
 }
 
 func (h *Handler) canViewChannel(r *http.Request, channelID uuid.UUID) bool {

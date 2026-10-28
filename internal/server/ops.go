@@ -35,7 +35,6 @@ type opsReading struct {
 	at       time.Time
 	proc     metrics.ProcessStats
 	mem      runtime.MemStats
-	threads  int
 	ws       ws.Stats
 	sfu      sfu.Stats
 	pool     db.PoolStats

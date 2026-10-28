@@ -42,13 +42,18 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	h.routes(r.With(auth.RequirePerm(h.Perms, perm.ManageBots)))
 }
 
+// MountAdminUploads registers the multipart avatar upload; the caller wraps it
+// in a larger MaxBody than the JSON default.
+func (h *Handler) MountAdminUploads(r chi.Router) {
+	r.With(auth.RequirePerm(h.Perms, perm.ManageBots)).Post("/bots/{id}/avatar", httpx.Handle(h.avatar))
+}
+
 func (h *Handler) routes(r chi.Router) {
 	r.Get("/bots", httpx.Handle(h.list))
 	r.Post("/bots", httpx.Handle(h.create))
 	r.Get("/bots/{id}", httpx.Handle(h.get))
 	r.Patch("/bots/{id}", httpx.Handle(h.update))
 	r.Delete("/bots/{id}", httpx.Handle(h.delete))
-	r.Post("/bots/{id}/avatar", httpx.Handle(h.avatar))
 	r.Put("/bots/{id}/roles", httpx.Handle(h.setRoles))
 	r.Get("/bots/{id}/access", httpx.Handle(h.access))
 	r.Get("/bots/{id}/tokens", httpx.Handle(h.listTokens))
@@ -64,6 +69,7 @@ func (h *Handler) routes(r chi.Router) {
 // tests that reach the handlers' own lookups.
 func (h *Handler) mountUnguarded(r chi.Router) {
 	h.routes(r)
+	r.Post("/bots/{id}/avatar", httpx.Handle(h.avatar))
 }
 
 // load finds the bot of the path and checks the caller may manage it: the

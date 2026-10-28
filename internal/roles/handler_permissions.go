@@ -86,7 +86,7 @@ func (h *Handler) myPermissions(w http.ResponseWriter, r *http.Request) error {
 	info := PermissionsInfo{
 		Owner:       snap.IsOwner(sub),
 		Permissions: snap.Global(sub),
-		RoleIDs:     nonNil(snap.RoleIDs(user.ID)),
+		RoleIDs:     httpx.NonNil(snap.RoleIDs(user.ID)),
 		TopPosition: min(snap.TopPosition(sub), maxReportedPosition),
 		Channels:    channels,
 		Catalog:     perm.Catalog,
@@ -103,13 +103,6 @@ func (h *Handler) myPermissions(w http.ResponseWriter, r *http.Request) error {
 
 // maxReportedPosition is what the Owner's unlimited position is reported as.
 const maxReportedPosition = 1 << 20
-
-func nonNil[T any](s []T) []T {
-	if s == nil {
-		return []T{}
-	}
-	return s
-}
 
 // UploadLimitInput is the body of PUT /api/admin/upload-limit.
 type UploadLimitInput struct {

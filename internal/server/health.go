@@ -113,12 +113,11 @@ func (h *healthCheck) check(ctx context.Context) *httpx.APIError {
 // and an object storage outage answers 503 as well.
 //
 // @Summary Health check
-// @Description Pings the database.
+// @Description Pings the database and checks object storage; the result is cached for 2 s.
 // @ID getHealth
 // @Tags System
 // @Produce json
 // @Success 200 {object} Health "Healthy."
-// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
 // @Router /api/health [get]
 func health(hc *healthCheck, version string) http.HandlerFunc {
