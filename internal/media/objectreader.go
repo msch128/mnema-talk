@@ -132,6 +132,9 @@ func parsePrefixRangeStart(first string, size int64) int64 {
 	return start
 }
 
+// IsMissingObject reports whether err means the stored object does not exist.
+func IsMissingObject(err error) bool { return isMissingObject(err) }
+
 // isMissingObject reports whether err means the stored object does not exist.
 func isMissingObject(err error) bool {
 	var noKey *types.NoSuchKey

@@ -21,7 +21,10 @@ const (
 	// exportBuildTimeout bounds the background work of one export.
 	exportBuildTimeout = 5 * time.Minute
 	// exportSlots is how many exports are built at once on the server.
-	exportSlots      = 2
+	exportSlots = 2
+	// exportBusyRetry is the Retry-After of a request refused for lack of a
+	// build slot.
+	exportBusyRetry  = time.Minute
 	exportSweepEvery = 15 * time.Minute
 )
 
@@ -68,7 +71,8 @@ func (h *Handler) mountExport(r chi.Router) {
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: an export was already requested in the last 24 hours, or too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
-// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: object storage is not available."
+// @Header 503 {integer} Retry-After "Seconds until the client may retry (when every export slot is busy)."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: object storage is not available, or every export slot is busy; no export was started and none counts toward the daily limit."
 // @Router /api/users/me/export [post]
 func (h *Handler) requestExport(w http.ResponseWriter, r *http.Request) error {
 	u := UserFrom(r.Context())
@@ -90,7 +94,11 @@ func (h *Handler) requestExport(w http.ResponseWriter, r *http.Request) error {
 		httpx.WriteRateLimited(w, retry)
 		return nil
 	}
-	h.buildExportInBackground(id, u.ID)
+	if !h.buildExportInBackground(id, u.ID) {
+		busy := httpx.ErrUnavailable("exports are being built for other members right now; try again in a few minutes")
+		busy.RetryAfter = exportBusyRetry
+		return busy
+	}
 	h.auditUser(r.Context(), u, "auth.export_request")
 	st, err := h.exportState(r.Context(), u.ID)
 	if err != nil {
@@ -123,12 +131,15 @@ func (h *Handler) claimExport(ctx context.Context, user uuid.UUID) (id uuid.UUID
 	return id, wait, err
 }
 
-func (h *Handler) buildExportInBackground(id, user uuid.UUID) {
+// buildExportInBackground starts building the export. It reports false, after
+// marking the export failed (which does not count toward the daily limit),
+// when every build slot is taken.
+func (h *Handler) buildExportInBackground(id, user uuid.UUID) bool {
 	select {
 	case h.exportSlots <- struct{}{}:
 	default:
 		h.failExport(context.Background(), id)
-		return
+		return false
 	}
 	h.rec.wg.Add(1)
 	go func() {
@@ -136,13 +147,14 @@ func (h *Handler) buildExportInBackground(id, user uuid.UUID) {
 			<-h.exportSlots
 			h.rec.wg.Done()
 		}()
-		ctx, cancel := context.WithTimeout(context.Background(), exportBuildTimeout)
+		ctx, cancel := context.WithTimeout(h.jobContext(), exportBuildTimeout)
 		defer cancel()
 		if err := h.buildExport(ctx, id, user); err != nil {
 			slog.Warn("data export failed", "err", err)
 			h.failExport(context.Background(), id)
 		}
 	}()
+	return true
 }
 
 func (h *Handler) failExport(ctx context.Context, id uuid.UUID) {
