@@ -196,3 +196,15 @@ func TestBandwidthRange(t *testing.T) {
 		t.Fatalf("ranges %v", seen)
 	}
 }
+
+func TestHTTPFamiliesKeepErrorClassesPastGenericCap(t *testing.T) {
+	HTTPRequests.Reset()
+	t.Cleanup(HTTPRequests.Reset)
+	for i := 0; i < maxSeries+100; i++ {
+		ObserveHTTP(fmt.Sprintf("GET /route/%d", i), 200, time.Millisecond)
+	}
+	ObserveHTTP("GET /late-route", 500, time.Millisecond)
+	if got := HTTPRequests.Sum(1, "5xx"); got != 1 {
+		t.Fatalf("5xx total = %d, want 1", got)
+	}
+}

@@ -20,6 +20,11 @@ import (
 // maxSeries bounds the series of one labelled family.
 const maxSeries = 256
 
+// maxHTTPSeries bounds the HTTP families. Their route label is the bounded set
+// of router patterns (several hundred) times up to five status classes, so the
+// generic cap would fold late routes, including their 4xx/5xx, into "other".
+const maxHTTPSeries = 2048
+
 // otherLabel replaces label values beyond maxSeries.
 const otherLabel = "other"
 
@@ -48,12 +53,19 @@ func (g *Gauge) Load() int64 { return g.v.Load() }
 type Vec struct {
 	name, help string
 	labels     []string
+	max        int
 	mu         sync.RWMutex
 	series     map[string]*Counter
 }
 
 func newVec(name, help string, labels ...string) *Vec {
-	return &Vec{name: name, help: help, labels: labels, series: map[string]*Counter{}}
+	return &Vec{name: name, help: help, labels: labels, max: maxSeries, series: map[string]*Counter{}}
+}
+
+func newHTTPVec(name, help string, labels ...string) *Vec {
+	v := newVec(name, help, labels...)
+	v.max = maxHTTPSeries
+	return v
 }
 
 // With returns the counter of one label combination.
@@ -70,7 +82,7 @@ func (v *Vec) With(values ...string) *Counter {
 	if c, ok = v.series[key]; ok {
 		return c
 	}
-	if len(v.series) >= maxSeries {
+	if len(v.series) >= v.max {
 		other := make([]string, len(v.labels))
 		for i := range other {
 			other[i] = otherLabel
@@ -157,12 +169,19 @@ type histogram struct {
 // HistVec is a latency histogram family with one label.
 type HistVec struct {
 	name, help, label string
+	max               int
 	mu                sync.RWMutex
 	series            map[string]*histogram
 }
 
 func newHistVec(name, help, label string) *HistVec {
-	return &HistVec{name: name, help: help, label: label, series: map[string]*histogram{}}
+	return &HistVec{name: name, help: help, label: label, max: maxSeries, series: map[string]*histogram{}}
+}
+
+func newHTTPHistVec(name, help, label string) *HistVec {
+	h := newHistVec(name, help, label)
+	h.max = maxHTTPSeries
+	return h
 }
 
 func (h *HistVec) get(value string) *histogram {
@@ -177,7 +196,7 @@ func (h *HistVec) get(value string) *histogram {
 	if s, ok = h.series[value]; ok {
 		return s
 	}
-	if len(h.series) >= maxSeries {
+	if len(h.series) >= h.max {
 		value = otherLabel
 		if s, ok = h.series[value]; ok {
 			return s
@@ -232,9 +251,9 @@ func formatFloat(f float64) string {
 // The process-wide instruments.
 var (
 	// HTTPRequests counts requests by route pattern and status class (2xx..5xx).
-	HTTPRequests = newVec("mnema_http_requests_total", "HTTP requests by route pattern and status class", "route", "class")
+	HTTPRequests = newHTTPVec("mnema_http_requests_total", "HTTP requests by route pattern and status class", "route", "class")
 	// HTTPDuration is the latency by route pattern.
-	HTTPDuration = newHistVec("mnema_http_request_duration_seconds", "HTTP request latency by route pattern", "route")
+	HTTPDuration = newHTTPHistVec("mnema_http_request_duration_seconds", "HTTP request latency by route pattern", "route")
 	// HTTPInflight is the number of requests being served.
 	HTTPInflight Gauge
 
