@@ -155,6 +155,7 @@ of the pre-update backup (see "Rollback" above).
 | 0073 | `server_notify`: a member's server-wide notification default (see [Notification settings](#notification-settings)). Adds a table only. |
 | 0074 | `dm_members.hidden_at` and `dm_members.favourite_pos`, `users.dm_mute_all` and `users.dm_list_collapsed`: member-local direct message list preferences (see [Direct message list](#direct-message-list-close-favourites-mute-all)). |
 | 0075 | `channels.slug` and `channel_slugs`: the speaking addresses of channels (see "Speaking URLs"). Every existing channel except a direct message gets its slug in the same migration. |
+| 0076 | `messages_channel_unread_idx`: covering index on `messages (channel_id, created_at) INCLUDE (user_id, parent_id, reply_to_id)` for the unread counts. Adds an index only; building it briefly slows message writes on a very large database. |
 
 #### Speaking URLs
 
