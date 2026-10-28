@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { nameInitial } from '../lib/initial'
 import type { PropType } from 'vue'
 import type { User as ProfileUser } from '../types/domain'
 import type { LivePresence } from './presentationTypes'
@@ -89,7 +90,7 @@ async function removeAvatar() {
           class="w-full h-full object-cover"
         />
         <span v-else class="text-2xl font-bold text-mnema-mint">
-          {{ (profileUser.display_name || profileUser.username || '?').charAt(0).toUpperCase() }}
+          {{ nameInitial(profileUser.display_name || profileUser.username || '?') }}
         </span>
 
         <!-- Hover overlay for own profile -->

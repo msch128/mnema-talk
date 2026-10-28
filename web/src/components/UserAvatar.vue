@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { nameInitial } from '../lib/initial'
 import type { PropType } from 'vue'
 import type { AvatarUser, AvatarSize, LivePresence } from './presentationTypes'
 import { computed } from 'vue'
@@ -51,7 +52,7 @@ const sizeClasses = computed(() => {
 
 const initial = computed(() => {
   const name = props.user?.display_name || props.user?.username || '?'
-  return name.charAt(0).toUpperCase()
+  return nameInitial(name)
 })
 
 const dotStatus = computed(() => props.status || (props.isOnline ? 'online' : 'offline'))

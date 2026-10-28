@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { nameInitial } from '../lib/initial'
 import type { PropType } from 'vue'
 import type { AvatarUser } from './presentationTypes'
 // One participant of the Talk, like a Discord voice tile: their camera when it
@@ -47,7 +48,7 @@ const emit = defineEmits<{ 'open-profile': [user: { id: string }]; 'toggle-camer
 
 const focusable = computed(() => !!props.stream && (props.cameraFocusable || props.cameraFocused))
 const name = computed(() => props.user.display_name || props.user.username)
-const initial = computed(() => (name.value || '?').charAt(0).toUpperCase())
+const initial = computed(() => nameInitial(name.value || '?'))
 
 // Shown on hover / keyboard focus of the tile (or of a button on it).
 const REVEAL = 'opacity-0 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100'

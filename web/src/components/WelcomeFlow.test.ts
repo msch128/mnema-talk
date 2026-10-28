@@ -3,6 +3,7 @@ import type { OnboardingState } from '../types/rest'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { nextTick } from 'vue'
 import WelcomeFlow from './WelcomeFlow.vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
@@ -97,6 +98,24 @@ describe('WelcomeFlow on a first run', () => {
     expect(saved()).toEqual([{ welcome_done: true }])
     expect(window.location.pathname).toBe(`/c/${START.id}`)
     w.unmount()
+  })
+
+  it('asks for notification permission once on a double click and moves on when it throws', async () => {
+    account()
+    await flow()
+    await click('welcome-next')
+    await click('welcome-accept')
+    await click('welcome-skip')
+    let reject: (e: Error) => void = () => {}
+    const ask = vi.spyOn(useChatStore(), 'requestNotificationPermission').mockReturnValue(new Promise((_, r) => { reject = r }))
+    const btn = document.querySelector<HTMLButtonElement>('[data-testid="welcome-enable"]')!
+    btn.click(); btn.click()
+    await nextTick()
+    expect(ask).toHaveBeenCalledTimes(1)
+    expect(btn.disabled).toBe(true)
+    reject(new Error('platform'))
+    await flushPromises()
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
   })
 
   it('drops the notification step where permission cannot be asked', async () => {
