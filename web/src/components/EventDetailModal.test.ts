@@ -132,7 +132,7 @@ describe('EventDetailModal', () => {
     wrapper = mount(EventDetailModal, { props: { event: makeEvent() } })
     await button('Can’t make it')?.trigger('click')
     await flushPromises()
-    expect(useToastStore().toasts.some(t => t.text === 'Could not update your response.')).toBe(true)
+    expect(useToastStore().toasts.some(t => t.text === 'Couldn’t save your response. Try again.')).toBe(true)
   })
 
   it.each([
