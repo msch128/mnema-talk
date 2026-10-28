@@ -1,0 +1,35 @@
+.env.example
+  s_bf965fb31d4e8a::t_aa6fadb013c16e 12
+doc/operations.md
+  s_bf965fb31d4e8a::t_05e7b97bce0668 37
+internal/config/config_net.go
+  s_dae090ee96213e::t_cc423bce39f93e 44-47,49,59,75-83
+internal/config/config_test.go
+  s_bf965fb31d4e8a::t_60f19adaf1ccb0 459-495
+internal/config/config_validate.go
+  s_dae090ee96213e::t_36083fc1ff61b1 126-128,132-144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "06dd480ada6d12582d93280106db127912fa3095",
+  "prompts": {},
+  "sessions": {
+    "s_bf965fb31d4e8a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a471f7457881e2784",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_dae090ee96213e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a448f20095192534b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
