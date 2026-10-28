@@ -39,14 +39,14 @@ export interface ClientLike {
 export interface PushScope {
   registration: {
     showNotification(title: string, options: Record<string, unknown>): Promise<void>
-    getNotifications(): Promise<unknown[]>
+    getNotifications(filter?: { tag?: string }): Promise<NotificationLike[]>
     pushManager: { subscribe(options: unknown): Promise<{ toJSON(): { endpoint?: string, keys?: Record<string, string> } }> }
   }
   clients: {
     matchAll(options: { type: 'window', includeUncontrolled: boolean }): Promise<ClientLike[]>
     openWindow(url: string): Promise<unknown>
   }
-  navigator?: { setAppBadge?(count: number): Promise<void>, clearAppBadge?(): Promise<void> }
+  navigator?: { userAgent?: string, setAppBadge?(count: number): Promise<void>, clearAppBadge?(): Promise<void> }
   fetch(input: Request | string, init?: RequestInit): Promise<Response>
 }
 
@@ -139,12 +139,29 @@ async function updateBadge(scope: PushScope): Promise<void> {
   } catch { /* a badge is a nicety */ }
 }
 
-/** A push arrived. Messages are not shown while the app is on screen (it shows them itself); the test push always is. */
+/** WebKit (Safari, every iOS browser) revokes a subscription whose pushes show nothing. */
+function isWebKit(scope: PushScope): boolean {
+  const ua = scope.navigator?.userAgent ?? ''
+  return ua.includes('AppleWebKit') && !/Chrome\/|Chromium|Edg\/|OPR\//.test(ua)
+}
+
+/**
+ * A push arrived. Messages are not shown while the app is on screen (it shows
+ * them itself); the test push always is. WebKit insists on a notification for
+ * every push, so there it is shown silently and taken back at once.
+ */
 export async function onPush(scope: PushScope, event: PushEventLike): Promise<void> {
   const message = parsePush(readPayload(event))
-  if (message?.type === 'message' && await appIsOnScreen(scope)) return
+  const quiet = message?.type === 'message' && await appIsOnScreen(scope)
+  if (quiet && !isWebKit(scope)) return
   const shown = message ?? { type: 'message' as const, title: 'Mnema Talk', body: '', tag: 'mnema', timestamp: Date.now(), channelId: null, channelSlug: null, messageId: null, parentId: null, mention: false }
-  await scope.registration.showNotification(shown.title, notificationOptions(shown))
+  const options = notificationOptions(shown)
+  await scope.registration.showNotification(shown.title, quiet ? { ...options, silent: true, renotify: false } : options)
+  if (quiet) {
+    try {
+      for (const n of await scope.registration.getNotifications({ tag: shown.tag })) n.close()
+    } catch { /* the notification then simply stays */ }
+  }
   await updateBadge(scope)
 }
 
@@ -183,10 +200,12 @@ export async function onSubscriptionChange(scope: PushScope, event: Subscription
   if (!event.oldSubscription) return
   const fresh = (await scope.registration.pushManager.subscribe(event.oldSubscription.options)).toJSON()
   if (!fresh.endpoint || !fresh.keys?.['p256dh'] || !fresh.keys['auth']) return
-  await scope.fetch('/api/push/subscriptions', {
+  const res = await scope.fetch('/api/push/subscriptions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'same-origin',
     body: JSON.stringify({ endpoint: fresh.endpoint, p256dh: fresh.keys['p256dh'], auth: fresh.keys['auth'], label: '' }),
   })
+  // Surfaced through waitUntil; the page re-syncs the subscription when it opens.
+  if (!res.ok) throw new Error(`push re-registration failed: ${res.status}`)
 }
