@@ -84,7 +84,7 @@ mnema-talk/
 │   ├── media/               # Uploads (MIME sniffing), authenticated media serving, retention
 │   ├── s3/                  # S3 client
 │   ├── events/              # Event types / publishing to the hub
-│   ├── ws/                  # Real-time WebSocket hub (events, presence)
+│   ├── ws/                  # Real-time WebSocket hub (events, presence); native_*.go (lease, admission, metadata socket) is dormant: only nativepreview mounts it, never the production server
 │   ├── bot/                 # Bot accounts, tokens, bot API authentication, slash commands (doc/bots.md)
 │   ├── slash/               # Built-in slash commands: the registry and the Builtin interface (doc/bots.md)
 │   ├── slashcmd/            # The built-ins besides /poll: /me, /shrug, /tableflip, /unflip, /spoiler, /nick, /thread, /msg, /timeout, /ban, /kick

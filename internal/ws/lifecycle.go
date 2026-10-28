@@ -229,6 +229,14 @@ func (h *Hub) Close() {
 		return
 	}
 	h.closed = true
+	// Stays in progress are settled now: once closed, the connections'
+	// own clean-up no longer reaches removePresence to bank them.
+	now := time.Now()
+	stays := make(map[voiceKey]time.Duration, len(h.voiceSince))
+	for key, since := range h.voiceSince {
+		stays[key] = now.Sub(since)
+		delete(h.voiceSince, key)
+	}
 	clients := make([]*Client, 0, len(h.clients))
 	online := make([]uuid.UUID, 0, len(h.online))
 	for c := range h.clients {
@@ -249,6 +257,9 @@ func (h *Hub) Close() {
 	// Everyone still connected goes offline now. Record it here, while the
 	// database is still open: the connections' own clean-up runs after the
 	// server has moved on to closing it.
+	for key, d := range stays {
+		h.addVoiceTime(key.user, key.ch, d)
+	}
 	h.flushAllVoiceTime()
 	h.recordLastSeen(online...)
 	for _, c := range clients {
