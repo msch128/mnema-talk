@@ -1,0 +1,31 @@
+internal/imageverify/policy.go
+  s_9df22b27f2327e::t_8c54fb76802073 27,73-74,81-99
+internal/imageverify/provenance.go
+  s_dae090ee96213e::t_c5dc9c3bccefad 194
+internal/imageverify/verifier.go
+  s_9df22b27f2327e::t_ed3c51ba12366b 160-163,165,167-171,177-183,185-188,191-192,204-207,209-212,215-221,231-234,236,247,285,289
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "979f764d51873c9cb9ff83a3e7b0905752483a15",
+  "prompts": {},
+  "sessions": {
+    "s_9df22b27f2327e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af345ded314039cb4",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_dae090ee96213e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a448f20095192534b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
