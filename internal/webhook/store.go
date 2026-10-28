@@ -207,6 +207,11 @@ func create(ctx context.Context, p *db.Pool, channel, creator uuid.UUID, name st
 	}
 	var id uuid.UUID
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		// Serialise creations per channel so the cap cannot be overrun; NO KEY
+		// does not block message inserts that only reference the channel.
+		if _, err := tx.Exec(ctx, `SELECT 1 FROM channels WHERE id = $1 FOR NO KEY UPDATE`, channel); err != nil {
+			return err
+		}
 		var n int
 		if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM webhooks WHERE channel_id = $1`, channel).Scan(&n); err != nil {
 			return err
@@ -266,43 +271,58 @@ func regenerate(ctx context.Context, p *db.Pool, rec *record) (string, error) {
 	return token, nil
 }
 
-func cleanupWebhookAvatar(ctx context.Context, p *db.Pool, store media.Store, avatarURL string) {
-	if store == nil || avatarURL == "" {
-		return
-	}
-	id, err := uuid.Parse(path.Base(avatarURL))
-	if err != nil {
-		return
-	}
-	if err := media.DeleteMedia(ctx, p, store, id); err != nil {
-		slog.Warn("could not delete webhook avatar", "media_id", id, "err", err)
-	}
-}
-
-func deleteWebhookRecords(ctx context.Context, p *db.Pool, webhookID, botUserID uuid.UUID) error {
-	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+// deleteWebhookRecords removes the webhook and, when no message of it is left,
+// its bot account. The account row is locked first, so a message posted
+// meanwhile either lands before the check (the account stays) or waits for the
+// delete and fails. It returns the storage key of the avatar of a removed
+// account ("" when the account stays or has none): the media row goes with the
+// account, so the key has to be read here.
+func deleteWebhookRecords(ctx context.Context, p *db.Pool, webhookID, botUserID uuid.UUID, avatarURL string) (string, error) {
+	var key string
+	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		key = ""
 		if _, err := tx.Exec(ctx, `DELETE FROM webhooks WHERE id = $1`, webhookID); err != nil {
 			return err
 		}
-		_, err := tx.Exec(ctx, `
-			DELETE FROM users WHERE id = $1 AND is_bot AND NOT EXISTS (SELECT 1 FROM messages WHERE user_id = $1)`, botUserID)
+		var locked uuid.UUID
+		err := tx.QueryRow(ctx, `SELECT id FROM users WHERE id = $1 AND is_bot FOR UPDATE`, botUserID).Scan(&locked)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		var hasMessages bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM messages WHERE user_id = $1)`, botUserID).Scan(&hasMessages); err != nil {
+			return err
+		}
+		if hasMessages {
+			return nil
+		}
+		if mediaID, err := uuid.Parse(path.Base(avatarURL)); err == nil && avatarURL != "" {
+			err := tx.QueryRow(ctx, `SELECT s3_key FROM media WHERE id = $1 AND NOT is_deleted`, mediaID).Scan(&key)
+			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return err
+			}
+		}
+		_, err = tx.Exec(ctx, `DELETE FROM users WHERE id = $1`, botUserID)
 		return err
 	})
+	return key, err
 }
 
 // remove deletes the webhook. Its bot account stays while messages by it
 // exist, so history keeps its author; without any, the account goes too, and
 // its avatar object with it (store may be nil).
 func remove(ctx context.Context, p *db.Pool, store media.Store, rec *record) error {
-	var hasMessages bool
-	if err := p.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM messages WHERE user_id = $1)`, rec.botUserID).Scan(&hasMessages); err != nil {
+	key, err := deleteWebhookRecords(ctx, p, rec.ID, rec.botUserID, rec.AvatarURL)
+	if err != nil {
 		return fmt.Errorf("delete webhook: %w", err)
 	}
-	if !hasMessages {
-		cleanupWebhookAvatar(ctx, p, store, rec.AvatarURL)
-	}
-	if err := deleteWebhookRecords(ctx, p, rec.ID, rec.botUserID); err != nil {
-		return fmt.Errorf("delete webhook: %w", err)
+	if key != "" && store != nil {
+		if err := store.Delete(ctx, key); err != nil {
+			slog.Warn("could not delete webhook avatar", "key", key, "err", err)
+		}
 	}
 	return nil
 }

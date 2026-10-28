@@ -312,7 +312,7 @@ func parseRelease(body []byte) (*Release, error) {
 	if err := dec.Decode(&gr); err != nil {
 		return nil, errors.New("GitHub's answer is not valid JSON")
 	}
-	if dec.More() {
+	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
 		return nil, errors.New("GitHub's answer has trailing data")
 	}
 	if gr.TagName == nil {

@@ -71,8 +71,11 @@ func ValidateParent(ctx context.Context, p *db.Pool, channelID uuid.UUID, parent
 		return nil
 	}
 	ref, err := loadMessageRef(ctx, p, *parentID)
-	if err != nil {
+	if errors.Is(err, errMessageNotFound) {
 		return httpx.ErrInvalidInput("parent message not found")
+	}
+	if err != nil {
+		return err
 	}
 	if ref.ChannelID != channelID || ref.ParentID != nil {
 		return httpx.ErrInvalidInput("parent must be a root message in the same channel")

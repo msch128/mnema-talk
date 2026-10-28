@@ -75,7 +75,7 @@ func decodeLenient(body io.Reader, dst any) error {
 	if err := dec.Decode(dst); err != nil {
 		return err
 	}
-	if dec.More() {
+	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
 		return errors.New("trailing data")
 	}
 	return nil

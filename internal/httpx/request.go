@@ -34,7 +34,7 @@ func DecodeJSON(r *http.Request, dst any) error {
 			return ErrInvalidInput("invalid JSON body")
 		}
 	}
-	if dec.More() {
+	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
 		return ErrInvalidInput("request body must contain a single JSON object")
 	}
 	return nil

@@ -22,6 +22,8 @@ func TestDecodeJSONIsStrict(t *testing.T) {
 	cases := map[string]string{
 		"unknown field": `{"name":"a","role":"admin"}`,
 		"trailing data": `{"name":"a"}{"name":"b"}`,
+		"stray brace":   `{"name":"a"}}`,
+		"stray bracket": `{"name":"a"}]`,
 		"not json":      `name=a`,
 		"empty":         ``,
 	}

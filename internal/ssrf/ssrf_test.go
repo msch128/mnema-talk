@@ -3,6 +3,7 @@ package ssrf
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -351,4 +352,24 @@ func TestClientEndToEnd(t *testing.T) {
 		t.Fatalf("proxy environment used: %v", err)
 	}
 	res.Body.Close()
+}
+
+func TestReasonNamesTheSharedFailures(t *testing.T) {
+	for err, want := range map[error]string{
+		fmt.Errorf("x: %w", ErrBlocked):               "blocked_address",
+		fmt.Errorf("x: %w", ErrResolve):               "dns_error",
+		fmt.Errorf("x: %w", ErrConnect):               "connect_error",
+		fmt.Errorf("x: %w", ErrBadURL):                "invalid_url",
+		fmt.Errorf("x: %w", context.DeadlineExceeded): "timeout",
+		&net.DNSError{IsTimeout: true}:                "timeout",
+		errors.New("tls: handshake failure"):          "tls_error",
+		errors.New("x509: unknown authority"):         "tls_error",
+	} {
+		if got, ok := Reason(err); !ok || got != want {
+			t.Errorf("%v: %q %v, want %q", err, got, ok, want)
+		}
+	}
+	if got, ok := Reason(errors.New("other")); ok || got != "" {
+		t.Errorf("unrelated error: %q %v", got, ok)
+	}
 }

@@ -28,6 +28,34 @@ var (
 	ErrRedirect = errors.New("redirects are not followed")
 )
 
+// Reason names why an outbound request through this package failed, as a short
+// code that is safe to store and show: never the raw network error. ok is false
+// when the error is none of the cases every caller shares (the sentinels
+// above, timeouts and TLS failures); callers add their own cases and fall back
+// to a generic code.
+func Reason(err error) (code string, ok bool) {
+	switch {
+	case errors.Is(err, ErrBlocked):
+		return "blocked_address", true
+	case errors.Is(err, ErrResolve):
+		return "dns_error", true
+	case errors.Is(err, ErrConnect):
+		return "connect_error", true
+	case errors.Is(err, ErrBadURL):
+		return "invalid_url", true
+	case errors.Is(err, context.DeadlineExceeded):
+		return "timeout", true
+	}
+	var t interface{ Timeout() bool }
+	if errors.As(err, &t) && t.Timeout() {
+		return "timeout", true
+	}
+	if msg := err.Error(); strings.Contains(msg, "tls:") || strings.Contains(msg, "x509:") {
+		return "tls_error", true
+	}
+	return "", false
+}
+
 // maxURLLen bounds a target URL.
 const maxURLLen = 2048
 

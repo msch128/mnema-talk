@@ -3,6 +3,7 @@ package webhook
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -221,6 +222,12 @@ func (h *Handler) execute(w http.ResponseWriter, r *http.Request) {
 		writeFailure(w, err)
 		return
 	}
+	if msg == nil {
+		// Stored, but the read-back failed (already logged): the sender must
+		// not retry and post a duplicate.
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	h.Events.BroadcastChannel(msg.ChannelID, events.MessageCreate, msg)
 	if wait, err := strconv.ParseBool(r.URL.Query().Get("wait")); err == nil && wait {
 		httpx.WriteJSON(w, http.StatusOK, msg)
@@ -229,7 +236,8 @@ func (h *Handler) execute(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// post validates and stores the message. It returns the stored message.
+// post validates and stores the message. It returns the stored message, or nil
+// without an error when the message was stored but could not be read back.
 func (h *Handler) post(w http.ResponseWriter, r *http.Request, rec *record) (*chat.Message, error) {
 	ctx := r.Context()
 	req, err := h.readRequest(w, r, rec.botUserID)
@@ -260,7 +268,14 @@ func (h *Handler) post(w http.ResponseWriter, r *http.Request, rec *record) (*ch
 		discard()
 		return nil, err
 	}
-	return chat.GetMessage(ctx, h.DB, id)
+	// The message is committed: a failed read-back (a cancelled request, a
+	// database hiccup) must not turn the post into an error the sender retries.
+	msg, err := chat.GetMessage(context.WithoutCancel(ctx), h.DB, id)
+	if err != nil {
+		slog.Error("webhook message stored but not read back", "message_id", id, "err", err)
+		return nil, nil
+	}
+	return msg, nil
 }
 
 // build validates a parsed request into a message and the mention policy.
@@ -346,7 +361,12 @@ func (h *Handler) threadParent(ctx context.Context, r *http.Request, rec *record
 		return nil, unknownThread{}
 	}
 	if err := chat.ValidateParent(ctx, h.DB, rec.ChannelID, &id); err != nil {
-		return nil, unknownThread{}
+		// Only a rejected parent means the thread is gone; a database or
+		// context failure must surface as a retryable 5xx.
+		if ae, ok := httpx.AsAPIError(err); ok && ae.Status == http.StatusBadRequest {
+			return nil, unknownThread{}
+		}
+		return nil, err
 	}
 	return &id, nil
 }

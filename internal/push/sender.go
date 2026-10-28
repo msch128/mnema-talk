@@ -120,26 +120,11 @@ func retryAfter(header string) time.Duration {
 
 // classifyError names why no answer came back.
 func classifyError(err error) string {
-	switch {
-	case errors.Is(err, ssrf.ErrBlocked):
-		return "blocked_address"
-	case errors.Is(err, ssrf.ErrResolve):
-		return "dns_error"
-	case errors.Is(err, ssrf.ErrConnect):
-		return "connect_error"
-	case errors.Is(err, ssrf.ErrBadURL):
-		return "invalid_url"
-	case errors.Is(err, context.DeadlineExceeded):
-		return "timeout"
-	case errors.Is(err, webpush.ErrMaxPadExceeded):
+	if errors.Is(err, webpush.ErrMaxPadExceeded) {
 		return "payload_too_large"
 	}
-	var timeout interface{ Timeout() bool }
-	if errors.As(err, &timeout) && timeout.Timeout() {
-		return "timeout"
-	}
-	if msg := err.Error(); strings.Contains(msg, "tls:") || strings.Contains(msg, "x509:") {
-		return "tls_error"
+	if code, ok := ssrf.Reason(err); ok {
+		return code
 	}
 	return "request_error"
 }
