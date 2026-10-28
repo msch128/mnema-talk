@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.4](https://github.com/msch128/mnema-talk/compare/v1.2.3...v1.2.4) (2026-10-28)
+
+
+### Documentation
+
+* the macOS and Linux desktop clients are Beta again ([#464](https://github.com/msch128/mnema-talk/issues/464)) ([7fb48df](https://github.com/msch128/mnema-talk/commit/7fb48df5d8d558b013dcc24557fe446b25192521))
+
 ## [1.2.3](https://github.com/msch128/mnema-talk/compare/v1.2.2...v1.2.3) (2026-10-26)
 
 
