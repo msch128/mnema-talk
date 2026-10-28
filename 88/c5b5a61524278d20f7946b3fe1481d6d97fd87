@@ -1,0 +1,19 @@
+web/src/stores/chat/socket.ts
+  s_b242c4c5a3f8fb::t_c1927fa48b9757 41-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "88c5b5a61524278d20f7946b3fe1481d6d97fd87",
+  "prompts": {},
+  "sessions": {
+    "s_b242c4c5a3f8fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a094b6e70840d876f",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
