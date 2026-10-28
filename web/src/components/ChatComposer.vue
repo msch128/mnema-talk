@@ -228,7 +228,7 @@ function handleKeyDown(e: KeyboardEvent) {
     />
 
     <!-- Who is typing (keeps its height so the layout doesn't jump) -->
-    <div class="h-5 px-1 pt-0.5 text-xs text-mnema-tertiary truncate" role="status" aria-live="polite">
+    <div class="h-5 px-1 pt-0.5 text-xs text-mnema-tertiary truncate" role="status" aria-live="polite" data-testid="typing-indicator">
       {{ typingText }}
     </div>
   </div>

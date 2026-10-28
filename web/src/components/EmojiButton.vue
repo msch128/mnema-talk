@@ -16,9 +16,10 @@ const open = ref(false)
 const button = ref<HTMLButtonElement | null>(null)
 
 // The picker's own focus goes away with it: put it back on the trigger.
-function close() {
+// A press outside is a click elsewhere: focus stays where the person put it.
+function close(reason?: 'outside' | 'escape') {
   open.value = false
-  void nextTick(() => button.value?.focus())
+  if (reason !== 'outside') void nextTick(() => button.value?.focus())
 }
 
 function pick(emoji: string) {
