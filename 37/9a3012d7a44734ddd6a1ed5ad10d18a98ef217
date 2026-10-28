@@ -1,0 +1,63 @@
+api/openapi.json
+  s_5f3060f697443d::t_104c5bc6f0445d 25655-25764
+doc/bots.md
+  s_04a9158107960a::t_ef2e52231d2086 126
+doc/moderation.md
+  s_04a9158107960a::t_0b26ec527cb142 22
+doc/roles-and-permissions.md
+  s_04a9158107960a::t_8aa5031d6fac1c 203-210
+internal/auth/handler.go
+  s_5284da226de11a::t_d7fd96bd1c45da 151
+internal/auth/users_admin_handlers.go
+  s_06fcde5dbef956::t_b048709660a1f3 10,254,257-261,275-328,335-337
+internal/server/talk_disconnect_integration_test.go
+  s_04a9158107960a::t_528d6543ef476a 1-142
+web/src/composables/useNavMenus.test.ts
+  s_04a9158107960a::t_ba8da7443d8c58 154,160,341-359
+web/src/composables/useNavMenus.ts
+  s_5284da226de11a::t_c07a99d07e0639 239,244,293-300,306,319,328,354-355,363,367,369
+web/src/i18n/de.json
+  s_04a9158107960a::t_968f431c47fe40 1336-1337,1339-1340
+web/src/i18n/en.json
+  s_04a9158107960a::t_c95944e33d6064 1336-1337,1339-1340
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "379a3012d7a44734ddd6a1ed5ad10d18a98ef217",
+  "prompts": {},
+  "sessions": {
+    "s_04a9158107960a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adel-native-desktop-25714c3fee945686",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5284da226de11a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-talk-disconnect-88fecc8ed16c4364",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5f3060f697443d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-zip-vectors-6e00f6c5314709e3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
