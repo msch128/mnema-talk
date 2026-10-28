@@ -169,8 +169,13 @@ func (a *adapter) setFloor(floor int) {
 
 // keyframeRequested records a keyframe request of the viewer in constant time.
 // Requests closer together than adaptPLIGap are not counted one by one: they
-// are a flood, which is trouble by itself.
+// are a flood, which is trouble by itself. Requests during the grace period
+// after a layer change are not recorded: the viewer is waiting for the new
+// layer's first keyframe, which is no sign of trouble.
 func (a *adapter) keyframeRequested(now time.Time) (counted bool) {
+	if now.Before(a.graceUntil) {
+		return true
+	}
 	if a.nPLI > 0 {
 		last := a.plis[(a.nPLI-1)%adaptPLIs]
 		if now.Sub(last) < adaptPLIGap {

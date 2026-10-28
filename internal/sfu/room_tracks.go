@@ -269,13 +269,24 @@ func (r *Room) unpublish(userID uuid.UUID, source Source) {
 }
 
 // removePeer closes peer and, if it is still the user's current connection,
-// removes it and its tracks from the room.
-func (r *Room) removePeer(peer *Peer) {
+// removes it and its tracks from the room. It reports whether peer was the
+// current connection.
+func (r *Room) removePeer(peer *Peer) bool {
 	current := r.detachPeer(peer)
 	if current {
 		go r.SignalPeerConnections()
 	}
 	_ = peer.PC.Close()
+	return current
+}
+
+// dropLostPeer removes a peer whose media connection failed or that stopped
+// answering, and tells its owner (see Peer.OnLost), who is otherwise left in
+// the call without media.
+func (r *Room) dropLostPeer(peer *Peer) {
+	if r.removePeer(peer) {
+		peer.notifyLost()
+	}
 }
 
 // detachPeer changes membership without closing network transports. This
@@ -316,4 +327,31 @@ func (p *Peer) Healthy() bool {
 		return false
 	}
 	return true
+}
+
+// OnLost registers fn, called once, on its own goroutine, when the SFU gives
+// up on the peer's media connection (it failed, or the client never answered
+// an offer) and has removed the peer from its room. The owner is still seated
+// elsewhere and must be told. fn runs at once if that already happened.
+func (p *Peer) OnLost(fn func()) {
+	p.lostMu.Lock()
+	lost := p.lost
+	if !lost {
+		p.onLost = fn
+	}
+	p.lostMu.Unlock()
+	if lost && fn != nil {
+		go fn()
+	}
+}
+
+func (p *Peer) notifyLost() {
+	p.lostMu.Lock()
+	p.lost = true
+	fn := p.onLost
+	p.onLost = nil
+	p.lostMu.Unlock()
+	if fn != nil {
+		go fn()
+	}
 }

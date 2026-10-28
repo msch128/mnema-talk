@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/netip"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/pion/webrtc/v4"
@@ -46,28 +45,15 @@ func ResolveAnnounce(ctx context.Context, entries []string) ([]string, error) {
 // announceRewriteRules turns the announced addresses into ICE address rewrite
 // rules that publish them as host candidates in place of the container's own
 // addresses. It mirrors what Pion derives from the deprecated
-// SettingEngine.SetNAT1To1IPs(ips, ICECandidateTypeHost): an "external/local"
-// entry also gets a rule pinned to that local address, and all external
-// addresses together form one catch-all rule. Replace is the mode Pion
-// defaults to for host candidates.
+// SettingEngine.SetNAT1To1IPs(ips, ICECandidateTypeHost): all addresses
+// together form one catch-all rule. Replace is the mode Pion defaults to for
+// host candidates. The addresses come from ResolveAnnounce, which accepts
+// plain IPs and host names only, so there is no "external/local" form.
 func announceRewriteRules(ips []string) []webrtc.ICEAddressRewriteRule {
-	catchAll := make([]string, 0, len(ips))
-	rules := make([]webrtc.ICEAddressRewriteRule, 0, len(ips)+1)
-	for _, ip := range ips {
-		external, local, pinned := strings.Cut(ip, "/")
-		if pinned {
-			rules = append(rules, webrtc.ICEAddressRewriteRule{
-				External:        []string{external},
-				Local:           local,
-				AsCandidateType: webrtc.ICECandidateTypeHost,
-				Mode:            webrtc.ICEAddressRewriteReplace,
-			})
-		}
-		catchAll = append(catchAll, external)
-	}
-	if len(catchAll) > 0 {
+	rules := make([]webrtc.ICEAddressRewriteRule, 0, 1)
+	if len(ips) > 0 {
 		rules = append(rules, webrtc.ICEAddressRewriteRule{
-			External:        catchAll,
+			External:        slices.Clone(ips),
 			AsCandidateType: webrtc.ICECandidateTypeHost,
 			Mode:            webrtc.ICEAddressRewriteReplace,
 		})
