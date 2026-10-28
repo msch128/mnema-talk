@@ -26934,7 +26934,7 @@
         ]
       },
       "patch": {
-        "description": "Updates an event. Requires ManageEvents permission.",
+        "description": "Updates an event. Requires ManageEvents permission. \"end_time\": null removes the end time; an event without an end counts as over two hours after it starts. Moving the start or end re-derives the status of an event that is not cancelled. The status follows the event's times: PATCH accepts status \"cancelled\" (same as POST cancel) or the current status, and any other change is refused with 409.",
         "operationId": "updateCommunityEvent",
         "parameters": [
           {
@@ -26999,6 +26999,16 @@
               }
             },
             "description": "NOT_FOUND"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the status change is not allowed."
           }
         },
         "security": [
@@ -27014,7 +27024,7 @@
     },
     "/api/events/{id}/cancel": {
       "post": {
-        "description": "Marks an event as cancelled. Requires ManageEvents permission.",
+        "description": "Marks an event as cancelled. Requires ManageEvents permission. An event that is already cancelled or completed is refused with 409.",
         "operationId": "cancelCommunityEvent",
         "parameters": [
           {
@@ -27058,6 +27068,16 @@
               }
             },
             "description": "NOT_FOUND"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the event is already cancelled or completed."
           }
         },
         "security": [
@@ -27205,6 +27225,26 @@
               }
             },
             "description": "NOT_FOUND"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "PAYLOAD_TOO_LARGE"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNSUPPORTED_MEDIA_TYPE"
           }
         },
         "security": [
@@ -27267,7 +27307,7 @@
         ]
       },
       "put": {
-        "description": "Sets caller's response to going, interested, or not_going.",
+        "description": "Sets caller's response to going, interested, or not_going. Case, surrounding spaces and a space or hyphen instead of the underscore are tolerated (\"Not Going\").",
         "operationId": "setCommunityEventRSVP",
         "parameters": [
           {

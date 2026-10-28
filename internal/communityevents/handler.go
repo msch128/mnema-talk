@@ -182,7 +182,6 @@ func (h *Handler) createEvent(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	_ = h.Store.fillRSVPs(r.Context(), ev, &user.ID)
 	h.auditRecord(r, "event.create", ev)
 	h.broadcast(ev)
 	httpx.WriteJSON(w, http.StatusCreated, ev)
@@ -217,7 +216,7 @@ func (h *Handler) getEvent(w http.ResponseWriter, r *http.Request) error {
 }
 
 // @Summary Update a community event
-// @Description Updates an event. Requires ManageEvents permission.
+// @Description Updates an event. Requires ManageEvents permission. "end_time": null removes the end time; an event without an end counts as over two hours after it starts. Moving the start or end re-derives the status of an event that is not cancelled. The status follows the event's times: PATCH accepts status "cancelled" (same as POST cancel) or the current status, and any other change is refused with 409.
 // @ID updateCommunityEvent
 // @Tags Events
 // @Accept json
@@ -229,6 +228,7 @@ func (h *Handler) getEvent(w http.ResponseWriter, r *http.Request) error {
 // @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT"
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN"
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND"
+// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the status change is not allowed."
 // @Router /api/events/{id} [patch]
 func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
@@ -250,16 +250,19 @@ func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	req.normalize()
-	if req.Status != nil && !validStatus(*req.Status) {
-		return httpx.ErrInvalidInput("status must be scheduled, active, completed or cancelled")
+	cancelling, err := statusRequest(ev, req.Status)
+	if err != nil {
+		return err
 	}
 	m := mergeUpdate(ev, req)
 	if err := h.validateEventPayload(r, m.title, m.desc, m.start, m.end, m.channel, m.location); err != nil {
 		return err
 	}
-	updated, err := h.Store.Update(r.Context(), id, req)
-	if err != nil {
-		return err
+	updated := ev
+	if !cancelling || req.changesFields() {
+		if updated, err = h.Store.Update(r.Context(), id, req); err != nil {
+			return err
+		}
 	}
 	if updated.ChannelID != nil && !sameChannel(ev.ChannelID, updated.ChannelID) {
 		// Members who cannot view the new Talk drop their copy.
@@ -267,10 +270,43 @@ func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 			slog.ErrorContext(r.Context(), "retract moved event failed", "event_id", id, "err", err)
 		}
 	}
-	h.auditRecord(r, "event.edit", updated)
+	if !cancelling || req.changesFields() {
+		h.auditRecord(r, "event.edit", updated)
+	}
+	if cancelling {
+		if updated, err = h.Store.Cancel(r.Context(), id); err != nil {
+			return err
+		}
+		h.auditRecord(r, "event.cancel", updated)
+	}
 	h.broadcast(updated)
 	httpx.WriteJSON(w, http.StatusOK, updated)
 	return nil
+}
+
+// statusRequest checks the status of a PATCH. An event's status follows its
+// times, so the only change a member can ask for is cancelling it (which the
+// handler runs through the cancel path); naming the current status is a no-op.
+func statusRequest(ev *CommunityEvent, status *string) (cancelling bool, err error) {
+	switch {
+	case status == nil || *status == ev.Status:
+		return false, nil
+	case !validStatus(*status):
+		return false, httpx.ErrInvalidInput("status must be scheduled, active, completed or cancelled")
+	case *status == StatusCancelled:
+		if ev.Status == StatusCompleted {
+			return false, httpx.ErrConflict("this event is completed and cannot be cancelled")
+		}
+		return true, nil
+	default:
+		return false, httpx.ErrConflict("the status follows the event's times; an event can only be cancelled")
+	}
+}
+
+// changesFields reports whether the request edits more than the status.
+func (r UpdateEventRequest) changesFields() bool {
+	return r.Title != nil || r.Description != nil || r.StartTime != nil || r.EndTime != nil || r.ClearEndTime ||
+		r.ChannelID != nil || r.Location != nil
 }
 
 // merged is an event as it would be after applying an update.
@@ -295,6 +331,8 @@ func mergeUpdate(ev *CommunityEvent, req UpdateEventRequest) merged {
 	}
 	if req.EndTime != nil {
 		m.end = req.EndTime
+	} else if req.ClearEndTime {
+		m.end = nil
 	}
 	if req.ChannelID != nil {
 		m.channel, m.location = req.ChannelID, nil
@@ -309,7 +347,7 @@ func sameChannel(a, b *uuid.UUID) bool {
 }
 
 // @Summary Cancel a community event
-// @Description Marks an event as cancelled. Requires ManageEvents permission.
+// @Description Marks an event as cancelled. Requires ManageEvents permission. An event that is already cancelled or completed is refused with 409.
 // @ID cancelCommunityEvent
 // @Tags Events
 // @Produce json
@@ -318,6 +356,7 @@ func sameChannel(a, b *uuid.UUID) bool {
 // @Success 200 {object} CommunityEvent
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN"
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND"
+// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the event is already cancelled or completed."
 // @Router /api/events/{id}/cancel [post]
 func (h *Handler) cancelEvent(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")

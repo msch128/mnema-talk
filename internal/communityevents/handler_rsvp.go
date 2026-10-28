@@ -9,7 +9,7 @@ import (
 )
 
 // @Summary Set RSVP response for an event
-// @Description Sets caller's response to going, interested, or not_going.
+// @Description Sets caller's response to going, interested, or not_going. Case, surrounding spaces and a space or hyphen instead of the underscore are tolerated ("Not Going").
 // @ID setCommunityEventRSVP
 // @Tags Events
 // @Accept json
@@ -42,10 +42,7 @@ func (h *Handler) setRSVP(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	resp := strings.TrimSpace(req.Response)
-	if resp == "not going" {
-		resp = RSVPNotGoing
-	}
+	resp := normalizeResponse(req.Response)
 	if resp != RSVPGoing && resp != RSVPInterested && resp != RSVPNotGoing {
 		return httpx.ErrInvalidInput("response must be going, interested, or not_going")
 	}
@@ -128,4 +125,11 @@ func (h *Handler) listRSVPs(w http.ResponseWriter, r *http.Request) error {
 	}
 	httpx.WriteJSON(w, http.StatusOK, rsvps)
 	return nil
+}
+
+// normalizeResponse folds the spellings of a response that are tolerated
+// ("Not Going", "not-going") into the canonical one.
+func normalizeResponse(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	return strings.NewReplacer(" ", "_", "-", "_").Replace(s)
 }
