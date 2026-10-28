@@ -1,0 +1,60 @@
+api/openapi.json
+  h_0ff4f4713441f4 24494,24531-24539,24556-24565
+doc/forums.md
+  h_0ff4f4713441f4 23-25
+internal/chat/access.go
+  h_0ff4f4713441f4 33
+internal/chat/audit.go
+  h_0ff4f4713441f4 56
+internal/chat/categories.go
+  h_0ff4f4713441f4 60,63,67,70,72
+internal/chat/channels.go
+  h_0ff4f4713441f4 144-150,170-175,317-323,330-339,358-361
+internal/chat/dm_gate.go
+  h_0ff4f4713441f4 40
+internal/chat/edit_history.go
+  h_0ff4f4713441f4 84-85,93,101,107-132
+internal/chat/forum_errors_integration_test.go
+  h_0ff4f4713441f4 273,277,281,393-394,492-493
+internal/chat/forum_posts.go
+  h_0ff4f4713441f4 7,18,21-31,33,38-41,61,64,82-92,135-140,159-167,178,181-185
+internal/chat/forum_review_integration_test.go
+  h_0ff4f4713441f4 1-279
+internal/chat/forum_tags.go
+  h_0ff4f4713441f4 10,20,26,86-88,95-105,107,109,111,113,115,118,120,122,125,127-142,145-153,155-156,158
+internal/chat/forum_test.go
+  h_0ff4f4713441f4 92-113
+internal/chat/forward.go
+  h_0ff4f4713441f4 76-96,100-101,104-107,110-111,115,117,212,214-217,219,222,226,254-255,259
+internal/chat/handler_channels.go
+  h_0ff4f4713441f4 117,233,281-282,286
+internal/chat/handler_forum.go
+  h_0ff4f4713441f4 4,7,11,138,184,188,223-224,227,242,246,248,281-287,393-396,401-403,415-451
+internal/chat/handler_lookup.go
+  h_0ff4f4713441f4 88-90
+internal/chat/handler_messages.go
+  h_0ff4f4713441f4 30-32
+internal/chat/handlers_integration_test.go
+  h_0ff4f4713441f4 88,333
+internal/chat/message_types.go
+  h_0ff4f4713441f4 216-218
+internal/chat/moderation.go
+  h_0ff4f4713441f4 251
+internal/chat/post.go
+  h_0ff4f4713441f4 207-236
+internal/chat/stage.go
+  h_0ff4f4713441f4 14
+internal/chat/talks.go
+  h_0ff4f4713441f4 56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "24b180dc1f3f0232375870c2e5efc6aceba1079d",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
