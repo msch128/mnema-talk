@@ -1,0 +1,55 @@
+api/openapi.json
+  s_7ad149a25819f7::t_2a61b4d2b6860b 34377
+internal/ws/hub_behaviour_test.go
+  s_7ad149a25819f7::t_76c8ccc6fd9caf 439,447-448
+internal/ws/lifecycle.go
+  s_7ad149a25819f7::t_a28f1db1239ff4 71
+internal/ws/perms.go
+  s_592c5254715fcb::t_7f01c468a0d7e8 222
+internal/ws/screen_viewers_test.go
+  s_7ad149a25819f7::t_fd7e1df96517cd 128,132,136,139,145-146,156
+internal/ws/stage.go
+  s_592c5254715fcb::t_d083c434b5f2d4 27-29,139-140
+internal/ws/voice_join.go
+  s_592c5254715fcb::t_b6d1cbfe530da3 33-35,116-124,202-219,225,231-232,234-236
+internal/ws/voice_mute.go
+  s_592c5254715fcb::t_502ae3c32fd2b0 58-63
+internal/ws/voice_seat_test.go
+  s_7ad149a25819f7::t_84f12aee9f5cb8 1-137
+internal/ws/voicegate.go
+  s_7ad149a25819f7::t_a4d3d3455b8386 71-72,127-130,164,167,173-210
+internal/ws/voicetime_integration_test.go
+  s_7545c4c3064e31::t_1eb71a1e5960e9 88-140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a942b78afe0daaa9206c0e5dd5813098df2bfbc1",
+  "prompts": {},
+  "sessions": {
+    "s_592c5254715fcb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af33cb060ccc93b4c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7545c4c3064e31": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a72f2e77600e3d2f8",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7ad149a25819f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8752352772233b1c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
