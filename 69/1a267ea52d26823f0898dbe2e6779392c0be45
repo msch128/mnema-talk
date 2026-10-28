@@ -1,0 +1,59 @@
+internal/bot/faults_integration_test.go
+  s_06c7db26fa9ea8::t_f1ac618e6e944a 111
+internal/bot/guards_integration_test.go
+  s_06c7db26fa9ea8::t_5fa76320c91059 73,122
+internal/bot/handler.go
+  s_19ca66a63b57e6::t_103c692a0c00b3 45-50,72
+internal/communityevents/handler.go
+  s_abe6d26c4f054b::t_99bc37efd1570a 44-53
+internal/communityevents/handler_cover.go
+  s_abe6d26c4f054b::t_3b065ad5e680a7 20
+internal/server/router_routes.go
+  s_06c7db26fa9ea8::t_f6767e4545c76a 9,11,128-133,138-150
+internal/server/upload_body_limit_integration_test.go
+  s_5e74eb91b1beec::t_fe06cb3cf7ee76 1-51
+internal/webhook/faults_integration_test.go
+  s_06c7db26fa9ea8::t_38dcc7662e3c92 95
+internal/webhook/handler.go
+  s_abe6d26c4f054b::t_a010a4253f67ec 80-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "691a267ea52d26823f0898dbe2e6779392c0be45",
+  "prompts": {},
+  "sessions": {
+    "s_06c7db26fa9ea8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afbd24a5d4933bf79",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_19ca66a63b57e6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa4cb870620abc635",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5e74eb91b1beec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a38bb58581f273dc2",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_abe6d26c4f054b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aeaddb1300c6c2b75",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
