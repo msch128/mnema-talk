@@ -65,13 +65,6 @@ func (h *Handler) routes(r chi.Router) {
 	r.Delete("/bots/{id}/commands/{commandID}", httpx.Handle(h.deleteCommand))
 }
 
-// mountUnguarded registers the routes without the permission guard, for
-// tests that reach the handlers' own lookups.
-func (h *Handler) mountUnguarded(r chi.Router) {
-	h.routes(r)
-	r.Post("/bots/{id}/avatar", httpx.Handle(h.avatar))
-}
-
 // load finds the bot of the path and checks the caller may manage it: the
 // bot's highest role must be below the caller's (the Owner outranks all). It
 // also returns the permission state the check used.

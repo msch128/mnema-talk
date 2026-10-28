@@ -20,12 +20,6 @@ type ServerNotify struct {
 	SuppressEveryone bool        `json:"suppress_everyone"`
 }
 
-// setting is the default as a NotifySetting for ResolveNotify; "all" and an
-// empty level both decide "all".
-func (s ServerNotify) setting() NotifySetting {
-	return NotifySetting{Level: s.Level, MutedUntil: s.MutedUntil}
-}
-
 // GetServerNotify returns the member's server default and whether they
 // suppress @all and @here. A member without a row gets the plain default; an
 // expired mute reads as "all".
