@@ -1,0 +1,23 @@
+doc/import.md
+  s_4db405a7a88614::t_e412b680c83a19 135,138
+internal/chat/channels.go
+  s_4db405a7a88614::t_1988f8f3ca7b7d 216-218
+internal/discordimport/undo_roles_integration_test.go
+  s_4db405a7a88614::t_50f56a3ca553e9 7,33-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bb40a6b1617e9eff76312e949381f68e5249ce4f",
+  "prompts": {},
+  "sessions": {
+    "s_4db405a7a88614": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4f5dd96a72f8957a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
