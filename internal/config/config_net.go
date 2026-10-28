@@ -41,12 +41,12 @@ func IsLoopbackAddr(host string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
-// resolveBindAddr applies the BIND_ADDR default and the development rule.
-// Development logs the generated admin password and uses a random JWT
-// secret, so it must never face a network: it defaults to loopback and
-// refuses any other address. All other environments default to 0.0.0.0.
+// resolveBindAddr applies the BIND_ADDR default and the loopback rule.
+// Development and test log the generated admin password and use a random
+// JWT secret, so they must never face a network: they default to loopback
+// and refuse any other address. Production and staging default to 0.0.0.0.
 func (c *Config) resolveBindAddr() error {
-	dev := c.AppEnv == "development" || c.AppEnv == "dev"
+	dev := c.AppEnv == "development" || c.AppEnv == "dev" || c.AppEnv == "test"
 	if c.BindAddr == "" {
 		if dev {
 			c.BindAddr = "127.0.0.1"
@@ -56,7 +56,7 @@ func (c *Config) resolveBindAddr() error {
 		return nil
 	}
 	if dev && !IsLoopbackAddr(c.BindAddr) {
-		return fmt.Errorf("BIND_ADDR=%s is not allowed with APP_ENV=development: development logs the generated admin password and uses a random JWT secret, so it may only listen on loopback; set APP_ENV=production (with real secrets) to listen on a network address", c.BindAddr)
+		return fmt.Errorf("BIND_ADDR=%s is not allowed with APP_ENV=%s: %s logs the generated admin password and uses a random JWT secret, so it may only listen on loopback; set APP_ENV=production (with real secrets) to listen on a network address", c.BindAddr, c.AppEnv, c.AppEnv)
 	}
 	return nil
 }
@@ -72,6 +72,15 @@ func (c *Config) BroadTrustedProxies() []string {
 			continue
 		}
 		ones, bits := n.Mask.Size()
+		if n.IP.To4() != nil && bits == 128 {
+			// An IPv4-mapped IPv6 prefix (::ffff:a.b.c.d/96+) matches IPv4
+			// peers only; judge it by its effective IPv4 prefix length.
+			if ones < 96 {
+				out = append(out, p)
+				continue
+			}
+			ones, bits = ones-96, 32
+		}
 		if isBroadMask(ones, bits) {
 			out = append(out, p)
 		}
