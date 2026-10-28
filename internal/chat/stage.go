@@ -11,7 +11,7 @@ import (
 
 // SetStage turns a permanent Talk into a Stage or back into a normal Talk
 // (doc/talks.md). Lobbies and temporary Talks cannot be Stages.
-func SetStage(ctx context.Context, p *db.Pool, id uuid.UUID, stage bool) error {
+func SetStage(ctx context.Context, p db.Querier, id uuid.UUID, stage bool) error {
 	tag, err := p.Exec(ctx, `
 		UPDATE channels SET is_stage = $2
 		WHERE id = $1 AND type = 'voice' AND NOT is_temp AND ($2 = FALSE OR NOT is_lobby)`, id, stage)

@@ -54,17 +54,17 @@ func CreateCategory(ctx context.Context, p *db.Pool, name string, sortOrder int)
 }
 
 // RenameCategory changes a category's name.
-func RenameCategory(ctx context.Context, p *db.Pool, id uuid.UUID, name string) error {
+func RenameCategory(ctx context.Context, p *db.Pool, id uuid.UUID, name string) (string, error) {
 	name, err := httpx.CleanText("name", name, MaxChannelNameLen, true)
 	if err != nil {
-		return err
+		return "", err
 	}
 	tag, err := p.Exec(ctx, `UPDATE categories SET name = $2 WHERE id = $1`, id, name)
 	if err != nil {
-		return fmt.Errorf("rename category: %w", err)
+		return "", fmt.Errorf("rename category: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		return errCategoryNotFound
+		return "", errCategoryNotFound
 	}
-	return nil
+	return name, nil
 }

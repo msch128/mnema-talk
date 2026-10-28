@@ -73,3 +73,25 @@ func TestCleanTagEmoji(t *testing.T) {
 		t.Error("expected error for overlong emoji")
 	}
 }
+
+func TestCleanTagEmojiCountsCharacters(t *testing.T) {
+	// 8 four-byte emoji: 32 bytes, so the limit counts characters, not bytes.
+	many := strings.Repeat("\U0001F41B", MaxForumTagEmojiLen)
+	if got, err := CleanTagEmoji(many); err != nil || got != many {
+		t.Fatalf("emoji at the character limit rejected: %v", err)
+	}
+	if _, err := CleanTagEmoji(many + "\U0001F41B"); err == nil {
+		t.Fatal("emoji beyond the character limit accepted")
+	}
+}
+
+func TestForumSortModes(t *testing.T) {
+	for mode, newest := range map[string]bool{"": false, "latest_activity": false, "activity": false, "newest": true, "creation": true} {
+		if got, err := forumSortNewest(mode); err != nil || got != newest {
+			t.Errorf("sort %q = %v, %v; want %v", mode, got, err, newest)
+		}
+	}
+	if _, err := forumSortNewest("oldest"); err == nil {
+		t.Fatal("unknown sort accepted")
+	}
+}

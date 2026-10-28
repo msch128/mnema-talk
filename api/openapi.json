@@ -24444,7 +24444,7 @@
             }
           },
           {
-            "description": "Sort order: 'latest_activity' (default) or 'newest'.",
+            "description": "Sort order: 'latest_activity' (default; 'activity' is accepted as an alias) or 'newest' ('creation' is accepted as an alias). Other values are rejected.",
             "in": "query",
             "name": "sort",
             "schema": {
@@ -24481,6 +24481,15 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "description": "With latest_activity order and before: the last_activity_at the client saw for the before post. Paging then continues exactly behind that position even when the post has got or lost a reply since.",
+            "in": "query",
+            "name": "before_activity",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -24496,6 +24505,16 @@
               }
             },
             "description": "Posts."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT"
           },
           "401": {
             "content": {

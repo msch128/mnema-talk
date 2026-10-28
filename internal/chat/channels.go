@@ -141,6 +141,13 @@ func verifyCategoryExists(ctx context.Context, p *db.Pool, categoryID *uuid.UUID
 }
 
 func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType ChannelType, topic string, sortOrder int) (*Channel, error) {
+	return CreateChannelWithStage(ctx, p, categoryID, name, chType, topic, sortOrder, false)
+}
+
+// CreateChannelWithStage is CreateChannel that can make the new channel a
+// Stage in the same transaction, so a request that cannot be a Stage (a text
+// channel) creates nothing.
+func CreateChannelWithStage(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType ChannelType, topic string, sortOrder int, stage bool) (*Channel, error) {
 	name, topic, err := cleanChannelInputs(name, topic, chType)
 	if err != nil {
 		return nil, err
@@ -157,8 +164,18 @@ func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name 
 			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds); err != nil {
 			return err
 		}
+		if stage {
+			if err := SetStage(ctx, tx, ch.ID, true); err != nil {
+				return err
+			}
+			ch.IsStage = true
+		}
 		return assignAndFillSlugs(ctx, tx, &ch)
 	})
+	var apiErr *httpx.APIError
+	if errors.As(err, &apiErr) {
+		return nil, err
+	}
 	if err != nil {
 		return nil, fmt.Errorf("create channel: %w", err)
 	}
@@ -281,12 +298,29 @@ const MaxSlowModeSeconds = 86400
 // (voice channels only; 0 removes it) and/or its slow mode (0 turns it off);
 // nil keeps a field.
 func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *string, userLimit, slowMode *int) (*Channel, error) {
+	return EditChannel(ctx, p, id, name, topic, userLimit, slowMode, nil, nil)
+}
+
+// EditChannel is UpdateChannel together with the lobby and Stage marks. The
+// request is validated first and applied in one transaction, so a request
+// that fails in any part changes nothing.
+func EditChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *string, userLimit, slowMode *int, lobby, stage *bool) (*Channel, error) {
 	name, topic, err := validateChannelEdit(name, topic, userLimit, slowMode)
 	if err != nil {
 		return nil, err
 	}
 	var ch Channel
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		if lobby != nil {
+			if err := SetLobby(ctx, tx, id, *lobby); err != nil {
+				return err
+			}
+		}
+		if stage != nil {
+			if err := SetStage(ctx, tx, id, *stage); err != nil {
+				return err
+			}
+		}
 		if err := tx.QueryRow(ctx, `
 			UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic),
 				user_limit = COALESCE($4, user_limit), slow_mode_seconds = COALESCE($5, slow_mode_seconds)
@@ -304,6 +338,10 @@ func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *s
 			}
 		}
 		return nil, errChannelNotFound
+	}
+	var apiErr *httpx.APIError
+	if errors.As(err, &apiErr) {
+		return nil, err
 	}
 	if err != nil {
 		return nil, fmt.Errorf("update channel: %w", err)

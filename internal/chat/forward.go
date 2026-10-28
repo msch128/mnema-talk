@@ -73,34 +73,48 @@ type forwardRoot struct {
 	channel uuid.UUID
 }
 
+// forwardRow is what a message says about being a forward.
+type forwardRow struct {
+	channel   uuid.UUID
+	forwarded bool
+	of        *uuid.UUID
+}
+
+// loadForwardRow reads the channel and forward state of a message; a message
+// that does not exist is errMessageNotFound.
+func loadForwardRow(ctx context.Context, q rowQuerier, msgID uuid.UUID) (forwardRow, error) {
+	var row forwardRow
+	err := q.QueryRow(ctx, `SELECT channel_id, forwarded, forward_of FROM messages WHERE id = $1`, msgID).Scan(&row.channel, &row.forwarded, &row.of)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return forwardRow{}, errMessageNotFound
+	}
+	if err != nil {
+		return forwardRow{}, fmt.Errorf("load message: %w", err)
+	}
+	return row, nil
+}
+
 // resolveForwardRoot returns the root of msgID: the message itself, or what
 // it forwards. ok is false when there is nothing to forward (a forward whose
 // original is gone).
-func resolveForwardRoot(ctx context.Context, q interface {
-	QueryRow(context.Context, string, ...any) pgx.Row
-}, msgID uuid.UUID) (root forwardRoot, ok bool, err error) {
-	var forwarded bool
-	var of *uuid.UUID
-	var channel uuid.UUID
-	err = q.QueryRow(ctx, `SELECT channel_id, forwarded, forward_of FROM messages WHERE id = $1`, msgID).Scan(&channel, &forwarded, &of)
+func resolveForwardRoot(ctx context.Context, q rowQuerier, msgID uuid.UUID) (root forwardRoot, ok bool, err error) {
+	row, err := loadForwardRow(ctx, q, msgID)
 	switch {
-	case errors.Is(err, pgx.ErrNoRows):
-		return forwardRoot{}, false, errMessageNotFound
 	case err != nil:
-		return forwardRoot{}, false, fmt.Errorf("load message: %w", err)
-	case !forwarded:
-		return forwardRoot{id: msgID, channel: channel}, true, nil
-	case of == nil:
+		return forwardRoot{}, false, err
+	case !row.forwarded:
+		return forwardRoot{id: msgID, channel: row.channel}, true, nil
+	case row.of == nil:
 		return forwardRoot{}, false, nil
 	}
-	err = q.QueryRow(ctx, `SELECT channel_id FROM messages WHERE id = $1`, *of).Scan(&channel)
-	if errors.Is(err, pgx.ErrNoRows) {
+	original, err := loadForwardRow(ctx, q, *row.of)
+	if errors.Is(err, errMessageNotFound) {
 		return forwardRoot{}, false, nil
 	}
 	if err != nil {
-		return forwardRoot{}, false, fmt.Errorf("load original: %w", err)
+		return forwardRoot{}, false, err
 	}
-	return forwardRoot{id: *of, channel: channel}, true, nil
+	return forwardRoot{id: *row.of, channel: original.channel}, true, nil
 }
 
 // refusedAsForward turns the refusals a forward can meet (no access, no such
@@ -195,24 +209,21 @@ func (h *Handler) getForwardQuote(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	var channel uuid.UUID
-	var forwarded bool
-	var of *uuid.UUID
-	err = h.DB.QueryRow(r.Context(), `SELECT channel_id, forwarded, forward_of FROM messages WHERE id = $1`, msgID).Scan(&channel, &forwarded, &of)
-	if errors.Is(err, pgx.ErrNoRows) || (err == nil && !forwarded) {
+	row, err := loadForwardRow(r.Context(), h.DB, msgID)
+	if err != nil {
+		return err
+	}
+	if !row.forwarded {
 		return errMessageNotFound
 	}
-	if err != nil {
-		return fmt.Errorf("load message: %w", err)
-	}
-	if err := h.require(r, channel, perm.ViewChannel); err != nil {
+	if err := h.require(r, row.channel, perm.ViewChannel); err != nil {
 		return notFoundUnlessFailure(err)
 	}
-	if of == nil {
+	if row.of == nil {
 		httpx.WriteJSON(w, http.StatusOK, ForwardQuote{Deleted: true})
 		return nil
 	}
-	quote, err := h.quoteFor(r, *of)
+	quote, err := h.quoteFor(r, *row.of)
 	if err != nil {
 		return err
 	}
@@ -240,11 +251,12 @@ func (h *Handler) quoteFor(r *http.Request, original uuid.UUID) (ForwardQuote, e
 	return loadQuote(r.Context(), h.DB, original)
 }
 
-type quoteQuerier interface {
+// rowQuerier is the part of a pool or transaction the forward lookups need.
+type rowQuerier interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
 }
 
-func loadQuote(ctx context.Context, q quoteQuerier, id uuid.UUID) (ForwardQuote, error) {
+func loadQuote(ctx context.Context, q rowQuerier, id uuid.UUID) (ForwardQuote, error) {
 	out := ForwardQuote{Available: true, MessageID: &id}
 	var avatar *string
 	var name string

@@ -213,4 +213,7 @@ type HistoryQuery struct {
 	Before *uuid.UUID
 	After  *uuid.UUID
 	Around *uuid.UUID
+	// BeforeActivity is the latest activity of the Before post as the client
+	// saw it; only the forum post list pages by activity and uses it.
+	BeforeActivity *time.Time
 }

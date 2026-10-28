@@ -20,7 +20,9 @@ Each forum channel can define up to 20 curated tags:
 - **Admin management**: Members with *Manage channels* can create, update and delete tags (`GET/POST /api/channels/{id}/tags`, `PATCH/DELETE /api/channels/{id}/tags/{tagID}`).
 - **Properties**: Each tag has a required name (1 to 20 characters) and an optional emoji (up to 32 characters).
 - **Filtering**: Members can filter posts in the forum view by selecting tag pills.
-- **Sorting**: The post list can be sorted by latest activity (`sort=activity`, default) or newest creation (`sort=newest`).
+- **Sorting**: The post list can be sorted by latest activity (`sort=latest_activity`, default; `activity` is an alias) or newest creation (`sort=newest`). Other values answer `400`. To page by activity, send `before` (the last post of the previous page) together with `before_activity` (its `last_activity_at`), so a reply that arrives between two requests cannot shift the page boundary.
+- **Tag names** are unique per forum; creating or renaming a tag to a name that exists answers `409`.
+- **Audit**: tag creation, change and removal (`forum.tag_create`, `forum.tag_update`, `forum.tag_delete`) and a moderator's change to another member's post (`forum.post_update`) are recorded in the audit log.
 
 ## Permissions and moderation
 

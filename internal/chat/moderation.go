@@ -248,7 +248,7 @@ func takeLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID, 
 		return nil, nil, err
 	}
 	attachDeletedMedia(gone, byMessage)
-	versions := editVersionsForAudit(ctx, tx, ids)
+	versions := editVersionsForAuditDetail(ctx, tx, ids)
 	for i := range gone {
 		gone[i].edits = versions[gone[i].id]
 	}
