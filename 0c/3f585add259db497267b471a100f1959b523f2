@@ -1,0 +1,33 @@
+web/src/composables/useWebRTC.devices.test.ts
+  s_4ac6295b6bd2d2::t_7b8837b459a2eb 643
+web/src/composables/webrtc/session.ts
+  s_4ac6295b6bd2d2::t_ef18452a369ca2 150-152,168-169
+web/src/stores/voice.ts
+  s_4ac6295b6bd2d2::t_a217082f015fd0 5,109
+web/src/stores/voice/room.ts
+  s_4ac6295b6bd2d2::t_808b9495403755 175,211
+web/src/stores/voice/screens.ts
+  s_4ac6295b6bd2d2::t_e4b5896258187b 195-196,214-221
+web/src/stores/voiceStoreBehaviour.test.ts
+  s_4ac6295b6bd2d2::t_fd38fd1612607a 152-178
+web/src/sw/push.test.ts
+  s_4ac6295b6bd2d2::t_6d210fca041ddc 18-19,26-29,33,36,83-97,201-206
+web/src/sw/push.ts
+  s_4ac6295b6bd2d2::t_cd9b60fa0e45b8 42,49,142-152,155-156,158-164,203,209-210
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0c3f585add259db497267b471a100f1959b523f2",
+  "prompts": {},
+  "sessions": {
+    "s_4ac6295b6bd2d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac4ef8ece1278c839",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
