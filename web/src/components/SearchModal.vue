@@ -14,6 +14,8 @@ import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useOnboardingStore } from '../stores/onboarding'
+import { useToastStore } from '../stores/toast'
+import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 import SearchInput from './SearchInput.vue'
 import SearchResults from './SearchResults.vue'
@@ -33,6 +35,7 @@ const PAGE = 25
 const chatStore = useChatStore()
 const authStore = useAuthStore()
 const onboarding = useOnboardingStore()
+const toasts = useToastStore()
 const serverFeatures = useServerFeaturesStore()
 const features = serverFeatures
 
@@ -87,6 +90,9 @@ function close() {
   emit('update:modelValue', false)
 }
 
+// The query of the list on screen: "more" pages that list, not what is being typed.
+let loadedParams = ''
+
 function pageParams(before?: string) {
   const params = new URLSearchParams(built.value.params)
   if (before) params.set('before', before)
@@ -120,8 +126,10 @@ async function performSearch() {
 
   isSearching.value = true
   try {
-    const data = await api(`/api/search?${pageParams().toString()}`, { decode: decodeSearchResult })
+    const sent = pageParams().toString()
+    const data = await api(`/api/search?${sent}`, { decode: decodeSearchResult })
     if (seq !== searchSeq) return
+    loadedParams = sent
     results.value = data.messages || []
     roots.value = keepRoots(data.roots)
     hasMore.value = !!data.has_more
@@ -151,13 +159,16 @@ async function loadMore() {
   const seq = searchSeq
   isLoadingMore.value = true
   try {
-    const data = await api(`/api/search?${pageParams(last.id).toString()}`, { decode: decodeSearchResult })
+    const params = new URLSearchParams(loadedParams)
+    params.set('before', last.id)
+    const data = await api(`/api/search?${params.toString()}`, { decode: decodeSearchResult })
     if (seq !== searchSeq) return
     results.value = [...results.value, ...(data.messages || [])]
     roots.value = { ...roots.value, ...keepRoots(data.roots) }
     hasMore.value = !!data.has_more
   } catch (err) {
     console.warn('Search error:', err)
+    toasts.error(t('chat.searchFailed'))
   } finally {
     isLoadingMore.value = false
   }
@@ -174,6 +185,8 @@ function handleSelect(msg: Message) {
 // button's own Enter. Escape peels one layer (popover, suggestions) before the
 // dialog closes.
 function handleKeydown(e: KeyboardEvent) {
+  // Enter that commits an IME composition is not "open the result" (Safari reports it with keyCode 229).
+  if (e.isComposing || e.keyCode === 229) return
   if (!results.value.length || !(e.target instanceof HTMLElement)) return
   if (e.target.closest('[data-search-popover]')) return
   const n = results.value.length
