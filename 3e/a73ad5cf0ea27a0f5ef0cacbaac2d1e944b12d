@@ -1,0 +1,88 @@
+web/src/components/ProfileAvatar.vue
+  s_06fcde5dbef956::t_75bf9d222cabc5 15,93
+web/src/lib/chatLogic.test.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 21-28
+web/src/lib/dmList.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 6-7,53,63-65
+web/src/components/ParticipantTile.vue
+  s_06fcde5dbef956::t_75bf9d222cabc5 15,51
+web/src/lib/forumApi.test.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 58-62
+web/src/lib/drafts.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 138-151,174,190,192
+web/src/lib/emojiShortcodes.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 9-13
+web/src/lib/automod.test.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 42-48
+web/src/lib/bots.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 4,50
+web/src/lib/auditSummary.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 16-17
+web/src/components/UserAvatar.vue
+  s_06fcde5dbef956::t_75bf9d222cabc5 6,54
+web/src/lib/emojiShortcodes.test.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 1,21-30
+  s_06fcde5dbef956::t_49bba235b52e5a 31-32
+web/src/lib/drafts.test.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 156-179
+web/src/lib/moderation.test.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 35-37
+web/src/lib/time.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 26-28
+web/src/lib/initial.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 1-3
+web/src/lib/bots.test.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 30
+web/src/lib/eventTime.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 3
+web/src/lib/globalSearch.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 27-30,54-59,71
+web/src/lib/automod.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 80-81
+web/src/components/ManageForumTagsModal.vue
+  s_06fcde5dbef956::t_75bf9d222cabc5 79
+web/src/lib/dm.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 7,18-19
+web/src/lib/dmList.test.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 3-4,61-62,76-85
+  s_06fcde5dbef956::t_9959c78d237605 86-87
+web/src/lib/auditSummary.test.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 30-37
+web/src/components/IncomingWebhooksPanel.vue
+  s_06fcde5dbef956::t_75bf9d222cabc5 17,201
+web/src/lib/initial.test.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 2,4-6,9-10,12-15
+web/src/lib/moderation.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 71
+web/src/lib/channelTree.test.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 2,7-14
+  s_06fcde5dbef956::t_d53067f5e598a0 15
+web/src/components/DmInfoDialog.vue
+  s_06fcde5dbef956::t_75bf9d222cabc5 20,74
+web/src/lib/forumApi.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 23,26
+web/src/lib/chatLogic.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 10-24,28
+web/src/lib/globalSearch.test.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 79-95
+web/src/lib/channelTree.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 24-34,44
+web/src/components/ManageForumTagsModal.test.ts
+  s_06fcde5dbef956::t_75bf9d222cabc5 140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3ea73ad5cf0ea27a0f5ef0cacbaac2d1e944b12d",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
