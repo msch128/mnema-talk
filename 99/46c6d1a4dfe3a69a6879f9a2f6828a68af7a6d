@@ -1,0 +1,19 @@
+internal/server/talk_disconnect_integration_test.go
+  s_2156e9735076ff::t_1a1e04fa71d9ac 76,84,95,106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9946c6d1a4dfe3a69a6879f9a2f6828a68af7a6d",
+  "prompts": {},
+  "sessions": {
+    "s_2156e9735076ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adel-native-server-78d153cdff05b628",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
