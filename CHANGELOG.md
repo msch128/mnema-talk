@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/msch128/mnema-talk/compare/v1.3.0...v1.4.0) (2026-10-28)
+
+
+### Features
+
+* **auth:** Owner confirms identity before account takeover routes ([#475](https://github.com/msch128/mnema-talk/issues/475)) ([0a5947c](https://github.com/msch128/mnema-talk/commit/0a5947cc6369c1c1b33d90f68dc8ef09c0447c87))
+
 ## [1.3.0](https://github.com/msch128/mnema-talk/compare/v1.2.6...v1.3.0) (2026-10-28)
 
 
