@@ -13,7 +13,7 @@ type ChannelHierarchy struct {
 // CreateCategoryRequest is the body of POST /api/admin/categories.
 type CreateCategoryRequest struct {
 	Name      string `json:"name" minLength:"1" maxLength:"64"`
-	SortOrder int    `json:"sort_order" minimum:"-1073741824" maximum:"1073741824" binding:"optional"`
+	SortOrder int    `json:"sort_order" binding:"optional"`
 }
 
 // RenameCategoryRequest is the body of PATCH /api/admin/categories/{id}.
@@ -33,7 +33,7 @@ type CreateChannelRequest struct {
 	Name       string      `json:"name" minLength:"1" maxLength:"64"`
 	Type       ChannelType `json:"type" default:"text" binding:"optional"`
 	Topic      string      `json:"topic" maxLength:"255" binding:"optional"`
-	SortOrder  int         `json:"sort_order" minimum:"-1073741824" maximum:"1073741824" binding:"optional"`
+	SortOrder  int         `json:"sort_order" binding:"optional"`
 	// IsStage creates the Talk as a Stage (voice channels only).
 	IsStage bool `json:"is_stage" binding:"optional"`
 }

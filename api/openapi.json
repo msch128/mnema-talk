@@ -2085,8 +2085,6 @@
             "type": "string"
           },
           "sort_order": {
-            "maximum": 1073741824,
-            "minimum": -1073741824,
             "type": "integer"
           }
         },
@@ -2252,8 +2250,6 @@
             "type": "string"
           },
           "sort_order": {
-            "maximum": 1073741824,
-            "minimum": -1073741824,
             "type": "integer"
           }
         },
@@ -2285,8 +2281,6 @@
             "type": "string"
           },
           "sort_order": {
-            "maximum": 1073741824,
-            "minimum": -1073741824,
             "type": "integer"
           }
         },
@@ -2314,8 +2308,6 @@
             "type": "string"
           },
           "sort_order": {
-            "maximum": 1073741824,
-            "minimum": -1073741824,
             "type": "integer"
           },
           "topic": {

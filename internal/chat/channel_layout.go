@@ -15,13 +15,13 @@ import (
 // CategoryOrder and ChannelPlacement describe a drag-and-drop result.
 type CategoryOrder struct {
 	ID        uuid.UUID `json:"id" format:"uuid"`
-	SortOrder int       `json:"sort_order" minimum:"-1073741824" maximum:"1073741824"`
+	SortOrder int       `json:"sort_order"`
 }
 
 type ChannelPlacement struct {
 	ID         uuid.UUID  `json:"id" format:"uuid"`
 	CategoryID *uuid.UUID `json:"category_id" format:"uuid" extensions:"x-nullable"`
-	SortOrder  int        `json:"sort_order" minimum:"-1073741824" maximum:"1073741824"`
+	SortOrder  int        `json:"sort_order"`
 }
 
 // MaxSortOrder bounds the sort order of a category or channel. The columns
