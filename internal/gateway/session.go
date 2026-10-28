@@ -77,6 +77,14 @@ func (s *session) detach(c *connection) {
 	}
 }
 
+// detachedSince reports when the session lost its connection; live is true
+// while it has one.
+func (s *session) detachedSince() (at time.Time, live bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.detachedAt, s.conn != nil
+}
+
 func (s *session) live() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()

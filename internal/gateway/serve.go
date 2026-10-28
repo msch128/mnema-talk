@@ -173,12 +173,11 @@ func (g *Gateway) identify(c *connection, d json.RawMessage, header *bot.Credent
 		c.closeWith(code, reason)
 		return nil
 	}
-	s := &session{id: newSessionID(), botID: creds.Bot.BotID, userID: creds.User.ID, tokenID: creds.Bot.TokenID, intents: *req.Intents, startedAt: time.Now()}
+	s := &session{id: newSessionID(), botID: creds.Bot.BotID, userID: creds.User.ID, tokenID: creds.Bot.TokenID, intents: *req.Intents, startedAt: time.Now(), conn: c}
 	if !g.register(s) {
 		c.closeWith(CloseRateLimited, "Too many connections")
 		return nil
 	}
-	s.attach(c)
 	// The token may have been revoked between its lookup and the registration.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -240,20 +239,23 @@ func (g *Gateway) resume(c *connection, d json.RawMessage, header *bot.Credentia
 		c.trySend(marshal(OpInvalidSession, false))
 		return nil, false
 	}
+	// The replaced connection ends whether or not the adoption holds.
+	closeReplaced(replaced, c)
 	if !g.adoptSession(s, creds.Bot.TokenID) {
 		c.closeWith(CloseAuthFailed, "Authentication failed")
 		return nil, true
 	}
-	closeReplaced(replaced, c)
 	return s, false
 }
 
 func scanSessions(mine map[string]*session) (live int, oldest *session) {
+	var oldestAt time.Time
 	for _, o := range mine {
-		if o.live() {
+		at, isLive := o.detachedSince()
+		if isLive {
 			live++
-		} else if oldest == nil || o.detachedAt.Before(oldest.detachedAt) {
-			oldest = o
+		} else if oldest == nil || at.Before(oldestAt) {
+			oldest, oldestAt = o, at
 		}
 	}
 	return live, oldest

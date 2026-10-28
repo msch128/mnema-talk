@@ -12,35 +12,13 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
-// Revoke ends the live connections and the resumable sessions of a bot: of one
-// token when tokenID is set, of all its tokens otherwise. Open connections get
-// close code 4004, as for a failed login.
-func (g *Gateway) Revoke(botID uuid.UUID, tokenID *uuid.UUID) {
-	g.mu.Lock()
-	var victims []*session
-	for id, s := range g.byBot[botID] {
-		if tokenID == nil || s.tokenID == *tokenID {
-			victims = append(victims, s)
-			delete(g.sessions, id)
-			delete(g.byBot[botID], id)
-		}
-	}
-	if len(g.byBot[botID]) == 0 {
-		delete(g.byBot, botID)
-	}
-	g.mu.Unlock()
-	for _, s := range victims {
-		s.closeConn(CloseAuthFailed, "Authentication failed")
-	}
-}
-
-// RevokeUser ends every session of the bot account userID, as Revoke does for a
-// bot: its account was banned or disabled. Open connections get close code 4004.
-func (g *Gateway) RevokeUser(userID uuid.UUID) {
+// revokeWhere ends every session matching pred: it is removed and its open
+// connection gets close code 4004, as for a failed login.
+func (g *Gateway) revokeWhere(pred func(*session) bool) {
 	g.mu.Lock()
 	var victims []*session
 	for id, s := range g.sessions {
-		if s.userID == userID {
+		if pred(s) {
 			victims = append(victims, s)
 			g.removeLocked(id, s)
 		}
@@ -49,6 +27,21 @@ func (g *Gateway) RevokeUser(userID uuid.UUID) {
 	for _, s := range victims {
 		s.closeConn(CloseAuthFailed, "Authentication failed")
 	}
+}
+
+// Revoke ends the live connections and the resumable sessions of a bot: of one
+// token when tokenID is set, of all its tokens otherwise. Open connections get
+// close code 4004, as for a failed login.
+func (g *Gateway) Revoke(botID uuid.UUID, tokenID *uuid.UUID) {
+	g.revokeWhere(func(s *session) bool {
+		return s.botID == botID && (tokenID == nil || s.tokenID == *tokenID)
+	})
+}
+
+// RevokeUser ends every session of the bot account userID, as Revoke does for a
+// bot: its account was banned or disabled. Open connections get close code 4004.
+func (g *Gateway) RevokeUser(userID uuid.UUID) {
+	g.revokeWhere(func(s *session) bool { return s.userID == userID })
 }
 
 // expire drops detached sessions that were not resumed in time.
@@ -169,16 +162,5 @@ func (g *Gateway) stillGood(ctx context.Context, s *session) bool {
 }
 
 func (g *Gateway) revokeToken(tokenID uuid.UUID) {
-	g.mu.Lock()
-	var victims []*session
-	for id, s := range g.sessions {
-		if s.tokenID == tokenID {
-			victims = append(victims, s)
-			g.removeLocked(id, s)
-		}
-	}
-	g.mu.Unlock()
-	for _, s := range victims {
-		s.closeConn(CloseAuthFailed, "Authentication failed")
-	}
+	g.revokeWhere(func(s *session) bool { return s.tokenID == tokenID })
 }
