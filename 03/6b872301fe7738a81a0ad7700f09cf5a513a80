@@ -1,0 +1,39 @@
+internal/httpx/request_test.go
+  s_1888f569b71f01::t_05bc1591738431 25-26
+internal/push/sender.go
+  s_1888f569b71f01::t_4e0edd65b1bac7 125,128-129
+internal/ssrf/ssrf.go
+  s_1888f569b71f01::t_e274d154ce3a00 31-58
+internal/webhook/dispatch_delivery.go
+  s_1888f569b71f01::t_8936f0409ae89d 21-23,36,57-59
+internal/webhook/dispatch_test.go
+  s_1888f569b71f01::t_54c1137123a309 15,42,53-55,285-297
+internal/webhook/execute.go
+  s_1888f569b71f01::t_59516469838800 6,224-229,238-239,270-277,363-368
+internal/webhook/execute_request.go
+  s_1888f569b71f01::t_dc21432fe49936 78
+internal/webhook/faults_integration_test.go
+  s_1888f569b71f01::t_483990f507a3fc 263-264,266-270
+internal/webhook/outgoing_store.go
+  s_1888f569b71f01::t_d2eb4d76308bc8 181-183,289,291-297
+internal/webhook/review_fixes_integration_test.go
+  s_1888f569b71f01::t_590034f382c610 1-136
+internal/webhook/store.go
+  s_1888f569b71f01::t_00dc3dca1b79d4 210-214,274-283,287-308,311,318-319,322-325
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "036b872301fe7738a81a0ad7700f09cf5a513a80",
+  "prompts": {},
+  "sessions": {
+    "s_1888f569b71f01": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aintegrate-server-60fe71aa50757d20",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
