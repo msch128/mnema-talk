@@ -434,14 +434,14 @@ jobs:
           marker='<!-- desktop-app-section -->'
           body=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body)
           case "$body" in *"$marker"*) echo "section already present"; exit 0 ;; esac
-          # The desktop release is resolved now; fall back to the releases page.
-          url=$(gh release view --repo msch128/mnema-talk-desktop --json url --jq .url 2>/dev/null || true)
-          [ -n "$url" ] || url="https://github.com/msch128/mnema-talk-desktop/releases"
+          # The releases page, not one tag: a tag URL freezes whatever was
+          # current when this server release was published.
+          url="https://github.com/msch128/mnema-talk-desktop/releases"
           {
             printf '%s\n\n' "$body"
             printf '%s\n' "$marker"
             printf '%s\n\n' "### Desktop app (Beta)"
-            printf '%s\n' "The desktop app (Windows only, Beta, unsigned; macOS and Linux builds are paused) is published in its own repository: [latest desktop release]($url)."
+            printf '%s\n' "The desktop app (Beta, unsigned) for Windows, macOS and Linux is published in its own repository: [latest desktop release]($url)."
             printf '%s\n' "This server release carries the Docker image (\`ghcr.io/msch128/mnema-talk:$VERSION\`) and the signed web bundle that the desktop app verifies, not desktop installers."
           } > notes.md
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
