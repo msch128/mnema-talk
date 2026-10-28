@@ -1,0 +1,65 @@
+internal/sfu/adapt.go
+  s_e093819e095c57::t_4853ce24ef3250 172-174,176-178
+internal/sfu/adapt_test.go
+  s_e093819e095c57::t_df7d556750dbdf 129-144
+internal/sfu/announce.go
+  s_e093819e095c57::t_418e4a2b5b4813 48-51,53-54,56
+internal/sfu/announce_test.go
+  s_e093819e095c57::t_fa2052b7eb5fd9 52,54,66,69
+internal/sfu/authorization.go
+  s_e093819e095c57::t_93ca66f6ef088e 13-16
+internal/sfu/helpers_test.go
+  s_e093819e095c57::t_02c24bfd1e348e 23-38
+internal/sfu/ingress_test.go
+  s_e093819e095c57::t_11de3bc205fef9 139-140
+internal/sfu/layer_wanted.go
+  s_e093819e095c57::t_7ddb95fc2b4bbe 151
+internal/sfu/layers.go
+  s_e093819e095c57::t_69ddcb9a217cd0 230-234,274
+internal/sfu/layers_hardening_test.go
+  s_e093819e095c57::t_f77dab99fea2dc 4,279-352
+internal/sfu/layers_test.go
+  s_e093819e095c57::t_c910d72fbc6a49 372-373
+internal/sfu/lost_peer_test.go
+  s_e093819e095c57::t_370b750b96e571 1-133
+internal/sfu/permissions_test.go
+  s_e093819e095c57::t_ab0fd613c53552 89-115
+internal/sfu/room_attach.go
+  s_e093819e095c57::t_36fea27e7975c7 52-55,155-157,159-163,166-167,169-186
+internal/sfu/room_tracks.go
+  s_e093819e095c57::t_f637a212a61895 272-274,280-289,331-357
+internal/sfu/screen.go
+  s_e093819e095c57::t_d20b911852a6c8 88,133-137
+internal/sfu/sfu.go
+  s_e093819e095c57::t_0baaa53ba688da 36-42,109-114,135-140
+internal/sfu/sfu_edges_test.go
+  s_e093819e095c57::t_3c0dd7aafceafd 167,268-271
+internal/sfu/sfu_join.go
+  s_e093819e095c57::t_abbc6a2a39c123 55,94
+internal/sfu/sfu_setup.go
+  s_e093819e095c57::t_76f28c8a2897ca 133-138
+internal/sfu/sources.go
+  s_e093819e095c57::t_9f4b0a4f541b9c 61-64,67-69,74,82
+internal/sfu/subscriptions_test.go
+  s_e093819e095c57::t_7155298e0dd5b3 128,255-264
+internal/sfu/viewer_track.go
+  s_e093819e095c57::t_b404923c5a0feb 256-258,260-261,264
+internal/sfu/viewers_test.go
+  s_e093819e095c57::t_bf50b220aab9f3 75,136,180,182,237
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "37b4bf15b93def7e0f71636d8de1546e649c3b73",
+  "prompts": {},
+  "sessions": {
+    "s_e093819e095c57": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-server-ci-3aceafcfa6eaef3b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
