@@ -64,6 +64,9 @@ type authQueryHook struct {
 	match  string
 	once   sync.Once
 	before func()
+	// after runs when the first matching query has finished.
+	after  func()
+	armed  bool
 	cancel bool
 	hit    bool
 }
@@ -72,6 +75,7 @@ func (h *authQueryHook) TraceQueryStart(ctx context.Context, _ *pgx.Conn, d pgx.
 	if strings.Contains(strings.Join(strings.Fields(d.SQL), " "), h.match) {
 		h.once.Do(func() {
 			h.hit = true
+			h.armed = h.after != nil
 			if h.before != nil {
 				h.before()
 			}
@@ -84,7 +88,12 @@ func (h *authQueryHook) TraceQueryStart(ctx context.Context, _ *pgx.Conn, d pgx.
 	}
 	return ctx
 }
-func (*authQueryHook) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
+func (h *authQueryHook) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {
+	if h.armed {
+		h.armed = false
+		h.after()
+	}
+}
 
 func authHookPool(t *testing.T, source *db.Pool, hook *authQueryHook) *db.Pool {
 	t.Helper()
@@ -146,7 +155,7 @@ func TestAuthDatabaseCancellationPropagates(t *testing.T) {
 			_, e := Register(ctx, p, "newmember", "", testPassword, "member-invite-k7x2")
 			return e
 		}},
-		{"change password load", "SELECT password_hash FROM users", func(p *db.Pool) error {
+		{"change password load", "SELECT password_hash, role FROM users", func(p *db.Pool) error {
 			_, e := ChangePassword(ctx, p, member.ID, testPassword, "next-password-value")
 			return e
 		}},

@@ -89,23 +89,6 @@ func checkGlobal(ctx context.Context, svc *perm.Service, u *User, ok func(perm.S
 	return nil
 }
 
-// authorizeTarget checks that the caller may act on another member: never on
-// the Owner, and only on members whose highest role is below the caller's.
-func (h *Handler) authorizeTarget(r *http.Request, target *User) error {
-	if target.IsAdmin() {
-		return errOwnerAction
-	}
-	actor := UserFrom(r.Context())
-	if h.Perms == nil || actor == nil || actor.IsAdmin() {
-		return nil
-	}
-	snap, err := h.Perms.Snapshot(r.Context())
-	if err != nil {
-		return err
-	}
-	return snap.CanModerate(actor.Subject(), target.Subject())
-}
-
 // withRoles fills RoleIDs of the given users from the permission state.
 func (h *Handler) withRoles(r *http.Request, users []AdminUser) error {
 	if h.Perms == nil {

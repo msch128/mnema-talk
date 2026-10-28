@@ -118,15 +118,28 @@ func ResetPassword(ctx context.Context, p *db.Pool, id uuid.UUID) (string, error
 	if err != nil {
 		return "", fmt.Errorf("hash password: %w", err)
 	}
-	tag, err := p.Exec(ctx, `UPDATE users SET password_hash = $1, token_version = token_version + 1,
-		updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`, hash, id)
+	err = storePassword(ctx, p, id, hash)
 	if err != nil {
 		return "", err
 	}
-	if tag.RowsAffected() == 0 {
-		return "", httpx.ErrNotFound("user not found")
-	}
-	return password, dropTokens(ctx, p, id, purposePasswordReset)
+	return password, nil
+}
+
+// storePassword replaces the hash of an active account, ends its sessions and
+// drops its pending reset links in one transaction, so the change is never
+// reported as failed after it took effect.
+func storePassword(ctx context.Context, p *db.Pool, id uuid.UUID, hash string) error {
+	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `UPDATE users SET password_hash = $1, token_version = token_version + 1,
+			updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`, hash, id)
+		if err != nil {
+			return err
+		}
+		if tag.RowsAffected() == 0 {
+			return httpx.ErrNotFound("user not found")
+		}
+		return dropTokens(ctx, tx, id, purposePasswordReset)
+	})
 }
 
 // SetPassword sets a password chosen by the admin and ends all sessions.
@@ -141,11 +154,7 @@ func SetPassword(ctx context.Context, p *db.Pool, id uuid.UUID, password string)
 	if err != nil {
 		return fmt.Errorf("hash password: %w", err)
 	}
-	if _, err = p.Exec(ctx, `UPDATE users SET password_hash = $1, token_version = token_version + 1,
-		updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`, hash, id); err != nil {
-		return err
-	}
-	return dropTokens(ctx, p, id, purposePasswordReset)
+	return storePassword(ctx, p, id, hash)
 }
 
 func (h *Handler) mountUserAdmin(r chi.Router) {
@@ -202,24 +211,11 @@ func checkTarget(snap *perm.Snapshot, actor, target *User) error {
 	if target.IsAdmin() {
 		return errOwnerAction
 	}
-	if snap == nil || actor == nil || actor.IsAdmin() {
+	if actor == nil {
+		return errNoSession
+	}
+	if snap == nil || actor.IsAdmin() {
 		return nil
 	}
 	return snap.CanModerate(actor.Subject(), target.Subject())
-}
-
-// moderate loads the member a moderation action aims at and checks that the
-// caller may act on them: never the Owner, only members below the caller.
-func (h *Handler) moderate(r *http.Request, id uuid.UUID) (*User, error) {
-	if err := refuseDeleted(r.Context(), h.Sessions.DB, id); err != nil {
-		return nil, err
-	}
-	target, err := GetUser(r.Context(), h.Sessions.DB, id)
-	if err != nil {
-		return nil, err
-	}
-	if err := h.authorizeTarget(r, target); err != nil {
-		return nil, err
-	}
-	return target, nil
 }

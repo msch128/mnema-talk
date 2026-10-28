@@ -30,6 +30,7 @@ func newLoginHandler() *Handler {
 	loginTestGen = 0
 	h := NewHandler(&Sessions{Secret: strings.Repeat("s", 32), TTL: time.Hour}, nil)
 	h.generation = func(context.Context, string) (uuid.UUID, int, error) { return loginTestUID, loginTestGen, nil }
+	h.twoFactor = func(context.Context, uuid.UUID) (bool, error) { return false, nil }
 	h.verify = func(_ context.Context, username, password string) (*User, int, error) {
 		if strings.EqualFold(username, "Herzog") && password == testPassword {
 			return &User{ID: loginTestUID, Username: "Herzog", Role: RoleAdmin}, 0, nil

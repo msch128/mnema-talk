@@ -82,6 +82,9 @@ type Handler struct {
 	generation func(ctx context.Context, account string) (uuid.UUID, int, error)
 	// verify replaces Login in unit tests.
 	verify func(ctx context.Context, username, password string) (*User, int, error)
+	// twoFactor replaces the lookup of whether an account signs in with a
+	// second factor, in unit tests that have no database.
+	twoFactor func(ctx context.Context, id uuid.UUID) (bool, error)
 }
 
 // accountAttackWeight is how many failures a wrong password counts against its

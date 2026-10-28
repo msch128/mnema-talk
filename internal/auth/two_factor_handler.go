@@ -54,15 +54,25 @@ func (h *Handler) mountTwoFactor(r chi.Router) {
 	r.Post("/users/me/2fa/recovery-codes", httpx.Handle(h.twoFactorRegenerate))
 }
 
-// failedCode counts a wrong code against the account's second-factor lockout.
-func (h *Handler) failedCode(u *User) error {
-	h.twoFactorFails.RecordFailure(u.ID.String())
+// failedCode counts a wrong code against the lockout its shape belongs to, the
+// same one the sign-in step uses (see factorLimiter).
+func (h *Handler) failedCode(r *http.Request, u *User, code string) error {
+	limiter, key := h.factorLimiter(u.ID, httpx.ClientIPKey(r), code)
+	limiter.RecordFailure(key)
 	return errBadCode
 }
 
+// clearCodeFailures forgets the wrong codes counted for the lockout a correct
+// code of this shape belongs to.
+func (h *Handler) clearCodeFailures(r *http.Request, id uuid.UUID, code string) {
+	limiter, key := h.factorLimiter(id, httpx.ClientIPKey(r), code)
+	limiter.ResetFailures(key)
+}
+
 // lockedOut writes the 429 of a locked second step and reports it.
-func (h *Handler) lockedOut(w http.ResponseWriter, id uuid.UUID) bool {
-	if locked, retry := h.twoFactorFails.IsLockedOut(id.String()); locked {
+func (h *Handler) lockedOut(w http.ResponseWriter, r *http.Request, id uuid.UUID, code string) bool {
+	limiter, key := h.factorLimiter(id, httpx.ClientIPKey(r), code)
+	if locked, retry := limiter.IsLockedOut(key); locked {
 		httpx.WriteRateLimited(w, retry)
 		return true
 	}
@@ -134,7 +144,7 @@ func (h *Handler) twoFactorEnable(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	defer h.lockFactor(u.ID)()
-	if h.lockedOut(w, u.ID) {
+	if h.lockedOut(w, r, u.ID, req.Code) {
 		return nil
 	}
 	var codes []string
@@ -143,12 +153,12 @@ func (h *Handler) twoFactorEnable(w http.ResponseWriter, r *http.Request) error 
 		return err
 	})
 	if errors.Is(err, ErrWrongCode) {
-		return h.failedCode(u)
+		return h.failedCode(r, u, req.Code)
 	}
 	if err != nil {
 		return err
 	}
-	h.twoFactorFails.ResetFailures(u.ID.String())
+	h.clearCodeFailures(r, u.ID, req.Code)
 	h.auditUser(r.Context(), u, "auth.two_factor_enabled")
 	writeRecoveryCodes(w, codes)
 	return nil
@@ -176,12 +186,18 @@ func (h *Handler) ConfirmIdentity(w http.ResponseWriter, r *http.Request, u *Use
 }
 
 func (h *Handler) identity(w http.ResponseWriter, r *http.Request, u *User, password, code string, mustBeOn bool) (bool, error) {
-	defer h.lockFactor(u.ID)()
-	if h.lockedOut(w, u.ID) {
+	// The password check can wait a long time for a hashing slot, so it runs
+	// before the factor lock is taken: that lock is shared by a stripe of
+	// accounts, and only the code check and its failure count need it.
+	if h.lockedOut(w, r, u.ID, code) {
 		return false, nil
 	}
 	if ok, err := h.reauth(w, r, u.ID, password); !ok {
 		return false, err
+	}
+	defer h.lockFactor(u.ID)()
+	if h.lockedOut(w, r, u.ID, code) {
+		return false, nil
 	}
 	st, err := h.Sessions.twoFactorState(r.Context(), h.Sessions.DB, u.ID)
 	if err != nil {
@@ -198,9 +214,9 @@ func (h *Handler) identity(w http.ResponseWriter, r *http.Request, u *User, pass
 		return false, err
 	}
 	if !res.OK {
-		return false, h.failedCode(u)
+		return false, h.failedCode(r, u, code)
 	}
-	h.twoFactorFails.ResetFailures(u.ID.String())
+	h.clearCodeFailures(r, u.ID, code)
 	return true, nil
 }
 
@@ -232,7 +248,10 @@ func (h *Handler) twoFactorDisable(w http.ResponseWriter, r *http.Request) error
 	if ok, err := h.requireProof(w, r, u, req); !ok {
 		return err
 	}
-	if err := removeTwoFactor(r.Context(), h.Sessions.DB, u.ID); err != nil {
+	err := pgx.BeginFunc(r.Context(), h.Sessions.DB, func(tx pgx.Tx) error {
+		return removeTwoFactor(r.Context(), tx, u.ID)
+	})
+	if err != nil {
 		return err
 	}
 	h.auditUser(r.Context(), u, "auth.two_factor_disabled")
@@ -283,11 +302,17 @@ func (h *Handler) twoFactorRegenerate(w http.ResponseWriter, r *http.Request) er
 }
 
 // ResetTwoFactor turns the second factor of an account off without asking for
-// a code and ends all of its sessions. It is for the Owner's support action
-// and the host command; callers audit it.
-func ResetTwoFactor(ctx context.Context, q db.Querier, id uuid.UUID) error {
-	if err := removeTwoFactor(ctx, q, id); err != nil {
+// a code and ends all of its sessions, all or nothing. It is for the Owner's
+// support action and the host command; callers audit it.
+func ResetTwoFactor(ctx context.Context, p *db.Pool, id uuid.UUID) error {
+	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error { return ResetTwoFactorTx(ctx, tx, id) })
+}
+
+// ResetTwoFactorTx is ResetTwoFactor inside the caller's transaction, for a
+// caller that has to commit more with it (the host command's audit row).
+func ResetTwoFactorTx(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+	if err := removeTwoFactor(ctx, tx, id); err != nil {
 		return err
 	}
-	return RevokeSessions(ctx, q, id)
+	return RevokeSessions(ctx, tx, id)
 }
