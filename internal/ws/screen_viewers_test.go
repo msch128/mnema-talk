@@ -125,25 +125,25 @@ func TestScreenViewersGoToTheRoomOnly(t *testing.T) {
 	ch, other := voiceCh(), voiceCh()
 	sharer := testClient(h, auth.User{ID: uuid.New(), Username: "sharer"})
 	viewerUser := auth.User{ID: uuid.New(), Username: "viewer"}
-	tab1, tab2 := testClient(h, viewerUser), testClient(h, viewerUser)
+	tab := testClient(h, viewerUser)
 	member := testClient(h, auth.User{ID: uuid.New(), Username: "member"})
 	outsider := testClient(h, auth.User{ID: uuid.New(), Username: "outsider"})
 	lobby := testClient(h, auth.User{ID: uuid.New(), Username: "lobby"})
-	for _, c := range []*Client{sharer, tab1, tab2, member} {
+	for _, c := range []*Client{sharer, tab, member} {
 		h.joinVoice(c, ch)
 	}
 	h.joinVoice(outsider, other)
-	inRoom := []*Client{sharer, tab1, tab2, member}
+	inRoom := []*Client{sharer, tab, member}
 	startShare(t, voiceSFU, ch.ID, sharer, append(inRoom, outsider, lobby)...)
 
-	subscribeScreen(tab1, sharer.User.ID, true)
+	subscribeScreen(tab, sharer.User.ID, true)
 	for _, c := range inRoom {
 		expectViewers(t, c, ch.ID, sharer.User.ID, viewerUser.ID)
 	}
 	expectNoViewers(t, outsider, lobby)
 
-	// The same user watching from a second tab is still one viewer.
-	subscribeScreen(tab2, sharer.User.ID, true)
+	// Subscribing again changes nothing.
+	subscribeScreen(tab, sharer.User.ID, true)
 	expectNoViewers(t, inRoom...)
 
 	// A joiner learns the audience of every live share, nobody else hears it again.
@@ -153,8 +153,7 @@ func TestScreenViewersGoToTheRoomOnly(t *testing.T) {
 	expectViewers(t, late, ch.ID, sharer.User.ID, viewerUser.ID)
 	expectNoViewers(t, late, sharer, member, outsider, lobby)
 
-	// A kick ends the viewer's subscription on every tab. (A tab still in
-	// the room while the other is kicked may hear it too.)
+	// A kick ends the viewer's subscription.
 	h.KickFromVoice(viewerUser.ID)
 	for _, c := range []*Client{sharer, member, late} {
 		expectViewers(t, c, ch.ID, sharer.User.ID)

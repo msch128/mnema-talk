@@ -219,9 +219,7 @@ func (h *Hub) enforceVoiceAccess(snap *perm.Snapshot, want map[uuid.UUID]bool) {
 	}
 	h.mu.RUnlock()
 	for _, s := range seats {
-		owner := snap.IsOwner(perm.Subject{ID: s.user})
-		p := snap.Channel(perm.Subject{ID: s.user, Owner: owner}, s.ch)
-		if p.Has(perm.ViewChannel | perm.Connect) {
+		if holds(snap, s.user, s.ch, perm.ViewChannel|perm.Connect) {
 			continue
 		}
 		reason := "missing_permission"
