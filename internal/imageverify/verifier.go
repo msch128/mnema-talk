@@ -157,23 +157,39 @@ func (v *Verifier) verifySignature(pinned name.Digest, digest v1.Hash, trust roo
 	if err != nil {
 		return err
 	}
-	last := v.tryBundles(pinned, manifest.Manifests, verifier, policy, opts)
-	if last == nil {
+	err = v.tryBundles(pinned, manifest.Manifests, verifier, policy, opts)
+	var rejected rejectedError
+	switch {
+	case err == nil:
 		return nil
-	}
-	if errors.Is(last, errNoBundle) {
+	case errors.Is(err, errNoBundle):
 		return untrusted("%s carries no signature", digest)
+	case errors.As(err, &rejected):
+		return untrusted("no valid signature for %s by the release workflow: %v", digest, err)
+	default:
+		// The registry could not be read: no verdict on the image.
+		return fmt.Errorf("check signatures of %s: %w", digest, err)
 	}
-	return untrusted("no valid signature for %s by the release workflow: %v", digest, last)
 }
 
 var errNoBundle = errors.New("no signature bundle")
 
+// rejectedError marks a referrer that was read but is not a valid signature
+// (as opposed to one that could not be fetched).
+type rejectedError struct{ err error }
+
+func (e rejectedError) Error() string { return e.err.Error() }
+func (e rejectedError) Unwrap() error { return e.err }
+
 // tryBundles returns nil as soon as one referrer carries a signature that
-// verifies, errNoBundle if there was nothing to try, else the last failure.
+// verifies. Otherwise it returns the first registry failure (the real
+// signature may have been the one that could not be read), else every
+// rejection joined (an unrelated referrer must not hide why the real
+// signature failed), else errNoBundle if there was nothing to try.
 func (v *Verifier) tryBundles(pinned name.Digest, referrers []v1.Descriptor, verifier *verify.Verifier, policy verify.PolicyBuilder, opts []remote.Option) error {
 	tried := 0
-	last := errNoBundle
+	var unavailable error
+	var rejections []string
 	for _, d := range referrers {
 		// The referrers index of a registry without the referrers API (GHCR)
 		// carries the config media type as artifact type, not the bundle
@@ -185,11 +201,24 @@ func (v *Verifier) tryBundles(pinned name.Digest, referrers []v1.Descriptor, ver
 		if tried++; tried > maxBundles {
 			break
 		}
-		if last = v.tryBundle(pinned.Repository.Digest(d.Digest.String()), verifier, policy, opts); last == nil {
+		err := v.tryBundle(pinned.Repository.Digest(d.Digest.String()), verifier, policy, opts)
+		var rejected rejectedError
+		switch {
+		case err == nil:
 			return nil
+		case errors.As(err, &rejected):
+			rejections = append(rejections, err.Error())
+		case unavailable == nil:
+			unavailable = err
 		}
 	}
-	return last
+	if unavailable != nil {
+		return unavailable
+	}
+	if len(rejections) > 0 {
+		return rejectedError{errors.New(strings.Join(rejections, "; "))}
+	}
+	return errNoBundle
 }
 
 func (v *Verifier) tryBundle(ref name.Digest, verifier *verify.Verifier, policy verify.PolicyBuilder, opts []remote.Option) error {
@@ -199,10 +228,12 @@ func (v *Verifier) tryBundle(ref name.Digest, verifier *verify.Verifier, policy 
 	}
 	entity, err := v.parseBundle(raw)
 	if err != nil {
-		return fmt.Errorf("malformed signature bundle: %w", err)
+		return rejectedError{fmt.Errorf("malformed signature bundle: %w", err)}
 	}
-	_, err = verifier.Verify(entity, policy)
-	return err
+	if _, err = verifier.Verify(entity, policy); err != nil {
+		return rejectedError{err}
+	}
+	return nil
 }
 
 func (v *Verifier) sigstorePolicy(trust root.TrustedMaterial, digest v1.Hash) (*verify.Verifier, verify.PolicyBuilder, error) {
@@ -213,7 +244,7 @@ func (v *Verifier) sigstorePolicy(trust root.TrustedMaterial, digest v1.Hash) (*
 	if err != nil {
 		return nil, verify.PolicyBuilder{}, fmt.Errorf("sigstore verifier: %w", err)
 	}
-	id, err := verify.NewShortCertificateIdentity(v.policy.Issuer, "", "", strings.TrimSpace(v.policy.IdentityRegexp))
+	id, err := verify.NewShortCertificateIdentity(v.policy.Issuer, "", "", v.policy.IdentityRegexp)
 	if err != nil {
 		return nil, verify.PolicyBuilder{}, fmt.Errorf("certificate identity: %w", err)
 	}
@@ -251,9 +282,9 @@ func (v *Verifier) fetchBundle(ref name.Digest, opts []remote.Option) ([]byte, e
 			return nil, err
 		}
 		if len(raw) > maxBundleBytes {
-			return nil, errors.New("signature bundle is too large")
+			return nil, rejectedError{errors.New("signature bundle is too large")}
 		}
 		return raw, nil
 	}
-	return nil, errors.New("signature artifact has no bundle layer")
+	return nil, rejectedError{errors.New("signature artifact has no bundle layer")}
 }
