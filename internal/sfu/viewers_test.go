@@ -72,7 +72,7 @@ func TestScreenViewersAnnouncedOnlyOnChange(t *testing.T) {
 	s, room, pub, b := joinTwo(t)
 	c, idle := uuid.New(), uuid.New()
 	for _, id := range []uuid.UUID{c, idle} {
-		if _, err := room.JoinPeer(id, nil, nil); err != nil {
+		if _, err := s.joinPeerIn(room, id, nil, nil); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -133,7 +133,7 @@ func TestScreenViewersFollowViewerConnections(t *testing.T) {
 	}
 	wantOne(t, log.flush(), room.ID, pub, []uuid.UUID{viewer})
 
-	if _, err := room.JoinPeer(viewer, nil, nil); err != nil {
+	if _, err := s.joinPeerIn(room, viewer, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	wantNone(t, log.flush())
@@ -177,9 +177,9 @@ func TestScreenViewersClearedWhenShareEnds(t *testing.T) {
 
 // The snapshot for joiners lists every live share, watched or not.
 func TestScreenViewersSnapshot(t *testing.T) {
-	_, room, pub, viewer := joinTwo(t)
+	s, room, pub, viewer := joinTwo(t)
 	other := uuid.New()
-	if _, err := room.JoinPeer(other, nil, nil); err != nil {
+	if _, err := s.joinPeerIn(room, other, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if len(room.ScreenViewers()) != 0 {
@@ -234,7 +234,7 @@ func TestScreenViewersConcurrentChanges(t *testing.T) {
 	viewers := make([]uuid.UUID, 4)
 	for i := range viewers {
 		viewers[i] = uuid.New()
-		if _, err := room.JoinPeer(viewers[i], nil, nil); err != nil {
+		if _, err := s.joinPeerIn(room, viewers[i], nil, nil); err != nil {
 			t.Fatal(err)
 		}
 	}

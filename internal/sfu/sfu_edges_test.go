@@ -164,7 +164,7 @@ func TestInvalidTransportRangeRejected(t *testing.T) {
 	if _, err := NewSFU(50001, 50000, nil, nil); err == nil || !strings.Contains(err.Error(), "UDP port range") {
 		t.Fatalf("inverted range error = %v", err)
 	}
-	if _, err := buildAPI(0, 0, []string{"127.0.0.1"}); err != nil {
+	if _, err := buildAPIWithAuthorization(0, 0, []string{"127.0.0.1"}, nil, nil, nil, nil); err != nil {
 		t.Fatalf("default API builder: %v", err)
 	}
 }
