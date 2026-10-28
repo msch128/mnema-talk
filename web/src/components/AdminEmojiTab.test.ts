@@ -74,6 +74,21 @@ describe('AdminEmojiTab', () => {
     expect(apiMock).toHaveBeenCalledWith(`/api/admin/emoji/${ID}`, expect.objectContaining({ method: 'PATCH', json: { name: 'blobby' } }))
   })
 
+  it('blocks a rename that breaks the name rules and points to them', async () => {
+    const w = mount(AdminEmojiTab)
+    await flushPromises()
+    await w.get('button[aria-label="Rename"]').trigger('click')
+    const input = w.get('[data-testid="emoji-rename-input"]')
+    await input.setValue('Party Time')
+    expect(w.get<HTMLButtonElement>('[data-testid="emoji-rename-save"]').element.disabled).toBe(true)
+    expect(input.attributes('aria-invalid')).toBe('true')
+    expect(input.attributes('title')).toBe('2 to 32 characters: a–z, 0–9 and _')
+    await w.get('[data-testid="emoji-row"] form').trigger('submit')
+    expect(apiMock).not.toHaveBeenCalledWith(`/api/admin/emoji/${ID}`, expect.anything())
+    await input.setValue('party_time')
+    expect(w.get<HTMLButtonElement>('[data-testid="emoji-rename-save"]').element.disabled).toBe(false)
+  })
+
   it('deletes an emoji only after confirmation', async () => {
     const w = mount(AdminEmojiTab)
     await flushPromises()

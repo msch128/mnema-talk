@@ -11,16 +11,21 @@ import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 import EmptyState from './EmptyState.vue'
+import { useReloadOnActivate } from '../composables/useReloadOnActivate'
+import StatePanel from './StatePanel.vue'
 
 const toasts = useToastStore()
 const bans = ref<AuthBan[]>([])
 const loading = ref(false)
+const failed = ref(false)
 
 async function load() {
   loading.value = true
   try {
     bans.value = await api('/api/admin/bans', { decode: arrayDecoder('bans', isAuthBan) })
+    failed.value = false
   } catch (e) {
+    failed.value = true
     toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
   } finally {
     loading.value = false
@@ -44,6 +49,7 @@ function when(iso: string) {
   return new Date(iso).toLocaleString(locale.value)
 }
 
+useReloadOnActivate(load)
 onMounted(load)
 </script>
 
@@ -57,7 +63,8 @@ onMounted(load)
     </div>
 
     <div class="divide-y divide-mnema-hairline overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
-      <EmptyState v-if="!bans.length && !loading" :icon="Gavel" :text="$t('moderation.noBans')" :hint="$t('moderation.noBansHint')" data-testid="bans-empty" />
+      <StatePanel v-if="failed && !bans.length" state="error" retryable data-testid="bans-error" @retry="load">{{ $t('moderation.bansLoadFailed') }}</StatePanel>
+      <EmptyState v-else-if="!bans.length && !loading" :icon="Gavel" :text="$t('moderation.noBans')" :hint="$t('moderation.noBansHint')" data-testid="bans-empty" />
       <div v-for="ban in bans" :key="ban.user_id" class="flex items-center justify-between gap-3 px-4 py-2.5 text-sm" :data-testid="`ban-${ban.user_id}`">
         <div class="min-w-0 space-y-0.5">
           <div class="flex min-w-0 items-center gap-2">

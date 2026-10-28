@@ -1862,6 +1862,7 @@
       "deleteBody": "Existing messages and reactions show :name: as text from now on. This can’t be undone.",
       "animated": "Animated",
       "rename": "Rename",
+      "nameRules": "2 to 32 characters: a–z, 0–9 and _",
       "empty": "No custom emoji yet.",
       "full": "The limit is reached. Delete an emoji to make room.",
       "choose": "Choose file",
@@ -2052,6 +2053,7 @@
     }
   },
   "audit": {
+    "loadFailed": "Couldn’t load the audit log. Try again.",
     "title": "Audit log",
     "immutable": "Entries cannot be changed.",
     "filterEvent": "Filter by event",
@@ -2561,7 +2563,8 @@
     "slowModeTooLong": "Slow mode can last 24 hours at most.",
     "slowModeCustom": "Custom",
     "slowModeUnit": "Unit",
-    "noBansHint": "Banned members are listed here, and you can lift a ban."
+    "noBansHint": "Banned members are listed here, and you can lift a ban.",
+    "bansLoadFailed": "Couldn’t load the bans. Try again."
   },
   "editHistory": {
     "menu": "Edit history",
@@ -2902,7 +2905,8 @@
       "everyoneHint": "Any member can start a conversation with you.",
       "nobody": "Nobody",
       "nobodyHint": "Nobody can start a conversation with you.",
-      "failed": "Couldn’t save the setting. Try again."
+      "failed": "Couldn’t save the setting. Try again.",
+      "loadFailed": "Couldn’t load the setting. Try again."
     },
     "startTalk": "Start a Talk",
     "startTalkFailed": "Couldn’t start a Talk.",

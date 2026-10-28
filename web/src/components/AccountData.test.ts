@@ -101,6 +101,22 @@ describe('data export', () => {
   })
 })
 
+describe('export status polling', () => {
+  it('stops polling when the dialog closes while a status request is in flight', async () => {
+    useAuthStore().user = userFixture({ role: 'user', username: 'max' })
+    useAccountStore().info = info
+    let release: (v: unknown) => void = () => undefined
+    apiMock.mockImplementation(() => new Promise(resolve => { release = resolve }))
+    const w = mount(AccountData)
+    w.unmount()
+    release({ state: 'pending', size_bytes: 0 })
+    await flushPromises()
+    apiMock.mockClear()
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(apiMock).not.toHaveBeenCalled()
+  })
+})
+
 describe('account deletion', () => {
   it('needs the typed username and the password, then signs out and reloads', async () => {
     const assign = vi.fn()

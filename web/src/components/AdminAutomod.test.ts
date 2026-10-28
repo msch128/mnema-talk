@@ -13,6 +13,7 @@ import { tooltip } from '../directives/tooltip'
 import { fixtureId, userFixture } from '../test-fixtures.fixture'
 import { PERMISSION_BITS } from '../lib/permissions'
 import { ApiError } from '../lib/api'
+import { now } from '../lib/clock'
 import type { ApiOptions } from '../lib/api'
 
 const http = vi.hoisted(() => ({ calls: [] as Array<{ url: string; options?: ApiOptions }>, handle: (_url: string, _o?: ApiOptions): unknown => ({}) }))
@@ -106,6 +107,17 @@ describe('AdminAutomodTab', () => {
     const w = mount(AdminAutomodTab, { global })
     await flushPromises()
     expect(w.find('[data-testid="automod-raid-on"]').exists()).toBe(true)
+  })
+
+  it('drops the raid banner once the hold has run out', async () => {
+    http.handle = url => (url === '/api/admin/automod' ? { rules, raid_until: new Date(Date.now() + 60_000).toISOString() } : {})
+    const w = mount(AdminAutomodTab, { global })
+    await flushPromises()
+    const before = now.value
+    now.value = Date.now() + 120_000
+    await flushPromises()
+    expect(w.find('[data-testid="automod-raid-on"]').exists()).toBe(false)
+    now.value = before
   })
 })
 

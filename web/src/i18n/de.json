@@ -1862,6 +1862,7 @@
       "deleteBody": "Bestehende Nachrichten und Reaktionen zeigen :name: ab jetzt als Text. Das lässt sich nicht rückgängig machen.",
       "animated": "Animiert",
       "rename": "Umbenennen",
+      "nameRules": "2 bis 32 Zeichen: a–z, 0–9 und _",
       "empty": "Noch keine eigenen Emojis.",
       "full": "Das Limit ist erreicht. Lösche ein Emoji, um Platz zu schaffen.",
       "choose": "Datei wählen",
@@ -2052,6 +2053,7 @@
     }
   },
   "audit": {
+    "loadFailed": "Das Audit-Protokoll konnte nicht geladen werden. Versuche es noch einmal.",
     "title": "Audit-Log",
     "immutable": "Einträge sind unveränderlich.",
     "filterEvent": "Nach Ereignis filtern",
@@ -2561,7 +2563,8 @@
     "slowModeTooLong": "Der Langsammodus kann höchstens 24 Stunden dauern.",
     "slowModeCustom": "Eigener Wert",
     "slowModeUnit": "Einheit",
-    "noBansHint": "Gesperrte Mitglieder erscheinen hier, und du kannst eine Sperre aufheben."
+    "noBansHint": "Gesperrte Mitglieder erscheinen hier, und du kannst eine Sperre aufheben.",
+    "bansLoadFailed": "Die Sperren konnten nicht geladen werden. Versuche es noch einmal."
   },
   "editHistory": {
     "menu": "Bearbeitungsverlauf",
@@ -2902,7 +2905,8 @@
       "everyoneHint": "Jedes Mitglied kann ein Gespräch mit dir beginnen.",
       "nobody": "Niemand",
       "nobodyHint": "Niemand kann ein Gespräch mit dir beginnen.",
-      "failed": "Die Einstellung konnte nicht gespeichert werden. Versuche es noch einmal."
+      "failed": "Die Einstellung konnte nicht gespeichert werden. Versuche es noch einmal.",
+      "loadFailed": "Die Einstellung konnte nicht geladen werden. Versuche es noch einmal."
     },
     "startTalk": "Talk starten",
     "startTalkFailed": "Der Talk konnte nicht gestartet werden.",
