@@ -200,14 +200,10 @@ category never turns its channels public.
   moving a channel between categories that have overwrites, needs sight of
   every channel it affects (moving: the Administrator permission).
 - Removing a member from a Talk needs *Disconnect members* and *View channels*
-  in that Talk; a Talk you may not moderate answers like no Talk at all. Like
-  every channel permission it follows the role: granted server-wide it works in
-  every Talk, allowed through a role or member overwrite on a Talk or its
-  category it works there only (the member needs no other admin permission),
-  and denied by an overwrite it is withheld there. The channel route
-  `POST /api/channels/{id}/voice/{userID}/disconnect` decides on exactly that;
-  `POST /api/admin/users/{id}/kick` stays for members who hold the permission
-  server-wide and removes the member from every Talk they may moderate.
+  in that Talk, from a server-wide role grant or from an overwrite on the Talk
+  or its category (a deny withholds it there); a Talk you may not moderate
+  answers like no Talk at all. The route is
+  `POST /api/channels/{id}/voice/{userID}/disconnect`.
 - Reordering only moves roles that are below your highest role, to places
   below it.
 - Moderating a member (disable, enable, end sessions, edit the status line,
