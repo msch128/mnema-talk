@@ -1,0 +1,45 @@
+internal/auth/handler_profile.go
+  s_06fcde5dbef956::t_6a9aec72bdd8d9 88,99-100,110-113,115-120,314-316
+internal/server/router_build.go
+  s_06fcde5dbef956::t_d697d0a780c8c2 122,130
+internal/auth/invite_strength.go
+  s_06fcde5dbef956::t_79ad597f8ca76b 4-5,39,69
+internal/server/two_factor_integration_test.go
+  s_06fcde5dbef956::t_af81d2083e7947 343-387
+internal/auth/handler.go
+  s_06fcde5dbef956::t_d697d0a780c8c2 41-48
+internal/auth/account_delete.go
+  s_06fcde5dbef956::t_1f8a276097b52b 5,9,26-29,77-82,86-90,92
+internal/auth/invite_strength_test.go
+  s_06fcde5dbef956::t_89a5fa38c6d7ec 3-8,37-46
+  s_06fcde5dbef956::t_133556022663f2 47
+api/openapi.json
+  s_06fcde5dbef956::t_93279048ab1186 85-88,318-322,343,556-560,673-677,19887,19940,19950,32967,33019,33029,33063,33115,33125,33398
+internal/auth/email_handler.go
+  s_06fcde5dbef956::t_6a9aec72bdd8d9 40-42,45-46,49-51,117,127-128,142,174,184-185,195
+  s_06fcde5dbef956::t_5a5014afe1c03e 151
+  s_06fcde5dbef956::t_ee4259246b55c7 5,29-33,150,152-155,158-159,161-168,246-252
+internal/server/server.go
+  s_06fcde5dbef956::t_d697d0a780c8c2 109-111,125-127
+  s_06fcde5dbef956::t_8de846895005a4 7,128
+internal/auth/account_mail.go
+  s_06fcde5dbef956::t_d697d0a780c8c2 107-132
+internal/auth/invites.go
+  s_06fcde5dbef956::t_08adb86a6ce912 34-39,92,265
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2826adc72328cd4e82b4587542c14ef8a54d5d79",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
