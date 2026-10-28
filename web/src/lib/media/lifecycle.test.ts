@@ -249,17 +249,38 @@ describe('absence', () => {
     await bob.close()
   }, 30_000)
 
-  it('does not count a handshake nobody signed as a sign of life', async () => {
+  it('lets a swapped-in member start its absence clock at the swap, not earlier, and removes it if it then stays silent', async () => {
     const { alice, bob } = await pair({ rotateMs: 1e9 })
     vi.setSystemTime(START + 3000)
-    // A key package from a member in the group (a reloaded tab's) says nothing about the member's leaf.
+    // A reloaded tab's key package gets its leaf swapped by the committer.
     const reloaded = await open(bobId)
     await alice.receive(bobId, (await reloaded.sync([aliceId, bobId])).wires[0] as Uint8Array)
     await reloaded.close()
+    // The swap was a fresh start for Bob's leaf: not absent 3 s after it ...
     vi.setSystemTime(START + 6000)
+    expect(kinds(await alice.maintain())).not.toContain('mls_public_message')
+    // ... but removed once it has been silent for the limit since then.
+    vi.setSystemTime(START + 3000 + timing.absentMs + 1)
     expect(kinds(await alice.maintain())).toContain('mls_public_message')
     await alice.close()
     await bob.close()
+  }, 30_000)
+
+  it('gives a reloaded member a clean slate when its leaf is swapped, however long the old tab was silent', async () => {
+    const { alice, bob } = await pair({ rotateMs: 1e9 })
+    vi.setSystemTime(START + 3900)
+    // Bob's tab reloads and offers a new key package; Alice swaps his leaf.
+    const reloaded = await open(bobId, { rotateMs: 1e9 })
+    const groups = new Map([[aliceId, alice], [bobId, reloaded]])
+    const roster = [aliceId, bobId]
+    await deliver(groups, bobId, (await reloaded.sync(roster)).wires, roster)
+    expect((await reloaded.sync(roster)).verification?.members).toEqual([aliceId, bobId])
+    // 4.1 s after Bob's last sign of life, 0.2 s after the swap: not absent.
+    vi.setSystemTime(START + 4100)
+    expect(kinds(await alice.maintain())).not.toContain('mls_public_message')
+    await alice.close()
+    await bob.close()
+    await reloaded.close()
   }, 30_000)
 
   it('does not remove anyone after its own browser slept', async () => {
