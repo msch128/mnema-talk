@@ -11,6 +11,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 	"github.com/msch128/mnema-talk/internal/slash"
 )
 
@@ -39,7 +40,7 @@ func TestEveryCommandIsAValidDefinition(t *testing.T) {
 
 // The moderation shortcuts are only offered to members who hold the permission.
 func TestModerationCommandsAreOfferedByPermission(t *testing.T) {
-	f := perm.NewFixture()
+	f := permtest.NewFixture()
 	plain, mod, admin := uuid.New(), uuid.New(), uuid.New()
 	f.Assign(mod, f.Role(1, perm.TimeoutMembers|perm.BanMembers))
 	f.Assign(admin, f.Role(2, perm.Administrator))
@@ -113,7 +114,7 @@ func TestAHelperWithoutPermissionStateGrantsNothing(t *testing.T) {
 
 func TestPostingIsRefusedWhenTheCallerMayNotSendThere(t *testing.T) {
 	user := &auth.User{ID: uuid.New(), Role: auth.RoleUser}
-	f := perm.NewFixture().Everyone(perm.ViewChannel)
+	f := permtest.NewFixture().Everyone(perm.ViewChannel)
 	svc := &Services{Perms: f.Service()}
 	req := httptest.NewRequest(http.MethodPost, "/", nil).WithContext(auth.WithUser(context.Background(), user))
 	if _, err := svc.post(slash.Call{Request: req, Channel: uuid.New(), User: user}, "hello", nil); err == nil {

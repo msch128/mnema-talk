@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func TestNewRouterRejectsInvalidDependencies(t *testing.T) {
@@ -19,7 +20,7 @@ func TestNewRouterRejectsInvalidDependencies(t *testing.T) {
 		{TrustedProxies: []string{"not-a-cidr"}},
 		{UpdaterToken: strings.Repeat("test-", 8), UpdaterURL: "ftp://example.invalid"},
 	} {
-		router, err := NewRouter(Deps{Config: cfg})
+		router, err := NewRouter(Deps{Config: cfg, Perms: permtest.NewFixture().Service()})
 		if err == nil || router != nil {
 			t.Fatalf("router=%v err=%v", router, err)
 		}
@@ -27,7 +28,7 @@ func TestNewRouterRejectsInvalidDependencies(t *testing.T) {
 }
 
 func TestRouterRouteErrorsAreJSON(t *testing.T) {
-	router, err := NewRouter(Deps{Config: &config.Config{AllowedOrigins: []string{"http://example.test"}, JWTSecret: "router-test-secret-router-test-secret"}})
+	router, err := NewRouter(Deps{Config: &config.Config{AllowedOrigins: []string{"http://example.test"}, JWTSecret: "router-test-secret-router-test-secret"}, Perms: permtest.NewFixture().Service()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +54,7 @@ func TestRouterRouteErrorsAreJSON(t *testing.T) {
 }
 
 func TestProductionRouterHasNoNativeRoute(t *testing.T) {
-	router, err := NewRouter(Deps{Config: &config.Config{AllowedOrigins: []string{"http://example.test"}, JWTSecret: "router-test-secret-router-test-secret"}})
+	router, err := NewRouter(Deps{Config: &config.Config{AllowedOrigins: []string{"http://example.test"}, JWTSecret: "router-test-secret-router-test-secret"}, Perms: permtest.NewFixture().Service()})
 	if err != nil {
 		t.Fatal(err)
 	}

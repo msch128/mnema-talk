@@ -10,6 +10,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/pion/webrtc/v4"
 )
@@ -18,7 +19,7 @@ import (
 // who holds the Staff role and an outsider, a public Talk and a private one.
 type permWorld struct {
 	h                             *Hub
-	f                             *perm.Fixture
+	f                             *permtest.Fixture
 	owner, insider, outsider      *Client
 	staff                         uuid.UUID
 	public, private, privateVoice *chat.ChannelInfo
@@ -26,7 +27,7 @@ type permWorld struct {
 
 func newPermWorld(t *testing.T) *permWorld {
 	t.Helper()
-	f := perm.NewFixture()
+	f := permtest.NewFixture()
 	w := &permWorld{f: f, staff: f.Role(1, 0)}
 	pub, priv, privVoice := f.Channel(uuid.Nil), f.Channel(uuid.Nil), f.Channel(uuid.Nil)
 	for _, ch := range []uuid.UUID{priv, privVoice} {
@@ -71,7 +72,7 @@ func TestBroadcastChannelReachesViewersOnly(t *testing.T) {
 
 func TestEventsFailClosedWhenPermissionsCannotBeLoaded(t *testing.T) {
 	h := NewHub(nil, nil, nil, nil)
-	h.SetPermissions(perm.NewService(nil)) // no database, no state
+	h.SetPermissions(permtest.Unloadable()) // no database, no state
 	t.Cleanup(h.Close)
 	a, b := testClient(h, auth.User{ID: uuid.New()}), testClient(h, auth.User{ID: uuid.New()})
 	// A fresh connection learns of no Talk and no media at all.

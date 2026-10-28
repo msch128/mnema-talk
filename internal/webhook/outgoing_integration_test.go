@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 	"github.com/msch128/mnema-talk/internal/ssrf"
 	"github.com/msch128/mnema-talk/internal/testutil/pgfault"
 )
@@ -101,7 +101,7 @@ func TestOutgoingManagementEdges(t *testing.T) {
 
 	// Without the permission model every route is open; with a model that
 	// cannot be loaded they fail closed.
-	f.h.Perms = perm.NewService(nil)
+	f.h.Perms = permtest.Unloadable()
 	f.owner = &auth.User{ID: uuid.New(), Role: "user"}
 	wantStatus(t, f.serve(f.h, "GET", "/admin/channels/"+f.ch.String()+"/outgoing-webhooks", nil, nil), 500, "list closed")
 	wantStatus(t, f.json(f.h, "POST", "/admin/channels/"+f.ch.String()+"/outgoing-webhooks", `{}`), 500, "create closed")

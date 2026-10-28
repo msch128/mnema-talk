@@ -1,11 +1,12 @@
-package perm
+package perm_test
 
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
+	. "github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func TestCatalogIsConsistent(t *testing.T) {
@@ -71,7 +72,7 @@ func TestSetHelpers(t *testing.T) {
 }
 
 func TestEveryoneDefaultsPreserveTodaysBehavior(t *testing.T) {
-	f := NewFixture()
+	f := permtest.NewFixture()
 	ch := f.Channel(uuid.Nil)
 	member := Subject{ID: uuid.New()}
 	got := f.Snapshot().Channel(member, ch)
@@ -85,7 +86,7 @@ func TestEveryoneDefaultsPreserveTodaysBehavior(t *testing.T) {
 }
 
 func TestOwnerHasEverythingAndNothingRestrictsThem(t *testing.T) {
-	f := NewFixture()
+	f := permtest.NewFixture()
 	cat := f.Category()
 	ch := f.Channel(cat)
 	owner := Subject{ID: uuid.New(), Owner: true}
@@ -113,7 +114,7 @@ func TestOwnerHasEverythingAndNothingRestrictsThem(t *testing.T) {
 }
 
 func TestAdministratorShortCircuitsOverwritesButNotTheOwner(t *testing.T) {
-	f := NewFixture()
+	f := permtest.NewFixture()
 	ch := f.Channel(uuid.Nil)
 	admin := f.Role(5, Administrator)
 	u := uuid.New()
@@ -131,7 +132,7 @@ func TestAdministratorShortCircuitsOverwritesButNotTheOwner(t *testing.T) {
 }
 
 func TestResolutionOrder(t *testing.T) {
-	f := NewFixture()
+	f := permtest.NewFixture()
 	cat := f.Category()
 	ch := f.Channel(cat)
 	roleA := f.Role(2, SendMessages)
@@ -167,7 +168,7 @@ func TestResolutionOrder(t *testing.T) {
 		t.Fatal("member allow should beat role deny")
 	}
 	// Roles combine: a deny on one role and an allow on another allow it.
-	f2 := NewFixture()
+	f2 := permtest.NewFixture()
 	ch2 := f2.Channel(uuid.Nil)
 	r1, r2 := f2.Role(2, 0), f2.Role(1, 0)
 	u2 := uuid.New()
@@ -180,7 +181,7 @@ func TestResolutionOrder(t *testing.T) {
 }
 
 func TestPrivateChannelAndViewGate(t *testing.T) {
-	f := NewFixture()
+	f := permtest.NewFixture()
 	ch := f.Channel(uuid.Nil)
 	insider := f.Role(1, 0)
 	in, out := uuid.New(), uuid.New()
@@ -220,7 +221,7 @@ func TestPrivateChannelAndViewGate(t *testing.T) {
 }
 
 func TestUnknownChannelGivesNothing(t *testing.T) {
-	snap := NewFixture().Snapshot()
+	snap := permtest.NewFixture().Snapshot()
 	if p := snap.Channel(Subject{ID: uuid.New()}, uuid.New()); p != 0 {
 		t.Fatalf("unknown channel: %b", p)
 	}
@@ -233,7 +234,7 @@ func TestUnknownChannelGivesNothing(t *testing.T) {
 }
 
 func TestCategoryVisibility(t *testing.T) {
-	f := NewFixture()
+	f := permtest.NewFixture()
 	cat := f.Category()
 	f.RoleOverwrite(false, cat, f.EveryoneID(), 0, ViewChannel)
 	snap := f.Snapshot()
@@ -249,7 +250,7 @@ func TestCategoryVisibility(t *testing.T) {
 }
 
 func TestHierarchy(t *testing.T) {
-	f := NewFixture()
+	f := permtest.NewFixture()
 	mod := f.Role(5, ManageRoles|ManageMembers)
 	helper := f.Role(3, 0)
 	vip := f.Role(7, 0)
@@ -297,7 +298,7 @@ func TestHierarchy(t *testing.T) {
 }
 
 func TestServiceChecks(t *testing.T) {
-	f := NewFixture()
+	f := permtest.NewFixture()
 	ch := f.Channel(uuid.Nil)
 	private := f.Channel(uuid.Nil)
 	f.RoleOverwrite(true, private, f.EveryoneID(), 0, ViewChannel)
@@ -345,7 +346,7 @@ func TestServiceChecks(t *testing.T) {
 	if _, err := svc.ForChannel(ctx, uuid.New()); err != nil {
 		t.Fatalf("a fixture keeps answering: %v", err)
 	}
-	if _, err := (&Service{now: time.Now}).Snapshot(ctx); err != errNoDatabase {
+	if _, err := permtest.Unloadable().Snapshot(ctx); err == nil {
 		t.Fatalf("no state and no database: %v", err)
 	}
 }

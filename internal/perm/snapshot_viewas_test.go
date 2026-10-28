@@ -1,14 +1,16 @@
-package perm
+package perm_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	. "github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func TestAsRoleOnlyResolvesLikeAMemberWithJustThatRole(t *testing.T) {
-	f := NewFixture()
+	f := permtest.NewFixture()
 	reader := f.Role(1, ViewChannel)
 	other := f.Role(2, SendMessages)
 	ch := f.Channel(uuid.Nil)
@@ -44,7 +46,7 @@ func TestAsRoleOnlyResolvesLikeAMemberWithJustThatRole(t *testing.T) {
 }
 
 func TestAsRoleOnlyForEveryoneHoldsNoCustomRole(t *testing.T) {
-	f := NewFixture()
+	f := permtest.NewFixture()
 	role := f.Role(1, ManageRoles)
 	view, sub, ok := f.Snapshot().AsRoleOnly(f.EveryoneID())
 	if !ok || view.Global(sub).Has(ManageRoles) {
@@ -57,11 +59,8 @@ func TestAsRoleOnlyForEveryoneHoldsNoCustomRole(t *testing.T) {
 }
 
 func TestAsRoleOnlyPreviewsAManagedRoleAsABotWithoutEveryone(t *testing.T) {
-	f := NewFixture().Everyone(SendMessages)
-	role := f.Role(1, ViewChannel)
-	r := f.s.roles[role]
-	r.Managed = true
-	f.s.roles[role] = r
+	f := permtest.NewFixture().Everyone(SendMessages)
+	role := f.ManagedRole(1, ViewChannel)
 
 	view, sub, ok := f.Snapshot().AsRoleOnly(role)
 	if !ok {

@@ -5,14 +5,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 // A conversation's events reach its members' clients that asked for them, are
 // shown to the push listener alone, and never to the Owner, to another member,
 // to webhooks or to a client from before conversations.
 func TestAConversationsEventsReachItsMembersOnly(t *testing.T) {
-	f := perm.NewFixture()
+	f := permtest.NewFixture()
 	h := NewHub(nil, nil, nil, nil)
 	h.SetPermissions(f.Service())
 	t.Cleanup(h.Close)

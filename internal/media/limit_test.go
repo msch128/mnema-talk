@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func TestUploadLimitResolution(t *testing.T) {
@@ -32,7 +33,7 @@ func TestUploadLimitResolution(t *testing.T) {
 	}
 
 	// A permission state that cannot be read fails the request closed.
-	h.Perms = perm.NewService(nil)
+	h.Perms = permtest.Unloadable()
 	if _, err := h.memberLimit(ctx, perm.Subject{ID: uuid.New()}); err == nil {
 		t.Fatal("member limit must fail without a readable state")
 	}

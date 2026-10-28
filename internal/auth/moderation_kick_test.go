@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func requestAs(u *User) *http.Request {
@@ -32,7 +33,7 @@ func TestRequirePermissionAdmitsOnlyWhoHoldsIt(t *testing.T) {
 	if err := (&Handler{}).RequirePermission(requestAs(member), perm.KickMembers); err == nil {
 		t.Error("member passed without a permission service")
 	}
-	f := perm.NewFixture()
+	f := permtest.NewFixture()
 	holder := uuid.New()
 	f.Assign(holder, f.Role(1, perm.KickMembers))
 	h := &Handler{Perms: f.Service()}
@@ -46,7 +47,7 @@ func TestRequirePermissionAdmitsOnlyWhoHoldsIt(t *testing.T) {
 }
 
 func TestRequirePermissionSanitizesAnUnreadablePermissionState(t *testing.T) {
-	h := &Handler{Perms: perm.NewService(nil)}
+	h := &Handler{Perms: permtest.Unloadable()}
 	err := h.RequirePermission(requestAs(&User{ID: uuid.New(), Role: RoleUser}), perm.KickMembers)
 	apiErr, ok := httpx.AsAPIError(err)
 	if !ok || apiErr.Status != http.StatusInternalServerError {

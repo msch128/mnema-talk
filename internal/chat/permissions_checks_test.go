@@ -5,10 +5,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func TestLayoutAndCategoryChecks(t *testing.T) {
-	f := perm.NewFixture()
+	f := permtest.NewFixture()
 	plain, restricted, hidden := f.Category(), f.Category(), f.Category()
 	f.RoleOverwrite(false, restricted, f.EveryoneID(), 0, perm.SendMessages)
 	f.RoleOverwrite(false, hidden, f.EveryoneID(), 0, perm.ViewChannel)

@@ -1,18 +1,19 @@
-package perm
+package perm_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	. "github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func TestTimeoutTakesPostingAndSpeakingButNotReading(t *testing.T) {
 	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
-	clock = func() time.Time { return now }
-	t.Cleanup(func() { clock = time.Now })
+	t.Cleanup(SetClock(func() time.Time { return now }))
 
-	f := NewFixture()
+	f := permtest.NewFixture()
 	ch := f.Channel(uuid.Nil)
 	member, mod, admin, owner := uuid.New(), uuid.New(), uuid.New(), uuid.New()
 	f.Owner(owner)

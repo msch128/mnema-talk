@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 // specPath is relative to this package's directory (go test runs there).
@@ -78,7 +79,7 @@ func routesOf(t *testing.T, apiDocs bool) map[string]bool {
 		APIDocs:            apiDocs, // registers /api/docs and /api/openapi.json
 		MaxUploadMB:        1,
 	}
-	router, err := NewRouter(Deps{Config: cfg})
+	router, err := NewRouter(Deps{Config: cfg, Perms: permtest.NewFixture().Service()})
 	if err != nil {
 		t.Fatalf("NewRouter: %v", err)
 	}
