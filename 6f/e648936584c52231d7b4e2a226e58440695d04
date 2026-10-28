@@ -1,0 +1,49 @@
+internal/chat/dm_prefs.go
+  s_06fcde5dbef956::t_ac460f99fd2802 28-30,34
+  s_06fcde5dbef956::t_6d5f9d9371a4cd 62,66-68,79-87,96-112
+  s_06fcde5dbef956::t_a22b8cb4d8e80c 113-114
+internal/chat/dm.go
+  s_06fcde5dbef956::t_fe0ac48289dd4d 114-117,295-302,334-339
+  s_06fcde5dbef956::t_1bba12b5522f44 340-341
+web/src/stores/chat/dms.ts
+  s_06fcde5dbef956::t_19f1af2017b00f 199-200
+  s_442cc25bac225a::t_c8518f2bfaa64e 206,209-210
+internal/chat/dm_members.go
+  s_06fcde5dbef956::t_fe0ac48289dd4d 69-73
+web/src/stores/chatDirectMessages.test.ts
+  s_442cc25bac225a::t_edfd3513c479c0 39-40,99-107
+web/src/types/rest.ts
+  s_5cd5d192f1212e::t_4fd9484827db77 1240,1326,1347,1366
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6fe648936584c52231d7b4e2a226e58440695d04",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_442cc25bac225a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a389b1c405b18f213",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5cd5d192f1212e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae1ca9ca247ec5629",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
