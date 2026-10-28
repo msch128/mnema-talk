@@ -5,7 +5,17 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
+
+// queryIDs runs a query that returns one uuid column and collects it.
+func (s *Store) queryIDs(ctx context.Context, sql string, args ...any) ([]uuid.UUID, error) {
+	rows, err := s.DB.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
+}
 
 type DueReminder struct {
 	ID        uuid.UUID  `db:"id"`
@@ -15,45 +25,17 @@ type DueReminder struct {
 }
 
 func (s *Store) ActivateScheduled(ctx context.Context, now time.Time) ([]uuid.UUID, error) {
-	rows, err := s.DB.Query(ctx, `
+	return s.queryIDs(ctx, `
 		UPDATE events SET status = 'active', updated_at = NOW()
 		WHERE status = 'scheduled' AND start_time <= $1
 		RETURNING id`, now)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var ids []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		ids = append(ids, id)
-	}
-	return ids, rows.Err()
 }
 
 func (s *Store) CompleteActive(ctx context.Context, now time.Time) ([]uuid.UUID, error) {
-	rows, err := s.DB.Query(ctx, `
+	return s.queryIDs(ctx, `
 		UPDATE events SET status = 'completed', updated_at = NOW()
 		WHERE status = 'active' AND `+eventEnd+` <= $1
 		RETURNING id`, now)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var ids []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		ids = append(ids, id)
-	}
-	return ids, rows.Err()
 }
 
 func (s *Store) DueReminders(ctx context.Context, now time.Time) ([]DueReminder, error) {
@@ -96,20 +78,6 @@ func (s *Store) ClaimReminder(ctx context.Context, id uuid.UUID) (bool, error) {
 }
 
 func (s *Store) GetRSVPUserIDs(ctx context.Context, eventID uuid.UUID) ([]uuid.UUID, error) {
-	rows, err := s.DB.Query(ctx, `
+	return s.queryIDs(ctx, `
 		SELECT user_id FROM event_rsvps WHERE event_id = $1 AND response IN ('going', 'interested')`, eventID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var ids []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		ids = append(ids, id)
-	}
-	return ids, rows.Err()
 }

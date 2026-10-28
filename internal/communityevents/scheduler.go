@@ -78,11 +78,7 @@ func (s *Scheduler) processActivations(ctx context.Context, now time.Time) {
 		slog.ErrorContext(ctx, "activate events failed", "err", err)
 		return
 	}
-	for _, id := range ids {
-		if ev, err := s.Handler.Store.Get(ctx, id, nil); err == nil {
-			s.Handler.broadcast(ev)
-		}
-	}
+	s.broadcastEvents(ctx, ids)
 }
 
 func (s *Scheduler) processCompletions(ctx context.Context, now time.Time) {
@@ -91,11 +87,7 @@ func (s *Scheduler) processCompletions(ctx context.Context, now time.Time) {
 		slog.ErrorContext(ctx, "complete events failed", "err", err)
 		return
 	}
-	for _, id := range ids {
-		if ev, err := s.Handler.Store.Get(ctx, id, nil); err == nil {
-			s.Handler.broadcast(ev)
-		}
-	}
+	s.broadcastEvents(ctx, ids)
 }
 
 func (s *Scheduler) processReminders(ctx context.Context, now time.Time) {
@@ -200,3 +192,13 @@ func (s *Scheduler) pushAll(ctx context.Context, pusher reminderPusher, recipien
 
 // Wait blocks until the push reminders already started are done.
 func (s *Scheduler) Wait() { s.pushes.Wait() }
+
+// broadcastEvents announces the current state of each event; an event that
+// vanished meanwhile is skipped.
+func (s *Scheduler) broadcastEvents(ctx context.Context, ids []uuid.UUID) {
+	for _, id := range ids {
+		if ev, err := s.Handler.Store.Get(ctx, id, nil); err == nil {
+			s.Handler.broadcast(ev)
+		}
+	}
+}

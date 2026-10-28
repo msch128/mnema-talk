@@ -112,18 +112,5 @@ func (h *Handler) sendDelete(snap *perm.Snapshot, e talkEvent, userIDs []uuid.UU
 }
 
 func (s *Store) memberIDs(ctx context.Context) ([]uuid.UUID, error) {
-	rows, err := s.DB.Query(ctx, `SELECT id FROM users`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var ids []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		ids = append(ids, id)
-	}
-	return ids, rows.Err()
+	return s.queryIDs(ctx, `SELECT id FROM users`)
 }
