@@ -1,0 +1,19 @@
+internal/chat/readstate_integration_test.go
+  s_791bbb8e901370::t_6ae8bc9a24ef4c 1-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cbb2bfe6fd7d64e9a04ae27bc2b04f35e98322f9",
+  "prompts": {},
+  "sessions": {
+    "s_791bbb8e901370": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-unread-index-26bfc601270d5cb8",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
