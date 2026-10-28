@@ -182,4 +182,24 @@ describe('admin system operational failures', () => {
     await vi.advanceTimersByTimeAsync(10000)
     expect(fetchMock).not.toHaveBeenCalled()
   })
+  it('does not re-arm the poll when the tab is left while a health request is in flight', async () => {
+    vi.useFakeTimers()
+    const st = systemStatus()
+    st.update.update_available = true
+    st.self_update = { ...st.self_update, configured: true, available: true }
+    const w = await openSystem(st)
+    await w.find('[data-testid="self-update-open"]').trigger('click')
+    let answer!: (r: unknown) => void
+    const fetchMock = vi.fn().mockImplementation(() => new Promise((resolve) => { answer = resolve }))
+    vi.stubGlobal('fetch', fetchMock)
+    w.findComponent(SelfUpdateDialog).vm.$emit('started', { status: 'started', from_version: '0.4.0', target_version: '0.5.0' })
+    await nextTick()
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    w.unmount()
+    wrappers = wrappers.filter((x) => x !== w)
+    answer({ ok: false })
+    await vi.advanceTimersByTimeAsync(20000)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
 })

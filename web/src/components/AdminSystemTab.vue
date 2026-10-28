@@ -8,7 +8,7 @@ import { decodeServerSystemStatus, decodeServerUpdateStatus, decodeServerHealth,
 import { useToastStore } from '../stores/toast'
 import { useAppVersionStore } from '../stores/appVersion'
 import { t, locale } from '../i18n'
-import { SOURCE_URL } from '../lib/thirdParty'
+import { describeWarning } from '../lib/operatorWarnings'
 import SelfUpdateDialog from './SelfUpdateDialog.vue'
 import AdminOpsPanel from './AdminOpsPanel.vue'
 import AdminUploadLimit from './AdminUploadLimit.vue'
@@ -77,8 +77,11 @@ const POLL_MS = 5000
 const STALL_MS = 5 * 60 * 1000
 let pollTimer: ReturnType<typeof setTimeout> | null = null
 let pollStarted = 0
+// Bumped by stopPolling so a request already in flight cannot re-arm or report after it.
+let pollGeneration = 0
 
 function stopPolling() {
+  pollGeneration++
   if (pollTimer !== null) clearTimeout(pollTimer)
   pollTimer = null
 }
@@ -86,10 +89,12 @@ function stopPolling() {
 // /api/health is public and answers 503 or nothing while the container
 // restarts; once it reports another version, the reload banner takes over.
 async function pollHealth(fromVersion: string | undefined) {
+  const generation = pollGeneration
   try {
     const res = await fetch('/api/health', { cache: 'no-store', credentials: 'same-origin' })
     if (res.ok) {
       const raw: unknown = await res.json()
+      if (generation !== pollGeneration) return
       const data = decodeServerHealth(raw)
       if (data?.version && data.version !== fromVersion) {
         versionStore.setServerVersion(data.version)
@@ -103,6 +108,7 @@ async function pollHealth(fromVersion: string | undefined) {
     void err
     // Restarting: keep waiting.
   }
+  if (generation !== pollGeneration) return
   if (Date.now() - pollStarted > STALL_MS) {
     updatePhase.value = 'stalled'
     stopPolling()
@@ -124,29 +130,6 @@ onBeforeUnmount(stopPolling)
 defineExpose({ refresh, status })
 
 // ---- Operator warnings (stable codes from the server) ----
-const OPERATIONS_DOC = `${SOURCE_URL}/blob/main/doc/operations.md`
-const PROXY_DOC = `${OPERATIONS_DOC}#reverse-proxy-and-trusted_proxy_cidrs`
-const VOICE_DOC = `${OPERATIONS_DOC}#nobody-can-join-voice-or-it-connects-and-drops-after-a-few-seconds`
-
-function describeWarning(code: string, value: number | undefined) {
-  switch (code) {
-    case 'trusted_proxy_broad':
-      return { title: t('admin.system.warn.trusted_proxy_broad.title'), body: t('admin.system.warn.trusted_proxy_broad.body'), doc: PROXY_DOC }
-    case 'proxy_not_trusted':
-      return { title: t('admin.system.warn.proxy_not_trusted.title'), body: t('admin.system.warn.proxy_not_trusted.body'), doc: PROXY_DOC }
-    case 'webrtc_reachability':
-      return { title: t('admin.system.warn.webrtc_reachability.title'), body: t('admin.system.warn.webrtc_reachability.body'), doc: VOICE_DOC }
-    case 'webrtc_udp_mux_disabled':
-      return { title: t('admin.system.warn.webrtc_udp_mux_disabled.title'), body: t('admin.system.warn.webrtc_udp_mux_disabled.body', { count: value ?? 0 }), doc: `${OPERATIONS_DOC}#voice-webrtc` }
-    case 'insecure_public_url':
-      return { title: t('admin.system.warn.insecure_public_url.title'), body: t('admin.system.warn.insecure_public_url.body'), doc: `${OPERATIONS_DOC}#public_url-and-secure-cookies` }
-    case 'voice_unavailable':
-      return { title: t('admin.system.warn.voice_unavailable.title'), body: t('admin.system.warn.voice_unavailable.body'), doc: VOICE_DOC }
-    default:
-      return { title: t('admin.system.warn.unknown.title', { code }), body: t('admin.system.warn.unknown.body'), doc: OPERATIONS_DOC }
-  }
-}
-
 const warnings = computed(() => (status.value?.warnings || []).map(w => ({ code: w.code, ...describeWarning(w.code, w.value) })))
 
 const health = computed(() => status.value?.health || null)

@@ -49,7 +49,7 @@ const slash = useSlashCommands(text, () => chatStore.activeChannel?.id, () => { 
 const laterButton = ref<HTMLElement | null>(null)
 const laterMenuOpen = ref(false)
 const laterEnabled = computed(() => features.has('messages.scheduled') && props.canSend)
-const laterItem: ContextMenuItem = {
+const laterItem = computed<ContextMenuItem>(() => ({
   label: t('later.sendLater'),
   icon: CalendarClock,
   action: () => {
@@ -60,8 +60,8 @@ const laterItem: ContextMenuItem = {
       onScheduled: () => { emit('update:modelValue', ''); emit('cancel-reply') }
     })
   }
-}
-const laterItems = [laterItem]
+}))
+const laterItems = computed(() => [laterItem.value])
 
 // On a phone the composer has room for the text: file, poll and "send later"
 // share the one "+" button instead of three buttons of their own.
@@ -71,8 +71,12 @@ const plusMenuOpen = ref(false)
 const plusItems = computed<ContextMenuItem[]>(() => [
   ...(props.canAttach ? [{ label: t('chat.upload'), icon: Paperclip, disabled: props.uploading || props.sending, action: () => fileInput.value?.click() }] : []),
   ...(props.canSend ? [{ label: t('poll.create'), icon: ChartNoAxesColumn, disabled: props.sending, action: () => { pollOpen.value = true } }] : []),
-  ...(laterEnabled.value ? [{ ...laterItem, disabled: !text.value.trim() || props.uploading || props.sending }] : [])
+  ...(laterEnabled.value ? [{ ...laterItem.value, disabled: !text.value.trim() || props.uploading || props.sending }] : [])
 ])
+// One combobox, two lists: the textarea points at whichever is open.
+const slashOpen = computed(() => slash.open.value && props.canSend)
+const listboxId = computed(() => (slashOpen.value ? 'chat-slash' : assist.open.value ? 'chat-mentions' : undefined))
+const activeOptionId = computed(() => (slashOpen.value ? `chat-slash-${slash.active.value}` : assist.open.value ? `chat-mentions-${assist.active.value}` : undefined))
 const hasPlus = computed(() => (isCompact.value ? plusItems.value.length > 0 : props.canAttach))
 function onPlus() {
   if (isCompact.value) plusMenuOpen.value = !plusMenuOpen.value
@@ -108,7 +112,7 @@ function handleKeyDown(e: KeyboardEvent) {
       ]"
     >
       <SlashSuggestions
-        v-if="slash.open.value && canSend"
+        v-if="slashOpen"
         id="chat-slash"
         :items="slash.suggestions.value"
         :active="slash.active.value"
@@ -178,8 +182,8 @@ function handleKeyDown(e: KeyboardEvent) {
         @keyup.right="assist.onInput"
         @blur="assist.close(); slash.close()"
         aria-autocomplete="list"
-        :aria-controls="assist.open.value ? 'chat-mentions' : undefined"
-        :aria-activedescendant="assist.open.value ? `chat-mentions-${assist.active.value}` : undefined"
+        :aria-controls="listboxId"
+        :aria-activedescendant="activeOptionId"
         :placeholder="placeholder"
         :disabled="!canSend"
         :aria-label="placeholder"
