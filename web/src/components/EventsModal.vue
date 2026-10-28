@@ -12,6 +12,7 @@ import { useToastStore } from '../stores/toast'
 import { useWebRTC } from '../composables/useWebRTC'
 import { eventAvatar } from '../lib/eventAvatar'
 import { formatEventStart, relativeEventDay } from '../lib/eventTime'
+import { caughtErrorMessage } from '../lib/api'
 import { locale, t } from '../i18n'
 import type { CommunityEvent } from '../types/domain'
 
@@ -75,7 +76,7 @@ function editFromDetail(event: CommunityEvent) {
 function getChannelName(id?: string | null): string {
   if (!id) return ''
   const ch = chatStore.allChannels.find(c => c.id === id)
-  return ch ? ch.name : 'Talk'
+  return ch ? ch.name : t('events.talkFallback')
 }
 
 function handleJoin(channelId: string) {
@@ -91,7 +92,7 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
       await eventsStore.setRSVP(event.id, response)
     }
   } catch (err) {
-    toast.error(err instanceof Error ? err.message : 'RSVP failed')
+    toast.error(caughtErrorMessage(err, t('events.rsvpFailed')))
   }
 }
 </script>
@@ -147,8 +148,8 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
 
       <!-- Events List -->
       <div class="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-4">
-        <div v-if="(activeTab === 'past' ? eventsStore.pastLoading && !eventsStore.pastLoaded : eventsStore.loading) && displayedEvents.length === 0" class="py-8 text-center text-sm text-mnema-tertiary">
-          ...
+        <div v-if="(activeTab === 'past' ? eventsStore.pastLoading && !eventsStore.pastLoaded : eventsStore.loading) && displayedEvents.length === 0" class="py-8 text-center text-sm text-mnema-tertiary" role="status">
+          {{ $t('common.loading') }}
         </div>
 
         <div v-else-if="displayedEvents.length === 0" class="py-12 text-center text-sm text-mnema-tertiary italic">
@@ -173,11 +174,14 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
             <!-- Header: Title & Badges -->
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
-                <h3
-                  class="text-base font-semibold text-mnema-text hover:text-mnema-accent cursor-pointer truncate"
-                  @click="selectedEvent = event"
-                >
-                  {{ event.title }}
+                <h3 class="truncate text-base font-semibold text-mnema-text">
+                  <button
+                    type="button"
+                    class="max-w-full truncate hover:text-mnema-accent cursor-pointer"
+                    @click="selectedEvent = event"
+                  >
+                    {{ event.title }}
+                  </button>
                 </h3>
                 <div class="mt-1 flex flex-wrap items-center gap-3 text-xs text-mnema-secondary">
                   <div class="flex items-center gap-1">

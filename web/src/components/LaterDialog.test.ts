@@ -108,6 +108,35 @@ describe('the Send later dialog', () => {
     expect(pendingLater.value).toBeNull()
   })
 
+  it('counts a preset from the moment of confirming, not from opening the dialog', async () => {
+    apiMock.mockResolvedValueOnce(scheduledReply)
+    const w = mountDialog()
+    openLater({ kind: 'schedule', channelId: fixtureId(5), content: 'text' })
+    await flushPromises()
+    vi.setSystemTime(new Date(NOW.getTime() + 10 * 60_000))
+    await w.find('[data-testid="later-preset-in30m"]').setValue(true)
+    await w.find('[data-testid="later-dialog"]').trigger('submit')
+    await flushPromises()
+    expect(apiMock).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      json: expect.objectContaining({ send_at: new Date(NOW.getTime() + 40 * 60_000).toISOString() })
+    }))
+  })
+
+  it('does not report a failed schedule, or allow a duplicate, when the callback throws', async () => {
+    apiMock.mockResolvedValueOnce(scheduledReply)
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const onScheduled = vi.fn(() => { throw new Error('composer gone') })
+    const w = mountDialog()
+    openLater({ kind: 'schedule', channelId: fixtureId(5), content: 'text', onScheduled })
+    await flushPromises()
+    await w.find('[data-testid="later-dialog"]').trigger('submit')
+    await flushPromises()
+    expect(logged).toHaveBeenCalled()
+    expect(apiMock).toHaveBeenCalledTimes(1)
+    expect(w.find('[data-testid="later-error"]').exists()).toBe(false)
+    expect(pendingLater.value).toBeNull()
+  })
+
   it('does not empty the composer when scheduling fails', async () => {
     apiMock.mockRejectedValueOnce(new Error('too many'))
     const onScheduled = vi.fn()

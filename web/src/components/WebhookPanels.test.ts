@@ -69,6 +69,33 @@ describe('IncomingWebhooksPanel', () => {
     expect(toastTexts()).toContain('boom')
   })
 
+  it('shows a failed load with a retry instead of the empty text', async () => {
+    apiMock.mockRejectedValueOnce(new Error('boom'))
+    const w = mount(IncomingWebhooksPanel, { props: { channelId } })
+    await flushPromises()
+    expect(w.text()).not.toContain('No incoming webhooks')
+    expect(w.find('[data-testid="incoming-load-failed"]').exists()).toBe(true)
+    apiMock.mockResolvedValueOnce([hook(1)])
+    await w.find('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="incoming-load-failed"]').exists()).toBe(false)
+    expect(w.findAll('[data-testid="incoming-webhook"]')).toHaveLength(1)
+  })
+
+  it('puts a switch back when the server refuses the change', async () => {
+    apiMock.mockResolvedValueOnce([hook(1)])
+    const w = mount(IncomingWebhooksPanel, { props: { channelId } })
+    await flushPromises()
+    await w.find('button[aria-label="Settings of Hook 1"]').trigger('click')
+    const box = w.find('input[data-setting="allow_everyone"]')
+    apiMock.mockRejectedValueOnce(new Error('forbidden'))
+    ;(box.element as HTMLInputElement).checked = true
+    await box.trigger('change')
+    await flushPromises()
+    expect((box.element as HTMLInputElement).checked).toBe(false)
+    expect((box.element as HTMLInputElement).disabled).toBe(false)
+  })
+
   it('creates a webhook, shows its URL once and copies it', async () => {
     const w = await mountPanel([])
     await w.find('button[type="submit"]').trigger('submit')
