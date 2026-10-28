@@ -1,0 +1,47 @@
+internal/nativepreview/native_ciphertext_preview.go
+  s_358548c949cb18::t_c0588aa8528d99 62-63,66,96,152
+internal/nativepreview/native_discovery.go
+  s_358548c949cb18::t_ef16a227bfaa15 40,42
+internal/nativepreview/native_preview.go
+  s_dae090ee96213e::t_2404573ddb9499 6,207,209-213,229-230,232-235,242-295,327
+internal/nativepreview/native_preview_routes_integration_test.go
+  s_bf965fb31d4e8a::t_fe3c5cc7856192 9,16-17,25-34
+internal/nativepreview/native_preview_test.go
+  s_dae090ee96213e::t_44fbbafb3dad7f 54-63
+internal/nativepreview/native_public_preview.go
+  s_358548c949cb18::t_8cfeffbafcc238 36,41,66
+internal/nativepreview/native_registration_preview.go
+  s_358548c949cb18::t_4aafdef4ddc90a 24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "62d8ac124fdf8bdb5d96f57c1d6198bd6960030c",
+  "prompts": {},
+  "sessions": {
+    "s_358548c949cb18": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af65a0f734c30e66e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bf965fb31d4e8a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a471f7457881e2784",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_dae090ee96213e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a448f20095192534b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
