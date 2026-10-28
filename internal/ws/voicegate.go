@@ -68,8 +68,6 @@ type pendingVoiceTime struct {
 	channel   uuid.UUID
 	lastWrite time.Time
 	timer     *time.Timer
-	// idle drops the entry once it has held nothing for a while.
-	idle *time.Timer
 }
 
 // voiceTimes debounces the writes of voice_seconds.
@@ -124,10 +122,6 @@ func (h *Hub) recordPendingVoiceTime(userID, chID uuid.UUID, secs int64) bool {
 	p := h.getOrCreatePendingVoiceTime(userID)
 	p.secs += secs
 	p.channel = chID
-	if p.idle != nil {
-		p.idle.Stop()
-		p.idle = nil
-	}
 	now := time.Now()
 	if wait := voiceTimeFlushEvery - now.Sub(p.lastWrite); wait > 0 {
 		if p.timer == nil {
@@ -161,51 +155,11 @@ func (h *Hub) flushVoiceTime(userID uuid.UUID) {
 		secs, userID).Scan(&total)
 	if err != nil {
 		slog.Warn("record voice time", "user", userID, "err", err)
-		h.restorePendingVoiceTime(userID, chID, secs)
 		return
 	}
-	h.pruneWhenIdle(userID)
 	// A total that just grew by a stay in a Talk reveals that stay, so only
 	// those who can view that Talk learn it.
 	h.BroadcastChannel(chID, events.UserStats, map[string]any{"user_id": userID, "voice_seconds": total})
-}
-
-// restorePendingVoiceTime puts seconds whose write failed back, so the next
-// flush (a retry timer, a later stay or the shutdown) writes them again.
-func (h *Hub) restorePendingVoiceTime(userID, chID uuid.UUID, secs int64) {
-	h.vtimes.mu.Lock()
-	defer h.vtimes.mu.Unlock()
-	p := h.getOrCreatePendingVoiceTime(userID)
-	p.secs += secs
-	p.channel = chID
-	if p.idle != nil {
-		p.idle.Stop()
-		p.idle = nil
-	}
-	if p.timer == nil {
-		p.timer = time.AfterFunc(voiceTimeFlushEvery, func() { h.flushVoiceTime(userID) })
-	}
-}
-
-// pruneWhenIdle forgets userID's entry once it held nothing for a debounce
-// period (it only has to outlive the write spacing it enforces).
-func (h *Hub) pruneWhenIdle(userID uuid.UUID) {
-	h.vtimes.mu.Lock()
-	defer h.vtimes.mu.Unlock()
-	p := h.vtimes.m[userID]
-	if p == nil || p.secs != 0 || p.timer != nil {
-		return
-	}
-	if p.idle != nil {
-		p.idle.Stop()
-	}
-	p.idle = time.AfterFunc(voiceTimeFlushEvery, func() {
-		h.vtimes.mu.Lock()
-		defer h.vtimes.mu.Unlock()
-		if h.vtimes.m[userID] == p && p.secs == 0 && p.timer == nil {
-			delete(h.vtimes.m, userID)
-		}
-	})
 }
 
 // flushAllVoiceTime writes every pending total (shutdown, while the

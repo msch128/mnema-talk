@@ -160,8 +160,8 @@ func (c *Client) notifyPermissions() {
 
 // PermissionsChanged re-checks live connections after a role, assignment,
 // overwrite or channel change (perm.Notifier). Everyone concerned is told to
-// refresh (permissions_changed: channels, permissions and roles). A member who may no
-// longer connect to or view their Talk is removed from it at once, and the media they may still send is narrowed to
+// refresh (permissions_changed: channels, permissions and roles), a member who may no longer connect to or view their Talk is
+// removed from it at once, and the media they may still send is narrowed to
 // what they may. nil userIDs means everybody.
 func (h *Hub) PermissionsChanged(userIDs []uuid.UUID) {
 	snap, ok := h.permSnapshot(uuid.Nil)
@@ -219,7 +219,9 @@ func (h *Hub) enforceVoiceAccess(snap *perm.Snapshot, want map[uuid.UUID]bool) {
 	}
 	h.mu.RUnlock()
 	for _, s := range seats {
-		if holds(snap, s.user, s.ch, perm.ViewChannel|perm.Connect) {
+		owner := snap.IsOwner(perm.Subject{ID: s.user})
+		p := snap.Channel(perm.Subject{ID: s.user, Owner: owner}, s.ch)
+		if p.Has(perm.ViewChannel | perm.Connect) {
 			continue
 		}
 		reason := "missing_permission"
@@ -276,7 +278,7 @@ func (h *Hub) kickUserFromChannel(userID, chID uuid.UUID, reason string) {
 	h.removePresenceUnlessPresent(userID, chID, nil)
 }
 
-// visibleTo filters the entries of a channel-keyed collection to the
+// allowedChannels filters the entries of a channel-keyed collection to the
 // ones c may view.
 func visibleTo[V any](c *Client, snap *perm.Snapshot, in map[uuid.UUID]V) map[uuid.UUID]V {
 	if snap == nil {

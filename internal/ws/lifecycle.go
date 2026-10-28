@@ -68,7 +68,7 @@ const (
 // @Description - `screen_quality`: `{channel_id, user_id, layer, auto}` to the watching connection only: the layer of `user_id`'s screen share it receives now (`-1` before the first picture) and whether the server chooses it (`auto`).
 // @Description - `screen_layers_wanted`: `{channel_id, layers}` to the sharing connection only: the indexes of its layers some viewer receives or is about to. A sender may stop encoding the others; layer 0 is always listed while nobody watches.
 // @Description - `media_handshake`: `{channel_id, user_id, wire}` to the other connections in that voice room. `wire` is opaque: the server checks only its framing (an MLS key package, welcome or public message, or a heartbeat or capability message) and never reads or logs the content.
-// @Description - `voice_kicked`: `{channel_id, reason?}` when a moderator removes the user from voice, `reason: "room_full"` when a voice join is refused because the room is full (the channel's `user_limit`), `reason: "rules_not_accepted"` when the community's rules have not been accepted yet (POST /api/onboarding/accept), `reason: "talk_rate_limited"` or `"talk_unavailable"` when joining a Create-a-Talk lobby opened no Talk (5 new Talks per 10 minutes and member, 50 open Talks per lobby), or `reason: "connection_lost"` when the media connection of the call failed and the server dropped it (join again), `reason: "media_unavailable"` when the media connection of a join could not be set up (the seat is given up; join again), `reason: "joined_elsewhere"` to a connection whose Talk the same account joined on another connection (one connection per account and Talk holds the media), or `reason: "missing_permission"` when the user may not (or no longer may) view and connect to that Talk.
+// @Description - `voice_kicked`: `{channel_id, reason?}` when a moderator removes the user from voice, `reason: "room_full"` when a voice join is refused because the room is full (the channel's `user_limit`), `reason: "rules_not_accepted"` when the community's rules have not been accepted yet (POST /api/onboarding/accept), `reason: "talk_rate_limited"` or `"talk_unavailable"` when joining a Create-a-Talk lobby opened no Talk (5 new Talks per 10 minutes and member, 50 open Talks per lobby), or or `reason: "missing_permission"` when the user may not (or no longer may) view and connect to that Talk.
 // @Description - `pong`: `{t}` echoing a `ping`.
 // @Description
 // @Description Client to server:
@@ -229,14 +229,6 @@ func (h *Hub) Close() {
 		return
 	}
 	h.closed = true
-	// Stays in progress are settled now: once closed, the connections'
-	// own clean-up no longer reaches removePresence to bank them.
-	now := time.Now()
-	stays := make(map[voiceKey]time.Duration, len(h.voiceSince))
-	for key, since := range h.voiceSince {
-		stays[key] = now.Sub(since)
-		delete(h.voiceSince, key)
-	}
 	clients := make([]*Client, 0, len(h.clients))
 	online := make([]uuid.UUID, 0, len(h.online))
 	for c := range h.clients {
@@ -257,9 +249,6 @@ func (h *Hub) Close() {
 	// Everyone still connected goes offline now. Record it here, while the
 	// database is still open: the connections' own clean-up runs after the
 	// server has moved on to closing it.
-	for key, d := range stays {
-		h.addVoiceTime(key.user, key.ch, d)
-	}
 	h.flushAllVoiceTime()
 	h.recordLastSeen(online...)
 	for _, c := range clients {

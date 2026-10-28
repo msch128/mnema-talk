@@ -3,7 +3,6 @@ package ws
 import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
-	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
 // kickClient takes c out of its voice room and tells it so. It reports
@@ -15,23 +14,9 @@ func (h *Hub) kickClient(c *Client, onlyCh *uuid.UUID) bool {
 // kickClientReason is kickClient telling the client why (voice_kicked
 // reason), e.g. "missing_permission".
 func (h *Hub) kickClientReason(c *Client, onlyCh *uuid.UUID, reason string) bool {
-	return h.kickClientPeer(c, onlyCh, reason, nil)
-}
-
-// kickLostPeer takes c out of its voice room because the SFU gave up on its
-// media connection peer, and tells it (voice_kicked, reason
-// "connection_lost"). A client that has meanwhile rejoined over another
-// peer is left alone.
-func (h *Hub) kickLostPeer(c *Client, peer *sfu.Peer) bool {
-	return h.kickClientPeer(c, nil, "connection_lost", peer)
-}
-
-// kickClientPeer is kickClientReason limited, when peer is set, to a client
-// whose current media peer it is.
-func (h *Hub) kickClientPeer(c *Client, onlyCh *uuid.UUID, reason string, peer *sfu.Peer) bool {
 	c.voiceMu.Lock()
 	cur := c.currentVoice()
-	if cur == nil || (onlyCh != nil && *cur != *onlyCh) || (peer != nil && c.peer() != peer) {
+	if cur == nil || (onlyCh != nil && *cur != *onlyCh) {
 		c.voiceMu.Unlock()
 		return false
 	}

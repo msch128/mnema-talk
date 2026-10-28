@@ -45,7 +45,7 @@ func (c *Client) dispatchFrame(budget *eventBudget, messageType int, message []b
 		return true
 	}
 	if !c.hub.userBudgets.allowFrame(c.User.ID, now) {
-		countDroppedFrame()
+		metrics.WSDropped.With("flood_frame").Inc()
 		return true
 	}
 	// A frame too big for its type is dropped before any decoding.
@@ -79,7 +79,11 @@ func (c *Client) userAllowsEvent(eventType string, payloadLen int, now time.Time
 	if c.hub.userBudgets.allowEvent(c.User.ID, eventType, payloadLen, now) {
 		return true
 	}
-	countDroppedEvent(eventType)
+	if eventType == handshakeEvent {
+		metrics.MLSHandshakes.With("rate_limited").Inc()
+	} else {
+		metrics.WSDropped.With("flood_event").Inc()
+	}
 	return false
 }
 

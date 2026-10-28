@@ -66,8 +66,12 @@ func (c *Client) handleLayers(payload json.RawMessage) {
 	if json.Unmarshal(payload, &req) != nil {
 		return
 	}
-	room := c.currentRoom()
-	if room == nil {
+	cur := c.currentVoice()
+	if cur == nil || c.hub.SFU == nil || !c.commandsAllowed() {
+		return
+	}
+	room := c.hub.SFU.Room(*cur)
+	if room == nil || !c.commandsAllowed() {
 		return
 	}
 	if err := room.SetScreenLayers(c.User.ID, req.Layers); err != nil {

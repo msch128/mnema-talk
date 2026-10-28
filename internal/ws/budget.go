@@ -30,11 +30,12 @@ const (
 	maxFramesPerSec = maxEventsPerSec + maxSignalingPerSec
 )
 
-// signalingEvents are the events counted against maxSignalingPerSec. Their
-// payload caps live in payloadCaps.
-var signalingEvents = map[string]struct{}{
-	events.ClientWebrtcAnswer:    {},
-	events.ClientWebrtcCandidate: {},
+// signalingEvents are the events counted against maxSignalingPerSec, with
+// the largest payload each may carry. An answer is a full SDP and stays
+// under maxMessageBytes; an ICE candidate is one short line.
+var signalingEvents = map[string]int{
+	events.ClientWebrtcAnswer:    maxMessageBytes,
+	events.ClientWebrtcCandidate: 2 << 10,
 }
 
 // handshakeEvent is metered by handleHandshake, not by signalingEvents.
@@ -64,35 +65,23 @@ func (b *eventBudget) allowFrame(now time.Time) bool {
 	b.roll(now)
 	b.frames++
 	if b.frames > maxFramesPerSec {
-		countDroppedFrame()
+		metrics.WSDropped.With("flood_frame").Inc()
 		return false
 	}
 	return true
-}
-
-// countDroppedFrame counts a frame dropped by a flood budget.
-func countDroppedFrame() {
-	metrics.WSDropped.With("flood_frame").Inc()
-}
-
-// countDroppedEvent counts an event dropped by a flood budget: handshakes
-// have their own label.
-func countDroppedEvent(eventType string) {
-	if eventType == handshakeEvent {
-		metrics.MLSHandshakes.With("rate_limited").Inc()
-		return
-	}
-	metrics.WSDropped.With("flood_event").Inc()
 }
 
 // allowEvent counts a parsed event against its category's budget. A payload
 // over its type's cap (see payloadCap) is dropped, and still counted.
 func (b *eventBudget) allowEvent(eventType string, payloadLen int, now time.Time) bool {
 	ok := b.admit(eventType, payloadLen, now)
-	if ok {
+	switch {
+	case ok:
 		metrics.WSEventsReceived.Inc()
-	} else {
-		countDroppedEvent(eventType)
+	case eventType == handshakeEvent:
+		metrics.MLSHandshakes.With("rate_limited").Inc()
+	default:
+		metrics.WSDropped.With("flood_event").Inc()
 	}
 	return ok
 }
@@ -107,11 +96,11 @@ func (b *eventBudget) admit(eventType string, payloadLen int, now time.Time) boo
 		b.handshakeBytes += payloadLen
 		return b.handshakes <= maxHandshakesPerSec &&
 			b.handshakeBytes <= maxHandshakeBytesPerSec &&
-			payloadLen <= payloadCap(eventType)
+			payloadLen <= maxMessageBytes
 	}
-	if _, ok := signalingEvents[eventType]; ok {
+	if maxLen, ok := signalingEvents[eventType]; ok {
 		b.signaling++
-		return b.signaling <= maxSignalingPerSec && payloadLen <= payloadCap(eventType)
+		return b.signaling <= maxSignalingPerSec && payloadLen <= maxLen
 	}
 	b.events++
 	return b.events <= maxEventsPerSec && payloadLen <= payloadCap(eventType)

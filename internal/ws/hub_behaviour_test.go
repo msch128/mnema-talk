@@ -436,7 +436,7 @@ func TestGraceCanBeClaimedWithoutRemovingPresence(t *testing.T) {
 	}
 }
 
-func TestVoiceJoinWithUnavailableSFUGivesUpTheSeat(t *testing.T) {
+func TestVoiceJoinSurvivesUnavailableSFU(t *testing.T) {
 	h, s := newSFUHub(t)
 	if err := s.Close(); err != nil {
 		t.Fatal(err)
@@ -444,9 +444,10 @@ func TestVoiceJoinWithUnavailableSFUGivesUpTheSeat(t *testing.T) {
 	c := testClient(h, auth.User{ID: uuid.New()})
 	ch := voiceCh()
 	h.joinVoice(c, ch)
-	if c.currentVoice() != nil || c.peer() != nil || inRoom(h, ch.ID, c.User.ID) {
-		t.Fatal("failed SFU join left a seat without media")
+	if c.currentVoice() == nil || *c.currentVoice() != ch.ID || c.peer() != nil || !inRoom(h, ch.ID, c.User.ID) {
+		t.Fatal("failed SFU join corrupted voice presence")
 	}
+	h.leaveCurrentVoice(c)
 	h.Close()
 }
 
