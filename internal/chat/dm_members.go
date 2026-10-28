@@ -66,6 +66,11 @@ func AddDMMember(ctx context.Context, p *db.Pool, id, adder, target uuid.UUID) (
 		if !group {
 			return errDMNotGroup
 		}
+		// The target's group count is checked below; hold their row so a
+		// second add cannot count the same number meanwhile.
+		if err := lockUsers(ctx, tx, []uuid.UUID{target}); err != nil {
+			return err
+		}
 		if added, err = checkAddable(ctx, tx, id, adder, target, n); err != nil || !added {
 			return err
 		}

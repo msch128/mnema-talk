@@ -185,9 +185,23 @@ func ToggleReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID
 // ToggleReactionAs is ToggleReaction where canAdd says whether userID may add
 // reactions; without it only taking back an existing one works (403 otherwise).
 func ToggleReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, canAdd bool) ([]ReactionSummary, error) {
+	reactions, _, err := changeReaction(ctx, p, messageID, userID, emoji, canAdd, func(present bool) bool { return !present })
+	return reactions, err
+}
+
+// SetReactionAs makes userID's reaction present (want) or absent, whatever it
+// was: asking for the state it already has changes nothing (changed false).
+// canAdd and the limits are as for ToggleReactionAs.
+func SetReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, want, canAdd bool) (reactions []ReactionSummary, changed bool, err error) {
+	return changeReaction(ctx, p, messageID, userID, emoji, canAdd, func(bool) bool { return want })
+}
+
+// changeReaction moves userID's reaction to the state target picks from the
+// current one, under the message's row lock, which serializes all changes to
+// one message so concurrent adds cannot overshoot the limits.
+func changeReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, canAdd bool, target func(present bool) bool) ([]ReactionSummary, bool, error) {
+	changed := false
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		// The row lock serializes toggles on one message, so concurrent
-		// adds cannot overshoot the limits.
 		var one int
 		err := tx.QueryRow(ctx, `SELECT 1 FROM messages WHERE id = $1 FOR UPDATE`, messageID).Scan(&one)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -196,11 +210,20 @@ func ToggleReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UU
 		if err != nil {
 			return fmt.Errorf("lock message: %w", err)
 		}
-		tag, err := tx.Exec(ctx, `DELETE FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`, messageID, userID, emoji)
-		if err != nil {
-			return fmt.Errorf("remove reaction: %w", err)
+		var present bool
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3)`,
+			messageID, userID, emoji).Scan(&present); err != nil {
+			return fmt.Errorf("read reaction: %w", err)
 		}
-		if tag.RowsAffected() > 0 {
+		if target(present) == present {
+			return nil
+		}
+		changed = true
+		if present {
+			if _, err := tx.Exec(ctx, `DELETE FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`, messageID, userID, emoji); err != nil {
+				return fmt.Errorf("remove reaction: %w", err)
+			}
 			return nil
 		}
 		if !canAdd {
@@ -209,13 +232,12 @@ func ToggleReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UU
 		return addReaction(ctx, tx, messageID, userID, emoji)
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return reactionSummary(ctx, p, messageID)
+	reactions, err := reactionSummary(ctx, p, messageID)
+	return reactions, changed, err
 }
 
-// addReaction adds the reaction unless the user or the message is at its limit
-// or the custom emoji no longer exists (taking a reaction back always works).
 func addReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, emoji string) error {
 	if err := requireKnownEmoji(ctx, tx, emoji); err != nil {
 		return err

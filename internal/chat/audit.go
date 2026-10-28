@@ -41,7 +41,11 @@ func (h *Handler) snapshotMessage(ctx context.Context, id uuid.UUID, withReplies
 		return nil
 	}
 	s := &auditSnapshot{msg: msg}
-	_ = h.DB.QueryRow(ctx, `SELECT name, type = 'dm' FROM channels WHERE id = $1`, msg.ChannelID).Scan(&s.channel, &s.dm)
+	// Fail closed: when the channel cannot be read, a direct message must not
+	// end up in the log with its text.
+	if err := h.DB.QueryRow(ctx, `SELECT name, type = 'dm' FROM channels WHERE id = $1`, msg.ChannelID).Scan(&s.channel, &s.dm); err != nil {
+		return nil
+	}
 	if s.dm {
 		return &auditSnapshot{dm: true, msg: &Message{UserID: msg.UserID}}
 	}

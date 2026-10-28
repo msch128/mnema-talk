@@ -196,16 +196,18 @@ function withMembers(cx: Cx, id: string, change: (members: ChatDMMember[]) => Ch
 /** dm_created: the caller started a conversation elsewhere, or somebody started one with them. */
 export function onDmCreated(cx: Cx, dm: ChatDirectMessage) {
   upsertDm(cx, dm)
-  // Added to a group with history: the event carries no preview, as it depends on whom the receiver blocked.
-  if (dm.last_message_at) void refreshDm(cx, dm.id)
+  // The event carries the starter's view only: no preview (it depends on whom the receiver blocked), and a notify level and send right that are not the receiver's own.
+  void refreshDm(cx, dm.id)
 }
 
 /** Reads one conversation again (its preview, or what the member did to it on another device). */
 export async function refreshDm(cx: Cx, id: string) {
   const community = cx.cs.communityGeneration
+  const known = isDm(cx, id)
   try {
     const dm = await api(`/api/dms/${id}`, { decode: decodeChatDirectMessage })
-    if (community === cx.cs.communityGeneration) upsertDm(cx, dm)
+    // A conversation dropped while this ran (left, removed) stays gone.
+    if (community === cx.cs.communityGeneration && (!known || isDm(cx, id))) upsertDm(cx, dm)
   } catch (error) {
     console.warn('Failed to read the conversation:', error)
   }

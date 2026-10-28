@@ -22,32 +22,61 @@ type BotMember struct {
 
 var errBotMembers = httpx.ErrForbidden("Missing Access: the bot may not ask for the member list (intent GUILD_MEMBERS)")
 
-// visibleMembers lists the members the bot may know about: those who can view
-// at least one channel the bot can view, so the list never reveals people
-// who are unrelated to the bot's channels.
+// requireMemberIntent admits only a bot with the GUILD_MEMBERS intent.
+func requireMemberIntent(r *http.Request) error {
+	if bot := auth.BotFrom(r.Context()); bot == nil || bot.Intents&intentGuildMembers == 0 {
+		return errBotMembers
+	}
+	return nil
+}
+
+// memberVisibility answers which members the bot may know about: those who can
+// view at least one channel the bot can view, so nothing reveals people who
+// are unrelated to the bot's channels.
+type memberVisibility struct {
+	snap *perm.Snapshot
+	mine map[uuid.UUID]perm.Set
+}
+
+func (h *Handler) memberVisibility(r *http.Request) (memberVisibility, error) {
+	snap, err := h.Perms.Snapshot(r.Context())
+	if err != nil {
+		return memberVisibility{}, err
+	}
+	return memberVisibility{snap: snap, mine: snap.ChannelPermissions(auth.UserFrom(r.Context()).Subject())}, nil
+}
+
+func (v memberVisibility) sees(m Member) bool {
+	sub := m.Subject()
+	for ch := range v.mine {
+		if v.snap.Channel(sub, ch).Has(perm.ViewChannel) {
+			return true
+		}
+	}
+	return false
+}
+
+func botMemberOf(m Member) BotMember {
+	return BotMember{ID: m.ID, Username: m.Username, DisplayName: m.DisplayName, AvatarURL: m.AvatarURL, Bot: m.IsBot}
+}
+
+// visibleMembers lists the members the bot may know about.
 func (h *Handler) visibleMembers(r *http.Request) ([]BotMember, error) {
-	bot := auth.BotFrom(r.Context())
-	if bot == nil || bot.Intents&intentGuildMembers == 0 {
-		return nil, errBotMembers
+	if err := requireMemberIntent(r); err != nil {
+		return nil, err
 	}
 	members, err := GetAllMembers(r.Context(), h.DB)
 	if err != nil {
 		return nil, err
 	}
-	snap, err := h.Perms.Snapshot(r.Context())
+	vis, err := h.memberVisibility(r)
 	if err != nil {
 		return nil, err
 	}
-	self := auth.UserFrom(r.Context()).Subject()
-	mine := snap.ChannelPermissions(self)
 	out := []BotMember{}
 	for _, m := range members {
-		sub := m.Subject()
-		for ch := range mine {
-			if snap.Channel(sub, ch).Has(perm.ViewChannel) {
-				out = append(out, BotMember{ID: m.ID, Username: m.Username, DisplayName: m.DisplayName, AvatarURL: m.AvatarURL, Bot: m.IsBot})
-				break
-			}
+		if vis.sees(m) {
+			out = append(out, botMemberOf(m))
 		}
 	}
 	return out, nil
@@ -98,15 +127,21 @@ func (h *Handler) botGetMember(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	list, err := h.visibleMembers(r)
+	if err := requireMemberIntent(r); err != nil {
+		return err
+	}
+	// One member is read and tested on its own, not picked from the whole list.
+	m, err := GetMember(r.Context(), h.DB, id)
 	if err != nil {
 		return err
 	}
-	for _, m := range list {
-		if m.ID == id {
-			httpx.WriteJSON(w, http.StatusOK, m)
-			return nil
-		}
+	vis, err := h.memberVisibility(r)
+	if err != nil {
+		return err
 	}
-	return httpx.ErrNotFound("unknown user")
+	if !vis.sees(*m) {
+		return errUnknownUser
+	}
+	httpx.WriteJSON(w, http.StatusOK, botMemberOf(*m))
+	return nil
 }

@@ -25,11 +25,13 @@ var errFavouriteOpen = httpx.ErrConflict("A favourite stays in the list: remove 
 // favourite cannot be closed. Anybody who is not in the conversation gets
 // errDMNotFound.
 func SetDMHidden(ctx context.Context, p *db.Pool, user, id uuid.UUID, hidden bool) error {
-	var favourite bool
+	// No row updated means the member is not in it, or it is a favourite
+	// that was to be closed; the lookup below tells which.
+	var updated bool
 	err := p.QueryRow(ctx, `
 		UPDATE dm_members SET hidden_at = CASE WHEN $3 THEN COALESCE(hidden_at, NOW()) ELSE NULL END
 		WHERE channel_id = $1 AND user_id = $2 AND NOT ($3 AND favourite_pos IS NOT NULL)
-		RETURNING FALSE`, id, user, hidden).Scan(&favourite)
+		RETURNING TRUE`, id, user, hidden).Scan(&updated)
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return err
 	}
@@ -57,10 +59,11 @@ func SetDMFavourites(ctx context.Context, p *db.Pool, user uuid.UUID, ids []uuid
 		if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = $1 FOR NO KEY UPDATE`, user); err != nil {
 			return err
 		}
-		old, err := updatedIDs(ctx, tx, `
-			UPDATE dm_members SET favourite_pos = NULL
-			WHERE user_id = $1 AND favourite_pos IS NOT NULL RETURNING channel_id`, user)
+		before, err := favouritePositions(ctx, tx, user)
 		if err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `UPDATE dm_members SET favourite_pos = NULL WHERE user_id = $1 AND favourite_pos IS NOT NULL`, user); err != nil {
 			return err
 		}
 		added, err := updatedIDs(ctx, tx, `
@@ -73,15 +76,40 @@ func SetDMFavourites(ctx context.Context, p *db.Pool, user uuid.UUID, ids []uuid
 		if len(added) != len(ids) {
 			return errDMNotFound
 		}
-		changed = old
-		for _, id := range added {
-			if !slices.Contains(changed, id) {
+		// A favourite that kept its place did not change; one that moved,
+		// came in or went out did.
+		for id := range before {
+			if !slices.Contains(ids, id) {
+				changed = append(changed, id)
+			}
+		}
+		for pos, id := range ids {
+			if old, was := before[id]; !was || old != pos {
 				changed = append(changed, id)
 			}
 		}
 		return nil
 	})
 	return changed, err
+}
+
+// favouritePositions maps the member's favourites to their places.
+func favouritePositions(ctx context.Context, tx pgx.Tx, user uuid.UUID) (map[uuid.UUID]int, error) {
+	rows, err := tx.Query(ctx, `SELECT channel_id, favourite_pos FROM dm_members WHERE user_id = $1 AND favourite_pos IS NOT NULL`, user)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[uuid.UUID]int{}
+	for rows.Next() {
+		var id uuid.UUID
+		var pos int
+		if err := rows.Scan(&id, &pos); err != nil {
+			return nil, err
+		}
+		out[id] = pos
+	}
+	return out, rows.Err()
 }
 
 // checkFavourites requires at most MaxFavouriteDMs distinct ids.

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
 // Member is a member as the member list shows them.
@@ -30,12 +31,32 @@ type Member struct {
 // incoming webhooks are not). message_count is maintained by triggers
 // (migration 0012), so this does not scan the messages table.
 func GetAllMembers(ctx context.Context, p *db.Pool) ([]Member, error) {
+	return queryMembers(ctx, p, "")
+}
+
+// GetMember reads one member the member list would show (errMemberNotFound
+// for anybody else).
+func GetMember(ctx context.Context, p *db.Pool, id uuid.UUID) (*Member, error) {
+	list, err := queryMembers(ctx, p, "AND u.id = $1", id)
+	if err != nil {
+		return nil, err
+	}
+	if len(list) == 0 {
+		return nil, errUnknownUser
+	}
+	return &list[0], nil
+}
+
+var errUnknownUser = httpx.ErrNotFound("unknown user")
+
+// queryMembers runs the member query; extra narrows its WHERE clause.
+func queryMembers(ctx context.Context, p *db.Pool, extra string, args ...any) ([]Member, error) {
 	rows, err := p.Query(ctx, `
 		SELECT u.id, u.username, u.display_name, u.bio, u.role, u.avatar_s3_key, `+auth.StatusSQLFor("u.")+`, u.created_at,
 		       u.voice_seconds, u.message_count, b.id IS NOT NULL, b.created_by
 		FROM users u LEFT JOIN bots b ON b.user_id = u.id
-		WHERE `+auth.ActiveSQL("u")+` AND (NOT u.is_bot OR (b.id IS NOT NULL AND NOT b.disabled))
-		ORDER BY CASE WHEN u.role = 'admin' THEN 0 ELSE 1 END, u.display_name`)
+		WHERE `+auth.ActiveSQL("u")+` AND (NOT u.is_bot OR (b.id IS NOT NULL AND NOT b.disabled)) `+extra+`
+		ORDER BY CASE WHEN u.role = 'admin' THEN 0 ELSE 1 END, u.display_name`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query members: %w", err)
 	}

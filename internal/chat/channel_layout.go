@@ -15,13 +15,25 @@ import (
 // CategoryOrder and ChannelPlacement describe a drag-and-drop result.
 type CategoryOrder struct {
 	ID        uuid.UUID `json:"id" format:"uuid"`
-	SortOrder int       `json:"sort_order"`
+	SortOrder int       `json:"sort_order" minimum:"-1073741824" maximum:"1073741824"`
 }
 
 type ChannelPlacement struct {
 	ID         uuid.UUID  `json:"id" format:"uuid"`
 	CategoryID *uuid.UUID `json:"category_id" format:"uuid" extensions:"x-nullable"`
-	SortOrder  int        `json:"sort_order"`
+	SortOrder  int        `json:"sort_order" minimum:"-1073741824" maximum:"1073741824"`
+}
+
+// MaxSortOrder bounds the sort order of a category or channel. The columns
+// are 32-bit, and the bound leaves room to shift a whole group by one.
+const MaxSortOrder = 1 << 30
+
+// CheckSortOrder refuses a sort order outside -MaxSortOrder..MaxSortOrder.
+func CheckSortOrder(n int) error {
+	if n < -MaxSortOrder || n > MaxSortOrder {
+		return httpx.ErrInvalidInput(fmt.Sprintf("sort_order must be between %d and %d", -MaxSortOrder, MaxSortOrder))
+	}
+	return nil
 }
 
 // ApplyLayout stores category order and channel placement in one
@@ -46,6 +58,9 @@ func ApplyLayoutTx(ctx context.Context, tx pgx.Tx, cats []CategoryOrder, chans [
 func orderCategories(ctx context.Context, tx pgx.Tx, cats []CategoryOrder) error {
 	last := map[uuid.UUID]int64{}
 	for _, c := range cats {
+		if err := CheckSortOrder(c.SortOrder); err != nil {
+			return err
+		}
 		last[c.ID] = int64(c.SortOrder)
 	}
 	if len(last) == 0 {
@@ -73,6 +88,9 @@ func orderCategories(ctx context.Context, tx pgx.Tx, cats []CategoryOrder) error
 func placeChannels(ctx context.Context, tx pgx.Tx, chans []ChannelPlacement) error {
 	last := map[uuid.UUID]ChannelPlacement{}
 	for _, c := range chans {
+		if err := CheckSortOrder(c.SortOrder); err != nil {
+			return err
+		}
 		last[c.ID] = c
 	}
 	if err := dropTempTalks(ctx, tx, last); err != nil {
