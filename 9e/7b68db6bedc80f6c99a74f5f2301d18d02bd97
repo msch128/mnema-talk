@@ -1,0 +1,47 @@
+internal/httpx/bounded.go
+  s_54f303c7458331::t_bd07d36dc2abe2 1-46
+internal/httpx/discord.go
+  s_54f303c7458331::t_268c24162704ab 31,49-59,61-63,89
+internal/httpx/loginfailure.go
+  s_54f303c7458331::t_f1b24fb7b8c375 142,175,177-178,188-205
+internal/httpx/metrics.go
+  s_54f303c7458331::t_63377c4bd81365 5,13-16,36-38
+internal/httpx/middleware.go
+  s_54f303c7458331::t_ebcb2c53186252 48,65,74-96
+internal/httpx/middleware_clientip.go
+  s_54f303c7458331::t_755fd57b4904a8 150,156-161,170
+internal/httpx/names.go
+  s_051381409cd96b::t_578b3d0ec2933a 74-89,91-95,98-99,101,103-110
+internal/httpx/ratelimit.go
+  s_54f303c7458331::t_309dafdd4c3d40 64,77-87,97,104,114,123-125,162
+internal/httpx/response.go
+  s_54f303c7458331::t_5c6b560d233a3a 53-63,149,159-165,173,177-182
+internal/update/checker.go
+  s_051381409cd96b::t_938ab2ad06a32b 315
+internal/webhook/execute.go
+  s_051381409cd96b::t_d0d94cc1c901be 68-70,72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9e7b68db6bedc80f6c99a74f5f2301d18d02bd97",
+  "prompts": {},
+  "sessions": {
+    "s_051381409cd96b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-acc7fede3012b05f4",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_54f303c7458331": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aabeada1c9210fdc7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
