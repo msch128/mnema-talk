@@ -126,18 +126,18 @@ func cleanChannelInputs(name, topic string, chType ChannelType) (string, string,
 	return cleanName, cleanTopic, nil
 }
 
-func verifyCategoryExists(ctx context.Context, p *db.Pool, categoryID *uuid.UUID) error {
+// lockCategory requires the category to exist and holds it until the end of
+// the transaction, so it cannot be deleted before the channel is in it.
+func lockCategory(ctx context.Context, tx pgx.Tx, categoryID *uuid.UUID) error {
 	if categoryID == nil {
 		return nil
 	}
-	var exists bool
-	if err := p.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM categories WHERE id = $1)`, *categoryID).Scan(&exists); err != nil {
-		return err
-	}
-	if !exists {
+	var one int
+	err := tx.QueryRow(ctx, `SELECT 1 FROM categories WHERE id = $1 FOR SHARE`, *categoryID).Scan(&one)
+	if errors.Is(err, pgx.ErrNoRows) {
 		return httpx.ErrInvalidInput("category not found")
 	}
-	return nil
+	return err
 }
 
 func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType ChannelType, topic string, sortOrder int) (*Channel, error) {
@@ -145,11 +145,14 @@ func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name 
 	if err != nil {
 		return nil, err
 	}
-	if err := verifyCategoryExists(ctx, p, categoryID); err != nil {
+	if err := CheckSortOrder(sortOrder); err != nil {
 		return nil, err
 	}
 	var ch Channel
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		if err := lockCategory(ctx, tx, categoryID); err != nil {
+			return err
+		}
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO channels (category_id, name, type, topic, sort_order) VALUES ($1, $2, $3, $4, $5)
 			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`,
@@ -159,6 +162,10 @@ func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name 
 		}
 		return assignAndFillSlugs(ctx, tx, &ch)
 	})
+	var refusal *httpx.APIError
+	if errors.As(err, &refusal) {
+		return nil, refusal
+	}
 	if err != nil {
 		return nil, fmt.Errorf("create channel: %w", err)
 	}
@@ -225,19 +232,14 @@ func checkCategoryMergeable(ctx context.Context, tx pgx.Tx, categoryID uuid.UUID
 }
 
 func copyCategoryOverwrites(ctx context.Context, tx pgx.Tx, categoryID uuid.UUID) error {
+	// Each overwrite names a role or a member (a table constraint), so one
+	// statement copies both kinds.
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO permission_overwrites (channel_id, role_id, allow, deny)
-		SELECT ch.id, co.role_id, co.allow, co.deny
+		INSERT INTO permission_overwrites (channel_id, role_id, user_id, allow, deny)
+		SELECT ch.id, co.role_id, co.user_id, co.allow, co.deny
 		FROM channels ch JOIN permission_overwrites co ON co.category_id = ch.category_id
-		WHERE ch.category_id = $1 AND co.role_id IS NOT NULL`, categoryID); err != nil {
-		return fmt.Errorf("keep category role permissions: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO permission_overwrites (channel_id, user_id, allow, deny)
-		SELECT ch.id, co.user_id, co.allow, co.deny
-		FROM channels ch JOIN permission_overwrites co ON co.category_id = ch.category_id
-		WHERE ch.category_id = $1 AND co.user_id IS NOT NULL`, categoryID); err != nil {
-		return fmt.Errorf("keep category user permissions: %w", err)
+		WHERE ch.category_id = $1`, categoryID); err != nil {
+		return fmt.Errorf("keep category permissions: %w", err)
 	}
 	return nil
 }

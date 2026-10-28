@@ -42,6 +42,9 @@ func CreateCategory(ctx context.Context, p *db.Pool, name string, sortOrder int)
 	if err != nil {
 		return nil, err
 	}
+	if err := CheckSortOrder(sortOrder); err != nil {
+		return nil, err
+	}
 	cat := Category{Channels: make([]Channel, 0)}
 	err = p.QueryRow(ctx, `
 		INSERT INTO categories (name, sort_order) VALUES ($1, $2)
