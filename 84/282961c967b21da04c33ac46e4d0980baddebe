@@ -1,0 +1,51 @@
+internal/auth/service.go
+  s_54f303c7458331::t_c72cfa77a06e79 231-243
+internal/chat/access.go
+  s_54f303c7458331::t_fd7c9ee77a6a54 74,77-79
+internal/chat/messages.go
+  s_54f303c7458331::t_d4030bba3bcf65 246,249-251
+internal/later/prune_test.go
+  s_051381409cd96b::t_8c9326a169ed91 1-23
+internal/later/scheduled_handler.go
+  s_54f303c7458331::t_f7687921845e99 98-99,102-105
+internal/later/scheduled_send.go
+  s_54f303c7458331::t_c4c24e776a71f6 86-89,97
+internal/later/scheduled_validation_integration_test.go
+  s_051381409cd96b::t_00bef1f0e4dfb5 1-88
+internal/later/service.go
+  s_bb0f2582e5d413::t_98c5ce3f6516ae 10,40-43,65-82,87,116-118
+internal/later/visibility.go
+  s_54f303c7458331::t_58b79c3cd4073b 75-77,79-85,87,89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "84282961c967b21da04c33ac46e4d0980baddebe",
+  "prompts": {},
+  "sessions": {
+    "s_051381409cd96b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-acc7fede3012b05f4",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_54f303c7458331": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aabeada1c9210fdc7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bb0f2582e5d413": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ab9fab403e984d1ad",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
