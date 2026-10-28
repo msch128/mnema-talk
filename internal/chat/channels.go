@@ -213,9 +213,9 @@ func DeleteChannel(ctx context.Context, p *db.Pool, channelID uuid.UUID) ([]stri
 		if err != nil {
 			return fmt.Errorf("lock channel: %w", err)
 		}
-		var err2 error
-		keys, err2 = DeleteChannelsTx(ctx, tx, []uuid.UUID{channelID})
-		return err2
+		k, derr := DeleteChannelsTx(ctx, tx, []uuid.UUID{channelID})
+		keys = k
+		return derr
 	})
 	if err != nil {
 		return nil, err
