@@ -1,11 +1,9 @@
 package nativepreview
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/server"
 )
 
@@ -22,12 +20,8 @@ func NewNativeRegistrationPreviewRouter(deps server.Deps, options NativePreviewO
 		preview.Close()
 		return nil, err
 	}
-	dispatch := http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
-		ctx := context.WithValue(request.Context(), chi.RouteCtxKey, (*chi.Context)(nil))
-		registration.ServeHTTP(w, request.WithContext(ctx))
-	})
 	trusted := preview.PreviewDeps().Trusted
-	handler := httpx.RequestID(httpx.ClientIPMiddleware(trusted)(httpx.Logger(httpx.Recover(deps.Config.IsProduction())(httpx.SecurityHeaders(trusted, deps.Config.IsProduction())(preview.boundary(http.StripPrefix(NativePreviewPrefix, dispatch)))))))
+	handler := chi.Chain(append(nativeBaseMiddleware(deps, trusted), preview.boundary)...).Handler(http.StripPrefix(NativePreviewPrefix, authDispatch(registration)))
 	base := preview.Router.Handler
 	preview.Router.Handler = http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		if request.URL.Path == NativePreviewPrefix+"/auth/register" {

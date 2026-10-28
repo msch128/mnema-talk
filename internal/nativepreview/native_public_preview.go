@@ -33,14 +33,12 @@ func NewNativePublicPreviewRouter(deps server.Deps, options NativePreviewOptions
 		return nil, err
 	}
 	routes := chi.NewRouter()
-	routes.Use(httpx.RequestID, httpx.ClientIPMiddleware(trusted), httpx.Logger, httpx.Recover(deps.Config.IsProduction()), httpx.SecurityHeaders(trusted, deps.Config.IsProduction()), preview.boundary, nativePublicPreviewBoundary)
+	routes.Use(append(nativeBaseMiddleware(deps, trusted), preview.boundary, nativePublicPreviewBoundary)...)
 	// Real cached health handler bounds DB/storage checks independently of callers;
 	// the closed public pair has a separate native-only per-IP request ceiling.
 	budget := httpx.NewRateLimiter(120, time.Minute)
 	routes.Use(budget.PerIP)
-	routes.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
-		httpx.WriteError(w, httpx.NewAPIError(http.StatusMethodNotAllowed, httpx.CodeInvalidInput, "method not allowed"))
-	})
+	routes.MethodNotAllowed(nativeMethodNotAllowed)
 	routes.Get(NativePublicLegalPath, server.LegalHandler(deps.Config))
 	routes.Get(NativePublicHealthPath, server.HealthHandler(deps))
 	base := preview.Router.Handler
@@ -53,13 +51,6 @@ func NewNativePublicPreviewRouter(deps server.Deps, options NativePreviewOptions
 	})
 	return preview, nil
 }
-func hasNonEmptyPublicBody(r *http.Request) bool {
-	if r.ContentLength != 0 || len(r.TransferEncoding) != 0 {
-		return true
-	}
-	return r.Body != nil && r.Body != http.NoBody
-}
-
 func nativePublicPreviewBoundary(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Origin/Cookie/query/unsupported-version rejection and no-store/CSP already
@@ -72,7 +63,7 @@ func nativePublicPreviewBoundary(next http.Handler) http.Handler {
 		// The wire accepts known-empty bodies only. Reject framed/chunked bodies
 		// without waiting for bytes, so a pre-login client cannot hold a DB check or
 		// legal response hostage with an unfinished body.
-		if hasNonEmptyPublicBody(r) {
+		if nativeBodyPresent(r) {
 			httpx.WriteError(w, httpx.ErrInvalidInput("native public metadata body must be empty"))
 			return
 		}

@@ -6,13 +6,15 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/server"
 )
 
 // Every native path that is not an explicitly installed metadata route is
 // answered by the closed catch-all (401 without a token, 503 "content
-// unavailable" with one), whatever the method: nothing falls through to the
+// unavailable" with one), whatever the method (a wrong verb on a registered
+// path is a 405): nothing falls through to the
 // browser router or the web app.
 func TestNativePreviewUnknownRoutesNeverReachBrowserRoutes(t *testing.T) {
 	a := newPreviewTestApp(t, NativeSupported, false)
@@ -20,7 +22,16 @@ func TestNativePreviewUnknownRoutesNeverReachBrowserRoutes(t *testing.T) {
 	a.request(t, http.MethodGet, NativePreviewPrefix+"/auth/login", nil, "", nil, http.StatusUnauthorized)
 	a.request(t, http.MethodGet, NativePreviewPrefix+"/no-such-route", nil, "", nil, http.StatusUnauthorized)
 	a.request(t, http.MethodGet, NativePreviewPrefix+"/no-such-route", nil, grant.Access, nil, http.StatusServiceUnavailable)
-	a.request(t, http.MethodPost, NativePreviewPrefix+"/members", nil, grant.Access, nil, http.StatusServiceUnavailable)
+}
+
+// A wrong verb on a registered metadata path is a 405, not the "content
+// unavailable" answer of the catch-all.
+func TestNativePreviewWrongMethodOnMetadataPathIsMethodNotAllowed(t *testing.T) {
+	a := newPreviewTestApp(t, NativeSupported, false)
+	grant := a.login(t, a.user)
+	a.request(t, http.MethodPost, NativePreviewPrefix+"/members", nil, grant.Access, nil, http.StatusMethodNotAllowed)
+	a.request(t, http.MethodDelete, NativePreviewPrefix+"/users/"+uuid.NewString(), nil, grant.Access, nil, http.StatusMethodNotAllowed)
+	a.request(t, http.MethodGet, NativePreviewPrefix+"/no-such-route", nil, grant.Access, nil, http.StatusServiceUnavailable)
 }
 
 // A corrupted metadata registry stops assembly of the whole preview router
