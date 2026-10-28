@@ -266,6 +266,9 @@ func TestVerifyRejectsTampering(t *testing.T) {
 		"no files":       signed(func(m *Manifest) { m.Files = nil }),
 		"bad path":       signed(func(m *Manifest) { m.Files[0].Path = "../x" }),
 		"duplicate path": signed(func(m *Manifest) { m.Files[1].Path = m.Files[0].Path }),
+		"case duplicate": signed(func(m *Manifest) { m.Files[1].Path = strings.ToUpper(m.Files[0].Path) }),
+		"windows path":   signed(func(m *Manifest) { m.Files[1].Path = "assets/con.js" }),
+		"upper hash":     signed(func(m *Manifest) { m.Files[0].SHA256 = strings.ToUpper(m.Files[0].SHA256) }),
 		"bad hash":       signed(func(m *Manifest) { m.Files[0].SHA256 = "zz" }),
 		"short hash":     signed(func(m *Manifest) { m.Files[0].SHA256 = "00" }),
 		"negative size":  signed(func(m *Manifest) { m.Files[0].Size = -1 }),
@@ -406,7 +409,7 @@ func TestValidPath(t *testing.T) {
 			t.Errorf("%q should be valid", p)
 		}
 	}
-	for _, p := range []string{"", "/abs", "a//b", "a/./b", "a/../b", "..", ".", "a/", `a\b`, "a\x00b", "a\x7f", "a\nb", "\xff", strings.Repeat("a", maxPathLen+1)} {
+	for _, p := range []string{"", "/abs", "a//b", "a/./b", "a/../b", "..", ".", "a/", `a\b`, "a\x00b", "a\x7f", "a\nb", "\xff", "a:b", "a.", "a /b", "dir/CON", "dir/nul.txt", "Com1.js", "lpt9", strings.Repeat("a", maxPathLen+1)} {
 		if ValidPath(p) {
 			t.Errorf("%q should be invalid", p)
 		}

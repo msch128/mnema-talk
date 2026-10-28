@@ -1,6 +1,7 @@
 package update
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -322,12 +323,12 @@ type githubRelease struct {
 // tag, a release page on github.com for Repo (else a link built from the
 // tag), sanitized notes.
 func parseRelease(body []byte) (*Release, error) {
-	dec := json.NewDecoder(strings.NewReader(string(body)))
+	dec := json.NewDecoder(bytes.NewReader(body))
 	var gr githubRelease
 	if err := dec.Decode(&gr); err != nil {
 		return nil, errors.New("GitHub's answer is not valid JSON")
 	}
-	if dec.More() {
+	if err := dec.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
 		return nil, errors.New("GitHub's answer has trailing data")
 	}
 	if gr.TagName == nil {

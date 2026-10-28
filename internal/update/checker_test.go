@@ -95,8 +95,10 @@ func TestCheckUsesETag(t *testing.T) {
 func TestCheckRejectsBadAnswers(t *testing.T) {
 	huge := `{"tag_name":"v1.0.0","body":"` + strings.Repeat("x", maxResponseBytes) + `"}`
 	cases := map[string]http.HandlerFunc{
-		"malformed":     jsonReply(`{"tag_name": "v1.0.0"`),
-		"trailing data": jsonReply(`{"tag_name":"v1.0.0"} {"tag_name":"v9.9.9"}`),
+		"malformed":        jsonReply(`{"tag_name": "v1.0.0"`),
+		"trailing data":    jsonReply(`{"tag_name":"v1.0.0"} {"tag_name":"v9.9.9"}`),
+		"trailing brace":   jsonReply(`{"tag_name":"v1.0.0"}}`),
+		"trailing bracket": jsonReply(`{"tag_name":"v1.0.0"}]`),
 		"not json": func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/html")
 			_, _ = w.Write([]byte("<html>"))
