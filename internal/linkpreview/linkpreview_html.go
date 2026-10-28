@@ -9,16 +9,30 @@ import (
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/charset"
+	"golang.org/x/text/transform"
 )
 
 // utf8Reader decodes body to UTF-8 using the charset of the Content-Type
-// header or the page's own <meta charset>; undecodable input is read as is.
+// header or the page's own <meta charset>. A page that declares no charset
+// and is valid UTF-8 is read as is, since the sniffer only looks at the first
+// KiB and would otherwise guess windows-1252.
 func utf8Reader(body []byte, ctype string) io.Reader {
-	r, err := charset.NewReader(bytes.NewReader(body), ctype)
-	if err != nil {
+	enc, _, certain := charset.DetermineEncoding(body, ctype)
+	if !certain && validUTF8Prefix(body) {
 		return bytes.NewReader(body)
 	}
-	return r
+	return transform.NewReader(bytes.NewReader(body), enc.NewDecoder())
+}
+
+// validUTF8Prefix reports whether body is valid UTF-8, ignoring a rune cut
+// off by the download limit at its end.
+func validUTF8Prefix(body []byte) bool {
+	for i := 0; i < utf8.UTFMax && i < len(body); i++ {
+		if cut := body[:len(body)-i]; utf8.Valid(cut) {
+			return true
+		}
+	}
+	return false
 }
 
 // parseHTML reads Open Graph tags with <title> and meta description as

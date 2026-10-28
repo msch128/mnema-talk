@@ -93,3 +93,12 @@ func TestCheckURLSharesSSRFShape(t *testing.T) {
 		}
 	}
 }
+
+func TestUndeclaredUTF8PageKeepsNonASCIITitle(t *testing.T) {
+	base, _ := url.Parse("https://example.com/")
+	pad := strings.Repeat(`<meta name="x" content="aaaaaaaaaa">`, 40)
+	body := []byte("<head>" + pad + "<title>ü日本語é</title>")
+	if p := parseHTML(body, "text/html", base); p.Title != "ü日本語é" {
+		t.Fatalf("undeclared utf-8: %q", p.Title)
+	}
+}
