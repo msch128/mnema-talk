@@ -2,7 +2,6 @@ package bot
 
 import (
 	"net/http"
-	"slices"
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
@@ -113,7 +112,7 @@ func (h *Handler) createToken(w http.ResponseWriter, r *http.Request) error {
 // regenerateToken handles POST /api/admin/bots/{id}/tokens/{tokenID}/regenerate.
 //
 // @Summary Regenerate a token
-// @Description Issues a new token with the same name and expiry and revokes the old one at once (its gateway connections close).
+// @Description Issues a new token with the same name and expiry and revokes the old one at once (its gateway connections close), in one step. Only an active token can be regenerated.
 // @ID regenerateBotToken
 // @Tags Bots
 // @Produce json
@@ -123,6 +122,7 @@ func (h *Handler) createToken(w http.ResponseWriter, r *http.Request) error {
 // @Success 201 {object} NewTokenResponse "Issued; the secret is shown once."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage bots permission, or the bot's highest role is not below yours, or cross-origin request rejected."
+// @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT: the token is expired or revoked."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such bot or token."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: too many active tokens."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
@@ -138,24 +138,12 @@ func (h *Handler) regenerateToken(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	ts, err := Tokens(r.Context(), h.DB, b.ID)
+	t, secret, err := RegenerateToken(r.Context(), h.DB, b.ID, tokenID, auth.UserFrom(r.Context()).ID)
 	if err != nil {
-		return err
-	}
-	i := slices.IndexFunc(ts, func(t Token) bool { return t.ID == tokenID })
-	if i < 0 {
-		return errTokenNotFound
-	}
-	old := ts[i]
-	if err := RevokeToken(r.Context(), h.DB, b.ID, tokenID); err != nil {
 		return err
 	}
 	if h.OnRevoke != nil {
 		h.OnRevoke(b.ID, &tokenID)
-	}
-	t, secret, err := IssueToken(r.Context(), h.DB, b.ID, old.Name, old.ExpiresAt, auth.UserFrom(r.Context()).ID)
-	if err != nil {
-		return err
 	}
 	httpx.WriteJSON(w, http.StatusCreated, NewTokenResponse{Token: t, Secret: secret})
 	return nil

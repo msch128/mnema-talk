@@ -59,15 +59,11 @@ func (a *Authenticator) CheckMinter(ctx context.Context, tokenID uuid.UUID, mint
 }
 
 func (a *Authenticator) minterQualifies(ctx context.Context, minter, botUser uuid.UUID) (bool, error) {
-	u, err := auth.GetUser(ctx, a.DB, minter)
+	u, err := auth.GetActiveUser(ctx, a.DB, minter)
 	if apiErr, isAPI := httpx.AsAPIError(err); isAPI && apiErr.Status == http.StatusNotFound {
 		return false, nil
 	}
 	if err != nil {
-		return false, err
-	}
-	var active bool
-	if err := a.DB.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE id = $1 AND `+auth.ActiveSQL("")+`)`, minter).Scan(&active); err != nil || !active {
 		return false, err
 	}
 	snap, err := a.Perms.Snapshot(ctx)

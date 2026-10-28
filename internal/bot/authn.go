@@ -23,6 +23,8 @@ const (
 	tokenLen = len(TokenPrefix) + 43
 	// touchEvery bounds how often a token's last-used time is written.
 	touchEvery = time.Minute
+	// touchTimeout bounds the last-used write on the request path.
+	touchTimeout = 3 * time.Second
 
 	// Per-bot limits, in Discord's spirit: a global budget and a tighter one
 	// for sending messages in one channel.
@@ -138,13 +140,14 @@ func (a *Authenticator) shouldTouch(id uuid.UUID, last *time.Time, now time.Time
 }
 
 func (a *Authenticator) recordTouch(ctx context.Context, tokenID, botID uuid.UUID) {
-	ctx = context.WithoutCancel(ctx)
-	if _, err := a.DB.Exec(ctx, `UPDATE bot_tokens SET last_used_at = NOW() WHERE id = $1`, tokenID); err != nil {
+	// Detached from the request so a disconnect does not lose the write, but
+	// bounded so a slow database cannot hold the request for long.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), touchTimeout)
+	defer cancel()
+	if _, err := a.DB.Exec(ctx, `
+		WITH t AS (UPDATE bot_tokens SET last_used_at = NOW() WHERE id = $1)
+		UPDATE bots SET last_active_at = NOW() WHERE id = $2`, tokenID, botID); err != nil {
 		slog.Warn("bot token last-used", "err", err)
-		return
-	}
-	if _, err := a.DB.Exec(ctx, `UPDATE bots SET last_active_at = NOW() WHERE id = $1`, botID); err != nil {
-		slog.Warn("bot last-active", "err", err)
 	}
 }
 

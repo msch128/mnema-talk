@@ -78,6 +78,7 @@ func (c *Commands) callback(w http.ResponseWriter, r *http.Request) error {
 	}
 	if msg != nil {
 		if _, err := c.respond(r, in, *msg); err != nil {
+			c.store.release(in.id, true)
 			return err
 		}
 	}
@@ -121,6 +122,7 @@ func (c *Commands) followup(w http.ResponseWriter, r *http.Request) error {
 	}
 	msg, err := c.respond(r, in, *m)
 	if err != nil {
+		c.store.release(in.id, false)
 		return err
 	}
 	if msg == nil {

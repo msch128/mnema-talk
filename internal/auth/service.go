@@ -228,6 +228,16 @@ func GetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
 	return u, err
 }
 
+// GetActiveUser is GetUser for an account that may act (see ActiveSQL); a
+// disabled, banned or deleted account is a 404 APIError like a missing one.
+func GetActiveUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
+	u, err := scanUser(p.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE id = $1 AND `+ActiveSQL(""), id))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, httpx.ErrNotFound("user not found")
+	}
+	return u, err
+}
+
 // inactiveSQL is true for a user_sessions row that has had no request for
 // longer than the community's inactivity limit.
 const inactiveSQL = `last_active_at < NOW() - make_interval(days => (SELECT session_inactivity_days FROM instance_settings LIMIT 1))`

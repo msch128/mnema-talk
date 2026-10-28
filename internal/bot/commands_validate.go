@@ -116,7 +116,7 @@ func (c *Commands) checkReference(r *http.Request, snap *perm.Snapshot, user *au
 		return id, nil
 	}
 	var exists bool
-	if err := c.DB.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM users WHERE id = $1 AND NOT is_bot AND disabled_at IS NULL)`, id).Scan(&exists); err != nil {
+	if err := c.DB.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM users WHERE id = $1 AND NOT is_bot AND `+auth.ActiveSQL("")+`)`, id).Scan(&exists); err != nil {
 		return nil, err
 	}
 	if !exists || !snap.Channel(perm.Subject{ID: id}, ch).Has(perm.ViewChannel) {
