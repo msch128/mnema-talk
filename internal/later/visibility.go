@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -72,15 +74,24 @@ func (s *Service) canView(ctx context.Context, sub perm.Subject, channel uuid.UU
 // subjectOf is who an account is for permission questions; ok is false when the
 // account is gone, disabled or banned.
 func (s *Service) subjectOf(ctx context.Context, user uuid.UUID) (sub perm.Subject, ok bool, err error) {
-	var role string
-	err = s.DB.QueryRow(ctx, `SELECT role FROM users WHERE id = $1 AND `+auth.ActiveSQL("")+` AND NOT is_bot`, user).Scan(&role)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return sub, false, nil
+	u, ok, err := s.activeUser(ctx, user)
+	if err != nil || !ok {
+		return sub, false, err
+	}
+	return u.Subject(), true, nil
+}
+
+// activeUser loads an account that may act now; ok is false when the account is
+// gone, disabled or banned. The Owner rule stays with auth.User.Subject.
+func (s *Service) activeUser(ctx context.Context, user uuid.UUID) (*auth.User, bool, error) {
+	u, err := auth.GetActiveUser(ctx, s.DB, user)
+	if apiErr, isAPI := httpx.AsAPIError(err); isAPI && apiErr.Status == http.StatusNotFound {
+		return nil, false, nil
 	}
 	if err != nil {
-		return sub, false, fmt.Errorf("load account: %w", err)
+		return nil, false, fmt.Errorf("load account: %w", err)
 	}
-	return perm.Subject{ID: user, Owner: role == "admin"}, true, nil
+	return u, true, nil
 }
 
 // visibleRef returns the message when sub may see it now, nil otherwise.

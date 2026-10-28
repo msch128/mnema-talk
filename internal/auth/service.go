@@ -229,9 +229,10 @@ func GetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
 }
 
 // GetActiveUser is GetUser for an account that may act (see ActiveSQL); a
-// disabled, banned or deleted account is a 404 APIError like a missing one.
+// disabled, banned or deleted account, or a bot, is a 404 APIError like a
+// missing one.
 func GetActiveUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
-	u, err := scanUser(p.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE id = $1 AND `+ActiveSQL(""), id))
+	u, err := scanUser(p.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE id = $1 AND `+ActiveSQL("")+` AND NOT is_bot`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound("user not found")
 	}

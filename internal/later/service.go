@@ -7,6 +7,7 @@ package later
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -36,7 +37,10 @@ const (
 
 	changesPerMinute = 60
 	sweepEvery       = 15 * time.Second
-	batch            = 100
+	// pruneEvery spaces the clean-up of delivered reminders, which has no index
+	// to lean on: once an hour is plenty for a 30 day retention.
+	pruneEvery = time.Hour
+	batch      = 100
 )
 
 // Notifier delivers a push to one member; the push service implements it. It
@@ -58,10 +62,29 @@ type Service struct {
 	Now func() time.Time
 
 	changes *httpx.RateLimiter
+	pruned  *pruneClock
+}
+
+// pruneClock remembers when delivered reminders were last pruned.
+type pruneClock struct {
+	mu   sync.Mutex
+	last time.Time
+}
+
+// due reports whether a prune is due at now and, when it is, books it.
+func (c *pruneClock) due(now time.Time) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.last.IsZero() && now.Sub(c.last) < pruneEvery {
+		return false
+	}
+	c.last = now
+	return true
 }
 
 // NewService returns s with its state.
 func NewService(s Service) *Service {
+	s.pruned = &pruneClock{}
 	s.changes = httpx.NewRateLimiter(changesPerMinute, time.Minute).Named("later_change")
 	if s.Now == nil {
 		s.Now = time.Now
@@ -90,7 +113,9 @@ func (s *Service) Sweep(ctx context.Context) {
 	}
 	s.deliverReminders(ctx)
 	s.sendScheduled(ctx)
-	s.pruneDelivered(ctx)
+	if s.pruned.due(s.Now()) {
+		s.pruneDelivered(ctx)
+	}
 }
 
 // checkTime requires a time a client sent to lie in the future, within a year.
