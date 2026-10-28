@@ -1,0 +1,89 @@
+web/src/components/ContextMenu.vue
+  s_06fcde5dbef956::t_5d32fe1d90fd03 291-297,300
+web/src/components/DesktopGamingOverlay.vue
+  s_06fcde5dbef956::t_c60da38a0b8f08 43-45
+web/src/components/DmFindBox.vue
+  s_06fcde5dbef956::t_4531076fa3a1f8 66-67
+web/src/components/EventDetailModal.test.ts
+  s_06fcde5dbef956::t_766cda7ac90d03 98-99,108-109,113-137
+web/src/components/ContextMenu.test.ts
+  s_779161c65c12bc::t_06f27f80777527 112-122
+web/src/components/CreateChannelModal.test.ts
+  s_0083ddead970ef::t_f4a6b0ab1cc4d6 86,90-127
+web/src/components/CreateChannelModal.vue
+  s_0083ddead970ef::t_ef61a025493e6e 5,10,43-50,52,72,74-76,212,220,227
+web/src/components/CreateForumPostModal.test.ts
+  s_439aa1bb873fd8::t_b66963731df2d0 63-70,132
+web/src/components/CreateForumPostModal.vue
+  s_0083ddead970ef::t_118b7581ed058f 74,103,105,110
+web/src/components/DesktopGamingOverlay.test.ts
+  s_0083ddead970ef::t_af20b24898e2c8 58-67
+web/src/components/DmListRow.vue
+  s_439aa1bb873fd8::t_1f7b8c86f59b40 8,49-59,62-63,78,88-96,122
+web/src/components/DmPolish.test.ts
+  s_439aa1bb873fd8::t_3f353b5695c1da 10,130-150,210,270-283,517
+web/src/components/EmojiButton.vue
+  s_0083ddead970ef::t_6f109e66fc557c 4,18-19,21-25,55
+web/src/components/EmojiPicker.test.ts
+  s_439aa1bb873fd8::t_fa38e0db343f39 32-33,128
+web/src/components/EmojiPicker.vue
+  s_0083ddead970ef::t_2bf801fb23a432 106-107
+web/src/components/EphemeralNotes.test.ts
+  s_439aa1bb873fd8::t_e361b49fe30831 2,18-39
+web/src/components/EphemeralNotes.vue
+  s_4ac6295b6bd2d2::t_f9b6e80bd5b0d1 2,9,14-25,29,53,55,61
+web/src/components/EventDetailModal.vue
+  s_0083ddead970ef::t_ec8b740e2c7ca0 15,44-45,47,49,52-55,57,59,61,86-87,89-90,99-101,118,190,202,215,238-241
+web/src/i18n/de.json
+  s_0083ddead970ef::t_0f882fd7513d2a 2487-2491,2923
+web/src/i18n/en.json
+  s_0083ddead970ef::t_fa578dad0aa1dc 2487-2491,2923
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "59304cef6ab4f05d0e276be789b66230ade0eb2f",
+  "prompts": {},
+  "sessions": {
+    "s_0083ddead970ef": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8130eec70ffb508e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_439aa1bb873fd8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8b737fc6e5b166c0",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4ac6295b6bd2d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac4ef8ece1278c839",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_779161c65c12bc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a625d1270c54328c0",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
