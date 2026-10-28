@@ -50,7 +50,7 @@ func TestEventStoreReportsMissingEvents(t *testing.T) {
 			return err
 		},
 		"cancel":     func() error { _, err := store.Cancel(ctx, missing); return err },
-		"set cover":  func() error { return store.SetCover(ctx, missing, uuid.New()) },
+		"set cover":  func() error { _, err := store.ReplaceCover(ctx, missing, uuid.New()); return err },
 		"drop cover": func() error { _, err := store.ClearCover(ctx, missing); return err },
 	}
 	for name, run := range checks {
@@ -85,7 +85,7 @@ func TestEventStoreFailsWhenTheDatabaseCallIsCancelled(t *testing.T) {
 			return err
 		},
 		"cancel":         func() error { _, err := store.Cancel(ctx, ev.ID); return err },
-		"set cover":      func() error { return store.SetCover(ctx, ev.ID, uuid.New()) },
+		"set cover":      func() error { _, err := store.ReplaceCover(ctx, ev.ID, uuid.New()); return err },
 		"drop cover":     func() error { _, err := store.ClearCover(ctx, ev.ID); return err },
 		"set rsvp":       func() error { return store.SetRSVP(ctx, ev.ID, uid, "going") },
 		"delete rsvp":    func() error { return store.DeleteRSVP(ctx, ev.ID, uid) },
@@ -94,7 +94,7 @@ func TestEventStoreFailsWhenTheDatabaseCallIsCancelled(t *testing.T) {
 		"activate":       func() error { _, err := store.ActivateScheduled(ctx, time.Now()); return err },
 		"complete":       func() error { _, err := store.CompleteActive(ctx, time.Now()); return err },
 		"due reminders":  func() error { _, err := store.DueReminders(ctx, time.Now()); return err },
-		"mark reminded":  func() error { return store.MarkReminderSent(ctx, ev.ID) },
+		"claim reminder": func() error { _, err := store.ClaimReminder(ctx, ev.ID); return err },
 		"reminder users": func() error { _, err := store.GetRSVPUserIDs(ctx, ev.ID); return err },
 	}
 	for name, run := range checks {
@@ -157,7 +157,7 @@ func TestEventRSVPEdgeCases(t *testing.T) {
 	wantStatus(t, "hidden get", alice.get(path(hidden.ID, "")), http.StatusNotFound)
 
 	wantStatus(t, "empty list", alice.get(path(open.ID, "/rsvps")), http.StatusOK)
-	res := alice.put(path(open.ID, "/rsvp"), map[string]string{"response": " not going "})
+	res := alice.put(path(open.ID, "/rsvp"), map[string]string{"response": " Not Going "})
 	wantStatus(t, "spaced not going", res, http.StatusOK)
 	var ev communityevents.CommunityEvent
 	res.decode(t, &ev)

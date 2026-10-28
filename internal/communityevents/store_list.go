@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/auth"
 )
 
 // Defaults and bounds of GET /api/events.
@@ -16,6 +15,13 @@ const (
 	MaxListLimit     = 200
 	listLookBehind   = 24 * time.Hour
 	listLookAhead    = 90 * 24 * time.Hour
+)
+
+// defaultEventDuration is how long an event without an end lasts: the list's
+// past window and the scheduler's completion both use it (eventEnd).
+const (
+	defaultEventDuration = `INTERVAL '2 hours'`
+	eventEnd             = `COALESCE(end_time, start_time + ` + defaultEventDuration + `)`
 )
 
 // ListQuery selects the events a member sees: those that start before Before
@@ -38,7 +44,7 @@ type ListQuery struct {
 const (
 	eventWindow = `COALESCE(end_time, start_time) >= $1 AND start_time < $2`
 	// pastWindow takes the cursor as $1 (time) and $2 (id), now as $3.
-	pastWindow = `(status IN ('completed', 'cancelled') OR COALESCE(end_time, start_time + INTERVAL '2 hours') < $3)
+	pastWindow = `(status IN ('completed', 'cancelled') OR ` + eventEnd + ` < $3)
 		AND (start_time, id) < ($1, $2)`
 )
 
@@ -59,8 +65,8 @@ func (s *Store) List(ctx context.Context, callerID *uuid.UUID, q ListQuery) ([]*
 
 	list := []*CommunityEvent{}
 	for rows.Next() {
-		var row eventRow
-		if err := rows.Scan(&row.ID, &row.Title, &row.Description, &row.StartTime, &row.EndTime, &row.ChannelID, &row.Location, &row.CoverMediaID, &row.Status, &row.CreatedBy, &row.CreatedAt, &row.UpdatedAt); err != nil {
+		row, err := scanEvent(rows)
+		if err != nil {
 			return nil, err
 		}
 		list = append(list, row.toEvent())
@@ -70,8 +76,6 @@ func (s *Store) List(ctx context.Context, callerID *uuid.UUID, q ListQuery) ([]*
 	}
 	return list, s.fillRSVPsBatch(ctx, list, callerID)
 }
-
-const eventColumns = `id, title, description, start_time, end_time, channel_id, location, cover_media_id, status, created_by, created_at, updated_at`
 
 // queryWindow selects the rows of the window q describes, restricted to events
 // without a Talk or in one of the allowed Talks.
@@ -202,12 +206,7 @@ func (s *Store) batchGoing(ctx context.Context, byID map[uuid.UUID]*CommunityEve
 		if err := rows.Scan(&eventID, &m.ID, &m.Username, &m.DisplayName, &avatarKey); err != nil {
 			return err
 		}
-		if avatarKey != nil {
-			if u := auth.AvatarURL(avatarKey); u != "" {
-				m.AvatarURL = &u
-			}
-		}
-		byID[eventID].GoingMembers = append(byID[eventID].GoingMembers, m)
+		byID[eventID].GoingMembers = append(byID[eventID].GoingMembers, newUserRef(m.ID, m.Username, m.DisplayName, avatarKey))
 	}
 	return rows.Err()
 }

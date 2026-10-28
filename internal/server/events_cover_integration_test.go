@@ -99,7 +99,7 @@ func TestEventCoverRejections(t *testing.T) {
 			return admin.post("/api/events/"+open.ID.String()+"/cover", map[string]string{"a": "b"})
 		}, http.StatusBadRequest, ""},
 		{"wrong field", func() response { return a.uploadCover(admin, open.ID, "file", png) }, http.StatusBadRequest, ""},
-		{"not an image", func() response { return a.uploadCover(admin, open.ID, "cover", []byte("this is text")) }, http.StatusBadRequest, ""},
+		{"not an image", func() response { return a.uploadCover(admin, open.ID, "cover", []byte("this is text")) }, http.StatusUnsupportedMediaType, ""},
 		{"over 5 MB", func() response { return a.uploadCover(admin, open.ID, "cover", make([]byte, 5<<20+512<<10)) }, http.StatusRequestEntityTooLarge, "PAYLOAD_TOO_LARGE"},
 		{"way over 5 MB", func() response { return a.uploadCover(admin, open.ID, "cover", make([]byte, 7<<20)) }, http.StatusRequestEntityTooLarge, "PAYLOAD_TOO_LARGE"},
 	}

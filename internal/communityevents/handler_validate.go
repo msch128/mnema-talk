@@ -1,11 +1,13 @@
 package communityevents
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -41,6 +43,9 @@ func (h *Handler) validateEventLocation(r *http.Request, chID *uuid.UUID, loc *s
 	if hasChannel {
 		var kind string
 		err := h.DB.QueryRow(r.Context(), `SELECT type FROM channels WHERE id = $1`, *chID).Scan(&kind)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
 		if err != nil || kind != "voice" {
 			return httpx.ErrInvalidInput("channel_id must be a Talk (voice) channel")
 		}
@@ -109,6 +114,9 @@ func (r *CreateEventRequest) normalize() {
 	r.Title = strings.TrimSpace(r.Title)
 	r.Description = strings.TrimSpace(r.Description)
 	trimPtr(r.Location)
+	if r.Location != nil && *r.Location == "" {
+		r.Location = nil // an empty location is none, also next to a Talk
+	}
 }
 
 func (r *UpdateEventRequest) normalize() {
