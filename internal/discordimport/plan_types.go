@@ -48,7 +48,7 @@ type PlanChannel struct {
 	// Category is the name of the category it goes into ("" for none).
 	Category string `json:"category"`
 	Name     string `json:"name" maxLength:"64"`
-	// Type is the Mnema type: text or voice (a Talk).
+	// Type is the Mnema type: text, voice (a Talk), stage or forum.
 	Type string `json:"type"`
 	// SourceType names the Discord kind it came from.
 	SourceType      string          `json:"source_type"`
@@ -91,5 +91,6 @@ type PlanRole struct {
 type EveryoneInfo struct {
 	PermissionKeys []string `json:"permission_keys"`
 	Dropped        []string `json:"dropped"`
+	// Applied is reserved: @everyone is never changed, so it is always false.
 	Applied        bool     `json:"applied"`
 }
