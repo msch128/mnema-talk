@@ -21,7 +21,9 @@ export function usePushSettings() {
   const busy = ref(false)
   const failed = ref(false)
 
-  const blocked = computed(() => typeof Notification !== 'undefined' && Notification.permission === 'denied')
+  // The permission is a browser property Vue cannot observe: read again after each load.
+  const isDenied = () => typeof Notification !== 'undefined' && Notification.permission === 'denied'
+  const blocked = ref(isDenied())
   const enabledByOperator = computed(() => config.value?.enabled === true)
 
   async function load() {
@@ -39,6 +41,7 @@ export function usePushSettings() {
     } finally {
       loading.value = false
     }
+    blocked.value = isDenied()
     await refreshPushState()
   }
 

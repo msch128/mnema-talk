@@ -106,15 +106,14 @@ describe('useMessageMenu items', () => {
     expect(required(toasts().at(-1)).text).toBe('Link copied')
   })
 
-  it('copies an empty string for attachment-only messages and tolerates a blocked clipboard', async () => {
+  it('copies an empty string for attachment-only messages and tells when the clipboard is blocked', async () => {
     const writeText = vi.fn().mockRejectedValue(new Error('denied'))
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } })
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const items = useMessageMenu({ actions: makeActions(), reply: vi.fn() }).itemsFor(messageFixture({ id: 'm2', content: '' }))
     await item(items, 'Copy text').action()
     expect(writeText).toHaveBeenCalledWith('')
-    expect(toasts()).toHaveLength(0)
-    expect(warn).toHaveBeenCalled()
+    expect(required(toasts().at(-1)).type).toBe('error')
     warn.mockRestore()
   })
 

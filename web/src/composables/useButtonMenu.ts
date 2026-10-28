@@ -16,7 +16,10 @@ export function useButtonMenu(build: () => ContextMenuItem[]) {
     wasOpen = menu.state.open
   }
 
-  function toggle() {
+  // A keyboard activation (click without a pointer, detail 0) never follows a pointer down; a flag left
+  // behind by a press that was released elsewhere must not swallow it.
+  function toggle(e?: MouseEvent) {
+    if (e && e.detail === 0) wasOpen = false
     if (wasOpen || menu.state.open) {
       wasOpen = false
       menu.state.open = false

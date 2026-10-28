@@ -119,6 +119,16 @@ describe('forum post addresses', () => {
     expect(chatStore.openThread).toHaveBeenCalledWith(POST)
   })
 
+  it('finds a post far back in a large forum', async () => {
+    const { ctx, chatStore } = makeCtx()
+    const page = (n: number) => Array.from({ length: 100 }, (_, i) => ({ id: `${String(n * 100 + i).padStart(8, '2')}-1111-4222-8333-444455556666` }))
+    for (let n = 0; n < 8; n++) fetchForumPosts.mockResolvedValueOnce(page(n))
+    fetchForumPosts.mockResolvedValueOnce([{ id: POST }])
+    await applyRoute(ctx, parseRoute('/c/ideas/p/x-0f3a9c1e'))
+    expect(fetchForumPosts).toHaveBeenCalledTimes(9)
+    expect(chatStore.openThread).toHaveBeenCalledWith(POST)
+  })
+
   it.each([
     ['an unknown post', [{ id: OTHER }]],
     ['an ambiguous short id', [{ id: POST }, { id: '0f3a9c1e-2222-4222-8333-444455556666' }]],

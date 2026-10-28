@@ -246,6 +246,7 @@
     "deleteFailed": "Couldn’t delete it. Try again.",
     "markRead": "Mark as read",
     "markedRead": "Marked as read",
+    "markReadFailed": "Couldn’t mark as read. Try again.",
     "markAllRead": "Mark all as read",
     "allMarkedRead": "All marked as read",
     "categoryMentions": "{n} mentions in this category",
@@ -1842,7 +1843,8 @@
   "mentions": {
     "inbox": "Mentions",
     "empty": "Nothing mentions you yet.",
-    "failed": "Couldn’t load your mentions. Try again."
+    "failed": "Couldn’t load your mentions. Try again.",
+    "moreFailed": "Couldn’t load more mentions. Try again."
   },
   "emoji": {
     "open": "Insert emoji",

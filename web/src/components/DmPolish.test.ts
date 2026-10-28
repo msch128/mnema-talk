@@ -450,7 +450,7 @@ describe('every entry of the context menu', () => {
     chat.dms = [withAda]
     chat.readStates = { [withAda.id]: { channel_id: withAda.id, unread_count: 4, mention_count: 0, notify_level: 'all', last_read_at: null } }
     http.handle = () => ({ channels: [], categories: [], server: { level: 'all', muted_until: null, suppress_everyone: false } })
-    const read = vi.spyOn(chat, 'markChannelRead').mockResolvedValue(undefined)
+    const read = vi.spyOn(chat, 'markChannelRead').mockResolvedValue(true)
     const w = mount(SidebarDmSection, { global, attachTo: document.body })
     await click(await menuFor(w, withAda.id), 'Mark as read')
     expect(read).toHaveBeenCalledWith(withAda.id)

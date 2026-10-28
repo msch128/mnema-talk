@@ -93,6 +93,17 @@ describe('MentionsInbox', () => {
     expect(w.find('[data-testid="mentions-inbox-more"]').exists()).toBe(false)
   })
 
+  it('says so when the next page could not be loaded', async () => {
+    apiMock.mockResolvedValueOnce({ messages: [messageFixture({ id: fixtureId(31) })], has_more: true }).mockRejectedValueOnce(new Error('offline'))
+    const w = mountInbox()
+    await w.find('[data-testid="mentions-inbox-button"]').trigger('click')
+    await flushPromises()
+    await w.find('[data-testid="mentions-inbox-more"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="mentions-inbox-more-failed"]').exists()).toBe(true)
+    expect(w.find('[data-testid="mentions-inbox-more"]').exists()).toBe(true)
+  })
+
   it('offers to try again after a failed load, and writes the date like the other lists', async () => {
     apiMock.mockRejectedValueOnce(new Error('offline'))
     const w = mountInbox()

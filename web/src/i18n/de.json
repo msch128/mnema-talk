@@ -246,6 +246,7 @@
     "deleteFailed": "Das Löschen hat nicht geklappt. Versuche es noch einmal.",
     "markRead": "Als gelesen markieren",
     "markedRead": "Als gelesen markiert",
+    "markReadFailed": "Das Markieren als gelesen hat nicht geklappt. Versuche es noch einmal.",
     "markAllRead": "Alle als gelesen markieren",
     "allMarkedRead": "Alle als gelesen markiert",
     "categoryMentions": "{n} Erwähnungen in dieser Kategorie",
@@ -1842,7 +1843,8 @@
   "mentions": {
     "inbox": "Erwähnungen",
     "empty": "Dich erwähnt noch niemand.",
-    "failed": "Die Erwähnungen konnten nicht geladen werden. Versuche es noch einmal."
+    "failed": "Die Erwähnungen konnten nicht geladen werden. Versuche es noch einmal.",
+    "moreFailed": "Weitere Erwähnungen konnten nicht geladen werden. Versuche es noch einmal."
   },
   "emoji": {
     "open": "Emoji einfügen",
