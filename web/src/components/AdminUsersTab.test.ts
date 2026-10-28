@@ -92,10 +92,12 @@ describe('admin account recovery and cancellation', () => {
     expect(errors()).toContain('enable failed')
     await w.find('[data-testid="action-reset-password"]').trigger('click')
     await w.find('[data-testid="new-password-input"]').setValue('long-password')
+    await flushPromises() // the dialog looks up the Owner's two-factor state first
+    await w.find('[data-testid="privacy-password"]').setValue('owner-password-123')
     apiMock.mockRejectedValueOnce(new Error('reset failed'))
     await w.find('form').trigger('submit')
     await flushPromises()
-    expect(errors()).toContain('reset failed')
+    expect(w.get('[data-testid="owner-confirm-error"]').text()).toContain('reset failed')
     expect(w.find('[data-testid="new-password-input"]').element).toHaveProperty(
       'value',
       'long-password',

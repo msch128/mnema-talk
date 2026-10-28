@@ -87,7 +87,7 @@ test('a member turns on two-factor sign-in and then needs the code to sign in', 
     await expect(m.getByTestId('account-menu-button')).toBeVisible()
   } finally {
     // Leave no second factor behind, whatever happened above.
-    if (memberId) await apiFetch(a, 'POST', `/api/admin/users/${memberId}/two-factor/reset`)
+    if (memberId) await apiFetch(a, 'POST', `/api/admin/users/${memberId}/two-factor/reset`, { current_password: ADMIN_PASSWORD })
     await aCtx.close()
     await mCtx.close()
   }

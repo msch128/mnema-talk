@@ -308,6 +308,19 @@ export function isAuthMemberSessionList(value: unknown): value is AuthMemberSess
 
 export const decodeAuthMemberSessionList = decoder("auth.MemberSessionList", isAuthMemberSessionList)
 
+export type AuthOwnerProof = {
+  code?: string
+  current_password?: string
+}
+
+export function isAuthOwnerProof(value: unknown): value is AuthOwnerProof {
+  return isRecord(value)
+    && (!hasOwn(value, "code") || isString(value["code"], 32))
+    && (!hasOwn(value, "current_password") || isString(value["current_password"]))
+}
+
+export const decodeAuthOwnerProof = decoder("auth.OwnerProof", isAuthOwnerProof)
+
 export type AuthPasswordConfirmRequest = {
   code?: string
   current_password: string
@@ -422,11 +435,15 @@ export function isAuthSetLocaleRequest(value: unknown): value is AuthSetLocaleRe
 export const decodeAuthSetLocaleRequest = decoder("auth.SetLocaleRequest", isAuthSetLocaleRequest)
 
 export type AuthSetPasswordRequest = {
+  code?: string
+  current_password?: string
   password: string
 }
 
 export function isAuthSetPasswordRequest(value: unknown): value is AuthSetPasswordRequest {
   return isRecord(value)
+    && (!hasOwn(value, "code") || isString(value["code"], 32))
+    && (!hasOwn(value, "current_password") || isString(value["current_password"]))
     && (hasOwn(value, "password") && isString(value["password"]))
 }
 

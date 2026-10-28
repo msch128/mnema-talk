@@ -147,17 +147,19 @@ func (h *Handler) revokeUserSessions(w http.ResponseWriter, r *http.Request) err
 // resetUserPassword handles POST /api/admin/users/{id}/password-reset.
 //
 // @Summary Generate a temporary password
-// @Description Ends all sessions; the password is returned once. Owner only (403 otherwise).
+// @Description Ends all sessions; the password is returned once. Owner only (403 otherwise). The Owner must confirm with their own current_password and, while their two-factor sign-in is on, a current code (403 when missing or wrong); wrong answers count toward the usual lockouts.
 // @ID resetUserPassword
 // @Tags Admin
+// @Accept json
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "User ID." Format(uuid)
+// @Param request body OwnerProof false "Owner confirmation."
 // @Success 200 {object} TemporaryPassword "Temporary password."
 // @Header 200 {string} Cache-Control "no-store"
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner may do this, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner may do this, the Owner's password or code is missing or wrong, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -166,6 +168,13 @@ func (h *Handler) revokeUserSessions(w http.ResponseWriter, r *http.Request) err
 func (h *Handler) resetUserPassword(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
+		return err
+	}
+	var req OwnerProof
+	if err := httpx.DecodeOptionalJSON(r, &req); err != nil {
+		return err
+	}
+	if ok, err := h.confirmOwner(w, r, req); !ok {
 		return err
 	}
 	password, err := ResetPassword(r.Context(), h.Sessions.DB, id)
@@ -183,7 +192,7 @@ func (h *Handler) resetUserPassword(w http.ResponseWriter, r *http.Request) erro
 // setUserPassword handles POST /api/admin/users/{id}/password.
 //
 // @Summary Set a user's password
-// @Description Ends all of the user's sessions. Owner only (403 otherwise).
+// @Description Ends all of the user's sessions. Owner only (403 otherwise). The Owner must confirm with their own current_password and, while their two-factor sign-in is on, a current code (403 when missing or wrong); wrong answers count toward the usual lockouts.
 // @ID setUserPassword
 // @Tags Admin
 // @Accept json
@@ -194,7 +203,7 @@ func (h *Handler) resetUserPassword(w http.ResponseWriter, r *http.Request) erro
 // @Success 204 "Success, no content."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner may do this, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner may do this, the Owner's password or code is missing or wrong, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -207,6 +216,9 @@ func (h *Handler) setUserPassword(w http.ResponseWriter, r *http.Request) error 
 	}
 	var req SetPasswordRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return err
+	}
+	if ok, err := h.confirmOwner(w, r, req.OwnerProof); !ok {
 		return err
 	}
 	if err := SetPassword(r.Context(), h.Sessions.DB, id, req.Password); err != nil {
@@ -250,6 +262,7 @@ func (h *Handler) setUserStatus(w http.ResponseWriter, r *http.Request) error {
 // SetPasswordRequest is the body of POST /api/admin/users/{id}/password.
 type SetPasswordRequest struct {
 	Password string `json:"password" format:"password" minLength:"10"`
+	OwnerProof
 }
 
 // TemporaryPassword is the response of POST /api/admin/users/{id}/password-reset.
@@ -264,13 +277,15 @@ type TemporaryPassword struct {
 // @Description For a member who lost the authenticator and the recovery codes: turns two-factor sign-in off, deletes the secret and recovery codes and ends all sessions of the account. Owner only (403 otherwise); the Owner account cannot be targeted (400), its second factor is reset from the host with `mnema-talk reset-2fa <username>`.
 // @ID resetUserTwoFactor
 // @Tags Admin
+// @Accept json
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "User ID." Format(uuid)
+// @Param request body OwnerProof false "Owner confirmation."
 // @Success 204 "Success, no content."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner may do this, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner may do this, the Owner's password or code is missing or wrong, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -279,6 +294,13 @@ type TemporaryPassword struct {
 func (h *Handler) resetUserTwoFactor(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
+		return err
+	}
+	var req OwnerProof
+	if err := httpx.DecodeOptionalJSON(r, &req); err != nil {
+		return err
+	}
+	if ok, err := h.confirmOwner(w, r, req); !ok {
 		return err
 	}
 	if _, err := targetUser(r.Context(), h.Sessions.DB, id); err != nil {

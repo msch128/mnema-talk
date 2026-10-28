@@ -777,7 +777,7 @@ operator is below. Update with the procedure above; take the backup first.
   an address they confirmed (link valid 30 minutes, signs every device out). Without
   `SMTP_HOST` nothing changes: no mail is sent, saved addresses stay unconfirmed
   and unused, and the "Forgot your password?" link does not appear. The Owner can
-  still set a temporary password for any member (Admin > Members). Reset by mail
+  still set a temporary password for any member (Admin > Members), after confirming their own password and, with two-factor sign-in on, a current code. Reset by mail
   also works for the Owner account if the Owner confirmed an address. Put
   `SMTP_PASSWORD` in the environment or mount a file and name it in
   `SMTP_PASSWORD_FILE`; `SMTP_TLS=none` is refused in production.

@@ -205,8 +205,8 @@ func TestAuthHandlersPropagateDatabaseCancellation(t *testing.T) {
 		{"revoke target load", "FROM users WHERE id = $1", "", func(h *Handler) httpx.HandlerFunc { return h.revokeUserSessions }, member.ID},
 		{"kick target load", "FROM users WHERE id = $1", "", func(h *Handler) httpx.HandlerFunc { return h.kickUser }, member.ID},
 		{"revoke write", "UPDATE users SET token_version", "", func(h *Handler) httpx.HandlerFunc { return h.revokeUserSessions }, member.ID},
-		{"admin set password", "UPDATE users SET password_hash", `{"password":"replacement-password"}`, func(h *Handler) httpx.HandlerFunc { return h.setUserPassword }, member.ID},
-		{"admin reset password", "UPDATE users SET password_hash", "", func(h *Handler) httpx.HandlerFunc { return h.resetUserPassword }, member.ID},
+		{"admin set password", "UPDATE users SET password_hash", `{"password":"replacement-password","current_password":"` + testPassword + `"}`, func(h *Handler) httpx.HandlerFunc { return h.setUserPassword }, member.ID},
+		{"admin reset password", "UPDATE users SET password_hash", `{"current_password":"` + testPassword + `"}`, func(h *Handler) httpx.HandlerFunc { return h.resetUserPassword }, member.ID},
 		{"confirm password", "SELECT password_hash FROM users", "", nil, member.ID},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

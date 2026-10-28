@@ -179,7 +179,7 @@ func TestAdminEndsSessionsAndResetsPasswords(t *testing.T) {
 		t.Fatalf("session survived revoke: %d", res.status)
 	}
 
-	res := admin.post(path+"/password-reset", nil)
+	res := admin.post(path+"/password-reset", ownerConfirm())
 	if res.status != http.StatusOK {
 		t.Fatalf("reset: %d %s", res.status, res.body)
 	}
@@ -235,13 +235,13 @@ func TestAdminSetsChosenPassword(t *testing.T) {
 	max := a.register(admin, "max")
 	path := "/api/admin/users/" + max.user.ID.String() + "/password"
 
-	if res := admin.post(path, map[string]string{"password": "short"}); res.status != http.StatusBadRequest {
+	if res := admin.post(path, map[string]string{"password": "short", "current_password": ownerPassword}); res.status != http.StatusBadRequest {
 		t.Fatalf("weak password accepted: %d", res.status)
 	}
 	if res := max.post(path, map[string]string{"password": "chosen-by-admin-123"}); res.status != http.StatusForbidden {
 		t.Fatalf("member set a password: %d", res.status)
 	}
-	if res := admin.post(path, map[string]string{"password": "chosen-by-admin-123"}); res.status != http.StatusNoContent {
+	if res := admin.post(path, map[string]string{"password": "chosen-by-admin-123", "current_password": ownerPassword}); res.status != http.StatusNoContent {
 		t.Fatalf("set password: %d %s", res.status, res.body)
 	}
 	if res := max.get("/api/auth/me"); res.status != http.StatusUnauthorized {
@@ -251,7 +251,7 @@ func TestAdminSetsChosenPassword(t *testing.T) {
 		t.Fatal("chosen password does not work")
 	}
 	self := "/api/admin/users/" + listUsers(t, admin)["Herzog"].ID.String() + "/password"
-	if res := admin.post(self, map[string]string{"password": "chosen-by-admin-123"}); res.status != http.StatusBadRequest {
+	if res := admin.post(self, map[string]string{"password": "chosen-by-admin-123", "current_password": ownerPassword}); res.status != http.StatusBadRequest {
 		t.Fatalf("admin changed own password via member route: %d", res.status)
 	}
 }

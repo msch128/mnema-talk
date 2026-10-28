@@ -1455,6 +1455,7 @@
     "resetTwoFactor": "Reset two-factor sign-in",
     "resetTwoFactorTitle": "Reset two-factor sign-in for {name}?",
     "resetTwoFactorBody": "Turns two-factor sign-in off, deletes the authenticator secret and the recovery codes, and signs the member out everywhere. Use it when they lost both the authenticator and the recovery codes. They can turn it on again afterwards.",
+    "confirmOwnerPrompt": "Confirm it is you: enter your own password, and your current code if you use two-factor sign-in.",
     "resetTwoFactorConfirm": "Reset",
     "twoFactorReset": "Two-factor sign-in reset.",
     "channelTopicHelp": "Shown under the channel name. Keep it short: what this channel is for.",

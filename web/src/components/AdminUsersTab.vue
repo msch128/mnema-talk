@@ -12,6 +12,7 @@ import { usePermissionsStore } from '../stores/permissions'
 import { t } from '../i18n'
 import AdminUserRow from './AdminUserRow.vue'
 import AdminResetPasswordDialog from './AdminResetPasswordDialog.vue'
+import AdminResetTwoFactorDialog from './AdminResetTwoFactorDialog.vue'
 import MemberRolesDialog from './MemberRolesDialog.vue'
 
 const toasts = useToastStore()
@@ -20,6 +21,7 @@ const rolesModalUser = ref<AdminUser | null>(null)
 
 const users = ref<AdminUser[]>([])
 const resetUser = ref<AdminUser | null>(null)
+const resetTwoFactorUser = ref<AdminUser | null>(null)
 const userSearch = ref('')
 function showError(e: unknown) {
   toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
@@ -83,22 +85,6 @@ async function revokeSessions(u: AdminUser) {
   try {
     await api(`/api/admin/users/${u.id}/sessions/revoke`, { method: 'POST' })
     toasts.success(t('admin.sessionsRevoked'))
-  } catch (e) {
-    showError(e)
-  }
-}
-
-async function resetTwoFactor(u: AdminUser) {
-  const ok = await confirm({
-    title: t('admin.resetTwoFactorTitle', { name: u.display_name || u.username }),
-    body: t('admin.resetTwoFactorBody'),
-    confirmLabel: t('admin.resetTwoFactorConfirm'),
-    danger: true
-  })
-  if (!ok) return
-  try {
-    await api(`/api/admin/users/${u.id}/two-factor/reset`, { method: 'POST' })
-    toasts.success(t('admin.twoFactorReset'))
   } catch (e) {
     showError(e)
   }
@@ -198,7 +184,7 @@ onMounted(async () => {
               @roles="rolesModalUser = u"
               @toggle-disable="toggleDisableUser(u)"
               @reset-login="resetUser = u"
-              @reset-two-factor="resetTwoFactor(u)"
+              @reset-two-factor="resetTwoFactorUser = u"
               @revoke-sessions="revokeSessions(u)"
             />
           </tbody>
@@ -209,5 +195,6 @@ onMounted(async () => {
     <MemberRolesDialog v-if="rolesModalUser" :user="rolesModalUser" @close="rolesModalUser = null" @saved="refreshUsers" />
 
     <AdminResetPasswordDialog v-if="resetUser" :user="resetUser" @close="resetUser = null" />
+    <AdminResetTwoFactorDialog v-if="resetTwoFactorUser" :user="resetTwoFactorUser" @close="resetTwoFactorUser = null" />
   </section>
 </template>

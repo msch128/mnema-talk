@@ -11,7 +11,7 @@ import { locale, t } from '../i18n'
 import { useAccountStore } from '../stores/account'
 import { useAuthStore } from '../stores/auth'
 import FormField from './FormField.vue'
-import PasswordInput from './PasswordInput.vue'
+import IdentityFields from './IdentityFields.vue'
 import { useToastStore } from '../stores/toast'
 
 const account = useAccountStore()
@@ -104,12 +104,7 @@ onBeforeUnmount(() => clearTimeout(timer))
       <p v-else-if="status && status.state !== 'none'" class="text-sm text-mnema-tertiary" data-testid="export-done">{{ $t(status.state === 'downloaded' ? 'security.privacy.exportDownloaded' : 'security.privacy.exportExpired') }}</p>
 
       <form v-if="asking === 'export'" class="space-y-3" @submit.prevent="requestExport">
-        <FormField v-slot="{ id }" :label="$t('profile.currentPassword')">
-          <PasswordInput :id="id" v-model="password" required autocomplete="current-password" data-testid="privacy-password" />
-        </FormField>
-        <FormField v-if="needsCode" v-slot="{ id }" :label="$t('security.twoFactor.code')">
-          <input :id="id" v-model="code" type="text" required autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="32" class="w-full rounded-lg border border-mnema-border-field bg-mnema-canvas px-3 py-2 font-mono text-sm tracking-widest text-mnema-text" data-testid="privacy-code" />
-        </FormField>
+        <IdentityFields v-model:password="password" v-model:code="code" :needs-code="needsCode" />
         <div v-if="error" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
         <div class="flex justify-end gap-2 pt-1">
           <button type="button" class="btn btn-ghost" @click="asking = null">{{ $t('common.cancel') }}</button>
@@ -134,12 +129,7 @@ onBeforeUnmount(() => clearTimeout(timer))
           <FormField v-slot="{ id }" :label="$t('security.privacy.deleteType', { name: username })">
             <input :id="id" v-model="typedName" type="text" required autocomplete="off" spellcheck="false" class="w-full rounded-lg border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text" data-testid="delete-name" />
           </FormField>
-          <FormField v-slot="{ id }" :label="$t('profile.currentPassword')">
-            <PasswordInput :id="id" v-model="password" required autocomplete="current-password" data-testid="privacy-password" />
-          </FormField>
-          <FormField v-if="needsCode" v-slot="{ id }" :label="$t('security.twoFactor.code')">
-            <input :id="id" v-model="code" type="text" required autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="32" class="w-full rounded-lg border border-mnema-border-field bg-mnema-canvas px-3 py-2 font-mono text-sm tracking-widest text-mnema-text" data-testid="privacy-code" />
-          </FormField>
+          <IdentityFields v-model:password="password" v-model:code="code" :needs-code="needsCode" />
           <div v-if="error" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
           <div class="flex justify-end gap-2 pt-1">
             <button type="button" class="btn btn-ghost" @click="asking = null">{{ $t('common.cancel') }}</button>

@@ -551,6 +551,21 @@
         ],
         "type": "object"
       },
+      "auth.OwnerProof": {
+        "properties": {
+          "code": {
+            "description": "Code is a current authenticator code or an unused recovery code; needed\nonly while the Owner has two-factor sign-in on.",
+            "maxLength": 32,
+            "type": "string"
+          },
+          "current_password": {
+            "description": "CurrentPassword is the Owner's own password.",
+            "format": "password",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "auth.PasswordConfirmRequest": {
         "properties": {
           "code": {
@@ -708,6 +723,16 @@
       },
       "auth.SetPasswordRequest": {
         "properties": {
+          "code": {
+            "description": "Code is a current authenticator code or an unused recovery code; needed\nonly while the Owner has two-factor sign-in on.",
+            "maxLength": 32,
+            "type": "string"
+          },
+          "current_password": {
+            "description": "CurrentPassword is the Owner's own password.",
+            "format": "password",
+            "type": "string"
+          },
           "password": {
             "format": "password",
             "minLength": 10,
@@ -18038,7 +18063,7 @@
     },
     "/api/admin/users/{id}/password": {
       "post": {
-        "description": "Ends all of the user's sessions. Owner only (403 otherwise).",
+        "description": "Ends all of the user's sessions. Owner only (403 otherwise). The Owner must confirm with their own current_password and, while their two-factor sign-in is on, a current code (403 when missing or wrong); wrong answers count toward the usual lockouts.",
         "operationId": "setUserPassword",
         "parameters": [
           {
@@ -18095,7 +18120,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: only the Owner may do this, or cross-origin request rejected."
+            "description": "FORBIDDEN: only the Owner may do this, the Owner's password or code is missing or wrong, or cross-origin request rejected."
           },
           "404": {
             "content": {
@@ -18149,7 +18174,7 @@
     },
     "/api/admin/users/{id}/password-reset": {
       "post": {
-        "description": "Ends all sessions; the password is returned once. Owner only (403 otherwise).",
+        "description": "Ends all sessions; the password is returned once. Owner only (403 otherwise). The Owner must confirm with their own current_password and, while their two-factor sign-in is on, a current code (403 when missing or wrong); wrong answers count toward the usual lockouts.",
         "operationId": "resetUserPassword",
         "parameters": [
           {
@@ -18163,6 +18188,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.OwnerProof"
+              }
+            }
+          },
+          "description": "Owner confirmation."
+        },
         "responses": {
           "200": {
             "content": {
@@ -18210,7 +18245,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: only the Owner may do this, or cross-origin request rejected."
+            "description": "FORBIDDEN: only the Owner may do this, the Owner's password or code is missing or wrong, or cross-origin request rejected."
           },
           "404": {
             "content": {
@@ -18823,6 +18858,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.OwnerProof"
+              }
+            }
+          },
+          "description": "Owner confirmation."
+        },
         "responses": {
           "204": {
             "description": "Success, no content."
@@ -18855,7 +18900,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: only the Owner may do this, or cross-origin request rejected."
+            "description": "FORBIDDEN: only the Owner may do this, the Owner's password or code is missing or wrong, or cross-origin request rejected."
           },
           "404": {
             "content": {

@@ -24,13 +24,13 @@ func TestOpenResetLinkDiesWhenTheAccountIsSecured(t *testing.T) {
 			}
 		},
 		"owner sets a password": func(a *app, admin, alice *client) {
-			res := admin.post("/api/admin/users/"+alice.user.ID.String()+"/password", map[string]string{"password": "set-by-the-owner"})
+			res := admin.post("/api/admin/users/"+alice.user.ID.String()+"/password", map[string]string{"password": "set-by-the-owner", "current_password": ownerPassword})
 			if res.status != http.StatusNoContent {
 				t.Fatalf("set password: %d %s", res.status, res.body)
 			}
 		},
 		"owner issues a temporary password": func(a *app, admin, alice *client) {
-			if res := admin.post("/api/admin/users/"+alice.user.ID.String()+"/password-reset", nil); res.status != http.StatusOK {
+			if res := admin.post("/api/admin/users/"+alice.user.ID.String()+"/password-reset", ownerConfirm()); res.status != http.StatusOK {
 				t.Fatalf("temporary password: %d", res.status)
 			}
 		},
