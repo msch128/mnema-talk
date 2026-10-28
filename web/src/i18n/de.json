@@ -146,6 +146,7 @@
       "storageOff": "Auf diesem Server ist kein Dateispeicher eingerichtet.",
       "exportNone": "Es gibt keinen Export zum Herunterladen.",
       "exportSameSite": "Der Download kann nur von dieser Seite aus gestartet werden.",
+      "exportBusy": "Gerade werden die Exporte anderer Mitglieder erstellt. Versuche es in ein paar Minuten erneut.",
       "pushOff": "Push-Benachrichtigungen sind auf diesem Server ausgeschaltet.",
       "pushDeviceLimit": "Push funktioniert auf höchstens {count} Geräten pro Konto. Entferne zuerst eines.",
       "pushSubscription": "Das Push-Abo deines Browsers wurde nicht akzeptiert. Schalte Benachrichtigungen aus und wieder ein.",

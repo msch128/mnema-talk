@@ -52,6 +52,7 @@ export const DETAILS: Readonly<Record<string, string>> = {
   'exports need object storage': 'storageOff',
   'there is no export to download': 'exportNone',
   'the download can only be started from this site': 'exportSameSite',
+  'exports are being built for other members right now; try again in a few minutes': 'exportBusy',
   'push notifications are turned off on this server': 'pushOff',
   'device not found': 'deviceGone',
   'the Owner account cannot be deleted: ownership is not transferable, so the community would be left without an Owner': 'ownerDelete',
