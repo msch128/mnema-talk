@@ -17,7 +17,7 @@ design. It keeps the parts that make a community server useful: roles, private
 channels, webhooks, bots and a call you can join with one click. Invite-only,
 no accounts on someone else's platform.
 
-**[Download the desktop app (Beta, unsigned)](https://github.com/msch128/mnema-talk-desktop/releases/latest)**: Windows installer and portable ZIP live in their own repository (macOS and Linux are paused, code kept, no new builds); releases here carry the Docker image and the signed web bundle. Prefer the browser? Nothing to install, see [Quick start](#quick-start) to host it.
+**[Download the desktop app (Beta, unsigned)](https://github.com/msch128/mnema-talk-desktop/releases/latest)**: Windows installer and portable ZIP, a macOS disk image and Linux AppImages and .deb packages live in their own repository; releases here carry the Docker image and the signed web bundle. Prefer the browser? Nothing to install, see [Quick start](#quick-start) to host it.
 
 [Why Mnema](#why-mnema) · [Features](#features) · [Quick start](#quick-start) ·
 [Desktop (Beta)](#desktop-beta) · [Documentation](#documentation) ·
@@ -385,8 +385,8 @@ The full model, its limits and how to report a vulnerability privately are in
 ## Desktop (Beta)
 
 The [desktop client](https://github.com/msch128/mnema-talk-desktop) for Windows
-(**Beta**, unsigned; installer and portable ZIP; macOS and Linux are paused,
-code kept, no new builds) wraps the same web app. Instead of loading code from
+(**Beta**, unsigned; Windows installer and portable ZIP, macOS disk image,
+Linux AppImage and .deb) wraps the same web app. Instead of loading code from
 your server it runs a **signed bundle** that it verifies on every start, with
 rollback protection and a security floor, and keeps the session in the OS
 keychain. On Windows it adds a gaming sidepeek and an `Alt+M` overlay for your Talk. The

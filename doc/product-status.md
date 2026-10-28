@@ -35,7 +35,7 @@ test, not a support promise.
 | Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), operator status page, backup and restore, upgrade tested from 0.8.16, 0.9.0, 1.0.0 and 1.1.0, cosign-signed images, self-update that verifies the image's signature and provenance before it restarts the app | Supported |
 | Native mobile apps, text end-to-end encryption | Not offered. Text stays readable by the server, by design. The browser app has a phone layout (channel list as a drawer, full-screen thread and member list, 44 px touch targets, safe areas) that is covered by the `mobile-*` e2e projects in Chromium and WebKit device emulation, not by tests on real phones (no real iOS/Android hardware qualification). |
 | Desktop client on Windows | Beta (unsigned, no Authenticode; SmartScreen warns; sealed media in WebView2 not verified on real Windows hardware) |
-| Desktop client on macOS and Linux | Paused (macOS and Linux desktop builds paused; DEV builds were not qualified on real hardware, not notarised, Gatekeeper warns) |
+| Desktop client on macOS and Linux | Beta (macOS: Apple silicon, ad-hoc signed, not notarised, Gatekeeper warns; Linux: Electron AppImage and .deb. Neither is qualified on real hardware. No gaming overlay. The Tauri host on Linux is not built) |
 
 **Internal security reviews.** Before 1.0 the code was reviewed in
 six lanes (authentication and sessions, permissions, content and media,
@@ -191,16 +191,13 @@ the "Remaining acceptance" list.
 
 ## Beta desktop path
 
-The desktop client is Beta on Windows. macOS and Linux desktop builds are
-paused (earlier DEV builds in the desktop repository were not qualified on real
-hardware, not notarised, Gatekeeper warns). The desktop client is unsigned by
-decision: no paid code-signing certificate will be bought (see [installing the unsigned Beta](desktop-app.md#installing-the-unsigned-beta)). The Windows path is the
-furthest along and is described first; macOS and Linux desktop builds are paused.
-That repository's CI built the packages and has a Linux workflow, but
-they are not qualified on real hardware, are not
-notarised or otherwise platform-signed, and desktop-specific features such as
-the gaming integration are Windows only. Everything below about the signed
-bundle, the security floor and updates applies to the Windows client.
+The desktop client is Beta on Windows, macOS and Linux. It is unsigned by
+decision: no paid code-signing certificate will be bought (see [installing the unsigned Beta](desktop-app.md#installing-the-unsigned-beta)). macOS is ad-hoc
+signed and not notarised, so Gatekeeper warns. Linux is an Electron AppImage
+and a .deb. None of the three is qualified on real hardware, and the gaming
+integration is Windows only. The Tauri host on Linux is not built. Everything
+below about the signed bundle, the security floor and updates applies to all
+three clients.
 
 ### Windows
 
@@ -273,8 +270,8 @@ The remaining fixes and acceptance work follow:
    surfaces refuse one. The check uses a synthetic capture device and does
    not click the prompt. A human prompt, a physical microphone or camera,
    display capture, sealed media in WebView2 on real Windows hardware and a signed installer
-   remain outstanding (desktop = Windows Beta, unsigned, SmartScreen warns). Desktop builds
-   for macOS and Linux are paused and have no hardware qualification either.
+   remain outstanding (desktop = Beta, unsigned; Windows SmartScreen warns, macOS Gatekeeper warns). Desktop builds
+   for macOS and Linux are published and have no hardware qualification either.
 2. Chat messages and attachments stay readable by the server and are not deleted by age (unless per-channel auto-delete is configured). Sealed media is verified in Chromium, WebKit and Firefox (see [Browsers](#browsers)), and in Chromium for calls between current and one-release-older tabs. WebKit occasionally refuses to clone the media key message (`web/src/lib/media/guard.ts` retries once; if the retry fails the line stays keyless until the next key, the call no longer aborts; seen on macOS WebKit CI runners, not verified on real Safari devices). The e2e WebKit and Firefox jobs use one retry and are not required checks. Sealed media in WebView2 is not verified on real Windows hardware, no real iOS/Android testing exists, and no external security audit has reviewed the app.
 3. Capacity: [`make load-test`](../loadtest/README.md) is reproducible (smoke, the 100-member `full` profile, join and reload stall checks, packet loss and jitter on the lightweight viewers, a two-hour `long` profile). On a single machine `make load-test full` is not met: it misses its gap and heap thresholds while all 84 viewers stay connected, so what remains is recording results on dedicated hardware with more real decrypting viewers ([capacity notes](architecture.md#capacity)). A viewer's bad reports move only that viewer to a lower screen layer (`TestOneViewersTroubleLeavesTheOtherOnTheHighLayer`); voice forwarding does not follow screen layers. The additional 250-endpoint target is deferred.
 4. Independent operation. `main` is protected by a ruleset (pull request required, CI and CodeQL checks must pass, squash merge only). Review approvals are not required. Dependency advisories remain part of release checks; a green build does not mean zero risk.
