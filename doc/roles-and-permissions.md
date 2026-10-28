@@ -200,10 +200,10 @@ category never turns its channels public.
   moving a channel between categories that have overwrites, needs sight of
   every channel it affects (moving: the Administrator permission).
 - Removing a member from a Talk needs *Disconnect members* and *View channels*
-  in that Talk; a Talk you may not moderate answers like no Talk at all.
-  *Disconnect members* also opens the admin area, so it has to be granted
-  server-wide first: an overwrite can withhold it in one Talk, but cannot
-  grant it to someone who does not hold it server-wide.
+  in that Talk, from a server-wide role grant or from an overwrite on the Talk
+  or its category (a deny withholds it there); a Talk you may not moderate
+  answers like no Talk at all. The route is
+  `POST /api/channels/{id}/voice/{userID}/disconnect`.
 - Reordering only moves roles that are below your highest role, to places
   below it.
 - Moderating a member (disable, enable, end sessions, edit the status line,

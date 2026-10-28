@@ -1,16 +1,12 @@
 package auth
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 // listUsers handles GET /api/admin/users.
@@ -221,80 +217,6 @@ func (h *Handler) setUserPassword(w http.ResponseWriter, r *http.Request) error 
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
-}
-
-// kickUser handles POST /api/admin/users/{id}/kick.
-//
-// @Summary Remove a user from voice
-// @Description 400 when the user is not in a Talk the caller may moderate (View channels and Disconnect members in that Talk; a Talk they may not moderate answers the same). Requires the Disconnect members permission (403 otherwise); members whose highest role is not below the caller's cannot be targeted, and the Owner cannot be removed (400).
-// @ID kickUserFromVoice
-// @Tags Admin
-// @Produce json
-// @Security cookieAuth
-// @Param id path string true "User ID." Format(uuid)
-// @Success 204 "Success, no content."
-// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
-// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Disconnect members permission, or the member's highest role is not below yours, or cross-origin request rejected."
-// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
-// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
-// @Header 429 {integer} Retry-After "Seconds until the client may retry."
-// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
-// @Router /api/admin/users/{id}/kick [post]
-func (h *Handler) kickUser(w http.ResponseWriter, r *http.Request) error {
-	id, err := httpx.PathUUID(r, "id")
-	if err != nil {
-		return err
-	}
-	// The target check and the kick run under the permission lock, like every
-	// other moderation action, so a role change cannot slip in between.
-	kicked := false
-	err = h.moderated(r, id, func(db.Querier) (err error) {
-		kicked, err = h.kickUserFromVoice(r, id)
-		return err
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return httpx.ErrNotFound("user not found")
-	}
-	if err != nil {
-		return err
-	}
-	if !kicked {
-		return httpx.ErrInvalidInput("user is not in a Talk")
-	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
-}
-
-func (h *Handler) kickUserFromVoice(r *http.Request, id uuid.UUID) (bool, error) {
-	if h.Live == nil {
-		return false, nil
-	}
-	actor := UserFrom(r.Context()).Subject()
-	kicked := false
-	for _, ch := range h.Live.VoiceChannels(id) {
-		allowed, err := h.canModerateVoiceChannel(r, actor, ch)
-		if err != nil {
-			return false, err
-		}
-		if !allowed {
-			continue
-		}
-		h.Live.KickFromChannel(id, ch)
-		kicked = true
-	}
-	return kicked, nil
-}
-
-func (h *Handler) canModerateVoiceChannel(r *http.Request, actor perm.Subject, ch uuid.UUID) (bool, error) {
-	err := h.Perms.RequireChannel(r.Context(), actor, ch, perm.ViewChannel|perm.DisconnectMembers)
-	if err == nil {
-		return true, nil
-	}
-	if _, refused := httpx.AsAPIError(err); !refused {
-		return false, err
-	}
-	return false, nil
 }
 
 // setUserStatus lets an admin edit or clear any member's status line.
