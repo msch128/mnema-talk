@@ -1,0 +1,21 @@
+internal/updaterd/run.go
+  s_068f95aa8cfec8::t_f3e1e151666396 138,140,151-158
+internal/webbundle/cli.go
+  s_068f95aa8cfec8::t_ae2af1eea2e037 196-198
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "25b991d26ac44447fbddcc8d4024277e2978f354",
+  "prompts": {},
+  "sessions": {
+    "s_068f95aa8cfec8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1c23b4fb9ef54765",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
