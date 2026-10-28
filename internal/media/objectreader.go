@@ -13,26 +13,29 @@ import (
 // objectReader is an io.ReadSeeker over a stored object for http.ServeContent.
 // Seeking is free; the object is fetched from the current offset on the next
 // Read, so a Range request downloads only the requested part from storage.
+// An open body survives seeks away and back (http.ServeContent measures the
+// size with Seek(0, End) and Seek(0, Start) before it reads).
 type objectReader struct {
 	ctx   context.Context
 	store Store
 	key   string
 	size  int64
 
-	off  int64
-	body io.ReadCloser
+	off     int64 // logical position
+	body    io.ReadCloser
+	bodyOff int64 // position of body, meaningful while body != nil
 }
 
 // open fetches the object from offset now, before any response header is
 // written, so a missing object becomes an error response instead of a 200
-// with a truncated body. A later Seek to the same offset keeps the body.
+// with a truncated body. A Seek away and back to the same offset keeps the body.
 func (o *objectReader) open(offset int64) error {
 	_ = o.Close()
 	body, err := o.store.GetObjectFrom(o.ctx, o.key, offset)
 	if err != nil {
 		return err
 	}
-	o.off, o.body = offset, body
+	o.off, o.body, o.bodyOff = offset, body, offset
 	return nil
 }
 
@@ -40,15 +43,19 @@ func (o *objectReader) Read(p []byte) (int, error) {
 	if o.off >= o.size {
 		return 0, io.EOF
 	}
+	if o.body != nil && o.bodyOff != o.off {
+		_ = o.Close()
+	}
 	if o.body == nil {
 		body, err := o.store.GetObjectFrom(o.ctx, o.key, o.off)
 		if err != nil {
 			return 0, err
 		}
-		o.body = body
+		o.body, o.bodyOff = body, o.off
 	}
 	n, err := o.body.Read(p)
 	o.off += int64(n)
+	o.bodyOff += int64(n)
 	return n, err
 }
 
@@ -67,10 +74,7 @@ func (o *objectReader) Seek(offset int64, whence int) (int64, error) {
 	if abs < 0 {
 		return 0, errors.New("objectReader: negative position")
 	}
-	if abs != o.off {
-		_ = o.Close()
-		o.off = abs
-	}
+	o.off = abs
 	return abs, nil
 }
 

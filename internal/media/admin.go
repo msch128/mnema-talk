@@ -103,18 +103,26 @@ func DeleteMedia(ctx context.Context, p *db.Pool, store Store, id uuid.UUID) err
 // per-request maximum for DeleteObjects.
 const pruneBatch = 1000
 
+// pruneAbortAfter is how many keys in a row may fail the single deletes of a
+// failed batch before the failure counts as systemic (storage down) instead
+// of bad keys, and the run stops.
+const pruneAbortAfter = 10
+
 // PruneOlderThan deletes chat attachments older than days. Avatars are never
 // pruned: they are still in use however old they are. It works in batches:
 // each batch's rows are marked deleted right after its objects are gone, so a
 // failure part-way leaves no row pointing at a deleted object, and the
-// candidates are paged instead of loaded all at once.
+// candidates are paged instead of loaded all at once. A key storage refuses
+// to delete is skipped for the rest of the run, so it cannot block the rows
+// behind it; the run then ends with an error naming how many were skipped.
 func PruneOlderThan(ctx context.Context, p *db.Pool, store Store, days int) (int, error) {
 	if days < 1 {
 		return 0, httpx.ErrInvalidInput("days must be at least 1")
 	}
 	total := 0
+	skip := []uuid.UUID{}
 	for {
-		deleted, hasMore, err := pruneNextBatch(ctx, p, store, days)
+		deleted, hasMore, err := pruneNextBatch(ctx, p, store, days, &skip)
 		total += deleted
 		if err != nil {
 			return total, err
@@ -126,32 +134,76 @@ func PruneOlderThan(ctx context.Context, p *db.Pool, store Store, days int) (int
 	if total > 0 {
 		slog.Info("media pruned", "count", total, "older_than_days", days)
 	}
+	if len(skip) > 0 {
+		return total, fmt.Errorf("%d media objects could not be deleted and were skipped", len(skip))
+	}
 	return total, nil
 }
 
-func pruneNextBatch(ctx context.Context, p *db.Pool, store Store, days int) (int, bool, error) {
-	ids, keys, err := prunable(ctx, p, days)
+// pruneNextBatch removes the next batch of old attachments. Ids in skip are
+// left out; keys that fail individually are appended to it.
+func pruneNextBatch(ctx context.Context, p *db.Pool, store Store, days int, skip *[]uuid.UUID) (int, bool, error) {
+	ids, keys, err := prunable(ctx, p, days, *skip)
 	if err != nil || len(keys) == 0 {
 		return 0, false, err
 	}
-	if err := store.DeleteBatch(ctx, keys); err != nil {
-		return 0, false, fmt.Errorf("delete objects: %w", err)
+	fetched := len(keys)
+	if batchErr := store.DeleteBatch(ctx, keys); batchErr != nil {
+		// One bad key fails the whole request: retry key by key to find out
+		// which ones, and carry on with the rest.
+		var failed []uuid.UUID
+		ids, keys, failed = deleteEach(ctx, store, ids, keys)
+		if ctx.Err() != nil || (len(keys) == 0 && len(failed) >= pruneAbortAfter) {
+			return 0, false, fmt.Errorf("delete objects: %w", batchErr)
+		}
+		if len(failed) > 0 {
+			slog.Warn("media objects could not be deleted", "count", len(failed), "err", batchErr)
+		}
+		*skip = append(*skip, failed...)
 	}
-	if _, err := p.Exec(ctx, `UPDATE media SET is_deleted = TRUE WHERE id = ANY($1)`, ids); err != nil {
-		return 0, false, fmt.Errorf("mark pruned media: %w", err)
+	if len(ids) > 0 {
+		if _, err := p.Exec(ctx, `UPDATE media SET is_deleted = TRUE WHERE id = ANY($1)`, ids); err != nil {
+			return 0, false, fmt.Errorf("mark pruned media: %w", err)
+		}
 	}
-	return len(keys), len(keys) >= pruneBatch, nil
+	return len(keys), fetched >= pruneBatch, nil
 }
 
-// prunable returns the next batch of attachments older than days.
-func prunable(ctx context.Context, p *db.Pool, days int) ([]uuid.UUID, []string, error) {
+// deleteEach deletes the objects one by one and returns the ids and keys that
+// are gone and the ids that failed. It gives up after pruneAbortAfter failures
+// in a row, counting the keys it did not try as failed.
+func deleteEach(ctx context.Context, store Store, ids []uuid.UUID, keys []string) ([]uuid.UUID, []string, []uuid.UUID) {
+	var doneIDs, failed []uuid.UUID
+	var doneKeys []string
+	streak := 0
+	for i, key := range keys {
+		if ctx.Err() != nil || streak >= pruneAbortAfter {
+			failed = append(failed, ids[i:]...)
+			break
+		}
+		if err := store.Delete(ctx, key); err != nil {
+			failed = append(failed, ids[i])
+			streak++
+			continue
+		}
+		streak = 0
+		doneIDs = append(doneIDs, ids[i])
+		doneKeys = append(doneKeys, key)
+	}
+	return doneIDs, doneKeys, failed
+}
+
+// prunable returns the next batch of attachments older than days, without
+// the ids in skip.
+func prunable(ctx context.Context, p *db.Pool, days int, skip []uuid.UUID) ([]uuid.UUID, []string, error) {
 	rows, err := p.Query(ctx, `
 		SELECT id, s3_key FROM media
 		WHERE created_at < NOW() - make_interval(days => $1)
 		  AND NOT is_deleted
 		  AND message_id IS NOT NULL
+		  AND id <> ALL($3)
 		ORDER BY created_at
-		LIMIT $2`, days, pruneBatch)
+		LIMIT $2`, days, pruneBatch, skip)
 	if err != nil {
 		return nil, nil, fmt.Errorf("query prunable media: %w", err)
 	}

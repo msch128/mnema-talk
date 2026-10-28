@@ -28,6 +28,8 @@ func TestReconcileMIME(t *testing.T) {
 		{"svg is accepted (download-only)", "image/svg+xml", svgBytes, "image/svg+xml", false},
 		{"plain text", "text/plain", textBytes, "text/plain", false},
 		{"text claiming pdf", "application/pdf", textBytes, "", true},
+		{"text claiming audio/ogg", "audio/ogg", textBytes, "", true},
+		{"text claiming application/ogg", "application/ogg", textBytes, "", true},
 		{"unlisted declared type", "application/x-msdownload", textBytes, "", true},
 	}
 	for _, tc := range cases {
@@ -77,5 +79,12 @@ func TestDeclaredMIMEFallsBackToExtension(t *testing.T) {
 	}
 	if got := declaredMIME("", "noext"); got != "application/octet-stream" {
 		t.Errorf("got %q", got)
+	}
+}
+
+func TestImageOnlyErrorDoesNotNameAvatars(t *testing.T) {
+	_, err := SniffImage("application/pdf", "banner.pdf", []byte("%PDF-1.4"))
+	if err == nil || strings.Contains(err.Error(), "avatar") {
+		t.Fatalf("err = %v, want a neutral picture message", err)
 	}
 }

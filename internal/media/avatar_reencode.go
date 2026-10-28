@@ -132,7 +132,7 @@ func (h *Handler) removeUnreadableAvatar(ctx context.Context, a storedAvatar, re
 		return err
 	}
 	mediaID := a.mediaID
-	h.deletePreviousAvatar(ctx, &mediaID)
+	h.deletePreviousImage(ctx, &mediaID)
 	h.Audit.RecordOrLog(ctx, audit.Entry{
 		Action: "media.avatar_removed", TargetType: "user", TargetID: a.userID.String(),
 		Details: map[string]any{"reason": "the stored avatar could not be re-encoded without its metadata: " + reason.Error()},
@@ -174,7 +174,7 @@ func (h *Handler) swapAvatar(ctx context.Context, a storedAvatar, pic *imgproc.P
 		_ = h.Store.Delete(context.WithoutCancel(ctx), newKey)
 		return fmt.Errorf("record avatar: %w", err)
 	}
-	h.deletePreviousAvatar(ctx, previous)
+	h.deletePreviousImage(ctx, previous)
 	h.announceUser(ctx, a.userID)
 	return nil
 }
