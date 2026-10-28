@@ -123,7 +123,23 @@ func (c *Config) validateLimits() error {
 	if err := c.validatePush(); err != nil {
 		return err
 	}
+	if err := validateAllowedOrigins(c.AllowedOrigins); err != nil {
+		return err
+	}
 	return validateTrustedProxies(c.TrustedProxies)
+}
+
+// validateAllowedOrigins requires every CORS_ALLOWED_ORIGINS entry to be a
+// bare http(s) origin. Anything else never equals a browser Origin header, so
+// cross-origin and WebSocket checks would fail without a hint at startup.
+func validateAllowedOrigins(origins []string) error {
+	for _, o := range origins {
+		u, ok := parseAbsoluteHTTP(o)
+		if !ok || (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.Fragment != "" || u.User != nil {
+			return fmt.Errorf("CORS_ALLOWED_ORIGINS entries must be origins like https://chat.example.com (scheme and host, no path), got %q", o)
+		}
+	}
+	return nil
 }
 
 // validatePush checks the Web Push settings.

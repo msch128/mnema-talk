@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"image"
-	"image/color"
 	"image/draw"
 	"image/gif"
 	"image/png"
@@ -15,7 +14,6 @@ import (
 // Frame is one complete picture of an animation, drawn onto the full canvas.
 type Frame struct {
 	Img *image.NRGBA
-	Pal color.Palette
 }
 
 // EncodePNG writes img as a PNG with the best compression.
@@ -46,7 +44,7 @@ func ComposeGIF(g *gif.GIF, cfg image.Config, shape func(image.Image) *image.NRG
 			copy(saved.Pix, canvas.Pix)
 		}
 		draw.Draw(canvas, frame.Bounds(), frame, frame.Bounds().Min, draw.Over)
-		out = append(out, Frame{Img: shape(canvas), Pal: frame.Palette})
+		out = append(out, Frame{Img: shape(canvas)})
 		switch disposal {
 		case gif.DisposalBackground:
 			draw.Draw(canvas, frame.Bounds(), image.Transparent, image.Point{}, draw.Src)
@@ -57,28 +55,15 @@ func ComposeGIF(g *gif.GIF, cfg image.Config, shape func(image.Image) *image.NRG
 	return out
 }
 
-// withTransparency makes sure the palette can draw a see-through pixel.
-func withTransparency(p color.Palette) color.Palette {
-	for _, c := range p {
-		if _, _, _, a := c.RGBA(); a == 0 {
-			return p
-		}
-	}
-	out := append(color.Palette(nil), p...)
-	if len(out) < 256 {
-		return append(out, color.Transparent)
-	}
-	out[len(out)-1] = color.Transparent
-	return out
-}
-
 // EncodeGIF writes frames as a new animation with the timing and loop count
-// of the original g.
+// of the original g. Every frame gets a palette of its own colours: the
+// composed canvas mixes pixels from earlier frames and scaling blends new
+// colours, so the source frame's palette would not fit.
 func EncodeGIF(g *gif.GIF, frames []Frame) ([]byte, error) {
 	b := frames[0].Img.Bounds()
 	res := &gif.GIF{LoopCount: g.LoopCount, Config: image.Config{Width: b.Dx(), Height: b.Dy()}}
 	for i, f := range frames {
-		p := image.NewPaletted(b, withTransparency(f.Pal))
+		p := image.NewPaletted(b, adaptivePalette(f.Img))
 		xdraw.FloydSteinberg.Draw(p, b, f.Img, b.Min)
 		res.Image = append(res.Image, p)
 		res.Delay = append(res.Delay, g.Delay[i])

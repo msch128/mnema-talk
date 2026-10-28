@@ -456,14 +456,43 @@ func TestBindAddrDefaultsAndDevelopmentRule(t *testing.T) {
 			t.Errorf("development must accept BIND_ADDR=%s: %v", addr, err)
 		}
 	}
-	m := base()
-	m["APP_ENV"] = "test"
-	if cfg, err := FromEnv(lookup(m)); err != nil || cfg.BindAddr != "0.0.0.0" {
-		t.Errorf("non-development default must be 0.0.0.0, got %q %v", cfg.BindAddr, err)
+	for _, appEnv := range []string{"test", "dev"} {
+		m := base()
+		m["APP_ENV"] = appEnv
+		if cfg, err := FromEnv(lookup(m)); err != nil || cfg.BindAddr != "127.0.0.1" {
+			t.Errorf("APP_ENV=%s default must be loopback, got %q %v", appEnv, cfg.BindAddr, err)
+		}
+		m["BIND_ADDR"] = "0.0.0.0"
+		if _, err := FromEnv(lookup(m)); err == nil || !strings.Contains(err.Error(), "BIND_ADDR") {
+			t.Errorf("APP_ENV=%s must refuse a wildcard listener, got %v", appEnv, err)
+		}
 	}
-	m["BIND_ADDR"] = "0.0.0.0"
-	if _, err := FromEnv(lookup(m)); err != nil {
-		t.Errorf("explicit wildcard is fine outside development: %v", err)
+	env := prodEnv()
+	if cfg, err := FromEnv(lookup(env)); err != nil || cfg.BindAddr != "0.0.0.0" {
+		t.Errorf("production default must be 0.0.0.0, got %v", err)
+	}
+}
+
+func TestBroadTrustedProxiesCoversIPv4MappedRange(t *testing.T) {
+	c := &Config{TrustedProxies: []string{"::ffff:0:0/96", "0::ffff:0.0.0.0/96", "::ffff:10.0.0.0/104", "::ffff:10.0.0.0/120", "::ffff:10.0.0.5/128"}}
+	got := strings.Join(c.BroadTrustedProxies(), ",")
+	if got != "::ffff:0:0/96,0::ffff:0.0.0.0/96,::ffff:10.0.0.0/104" {
+		t.Fatalf("broad = %q", got)
+	}
+}
+
+func TestCORSAllowedOriginsAreValidated(t *testing.T) {
+	for _, bad := range []string{"chat.example.com", "https://chat.example.com/app", "https://chat.example.com?x=1", "ftp://chat.example.com", "https://a.example.com,chat.example.com"} {
+		env := base()
+		env["CORS_ALLOWED_ORIGINS"] = bad
+		if _, err := FromEnv(lookup(env)); err == nil || !strings.Contains(err.Error(), "CORS_ALLOWED_ORIGINS") {
+			t.Errorf("CORS_ALLOWED_ORIGINS=%q accepted: %v", bad, err)
+		}
+	}
+	env := base()
+	env["CORS_ALLOWED_ORIGINS"] = "https://chat.example.com/, http://localhost:3000"
+	if _, err := FromEnv(lookup(env)); err != nil {
+		t.Fatalf("valid origins refused: %v", err)
 	}
 }
 

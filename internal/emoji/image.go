@@ -28,11 +28,6 @@ const (
 	// maxSourceEdge bounds the canvas before anything is decoded, so a small
 	// file cannot ask for gigabytes of pixels.
 	maxSourceEdge = 1024
-	// maxFrames bounds an animation; counted before the frames are decoded.
-	maxFrames = 100
-	// maxAnimationPixels bounds canvas area times frames, which is what the
-	// decoder and the redraw hold in memory; checked before any frame is decoded.
-	maxAnimationPixels = 16 << 20
 )
 
 // Content types the stored result can have.
@@ -85,23 +80,14 @@ func redraw(data []byte) (*Image, error) {
 		return processStatic(data, png.DecodeConfig, png.Decode)
 	case bytes.HasPrefix(data, []byte("GIF87a")), bytes.HasPrefix(data, []byte("GIF89a")):
 		return processGIF(data)
-	case isWebP(data):
-		if isAnimatedWebP(data) {
+	case imgproc.IsWebP(data):
+		if imgproc.IsAnimatedWebP(data) {
 			return nil, reject("animated WebP is not supported, use a GIF")
 		}
 		return processStatic(data, webp.DecodeConfig, webp.Decode)
 	default:
 		return nil, reject("only PNG, GIF and WebP images are accepted")
 	}
-}
-
-func isWebP(data []byte) bool {
-	return len(data) >= 12 && string(data[:4]) == "RIFF" && string(data[8:12]) == "WEBP"
-}
-
-// isAnimatedWebP reads the animation flag of the extended header (VP8X).
-func isAnimatedWebP(data []byte) bool {
-	return len(data) >= 21 && string(data[12:16]) == "VP8X" && data[20]&0x02 != 0
 }
 
 func checkCanvas(cfg image.Config) error {
@@ -157,23 +143,9 @@ func processStatic(data []byte, config func(io.Reader) (image.Config, error), de
 // processGIF redraws every frame onto the full canvas (honouring disposal),
 // shrinks it and writes a new GIF. A single-frame GIF becomes a PNG.
 func processGIF(data []byte) (*Image, error) {
-	cfg, err := gif.DecodeConfig(bytes.NewReader(data))
+	g, cfg, err := imgproc.DecodeGIF(data, checkCanvas, reject)
 	if err != nil {
-		return nil, reject("the image cannot be read")
-	}
-	if err := checkCanvas(cfg); err != nil {
 		return nil, err
-	}
-	n := imgproc.GIFFrames(data, maxFrames)
-	if n < 1 || n > maxFrames {
-		return nil, reject("an animation may have 1 to %d frames", maxFrames)
-	}
-	if cfg.Width*cfg.Height*n > maxAnimationPixels {
-		return nil, reject("the animation is too large: canvas size times frames may not exceed %d million pixels", maxAnimationPixels>>20)
-	}
-	g, err := gif.DecodeAll(bytes.NewReader(data))
-	if err != nil || len(g.Image) == 0 {
-		return nil, reject("the image cannot be read")
 	}
 	frames := imgproc.ComposeGIF(g, cfg, func(src image.Image) *image.NRGBA { return scaled(src) })
 	if len(frames) == 1 {

@@ -3,9 +3,11 @@ package imageverify_test
 import (
 	"context"
 	"errors"
+	"net/http"
 	"strings"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/msch128/mnema-talk/internal/imageverify"
 	"github.com/sigstore/sigstore-go/pkg/root"
 )
@@ -157,8 +159,12 @@ func TestPolicyValidation(t *testing.T) {
 		"no namespace":       func(p *imageverify.Policy) { p.Repository = "mnema-talk" },
 		"empty issuer":       func(p *imageverify.Policy) { p.Issuer = "" },
 		"unanchored pattern": func(p *imageverify.Policy) { p.IdentityRegexp = "release.yml" },
-		"broken pattern":     func(p *imageverify.Policy) { p.IdentityRegexp = "^(+$" },
-		"plain http source":  func(p *imageverify.Policy) { p.Source = "http://example.com" },
+		"top-level alternation": func(p *imageverify.Policy) {
+			p.IdentityRegexp = `^https://github\.com/msch128/.*@refs/heads/main|.*evil$`
+		},
+		"multiline anchors": func(p *imageverify.Policy) { p.IdentityRegexp = `(?m)^release\.yml$` },
+		"broken pattern":    func(p *imageverify.Policy) { p.IdentityRegexp = "^(+$" },
+		"plain http source": func(p *imageverify.Policy) { p.Source = "http://example.com" },
 	} {
 		p := good
 		change(&p)
@@ -171,5 +177,47 @@ func TestPolicyValidation(t *testing.T) {
 	}
 	if _, err := imageverify.New(good, nil); err == nil {
 		t.Error("New without a trust source must fail")
+	}
+}
+
+func TestPolicyAcceptsAnchoredAlternationInAGroup(t *testing.T) {
+	p := imageverify.DefaultPolicy()
+	p.IdentityRegexp = `^(?:https://github\.com/msch128/a|https://github\.com/msch128/b)$`
+	if err := p.Validate(); err != nil {
+		t.Fatalf("a grouped alternation is anchored as a whole: %v", err)
+	}
+}
+
+// failBlobs makes every blob download fail, like a registry outage while the
+// signature bundle is read.
+type failBlobs struct{ next http.RoundTripper }
+
+func (f failBlobs) RoundTrip(r *http.Request) (*http.Response, error) {
+	if strings.Contains(r.URL.Path, "/blobs/") {
+		return nil, errors.New("connection reset")
+	}
+	return f.next.RoundTrip(r)
+}
+
+func TestVerifyReportsRegistryFailuresAsUnavailableNotUntrusted(t *testing.T) {
+	f := newFixture(t)
+	rel := f.Push("1.0")
+	f.Sign(rel, Identity, rel.Digest)
+	v := f.VerifierFor(f.Policy(), f.Trust(), imageverify.WithRemoteOptions(remote.WithTransport(failBlobs{http.DefaultTransport})))
+	_, err := v.Verify(context.Background(), f.Repo+":1.0")
+	if err == nil || errors.Is(err, imageverify.ErrUntrusted) {
+		t.Fatalf("err = %v, want a failure that is not a verdict on the image", err)
+	}
+}
+
+func TestVerifyKeepsTheRealSignatureFailureBehindUnrelatedReferrers(t *testing.T) {
+	f := newFixture(t)
+	rel := f.Push("1.0")
+	f.Sign(rel, "https://github.com/msch128/mnema-talk/.github/workflows/ci.yml@refs/heads/main", rel.Digest)
+	f.Attach(rel, []byte("{}"), "application/json")
+	expectUntrusted(t, f, "1.0", "expected SAN value to match regex")
+	_, err := verifyTag(f, "1.0")
+	if strings.Contains(err.Error(), "\n") {
+		t.Fatalf("the refusal must stay on one log line: %q", err)
 	}
 }

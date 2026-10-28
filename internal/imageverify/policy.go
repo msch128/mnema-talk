@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"regexp/syntax"
 	"strings"
 )
 
@@ -69,14 +70,30 @@ func (p Policy) Validate() error {
 	if p.Issuer == "" {
 		return errors.New("the certificate issuer must be set")
 	}
-	if !strings.HasPrefix(p.IdentityRegexp, "^") || !strings.HasSuffix(p.IdentityRegexp, "$") {
-		return errors.New("the identity pattern must be anchored with ^ and $")
-	}
-	if _, err := regexp.Compile(p.IdentityRegexp); err != nil {
-		return fmt.Errorf("identity pattern: %w", err)
+	if err := validateIdentity(p.IdentityRegexp); err != nil {
+		return err
 	}
 	if !strings.HasPrefix(p.Source, "https://") {
 		return errors.New("the source must be an https URL")
+	}
+	return nil
+}
+
+// validateIdentity requires the pattern to be anchored as a whole: a
+// sequence that starts with ^ and ends with $. Checking the first and last
+// character is not enough, because "^a|b$" is two alternatives, each
+// anchored on one side only.
+func validateIdentity(pattern string) error {
+	re, err := syntax.Parse(pattern, syntax.Perl)
+	if err != nil {
+		return fmt.Errorf("identity pattern: %w", err)
+	}
+	if _, err := regexp.Compile(pattern); err != nil {
+		return fmt.Errorf("identity pattern: %w", err)
+	}
+	if re.Op != syntax.OpConcat || len(re.Sub) < 2 ||
+		re.Sub[0].Op != syntax.OpBeginText || re.Sub[len(re.Sub)-1].Op != syntax.OpEndText {
+		return errors.New("the identity pattern must be anchored as a whole with ^ and $ (wrap alternatives in a group)")
 	}
 	return nil
 }
