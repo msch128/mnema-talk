@@ -1,0 +1,37 @@
+AGENTS.md
+  s_19ca66a63b57e6::t_ea2f85fe2bca65 87
+internal/ws/budget.go
+  s_19ca66a63b57e6::t_5ffbb475b60ace 33-37,67,73-87,92,94-95,110,112,114
+internal/ws/budget_test.go
+  s_19ca66a63b57e6::t_04d2fbc7163174 118-133
+internal/ws/handle.go
+  s_19ca66a63b57e6::t_c039061e957e63 198
+internal/ws/layers.go
+  s_19ca66a63b57e6::t_3f52bf11602b42 69-70
+internal/ws/lifecycle_pumps.go
+  s_19ca66a63b57e6::t_a404776111a15a 48,82
+internal/ws/native_lease.go
+  s_19ca66a63b57e6::t_6d3adc4b33f39b 158,160,282-288
+internal/ws/native_metadata_admission.go
+  s_19ca66a63b57e6::t_9ed56ae56ae643 69-72,75,113-114,129-131,240-242
+internal/ws/perms.go
+  s_19ca66a63b57e6::t_fc0836f7109178 163-164,281
+internal/ws/voicetime_integration_test.go
+  s_19ca66a63b57e6::t_af34df313a52f8 88-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "070edc306f760454511df406ef3a8c470a4758f8",
+  "prompts": {},
+  "sessions": {
+    "s_19ca66a63b57e6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa4cb870620abc635",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
