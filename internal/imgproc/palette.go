@@ -9,12 +9,16 @@ import (
 // maxOpaqueColours leaves one palette slot for the see-through pixel.
 const maxOpaqueColours = 255
 
-// adaptivePalette builds the palette of one composed frame by median cut over
-// a histogram of its pixels (5 bits per channel; the bins keep the true mean
-// colour), so a frame is drawn in its own colours rather than in whatever
-// palette the source frame happened to carry. The result always ends with a
-// fully transparent entry.
-func adaptivePalette(img *image.NRGBA) color.Palette {
+// colourEntry is the mean colour of the opaque pixels of one 5-bit-per-channel
+// histogram cell, and how many pixels fell into it.
+type colourEntry struct {
+	n       int
+	r, g, b float64
+}
+
+// colourEntries buckets the opaque pixels of img into a 5-bit-per-channel
+// histogram and returns the mean colour of every occupied cell.
+func colourEntries(img *image.NRGBA) []colourEntry {
 	type bin struct {
 		n       int
 		r, g, b uint64
@@ -34,19 +38,25 @@ func adaptivePalette(img *image.NRGBA) color.Palette {
 			h.b += uint64(b)
 		}
 	}
-	type entry struct {
-		n       int
-		r, g, b float64 // mean colour
-	}
-	var entries []entry
+	var entries []colourEntry
 	for _, h := range hist {
 		if h.n > 0 {
 			n := float64(h.n)
-			entries = append(entries, entry{h.n, float64(h.r) / n, float64(h.g) / n, float64(h.b) / n})
+			entries = append(entries, colourEntry{h.n, float64(h.r) / n, float64(h.g) / n, float64(h.b) / n})
 		}
 	}
-	channel := func(e entry, c int) float64 { return [3]float64{e.r, e.g, e.b}[c] }
-	boxes := [][]entry{entries}
+	return entries
+}
+
+// adaptivePalette builds the palette of one composed frame by median cut over
+// a histogram of its pixels (5 bits per channel; the bins keep the true mean
+// colour), so a frame is drawn in its own colours rather than in whatever
+// palette the source frame happened to carry. The result always ends with a
+// fully transparent entry.
+func adaptivePalette(img *image.NRGBA) color.Palette {
+	entries := colourEntries(img)
+	channel := func(e colourEntry, c int) float64 { return [3]float64{e.r, e.g, e.b}[c] }
+	boxes := [][]colourEntry{entries}
 	for len(boxes) < maxOpaqueColours {
 		// Split the box that holds the most pixels and can still be split.
 		best, bestN := -1, 0

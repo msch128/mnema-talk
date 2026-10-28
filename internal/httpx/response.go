@@ -176,9 +176,10 @@ func handleWith(h HandlerFunc, write func(http.ResponseWriter, error)) http.Hand
 }
 
 // retryAfterSeconds renders a wait as whole seconds for the Retry-After
-// header, rounded up so a client never retries early.
+// header, rounded up so a client never retries early, and never below one
+// second (callers without a computed wait pass 0).
 func retryAfterSeconds(d time.Duration) string {
-	return strconv.Itoa(int(math.Ceil(d.Seconds())))
+	return strconv.Itoa(max(1, int(math.Ceil(d.Seconds()))))
 }
 
 // NonNil returns s, or an empty slice for nil, so JSON encodes [] rather than null.
