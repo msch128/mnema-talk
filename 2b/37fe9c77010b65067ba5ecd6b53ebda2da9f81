@@ -1,0 +1,21 @@
+internal/s3/s3.go
+  s_d790a4160a95a2::t_0ac612056d8053 26,45,60,63,66,74-80
+internal/s3/s3_test.go
+  s_d790a4160a95a2::t_5725b13c42d050 13,27,29,58,68-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2b37fe9c77010b65067ba5ecd6b53ebda2da9f81",
+  "prompts": {},
+  "sessions": {
+    "s_d790a4160a95a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4cb5f290f8d29e33",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
