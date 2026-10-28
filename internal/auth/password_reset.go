@@ -143,12 +143,14 @@ func (h *Handler) confirmPasswordReset(w http.ResponseWriter, r *http.Request) e
 		setRetryIfBusy(w, err)
 		return err
 	}
-	u, err := GetUser(r.Context(), h.Sessions.DB, id)
-	if err != nil {
-		return err
+	// The new password is stored. A failure of the bookkeeping below must not
+	// turn the answer into an error, or the member retries a spent link.
+	if u, err := GetUser(r.Context(), h.Sessions.DB, id); err != nil {
+		slog.Error("password reset: load user after commit", "user", id, "err", err)
+	} else {
+		h.ClearLoginLockout(u.Username, u.ID)
+		h.auditUser(r.Context(), u, "auth.password_reset_mail")
 	}
-	h.ClearLoginLockout(u.Username, u.ID)
-	h.auditUser(r.Context(), u, "auth.password_reset_mail")
 	if h.Live != nil {
 		h.Live.DisconnectUser(id)
 	}

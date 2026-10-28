@@ -38,11 +38,15 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 	}
 
 	hash, err := hashPasswordCtx(ctx, password)
-	if errors.Is(err, ErrServerBusy) || ctx.Err() != nil {
+	if errors.Is(err, ErrServerBusy) || (err != nil && ctx.Err() != nil) {
 		return nil, err
 	}
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
+	}
+	// Hashing cannot be cancelled: a client that left meanwhile gets no account.
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 
 	var user *User
@@ -141,16 +145,15 @@ func insertInvitedUser(ctx context.Context, tx pgx.Tx, username, displayName, ha
 
 // ChangePassword verifies the current password, stores the new hash and bumps the
 // token version, which signs out every other session. It returns the new version.
+// The write only lands while the password is still the one that was verified: a
+// reset or another change in between answers ErrWrongPassword.
 func ChangePassword(ctx context.Context, p *db.Pool, userID uuid.UUID, current, next string) (int, error) {
 	if err := ValidatePassword(next); err != nil {
 		return 0, err
 	}
 	var hash, role string
-	if err := p.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1`, userID).Scan(&hash); err != nil {
+	if err := p.QueryRow(ctx, `SELECT password_hash, role FROM users WHERE id = $1`, userID).Scan(&hash, &role); err != nil {
 		return 0, fmt.Errorf("load password hash: %w", err)
-	}
-	if err := p.QueryRow(ctx, `SELECT role FROM users WHERE id = $1`, userID).Scan(&role); err != nil {
-		return 0, fmt.Errorf("load role: %w", err)
 	}
 	if err := ValidatePasswordFor(role, next); err != nil {
 		return 0, err
@@ -163,21 +166,35 @@ func ChangePassword(ctx context.Context, p *db.Pool, userID uuid.UUID, current, 
 		return 0, fmt.Errorf("hash password: %w", err)
 	}
 	var tv int
-	err = p.QueryRow(ctx, `
-		UPDATE users SET password_hash = $1, token_version = token_version + 1, updated_at = NOW()
-		WHERE id = $2 RETURNING token_version`, newHash, userID).Scan(&tv)
-	if err != nil {
-		return 0, err
-	}
-	return tv, dropTokens(ctx, p, userID, purposePasswordReset)
+	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		// The hash is compared under the row lock, so two changes that both
+		// verified the same old password cannot both win.
+		tag, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = $1 AND password_hash = $2 FOR UPDATE`, userID, hash)
+		if err != nil {
+			return err
+		}
+		if tag.RowsAffected() == 0 {
+			return ErrWrongPassword
+		}
+		if err := tx.QueryRow(ctx, `
+			UPDATE users SET password_hash = $1, token_version = token_version + 1, updated_at = NOW()
+			WHERE id = $2 RETURNING token_version`, newHash, userID).Scan(&tv); err != nil {
+			return err
+		}
+		return dropTokens(ctx, tx, userID, purposePasswordReset)
+	})
+	return tv, err
 }
 
-// RevokeSessions invalidates every session of userID ("log out everywhere").
+// RevokeSessions invalidates every session of userID ("log out everywhere")
+// and ends its pending password-reset links, in one statement.
 func RevokeSessions(ctx context.Context, p db.Querier, userID uuid.UUID) error {
-	if _, err := p.Exec(ctx, `UPDATE users SET token_version = token_version + 1, updated_at = NOW() WHERE id = $1`, userID); err != nil {
-		return err
-	}
-	return dropTokens(ctx, p, userID, purposePasswordReset)
+	_, err := p.Exec(ctx, `WITH bumped AS (
+			UPDATE users SET token_version = token_version + 1, updated_at = NOW() WHERE id = $1
+		)
+		UPDATE account_tokens SET used_at = NOW()
+		WHERE user_id = $1 AND purpose = $2 AND used_at IS NULL`, userID, purposePasswordReset)
+	return err
 }
 
 // UpdateProfile changes display name and bio.

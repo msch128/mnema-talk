@@ -49,11 +49,19 @@ func (h *Handler) ExpireStatuses(ctx context.Context) {
 		slog.Error("status expiry failed", "err", err)
 		return
 	}
+	// The UPDATE has committed: announce every row that can be read, and say
+	// what could not be, instead of leaving clients with a stale status line.
 	var cleared []User
 	for rows.Next() {
-		if u, err := scanUser(rows); err == nil {
-			cleared = append(cleared, u.Public())
+		u, err := scanUser(rows)
+		if err != nil {
+			slog.Error("status expiry: read cleared user", "err", err)
+			continue
 		}
+		cleared = append(cleared, u.Public())
+	}
+	if err := rows.Err(); err != nil {
+		slog.Error("status expiry: iterate cleared users", "err", err)
 	}
 	rows.Close()
 	for _, u := range cleared {

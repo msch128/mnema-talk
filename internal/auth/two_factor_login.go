@@ -46,9 +46,8 @@ type TwoFactorLoginRequest struct {
 
 // secondFactorNeeded reports whether the account has two-factor sign-in on.
 func (h *Handler) secondFactorNeeded(ctx context.Context, id uuid.UUID) (bool, error) {
-	if h.verify != nil {
-		// Unit tests that replace the credential check have no database either.
-		return false, nil
+	if h.twoFactor != nil {
+		return h.twoFactor(ctx, id)
 	}
 	st, err := h.Sessions.twoFactorState(ctx, h.Sessions.DB, id)
 	return st.Enabled, err
