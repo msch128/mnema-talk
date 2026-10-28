@@ -1,4 +1,4 @@
-package perm
+package perm_test
 
 import (
 	"errors"
@@ -6,10 +6,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	. "github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func TestPendingRulesTakeWhatATimeoutTakes(t *testing.T) {
-	f := NewFixture()
+	f := permtest.NewFixture()
 	ch := f.Channel(uuid.Nil)
 	pending, accepted, stale, owner, bot, admin := uuid.New(), uuid.New(), uuid.New(), uuid.New(), uuid.New(), uuid.New()
 	f.Owner(owner).Bot(bot).Assign(admin, f.Role(5, Administrator))
@@ -40,7 +42,7 @@ func TestPendingRulesTakeWhatATimeoutTakes(t *testing.T) {
 }
 
 func TestNoRulesEnforcesNothing(t *testing.T) {
-	f := NewFixture()
+	f := permtest.NewFixture()
 	ch := f.Channel(uuid.Nil)
 	member := uuid.New()
 	s := f.Rules(0).Snapshot()
@@ -50,11 +52,11 @@ func TestNoRulesEnforcesNothing(t *testing.T) {
 }
 
 func TestDenyNamesTheRulesNotAMissingPermission(t *testing.T) {
-	f := NewFixture()
+	f := permtest.NewFixture()
 	ch := f.Channel(uuid.Nil)
 	pending, plain := uuid.New(), uuid.New()
 	f.Rules(1).AcceptedRules(plain, 1)
-	f.RoleOverwrite(true, ch, f.Snapshot().everyoneID, 0, SendMessages)
+	f.RoleOverwrite(true, ch, f.EveryoneID(), 0, SendMessages)
 	s := f.Snapshot()
 
 	sub := Subject{ID: pending}

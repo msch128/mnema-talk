@@ -1,10 +1,12 @@
-package perm
+package perm_test
 
 import (
 	"encoding/json"
 	"testing"
 
 	"github.com/google/uuid"
+	. "github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func ip(v int) *int { return &v }
@@ -12,7 +14,7 @@ func ip(v int) *int { return &v }
 func TestUploadMBResolution(t *testing.T) {
 	user, owner := uuid.New(), uuid.New()
 	small, big := Subject{ID: user}, Subject{ID: owner, Owner: true}
-	f := NewFixture().Owner(owner)
+	f := permtest.NewFixture().Owner(owner)
 	a, b := f.Role(1, 0), f.Role(2, 0)
 	f.RoleUpload(a, ip(10)).RoleUpload(b, ip(30)).Assign(user, a)
 	s := f.Snapshot()
@@ -69,7 +71,7 @@ func TestOptionalInt(t *testing.T) {
 }
 
 func TestUploadCeilingDefault(t *testing.T) {
-	s := NewService(nil)
+	s := permtest.Unloadable()
 	if s.UploadCeilingMB() != 50 {
 		t.Fatalf("default ceiling %d", s.UploadCeilingMB())
 	}

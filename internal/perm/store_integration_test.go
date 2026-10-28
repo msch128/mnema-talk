@@ -16,6 +16,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
@@ -313,7 +314,7 @@ func TestStoreFailsWhenTheDatabaseDoes(t *testing.T) {
 	if held, err := w.svc.MemberRoles(ctx); err != nil || len(held[w.member.ID]) != 2 || held[w.member.ID][0] != low.ID {
 		t.Fatalf("member roles: %v %v", held, err)
 	}
-	if err := perm.NewService(nil).RequireGlobal(ctx, w.member, perm.ManageRoles); err == nil {
+	if err := permtest.Unloadable().RequireGlobal(ctx, w.member, perm.ManageRoles); err == nil {
 		t.Fatal("an unreadable state must fail the check")
 	}
 

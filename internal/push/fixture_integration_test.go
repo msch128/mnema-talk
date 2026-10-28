@@ -14,6 +14,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
@@ -31,7 +32,7 @@ type member struct {
 type env struct {
 	t        *testing.T
 	pool     *db.Pool
-	perms    *perm.Fixture
+	perms    *permtest.Fixture
 	push     *pushService
 	svc      *Service
 	category uuid.UUID
@@ -45,7 +46,7 @@ func newEnvWith(t *testing.T, status int, burst time.Duration) *env {
 	t.Helper()
 	pool := testutil.DB(t)
 	testutil.Reset(t, pool)
-	f := perm.NewFixture()
+	f := permtest.NewFixture()
 	e := &env{t: t, pool: pool, perms: f, push: newPushService(t, status)}
 	e.category = f.Category()
 	e.general, e.secret = f.Channel(e.category), f.Channel(e.category)
