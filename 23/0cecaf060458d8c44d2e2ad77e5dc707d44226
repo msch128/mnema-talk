@@ -1,0 +1,19 @@
+web/src/stores/reconnectSession.test.ts
+  s_550d6cad46dc06::t_80761a200f5d6d 111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "230cecaf060458d8c44d2e2ad77e5dc707d44226",
+  "prompts": {},
+  "sessions": {
+    "s_550d6cad46dc06": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aeb6b590d10be2dd5",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
