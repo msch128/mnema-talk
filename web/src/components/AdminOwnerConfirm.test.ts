@@ -95,4 +95,14 @@ describe('password set by the Owner', () => {
     expect(w.get('[data-testid="owner-confirm-error"]').text()).toContain('Wrong password.')
     expect(w.emitted('close')).toBeUndefined()
   })
+
+  it('marks the new password field so password managers do not fill the Owner password', async () => {
+    answer(false)
+    const w = mount(AdminResetPasswordDialog, { props: { user: alice } })
+    await flushPromises()
+    const field = w.get('[data-testid="new-password-input"]')
+    expect(field.attributes('autocomplete')).toBe('new-password')
+    expect(w.get(`label[for="${field.attributes('id')}"]`).exists()).toBe(true)
+    expect(w.find('[data-testid="password-toggle"]').exists()).toBe(true)
+  })
 })

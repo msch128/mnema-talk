@@ -1420,6 +1420,7 @@
       "invalid": "Enter a whole number from 1 to {ceiling}."
     },
     "onboarding": {
+      "loadFailed": "Couldn’t load the settings.",
       "hint": "Shown to new members. Once rules exist, members have to accept them before they can post, react, upload or join a Talk. You are never asked.",
       "name": "Community name",
       "namePlaceholder": "Mnema Talk",
@@ -2300,6 +2301,7 @@
     "uploadInherit": "Inherit",
     "uploadHint": "Leave empty to use the global limit. A member gets the highest limit of their roles, never above the server maximum.",
     "uploadInvalid": "Enter a whole number of MB, or leave it empty.",
+    "colorInvalid": "Use a colour like #5fd0b6.",
     "botRoles": "Bot roles",
     "botRoleHint": "Managed role of one bot: it cannot be removed.",
     "botRoleNote": "“{name}” is a bot’s own role. It is created with the bot, follows its name and is deleted with it; only that bot holds it, and it cannot be renamed, given to anyone else, removed from the bot or deleted by hand. You can change its colour and permissions. Nobody can give a bot permissions they lack themselves, and only the Owner can make a bot elevated.",

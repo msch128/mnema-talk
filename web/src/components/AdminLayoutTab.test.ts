@@ -10,6 +10,7 @@ import { categoryFixture, channelFixture, fixtureId, userFixture } from '../test
 import { tree, errors, button } from './adminTestkit.fixture'
 import { useAuthStore } from '../stores/auth'
 import { setLocale } from '../i18n'
+import { useToastStore } from '../stores/toast'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
 vi.mock('../lib/api', async (original) => ({
@@ -329,5 +330,71 @@ describe('layout stale arrow handler', () => {
     await downArrow.trigger('click')
     expect(w.find(`[data-testid="channel-item-${fixtureId(22)}"]`).exists()).toBe(false)
     expect(errors()).toEqual([])
+  })
+
+})
+
+describe('layout save and create races', () => {
+  async function open() {
+    vi.spyOn(useChatStore(), 'fetchChannels').mockResolvedValue(undefined)
+    const calls: { path: string; method?: string }[] = []
+    let release: (() => void) | undefined
+    apiMock.mockImplementation(async (path, options) => {
+      calls.push({ path, method: options?.method })
+      if (path === '/api/channels') return tree()
+      if (path === '/api/admin/categories') {
+        await new Promise<void>((resolve) => { release = resolve })
+        return categoryFixture({ id: fixtureId(99), name: 'New category' })
+      }
+      if (path === '/api/admin/layout') {
+        await new Promise<void>((resolve) => { release = resolve })
+      }
+      return { ok: true }
+    })
+    const w = keep(mount(AdminLayoutTab))
+    await flushPromises()
+    return { w, calls, release: () => release?.() }
+  }
+
+  it('keeps a reorder made while the layout is being saved', async () => {
+    const { w, calls, release } = await open()
+    const item = (id: number) => w.find(`[data-testid="category-item-${fixtureId(id)}"]`)
+    await item(20).find('[data-testid="move-down-category"]').trigger('click')
+    await w.find('[data-testid="save-layout-button"]').trigger('click')
+    await item(20).find('[data-testid="move-up-category"]').trigger('click')
+    release()
+    await flushPromises()
+    expect(calls.filter(c => c.path === '/api/admin/layout')).toHaveLength(1)
+    expect(w.text()).toContain('Unsaved changes')
+    expect(w.findAll('[data-testid^="category-item-"]')[0]!.attributes('data-testid')).toBe(`category-item-${fixtureId(20)}`)
+  })
+
+  it('sends one save for a double click on the banner button', async () => {
+    const { w, calls, release } = await open()
+    await w.find('[data-testid^="category-item-"] [data-testid="move-down-category"]').trigger('click')
+    const banner = w.findAll('button').find(b => b.text() === 'Save layout' && b.classes().includes('btn-primary'))!
+    await banner.trigger('click')
+    await banner.trigger('click')
+    release()
+    await flushPromises()
+    expect(calls.filter(c => c.path === '/api/admin/layout')).toHaveLength(1)
+  })
+
+  it('creates a category once and says it was created', async () => {
+    const { w, calls, release } = await open()
+    await w.find('input[type="text"]').setValue('Fresh')
+    await w.find('input[type="text"]').trigger('keydown', { key: 'Enter' })
+    await w.find('input[type="text"]').trigger('keydown', { key: 'Enter' })
+    release()
+    await flushPromises()
+    expect(calls.filter(c => c.path === '/api/admin/categories' && c.method === 'POST')).toHaveLength(1)
+    expect(useToastStore().toasts.map(x => x.text)).toContain('Category created')
+  })
+
+  it('does not create a category while an IME composition is confirmed with Enter', async () => {
+    const { w, calls } = await open()
+    await w.find('input[type="text"]').setValue('にほ')
+    await w.find('input[type="text"]').trigger('keydown', { key: 'Enter', isComposing: true })
+    expect(calls.filter(c => c.path === '/api/admin/categories')).toHaveLength(0)
   })
 })

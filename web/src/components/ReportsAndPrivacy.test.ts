@@ -149,6 +149,17 @@ describe('AdminReportsTab', () => {
     expect(useToastStore().toasts.map(t => t.text)).toEqual(['offline'])
   })
 
+  it('drops the previous filter reports when switching filters fails to load', async () => {
+    http.handle = () => ({ has_more: false, reports: [report(10)] })
+    const w = mount(AdminReportsTab, { global })
+    await flushPromises()
+    expect(w.findAll('[data-report]')).toHaveLength(1)
+    http.handle = () => { throw new Error('offline') }
+    await w.get('[data-filter="resolved"]').trigger('click')
+    await flushPromises()
+    expect(w.findAll('[data-report]')).toHaveLength(0)
+  })
+
   it('opens a report with the copy of the messages and resolves it with a note', async () => {
     const seen: { url: string; method: string | undefined; json: unknown }[] = []
     http.handle = (url, o) => {
