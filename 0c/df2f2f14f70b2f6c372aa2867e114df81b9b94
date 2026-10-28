@@ -1,0 +1,25 @@
+internal/server/account_email_edges_integration_test.go
+  s_1888f569b71f01::t_3d35aa3b8ee3d7 66-67
+internal/server/bot_status_integration_test.go
+  s_1888f569b71f01::t_644807e6431174 227-229
+internal/server/later_edges_integration_test.go
+  s_1888f569b71f01::t_bd6563a464943e 82-83
+internal/server/media_storage_integration_test.go
+  s_1888f569b71f01::t_2faba724bb420a 56-57,64-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0cdf2f2f14f70b2f6c372aa2867e114df81b9b94",
+  "prompts": {},
+  "sessions": {
+    "s_1888f569b71f01": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aintegrate-server-60fe71aa50757d20",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
