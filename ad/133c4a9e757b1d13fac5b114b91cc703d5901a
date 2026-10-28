@@ -1,0 +1,25 @@
+doc/product-status.md
+  s_791bbb8e901370::t_834be68c5bbf3a 33
+doc/upgrade.md
+  s_791bbb8e901370::t_a9cc4beb068ba5 158
+internal/chat/readstate.go
+  s_791bbb8e901370::t_752ed90eace56d 34-36,41,52-68
+internal/db/migrations/0076_unread_index.sql
+  s_791bbb8e901370::t_94a0d486292412 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ad133c4a9e757b1d13fac5b114b91cc703d5901a",
+  "prompts": {},
+  "sessions": {
+    "s_791bbb8e901370": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-unread-index-26bfc601270d5cb8",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
