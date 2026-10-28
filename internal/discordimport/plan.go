@@ -76,7 +76,7 @@ func (b *builder) roles(src []SrcRole) {
 		if r.Name == "@everyone" {
 			b.everyone = string(r.ID)
 			m := mapBits(r.Permissions.Bits(), perm.All&^perm.Administrator)
-			b.plan.Everyone = EveryoneInfo{PermissionKeys: keys(m.Set), Dropped: nonNil(m.Dropped)}
+			b.plan.Everyone = EveryoneInfo{PermissionKeys: keys(m.Set), Dropped: httpx.NonNil(m.Dropped)}
 			continue
 		}
 		order = append(order, i)
@@ -104,7 +104,7 @@ func (b *builder) role(r SrcRole, taken map[string]bool) PlanRole {
 	return PlanRole{
 		SourceID: string(r.ID), Name: uniqueRoleName(r.Name, taken), SourceName: strings.TrimSpace(r.Name),
 		Color: clampColor(r.Color), Hoist: r.Hoist, Mentionable: r.Mentionable,
-		Permissions: m.Set, PermissionKeys: keys(m.Set), Dropped: nonNil(m.Dropped),
+		Permissions: m.Set, PermissionKeys: keys(m.Set), Dropped: httpx.NonNil(m.Dropped),
 		AdministratorDropped: m.AdministratorDropped,
 	}
 }
@@ -120,13 +120,6 @@ func clampColor(c int) int {
 		return 0
 	}
 	return c
-}
-
-func nonNil(s []string) []string {
-	if s == nil {
-		return []string{}
-	}
-	return s
 }
 
 // cleanName shortens s to max characters and strips what Mnema refuses; an

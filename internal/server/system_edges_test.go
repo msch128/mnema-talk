@@ -19,7 +19,7 @@ import (
 
 func TestPublicConfigurationEmptyListsAndSTUN(t *testing.T) {
 	rec := httptest.NewRecorder()
-	legal(&config.Config{SessionExpiryHours: 25}).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/legal", nil))
+	LegalHandler(&config.Config{SessionExpiryHours: 25}).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/legal", nil))
 	if !strings.Contains(rec.Body.String(), `"stun_servers":[]`) || !strings.Contains(rec.Body.String(), `"session_expiry_days":2`) {
 		t.Fatal(rec.Body.String())
 	}

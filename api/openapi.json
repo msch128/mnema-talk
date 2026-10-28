@@ -7524,6 +7524,10 @@
           },
           "total_bytes": {
             "type": "integer"
+          },
+          "usage_unavailable": {
+            "description": "UsageUnavailable is true when the usage could not be read in time; the\ncounts above are then zero because they are unknown.",
+            "type": "boolean"
           }
         },
         "required": [
@@ -27399,7 +27403,7 @@
     },
     "/api/health": {
       "get": {
-        "description": "Pings the database.",
+        "description": "Pings the database and checks object storage; the result is cached for 2 s.",
         "operationId": "getHealth",
         "responses": {
           "200": {
@@ -27411,16 +27415,6 @@
               }
             },
             "description": "Healthy."
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/httpx.ErrorResponse"
-                }
-              }
-            },
-            "description": "INTERNAL_ERROR: sanitized server failure."
           },
           "503": {
             "content": {

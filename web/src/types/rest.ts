@@ -4444,6 +4444,7 @@ export type ServerStorageHealth = {
   files: number
   reachable: boolean
   total_bytes: number
+  usage_unavailable?: boolean
 }
 
 export function isServerStorageHealth(value: unknown): value is ServerStorageHealth {
@@ -4454,6 +4455,7 @@ export function isServerStorageHealth(value: unknown): value is ServerStorageHea
     && (hasOwn(value, "files") && isInteger(value["files"]))
     && (hasOwn(value, "reachable") && typeof value["reachable"] === 'boolean')
     && (hasOwn(value, "total_bytes") && isInteger(value["total_bytes"]))
+    && (!hasOwn(value, "usage_unavailable") || typeof value["usage_unavailable"] === 'boolean')
 }
 
 export const decodeServerStorageHealth = decoder("server.StorageHealth", isServerStorageHealth)

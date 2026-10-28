@@ -44,11 +44,11 @@ func (c *components) mountAPI(api chi.Router) {
 		httpx.WriteError(w, httpx.NewAPIError(http.StatusMethodNotAllowed, httpx.CodeInvalidInput, "method not allowed"))
 	})
 
-	api.Get("/health", health(newHealthCheck(c.d.DB, c.d.StorageReady, healthCacheTTL), c.d.Version))
+	api.Get("/health", HealthHandler(c.d))
 	if cfg.MetricsToken != "" {
 		api.Get("/metrics", requireBearer(cfg.MetricsToken, metricsHandler(c.opsSrc)))
 	}
-	api.Get("/legal", legal(cfg))
+	api.Get("/legal", LegalHandler(cfg))
 	if cfg.APIDocs {
 		// A page, not JSON: without a session it sends the browser to sign in.
 		api.Get("/docs", apiDocs(c.sessions, web.APIDocsPage()))

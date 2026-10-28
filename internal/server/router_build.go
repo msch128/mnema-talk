@@ -180,7 +180,7 @@ func (c *components) newWebhooks() {
 	// Outgoing webhooks may only reach public addresses (see internal/ssrf).
 	ssrfPolicy := &ssrf.Policy{Allow: c.cfg.WebhookAllowPrivateTargets}
 	c.outgoing = webhook.NewDispatcher(d.DB, ssrf.NewClient(ssrf.NewDialer(ssrfPolicy), 10*time.Second), d.Version)
-	c.hub.Tap = c.outgoing.Observe
+	c.addTap(c.outgoing.Observe)
 	c.hub.Presence = auditPresence(c.ctx, c.auditLog, d.DB)
 	go c.outgoing.Run(c.ctx)
 	c.webhookH = webhook.New(webhook.Handler{DB: d.DB, Events: c.pub, Media: c.mediaH, Perms: c.permSvc, Online: c.hub, PublicURL: c.cfg.PublicURL, Outgoing: c.outgoing, Policy: ssrfPolicy})
@@ -212,26 +212,25 @@ func (c *components) newBots() {
 	// Both the hub and the gateway learn about permission changes, and the
 	// gateway sees every event the hub publishes (as outgoing webhooks do).
 	c.permSvc.SetNotifier(notifiers{hub, gw, eventsNotifier{c}})
-	prevTap := hub.Tap
-	hub.Tap = func(ch uuid.UUID, eventType string, payload any) {
-		if prevTap != nil {
-			prevTap(ch, eventType, payload)
+	c.addTap(gw.Observe)
+}
+
+// addTap chains f after the taps already on the hub, so no component replaces
+// another's tap.
+func (c *components) addTap(f func(ch uuid.UUID, eventType string, payload any)) {
+	prev := c.hub.Tap
+	c.hub.Tap = func(ch uuid.UUID, eventType string, payload any) {
+		if prev != nil {
+			prev(ch, eventType, payload)
 		}
-		gw.Observe(ch, eventType, payload)
+		f(ch, eventType, payload)
 	}
 }
 
 // tapThreadFollows tells open clients which threads they follow after a reply
 // made them follow it (see chat.NewFollowSync).
 func (c *components) tapThreadFollows() {
-	prevTap := c.hub.Tap
-	follows := chat.NewFollowSync(c.ctx, c.d.DB, c.permSvc, c.pub)
-	c.hub.Tap = func(ch uuid.UUID, eventType string, payload any) {
-		if prevTap != nil {
-			prevTap(ch, eventType, payload)
-		}
-		follows(ch, eventType, payload)
-	}
+	c.addTap(chat.NewFollowSync(c.ctx, c.d.DB, c.permSvc, c.pub))
 }
 
 // newPush builds Web Push: the key pair, the sender, the handler for the
@@ -255,13 +254,7 @@ func (c *components) newPush() error {
 			DB: c.d.DB, Perms: c.permSvc, Previews: h.PreviewsAllowed, Burst: c.d.PushBurst,
 			Sender: &push.Sender{Keys: keys, Subject: push.Subject(cfg.PushVAPIDSubject, cfg.PublicURL), HTTP: client},
 		}
-		prevTap := c.hub.Tap
-		c.hub.Tap = func(ch uuid.UUID, eventType string, payload any) {
-			if prevTap != nil {
-				prevTap(ch, eventType, payload)
-			}
-			svc.Observe(ch, eventType, payload)
-		}
+		c.addTap(svc.Observe)
 		c.hub.DMTap = svc.Observe // conversations reach no webhook or bot, only push to their members
 		go svc.Run(c.ctx)
 		h.Keys, h.Service = keys, svc

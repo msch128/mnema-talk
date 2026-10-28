@@ -156,3 +156,11 @@ func Handle(h HandlerFunc) http.HandlerFunc {
 		}
 	}
 }
+
+// NonNil returns s, or an empty slice for nil, so JSON encodes [] rather than null.
+func NonNil[T any](s []T) []T {
+	if s == nil {
+		return []T{}
+	}
+	return s
+}
