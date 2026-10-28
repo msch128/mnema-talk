@@ -1,0 +1,115 @@
+web/src/components/ChatArea.test.ts
+  s_4301fed6e62c09::t_49f89e2af7d46b 712,730
+web/src/components/ChatAreaBoundaries.test.ts
+  s_4301fed6e62c09::t_c7bb3292fa6179 131
+web/src/components/DmPolish.test.ts
+  s_4301fed6e62c09::t_20f5dc7563f273 453
+web/src/components/MentionsInbox.test.ts
+  s_2b1b57aefe26cd::t_8cf5687eeab48a 96-106
+web/src/components/MentionsInbox.vue
+  s_4ac6295b6bd2d2::t_838a622d350403 93
+web/src/components/PushSection.test.ts
+  s_2b1b57aefe26cd::t_ad0665ffdf4b21 115-126
+web/src/composables/appRoutingApply.test.ts
+  s_4301fed6e62c09::t_334ec05c0d039e 120-129
+web/src/composables/appRoutingApply.ts
+  s_2148161d7c98f3::t_e0421e2c990613 76,82,88-89
+web/src/composables/useButtonMenu.test.ts
+  s_4301fed6e62c09::t_568efbc0413140 1-35
+web/src/composables/useButtonMenu.ts
+  s_27bb33a982f856::t_06e9e8cea3cd4b 19-22
+web/src/composables/useComposerAssist.test.ts
+  s_2b1b57aefe26cd::t_91b66c6b81195f 46-57
+web/src/composables/useComposerAssist.ts
+  s_27bb33a982f856::t_7cdf7d11a5e3fc 11,117
+web/src/composables/useComposerKeys.test.ts
+  s_2b1b57aefe26cd::t_14c76dda59aa59 27-36
+web/src/composables/useComposerKeys.ts
+  s_27bb33a982f856::t_0b7d2d566d9bf2 14-18,21
+web/src/composables/useDismissable.test.ts
+  s_2b1b57aefe26cd::t_686ff211f2b68c 2-4,136,142,148,156-174
+web/src/composables/useDismissable.ts
+  s_4ac6295b6bd2d2::t_e194d2693f2508 51-52,59
+web/src/composables/useMentionsInbox.test.ts
+  s_2b1b57aefe26cd::t_626c9319ae4f97 21-33
+web/src/composables/useMentionsInbox.ts
+  s_27bb33a982f856::t_ca0cafa452400c 17,31,54,62,68
+web/src/composables/useMessageActions.test.ts
+  s_4301fed6e62c09::t_100a316e3cf1db 108-122
+web/src/composables/useMessageActions.ts
+  s_2148161d7c98f3::t_c5989d5c9cb4d1 15,92,127-128,130,187
+web/src/composables/useMessageMenu.test.ts
+  s_2b1b57aefe26cd::t_0becdeb8e9ad96 109,116
+web/src/composables/useMessageMenu.ts
+  s_4301fed6e62c09::t_45304786936948 23-24,47,63,126,198
+web/src/composables/useMuteMenu.test.ts
+  s_2b1b57aefe26cd::t_63bd8d69c11522 49-56
+web/src/composables/useMuteMenu.ts
+  s_27bb33a982f856::t_26a7c8698155f1 8,26,30-31
+web/src/composables/useNavMenus.test.ts
+  s_4301fed6e62c09::t_91ea9c7de10b07 80-88,92
+web/src/composables/useNavMenus.ts
+  s_2148161d7c98f3::t_cf2ad2be778202 25,78-79,86,168-169,225
+web/src/composables/usePushSettings.ts
+  s_2148161d7c98f3::t_72307365d6b12a 24-26,44
+web/src/composables/useSlashCommands.test.ts
+  s_2b1b57aefe26cd::t_09340cc3d44537 76-113
+web/src/composables/useSlashCommands.ts
+  s_27bb33a982f856::t_91fbb0f567bf80 15,28-29,38-41,57
+web/src/i18n/de.json
+  s_4ac6295b6bd2d2::t_997dd245e76cc0 249,1846-1847
+web/src/i18n/en.json
+  s_4ac6295b6bd2d2::t_3d5a82d54ea94b 249,1846-1847
+web/src/lib/clipboard.ts
+  s_4ac6295b6bd2d2::t_085ab39952ec7c 1-16
+web/src/stores/chat/readState.ts
+  s_27bb33a982f856::t_cf1404ebb87654 40-41,43,58,61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8853bae77c2c39413fe4c3ee95d3ef07fe63211e",
+  "prompts": {},
+  "sessions": {
+    "s_2148161d7c98f3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adb3d886b8008116b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_27bb33a982f856": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaf7a7a7ee20c3225",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2b1b57aefe26cd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9c15b256f7f7287d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4301fed6e62c09": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa0018c3b54a75b89",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4ac6295b6bd2d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac4ef8ece1278c839",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
