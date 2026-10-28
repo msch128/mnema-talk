@@ -81,8 +81,8 @@ func loadEditHistory(ctx context.Context, q db.Querier, messageID uuid.UUID) (*M
 
 // editVersionsForAudit reads the replaced versions of the messages, newest
 // first per message, as the audit log keeps them (text under the operator's
-// audit policy). A failure costs detail only: the deletion must not fail.
-func editVersionsForAudit(ctx context.Context, q db.Querier, ids []uuid.UUID) map[uuid.UUID][]map[string]any {
+// audit policy).
+func editVersionsForAudit(ctx context.Context, q db.Querier, ids []uuid.UUID) (map[uuid.UUID][]map[string]any, error) {
 	out := map[uuid.UUID][]map[string]any{}
 	rows, err := q.Query(ctx, `
 		SELECT message_id, content, edited_at, replaced_at, editor_id FROM (
@@ -90,8 +90,7 @@ func editVersionsForAudit(ctx context.Context, q db.Querier, ids []uuid.UUID) ma
 			FROM message_edits e WHERE message_id = ANY($1)) v
 		WHERE rn <= $2 ORDER BY message_id, rn`, ids, MaxEditVersions)
 	if err != nil {
-		slog.Warn("audit: read edit versions", "err", err)
-		return out
+		return nil, fmt.Errorf("read edit versions: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -99,12 +98,37 @@ func editVersionsForAudit(ctx context.Context, q db.Querier, ids []uuid.UUID) ma
 		var content string
 		var editedAt, replacedAt time.Time
 		if err := rows.Scan(&id, &content, &editedAt, &replacedAt, &editor); err != nil {
-			slog.Warn("audit: read edit versions", "err", err)
-			return out
+			return nil, fmt.Errorf("read edit versions: %w", err)
 		}
 		out[id] = append(out[id], map[string]any{
 			"content": audit.Content(content), "edited_at": editedAt, "replaced_at": replacedAt, "editor_id": editor,
 		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read edit versions: %w", err)
+	}
+	return out, nil
+}
+
+// editVersionsForAuditDetail is editVersionsForAudit for a caller that must
+// not fail because of it: a failure costs audit detail only. Inside a
+// transaction the read runs in a savepoint, because a failed statement would
+// otherwise abort the whole transaction and the deletion with it.
+func editVersionsForAuditDetail(ctx context.Context, q db.Querier, ids []uuid.UUID) map[uuid.UUID][]map[string]any {
+	var out map[uuid.UUID][]map[string]any
+	read := func(q db.Querier) (err error) {
+		out, err = editVersionsForAudit(ctx, q, ids)
+		return err
+	}
+	var err error
+	if tx, ok := q.(pgx.Tx); ok {
+		err = pgx.BeginFunc(ctx, tx, func(sp pgx.Tx) error { return read(sp) })
+	} else {
+		err = read(q)
+	}
+	if err != nil {
+		slog.Warn("audit: read edit versions", "err", err)
+		return map[uuid.UUID][]map[string]any{}
 	}
 	return out
 }

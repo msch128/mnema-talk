@@ -53,7 +53,7 @@ func (h *Handler) snapshotMessage(ctx context.Context, id uuid.UUID, withReplies
 		s.replies = h.fetchAuditedReplyIDs(ctx, id)
 	}
 	if withReplies && msg.IsEdited {
-		s.edits = editVersionsForAudit(ctx, h.DB, []uuid.UUID{id})[id]
+		s.edits = editVersionsForAuditDetail(ctx, h.DB, []uuid.UUID{id})[id]
 	}
 	return s
 }

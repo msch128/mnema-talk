@@ -30,7 +30,7 @@ type ChannelInfo struct {
 var errChannelNotFound = httpx.ErrNotFound("channel not found")
 
 // LoadChannel fetches a channel's type; a missing channel is a 404.
-func LoadChannel(ctx context.Context, p *db.Pool, id uuid.UUID) (*ChannelInfo, error) {
+func LoadChannel(ctx context.Context, p db.Querier, id uuid.UUID) (*ChannelInfo, error) {
 	ch := &ChannelInfo{ID: id}
 	err := p.QueryRow(ctx, `SELECT type, user_limit, slow_mode_seconds, is_lobby, is_stage FROM channels WHERE id = $1`, id).Scan(&ch.Type, &ch.UserLimit, &ch.SlowMode, &ch.IsLobby, &ch.IsStage)
 	if errors.Is(err, pgx.ErrNoRows) {

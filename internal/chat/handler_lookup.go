@@ -85,21 +85,9 @@ func (h *Handler) loadThreadRoot(r *http.Request, msgID uuid.UUID) (*Message, er
 }
 
 func (h *Handler) parseThreadQuery(r *http.Request, msgID uuid.UUID) (HistoryQuery, error) {
-	q := HistoryQuery{Limit: httpx.QueryLimit(r, "limit", 50, 100)}
-	anchors, err := queryIDs(r, "a message id", map[string]**uuid.UUID{"before": &q.Before, "after": &q.After})
-	if err != nil {
-		return q, err
-	}
-	if anchors > 1 {
-		return q, httpx.ErrInvalidInput("use only one of before or after")
-	}
-	if anchor := firstID(q.Before, q.After); anchor != nil {
-		ref, err := loadMessageRef(r.Context(), h.DB, *anchor)
-		if err != nil || ref.ParentID == nil || *ref.ParentID != msgID {
-			return q, errMessageNotFound
-		}
-	}
-	return q, nil
+	return h.parseHistoryQuery(r, []string{"before", "after"}, func(ref *messageRef) bool {
+		return ref.ParentID != nil && *ref.ParentID == msgID
+	})
 }
 
 // getThread handles GET /api/messages/{messageID}/thread.

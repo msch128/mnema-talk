@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"unicode/utf8"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -15,21 +15,30 @@ import (
 
 // CleanPostTitle validates and sanitizes a forum post title.
 func CleanPostTitle(title string) (string, error) {
-	cleaned, err := httpx.CleanText("title", title, MaxPostTitleLen, true)
-	if err != nil {
-		return "", err
-	}
-	if utf8.RuneCountInString(cleaned) < 1 {
+	if strings.TrimSpace(title) == "" {
 		return "", errPostTitleRequired
 	}
-	if utf8.RuneCountInString(cleaned) > MaxPostTitleLen {
-		return "", errPostTitleLength
+	return httpx.CleanText("title", title, MaxPostTitleLen, true)
+}
+
+// forumSortNewest maps the sort query value of the post list to its order:
+// true for creation time, false for latest activity (the default).
+func forumSortNewest(mode string) (bool, error) {
+	switch mode {
+	case "", "latest_activity", "activity":
+		return false, nil
+	case "newest", "creation":
+		return true, nil
 	}
-	return cleaned, nil
+	return false, httpx.ErrInvalidInput("sort must be latest_activity or newest")
 }
 
 // ListForumPosts returns a page of root posts in channelID, ordered by latest activity or creation.
 func ListForumPosts(ctx context.Context, p *db.Pool, channelID uuid.UUID, sortMode string, tagID *uuid.UUID, q HistoryQuery) ([]Message, error) {
+	newest, err := forumSortNewest(sortMode)
+	if err != nil {
+		return nil, err
+	}
 	limit := q.Limit
 	if limit <= 0 {
 		limit = 50
@@ -49,10 +58,10 @@ func ListForumPosts(ctx context.Context, p *db.Pool, channelID uuid.UUID, sortMo
 		whereClause += fmt.Sprintf(` AND EXISTS (SELECT 1 FROM forum_post_tags pt WHERE pt.message_id = m.id AND pt.tag_id = $%d)`, len(args))
 	}
 
-	if sortMode == "newest" || sortMode == "creation" {
+	if newest {
 		return listPostsByCreation(ctx, p, whereClause, args, q.Before, limit)
 	}
-	return listPostsByActivity(ctx, p, whereClause, args, q.Before, limit)
+	return listPostsByActivity(ctx, p, whereClause, args, q, limit)
 }
 
 func listPostsByCreation(ctx context.Context, p *db.Pool, where string, args []any, before *uuid.UUID, limit int) ([]Message, error) {
@@ -70,9 +79,17 @@ const activityExpr = `COALESCE((SELECT MAX(r.created_at) FROM messages r WHERE r
 // cursorActivityExpr is activityExpr evaluated for the cursor row (alias a).
 const cursorActivityExpr = `COALESCE((SELECT MAX(r.created_at) FROM messages r WHERE r.parent_id = a.id), a.created_at)`
 
-func listPostsByActivity(ctx context.Context, p *db.Pool, where string, args []any, before *uuid.UUID, limit int) ([]Message, error) {
-	if before != nil {
-		args = append(args, *before)
+// listPostsByActivity pages by (activity, id). A client that sends the
+// activity it saw for the cursor post (BeforeActivity) gets exactly the posts
+// behind that position; without it the cursor's activity is read now, which
+// moves when the cursor post has since got or lost a reply.
+func listPostsByActivity(ctx context.Context, p *db.Pool, where string, args []any, q HistoryQuery, limit int) ([]Message, error) {
+	switch {
+	case q.Before != nil && q.BeforeActivity != nil:
+		args = append(args, *q.BeforeActivity, *q.Before)
+		where += fmt.Sprintf(` AND (`+activityExpr+`, m.id) < ($%d, $%d)`, len(args)-1, len(args))
+	case q.Before != nil:
+		args = append(args, *q.Before)
 		where += fmt.Sprintf(` AND (`+activityExpr+`, m.id) < (SELECT `+cursorActivityExpr+`, a.id FROM messages a WHERE a.id = $%d)`, len(args))
 	}
 	args = append(args, limit)
@@ -115,7 +132,12 @@ func CreateForumPost(ctx context.Context, p *db.Pool, online OnlineSource, chann
 
 // UpdateForumPost updates a post's title, tags, or lock status.
 func UpdateForumPost(ctx context.Context, p *db.Pool, channelID, messageID, actorID uuid.UUID, canManage bool, title *string, tagIDs *[]uuid.UUID, isLocked *bool) (*Message, error) {
-	authorID, locked, err := getForumPostAuthor(ctx, p, channelID, messageID)
+	if title == nil && tagIDs == nil && isLocked == nil {
+		return nil, httpx.ErrInvalidInput("no fields to update")
+	}
+	// A first check before the screening and tag lookups; the one under the
+	// row lock below is the one that counts.
+	authorID, locked, err := getForumPostAuthor(ctx, p, channelID, messageID, false)
 	if err != nil {
 		return nil, err
 	}
@@ -134,6 +156,15 @@ func UpdateForumPost(ctx context.Context, p *db.Pool, channelID, messageID, acto
 	}
 
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		// A lock or an ownership change that raced with this request is seen
+		// here, and the row stays put until the update is applied.
+		authorID, locked, err := getForumPostAuthor(ctx, tx, channelID, messageID, true)
+		if err != nil {
+			return err
+		}
+		if err := checkPostUpdatePerms(actorID, authorID, canManage, locked, title, tagIDs, isLocked); err != nil {
+			return err
+		}
 		return applyPostUpdate(ctx, tx, messageID, cleanTitle, isLocked, tagIDs)
 	})
 	if err != nil {
@@ -144,11 +175,14 @@ func UpdateForumPost(ctx context.Context, p *db.Pool, channelID, messageID, acto
 	return GetMessage(ctx, p, messageID)
 }
 
-func getForumPostAuthor(ctx context.Context, p *db.Pool, channelID, messageID uuid.UUID) (authorID uuid.UUID, locked bool, err error) {
+func getForumPostAuthor(ctx context.Context, q db.Querier, channelID, messageID uuid.UUID, lock bool) (authorID uuid.UUID, locked bool, err error) {
 	var curChannelID uuid.UUID
 	var parentID *uuid.UUID
-	err = p.QueryRow(ctx, `SELECT channel_id, user_id, parent_id, is_locked FROM messages WHERE id = $1`, messageID).
-		Scan(&curChannelID, &authorID, &parentID, &locked)
+	query := `SELECT channel_id, user_id, parent_id, is_locked FROM messages WHERE id = $1`
+	if lock {
+		query += ` FOR UPDATE`
+	}
+	err = q.QueryRow(ctx, query, messageID).Scan(&curChannelID, &authorID, &parentID, &locked)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && (curChannelID != channelID || parentID != nil)) {
 		return uuid.Nil, false, errMessageNotFound
 	}

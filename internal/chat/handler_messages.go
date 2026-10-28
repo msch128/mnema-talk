@@ -26,22 +26,10 @@ func (h *Handler) validateListChannel(r *http.Request) (uuid.UUID, error) {
 }
 
 func (h *Handler) parseChannelMessageQuery(r *http.Request, chID uuid.UUID) (HistoryQuery, error) {
-	q := HistoryQuery{Limit: httpx.QueryLimit(r, "limit", 50, 100)}
-	anchors, err := queryIDs(r, "a message id", map[string]**uuid.UUID{"before": &q.Before, "after": &q.After, "around": &q.Around})
-	if err != nil {
-		return q, err
-	}
-	if anchors > 1 {
-		return q, httpx.ErrInvalidInput("use only one of before, after or around")
-	}
 	// The anchor must be a root message of this channel.
-	if anchor := firstID(q.Before, q.After, q.Around); anchor != nil {
-		ref, err := loadMessageRef(r.Context(), h.DB, *anchor)
-		if err != nil || ref.ChannelID != chID || ref.ParentID != nil {
-			return q, errMessageNotFound
-		}
-	}
-	return q, nil
+	return h.parseHistoryQuery(r, []string{"before", "after", "around"}, func(ref *messageRef) bool {
+		return ref.ChannelID == chID && ref.ParentID == nil
+	})
 }
 
 // listMessages handles GET /api/channels/{channelID}/messages.

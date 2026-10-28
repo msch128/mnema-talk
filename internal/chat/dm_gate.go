@@ -37,7 +37,7 @@ func gatePost(ctx context.Context, tx pgx.Tx, nm NewMessage) error {
 			return err
 		}
 	} else if kind == "forum" && (nm.Title == nil || *nm.Title == "") {
-		return httpx.ErrInvalidInput("title is required for forum posts")
+		return errPostTitleRequired
 	}
 	if nm.WebhookID == nil && !slowModeExempt(ctx) {
 		return enforceSlowMode(ctx, tx, nm.ChannelID, nm.UserID, seconds)

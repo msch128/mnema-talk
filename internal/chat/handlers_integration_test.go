@@ -85,7 +85,7 @@ func TestChatCanceledDatabaseOperations(t *testing.T) {
 		{"channel creation", func() error { _, e := CreateChannel(ctx, f.p, nil, "new", ChannelTypeText, "", 0); return e }},
 		{"category deletion", func() error { return DeleteCategory(ctx, f.p, f.c.ID) }},
 		{"channel update", func() error { _, e := UpdateChannel(ctx, f.p, f.c.ID, &name, &topic, &limit, nil); return e }},
-		{"category rename", func() error { return RenameCategory(ctx, f.p, f.c.ID, name) }},
+		{"category rename", func() error { _, err := RenameCategory(ctx, f.p, f.c.ID, name); return err }},
 		{"members", func() error { _, e := GetAllMembers(ctx, f.p); return e }},
 		{"resolve mentions", func() error { _, e := ResolveMentions(ctx, f.p, "@all", f.u.ID, nil); return e }},
 		{"clear mentions", func() error { return SaveMentions(ctx, f.p, f.m, nil) }},
@@ -330,7 +330,7 @@ func TestChatValidationAndReadMarkerBoundaries(t *testing.T) {
 			_, e := UpdateChannel(ctx, f.p, f.c.ID, nil, &topic, nil, nil)
 			return e
 		},
-		func() error { return RenameCategory(ctx, f.p, uuid.New(), "new") },
+		func() error { _, err := RenameCategory(ctx, f.p, uuid.New(), "new"); return err },
 		func() error { return ApplyLayout(ctx, f.p, nil, []ChannelPlacement{{ID: uuid.New()}}) },
 		func() error { _, e := UpdateChannel(ctx, f.p, uuid.New(), nil, nil, nil, nil); return e },
 	} {
