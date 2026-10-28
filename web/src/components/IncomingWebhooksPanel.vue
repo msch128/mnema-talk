@@ -14,6 +14,7 @@ import { useChatStore } from '../stores/chat'
 import { t } from '../i18n'
 import StatePanel from './StatePanel.vue'
 import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
+import { initialOf } from '../lib/initial'
 
 const props = defineProps({
   channelId: { type: String, required: true }
@@ -197,7 +198,7 @@ onMounted(load)
     <ul v-if="hooks.length" class="divide-y divide-mnema-hairline overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
       <li v-for="hook in hooks" :key="hook.id" class="flex flex-wrap items-center gap-3 p-3" data-testid="incoming-webhook">
         <img v-if="hook.avatar_url" :src="hook.avatar_url" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover" />
-        <span v-else class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mnema-raised text-sm font-semibold text-mnema-muted" aria-hidden="true">{{ hook.name.slice(0, 1).toUpperCase() }}</span>
+        <span v-else class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mnema-raised text-sm font-semibold text-mnema-muted" aria-hidden="true">{{ initialOf(hook.name) }}</span>
 
         <form v-if="renaming?.id === hook.id" class="min-w-0 flex-1" @submit.prevent="saveName">
           <input v-model="renaming.name" type="text" maxlength="80" autofocus class="w-full rounded-md border border-mnema-border-field bg-mnema-elevated px-2 py-1 text-sm text-mnema-text" :aria-label="$t('common.name')" @keydown.esc="renaming = null" @blur="saveName" />

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { nameInitial } from '../lib/initial'
 import type { PropType } from 'vue'
 import type { AvatarUser } from './presentationTypes'
 // One participant of the Talk, like a Discord voice tile: their camera when it
@@ -13,6 +12,7 @@ import { MicOff, Eye, EyeOff, Monitor, X } from '@lucide/vue'
 import VoiceTimer from './VoiceTimer.vue'
 import MuteMarks from './MuteMarks.vue'
 import TalkReactionFloat from './TalkReactionFloat.vue'
+import { initialOf } from '../lib/initial'
 
 const props = defineProps({
   user: { type: Object as PropType<AvatarUser & { id: string; joined_at?: string; role?: 'admin' | 'user' }>, required: true },
@@ -48,7 +48,7 @@ const emit = defineEmits<{ 'open-profile': [user: { id: string }]; 'toggle-camer
 
 const focusable = computed(() => !!props.stream && (props.cameraFocusable || props.cameraFocused))
 const name = computed(() => props.user.display_name || props.user.username)
-const initial = computed(() => nameInitial(name.value || '?'))
+const initial = computed(() => initialOf(name.value))
 
 // Shown on hover / keyboard focus of the tile (or of a button on it).
 const REVEAL = 'opacity-0 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100'

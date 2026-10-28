@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { nameInitial } from '../lib/initial'
 import type { PropType } from 'vue'
 import type { User as ProfileUser } from '../types/domain'
 import type { LivePresence } from './presentationTypes'
@@ -13,6 +12,7 @@ import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
 import PresenceDot from './PresenceDot.vue'
+import { initialOf } from '../lib/initial'
 
 // The top of a profile: the large avatar (changeable on one's own profile),
 // the live status dot and the buttons next to it.
@@ -90,7 +90,7 @@ async function removeAvatar() {
           class="w-full h-full object-cover"
         />
         <span v-else class="text-2xl font-bold text-mnema-mint">
-          {{ nameInitial(profileUser.display_name || profileUser.username || '?') }}
+          {{ initialOf(profileUser.display_name || profileUser.username) }}
         </span>
 
         <!-- Hover overlay for own profile -->

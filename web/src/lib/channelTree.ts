@@ -21,7 +21,17 @@ export function buildChannelTree<C extends LayoutChannel, K extends LayoutCatego
 
 export const COLLAPSED_KEY = 'mnema.sidebar.collapsedCategories'
 
-export function loadCollapsed(storage: Pick<Storage, 'getItem'> | null = globalThis.localStorage): string[] {
+// Reading localStorage itself throws where site data is blocked, so it is resolved
+// here and not in a default parameter, where no try/catch could reach it.
+function defaultStorage(): Storage | null {
+  try {
+    return globalThis.localStorage ?? null
+  } catch {
+    return null
+  }
+}
+
+export function loadCollapsed(storage: Pick<Storage, 'getItem'> | null = defaultStorage()): string[] {
   try {
     const ids: unknown = JSON.parse(storage?.getItem(COLLAPSED_KEY) || '[]')
     return Array.isArray(ids) ? ids.filter((id: unknown): id is string => typeof id === 'string') : []
@@ -31,7 +41,7 @@ export function loadCollapsed(storage: Pick<Storage, 'getItem'> | null = globalT
   }
 }
 
-export function saveCollapsed(ids: string[], storage: Pick<Storage, 'setItem'> | null = globalThis.localStorage): void {
+export function saveCollapsed(ids: string[], storage: Pick<Storage, 'setItem'> | null = defaultStorage()): void {
   try {
     storage?.setItem(COLLAPSED_KEY, JSON.stringify(ids))
   } catch (error) {

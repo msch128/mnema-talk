@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { nameInitial } from './initial'
+import { initialOf } from './initial'
 
-describe('nameInitial', () => {
-  it('uppercases the first letter', () => {
-    expect(nameInitial('alice')).toBe('A')
+describe('initialOf', () => {
+  it('upper-cases the first character of the trimmed name', () => {
+    expect(initialOf('  ada')).toBe('A')
   })
   it('keeps an astral first character whole', () => {
-    expect(nameInitial('\u{1F98A} Fox')).toBe('\u{1F98A}')
-    expect(nameInitial('\u{1D56C}x')).toHaveLength(2)
+    expect(initialOf('🤖 Helper')).toBe('🤖')
+    expect(initialOf('𠮷野')).toBe('𠮷')
   })
-  it('falls back for an empty name', () => {
-    expect(nameInitial('')).toBe('?')
+  it('falls back to a question mark', () => {
+    expect(initialOf('')).toBe('?')
+    expect(initialOf('   ')).toBe('?')
+    expect(initialOf(undefined)).toBe('?')
   })
 })
