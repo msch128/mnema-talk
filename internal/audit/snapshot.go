@@ -3,10 +3,13 @@ package audit
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/msch128/mnema-talk/internal/db"
 )
@@ -77,6 +80,11 @@ func Snapshot(ctx context.Context, q db.Querier, res Resource, id string) (map[s
 	var raw []byte
 	var name string
 	if err := q.QueryRow(ctx, query, args...).Scan(&raw, &name); err != nil {
+		// A missing resource is expected (it was deleted); anything else
+		// would silently strip the before/after block of every entry.
+		if !errors.Is(err, pgx.ErrNoRows) {
+			slog.WarnContext(ctx, "audit snapshot failed", "resource", res, "err", err)
+		}
 		return nil, ""
 	}
 	// The queries above build JSON objects, so this cannot fail.

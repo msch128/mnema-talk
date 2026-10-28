@@ -89,12 +89,8 @@ func (f *filter) restrictTo(viewer Viewer) {
 		return
 	}
 	f.add("action NOT LIKE ALL(?)", patterns(VisPrivileged))
-	ids := make([]string, len(viewer.Channels))
-	for i, c := range viewer.Channels {
-		ids[i] = c.String()
-	}
-	f.args = append(f.args, patterns(VisChannel), ids)
-	f.where = append(f.where, "(action NOT LIKE ALL($"+strconv.Itoa(len(f.args)-1)+") OR channel_id::text = ANY($"+strconv.Itoa(len(f.args))+"))")
+	f.args = append(f.args, patterns(VisChannel), viewer.Channels)
+	f.where = append(f.where, "(action NOT LIKE ALL($"+strconv.Itoa(len(f.args)-1)+") OR channel_id = ANY($"+strconv.Itoa(len(f.args))+"))")
 }
 
 // query returns the SELECT for the newest entries matching the filter.

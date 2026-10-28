@@ -2,9 +2,11 @@ package audit
 
 import (
 	"crypto/sha256"
+	"encoding"
 	"encoding/hex"
 	"encoding/json"
 	"net/url"
+	"reflect"
 	"regexp"
 	"strings"
 )
@@ -53,11 +55,34 @@ func SanitizeDetails(details map[string]any) map[string]any {
 			out[key+"_truncated"] = true
 		}
 	}
+	for size(out) > maxDetailBytes && shrinkLargestList(out) {
+	}
 	if size(out) > maxDetailBytes {
 		// Only a huge changes block or free-form fields remain.
 		return map[string]any{"truncated": true}
 	}
 	return out
+}
+
+// shrinkLargestList halves the biggest top-level list (for example the edit
+// versions of a deleted message) so the rest of the entry survives, and marks
+// it <key>_truncated. It reports false when there is nothing left to halve.
+func shrinkLargestList(out map[string]any) bool {
+	best, bestSize := "", 0
+	for k, v := range out {
+		if list, ok := v.([]any); ok && len(list) > 1 {
+			if n := size(map[string]any{k: list}); n > bestSize {
+				best, bestSize = k, n
+			}
+		}
+	}
+	if best == "" {
+		return false
+	}
+	list := out[best].([]any)
+	out[best] = list[:len(list)/2]
+	out[best+"_truncated"] = true
+	return true
 }
 
 func size(v map[string]any) int {
@@ -81,6 +106,41 @@ func sanitize(v any, depth int) any {
 		return clip(string(x), MaxContentRunes)
 	case string:
 		return cleanString(x)
+	default:
+		return sanitizeTyped(v, depth)
+	}
+}
+
+// sanitizeTyped brings typed slices and maps (callers pass []map[string]any,
+// map[string]string, []uuid.UUID ...) under the same rules as the generic
+// ones. Scalars and values with their own text form (uuid, time) stay as is.
+func sanitizeTyped(v any, depth int) any {
+	if v == nil {
+		return v
+	}
+	if _, ok := v.(encoding.TextMarshaler); ok {
+		return v
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Slice, reflect.Array:
+		if rv.Kind() == reflect.Slice && rv.IsNil() {
+			return v
+		}
+		list := make([]any, rv.Len())
+		for i := range list {
+			list[i] = rv.Index(i).Interface()
+		}
+		return sanitizeList(list, depth)
+	case reflect.Map:
+		if rv.Type().Key().Kind() != reflect.String {
+			return v
+		}
+		m := make(map[string]any, rv.Len())
+		for it := rv.MapRange(); it.Next(); {
+			m[it.Key().String()] = it.Value().Interface()
+		}
+		return sanitizeMap(m, depth)
 	default:
 		return v
 	}
