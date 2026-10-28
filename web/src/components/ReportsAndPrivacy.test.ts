@@ -303,6 +303,19 @@ describe('AccountDmPolicy', () => {
     http.handle = () => { throw new Error('offline') }
     expect(mount(AccountDmPolicy, { global }).find('[data-testid="dm-policy"]').exists()).toBe(false)
   })
+
+  it('tells when the choice cannot be read and loads it on retry', async () => {
+    http.handle = () => { throw new Error('offline') }
+    const w = mount(AccountDmPolicy, { global })
+    await flushPromises()
+    expect(w.find('[data-testid="dm-policy"]').exists()).toBe(false)
+    expect(w.get('[role="alert"]').text()).toBe('Couldn’t load the setting. Try again.')
+    http.handle = () => ({ dm_policy: 'nobody' })
+    await w.get('[data-testid="dm-policy-retry"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="dm-policy-failed"]').exists()).toBe(false)
+    expect((w.get('[data-dm-policy="nobody"]').element as HTMLInputElement).checked).toBe(true)
+  })
 })
 
 describe('AdminReportDetail variants', () => {

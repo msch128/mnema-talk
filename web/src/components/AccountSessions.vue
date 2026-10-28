@@ -90,9 +90,12 @@ onMounted(refresh)
     <h3 id="security-sessions-title" class="settings-title">{{ $t('security.sessions.title') }}</h3>
     <p class="settings-help">{{ $t('security.sessions.intro') }}</p>
 
-    <p v-if="error" role="alert" class="text-sm text-mnema-danger" data-testid="sessions-error">{{ error }}</p>
-    <p v-else-if="!loaded" role="status" class="text-sm text-mnema-tertiary">{{ $t('security.loading') }}</p>
-    <template v-else>
+    <div v-if="error" class="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <p role="alert" class="text-sm text-mnema-danger" data-testid="sessions-error">{{ error }}</p>
+      <button type="button" class="btn btn-ghost btn-sm" data-testid="sessions-retry" @click="refresh">{{ $t('common.retry') }}</button>
+    </div>
+    <p v-if="!loaded" role="status" class="text-sm text-mnema-tertiary">{{ $t('security.loading') }}</p>
+    <template v-else-if="sessions.length || !error">
       <ul class="divide-y divide-mnema-hairline rounded-lg border border-mnema-hairline">
         <li v-for="s in sessions" :key="s.id" class="flex items-center gap-3 px-3 py-2.5" :data-session="name(s)" :data-current="s.current ? 'true' : 'false'">
           <Monitor class="h-4 w-4 shrink-0 text-mnema-tertiary" aria-hidden="true" />

@@ -27,6 +27,7 @@ const typedName = ref('')
 const busy = ref(false)
 const error = ref('')
 let timer: ReturnType<typeof setTimeout> | undefined
+let alive = true
 
 const needsCode = computed(() => !!account.info?.two_factor_enabled)
 const isOwner = computed(() => authStore.isAdmin)
@@ -44,6 +45,7 @@ async function refresh() {
   } catch (err) {
     void err
   }
+  if (!alive) return
   clearTimeout(timer)
   if (status.value?.state === 'pending') timer = setTimeout(refresh, POLL_MS)
 }
@@ -88,7 +90,10 @@ function afterDownload() {
 }
 
 onMounted(refresh)
-onBeforeUnmount(() => clearTimeout(timer))
+onBeforeUnmount(() => {
+  alive = false
+  clearTimeout(timer)
+})
 </script>
 
 <template>
