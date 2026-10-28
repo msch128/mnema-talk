@@ -3,7 +3,7 @@
 // the keyboard (e on a message) can go straight on typing.
 import { ref, onMounted, nextTick } from 'vue'
 import { Check, Loader2 } from '@lucide/vue'
-import { isComposing } from '../composables/useComposerKeys'
+import { isImeKey } from '../composables/useComposerKeys'
 
 defineProps({
   saving: { type: Boolean, default: false },
@@ -28,7 +28,7 @@ onMounted(() => {
 
 // Enter that confirms an IME candidate must not save the edit.
 function onEnter(e: KeyboardEvent) {
-  if (isComposing(e)) return
+  if (isImeKey(e)) return
   e.preventDefault()
   emit('save')
 }

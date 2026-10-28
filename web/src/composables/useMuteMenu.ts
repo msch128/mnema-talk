@@ -5,7 +5,7 @@ import { BellOff, Bell } from '@lucide/vue'
 import type { NotifyLevel } from '../types/domain'
 import type { ContextMenuItem } from '../components/menuTypes'
 import { useChatStore } from '../stores/chat'
-import { t } from '../i18n'
+import { t, locale } from '../i18n'
 import { clockTimeOptions } from '../lib/time'
 
 // A channel outside any category inherits from the server default directly.
@@ -23,12 +23,12 @@ export const MUTE_DURATIONS = [
 ] as const
 
 /** When a mute ends, as a short local time ("14:30", or with the date on another day). */
-export function formatMuteEnd(iso: string, now = new Date()): string {
+export function formatMuteEnd(iso: string, now = new Date(), tag: string = locale.value): string {
   const end = new Date(iso)
   const sameDay = end.toDateString() === now.toDateString()
   return sameDay
-    ? end.toLocaleTimeString([], clockTimeOptions())
-    : end.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
+    ? end.toLocaleTimeString([tag], clockTimeOptions(tag))
+    : end.toLocaleString([tag], { dateStyle: 'short', timeStyle: 'short' })
 }
 
 /** The stored setting of a target; 'inherit' when it has none. */

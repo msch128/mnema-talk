@@ -28,14 +28,14 @@ describe('StreamQualityMenu', () => {
   it('opens anchored menu and keeps stage informed; pointerdown on open menu only closes', async () => {
     wrapper = mount(StreamQualityMenu, { global: { stubs: { ContextMenu: true } } })
     const button = wrapper.get('button')
-    await button.trigger('pointerdown'); await button.trigger('click'); await flushPromises()
+    await button.trigger('pointerdown'); await button.trigger('click', { detail: 1 }); await flushPromises()
     expect(show).toHaveBeenCalledOnce(); expect(button.attributes('aria-expanded')).toBe('true')
     expect(wrapper.emitted('open-change')).toEqual([[true]])
     expect(getStats?.()).toEqual([]); expect(getCapture?.()).toEqual({ width: 1920 })
     const options = items.mock.calls[0]?.[0]
     if (!options) throw new Error('Menu factory not called')
     options.onChangeSource(); expect(start).toHaveBeenCalledOnce()
-    await button.trigger('pointerdown'); state.open = false; await button.trigger('click')
+    await button.trigger('pointerdown'); state.open = false; await button.trigger('click', { detail: 1 })
     expect(show).toHaveBeenCalledOnce(); expect(stop).toHaveBeenCalledOnce()
     expect(wrapper.emitted('open-change')).toEqual([[true], [false]])
   })

@@ -112,6 +112,18 @@ describe('the push section', () => {
     expect(toasts()).toEqual(['no network'])
   })
 
+  it('shows the block right after the person refuses the browser prompt', async () => {
+    const notification = { permission: 'default' }
+    vi.stubGlobal('Notification', notification)
+    await open()
+    expect(w.find('[data-testid="push-enable"]').attributes('disabled')).toBeUndefined()
+    lib.enable.mockImplementationOnce(async () => { notification.permission = 'denied'; return 'denied' })
+    await w.find('[data-testid="push-enable"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="push-state"]').text()).toContain('blocked for this site')
+    expect(w.find('[data-testid="push-enable"]').attributes('disabled')).toBeDefined()
+  })
+
   it('does not offer to turn on what the browser blocks', async () => {
     vi.stubGlobal('Notification', { permission: 'denied' })
     await open()

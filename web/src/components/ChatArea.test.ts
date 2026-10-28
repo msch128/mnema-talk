@@ -709,7 +709,7 @@ describe('ChatArea history scrolling', () => {
 describe('ChatArea Escape guards', () => {
   it('marks read for unread counts or mentions and skips already read/no channel', async () => {
     const chat = setup()
-    const read = vi.spyOn(chat, 'markChannelRead').mockResolvedValue(undefined)
+    const read = vi.spyOn(chat, 'markChannelRead').mockResolvedValue(true)
     const escape = () => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
     escape()
     expect(read).not.toHaveBeenCalled()
@@ -727,7 +727,7 @@ describe('ChatArea Escape guards', () => {
   it('ignores Escape used by other controls, dialogs, lightboxes, editing and reply targets', async () => {
     const chat = setup()
     chat.readStates.ch1 = readStateFixture({ channel_id: 'ch1', unread_count: 2 })
-    const read = vi.spyOn(chat, 'markChannelRead').mockResolvedValue(undefined)
+    const read = vi.spyOn(chat, 'markChannelRead').mockResolvedValue(true)
     const other = document.createElement('input')
     document.body.append(other)
     other.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
