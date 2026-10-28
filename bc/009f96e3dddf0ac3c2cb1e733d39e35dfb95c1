@@ -1,0 +1,19 @@
+internal/auth/users_admin_talk.go
+  s_5284da226de11a::t_755c6064ac6f2e 1-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bc009f96e3dddf0ac3c2cb1e733d39e35dfb95c1",
+  "prompts": {},
+  "sessions": {
+    "s_5284da226de11a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-talk-disconnect-88fecc8ed16c4364",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
