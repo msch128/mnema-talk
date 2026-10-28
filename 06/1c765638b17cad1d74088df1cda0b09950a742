@@ -1,0 +1,55 @@
+internal/perm/fixture.go
+  s_358548c949cb18::t_8d0361340a0d08 6,45
+internal/perm/fixture_fork_test.go
+  s_358548c949cb18::t_f3b0b46c1557d0 23-43
+internal/perm/overwrite_bits_test.go
+  s_358548c949cb18::t_541a291dd0b662 1-20
+internal/perm/service.go
+  s_358548c949cb18::t_73392cd285d59d 159-163
+internal/perm/snapshot_load.go
+  s_358548c949cb18::t_3553b4c2e91dfd 95-100,122,136,138-140,147
+internal/perm/snapshot_viewas.go
+  s_358548c949cb18::t_7d0fb4eee7b86c 7-8,24-27
+internal/perm/snapshot_viewas_test.go
+  s_358548c949cb18::t_95cf4189a4753c 58-73
+internal/perm/store_integration_test.go
+  s_bf965fb31d4e8a::t_50c58bf2a78c59 154-159,163-165
+internal/perm/store_overwrites.go
+  s_2ad46f01a5d17d::t_fb546200dc91c8 95,117,326-327,330
+internal/perm/store_roles.go
+  s_358548c949cb18::t_bf90614771f035 74
+internal/perm/store_roles_order.go
+  s_358548c949cb18::t_56ac5f663a4d30 26,32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "061c765638b17cad1d74088df1cda0b09950a742",
+  "prompts": {},
+  "sessions": {
+    "s_2ad46f01a5d17d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a365a38e52ae447b7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_358548c949cb18": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af65a0f734c30e66e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bf965fb31d4e8a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a471f7457881e2784",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
