@@ -288,9 +288,16 @@ function isInsideMenu(target: EventTarget | null): boolean {
   return target instanceof Node && !!menuEl.value?.contains(target)
 }
 
+// The anchor element is the opener's button: its own click toggles the menu,
+// so a press on it must not also close the menu first (it would reopen).
+function isOnAnchor(target: EventTarget | null): boolean {
+  const a = props.anchor
+  return a instanceof Node && target instanceof Node && a.contains(target)
+}
+
 function handleOutsideDismiss(e: Event) {
   if (!props.modelValue || !menuEl.value) return
-  if (!isInsideMenu(e.target)) {
+  if (!isInsideMenu(e.target) && !isOnAnchor(e.target)) {
     opener = null
     close()
   }

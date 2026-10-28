@@ -12,6 +12,7 @@ import { confirm } from '../lib/confirm'
 import type { CommunityEvent, RSVPItem } from '../types/domain'
 import { eventAvatar } from '../lib/eventAvatar'
 import { formatEventStart, relativeEventDay } from '../lib/eventTime'
+import { caughtErrorMessage } from '../lib/api'
 import { locale, t } from '../i18n'
 
 const props = defineProps<{
@@ -40,15 +41,24 @@ const talkChannel = computed(() => {
 
 const rsvps = ref<RSVPItem[]>([])
 const loadingRsvps = ref(false)
+const rsvpsFailed = ref(false)
+let rsvpLoadSeq = 0
 
+// Only the latest load may write: a slower, older answer would show stale data.
 async function loadRsvps() {
+  const seq = ++rsvpLoadSeq
   loadingRsvps.value = true
   try {
-    rsvps.value = await eventsStore.listRSVPs(currentEvent.value.id)
+    const list = await eventsStore.listRSVPs(currentEvent.value.id)
+    if (seq !== rsvpLoadSeq) return
+    rsvps.value = list
+    rsvpsFailed.value = false
   } catch (err) {
+    if (seq !== rsvpLoadSeq) return
     console.warn('Failed to load RSVPs', err)
+    rsvpsFailed.value = true
   } finally {
-    loadingRsvps.value = false
+    if (seq === rsvpLoadSeq) loadingRsvps.value = false
   }
 }
 
@@ -73,7 +83,11 @@ const rsvpChoices = computed(() => [
 ])
 const counts = computed(() => currentEvent.value.rsvp_counts)
 
+const rsvpBusy = ref(false)
+
 async function setRSVP(response: 'going' | 'interested' | 'not_going') {
+  if (rsvpBusy.value) return
+  rsvpBusy.value = true
   try {
     if (currentEvent.value.my_rsvp === response) {
       await eventsStore.deleteRSVP(currentEvent.value.id)
@@ -82,7 +96,9 @@ async function setRSVP(response: 'going' | 'interested' | 'not_going') {
     }
     await loadRsvps()
   } catch (err) {
-    toast.error(err instanceof Error ? err.message : 'RSVP failed')
+    toast.error(caughtErrorMessage(err, t('events.rsvpFailed')))
+  } finally {
+    rsvpBusy.value = false
   }
 }
 
@@ -99,7 +115,7 @@ async function cancelEvent() {
     await eventsStore.cancel(currentEvent.value.id)
     toast.success(t('events.cancelled'))
   } catch (err) {
-    toast.error(err instanceof Error ? err.message : 'Cancel failed')
+    toast.error(caughtErrorMessage(err, t('events.cancelFailed')))
   }
 }
 </script>
@@ -171,7 +187,7 @@ async function cancelEvent() {
           @click="emit('join', currentEvent.channel_id!); emit('close')"
         >
           <Volume2 class="w-5 h-5" />
-          <span>{{ $t('events.join') }} ({{ talkChannel?.name || 'Talk' }})</span>
+          <span>{{ $t('events.join') }} ({{ talkChannel?.name || $t('events.talkFallback') }})</span>
         </button>
       </div>
 
@@ -183,7 +199,7 @@ async function cancelEvent() {
           class="text-sm text-mnema-text"
         />
         <p v-else class="text-sm text-mnema-tertiary italic">
-          {{ $t('events.noResponses') }}
+          {{ $t('events.noDescription') }}
         </p>
       </div>
 
@@ -196,6 +212,7 @@ async function cancelEvent() {
             :key="c.id"
             type="button"
             :data-rsvp="c.id"
+            :disabled="rsvpBusy"
             :aria-pressed="currentEvent.my_rsvp === c.id ? 'true' : 'false'"
             :class="[
               'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border px-1 py-2 text-center text-xs font-medium leading-tight transition-colors sm:flex-row sm:gap-1.5 sm:text-sm',
@@ -218,7 +235,10 @@ async function cancelEvent() {
           {{ $t('events.participants') }}
         </h3>
         <div v-if="loadingRsvps" class="py-4 text-center text-sm text-mnema-tertiary">
-          ...
+          {{ $t('common.loading') }}
+        </div>
+        <div v-else-if="rsvpsFailed" role="alert" class="text-sm text-red-400">
+          {{ $t('events.participantsFailed') }}
         </div>
         <div v-else-if="rsvps.length === 0" class="text-sm text-mnema-tertiary italic">
           {{ $t('events.noResponses') }}

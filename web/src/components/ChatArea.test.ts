@@ -102,13 +102,13 @@ describe('ChatArea typing indicator', () => {
     const chat = setup()
     chat.typingByChannel = { ch1: [{ user_id: 'u2', display_name: 'Anna', username: 'anna' }] }
     await nextTick()
-    expect(w.find<HTMLElement>('[role="status"]').text()).toBe('Anna tippt …')
+    expect(w.find<HTMLElement>('[data-testid="typing-indicator"]').text()).toBe('Anna tippt …')
     chat.typingByChannel = { ch1: [{ user_id: 'u2', display_name: 'Anna', username: 'anna' }, { user_id: 'u3', username: 'ben', display_name: '' }] }
     await nextTick()
-    expect(w.find<HTMLElement>('[role="status"]').text()).toBe('Anna und ben tippen …')
+    expect(w.find<HTMLElement>('[data-testid="typing-indicator"]').text()).toBe('Anna und ben tippen …')
     chat.typingByChannel = { ch1: [{ user_id: 'u2', username: 'a', display_name: '' }, { user_id: 'u3', username: 'b', display_name: '' }, { user_id: 'u4', username: 'c', display_name: '' }] }
     await nextTick()
-    expect(w.find<HTMLElement>('[role="status"]').text()).toBe('Mehrere Personen tippen …')
+    expect(w.find<HTMLElement>('[data-testid="typing-indicator"]').text()).toBe('Mehrere Personen tippen …')
   })
 
   it('announces typing through the composer, but not for empty text', async () => {
