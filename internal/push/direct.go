@@ -2,6 +2,7 @@ package push
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -59,24 +60,40 @@ func buildDirect(d Direct, locale string, preview bool, ts int64) Payload {
 // the push (counted), as for messages. Failures are logged; the in-app
 // notification does not depend on push.
 func (s *Service) Direct(ctx context.Context, d Direct) {
+	if s == nil {
+		return
+	}
 	s.init()
-	locale, preview, err := loadPushPrefs(ctx, s.DB, d.User)
+	opts := Options{TTL: mentionTTL, Urgent: true, Topic: topic(d.ID, true), Timeout: sendTimeout}
+	err := s.pushToMember(ctx, d.User, opts, func(locale string, preview bool) Payload {
+		return buildDirect(d, locale, preview, s.Now().UnixMilli())
+	})
 	if err != nil {
-		slog.Warn("push: load preferences", "err", err)
-		return
+		slog.Warn("push: direct", "err", err)
 	}
-	targets, err := targetsFor(ctx, s.DB, []uuid.UUID{d.User})
+}
+
+// pushToMember queues the push compose builds for every device of the member:
+// the one place that reads their language and preview choice (the operator's
+// switch applies on top) and their subscriptions. A member with no device, or
+// a payload that cannot be built, is an error only when the cause is the
+// database.
+func (s *Service) pushToMember(ctx context.Context, user uuid.UUID, opts Options, compose func(locale string, preview bool) Payload) error {
+	locale, preview, err := loadPushPrefs(ctx, s.DB, user)
 	if err != nil {
-		slog.Warn("push: load subscriptions", "err", err)
-		return
+		return fmt.Errorf("load preferences: %w", err)
 	}
-	if len(targets[d.User]) == 0 {
-		return
-	}
-	body, err := buildDirect(d, locale, preview && s.Previews, s.Now().UnixMilli()).encode()
+	targets, err := targetsFor(ctx, s.DB, []uuid.UUID{user})
 	if err != nil {
-		slog.Warn("push: encode payload", "err", err)
-		return
+		return fmt.Errorf("load subscriptions: %w", err)
 	}
-	s.queue(targets[d.User], body, Options{TTL: mentionTTL, Urgent: true, Topic: topic(d.ID, true), Timeout: sendTimeout})
+	if len(targets[user]) == 0 {
+		return nil
+	}
+	body, err := compose(locale, preview && s.Previews).encode()
+	if err != nil {
+		return fmt.Errorf("encode payload: %w", err)
+	}
+	s.queue(targets[user], body, opts)
+	return nil
 }

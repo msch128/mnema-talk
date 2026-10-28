@@ -4,7 +4,7 @@
 
 /** What the server sends (see internal/push/payload.go); unknown fields are ignored. */
 export interface PushMessage {
-  type: 'message' | 'test'
+  type: 'message' | 'test' | 'event'
   title: string
   body: string
   tag: string
@@ -87,7 +87,7 @@ export function parsePush(raw: unknown): PushMessage | null {
   const p = raw as Record<string, unknown>
   const title = text(p['title'])
   const body = text(p['body'])
-  if (p['v'] !== 1 || (p['type'] !== 'message' && p['type'] !== 'test') || title === null || body === null) return null
+  if (p['v'] !== 1 || (p['type'] !== 'message' && p['type'] !== 'test' && p['type'] !== 'event') || title === null || body === null) return null
   return {
     type: p['type'],
     title,

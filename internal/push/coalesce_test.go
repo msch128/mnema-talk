@@ -110,3 +110,32 @@ func TestSweepForgetsQuietChannelsButKeepsWaitingOnes(t *testing.T) {
 	}
 	c.stop()
 }
+
+func TestStaleTimerDoesNotFlushNewerHeldPush(t *testing.T) {
+	clk := &clock{t: time.Unix(1_000, 0)}
+	c := newCoalescer(time.Hour, clk.now)
+	user, ch := uuid.New(), uuid.New()
+	k := key{user, ch}
+	flushed := make(chan held, 4)
+	flush := func(h held) { flushed <- h }
+
+	c.add(k, heldFor(user, ch, false, "one"), flush)
+	c.add(k, heldFor(user, ch, false, "two"), flush)
+	staleGen := c.entries[k].gen
+	// A mention releases the held push; its timer already fired and waits for the lock.
+	if c.add(k, heldFor(user, ch, true, "mention"), flush) == nil {
+		t.Fatal("a mention must go out at once")
+	}
+	c.add(k, heldFor(user, ch, false, "three"), flush)
+
+	c.fire(k, staleGen, flush)
+	select {
+	case h := <-flushed:
+		t.Fatalf("stale timer flushed %+v early", h.notice)
+	default:
+	}
+	c.fire(k, c.entries[k].gen, flush)
+	if h := <-flushed; h.notice.Content != "three" {
+		t.Fatalf("flushed %+v", h.notice)
+	}
+}

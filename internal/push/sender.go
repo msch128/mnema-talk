@@ -18,7 +18,7 @@ import (
 type Outcome string
 
 const (
-	// Delivered: the push service accepted the message (201 or 202).
+	// Delivered: the push service accepted the message (200, 201 or 202).
 	Delivered Outcome = "ok"
 	// Gone: the subscription no longer exists (404, 410); remove it.
 	Gone Outcome = "gone"
@@ -102,20 +102,22 @@ func classifyStatus(res *http.Response) Result {
 	case res.StatusCode == http.StatusNotFound || res.StatusCode == http.StatusGone:
 		return Result{Outcome: Gone, Reason: reason}
 	case res.StatusCode == http.StatusTooManyRequests || res.StatusCode >= 500:
-		return Result{Outcome: Retry, Reason: reason, RetryAfter: retryAfter(res.Header.Get("Retry-After"))}
+		return Result{Outcome: Retry, Reason: reason, RetryAfter: retryAfter(res.Header.Get("Retry-After"), time.Now())}
 	}
 	return Result{Outcome: Rejected, Reason: reason}
 }
 
-// maxRetryWait caps how long a push service may ask us to wait.
-const maxRetryWait = 30 * time.Second
-
-func retryAfter(header string) time.Duration {
-	seconds, err := strconv.Atoi(strings.TrimSpace(header))
-	if err != nil || seconds <= 0 {
-		return 0
+// retryAfter reads a Retry-After header (seconds or an HTTP date), capped at
+// maxRetryDelay: the one retry never waits longer than that.
+func retryAfter(header string, now time.Time) time.Duration {
+	header = strings.TrimSpace(header)
+	var wait time.Duration
+	if seconds, err := strconv.Atoi(header); err == nil {
+		wait = time.Duration(seconds) * time.Second
+	} else if at, err := http.ParseTime(header); err == nil {
+		wait = at.Sub(now)
 	}
-	return min(time.Duration(seconds)*time.Second, maxRetryWait)
+	return min(max(wait, 0), maxRetryDelay)
 }
 
 // classifyError names why no answer came back.
