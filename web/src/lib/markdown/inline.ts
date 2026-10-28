@@ -44,9 +44,18 @@ function scan(ctx: InlineContext, key: string, src: string, from: number, test: 
 }
 
 function scanFrom(src: string, from: number, test: (j: number) => boolean, pair: string): number {
+  // Fence lengths without a closer further on: a later fence of that length has none either.
+  let unclosed: Set<number> | undefined
   for (let j = from; j < src.length; j++) {
     if (src[j] === '\\') {
       j++
+    } else if (src[j] === '`') {
+      // A code span is opaque: delimiters inside it neither close nor open anything.
+      let n = 1
+      while (src[j + n] === '`') n++
+      const close = unclosed?.has(n) ? -1 : findCodeClose(src, j, n)
+      if (close < 0) (unclosed ??= new Set()).add(n)
+      j = (close < 0 ? j : close) + n - 1
     } else if (pair && src.startsWith(pair, j)) {
       j += pair.length - 1
     } else if (test(j)) {
@@ -110,24 +119,30 @@ function matchFormat(src: string, i: number, ctx: InlineContext): Hit | null {
   }
 }
 
+/** The index of the run of n backticks closing the code span opened at i, or -1. */
+function findCodeClose(src: string, i: number, n: number): number {
+  const fence = '`'.repeat(n)
+  let from = i + n
+  while (from < src.length) {
+    const close = src.indexOf(fence, from)
+    if (close < 0) return -1
+    let runEnd = close + n
+    while (src[runEnd] === '`') runEnd++
+    if (runEnd - close === n && src.slice(i + n, close).trim() !== '') return close
+    from = runEnd
+  }
+  return -1
+}
+
 /** `code` and ``code with ` inside``: a run of backticks closes with a run of the same length. */
 function matchCode(src: string, i: number, ctx: InlineContext): Hit {
   let n = 1
   while (src[i + n] === '`') n++
   const fence = '`'.repeat(n)
   const key = `\`${n}`
-  let from = i + n
-  if (from >= (ctx.miss?.get(key) ?? Infinity)) return { node: { t: 'text', v: fence }, end: i + n }
-  while (from < src.length) {
-    const close = src.indexOf(fence, from)
-    if (close < 0) break
-    let runEnd = close + n
-    while (src[runEnd] === '`') runEnd++
-    if (runEnd - close === n && src.slice(i + n, close).trim() !== '') {
-      return { node: { t: 'code', v: codeBody(src.slice(i + n, close)) }, end: close + n }
-    }
-    from = runEnd
-  }
+  if (i + n >= (ctx.miss?.get(key) ?? Infinity)) return { node: { t: 'text', v: fence }, end: i + n }
+  const close = findCodeClose(src, i, n)
+  if (close >= 0) return { node: { t: 'code', v: codeBody(src.slice(i + n, close)) }, end: close + n }
   ctx.miss?.set(key, Math.min(i + n, ctx.miss.get(key) ?? Infinity))
   return { node: { t: 'text', v: fence }, end: i + n }
 }
@@ -152,7 +167,9 @@ function matchAutolink(src: string, i: number, ctx: InlineContext): Hit | null {
   return m && href ? { node: link('auto', href, [{ t: 'text', v: href }]), end: i + m[0].length } : null
 }
 
-const BARE_URL = /https?:\/\/[^\s<]+/iy
+// Stops at what safeHref forbids, so a URL is linked up to that character.
+// eslint-disable-next-line no-control-regex
+const BARE_URL = /https?:\/\/[^\s<>"`\\\u0000-\u001f\u007f]+/iy
 const TRAILING = new Set(['.', ',', ':', ';', '!', '?', "'", '"', '*', '_', '~', '|'])
 
 function count(text: string, ch: string): number {

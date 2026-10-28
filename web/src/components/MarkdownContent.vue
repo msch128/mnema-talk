@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { PropType } from 'vue'
+import { t } from '../i18n'
 import { renderMarkdown } from '../lib/markdown'
 import { extractPreviewUrls } from '../lib/chatLogic'
 import { copyCodeBlock, openConfirmedLink } from '../lib/markdownActions'
@@ -70,7 +71,15 @@ function onClick(event: MouseEvent) {
     return
   }
   const spoiler = target?.closest('.md-spoiler')
-  if (spoiler) spoiler.classList.toggle('revealed')
+  if (spoiler) toggleSpoiler(spoiler)
+}
+
+// While hidden, the spoiler's aria-label ("Spoiler") stands in for its text.
+function toggleSpoiler(spoiler: Element) {
+  const revealed = spoiler.classList.toggle('revealed')
+  spoiler.setAttribute('aria-expanded', String(revealed))
+  if (revealed) spoiler.removeAttribute('aria-label')
+  else spoiler.setAttribute('aria-label', t('chat.spoiler'))
 }
 
 // A link whose text does not name its destination opens only after a confirmation,
@@ -99,7 +108,7 @@ function onKeydown(event: KeyboardEvent) {
   }
   if ((event.key === 'Enter' || event.key === ' ') && isSpoilerElement(event.target)) {
     event.preventDefault()
-    event.target.classList.toggle('revealed')
+    toggleSpoiler(event.target)
   }
 }
 </script>
