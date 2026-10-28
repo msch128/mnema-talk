@@ -1,0 +1,19 @@
+web/src/components/StreamQualityMenu.test.ts
+  s_a76092291453e7::t_4752d4b412c0ba 31,38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "64fe4e79b62d7506354ebd8e2077ba7ae8de4b1b",
+  "prompts": {},
+  "sessions": {
+    "s_a76092291453e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a25ee130d88329686",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
