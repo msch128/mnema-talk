@@ -1,0 +1,27 @@
+.github/workflows/release.yml
+  s_06fcde5dbef956::t_bf7d46ff5c97af 31-32
+README.md
+  s_06fcde5dbef956::t_003b122a2effaf 387-389,395
+doc/desktop-app.md
+  s_06fcde5dbef956::t_de593ffa81055d 152-153
+doc/desktop-trusted-client.md
+  s_06fcde5dbef956::t_909cf3947768e5 708
+doc/product-status.md
+  s_06fcde5dbef956::t_ce8eaf2daa6a18 204
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0a6b5ac322d38755440868ba8b96a0c25d56ef14",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
