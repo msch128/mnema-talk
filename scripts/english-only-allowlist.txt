@@ -69,3 +69,8 @@ path: internal/db/migrations/0075_channel_slugs.sql | the same transliteration, 
 path: web/src/lib/routePaths.ts | the same transliteration, for forum post addresses
 path: web/src/lib/routePaths.test.ts | feeds the transliteration German and accented samples
 path: web/src/composables/appRoutingApply.test.ts | a German forum post title in the address
+
+# Unicode fixtures: character folding and decoding behave the same for any script.
+path: internal/httpx/names.go | the display name homoglyph and letter folds map non-ASCII letters (ß, ø, ł, ...) to ASCII
+path: internal/httpx/httpx_review_test.go | asserts the letter fold of the display name check (Straße)
+path: internal/linkpreview/linkpreview_fixes_test.go | asserts that undeclared UTF-8 pages decode as UTF-8 (umlaut and CJK fixture text)
