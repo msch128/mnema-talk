@@ -1,0 +1,23 @@
+cmd/server/storage.go
+  s_dae090ee96213e::t_4feadeac10daf7 27-30,35-44,48-50
+cmd/server/storage_edges_test.go
+  s_dae090ee96213e::t_898e1f5c7b12e5 32
+cmd/server/storage_test.go
+  s_dae090ee96213e::t_0a0b5934eb0042 74-106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "747b235aa9966c29ec01be7f79a8871ecb605459",
+  "prompts": {},
+  "sessions": {
+    "s_dae090ee96213e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a448f20095192534b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
