@@ -1,0 +1,89 @@
+web/src/components/StageLayout.vue
+  s_06fcde5dbef956::t_f0914f92efb905 113-115,117-118
+web/src/components/StageLayout.test.ts
+  s_06fcde5dbef956::t_2e5877f36eb9b9 131-136
+web/src/components/SlashCommandBar.vue
+  s_439aa1bb873fd8::t_dd9f26fc730eb9 32-33,38
+web/src/components/SlashParts.test.ts
+  s_439aa1bb873fd8::t_534540ea923a60 118-123
+web/src/components/SlowModePicker.test.ts
+  s_439aa1bb873fd8::t_d1b52d8c61da12 1-41
+web/src/components/SlowModePicker.vue
+  s_439aa1bb873fd8::t_18f98199d0bf31 50-63,94
+web/src/components/TalkAccessPresets.vue
+  s_0083ddead970ef::t_735f44f027f34b 30-31,36,46-47,53,90-91,132-133
+web/src/components/TalkReactButton.test.ts
+  s_9b1762bf3aaac0::t_3237440c879aa6 1-39
+web/src/components/TalkReactButton.vue
+  s_0083ddead970ef::t_4f61aff00ca6ba 28,30-32,42
+web/src/components/TalkSettingsDialog.test.ts
+  s_89e1cac892ca76::t_e64524018c7825 152-190
+web/src/components/TalkSettingsDialog.vue
+  s_89e1cac892ca76::t_15c437ba769e1d 37-39,47-50,84
+web/src/components/ThreadRootCard.vue
+  s_0083ddead970ef::t_8180eefde3a23e 8,91,101
+web/src/components/ThreadSidebar.test.ts
+  s_439aa1bb873fd8::t_e96830a9142cbf 598-600,603,606-681
+web/src/components/ThreadSidebar.vue
+  s_4ac6295b6bd2d2::t_86ef774486cf8d 9,21,28,42-44,46-47,71-82,183-185,188-196,206,208-209,271-276,278
+web/src/components/TimeoutBanner.test.ts
+  s_0083ddead970ef::t_2a629bc4848723 34,52-69
+web/src/components/TimeoutBanner.vue
+  s_0083ddead970ef::t_8981d9ecfc970a 14-21,26-36,46-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f1e86f35c482d8dcffcbc4e4097688020c471a52",
+  "prompts": {},
+  "sessions": {
+    "s_0083ddead970ef": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8130eec70ffb508e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_439aa1bb873fd8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8b737fc6e5b166c0",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4ac6295b6bd2d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac4ef8ece1278c839",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_89e1cac892ca76": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6e7a4aedf753ba03",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_9b1762bf3aaac0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaf3e3fa1d866b304",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
