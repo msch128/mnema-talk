@@ -180,6 +180,30 @@ func assignAndFillSlugs(ctx context.Context, tx pgx.Tx, ch *Channel) error {
 	return FillSlugs(ctx, tx, ch)
 }
 
+// channelMediaKeys returns the storage keys of the media attached to the
+// messages of the given channels.
+func channelMediaKeys(ctx context.Context, q db.Querier, ids []uuid.UUID) ([]string, error) {
+	var keys []string
+	err := collectKeys(ctx, q, &keys, `
+		SELECT s3_key FROM media WHERE message_id IN
+			(SELECT id FROM messages WHERE channel_id = ANY($1))`, ids)
+	return keys, err
+}
+
+// DeleteChannelsTx deletes the channels and, by cascade, their messages inside
+// tx and returns the storage keys of the media attached to those messages. The
+// caller locks the channels first and removes the objects after the commit.
+func DeleteChannelsTx(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]string, error) {
+	keys, err := channelMediaKeys(ctx, tx, ids)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM channels WHERE id = ANY($1)`, ids); err != nil {
+		return nil, fmt.Errorf("delete channel: %w", err)
+	}
+	return keys, nil
+}
+
 // DeleteChannel removes a channel and, by cascade, its messages. It returns
 // the storage keys of the media attached to those messages.
 func DeleteChannel(ctx context.Context, p *db.Pool, channelID uuid.UUID) ([]string, error) {
@@ -196,15 +220,9 @@ func DeleteChannel(ctx context.Context, p *db.Pool, channelID uuid.UUID) ([]stri
 		if err != nil {
 			return fmt.Errorf("lock channel: %w", err)
 		}
-		if err := collectKeys(ctx, tx, &keys, `
-			SELECT s3_key FROM media WHERE message_id IN
-				(SELECT id FROM messages WHERE channel_id = $1)`, channelID); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx, `DELETE FROM channels WHERE id = $1`, channelID); err != nil {
-			return fmt.Errorf("delete channel: %w", err)
-		}
-		return nil
+		k, derr := DeleteChannelsTx(ctx, tx, []uuid.UUID{channelID})
+		keys = k
+		return derr
 	})
 	if err != nil {
 		return nil, err

@@ -5083,7 +5083,7 @@
             "type": "string"
           },
           "type": {
-            "description": "Type is the Mnema type: text or voice (a Talk).",
+            "description": "Type is the Mnema type: text, voice (a Talk), stage or forum.",
             "type": "string"
           },
           "user_limit": {
