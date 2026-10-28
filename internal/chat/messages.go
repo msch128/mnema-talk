@@ -345,13 +345,16 @@ func CreateMessage(ctx context.Context, q db.Querier, nm NewMessage) (uuid.UUID,
 	if nm.AuthorName != "" {
 		authorName = &nm.AuthorName
 	}
+	// created_at is taken now, not at the start of the transaction (NOW()):
+	// after waiting for the locks of gatePost, a message must not sort before
+	// a read marker or a neighbour that committed meanwhile.
 	// A message of a direct message conversation draws its number from the
 	// conversations' own sequence, so the public numbering shows nothing of
 	// what is said in private (migration 0050).
 	err := q.QueryRow(ctx, `
-		INSERT INTO messages (number, in_dm, channel_id, user_id, content, parent_id, reply_to_id, webhook_id, author_name, embeds, forward_of, forwarded, title, is_locked) OVERRIDING SYSTEM VALUE
+		INSERT INTO messages (number, in_dm, channel_id, user_id, content, parent_id, reply_to_id, webhook_id, author_name, embeds, forward_of, forwarded, title, is_locked, created_at) OVERRIDING SYSTEM VALUE
 		SELECT CASE WHEN c.type = 'dm' THEN nextval('dm_number_seq') ELSE nextval(pg_get_serial_sequence('messages', 'number')) END,
-		       c.type = 'dm', c.id, $2, $3, $4, $5, $6, $7, $8, $9::uuid, $9::uuid IS NOT NULL, $10, $11
+		       c.type = 'dm', c.id, $2, $3, $4, $5, $6, $7, $8, $9::uuid, $9::uuid IS NOT NULL, $10, $11, clock_timestamp()
 		FROM channels c WHERE c.id = $1
 		RETURNING id`, nm.ChannelID, nm.UserID, nm.Content, nm.ParentID, nm.ReplyToID, nm.WebhookID, authorName, embeds, nm.ForwardOf, nm.Title, nm.IsLocked).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {

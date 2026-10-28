@@ -290,3 +290,35 @@ func TestNameSkeletonIgnoresInvisiblesAndCompatibilityForms(t *testing.T) {
 		}
 	}
 }
+
+type chunkedBody struct{ r *strings.Reader }
+
+func (c chunkedBody) Read(p []byte) (int, error) { return c.r.Read(p) }
+func (c chunkedBody) Close() error               { return nil }
+
+func TestDecodeOptionalJSON(t *testing.T) {
+	type payload struct {
+		ID string `json:"id"`
+	}
+	newReq := func(body string, length int64) *http.Request {
+		r := httptest.NewRequest(http.MethodPost, "/", chunkedBody{strings.NewReader(body)})
+		r.ContentLength = length
+		return r
+	}
+	var p payload
+	if err := DecodeOptionalJSON(newReq("", -1), &p); err != nil || p.ID != "" {
+		t.Errorf("empty chunked body: %+v %v", p, err)
+	}
+	if err := DecodeOptionalJSON(httptest.NewRequest(http.MethodPost, "/", http.NoBody), &p); err != nil {
+		t.Errorf("no body: %v", err)
+	}
+	if err := DecodeOptionalJSON(newReq(`{"id":"x"}`, -1), &p); err != nil || p.ID != "x" {
+		t.Errorf("chunked body ignored: %+v %v", p, err)
+	}
+	if err := DecodeOptionalJSON(newReq(`{"id":"x"} {}`, 13), &payload{}); err == nil {
+		t.Error("trailing data accepted")
+	}
+	if err := DecodeOptionalJSON(newReq(`{"nope":1}`, 10), &payload{}); err == nil {
+		t.Error("unknown field accepted")
+	}
+}

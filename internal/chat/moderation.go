@@ -74,6 +74,8 @@ type deletedMessage struct {
 	createdAt   time.Time
 	attachments []map[string]any
 	edits       []map[string]any
+	// replyIDs are the thread replies of other members that go with it.
+	replyIDs []uuid.UUID
 }
 
 func parseBulkDeleteRequest(r *http.Request) (uuid.UUID, BulkDeleteRequest, string, error) {
@@ -187,13 +189,16 @@ func (h *Handler) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) 
 		if len(m.edits) > 0 {
 			d["edit_versions"] = m.edits
 		}
+		if len(m.replyIDs) > 0 {
+			d["reply_ids"] = m.replyIDs
+		}
 		h.Audit.RecordOrLog(ctx, audit.Entry{Action: "message.delete", TargetType: "message", TargetID: m.id.String(), TargetName: rep.channelName, ChannelID: &chID, Details: d})
 	}
 	h.Audit.RecordOrLog(ctx, audit.Entry{
 		Action: "moderation.bulk_delete", TargetType: "user", TargetID: req.UserID.String(), TargetName: rep.targetName, ChannelID: &chID,
 		Details: map[string]any{"channel_id": chID, "channel_name": rep.channelName, "requested": req.Count, "deleted": len(rep.gone), "reason": rep.reason},
 	})
-	if len(rep.gone) > 0 && req.UserID != rep.actor.ID && h.Events != nil {
+	if len(rep.gone) > 0 && req.UserID != rep.actor.ID {
 		h.Events.SendToUsers([]uuid.UUID{req.UserID}, events.ModerationNotice, map[string]any{
 			"kind": "messages_deleted", "reason": rep.reason, "channel_name": rep.channelName, "count": len(rep.gone),
 		})
@@ -249,8 +254,10 @@ func takeLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID, 
 	}
 	attachDeletedMedia(gone, byMessage)
 	versions := editVersionsForAuditDetail(ctx, tx, ids)
+	replies := replyIDsForAudit(ctx, tx, ids)
 	for i := range gone {
 		gone[i].edits = versions[gone[i].id]
+		gone[i].replyIDs = replies[gone[i].id]
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM messages WHERE id = ANY($1)`, ids); err != nil {
 		return nil, nil, fmt.Errorf("delete messages: %w", err)

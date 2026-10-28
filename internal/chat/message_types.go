@@ -168,12 +168,24 @@ func ValidateContent(content string, allowEmpty bool) (string, error) {
 	return httpx.CleanText("content", content, MaxMessageLen, !allowEmpty)
 }
 
+// Parts of emoji sequences that are format characters: the zero width joiner
+// of family and profession emoji, and the tag characters of subdivision flags.
+const (
+	zeroWidthJoiner rune = 0x200D
+	tagSpace        rune = 0xE0020
+	tagCancel       rune = 0xE007F
+)
+
 func isDisallowedEmojiRune(r rune) bool {
 	switch {
 	case unicode.IsSpace(r), unicode.IsControl(r):
 		return true
 	case r == '<', r == '>':
 		return true
+	case unicode.Is(unicode.Cf, r):
+		// Invisible and bidi formatting characters spoof the pill; only the
+		// joiner and the tag characters of emoji sequences are real emoji parts.
+		return r != zeroWidthJoiner && (r < tagSpace || r > tagCancel)
 	default:
 		return false
 	}
@@ -186,8 +198,8 @@ func validEmojiLength(emoji string) bool {
 	return utf8.ValidString(emoji)
 }
 
-// ValidateEmoji accepts a short, printable, whitespace-free reaction token, or
-// the token of a custom emoji (<:name:id>).
+// ValidateEmoji accepts a short, printable, whitespace-free reaction token
+// without invisible or bidi formatting characters, or the token of a custom emoji (<:name:id>).
 func ValidateEmoji(emoji string) (string, error) {
 	emoji = strings.TrimSpace(emoji)
 	if emojitext.IsToken(emoji) {

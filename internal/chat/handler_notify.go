@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -203,10 +202,8 @@ func (h *Handler) setServerNotify(w http.ResponseWriter, r *http.Request) error 
 // @Router /api/read-state/read-all [post]
 func (h *Handler) markAllRead(w http.ResponseWriter, r *http.Request) error {
 	var req MarkAllReadRequest
-	if r.ContentLength != 0 {
-		if err := httpx.DecodeJSON(r, &req); err != nil {
-			return err
-		}
+	if err := httpx.DecodeOptionalJSON(r, &req); err != nil {
+		return err
 	}
 	if req.CategoryID != nil {
 		if err := h.requireCategory(r, *req.CategoryID); err != nil {
@@ -235,20 +232,5 @@ func (h *Handler) viewableCategories(r *http.Request) ([]uuid.UUID, error) {
 	if err != nil {
 		return nil, err
 	}
-	rows, err := h.DB.Query(r.Context(), `SELECT id FROM categories`)
-	if err != nil {
-		return nil, err
-	}
-	ids, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
-	if err != nil {
-		return nil, err
-	}
-	sub := auth.UserFrom(r.Context()).Subject()
-	out := make([]uuid.UUID, 0, len(ids))
-	for _, id := range ids {
-		if snap.CategoryVisible(sub, id) {
-			out = append(out, id)
-		}
-	}
-	return out, nil
+	return snap.VisibleCategories(auth.UserFrom(r.Context()).Subject()), nil
 }
