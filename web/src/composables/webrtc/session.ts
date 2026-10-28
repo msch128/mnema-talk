@@ -149,6 +149,9 @@ export function sendMuteState(cx: Cx) {
   chat.sendWSEvent('voice_mute_state', { muted: !!voice.isMuted, deafened: !!voice.isDeafened })
 }
 
+// How long the room state after a rejoin gets to arrive.
+const ROOM_STATE_GRACE_MS = 5000
+
 // After the WebSocket reconnected the server may have dropped our media
 // peer; start a fresh connection and announce the join again. The server
 // treats it as a resume (no leave/join for the others) within its grace time.
@@ -164,6 +167,8 @@ export function rejoinAfterReconnect(cx: Cx) {
   // After the join, so a package it produces is not dropped by the hub.
   mediaCall().resume()
   attachSubscriptions(cx)
+  // The room state arrives right after the join; a share missing by then ended.
+  setTimeout(() => { if (voice.currentChannelId === channelId) voice.dropEndedWatches() }, ROOM_STATE_GRACE_MS)
 }
 
 // Which video I receive is decided on the server: tell it my camera opt-outs
