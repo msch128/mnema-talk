@@ -1,0 +1,39 @@
+api/openapi.json
+  s_442cc25bac225a::t_caf24574df4dce 5059
+internal/chat/channels.go
+  s_442cc25bac225a::t_86be6cf437f726 176-199,216-218
+internal/chat/dm_members.go
+  s_442cc25bac225a::t_67aa0474e8375e 114-115
+internal/discordimport/apply.go
+  s_d8538fb3b7561b::t_1d58b90f6ec71c 8,38-39,50-54,123-125,129-135,163-164
+internal/discordimport/import_test.go
+  s_442cc25bac225a::t_dc897ff173d566 218-240
+internal/discordimport/plan_types.go
+  s_442cc25bac225a::t_36714967b45eaa 51,94
+internal/discordimport/undo.go
+  s_442cc25bac225a::t_ffdbfa5d3ebcc1 11,192-193,275-280,306,308
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "43c3a36ed71dff176e80ae2edce415327f748b74",
+  "prompts": {},
+  "sessions": {
+    "s_442cc25bac225a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a389b1c405b18f213",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_d8538fb3b7561b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-add127b93db77294e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
