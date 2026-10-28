@@ -1,0 +1,35 @@
+internal/auth/admin_seed.go
+  s_06fcde5dbef956::t_03d85c68c602a1 69
+internal/auth/email.go
+  s_06fcde5dbef956::t_dd4d3c08fa9cbe 102
+internal/auth/invites.go
+  s_06fcde5dbef956::t_0c5d4d87af7798 120
+internal/auth/service_accounts.go
+  s_06fcde5dbef956::t_7300f29c13871d 134
+internal/chat/dm.go
+  s_06fcde5dbef956::t_54c41a5778f04c 262
+internal/chat/forum_tags.go
+  s_06fcde5dbef956::t_355bc187830d26 85,129
+internal/chat/reports.go
+  s_06fcde5dbef956::t_9848110ac5aa31 202
+internal/db/errors.go
+  s_06fcde5dbef956::t_f136c10ebbc785 1-14
+internal/emoji/store.go
+  s_06fcde5dbef956::t_824a361c7b66be 11,111,123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "088e1973db065f2c208804ca10d76aea6a4c845d",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
