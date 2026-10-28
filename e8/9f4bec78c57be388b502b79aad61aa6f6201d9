@@ -1,0 +1,19 @@
+doc/desktop-trusted-client.md
+  s_9df22b27f2327e::t_ec50f2d1430478 320-338,341-342
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e89f4bec78c57be388b502b79aad61aa6f6201d9",
+  "prompts": {},
+  "sessions": {
+    "s_9df22b27f2327e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af345ded314039cb4",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
