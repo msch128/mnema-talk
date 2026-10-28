@@ -1,0 +1,51 @@
+web/src/lib/noiseSuppressor.test.ts
+  s_dc6ba5bcea699f::t_0cc3cd2d2466ae 206-220
+web/src/lib/noiseSuppressor.ts
+  s_dc6ba5bcea699f::t_307e88476cdb62 71-76
+web/src/lib/notifyPreview.test.ts
+  s_27bb33a982f856::t_ce8a6e3cbe15d2 1-43
+web/src/lib/notifyPreview.ts
+  s_dc6ba5bcea699f::t_afd29dd30ebb22 12-14,16,20-25,27-28,30-33
+web/src/lib/router.test.ts
+  s_dc6ba5bcea699f::t_b34a5dbf3d0139 153-169
+web/src/lib/router.ts
+  s_dc6ba5bcea699f::t_0873ca0c5c6803 89-98,197-200,206-212
+web/src/lib/webPush.test.ts
+  s_2148161d7c98f3::t_b16a493bd14069 211-222
+web/src/lib/webPush.ts
+  s_dc6ba5bcea699f::t_e00d82f19031a7 59-60,63-71,145,147
+web/src/stores/auth/credentials.ts
+  s_dc6ba5bcea699f::t_aca2738ba02cd7 4,143,176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4cac42f607e71590de1742872c7df8cfc8513ae6",
+  "prompts": {},
+  "sessions": {
+    "s_2148161d7c98f3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adb3d886b8008116b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_27bb33a982f856": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaf7a7a7ee20c3225",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_dc6ba5bcea699f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a3702c97e5f923577",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
