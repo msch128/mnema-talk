@@ -36,7 +36,8 @@ function calls(method: string) {
 beforeEach(() => {
   vi.useFakeTimers()
   setActivePinia(createPinia())
-  http.handle = () => []
+  // A created conversation is read again: the route answers with the one asked for.
+  http.handle = url => [pair, group].find(d => url === `/api/dms/${d.id}`) ?? []
   vi.mocked(api).mockClear()
   vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
@@ -93,6 +94,15 @@ describe('events', () => {
     chat.handleWSEvent({ type: 'message_create', payload: messageFixture({ id: fixtureId(8), channel_id: pair.id, user_id: ada.id, created_at: '2030-01-01T00:00:00Z' }) })
     expect(chat.dms[0]?.id).toBe(pair.id)
     expect(chat.readStates[pair.id]).toMatchObject({ unread_count: 1, mention_count: 0 })
+  })
+
+  it('reads a created conversation again, as the event carries the starter\'s notify level and send right', async () => {
+    const chat = setup()
+    http.handle = () => ({ ...pair, notify_level: 'all', can_send: false })
+    chat.handleWSEvent({ type: 'dm_created', payload: { ...pair, notify_level: 'mute', can_send: true } })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(calls('GET').map(([url]) => url)).toContain(`/api/dms/${pair.id}`)
+    expect(chat.dms[0]).toMatchObject({ id: pair.id, notify_level: 'all', can_send: false })
   })
 
   it('does not count a message of the conversation that is open and being read', async () => {

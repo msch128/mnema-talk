@@ -111,6 +111,10 @@ type DMLastMessage struct {
 func (d DirectMessage) forOthers() DirectMessage {
 	d.UnreadCount, d.MentionCount, d.LastReadAt = 0, 0, nil
 	d.Hidden, d.FavouritePosition = false, nil
+	// Both were worked out for the caller (their mute-all, their permissions).
+	// The client reads its own with the conversation, and meanwhile assumes
+	// nothing about the setting and nothing to send with.
+	d.NotifyLevel, d.CanSend = NotifyInherit, false
 	d.LastMessage = nil // chosen by the caller's blocks; each member fetches their own
 	return d
 }
@@ -288,11 +292,16 @@ func createDMOnce(ctx context.Context, p *db.Pool, nd NewDM) (uuid.UUID, bool, e
 	var id uuid.UUID
 	created := false
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		// One member's starts are serialized, so the limits hold.
-		if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = $1 FOR NO KEY UPDATE`, nd.Creator); err != nil {
+		// One member's starts are serialized, so the limits hold; so are the
+		// starts that count the others' group conversations.
+		group := len(nd.Others) > 1
+		locked := []uuid.UUID{nd.Creator}
+		if group {
+			locked = append(locked, nd.Others...)
+		}
+		if err := lockUsers(ctx, tx, locked); err != nil {
 			return err
 		}
-		group := len(nd.Others) > 1
 		var key *string
 		if !group {
 			k := dmKey(nd.Creator, nd.Others[0])
@@ -320,6 +329,14 @@ func createDMOnce(ctx context.Context, p *db.Pool, nd NewDM) (uuid.UUID, bool, e
 		return err
 	})
 	return id, created, err
+}
+
+// lockUsers locks the user rows in a fixed order, so transactions that count
+// the same members' conversations before adding to them run one after the
+// other and cannot deadlock on each other.
+func lockUsers(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) error {
+	_, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = ANY($1::uuid[]) ORDER BY id FOR NO KEY UPDATE`, ids)
+	return err
 }
 
 // checkDMStart applies the limits of the starter and the rules about the
