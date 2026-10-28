@@ -23,12 +23,13 @@ export function resetMemberStores() {
   useAccountStore().reset()
 }
 
-/** Retire all instance data and pending work before selecting another origin. */
+/** Removes one ephemeral note. */
 export function dismissEphemeral(cx: Cx, id: number) {
   const { cs } = cx
   cs.ephemeral.value = cs.ephemeral.value.filter(n => n.id !== id)
 }
 
+/** Retire all instance data and pending work before selecting another origin. */
 export function resetCommunityState(cx: Cx) {
   const { cs } = cx
   cs.ephemeral.value = []
@@ -93,6 +94,9 @@ export function resetCommunityState(cx: Cx) {
   cs.webrtcCandidateHandler = null
   cs.voiceKickedHandler = null
   cs.talkMovedHandler = null
+  cs.mediaHandshakeHandler = null
+  cs.forumTagsChangedHandler = null
+  cs.forumTagsSignal.value = null
   const version = useAppVersionStore()
   version.followAdminUpdates(() => false)
   version.setServerVersion('')

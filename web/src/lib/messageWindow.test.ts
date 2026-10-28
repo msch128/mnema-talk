@@ -3,7 +3,7 @@ import type { MessageWindow } from './messageWindow'
 import { describe, it, expect } from 'vitest'
 import {
   PAGE_SIZE, WINDOW_CAP, emptyWindow, dedupe, fromLatest, fromAround,
-  prependOlder, appendNewer, appendLive, removeMessage
+  prependOlder, appendNewer, appendLive, removeMessage, mergeLatest
 } from './messageWindow'
 
 // Fake server with the same paging contract as GET /api/channels/{id}/messages.
@@ -186,5 +186,29 @@ describe('messageWindow 15k paging simulation', () => {
     const result = appendNewer(win, pendingAfter, { anchorId: lastBefore })
     expect(result).toBe(win)
     assertContiguous(result)
+  })
+})
+
+describe('mergeLatest', () => {
+  const m = (id: string, content = id) => ({ id, content })
+  const win = (ids: string[], hasMoreBefore = true) => ({ messages: ids.map(id => m(id)), hasMoreBefore, hasMoreAfter: false })
+
+  it('keeps the older history and appends what the newest page adds', () => {
+    const { window: merged, replaced } = mergeLatest(win(['a', 'b', 'c']), [m('b'), m('c'), m('d')], { limit: 3 })
+    expect(replaced).toBe(false)
+    expect(merged.messages.map(x => x.id)).toEqual(['a', 'b', 'c', 'd'])
+    expect(merged.hasMoreBefore).toBe(true)
+    expect(merged.hasMoreAfter).toBe(false)
+  })
+
+  it('takes the page copy of a known message and drops one the page no longer holds', () => {
+    const { window: merged } = mergeLatest(win(['a', 'b', 'c']), [m('b', 'edited')], { limit: 3 })
+    expect(merged.messages).toEqual([m('a'), m('b', 'edited')])
+  })
+
+  it('replaces the window when the page does not reach it', () => {
+    const { window: merged, replaced } = mergeLatest(win(['a', 'b']), [m('x'), m('y')], { limit: 2 })
+    expect(replaced).toBe(true)
+    expect(merged.messages.map(x => x.id)).toEqual(['x', 'y'])
   })
 })
