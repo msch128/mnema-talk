@@ -1,0 +1,41 @@
+web/src/components/ParticipantTile.vue
+  s_06fcde5dbef956::t_18147abd3b435d 2,51
+web/src/components/ProfileAvatar.vue
+  s_06fcde5dbef956::t_87463875b92548 2,93
+web/src/components/UserAvatar.test.ts
+  s_06fcde5dbef956::t_ba0bc2f4f523e2 1-11
+web/src/components/UserAvatar.vue
+  s_06fcde5dbef956::t_892ed7914c3e1b 2,55
+web/src/components/UserBar.vue
+  s_06fcde5dbef956::t_73e9e9620ccb6b 2,48
+web/src/components/VoiceStatusPanel.test.ts
+  s_06fcde5dbef956::t_6f51b1260c5df9 33
+web/src/components/VoiceStatusPanel.vue
+  s_06fcde5dbef956::t_5f095ce7e1f904 3,26
+web/src/components/WelcomeFlow.test.ts
+  s_06fcde5dbef956::t_9a37f754ba8484 6,103-120
+web/src/components/WelcomeFlow.vue
+  s_06fcde5dbef956::t_44bdc1d06b7afd 6,22,24-34,82
+web/src/components/talkButtons.ts
+  s_06fcde5dbef956::t_4cc73e68581ee6 19-21
+web/src/lib/initial.test.ts
+  s_06fcde5dbef956::t_92d86314ef0ee5 1-15
+web/src/lib/initial.ts
+  s_06fcde5dbef956::t_1415165883d376 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fda83c1a5c3d84d8193a0ab388b77874b015c002",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
