@@ -195,11 +195,12 @@ export function leaveVoiceChannel(cx: Cx) {
   endCall(cx, { notifyServer: true })
 }
 
-function kickedMessageKey(reason: ServerEventPayloads['voice_kicked']['reason']): string {
-  if (reason === 'room_full') return 'voice.roomFull'
-  if (reason === 'missing_permission') return 'voice.noPermission'
-  if (reason === 'connection_lost') return 'voice.connectionLost'
-  return 'voice.kicked'
+const KICK_NOTICE: Record<string, string> = {
+  room_full: 'voice.roomFull',
+  missing_permission: 'voice.noPermission',
+  connection_lost: 'voice.connectionLost',
+  media_unavailable: 'voice.mediaUnavailable',
+  joined_elsewhere: 'voice.joinedElsewhere',
 }
 
 // An admin removed me, or the server refused a full room. The server has
@@ -210,7 +211,7 @@ function handleKicked(cx: Cx, payload: ServerEventPayloads['voice_kicked']) {
   if (!voice.currentChannelId) return
   if (payload.channel_id !== voice.currentChannelId) return
   endCall(cx, { notifyServer: false })
-  useToastStore().info(t(kickedMessageKey(payload.reason)))
+  useToastStore().info(t(KICK_NOTICE[payload.reason ?? ''] ?? 'voice.kicked'))
 }
 
 // Rejoins the channel of a call interrupted by a reload less than 30 s ago.

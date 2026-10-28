@@ -24,8 +24,9 @@ const (
 	stageActionWindow = 10 * time.Second
 )
 
-// stageBook is the Stage state of every seat, guarded by its own lock (never
-// held together with the hub's).
+// stageBook is the Stage state of every seat, guarded by its own lock. The
+// lock order is the hub's first, then this one (whileSeated, removePresence);
+// nothing may take the hub's lock while holding this one.
 type stageBook struct {
 	mu sync.Mutex
 	// grant is talk power handed out by a manager.
@@ -135,9 +136,8 @@ func (b *stageBook) seats() []voiceKey {
 
 // holds reports whether a member holds a permission in a channel.
 func holds(snap *perm.Snapshot, user, ch uuid.UUID, need perm.Set) bool {
-	sub := perm.Subject{ID: user}
-	sub.Owner = snap.IsOwner(sub)
-	return snap.Channel(sub, ch).Has(need)
+	// Channel resolves the owner itself.
+	return snap.Channel(perm.Subject{ID: user}, ch).Has(need)
 }
 
 // mayTalkOnStage is whether the seat has talk power: granted, or implied by
