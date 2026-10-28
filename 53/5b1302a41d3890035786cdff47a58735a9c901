@@ -1,0 +1,25 @@
+web/src/components/SearchModal.test.ts
+  s_29b6703bbd3fe6::t_95a6352ed3df8f 15,278
+web/src/lib/roleSave.test.ts
+  s_29b6703bbd3fe6::t_513679911d2103 1-34
+web/src/stores/events.test.ts
+  s_29b6703bbd3fe6::t_50d963fbc66e49 246-252
+web/src/stores/memberStoresRaces.test.ts
+  s_29b6703bbd3fe6::t_86a684294592d3 127-153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "535b1302a41d3890035786cdff47a58735a9c901",
+  "prompts": {},
+  "sessions": {
+    "s_29b6703bbd3fe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aintegrate-web-565add501aebda67",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
