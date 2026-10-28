@@ -1,0 +1,21 @@
+internal/mdplain/links.go
+  s_bf965fb31d4e8a::t_b8a8efe3cc268e 9,11,13,26-43,88
+internal/mdplain/plain_test.go
+  s_bf965fb31d4e8a::t_1bfd738290644b 70-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "34b07e65f90e9f7a8dd8137728a504f103fbd398",
+  "prompts": {},
+  "sessions": {
+    "s_bf965fb31d4e8a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a471f7457881e2784",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
