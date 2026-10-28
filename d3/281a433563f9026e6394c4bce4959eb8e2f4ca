@@ -1,0 +1,101 @@
+web/src/components/ForwardDialog.vue
+  s_06fcde5dbef956::t_f0914f92efb905 46-55,59
+web/src/components/EventEditDialog.test.ts
+  s_06fcde5dbef956::t_cb27f8de159975 66,75,86,96,230-278
+web/src/components/LegalModal.test.ts
+  s_06fcde5dbef956::t_bb56c71b87d913 38-41
+web/src/components/LegalModal.vue
+  s_06fcde5dbef956::t_d5f710b36cb055 18-19,26-27,76,112-113,216
+web/src/components/EventDetailModal.vue
+  s_de43b55f5a64fd::t_ccfa301defa382 15,86,175
+web/src/components/EventEditDialog.vue
+  s_89e1cac892ca76::t_193b066cc8d87e 2,9,25-32,60-67,71,73-74,80,89-90,93,95,128,130-131,134-136,138-141,143,147,167,171,183,187,199,203,211,215,225,227,252,264,275,277,282
+web/src/components/EventsModal.vue
+  s_de43b55f5a64fd::t_ab6e6ab5b96ec7 15,79,95,151-152,177-184
+web/src/components/EventsModalDetails.test.ts
+  s_0cdb82f6031197::t_c2cc7b278643d7 118,187-195
+web/src/components/ForumArea.test.ts
+  s_0083ddead970ef::t_d3fb04f815cf13 164-165,171-235
+web/src/components/ForumArea.vue
+  s_0083ddead970ef::t_b87bc3fe3b06ad 7,10,13,21,41-48,51,54-55,57,59,65,67,70,74-102,104-105,107,130-132,266-269,303-313
+web/src/components/Forward.test.ts
+  s_0083ddead970ef::t_1d65c6ff98c2f3 133-143
+web/src/components/IncomingWebhooksPanel.vue
+  s_0083ddead970ef::t_e2a752cf9c6781 5,15,25,44-46,51-52,54-55,59,66,68,70,82,195-196,228
+web/src/components/LaterDialog.test.ts
+  s_0cdb82f6031197::t_af1060640cb92b 111-139
+web/src/components/LaterDialog.vue
+  s_9b1762bf3aaac0::t_b644deffed45c6 6,40-44,58-60,62,69,77,85-92
+web/src/components/WebhookPanels.test.ts
+  s_0083ddead970ef::t_17870e0e616383 72-98
+web/src/i18n/de.json
+  s_a90e3e5d817e29::t_1c6006837e2089 409,801,2378,2491-2499
+web/src/i18n/en.json
+  s_a90e3e5d817e29::t_22a661a9313b26 409,801,2378,2491-2499
+web/src/lib/forumApi.ts
+  s_0083ddead970ef::t_bdf391b8192750 40-41,50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d3281a433563f9026e6394c4bce4959eb8e2f4ca",
+  "prompts": {},
+  "sessions": {
+    "s_0083ddead970ef": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8130eec70ffb508e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0cdb82f6031197": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4384bdc05bc26891",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_89e1cac892ca76": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6e7a4aedf753ba03",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_9b1762bf3aaac0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaf3e3fa1d866b304",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_a90e3e5d817e29": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa8140774db0fd2a7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_de43b55f5a64fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad07725a6893b3ba3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
