@@ -38,7 +38,7 @@ func (s *Store) ActivateScheduled(ctx context.Context, now time.Time) ([]uuid.UU
 func (s *Store) CompleteActive(ctx context.Context, now time.Time) ([]uuid.UUID, error) {
 	rows, err := s.DB.Query(ctx, `
 		UPDATE events SET status = 'completed', updated_at = NOW()
-		WHERE status = 'active' AND end_time IS NOT NULL AND end_time <= $1
+		WHERE status = 'active' AND `+eventEnd+` <= $1
 		RETURNING id`, now)
 	if err != nil {
 		return nil, err
@@ -82,9 +82,17 @@ func (s *Store) DueReminders(ctx context.Context, now time.Time) ([]DueReminder,
 	return out, rows.Err()
 }
 
-func (s *Store) MarkReminderSent(ctx context.Context, id uuid.UUID) error {
-	_, err := s.DB.Exec(ctx, `UPDATE events SET reminder_sent_at = NOW() WHERE id = $1`, id)
-	return err
+// ClaimReminder marks the reminder of a due event as sent and reports whether
+// this call did it, so of several scheduler passes or server processes only
+// one sends it.
+func (s *Store) ClaimReminder(ctx context.Context, id uuid.UUID) (bool, error) {
+	tag, err := s.DB.Exec(ctx, `
+		UPDATE events SET reminder_sent_at = NOW()
+		WHERE id = $1 AND reminder_sent_at IS NULL AND status IN ('scheduled', 'active')`, id)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() == 1, nil
 }
 
 func (s *Store) GetRSVPUserIDs(ctx context.Context, eventID uuid.UUID) ([]uuid.UUID, error) {
