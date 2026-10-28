@@ -3563,14 +3563,12 @@
             ]
           },
           "mention_count": {
-            "description": "MentionCount is counted among those messages too.",
             "type": "integer"
           },
           "notify_level": {
             "$ref": "#/components/schemas/chat.NotifyLevel"
           },
           "unread_count": {
-            "description": "UnreadCount stops at 1000 (the newest unread messages are counted).",
             "type": "integer"
           }
         },

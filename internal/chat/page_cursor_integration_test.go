@@ -111,30 +111,3 @@ func TestResolveAndDeleteReportStates(t *testing.T) {
 	requireStatus(t, err, http.StatusNotFound)
 	requireStatus(t, del(), http.StatusNotFound)
 }
-
-// The unread count of a channel stops at the cap, so a member who never opens a
-// busy channel does not make every read-state request count its whole history.
-func TestReadStateCountsStopAtTheCap(t *testing.T) {
-	f := newChatFixture(t)
-	ctx := context.Background()
-	var author uuid.UUID
-	if err := f.p.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash) VALUES ('chatty_one', 'Chatty', 'x') RETURNING id`).Scan(&author); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := f.p.Exec(ctx, `INSERT INTO messages (channel_id, user_id, content) SELECT $1, $2, 'm' || g FROM generate_series(1, $3) g`, f.c.ID, author, readStateCountCap+25); err != nil {
-		t.Fatal(err)
-	}
-	states, err := GetReadStates(ctx, f.p, f.u)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, s := range states {
-		if s.ChannelID == f.c.ID {
-			if s.UnreadCount != readStateCountCap {
-				t.Fatalf("unread = %d, want the cap %d", s.UnreadCount, readStateCountCap)
-			}
-			return
-		}
-	}
-	t.Fatal("channel missing from the read states")
-}
