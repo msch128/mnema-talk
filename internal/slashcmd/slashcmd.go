@@ -32,7 +32,7 @@ type Services struct {
 	// Auth carries the profile and moderation actions shared with the REST
 	// routes.
 	Auth *auth.Handler
-	// Audit records the moderation shortcuts and /nick; nil records nothing.
+	// Audit records the moderation shortcuts; nil records nothing.
 	Audit *audit.Log
 
 	// Chat starts direct messages for /msg (chat.Handler.StartDM).
@@ -54,9 +54,9 @@ func Commands(s Services) []slash.Builtin {
 		msgCommand{svc: svc},
 		nickCommand{svc: svc},
 		threadCommand{svc: svc},
-		timeoutCommand{svc: svc},
-		banCommand{svc: svc},
-		kickCommand{svc: svc},
+		timeoutCommand(svc),
+		banCommand(svc),
+		kickCommand(svc),
 	}
 	return list
 }

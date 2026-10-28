@@ -522,3 +522,21 @@ func TestAuthHashEntropyFailuresPreserveAccounts(t *testing.T) {
 		t.Fatalf("failed hash created account: exists=%v err=%v", exists, err)
 	}
 }
+
+func TestUpdateDisplayNameKeepsTheStoredBio(t *testing.T) {
+	p, _, member := authFixture(t)
+	ctx := context.Background()
+	if _, err := UpdateProfile(ctx, p, member.ID, "before", "my bio"); err != nil {
+		t.Fatal(err)
+	}
+	u, err := UpdateDisplayName(ctx, p, member.ID, "after")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.DisplayName != "after" || u.Bio != "my bio" {
+		t.Fatalf("display name %q, bio %q", u.DisplayName, u.Bio)
+	}
+	if _, err := UpdateDisplayName(ctx, p, uuid.New(), "x"); err == nil {
+		t.Fatal("unknown user accepted")
+	}
+}

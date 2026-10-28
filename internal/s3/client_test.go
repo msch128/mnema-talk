@@ -253,6 +253,9 @@ func TestDeleteBatchChunksAndReportsFailures(t *testing.T) {
 	if !strings.Contains(err.Error(), "2 of 3 failed") {
 		t.Fatalf("partial failure not reported: %v", err)
 	}
+	if !strings.Contains(err.Error(), "locked/a") || !strings.Contains(err.Error(), "AccessDenied") {
+		t.Fatalf("first failing key and code missing: %v", err)
+	}
 }
 
 func TestClientReportsStorageErrors(t *testing.T) {

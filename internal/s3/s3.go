@@ -156,7 +156,9 @@ func (c *Client) DeleteBatch(ctx context.Context, keys []string) (err error) {
 			return fmt.Errorf("delete objects: %w", err)
 		}
 		if len(out.Errors) > 0 {
-			return fmt.Errorf("delete objects: %d of %d failed", len(out.Errors), len(ids))
+			first := out.Errors[0]
+			return fmt.Errorf("delete objects: %d of %d failed, first %s: %s %s", len(out.Errors), len(ids),
+				aws.ToString(first.Key), aws.ToString(first.Code), aws.ToString(first.Message))
 		}
 	}
 	return nil

@@ -53,125 +53,120 @@ func (s *Services) recordModeration(ctx context.Context, action string, target u
 
 var reasonOption = slash.Option{Name: "reason", Description: "Shown to the member (200 characters at most)", Type: slash.OptionString}
 
-// timeoutCommand is /timeout @member duration [reason].
-type timeoutCommand struct{ svc *Services }
-
-var _ slash.Builtin = timeoutCommand{}
-
-// Definition describes /timeout for the menu.
-func (timeoutCommand) Definition() slash.Definition {
-	return slash.Definition{
-		Name: "timeout", Description: "Send a member into a timeout",
-		Options: []slash.Option{
-			{Name: "member", Description: "Who gets the timeout", Type: slash.OptionUser, Required: true},
-			{Name: "duration", Description: "How long, for example 10m, 2h or 3d", Type: slash.OptionString, Required: true},
-			reasonOption,
-		},
-	}
+// modCommand is the shape all moderation shortcuts share: a definition, the
+// global permission checked in the menu and again in Run, and one service
+// call on a member whose outcome is written to the audit log.
+type modCommand struct {
+	svc  *Services
+	need perm.Set
+	def  slash.Definition
+	// act runs the route's service function and returns the audit action and
+	// details of what it did.
+	act func(call slash.Call, target uuid.UUID) (action string, details map[string]any, err error)
 }
 
-// Available: members who hold Timeout members.
-func (timeoutCommand) Available(snap *perm.Snapshot, user perm.Subject, _ uuid.UUID) bool {
-	return needs(snap, user, perm.TimeoutMembers)
+var _ slash.Builtin = modCommand{}
+
+// Definition describes the command for the menu.
+func (c modCommand) Definition() slash.Definition { return c.def }
+
+// Available: members who hold the command's permission.
+func (c modCommand) Available(snap *perm.Snapshot, user perm.Subject, _ uuid.UUID) bool {
+	return needs(snap, user, c.need)
 }
 
-// Run checks the permission again on the server, then runs the route's service.
-func (c timeoutCommand) Run(ctx context.Context, call slash.Call) (slash.Result, error) {
-	if err := c.svc.Auth.RequirePermission(call.Request, perm.TimeoutMembers); err != nil {
-		return slash.Result{}, err
-	}
-	seconds, err := parseDuration(str(call, "duration"))
-	if err != nil {
+// Run checks the permission again on the server, then runs the route's
+// service and records the action.
+func (c modCommand) Run(ctx context.Context, call slash.Call) (slash.Result, error) {
+	if err := c.svc.Auth.RequirePermission(call.Request, c.need); err != nil {
 		return slash.Result{}, err
 	}
 	target := userOption(call, "member")
-	state, err := c.svc.Auth.TimeoutMember(call.Request, target, auth.TimeoutRequest{DurationSeconds: seconds, Reason: str(call, "reason")})
+	action, details, err := c.act(call, target)
 	if err != nil {
 		return slash.Result{}, err
 	}
-	c.svc.recordModeration(ctx, "moderation.timeout", target, map[string]any{"duration_seconds": seconds, "reason": state.Reason})
+	c.svc.recordModeration(ctx, action, target, details)
 	return slash.Result{}, nil
+}
+
+// timeoutCommand is /timeout @member duration [reason].
+func timeoutCommand(svc *Services) modCommand {
+	return modCommand{
+		svc: svc, need: perm.TimeoutMembers,
+		def: slash.Definition{
+			Name: "timeout", Description: "Send a member into a timeout",
+			Options: []slash.Option{
+				{Name: "member", Description: "Who gets the timeout", Type: slash.OptionUser, Required: true},
+				{Name: "duration", Description: "How long, for example 10m, 2h or 3d", Type: slash.OptionString, Required: true},
+				reasonOption,
+			},
+		},
+		act: func(call slash.Call, target uuid.UUID) (string, map[string]any, error) {
+			seconds, err := parseDuration(str(call, "duration"))
+			if err != nil {
+				return "", nil, err
+			}
+			state, err := svc.Auth.TimeoutMember(call.Request, target, auth.TimeoutRequest{DurationSeconds: seconds, Reason: str(call, "reason")})
+			if err != nil {
+				return "", nil, err
+			}
+			return "moderation.timeout", map[string]any{"duration_seconds": seconds, "reason": state.Reason}, nil
+		},
+	}
 }
 
 // banCommand is /ban @member [duration] [reason].
-type banCommand struct{ svc *Services }
-
-var _ slash.Builtin = banCommand{}
-
-// Definition describes /ban for the menu.
-func (banCommand) Definition() slash.Definition {
-	return slash.Definition{
-		Name: "ban", Description: "Ban a member",
-		Options: []slash.Option{
-			{Name: "member", Description: "Who gets banned", Type: slash.OptionUser, Required: true},
-			{Name: "duration", Description: "For how long, for example 7d; empty bans for good", Type: slash.OptionString},
-			reasonOption,
+func banCommand(svc *Services) modCommand {
+	return modCommand{
+		svc: svc, need: perm.BanMembers,
+		def: slash.Definition{
+			Name: "ban", Description: "Ban a member",
+			Options: []slash.Option{
+				{Name: "member", Description: "Who gets banned", Type: slash.OptionUser, Required: true},
+				{Name: "duration", Description: "For how long, for example 7d; empty bans for good", Type: slash.OptionString},
+				reasonOption,
+			},
+		},
+		act: func(call slash.Call, target uuid.UUID) (string, map[string]any, error) {
+			req := auth.BanRequest{Reason: str(call, "reason")}
+			if d := str(call, "duration"); d != "" {
+				seconds, err := parseDuration(d)
+				if err != nil {
+					return "", nil, err
+				}
+				req.DurationSeconds = &seconds
+			}
+			if err := svc.Auth.BanMember(call.Request, target, req); err != nil {
+				return "", nil, err
+			}
+			details := map[string]any{"reason": req.Reason}
+			if req.DurationSeconds != nil {
+				details["duration_seconds"] = *req.DurationSeconds
+			}
+			return "moderation.ban", details, nil
 		},
 	}
 }
 
-// Available: members who hold Ban members.
-func (banCommand) Available(snap *perm.Snapshot, user perm.Subject, _ uuid.UUID) bool {
-	return needs(snap, user, perm.BanMembers)
-}
-
-// Run checks the permission again on the server, then runs the route's service.
-func (c banCommand) Run(ctx context.Context, call slash.Call) (slash.Result, error) {
-	if err := c.svc.Auth.RequirePermission(call.Request, perm.BanMembers); err != nil {
-		return slash.Result{}, err
-	}
-	req := auth.BanRequest{Reason: str(call, "reason")}
-	if d := str(call, "duration"); d != "" {
-		seconds, err := parseDuration(d)
-		if err != nil {
-			return slash.Result{}, err
-		}
-		req.DurationSeconds = &seconds
-	}
-	target := userOption(call, "member")
-	if err := c.svc.Auth.BanMember(call.Request, target, req); err != nil {
-		return slash.Result{}, err
-	}
-	details := map[string]any{"reason": req.Reason}
-	if req.DurationSeconds != nil {
-		details["duration_seconds"] = *req.DurationSeconds
-	}
-	c.svc.recordModeration(ctx, "moderation.ban", target, details)
-	return slash.Result{}, nil
-}
-
-// kickCommand is /kick @member [reason].
-type kickCommand struct{ svc *Services }
-
-var _ slash.Builtin = kickCommand{}
-
-// Definition describes /kick for the menu.
-func (kickCommand) Definition() slash.Definition {
-	return slash.Definition{
-		Name: "kick", Description: "Sign a member out everywhere and drop them from their Talk",
-		Options: []slash.Option{
-			{Name: "member", Description: "Who is kicked", Type: slash.OptionUser, Required: true},
-			reasonOption,
+// kickCommand is /kick @member [reason]. A kick leaves no sanction: the member
+// can sign in again at once. By default only the Owner and Administrators
+// hold Kick members.
+func kickCommand(svc *Services) modCommand {
+	return modCommand{
+		svc: svc, need: perm.KickMembers,
+		def: slash.Definition{
+			Name: "kick", Description: "Sign a member out everywhere and drop them from their Talk",
+			Options: []slash.Option{
+				{Name: "member", Description: "Who is kicked", Type: slash.OptionUser, Required: true},
+				reasonOption,
+			},
+		},
+		act: func(call slash.Call, target uuid.UUID) (string, map[string]any, error) {
+			if err := svc.Auth.KickMember(call.Request, target, str(call, "reason")); err != nil {
+				return "", nil, err
+			}
+			return "moderation.kick", map[string]any{"reason": str(call, "reason")}, nil
 		},
 	}
-}
-
-// Available: members who hold Kick members (by default the Owner and
-// Administrators only).
-func (kickCommand) Available(snap *perm.Snapshot, user perm.Subject, _ uuid.UUID) bool {
-	return needs(snap, user, perm.KickMembers)
-}
-
-// Run checks the permission again on the server, then kicks. A kick leaves no
-// sanction: the member can sign in again at once.
-func (c kickCommand) Run(ctx context.Context, call slash.Call) (slash.Result, error) {
-	if err := c.svc.Auth.RequirePermission(call.Request, perm.KickMembers); err != nil {
-		return slash.Result{}, err
-	}
-	target := userOption(call, "member")
-	if err := c.svc.Auth.KickMember(call.Request, target, str(call, "reason")); err != nil {
-		return slash.Result{}, err
-	}
-	c.svc.recordModeration(ctx, "moderation.kick", target, map[string]any{"reason": str(call, "reason")})
-	return slash.Result{}, nil
 }

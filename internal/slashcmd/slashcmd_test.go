@@ -120,3 +120,19 @@ func TestPostingIsRefusedWhenTheCallerMayNotSendThere(t *testing.T) {
 		t.Fatal("posted without Send messages")
 	}
 }
+
+func TestMsgValidatesTheTextBeforeStartingTheConversation(t *testing.T) {
+	user := &auth.User{ID: uuid.New(), Role: auth.RoleUser}
+	req := httptest.NewRequest(http.MethodPost, "/", nil).WithContext(auth.WithUser(context.Background(), user))
+	// No chat handler: reaching StartDM (or AllowDMStart) would panic, so an
+	// error proves the text was refused first.
+	svc := &Services{}
+	for _, text := range []string{"", "   \n\t "} {
+		call := slash.Call{Request: req, User: user, Options: map[string]any{"member": uuid.New(), "text": text}}
+		_, err := msgCommand{svc: svc}.Run(context.Background(), call)
+		apiErr, ok := httpx.AsAPIError(err)
+		if !ok || apiErr.Status != http.StatusBadRequest {
+			t.Errorf("/msg with text %q: %v", text, err)
+		}
+	}
+}
