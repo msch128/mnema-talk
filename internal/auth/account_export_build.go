@@ -130,6 +130,33 @@ func (z *zipFiles) add(name string, v any) error {
 	return enc.Encode(v)
 }
 
+// exportStep is one file of the archive and the function that builds its content.
+type exportStep struct {
+	name  string
+	build func() (any, error)
+}
+
+// addSteps builds and adds every step; it returns the names of the files that
+// were cut at the row limit.
+func (z *zipFiles) addSteps(steps []exportStep) (cut []string, err error) {
+	for _, s := range steps {
+		v, err := s.build()
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", s.name, err)
+		}
+		if c, ok := v.(capped); ok {
+			if c.truncated {
+				cut = append(cut, s.name)
+			}
+			v = c.value
+		}
+		if err := z.add(s.name, v); err != nil {
+			return nil, err
+		}
+	}
+	return cut, nil
+}
+
 // writeArchive collects the person's own data into a ZIP written to out.
 // Channel names appear only for channels the person can still view; nothing
 // here names another member.
@@ -147,10 +174,7 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 	if _, err := w.Write([]byte(exportReadme)); err != nil {
 		return err
 	}
-	steps := []struct {
-		name  string
-		build func() (any, error)
-	}{
+	steps := []exportStep{
 		{"profile.json", func() (any, error) { return h.exportProfileWithImages(ctx, z, user) }},
 		{"settings.json", func() (any, error) { return exportSettings(ctx, q, user, viewable) }},
 		{"edits.json", func() (any, error) { return exportEdits(ctx, q, user) }},
@@ -173,21 +197,9 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 		{"scheduled_messages.json", func() (any, error) { return exportScheduled(ctx, q, user, viewable) }},
 		{"rsvps.json", func() (any, error) { return exportRSVPs(ctx, q, user) }},
 	}
-	var cut []string
-	for _, s := range steps {
-		v, err := s.build()
-		if err != nil {
-			return fmt.Errorf("%s: %w", s.name, err)
-		}
-		if c, ok := v.(capped); ok {
-			if c.truncated {
-				cut = append(cut, s.name)
-			}
-			v = c.value
-		}
-		if err := z.add(s.name, v); err != nil {
-			return err
-		}
+	cut, err := z.addSteps(steps)
+	if err != nil {
+		return err
 	}
 	mw, err := z.zw.Create("messages.json")
 	if err != nil {

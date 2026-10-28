@@ -306,11 +306,8 @@ func createDMOnce(ctx context.Context, p *db.Pool, nd NewDM) (uuid.UUID, bool, e
 		if !group {
 			k := dmKey(nd.Creator, nd.Others[0])
 			key = &k
-			err := tx.QueryRow(ctx, `SELECT id FROM channels WHERE dm_key = $1`, k).Scan(&id)
-			if err == nil {
-				return nil
-			}
-			if !errors.Is(err, pgx.ErrNoRows) {
+			found, err := existingDM(ctx, tx, k, &id)
+			if err != nil || found {
 				return err
 			}
 		}
@@ -329,6 +326,16 @@ func createDMOnce(ctx context.Context, p *db.Pool, nd NewDM) (uuid.UUID, bool, e
 		return err
 	})
 	return id, created, err
+}
+
+// existingDM reads the conversation of a pair key into id; found is false when
+// the pair has none yet.
+func existingDM(ctx context.Context, tx pgx.Tx, key string, id *uuid.UUID) (found bool, err error) {
+	err = tx.QueryRow(ctx, `SELECT id FROM channels WHERE dm_key = $1`, key).Scan(id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	return err == nil, err
 }
 
 // lockUsers locks the user rows in a fixed order, so transactions that count

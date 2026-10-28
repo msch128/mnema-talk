@@ -99,14 +99,8 @@ func (c *Config) validateLimits() error {
 	if !validLogLevels[c.LogLevel] {
 		return fmt.Errorf("LOG_LEVEL must be debug, info, warn or error (or empty), got %q", c.LogLevel)
 	}
-	if c.AuditRetentionDays < 0 {
-		return fmt.Errorf("AUDIT_RETENTION_DAYS must be 0 (keep forever) or a positive number of days")
-	}
-	if c.EditHistoryRetentionDays < 0 {
-		return fmt.Errorf("EDIT_HISTORY_RETENTION_DAYS must be 0 (keep up to 50 versions per message) or a positive number of days")
-	}
-	if c.MediaRetentionDays < 0 {
-		return fmt.Errorf("MEDIA_RETENTION_DAYS must be 0 (disabled) or a positive number of days")
+	if err := c.validateRetention(); err != nil {
+		return err
 	}
 	if c.EmojiMax < 0 || c.EmojiMax > 2000 {
 		return fmt.Errorf("EMOJI_MAX must be between 0 and 2000")
@@ -127,6 +121,20 @@ func (c *Config) validateLimits() error {
 		return err
 	}
 	return validateTrustedProxies(c.TrustedProxies)
+}
+
+// validateRetention checks the retention periods.
+func (c *Config) validateRetention() error {
+	if c.AuditRetentionDays < 0 {
+		return fmt.Errorf("AUDIT_RETENTION_DAYS must be 0 (keep forever) or a positive number of days")
+	}
+	if c.EditHistoryRetentionDays < 0 {
+		return fmt.Errorf("EDIT_HISTORY_RETENTION_DAYS must be 0 (keep up to 50 versions per message) or a positive number of days")
+	}
+	if c.MediaRetentionDays < 0 {
+		return fmt.Errorf("MEDIA_RETENTION_DAYS must be 0 (disabled) or a positive number of days")
+	}
+	return nil
 }
 
 // validateAllowedOrigins requires every CORS_ALLOWED_ORIGINS entry to be a

@@ -267,10 +267,25 @@ func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 	if err := h.validateEventPayload(r, m.title, m.desc, m.start, m.end, m.channel, m.location); err != nil {
 		return err
 	}
+	updated, err := h.applyUpdate(r, ev, req, cancelling)
+	if err != nil {
+		return err
+	}
+	h.broadcast(updated)
+	httpx.WriteJSON(w, http.StatusOK, updated)
+	return nil
+}
+
+// applyUpdate stores the field changes of an event edit and then the
+// cancellation it asks for, writing an audit record for each, and returns the
+// event as it stands afterwards.
+func (h *Handler) applyUpdate(r *http.Request, ev *CommunityEvent, req UpdateEventRequest, cancelling bool) (*CommunityEvent, error) {
+	id := ev.ID
+	var err error
 	updated := ev
 	if !cancelling || req.changesFields() {
 		if updated, err = h.Store.Update(r.Context(), id, req); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if updated.ChannelID != nil && !sameChannel(ev.ChannelID, updated.ChannelID) {
@@ -284,13 +299,11 @@ func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 	}
 	if cancelling {
 		if updated, err = h.Store.Cancel(r.Context(), id); err != nil {
-			return err
+			return nil, err
 		}
 		h.auditRecord(r, "event.cancel", updated)
 	}
-	h.broadcast(updated)
-	httpx.WriteJSON(w, http.StatusOK, updated)
-	return nil
+	return updated, nil
 }
 
 // @Summary Cancel a community event

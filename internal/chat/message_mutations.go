@@ -205,13 +205,8 @@ func changeReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID
 		// The row lock serializes toggles on one message, so concurrent
 		// adds cannot overshoot the limits. NO KEY UPDATE still lets replies,
 		// uploads and quotes (FOR KEY SHARE through their foreign keys) in.
-		var one int
-		err := tx.QueryRow(ctx, `SELECT 1 FROM messages WHERE id = $1 FOR NO KEY UPDATE`, messageID).Scan(&one)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return errMessageNotFound
-		}
-		if err != nil {
-			return fmt.Errorf("lock message: %w", err)
+		if err := lockMessage(ctx, tx, messageID); err != nil {
+			return err
 		}
 		var present bool
 		if err := tx.QueryRow(ctx,
@@ -239,6 +234,19 @@ func changeReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID
 	}
 	reactions, err := reactionSummary(ctx, p, messageID)
 	return reactions, changed, err
+}
+
+// lockMessage takes the message's row lock (errMessageNotFound when it is gone).
+func lockMessage(ctx context.Context, tx pgx.Tx, messageID uuid.UUID) error {
+	var one int
+	err := tx.QueryRow(ctx, `SELECT 1 FROM messages WHERE id = $1 FOR NO KEY UPDATE`, messageID).Scan(&one)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return errMessageNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("lock message: %w", err)
+	}
+	return nil
 }
 
 func addReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, emoji string) error {

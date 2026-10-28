@@ -187,13 +187,13 @@ func TestEventRetractionCoversEventsThatEndedLongAgo(t *testing.T) {
 	}
 }
 
-// failingQuerier fails every statement that mentions one of the fragments.
-type failingQuerier struct {
+// fragmentFailingQuerier fails every statement that mentions one of the fragments.
+type fragmentFailingQuerier struct {
 	db.Querier
 	fragments []string
 }
 
-func (f failingQuerier) fails(sql string) bool {
+func (f fragmentFailingQuerier) fails(sql string) bool {
 	for _, frag := range f.fragments {
 		if strings.Contains(sql, frag) {
 			return true
@@ -202,14 +202,14 @@ func (f failingQuerier) fails(sql string) bool {
 	return false
 }
 
-func (f failingQuerier) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
+func (f fragmentFailingQuerier) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
 	if f.fails(sql) {
 		return nil, errors.New("injected failure")
 	}
 	return f.Querier.Query(ctx, sql, args...)
 }
 
-func (f failingQuerier) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
+func (f fragmentFailingQuerier) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
 	if f.fails(sql) {
 		return pgconn.CommandTag{}, errors.New("injected failure")
 	}
@@ -231,7 +231,7 @@ func TestEventReminderStaysDueWhenTheRecipientsCannotBeLoaded(t *testing.T) {
 	}
 
 	flaky := &communityevents.Handler{DB: a.db, Events: a.events,
-		Store: communityevents.NewStore(failingQuerier{a.db, []string{"FROM event_rsvps WHERE event_id = $1 AND response IN"}})}
+		Store: communityevents.NewStore(fragmentFailingQuerier{a.db, []string{"FROM event_rsvps WHERE event_id = $1 AND response IN"}})}
 	communityevents.NewScheduler(flaky).Tick(context.Background(), time.Now())
 	if sent() != nil {
 		t.Fatal("a failure while loading the recipients must leave the reminder due")

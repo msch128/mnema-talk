@@ -266,33 +266,10 @@ func EditChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *str
 	}
 	var ch Channel
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if lobby != nil {
-			if err := SetLobby(ctx, tx, id, *lobby); err != nil {
-				return err
-			}
-		}
-		if stage != nil {
-			if err := SetStage(ctx, tx, id, *stage); err != nil {
-				return err
-			}
-		}
-		if err := tx.QueryRow(ctx, `
-			UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic),
-				user_limit = COALESCE($4, user_limit), slow_mode_seconds = COALESCE($5, slow_mode_seconds)
-			WHERE id = $1 AND type <> 'dm' AND ($4::int IS NULL OR $4 = 0 OR type = 'voice')
-			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days`, id, name, topic, userLimit, slowMode).
-			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays); err != nil {
-			return err
-		}
-		return assignAndFillSlugs(ctx, tx, &ch)
+		return applyChannelEdit(ctx, tx, id, &ch, name, topic, userLimit, slowMode, lobby, stage)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		if userLimit != nil && *userLimit > 0 {
-			if _, lerr := LoadChannel(ctx, p, id); lerr == nil {
-				return nil, httpx.ErrInvalidInput("user_limit applies to voice channels only")
-			}
-		}
-		return nil, errChannelNotFound
+		return nil, channelEditMissed(ctx, p, id, userLimit)
 	}
 	var apiErr *httpx.APIError
 	if errors.As(err, &apiErr) {
@@ -302,6 +279,41 @@ func EditChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *str
 		return nil, fmt.Errorf("update channel: %w", err)
 	}
 	return &ch, nil
+}
+
+// applyChannelEdit writes the lobby and Stage marks and the validated fields
+// of one channel edit into ch.
+func applyChannelEdit(ctx context.Context, tx pgx.Tx, id uuid.UUID, ch *Channel, name, topic *string, userLimit, slowMode *int, lobby, stage *bool) error {
+	if lobby != nil {
+		if err := SetLobby(ctx, tx, id, *lobby); err != nil {
+			return err
+		}
+	}
+	if stage != nil {
+		if err := SetStage(ctx, tx, id, *stage); err != nil {
+			return err
+		}
+	}
+	if err := tx.QueryRow(ctx, `
+		UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic),
+			user_limit = COALESCE($4, user_limit), slow_mode_seconds = COALESCE($5, slow_mode_seconds)
+		WHERE id = $1 AND type <> 'dm' AND ($4::int IS NULL OR $4 = 0 OR type = 'voice')
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days`, id, name, topic, userLimit, slowMode).
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays); err != nil {
+		return err
+	}
+	return assignAndFillSlugs(ctx, tx, ch)
+}
+
+// channelEditMissed explains an edit that matched no row: a user limit on a
+// channel that is not a voice one, or no such channel.
+func channelEditMissed(ctx context.Context, p *db.Pool, id uuid.UUID, userLimit *int) error {
+	if userLimit != nil && *userLimit > 0 {
+		if _, err := LoadChannel(ctx, p, id); err == nil {
+			return httpx.ErrInvalidInput("user_limit applies to voice channels only")
+		}
+	}
+	return errChannelNotFound
 }
 
 func validateChannelLimits(userLimit, slowMode *int) error {

@@ -41,22 +41,24 @@ func (h *Handler) validateEventLocation(r *http.Request, chID *uuid.UUID, loc *s
 		return httpx.ErrInvalidInput("cannot specify both channel_id and location text")
 	}
 	if hasChannel {
-		var kind string
-		err := h.DB.QueryRow(r.Context(), `SELECT type FROM channels WHERE id = $1`, *chID).Scan(&kind)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return err
-		}
-		if err != nil || kind != "voice" {
-			return httpx.ErrInvalidInput("channel_id must be a Talk (voice) channel")
-		}
-		if !h.canViewChannel(r, *chID) {
-			return httpx.ErrForbidden("you cannot view this Talk channel")
-		}
+		return h.validateEventTalk(r, *chID)
 	}
-	if hasLoc {
-		if _, err := httpx.CleanText("location", *loc, 255, true); err != nil {
-			return err
-		}
+	_, err := httpx.CleanText("location", *loc, 255, true)
+	return err
+}
+
+// validateEventTalk checks that chID is a Talk (voice) channel the caller may view.
+func (h *Handler) validateEventTalk(r *http.Request, chID uuid.UUID) error {
+	var kind string
+	err := h.DB.QueryRow(r.Context(), `SELECT type FROM channels WHERE id = $1`, chID).Scan(&kind)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+	if err != nil || kind != "voice" {
+		return httpx.ErrInvalidInput("channel_id must be a Talk (voice) channel")
+	}
+	if !h.canViewChannel(r, chID) {
+		return httpx.ErrForbidden("you cannot view this Talk channel")
 	}
 	return nil
 }

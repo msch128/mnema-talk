@@ -299,16 +299,28 @@ func deleteWebhookRecords(ctx context.Context, p *db.Pool, webhookID, botUserID 
 		if hasMessages {
 			return nil
 		}
-		if mediaID, err := uuid.Parse(path.Base(avatarURL)); err == nil && avatarURL != "" {
-			err := tx.QueryRow(ctx, `SELECT s3_key FROM media WHERE id = $1 AND NOT is_deleted`, mediaID).Scan(&key)
-			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-				return err
-			}
+		if key, err = avatarKey(ctx, tx, avatarURL); err != nil {
+			return err
 		}
 		_, err = tx.Exec(ctx, `DELETE FROM users WHERE id = $1`, botUserID)
 		return err
 	})
 	return key, err
+}
+
+// avatarKey is the storage key of the media object behind an avatar URL ("" when
+// the URL names none or the object is gone).
+func avatarKey(ctx context.Context, tx pgx.Tx, avatarURL string) (string, error) {
+	mediaID, err := uuid.Parse(path.Base(avatarURL))
+	if err != nil || avatarURL == "" {
+		return "", nil
+	}
+	var key string
+	err = tx.QueryRow(ctx, `SELECT s3_key FROM media WHERE id = $1 AND NOT is_deleted`, mediaID).Scan(&key)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return "", err
+	}
+	return key, nil
 }
 
 // remove deletes the webhook. Its bot account stays while messages by it

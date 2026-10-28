@@ -203,27 +203,13 @@ func (h *Handler) updateForumPost(w http.ResponseWriter, r *http.Request) error 
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	canManage := false
-	if h.Perms != nil {
-		p, err := h.Perms.Channel(r.Context(), user.Subject(), chID)
-		if err != nil {
-			return err
-		}
-		canManage = p.Has(perm.ManageMessages)
-	} else if user.Role == "admin" {
-		canManage = true
+	canManage, err := h.canManageMessages(r, user, chID)
+	if err != nil {
+		return err
 	}
-	ctx := r.Context()
-	if !canManage && (req.Title != nil || req.TagIDs != nil) {
-		// An author who may no longer write here (timeout, lost Send messages)
-		// does not get to rename or retag the post either.
-		if ctx, err = h.sendContext(r, chID, perm.SendMessages); err != nil {
-			return err
-		}
-	}
-	var before *Message
-	if canManage && h.Audit != nil {
-		before, _ = GetMessage(ctx, h.DB, msgID) // detail only: a miss leaves the entry without before values
+	ctx, before, err := h.postEditContext(r, chID, msgID, canManage, req)
+	if err != nil {
+		return err
 	}
 	msg, err := UpdateForumPost(ctx, h.DB, chID, msgID, user.ID, canManage, req.Title, req.TagIDs, req.IsLocked)
 	if err != nil {
@@ -235,6 +221,36 @@ func (h *Handler) updateForumPost(w http.ResponseWriter, r *http.Request) error 
 	h.Events.BroadcastChannel(chID, events.MessageUpdate, msg)
 	httpx.WriteJSON(w, http.StatusOK, msg)
 	return nil
+}
+
+// postEditContext is the context a post edit runs under, and the post as it was
+// for the audit entry of a moderator's edit. An author who may no longer write
+// here (timeout, lost Send messages) does not get to rename or retag the post
+// either.
+func (h *Handler) postEditContext(r *http.Request, chID, msgID uuid.UUID, canManage bool, req UpdatePostRequest) (ctx context.Context, before *Message, err error) {
+	ctx = r.Context()
+	if !canManage && (req.Title != nil || req.TagIDs != nil) {
+		if ctx, err = h.sendContext(r, chID, perm.SendMessages); err != nil {
+			return nil, nil, err
+		}
+	}
+	if canManage && h.Audit != nil {
+		before, _ = GetMessage(ctx, h.DB, msgID) // detail only: a miss leaves the entry without before values
+	}
+	return ctx, before, nil
+}
+
+// canManageMessages says whether user holds Manage messages in the channel (the
+// Owner does when there is no permission service).
+func (h *Handler) canManageMessages(r *http.Request, user *auth.User, chID uuid.UUID) (bool, error) {
+	if h.Perms == nil {
+		return user.Role == "admin", nil
+	}
+	p, err := h.Perms.Channel(r.Context(), user.Subject(), chID)
+	if err != nil {
+		return false, err
+	}
+	return p.Has(perm.ManageMessages), nil
 }
 
 // auditForumPost records a moderator's change to another member's post: the

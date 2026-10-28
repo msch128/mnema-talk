@@ -30,29 +30,33 @@ var errStorageStarting = errors.New("object storage not initialised yet")
 // or ctx ends.
 func startLazyStore(ctx context.Context, init func(context.Context) (media.Store, error), minWait, maxWait time.Duration) *lazyStore {
 	l := &lazyStore{err: errStorageStarting}
-	go func() {
-		wait := minWait
-		for first := true; ; first = false {
-			if !first {
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(wait):
-				}
-				wait = min(wait*2, maxWait)
-			}
-			if ctx.Err() != nil {
-				return
-			}
-			if l.try(ctx, init) {
-				if !first {
-					slog.Info("object storage available, uploads enabled")
-				}
-				return
-			}
-		}
-	}()
+	go l.retryInit(ctx, init, minWait, maxWait)
 	return l
+}
+
+// retryInit runs init until it succeeds or ctx ends, waiting minWait before
+// the second attempt and doubling up to maxWait after each further failure.
+func (l *lazyStore) retryInit(ctx context.Context, init func(context.Context) (media.Store, error), minWait, maxWait time.Duration) {
+	wait := minWait
+	for first := true; ; first = false {
+		if !first {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(wait):
+			}
+			wait = min(wait*2, maxWait)
+		}
+		if ctx.Err() != nil {
+			return
+		}
+		if l.try(ctx, init) {
+			if !first {
+				slog.Info("object storage available, uploads enabled")
+			}
+			return
+		}
+	}
 }
 
 func (l *lazyStore) try(ctx context.Context, init func(context.Context) (media.Store, error)) bool {

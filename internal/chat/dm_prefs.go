@@ -76,21 +76,27 @@ func SetDMFavourites(ctx context.Context, p *db.Pool, user uuid.UUID, ids []uuid
 		if len(added) != len(ids) {
 			return errDMNotFound
 		}
-		// A favourite that kept its place did not change; one that moved,
-		// came in or went out did.
-		for id := range before {
-			if !slices.Contains(ids, id) {
-				changed = append(changed, id)
-			}
-		}
-		for pos, id := range ids {
-			if old, was := before[id]; !was || old != pos {
-				changed = append(changed, id)
-			}
-		}
+		changed = changedFavourites(before, ids)
 		return nil
 	})
 	return changed, err
+}
+
+// changedFavourites lists the conversations whose favourite state differs
+// between before and the new order ids: a favourite that kept its place did
+// not change; one that moved, came in or went out did.
+func changedFavourites(before map[uuid.UUID]int, ids []uuid.UUID) (changed []uuid.UUID) {
+	for id := range before {
+		if !slices.Contains(ids, id) {
+			changed = append(changed, id)
+		}
+	}
+	for pos, id := range ids {
+		if old, was := before[id]; !was || old != pos {
+			changed = append(changed, id)
+		}
+	}
+	return changed
 }
 
 // favouritePositions maps the member's favourites to their places.

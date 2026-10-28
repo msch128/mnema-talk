@@ -28,28 +28,9 @@ func (s *Service) SendEventReminder(ctx context.Context, userID uuid.UUID, event
 	}
 
 	if channelID != nil {
-		var chLvl, catLvl, srvLvl *string
-		var chSetting, catSetting, srvSetting chat.NotifySetting
-		var dbNow time.Time
-		err := s.DB.QueryRow(ctx, `
-			SELECT r.notify_level, r.muted_until, cn.notify_level, cn.muted_until, sn.notify_level, sn.muted_until, NOW()
-			FROM channels c
-			LEFT JOIN channel_reads r ON r.channel_id = c.id AND r.user_id = $1
-			LEFT JOIN category_notify cn ON cn.category_id = c.category_id AND cn.user_id = $1
-			LEFT JOIN server_notify sn ON sn.user_id = $1
-			WHERE c.id = $2`, userID, *channelID).Scan(&chLvl, &chSetting.MutedUntil, &catLvl, &catSetting.MutedUntil, &srvLvl, &srvSetting.MutedUntil, &dbNow)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil // the Talk is gone: nothing to remind of
-		}
-		if err != nil {
-			return err // fail closed: a muted Talk must not ring on a failed lookup
-		}
-
-		chSetting.Level = levelOf(chLvl)
-		catSetting.Level = levelOf(catLvl)
-		srvSetting.Level = levelOf(srvLvl)
-		if chat.ResolveNotify(dbNow, chSetting, catSetting, srvSetting) == chat.NotifyMute {
-			return nil
+		muted, err := s.talkMuted(ctx, userID, *channelID)
+		if err != nil || muted {
+			return err
 		}
 	}
 
@@ -78,4 +59,30 @@ func (s *Service) SendEventReminder(ctx context.Context, userID uuid.UUID, event
 		return nil // the account was disabled meanwhile
 	}
 	return err
+}
+
+// talkMuted says whether the member's notification settings (Talk, category,
+// server) mute the Talk now. A Talk that is gone counts as muted: there is
+// nothing to remind of.
+func (s *Service) talkMuted(ctx context.Context, userID, channelID uuid.UUID) (bool, error) {
+	var chLvl, catLvl, srvLvl *string
+	var chSetting, catSetting, srvSetting chat.NotifySetting
+	var dbNow time.Time
+	err := s.DB.QueryRow(ctx, `
+		SELECT r.notify_level, r.muted_until, cn.notify_level, cn.muted_until, sn.notify_level, sn.muted_until, NOW()
+		FROM channels c
+		LEFT JOIN channel_reads r ON r.channel_id = c.id AND r.user_id = $1
+		LEFT JOIN category_notify cn ON cn.category_id = c.category_id AND cn.user_id = $1
+		LEFT JOIN server_notify sn ON sn.user_id = $1
+		WHERE c.id = $2`, userID, channelID).Scan(&chLvl, &chSetting.MutedUntil, &catLvl, &catSetting.MutedUntil, &srvLvl, &srvSetting.MutedUntil, &dbNow)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return true, nil
+	}
+	if err != nil {
+		return false, err // fail closed: a muted Talk must not ring on a failed lookup
+	}
+	chSetting.Level = levelOf(chLvl)
+	catSetting.Level = levelOf(catLvl)
+	srvSetting.Level = levelOf(srvLvl)
+	return chat.ResolveNotify(dbNow, chSetting, catSetting, srvSetting) == chat.NotifyMute, nil
 }

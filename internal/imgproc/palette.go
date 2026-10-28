@@ -54,57 +54,78 @@ func colourEntries(img *image.NRGBA) []colourEntry {
 // palette the source frame happened to carry. The result always ends with a
 // fully transparent entry.
 func adaptivePalette(img *image.NRGBA) color.Palette {
-	entries := colourEntries(img)
-	channel := func(e colourEntry, c int) float64 { return [3]float64{e.r, e.g, e.b}[c] }
-	boxes := [][]colourEntry{entries}
+	boxes := [][]colourEntry{colourEntries(img)}
 	for len(boxes) < maxOpaqueColours {
-		// Split the box that holds the most pixels and can still be split.
-		best, bestN := -1, 0
-		for i, box := range boxes {
-			n := 0
-			for _, e := range box {
-				n += e.n
-			}
-			if len(box) > 1 && n > bestN {
-				best, bestN = i, n
-			}
-		}
+		best, pixels := splittableBox(boxes)
 		if best < 0 {
 			break
 		}
 		box := boxes[best]
-		widest, widestRange := 0, -1.0
-		for c := range 3 {
-			lo, hi := channel(box[0], c), channel(box[0], c)
-			for _, e := range box {
-				lo, hi = min(lo, channel(e, c)), max(hi, channel(e, c))
-			}
-			if hi-lo > widestRange {
-				widest, widestRange = c, hi-lo
-			}
-		}
-		sort.Slice(box, func(i, j int) bool { return channel(box[i], widest) < channel(box[j], widest) })
-		half, cum, cut := bestN/2, 0, 1
-		for i, e := range box {
-			cum += e.n
-			if cum >= half {
-				cut = min(max(i+1, 1), len(box)-1)
-				break
-			}
-		}
+		cut := medianCut(box, pixels)
 		boxes[best] = box[:cut]
 		boxes = append(boxes, box[cut:])
 	}
 	pal := make(color.Palette, 0, len(boxes)+1)
 	for _, box := range boxes {
-		var n, r, g, b float64
-		for _, e := range box {
-			w := float64(e.n)
-			n, r, g, b = n+w, r+e.r*w, g+e.g*w, b+e.b*w
-		}
-		if n > 0 {
-			pal = append(pal, color.NRGBA{R: uint8(r/n + 0.5), G: uint8(g/n + 0.5), B: uint8(b/n + 0.5), A: 255})
+		if c, ok := boxMean(box); ok {
+			pal = append(pal, c)
 		}
 	}
 	return append(pal, color.Transparent)
+}
+
+func (e colourEntry) channel(c int) float64 { return [3]float64{e.r, e.g, e.b}[c] }
+
+// splittableBox picks the box that holds the most pixels and can still be
+// split (-1 when none can) and returns its pixel count.
+func splittableBox(boxes [][]colourEntry) (best, pixels int) {
+	best = -1
+	for i, box := range boxes {
+		n := 0
+		for _, e := range box {
+			n += e.n
+		}
+		if len(box) > 1 && n > pixels {
+			best, pixels = i, n
+		}
+	}
+	return best, pixels
+}
+
+// medianCut sorts box along its widest colour channel and returns the index
+// where the pixel count reaches half of pixels, always leaving both sides
+// non-empty.
+func medianCut(box []colourEntry, pixels int) int {
+	widest, widestRange := 0, -1.0
+	for c := range 3 {
+		lo, hi := box[0].channel(c), box[0].channel(c)
+		for _, e := range box {
+			lo, hi = min(lo, e.channel(c)), max(hi, e.channel(c))
+		}
+		if hi-lo > widestRange {
+			widest, widestRange = c, hi-lo
+		}
+	}
+	sort.Slice(box, func(i, j int) bool { return box[i].channel(widest) < box[j].channel(widest) })
+	half, cum := pixels/2, 0
+	for i, e := range box {
+		cum += e.n
+		if cum >= half {
+			return min(max(i+1, 1), len(box)-1)
+		}
+	}
+	return 1
+}
+
+// boxMean is the pixel-weighted mean colour of a box; ok is false for an empty one.
+func boxMean(box []colourEntry) (c color.NRGBA, ok bool) {
+	var n, r, g, b float64
+	for _, e := range box {
+		w := float64(e.n)
+		n, r, g, b = n+w, r+e.r*w, g+e.g*w, b+e.b*w
+	}
+	if n == 0 {
+		return c, false
+	}
+	return color.NRGBA{R: uint8(r/n + 0.5), G: uint8(g/n + 0.5), B: uint8(b/n + 0.5), A: 255}, true
 }
