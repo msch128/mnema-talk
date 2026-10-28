@@ -10,6 +10,7 @@ import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
+import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
 import PresenceDot from './PresenceDot.vue'
 
 // The top of a profile: the large avatar (changeable on one's own profile),
@@ -38,42 +39,32 @@ function triggerAvatarUpload() {
 }
 
 async function onAvatarSelected(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0]
+  const { file, tooBig } = pickImage(e.target as HTMLInputElement)
+  if (tooBig) toasts.error(t('profile.avatarTooBig', { size: IMAGE_UPLOAD_MAX_MB }))
   if (!file) return
 
-  // Validate size (max 5MB, like the server)
-  if (file.size > 5 * 1024 * 1024) {
-    toasts.error(t('profile.avatarTooBig', { size: 5 }))
-    return
-  }
-
+  const openId = chatStore.selectedUserProfile?.id
   isUploading.value = true
 
   try {
     const updated = await authStore.uploadAvatar(file)
     // Update profile view immediately
-    if (chatStore.selectedUserProfile) {
-      chatStore.selectedUserProfile = { ...chatStore.selectedUserProfile, ...updated }
-    }
+    chatStore.patchOpenProfile(openId, updated)
     toasts.success(t('profile.avatarSaved'))
   } catch (err) {
     toasts.error(caughtErrorMessage(err, t('profile.avatarFailed')))
   } finally {
     isUploading.value = false
-    if (fileInput.value) fileInput.value.value = ''
   }
 }
 
 async function removeAvatar() {
+  const openId = chatStore.selectedUserProfile?.id
   isUploading.value = true
   try {
     const updated = await authStore.removeAvatar()
-    if (chatStore.selectedUserProfile) {
-      const next = { ...chatStore.selectedUserProfile, ...updated }
-      // A removed avatar is absent from the answer; the merge must not keep the old one.
-      delete next.avatar_url
-      chatStore.selectedUserProfile = next
-    }
+    // A removed avatar is absent from the answer; the merge must not keep the old one.
+    chatStore.patchOpenProfile(openId, updated, ['avatar_url'])
     toasts.success(t('profile.avatarRemoved'))
   } catch (err) {
     toasts.error(caughtErrorMessage(err, t('profile.avatarRemoveFailed')))

@@ -100,18 +100,19 @@ describe('ParticipantTile name', () => {
 describe('ParticipantTile click', () => {
   it('a camera that can go on the stage is focused, otherwise the profile opens', async () => {
     const cam = tile({ stream: new MediaStream(), cameraFocusable: true })
-    expect(cam.attributes('aria-label')).toBe('Enlarge camera of Alice with a rather long display name')
-    expect(cam.attributes('aria-pressed')).toBe('false')
+    const primary = (w: ReturnType<typeof tile>) => w.get('[data-tile-primary]')
+    expect(primary(cam).attributes('aria-label')).toBe('Enlarge camera of Alice with a rather long display name')
+    expect(primary(cam).attributes('aria-pressed')).toBe('false')
     await cam.trigger('click')
     expect(cam.emitted('focus-camera')).toEqual([['a']])
     expect(cam.emitted('open-profile')).toBeUndefined()
 
     const focused = tile({ stream: new MediaStream(), cameraFocused: true })
-    expect(focused.attributes('aria-pressed')).toBe('true')
-    expect(focused.attributes('aria-label')).toBe('Back to everyone')
+    expect(primary(focused).attributes('aria-pressed')).toBe('true')
+    expect(primary(focused).attributes('aria-label')).toBe('Back to everyone')
 
     const avatar = tile()
-    expect(avatar.attributes('aria-pressed')).toBeUndefined()
+    expect(primary(avatar).attributes('aria-pressed')).toBeUndefined()
     await avatar.trigger('click')
     expect(avatar.emitted('open-profile')).toHaveLength(1)
     expect(avatar.emitted('focus-camera')).toBeUndefined()
@@ -119,7 +120,7 @@ describe('ParticipantTile click', () => {
 })
 
 describe('ParticipantTile time in the Talk', () => {
-  const REVEALED_BY = ['opacity-0', 'group-hover:opacity-100', 'group-focus-visible:opacity-100', 'group-has-[:focus-visible]:opacity-100']
+  const REVEALED_BY = ['opacity-0', 'group-hover:opacity-100', 'group-has-[:focus-visible]:opacity-100', 'group-has-[:focus-visible]:opacity-100']
 
   it('is hidden until hover or keyboard focus, on avatars and cameras', () => {
     for (const props of [{}, { speaking: true }, { compact: true }, { stream: new MediaStream() }]) {
@@ -177,8 +178,17 @@ describe('ParticipantTile double-click', () => {
 
   it('keyboard activation (no click count) still focuses', async () => {
     const cam = tile({ stream: new MediaStream(), cameraFocusable: true })
-    await cam.trigger('keydown', { key: 'Enter' })
+    await cam.get('[data-tile-primary]').trigger('click')
     expect(cam.emitted('focus-camera')).toEqual([['a']])
+  })
+
+  it('holds no button inside a role=button: the tile is a group with one real button', () => {
+    const w = tile({ stream: new MediaStream(), cameraAvailable: true, isScreensharing: true })
+    expect(w.attributes('role')).toBe('group')
+    expect(w.attributes('tabindex')).toBeUndefined()
+    expect(w.findAll('[role="button"]')).toHaveLength(0)
+    expect(w.get('[data-tile-primary]').element.tagName).toBe('BUTTON')
+    expect(w.findAll('button').length).toBeGreaterThan(1)
   })
 
   it('stops the dblclick so the Talk area does not handle it again', async () => {
@@ -199,7 +209,7 @@ describe('ParticipantTile double-click', () => {
     expect(avatar.emitted('fullscreen-camera')).toBeUndefined()
 
     const cam = tile({ stream: new MediaStream(), cameraFocusable: true, cameraAvailable: true })
-    await cam.get('button').trigger('dblclick')
+    await cam.findAll('button').find(b => !b.element.hasAttribute('data-tile-primary'))!.trigger('dblclick')
     expect(cam.emitted('fullscreen-camera')).toBeUndefined()
   })
 
@@ -216,12 +226,13 @@ describe('ParticipantTile double-click', () => {
 describe('ParticipantTile accessible controls', () => {
   it('opens menus through mouse and keyboard and lets nested camera button own its click', async () => {
     const wrapper = tile({ cameraAvailable: true, cameraHidden: true, compact: true, speaking: true, deafened: true })
-    await wrapper.trigger('contextmenu'); await wrapper.trigger('keydown', { key: 'F10', shiftKey: true }); await wrapper.trigger('keydown', { key: 'ContextMenu' })
+    const primary = wrapper.get('[data-tile-primary]')
+    await wrapper.trigger('contextmenu'); await primary.trigger('keydown', { key: 'F10', shiftKey: true }); await primary.trigger('keydown', { key: 'ContextMenu' })
     expect(wrapper.emitted('menu')).toHaveLength(3)
-    const camera = wrapper.get('button')
+    const camera = wrapper.findAll('button').find(b => !b.element.hasAttribute('data-tile-primary'))!
     await camera.trigger('click'); expect(wrapper.emitted('toggle-camera')).toEqual([[]]); expect(wrapper.emitted('open-profile')).toBeUndefined()
-    await wrapper.setProps({ cameraHidden: false }); expect(wrapper.get('button').attributes('aria-label')).toContain('Hide')
-    await wrapper.trigger('keydown', { key: ' ' }); expect(wrapper.emitted('open-profile')).toHaveLength(1)
+    await wrapper.setProps({ cameraHidden: false }); expect(wrapper.findAll('button').find(b => !b.element.hasAttribute('data-tile-primary'))!.attributes('aria-label')).toContain('Hide')
+    await primary.trigger('click'); expect(wrapper.emitted('open-profile')).toHaveLength(1)
     wrapper.unmount()
   })
   it('binds replacement video streams, mirrors self, and uses username/unknown fallbacks', async () => {

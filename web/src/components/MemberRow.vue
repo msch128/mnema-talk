@@ -47,6 +47,7 @@ const subline = computed(() => {
     class="group flex h-[42px] min-w-0 cursor-pointer items-center gap-3 rounded-md px-2 transition-colors hover:bg-mnema-hover focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent"
     @click="chatStore.openUserProfile(member)"
     @keydown.enter.self.prevent="chatStore.openUserProfile(member)"
+    @keydown.space.self.prevent="chatStore.openUserProfile(member)"
     @contextmenu="emit('menu', $event)"
     @keydown.f10.shift.self.prevent="emit('menu', $event)"
     @keydown.context-menu.self.prevent="emit('menu', $event)"

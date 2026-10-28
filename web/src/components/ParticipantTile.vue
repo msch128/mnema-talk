@@ -50,7 +50,7 @@ const name = computed(() => props.user.display_name || props.user.username)
 const initial = computed(() => (name.value || '?').charAt(0).toUpperCase())
 
 // Shown on hover / keyboard focus of the tile (or of a button on it).
-const REVEAL = 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 group-has-[:focus-visible]:opacity-100'
+const REVEAL = 'opacity-0 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100'
 
 function handleTileClick(e: MouseEvent | KeyboardEvent) {
   if (focusable.value) {
@@ -68,7 +68,7 @@ function handleTileClick(e: MouseEvent | KeyboardEvent) {
 }
 
 function isButtonTarget(target: EventTarget | null): boolean {
-  return target instanceof Element && !!target.closest('button')
+  return target instanceof Element && !!target.closest('button:not([data-tile-primary])')
 }
 
 // A double-click on a camera: on the stage and full screen.
@@ -88,20 +88,13 @@ watch(() => props.stream, (stream) => {
 
 <template>
   <div
-    role="button"
-    tabindex="0"
+    role="group"
     data-participant-tile
     :data-user-id="user.id"
-    :aria-label="focusable ? (cameraFocused ? $t('talk.unfocusCamera') : $t('talk.focusCamera', { name })) : $t('profile.open', { name })"
-    :aria-pressed="focusable ? (cameraFocused ? 'true' : 'false') : undefined"
+    :aria-label="name"
     @click="handleTileClick"
     @dblclick="onDblclick"
     @contextmenu.prevent="emit('menu', $event)"
-    @keydown.f10.shift.self.prevent="emit('menu', $event)"
-    @keydown.context-menu.self.prevent="emit('menu', $event)"
-    aria-haspopup="menu"
-    @keydown.enter.self.prevent="handleTileClick"
-    @keydown.space.self.prevent="handleTileClick"
     :class="[
       'group relative isolate aspect-video cursor-pointer select-none overflow-hidden rounded-lg transition-colors duration-150 focus:outline-hidden',
       compact ? 'tile-compact' : '',
@@ -109,6 +102,19 @@ watch(() => props.stream, (stream) => {
       stream ? 'bg-black' : 'bg-mnema-surface hover:bg-mnema-hover'
     ]"
   >
+    <!-- The tile's own action as a real button, so the watch and camera buttons
+         are not nested in one. A click on it reaches the tile's click handler. -->
+    <button
+      type="button"
+      data-tile-primary
+      class="absolute inset-0 z-10 h-full w-full cursor-pointer focus:outline-hidden"
+      :aria-label="focusable ? (cameraFocused ? $t('talk.unfocusCamera') : $t('talk.focusCamera', { name })) : $t('profile.open', { name })"
+      :aria-pressed="focusable ? (cameraFocused ? 'true' : 'false') : undefined"
+      aria-haspopup="menu"
+      @keydown.f10.shift.prevent="emit('menu', $event)"
+      @keydown.context-menu.prevent="emit('menu', $event)"
+    ></button>
+
     <!-- Camera: fills the tile -->
     <video
       v-if="stream"
@@ -207,7 +213,7 @@ watch(() => props.stream, (stream) => {
         :class="[
           'flex items-center justify-center rounded-sm bg-black/65 text-white hover:bg-black/85 transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent',
           compact ? 'w-5 h-5' : 'w-6 h-6',
-          cameraHidden ? '' : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 focus-visible:opacity-100'
+          cameraHidden ? '' : 'opacity-0 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 focus-visible:opacity-100'
         ]"
         v-tooltip="cameraHidden ? $t('talk.showCamera') : $t('talk.hideCamera')"
         @click.stop="$emit('toggle-camera')"
@@ -274,7 +280,7 @@ watch(() => props.stream, (stream) => {
     ></div>
     <!-- Keyboard focus ring, inside the tile so the strip never clips it -->
     <div
-      class="absolute inset-0 z-50 rounded-[inherit] pointer-events-none hidden group-focus-visible:block ring-2 ring-inset ring-mnema-text"
+      class="absolute inset-0 z-50 rounded-[inherit] pointer-events-none hidden group-has-[:focus-visible]:block ring-2 ring-inset ring-mnema-text"
       aria-hidden="true"
     ></div>
   </div>

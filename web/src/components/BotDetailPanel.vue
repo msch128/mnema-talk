@@ -10,6 +10,7 @@ import { confirm } from '../lib/confirm'
 import { BOT_INTENTS, botInitial, hasIntent, toggleIntent } from '../lib/bots'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
+import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
 import BotRolesPanel from './BotRolesPanel.vue'
 import BotAccessPanel from './BotAccessPanel.vue'
 import BotTokensPanel from './BotTokensPanel.vue'
@@ -57,9 +58,8 @@ function rename() {
 }
 
 async function setAvatar(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
+  const { file, tooBig } = pickImage(event.target as HTMLInputElement)
+  if (tooBig) toasts.error(t('profile.avatarTooBig', { size: IMAGE_UPLOAD_MAX_MB }))
   if (!file) return
   const form = new FormData()
   form.append('avatar', file)

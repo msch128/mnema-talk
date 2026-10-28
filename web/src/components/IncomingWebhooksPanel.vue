@@ -12,6 +12,7 @@ import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { useChatStore } from '../stores/chat'
 import { t } from '../i18n'
+import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
 
 const props = defineProps({
   channelId: { type: String, required: true }
@@ -139,9 +140,8 @@ async function remove(hook: Webhook) {
 }
 
 async function setAvatar(hook: Webhook, event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
+  const { file, tooBig } = pickImage(event.target as HTMLInputElement)
+  if (tooBig) toasts.error(t('profile.avatarTooBig', { size: IMAGE_UPLOAD_MAX_MB }))
   if (!file) return
   const form = new FormData()
   form.append('avatar', file)

@@ -11,6 +11,11 @@ interface ComposerKeys {
   send: () => void
 }
 
+/** Enter pressed while an IME composition is active (keyCode 229 on older WebKit). */
+export function isComposing(e: KeyboardEvent): boolean {
+  return e.isComposing || e.keyCode === 229
+}
+
 /** Escape leaves a reply; Enter sends, Shift+Enter breaks the line. */
 export function handleComposerKeydown(e: KeyboardEvent, { consumers, replying, cancelReply, send }: ComposerKeys) {
   if (consumers.some(consume => consume(e))) return
@@ -19,7 +24,8 @@ export function handleComposerKeydown(e: KeyboardEvent, { consumers, replying, c
     cancelReply()
     return
   }
-  if (e.key === 'Enter' && !e.shiftKey) {
+  // Enter that confirms an IME candidate is part of the composition, not a send.
+  if (e.key === 'Enter' && !e.shiftKey && !isComposing(e)) {
     e.preventDefault()
     send()
   }
