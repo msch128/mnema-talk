@@ -1,0 +1,21 @@
+internal/httpx/response.go
+  s_a58f07db94e311::t_b3941b3dfec835 179-180,182
+internal/imgproc/palette.go
+  s_a58f07db94e311::t_f7632deb0ae221 12-21,41,45,48-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f5358e28b06974178a35f4e0d6beab4e42cd3bed",
+  "prompts": {},
+  "sessions": {
+    "s_a58f07db94e311": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aintegrate-desktop-0629b15836aecec2",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
