@@ -1,0 +1,51 @@
+cmd/server/storage.go
+  s_0c23a553dd44a8::t_b5a44f0a846b59 33-44,46,48-55,57,59
+internal/auth/account_export_build.go
+  s_1888f569b71f01::t_d8484cacf30a21 133-159,177,200-202
+internal/chat/channels.go
+  s_1888f569b71f01::t_c90c4a0771d947 269,272,284-318
+internal/chat/dm.go
+  s_0c23a553dd44a8::t_e3423f582c2cb7 309-310,331-340
+internal/chat/dm_prefs.go
+  s_0c23a553dd44a8::t_2511f93bcfb563 79,85-101
+internal/chat/handler_forum.go
+  s_1888f569b71f01::t_acbac296619f61 206-208,210-212,226-255
+internal/chat/message_mutations.go
+  s_1888f569b71f01::t_072e8e55338472 208-209,239-251
+internal/communityevents/handler.go
+  s_0c23a553dd44a8::t_0aca471f410149 270-284,288,302,306
+internal/communityevents/handler_validate.go
+  s_1888f569b71f01::t_333a6130fe7dca 44,46-61
+internal/config/config_validate.go
+  s_1888f569b71f01::t_26bba97537480a 102-103,126-139
+internal/imgproc/palette.go
+  s_1888f569b71f01::t_049c3249c71a10 57,59,64,70-84,86,88-89,92-130
+internal/push/event_reminder.go
+  s_1888f569b71f01::t_7fb333a1843029 31-33,63-88
+internal/webhook/store.go
+  s_1888f569b71f01::t_a8108ae64aa928 302-303,311-325
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f89040c1ba7f91ab6485bdd1664701215072b4d6",
+  "prompts": {},
+  "sessions": {
+    "s_0c23a553dd44a8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-acleanup-desktop-91880e18b59c4285",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_1888f569b71f01": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aintegrate-server-60fe71aa50757d20",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
