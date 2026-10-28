@@ -5,6 +5,8 @@ import type { ChatEmbed } from '../types/rest'
 // (Markdown, sanitized); pictures are never loaded from their host, they show
 // as links the reader chooses to open.
 import { ExternalLink } from '@lucide/vue'
+import { locale } from '../i18n'
+import { dateTime } from '../lib/time'
 import MarkdownContent from './MarkdownContent.vue'
 import TalkInviteCard from './TalkInviteCard.vue'
 
@@ -27,7 +29,7 @@ function host(url: string): string {
 }
 
 function when(timestamp: string): string {
-  return new Date(timestamp).toLocaleString()
+  return dateTime(timestamp, locale.value)
 }
 </script>
 

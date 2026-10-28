@@ -7,12 +7,12 @@ import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
+import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
 
 // "Change banner" and "Remove banner" on one's own profile, as quiet pills on
 // the banner itself. The server crops the picture to 3:1 and strips its metadata.
 defineProps<{ hasBanner: boolean }>()
 
-const MAX_MB = 5
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 const toasts = useToastStore()
@@ -21,40 +21,32 @@ const pill = 'btn btn-sm border-white/10 bg-black/50 text-mnema-text backdrop-bl
 const fileInput = ref<HTMLInputElement | null>(null)
 const busy = ref(false)
 
-function showOnProfile(updated: Partial<ProfileUser>) {
-  const open = chatStore.selectedUserProfile
-  if (!open) return
-  const next = { ...open, ...updated }
+function showOnProfile(openId: string | undefined, updated: Partial<ProfileUser>) {
   // A removed banner is absent from the answer; the merge must not keep the old one.
-  if (!updated.banner_url) delete next.banner_url
-  chatStore.selectedUserProfile = next
+  chatStore.patchOpenProfile(openId, updated, updated.banner_url ? [] : ['banner_url'])
 }
 
 async function onSelected(e: Event) {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
+  const { file, tooBig } = pickImage(e.target as HTMLInputElement)
+  if (tooBig) toasts.error(t('profile.bannerTooBig', { size: IMAGE_UPLOAD_MAX_MB }))
   if (!file) return
-  if (file.size > MAX_MB * 1024 * 1024) {
-    toasts.error(t('profile.bannerTooBig', { size: MAX_MB }))
-    input.value = ''
-    return
-  }
+  const openId = chatStore.selectedUserProfile?.id
   busy.value = true
   try {
-    showOnProfile(await authStore.uploadBanner(file))
+    showOnProfile(openId, await authStore.uploadBanner(file))
     toasts.success(t('profile.bannerSaved'))
   } catch (err) {
     toasts.error(caughtErrorMessage(err, t('profile.bannerFailed')))
   } finally {
     busy.value = false
-    input.value = ''
   }
 }
 
 async function remove() {
+  const openId = chatStore.selectedUserProfile?.id
   busy.value = true
   try {
-    showOnProfile(await authStore.removeBanner())
+    showOnProfile(openId, await authStore.removeBanner())
     toasts.success(t('profile.bannerRemoved'))
   } catch (err) {
     toasts.error(caughtErrorMessage(err, t('profile.bannerRemoveFailed')))

@@ -3,6 +3,7 @@
 // the keyboard (e on a message) can go straight on typing.
 import { ref, onMounted, nextTick } from 'vue'
 import { Check, Loader2 } from '@lucide/vue'
+import { isComposing } from '../composables/useComposerKeys'
 
 defineProps({
   saving: { type: Boolean, default: false },
@@ -25,6 +26,13 @@ onMounted(() => {
   })
 })
 
+// Enter that confirms an IME candidate must not save the edit.
+function onEnter(e: KeyboardEvent) {
+  if (isComposing(e)) return
+  e.preventDefault()
+  emit('save')
+}
+
 defineExpose({ focus: () => input.value?.focus() })
 </script>
 
@@ -36,7 +44,7 @@ defineExpose({ focus: () => input.value?.focus() })
       rows="2"
       :aria-label="label || undefined"
       data-testid="message-editor"
-      @keydown.enter.exact.prevent="emit('save')"
+      @keydown.enter.exact="onEnter"
       @keydown.esc.prevent="emit('cancel')"
       :class="[
         'w-full text-message rounded-lg bg-mnema-surface border border-mnema-border-strong text-mnema-text resize-none',

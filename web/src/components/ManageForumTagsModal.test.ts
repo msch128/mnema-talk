@@ -47,6 +47,25 @@ describe('ManageForumTagsModal', () => {
     expect(wrapper.text()).toContain('No tags created yet.')
   })
 
+  it('Escape while editing a tag leaves edit mode and keeps the dialog open', async () => {
+    mountModal()
+    await wrapper.get('button[aria-label="Edit"]').trigger('click')
+    expect(inputs()).toHaveLength(4)
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    await flushPromises()
+    expect(wrapper.emitted('close')).toBeUndefined()
+    expect(inputs()).toHaveLength(2)
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(wrapper.emitted('close')).toHaveLength(1)
+  })
+
+  it('names the icon buttons in edit mode', async () => {
+    mountModal()
+    await wrapper.get('button[aria-label="Edit"]').trigger('click')
+    expect(wrapper.find('button[aria-label="Save"]').exists()).toBe(true)
+    expect(wrapper.find('button[aria-label="Cancel"]').exists()).toBe(true)
+  })
+
   it('adds a trimmed tag, clears the form and reports the change', async () => {
     vi.mocked(forumApi.createForumTag).mockResolvedValue(tag(3))
     mountModal()
@@ -129,17 +148,16 @@ describe('ManageForumTagsModal', () => {
     mountModal()
     await wrapper.find('button[title="Edit"]').trigger('click')
     expect(inputs()).toHaveLength(4)
-    await inputs()[3]!.trigger('keydown.esc')
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    await flushPromises()
     expect(inputs()).toHaveLength(2)
 
     await wrapper.find('button[title="Edit"]').trigger('click')
-    const row = wrapper.findAll('button').filter(b => !b.attributes('title') && b.text() === '')
-    await row[1]!.trigger('click') // cancel (X)
+    await wrapper.get('button[aria-label="Cancel"]').trigger('click')
     expect(inputs()).toHaveLength(2)
 
     await wrapper.find('button[title="Edit"]').trigger('click')
-    const confirm = wrapper.findAll('button').filter(b => !b.attributes('title') && b.text() === '')
-    await confirm[0]!.trigger('click')
+    await wrapper.get('button[aria-label="Save"]').trigger('click')
     await flushPromises()
     expect(forumApi.updateForumTag).toHaveBeenCalledWith('chan-1', 'tag-1', 'tag1', '💬')
   })

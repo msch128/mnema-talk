@@ -7,10 +7,9 @@ import { caughtErrorMessage } from '../lib/api'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
+import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
 import FormField from './FormField.vue'
 import UserAvatar from './UserAvatar.vue'
-
-const MAX_AVATAR_BYTES = 10 * 1024 * 1024
 
 const emit = defineEmits<{ done: []; skip: [] }>()
 const auth = useAuthStore()
@@ -23,14 +22,9 @@ const uploading = ref(false)
 const saving = ref(false)
 
 async function onAvatar(e: Event) {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
+  const { file, tooBig } = pickImage(e.target as HTMLInputElement)
+  if (tooBig) toasts.error(t('profile.avatarTooBig', { size: IMAGE_UPLOAD_MAX_MB }))
   if (!file) return
-  if (file.size > MAX_AVATAR_BYTES) {
-    toasts.error(t('profile.avatarTooBig', { size: 10 }))
-    return
-  }
   uploading.value = true
   try {
     await auth.uploadAvatar(file)

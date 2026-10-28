@@ -24,6 +24,16 @@ describe('composer keys', () => {
     expect(k.send).toHaveBeenCalledTimes(1)
   })
 
+  it('does not send on the Enter that confirms an IME candidate', () => {
+    const k = keys()
+    const composing = key('Enter', { isComposing: true })
+    handleComposerKeydown(composing, k)
+    const legacy = key('Enter', { keyCode: 229 })
+    handleComposerKeydown(legacy, k)
+    expect(k.send).not.toHaveBeenCalled()
+    expect(composing.defaultPrevented).toBe(false)
+  })
+
   it('leaves a reply on Escape, and only while replying', () => {
     const k = keys({ replying: () => true })
     const esc = key('Escape')

@@ -4,7 +4,7 @@ import { useVoiceStore } from './voice'
 import type { ClientEventPayloads } from '../types/events'
 import { createChatState, type ChatState, type Cx } from './chat/state'
 import { createCategory, createChannel, deleteCategory, deleteChannel, duplicateChannel, fetchChannels, isVoiceChannel, linkTo, selectChannel, setChannelAutoDelete, updateCategory, updateChannel } from './chat/channels'
-import { activityOfUser, closeUserProfile, fetchMembers, insertMention, openUserProfile, presenceOf } from './chat/members'
+import { activityOfUser, closeUserProfile, fetchMembers, insertMention, openUserProfile, patchOpenProfile, presenceOf } from './chat/members'
 import { installActivityListeners, setMyPresence, setStatusText } from './chat/presence'
 import { fetchMessages, goToMessage, jumpToLatest, jumpToMessage, loadNewer, loadOlder, showToast } from './chat/messageWindow'
 import { createPoll, endPoll, fetchPoll, votePoll } from './chat/polls'
@@ -101,6 +101,7 @@ function exposedActions(cx: Cx) {
     messageMentionsMe: bind(messageMentionsMe),
     openUserProfile: bind(openUserProfile),
     closeUserProfile: bind(closeUserProfile),
+    patchOpenProfile: bind(patchOpenProfile),
     insertMention: bind(insertMention),
     fetchChannels: bind(fetchChannels),
     fetchMembers: bind(fetchMembers),

@@ -10,6 +10,7 @@ import {
   countMessageOf,
   updateUserEverywhere,
   closeUserProfile,
+  patchOpenProfile,
   openUserProfile,
   insertMention
 } from './members'
@@ -104,6 +105,27 @@ describe('members', () => {
 
       closeUserProfile(cx)
       expect(cx.cs.selectedUserProfile.value).toBeNull()
+    })
+  })
+
+  describe('patching the open profile', () => {
+    it('ignores a save that finishes after another profile was opened', () => {
+      const mine = fixtureId(20)
+      const other = fixtureId(21)
+      cx.cs.selectedUserProfile.value = { id: other, username: 'bob', display_name: 'Bob', role: 'user' }
+      patchOpenProfile(cx, mine, { id: mine, username: 'ada', display_name: 'Ada', bio: 'mine' })
+      expect(cx.cs.selectedUserProfile.value).toMatchObject({ id: other, username: 'bob', display_name: 'Bob' })
+      patchOpenProfile(cx, mine, { bio: 'x' })
+      closeUserProfile(cx)
+      patchOpenProfile(cx, mine, { bio: 'x' })
+      expect(cx.cs.selectedUserProfile.value).toBeNull()
+    })
+
+    it('merges into the profile it was started on and drops cleared fields', () => {
+      const id = fixtureId(22)
+      cx.cs.selectedUserProfile.value = { id, username: 'ada', display_name: 'Ada', role: 'user', avatar_url: '/old', bio: 'a' }
+      patchOpenProfile(cx, id, { bio: 'b' }, ['avatar_url'])
+      expect(cx.cs.selectedUserProfile.value).toEqual({ id, username: 'ada', display_name: 'Ada', role: 'user', bio: 'b' })
     })
   })
 

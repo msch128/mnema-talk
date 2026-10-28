@@ -469,7 +469,7 @@ describe('VoiceStage screen share opt-in', () => {
     await nextTick()
     expect(w.find<HTMLElement>('[data-testid="stage"]').exists()).toBe(false)
 
-    const aliceTile = () => w.find<HTMLElement>('[data-participant-tile][aria-label="Enlarge camera of Alice"]')
+    const aliceTile = () => w.find<HTMLElement>('[data-participant-tile] [data-tile-primary][aria-label="Enlarge camera of Alice"]')
     await aliceTile().trigger('click')
     await flushPromises()
     const stageEl = w.find<HTMLElement>('[data-testid="stage"]')
@@ -483,7 +483,7 @@ describe('VoiceStage screen share opt-in', () => {
     expect(w.find<HTMLElement>('[data-testid="streamer-audio-toggle"]').exists()).toBe(false)
     expect(w.find<HTMLElement>('button[aria-label="Stop watching"]').exists()).toBe(false)
     // The tile shows that its camera is on the stage.
-    expect(w.find<HTMLElement>('[data-participant-tile][aria-pressed="true"]').attributes('aria-label')).toBe('Back to everyone')
+    expect(w.find<HTMLElement>('[data-participant-tile] [data-tile-primary][aria-pressed="true"]').attributes('aria-label')).toBe('Back to everyone')
 
     // Bob's screen goes on the stage.
     await w.find<HTMLElement>('[data-screen-card="b"] [data-testid="screen-card-action"]').trigger('click')
@@ -505,7 +505,7 @@ describe('VoiceStage screen share opt-in', () => {
     voice.unwatchScreen('b')
     await aliceTile().trigger('click')
     await flushPromises()
-    await w.find<HTMLElement>('[data-participant-tile][aria-pressed="true"]').trigger('click')
+    await w.find<HTMLElement>('[data-participant-tile] [data-tile-primary][aria-pressed="true"]').trigger('click')
     await flushPromises()
     expect(w.find<HTMLElement>('[data-testid="stage"]').exists()).toBe(false)
   })
@@ -516,7 +516,7 @@ describe('VoiceStage screen share opt-in', () => {
     voice.setUserVideoStream('a', new MediaStream())
     const w = mountStage({ channelId: 'v1' })
     await nextTick()
-    await w.find<HTMLElement>(`[data-participant-tile][aria-label="Open Bob’s profile"]`).trigger('click')
+    await w.find<HTMLElement>(`[data-participant-tile] [data-tile-primary][aria-label="Open Bob’s profile"]`).trigger('click')
     expect(open).toHaveBeenCalledWith(expect.objectContaining({ id: 'b' }))
     expect(voice.focusedCamera).toBeNull()
   })

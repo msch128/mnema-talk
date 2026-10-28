@@ -47,6 +47,12 @@ function cancelEdit() {
   editEmoji.value = ''
 }
 
+// Escape while a tag is being edited leaves edit mode; the dialog stays open.
+function onDialogClose() {
+  if (editingId.value) cancelEdit()
+  else emit('close')
+}
+
 async function handleAddTag() {
   if (!canAdd.value || isAdding.value) return
   error.value = ''
@@ -100,7 +106,7 @@ async function handleDeleteTag(tagId: string) {
   <BaseDialog
     :title="$t('forum.manageTagsTitle')"
     panel-class="max-w-md"
-    @close="emit('close')"
+    @close="onDialogClose"
   >
     <div class="p-6 space-y-4">
       <div v-if="error" class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-sm text-red-400">
@@ -178,12 +184,12 @@ async function handleDeleteTag(tagId: string) {
               maxlength="20"
               class="flex-1 min-w-0 bg-mnema-surface border border-mnema-border rounded-md px-2 py-1 text-xs text-mnema-text focus:outline-hidden focus:border-mnema-accent"
               @keydown.enter.prevent="handleSaveEdit(tag.id)"
-              @keydown.esc.prevent="cancelEdit"
             />
             <div class="flex items-center gap-1 shrink-0">
               <button
                 type="button"
                 :disabled="isSaving"
+                :aria-label="$t('common.save')"
                 class="p-1 hover:bg-mnema-hover rounded-md text-emerald-400"
                 @click="handleSaveEdit(tag.id)"
               >
@@ -191,6 +197,7 @@ async function handleDeleteTag(tagId: string) {
               </button>
               <button
                 type="button"
+                :aria-label="$t('common.cancel')"
                 class="p-1 hover:bg-mnema-hover rounded-md text-mnema-tertiary hover:text-mnema-text"
                 @click="cancelEdit"
               >
@@ -210,6 +217,7 @@ async function handleDeleteTag(tagId: string) {
                 type="button"
                 class="p-1.5 hover:bg-mnema-hover rounded-md text-mnema-tertiary hover:text-mnema-text transition"
                 :title="$t('forum.edit')"
+                :aria-label="$t('forum.edit')"
                 @click="startEdit(tag)"
               >
                 <Edit2 class="w-3.5 h-3.5" />
@@ -219,6 +227,7 @@ async function handleDeleteTag(tagId: string) {
                 :disabled="deletingId === tag.id"
                 class="p-1.5 hover:bg-mnema-hover rounded-md text-mnema-tertiary hover:text-red-400 transition"
                 :title="$t('common.delete')"
+                :aria-label="$t('common.delete')"
                 @click="handleDeleteTag(tag.id)"
               >
                 <Loader2 v-if="deletingId === tag.id" class="w-3.5 h-3.5 animate-spin" />

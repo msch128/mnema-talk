@@ -29,6 +29,14 @@ describe('MessageEditor', () => {
     expect(w.emitted('cancel')).toHaveLength(1)
   })
 
+  it('Enter that confirms an IME candidate does not save the edit', async () => {
+    w = mount(MessageEditor, { props: { modelValue: 'x' }, attachTo: document.body })
+    const ta = w.find('textarea')
+    await ta.trigger('keydown', { key: 'Enter', isComposing: true })
+    await ta.trigger('keydown', { key: 'Enter', keyCode: 229 })
+    expect(w.emitted('save')).toBeUndefined()
+  })
+
   it('forwards buttons, compact layout and exposed focus', async () => {
     w = mount(MessageEditor, { props: { compact: true }, attachTo: document.body })
     await flushPromises()
