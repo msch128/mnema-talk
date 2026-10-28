@@ -1,0 +1,75 @@
+web/src/components/MarkdownContent.test.ts
+  s_2148161d7c98f3::t_9214b0d39211a0 56-68
+web/src/components/MarkdownContent.vue
+  s_2148161d7c98f3::t_f76ef0bd6d0ab2 4,74-82,111
+web/src/lib/markdown/highlight.test.ts
+  s_dc6ba5bcea699f::t_47e9fc406dcdfc 1-25
+web/src/lib/markdown/highlight.ts
+  s_27bb33a982f856::t_0626f958095600 4-5,53,64
+web/src/lib/markdown/inline.ts
+  s_06fcde5dbef956::t_4ebd882fd4bef3 47-48,52-58,122-123,128,131,134-145,170-172
+web/src/lib/markdown/link.ts
+  s_27bb33a982f856::t_f337636a926a97 5
+web/src/lib/markdown/parity.test.ts
+  s_814bdab332b3b0::t_5548636b9e99eb 11,200-216
+web/src/lib/markdown/render.ts
+  s_2148161d7c98f3::t_12b760e3836ea1 16,26-32,90
+web/src/lib/markdown/security.test.ts
+  s_4ac6295b6bd2d2::t_55e58131806d6c 11,114,192-193
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3e564b60219fc8e999295dbf35f8f94ba64d85d0",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2148161d7c98f3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adb3d886b8008116b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_27bb33a982f856": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaf7a7a7ee20c3225",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4ac6295b6bd2d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac4ef8ece1278c839",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_814bdab332b3b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a577c2ec494cbbbb0",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_dc6ba5bcea699f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a3702c97e5f923577",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
