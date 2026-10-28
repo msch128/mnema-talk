@@ -33,13 +33,6 @@ const defaultOfferTimeout = 10 * time.Second
 
 const maxOfferResends = 6
 
-// An offer that cannot be built is tried again after offerRetryDelay, and the
-// peer is dropped after maxOfferBuildFailures failures in a row.
-const (
-	offerRetryDelay       = 250 * time.Millisecond
-	maxOfferBuildFailures = 5
-)
-
 // resumeHoldoff keeps late packets of a stopped video from re-publishing it.
 const resumeHoldoff = 500 * time.Millisecond
 
@@ -106,12 +99,6 @@ type Peer struct {
 	// offerSent is guarded by signalingMu. Reading LocalDescription may wait for
 	// the ICE task loop, so it must not be used as a flag under the room lock.
 	offerSent bool
-	// needOffer and offerFailures track an offer that could not be built (see
-	// negotiateOrRetry); guarded by signalingMu.
-	needOffer     bool
-	offerFailures int
-	// offerFault makes building an offer fail (tests only).
-	offerFault func() error
 	// candMu guards cands: trickle candidates held back until the offer was
 	// handed over (outgoing) or the answer was applied (incoming).
 	candMu sync.Mutex
@@ -132,15 +119,10 @@ type Peer struct {
 	// track ID, so they can be released with the track.
 	vtMu         sync.Mutex
 	viewerTracks map[string]*viewerTrack
-	// vtReleased is set by releaseViewerTracks; no viewer track is added after.
-	vtReleased bool
-	// lostMu guards onLost and lost (see OnLost).
-	lostMu sync.Mutex
-	onLost func()
-	lost   bool
 }
 
 type Room struct {
+	nativeAPI           func(func() bool) (*webrtc.API, error)
 	allowLoopbackCands  bool
 	load                *peerLoad
 	sourceAuthorization *sourceAuthorizationRegistry
@@ -157,6 +139,7 @@ type Room struct {
 	// by mu.
 	groups       map[uuid.UUID]*layerGroup
 	mu           sync.RWMutex
+	api          *webrtc.API
 	iceServers   []webrtc.ICEServer
 	offerTimeout time.Duration
 

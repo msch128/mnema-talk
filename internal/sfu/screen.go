@@ -85,7 +85,7 @@ func (r *Room) SetScreenLayers(publisher uuid.UUID, layers []Layer) error {
 	r.mu.Lock()
 	if r.peers[publisher] == nil {
 		r.mu.Unlock()
-		return ErrNotInRoom
+		return ErrInvalidLayers
 	}
 	if r.layerMeta == nil {
 		r.layerMeta = make(map[uuid.UUID][]Layer)
@@ -130,11 +130,7 @@ func (r *Room) SetScreenQuality(viewer, publisher uuid.UUID, layer int) error {
 		return ErrInvalidLayers
 	}
 	r.mu.Lock()
-	if r.peers[viewer] == nil {
-		r.mu.Unlock()
-		return ErrNotInRoom
-	}
-	if viewer == publisher {
+	if r.peers[viewer] == nil || viewer == publisher {
 		r.mu.Unlock()
 		return ErrInvalidLayers
 	}
@@ -148,4 +144,20 @@ func (r *Room) SetScreenQuality(viewer, publisher uuid.UUID, layer int) error {
 		vt.setPref(layer)
 	}
 	return nil
+}
+
+// ScreenQuality is what viewer currently receives of publisher's screen
+// share, if it receives it.
+func (r *Room) ScreenQuality(viewer, publisher uuid.UUID) (QualityState, bool) {
+	r.mu.RLock()
+	g := r.groups[publisher]
+	r.mu.RUnlock()
+	if g == nil {
+		return QualityState{}, false
+	}
+	vt := g.viewerFor(viewer)
+	if vt == nil {
+		return QualityState{}, false
+	}
+	return vt.state(), true
 }

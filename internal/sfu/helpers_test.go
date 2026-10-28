@@ -20,19 +20,3 @@ func (r *Room) Receives(viewer, publisher uuid.UUID, kind Source) bool {
 	defer r.mu.RUnlock()
 	return viewer != publisher && r.subs[viewer].Wants(publisher, webrtc.RTPCodecTypeVideo, kind)
 }
-
-// ScreenQuality is what viewer currently receives of publisher's screen
-// share, if it receives it.
-func (r *Room) ScreenQuality(viewer, publisher uuid.UUID) (QualityState, bool) {
-	r.mu.RLock()
-	g := r.groups[publisher]
-	r.mu.RUnlock()
-	if g == nil {
-		return QualityState{}, false
-	}
-	vt := g.viewerFor(viewer)
-	if vt == nil {
-		return QualityState{}, false
-	}
-	return vt.state(), true
-}

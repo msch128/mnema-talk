@@ -164,7 +164,7 @@ func TestInvalidTransportRangeRejected(t *testing.T) {
 	if _, err := NewSFU(50001, 50000, nil, nil); err == nil || !strings.Contains(err.Error(), "UDP port range") {
 		t.Fatalf("inverted range error = %v", err)
 	}
-	if _, err := buildAPIWithAuthorization(0, 0, []string{"127.0.0.1"}, nil, nil, nil, nil); err != nil {
+	if _, err := buildAPI(0, 0, []string{"127.0.0.1"}); err != nil {
 		t.Fatalf("default API builder: %v", err)
 	}
 }
@@ -265,10 +265,9 @@ func TestOfferWatchdogStopsAfterResendLimit(t *testing.T) {
 		t.Fatal("watchdog exceeded the resend limit")
 	case <-time.After(60 * time.Millisecond):
 	}
-	// Giving up must not leave a silent member behind: the peer is dropped.
-	waitSFUCondition(t, "peer dropped after giving up", func() bool {
-		return peer.PC.ConnectionState() == webrtc.PeerConnectionStateClosed && peer.room.GetPeer(peer.ID) == nil
-	})
+	if peer.PC.SignalingState() != webrtc.SignalingStateHaveLocalOffer {
+		t.Fatal("watchdog exhaustion corrupted pending offer state")
+	}
 }
 
 func TestPublishTestVideoRejectsUnsupportedSourceAndMissingPeer(t *testing.T) {

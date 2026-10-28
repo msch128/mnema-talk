@@ -253,15 +253,13 @@ func (vt *viewerTrack) state() QualityState {
 // report tells the viewer what it receives when that changed (or always with
 // force).
 func (vt *viewerTrack) report(force bool) {
-	// The state is read, recorded and queued under one hold, so concurrent
-	// reports reach the viewer in the order their states were taken. Queueing
-	// only stores the value; delivery runs on its own goroutine.
+	st := vt.state()
 	vt.mu.Lock()
-	defer vt.mu.Unlock()
-	st := QualityState{Layer: vt.cur, Auto: vt.pref < 0}
 	same := vt.hasRep && vt.reported == st
 	vt.reported, vt.hasRep = st, true
-	if vt.closed || (same && !force) {
+	closed := vt.closed
+	vt.mu.Unlock()
+	if closed || (same && !force) {
 		return
 	}
 	vt.group.notifyQuality(vt, st)

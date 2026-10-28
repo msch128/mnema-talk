@@ -136,8 +136,8 @@ func TestJoinFailsWhenConnectionCannotBeBuilt(t *testing.T) {
 	if _, _, err := s.Join(uuid.New(), uuid.New(), func(webrtc.SessionDescription) {}, nil); err == nil {
 		t.Fatal("join with an unusable ICE server succeeded")
 	}
-	r := &Room{peers: map[uuid.UUID]*Peer{}}
-	if _, err := s.joinPeerIn(r, uuid.New(), nil, nil); err == nil {
+	r := &Room{api: s.currentAPI(), iceServers: s.iceServers, peers: map[uuid.UUID]*Peer{}}
+	if _, err := r.JoinPeer(uuid.New(), nil, nil); err == nil {
 		t.Fatal("room join with an unusable ICE server succeeded")
 	}
 }

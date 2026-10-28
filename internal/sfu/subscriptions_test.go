@@ -125,7 +125,7 @@ func joinTwo(t *testing.T) (*SFU, *Room, uuid.UUID, uuid.UUID) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.joinPeerIn(room, b, nil, nil); err != nil {
+	if _, err := room.JoinPeer(b, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	return s, room, a, b
@@ -251,14 +251,4 @@ func TestRoomMediaStateNotifications(t *testing.T) {
 	if got[pub].Screen || calls != 2 {
 		t.Fatalf("want stop announcement, got %+v calls=%d", got[pub], calls)
 	}
-}
-
-// joinPeerIn adds a further peer to an existing room through the same
-// connection builder the production join uses, without the SFU-level checks.
-func (s *SFU) joinPeerIn(r *Room, userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit)) (*Peer, error) {
-	conn, err := newReceiveConn(s.currentAPI(), s.iceServers)
-	if err != nil {
-		return nil, err
-	}
-	return r.attachPeer(userID, conn, sendOffer, sendICE, nil), nil
 }

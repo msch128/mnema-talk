@@ -130,12 +130,12 @@ func (s *SFU) currentAPI() *webrtc.API {
 	return s.api
 }
 
-// apiAndAnnounced returns the API with the announced addresses it was built
-// for, read together so a concurrent SetAnnouncedIPs cannot split them.
-func (s *SFU) apiAndAnnounced() (*webrtc.API, []string) {
-	s.apiMu.RLock()
-	defer s.apiMu.RUnlock()
-	return s.api, append([]string(nil), s.announced...)
+func buildAPI(portMin, portMax uint16, announceIPs []string) (*webrtc.API, error) {
+	return buildAPIWithMux(portMin, portMax, announceIPs, nil)
+}
+
+func buildAPIWithMux(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux) (*webrtc.API, error) {
+	return buildAPIWithAuthorization(portMin, portMax, announceIPs, mux, nil, nil, nil)
 }
 
 // buildSettingEngine configures ICE: loopback handling, the UDP mux or port

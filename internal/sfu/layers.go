@@ -227,11 +227,6 @@ func (g *layerGroup) shareStopped() {
 func (g *layerGroup) resetAnnouncedLocked() {
 	g.started = false
 	g.announced = 0
-	g.stopTimerLocked()
-}
-
-// stopTimerLocked cancels the pending hold timer, if any. g.mu is held.
-func (g *layerGroup) stopTimerLocked() {
 	if g.timer != nil {
 		g.timer.Stop()
 		g.timer = nil
@@ -271,6 +266,9 @@ func (g *layerGroup) supersede() {
 // close stops the group's timer.
 func (g *layerGroup) close() {
 	g.mu.Lock()
-	g.stopTimerLocked()
+	if g.timer != nil {
+		g.timer.Stop()
+		g.timer = nil
+	}
 	g.mu.Unlock()
 }

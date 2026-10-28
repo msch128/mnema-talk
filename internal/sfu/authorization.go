@@ -10,10 +10,8 @@ import (
 	"github.com/pion/webrtc/v4"
 )
 
-// mediaAuthorized reports whether the peer may send or receive media. Browser
-// peers have no authorizer (authorizeMedia is nil) and are always authorized;
-// native peers consult their lease latch. authorizeMedia is immutable after
-// peer construction.
+// authorizeMedia is immutable after peer construction. Native connections use
+// an owner-controlled lease latch; browser peers retain the nil/default path.
 func (p *Peer) mediaAuthorized() bool { return p.authorizeMedia == nil || p.authorizeMedia() }
 
 // authorizedTrack binds the shared publisher track to a recipient-specific

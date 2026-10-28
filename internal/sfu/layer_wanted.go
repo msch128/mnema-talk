@@ -148,7 +148,10 @@ func (g *layerGroup) computeHoldMaskLocked(now time.Time, need uint8) (uint8, ti
 
 // scheduleHoldTimerLocked stops any existing timer and schedules a refresh for the next expiration.
 func (g *layerGroup) scheduleHoldTimerLocked(next time.Time, now time.Time) {
-	g.stopTimerLocked()
+	if g.timer != nil {
+		g.timer.Stop()
+		g.timer = nil
+	}
 	if !next.IsZero() && !g.superseded.Load() {
 		g.timer = time.AfterFunc(next.Sub(now)+time.Millisecond, g.refreshWanted)
 	}

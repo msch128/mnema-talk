@@ -1,7 +1,6 @@
 package sfu
 
 import (
-	"errors"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -274,79 +273,5 @@ func TestSetScreenLayersUnchangedDoesNothing(t *testing.T) {
 	r.mu.RUnlock()
 	if len(got) != 1 {
 		t.Fatalf("changed layers not stored: %v", got)
-	}
-}
-
-// Concurrent reports must leave the viewer with the state the track ended in,
-// never an older one that was read earlier but queued later.
-func TestConcurrentQualityReportsEndOnTheLatestState(t *testing.T) {
-	rig := newLayerRig(t, "video/VP8", 3)
-	vt, _ := rig.viewer(-1)
-	var (
-		mu   sync.Mutex
-		last QualityState
-	)
-	drain := make(chan struct{})
-	go func() {
-		for {
-			select {
-			case st := <-rig.qual:
-				mu.Lock()
-				last = st
-				mu.Unlock()
-			case <-drain:
-				return
-			}
-		}
-	}()
-	for round := 0; round < 200; round++ {
-		var wg sync.WaitGroup
-		for i := 0; i < 8; i++ {
-			wg.Add(1)
-			go func(layer int) {
-				defer wg.Done()
-				vt.mu.Lock()
-				vt.cur = layer
-				vt.mu.Unlock()
-				vt.report(true)
-			}(i % 3)
-		}
-		wg.Wait()
-		want := vt.state()
-		deadline := time.Now().Add(2 * time.Second)
-		for {
-			mu.Lock()
-			got := last
-			mu.Unlock()
-			if got == want {
-				break
-			}
-			if time.Now().After(deadline) {
-				close(drain)
-				t.Fatalf("round %d: viewer ended on %+v, track is on %+v", round, got, want)
-			}
-			time.Sleep(time.Millisecond)
-		}
-	}
-	close(drain)
-}
-
-func TestScreenMembershipErrorsAreNotLayerErrors(t *testing.T) {
-	s := newTestSFU(t)
-	roomID, pub := uuid.New(), newClient(t)
-	pub.join(s, roomID)
-	r := s.Room(roomID)
-	stranger := uuid.New()
-	if err := r.SetScreenLayers(stranger, []Layer{{1920, 1080, 30}}); !errors.Is(err, ErrNotInRoom) {
-		t.Fatalf("SetScreenLayers by a stranger = %v", err)
-	}
-	if err := r.SetScreenQuality(stranger, pub.id, 0); !errors.Is(err, ErrNotInRoom) {
-		t.Fatalf("SetScreenQuality by a stranger = %v", err)
-	}
-	if err := r.SetScreenQuality(pub.id, pub.id, 0); !errors.Is(err, ErrInvalidLayers) {
-		t.Fatalf("SetScreenQuality on one's own share = %v", err)
-	}
-	if err := r.SetScreenLayers(pub.id, nil); !errors.Is(err, ErrInvalidLayers) {
-		t.Fatalf("SetScreenLayers without layers = %v", err)
 	}
 }

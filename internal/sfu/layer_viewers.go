@@ -21,6 +21,18 @@ func (g *layerGroup) publishViewersLocked() {
 	g.snapshot.Store(&list)
 }
 
+// representative is a live layer's info, the best one; nil when none is live.
+func (g *layerGroup) representative() *TrackInfo {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	for _, info := range g.infos {
+		if info != nil {
+			return info
+		}
+	}
+	return nil
+}
+
 // newViewer makes the outgoing track one viewer gets for the group. pref is
 // the viewer's choice, -1 for automatic. It receives nothing until addViewer.
 func (g *layerGroup) newViewer(viewer uuid.UUID, pref int, trackID, streamID string) (*viewerTrack, error) {
