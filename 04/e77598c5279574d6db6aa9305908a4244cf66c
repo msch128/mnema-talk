@@ -1,0 +1,26 @@
+internal/auth/service.go
+  h_0ff4f4713441f4 232-233,235
+internal/later/prune_test.go
+  h_0ff4f4713441f4 1-23
+internal/later/scheduled_handler.go
+  h_0ff4f4713441f4 98-99,102-105
+internal/later/scheduled_send.go
+  h_0ff4f4713441f4 86-89,97
+internal/later/scheduled_validation_integration_test.go
+  h_0ff4f4713441f4 1-88
+internal/later/service.go
+  h_0ff4f4713441f4 10,40-43,65-82,87,116-118
+internal/later/visibility.go
+  h_0ff4f4713441f4 7,13,77-89,92,94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "04e77598c5279574d6db6aa9305908a4244cf66c",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
