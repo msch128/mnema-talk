@@ -1,0 +1,47 @@
+internal/chat/botapi.go
+  s_1888f569b71f01::t_41bc24335dac8d 208
+internal/chat/members.go
+  s_1888f569b71f01::t_f02e4e90dcc9a0 50
+internal/httpx/bounded.go
+  s_1888f569b71f01::t_a3d39fc45c6395 1-46
+internal/httpx/discord.go
+  s_1888f569b71f01::t_d53ab9978b1a10 31,49-59,61-63,89
+internal/httpx/httpx_review_test.go
+  s_1888f569b71f01::t_5fe5ab971c5747 1-140
+internal/httpx/loginfailure.go
+  s_1888f569b71f01::t_13974dc87f401a 142,175,177-178,188-205
+internal/httpx/metrics.go
+  s_1888f569b71f01::t_6622e0ab3fff2a 5,13-16,36-38
+internal/httpx/middleware.go
+  s_1888f569b71f01::t_6422fcf13c5ea1 48,65,74-96
+internal/httpx/middleware_clientip.go
+  s_1888f569b71f01::t_8cc31d75b0ab3a 150,156-161,170
+internal/httpx/names.go
+  s_1888f569b71f01::t_513ed94e86af5a 74-89,91-95,98-99,101,103-110
+internal/httpx/ratelimit.go
+  s_1888f569b71f01::t_82b8d68281d19f 64,77-87,97,104,114,123-125,162
+internal/httpx/request.go
+  s_1888f569b71f01::t_93d02e6c8949c3 33,38-39,104,108-112,119-122,124-128
+internal/httpx/response.go
+  s_1888f569b71f01::t_0552a5af311bfc 53-63,149,159-165,173,177-182
+internal/update/checker_trailing_test.go
+  s_1888f569b71f01::t_38d757805c9d78 1-9
+internal/webhook/execute.go
+  s_1888f569b71f01::t_c8ea5ef0b4d019 68-70,72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3b15f2e432a70854e988038dbf6d6850d055ef2b",
+  "prompts": {},
+  "sessions": {
+    "s_1888f569b71f01": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aintegrate-server-60fe71aa50757d20",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
