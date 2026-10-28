@@ -1,0 +1,23 @@
+web/src/stores/chat/socket.ts
+  s_b242c4c5a3f8fb::t_ae58dbcdf2e88c 29,31-32,41-42
+web/src/stores/chat/state.ts
+  s_b242c4c5a3f8fb::t_fd125a62d34e51 120
+web/src/stores/reconnectSession.test.ts
+  s_b242c4c5a3f8fb::t_68d15bffb82505 129-141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a6345cfbb236a3fedcf16809d3e38133d878ce64",
+  "prompts": {},
+  "sessions": {
+    "s_b242c4c5a3f8fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a094b6e70840d876f",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
