@@ -1,0 +1,31 @@
+internal/communityevents/store_scheduler.go
+  s_06fcde5dbef956::t_3c51728f9d4a27 41,85-95
+internal/communityevents/scheduler.go
+  s_3d7b9126a2ee81::t_575ae8c21de0ed 6,18-20,23-42,125-135,140,142,152-159,162-164,166-170,172-202
+internal/communityevents/scheduler_test.go
+  s_3d7b9126a2ee81::t_09c9d0c068a34e 1-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b8560aa3ef3b193054a3700f6cd77cd86190825d",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3d7b9126a2ee81": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad48e74d371a2a225",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
