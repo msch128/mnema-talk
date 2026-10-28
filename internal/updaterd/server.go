@@ -32,15 +32,15 @@ type Recreator interface {
 	Recreate(ctx context.Context) error
 }
 
-// Refusal reasons in the 4xx/5xx body (stable strings, no free text: the app
-// maps them to its own wording).
+// Refusal reasons in the 4xx/5xx body: stable strings shared with the app's
+// client (update.Reason*), which maps them to its own wording.
 const (
-	reasonUntrusted = "verification_failed"
-	reasonUnchecked = "verification_unavailable"
-	reasonNoTarget  = "no_target"
-	reasonVersion   = "version_mismatch"
-	reasonRequest   = "target_version_required"
-	reasonEngine    = "docker_unavailable"
+	reasonUntrusted = update.ReasonUntrusted
+	reasonUnchecked = update.ReasonUnchecked
+	reasonNoTarget  = update.ReasonNoTarget
+	reasonVersion   = update.ReasonVersion
+	reasonRequest   = update.ReasonRequest
+	reasonEngine    = update.ReasonEngine
 )
 
 const (

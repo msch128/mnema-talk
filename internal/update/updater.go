@@ -2,6 +2,7 @@ package update
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -18,6 +19,18 @@ import (
 // the answer (?async=true).
 const updaterTimeout = 120 * time.Second
 
+// Refusal reasons in the sidecar's 4xx/5xx body ({"error": reason}). The
+// sidecar (internal/updaterd) writes them, Trigger reads them: stable strings,
+// no free text.
+const (
+	ReasonUntrusted = "verification_failed"
+	ReasonUnchecked = "verification_unavailable"
+	ReasonNoTarget  = "no_target"
+	ReasonVersion   = "version_mismatch"
+	ReasonRequest   = "target_version_required"
+	ReasonEngine    = "docker_unavailable"
+)
+
 var (
 	// ErrUpdaterBusy: the sidecar is already running an update.
 	ErrUpdaterBusy = errors.New("an update is already running")
@@ -32,6 +45,13 @@ var (
 	// ErrUpdaterUnverified: the sidecar could not carry the check out
 	// (registry or Sigstore unreachable); nothing was changed.
 	ErrUpdaterUnverified = errors.New("the updater could not verify the new image (registry or Sigstore unreachable); nothing was changed")
+	// ErrUpdaterVersionMismatch: the signed image is not the requested
+	// release, or not newer than the running one; nothing was changed.
+	ErrUpdaterVersionMismatch = errors.New("the updater refused the update: the signed image is not the requested release or not newer than the running one; nothing was changed")
+	// ErrUpdaterNoTarget: the sidecar found no container in its scope.
+	ErrUpdaterNoTarget = errors.New("the updater found no container to update; check the updater's scope and label")
+	// ErrUpdaterEngine: the sidecar cannot reach the Docker engine.
+	ErrUpdaterEngine = errors.New("the updater cannot reach Docker; check the updater's socket access")
 	// ErrUpdaterUnreachable: no answer (sidecar not started, wrong URL).
 	ErrUpdaterUnreachable = errors.New("the updater is not reachable; is the autoupdate profile running?")
 )
@@ -89,9 +109,11 @@ func (u *Updater) Trigger(ctx context.Context, targetVersion string) error {
 		return ErrUpdaterUnreachable
 	}
 	defer res.Body.Close()
-	if _, err := io.Copy(io.Discard, io.LimitReader(res.Body, 64<<10)); err != nil {
-		slog.Debug("updater response drain failed", "err", err)
+	body, err := io.ReadAll(io.LimitReader(res.Body, 64<<10))
+	if err != nil {
+		slog.Debug("updater response read failed", "err", err)
 	}
+	reason := refusalReason(body)
 	switch res.StatusCode {
 	case http.StatusOK, http.StatusAccepted:
 		return nil
@@ -100,12 +122,35 @@ func (u *Updater) Trigger(ctx context.Context, targetVersion string) error {
 	case http.StatusTooManyRequests:
 		return ErrUpdaterBusy
 	case http.StatusUnprocessableEntity:
+		if reason == ReasonVersion {
+			return ErrUpdaterVersionMismatch
+		}
 		return ErrUpdaterUntrusted
+	case http.StatusConflict:
+		if reason == ReasonNoTarget {
+			return ErrUpdaterNoTarget
+		}
+		return fmt.Errorf("the updater answered HTTP %d", res.StatusCode)
 	case http.StatusBadRequest:
 		return ErrUpdaterRequest
 	case http.StatusBadGateway:
+		if reason == ReasonEngine {
+			return ErrUpdaterEngine
+		}
 		return ErrUpdaterUnverified
 	default:
 		return fmt.Errorf("the updater answered HTTP %d", res.StatusCode)
 	}
+}
+
+// refusalReason returns the sidecar's reason string, or "" when the body is
+// not the sidecar's {"error": reason} JSON.
+func refusalReason(body []byte) string {
+	var v struct {
+		Error string `json:"error"`
+	}
+	if json.Unmarshal(body, &v) != nil {
+		return ""
+	}
+	return v.Error
 }
