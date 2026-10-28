@@ -1,0 +1,14 @@
+.github/workflows/dbg-reload.yml
+  h_0ff4f4713441f4 41,81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "51f55cd94121a2e6d325d43eceb11609efc839f7",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
