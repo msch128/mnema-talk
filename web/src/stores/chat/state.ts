@@ -117,6 +117,7 @@ function socketState() {
     reconnectCheckSeq: 0,
     pingTimer: undefined as Timer | undefined,
     lastPongAt: 0,
+    lastPingAt: 0,
     reconnectTimer: undefined as Timer | undefined,
     reconnectDelay: 1000,
     webrtcOfferHandler: null as Handler<'webrtc_offer'>,

@@ -126,4 +126,17 @@ describe('socket liveness', () => {
     expect(chat.isConnected).toBe(true)
     expect(socket.close).not.toHaveBeenCalled()
   })
+
+  it('keeps an answered socket when throttled timers leave a long gap between ticks', async () => {
+    const { chat } = setup()
+    chat.initWebSocket()
+    const socket = required(Socket.instances[0])
+    socket.onopen?.()
+    await vi.advanceTimersByTimeAsync(5000)
+    socket.onmessage?.({ data: JSON.stringify({ type: 'pong', payload: { t: Date.now() } }) })
+    vi.setSystemTime(Date.now() + 60000)
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(chat.isConnected).toBe(true)
+    expect(socket.close).not.toHaveBeenCalled()
+  })
 })

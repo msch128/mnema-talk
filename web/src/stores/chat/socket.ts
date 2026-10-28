@@ -26,8 +26,10 @@ function startPingHeartbeat(cx: Cx, session: SocketSession) {
   const { cs } = cx
   stopPingHeartbeat(cx)
   cs.lastPongAt = Date.now()
+  cs.lastPingAt = 0
   cs.pingTimer = setInterval(() => {
-    if (Date.now() - cs.lastPongAt > PONG_TIMEOUT_MS) {
+    // Judge the last ping actually sent: throttled timers (hidden tab, sleep) stretch the gap between ticks.
+    if (cs.lastPingAt > cs.lastPongAt && Date.now() - cs.lastPingAt > PONG_TIMEOUT_MS) {
       // Close handshakes never finish on a half-open connection: drop the socket and reconnect now.
       session.socket.onopen = null
       session.socket.onmessage = null
@@ -36,7 +38,8 @@ function startPingHeartbeat(cx: Cx, session: SocketSession) {
       handleSocketClose(cx, session)
       return
     }
-    sendWSEvent(cx, 'ping', { t: Date.now() })
+    cs.lastPingAt = Date.now()
+    sendWSEvent(cx, 'ping', { t: cs.lastPingAt })
   }, PING_INTERVAL_MS)
 }
 
