@@ -369,16 +369,12 @@ func TestAttachRefusals(t *testing.T) {
 	if !g.attach(repl, webrtc.RTPCodecCapability{MimeType: "video/vp8", ClockRate: videoClockRate}) || !old.superseded.Load() {
 		t.Error("replacing a layer did not end the old track")
 	}
-	if g.representative() != repl {
-		t.Error("representative is not the replacement")
+	if g.infos[0] != repl {
+		t.Error("the replacement did not take the layer")
 	}
 	g.supersede()
 	if !repl.superseded.Load() || !g.superseded.Load() {
 		t.Error("supersede did not reach the layers")
-	}
-	empty := newLayerGroup("e", uuid.New(), uuid.New(), nil, g.codec)
-	if empty.representative() != nil {
-		t.Error("an empty group has a representative")
 	}
 }
 

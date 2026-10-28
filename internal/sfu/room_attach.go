@@ -49,7 +49,10 @@ func (r *Room) attachPeer(userID uuid.UUID, conn *receiveConn, sendOffer func(we
 
 	pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
 		slog.Info("sfu peer state", "user", userID, "state", state.String())
-		if state == webrtc.PeerConnectionStateFailed || state == webrtc.PeerConnectionStateClosed {
+		switch state {
+		case webrtc.PeerConnectionStateFailed:
+			r.dropLostPeer(peer)
+		case webrtc.PeerConnectionStateClosed:
 			r.removePeer(peer)
 		}
 	})
@@ -149,13 +152,38 @@ func (r *Room) handleRemoteTrack(peer *Peer, conn *receiveConn, remoteTrack *web
 	slog.Info("sfu track received", "user", userID, "kind", remoteTrack.Kind().String(), "source", string(source), "layer", role.layer, "codec", remoteTrack.Codec().MimeType)
 
 	// The user may not send this (no Speak or Video permission): never
-	// publish it. Should the permission come back later, the client
-	// renegotiates and the track is accepted then.
+	// publish it while that lasts. Pion reports a track once, so it is kept
+	// and published when the first packet arrives after the permission came
+	// back.
 	if peer.sourceDenied(source) {
-		drain(remoteTrack)
+		go func() {
+			if awaitSourceAllowed(peer, source, remoteTrack) {
+				r.publishRemoteTrack(peer, remoteTrack, role)
+			}
+		}()
 		return
 	}
+	r.publishRemoteTrack(peer, remoteTrack, role)
+}
 
+// awaitSourceAllowed reads and drops the packets of a track whose source the
+// peer may not send, until the peer may. It returns false when the track ended
+// first.
+func awaitSourceAllowed(peer *Peer, source Source, remote rtpReader) bool {
+	buf := make([]byte, 1500)
+	for peer.sourceDenied(source) {
+		if _, _, err := remote.Read(buf); err != nil {
+			return false
+		}
+	}
+	return true
+}
+
+// publishRemoteTrack makes a track the peer may send available to the room
+// and starts forwarding its packets.
+func (r *Room) publishRemoteTrack(peer *Peer, remoteTrack *webrtc.TrackRemote, role remoteTrackRole) {
+	userID := peer.ID
+	source := role.source
 	if source == SourceScreen {
 		r.receiveScreenLayer(peer, remoteTrack, remoteTrack.ID(), uint32(remoteTrack.SSRC()), remoteTrack.Codec().RTPCodecCapability, role.layer)
 		return

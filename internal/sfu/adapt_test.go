@@ -126,6 +126,22 @@ func TestAdapterTreatsRepeatedKeyframeRequestsAsTrouble(t *testing.T) {
 	}
 }
 
+// A viewer waiting for the first keyframe of a new layer asks for it again
+// and again; those requests are no trouble once the grace period is over.
+func TestKeyframeRequestsDuringGraceAreNotTrouble(t *testing.T) {
+	a := newAdapter(epoch, 2)
+	now := epoch.Add(10 * time.Second)
+	a.stalledTo(now, 1)
+	for _, d := range []time.Duration{300, 700, 1200} {
+		if !a.keyframeRequested(now.Add(d * time.Millisecond)) {
+			t.Fatal("a request in the grace period was treated as a flood")
+		}
+	}
+	if _, changed := a.observe(now.Add(adaptGrace+time.Millisecond), 0, 0); changed {
+		t.Fatal("requests made during the grace period moved the viewer")
+	}
+}
+
 func TestAdapterMovesUpOnlyAfterALongCleanStretch(t *testing.T) {
 	a := newAdapter(epoch, 2)
 	now := epoch.Add(10 * time.Second)

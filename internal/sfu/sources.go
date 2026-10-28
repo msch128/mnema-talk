@@ -58,13 +58,20 @@ func (p *Peer) takeViewerTrack(trackID string) *viewerTrack {
 	return vt
 }
 
-func (p *Peer) putViewerTrack(trackID string, vt *viewerTrack) {
+// putViewerTrack records the outgoing layered track trackID. It reports false,
+// recording nothing, once the peer's tracks were released: a signaling round
+// still running then must not register a viewer nobody will release.
+func (p *Peer) putViewerTrack(trackID string, vt *viewerTrack) bool {
 	p.vtMu.Lock()
 	defer p.vtMu.Unlock()
+	if p.vtReleased {
+		return false
+	}
 	if p.viewerTracks == nil {
 		p.viewerTracks = make(map[string]*viewerTrack)
 	}
 	p.viewerTracks[trackID] = vt
+	return true
 }
 
 // releaseViewerTracks stops every layered track this peer receives.
@@ -72,6 +79,7 @@ func (p *Peer) releaseViewerTracks() {
 	p.vtMu.Lock()
 	tracks := p.viewerTracks
 	p.viewerTracks = nil
+	p.vtReleased = true
 	p.vtMu.Unlock()
 	for _, vt := range tracks {
 		vt.group.removeViewer(vt)

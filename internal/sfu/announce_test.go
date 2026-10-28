@@ -49,13 +49,11 @@ func TestOffersEveryAnnouncedAddress(t *testing.T) {
 
 // The rules must be what Pion built from the deprecated
 // SetNAT1To1IPs(ips, ICECandidateTypeHost): host candidates that replace the
-// local address, one catch-all rule over all external addresses, plus a
-// pinned rule per "external/local" entry.
+// local address, with one catch-all rule over all announced addresses.
 func TestAnnounceRewriteRules(t *testing.T) {
-	host := func(external []string, local string) webrtc.ICEAddressRewriteRule {
+	host := func(external []string) webrtc.ICEAddressRewriteRule {
 		return webrtc.ICEAddressRewriteRule{
 			External:        external,
-			Local:           local,
 			AsCandidateType: webrtc.ICECandidateTypeHost,
 			Mode:            webrtc.ICEAddressRewriteReplace,
 		}
@@ -65,17 +63,10 @@ func TestAnnounceRewriteRules(t *testing.T) {
 		want []webrtc.ICEAddressRewriteRule
 	}{
 		"none":   {nil, []webrtc.ICEAddressRewriteRule{}},
-		"single": {[]string{"203.0.113.7"}, []webrtc.ICEAddressRewriteRule{host([]string{"203.0.113.7"}, "")}},
+		"single": {[]string{"203.0.113.7"}, []webrtc.ICEAddressRewriteRule{host([]string{"203.0.113.7"})}},
 		"public and LAN": {
 			[]string{"203.0.113.7", "192.168.1.20"},
-			[]webrtc.ICEAddressRewriteRule{host([]string{"203.0.113.7", "192.168.1.20"}, "")},
-		},
-		"pinned to a local address": {
-			[]string{"203.0.113.7/10.0.0.2", "192.168.1.20"},
-			[]webrtc.ICEAddressRewriteRule{
-				host([]string{"203.0.113.7"}, "10.0.0.2"),
-				host([]string{"203.0.113.7", "192.168.1.20"}, ""),
-			},
+			[]webrtc.ICEAddressRewriteRule{host([]string{"203.0.113.7", "192.168.1.20"})},
 		},
 	}
 	for name, tc := range cases {

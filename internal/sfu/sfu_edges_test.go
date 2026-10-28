@@ -265,9 +265,10 @@ func TestOfferWatchdogStopsAfterResendLimit(t *testing.T) {
 		t.Fatal("watchdog exceeded the resend limit")
 	case <-time.After(60 * time.Millisecond):
 	}
-	if peer.PC.SignalingState() != webrtc.SignalingStateHaveLocalOffer {
-		t.Fatal("watchdog exhaustion corrupted pending offer state")
-	}
+	// Giving up must not leave a silent member behind: the peer is dropped.
+	waitSFUCondition(t, "peer dropped after giving up", func() bool {
+		return peer.PC.ConnectionState() == webrtc.PeerConnectionStateClosed && peer.room.GetPeer(peer.ID) == nil
+	})
 }
 
 func TestPublishTestVideoRejectsUnsupportedSourceAndMissingPeer(t *testing.T) {
