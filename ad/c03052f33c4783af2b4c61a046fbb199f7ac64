@@ -1,0 +1,23 @@
+internal/emoji/image.go
+  s_abe6d26c4f054b::t_54b8e7a0b86ed2 83-84,146
+internal/imgproc/guard.go
+  s_abe6d26c4f054b::t_e0cf355cd1b9ad 1-43
+internal/imgproc/picture.go
+  s_abe6d26c4f054b::t_0b3de929fbfadd 26-28,95-96,188
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "adc03052f33c4783af2b4c61a046fbb199f7ac64",
+  "prompts": {},
+  "sessions": {
+    "s_abe6d26c4f054b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aeaddb1300c6c2b75",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
