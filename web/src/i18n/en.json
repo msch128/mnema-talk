@@ -639,6 +639,8 @@
     "memberDeafened": "Deafened",
     "kicked": "You were removed from the Talk.",
     "roomFull": "This Talk is full. Try again when someone leaves.",
+    "mediaUnavailable": "The Talk could not set up its media connection. Try joining again.",
+    "joinedElsewhere": "You joined this Talk from another window or device.",
     "mediaUnsupported": "This browser cannot protect the media of a Talk, so it cannot join. Use Chrome or Edge 137+, Safari 17+ or Firefox 129+.",
     "mediaUnprotected": "This browser cannot protect the Talk. Microphone, camera and screen stay off.",
     "mediaRekeyed": "The media keys of this Talk were reset by someone in it or by the server. The Talk sets up new keys by itself.",
