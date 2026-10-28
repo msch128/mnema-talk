@@ -90,6 +90,33 @@ func TestRevokedSourceIsUnpublishedAndComesBack(t *testing.T) {
 	waitSources(t, r, pub.id, SourceAudio, 1)
 }
 
+// A track that arrives while its source is denied is not lost: pion reports a
+// track once, so the SFU keeps reading it and publishes it as soon as the
+// permission is back.
+func TestTrackArrivingWhileDeniedIsPublishedOnceAllowed(t *testing.T) {
+	s := newTestSFU(t)
+	room := uuid.New()
+
+	pub := newClient(t)
+	pub.publishAudio("mic")
+	pub.joinWith(func(offer func(webrtc.SessionDescription)) (*Peer, error) {
+		_, p, err := s.Join(room, pub.id, offer, nil)
+		if p != nil {
+			p.SetDeniedSources(SourceSet(0).With(SourceAudio))
+		}
+		return p, err
+	})
+	r := s.Room(room)
+	// Packets arrive (the track is handled) but nothing is published.
+	time.Sleep(time.Second)
+	if n := r.sourceCount(pub.id, SourceAudio); n != 0 {
+		t.Fatalf("a denied microphone was published (%d tracks)", n)
+	}
+
+	pub.peer.SetDeniedSources(0)
+	waitSources(t, r, pub.id, SourceAudio, 1)
+}
+
 func TestForwardDropsPacketsOfDeniedSources(t *testing.T) {
 	user := uuid.New()
 	peer := &Peer{ID: user}

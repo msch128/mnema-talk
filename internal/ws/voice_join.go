@@ -200,6 +200,11 @@ func (h *Hub) attachPeer(c *Client, chID uuid.UUID) bool {
 		slog.Error("sfu join failed", "user", c.User.ID, "channel", chID, "err", err)
 	}
 	c.setPeer(peer)
+	if peer != nil {
+		// A media connection that fails after the join leaves the seat
+		// without media: tell the client so it can rejoin.
+		peer.OnLost(func() { h.kickLostPeer(c, peer) })
+	}
 	if h.afterPeer != nil {
 		h.afterPeer() // tests change permissions exactly here
 	}

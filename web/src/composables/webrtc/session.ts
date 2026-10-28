@@ -195,6 +195,13 @@ export function leaveVoiceChannel(cx: Cx) {
   endCall(cx, { notifyServer: true })
 }
 
+function kickedMessageKey(reason: ServerEventPayloads['voice_kicked']['reason']): string {
+  if (reason === 'room_full') return 'voice.roomFull'
+  if (reason === 'missing_permission') return 'voice.noPermission'
+  if (reason === 'connection_lost') return 'voice.connectionLost'
+  return 'voice.kicked'
+}
+
 // An admin removed me, or the server refused a full room. The server has
 // already ended or rejected membership, so no voice_leave goes out.
 function handleKicked(cx: Cx, payload: ServerEventPayloads['voice_kicked']) {
@@ -203,7 +210,7 @@ function handleKicked(cx: Cx, payload: ServerEventPayloads['voice_kicked']) {
   if (!voice.currentChannelId) return
   if (payload.channel_id !== voice.currentChannelId) return
   endCall(cx, { notifyServer: false })
-  useToastStore().info(t(payload.reason === 'room_full' ? 'voice.roomFull' : payload.reason === 'missing_permission' ? 'voice.noPermission' : 'voice.kicked'))
+  useToastStore().info(t(kickedMessageKey(payload.reason)))
 }
 
 // Rejoins the channel of a call interrupted by a reload less than 30 s ago.
