@@ -1,0 +1,19 @@
+internal/chat/readstate.go
+  s_d790a4160a95a2::t_49f24d8a4abfa8 16-21,24-27,40-41,64-67,72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c840053005fd6ffd0011cd1a8888cccbadd5509f",
+  "prompts": {},
+  "sessions": {
+    "s_d790a4160a95a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4cb5f290f8d29e33",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
