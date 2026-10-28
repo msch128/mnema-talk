@@ -108,6 +108,7 @@ func (e *env) serveWith(h *Handler, guarded bool, method, path string, body io.R
 		})
 		if guarded {
 			h.MountAdmin(a)
+			h.MountAdminUploads(a)
 			return
 		}
 		h.mountUnguarded(a)

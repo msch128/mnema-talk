@@ -17,7 +17,7 @@ import (
 const maxCoverBytes = 5 << 20
 
 func readAndProcessCover(w http.ResponseWriter, r *http.Request) (*imgproc.Picture, string, error) {
-	r.Body = http.MaxBytesReader(w, r.Body, maxCoverBytes+(1<<20))
+	r.Body = http.MaxBytesReader(w, r.Body, CoverBodyLimit)
 	if err := r.ParseMultipartForm(maxCoverBytes); err != nil {
 		var maxErr *http.MaxBytesError
 		if errors.As(err, &maxErr) {
