@@ -406,6 +406,7 @@
     "sortActivity": "Letzte Aktivität",
     "sortNewest": "Neueste",
     "loadingPosts": "Beiträge werden geladen …",
+    "loadFailed": "Beiträge konnten nicht geladen werden. Versuche es erneut.",
     "emptyTitle": "Noch keine Beiträge",
     "emptyDescription": "Starte die Unterhaltung und erstelle den ersten Beitrag in diesem Forum.",
     "emptyTagFilter": "Keine Beiträge für den ausgewählten Tag-Filter gefunden.",
@@ -797,6 +798,7 @@
       "introAfter": " ist ein privates, nicht-kommerzielles Softwareprojekt für geschlossene Gemeinschaften – ohne Gewinnerzielungsabsicht, ohne Werbeeinnahmen und ohne geschäftliche Beziehung. Konten werden ausschließlich über persönliche Einladungsschlüssel vergeben.",
       "controller": "Verantwortlicher (Art. 4 Nr. 7 DSGVO)",
       "email": "E-Mail-Kontakt",
+      "emailUnset": "vom Betreiber nicht angegeben",
       "country": "Land / Gerichtsstand",
       "status": "Projektstatus",
       "statusNote": "{status} (keine § 5 DDG Impressumspflicht)"
@@ -2373,6 +2375,7 @@
     "copySecret": "Geheimnis kopieren",
     "urlOnce": "Kopiere die URL jetzt: Sie wird nur einmal angezeigt. Geht sie verloren, erstelle eine neue.",
     "secretOnce": "Kopiere das Geheimnis jetzt: Es wird nur einmal angezeigt. Damit prüfst du die Signatur jeder Zustellung.",
+    "loadFailed": "Die Webhooks konnten nicht geladen werden. Versuche es erneut.",
     "emptyIncoming": "In diesem Kanal gibt es noch keine eingehenden Webhooks.",
     "emptyOutgoing": "Noch keine ausgehenden Webhooks.",
     "rename": "{name} umbenennen",
@@ -2485,7 +2488,15 @@
     "participants": "Rückmeldungen",
     "noResponses": "Noch keine Rückmeldungen.",
     "created": "Veranstaltung erstellt",
-    "updated": "Veranstaltung aktualisiert"
+    "updated": "Veranstaltung aktualisiert",
+    "rsvpFailed": "Deine Antwort konnte nicht gespeichert werden. Versuche es erneut.",
+    "talkFallback": "Talk",
+    "saveFailed": "Das Event konnte nicht gespeichert werden. Versuche es erneut.",
+    "coverFailed": "Das Event wurde gespeichert, aber das Titelbild konnte nicht hochgeladen werden. Versuche es erneut.",
+    "errTitle": "Gib einen Titel ein.",
+    "errStart": "Wähle eine Startzeit.",
+    "errEnd": "Das Ende darf nicht vor dem Start liegen.",
+    "errLocation": "Gib einen Ort ein."
   },
   "moderation": {
     "timeoutAction": "Auszeit verhängen …",

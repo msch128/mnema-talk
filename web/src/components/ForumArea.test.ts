@@ -161,10 +161,76 @@ describe('ForumArea', () => {
     wrapper = mount(ForumArea, { attachTo: document.body })
     await flushPromises()
 
-    expect(wrapper.find('[data-testid="forum-empty"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="forum-empty"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="forum-error"]').text()).toContain('posts down')
     expect(wrapper.findAll('[data-testid="forum-post-card"]')).toHaveLength(0)
     expect(wrapper.findAll('[data-testid="filter-tag-pill"]')).toHaveLength(0)
     spy.mockRestore()
+  })
+
+  it('retries a failed load from the error state', async () => {
+    vi.mocked(forumApi.fetchForumPosts).mockRejectedValueOnce(new Error('offline'))
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    await wrapper.find('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="forum-error"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-testid="forum-post-card"]')).toHaveLength(2)
+  })
+
+  it('pages older posts behind the last one with the activity cursor', async () => {
+    const page = Array.from({ length: 50 }, (_, i) => messageFixture({
+      id: `p-${i}`, channel_id: 'forum-chan-1', title: `Post ${i}`, last_activity_at: `2026-01-01T10:${String(59 - i).padStart(2, '0')}:00Z`
+    }))
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce(page)
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    expect(wrapper.findAll('[data-testid="forum-post-card"]')).toHaveLength(50)
+
+    const older = messageFixture({ id: 'p-old', channel_id: 'forum-chan-1', title: 'Old post' })
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce([older, page[49]!])
+    await wrapper.find('[data-testid="forum-load-more"]').trigger('click')
+    await flushPromises()
+    expect(forumApi.fetchForumPosts).toHaveBeenLastCalledWith('forum-chan-1', {
+      sort: 'activity', tagId: undefined, before: 'p-49', beforeActivity: page[49]!.last_activity_at
+    })
+    expect(wrapper.findAll('[data-testid="forum-post-card"]')).toHaveLength(51)
+    expect(wrapper.find('[data-testid="forum-load-more"]').exists()).toBe(false)
+  })
+
+  it('offers no load-more for a short page', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="forum-load-more"]').exists()).toBe(false)
+  })
+
+  it('ignores a slow answer of the previous forum after switching', async () => {
+    let releaseOld: (v: typeof mockPosts) => void = () => {}
+    vi.mocked(forumApi.fetchForumPosts).mockImplementationOnce(() => new Promise(r => { releaseOld = r }))
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+
+    const other = messageFixture({ id: 'other-1', channel_id: 'forum-chan-2', title: 'Other forum post' })
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce([other])
+    chatStore.activeChannel = channelFixture({ id: 'forum-chan-2', name: 'other', type: 'forum' })
+    await flushPromises()
+    releaseOld(mockPosts)
+    await flushPromises()
+
+    const cards = wrapper.findAll('[data-testid="forum-post-card"]')
+    expect(cards).toHaveLength(1)
+    expect(cards[0]!.text()).toContain('Other forum post')
+  })
+
+  it('loads the posts once when the channel changes with a tag filter selected', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    await wrapper.findAll('[data-testid="filter-tag-pill"]')[0]!.trigger('click')
+    await flushPromises()
+    vi.mocked(forumApi.fetchForumPosts).mockClear()
+    chatStore.activeChannel = channelFixture({ id: 'forum-chan-2', name: 'other', type: 'forum' })
+    await flushPromises()
+    expect(forumApi.fetchForumPosts).toHaveBeenCalledTimes(1)
   })
 
   it('shows the tag-filter empty text and no create button when a tag filters everything out', async () => {

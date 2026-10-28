@@ -406,6 +406,7 @@
     "sortActivity": "Latest activity",
     "sortNewest": "Newest",
     "loadingPosts": "Loading posts…",
+    "loadFailed": "Couldn’t load the posts. Try again.",
     "emptyTitle": "No posts yet",
     "emptyDescription": "Start the conversation by creating the first post in this forum.",
     "emptyTagFilter": "No posts match the selected tag filter.",
@@ -797,6 +798,7 @@
       "introAfter": " is a private, non-commercial software project for closed communities – with no profit motive, no advertising revenue and no business relationship. Accounts are issued only through personal invite codes.",
       "controller": "Controller (Art. 4(7) GDPR)",
       "email": "Email contact",
+      "emailUnset": "not specified by the operator",
       "country": "Country / jurisdiction",
       "status": "Project status",
       "statusNote": "{status} (no imprint obligation under § 5 DDG)"
@@ -2373,6 +2375,7 @@
     "copySecret": "Copy secret",
     "urlOnce": "Copy the URL now: it is shown only once. If it gets lost, make a new one.",
     "secretOnce": "Copy the secret now: it is shown only once. Use it to check the signature of each delivery.",
+    "loadFailed": "Couldn’t load the webhooks. Try again.",
     "emptyIncoming": "No incoming webhooks in this channel yet.",
     "emptyOutgoing": "No outgoing webhooks yet.",
     "rename": "Rename {name}",
@@ -2485,7 +2488,15 @@
     "participants": "Responses",
     "noResponses": "No responses yet.",
     "created": "Event created",
-    "updated": "Event updated"
+    "updated": "Event updated",
+    "rsvpFailed": "Couldn’t save your response. Try again.",
+    "talkFallback": "Talk",
+    "saveFailed": "Couldn’t save the event. Try again.",
+    "coverFailed": "The event was saved, but the cover couldn’t be uploaded. Try again.",
+    "errTitle": "Enter a title.",
+    "errStart": "Choose a start time.",
+    "errEnd": "The end must not be before the start.",
+    "errLocation": "Enter a location."
   },
   "moderation": {
     "timeoutAction": "Time out…",

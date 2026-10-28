@@ -12,6 +12,7 @@ import { confirm } from '../lib/confirm'
 import type { CommunityEvent, RSVPItem } from '../types/domain'
 import { eventAvatar } from '../lib/eventAvatar'
 import { formatEventStart, relativeEventDay } from '../lib/eventTime'
+import { caughtErrorMessage } from '../lib/api'
 import { locale, t } from '../i18n'
 
 const props = defineProps<{
@@ -82,7 +83,7 @@ async function setRSVP(response: 'going' | 'interested' | 'not_going') {
     }
     await loadRsvps()
   } catch (err) {
-    toast.error(err instanceof Error ? err.message : 'RSVP failed')
+    toast.error(caughtErrorMessage(err, t('events.rsvpFailed')))
   }
 }
 
@@ -171,7 +172,7 @@ async function cancelEvent() {
           @click="emit('join', currentEvent.channel_id!); emit('close')"
         >
           <Volume2 class="w-5 h-5" />
-          <span>{{ $t('events.join') }} ({{ talkChannel?.name || 'Talk' }})</span>
+          <span>{{ $t('events.join') }} ({{ talkChannel?.name || $t('events.talkFallback') }})</span>
         </button>
       </div>
 

@@ -37,6 +37,8 @@ export interface FetchForumPostsOptions {
   sort?: 'activity' | 'newest' | undefined
   tagId?: string | undefined
   before?: string | undefined
+  // With the activity sort: the last_activity_at the client saw for `before`.
+  beforeActivity?: string | undefined
   limit?: number | undefined
 }
 
@@ -45,6 +47,7 @@ export async function fetchForumPosts(channelId: string, options: FetchForumPost
   if (options.sort) params.set('sort', options.sort)
   if (options.tagId) params.set('tag_id', options.tagId)
   if (options.before) params.set('before', options.before)
+  if (options.beforeActivity) params.set('before_activity', options.beforeActivity)
   if (options.limit) params.set('limit', String(options.limit))
 
   const qs = params.toString()
