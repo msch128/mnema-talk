@@ -103,6 +103,8 @@ onBeforeUnmount(() => {
   <div
     ref="host"
     data-testid="emoji-picker"
+    role="dialog"
+    :aria-label="$t('emoji.suggestTitle')"
     class="z-40 overflow-hidden rounded-xl bg-mnema-elevated shadow-popover pop-in"
   >
     <div v-if="loading" class="flex h-[377px] w-[340px] max-w-[calc(100vw-16px)] items-center justify-center text-sm text-mnema-tertiary">

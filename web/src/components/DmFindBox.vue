@@ -63,6 +63,8 @@ function onKey(event: KeyboardEvent) {
     const n = choices.value.length
     if (n) active.value = (active.value + (event.key === 'ArrowDown' ? 1 : n - 1)) % n
   } else if (event.key === 'Enter') {
+    // Enter that commits an IME composition is not a choice.
+    if (event.isComposing || event.keyCode === 229) return
     event.preventDefault()
     void pick(choices.value[active.value])
   }

@@ -29,6 +29,8 @@ describe('EmojiPicker and trigger', () => {
   it.each(['en', 'de'] as const)('loads local %s data, focuses search and emits only Unicode', async lang => {
     setLocale(lang)
     wrapper = mount(EmojiPicker, { attachTo: document.body })
+    expect(wrapper.attributes('role')).toBe('dialog')
+    expect(wrapper.attributes('aria-label')).toBeTruthy()
     expect(wrapper.text()).toContain(lang === 'en' ? 'Loading' : 'geladen')
     await vi.waitFor(() => expect(wrapper.element.querySelector('synthetic-emoji-picker')).not.toBeNull())
     const picker = requireValue(document.querySelector<HTMLElement>('synthetic-emoji-picker'))
@@ -123,6 +125,7 @@ describe('EmojiPicker and trigger', () => {
     wrapper.getComponent(EmojiPicker).vm.$emit('close')
     await flushPromises()
     expect(button.attributes('aria-expanded')).toBe('false')
+    expect(document.activeElement).toBe(button.element)
     await button.trigger('click')
     await button.trigger('click')
     expect(button.attributes('aria-expanded')).toBe('false')

@@ -5,7 +5,7 @@ import type { ChatDirectMessage } from '../types/rest'
 // message, when, and what is new. Hovering (or focusing) a row offers the
 // star and the close button; the same actions are in its context menu, which
 // the "more" button opens on a phone.
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { BellOff, MoreHorizontal, Star, X } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { dmClock, dmPreview } from '../lib/dmList'
@@ -46,14 +46,21 @@ const line = computed(() => {
   return preview.sender ? t('dm.previewFrom', { name: preview.sender, text }) : text
 })
 
-const label = computed(() => [title.value, line.value, props.unread > 0 ? t('dm.unreadCount', { n: props.unread }) : ''].filter(Boolean).join(', '))
+const label = computed(() => [
+  title.value,
+  line.value,
+  props.unread > 0 ? t('dm.unreadCount', { n: props.unread }) : '',
+  props.mentions > 0 ? t('dm.mentionCount', { n: props.mentions }) : '',
+  props.muted ? t('dm.mutedState') : ''
+].filter(Boolean).join(', '))
+
+// The row is a container: this button opens the conversation, the star, close
+// and more buttons are its siblings, so each one stays reachable on its own.
+const openButton = ref<HTMLElement | null>(null)
 
 function onKey(event: KeyboardEvent) {
-  if (event.target !== event.currentTarget) return
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault()
-    emit('open')
-  } else if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+  if (event.target !== event.currentTarget && event.target !== openButton.value) return
+  if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
     event.preventDefault()
     emit('menu', event)
   } else if (props.favourite && event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
@@ -65,24 +72,28 @@ function onKey(event: KeyboardEvent) {
 
 <template>
   <div
-    role="button"
-    tabindex="0"
     :data-dm="dm.id"
-    :aria-current="open ? 'true' : undefined"
-    :aria-label="label"
     :draggable="draggable ? 'true' : undefined"
     :class="[
-      'group relative mb-px flex min-h-[46px] w-full min-w-0 cursor-pointer items-center gap-2.5 rounded-md px-2 py-1 text-left transition-colors focus:outline-hidden focus-ring max-md:min-h-14 motion-reduce:transition-none',
+      'group relative mb-px flex min-h-[46px] w-full min-w-0 cursor-pointer items-center gap-2.5 rounded-md px-2 py-1 text-left transition-colors max-md:min-h-14 motion-reduce:transition-none',
       open
         ? 'bg-mnema-hover text-mnema-text shadow-[inset_2px_0_0_0_#2DA771]'
         : unread > 0 && !muted
           ? 'text-mnema-text hover:bg-mnema-hover/70'
           : 'text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text'
     ]"
-    @click="emit('open')"
     @contextmenu.prevent="emit('menu', $event)"
     @keydown="onKey"
   >
+    <button
+      ref="openButton"
+      type="button"
+      data-testid="dm-open"
+      :aria-current="open ? 'true' : undefined"
+      :aria-label="label"
+      class="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-md text-left focus:outline-hidden focus-ring"
+      @click="emit('open')"
+    >
     <DmAvatar :dm="dm" />
     <div class="min-w-0 flex-1">
       <div class="flex items-baseline gap-1.5">
@@ -108,6 +119,7 @@ function onKey(event: KeyboardEvent) {
         <Badge v-else-if="unread > 0 && !open" variant="unread" class="ml-auto" data-testid="dm-unread">{{ unread }}</Badge>
       </div>
     </div>
+    </button>
 
     <div v-if="enhanced" class="absolute right-1.5 top-1 flex items-center gap-0.5 max-md:hidden md:invisible md:group-hover:visible md:group-focus-within:visible">
       <button
