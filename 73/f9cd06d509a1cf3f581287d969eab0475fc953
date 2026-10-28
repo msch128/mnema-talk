@@ -1,0 +1,19 @@
+internal/emoji/image_test.go
+  s_9df22b27f2327e::t_464a9e08361415 16-17,180
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "73f9cd06d509a1cf3f581287d969eab0475fc953",
+  "prompts": {},
+  "sessions": {
+    "s_9df22b27f2327e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af345ded314039cb4",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
