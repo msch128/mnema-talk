@@ -55,3 +55,19 @@ func TestAsRoleOnlyForEveryoneHoldsNoCustomRole(t *testing.T) {
 		t.Fatal("the role's rights are missing")
 	}
 }
+
+func TestAsRoleOnlyPreviewsAManagedRoleAsABotWithoutEveryone(t *testing.T) {
+	f := NewFixture().Everyone(SendMessages)
+	role := f.Role(1, ViewChannel)
+	r := f.s.roles[role]
+	r.Managed = true
+	f.s.roles[role] = r
+
+	view, sub, ok := f.Snapshot().AsRoleOnly(role)
+	if !ok {
+		t.Fatal("role not found")
+	}
+	if got := view.Global(sub); got.Has(SendMessages) || !got.Has(ViewChannel) {
+		t.Errorf("a managed role is held by a bot, which does not inherit @everyone, got %b", got)
+	}
+}

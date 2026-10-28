@@ -156,8 +156,11 @@ func (s *Service) reload(ctx context.Context, forced bool) (*Snapshot, error) {
 	}
 	// A change that happened while loading may not be in snap: serve it to
 	// this caller but do not keep it.
-	if s.gen.Load() == gen {
-		s.cur.Store(snap)
+	// Invalidate does not take s.mu, so re-check after storing and take the
+	// snapshot back if a change slipped in between the check and the store.
+	s.cur.Store(snap)
+	if s.gen.Load() != gen {
+		s.cur.CompareAndSwap(snap, nil)
 	}
 	return snap, nil
 }

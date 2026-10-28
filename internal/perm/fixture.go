@@ -3,6 +3,7 @@ package perm
 import (
 	"errors"
 	"maps"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -41,7 +42,7 @@ func (f *Fixture) Role(position int, p Set) uuid.UUID {
 
 // Assign gives a member a role.
 func (f *Fixture) Assign(user, role uuid.UUID) *Fixture {
-	f.s.userRoles[user] = append(f.s.userRoles[user], role)
+	f.s.userRoles[user] = append(slices.Clip(f.s.userRoles[user]), role)
 	return f
 }
 

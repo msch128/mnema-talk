@@ -92,6 +92,12 @@ type timeoutRow struct {
 	Reason string
 }
 
+type settingsRow struct {
+	MaxUploadMB    *int
+	RulesVersion   int
+	DirectMessages bool
+}
+
 type acceptedRow struct {
 	ID      uuid.UUID
 	Version int
@@ -113,15 +119,13 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	roles := load(r, `SELECT id, name, color, position, permissions, hoist, mentionable, is_everyone, managed, max_upload_mb, bot_user_id FROM roles`, pgx.RowToStructByPos[roleRow])
 	assigned := load(r, `SELECT user_id, role_id FROM user_roles`, pgx.RowToStructByPos[userRoleRow])
 	owners := load(r, `SELECT id FROM users WHERE role = 'admin'`, pgx.RowTo[uuid.UUID])
-	settings := load(r, `SELECT max_upload_mb FROM instance_settings`, pgx.RowTo[*int])
+	settings := load(r, `SELECT max_upload_mb, CASE WHEN rules_text <> '' THEN rules_version ELSE 0 END, direct_messages_enabled FROM instance_settings`, pgx.RowToStructByPos[settingsRow])
 	timeouts := load(r, `SELECT id, timeout_until, timeout_reason FROM users WHERE timeout_until > NOW()`, pgx.RowToStructByPos[timeoutRow])
-	rules := load(r, `SELECT CASE WHEN rules_text <> '' THEN rules_version ELSE 0 END FROM instance_settings`, pgx.RowTo[int])
 	accepted := load(r, `SELECT id, rules_accepted_version FROM users WHERE rules_accepted_version > 0`, pgx.RowToStructByPos[acceptedRow])
 	bots := load(r, `SELECT user_id FROM bots`, pgx.RowTo[uuid.UUID])
 	cats := load(r, `SELECT id FROM categories`, pgx.RowTo[uuid.UUID])
 	chans := load(r, `SELECT id, category_id, is_stage FROM channels WHERE type <> 'dm'`, pgx.RowToStructByPos[channelRow])
 	dmRows := load(r, `SELECT channel_id, user_id FROM dm_members`, pgx.RowToStructByPos[dmMemberRow])
-	dmOn := load(r, `SELECT direct_messages_enabled FROM instance_settings`, pgx.RowTo[bool])
 	ows := load(r, `SELECT channel_id, category_id, role_id, user_id, allow, deny FROM permission_overwrites`, pgx.RowToStructByPos[overwriteRow])
 	if r.err != nil {
 		return r.err
@@ -129,18 +133,18 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 
 	s.addRoles(roles)
 	s.addAssignments(assigned)
+	dmOn := true
 	if len(settings) > 0 {
-		s.globalUploadMB = settings[0]
+		s.globalUploadMB = settings[0].MaxUploadMB
+		s.rulesVersion = settings[0].RulesVersion
+		dmOn = settings[0].DirectMessages
 	}
 	s.addEntities(owners, bots, cats, timeouts)
-	if len(rules) > 0 {
-		s.rulesVersion = rules[0]
-	}
 	for _, a := range accepted {
 		s.rulesAccepted[a.ID] = a.Version
 	}
 	s.addChannels(chans)
-	s.addDMs(dmRows, len(dmOn) == 0 || dmOn[0])
+	s.addDMs(dmRows, dmOn)
 	s.addOverwrites(ows)
 	return nil
 }

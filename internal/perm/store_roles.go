@@ -71,7 +71,7 @@ const roleColumns = `id, name, color, position, permissions, hoist, mentionable,
 func (s *Service) CreateRole(ctx context.Context, actor Subject, in RoleInput) (Role, error) {
 	var created Role
 	err := s.mutate(ctx, actor, ManageRoles, func(tx pgx.Tx, snap *Snapshot) ([]uuid.UUID, error) {
-		if len(snap.roles) > maxRoles {
+		if len(snap.roles) >= maxRoles {
 			return nil, httpx.ErrConflict("too many roles")
 		}
 		name, color, perms, err := checkNewRole(snap, actor, in)
