@@ -1,6 +1,7 @@
 package httpx
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -38,6 +39,24 @@ func DecodeJSON(r *http.Request, dst any) error {
 		return ErrInvalidInput("request body must contain a single JSON object")
 	}
 	return nil
+}
+
+// DecodeOptionalJSON is DecodeJSON for a body that may be left out: no body,
+// or one that ends before its first byte (whatever the transfer encoding),
+// leaves dst untouched.
+func DecodeOptionalJSON(r *http.Request, dst any) error {
+	if r.Body == nil || r.Body == http.NoBody {
+		return nil
+	}
+	br := bufio.NewReader(r.Body)
+	if _, err := br.Peek(1); errors.Is(err, io.EOF) {
+		return nil
+	}
+	r.Body = struct {
+		io.Reader
+		io.Closer
+	}{br, r.Body}
+	return DecodeJSON(r, dst)
 }
 
 // PathUUID parses a UUID path parameter.

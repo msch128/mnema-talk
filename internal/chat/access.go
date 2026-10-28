@@ -64,15 +64,26 @@ func loadMessageRef(ctx context.Context, p *db.Pool, messageID uuid.UUID) (*mess
 	return &ref, nil
 }
 
+// loadReferencedMessage loads a message a request points at (parent, reply
+// target): a missing one is the caller's invalid input, a failing database
+// stays an internal error.
+func loadReferencedMessage(ctx context.Context, p *db.Pool, messageID uuid.UUID, notFound string) (*messageRef, error) {
+	ref, err := loadMessageRef(ctx, p, messageID)
+	if errors.Is(err, errMessageNotFound) {
+		return nil, httpx.ErrInvalidInput(notFound)
+	}
+	return ref, err
+}
+
 // ValidateParent checks that parentID is a root message of the same channel, so
 // thread replies cannot be attached across channels or nested.
 func ValidateParent(ctx context.Context, p *db.Pool, channelID uuid.UUID, parentID *uuid.UUID) error {
 	if parentID == nil {
 		return nil
 	}
-	ref, err := loadMessageRef(ctx, p, *parentID)
+	ref, err := loadReferencedMessage(ctx, p, *parentID, "parent message not found")
 	if err != nil {
-		return httpx.ErrInvalidInput("parent message not found")
+		return err
 	}
 	if ref.ChannelID != channelID || ref.ParentID != nil {
 		return httpx.ErrInvalidInput("parent must be a root message in the same channel")

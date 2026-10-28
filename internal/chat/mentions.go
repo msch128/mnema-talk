@@ -131,10 +131,10 @@ func mentionIDs(ctx context.Context, q db.Querier, targets mentionTargets, onlin
 	return ids, nil
 }
 
-func allowedMentions(ids map[uuid.UUID]int16, policy MentionPolicy, targets mentionTargets) []MentionedUser {
+func allowedMentions(ids map[uuid.UUID]int16, policy MentionPolicy, targets mentionTargets, online []uuid.UUID) []MentionedUser {
 	out := make([]MentionedUser, 0, len(ids))
 	for id, kind := range ids {
-		if mentionSkipped(policy, targets, id) {
+		if mentionSkipped(policy, targets, online, id) {
 			continue
 		}
 		if !mentionVisible(policy, id) {
@@ -145,14 +145,17 @@ func allowedMentions(ids map[uuid.UUID]int16, policy MentionPolicy, targets ment
 	return out
 }
 
-func mentionSkipped(policy MentionPolicy, targets mentionTargets, id uuid.UUID) bool {
-	if !policy.NoUsers {
+// mentionSkipped reports whether the policy turns the mention of id into plain
+// text: with NoUsers only AllowUsers and those the group mentions reach
+// (@all everyone, @here the online) are notified.
+func mentionSkipped(policy MentionPolicy, targets mentionTargets, online []uuid.UUID, id uuid.UUID) bool {
+	if !policy.NoUsers || slices.Contains(policy.AllowUsers, id) {
 		return false
 	}
-	if targets.all || targets.here {
+	if targets.all || (targets.here && slices.Contains(online, id)) {
 		return false
 	}
-	return !slices.Contains(policy.AllowUsers, id)
+	return true
 }
 
 func mentionVisible(policy MentionPolicy, id uuid.UUID) bool {

@@ -57,6 +57,17 @@ func (s *Snapshot) CanSeeAllChannelsIn(sub Subject, cat uuid.UUID) bool {
 // HasCategoryOverwrites reports whether a category carries any overwrite.
 func (s *Snapshot) HasCategoryOverwrites(cat uuid.UUID) bool { return s.categoryOv[cat] != nil }
 
+// VisibleCategories lists the categories sub may see (see CategoryVisible).
+func (s *Snapshot) VisibleCategories(sub Subject) []uuid.UUID {
+	out := make([]uuid.UUID, 0, len(s.categories))
+	for id := range s.categories {
+		if s.CategoryVisible(sub, id) {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
 // KnowsCategory reports whether the snapshot has seen the category.
 func (s *Snapshot) KnowsCategory(cat uuid.UUID) bool { return s.categories[cat] }
 

@@ -7,6 +7,11 @@ import (
 	"github.com/google/uuid"
 )
 
+// matchRoles runs the role matching resolveMentionSet starts with.
+func matchRoles(content string, roles []MentionRole) []MentionRole {
+	return hitRoles(roleHits(content, roles))
+}
+
 func TestMatchRoles(t *testing.T) {
 	dev := MentionRole{ID: uuid.New(), Name: "Dev"}
 	team := MentionRole{ID: uuid.New(), Name: "Dev Team"}
@@ -33,6 +38,9 @@ func TestMatchRoles(t *testing.T) {
 		"@dev.ops is something":    nil,
 		"no mention here":          nil,
 		"@dev-ops and @qa_lead":    nil,
+		"ping @QA- thanks":         {"QA"},
+		"@dev.- ok":                {"Dev"},
+		"@dev-.ops":                nil,
 		"first @qa then more text": {"QA"},
 	}
 	for in, want := range cases {
@@ -60,6 +68,39 @@ func TestParseMentions(t *testing.T) {
 	for in, want := range cases {
 		if got := ParseMentions(in); !slices.Equal(got, want) {
 			t.Errorf("ParseMentions(%q) = %v, want %v", in, got, want)
+		}
+	}
+}
+
+func TestPhraseRoleIsMaskedBeforeUserNames(t *testing.T) {
+	team := MentionRole{ID: uuid.New(), Name: "Dev Team"}
+	hits := roleHits("@Dev Team and @bob", []MentionRole{team})
+	if got := ParseMentions(maskPhraseRoles("@Dev Team and @bob", hits)); !slices.Equal(got, []string{"bob"}) {
+		t.Errorf("user names after masking = %v, want only bob", got)
+	}
+}
+
+func TestMentionSkippedUnderNoUsers(t *testing.T) {
+	bob, eve := uuid.New(), uuid.New()
+	online := []uuid.UUID{eve}
+	policy := MentionPolicy{NoUsers: true}
+	cases := []struct {
+		name    string
+		policy  MentionPolicy
+		targets mentionTargets
+		id      uuid.UUID
+		want    bool
+	}{
+		{"named user", policy, mentionTargets{usernames: []string{"bob"}}, bob, true},
+		{"allowed user", MentionPolicy{NoUsers: true, AllowUsers: []uuid.UUID{bob}}, mentionTargets{usernames: []string{"bob"}}, bob, false},
+		{"@all reaches everyone", policy, mentionTargets{all: true}, bob, false},
+		{"@here reaches the online", policy, mentionTargets{here: true}, eve, false},
+		{"@here does not make an offline name a mention", policy, mentionTargets{here: true, usernames: []string{"bob"}}, bob, true},
+		{"no policy", MentionPolicy{}, mentionTargets{usernames: []string{"bob"}}, bob, false},
+	}
+	for _, c := range cases {
+		if got := mentionSkipped(c.policy, c.targets, online, c.id); got != c.want {
+			t.Errorf("%s: skipped = %v, want %v", c.name, got, c.want)
 		}
 	}
 }

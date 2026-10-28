@@ -39,7 +39,7 @@ func editMessageTx(ctx context.Context, tx pgx.Tx, online OnlineSource, messageI
 	err := tx.QueryRow(ctx, `
 		SELECT user_id, EXISTS (SELECT 1 FROM media WHERE message_id = messages.id),
 		       EXISTS (SELECT 1 FROM polls WHERE message_id = messages.id), forwarded
-		FROM messages WHERE id = $1 FOR UPDATE`, messageID).Scan(&author, &hasMedia, &isPoll, &forwarded)
+		FROM messages WHERE id = $1 FOR NO KEY UPDATE`, messageID).Scan(&author, &hasMedia, &isPoll, &forwarded)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return errMessageNotFound
 	}
@@ -187,9 +187,10 @@ func ToggleReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID
 func ToggleReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, canAdd bool) ([]ReactionSummary, error) {
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		// The row lock serializes toggles on one message, so concurrent
-		// adds cannot overshoot the limits.
+		// adds cannot overshoot the limits. NO KEY UPDATE still lets replies,
+		// uploads and quotes (FOR KEY SHARE through their foreign keys) in.
 		var one int
-		err := tx.QueryRow(ctx, `SELECT 1 FROM messages WHERE id = $1 FOR UPDATE`, messageID).Scan(&one)
+		err := tx.QueryRow(ctx, `SELECT 1 FROM messages WHERE id = $1 FOR NO KEY UPDATE`, messageID).Scan(&one)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errMessageNotFound
 		}
@@ -240,23 +241,11 @@ func addReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, em
 
 // reactionSummary loads one message's reactions, in the order they were first given.
 func reactionSummary(ctx context.Context, p *db.Pool, messageID uuid.UUID) ([]ReactionSummary, error) {
-	rows, err := p.Query(ctx, `
-		SELECT emoji, COUNT(*), array_agg(user_id ORDER BY created_at)
-		FROM message_reactions WHERE message_id = $1
-		GROUP BY emoji ORDER BY MIN(created_at)`, messageID)
-	if err != nil {
-		return nil, fmt.Errorf("load reactions: %w", err)
+	msgs := []Message{{Reactions: []ReactionSummary{}}}
+	if err := loadReactions(ctx, p, msgs, map[uuid.UUID]int{messageID: 0}, []uuid.UUID{messageID}); err != nil {
+		return nil, err
 	}
-	defer rows.Close()
-	out := make([]ReactionSummary, 0)
-	for rows.Next() {
-		var r ReactionSummary
-		if err := rows.Scan(&r.Emoji, &r.Count, &r.Users); err != nil {
-			return nil, err
-		}
-		out = append(out, r)
-	}
-	return out, rows.Err()
+	return msgs[0].Reactions, nil
 }
 
 // requireKnownEmoji refuses the token of a custom emoji that was deleted (or

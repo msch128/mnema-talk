@@ -2,12 +2,14 @@ package chat
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 
 	"github.com/google/uuid"
 
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -55,21 +57,34 @@ func (h *Handler) snapshotMessage(ctx context.Context, id uuid.UUID, withReplies
 }
 
 func (h *Handler) fetchAuditedReplyIDs(ctx context.Context, parentID uuid.UUID) []uuid.UUID {
-	// Ids only: replies are other members' messages, and one that is
-	// deleted on its own gets its own entry with its text.
-	rows, err := h.DB.Query(ctx, `SELECT id FROM messages WHERE parent_id = $1 ORDER BY created_at LIMIT $2`, parentID, maxAuditedReplies)
+	return replyIDsForAudit(ctx, h.DB, []uuid.UUID{parentID})[parentID]
+}
+
+// replyIDsForAudit reads, per message, the ids of its first maxAuditedReplies
+// thread replies. Ids only: replies are other members' messages, and one that
+// is deleted on its own gets its own entry with its text. A failure costs
+// detail only: the deletion must not fail.
+func replyIDsForAudit(ctx context.Context, q db.Querier, parentIDs []uuid.UUID) map[uuid.UUID][]uuid.UUID {
+	out := map[uuid.UUID][]uuid.UUID{}
+	rows, err := q.Query(ctx, `
+		SELECT parent_id, id FROM (
+			SELECT parent_id, id, row_number() OVER (PARTITION BY parent_id ORDER BY created_at, id) AS rn
+			FROM messages WHERE parent_id = ANY($1)) v
+		WHERE rn <= $2 ORDER BY parent_id, rn`, parentIDs, maxAuditedReplies)
 	if err != nil {
-		return nil
+		slog.Warn("audit: read replies", "err", err)
+		return out
 	}
 	defer rows.Close()
-	var replies []uuid.UUID
 	for rows.Next() {
-		var rid uuid.UUID
-		if err := rows.Scan(&rid); err == nil {
-			replies = append(replies, rid)
+		var parent, reply uuid.UUID
+		if err := rows.Scan(&parent, &reply); err != nil {
+			slog.Warn("audit: read replies", "err", err)
+			return out
 		}
+		out[parent] = append(out[parent], reply)
 	}
-	return replies
+	return out
 }
 
 func attachmentList(m *Message) []map[string]any {
@@ -140,11 +155,8 @@ type DeleteMessageRequest struct {
 // deleteReason reads the optional reason of a deletion. DELETE normally has
 // no body, so an empty one is fine.
 func deleteReason(r *http.Request) (string, error) {
-	if r.Body == nil || r.Body == http.NoBody || r.ContentLength == 0 {
-		return "", nil
-	}
 	var req DeleteMessageRequest
-	if err := httpx.DecodeJSON(r, &req); err != nil {
+	if err := httpx.DecodeOptionalJSON(r, &req); err != nil {
 		return "", err
 	}
 	return httpx.CleanText("reason", req.Reason, MaxModerationReason, false)
