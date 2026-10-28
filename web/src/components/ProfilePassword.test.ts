@@ -5,6 +5,7 @@ import { mount, flushPromises, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ProfilePassword from './ProfilePassword.vue'
 import { useAuthStore } from '../stores/auth'
+import { useAccountStore } from '../stores/account'
 import { t, setLocale } from '../i18n'
 import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
 
@@ -84,5 +85,22 @@ describe('changing the password', () => {
     await button('common.cancel').trigger('click')
     expect(wrapper.find('input[type="password"]').exists()).toBe(false)
     expect(mockApi).not.toHaveBeenCalled()
+  })
+
+  it('asks for a current code while two-factor sign-in is on and sends it along', async () => {
+    useAccountStore().info = { email_verified: false, mail_available: false, recovery_codes_remaining: 8, two_factor_enabled: true }
+    await fill('valid-password')
+    mockApi.mockResolvedValue({ ok: true })
+    await wrapper.get('input[data-testid="password-code"]').setValue(' 123456 ')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(mockApi).toHaveBeenCalledWith('/api/auth/password', expect.objectContaining({
+      json: { current_password: 'previous-password', new_password: 'valid-password', code: '123456' }
+    }))
+  })
+
+  it('shows no code field without two-factor sign-in', async () => {
+    await fill('valid-password')
+    expect(wrapper.find('input[data-testid="password-code"]').exists()).toBe(false)
   })
 })

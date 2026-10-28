@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Edit3, Loader2, Save } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
+import { useAccountStore } from '../stores/account'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
@@ -11,10 +12,14 @@ import PasswordInput from './PasswordInput.vue'
 
 // Changing one's own password (own profile only).
 const authStore = useAuthStore()
+const account = useAccountStore()
 const toasts = useToastStore()
 
 const isChangingPassword = ref(false)
 const currentPassword = ref('')
+const code = ref('')
+// With two-factor sign-in on, the credentials change only with a current code too.
+const needsCode = computed(() => !!account.info?.two_factor_enabled)
 const newPassword = ref('')
 const newPasswordRepeat = ref('')
 const isSavingPassword = ref(false)
@@ -32,8 +37,8 @@ async function savePassword() {
   }
   isSavingPassword.value = true
   try {
-    await authStore.changePassword(currentPassword.value, newPassword.value)
-    currentPassword.value = newPassword.value = newPasswordRepeat.value = ''
+    await authStore.changePassword(currentPassword.value, newPassword.value, needsCode.value ? code.value.trim() : '')
+    currentPassword.value = newPassword.value = newPasswordRepeat.value = code.value = ''
     isChangingPassword.value = false
     toasts.success(t('profile.passwordChanged'))
   } catch (err) {
@@ -62,6 +67,9 @@ async function savePassword() {
       <FormField v-slot="{ id }" :label="$t('profile.currentPassword')">
         <PasswordInput :id="id" v-model="currentPassword" autocomplete="current-password" />
       </FormField>
+      <FormField v-if="needsCode" v-slot="{ id }" :label="$t('security.twoFactor.code')">
+        <input :id="id" v-model="code" type="text" required autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="32" class="w-full rounded-lg border border-mnema-border-field bg-mnema-canvas px-3 py-2 font-mono text-sm tracking-widest text-mnema-text" data-testid="password-code" />
+      </FormField>
       <FormField v-slot="{ id }" :label="$t('profile.newPassword', { count: MIN_PASSWORD_LENGTH })">
         <PasswordInput :id="id" v-model="newPassword" autocomplete="new-password" />
       </FormField>
@@ -71,7 +79,7 @@ async function savePassword() {
       <div class="flex justify-end items-center gap-2 pt-1">
         <button
           type="button"
-          @click="isChangingPassword = false; currentPassword = newPassword = newPasswordRepeat = ''"
+          @click="isChangingPassword = false; currentPassword = newPassword = newPasswordRepeat = code = ''"
           class="btn btn-ghost"
         >
           {{ $t('common.cancel') }}

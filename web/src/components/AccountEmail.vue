@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Optional e-mail address of the signed-in member: never required, never shown
-// to anyone else. Setting or removing it needs the current password.
+// to anyone else. Setting or removing it needs the current password and, when
+// two-factor sign-in is on, a current code.
 import { computed, ref } from 'vue'
 import { BadgeCheck, Loader2, Mail, MailQuestion } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
@@ -17,28 +18,30 @@ type Mode = 'view' | 'edit' | 'remove'
 const mode = ref<Mode>('view')
 const email = ref('')
 const password = ref('')
+const code = ref('')
 const busy = ref(false)
 const error = ref('')
 
 const info = computed(() => account.info)
 const hasEmail = computed(() => !!info.value?.email)
 const canConfirm = computed(() => !!info.value?.mail_available)
+const needsCode = computed(() => !!info.value?.two_factor_enabled)
 
 function start(next: Mode) {
   email.value = next === 'edit' ? info.value?.email ?? '' : ''
-  password.value = ''
+  password.value = code.value = ''
   error.value = ''
   mode.value = next
 }
 
-async function run(action: () => Promise<void>, done: string) {
+async function run(action: () => Promise<string | void>, done: string) {
   error.value = ''
   busy.value = true
   try {
-    await action()
+    const outcome = await action()
     mode.value = 'view'
-    password.value = ''
-    toasts.success(done)
+    password.value = code.value = ''
+    toasts.success(outcome || done)
   } catch (err) {
     error.value = caughtErrorMessage(err, t('errors.unknown'))
     // The address may be saved even when the confirmation mail failed.
@@ -53,12 +56,15 @@ const LOOKS_LIKE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 function submit() {
   if (mode.value === 'edit' && !LOOKS_LIKE_EMAIL.test(email.value.trim())) { error.value = t('security.email.invalid'); return }
   if (!password.value) { error.value = t('security.email.needPassword'); return }
+  if (needsCode.value && !code.value.trim()) { error.value = t('security.email.needCode'); return }
   void (mode.value === 'edit' ? save() : remove())
 }
 
-const save = () => run(() => account.setEmail(email.value.trim(), password.value),
-  t(canConfirm.value ? 'security.email.savedConfirm' : 'security.email.saved'))
-const remove = () => run(() => account.removeEmail(password.value), t('security.email.removed'))
+const save = () => run(async () => {
+  const mailed = await account.setEmail(email.value.trim(), password.value, code.value.trim())
+  if (!mailed) return t('security.email.savedNoMail')
+}, t(canConfirm.value ? 'security.email.savedConfirm' : 'security.email.saved'))
+const remove = () => run(() => account.removeEmail(password.value, code.value.trim()), t('security.email.removed'))
 
 async function resend() {
   busy.value = true
@@ -100,6 +106,9 @@ async function resend() {
       </FormField>
       <FormField v-slot="{ id }" :label="$t('profile.currentPassword')">
         <PasswordInput :id="id" v-model="password" required autocomplete="current-password" data-testid="account-email-password" />
+      </FormField>
+      <FormField v-if="needsCode" v-slot="{ id }" :label="$t('security.twoFactor.code')">
+        <input :id="id" v-model="code" type="text" required autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="32" class="w-full rounded-lg border border-mnema-border-field bg-mnema-canvas px-3 py-2 font-mono text-sm tracking-widest text-mnema-text" data-testid="account-email-code" />
       </FormField>
       <div v-if="error" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
       <div class="flex items-center justify-end gap-2 pt-1">

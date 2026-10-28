@@ -115,7 +115,7 @@ async function establishSession({ core, user, applyAccountLocale }: AuthDeps, pa
   })
 }
 
-async function changePassword({ core }: AuthDeps, currentPassword: string, newPassword: string) {
+async function changePassword({ core }: AuthDeps, currentPassword: string, newPassword: string, code = '') {
   const { s, advanceSession, sessionSnapshot, isCurrentSession, queueCookieRequest } = core
   const requestedSession = sessionSnapshot()
   await queueCookieRequest(async () => {
@@ -129,7 +129,7 @@ async function changePassword({ core }: AuthDeps, currentPassword: string, newPa
     await api('/api/auth/password', {
       method: 'PUT',
       shouldNotifyUnauthorized: () => isCurrentSession(session),
-      json: { current_password: currentPassword, new_password: newPassword }
+      json: { current_password: currentPassword, new_password: newPassword, ...(code ? { code } : {}) }
     })
     if (isCurrentSession(session)) advanceSession()
   })
@@ -166,7 +166,7 @@ export function createAuthActions(deps: AuthDeps) {
         { username, display_name: displayName, password, invite_code: inviteCode }, true, decodeRegistration)
       return outcome.kind === 'user' ? outcome.user : null
     },
-    changePassword: (currentPassword: string, newPassword: string) => changePassword(deps, currentPassword, newPassword),
+    changePassword: (currentPassword: string, newPassword: string, code = '') => changePassword(deps, currentPassword, newPassword, code),
     logout: () => logout(deps),
     resetLocalSession() {
       core.advanceSession()
