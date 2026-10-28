@@ -1,0 +1,29 @@
+internal/mailer/mailtest/server.go
+  s_bf965fb31d4e8a::t_c4171e8525cd49 32,45,135-136,143
+internal/mailer/mailtest/server_test.go
+  s_a189ba8adbc896::t_90eed5a7385075 1-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "900f5b4afffcc15ffc6dea413837242096269ba5",
+  "prompts": {},
+  "sessions": {
+    "s_a189ba8adbc896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1a43bfd89de73cab",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bf965fb31d4e8a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a471f7457881e2784",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
