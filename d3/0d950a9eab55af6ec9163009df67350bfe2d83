@@ -1,0 +1,41 @@
+web/src/components/ChatArea.test.ts
+  s_aac7c0601a888c::t_01865ee03d3511 105,108,111
+web/src/components/ChatComposer.vue
+  s_aac7c0601a888c::t_acb6fb31aa3051 231
+web/src/components/DmListRow.vue
+  s_aac7c0601a888c::t_b37bbb83d6441d 78,94,97-120
+web/src/components/DmSidebarAndDialogs.test.ts
+  s_aac7c0601a888c::t_7b6cf2f4fb6bc9 88-89
+web/src/components/EmojiButton.vue
+  s_aac7c0601a888c::t_404808160e5f7c 19-20,22
+web/src/components/EmojiPicker.test.ts
+  s_550d6cad46dc06::t_e42d1e0690b47f 48,130-135
+web/src/components/EmojiPicker.vue
+  s_aac7c0601a888c::t_ea08e47ee1a144 13,85
+web/src/components/EphemeralNotes.vue
+  s_aac7c0601a888c::t_a1fd5355e64d9f 30-35,37-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d30d950a9eab55af6ec9163009df67350bfe2d83",
+  "prompts": {},
+  "sessions": {
+    "s_550d6cad46dc06": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aeb6b590d10be2dd5",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_aac7c0601a888c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a67f976f079bbfe05",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
