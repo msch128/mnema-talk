@@ -73,6 +73,7 @@ func TestDisconnectMembersFollowsTalkOverwrites(t *testing.T) {
 	wantStatus(t, "scoped, admin route", scoped.post("/api/admin/users/"+max.user.ID.String()+"/kick", nil), http.StatusForbidden)
 
 	// The category's grant reaches the Talks inside it.
+	max = a.register(owner, "max2")
 	conn = joinTalk(t, a, watcher, max, inside.ID)
 	wantStatus(t, "scoped, category", scoped.post(disconnectURL(inside.ID, max), nil), http.StatusNoContent)
 	if _, ok := conn.expect("voice_kicked", soon); !ok {
@@ -80,6 +81,7 @@ func TestDisconnectMembersFollowsTalkOverwrites(t *testing.T) {
 	}
 
 	// A server-wide grant works in every Talk, except where an overwrite denies it.
+	max = a.register(owner, "max3")
 	conn = joinTalk(t, a, watcher, max, quiet)
 	wantStatus(t, "denied, Quiet", denied.post(disconnectURL(quiet, max), nil), http.StatusForbidden)
 	if _, ok := conn.expect("voice_kicked", none); ok {
@@ -90,6 +92,7 @@ func TestDisconnectMembersFollowsTalkOverwrites(t *testing.T) {
 		t.Fatal("the server-wide grant did not disconnect")
 	}
 	annex := a.createChannel(owner, "Annex", "voice")
+	max = a.register(owner, "max4")
 	conn = joinTalk(t, a, watcher, max, annex)
 	wantStatus(t, "denied, elsewhere", denied.post(disconnectURL(annex, max), nil), http.StatusNoContent)
 	if _, ok := conn.expect("voice_kicked", soon); !ok {
@@ -100,7 +103,7 @@ func TestDisconnectMembersFollowsTalkOverwrites(t *testing.T) {
 	wantStatus(t, "not in the Talk", global.post(disconnectURL(lobby, max), nil), http.StatusBadRequest)
 
 	// Each disconnect is audited.
-	if n := a.countRows(`SELECT COUNT(*) FROM audit_log WHERE action = 'user.talk_kick' AND target_id = $1`, max.user.ID.String()); n != 4 {
+	if n := a.countRows(`SELECT COUNT(*) FROM audit_log WHERE action = 'user.talk_kick' AND actor_id = ANY($1)`, []uuid.UUID{global.user.ID, scoped.user.ID, denied.user.ID}); n != 4 {
 		t.Fatalf("audit entries: %d, want 4", n)
 	}
 }
