@@ -1,0 +1,19 @@
+internal/auth/owner_proof.go
+  s_7f6fb971c44b88::t_e4d06468077dbb 1-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "faec7695235ac89b93d1c1a1ebf371812e396291",
+  "prompts": {},
+  "sessions": {
+    "s_7f6fb971c44b88": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-owner-stepup-bdda36191467c6b7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
