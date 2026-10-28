@@ -1,0 +1,21 @@
+.github/workflows/dbg-reload.yml
+  s_d35a289f31c2d9::t_997300817eed87 11,35,37,43
+e2e/tests/late-join.spec.ts
+  s_d35a289f31c2d9::t_a94c27fead2b39 176-187,189-198
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fc87e7a54352b4ecadab3a4739a33b31650b9782",
+  "prompts": {},
+  "sessions": {
+    "s_d35a289f31c2d9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a94a8cd11f876e506",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
