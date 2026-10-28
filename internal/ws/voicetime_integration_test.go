@@ -85,3 +85,29 @@ func TestVoiceTimeIsAnnouncedOnlyToTheTalkItWasSpentIn(t *testing.T) {
 		}
 	}
 }
+
+// A stay still in progress when the hub closes is banked: the connections'
+// own clean-up no longer gets to it.
+func TestHubCloseBanksVoiceStaysInProgress(t *testing.T) {
+	p := testutil.DB(t)
+	u := wsFixtureUser(t, p)
+	h := NewHub(p, nil, nil, nil)
+	ch := uuid.New()
+	h.mu.Lock()
+	h.voiceSince[voiceKey{u.ID, ch}] = time.Now().Add(-90 * time.Second)
+	h.mu.Unlock()
+	h.Close()
+	var n int64
+	if err := p.QueryRow(context.Background(), `SELECT voice_seconds FROM users WHERE id=$1`, u.ID).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n < 90 || n > 100 {
+		t.Fatalf("voice_seconds = %d after close, want about 90", n)
+	}
+	h.mu.RLock()
+	left := len(h.voiceSince)
+	h.mu.RUnlock()
+	if left != 0 {
+		t.Fatalf("%d stays still tracked after close", left)
+	}
+}

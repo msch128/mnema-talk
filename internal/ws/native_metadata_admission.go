@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"math"
 	"net/http"
 	"time"
 
@@ -67,13 +66,13 @@ func (c *Client) dispatchMetadataFrame(budget *eventBudget, kind int, frame []by
 // message/media payloads. Filter on the wire before writing, retaining the real
 // native generation/deadline/terminal checks and bounded existing send queue.
 func nativeMetadataEventAllowed(raw []byte) bool {
-	var event struct {
-		Type string `json:"type"`
-	}
-	if json.Unmarshal(raw, &event) != nil {
+	// Hub events are encoded with the type first, so a prefix scan finds it
+	// without decoding the payload. Anything else is dropped.
+	eventType, ok := peekEventType(raw)
+	if !ok {
 		return false
 	}
-	switch event.Type {
+	switch eventType {
 	case events.ServerInfo, events.SystemUpdate, events.Pong, events.PresenceSnapshot, events.PresenceUpdate, events.ChannelsChanged, events.MemberJoined, events.UserUpdate, events.UserStats, events.NativeAccessRenewed:
 		return true
 	default:
@@ -111,8 +110,8 @@ func (c *Client) nativeMetadataWritePump() {
 	}
 }
 
-// Parse closed metadata/control envelopes before dispatch. Duplicate or unknown
-// fields are denied, rather than permitting last-value-wins JSON ambiguity.
+// metadataSocketRejected reports a frame that is not text or arrives after the
+// lease stopped allowing commands.
 func metadataSocketRejected(c *Client, kind int) bool {
 	if kind != websocket.TextMessage {
 		return true
@@ -127,6 +126,9 @@ func metadataEventRejected(eventType string) bool {
 	return eventType != events.ClientPresenceIdle
 }
 
+// nativeMetadataObject parses a closed metadata/control envelope. Duplicate or
+// unknown fields are denied, rather than permitting last-value-wins JSON
+// ambiguity.
 func nativeMetadataObject(raw []byte) (map[string]json.RawMessage, bool) {
 	d := json.NewDecoder(bytes.NewReader(raw))
 	if !expectToken(d, json.Delim('{')) {
@@ -235,7 +237,9 @@ func finiteTimestamp(raw json.RawMessage) bool {
 	if timestamp < 0 || timestamp > 9007199254740991 {
 		return false
 	}
-	return !math.IsInf(timestamp, 0) && !math.IsNaN(timestamp)
+	// Unmarshal into a float64 cannot yield Inf or NaN (JSON has neither and an
+	// overflow is an error), so the range check is sufficient.
+	return true
 }
 
 func idleFlag(object map[string]json.RawMessage) bool {
