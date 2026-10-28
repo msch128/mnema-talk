@@ -77,11 +77,11 @@ describe('WelcomeProfileStep', () => {
     expect(upload).toHaveBeenCalledWith(file)
   })
 
-  it('refuses an image over 10 MB without uploading it', async () => {
+  it('refuses an image over 5 MB (the server limit) without uploading it', async () => {
     const upload = vi.spyOn(useAuthStore(), 'uploadAvatar')
-    await pick(step(), new File([new Uint8Array(10 * 1024 * 1024 + 1)], 'big.png', { type: 'image/png' }))
+    await pick(step(), new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'big.png', { type: 'image/png' }))
     expect(upload).not.toHaveBeenCalled()
-    expect(useToastStore().toasts.at(-1)?.text).toBe(t('profile.avatarTooBig', { size: 10 }))
+    expect(useToastStore().toasts.at(-1)?.text).toBe(t('profile.avatarTooBig', { size: 5 }))
   })
 
   it('reports a failed upload', async () => {

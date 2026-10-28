@@ -3,6 +3,7 @@
 // time. The rules step blocks until they are accepted and has no way out;
 // everything else can be skipped. Mounted once in App.vue; it decides itself
 // whether anything is due (see useWelcomeFlow).
+import { ref } from 'vue'
 import { Bell, X } from '@lucide/vue'
 import { useWelcomeFlow } from '../composables/useWelcomeFlow'
 import { useChatStore } from '../stores/chat'
@@ -18,10 +19,19 @@ const onboarding = useOnboardingStore()
 const chat = useChatStore()
 const toasts = useToastStore()
 
+const enabling = ref(false)
 async function enableNotifications() {
-  const result = await chat.requestNotificationPermission()
-  if (result === 'granted') toasts.success(t('notifications.granted'))
-  else if (result === 'denied') toasts.error(t('notifications.denied'))
+  if (enabling.value) return
+  enabling.value = true
+  try {
+    const result = await chat.requestNotificationPermission()
+    if (result === 'granted') toasts.success(t('notifications.granted'))
+    else if (result === 'denied') toasts.error(t('notifications.denied'))
+  } catch {
+    toasts.error(t('notifications.denied'))
+  } finally {
+    enabling.value = false
+  }
   next()
 }
 
@@ -69,7 +79,7 @@ const quiet = 'btn btn-ghost'
         </template>
         <template v-else-if="step === 'notifications'">
           <button type="button" :class="quiet" data-testid="welcome-skip" @click="next">{{ $t('notifications.notNow') }}</button>
-          <button type="button" :class="primary" data-testid="welcome-enable" @click="enableNotifications">{{ $t('notifications.enable') }}</button>
+          <button type="button" :class="primary" data-testid="welcome-enable" :disabled="enabling" @click="enableNotifications">{{ $t('notifications.enable') }}</button>
         </template>
       </footer>
     </template>

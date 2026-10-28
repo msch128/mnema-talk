@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Welcome flow, profile step: avatar, display name and bio through the same
 // store calls as the profile dialog. Every field is optional.
+import { MAX_AVATAR_BYTES, MAX_AVATAR_MB } from '../lib/avatarLimit'
 import { ref } from 'vue'
 import { Camera, Loader2 } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
@@ -9,8 +10,6 @@ import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 import FormField from './FormField.vue'
 import UserAvatar from './UserAvatar.vue'
-
-const MAX_AVATAR_BYTES = 10 * 1024 * 1024
 
 const emit = defineEmits<{ done: []; skip: [] }>()
 const auth = useAuthStore()
@@ -28,7 +27,7 @@ async function onAvatar(e: Event) {
   input.value = ''
   if (!file) return
   if (file.size > MAX_AVATAR_BYTES) {
-    toasts.error(t('profile.avatarTooBig', { size: 10 }))
+    toasts.error(t('profile.avatarTooBig', { size: MAX_AVATAR_MB }))
     return
   }
   uploading.value = true

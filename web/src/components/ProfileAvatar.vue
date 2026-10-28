@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { nameInitial } from '../lib/initial'
+import { MAX_AVATAR_BYTES, MAX_AVATAR_MB } from '../lib/avatarLimit'
 import type { PropType } from 'vue'
 import type { User as ProfileUser } from '../types/domain'
 import type { LivePresence } from './presentationTypes'
@@ -42,8 +44,8 @@ async function onAvatarSelected(e: Event) {
   if (!file) return
 
   // Validate size (max 5MB, like the server)
-  if (file.size > 5 * 1024 * 1024) {
-    toasts.error(t('profile.avatarTooBig', { size: 5 }))
+  if (file.size > MAX_AVATAR_BYTES) {
+    toasts.error(t('profile.avatarTooBig', { size: MAX_AVATAR_MB }))
     return
   }
 
@@ -98,7 +100,7 @@ async function removeAvatar() {
           class="w-full h-full object-cover"
         />
         <span v-else class="text-2xl font-bold text-mnema-mint">
-          {{ (profileUser.display_name || profileUser.username || '?').charAt(0).toUpperCase() }}
+          {{ nameInitial(profileUser.display_name || profileUser.username || '?') }}
         </span>
 
         <!-- Hover overlay for own profile -->
