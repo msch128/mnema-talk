@@ -1,0 +1,21 @@
+web/src/composables/webrtc/micPipeline.ts
+  s_d8e458a1a9342a::t_4c76a9c33537b9 1,244-245
+web/src/composables/webrtc/voiceAudio.ts
+  s_d8e458a1a9342a::t_a6ed2a7991c1af 1,102,109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "32de3ec53032204ea935e8d3df73751e630b61dd",
+  "prompts": {},
+  "sessions": {
+    "s_d8e458a1a9342a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-arootcause-sealing-f9b13a90a3d1378a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
