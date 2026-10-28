@@ -1,0 +1,75 @@
+web/src/components/PushSection.test.ts
+  s_439aa1bb873fd8::t_6cdd354a838643 146-159
+web/src/components/QrCode.test.ts
+  s_439aa1bb873fd8::t_165e6832658a1b 1-15
+web/src/components/QrCode.vue
+  s_0083ddead970ef::t_0100decc6d8b02 10
+web/src/components/ScheduledItem.test.ts
+  s_9b1762bf3aaac0::t_e2dfa262dcbc86 130-142
+web/src/components/ScheduledItem.vue
+  s_0083ddead970ef::t_99feeb3a75454e 30,72-73,78-79,116
+web/src/components/ScreenShareModal.test.ts
+  s_9b1762bf3aaac0::t_fbf9f019b84d03 46-61
+web/src/components/ScreenShareModal.vue
+  s_0083ddead970ef::t_084193cfae8a36 102,104-105,110,132,154,176,178-179,185,203,205-206,212
+web/src/components/SearchFilterPopover.vue
+  s_0083ddead970ef::t_8dbf7b87a3a372 46-50,67-69,152
+web/src/components/SearchFilterRow.test.ts
+  s_9b1762bf3aaac0::t_99643328bd99b6 172-198
+web/src/components/SearchInput.test.ts
+  s_9b1762bf3aaac0::t_5255802a4f056a 201-215
+web/src/components/SearchInput.vue
+  s_0083ddead970ef::t_9eba4043d4c698 106
+web/src/components/SearchModal.test.ts
+  s_9b1762bf3aaac0::t_989a0f72435233 12,260-293
+web/src/components/SearchModal.vue
+  s_0083ddead970ef::t_f26df0810314ab 17-18,38,93-95,129-130,132,162-164,171,188-189
+web/src/components/Sidebar.test.ts
+  s_9b1762bf3aaac0::t_8cf7d6526bd75c 585,589-598
+web/src/components/Sidebar.vue
+  s_0083ddead970ef::t_4a5c3cecfd3275 176-177,186,195,226-227
+web/src/components/SidebarChannelRow.vue
+  s_0083ddead970ef::t_06ce6aad253d63 234
+web/src/components/SidebarChannelRowTalks.test.ts
+  s_9b1762bf3aaac0::t_3e7c5483fc0450 30-39
+web/src/components/SidebarNotifications.test.ts
+  s_9b1762bf3aaac0::t_e07ce0b360a0b6 23-28
+web/src/composables/usePushSettings.ts
+  s_0083ddead970ef::t_9e5bf8cdb3a383 27-29,43-47,50-51,70,75,82,93
+web/src/stores/later.test.ts
+  s_9b1762bf3aaac0::t_942fed15a8d457 7,154-165
+web/src/stores/later.ts
+  s_0083ddead970ef::t_7228c6d2241497 8,83-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6bcfc47161ad15dd34bdc050a3e443af254f626c",
+  "prompts": {},
+  "sessions": {
+    "s_0083ddead970ef": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8130eec70ffb508e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_439aa1bb873fd8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8b737fc6e5b166c0",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_9b1762bf3aaac0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaf3e3fa1d866b304",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
