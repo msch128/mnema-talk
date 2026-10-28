@@ -1,0 +1,56 @@
+internal/chat/message_mutations.go
+  s_06fcde5dbef956::t_89a5fa38c6d7ec 42,190-191,193,244-246,248
+internal/chat/review_fixes_integration_test.go
+  s_06fcde5dbef956::t_7a43bb5b6769d2 1-96
+internal/chat/handler_notify.go
+  s_06fcde5dbef956::t_89a5fa38c6d7ec 205-206,235
+internal/chat/handler_readstate.go
+  s_06fcde5dbef956::t_89a5fa38c6d7ec 88-89
+internal/chat/moderation.go
+  s_06fcde5dbef956::t_d35cb30fbe7070 77-78,192-194,201,257,260
+internal/chat/mentions.go
+  s_06fcde5dbef956::t_dc2b7c35cf477d 134,137,148-152,155,158
+internal/httpx/request_test.go
+  s_06fcde5dbef956::t_7a43bb5b6769d2 293-324
+internal/chat/saved.go
+  s_06fcde5dbef956::t_89a5fa38c6d7ec 231-232
+internal/chat/pins.go
+  s_06fcde5dbef956::t_89a5fa38c6d7ec 172
+internal/chat/audit.go
+  s_06fcde5dbef956::t_89a5fa38c6d7ec 159
+  s_06fcde5dbef956::t_d35cb30fbe7070 5,12,60-73,75-76,80-83,85,87
+internal/httpx/request.go
+  s_06fcde5dbef956::t_89a5fa38c6d7ec 4,44-59
+  s_06fcde5dbef956::t_4efecdd9d1f5cb 60-61
+internal/chat/mentions_roles.go
+  s_06fcde5dbef956::t_dc2b7c35cf477d 47,133-137,142,145-148,187-191,193
+internal/chat/mentions_test.go
+  s_06fcde5dbef956::t_7a43bb5b6769d2 10-14,41-43,74-103,105-106
+  s_06fcde5dbef956::t_7eed4815a23233 104
+internal/chat/validate_test.go
+  s_06fcde5dbef956::t_7a43bb5b6769d2 24,29-30
+internal/chat/access.go
+  s_06fcde5dbef956::t_89a5fa38c6d7ec 67-77,84,86
+internal/chat/messages.go
+  s_06fcde5dbef956::t_89a5fa38c6d7ec 245,247,347-349,354,356
+internal/chat/message_types.go
+  s_06fcde5dbef956::t_dc2b7c35cf477d 171-178,185-188,201-202
+internal/perm/snapshot_channels.go
+  s_06fcde5dbef956::t_a176df28220b7b 60-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "da4b9fe1ab05cb30f0a6a38542c92d8fc3ff4cae",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
