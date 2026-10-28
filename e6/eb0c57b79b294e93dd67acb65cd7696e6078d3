@@ -1,0 +1,81 @@
+api/openapi.json
+  s_7ad149a25819f7::t_f058b4f22af582 7527-7530,27406
+internal/discordimport/plan.go
+  s_11e768189363e4::t_47d68589df2f00 79,107
+internal/httpx/response.go
+  s_11e768189363e4::t_70c9c5a03bea5c 159-166
+internal/roles/handler_overwrites.go
+  s_11e768189363e4::t_a50ba046361eb5 123
+internal/roles/handler_permissions.go
+  s_11e768189363e4::t_b7241968922a0d 89
+internal/server/admin_status.go
+  s_5e74eb91b1beec::t_cc9a1127ab6f7a 5,125-128,142-143
+internal/server/health.go
+  s_7ad149a25819f7::t_acdf0a56c7d3b6 116
+internal/server/metrics.go
+  s_abe6d26c4f054b::t_403ef18459b383 30-32,44
+internal/server/metrics_scrape_test.go
+  s_5e74eb91b1beec::t_f1c90b8b569093 1-22
+internal/server/public.go
+  s_11e768189363e4::t_54f5f18ddd010b 68,81
+internal/server/router_build.go
+  s_7ad149a25819f7::t_d6997db9e3a827 183,215-224,226,233,257
+internal/server/router_routes.go
+  s_11e768189363e4::t_7f8e807e12449d 47,51
+internal/server/system.go
+  s_5e74eb91b1beec::t_a59102c732bec6 5,102-104,210-213,215-220,222-256,259-260
+internal/server/system_edges_test.go
+  s_11e768189363e4::t_802eca599a31a4 22
+internal/server/system_usage_test.go
+  s_abe6d26c4f054b::t_96da7f0a701cc0 1-36
+web/src/types/rest.ts
+  s_592c5254715fcb::t_32f8d91e281ba6 4447,4458
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e6eb0c57b79b294e93dd67acb65cd7696e6078d3",
+  "prompts": {},
+  "sessions": {
+    "s_11e768189363e4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaf10a826e91a64f0",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_592c5254715fcb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af33cb060ccc93b4c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5e74eb91b1beec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a38bb58581f273dc2",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7ad149a25819f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8752352772233b1c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_abe6d26c4f054b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aeaddb1300c6c2b75",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
