@@ -38,6 +38,9 @@ func ListForumPosts(ctx context.Context, p *db.Pool, channelID uuid.UUID, sortMo
 		limit = 100
 	}
 
+	if err := messageCursorExists(ctx, p, q.Before); err != nil {
+		return nil, err
+	}
 	whereClause := `WHERE m.channel_id = $1 AND m.parent_id IS NULL`
 	args := []any{channelID}
 
@@ -99,7 +102,7 @@ func CreateForumPost(ctx context.Context, p *db.Pool, online OnlineSource, chann
 	}, func(tx pgx.Tx, messageID uuid.UUID) error {
 		for _, tagID := range tagIDs {
 			if _, err := tx.Exec(ctx, `INSERT INTO forum_post_tags (message_id, tag_id) VALUES ($1, $2)`, messageID, tagID); err != nil {
-				return fmt.Errorf("insert post tag: %w", err)
+				return postTagError(err)
 			}
 		}
 		return SetThreadFollow(ctx, tx, userID, messageID, true)
@@ -203,8 +206,17 @@ func applyPostUpdate(ctx context.Context, tx pgx.Tx, messageID uuid.UUID, cleanT
 	}
 	for _, tagID := range *tagIDs {
 		if _, err := tx.Exec(ctx, `INSERT INTO forum_post_tags (message_id, tag_id) VALUES ($1, $2)`, messageID, tagID); err != nil {
-			return fmt.Errorf("insert post tag: %w", err)
+			return postTagError(err)
 		}
 	}
 	return nil
+}
+
+// postTagError maps a refused tag insert: a tag deleted after ValidatePostTags
+// looked at it is no longer a tag of this channel.
+func postTagError(err error) error {
+	if isForeignKeyViolation(err) {
+		return errTagWrongChannel
+	}
+	return fmt.Errorf("insert post tag: %w", err)
 }

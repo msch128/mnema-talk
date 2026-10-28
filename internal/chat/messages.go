@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -356,8 +357,20 @@ func CreateMessage(ctx context.Context, q db.Querier, nm NewMessage) (uuid.UUID,
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, errChannelNotFound
 	}
+	if isForeignKeyViolation(err) && nm.ParentID != nil {
+		// The thread root was deleted after ValidateParent looked at it.
+		return uuid.Nil, httpx.ErrInvalidInput("parent message not found")
+	}
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("insert message: %w", err)
 	}
 	return id, nil
+}
+
+// isForeignKeyViolation reports whether err is the database refusing a row
+// because the row it refers to is gone (SQLSTATE 23503): a concurrent delete
+// won against a reference that was validated moments earlier.
+func isForeignKeyViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23503"
 }
