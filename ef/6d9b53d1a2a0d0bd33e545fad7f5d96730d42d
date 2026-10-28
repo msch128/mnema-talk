@@ -1,0 +1,28 @@
+internal/auth/password_reset_budget_test.go
+  s_06fcde5dbef956::t_32859454f7f508 1-39
+internal/auth/account_mail.go
+  s_06fcde5dbef956::t_ecffc20a8fe933 35-39,61
+  s_06fcde5dbef956::t_d7b5bb034b208b 40-47,62
+internal/auth/password_reset_integration_test.go
+  s_06fcde5dbef956::t_8acb0b2dce67e4 1-68
+internal/auth/password_reset.go
+  s_06fcde5dbef956::t_cf742726c42947 143,151,160-163,188-192,194
+  s_06fcde5dbef956::t_d7b5bb034b208b 102-104
+  s_06fcde5dbef956::t_4c5a3f26b14e1f 83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ef6d9b53d1a2a0d0bd33e545fad7f5d96730d42d",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
