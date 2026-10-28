@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.6](https://github.com/msch128/mnema-talk/compare/v1.2.5...v1.2.6) (2026-10-28)
+
+
+### Bug Fixes
+
+* code review findings for the server ([#469](https://github.com/msch128/mnema-talk/issues/469)) ([d981362](https://github.com/msch128/mnema-talk/commit/d9813626ddd0ad69968bcb4ebcf8e46bb095e159))
+
 ## [1.2.5](https://github.com/msch128/mnema-talk/compare/v1.2.4...v1.2.5) (2026-10-28)
 
 
