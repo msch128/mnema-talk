@@ -63,8 +63,10 @@ const (
 	maxSessionsPerBot = 6
 	// bufferSize is how many events a session keeps for RESUME.
 	bufferSize = 512
-	sendQueue  = 256
-	writeWait  = 10 * time.Second
+	// sendQueue holds a full replay of the buffer plus the RESUMED frame, with
+	// headroom for events that arrive while the writer drains it.
+	sendQueue = bufferSize + 64
+	writeWait = 10 * time.Second
 	// identifyPerMinute bounds IDENTIFY and RESUME per bot.
 	identifyPerMinute = 20
 	// tokenCheckEvery is how often live sessions are checked against their
