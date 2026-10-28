@@ -12,7 +12,7 @@ import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { channelFixture, messageFixture, userFixture, fixtureId, requireValue } from '../test-fixtures.fixture'
-import { i18nPlugin, setLocale } from '../i18n'
+import { i18nPlugin, setLocale, t } from '../i18n'
 import { tooltip } from '../directives/tooltip'
 
 const mockApi = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
@@ -275,7 +275,7 @@ it('tells when another page could not be loaded', async () => {
   await open(); await query('hello')
   requireValue([...document.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent.includes('Mehr laden'))).click()
   await flushPromises()
-  expect(useToastStore().toasts.map(x => x.text)).toContain('Die Suche hat nicht geklappt. Versuche es noch einmal.')
+  expect(useToastStore().toasts.map(x => x.text)).toContain(t('chat.searchFailed'))
   vi.restoreAllMocks()
 })
 

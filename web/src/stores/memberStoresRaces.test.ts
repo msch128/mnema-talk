@@ -124,6 +124,33 @@ describe('events store', () => {
     expect(events.pastEvents).toEqual([])
     expect(events.pastLoading).toBe(false)
   })
+
+  it('ignores a past page that fails after reset', async () => {
+    const events = useEventsStore()
+    const reply = deferred()
+    apiMock.mockReturnValueOnce(reply.promise)
+    const late = events.loadPast()
+    events.reset()
+    reply.reject(new Error('late'))
+    await late
+    expect(events.error).toBeNull()
+    expect(events.pastLoaded).toBe(false)
+  })
+
+  it('starts at the top without a cursor and ends at an empty further page', async () => {
+    const events = useEventsStore()
+    apiMock.mockResolvedValueOnce([])
+    await events.loadPast(true)
+    expect(String(apiMock.mock.calls[0]?.[0])).not.toContain('before_id')
+
+    const page = Array.from({ length: 30 }, (_, i) => ({ ...event(200 + i), status: 'completed', start_time: `2026-08-${String(30 - i).padStart(2, '0')}T18:00:00Z` }))
+    apiMock.mockResolvedValueOnce(page)
+    await events.loadPast()
+    apiMock.mockResolvedValueOnce([])
+    await events.loadPast(true)
+    expect(String(apiMock.mock.calls[2]?.[0])).toContain(`before_id=${fixtureId(229)}`)
+    expect(events.pastHasMore).toBe(false)
+  })
 })
 
 describe('later store', () => {
