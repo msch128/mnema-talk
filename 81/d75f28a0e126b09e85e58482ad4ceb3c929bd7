@@ -1,0 +1,29 @@
+internal/emoji/handler_image.go
+  s_06fcde5dbef956::t_65c6d4a753981b 7,94,115-129
+internal/emoji/handler_image_test.go
+  s_a189ba8adbc896::t_e221247b7f0085 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "81d75f28a0e126b09e85e58482ad4ceb3c929bd7",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_a189ba8adbc896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1a43bfd89de73cab",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
