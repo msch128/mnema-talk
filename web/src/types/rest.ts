@@ -1245,7 +1245,7 @@ export type ChatCategoryOrder = {
 export function isChatCategoryOrder(value: unknown): value is ChatCategoryOrder {
   return isRecord(value)
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
-    && (hasOwn(value, "sort_order") && (isInteger(value["sort_order"]) && value["sort_order"] >= -1073741824 && value["sort_order"] <= 1073741824))
+    && (hasOwn(value, "sort_order") && isInteger(value["sort_order"]))
 }
 
 export const decodeChatCategoryOrder = decoder("chat.CategoryOrder", isChatCategoryOrder)
@@ -1331,7 +1331,7 @@ export function isChatChannelPlacement(value: unknown): value is ChatChannelPlac
   return isRecord(value)
     && (hasOwn(value, "category_id") && (isIdentifier(value["category_id"]) || value["category_id"] === null))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
-    && (hasOwn(value, "sort_order") && (isInteger(value["sort_order"]) && value["sort_order"] >= -1073741824 && value["sort_order"] <= 1073741824))
+    && (hasOwn(value, "sort_order") && isInteger(value["sort_order"]))
 }
 
 export const decodeChatChannelPlacement = decoder("chat.ChannelPlacement", isChatChannelPlacement)
@@ -1352,7 +1352,7 @@ export type ChatCreateCategoryRequest = {
 export function isChatCreateCategoryRequest(value: unknown): value is ChatCreateCategoryRequest {
   return isRecord(value)
     && (hasOwn(value, "name") && isString(value["name"], 64))
-    && (!hasOwn(value, "sort_order") || (isInteger(value["sort_order"]) && value["sort_order"] >= -1073741824 && value["sort_order"] <= 1073741824))
+    && (!hasOwn(value, "sort_order") || isInteger(value["sort_order"]))
 }
 
 export const decodeChatCreateCategoryRequest = decoder("chat.CreateCategoryRequest", isChatCreateCategoryRequest)
@@ -1371,7 +1371,7 @@ export function isChatCreateChannelRequest(value: unknown): value is ChatCreateC
     && (!hasOwn(value, "category_id") || (isIdentifier(value["category_id"]) || value["category_id"] === null))
     && (!hasOwn(value, "is_stage") || typeof value["is_stage"] === 'boolean')
     && (hasOwn(value, "name") && isString(value["name"], 64))
-    && (!hasOwn(value, "sort_order") || (isInteger(value["sort_order"]) && value["sort_order"] >= -1073741824 && value["sort_order"] <= 1073741824))
+    && (!hasOwn(value, "sort_order") || isInteger(value["sort_order"]))
     && (!hasOwn(value, "topic") || isString(value["topic"], 255))
     && (!hasOwn(value, "type") || isChatChannelType(value["type"]))
 }
