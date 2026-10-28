@@ -14,7 +14,7 @@ import { closeMediaRoom, openMediaRoom, resetMediaAnnouncements } from './mediaR
 import type { Cx } from './state'
 import { aiModel } from './audioMath'
 import { stopCamera } from './camera'
-import { getAudioConstraints, refreshAudioDevices, setupMicPipeline } from './micPipeline'
+import { micErrorKey, refreshAudioDevices, requestMicrophone, setupMicPipeline } from './micPipeline'
 import { stopMicTest } from './micTest'
 import { cleanupPeerConnection, handleRemoteCandidate, handleRemoteOffer, setupPeerConnection } from './peer'
 import { stopScreenShare } from './screen'
@@ -50,9 +50,11 @@ async function captureMicrophone(cx: Cx): Promise<MediaStream | null> {
   if (model) preloadNoiseSuppressor(model)
   try {
     await refreshAudioDevices(cx)
-    return await navigator.mediaDevices.getUserMedia({ audio: getAudioConstraints(cx) })
+    return await requestMicrophone(cx)
   } catch (err) {
     console.warn('Microphone access denied or unavailable:', err)
+    // The join goes on listen-only; say why instead of leaving the user mute.
+    useToastStore().error(t(micErrorKey(err)))
     return null
   }
 }
