@@ -32,20 +32,22 @@ type Recreator interface {
 	Recreate(ctx context.Context) error
 }
 
-// Refusal reasons in the 4xx/5xx body (stable strings, no free text: the app
-// maps them to its own wording).
+// Refusal reasons in the 4xx/5xx body: stable strings shared with the app's
+// client (update.Reason*), which maps them to its own wording.
 const (
-	reasonUntrusted = "verification_failed"
-	reasonUnchecked = "verification_unavailable"
-	reasonNoTarget  = "no_target"
-	reasonVersion   = "version_mismatch"
-	reasonRequest   = "target_version_required"
-	reasonEngine    = "docker_unavailable"
+	reasonUntrusted = update.ReasonUntrusted
+	reasonUnchecked = update.ReasonUnchecked
+	reasonNoTarget  = update.ReasonNoTarget
+	reasonVersion   = update.ReasonVersion
+	reasonRequest   = update.ReasonRequest
+	reasonEngine    = update.ReasonEngine
 )
 
 const (
 	verifyTimeout = 90 * time.Second
 	swapTimeout   = 15 * time.Minute
+	// swapGrace is how long a shutdown waits for a running swap.
+	swapGrace = 2 * time.Minute
 )
 
 // Server is the updater's HTTP handler.
@@ -60,8 +62,9 @@ type Server struct {
 	// Background runs the swap after the 202; tests replace it to wait.
 	Background func(func())
 
-	mu   sync.Mutex
-	busy bool
+	mu    sync.Mutex
+	busy  bool
+	swaps sync.WaitGroup
 }
 
 // ServeHTTP serves POST /v1/update (Bearer token) and GET /healthz.
@@ -162,7 +165,7 @@ func (s *Server) verifyAll(ctx context.Context, targets []Target, want update.Se
 				"container", t.Name, "image", res.Ref(), "signed_version", res.Version, "running_version", t.RunningVersion, "target_version", want.String(), "err", err)
 			return nil, http.StatusUnprocessableEntity, reasonVersion
 		}
-		_, tag := splitTag(t.Image)
+		_, tag, _ := update.SplitImage(t.Image)
 		plan = append(plan, verified{target: t, result: res, tag: tag})
 		s.Log.Info("image verified", "container", t.Name, "image", res.Ref(), "platforms", res.Platforms)
 	}
@@ -217,11 +220,32 @@ func checkVersion(signed, running string, want update.Semver) error {
 }
 
 func (s *Server) background(f func()) {
+	s.swaps.Add(1)
+	run := func() {
+		defer s.swaps.Done()
+		f()
+	}
 	if s.Background != nil {
-		s.Background(f)
+		s.Background(run)
 		return
 	}
-	go f()
+	go run()
+}
+
+// WaitIdle blocks until no swap is running, or until timeout; it reports
+// whether the updater is idle.
+func (s *Server) WaitIdle(timeout time.Duration) bool {
+	idle := make(chan struct{})
+	go func() {
+		s.swaps.Wait()
+		close(idle)
+	}()
+	select {
+	case <-idle:
+		return true
+	case <-time.After(timeout):
+		return false
+	}
 }
 
 func (s *Server) acquire() bool {
@@ -238,15 +262,4 @@ func (s *Server) release() {
 	s.mu.Lock()
 	s.busy = false
 	s.mu.Unlock()
-}
-
-// splitTag returns the repository and tag of "repo:tag" ("latest" if none).
-func splitTag(ref string) (repo, tag string) {
-	if at := strings.Index(ref, "@"); at >= 0 {
-		ref = ref[:at]
-	}
-	if i := strings.LastIndex(ref, ":"); i > strings.LastIndex(ref, "/") {
-		return ref[:i], ref[i+1:]
-	}
-	return ref, "latest"
 }

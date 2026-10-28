@@ -58,6 +58,7 @@ func TestAnonymousPollStoresNoLinkBetweenAMemberAndAChoice(t *testing.T) {
 	wantStatus(t, "bob votes", f.vote(f.bob, m, pizza, both), http.StatusOK)
 	wantStatus(t, "owner votes", f.vote(f.owner, m, pasta), http.StatusOK)
 
+	wantStatus(t, "end", f.owner.post(f.base()+"/messages/"+m.ID.String()+"/poll/end", nil), http.StatusOK)
 	d := f.detail(t, f.bob, m)
 	if !sameInts(tallies(d.Poll), []int{1, 1, 1}) || d.TotalVoters != 2 || !d.HasVoted || len(d.MyVotes) != 0 {
 		t.Fatalf("detail: %+v", d)
@@ -84,7 +85,6 @@ func TestAnonymousPollStoresNoLinkBetweenAMemberAndAChoice(t *testing.T) {
 	}
 
 	// Nor does the audit log, even after the poll is ended and deleted.
-	wantStatus(t, "end", f.owner.post(f.base()+"/messages/"+m.ID.String()+"/poll/end", nil), http.StatusOK)
 	for _, opt := range []uuid.UUID{pizza, pasta, both} {
 		if n := f.a.countRows(`SELECT COUNT(*) FROM audit_log WHERE details::text LIKE '%' || $1 || '%'`, opt.String()); n != 0 {
 			t.Fatalf("%d audit entries name option %s", n, opt)
@@ -104,13 +104,14 @@ func TestAnonymousVoteCannotBeChangedOrWithdrawn(t *testing.T) {
 	wantStatus(t, "change", f.vote(f.bob, m, f.optionID(m, 1)), http.StatusConflict)
 	wantStatus(t, "repeat", f.vote(f.bob, m, f.optionID(m, 0)), http.StatusConflict)
 	wantStatus(t, "withdraw", f.vote(f.bob, m), http.StatusBadRequest)
-	if d := f.detail(t, f.bob, m); !sameInts(tallies(d.Poll), []int{1, 0, 0}) || d.TotalVoters != 1 {
-		t.Fatalf("counts moved: %+v", d)
-	}
 	// A refused vote must not leave a half-counted option behind.
 	wantStatus(t, "unknown option", f.vote(f.owner, m, uuid.New()), http.StatusBadRequest)
 	if n := f.a.countRows(`SELECT COUNT(*) FROM poll_voters WHERE poll_id = $1`, m.ID); n != 1 {
 		t.Fatalf("a refused vote left %d voters", n)
+	}
+	wantStatus(t, "end", f.owner.post(f.base()+"/messages/"+m.ID.String()+"/poll/end", nil), http.StatusOK)
+	if d := f.detail(t, f.bob, m); !sameInts(tallies(d.Poll), []int{1, 0, 0}) || d.TotalVoters != 1 {
+		t.Fatalf("counts moved: %+v", d)
 	}
 }
 
@@ -134,6 +135,7 @@ func TestAnonymousVotesRaceCountEachMemberOnce(t *testing.T) {
 			wins++
 		}
 	}
+	wantStatus(t, "end", f.owner.post(f.base()+"/messages/"+m.ID.String()+"/poll/end", nil), http.StatusOK)
 	d := f.detail(t, f.bob, m)
 	if wins != 1 || d.TotalVoters != 1 || tallies(d.Poll)[0]+tallies(d.Poll)[1]+tallies(d.Poll)[2] != 1 {
 		t.Fatalf("wins=%d %+v", wins, d)
@@ -176,6 +178,7 @@ func TestAnonymousVoteIsInTheMembersExportOnlyAsParticipationAndTheirErasureKeep
 	if n := a.countRows(`SELECT COUNT(*) FROM poll_voters WHERE user_id = $1`, f.alice.user.ID); n != 0 {
 		t.Fatalf("poll_voters of the deleted member: %d", n)
 	}
+	wantStatus(t, "end", f.owner.post(f.base()+"/messages/"+m.ID.String()+"/poll/end", nil), http.StatusOK)
 	var msgs []chat.Message
 	f.bob.get(f.base()+"/messages").decode(t, &msgs)
 	if len(msgs) != 1 || msgs[0].Poll == nil || !sameInts(tallies(*msgs[0].Poll), []int{1, 1, 0}) || msgs[0].Poll.TotalVoters != 2 {
@@ -223,6 +226,7 @@ func TestMigrationConvertsAnExistingAnonymousPoll(t *testing.T) {
 		t.Fatalf("conversion: %v", err)
 	}
 
+	wantStatus(t, "end", f.owner.post(f.base()+"/messages/"+m.ID.String()+"/poll/end", nil), http.StatusOK)
 	d := f.detail(t, f.bob, m)
 	if !sameInts(tallies(d.Poll), []int{2, 0, 1}) || d.TotalVoters != 3 || !d.HasVoted || len(d.MyVotes) != 0 {
 		t.Fatalf("converted poll: %+v", d)
@@ -249,19 +253,19 @@ func TestAnonymousBallotsHaveNoMemberAndFoldingChangesNothing(t *testing.T) {
 	if n := f.a.countRows(`SELECT COUNT(*) FROM poll_anon_ballots WHERE poll_id = $1`, m.ID); n != 2 {
 		t.Fatalf("unfolded ballots: %d", n)
 	}
-	before := tallies(f.detail(t, f.bob, m).Poll)
+	before := f.revealedTallies(t, m)
 	if err := poll.FoldBallots(t.Context(), f.a.db); err != nil {
 		t.Fatal(err)
 	}
 	if n := f.a.countRows(`SELECT COUNT(*) FROM poll_anon_ballots`); n != 0 {
 		t.Fatalf("ballots left after the fold: %d", n)
 	}
-	after := f.detail(t, f.bob, m)
-	if !sameInts(before, tallies(after.Poll)) || !sameInts(before, []int{2, 0, 0}) || after.TotalVoters != 2 {
-		t.Fatalf("fold changed the result: %v -> %+v", before, after)
+	after := f.revealedTallies(t, m)
+	if !sameInts(before, after) || !sameInts(before, []int{2, 0, 0}) {
+		t.Fatalf("fold changed the result: %v -> %v", before, after)
 	}
 	wantStatus(t, "third voter after a fold", f.vote(f.alice, m, f.optionID(m, 1)), http.StatusOK)
-	if got := tallies(f.detail(t, f.bob, m).Poll); !sameInts(got, []int{2, 1, 0}) {
+	if got := f.revealedTallies(t, m); !sameInts(got, []int{2, 1, 0}) {
 		t.Fatalf("after fold and vote: %v", got)
 	}
 }
@@ -288,7 +292,7 @@ func TestBallotFoldLoopRunsAndStops(t *testing.T) {
 	if n := f.a.countRows(`SELECT COUNT(*) FROM poll_anon_ballots`); n != 0 {
 		t.Fatalf("ballots never folded: %d", n)
 	}
-	if got := tallies(f.detail(t, f.bob, m).Poll); !sameInts(got, []int{0, 0, 1}) {
+	if got := f.revealedTallies(t, m); !sameInts(got, []int{0, 0, 1}) {
 		t.Fatalf("after the loop: %v", got)
 	}
 }
@@ -314,4 +318,48 @@ func TestAnonymousPollPushesNoRunningTally(t *testing.T) {
 	if got := updates(); got != 1 {
 		t.Fatalf("ending pushed %d poll_update events", got)
 	}
+}
+
+// A running anonymous poll reports who voted in total, but no per-option
+// tally anywhere (poll detail, message lists): a counter that moves at the
+// moment a member is seen voting would give away their choice. The tally
+// appears once the poll has ended.
+func TestRunningAnonymousPollHidesTheTallyUntilItEnds(t *testing.T) {
+	f := newPollFixture(t)
+	m := f.basic(t, f.alice, map[string]any{"anonymous": true})
+	wantStatus(t, "bob votes", f.vote(f.bob, m, f.optionID(m, 1)), http.StatusOK)
+
+	d := f.detail(t, f.owner, m)
+	if !sameInts(tallies(d.Poll), []int{0, 0, 0}) || d.TotalVoters != 1 {
+		t.Fatalf("running detail: %+v", d)
+	}
+	var msgs []chat.Message
+	f.owner.get(f.base()+"/messages").decode(t, &msgs)
+	if len(msgs) != 1 || msgs[0].Poll == nil || !sameInts(tallies(*msgs[0].Poll), []int{0, 0, 0}) || msgs[0].Poll.TotalVoters != 1 {
+		t.Fatalf("running message list: %+v", msgs)
+	}
+
+	wantStatus(t, "end", f.owner.post(f.base()+"/messages/"+m.ID.String()+"/poll/end", nil), http.StatusOK)
+	if d := f.detail(t, f.owner, m); !sameInts(tallies(d.Poll), []int{0, 1, 0}) || d.TotalVoters != 1 {
+		t.Fatalf("ended detail: %+v", d)
+	}
+}
+
+// revealedTallies reads the per-option tally of a running anonymous poll, which
+// the API withholds until the poll ends: it moves the end into the past for the
+// read and puts it back.
+func (f pollFixture) revealedTallies(t *testing.T, m chat.Message) []int {
+	t.Helper()
+	var closes time.Time
+	if err := f.a.db.QueryRow(t.Context(), `SELECT closes_at FROM polls WHERE message_id = $1`, m.ID).Scan(&closes); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.a.db.Exec(t.Context(), `UPDATE polls SET closes_at = clock_timestamp() - interval '1 second' WHERE message_id = $1`, m.ID); err != nil {
+		t.Fatal(err)
+	}
+	got := tallies(f.detail(t, f.bob, m).Poll)
+	if _, err := f.a.db.Exec(t.Context(), `UPDATE polls SET closes_at = $2 WHERE message_id = $1`, m.ID, closes); err != nil {
+		t.Fatal(err)
+	}
+	return got
 }

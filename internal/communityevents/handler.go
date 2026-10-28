@@ -38,8 +38,17 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Put("/events/{id}/rsvp", httpx.Handle(h.setRSVP))
 	r.Delete("/events/{id}/rsvp", httpx.Handle(h.deleteRSVP))
 	r.Get("/events/{id}/rsvps", httpx.Handle(h.listRSVPs))
-	r.Post("/events/{id}/cover", httpx.Handle(h.uploadCover))
 	r.Delete("/events/{id}/cover", httpx.Handle(h.deleteCover))
+}
+
+// CoverBodyLimit is the body ceiling of the cover upload: the image plus the
+// multipart framing.
+const CoverBodyLimit = maxCoverBytes + 1<<20
+
+// MountUploads registers the multipart cover upload; the caller wraps it in a
+// MaxBody of CoverBodyLimit instead of the JSON default.
+func (h *Handler) MountUploads(r chi.Router) {
+	r.Post("/events/{id}/cover", httpx.Handle(h.uploadCover))
 }
 
 func (h *Handler) canViewChannel(r *http.Request, channelID uuid.UUID) bool {
@@ -182,7 +191,6 @@ func (h *Handler) createEvent(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	_ = h.Store.fillRSVPs(r.Context(), ev, &user.ID)
 	h.auditRecord(r, "event.create", ev)
 	h.broadcast(ev)
 	httpx.WriteJSON(w, http.StatusCreated, ev)
@@ -217,7 +225,7 @@ func (h *Handler) getEvent(w http.ResponseWriter, r *http.Request) error {
 }
 
 // @Summary Update a community event
-// @Description Updates an event. Requires ManageEvents permission.
+// @Description Updates an event. Requires ManageEvents permission. "end_time": null removes the end time; an event without an end counts as over two hours after it starts. Moving the start or end re-derives the status of an event that is not cancelled. The status follows the event's times: PATCH accepts status "cancelled" (same as POST cancel) or the current status, and any other change is refused with 409.
 // @ID updateCommunityEvent
 // @Tags Events
 // @Accept json
@@ -229,6 +237,7 @@ func (h *Handler) getEvent(w http.ResponseWriter, r *http.Request) error {
 // @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT"
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN"
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND"
+// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the status change is not allowed."
 // @Router /api/events/{id} [patch]
 func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
@@ -250,16 +259,34 @@ func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	req.normalize()
-	if req.Status != nil && !validStatus(*req.Status) {
-		return httpx.ErrInvalidInput("status must be scheduled, active, completed or cancelled")
+	cancelling, err := statusRequest(ev, req.Status)
+	if err != nil {
+		return err
 	}
 	m := mergeUpdate(ev, req)
 	if err := h.validateEventPayload(r, m.title, m.desc, m.start, m.end, m.channel, m.location); err != nil {
 		return err
 	}
-	updated, err := h.Store.Update(r.Context(), id, req)
+	updated, err := h.applyUpdate(r, ev, req, cancelling)
 	if err != nil {
 		return err
+	}
+	h.broadcast(updated)
+	httpx.WriteJSON(w, http.StatusOK, updated)
+	return nil
+}
+
+// applyUpdate stores the field changes of an event edit and then the
+// cancellation it asks for, writing an audit record for each, and returns the
+// event as it stands afterwards.
+func (h *Handler) applyUpdate(r *http.Request, ev *CommunityEvent, req UpdateEventRequest, cancelling bool) (*CommunityEvent, error) {
+	id := ev.ID
+	var err error
+	updated := ev
+	if !cancelling || req.changesFields() {
+		if updated, err = h.Store.Update(r.Context(), id, req); err != nil {
+			return nil, err
+		}
 	}
 	if updated.ChannelID != nil && !sameChannel(ev.ChannelID, updated.ChannelID) {
 		// Members who cannot view the new Talk drop their copy.
@@ -267,49 +294,20 @@ func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 			slog.ErrorContext(r.Context(), "retract moved event failed", "event_id", id, "err", err)
 		}
 	}
-	h.auditRecord(r, "event.edit", updated)
-	h.broadcast(updated)
-	httpx.WriteJSON(w, http.StatusOK, updated)
-	return nil
-}
-
-// merged is an event as it would be after applying an update.
-type merged struct {
-	title, desc string
-	start       time.Time
-	end         *time.Time
-	channel     *uuid.UUID
-	location    *string
-}
-
-func mergeUpdate(ev *CommunityEvent, req UpdateEventRequest) merged {
-	m := merged{title: ev.Title, desc: ev.Description, start: ev.StartTime, end: ev.EndTime, channel: ev.ChannelID, location: ev.Location}
-	if req.Title != nil {
-		m.title = *req.Title
+	if !cancelling || req.changesFields() {
+		h.auditRecord(r, "event.edit", updated)
 	}
-	if req.Description != nil {
-		m.desc = *req.Description
+	if cancelling {
+		if updated, err = h.Store.Cancel(r.Context(), id); err != nil {
+			return nil, err
+		}
+		h.auditRecord(r, "event.cancel", updated)
 	}
-	if req.StartTime != nil {
-		m.start = *req.StartTime
-	}
-	if req.EndTime != nil {
-		m.end = req.EndTime
-	}
-	if req.ChannelID != nil {
-		m.channel, m.location = req.ChannelID, nil
-	} else if req.Location != nil {
-		m.location, m.channel = req.Location, nil
-	}
-	return m
-}
-
-func sameChannel(a, b *uuid.UUID) bool {
-	return a != nil && b != nil && *a == *b
+	return updated, nil
 }
 
 // @Summary Cancel a community event
-// @Description Marks an event as cancelled. Requires ManageEvents permission.
+// @Description Marks an event as cancelled. Requires ManageEvents permission. An event that is already cancelled or completed is refused with 409.
 // @ID cancelCommunityEvent
 // @Tags Events
 // @Produce json
@@ -318,6 +316,7 @@ func sameChannel(a, b *uuid.UUID) bool {
 // @Success 200 {object} CommunityEvent
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN"
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND"
+// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the event is already cancelled or completed."
 // @Router /api/events/{id}/cancel [post]
 func (h *Handler) cancelEvent(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -34,6 +35,8 @@ type Importer struct {
 	// Features reports whether this server has a feature (GET /api/health
 	// features); nil means none, so stages and forums map to Talks and text.
 	Features func(name string) bool
+
+	fetcherOnce sync.Once
 }
 
 func (im *Importer) caps() Capabilities {
@@ -44,9 +47,11 @@ func (im *Importer) caps() Capabilities {
 }
 
 func (im *Importer) fetcher() *Fetcher {
-	if im.Fetcher == nil {
-		im.Fetcher = NewFetcher()
-	}
+	im.fetcherOnce.Do(func() {
+		if im.Fetcher == nil {
+			im.Fetcher = NewFetcher()
+		}
+	})
 	return im.Fetcher
 }
 
@@ -115,9 +120,18 @@ type ApplyRequest struct {
 	ConfirmText string `json:"confirm_text" maxLength:"100"`
 }
 
-func (r ApplyRequest) check(plan *Plan) error {
+// confirmed checks the confirmation flags; Apply runs it before the download
+// and check again under the lock.
+func (r ApplyRequest) confirmed() error {
 	if !r.ConfirmAdditive || !r.ConfirmRoles {
 		return httpx.ErrInvalidInput("every confirmation step must be confirmed")
+	}
+	return nil
+}
+
+func (r ApplyRequest) check(plan *Plan) error {
+	if err := r.confirmed(); err != nil {
+		return err
 	}
 	text := strings.TrimSpace(r.ConfirmText)
 	if text != ConfirmWord && (plan.ServerName == "" || !strings.EqualFold(text, plan.ServerName)) {
@@ -146,8 +160,8 @@ type Record struct {
 // Apply runs the import in one transaction. The plan is recomputed from a
 // fresh download and must match the preview the administrator confirmed.
 func (im *Importer) Apply(ctx context.Context, sub perm.Subject, actorName string, req ApplyRequest) (*Record, error) {
-	if !req.ConfirmAdditive || !req.ConfirmRoles {
-		return nil, httpx.ErrInvalidInput("every confirmation step must be confirmed")
+	if err := req.confirmed(); err != nil {
+		return nil, err
 	}
 	code, err := ParseCode(req.Template)
 	if err != nil {

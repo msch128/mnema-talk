@@ -57,6 +57,17 @@ func (s *Snapshot) CanSeeAllChannelsIn(sub Subject, cat uuid.UUID) bool {
 // HasCategoryOverwrites reports whether a category carries any overwrite.
 func (s *Snapshot) HasCategoryOverwrites(cat uuid.UUID) bool { return s.categoryOv[cat] != nil }
 
+// VisibleCategories lists the categories sub may see (see CategoryVisible).
+func (s *Snapshot) VisibleCategories(sub Subject) []uuid.UUID {
+	out := make([]uuid.UUID, 0, len(s.categories))
+	for id := range s.categories {
+		if s.CategoryVisible(sub, id) {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
 // KnowsCategory reports whether the snapshot has seen the category.
 func (s *Snapshot) KnowsCategory(cat uuid.UUID) bool { return s.categories[cat] }
 
@@ -138,6 +149,21 @@ func (s *Snapshot) ViewableChannels(sub Subject) []uuid.UUID {
 	out := make([]uuid.UUID, 0, len(s.channelCat))
 	for ch := range s.channelCat {
 		if s.Channel(sub, ch).Has(ViewChannel) {
+			out = append(out, ch)
+		}
+	}
+	return out
+}
+
+// HiddenChannels lists the channels sub may not view: the complement of
+// ViewableChannels within the channels the snapshot knows.
+func (s *Snapshot) HiddenChannels(sub Subject) []uuid.UUID {
+	if s.Global(sub).Has(Administrator) {
+		return nil
+	}
+	var out []uuid.UUID
+	for ch := range s.channelCat {
+		if !s.Channel(sub, ch).Has(ViewChannel) {
 			out = append(out, ch)
 		}
 	}

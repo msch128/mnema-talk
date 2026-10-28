@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/imgproc"
 )
 
@@ -37,9 +38,17 @@ func TestBannerRoutesNeedFileStorage(t *testing.T) {
 	f := mediaDB(t)
 	f.h.Store = nil
 	put := bannerRequest(t, f, http.MethodPut, formPart{name: "banner", filename: "b.png", mime: "image/png", value: bannerPNG(t, 600, 200)})
-	requireAPIError(t, f.h.putBanner(httptest.NewRecorder(), put), http.StatusServiceUnavailable)
 	del := bannerRequest(t, f, http.MethodDelete)
-	requireAPIError(t, f.h.deleteBanner(httptest.NewRecorder(), del), http.StatusServiceUnavailable)
+	for _, c := range []struct {
+		handler http.HandlerFunc
+		r       *http.Request
+	}{{httpx.Handle(f.h.putBanner), put}, {httpx.Handle(f.h.deleteBanner), del}} {
+		rec := httptest.NewRecorder()
+		f.h.requireStore(c.handler).ServeHTTP(rec, c.r)
+		if rec.Code != http.StatusServiceUnavailable {
+			t.Fatalf("status %d, want 503", rec.Code)
+		}
+	}
 }
 
 func TestBannerUploadWithoutFileOrWithBrokenImageIsRefused(t *testing.T) {

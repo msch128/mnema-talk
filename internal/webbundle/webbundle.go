@@ -25,7 +25,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"unicode/utf8"
 )
 
 const (
@@ -165,33 +164,6 @@ func ParsePublicKeyPEM(data []byte) (ed25519.PublicKey, error) {
 		return nil, errors.New("public key is not Ed25519")
 	}
 	return pub, nil
-}
-
-func validPathRune(r rune) bool {
-	return r >= 0x20 && r != 0x7f && r != '\\'
-}
-
-func validPathSegment(seg string) bool {
-	return seg != "" && seg != "." && seg != ".."
-}
-
-// ValidPath reports whether p is an acceptable bundle-relative path: UTF-8,
-// forward slashes only, no empty, "." or ".." segments, no control characters.
-func ValidPath(p string) bool {
-	if p == "" || len(p) > maxPathLen || !utf8.ValidString(p) {
-		return false
-	}
-	for _, r := range p {
-		if !validPathRune(r) {
-			return false
-		}
-	}
-	for _, seg := range strings.Split(p, "/") {
-		if !validPathSegment(seg) {
-			return false
-		}
-	}
-	return true
 }
 
 // BuildOptions configures Build.

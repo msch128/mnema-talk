@@ -66,6 +66,11 @@ func AddDMMember(ctx context.Context, p *db.Pool, id, adder, target uuid.UUID) (
 		if !group {
 			return errDMNotGroup
 		}
+		// The target's group count is checked below; hold their row so a
+		// second add cannot count the same number meanwhile.
+		if err := lockUsers(ctx, tx, []uuid.UUID{target}); err != nil {
+			return err
+		}
 		if added, err = checkAddable(ctx, tx, id, adder, target, n); err != nil || !added {
 			return err
 		}
@@ -111,9 +116,8 @@ func removeDMMember(ctx context.Context, tx pgx.Tx, id, user uuid.UUID) ([]uuid.
 // deleteEmptyDM removes a conversation without members with its messages and
 // returns the storage keys of their attachments.
 func deleteEmptyDM(ctx context.Context, tx pgx.Tx, id uuid.UUID) ([]string, error) {
-	var keys []string
-	if err := collectKeys(ctx, tx, &keys, `
-		SELECT s3_key FROM media WHERE message_id IN (SELECT id FROM messages WHERE channel_id = $1)`, id); err != nil {
+	keys, err := channelMediaKeys(ctx, tx, []uuid.UUID{id})
+	if err != nil {
 		return nil, err
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM channels WHERE id = $1 AND type = 'dm'`, id); err != nil {

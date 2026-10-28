@@ -24,7 +24,8 @@ import (
 
 // ClearLoginLockout forgets every login lockout and failure counter for one
 // account: the per-address caps, the account-wide cap, the unknown-device
-// trickle and the password-change lockout.
+// trickle, the password-change lockout and the second-step (authenticator and
+// recovery code) lockouts.
 func (h *Handler) ClearLoginLockout(username string, userID uuid.UUID) {
 	account := strings.ToLower(strings.TrimSpace(username))
 	suffix := "|" + account
@@ -35,6 +36,8 @@ func (h *Handler) ClearLoginLockout(username string, userID uuid.UUID) {
 	if userID != uuid.Nil {
 		id := userID.String()
 		h.passwordFails.Clear(func(k string) bool { return k == id })
+		h.twoFactorFails.Clear(func(k string) bool { return k == id })
+		h.recoveryFails.Clear(func(k string) bool { return strings.HasPrefix(k, id+"|") })
 	}
 }
 
@@ -44,6 +47,8 @@ func (h *Handler) ClearAllLoginLockouts() {
 	h.loginFailures.Clear(all)
 	h.accountFailures.Clear(all)
 	h.passwordFails.Clear(all)
+	h.twoFactorFails.Clear(all)
+	h.recoveryFails.Clear(all)
 	h.unknownDevice.Clear(all)
 	h.unknownDeviceTotal.Clear(all)
 	h.loginPerIP.Clear(all)
@@ -161,8 +166,14 @@ func (h *Handler) applyUnlockRequest(ctx context.Context, r unlockReq) {
 		return
 	}
 	var id uuid.UUID
-	if err := h.Sessions.DB.QueryRow(ctx, `SELECT id FROM users WHERE LOWER(username) = LOWER($1)`, *r.username).Scan(&id); err != nil {
+	err := h.Sessions.DB.QueryRow(ctx, `SELECT id FROM users WHERE LOWER(username) = LOWER($1)`, *r.username).Scan(&id)
+	if err != nil {
+		// The id-keyed limiters stay locked when the lookup fails; the request
+		// row is already gone, so say so instead of reporting a full clear.
 		id = uuid.Nil
+		if !errors.Is(err, pgx.ErrNoRows) {
+			slog.Warn("unlock request: resolve account", "err", err)
+		}
 	}
 	h.ClearLoginLockout(*r.username, id)
 	slog.Info("login lockout cleared", "scope", "account", "via", "cli")

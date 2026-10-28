@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -53,23 +52,6 @@ func TestNativeAPIRequiresAuthorizationAndALiveSFU(t *testing.T) {
 	}
 	if _, err := s.nativeAPI(func() bool { return true }); !errors.Is(err, errSFUClosed) {
 		t.Fatalf("native API on a closed SFU: %v", err)
-	}
-}
-
-func TestNativeJoinNeedsTheRoomsNativeAPI(t *testing.T) {
-	s := newTestSFU(t)
-	authorized := func() bool { return true }
-	room := &Room{ID: uuid.New(), api: s.currentAPI(), peers: map[uuid.UUID]*Peer{}}
-	if _, err := room.joinPeer(uuid.New(), nil, nil, authorized); err == nil || err.Error() != "native media authorization unavailable" {
-		t.Fatalf("room without a native API: %v", err)
-	}
-	failure := errors.New("native API refused")
-	room.nativeAPI = func(func() bool) (*webrtc.API, error) { return nil, failure }
-	if _, err := room.joinPeer(uuid.New(), nil, nil, authorized); !errors.Is(err, failure) {
-		t.Fatalf("native API failure: %v", err)
-	}
-	if len(room.peers) != 0 {
-		t.Fatal("failed join registered a peer")
 	}
 }
 

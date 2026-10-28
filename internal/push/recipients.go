@@ -39,10 +39,35 @@ type candidate struct {
 	now time.Time
 }
 
+// subscriberIDs lists the accounts a message of authorID can be pushed to
+// at all: with a valid subscription, not disabled and not blocking the author.
+// It is the cheap first step, so the permission check can drop everyone who
+// may not see the channel before their notification settings are read.
+func subscriberIDs(ctx context.Context, q db.Querier, authorID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.Query(ctx, `
+		SELECT u.id FROM users u
+		WHERE u.id <> $1 AND u.disabled_at IS NULL
+		  AND NOT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = u.id AND ub.blocked_id = $1)
+		  AND EXISTS (SELECT 1 FROM push_subscriptions s WHERE s.user_id = u.id AND `+validSession+`)`, authorID)
+	if err != nil {
+		return nil, fmt.Errorf("load push subscribers: %w", err)
+	}
+	defer rows.Close()
+	var out []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("load push subscribers: %w", err)
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
 // loadCandidates reads, for one channel, every account with a subscription
 // (except the author) together with its notification settings, in one query.
-// A member who blocked the author is never a candidate. A non-nil only limits the result to that account.
-func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.UUID, only *uuid.UUID) ([]candidate, error) {
+// A member who blocked the author is never a candidate. Only limits the result to those accounts.
+func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.UUID, only []uuid.UUID) ([]candidate, error) {
 	rows, err := q.Query(ctx, `
 		SELECT u.id, u.locale, u.push_preview, u.presence, c.name, COALESCE(c.slug, ''), c.type = 'dm',
 		       cr.notify_level, cr.muted_until, cn.notify_level, cn.muted_until,
@@ -52,7 +77,7 @@ func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.
 		LEFT JOIN channel_reads cr ON cr.user_id = u.id AND cr.channel_id = c.id
 		LEFT JOIN category_notify cn ON cn.user_id = u.id AND cn.category_id = c.category_id
 		LEFT JOIN server_notify sn ON sn.user_id = u.id
-		WHERE u.id <> $2 AND ($3::uuid IS NULL OR u.id = $3) AND u.disabled_at IS NULL
+		WHERE u.id <> $2 AND u.id = ANY($3) AND u.disabled_at IS NULL
 		  AND NOT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = u.id AND ub.blocked_id = $2)
 		  AND EXISTS (SELECT 1 FROM push_subscriptions s WHERE s.user_id = u.id AND `+validSession+`)`, channelID, authorID, only)
 	if err != nil {
@@ -148,7 +173,7 @@ func threadAudience(ctx context.Context, q db.Querier, thread *uuid.UUID) (follo
 // role (not through @all or @here). When the stored mentions cannot be read
 // nobody counts as addressed, so a mute stays silent.
 func namedMentions(ctx context.Context, q db.Querier, messageID uuid.UUID) map[uuid.UUID]bool {
-	rows, err := q.Query(ctx, `SELECT user_id FROM message_mentions WHERE message_id = $1 AND kind <> 1`, messageID)
+	rows, err := q.Query(ctx, `SELECT user_id FROM message_mentions WHERE message_id = $1 AND kind <> $2`, messageID, chat.MentionKindGroup)
 	if err != nil {
 		slog.Warn("push: load mentions", "err", err)
 		return nil

@@ -95,8 +95,13 @@ func (s *Service) createScheduled(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	if _, err := chat.ChannelForMessages(ctx, s.DB, ch); err != nil {
+	info, err := chat.ChannelForMessages(ctx, s.DB, ch)
+	if err != nil {
 		return err
+	}
+	// A forum post needs a title and a scheduled message has none: only replies fit.
+	if info.Type == chat.ChannelTypeForum && req.ParentID == nil {
+		return httpx.ErrInvalidInput("a forum post needs a title; schedule a reply in a post instead")
 	}
 	if err := chat.ValidateTarget(ctx, s.DB, ch, req.ParentID, req.ReplyToID); err != nil {
 		return err

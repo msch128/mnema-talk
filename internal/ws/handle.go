@@ -195,7 +195,7 @@ func (c *Client) handleCandidate(payload json.RawMessage) {
 // handleDiag logs a browser's own view of its voice connection, for
 // troubleshooting.
 func (c *Client) handleDiag(payload json.RawMessage) {
-	if !c.hasNativeLease() && len(payload) <= 4096 && c.allowDiag(time.Now()) {
+	if !c.hasNativeLease() && len(payload) <= payloadCap(events.ClientWebrtcDiag) && c.allowDiag(time.Now()) {
 		slog.Debug("webrtc client diag", "user", c.User.Username, "diag", json.RawMessage(payload))
 	}
 }

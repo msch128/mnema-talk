@@ -3,6 +3,7 @@ package communityevents
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,7 +15,30 @@ import (
 type Scheduler struct {
 	Handler  *Handler
 	Interval time.Duration
+	pushes   sync.WaitGroup
+	// pusher overrides Handler.Push (tests).
+	pusher reminderPusher
 }
+
+// reminderPusher sends the push reminder of an event to one member.
+type reminderPusher interface {
+	SendEventReminder(ctx context.Context, userID, eventID uuid.UUID, title string, startTime time.Time, channelID *uuid.UUID) error
+}
+
+func (s *Scheduler) reminderPusher() reminderPusher {
+	if s.pusher != nil {
+		return s.pusher
+	}
+	if s.Handler.Push != nil {
+		return s.Handler.Push
+	}
+	return nil
+}
+
+const (
+	reminderPushWorkers = 8
+	reminderPushTimeout = 2 * time.Minute
+)
 
 func NewScheduler(h *Handler) *Scheduler {
 	return &Scheduler{
@@ -54,11 +78,7 @@ func (s *Scheduler) processActivations(ctx context.Context, now time.Time) {
 		slog.ErrorContext(ctx, "activate events failed", "err", err)
 		return
 	}
-	for _, id := range ids {
-		if ev, err := s.Handler.Store.Get(ctx, id, nil); err == nil {
-			s.Handler.broadcast(ev)
-		}
-	}
+	s.broadcastEvents(ctx, ids)
 }
 
 func (s *Scheduler) processCompletions(ctx context.Context, now time.Time) {
@@ -67,11 +87,7 @@ func (s *Scheduler) processCompletions(ctx context.Context, now time.Time) {
 		slog.ErrorContext(ctx, "complete events failed", "err", err)
 		return
 	}
-	for _, id := range ids {
-		if ev, err := s.Handler.Store.Get(ctx, id, nil); err == nil {
-			s.Handler.broadcast(ev)
-		}
-	}
+	s.broadcastEvents(ctx, ids)
 }
 
 func (s *Scheduler) processReminders(ctx context.Context, now time.Time) {
@@ -93,21 +109,29 @@ func (s *Scheduler) dispatchReminder(ctx context.Context, r DueReminder) {
 		slog.ErrorContext(ctx, "load permissions for event reminder failed", "event_id", r.ID, "err", err)
 		return
 	}
-	if err := s.Handler.Store.MarkReminderSent(ctx, r.ID); err != nil {
-		slog.ErrorContext(ctx, "mark event reminder sent failed", "event_id", r.ID, "err", err)
-		return
-	}
 	userIDs, err := s.Handler.Store.GetRSVPUserIDs(ctx, r.ID)
 	if err != nil {
 		slog.ErrorContext(ctx, "get rsvp users for reminder failed", "event_id", r.ID, "err", err)
 		return
 	}
+	// Claim after the recipients are known, so a failure above leaves the
+	// reminder due, and only one pass or server process sends it.
+	claimed, err := s.Handler.Store.ClaimReminder(ctx, r.ID)
+	if err != nil {
+		slog.ErrorContext(ctx, "mark event reminder sent failed", "event_id", r.ID, "err", err)
+		return
+	}
+	if !claimed {
+		return
+	}
+	recipients := userIDs[:0]
 	for _, uid := range userIDs {
 		if r.ChannelID != nil && snap != nil && !snap.Channel(perm.Subject{ID: uid}, *r.ChannelID).Has(perm.ViewChannel) {
 			continue
 		}
-		s.remind(ctx, uid, r)
+		recipients = append(recipients, uid)
 	}
+	s.remind(ctx, recipients, r)
 }
 
 func (s *Scheduler) reminderSnapshot(ctx context.Context) (*perm.Snapshot, error) {
@@ -117,15 +141,64 @@ func (s *Scheduler) reminderSnapshot(ctx context.Context) (*perm.Snapshot, error
 	return s.Handler.Perms.Snapshot(ctx)
 }
 
-func (s *Scheduler) remind(ctx context.Context, uid uuid.UUID, r DueReminder) {
-	if s.Handler.Push != nil {
-		if err := s.Handler.Push.SendEventReminder(ctx, uid, r.ID, r.Title, r.StartTime, r.ChannelID); err != nil {
-			slog.DebugContext(ctx, "send push event reminder failed", "user_id", uid, "err", err)
+// remind tells the recipients over WebSocket right away; the pushes, which
+// can be slow, go out in the background so the tick is not held up.
+func (s *Scheduler) remind(ctx context.Context, recipients []uuid.UUID, r DueReminder) {
+	if s.Handler.Events != nil {
+		for _, uid := range recipients {
+			s.Handler.Events.SendToUsers([]uuid.UUID{uid}, events.EventReminder, EventReminderPayload{
+				EventID: r.ID, Title: r.Title, StartTime: r.StartTime, ChannelID: r.ChannelID,
+			})
 		}
 	}
-	if s.Handler.Events != nil {
-		s.Handler.Events.SendToUsers([]uuid.UUID{uid}, events.EventReminder, EventReminderPayload{
-			EventID: r.ID, Title: r.Title, StartTime: r.StartTime, ChannelID: r.ChannelID,
-		})
+	pusher := s.reminderPusher()
+	if pusher == nil || len(recipients) == 0 {
+		return
+	}
+	s.pushes.Add(1)
+	go func() {
+		defer s.pushes.Done()
+		s.pushAll(ctx, pusher, recipients, r)
+	}()
+}
+
+// pushAll sends the push reminders with a few workers, giving up after
+// reminderPushTimeout.
+func (s *Scheduler) pushAll(ctx context.Context, pusher reminderPusher, recipients []uuid.UUID, r DueReminder) {
+	ctx, cancel := context.WithTimeout(ctx, reminderPushTimeout)
+	defer cancel()
+	todo := make(chan uuid.UUID)
+	var wg sync.WaitGroup
+	for range min(reminderPushWorkers, len(recipients)) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for uid := range todo {
+				if err := pusher.SendEventReminder(ctx, uid, r.ID, r.Title, r.StartTime, r.ChannelID); err != nil {
+					slog.DebugContext(ctx, "send push event reminder failed", "user_id", uid, "err", err)
+				}
+			}
+		}()
+	}
+	for _, uid := range recipients {
+		if ctx.Err() != nil {
+			break
+		}
+		todo <- uid
+	}
+	close(todo)
+	wg.Wait()
+}
+
+// Wait blocks until the push reminders already started are done.
+func (s *Scheduler) Wait() { s.pushes.Wait() }
+
+// broadcastEvents announces the current state of each event; an event that
+// vanished meanwhile is skipped.
+func (s *Scheduler) broadcastEvents(ctx context.Context, ids []uuid.UUID) {
+	for _, id := range ids {
+		if ev, err := s.Handler.Store.Get(ctx, id, nil); err == nil {
+			s.Handler.broadcast(ev)
+		}
 	}
 }

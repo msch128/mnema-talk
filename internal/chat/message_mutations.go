@@ -39,7 +39,7 @@ func editMessageTx(ctx context.Context, tx pgx.Tx, online OnlineSource, messageI
 	err := tx.QueryRow(ctx, `
 		SELECT user_id, EXISTS (SELECT 1 FROM media WHERE message_id = messages.id),
 		       EXISTS (SELECT 1 FROM polls WHERE message_id = messages.id), forwarded
-		FROM messages WHERE id = $1 FOR UPDATE`, messageID).Scan(&author, &hasMedia, &isPoll, &forwarded)
+		FROM messages WHERE id = $1 FOR NO KEY UPDATE`, messageID).Scan(&author, &hasMedia, &isPoll, &forwarded)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return errMessageNotFound
 	}
@@ -185,22 +185,43 @@ func ToggleReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID
 // ToggleReactionAs is ToggleReaction where canAdd says whether userID may add
 // reactions; without it only taking back an existing one works (403 otherwise).
 func ToggleReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, canAdd bool) ([]ReactionSummary, error) {
+	reactions, _, err := changeReaction(ctx, p, messageID, userID, emoji, canAdd, func(present bool) bool { return !present })
+	return reactions, err
+}
+
+// SetReactionAs makes userID's reaction present (want) or absent, whatever it
+// was: asking for the state it already has changes nothing (changed false).
+// canAdd and the limits are as for ToggleReactionAs.
+func SetReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, want, canAdd bool) (reactions []ReactionSummary, changed bool, err error) {
+	return changeReaction(ctx, p, messageID, userID, emoji, canAdd, func(bool) bool { return want })
+}
+
+// changeReaction moves userID's reaction to the state target picks from the
+// current one, under the message's row lock, which serializes all changes to
+// one message so concurrent adds cannot overshoot the limits.
+func changeReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, canAdd bool, target func(present bool) bool) ([]ReactionSummary, bool, error) {
+	changed := false
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		// The row lock serializes toggles on one message, so concurrent
-		// adds cannot overshoot the limits.
-		var one int
-		err := tx.QueryRow(ctx, `SELECT 1 FROM messages WHERE id = $1 FOR UPDATE`, messageID).Scan(&one)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return errMessageNotFound
+		// adds cannot overshoot the limits. NO KEY UPDATE still lets replies,
+		// uploads and quotes (FOR KEY SHARE through their foreign keys) in.
+		if err := lockMessage(ctx, tx, messageID); err != nil {
+			return err
 		}
-		if err != nil {
-			return fmt.Errorf("lock message: %w", err)
+		var present bool
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3)`,
+			messageID, userID, emoji).Scan(&present); err != nil {
+			return fmt.Errorf("read reaction: %w", err)
 		}
-		tag, err := tx.Exec(ctx, `DELETE FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`, messageID, userID, emoji)
-		if err != nil {
-			return fmt.Errorf("remove reaction: %w", err)
+		if target(present) == present {
+			return nil
 		}
-		if tag.RowsAffected() > 0 {
+		changed = true
+		if present {
+			if _, err := tx.Exec(ctx, `DELETE FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`, messageID, userID, emoji); err != nil {
+				return fmt.Errorf("remove reaction: %w", err)
+			}
 			return nil
 		}
 		if !canAdd {
@@ -209,13 +230,25 @@ func ToggleReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UU
 		return addReaction(ctx, tx, messageID, userID, emoji)
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return reactionSummary(ctx, p, messageID)
+	reactions, err := reactionSummary(ctx, p, messageID)
+	return reactions, changed, err
 }
 
-// addReaction adds the reaction unless the user or the message is at its limit
-// or the custom emoji no longer exists (taking a reaction back always works).
+// lockMessage takes the message's row lock (errMessageNotFound when it is gone).
+func lockMessage(ctx context.Context, tx pgx.Tx, messageID uuid.UUID) error {
+	var one int
+	err := tx.QueryRow(ctx, `SELECT 1 FROM messages WHERE id = $1 FOR NO KEY UPDATE`, messageID).Scan(&one)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return errMessageNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("lock message: %w", err)
+	}
+	return nil
+}
+
 func addReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, emoji string) error {
 	if err := requireKnownEmoji(ctx, tx, emoji); err != nil {
 		return err
@@ -240,23 +273,11 @@ func addReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, em
 
 // reactionSummary loads one message's reactions, in the order they were first given.
 func reactionSummary(ctx context.Context, p *db.Pool, messageID uuid.UUID) ([]ReactionSummary, error) {
-	rows, err := p.Query(ctx, `
-		SELECT emoji, COUNT(*), array_agg(user_id ORDER BY created_at)
-		FROM message_reactions WHERE message_id = $1
-		GROUP BY emoji ORDER BY MIN(created_at)`, messageID)
-	if err != nil {
-		return nil, fmt.Errorf("load reactions: %w", err)
+	msgs := []Message{{Reactions: []ReactionSummary{}}}
+	if err := loadReactions(ctx, p, msgs, map[uuid.UUID]int{messageID: 0}, []uuid.UUID{messageID}); err != nil {
+		return nil, err
 	}
-	defer rows.Close()
-	out := make([]ReactionSummary, 0)
-	for rows.Next() {
-		var r ReactionSummary
-		if err := rows.Scan(&r.Emoji, &r.Count, &r.Users); err != nil {
-			return nil, err
-		}
-		out = append(out, r)
-	}
-	return out, rows.Err()
+	return msgs[0].Reactions, nil
 }
 
 // requireKnownEmoji refuses the token of a custom emoji that was deleted (or

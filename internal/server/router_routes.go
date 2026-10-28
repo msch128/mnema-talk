@@ -6,7 +6,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/bot"
+	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/webhook"
 	"github.com/msch128/mnema-talk/web"
@@ -42,11 +44,11 @@ func (c *components) mountAPI(api chi.Router) {
 		httpx.WriteError(w, httpx.NewAPIError(http.StatusMethodNotAllowed, httpx.CodeInvalidInput, "method not allowed"))
 	})
 
-	api.Get("/health", health(newHealthCheck(c.d.DB, c.d.StorageReady, healthCacheTTL), c.d.Version))
+	api.Get("/health", HealthHandler(c.d))
 	if cfg.MetricsToken != "" {
 		api.Get("/metrics", requireBearer(cfg.MetricsToken, metricsHandler(c.opsSrc)))
 	}
-	api.Get("/legal", legal(cfg))
+	api.Get("/legal", LegalHandler(cfg))
 	if cfg.APIDocs {
 		// A page, not JSON: without a session it sends the browser to sign in.
 		api.Get("/docs", apiDocs(c.sessions, web.APIDocsPage()))
@@ -123,12 +125,29 @@ func (c *components) mountAuthenticated(authed chi.Router) {
 		c.mediaH.MountUploads(u)
 	})
 
+	// Cover images are parsed in memory (at most 5 MB), like avatars.
+	authed.Group(func(u chi.Router) {
+		u.Use(httpx.MaxBody(communityevents.CoverBodyLimit))
+		c.eventsH.MountUploads(u)
+	})
+
 	authed.Route("/admin", c.mountAdmin)
 }
 
 func (c *components) mountAdmin(adm chi.Router) {
-	adm.Use(auth.RequireAnyPerm(c.permSvc, perm.AdminArea), httpx.MaxBody(httpx.DefaultMaxBody))
-	adm.Use(c.auditLog.Middleware)
+	adm.Use(auth.RequireAnyPerm(c.permSvc, perm.AdminArea), c.auditLog.Middleware)
+	// Avatars are parsed in memory (at most 5 MB): their routes sit outside
+	// the JSON body limit, like the member avatar routes.
+	adm.Group(func(u chi.Router) {
+		u.Use(httpx.MaxBody(media.MaxAvatarBytes + 1<<20))
+		c.webhookH.MountAdminUploads(u)
+		c.botH.MountAdminUploads(u)
+	})
+	adm.Group(c.mountAdminJSON)
+}
+
+func (c *components) mountAdminJSON(adm chi.Router) {
+	adm.Use(httpx.MaxBody(httpx.DefaultMaxBody))
 	c.auditLog.Mount(adm.With(auth.RequirePerm(c.permSvc, perm.ViewAuditLog)))
 	c.authH.MountAdmin(adm)
 	c.chatH.MountAdmin(adm)

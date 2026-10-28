@@ -2,10 +2,12 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 )
 
@@ -36,7 +38,12 @@ func (a *Authenticator) bindLegacy(ctx context.Context, tokenID, botUser uuid.UU
 	a.bindTried[tokenID] = now
 	a.mu.Unlock()
 
-	for _, who := range a.bindCandidates(ctx, tokenID) {
+	candidates, err := a.bindCandidates(ctx, tokenID)
+	if err != nil {
+		slog.Warn("legacy bot token: cannot list its likely issuers yet", "token_id", tokenID, "err", err)
+		return
+	}
+	for _, who := range candidates {
 		ok, err := a.minterQualifies(ctx, who, botUser)
 		if err != nil {
 			slog.Warn("legacy bot token: cannot decide its issuer yet", "token_id", tokenID, "err", err)
@@ -60,17 +67,30 @@ func (a *Authenticator) bindLegacy(ctx context.Context, tokenID, botUser uuid.UU
 }
 
 // bindCandidates lists who may have issued a legacy token, likeliest first.
-func (a *Authenticator) bindCandidates(ctx context.Context, tokenID uuid.UUID) []uuid.UUID {
+// A database error is returned, never skipped: dropping the creator would
+// bind the token to the Owner for good.
+func (a *Authenticator) bindCandidates(ctx context.Context, tokenID uuid.UUID) ([]uuid.UUID, error) {
 	var out []uuid.UUID
 	var creator *uuid.UUID
-	if err := a.DB.QueryRow(ctx, `
-		SELECT b.created_by FROM bot_tokens t JOIN bots b ON b.id = t.bot_id WHERE t.id = $1`, tokenID).Scan(&creator); err == nil && creator != nil {
+	err := a.DB.QueryRow(ctx, `
+		SELECT b.created_by FROM bot_tokens t JOIN bots b ON b.id = t.bot_id WHERE t.id = $1`, tokenID).Scan(&creator)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+	if creator != nil {
 		out = append(out, *creator)
 	}
 	var owner uuid.UUID
-	if err := a.DB.QueryRow(ctx, `
-		SELECT id FROM users WHERE role = 'admin' AND NOT is_bot AND `+auth.ActiveSQL("")+` ORDER BY created_at LIMIT 1`).Scan(&owner); err == nil && (len(out) == 0 || out[0] != owner) {
+	err = a.DB.QueryRow(ctx, `
+		SELECT id FROM users WHERE role = 'admin' AND NOT is_bot AND `+auth.ActiveSQL("")+` ORDER BY created_at LIMIT 1`).Scan(&owner)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return out, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if len(out) == 0 || out[0] != owner {
 		out = append(out, owner)
 	}
-	return out
+	return out, nil
 }

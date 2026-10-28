@@ -2,6 +2,7 @@ package linkpreview
 
 import (
 	"container/list"
+	"errors"
 	"sync"
 	"time"
 )
@@ -9,6 +10,8 @@ import (
 // flightGroup collapses concurrent calls with the same key into one: the
 // first caller runs fn, the others wait for and share its result. A tiny
 // stand-in for golang.org/x/sync/singleflight, which is not a dependency.
+// errBusy is the leader's own limit, not the link's: a waiter that sees it
+// runs fn itself instead of inheriting it.
 type flightGroup[T any] struct {
 	mu    sync.Mutex
 	calls map[string]*flight[T]
@@ -25,10 +28,17 @@ func (g *flightGroup[T]) do(key string, fn func() (T, error)) (T, error) {
 	if g.calls == nil {
 		g.calls = map[string]*flight[T]{}
 	}
-	if c, ok := g.calls[key]; ok {
+	for {
+		c, ok := g.calls[key]
+		if !ok {
+			break
+		}
 		g.mu.Unlock()
 		<-c.done
-		return c.val, c.err
+		if !errors.Is(c.err, errBusy) {
+			return c.val, c.err
+		}
+		g.mu.Lock()
 	}
 	c := &flight[T]{done: make(chan struct{})}
 	g.calls[key] = c

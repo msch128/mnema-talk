@@ -105,13 +105,14 @@ func (c *Commands) listForChannel(w http.ResponseWriter, r *http.Request) error 
 	}
 	var list []found
 	rows, err := c.DB.Query(r.Context(), `
-		SELECT c.id, c.bot_id, c.name, c.description, c.options, c.disabled, c.created_at, b.user_id, b.name, u.avatar_s3_key
+		SELECT `+commandColumnsAs("c")+`, b.user_id, b.name, u.avatar_s3_key
 		FROM bot_commands c JOIN bots b ON b.id = c.bot_id JOIN users u ON u.id = b.user_id
 		WHERE NOT c.disabled AND NOT b.disabled ORDER BY c.name, b.name`)
 	if err == nil {
 		list, err = pgx.CollectRows(rows, func(r pgx.CollectableRow) (found, error) {
 			var x found
-			err := r.Scan(&x.ID, &x.BotID, &x.Name, &x.Description, &x.Options, &x.Disabled, &x.CreatedAt, &x.BotUser, &x.BotName, &x.Avatar)
+			var err error
+			x.Command, err = scanCommandWith(r, &x.BotUser, &x.BotName, &x.Avatar)
 			return x, err
 		})
 	}
@@ -122,8 +123,15 @@ func (c *Commands) listForChannel(w http.ResponseWriter, r *http.Request) error 
 	if out == nil {
 		out = []ChannelCommand{}
 	}
+	// The verdict depends on the bot's account only, so it is evaluated once per bot.
+	canSend := map[uuid.UUID]bool{}
 	for _, f := range list {
-		if snap.Channel(perm.Subject{ID: f.BotUser}, ch).Has(perm.ViewChannel | perm.SendMessages) {
+		ok, seen := canSend[f.BotUser]
+		if !seen {
+			ok = snap.Channel(perm.Subject{ID: f.BotUser}, ch).Has(perm.ViewChannel | perm.SendMessages)
+			canSend[f.BotUser] = ok
+		}
+		if ok {
 			out = append(out, ChannelCommand{Command: f.Command, BotName: f.BotName, BotAvatarURL: auth.AvatarURL(f.Avatar)})
 		}
 	}
@@ -169,9 +177,7 @@ func buildInteractionPayload(id uuid.UUID, token string, ch uuid.UUID, cmd Comma
 
 func (c *Commands) deliverOrRollback(botID, id uuid.UUID, payload []byte) error {
 	if !c.Deliver.DeliverInteraction(botID, payload) {
-		c.store.mu.Lock()
-		delete(c.store.m, id)
-		c.store.mu.Unlock()
+		c.store.remove(id)
 		return httpx.ErrConflict("the bot is not connected")
 	}
 	return nil

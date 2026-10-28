@@ -39,5 +39,8 @@ func (h *Handler) MountBot(r chi.Router, send func(http.Handler) http.Handler) {
 // @Failure 503 {object} httpx.DiscordError "File storage is not available."
 // @Router /api/bot/v1/channels/{channelID}/upload [post]
 func (h *Handler) botUpload(w http.ResponseWriter, r *http.Request) error {
+	if h.Store == nil {
+		return httpx.ErrUnavailable("file storage is not configured")
+	}
 	return h.upload(w, r)
 }

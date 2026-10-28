@@ -116,13 +116,35 @@ func (r *Registry) Add(b Builtin) error {
 	if _, dup := r.byID[id]; dup {
 		return fmt.Errorf("slash: built-in command %q registered twice", d.Name)
 	}
+	if err := validOptions(d); err != nil {
+		return err
+	}
+	r.list = append(r.list, b)
+	r.byID[id] = b
+	return nil
+}
+
+// validOptions checks the options of a definition: valid names, no name twice,
+// a known type, and choices only on string options.
+func validOptions(d Definition) error {
+	seen := map[string]bool{}
 	for _, o := range d.Options {
 		if !nameRE.MatchString(o.Name) || o.Description == "" {
 			return fmt.Errorf("slash: command %q has an invalid option %q", d.Name, o.Name)
 		}
+		if seen[o.Name] {
+			return fmt.Errorf("slash: command %q has the option %q twice", d.Name, o.Name)
+		}
+		seen[o.Name] = true
+		switch o.Type {
+		case OptionString, OptionInteger, OptionBoolean, OptionUser, OptionChannel:
+		default:
+			return fmt.Errorf("slash: command %q option %q has the unknown type %d", d.Name, o.Name, o.Type)
+		}
+		if len(o.Choices) > 0 && o.Type != OptionString {
+			return fmt.Errorf("slash: command %q option %q has choices but is not a string option", d.Name, o.Name)
+		}
 	}
-	r.list = append(r.list, b)
-	r.byID[id] = b
 	return nil
 }
 

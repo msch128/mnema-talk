@@ -3,14 +3,13 @@ package chat
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"slices"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/mention"
 )
 
 // Mention keywords: @all reaches every active member, @here active connected members.
@@ -53,26 +52,9 @@ type OnlineSource interface {
 	OnlineUserIDs() []uuid.UUID
 }
 
-// mentionToken finds "@name" at the start of the text or after a character
-// that cannot be part of a username (see auth.ValidateUsername).
-var mentionToken = regexp.MustCompile(`(?:^|[^A-Za-z0-9_.-])@([A-Za-z0-9_.-]{3,64})`)
-
 // ParseMentions returns the lower-cased names mentioned in content, each once,
-// including the keywords "all" and "here". A trailing '.' or '-' (end of a
-// sentence) is not part of the name.
-func ParseMentions(content string) []string {
-	seen := map[string]bool{}
-	var names []string
-	for _, m := range mentionToken.FindAllStringSubmatch(content, -1) {
-		name := strings.ToLower(strings.TrimRight(m[1], ".-"))
-		if len(name) < 3 || len(name) > 32 || seen[name] {
-			continue
-		}
-		seen[name] = true
-		names = append(names, name)
-	}
-	return names
-}
+// including the keywords "all" and "here" (see the mention package).
+func ParseMentions(content string) []string { return mention.Names(content) }
 
 // Why a user is mentioned (message_mentions.kind). A lower kind wins when a
 // user is reached more than one way.
@@ -131,10 +113,10 @@ func mentionIDs(ctx context.Context, q db.Querier, targets mentionTargets, onlin
 	return ids, nil
 }
 
-func allowedMentions(ids map[uuid.UUID]int16, policy MentionPolicy, targets mentionTargets) []MentionedUser {
+func allowedMentions(ids map[uuid.UUID]int16, policy MentionPolicy, targets mentionTargets, online []uuid.UUID) []MentionedUser {
 	out := make([]MentionedUser, 0, len(ids))
 	for id, kind := range ids {
-		if mentionSkipped(policy, targets, id) {
+		if mentionSkipped(policy, targets, online, id) {
 			continue
 		}
 		if !mentionVisible(policy, id) {
@@ -145,14 +127,17 @@ func allowedMentions(ids map[uuid.UUID]int16, policy MentionPolicy, targets ment
 	return out
 }
 
-func mentionSkipped(policy MentionPolicy, targets mentionTargets, id uuid.UUID) bool {
-	if !policy.NoUsers {
+// mentionSkipped reports whether the policy turns the mention of id into plain
+// text: with NoUsers only AllowUsers and those the group mentions reach
+// (@all everyone, @here the online) are notified.
+func mentionSkipped(policy MentionPolicy, targets mentionTargets, online []uuid.UUID, id uuid.UUID) bool {
+	if !policy.NoUsers || slices.Contains(policy.AllowUsers, id) {
 		return false
 	}
-	if targets.all || targets.here {
+	if targets.all || (targets.here && slices.Contains(online, id)) {
 		return false
 	}
-	return !slices.Contains(policy.AllowUsers, id)
+	return true
 }
 
 func mentionVisible(policy MentionPolicy, id uuid.UUID) bool {

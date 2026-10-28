@@ -1,6 +1,8 @@
 package communityevents
 
 import (
+	"bytes"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -70,6 +72,28 @@ type UpdateEventRequest struct {
 	ChannelID   *uuid.UUID `json:"channel_id,omitempty" format:"uuid" binding:"optional" extensions:"x-nullable"`
 	Location    *string    `json:"location,omitempty" maxLength:"255" binding:"optional" extensions:"x-nullable"`
 	Status      *string    `json:"status,omitempty" binding:"optional"`
+	// ClearEndTime is set when the request carried "end_time": null, which
+	// removes the end time (an absent end_time leaves it unchanged).
+	ClearEndTime bool `json:"-"`
+}
+
+// UnmarshalJSON decodes the request strictly (unknown fields are refused, as
+// httpx.DecodeJSON does) and records an explicit "end_time": null.
+func (r *UpdateEventRequest) UnmarshalJSON(data []byte) error {
+	type plain UpdateEventRequest
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode((*plain)(r)); err != nil {
+		return err
+	}
+	var probe struct {
+		EndTime json.RawMessage `json:"end_time"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	r.ClearEndTime = string(probe.EndTime) == "null"
+	return nil
 }
 
 // RSVPRequest sets the caller's RSVP response.

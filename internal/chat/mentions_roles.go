@@ -44,7 +44,7 @@ func resolveMentionSet(ctx context.Context, q db.Querier, content string, author
 		return MentionSet{}, err
 	}
 	delete(ids, authorID)
-	set := MentionSet{Users: allowedMentions(ids, policy, targets)}
+	set := MentionSet{Users: allowedMentions(ids, policy, targets, online)}
 	if len(roles) > 0 {
 		if set, err = addRoleMentions(ctx, q, set, roles, authorID, policy); err != nil {
 			return set, err
@@ -130,23 +130,22 @@ type roleHit struct {
 	role       MentionRole
 }
 
-// matchRoles finds "@Role Name" in content, case-insensitively. A mention
-// ends at a character that cannot be part of a name, as for users; of two
-// roles matching from the same "@" the longer name wins ("@Dev Team" is not
-// also "@Dev"). Role names may contain spaces, so this scans for the known
-// names instead of tokenising.
-func matchRoles(content string, roles []MentionRole) []MentionRole {
-	return hitRoles(roleHits(content, roles))
-}
-
-// roleHits are the surviving "@Role Name" matches of content, longest first
-// per position.
+// roleHits finds "@Role Name" in content, case-insensitively. A mention ends
+// at a character that cannot be part of a name, as for users; of two roles
+// matching from the same "@" the longer name wins ("@Dev Team" is not also
+// "@Dev"). Role names may contain spaces, so this scans for the known names
+// instead of tokenising.
 func roleHits(content string, roles []MentionRole) []roleHit {
 	if len(roles) == 0 || !strings.Contains(content, "@") {
 		return nil
 	}
+	lower := strings.ToLower(content)
 	var hits []roleHit
 	for _, r := range roles {
+		// Most roles are not in the text at all: skip compiling for them.
+		if !strings.Contains(lower, strings.ToLower(r.Name)) {
+			continue
+		}
 		re, err := regexp.Compile(`(?i)@` + regexp.QuoteMeta(r.Name))
 		if err != nil {
 			continue
@@ -185,11 +184,13 @@ func mentionBounded(content string, start, end int) bool {
 	if end >= len(content) {
 		return true
 	}
-	next := content[end]
-	if next == '.' && (end+1 >= len(content) || !isNameChar(content[end+1])) {
-		return true
+	// A trailing '.' or '-' run that no name character follows ends the
+	// sentence, as for users (see ParseMentions).
+	rest := strings.TrimLeft(content[end:], ".-")
+	if len(rest) < len(content)-end {
+		return rest == "" || !isNameChar(rest[0])
 	}
-	return !isNameChar(next)
+	return !isNameChar(content[end])
 }
 
 func isNameChar(c byte) bool {

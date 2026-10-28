@@ -82,6 +82,10 @@
       },
       "auth.AccountInfo": {
         "properties": {
+          "confirmation_sent": {
+            "description": "ConfirmationSent is only present in the answer to PUT /api/users/me/email\nfor a new address: false when the address was saved but the\nconfirmation mail was refused (too many mails or SMTP failure), so the\nclient can offer to send it again. Omitted when no mail was due.",
+            "type": "boolean"
+          },
           "email": {
             "description": "Email is the caller's own address; omitted when none is set. It is never\nshown to other members or administrators.",
             "type": "string"
@@ -311,6 +315,11 @@
       },
       "auth.ChangePasswordRequest": {
         "properties": {
+          "code": {
+            "description": "Code is a current authenticator code or an unused recovery code; needed\nonly while two-factor sign-in is on.",
+            "maxLength": 32,
+            "type": "string"
+          },
           "current_password": {
             "format": "password",
             "type": "string"
@@ -331,7 +340,7 @@
         "properties": {
           "code": {
             "description": "Code is generated (12 characters) when omitted or empty.",
-            "pattern": "^[A-Za-z0-9_-]{6,64}$",
+            "pattern": "^[A-Za-z0-9_-]{12,64}$",
             "type": "string"
           },
           "expires_in_hours": {
@@ -544,6 +553,11 @@
       },
       "auth.PasswordConfirmRequest": {
         "properties": {
+          "code": {
+            "description": "Code is a current authenticator code or an unused recovery code; needed\nonly while two-factor sign-in is on.",
+            "maxLength": 32,
+            "type": "string"
+          },
           "current_password": {
             "format": "password",
             "type": "string"
@@ -656,6 +670,11 @@
       },
       "auth.SetEmailRequest": {
         "properties": {
+          "code": {
+            "description": "Code is a current authenticator code or an unused recovery code; needed\nonly while two-factor sign-in is on.",
+            "maxLength": 32,
+            "type": "string"
+          },
           "current_password": {
             "format": "password",
             "type": "string"
@@ -3406,7 +3425,7 @@
       "chat.Poll": {
         "properties": {
           "anonymous": {
-            "description": "Anonymous polls never name voters: options carry counts only.",
+            "description": "Anonymous polls never name voters: options carry counts only, and only\nonce the poll has ended (a running one reports 0 for every option).",
             "type": "boolean"
           },
           "closed": {
@@ -4889,6 +4908,7 @@
       "discordimport.EveryoneInfo": {
         "properties": {
           "applied": {
+            "description": "Applied is reserved: @everyone is never changed, so it is always false.",
             "type": "boolean"
           },
           "dropped": {
@@ -5056,7 +5076,7 @@
             "type": "string"
           },
           "type": {
-            "description": "Type is the Mnema type: text or voice (a Talk).",
+            "description": "Type is the Mnema type: text, voice (a Talk), stage or forum.",
             "type": "string"
           },
           "user_limit": {
@@ -5260,7 +5280,7 @@
             "type": "array"
           },
           "kept_roles": {
-            "description": "KeptRoles counts created roles that stay because the caller can no\nlonger manage them (moved above their highest role since).",
+            "description": "KeptRoles counts created roles that stay because the caller can no\nlonger manage them (moved above their highest role since). While any\nstay, the import is not marked undone and can be undone again.",
             "type": "integer"
           },
           "removed": {
@@ -6496,7 +6516,7 @@
       "poll.Detail": {
         "properties": {
           "anonymous": {
-            "description": "Anonymous polls never name voters: options carry counts only.",
+            "description": "Anonymous polls never name voters: options carry counts only, and only\nonce the poll has ended (a running one reports 0 for every option).",
             "type": "boolean"
           },
           "closed": {
@@ -7524,6 +7544,10 @@
           },
           "total_bytes": {
             "type": "integer"
+          },
+          "usage_unavailable": {
+            "description": "UsageUnavailable is true when the usage could not be read in time; the\ncounts above are then zero because they are unknown.",
+            "type": "boolean"
           }
         },
         "required": [
@@ -10596,7 +10620,7 @@
     },
     "/api/admin/bots/{id}/tokens/{tokenID}/regenerate": {
       "post": {
-        "description": "Issues a new token with the same name and expiry and revokes the old one at once (its gateway connections close).",
+        "description": "Issues a new token with the same name and expiry and revokes the old one at once (its gateway connections close), in one step. Only an active token can be regenerated.",
         "operationId": "regenerateBotToken",
         "parameters": [
           {
@@ -10630,6 +10654,16 @@
               }
             },
             "description": "Issued; the secret is shown once."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT: the token is expired or revoked."
           },
           "401": {
             "content": {
@@ -15152,6 +15186,16 @@
               }
             },
             "description": "FORBIDDEN: missing the Manage reports permission."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the before cursor no longer exists (it was deleted since the previous page); reload the list."
           },
           "429": {
             "content": {
@@ -19865,7 +19909,7 @@
     },
     "/api/auth/password": {
       "put": {
-        "description": "Signs out all other sessions and keeps the current one (a fresh cookie is set); open WebSockets are closed and reconnect with it. Five wrong current passwords trigger a lockout (429).",
+        "description": "Signs out all other sessions and keeps the current one (a fresh cookie is set); open WebSockets are closed and reconnect with it. Needs the current password and, while two-factor sign-in is on, a current code. Five wrong current passwords trigger a lockout (429).",
         "operationId": "changePassword",
         "requestBody": {
           "content": {
@@ -19918,7 +19962,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: current password is incorrect, or cross-origin request rejected."
+            "description": "FORBIDDEN: current password or code is incorrect, or cross-origin request rejected."
           },
           "429": {
             "content": {
@@ -19928,7 +19972,7 @@
                 }
               }
             },
-            "description": "RATE_LIMITED: too many requests.",
+            "description": "RATE_LIMITED: too many requests, or the second step is locked.",
             "headers": {
               "Retry-After": {
                 "description": "Seconds until the client may retry.",
@@ -24444,7 +24488,7 @@
             }
           },
           {
-            "description": "Sort order: 'latest_activity' (default) or 'newest'.",
+            "description": "Sort order: 'latest_activity' (default; 'activity' is accepted as an alias) or 'newest' ('creation' is accepted as an alias). Other values are rejected.",
             "in": "query",
             "name": "sort",
             "schema": {
@@ -24481,6 +24525,15 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "description": "With latest_activity order and before: the last_activity_at the client saw for the before post. Paging then continues exactly behind that position even when the post has got or lost a reply since.",
+            "in": "query",
+            "name": "before_activity",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -24496,6 +24549,16 @@
               }
             },
             "description": "Posts."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT"
           },
           "401": {
             "content": {
@@ -24525,7 +24588,7 @@
                 }
               }
             },
-            "description": "NOT_FOUND"
+            "description": "NOT_FOUND: the channel, or the before post (deleted since the previous page), does not exist."
           }
         },
         "security": [
@@ -26934,7 +26997,7 @@
         ]
       },
       "patch": {
-        "description": "Updates an event. Requires ManageEvents permission.",
+        "description": "Updates an event. Requires ManageEvents permission. \"end_time\": null removes the end time; an event without an end counts as over two hours after it starts. Moving the start or end re-derives the status of an event that is not cancelled. The status follows the event's times: PATCH accepts status \"cancelled\" (same as POST cancel) or the current status, and any other change is refused with 409.",
         "operationId": "updateCommunityEvent",
         "parameters": [
           {
@@ -26999,6 +27062,16 @@
               }
             },
             "description": "NOT_FOUND"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the status change is not allowed."
           }
         },
         "security": [
@@ -27014,7 +27087,7 @@
     },
     "/api/events/{id}/cancel": {
       "post": {
-        "description": "Marks an event as cancelled. Requires ManageEvents permission.",
+        "description": "Marks an event as cancelled. Requires ManageEvents permission. An event that is already cancelled or completed is refused with 409.",
         "operationId": "cancelCommunityEvent",
         "parameters": [
           {
@@ -27058,6 +27131,16 @@
               }
             },
             "description": "NOT_FOUND"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the event is already cancelled or completed."
           }
         },
         "security": [
@@ -27205,6 +27288,26 @@
               }
             },
             "description": "NOT_FOUND"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "PAYLOAD_TOO_LARGE"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNSUPPORTED_MEDIA_TYPE"
           }
         },
         "security": [
@@ -27267,7 +27370,7 @@
         ]
       },
       "put": {
-        "description": "Sets caller's response to going, interested, or not_going.",
+        "description": "Sets caller's response to going, interested, or not_going. Case, surrounding spaces and a space or hyphen instead of the underscore are tolerated (\"Not Going\").",
         "operationId": "setCommunityEventRSVP",
         "parameters": [
           {
@@ -27399,7 +27502,7 @@
     },
     "/api/health": {
       "get": {
-        "description": "Pings the database.",
+        "description": "Pings the database and checks object storage; the result is cached for 2 s.",
         "operationId": "getHealth",
         "responses": {
           "200": {
@@ -27411,16 +27514,6 @@
               }
             },
             "description": "Healthy."
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/httpx.ErrorResponse"
-                }
-              }
-            },
-            "description": "INTERNAL_ERROR: sanitized server failure."
           },
           "503": {
             "content": {
@@ -28274,6 +28367,16 @@
             },
             "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the before cursor no longer exists (it was deleted since the previous page); reload the list."
+          },
           "429": {
             "content": {
               "application/json": {
@@ -29024,6 +29127,16 @@
               }
             },
             "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the before cursor no longer exists (it was deleted since the previous page); reload the list."
           },
           "429": {
             "content": {
@@ -31130,7 +31243,7 @@
             }
           },
           {
-            "description": "Timezone offset for during (e.g. +02:00, -05:00, or minutes).",
+            "description": "Timezone offset for during (e.g. +02:00, -0500, or minutes east of UTC; a signed run of three digits such as -300 is ambiguous and refused).",
             "in": "query",
             "name": "tz",
             "schema": {
@@ -31148,7 +31261,7 @@
             }
           },
           {
-            "description": "Sort order: newest (default), oldest or relevance.",
+            "description": "Sort order: newest (default) or oldest. relevance is accepted as an alias of newest: search has no ranking.",
             "in": "query",
             "name": "sort",
             "schema": {
@@ -31211,6 +31324,16 @@
               }
             },
             "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the before cursor no longer exists (it was deleted since the previous page); reload the list."
           },
           "429": {
             "content": {
@@ -32945,7 +33068,7 @@
     },
     "/api/users/me/email": {
       "put": {
-        "description": "Optional; used only to confirm the address and to reset the password. Needs the current password. A new address starts unconfirmed; when the server can send mail, a single-use link (valid 24 hours) is sent to it. Typing the confirmed address again keeps it confirmed. Never shown to other members. Wrong passwords count toward the same lockout as PUT /api/auth/password.",
+        "description": "Optional; used only to confirm the address and to reset the password. Needs the current password and, while two-factor sign-in is on, a current code. A new address starts unconfirmed; when the server can send mail, a single-use link (valid 24 hours) is sent to it. Typing the confirmed address again keeps it confirmed. The address is saved even when the mail is refused (too many mails for this account or address in the last hour, or the mail server fails); the answer then has confirmation_sent false and POST /api/users/me/email/resend sends it again. Never shown to other members. Wrong passwords count toward the same lockout as PUT /api/auth/password.",
         "operationId": "setEmail",
         "requestBody": {
           "content": {
@@ -32997,7 +33120,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: the current password is incorrect, or cross-origin request rejected."
+            "description": "FORBIDDEN: the current password or code is incorrect, or cross-origin request rejected."
           },
           "429": {
             "content": {
@@ -33007,7 +33130,7 @@
                 }
               }
             },
-            "description": "RATE_LIMITED: too many requests, or too many confirmation mails for this account in the last hour.",
+            "description": "RATE_LIMITED: too many requests, or the second step is locked.",
             "headers": {
               "Retry-After": {
                 "description": "Seconds until the client may retry.",
@@ -33026,16 +33149,6 @@
               }
             },
             "description": "INTERNAL_ERROR: sanitized server failure."
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/httpx.ErrorResponse"
-                }
-              }
-            },
-            "description": "UNAVAILABLE: the confirmation mail could not be sent; the address is saved and the mail can be requested again."
           }
         },
         "security": [
@@ -33051,7 +33164,7 @@
     },
     "/api/users/me/email/remove": {
       "post": {
-        "description": "Always possible; needs the current password. Pending confirmation and reset links stop working. Without an address, password reset by e-mail is not available for the account.",
+        "description": "Always possible; needs the current password and, while two-factor sign-in is on, a current code. Pending confirmation and reset links stop working. Without an address, password reset by e-mail is not available for the account.",
         "operationId": "removeEmail",
         "requestBody": {
           "content": {
@@ -33103,7 +33216,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: the current password is incorrect, or cross-origin request rejected."
+            "description": "FORBIDDEN: the current password or code is incorrect, or cross-origin request rejected."
           },
           "429": {
             "content": {
@@ -33113,7 +33226,7 @@
                 }
               }
             },
-            "description": "RATE_LIMITED: too many requests.",
+            "description": "RATE_LIMITED: too many requests, or the second step is locked.",
             "headers": {
               "Retry-After": {
                 "description": "Seconds until the client may retry.",
@@ -33386,7 +33499,7 @@
                 }
               }
             },
-            "description": "UNAVAILABLE: object storage is not available."
+            "description": "UNAVAILABLE: object storage is not available, or every export slot is busy; no export was started and none counts toward the daily limit."
           }
         },
         "security": [
@@ -34374,7 +34487,7 @@
     },
     "/api/ws": {
       "get": {
-        "description": "Upgrades to a WebSocket (requires a same-origin Origin header; a foreign origin is refused with 403 by the upgrade handler). OpenAPI cannot model WebSocket frames, so the protocol is described here.\n\nEvery frame in both directions is a JSON text message `{\"type\": string, \"payload\": any}`. At most a few events per second per connection (and per account across its connections) are processed; excess client events, and events whose payload is over the cap for their type (1 KiB, more only for an SDP answer, ICE candidate, diagnostic and media handshake), are dropped.\n\nServer to client, on connect (to this connection only):\n- `presence_snapshot`: map of user id to live status for every online user.\n- `voice_snapshot`: map of voice channel id to a map of user id to User plus `joined_at`.\n- `voice_rooms`: `{started: {channelId: time}, now}`; the server clock lets clients count up.\n\nServer to client, broadcast to all connections:\nChannel events (`message_*`, `typing`, `voice_state_update`, `webrtc_media_state`) only reach connections whose user may view that channel; the connect snapshots list only the Talks the user may view.\n- `message_create`, `message_update`: Message.\n- `message_delete`: `{id, channel_id, parent_id}`.\n- `message_reaction`: `{message_id, channel_id, reactions}`.\n- `channels_changed`: no payload; refetch GET /api/channels (sent after any category/channel/layout admin change).\n- `permissions_changed`: no payload; refetch GET /api/permissions and GET /api/channels. Sent to the users whose roles or permissions may have changed (everybody after a channel, category, overwrite or @everyone change).\n- `roles_changed`: no payload; refetch GET /api/roles and GET /api/members (a role was created, edited, deleted, reordered or assigned).\n- `emoji_changed`: no payload; refetch GET /api/emoji (a custom emoji was added, renamed or deleted).\n- `member_joined`: public User of a newly registered member.\n- `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.\n- `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.\n- `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline; for a bot that set an activity also `activity: {type, name}` (Discord activity type).\n- `voice_state_update`: `{action: \"join\", channel_id, user, started_at}` or `{action: \"leave\", channel_id, user_id}`.\n- `typing`: `{channel_id, user_id}` (to everyone except the typist).\n\nServer to client, targeted:\n- `block_updated`: to the user's own sessions only; `{user_id, blocked}` after they blocked or unblocked a member (refetch GET /api/me/blocks). The blocked member is never told.\n- `dm_created`: to every member's sessions; the direct message (`DirectMessage`) a conversation was started with, or the one the receiver was just added to.\n- `dm_member_added`: to the other members of a group conversation; `{dm_id, member}`.\n- `dm_member_removed`: to the remaining members and the leaver's sessions; `{dm_id, member}`.\n- `dm_prefs_updated`: to the user's own sessions only; `{dm_id}` after they closed, reopened or (un)favourited a conversation (refetch GET /api/dms/{id}), or `{dm_id: null}` after their direct message settings changed (refetch GET /api/dms).\n- `talk_leader`: `{channel_id, leader_id}` to everyone who may view a temporary Talk (opened from a Create-a-Talk lobby) when its leader changes; `leader_id` is null when nobody leads it.\n- `talk_moved`: `{from_channel_id, channel_id}` to the connection whose `voice_join` of a Create-a-Talk lobby opened the temporary Talk `channel_id`; the client then sends its ordinary `voice_join` for that Talk. The connection is never seated in the lobby itself.\n- `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}`, or `{refresh: true}` alone after a notification setting changed or everything was marked read (reload read states and notification settings).\n- `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.\n- `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.\n- `screen_viewers`: `{channel_id, user_id, viewers}` to voice-room members: `viewers` are the distinct users in the room watching `user_id`'s screen share (sorted ids, never the sharer). Sent whenever that set changes (`viewers: []` once when a watched share ends or loses its last viewer), and on `voice_join` one per live share to the joining connection only.\n- `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.\n- `screen_layers`: `{channel_id, user_id, layers}` to voice-room members: the layers of `user_id`'s live screen share, best first, each `{width, height, fps}` as the sharer declared them. Sent when they change, as an empty list once the share ends, and on `voice_join` one per live share to the joining connection only. A share of a client without layers has none.\n- `screen_quality`: `{channel_id, user_id, layer, auto}` to the watching connection only: the layer of `user_id`'s screen share it receives now (`-1` before the first picture) and whether the server chooses it (`auto`).\n- `screen_layers_wanted`: `{channel_id, layers}` to the sharing connection only: the indexes of its layers some viewer receives or is about to. A sender may stop encoding the others; layer 0 is always listed while nobody watches.\n- `media_handshake`: `{channel_id, user_id, wire}` to the other connections in that voice room. `wire` is opaque: the server checks only its framing (an MLS key package, welcome or public message, or a heartbeat or capability message) and never reads or logs the content.\n- `voice_kicked`: `{channel_id, reason?}` when a moderator removes the user from voice, `reason: \"room_full\"` when a voice join is refused because the room is full (the channel's `user_limit`), `reason: \"rules_not_accepted\"` when the community's rules have not been accepted yet (POST /api/onboarding/accept), `reason: \"talk_rate_limited\"` or `\"talk_unavailable\"` when joining a Create-a-Talk lobby opened no Talk (5 new Talks per 10 minutes and member, 50 open Talks per lobby), or or `reason: \"missing_permission\"` when the user may not (or no longer may) view and connect to that Talk.\n- `pong`: `{t}` echoing a `ping`.\n\nClient to server:\n- `ping` `{t}`; `presence_idle` `{idle: bool}`.\n- `typing` `{channel_id}` (text and voice channels, rate-limited; ignored without View channels and Send messages).\n- `voice_join` `{channel_id}` (needs View channels and Connect, otherwise `voice_kicked` with `reason: \"missing_permission\"`); `voice_leave`; `voice_speaking` `{active}`. The SFU drops audio without Speak and camera/screen without Video.\n- `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.\n- `media_handshake` `{channel_id, wire}`: opaque handshake bytes for the current voice room.\n- `webrtc_subscribe` `{kind: \"screen\"|\"camera\", user_id, on}` or `{kind: \"camera\", all: true, on}`. A screen subscription may carry `quality`: `\"auto\"` or the index of a layer (0 is the best); it is applied before the first picture and again whenever sent. Without one, or with `\"auto\"`, the server chooses: it starts on the best layer, moves down one layer at a time when the viewer's receiver reports show lasting loss, a rising round trip time or repeated keyframe requests, and tries one layer up again after a long stretch without trouble (a failed attempt makes the next one wait twice as long).\n- `webrtc_layers` `{layers: [{width, height, fps}, ...]}` (1 to 3, best first, strictly shrinking): the layers of the sender's own screen share. They are sent on the SFU's lower video lines.\n- `webrtc_screenshare_stop`, `webrtc_camera_stop`.\n\nUnknown event types are ignored. The server closes the connection when the session is revoked (sign-out of that session, sign-out everywhere, password change) or expires, or the account is disabled. A user keeps at most 8 browser connections: a newer one closes the oldest with close code 4001 (\"too many connections\"), after which that client should not reconnect by itself. Upgrades are rate-limited per address and per user (429), and `voice_join` beyond about one per second (burst 3) is answered with `voice_kicked`.",
+        "description": "Upgrades to a WebSocket (requires a same-origin Origin header; a foreign origin is refused with 403 by the upgrade handler). OpenAPI cannot model WebSocket frames, so the protocol is described here.\n\nEvery frame in both directions is a JSON text message `{\"type\": string, \"payload\": any}`. At most a few events per second per connection (and per account across its connections) are processed; excess client events, and events whose payload is over the cap for their type (1 KiB, more only for an SDP answer, ICE candidate, diagnostic and media handshake), are dropped.\n\nServer to client, on connect (to this connection only):\n- `presence_snapshot`: map of user id to live status for every online user.\n- `voice_snapshot`: map of voice channel id to a map of user id to User plus `joined_at`.\n- `voice_rooms`: `{started: {channelId: time}, now}`; the server clock lets clients count up.\n\nServer to client, broadcast to all connections:\nChannel events (`message_*`, `typing`, `voice_state_update`, `webrtc_media_state`) only reach connections whose user may view that channel; the connect snapshots list only the Talks the user may view.\n- `message_create`, `message_update`: Message.\n- `message_delete`: `{id, channel_id, parent_id}`.\n- `message_reaction`: `{message_id, channel_id, reactions}`.\n- `channels_changed`: no payload; refetch GET /api/channels (sent after any category/channel/layout admin change).\n- `permissions_changed`: no payload; refetch GET /api/permissions and GET /api/channels. Sent to the users whose roles or permissions may have changed (everybody after a channel, category, overwrite or @everyone change).\n- `roles_changed`: no payload; refetch GET /api/roles and GET /api/members (a role was created, edited, deleted, reordered or assigned).\n- `emoji_changed`: no payload; refetch GET /api/emoji (a custom emoji was added, renamed or deleted).\n- `member_joined`: public User of a newly registered member.\n- `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.\n- `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.\n- `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline; for a bot that set an activity also `activity: {type, name}` (Discord activity type).\n- `voice_state_update`: `{action: \"join\", channel_id, user, started_at}` or `{action: \"leave\", channel_id, user_id}`.\n- `typing`: `{channel_id, user_id}` (to everyone except the typist).\n\nServer to client, targeted:\n- `block_updated`: to the user's own sessions only; `{user_id, blocked}` after they blocked or unblocked a member (refetch GET /api/me/blocks). The blocked member is never told.\n- `dm_created`: to every member's sessions; the direct message (`DirectMessage`) a conversation was started with, or the one the receiver was just added to.\n- `dm_member_added`: to the other members of a group conversation; `{dm_id, member}`.\n- `dm_member_removed`: to the remaining members and the leaver's sessions; `{dm_id, member}`.\n- `dm_prefs_updated`: to the user's own sessions only; `{dm_id}` after they closed, reopened or (un)favourited a conversation (refetch GET /api/dms/{id}), or `{dm_id: null}` after their direct message settings changed (refetch GET /api/dms).\n- `talk_leader`: `{channel_id, leader_id}` to everyone who may view a temporary Talk (opened from a Create-a-Talk lobby) when its leader changes; `leader_id` is null when nobody leads it.\n- `talk_moved`: `{from_channel_id, channel_id}` to the connection whose `voice_join` of a Create-a-Talk lobby opened the temporary Talk `channel_id`; the client then sends its ordinary `voice_join` for that Talk. The connection is never seated in the lobby itself.\n- `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}`, or `{refresh: true}` alone after a notification setting changed or everything was marked read (reload read states and notification settings).\n- `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.\n- `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.\n- `screen_viewers`: `{channel_id, user_id, viewers}` to voice-room members: `viewers` are the distinct users in the room watching `user_id`'s screen share (sorted ids, never the sharer). Sent whenever that set changes (`viewers: []` once when a watched share ends or loses its last viewer), and on `voice_join` one per live share to the joining connection only.\n- `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.\n- `screen_layers`: `{channel_id, user_id, layers}` to voice-room members: the layers of `user_id`'s live screen share, best first, each `{width, height, fps}` as the sharer declared them. Sent when they change, as an empty list once the share ends, and on `voice_join` one per live share to the joining connection only. A share of a client without layers has none.\n- `screen_quality`: `{channel_id, user_id, layer, auto}` to the watching connection only: the layer of `user_id`'s screen share it receives now (`-1` before the first picture) and whether the server chooses it (`auto`).\n- `screen_layers_wanted`: `{channel_id, layers}` to the sharing connection only: the indexes of its layers some viewer receives or is about to. A sender may stop encoding the others; layer 0 is always listed while nobody watches.\n- `media_handshake`: `{channel_id, user_id, wire}` to the other connections in that voice room. `wire` is opaque: the server checks only its framing (an MLS key package, welcome or public message, or a heartbeat or capability message) and never reads or logs the content.\n- `voice_kicked`: `{channel_id, reason?}` when a moderator removes the user from voice, `reason: \"room_full\"` when a voice join is refused because the room is full (the channel's `user_limit`), `reason: \"rules_not_accepted\"` when the community's rules have not been accepted yet (POST /api/onboarding/accept), `reason: \"talk_rate_limited\"` or `\"talk_unavailable\"` when joining a Create-a-Talk lobby opened no Talk (5 new Talks per 10 minutes and member, 50 open Talks per lobby), or `reason: \"connection_lost\"` when the media connection of the call failed and the server dropped it (join again), `reason: \"media_unavailable\"` when the media connection of a join could not be set up (the seat is given up; join again), `reason: \"joined_elsewhere\"` to a connection whose Talk the same account joined on another connection (one connection per account and Talk holds the media), or `reason: \"missing_permission\"` when the user may not (or no longer may) view and connect to that Talk.\n- `pong`: `{t}` echoing a `ping`.\n\nClient to server:\n- `ping` `{t}`; `presence_idle` `{idle: bool}`.\n- `typing` `{channel_id}` (text and voice channels, rate-limited; ignored without View channels and Send messages).\n- `voice_join` `{channel_id}` (needs View channels and Connect, otherwise `voice_kicked` with `reason: \"missing_permission\"`); `voice_leave`; `voice_speaking` `{active}`. The SFU drops audio without Speak and camera/screen without Video.\n- `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.\n- `media_handshake` `{channel_id, wire}`: opaque handshake bytes for the current voice room.\n- `webrtc_subscribe` `{kind: \"screen\"|\"camera\", user_id, on}` or `{kind: \"camera\", all: true, on}`. A screen subscription may carry `quality`: `\"auto\"` or the index of a layer (0 is the best); it is applied before the first picture and again whenever sent. Without one, or with `\"auto\"`, the server chooses: it starts on the best layer, moves down one layer at a time when the viewer's receiver reports show lasting loss, a rising round trip time or repeated keyframe requests, and tries one layer up again after a long stretch without trouble (a failed attempt makes the next one wait twice as long).\n- `webrtc_layers` `{layers: [{width, height, fps}, ...]}` (1 to 3, best first, strictly shrinking): the layers of the sender's own screen share. They are sent on the SFU's lower video lines.\n- `webrtc_screenshare_stop`, `webrtc_camera_stop`.\n\nUnknown event types are ignored. The server closes the connection when the session is revoked (sign-out of that session, sign-out everywhere, password change) or expires, or the account is disabled. A user keeps at most 8 browser connections: a newer one closes the oldest with close code 4001 (\"too many connections\"), after which that client should not reconnect by itself. Upgrades are rate-limited per address and per user (429), and `voice_join` beyond about one per second (burst 3) is answered with `voice_kicked`.",
         "operationId": "connectWebSocket",
         "parameters": [
           {

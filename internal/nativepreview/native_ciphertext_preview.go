@@ -59,12 +59,11 @@ func NewNativeCiphertextPreviewRouter(deps server.Deps, options NativePreviewOpt
 	// Bound forged-bearer DB lookups before authentication as well as admitted
 	// account work afterwards. Both use the existing trusted client-IP policy.
 	perRelayIP := httpx.NewRateLimiter(120, time.Minute)
-	routes.Use(httpx.RequestID, httpx.ClientIPMiddleware(trusted), httpx.Logger, httpx.Recover(deps.Config.IsProduction()), httpx.SecurityHeaders(trusted, deps.Config.IsProduction()), result.relayBoundary, perRelayIP.PerIP, preview.Native.RequireUser, preview.instanceContext, preview.PreviewDeps().PerUser.By(auth.UserKey))
+	routes.Use(nativeBaseMiddleware(deps, trusted)...)
+	routes.Use(result.relayBoundary, perRelayIP.PerIP, preview.Native.RequireUser, preview.instanceContext, preview.PreviewDeps().PerUser.By(auth.UserKey))
 	perRelayUser := httpx.NewRateLimiter(60, time.Minute)
 	routes.Use(perRelayUser.By(auth.UserKey))
-	routes.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
-		httpx.WriteError(w, httpx.NewAPIError(http.StatusMethodNotAllowed, httpx.CodeInvalidInput, "method not allowed"))
-	})
+	routes.MethodNotAllowed(nativeMethodNotAllowed)
 	routes.Post(nativeCiphertextPath, httpx.Handle(result.publishCiphertext))
 	routes.Get(nativeCiphertextPath, httpx.Handle(result.listCiphertext))
 	base := preview.Router.Handler
@@ -94,8 +93,7 @@ func relayRequestRejected(request *http.Request) bool {
 
 func (r *NativeCiphertextPreviewRouter) relayBoundary(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
-		w.Header().Set("Cache-Control", "no-store")
-		w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+		nativeNoStoreHeaders(w)
 		if relayRequestRejected(request) {
 			httpx.WriteError(w, httpx.ErrForbidden("native relay request rejected"))
 			return
@@ -151,7 +149,7 @@ func (r *NativeCiphertextPreviewRouter) listCiphertext(w http.ResponseWriter, re
 	if !ok {
 		return httpx.ErrUnauthorized("authentication required")
 	}
-	if relayBodyPresent(request) {
+	if nativeBodyPresent(request) {
 		return httpx.ErrInvalidInput("native relay read body must be empty")
 	}
 	channel, err := nativeCiphertextChannel(request)
@@ -189,16 +187,6 @@ func nativeCiphertextError(err error) error {
 		return httpx.ErrUnavailable("native ciphertext request unavailable")
 	}
 }
-func relayBodyPresent(request *http.Request) bool {
-	if request.ContentLength != 0 || len(request.TransferEncoding) != 0 {
-		return true
-	}
-	if request.Body == nil {
-		return false
-	}
-	return request.Body != http.NoBody
-}
-
 func forcedEmptyQuery(target *url.URL) bool {
 	return target.ForceQuery && target.RawQuery == ""
 }

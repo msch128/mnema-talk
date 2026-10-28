@@ -19,6 +19,8 @@ const props = defineProps({
 
 const chat = useChatStore()
 const { poll, ended, left, mine, busy, canVote, votingBlocked, canEnd, hasVoted, submitsLater, pick, submit, end } = usePoll(() => props.msg)
+// The server withholds the per-option tally of a running anonymous poll.
+const tallyShown = computed(() => !poll.value.anonymous || ended.value)
 const winners = computed(() => (ended.value ? leaders(poll.value) : []))
 const interactive = computed(() => canVote.value && !busy.value)
 
@@ -69,6 +71,7 @@ async function confirmEnd() {
           @click="pick(o.id)"
         >
           <span
+            v-if="tallyShown"
             aria-hidden="true"
             data-testid="poll-bar"
             :class="['absolute inset-y-0 left-0 transition-[width]', winners.includes(o.id) ? 'bg-mnema-accent/30' : 'bg-mnema-accent/15']"
@@ -77,7 +80,7 @@ async function confirmEnd() {
           <span class="relative flex items-center gap-2">
             <Check v-if="mine.includes(o.id)" class="h-3.5 w-3.5 shrink-0 text-mnema-accent" aria-hidden="true" />
             <span class="min-w-0 flex-1 wrap-break-word text-mnema-text" :class="winners.includes(o.id) ? 'font-semibold' : ''">{{ o.label }}</span>
-            <span class="shrink-0 text-xs tabular-nums text-mnema-muted">{{ o.votes }} · {{ percent(o.votes, poll.total_voters) }}%</span>
+            <span v-if="tallyShown" class="shrink-0 text-xs tabular-nums text-mnema-muted">{{ o.votes }} · {{ percent(o.votes, poll.total_voters) }}%</span>
           </span>
         </button>
         <p v-if="!poll.anonymous && o.voters?.length" class="mt-0.5 truncate px-1 text-xs text-mnema-tertiary" data-testid="poll-voters">{{ voterNames(o.voters) }}</p>

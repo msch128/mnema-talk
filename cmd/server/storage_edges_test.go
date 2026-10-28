@@ -29,6 +29,7 @@ func TestLazyStoreMethodsUnavailableAndDelegated(t *testing.T) {
 	}
 	store := media.NewMemoryStore()
 	l := startLazyStore(ctx, func(context.Context) (media.Store, error) { return store, nil }, time.Millisecond, time.Millisecond)
+	waitReady(t, l)
 	for _, key := range []string{"keep", "delete", "batch"} {
 		if err := l.Upload(ctx, key, bytes.NewBufferString("value"), "text/plain", 5); err != nil {
 			t.Fatal(err)

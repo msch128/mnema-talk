@@ -146,6 +146,7 @@
       "storageOff": "File storage isn’t set up on this server.",
       "exportNone": "There is no export to download.",
       "exportSameSite": "The download can only be started from this site.",
+      "exportBusy": "Exports of other members are being built right now. Try again in a few minutes.",
       "pushOff": "Push notifications are turned off on this server.",
       "pushDeviceLimit": "Push works on at most {count} devices per account. Remove one first.",
       "pushSubscription": "Your browser’s push subscription wasn’t accepted. Turn notifications off and on again.",
@@ -517,7 +518,6 @@
     "sortLabel": "Sort results by",
     "sortNewest": "Newest",
     "sortOldest": "Oldest",
-    "sortRelevance": "Relevance",
     "searchResults": "Results",
     "resultsCount": {
       "one": "{count} result",
@@ -639,6 +639,9 @@
     "memberDeafened": "Deafened",
     "kicked": "You were removed from the Talk.",
     "roomFull": "This Talk is full. Try again when someone leaves.",
+    "connectionLost": "The media connection to the Talk was lost. Join again to continue.",
+    "mediaUnavailable": "The Talk could not set up its media connection. Try joining again.",
+    "joinedElsewhere": "You joined this Talk from another window or device.",
     "mediaUnsupported": "This browser cannot protect the media of a Talk, so it cannot join. Use Chrome or Edge 137+, Safari 17+ or Firefox 129+.",
     "mediaUnprotected": "This browser cannot protect the Talk. Microphone, camera and screen stay off.",
     "mediaRekeyed": "The media keys of this Talk were reset by someone in it or by the server. The Talk sets up new keys by itself.",
@@ -2759,9 +2762,11 @@
       "unused": "Not used",
       "saved": "Address saved.",
       "savedConfirm": "Address saved. Check your inbox to confirm it.",
+      "savedNoMail": "Address saved, but the confirmation e-mail could not be sent. Use “Send again” in a moment.",
       "removed": "Address removed.",
       "invalid": "That does not look like an e-mail address.",
-      "needPassword": "Enter your current password to confirm."
+      "needPassword": "Enter your current password to confirm.",
+      "needCode": "Enter a current authenticator or recovery code."
     },
     "loading": "Loading…",
     "twoFactor": {

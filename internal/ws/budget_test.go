@@ -115,3 +115,19 @@ func TestEventBudgetCapsHandshakeBytes(t *testing.T) {
 		t.Fatal("oversized handshake was allowed")
 	}
 }
+
+// The per-type caps of payloadCaps are what the budget enforces, for
+// signaling and handshake events as for ordinary ones.
+func TestEventBudgetEnforcesPayloadCaps(t *testing.T) {
+	now := time.Now()
+	for _, typ := range []string{"webrtc_answer", "webrtc_candidate", "media_handshake", "webrtc_diag", "typing"} {
+		limit := payloadCap(typ)
+		var b eventBudget
+		if !b.allowEvent(typ, limit, now) {
+			t.Fatalf("%s at its cap was dropped", typ)
+		}
+		if b.allowEvent(typ, limit+1, now) {
+			t.Fatalf("%s over its cap was allowed", typ)
+		}
+	}
+}

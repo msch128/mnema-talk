@@ -155,11 +155,9 @@ func (c *Client) nativeWatchdog() {
 func (c *Client) revalidateNative() {
 	s := c.native
 	defer s.checking.Store(false)
-	generation, old, observed := s.snapshot()
-	_ = observed
+	generation, old, _ := s.snapshot()
 	fresh, err := s.authenticator.RevalidateNativeLease(s.ctx, old.Principal())
-	current, _, again := s.snapshot()
-	_ = again
+	current := s.currentGeneration()
 	if current != generation || c.closed.Load() {
 		return
 	}
@@ -250,13 +248,6 @@ func (h *Hub) expireNativeClient(c *Client) bool {
 	return true
 }
 
-// Native application-state publication is authorized after waiting on Hub.mu.
-// The family observer seals under that same lock, so a frame that waited behind
-// confirmed revocation cannot publish participant state. Browser calls delegate
-// to their existing helpers, including their established presence behavior.
-//
-// view, when set, limits the event to the connections whose user may view
-// that channel.
 func nativeFamily(c *Client, id uuid.UUID) bool {
 	if c.native == nil {
 		return false
@@ -288,6 +279,13 @@ func attachView(scope *eventScope, h *Hub, view uuid.UUID) bool {
 	return true
 }
 
+// Native application-state publication is authorized after waiting on Hub.mu.
+// The family observer seals under that same lock, so a frame that waited behind
+// confirmed revocation cannot publish participant state. Browser calls delegate
+// to their existing helpers, including their established presence behavior.
+//
+// view, when set, limits the event to the connections whose user may view
+// that channel.
 func (c *Client) emitApplicationEvent(eventType string, payload any, excludeSelf bool, voice *uuid.UUID, view uuid.UUID) {
 	h := c.hub
 	if browserBroadcast(c, eventType, payload, excludeSelf, voice, view) {

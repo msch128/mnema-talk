@@ -83,8 +83,10 @@ func (s *Service) sendOne(ctx context.Context, d dueScheduled) {
 			s.fail(ctx, d, reasonFor(apiErr))
 			return
 		}
-		if ctx.Err() == nil {
-			slog.Warn("scheduled: send", "err", err)
+		// ctx is the per-message context: a timeout of the send itself must show
+		// in the log, only a stopping service stays quiet.
+		if errors.Is(err, context.DeadlineExceeded) || ctx.Err() == nil {
+			slog.Warn("scheduled: send", "err", err, "id", d.id)
 		}
 	}
 }
@@ -92,16 +94,12 @@ func (s *Service) sendOne(ctx context.Context, d dueScheduled) {
 // post runs the send path. The scheduled row is removed in the transaction
 // that stores the message, so a message is never sent twice nor lost half-way.
 func (s *Service) post(ctx context.Context, d dueScheduled) (uuid.UUID, error) {
-	sub, ok, err := s.subjectOf(ctx, d.user)
+	user, ok, err := s.activeUser(ctx, d.user)
 	if err != nil {
 		return uuid.Nil, err
 	}
 	if !ok {
 		return uuid.Nil, httpx.ErrForbidden("the account cannot send")
-	}
-	user, err := auth.GetUser(ctx, s.DB, sub.ID)
-	if err != nil {
-		return uuid.Nil, err
 	}
 	ctx, err = chat.SendContextFor(s.Perms, auth.WithUser(ctx, user), d.channel, perm.SendMessages)
 	if err != nil {

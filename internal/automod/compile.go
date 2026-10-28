@@ -6,6 +6,7 @@ import (
 	"unicode"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/mention"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -52,7 +53,11 @@ func set(ids []uuid.UUID) map[uuid.UUID]bool {
 func compileWords(words []string) (*regexp.Regexp, error) {
 	var alts []string
 	for _, w := range words {
-		parts := strings.Split(fold(w), "*")
+		folded := fold(w)
+		if strings.Trim(folded, "* ") == "" {
+			continue // nothing left to match: an empty branch would match everything
+		}
+		parts := strings.Split(folded, "*")
 		for i, p := range parts {
 			parts[i] = phrasePart(p)
 		}
@@ -152,18 +157,6 @@ func coveredBy(host string, domains []string) bool {
 	return false
 }
 
-// mentionToken is the same pattern as chat.mentionToken (this package cannot
-// import chat): "@name" at the start or after a character that cannot be part
-// of a username.
-var mentionToken = regexp.MustCompile(`(?:^|[^A-Za-z0-9_.-])@([A-Za-z0-9_.-]{3,64})`)
-
-// distinctMentions counts the different names mentioned, @all and @here included.
-func distinctMentions(content string) int {
-	seen := map[string]bool{}
-	for _, m := range mentionToken.FindAllStringSubmatch(content, -1) {
-		if name := strings.ToLower(strings.TrimRight(m[1], ".-")); len(name) >= 3 {
-			seen[name] = true
-		}
-	}
-	return len(seen)
-}
+// distinctMentions counts the different names mentioned, @all and @here
+// included, exactly as chat reads them.
+func distinctMentions(content string) int { return len(mention.Names(content)) }

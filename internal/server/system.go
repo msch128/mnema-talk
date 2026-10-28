@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"runtime"
 	"sync"
@@ -98,6 +99,9 @@ type StorageHealth struct {
 	TotalBytes      int64 `json:"total_bytes"`
 	AttachmentBytes int64 `json:"attachment_bytes"`
 	AvatarBytes     int64 `json:"avatar_bytes"`
+	// UsageUnavailable is true when the usage could not be read in time; the
+	// counts above are then zero because they are unknown.
+	UsageUnavailable bool `json:"usage_unavailable,omitempty" binding:"optional"`
 }
 
 // VoiceHealth reports the SFU and the live calls.
@@ -203,20 +207,57 @@ func (h *systemHandler) dbHealth(ctx context.Context) (DatabaseHealth, StorageHe
 		return dbH, storH
 	}
 	dbH.Reachable = true
-	var latest string
-	var applied int
-	if err := h.db.QueryRow(ctx, `SELECT COUNT(*), COALESCE(MAX(filename), '') FROM schema_migrations`).Scan(&applied, &latest); err == nil {
-		dbH.LatestMigration, dbH.AppliedMigrations = latest, applied
+	if m, err := migrationStatus(ctx, h.db); err != nil {
+		slog.Warn("system health: migration status unavailable", "error", err)
+	} else {
+		dbH.LatestMigration, dbH.AppliedMigrations, dbH.PendingMigrations = m.latest, m.applied, m.pending
 	}
-	if files, err := db.MigrationFiles(); err == nil && len(files) > applied {
-		dbH.PendingMigrations = len(files) - applied
+	if t, err := mediaTotals(ctx, h.db); err != nil {
+		slog.Warn("system health: storage usage unavailable", "error", err)
+		storH.UsageUnavailable = true
+	} else {
+		storH.Files, storH.TotalBytes, storH.AvatarBytes = t.files, t.totalBytes, t.avatarBytes
+		storH.AttachmentBytes = t.totalBytes - t.avatarBytes
 	}
-	_ = h.db.QueryRow(ctx, `
+	return dbH, storH
+}
+
+// migrations is what the schema_migrations table says against the embedded
+// migration files.
+type migrations struct {
+	latest  string
+	applied int
+	pending int
+}
+
+// migrationStatus counts the applied migrations and those still pending. It
+// returns an error rather than a guess when the table cannot be read, so a
+// slow database never shows every migration as pending.
+func migrationStatus(ctx context.Context, q db.Querier) (migrations, error) {
+	var m migrations
+	if err := q.QueryRow(ctx, `SELECT COUNT(*), COALESCE(MAX(filename), '') FROM schema_migrations`).Scan(&m.applied, &m.latest); err != nil {
+		return migrations{}, err
+	}
+	if files, err := db.MigrationFiles(); err == nil && len(files) > m.applied {
+		m.pending = len(files) - m.applied
+	}
+	return m, nil
+}
+
+// mediaUsage is what the live (not deleted) media rows hold.
+type mediaUsage struct {
+	files, totalBytes, avatarBytes int64
+}
+
+// mediaTotals sums the live media rows; avatarBytes is the share of avatars
+// and banners.
+func mediaTotals(ctx context.Context, q db.Querier) (mediaUsage, error) {
+	var t mediaUsage
+	err := q.QueryRow(ctx, `
 		SELECT COUNT(*), COALESCE(SUM(size_bytes), 0),
 		       COALESCE(SUM(size_bytes) FILTER (WHERE s3_key LIKE 'avatars/%' OR s3_key LIKE 'banners/%'), 0)
-		FROM media WHERE NOT is_deleted`).Scan(&storH.Files, &storH.TotalBytes, &storH.AvatarBytes)
-	storH.AttachmentBytes = storH.TotalBytes - storH.AvatarBytes
-	return dbH, storH
+		FROM media WHERE NOT is_deleted`).Scan(&t.files, &t.totalBytes, &t.avatarBytes)
+	return t, err
 }
 
 func (h *systemHandler) storageHealth(base StorageHealth) StorageHealth {

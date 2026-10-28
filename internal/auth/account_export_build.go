@@ -18,14 +18,14 @@ const (
 	// The archive is streamed to object storage while it is made, so memory
 	// stays at one page of rows whatever the size of the export. Three bounds
 	// apply: messages stop at exportMaxMessages or exportMessageBytes of JSON
-	// (the archive says so in "truncated"), the other lists at exportMaxRows,
-	// and the compressed archive at exportMaxBytes, which fails the export.
-	exportMaxRows = 50_000
-	exportPage    = 1000
+	// (the archive says so in "truncated"), the other lists at exportMaxRows
+	// (truncated.json names the ones that were cut), and the compressed archive at exportMaxBytes, which fails the export.
+	exportPage = 1000
 )
 
 // The bounds are variables so tests can lower them.
 var (
+	exportMaxRows      = 50_000
 	exportMaxMessages  = 200_000
 	exportMessageBytes = 48 << 20
 	exportMaxBytes     = int64(64 << 20)
@@ -52,6 +52,7 @@ func (b *budgetWriter) Write(p []byte) (int, error) {
 const exportReadme = `Your data from Mnema Talk (GDPR Art. 20).
 
 profile.json    your account: names, bio, status, language, role, e-mail address, settings
+avatar.*        your profile picture, if you set one (as stored; the file name is in profile.json)
 banner.*        your profile banner, if you set one (as stored; the file name is in profile.json)
 settings.json   notification levels per channel and category
 messages.json   the messages you wrote (channel_name is empty for channels you cannot see any more)
@@ -74,6 +75,7 @@ saved.json      the messages you saved (their ids, your note and when; not the s
 reminders.json  your reminders (the message id and the times; not the message text)
 scheduled_messages.json  your scheduled messages that were not sent yet (your text, the time and the state)
 rsvps.json      your RSVPs to community events
+truncated.json  only present when a list was cut: the files that hold more rows than the archive keeps
 
 The files are meant for machines: file names and keys are in English whatever
 language your account uses, and messages.json keeps your messages as typed,
@@ -128,6 +130,33 @@ func (z *zipFiles) add(name string, v any) error {
 	return enc.Encode(v)
 }
 
+// exportStep is one file of the archive and the function that builds its content.
+type exportStep struct {
+	name  string
+	build func() (any, error)
+}
+
+// addSteps builds and adds every step; it returns the names of the files that
+// were cut at the row limit.
+func (z *zipFiles) addSteps(steps []exportStep) (cut []string, err error) {
+	for _, s := range steps {
+		v, err := s.build()
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", s.name, err)
+		}
+		if c, ok := v.(capped); ok {
+			if c.truncated {
+				cut = append(cut, s.name)
+			}
+			v = c.value
+		}
+		if err := z.add(s.name, v); err != nil {
+			return nil, err
+		}
+	}
+	return cut, nil
+}
+
 // writeArchive collects the person's own data into a ZIP written to out.
 // Channel names appear only for channels the person can still view; nothing
 // here names another member.
@@ -145,11 +174,8 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 	if _, err := w.Write([]byte(exportReadme)); err != nil {
 		return err
 	}
-	steps := []struct {
-		name  string
-		build func() (any, error)
-	}{
-		{"profile.json", func() (any, error) { return h.exportProfileWithBanner(ctx, z, user) }},
+	steps := []exportStep{
+		{"profile.json", func() (any, error) { return h.exportProfileWithImages(ctx, z, user) }},
 		{"settings.json", func() (any, error) { return exportSettings(ctx, q, user, viewable) }},
 		{"edits.json", func() (any, error) { return exportEdits(ctx, q, user) }},
 		{"reactions.json", func() (any, error) { return exportReactions(ctx, q, user) }},
@@ -171,14 +197,9 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 		{"scheduled_messages.json", func() (any, error) { return exportScheduled(ctx, q, user, viewable) }},
 		{"rsvps.json", func() (any, error) { return exportRSVPs(ctx, q, user) }},
 	}
-	for _, s := range steps {
-		v, err := s.build()
-		if err != nil {
-			return fmt.Errorf("%s: %w", s.name, err)
-		}
-		if err := z.add(s.name, v); err != nil {
-			return err
-		}
+	cut, err := z.addSteps(steps)
+	if err != nil {
+		return err
 	}
 	mw, err := z.zw.Create("messages.json")
 	if err != nil {
@@ -187,26 +208,36 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 	if err := streamMessages(ctx, q, user, viewable, mw); err != nil {
 		return fmt.Errorf("messages.json: %w", err)
 	}
+	if len(cut) > 0 {
+		if err := z.add("truncated.json", map[string]any{"limit": exportMaxRows, "files": cut}); err != nil {
+			return err
+		}
+	}
 	return z.zw.Close()
 }
 
 // viewableChannels are the channels the person may still see, by the live
 // permission state. Without a permission service no channel name is revealed.
-func (h *Handler) viewableChannels(ctx context.Context, user uuid.UUID) (map[uuid.UUID]bool, error) {
-	out := map[uuid.UUID]bool{}
+func (h *Handler) viewableChannels(ctx context.Context, user uuid.UUID) (viewSet, error) {
 	if h.Perms == nil {
-		return out, nil
+		return viewSet{}, nil
 	}
 	snap, err := h.Perms.Snapshot(ctx)
 	if err != nil {
-		return nil, err
+		return viewSet{}, err
 	}
 	u, err := GetUser(ctx, h.Sessions.DB, user)
 	if err != nil {
-		return nil, err
+		return viewSet{}, err
 	}
-	for _, c := range snap.ViewableChannels(u.Subject()) {
-		out[c] = true
+	channels := snap.ViewableChannels(u.Subject())
+	if channels == nil {
+		// The Owner and Administrators see every channel.
+		return viewSet{all: true}, nil
+	}
+	out := viewSet{ids: make(map[uuid.UUID]bool, len(channels))}
+	for _, c := range channels {
+		out.ids[c] = true
 	}
 	return out, nil
 }

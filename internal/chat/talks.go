@@ -53,7 +53,7 @@ func lowestFreeTalkNumber(names []string) int {
 
 // SetLobby marks a voice channel as a lobby or clears the mark. Temporary
 // Talks cannot be lobbies.
-func SetLobby(ctx context.Context, p *db.Pool, id uuid.UUID, lobby bool) error {
+func SetLobby(ctx context.Context, p db.Querier, id uuid.UUID, lobby bool) error {
 	tag, err := p.Exec(ctx, `UPDATE channels SET is_lobby = $2 WHERE id = $1 AND type = 'voice' AND NOT is_temp AND ($2 = FALSE OR NOT is_stage)`, id, lobby)
 	if err != nil {
 		return fmt.Errorf("set lobby: %w", err)
@@ -69,8 +69,15 @@ func SetLobby(ctx context.Context, p *db.Pool, id uuid.UUID, lobby bool) error {
 
 // FillTalkFields loads the lobby/temporary-Talk fields of ch, which the
 // create and update statements do not return.
-func FillTalkFields(ctx context.Context, p *db.Pool, ch *Channel) {
-	_ = p.QueryRow(ctx, `SELECT is_lobby, is_temp, leader_id, is_stage FROM channels WHERE id = $1`, ch.ID).Scan(&ch.IsLobby, &ch.IsTemp, &ch.LeaderID, &ch.IsStage)
+func FillTalkFields(ctx context.Context, p *db.Pool, ch *Channel) error {
+	err := p.QueryRow(ctx, `SELECT is_lobby, is_temp, leader_id, is_stage FROM channels WHERE id = $1`, ch.ID).Scan(&ch.IsLobby, &ch.IsTemp, &ch.LeaderID, &ch.IsStage)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return errChannelNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("load talk fields: %w", err)
+	}
+	return nil
 }
 
 // OpenTempTalk creates a temporary Talk from lobbyID with creator as its

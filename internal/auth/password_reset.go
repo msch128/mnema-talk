@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -81,7 +80,7 @@ func (h *Handler) requestPasswordReset(w http.ResponseWriter, r *http.Request) e
 	if err != nil {
 		return err
 	}
-	if allowed, _ := h.rec.perAddress.Allow(addressKey(email)); allowed {
+	if allowed, _ := h.rec.resetFlood.Allow(addressKey(email)); allowed {
 		lang := requestLanguage(r)
 		h.background(func(ctx context.Context) { h.sendReset(ctx, email, lang) })
 	}
@@ -98,6 +97,9 @@ func (h *Handler) sendReset(ctx context.Context, email, lang string) {
 		if !notFound(err) {
 			slog.Warn("password reset lookup failed", "err", err)
 		}
+		return
+	}
+	if allowed, _ := h.rec.resetPerAccount.Allow(id.String()); !allowed {
 		return
 	}
 	tooOften, err := issuedTooOften(ctx, h.Sessions.DB, id, purposePasswordReset)
@@ -138,19 +140,15 @@ func (h *Handler) confirmPasswordReset(w http.ResponseWriter, r *http.Request) e
 	if !wellFormedToken(req.Token) {
 		return errInvalidLink
 	}
-	id, err := h.applyReset(r.Context(), req)
+	u, err := h.applyReset(r.Context(), req)
 	if err != nil {
 		setRetryIfBusy(w, err)
-		return err
-	}
-	u, err := GetUser(r.Context(), h.Sessions.DB, id)
-	if err != nil {
 		return err
 	}
 	h.ClearLoginLockout(u.Username, u.ID)
 	h.auditUser(r.Context(), u, "auth.password_reset_mail")
 	if h.Live != nil {
-		h.Live.DisconnectUser(id)
+		h.Live.DisconnectUser(u.ID)
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
@@ -159,9 +157,10 @@ func (h *Handler) confirmPasswordReset(w http.ResponseWriter, r *http.Request) e
 // applyReset spends the token and stores the new password in one transaction,
 // so a rejected password or a failure in between leaves the link usable and a
 // success leaves it spent. Hashing happens only for a live token of an
-// active account.
-func (h *Handler) applyReset(ctx context.Context, req PasswordResetConfirmation) (uuid.UUID, error) {
-	var id uuid.UUID
+// active account. It returns the account, read in the same transaction so a
+// failure after the commit cannot skip the follow-up work.
+func (h *Handler) applyReset(ctx context.Context, req PasswordResetConfirmation) (*User, error) {
+	var user *User
 	err := pgx.BeginFunc(ctx, h.Sessions.DB, func(tx pgx.Tx) error {
 		claim, err := consumeToken(ctx, tx, req.Token, purposePasswordReset)
 		if err != nil {
@@ -186,8 +185,11 @@ func (h *Handler) applyReset(ctx context.Context, req PasswordResetConfirmation)
 			WHERE id = $2`, hash, claim.UserID); err != nil {
 			return err
 		}
-		id = claim.UserID
-		return dropTokens(ctx, tx, claim.UserID, purposePasswordReset)
+		if err := dropTokens(ctx, tx, claim.UserID, purposePasswordReset); err != nil {
+			return err
+		}
+		user, err = GetUser(ctx, tx, claim.UserID)
+		return err
 	})
-	return id, err
+	return user, err
 }

@@ -147,6 +147,11 @@ func (h *Handler) auditEvents(ctx context.Context, id uuid.UUID) ([]HistoryEvent
 	for a := range auditKinds {
 		actions = append(actions, a)
 	}
+	// Loaded before the query so a failure cannot leave its rows open.
+	snap, err := h.Perms.Snapshot(ctx)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := h.DB.Query(ctx, `
 		SELECT created_at, action, actor_name,
 		       COALESCE(details #>> '{request,reason}', details ->> 'reason', ''),
@@ -156,10 +161,6 @@ func (h *Handler) auditEvents(ctx context.Context, id uuid.UUID) ([]HistoryEvent
 		ORDER BY id DESC LIMIT $3`, id.String(), actions, MaxHistoryEvents)
 	if err != nil {
 		return nil, fmt.Errorf("load moderation history: %w", err)
-	}
-	snap, err := h.Perms.Snapshot(ctx)
-	if err != nil {
-		return nil, err
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (HistoryEvent, error) {
 		var ev HistoryEvent

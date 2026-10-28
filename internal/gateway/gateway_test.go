@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -325,4 +326,73 @@ func TestCloseReasonsNeverCarryErrorText(t *testing.T) {
 		t.Fatal("garbage resumed")
 	}
 	check("resume decode", c, 4002, "Decode error")
+}
+
+// A bot that missed the whole buffer can resume: the replay fits the queue.
+func TestResumeReplaysTheFullBuffer(t *testing.T) {
+	s := &session{id: "s"}
+	for i := 0; i < bufferSize; i++ {
+		s.enqueue("X", json.RawMessage(`{}`))
+	}
+	c := newConnection(nil)
+	if _, ok := s.resumeOn(c, 0); !ok || c.closed() {
+		t.Fatalf("resume: ok=%v closed=%v", ok, c.closed())
+	}
+	if len(c.send) != bufferSize+1 {
+		t.Fatalf("%d frames queued, want the buffer and RESUMED", len(c.send))
+	}
+}
+
+// Ending a session that was resumed closes the connection it replaced too.
+func TestFailedAdoptClosesTheReplacedConnection(t *testing.T) {
+	g := New(Config{}) // no database: the adoption cannot confirm the token
+	botID := uuid.New()
+	old := newConnection(nil)
+	s := &session{id: "s", botID: botID, conn: old}
+	if !g.register(s) {
+		t.Fatal("register")
+	}
+	creds := &bot.Credentials{Bot: auth.BotInfo{BotID: botID, TokenID: uuid.New()}, User: &auth.User{ID: uuid.New()}}
+	c := newConnection(nil)
+	body, _ := json.Marshal(Resume{SessionID: "s"})
+	if got, fatal := g.resume(c, body, creds); got != nil || !fatal {
+		t.Fatalf("resume: %v %v", got, fatal)
+	}
+	if !old.closed() {
+		t.Fatal("the replaced connection stays open")
+	}
+}
+
+func TestDetachedSince(t *testing.T) {
+	s := &session{id: "s"}
+	c := newConnection(nil)
+	s.attach(c)
+	if _, live := s.detachedSince(); !live {
+		t.Fatal("attached session is live")
+	}
+	s.detach(c)
+	if at, live := s.detachedSince(); live || at.IsZero() {
+		t.Fatalf("detached: %v %v", at, live)
+	}
+}
+
+func TestRevokeEndsMatchingSessions(t *testing.T) {
+	g := New(Config{})
+	botID, tok1, tok2 := uuid.New(), uuid.New(), uuid.New()
+	a := &session{id: "a", botID: botID, tokenID: tok1, conn: newConnection(nil)}
+	b := &session{id: "b", botID: botID, tokenID: tok2, conn: newConnection(nil)}
+	other := &session{id: "o", botID: uuid.New(), tokenID: tok1, conn: newConnection(nil)}
+	for _, s := range []*session{a, b, other} {
+		g.register(s)
+	}
+	g.Revoke(botID, &tok1)
+	if !a.conn.closed() || b.conn.closed() || other.conn.closed() {
+		t.Fatal("only the token's sessions of that bot end")
+	}
+	g.Revoke(botID, nil)
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if !b.conn.closed() || g.byBot[botID] != nil || g.sessions["o"] == nil {
+		t.Fatalf("sessions left: %v", g.sessions)
+	}
 }

@@ -88,7 +88,7 @@ func cleanLabels(options []string) ([]string, error) {
 		if strings.IndexFunc(label, unicode.IsControl) >= 0 {
 			return nil, httpx.ErrInvalidInput("an option is one line of text")
 		}
-		key := strings.ToLower(label)
+		key := httpx.NameSkeleton(label)
 		if seen[key] {
 			return nil, httpx.ErrInvalidInput("options must differ")
 		}

@@ -3,64 +3,24 @@ package communityevents
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
-	"io"
+	"log/slog"
 	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/imgproc"
+	"github.com/msch128/mnema-talk/internal/media"
 )
 
 const maxCoverBytes = 5 << 20
 
-func readAndProcessCover(w http.ResponseWriter, r *http.Request) (*imgproc.Picture, string, error) {
-	r.Body = http.MaxBytesReader(w, r.Body, maxCoverBytes+(1<<20))
-	if err := r.ParseMultipartForm(maxCoverBytes); err != nil {
-		var maxErr *http.MaxBytesError
-		if errors.As(err, &maxErr) {
-			return nil, "", httpx.NewAPIError(http.StatusRequestEntityTooLarge, httpx.CodePayloadTooLarge, "cover image exceeds 5 MB")
-		}
-		return nil, "", httpx.ErrInvalidInput("invalid multipart form")
-	}
-	defer r.MultipartForm.RemoveAll()
-	file, _, err := r.FormFile("cover")
-	if err != nil {
-		file, _, err = r.FormFile("image")
-	}
-	if err != nil {
-		return nil, "", httpx.ErrInvalidInput("missing cover image in form")
-	}
-	defer file.Close()
-
-	data, err := io.ReadAll(io.LimitReader(file, maxCoverBytes+1))
-	if err != nil {
-		return nil, "", fmt.Errorf("read cover: %w", err)
-	}
-	if int64(len(data)) > maxCoverBytes {
-		return nil, "", httpx.NewAPIError(http.StatusRequestEntityTooLarge, httpx.CodePayloadTooLarge, "cover image exceeds 5 MB")
-	}
-
-	pic, err := imgproc.ProcessBanner(data)
-	if errors.Is(err, imgproc.ErrImage) {
-		return nil, "", httpx.ErrInvalidInput(err.Error())
-	}
-	if err != nil {
-		return nil, "", err
-	}
-
-	ext := ".png"
-	switch pic.ContentType {
-	case "image/jpeg":
-		ext = ".jpg"
-	case "image/gif":
-		ext = ".gif"
-	case "image/webp":
-		ext = ".webp"
-	}
-	return pic, ext, nil
+// readCover reads the cover picture of the request (field "cover", or "image")
+// with the checks every uploaded picture gets, and crops it to the banner ratio.
+func readCover(w http.ResponseWriter, r *http.Request) (*imgproc.Picture, error) {
+	r.Body = http.MaxBytesReader(w, r.Body, CoverBodyLimit)
+	return media.ReadPicture(r, media.PictureUpload{Fields: []string{"cover", "image"}, MaxBytes: maxCoverBytes, Process: imgproc.ProcessBanner})
 }
 
 // @Summary Upload event cover image
@@ -76,6 +36,8 @@ func readAndProcessCover(w http.ResponseWriter, r *http.Request) (*imgproc.Pictu
 // @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT"
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN"
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND"
+// @Failure 413 {object} httpx.ErrorResponse "PAYLOAD_TOO_LARGE"
+// @Failure 415 {object} httpx.ErrorResponse "UNSUPPORTED_MEDIA_TYPE"
 // @Router /api/events/{id}/cover [post]
 func (h *Handler) uploadCover(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
@@ -96,10 +58,11 @@ func (h *Handler) uploadCover(w http.ResponseWriter, r *http.Request) error {
 		return httpx.ErrUnavailable("file storage is not configured")
 	}
 
-	pic, ext, err := readAndProcessCover(w, r)
+	pic, err := readCover(w, r)
 	if err != nil {
 		return err
 	}
+	ext := media.ExtensionFor(pic.ContentType)
 
 	user := auth.UserFrom(r.Context())
 	mediaID := uuid.New()
@@ -119,12 +82,14 @@ func (h *Handler) uploadCover(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("insert media row: %w", err)
 	}
 
-	prevID, _ := h.Store.ClearCover(r.Context(), id)
-	if err := h.Store.SetCover(r.Context(), id, mediaID); err != nil {
+	prevID, err := h.Store.ReplaceCover(r.Context(), id, mediaID)
+	if err != nil {
+		// The new cover is not used: drop its row and object.
+		h.deleteMedia(r.Context(), mediaID)
 		return err
 	}
 	if prevID != nil {
-		h.deletePreviousMedia(r.Context(), *prevID)
+		h.deleteMedia(r.Context(), *prevID)
 	}
 
 	updated, err := h.Store.Get(r.Context(), id, &user.ID)
@@ -168,7 +133,7 @@ func (h *Handler) deleteCover(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if prevID != nil {
-		h.deletePreviousMedia(r.Context(), *prevID)
+		h.deleteMedia(r.Context(), *prevID)
 	}
 	user := auth.UserFrom(r.Context())
 	updated, err := h.Store.Get(r.Context(), id, &user.ID)
@@ -181,12 +146,13 @@ func (h *Handler) deleteCover(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *Handler) deletePreviousMedia(ctx context.Context, mediaID uuid.UUID) {
-	var key string
-	if err := h.DB.QueryRow(ctx, `SELECT s3_key FROM media WHERE id = $1`, mediaID).Scan(&key); err == nil {
-		_, _ = h.DB.Exec(ctx, `UPDATE media SET is_deleted = TRUE WHERE id = $1`, mediaID)
-		if h.MediaStore != nil {
-			_ = h.MediaStore.Delete(ctx, key)
-		}
+// deleteMedia removes a cover's object and row. It runs to the end when the
+// request goes away, and only logs a failure: the event is already updated.
+func (h *Handler) deleteMedia(ctx context.Context, mediaID uuid.UUID) {
+	if h.MediaStore == nil {
+		return
+	}
+	if err := media.DeleteMedia(context.WithoutCancel(ctx), h.DB, h.MediaStore, mediaID); err != nil {
+		slog.WarnContext(ctx, "could not delete event cover", "media_id", mediaID, "err", err)
 	}
 }

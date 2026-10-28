@@ -131,7 +131,7 @@ no accounts on someone else's platform.
   `during:` for a single local day), attachments (`has:file`, `filename:`),
   links, embeds, polls, edited and pinned messages, one compact filter row with
   small pickers, `"exact phrases"`, `-excluded` words and a sort order (newest,
-  oldest, relevance). A filter that matches nothing is explained, not ignored.
+  oldest). A filter that matches nothing is explained, not ignored.
 - **Notification settings per channel, category and server.** Right-click a
   channel or a category header (or press Shift+F10) and choose
   **Notifications**: all messages, mentions only, nothing, or "use the
@@ -384,15 +384,15 @@ The full model, its limits and how to report a vulnerability privately are in
 
 ## Desktop (Beta)
 
-The [desktop client](https://github.com/msch128/mnema-talk-desktop) for Windows
-(**Beta**, unsigned; Windows installer and portable ZIP, macOS disk image,
-Linux AppImage and .deb) wraps the same web app. Instead of loading code from
+The [desktop client](https://github.com/msch128/mnema-talk-desktop) for Windows,
+macOS (Apple silicon) and Linux (**Beta**, unsigned; Windows installer and
+portable ZIP, macOS disk image, Linux AppImage and .deb) wraps the same web app. Instead of loading code from
 your server it runs a **signed bundle** that it verifies on every start, with
 rollback protection and a security floor, and keeps the session in the OS
 keychain. On Windows it adds a gaming sidepeek and an `Alt+M` overlay for your Talk. The
 browser app remains the primary, fully supported client. The installer is
 not code-signed (no paid certificate), so Windows SmartScreen warns on first
-start; the steps are in
+start (macOS shows a Gatekeeper warning); the steps are in
 [doc/desktop-app.md](doc/desktop-app.md#installing-the-unsigned-beta). Details
 and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md).
 

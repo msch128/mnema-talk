@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -66,16 +67,15 @@ func TestPermissionGuards(t *testing.T) {
 	}
 }
 
-func TestAuthorizeTargetFollowsTheHierarchy(t *testing.T) {
+func TestCheckTargetFollowsTheHierarchy(t *testing.T) {
 	f := perm.NewFixture()
 	high, low := f.Role(5, perm.ManageMembers), f.Role(2, 0)
 	boss, peer, junior, plain := &User{ID: uuid.New()}, &User{ID: uuid.New()}, &User{ID: uuid.New()}, &User{ID: uuid.New()}
 	f.Assign(boss.ID, high).Assign(peer.ID, high).Assign(junior.ID, low)
 	owner := &User{ID: uuid.New(), Role: RoleAdmin}
-	h := &Handler{Perms: f.Service()}
-	req := func(actor *User) *http.Request {
-		r := httptest.NewRequest(http.MethodPost, "/", nil)
-		return r.WithContext(WithUser(r.Context(), actor))
+	snap, err := f.Service().Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
 	}
 	for _, c := range []struct {
 		what   string
@@ -91,23 +91,21 @@ func TestAuthorizeTargetFollowsTheHierarchy(t *testing.T) {
 		{"anyone over the Owner", boss, owner, false},
 		{"the Owner over themselves", owner, owner, false},
 	} {
-		if err := h.authorizeTarget(req(c.actor), c.target); (err == nil) != c.ok {
+		if err := checkTarget(snap, c.actor, c.target); (err == nil) != c.ok {
 			t.Errorf("%s: %v", c.what, err)
 		}
 	}
 	// Without a permission service only the Owner reaches this far: the Owner
 	// stays untouchable, everyone else is not checked again.
-	bare := &Handler{}
-	if err := bare.authorizeTarget(req(owner), owner); err == nil {
+	if err := checkTarget(nil, owner, owner); err == nil {
 		t.Error("the Owner is never a target")
 	}
-	if err := bare.authorizeTarget(req(owner), junior); err != nil {
+	if err := checkTarget(nil, owner, junior); err != nil {
 		t.Errorf("no service: %v", err)
 	}
-	// An unreadable state fails the check.
-	broken := &Handler{Perms: perm.NewService(nil)}
-	if err := broken.authorizeTarget(req(boss), junior); err == nil {
-		t.Error("an unreadable permission state must not allow the action")
+	// No acting member never passes the check.
+	if err := checkTarget(snap, nil, junior); err == nil {
+		t.Error("a missing actor must not be allowed to act")
 	}
 }
 

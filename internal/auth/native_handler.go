@@ -17,6 +17,9 @@ import (
 
 const nativeAuthMaxBody int64 = 16 << 10
 
+// nativeBearerPrefix precedes a native access token in Authorization.
+const nativeBearerPrefix = "Bearer "
+
 // NativeHandler is intentionally not wired into the server router. These
 // endpoints issue transport sessions, not E2EE device or content authorization.
 // Remote API access belongs to the native broker; tokens never belong in a
@@ -93,15 +96,25 @@ func nativeHeaderPresent(r *http.Request, name string) bool {
 	return false
 }
 
+// nativeBoundaryError is the one native request boundary: no browser headers
+// (403) and a plain target without query, bare "?", userinfo, fragment or
+// escaped path (400). Every native entry point goes through it.
+func nativeBoundaryError(r *http.Request) error {
+	if nativeHeaderPresent(r, "Origin") || nativeHeaderPresent(r, "Cookie") {
+		return httpx.ErrForbidden("native transport request rejected")
+	}
+	u := r.URL
+	if u.RawQuery != "" || u.ForceQuery || u.User != nil || u.Fragment != "" || u.RawPath != "" {
+		return httpx.ErrInvalidInput("invalid native request target")
+	}
+	return nil
+}
+
 func nativeRequestBoundary(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
-		if nativeHeaderPresent(r, "Origin") || nativeHeaderPresent(r, "Cookie") {
-			httpx.WriteError(w, httpx.ErrForbidden("native transport request rejected"))
-			return
-		}
-		if r.URL.RawQuery != "" || r.URL.User != nil || r.URL.Fragment != "" {
-			httpx.WriteError(w, httpx.ErrInvalidInput("invalid native request target"))
+		if err := nativeBoundaryError(r); err != nil {
+			httpx.WriteError(w, err)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -109,18 +122,15 @@ func nativeRequestBoundary(next http.Handler) http.Handler {
 }
 
 func nativeTransportRejected(r *http.Request) bool {
-	if nativeHeaderPresent(r, "Origin") || nativeHeaderPresent(r, "Cookie") {
-		return true
-	}
-	return r.URL.RawQuery != "" || r.URL.User != nil || r.URL.Fragment != ""
+	return nativeBoundaryError(r) != nil
 }
 
 func nativeBearer(r *http.Request) (string, error) {
 	values := nativeHeaderValues(r, "Authorization")
-	if len(values) != 1 || len(values[0]) != 50 || !strings.HasPrefix(values[0], "Bearer ") {
+	if len(values) != 1 || len(values[0]) != len(nativeBearerPrefix)+nativeSecretLen || !strings.HasPrefix(values[0], nativeBearerPrefix) {
 		return "", ErrNativeUnauthorized
 	}
-	token := values[0][7:]
+	token := values[0][len(nativeBearerPrefix):]
 	if _, err := parseNativeSecret(token); err != nil {
 		return "", err
 	}
@@ -263,7 +273,7 @@ func (h *NativeHandler) refresh(w http.ResponseWriter, r *http.Request) error {
 	}
 	grant, err := h.sessions.RotateRefresh(r.Context(), fields["refresh_token"])
 	if errors.Is(err, ErrNativeRefreshWait) {
-		httpx.WriteRateLimited(w, nativeRefreshInterval)
+		httpx.WriteRateLimited(w, nativeRefreshRetry(err))
 		return nil
 	}
 	if err != nil {

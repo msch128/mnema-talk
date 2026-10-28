@@ -66,7 +66,7 @@ func insertAdminUser(ctx context.Context, p *db.Pool, username, hash string) err
 		INSERT INTO users (username, display_name, password_hash, role)
 		VALUES ($1, $2, $3, 'admin')`,
 		username, defaultDisplayName(username), hash)
-	if isUniqueViolation(err) {
+	if db.IsUniqueViolation(err) {
 		return fmt.Errorf("ADMIN_USERNAME %q is taken by a regular user; choose another admin name", username)
 	}
 	if err != nil {

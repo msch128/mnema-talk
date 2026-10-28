@@ -65,34 +65,49 @@ func (l lockedNativeSession) clockLease(ctx context.Context, tx pgx.Tx, rejected
 	return now, nil
 }
 
+// ended reports a session whose account is disabled or whose family deadline
+// passed (database clock).
+func (l lockedNativeSession) ended(now time.Time) bool {
+	return l.disabled || !now.Before(l.family.expiresAt)
+}
+
+// closed reports a session that can no longer be used by anyone: it ended or
+// the family was revoked.
+func (l lockedNativeSession) closed(now time.Time) bool {
+	return l.ended(now) || l.family.revokedAt != nil
+}
+
+// mismatch reports that the locked session is not the one p authenticated: the
+// account version or the client instance differ.
+func (l lockedNativeSession) mismatch(p NativePrincipal) bool {
+	if l.version != p.tokenVersion {
+		return true
+	}
+	return l.family.version != l.version || l.family.instanceID != p.instanceID
+}
+
+// rejected reports that the locked session is closed or not the one p
+// authenticated. Lease and reissue start here; a new revocation condition
+// belongs in closed or mismatch.
+func (l lockedNativeSession) rejected(now time.Time, p NativePrincipal) bool {
+	return l.closed(now) || l.mismatch(p)
+}
+
 // leaseRejected reports that the locked session is not the one p authenticated.
 func (l lockedNativeSession) leaseRejected(now time.Time, p NativePrincipal) bool {
-	family := l.family
-	if l.disabled || l.version != p.tokenVersion {
-		return true
-	}
-	if family.version != l.version || family.instanceID != p.instanceID {
-		return true
-	}
-	if family.revokedAt != nil || !now.Before(family.expiresAt) {
-		return true
-	}
-	return !now.Before(p.familyExpiresAt) || !now.Before(p.accessExpiresAt)
+	return l.rejected(now, p) || !now.Before(p.familyExpiresAt) || !now.Before(p.accessExpiresAt)
 }
 
 // reissueLeaseRejected reports that the locked session is not the one the
 // caller authenticated, read at the database clock now. A reissue also requires
 // the stored family deadline to be the one the caller was shown.
 func (l lockedNativeSession) reissueLeaseRejected(now time.Time, expected NativePrincipal) bool {
-	family := l.family
-	if l.disabled || l.version != expected.tokenVersion {
-		return true
-	}
-	if family.version != l.version || family.instanceID != expected.instanceID {
-		return true
-	}
-	if family.revokedAt != nil || !family.expiresAt.Equal(expected.familyExpiresAt) {
-		return true
-	}
-	return !now.Before(family.expiresAt) || !now.Before(expected.accessExpiresAt)
+	return l.rejected(now, expected) || !l.family.expiresAt.Equal(expected.familyExpiresAt) || !now.Before(expected.accessExpiresAt)
+}
+
+// logoutRejected reports that the locked session is not the one principal
+// authenticated, or its access token ran out. An already revoked family is not
+// rejected: logging out twice succeeds.
+func (l lockedNativeSession) logoutRejected(now time.Time, principal NativePrincipal) bool {
+	return l.ended(now) || l.mismatch(principal) || !now.Before(principal.accessExpiresAt)
 }

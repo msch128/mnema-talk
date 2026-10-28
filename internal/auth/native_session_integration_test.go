@@ -5,6 +5,7 @@ package auth
 import (
 	"bytes"
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -133,7 +134,7 @@ func TestNativeSessionHashOnlyPersistenceAndCurrentUser(t *testing.T) {
 func TestNativeRefreshRotationAndCommittedReuseRevoke(t *testing.T) {
 	pool, _, service, proof := nativeFixture(t)
 	grant := nativeIssue(t, service, proof)
-	if output, err := service.RotateRefresh(context.Background(), grant.refresh.wire()); err != ErrNativeRefreshWait || output != (IssuedNative{}) {
+	if output, err := service.RotateRefresh(context.Background(), grant.refresh.wire()); !errors.Is(err, ErrNativeRefreshWait) || output != (IssuedNative{}) {
 		t.Fatal("initial refresh did not throttle")
 	}
 	nativeCounts(t, pool, 1, 1, 1)

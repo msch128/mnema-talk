@@ -24,24 +24,12 @@ type kickNotice struct {
 // command): the caller must hold every permission of need server-wide, the
 // Owner always, and without a permission service only the Owner passes.
 func (h *Handler) RequirePermission(r *http.Request, need perm.Set) error {
-	u := UserFrom(r.Context())
-	if u == nil {
-		return errNoSession
-	}
-	if h.Perms == nil {
-		if !u.IsAdmin() {
-			return httpx.ErrForbidden("only the Owner can do this")
+	return checkGlobal(r.Context(), h.Perms, UserFrom(r.Context()), func(p perm.Set) error {
+		if name := p.MissingName(need); name != "" {
+			return httpx.ErrForbidden("missing permission: " + name)
 		}
 		return nil
-	}
-	have, err := h.Perms.Global(r.Context(), u.Subject())
-	if err != nil {
-		return err
-	}
-	if name := have.MissingName(need); name != "" {
-		return httpx.ErrForbidden("missing permission: " + name)
-	}
-	return nil
+	})
 }
 
 // KickMember sends a member away for now: every session of theirs ends (push

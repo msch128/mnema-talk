@@ -172,11 +172,11 @@ func (h *Handler) listMembers(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	counts, err := h.visibleMessageCounts(r)
+	hidden, err := h.hiddenMessageCounts(r)
 	if err != nil {
 		return err
 	}
-	out := enrichMembers(members, roles, timeouts, counts)
+	out := enrichMembers(members, roles, timeouts, hidden)
 	httpx.WriteJSON(w, http.StatusOK, out)
 	return nil
 }
@@ -196,7 +196,7 @@ func (h *Handler) loadMemberPermissions(ctx context.Context) (map[uuid.UUID][]uu
 	return roles, snap.Timeouts(), nil
 }
 
-func enrichMembers(members []Member, roles map[uuid.UUID][]uuid.UUID, timeouts map[uuid.UUID]time.Time, counts map[uuid.UUID]int64) []Member {
+func enrichMembers(members []Member, roles map[uuid.UUID][]uuid.UUID, timeouts map[uuid.UUID]time.Time, hidden map[uuid.UUID]int64) []Member {
 	out := make([]Member, len(members))
 	for i, m := range members {
 		m.RoleIDs = roles[m.ID]
@@ -204,9 +204,9 @@ func enrichMembers(members []Member, roles map[uuid.UUID][]uuid.UUID, timeouts m
 		if until, ok := timeouts[m.ID]; ok {
 			out[i].TimeoutUntil = &until
 		}
-		if counts != nil {
+		if hidden != nil {
 			// Totals must not reveal activity in channels the viewer cannot see.
-			out[i].MessageCount = counts[m.ID]
+			out[i].MessageCount = max(m.MessageCount-hidden[m.ID], 0)
 		}
 	}
 	return out

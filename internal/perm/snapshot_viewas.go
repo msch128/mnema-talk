@@ -4,7 +4,8 @@ import "github.com/google/uuid"
 
 // AsRoleOnly returns the snapshot as seen for a made-up member who holds
 // @everyone and the one role, nothing else: no overwrite for them personally,
-// no timeout, rules accepted, not the Owner and not a bot. The returned
+// no timeout, rules accepted, not the Owner and not a bot (except for a
+// managed role, which only bots hold). The returned
 // Subject answers every question of the snapshot (Channel, CategoryVisible,
 // ...) for that member, with the real resolution order. The member exists only
 // in the returned copy; the snapshot itself is not changed. It is false when
@@ -20,6 +21,10 @@ func (s *Snapshot) AsRoleOnly(role uuid.UUID) (*Snapshot, Subject, bool) {
 	view := *s
 	view.owners = map[uuid.UUID]bool{}
 	view.bots = map[uuid.UUID]bool{}
+	if r.Managed {
+		// Managed roles are held by bots only, and bots do not inherit @everyone.
+		view.bots[member] = true
+	}
 	view.timeouts = map[uuid.UUID]Timeout{}
 	view.userRoles = map[uuid.UUID][]uuid.UUID{}
 	if !r.Everyone {

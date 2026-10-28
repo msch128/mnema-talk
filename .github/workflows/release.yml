@@ -28,7 +28,8 @@ name: Release
 #    cross-compiled without QEMU and pushed to GHCR as
 #    :X.Y.Z, :X.Y and :latest, with OCI labels plus BuildKit provenance and
 #    SBOM attestations attached to the image.
-#    Windows Desktop DEV builds live in msch128/mnema-talk-desktop.
+#    The desktop app (Windows, macOS Apple silicon, Linux) lives in
+#    msch128/mnema-talk-desktop.
 #    Releases through v0.7.3 keep the ZIP that was attached here.
 #
 # Deploying to the self-hosted server stays manual/pull-based (see README).

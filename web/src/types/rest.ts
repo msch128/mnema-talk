@@ -45,6 +45,7 @@ export function isAuditPage(value: unknown): value is AuditPage {
 export const decodeAuditPage = decoder("audit.Page", isAuditPage)
 
 export type AuthAccountInfo = {
+  confirmation_sent?: boolean
   email?: string
   email_verified: boolean
   mail_available: boolean
@@ -54,6 +55,7 @@ export type AuthAccountInfo = {
 
 export function isAuthAccountInfo(value: unknown): value is AuthAccountInfo {
   return isRecord(value)
+    && (!hasOwn(value, "confirmation_sent") || typeof value["confirmation_sent"] === 'boolean')
     && (!hasOwn(value, "email") || isString(value["email"]))
     && (hasOwn(value, "email_verified") && typeof value["email_verified"] === 'boolean')
     && (hasOwn(value, "mail_available") && typeof value["mail_available"] === 'boolean')
@@ -164,12 +166,14 @@ export function isAuthBanRequest(value: unknown): value is AuthBanRequest {
 export const decodeAuthBanRequest = decoder("auth.BanRequest", isAuthBanRequest)
 
 export type AuthChangePasswordRequest = {
+  code?: string
   current_password: string
   new_password: string
 }
 
 export function isAuthChangePasswordRequest(value: unknown): value is AuthChangePasswordRequest {
   return isRecord(value)
+    && (!hasOwn(value, "code") || isString(value["code"], 32))
     && (hasOwn(value, "current_password") && isString(value["current_password"]))
     && (hasOwn(value, "new_password") && isString(value["new_password"]))
 }
@@ -305,11 +309,13 @@ export function isAuthMemberSessionList(value: unknown): value is AuthMemberSess
 export const decodeAuthMemberSessionList = decoder("auth.MemberSessionList", isAuthMemberSessionList)
 
 export type AuthPasswordConfirmRequest = {
+  code?: string
   current_password: string
 }
 
 export function isAuthPasswordConfirmRequest(value: unknown): value is AuthPasswordConfirmRequest {
   return isRecord(value)
+    && (!hasOwn(value, "code") || isString(value["code"], 32))
     && (hasOwn(value, "current_password") && isString(value["current_password"]))
 }
 
@@ -390,12 +396,14 @@ export function isAuthSecurityNotice(value: unknown): value is AuthSecurityNotic
 export const decodeAuthSecurityNotice = decoder("auth.SecurityNotice", isAuthSecurityNotice)
 
 export type AuthSetEmailRequest = {
+  code?: string
   current_password: string
   email: string
 }
 
 export function isAuthSetEmailRequest(value: unknown): value is AuthSetEmailRequest {
   return isRecord(value)
+    && (!hasOwn(value, "code") || isString(value["code"], 32))
     && (hasOwn(value, "current_password") && isString(value["current_password"]))
     && (hasOwn(value, "email") && isString(value["email"], 254))
 }
@@ -4444,6 +4452,7 @@ export type ServerStorageHealth = {
   files: number
   reachable: boolean
   total_bytes: number
+  usage_unavailable?: boolean
 }
 
 export function isServerStorageHealth(value: unknown): value is ServerStorageHealth {
@@ -4454,6 +4463,7 @@ export function isServerStorageHealth(value: unknown): value is ServerStorageHea
     && (hasOwn(value, "files") && isInteger(value["files"]))
     && (hasOwn(value, "reachable") && typeof value["reachable"] === 'boolean')
     && (hasOwn(value, "total_bytes") && isInteger(value["total_bytes"]))
+    && (!hasOwn(value, "usage_unavailable") || typeof value["usage_unavailable"] === 'boolean')
 }
 
 export const decodeServerStorageHealth = decoder("server.StorageHealth", isServerStorageHealth)

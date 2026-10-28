@@ -41,15 +41,14 @@ func (nickCommand) Definition() slash.Definition {
 // Available: everyone who may send in the channel.
 func (nickCommand) Available(*perm.Snapshot, perm.Subject, uuid.UUID) bool { return true }
 
-// Run renames the caller through auth.UpdateProfile, the function behind
-// PUT /api/users/me/profile, so the length limit and the cleaning of the text
-// are the profile's. Only the caller's own account is ever touched: the target
+// Run renames the caller through auth.UpdateDisplayName, which shares the
+// profile's length limit and text cleaning but leaves the bio alone. Only the caller's own account is ever touched: the target
 // is the signed-in member, not an option.
 func (c nickCommand) Run(ctx context.Context, call slash.Call) (slash.Result, error) {
 	if ok, _ := c.svc.nick.rl.Allow(call.User.ID.String()); !ok {
 		return slash.Result{}, httpx.ErrRateLimited()
 	}
-	u, err := auth.UpdateProfile(ctx, c.svc.DB, call.User.ID, str(call, "name"), call.User.Bio)
+	u, err := auth.UpdateDisplayName(ctx, c.svc.DB, call.User.ID, str(call, "name"))
 	if err != nil {
 		return slash.Result{}, err
 	}

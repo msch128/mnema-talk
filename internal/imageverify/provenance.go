@@ -2,7 +2,6 @@ package imageverify
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -192,7 +191,7 @@ func (v *Verifier) checkSource(s *statement, image v1.Hash) error {
 		}
 	}
 	if !seen {
-		return errors.Join(ErrUntrusted, fmt.Errorf("provenance of %s does not record its source", image))
+		return untrusted("provenance of %s does not record its source", image)
 	}
 	return nil
 }

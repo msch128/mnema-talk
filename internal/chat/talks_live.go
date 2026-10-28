@@ -2,24 +2,17 @@ package chat
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"slices"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/events"
 )
-
-// apply folds one join or leave into the live state.
-func (m *TalkManager) apply(ev presenceEvent) {
-	m.mu.Lock()
-	change := m.applyLocked(ev)
-	m.mu.Unlock()
-	if change.changed {
-		m.persistLeader(ev.channel, change.leader)
-	}
-}
 
 // applyNext applies the oldest pending event; it reports false when there is
 // none. The event leaves the queue and takes effect under one lock, so the
@@ -124,16 +117,30 @@ func (m *TalkManager) removeIfEmpty(ch uuid.UUID) {
 		m.mu.Unlock()
 		return
 	}
-	delete(m.talks, ch)
+	// The Talk stays registered while it is removed, so a join that happens in
+	// the meantime is still counted.
 	m.mu.Unlock()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	if err := m.remove(ctx, ch, "empty"); err != nil {
+	err := m.remove(ctx, ch, "empty")
+	if err != nil {
 		slog.Warn("talks: remove empty Talk", "channel", ch, "err", err)
-		m.mu.Lock()
-		m.talks[ch] = t
+	}
+	m.finishRemoval(ch, t, err)
+}
+
+// finishRemoval ends the removal attempt of t: a removed Talk is forgotten; a
+// Talk that is still there is counted down again unless someone joined while
+// the attempt ran.
+func (m *TalkManager) finishRemoval(ch uuid.UUID, t *liveTalk, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err == nil {
+		delete(m.talks, ch)
+		return
+	}
+	if len(t.members) == 0 {
 		m.armLocked(ch, t)
-		m.mu.Unlock()
 	}
 }
 
@@ -144,9 +151,12 @@ func (m *TalkManager) hasPendingLocked(ch uuid.UUID) bool {
 // remove deletes a temporary Talk and records that the system did it.
 func (m *TalkManager) remove(ctx context.Context, ch uuid.UUID, reason string) error {
 	var name string
-	_ = m.DB.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1 AND is_temp`, ch).Scan(&name)
-	if name == "" {
+	err := m.DB.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1 AND is_temp`, ch).Scan(&name)
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil // already gone, or not temporary: nothing to remove
+	}
+	if err != nil {
+		return fmt.Errorf("look up temporary Talk: %w", err)
 	}
 	keys, err := DeleteChannel(ctx, m.DB, ch)
 	if err != nil {
@@ -182,14 +192,33 @@ func (m *TalkManager) sweepStale(ctx context.Context) {
 	var stale []uuid.UUID
 	for rows.Next() {
 		var id uuid.UUID
-		if err := rows.Scan(&id); err == nil {
-			stale = append(stale, id)
+		if err := rows.Scan(&id); err != nil {
+			slog.Warn("talks: read stale Talk", "err", err)
+			continue
 		}
+		stale = append(stale, id)
+	}
+	if err := rows.Err(); err != nil {
+		slog.Warn("talks: list stale Talks", "err", err)
 	}
 	rows.Close()
 	for _, id := range stale {
 		if err := m.remove(ctx, id, "restart"); err != nil {
 			slog.Warn("talks: remove stale Talk", "channel", id, "err", err)
+			m.retryRemoval(id)
 		}
 	}
+}
+
+// retryRemoval tracks a Talk whose removal failed like any other empty Talk,
+// so its countdown tries again.
+func (m *TalkManager) retryRemoval(ch uuid.UUID) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.talks[ch] != nil {
+		return
+	}
+	t := &liveTalk{}
+	m.talks[ch] = t
+	m.armLocked(ch, t)
 }

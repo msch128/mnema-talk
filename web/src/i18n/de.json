@@ -146,6 +146,7 @@
       "storageOff": "Auf diesem Server ist kein Dateispeicher eingerichtet.",
       "exportNone": "Es gibt keinen Export zum Herunterladen.",
       "exportSameSite": "Der Download kann nur von dieser Seite aus gestartet werden.",
+      "exportBusy": "Gerade werden die Exporte anderer Mitglieder erstellt. Versuche es in ein paar Minuten erneut.",
       "pushOff": "Push-Benachrichtigungen sind auf diesem Server ausgeschaltet.",
       "pushDeviceLimit": "Push funktioniert auf höchstens {count} Geräten pro Konto. Entferne zuerst eines.",
       "pushSubscription": "Das Push-Abo deines Browsers wurde nicht akzeptiert. Schalte Benachrichtigungen aus und wieder ein.",
@@ -517,7 +518,6 @@
     "sortLabel": "Ergebnisse sortieren nach",
     "sortNewest": "Neueste",
     "sortOldest": "Älteste",
-    "sortRelevance": "Relevanz",
     "searchResults": "Ergebnisse",
     "resultsCount": {
       "one": "{count} Ergebnis",
@@ -639,6 +639,9 @@
     "memberDeafened": "Taub geschaltet",
     "kicked": "Du wurdest aus dem Talk entfernt.",
     "roomFull": "Dieser Talk ist voll. Versuche es erneut, sobald jemand den Talk verlässt.",
+    "connectionLost": "Die Medienverbindung zum Talk ist abgebrochen. Tritt erneut bei, um fortzufahren.",
+    "mediaUnavailable": "Der Talk konnte keine Medienverbindung aufbauen. Versuche es erneut.",
+    "joinedElsewhere": "Du bist diesem Talk in einem anderen Fenster oder auf einem anderen Gerät beigetreten.",
     "mediaUnsupported": "Dieser Browser kann die Medien eines Talks nicht schützen und kann deshalb nicht beitreten. Nutze Chrome oder Edge ab 137, Safari ab 17 oder Firefox ab 129.",
     "mediaUnprotected": "Dieser Browser kann den Talk nicht schützen. Mikrofon, Kamera und Bildschirm bleiben aus.",
     "mediaRekeyed": "Die Medienschlüssel dieses Talks wurden von jemandem im Talk oder vom Server zurückgesetzt. Der Talk richtet neue Schlüssel selbst ein.",
@@ -2759,9 +2762,11 @@
       "unused": "Nicht verwendet",
       "saved": "Adresse gespeichert.",
       "savedConfirm": "Adresse gespeichert. Bestätige sie über den Link in deinem Postfach.",
+      "savedNoMail": "Adresse gespeichert, aber die Bestätigungs-Mail ließ sich nicht senden. Nutze gleich „Erneut senden“.",
       "removed": "Adresse entfernt.",
       "invalid": "Das sieht nicht nach einer E-Mail-Adresse aus.",
-      "needPassword": "Gib zur Bestätigung dein aktuelles Passwort ein."
+      "needPassword": "Gib zur Bestätigung dein aktuelles Passwort ein.",
+      "needCode": "Gib einen aktuellen Authenticator- oder Wiederherstellungscode ein."
     },
     "loading": "Lädt …",
     "twoFactor": {

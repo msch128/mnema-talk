@@ -2,7 +2,6 @@ package httpx
 
 import (
 	"net/http"
-	"strconv"
 	"sync"
 	"time"
 
@@ -62,15 +61,7 @@ func (rl *RateLimiter) Allow(key string) (bool, time.Duration) {
 	defer rl.mu.Unlock()
 
 	now := rl.now()
-	rl.sweepLocked(now)
-	e, ok := rl.entries[key]
-	if !ok {
-		rl.makeRoomLocked()
-	}
-	if !ok || !now.Before(e.reset) {
-		e = &rateEntry{reset: now.Add(rl.window)}
-		rl.entries[key] = e
-	}
+	e := rl.entryLocked(key, now)
 	e.count++
 	return e.count <= rl.limit, e.reset.Sub(now)
 }
@@ -83,6 +74,17 @@ func (rl *RateLimiter) TryAllow(key string) (bool, time.Duration) {
 	defer rl.mu.Unlock()
 
 	now := rl.now()
+	e := rl.entryLocked(key, now)
+	if e.count >= rl.limit {
+		return false, e.reset.Sub(now)
+	}
+	e.count++
+	return true, e.reset.Sub(now)
+}
+
+// entryLocked returns the live window of key, starting a fresh one (after a
+// sweep and, at the cap, an eviction) when there is none or it has elapsed.
+func (rl *RateLimiter) entryLocked(key string, now time.Time) *rateEntry {
 	rl.sweepLocked(now)
 	e, ok := rl.entries[key]
 	if !ok {
@@ -92,25 +94,14 @@ func (rl *RateLimiter) TryAllow(key string) (bool, time.Duration) {
 		e = &rateEntry{reset: now.Add(rl.window)}
 		rl.entries[key] = e
 	}
-	if e.count >= rl.limit {
-		return false, e.reset.Sub(now)
-	}
-	e.count++
-	return true, e.reset.Sub(now)
+	return e
 }
 
 // Clear forgets every key for which match reports true and returns how many.
 func (rl *RateLimiter) Clear(match func(key string) bool) int {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	n := 0
-	for k := range rl.entries {
-		if match(k) {
-			delete(rl.entries, k)
-			n++
-		}
-	}
-	return n
+	return clearMatching(rl.entries, match)
 }
 
 // sweepLocked drops expired entries at most once per sweepInterval, bounding
@@ -120,11 +111,7 @@ func (rl *RateLimiter) sweepLocked(now time.Time) {
 		return
 	}
 	rl.lastSweep = now
-	for k, e := range rl.entries {
-		if !now.Before(e.reset) {
-			delete(rl.entries, k)
-		}
-	}
+	dropWhere(rl.entries, func(_ string, e *rateEntry) bool { return !now.Before(e.reset) })
 }
 
 // makeRoomLocked enforces the hard cap before a new key is inserted: it evicts
@@ -133,18 +120,9 @@ func (rl *RateLimiter) makeRoomLocked() {
 	if len(rl.entries) < rl.maxEntries {
 		return
 	}
-	var victim string
-	var earliest time.Time
-	n := 0
-	for k, e := range rl.entries {
-		if n == 0 || e.reset.Before(earliest) {
-			victim, earliest = k, e.reset
-		}
-		if n++; n >= evictSample {
-			break
-		}
-	}
-	delete(rl.entries, victim)
+	evictSampled(rl.entries,
+		func(_ string, e *rateEntry) time.Time { return e.reset },
+		func(c, v time.Time) bool { return c.Before(v) })
 }
 
 // PerIP limits requests per resolved client address (IPv6 per /64, see
@@ -181,6 +159,6 @@ func WriteRateLimited(w http.ResponseWriter, retry time.Duration) {
 }
 
 func writeRateLimited(w http.ResponseWriter, retry time.Duration) {
-	w.Header().Set("Retry-After", strconv.Itoa(int(retry.Seconds())+1))
+	w.Header().Set("Retry-After", retryAfterSeconds(retry))
 	WriteError(w, ErrRateLimited())
 }

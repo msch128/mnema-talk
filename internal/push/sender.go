@@ -18,7 +18,7 @@ import (
 type Outcome string
 
 const (
-	// Delivered: the push service accepted the message (201 or 202).
+	// Delivered: the push service accepted the message (200, 201 or 202).
 	Delivered Outcome = "ok"
 	// Gone: the subscription no longer exists (404, 410); remove it.
 	Gone Outcome = "gone"
@@ -102,44 +102,31 @@ func classifyStatus(res *http.Response) Result {
 	case res.StatusCode == http.StatusNotFound || res.StatusCode == http.StatusGone:
 		return Result{Outcome: Gone, Reason: reason}
 	case res.StatusCode == http.StatusTooManyRequests || res.StatusCode >= 500:
-		return Result{Outcome: Retry, Reason: reason, RetryAfter: retryAfter(res.Header.Get("Retry-After"))}
+		return Result{Outcome: Retry, Reason: reason, RetryAfter: retryAfter(res.Header.Get("Retry-After"), time.Now())}
 	}
 	return Result{Outcome: Rejected, Reason: reason}
 }
 
-// maxRetryWait caps how long a push service may ask us to wait.
-const maxRetryWait = 30 * time.Second
-
-func retryAfter(header string) time.Duration {
-	seconds, err := strconv.Atoi(strings.TrimSpace(header))
-	if err != nil || seconds <= 0 {
-		return 0
+// retryAfter reads a Retry-After header (seconds or an HTTP date), capped at
+// maxRetryDelay: the one retry never waits longer than that.
+func retryAfter(header string, now time.Time) time.Duration {
+	header = strings.TrimSpace(header)
+	var wait time.Duration
+	if seconds, err := strconv.Atoi(header); err == nil {
+		wait = time.Duration(seconds) * time.Second
+	} else if at, err := http.ParseTime(header); err == nil {
+		wait = at.Sub(now)
 	}
-	return min(time.Duration(seconds)*time.Second, maxRetryWait)
+	return min(max(wait, 0), maxRetryDelay)
 }
 
 // classifyError names why no answer came back.
 func classifyError(err error) string {
-	switch {
-	case errors.Is(err, ssrf.ErrBlocked):
-		return "blocked_address"
-	case errors.Is(err, ssrf.ErrResolve):
-		return "dns_error"
-	case errors.Is(err, ssrf.ErrConnect):
-		return "connect_error"
-	case errors.Is(err, ssrf.ErrBadURL):
-		return "invalid_url"
-	case errors.Is(err, context.DeadlineExceeded):
-		return "timeout"
-	case errors.Is(err, webpush.ErrMaxPadExceeded):
+	if errors.Is(err, webpush.ErrMaxPadExceeded) {
 		return "payload_too_large"
 	}
-	var timeout interface{ Timeout() bool }
-	if errors.As(err, &timeout) && timeout.Timeout() {
-		return "timeout"
-	}
-	if msg := err.Error(); strings.Contains(msg, "tls:") || strings.Contains(msg, "x509:") {
-		return "tls_error"
+	if code, ok := ssrf.Reason(err); ok {
+		return code
 	}
 	return "request_error"
 }

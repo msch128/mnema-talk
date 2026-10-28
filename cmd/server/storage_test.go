@@ -71,3 +71,36 @@ func TestLazyStoreStopsRetryingWithContext(t *testing.T) {
 		t.Fatal("ready without a store")
 	}
 }
+
+func waitReady(t *testing.T, l *lazyStore) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for l.Ready() != nil {
+		if time.Now().After(deadline) {
+			t.Fatalf("store never became ready: %v", l.Ready())
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+func TestLazyStoreDoesNotBlockOnAHangingFirstAttempt(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	release := make(chan struct{})
+	defer close(release)
+	done := make(chan *lazyStore, 1)
+	go func() {
+		done <- startLazyStore(ctx, func(context.Context) (media.Store, error) {
+			<-release
+			return nil, errors.New("blackholed")
+		}, time.Millisecond, time.Millisecond)
+	}()
+	select {
+	case l := <-done:
+		if l.Ready() == nil {
+			t.Fatal("ready before init succeeded")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("startLazyStore waited for the first init attempt")
+	}
+}

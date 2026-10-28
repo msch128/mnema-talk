@@ -1,8 +1,11 @@
 package chat
 
 import (
+	"errors"
 	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 func TestCleanPostTitle(t *testing.T) {
@@ -71,5 +74,40 @@ func TestCleanTagEmoji(t *testing.T) {
 	overlong := strings.Repeat("a", MaxForumTagEmojiLen+1)
 	if _, err := CleanTagEmoji(overlong); err == nil {
 		t.Error("expected error for overlong emoji")
+	}
+}
+
+// A tag deleted between validation and the insert reads like a tag of another
+// channel, not like a server fault.
+func TestPostTagErrorMapsAVanishedTag(t *testing.T) {
+	err := postTagError(&pgconn.PgError{Code: "23503"})
+	if !errors.Is(err, errTagWrongChannel) {
+		t.Fatalf("foreign key violation: %v", err)
+	}
+	other := errors.New("boom")
+	if got := postTagError(other); errors.Is(got, errTagWrongChannel) || !errors.Is(got, other) {
+		t.Fatalf("other failure: %v", got)
+	}
+}
+
+func TestCleanTagEmojiCountsCharacters(t *testing.T) {
+	// 8 four-byte emoji: 32 bytes, so the limit counts characters, not bytes.
+	many := strings.Repeat("\U0001F41B", MaxForumTagEmojiLen)
+	if got, err := CleanTagEmoji(many); err != nil || got != many {
+		t.Fatalf("emoji at the character limit rejected: %v", err)
+	}
+	if _, err := CleanTagEmoji(many + "\U0001F41B"); err == nil {
+		t.Fatal("emoji beyond the character limit accepted")
+	}
+}
+
+func TestForumSortModes(t *testing.T) {
+	for mode, newest := range map[string]bool{"": false, "latest_activity": false, "activity": false, "newest": true, "creation": true} {
+		if got, err := forumSortNewest(mode); err != nil || got != newest {
+			t.Errorf("sort %q = %v, %v; want %v", mode, got, err, newest)
+		}
+	}
+	if _, err := forumSortNewest("oldest"); err == nil {
+		t.Fatal("unknown sort accepted")
 	}
 }

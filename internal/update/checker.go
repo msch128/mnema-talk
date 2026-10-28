@@ -2,7 +2,6 @@ package update
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -14,7 +13,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unicode"
 )
 
 const (
@@ -154,13 +152,17 @@ func (c *Checker) Run(ctx context.Context, initialDelay time.Duration) {
 // CheckNow is an admin's "check now": like Check, but refused within
 // ManualMinGap of the previous attempt.
 func (c *Checker) CheckNow(ctx context.Context) error {
+	// The gap is tested under checkMu, so two simultaneous requests cannot
+	// both pass it before the first one records its attempt.
+	c.checkMu.Lock()
+	defer c.checkMu.Unlock()
 	c.mu.Lock()
 	tooSoon := !c.lastAttempt.IsZero() && c.now().Sub(c.lastAttempt) < ManualMinGap
 	c.mu.Unlock()
 	if tooSoon {
 		return ErrTooSoon
 	}
-	return c.Check(ctx)
+	return c.check(ctx)
 }
 
 // Check asks GitHub for the latest release once. While a rate limit from an
@@ -168,13 +170,18 @@ func (c *Checker) CheckNow(ctx context.Context) error {
 func (c *Checker) Check(ctx context.Context) error {
 	c.checkMu.Lock()
 	defer c.checkMu.Unlock()
+	return c.check(ctx)
+}
 
+// check is Check with checkMu held by the caller.
+func (c *Checker) check(ctx context.Context) error {
 	c.mu.Lock()
 	now := c.now()
 	if now.Before(c.retryAt) {
 		c.mu.Unlock()
 		return ErrBackoff
 	}
+	prevAttempt := c.lastAttempt
 	c.lastAttempt = now
 	etag := c.etag
 	c.mu.Unlock()
@@ -185,6 +192,12 @@ func (c *Checker) Check(ctx context.Context) error {
 	defer c.mu.Unlock()
 	if !retryAt.IsZero() {
 		c.retryAt = retryAt
+	}
+	if err != nil && ctx.Err() != nil && errors.Is(err, ctx.Err()) {
+		// A cancelled check says nothing about GitHub: it neither becomes the
+		// visible error nor blocks the next manual check.
+		c.lastAttempt = prevAttempt
+		return err
 	}
 	if err != nil {
 		c.lastErr = err.Error()
@@ -291,104 +304,4 @@ func (c *Checker) backoffUntil(h http.Header) time.Time {
 		wait = maxBackoff
 	}
 	return now.Add(wait)
-}
-
-// githubRelease lists the only fields we read; everything else is ignored.
-type githubRelease struct {
-	TagName     *string `json:"tag_name"`
-	HTMLURL     string  `json:"html_url"`
-	PublishedAt string  `json:"published_at"`
-	Body        string  `json:"body"`
-	Draft       bool    `json:"draft"`
-	Prerelease  bool    `json:"prerelease"`
-}
-
-// parseRelease validates GitHub's answer strictly: one JSON object, a semver
-// tag, a release page on github.com for Repo (else a link built from the
-// tag), sanitized notes.
-func parseRelease(body []byte) (*Release, error) {
-	dec := json.NewDecoder(strings.NewReader(string(body)))
-	var gr githubRelease
-	if err := dec.Decode(&gr); err != nil {
-		return nil, errors.New("GitHub's answer is not valid JSON")
-	}
-	if dec.More() {
-		return nil, errors.New("GitHub's answer has trailing data")
-	}
-	if gr.TagName == nil {
-		return nil, errors.New("GitHub's answer has no tag_name")
-	}
-	if gr.Draft || gr.Prerelease {
-		return nil, errors.New("the latest release is a draft or pre-release")
-	}
-	v, ok := ParseSemver(*gr.TagName)
-	if !ok {
-		return nil, errors.New("the latest release tag is not a version number")
-	}
-	rel := &Release{Version: v.String(), Notes: cleanNotes(gr.Body)}
-	rel.URL = releasePage(gr.HTMLURL, v)
-	if t, err := time.Parse(time.RFC3339, gr.PublishedAt); err == nil {
-		rel.PublishedAt = t.UTC()
-	}
-	return rel, nil
-}
-
-// releasePage accepts html_url only as https://github.com/<Repo>/releases/...;
-// anything else is replaced by the tag page, so the admin UI never links to
-// a host GitHub's answer chose.
-func releasePage(raw string, v Semver) string {
-	fallback := "https://github.com/" + Repo + "/releases/tag/v" + v.String()
-	u, err := url.Parse(raw)
-	if releasePageRejected(u, err) {
-		return fallback
-	}
-	return u.String()
-}
-
-func releaseBase(releaseURL string) *url.URL {
-	base, err := url.Parse(releaseURL)
-	if err != nil {
-		slog.Debug("update check url", "err", err)
-	}
-	return base
-}
-
-func drainReleaseBody(body io.Reader) {
-	if _, err := io.Copy(io.Discard, io.LimitReader(body, 64<<10)); err != nil {
-		slog.Debug("update check drain", "err", err)
-	}
-}
-
-func releasePageRejected(u *url.URL, err error) bool {
-	if err != nil {
-		return true
-	}
-	if u.Scheme != "https" || u.Host != "github.com" || u.User != nil {
-		return true
-	}
-	if !strings.HasPrefix(u.EscapedPath(), "/"+Repo+"/releases/") || u.RawQuery != "" {
-		return true
-	}
-	return u.Fragment != ""
-}
-
-// cleanNotes drops control characters (except newlines and tabs) and
-// invalid UTF-8, and caps the length.
-func cleanNotes(s string) string {
-	s = strings.ToValidUTF8(s, "")
-	s = strings.ReplaceAll(s, "\r\n", "\n")
-	var b strings.Builder
-	n := 0
-	for _, r := range s {
-		if n >= maxNotesRunes {
-			b.WriteString("\n…")
-			break
-		}
-		if unicode.IsControl(r) && r != '\n' && r != '\t' {
-			continue
-		}
-		b.WriteRune(r)
-		n++
-	}
-	return strings.TrimSpace(b.String())
 }

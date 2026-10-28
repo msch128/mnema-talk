@@ -2,10 +2,10 @@ package server
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/opwarn"
@@ -122,13 +122,10 @@ func (h *systemHandler) operatorDBStatus(ctx context.Context) DatabaseStatus {
 		st.SizeBytes = &size
 	}
 
-	var latest string
-	var applied int
-	if err := h.db.QueryRow(ctx, `SELECT COUNT(*), COALESCE(MAX(filename), '') FROM schema_migrations`).Scan(&applied, &latest); err == nil {
-		st.LatestMigration, st.AppliedMigrations = latest, applied
-	}
-	if files, err := db.MigrationFiles(); err == nil && len(files) > applied {
-		st.PendingMigrations = len(files) - applied
+	if m, err := migrationStatus(ctx, h.db); err != nil {
+		slog.Warn("operator status: migration status unavailable", "error", err)
+	} else {
+		st.LatestMigration, st.AppliedMigrations, st.PendingMigrations = m.latest, m.applied, m.pending
 	}
 	return st
 }
@@ -142,9 +139,8 @@ func (h *systemHandler) operatorStorageStatus(ctx context.Context) StorageStatus
 	}
 	st.Reachable = h.storage == nil || h.storage() == nil
 	if st.Reachable && h.db != nil {
-		var used int64
-		if err := h.db.QueryRow(ctx, `SELECT COALESCE(SUM(size_bytes), 0) FROM media WHERE NOT is_deleted`).Scan(&used); err == nil {
-			st.UsedBytes = &used
+		if t, err := mediaTotals(ctx, h.db); err == nil {
+			st.UsedBytes = &t.totalBytes
 		}
 	}
 	return st

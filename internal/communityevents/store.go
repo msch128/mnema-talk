@@ -63,6 +63,26 @@ func (r eventRow) toEvent() *CommunityEvent {
 
 func ptrString(s string) *string { return &s }
 
+const eventColumns = `id, title, description, start_time, end_time, channel_id, location, cover_media_id, status, created_by, created_at, updated_at`
+
+// scanEvent reads one row selected with eventColumns.
+func scanEvent(row pgx.Row) (eventRow, error) {
+	var r eventRow
+	err := row.Scan(&r.ID, &r.Title, &r.Description, &r.StartTime, &r.EndTime, &r.ChannelID, &r.Location, &r.CoverMediaID, &r.Status, &r.CreatedBy, &r.CreatedAt, &r.UpdatedAt)
+	return r, err
+}
+
+// newUserRef builds the participant reference of a user row.
+func newUserRef(id uuid.UUID, username, displayName string, avatarKey *string) UserRef {
+	ref := UserRef{ID: id, Username: username, DisplayName: displayName}
+	if avatarKey != nil {
+		if u := auth.AvatarURL(avatarKey); u != "" {
+			ref.AvatarURL = &u
+		}
+	}
+	return ref
+}
+
 func (s *Store) Create(ctx context.Context, req CreateEventRequest, creatorID uuid.UUID) (*CommunityEvent, error) {
 	status := StatusScheduled
 	now := time.Now()
@@ -70,26 +90,20 @@ func (s *Store) Create(ctx context.Context, req CreateEventRequest, creatorID uu
 		status = StatusActive
 	}
 
-	var row eventRow
-	err := s.DB.QueryRow(ctx, `
+	row, err := scanEvent(s.DB.QueryRow(ctx, `
 		INSERT INTO events (title, description, start_time, end_time, channel_id, location, status, created_by, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-		RETURNING id, title, description, start_time, end_time, channel_id, location, cover_media_id, status, created_by, created_at, updated_at`,
+		RETURNING `+eventColumns,
 		req.Title, req.Description, req.StartTime, req.EndTime, req.ChannelID, req.Location, status, creatorID,
-	).Scan(&row.ID, &row.Title, &row.Description, &row.StartTime, &row.EndTime, &row.ChannelID, &row.Location, &row.CoverMediaID, &row.Status, &row.CreatedBy, &row.CreatedAt, &row.UpdatedAt)
+	))
 	if err != nil {
 		return nil, fmt.Errorf("create event: %w", err)
 	}
-	ev := row.toEvent()
-	return ev, nil
+	return row.toEvent(), nil
 }
 
 func (s *Store) Get(ctx context.Context, id uuid.UUID, callerID *uuid.UUID) (*CommunityEvent, error) {
-	var row eventRow
-	err := s.DB.QueryRow(ctx, `
-		SELECT id, title, description, start_time, end_time, channel_id, location, cover_media_id, status, created_by, created_at, updated_at
-		FROM events WHERE id = $1`, id,
-	).Scan(&row.ID, &row.Title, &row.Description, &row.StartTime, &row.EndTime, &row.ChannelID, &row.Location, &row.CoverMediaID, &row.Status, &row.CreatedBy, &row.CreatedAt, &row.UpdatedAt)
+	row, err := scanEvent(s.DB.QueryRow(ctx, `SELECT `+eventColumns+` FROM events WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound("event not found")
 	}
@@ -97,157 +111,64 @@ func (s *Store) Get(ctx context.Context, id uuid.UUID, callerID *uuid.UUID) (*Co
 		return nil, err
 	}
 	ev := row.toEvent()
-	if err := s.fillRSVPs(ctx, ev, callerID); err != nil {
+	if err := s.fillRSVPsBatch(ctx, []*CommunityEvent{ev}, callerID); err != nil {
 		return nil, err
 	}
 	return ev, nil
 }
 
-func (s *Store) fillRSVPs(ctx context.Context, ev *CommunityEvent, callerID *uuid.UUID) error {
-	if err := s.fillCounts(ctx, ev); err != nil {
-		return err
-	}
-	if err := s.fillCallerRSVP(ctx, ev, callerID); err != nil {
-		return err
-	}
-	return s.fillGoingMembers(ctx, ev)
-}
-
-func (s *Store) fillCounts(ctx context.Context, ev *CommunityEvent) error {
-	countRows, err := s.DB.Query(ctx, `
-		SELECT response, COUNT(*) FROM event_rsvps WHERE event_id = $1 GROUP BY response`, ev.ID)
-	if err != nil {
-		return err
-	}
-	defer countRows.Close()
-	for countRows.Next() {
-		var resp string
-		var count int
-		if err := countRows.Scan(&resp, &count); err != nil {
-			return err
-		}
-		switch resp {
-		case RSVPGoing:
-			ev.RSVPCounts.Going = count
-		case RSVPInterested:
-			ev.RSVPCounts.Interested = count
-		case RSVPNotGoing:
-			ev.RSVPCounts.NotGoing = count
-		}
-	}
-	return countRows.Err()
-}
-
-func (s *Store) fillCallerRSVP(ctx context.Context, ev *CommunityEvent, callerID *uuid.UUID) error {
-	if callerID == nil {
-		return nil
-	}
-	var myResp string
-	err := s.DB.QueryRow(ctx, `SELECT response FROM event_rsvps WHERE event_id = $1 AND user_id = $2`, ev.ID, *callerID).Scan(&myResp)
-	if err == nil {
-		ev.MyRSVP = &myResp
-		return nil
-	}
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
-	}
-	return err
-}
-
-func (s *Store) fillGoingMembers(ctx context.Context, ev *CommunityEvent) error {
-	goingRows, err := s.DB.Query(ctx, `
-		SELECT u.id, u.username, u.display_name, u.avatar_s3_key
-		FROM event_rsvps r
-		JOIN users u ON u.id = r.user_id
-		WHERE r.event_id = $1 AND r.response = 'going'
-		ORDER BY r.updated_at ASC
-		LIMIT 20`, ev.ID)
-	if err != nil {
-		return err
-	}
-	defer goingRows.Close()
-
-	for goingRows.Next() {
-		var member UserRef
-		var avatarKey *string
-		if err := goingRows.Scan(&member.ID, &member.Username, &member.DisplayName, &avatarKey); err != nil {
-			return err
-		}
-		if avatarKey != nil {
-			if u := auth.AvatarURL(avatarKey); u != "" {
-				member.AvatarURL = &u
-			}
-		}
-		ev.GoingMembers = append(ev.GoingMembers, member)
-	}
-	return goingRows.Err()
-}
-
+// Update applies the fields req names in one statement, so a concurrent
+// cancellation, edit or scheduler step is never overwritten with a stale
+// copy. A changed start or end re-derives the status from the new times
+// (cancelled events stay cancelled) and re-arms the reminder.
 func (s *Store) Update(ctx context.Context, id uuid.UUID, req UpdateEventRequest) (*CommunityEvent, error) {
-	current, err := s.Get(ctx, id, nil)
-	if err != nil {
-		return nil, err
+	row, err := scanEvent(s.DB.QueryRow(ctx, `
+		UPDATE events SET
+		    title = COALESCE($2, title),
+		    description = COALESCE($3, description),
+		    start_time = COALESCE($4, start_time),
+		    end_time = CASE WHEN $5 THEN NULL ELSE COALESCE($6, end_time) END,
+		    channel_id = CASE WHEN $7::uuid IS NOT NULL THEN $7 WHEN $8::text IS NOT NULL THEN NULL ELSE channel_id END,
+		    location = CASE WHEN $7::uuid IS NOT NULL THEN NULL WHEN $8::text IS NOT NULL THEN $8 ELSE location END,
+		    reminder_sent_at = CASE WHEN $4::timestamptz IS NULL OR start_time = $4 THEN reminder_sent_at ELSE NULL END,
+		    status = CASE
+		        WHEN status = 'cancelled' OR ($4::timestamptz IS NULL AND NOT $5 AND $6::timestamptz IS NULL) THEN status
+		        WHEN COALESCE($4, start_time) > NOW() THEN 'scheduled'
+		        WHEN COALESCE(CASE WHEN $5 THEN NULL ELSE COALESCE($6, end_time) END, COALESCE($4, start_time) + `+defaultEventDuration+`) <= NOW() THEN 'completed'
+		        ELSE 'active' END,
+		    updated_at = NOW()
+		WHERE id = $1
+		RETURNING `+eventColumns,
+		id, req.Title, req.Description, req.StartTime, req.ClearEndTime, req.EndTime, req.ChannelID, req.Location,
+	))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, httpx.ErrNotFound("event not found")
 	}
-
-	title := current.Title
-	if req.Title != nil {
-		title = *req.Title
-	}
-	desc := current.Description
-	if req.Description != nil {
-		desc = *req.Description
-	}
-	startTime := current.StartTime
-	if req.StartTime != nil {
-		startTime = *req.StartTime
-	}
-	endTime := current.EndTime
-	if req.EndTime != nil {
-		endTime = req.EndTime
-	}
-	status := current.Status
-	if req.Status != nil {
-		status = *req.Status
-	}
-	channelID := current.ChannelID
-	location := current.Location
-	if req.ChannelID != nil {
-		channelID = req.ChannelID
-		location = nil
-	} else if req.Location != nil {
-		location = req.Location
-		channelID = nil
-	}
-
-	var row eventRow
-	err = s.DB.QueryRow(ctx, `
-		UPDATE events
-		SET title = $1, description = $2, end_time = $4, channel_id = $5, location = $6, status = $7, updated_at = NOW(),
-		    reminder_sent_at = CASE WHEN start_time = $3 THEN reminder_sent_at ELSE NULL END,
-		    start_time = $3
-		WHERE id = $8
-		RETURNING id, title, description, start_time, end_time, channel_id, location, cover_media_id, status, created_by, created_at, updated_at`,
-		title, desc, startTime, endTime, channelID, location, status, id,
-	).Scan(&row.ID, &row.Title, &row.Description, &row.StartTime, &row.EndTime, &row.ChannelID, &row.Location, &row.CoverMediaID, &row.Status, &row.CreatedBy, &row.CreatedAt, &row.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("update event: %w", err)
 	}
-	if _, err := s.DB.Exec(ctx, `UPDATE media SET channel_id = $2 WHERE id = (SELECT cover_media_id FROM events WHERE id = $1)`, id, channelID); err != nil {
-		return nil, fmt.Errorf("move event cover: %w", err)
+	if req.ChannelID != nil || req.Location != nil {
+		if _, err := s.DB.Exec(ctx, `UPDATE media SET channel_id = $2 WHERE id = $1`, row.CoverMediaID, row.ChannelID); err != nil {
+			return nil, fmt.Errorf("move event cover: %w", err)
+		}
 	}
 	return s.Get(ctx, id, nil)
 }
 
+// Cancel marks a scheduled or active event cancelled. An event that is
+// cancelled or over already is refused with a conflict, so nothing is
+// re-announced or re-audited.
 func (s *Store) Cancel(ctx context.Context, id uuid.UUID) (*CommunityEvent, error) {
-	var row eventRow
-	err := s.DB.QueryRow(ctx, `
+	_, err := scanEvent(s.DB.QueryRow(ctx, `
 		UPDATE events SET status = 'cancelled', updated_at = NOW()
-		WHERE id = $1
-		RETURNING id, title, description, start_time, end_time, channel_id, location, cover_media_id, status, created_by, created_at, updated_at`,
-		id,
-	).Scan(&row.ID, &row.Title, &row.Description, &row.StartTime, &row.EndTime, &row.ChannelID, &row.Location, &row.CoverMediaID, &row.Status, &row.CreatedBy, &row.CreatedAt, &row.UpdatedAt)
+		WHERE id = $1 AND status IN ('scheduled', 'active')
+		RETURNING `+eventColumns, id))
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, httpx.ErrNotFound("event not found")
+		current, getErr := s.Get(ctx, id, nil)
+		if getErr != nil {
+			return nil, getErr
+		}
+		return nil, httpx.ErrConflict("this event is " + current.Status + " and cannot be cancelled")
 	}
 	if err != nil {
 		return nil, fmt.Errorf("cancel event: %w", err)
@@ -255,24 +176,24 @@ func (s *Store) Cancel(ctx context.Context, id uuid.UUID) (*CommunityEvent, erro
 	return s.Get(ctx, id, nil)
 }
 
-func (s *Store) SetCover(ctx context.Context, id uuid.UUID, mediaID uuid.UUID) error {
-	tag, err := s.DB.Exec(ctx, `UPDATE events SET cover_media_id = $1, updated_at = NOW() WHERE id = $2`, mediaID, id)
-	if err != nil {
-		return err
-	}
-	if tag.RowsAffected() == 0 {
-		return httpx.ErrNotFound("event not found")
-	}
-	return nil
+// ReplaceCover makes mediaID the event's cover and returns the cover it
+// replaced, in one statement that locks the event row.
+func (s *Store) ReplaceCover(ctx context.Context, id uuid.UUID, mediaID uuid.UUID) (*uuid.UUID, error) {
+	return s.swapCover(ctx, id, &mediaID)
 }
 
+// ClearCover removes the event's cover and returns the one it had.
 func (s *Store) ClearCover(ctx context.Context, id uuid.UUID) (*uuid.UUID, error) {
+	return s.swapCover(ctx, id, nil)
+}
+
+func (s *Store) swapCover(ctx context.Context, id uuid.UUID, mediaID *uuid.UUID) (*uuid.UUID, error) {
 	var prev *uuid.UUID
 	err := s.DB.QueryRow(ctx, `
-		UPDATE events e SET cover_media_id = NULL, updated_at = NOW()
+		UPDATE events e SET cover_media_id = $2, updated_at = NOW()
 		FROM (SELECT id, cover_media_id FROM events WHERE id = $1 FOR UPDATE) old
 		WHERE e.id = old.id
-		RETURNING old.cover_media_id`, id).Scan(&prev)
+		RETURNING old.cover_media_id`, id, mediaID).Scan(&prev)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound("event not found")
 	}
@@ -314,12 +235,7 @@ func (s *Store) ListRSVPs(ctx context.Context, eventID uuid.UUID) ([]RSVPItem, e
 		if err := rows.Scan(&item.User.ID, &item.User.Username, &item.User.DisplayName, &avatarKey, &item.Response, &item.UpdatedAt); err != nil {
 			return nil, err
 		}
-		if avatarKey != nil {
-			u := auth.AvatarURL(avatarKey)
-			if u != "" {
-				item.User.AvatarURL = &u
-			}
-		}
+		item.User = newUserRef(item.User.ID, item.User.Username, item.User.DisplayName, avatarKey)
 		items = append(items, item)
 	}
 	return items, rows.Err()

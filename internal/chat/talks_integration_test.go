@@ -78,24 +78,20 @@ func newTalksWorld(t *testing.T) *talksWorld {
 	return w
 }
 
-// stopTimers ends the countdowns of a test's manager, so none fires into the
-// next test's database.
-func (m *TalkManager) stopTimers() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	for _, t := range m.talks {
-		if t.timer != nil {
-			t.timer.Stop()
-		}
-	}
-}
-
 // shortGrace lets an empty Talk go within moments. Every other test keeps the
 // hour: a Talk nobody joins must not vanish under it on a slow machine.
 func (w *talksWorld) shortGrace() { w.mgr.EmptyGrace = 40 * time.Millisecond }
 
-func (w *talksWorld) join(ch, user uuid.UUID)  { w.mgr.apply(presenceEvent{user, ch, true}) }
-func (w *talksWorld) leave(ch, user uuid.UUID) { w.mgr.apply(presenceEvent{user, ch, false}) }
+// applyEvent runs ev through the queue exactly like Run does.
+func (m *TalkManager) applyEvent(ev presenceEvent) {
+	m.mu.Lock()
+	m.pending = append(m.pending, ev)
+	m.mu.Unlock()
+	m.applyNext()
+}
+
+func (w *talksWorld) join(ch, user uuid.UUID)  { w.mgr.applyEvent(presenceEvent{user, ch, true}) }
+func (w *talksWorld) leave(ch, user uuid.UUID) { w.mgr.applyEvent(presenceEvent{user, ch, false}) }
 
 func (w *talksWorld) exists(t *testing.T, id uuid.UUID) bool {
 	t.Helper()

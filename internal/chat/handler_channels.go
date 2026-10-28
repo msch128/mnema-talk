@@ -114,15 +114,9 @@ func (h *Handler) createChannel(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
-	ch, err := CreateChannel(r.Context(), h.DB, req.CategoryID, req.Name, req.Type, req.Topic, req.SortOrder)
+	ch, err := CreateChannelWithStage(r.Context(), h.DB, req.CategoryID, req.Name, req.Type, req.Topic, req.SortOrder, req.IsStage)
 	if err != nil {
 		return err
-	}
-	if req.IsStage {
-		if err := SetStage(r.Context(), h.DB, ch.ID, true); err != nil {
-			return err
-		}
-		ch.IsStage = true
 	}
 	h.structureChanged()
 	httpx.WriteJSON(w, http.StatusCreated, ch)
@@ -236,21 +230,13 @@ func (h *Handler) updateChannel(w http.ResponseWriter, r *http.Request) error {
 	if err := h.require(r, id, perm.ViewChannel); err != nil {
 		return err
 	}
-	if req.IsLobby != nil {
-		if err := SetLobby(r.Context(), h.DB, id, *req.IsLobby); err != nil {
-			return err
-		}
-	}
-	if req.IsStage != nil {
-		if err := SetStage(r.Context(), h.DB, id, *req.IsStage); err != nil {
-			return err
-		}
-	}
-	ch, err := UpdateChannel(r.Context(), h.DB, id, req.Name, req.Topic, req.UserLimit, req.SlowModeSeconds)
+	ch, err := EditChannel(r.Context(), h.DB, id, req.Name, req.Topic, req.UserLimit, req.SlowModeSeconds, req.IsLobby, req.IsStage)
 	if err != nil {
 		return err
 	}
-	FillTalkFields(r.Context(), h.DB, ch)
+	if err := FillTalkFields(r.Context(), h.DB, ch); err != nil {
+		return err
+	}
 	if req.IsStage != nil {
 		h.structureChanged() // the hub re-checks who may still send media
 	} else {
@@ -292,11 +278,12 @@ func (h *Handler) renameCategory(w http.ResponseWriter, r *http.Request) error {
 	if err := h.requireCategory(r, id); err != nil {
 		return err
 	}
-	if err := RenameCategory(r.Context(), h.DB, id, req.Name); err != nil {
+	name, err := RenameCategory(r.Context(), h.DB, id, req.Name)
+	if err != nil {
 		return err
 	}
 	h.channelsChanged()
-	httpx.WriteJSON(w, http.StatusOK, RenamedCategory{ID: id, Name: req.Name})
+	httpx.WriteJSON(w, http.StatusOK, RenamedCategory{ID: id, Name: name})
 	return nil
 }
 

@@ -22,6 +22,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil"
@@ -108,6 +109,7 @@ func (e *env) serveWith(h *Handler, guarded bool, method, path string, body io.R
 		})
 		if guarded {
 			h.MountAdmin(a)
+			h.MountAdminUploads(a)
 			return
 		}
 		h.mountUnguarded(a)
@@ -384,4 +386,11 @@ func TestManagementRefusals(t *testing.T) {
 	if w := e.serve(h, "POST", "/admin/bots", strings.NewReader(`{"name":"one more"}`), map[string]string{"Content-Type": "application/json"}); w.Code != http.StatusConflict {
 		t.Fatalf("over the bot limit: %d", w.Code)
 	}
+}
+
+// mountUnguarded registers the routes without the permission guard, for
+// tests that reach the handlers' own lookups.
+func (h *Handler) mountUnguarded(r chi.Router) {
+	h.routes(r)
+	r.Post("/bots/{id}/avatar", httpx.Handle(h.avatar))
 }

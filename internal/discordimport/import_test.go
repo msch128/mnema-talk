@@ -215,3 +215,26 @@ func TestFetchRefusesWhatItShould(t *testing.T) {
 		t.Fatal("the production base URL must be fixed to discord.com")
 	}
 }
+
+func TestFetcherIsCreatedOnceUnderConcurrency(t *testing.T) {
+	im := &Importer{}
+	got := make(chan *Fetcher, 8)
+	for i := 0; i < cap(got); i++ {
+		go func() { got <- im.fetcher() }()
+	}
+	first := <-got
+	for i := 1; i < cap(got); i++ {
+		if f := <-got; f != first {
+			t.Fatal("fetcher created more than once")
+		}
+	}
+}
+
+func TestApplyRequestConfirmed(t *testing.T) {
+	if (ApplyRequest{ConfirmAdditive: true}).confirmed() == nil {
+		t.Fatal("missing roles confirmation accepted")
+	}
+	if err := (ApplyRequest{ConfirmAdditive: true, ConfirmRoles: true}).confirmed(); err != nil {
+		t.Fatal(err)
+	}
+}

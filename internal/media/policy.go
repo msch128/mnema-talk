@@ -87,6 +87,8 @@ var mustMatchWhenDeclared = map[string]bool{
 	"video/webm":      true,
 	"audio/mpeg":      true,
 	"audio/wave":      true,
+	"audio/ogg":       true,
+	"application/ogg": true,
 	"application/pdf": true,
 }
 
@@ -137,7 +139,7 @@ func reconcileMIME(declared string, head []byte, allow map[string]bool, imageOnl
 		return sniffed, nil
 	}
 	if imageOnly {
-		return "", &mimeError{"avatar must be a png, jpeg, gif or webp image"}
+		return "", &mimeError{"the picture must be a png, jpeg, gif or webp image"}
 	}
 	if mustMatchWhenDeclared[declared] {
 		return "", &mimeError{"declared " + declared + " but the file content does not match"}
@@ -158,6 +160,9 @@ func reconcileMIME(declared string, head []byte, allow map[string]bool, imageOnl
 func SniffImage(headerType, filename string, head []byte) (string, error) {
 	return reconcileMIME(declaredMIME(headerType, filename), head, avatarMIME, true)
 }
+
+// ExtensionFor is extensionFor for other packages that store pictures.
+func ExtensionFor(mimeType string) string { return extensionFor(mimeType) }
 
 // extensionFor picks the storage key extension from the final MIME type.
 func extensionFor(mimeType string) string {

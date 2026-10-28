@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -188,7 +189,8 @@ type UndoResult struct {
 	// KeptCategories were left in place because they hold other channels now.
 	KeptCategories []string `json:"kept_categories"`
 	// KeptRoles counts created roles that stay because the caller can no
-	// longer manage them (moved above their highest role since).
+	// longer manage them (moved above their highest role since). While any
+	// stay, the import is not marked undone and can be undone again.
 	KeptRoles int `json:"kept_roles"`
 
 	holders []uuid.UUID // members who held a removed role
@@ -270,8 +272,12 @@ func undoTx(ctx context.Context, tx pgx.Tx, snap *perm.Snapshot, sub perm.Subjec
 	if err := removeRoles(ctx, tx, snap, sub, obj, res); err != nil {
 		return nil, nil, nil, err
 	}
-	if _, err := tx.Exec(ctx, `UPDATE discord_imports SET undone_at = NOW(), undone_by = $2 WHERE id = $1`, id, sub.ID); err != nil {
-		return nil, nil, nil, fmt.Errorf("mark import undone: %w", err)
+	// Roles the caller cannot manage stay behind: the import stays open so
+	// someone who outranks them can finish the undo.
+	if res.KeptRoles == 0 {
+		if _, err := tx.Exec(ctx, `UPDATE discord_imports SET undone_at = NOW(), undone_by = $2 WHERE id = $1`, id, sub.ID); err != nil {
+			return nil, nil, nil, fmt.Errorf("mark import undone: %w", err)
+		}
 	}
 	err = log.RecordTx(ctx, tx, audit.Entry{
 		Action: "import.discord_undo", TargetType: "import", TargetID: id.String(), TargetName: rec.TemplateName,
@@ -297,17 +303,9 @@ func removeChannels(ctx context.Context, tx pgx.Tx, chans []chanInfo) ([]string,
 	if len(ids) == 0 {
 		return nil, nil, nil
 	}
-	rows, err := tx.Query(ctx, `
-		SELECT s3_key FROM media WHERE message_id IN (SELECT id FROM messages WHERE channel_id = ANY($1))`, ids)
+	keys, err := chat.DeleteChannelsTx(ctx, tx, ids)
 	if err != nil {
-		return nil, nil, fmt.Errorf("collect media: %w", err)
-	}
-	keys, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
-		return nil, nil, fmt.Errorf("collect media: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `DELETE FROM channels WHERE id = ANY($1)`, ids); err != nil {
-		return nil, nil, fmt.Errorf("delete channels: %w", err)
+		return nil, nil, err
 	}
 	return keys, ids, nil
 }

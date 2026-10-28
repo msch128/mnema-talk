@@ -92,6 +92,7 @@ func (f *fixture) serve(h *Handler, method, path string, body io.Reader, hdr map
 			})
 		})
 		h.MountAdmin(a)
+		h.MountAdminUploads(a)
 	})
 	req := httptest.NewRequest(method, path, body)
 	for k, v := range hdr {
@@ -259,8 +260,14 @@ func TestExecuteFailures(t *testing.T) {
 	// The insert fails; so does reading the message back.
 	h = f.faulty(&pgfault.Tracer{Query: "INSERT INTO messages"})
 	wantStatus(t, f.json(h, "POST", path, `{"content":"x"}`), 500, "insert")
+	// The message is stored by then: the sender gets 204, not an error that
+	// would make it post a duplicate.
 	h = f.faulty(&pgfault.Tracer{Query: "m.id = $1"})
-	wantStatus(t, f.json(h, "POST", path, `{"content":"x"}`), 500, "read back")
+	wantStatus(t, f.json(h, "POST", path, `{"content":"read back"}`), 204, "read back")
+	var stored int
+	if err := f.p.QueryRow(context.Background(), `SELECT COUNT(*) FROM messages WHERE content = 'read back'`).Scan(&stored); err != nil || stored != 1 {
+		t.Fatalf("stored messages %d, err %v", stored, err)
+	}
 
 	// A failed insert after a stored file removes the file again.
 	var buf bytes.Buffer

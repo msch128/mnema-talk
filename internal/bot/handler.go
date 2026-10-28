@@ -42,13 +42,18 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	h.routes(r.With(auth.RequirePerm(h.Perms, perm.ManageBots)))
 }
 
+// MountAdminUploads registers the multipart avatar upload; the caller wraps it
+// in a larger MaxBody than the JSON default.
+func (h *Handler) MountAdminUploads(r chi.Router) {
+	r.With(auth.RequirePerm(h.Perms, perm.ManageBots)).Post("/bots/{id}/avatar", httpx.Handle(h.avatar))
+}
+
 func (h *Handler) routes(r chi.Router) {
 	r.Get("/bots", httpx.Handle(h.list))
 	r.Post("/bots", httpx.Handle(h.create))
 	r.Get("/bots/{id}", httpx.Handle(h.get))
 	r.Patch("/bots/{id}", httpx.Handle(h.update))
 	r.Delete("/bots/{id}", httpx.Handle(h.delete))
-	r.Post("/bots/{id}/avatar", httpx.Handle(h.avatar))
 	r.Put("/bots/{id}/roles", httpx.Handle(h.setRoles))
 	r.Get("/bots/{id}/access", httpx.Handle(h.access))
 	r.Get("/bots/{id}/tokens", httpx.Handle(h.listTokens))
@@ -58,12 +63,6 @@ func (h *Handler) routes(r chi.Router) {
 	r.Get("/bots/{id}/commands", httpx.Handle(h.listCommands))
 	r.Patch("/bots/{id}/commands/{commandID}", httpx.Handle(h.patchCommand))
 	r.Delete("/bots/{id}/commands/{commandID}", httpx.Handle(h.deleteCommand))
-}
-
-// mountUnguarded registers the routes without the permission guard, for
-// tests that reach the handlers' own lookups.
-func (h *Handler) mountUnguarded(r chi.Router) {
-	h.routes(r)
 }
 
 // load finds the bot of the path and checks the caller may manage it: the
@@ -293,10 +292,11 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) error {
 		h.OnRevoke(b.ID, nil)
 	}
 	h.Perms.Changed(nil)
-	h.membersChanged()
 	return h.writeCurrent(w, r, b.ID)
 }
 
+// writeCurrent announces the change to the member list and answers with the
+// bot as it is now.
 func (h *Handler) writeCurrent(w http.ResponseWriter, r *http.Request, id uuid.UUID) error {
 	h.membersChanged() // avatar and role changes show in the member list
 	cur, err := Get(r.Context(), h.DB, id)

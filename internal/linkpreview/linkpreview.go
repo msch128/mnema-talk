@@ -18,12 +18,15 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/msch128/mnema-talk/internal/ssrf"
 )
 
 const (
 	maxPageBytes  = 512 << 10
 	maxImageBytes = 4 << 20
 	maxRedirects  = 3
+	maxURLLen     = 2048
 	cacheTTL      = 6 * time.Hour
 	cacheMax      = 2000
 	maxTitleRunes = 200
@@ -148,8 +151,12 @@ func New() *Fetcher {
 }
 
 func (f *Fetcher) parse(raw string) (*url.URL, error) {
-	u, err := url.Parse(strings.TrimSpace(raw))
-	if err != nil || len(raw) > 2048 {
+	raw = strings.TrimSpace(raw)
+	if ssrf.RejectedURLText(raw) {
+		return nil, ErrBlocked
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
 		return nil, ErrBlocked
 	}
 	if err := f.checkURL(u); err != nil {
@@ -231,7 +238,7 @@ func (f *Fetcher) fetchPreview(ctx context.Context, u *url.URL) (*Preview, error
 	if !strings.Contains(strings.ToLower(ctype), "html") {
 		return nil, ErrNoPreview
 	}
-	p := parseHTML(body, final)
+	p := parseHTML(body, ctype, final)
 	if p.Title == "" {
 		return nil, ErrNoPreview
 	}
@@ -257,8 +264,14 @@ func (f *Fetcher) Image(ctx context.Context, raw string) ([]byte, string, error)
 		if body, mime, ok := f.imgCache.get(key); ok {
 			return cachedImage{body: body, mime: mime}, nil
 		}
+		if _, err, ok := f.cached(imageFailureKey(key)); ok {
+			return cachedImage{}, err
+		}
 		body, mime, err := f.fetchImage(context.WithoutCancel(ctx), u)
 		if err != nil {
+			if !errors.Is(err, errBusy) {
+				f.store(imageFailureKey(key), nil, err)
+			}
 			return cachedImage{}, err
 		}
 		f.imgCache.put(key, body, mime)
@@ -269,6 +282,10 @@ func (f *Fetcher) Image(ctx context.Context, raw string) ([]byte, string, error)
 	}
 	return img.body, img.mime, nil
 }
+
+// imageFailureKey is the negative-cache key of a proxied image. Preview keys
+// are http(s) URLs, so the prefix cannot collide with them.
+func imageFailureKey(key string) string { return "image:" + key }
 
 func (f *Fetcher) fetchImage(ctx context.Context, u *url.URL) ([]byte, string, error) {
 	body, _, _, err := f.get(ctx, u, "image/*", maxImageBytes+1)

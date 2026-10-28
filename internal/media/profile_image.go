@@ -41,24 +41,51 @@ var (
 
 // read reads, sniffs and redraws the picture of a multipart request.
 func (p profileImage) read(r *http.Request) (*imgproc.Picture, error) {
-	in, err := readFile(r, readFileOptions{field: p.field, maxBytes: p.maxBytes, allow: avatarMIME, imageOnly: true})
+	return ReadPicture(r, PictureUpload{Fields: []string{p.field}, MaxBytes: p.maxBytes, Process: p.process})
+}
+
+// PictureUpload describes an uploaded picture ReadPicture reads: the multipart
+// field(s) it may arrive in (the first one present wins), the size limit of
+// the upload and of the redrawn picture, and how it is redrawn.
+type PictureUpload struct {
+	Fields   []string
+	MaxBytes int64
+	Process  func([]byte) (*imgproc.Picture, error)
+}
+
+// ReadPicture reads, sniffs (image types only) and redraws the picture of a
+// multipart request. The uploaded file is never kept, only the redrawn one.
+func ReadPicture(r *http.Request, up PictureUpload) (*imgproc.Picture, error) {
+	field := up.Fields[0]
+	if len(up.Fields) > 1 {
+		if err := parseMultipartForm(r, up.MaxBytes); err != nil {
+			return nil, err
+		}
+		for _, f := range up.Fields {
+			if len(r.MultipartForm.File[f]) > 0 {
+				field = f
+				break
+			}
+		}
+	}
+	in, err := readFile(r, readFileOptions{field: field, maxBytes: up.MaxBytes, allow: avatarMIME, imageOnly: true})
 	if err != nil {
 		return nil, err
 	}
 	defer in.file.Close()
-	data, err := io.ReadAll(io.LimitReader(in.file, p.maxBytes+1))
+	data, err := io.ReadAll(io.LimitReader(in.file, up.MaxBytes+1))
 	if err != nil {
-		return nil, fmt.Errorf("read %s: %w", p.field, err)
+		return nil, fmt.Errorf("read %s: %w", field, err)
 	}
-	pic, err := p.process(data)
+	pic, err := up.Process(data)
 	if errors.Is(err, imgproc.ErrImage) {
 		return nil, httpx.ErrInvalidInput(err.Error())
 	}
 	if err != nil {
 		return nil, err
 	}
-	if int64(len(pic.Data)) > p.maxBytes {
-		return nil, httpx.ErrInvalidInput(fmt.Sprintf("the %s is larger than %d MB after processing", p.field, p.maxBytes>>20))
+	if int64(len(pic.Data)) > up.MaxBytes {
+		return nil, httpx.ErrInvalidInput(fmt.Sprintf("the %s is larger than %d MB after processing", field, up.MaxBytes>>20))
 	}
 	return pic, nil
 }
@@ -75,7 +102,7 @@ func (h *Handler) setProfileImage(ctx context.Context, p profileImage, userID uu
 		_ = h.Store.Delete(context.WithoutCancel(ctx), key)
 		return fmt.Errorf("record %s: %w", p.field, err)
 	}
-	h.deletePreviousAvatar(ctx, previous)
+	h.deletePreviousImage(ctx, previous)
 	return nil
 }
 

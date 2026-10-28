@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -38,6 +39,7 @@ func TestTranslate(t *testing.T) {
 	ch := uuid.New()
 	human := chat.Message{ID: uuid.New(), ChannelID: ch, Content: "hi"}
 	bot := chat.Message{ID: uuid.New(), ChannelID: ch, IsBot: true}
+	hook := chat.Message{ID: uuid.New(), ChannelID: ch, IsBot: true, IsWebhook: true}
 	cases := []struct {
 		name    string
 		typ     string
@@ -48,7 +50,9 @@ func TestTranslate(t *testing.T) {
 		{"create pointer", "message_create", &human, EventMessageCreate},
 		{"update value", "message_update", human, EventMessageUpdate},
 		{"update by a bot is delivered", "message_update", &bot, EventMessageUpdate},
-		{"create by a bot is not", "message_create", &bot, ""},
+		{"create by a bot account is delivered", "message_create", &bot, EventMessageCreate},
+		{"create by an incoming webhook is not", "message_create", &hook, ""},
+		{"update by an incoming webhook is delivered", "message_update", &hook, EventMessageUpdate},
 		{"create with another payload", "message_create", "text", ""},
 		{"delete", "message_delete", map[string]any{"id": 1}, EventMessageDelete},
 		{"reactions", "message_reaction", chat.ReactionResult{}, EventReactionsUpdate},
@@ -276,5 +280,18 @@ func TestValidEvents(t *testing.T) {
 	}
 	if s := newSecret(); len(s) < 40 || s == newSecret() {
 		t.Errorf("secret %q", s)
+	}
+}
+
+func TestDecodeLenientRejectsAnyTrailingData(t *testing.T) {
+	for _, body := range []string{`{"content":"a"}}`, `{"content":"a"}]`, `{"content":"a"} {}`, `{"content":"a"} x`} {
+		var p struct{ Content string }
+		if err := decodeLenient(strings.NewReader(body), &p); err == nil {
+			t.Errorf("%q was accepted", body)
+		}
+	}
+	var p struct{ Content string }
+	if err := decodeLenient(strings.NewReader("{\"content\":\"a\"}\n "), &p); err != nil || p.Content != "a" {
+		t.Errorf("trailing whitespace: %v", err)
 	}
 }

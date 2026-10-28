@@ -201,7 +201,7 @@ three clients.
 
 ### Windows
 
-The Windows desktop app lives in the separate
+The desktop app (this section covers its Windows build) lives in the separate
 [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop) repository
 and is an unsigned Tauri DEV client, including the Gaming integration described
 in the [usage guide](desktop-app.md#windows-gaming-dev). Its local instance

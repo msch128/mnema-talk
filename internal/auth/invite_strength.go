@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -34,7 +36,7 @@ const weakCodeSlack = 6
 // inviteCodeWeakness names why code is easy to guess, or "" when it is fine.
 func inviteCodeWeakness(code string) string {
 	if len(code) < minCustomCodeLength {
-		return "shorter than 12 characters"
+		return fmt.Sprintf("shorter than %d characters", minCustomCodeLength)
 	}
 	distinct := map[rune]struct{}{}
 	var letters, digits bool
@@ -64,7 +66,7 @@ func IsWeakInviteCode(code string) bool { return inviteCodeWeakness(code) != "" 
 
 func checkCustomCodeStrength(code string) error {
 	if why := inviteCodeWeakness(code); why != "" {
-		return httpx.ErrInvalidInput("code is too easy to guess (" + why + "); leave it empty for a random code or use at least 12 hard-to-guess characters")
+		return httpx.ErrInvalidInput("code is too easy to guess (" + why + "); leave it empty for a random code or use at least " + strconv.Itoa(minCustomCodeLength) + " hard-to-guess characters")
 	}
 	return nil
 }

@@ -84,6 +84,13 @@ describe('a push arrives', () => {
     expect(shown[0]?.title).toBe('Mnema Talk')
   })
 
+  it('shows an event reminder with its title and text, even with the app on screen', async () => {
+    const { scope: s, shown } = scope({ windows: [client('visible')] })
+    await onPush(s, event(payload({ type: 'event', title: 'Game night', body: 'Starts in 15 minutes', tag: 'event:1', message_id: undefined })))
+    expect(shown).toHaveLength(1)
+    expect(shown[0]).toMatchObject({ title: 'Game night', options: { body: 'Starts in 15 minutes', tag: 'event:1' } })
+  })
+
   it('still shows something for a payload it cannot read, as the browser requires', async () => {
     for (const data of [null, { v: 1 }, 'not an object']) {
       const { scope: s, shown } = scope()

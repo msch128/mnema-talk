@@ -169,7 +169,7 @@ func writePin(r *http.Request, tx pgx.Tx, t pinTarget, pinned bool) (bool, error
 		return false, fmt.Errorf("lock channel: %w", err)
 	}
 	var current bool
-	err := tx.QueryRow(ctx, `SELECT is_pinned FROM messages WHERE id = $1 AND channel_id = $2 FOR UPDATE`, t.message, t.channel).Scan(&current)
+	err := tx.QueryRow(ctx, `SELECT is_pinned FROM messages WHERE id = $1 AND channel_id = $2 FOR NO KEY UPDATE`, t.message, t.channel).Scan(&current)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, errMessageNotFound
 	}

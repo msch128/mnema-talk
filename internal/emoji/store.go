@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -86,11 +86,6 @@ func (h *Handler) get(ctx context.Context, id uuid.UUID) (row, error) {
 	return e, err
 }
 
-func isUniqueViolation(err error) bool {
-	var pg *pgconn.PgError
-	return errors.As(err, &pg) && pg.Code == "23505"
-}
-
 func errNameTaken() error { return httpx.ErrConflict("an emoji with this name already exists") }
 
 // emojiLockKey serialises the count check of concurrent uploads.
@@ -113,7 +108,7 @@ func (h *Handler) insert(ctx context.Context, e row, size int, by uuid.UUID) err
 			INSERT INTO custom_emoji (id, name, content_type, animated, s3_key, still_s3_key, size_bytes, content_hash, created_by)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 			e.id, e.name, e.contentType, e.animated, e.key, e.stillKey, size, e.hash, by)
-		if isUniqueViolation(err) {
+		if db.IsUniqueViolation(err) {
 			return errNameTaken()
 		}
 		return err
@@ -125,7 +120,7 @@ func (h *Handler) rename(ctx context.Context, id uuid.UUID, name string) (row, e
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		return row{}, httpx.ErrNotFound("emoji not found")
-	case isUniqueViolation(err):
+	case db.IsUniqueViolation(err):
 		return row{}, errNameTaken()
 	}
 	return e, err

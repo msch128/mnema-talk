@@ -33,9 +33,6 @@ const MaxBannerBytes = 5 << 20
 // @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
 // @Router /api/users/me/banner [put]
 func (h *Handler) putBanner(w http.ResponseWriter, r *http.Request) error {
-	if h.Store == nil {
-		return httpx.ErrUnavailable("file storage is not configured")
-	}
 	user := auth.UserFrom(r.Context())
 	banner, err := bannerImage.read(r)
 	if err != nil {
@@ -64,15 +61,12 @@ func (h *Handler) putBanner(w http.ResponseWriter, r *http.Request) error {
 // @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
 // @Router /api/users/me/banner [delete]
 func (h *Handler) deleteBanner(w http.ResponseWriter, r *http.Request) error {
-	if h.Store == nil {
-		return httpx.ErrUnavailable("file storage is not configured")
-	}
 	user := auth.UserFrom(r.Context())
 	previous, err := h.clearProfileImage(r.Context(), bannerImage, user.ID)
 	if err != nil {
 		return err
 	}
-	h.deletePreviousAvatar(r.Context(), previous)
+	h.deletePreviousImage(r.Context(), previous)
 	return h.writeBannerUser(w, r, user.ID)
 }
 

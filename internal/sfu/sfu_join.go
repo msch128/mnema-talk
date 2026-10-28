@@ -52,7 +52,7 @@ func (s *SFU) joinAuthorized(channelID, userID uuid.UUID, sendOffer func(webrtc.
 	// The connection is built before any lock is taken: creating it costs
 	// real time (transports, DTLS and ICE agents), and roomsMu serializes
 	// every join, leave and lookup of every room.
-	api := s.currentAPI()
+	api, announced := s.apiAndAnnounced()
 	if authorize != nil {
 		var err error
 		if api, err = s.nativeAPI(authorize); err != nil {
@@ -77,7 +77,6 @@ func (s *SFU) joinAuthorized(channelID, userID uuid.UUID, sendOffer func(webrtc.
 	if !ok {
 		r = &Room{
 			ID:                  channelID,
-			nativeAPI:           s.nativeAPI,
 			load:                s.load,
 			sourceAuthorization: s.sourceAuthorization,
 			peers:               make(map[uuid.UUID]*Peer),
@@ -85,8 +84,6 @@ func (s *SFU) joinAuthorized(channelID, userID uuid.UUID, sendOffer func(webrtc.
 			subs:                make(map[uuid.UUID]*Subscriptions),
 			lastMedia:           make(map[uuid.UUID]MediaState),
 			notifier:            s.notifier,
-			api:                 api,
-			allowLoopbackCands:  announcesLoopback(s.AnnouncedIPs()),
 			iceServers:          s.iceServers,
 			offerTimeout:        s.offerTimeout,
 		}
@@ -94,8 +91,7 @@ func (s *SFU) joinAuthorized(channelID, userID uuid.UUID, sendOffer func(webrtc.
 	}
 	// A long-lived room picks up changed announced addresses for new peers.
 	r.mu.Lock()
-	r.api = s.currentAPI()
-	r.allowLoopbackCands = announcesLoopback(s.AnnouncedIPs())
+	r.allowLoopbackCands = announcesLoopback(announced)
 	r.mu.Unlock()
 	return r, r.attachPeer(userID, conn, sendOffer, sendICE, authorize), nil
 }
@@ -157,31 +153,6 @@ func (r *Room) empty() bool {
 // trackKey scopes a client-chosen track ID to its publisher.
 func trackKey(userID uuid.UUID, trackID string) string {
 	return userID.String() + ":" + trackID
-}
-
-func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit)) (*Peer, error) {
-	return r.joinPeer(userID, sendOffer, sendICE, nil)
-}
-
-func (r *Room) joinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit), authorize func() bool) (*Peer, error) {
-	r.mu.RLock()
-	api := r.api
-	r.mu.RUnlock()
-	if authorize != nil {
-		if r.nativeAPI == nil {
-			return nil, errors.New("native media authorization unavailable")
-		}
-		var err error
-		api, err = r.nativeAPI(authorize)
-		if err != nil {
-			return nil, err
-		}
-	}
-	conn, err := newReceiveConn(api, r.iceServers)
-	if err != nil {
-		return nil, err
-	}
-	return r.attachPeer(userID, conn, sendOffer, sendICE, authorize), nil
 }
 
 // receiveConn is a PeerConnection with the lines that receive a client's

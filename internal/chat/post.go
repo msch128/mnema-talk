@@ -204,6 +204,36 @@ func queryIDs(r *http.Request, what string, dst map[string]**uuid.UUID) (int, er
 	return n, nil
 }
 
+// parseHistoryQuery reads the page size and at most one anchor of the names
+// (before, after, around), and checks the anchor message with valid. An anchor
+// that does not exist or does not fit is errMessageNotFound; a failing lookup
+// stays the error it is.
+func (h *Handler) parseHistoryQuery(r *http.Request, names []string, valid func(*messageRef) bool) (HistoryQuery, error) {
+	q := HistoryQuery{Limit: httpx.QueryLimit(r, "limit", 50, 100)}
+	slots := map[string]**uuid.UUID{"before": &q.Before, "after": &q.After, "around": &q.Around}
+	wanted := map[string]**uuid.UUID{}
+	for _, name := range names {
+		wanted[name] = slots[name]
+	}
+	anchors, err := queryIDs(r, "a message id", wanted)
+	if err != nil {
+		return q, err
+	}
+	if anchors > 1 {
+		return q, httpx.ErrInvalidInput("use only one of " + strings.Join(names[:len(names)-1], ", ") + " or " + names[len(names)-1])
+	}
+	if anchor := firstID(q.Before, q.After, q.Around); anchor != nil {
+		ref, err := loadMessageRef(r.Context(), h.DB, *anchor)
+		if err != nil {
+			return q, err
+		}
+		if !valid(ref) {
+			return q, errMessageNotFound
+		}
+	}
+	return q, nil
+}
+
 // firstID returns the first non-nil id.
 func firstID(ids ...*uuid.UUID) *uuid.UUID {
 	for _, id := range ids {

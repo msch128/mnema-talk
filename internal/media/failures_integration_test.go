@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -24,6 +25,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
@@ -84,9 +86,17 @@ func cancelledRequest() *http.Request {
 
 func TestMediaHandlersWithoutStorage(t *testing.T) {
 	h := &Handler{}
-	for name, handler := range map[string]func(http.ResponseWriter, *http.Request) error{"upload": h.upload, "avatar": h.uploadAvatar, "serve": h.serve, "prune": h.prune, "delete": h.delete, "orphans": h.orphans, "cleanup": h.cleanupOrphans} {
+	for name, handler := range map[string]func(http.ResponseWriter, *http.Request) error{"upload": h.upload, "avatar": h.uploadAvatar, "serve": h.serve, "prune": h.prune, "delete": h.delete, "orphans": h.orphans, "cleanup": h.cleanupOrphans, "bot": h.botUpload} {
 		t.Run(name, func(t *testing.T) {
-			requireAPIError(t, handler(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/", nil)), 503)
+			route := h.requireStore(httpx.Handle(handler))
+			if name == "bot" {
+				route = httpx.Handle(handler)
+			}
+			rec := httptest.NewRecorder()
+			route.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/", nil))
+			if rec.Code != http.StatusServiceUnavailable {
+				t.Fatalf("status %d, want 503", rec.Code)
+			}
 		})
 	}
 }
@@ -259,10 +269,11 @@ func TestPruneFailuresLeaveAccurateDatabaseState(t *testing.T) {
 	id := f.attachment(t, "uploads/old", false)
 	requireAPIError(t, func() error { _, err := PruneOlderThan(context.Background(), f.p, f.store, 0); return err }(), 400)
 	f.store.batchErr = errors.New("storage refused delete")
+	f.store.deleteErr = f.store.batchErr
 	if n, err := PruneOlderThan(context.Background(), f.p, f.store, 1); n != 0 || err == nil || !f.store.Has("uploads/old") {
 		t.Fatalf("failed prune n=%d %v", n, err)
 	}
-	f.store.batchErr = nil
+	f.store.batchErr, f.store.deleteErr = nil, nil
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	f.store.afterBatch = cancel
@@ -516,5 +527,45 @@ func TestOrphanScanReportsDatabaseFailureWhileReadingRows(t *testing.T) {
 	var pgerr *pgconn.PgError
 	if !errors.As(err, &pgerr) || pgerr.Code != "55P03" || strings.Contains(err.Error(), "look up media keys") || result.Deleted != 0 || !f.store.Has("uploads/known") {
 		t.Fatalf("streamed query failure result=%+v error=%v", result, err)
+	}
+}
+
+// stuckKeyStore refuses to delete one key: a batch containing it fails as a
+// whole, like an S3 DeleteObjects call with a per-key error.
+type stuckKeyStore struct {
+	*MemoryStore
+	stuck string
+}
+
+func (s stuckKeyStore) Delete(ctx context.Context, key string) error {
+	if key == s.stuck {
+		return errors.New("object locked")
+	}
+	return s.MemoryStore.Delete(ctx, key)
+}
+
+func (s stuckKeyStore) DeleteBatch(ctx context.Context, keys []string) error {
+	if slices.Contains(keys, s.stuck) {
+		return errors.New("delete objects: 1 of 3 failed")
+	}
+	return s.MemoryStore.DeleteBatch(ctx, keys)
+}
+
+func TestPruneSkipsAKeyStorageRefusesToDelete(t *testing.T) {
+	f := mediaDB(t)
+	stuck := f.attachment(t, "uploads/stuck", false)
+	f.attachment(t, "uploads/ok-1", false)
+	f.attachment(t, "uploads/ok-2", false)
+	store := stuckKeyStore{MemoryStore: f.store.MemoryStore, stuck: "uploads/stuck"}
+	n, err := PruneOlderThan(context.Background(), f.p, store, 1)
+	if n != 2 || err == nil || !strings.Contains(err.Error(), "skipped") {
+		t.Fatalf("prune n=%d err=%v, want the two healthy objects removed and an error for the stuck one", n, err)
+	}
+	if store.Has("uploads/ok-1") || store.Has("uploads/ok-2") || !store.Has("uploads/stuck") {
+		t.Fatal("the stuck object blocked the rows behind it")
+	}
+	var deleted bool
+	if err := f.p.QueryRow(context.Background(), `SELECT is_deleted FROM media WHERE id=$1`, stuck).Scan(&deleted); err != nil || deleted {
+		t.Fatalf("stuck row is_deleted=%v err=%v", deleted, err)
 	}
 }

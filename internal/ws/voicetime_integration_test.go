@@ -85,3 +85,82 @@ func TestVoiceTimeIsAnnouncedOnlyToTheTalkItWasSpentIn(t *testing.T) {
 		}
 	}
 }
+
+// A stay still in progress when the hub closes is banked: the connections'
+// own clean-up no longer gets to it.
+func TestHubCloseBanksVoiceStaysInProgress(t *testing.T) {
+	p := testutil.DB(t)
+	u := wsFixtureUser(t, p)
+	h := NewHub(p, nil, nil, nil)
+	ch := uuid.New()
+	h.mu.Lock()
+	h.voiceSince[voiceKey{u.ID, ch}] = time.Now().Add(-90 * time.Second)
+	h.mu.Unlock()
+	h.Close()
+	var n int64
+	if err := p.QueryRow(context.Background(), `SELECT voice_seconds FROM users WHERE id=$1`, u.ID).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n < 90 || n > 100 {
+		t.Fatalf("voice_seconds = %d after close, want about 90", n)
+	}
+	h.mu.RLock()
+	left := len(h.voiceSince)
+	h.mu.RUnlock()
+	if left != 0 {
+		t.Fatalf("%d stays still tracked after close", left)
+	}
+}
+
+// A failed write must not lose the held seconds: they are written by the next
+// flush.
+func TestVoiceTimeSurvivesAFailedWrite(t *testing.T) {
+	p := testutil.DB(t)
+	u := wsFixtureUser(t, p)
+	h := NewHub(p, nil, nil, nil)
+	ch := uuid.New()
+	h.addVoiceTime(u.ID, ch, 3*time.Second) // written at once
+	h.addVoiceTime(u.ID, ch, 4*time.Second) // held back
+
+	ctx := context.Background()
+	if _, err := p.Exec(ctx, `CREATE FUNCTION fail_voice_write() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'write refused'; END $$`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.Exec(ctx, `CREATE TRIGGER fail_voice_write BEFORE UPDATE OF voice_seconds ON users FOR EACH ROW EXECUTE FUNCTION fail_voice_write()`); err != nil {
+		t.Fatal(err)
+	}
+	h.flushVoiceTime(u.ID)
+	if _, err := p.Exec(ctx, `DROP TRIGGER fail_voice_write ON users`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.Exec(ctx, `DROP FUNCTION fail_voice_write()`); err != nil {
+		t.Fatal(err)
+	}
+
+	h.vtimes.mu.Lock()
+	held := h.vtimes.m[u.ID].secs
+	h.vtimes.mu.Unlock()
+	if held != 4 {
+		t.Fatalf("held = %d after a failed write, want 4", held)
+	}
+
+	h.flushVoiceTime(u.ID)
+	var n int64
+	if err := p.QueryRow(context.Background(), `SELECT voice_seconds FROM users WHERE id=$1`, u.ID).Scan(&n); err != nil || n != 7 {
+		t.Fatalf("total = %d, %v; want 7", n, err)
+	}
+}
+
+func TestVoiceTimeEntryIsDroppedOnceIdle(t *testing.T) {
+	p := testutil.DB(t)
+	u := wsFixtureUser(t, p)
+	h := NewHub(p, nil, nil, nil)
+	h.addVoiceTime(u.ID, uuid.New(), 3*time.Second)
+	h.pruneWhenIdle(u.ID)
+	h.vtimes.mu.Lock()
+	idle := h.vtimes.m[u.ID].idle
+	h.vtimes.mu.Unlock()
+	if idle == nil {
+		t.Fatal("no idle timer after a write")
+	}
+}

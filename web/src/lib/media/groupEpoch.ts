@@ -114,6 +114,11 @@ export abstract class GroupEpoch extends GroupBase {
       const known = this.leaves.get(id)
       if (known && sameBytes(known.key, key)) continue
       this.leaves.set(id, { key: new Uint8Array(key), at: now })
+      // A member whose leaf was swapped (a reload) was let back in just now: its silence
+      // before the swap says nothing about the new tab, which starts with a clean slate
+      // like any new member. Without this a tab that took longer than the absence limit
+      // to come back would be removed again by the very next tick.
+      if (known && id !== this.userId) this.alive.set(id, now)
       // My own leaf is due again after a period of its own, jittered like an epoch's.
       if (id === this.userId) this.updateAfter = Math.max(0, rotateMs + (Math.random() * 2 - 1) * rotateJitterMs)
     }

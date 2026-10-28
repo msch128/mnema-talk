@@ -68,6 +68,11 @@ func TestRegistryRefusesMalformedAndDuplicateDefinitions(t *testing.T) {
 		"no description":    {def: Definition{Name: "x"}},
 		"bad option name":   {def: Definition{Name: "x", Description: "d", Options: []Option{{Name: "A", Description: "d"}}}},
 		"option without it": {def: Definition{Name: "x", Description: "d", Options: []Option{{Name: "a"}}}},
+		"duplicate option": {def: Definition{Name: "x", Description: "d", Options: []Option{
+			{Name: "a", Description: "d", Type: OptionString}, {Name: "a", Description: "d", Type: OptionUser}}}},
+		"unknown type": {def: Definition{Name: "x", Description: "d", Options: []Option{{Name: "a", Description: "d", Type: 99}}}},
+		"choices on a number": {def: Definition{Name: "x", Description: "d", Options: []Option{
+			{Name: "a", Description: "d", Type: OptionInteger, Choices: []string{"1"}}}}},
 	}
 	for name, c := range bad {
 		if err := r.Add(c); err == nil {

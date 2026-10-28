@@ -85,10 +85,8 @@ func (h *Handler) markRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var req MarkReadRequest
-	if r.ContentLength > 0 {
-		if err := httpx.DecodeJSON(r, &req); err != nil {
-			return err
-		}
+	if err := httpx.DecodeOptionalJSON(r, &req); err != nil {
+		return err
 	}
 	user := auth.UserFrom(r.Context())
 	at, err := MarkRead(r.Context(), h.DB, user.ID, chID, req.MessageID)

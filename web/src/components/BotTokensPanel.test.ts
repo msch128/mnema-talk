@@ -53,6 +53,8 @@ describe('BotTokensPanel', () => {
     expect(rows[1]?.text()).toContain('Revoked')
     expect(rows[1]?.text()).toContain('Never')
     expect(rows[1]?.get('[data-action="revoke"]').attributes('disabled')).toBeDefined()
+    expect(rows[0]?.get('[data-action="regenerate"]').attributes('disabled')).toBeUndefined()
+    expect(rows[1]?.get('[data-action="regenerate"]').attributes('disabled')).toBeDefined()
   })
 
   it('marks pre-1.0 tokens that have no recorded issuer, and tells which binding was assumed', async () => {

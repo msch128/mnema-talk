@@ -159,12 +159,13 @@ func TestSenderClassifiesAnswers(t *testing.T) {
 		want   Outcome
 		wait   time.Duration
 	}{
+		{http.StatusOK, "", Delivered, 0},
 		{http.StatusCreated, "", Delivered, 0},
 		{http.StatusAccepted, "", Delivered, 0},
 		{http.StatusNotFound, "", Gone, 0},
 		{http.StatusGone, "", Gone, 0},
-		{http.StatusTooManyRequests, "7", Retry, 7 * time.Second},
-		{http.StatusServiceUnavailable, "3600", Retry, maxRetryWait},
+		{http.StatusTooManyRequests, "4", Retry, 4 * time.Second},
+		{http.StatusServiceUnavailable, "3600", Retry, maxRetryDelay},
 		{http.StatusBadGateway, "soon", Retry, 0},
 		{http.StatusBadRequest, "", Rejected, 0},
 		{http.StatusForbidden, "", Rejected, 0},
@@ -252,5 +253,26 @@ func TestBrowserKeyGeneratedForTestsIsValid(t *testing.T) {
 	}
 	if p, a, err := ValidateKeys(b.p256dh(), b.secret()); err != nil || p != b.p256dh() || a != b.secret() {
 		t.Fatalf("%v %s %s", err, p, a)
+	}
+}
+
+func TestRetryAfterReadsSecondsAndDatesAndIsCapped(t *testing.T) {
+	now := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	cases := []struct {
+		header string
+		want   time.Duration
+	}{
+		{"3", 3 * time.Second},
+		{"120", maxRetryDelay},
+		{"-4", 0},
+		{"soon", 0},
+		{now.Add(2 * time.Second).Format(http.TimeFormat), 2 * time.Second},
+		{now.Add(time.Hour).Format(http.TimeFormat), maxRetryDelay},
+		{now.Add(-time.Hour).Format(http.TimeFormat), 0},
+	}
+	for _, c := range cases {
+		if got := retryAfter(c.header, now); got != c.want {
+			t.Errorf("Retry-After %q: %s, want %s", c.header, got, c.want)
+		}
 	}
 }

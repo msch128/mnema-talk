@@ -64,6 +64,9 @@ type authQueryHook struct {
 	match  string
 	once   sync.Once
 	before func()
+	// after runs when the first matching query has finished.
+	after  func()
+	armed  bool
 	cancel bool
 	hit    bool
 }
@@ -72,6 +75,7 @@ func (h *authQueryHook) TraceQueryStart(ctx context.Context, _ *pgx.Conn, d pgx.
 	if strings.Contains(strings.Join(strings.Fields(d.SQL), " "), h.match) {
 		h.once.Do(func() {
 			h.hit = true
+			h.armed = h.after != nil
 			if h.before != nil {
 				h.before()
 			}
@@ -84,7 +88,12 @@ func (h *authQueryHook) TraceQueryStart(ctx context.Context, _ *pgx.Conn, d pgx.
 	}
 	return ctx
 }
-func (*authQueryHook) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
+func (h *authQueryHook) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {
+	if h.armed {
+		h.armed = false
+		h.after()
+	}
+}
 
 func authHookPool(t *testing.T, source *db.Pool, hook *authQueryHook) *db.Pool {
 	t.Helper()
@@ -146,7 +155,7 @@ func TestAuthDatabaseCancellationPropagates(t *testing.T) {
 			_, e := Register(ctx, p, "newmember", "", testPassword, "member-invite-k7x2")
 			return e
 		}},
-		{"change password load", "SELECT password_hash FROM users", func(p *db.Pool) error {
+		{"change password load", "SELECT password_hash, role FROM users", func(p *db.Pool) error {
 			_, e := ChangePassword(ctx, p, member.ID, testPassword, "next-password-value")
 			return e
 		}},
@@ -520,5 +529,23 @@ func TestAuthHashEntropyFailuresPreserveAccounts(t *testing.T) {
 	var exists bool
 	if err := p.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE username IN ('entropy-member','entropy-admin'))`).Scan(&exists); err != nil || exists {
 		t.Fatalf("failed hash created account: exists=%v err=%v", exists, err)
+	}
+}
+
+func TestUpdateDisplayNameKeepsTheStoredBio(t *testing.T) {
+	p, _, member := authFixture(t)
+	ctx := context.Background()
+	if _, err := UpdateProfile(ctx, p, member.ID, "before", "my bio"); err != nil {
+		t.Fatal(err)
+	}
+	u, err := UpdateDisplayName(ctx, p, member.ID, "after")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.DisplayName != "after" || u.Bio != "my bio" {
+		t.Fatalf("display name %q, bio %q", u.DisplayName, u.Bio)
+	}
+	if _, err := UpdateDisplayName(ctx, p, uuid.New(), "x"); err == nil {
+		t.Fatal("unknown user accepted")
 	}
 }

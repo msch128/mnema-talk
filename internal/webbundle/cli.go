@@ -193,6 +193,9 @@ func runVerify(args []string, stdout, stderr io.Writer) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
+	if *zipPath == "" {
+		return errors.New("-zip is required")
+	}
 	pub, err := readPub(*pubPath)
 	if err != nil {
 		return err

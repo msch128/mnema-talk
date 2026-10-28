@@ -73,9 +73,14 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	r.Post("/channels/{id}/webhooks", httpx.Handle(h.create))
 	r.Patch("/webhooks/{id}", httpx.Handle(h.update))
 	r.Post("/webhooks/{id}/token", httpx.Handle(h.regenerate))
-	r.Post("/webhooks/{id}/avatar", httpx.Handle(h.avatar))
 	r.Delete("/webhooks/{id}", httpx.Handle(h.delete))
 	h.mountOutgoing(r)
+}
+
+// MountAdminUploads registers the multipart avatar upload; the caller wraps it
+// in a larger MaxBody than the JSON default.
+func (h *Handler) MountAdminUploads(r chi.Router) {
+	r.Post("/webhooks/{id}/avatar", httpx.Handle(h.avatar))
 }
 
 func (h *Handler) url(rec *record, token string) string {

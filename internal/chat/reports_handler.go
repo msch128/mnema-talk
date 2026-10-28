@@ -114,6 +114,7 @@ func (h *Handler) auditReport(ctx context.Context, id uuid.UUID, category string
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage reports permission."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the before cursor no longer exists (it was deleted since the previous page); reload the list."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
@@ -132,6 +133,11 @@ func (h *Handler) listReports(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	limit := httpx.QueryLimit(r, "limit", 25, 100)
+	if before != nil {
+		if err := cursorExists(r.Context(), h.DB, `SELECT 1 FROM message_reports WHERE id = $1`, *before); err != nil {
+			return err
+		}
+	}
 	rows, err := h.DB.Query(r.Context(), reportSelect+reportFrom+`
 		WHERE ($1 = 'all' OR r.status = $1)
 		  AND ($2::uuid IS NULL OR (r.created_at, r.id) < (SELECT created_at, id FROM message_reports WHERE id = $2))
@@ -241,28 +247,46 @@ func (h *Handler) resolveReport(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	tag, err := h.DB.Exec(r.Context(), `
-		UPDATE message_reports SET status = $2, resolution_note = $3, resolved_by = $4, resolved_at = NOW()
-		WHERE id = $1 AND status = 'open'`, id, req.Status, note, auth.UserFrom(r.Context()).ID)
-	if err != nil {
-		return fmt.Errorf("resolve report: %w", err)
+	// The update and the read share a transaction: its row lock keeps a
+	// moderator who deletes the report now waiting, so the read always finds
+	// the report this call just closed.
+	var rep Report
+	err = pgx.BeginFunc(r.Context(), h.DB, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(r.Context(), `
+			UPDATE message_reports SET status = $2, resolution_note = $3, resolved_by = $4, resolved_at = NOW()
+			WHERE id = $1 AND status = 'open'`, id, req.Status, note, auth.UserFrom(r.Context()).ID)
+		if err != nil {
+			return fmt.Errorf("resolve report: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return errReportNotOpen
+		}
+		rows, err := tx.Query(r.Context(), reportSelect+reportFrom+` WHERE r.id = $1`, id)
+		if err != nil {
+			return fmt.Errorf("resolve report: %w", err)
+		}
+		if rep, err = pgx.CollectExactlyOneRow(rows, scanReport); err != nil {
+			return fmt.Errorf("resolve report: %w", err)
+		}
+		return nil
+	})
+	if errors.Is(err, errReportNotOpen) {
+		return h.reportClosedOrMissing(r.Context(), id, "the report is already closed")
 	}
-	if tag.RowsAffected() == 0 {
-		return h.reportClosedOrMissing(r.Context(), id)
-	}
-	rows, err := h.DB.Query(r.Context(), reportSelect+reportFrom+` WHERE r.id = $1`, id)
 	if err != nil {
-		return fmt.Errorf("resolve report: %w", err)
-	}
-	rep, err := pgx.CollectExactlyOneRow(rows, scanReport)
-	if err != nil {
-		return fmt.Errorf("resolve report: %w", err)
+		return err
 	}
 	httpx.WriteJSON(w, http.StatusOK, rep)
 	return nil
 }
 
-func (h *Handler) reportClosedOrMissing(ctx context.Context, id uuid.UUID) error {
+// errReportNotOpen says a report is not open (anymore): closed or gone.
+var errReportNotOpen = errors.New("report is not open")
+
+// reportClosedOrMissing explains why an operation on an open report matched
+// nothing: the report does not exist (404), or it is in the wrong state
+// (409, with conflict as the message).
+func (h *Handler) reportClosedOrMissing(ctx context.Context, id uuid.UUID, conflict string) error {
 	var exists bool
 	if err := h.DB.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM message_reports WHERE id = $1)`, id).Scan(&exists); err != nil {
 		return err
@@ -270,7 +294,7 @@ func (h *Handler) reportClosedOrMissing(ctx context.Context, id uuid.UUID) error
 	if !exists {
 		return errReportNotFound
 	}
-	return httpx.ErrConflict("the report is already closed")
+	return httpx.ErrConflict(conflict)
 }
 
 // deleteReport handles DELETE /api/admin/reports/{id}.
@@ -301,14 +325,7 @@ func (h *Handler) deleteReport(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("delete report: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		var exists bool
-		if err := h.DB.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM message_reports WHERE id = $1)`, id).Scan(&exists); err != nil {
-			return err
-		}
-		if !exists {
-			return errReportNotFound
-		}
-		return httpx.ErrConflict("close the report before deleting it")
+		return h.reportClosedOrMissing(r.Context(), id, "close the report before deleting it")
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil

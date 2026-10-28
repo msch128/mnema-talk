@@ -9,7 +9,6 @@ package metrics
 import (
 	"fmt"
 	"io"
-	"math"
 	"sort"
 	"strings"
 	"sync"
@@ -19,6 +18,11 @@ import (
 
 // maxSeries bounds the series of one labelled family.
 const maxSeries = 256
+
+// maxHTTPSeries bounds the HTTP families. Their route label is the bounded set
+// of router patterns (several hundred) times up to five status classes, so the
+// generic cap would fold late routes, including their 4xx/5xx, into "other".
+const maxHTTPSeries = 2048
 
 // otherLabel replaces label values beyond maxSeries.
 const otherLabel = "other"
@@ -48,12 +52,19 @@ func (g *Gauge) Load() int64 { return g.v.Load() }
 type Vec struct {
 	name, help string
 	labels     []string
+	max        int
 	mu         sync.RWMutex
 	series     map[string]*Counter
 }
 
 func newVec(name, help string, labels ...string) *Vec {
-	return &Vec{name: name, help: help, labels: labels, series: map[string]*Counter{}}
+	return &Vec{name: name, help: help, labels: labels, max: maxSeries, series: map[string]*Counter{}}
+}
+
+func newHTTPVec(name, help string, labels ...string) *Vec {
+	v := newVec(name, help, labels...)
+	v.max = maxHTTPSeries
+	return v
 }
 
 // With returns the counter of one label combination.
@@ -70,7 +81,7 @@ func (v *Vec) With(values ...string) *Counter {
 	if c, ok = v.series[key]; ok {
 		return c
 	}
-	if len(v.series) >= maxSeries {
+	if len(v.series) >= v.max {
 		other := make([]string, len(v.labels))
 		for i := range other {
 			other[i] = otherLabel
@@ -148,93 +159,12 @@ func labelString(names, values []string) string {
 // Buckets are the HTTP latency bounds in seconds.
 var Buckets = []float64{0.005, 0.025, 0.1, 0.25, 0.5, 1, 2.5, 10}
 
-type histogram struct {
-	counts [9]atomic.Uint64 // Buckets plus +Inf, non-cumulative
-	sumNs  atomic.Uint64
-	count  atomic.Uint64
-}
-
-// HistVec is a latency histogram family with one label.
-type HistVec struct {
-	name, help, label string
-	mu                sync.RWMutex
-	series            map[string]*histogram
-}
-
-func newHistVec(name, help, label string) *HistVec {
-	return &HistVec{name: name, help: help, label: label, series: map[string]*histogram{}}
-}
-
-func (h *HistVec) get(value string) *histogram {
-	h.mu.RLock()
-	s, ok := h.series[value]
-	h.mu.RUnlock()
-	if ok {
-		return s
-	}
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if s, ok = h.series[value]; ok {
-		return s
-	}
-	if len(h.series) >= maxSeries {
-		value = otherLabel
-		if s, ok = h.series[value]; ok {
-			return s
-		}
-	}
-	s = &histogram{}
-	h.series[value] = s
-	return s
-}
-
-// Observe records one duration under the label value.
-func (h *HistVec) Observe(value string, d time.Duration) {
-	s := h.get(value)
-	s.counts[sort.SearchFloat64s(Buckets, d.Seconds())].Add(1)
-	if d > 0 {
-		s.sumNs.Add(uint64(d))
-	}
-	s.count.Add(1)
-}
-
-func (h *HistVec) write(w io.Writer) {
-	h.mu.RLock()
-	keys := make([]string, 0, len(h.series))
-	for k := range h.series {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	fmt.Fprintf(w, "# HELP %s %s\n# TYPE %s histogram\n", h.name, h.help, h.name)
-	for _, k := range keys {
-		s := h.series[k]
-		var cum uint64
-		for i, le := range Buckets {
-			cum += s.counts[i].Load()
-			fmt.Fprintf(w, "%s_bucket{%s=%q,le=\"%s\"} %d\n", h.name, h.label, k, formatFloat(le), cum)
-		}
-		cum += s.counts[len(Buckets)].Load()
-		fmt.Fprintf(w, "%s_bucket{%s=%q,le=\"+Inf\"} %d\n", h.name, h.label, k, cum)
-		fmt.Fprintf(w, "%s_sum{%s=%q} %s\n", h.name, h.label, k, formatFloat(float64(s.sumNs.Load())/1e9))
-		fmt.Fprintf(w, "%s_count{%s=%q} %d\n", h.name, h.label, k, s.count.Load())
-	}
-	h.mu.RUnlock()
-	fmt.Fprintln(w)
-}
-
-func formatFloat(f float64) string {
-	if math.IsInf(f, 0) || math.IsNaN(f) {
-		return "0"
-	}
-	return fmt.Sprintf("%g", f)
-}
-
 // The process-wide instruments.
 var (
 	// HTTPRequests counts requests by route pattern and status class (2xx..5xx).
-	HTTPRequests = newVec("mnema_http_requests_total", "HTTP requests by route pattern and status class", "route", "class")
+	HTTPRequests = newHTTPVec("mnema_http_requests_total", "HTTP requests by route pattern and status class", "route", "class")
 	// HTTPDuration is the latency by route pattern.
-	HTTPDuration = newHistVec("mnema_http_request_duration_seconds", "HTTP request latency by route pattern", "route")
+	HTTPDuration = newHTTPHistVec("mnema_http_request_duration_seconds", "HTTP request latency by route pattern", "route")
 	// HTTPInflight is the number of requests being served.
 	HTTPInflight Gauge
 

@@ -76,7 +76,9 @@ func TestTheChannelListAndThePermissionStateKnowTheStage(t *testing.T) {
 	if err != nil || !snap.IsStage(stage.ID) {
 		t.Fatalf("permission state: %v", err)
 	}
-	FillTalkFields(ctx, p, stage)
+	if err := FillTalkFields(ctx, p, stage); err != nil {
+		t.Fatal(err)
+	}
 	if !stage.IsStage {
 		t.Fatal("FillTalkFields forgot the Stage flag")
 	}

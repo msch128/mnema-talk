@@ -139,7 +139,10 @@ func List(ctx context.Context, q db.Querier) ([]Bot, error) {
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (Bot, error) {
 		b, err := scanBot(row)
-		return *b, err
+		if err != nil {
+			return Bot{}, err
+		}
+		return *b, nil
 	})
 }
 
@@ -275,92 +278,4 @@ func WithRoles(bots []Bot, roles map[uuid.UUID][]uuid.UUID) {
 			bots[i].RoleIDs = slices.Clone(r)
 		}
 	}
-}
-
-// Tokens lists the tokens of a bot, newest first.
-func Tokens(ctx context.Context, q db.Querier, botID uuid.UUID) ([]Token, error) {
-	rows, err := q.Query(ctx, `
-		SELECT id, name, hint, expires_at, last_used_at, revoked_at, created_at,
-		       CASE WHEN created_by IS NULL THEN 'unbound' WHEN minter_inferred THEN 'inferred' ELSE '' END
-		FROM bot_tokens WHERE bot_id = $1 ORDER BY created_at DESC, id`, botID)
-	if err != nil {
-		return nil, fmt.Errorf("list tokens: %w", err)
-	}
-	now := time.Now()
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (Token, error) {
-		var t Token
-		var revoked *time.Time
-		err := row.Scan(&t.ID, &t.Name, &t.Hint, &t.ExpiresAt, &t.LastUsedAt, &revoked, &t.CreatedAt, &t.IssuerBinding)
-		t.State = tokenState(revoked, t.ExpiresAt, now)
-		return t, err
-	})
-}
-
-func tokenState(revoked, expires *time.Time, now time.Time) string {
-	switch {
-	case revoked != nil:
-		return "revoked"
-	case expires != nil && !expires.After(now):
-		return "expired"
-	}
-	return "active"
-}
-
-// IssueToken adds a token to a bot and returns the secret, the only time it
-// exists in clear.
-func IssueToken(ctx context.Context, p *db.Pool, botID uuid.UUID, name string, expires *time.Time, minter uuid.UUID) (Token, string, error) {
-	secret, hash, hint := NewToken()
-	var t Token
-	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		var one int
-		if err := tx.QueryRow(ctx, `SELECT 1 FROM bots WHERE id = $1 FOR UPDATE`, botID).Scan(&one); errors.Is(err, pgx.ErrNoRows) {
-			return errNotFound
-		} else if err != nil {
-			return err
-		}
-		var active int
-		if err := tx.QueryRow(ctx, `
-			SELECT COUNT(*) FROM bot_tokens WHERE bot_id = $1 AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > NOW())`, botID).Scan(&active); err != nil {
-			return err
-		}
-		if active >= MaxTokens {
-			return httpx.ErrConflict(fmt.Sprintf("a bot can have at most %d active tokens", MaxTokens))
-		}
-		return tx.QueryRow(ctx, `
-			INSERT INTO bot_tokens (bot_id, name, token_hash, hint, expires_at, created_by) VALUES ($1, $2, $3, $4, $5, NULLIF($6, '00000000-0000-0000-0000-000000000000'::uuid))
-			RETURNING id, name, hint, expires_at, last_used_at, created_at`,
-			botID, name, hash, hint, expires, minter).Scan(&t.ID, &t.Name, &t.Hint, &t.ExpiresAt, &t.LastUsedAt, &t.CreatedAt)
-	})
-	if err != nil {
-		if _, ok := httpx.AsAPIError(err); ok {
-			return Token{}, "", err
-		}
-		return Token{}, "", fmt.Errorf("issue token: %w", err)
-	}
-	t.State = "active"
-	return t, secret, nil
-}
-
-// RevokeToken ends a token at once. A token already revoked stays so.
-func RevokeToken(ctx context.Context, p *db.Pool, botID, tokenID uuid.UUID) error {
-	tag, err := p.Exec(ctx, `
-		UPDATE bot_tokens SET revoked_at = COALESCE(revoked_at, NOW()) WHERE id = $1 AND bot_id = $2`, tokenID, botID)
-	if err != nil {
-		return fmt.Errorf("revoke token: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return errTokenNotFound
-	}
-	return nil
-}
-
-// CheckExpiry validates an expiry an admin asked for.
-func CheckExpiry(t, now time.Time) error {
-	if !t.After(now) {
-		return httpx.ErrInvalidInput("expires_at must be in the future")
-	}
-	if t.After(now.Add(MaxTokenLifetime)) {
-		return httpx.ErrInvalidInput("expires_at is too far in the future")
-	}
-	return nil
 }

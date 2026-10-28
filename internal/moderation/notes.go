@@ -50,6 +50,16 @@ func (n *Note) scan(row pgx.CollectableRow) error {
 	return row.Scan(&n.ID, &n.AuthorID, &n.AuthorName, &n.Body, &n.Strike, &n.CreatedAt, &n.UpdatedAt)
 }
 
+// decorate sets what the caller may do with the note and names a deleted
+// author. The list and the single-note load share it, so both agree.
+func (n *Note) decorate(actor *auth.User, admin bool) {
+	n.Mine = n.AuthorID == actor.ID
+	n.CanDelete = n.Mine || admin
+	if n.AuthorName == "" {
+		n.AuthorName = deletedAuthorName
+	}
+}
+
 // listNotes returns the notes about a member, newest first, with what the
 // caller may do with each.
 func (h *Handler) listNotes(ctx context.Context, subject uuid.UUID, actor *auth.User) ([]Note, error) {
@@ -71,11 +81,7 @@ func (h *Handler) listNotes(ctx context.Context, subject uuid.UUID, actor *auth.
 		return nil, err
 	}
 	for i := range notes {
-		notes[i].Mine = notes[i].AuthorID == actor.ID
-		notes[i].CanDelete = notes[i].Mine || admin
-		if notes[i].AuthorName == "" {
-			notes[i].AuthorName = deletedAuthorName
-		}
+		notes[i].decorate(actor, admin)
 	}
 	if notes == nil {
 		notes = []Note{}
@@ -182,11 +188,7 @@ func (h *Handler) loadNote(ctx context.Context, subject, id uuid.UUID, actor *au
 	if err != nil {
 		return n, err
 	}
-	n.Mine = n.AuthorID == actor.ID
-	n.CanDelete = n.Mine || admin
-	if n.AuthorName == "" {
-		n.AuthorName = deletedAuthorName
-	}
+	n.decorate(actor, admin)
 	return n, nil
 }
 

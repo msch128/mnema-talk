@@ -85,21 +85,9 @@ func (h *Handler) loadThreadRoot(r *http.Request, msgID uuid.UUID) (*Message, er
 }
 
 func (h *Handler) parseThreadQuery(r *http.Request, msgID uuid.UUID) (HistoryQuery, error) {
-	q := HistoryQuery{Limit: httpx.QueryLimit(r, "limit", 50, 100)}
-	anchors, err := queryIDs(r, "a message id", map[string]**uuid.UUID{"before": &q.Before, "after": &q.After})
-	if err != nil {
-		return q, err
-	}
-	if anchors > 1 {
-		return q, httpx.ErrInvalidInput("use only one of before or after")
-	}
-	if anchor := firstID(q.Before, q.After); anchor != nil {
-		ref, err := loadMessageRef(r.Context(), h.DB, *anchor)
-		if err != nil || ref.ParentID == nil || *ref.ParentID != msgID {
-			return q, errMessageNotFound
-		}
-	}
-	return q, nil
+	return h.parseHistoryQuery(r, []string{"before", "after"}, func(ref *messageRef) bool {
+		return ref.ParentID != nil && *ref.ParentID == msgID
+	})
 }
 
 // getThread handles GET /api/messages/{messageID}/thread.
@@ -199,14 +187,15 @@ func (h *Handler) getMessageByNumber(w http.ResponseWriter, r *http.Request) err
 // @Param after query string false "Only messages created after this instant (RFC 3339); must be earlier than before_date." Format(date-time)
 // @Param before_date query string false "Only messages created before this instant (RFC 3339)." Format(date-time)
 // @Param during query string false "Only messages created during this day (YYYY-MM-DD) in the caller's timezone." Format(date)
-// @Param tz query string false "Timezone offset for during (e.g. +02:00, -05:00, or minutes)." default(UTC)
+// @Param tz query string false "Timezone offset for during (e.g. +02:00, -0500, or minutes east of UTC; a signed run of three digits such as -300 is ambiguous and refused)." default(UTC)
 // @Param before query string false "Page back: only messages older (or newer, if sort=oldest) than this message." Format(uuid)
-// @Param sort query string false "Sort order: newest (default), oldest or relevance." Enums(newest,oldest,relevance)
+// @Param sort query string false "Sort order: newest (default) or oldest. relevance is accepted as an alias of newest: search has no ranking." Enums(newest,oldest,relevance)
 // @Param dm query boolean false "Search the caller's direct message conversations instead of channels. Only conversations the caller is in are searched; channel_id may name one of them." default(false)
 // @Param limit query int false "Page size. Values below 1 or non-numeric fall back to the default; larger values are clamped to 50." minimum(1) maximum(50) default(25)
 // @Success 200 {object} SearchResult "One page of results."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the before cursor no longer exists (it was deleted since the previous page); reload the list."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."

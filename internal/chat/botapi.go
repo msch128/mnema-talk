@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -152,19 +153,30 @@ type rawBotMessage struct {
 	ParentID         *uuid.UUID           `json:"parent_id"`
 }
 
-func (h *Handler) checkBotChannelSend(ctx context.Context, user *auth.User, chID uuid.UUID) (*perm.Snapshot, perm.Set, error) {
-	snap, err := h.Perms.ForChannel(ctx, chID)
+// ChannelPermsOf is what user may do in a channel, with the snapshot it was
+// decided on.
+func ChannelPermsOf(ctx context.Context, ps *perm.Service, user *auth.User, chID uuid.UUID) (*perm.Snapshot, perm.Set, error) {
+	snap, err := ps.ForChannel(ctx, chID)
 	if err != nil {
 		return nil, 0, err
 	}
-	p := snap.Channel(user.Subject(), chID)
-	if err := perm.CheckChannel(p, perm.SendMessages); err != nil {
+	return snap, snap.Channel(user.Subject(), chID), nil
+}
+
+// CheckBotSend requires that user may post in the channel and that it exists.
+// Posting by a bot and a bot's reply to a command both pass through it.
+func CheckBotSend(ctx context.Context, ps *perm.Service, p *db.Pool, user *auth.User, chID uuid.UUID) (*perm.Snapshot, perm.Set, error) {
+	snap, set, err := ChannelPermsOf(ctx, ps, user, chID)
+	if err != nil {
 		return nil, 0, err
 	}
-	if _, err := ChannelForMessages(ctx, h.DB, chID); err != nil {
+	if err := perm.CheckChannel(set, perm.SendMessages); err != nil {
 		return nil, 0, err
 	}
-	return snap, p, nil
+	if _, err := ChannelForMessages(ctx, p, chID); err != nil {
+		return nil, 0, err
+	}
+	return snap, set, nil
 }
 
 func decodeRawBotMessage(w http.ResponseWriter, r *http.Request) (*rawBotMessage, error) {
@@ -181,17 +193,27 @@ func decodeRawBotMessage(w http.ResponseWriter, r *http.Request) (*rawBotMessage
 	return &req, nil
 }
 
-func validateBotPayload(req *rawBotMessage) (string, []Embed, *uuid.UUID, error) {
-	content, err := ValidateContent(req.Content, true)
+// ValidateBotMessage checks the content and embeds a bot sends (a message or
+// a response to a command): the same rules, one message needs one of them.
+func ValidateBotMessage(rawContent string, rawEmbeds []InEmbed) (string, []Embed, error) {
+	content, err := ValidateContent(rawContent, true)
 	if err != nil {
-		return "", nil, nil, err
+		return "", nil, err
 	}
-	embeds, err := SanitizeEmbeds(req.Embeds)
+	embeds, err := SanitizeEmbeds(rawEmbeds)
 	if err != nil {
-		return "", nil, nil, httpx.ErrInvalidInput(err.Error())
+		return "", nil, httpx.ErrInvalidInput(err.Error())
 	}
 	if content == "" && len(embeds) == 0 {
-		return "", nil, nil, httpx.ErrInvalidInput("Cannot send an empty message")
+		return "", nil, httpx.ErrInvalidInput("Cannot send an empty message").WithDiscordCode(httpx.DiscordCodeEmptyMessage)
+	}
+	return content, embeds, nil
+}
+
+func validateBotPayload(req *rawBotMessage) (string, []Embed, *uuid.UUID, error) {
+	content, embeds, err := ValidateBotMessage(req.Content, req.Embeds)
+	if err != nil {
+		return "", nil, nil, err
 	}
 	var reply *uuid.UUID
 	if req.MessageReference != nil {
@@ -225,7 +247,7 @@ func (h *Handler) botCreateMessage(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	snap, p, err := h.checkBotChannelSend(r.Context(), user, chID)
+	snap, p, err := CheckBotSend(r.Context(), h.Perms, h.DB, user, chID)
 	if err != nil {
 		return err
 	}
@@ -317,12 +339,12 @@ func (h *Handler) botEditMessage(w http.ResponseWriter, r *http.Request) error {
 // botEditContext is the mention context of a bot's edit: the policy of its
 // sends (botMentionPolicy), so an edit never reaches more than a send does.
 func (h *Handler) botEditContext(r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
-	snap, err := h.Perms.ForChannel(r.Context(), ch)
+	user := auth.UserFrom(r.Context())
+	snap, p, err := ChannelPermsOf(r.Context(), h.Perms, user, ch)
 	if err != nil {
 		return nil, err
 	}
-	p := snap.Channel(auth.UserFrom(r.Context()).Subject(), ch)
-	if err := snap.Deny(auth.UserFrom(r.Context()).Subject(), p, need); err != nil {
+	if err := snap.Deny(user.Subject(), p, need); err != nil {
 		return nil, err
 	}
 	return WithMentionPolicy(r.Context(), botMentionPolicy(snap, ch, p, nil)), nil

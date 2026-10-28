@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/bot"
@@ -57,10 +58,14 @@ func dispatchGlobalEvent(snap *perm.Snapshot, targets []*session, name string, p
 	}
 }
 
+// permTimeout bounds the permission-state load made on behalf of an event.
+const permTimeout = 3 * time.Second
+
 // Observe is the hub's tap: it sees every event the hub publishes (channel is
 // uuid.Nil for events to everybody) and queues it for the sessions whose
 // intents ask for it and whose bot may view the channel right now. It never
-// blocks.
+// blocks for longer than permTimeout, the bound on reloading the permission
+// snapshot.
 func (g *Gateway) Observe(channel uuid.UUID, eventType string, payload any) {
 	if g.Perms == nil {
 		return
@@ -73,7 +78,9 @@ func (g *Gateway) Observe(channel uuid.UUID, eventType string, payload any) {
 	if len(targets) == 0 {
 		return
 	}
-	snap, err := g.Perms.Snapshot(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), permTimeout)
+	defer cancel()
+	snap, err := g.Perms.Snapshot(ctx)
 	if err != nil {
 		return // fail closed
 	}

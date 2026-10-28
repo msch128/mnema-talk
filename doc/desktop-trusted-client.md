@@ -317,14 +317,29 @@ limit).
 ### Rollback protection
 
 The host keeps `state.json` next to the cache:
-`{ "security_floor", "high_water", "last_check" }`. `high_water` maps each
-`web_client_api` to the highest bundle version that ever verified on this
-machine (built-in, cached or downloaded). The floor and the marks are rebuilt
-from the held bundles if the file is lost, and never lowered.
+`{ "floors", "marks", "last_check" }`. Both numbers are recorded **per signing
+key** (by key id), so a key that is revoked later takes the marks it raised
+with it:
+
+* `floors` maps each key id to the highest `security_floor` that key ever
+  declared in a verified manifest.
+* `marks` maps each `web_client_api` to, per key id, the highest bundle version
+  that key ever signed and this machine verified (built-in, cached or
+  downloaded).
+
+The floor and the high-water mark in force are derived from these: the highest
+value of any key that is still trusted. `security_floor` and `high_water` in
+the file are the older, signer-less format; they are read once as the unknown
+signer (always counted) and no longer written. The marks are rebuilt from the
+held bundles if the file is lost. They only rise, except in two cases that
+exist to undo a forged mark: a key that a trust statement revokes stops
+counting (the marks in force fall back to what still-trusted keys reached or
+declared), and a statement with `max_version` lowers the recorded marks and
+floors to at most the cap (see [Key revocation](#key-revocation-the-offline-root-key-and-the-trust-statement)).
 
 * A bundle is refused when `version < security_floor`, where the floor is the
-  maximum of every `security_floor` of every manifest that has verified so
-  far.
+  maximum of every `security_floor` declared by a still-trusted key's verified
+  manifests.
 * **Strict high-water rule.** A bundle is never selected when its version is
   below the high-water mark of its contract, even if it is validly signed,
   above the floor and the only one the server's version fits. The rule is "never
@@ -690,7 +705,7 @@ Community rules (`/api/onboarding`, see [roles-and-permissions.md](roles-and-per
 reach the shipped desktop clients through the trusted proxy like any other
 `/api` call, so members accept them in the web app as usual. The native IPC
 transport (`web/src/lib/native/nativeRoutes.ts`) belongs to the experimental
-Windows DEV client, which is not shipped; it does not carry `/api/onboarding`
+native DEV client, which is not shipped; it does not carry `/api/onboarding`
 and a member of that client could not accept rules until a typed operation is
 added. The same holds for custom emoji (`/api/emoji`, `/api/admin/emoji`): the
 shipped clients get them through the trusted proxy, the native DEV client answers

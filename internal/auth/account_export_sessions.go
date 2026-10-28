@@ -5,15 +5,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
 // exportSessions lists the member's own sessions: coarse device label, when
 // each was created and last used, and when it expires. Never the session id.
-func exportSessions(ctx context.Context, q db.Querier, user uuid.UUID) ([]exportedSession, error) {
-	return collect(ctx, q, pgx.RowToStructByName[exportedSession], `
-		SELECT device, created_at, last_active_at, expires_at FROM user_sessions WHERE user_id = $1 ORDER BY created_at LIMIT $2`, user, exportMaxRows)
+func exportSessions(ctx context.Context, q db.Querier, user uuid.UUID) (capped, error) {
+	return listDataset[exportedSession](ctx, q, user, `
+		SELECT device, created_at, last_active_at, expires_at FROM user_sessions WHERE user_id = $1 ORDER BY created_at LIMIT $2`)
 }
 
 type exportedSession struct {

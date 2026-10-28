@@ -30,6 +30,9 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 	}
 	seat, ok := h.takeSeat(c, ch, rejoin)
 	if !ok {
+		if rejoin {
+			h.restoreGraceIfAbandoned(c, ch.ID)
+		}
 		return
 	}
 	id := ch.ID
@@ -110,6 +113,15 @@ func (h *Hub) leaveOtherRooms(c *Client, chID uuid.UUID) (rejoin, done bool) {
 	return true, h.SFU != nil && c.peer().Healthy()
 }
 
+// restoreGraceIfAbandoned runs when a join that resumed a lingering presence
+// was refused after the grace timer was already cancelled: with no connection
+// in the room and no timer left, nothing would ever end that presence.
+func (h *Hub) restoreGraceIfAbandoned(c *Client, chID uuid.UUID) {
+	if h.inRoom(chID, c.User.ID) && !h.userInVoice(c.User.ID, chID, nil) {
+		h.startGrace(voiceKey{c.User.ID, chID})
+	}
+}
+
 // voiceSeat is what a join leaves behind for its announcement.
 type voiceSeat struct {
 	rejoin      bool
@@ -187,19 +199,48 @@ func (h *Hub) recheckJoin(c *Client, chID uuid.UUID) (*perm.Snapshot, bool) {
 	return snap, true
 }
 
+// evictSiblingConnections takes the media of chID's room away from the other
+// connections of c's user (a second tab or device): the SFU keeps one peer per
+// user and room, so the join below replaces theirs. They are told instead of
+// being left on a dead connection. Presence stays; c now holds the seat.
+// Their voiceMu is not taken: two tabs joining at once would wait on each
+// other, and detaching only touches the connection's own state.
+func (h *Hub) evictSiblingConnections(c *Client, chID uuid.UUID) {
+	for _, o := range h.clientsOf(c.User.ID) {
+		if o == c {
+			continue
+		}
+		if cur := o.currentVoice(); cur != nil && *cur == chID {
+			o.setVoice(nil)
+			o.SendEvent(events.VoiceKicked, map[string]any{"channel_id": chID, "reason": "joined_elsewhere"})
+		}
+	}
+}
+
 // attachPeer joins c to the SFU room and brings it up to date. It reports
 // false when the permission check after the join revoked the seat.
 func (h *Hub) attachPeer(c *Client, chID uuid.UUID) bool {
 	sendOffer := func(offer webrtc.SessionDescription) { c.SendEvent(events.WebrtcOffer, offer) }
 	sendICE := func(cand *webrtc.ICECandidateInit) { c.SendEvent(events.WebrtcCandidate, cand) }
+	h.evictSiblingConnections(c, chID)
 	peer, err, leased := c.joinLeasedVoice(h.SFU, chID, sendOffer, sendICE)
 	if !leased && c.commandsAllowed() {
 		_, peer, err = h.SFU.Join(chID, c.User.ID, sendOffer, sendICE)
 	}
 	if err != nil {
+		// Without a media connection the seat is worth nothing: give it up
+		// instead of announcing a member nobody can hear.
 		slog.Error("sfu join failed", "user", c.User.ID, "channel", chID, "err", err)
+		h.leaveVoiceLocked(c, chID)
+		c.SendEvent(events.VoiceKicked, map[string]any{"channel_id": chID, "reason": "media_unavailable"})
+		return false
 	}
 	c.setPeer(peer)
+	if peer != nil {
+		// A media connection that fails after the join leaves the seat
+		// without media: tell the client so it can rejoin.
+		peer.OnLost(func() { h.kickLostPeer(c, peer) })
+	}
 	if h.afterPeer != nil {
 		h.afterPeer() // tests change permissions exactly here
 	}

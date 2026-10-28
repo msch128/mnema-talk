@@ -126,30 +126,40 @@ func cleanChannelInputs(name, topic string, chType ChannelType) (string, string,
 	return cleanName, cleanTopic, nil
 }
 
-func verifyCategoryExists(ctx context.Context, p *db.Pool, categoryID *uuid.UUID) error {
+// lockCategory requires the category to exist and holds it until the end of
+// the transaction, so it cannot be deleted before the channel is in it.
+func lockCategory(ctx context.Context, tx pgx.Tx, categoryID *uuid.UUID) error {
 	if categoryID == nil {
 		return nil
 	}
-	var exists bool
-	if err := p.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM categories WHERE id = $1)`, *categoryID).Scan(&exists); err != nil {
-		return err
-	}
-	if !exists {
+	var one int
+	err := tx.QueryRow(ctx, `SELECT 1 FROM categories WHERE id = $1 FOR SHARE`, *categoryID).Scan(&one)
+	if errors.Is(err, pgx.ErrNoRows) {
 		return httpx.ErrInvalidInput("category not found")
 	}
-	return nil
+	return err
 }
 
 func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType ChannelType, topic string, sortOrder int) (*Channel, error) {
+	return CreateChannelWithStage(ctx, p, categoryID, name, chType, topic, sortOrder, false)
+}
+
+// CreateChannelWithStage is CreateChannel that can make the new channel a
+// Stage in the same transaction, so a request that cannot be a Stage (a text
+// channel) creates nothing.
+func CreateChannelWithStage(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType ChannelType, topic string, sortOrder int, stage bool) (*Channel, error) {
 	name, topic, err := cleanChannelInputs(name, topic, chType)
 	if err != nil {
 		return nil, err
 	}
-	if err := verifyCategoryExists(ctx, p, categoryID); err != nil {
+	if err := CheckSortOrder(sortOrder); err != nil {
 		return nil, err
 	}
 	var ch Channel
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		if err := lockCategory(ctx, tx, categoryID); err != nil {
+			return err
+		}
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO channels (category_id, name, type, topic, sort_order) VALUES ($1, $2, $3, $4, $5)
 			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`,
@@ -157,8 +167,18 @@ func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name 
 			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds); err != nil {
 			return err
 		}
+		if stage {
+			if err := SetStage(ctx, tx, ch.ID, true); err != nil {
+				return err
+			}
+			ch.IsStage = true
+		}
 		return assignAndFillSlugs(ctx, tx, &ch)
 	})
+	var refusal *httpx.APIError
+	if errors.As(err, &refusal) {
+		return nil, refusal
+	}
 	if err != nil {
 		return nil, fmt.Errorf("create channel: %w", err)
 	}
@@ -171,6 +191,30 @@ func assignAndFillSlugs(ctx context.Context, tx pgx.Tx, ch *Channel) error {
 		return err
 	}
 	return FillSlugs(ctx, tx, ch)
+}
+
+// channelMediaKeys returns the storage keys of the media attached to the
+// messages of the given channels.
+func channelMediaKeys(ctx context.Context, q db.Querier, ids []uuid.UUID) ([]string, error) {
+	var keys []string
+	err := collectKeys(ctx, q, &keys, `
+		SELECT s3_key FROM media WHERE message_id IN
+			(SELECT id FROM messages WHERE channel_id = ANY($1))`, ids)
+	return keys, err
+}
+
+// DeleteChannelsTx deletes the channels and, by cascade, their messages inside
+// tx and returns the storage keys of the media attached to those messages. The
+// caller locks the channels first and removes the objects after the commit.
+func DeleteChannelsTx(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]string, error) {
+	keys, err := channelMediaKeys(ctx, tx, ids)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM channels WHERE id = ANY($1)`, ids); err != nil {
+		return nil, fmt.Errorf("delete channel: %w", err)
+	}
+	return keys, nil
 }
 
 // DeleteChannel removes a channel and, by cascade, its messages. It returns
@@ -189,87 +233,15 @@ func DeleteChannel(ctx context.Context, p *db.Pool, channelID uuid.UUID) ([]stri
 		if err != nil {
 			return fmt.Errorf("lock channel: %w", err)
 		}
-		if err := collectKeys(ctx, tx, &keys, `
-			SELECT s3_key FROM media WHERE message_id IN
-				(SELECT id FROM messages WHERE channel_id = $1)`, channelID); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx, `DELETE FROM channels WHERE id = $1`, channelID); err != nil {
-			return fmt.Errorf("delete channel: %w", err)
-		}
-		return nil
+		k, derr := DeleteChannelsTx(ctx, tx, []uuid.UUID{channelID})
+		keys = k
+		return derr
 	})
 	if err != nil {
 		return nil, err
 	}
 	return keys, nil
 }
-
-// DeleteCategory removes a category; its channels become uncategorized.
-func DeleteCategory(ctx context.Context, p *db.Pool, categoryID uuid.UUID) error {
-	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error { return DeleteCategoryTx(ctx, tx, categoryID) })
-}
-
-func checkCategoryMergeable(ctx context.Context, tx pgx.Tx, categoryID uuid.UUID) error {
-	var inexact bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM permission_overwrites WHERE category_id = $1)
-		   AND EXISTS (SELECT 1 FROM permission_overwrites o JOIN channels ch ON ch.id = o.channel_id WHERE ch.category_id = $1)`,
-		categoryID).Scan(&inexact); err != nil {
-		return fmt.Errorf("check category permissions: %w", err)
-	}
-	if inexact {
-		return httpx.ErrConflict("clear the permissions of the channels in this category, or of the category, first: they cannot be merged exactly")
-	}
-	return nil
-}
-
-func copyCategoryOverwrites(ctx context.Context, tx pgx.Tx, categoryID uuid.UUID) error {
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO permission_overwrites (channel_id, role_id, allow, deny)
-		SELECT ch.id, co.role_id, co.allow, co.deny
-		FROM channels ch JOIN permission_overwrites co ON co.category_id = ch.category_id
-		WHERE ch.category_id = $1 AND co.role_id IS NOT NULL`, categoryID); err != nil {
-		return fmt.Errorf("keep category role permissions: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO permission_overwrites (channel_id, user_id, allow, deny)
-		SELECT ch.id, co.user_id, co.allow, co.deny
-		FROM channels ch JOIN permission_overwrites co ON co.category_id = ch.category_id
-		WHERE ch.category_id = $1 AND co.user_id IS NOT NULL`, categoryID); err != nil {
-		return fmt.Errorf("keep category user permissions: %w", err)
-	}
-	return nil
-}
-
-// DeleteCategoryTx is DeleteCategory inside a transaction. The category's
-// permission overwrites do not vanish for its channels: they are copied to
-// each channel first, so deleting a private category never makes its channels
-// public. That copy is only exact when the channels have no overwrites of
-// their own (two layers do not always flatten into one); otherwise the
-// deletion is refused with 409 until one side is cleared.
-func DeleteCategoryTx(ctx context.Context, tx pgx.Tx, categoryID uuid.UUID) error {
-	var one int
-	err := tx.QueryRow(ctx, `SELECT 1 FROM categories WHERE id = $1 FOR UPDATE`, categoryID).Scan(&one)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return errCategoryNotFound
-	}
-	if err != nil {
-		return fmt.Errorf("lock category: %w", err)
-	}
-	if err := checkCategoryMergeable(ctx, tx, categoryID); err != nil {
-		return err
-	}
-	if err := copyCategoryOverwrites(ctx, tx, categoryID); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx, `DELETE FROM categories WHERE id = $1`, categoryID); err != nil {
-		return fmt.Errorf("delete category: %w", err)
-	}
-	return nil
-}
-
-var errCategoryNotFound = httpx.ErrNotFound("category not found")
 
 // MaxUserLimit is the highest member limit a voice channel can have.
 const MaxUserLimit = 999
@@ -281,34 +253,67 @@ const MaxSlowModeSeconds = 86400
 // (voice channels only; 0 removes it) and/or its slow mode (0 turns it off);
 // nil keeps a field.
 func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *string, userLimit, slowMode *int) (*Channel, error) {
+	return EditChannel(ctx, p, id, name, topic, userLimit, slowMode, nil, nil)
+}
+
+// EditChannel is UpdateChannel together with the lobby and Stage marks. The
+// request is validated first and applied in one transaction, so a request
+// that fails in any part changes nothing.
+func EditChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *string, userLimit, slowMode *int, lobby, stage *bool) (*Channel, error) {
 	name, topic, err := validateChannelEdit(name, topic, userLimit, slowMode)
 	if err != nil {
 		return nil, err
 	}
 	var ch Channel
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, `
-			UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic),
-				user_limit = COALESCE($4, user_limit), slow_mode_seconds = COALESCE($5, slow_mode_seconds)
-			WHERE id = $1 AND type <> 'dm' AND ($4::int IS NULL OR $4 = 0 OR type = 'voice')
-			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days`, id, name, topic, userLimit, slowMode).
-			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays); err != nil {
-			return err
-		}
-		return assignAndFillSlugs(ctx, tx, &ch)
+		return applyChannelEdit(ctx, tx, id, &ch, name, topic, userLimit, slowMode, lobby, stage)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		if userLimit != nil && *userLimit > 0 {
-			if _, lerr := LoadChannel(ctx, p, id); lerr == nil {
-				return nil, httpx.ErrInvalidInput("user_limit applies to voice channels only")
-			}
-		}
-		return nil, errChannelNotFound
+		return nil, channelEditMissed(ctx, p, id, userLimit)
+	}
+	var apiErr *httpx.APIError
+	if errors.As(err, &apiErr) {
+		return nil, err
 	}
 	if err != nil {
 		return nil, fmt.Errorf("update channel: %w", err)
 	}
 	return &ch, nil
+}
+
+// applyChannelEdit writes the lobby and Stage marks and the validated fields
+// of one channel edit into ch.
+func applyChannelEdit(ctx context.Context, tx pgx.Tx, id uuid.UUID, ch *Channel, name, topic *string, userLimit, slowMode *int, lobby, stage *bool) error {
+	if lobby != nil {
+		if err := SetLobby(ctx, tx, id, *lobby); err != nil {
+			return err
+		}
+	}
+	if stage != nil {
+		if err := SetStage(ctx, tx, id, *stage); err != nil {
+			return err
+		}
+	}
+	if err := tx.QueryRow(ctx, `
+		UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic),
+			user_limit = COALESCE($4, user_limit), slow_mode_seconds = COALESCE($5, slow_mode_seconds)
+		WHERE id = $1 AND type <> 'dm' AND ($4::int IS NULL OR $4 = 0 OR type = 'voice')
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days`, id, name, topic, userLimit, slowMode).
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays); err != nil {
+		return err
+	}
+	return assignAndFillSlugs(ctx, tx, ch)
+}
+
+// channelEditMissed explains an edit that matched no row: a user limit on a
+// channel that is not a voice one, or no such channel.
+func channelEditMissed(ctx context.Context, p *db.Pool, id uuid.UUID, userLimit *int) error {
+	if userLimit != nil && *userLimit > 0 {
+		if _, err := LoadChannel(ctx, p, id); err == nil {
+			return httpx.ErrInvalidInput("user_limit applies to voice channels only")
+		}
+	}
+	return errChannelNotFound
 }
 
 func validateChannelLimits(userLimit, slowMode *int) error {

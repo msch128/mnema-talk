@@ -39,17 +39,25 @@ func TestLegacyAvatarAllowsALargerCanvas(t *testing.T) {
 // animatedWebP wraps the one frame of a 1x1 lossless WebP in an animation.
 func animatedWebP(t *testing.T) []byte {
 	t.Helper()
+	return animatedWebPOn(t, 1, 1, 0, 0)
+}
+
+// animatedWebPOn is animatedWebP on a canvas of canvasW x canvasH pixels, with
+// the 1x1 frame at (2*x2, 2*y2).
+func animatedWebPOn(t *testing.T, canvasW, canvasH, x2, y2 int) []byte {
+	t.Helper()
 	still, err := base64.StdEncoding.DecodeString("UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==")
 	if err != nil {
 		t.Fatal(err)
 	}
 	frame := still[12:]
 	anmf := make([]byte, 16, 16+len(frame))
+	anmf[0], anmf[3] = byte(x2), byte(y2)
 	anmf = append(anmf, frame...) // 1x1: the width and height fields stay 0 (= 1)
 	var body bytes.Buffer
 	body.WriteString("WEBPVP8X")
 	_ = binary.Write(&body, binary.LittleEndian, uint32(10))
-	body.Write([]byte{0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0}) // animation flag
+	body.Write([]byte{0x02, 0, 0, 0, byte(canvasW - 1), 0, 0, byte(canvasH - 1), 0, 0}) // animation flag, canvas size
 	body.WriteString("ANMF")
 	_ = binary.Write(&body, binary.LittleEndian, uint32(len(anmf)))
 	body.Write(anmf)
@@ -79,5 +87,18 @@ func TestLegacyAvatarTakesTheFirstFrameOfAnAnimatedWebP(t *testing.T) {
 	empty := append([]byte("RIFF\x16\x00\x00\x00WEBPVP8X\x0a\x00\x00\x00\x02"), make([]byte, 10)...)
 	if _, err := ProcessLegacyAvatar(empty); err == nil {
 		t.Fatal("an animation without a frame")
+	}
+}
+
+func TestLegacyAvatarKeepsTheCanvasAndOffsetOfAnimatedWebP(t *testing.T) {
+	// A 6x6 canvas whose first frame is a single pixel at (2,4): the avatar
+	// is the whole canvas, not the 1x1 frame rectangle.
+	out, err := ProcessLegacyAvatar(animatedWebPOn(t, 6, 6, 1, 2))
+	if err != nil || sizeOf(t, out.Data) != image.Pt(6, 6) {
+		t.Fatalf("%v %v", out, err)
+	}
+	// A frame that does not fit on its canvas is refused.
+	if _, err := ProcessLegacyAvatar(animatedWebPOn(t, 3, 3, 2, 0)); err == nil {
+		t.Fatal("frame outside the canvas")
 	}
 }

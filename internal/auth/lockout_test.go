@@ -72,3 +72,35 @@ func TestClearAllLoginLockouts(t *testing.T) {
 		t.Fatal("state survived ClearAllLoginLockouts")
 	}
 }
+
+func TestClearLoginLockoutCoversSecondStepLimiters(t *testing.T) {
+	h := NewHandler(nil, nil)
+	uid, other := uuid.New(), uuid.New()
+	lock := func(id uuid.UUID) {
+		for i := 0; i < 10; i++ {
+			h.twoFactorFails.RecordFailure(id.String())
+			h.recoveryFails.RecordFailure(id.String() + "|203.0.113.9")
+		}
+	}
+	lock(uid)
+	lock(other)
+
+	h.ClearLoginLockout("max", uid)
+	if ok, _ := h.twoFactorFails.IsLockedOut(uid.String()); ok {
+		t.Error("2FA lockout survived the clear")
+	}
+	if ok, _ := h.recoveryFails.IsLockedOut(uid.String() + "|203.0.113.9"); ok {
+		t.Error("recovery-code lockout survived the clear")
+	}
+	if ok, _ := h.twoFactorFails.IsLockedOut(other.String()); !ok {
+		t.Error("another account's 2FA lockout was cleared")
+	}
+
+	h.ClearAllLoginLockouts()
+	if ok, _ := h.twoFactorFails.IsLockedOut(other.String()); ok {
+		t.Error("2FA lockout survived clear-all")
+	}
+	if ok, _ := h.recoveryFails.IsLockedOut(other.String() + "|203.0.113.9"); ok {
+		t.Error("recovery-code lockout survived clear-all")
+	}
+}

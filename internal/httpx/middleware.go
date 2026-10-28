@@ -45,7 +45,7 @@ func RequestIDFromContext(ctx context.Context) string {
 }
 
 const (
-	prodStackLimit    = 512
+	prodStackLimit    = 2048
 	nonProdStackLimit = 8192
 )
 
@@ -62,17 +62,36 @@ func Recover(prod bool) func(http.Handler) http.Handler {
 					if rec == http.ErrAbortHandler {
 						panic(rec)
 					}
-					stack := debug.Stack()
-					if len(stack) > limit {
-						stack = stack[:limit]
-					}
-					slog.Error("panic", "request_id", RequestIDFromContext(r.Context()), "err", rec, "stack", string(stack))
+					slog.Error("panic", "request_id", RequestIDFromContext(r.Context()), "err", rec, "stack", panicStack(debug.Stack(), limit))
 					WriteError(w, ErrInternal("internal server error"))
 				}
 			}()
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// panicStack drops the goroutine header and the leading frames that only
+// describe the recovery (debug.Stack, the deferred closure, panic and the
+// runtime's own panic helpers), so the limit cuts off the tail of a deep stack
+// and never the frame that panicked.
+func panicStack(stack []byte, limit int) string {
+	lines := strings.Split(string(stack), "\n")
+	start := 0
+	for i := 0; i+1 < len(lines); i++ {
+		if strings.HasPrefix(lines[i], "panic(") {
+			start = i + 2
+			for start+1 < len(lines) && strings.HasPrefix(lines[start], "runtime.") {
+				start += 2
+			}
+			break
+		}
+	}
+	out := strings.Join(lines[start:], "\n")
+	if len(out) > limit {
+		out = out[:limit]
+	}
+	return out
 }
 
 // LogPath is the path as it may appear in logs: the secret token of a webhook

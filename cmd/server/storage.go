@@ -24,30 +24,39 @@ type lazyStore struct {
 
 var errStorageStarting = errors.New("object storage not initialised yet")
 
-// startLazyStore tries init once right away and, if that fails, keeps
-// retrying in the background with exponential backoff (minWait doubling up
-// to maxWait) until it succeeds or ctx ends.
+// startLazyStore returns at once and runs init in the background, so an
+// unreachable endpoint cannot delay the listener. A failed attempt is retried
+// with exponential backoff (minWait doubling up to maxWait) until it succeeds
+// or ctx ends.
 func startLazyStore(ctx context.Context, init func(context.Context) (media.Store, error), minWait, maxWait time.Duration) *lazyStore {
 	l := &lazyStore{err: errStorageStarting}
-	if l.try(ctx, init) {
-		return l
-	}
-	go func() {
-		wait := minWait
-		for {
+	go l.retryInit(ctx, init, minWait, maxWait)
+	return l
+}
+
+// retryInit runs init until it succeeds or ctx ends, waiting minWait before
+// the second attempt and doubling up to maxWait after each further failure.
+func (l *lazyStore) retryInit(ctx context.Context, init func(context.Context) (media.Store, error), minWait, maxWait time.Duration) {
+	wait := minWait
+	for first := true; ; first = false {
+		if !first {
 			select {
 			case <-ctx.Done():
 				return
 			case <-time.After(wait):
 			}
-			if l.try(ctx, init) {
-				slog.Info("object storage available, uploads enabled")
-				return
-			}
 			wait = min(wait*2, maxWait)
 		}
-	}()
-	return l
+		if ctx.Err() != nil {
+			return
+		}
+		if l.try(ctx, init) {
+			if !first {
+				slog.Info("object storage available, uploads enabled")
+			}
+			return
+		}
+	}
 }
 
 func (l *lazyStore) try(ctx context.Context, init func(context.Context) (media.Store, error)) bool {

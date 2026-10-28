@@ -10,6 +10,7 @@ import (
 )
 
 type fakeBuckets struct {
+	input   *s3svc.CreateBucketInput
 	head    []error // returned by successive HeadBucket calls (last one repeats)
 	create  error
 	created int
@@ -23,8 +24,9 @@ func (f *fakeBuckets) HeadBucket(context.Context, *s3svc.HeadBucketInput, ...fun
 	return &s3svc.HeadBucketOutput{}, err
 }
 
-func (f *fakeBuckets) CreateBucket(context.Context, *s3svc.CreateBucketInput, ...func(*s3svc.Options)) (*s3svc.CreateBucketOutput, error) {
+func (f *fakeBuckets) CreateBucket(_ context.Context, in *s3svc.CreateBucketInput, _ ...func(*s3svc.Options)) (*s3svc.CreateBucketOutput, error) {
 	f.created++
+	f.input = in
 	return &s3svc.CreateBucketOutput{}, f.create
 }
 
@@ -53,7 +55,7 @@ func TestEnsureBucket(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			err := ensureBucket(ctx, c.f, "b")
+			err := ensureBucket(ctx, c.f, "b", "us-east-1")
 			if (err != nil) != c.wantErr {
 				t.Fatalf("err = %v, wantErr %v", err, c.wantErr)
 			}
@@ -61,5 +63,22 @@ func TestEnsureBucket(t *testing.T) {
 				t.Fatalf("created %d times, want %d", c.f.created, c.wantCreate)
 			}
 		})
+	}
+}
+
+func TestEnsureBucketSendsTheRegionAsLocationConstraint(t *testing.T) {
+	cases := map[string]string{"eu-central-1": "eu-central-1", "us-east-1": "", "": ""}
+	for region, want := range cases {
+		f := &fakeBuckets{head: []error{statusErr(404)}}
+		if err := ensureBucket(context.Background(), f, "b", region); err != nil {
+			t.Fatalf("%q: %v", region, err)
+		}
+		got := ""
+		if cfg := f.input.CreateBucketConfiguration; cfg != nil {
+			got = string(cfg.LocationConstraint)
+		}
+		if got != want {
+			t.Errorf("region %q: location constraint %q, want %q", region, got, want)
+		}
 	}
 }

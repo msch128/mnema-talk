@@ -135,7 +135,9 @@ func Run(getenv func(string) string, stderr io.Writer) int {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	hs := &http.Server{Addr: cfg.Listen, Handler: srv, ReadHeaderTimeout: 10 * time.Second}
+	stopped := make(chan struct{})
 	go func() {
+		defer close(stopped)
 		<-ctx.Done()
 		shutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -144,6 +146,14 @@ func Run(getenv func(string) string, stderr io.Writer) int {
 	log.Info("updater ready", "listen", cfg.Listen, "repository", cfg.Policy.Repository, "identity", cfg.Policy.IdentityRegexp)
 	if err := hs.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Error("serve", "err", err)
+		return 1
+	}
+	// ListenAndServe returns as soon as Shutdown starts: wait for it to drain
+	// the requests in flight, then give a running swap time to finish so the
+	// process does not exit between retagging and recreating.
+	<-stopped
+	if !srv.WaitIdle(swapGrace) {
+		log.Error("SWAP ABORTED BY SHUTDOWN: the update was still running; the local tag may point at the new image while the app was not recreated")
 		return 1
 	}
 	return 0

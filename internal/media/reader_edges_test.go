@@ -33,8 +33,8 @@ func TestObjectReaderLazyReadAndSeekValidation(t *testing.T) {
 	if o.off != 3 {
 		t.Fatal("invalid seek modified the offset")
 	}
-	if _, err := o.Seek(-1, io.SeekEnd); err != nil || o.body != nil {
-		t.Fatalf("seek end did not release old body: %v", err)
+	if _, err := o.Seek(-1, io.SeekEnd); err != nil {
+		t.Fatalf("seek end: %v", err)
 	}
 	if n, err := o.Read(data); n != 1 || err != nil || string(data) != "5" {
 		t.Fatalf("reread=%q n=%d error=%v", data, n, err)

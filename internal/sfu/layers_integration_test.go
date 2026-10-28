@@ -21,8 +21,6 @@ type layerPub struct {
 	plis   chan struct{}
 }
 
-func (p *layerPub) ssrc() uint32 { return uint32(p.sender.GetParameters().Encodings[0].SSRC) }
-
 func forwardPLIs(pkts []rtcp.Packet, plis chan<- struct{}) {
 	for _, pkt := range pkts {
 		if _, ok := pkt.(*rtcp.PictureLossIndication); ok {

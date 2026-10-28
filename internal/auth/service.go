@@ -12,7 +12,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"golang.org/x/crypto/bcrypt"
@@ -163,13 +162,6 @@ func newDummyHash() []byte {
 	return h
 }
 
-// isUniqueViolation reports a unique-constraint violation (SQLSTATE 23505),
-// e.g. on the username or its case-insensitive index.
-func isUniqueViolation(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "23505"
-}
-
 // ValidatePassword enforces the password policy for regular accounts.
 func ValidatePassword(password string) error {
 	return validatePasswordMin(password, MinPasswordLength)
@@ -222,6 +214,17 @@ func scanUser(row pgx.Row, extra ...any) (*User, error) {
 // GetUser loads a user by ID; it returns a 404 APIError if absent.
 func GetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
 	u, err := scanUser(p.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE id = $1`, id))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, httpx.ErrNotFound("user not found")
+	}
+	return u, err
+}
+
+// GetActiveUser is GetUser for an account that may act (see ActiveSQL); a
+// disabled, banned or deleted account, or a bot, is a 404 APIError like a
+// missing one.
+func GetActiveUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
+	u, err := scanUser(p.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE id = $1 AND `+ActiveSQL("")+` AND NOT is_bot`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound("user not found")
 	}

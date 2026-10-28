@@ -23,6 +23,7 @@ import (
 type Client struct {
 	client *s3svc.Client
 	bucket string
+	region string
 }
 
 func New(ctx context.Context, cfg *config.Config) (*Client, error) {
@@ -41,6 +42,7 @@ func New(ctx context.Context, cfg *config.Config) (*Client, error) {
 			o.UsePathStyle = cfg.S3ForcePathStyle
 		}),
 		bucket: cfg.S3Bucket,
+		region: cfg.S3Region,
 	}
 	if err := c.ensureBucket(ctx); err != nil {
 		return nil, err
@@ -55,13 +57,13 @@ type bucketAPI interface {
 }
 
 func (c *Client) ensureBucket(ctx context.Context) error {
-	return ensureBucket(ctx, c.client, c.bucket)
+	return ensureBucket(ctx, c.client, c.bucket, c.region)
 }
 
-// ensureBucket creates the bucket only when HEAD says it does not exist. Any
+// ensureBucket creates the bucket in region only when HEAD says it does not exist. Any
 // other HEAD failure (wrong credentials, storage down) is returned as is, so
 // it is not mistaken for a missing bucket.
-func ensureBucket(ctx context.Context, api bucketAPI, bucket string) error {
+func ensureBucket(ctx context.Context, api bucketAPI, bucket, region string) error {
 	_, err := api.HeadBucket(ctx, &s3svc.HeadBucketInput{Bucket: aws.String(bucket)})
 	if err == nil {
 		return nil
@@ -69,7 +71,13 @@ func ensureBucket(ctx context.Context, api bucketAPI, bucket string) error {
 	if !isNotFound(err) {
 		return fmt.Errorf("check bucket %s: %w", bucket, err)
 	}
-	_, err = api.CreateBucket(ctx, &s3svc.CreateBucketInput{Bucket: aws.String(bucket)})
+	in := &s3svc.CreateBucketInput{Bucket: aws.String(bucket)}
+	// Outside us-east-1 AWS (and providers that follow it) refuse a bucket
+	// without its region as location constraint.
+	if region != "" && region != "us-east-1" {
+		in.CreateBucketConfiguration = &types.CreateBucketConfiguration{LocationConstraint: types.BucketLocationConstraint(region)}
+	}
+	_, err = api.CreateBucket(ctx, in)
 	var owned *types.BucketAlreadyOwnedByYou
 	var exists *types.BucketAlreadyExists
 	switch {
@@ -156,7 +164,9 @@ func (c *Client) DeleteBatch(ctx context.Context, keys []string) (err error) {
 			return fmt.Errorf("delete objects: %w", err)
 		}
 		if len(out.Errors) > 0 {
-			return fmt.Errorf("delete objects: %d of %d failed", len(out.Errors), len(ids))
+			first := out.Errors[0]
+			return fmt.Errorf("delete objects: %d of %d failed, first %s: %s %s", len(out.Errors), len(ids),
+				aws.ToString(first.Key), aws.ToString(first.Code), aws.ToString(first.Message))
 		}
 	}
 	return nil

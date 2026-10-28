@@ -149,8 +149,8 @@ client code. Tauri v2 is the shell on Windows and macOS. Linux uses Electron, be
 the WebKitGTK that Tauri uses there has no WebRTC. Changing shells does not
 itself solve end-to-end encryption or exclusive-fullscreen overlays.
 
-Windows is the first implementation target. macOS and Linux, including X11 and
-Wayland, remain required targets. The main app and interactive overlay must expose
+Windows is the furthest along. macOS (Apple silicon) and Linux, including X11
+and Wayland, are published as Beta; the gaming overlay is Windows only. The main app and interactive overlay must expose
 the complete role-appropriate web feature set. Rewriting the web app in React is
 not a prerequisite.
 

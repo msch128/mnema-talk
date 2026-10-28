@@ -34,12 +34,13 @@ func (h *Handler) PermissionsChanged(userIDs []uuid.UUID) {
 
 // RetractHidden sends event_delete, per event, to the members among userIDs
 // (all members when nil) who could view its Talk in prev (the snapshot from
-// before the change) and cannot now. Members who never saw the event learn nothing. Only events the client
-// can still list (not ended more than a day ago) are covered.
+// before the change) and cannot now. Members who never saw the event learn
+// nothing. Every Talk event is covered, however long ago it ended: the past
+// list lets a client load old ones.
 func (h *Handler) RetractHidden(ctx context.Context, prev *perm.Snapshot, userIDs []uuid.UUID) error {
 	rows, err := h.DB.Query(ctx, `
 		SELECT id, channel_id FROM events
-		WHERE channel_id IS NOT NULL AND COALESCE(end_time, start_time) >= $1`, time.Now().Add(-listLookBehind))
+		WHERE channel_id IS NOT NULL`)
 	if err != nil {
 		return err
 	}
@@ -111,18 +112,5 @@ func (h *Handler) sendDelete(snap *perm.Snapshot, e talkEvent, userIDs []uuid.UU
 }
 
 func (s *Store) memberIDs(ctx context.Context) ([]uuid.UUID, error) {
-	rows, err := s.DB.Query(ctx, `SELECT id FROM users`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var ids []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		ids = append(ids, id)
-	}
-	return ids, rows.Err()
+	return s.queryIDs(ctx, `SELECT id FROM users`)
 }

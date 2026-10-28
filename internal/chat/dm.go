@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -111,6 +110,10 @@ type DMLastMessage struct {
 func (d DirectMessage) forOthers() DirectMessage {
 	d.UnreadCount, d.MentionCount, d.LastReadAt = 0, 0, nil
 	d.Hidden, d.FavouritePosition = false, nil
+	// Both were worked out for the caller (their mute-all, their permissions).
+	// The client reads its own with the conversation, and meanwhile assumes
+	// nothing about the setting and nothing to send with.
+	d.NotifyLevel, d.CanSend = NotifyInherit, false
 	d.LastMessage = nil // chosen by the caller's blocks; each member fetches their own
 	return d
 }
@@ -256,8 +259,7 @@ func CreateDM(ctx context.Context, p *db.Pool, nd NewDM) (id uuid.UUID, created 
 	nd.Others = others
 	for range 2 {
 		id, created, err = createDMOnce(ctx, p, nd)
-		var pgErr *pgconn.PgError
-		if !errors.As(err, &pgErr) || pgErr.Code != "23505" {
+		if !db.IsUniqueViolation(err) {
 			return id, created, err
 		}
 		// Somebody started the same pair a moment ago: use that one.
@@ -288,20 +290,22 @@ func createDMOnce(ctx context.Context, p *db.Pool, nd NewDM) (uuid.UUID, bool, e
 	var id uuid.UUID
 	created := false
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		// One member's starts are serialized, so the limits hold.
-		if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = $1 FOR NO KEY UPDATE`, nd.Creator); err != nil {
+		// One member's starts are serialized, so the limits hold; so are the
+		// starts that count the others' group conversations.
+		group := len(nd.Others) > 1
+		locked := []uuid.UUID{nd.Creator}
+		if group {
+			locked = append(locked, nd.Others...)
+		}
+		if err := lockUsers(ctx, tx, locked); err != nil {
 			return err
 		}
-		group := len(nd.Others) > 1
 		var key *string
 		if !group {
 			k := dmKey(nd.Creator, nd.Others[0])
 			key = &k
-			err := tx.QueryRow(ctx, `SELECT id FROM channels WHERE dm_key = $1`, k).Scan(&id)
-			if err == nil {
-				return nil
-			}
-			if !errors.Is(err, pgx.ErrNoRows) {
+			found, err := existingDM(ctx, tx, k, &id)
+			if err != nil || found {
 				return err
 			}
 		}
@@ -320,6 +324,24 @@ func createDMOnce(ctx context.Context, p *db.Pool, nd NewDM) (uuid.UUID, bool, e
 		return err
 	})
 	return id, created, err
+}
+
+// existingDM reads the conversation of a pair key into id; found is false when
+// the pair has none yet.
+func existingDM(ctx context.Context, tx pgx.Tx, key string, id *uuid.UUID) (found bool, err error) {
+	err = tx.QueryRow(ctx, `SELECT id FROM channels WHERE dm_key = $1`, key).Scan(id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+// lockUsers locks the user rows in a fixed order, so transactions that count
+// the same members' conversations before adding to them run one after the
+// other and cannot deadlock on each other.
+func lockUsers(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) error {
+	_, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = ANY($1::uuid[]) ORDER BY id FOR NO KEY UPDATE`, ids)
+	return err
 }
 
 // checkDMStart applies the limits of the starter and the rules about the

@@ -246,13 +246,16 @@ func (h *Handler) kickUser(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := h.moderate(r, id); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return httpx.ErrNotFound("user not found")
-		}
+	// The target check and the kick run under the permission lock, like every
+	// other moderation action, so a role change cannot slip in between.
+	kicked := false
+	err = h.moderated(r, id, func(db.Querier) (err error) {
+		kicked, err = h.kickUserFromVoice(r, id)
 		return err
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return httpx.ErrNotFound("user not found")
 	}
-	kicked, err := h.kickUserFromVoice(r, id)
 	if err != nil {
 		return err
 	}

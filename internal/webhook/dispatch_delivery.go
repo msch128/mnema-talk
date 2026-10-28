@@ -10,7 +10,6 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,8 +18,9 @@ import (
 	"github.com/msch128/mnema-talk/internal/ssrf"
 )
 
-// translate maps a hub event to an outgoing one. Messages posted by a
-// webhook do not leave again, so two webhooks cannot feed each other.
+// translate maps a hub event to an outgoing one. New messages posted by an
+// incoming webhook do not leave again, so two webhooks cannot feed each other;
+// messages of Bot API bots are delivered like any member's.
 func translate(eventType string, payload any) (name string, data any, ok bool) {
 	switch eventType {
 	case events.MessageCreate, events.MessageUpdate:
@@ -33,7 +33,7 @@ func translate(eventType string, payload any) (name string, data any, ok bool) {
 		default:
 			return "", nil, false
 		}
-		if m.IsBot && eventType == events.MessageCreate {
+		if m.IsWebhook && eventType == events.MessageCreate {
 			return "", nil, false
 		}
 		return map[string]string{events.MessageCreate: EventMessageCreate, events.MessageUpdate: EventMessageUpdate}[eventType], m, true
@@ -54,25 +54,11 @@ func classify(err error, status int) string {
 		return "redirect_not_followed"
 	case err == nil:
 		return "http_" + strconv.Itoa(status)
-	case errors.Is(err, ssrf.ErrBlocked):
-		return "blocked_address"
-	case errors.Is(err, ssrf.ErrResolve):
-		return "dns_error"
-	case errors.Is(err, ssrf.ErrConnect):
-		return "connect_error"
-	case errors.Is(err, ssrf.ErrBadURL):
-		return "invalid_url"
-	case errors.Is(err, context.DeadlineExceeded) || isTimeout(err):
-		return "timeout"
-	case strings.Contains(err.Error(), "tls:") || strings.Contains(err.Error(), "x509:"):
-		return "tls_error"
+	}
+	if code, ok := ssrf.Reason(err); ok {
+		return code
 	}
 	return "request_error"
-}
-
-func isTimeout(err error) bool {
-	var t interface{ Timeout() bool }
-	return errors.As(err, &t) && t.Timeout()
 }
 
 func (d *Dispatcher) backoff(attempt int) time.Duration {

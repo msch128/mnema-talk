@@ -2,9 +2,11 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
@@ -20,6 +22,10 @@ type ObjectStore interface {
 	Delete(ctx context.Context, key string) error
 	DeleteBatch(ctx context.Context, keys []string) error
 }
+
+// deleteCleanupTimeout bounds what follows the commit of an account deletion:
+// removing its files and recording the deletion.
+const deleteCleanupTimeout = 30 * time.Second
 
 // errOwnerDelete explains why the one Owner account has no delete button.
 var errOwnerDelete = httpx.ErrForbidden("the Owner account cannot be deleted: ownership is not transferable, so the community would be left without an Owner")
@@ -68,12 +74,22 @@ func (h *Handler) deleteAccount(w http.ResponseWriter, r *http.Request) error {
 		gone, err = eraseAccount(r.Context(), tx, u.ID)
 		return err
 	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		// A parallel request erased the account while this one waited for it.
+		h.Sessions.End(w)
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	}
 	if err != nil {
 		return err
 	}
-	h.removeObjects(r.Context(), gone.keys)
+	// The rows are gone and cannot be retried: a client that hangs up now must
+	// not leave files behind or the deletion unrecorded.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), deleteCleanupTimeout)
+	defer cancel()
+	h.removeObjects(ctx, gone.keys)
 	h.announceUnpins(u, gone.unpins)
-	h.endDeletedAccount(r.Context(), u)
+	h.endDeletedAccount(ctx, u)
 	h.Sessions.End(w)
 	w.WriteHeader(http.StatusNoContent)
 	return nil

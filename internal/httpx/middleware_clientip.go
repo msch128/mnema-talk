@@ -147,20 +147,18 @@ func ClientIPKey(r *http.Request) string {
 // against an attacker who owns a whole site allocation: IPv4 addresses as they
 // are, IPv6 addresses masked to their /48 (65536 /64 prefixes).
 func ClientAggregateKey(r *http.Request) string {
-	addr, err := netip.ParseAddr(strings.Trim(ClientIP(r), "[]"))
-	if err != nil {
-		return ClientIP(r)
-	}
-	addr = addr.Unmap()
-	if addr.Is4() {
-		return addr.String()
-	}
-	return netip.PrefixFrom(addr.WithZone(""), 48).Masked().String()
+	return ipPrefixKey(ClientIP(r), 48)
 }
 
 // IPKey normalizes ip for use as a limiter key (see ClientIPKey). Anything
 // that does not parse as an IP is returned unchanged.
 func IPKey(ip string) string {
+	return ipPrefixKey(ip, 64)
+}
+
+// ipPrefixKey returns IPv4 addresses as they are and IPv6 addresses masked to
+// their first bits bits; anything that does not parse is returned unchanged.
+func ipPrefixKey(ip string, bits int) string {
 	addr, err := netip.ParseAddr(strings.Trim(ip, "[]"))
 	if err != nil {
 		return ip
@@ -169,5 +167,5 @@ func IPKey(ip string) string {
 	if addr.Is4() {
 		return addr.String()
 	}
-	return netip.PrefixFrom(addr.WithZone(""), 64).Masked().String()
+	return netip.PrefixFrom(addr.WithZone(""), bits).Masked().String()
 }

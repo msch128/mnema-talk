@@ -78,6 +78,7 @@ func (c *Commands) callback(w http.ResponseWriter, r *http.Request) error {
 	}
 	if msg != nil {
 		if _, err := c.respond(r, in, *msg); err != nil {
+			c.store.release(in.id, true)
 			return err
 		}
 	}
@@ -121,6 +122,7 @@ func (c *Commands) followup(w http.ResponseWriter, r *http.Request) error {
 	}
 	msg, err := c.respond(r, in, *m)
 	if err != nil {
+		c.store.release(in.id, false)
 		return err
 	}
 	if msg == nil {
@@ -148,16 +150,9 @@ type message struct {
 
 // validate checks the content and embeds of a response.
 func validate(d ResponseData) (*message, error) {
-	content, err := chat.ValidateContent(d.Content, true)
+	content, embeds, err := chat.ValidateBotMessage(d.Content, d.Embeds)
 	if err != nil {
 		return nil, err
-	}
-	embeds, err := chat.SanitizeEmbeds(d.Embeds)
-	if err != nil {
-		return nil, httpx.ErrInvalidInput(err.Error())
-	}
-	if content == "" && len(embeds) == 0 {
-		return nil, httpx.ErrInvalidInput("Cannot send an empty message")
 	}
 	return &message{content: content, embeds: embeds, ephemeral: d.Flags&flagEphemeral != 0}, nil
 }
@@ -165,11 +160,8 @@ func validate(d ResponseData) (*message, error) {
 // respond posts the message of a response, or shows it to the invoker only.
 func (c *Commands) respond(r *http.Request, in *interaction, m message) (*chat.Message, error) {
 	ctx := r.Context()
-	snap, err := c.Perms.ForChannel(ctx, in.channel)
+	snap, _, err := chat.CheckBotSend(ctx, c.Perms, c.DB, auth.UserFrom(ctx), in.channel)
 	if err != nil {
-		return nil, err
-	}
-	if err := perm.CheckChannel(snap.Channel(auth.UserFrom(ctx).Subject(), in.channel), perm.SendMessages); err != nil {
 		return nil, err
 	}
 	if m.ephemeral {

@@ -46,11 +46,15 @@ func resetTwoFactorFor(ctx context.Context, pool *db.Pool, username string, out 
 	if err != nil {
 		return err
 	}
-	if err := auth.ResetTwoFactor(ctx, pool, id); err != nil {
+	// The reset and its audit row commit together: no recovery action without a trail.
+	err = pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
+		if err := auth.ResetTwoFactorTx(ctx, tx, id); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `INSERT INTO audit_log (action, target_type, target_id, target_name, details)
+			VALUES ('user.two_factor_reset', 'user', $1, $2, '{"via":"host command"}')`, id.String(), name)
 		return err
-	}
-	_, err = pool.Exec(ctx, `INSERT INTO audit_log (action, target_type, target_id, target_name, details)
-		VALUES ('user.two_factor_reset', 'user', $1, $2, '{"via":"host command"}')`, id.String(), name)
+	})
 	if err != nil {
 		return err
 	}

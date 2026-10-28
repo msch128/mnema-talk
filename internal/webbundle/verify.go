@@ -140,7 +140,7 @@ func verifyFile(entries map[string]*zip.File, f File) error {
 		return err
 	}
 	sum := sha256.Sum256(body)
-	if hex.EncodeToString(sum[:]) != f.SHA256 {
+	if hex.EncodeToString(sum[:]) != f.SHA256 { // isValidSHA256 guarantees lower case
 		return fmt.Errorf("%s: content does not match the manifest", f.Path)
 	}
 	return nil
@@ -179,7 +179,7 @@ func checkFileList(files []File) error {
 		if err := checkFileRecord(f, seen); err != nil {
 			return err
 		}
-		seen[f.Path] = true
+		seen[strings.ToLower(f.Path)] = true
 		if f.Path == "index.html" {
 			hasIndex = true
 		}
@@ -195,7 +195,9 @@ func checkFileList(files []File) error {
 }
 
 func checkFileRecord(f File, seen map[string]bool) error {
-	if !ValidPath(f.Path) || seen[f.Path] {
+	// seen holds lower-cased paths: the desktop extracts to case-insensitive
+	// file systems, so paths differing only in case are duplicates.
+	if !ValidPath(f.Path) || seen[strings.ToLower(f.Path)] {
 		return fmt.Errorf("invalid or duplicate path %q", f.Path)
 	}
 	if !isValidSHA256(f.SHA256) {
@@ -207,7 +209,16 @@ func checkFileRecord(f File, seen map[string]bool) error {
 	return nil
 }
 
+// isValidSHA256 accepts only the canonical spelling (64 lower-case hex digits)
+// that verifyFile compares against.
 func isValidSHA256(s string) bool {
-	raw, err := hex.DecodeString(s)
-	return err == nil && len(raw) == sha256.Size
+	if len(s) != 2*sha256.Size {
+		return false
+	}
+	for _, c := range []byte(s) {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return false
+		}
+	}
+	return true
 }

@@ -48,6 +48,7 @@ type Deliverer interface {
 }
 
 type interaction struct {
+	id        uuid.UUID
 	hash      [32]byte
 	botID     uuid.UUID
 	botUser   uuid.UUID
@@ -73,6 +74,7 @@ func (s *interactionStore) add(id uuid.UUID, in *interaction) (token string, ok 
 	}
 	token = base64.RawURLEncoding.EncodeToString(raw)
 	in.hash = sha256.Sum256([]byte(token))
+	in.id = id
 	in.created = s.now()
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -121,6 +123,30 @@ func validateInteractionState(in *interaction, callback bool) error {
 		return httpx.ErrConflict(fmt.Sprintf("an interaction takes at most %d responses", maxResponses))
 	default:
 		return nil
+	}
+}
+
+// remove drops an interaction.
+func (s *interactionStore) remove(id uuid.UUID) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.m, id)
+}
+
+// release gives back the response slot claim took, for a response that could
+// not be posted, so the bot can try again.
+func (s *interactionStore) release(id uuid.UUID, callback bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	in := s.m[id]
+	if in == nil {
+		return
+	}
+	if callback {
+		in.called = false
+	}
+	if in.responses > 0 {
+		in.responses--
 	}
 }
 

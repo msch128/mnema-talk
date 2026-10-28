@@ -160,9 +160,6 @@ func (h *Handler) insertUploadMessage(ctx context.Context, chID uuid.UUID, user 
 // @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
 // @Router /api/channels/{channelID}/upload [post]
 func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
-	if h.Store == nil {
-		return httpx.ErrUnavailable("file storage is not configured")
-	}
 	user := auth.UserFrom(r.Context())
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
@@ -219,9 +216,6 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 // @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
 // @Router /api/users/me/avatar [post]
 func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) error {
-	if h.Store == nil {
-		return httpx.ErrUnavailable("file storage is not configured")
-	}
 	user := auth.UserFrom(r.Context())
 	if err := h.ReplaceAvatar(r, user.ID); err != nil {
 		return err
@@ -235,8 +229,8 @@ func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// deletePreviousAvatar deletes the object of a replaced avatar or banner.
-func (h *Handler) deletePreviousAvatar(ctx context.Context, previous *string) {
+// deletePreviousImage deletes the object of a replaced or removed avatar or banner.
+func (h *Handler) deletePreviousImage(ctx context.Context, previous *string) {
 	if previous == nil {
 		return
 	}
@@ -245,7 +239,7 @@ func (h *Handler) deletePreviousAvatar(ctx context.Context, previous *string) {
 		return
 	}
 	if err := DeleteMedia(context.WithoutCancel(ctx), h.DB, h.Store, oldID); err != nil {
-		slog.Warn("could not delete previous avatar", "media_id", oldID, "err", err)
+		slog.Warn("could not delete previous profile image", "media_id", oldID, "err", err)
 	}
 }
 
@@ -281,15 +275,12 @@ func (h *Handler) ReplaceAvatar(r *http.Request, userID uuid.UUID) error {
 // @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
 // @Router /api/users/me/avatar [delete]
 func (h *Handler) deleteAvatar(w http.ResponseWriter, r *http.Request) error {
-	if h.Store == nil {
-		return httpx.ErrUnavailable("file storage is not configured")
-	}
 	user := auth.UserFrom(r.Context())
 	previous, err := h.clearProfileImage(r.Context(), avatarImage, user.ID)
 	if err != nil {
 		return err
 	}
-	h.deletePreviousAvatar(r.Context(), previous)
+	h.deletePreviousImage(r.Context(), previous)
 	updated, err := auth.GetUser(r.Context(), h.DB, user.ID)
 	if err != nil {
 		return err

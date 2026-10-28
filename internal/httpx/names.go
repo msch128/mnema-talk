@@ -71,17 +71,41 @@ var zwnjScripts = []*unicode.RangeTable{
 
 func joinsAcrossZWNJ(r rune) bool { return unicode.In(r, zwnjScripts...) }
 
+// confusables maps lower-case letters that read like a Latin letter or digit
+// (Cyrillic, Greek and a few Latin variants) to that letter. It is a small
+// curated subset of Unicode's confusables, aimed at the names the reserved
+// word checks guard (everyone, here, admin, ...), not a full UTS #39 table.
+var confusables = map[rune]string{
+	// Cyrillic
+	'а': "a", 'в': "b", 'е': "e", 'ё': "e", 'з': "3", 'к': "k", 'м': "m", 'н': "h", 'о': "o", 'р': "p",
+	'с': "c", 'т': "t", 'у': "y", 'х': "x", 'ь': "b", 'і': "i", 'ї': "i", 'ј': "j", 'ѕ': "s", 'һ': "h",
+	'ԁ': "d", 'ԛ': "q", 'ԝ': "w", 'ӏ': "l",
+	// Greek
+	'α': "a", 'β': "b", 'ε': "e", 'η': "n", 'ι': "i", 'κ': "k", 'ν': "v", 'ο': "o", 'ρ': "p", 'τ': "t",
+	'υ': "u", 'χ': "x", 'ω': "w",
+	// Latin variants
+	'ı': "i", 'ł': "l", 'ø': "o", 'đ': "d", 'ß': "ss", 'ǀ': "l",
+}
+
 // NameSkeleton reduces a name to what it looks like to a reader: compatibility
-// forms folded (NFKC), every invisible character and joiner gone, lower case.
-// Reserved-name and duplicate checks compare skeletons, so no invisible
-// character makes a reserved name look different.
+// forms folded (NFKC), every invisible character and joiner gone, lower case,
+// and look-alike Cyrillic, Greek and Latin variants mapped to their Latin
+// letter (confusables). Reserved-name and duplicate checks compare skeletons,
+// so neither an invisible character nor a homoglyph makes a reserved name look
+// different.
 func NameSkeleton(s string) string {
 	s = norm.NFKC.String(s)
-	s = strings.Map(func(r rune) rune {
+	var b strings.Builder
+	for _, r := range s {
 		if isInvisibleRune(r) {
-			return -1
+			continue
 		}
-		return unicode.ToLower(r)
-	}, s)
-	return strings.TrimSpace(s)
+		r = unicode.ToLower(r)
+		if m, ok := confusables[r]; ok {
+			b.WriteString(m)
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return strings.TrimSpace(b.String())
 }

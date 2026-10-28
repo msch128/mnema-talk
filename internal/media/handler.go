@@ -80,9 +80,22 @@ func (h *Handler) memberLimit(ctx context.Context, sub perm.Subject) (int64, err
 	return min(v, h.MaxUploadBytes), nil
 }
 
+// requireStore answers 503 on routes that need object storage when none is
+// configured, so the handlers behind it can use h.Store unconditionally.
+func (h *Handler) requireStore(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if h.Store == nil {
+			httpx.WriteError(w, httpx.ErrUnavailable("file storage is not configured"))
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // MountUploads registers the multipart routes; the caller wraps them in a
 // larger MaxBody than the JSON default.
 func (h *Handler) MountUploads(r chi.Router) {
+	r = r.With(h.requireStore)
 	r.Post("/channels/{channelID}/upload", httpx.Handle(h.upload))
 	// An avatar is parsed in memory (at most 5 MB), never spilled to /tmp:
 	// its body gets a tighter cap than file uploads.
@@ -94,16 +107,17 @@ func (h *Handler) MountUploads(r chi.Router) {
 
 // Mount registers authenticated media serving.
 func (h *Handler) Mount(r chi.Router) {
-	r.Get("/media/{id}", httpx.Handle(h.serve))
+	r.With(h.requireStore).Get("/media/{id}", httpx.Handle(h.serve))
 }
 
-// MountAdmin registers the storage dashboard (RequireAdmin applies). Pruning is
+// MountAdmin registers the storage dashboard (Owner only). Pruning is
 // opt-in: the manual prune needs an explicit day count unless
 // MEDIA_RETENTION_DAYS is configured.
 func (h *Handler) MountAdmin(r chi.Router) {
 	r = r.With(auth.RequireOwner)
 	r.Get("/media/stats", httpx.Handle(h.stats))
 	r.Get("/media", httpx.Handle(h.list))
+	r = r.With(h.requireStore)
 	r.Post("/media/prune", httpx.Handle(h.prune))
 	r.Get("/media/orphans", httpx.Handle(h.orphans))
 	r.Post("/media/orphans/cleanup", httpx.Handle(h.cleanupOrphans))
@@ -132,9 +146,6 @@ func (h *Handler) MountAdmin(r chi.Router) {
 // @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
 // @Router /api/media/{id} [get]
 func (h *Handler) serve(w http.ResponseWriter, r *http.Request) error {
-	if h.Store == nil {
-		return httpx.ErrUnavailable("file storage is not configured")
-	}
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err

@@ -25,7 +25,7 @@ func TestAnEventReminderReachesTheMembersDevices(t *testing.T) {
 	}
 	got := e.pushedTo("/device/bob", 1)
 	p := e.content(bob, got[0])
-	if p.Type != "event" || p.Title != "Game night" || p.Tag != "event:"+eventID.String() || p.Body == "" {
+	if p.Type != typeEvent || p.Title != "Game night" || p.Tag != "event:"+eventID.String() || p.Body == "" {
 		t.Fatalf("payload: %+v", p)
 	}
 	if p.ChannelID == nil || *p.ChannelID != e.general {
@@ -111,5 +111,41 @@ func TestAnEventReminderEdgeCases(t *testing.T) {
 	var none *Service
 	if err := none.SendEventReminder(context.Background(), bob.id, uuid.New(), "x", time.Now(), nil); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestAnEventReminderHidesTheTitleWithoutPreviews(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		setup func(e *env, m member)
+	}{
+		{"member opted out", func(e *env, m member) { e.exec(`UPDATE users SET push_preview = FALSE WHERE id = $1`, m.id) }},
+		{"operator forbids", func(e *env, _ member) { e.svc.Previews = false }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newEnv(t, http.StatusCreated)
+			bob := e.member("bob")
+			tc.setup(e, bob)
+			if err := e.remind(bob, &e.general); err != nil {
+				t.Fatal(err)
+			}
+			p := e.content(bob, e.pushedTo("/device/bob", 1)[0])
+			if p.Title == "Game night" || p.Body == "" {
+				t.Fatalf("payload shows the event title: %+v", p)
+			}
+		})
+	}
+}
+
+func TestAnEventReminderForAMissingTalkSendsNothing(t *testing.T) {
+	e := newEnv(t, http.StatusCreated)
+	bob := e.member("bob")
+	gone := uuid.New()
+	if err := e.remind(bob, &gone); err != nil {
+		t.Fatal(err)
+	}
+	settle()
+	if got := e.requestsTo("/device/bob"); len(got) != 0 {
+		t.Fatalf("%d pushes, want none", len(got))
 	}
 }

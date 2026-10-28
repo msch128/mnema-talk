@@ -28,18 +28,46 @@ var (
 	ErrRedirect = errors.New("redirects are not followed")
 )
 
+// Reason names why an outbound request through this package failed, as a short
+// code that is safe to store and show: never the raw network error. ok is false
+// when the error is none of the cases every caller shares (the sentinels
+// above, timeouts and TLS failures); callers add their own cases and fall back
+// to a generic code.
+func Reason(err error) (code string, ok bool) {
+	switch {
+	case errors.Is(err, ErrBlocked):
+		return "blocked_address", true
+	case errors.Is(err, ErrResolve):
+		return "dns_error", true
+	case errors.Is(err, ErrConnect):
+		return "connect_error", true
+	case errors.Is(err, ErrBadURL):
+		return "invalid_url", true
+	case errors.Is(err, context.DeadlineExceeded):
+		return "timeout", true
+	}
+	var t interface{ Timeout() bool }
+	if errors.As(err, &t) && t.Timeout() {
+		return "timeout", true
+	}
+	if msg := err.Error(); strings.Contains(msg, "tls:") || strings.Contains(msg, "x509:") {
+		return "tls_error", true
+	}
+	return "", false
+}
+
 // maxURLLen bounds a target URL.
 const maxURLLen = 2048
 
 // never are addresses no allowlist can open and link preview refuses too (see
-// PublicUnicast): the metadata endpoints, IPv4-compatible, IPv4-translated
-// and discard-only IPv6, multicast and class E.
+// PublicUnicast): the metadata endpoints, IPv4-translated and discard-only
+// IPv6, multicast and class E. IPv4-compatible IPv6 is checked separately by
+// ipv4Compatible, because ::/96 would also swallow ::1.
 var never = []netip.Prefix{
 	netip.MustParsePrefix("169.254.169.254/32"), // cloud metadata
 	netip.MustParsePrefix("fd00:ec2::254/128"),  // AWS IPv6 metadata
 	netip.MustParsePrefix("100.100.100.200/32"), // Alibaba metadata
 	netip.MustParsePrefix("192.0.0.192/32"),     // Oracle metadata
-	netip.MustParsePrefix("::/96"),              // IPv4-compatible
 	netip.MustParsePrefix("::ffff:0:0:0/96"),    // IPv4-translated (SIIT)
 	netip.MustParsePrefix("224.0.0.0/3"),        // multicast and class E
 	netip.MustParsePrefix("ff00::/8"),           // multicast
@@ -66,19 +94,34 @@ var shared = []netip.Prefix{
 	netip.MustParsePrefix("fec0::/10"),       // site-local; allowlist may open it
 }
 
-// private are the ranges for the local network: refused unless the operator
-// allows them (WEBHOOK_ALLOW_PRIVATE_TARGETS).
+// private are the local-network ranges the IsLoopback, IsPrivate and
+// IsLinkLocalUnicast predicates do not cover (127/8, ::1, 10/8, 172.16/12,
+// 192.168/16, fc00::/7, 169.254/16 and fe80::/10 are covered by them):
+// refused unless the operator allows them (WEBHOOK_ALLOW_PRIVATE_TARGETS).
 var private = []netip.Prefix{
-	netip.MustParsePrefix("127.0.0.0/8"),
-	netip.MustParsePrefix("10.0.0.0/8"),
-	netip.MustParsePrefix("172.16.0.0/12"),
-	netip.MustParsePrefix("192.168.0.0/16"),
-	netip.MustParsePrefix("169.254.0.0/16"), // link-local
-	netip.MustParsePrefix("100.64.0.0/10"),  // carrier-grade NAT; link preview always refuses this
-	netip.MustParsePrefix("::1/128"),
-	netip.MustParsePrefix("fc00::/7"),  // unique local
-	netip.MustParsePrefix("fe80::/10"), // link-local
-	netip.MustParsePrefix("fec0::/10"), // site-local; link preview always refuses this
+	netip.MustParsePrefix("100.64.0.0/10"), // carrier-grade NAT; link preview always refuses this
+	netip.MustParsePrefix("fec0::/10"),     // site-local; link preview always refuses this
+}
+
+// ipv4Compatible reports the deprecated IPv4-compatible range ::/96 without
+// ::1 (loopback) and :: (unspecified), which sit inside it but are not
+// IPv4-compatible addresses.
+func ipv4Compatible(addr netip.Addr) bool {
+	if !addr.Is6() || addr.Is4In6() || addr == netip.IPv6Loopback() || addr.IsUnspecified() {
+		return false
+	}
+	b := addr.As16()
+	for _, v := range b[:12] {
+		if v != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// inNever reports an address in the never list or the IPv4-compatible range.
+func inNever(addr netip.Addr) bool {
+	return contains(never, addr) || ipv4Compatible(addr)
 }
 
 // Refused reports whether addr is not a public unicast address.
@@ -99,7 +142,7 @@ func Refused(addr netip.Addr) bool {
 // addresses, so it and the webhook guard share one list.
 func PublicUnicast(addr netip.Addr) bool {
 	addr = addr.WithZone("").Unmap()
-	return !Refused(addr) && !contains(never, addr)
+	return !Refused(addr) && !inNever(addr)
 }
 
 // Policy decides which addresses may be contacted.
@@ -119,6 +162,10 @@ func ParseAllow(list string) ([]netip.Prefix, error) {
 			continue
 		}
 		if p, err := netip.ParsePrefix(item); err == nil {
+			p, err = unmapPrefix(p)
+			if err != nil {
+				return nil, fmt.Errorf("%q: %w", item, err)
+			}
 			out = append(out, p.Masked())
 			continue
 		}
@@ -129,6 +176,19 @@ func ParseAllow(list string) ([]netip.Prefix, error) {
 		out = append(out, netip.PrefixFrom(a.Unmap(), a.Unmap().BitLen()))
 	}
 	return out, nil
+}
+
+// unmapPrefix turns an IPv4-mapped IPv6 prefix into the IPv4 prefix it
+// stands for, because Check unmaps every candidate and netip never matches
+// the two families against each other.
+func unmapPrefix(p netip.Prefix) (netip.Prefix, error) {
+	if !p.Addr().Is4In6() {
+		return p, nil
+	}
+	if p.Bits() < 96 {
+		return p, errors.New("an IPv4-mapped range must be at least a /96")
+	}
+	return netip.PrefixFrom(p.Addr().Unmap(), p.Bits()-96), nil
 }
 
 func contains(list []netip.Prefix, a netip.Addr) bool {
@@ -149,7 +209,7 @@ func notAllowable(addr netip.Addr) bool {
 	if addr.IsUnspecified() || addr.IsMulticast() {
 		return true
 	}
-	return contains(never, addr)
+	return inNever(addr)
 }
 
 // onLocalNet reports an address the allowlist may open.
@@ -157,7 +217,7 @@ func onLocalNet(addr netip.Addr) bool {
 	if addr.IsLoopback() || addr.IsPrivate() {
 		return true
 	}
-	if addr.IsLinkLocalUnicast() || addr.IsInterfaceLocalMulticast() {
+	if addr.IsLinkLocalUnicast() {
 		return true
 	}
 	return contains(private, addr)
@@ -182,6 +242,14 @@ func (p *Policy) Check(addr netip.Addr) error {
 	}
 	return nil
 }
+
+// RejectedURLText reports a URL string that is empty, too long, or contains
+// a space, an ASCII control or DEL. Other packages that fetch user-supplied
+// URLs share it with ValidateURL.
+func RejectedURLText(raw string) bool { return rejectedURLText(raw) }
+
+// AcceptableURL reports an absolute http(s) URL with a host and no credentials.
+func AcceptableURL(u *url.URL) bool { return acceptableURL(u) }
 
 // rejectedURLText reports a URL string that is empty, too long, or contains
 // a space, an ASCII control or DEL.

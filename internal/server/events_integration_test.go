@@ -513,7 +513,7 @@ func TestCommunityEventsRSVPClosedAfterCancelOrCompletion(t *testing.T) {
 	cancelled := create("cancelled")
 	wantStatus(t, "cancel", admin.post("/api/events/"+cancelled.ID.String()+"/cancel", nil), http.StatusOK)
 	done := create("done")
-	wantStatus(t, "complete", admin.patch("/api/events/"+done.ID.String(), map[string]any{"status": "completed"}), http.StatusOK)
+	a.setStatus(done.ID, communityevents.StatusCompleted)
 	open := create("open")
 
 	for _, ev := range []communityevents.CommunityEvent{cancelled, done} {

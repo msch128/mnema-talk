@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
-	"github.com/msch128/mnema-talk/internal/events"
 )
 
 const raidReason = "Automod: raid protection"
@@ -31,7 +30,7 @@ func (e *Engine) OnJoin(ctx context.Context, userID uuid.UUID) {
 		}
 		return
 	}
-	restricted, started, until, err := e.restrictJoiners(ctx, set.raid, userID)
+	restricted, started, err := e.restrictJoiners(ctx, set.raid, userID)
 	if err != nil {
 		slog.Error("automod raid check failed", "err", err)
 		return
@@ -39,15 +38,7 @@ func (e *Engine) OnJoin(ctx context.Context, userID uuid.UUID) {
 	if len(restricted) == 0 {
 		return
 	}
-	e.Perms.Changed(restricted)
-	if e.Events != nil {
-		e.Events.SendToUsers(restricted, events.ModerationNotice, map[string]any{
-			"kind": "timeout", "until": until, "duration_seconds": set.raid.Config.RestrictSeconds, "reason": raidReason,
-		})
-		for _, id := range restricted {
-			e.Events.Broadcast(events.MemberTimeout, map[string]any{"id": id, "timeout_until": until})
-		}
-	}
+	e.announceTimeouts(restricted, set.raid.Config.RestrictSeconds, raidReason)
 	if started {
 		e.Audit.RecordOrLog(context.Background(), audit.Entry{
 			ActorName: "Automod", Action: "automod.raid", TargetType: "automod_rule", TargetID: set.raid.ID.String(), TargetName: set.raid.Name,
@@ -59,7 +50,7 @@ func (e *Engine) OnJoin(ctx context.Context, userID uuid.UUID) {
 // restrictJoiners decides, under the lock of the state row, whether a raid is
 // on, times out the joiners it covers and keeps the queue entry. started says
 // that this join began the raid.
-func (e *Engine) restrictJoiners(ctx context.Context, r *compiled, userID uuid.UUID) (restricted []uuid.UUID, started bool, until time.Time, err error) {
+func (e *Engine) restrictJoiners(ctx context.Context, r *compiled, userID uuid.UUID) (restricted map[uuid.UUID]time.Time, started bool, err error) {
 	err = pgx.BeginFunc(ctx, e.DB, func(tx pgx.Tx) error {
 		var active bool
 		var report *uuid.UUID
@@ -74,9 +65,11 @@ func (e *Engine) restrictJoiners(ctx context.Context, r *compiled, userID uuid.U
 			return nil
 		}
 		started = !active
+		restricted = map[uuid.UUID]time.Time{}
 		rows, err := tx.Query(ctx, `
-			UPDATE users SET timeout_until = GREATEST(COALESCE(timeout_until, NOW()), NOW() + make_interval(secs => $3)),
-			       timeout_reason = $4, timeout_by = NULL, updated_at = NOW()
+			UPDATE users SET timeout_reason = CASE WHEN NOW() + make_interval(secs => $3) > COALESCE(timeout_until, NOW()) THEN $4 ELSE timeout_reason END,
+			       timeout_by = CASE WHEN NOW() + make_interval(secs => $3) > COALESCE(timeout_until, NOW()) THEN NULL ELSE timeout_by END,
+			       timeout_until = GREATEST(COALESCE(timeout_until, NOW()), NOW() + make_interval(secs => $3)), updated_at = NOW()
 			WHERE role <> 'admin' AND NOT is_bot AND deleted_at IS NULL
 			  AND (id = $1 OR ($2 AND created_at > NOW() - make_interval(secs => $5)))
 			RETURNING id, timeout_until`, userID, started, float64(r.Config.RestrictSeconds), raidReason, float64(r.Config.WindowSeconds))
@@ -86,10 +79,11 @@ func (e *Engine) restrictJoiners(ctx context.Context, r *compiled, userID uuid.U
 		defer rows.Close()
 		for rows.Next() {
 			var id uuid.UUID
+			var until time.Time
 			if err := rows.Scan(&id, &until); err != nil {
 				return err
 			}
-			restricted = append(restricted, id)
+			restricted[id] = until
 		}
 		rows.Close()
 		if err := rows.Err(); err != nil {
@@ -97,7 +91,7 @@ func (e *Engine) restrictJoiners(ctx context.Context, r *compiled, userID uuid.U
 		}
 		return e.noteRaid(ctx, tx, r, started, report, len(restricted))
 	})
-	return restricted, started, until, err
+	return restricted, started, err
 }
 
 // noteRaid creates the queue entry of a raid that just began, or counts one

@@ -4,6 +4,7 @@ package discordimport
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/google/uuid"
@@ -28,6 +29,29 @@ func TestUndoKeepsRolesTheCallerCanNoLongerManage(t *testing.T) {
 	w.must(w.p.QueryRow(ctx, `SELECT COUNT(*) FROM roles WHERE name = 'Moderator'`).Scan(&left))
 	if left != 1 {
 		t.Fatal("the role above the caller was deleted")
+	}
+	// A partial undo leaves the import open for someone who outranks the role.
+	undoneAt := func() (set bool) {
+		w.must(w.p.QueryRow(ctx, `SELECT undone_at IS NOT NULL FROM discord_imports WHERE id = $1`, rec.ID).Scan(&set))
+		return set
+	}
+	if undoneAt() {
+		t.Fatal("import was closed although a role was kept")
+	}
+	res, err = w.im.Undo(ctx, w.owner, rec.ID, UndoRequest{})
+	w.must(err)
+	if res.KeptRoles != 0 {
+		t.Fatalf("owner undo = %+v", res)
+	}
+	w.must(w.p.QueryRow(ctx, `SELECT COUNT(*) FROM roles WHERE name = 'Moderator'`).Scan(&left))
+	if left != 0 {
+		t.Fatal("the owner did not remove the kept role")
+	}
+	if !undoneAt() {
+		t.Fatal("import still open after the full undo")
+	}
+	if _, err := w.im.Undo(ctx, w.owner, rec.ID, UndoRequest{}); !errors.Is(err, errAlreadyUndone) {
+		t.Fatalf("third undo error = %v, want errAlreadyUndone", err)
 	}
 
 	// The Owner outranks everything and can still remove it.

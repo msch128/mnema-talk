@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/slash"
 )
@@ -37,6 +38,12 @@ func (msgCommand) Available(snap *perm.Snapshot, user perm.Subject, _ uuid.UUID)
 // member is the route's one text. The text is then sent under the
 // conversation's id with the permissions of a message in that conversation.
 func (c msgCommand) Run(_ context.Context, call slash.Call) (slash.Result, error) {
+	// The text is checked before the conversation exists, so a message that
+	// cannot be sent leaves no empty direct message behind.
+	text, err := chat.ValidateContent(str(call, "text"), false)
+	if err != nil {
+		return slash.Result{}, err
+	}
 	h := c.svc.Chat
 	if err := h.AllowDMStart(call.Request); err != nil {
 		return slash.Result{}, err
@@ -46,5 +53,5 @@ func (c msgCommand) Run(_ context.Context, call slash.Call) (slash.Result, error
 		return slash.Result{}, err
 	}
 	call.Channel = dm.ID
-	return c.svc.post(call, str(call, "text"), nil)
+	return c.svc.post(call, text, nil)
 }
