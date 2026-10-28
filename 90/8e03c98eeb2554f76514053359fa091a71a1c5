@@ -1,0 +1,23 @@
+web/src/i18n/de.json
+  s_1888f569b71f01::t_c31b62251f4d54 149
+web/src/i18n/en.json
+  s_1888f569b71f01::t_dde43f32092f55 149
+web/src/lib/errorDetails.ts
+  s_1888f569b71f01::t_ef02d7b284c85b 55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "908e03c98eeb2554f76514053359fa091a71a1c5",
+  "prompts": {},
+  "sessions": {
+    "s_1888f569b71f01": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aintegrate-server-60fe71aa50757d20",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
