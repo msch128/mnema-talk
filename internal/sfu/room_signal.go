@@ -65,7 +65,6 @@ func (p *Peer) finishSignalingTask() {
 
 // requestPendingSignal runs a queued round if the peer can take it now.
 func (p *Peer) requestPendingSignal() {
-	slog.Info("DBG requestPendingSignal", "user", p.ID, "state", p.PC.SignalingState().String(), "pending", p.negotiationPending.Load())
 	if p.PC.SignalingState() == webrtc.SignalingStateStable && p.negotiationPending.Swap(false) {
 		p.room.requestPeerSignal(p)
 	}
@@ -108,7 +107,6 @@ func (r *Room) negotiateOrRetry(peer *Peer) {
 		return
 	}
 	peer.offerFailures++
-	slog.Info("DBG offer build failed", "user", peer.ID)
 	if peer.offerFailures >= maxOfferBuildFailures {
 		slog.Error("sfu offer could not be built, giving up", "user", peer.ID, "attempts", peer.offerFailures)
 		go r.dropLostPeer(peer)
@@ -200,7 +198,6 @@ func (r *Room) addSender(peer *Peer, trackID string, info *TrackInfo) bool {
 	delete(peer.addTrackFailed, trackID)
 	if vt != nil {
 		if !peer.putViewerTrack(trackID, vt) {
-			slog.Info("DBG putViewerTrack refused", "user", peer.ID)
 			// The peer was released while this round ran.
 			_ = peer.PC.RemoveTrack(sender)
 			return false
@@ -262,7 +259,6 @@ func (p *Peer) noteAddTrackFailure(trackID string, info *TrackInfo, err error) {
 
 // negotiateOffer creates and sets the local offer and hands it to the client.
 func negotiateOffer(peer *Peer) error {
-	slog.Info("DBG negotiateOffer", "user", peer.ID, "state", peer.PC.SignalingState().String())
 	if peer.offerFault != nil {
 		if err := peer.offerFault(); err != nil {
 			return err
