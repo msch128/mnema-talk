@@ -154,13 +154,17 @@ func (c *Checker) Run(ctx context.Context, initialDelay time.Duration) {
 // CheckNow is an admin's "check now": like Check, but refused within
 // ManualMinGap of the previous attempt.
 func (c *Checker) CheckNow(ctx context.Context) error {
+	// The gap is tested under checkMu, so two simultaneous requests cannot
+	// both pass it before the first one records its attempt.
+	c.checkMu.Lock()
+	defer c.checkMu.Unlock()
 	c.mu.Lock()
 	tooSoon := !c.lastAttempt.IsZero() && c.now().Sub(c.lastAttempt) < ManualMinGap
 	c.mu.Unlock()
 	if tooSoon {
 		return ErrTooSoon
 	}
-	return c.Check(ctx)
+	return c.check(ctx)
 }
 
 // Check asks GitHub for the latest release once. While a rate limit from an
@@ -168,13 +172,18 @@ func (c *Checker) CheckNow(ctx context.Context) error {
 func (c *Checker) Check(ctx context.Context) error {
 	c.checkMu.Lock()
 	defer c.checkMu.Unlock()
+	return c.check(ctx)
+}
 
+// check is Check with checkMu held by the caller.
+func (c *Checker) check(ctx context.Context) error {
 	c.mu.Lock()
 	now := c.now()
 	if now.Before(c.retryAt) {
 		c.mu.Unlock()
 		return ErrBackoff
 	}
+	prevAttempt := c.lastAttempt
 	c.lastAttempt = now
 	etag := c.etag
 	c.mu.Unlock()
@@ -185,6 +194,12 @@ func (c *Checker) Check(ctx context.Context) error {
 	defer c.mu.Unlock()
 	if !retryAt.IsZero() {
 		c.retryAt = retryAt
+	}
+	if err != nil && ctx.Err() != nil && errors.Is(err, ctx.Err()) {
+		// A cancelled check says nothing about GitHub: it neither becomes the
+		// visible error nor blocks the next manual check.
+		c.lastAttempt = prevAttempt
+		return err
 	}
 	if err != nil {
 		c.lastErr = err.Error()

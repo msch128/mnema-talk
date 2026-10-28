@@ -246,6 +246,12 @@ func updaterMessage(err error) string {
 		return update.ErrUpdaterUnverified.Error()
 	case errors.Is(err, update.ErrUpdaterRequest):
 		return update.ErrUpdaterRequest.Error()
+	case errors.Is(err, update.ErrUpdaterVersionMismatch):
+		return update.ErrUpdaterVersionMismatch.Error()
+	case errors.Is(err, update.ErrUpdaterNoTarget):
+		return update.ErrUpdaterNoTarget.Error()
+	case errors.Is(err, update.ErrUpdaterEngine):
+		return update.ErrUpdaterEngine.Error()
 	default:
 		return "the updater could not start the update; see the updater's log"
 	}

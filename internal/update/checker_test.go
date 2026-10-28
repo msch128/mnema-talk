@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -278,5 +279,49 @@ func TestSemver(t *testing.T) {
 		if got := IsNewer(tc.latest, tc.current); got != tc.want {
 			t.Errorf("IsNewer(%q, %q) = %v", tc.latest, tc.current, got)
 		}
+	}
+}
+
+func TestConcurrentCheckNowHitsGitHubOnce(t *testing.T) {
+	srv, hits := github(t, jsonReply(releaseJSON))
+	c := NewChecker(srv.URL, "0.3.0")
+	now := time.Now()
+	c.now = func() time.Time { return now }
+	const callers = 8
+	var wg sync.WaitGroup
+	var tooSoon atomic.Int32
+	for i := 0; i < callers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if errors.Is(c.CheckNow(context.Background()), ErrTooSoon) {
+				tooSoon.Add(1)
+			}
+		}()
+	}
+	wg.Wait()
+	if hits.Load() != 1 || tooSoon.Load() != callers-1 {
+		t.Fatalf("hits=%d tooSoon=%d", hits.Load(), tooSoon.Load())
+	}
+}
+
+func TestCancelledCheckIsNeitherShownNorThrottled(t *testing.T) {
+	srv, hits := github(t, jsonReply(releaseJSON))
+	c := NewChecker(srv.URL, "0.3.0")
+	now := time.Now()
+	c.now = func() time.Time { return now }
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := c.CheckNow(ctx); !errors.Is(err, context.Canceled) {
+		t.Fatalf("cancelled check: %v", err)
+	}
+	if got := c.Snapshot().Error; got != "" {
+		t.Fatalf("visible error = %q", got)
+	}
+	if err := c.CheckNow(context.Background()); err != nil {
+		t.Fatalf("retry after cancel: %v", err)
+	}
+	if hits.Load() != 1 {
+		t.Fatalf("hits = %d", hits.Load())
 	}
 }

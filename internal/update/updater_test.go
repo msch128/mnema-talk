@@ -65,6 +65,30 @@ func TestUpdaterErrors(t *testing.T) {
 	}
 }
 
+func TestUpdaterMapsRefusalReasons(t *testing.T) {
+	for _, c := range []struct {
+		status int
+		reason string
+		want   error
+	}{
+		{http.StatusUnprocessableEntity, ReasonUntrusted, ErrUpdaterUntrusted},
+		{http.StatusUnprocessableEntity, ReasonVersion, ErrUpdaterVersionMismatch},
+		{http.StatusBadGateway, ReasonUnchecked, ErrUpdaterUnverified},
+		{http.StatusBadGateway, ReasonEngine, ErrUpdaterEngine},
+		{http.StatusConflict, ReasonNoTarget, ErrUpdaterNoTarget},
+	} {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(c.status)
+			_, _ = w.Write([]byte(`{"error":"` + c.reason + `"}`))
+		}))
+		u, _ := NewUpdater(srv.URL, testToken)
+		if err := u.Trigger(context.Background(), "1.2.3"); !errors.Is(err, c.want) {
+			t.Errorf("%d %s: err = %v, want %v", c.status, c.reason, err, c.want)
+		}
+		srv.Close()
+	}
+}
+
 func TestUpdaterNeverFollowsRedirects(t *testing.T) {
 	var leaked bool
 	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -89,7 +89,7 @@ func TestCheckerRunStopsAfterCompletedOrFailedCheck(t *testing.T) {
 				t.Fatalf("performed %d checks, want exactly one before cancellation", hits.Load())
 			}
 			if fail {
-				if s.Error != context.Canceled.Error() || s.Latest != nil {
+				if s.Error != "" || s.Latest != nil {
 					t.Fatalf("failed cancelled check snapshot=%+v", s)
 				}
 			} else if s.Latest == nil || s.Latest.Version != "0.4.0" || s.Error != "" {

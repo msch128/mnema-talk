@@ -63,6 +63,11 @@ func buildSampleOpenAPIDoc() obj {
 					"type":       "string",
 					"x-nullable": true,
 				},
+				"UniqueArray": obj{
+					"uniqueItems": true,
+					"type":        "array",
+					"properties":  obj{"uniqueItems": obj{"type": "boolean"}},
+				},
 				"ArrayItem": obj{
 					"uniqueItems": false,
 					"type":        "array",
@@ -110,6 +115,15 @@ func verifyFixedDocument(t *testing.T, res obj) {
 	arr := schemas["ArrayItem"].(obj)
 	if _, ok := arr["uniqueItems"]; ok {
 		t.Errorf("uniqueItems should be deleted")
+	}
+	// Only the false noise goes: true is a real constraint, and a property
+	// that happens to be named uniqueItems is not a keyword.
+	uniq := schemas["UniqueArray"].(obj)
+	if uniq["uniqueItems"] != true {
+		t.Errorf("uniqueItems: true was removed")
+	}
+	if _, ok := uniq["properties"].(obj)["uniqueItems"]; !ok {
+		t.Errorf("a property named uniqueItems was removed")
 	}
 }
 

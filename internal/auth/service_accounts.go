@@ -197,6 +197,24 @@ func UpdateProfile(ctx context.Context, p *db.Pool, userID uuid.UUID, displayNam
 		RETURNING `+userColumns, displayName, bio, userID))
 }
 
+// UpdateDisplayName changes only the display name; the bio and everything else
+// stay as stored. It cleans and limits the name like UpdateProfile.
+func UpdateDisplayName(ctx context.Context, p *db.Pool, userID uuid.UUID, displayName string) (*User, error) {
+	displayName, err := httpx.CleanText("display_name", displayName, MaxDisplayNameLen, false)
+	if err != nil {
+		return nil, err
+	}
+	u, err := scanUser(p.QueryRow(ctx, `
+		UPDATE users
+		SET display_name = CASE WHEN $1 = '' THEN LEFT(username, 24) ELSE $1 END, updated_at = NOW()
+		WHERE id = $2
+		RETURNING `+userColumns, displayName, userID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, httpx.ErrNotFound("user not found")
+	}
+	return u, err
+}
+
 // defaultDisplayName is the username, cut to the display name limit.
 func defaultDisplayName(username string) string {
 	r := []rune(username)

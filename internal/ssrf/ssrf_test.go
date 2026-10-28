@@ -352,3 +352,43 @@ func TestClientEndToEnd(t *testing.T) {
 	}
 	res.Body.Close()
 }
+
+func TestAllowCanOpenIPv6LoopbackButNotIPv4Compatible(t *testing.T) {
+	allow, err := ParseAllow("::1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &Policy{Allow: allow}
+	if err := p.Check(addr("::1")); err != nil {
+		t.Errorf("::1 on the allowlist: %v", err)
+	}
+	if err := (&Policy{}).Check(addr("::1")); err == nil {
+		t.Error("::1 allowed without an allowlist")
+	}
+	all, _ := ParseAllow("::/0")
+	for _, s := range []string{"::", "::1.2.3.4", "::808:808"} {
+		if err := (&Policy{Allow: all}).Check(addr(s)); err == nil {
+			t.Errorf("%s was opened by an allowlist", s)
+		}
+	}
+	if PublicUnicast(addr("::1.2.3.4")) || PublicUnicast(addr("::1")) {
+		t.Error("IPv4-compatible or loopback treated as public")
+	}
+}
+
+func TestParseAllowIPv4MappedPrefixMatchesIPv4(t *testing.T) {
+	allow, err := ParseAllow("::ffff:10.0.0.0/104")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &Policy{Allow: allow}
+	if err := p.Check(addr("10.1.2.3")); err != nil {
+		t.Errorf("mapped prefix did not match 10.1.2.3: %v", err)
+	}
+	if err := p.Check(addr("192.168.1.1")); err == nil {
+		t.Error("192.168.1.1 allowed by the 10/8 prefix")
+	}
+	if _, err := ParseAllow("::ffff:0:0/64"); err == nil {
+		t.Error("a mapped prefix shorter than /96 was accepted")
+	}
+}

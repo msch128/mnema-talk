@@ -122,7 +122,9 @@ func renameAtMe(paths obj) {
 func walk(v any) error {
 	switch v := v.(type) {
 	case obj:
-		delete(v, "uniqueItems")
+		if u, ok := v["uniqueItems"].(bool); ok && !u {
+			delete(v, "uniqueItems")
+		}
 		if err := makeNullable(v); err != nil {
 			return err
 		}
