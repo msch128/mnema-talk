@@ -1,0 +1,41 @@
+internal/sfu/ingress_test.go
+  s_f8e7d3bc1f8ddb::t_852b316d5871f4 139-140
+internal/sfu/layers_hardening_test.go
+  s_19ca66a63b57e6::t_1bfb00ee55107d 4,279-352
+internal/sfu/screen.go
+  s_19ca66a63b57e6::t_a1b6fbf10a2283 88,133-137
+internal/sfu/sfu_edges_test.go
+  s_f8e7d3bc1f8ddb::t_fff3c75a0aedb6 167
+internal/sfu/sfu_join.go
+  s_19ca66a63b57e6::t_24de03f20c6082 55,94
+internal/sfu/sfu_setup.go
+  s_19ca66a63b57e6::t_e7992e08fdbc07 133-138
+internal/sfu/subscriptions_test.go
+  s_f8e7d3bc1f8ddb::t_9609232962c720 128,255-264
+internal/sfu/viewers_test.go
+  s_19ca66a63b57e6::t_9c32c69866c41f 75,136,180,182,237
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bda118258446921d0b8821acba5dcdeb6d833101",
+  "prompts": {},
+  "sessions": {
+    "s_19ca66a63b57e6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa4cb870620abc635",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_f8e7d3bc1f8ddb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a22d32b6f61e75622",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
