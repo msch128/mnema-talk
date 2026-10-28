@@ -200,6 +200,8 @@ func TestForumPostListRejectsUnknownSort(t *testing.T) {
 	requireAPIStatus(t, err, http.StatusBadRequest)
 }
 
+var errRollBack = errors.New("roll back")
+
 func TestBulkDeleteSurvivesAFailingEditVersionRead(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
@@ -211,9 +213,9 @@ func TestBulkDeleteSurvivesAFailingEditVersionRead(t *testing.T) {
 		if err != nil || len(gone) == 0 {
 			t.Fatalf("takeLatestMessages = %d messages, %v", len(gone), err)
 		}
-		return nil
+		return errRollBack // the rename must not outlive the test
 	})
-	if err != nil {
+	if !errors.Is(err, errRollBack) {
 		t.Fatal(err)
 	}
 }
