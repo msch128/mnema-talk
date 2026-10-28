@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func serve(mw func(http.Handler) http.Handler, user *User) *httptest.ResponseRecorder {
@@ -34,7 +35,7 @@ func TestRequireOwnerAdmitsOnlyTheOwner(t *testing.T) {
 }
 
 func TestPermissionGuards(t *testing.T) {
-	f := perm.NewFixture()
+	f := permtest.NewFixture()
 	mod := f.Role(1, perm.ManageRoles)
 	moderator, plain := &User{ID: uuid.New(), Role: RoleUser}, &User{ID: uuid.New(), Role: RoleUser}
 	owner := &User{ID: uuid.New(), Role: RoleAdmin}
@@ -59,7 +60,7 @@ func TestPermissionGuards(t *testing.T) {
 		{"without a service only the owner", RequirePerm(nil, perm.ManageRoles), moderator, 403},
 		{"without a service the owner", RequireAnyPerm(nil, perm.ManageRoles), owner, 204},
 		// A permission state that cannot be loaded is a server failure, not a pass.
-		{"unloadable state", RequirePerm(perm.NewService(nil), perm.ManageRoles), moderator, 500},
+		{"unloadable state", RequirePerm(permtest.Unloadable(), perm.ManageRoles), moderator, 500},
 	} {
 		if got := serve(c.mw, c.user).Code; got != c.status {
 			t.Errorf("%s: %d, want %d", c.what, got, c.status)
@@ -68,7 +69,7 @@ func TestPermissionGuards(t *testing.T) {
 }
 
 func TestCheckTargetFollowsTheHierarchy(t *testing.T) {
-	f := perm.NewFixture()
+	f := permtest.NewFixture()
 	high, low := f.Role(5, perm.ManageMembers), f.Role(2, 0)
 	boss, peer, junior, plain := &User{ID: uuid.New()}, &User{ID: uuid.New()}, &User{ID: uuid.New()}, &User{ID: uuid.New()}
 	f.Assign(boss.ID, high).Assign(peer.ID, high).Assign(junior.ID, low)
@@ -110,7 +111,7 @@ func TestCheckTargetFollowsTheHierarchy(t *testing.T) {
 }
 
 func TestWithRoles(t *testing.T) {
-	f := perm.NewFixture()
+	f := permtest.NewFixture()
 	role := f.Role(1, 0)
 	a, b := uuid.New(), uuid.New()
 	f.Assign(a, role)
@@ -122,7 +123,7 @@ func TestWithRoles(t *testing.T) {
 	if err := (&Handler{Perms: f.Service()}).withRoles(r, users); err != nil || len(users[0].RoleIDs) != 1 || users[1].RoleIDs != nil {
 		t.Fatalf("roles: %v %+v", err, users)
 	}
-	if err := (&Handler{Perms: perm.NewService(nil)}).withRoles(r, users); err == nil {
+	if err := (&Handler{Perms: permtest.Unloadable()}).withRoles(r, users); err == nil {
 		t.Fatal("an unreadable state must fail")
 	}
 }

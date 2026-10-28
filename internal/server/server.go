@@ -22,6 +22,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/later"
 	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/push"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/msch128/mnema-talk/internal/update"
@@ -38,6 +39,9 @@ type Deps struct {
 	SFU    *sfu.SFU    // nil disables voice
 	// Events overrides the publisher (tests); nil uses the WebSocket hub.
 	Events events.Publisher
+	// Perms replaces the database-backed permission service (tests); nil
+	// builds it from DB.
+	Perms *perm.Service
 	// Version is the build version reported by /api/health.
 	Version string
 	// Updates is the release checker (nil when UPDATE_CHECK_ENABLED=false;

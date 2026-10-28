@@ -1,14 +1,16 @@
-package perm
+package perm_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	. "github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func TestOnlyMembersOfAConversationGetAnything(t *testing.T) {
-	f := NewFixture()
+	f := permtest.NewFixture()
 	alice, bob, carol, owner, admin := uuid.New(), uuid.New(), uuid.New(), uuid.New(), uuid.New()
 	f.Owner(owner).Assign(admin, f.Role(5, Administrator))
 	dm := f.DM(alice, bob)
@@ -38,7 +40,7 @@ func TestOnlyMembersOfAConversationGetAnything(t *testing.T) {
 }
 
 func TestAMemberKeepsReadingWhenWritingIsTakenAway(t *testing.T) {
-	f := NewFixture()
+	f := permtest.NewFixture()
 	alice, bob := uuid.New(), uuid.New()
 	dm := f.DM(alice, bob)
 	f.Timeout(alice, time.Now().Add(time.Hour), "calm down")
@@ -52,10 +54,10 @@ func TestAMemberKeepsReadingWhenWritingIsTakenAway(t *testing.T) {
 }
 
 func TestTheCommunitySwitchMakesConversationsReadOnly(t *testing.T) {
-	f := NewFixture()
+	f := permtest.NewFixture()
 	alice, bob := uuid.New(), uuid.New()
 	dm := f.DM(alice, bob)
-	f.Snapshot().dmEnabled = false
+	f.DMEnabled(false)
 	if p := f.Snapshot().Channel(Subject{ID: alice}, dm); p != ViewChannel {
 		t.Errorf("switch off: %b, want read only", p)
 	}
@@ -65,7 +67,7 @@ func TestTheCommunitySwitchMakesConversationsReadOnly(t *testing.T) {
 }
 
 func TestPendingRulesAndBotsCannotStartConversations(t *testing.T) {
-	f := NewFixture()
+	f := permtest.NewFixture()
 	member, bot := uuid.New(), uuid.New()
 	f.Rules(1).Bot(bot)
 	if f.Snapshot().CanStartDM(Subject{ID: member}) {
