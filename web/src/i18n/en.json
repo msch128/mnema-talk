@@ -517,7 +517,6 @@
     "sortLabel": "Sort results by",
     "sortNewest": "Newest",
     "sortOldest": "Oldest",
-    "sortRelevance": "Relevance",
     "searchResults": "Results",
     "resultsCount": {
       "one": "{count} result",

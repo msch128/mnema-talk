@@ -3433,7 +3433,7 @@
       "chat.Poll": {
         "properties": {
           "anonymous": {
-            "description": "Anonymous polls never name voters: options carry counts only.",
+            "description": "Anonymous polls never name voters: options carry counts only, and only\nonce the poll has ended (a running one reports 0 for every option).",
             "type": "boolean"
           },
           "closed": {
@@ -6523,7 +6523,7 @@
       "poll.Detail": {
         "properties": {
           "anonymous": {
-            "description": "Anonymous polls never name voters: options carry counts only.",
+            "description": "Anonymous polls never name voters: options carry counts only, and only\nonce the poll has ended (a running one reports 0 for every option).",
             "type": "boolean"
           },
           "closed": {
@@ -15189,6 +15189,16 @@
               }
             },
             "description": "FORBIDDEN: missing the Manage reports permission."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the before cursor no longer exists (it was deleted since the previous page); reload the list."
           },
           "429": {
             "content": {
@@ -24562,7 +24572,7 @@
                 }
               }
             },
-            "description": "NOT_FOUND"
+            "description": "NOT_FOUND: the channel, or the before post (deleted since the previous page), does not exist."
           }
         },
         "security": [
@@ -28311,6 +28321,16 @@
             },
             "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the before cursor no longer exists (it was deleted since the previous page); reload the list."
+          },
           "429": {
             "content": {
               "application/json": {
@@ -29061,6 +29081,16 @@
               }
             },
             "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the before cursor no longer exists (it was deleted since the previous page); reload the list."
           },
           "429": {
             "content": {
@@ -31167,7 +31197,7 @@
             }
           },
           {
-            "description": "Timezone offset for during (e.g. +02:00, -05:00, or minutes).",
+            "description": "Timezone offset for during (e.g. +02:00, -0500, or minutes east of UTC; a signed run of three digits such as -300 is ambiguous and refused).",
             "in": "query",
             "name": "tz",
             "schema": {
@@ -31185,7 +31215,7 @@
             }
           },
           {
-            "description": "Sort order: newest (default), oldest or relevance.",
+            "description": "Sort order: newest (default) or oldest. relevance is accepted as an alias of newest: search has no ranking.",
             "in": "query",
             "name": "sort",
             "schema": {
@@ -31248,6 +31278,16 @@
               }
             },
             "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the before cursor no longer exists (it was deleted since the previous page); reload the list."
           },
           "429": {
             "content": {

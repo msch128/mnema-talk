@@ -214,3 +214,51 @@ func TestBuildSearchSQLPhraseAndExclusion(t *testing.T) {
 		t.Fatal("an exclusion alone must not be a search")
 	}
 }
+
+// "-300" reads as hh=3 mm=00 as an ISO offset but as 300 minutes as a numeric
+// one; a signed run of three digits is refused instead of guessed.
+func TestSearchDayRefusesAmbiguousSignedOffsets(t *testing.T) {
+	for _, tz := range []string{"-300", "+120", "+530"} {
+		if _, _, err := ParseSearchDay("2026-10-24", tz); err == nil {
+			t.Errorf("accepted ambiguous tz %q", tz)
+		}
+	}
+	for tz, wantHours := range map[string]int{"-0500": -5, "-05:00": -5, "+5": 5, "-12": -12, "120": 2} {
+		s, _, err := ParseSearchDay("2026-10-24", tz)
+		if err != nil {
+			t.Errorf("tz %q: %v", tz, err)
+			continue
+		}
+		if got := s.Add(time.Duration(wantHours) * time.Hour).Hour(); got != 0 {
+			t.Errorf("tz %q: day starts at %v UTC, want local midnight at %+d h", tz, s, wantHours)
+		}
+	}
+}
+
+// Every media filter leaves out deleted files, so has:image and filename: agree.
+func TestSearchMediaFiltersIgnoreDeletedFiles(t *testing.T) {
+	for _, q := range []SearchQuery{{Has: "file"}, {Has: "image"}, {Has: "video"}, {Filename: "cat"}} {
+		q.Limit = 5
+		sql, _, err := buildSearchSQL(q)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(sql, "NOT f.is_deleted") {
+			t.Errorf("%+v lets deleted files match: %s", q, sql)
+		}
+	}
+}
+
+// Relevance has no ranking: it orders and pages like newest.
+func TestSearchRelevanceSortsLikeNewest(t *testing.T) {
+	before := uuid.New()
+	for _, sort := range []string{"", "newest", "relevance"} {
+		sql, _, err := buildSearchSQL(SearchQuery{Text: "hi", Sort: sort, Before: &before, Limit: 5})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(sql, "ORDER BY m.created_at DESC") || !strings.Contains(sql, "(m.created_at, m.id) <") {
+			t.Errorf("sort %q: %s", sort, sql)
+		}
+	}
+}

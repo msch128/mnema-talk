@@ -130,10 +130,17 @@ func parseNumericOffset(tz string) (*time.Location, bool) {
 	return time.FixedZone("", secs), true
 }
 
+// ambiguousOffsetRe matches a signed run of exactly three digits: "-300" is
+// hh=3 mm=00 as an ISO offset but 300 minutes as a numeric one.
+var ambiguousOffsetRe = regexp.MustCompile(`^[+-]\d{3}$`)
+
 func parseTZLocation(tz string) (*time.Location, error) {
 	tz = strings.TrimSpace(tz)
 	if tz == "" || strings.EqualFold(tz, "utc") || tz == "Z" {
 		return time.UTC, nil
+	}
+	if ambiguousOffsetRe.MatchString(tz) {
+		return nil, httpx.ErrInvalidInput("invalid tz offset: write +hh:mm or +hhmm")
 	}
 	if loc, ok := parseISOOffset(tz); ok {
 		return loc, nil
@@ -180,7 +187,7 @@ func validateSearchTerms(q SearchQuery) ([]searchTerm, error) {
 		return nil, err
 	}
 	switch q.Sort {
-	case "", "newest", "oldest", "relevance":
+	case "", "newest", "oldest", sortRelevance:
 	default:
 		return nil, httpx.ErrInvalidInput("sort must be newest, oldest or relevance")
 	}
@@ -200,6 +207,15 @@ func validateSearchTerms(q SearchQuery) ([]searchTerm, error) {
 	}
 	return terms, nil
 }
+
+// sortRelevance is accepted for clients written against 1.1, which listed it
+// next to newest and oldest. Search has no ranking, so it orders like newest.
+const sortRelevance = "relevance"
+
+// oldestFirst reports whether the results run oldest first; every other
+// accepted sort is newest first. The order and the cursor comparison both
+// follow from it.
+func (q SearchQuery) oldestFirst() bool { return q.Sort == "oldest" }
 
 type searchBuilder struct {
 	where []string
@@ -227,7 +243,7 @@ func (b *searchBuilder) addTerms(terms []searchTerm) {
 // elsewhere cannot make a conversation searchable by anybody else.
 func (b *searchBuilder) addScope(q SearchQuery) {
 	if q.Conversations {
-		b.where = append(b.where, "m.in_dm AND EXISTS (SELECT 1 FROM dm_members dm WHERE dm.channel_id = m.channel_id AND dm.user_id = "+b.addArg(q.Member)+")")
+		b.where = append(b.where, conversationReadableSQL(b.addArg(q.Member)))
 		return
 	}
 	b.where = append(b.where, "NOT m.in_dm")
@@ -257,7 +273,7 @@ func (b *searchBuilder) addAuthorFilters(q SearchQuery) error {
 
 func (b *searchBuilder) addContentFilters(q SearchQuery) error {
 	if q.Filename != "" {
-		b.where = append(b.where, "EXISTS (SELECT 1 FROM media f WHERE f.message_id = m.id AND NOT f.is_deleted AND f.original_filename ILIKE "+b.addArg(likePattern(q.Filename))+` ESCAPE '\')`)
+		b.where = append(b.where, mediaExists("f.original_filename ILIKE "+b.addArg(likePattern(q.Filename))+` ESCAPE '\'`))
 	}
 	has, err := hasCondition(q.Has)
 	if err != nil {
@@ -291,7 +307,7 @@ func (b *searchBuilder) addDateFilters(q SearchQuery) {
 	}
 	if q.Before != nil {
 		op := "<"
-		if q.Sort == "oldest" {
+		if q.oldestFirst() {
 			op = ">"
 		}
 		b.where = append(b.where, fmt.Sprintf("(m.created_at, m.id) %s (SELECT created_at, id FROM messages WHERE id = %s)", op, b.addArg(*q.Before)))
@@ -313,17 +329,27 @@ func (b *searchBuilder) addFilters(q SearchQuery) error {
 	return nil
 }
 
+// mediaExists is the condition "the message has an attachment that is still
+// there and satisfies cond" ("" for any): a deleted file is a placeholder, so
+// no media filter matches it.
+func mediaExists(cond string) string {
+	if cond != "" {
+		cond = " AND " + cond
+	}
+	return "EXISTS (SELECT 1 FROM media f WHERE f.message_id = m.id AND NOT f.is_deleted" + cond + ")"
+}
+
 // hasCondition is the WHERE condition of the "has" filter ("" for none).
 func hasCondition(has string) (string, error) {
 	switch has {
 	case "":
 		return "", nil
 	case "file":
-		return "EXISTS (SELECT 1 FROM media f WHERE f.message_id = m.id)", nil
+		return mediaExists(""), nil
 	case "image":
-		return "EXISTS (SELECT 1 FROM media f WHERE f.message_id = m.id AND f.mime_type LIKE 'image/%')", nil
+		return mediaExists("f.mime_type LIKE 'image/%'"), nil
 	case "video":
-		return "EXISTS (SELECT 1 FROM media f WHERE f.message_id = m.id AND f.mime_type LIKE 'video/%')", nil
+		return mediaExists("f.mime_type LIKE 'video/%'"), nil
 	case "link":
 		return `m.content ~* 'https?://'`, nil
 	case "embed":

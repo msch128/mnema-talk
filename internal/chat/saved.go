@@ -86,6 +86,11 @@ type savedRow struct {
 // other channel is returned as unavailable. before is the message id of the
 // last entry of the previous page.
 func ListSaved(ctx context.Context, p *db.Pool, user uuid.UUID, visible []uuid.UUID, before *uuid.UUID, limit int) (SavedPage, error) {
+	if before != nil {
+		if err := cursorExists(ctx, p, `SELECT 1 FROM saved_messages WHERE user_id = $1 AND message_id = $2`, user, *before); err != nil {
+			return SavedPage{}, err
+		}
+	}
 	rows, err := p.Query(ctx, `
 		SELECT s.message_id, s.note, s.created_at FROM saved_messages s
 		WHERE s.user_id = $1 AND ($3::uuid IS NULL OR (s.created_at, s.message_id) <
@@ -130,7 +135,7 @@ func savedMessages(ctx context.Context, p *db.Pool, user uuid.UUID, saved []save
 	// membership test in SQL, as in search.
 	msgs, err := queryMessages(ctx, p, messageSelect+` WHERE m.id = ANY($1) AND (
 		(NOT m.in_dm AND ($2::uuid[] IS NULL OR m.channel_id = ANY($2)))
-		OR (m.in_dm AND EXISTS (SELECT 1 FROM dm_members dm WHERE dm.channel_id = m.channel_id AND dm.user_id = $3)))`, ids, visible, user)
+		OR (`+conversationReadableSQL("$3")+`))`, ids, visible, user)
 	if err != nil {
 		return nil, err
 	}
@@ -181,6 +186,7 @@ func SaveMessage(ctx context.Context, p *db.Pool, user, messageID uuid.UUID, not
 // @Success 200 {object} SavedPage "One page of the saved list."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the before cursor no longer exists (it was deleted since the previous page); reload the list."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."

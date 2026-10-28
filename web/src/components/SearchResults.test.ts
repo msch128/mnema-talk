@@ -98,11 +98,11 @@ describe('SearchResults', () => {
   it('shows the count and the sort choice with v3, newest by default', async () => {
     make({ showV3: true, results: [hit(1), hit(2)] })
     expect(wrapper.get('[data-testid="search-results-header"]').text()).toContain('2')
-    expect(sortButtons().map(b => b.attributes('aria-checked'))).toEqual(['true', 'false', 'false'])
-    await sortButtons()[2]!.trigger('click')
-    expect(sortEmits()).toEqual(['relevance'])
+    expect(sortButtons().map(b => b.attributes('aria-checked'))).toEqual(['true', 'false'])
+    await sortButtons()[1]!.trigger('click')
+    expect(sortEmits()).toEqual(['oldest'])
     await wrapper.setProps({ sort: 'oldest' })
-    expect(sortButtons().map(b => b.attributes('aria-checked'))).toEqual(['false', 'true', 'false'])
+    expect(sortButtons().map(b => b.attributes('aria-checked'))).toEqual(['false', 'true'])
   })
 
   it('shows the header title instead of a count when only criteria are set', () => {
@@ -121,15 +121,15 @@ describe('SearchResults', () => {
     await group.trigger('keydown', { key: 'ArrowDown' })
     await group.trigger('keydown', { key: 'ArrowUp' })
     await group.trigger('keydown', { key: 'a' })
-    expect(sortEmits()).toEqual(['oldest', 'relevance'])
-    await wrapper.setProps({ sort: 'relevance' })
+    expect(sortEmits()).toEqual(['oldest', 'oldest'])
+    await wrapper.setProps({ sort: 'oldest' })
     await group.trigger('keydown', { key: 'ArrowRight' })
     expect(sortEmits()?.at(-1)).toBe('newest')
   })
 
   it('keeps one tab stop on the sort choice and one on the result list', () => {
     make({ showV3: true, results: [hit(1), hit(2)], sort: 'oldest' })
-    expect(sortButtons().map(b => b.attributes('tabindex'))).toEqual(['-1', '0', '-1'])
+    expect(sortButtons().map(b => b.attributes('tabindex'))).toEqual(['-1', '0'])
     expect(wrapper.get('#search-results').attributes('tabindex')).toBe('0')
     expect(wrapper.findAll('[role="option"]').every(o => o.attributes('tabindex') === undefined)).toBe(true)
     wrapper.unmount()

@@ -1,8 +1,11 @@
 package chat
 
 import (
+	"errors"
 	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 func TestCleanPostTitle(t *testing.T) {
@@ -71,5 +74,18 @@ func TestCleanTagEmoji(t *testing.T) {
 	overlong := strings.Repeat("a", MaxForumTagEmojiLen+1)
 	if _, err := CleanTagEmoji(overlong); err == nil {
 		t.Error("expected error for overlong emoji")
+	}
+}
+
+// A tag deleted between validation and the insert reads like a tag of another
+// channel, not like a server fault.
+func TestPostTagErrorMapsAVanishedTag(t *testing.T) {
+	err := postTagError(&pgconn.PgError{Code: "23503"})
+	if !errors.Is(err, errTagWrongChannel) {
+		t.Fatalf("foreign key violation: %v", err)
+	}
+	other := errors.New("boom")
+	if got := postTagError(other); errors.Is(got, errTagWrongChannel) || !errors.Is(got, other) {
+		t.Fatalf("other failure: %v", got)
 	}
 }

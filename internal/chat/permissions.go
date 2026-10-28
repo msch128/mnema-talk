@@ -47,11 +47,7 @@ func (h *Handler) channelPerms(r *http.Request, ch uuid.UUID) (perm.Set, error) 
 // @here only notify when they may mention everyone, and nobody is notified
 // about a message in a channel they cannot view.
 func (h *Handler) sendContext(r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
-	return sendContext(h.Perms, r, ch, need)
-}
-
-func sendContext(perms *perm.Service, r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
-	return SendContextFor(perms, r.Context(), ch, need)
+	return SendContextFor(h.Perms, r.Context(), ch, need)
 }
 
 // SendContextFor is SendContext for work that runs without a request (a
@@ -108,16 +104,16 @@ func MentionableRoles(snap *perm.Snapshot, mayAll bool) []MentionRole {
 	return out
 }
 
-// SendContext is sendContext for a message that another feature creates for
+// SendContext is Handler.sendContext for a message that another feature creates for
 // the caller (a built-in slash command, a poll): the caller needs need in ch.
 func SendContext(perms *perm.Service, r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
-	return sendContext(perms, r, ch, need)
+	return SendContextFor(perms, r.Context(), ch, need)
 }
 
-// UploadContext is the sendContext of an upload (media package): the caller
+// UploadContext is the send context of an upload (media package): the caller
 // needs to view the channel, send messages and attach files.
 func UploadContext(perms *perm.Service, r *http.Request, ch uuid.UUID) (context.Context, error) {
-	return sendContext(perms, r, ch, perm.SendMessages|perm.AttachFiles)
+	return SendContextFor(perms, r.Context(), ch, perm.SendMessages|perm.AttachFiles)
 }
 
 // viewableChannels lists the channels the caller may view; nil means all.
@@ -132,19 +128,25 @@ func (h *Handler) viewableChannels(r *http.Request) ([]uuid.UUID, error) {
 	return snap.ViewableChannels(auth.UserFrom(r.Context()).Subject()), nil
 }
 
-// visibleMessageCounts counts messages per author over the channels the caller
-// may view; nil when they may view all of them (the stored totals apply).
-func (h *Handler) visibleMessageCounts(r *http.Request) (map[uuid.UUID]int64, error) {
-	visible, err := h.viewableChannels(r)
+// hiddenMessageCounts counts messages per author over the channels the caller
+// may not view; nil when there are none (the stored totals apply). Only the
+// hidden channels are scanned: the stored total minus these is what the caller
+// may see.
+func (h *Handler) hiddenMessageCounts(r *http.Request) (map[uuid.UUID]int64, error) {
+	if h.Perms == nil {
+		return nil, nil
+	}
+	snap, err := h.Perms.Snapshot(r.Context())
 	if err != nil {
 		return nil, err
 	}
-	if visible == nil {
+	hidden := snap.HiddenChannels(auth.UserFrom(r.Context()).Subject())
+	if len(hidden) == 0 {
 		return nil, nil
 	}
-	rows, err := h.DB.Query(r.Context(), `SELECT user_id, COUNT(*) FROM messages WHERE channel_id = ANY($1::uuid[]) GROUP BY user_id`, visible)
+	rows, err := h.DB.Query(r.Context(), `SELECT user_id, COUNT(*) FROM messages WHERE channel_id = ANY($1::uuid[]) GROUP BY user_id`, hidden)
 	if err != nil {
-		return nil, fmt.Errorf("count visible messages: %w", err)
+		return nil, fmt.Errorf("count hidden messages: %w", err)
 	}
 	type count struct {
 		User uuid.UUID
@@ -152,7 +154,7 @@ func (h *Handler) visibleMessageCounts(r *http.Request) (map[uuid.UUID]int64, er
 	}
 	found, err := pgx.CollectRows(rows, pgx.RowToStructByPos[count])
 	if err != nil {
-		return nil, fmt.Errorf("count visible messages: %w", err)
+		return nil, fmt.Errorf("count hidden messages: %w", err)
 	}
 	out := make(map[uuid.UUID]int64, len(found))
 	for _, c := range found {

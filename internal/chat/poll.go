@@ -18,7 +18,8 @@ import (
 type Poll struct {
 	// Multiple lets a member vote for several options.
 	Multiple bool `json:"multiple"`
-	// Anonymous polls never name voters: options carry counts only.
+	// Anonymous polls never name voters: options carry counts only, and only
+	// once the poll has ended (a running one reports 0 for every option).
 	Anonymous bool `json:"anonymous"`
 	// ClosesAt is when voting ends; ending the poll early moves it to that moment.
 	ClosesAt time.Time `json:"closes_at" format:"date-time"`
@@ -90,21 +91,27 @@ func loadPollsFor(ctx context.Context, q db.Querier, ids []uuid.UUID) (map[uuid.
 
 // loadPollOptions adds the options with their tallies. The voters are chosen
 // in SQL and only for polls that are not anonymous, so an anonymous poll's
-// voter ids never leave the database.
+// voter ids never leave the database. A running anonymous poll shows no
+// per-option tally either (only TotalVoters): a count that moves by one at the
+// moment someone is seen voting would give away their choice in a small
+// audience, so the tally appears when the poll ends, here and in the
+// poll_update that carries it.
 func loadPollOptions(ctx context.Context, q db.Querier, polls map[uuid.UUID]*Poll) error {
 	ids := make([]uuid.UUID, 0, len(polls))
 	for id := range polls {
 		ids = append(ids, id)
 	}
 	rows, err := q.Query(ctx, `
-		SELECT o.poll_id, o.id, o.label, CASE WHEN p.anonymous THEN o.anon_votes + (SELECT COUNT(*)::int FROM poll_anon_ballots b WHERE b.option_id = o.id) ELSE COUNT(v.user_id)::int END,
+		SELECT o.poll_id, o.id, o.label, CASE WHEN p.anonymous AND p.closes_at > clock_timestamp() THEN 0
+		            WHEN p.anonymous THEN o.anon_votes + (SELECT COUNT(*)::int FROM poll_anon_ballots b WHERE b.option_id = o.id)
+		            ELSE COUNT(v.user_id)::int END,
 		       CASE WHEN p.anonymous THEN NULL
 		            ELSE array_agg(v.user_id ORDER BY v.created_at, v.user_id) FILTER (WHERE v.user_id IS NOT NULL) END
 		FROM poll_options o
 		JOIN polls p ON p.message_id = o.poll_id
 		LEFT JOIN poll_votes v ON v.option_id = o.id
 		WHERE o.poll_id = ANY($1)
-		GROUP BY o.poll_id, o.id, o.label, o.position, o.anon_votes, p.anonymous
+		GROUP BY o.poll_id, o.id, o.label, o.position, o.anon_votes, p.anonymous, p.closes_at
 		ORDER BY o.poll_id, o.position`, ids)
 	if err != nil {
 		return fmt.Errorf("load poll options: %w", err)

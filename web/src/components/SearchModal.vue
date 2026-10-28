@@ -62,7 +62,7 @@ const lookup = computed(() => ({
   channels: inDm.value ? conversations.value : chatStore.allChannels,
 }))
 const parsed = computed(() => parseSearchQuery(searchText.value))
-const currentSort = ref<'newest' | 'oldest' | 'relevance'>('newest')
+const currentSort = ref<'newest' | 'oldest'>('newest')
 const showV3 = computed(() => serverFeatures.has('search.filters.v3'))
 const built = computed(() => {
   const extra: Record<string, string> = { limit: String(PAGE) }

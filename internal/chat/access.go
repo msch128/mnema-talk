@@ -51,6 +51,43 @@ type messageRef struct {
 
 var errMessageNotFound = httpx.ErrNotFound("message not found")
 
+// conversationReadableSQL is the condition "message m is in a conversation
+// that the member user (a SQL parameter or expression) belongs to". A
+// conversation is readable by its members only, whatever the permission state
+// says, so every read of conversation messages (search, saved list) uses this
+// one rule.
+func conversationReadableSQL(user string) string {
+	return "m.in_dm AND EXISTS (SELECT 1 FROM dm_members dm WHERE dm.channel_id = m.channel_id AND dm.user_id = " + user + ")"
+}
+
+// errCursorGone answers a page request whose cursor row has been deleted since
+// the previous page: its position is unknown, so the list must be reloaded.
+var errCursorGone = httpx.ErrNotFound("the page cursor no longer exists; reload the list")
+
+// cursorExists checks that the row a page cursor points at still exists
+// (query selects it). Without that check a keyset comparison against a deleted
+// row is NULL and the page comes back empty with has_more=false, as if the
+// list had ended.
+func cursorExists(ctx context.Context, q db.Querier, query string, args ...any) error {
+	var ok bool
+	if err := q.QueryRow(ctx, "SELECT EXISTS ("+query+")", args...).Scan(&ok); err != nil {
+		return fmt.Errorf("check page cursor: %w", err)
+	}
+	if !ok {
+		return errCursorGone
+	}
+	return nil
+}
+
+// messageCursorExists is cursorExists for a cursor that is a message id (nil:
+// the first page).
+func messageCursorExists(ctx context.Context, q db.Querier, before *uuid.UUID) error {
+	if before == nil {
+		return nil
+	}
+	return cursorExists(ctx, q, `SELECT 1 FROM messages WHERE id = $1`, *before)
+}
+
 func loadMessageRef(ctx context.Context, p *db.Pool, messageID uuid.UUID) (*messageRef, error) {
 	var ref messageRef
 	err := p.QueryRow(ctx, `SELECT channel_id, user_id, parent_id FROM messages WHERE id = $1`, messageID).
