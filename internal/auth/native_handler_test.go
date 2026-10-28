@@ -81,7 +81,9 @@ func TestNativeRequestBoundaryRejectsBrowserHeadersAndTargets(t *testing.T) {
 		}
 	}
 	for _, alter := range []func(*http.Request){func(r *http.Request) { r.URL.RawQuery = "token=private" },
-		func(r *http.Request) { r.URL.Fragment = "private" }, func(r *http.Request) { r.URL.User = url.UserPassword("user", "private") }} {
+		func(r *http.Request) { r.URL.Fragment = "private" },
+		func(r *http.Request) { r.URL.ForceQuery = true }, func(r *http.Request) { r.URL.RawPath = "/auth/%6de" },
+		func(r *http.Request) { r.URL.User = url.UserPassword("user", "private") }} {
 		r := nativeRequest(http.MethodGet, "/auth/me", "")
 		alter(r)
 		nativeStatus(t, h.Handler(), r, http.StatusBadRequest)

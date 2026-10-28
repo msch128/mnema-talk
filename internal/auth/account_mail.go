@@ -32,10 +32,19 @@ type recovery struct {
 	confirmPerIP   *httpx.RateLimiter
 	verifyPerIP    *httpx.RateLimiter
 	optionsPerIP   *httpx.RateLimiter
-	// perAddress is keyed by a hash of the address typed into the reset form,
-	// whether or not an account has it, so it tells nothing about accounts.
-	perAddress    *httpx.RateLimiter
-	resendPerUser *httpx.RateLimiter
+	// perAddress caps the confirmation mails one address gets an hour, however
+	// many accounts ask. It is keyed by a hash of the address, so it tells
+	// nothing about accounts.
+	perAddress *httpx.RateLimiter
+	// resetFlood is a coarse flood guard on the anonymous reset form, keyed
+	// the same way whether or not an account has the address.
+	resetFlood *httpx.RateLimiter
+	// resetPerAccount is the exact, race-free cap on reset mails per account:
+	// the database count alone lets concurrent requests slip past together. It
+	// is a budget of its own, so reset requests of strangers never spend the
+	// confirmation mails' perAddress budget.
+	resetPerAccount *httpx.RateLimiter
+	resendPerUser   *httpx.RateLimiter
 	// downloadPerUser bounds export downloads.
 	downloadPerUser *httpx.RateLimiter
 	slots           chan struct{}
@@ -49,6 +58,8 @@ func newRecovery() *recovery {
 		confirmPerIP:    httpx.NewRateLimiter(20, time.Hour).Named("reset_confirm"),
 		verifyPerIP:     httpx.NewRateLimiter(30, time.Hour).Named("email_verify"),
 		perAddress:      httpx.NewRateLimiter(5, time.Hour),
+		resetFlood:      httpx.NewRateLimiter(30, time.Hour),
+		resetPerAccount: httpx.NewRateLimiter(tokensPerHour, time.Hour),
 		optionsPerIP:    httpx.NewRateLimiter(120, 15*time.Minute).Named("auth_options"),
 		resendPerUser:   httpx.NewRateLimiter(1, time.Minute),
 		downloadPerUser: httpx.NewRateLimiter(10, time.Hour).Named("export_download"),

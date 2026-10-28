@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -51,25 +52,41 @@ func guard(svc *perm.Service, ok func(perm.Set) error) func(http.Handler) http.H
 	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			u := UserFrom(r.Context())
-			if u == nil {
-				httpx.WriteError(w, errNoSession)
-				return
-			}
-			p, err := svc.Global(r.Context(), u.Subject())
-			if err == nil {
-				err = ok(p)
-			}
-			if err != nil {
-				if _, isAPI := httpx.AsAPIError(err); !isAPI {
-					err = httpx.ErrServer(err)
-				}
+			if err := checkGlobal(r.Context(), svc, UserFrom(r.Context()), ok); err != nil {
 				httpx.WriteError(w, err)
 				return
 			}
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// checkGlobal is the one server-wide permission check behind the route guards
+// and RequirePermission: no session fails, without a permission service only
+// the Owner passes, otherwise ok judges the caller's global permissions. A
+// failure that is not an APIError (an unreadable permission state) is
+// sanitized, so every caller reports it the same way.
+func checkGlobal(ctx context.Context, svc *perm.Service, u *User, ok func(perm.Set) error) error {
+	if u == nil {
+		return errNoSession
+	}
+	if svc == nil {
+		if !u.IsAdmin() {
+			return httpx.ErrForbidden("only the Owner can do this")
+		}
+		return nil
+	}
+	p, err := svc.Global(ctx, u.Subject())
+	if err == nil {
+		err = ok(p)
+	}
+	if err != nil {
+		if _, isAPI := httpx.AsAPIError(err); !isAPI {
+			err = httpx.ErrServer(err)
+		}
+		return err
+	}
+	return nil
 }
 
 // authorizeTarget checks that the caller may act on another member: never on

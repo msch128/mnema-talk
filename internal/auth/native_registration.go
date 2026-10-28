@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -26,10 +25,6 @@ func requireAnonymousNative(next http.Handler) http.Handler {
 	})
 }
 
-func rejectNativeRegistration(next http.Handler) http.Handler {
-	return rejectForcedNativeTarget(requireAnonymousNative(next), "invalid native registration target")
-}
-
 // RegistrationHandler is an explicit native-only account creation preview.
 // It shares invite consumption and the browser registration IP budget. It
 // creates neither a cookie nor a native session; a separate login is required.
@@ -37,7 +32,7 @@ func (h *NativeHandler) RegistrationHandler() (http.Handler, error) {
 	if invalidRegistrationHandler(h) {
 		return nil, errors.New("invalid native registration dependencies")
 	}
-	r := nativeRouter(rejectNativeRegistration, "native registration route not found")
+	r := nativeRouter(requireAnonymousNative, "native registration route not found")
 	r.With(h.accounts.registerPerIP.PerIP).Post("/auth/register", httpx.Handle(h.registerNative))
 	return r, nil
 }
@@ -48,11 +43,9 @@ func (h *NativeHandler) registerNative(w http.ResponseWriter, request *http.Requ
 	}
 	user, err := Register(request.Context(), h.accounts.Sessions.DB, strings.TrimSpace(fields["username"]), fields["display_name"], fields["password"], fields["invite_code"])
 	if err != nil {
-		return nativeHandlerError(err)
+		return nativeFail(w, err)
 	}
-	if h.accounts.Events != nil {
-		h.accounts.Events.Broadcast(events.MemberJoined, user.Public())
-	}
+	h.accounts.announceRegistered(request.Context(), user)
 	httpx.WriteJSON(w, http.StatusCreated, UserEnvelope{User: h.accounts.withRulesPending(request.Context(), user)})
 	return nil
 }

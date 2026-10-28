@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -41,10 +42,18 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 	if err := h.Sessions.Start(w, u, 0); err != nil {
 		return err
 	}
-	h.auditUser(r.Context(), u, "auth.register")
-	h.Events.Broadcast(events.MemberJoined, u.Public())
+	h.announceRegistered(r.Context(), u)
 	httpx.WriteJSON(w, http.StatusCreated, UserEnvelope{User: h.withRulesPending(r.Context(), u)})
 	return nil
+}
+
+// announceRegistered audits a new account and tells the clients about it. The
+// browser and native registration both end here.
+func (h *Handler) announceRegistered(ctx context.Context, u *User) {
+	h.auditUser(ctx, u, "auth.register")
+	if h.Events != nil {
+		h.Events.Broadcast(events.MemberJoined, u.Public())
+	}
 }
 
 // logout handles POST /api/auth/logout.

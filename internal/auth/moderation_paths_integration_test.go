@@ -104,3 +104,48 @@ func TestBanExpiryAndBanMessageFailuresAreSurvivable(t *testing.T) {
 		t.Fatalf("lookup failure = %v", err)
 	}
 }
+
+// A lifted or expired ban must not announce an account as enabled while an
+// admin's disabling still holds.
+func TestBanLiftBroadcastsTheRealDisabledState(t *testing.T) {
+	p, admin, member := authFixture(t)
+	ctx := context.Background()
+	rec := &events.Recorder{}
+	h := NewHandler(&Sessions{DB: p, Secret: secret, TTL: time.Hour}, rec)
+	disabledOf := func(want string) any {
+		t.Helper()
+		evs := rec.Snapshot()
+		for i := len(evs) - 1; i >= 0; i-- {
+			if ev := evs[i]; ev.Type == want {
+				return ev.Payload.(map[string]any)["disabled"]
+			}
+		}
+		t.Fatalf("no %s event", want)
+		return nil
+	}
+	for _, disabled := range []bool{true, false} {
+		if _, err := p.Exec(ctx, `UPDATE users SET disabled_at = CASE WHEN $2 THEN NOW() END WHERE id = $1`, member.ID, disabled); err != nil {
+			t.Fatal(err)
+		}
+		if err := setBan(ctx, p, member.ID, admin.ID, "r", nil, false); err != nil {
+			t.Fatal(err)
+		}
+		if w := modRequest(t, h.unbanUser, admin, ``, member.ID.String()); w.Code != http.StatusNoContent {
+			t.Fatalf("unban: %d %s", w.Code, w.Body.String())
+		}
+		if got := disabledOf(events.UserUpdate); got != disabled {
+			t.Fatalf("unban broadcast disabled=%v, account disabled=%v", got, disabled)
+		}
+		until := time.Now().Add(time.Hour)
+		if err := setBan(ctx, p, member.ID, admin.ID, "r", &until, false); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := p.Exec(ctx, `UPDATE users SET banned_until = NOW() - INTERVAL '1 second' WHERE id = $1`, member.ID); err != nil {
+			t.Fatal(err)
+		}
+		h.ExpireBans(ctx)
+		if got := disabledOf(events.UserUpdate); got != disabled {
+			t.Fatalf("expiry broadcast disabled=%v, account disabled=%v", got, disabled)
+		}
+	}
+}

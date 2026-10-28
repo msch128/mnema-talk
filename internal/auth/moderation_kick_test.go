@@ -44,3 +44,12 @@ func TestRequirePermissionAdmitsOnlyWhoHoldsIt(t *testing.T) {
 		t.Errorf("member without the permission: %v", err)
 	}
 }
+
+func TestRequirePermissionSanitizesAnUnreadablePermissionState(t *testing.T) {
+	h := &Handler{Perms: perm.NewService(nil)}
+	err := h.RequirePermission(requestAs(&User{ID: uuid.New(), Role: RoleUser}), perm.KickMembers)
+	apiErr, ok := httpx.AsAPIError(err)
+	if !ok || apiErr.Status != http.StatusInternalServerError {
+		t.Fatalf("want a sanitized 500 like the route guard, got %v", err)
+	}
+}
