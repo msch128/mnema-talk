@@ -28,8 +28,13 @@ function inTalkView(el: EventTarget | null, rootElement: HTMLElement | null) {
   return el instanceof Node && Boolean(rootElement?.contains(el))
 }
 
-function isStageFullscreenKey(e: KeyboardEvent): boolean {
-  return e.key === 'f' || e.key === 'F'
+/**
+ * The F key: the letter on Latin layouts (so Dvorak and AZERTY follow the
+ * letter), the physical key where the layout types no Latin letter at all.
+ */
+export function isStageFullscreenKey(e: KeyboardEvent): boolean {
+  if (/^[a-z]$/i.test(e.key)) return e.key === 'f' || e.key === 'F'
+  return e.code === 'KeyF'
 }
 
 function isPttCollision(voiceStore: VoiceStore, code: string): boolean {

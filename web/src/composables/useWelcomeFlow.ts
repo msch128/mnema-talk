@@ -42,6 +42,9 @@ export function useWelcomeFlow() {
   const index = ref(0)
   const firstRun = ref(false)
   const accepting = ref(false)
+  const acceptFailed = ref(false)
+  // Set when the component goes away, so a load still in flight opens nothing.
+  let gone = false
 
   const step = computed<WelcomeStep | null>(() => steps.value[index.value] ?? null)
   const open = computed(() => step.value !== null)
@@ -51,6 +54,7 @@ export function useWelcomeFlow() {
   /** Decides whether to open; existing accounts are marked done instead. */
   async function evaluate() {
     await onboarding.ensureLoaded()
+    if (gone) return
     const state = onboarding.state
     const user = auth.user
     if (!state || !user || open.value) return
@@ -92,8 +96,10 @@ export function useWelcomeFlow() {
   async function accept() {
     const version = onboarding.state?.rules_version ?? 0
     accepting.value = true
+    acceptFailed.value = false
     try {
       if (await onboarding.acceptRules(version)) next()
+      else acceptFailed.value = true
     } finally {
       accepting.value = false
     }
@@ -103,7 +109,10 @@ export function useWelcomeFlow() {
   useRulesRecovery(open, evaluate)
   // A rules version raised while the app was in the background shows up on return.
   useOnReturn(() => { if (!open.value) void onboarding.reload().then(evaluate) })
-  onBeforeUnmount(() => { onboarding.welcomeOpen = false })
+  onBeforeUnmount(() => {
+    gone = true
+    onboarding.welcomeOpen = false
+  })
 
-  return { step, stepNumber, total: computed(() => steps.value.length), open, canClose, accepting, next, close, accept }
+  return { step, stepNumber, total: computed(() => steps.value.length), open, canClose, accepting, acceptFailed, next, close, accept }
 }

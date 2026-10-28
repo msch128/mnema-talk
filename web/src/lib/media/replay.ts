@@ -87,10 +87,3 @@ export class ReplayWindow {
     for (const id of [...this.retired.keys()]) if (!kept.has(id.slice(0, id.indexOf(':')))) this.retired.delete(id)
   }
 }
-
-/** The live epoch and the one before it. Older keys cannot open new frames. */
-export function rememberEpochKey<T>(keys: Map<number, T>, epoch: number, key: T): void {
-  keys.set(epoch, key)
-  const ordered = [...keys.keys()].sort((a, b) => a - b)
-  for (const drop of ordered.slice(0, -2)) keys.delete(drop)
-}
