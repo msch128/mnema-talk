@@ -1,0 +1,45 @@
+internal/chat/audit.go
+  s_1888f569b71f01::t_5d5e93267bfc71 5,12,64-77,79-80,84-87,89,91,163
+internal/chat/handler_notify.go
+  s_1888f569b71f01::t_de89b3f5257fa5 205-206,235
+internal/chat/handler_readstate.go
+  s_1888f569b71f01::t_adab7a5725a968 88-89
+internal/chat/mentions.go
+  s_1888f569b71f01::t_b96480eb2e835c 116,119,130-134,137,140
+internal/chat/mentions_roles.go
+  s_1888f569b71f01::t_a877e95cf9bf10 47,133-137,142,145-148,187-191,193
+internal/chat/mentions_test.go
+  s_1888f569b71f01::t_69182b2da1d749 10-14,41-43,74-106
+internal/chat/message_types.go
+  s_1888f569b71f01::t_45341433603c16 171-178,185-188,201-202
+internal/chat/messages.go
+  s_1888f569b71f01::t_f762eff45fae7d 348-350,355,357
+internal/chat/pins.go
+  s_1888f569b71f01::t_3f47710c103c28 172
+internal/chat/review_fixes_integration_test.go
+  s_1888f569b71f01::t_c4310259c28a0e 1-96
+internal/chat/saved.go
+  s_1888f569b71f01::t_bddd1c65271239 237-238
+internal/chat/validate_test.go
+  s_1888f569b71f01::t_55b4297c3caacb 24,29-30
+internal/httpx/request_test.go
+  s_1888f569b71f01::t_36aab4309d25d8 293-324
+internal/perm/snapshot_channels.go
+  s_1888f569b71f01::t_27c4e3b2b920f9 60-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f194d6af2645cf5f2b64f273aefb4408808eeb8b",
+  "prompts": {},
+  "sessions": {
+    "s_1888f569b71f01": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aintegrate-server-60fe71aa50757d20",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
