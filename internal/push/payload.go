@@ -15,8 +15,9 @@ import (
 
 // Payload is what the service worker receives (after the browser decrypted
 // it). Title and body are finished, localised text, so the worker needs no
-// translations. Tag equals the channel id, which is also the tag of the page's
-// own notification: the two replace each other instead of showing twice.
+// translations. For a message the Tag equals the channel id, which is also the
+// tag of the page's own notification: the two replace each other instead of
+// showing twice. Reminders, events and the test push use a tag of their own.
 type Payload struct {
 	Version   int        `json:"v"`
 	Type      string     `json:"type"`
@@ -36,6 +37,7 @@ type Payload struct {
 const (
 	typeMessage = "message"
 	typeTest    = "test"
+	typeEvent   = "event"
 )
 
 const (
@@ -143,7 +145,7 @@ func previewLine(n Notice, locale string, preview bool) string {
 	case !preview:
 		return text(locale, "new")
 	}
-	if line := clean(mdplain.Plain(n.Content, text(locale, "spoiler")), maxPreviewRunes); line != "" {
+	if line := clean(plainLine(n.Content, locale), maxPreviewRunes); line != "" {
 		if n.Poll {
 			return text(locale, "poll") + ": " + line
 		}
@@ -158,11 +160,18 @@ func previewLine(n Notice, locale string, preview bool) string {
 	return text(locale, "new")
 }
 
-// clean makes text safe to show in a notification: control characters become
-// spaces, runs of white space collapse, and the result is cut at limit runes.
+// Joiners are format characters, but they belong to emoji sequences and to
+// Persian, Urdu and Indic words, so clean keeps them.
+const (
+	zwnj = '\u200c'
+	zwj  = '\u200d'
+)
+
+// clean makes text safe to show in a notification: control and format
+// characters (bidi overrides, BOM and the like, but not the joiners) become spaces, runs of white space collapse, and the result is cut at limit runes.
 func clean(s string, limit int) string {
 	s = strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
+		if unicode.IsControl(r) || (unicode.Is(unicode.Cf, r) && r != zwj && r != zwnj) {
 			return ' '
 		}
 		return r

@@ -24,6 +24,8 @@ type entry struct {
 	lastSent time.Time
 	waiting  *held
 	timer    *time.Timer
+	// gen counts the held pushes; a timer callback only flushes the one it was set for.
+	gen uint64
 }
 
 // coalescer keeps a burst of messages in one channel from becoming a burst of
@@ -59,7 +61,9 @@ func (c *coalescer) add(k key, h held, flush func(held)) *held {
 	if e.waiting == nil {
 		h.notice.Count = 1
 		e.waiting = &h
-		e.timer = time.AfterFunc(e.lastSent.Add(c.window).Sub(now), func() { c.fire(k, flush) })
+		e.gen++
+		gen := e.gen
+		e.timer = time.AfterFunc(e.lastSent.Add(c.window).Sub(now), func() { c.fire(k, gen, flush) })
 		return nil
 	}
 	h.notice.Count = e.waiting.notice.Count + 1
@@ -79,12 +83,13 @@ func (c *coalescer) release(e *entry, h held, now time.Time) *held {
 	return &h
 }
 
-// fire sends what was held when its window ended.
-func (c *coalescer) fire(k key, flush func(held)) {
+// fire sends what was held when its window ended. A callback of a timer that
+// release stopped too late finds another generation and does nothing.
+func (c *coalescer) fire(k key, gen uint64, flush func(held)) {
 	c.mu.Lock()
 	e := c.entries[k]
 	var out *held
-	if e != nil && e.waiting != nil {
+	if e != nil && e.waiting != nil && e.gen == gen {
 		out = e.waiting
 		e.waiting, e.timer = nil, nil
 		e.lastSent = c.now()

@@ -166,19 +166,35 @@ func addressed(msg chat.Message, user uuid.UUID, byName map[uuid.UUID]bool) bool
 	return byName[user] || replyTo(msg, user)
 }
 
+// audienceAllows applies the thread rule: a reply of a thread (followers is
+// not nil) only reaches its followers and whoever it addresses.
+func audienceAllows(followers map[uuid.UUID]bool, user uuid.UUID, addressed bool) bool {
+	return followers == nil || followers[user] || addressed
+}
+
 // handle works out who is told about msg and queues their pushes.
 func (s *Service) handle(ctx context.Context, msg chat.Message) {
-	cands, err := loadCandidates(ctx, s.DB, msg.ChannelID, msg.UserID, nil)
+	snap, err := s.Perms.Snapshot(ctx)
+	if err != nil {
+		slog.Warn("push: permission snapshot", "err", err)
+		return // fail closed: nobody is told what they may not see
+	}
+	subscribers, err := subscriberIDs(ctx, s.DB, msg.UserID)
+	if err != nil {
+		slog.Warn("push: load recipients", "err", err)
+		return
+	}
+	// Only who may see the channel is looked at further.
+	viewers := slices.DeleteFunc(subscribers, func(id uuid.UUID) bool { return !canView(snap, id, msg.ChannelID) })
+	if len(viewers) == 0 {
+		return
+	}
+	cands, err := loadCandidates(ctx, s.DB, msg.ChannelID, msg.UserID, viewers)
 	if err != nil || len(cands) == 0 {
 		if err != nil {
 			slog.Warn("push: load recipients", "err", err)
 		}
 		return
-	}
-	snap, err := s.Perms.Snapshot(ctx)
-	if err != nil {
-		slog.Warn("push: permission snapshot", "err", err)
-		return // fail closed: nobody is told what they may not see
 	}
 	byName := namedMentions(ctx, s.DB, msg.ID)
 	followers, ok := threadAudience(ctx, s.DB, msg.ParentID)
@@ -187,7 +203,7 @@ func (s *Service) handle(ctx context.Context, msg chat.Message) {
 	}
 	var chosen []candidate
 	for _, c := range cands {
-		if followers != nil && !followers[c.userID] && !addressed(msg, c.userID, byName) {
+		if !audienceAllows(followers, c.userID, addressed(msg, c.userID, byName)) {
 			continue
 		}
 		if canView(snap, c.userID, msg.ChannelID) && c.wants(c.mention(msg, byName), addressed(msg, c.userID, byName)) {
@@ -256,7 +272,7 @@ func (s *Service) flush(h held) {
 // stillQualifies repeats the message-time checks for a held push. It fails
 // closed: when the state cannot be read, nothing is sent.
 func (s *Service) stillQualifies(ctx context.Context, h held) bool {
-	cands, err := loadCandidates(ctx, s.DB, h.notice.ChannelID, h.notice.AuthorID, &h.user)
+	cands, err := loadCandidates(ctx, s.DB, h.notice.ChannelID, h.notice.AuthorID, []uuid.UUID{h.user})
 	if err != nil {
 		slog.Warn("push: recheck recipient", "err", err)
 		return false
@@ -268,7 +284,7 @@ func (s *Service) stillQualifies(ctx context.Context, h held) bool {
 	}
 	if !h.notice.Addressed {
 		followers, ok := threadAudience(ctx, s.DB, h.notice.ParentID)
-		if !ok || (followers != nil && !followers[h.user]) {
+		if !ok || !audienceAllows(followers, h.user, false) {
 			return false // unfollowed inside the window
 		}
 	}

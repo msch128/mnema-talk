@@ -188,3 +188,17 @@ func TestPushCarriesTheChannelSlugForTheClickAddress(t *testing.T) {
 		t.Fatalf("a conversation has no slug: %s, %v", raw, err)
 	}
 }
+
+func TestCleanKeepsJoinersButDropsBidiControls(t *testing.T) {
+	family := "\U0001F468\u200d\U0001F469\u200d\U0001F467 hi"
+	if got := clean(family, 50); got != family {
+		t.Fatalf("emoji sequence changed: %q", got)
+	}
+	persian := "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645"
+	if got := clean(persian, 50); got != persian {
+		t.Fatalf("zero-width non-joiner lost: %q", got)
+	}
+	if got := clean("a\u202eb\uFEFFc", 50); got != "a b c" {
+		t.Fatalf("bidi override or BOM survive: %q", got)
+	}
+}
