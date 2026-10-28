@@ -17,9 +17,28 @@ export const STREAM_VOLUME_MAX = 100
 // Someone's stream starts at half volume; a changed volume is remembered.
 export const STREAM_VOLUME_DEFAULT = 50
 
+/** A stored string, or null when there is none or the storage is blocked. */
+export function readItem(key: string): string | null {
+  try {
+    return localStorage.getItem(key)
+  } catch (error) {
+    void error
+    return null
+  }
+}
+
+/** Stores a string; when storage is blocked or full the setting only lasts for this session. */
+export function writeItem(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value)
+  } catch (error) {
+    void error
+  }
+}
+
 export function readJson(key: string): Record<string, unknown> {
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(key) || '{}')
+    const parsed: unknown = JSON.parse(readItem(key) || '{}')
     return isRecord(parsed) ? parsed : {}
   } catch (error) {
     void error
@@ -28,12 +47,7 @@ export function readJson(key: string): Record<string, unknown> {
 }
 
 export function writeJson(key: string, value: Record<string, unknown>) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch (error) {
-    void error
-    // Storage blocked or full: the setting then only lasts for this session.
-  }
+  writeItem(key, JSON.stringify(value))
 }
 
 /** Per-user playback (volume 0..200 %, local mute). */

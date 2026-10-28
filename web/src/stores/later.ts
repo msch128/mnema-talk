@@ -38,21 +38,34 @@ export const useLaterStore = defineStore('later', () => {
   const failedCount = computed(() => scheduled.value.filter(s => s.state === 'failed').length)
   const attention = computed(() => dueCount.value + failedCount.value)
 
-  const loadReminders = async () => { reminders.value = await fetchReminders() }
-  const loadScheduled = async () => { scheduled.value = await fetchScheduled() }
+  // Bumped by reset(): a list asked for before must not fill the next account's store.
+  let generation = 0
+  const loadReminders = async () => {
+    const mine = generation
+    const list = await fetchReminders()
+    if (mine === generation) reminders.value = list
+  }
+  const loadScheduled = async () => {
+    const mine = generation
+    const list = await fetchScheduled()
+    if (mine === generation) scheduled.value = list
+  }
 
   /** Loads the lists of the features the server has. */
   async function load(want: { reminders: boolean; scheduled: boolean }) {
+    const mine = generation
     loading.value = true
     try {
       await Promise.all([want.reminders ? loadReminders() : null, want.scheduled ? loadScheduled() : null])
+      if (mine !== generation) return
       loaded.value = true
       failed.value = false
     } catch (error) {
+      if (mine !== generation) return
       console.warn('Failed to load reminders and scheduled messages:', error)
       failed.value = true
     } finally {
-      loading.value = false
+      if (mine === generation) loading.value = false
     }
   }
 
@@ -100,7 +113,10 @@ export const useLaterStore = defineStore('later', () => {
     if (loaded.value) await loadScheduled().catch(() => undefined)
   }
 
-  const reset = () => { reminders.value = []; scheduled.value = []; loaded.value = false; failed.value = false }
+  const reset = () => {
+    ++generation
+    reminders.value = []; scheduled.value = []; loading.value = false; loaded.value = false; failed.value = false
+  }
 
   return {
     reminders, scheduled, loading, failed, loaded, dueCount, failedCount, attention,
