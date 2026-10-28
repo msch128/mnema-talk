@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -89,4 +91,52 @@ func TestRunPeriodicallyRunsSoonThenRepeats(t *testing.T) {
 		time.Sleep(time.Millisecond)
 	}
 	cancel()
+}
+
+// countingStore counts the object fetches a download causes.
+type countingStore struct {
+	*MemoryStore
+	gets atomic.Int32
+}
+
+func (c *countingStore) GetObjectFrom(ctx context.Context, key string, offset int64) (io.ReadCloser, error) {
+	c.gets.Add(1)
+	return c.MemoryStore.GetObjectFrom(ctx, key, offset)
+}
+
+// http.ServeContent seeks to the end and back before it reads; the prefetched
+// body must survive that, so a download is one storage request.
+func TestServeContentFetchesTheObjectOnce(t *testing.T) {
+	ctx := context.Background()
+	store := &countingStore{MemoryStore: NewMemoryStore()}
+	if err := store.Upload(ctx, "k", strings.NewReader("0123456789"), "text/plain", 10); err != nil {
+		t.Fatal(err)
+	}
+	for name, tc := range map[string]struct{ rangeHeader, want string }{
+		"whole":  {"", "0123456789"},
+		"ranged": {"bytes=4-", "456789"},
+		"suffix": {"bytes=-3", "789"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			store.gets.Store(0)
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			if tc.rangeHeader != "" {
+				req.Header.Set("Range", tc.rangeHeader)
+			}
+			obj := &objectReader{ctx: ctx, store: store, key: "k", size: 10}
+			defer obj.Close()
+			if err := obj.open(rangeStart(tc.rangeHeader, 10)); err != nil {
+				t.Fatal(err)
+			}
+			rec := httptest.NewRecorder()
+			rec.Header().Set("Content-Type", "text/plain") // as serve does; no sniffing read
+			http.ServeContent(rec, req, "k", time.Time{}, obj)
+			if got := rec.Body.String(); got != tc.want {
+				t.Fatalf("body %q, want %q", got, tc.want)
+			}
+			if n := store.gets.Load(); n != 1 {
+				t.Fatalf("%d object fetches, want 1", n)
+			}
+		})
+	}
 }

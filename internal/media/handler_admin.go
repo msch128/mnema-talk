@@ -82,9 +82,6 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 // @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
 // @Router /api/admin/media/prune [post]
 func (h *Handler) prune(w http.ResponseWriter, r *http.Request) error {
-	if h.Store == nil {
-		return httpx.ErrUnavailable("file storage is not configured")
-	}
 	days := h.RetentionDays
 	if raw := r.URL.Query().Get("days"); raw != "" {
 		d, err := strconv.Atoi(raw)
@@ -124,9 +121,6 @@ func (h *Handler) prune(w http.ResponseWriter, r *http.Request) error {
 // @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
 // @Router /api/admin/media/{id} [delete]
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) error {
-	if h.Store == nil {
-		return httpx.ErrUnavailable("file storage is not configured")
-	}
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
@@ -161,9 +155,6 @@ type PruneResult struct {
 // @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
 // @Router /api/admin/media/orphans [get]
 func (h *Handler) orphans(w http.ResponseWriter, r *http.Request) error {
-	if h.Store == nil {
-		return httpx.ErrUnavailable("file storage is not configured")
-	}
 	o, err := FindOrphans(r.Context(), h.DB, h.Store, false)
 	if err != nil {
 		return err
@@ -189,9 +180,6 @@ func (h *Handler) orphans(w http.ResponseWriter, r *http.Request) error {
 // @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
 // @Router /api/admin/media/orphans/cleanup [post]
 func (h *Handler) cleanupOrphans(w http.ResponseWriter, r *http.Request) error {
-	if h.Store == nil {
-		return httpx.ErrUnavailable("file storage is not configured")
-	}
 	admin := auth.UserFrom(r.Context())
 	o, err := FindOrphans(r.Context(), h.DB, h.Store, true)
 	if o != nil && o.Deleted > 0 {

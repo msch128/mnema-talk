@@ -75,7 +75,7 @@ func (h *Handler) setProfileImage(ctx context.Context, p profileImage, userID uu
 		_ = h.Store.Delete(context.WithoutCancel(ctx), key)
 		return fmt.Errorf("record %s: %w", p.field, err)
 	}
-	h.deletePreviousAvatar(ctx, previous)
+	h.deletePreviousImage(ctx, previous)
 	return nil
 }
 
