@@ -1,0 +1,51 @@
+internal/auth/paths_integration_test.go
+  s_9df22b27f2327e::t_91a5e95c7777eb 525-542
+internal/auth/service_accounts.go
+  s_068f95aa8cfec8::t_70c4601d241136 200-217
+internal/s3/client_test.go
+  s_068f95aa8cfec8::t_292006b775a9f6 256-258
+internal/s3/s3.go
+  s_068f95aa8cfec8::t_3b839633f563ed 159-161
+internal/slash/slash.go
+  s_068f95aa8cfec8::t_258cf16a8b2aea 119-130,135-146
+internal/slash/slash_test.go
+  s_068f95aa8cfec8::t_6b45a9ce1a6583 71-75
+internal/slashcmd/moderation.go
+  s_068f95aa8cfec8::t_a040c9733b59c4 56-65,68-75,78-81,85,89,93-114,119-147,152-170
+internal/slashcmd/msg.go
+  s_068f95aa8cfec8::t_628d9714a99137 7,41-46,56
+internal/slashcmd/nick.go
+  s_068f95aa8cfec8::t_edb734739e29f4 44-45,51
+internal/slashcmd/slashcmd.go
+  s_068f95aa8cfec8::t_cf4614c21481f6 35,57-59
+internal/slashcmd/slashcmd_test.go
+  s_068f95aa8cfec8::t_b29c0f9467f14e 123-138
+internal/tools/openapifix/main.go
+  s_068f95aa8cfec8::t_dfaa3ce1cc9f56 125-127
+internal/tools/openapifix/main_test.go
+  s_068f95aa8cfec8::t_963e5eb08f7564 66-70,119-127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "528d4f7de24d1e33b07b5387b94d18708b2a0627",
+  "prompts": {},
+  "sessions": {
+    "s_068f95aa8cfec8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1c23b4fb9ef54765",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_9df22b27f2327e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af345ded314039cb4",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
