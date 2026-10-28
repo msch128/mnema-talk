@@ -86,7 +86,7 @@ func process(data []byte, k kind) (*Picture, error) {
 	case bytes.HasPrefix(data, []byte("\x89PNG\r\n\x1a\n")):
 		return still(data, k, png.DecodeConfig, png.Decode, "image/png")
 	case bytes.HasPrefix(data, []byte("\xff\xd8\xff")):
-		return still(data, k, jpeg.DecodeConfig, jpeg.Decode, "image/jpeg")
+		return stillJPEG(data, k)
 	case bytes.HasPrefix(data, []byte("GIF87a")), bytes.HasPrefix(data, []byte("GIF89a")):
 		if k.legacy {
 			return firstGIFFrame(data, k)
@@ -167,6 +167,27 @@ func still(data []byte, k kind, config func(io.Reader) (image.Config, error), de
 		return nil, reject("the image cannot be read")
 	}
 	return encode(k.cover(src), contentType)
+}
+
+// stillJPEG is still for a JPEG, turned upright by its EXIF orientation
+// before the crop.
+func stillJPEG(data []byte, k kind) (*Picture, error) {
+	o := jpegOrientation(data)
+	cfg := func(r io.Reader) (image.Config, error) {
+		c, err := jpeg.DecodeConfig(r)
+		if swapsAxes(o) {
+			c.Width, c.Height = c.Height, c.Width
+		}
+		return c, err
+	}
+	decode := func(r io.Reader) (image.Image, error) {
+		img, err := jpeg.Decode(r)
+		if err != nil {
+			return nil, err
+		}
+		return orient(img, o), nil
+	}
+	return still(data, k, cfg, decode, "image/jpeg")
 }
 
 func encode(img *image.NRGBA, contentType string) (*Picture, error) {
