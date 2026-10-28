@@ -224,7 +224,9 @@ func TestTimedOutBotCannotSpeak(t *testing.T) {
 	// Lifting the timeout gives the voice back.
 	wantStatus(t, "untimeout", f.owner.delete("/api/admin/users/"+f.bot.UserID.String()+"/timeout"), http.StatusNoContent)
 	wantStatus(t, "speaks again", f.client.say(f.open, "back"), http.StatusCreated)
-	wantStatus(t, "response", reply("/followups", map[string]any{"content": "pong"}), http.StatusCreated)
+	// The refused response kept its slot: the bot answers now, then follows up.
+	wantStatus(t, "response", reply("/callback", map[string]any{"type": 4, "data": map[string]any{"content": "pong"}}), http.StatusNoContent)
+	wantStatus(t, "follow-up", reply("/followups", map[string]any{"content": "pong"}), http.StatusCreated)
 }
 
 // A banned bot is out: its token is refused, its gateway sessions close, and

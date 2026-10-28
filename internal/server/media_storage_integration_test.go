@@ -53,11 +53,19 @@ func TestServeMissingObjectIsGone(t *testing.T) {
 	}
 }
 
-// flakyStore fails DeleteBatch from the given call on.
+// flakyStore fails DeleteBatch from the given call on, and every single Delete
+// after that: the storage is down, so the key-by-key retry fails as well.
 type flakyStore struct {
 	*media.MemoryStore
 	calls, failFrom int
 	deleted         int
+}
+
+func (f *flakyStore) Delete(ctx context.Context, key string) error {
+	if f.calls >= f.failFrom {
+		return errors.New("storage unavailable")
+	}
+	return f.MemoryStore.Delete(ctx, key)
 }
 
 func (f *flakyStore) DeleteBatch(ctx context.Context, keys []string) error {

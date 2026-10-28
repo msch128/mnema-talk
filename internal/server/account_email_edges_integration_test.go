@@ -63,8 +63,8 @@ func TestAnAddressSavesEvenWhenTheMailServerIsDown(t *testing.T) {
 	a := newAppWithConfig(t, func(c *config.Config) { c.SMTP = cfg })
 	alice := a.register(a.seedAdmin(), "alice")
 	res := a.setEmail(alice, "alice@example.org")
-	if res.status != http.StatusServiceUnavailable {
-		t.Fatalf("the failure is reported: %d %s", res.status, res.body)
+	if res.status != http.StatusOK || !strings.Contains(string(res.body), `"confirmation_sent":false`) {
+		t.Fatalf("the saved address is answered, with the refused mail reported: %d %s", res.status, res.body)
 	}
 	if strings.Contains(string(res.body), "connect") || strings.Contains(string(res.body), "127.0.0.1") {
 		t.Fatalf("no delivery detail for members: %s", res.body)

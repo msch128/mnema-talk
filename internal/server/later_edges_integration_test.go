@@ -79,6 +79,8 @@ func TestDeliveredRemindersAreRemovedAfterAMonthAndTheLoopStops(t *testing.T) {
 	if _, err := f.a.db.Exec(context.Background(), `UPDATE message_reminders SET delivered_at = NOW() - INTERVAL '40 days'`); err != nil {
 		t.Fatal(err)
 	}
+	// The first sweep booked the hourly prune: the next one is due an hour later.
+	f.a.router.Later.Now = func() time.Time { return time.Now().Add(2 * time.Hour) }
 	f.sweep(t)
 	if got := f.reminders(t, f.alice); len(got) != 0 {
 		t.Fatalf("an old delivered reminder is kept: %+v", got)
