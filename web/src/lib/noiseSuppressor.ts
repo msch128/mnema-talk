@@ -75,9 +75,10 @@ const MODELS = {
   }
 }
 
-/** Starts downloading a model early (e.g. while the mic permission prompt is open). */
-export function preloadNoiseSuppressor(model: NoiseModel = 'dfn3') {
-  if (isNoiseSuppressionSupported() && MODELS[model]) MODELS[model].load().catch(() => {})
+/** Starts downloading a model early (e.g. while the mic permission prompt is open). Resolves once it is loaded or has failed. */
+export function preloadNoiseSuppressor(model: NoiseModel = 'dfn3'): Promise<void> {
+  if (!isNoiseSuppressionSupported() || !MODELS[model]) return Promise.resolve()
+  return MODELS[model].load().then(() => {}, () => {})
 }
 
 function isContextCompatible(audioContext: AudioContext, model: NoiseModel): boolean {

@@ -46,8 +46,19 @@ function openPlayback(AudioCtx: typeof AudioContext): AudioContext {
     playbackContext = new AudioCtx()
     if (outputDeviceStore) applyOutput(outputDeviceStore, playbackContext)
   }
-  if (playbackContext.state === 'suspended') playbackContext.resume().catch(() => { ignorePlaybackError() })
+  if (playbackContext.state === 'suspended') holdForGesture(playbackContext)
   return playbackContext
+}
+
+// The boosted elements are muted, so their play() always resolves and never
+// reports autoplay: a context that stays suspended (no user gesture yet) would
+// leave the call silent without the "click to turn the sound on" banner.
+function holdForGesture(ctx: AudioContext) {
+  const store = outputDeviceStore
+  if (store) store.audioBlocked = true
+  ctx.resume().then(() => {
+    if (store && ctx.state === 'running' && ctx === playbackContext) store.audioBlocked = false
+  }).catch(() => { ignorePlaybackError() })
 }
 
 function createBoost(el: RemoteAudioElement) {
