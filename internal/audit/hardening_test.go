@@ -2,12 +2,16 @@ package audit
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -136,3 +140,104 @@ func TestPeekRequestKeepsTheBodyAfterAReadError(t *testing.T) {
 		t.Fatalf("handler sees %q, %v; want the bytes read so far and the error", got, err)
 	}
 }
+
+func TestTypedValuesGetTheSameRules(t *testing.T) {
+	id := uuid.New()
+	out := SanitizeDetails(map[string]any{
+		"attachments": []map[string]any{{"name": "see https://h.example/p/TOKEN", "token": "x"}},
+		"params":      map[string]string{"api_token": "SECRET", "id": "7"},
+		"reply_ids":   []uuid.UUID{id},
+	})
+	b, _ := json.Marshal(out)
+	if strings.Contains(string(b), "TOKEN\"") || strings.Contains(string(b), "SECRET") || strings.Contains(string(b), "/p/") {
+		t.Fatalf("typed values bypassed sanitising: %s", b)
+	}
+	if !strings.Contains(string(b), id.String()) {
+		t.Fatalf("uuid lost: %s", b)
+	}
+}
+
+func TestHugeEditHistoryKeepsTheRestOfTheEntry(t *testing.T) {
+	versions := make([]map[string]any, 50)
+	for i := range versions {
+		versions[i] = map[string]any{"content": Content(strings.Repeat("z", MaxContentRunes))}
+	}
+	out := SanitizeDetails(map[string]any{
+		"content": Content("deleted text"), "channel_name": "general", "edit_versions": versions,
+	})
+	if out["truncated"] != nil || out["content"] != "deleted text" || out["channel_name"] != "general" {
+		t.Fatalf("entry discarded: %v", out)
+	}
+	if out["edit_versions_truncated"] != true || len(out["edit_versions"].([]any)) == 0 || size(out) > maxDetailBytes {
+		t.Fatalf("edit versions not shrunk: %d", size(out))
+	}
+}
+
+func TestTakeCreatedTargetKeepsAnExistingName(t *testing.T) {
+	e := Entry{TargetName: "instance settings"}
+	takeCreatedTarget(&e, []byte(`{"max_upload_mb":50}`))
+	if e.TargetName != "instance settings" || e.TargetID != "" {
+		t.Fatalf("wiped: %+v", e)
+	}
+	e = Entry{}
+	takeCreatedTarget(&e, []byte(`{"id":"1","username":"bob"}`))
+	if e.TargetID != "1" || e.TargetName != "bob" {
+		t.Fatalf("created target: %+v", e)
+	}
+}
+
+func TestRetentionIgnoresANonPositiveInterval(t *testing.T) {
+	(&Log{DB: &fakeDB{}}).RunRetention(context.Background(), 7, 0)
+}
+
+func TestPruneDeletesInBatches(t *testing.T) {
+	f := &batchDB{}
+	n, err := (&Log{DB: f}).Prune(context.Background(), 7)
+	if err != nil || n != 2*pruneBatch+10 || f.calls != 3 {
+		t.Fatalf("n=%d err=%v calls=%d", n, err, f.calls)
+	}
+}
+
+type batchDB struct {
+	fakeDB
+	calls int
+}
+
+func (b *batchDB) Exec(context.Context, string, ...any) (pgconn.CommandTag, error) {
+	b.calls++
+	if b.calls < 3 {
+		return pgconn.NewCommandTag("DELETE " + strconv.Itoa(pruneBatch)), nil
+	}
+	return pgconn.NewCommandTag("DELETE 10"), nil
+}
+
+func TestRestrictToComparesTheColumnAsUUID(t *testing.T) {
+	var f filter
+	f.restrictTo(Viewer{Channels: []uuid.UUID{uuid.New()}})
+	sql, _ := f.query(10)
+	if strings.Contains(sql, "::text") || !strings.Contains(sql, "channel_id = ANY(") {
+		t.Fatal(sql)
+	}
+}
+
+func TestSnapshotLogsRealErrorsOnly(t *testing.T) {
+	var buf strings.Builder
+	old := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	defer slog.SetDefault(old)
+	run := func(err error) {
+		Snapshot(context.Background(), &fakeDB{row: errRowWith{err}}, ResSettings, "")
+	}
+	run(pgx.ErrNoRows)
+	if buf.Len() != 0 {
+		t.Fatalf("missing row logged: %s", buf.String())
+	}
+	run(errors.New("column gone"))
+	if !strings.Contains(buf.String(), "audit snapshot failed") {
+		t.Fatalf("real error not logged: %q", buf.String())
+	}
+}
+
+type errRowWith struct{ err error }
+
+func (r errRowWith) Scan(...any) error { return r.err }

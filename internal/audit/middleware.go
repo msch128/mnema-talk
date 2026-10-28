@@ -2,6 +2,7 @@ package audit
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"io"
@@ -240,5 +241,11 @@ func takeCreatedTarget(e *Entry, response []byte) {
 	if err := json.Unmarshal(response, &out); err != nil {
 		return
 	}
-	e.TargetID, e.TargetName = out.ID, out.Name
+	// Never blank what an earlier step (the snapshot) already named.
+	if out.ID != "" {
+		e.TargetID = out.ID
+	}
+	if e.TargetName == "" {
+		e.TargetName = cmp.Or(out.Name, out.Username)
+	}
 }

@@ -105,26 +105,47 @@ func (l *Log) RecordOrLog(ctx context.Context, e Entry) {
 	}
 }
 
-// Prune deletes entries older than days; days <= 0 keeps everything.
+// pruneBatch bounds one retention DELETE so a large backlog is removed in
+// short transactions instead of one long one.
+const pruneBatch = 5000
+
+// Prune deletes entries older than days, in batches; days <= 0 keeps
+// everything. It returns how many rows it deleted, also on an error or a
+// cancelled ctx part way through.
 func (l *Log) Prune(ctx context.Context, days int) (int64, error) {
 	if l == nil || days <= 0 {
 		return 0, nil
 	}
-	tag, err := l.DB.Exec(ctx, `DELETE FROM audit_log WHERE created_at < NOW() - make_interval(days => $1)`, days)
-	return tag.RowsAffected(), err
+	var total int64
+	for {
+		tag, err := l.DB.Exec(ctx, `
+			DELETE FROM audit_log WHERE id IN (
+				SELECT id FROM audit_log
+				WHERE created_at < NOW() - make_interval(days => $1)
+				ORDER BY id LIMIT $2)`, days, pruneBatch)
+		total += tag.RowsAffected()
+		if err != nil || tag.RowsAffected() < pruneBatch {
+			return total, err
+		}
+		if err := ctx.Err(); err != nil {
+			return total, err
+		}
+	}
 }
 
 // RunRetention prunes every interval until ctx ends. With days <= 0 it
-// returns at once: nothing is ever deleted automatically.
+// (or every <= 0) it returns at once: nothing is ever deleted automatically.
 func (l *Log) RunRetention(ctx context.Context, days int, every time.Duration) {
-	if l == nil || days <= 0 {
+	if l == nil || days <= 0 || every <= 0 {
 		return
 	}
 	t := time.NewTicker(every)
 	defer t.Stop()
 	for {
 		if n, err := l.Prune(ctx, days); err != nil {
-			slog.Error("audit log retention failed", "err", err)
+			if ctx.Err() == nil {
+				slog.ErrorContext(ctx, "audit log retention failed", "err", err)
+			}
 		} else if n > 0 {
 			slog.Info("audit log retention", "deleted", n)
 		}
