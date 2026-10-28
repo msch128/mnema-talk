@@ -2,6 +2,7 @@ package perm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -32,8 +33,9 @@ type Notifier interface {
 // database that is rebuilt after every change. A database failure fails the
 // question (and so the request) closed.
 type Service struct {
-	db  *db.Pool
-	now func() time.Time
+	db   *db.Pool // nil for a Service built by NewServiceFrom
+	load Loader
+	now  func() time.Time
 
 	mu         sync.Mutex // serializes loads
 	lastForced time.Time  // guarded by mu
@@ -47,8 +49,24 @@ type Service struct {
 	notifier   Notifier
 }
 
-// NewService returns a Service reading from p.
-func NewService(p *db.Pool) *Service { return &Service{db: p, now: time.Now} }
+// Loader builds the permission state as of now. The database is the only
+// production source; tests plug in a hand-built state.
+type Loader func(ctx context.Context, now time.Time) (*Snapshot, error)
+
+// NewService returns a Service reading from p. It panics on a nil pool: a
+// server without a database has no permissions to answer from.
+func NewService(p *db.Pool) *Service {
+	if p == nil {
+		panic("perm: NewService needs a database pool")
+	}
+	return &Service{db: p, now: time.Now, load: func(ctx context.Context, now time.Time) (*Snapshot, error) {
+		return loadSnapshot(ctx, p, now)
+	}}
+}
+
+// NewServiceFrom returns a Service that loads its state from load instead of
+// the database. It cannot run Locked changes. For tests (see permtest).
+func NewServiceFrom(load Loader) *Service { return &Service{load: load, now: time.Now} }
 
 // SetNotifier registers who learns about permission changes.
 func (s *Service) SetNotifier(n Notifier) {
@@ -140,9 +158,6 @@ func (s *Service) reload(ctx context.Context, forced bool) (*Snapshot, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := s.now()
-	if snap, err := s.checkFixtureSnapshot(); snap != nil || err != nil {
-		return snap, err
-	}
 	if snap := s.reuseCurrentSnapshot(now, forced); snap != nil {
 		return snap, nil
 	}
@@ -150,7 +165,7 @@ func (s *Service) reload(ctx context.Context, forced bool) (*Snapshot, error) {
 		s.lastForced = now
 	}
 	gen := s.gen.Load()
-	snap, err := loadSnapshot(ctx, s.db, now)
+	snap, err := s.load(ctx, now)
 	if err != nil {
 		return nil, err
 	}
@@ -163,16 +178,6 @@ func (s *Service) reload(ctx context.Context, forced bool) (*Snapshot, error) {
 		s.cur.CompareAndSwap(snap, nil)
 	}
 	return snap, nil
-}
-
-func (s *Service) checkFixtureSnapshot() (*Snapshot, error) {
-	if s.db != nil {
-		return nil, nil
-	}
-	if cur := s.cur.Load(); cur != nil {
-		return cur, nil
-	}
-	return nil, errNoDatabase
 }
 
 func (s *Service) reuseCurrentSnapshot(now time.Time, forced bool) *Snapshot {
@@ -316,3 +321,5 @@ func RequireOwner(sub Subject) error {
 	}
 	return nil
 }
+
+var errNoDatabase = errors.New("permissions: service has no database")

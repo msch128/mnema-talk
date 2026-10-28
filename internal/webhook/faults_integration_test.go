@@ -23,6 +23,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 	"github.com/msch128/mnema-talk/internal/ssrf"
 	"github.com/msch128/mnema-talk/internal/testutil"
 	"github.com/msch128/mnema-talk/internal/testutil/pgfault"
@@ -231,7 +232,7 @@ func (failingStore) Delete(context.Context, string) error { return errors.New("s
 func TestFailsClosedWithoutPermissionState(t *testing.T) {
 	f := newFixture(t)
 	rec, _ := f.newHook("hook")
-	f.h.Perms = perm.NewService(nil)
+	f.h.Perms = permtest.Unloadable()
 	admin := "/admin/webhooks/" + rec.ID.String()
 	f.owner = &auth.User{ID: uuid.New(), Role: "user"}
 	for name, w := range map[string]*httptest.ResponseRecorder{
@@ -348,7 +349,7 @@ func TestExecuteWithPermissionModel(t *testing.T) {
 	}
 	wantStatus(t, f.json(f.h, "POST", path, `{"content":"still fine"}`), 204, "maker gone")
 	// An unreadable permission model refuses the post instead of guessing.
-	f.h.Perms = perm.NewService(nil)
+	f.h.Perms = permtest.Unloadable()
 	wantStatus(t, f.json(f.h, "POST", path, `{"content":"hi"}`), 500, "no permission state")
 }
 

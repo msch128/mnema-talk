@@ -123,7 +123,7 @@ common paths.
 | `PUT /admin/users/{id}/roles` | refused for bots |
 | Editing a role a bot holds | the usual role rules, and adding Administrator or admin-area bits is Owner-only |
 | Reordering roles | moves positions only, grants no permission |
-| Channel or category overwrite for a role a bot holds, or for the bot itself | the usual overwrite rules (*Manage channels*, only what you hold there), and allowing Disconnect members (the one channel permission that opens part of the admin area) is Owner-only |
+| Channel or category overwrite for a role a bot holds, or for the bot itself | the usual overwrite rules (*Manage channels*, only what you hold there), and allowing Disconnect members (the one elevated channel permission) is Owner-only |
 | `@everyone` | not inherited, its overwrites do not apply |
 | Managing the bot afterwards (tokens, edits) | needs at least the bot's rights, server-wide and per channel; a bot holding any elevated permission anywhere is the Owner's. The access view lists only channels the caller can see |
 

@@ -13,6 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func TestFrameLimiter(t *testing.T) {
@@ -181,14 +182,14 @@ func TestObserveFailsClosed(t *testing.T) {
 		return g, s
 	}
 
-	g, s := newGateway(perm.NewService(nil)) // no state to read
+	g, s := newGateway(permtest.Unloadable()) // no state to read
 	g.Observe(ch, "message_create", map[string]any{"id": 1})
 	g.Observe(uuid.Nil, "member_joined", map[string]any{"id": uuid.New()})
 	if s.seq != 0 {
 		t.Fatal("delivered without a permission state")
 	}
 
-	f := perm.NewFixture().Bot(user)
+	f := permtest.NewFixture().Bot(user)
 	channel := f.Channel(uuid.Nil)
 	role := f.Role(1, perm.SendMessages)
 	f.Assign(user, role)

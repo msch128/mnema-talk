@@ -11,7 +11,7 @@ import (
 
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 // When the permission state cannot be loaded every guarded handler fails
@@ -26,7 +26,7 @@ func TestHandlersFailClosedWithoutPermissionState(t *testing.T) {
 	if err := f.p.QueryRow(context.Background(), `SELECT number FROM messages WHERE id = $1`, f.m).Scan(&number); err != nil {
 		t.Fatal(err)
 	}
-	h := &Handler{DB: f.p, Events: &events.Recorder{}, Perms: perm.NewService(nil)}
+	h := &Handler{DB: f.p, Events: &events.Recorder{}, Perms: permtest.Unloadable()}
 	ch, msg := f.c.ID.String(), f.m.String()
 	params := map[string]string{"channelID": ch, "messageID": msg, "id": ch}
 	catParams := map[string]string{"id": cat.ID.String()}

@@ -148,6 +148,7 @@ func (h *Handler) MountAuthenticated(r chi.Router) {
 	r.Put("/users/me/locale", httpx.Handle(h.setLocale))
 	r.Put("/users/me/presence", httpx.Handle(h.setPresence))
 	r.Put("/users/me/status", httpx.Handle(h.setStatus))
+	r.Post("/channels/{id}/voice/{userID}/disconnect", httpx.Handle(h.disconnectFromTalk))
 	h.mountAccount(r)
 }
 

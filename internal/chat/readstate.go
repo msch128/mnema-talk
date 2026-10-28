@@ -31,17 +31,14 @@ type ReadState struct {
 // role or as a reply; not @all or @here), the same ones that still notify.
 // Before the first read, "last read" is the sign-up.
 // Messages of members the caller blocked never count as mentions.
+// The unread count is an index-only scan of messages_channel_unread_idx per
+// channel; only messages that mention the user or reply to their messages
+// are looked at one by one, so a channel with a long backlog stays cheap.
 // NotifyLevel is the effective level: the channel's own setting, else its
 // category's, else the member's server default, else "all"; an expired mute counts as none (see ResolveNotify).
 func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadState, error) {
 	rows, err := p.Query(ctx, `
-		SELECT c.id,
-		       count(m.id) FILTER (WHERE m.parent_id IS NULL),
-		       count(m.id) FILTER (WHERE NOT blocked.is_blocked AND (orig.user_id = $1 OR EXISTS (
-		           SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = $1
-		             AND (mm.kind <> $2 OR NOT COALESCE(sn.suppress_everyone, FALSE))))),
-		       count(m.id) FILTER (WHERE NOT blocked.is_blocked AND (orig.user_id = $1 OR EXISTS (
-		           SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = $1 AND mm.kind <> $2))),
+		SELECT c.id, unread.n, addr.mentions, addr.addressed,
 		       cr.last_read_at,
 		       COALESCE(cr.notify_level, 'inherit'), cr.muted_until,
 		       COALESCE(cn.notify_level, 'inherit'), cn.muted_until,
@@ -52,12 +49,24 @@ func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadStat
 		LEFT JOIN channel_reads cr ON cr.channel_id = c.id AND cr.user_id = $1
 		LEFT JOIN category_notify cn ON cn.category_id = c.category_id AND cn.user_id = $1
 		LEFT JOIN server_notify sn ON sn.user_id = $1
-		LEFT JOIN messages m ON m.channel_id = c.id AND m.user_id <> $1
-		     AND m.created_at > COALESCE(cr.last_read_at, me.created_at)
-		LEFT JOIN messages orig ON orig.id = m.reply_to_id
-		CROSS JOIN LATERAL (SELECT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = m.user_id) AS is_blocked) blocked
+		CROSS JOIN LATERAL (
+		    SELECT count(*) AS n FROM messages m
+		    WHERE m.channel_id = c.id AND m.user_id <> $1 AND m.parent_id IS NULL
+		      AND m.created_at > COALESCE(cr.last_read_at, me.created_at)
+		) unread
+		CROSS JOIN LATERAL (
+		    SELECT count(*) FILTER (WHERE orig.user_id = $1 OR (mm.message_id IS NOT NULL
+		               AND (mm.kind <> $2 OR NOT COALESCE(sn.suppress_everyone, FALSE)))) AS mentions,
+		           count(*) FILTER (WHERE orig.user_id = $1 OR (mm.message_id IS NOT NULL AND mm.kind <> $2)) AS addressed
+		    FROM messages m
+		    LEFT JOIN message_mentions mm ON mm.message_id = m.id AND mm.user_id = $1
+		    LEFT JOIN messages orig ON orig.id = m.reply_to_id
+		    WHERE m.channel_id = c.id AND m.user_id <> $1
+		      AND m.created_at > COALESCE(cr.last_read_at, me.created_at)
+		      AND (mm.message_id IS NOT NULL OR orig.user_id = $1)
+		      AND NOT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = m.user_id)
+		) addr
 		WHERE c.type <> 'dm'
-		GROUP BY c.id, cr.last_read_at, cr.notify_level, cr.muted_until, cn.notify_level, cn.muted_until, sn.notify_level, sn.muted_until, sn.suppress_everyone
 		ORDER BY c.id`, user.ID, MentionKindGroup)
 	if err != nil {
 		return nil, fmt.Errorf("read states: %w", err)

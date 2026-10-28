@@ -104,7 +104,10 @@ func (c *components) newCore() {
 	c.wsPerIP = httpx.NewRateLimiter(120, time.Minute).Named("ws_ip")
 	hub.Version = d.Version
 	c.hub = hub
-	c.permSvc = perm.NewService(d.DB)
+	c.permSvc = d.Perms
+	if c.permSvc == nil {
+		c.permSvc = perm.NewService(d.DB)
+	}
 	c.permSvc.SetUploadCeiling(cfg.MaxUploadMB)
 	hub.SetPermissions(c.permSvc)
 	c.pub = hub

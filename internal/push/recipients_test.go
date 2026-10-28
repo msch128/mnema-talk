@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 var noon = time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
@@ -51,7 +52,7 @@ func TestEffectiveNotificationLevelDecidesWhoIsTold(t *testing.T) {
 }
 
 func TestOnlyMembersWhoCanViewTheChannelAreTold(t *testing.T) {
-	f := perm.NewFixture()
+	f := permtest.NewFixture()
 	category := f.Category()
 	open, hidden := f.Channel(category), f.Channel(category)
 	f.RoleOverwrite(true, hidden, f.EveryoneID(), 0, perm.ViewChannel)
