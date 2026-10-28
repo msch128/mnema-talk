@@ -17,6 +17,9 @@ import (
 
 const nativeAuthMaxBody int64 = 16 << 10
 
+// nativeBearerPrefix precedes a native access token in Authorization.
+const nativeBearerPrefix = "Bearer "
+
 // NativeHandler is intentionally not wired into the server router. These
 // endpoints issue transport sessions, not E2EE device or content authorization.
 // Remote API access belongs to the native broker; tokens never belong in a
@@ -124,10 +127,10 @@ func nativeTransportRejected(r *http.Request) bool {
 
 func nativeBearer(r *http.Request) (string, error) {
 	values := nativeHeaderValues(r, "Authorization")
-	if len(values) != 1 || len(values[0]) != 50 || !strings.HasPrefix(values[0], "Bearer ") {
+	if len(values) != 1 || len(values[0]) != len(nativeBearerPrefix)+nativeSecretLen || !strings.HasPrefix(values[0], nativeBearerPrefix) {
 		return "", ErrNativeUnauthorized
 	}
-	token := values[0][7:]
+	token := values[0][len(nativeBearerPrefix):]
 	if _, err := parseNativeSecret(token); err != nil {
 		return "", err
 	}
@@ -270,7 +273,7 @@ func (h *NativeHandler) refresh(w http.ResponseWriter, r *http.Request) error {
 	}
 	grant, err := h.sessions.RotateRefresh(r.Context(), fields["refresh_token"])
 	if errors.Is(err, ErrNativeRefreshWait) {
-		httpx.WriteRateLimited(w, nativeRefreshInterval)
+		httpx.WriteRateLimited(w, nativeRefreshRetry(err))
 		return nil
 	}
 	if err != nil {

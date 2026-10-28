@@ -17,6 +17,10 @@ var (
 	errNativeEntropy       = errors.New("native session entropy unavailable")
 )
 
+// nativeSecretLen is the wire length of a native secret: 32 random bytes in
+// unpadded base64url.
+const nativeSecretLen = 43
+
 // nativeSecret is deliberately private and never passed to a generic JSON DTO.
 // An inaccessible enclosing field prevents fmt from calling nested Format
 // methods. Pointer storage also prevents its reflective fallback from walking
@@ -71,7 +75,7 @@ func nativeSecretRune(b byte) bool {
 }
 
 func parseNativeSecret(raw string) (nativeSecret, error) {
-	if len(raw) != 43 {
+	if len(raw) != nativeSecretLen {
 		return nativeSecret{}, ErrNativeUnauthorized
 	}
 	for i := range raw {

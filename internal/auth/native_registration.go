@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -44,11 +43,9 @@ func (h *NativeHandler) registerNative(w http.ResponseWriter, request *http.Requ
 	}
 	user, err := Register(request.Context(), h.accounts.Sessions.DB, strings.TrimSpace(fields["username"]), fields["display_name"], fields["password"], fields["invite_code"])
 	if err != nil {
-		return nativeHandlerError(err)
+		return nativeFail(w, err)
 	}
-	if h.accounts.Events != nil {
-		h.accounts.Events.Broadcast(events.MemberJoined, user.Public())
-	}
+	h.accounts.announceRegistered(request.Context(), user)
 	httpx.WriteJSON(w, http.StatusCreated, UserEnvelope{User: h.accounts.withRulesPending(request.Context(), user)})
 	return nil
 }

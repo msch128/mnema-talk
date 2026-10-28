@@ -99,9 +99,11 @@ func (h *NativeHandler) changePassword(control NativeCredentialControl) func(htt
 			h.accounts.passwordFails.RecordFailure(key)
 		}
 		if err != nil {
-			return nativeHandlerError(err)
+			return nativeFail(w, err)
 		}
 		h.accounts.passwordFails.ResetFailures(key)
+		user := principal.User()
+		h.accounts.auditUser(request.Context(), &user, "auth.password_change")
 		writeNativeGrant(w, grant)
 		return nil
 	}
