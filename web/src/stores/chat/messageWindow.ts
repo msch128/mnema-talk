@@ -4,7 +4,7 @@ import { arrayDecoder, isRecord } from '../../types/validation'
 import { api } from '../../lib/api'
 import { useToastStore } from '../toast'
 import { t } from '../../i18n'
-import { PAGE_SIZE, WINDOW_CAP, emptyWindow, fromLatest, fromAround, prependOlder, appendNewer, appendLive, removeMessage } from '../../lib/messageWindow'
+import { PAGE_SIZE, WINDOW_CAP, fromLatest, mergeLatest, fromAround, prependOlder, appendNewer, appendLive, removeMessage } from '../../lib/messageWindow'
 import { markPreviewEdited, markPreviewDeleted } from '../../lib/replies'
 import { navigate } from '../../lib/router'
 import { MAX_PENDING_LIVE } from './types'
@@ -79,10 +79,33 @@ export async function fetchMessages(cx: Cx, channelId: string) {
     return true
   } catch (e) {
     console.error('Failed to fetch messages:', e)
-    if (gen === cs.windowGen && cs.activeChannel.value?.id === channelId) setWindow(cx, emptyWindow())
+    // The window stays as it is: a refresh that fails must not empty a chat being read.
+    if (gen === cs.windowGen && cs.activeChannel.value?.id === channelId) showToast(t('chat.messageLoadFailed'))
     return false
   } finally {
     if (gen === cs.windowGen) cs.isLoadingWindow.value = false
+  }
+}
+
+/**
+ * After a reconnect: catches up with what was missed without cutting the
+ * history the reader paged in or moving the view. Only a window that does
+ * not reach the newest end is left alone.
+ */
+export async function refreshLatest(cx: Cx, channelId: string) {
+  const { cs } = cx
+  if (!cs.messages.value.length) return fetchMessages(cx, channelId)
+  const gen = cs.windowGen
+  try {
+    const data = await api(messagesUrl(channelId), { decode: decodeMessages })
+    if (gen !== cs.windowGen || cs.activeChannel.value?.id !== channelId || cs.hasMoreAfter.value) return false
+    const { window: win, replaced } = mergeLatest(getWindow(cx), data, { limit: PAGE_SIZE, cap: WINDOW_CAP })
+    setWindow(cx, win)
+    if (replaced) cs.latestLoadSeq.value++
+    return true
+  } catch (e) {
+    console.error('Failed to refresh messages:', e)
+    return false
   }
 }
 
@@ -213,7 +236,11 @@ async function jumpToRootMessage(cx: Cx, id: string) {
     reportMissedJump(cs, gen, error)
     return false
   } finally {
-    if (gen === cs.windowGen) cs.isLoadingWindow.value = false
+    if (gen === cs.windowGen) {
+      cs.isLoadingWindow.value = false
+      // Live messages held during a failed jump belong to the unchanged window.
+      if (!cs.hasMoreAfter.value) flushPendingLive(cx)
+    }
   }
 }
 

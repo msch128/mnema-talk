@@ -109,18 +109,20 @@ export async function fetchDms(cx: Cx) {
     const list = await api('/api/dms', { decode: decodeDms })
     if (seq !== cs.dmsFetchSeq || community !== cs.communityGeneration) return
     setDms(cx, list, true)
+    // Only a list the server answered counts as loaded; draft pruning relies on it.
+    cs.dmsLoaded.value = true
     void fetchDmSettings(cx)
     markActiveChannelReadIfReading(cx)
   } catch (error) {
     console.warn('Failed to fetch direct messages:', error)
-  } finally {
-    if (seq === cs.dmsFetchSeq) cs.dmsLoaded.value = true
   }
 }
 
-export function upsertDm(cx: Cx, dm: ChatDirectMessage) {
+/** fresh: the row is the caller's own, just read from the server, so its counts replace what is held. */
+export function upsertDm(cx: Cx, dm: ChatDirectMessage, fresh = false) {
   const rest = cx.cs.dms.value.filter(d => d.id !== dm.id)
   setDms(cx, [...rest, dm])
+  if (fresh) cx.cs.readStates.value = { ...cx.cs.readStates.value, [dm.id]: readStateOf(dm) }
 }
 
 /** Closes a conversation in the caller's list, or shows it again; only their own view changes. */
@@ -197,17 +199,17 @@ function withMembers(cx: Cx, id: string, change: (members: ChatDMMember[]) => Ch
 export function onDmCreated(cx: Cx, dm: ChatDirectMessage) {
   upsertDm(cx, dm)
   // The event carries the starter's view only: no preview (it depends on whom the receiver blocked), and a notify level and send right that are not the receiver's own.
-  void refreshDm(cx, dm.id)
+  void refreshDm(cx, dm.id, true)
 }
 
-/** Reads one conversation again (its preview, or what the member did to it on another device). */
-export async function refreshDm(cx: Cx, id: string) {
+/** Reads one conversation again (its preview, or what the member did to it on another device); fresh also takes its counts and notify level. */
+export async function refreshDm(cx: Cx, id: string, fresh = false) {
   const community = cx.cs.communityGeneration
   const known = isDm(cx, id)
   try {
     const dm = await api(`/api/dms/${id}`, { decode: decodeChatDirectMessage })
     // A conversation dropped while this ran (left, removed) stays gone.
-    if (community === cx.cs.communityGeneration && (!known || isDm(cx, id))) upsertDm(cx, dm)
+    if (community === cx.cs.communityGeneration && (!known || isDm(cx, id))) upsertDm(cx, dm, fresh)
   } catch (error) {
     console.warn('Failed to read the conversation:', error)
   }

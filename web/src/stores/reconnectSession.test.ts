@@ -99,3 +99,31 @@ describe('websocket session lifecycle', () => {
     expect(checking).not.toHaveBeenCalled(); expect(Socket.instances).toHaveLength(0)
   })
 })
+
+describe('socket liveness', () => {
+  it('drops a socket that stops answering pings and reconnects', async () => {
+    const { chat } = setup()
+    chat.initWebSocket()
+    const socket = required(Socket.instances[0])
+    socket.onopen?.()
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(chat.isConnected).toBe(true)
+    await vi.advanceTimersByTimeAsync(15000)
+    expect(chat.isConnected).toBe(false)
+    expect(socket.close).toHaveBeenCalled()
+    expect(chat.reconnectAttempt).toBe(1)
+  })
+
+  it('keeps a socket that answers its pings', async () => {
+    const { chat } = setup()
+    chat.initWebSocket()
+    const socket = required(Socket.instances[0])
+    socket.onopen?.()
+    for (let i = 0; i < 6; i++) {
+      await vi.advanceTimersByTimeAsync(5000)
+      socket.onmessage?.({ data: JSON.stringify({ type: 'pong', payload: { t: Date.now() } }) })
+    }
+    expect(chat.isConnected).toBe(true)
+    expect(socket.close).not.toHaveBeenCalled()
+  })
+})
