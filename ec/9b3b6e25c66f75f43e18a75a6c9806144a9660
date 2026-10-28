@@ -1,0 +1,79 @@
+web/src/App.vue
+  s_814bdab332b3b0::t_768d40996e6bcc 7,174
+web/src/lib/voicePlayback.ts
+  s_dc6ba5bcea699f::t_563f3d8f1f183f 20-21,23,26,30-39,41-42,45,49-52
+web/src/stores/account.ts
+  s_dc6ba5bcea699f::t_896e2a46d63124 13-15,18-20,28,32,37-38,41,49,54,59
+web/src/stores/chat/reset.ts
+  s_dc6ba5bcea699f::t_dad6b232f01f66 6-10,17-25,64
+web/src/stores/events.ts
+  s_dc6ba5bcea699f::t_86c29fd121f545 86-88,91,95-96,98,100,133
+web/src/stores/eventsPast.ts
+  s_4ac6295b6bd2d2::t_9dcc0514c738a5 26-29,34,37-45,49,52,66-67
+web/src/stores/forwardQuotes.ts
+  s_dc6ba5bcea699f::t_d67480d29fe694 31,43
+web/src/stores/later.ts
+  s_dc6ba5bcea699f::t_269fd7fae40ab0 40-51,55,59,63,67,112-115
+web/src/stores/memberStoresRaces.test.ts
+  s_d8e458a1a9342a::t_5be0adc917aae7 1-202
+web/src/stores/onboarding.ts
+  s_d8e458a1a9342a::t_55d7c2573a9292 61-73,105
+web/src/stores/saved.test.ts
+  s_2b1b57aefe26cd::t_72071c3293b273 1,69,71-79,84-111,113
+web/src/stores/saved.ts
+  s_dc6ba5bcea699f::t_53484f50a3e028 51-57
+web/src/stores/savedList.ts
+  s_dc6ba5bcea699f::t_e61367e8fa8cd9 2,15-16,28,33-37,58-62,68-79
+web/src/stores/voiceSettings.test.ts
+  s_2b1b57aefe26cd::t_0522ee52579399 1-18
+web/src/stores/voiceSettings.ts
+  s_dc6ba5bcea699f::t_02d42850ad51ae 4,49,55-59,64-68,82-87,99-108,110-116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ec9b3b6e25c66f75f43e18a75a6c9806144a9660",
+  "prompts": {},
+  "sessions": {
+    "s_2b1b57aefe26cd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9c15b256f7f7287d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4ac6295b6bd2d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac4ef8ece1278c839",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_814bdab332b3b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a577c2ec494cbbbb0",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_d8e458a1a9342a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-arootcause-sealing-f9b13a90a3d1378a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_dc6ba5bcea699f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a3702c97e5f923577",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
