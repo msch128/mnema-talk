@@ -31,7 +31,12 @@ type Invite struct {
 	Weak bool `json:"weak"`
 }
 
-var inviteCodePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{6,64}$`)
+// maxInviteCodeLength is the longest custom code. The shortest is
+// minCustomCodeLength; the pattern tag of CreateInviteRequest.Code repeats both
+// numbers (a test keeps them in step).
+const maxInviteCodeLength = 64
+
+var inviteCodePattern = regexp.MustCompile(fmt.Sprintf(`^[A-Za-z0-9_-]{%d,%d}$`, minCustomCodeLength, maxInviteCodeLength))
 
 // inviteAlphabet avoids look-alike characters so codes can be read aloud.
 const inviteAlphabet = "abcdefghjkmnpqrstuvwxyz23456789"
@@ -84,7 +89,7 @@ func validateOrGenerateCode(code string) (string, error) {
 		return GenerateInviteCode()
 	}
 	if !inviteCodePattern.MatchString(code) {
-		return "", httpx.ErrInvalidInput("code must be 6-64 characters: letters, digits, '_' or '-'")
+		return "", httpx.ErrInvalidInput(fmt.Sprintf("code must be %d-%d characters: letters, digits, '_' or '-'", minCustomCodeLength, maxInviteCodeLength))
 	}
 	if err := checkCustomCodeStrength(code); err != nil {
 		return "", err
@@ -257,7 +262,7 @@ func (h *Handler) deleteInvite(w http.ResponseWriter, r *http.Request) error {
 // CreateInviteRequest is the body of POST /api/admin/invites.
 type CreateInviteRequest struct {
 	// Code is generated (12 characters) when omitted or empty.
-	Code string `json:"code" pattern:"^[A-Za-z0-9_-]{6,64}$" binding:"optional"`
+	Code string `json:"code" pattern:"^[A-Za-z0-9_-]{12,64}$" binding:"optional"`
 	// MaxUses is unlimited when null or omitted.
 	MaxUses *int `json:"max_uses" minimum:"1" maximum:"1000" binding:"optional" extensions:"x-nullable"`
 	// ExpiresInHours never expires when null or omitted.

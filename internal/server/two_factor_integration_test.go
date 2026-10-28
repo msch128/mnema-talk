@@ -340,3 +340,48 @@ func TestTheAccountPageShowsTheSecondFactorState(t *testing.T) {
 		t.Errorf("second step without a challenge: %d", res.status)
 	}
 }
+
+func TestCredentialChangesNeedTheSecondFactorToo(t *testing.T) {
+	a := newApp(t, false)
+	alice := a.register(a.seedAdmin(), "alice")
+	e := a.enroll(alice, memberPassword)
+	a.freshStep()
+
+	newPassword := "a-brand-new-password"
+	change := map[string]string{"current_password": memberPassword, "new_password": newPassword}
+	if res := alice.put("/api/auth/password", change); res.status != http.StatusForbidden {
+		t.Fatalf("password change without a code: %d %s", res.status, res.body)
+	}
+	change["code"] = wrongCode(3, e.auth)
+	if res := alice.put("/api/auth/password", change); res.status != http.StatusForbidden {
+		t.Fatalf("password change with a wrong code: %d %s", res.status, res.body)
+	}
+	if got := a.password(a.anon(), "alice", memberPassword); got.status != http.StatusAccepted {
+		t.Fatalf("the password must be unchanged: %d", got.status)
+	}
+
+	address := map[string]string{"email": "alice@example.org", "current_password": memberPassword}
+	if res := alice.put("/api/users/me/email", address); res.status != http.StatusForbidden {
+		t.Fatalf("set e-mail without a code: %d %s", res.status, res.body)
+	}
+	if v := a.account(alice); v.Email != "" {
+		t.Fatalf("the address must not be stored: %q", v.Email)
+	}
+	address["code"] = e.auth.code(1)
+	if res := alice.put("/api/users/me/email", address); res.status != http.StatusOK {
+		t.Fatalf("set e-mail with a code: %d %s", res.status, res.body)
+	}
+	remove := map[string]string{"current_password": memberPassword}
+	if res := alice.post("/api/users/me/email/remove", remove); res.status != http.StatusForbidden {
+		t.Fatalf("remove e-mail without a code: %d %s", res.status, res.body)
+	}
+	remove["code"] = e.recovery[0]
+	if res := alice.post("/api/users/me/email/remove", remove); res.status != http.StatusOK {
+		t.Fatalf("remove e-mail with a recovery code: %d %s", res.status, res.body)
+	}
+
+	change["code"] = e.recovery[1]
+	if res := alice.put("/api/auth/password", change); res.status != http.StatusNoContent {
+		t.Fatalf("password change with a code: %d %s", res.status, res.body)
+	}
+}

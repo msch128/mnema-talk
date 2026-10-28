@@ -15,15 +15,21 @@ export const useAccountStore = defineStore('account', () => {
     info.value = await api('/api/users/me/account', { decode: decodeAuthAccountInfo })
   }
 
-  async function setEmail(email: string, currentPassword: string) {
-    info.value = await api('/api/users/me/email', {
-      method: 'PUT', decode: decodeAuthAccountInfo, json: { email, current_password: currentPassword }
+  // The password, and while two-factor sign-in is on a current code.
+  const proof = (currentPassword: string, code: string) => ({ current_password: currentPassword, ...(code ? { code } : {}) })
+
+  /** Saves the address; returns false when the confirmation mail was refused (the address is saved anyway). */
+  async function setEmail(email: string, currentPassword: string, code = ''): Promise<boolean> {
+    const next = await api('/api/users/me/email', {
+      method: 'PUT', decode: decodeAuthAccountInfo, json: { email, ...proof(currentPassword, code) }
     })
+    info.value = next
+    return next.confirmation_sent !== false
   }
 
-  async function removeEmail(currentPassword: string) {
+  async function removeEmail(currentPassword: string, code = '') {
     info.value = await api('/api/users/me/email/remove', {
-      method: 'POST', decode: decodeAuthAccountInfo, json: { current_password: currentPassword }
+      method: 'POST', decode: decodeAuthAccountInfo, json: proof(currentPassword, code)
     })
   }
 

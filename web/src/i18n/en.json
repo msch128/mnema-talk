@@ -2759,9 +2759,11 @@
       "unused": "Not used",
       "saved": "Address saved.",
       "savedConfirm": "Address saved. Check your inbox to confirm it.",
+      "savedNoMail": "Address saved, but the confirmation e-mail could not be sent. Use “Send again” in a moment.",
       "removed": "Address removed.",
       "invalid": "That does not look like an e-mail address.",
-      "needPassword": "Enter your current password to confirm."
+      "needPassword": "Enter your current password to confirm.",
+      "needCode": "Enter a current authenticator or recovery code."
     },
     "loading": "Loading…",
     "twoFactor": {

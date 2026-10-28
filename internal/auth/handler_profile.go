@@ -85,7 +85,7 @@ func (h *Handler) withRulesPending(ctx context.Context, u *User) User {
 // changePassword handles PUT /api/auth/password.
 //
 // @Summary Change own password
-// @Description Signs out all other sessions and keeps the current one (a fresh cookie is set); open WebSockets are closed and reconnect with it. Five wrong current passwords trigger a lockout (429).
+// @Description Signs out all other sessions and keeps the current one (a fresh cookie is set); open WebSockets are closed and reconnect with it. Needs the current password and, while two-factor sign-in is on, a current code. Five wrong current passwords trigger a lockout (429).
 // @ID changePassword
 // @Tags Auth
 // @Accept json
@@ -96,8 +96,8 @@ func (h *Handler) withRulesPending(ctx context.Context, u *User) User {
 // @Header 204 {string} Set-Cookie "Session cookie (HttpOnly, SameSite=Lax, Path=/; Secure on HTTPS)."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: current password is incorrect, or cross-origin request rejected."
-// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: current password or code is incorrect, or cross-origin request rejected."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests, or the second step is locked."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/auth/password [put]
@@ -107,11 +107,17 @@ func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	key := u.ID.String()
-	if locked, retry := h.passwordFails.IsLockedOut(key); locked {
-		httpx.WriteRateLimited(w, retry)
-		return nil
+	// A malformed new password is refused before any proof is asked for, so it
+	// does not count as a wrong attempt.
+	if err := ValidatePassword(req.NewPassword); err != nil {
+		return err
 	}
+	// The password and, while two-factor sign-in is on, a current code: the
+	// credentials must not change on the password alone.
+	if ok, err := h.ConfirmIdentity(w, r, u, req.CurrentPassword, req.Code); !ok {
+		return err
+	}
+	key := u.ID.String()
 	tv, err := ChangePassword(r.Context(), h.Sessions.DB, u.ID, req.CurrentPassword, req.NewPassword)
 	if err == ErrWrongPassword {
 		h.passwordFails.RecordFailure(key)
@@ -305,6 +311,9 @@ type UserEnvelope struct {
 type ChangePasswordRequest struct {
 	CurrentPassword string `json:"current_password" format:"password"`
 	NewPassword     string `json:"new_password" format:"password" minLength:"10"`
+	// Code is a current authenticator code or an unused recovery code; needed
+	// only while two-factor sign-in is on.
+	Code string `json:"code,omitempty" maxLength:"32" binding:"optional"`
 }
 
 // UpdateProfileRequest is the body of PUT /api/users/me/profile.

@@ -4,6 +4,7 @@ package server
 
 import (
 	"context"
+	"log/slog"
 	"net"
 	"net/http"
 	"time"
@@ -105,6 +106,9 @@ func (r *Router) Close() {
 	if r.cancel != nil {
 		r.cancel()
 	}
+	if a := r.preview.Accounts; a != nil && !a.Drain(jobsStopWait) {
+		slog.Warn("account jobs still running at shutdown")
+	}
 	if r.outgoing != nil {
 		// Attempts in flight finish and the queue stays in the database.
 		r.outgoing.Wait(webhookStopWait)
@@ -117,6 +121,10 @@ const (
 	denyRefresh = 10 * time.Minute
 	denyTimeout = 10 * time.Second
 )
+
+// jobsStopWait bounds how long Close waits for account mail and export jobs;
+// exports are cancelled by then and only need to mark themselves failed.
+const jobsStopWait = 10 * time.Second
 
 // webhookStopWait bounds how long Close waits for outgoing webhook attempts in flight.
 const webhookStopWait = 10 * time.Second

@@ -2759,9 +2759,11 @@
       "unused": "Nicht verwendet",
       "saved": "Adresse gespeichert.",
       "savedConfirm": "Adresse gespeichert. Bestätige sie über den Link in deinem Postfach.",
+      "savedNoMail": "Adresse gespeichert, aber die Bestätigungs-Mail ließ sich nicht senden. Nutze gleich „Erneut senden“.",
       "removed": "Adresse entfernt.",
       "invalid": "Das sieht nicht nach einer E-Mail-Adresse aus.",
-      "needPassword": "Gib zur Bestätigung dein aktuelles Passwort ein."
+      "needPassword": "Gib zur Bestätigung dein aktuelles Passwort ein.",
+      "needCode": "Gib einen aktuellen Authenticator- oder Wiederherstellungscode ein."
     },
     "loading": "Lädt …",
     "twoFactor": {

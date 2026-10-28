@@ -19,6 +19,9 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
+// errStoreMissing is what memStore answers for an unknown key.
+var errStoreMissing = errors.New("not found")
+
 // memStore is a minimal ObjectStore for these tests.
 type memStore struct {
 	mu   sync.Mutex
@@ -43,7 +46,7 @@ func (m *memStore) GetObjectFrom(_ context.Context, key string, _ int64) (io.Rea
 	defer m.mu.Unlock()
 	b, ok := m.data[key]
 	if !ok {
-		return nil, errors.New("not found")
+		return nil, errStoreMissing
 	}
 	return io.NopCloser(bytes.NewReader(b)), nil
 }
