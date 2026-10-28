@@ -203,6 +203,12 @@ func TestPrivateChannelAndViewGate(t *testing.T) {
 	if got := snap.ViewableChannels(Subject{ID: uuid.New(), Owner: true}); got != nil {
 		t.Fatalf("the Owner is not filtered: %v", got)
 	}
+	if got := snap.HiddenChannels(Subject{ID: out}); len(got) != 1 || got[0] != ch {
+		t.Fatalf("outsider hidden %v", got)
+	}
+	if got := snap.HiddenChannels(Subject{ID: in}); len(got) != 0 {
+		t.Fatalf("insider hidden %v", got)
+	}
 	if got := snap.ChannelPermissions(Subject{ID: out}); len(got) != 0 {
 		t.Fatalf("outsider channel permissions: %v", got)
 	}

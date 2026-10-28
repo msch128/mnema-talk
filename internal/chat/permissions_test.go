@@ -32,3 +32,18 @@ func TestHandlerWithoutPermissionsLimitsNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// A member's total shown to a caller drops the messages in channels the
+// caller cannot view; callers who see everything get the stored total.
+func TestEnrichMembersSubtractsHiddenMessages(t *testing.T) {
+	a, b := uuid.New(), uuid.New()
+	members := []Member{{ID: a, MessageCount: 10}, {ID: b, MessageCount: 3}}
+	got := enrichMembers(members, nil, nil, map[uuid.UUID]int64{a: 4, b: 5})
+	if got[0].MessageCount != 6 || got[1].MessageCount != 0 {
+		t.Fatalf("counts: %d %d", got[0].MessageCount, got[1].MessageCount)
+	}
+	got = enrichMembers(members, nil, nil, nil)
+	if got[0].MessageCount != 10 || got[1].MessageCount != 3 {
+		t.Fatalf("stored totals: %d %d", got[0].MessageCount, got[1].MessageCount)
+	}
+}

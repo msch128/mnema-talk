@@ -144,6 +144,21 @@ func (s *Snapshot) ViewableChannels(sub Subject) []uuid.UUID {
 	return out
 }
 
+// HiddenChannels lists the channels sub may not view: the complement of
+// ViewableChannels within the channels the snapshot knows.
+func (s *Snapshot) HiddenChannels(sub Subject) []uuid.UUID {
+	if s.Global(sub).Has(Administrator) {
+		return nil
+	}
+	var out []uuid.UUID
+	for ch := range s.channelCat {
+		if !s.Channel(sub, ch).Has(ViewChannel) {
+			out = append(out, ch)
+		}
+	}
+	return out
+}
+
 // ChannelPermissions maps every channel sub may view to what they may do in
 // it.
 func (s *Snapshot) ChannelPermissions(sub Subject) map[uuid.UUID]Set {
