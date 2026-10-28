@@ -371,5 +371,44 @@ describe('AdminRolesTab unsaved edits', () => {
     expect(w.findAll('[data-permission]')).toHaveLength(0)
     expect(w.get('[data-testid="role-permission-none"]').text()).toBe('No permission matches.')
   })
+
+  it('asks before creating a role would drop unsaved edits', async () => {
+    const w = setup()
+    await flushPromises()
+    await pick(w, 'Middle')
+    await w.find('input[maxlength="32"]').setValue('Renamed')
+    confirmMock.mockResolvedValueOnce(false)
+    await w.findAll('button').find(b => b.text() === 'New role')!.trigger('click')
+    await flushPromises()
+    expect(confirmMock).toHaveBeenCalledTimes(1)
+    expect(apiMock).not.toHaveBeenCalledWith('/api/admin/roles', expect.objectContaining({ method: 'POST' }))
+    expect(w.find<HTMLInputElement>('input[maxlength="32"]').element.value).toBe('Renamed')
+  })
+
+  it('forgets a cancelled drag so a later drop cannot reorder', async () => {
+    const w = setup()
+    await flushPromises()
+    await row(w, 'Bottom').trigger('dragstart')
+    await row(w, 'Bottom').trigger('dragend')
+    await row(w, 'Middle').trigger('drop')
+    expect(apiMock).not.toHaveBeenCalledWith('/api/admin/roles/order', expect.anything())
+  })
+
+  it('explains an unusable upload limit or colour instead of leaving Save silently off', async () => {
+    roles = [role(2, { name: 'Middle', max_upload_mb: 20 }), everyone]
+    const w = setup()
+    await flushPromises()
+    await pick(w, 'Middle')
+    await w.find<HTMLInputElement>('input[aria-label="Max upload size"]').setValue('0')
+    expect(w.get('[data-testid="role-upload-invalid"]').text()).toContain('whole number')
+    expect(w.find('input[aria-label="Max upload size"]').attributes('aria-invalid')).toBe('true')
+    await w.find('input[aria-label="Max upload size"]').setValue('20')
+    expect(w.find('[data-testid="role-upload-invalid"]').exists()).toBe(false)
+    const hex = w.get<HTMLInputElement>('input[placeholder="#rrggbb"]')
+    await hex.setValue('#12345')
+    expect(w.get('[data-testid="role-color-invalid"]').exists()).toBe(true)
+    await hex.setValue('#123456')
+    expect(w.find('[data-testid="role-color-invalid"]').exists()).toBe(false)
+  })
 })
 
