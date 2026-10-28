@@ -141,7 +141,6 @@ type Peer struct {
 }
 
 type Room struct {
-	nativeAPI           func(func() bool) (*webrtc.API, error)
 	allowLoopbackCands  bool
 	load                *peerLoad
 	sourceAuthorization *sourceAuthorizationRegistry
@@ -158,7 +157,6 @@ type Room struct {
 	// by mu.
 	groups       map[uuid.UUID]*layerGroup
 	mu           sync.RWMutex
-	api          *webrtc.API
 	iceServers   []webrtc.ICEServer
 	offerTimeout time.Duration
 
