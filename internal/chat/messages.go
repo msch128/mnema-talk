@@ -243,8 +243,11 @@ func ValidateReplyTarget(ctx context.Context, p *db.Pool, channelID uuid.UUID, p
 		return nil
 	}
 	ref, err := loadMessageRef(ctx, p, *replyTo)
-	if err != nil {
+	if errors.Is(err, errMessageNotFound) {
 		return httpx.ErrInvalidInput("message to reply to not found")
+	}
+	if err != nil {
+		return err
 	}
 	if ref.ChannelID != channelID || !isSameThreadContext(ref.ParentID, parentID, replyTo) {
 		return httpx.ErrInvalidInput("can only reply to a message in the same conversation")

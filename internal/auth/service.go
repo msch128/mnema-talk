@@ -228,6 +228,19 @@ func GetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
 	return u, err
 }
 
+// GetActiveUser loads an account that may act right now: not disabled, deleted
+// or banned, and not a bot. ok is false when there is no such account.
+func GetActiveUser(ctx context.Context, p db.Querier, id uuid.UUID) (u *User, ok bool, err error) {
+	u, err = scanUser(p.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE id = $1 AND `+ActiveSQL("")+` AND NOT is_bot`, id))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	return u, true, nil
+}
+
 // inactiveSQL is true for a user_sessions row that has had no request for
 // longer than the community's inactivity limit.
 const inactiveSQL = `last_active_at < NOW() - make_interval(days => (SELECT session_inactivity_days FROM instance_settings LIMIT 1))`
