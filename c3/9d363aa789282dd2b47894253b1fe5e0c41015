@@ -1,0 +1,61 @@
+web/src/lib/laterApi.ts
+  s_06fcde5dbef956::t_e70d7140fc7aef 2
+  s_06fcde5dbef956::t_bef0f266bb78d5 35-38
+web/src/composables/useWelcomeFlow.ts
+  s_06fcde5dbef956::t_f67ec785f460dd 36-41
+web/src/lib/markdown/inline.ts
+  s_06fcde5dbef956::t_9e3018d3b74a20 46-54,63-64
+web/src/components/AdminRolesTab.vue
+  s_06fcde5dbef956::t_bfb5abeec157f5 13
+web/src/components/AdminOwnerConfirm.test.ts
+  s_06fcde5dbef956::t_08683e5df4d6a4 105
+web/src/sw/push.test.ts
+  s_06fcde5dbef956::t_08683e5df4d6a4 33
+web/src/components/AdminRolesTab.test.ts
+  s_06fcde5dbef956::t_08683e5df4d6a4 409
+web/src/composables/usePushSettings.ts
+  s_06fcde5dbef956::t_f67ec785f460dd 14-24,55
+web/src/lib/media/guard.ts
+  s_06fcde5dbef956::t_9e3018d3b74a20 154-159,194,231
+web/src/components/SearchInput.vue
+  s_06fcde5dbef956::t_c920e464323fd8 2,107-110
+web/src/components/ChatArea.vue
+  s_06fcde5dbef956::t_855e456ad5d158 181,195-197
+  s_06fcde5dbef956::t_41ac0e66e20dd5 344
+web/src/components/ContextMenu.vue
+  s_06fcde5dbef956::t_5824dddcd9dc94 285-290,294-296
+web/src/lib/roleSave.ts
+  s_06fcde5dbef956::t_bfb5abeec157f5 1,4-25
+  s_06fcde5dbef956::t_deefa8396e1fe4 2-3
+web/src/stores/later.ts
+  s_06fcde5dbef956::t_e70d7140fc7aef 2,24-45,56,58-59,80
+  s_29b6703bbd3fe6::t_55959b342f4c55 89,99,117-118
+web/src/components/AdminLayoutTab.test.ts
+  s_06fcde5dbef956::t_08683e5df4d6a4 340
+web/src/stores/onboarding.ts
+  s_29b6703bbd3fe6::t_b19507bf219ad9 13-28,61,72,77-78,88-89,103-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c39d363aa789282dd2b47894253b1fe5e0c41015",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_29b6703bbd3fe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aintegrate-web-565add501aebda67",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
