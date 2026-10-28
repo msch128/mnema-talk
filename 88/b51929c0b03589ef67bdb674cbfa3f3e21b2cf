@@ -1,0 +1,87 @@
+web/src/components/IncomingWebhooksPanel.vue
+  s_06fcde5dbef956::t_63a045fbdec169 16,153-154
+web/src/components/ParticipantTile.vue
+  s_06fcde5dbef956::t_f4d024590349f2 53,71,91,94,105-117,216,283
+web/src/components/ProfileAvatar.vue
+  s_06fcde5dbef956::t_2e7709517e824f 13,42-43,46,52,62,66-67
+web/src/components/WelcomeProfileStep.test.ts
+  s_06fcde5dbef956::t_4029083aeaa7e2 80,82,84
+web/src/components/WelcomeProfileStep.vue
+  s_06fcde5dbef956::t_f6ec4a9cf8839c 10,25-26
+web/src/components/BotDetailPanel.vue
+  s_29b6703bbd3fe6::t_3cd5ba9e413a02 13,70-71
+web/src/components/ManageForumTagsModal.test.ts
+  s_29b6703bbd3fe6::t_263e226131670f 50-68,151-152,156,160
+web/src/components/ManageForumTagsModal.vue
+  s_29b6703bbd3fe6::t_2282239a4f0f56 50-55,109,192,200,220,230
+web/src/components/MemberRow.test.ts
+  s_29b6703bbd3fe6::t_ae9ba108183374 1-20
+web/src/components/MemberRow.vue
+  s_29b6703bbd3fe6::t_fdfdad62893133 50
+web/src/components/MessageEditor.test.ts
+  s_29b6703bbd3fe6::t_e83232c7671d94 32-39
+web/src/components/MessageEditor.vue
+  s_29b6703bbd3fe6::t_d4731079899ec2 6,29-35,47
+web/src/components/MessageEmbeds.test.ts
+  s_29b6703bbd3fe6::t_69f323fd9e130a 9-10,28-40
+web/src/components/MessageEmbeds.vue
+  s_29b6703bbd3fe6::t_c4c017d3570da3 8-9,32
+web/src/components/ParticipantTile.test.ts
+  s_29b6703bbd3fe6::t_1564241f3cad73 103-105,111-112,115,123,181,185-193,212,229-230,232,234-235
+web/src/components/PollDialog.test.ts
+  s_29b6703bbd3fe6::t_d9e681ce95fb2d 58-66
+web/src/components/PollDialog.vue
+  s_29b6703bbd3fe6::t_2e58604bde14da 36-37
+web/src/components/PresenceDot.test.ts
+  s_29b6703bbd3fe6::t_e6eee8816af5a3 1-23
+web/src/components/PresenceDot.vue
+  s_29b6703bbd3fe6::t_1297a911ef62d1 6,18-20,43,47,52,57
+web/src/components/ProfileBannerControls.vue
+  s_29b6703bbd3fe6::t_c6910990295320 10,24,26,30-31,33,36,46,49
+web/src/components/ProfileBio.vue
+  s_29b6703bbd3fe6::t_5e0fa0818b4adc 60,66
+web/src/components/ProfileStatus.vue
+  s_29b6703bbd3fe6::t_66dd7a8535f005 13-14,65,148
+web/src/components/ProfileStatusExpiry.test.ts
+  s_29b6703bbd3fe6::t_564695a2ece4ef 9,89-105
+web/src/components/VoiceStage.test.ts
+  s_29b6703bbd3fe6::t_df17b4a2bab9a0 472,486,508,519
+web/src/composables/useComposerKeys.test.ts
+  s_29b6703bbd3fe6::t_909d93b8f53b11 27-36
+web/src/composables/useComposerKeys.ts
+  s_29b6703bbd3fe6::t_9d2516ec6078b3 14-18,27-28
+web/src/lib/pickImage.test.ts
+  s_29b6703bbd3fe6::t_f23647f7b1c664 1-33
+web/src/lib/pickImage.ts
+  s_29b6703bbd3fe6::t_ada9cf44d41c5e 1-21
+web/src/stores/chat.ts
+  s_29b6703bbd3fe6::t_f7d3f0d51cff8b 7,104
+web/src/stores/chat/members.test.ts
+  s_29b6703bbd3fe6::t_246c46036bf0c4 13,111-131
+web/src/stores/chat/members.ts
+  s_29b6703bbd3fe6::t_1230b2b35d1840 187-201
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "88b51929c0b03589ef67bdb674cbfa3f3e21b2cf",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_29b6703bbd3fe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aintegrate-web-565add501aebda67",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
