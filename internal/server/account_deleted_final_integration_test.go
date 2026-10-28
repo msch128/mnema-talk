@@ -24,10 +24,10 @@ func TestADeletedAccountCannotBeRevived(t *testing.T) {
 	for name, res := range map[string]response{
 		"enable":        admin.post(base+"/enable", nil),
 		"disable":       admin.post(base+"/disable", nil),
-		"set password":  admin.post(base+"/password", map[string]string{"password": "an-admin-chosen-password"}),
-		"temp password": admin.post(base+"/password-reset", nil),
+		"set password":  admin.post(base+"/password", map[string]string{"password": "an-admin-chosen-password", "current_password": ownerPassword}),
+		"temp password": admin.post(base+"/password-reset", ownerConfirm()),
 		"revoke":        admin.post(base+"/sessions/revoke", nil),
-		"2fa reset":     admin.post(base+"/two-factor/reset", nil),
+		"2fa reset":     admin.post(base+"/two-factor/reset", ownerConfirm()),
 		"timeout":       admin.post(base+"/timeout", map[string]any{"duration_seconds": 600, "reason": "x"}),
 		"ban":           admin.post(base+"/ban", map[string]any{"reason": "x"}),
 		"unban":         admin.do(http.MethodDelete, base+"/ban", nil, nil),

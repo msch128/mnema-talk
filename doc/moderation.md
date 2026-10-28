@@ -434,7 +434,7 @@ requests leave no entry. Reading the log is not recorded.
 | `auth.email_set`, `auth.email_remove`, `auth.email_verified`, `auth.password_reset_mail` | A member sets, removes or confirms an e-mail address, or resets the password through the link in a mail | The member. The address itself is never stored in the log |
 | `auth.two_factor_enabled`, `auth.two_factor_disabled`, `auth.recovery_codes_regenerated`, `auth.recovery_code_used` | A member changes or uses their second factor | The member. Never a code or secret |
 | `auth.two_factor_failed`, `auth.two_factor_alert` | A wrong second-step code (at most one entry per account and minute); five or more not yet reported | The member. No code |
-| `user.two_factor_reset` | The Owner (or the host command `mnema-talk reset-2fa`) turns a member's second factor off | Who did it and the member |
+| `user.two_factor_reset` | The Owner (after confirming their own password and code, or via the host command `mnema-talk reset-2fa`) turns a member's second factor off | Who did it and the member |
 | `auth.account_delete`, `auth.export_request`, `auth.export_download` | A member deletes their account or asks for / takes their data export | The account id only. After a deletion, earlier entries about the account lose names and details |
 | `system.mail_test` | The Owner sends a test mail | Who did it; neither recipient nor mail text |
 

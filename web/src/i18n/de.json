@@ -1455,6 +1455,7 @@
     "resetTwoFactor": "Zwei-Faktor-Anmeldung zurücksetzen",
     "resetTwoFactorTitle": "Zwei-Faktor-Anmeldung von {name} zurücksetzen?",
     "resetTwoFactorBody": "Schaltet die Zwei-Faktor-Anmeldung aus, löscht das Authenticator-Geheimnis und die Recovery-Codes und meldet das Mitglied überall ab. Gedacht für den Fall, dass beides verloren ist. Danach kann es sie neu einschalten.",
+    "confirmOwnerPrompt": "Bestätige, dass du es bist: gib dein eigenes Passwort ein, bei Zwei-Faktor-Anmeldung auch deinen aktuellen Code.",
     "resetTwoFactorConfirm": "Zurücksetzen",
     "twoFactorReset": "Zwei-Faktor-Anmeldung zurückgesetzt.",
     "channelTopicHelp": "Steht unter dem Kanalnamen. Halte sie kurz: wofür der Kanal da ist.",

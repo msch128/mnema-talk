@@ -358,7 +358,11 @@ details and the limits.
   address when the server can send mail. Turning it off or making new recovery
   codes needs the password and a current code; setting up needs the password.
   The Owner can reset a member's second factor (`user.two_factor_reset`, ends
-  their sessions); the Owner's own is reset from the host with
+  their sessions). That reset, setting a member's password and generating a
+  temporary password for a member take over another account, so each asks the
+  Owner to confirm their own password and, while their second factor is on, a
+  current code (the same check and lockouts as deleting an account); a request
+  without it is refused with 403 and not audited as done. The Owner's own is reset from the host with
   `mnema-talk reset-2fa <username>`. Resetting a password by mail does not skip
   the second factor, and a native sign-in has the same second step
   (`POST /auth/login/2fa`) before any grant is issued.

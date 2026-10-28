@@ -83,6 +83,7 @@ const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>(
   if (url === '/api/admin/media/stats') return Promise.resolve(mockStats)
   if (url.startsWith('/api/admin/media?')) return Promise.resolve(mockMedia)
   if (url === '/api/admin/invites') return Promise.resolve(mockInvites)
+  if (url === '/api/users/me/account') return Promise.resolve({ two_factor_enabled: false })
   if (options?.method === 'PATCH' || options?.method === 'POST' || options?.method === 'PUT' || options?.method === 'DELETE') {
     return Promise.resolve({ ok: true })
   }
@@ -280,6 +281,7 @@ describe('AdminDashboard - Users Tab', () => {
     expect(submitBtn.attributes('disabled')).toBeDefined()
 
     await pwInput.setValue('supersecret123')
+    await w.get('[data-testid="privacy-password"]').setValue('owner-password-123')
     await nextTick()
     expect(submitBtn.attributes('disabled')).toBeUndefined()
 
@@ -288,7 +290,7 @@ describe('AdminDashboard - Users Tab', () => {
 
     expect(apiMock).toHaveBeenCalledWith("/api/admin/users/00000000-0000-4000-8000-0000000003fb/password", {
       method: 'POST',
-      json: { password: 'supersecret123' }
+      json: { password: 'supersecret123', current_password: 'owner-password-123' }
     })
     // Modal should close
     expect(w.find("[data-testid=\"new-password-input\"]")!.exists()).toBe(false)

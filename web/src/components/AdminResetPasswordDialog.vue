@@ -6,7 +6,9 @@ import { api, caughtErrorMessage } from '../lib/api'
 import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
+import { ownerProof, useOwnerNeedsCode } from '../lib/ownerProof'
 import BaseDialog from './BaseDialog.vue'
+import IdentityFields from './IdentityFields.vue'
 
 // The Owner sets a new password for an account.
 const props = defineProps({
@@ -17,22 +19,27 @@ const emit = defineEmits<{ close: [] }>()
 const toasts = useToastStore()
 const newPasswordInput = ref('')
 const isResettingPassword = ref(false)
+const ownerPassword = ref('')
+const ownerCode = ref('')
+const error = ref('')
+const needsCode = useOwnerNeedsCode()
 
 // Counted in characters like the server does, not UTF-16 units.
 const passwordTooShort = computed(() => [...newPasswordInput.value].length < MIN_PASSWORD_LENGTH)
 
 async function submitPasswordReset() {
   if (passwordTooShort.value) return
+  error.value = ''
   isResettingPassword.value = true
   try {
     await api(`/api/admin/users/${props.user.id}/password`, {
       method: 'POST',
-      json: { password: newPasswordInput.value }
+      json: { password: newPasswordInput.value, ...ownerProof(ownerPassword.value, ownerCode.value) }
     })
     toasts.success(t('admin.passwordResetSuccess'))
     emit('close')
   } catch (e) {
-    toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
+    error.value = caughtErrorMessage(e, t('admin.unknownError'))
   } finally {
     isResettingPassword.value = false
   }
@@ -63,6 +70,9 @@ async function submitPasswordReset() {
           {{ $t('admin.passwordTooShort', { count: MIN_PASSWORD_LENGTH }) }}
         </p>
       </div>
+      <p class="text-sm text-mnema-muted">{{ $t('admin.confirmOwnerPrompt') }}</p>
+      <IdentityFields v-model:password="ownerPassword" v-model:code="ownerCode" :needs-code="needsCode" />
+      <div v-if="error" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger" data-testid="owner-confirm-error">{{ error }}</div>
       <div class="flex justify-end gap-2 pt-2">
         <button
           type="button"

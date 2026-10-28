@@ -286,10 +286,10 @@ func TestTheOwnerCanResetAMembersSecondFactor(t *testing.T) {
 	if res := bob.post(path, nil); res.status != http.StatusForbidden {
 		t.Fatalf("members cannot: %d", res.status)
 	}
-	if res := admin.post("/api/admin/users/"+admin.user.ID.String()+"/two-factor/reset", nil); res.status != http.StatusBadRequest {
+	if res := admin.post("/api/admin/users/"+admin.user.ID.String()+"/two-factor/reset", ownerConfirm()); res.status != http.StatusBadRequest {
 		t.Fatalf("the Owner is not a target: %d", res.status)
 	}
-	if res := admin.post(path, nil); res.status != http.StatusNoContent {
+	if res := admin.post(path, ownerConfirm()); res.status != http.StatusNoContent {
 		t.Fatalf("reset: %d", res.status)
 	}
 	if me := alice.get("/api/auth/me"); me.status != http.StatusUnauthorized {

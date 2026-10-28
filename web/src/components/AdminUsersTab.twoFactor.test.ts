@@ -15,8 +15,6 @@ vi.mock('../lib/api', async (original) => ({
   ...(await original<typeof import('../lib/api')>()),
   api: (path: string, options?: ApiOptions) => apiMock(path, options),
 }))
-const confirmMock = vi.fn<() => Promise<boolean>>()
-vi.mock('../lib/confirm', () => ({ confirm: () => confirmMock() }))
 
 let wrapper: VueWrapper | null = null
 
@@ -24,7 +22,6 @@ beforeEach(() => {
   setActivePinia(createPinia())
   setLocale('en')
   apiMock.mockReset()
-  confirmMock.mockReset().mockResolvedValue(true)
   useAuthStore().user = userFixture({ role: 'admin', username: 'owner' })
 })
 afterEach(() => {
@@ -40,28 +37,42 @@ async function openUsers() {
 }
 
 describe('resetting a member\'s two-factor sign-in', () => {
-  it('is offered to the Owner and asks before it acts', async () => {
+  async function openDialog() {
     const w = await openUsers()
-    apiMock.mockClear()
-    confirmMock.mockResolvedValue(false)
+    apiMock.mockReset().mockResolvedValue(undefined)
     await w.get('[data-testid="action-reset-two-factor"]').trigger('click')
     await flushPromises()
-    expect(apiMock).not.toHaveBeenCalled()
+    return w
+  }
 
-    confirmMock.mockResolvedValue(true)
-    apiMock.mockResolvedValue(undefined)
-    await w.get('[data-testid="action-reset-two-factor"]').trigger('click')
+  it('asks the Owner to confirm before it acts, and cancelling sends nothing', async () => {
+    const w = await openDialog()
+    expect(apiMock).not.toHaveBeenCalledWith(expect.stringMatching(/two-factor\/reset$/), expect.anything())
+    await w.get('button.btn-secondary').trigger('click')
+    expect(w.find('[data-testid="privacy-password"]').exists()).toBe(false)
+    expect(apiMock).not.toHaveBeenCalledWith(expect.stringMatching(/two-factor\/reset$/), expect.anything())
+  })
+
+  it('sends the confirmation with the reset', async () => {
+    const w = await openDialog()
+    await w.get('[data-testid="privacy-password"]').setValue('owner-password-123')
+    await w.get('[data-testid="privacy-code"]').setValue('123456')
+    await w.get('form').trigger('submit')
     await flushPromises()
-    expect(apiMock).toHaveBeenCalledWith(expect.stringMatching(/^\/api\/admin\/users\/.+\/two-factor\/reset$/), { method: 'POST' })
+    expect(apiMock).toHaveBeenCalledWith(expect.stringMatching(/^\/api\/admin\/users\/.+\/two-factor\/reset$/), {
+      method: 'POST', json: { current_password: 'owner-password-123', code: '123456' }
+    })
     expect(useToastStore().toasts.at(-1)?.text).toBe('Two-factor sign-in reset.')
   })
 
-  it('reports a failure', async () => {
-    const w = await openUsers()
+  it('reports a failure in the dialog', async () => {
+    const w = await openDialog()
     apiMock.mockRejectedValue(new Error('This action is not available for the Owner account'))
-    await w.get('[data-testid="action-reset-two-factor"]').trigger('click')
+    await w.get('[data-testid="privacy-password"]').setValue('owner-password-123')
+    await w.get('[data-testid="privacy-code"]').setValue('123456')
+    await w.get('form').trigger('submit')
     await flushPromises()
-    expect(useToastStore().toasts.at(-1)?.type).toBe('error')
+    expect(w.get('[data-testid="owner-confirm-error"]').text()).toContain('not available')
   })
 
   it('is not offered to anyone but the Owner', async () => {
