@@ -1,0 +1,38 @@
+internal/mention/mention.go
+  s_06fcde5dbef956::t_2a80e7b7cb076a 1-37
+internal/mention/mention_test.go
+  s_06fcde5dbef956::t_2a80e7b7cb076a 1-15
+internal/automod/timeout_integration_test.go
+  s_06fcde5dbef956::t_b3b322d41aeae9 1-120
+internal/automod/compile_test.go
+  s_06fcde5dbef956::t_b3b322d41aeae9 242-285
+internal/automod/compile.go
+  s_06fcde5dbef956::t_2a80e7b7cb076a 9,56-60,160-162
+internal/chat/mentions.go
+  s_06fcde5dbef956::t_2a80e7b7cb076a 12,56-57
+internal/automod/engine.go
+  s_06fcde5dbef956::t_b3b322d41aeae9 38-39,77,102,107-108
+  s_06fcde5dbef956::t_59b07f49747519 35,109-114
+internal/automod/rule.go
+  s_06fcde5dbef956::t_2a80e7b7cb076a 249,273-276,284-285
+internal/automod/hits.go
+  s_06fcde5dbef956::t_d5177c3f7ae930 9,119,126-147,149-150,154-156
+internal/automod/raid.go
+  s_06fcde5dbef956::t_1bcc26dea8a7a6 33,41,53,68,70-72,82,86,94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1dcf70c236d2a62c4098dc4144a53a7ddf04d4ad",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
