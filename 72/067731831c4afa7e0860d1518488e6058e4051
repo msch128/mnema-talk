@@ -1,0 +1,27 @@
+.github/workflows/exp-kl.yml
+  s_27217b624be6ba::t_5d4b4c04f8aef5 1-38
+e2e/tests/key-lifecycle.spec.ts
+  s_27217b624be6ba::t_4fbac75c90ba7f 61-65
+web/src/lib/media/group.ts
+  s_27217b624be6ba::t_d2bbada64c70a3 86,238,359
+web/src/lib/media/groupEpoch.ts
+  s_27217b624be6ba::t_2190bc7fb8fc0f 77,245
+web/src/lib/media/groupSync.ts
+  s_27217b624be6ba::t_89900014c2b050 183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "72067731831c4afa7e0860d1518488e6058e4051",
+  "prompts": {},
+  "sessions": {
+    "s_27217b624be6ba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-arootcause-keylife-5ba7da43a3371c3b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
