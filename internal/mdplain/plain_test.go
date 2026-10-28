@@ -67,3 +67,16 @@ func TestPlainDeepNestingStaysLiteralBeyondTheLimit(t *testing.T) {
 		t.Errorf("got %q", got)
 	}
 }
+
+func TestBareURLDoesNotAllocatePerLetterH(t *testing.T) {
+	src := strings.Repeat("h ", 2000)
+	if allocs := testing.AllocsPerRun(5, func() { _ = Plain(src, "spoiler") }); allocs > 200 {
+		t.Fatalf("allocs per Plain = %v, want a small constant per message", allocs)
+	}
+}
+
+func TestHasPrefixFoldIsCaseInsensitive(t *testing.T) {
+	if !hasPrefixFold("HtTpS://x", "https://") || hasPrefixFold("http:/", "http://") || hasPrefixFold("ftp://x", "http://") {
+		t.Fatal("hasPrefixFold misjudged a prefix")
+	}
+}
