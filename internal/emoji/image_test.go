@@ -13,6 +13,8 @@ import (
 	"image/png"
 	"strings"
 	"testing"
+
+	"github.com/msch128/mnema-talk/internal/imgproc"
 )
 
 func pngOf(t *testing.T, w, h int) []byte {
@@ -175,7 +177,7 @@ func TestUnsupportedAndHostileFilesAreRejected(t *testing.T) {
 	rejected(t, "truncated png", pngOf(t, 16, 16)[:40])
 	rejected(t, "too large", bytes.Repeat([]byte{1}, MaxFileBytes+1))
 	rejected(t, "huge canvas", pngOf(t, 1025, 4))
-	rejected(t, "too many frames", gifOf(t, 4, 4, maxFrames+1))
+	rejected(t, "too many frames", gifOf(t, 4, 4, imgproc.MaxFrames+1))
 	rejected(t, "gif header only", []byte("GIF89a"))
 }
 
