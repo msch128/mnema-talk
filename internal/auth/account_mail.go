@@ -104,6 +104,32 @@ func (h *Handler) background(fn func(ctx context.Context)) {
 // DrainMail waits for the mail jobs in flight (shutdown and tests).
 func (h *Handler) DrainMail() { h.rec.wg.Wait() }
 
+// Drain waits up to max for the background jobs (mail, exports) in flight, so
+// shutdown does not close the database under them. It reports whether they
+// all finished.
+func (h *Handler) Drain(max time.Duration) bool {
+	done := make(chan struct{})
+	go func() {
+		h.rec.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return true
+	case <-time.After(max):
+		return false
+	}
+}
+
+// jobContext is the parent of a background job: the server's lifetime when it
+// was given, so shutdown cancels the job.
+func (h *Handler) jobContext() context.Context {
+	if h.Lifetime != nil {
+		return h.Lifetime
+	}
+	return context.Background()
+}
+
 // sendMail delivers msg and logs a failure without the address.
 func (h *Handler) sendMail(ctx context.Context, msg mailer.Message) error {
 	err := h.Mail.Send(ctx, msg)

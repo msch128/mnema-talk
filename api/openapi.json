@@ -82,6 +82,10 @@
       },
       "auth.AccountInfo": {
         "properties": {
+          "confirmation_sent": {
+            "description": "ConfirmationSent is only present in the answer to PUT /api/users/me/email\nfor a new address: false when the address was saved but the\nconfirmation mail was refused (too many mails or SMTP failure), so the\nclient can offer to send it again. Omitted when no mail was due.",
+            "type": "boolean"
+          },
           "email": {
             "description": "Email is the caller's own address; omitted when none is set. It is never\nshown to other members or administrators.",
             "type": "string"
@@ -311,6 +315,11 @@
       },
       "auth.ChangePasswordRequest": {
         "properties": {
+          "code": {
+            "description": "Code is a current authenticator code or an unused recovery code; needed\nonly while two-factor sign-in is on.",
+            "maxLength": 32,
+            "type": "string"
+          },
           "current_password": {
             "format": "password",
             "type": "string"
@@ -331,7 +340,7 @@
         "properties": {
           "code": {
             "description": "Code is generated (12 characters) when omitted or empty.",
-            "pattern": "^[A-Za-z0-9_-]{6,64}$",
+            "pattern": "^[A-Za-z0-9_-]{12,64}$",
             "type": "string"
           },
           "expires_in_hours": {
@@ -544,6 +553,11 @@
       },
       "auth.PasswordConfirmRequest": {
         "properties": {
+          "code": {
+            "description": "Code is a current authenticator code or an unused recovery code; needed\nonly while two-factor sign-in is on.",
+            "maxLength": 32,
+            "type": "string"
+          },
           "current_password": {
             "format": "password",
             "type": "string"
@@ -656,6 +670,11 @@
       },
       "auth.SetEmailRequest": {
         "properties": {
+          "code": {
+            "description": "Code is a current authenticator code or an unused recovery code; needed\nonly while two-factor sign-in is on.",
+            "maxLength": 32,
+            "type": "string"
+          },
           "current_password": {
             "format": "password",
             "type": "string"
@@ -19865,7 +19884,7 @@
     },
     "/api/auth/password": {
       "put": {
-        "description": "Signs out all other sessions and keeps the current one (a fresh cookie is set); open WebSockets are closed and reconnect with it. Five wrong current passwords trigger a lockout (429).",
+        "description": "Signs out all other sessions and keeps the current one (a fresh cookie is set); open WebSockets are closed and reconnect with it. Needs the current password and, while two-factor sign-in is on, a current code. Five wrong current passwords trigger a lockout (429).",
         "operationId": "changePassword",
         "requestBody": {
           "content": {
@@ -19918,7 +19937,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: current password is incorrect, or cross-origin request rejected."
+            "description": "FORBIDDEN: current password or code is incorrect, or cross-origin request rejected."
           },
           "429": {
             "content": {
@@ -19928,7 +19947,7 @@
                 }
               }
             },
-            "description": "RATE_LIMITED: too many requests.",
+            "description": "RATE_LIMITED: too many requests, or the second step is locked.",
             "headers": {
               "Retry-After": {
                 "description": "Seconds until the client may retry.",
@@ -32945,7 +32964,7 @@
     },
     "/api/users/me/email": {
       "put": {
-        "description": "Optional; used only to confirm the address and to reset the password. Needs the current password. A new address starts unconfirmed; when the server can send mail, a single-use link (valid 24 hours) is sent to it. Typing the confirmed address again keeps it confirmed. Never shown to other members. Wrong passwords count toward the same lockout as PUT /api/auth/password.",
+        "description": "Optional; used only to confirm the address and to reset the password. Needs the current password and, while two-factor sign-in is on, a current code. A new address starts unconfirmed; when the server can send mail, a single-use link (valid 24 hours) is sent to it. Typing the confirmed address again keeps it confirmed. The address is saved even when the mail is refused (too many mails for this account or address in the last hour, or the mail server fails); the answer then has confirmation_sent false and POST /api/users/me/email/resend sends it again. Never shown to other members. Wrong passwords count toward the same lockout as PUT /api/auth/password.",
         "operationId": "setEmail",
         "requestBody": {
           "content": {
@@ -32997,7 +33016,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: the current password is incorrect, or cross-origin request rejected."
+            "description": "FORBIDDEN: the current password or code is incorrect, or cross-origin request rejected."
           },
           "429": {
             "content": {
@@ -33007,7 +33026,7 @@
                 }
               }
             },
-            "description": "RATE_LIMITED: too many requests, or too many confirmation mails for this account in the last hour.",
+            "description": "RATE_LIMITED: too many requests, or the second step is locked.",
             "headers": {
               "Retry-After": {
                 "description": "Seconds until the client may retry.",
@@ -33026,16 +33045,6 @@
               }
             },
             "description": "INTERNAL_ERROR: sanitized server failure."
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/httpx.ErrorResponse"
-                }
-              }
-            },
-            "description": "UNAVAILABLE: the confirmation mail could not be sent; the address is saved and the mail can be requested again."
           }
         },
         "security": [
@@ -33051,7 +33060,7 @@
     },
     "/api/users/me/email/remove": {
       "post": {
-        "description": "Always possible; needs the current password. Pending confirmation and reset links stop working. Without an address, password reset by e-mail is not available for the account.",
+        "description": "Always possible; needs the current password and, while two-factor sign-in is on, a current code. Pending confirmation and reset links stop working. Without an address, password reset by e-mail is not available for the account.",
         "operationId": "removeEmail",
         "requestBody": {
           "content": {
@@ -33103,7 +33112,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: the current password is incorrect, or cross-origin request rejected."
+            "description": "FORBIDDEN: the current password or code is incorrect, or cross-origin request rejected."
           },
           "429": {
             "content": {
@@ -33113,7 +33122,7 @@
                 }
               }
             },
-            "description": "RATE_LIMITED: too many requests.",
+            "description": "RATE_LIMITED: too many requests, or the second step is locked.",
             "headers": {
               "Retry-After": {
                 "description": "Seconds until the client may retry.",
@@ -33386,7 +33395,7 @@
                 }
               }
             },
-            "description": "UNAVAILABLE: object storage is not available."
+            "description": "UNAVAILABLE: object storage is not available, or every export slot is busy; no export was started and none counts toward the daily limit."
           }
         },
         "security": [

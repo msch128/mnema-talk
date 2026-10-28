@@ -38,7 +38,14 @@ type Handler struct {
 	Mail MailSender
 	// Objects is the object store; nil disables data exports and the removal
 	// of a deleted account's files.
-	Objects     ObjectStore
+	Objects ObjectStore
+	// ObjectMissing tells a "no such object" error of Objects from a real
+	// failure; an export skips only the files that are gone. nil treats every
+	// error as a failure.
+	ObjectMissing func(error) bool
+	// Lifetime bounds the background jobs (data exports): they stop when it
+	// ends. nil means they run to completion.
+	Lifetime    context.Context
 	exportSlots chan struct{}
 	// PublicURL is the address the links in those mails point to.
 	PublicURL string

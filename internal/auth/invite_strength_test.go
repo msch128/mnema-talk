@@ -1,6 +1,11 @@
 package auth
 
-import "testing"
+import (
+	"fmt"
+	"reflect"
+	"strings"
+	"testing"
+)
 
 func TestCustomInviteCodesMustBeHardToGuess(t *testing.T) {
 	for _, code := range []string{"welcome", "welcome-2026", "mnema2026", "abcdefghij", "k7Rm2xQv9pL", "aaaaaaaaaaaa", "passwort12345", "short9", "OnlyLetter"} {
@@ -27,5 +32,16 @@ func TestGeneratedCodesAreNeverFlagged(t *testing.T) {
 func TestExistingWeakCodesAreFlagged(t *testing.T) {
 	if !IsWeakInviteCode("welcome") || IsWeakInviteCode("k7Rm2xQv9pLw") {
 		t.Fatal("weak flag wrong")
+	}
+}
+
+func TestInviteRequestDocumentsTheLengthsThatAreEnforced(t *testing.T) {
+	field, _ := reflect.TypeOf(CreateInviteRequest{}).FieldByName("Code")
+	want := fmt.Sprintf("^[A-Za-z0-9_-]{%d,%d}$", minCustomCodeLength, maxInviteCodeLength)
+	if got := field.Tag.Get("pattern"); got != want {
+		t.Fatalf("pattern tag %q, enforced %q", got, want)
+	}
+	if _, err := validateOrGenerateCode(strings.Repeat("k7Rm", 2) + "x"); err == nil || !strings.Contains(err.Error(), "12-64") {
+		t.Fatalf("a short code must be refused with the real bounds: %v", err)
 	}
 }

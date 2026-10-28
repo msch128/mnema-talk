@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -25,17 +26,29 @@ type AccountInfo struct {
 	// RecoveryCodesRemaining is how many single-use recovery codes are unused
 	// (0 when two-factor sign-in is off).
 	RecoveryCodesRemaining int `json:"recovery_codes_remaining"`
+	// ConfirmationSent is only present in the answer to PUT /api/users/me/email
+	// for a new address: false when the address was saved but the
+	// confirmation mail was refused (too many mails or SMTP failure), so the
+	// client can offer to send it again. Omitted when no mail was due.
+	ConfirmationSent *bool `json:"confirmation_sent,omitempty" binding:"optional"`
 }
 
 // SetEmailRequest is the body of PUT /api/users/me/email.
 type SetEmailRequest struct {
 	Email           string `json:"email" format:"email" maxLength:"254"`
 	CurrentPassword string `json:"current_password" format:"password"`
+	// Code is a current authenticator code or an unused recovery code; needed
+	// only while two-factor sign-in is on.
+	Code string `json:"code,omitempty" maxLength:"32" binding:"optional"`
 }
 
-// PasswordConfirmRequest carries the caller's current password.
+// PasswordConfirmRequest carries the caller's current password and, while
+// two-factor sign-in is on, a current code.
 type PasswordConfirmRequest struct {
 	CurrentPassword string `json:"current_password" format:"password"`
+	// Code is a current authenticator code or an unused recovery code; needed
+	// only while two-factor sign-in is on.
+	Code string `json:"code,omitempty" maxLength:"32" binding:"optional"`
 }
 
 // VerifyEmailRequest is the body of POST /api/auth/email/verify.
@@ -101,7 +114,7 @@ func (h *Handler) getAccount(w http.ResponseWriter, r *http.Request) error {
 // setEmail handles PUT /api/users/me/email.
 //
 // @Summary Set the account's e-mail address
-// @Description Optional; used only to confirm the address and to reset the password. Needs the current password. A new address starts unconfirmed; when the server can send mail, a single-use link (valid 24 hours) is sent to it. Typing the confirmed address again keeps it confirmed. Never shown to other members. Wrong passwords count toward the same lockout as PUT /api/auth/password.
+// @Description Optional; used only to confirm the address and to reset the password. Needs the current password and, while two-factor sign-in is on, a current code. A new address starts unconfirmed; when the server can send mail, a single-use link (valid 24 hours) is sent to it. Typing the confirmed address again keeps it confirmed. The address is saved even when the mail is refused (too many mails for this account or address in the last hour, or the mail server fails); the answer then has confirmation_sent false and POST /api/users/me/email/resend sends it again. Never shown to other members. Wrong passwords count toward the same lockout as PUT /api/auth/password.
 // @ID setEmail
 // @Tags Users
 // @Accept json
@@ -111,11 +124,10 @@ func (h *Handler) getAccount(w http.ResponseWriter, r *http.Request) error {
 // @Success 200 {object} AccountInfo "Account security after the change."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: the current password is incorrect, or cross-origin request rejected."
-// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests, or too many confirmation mails for this account in the last hour."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: the current password or code is incorrect, or cross-origin request rejected."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests, or the second step is locked."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
-// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: the confirmation mail could not be sent; the address is saved and the mail can be requested again."
 // @Router /api/users/me/email [put]
 func (h *Handler) setEmail(w http.ResponseWriter, r *http.Request) error {
 	u := UserFrom(r.Context())
@@ -127,7 +139,7 @@ func (h *Handler) setEmail(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if ok, err := h.reauth(w, r, u.ID, req.CurrentPassword); !ok {
+	if ok, err := h.ConfirmIdentity(w, r, u, req.CurrentPassword, req.Code); !ok {
 		return err
 	}
 	verified, err := storeEmail(r.Context(), h.Sessions.DB, u.ID, email)
@@ -135,18 +147,31 @@ func (h *Handler) setEmail(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	h.auditUser(r.Context(), u, "auth.email_set")
-	if !verified {
-		if err := h.sendVerification(r.Context(), u.ID, requestLanguage(r)); err != nil {
+	var sent *bool
+	if !verified && h.mailEnabled() {
+		// The address is stored by now: a refused mail must not turn the
+		// answer into an error that hides the change.
+		err := h.sendVerification(r.Context(), u.ID, requestLanguage(r))
+		if err != nil && !mailRefused(err) {
 			return err
 		}
+		ok := err == nil
+		sent = &ok
 	}
-	return h.writeAccountInfo(w, r, u.ID)
+	info, err := h.accountInfo(r.Context(), u.ID)
+	if err != nil {
+		return err
+	}
+	info.ConfirmationSent = sent
+	w.Header().Set("Cache-Control", "no-store")
+	httpx.WriteJSON(w, http.StatusOK, info)
+	return nil
 }
 
 // removeEmailHandler handles POST /api/users/me/email/remove.
 //
 // @Summary Remove the account's e-mail address
-// @Description Always possible; needs the current password. Pending confirmation and reset links stop working. Without an address, password reset by e-mail is not available for the account.
+// @Description Always possible; needs the current password and, while two-factor sign-in is on, a current code. Pending confirmation and reset links stop working. Without an address, password reset by e-mail is not available for the account.
 // @ID removeEmail
 // @Tags Users
 // @Accept json
@@ -156,8 +181,8 @@ func (h *Handler) setEmail(w http.ResponseWriter, r *http.Request) error {
 // @Success 200 {object} AccountInfo "Account security after the change."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: the current password is incorrect, or cross-origin request rejected."
-// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: the current password or code is incorrect, or cross-origin request rejected."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests, or the second step is locked."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/users/me/email/remove [post]
@@ -167,7 +192,7 @@ func (h *Handler) removeEmailHandler(w http.ResponseWriter, r *http.Request) err
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	if ok, err := h.reauth(w, r, u.ID, req.CurrentPassword); !ok {
+	if ok, err := h.ConfirmIdentity(w, r, u, req.CurrentPassword, req.Code); !ok {
 		return err
 	}
 	if err := removeEmail(r.Context(), h.Sessions.DB, u.ID); err != nil {
@@ -218,6 +243,13 @@ func (h *Handler) resendVerification(w http.ResponseWriter, r *http.Request) err
 
 // sendVerification issues a link for the account's unconfirmed address and
 // mails it. It does nothing when mail is off or there is nothing to confirm.
+// mailRefused reports whether err says the confirmation mail was not sent
+// because of the hourly budget or a mail server failure.
+func mailRefused(err error) bool {
+	var ae *httpx.APIError
+	return errors.As(err, &ae) && (ae.Status == http.StatusTooManyRequests || ae.Status == http.StatusServiceUnavailable)
+}
+
 func (h *Handler) sendVerification(ctx context.Context, id uuid.UUID, lang string) error {
 	if !h.mailEnabled() {
 		return nil

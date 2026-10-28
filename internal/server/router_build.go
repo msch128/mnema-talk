@@ -119,6 +119,7 @@ func (c *components) newCore() {
 	c.authH.Live = hub
 	c.authH.Perms = c.permSvc
 	c.authH.Audit = c.auditLog
+	c.authH.Lifetime = c.ctx
 	go c.authH.RunBanExpiry(c.ctx, time.Minute)
 	go c.authH.RunStatusExpiry(c.ctx, 0)
 	go c.authH.RunSessionSweep(c.ctx, auth.DefaultSessionSweepEvery)
@@ -126,6 +127,7 @@ func (c *components) newCore() {
 	go c.authH.RunUnlockWorker(c.ctx, auth.UnlockPollInterval)
 	if d.Store != nil {
 		c.authH.Objects = d.Store
+		c.authH.ObjectMissing = media.IsMissingObject
 		go c.authH.RunExportSweep(c.ctx, 0)
 	}
 	go chat.RunSlowModePrune(c.ctx, d.DB, time.Hour)
