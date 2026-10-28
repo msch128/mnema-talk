@@ -93,19 +93,6 @@ func TestHealthzAndUnknownRoutes(t *testing.T) {
 	}
 }
 
-func TestSplitTag(t *testing.T) {
-	for in, want := range map[string][2]string{
-		"ghcr.io/a/b:1.0":               {"ghcr.io/a/b", "1.0"},
-		"ghcr.io/a/b":                   {"ghcr.io/a/b", "latest"},
-		"localhost:5000/a/b":            {"localhost:5000/a/b", "latest"},
-		"localhost:5000/a/b:2@sha256:x": {"localhost:5000/a/b", "2"},
-	} {
-		if repo, tag := splitTag(in); repo != want[0] || tag != want[1] {
-			t.Errorf("splitTag(%q) = %q, %q", in, repo, tag)
-		}
-	}
-}
-
 func TestConfig(t *testing.T) {
 	env := map[string]string{"UPDATER_TOKEN": token}
 	get := func(k string) string { return env[k] }

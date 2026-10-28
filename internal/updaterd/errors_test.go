@@ -186,3 +186,28 @@ func TestRunRefusesAnOccupiedPort(t *testing.T) {
 		t.Fatalf("exit code = %d, want 1", code)
 	}
 }
+
+type blockingRecreator struct{ started, release chan struct{} }
+
+func (b *blockingRecreator) Recreate(context.Context) error {
+	close(b.started)
+	<-b.release
+	return nil
+}
+
+func TestWaitIdleCoversARunningSwap(t *testing.T) {
+	eng := &recordingEngine{stubEngine: stubEngine{targets: []Target{{Name: "app", Image: "r/x:1", RunningVersion: "1.0.0"}}}}
+	rec := &blockingRecreator{started: make(chan struct{}), release: make(chan struct{})}
+	srv := &Server{Token: token, Engine: eng, Verifier: okVerifier{}, Recreator: rec, Log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	if r := post(srv, "Bearer "+token); r.Code != http.StatusAccepted {
+		t.Fatalf("status = %d", r.Code)
+	}
+	<-rec.started
+	if srv.WaitIdle(50 * time.Millisecond) {
+		t.Fatal("WaitIdle returned while the swap was running")
+	}
+	close(rec.release)
+	if !srv.WaitIdle(5 * time.Second) {
+		t.Fatal("WaitIdle did not return after the swap finished")
+	}
+}

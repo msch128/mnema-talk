@@ -157,3 +157,10 @@ func TestCLIBuildVerifyKeyID(t *testing.T) {
 		}
 	})
 }
+
+func TestCLIVerifyRequiresZip(t *testing.T) {
+	code, _, stderr := run([]string{"verify", "-pub", "web/desktop-signing.pub"}, nil)
+	if code == 0 || !strings.Contains(stderr, "-zip is required") {
+		t.Fatalf("verify without -zip: %d %q", code, stderr)
+	}
+}
