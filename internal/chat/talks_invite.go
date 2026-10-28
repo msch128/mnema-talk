@@ -2,9 +2,12 @@ package chat
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -35,8 +38,12 @@ func (h *Handler) dmSendContext(r *http.Request, dm uuid.UUID) (context.Context,
 // postTalkInvite posts the invitation card for talk into dm as user.
 func (h *Handler) postTalkInvite(ctx context.Context, dm, user, talk uuid.UUID) (*Message, error) {
 	var name string
-	if err := h.DB.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1 AND type = 'voice'`, talk).Scan(&name); err != nil {
+	err := h.DB.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1 AND type = 'voice'`, talk).Scan(&name)
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, errChannelNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("load talk for invite: %w", err)
 	}
 	id, err := InsertMessage(ctx, h.DB, h.Online, NewMessage{
 		ChannelID: dm, UserID: user, Embeds: []Embed{{Title: name, TalkID: &talk}},

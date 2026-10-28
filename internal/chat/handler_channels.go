@@ -250,7 +250,9 @@ func (h *Handler) updateChannel(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	FillTalkFields(r.Context(), h.DB, ch)
+	if err := FillTalkFields(r.Context(), h.DB, ch); err != nil {
+		return err
+	}
 	if req.IsStage != nil {
 		h.structureChanged() // the hub re-checks who may still send media
 	} else {

@@ -32,6 +32,15 @@ type FollowedThreads struct {
 	ThreadIDs []uuid.UUID `json:"thread_ids" format:"uuid"`
 }
 
+// replyFollowersSQL selects the people a reply concerns, as column u: the
+// root's author, the replier and everyone mentioned by name or role. Its
+// parameters are the thread ($1), the replier ($2), the reply ($3) and
+// MentionKindGroup ($4), which is left out.
+const replyFollowersSQL = `
+		SELECT user_id AS u FROM messages WHERE id = $1
+		UNION ALL SELECT $2::uuid
+		UNION ALL SELECT user_id FROM message_mentions WHERE message_id = $3 AND kind <> $4`
+
 // followOnReply makes the people a reply concerns follow its thread: the
 // root's author, the replier and everyone mentioned by name or role. A member
 // who unfollowed explicitly stays unfollowed. It runs in the reply's
@@ -39,23 +48,22 @@ type FollowedThreads struct {
 func followOnReply(ctx context.Context, tx pgx.Tx, replyID, threadID, replier uuid.UUID) error {
 	_, err := tx.Exec(ctx, `
 		INSERT INTO thread_follows (user_id, thread_id)
-		SELECT DISTINCT u, $1::uuid FROM (
-			SELECT user_id AS u FROM messages WHERE id = $1
-			UNION ALL SELECT $2::uuid
-			UNION ALL SELECT user_id FROM message_mentions WHERE message_id = $3 AND kind <> 1
+		SELECT DISTINCT u, $1::uuid FROM (`+replyFollowersSQL+`
 		) people
-		ON CONFLICT (user_id, thread_id) DO NOTHING`, threadID, replier, replyID)
+		ON CONFLICT (user_id, thread_id) DO NOTHING`, threadID, replier, replyID, MentionKindGroup)
 	if err != nil {
 		return fmt.Errorf("follow thread: %w", err)
 	}
 	return nil
 }
 
-// SetThreadFollow stores whether the user follows the thread.
+// SetThreadFollow stores whether the user follows the thread. Following again
+// counts as a new follow: it moves the thread to the front of the list.
 func SetThreadFollow(ctx context.Context, q db.Querier, userID, threadID uuid.UUID, following bool) error {
 	_, err := q.Exec(ctx, `
 		INSERT INTO thread_follows (user_id, thread_id, following) VALUES ($1, $2, $3)
-		ON CONFLICT (user_id, thread_id) DO UPDATE SET following = EXCLUDED.following`,
+		ON CONFLICT (user_id, thread_id) DO UPDATE SET following = EXCLUDED.following,
+			created_at = CASE WHEN EXCLUDED.following AND NOT thread_follows.following THEN NOW() ELSE thread_follows.created_at END`,
 		userID, threadID, following)
 	if err != nil {
 		return fmt.Errorf("set thread follow: %w", err)

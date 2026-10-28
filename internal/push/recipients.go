@@ -148,7 +148,7 @@ func threadAudience(ctx context.Context, q db.Querier, thread *uuid.UUID) (follo
 // role (not through @all or @here). When the stored mentions cannot be read
 // nobody counts as addressed, so a mute stays silent.
 func namedMentions(ctx context.Context, q db.Querier, messageID uuid.UUID) map[uuid.UUID]bool {
-	rows, err := q.Query(ctx, `SELECT user_id FROM message_mentions WHERE message_id = $1 AND kind <> 1`, messageID)
+	rows, err := q.Query(ctx, `SELECT user_id FROM message_mentions WHERE message_id = $1 AND kind <> $2`, messageID, chat.MentionKindGroup)
 	if err != nil {
 		slog.Warn("push: load mentions", "err", err)
 		return nil
