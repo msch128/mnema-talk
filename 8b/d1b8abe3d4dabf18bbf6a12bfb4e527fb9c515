@@ -1,0 +1,31 @@
+internal/moderation/history.go
+  s_bf965fb31d4e8a::t_e81167c63c846e 150-154
+internal/moderation/notes.go
+  s_bf965fb31d4e8a::t_be19996c785c4d 53-62,84,191
+internal/moderation/notes_test.go
+  s_dae090ee96213e::t_541a059c4aaf68 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8bd1b8abe3d4dabf18bbf6a12bfb4e527fb9c515",
+  "prompts": {},
+  "sessions": {
+    "s_bf965fb31d4e8a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a471f7457881e2784",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_dae090ee96213e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a448f20095192534b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
