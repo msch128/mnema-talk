@@ -68,7 +68,12 @@ const MODELS = {
     load: () => {
       // The package's entry subclasses AudioWorkletNode at import time, so it
       // is only imported once support is confirmed.
-      if (!gtcrnModulePromise) gtcrnModulePromise = import('@sapphi-red/web-noise-suppressor')
+      if (!gtcrnModulePromise) {
+        const loading = import('@sapphi-red/web-noise-suppressor')
+        gtcrnModulePromise = loading
+        // A failed chunk fetch must not be remembered: the next attempt retries.
+        loading.catch(() => { if (gtcrnModulePromise === loading) gtcrnModulePromise = null })
+      }
       return Promise.all([gtcrnModulePromise, fetchOnce(gtcrnWasmUrl)])
     },
     create: (ctx: AudioContext, [{ GtcrnWorkletNode }, wasmBinary]: readonly [typeof import('@sapphi-red/web-noise-suppressor'), ArrayBuffer]) => new GtcrnWorkletNode(ctx, { maxChannels: 1, wasmBinary })

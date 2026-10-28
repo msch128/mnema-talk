@@ -203,6 +203,21 @@ describe('noise model loading lifecycle', () => {
     present(finish)()
     expect(await creating).toBeNull()
   })
+  it('retries the GTCRN package after its chunk failed to load', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.resetModules()
+    vi.doMock('@sapphi-red/web-noise-suppressor', () => { throw new Error('chunk fetch failed') })
+    mod = await import('./noiseSuppressor')
+    expect(await mod.createNoiseSuppressorNode(fakeContext(16000), 'gtcrn')).toBeNull()
+    vi.doUnmock('@sapphi-red/web-noise-suppressor')
+    vi.doMock('@sapphi-red/web-noise-suppressor', () => ({
+      GtcrnWorkletNode: class extends FakeWorkletNode {
+        constructor(ctx: AudioContext, opts: NodeOptions) { super(ctx, 'gtcrn', opts) }
+      }
+    }))
+    const node = await createNode(fakeContext(16000), 'gtcrn')
+    expect(node.name).toBe('gtcrn')
+  })
   it('ignores preload failures and permits a later successful download', async () => {
     vi.mocked(fetch).mockRejectedValueOnce(new Error('offline'))
     mod.preloadNoiseSuppressor('gtcrn')
