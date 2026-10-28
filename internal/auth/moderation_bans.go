@@ -177,27 +177,28 @@ func (h *Handler) unbanUser(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	var disabled bool
 	err = h.moderationTarget(r, id, func(q db.Querier) error {
-		tag, err := q.Exec(r.Context(), clearBanSQL+` AND banned_at IS NOT NULL`, id)
-		if err != nil {
-			return err
-		}
-		if tag.RowsAffected() == 0 {
+		err := q.QueryRow(r.Context(), clearBanSQL+` AND banned_at IS NOT NULL RETURNING disabled_at IS NOT NULL`, id).Scan(&disabled)
+		if errors.Is(err, pgx.ErrNoRows) {
 			return errNotBanned
 		}
-		return nil
+		return err
 	})
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": false})
+	h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": disabled})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
 
-// clearBanSQL lifts a ban and the disabling that came with it.
-const clearBanSQL = `UPDATE users SET banned_at = NULL, banned_until = NULL,
-	ban_reason = '', banned_by = NULL, updated_at = NOW() WHERE id = $1`
+// clearBanColumns resets every ban column. Bans never touch disabled_at (see
+// setBan), so lifting one does not re-enable an account an admin disabled.
+const clearBanColumns = `banned_at = NULL, banned_until = NULL, ban_reason = '', banned_by = NULL, updated_at = NOW()`
+
+// clearBanSQL lifts one member's ban.
+const clearBanSQL = `UPDATE users SET ` + clearBanColumns + ` WHERE id = $1`
 
 // listBans handles GET /api/admin/bans.
 //
@@ -275,34 +276,30 @@ func (h *Handler) RunBanExpiry(ctx context.Context, interval time.Duration) {
 
 // ExpireBans lifts the bans whose time has come.
 func (h *Handler) ExpireBans(ctx context.Context) {
-	rows, err := h.Sessions.DB.Query(ctx, `UPDATE users SET banned_at = NULL, banned_until = NULL,
-		ban_reason = '', banned_by = NULL, updated_at = NOW()
+	rows, err := h.Sessions.DB.Query(ctx, `UPDATE users SET `+clearBanColumns+`
 		WHERE banned_at IS NOT NULL AND banned_until IS NOT NULL AND banned_until <= NOW()
-		RETURNING id, username`)
+		RETURNING id, username, disabled_at IS NOT NULL`)
 	if err != nil {
 		slog.Error("ban expiry failed", "err", err)
 		return
 	}
-	defer rows.Close()
 	type expired struct {
-		id   uuid.UUID
-		name string
+		ID       uuid.UUID
+		Name     string
+		Disabled bool
 	}
-	var done []expired
-	for rows.Next() {
-		var e expired
-		if rows.Scan(&e.id, &e.name) == nil {
-			done = append(done, e)
-		}
+	// The UPDATE is already committed: a broken stream must not pass silently.
+	done, err := pgx.CollectRows(rows, pgx.RowToStructByPos[expired])
+	if err != nil {
+		slog.Error("ban expiry: read lifted bans", "err", err, "read", len(done))
 	}
-	rows.Close()
 	for _, e := range done {
-		id := e.id
+		id := e.ID
 		h.Audit.RecordOrLog(ctx, audit.Entry{
-			Action: "moderation.ban_expired", TargetType: "user", TargetID: id.String(), TargetName: e.name,
+			Action: "moderation.ban_expired", TargetType: "user", TargetID: id.String(), TargetName: e.Name,
 		})
 		if h.Events != nil {
-			h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": false})
+			h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": e.Disabled})
 		}
 	}
 }
