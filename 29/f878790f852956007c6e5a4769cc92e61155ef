@@ -1,0 +1,55 @@
+internal/ws/budget.go
+  s_e093819e095c57::t_808f1e2308f199 33-37,67,73-87,92,94-95,110,112,114
+internal/ws/budget_test.go
+  s_e093819e095c57::t_5626a3ef5401d5 118-133
+internal/ws/handle.go
+  s_e093819e095c57::t_5fc707f60d3354 198
+internal/ws/hub_behaviour_test.go
+  s_e093819e095c57::t_299e75d9d1060e 439,447-448
+internal/ws/layers.go
+  s_e093819e095c57::t_f1d67d3ed1a161 69-70
+internal/ws/lifecycle.go
+  s_e093819e095c57::t_6972bc2a2c8094 71,232-239,260-262
+internal/ws/lifecycle_pumps.go
+  s_e093819e095c57::t_297b90f8fea5cf 48,82
+internal/ws/native_lease.go
+  s_e093819e095c57::t_1d04363ee5ed35 158,160,282-288
+internal/ws/native_metadata_admission.go
+  s_e093819e095c57::t_e1fafdae5dcad7 69-72,75,113-114,129-131,240-242
+internal/ws/perms.go
+  s_e093819e095c57::t_098f651952dc50 163-164,222,279
+internal/ws/screen_viewers_test.go
+  s_e093819e095c57::t_164cd062f3948c 128,132,136,139,145-146,156
+internal/ws/stage.go
+  s_e093819e095c57::t_98f3f0fc2d46fc 27-29,139-140
+internal/ws/voice_join.go
+  s_e093819e095c57::t_5b4c7549657b56 33-35,116-124,202-219,225,231-232,234-236,239-243
+internal/ws/voice_kick.go
+  s_e093819e095c57::t_002706de10787c 6,18-31,34
+internal/ws/voice_lost_test.go
+  s_e093819e095c57::t_2eb855f4b72649 1-45
+internal/ws/voice_mute.go
+  s_e093819e095c57::t_470b9f16c80956 58-63
+internal/ws/voice_seat_test.go
+  s_e093819e095c57::t_73d6776b84136a 1-137
+internal/ws/voicegate.go
+  s_e093819e095c57::t_412c08dee5541e 71-72,127-130,164,167,173-210
+internal/ws/voicetime_integration_test.go
+  s_e093819e095c57::t_e100818443f3d0 88-166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "29f878790f852956007c6e5a4769cc92e61155ef",
+  "prompts": {},
+  "sessions": {
+    "s_e093819e095c57": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-server-ci-3aceafcfa6eaef3b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
