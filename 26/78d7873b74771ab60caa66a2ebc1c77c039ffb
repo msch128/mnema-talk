@@ -1,0 +1,23 @@
+internal/imgproc/gif.go
+  s_abe6d26c4f054b::t_fa7de2a763301c 47,59-61,66
+internal/imgproc/gif_test.go
+  s_abe6d26c4f054b::t_02ecd419bfa436 35-42,44-45,49-50,53-88,90
+internal/imgproc/palette.go
+  s_abe6d26c4f054b::t_5465382c15fcdd 1-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2678d7873b74771ab60caa66a2ebc1c77c039ffb",
+  "prompts": {},
+  "sessions": {
+    "s_abe6d26c4f054b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aeaddb1300c6c2b75",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
