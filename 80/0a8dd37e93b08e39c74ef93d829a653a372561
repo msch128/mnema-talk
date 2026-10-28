@@ -1,0 +1,41 @@
+internal/ws/native_lease.go
+  s_06fcde5dbef956::t_efd9e360b257e8 158-159,161-162,253-259
+internal/ws/budget.go
+  s_06fcde5dbef956::t_efd9e360b257e8 33-38,68,78-79,81-84,99,101,103
+internal/ws/layers.go
+  s_06fcde5dbef956::t_efd9e360b257e8 69-74
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_efd9e360b257e8 71
+internal/ws/perms.go
+  s_06fcde5dbef956::t_efd9e360b257e8 163-164,222-224,281
+internal/ws/native_metadata_admission.go
+  s_06fcde5dbef956::t_efd9e360b257e8 7,70-73,76,114-115,238
+internal/ws/voice_kick.go
+  s_06fcde5dbef956::t_efd9e360b257e8 19
+internal/ws/lifecycle_pumps.go
+  s_06fcde5dbef956::t_efd9e360b257e8 48,82-86
+internal/ws/screen_viewers_test.go
+  s_06fcde5dbef956::t_efd9e360b257e8 128,132,136,139,145-146,156-157
+internal/ws/hub_behaviour_test.go
+  s_06fcde5dbef956::t_efd9e360b257e8 439,447-448,450
+internal/ws/stage.go
+  s_06fcde5dbef956::t_efd9e360b257e8 27-28,138-140
+internal/ws/handle.go
+  s_06fcde5dbef956::t_efd9e360b257e8 198
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "800a8dd37e93b08e39c74ef93d829a653a372561",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
