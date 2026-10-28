@@ -70,7 +70,7 @@ async function handleSaveEdit(tagId: string) {
   isSaving.value = true
 
   try {
-    await updateForumTag(props.channelId, tagId, editName.value.trim(), editEmoji.value.trim() || undefined)
+    await updateForumTag(props.channelId, tagId, editName.value.trim(), editEmoji.value.trim())
     cancelEdit()
     emit('updated')
   } catch (err) {

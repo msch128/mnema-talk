@@ -1,14 +1,8 @@
 // How an event's start is written: the weekday and the date with the time,
 // and a short relative hint next to it ("today", "tomorrow", "in 3 days").
-import { clockTimeOptions } from './time'
+import { clockTimeOptions, startOfDay } from './time'
 
 const DAY_MS = 86_400_000
-
-function startOfDay(ms: number): number {
-  const d = new Date(ms)
-  d.setHours(0, 0, 0, 0)
-  return d.getTime()
-}
 
 /** "Sat, 1 Nov, 18:00" in the member's language. */
 export function formatEventStart(iso: string, locale: string): string {

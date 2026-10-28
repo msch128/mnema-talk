@@ -4,6 +4,7 @@ import type { Channel } from '../types/domain'
 import type { ChatDMMember, ChatDirectMessage } from '../types/rest'
 import { isApiError } from './api'
 import { t } from '../i18n'
+import { shownName } from './deletedUser'
 import type { PathDm } from './routePaths'
 
 /** The most members a conversation takes, the caller included (the server's limit). */
@@ -14,7 +15,8 @@ export function dmPeers(dm: Pick<ChatDirectMessage, 'members'>, meId: string | n
   return dm.members.filter(m => m.id !== meId)
 }
 
-const nameOf = (m: ChatDMMember) => m.display_name || m.username
+/** How a member is named: a deleted account in the member's language. */
+export const nameOf = (m: ChatDMMember) => shownName(m)
 
 /** What the conversation is called: the other member, or the others in a group. */
 export function dmTitle(dm: Pick<ChatDirectMessage, 'members'>, meId: string | null | undefined): string {

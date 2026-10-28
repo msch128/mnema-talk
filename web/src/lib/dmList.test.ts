@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { dmClock, dmPreview, lastMessageOf, matchDms, splitDms } from './dmList'
+import { dmTitle } from './dm'
+import { setLocale } from '../i18n'
 import { dmFixture, dmMemberFixture } from '../dm.fixture'
 import { fixtureId, messageFixture } from '../test-fixtures.fixture'
 
@@ -56,7 +58,8 @@ describe('dmClock', () => {
   it('reads as the clock today, the weekday this week and the date before', () => {
     expect(dmClock(null, 'en', now)).toBe('')
     expect(dmClock('nope', 'en', now)).toBe('')
-    expect(dmClock('2026-03-18T09:05:00', 'en', now)).toMatch(/9:05/)
+    expect(dmClock('2026-03-18T09:05:00', 'en', now)).toMatch(/^9:05/)
+    expect(dmClock('2026-03-18T13:13:00', 'en-US', now)).toMatch(/^1:13/)
     expect(dmClock('2026-03-16T09:05:00', 'en', now)).toBe('Mon')
     expect(dmClock('2026-01-02T09:05:00', 'en', now)).toBe('Jan 2')
   })
@@ -68,5 +71,17 @@ describe('matching', () => {
     expect(matchDms([pair, group], me, 'bo').map(d => d.id)).toEqual([group.id])
     expect(matchDms([pair, group], me, '')).toEqual([])
     expect(matchDms([pair, group], me, 'member1')).toEqual([])
+  })
+})
+
+describe('deleted members', () => {
+  it('are named in the interface language in the title and the preview', () => {
+    setLocale('de')
+    const gone = dmMemberFixture(4, { display_name: 'Deleted member', username: 'deleted-abc123' })
+    const dm = dmFixture({ id: fixtureId(102), group: true, members: [dmMemberFixture(1), ada, gone], last_message: { user_id: gone.id, text: 'hi', has_attachment: false, has_poll: false } })
+    expect(dmTitle(dm, me)).not.toContain('Deleted member')
+    expect(dmPreview(dm, me).sender).not.toBe('Deleted member')
+    setLocale('en')
+    expect(dmPreview(dm, me).sender).toBe('Deleted member')
   })
 })

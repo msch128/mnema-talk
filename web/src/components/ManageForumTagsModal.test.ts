@@ -118,7 +118,7 @@ describe('ManageForumTagsModal', () => {
     await name!.trigger('keydown.enter')
     await flushPromises()
 
-    expect(forumApi.updateForumTag).toHaveBeenCalledWith('chan-1', 'tag-1', 'renamed', undefined)
+    expect(forumApi.updateForumTag).toHaveBeenCalledWith('chan-1', 'tag-1', 'renamed', '')
     expect(wrapper.emitted('updated')).toHaveLength(1)
     expect(inputs()).toHaveLength(2) // back to the add form only
     expect(wrapper.text()).not.toContain('renamed') // parent owns the list

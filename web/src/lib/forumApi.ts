@@ -20,9 +20,10 @@ export async function createForumTag(channelId: string, name: string, emoji?: st
 }
 
 export async function updateForumTag(channelId: string, tagId: string, name?: string, emoji?: string): Promise<ForumTag> {
+  // emoji: undefined keeps it, '' clears it (the server reads an omitted field as unchanged).
   return api(`/api/channels/${encodeURIComponent(channelId)}/tags/${encodeURIComponent(tagId)}`, {
     method: 'PATCH',
-    json: { name, emoji: emoji || undefined },
+    json: { name, emoji },
     decode: decodeForumTag
   })
 }
