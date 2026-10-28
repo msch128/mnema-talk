@@ -236,12 +236,12 @@ export async function mentionMember(member: MenuMember) {
   await copyText(`@${member.username}`, t('nav.mentionCopied'))
 }
 
-async function adminCall(member: MenuMember, path: string, { title, body, confirmLabel, done }: { title: string; body: string; confirmLabel: string; done: string }) {
+async function memberCall(member: MenuMember, url: string, { title, body, confirmLabel, done }: { title: string; body: string; confirmLabel: string; done: string }) {
   const toasts = useToastStore()
   const ok = await confirm({ title: t(title, { name: displayName(member) }), body: t(body), confirmLabel: t(confirmLabel), danger: true })
   if (!ok) return
   try {
-    await api(`/api/admin/users/${member.id}/${path}`, { method: 'POST' })
+    await api(url, { method: 'POST' })
     toasts.success(t(done))
   } catch (e) {
     toasts.error(e instanceof Error && e.message ? e.message : t('nav.actionFailed'))
@@ -290,13 +290,20 @@ function localCallItems(member: MenuMember, ctx: { refresh?: () => void }): Cont
   return items
 }
 
-function kickItems(member: MenuMember): ContextMenuItem[] {
+/** A Talk the member sits in where the viewer may disconnect people (a role's grant, server-wide or through an overwrite there). */
+function disconnectableTalk(memberId: string): string | null {
+  const permissions = usePermissionsStore()
+  const talks = Object.entries(useVoiceStore().channelUsers || {})
+  return talks.find(([id, users]) => !!users?.[memberId] && permissions.canIn(id, 'disconnect_members'))?.[0] ?? null
+}
+
+function kickItems(member: MenuMember, talk: string): ContextMenuItem[] {
   return [{
     id: 'kick',
     label: t('admin.kickFromVoice'),
     icon: UserX,
     danger: true,
-    action: () => adminCall(member, 'kick', {
+    action: () => memberCall(member, `/api/channels/${talk}/voice/${member.id}/disconnect`, {
       title: 'admin.kickFromVoiceTitle', body: 'admin.kickFromVoiceBody', confirmLabel: 'admin.kickConfirm', done: 'admin.userKicked'
     })
   }]
@@ -309,7 +316,7 @@ function sessionItems(member: MenuMember): ContextMenuItem[] {
       label: t('admin.revokeSessions'),
       icon: LogOut,
       danger: true,
-      action: () => adminCall(member, 'sessions/revoke', {
+      action: () => memberCall(member, `/api/admin/users/${member.id}/sessions/revoke`, {
         title: 'admin.revokeSessionsTitle', body: 'admin.revokeSessionsBody', confirmLabel: 'admin.revokeSessionsConfirm', done: 'admin.sessionsRevoked'
       })
     },
@@ -318,7 +325,7 @@ function sessionItems(member: MenuMember): ContextMenuItem[] {
       label: t('admin.disableUser'),
       icon: Ban,
       danger: true,
-      action: () => adminCall(member, 'disable', {
+      action: () => memberCall(member, `/api/admin/users/${member.id}/disable`, {
         title: 'admin.disableUserTitle', body: 'admin.disableUserBody', confirmLabel: 'admin.disableUserConfirm', done: 'admin.userDisabledToast'
       })
     }
@@ -344,29 +351,22 @@ function isMemberReachable(member: MenuMember, isSelf: boolean): boolean {
   return usePermissionsStore().outranksMember(member.id)
 }
 
-function hasModerationActions(canKick: boolean, canModerate: boolean, offer: ReturnType<typeof moderationOffer>): boolean {
-  if (canKick || canModerate) return true
+function hasModerationActions(kickTalk: string | null, canModerate: boolean, offer: ReturnType<typeof moderationOffer>): boolean {
+  if (kickTalk || canModerate) return true
   return !!offer.timeout || !!offer.ban
-}
-
-function isMemberInAnyVoiceCall(memberId: string): boolean {
-  const channelUsers = useVoiceStore().channelUsers || {}
-  return Object.values(channelUsers).some(u => !!u?.[memberId])
 }
 
 /** Kick, timeout, ban, revoke sessions and disable, as far as the viewer may. */
 function moderationItems(member: MenuMember, isSelf: boolean): ContextMenuItem[] {
   const permissions = usePermissionsStore()
   const reachable = isMemberReachable(member, isSelf)
-  const canKick = reachable && permissions.can('disconnect_members')
+  const kickTalk = reachable ? disconnectableTalk(member.id) : null
   const canModerate = reachable && permissions.can('manage_members')
   const offer = moderationOffer(member)
   const items: ContextMenuItem[] = []
-  if (hasModerationActions(canKick, canModerate, offer)) {
+  if (hasModerationActions(kickTalk, canModerate, offer)) {
     items.push({ type: 'separator' })
-    if (canKick && isMemberInAnyVoiceCall(member.id)) {
-      items.push(...kickItems(member))
-    }
+    if (kickTalk) items.push(...kickItems(member, kickTalk))
   }
   items.push(...timeoutAndBanItems(member, offer))
   if (canModerate) items.push(...sessionItems(member))

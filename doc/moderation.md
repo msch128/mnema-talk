@@ -19,7 +19,7 @@ the target out of reach between the check and the write.
 | Ban, unban, list bans | *Ban members* | `POST` / `DELETE /api/admin/users/{id}/ban`, `GET /api/admin/bans`; `/ban` in the composer |
 | Disable an account | *Manage members* | **Disable**: ends sessions and blocks sign-in until **Enable**. No record beyond the audit log |
 | Kick | *Kick members* | `/kick` in the composer, see [Kicks](#kicks) |
-| Remove from a Talk | *Disconnect members* | Removes the member from that Talk only; they stay signed in |
+| Remove from a Talk | *Disconnect members* | Removes the member from that Talk only; they stay signed in. A role can hold it server-wide or through an overwrite on one Talk or category |
 | Read and close reports | *Manage reports* | See [Blocking and reports](#blocking-and-reports) |
 | Automod rules | *Administrator* | See [Automod](#automod); no new permission bit |
 | Moderation history and notes of a member | *Manage reports* | See [Moderation history and moderator notes](#moderation-history-and-moderator-notes) |

@@ -151,13 +151,13 @@ describe('menu actions and state', () => {
     required(pendingConfirm.value).resolve(false)
     await rejected
     expect(api).not.toHaveBeenCalled()
-    for (const [id, path, error] of [['kick', 'kick', null], ['revoke', 'sessions/revoke', new Error('offline')], ['disable', 'disable', 'failed']] as const) {
+    for (const [id, path, error] of [['kick', '/api/channels/v1/voice/u2/disconnect', null], ['revoke', '/api/admin/users/u2/sessions/revoke', new Error('offline')], ['disable', '/api/admin/users/u2/disable', 'failed']] as const) {
       if (error === null) vi.mocked(api).mockResolvedValueOnce(null)
       else vi.mocked(api).mockRejectedValueOnce(error)
       const request = required(menuItem(items, id).action)()
       required(pendingConfirm.value).resolve(true)
       await request
-      expect(api).toHaveBeenLastCalledWith(`/api/admin/users/u2/${path}`, { method: 'POST' })
+      expect(api).toHaveBeenLastCalledWith(path, { method: 'POST' })
     }
     expect(useToastStore().toasts.some(toast => toast.text === 'offline')).toBe(true)
     expect(useToastStore().toasts.at(-1)?.type).toBe('error')
@@ -336,6 +336,25 @@ describe('member menu', () => {
     voice.channelUsers = { v9: { u2: voiceUserFixture({ id: 'u2' }) } }
     expect(ids(buildMemberItems(other))).toEqual(['profile', 'mention', 'kick', 'timeout', 'ban', 'revoke', 'disable'])
     expect(ids(buildMemberItems(userFixture({ id: 'me', username: 'me' })))).toEqual(['profile', 'mention'])
+  })
+
+  it('offers disconnect per Talk: a server-wide grant, an overwrite there, or not at all', () => {
+    const permissions = usePermissionsStore()
+    auth.user = userFixture({ id: 'me', role: 'user' })
+    voice.channelUsers = { v1: { u2: voiceUserFixture({ id: 'u2' }) }, v2: {} }
+    const info = (permissions: number, channels: { channel_id: string, permissions: number }[]) =>
+      ({ owner: false, permissions, role_ids: [], top_position: 5, max_upload_mb: 50, catalog: [], channels })
+    // Granted server-wide: every Talk the member sits in.
+    permissions.info = info(PERMISSION_BITS.disconnect_members, [{ channel_id: 'v1', permissions: PERMISSION_BITS.view_channel | PERMISSION_BITS.disconnect_members }])
+    expect(ids(buildMemberItems(other))).toContain('kick')
+    // Granted only by an overwrite on the Talk they are in.
+    permissions.info = info(0, [{ channel_id: 'v1', permissions: PERMISSION_BITS.view_channel | PERMISSION_BITS.disconnect_members }])
+    expect(ids(buildMemberItems(other))).toContain('kick')
+    // Granted in another Talk only, or denied where they sit.
+    permissions.info = info(0, [{ channel_id: 'v2', permissions: PERMISSION_BITS.view_channel | PERMISSION_BITS.disconnect_members }])
+    expect(ids(buildMemberItems(other))).not.toContain('kick')
+    permissions.info = info(PERMISSION_BITS.disconnect_members, [{ channel_id: 'v1', permissions: PERMISSION_BITS.view_channel }])
+    expect(ids(buildMemberItems(other))).not.toContain('kick')
   })
 
   it('offers timeout and ban by permission and rank, and ending a running timeout', async () => {
