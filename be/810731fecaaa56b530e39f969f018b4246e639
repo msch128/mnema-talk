@@ -1,0 +1,31 @@
+internal/poll/faults_integration_test.go
+  s_2ad46f01a5d17d::t_f90b324fe4d8c4 197-213
+internal/poll/handler.go
+  s_a189ba8adbc896::t_105aa143c25d9d 6,159,171-175,216
+internal/poll/service.go
+  s_a189ba8adbc896::t_22c08683b07839 5,66-72,105-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "be810731fecaaa56b530e39f969f018b4246e639",
+  "prompts": {},
+  "sessions": {
+    "s_2ad46f01a5d17d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a365a38e52ae447b7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_a189ba8adbc896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1a43bfd89de73cab",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
