@@ -1,0 +1,79 @@
+web/src/components/AccountData.test.ts
+  s_06fcde5dbef956::t_975d294e5fe0ca 104-119
+web/src/components/AccountData.vue
+  s_06fcde5dbef956::t_523a5a80a2ca60 30,48,93-96
+web/src/components/AccountMenu.behavior.test.ts
+  s_06fcde5dbef956::t_69479d2491ba1c 69-86
+web/src/components/AccountMenu.vue
+  s_06fcde5dbef956::t_99262472ff2572 48,67-74,86-88,101,220
+web/src/components/AccountTwoFactor.test.ts
+  s_06fcde5dbef956::t_668eecd270a2da 129-142
+web/src/components/AccountTwoFactor.vue
+  s_06fcde5dbef956::t_df9a8002dd4237 64,67,80
+web/src/components/AdminAuditTab.vue
+  s_06fcde5dbef956::t_7cc44d0d1d8778 4,7,17,29-31,55-56,60-61,66-67,70,120-125,183-184
+web/src/components/AdminAutomod.test.ts
+  s_06fcde5dbef956::t_c7b63c29484665 16,111-121
+web/src/components/AdminAutomodTab.vue
+  s_06fcde5dbef956::t_f02d38588e658e 13,18,31,73
+web/src/components/AdminBansTab.test.ts
+  s_06fcde5dbef956::t_186b6a1eea6b66 59-65
+web/src/components/AdminBansTab.vue
+  s_06fcde5dbef956::t_551db4db15f5bb 14-15,20,26,28,52,66-67
+web/src/components/AdminEmojiTab.test.ts
+  s_06fcde5dbef956::t_7cd6092b36a9d0 77-91
+web/src/components/ReportsAndPrivacy.test.ts
+  s_06fcde5dbef956::t_bd64e2da446661 306-318
+web/src/composables/useReloadOnActivate.ts
+  s_06fcde5dbef956::t_ef4da416a3d7cb 1-13
+web/src/components/AccountDmPolicy.vue
+  s_0083ddead970ef::t_48ed89ab839413 15,22,25,48-52
+web/src/components/AccountSessions.test.ts
+  s_9b1762bf3aaac0::t_717563c545b2fa 122-138
+web/src/components/AccountSessions.vue
+  s_0083ddead970ef::t_fa0698e37aee57 93-98
+web/src/components/AdminAuditTab.test.ts
+  s_9b1762bf3aaac0::t_252cee45d8e5ea 32-74,151,160
+web/src/components/AdminBotsTab.vue
+  s_0083ddead970ef::t_23de9965979325 4,70
+web/src/components/AdminEmojiTab.vue
+  s_0083ddead970ef::t_b43568fe76d0b3 25,65,159-161,164
+web/src/composables/useReloadOnActivate.test.ts
+  s_0083ddead970ef::t_49f1a9c8e78f27 1-20
+web/src/i18n/de.json
+  s_0083ddead970ef::t_6b7b9f13107b66 1865,2056,2566-2567,2908-2909
+web/src/i18n/en.json
+  s_0083ddead970ef::t_1ae9bd7ef1e3bf 1865,2056,2566-2567,2908-2909
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7363139ae5e91fff350a2f0b158cab529e11f994",
+  "prompts": {},
+  "sessions": {
+    "s_0083ddead970ef": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8130eec70ffb508e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_9b1762bf3aaac0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaf3e3fa1d866b304",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
