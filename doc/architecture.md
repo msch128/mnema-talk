@@ -232,7 +232,7 @@ a member next to a choice; a trigger on `poll_votes` (which still serves polls
 that name their voters) refuses a row for an anonymous poll, and an integration
 test walks every table of the schema to prove that no row mentions a voter and
 an option together. A running anonymous poll broadcasts no tally at each vote, since in a small audience the
-last vote would follow from it; the result goes out when the poll ends. Because a choice is never known, a vote cannot be changed
+last vote would follow from it, and the REST and message payloads report 0 for every option until the poll ends (only the number of voters is live); the result goes out when the poll ends. Because a choice is never known, a vote cannot be changed
 or withdrawn and the data export of a member has no entry for anonymous
 polls. Erasing an account deletes its `poll_voters` rows and leaves the
 counters, as a tally is not personal data. Migration 0063 converted the

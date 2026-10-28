@@ -225,8 +225,9 @@ func TestAnonymousPollNeverRevealsWhoVoted(t *testing.T) {
 			assertNoVoters("event "+e.Type, raw)
 		}
 	}
-	// The server does not know the choice, only that bob took part.
-	if d := f.detail(t, f.bob, m); len(d.MyVotes) != 0 || !d.HasVoted || !sameInts(tallies(d.Poll), []int{1, 1, 0}) {
+	// The server does not know the choice, only that bob took part; the
+	// running tally stays hidden (see TestRunningAnonymousPollHidesTheTallyUntilItEnds).
+	if d := f.detail(t, f.bob, m); len(d.MyVotes) != 0 || !d.HasVoted || !sameInts(tallies(d.Poll), []int{0, 0, 0}) || d.TotalVoters != 2 {
 		t.Fatalf("bob's own view: %+v", d)
 	}
 	if d := f.detail(t, f.alice, m); len(d.MyVotes) != 0 {
