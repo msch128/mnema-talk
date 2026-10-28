@@ -1,0 +1,125 @@
+web/src/components/DmInfoDialog.vue
+  s_2148161d7c98f3::t_12714fb473e983 20,74
+web/src/components/IncomingWebhooksPanel.vue
+  s_2148161d7c98f3::t_8ca968d69140d7 15,190
+web/src/components/ManageForumTagsModal.test.ts
+  s_4301fed6e62c09::t_34733c257115d1 121
+web/src/components/ManageForumTagsModal.vue
+  s_2148161d7c98f3::t_bfc8e6d1f817d4 73
+web/src/components/ParticipantTile.vue
+  s_2148161d7c98f3::t_968d00275f4533 15,51
+web/src/components/ProfileAvatar.vue
+  s_2148161d7c98f3::t_7f822ef6378d46 14,102
+web/src/components/UserAvatar.vue
+  s_2148161d7c98f3::t_5d8cac9cc49435 6,54
+web/src/lib/auditSummary.test.ts
+  s_4301fed6e62c09::t_3d9134b9f1e52f 30-37
+web/src/lib/auditSummary.ts
+  s_e821fb91255620::t_dc9898bb29024c 16-17
+web/src/lib/automod.test.ts
+  s_2148161d7c98f3::t_450d7d56eb8a51 42-48
+web/src/lib/automod.ts
+  s_e821fb91255620::t_4d41cd8358ba3c 80-81
+web/src/lib/bots.test.ts
+  s_2148161d7c98f3::t_ba91c3d9ba2dc9 30
+web/src/lib/bots.ts
+  s_2148161d7c98f3::t_d17bd6122b94f4 4,50
+web/src/lib/channelTree.test.ts
+  s_2148161d7c98f3::t_46d447e317030f 2,7-15
+web/src/lib/channelTree.ts
+  s_e821fb91255620::t_f2138ed2119ce2 24-34,44
+web/src/lib/chatLogic.test.ts
+  s_2148161d7c98f3::t_98e5c127cfed48 21-28
+web/src/lib/chatLogic.ts
+  s_e821fb91255620::t_b1a06a9ba8dbb6 10-24,28
+web/src/lib/dm.ts
+  s_e821fb91255620::t_fbf46078955792 7,18-19
+web/src/lib/dmList.test.ts
+  s_dc6ba5bcea699f::t_000bb19e99bfe6 3-4,61-62,76-87
+web/src/lib/dmList.ts
+  s_e821fb91255620::t_3fad4a1e828a18 6-7,53,63-65
+web/src/lib/drafts.test.ts
+  s_27bb33a982f856::t_93e3aea028b73a 156-179
+web/src/lib/drafts.ts
+  s_27bb33a982f856::t_a26f603a44093c 138-151,174,190,192
+web/src/lib/emojiShortcodes.test.ts
+  s_4ac6295b6bd2d2::t_6910714e7ca6ce 1,21-32
+web/src/lib/emojiShortcodes.ts
+  s_e821fb91255620::t_b364f818eb90e1 9-13
+web/src/lib/eventTime.ts
+  s_e821fb91255620::t_caf2f37c96f8b8 3
+web/src/lib/forumApi.test.ts
+  s_2148161d7c98f3::t_faf9e589b2b254 58-62
+web/src/lib/forumApi.ts
+  s_e821fb91255620::t_a52d8378493017 23,26
+web/src/lib/globalSearch.test.ts
+  s_dc6ba5bcea699f::t_9febedd191805b 79-95
+web/src/lib/globalSearch.ts
+  s_e821fb91255620::t_2bd1cf6878947d 27-30,54-59,71
+web/src/lib/initial.test.ts
+  s_2148161d7c98f3::t_c28a98fb7bb1f0 1-17
+web/src/lib/initial.ts
+  s_e821fb91255620::t_5d30f45dcd1ba7 1-4
+web/src/lib/moderation.test.ts
+  s_2148161d7c98f3::t_e2e79067e7c2cc 35-37
+web/src/lib/moderation.ts
+  s_e821fb91255620::t_b8f607e5e0a5f5 71
+web/src/lib/time.ts
+  s_e821fb91255620::t_5b1897f4d6470e 26-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f5e764eefa2d0300ea89a2755e640e5dc4557fe7",
+  "prompts": {},
+  "sessions": {
+    "s_2148161d7c98f3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adb3d886b8008116b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_27bb33a982f856": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaf7a7a7ee20c3225",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4301fed6e62c09": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa0018c3b54a75b89",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4ac6295b6bd2d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac4ef8ece1278c839",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_dc6ba5bcea699f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a3702c97e5f923577",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e821fb91255620": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5e60fb1b32442e57",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
