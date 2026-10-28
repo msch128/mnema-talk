@@ -1,0 +1,19 @@
+internal/imgproc/firstframe.go
+  s_dae090ee96213e::t_81999835b5e960 32-35,37-46,51,58-60,63-67,71-72,75-77,81,86,90-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a8884a8941e4e597fa6819353f41b50f1cc4739e",
+  "prompts": {},
+  "sessions": {
+    "s_dae090ee96213e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a448f20095192534b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
