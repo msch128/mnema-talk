@@ -1,0 +1,129 @@
+web/src/components/WelcomeFlow.vue
+  s_4301fed6e62c09::t_61fd2260fefa21 16,68
+web/src/components/WelcomeFlowRecovery.test.ts
+  s_4301fed6e62c09::t_7d1c5c22f9a4c8 9,20-21,27-31,34,89-90,133-159
+web/src/composables/useStageFullscreen.test.ts
+  s_b5fda9de85b26b::t_9821af7767a762 1-25
+web/src/composables/useStageFullscreen.ts
+  s_b5fda9de85b26b::t_dc0e6f6ca23f30 31-37
+web/src/composables/useStreamQuality.test.ts
+  s_06fcde5dbef956::t_f682171575146b 28-42
+web/src/composables/useWelcomeFlow.ts
+  s_4301fed6e62c09::t_cde85f7b35e8b1 45-47,57,99,102,112-115,117
+web/src/i18n/de.json
+  s_28055c6eca8543::t_a68b31861a96b3 331-332,603
+web/src/i18n/en.json
+  s_28055c6eca8543::t_7d9de5f7f1ca31 331-332,603
+web/src/lib/media/frame.test.ts
+  s_4ac6295b6bd2d2::t_d17f15f68c7813 5
+web/src/lib/media/frame.ts
+  s_4ac6295b6bd2d2::t_968b0d0f01c7e8 379
+web/src/lib/media/group.test.ts
+  s_21413b5fa68a12::t_2d2883bcef221e 140-161
+web/src/lib/media/group.ts
+  s_d8e458a1a9342a::t_884ca05b1cbc5c 228-229
+web/src/lib/media/groupBase.ts
+  s_d8e458a1a9342a::t_793651bf45604f 17,22,201-208,210,219-223
+web/src/lib/media/groupEpoch.ts
+  s_d8e458a1a9342a::t_3444b8854db5bc 327-328
+web/src/lib/media/guard.test.ts
+  s_21413b5fa68a12::t_4c82d98494f422 98-113
+web/src/lib/media/guard.ts
+  s_21413b5fa68a12::t_ec7eb16c30602b 157-160,173-178,193-196,231
+web/src/lib/media/mediaFrameWorker.test.ts
+  s_b5fda9de85b26b::t_0a168e4df721cd 148-159
+web/src/lib/streamQuality.test.ts
+  s_ab7727be75b153::t_12d798b89845fa 36-37
+web/src/lib/streamQuality.ts
+  s_4301fed6e62c09::t_a2ac71532b32cb 53,60
+web/src/stores/chat/threadFollow.ts
+  s_28055c6eca8543::t_3db8149c0a629c 6,29-33
+web/src/stores/chat/threads.ts
+  s_28055c6eca8543::t_47916238f9b04e 8-9,23-30,44,47-50
+web/src/stores/chatThreadFollow.test.ts
+  s_2148161d7c98f3::t_63c697e66c620b 9-10,108,113-136,150-175
+web/src/stores/voice/controls.ts
+  s_4301fed6e62c09::t_a42e97c44954c7 56
+web/src/stores/voice/state.ts
+  s_4301fed6e62c09::t_521d7169a1a8ef 26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ada481811a1a61d032cfa8211f04f1025c472fb6",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_21413b5fa68a12": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6c94cb525b2a7555",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2148161d7c98f3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adb3d886b8008116b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_28055c6eca8543": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae75726a09f441661",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4301fed6e62c09": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa0018c3b54a75b89",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4ac6295b6bd2d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac4ef8ece1278c839",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ab7727be75b153": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a05d819272bad2e5c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_b5fda9de85b26b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac3cb94b938d60b3a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_d8e458a1a9342a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-arootcause-sealing-f9b13a90a3d1378a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
