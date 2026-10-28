@@ -1,0 +1,47 @@
+cmd/server/reset2fa.go
+  s_1888f569b71f01::t_0d6bf23738c73d 49-55,57
+cmd/server/reset2fa_integration_test.go
+  s_1888f569b71f01::t_86be647a99b248 64-96
+doc/roles-and-permissions.md
+  s_1888f569b71f01::t_a0fcabb20594e9 204-206
+internal/auth/credential_atomicity_integration_test.go
+  s_1888f569b71f01::t_095c4070d4731d 1-119
+internal/auth/handler.go
+  s_1888f569b71f01::t_0d3b2e7c2e09b8 85-87
+internal/auth/login_test.go
+  s_1888f569b71f01::t_b8db6077f8171d 33
+internal/auth/paths_integration_test.go
+  s_1888f569b71f01::t_d86aa486ef8a5f 67-69,78,91-96,158
+internal/auth/perm_test.go
+  s_1888f569b71f01::t_5309a5446c379e 4,70,76-78,94,100,103,106-108
+internal/auth/service_accounts.go
+  s_1888f569b71f01::t_482e4f1e8b0296 41,47-50,148-149,155,169-186,189-190,192-197
+internal/auth/status_expiry.go
+  s_1888f569b71f01::t_fc6bd8f829bc38 52-53,56-59,61-64
+internal/auth/two_factor_handler.go
+  s_1888f569b71f01::t_8a9ef1911c170e 57-61,65-71,73-75,147,156,161,189-192,198-201,217,219,251-254,305-314,317
+internal/auth/two_factor_limits_test.go
+  s_1888f569b71f01::t_5d13cc783ecb20 1-49
+internal/auth/two_factor_login.go
+  s_1888f569b71f01::t_4ef44852688c21 49-50
+internal/auth/users_admin.go
+  s_1888f569b71f01::t_494d32b5ff6421 121,125-142,157,214-217
+internal/auth/users_admin_handlers.go
+  s_1888f569b71f01::t_09186faed2d61b 249-253,255-257
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "32a56c9e9f30642a5f9b9866806c6d52a679f2d7",
+  "prompts": {},
+  "sessions": {
+    "s_1888f569b71f01": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aintegrate-server-60fe71aa50757d20",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
