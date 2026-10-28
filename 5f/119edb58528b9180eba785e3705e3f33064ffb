@@ -1,0 +1,29 @@
+internal/server/system_selfupdate.go
+  s_7375f2539c4104::t_59c496c004becb 127-129,134,206-208,215,218,221-223
+internal/server/system_selfupdate_integration_test.go
+  s_dae090ee96213e::t_5dd720fd6c5bfc 204-217
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5f119edb58528b9180eba785e3705e3f33064ffb",
+  "prompts": {},
+  "sessions": {
+    "s_7375f2539c4104": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad698788cf33a7188",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_dae090ee96213e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a448f20095192534b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
