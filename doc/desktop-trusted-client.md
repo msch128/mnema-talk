@@ -705,7 +705,7 @@ Community rules (`/api/onboarding`, see [roles-and-permissions.md](roles-and-per
 reach the shipped desktop clients through the trusted proxy like any other
 `/api` call, so members accept them in the web app as usual. The native IPC
 transport (`web/src/lib/native/nativeRoutes.ts`) belongs to the experimental
-Windows DEV client, which is not shipped; it does not carry `/api/onboarding`
+native DEV client, which is not shipped; it does not carry `/api/onboarding`
 and a member of that client could not accept rules until a typed operation is
 added. The same holds for custom emoji (`/api/emoji`, `/api/admin/emoji`): the
 shipped clients get them through the trusted proxy, the native DEV client answers

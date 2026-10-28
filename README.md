@@ -384,15 +384,15 @@ The full model, its limits and how to report a vulnerability privately are in
 
 ## Desktop (Beta)
 
-The [desktop client](https://github.com/msch128/mnema-talk-desktop) for Windows
-(**Beta**, unsigned; Windows installer and portable ZIP, macOS disk image,
-Linux AppImage and .deb) wraps the same web app. Instead of loading code from
+The [desktop client](https://github.com/msch128/mnema-talk-desktop) for Windows,
+macOS (Apple silicon) and Linux (**Beta**, unsigned; Windows installer and
+portable ZIP, macOS disk image, Linux AppImage and .deb) wraps the same web app. Instead of loading code from
 your server it runs a **signed bundle** that it verifies on every start, with
 rollback protection and a security floor, and keeps the session in the OS
 keychain. On Windows it adds a gaming sidepeek and an `Alt+M` overlay for your Talk. The
 browser app remains the primary, fully supported client. The installer is
 not code-signed (no paid certificate), so Windows SmartScreen warns on first
-start; the steps are in
+start (macOS shows a Gatekeeper warning); the steps are in
 [doc/desktop-app.md](doc/desktop-app.md#installing-the-unsigned-beta). Details
 and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md).
 
