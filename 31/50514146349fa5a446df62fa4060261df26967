@@ -1,0 +1,21 @@
+web/src/lib/media/groupEpoch.ts
+  s_27217b624be6ba::t_3abdbdc1ddfbbc 118-122
+web/src/lib/media/lifecycle.test.ts
+  s_27217b624be6ba::t_d9bf64e302c6e5 252,255,259,261-263,269-285
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3150514146349fa5a446df62fa4060261df26967",
+  "prompts": {},
+  "sessions": {
+    "s_27217b624be6ba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-arootcause-keylife-5ba7da43a3371c3b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
