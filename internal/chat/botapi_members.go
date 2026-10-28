@@ -108,5 +108,5 @@ func (h *Handler) botGetMember(w http.ResponseWriter, r *http.Request) error {
 			return nil
 		}
 	}
-	return httpx.ErrNotFound("unknown user")
+	return httpx.ErrNotFound("unknown user").WithDiscordCode(httpx.DiscordCodeUnknownUser)
 }

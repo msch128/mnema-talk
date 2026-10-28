@@ -191,7 +191,7 @@ func validateBotPayload(req *rawBotMessage) (string, []Embed, *uuid.UUID, error)
 		return "", nil, nil, httpx.ErrInvalidInput(err.Error())
 	}
 	if content == "" && len(embeds) == 0 {
-		return "", nil, nil, httpx.ErrInvalidInput("Cannot send an empty message")
+		return "", nil, nil, httpx.ErrInvalidInput("Cannot send an empty message").WithDiscordCode(httpx.DiscordCodeEmptyMessage)
 	}
 	var reply *uuid.UUID
 	if req.MessageReference != nil {

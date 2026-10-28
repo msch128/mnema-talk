@@ -139,14 +139,7 @@ func (l *LoginFailureLimiter) ResetFailures(key string) {
 func (l *LoginFailureLimiter) Clear(match func(key string) bool) int {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	n := 0
-	for k := range l.entries {
-		if match(k) {
-			delete(l.entries, k)
-			n++
-		}
-	}
-	return n
+	return clearMatching(l.entries, match)
 }
 
 // LockedKeys lists the keys that are locked out right now.
@@ -179,12 +172,10 @@ func (l *LoginFailureLimiter) sweepLocked(now time.Time) {
 		return
 	}
 	l.lastSweep = now
-	for k, e := range l.entries {
+	dropWhere(l.entries, func(_ string, e *loginFailureEntry) bool {
 		locked, _ := l.refreshLocked(e, now)
-		if !locked && now.Sub(e.lastSeen) >= l.decay {
-			delete(l.entries, k)
-		}
-	}
+		return !locked && now.Sub(e.lastSeen) >= l.decay
+	})
 }
 
 // makeRoomLocked enforces the hard cap before a new key is inserted. It evicts
@@ -194,40 +185,22 @@ func (l *LoginFailureLimiter) makeRoomLocked(now time.Time) {
 	if len(l.entries) < l.maxEntries {
 		return
 	}
-	delete(l.entries, l.evictVictim(now))
+	evictSampled(l.entries,
+		func(_ string, e *loginFailureEntry) evictScore {
+			locked, _ := l.refreshLocked(e, now)
+			return evictScore{locked: locked, seen: e.lastSeen}
+		},
+		func(c, v evictScore) bool {
+			// An unlocked entry beats a locked one; otherwise the staler wins.
+			if c.locked != v.locked {
+				return v.locked
+			}
+			return c.seen.Before(v.seen)
+		})
 }
 
-// evictVictim picks the stalest entry of a sample, preferring one that is not
-// locked, so flooding the map with fresh keys does not cheaply lift a lockout.
-func (l *LoginFailureLimiter) evictVictim(now time.Time) string {
-	var victim string
-	var victimLocked bool
-	var victimSeen time.Time
-	n := 0
-	for k, e := range l.entries {
-		locked, _ := l.refreshLocked(e, now)
-		if preferEviction(n, victimLocked, locked, e.lastSeen, victimSeen) {
-			victim, victimLocked, victimSeen = k, locked, e.lastSeen
-		}
-		n++
-		if n >= evictSample {
-			break
-		}
-	}
-	return victim
-}
-
-// preferEviction keeps the first sample, then an unlocked entry over a locked
-// one, then the earlier last-seen time when the lock state matches.
-func preferEviction(n int, victimLocked, locked bool, seen, victimSeen time.Time) bool {
-	if n == 0 {
-		return true
-	}
-	if victimLocked && !locked {
-		return true
-	}
-	if victimLocked != locked {
-		return false
-	}
-	return seen.Before(victimSeen)
+// evictScore ranks eviction candidates of the login limiter.
+type evictScore struct {
+	locked bool
+	seen   time.Time
 }
