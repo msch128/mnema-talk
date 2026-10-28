@@ -2,19 +2,45 @@ package linkpreview
 
 import (
 	"bytes"
+	"io"
 	"net/url"
 	"strings"
 	"unicode/utf8"
 
 	"golang.org/x/net/html"
+	"golang.org/x/net/html/charset"
+	"golang.org/x/text/transform"
 )
+
+// utf8Reader decodes body to UTF-8 using the charset of the Content-Type
+// header or the page's own <meta charset>. A page that declares no charset
+// and is valid UTF-8 is read as is, since the sniffer only looks at the first
+// KiB and would otherwise guess windows-1252.
+func utf8Reader(body []byte, ctype string) io.Reader {
+	enc, _, certain := charset.DetermineEncoding(body, ctype)
+	if !certain && validUTF8Prefix(body) {
+		return bytes.NewReader(body)
+	}
+	return transform.NewReader(bytes.NewReader(body), enc.NewDecoder())
+}
+
+// validUTF8Prefix reports whether body is valid UTF-8, ignoring a rune cut
+// off by the download limit at its end.
+func validUTF8Prefix(body []byte) bool {
+	for i := 0; i < utf8.UTFMax && i < len(body); i++ {
+		if cut := body[:len(body)-i]; utf8.Valid(cut) {
+			return true
+		}
+	}
+	return false
+}
 
 // parseHTML reads Open Graph tags with <title> and meta description as
 // fallbacks. Text is plain (entities decoded); the client escapes it.
-func parseHTML(body []byte, base *url.URL) *Preview {
+func parseHTML(body []byte, ctype string, base *url.URL) *Preview {
 	p := &Preview{}
 	var title, desc string
-	z := html.NewTokenizer(bytes.NewReader(body))
+	z := html.NewTokenizer(utf8Reader(body, ctype))
 	inTitle := false
 	for {
 		switch z.Next() {
@@ -82,7 +108,9 @@ func finish(p *Preview, title, desc string, base *url.URL) *Preview {
 	p.Description = clip(p.Description, maxDescRunes)
 	p.SiteName = clip(p.SiteName, 80)
 	if p.Image != "" {
-		if img, err := base.Parse(strings.TrimSpace(p.Image)); err == nil && (img.Scheme == "http" || img.Scheme == "https") {
+		// An URL the image proxy would refuse anyway is not worth caching
+		// and sending to every client.
+		if img, err := base.Parse(strings.TrimSpace(p.Image)); err == nil && (img.Scheme == "http" || img.Scheme == "https") && len(img.String()) <= maxURLLen {
 			p.Image = img.String()
 		} else {
 			p.Image = ""

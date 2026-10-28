@@ -217,7 +217,7 @@ func TestPreviewClipsUnicodeMetadataAndRejectsUnsafeImageURLs(t *testing.T) {
 	}
 }
 
-func TestOversizedRasterImageIsRejectedAndNotCached(t *testing.T) {
+func TestOversizedRasterImageIsRejectedAndNotKept(t *testing.T) {
 	f := New()
 	var hits atomic.Int32
 	const pngHeader = "\x89PNG\r\n\x1a\n"
@@ -235,8 +235,9 @@ func TestOversizedRasterImageIsRejectedAndNotCached(t *testing.T) {
 			t.Fatalf("oversized image accepted: len=%d mime=%q", len(body), mime)
 		}
 	}
-	if hits.Load() != 2 || f.imgCache.bytes != 0 {
-		t.Fatalf("oversized image was cached: hits=%d bytes=%d", hits.Load(), f.imgCache.bytes)
+	// The failure is remembered, the image bytes never are.
+	if hits.Load() != 1 || f.imgCache.bytes != 0 {
+		t.Fatalf("oversized image was kept: hits=%d bytes=%d", hits.Load(), f.imgCache.bytes)
 	}
 }
 
