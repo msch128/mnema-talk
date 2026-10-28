@@ -92,7 +92,7 @@ func knowsTarget(snap *Snapshot, kind string, id uuid.UUID) bool {
 // needs ManageChannels and must see the target; they can only allow what
 // they hold there themselves, and the Owner cannot be the subject of one.
 func (s *Service) SetOverwrites(ctx context.Context, actor Subject, kind string, id uuid.UUID, list []Overwrite) error {
-	col, ok := targetColumns[kind]
+	_, ok := targetColumns[kind]
 	if !ok {
 		return httpx.ErrInvalidInput("unknown target")
 	}
@@ -114,7 +114,7 @@ func (s *Service) SetOverwrites(ctx context.Context, actor Subject, kind string,
 		if err := authorizeOverwriteChanges(snap, actor, held, diffOverwrites(existing, next)); err != nil {
 			return nil, err
 		}
-		return nil, replaceOverwrites(ctx, tx, col, id, list)
+		return nil, replaceOverwrites(ctx, tx, kind, id, list)
 	})
 }
 
@@ -176,9 +176,6 @@ func validateOverwrites(ctx context.Context, tx pgx.Tx, snap *Snapshot, list []O
 }
 
 func overwriteBitsRejected(o Overwrite) error {
-	if !o.Allow.Valid() || !o.Deny.Valid() {
-		return httpx.ErrInvalidInput("these permissions cannot be overwritten per channel")
-	}
 	if (o.Allow|o.Deny)&^ChannelScoped != 0 {
 		return httpx.ErrInvalidInput("these permissions cannot be overwritten per channel")
 	}
@@ -326,11 +323,11 @@ func authorizeOverwriteSubject(snap *Snapshot, actor Subject, k overwriteKey) er
 
 // replaceOverwrites rewrites the stored overwrites of the target with the list:
 // one statement clears the old ones, one inserts every non-empty new one.
-func replaceOverwrites(ctx context.Context, tx pgx.Tx, col string, id uuid.UUID, list []Overwrite) error {
-	if err := rewriteOverwrites(ctx, tx, col, id, list); err != nil {
+func replaceOverwrites(ctx context.Context, tx pgx.Tx, kind string, id uuid.UUID, list []Overwrite) error {
+	if err := rewriteOverwrites(ctx, tx, targetColumns[kind], id, list); err != nil {
 		return err
 	}
-	if col != "channel_id" {
+	if kind != TargetChannel {
 		return nil
 	}
 	return syncTempTalks(ctx, tx, id)

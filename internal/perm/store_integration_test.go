@@ -151,11 +151,18 @@ func TestStoreEnforcesRulesWithoutTheHTTPLayer(t *testing.T) {
 		t.Fatalf("flags: %+v %v", updated, err)
 	}
 
-	// There is a ceiling on the number of roles.
-	if _, err := w.p.Exec(ctx, `INSERT INTO roles (name, position) SELECT 'bulk ' || g, g + 1 FROM generate_series(1, 260) g`); err != nil {
+	// There is a ceiling on the number of roles: the last one fits, the next does not.
+	var have int
+	if err := w.p.QueryRow(ctx, `SELECT count(*) FROM roles`).Scan(&have); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.p.Exec(ctx, `INSERT INTO roles (name, position) SELECT 'bulk ' || g, g + 1 FROM generate_series(1, $1::int) g`, perm.MaxRoles-1-have); err != nil {
 		t.Fatal(err)
 	}
 	w.svc.Invalidate()
+	if _, err := w.svc.CreateRole(ctx, w.owner, perm.RoleInput{Name: &name}); err != nil {
+		t.Fatalf("the role that reaches the ceiling: %v", err)
+	}
 	_, err = w.svc.CreateRole(ctx, w.owner, perm.RoleInput{Name: &name})
 	wantAPI(t, "too many roles", err, 409)
 }

@@ -23,12 +23,13 @@ func (s *Service) ReorderRoles(ctx context.Context, actor Subject, ids []uuid.UU
 	})
 }
 
-// moveRoles gives each role the position its place in ids implies.
+// roleMove is one role and the position it moves to.
 type roleMove struct {
 	id  uuid.UUID
 	pos int
 }
 
+// moveRoles gives each role the position its place in ids implies.
 func moveRoles(ctx context.Context, tx pgx.Tx, snap *Snapshot, actor Subject, ids []uuid.UUID, custom int) error {
 	moves, err := planRoleMoves(snap, actor, ids, custom)
 	if err != nil {
