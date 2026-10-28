@@ -11,12 +11,29 @@ const permissions = usePermissionsStore()
 const now = ref(Date.now())
 let tick: ReturnType<typeof setInterval> | undefined
 
-const remaining = computed(() => (permissions.timeoutUntil === null ? 0 : permissions.timeoutUntil - now.value))
-const active = computed(() => remaining.value > 0)
+const RETRY_MS = 5000
+// The server still reports the timeout after the local clock ran past it: the
+// local clock is ahead, so the server decides when the banner goes.
+const serverHolds = ref(false)
+let retry: ReturnType<typeof setTimeout> | undefined
+
+const remaining = computed(() => (permissions.timeoutUntil === null ? 0 : Math.max(0, permissions.timeoutUntil - now.value)))
+const active = computed(() => remaining.value > 0 || (serverHolds.value && permissions.timeoutUntil !== null))
 
 function stop() {
   clearInterval(tick)
   tick = undefined
+  clearTimeout(retry)
+  retry = undefined
+  serverHolds.value = false
+}
+
+async function expire() {
+  const until = permissions.timeoutUntil
+  await permissions.load()
+  if (until === null || permissions.timeoutUntil !== until) return
+  serverHolds.value = true
+  retry = setTimeout(() => { void expire() }, RETRY_MS)
 }
 
 watch(() => permissions.timeoutUntil, until => {
@@ -26,8 +43,9 @@ watch(() => permissions.timeoutUntil, until => {
   tick = setInterval(() => {
     now.value = Date.now()
     if (permissions.timeoutUntil !== null && permissions.timeoutUntil <= now.value) {
-      stop()
-      void permissions.load()
+      clearInterval(tick)
+      tick = undefined
+      void expire()
     }
   }, 1000)
 }, { immediate: true })

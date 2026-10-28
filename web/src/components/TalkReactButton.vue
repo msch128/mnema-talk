@@ -25,10 +25,11 @@ const root = ref<HTMLElement | null>(null)
 const IDLE_MS = 8000
 let idle: ReturnType<typeof setTimeout> | undefined
 useDismissable(root, () => { open.value = false }, { active: open })
-watch(open, on => {
+function restartIdle() {
   clearTimeout(idle)
-  if (on) idle = setTimeout(() => { open.value = false }, IDLE_MS)
-})
+  if (open.value) idle = setTimeout(() => { open.value = false }, IDLE_MS)
+}
+watch(open, restartIdle)
 onBeforeUnmount(() => clearTimeout(idle))
 
 function pick(emoji: string) {
@@ -38,7 +39,7 @@ function pick(emoji: string) {
 </script>
 
 <template>
-  <div ref="root" class="relative shrink-0">
+  <div ref="root" class="relative shrink-0" @pointermove="restartIdle" @keydown="restartIdle" @focusin="restartIdle" @input="restartIdle" @wheel.passive="restartIdle" @scroll.capture="restartIdle">
     <button
       type="button"
       data-testid="talk-react"
