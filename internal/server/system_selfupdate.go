@@ -124,11 +124,14 @@ func (h *systemHandler) startSelfUpdate(w http.ResponseWriter, r *http.Request) 
 		httpx.WriteRateLimited(w, selfUpdateCooldown)
 		return nil
 	}
-	defer release()
+
+	started := false
+	defer func() { release(started) }()
 
 	if err := h.triggerSelfUpdate(r.Context(), upd, log); err != nil {
 		return err
 	}
+	started = true
 	httpx.WriteJSON(w, http.StatusAccepted, SelfUpdateStarted{Status: "started", FromVersion: h.version, TargetVersion: upd.LatestVersion})
 	return nil
 }
@@ -200,19 +203,24 @@ func (h *systemHandler) checkSelfUpdateTarget(req SelfUpdateRequest) (UpdateStat
 }
 
 // reserveSelfUpdate takes the update slot, which a concurrent request may
-// have taken meanwhile. The returned function frees it again.
-func (h *systemHandler) reserveSelfUpdate() (release func(), ok bool) {
+// have taken meanwhile. The returned function frees it again; the cooldown
+// only stays when an update was actually started.
+func (h *systemHandler) reserveSelfUpdate() (release func(started bool), ok bool) {
 	h.selfMu.Lock()
 	if h.self.inFlight || (!h.self.lastCall.IsZero() && h.self.now().Before(h.self.lastCall.Add(selfUpdateCooldown))) {
 		h.selfMu.Unlock()
 		return nil, false
 	}
 	h.self.inFlight = true
+	previous := h.self.lastCall
 	h.self.lastCall = h.self.now()
 	h.selfMu.Unlock()
-	return func() {
+	return func(started bool) {
 		h.selfMu.Lock()
 		h.self.inFlight = false
+		if !started {
+			h.self.lastCall = previous
+		}
 		h.selfMu.Unlock()
 	}, true
 }
