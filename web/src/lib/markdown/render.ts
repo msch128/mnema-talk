@@ -13,7 +13,7 @@ const FORMAT_TAGS: Record<FormatKind, string> = {
   em: '<em>',
   u: '<u class="md-underline">',
   del: '<del>',
-  spoiler: '<span class="md-spoiler" role="button" tabindex="0">'
+  spoiler: ''
 }
 const FORMAT_CLOSE: Record<FormatKind, string> = {
   strong: '</strong>',
@@ -21,6 +21,13 @@ const FORMAT_CLOSE: Record<FormatKind, string> = {
   u: '</u>',
   del: '</del>',
   spoiler: '</span>'
+}
+
+// Hidden text must not reach assistive technology: until revealed, the button is
+// named "Spoiler" and its content is presentational. MarkdownContent drops the
+// label and flips aria-expanded on reveal.
+function spoilerOpen(): string {
+  return `<span class="md-spoiler" role="button" tabindex="0" aria-expanded="false" aria-label="${escapeHtml(t('chat.spoiler'))}">`
 }
 
 // eslint-disable-next-line no-control-regex
@@ -80,7 +87,7 @@ export function renderInline(nodes: readonly Inline[]): string {
         out += `<code class="md-code">${escapeHtml(node.v)}</code>`
         break
       case 'fmt':
-        out += FORMAT_TAGS[node.k] + renderInline(node.c) + FORMAT_CLOSE[node.k]
+        out += (node.k === 'spoiler' ? spoilerOpen() : FORMAT_TAGS[node.k]) + renderInline(node.c) + FORMAT_CLOSE[node.k]
         break
       case 'link':
         out += link(node)

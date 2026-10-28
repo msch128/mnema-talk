@@ -53,6 +53,19 @@ describe('MarkdownContent interaction delegation', () => {
     expect(useChatStore().openUserProfile).not.toHaveBeenCalled()
   })
 
+  it('hides a spoiler from assistive technology until it is revealed', async () => {
+    const w = mount(MarkdownContent, { props: { content: '||secret||' } })
+    const spoiler = w.find('.md-spoiler')
+    expect(spoiler.attributes('aria-label')).toBe('Spoiler')
+    expect(spoiler.attributes('aria-expanded')).toBe('false')
+    await spoiler.trigger('click')
+    expect(spoiler.attributes('aria-label')).toBeUndefined()
+    expect(spoiler.attributes('aria-expanded')).toBe('true')
+    await spoiler.trigger('keydown', { key: 'Enter' })
+    expect(spoiler.attributes('aria-label')).toBe('Spoiler')
+    expect(spoiler.attributes('aria-expanded')).toBe('false')
+  })
+
   it('reveals and conceals spoilers with nested clicks, Enter and Space', async () => {
     const w = mount(MarkdownContent, { props: { content: '||secret **nested**||' } })
     const spoiler = w.find('.md-spoiler')

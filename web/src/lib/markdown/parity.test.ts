@@ -8,7 +8,7 @@ const OUT = 'target="_blank" rel="noopener noreferrer nofollow"'
 const link = (href: string, text = href) => `<a href="${href}" ${OUT} class="md-link">${text}</a>`
 const masked = (href: string, host: string, label: string, confirm = true) =>
   `<a href="${href}" ${OUT} class="md-link md-link-masked" title="${href}" data-host="${host}"${confirm ? ' data-confirm="1"' : ''}>${label}</a>`
-const spoiler = (inner: string) => `<span class="md-spoiler" role="button" tabindex="0">${inner}</span>`
+const spoiler = (inner: string) => `<span class="md-spoiler" role="button" tabindex="0" aria-expanded="false" aria-label="Spoiler">${inner}</span>`
 const underline = (inner: string) => `<u class="md-underline">${inner}</u>`
 
 type Row = readonly [input: string, html: string]
@@ -194,6 +194,23 @@ describe('links', () => {
       expect(html).not.toContain('<a ')
       expect(html).not.toContain('href=')
     }
+  })
+})
+
+describe('delimiters next to code spans and URLs', () => {
+  it('does not close emphasis at a delimiter inside a code span', () => {
+    expect(renderMarkdown('*see `*` operator*')).toBe('<em>see <code class="md-code">*</code> operator</em>')
+    expect(renderMarkdown('||spoiler `||` x||')).toBe(spoiler('spoiler <code class="md-code">||</code> x'))
+    expect(renderMarkdown('~~a ``~~`` b~~')).toBe('<del>a <code class="md-code">~~</code> b</del>')
+  })
+
+  it('still closes at a delimiter after an unclosed backtick', () => {
+    expect(renderMarkdown('*a ` b*')).toBe('<em>a ` b</em>')
+  })
+
+  it('links a URL up to the first character a link cannot hold', () => {
+    expect(renderMarkdown('https://example.com/a>b')).toBe(`${link('https://example.com/a')}&gt;b`)
+    expect(renderMarkdown("https://en.wikipedia.org/wiki/Rock_'n'_Roll")).toBe(link('https://en.wikipedia.org/wiki/Rock_&#39;n&#39;_Roll'))
   })
 })
 
