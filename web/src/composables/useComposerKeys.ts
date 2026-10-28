@@ -1,6 +1,7 @@
 // Keys of a message composer, shared by the channel chat and the thread panel.
 import { onMounted, onUnmounted } from 'vue'
 import type { Ref } from 'vue'
+import { isTypingEvent } from '../lib/typingTarget'
 
 interface ComposerKeys {
   /** Handlers that may consume the key first (suggestion lists); each returns true when it did. */
@@ -34,10 +35,9 @@ interface EscapeMarksRead {
   markAllRead: () => boolean
 }
 
-function isExternalInputTarget(target: EventTarget | null, composerElement: HTMLTextAreaElement | null): boolean {
-  if (!(target instanceof Element)) return false
-  if (target === composerElement) return false
-  return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
+function isExternalInputTarget(e: KeyboardEvent, composerElement: HTMLTextAreaElement | null): boolean {
+  if (e.target === composerElement) return false
+  return isTypingEvent(e)
 }
 
 function hasActiveDraftOrDialog(draftText: string): boolean {
@@ -51,7 +51,7 @@ export function useEscapeMarksRead({ composer, closeMenu, occupied, draft, markA
     if (e.key !== 'Escape' || closeMenu()) return
     if (e.defaultPrevented || occupied()) return
     if (hasActiveDraftOrDialog(draft())) return
-    if (isExternalInputTarget(e.target, composer.value)) return
+    if (isExternalInputTarget(e, composer.value)) return
     if (markAllRead()) e.preventDefault()
   }
   onMounted(() => window.addEventListener('keydown', onKeydown))

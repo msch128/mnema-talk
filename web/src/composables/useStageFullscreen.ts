@@ -3,16 +3,13 @@ import type { VoiceStore } from '../stores/voice'
 import type { TalkParticipant } from '../components/presentationTypes'
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useVoiceStore } from '../stores/voice'
+import { isTypingEvent } from '../lib/typingTarget'
 
 // A double-click on a camera puts it on the stage in full screen. Its first
 // click already put it on the stage (or took it off) without waiting, and
 // moved the tiles: the second click and the dblclick may land elsewhere, so
 // the camera clicked last decides.
 const DOUBLE_CLICK_MS = 600
-
-function isTypingTarget(el: EventTarget | null) {
-  return el instanceof HTMLElement && (el.isContentEditable || !!el.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])'))
-}
 
 function hasModifierOrComposition(e: KeyboardEvent): boolean {
   if (e.ctrlKey || e.metaKey || e.altKey) return true
@@ -41,7 +38,7 @@ function isPttCollision(voiceStore: VoiceStore, code: string): boolean {
 
 function canToggleStageFullscreen(e: KeyboardEvent, rootElement: HTMLElement | null, voiceStore: VoiceStore): boolean {
   if (!isStageFullscreenKey(e) || hasModifierOrComposition(e)) return false
-  if (!inTalkView(e.target, rootElement) || isTypingTarget(e.target)) return false
+  if (!inTalkView(e.target, rootElement) || isTypingEvent(e)) return false
   if (isModalOrMenuOpen(e.target)) return false
   return !isPttCollision(voiceStore, e.code)
 }

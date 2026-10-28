@@ -2,11 +2,8 @@
 // the thread panel: arrows move between rows, r replies, e edits (own
 // messages), the menu key / Shift+F10 open the message menu, Escape backs out.
 
-function isTyping(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
-  if (target.isContentEditable) return true
-  return ['INPUT', 'TEXTAREA'].includes(target.tagName)
-}
+import { isTypingEvent } from '../lib/typingTarget'
+
 
 /**
  * @param e        keydown event on the row (currentTarget is the row).
@@ -64,7 +61,7 @@ function hasModifierCombo(e: KeyboardEvent): boolean {
 }
 
 export function handleMessageKeydown(e: KeyboardEvent, handlers: KeyboardHandlers) {
-  if (isTyping(e.target)) return
+  if (isTypingEvent(e)) return
   if (handleMenuKey(e, handlers.menu)) return
   if (moveRowFocus(e, handlers.rows)) return
   if (hasModifierCombo(e)) return
@@ -72,6 +69,13 @@ export function handleMessageKeydown(e: KeyboardEvent, handlers: KeyboardHandler
 }
 
 function handleShortcutKey(e: KeyboardEvent, { reply, edit, save, escape }: KeyboardHandlers) {
+  if (e.key === 'Escape') {
+    if (escape?.()) e.preventDefault()
+    return
+  }
+  // Letter shortcuts belong to the focused row itself, not to a picker,
+  // button or other control inside it.
+  if (e.target !== e.currentTarget) return
   if ((e.key === 's' || e.key === 'S') && save) {
     e.preventDefault()
     save()
@@ -84,9 +88,5 @@ function handleShortcutKey(e: KeyboardEvent, { reply, edit, save, escape }: Keyb
   }
   if (e.key === 'e' || e.key === 'E') {
     if (edit?.() !== false) e.preventDefault()
-    return
-  }
-  if (e.key === 'Escape' && escape?.()) {
-    e.preventDefault()
   }
 }
