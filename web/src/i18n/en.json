@@ -329,7 +329,8 @@
     "rules": {
       "title": "The rules",
       "intro": "Read the rules of this community. You can read along right away, but posting, reacting, uploading and joining a Talk wait until you accept them.",
-      "accept": "I accept the rules"
+      "accept": "I accept the rules",
+      "acceptFailed": "Couldn’t save that. Check your connection and try again."
     },
     "profile": {
       "title": "Your profile",
@@ -601,6 +602,7 @@
     "notFollowing": "You do not get notifications for replies in this thread.",
     "followFailed": "Couldn’t follow the thread. Try again.",
     "unfollowFailed": "Couldn’t unfollow the thread. Try again.",
+    "loadFailed": "Couldn’t load the thread. Try again.",
     "edit": "Edit reply",
     "delete": "Delete reply",
     "deleteTitle": "Delete reply?",

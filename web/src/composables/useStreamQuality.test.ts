@@ -25,6 +25,21 @@ beforeEach(() => { setActivePinia(createPinia()); vi.useFakeTimers() })
 afterEach(() => vi.useRealTimers())
 
 describe('stream quality menu and sampling', () => {
+  it('keeps Custom selected when its values are edited to a preset\'s', () => {
+    const quality = useStreamQuality()
+    const voice = useVoiceStore()
+    voice.setScreenQuality({ resolution: 1080, fps: 30, custom: true })
+    quality.setResolution('source')
+    quality.setFrameRate(15)
+    expect(voice.screenQuality).toEqual({ resolution: 'source', fps: 15, custom: true })
+    expect(quality.mode.value).toBe('custom')
+    // Without the flag the values decide, as before.
+    voice.setScreenQuality({ resolution: 1080, fps: 30 })
+    quality.setResolution('source')
+    quality.setFrameRate(15)
+    expect(quality.mode.value).toBe('screen')
+  })
+
   it('executes mode, resolution, cadence, mute and source controls through menu actions', () => {
     const quality = useStreamQuality()
     const voice = useVoiceStore()

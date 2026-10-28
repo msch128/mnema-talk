@@ -154,8 +154,10 @@ function isValidArmTarget(direction: 'send' | 'recv', channelId: string, senderI
 /** One worker seals every local track and opens every remote track of this call. */
 export function createMediaGuard(): MediaGuard {
   let worker: Worker | null = null
-  const ports: KeyedPort[] = []
-  let armed = new WeakMap<RTCRtpReceiver, KeyedPort>()
+  const ports = new Set<KeyedPort>()
+  // The port of the line each sender or receiver carries now, so arming it
+  // again (renegotiation, a replaced track) releases the port it replaces.
+  let armed = new WeakMap<TransformTarget, KeyedPort>()
   // The last key message, given to a line armed later; seq lets the shared
   // worker apply a message once however many lines deliver it.
   let current: KeyMessage | null = null
@@ -166,6 +168,12 @@ export function createMediaGuard(): MediaGuard {
     if (!canArm()) return null
     worker ??= spawnWorker(senders => statsListener?.(senders))
     return worker
+  }
+
+  function release(port: KeyedPort) {
+    ports.delete(port)
+    try { port.postMessage({ type: 'drop' }) } catch (error) { ignoreClosedPort(error) }
+    try { port.close() } catch (error) { ignoreClosedPort(error) }
   }
 
   function arm(target: TransformTarget, direction: 'send' | 'recv', channelId: string, senderId: string | null, source?: FrameSource, layer?: number): boolean {
@@ -182,11 +190,13 @@ export function createMediaGuard(): MediaGuard {
       closeQuietly(channel.port1)
       return false
     }
-    ports.push(channel.port1)
+    const replaced = armed.get(target)
+    if (replaced) release(replaced)
+    ports.add(channel.port1)
+    armed.set(target, channel.port1)
     // A browser that cannot clone the key message (it holds CryptoKeys) leaves
     // the line without a key: it opens and seals nothing until setKey reaches it.
     if (current) postOrWarn(channel.port1, current)
-    if (direction === 'recv') armed.set(target as RTCRtpReceiver, channel.port1)
     return true
   }
 
@@ -218,11 +228,7 @@ export function createMediaGuard(): MediaGuard {
     onStats(listener) { statsListener = listener },
     reset() {
       current = null
-      for (const port of ports) {
-        try { port.postMessage({ type: 'drop' }) } catch (error) { ignoreClosedPort(error) }
-        try { port.close() } catch (error) { ignoreClosedPort(error) }
-      }
-      ports.length = 0
+      for (const port of [...ports]) release(port)
       armed = new WeakMap()
       worker?.terminate()
       worker = null

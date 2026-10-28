@@ -95,6 +95,22 @@ describe('media transform guard', () => {
     expect(created.workers).toHaveLength(2)
   })
 
+  it('releases the port of a line when the same sender or receiver is armed again', () => {
+    installBrowser()
+    const guard = createMediaGuard()
+    const sender = { transform: null } as RTCRtpSender
+    expect(guard.armSender(sender, 'channel', 'alice', 0)).toBe(true)
+    expect(guard.armSender(sender, 'channel', 'alice', 0)).toBe(true)
+    const [first, second] = created.channels
+    expect(first?.port1.postMessage).toHaveBeenCalledWith({ type: 'drop' })
+    expect(first?.port1.close).toHaveBeenCalledOnce()
+    expect(second?.port1.close).not.toHaveBeenCalled()
+    // Only the live line hears the next key.
+    guard.setKey(1, {} as EpochKeys)
+    expect(first?.port1.postMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'key' }))
+    expect(second?.port1.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'key', epoch: 1 }))
+  })
+
   it('does not lose the negotiation when a browser refuses to clone what a line needs', () => {
     installBrowser()
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})

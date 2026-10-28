@@ -14,7 +14,7 @@ import BaseDialog from './BaseDialog.vue'
 import MarkdownContent from './MarkdownContent.vue'
 import WelcomeProfileStep from './WelcomeProfileStep.vue'
 
-const { step, stepNumber, total, open, canClose, accepting, next, close, accept } = useWelcomeFlow()
+const { step, stepNumber, total, open, canClose, accepting, acceptFailed, next, close, accept } = useWelcomeFlow()
 const onboarding = useOnboardingStore()
 const chat = useChatStore()
 const toasts = useToastStore()
@@ -75,6 +75,7 @@ const quiet = 'btn btn-ghost'
           <button type="button" :class="primary" data-testid="welcome-next" @click="next">{{ $t('welcome.continue') }}</button>
         </template>
         <template v-else-if="step === 'rules'">
+          <p v-if="acceptFailed" role="alert" class="mr-auto self-center text-sm text-mnema-danger" data-testid="welcome-accept-failed">{{ $t('welcome.rules.acceptFailed') }}</p>
           <button type="button" :class="primary" :disabled="accepting" data-testid="welcome-accept" @click="accept">{{ $t('welcome.rules.accept') }}</button>
         </template>
         <template v-else-if="step === 'notifications'">
