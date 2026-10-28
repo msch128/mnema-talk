@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -90,7 +91,7 @@ func (h *Handler) writeImage(w http.ResponseWriter, r *http.Request, key, ctype,
 	hdr := w.Header()
 	hdr.Set("ETag", etag)
 	hdr.Set("Cache-Control", "private, max-age=31536000, immutable")
-	if r.Header.Get("If-None-Match") == etag {
+	if etagMatches(r.Header.Values("If-None-Match"), etag) {
 		w.WriteHeader(http.StatusNotModified)
 		return nil
 	}
@@ -110,4 +111,19 @@ func (h *Handler) writeImage(w http.ResponseWriter, r *http.Request, key, ctype,
 	hdr.Set("Content-Security-Policy", "default-src 'none'; sandbox")
 	_, _ = w.Write(data)
 	return nil
+}
+
+// etagMatches reports whether an If-None-Match header lists etag. It accepts
+// several comma-separated validators, the weak form a proxy may rewrite them
+// to (weak comparison, RFC 9110) and "*".
+func etagMatches(headers []string, etag string) bool {
+	for _, h := range headers {
+		for _, v := range strings.Split(h, ",") {
+			v = strings.TrimPrefix(strings.TrimSpace(v), "W/")
+			if v == "*" || v == etag {
+				return true
+			}
+		}
+	}
+	return false
 }
