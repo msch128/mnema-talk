@@ -1,0 +1,46 @@
+web/src/components/EventEditDialog.test.ts
+  h_0ff4f4713441f4 66,75,86,96,230-278
+web/src/components/EventEditDialog.vue
+  h_0ff4f4713441f4 2,9,25-32,60-67,71,73-74,80,89-90,93,95,128,130-131,134-136,138-141,143,147,167,171,183,187,199,203,211,215,225,227,252,264,275,277,282
+web/src/components/EventsModal.vue
+  h_0ff4f4713441f4 15,79,95,151-152,177-184
+web/src/components/EventsModalDetails.test.ts
+  h_0ff4f4713441f4 118,187-195
+web/src/components/ForumArea.test.ts
+  h_0ff4f4713441f4 164-165,171-235
+web/src/components/ForumArea.vue
+  h_0ff4f4713441f4 7,10,13,21,41-48,51,54-55,57,59,65,67,70,74-102,104-105,107,130-132,266-269,303-313
+web/src/components/Forward.test.ts
+  h_0ff4f4713441f4 133-143
+web/src/components/ForwardDialog.vue
+  h_0ff4f4713441f4 46-55,59
+web/src/components/IncomingWebhooksPanel.vue
+  h_0ff4f4713441f4 5,15,25,44-46,51-52,54-55,59,66,68,70,82,195-196,228
+web/src/components/LaterDialog.test.ts
+  h_0ff4f4713441f4 111-139
+web/src/components/LaterDialog.vue
+  h_0ff4f4713441f4 6,40-44,58-60,62,69,77,85-92
+web/src/components/LegalModal.test.ts
+  h_0ff4f4713441f4 38-41
+web/src/components/LegalModal.vue
+  h_0ff4f4713441f4 18-19,26-27,76,112-113,216
+web/src/components/WebhookPanels.test.ts
+  h_0ff4f4713441f4 72-98
+web/src/i18n/de.json
+  h_0ff4f4713441f4 409,801,2382,2500-2508
+web/src/i18n/en.json
+  h_0ff4f4713441f4 409,801,2382,2500-2508
+web/src/lib/forumApi.ts
+  h_0ff4f4713441f4 40-41,50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "43c2041b87fdf8a4623ef89446ed8dffadd0c185",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
