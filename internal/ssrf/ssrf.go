@@ -183,6 +183,14 @@ func (p *Policy) Check(addr netip.Addr) error {
 	return nil
 }
 
+// RejectedURLText reports a URL string that is empty, too long, or contains
+// a space, an ASCII control or DEL. Other packages that fetch user-supplied
+// URLs share it with ValidateURL.
+func RejectedURLText(raw string) bool { return rejectedURLText(raw) }
+
+// AcceptableURL reports an absolute http(s) URL with a host and no credentials.
+func AcceptableURL(u *url.URL) bool { return acceptableURL(u) }
+
 // rejectedURLText reports a URL string that is empty, too long, or contains
 // a space, an ASCII control or DEL.
 func rejectedURLText(raw string) bool {

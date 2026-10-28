@@ -92,16 +92,9 @@ func isAllowedPort(port string, allowPrivate bool) bool {
 	return port == "80" || port == "443"
 }
 
-func isValidWebScheme(scheme string) bool {
-	return scheme == "http" || scheme == "https"
-}
-
 // checkURL allows only plain http(s) URLs on the default ports.
 func (f *Fetcher) checkURL(u *url.URL) error {
-	if !isValidWebScheme(u.Scheme) {
-		return ErrBlocked
-	}
-	if u.User != nil || u.Hostname() == "" {
+	if !ssrf.AcceptableURL(u) {
 		return ErrBlocked
 	}
 	if !isAllowedPort(u.Port(), f.allowPrivate) {

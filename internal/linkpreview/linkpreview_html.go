@@ -2,19 +2,31 @@ package linkpreview
 
 import (
 	"bytes"
+	"io"
 	"net/url"
 	"strings"
 	"unicode/utf8"
 
 	"golang.org/x/net/html"
+	"golang.org/x/net/html/charset"
 )
+
+// utf8Reader decodes body to UTF-8 using the charset of the Content-Type
+// header or the page's own <meta charset>; undecodable input is read as is.
+func utf8Reader(body []byte, ctype string) io.Reader {
+	r, err := charset.NewReader(bytes.NewReader(body), ctype)
+	if err != nil {
+		return bytes.NewReader(body)
+	}
+	return r
+}
 
 // parseHTML reads Open Graph tags with <title> and meta description as
 // fallbacks. Text is plain (entities decoded); the client escapes it.
-func parseHTML(body []byte, base *url.URL) *Preview {
+func parseHTML(body []byte, ctype string, base *url.URL) *Preview {
 	p := &Preview{}
 	var title, desc string
-	z := html.NewTokenizer(bytes.NewReader(body))
+	z := html.NewTokenizer(utf8Reader(body, ctype))
 	inTitle := false
 	for {
 		switch z.Next() {
@@ -82,7 +94,9 @@ func finish(p *Preview, title, desc string, base *url.URL) *Preview {
 	p.Description = clip(p.Description, maxDescRunes)
 	p.SiteName = clip(p.SiteName, 80)
 	if p.Image != "" {
-		if img, err := base.Parse(strings.TrimSpace(p.Image)); err == nil && (img.Scheme == "http" || img.Scheme == "https") {
+		// An URL the image proxy would refuse anyway is not worth caching
+		// and sending to every client.
+		if img, err := base.Parse(strings.TrimSpace(p.Image)); err == nil && (img.Scheme == "http" || img.Scheme == "https") && len(img.String()) <= maxURLLen {
 			p.Image = img.String()
 		} else {
 			p.Image = ""
