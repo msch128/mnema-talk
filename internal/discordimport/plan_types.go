@@ -92,5 +92,5 @@ type EveryoneInfo struct {
 	PermissionKeys []string `json:"permission_keys"`
 	Dropped        []string `json:"dropped"`
 	// Applied is reserved: @everyone is never changed, so it is always false.
-	Applied        bool     `json:"applied"`
+	Applied bool `json:"applied"`
 }
