@@ -38,8 +38,10 @@ function startPingHeartbeat(cx: Cx, session: SocketSession) {
       handleSocketClose(cx, session)
       return
     }
-    cs.lastPingAt = Date.now()
-    sendWSEvent(cx, 'ping', { t: cs.lastPingAt })
+    const now = Date.now()
+    // Keep the oldest unanswered ping as the reference so the wait keeps growing until a pong arrives.
+    if (cs.lastPingAt <= cs.lastPongAt) cs.lastPingAt = now
+    sendWSEvent(cx, 'ping', { t: now })
   }, PING_INTERVAL_MS)
 }
 
