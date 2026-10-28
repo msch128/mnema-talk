@@ -1,0 +1,29 @@
+internal/gateway/gateway.go
+  s_9df22b27f2327e::t_492b5c15f1601d 66-69
+internal/gateway/gateway_test.go
+  s_9df22b27f2327e::t_e35aba3e2a0d87 13,330-398
+internal/gateway/gateway_tokens.go
+  s_9df22b27f2327e::t_192dbcf406f491 15-17,20-21,23,32-40,44,165
+internal/gateway/observe.go
+  s_9df22b27f2327e::t_79dd09c6a34af4 6,61-63,67-68,81-83
+internal/gateway/serve.go
+  s_9df22b27f2327e::t_7a43508ab26d63 176,242-243,252,254-255,257-258
+internal/gateway/session.go
+  s_9df22b27f2327e::t_19322289ce1489 80-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "50521b2d00c5973bd087c422e35e5ac75e5b06ba",
+  "prompts": {},
+  "sessions": {
+    "s_9df22b27f2327e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af345ded314039cb4",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
