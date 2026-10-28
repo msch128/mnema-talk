@@ -33,6 +33,12 @@ function useOnReturn(callback: () => void) {
   onBeforeUnmount(() => document.removeEventListener('visibilitychange', onVisible))
 }
 
+function openStartChannel() {
+  const chat = useChatStore()
+  const id = useOnboardingStore().state?.start_channel_id
+  if (id && chat.allChannels.some(c => c.id === id)) navigate(chat.linkTo(id))
+}
+
 export function useWelcomeFlow() {
   const auth = useAuthStore()
   const chat = useChatStore()
@@ -63,11 +69,6 @@ export function useWelcomeFlow() {
     index.value = 0
     steps.value = welcomeSteps(state, { firstRun: firstRun.value, canAskNotifications: chat.notificationPermission === 'default' })
     onboarding.welcomeOpen = open.value
-  }
-
-  function openStartChannel() {
-    const id = onboarding.state?.start_channel_id
-    if (id && chat.allChannels.some(c => c.id === id)) navigate(chat.linkTo(id))
   }
 
   function finish() {

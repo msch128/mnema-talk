@@ -406,7 +406,7 @@ describe('AdminRolesTab unsaved edits', () => {
     expect(w.find('[data-testid="role-upload-invalid"]').exists()).toBe(false)
     const hex = w.get<HTMLInputElement>('input[placeholder="#rrggbb"]')
     await hex.setValue('#12345')
-    expect(w.get('[data-testid="role-color-invalid"]').exists()).toBe(true)
+    expect(w.find('[data-testid="role-color-invalid"]').exists()).toBe(true)
     await hex.setValue('#123456')
     expect(w.find('[data-testid="role-color-invalid"]').exists()).toBe(false)
   })

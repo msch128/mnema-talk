@@ -30,7 +30,7 @@ function scope(options: { windows?: ClientLike[], waiting?: number, userAgent?: 
       pushManager: { subscribe },
     },
     clients: { matchAll: async () => options.windows ?? [], openWindow: vi.fn(async () => null) },
-    navigator: { ...nav, userAgent: options.userAgent },
+    navigator: { ...nav, ...(options.userAgent === undefined ? {} : { userAgent: options.userAgent }) },
     fetch,
   }
   return { scope: s, shown, nav: s.navigator as typeof nav, subscribe, fetch }

@@ -151,6 +151,12 @@ function isValidArmTarget(direction: 'send' | 'recv', channelId: string, senderI
   return true
 }
 
+function releasePort(ports: Set<KeyedPort>, port: KeyedPort) {
+  ports.delete(port)
+  try { port.postMessage({ type: 'drop' }) } catch (error) { ignoreClosedPort(error) }
+  try { port.close() } catch (error) { ignoreClosedPort(error) }
+}
+
 /** One worker seals every local track and opens every remote track of this call. */
 export function createMediaGuard(): MediaGuard {
   let worker: Worker | null = null
@@ -170,12 +176,6 @@ export function createMediaGuard(): MediaGuard {
     return worker
   }
 
-  function release(port: KeyedPort) {
-    ports.delete(port)
-    try { port.postMessage({ type: 'drop' }) } catch (error) { ignoreClosedPort(error) }
-    try { port.close() } catch (error) { ignoreClosedPort(error) }
-  }
-
   function arm(target: TransformTarget, direction: 'send' | 'recv', channelId: string, senderId: string | null, source?: FrameSource, layer?: number): boolean {
     if (!isValidArmTarget(direction, channelId, senderId, source)) return false
     const currentWorker = sharedWorker()
@@ -191,7 +191,7 @@ export function createMediaGuard(): MediaGuard {
       return false
     }
     const replaced = armed.get(target)
-    if (replaced) release(replaced)
+    if (replaced) releasePort(ports, replaced)
     ports.add(channel.port1)
     armed.set(target, channel.port1)
     // A browser that cannot clone the key message (it holds CryptoKeys) leaves
@@ -228,7 +228,7 @@ export function createMediaGuard(): MediaGuard {
     onStats(listener) { statsListener = listener },
     reset() {
       current = null
-      for (const port of [...ports]) release(port)
+      for (const port of [...ports]) releasePort(ports, port)
       armed = new WeakMap()
       worker?.terminate()
       worker = null

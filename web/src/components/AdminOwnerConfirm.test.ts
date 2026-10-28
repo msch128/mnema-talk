@@ -102,7 +102,7 @@ describe('password set by the Owner', () => {
     await flushPromises()
     const field = w.get('[data-testid="new-password-input"]')
     expect(field.attributes('autocomplete')).toBe('new-password')
-    expect(w.get(`label[for="${field.attributes('id')}"]`).exists()).toBe(true)
+    expect(w.find(`label[for="${field.attributes('id')}"]`).exists()).toBe(true)
     expect(w.find('[data-testid="password-toggle"]').exists()).toBe(true)
   })
 })

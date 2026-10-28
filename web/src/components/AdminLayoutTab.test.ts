@@ -337,7 +337,7 @@ describe('layout stale arrow handler', () => {
 describe('layout save and create races', () => {
   async function open() {
     vi.spyOn(useChatStore(), 'fetchChannels').mockResolvedValue(undefined)
-    const calls: { path: string; method?: string }[] = []
+    const calls: { path: string; method?: string | undefined }[] = []
     let release: (() => void) | undefined
     apiMock.mockImplementation(async (path, options) => {
       calls.push({ path, method: options?.method })

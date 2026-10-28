@@ -10,6 +10,7 @@ import { decodeRole } from '../types/domain'
 import type { Role } from '../types/domain'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
+import { customNameMissing, ownerUploadRejected, saveClosed, uploadPatch } from '../lib/roleSave'
 import { PERMISSION_BITS, ROLE_COLOR_PRESETS, parseRoleColor, roleColorCss } from '../lib/permissions'
 import { t } from '../i18n'
 import RolePermissionPicker from './RolePermissionPicker.vue'
@@ -123,29 +124,6 @@ async function create() {
   } finally {
     busy.value = false
   }
-}
-
-function saveClosed(role: Role | null, isBusy: boolean): boolean {
-  if (!role) return true
-  return isBusy
-}
-
-function customNameMissing(role: Role, trimmed: string): boolean {
-  if (role.is_everyone) return false
-  return trimmed.length === 0
-}
-
-function ownerUploadRejected(owner: boolean, upload: number | null | undefined): boolean {
-  if (!owner) return false
-  return upload === undefined
-}
-
-function uploadPatch(owner: boolean, upload: number | null | undefined, current: number | null) {
-  // Only the Owner may send the upload limit; it is the one field the
-  // server refuses from role managers.
-  if (!owner) return {}
-  if (upload === undefined || upload === current) return {}
-  return { max_upload_mb: upload }
 }
 
 function savedRole(role: Role, trimmed: string, upload: { max_upload_mb?: number | null }) {

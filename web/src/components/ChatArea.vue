@@ -90,8 +90,6 @@ const { stopId } = useRovingMessages(messageContainer, () => (chatStore.messages
 const { dividerSince, dividerBeforeId, dividerLabel, markAllRead } = useUnreadDivider()
 const { showJumpToUnread, jumpToFirstUnread } = useFirstUnreadJump({ container: messageContainer, since: dividerSince, dividerBeforeId })
 
-// ---- Typing indicator ----
-
 const typingText = computed(() => {
   const line = typingLine(chatStore.typingByChannel[chatStore.activeChannel?.id ?? ''])
   return line ? t(line.key, line.params) : ''
@@ -102,12 +100,6 @@ watch(() => chatStore.activeChannel?.id, () => {
   actions.cancelEdit()
   nextTick(() => composer.value?.focus())
 })
-
-async function handleJumpToPresent() {
-  await chatStore.jumpToLatest()
-}
-
-// ---- Replies ----
 
 function startReply(msg: Message) {
   replyingTo.value = msg
@@ -186,15 +178,7 @@ function isSendBlocked(text: string): boolean {
 
 // The composer refs belong to whichever channel is open now, so a send that
 // resolves after a channel switch must not touch them.
-function stillIn(channelId: string | undefined): boolean {
-  return chatStore.activeChannel?.id === channelId
-}
-
-// The switch already saved the sent text as the old channel's draft; drop it.
-function dropSentDraft(channelId: string | undefined) {
-  const uid = authStore.user?.id
-  if (uid && channelId) setDraft(uid, channelDraftKey(channelId), null)
-}
+const stillIn = (channelId: string | undefined) => chatStore.activeChannel?.id === channelId
 
 async function handleSend() {
   const text = inputMessage.value.trim()
@@ -208,8 +192,9 @@ async function handleSend() {
       inputMessage.value = ''
       replyingTo.value = null
       await revealOwnMessage()
-    } else {
-      dropSentDraft(sentIn)
+    } else if (authStore.user?.id && sentIn) {
+      // The switch already saved the sent text as the old channel's draft; drop it.
+      setDraft(authStore.user.id, channelDraftKey(sentIn), null)
     }
   } catch (err) {
     toasts.error(dmChat.sendError(err, t('chat.sendFailed')))
@@ -356,7 +341,7 @@ const groupedIds = computed(() => {
       v-if="chatStore.hasMoreAfter && chatStore.messages.length"
       type="button"
       class="absolute left-4 right-4 bottom-1 h-8 px-3 flex items-center justify-between gap-2 rounded-lg bg-mnema-band text-mnema-mint text-sm font-medium shadow-lg hover:brightness-110 transition z-20"
-      @click="handleJumpToPresent"
+      @click="chatStore.jumpToLatest()"
     >
       <span class="truncate">
         {{ chatStore.missedLiveCount > 0 ? $t('chat.newMessages') : $t('chat.viewingOlder') }}

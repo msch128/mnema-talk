@@ -43,6 +43,15 @@ function scan(ctx: InlineContext, key: string, src: string, from: number, test: 
   return found
 }
 
+/** The index of the last character of the code span (or lone backtick run) at j; fence lengths found unclosed go into `unclosed`. */
+function skipCodeSpan(src: string, j: number, unclosed: Set<number>): number {
+  let n = 1
+  while (src[j + n] === '`') n++
+  const close = unclosed.has(n) ? -1 : findCodeClose(src, j, n)
+  if (close < 0) unclosed.add(n)
+  return (close < 0 ? j : close) + n - 1
+}
+
 function scanFrom(src: string, from: number, test: (j: number) => boolean, pair: string): number {
   // Fence lengths without a closer further on: a later fence of that length has none either.
   let unclosed: Set<number> | undefined
@@ -51,11 +60,8 @@ function scanFrom(src: string, from: number, test: (j: number) => boolean, pair:
       j++
     } else if (src[j] === '`') {
       // A code span is opaque: delimiters inside it neither close nor open anything.
-      let n = 1
-      while (src[j + n] === '`') n++
-      const close = unclosed?.has(n) ? -1 : findCodeClose(src, j, n)
-      if (close < 0) (unclosed ??= new Set()).add(n)
-      j = (close < 0 ? j : close) + n - 1
+      unclosed ??= new Set()
+      j = skipCodeSpan(src, j, unclosed)
     } else if (pair && src.startsWith(pair, j)) {
       j += pair.length - 1
     } else if (test(j)) {

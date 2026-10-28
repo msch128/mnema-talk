@@ -11,6 +11,17 @@ import { useToastStore } from '../stores/toast'
 import { applyPushConfig } from '../lib/notifyPreview'
 import { t } from '../i18n'
 
+// The permission is a browser property Vue cannot observe: read again after each load.
+const isDenied = () => typeof Notification !== 'undefined' && Notification.permission === 'denied'
+
+async function refreshDeviceState() {
+  try {
+    await refreshPushState()
+  } catch {
+    // The device state is advisory; the section already shows what it could read.
+  }
+}
+
 export function usePushSettings() {
   const toasts = useToastStore()
   const availability = pushAvailability()
@@ -21,8 +32,6 @@ export function usePushSettings() {
   const busy = ref(false)
   const failed = ref(false)
 
-  // The permission is a browser property Vue cannot observe: read again after each load.
-  const isDenied = () => typeof Notification !== 'undefined' && Notification.permission === 'denied'
   const blocked = ref(isDenied())
   const enabledByOperator = computed(() => config.value?.enabled === true)
 
@@ -43,11 +52,7 @@ export function usePushSettings() {
       loading.value = false
     }
     blocked.value = isDenied()
-    try {
-      await refreshPushState()
-    } catch {
-      // The device state is advisory; the section already shows what it could read.
-    }
+    await refreshDeviceState()
   }
 
   const refresh = () => load(true)
