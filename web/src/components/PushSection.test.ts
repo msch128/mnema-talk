@@ -143,6 +143,20 @@ describe('the push section', () => {
     expect(lib.remove).toHaveBeenCalledWith(lib.mine)
   })
 
+  it('refreshes in place after an action, keeping the buttons mounted', async () => {
+    lib.devices = [device('d1', 'Firefox on Linux')]
+    lib.mine = { id: 'd1' }
+    await open()
+    const button = w.find('[data-testid="push-test"]')
+    const seen: boolean[] = []
+    const watch = setInterval(() => seen.push(w.find('[data-testid="push-loading"]').exists()), 0)
+    await button.trigger('click')
+    await flushPromises()
+    clearInterval(watch)
+    expect(seen).not.toContain(true)
+    expect(w.find('[data-testid="push-test"]').element).toBe(button.element)
+  })
+
   it('removes another device from the list', async () => {
     lib.devices = [device('d1', 'Firefox on Linux'), device('d2', '')]
     lib.mine = { id: 'd1' }

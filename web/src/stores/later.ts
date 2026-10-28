@@ -5,6 +5,7 @@ import {
   deleteReminder, deleteScheduled, fetchReminders, fetchScheduled, patchScheduled, postReminder, postScheduled,
   type ScheduleOptions
 } from '../lib/laterApi'
+import { isApiError } from '../lib/api'
 import { noticeReminderDue, noticeScheduledFailed } from '../lib/laterNotices'
 
 export type { ScheduleOptions }
@@ -79,7 +80,10 @@ export const useLaterStore = defineStore('later', () => {
   }
 
   async function removeScheduled(id: string) {
-    await deleteScheduled(id)
+    // Already gone (another tab, a double click): the list should drop it all the same.
+    await deleteScheduled(id).catch((e: unknown) => {
+      if (!(isApiError(e) && e.status === 404)) throw e
+    })
     scheduled.value = without(scheduled.value, id)
   }
 

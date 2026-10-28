@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useLaterStore } from './later'
 import { useToastStore } from './toast'
+import { ApiError } from '../lib/api'
 import { setLocale, t } from '../i18n'
 import { fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 
@@ -149,5 +150,17 @@ describe('reminders and scheduled messages store', () => {
     expect(later.reminders).toHaveLength(1)
     await later.onScheduledEvent({ id: fixtureId(2), channel_id: fixtureId(2), state: 'failed' })
     expect(toasts.toasts.at(-1)?.detail).toBe(t('later.reason.refused'))
+  })
+
+  it('drops a scheduled message the server no longer has, but keeps it when the delete really fails', async () => {
+    apiMock.mockResolvedValueOnce({ items: [scheduled(2)] })
+    const later = useLaterStore()
+    await later.load({ reminders: false, scheduled: true })
+    apiMock.mockRejectedValueOnce(new ApiError(500, 'internal', 'boom'))
+    await expect(later.removeScheduled(fixtureId(2))).rejects.toThrow('boom')
+    expect(later.scheduled).toHaveLength(1)
+    apiMock.mockRejectedValueOnce(new ApiError(404, 'not_found', 'gone'))
+    await later.removeScheduled(fixtureId(2))
+    expect(later.scheduled).toHaveLength(0)
   })
 })

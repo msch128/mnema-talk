@@ -43,6 +43,22 @@ describe('ScreenShareModal', () => {
     expect(w.text()).not.toContain('H.264')
   })
 
+  it('exposes the chosen preset, resolution and frame rate to assistive technology', async () => {
+    w = mount(ScreenShareModal)
+    await w.find('[data-testid="preset-gaming"]').trigger('click')
+    const pressed = (id: string) => w.find(`[data-testid="${id}"]`).attributes('aria-pressed')
+    expect(pressed('preset-gaming')).toBe('true')
+    expect(pressed('preset-screen')).toBe('false')
+    expect(pressed('resolution-btn-1440')).toBe('true')
+    expect(pressed('resolution-btn-720')).toBe('false')
+    expect(pressed('fps-btn-60')).toBe('true')
+    expect(pressed('fps-btn-30')).toBe('false')
+    for (const group of w.findAll('[role="group"]')) {
+      expect(w.find(`#${group.attributes('aria-labelledby')}`).text()).not.toBe('')
+    }
+    expect(w.findAll('[role="group"]')).toHaveLength(3)
+  })
+
   it('switches to gaming preset when clicked', async () => {
     w = mount(ScreenShareModal)
     await w.find('[data-testid="preset-gaming"]').trigger('click')

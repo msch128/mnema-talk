@@ -169,3 +169,30 @@ describe('SearchFilterRow', () => {
     expect(wrapper.find('[data-testid="search-scope"]').exists()).toBe(false)
   })
 })
+
+describe('SearchFilterRow date popover', () => {
+  const dateInput = () => wrapper.get<HTMLInputElement>('[data-date-input]')
+
+  it('waits for a real year before picking a typed day', async () => {
+    make()
+    await button('date').trigger('click')
+    // A date field reports 0002-10-28 after the first year digit.
+    await dateInput().setValue('0002-10-28')
+    expect(picks()).toBeUndefined()
+    await dateInput().setValue('2026-10-28')
+    expect(picks()).toEqual(['during:2026-10-28'])
+  })
+
+  it('walks the list from the other controls: Up enters at the bottom, Down at the top', async () => {
+    make()
+    await button('date').trigger('click')
+    const items = wrapper.findAll<HTMLElement>('[data-pop-item]')
+    const kind = wrapper.get<HTMLElement>('[data-date-kind]')
+    kind.element.focus()
+    await kind.trigger('keydown', { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(items.at(-1)?.element)
+    kind.element.focus()
+    await kind.trigger('keydown', { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(items[0]?.element)
+  })
+})
