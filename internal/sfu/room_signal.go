@@ -23,9 +23,7 @@ func (p *Peer) SetAnswer(answer webrtc.SessionDescription) error {
 		return err
 	}
 	p.applyEarlyCandidates()
-	if p.negotiationPending.Swap(false) {
-		p.room.requestPeerSignal(p)
-	}
+	p.requestPendingSignal()
 	return nil
 }
 
@@ -53,14 +51,24 @@ func (r *Room) requestPeerSignal(peer *Peer) {
 		return
 	}
 	go func() {
-		defer func() {
-			peer.signalingMu.Unlock()
-			if peer.PC.SignalingState() == webrtc.SignalingStateStable && peer.negotiationPending.Swap(false) {
-				r.requestPeerSignal(peer)
-			}
-		}()
+		defer peer.finishSignalingTask()
 		r.signalPeer(peer)
 	}()
+}
+
+// finishSignalingTask ends a signaling task and runs the round that changes
+// queued behind it, once the peer is stable. The caller owns signalingMu.
+func (p *Peer) finishSignalingTask() {
+	p.signalingMu.Unlock()
+	p.requestPendingSignal()
+}
+
+// requestPendingSignal runs a queued round if the peer can take it now.
+func (p *Peer) requestPendingSignal() {
+	slog.Info("DBG requestPendingSignal", "user", p.ID, "state", p.PC.SignalingState().String(), "pending", p.negotiationPending.Load())
+	if p.PC.SignalingState() == webrtc.SignalingStateStable && p.negotiationPending.Swap(false) {
+		p.room.requestPeerSignal(p)
+	}
 }
 
 // signalPeer operates on a membership snapshot. No PeerConnection/network
@@ -84,9 +92,30 @@ func (r *Room) signalPeer(peer *Peer) {
 	}
 	existing, removed := removeStaleSenders(peer, desired)
 	added := r.addMissingSenders(peer, desired, existing)
-	if removed || added || !peer.offerSent {
-		negotiateOffer(peer)
+	if removed || added || !peer.offerSent || peer.needOffer {
+		r.negotiateOrRetry(peer)
 	}
+}
+
+// negotiateOrRetry sends the peer an offer. An offer that cannot be built
+// leaves the peer's senders un-negotiated, and no later round would notice, so
+// the attempt is repeated shortly; a peer that never gets one is dropped.
+// The caller owns peer.signalingMu.
+func (r *Room) negotiateOrRetry(peer *Peer) {
+	if err := negotiateOffer(peer); err == nil {
+		peer.needOffer = false
+		peer.offerFailures = 0
+		return
+	}
+	peer.offerFailures++
+	slog.Info("DBG offer build failed", "user", peer.ID)
+	if peer.offerFailures >= maxOfferBuildFailures {
+		slog.Error("sfu offer could not be built, giving up", "user", peer.ID, "attempts", peer.offerFailures)
+		go r.dropLostPeer(peer)
+		return
+	}
+	peer.needOffer = true
+	time.AfterFunc(offerRetryDelay, func() { r.requestPeerSignal(peer) })
 }
 
 // desiredTracks returns the tracks the peer should receive, keyed by the ID
@@ -170,7 +199,12 @@ func (r *Room) addSender(peer *Peer, trackID string, info *TrackInfo) bool {
 	}
 	delete(peer.addTrackFailed, trackID)
 	if vt != nil {
-		peer.putViewerTrack(trackID, vt)
+		if !peer.putViewerTrack(trackID, vt) {
+			slog.Info("DBG putViewerTrack refused", "user", peer.ID)
+			// The peer was released while this round ran.
+			_ = peer.PC.RemoveTrack(sender)
+			return false
+		}
 		// The new viewer waits for a keyframe of its layer, which
 		// addViewer asks for.
 		info.group.addViewer(vt)
@@ -227,15 +261,21 @@ func (p *Peer) noteAddTrackFailure(trackID string, info *TrackInfo, err error) {
 }
 
 // negotiateOffer creates and sets the local offer and hands it to the client.
-func negotiateOffer(peer *Peer) {
+func negotiateOffer(peer *Peer) error {
+	slog.Info("DBG negotiateOffer", "user", peer.ID, "state", peer.PC.SignalingState().String())
+	if peer.offerFault != nil {
+		if err := peer.offerFault(); err != nil {
+			return err
+		}
+	}
 	offer, err := peer.PC.CreateOffer(nil)
 	if err != nil {
 		slog.Error("sfu create offer", "err", err)
-		return
+		return err
 	}
 	if err := peer.PC.SetLocalDescription(offer); err != nil {
 		slog.Error("sfu set local description", "err", err)
-		return
+		return err
 	}
 	peer.offerSent = true
 	gen := peer.offerGen.Add(1)
@@ -246,6 +286,7 @@ func negotiateOffer(peer *Peer) {
 	// Gathering started with SetLocalDescription, so candidates may be
 	// waiting; the client must see them after the offer.
 	peer.offerDelivered()
+	return nil
 }
 
 // watchOffer arms the watchdog for offer gen: if it is still unanswered
@@ -253,14 +294,9 @@ func negotiateOffer(peer *Peer) {
 func (p *Peer) watchOffer(gen uint64, attempt int) {
 	time.AfterFunc(p.room.offerTimeout, func() {
 		p.signalingMu.Lock()
-		defer func() {
-			p.signalingMu.Unlock()
-			// An answer may stabilize the peer while the resend callback is
-			// still running. Drain changes queued behind this task as well.
-			if p.PC.SignalingState() == webrtc.SignalingStateStable && p.negotiationPending.Swap(false) {
-				p.room.requestPeerSignal(p)
-			}
-		}()
+		// An answer may stabilize the peer while the resend callback is
+		// still running; finishing drains changes queued behind this task.
+		defer p.finishSignalingTask()
 		p.resendOffer(gen, attempt)
 	})
 }
@@ -285,6 +321,8 @@ func (p *Peer) resendOffer(gen uint64, attempt int) {
 	}
 	if attempt > maxOfferResends {
 		slog.Error("sfu offer never answered, giving up", "user", p.ID, "resends", maxOfferResends)
+		// Left alone the peer would stay a silent member of the call.
+		go p.room.dropLostPeer(p)
 		return
 	}
 	slog.Warn("sfu offer unanswered, sending it again", "user", p.ID, "attempt", attempt)

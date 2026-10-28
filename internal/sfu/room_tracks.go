@@ -1,6 +1,7 @@
 package sfu
 
 import (
+	"log/slog"
 	"slices"
 	"time"
 
@@ -284,6 +285,7 @@ func (r *Room) removePeer(peer *Peer) bool {
 // answering, and tells its owner (see Peer.OnLost), who is otherwise left in
 // the call without media.
 func (r *Room) dropLostPeer(peer *Peer) {
+	slog.Info("DBG dropLostPeer", "user", peer.ID)
 	if r.removePeer(peer) {
 		peer.notifyLost()
 	}
