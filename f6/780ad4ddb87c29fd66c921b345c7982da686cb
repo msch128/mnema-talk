@@ -1,0 +1,21 @@
+.github/workflows/dbg-reload.yml
+  s_d8e458a1a9342a::t_05bc548ddeb798 15
+web/src/lib/media/mediaFrameWorker.ts
+  s_d8e458a1a9342a::t_86443c5218276b 242-244,256-259
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f6780ad4ddb87c29fd66c921b345c7982da686cb",
+  "prompts": {},
+  "sessions": {
+    "s_d8e458a1a9342a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-arootcause-sealing-f9b13a90a3d1378a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
