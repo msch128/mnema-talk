@@ -1,0 +1,115 @@
+SECURITY.md
+  s_7f6fb971c44b88::t_5cbca88a897613 361-365
+api/openapi.json
+  s_7f6fb971c44b88::t_15ff885b7aab0a 554-568,726-735,18066,18123,18177,18191-18200,18248,18861-18870,18903
+doc/moderation.md
+  s_2156e9735076ff::t_c51b45e2fe5558 437
+doc/upgrade.md
+  s_2156e9735076ff::t_6e28642342b883 779
+e2e/tests/two-factor.spec.ts
+  s_5284da226de11a::t_295f7fc0a4f180 90
+internal/auth/paths_integration_test.go
+  s_7f6fb971c44b88::t_4dbe67b537cc79 208-209
+internal/auth/users_admin_handlers.go
+  s_5f3060f697443d::t_96db66dce512e1 154,157,161,166,177-183,199,210,225-227,343-361,376,380,384,395-401
+internal/server/account_deleted_final_integration_test.go
+  s_791bbb8e901370::t_e26ad303aaeed3 27-28,30
+internal/server/owner_stepup_integration_test.go
+  s_7f6fb971c44b88::t_1d3fe7cb5d66fe 1-105
+internal/server/password_reset_revocation_integration_test.go
+  s_791bbb8e901370::t_41ec2012aa3ddf 27,33
+internal/server/two_factor_integration_test.go
+  s_791bbb8e901370::t_e4aeefb7ccb89a 289,292
+internal/server/users_admin_integration_test.go
+  s_791bbb8e901370::t_01a7b5f630b2e1 182,238,244,254
+web/src/components/AccountData.vue
+  s_5284da226de11a::t_50424e01e2bf57 14,107,132
+web/src/components/AdminDashboard.test.ts
+  s_06fcde5dbef956::t_3364bbc3da0adb 86,284,293
+web/src/components/AdminOwnerConfirm.test.ts
+  s_7f6fb971c44b88::t_50db4c4d8b37d0 1-98
+web/src/components/AdminResetPasswordDialog.vue
+  s_7f6fb971c44b88::t_3d63cf3d6b6eeb 9,11,22-25,32,37,42,73-75
+web/src/components/AdminResetTwoFactorDialog.vue
+  s_7f6fb971c44b88::t_d48b1390eacd84 1-60
+web/src/components/AdminUsersTab.test.ts
+  s_04a9158107960a::t_e11a9e5685afe9 95-96,100
+web/src/components/AdminUsersTab.twoFactor.test.ts
+  s_04a9158107960a::t_6384e85eb4e0e5 40,42,45-46,48-60,62-64,68-69,71-73,75
+web/src/components/AdminUsersTab.vue
+  s_7f6fb971c44b88::t_4b3fe10852f79d 15,24,187,198
+web/src/components/IdentityFields.vue
+  s_5284da226de11a::t_9f052bd6ad217b 1-20
+web/src/i18n/de.json
+  s_7f6fb971c44b88::t_2f189e587e3d10 1458
+web/src/i18n/en.json
+  s_7f6fb971c44b88::t_7cd4257913a75d 1458
+web/src/lib/ownerProof.ts
+  s_5284da226de11a::t_487aa3147b462f 1-27
+web/src/types/rest.ts
+  s_5f3060f697443d::t_5bcb64351c0e02 311-323,438-439,445-446
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "31b26f251ff849aa47518be801bbf396a7bade10",
+  "prompts": {},
+  "sessions": {
+    "s_04a9158107960a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adel-native-desktop-25714c3fee945686",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2156e9735076ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adel-native-server-78d153cdff05b628",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5284da226de11a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-talk-disconnect-88fecc8ed16c4364",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5f3060f697443d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-zip-vectors-6e00f6c5314709e3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_791bbb8e901370": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-unread-index-26bfc601270d5cb8",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7f6fb971c44b88": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-owner-stepup-bdda36191467c6b7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
