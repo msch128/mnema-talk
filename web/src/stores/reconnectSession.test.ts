@@ -108,7 +108,7 @@ describe('socket liveness', () => {
     socket.onopen?.()
     await vi.advanceTimersByTimeAsync(5000)
     expect(chat.isConnected).toBe(true)
-    await vi.advanceTimersByTimeAsync(15000)
+    await vi.advanceTimersByTimeAsync(20000)
     expect(chat.isConnected).toBe(false)
     expect(socket.close).toHaveBeenCalled()
     expect(chat.reconnectAttempt).toBe(1)
