@@ -1,0 +1,19 @@
+e2e/tests/helpers.ts
+  s_d8e458a1a9342a::t_31384f513f0239 87-95,97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "81140ad03231f53778761000c13bdc08d3defff6",
+  "prompts": {},
+  "sessions": {
+    "s_d8e458a1a9342a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-arootcause-sealing-f9b13a90a3d1378a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
