@@ -29,6 +29,7 @@ type Mail struct {
 
 // Server is the fake SMTP server.
 type Server struct {
+	t    testing.TB
 	ln   net.Listener
 	mu   sync.Mutex
 	mail []Mail
@@ -41,7 +42,7 @@ func Start(t testing.TB) *Server {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := &Server{ln: ln}
+	s := &Server{t: t, ln: ln}
 	t.Cleanup(func() { _ = ln.Close() })
 	go func() {
 		for {
@@ -131,13 +132,15 @@ func readData(r *bufio.Reader) string {
 		if err != nil || line == ".\r\n" {
 			return b.String()
 		}
-		b.WriteString(line)
+		// Undo the dot-stuffing of the sender (RFC 5321, section 4.5.2).
+		b.WriteString(strings.TrimPrefix(line, "."))
 	}
 }
 
 func (s *Server) store(to, raw string) {
 	msg, err := mail.ReadMessage(strings.NewReader(raw))
 	if err != nil {
+		s.t.Errorf("mailtest: unparseable message for %s: %v\n%s", to, err, raw)
 		return
 	}
 	subject, _ := new(mime.WordDecoder).DecodeHeader(msg.Header.Get("Subject"))
