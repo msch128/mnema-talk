@@ -1,0 +1,21 @@
+internal/sfu/room_signal.go
+  s_e093819e095c57::t_8dad173e866a77 26,54,59-73,95-96,100-120,202-207,264-270,274,278,289,297-299,324-325
+internal/sfu/room_tracks.go
+  s_e093819e095c57::t_0f77b67a6fd8b9 4,288
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "25405ba8bc917add9572b89954a845870d854399",
+  "prompts": {},
+  "sessions": {
+    "s_e093819e095c57": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-server-ci-3aceafcfa6eaef3b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
