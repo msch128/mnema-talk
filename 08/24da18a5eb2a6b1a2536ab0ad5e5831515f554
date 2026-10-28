@@ -1,0 +1,19 @@
+internal/webbundle/layout_test.go
+  s_03d1e2dbe3fda0::t_ab5dfc43203b9a 1-359
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0824da18a5eb2a6b1a2536ab0ad5e5831515f554",
+  "prompts": {},
+  "sessions": {
+    "s_03d1e2dbe3fda0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aguard-bundle-layout-3d082d44a0ce283d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
