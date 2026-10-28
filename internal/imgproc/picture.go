@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
-	"image/gif"
 	"image/jpeg"
 	"image/png"
 	"io"
@@ -24,8 +23,9 @@ const (
 	// before anything is decoded.
 	maxEdge   = 8000
 	maxPixels = 16 << 20
-	// maxFrames bounds an animation; counted before the frames are decoded.
-	maxFrames = 100
+	// MaxFrames bounds an animation; counted before the frames are decoded.
+	// Custom emoji use the same limit.
+	MaxFrames = 100
 	// MaxAnimationPixels bounds canvas area times frames, which is what the
 	// decoder and the redraw hold in memory. It is the budget animated custom
 	// emoji have as well.
@@ -92,8 +92,8 @@ func process(data []byte, k kind) (*Picture, error) {
 			return firstGIFFrame(data, k)
 		}
 		return animation(data, k)
-	case len(data) >= 12 && string(data[:4]) == "RIFF" && string(data[8:12]) == "WEBP":
-		if len(data) >= 21 && string(data[12:16]) == "VP8X" && data[20]&0x02 != 0 {
+	case IsWebP(data):
+		if IsAnimatedWebP(data) {
 			if k.legacy {
 				return firstWebPFrame(data, k)
 			}
@@ -185,23 +185,9 @@ func encode(img *image.NRGBA, contentType string) (*Picture, error) {
 // animation redraws every frame onto the full canvas, crops and shrinks it and
 // writes a new GIF. A single-frame GIF becomes a PNG.
 func animation(data []byte, k kind) (*Picture, error) {
-	cfg, err := gif.DecodeConfig(bytes.NewReader(data))
+	g, cfg, err := DecodeGIF(data, func(cfg image.Config) error { return checkCanvas(cfg, k) }, reject)
 	if err != nil {
-		return nil, reject("the image cannot be read")
-	}
-	if err := checkCanvas(cfg, k); err != nil {
 		return nil, err
-	}
-	n := GIFFrames(data, maxFrames)
-	if n < 1 || n > maxFrames {
-		return nil, reject("an animation may have 1 to %d frames", maxFrames)
-	}
-	if cfg.Width*cfg.Height*n > MaxAnimationPixels {
-		return nil, reject("the animation is too large: canvas size times frames may not exceed %d million pixels", MaxAnimationPixels>>20)
-	}
-	g, err := gif.DecodeAll(bytes.NewReader(data))
-	if err != nil || len(g.Image) == 0 {
-		return nil, reject("the image cannot be read")
 	}
 	frames := ComposeGIF(g, cfg, k.cover)
 	if len(frames) == 1 {
