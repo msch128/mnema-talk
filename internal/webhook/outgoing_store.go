@@ -178,6 +178,9 @@ func createOutgoing(ctx context.Context, p *db.Pool, channel, creator uuid.UUID,
 	secret := newSecret()
 	var id uuid.UUID
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SELECT 1 FROM channels WHERE id = $1 FOR NO KEY UPDATE`, channel); err != nil {
+			return err
+		}
 		var n int
 		if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM outgoing_webhooks WHERE channel_id = $1`, channel).Scan(&n); err != nil {
 			return err
@@ -283,14 +286,15 @@ func recordDelivery(ctx context.Context, p *db.Pool, id uuid.UUID, d Delivery, f
 			return nil
 		}
 		return tx.QueryRow(ctx, `
-			UPDATE outgoing_webhooks SET
+			UPDATE outgoing_webhooks w SET
 			    last_status = $2, last_error = $3, last_attempt_at = NOW(),
-			    last_success_at = CASE WHEN $4 THEN NOW() ELSE last_success_at END,
-			    consecutive_failures = CASE WHEN $4 THEN 0 WHEN $5 THEN consecutive_failures + 1 ELSE consecutive_failures END,
-			    enabled = CASE WHEN NOT $4 AND $5 AND consecutive_failures + 1 >= $6 THEN FALSE ELSE enabled END,
-			    auto_disabled = CASE WHEN NOT $4 AND $5 AND consecutive_failures + 1 >= $6 THEN TRUE ELSE auto_disabled END
-			WHERE id = $1
-			RETURNING auto_disabled AND NOT enabled AND NOT $4 AND $5`,
+			    last_success_at = CASE WHEN $4 THEN NOW() ELSE w.last_success_at END,
+			    consecutive_failures = CASE WHEN $4 THEN 0 WHEN $5 THEN w.consecutive_failures + 1 ELSE w.consecutive_failures END,
+			    enabled = CASE WHEN NOT $4 AND $5 AND w.enabled AND w.consecutive_failures + 1 >= $6 THEN FALSE ELSE w.enabled END,
+			    auto_disabled = CASE WHEN NOT $4 AND $5 AND w.enabled AND w.consecutive_failures + 1 >= $6 THEN TRUE ELSE w.auto_disabled END
+			FROM (SELECT id, enabled AS was_enabled FROM outgoing_webhooks WHERE id = $1 FOR NO KEY UPDATE) o
+			WHERE w.id = o.id
+			RETURNING o.was_enabled AND NOT w.enabled`,
 			id, d.StatusCode, d.Error, d.Success, final, disableAfter).Scan(&switchedOff)
 	})
 	if err != nil {

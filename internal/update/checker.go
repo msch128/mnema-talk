@@ -328,7 +328,7 @@ func parseRelease(body []byte) (*Release, error) {
 	if err := dec.Decode(&gr); err != nil {
 		return nil, errors.New("GitHub's answer is not valid JSON")
 	}
-	if err := dec.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
 		return nil, errors.New("GitHub's answer has trailing data")
 	}
 	if gr.TagName == nil {
