@@ -239,3 +239,47 @@ func TestInvisibleAndCompatibilityFormsDoNotHideWords(t *testing.T) {
 		}
 	}
 }
+
+func TestAWordOfOnlyInvisibleCharactersIsRejectedAndNeverMatchesEverything(t *testing.T) {
+	for _, w := range []string{"\u200b", "\u0301", "*\u200b", "\u200b * \u2060"} {
+		if _, err := cleanWord(w); err == nil {
+			t.Errorf("%q was accepted as a word", w)
+		}
+	}
+	// A rule stored before the check existed must not match everything.
+	r := wordsRule(t, "\u200b", "\u0301", "spam")
+	for _, content := range []string{"hello.", "", "hi, there", "?"} {
+		if r.matchesWords(content) {
+			t.Errorf("%q matched an empty entry", content)
+		}
+	}
+	if !r.matchesWords("some spam here") {
+		t.Error("the real word no longer matches")
+	}
+	if re, err := compileWords([]string{"\u200b"}); err != nil || re != nil {
+		t.Errorf("only-invisible list compiled to %v, %v", re, err)
+	}
+}
+
+func TestOnlyALeadingSchemeIsTakenOffALinkToken(t *testing.T) {
+	allow := linksRule(LinksAllowList, "allowed.com")
+	block := linksRule(LinksBlockList, "evil.com")
+	for _, text := range []string{"www.evil.com?u=http://allowed.com", "www.evil.com#x://allowed.com", "www.evil.com/r/http://allowed.com"} {
+		if !allow.matchesLinks(text) {
+			t.Errorf("allow list let %q through", text)
+		}
+		if !block.matchesLinks(text) {
+			t.Errorf("block list missed %q", text)
+		}
+	}
+	if host, ok := hostOf("www.evil.com?u=http://allowed.com"); !ok || host != "www.evil.com" {
+		t.Errorf("host = %q, %v", host, ok)
+	}
+}
+
+func TestMentionsOverTheNameLimitDoNotCount(t *testing.T) {
+	long := "@" + strings.Repeat("a", 40)
+	if n := distinctMentions(long + " " + long + "b @bob_1"); n != 1 {
+		t.Fatalf("distinctMentions = %d, want 1 (only the real name)", n)
+	}
+}

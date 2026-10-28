@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"sync"
 	"time"
 
@@ -115,26 +116,44 @@ func (e *Engine) timeout(ctx context.Context, userID uuid.UUID, seconds int, rea
 		}
 		return
 	}
-	e.Perms.Changed([]uuid.UUID{userID})
-	if e.Events != nil {
-		e.Events.SendToUsers([]uuid.UUID{userID}, events.ModerationNotice, map[string]any{
-			"kind": "timeout", "until": until, "duration_seconds": seconds, "reason": reason,
-		})
-		e.Events.Broadcast(events.MemberTimeout, map[string]any{"id": userID, "timeout_until": until})
-	}
+	e.announceTimeouts(map[uuid.UUID]time.Time{userID: until}, seconds, reason)
 	e.Audit.RecordOrLog(context.Background(), audit.Entry{
 		ActorName: "Automod", Action: "automod.timeout", TargetType: "user", TargetID: userID.String(),
 		Details: map[string]any{"duration_seconds": seconds, "reason": reason},
 	})
 }
 
+// announceTimeouts tells the members and the clients about timeouts that were
+// just stored (id to end time), for both the message rules and raid protection.
+// The notice carries the time left, which is longer than seconds when a longer
+// timeout was already running.
+func (e *Engine) announceTimeouts(untils map[uuid.UUID]time.Time, seconds int, reason string) {
+	ids := make([]uuid.UUID, 0, len(untils))
+	for id := range untils {
+		ids = append(ids, id)
+	}
+	e.Perms.Changed(ids)
+	if e.Events == nil {
+		return
+	}
+	for id, until := range untils {
+		left := max(seconds, int(math.Ceil(time.Until(until).Seconds())))
+		e.Events.SendToUsers([]uuid.UUID{id}, events.ModerationNotice, map[string]any{
+			"kind": "timeout", "until": until, "duration_seconds": left, "reason": reason,
+		})
+		e.Events.Broadcast(events.MemberTimeout, map[string]any{"id": id, "timeout_until": until})
+	}
+}
+
 // setTimeout stores the timeout; the Owner, Administrators' accounts (role
-// 'admin') and bots are never timed out. It returns the end time.
+// 'admin') and bots are never timed out. It returns the end time. A timeout
+// that runs longer already stays as it is, with its reason and moderator.
 func (e *Engine) setTimeout(ctx context.Context, userID uuid.UUID, seconds int, reason string) (time.Time, error) {
 	var until time.Time
 	err := e.DB.QueryRow(ctx, `
-		UPDATE users SET timeout_until = GREATEST(COALESCE(timeout_until, NOW()), NOW() + make_interval(secs => $2)),
-		       timeout_reason = LEFT($3, 200), timeout_by = NULL, updated_at = NOW()
+		UPDATE users SET timeout_reason = CASE WHEN NOW() + make_interval(secs => $2) > COALESCE(timeout_until, NOW()) THEN LEFT($3, 200) ELSE timeout_reason END,
+		       timeout_by = CASE WHEN NOW() + make_interval(secs => $2) > COALESCE(timeout_until, NOW()) THEN NULL ELSE timeout_by END,
+		       timeout_until = GREATEST(COALESCE(timeout_until, NOW()), NOW() + make_interval(secs => $2)), updated_at = NOW()
 		WHERE id = $1 AND role <> 'admin' AND NOT is_bot AND deleted_at IS NULL
 		RETURNING timeout_until`, userID, float64(seconds), reason).Scan(&until)
 	if err != nil {

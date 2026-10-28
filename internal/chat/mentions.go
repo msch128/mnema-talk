@@ -3,14 +3,13 @@ package chat
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"slices"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/mention"
 )
 
 // Mention keywords: @all reaches every active member, @here active connected members.
@@ -53,26 +52,9 @@ type OnlineSource interface {
 	OnlineUserIDs() []uuid.UUID
 }
 
-// mentionToken finds "@name" at the start of the text or after a character
-// that cannot be part of a username (see auth.ValidateUsername).
-var mentionToken = regexp.MustCompile(`(?:^|[^A-Za-z0-9_.-])@([A-Za-z0-9_.-]{3,64})`)
-
 // ParseMentions returns the lower-cased names mentioned in content, each once,
-// including the keywords "all" and "here". A trailing '.' or '-' (end of a
-// sentence) is not part of the name.
-func ParseMentions(content string) []string {
-	seen := map[string]bool{}
-	var names []string
-	for _, m := range mentionToken.FindAllStringSubmatch(content, -1) {
-		name := strings.ToLower(strings.TrimRight(m[1], ".-"))
-		if len(name) < 3 || len(name) > 32 || seen[name] {
-			continue
-		}
-		seen[name] = true
-		names = append(names, name)
-	}
-	return names
-}
+// including the keywords "all" and "here" (see the mention package).
+func ParseMentions(content string) []string { return mention.Names(content) }
 
 // Why a user is mentioned (message_mentions.kind). A lower kind wins when a
 // user is reached more than one way.

@@ -32,8 +32,11 @@ type Engine struct {
 	mu      sync.RWMutex
 	set     *ruleSet
 	checked atomic.Int64 // unix nanoseconds of the last version check
+	gen     atomic.Int64 // bumped by Invalidate, so a reload that raced it does not mark its stale rules as checked
 	ages    ageCache
 	now     func() time.Time
+	// listed runs after a reload read the rules (tests only).
+	listed func()
 }
 
 // ruleSet is one compiled version of the configuration.
@@ -71,6 +74,7 @@ func Of(p *db.Pool) *Engine {
 // Invalidate makes the next check load the rules again.
 func (e *Engine) Invalidate() {
 	if e != nil {
+		e.gen.Add(1)
 		e.checked.Store(0)
 	}
 }
@@ -95,11 +99,19 @@ func (e *Engine) reload(ctx context.Context, old *ruleSet) (*ruleSet, error) {
 	if e.set != nil && e.set != old && e.checked.Load() != 0 {
 		return e.set, nil
 	}
+	gen := e.gen.Load()
 	rules, version, err := ListRules(ctx, e.DB)
 	if err != nil {
 		return e.set, err
 	}
-	e.checked.Store(e.now().UnixNano())
+	if e.listed != nil {
+		e.listed()
+	}
+	// An Invalidate that ran meanwhile may have been committed after this read:
+	// leave the check mark unset so the next call loads again.
+	if e.gen.Load() == gen {
+		e.checked.Store(e.now().UnixNano())
+	}
 	if e.set != nil && e.set.version == version {
 		return e.set, nil
 	}
