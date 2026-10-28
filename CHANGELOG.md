@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.5](https://github.com/msch128/mnema-talk/compare/v1.2.4...v1.2.5) (2026-10-28)
+
+
+### Bug Fixes
+
+* **web:** keys typed into the emoji picker no longer trigger message shortcuts ([#467](https://github.com/msch128/mnema-talk/issues/467)) ([d0c3e74](https://github.com/msch128/mnema-talk/commit/d0c3e74456d6c44d50a596f92cd82a6cb74763bb))
+
 ## [1.2.4](https://github.com/msch128/mnema-talk/compare/v1.2.3...v1.2.4) (2026-10-28)
 
 
