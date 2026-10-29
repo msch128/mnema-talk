@@ -282,7 +282,8 @@ func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 // event cancelled, whereas an edit that moved the end into the past would turn
 // the event completed and make the cancellation fail after the edit was saved.
 // When the edit fails after the cancellation went through, the cancelled event
-// is announced before the error is returned.
+// is announced before the error is returned; the cancellation stays in effect
+// even though the client sees the edit's error.
 func (h *Handler) applyUpdate(r *http.Request, ev *CommunityEvent, req UpdateEventRequest, cancelling bool) (*CommunityEvent, error) {
 	id := ev.ID
 	var err error
