@@ -1,0 +1,19 @@
+e2e/tests/stage-switch.spec.ts
+  s_06fcde5dbef956::t_5f7aa170b9a205 13-18,49-50,52,56,62,120,131,140,147,152,185,197,200,205,212
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f2570b9193ff69d4b783cc01da0730e4e319e02b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
