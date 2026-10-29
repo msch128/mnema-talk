@@ -2409,9 +2409,17 @@
       },
       "chat.CreateMessageRequest": {
         "properties": {
+          "attachment_ids": {
+            "description": "AttachmentIDs are files uploaded with POST /api/channels/{channelID}/attachments,\nat most 10, shown in this order. Needs the Attach files permission; the\nfiles must be the caller's, from this channel and not yet sent.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
           "content": {
+            "description": "Content is required unless attachment_ids is set.",
             "maxLength": 4000,
-            "minLength": 1,
             "type": "string"
           },
           "parent_id": {
@@ -23385,6 +23393,284 @@
         ]
       }
     },
+    "/api/channels/{channelID}/attachments": {
+      "post": {
+        "description": "multipart/form-data with the file in field 'file'. Stores the file as a staged attachment without posting a message; send the returned id in attachment_ids of POST /api/channels/{channelID}/messages (up to 10 per message). Needs the same permissions as an upload. A staged file is visible only to its uploader and is deleted automatically after six hours if no message claims it. A member holds at most 30 unsent files. Same rate limit and size limits as the upload endpoint.",
+        "operationId": "stageAttachment",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "description": "At most MAX_UPLOAD_MB (config); type is sniffed and checked against an allowlist.",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "description": "At most MAX_UPLOAD_MB (config); type is sniffed and checked against an allowlist.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.MediaAttachment"
+                }
+              }
+            },
+            "description": "The staged attachment."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): no file, an empty file or too many unsent files."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Send messages or Attach files permission in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "PAYLOAD_TOO_LARGE: body or file exceeds the limit (1 MiB for JSON)."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNSUPPORTED_MEDIA_TYPE: the file type is not allowed."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Upload an attachment for a message",
+        "tags": [
+          "Media"
+        ]
+      }
+    },
+    "/api/channels/{channelID}/attachments/{id}": {
+      "delete": {
+        "description": "Deletes a staged attachment (one not yet sent in a message) and its file. Only the uploader can. 404 when it does not exist, is not staged any more or belongs to someone else.",
+        "operationId": "unstageAttachment",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Attachment ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: cross-origin request rejected by the CSRF check."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Remove an unsent attachment",
+        "tags": [
+          "Media"
+        ]
+      }
+    },
     "/api/channels/{channelID}/commands": {
       "get": {
         "description": "The server's built-in commands the caller may use in the channel (builtin: true, listed first), then the commands of bots that can view and send in the channel (through their roles and overwrites), not disabled by an admin, for the composer's autocomplete. Needs View channels.",
@@ -23858,7 +24144,7 @@
         ]
       },
       "post": {
-        "description": "Works in text and voice channels (a voice channel's chat). Resolves mentions and broadcasts message_create.",
+        "description": "Works in text and voice channels (a voice channel's chat). Resolves mentions and broadcasts message_create. With attachment_ids the message carries those staged files (up to 10, at most 100 MB together); the text may then be empty.",
         "operationId": "createMessage",
         "parameters": [
           {

@@ -190,7 +190,7 @@ func exportUploads(ctx context.Context, q db.Querier, user uuid.UUID) (capped, e
 		URL       string     `json:"url,omitempty" db:"-"`
 	}
 	us, cut, err := fetchRows[upload](ctx, q, exportMaxRows, `SELECT id, original_filename, mime_type, size_bytes, message_id, is_deleted, created_at
-		FROM media WHERE uploader_id = $1 ORDER BY created_at LIMIT $2`, user)
+		FROM media WHERE uploader_id = $1 AND NOT staged ORDER BY created_at, position LIMIT $2`, user)
 	if err != nil {
 		return capped{}, err
 	}
