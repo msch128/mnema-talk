@@ -1,0 +1,19 @@
+e2e/tests/stage-switch.spec.ts
+  s_1d172cff67c5a0::t_3d4db9f4ec0ed6 51-64,157,215,222
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ee0a88cbcaa34e34291d0ea0bd01fee246faedc4",
+  "prompts": {},
+  "sessions": {
+    "s_1d172cff67c5a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-firefox-dfn-dd6480b07de0372e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
