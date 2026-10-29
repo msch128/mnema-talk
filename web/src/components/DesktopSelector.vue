@@ -3,17 +3,30 @@ import { ref, onBeforeUnmount } from 'vue'
 import { t } from '../i18n'
 import { platform } from '../lib/platform'
 import { localizeHostError } from '../lib/hostError'
+import { copyText } from '../lib/copyText'
 
 const address = ref('')
 const verified = platform.trustedApp()
 const addressInput = ref<HTMLInputElement | null>(null)
 const busy = ref(false)
 const error = ref('')
+const rawError = ref('')
+const copied = ref(false)
+let copiedTimer: ReturnType<typeof setTimeout> | undefined
 let attempt = 0
-onBeforeUnmount(() => { ++attempt })
+onBeforeUnmount(() => { ++attempt; clearTimeout(copiedTimer) })
 
 function hostFailure(cause: unknown): string {
   return typeof cause === 'string' ? localizeHostError(cause.slice(0, 600)) : t('nativeDesktop.connectError')
+}
+
+// The shown sentence plus, when the host sent it differently, the host's own wording as the error code.
+async function copyError() {
+  const text = rawError.value && rawError.value !== error.value ? `${error.value}\n${rawError.value}` : error.value
+  if (!await copyText(text)) return
+  copied.value = true
+  clearTimeout(copiedTimer)
+  copiedTimer = setTimeout(() => { copied.value = false }, 2000)
 }
 
 async function connect() {
@@ -23,10 +36,15 @@ async function connect() {
   const current = ++attempt
   busy.value = true
   error.value = ''
+  rawError.value = ''
+  copied.value = false
   try {
     await platform.invoke('desktop_open_instance', { address: submittedAddress })
   } catch (cause) {
-    if (current === attempt) error.value = hostFailure(cause)
+    if (current === attempt) {
+      error.value = hostFailure(cause)
+      rawError.value = typeof cause === 'string' ? cause.slice(0, 600) : ''
+    }
   } finally {
     if (current === attempt) busy.value = false
   }
@@ -43,7 +61,10 @@ async function connect() {
         <input id="native-server-url" ref="addressInput" v-model="address" type="text" inputmode="url" :placeholder="t('nativeDesktop.placeholder')" autocomplete="off" autocapitalize="off" spellcheck="false" :disabled="busy" required />
         <button type="submit" :disabled="busy">{{ busy ? t('nativeDesktop.checking') : t('nativeDesktop.connect') }}</button>
       </form>
-      <p v-if="error" class="native-connect-error" role="alert">{{ error }}</p>
+      <div v-if="error" class="native-connect-error">
+        <p role="alert" data-testid="connect-error">{{ error }}</p>
+        <button type="button" class="native-connect-copy" data-testid="copy-error" @click="copyError">{{ copied ? t('nativeDesktop.copied') : t('nativeDesktop.copy') }}</button>
+      </div>
       <p v-if="verified" class="native-connect-note" data-testid="verified-app">{{ t('trustedApp.verified', { version: verified.version }) }} · {{ t(`trustedApp.${verified.source}`) }}</p>
       <p v-else class="native-connect-note">{{ t('nativeDesktop.dev') }}</p>
     </section>
@@ -64,4 +85,7 @@ form button { width: 100%; margin-top: 12px; padding: 9px; border-radius: 6px; b
 button:disabled { opacity: .5; cursor: default; }
 .native-connect-note { margin-top: 16px; font-size: 11px; color: #748279; }
 .native-connect-error { margin-top: 12px; color: #e2b3a6; }
+.native-connect-error p { margin: 0 0 6px; color: inherit; user-select: text; -webkit-user-select: text; cursor: text; overflow-wrap: anywhere; }
+.native-connect-copy { padding: 3px 10px; border: 1px solid #2c322f; border-radius: 6px; background: transparent; color: #9ba69f; font-size: 12px; }
+.native-connect-copy:hover { color: #e6eae8; border-color: #3a423e; }
 </style>

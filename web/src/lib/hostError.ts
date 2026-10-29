@@ -30,6 +30,10 @@ const rules: Rule[] = [
     text: (m) => withDetail(t('nativeDesktop.hostError.certificate'), m[1])
   },
   {
+    match: new RegExp(`^The instance offers no TLS version this client can use\\. It speaks TLS 1\\.2 and 1\\.3; ask the administrator to enable one of them\\.${DETAIL}$`),
+    text: (m) => withDetail(t('nativeDesktop.hostError.tlsVersion'), m[1])
+  },
+  {
     match: new RegExp(`^Unable to reach the instance using trusted HTTPS\\.${DETAIL}$`),
     text: (m) => withDetail(t('nativeDesktop.hostError.unreachable'), m[1])
   },
