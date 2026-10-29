@@ -1,0 +1,199 @@
+.env.example
+  s_06fcde5dbef956::t_5f67c21df04c6c 72-73
+doc/deployment.md
+  s_06fcde5dbef956::t_9f203735157d02 54
+doc/operations.md
+  s_06fcde5dbef956::t_1673511f0b78bc 48
+doc/upgrade.md
+  s_17ef7810e0243d::t_d0e152c19a5f6a 401
+e2e/tests/dm.spec.ts
+  s_e516df595aeaf4::t_dcfb905613201f 247,249,258
+internal/automod/engine.go
+  s_17ef7810e0243d::t_9cb2280c832a6d 264
+internal/config/config_env.go
+  s_06fcde5dbef956::t_529ba686727435 110
+internal/config/config_test.go
+  s_b319e5339877fc::t_3da1ac3d653cc4 46-48
+web/src/components/ActivityAndConnectionStats.test.ts
+  s_b10e722bc60c79::t_ea64d95c235fab 17
+web/src/components/AdminAccessSettings.test.ts
+  s_afb3377f9f37f8::t_51532a7b07870d 1-49
+web/src/components/AdminAccessSettings.vue
+  s_45fff186c97845::t_87828bf56c9bd9 1-93
+web/src/components/AdminCategoryHeader.vue
+  s_46a6db8f9e8231::t_d6892fcf4b0f07 4,12,24-33
+web/src/components/AdminDashboard.vue
+  s_46a6db8f9e8231::t_800429f97101ee 14-15,137-147,154
+web/src/components/AdminDashboardDiscard.test.ts
+  s_f25d7044ea294b::t_74025f27f9bca9 1-50
+web/src/components/AdminDashboardRouting.test.ts
+  s_b10e722bc60c79::t_335a13704eac72 20
+web/src/components/AdminInvitesTab.test.ts
+  s_ed05b7d59456d3::t_77d71734613634 57,78,80,86,92-105,112-122,209-212,215,244
+web/src/components/AdminInvitesTab.vue
+  s_06fcde5dbef956::t_2f84babd47c3bd 19-22,46,49,108-111,139,141-142,145,149,155,164
+web/src/components/AdminLayoutTab.test.ts
+  s_b10e722bc60c79::t_7d6efe86687721 8,26,70-91
+web/src/components/AdminLayoutTab.vue
+  s_3d15a6983fd807::t_346939e9067e53 4,20-22,35-39,97,213-221,262,322,354-360
+web/src/components/AdminLayoutToolbar.vue
+  s_46a6db8f9e8231::t_e82ea9c73c92f5 4,10,16-20
+web/src/components/AdminLockoutAndWarnings.test.ts
+  s_b10e722bc60c79::t_ae11ff83e05357 17
+web/src/components/AdminOnboardingTab.test.ts
+  s_06fcde5dbef956::t_0fb35ecd122b76 60,115,117-123,125-127
+web/src/components/AdminOnboardingTab.vue
+  s_06fcde5dbef956::t_50253b90dbc652 12,16-17,39,70,98-101,106-107,142
+web/src/components/AdminPermissionsUi.test.ts
+  s_b10e722bc60c79::t_bac7958a8585e6 24
+web/src/components/AdminSelfUpdateConfirmation.test.ts
+  s_b10e722bc60c79::t_bcf032c645f380 21
+web/src/components/AdminSystemOperations.test.ts
+  s_b10e722bc60c79::t_8c6dbd817898e7 24
+web/src/components/AdminSystemTab.test.ts
+  s_b10e722bc60c79::t_6c79db3aad96cf 23
+web/src/components/AdminSystemTab.vue
+  s_0dfc723326fc69::t_af0467f567f443 17,378-379
+web/src/components/AdminUsersTab.test.ts
+  s_b10e722bc60c79::t_53a7603d456dfb 25
+web/src/components/CreateChannelModal.test.ts
+  s_fc0f81897b6653::t_52cac505bed649 62,67,72-74,118,128-144,152,196,206
+web/src/components/CreateChannelModal.vue
+  s_ed05b7d59456d3::t_0e679ac571fe1f 30-38,128,143,160
+web/src/components/EventsModal.test.ts
+  s_06fcde5dbef956::t_f094322725e0e9 110-121
+web/src/components/EventsModal.vue
+  s_ed05b7d59456d3::t_f79459d054e46c 5,156-172
+web/src/components/ReportsAndPrivacy.test.ts
+  s_06fcde5dbef956::t_cdacd09e582e5f 8,382,389,391,393,395,401,404,407
+web/src/components/SelfUpdate.test.ts
+  s_b10e722bc60c79::t_77f80901639f9e 19
+web/src/components/Sidebar.menus.test.ts
+  s_afb3377f9f37f8::t_fbb1dc04447ecd 185,206,225,231
+web/src/components/Sidebar.vue
+  s_46a6db8f9e8231::t_be68ab5bf95c01 281
+web/src/composables/useLayoutDrag.ts
+  s_3d15a6983fd807::t_3249745836fa66 1-47
+web/src/i18n/de.json
+  s_afb3377f9f37f8::t_592204238ecefc 170-171,203,296,311,314,354,361,363-364,1558-1561,1645,1690-1693,1696-1699,2695
+web/src/i18n/en.json
+  s_afb3377f9f37f8::t_e7f59cc76fcaf9 170-171,296,311,314,361,363-364,1558-1561,1645,1690-1693,1696-1699,2695
+web/src/lib/adminUnsaved.ts
+  s_46a6db8f9e8231::t_f2ccd5b8197c0f 1-4
+web/src/lib/errorDetails.test.ts
+  s_17ef7810e0243d::t_cd2d6c91bd292b 31
+web/src/lib/errorDetails.ts
+  s_17ef7810e0243d::t_f5fa9ffcc79bd5 81-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "468b437fcc10a2e89d2e86557b84c6f72ac97108",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0dfc723326fc69": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aci-secretscan-scope-eead97415a6d3132",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3d15a6983fd807": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-stats-packets-a99b089a927db102",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_46a6db8f9e8231": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-owner-firstrun-b73e149d9963f888",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_afb3377f9f37f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-proxy-limits-737a1a591bac000a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_b10e722bc60c79": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-docs-e9d2378f61bc75a7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_b319e5339877fc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4185847cca992a31",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e516df595aeaf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-notify-links-78aaa4213a135c59",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ed05b7d59456d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a843a0ef992e8c6d6",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_f25d7044ea294b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adesk-server-rail-8b6f70bd624eb14f",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fc0f81897b6653": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-tests-fc20e0fa5cecb986",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
