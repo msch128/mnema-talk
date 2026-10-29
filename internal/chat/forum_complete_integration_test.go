@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 )
 
@@ -386,5 +387,44 @@ func TestForumUnreadPostsAndMarkRead(t *testing.T) {
 	params["messageID"] = replyID.String()
 	if err := x.h.markForumPostRead(httptest.NewRecorder(), chatRequest(x.f.u, "", params, "")); err == nil {
 		t.Fatal("a reply is not a post")
+	}
+}
+
+func TestForumRulesReorderAndSolvedAreAudited(t *testing.T) {
+	x := newForumTagFixture(t)
+	x.h.Audit = &audit.Log{DB: x.f.p}
+	ctx := context.Background()
+
+	order := fmt.Sprintf(`{"tag_ids":["%s","%s"]}`, x.moderated.ID, x.plain.ID)
+	if err := x.h.reorderForumTags(httptest.NewRecorder(), chatRequest(x.mod, order, x.chParam, "")); err != nil {
+		t.Fatal(err)
+	}
+	if err := x.h.updateForumSettings(httptest.NewRecorder(), chatRequest(x.mod, `{"require_tag":true,"guidelines":"Be kind."}`, x.chParam, "")); err != nil {
+		t.Fatal(err)
+	}
+	post, err := x.createPost(t, x.f.u, "solved by a moderator", x.plain.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := x.patchPost(x.f.u, post, `{"is_resolved":true}`); err != nil {
+		t.Fatal(err)
+	}
+	if err := x.patchPost(x.mod, post, fmt.Sprintf(`{"is_resolved":false,"tag_ids":["%s"]}`, x.moderated.ID)); err != nil {
+		t.Fatal(err)
+	}
+
+	for action, want := range map[string]int{"forum.tag_reorder": 1, "forum.settings_update": 1, "forum.post_update": 1} {
+		var n int
+		if err := x.f.p.QueryRow(ctx, `SELECT COUNT(*) FROM audit_log WHERE action = $1`, action).Scan(&n); err != nil || n != want {
+			t.Errorf("%s audited %d times, want %d (%v)", action, n, want, err)
+		}
+	}
+	var details string
+	if err := x.f.p.QueryRow(ctx, `SELECT details::text FROM audit_log WHERE action = 'forum.post_update'`).Scan(&details); err != nil {
+		t.Fatal(err)
+	}
+	var d map[string]any
+	if err := json.Unmarshal([]byte(details), &d); err != nil || d["is_resolved"] != false || d["previous_tag_ids"] == nil || d["tag_ids"] == nil {
+		t.Fatalf("post_update details = %s, %v", details, err)
 	}
 }
