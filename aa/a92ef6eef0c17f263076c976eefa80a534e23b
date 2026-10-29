@@ -1,0 +1,44 @@
+internal/onboarding/invite.go
+  s_06fcde5dbef956::t_5e318a3f58453a 58
+  s_06fcde5dbef956::t_2eea0df5ab2d8b 4,50,61-85
+internal/onboarding/sharepage.go
+  s_06fcde5dbef956::t_5e318a3f58453a 1-61,63,65,67-68,71-74
+  s_06fcde5dbef956::t_552b12e51d8517 62,64,66,69-70
+internal/server/sharepage_test.go
+  s_06fcde5dbef956::t_a3d4a7afde6cb3 47
+  s_06fcde5dbef956::t_2b7153a49043a4 1-46,48-62
+internal/server/sharepage.go
+  s_06fcde5dbef956::t_407bdb0e87b970 1-183
+internal/server/router_routes.go
+  s_06fcde5dbef956::t_a4ea575c5771ac 31-35
+internal/server/server.go
+  s_06fcde5dbef956::t_876052a2039125 61-63
+internal/server/sharepage_integration_test.go
+  s_06fcde5dbef956::t_6b9028d6def8ad 1-132
+internal/onboarding/sharepage_test.go
+  s_c3fcad2120d0c2::t_e5ab6e75ce25b1 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aaa92ef6eef0c17f263076c976eefa80a534e23b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_c3fcad2120d0c2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-rich-previews-11262cb153097d18",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
