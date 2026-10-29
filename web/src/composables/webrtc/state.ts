@@ -44,9 +44,8 @@ export interface RtcState {
   noAudioStart: number
   /** The user closed the no-sound warning for this call. */
   noAudioDismissed: boolean
-  /** The hardware-mute hint is shown once per call. */
-  hardwareMuteHinted: boolean
-  lastNoAudioWarningToastTime: number
+  /** The no-sound warning is shown once per call. */
+  noAudioWarned: boolean
 
   pc: RTCPeerConnection | null
   /**
@@ -146,8 +145,7 @@ export function createRtcState(): RtcState {
     rawAnalyser: null,
     noAudioStart: 0,
     noAudioDismissed: false,
-    hardwareMuteHinted: false,
-    lastNoAudioWarningToastTime: 0,
+    noAudioWarned: false,
     pc: null,
     audioSender: null,
     screenSender: null,

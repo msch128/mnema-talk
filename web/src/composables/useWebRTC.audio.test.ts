@@ -406,30 +406,43 @@ describe('voice activity, loopback and window lifecycle', () => {
       expect(toasts.info).not.toHaveBeenCalled()
     })
 
-    it('warns once per cooldown on digital silence and resets after any signal', async () => {
+    it('warns once per call on digital silence, even when speech comes and goes', async () => {
       const { toasts } = await watched()
       FakeAudioContext.rawSample = 0
       await vi.advanceTimersByTimeAsync(16_000)
       expect(toasts.info).toHaveBeenCalledTimes(1)
       expect(toasts.info).toHaveBeenCalledWith(t('audio.noAudioDetectedToast'), expect.anything())
-      await vi.advanceTimersByTimeAsync(30_000)
-      expect(toasts.info).toHaveBeenCalledTimes(1)
       FakeAudioContext.rawSample = 0.001
       await vi.advanceTimersByTimeAsync(60)
       FakeAudioContext.rawSample = 0
       await vi.advanceTimersByTimeAsync(130_000)
-      expect(toasts.info).toHaveBeenCalledTimes(2)
+      expect(toasts.info).toHaveBeenCalledTimes(1)
     })
 
-    it('does not warn while muted in Mnema, in the mic test or with an idle push-to-talk key', async () => {
+    it('does not warn while the audio context is not running, since it then reads zeros', async () => {
+      const { toasts } = await watched()
+      present(FakeAudioContext.instances.at(-1)).moveTo('suspended')
+      FakeAudioContext.rawSample = 0
+      await vi.advanceTimersByTimeAsync(40_000)
+      expect(toasts.info).not.toHaveBeenCalled()
+    })
+
+    it('does not warn while muted in Mnema or in the mic test, and warns with a pressed push-to-talk key', async () => {
       const { voice, toasts } = await watched()
       FakeAudioContext.rawSample = 0
       voice.isMuted = true
       await vi.advanceTimersByTimeAsync(20_000)
       voice.isMuted = false
+      voice.isMicTesting = true
+      await vi.advanceTimersByTimeAsync(20_000)
+      voice.isMicTesting = false
       voice.inputMode = 'ptt'
+      voice.isPttPressed = false
       await vi.advanceTimersByTimeAsync(20_000)
       expect(toasts.info).not.toHaveBeenCalled()
+      voice.isPttPressed = true
+      await vi.advanceTimersByTimeAsync(16_000)
+      expect(toasts.info).toHaveBeenCalledTimes(1)
     })
 
     it('gives a hardware mute one calm hint per call', async () => {

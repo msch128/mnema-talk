@@ -6,7 +6,6 @@ import type { Cx, RtcState } from './state'
 // capture, however quiet the room is.
 const DIGITAL_SILENCE_PEAK = 1e-5
 const SUSTAINED_MS = 15_000
-const REPEAT_MS = 120_000
 
 /**
  * Taps the raw capture before the AI filter, input volume and the gate. The
@@ -32,9 +31,8 @@ export function detachRawTap(st: RtcState) {
 /** A new call warns afresh. */
 export function resetNoAudioWatch(st: RtcState) {
   st.noAudioStart = 0
-  st.lastNoAudioWarningToastTime = 0
   st.noAudioDismissed = false
-  st.hardwareMuteHinted = false
+  st.noAudioWarned = false
 }
 
 type Cause = 'silence' | 'hardware'
@@ -42,7 +40,8 @@ type Cause = 'silence' | 'hardware'
 function rawCause(st: RtcState, buffer: Float32Array<ArrayBuffer>): Cause | null {
   const track = st.rawMicStream?.getAudioTracks()[0]
   if (track?.muted) return 'hardware'
-  if (!st.rawAnalyser) return null
+  // A context that is not rendering reads zeros while the mic works (it is sent around the context).
+  if (!st.rawAnalyser || st.contextStalled || st.audioContext?.state !== 'running') return null
   st.rawAnalyser.getFloatTimeDomainData(buffer)
   for (const sample of buffer) if (Math.abs(sample) > DIGITAL_SILENCE_PEAK) return null
   return 'silence'
@@ -55,12 +54,8 @@ function skips({ voice, st }: Cx): boolean {
 
 function warn(cx: Cx, cause: Cause) {
   const { st } = cx
-  const now = Date.now()
-  if (cause === 'hardware') {
-    if (st.hardwareMuteHinted) return
-    st.hardwareMuteHinted = true
-  } else if (now - st.lastNoAudioWarningToastTime <= REPEAT_MS) return
-  st.lastNoAudioWarningToastTime = now
+  if (st.noAudioWarned) return
+  st.noAudioWarned = true
   useToastStore().info(t(cause === 'hardware' ? 'audio.micHardwareMutedToast' : 'audio.noAudioDetectedToast'), {
     action: { label: t('audio.noAudioDismiss'), onClick: () => { st.noAudioDismissed = true } }
   })
