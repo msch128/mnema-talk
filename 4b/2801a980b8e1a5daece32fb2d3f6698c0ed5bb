@@ -1,0 +1,27 @@
+.github/workflows/ci.yml
+  s_7a18f0478e9b2a::t_f8e9299e2c447a 523-529
+internal/imageverify/policy.go
+  s_7a18f0478e9b2a::t_5998f0227d6669 119-129
+internal/imageverify/verifier_test.go
+  s_7a18f0478e9b2a::t_b6b338ff92a62f 291-302
+internal/updaterd/errors_test.go
+  s_7a18f0478e9b2a::t_c2ed6a021c5ee1 214-244
+internal/updaterd/server.go
+  s_7a18f0478e9b2a::t_235a7956d484bc 183-184,188
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4b2801a980b8e1a5daece32fb2d3f6698c0ed5bb",
+  "prompts": {},
+  "sessions": {
+    "s_7a18f0478e9b2a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9cd5370abd507136",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
