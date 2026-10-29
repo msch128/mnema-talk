@@ -21,6 +21,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/push"
+	"github.com/msch128/mnema-talk/internal/setupcheck"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/msch128/mnema-talk/internal/webhook"
@@ -58,6 +59,10 @@ type Deps struct {
 	// WebIndex replaces the built app shell that gets link preview tags
 	// (tests, where the web app is not built); nil uses the embedded one.
 	WebIndex []byte
+
+	// Setup holds what the server learned about its surroundings at startup
+	// (announced voice address, clock skew) for the setup checks; nil = none.
+	Setup *setupcheck.Runtime
 }
 
 // Router holds the assembled handler and the hub (for shutdown/tests).

@@ -42,6 +42,13 @@ function formatDate(iso: string | null | undefined): string {
 }
 
 const warnings = computed(() => status.value?.warnings || [])
+const setup = computed(() => status.value?.setup || [])
+const setupAttention = computed(() => setup.value.filter(c => c.level !== 'ok').length)
+// Red items first, then amber, then green; the server order is kept within a level.
+const LEVEL_RANK = { fail: 0, warn: 1, ok: 2 } as const
+const setupSorted = computed(() => [...setup.value].sort((a, b) => LEVEL_RANK[a.level] - LEVEL_RANK[b.level]))
+const checkLabels = new Set(['public_url', 'voice_address', 'voice_udp', 'turn', 'mail', 'storage', 'database', 'clock', 'reverse_proxy'])
+const checkLabel = (id: string) => (checkLabels.has(id) ? t(`admin.operatorStatus.check.${id}`) : id)
 const db = computed(() => status.value?.database || null)
 const storage = computed(() => status.value?.storage || null)
 const activity = computed(() => status.value?.activity || null)
@@ -66,6 +73,36 @@ onMounted(refresh)
       >
         <RefreshCw class="w-4 h-4" :class="loading && 'animate-spin'" />
       </button>
+    </div>
+
+    <!-- Setup checks -->
+    <div v-if="setup.length" class="bg-mnema-surface p-5 rounded-lg border border-mnema-hairline space-y-3" role="region" :aria-label="$t('admin.operatorStatus.setup')" data-testid="status-setup">
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <ShieldCheck class="w-4 h-4 text-mnema-accent shrink-0" aria-hidden="true" />
+          <span class="text-xs uppercase font-semibold font-mono text-mnema-tertiary tracking-wider">{{ $t('admin.operatorStatus.setup') }}</span>
+        </div>
+        <p class="text-xs text-mnema-muted" data-testid="setup-summary">
+          {{ setupAttention ? $t('admin.operatorStatus.setupSummaryAttention', { count: setupAttention, total: setup.length }) : $t('admin.operatorStatus.setupSummaryOk') }}
+        </p>
+      </div>
+      <ul class="divide-y divide-mnema-hairline">
+        <li v-for="c in setupSorted" :key="c.id" class="py-2.5 text-sm" :data-testid="`setup-check-${c.id}`" :data-level="c.level">
+          <div class="flex items-start gap-2.5">
+            <XCircle v-if="c.level === 'fail'" class="w-4 h-4 mt-0.5 text-mnema-danger shrink-0" aria-hidden="true" />
+            <TriangleAlert v-else-if="c.level === 'warn'" class="w-4 h-4 mt-0.5 text-mnema-warning shrink-0" aria-hidden="true" />
+            <CheckCircle2 v-else class="w-4 h-4 mt-0.5 text-mnema-success shrink-0" aria-hidden="true" />
+            <div class="min-w-0 space-y-1">
+              <p class="font-medium text-mnema-text">
+                {{ checkLabel(c.id) }}
+                <span class="sr-only"> – {{ $t(`admin.operatorStatus.level.${c.level}`) }}</span>
+              </p>
+              <p class="text-xs text-mnema-muted break-words">{{ c.detail }}</p>
+              <p v-if="c.fix" class="text-xs text-mnema-text break-words" :data-testid="`setup-fix-${c.id}`">{{ c.fix }}</p>
+            </div>
+          </div>
+        </li>
+      </ul>
     </div>
 
     <!-- Operator warnings -->

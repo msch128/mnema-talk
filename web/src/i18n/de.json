@@ -1321,7 +1321,26 @@
       "warnings": "Betreiber-Warnungen",
       "noWarnings": "Keine aktiven Betreiber-Warnungen",
       "count": "Häufigkeit: {count}",
-      "since": "Aktiv seit: {since}"
+      "since": "Aktiv seit: {since}",
+      "setup": "Einrichtungs-Check",
+      "setupSummaryOk": "Alles Nötige ist eingerichtet",
+      "setupSummaryAttention": "{count} von {total} Prüfungen brauchen Aufmerksamkeit",
+      "level": {
+        "ok": "In Ordnung",
+        "warn": "Hinweis",
+        "fail": "Handlungsbedarf"
+      },
+      "check": {
+        "public_url": "Öffentliche Adresse",
+        "voice_address": "Sprach-Adresse",
+        "voice_udp": "Sprach-Port",
+        "turn": "TURN-Relay",
+        "mail": "E-Mail-Versand",
+        "storage": "Objektspeicher",
+        "database": "Datenbank",
+        "clock": "Serveruhr",
+        "reverse_proxy": "Reverse-Proxy"
+      }
     },
     "users": "Mitgliederverwaltung",
     "searchUsers": "Mitglieder suchen …",

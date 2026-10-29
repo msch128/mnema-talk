@@ -4,6 +4,7 @@ package config
 
 import (
 	"net/netip"
+	"net/url"
 	"os"
 	"strings"
 
@@ -96,8 +97,17 @@ type Config struct {
 	WebRTCUDPMuxPort uint16
 	// WebRTCAnnounce lists the IPs or host names announced to browsers for
 	// media (WEBRTC_NAT_1TO1_IP, comma-separated).
-	WebRTCAnnounce       []string
-	WebRTCSTUNURLs       []string
+	WebRTCAnnounce []string
+	// WebRTCAutoAnnounce (WEBRTC_AUTO_ANNOUNCE, default true) lets a
+	// production server find its public IPv4 address with a STUN request when
+	// WEBRTC_NAT_1TO1_IP is empty. WebRTCDetectSTUN lists the STUN servers
+	// asked (WEBRTC_DETECT_STUN_URLS, default: public Google and Cloudflare).
+	WebRTCAutoAnnounce bool
+	WebRTCDetectSTUN   []string
+	WebRTCSTUNURLs     []string
+	// ClockCheck (CLOCK_CHECK_ENABLED, default true) compares the server clock
+	// with an NTP server for the setup checks; false = no outbound request.
+	ClockCheck           bool
 	LegalOperatorName    string
 	LegalOperatorEmail   string
 	LegalOperatorCountry string
@@ -105,6 +115,30 @@ type Config struct {
 	// SMTP is the optional outgoing mail setup (SMTP_* variables).
 	SMTP SMTPConfig
 }
+
+// PublicHost is the host name or IP address of PUBLIC_URL, without port.
+func (c *Config) PublicHost() string {
+	u, err := url.Parse(c.PublicURL)
+	if err != nil {
+		return ""
+	}
+	return u.Hostname()
+}
+
+// PublicIPv4 returns the address when PUBLIC_URL names a plain IPv4 address
+// (a LAN install opened by IP), which is then also the address voice must be
+// announced on.
+func (c *Config) PublicIPv4() (netip.Addr, bool) {
+	a, err := netip.ParseAddr(c.PublicHost())
+	if err != nil || !a.Is4() || a.IsLoopback() || a.IsUnspecified() {
+		return netip.Addr{}, false
+	}
+	return a, true
+}
+
+// PublicURLIsLocal reports whether PUBLIC_URL names this machine only
+// (localhost or a loopback address), which no other device can open.
+func (c *Config) PublicURLIsLocal() bool { return IsLoopbackAddr(c.PublicHost()) }
 
 func Load() (*Config, error) {
 	// A local .env is optional; in production the variables come from the environment.

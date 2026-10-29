@@ -16,6 +16,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/mailer"
 	"github.com/msch128/mnema-talk/internal/opwarn"
+	"github.com/msch128/mnema-talk/internal/setupcheck"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/msch128/mnema-talk/internal/version"
@@ -40,6 +41,8 @@ type systemHandler struct {
 	ops      *opsSampler
 	// warnings is the operator-warning registry (opwarn.Default in production).
 	warnings *opwarn.Registry
+	// setup is what the server learned at startup, for the setup checks.
+	setup *setupcheck.Runtime
 
 	// mail is nil when SMTP is not configured.
 	mail          *mailer.Mailer

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/msch128/mnema-talk/internal/ssrf"
+	"github.com/msch128/mnema-talk/internal/stunprobe"
 )
 
 // FromEnv builds a Config from a lookup function, which keeps it testable.
@@ -103,6 +104,7 @@ func (r *envReader) textSettings() *Config {
 		MetricsToken:         r.get("METRICS_TOKEN", ""),
 		WebRTCAnnounce:       SplitList(r.get("WEBRTC_NAT_1TO1_IP", "")),
 		WebRTCSTUNURLs:       SplitList(r.get("WEBRTC_STUN_URLS", "")),
+		WebRTCDetectSTUN:     SplitList(r.get("WEBRTC_DETECT_STUN_URLS", strings.Join(stunprobe.DefaultServers, ","))),
 		LegalOperatorName:    r.get("LEGAL_OPERATOR_NAME", "Community Operator"),
 		LegalOperatorEmail:   r.get("LEGAL_OPERATOR_EMAIL", "admin@example.com"),
 		LegalOperatorCountry: r.get("LEGAL_OPERATOR_COUNTRY", ""),
@@ -143,5 +145,7 @@ func (r *envReader) numericSettings(cfg *Config) (portMin, portMax uint16) {
 	cfg.WebhookAllowPrivateTargets = allow
 	cfg.APIDocs = r.bool("API_DOCS_ENABLED", false)
 	cfg.UpdateCheck = r.bool("UPDATE_CHECK_ENABLED", true)
+	cfg.WebRTCAutoAnnounce = r.bool("WEBRTC_AUTO_ANNOUNCE", true)
+	cfg.ClockCheck = r.bool("CLOCK_CHECK_ENABLED", true)
 	return portMin, portMax
 }

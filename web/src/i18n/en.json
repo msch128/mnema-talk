@@ -1321,7 +1321,26 @@
       "warnings": "Operator warnings",
       "noWarnings": "No active operator warnings",
       "count": "Occurrences: {count}",
-      "since": "Active since: {since}"
+      "since": "Active since: {since}",
+      "setup": "Setup checks",
+      "setupSummaryOk": "Everything needed is in place",
+      "setupSummaryAttention": "{count} of {total} checks need attention",
+      "level": {
+        "ok": "OK",
+        "warn": "Attention",
+        "fail": "Fix needed"
+      },
+      "check": {
+        "public_url": "Public address",
+        "voice_address": "Voice address",
+        "voice_udp": "Voice port",
+        "turn": "TURN relay",
+        "mail": "Outgoing mail",
+        "storage": "Object storage",
+        "database": "Database",
+        "clock": "Server clock",
+        "reverse_proxy": "Reverse proxy"
+      }
     },
     "users": "Member management",
     "searchUsers": "Search members…",

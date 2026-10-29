@@ -4268,6 +4268,7 @@ export type ServerOperatorStatus = {
   backup: ServerBackupStatus
   database: ServerDatabaseStatus
   disk_free_bytes?: number
+  setup: Array<SetupcheckCheck>
   storage: ServerStorageStatus
   update: ServerUpdateStatus
   version: ServerSystemVersion
@@ -4281,6 +4282,7 @@ export function isServerOperatorStatus(value: unknown): value is ServerOperatorS
     && (hasOwn(value, "backup") && isServerBackupStatus(value["backup"]))
     && (hasOwn(value, "database") && isServerDatabaseStatus(value["database"]))
     && (!hasOwn(value, "disk_free_bytes") || isInteger(value["disk_free_bytes"]))
+    && (hasOwn(value, "setup") && isArrayOf(value["setup"], item => isSetupcheckCheck(item)))
     && (hasOwn(value, "storage") && isServerStorageStatus(value["storage"]))
     && (hasOwn(value, "update") && isServerUpdateStatus(value["update"]))
     && (hasOwn(value, "version") && isServerSystemVersion(value["version"]))
@@ -4661,6 +4663,31 @@ export function isServerVoiceHealth(value: unknown): value is ServerVoiceHealth 
 }
 
 export const decodeServerVoiceHealth = decoder("server.VoiceHealth", isServerVoiceHealth)
+
+export type SetupcheckCheck = {
+  detail: string
+  fix?: string
+  id: string
+  level: SetupcheckLevel
+}
+
+export function isSetupcheckCheck(value: unknown): value is SetupcheckCheck {
+  return isRecord(value)
+    && (hasOwn(value, "detail") && isString(value["detail"]))
+    && (!hasOwn(value, "fix") || isString(value["fix"]))
+    && (hasOwn(value, "id") && isString(value["id"]))
+    && (hasOwn(value, "level") && isSetupcheckLevel(value["level"]))
+}
+
+export const decodeSetupcheckCheck = decoder("setupcheck.Check", isSetupcheckCheck)
+
+export type SetupcheckLevel = "ok" | "warn" | "fail"
+
+export function isSetupcheckLevel(value: unknown): value is SetupcheckLevel {
+  return (value === "ok" || value === "warn" || value === "fail")
+}
+
+export const decodeSetupcheckLevel = decoder("setupcheck.Level", isSetupcheckLevel)
 
 export type SlashResult = {
   message_id?: string

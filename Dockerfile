@@ -84,6 +84,10 @@ COPY --from=builder /out/mnema-talk /usr/local/bin/mnema-talk
 # provenance before the app is restarted on it.
 COPY --from=builder /out/mnema-updater /usr/local/bin/mnema-updater
 
+# The compose file of this release, for `mnema-talk setup` to derive the one
+# it writes for a new installation.
+COPY docker-compose.yml /usr/share/mnema/docker-compose.yml
+
 ENV PORT=8080 \
     BIND_ADDR=0.0.0.0 \
     APP_ENV=production
