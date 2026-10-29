@@ -1,0 +1,43 @@
+internal/sfu/announce.go
+  s_5aa38e778cf1ac::t_c64bee11a45382 71,73
+internal/sfu/layers.go
+  s_06fcde5dbef956::t_040b593c5342df 38-49
+internal/sfu/layers_test.go
+  s_06fcde5dbef956::t_ef8b5b592f759f 24-25,30-31
+internal/sfu/sfu.go
+  s_2156e9735076ff::t_e7df625ca4c3b3 177-181
+internal/sfu/sfu_edges_test.go
+  s_5aa38e778cf1ac::t_1cfb91ae7a98d9 113-114,153-154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e28ab65896d1c45ab14849692d99c171022ca723",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2156e9735076ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adel-native-server-78d153cdff05b628",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5aa38e778cf1ac": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-builtin-turn-725a019b5a1e641a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
