@@ -194,7 +194,6 @@ function handleSelect(item: ContextMenuItem) {
   if (item.disabled) return
   if (item.action) item.action()
   emit('select', item)
-  // Radio groups and checkboxes may stay open to show the result.
   if (item.keepOpen) return
   closeSubmenu()
   emit('update:modelValue', false)
@@ -227,7 +226,6 @@ function handleLeaveKey(e: KeyboardEvent, panel: HTMLElement | null): boolean {
     return true
   }
   if (e.key === 'Tab') {
-    // Leave the menu; focus continues from the opener.
     close({ focus: true })
     return true
   }
@@ -284,16 +282,18 @@ function typeAhead(e: KeyboardEvent, list: HTMLElement[], cur: number) {
   }
 }
 
-function isInsideMenu(target: EventTarget | null): boolean {
-  return target instanceof Node && !!menuEl.value?.contains(target)
+// The menu itself, or the opener's button (the anchor): its own click toggles the
+// menu, so a press on it must not also close the menu first (it would reopen).
+function isOwnTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Node)) return false
+  const anchor = props.anchor
+  return !!menuEl.value?.contains(target) || (anchor instanceof Node && anchor.contains(target))
 }
 
 function handleOutsideDismiss(e: Event) {
-  if (!props.modelValue || !menuEl.value) return
-  if (!isInsideMenu(e.target)) {
-    opener = null
-    close()
-  }
+  if (!props.modelValue || !menuEl.value || isOwnTarget(e.target)) return
+  opener = null
+  close()
 }
 
 const handleScrollDismiss = (e: Event) => { if (!settling) handleOutsideDismiss(e) }

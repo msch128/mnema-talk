@@ -60,7 +60,6 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
       type="button"
       class="flex-1 min-w-0 h-6 max-md:h-11 pl-0.5 flex items-center gap-0.5 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary hover:text-mnema-muted transition-colors focus:outline-hidden focus-visible:text-mnema-text focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent rounded-sm"
       :aria-expanded="collapsed ? 'false' : 'true'"
-      aria-haspopup="menu"
       :data-category-toggle="category.id"
       :aria-describedby="admin && hintId ? hintId : undefined"
       :aria-keyshortcuts="admin ? 'Alt+ArrowUp Alt+ArrowDown' : undefined"

@@ -34,7 +34,9 @@ const lobby = ref(props.channel.is_lobby === true)
 const busy = ref(false)
 
 const presets = ref<PresetsHandle | null>(null)
-const nameChanged = computed(() => !!name.value.trim() && name.value.trim() !== props.channel.name)
+// Only a name the member typed is sent: a rename from elsewhere must not be reverted by a stale copy.
+const nameEdited = ref(false)
+const nameChanged = computed(() => nameEdited.value && !!name.value.trim() && name.value.trim() !== props.channel.name)
 const canSave = computed(() => !busy.value && (nameChanged.value || !!presets.value?.canSave))
 
 // One Save for the whole form: the name and, when it changed, who may join.
@@ -42,7 +44,10 @@ async function save() {
   if (!canSave.value) return
   busy.value = true
   try {
-    if (nameChanged.value) await updateTalk(props.channel.id, { name: name.value.trim() }, canManage.value)
+    if (nameChanged.value) {
+      await updateTalk(props.channel.id, { name: name.value.trim() }, canManage.value)
+      nameEdited.value = false
+    }
     await presets.value?.save()
     await chat.fetchChannels()
     toasts.success(t('talk.presetApplied'))
@@ -76,7 +81,7 @@ const field = 'w-full rounded-md border border-mnema-border-field bg-mnema-canva
     <div class="space-y-5 overflow-y-auto p-5" data-testid="talk-settings">
       <form class="space-y-1.5" @submit.prevent="save">
         <label for="talk-name" class="font-mono text-xs font-medium uppercase tracking-wider text-mnema-tertiary">{{ $t('admin.channelNameLabel') }}</label>
-        <input id="talk-name" v-model="name" type="text" maxlength="64" data-testid="talk-name" :class="field" />
+        <input id="talk-name" v-model="name" type="text" maxlength="64" data-testid="talk-name" :class="field" @input="nameEdited = true" />
       </form>
 
       <label v-if="canMakeLobby" class="flex items-start gap-3">

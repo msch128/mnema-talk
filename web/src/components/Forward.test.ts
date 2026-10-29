@@ -130,6 +130,17 @@ describe('ForwardDialog', () => {
     w.unmount()
   })
 
+  it('does not preselect the open channel when the member cannot write there', async () => {
+    setup()
+    vi.spyOn(usePermissionsStore(), 'canIn').mockImplementation((id: string) => id === fixtureId(3))
+    openForward({ messageId: fixtureId(20), excerpt: 'hello' })
+    const w = mount(ForwardDialog, { attachTo: document.body, ...stubs })
+    await flushPromises()
+    expect(document.querySelector<HTMLButtonElement>('[data-testid="forward-send"]')!.disabled).toBe(true)
+    expect(document.querySelectorAll<HTMLInputElement>('input[name="forward-target"]:checked')).toHaveLength(0)
+    w.unmount()
+  })
+
   it('filters the channels, says when none is left and closes on cancel', async () => {
     setup()
     openForward({ messageId: fixtureId(20), excerpt: 'hello' })

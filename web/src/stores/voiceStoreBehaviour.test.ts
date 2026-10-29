@@ -149,6 +149,33 @@ describe('voice membership events and moderator profile updates', () => {
     expect(voice.channelUsers.room).toEqual({})
   })
 
+  it('forgets who was speaking when the call is left or the room changes', () => {
+    const voice = useVoiceStore()
+    voice.setVoiceSnapshot({ room: { member: voiceUserFixture({ id: 'member' }) } })
+    voice.setChannel('room')
+    voice.handleSpeakingEvent({ channel_id: 'room', user_id: 'member', active: true })
+    voice.disconnect()
+    expect(voice.isSpeaking('member')).toBe(false)
+    voice.setChannel('room')
+    voice.handleSpeakingEvent({ channel_id: 'room', user_id: 'member', active: true })
+    voice.setChannel('other')
+    expect(voice.speakingUsers).toEqual({})
+  })
+
+  it('drops the opt-in of a share that ended during a reconnect once the room state is in', () => {
+    const voice = useVoiceStore()
+    voice.setChannel('room')
+    voice.handleMediaState({ channel_id: 'room', user_id: 'live', screen: true })
+    voice.handleMediaState({ channel_id: 'room', user_id: 'ended', screen: true })
+    voice.watchScreen('live')
+    voice.watchScreen('ended')
+    voice.resetRemoteMedia()
+    expect(voice.watchedScreens).toEqual({ live: true, ended: true })
+    voice.handleMediaState({ channel_id: 'room', user_id: 'live', screen: true })
+    voice.dropEndedWatches()
+    expect(voice.watchedScreens).toEqual({ live: true })
+  })
+
   it('keeps speaking state idempotent and suppresses rings for deafened members', () => {
     const voice = useVoiceStore()
     voice.setVoiceSnapshot({ room: { member: voiceUserFixture({ id: 'member' }) } })

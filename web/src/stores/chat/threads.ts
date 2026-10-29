@@ -5,6 +5,8 @@ import type { ThreadRoot } from './types'
 import type { Cx } from './state'
 import { sendMessage, uploadMedia } from './messageActions'
 import { noteThreadFollowing } from './threadFollow'
+import { useToastStore } from '../toast'
+import { t } from '../../i18n'
 
 function resolveThreadTarget(msg: Message | ThreadRoot | string): { id: string; initial: ThreadRoot } | null {
   if (!msg) return null
@@ -16,6 +18,14 @@ function resolveThreadTarget(msg: Message | ThreadRoot | string): { id: string; 
 
 function isThreadActive(cs: Cx['cs'], id: string, gen: number): boolean {
   return gen === cs.threadGen && cs.activeThread.value?.id === id
+}
+
+/** The loaded replies plus those that arrived live while the request ran, oldest first. */
+function mergeLiveReplies(loaded: Message[], live: Message[]): Message[] {
+  const known = new Set(loaded.map(m => m.id))
+  const late = live.filter(m => !known.has(m.id))
+  if (!late.length) return loaded
+  return [...loaded, ...late].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
 }
 
 export async function openThread(cx: Cx, msg: Message | ThreadRoot | string) {
@@ -31,10 +41,13 @@ export async function openThread(cx: Cx, msg: Message | ThreadRoot | string) {
     const data = await api(`/api/messages/${id}/thread`, { decode: decodeThread })
     if (!isThreadActive(cs, id, gen)) return
     cs.activeThread.value = data.root
-    cs.threadReplies.value = data.replies
+    cs.threadReplies.value = mergeLiveReplies(data.replies, cs.threadReplies.value)
     noteThreadFollowing(cx, id, data.following)
   } catch (e) {
-    if (gen === cs.threadGen) console.error('Failed to load thread:', e)
+    if (gen === cs.threadGen) {
+      console.error('Failed to load thread:', e)
+      useToastStore().error(t('thread.loadFailed'))
+    }
   } finally {
     if (gen === cs.threadGen) cs.isThreadLoading.value = false
   }

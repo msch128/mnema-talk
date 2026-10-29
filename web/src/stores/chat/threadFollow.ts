@@ -3,7 +3,7 @@
 // (reply authors, root authors and mentioned members follow on their own) and
 // tells open sessions through thread_follow_updated; an older server has no
 // such list and the notification rules stay as they were.
-import { api } from '../../lib/api'
+import { api, isApiError } from '../../lib/api'
 import { decodeChatFollowedThreads, decodeChatThreadFollow } from '../../types/rest'
 import { useToastStore } from '../toast'
 import { t } from '../../i18n'
@@ -26,8 +26,11 @@ export async function fetchFollowedThreads(cx: Cx) {
     if (community !== cs.communityGeneration) return
     cs.followedThreads.value = new Set(data.thread_ids)
     cs.followKnown.value = true
-  } catch {
-    cs.followKnown.value = false
+  } catch (e) {
+    if (community !== cs.communityGeneration) return
+    // Only a missing route (an older server) leaves the list unknown; a failed
+    // fetch keeps what was known, so replies in unfollowed threads stay quiet.
+    if (isApiError(e) && (e.status === 404 || e.status === 501)) cs.followKnown.value = false
   }
 }
 

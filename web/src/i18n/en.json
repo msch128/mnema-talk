@@ -246,6 +246,7 @@
     "deleteFailed": "Couldn’t delete it. Try again.",
     "markRead": "Mark as read",
     "markedRead": "Marked as read",
+    "markReadFailed": "Couldn’t mark as read. Try again.",
     "markAllRead": "Mark all as read",
     "allMarkedRead": "All marked as read",
     "categoryMentions": "{n} mentions in this category",
@@ -328,7 +329,8 @@
     "rules": {
       "title": "The rules",
       "intro": "Read the rules of this community. You can read along right away, but posting, reacting, uploading and joining a Talk wait until you accept them.",
-      "accept": "I accept the rules"
+      "accept": "I accept the rules",
+      "acceptFailed": "Couldn’t save that. Check your connection and try again."
     },
     "profile": {
       "title": "Your profile",
@@ -406,6 +408,7 @@
     "sortActivity": "Latest activity",
     "sortNewest": "Newest",
     "loadingPosts": "Loading posts…",
+    "loadFailed": "Couldn’t load the posts. Try again.",
     "emptyTitle": "No posts yet",
     "emptyDescription": "Start the conversation by creating the first post in this forum.",
     "emptyTagFilter": "No posts match the selected tag filter.",
@@ -609,6 +612,7 @@
     "notFollowing": "You do not get notifications for replies in this thread.",
     "followFailed": "Couldn’t follow the thread. Try again.",
     "unfollowFailed": "Couldn’t unfollow the thread. Try again.",
+    "loadFailed": "Couldn’t load the thread. Try again.",
     "edit": "Edit reply",
     "delete": "Delete reply",
     "deleteTitle": "Delete reply?",
@@ -645,6 +649,12 @@
     "cameraDenied": "Camera access denied. Allow the camera for this site in your browser settings.",
     "cameraNotFound": "No camera found.",
     "cameraBusy": "The camera is in use by another app.",
+    "micDenied": "Microphone access denied. Allow the microphone for this site in your browser settings.",
+    "micNotFound": "No microphone found.",
+    "micBusy": "The microphone is in use by another app.",
+    "micFailed": "Microphone unavailable. Check the permission in your browser.",
+    "micDeviceReset": "Your saved microphone is not available. Using the default one.",
+    "micLost": "Your microphone stopped working. Leave the Talk and join again.",
     "memberMuted": "Muted",
     "memberDeafened": "Deafened",
     "kicked": "You were removed from the Talk.",
@@ -809,6 +819,7 @@
       "introAfter": " is a private, non-commercial software project for closed communities – with no profit motive, no advertising revenue and no business relationship. Accounts are issued only through personal invite codes.",
       "controller": "Controller (Art. 4(7) GDPR)",
       "email": "Email contact",
+      "emailUnset": "not specified by the operator",
       "country": "Country / jurisdiction",
       "status": "Project status",
       "statusNote": "{status} (no imprint obligation under § 5 DDG)"
@@ -1432,6 +1443,7 @@
       "invalid": "Enter a whole number from 1 to {ceiling}."
     },
     "onboarding": {
+      "loadFailed": "Couldn’t load the settings.",
       "hint": "Shown to new members. Once rules exist, members have to accept them before they can post, react, upload or join a Talk. You are never asked.",
       "name": "Community name",
       "namePlaceholder": "Mnema Talk",
@@ -1854,7 +1866,8 @@
   "mentions": {
     "inbox": "Mentions",
     "empty": "Nothing mentions you yet.",
-    "failed": "Couldn’t load your mentions. Try again."
+    "failed": "Couldn’t load your mentions. Try again.",
+    "moreFailed": "Couldn’t load more mentions. Try again."
   },
   "emoji": {
     "open": "Insert emoji",
@@ -1874,6 +1887,7 @@
       "deleteBody": "Existing messages and reactions show :name: as text from now on. This can’t be undone.",
       "animated": "Animated",
       "rename": "Rename",
+      "nameRules": "2 to 32 characters: a–z, 0–9 and _",
       "empty": "No custom emoji yet.",
       "full": "The limit is reached. Delete an emoji to make room.",
       "choose": "Choose file",
@@ -2035,6 +2049,7 @@
     }
   },
   "audit": {
+    "loadFailed": "Couldn’t load the audit log. Try again.",
     "title": "Audit log",
     "immutable": "Entries cannot be changed.",
     "filterEvent": "Filter by event",
@@ -2281,6 +2296,7 @@
     "uploadInherit": "Inherit",
     "uploadHint": "Leave empty to use the global limit. A member gets the highest limit of their roles, never above the server maximum.",
     "uploadInvalid": "Enter a whole number of MB, or leave it empty.",
+    "colorInvalid": "Use a colour like #5fd0b6.",
     "botRoles": "Bot roles",
     "botRoleHint": "Managed role of one bot: it cannot be removed.",
     "botRoleNote": "“{name}” is a bot’s own role. It is created with the bot, follows its name and is deleted with it; only that bot holds it, and it cannot be renamed, given to anyone else, removed from the bot or deleted by hand. You can change its colour and permissions. Nobody can give a bot permissions they lack themselves, and only the Owner can make a bot elevated.",
@@ -2356,6 +2372,7 @@
     "copySecret": "Copy secret",
     "urlOnce": "Copy the URL now: it is shown only once. If it gets lost, make a new one.",
     "secretOnce": "Copy the secret now: it is shown only once. Use it to check the signature of each delivery.",
+    "loadFailed": "Couldn’t load the webhooks. Try again.",
     "emptyIncoming": "No incoming webhooks in this channel yet.",
     "emptyOutgoing": "No outgoing webhooks yet.",
     "rename": "Rename {name}",
@@ -2467,8 +2484,19 @@
     "details": "Details",
     "participants": "Responses",
     "noResponses": "No responses yet.",
+    "noDescription": "There is no description.",
+    "cancelFailed": "Could not cancel the event.",
+    "participantsFailed": "Could not load the responses.",
     "created": "Event created",
-    "updated": "Event updated"
+    "updated": "Event updated",
+    "rsvpFailed": "Couldn’t save your response. Try again.",
+    "talkFallback": "Talk",
+    "saveFailed": "Couldn’t save the event. Try again.",
+    "coverFailed": "The event was saved, but the cover couldn’t be uploaded. Try again.",
+    "errTitle": "Enter a title.",
+    "errStart": "Choose a start time.",
+    "errEnd": "The end must not be before the start.",
+    "errLocation": "Enter a location."
   },
   "moderation": {
     "timeoutAction": "Time out…",
@@ -2544,7 +2572,8 @@
     "slowModeTooLong": "Slow mode can last 24 hours at most.",
     "slowModeCustom": "Custom",
     "slowModeUnit": "Unit",
-    "noBansHint": "Banned members are listed here, and you can lift a ban."
+    "noBansHint": "Banned members are listed here, and you can lift a ban.",
+    "bansLoadFailed": "Couldn’t load the bans. Try again."
   },
   "editHistory": {
     "menu": "Edit history",
@@ -2885,7 +2914,8 @@
       "everyoneHint": "Any member can start a conversation with you.",
       "nobody": "Nobody",
       "nobodyHint": "Nobody can start a conversation with you.",
-      "failed": "Couldn’t save the setting. Try again."
+      "failed": "Couldn’t save the setting. Try again.",
+      "loadFailed": "Couldn’t load the setting. Try again."
     },
     "startTalk": "Start a Talk",
     "startTalkFailed": "Couldn’t start a Talk.",
@@ -2898,6 +2928,7 @@
     "previewAttachment": "Attachment",
     "previewPoll": "Poll",
     "unreadCount": "{n} unread",
+    "mutedState": "muted",
     "mentionCount": "{n} unread mentions",
     "memberCount": "{n} members",
     "favourites": "Favourites",

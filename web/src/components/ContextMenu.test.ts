@@ -109,6 +109,17 @@ describe('ContextMenu accessibility', () => {
     expect(requireValue(menu()).style.top).toBe('94px')
   })
 
+  it('does not close on a press on its own anchor, so the trigger can toggle it', async () => {
+    const anchor = document.createElement('button')
+    document.body.appendChild(anchor)
+    await openMenu({ anchor })
+    anchor.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+    await nextTick()
+    expect(w.emitted('update:modelValue')).toBeUndefined()
+    document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+    expect(w.emitted('update:modelValue')?.[0]).toEqual([false])
+  })
+
   it('stays backwards compatible with x/y and plain items', async () => {
     await openMenu({ x: 33, y: 44 })
     expect(requireValue(menu()).style.left).toBe('33px')

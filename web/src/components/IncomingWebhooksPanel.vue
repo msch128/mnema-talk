@@ -2,7 +2,7 @@
 // Incoming webhooks of one channel: a secret URL scripts post to. The URL is
 // shown once (the server keeps only a hash), so it is revealed right after
 // creating or regenerating, with a copy button.
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Copy, KeyRound, Pencil, Trash2, ImagePlus, SlidersHorizontal } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import { arrayDecoder } from '../types/validation'
@@ -12,6 +12,9 @@ import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { useChatStore } from '../stores/chat'
 import { t } from '../i18n'
+import StatePanel from './StatePanel.vue'
+import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
+import { initialOf } from '../lib/initial'
 
 const props = defineProps({
   channelId: { type: String, required: true }
@@ -21,6 +24,7 @@ const toasts = useToastStore()
 const chat = useChatStore()
 const hooks = ref<Webhook[]>([])
 const loaded = ref(false)
+const loadFailed = ref(false)
 const newName = ref('')
 const busy = ref(false)
 // The one URL on show: right after creating or regenerating.
@@ -39,25 +43,33 @@ function memberName(id: string | null): string {
   return m ? (m.display_name || m.username) : t('webhooks.unknownMember')
 }
 
-async function setSetting(hook: Webhook, key: SettingKey, value: boolean) {
+async function setSetting(hook: Webhook, key: SettingKey, input: HTMLInputElement) {
+  const value = input.checked
+  input.disabled = true
   try {
     const updated = await api(`/api/admin/webhooks/${hook.id}`, { method: 'PATCH', json: { [key]: value }, decode: decodeWebhook })
     hooks.value = hooks.value.map(h => (h.id === updated.id ? updated : h))
   } catch (e) {
+    // Nothing reactive changed, so Vue would keep the box as the user left it.
+    input.checked = !value
     showError(e)
+  } finally {
+    input.disabled = false
   }
 }
 
-const base = `/api/admin/channels/${props.channelId}/webhooks`
+const base = computed(() => `/api/admin/channels/${props.channelId}/webhooks`)
 
 function showError(e: unknown) {
   toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
 }
 
 async function load() {
+  loadFailed.value = false
   try {
-    hooks.value = await api(base, { decode: arrayDecoder('webhooks', isWebhook) })
+    hooks.value = await api(base.value, { decode: arrayDecoder('webhooks', isWebhook) })
   } catch (e) {
+    loadFailed.value = true
     showError(e)
   } finally {
     loaded.value = true
@@ -69,7 +81,7 @@ async function create() {
   if (!name) return
   busy.value = true
   try {
-    const created = await api(base, { method: 'POST', json: { name }, decode: decodeCreatedWebhook })
+    const created = await api(base.value, { method: 'POST', json: { name }, decode: decodeCreatedWebhook })
     revealed.value = { id: created.id, url: created.url }
     newName.value = ''
     toasts.success(t('webhooks.created'))
@@ -139,9 +151,8 @@ async function remove(hook: Webhook) {
 }
 
 async function setAvatar(hook: Webhook, event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
+  const { file, tooBig } = pickImage(event.target as HTMLInputElement)
+  if (tooBig) toasts.error(t('profile.avatarTooBig', { size: IMAGE_UPLOAD_MAX_MB }))
   if (!file) return
   const form = new FormData()
   form.append('avatar', file)
@@ -182,11 +193,12 @@ onMounted(load)
       </div>
     </div>
 
-    <p v-if="loaded && !hooks.length" class="text-sm text-mnema-tertiary">{{ $t('webhooks.emptyIncoming') }}</p>
+    <StatePanel v-if="loadFailed" state="error" retryable data-testid="incoming-load-failed" @retry="load">{{ $t('webhooks.loadFailed') }}</StatePanel>
+    <p v-else-if="loaded && !hooks.length" class="text-sm text-mnema-tertiary">{{ $t('webhooks.emptyIncoming') }}</p>
     <ul v-if="hooks.length" class="divide-y divide-mnema-hairline overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
       <li v-for="hook in hooks" :key="hook.id" class="flex flex-wrap items-center gap-3 p-3" data-testid="incoming-webhook">
         <img v-if="hook.avatar_url" :src="hook.avatar_url" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover" />
-        <span v-else class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mnema-raised text-sm font-semibold text-mnema-muted" aria-hidden="true">{{ hook.name.slice(0, 1).toUpperCase() }}</span>
+        <span v-else class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mnema-raised text-sm font-semibold text-mnema-muted" aria-hidden="true">{{ initialOf(hook.name) }}</span>
 
         <form v-if="renaming?.id === hook.id" class="min-w-0 flex-1" @submit.prevent="saveName">
           <input v-model="renaming.name" type="text" maxlength="80" autofocus class="w-full rounded-md border border-mnema-border-field bg-mnema-elevated px-2 py-1 text-sm text-mnema-text" :aria-label="$t('common.name')" @keydown.esc="renaming = null" @blur="saveName" />
@@ -214,7 +226,7 @@ onMounted(load)
         <div v-if="settingsOpen === hook.id" class="basis-full space-y-1 pl-12 text-sm text-mnema-text" data-testid="webhook-settings">
           <p class="text-xs text-mnema-tertiary" data-testid="incoming-audit">{{ $t('webhooks.createdBy', { name: memberName(hook.created_by) }) }}</p>
           <label v-for="key in SETTINGS" :key="key" class="flex items-center gap-2">
-            <input type="checkbox" :checked="hook[key]" :data-setting="key" @change="setSetting(hook, key, ($event.target as HTMLInputElement).checked)" />
+            <input type="checkbox" :checked="hook[key]" :data-setting="key" @change="setSetting(hook, key, $event.target as HTMLInputElement)" />
             <span>{{ $t(`webhooks.setting.${key}`) }}</span>
           </label>
         </div>

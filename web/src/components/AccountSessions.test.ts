@@ -119,4 +119,21 @@ describe('AccountSessions', () => {
     expect(w.find('[data-testid="sessions-error"]').exists()).toBe(true)
     expect(w.find('li[data-session]').exists()).toBe(false)
   })
+
+  it('keeps the list when a later refresh fails and retries from the error', async () => {
+    const w = await open()
+    apiMock.mockImplementation(async path => {
+      if (path === '/api/auth/sessions') throw new Error('down')
+      return { revoked: 1 }
+    })
+    await w.get('[data-testid="sessions-sign-out-others"]').trigger('click')
+    await answer(true)
+    expect(w.find('[data-testid="sessions-error"]').exists()).toBe(true)
+    expect(w.findAll('li[data-session]').length).toBeGreaterThan(0)
+    apiMock.mockImplementation(async () => ({ sessions }))
+    await w.get('[data-testid="sessions-retry"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="sessions-error"]').exists()).toBe(false)
+    expect(w.findAll('li[data-session]')).toHaveLength(2)
+  })
 })

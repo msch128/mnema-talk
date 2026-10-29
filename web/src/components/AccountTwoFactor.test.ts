@@ -126,6 +126,20 @@ describe('with two-factor sign-in on', () => {
     expect(w.find('[data-testid="two-factor-low"]').exists()).toBe(false)
   })
 
+  it('shows the recovery codes even when refreshing the account fails', async () => {
+    const w = mountWith(on)
+    await w.get('[data-testid="two-factor-renew"]').trigger('click')
+    apiMock.mockImplementation(async path => {
+      if (path === '/api/users/me/2fa/recovery-codes') return { recovery_codes: CODES }
+      throw new Error('offline')
+    })
+    await w.get('[data-testid="two-factor-password"]').setValue('member-password-123')
+    await w.get('[data-testid="two-factor-code"]').setValue('123456')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(w.findAll('[data-testid="recovery-code-list"] li')).toHaveLength(10)
+  })
+
   it('shows a wrong code', async () => {
     const w = mountWith(on)
     await w.get('[data-testid="two-factor-off"]').trigger('click')

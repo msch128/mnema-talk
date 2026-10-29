@@ -1,4 +1,4 @@
-import type { ApiOptions } from '../lib/api'
+import { ApiError, type ApiOptions } from '../lib/api'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
@@ -66,14 +66,51 @@ describe('saved store', () => {
     expect(saved.loadingMore).toBe(false)
   })
 
-  it('marks a failed load and empties the list', async () => {
+  it('marks a failed first load and shows an empty list', async () => {
     const saved = useSavedStore()
-    apiMock.mockResolvedValueOnce(page([entry(1)]))
-    await saved.load()
     apiMock.mockRejectedValueOnce(new Error('offline'))
     await saved.load()
     expect(saved.failed).toBe(true)
     expect(saved.items).toEqual([])
+  })
+
+  it('keeps a list that is on screen when a refresh fails', async () => {
+    const saved = useSavedStore()
+    apiMock.mockResolvedValueOnce(page([entry(1)], true))
+    await saved.load()
+    apiMock.mockRejectedValueOnce(new Error('offline'))
+    await saved.load()
+    expect(saved.failed).toBe(true)
+    expect(saved.items).toHaveLength(1)
+    expect(saved.hasMore).toBe(true)
+  })
+
+  it('starts over from the newest page when the cursor of the next page is gone', async () => {
+    const saved = useSavedStore()
+    apiMock.mockResolvedValueOnce(page([entry(1)], true))
+    await saved.load()
+    apiMock.mockRejectedValueOnce(new ApiError(404, 'NOT_FOUND', 'gone'))
+    apiMock.mockResolvedValueOnce(page([entry(2)], false))
+    await saved.loadMore()
+    expect(String(apiMock.mock.calls[2]?.[0])).not.toContain('before=')
+    expect(saved.items.map(e => e.message_id)).toEqual([fixtureId(2)])
+    expect(saved.loadingMore).toBe(false)
+  })
+
+  it('forgets the list and the known ids on reset, even for a page still on its way', async () => {
+    const saved = useSavedStore()
+    apiMock.mockResolvedValueOnce(page([entry(1)]))
+    await saved.load()
+    let resolve: (value: unknown) => void = () => undefined
+    apiMock.mockReturnValueOnce(new Promise(r => { resolve = r }))
+    const late = saved.load()
+    saved.reset()
+    expect(saved.items).toEqual([])
+    expect(saved.isSaved(fixtureId(1))).toBe(false)
+    resolve(page([entry(3)]))
+    await late
+    expect(saved.items).toEqual([])
+    expect(saved.isSaved(fixtureId(3))).toBe(false)
   })
 
   it('follows another session: a save reloads, a removal drops the entry', async () => {

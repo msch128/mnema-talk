@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isImeKey } from '../composables/useComposerKeys'
 import type { FilterKey, SearchFilters, SearchLookup } from '../lib/searchQuery'
 import type { SearchSuggestion } from '../lib/searchSuggest'
 import { computed, ref, watch } from 'vue'
@@ -103,9 +104,10 @@ function onSelectFilter(token: string) {
 // Keys the suggestion list owns while it is open; everything else bubbles on
 // to the dialog (result navigation, Enter on the selected result).
 function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Backspace' && draft.value === '' && chips.value.length > 0) {
-    const last = chips.value[chips.value.length - 1]
-    if (last) removeChip(last.key)
+  if (isImeKey(e)) return
+  const lastChip = chips.value.at(-1)
+  if (e.key === 'Backspace' && draft.value === '' && lastChip) {
+    removeChip(lastChip.key)
     return
   }
   const ctx = suggestions.value

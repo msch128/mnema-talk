@@ -39,6 +39,13 @@ describe('automod rule forms', () => {
     })
   })
 
+  it('keeps the stored name of a built-in rule, whatever the UI language', () => {
+    setLocale('de')
+    const seeded = rule({ kind: 'words', name: 'Blocked words' })
+    expect(formFromRule(seeded).name).toBe('Blocked words')
+    expect(toggled(seeded).name).toBe('Blocked words')
+  })
+
   it('names what is missing before anything is sent', () => {
     expect(formProblem({ ...emptyForm('words'), name: '  ' })).toBe('Give the rule a name.')
     expect(formProblem({ ...emptyForm('mentions'), maxMentions: 0 })).toBe('Enter a number from 1 to 50.')

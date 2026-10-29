@@ -49,6 +49,44 @@ describe('ICE servers', () => {
     expect(iceServers()[0]?.username).toBe('cred-1')
   })
 
+  it('shares one request between joins while the first fetch is in flight', async () => {
+    let finish: (() => void) | undefined
+    const fetchMock = vi.fn(() => new Promise(resolve => {
+      finish = () => resolve({ ok: true, json: async () => config('cred-1') })
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const { iceServers, loadIceServers } = await import('./iceServers')
+
+    const first = loadIceServers()
+    const second = loadIceServers()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    finish?.()
+    await Promise.all([first, second])
+    expect(iceServers()[0]?.username).toBe('cred-1')
+  })
+
+  it('shares one request while a refresh after the hour is in flight', async () => {
+    let n = 0
+    const resolvers: Array<() => void> = []
+    const fetchMock = vi.fn(() => new Promise(resolve => {
+      const cred = `cred-${++n}`
+      resolvers.push(() => resolve({ ok: true, json: async () => config(cred) }))
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const { iceServers, loadIceServers } = await import('./iceServers')
+
+    const initial = loadIceServers()
+    resolvers[0]?.()
+    await initial
+    vi.advanceTimersByTime(61 * 60 * 1000)
+    const refreshA = loadIceServers()
+    const refreshB = loadIceServers()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    resolvers[1]?.()
+    await Promise.all([refreshA, refreshB])
+    expect(iceServers()[0]?.username).toBe('cred-2')
+  })
+
   it('knows a relay is on offer only when the server lists a TURN URL', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ ice_servers: [{ urls: ['stun:stun.example.com:3478'] }] }) })

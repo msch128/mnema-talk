@@ -4,7 +4,7 @@
 # (restore.sh --verify), restores it (restore.sh --yes) and checks that the
 # seeded message and file are back and the later change is gone.
 # Usage: scripts/backup-drill.sh [image]   (default mnema-talk:local; `make backup-drill`)
-#   DRILL_PORT=58190  host port for the app
+#   DRILL_PORT=<port>  host port for the app (default: a free one)
 #   FROM_VERSION=0.9.0  cross-version mode: run and back up on that released
 #                     image, restore into [image] with scripts/restore.sh, let
 #                     it migrate, verify, then check that the released image
@@ -15,6 +15,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck source=scripts/drill-common.sh
 source "$ROOT/scripts/drill-common.sh"
+# shellcheck source=scripts/free-port.sh
+source "$ROOT/scripts/free-port.sh"
 # shellcheck source=scripts/backup-drill-downgrade.sh
 source "$ROOT/scripts/backup-drill-downgrade.sh"
 IMAGE="${1:-mnema-talk:local}"
@@ -25,7 +27,9 @@ if [ -n "${FROM_VERSION:-}" ]; then
   drill_pull_image "$START_IMAGE"
   echo "==> cross-version: back up on $START_IMAGE, restore into $IMAGE"
 fi
-PORT="${DRILL_PORT:-58190}"
+PORT="${DRILL_PORT:-$(free_port)}"
+UDP_MIN="${DRILL_UDP_PORT:-$(free_port_range 11)}"
+UDP_MAX=$((UDP_MIN + 10))
 BASE="http://127.0.0.1:$PORT"
 ADMIN_PASSWORD="drill-$(openssl rand -hex 8)"
 
@@ -54,8 +58,8 @@ ADMIN_USERNAME=Herzog
 ADMIN_INITIAL_PASSWORD=$ADMIN_PASSWORD
 UPDATE_CHECK_ENABLED=false
 LINK_PREVIEWS_ENABLED=false
-WEBRTC_UDP_PORT_MIN=58200
-WEBRTC_UDP_PORT_MAX=58210
+WEBRTC_UDP_PORT_MIN=$UDP_MIN
+WEBRTC_UDP_PORT_MAX=$UDP_MAX
 WEBRTC_NAT_1TO1_IP=127.0.0.1
 EOF
 chmod 600 "$DEPLOY/.env"
@@ -66,7 +70,7 @@ services:
     container_name: $COMPOSE_PROJECT_NAME-app
     ports: !override
       - "127.0.0.1:$PORT:8080"
-      - "127.0.0.1:58200-58210:58200-58210/udp"
+      - "127.0.0.1:$UDP_MIN-$UDP_MAX:$UDP_MIN-$UDP_MAX/udp"
   postgres:
     container_name: $COMPOSE_PROJECT_NAME-postgres
   seaweedfs:

@@ -34,12 +34,16 @@ async function load() {
   }
 }
 
-async function setDisabled(command: BotCommand, disabled: boolean) {
+async function setDisabled(command: BotCommand, event: Event) {
+  const input = event.target as HTMLInputElement
+  const disabled = !input.checked
   try {
     const updated = await api(`${base}/${command.id}`, { method: 'PATCH', json: { disabled }, decode: decodeBotCommand })
     commands.value = commands.value.map(c => (c.id === updated.id ? updated : c))
   } catch (e) {
     fail(e)
+    // Vue does not re-patch `checked` when the bound value is unchanged, so restore the box by hand.
+    input.checked = disabled
     await load()
   }
 }
@@ -70,7 +74,7 @@ onMounted(load)
           <p class="truncate text-xs text-mnema-tertiary">{{ command.description }} <span class="whitespace-nowrap">- {{ $t('bots.commands.options', { count: command.options.length }) }}</span></p>
         </div>
         <label class="flex items-center gap-2 text-sm text-mnema-text">
-          <input type="checkbox" :checked="!command.disabled" :aria-label="$t('bots.commands.enabledFor', { name: command.name })" @change="setDisabled(command, !($event.target as HTMLInputElement).checked)" />
+          <input type="checkbox" :checked="!command.disabled" :aria-label="$t('bots.commands.enabledFor', { name: command.name })" @change="setDisabled(command, $event)" />
           <span>{{ command.disabled ? $t('bots.disabled') : $t('bots.enabled') }}</span>
         </label>
         <button type="button" class="btn btn-icon btn-sm hover:text-mnema-danger" :aria-label="$t('bots.commands.deleteFor', { name: command.name })" data-action="delete" @click="remove(command)"><Trash2 class="h-4 w-4" /></button>

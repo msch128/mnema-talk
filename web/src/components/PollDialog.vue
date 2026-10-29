@@ -33,7 +33,8 @@ async function addOption() {
   if (!canAdd.value) return
   draft.options.push('')
   await nextTick()
-  list.value?.querySelector<HTMLInputElement>('input:last-of-type')?.focus()
+  const inputs = list.value?.querySelectorAll<HTMLInputElement>('input')
+  inputs?.[inputs.length - 1]?.focus()
 }
 
 function removeOption(i: number) {

@@ -145,6 +145,18 @@ describe('media frame worker', () => {
     scope.onrtctransform?.({ transformer: { readable: new ReadableStream(), writable: new WritableStream(), options: { port: { onmessage: null }, direction: 'sideways', channelId: 'channel', senderId: 'alice' } } })
   })
 
+  it('keeps only the two newest epoch keys', async () => {
+    const keys = [await epochKeys(1), await epochKeys(2), await epochKeys(3)]
+    const sealedAt = async (epoch: number) => (await seal({ keys: keys[epoch - 1] as EpochKeys, epoch, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([epoch]) }))?.buffer as ArrayBuffer
+    const opened = await frames('recv', [await sealedAt(1), await sealedAt(2), await sealedAt(3)], [
+      { type: 'key', epoch: 1, key: keys[0] },
+      { type: 'key', epoch: 2, key: keys[1] },
+      { type: 'key', epoch: 3, key: keys[2] },
+    ])
+    const plain = opened.map(frame => [...new Uint8Array((frame as { data: ArrayBuffer }).data)])
+    expect(plain).toEqual([[2], [3]])
+  })
+
   it('keeps a video frame parseable and opens it again', async () => {
     const key = await epochKeys(2)
     const nal = [0x61, 0xe0, 0x00, 0x7e, ...Array.from({ length: 64 }, (_, i) => i + 1)]

@@ -12,6 +12,7 @@ import { previewText } from '../lib/replies'
 import { shortcodesForEditing } from '../lib/customEmoji'
 import { confirm } from '../lib/confirm'
 import { t, locale } from '../i18n'
+import { caughtErrorMessage } from '../lib/api'
 import { clockTimeOptions } from '../lib/time'
 
 export function formatTime(dateStr: string | null | undefined) {
@@ -22,10 +23,6 @@ export function formatTime(dateStr: string | null | undefined) {
 // Reaction pickers live in elements with this class; presses inside one
 // don't close the open picker.
 export const PICKER_ANCHOR = 'reaction-picker-anchor'
-
-function errorText(err: unknown, fallback: string) {
-  return err instanceof Error && err.message ? err.message : fallback
-}
 
 function confirmDelete(msg: Message, titleKey: string) {
   return confirm({
@@ -92,7 +89,7 @@ function useFileUpload() {
       await send(file)
       return true
     } catch (err) {
-      toasts.error(errorText(err, t('chat.uploadFailed')))
+      toasts.error(caughtErrorMessage(err, t('chat.uploadFailed')))
       return false
     } finally {
       isUploading.value = false
@@ -127,9 +124,10 @@ function useMessageEditor(channelOf: (msg: Message) => string, onStart?: () => v
     isSavingEdit.value = true
     try {
       await chatStore.editMessage(channelOf(msg), msg.id, text)
-      cancelEdit()
+      // The member may have moved on to another edit while this one was sent.
+      if (editingId.value === msg.id) cancelEdit()
     } catch (err) {
-      toasts.error(errorText(err, t('chat.editFailed')))
+      toasts.error(caughtErrorMessage(err, t('chat.editFailed')))
     } finally {
       isSavingEdit.value = false
     }
@@ -186,7 +184,7 @@ export function useMessageActions({ container = null, deleteTitle = 'chat.delete
     try {
       await chatStore.deleteMessage(channelOf(msg), msg.id)
     } catch (err) {
-      toasts.error(errorText(err, t('chat.deleteFailed')))
+      toasts.error(caughtErrorMessage(err, t('chat.deleteFailed')))
     }
   }
 

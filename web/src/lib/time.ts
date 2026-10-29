@@ -23,7 +23,9 @@ function asDate(input: Moment): Date {
   return input instanceof Date ? input : new Date(input)
 }
 
-function startOfDay(d: Date): number {
+/** Local midnight of the day containing `at`, in ms. */
+export function startOfDay(at: Date | number): number {
+  const d = new Date(at)
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
 }
 

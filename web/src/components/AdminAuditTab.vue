@@ -1,9 +1,10 @@
 <script setup lang="ts">
 // Admin dashboard: the audit log. Read-only by design: entries are immutable
 // on the server, so there is nothing to edit or delete here.
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { ScrollText, ChevronRight, ChevronDown } from '@lucide/vue'
 import EmptyState from './EmptyState.vue'
+import { useReloadOnActivate } from '../composables/useReloadOnActivate'
 import { api, caughtErrorMessage } from '../lib/api'
 import type { AuditItem, AuditPage } from '../types/rest'
 import { isAuditPage } from '../types/rest'
@@ -13,6 +14,7 @@ import { useChatStore } from '../stores/chat'
 import { t, locale } from '../i18n'
 import { summarizeAudit } from '../lib/auditSummary'
 import BotBadge from './BotBadge.vue'
+import StatePanel from './StatePanel.vue'
 
 const decodePage = decoder<AuditPage>('audit.Page', isAuditPage)
 const toasts = useToastStore()
@@ -24,6 +26,9 @@ const GROUPS = ['role', 'user', 'channel', 'category', 'layout', 'invite', 'webh
 const entries = ref<AuditItem[]>([])
 const next = ref<number | null>(null)
 const loading = ref(false)
+const failed = ref(false)
+// Only the newest request may write its page; a filter change supersedes one in flight.
+let request = 0
 const group = ref('')
 const actor = ref('')
 const from = ref('')
@@ -47,17 +52,22 @@ function query(before: number | null): string {
 }
 
 async function load(more: boolean) {
-  if (loading.value) return
+  if (more && loading.value) return
+  const mine = ++request
   loading.value = true
   try {
     const page = await api(`/api/admin/audit-log?${query(more ? next.value : null)}`, { decode: decodePage })
+    if (mine !== request) return
+    failed.value = false
     entries.value = more ? [...entries.value, ...page.entries] : page.entries
     next.value = page.next_before
     if (!more) open.value = new Set()
   } catch (e) {
+    if (mine !== request) return
+    failed.value = true
     toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
   } finally {
-    loading.value = false
+    if (mine === request) loading.value = false
   }
 }
 
@@ -107,6 +117,12 @@ function pretty(details: Record<string, unknown>): string {
   return JSON.stringify(details, null, 2)
 }
 
+// A page made only of hidden sign-ins would read as an empty log while more pages wait.
+watch([shown, next, loading], () => {
+  if (hideSignIns.value && !shown.value.length && next.value !== null && !loading.value && !failed.value) void load(true)
+})
+
+useReloadOnActivate(() => load(false))
 onMounted(() => load(false))
 </script>
 
@@ -164,7 +180,8 @@ onMounted(() => load(false))
     </label>
 
     <div class="bg-mnema-surface rounded-lg border border-mnema-hairline overflow-hidden divide-y divide-mnema-hairline">
-      <EmptyState v-if="!shown.length && !loading" :icon="ScrollText" :text="$t('audit.empty')" :hint="$t('audit.emptyHint')" />
+      <StatePanel v-if="failed && !entries.length" state="error" retryable data-testid="audit-error" @retry="load(false)">{{ $t('audit.loadFailed') }}</StatePanel>
+      <EmptyState v-else-if="!shown.length && !loading && next === null" :icon="ScrollText" :text="$t('audit.empty')" :hint="$t('audit.emptyHint')" />
       <div v-for="e in shown" :key="e.id" :data-testid="`audit-entry-${e.id}`">
         <button
           type="button"

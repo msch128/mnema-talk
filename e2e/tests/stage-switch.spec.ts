@@ -155,6 +155,8 @@ test('a camera goes on the stage, switches with a screen share and back to the g
   const { a, b, bId, bName, close } = await twoMembers(browser, 'camera')
   const aStage = a.getByTestId('stage')
   const bTile = a.locator('[data-participant-tile]', { hasText: bName })
+  // The tile's own action is the button that fills it; it carries the label and the pressed state.
+  const bTileAction = bTile.locator('[data-tile-primary]')
   // A corner of the tile: its middle holds the Watch button while B shares.
   const clickTile = () => bTile.click({ position: { x: 6, y: 6 } })
 
@@ -171,14 +173,14 @@ test('a camera goes on the stage, switches with a screen share and back to the g
   await expect.poll(decoded, { timeout: 20_000 }).toBeGreaterThan(0)
   const framesSoFar = await decoded()
   await expect.poll(decoded, { timeout: 10_000 }).toBeGreaterThan(framesSoFar + 10)
-  await expect(bTile).toHaveAttribute('aria-label', `Kamera von ${bName} vergrößern`)
+  await expect(bTileAction).toHaveAttribute('aria-label', `Kamera von ${bName} vergrößern`)
 
   // A click puts it on the stage, a second click takes it off: the grid again.
   await clickTile()
   await expect(aStage).toHaveAttribute('data-stage-source', `camera:${bId}`)
   await expect.poll(() => stageSize(a)).not.toBe('')
   await expect(aStage.getByTestId('viewer-stream-volume-slider')).toHaveCount(0)
-  await expect(bTile).toHaveAttribute('aria-pressed', 'true')
+  await expect(bTileAction).toHaveAttribute('aria-pressed', 'true')
   await shot(a, 'stage-camera')
   await clickTile()
   await expect(aStage).toHaveCount(0)

@@ -56,7 +56,13 @@ describe('AdminBansTab', () => {
     const failed = mount(AdminBansTab)
     await flushPromises()
     expect(toastTexts()).toContain('boom')
-    expect(failed.text()).toContain('Nobody is banned.')
+    expect(failed.text()).not.toContain('Nobody is banned.')
+    expect(failed.get('[data-testid="bans-error"]').text()).toContain('Couldn’t load the bans.')
+    apiMock.mockResolvedValueOnce(bans())
+    await failed.get('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(failed.find('[data-testid="bans-error"]').exists()).toBe(false)
+    expect(failed.text()).toContain('The Troll')
   })
 
   it('unbans after confirmation and drops the row', async () => {

@@ -77,7 +77,8 @@ export function formFromRule(rule: AutomodRule): RuleForm {
   const c = rule.config
   const base = emptyForm(rule.kind)
   return {
-    ...base, name: ruleLabel(rule), enabled: rule.enabled, action: rule.action, timeoutSeconds: rule.timeout_seconds,
+    // The stored name, not its translation: saving must not rename a built-in rule.
+    ...base, name: rule.name, enabled: rule.enabled, action: rule.action, timeoutSeconds: rule.timeout_seconds,
     words: lines(c.words), mode: c.mode ?? base.mode, domains: lines(c.domains),
     maxMentions: c.max_mentions ?? base.maxMentions, maxAgeSeconds: c.max_age_seconds ?? base.maxAgeSeconds,
     restrict: c.restrict ?? base.restrict, joins: c.joins ?? base.joins, windowSeconds: c.window_seconds ?? base.windowSeconds,

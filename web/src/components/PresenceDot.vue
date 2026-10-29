@@ -3,7 +3,7 @@ import type { PropType } from 'vue'
 import type { LivePresence } from './presentationTypes'
 // The live-status mark on avatars and in menus. Each status has its own
 // shape as well as its own colour, so it reads without colour vision too.
-import { computed } from 'vue'
+import { computed, useId } from 'vue'
 import { normalizeStatus } from '../lib/presence'
 
 const props = defineProps({
@@ -14,6 +14,9 @@ const props = defineProps({
   ringClass: { type: String, default: 'bg-mnema-canvas' },
   ring: { type: Boolean, default: true }
 })
+
+// The mask id must be unique per dot: a duplicate id resolves to the first element, which may be hidden.
+const maskId = `moon-${useId()}`
 
 const s = computed<LivePresence>(() => normalizeStatus(props.status))
 const colour = computed(() => ({
@@ -37,21 +40,21 @@ const colour = computed(() => ({
       <circle v-if="s === 'online'" cx="5" cy="5" r="5" fill="currentColor" />
       <!-- away: crescent -->
       <template v-else-if="s === 'away'">
-        <mask :id="`moon-${size}`">
+        <mask :id="maskId">
           <rect width="10" height="10" fill="white" />
           <circle cx="2.6" cy="2.6" r="3.4" fill="black" />
         </mask>
-        <circle cx="5" cy="5" r="5" fill="currentColor" :mask="`url(#moon-${size})`" />
+        <circle cx="5" cy="5" r="5" fill="currentColor" :mask="`url(#${maskId})`" />
       </template>
       <!-- do not disturb: disc with a bar -->
       <template v-else-if="s === 'dnd'">
         <circle cx="5" cy="5" r="5" fill="currentColor" />
-        <rect x="2" y="4" width="6" height="2" rx="1" fill="#0F1110" />
+        <rect x="2" y="4" width="6" height="2" rx="1" fill="var(--color-mnema-accent-ink)" />
       </template>
       <!-- focus: disc with a centre point -->
       <template v-else-if="s === 'focus'">
         <circle cx="5" cy="5" r="5" fill="currentColor" />
-        <circle cx="5" cy="5" r="2.2" fill="#0F1110" />
+        <circle cx="5" cy="5" r="2.2" fill="var(--color-mnema-accent-ink)" />
         <circle cx="5" cy="5" r="1" fill="currentColor" />
       </template>
       <!-- offline: hollow ring -->

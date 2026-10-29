@@ -31,7 +31,7 @@ describe('TimeoutBanner', () => {
 
   it('counts down with the reason and asks for the permissions again when it ends', async () => {
     const permissions = usePermissionsStore()
-    const load = vi.spyOn(permissions, 'load').mockResolvedValue()
+    const load = vi.spyOn(permissions, 'load').mockImplementation(async () => { permissions.info = info() })
     const w = mount(TimeoutBanner)
     permissions.info = info('2026-01-01T12:00:03Z', 'calm down')
     await vi.advanceTimersByTimeAsync(0)
@@ -47,6 +47,24 @@ describe('TimeoutBanner', () => {
     // No ticking goes on afterwards.
     await vi.advanceTimersByTimeAsync(5000)
     expect(load).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the banner and asks again while the server still reports the timeout after a fast clock ran out', async () => {
+    const permissions = usePermissionsStore()
+    const load = vi.spyOn(permissions, 'load').mockResolvedValue()
+    const w = mount(TimeoutBanner)
+    permissions.info = info('2026-01-01T12:00:02Z')
+    await vi.advanceTimersByTimeAsync(2500)
+    expect(load).toHaveBeenCalledTimes(1)
+    expect(w.get('[data-testid="timeout-remaining"]').text()).toBe('0:00')
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(load).toHaveBeenCalledTimes(2)
+    expect(w.find('[data-testid="timeout-banner"]').exists()).toBe(true)
+    load.mockImplementation(async () => { permissions.info = info() })
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(w.find('[data-testid="timeout-banner"]').exists()).toBe(false)
+    w.unmount()
+    expect(vi.getTimerCount()).toBe(0)
   })
 
   it('follows a changed or removed timeout and stops its timer on unmount', async () => {

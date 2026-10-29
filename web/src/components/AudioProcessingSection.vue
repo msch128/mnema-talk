@@ -2,6 +2,7 @@
 import { Sparkles } from '@lucide/vue'
 import type { NoiseMode } from '../stores/voice'
 import { useVoiceStore, NOISE_MODES } from '../stores/voice'
+import { rovingKeydown } from '../lib/rovingFocus'
 import { useActiveAudioSettings } from '../composables/useActiveAudioSettings'
 
 // The noise filter and echo cancellation. The rarely used processing options
@@ -13,6 +14,13 @@ async function setNoiseMode(mode: NoiseMode) {
   if (voiceStore.noiseMode === mode) return
   voiceStore.setNoiseMode(mode)
   await applyActiveAudioSettings()
+}
+
+function onModeKey(e: KeyboardEvent, index: number) {
+  rovingKeydown(e, index, NOISE_MODES.length, n => {
+    const mode = NOISE_MODES[n]
+    if (mode) void setNoiseMode(mode)
+  })
 }
 
 async function toggleEcho() {
@@ -39,11 +47,12 @@ async function toggleEcho() {
         </div>
         <div role="radiogroup" aria-labelledby="noise-mode-label" class="grid grid-cols-2 gap-1 rounded-xl border border-mnema-hairline bg-mnema-canvas p-1 sm:grid-cols-4">
           <button
-            v-for="mode in NOISE_MODES"
+            v-for="(mode, i) in NOISE_MODES"
             :key="mode"
             type="button"
             role="radio"
             :aria-checked="voiceStore.noiseMode === mode ? 'true' : 'false'"
+            :tabindex="voiceStore.noiseMode === mode ? 0 : -1"
             :class="[
               'rounded-lg px-3 py-2 text-sm font-medium transition',
               voiceStore.noiseMode === mode
@@ -51,6 +60,7 @@ async function toggleEcho() {
                 : 'text-mnema-muted hover:bg-mnema-hover/60 hover:text-mnema-text'
             ]"
             @click="setNoiseMode(mode)"
+            @keydown="onModeKey($event, i)"
           >
             {{ $t(`audio.noiseMode_${mode}`) }}
           </button>

@@ -1,7 +1,7 @@
 // The voice settings a member keeps in this browser: how the microphone opens,
 // noise handling, volumes, devices and sound effects. Built inside the voice store.
 import { computed, ref, watch } from 'vue'
-import { readJson, writeJson } from '../lib/voicePlayback'
+import { readItem, readJson, writeItem, writeJson } from '../lib/voicePlayback'
 
 export type InputMode = 'activity' | 'ptt'
 export type NoiseMode = 'ai' | 'ai-lite' | 'browser' | 'off'
@@ -46,26 +46,26 @@ function isNoiseMode(value: string | null): value is NoiseMode {
 // 'browser' (getUserMedia noiseSuppression) or 'off'. Older clients stored
 // only 'true'/'false'.
 function savedNoiseMode(): NoiseMode {
-  const stored = localStorage.getItem('mnema_noise')
+  const stored = readItem('mnema_noise')
   if (isNoiseMode(stored)) return stored
   return stored === 'false' ? 'off' : 'ai'
 }
 
 function loadVoiceInputSettings() {
-  const inputMode = ref<InputMode>(localStorage.getItem('mnema_input_mode') === 'ptt' ? 'ptt' : 'activity')
-  const pttKey = ref(localStorage.getItem('mnema_ptt_key') || 'Space')
-  const autoSensitivity = ref(localStorage.getItem('mnema_auto_sens') === 'true')
-  const sensitivityThreshold = ref(parseInt(localStorage.getItem('mnema_sens_threshold') || '30', 10))
-  const hangoverMs = ref(parseInt(localStorage.getItem('mnema_hangover_ms') || '250', 10))
+  const inputMode = ref<InputMode>(readItem('mnema_input_mode') === 'ptt' ? 'ptt' : 'activity')
+  const pttKey = ref(readItem('mnema_ptt_key') || 'Space')
+  const autoSensitivity = ref(readItem('mnema_auto_sens') === 'true')
+  const sensitivityThreshold = ref(parseInt(readItem('mnema_sens_threshold') || '30', 10))
+  const hangoverMs = ref(parseInt(readItem('mnema_hangover_ms') || '250', 10))
   return { inputMode, pttKey, autoSensitivity, sensitivityThreshold, hangoverMs }
 }
 
 function loadFeedbackSettings() {
-  const warnNoAudioDetected = ref(localStorage.getItem('mnema_warn_no_audio') !== 'false')
-  const warnSwitchChannel = ref(localStorage.getItem('mnema_warn_switch_channel') !== 'false')
-  const qosHighPriority = ref(localStorage.getItem('mnema_qos_priority') !== 'false')
-  const soundEffectsEnabled = ref(localStorage.getItem('mnema_sounds_enabled') !== 'false')
-  const soundEffectsVolume = ref(parseInt(localStorage.getItem('mnema_sounds_volume') || '80', 10))
+  const warnNoAudioDetected = ref(readItem('mnema_warn_no_audio') !== 'false')
+  const warnSwitchChannel = ref(readItem('mnema_warn_switch_channel') !== 'false')
+  const qosHighPriority = ref(readItem('mnema_qos_priority') !== 'false')
+  const soundEffectsEnabled = ref(readItem('mnema_sounds_enabled') !== 'false')
+  const soundEffectsVolume = ref(parseInt(readItem('mnema_sounds_volume') || '80', 10))
   const soundEvents = ref({
     ...defaultSoundEvents(),
     ...readJson('mnema_sound_events')
@@ -79,12 +79,12 @@ function loadFeedbackSettings() {
 function loadAudioProcessingSettings() {
   const noiseMode = ref<NoiseMode>(savedNoiseMode())
   const noiseCancelling = computed(() => noiseMode.value !== 'off')
-  const autoGainControl = ref(localStorage.getItem('mnema_agc') === 'true')
-  const echoCancellation = ref(localStorage.getItem('mnema_echo') !== 'false')
-  const inputVolume = ref(parseInt(localStorage.getItem('mnema_input_volume') || '100', 10))
-  const outputVolume = ref(parseInt(localStorage.getItem('mnema_output_volume') || '100', 10))
-  const selectedInputDeviceId = ref(localStorage.getItem('mnema_input_dev') || '')
-  const selectedOutputDeviceId = ref(localStorage.getItem('mnema_output_dev') || '')
+  const autoGainControl = ref(readItem('mnema_agc') === 'true')
+  const echoCancellation = ref(readItem('mnema_echo') !== 'false')
+  const inputVolume = ref(parseInt(readItem('mnema_input_volume') || '100', 10))
+  const outputVolume = ref(parseInt(readItem('mnema_output_volume') || '100', 10))
+  const selectedInputDeviceId = ref(readItem('mnema_input_dev') || '')
+  const selectedOutputDeviceId = ref(readItem('mnema_output_dev') || '')
   return {
     noiseMode, noiseCancelling, autoGainControl, echoCancellation,
     inputVolume, outputVolume, selectedInputDeviceId, selectedOutputDeviceId
@@ -96,24 +96,24 @@ function persistVoiceSettings(
   feedback: ReturnType<typeof loadFeedbackSettings>,
   audio: ReturnType<typeof loadAudioProcessingSettings>
 ) {
-  localStorage.setItem('mnema_input_mode', input.inputMode.value)
-  localStorage.setItem('mnema_ptt_key', input.pttKey.value)
-  localStorage.setItem('mnema_auto_sens', String(input.autoSensitivity.value))
-  localStorage.setItem('mnema_sens_threshold', String(input.sensitivityThreshold.value))
-  localStorage.setItem('mnema_hangover_ms', String(input.hangoverMs.value))
-  localStorage.setItem('mnema_warn_no_audio', String(feedback.warnNoAudioDetected.value))
-  localStorage.setItem('mnema_warn_switch_channel', String(feedback.warnSwitchChannel.value))
-  localStorage.setItem('mnema_qos_priority', String(feedback.qosHighPriority.value))
-  localStorage.setItem('mnema_sounds_enabled', String(feedback.soundEffectsEnabled.value))
-  localStorage.setItem('mnema_sounds_volume', String(feedback.soundEffectsVolume.value))
+  writeItem('mnema_input_mode', input.inputMode.value)
+  writeItem('mnema_ptt_key', input.pttKey.value)
+  writeItem('mnema_auto_sens', String(input.autoSensitivity.value))
+  writeItem('mnema_sens_threshold', String(input.sensitivityThreshold.value))
+  writeItem('mnema_hangover_ms', String(input.hangoverMs.value))
+  writeItem('mnema_warn_no_audio', String(feedback.warnNoAudioDetected.value))
+  writeItem('mnema_warn_switch_channel', String(feedback.warnSwitchChannel.value))
+  writeItem('mnema_qos_priority', String(feedback.qosHighPriority.value))
+  writeItem('mnema_sounds_enabled', String(feedback.soundEffectsEnabled.value))
+  writeItem('mnema_sounds_volume', String(feedback.soundEffectsVolume.value))
   writeJson('mnema_sound_events', feedback.soundEvents.value)
-  localStorage.setItem('mnema_noise', audio.noiseMode.value)
-  localStorage.setItem('mnema_agc', String(audio.autoGainControl.value))
-  localStorage.setItem('mnema_echo', String(audio.echoCancellation.value))
-  localStorage.setItem('mnema_input_volume', String(audio.inputVolume.value))
-  localStorage.setItem('mnema_output_volume', String(audio.outputVolume.value))
-  localStorage.setItem('mnema_input_dev', audio.selectedInputDeviceId.value)
-  localStorage.setItem('mnema_output_dev', audio.selectedOutputDeviceId.value)
+  writeItem('mnema_noise', audio.noiseMode.value)
+  writeItem('mnema_agc', String(audio.autoGainControl.value))
+  writeItem('mnema_echo', String(audio.echoCancellation.value))
+  writeItem('mnema_input_volume', String(audio.inputVolume.value))
+  writeItem('mnema_output_volume', String(audio.outputVolume.value))
+  writeItem('mnema_input_dev', audio.selectedInputDeviceId.value)
+  writeItem('mnema_output_dev', audio.selectedOutputDeviceId.value)
 }
 
 export function useVoiceSettings() {

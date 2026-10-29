@@ -17,6 +17,7 @@ const invites = ref<Invite[]>([])
 const newInviteUses = ref<string | number>('')
 const newInviteHours = ref<string | number>('')
 const copiedCode = ref('')
+const creating = ref(false)
 
 function showError(e: unknown) {
   toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
@@ -32,6 +33,8 @@ async function loadInvites() {
 }
 
 async function createInvite() {
+  if (creating.value) return
+  creating.value = true
   try {
     const body: CreateInviteRequest = {}
     if (newInviteUses.value) body.max_uses = parseInt(String(newInviteUses.value), 10)
@@ -43,6 +46,8 @@ async function createInvite() {
   } catch (e) {
     showError(e)
     return
+  } finally {
+    creating.value = false
   }
   await loadInvites()
 }
@@ -133,7 +138,7 @@ onMounted(loadInvites)
           <button v-for="preset in PRESETS" :key="preset.key" type="button" class="chip" :aria-pressed="String(newInviteHours) === String(preset.hours) ? 'true' : 'false'" :data-preset="preset.key" @click="newInviteHours = preset.hours">{{ $t(`admin.preset.${preset.key}`) }}</button>
         </div>
       </div>
-      <button type="submit" class="btn btn-primary sm:mt-6">
+      <button type="submit" :disabled="creating" class="btn btn-primary sm:mt-6">
         {{ $t('admin.createInvite') }}
       </button>
     </form>

@@ -173,7 +173,8 @@ function defaultTypeFor(category: Category) {
   return chs.length && chs.every(c => c.type === 'voice') ? 'voice' : 'text'
 }
 
-async function handleVoiceClick(channel: Channel) {
+// False when the member backed out of leaving their current Talk.
+async function handleVoiceClick(channel: Channel): Promise<boolean> {
   if (voiceStore.warnSwitchChannel && voiceStore.currentChannelId && voiceStore.currentChannelId !== channel.id) {
     const ok = await confirm({
       title: t('audio.switchChannelTitle'),
@@ -182,7 +183,7 @@ async function handleVoiceClick(channel: Channel) {
       cancelLabel: t('common.cancel'),
       danger: false
     })
-    if (!ok) return
+    if (!ok) return false
   }
   // Select channel messages for side-chat
   chatStore.selectChannel(channel)
@@ -191,6 +192,7 @@ async function handleVoiceClick(channel: Channel) {
   voiceStore.activeView = 'voice'
   // /v/:id keeps the Talk's chat toggle as it is.
   navigate(talkPath(channel, { chat: currentRoute.value.view === 'voice' && !!currentRoute.value.showChat }))
+  return true
 }
 
 // The Talk's chat without joining: the Talk opens as a preview with its chat.
@@ -221,7 +223,8 @@ async function handleVoiceUserClick(channel: Channel, user: VoiceUser) {
     } else {
       voiceStore.activeView = 'voice'
     }
-    voiceStore.watchScreen(user.id)
+    // Only a Talk this member is in can deliver the stream: a cancelled switch or a refused join stays out.
+    if (voiceStore.currentChannelId === channel.id) voiceStore.watchScreen(user.id)
     return
   }
   chatStore.openUserProfile(user)

@@ -83,8 +83,46 @@ describe('CreateChannelModal', () => {
     await w.find<HTMLInputElement>('#channel-name')!.setValue('roadmap')
     await w.find('form')!.trigger('submit')
     await flushPromises()
-    expect(chat.createCategory).toHaveBeenCalledWith('Projects', 2)
+    expect(chat.createCategory).toHaveBeenCalledWith('Projects', 1)
     expect(vi.mocked(chat.createChannel).mock.calls[0]![0]!.categoryId).toBe("00000000-0000-4000-8000-0000000003ed")
+  })
+
+  it('appends an inline category after the highest sort order', async () => {
+    chat.categories = [categoryFixture({ id: '00000000-0000-4000-8000-0000000003ea', name: 'Games', sort_order: 0 }), categoryFixture({ id: '00000000-0000-4000-8000-0000000003eb', name: 'Work', sort_order: 5 })]
+    const w = mountModal()
+    await typeButton(w, '+ New category').trigger('click')
+    await w.find<HTMLInputElement>('#channel-category')!.setValue('Projects')
+    await w.find<HTMLInputElement>('#channel-name')!.setValue('roadmap')
+    await w.find('form')!.trigger('submit')
+    await flushPromises()
+    expect(chat.createCategory).toHaveBeenCalledWith('Projects', 6)
+  })
+
+  it('reuses the inline category when the channel create fails and is retried', async () => {
+    vi.mocked(chat.createChannel).mockRejectedValueOnce(new Error('name taken'))
+    const w = mountModal()
+    await typeButton(w, '+ New category').trigger('click')
+    await w.find<HTMLInputElement>('#channel-category')!.setValue('Projects')
+    await w.find<HTMLInputElement>('#channel-name')!.setValue('roadmap')
+    await w.find('form')!.trigger('submit')
+    await flushPromises()
+    await w.find('form')!.trigger('submit')
+    await flushPromises()
+    expect(chat.createCategory).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(chat.createChannel).mock.calls[1]![0]!.categoryId).toBe('00000000-0000-4000-8000-0000000003ed')
+  })
+
+  it('slugs a Talk title when the type changes to text', async () => {
+    const w = mountModal({ initialType: 'voice' })
+    await w.find<HTMLInputElement>('#channel-name')!.setValue('My Voice')
+    await typeButton(w, 'Channel').trigger('click')
+    expect(w.find<HTMLInputElement>('#channel-name')!.element.value).toBe('my-voice')
+  })
+
+  it('shows the text hints for forums', async () => {
+    useServerFeaturesStore().list = ['channels.forum']
+    const w = mountModal({ initialType: 'forum' })
+    expect(w.text()).toContain('Lowercase letters, digits and hyphens.')
   })
 
   it('ignores an empty inline category', async () => {

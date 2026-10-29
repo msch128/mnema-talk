@@ -90,6 +90,7 @@ const when = (iso: string) => dateTime(iso, locale.value)
           <span class="line-clamp-2 wrap-break-word text-sm text-mnema-muted">{{ previewText(msg.content) }}</span>
         </span>
       </button>
+      <p v-if="inbox.loadMoreFailed.value" role="alert" data-testid="mentions-inbox-more-failed" class="px-3 py-2 text-sm text-mnema-muted">{{ $t('mentions.moreFailed') }}</p>
       <button
         v-if="inbox.hasMore.value && !inbox.loading.value"
         type="button"

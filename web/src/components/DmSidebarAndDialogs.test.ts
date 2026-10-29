@@ -85,8 +85,8 @@ describe('SidebarDmSection', () => {
     chat.dms = [pair, group]
     const open = vi.spyOn(chat, 'openDm').mockResolvedValue(undefined)
     const w = mount(SidebarDmSection, { global })
-    await w.get(`[data-dm="${pair.id}"]`).trigger('click')
-    await w.get(`[data-dm="${group.id}"]`).trigger('keydown', { key: 'Enter' })
+    await w.get(`[data-dm="${pair.id}"] [data-testid="dm-open"]`).trigger('click')
+    await w.get(`[data-dm="${group.id}"] [data-testid="dm-open"]`).trigger('click')
     expect(open.mock.calls.map(c => c[0])).toEqual([pair.id, group.id])
   })
 

@@ -16,17 +16,20 @@ export function setGamingPttLease(st: RtcState, pressed: boolean): void {
 interface SpeakingTick {
   buffer: Uint8Array<ArrayBuffer>
   gateOpen: (level: number) => boolean
-  wasSpeaking: boolean
   lastGamingTick: number
 }
 
+/** Takes my speaking ring down for the others, if it is up. */
+export function endSpeakingRing({ chat, st }: Cx) {
+  if (!st.speakingAnnounced) return
+  st.speakingAnnounced = false
+  chat.sendWSEvent('voice_speaking', { active: false })
+}
+
 // Nothing goes out: the speaking ring ends and the track is disabled.
-function stopTransmitting(cx: Cx, tick: SpeakingTick) {
-  const { chat, st } = cx
-  if (tick.wasSpeaking) {
-    tick.wasSpeaking = false
-    chat.sendWSEvent('voice_speaking', { active: false })
-  }
+function stopTransmitting(cx: Cx) {
+  const { st } = cx
+  endSpeakingRing(cx)
   if (st.localAudioStream.value) {
     const track = st.localAudioStream.value.getAudioTracks()[0]
     if (track && track.enabled) track.enabled = false
@@ -70,7 +73,7 @@ function watchForNoAudio(cx: Cx, level: number) {
 // Mic testing in a call: channel transmission is muted and the loopback is gated.
 function gateMicTestLoopback(cx: Cx, tick: SpeakingTick, level: number) {
   const { voice, st } = cx
-  stopTransmitting(cx, tick)
+  stopTransmitting(cx)
   const open = tick.gateOpen(level)
   if (st.loopbackGain && st.audioContext && st.loopbackCtx === st.audioContext) {
     setNodeGain(st.loopbackGain, open ? (voice.outputVolume / 100) : 0, st.audioContext.currentTime)
@@ -92,8 +95,8 @@ function gateTransmission(cx: Cx, tick: SpeakingTick, level: number) {
   }
 
   // Animated speaking halo state
-  if (shouldTransmit !== tick.wasSpeaking) {
-    tick.wasSpeaking = shouldTransmit
+  if (shouldTransmit !== st.speakingAnnounced) {
+    st.speakingAnnounced = shouldTransmit
     chat.sendWSEvent('voice_speaking', { active: shouldTransmit })
   }
 }
@@ -112,22 +115,28 @@ function speakingTick(cx: Cx, tick: SpeakingTick) {
   watchForNoAudio(cx, level)
 
   if (voice.isMicTesting) gateMicTestLoopback(cx, tick, level)
-  else if (voice.isMuted) stopTransmitting(cx, tick)
+  else if (voice.isMuted) stopTransmitting(cx)
   else gateTransmission(cx, tick, level)
 }
 
-export function startSpeakingDetection(cx: Cx) {
-  const { voice, st } = cx
+/** Stops the detection; a ring it had put up comes down with it, as no tick is left to do that. */
+export function stopSpeakingDetection(cx: Cx) {
+  const { st } = cx
   if (st.speakingInterval) {
     clearInterval(st.speakingInterval)
     st.speakingInterval = null
   }
+  endSpeakingRing(cx)
+}
+
+export function startSpeakingDetection(cx: Cx) {
+  const { voice, st } = cx
+  stopSpeakingDetection(cx)
   if (!st.analyser) return
 
   const tick: SpeakingTick = {
     buffer: new Uint8Array(st.analyser.fftSize),
     gateOpen: createVoiceGate(voice),
-    wasSpeaking: false,
     lastGamingTick: performance.now()
   }
   st.speakingInterval = setInterval(() => speakingTick(cx, tick), 60)
@@ -140,6 +149,8 @@ export function cleanupVoiceAudio(cx: Cx) {
     clearInterval(st.speakingInterval)
     st.speakingInterval = null
   }
+  // The leave (or the end of the call) takes the member's ring down itself.
+  st.speakingAnnounced = false
 
   st.pushToTalk.detach()
 

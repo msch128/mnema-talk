@@ -2,11 +2,12 @@
 import type { PropType } from 'vue'
 import type { Channel, ChannelType } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
-import { ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Hash, Volume2, MessagesSquare, FolderPlus, Plus, AlertCircle } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { t } from '../i18n'
+import { nextSortOrder } from '../lib/channelLayout'
 import BaseDialog from './BaseDialog.vue'
 
 const props = defineProps({
@@ -39,8 +40,16 @@ function formatName(val: string) {
   return val.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '')
 }
 
+// Text channels and forums share the slug rules; only Talks keep free titles.
+const slugName = computed(() => channelType.value === 'text' || channelType.value === 'forum')
+
+// A name typed for a Talk is slugged when the type changes to a slugged one.
+watch(slugName, slug => {
+  if (slug) channelName.value = formatName(channelName.value)
+})
+
 function handleNameInput(e: Event) {
-  if (channelType.value === 'text' || channelType.value === 'forum') {
+  if (slugName.value) {
     channelName.value = formatName((e.target as HTMLInputElement).value)
   } else {
     channelName.value = (e.target as HTMLInputElement).value
@@ -60,8 +69,11 @@ async function handleSubmit() {
 
     // If a new category was chosen inline
     if (isCreatingCategory.value && newCategoryName.value.trim()) {
-      const newCat = await chatStore.createCategory(newCategoryName.value.trim(), chatStore.categories.length)
+      const newCat = await chatStore.createCategory(newCategoryName.value.trim(), nextSortOrder(chatStore.categories))
       catId = newCat.id
+      // A retry after a failed channel create reuses this category.
+      selectedCategoryId.value = newCat.id
+      isCreatingCategory.value = false
     }
 
     const createdChannel = await chatStore.createChannel({
@@ -197,7 +209,7 @@ async function handleSubmit() {
         <label for="channel-name" class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono block">{{ $t('common.name') }}</label>
         <div class="relative flex items-center">
           <span class="absolute left-3 text-mnema-tertiary select-none" aria-hidden="true">
-            <Hash v-if="channelType === 'text'" class="w-4 h-4" />
+            <Hash v-if="slugName" class="w-4 h-4" />
             <Volume2 v-else class="w-4 h-4" />
           </span>
           <input
@@ -205,14 +217,14 @@ async function handleSubmit() {
             v-model="channelName"
             @input="handleNameInput"
             type="text"
-            :placeholder="channelType === 'text' ? $t('channel.namePlaceholderText') : $t('channel.namePlaceholderVoice')"
+            :placeholder="slugName ? $t('channel.namePlaceholderText') : $t('channel.namePlaceholderVoice')"
             required
             aria-describedby="channel-name-hint"
             class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md pl-9 pr-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-hidden focus:border-mnema-accent font-mono"
           />
         </div>
         <p id="channel-name-hint" class="text-xs text-mnema-tertiary">
-          {{ channelType === 'text' ? $t('channel.nameHintText') : $t('channel.nameHintVoice') }}
+          {{ slugName ? $t('channel.nameHintText') : $t('channel.nameHintVoice') }}
         </p>
       </div>
 

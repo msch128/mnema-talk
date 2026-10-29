@@ -595,12 +595,89 @@ describe('ThreadSidebar forum posts and follow', () => {
     useServerFeaturesStore().list = ['blocks']
     useBlocksStore().blocked = [{ user_id: 'u2', username: 'u2', display_name: 'U2', blocked_at: '2026-01-01T00:00:00Z' }]
     await nextTick()
-    expect(w.findAll('[data-testid="blocked-message"]')).toHaveLength(2)
+    // The root (also by u2) is folded like the replies.
+    expect(w.findAll('[data-testid="blocked-message"]')).toHaveLength(3)
+    expect(w.find('[data-reply-id="root"]').exists()).toBe(false)
     expect(w.find('[data-reply-id="r1"]').exists()).toBe(false)
 
-    await w.findAll('[data-testid="blocked-message-show"]')[0]!.trigger('click')
+    await w.findAll('[data-testid="blocked-message-show"]')[1]!.trigger('click')
     await nextTick()
     expect(w.find('[data-reply-id="r1"]').exists()).toBe(true)
-    expect(w.findAll('[data-testid="blocked-message"]')).toHaveLength(1)
+    expect(w.findAll('[data-testid="blocked-message"]')).toHaveLength(2)
+  })
+})
+
+describe('ThreadSidebar races and deleted authors', () => {
+  const textarea = () => w.find<HTMLTextAreaElement>('textarea')
+
+  it('shows a deleted author and an emptied root like a reply does', async () => {
+    const chat = setup()
+    chat.activeThread = msg('root', 'deleted-123', { content: '', display_name: '' })
+    await nextTick()
+    const root = w.get('[data-reply-id="root"]')
+    expect(root.text()).toContain(t('user.deleted'))
+    expect(root.text()).not.toContain('deleted-123')
+    expect(root.find('[data-testid="message-removed"]').exists()).toBe(true)
+  })
+
+  it('keeps the draft of the thread that is open when a send of another thread returns', async () => {
+    const chat = setup()
+    let done!: () => void
+    vi.spyOn(chat, 'sendThreadReply').mockImplementation(() => new Promise(res => { done = () => res(null) }))
+    await textarea().setValue('for A')
+    key(textarea(), { key: 'Enter' })
+    await nextTick()
+    chat.activeThread = msg('other', 'u2')
+    await nextTick()
+    await textarea().setValue('draft of B')
+    done()
+    await flushPromises()
+    expect(textarea().element.value).toBe('draft of B')
+  })
+
+  it('does not lock the post that is open now when the answer is for another one', async () => {
+    const chat = setup()
+    vi.spyOn(usePermissionsStore(), 'canIn').mockReturnValue(true)
+    chat.activeThread = msg('root', 'u2', { title: 'Post A', is_locked: false })
+    let done!: () => void
+    vi.mocked(forumApi.updateForumPost).mockImplementation(() => new Promise(res => { done = () => res(msg('root', 'u2')) }))
+    await nextTick()
+    await w.get('[data-testid="thread-lock-toggle"]').trigger('click')
+    chat.activeThread = msg('post-b', 'u2', { title: 'Post B', is_locked: false })
+    await nextTick()
+    done()
+    await flushPromises()
+    expect(chat.activeThread?.is_locked).toBe(false)
+  })
+
+  describe('scrolling', () => {
+    async function geometry(scrollTop: number) {
+      await flushPromises() // the scroll to the end after mounting
+      const container = w.get<HTMLElement>('.overflow-y-auto').element
+      Object.defineProperty(container, 'scrollHeight', { configurable: true, value: 1000 })
+      Object.defineProperty(container, 'clientHeight', { configurable: true, value: 300 })
+      container.scrollTop = scrollTop
+      return container
+    }
+
+    it('leaves a reader of older replies in place when another member replies', async () => {
+      const chat = setup()
+      const container = await geometry(100)
+      chat.threadReplies = [...chat.threadReplies, msg('new', 'u2')]
+      await flushPromises()
+      expect(container.scrollTop).toBe(100)
+    })
+
+    it('follows new replies at the end, and the reader\'s own reply anywhere', async () => {
+      const chat = setup()
+      const container = await geometry(680)
+      chat.threadReplies = [...chat.threadReplies, msg('new', 'u2')]
+      await flushPromises()
+      expect(container.scrollTop).toBe(1000)
+      container.scrollTop = 100
+      chat.threadReplies = [...chat.threadReplies, msg('mine', 'me')]
+      await flushPromises()
+      expect(container.scrollTop).toBe(1000)
+    })
   })
 })
