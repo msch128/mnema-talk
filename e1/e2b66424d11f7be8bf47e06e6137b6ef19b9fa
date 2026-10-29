@@ -1,0 +1,53 @@
+web/src/components/AccountDirectMessages.vue
+  s_fb29f048bd6d02::t_d45e72d6ad9bf5 7,9,15,22,31-35
+web/src/components/AccountDmPolicy.vue
+  s_fb29f048bd6d02::t_206ec35e4ac97c 13,37
+web/src/components/AudioSettingsPanel.test.ts
+  s_06fcde5dbef956::t_a07c2ec07e35ed 384-402
+web/src/components/AudioSettingsPanel.vue
+  s_fb29f048bd6d02::t_a6a4bdd1dd2904 3-4,7,9,16-18,36
+web/src/components/DmPolish.test.ts
+  s_06fcde5dbef956::t_d1c3d42845bc27 451,457
+web/src/components/NotificationSettingsDialog.test.ts
+  s_0cae4a4d7ab7c3::t_c3b9d085ed16af 110-124
+web/src/components/NotificationSettingsDialog.vue
+  s_fb29f048bd6d02::t_2fc6b69f5c1467 5,10-11,18,35-37,116-117
+web/src/components/PushSection.test.ts
+  s_06fcde5dbef956::t_1d46227b1e690c 199,204
+web/src/components/PushSection.vue
+  s_fb29f048bd6d02::t_bf992d83a5d15e 6-7,15-20,79,81
+web/src/composables/usePushSettings.ts
+  s_fb29f048bd6d02::t_d32a2f54f7eac8 60-61,65,68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e1e2b66424d11f7be8bf47e06e6137b6ef19b9fa",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
