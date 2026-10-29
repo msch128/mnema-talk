@@ -206,7 +206,7 @@ branch) was waived when it landed there and is not reported again.
    repository variable `DOCKERHUB_NAMESPACE` and the secrets
    `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` are set, the `dockerhub-mirror`
    job then copies that exact image (same digest, no rebuild) to
-   `docker.io/<namespace>/mnema-talk` as `:X.Y.Z`, `:X.Y`, `:X` and `:latest`,
+   `docker.io/msch128/mnema-talk` as `:X.Y.Z`, `:X.Y`, `:X` and `:latest`,
    checks the digests and signs it the same way. Without them the job is
    skipped with a notice and the release is not affected. To mirror an
    existing release, run the Release workflow by hand on `main` (`workflow_dispatch`)
