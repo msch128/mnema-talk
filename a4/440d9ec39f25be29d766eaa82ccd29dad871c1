@@ -1,0 +1,41 @@
+doc/quick-start.md
+  s_06fcde5dbef956::t_00ff1a50811ebf 1-46,48-52,54-73,80-81,83-86,88-93,95-96,99-100,103,106-107,110-203
+  s_06fcde5dbef956::t_87705389f4ed9c 204
+doc/platform-notes.md
+  s_06fcde5dbef956::t_5f29391218745b 1-118
+doc/reverse-proxy.md
+  s_06fcde5dbef956::t_b979549f725ce2 1-165
+doc/troubleshooting-voice.md
+  s_06fcde5dbef956::t_a24f387107b6fa 1-156
+  s_06fcde5dbef956::t_607eed534397a7 157-158
+doc/faq.md
+  s_06fcde5dbef956::t_74963b167f3363 1-103
+doc/updating.md
+  s_06fcde5dbef956::t_d1749588d68609 1-159
+doc/glossary.md
+  s_b10e722bc60c79::t_3994ee54c61df8 43-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a4440d9ec39f25be29d766eaa82ccd29dad871c1",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_b10e722bc60c79": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-docs-e9d2378f61bc75a7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
