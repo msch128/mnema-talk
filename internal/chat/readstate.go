@@ -103,8 +103,9 @@ func messageTime(ctx context.Context, p *db.Pool, channelID, messageID uuid.UUID
 // marker and the target, or when the member has no marker yet (the first read
 // starts the "new since" divider). Repeated calls (a second tab, Esc on an
 // already read channel, a client retry) cost one indexed probe and no row
-// version, and sending a message never writes a marker at all. The result is
-// the marker afterwards.
+// version. Sending a message calls it for the author (see markReadAfterSend):
+// that writes a marker only when others posted since the last one. The result
+// is the marker afterwards.
 func MarkRead(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, messageID *uuid.UUID) (time.Time, error) {
 	// "Now" is the database's clock, the one messages.created_at comes from:
 	// the app's clock may lag it by a few milliseconds (separate containers,
