@@ -13,7 +13,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function cut(text: string): string {
-  return text.length > MAX_VALUE ? `${text.slice(0, MAX_VALUE - 1)}…` : text
+  const chars = Array.from(text)
+  return chars.length > MAX_VALUE ? `${chars.slice(0, MAX_VALUE - 1).join('')}…` : text
 }
 
 /** One value as short text; yes and no are the caller's words. */

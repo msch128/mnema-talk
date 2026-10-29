@@ -1,5 +1,5 @@
 // The REST calls of reminders and scheduled messages (see stores/later).
-import { api } from './api'
+import { api, isApiError } from './api'
 import {
   decodeLaterReminder, decodeLaterReminderList, decodeLaterScheduled, decodeLaterScheduledList
 } from '../types/rest'
@@ -32,4 +32,7 @@ export const patchScheduled = (id: string, patch: { content?: string; at?: Date 
   decode: decodeLaterScheduled
 })
 
-export const deleteScheduled = (id: string) => api(`/api/me/scheduled/${id}`, { method: 'DELETE' })
+// Already gone (another tab, a double click) counts as deleted.
+export const deleteScheduled = (id: string) => api(`/api/me/scheduled/${id}`, { method: 'DELETE' }).catch((e: unknown) => {
+  if (!(isApiError(e) && e.status === 404)) throw e
+})

@@ -33,7 +33,8 @@ describe('stream modes', () => {
   it('normalizes unknown values to the default', () => {
     expect(normalizeQuality({ resolution: 2160, fps: 120 })).toEqual(DEFAULT_STREAM_QUALITY)
     expect(normalizeQuality(null)).toEqual(DEFAULT_STREAM_QUALITY)
-    expect(normalizeQuality({ resolution: 720, fps: 60, custom: true })).toEqual({ resolution: 720, fps: 60 })
+    expect(normalizeQuality({ resolution: 720, fps: 60, custom: true })).toEqual({ resolution: 720, fps: 60, custom: true })
+    expect(normalizeQuality({ resolution: 720, fps: 60, custom: 'yes' })).toEqual({ resolution: 720, fps: 60 })
   })
 })
 

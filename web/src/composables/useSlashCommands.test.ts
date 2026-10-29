@@ -73,6 +73,44 @@ describe('useSlashCommands', () => {
     expect(apiMock).toHaveBeenCalledTimes(1)
   })
 
+  it('keeps the Enter that confirms an IME composition away from the list', async () => {
+    apiMock.mockResolvedValue([ping])
+    const s = setup()
+    await typeSlash(s, '/p')
+    expect(s.onKeydown(key('Enter', { isComposing: true }))).toBe(false)
+    expect(s.onKeydown(key('Tab', { keyCode: 229 }))).toBe(false)
+    expect(s.picked.value).toBeNull()
+    expect(s.open.value).toBe(true)
+  })
+
+  it('ignores a failed load of a channel left behind and does not offer its commands in the next one', async () => {
+    const OTHER_CH = '00000000-0000-4000-8000-000000000002'
+    let failA: (e: Error) => void = () => undefined
+    apiMock.mockImplementationOnce(() => new Promise((_, reject) => { failA = reject }))
+    const s = setup()
+    await typeSlash(s, '/')
+    channel = OTHER_CH
+    apiMock.mockResolvedValueOnce([wire('help')])
+    await typeSlash(s, '/h')
+    expect(s.suggestions.value.map(c => c.name)).toEqual(['help'])
+    failA(new Error('late'))
+    await flushPromises()
+    expect(s.suggestions.value.map(c => c.name)).toEqual(['help'])
+  })
+
+  it('drops the commands of the previous channel while the next list loads', async () => {
+    const OTHER_CH = '00000000-0000-4000-8000-000000000002'
+    apiMock.mockResolvedValueOnce([ping])
+    const s = setup()
+    await typeSlash(s, '/')
+    expect(s.commands.value).toHaveLength(1)
+    channel = OTHER_CH
+    apiMock.mockImplementationOnce(() => new Promise(() => undefined))
+    await typeSlash(s, '/p')
+    expect(s.suggestions.value).toEqual([])
+    expect(s.open.value).toBe(false)
+  })
+
   it('moves with the arrow keys, picks with Enter or Tab, closes with Escape', async () => {
     apiMock.mockResolvedValue([ping, wire('pong'), wire('help')])
     const s = setup()

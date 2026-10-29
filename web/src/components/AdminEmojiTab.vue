@@ -22,6 +22,7 @@ const draft = ref('')
 
 const NAME_RE = /^[a-z0-9_]{2,32}$/
 const nameOk = computed(() => NAME_RE.test(name.value.trim().toLowerCase()))
+const draftOk = computed(() => NAME_RE.test(draft.value.trim().toLowerCase()))
 const full = computed(() => store.items.length >= store.limit)
 
 function showError(e: unknown) {
@@ -61,7 +62,7 @@ function startRename(id: string, current: string) {
 
 async function saveRename(id: string) {
   const next = draft.value.trim().toLowerCase()
-  if (!NAME_RE.test(next)) return
+  if (!draftOk.value) return
   try {
     await store.rename(id, next)
     editing.value = null
@@ -155,9 +156,12 @@ onMounted(() => { void store.load() })
               type="text"
               maxlength="32"
               :aria-label="$t('emoji.admin.name')"
+              :aria-invalid="!draftOk"
+              :title="$t('emoji.admin.nameRules')"
+              data-testid="emoji-rename-input"
               class="bg-mnema-elevated border border-mnema-border-field rounded-md px-2 py-1 text-sm text-mnema-text outline-hidden focus:border-mnema-accent"
             />
-            <button type="submit" class="text-mnema-accent" :aria-label="$t('common.save')"><Check class="w-4 h-4" /></button>
+            <button type="submit" :disabled="!draftOk" data-testid="emoji-rename-save" class="text-mnema-accent disabled:opacity-40" :aria-label="$t('common.save')"><Check class="w-4 h-4" /></button>
             <button type="button" class="text-mnema-tertiary" :aria-label="$t('common.cancel')" @click="editing = null"><X class="w-4 h-4" /></button>
           </form>
           <span v-else class="font-mono text-mnema-text truncate">:{{ e.name }}:</span>

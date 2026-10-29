@@ -3,7 +3,7 @@
 // message ("Remind me") or when a composed message goes out ("Send later").
 // The time is worked out here in the member's own time zone and sent as an
 // absolute time.
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { caughtErrorMessage } from '../lib/api'
 import { closeLater, pendingLater } from '../lib/laterDialog'
 import {
@@ -37,6 +37,11 @@ watch(request, req => {
   error.value = ''
 }, { immediate: true })
 
+// The preset labels follow the clock while the dialog stays open.
+let clock: ReturnType<typeof setInterval> | undefined
+onMounted(() => { clock = setInterval(() => { now.value = new Date() }, 30_000) })
+onBeforeUnmount(() => clearInterval(clock))
+
 function describe(date: Date): string {
   return date.toLocaleString(locale.value, { weekday: 'short', day: 'numeric', month: 'short', ...clockTimeOptions(locale.value) })
 }
@@ -50,14 +55,18 @@ const valid = computed(() => !!chosen.value && isAcceptableTime(chosen.value, ch
 
 async function confirm() {
   const req = request.value
+  if (!req || busy.value) return
+  // A preset counts from the moment of confirming, not from opening the dialog.
+  now.value = new Date()
   const at = chosen.value
-  if (!req || !at || busy.value) return
+  if (!at) return
   if (!isAcceptableTime(at)) {
     error.value = t('later.pastTime')
     return
   }
   busy.value = true
   error.value = ''
+  let onScheduled: (() => void) | undefined
   try {
     if (req.kind === 'remind') {
       await later.remind(req.messageId, at)
@@ -65,13 +74,21 @@ async function confirm() {
     } else {
       await later.schedule(req.channelId, req.content, at, { parentId: req.parentId ?? null, replyToId: req.replyToId ?? null })
       toasts.success(t('later.scheduledSet', { time: describe(at) }))
-      req.onScheduled?.()
+      onScheduled = req.onScheduled
     }
     closeLater()
   } catch (e) {
     error.value = caughtErrorMessage(e, t(req.kind === 'remind' ? 'later.reminderFailed' : 'later.scheduleFailed'))
   } finally {
     busy.value = false
+  }
+  // Outside the try: a throwing callback is not a failed schedule (a retry would send twice).
+  if (onScheduled) {
+    try {
+      onScheduled()
+    } catch (e) {
+      console.error('onScheduled failed:', e)
+    }
   }
 }
 </script>

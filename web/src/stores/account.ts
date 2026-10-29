@@ -10,9 +10,14 @@ import { decodeAuthAccountInfo, type AuthAccountInfo } from '../types/rest'
 export const useAccountStore = defineStore('account', () => {
   const info = ref<AuthAccountInfo | null>(null)
   const dialogOpen = ref(false)
+  // Bumped when the dialog opens or closes and on reset: an answer that was
+  // asked for before must not fill the store afterwards.
+  let generation = 0
 
   async function load() {
-    info.value = await api('/api/users/me/account', { decode: decodeAuthAccountInfo })
+    const mine = generation
+    const loaded = await api('/api/users/me/account', { decode: decodeAuthAccountInfo })
+    if (mine === generation) info.value = loaded
   }
 
   // The password, and while two-factor sign-in is on a current code.
@@ -20,17 +25,20 @@ export const useAccountStore = defineStore('account', () => {
 
   /** Saves the address; returns false when the confirmation mail was refused (the address is saved anyway). */
   async function setEmail(email: string, currentPassword: string, code = ''): Promise<boolean> {
+    const mine = generation
     const next = await api('/api/users/me/email', {
       method: 'PUT', decode: decodeAuthAccountInfo, json: { email, ...proof(currentPassword, code) }
     })
-    info.value = next
+    if (mine === generation) info.value = next
     return next.confirmation_sent !== false
   }
 
   async function removeEmail(currentPassword: string, code = '') {
-    info.value = await api('/api/users/me/email/remove', {
+    const mine = generation
+    const next = await api('/api/users/me/email/remove', {
       method: 'POST', decode: decodeAuthAccountInfo, json: proof(currentPassword, code)
     })
+    if (mine === generation) info.value = next
   }
 
   async function resendConfirmation() {
@@ -38,13 +46,15 @@ export const useAccountStore = defineStore('account', () => {
   }
 
   function open() {
+    ++generation
     dialogOpen.value = true
   }
 
   function close() {
+    ++generation
     dialogOpen.value = false
     info.value = null
   }
 
-  return { info, dialogOpen, load, setEmail, removeEmail, resendConfirmation, open, close }
+  return { info, dialogOpen, load, setEmail, removeEmail, resendConfirmation, open, close, reset: close }
 })

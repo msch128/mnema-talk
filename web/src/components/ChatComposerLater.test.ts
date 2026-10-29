@@ -5,7 +5,7 @@ import ChatComposer from './ChatComposer.vue'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { closeLater, pendingLater } from '../lib/laterDialog'
-import { setLocale } from '../i18n'
+import { setLocale, t } from '../i18n'
 import { channelFixture, fixtureId } from '../test-fixtures.fixture'
 
 enableAutoUnmount(afterEach)
@@ -52,5 +52,16 @@ describe('Send later next to the send button', () => {
     if (pendingLater.value?.kind === 'schedule') pendingLater.value.onScheduled?.()
     expect(w.emitted('update:modelValue')?.at(-1)).toEqual([''])
     expect(w.emitted('cancel-reply')).toHaveLength(1)
+  })
+
+  it('follows a language switch while the composer stays mounted', async () => {
+    useServerFeaturesStore().list = ['messages.scheduled']
+    const w = mountComposer()
+    setLocale('de')
+    await flushPromises()
+    await w.find('[data-testid="send-later-button"]').trigger('click')
+    await flushPromises()
+    expect(document.body.querySelector('[role="menuitem"]')?.textContent).toContain(t('later.sendLater'))
+    expect(t('later.sendLater')).not.toBe('Send later')
   })
 })

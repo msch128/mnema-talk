@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, useId } from 'vue'
 import { Image as ImageIcon, Trash2 } from '@lucide/vue'
 import BaseDialog from './BaseDialog.vue'
 import { useEventsStore } from '../stores/events'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import type { CommunityEvent } from '../types/domain'
+import { caughtErrorMessage } from '../lib/api'
 import { t } from '../i18n'
 
 const props = defineProps<{
@@ -21,7 +22,14 @@ const eventsStore = useEventsStore()
 const chatStore = useChatStore()
 const toast = useToastStore()
 
-const isEdit = computed(() => !!props.event)
+// An event this dialog created itself: when the cover upload failed after the
+// create, the next submit updates it instead of creating a duplicate.
+const created = ref<CommunityEvent | null>(null)
+const existing = computed(() => props.event ?? created.value)
+const isEdit = computed(() => !!existing.value)
+const ids = {
+  title: useId(), description: useId(), start: useId(), end: useId()
+}
 const title = ref(props.event?.title || '')
 const description = ref(props.event?.description || '')
 
@@ -49,16 +57,27 @@ const error = ref('')
 
 const voiceChannels = computed(() => chatStore.allChannels.filter(c => c.type === 'voice'))
 
+// The preview of a picked file is an object URL that must be released again.
+let previewUrl: string | null = null
+function releasePreview() {
+  if (previewUrl) URL.revokeObjectURL(previewUrl)
+  previewUrl = null
+}
+onBeforeUnmount(releasePreview)
+
 function onCoverSelected(e: Event) {
   const target = e.target as HTMLInputElement
   if (target.files && target.files[0]) {
+    releasePreview()
     coverFile.value = target.files[0]
-    coverPreview.value = URL.createObjectURL(target.files[0])
+    previewUrl = URL.createObjectURL(target.files[0])
+    coverPreview.value = previewUrl
     removeExistingCover.value = false
   }
 }
 
 function removeCover() {
+  releasePreview()
   coverFile.value = null
   coverPreview.value = null
   if (props.event?.cover_url) {
@@ -67,13 +86,13 @@ function removeCover() {
 }
 
 function validateForm(trimmedTitle: string): string | null {
-  if (!trimmedTitle) return t('events.titlePlaceholder')
-  if (!startTime.value) return t('events.startTime')
+  if (!trimmedTitle) return t('events.errTitle')
+  if (!startTime.value) return t('events.errStart')
   const startIso = new Date(startTime.value).toISOString()
   const endIso = endTime.value ? new Date(endTime.value).toISOString() : null
-  if (endIso && new Date(endIso) < new Date(startIso)) return t('events.endTime')
+  if (endIso && new Date(endIso) < new Date(startIso)) return t('events.errEnd')
   if (locationType.value === 'talk' && !channelId.value) return t('events.selectTalk')
-  if (locationType.value === 'text' && !locationText.value.trim()) return t('events.locationTextPlaceholder')
+  if (locationType.value === 'text' && !locationText.value.trim()) return t('events.errLocation')
   return null
 }
 
@@ -106,20 +125,26 @@ async function submit() {
   saving.value = true
   try {
     const payload = buildPayload(trimmedTitle)
+    const current = existing.value
     let result: CommunityEvent
-    if (isEdit.value && props.event) {
-      result = await eventsStore.update(props.event.id, payload)
-      result = await applyCover(result.id, result)
-      toast.success(t('events.updated'))
+    if (current) {
+      result = await eventsStore.update(current.id, payload)
     } else {
       result = await eventsStore.create(payload)
-      result = await applyCover(result.id, result)
-      toast.success(t('events.created'))
+      created.value = result
     }
+    try {
+      result = await applyCover(result.id, result)
+    } catch (err) {
+      // The event itself is saved; only the cover is missing.
+      error.value = created.value ? caughtErrorMessage(err, t('events.coverFailed')) : caughtErrorMessage(err, t('events.saveFailed'))
+      return
+    }
+    toast.success(current ? t('events.updated') : t('events.created'))
     emit('saved', result)
     emit('close')
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Operation failed'
+    error.value = caughtErrorMessage(err, t('events.saveFailed'))
   } finally {
     saving.value = false
   }
@@ -139,10 +164,11 @@ async function submit() {
 
       <!-- Title -->
       <div>
-        <label class="mb-1 block text-sm font-medium text-mnema-text">
+        <label :for="ids.title" class="mb-1 block text-sm font-medium text-mnema-text">
           {{ $t('events.title') }}
         </label>
         <input
+          :id="ids.title"
           v-model="title"
           type="text"
           maxlength="100"
@@ -154,10 +180,11 @@ async function submit() {
 
       <!-- Description -->
       <div>
-        <label class="mb-1 block text-sm font-medium text-mnema-text">
+        <label :for="ids.description" class="mb-1 block text-sm font-medium text-mnema-text">
           {{ $t('events.description') }}
         </label>
         <textarea
+          :id="ids.description"
           v-model="description"
           rows="3"
           maxlength="2000"
@@ -169,10 +196,11 @@ async function submit() {
       <!-- Time Fields -->
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label class="mb-1 block text-sm font-medium text-mnema-text">
+          <label :for="ids.start" class="mb-1 block text-sm font-medium text-mnema-text">
             {{ $t('events.startTime') }}
           </label>
           <input
+            :id="ids.start"
             v-model="startTime"
             type="datetime-local"
             required
@@ -180,10 +208,11 @@ async function submit() {
           />
         </div>
         <div>
-          <label class="mb-1 block text-sm font-medium text-mnema-text">
+          <label :for="ids.end" class="mb-1 block text-sm font-medium text-mnema-text">
             {{ $t('events.endTime') }}
           </label>
           <input
+            :id="ids.end"
             v-model="endTime"
             type="datetime-local"
             class="w-full rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text focus:outline-hidden"
@@ -193,9 +222,9 @@ async function submit() {
 
       <!-- Location Type -->
       <div>
-        <label class="mb-1 block text-sm font-medium text-mnema-text">
+        <span class="mb-1 block text-sm font-medium text-mnema-text">
           {{ $t('events.locationType') }}
-        </label>
+        </span>
         <div class="mb-2 flex gap-4">
           <label class="flex items-center gap-2 text-sm text-mnema-text cursor-pointer">
             <input
@@ -220,6 +249,7 @@ async function submit() {
         <div v-if="locationType === 'talk'">
           <select
             v-model="channelId"
+            :aria-label="$t('events.locationTalk')"
             class="w-full rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text focus:outline-hidden"
           >
             <option value="" disabled>{{ $t('events.selectTalk') }}</option>
@@ -231,6 +261,7 @@ async function submit() {
         <div v-else>
           <input
             v-model="locationText"
+            :aria-label="$t('events.locationText')"
             type="text"
             maxlength="255"
             :placeholder="$t('events.locationTextPlaceholder')"
@@ -241,13 +272,14 @@ async function submit() {
 
       <!-- Cover Image -->
       <div>
-        <label class="mb-1 block text-sm font-medium text-mnema-text">
+        <span class="mb-1 block text-sm font-medium text-mnema-text">
           {{ $t('events.coverImage') }}
-        </label>
+        </span>
         <div v-if="coverPreview" class="relative mb-2 aspect-[3/1] w-full shrink-0 overflow-hidden rounded-lg border border-mnema-border bg-mnema-surface">
           <img :src="coverPreview" :alt="t('events.coverAlt')" class="h-full w-full object-cover" />
           <button
             type="button"
+            :aria-label="$t('events.removeCover')"
             class="absolute top-2 right-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80 transition-colors"
             @click="removeCover"
           >

@@ -11,6 +11,17 @@ import { useToastStore } from '../stores/toast'
 import { applyPushConfig } from '../lib/notifyPreview'
 import { t } from '../i18n'
 
+// The permission is a browser property Vue cannot observe: read again after each load.
+const isDenied = () => typeof Notification !== 'undefined' && Notification.permission === 'denied'
+
+async function refreshDeviceState() {
+  try {
+    await refreshPushState()
+  } catch {
+    // The device state is advisory; the section already shows what it could read.
+  }
+}
+
 export function usePushSettings() {
   const toasts = useToastStore()
   const availability = pushAvailability()
@@ -21,11 +32,12 @@ export function usePushSettings() {
   const busy = ref(false)
   const failed = ref(false)
 
-  const blocked = computed(() => typeof Notification !== 'undefined' && Notification.permission === 'denied')
+  const blocked = ref(isDenied())
   const enabledByOperator = computed(() => config.value?.enabled === true)
 
-  async function load() {
-    loading.value = true
+  /** Reads config and devices. Only the first load blanks the section; later ones refresh in place so focus survives. */
+  async function load(silent = false) {
+    if (!silent) loading.value = true
     failed.value = false
     try {
       config.value = await loadConfig()
@@ -39,8 +51,11 @@ export function usePushSettings() {
     } finally {
       loading.value = false
     }
-    await refreshPushState()
+    blocked.value = isDenied()
+    await refreshDeviceState()
   }
+
+  const refresh = () => load(true)
 
   /** Runs one action with the busy flag and a toast for a failure. */
   async function act(work: () => Promise<void>, failure: string) {
@@ -60,19 +75,19 @@ export function usePushSettings() {
     if (result === 'denied') toasts.error(t('push.blockedToast'))
     else if (result === 'unavailable') toasts.error(t('push.unavailableToast'))
     else toasts.success(t('push.enabledToast'))
-    await load()
+    await refresh()
   }, t('push.enableFailed'))
 
   const remove = (device: PushSubscription) => act(async () => {
     await removeDevice(device)
-    await load()
+    await refresh()
   }, t('push.removeFailed'))
 
   const test = () => act(async () => {
     const result = await sendTestPush()
     if (result.delivered > 0) toasts.success(t('push.testSent'))
     else toasts.error(t('push.testFailed'))
-    await load()
+    await refresh()
   }, t('push.testFailed'))
 
   const setText = (on: boolean) => act(async () => {
@@ -83,7 +98,7 @@ export function usePushSettings() {
     }
   }, t('push.previewFailed'))
 
-  onMounted(load)
+  onMounted(() => load())
 
   return { availability, config, devices, mine, loading, busy, failed, blocked, enabledByOperator, load, enable, remove, test, setText }
 }

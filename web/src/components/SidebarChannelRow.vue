@@ -231,6 +231,7 @@ const rowClass = computed(() => [
         data-voice-user
         @click="emit('voice-user-click', user)"
         @keydown.enter.self.prevent="emit('voice-user-click', user)"
+        @keydown.space.self.prevent="emit('voice-user-click', user)"
         @contextmenu="emit('member-menu', $event, user)"
         @keydown.f10.shift.self.prevent="emit('member-menu', $event, user)"
         @keydown.context-menu.self.prevent="emit('member-menu', $event, user)"

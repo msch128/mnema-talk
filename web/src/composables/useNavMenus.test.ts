@@ -77,10 +77,19 @@ describe('menu actions and state', () => {
     expect(menu.items.value).toEqual([])
   })
 
+  it('says so when the server could not be told that a channel or category is read', async () => {
+    chat.markChannelRead = vi.fn(async () => false)
+    await required(menuItem(buildChannelItems(textCh), 'mark-read').action)()
+    expect(useToastStore().toasts.map(x => x.type)).toEqual(['error'])
+    chat.markChannelRead = vi.fn(async () => true)
+    await required(menuItem(buildChannelItems(textCh), 'mark-read').action)()
+    expect(useToastStore().toasts.map(x => x.type)).toEqual(['error', 'success'])
+  })
+
   it('marks read, copies each channel link and reports unavailable clipboard', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } })
-    chat.markChannelRead = vi.fn(async () => {})
+    chat.markChannelRead = vi.fn(async () => true)
     await required(menuItem(buildChannelItems(textCh), 'mark-read').action)()
     expect(chat.markChannelRead).toHaveBeenCalledWith('t1')
     await required(menuItem(buildChannelItems(textCh), 'copy-link').action)()

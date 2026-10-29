@@ -15,22 +15,25 @@ function client(visibilityState: string) {
   return { visibilityState, focus: vi.fn(async () => {}), postMessage: vi.fn<(message: unknown) => void>() } satisfies ClientLike
 }
 
-function scope(options: { windows?: ClientLike[], waiting?: number } = {}) {
-  const shown: Array<{ title: string, options: Record<string, unknown> }> = []
+function scope(options: { windows?: ClientLike[], waiting?: number, userAgent?: string } = {}) {
+  const shown: Array<{ title: string, options: Record<string, unknown>, closed?: boolean }> = []
   const nav = { setAppBadge: vi.fn(async () => {}), clearAppBadge: vi.fn(async () => {}) }
   const subscribe = vi.fn(async () => ({ toJSON: () => ({ endpoint: 'https://push.example/new', keys: { p256dh: 'PUB', auth: 'SECRET' } }) }))
   const fetch = vi.fn(async () => new Response(null, { status: 201 }))
   const s: PushScope = {
     registration: {
       showNotification: async (title, opts) => { shown.push({ title, options: opts }) },
-      getNotifications: async () => Array.from({ length: options.waiting ?? shown.length }),
+      getNotifications: async (filter) => {
+        if (filter?.tag) return shown.filter(n => n.options['tag'] === filter.tag).map(n => ({ close: () => { n.closed = true } }))
+        return Array.from({ length: options.waiting ?? shown.length }, () => ({ close: () => {} }))
+      },
       pushManager: { subscribe },
     },
     clients: { matchAll: async () => options.windows ?? [], openWindow: vi.fn(async () => null) },
-    navigator: nav,
+    navigator: { ...nav, ...(options.userAgent === undefined ? {} : { userAgent: options.userAgent }) },
     fetch,
   }
-  return { scope: s, shown, nav, subscribe, fetch }
+  return { scope: s, shown, nav: s.navigator as typeof nav, subscribe, fetch }
 }
 
 const event = (data: unknown) => ({ data: data === null ? null : { json: () => data }, waitUntil: vi.fn() })
@@ -73,6 +76,21 @@ describe('a push arrives', () => {
 
   it('shows nothing for a message while the app is on screen: the page shows it itself', async () => {
     const { scope: s, shown } = scope({ windows: [client('hidden'), client('visible')] })
+    await onPush(s, event(payload()))
+    expect(shown).toEqual([])
+  })
+
+  it('on WebKit shows the message silently and takes it back, or the subscription is revoked', async () => {
+    const safari = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
+    const { scope: s, shown } = scope({ windows: [client('visible')], userAgent: safari })
+    await onPush(s, event(payload()))
+    expect(shown).toHaveLength(1)
+    expect(shown[0]).toMatchObject({ options: { silent: true, renotify: false }, closed: true })
+  })
+
+  it('keeps a Chromium browser quiet while the app is on screen even though its user agent says WebKit', async () => {
+    const chrome = 'Mozilla/5.0 (Macintosh) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
+    const { scope: s, shown } = scope({ windows: [client('visible')], userAgent: chrome })
     await onPush(s, event(payload()))
     expect(shown).toEqual([])
   })
@@ -178,6 +196,12 @@ describe('the browser replaces the subscription', () => {
     expect(url).toBe('/api/push/subscriptions')
     expect(init).toMatchObject({ method: 'POST', credentials: 'same-origin' })
     expect(JSON.parse(String(init.body))).toEqual({ endpoint: 'https://push.example/new', p256dh: 'PUB', auth: 'SECRET', label: '' })
+  })
+
+  it('fails loudly when the server refuses the new subscription', async () => {
+    const { scope: s, fetch } = scope()
+    fetch.mockResolvedValueOnce(new Response(null, { status: 401 }))
+    await expect(onSubscriptionChange(s, { oldSubscription: { options: {} }, waitUntil: vi.fn() })).rejects.toThrow('401')
   })
 
   it('does nothing without an old subscription to copy, or without keys', async () => {

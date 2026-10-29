@@ -1,8 +1,17 @@
 import { memoryStorageFixture } from '../test-fixtures.fixture'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { buildChannelTree, loadCollapsed, saveCollapsed, COLLAPSED_KEY } from './channelTree'
 
 const memoryStorage = memoryStorageFixture
+
+describe('blocked storage', () => {
+  it('falls back to no storage when reading localStorage itself throws', () => {
+    vi.spyOn(globalThis, 'localStorage', 'get').mockImplementation(() => { throw new DOMException('blocked', 'SecurityError') })
+    expect(loadCollapsed()).toEqual([])
+    expect(() => saveCollapsed(['a'])).not.toThrow()
+    vi.restoreAllMocks()
+  })
+})
 
 describe('channel tree', () => {
   it('keeps uncategorized first and sorts categories and channels by sort_order', () => {

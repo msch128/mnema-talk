@@ -4,6 +4,7 @@ import { Plus, Save } from '@lucide/vue'
 // The layout editor's toolbar: a new category and saving the order.
 defineProps({
   saving: { type: Boolean, default: false },
+  creating: { type: Boolean, default: false },
   changed: { type: Boolean, default: false }
 })
 const emit = defineEmits<{ create: []; save: [] }>()
@@ -20,11 +21,11 @@ const newCategoryName = defineModel<string>('newCategoryName', { required: true 
         :placeholder="$t('admin.categoryNamePlaceholder')"
         :aria-label="$t('admin.categoryNameLabel')"
         class="bg-mnema-surface border border-mnema-border-field rounded-md px-2.5 py-1 text-sm text-mnema-text placeholder-mnema-tertiary outline-hidden focus:border-mnema-accent transition min-w-0 flex-1 md:w-44 md:flex-none"
-        @keydown.enter="emit('create')"
+        @keydown.enter="!$event.isComposing && emit('create')"
       />
       <button
         type="button"
-        :disabled="!newCategoryName.trim()"
+        :disabled="creating || !newCategoryName.trim()"
         class="btn btn-secondary btn-sm flex shrink-0 items-center gap-1"
         @click="emit('create')"
       >

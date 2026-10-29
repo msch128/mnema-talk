@@ -45,7 +45,7 @@ function close(returnFocus = true) {
 
 const { closeNav } = useCompactLayout()
 
-function run(fn: () => void) {
+function run(fn: () => unknown) {
   close()
   // On a phone the drawer holding this menu makes way for what was chosen.
   closeNav()
@@ -64,6 +64,14 @@ async function chooseLanguage(l: Locale) {
   }
 }
 
+async function signOut() {
+  try {
+    await authStore.logout()
+  } catch (err) {
+    toasts.error(caughtErrorMessage(err, t('errors.unknown')))
+  }
+}
+
 function openOwnProfile() {
   if (authStore.user) chatStore.openUserProfile(authStore.user)
 }
@@ -74,9 +82,10 @@ function toggleShare() {
 }
 
 function onKeydown(e: KeyboardEvent) {
-  const list = items().filter(el => el.offsetParent !== null || el === document.activeElement)
-  const i = list.findIndex(el => el === document.activeElement)
   const inSub = !!document.activeElement?.closest?.('[data-submenu]')
+  // Arrow keys walk one menu level: the open language submenu or the main list.
+  const list = items().filter(el => (el.offsetParent !== null || el === document.activeElement) && !!el.closest('[data-submenu]') === inSub)
+  const i = list.findIndex(el => el === document.activeElement)
   if (e.key === 'Escape') {
     e.preventDefault()
     e.stopPropagation()
@@ -89,7 +98,7 @@ function onKeydown(e: KeyboardEvent) {
     list[(i + 1) % list.length]?.focus()
   } else if (e.key === 'ArrowUp') {
     e.preventDefault()
-    list[(i - 1 + list.length) % list.length]?.focus()
+    list[i <= 0 ? list.length - 1 : i - 1]?.focus()
   } else if (e.key === 'ArrowRight' && document.activeElement?.hasAttribute('data-lang-trigger')) {
     e.preventDefault()
     openLang()
@@ -208,7 +217,7 @@ const item = 'flex min-h-9 w-full items-center gap-3 rounded-lg px-2.5 py-2 text
       <HelpCircle class="h-4 w-4 shrink-0 text-mnema-tertiary" />{{ $t('menu.legal') }}
     </button>
     <div class="mx-0.5 my-1 h-px bg-mnema-hairline" role="separator"></div>
-    <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(() => authStore.logout())">
+    <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(signOut)">
       <LogOut class="h-4 w-4 shrink-0 text-mnema-tertiary" />{{ $t('account.signOut') }}
     </button>
     <div

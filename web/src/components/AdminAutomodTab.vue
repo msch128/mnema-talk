@@ -10,10 +10,12 @@ import type { ModerationAutomodList } from '../types/rest'
 import { AUTOMOD_KINDS, ruleLabel, ruleSummary, toggled } from '../lib/automod'
 import type { AutomodKind } from '../lib/automod'
 import { confirm } from '../lib/confirm'
+import { now } from '../lib/clock'
 import { useToastStore } from '../stores/toast'
 import { locale, t } from '../i18n'
 import AutomodRuleDialog from './AutomodRuleDialog.vue'
 import EmptyState from './EmptyState.vue'
+import { useReloadOnActivate } from '../composables/useReloadOnActivate'
 
 const toasts = useToastStore()
 const state = ref<ModerationAutomodList | null>(null)
@@ -26,7 +28,7 @@ const rules = computed(() => state.value?.rules ?? [])
 const kinds = computed(() => AUTOMOD_KINDS.filter(k => k !== 'raid' || !rules.value.some(r => r.kind === 'raid')))
 const raidUntil = computed(() => {
   const until = state.value?.raid_until
-  return until && Date.parse(until) > Date.now() ? new Date(until).toLocaleTimeString(locale.value, { timeStyle: 'short' }) : ''
+  return until && Date.parse(until) > now.value ? new Date(until).toLocaleTimeString(locale.value, { timeStyle: 'short' }) : ''
 })
 
 async function load() {
@@ -68,6 +70,7 @@ async function remove(rule: AutomodRule) {
   }
 }
 
+useReloadOnActivate(load)
 onMounted(load)
 </script>
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { Channel } from '../types/domain'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
@@ -20,8 +20,13 @@ const chat = useChatStore()
 const features = useServerFeaturesStore()
 const toasts = useToastStore()
 
-const current = computed(() => props.channel.auto_delete_days ?? 0)
+// The prop is a snapshot taken when the dialog opened; the store replaces
+// channel objects on every refresh, so the saved value is read from there.
+const live = computed(() => chat.allChannels.find(c => c.id === props.channel.id) ?? props.channel)
+const current = computed(() => live.value.auto_delete_days ?? 0)
 const chosen = ref(current.value)
+// Follow a change made elsewhere unless the select holds an unsaved choice.
+watch(current, (now, before) => { if (chosen.value === before) chosen.value = now })
 const saving = ref(false)
 const changed = computed(() => chosen.value !== current.value)
 

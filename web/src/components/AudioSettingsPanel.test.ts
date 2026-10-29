@@ -290,6 +290,26 @@ describe('AudioSettingsPanel preference interactions', () => {
     expect(wrapper.find(`input[aria-label="${t('audio.sensitivity')}"]`).exists()).toBe(false)
     wrapper.unmount()
   })
+  it('lets Tab and lone modifiers through, cancels recording on Escape and blur, and rolls the noise mode with the arrows', async () => {
+    const voice = useVoiceStore(); voice.inputMode = 'ptt'
+    const wrapper = mount(AudioSettingsPanel, { ...mountOpts, attachTo: document.body })
+    const previous = voice.pttKey
+    const record = requireValue(wrapper.findAll('button').find(b => b.text() === previous))
+    await record.trigger('click')
+    await record.trigger('keydown', { key: 'Tab', code: 'Tab' }); expect(voice.pttKey).toBe(previous)
+    await record.trigger('keydown', { key: 'Shift', code: 'ShiftLeft' }); expect(voice.pttKey).toBe(previous)
+    await record.trigger('keydown', { key: 'Escape', code: 'Escape' }); expect(voice.pttKey).toBe(previous)
+    await record.trigger('keydown', { key: 'q', code: 'KeyQ' }); expect(voice.pttKey).toBe(previous)
+    await record.trigger('click'); await record.trigger('blur')
+    await record.trigger('keydown', { key: 'q', code: 'KeyQ' }); expect(voice.pttKey).toBe(previous)
+
+    const radios = wrapper.findAll('[role="radio"]')
+    const selected = radios.findIndex(r => r.attributes('aria-checked') === 'true')
+    expect(radios.map(r => r.attributes('tabindex'))).toEqual(radios.map((_, i) => (i === selected ? '0' : '-1')))
+    await radios[selected]!.trigger('keydown', { key: 'ArrowRight' })
+    expect(wrapper.findAll('[role="radio"]')[(selected + 1) % radios.length]!.attributes('aria-checked')).toBe('true')
+    wrapper.unmount()
+  })
   it('applies AGC/echo/noise only to a running call or local mic test and ignores unchanged noise', async () => {
     const voice = useVoiceStore(); voice.isMicTesting = true
     const wrapper = mount(AudioSettingsPanel, mountOpts)

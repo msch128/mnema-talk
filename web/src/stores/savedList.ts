@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { api } from '../lib/api'
+import { api, ApiError } from '../lib/api'
 import { decodeChatSavedPage, type ChatSavedMessage } from '../types/rest'
 
 const PAGE = 50
@@ -12,6 +12,8 @@ export function createSavedList(onEntries: (entries: ChatSavedMessage[]) => void
   const loadingMore = ref(false)
   const failed = ref(false)
   let seq = 0
+  // Whether a page has been shown since the last reset.
+  let loaded = false
 
   /** Loads the newest page, replacing what was shown. */
   async function load() {
@@ -23,12 +25,16 @@ export function createSavedList(onEntries: (entries: ChatSavedMessage[]) => void
       if (mine !== seq) return
       items.value = page.items
       hasMore.value = page.has_more
+      loaded = true
       onEntries(page.items)
     } catch (error) {
       if (mine !== seq) return
       console.warn('Failed to load saved messages:', error)
-      items.value = []
-      hasMore.value = false
+      // A list already on screen stays: a refresh that failed does not make it wrong.
+      if (!loaded) {
+        items.value = []
+        hasMore.value = false
+      }
       failed.value = true
     } finally {
       if (mine === seq) loading.value = false
@@ -49,10 +55,26 @@ export function createSavedList(onEntries: (entries: ChatSavedMessage[]) => void
       onEntries(page.items)
     } catch (error) {
       console.warn('Failed to load more saved messages:', error)
+      // The entry the next page starts behind is gone: start over from the newest page.
+      if (error instanceof ApiError && error.status === 404) {
+        loadingMore.value = false
+        await load()
+      }
     } finally {
       loadingMore.value = false
     }
   }
 
-  return { items, hasMore, loading, loadingMore, failed, load, loadMore }
+  /** Forgets the list (sign-out); a page still on its way is dropped. */
+  function reset() {
+    ++seq
+    loaded = false
+    items.value = []
+    hasMore.value = false
+    loading.value = false
+    loadingMore.value = false
+    failed.value = false
+  }
+
+  return { items, hasMore, loading, loadingMore, failed, load, loadMore, reset }
 }

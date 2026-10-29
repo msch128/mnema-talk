@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { createVoiceState, type VoiceState } from './voice/state'
 import { toggleScreenAudioMute, setScreenQuality, resetScreenQuality, openScreenShareModal, closeScreenShareModal, recordPing, setNoiseMode, toggleNoiseCancelling, toggleMute, toggleDeafen } from './voice/controls'
 import { setSubscriptionSink, isCameraHidden, setCameraHidden, toggleCameraHidden, setAllCamerasOff, setHideNoVideo, toggleHideNoVideo, resendSubscriptions, cameraStreamOf, canFocusCamera, focusCamera, unfocusCamera, toggleCameraFocus, setUserVideoStream, removeUserVideoStream } from './voice/cameras'
-import { watchScreen, unwatchScreen, focusScreen, focusOwnScreen, setRemoteScreen, removeRemoteScreen, handleMediaState, handleScreenViewers, handleScreenLayers, handleScreenQuality, handleLayersWanted, setScreenChoice, viewersOf, resetRemoteMedia } from './voice/screens'
+import { watchScreen, unwatchScreen, focusScreen, focusOwnScreen, setRemoteScreen, removeRemoteScreen, handleMediaState, handleScreenViewers, handleScreenLayers, handleScreenQuality, handleLayersWanted, setScreenChoice, viewersOf, resetRemoteMedia, dropEndedWatches } from './voice/screens'
 import { updateUser, setVoiceRooms, joinedAtOf, setVoiceSnapshot, handleVoiceStateUpdate, handleSpeakingEvent, handleMuteState, muteStateOf, isSpeaking, setChannel, disconnect } from './voice/room'
 import { installStage } from './voice/cameras'
 import { handleStageHand, handleStageTalkPower, handleTalkReaction, hasTalkPower } from './voice/stage'
@@ -106,6 +106,7 @@ function exposedActions(cs: VoiceState) {
     setScreenChoice: bind(setScreenChoice),
     viewersOf: bind(viewersOf),
     resetRemoteMedia: bind(resetRemoteMedia),
+    dropEndedWatches: bind(dropEndedWatches),
     setUserVideoStream: bind(setUserVideoStream),
     removeUserVideoStream: bind(removeUserVideoStream),
     recordPing: bind(recordPing),

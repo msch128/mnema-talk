@@ -22,6 +22,7 @@ import { useToastStore } from '../stores/toast'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { canConfigureTalk, canToggleStage, isStageTalk, openTalkSettings, setStage } from '../lib/talks'
 import { api } from '../lib/api'
+import { copyToClipboard } from '../lib/clipboard'
 import { channelPath } from '../lib/routePaths'
 import { confirm } from '../lib/confirm'
 import { menuPointFromEvent } from '../lib/contextMenuPoint'
@@ -56,18 +57,6 @@ export function channelLink(channel: Channel) {
   return `${base}${channelPath(channel)}`
 }
 
-async function copyText(text: string, okMessage: string) {
-  const toasts = useToastStore()
-  try {
-    await navigator.clipboard.writeText(text)
-    toasts.success(okMessage)
-    return true
-  } catch {
-    toasts.error(t('admin.copyFailed') + ' ' + text)
-    return false
-  }
-}
-
 export function notifyLevelOf(chatStore: Pick<ChatStore, "notificationLevel" | "readStates">, channelId: string): NotifyLevel {
   return chatStore.notificationLevel?.(channelId)
     ?? chatStore.readStates?.[channelId]?.notify_level
@@ -86,15 +75,15 @@ function basicChannelItems(channel: Channel): ContextMenuItem[] {
       icon: CheckCheck,
       disabled: !hasUnread,
       action: async () => {
-        await chatStore.markChannelRead?.(channel.id)
-        toasts.success(t('sidebar.markedRead'))
+        if (await chatStore.markChannelRead?.(channel.id) === false) toasts.error(t('sidebar.markReadFailed'))
+        else toasts.success(t('sidebar.markedRead'))
       }
     },
     {
       id: 'copy-link',
       label: t('sidebar.copyLink'),
       icon: Link,
-      action: () => copyText(channelLink(channel), t('sidebar.copiedLink'))
+      action: () => copyToClipboard(channelLink(channel), t('sidebar.copiedLink'))
     }
   ]
 }
@@ -176,8 +165,8 @@ export function buildCategoryItems(category: Category, handlers: CategoryHandler
     icon: CheckCheck,
     disabled: !hasUnread,
     action: async () => {
-      await chatStore.markAllRead?.(category.id)
-      toasts.success(t('sidebar.allMarkedRead'))
+      if (await chatStore.markAllRead?.(category.id) === false) toasts.error(t('sidebar.markReadFailed'))
+      else toasts.success(t('sidebar.allMarkedRead'))
     }
   }]
   items.push({ type: 'separator' })
@@ -233,7 +222,7 @@ export async function mentionMember(member: MenuMember) {
     chatStore.insertMention(member.username)
     return
   }
-  await copyText(`@${member.username}`, t('nav.mentionCopied'))
+  await copyToClipboard(`@${member.username}`, t('nav.mentionCopied'))
 }
 
 async function memberCall(member: MenuMember, url: string, { title, body, confirmLabel, done }: { title: string; body: string; confirmLabel: string; done: string }) {

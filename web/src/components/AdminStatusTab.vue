@@ -7,6 +7,7 @@ import type { OperatorStatus } from '../types/domain'
 import { decodeOperatorStatus } from '../types/domain'
 import { useToastStore } from '../stores/toast'
 import { SOURCE_URL } from '../lib/thirdParty'
+import { describeWarning } from '../lib/operatorWarnings'
 import { t, locale } from '../i18n'
 
 const toasts = useToastStore()
@@ -75,8 +76,11 @@ onMounted(refresh)
       </div>
       <ul class="space-y-3">
         <li v-for="w in warnings" :key="w.code" class="text-sm" :data-testid="`status-warning-${w.code}`">
-          <p class="font-medium text-mnema-text font-mono">{{ w.code }}</p>
+          <p class="font-medium text-mnema-text">{{ describeWarning(w.code, undefined).title }}</p>
+          <p class="text-mnema-muted">{{ describeWarning(w.code, undefined).body }}</p>
+          <p class="font-mono text-xs text-mnema-tertiary">{{ w.code }}</p>
           <p class="text-xs text-mnema-muted">{{ $t('admin.operatorStatus.count', { count: w.count }) }} · {{ $t('admin.operatorStatus.since', { since: formatDate(w.since) }) }}</p>
+          <a :href="describeWarning(w.code, undefined).doc" target="_blank" rel="noopener noreferrer" class="text-xs text-mnema-accent hover:underline">{{ $t('admin.system.warn.docs') }}</a>
         </li>
       </ul>
     </div>

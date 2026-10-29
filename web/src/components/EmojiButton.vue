@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 // Smiley button that opens the emoji picker above it.
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { Smile } from '@lucide/vue'
 import EmojiPicker from './EmojiPicker.vue'
 
@@ -15,8 +15,15 @@ const emit = defineEmits<{ pick: [emoji: string] }>()
 const open = ref(false)
 const button = ref<HTMLButtonElement | null>(null)
 
-function pick(emoji: string) {
+// The picker's own focus goes away with it: put it back on the trigger.
+// A press outside is a click elsewhere: focus stays where the person put it.
+function close(reason?: 'outside' | 'escape') {
   open.value = false
+  if (reason !== 'outside') void nextTick(() => button.value?.focus())
+}
+
+function pick(emoji: string) {
+  close()
   emit('pick', emoji)
 }
 </script>
@@ -46,7 +53,7 @@ function pick(emoji: string) {
       shortcode
       :class="['absolute bottom-full mb-2', align === 'left' ? 'left-0' : 'right-0']"
       @pick="pick"
-      @close="open = false"
+      @close="close"
     />
   </div>
 </template>

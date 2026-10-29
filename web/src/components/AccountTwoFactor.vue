@@ -61,9 +61,10 @@ const start = () => run(async () => {
 
 const confirm = () => run(async () => {
   codes.value = await enableTwoFactor(code.value)
-  await account.load()
+  // The codes are shown once: reveal them before the refresh, which may fail.
   setup.value = null
   go('codes')
+  await account.load().catch(() => undefined)
 })
 
 const turnOff = () => run(async () => {
@@ -75,8 +76,8 @@ const turnOff = () => run(async () => {
 
 const renew = () => run(async () => {
   codes.value = await newRecoveryCodes(password.value, code.value)
-  await account.load()
   go('codes')
+  await account.load().catch(() => undefined)
 })
 
 function finish() {

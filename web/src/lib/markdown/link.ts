@@ -2,7 +2,7 @@
 // confirmation because the visible text says something else.
 
 // eslint-disable-next-line no-control-regex
-const SAFE_HREF = /^(?:https?:\/\/(?!\/)|mailto:)[^\s<>"'`\\\u0000-\u001f\u007f]+$/i
+const SAFE_HREF = /^(?:https?:\/\/(?!\/)|mailto:)[^\s<>"`\\\u0000-\u001f\u007f]+$/i
 
 /** The URL when it is http(s) or mailto and parses; otherwise null. */
 export function safeHref(raw: string): string | null {

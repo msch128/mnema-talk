@@ -20,6 +20,12 @@ describe('category header activity', () => {
   const category = { id: 'k1', name: 'Music' }
   const header = (props: Record<string, unknown>) => mount(SidebarCategoryHeader, { props: { category, ...props } })
 
+  it('is a plain disclosure button, not a menu button', () => {
+    const toggle = header({ collapsed: true }).get('[data-category-toggle]')
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+    expect(toggle.attributes('aria-haspopup')).toBeUndefined()
+  })
+
   it('shows a mention count or an unread dot only while collapsed', () => {
     expect(header({ collapsed: true, mentions: 4, unreadChannels: 2 }).find('[data-testid="category-mentions"]').text()).toBe('4')
     expect(header({ collapsed: true, mentions: 4, unreadChannels: 2 }).find('[data-testid="category-unread"]').exists()).toBe(false)

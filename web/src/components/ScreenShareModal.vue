@@ -99,14 +99,15 @@ async function handleStart() {
     <div class="space-y-5 p-5">
       <!-- 1. Presets -->
       <div class="stack-2">
-        <label class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
+        <span id="stream-preset-label" class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
           {{ t('talk.quality.preset') }}
-        </label>
-        <div class="grid grid-cols-3 gap-2">
+        </span>
+        <div class="grid grid-cols-3 gap-2" role="group" aria-labelledby="stream-preset-label">
           <!-- Gaming Preset -->
           <button
             type="button"
             data-testid="preset-gaming"
+            :aria-pressed="currentMode === 'gaming'"
             @click="applyPreset('gaming')"
             :class="[
               'flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition cursor-pointer',
@@ -128,6 +129,7 @@ async function handleStart() {
           <button
             type="button"
             data-testid="preset-screen"
+            :aria-pressed="currentMode === 'screen'"
             @click="applyPreset('screen')"
             :class="[
               'flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition cursor-pointer',
@@ -149,6 +151,7 @@ async function handleStart() {
           <button
             type="button"
             data-testid="preset-custom"
+            :aria-pressed="currentMode === 'custom'"
             @click="applyPreset('custom')"
             :class="[
               'flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition cursor-pointer',
@@ -170,15 +173,16 @@ async function handleStart() {
 
       <!-- 2. Resolution -->
       <div class="stack-2">
-        <label class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
+        <span id="stream-resolution-label" class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
           {{ t('talk.quality.resolution') }}
-        </label>
-        <div class="grid grid-cols-4 gap-2">
+        </span>
+        <div class="grid grid-cols-4 gap-2" role="group" aria-labelledby="stream-resolution-label">
           <button
             v-for="r in STREAM_RESOLUTIONS"
             :key="r"
             type="button"
             :data-testid="`resolution-btn-${r}`"
+            :aria-pressed="selectedResolution === r"
             @click="selectResolution(r)"
             :class="[
               'py-2 px-3 rounded-lg border text-center font-medium transition cursor-pointer flex flex-col items-center justify-center gap-0.5',
@@ -196,15 +200,16 @@ async function handleStart() {
 
       <!-- 3. Frame Rate (Bildrate) -->
       <div class="stack-2">
-        <label class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
+        <span id="stream-fps-label" class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
           {{ t('talk.quality.frameRate') }}
-        </label>
-        <div class="grid grid-cols-3 gap-2">
+        </span>
+        <div class="grid grid-cols-3 gap-2" role="group" aria-labelledby="stream-fps-label">
           <button
             v-for="fps in STREAM_FRAME_RATES"
             :key="fps"
             type="button"
             :data-testid="`fps-btn-${fps}`"
+            :aria-pressed="selectedFps === fps"
             @click="selectFps(fps)"
             :class="[
               'py-2 px-3 rounded-lg border text-center font-medium transition cursor-pointer flex items-center justify-center gap-1.5',

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // Shown above the user bar only while connected to a Talk.
+import { barIconButton } from './talkButtons'
 import { computed } from 'vue'
 import { Monitor, MonitorOff, PhoneOff, Volume2, VolumeX } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
@@ -22,7 +23,7 @@ function toggleScreenShare() {
   else startScreenShare()
 }
 
-const ib = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent'
+const ib = barIconButton
 </script>
 
 <template>

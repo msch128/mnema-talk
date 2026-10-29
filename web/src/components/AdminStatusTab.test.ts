@@ -143,6 +143,7 @@ describe('AdminStatusTab', () => {
     expect(w.find('[data-testid="status-update-available"]').text()).toContain('1.3.0')
     expect(w.find('[data-testid="status-warnings"]').exists()).toBe(true)
     expect(w.find('[data-testid="status-warning-trusted_proxy_broad"]').text()).toContain('trusted_proxy_broad')
+    expect(w.find('[data-testid="status-warning-trusted_proxy_broad"]').text()).toContain('TRUSTED_PROXY_CIDRS is too broad')
     expect(w.find('[data-testid="status-warning-trusted_proxy_broad"]').text()).toContain('3')
   })
 

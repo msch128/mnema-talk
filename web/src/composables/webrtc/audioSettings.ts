@@ -1,11 +1,13 @@
 import { useToastStore } from '../../stores/toast'
 import { t } from '../../i18n'
+import { preloadNoiseSuppressor } from '../../lib/noiseSuppressor'
 import type { NoiseModel } from '../../lib/dfn/dfnTypes'
 import type { Cx } from './state'
-import { getAudioConstraints, setupMicPipeline, teardownMicPipeline } from './micPipeline'
+import { micErrorKey, requestMicrophone, setupMicPipeline, teardownMicPipeline } from './micPipeline'
 import { startMicTest } from './micTest'
+import { aiModel } from './audioMath'
 import { activeAudioTrack, applyQos } from './senders'
-import { startSpeakingDetection } from './voiceAudio'
+import { startSpeakingDetection, stopSpeakingDetection } from './voiceAudio'
 
 function targetAudioContext(st: Cx['st'], test: boolean): AudioContext | null {
   return test ? st.testAudioContext : st.audioContext
@@ -53,9 +55,11 @@ export function applyAudioSettings(cx: Cx) {
 
 async function acquireMicrophone(cx: Cx): Promise<MediaStream | null> {
   try {
-    return await navigator.mediaDevices.getUserMedia({ audio: getAudioConstraints(cx) })
+    return await requestMicrophone(cx)
   } catch (err) {
     console.warn('Could not switch microphone:', err)
+    // The running microphone stays; the user learns the new one was not applied.
+    useToastStore().error(t(micErrorKey(err)))
     return null
   }
 }
@@ -66,10 +70,7 @@ function stopMediaTracks(stream?: MediaStream | null) {
 
 function teardownCurrentAudio(cx: Cx) {
   const { st } = cx
-  if (st.speakingInterval) {
-    clearInterval(st.speakingInterval)
-    st.speakingInterval = null
-  }
+  stopSpeakingDetection(cx)
   const old = st.localAudioStream.value
   teardownMicPipeline(cx)
   stopMediaTracks(old)
@@ -78,7 +79,8 @@ function teardownCurrentAudio(cx: Cx) {
 async function installSwappedTrack(cx: Cx, sendStream: MediaStream) {
   const { voice, st } = cx
   const track = sendStream.getAudioTracks()[0]
-  if (track) track.enabled = !voice.isMuted
+  // Closed like the speaking gate would have it until its first tick.
+  if (track) track.enabled = !voice.isMuted && !voice.isMicTesting && (voice.inputMode !== 'ptt' || voice.isPttPressed)
   st.localAudioStream.value = sendStream
   voice.localAudioStream = sendStream
   const outgoing = activeAudioTrack(cx)
@@ -88,12 +90,26 @@ async function installSwappedTrack(cx: Cx, sendStream: MediaStream) {
   startSpeakingDetection(cx)
 }
 
+// The new pipeline could not be built after the old one was released: the
+// call must not keep an ended track that looks alive.
+function dropMicrophone(cx: Cx) {
+  const { voice, st } = cx
+  st.localAudioStream.value = null
+  voice.localAudioStream = null
+  voice.currentInputLevel = 0
+  st.audioSender?.replaceTrack(null).catch(() => {})
+  useToastStore().error(t('voice.micLost'))
+}
+
 async function swapMicrophone(cx: Cx) {
-  const { st } = cx
+  const { voice, st } = cx
   await applyQos(cx)
   if (!st.localAudioStream.value) return
   const gen = st.joinGeneration
-  const stream = await acquireMicrophone(cx)
+  // An AI model downloads before the live microphone is released, so the call
+  // is not silent while it loads.
+  const model = aiModel(voice.noiseMode)
+  const [stream] = await Promise.all([acquireMicrophone(cx), model ? preloadNoiseSuppressor(model) : undefined])
   if (!stream) return
   if (gen !== st.joinGeneration || !st.localAudioStream.value) {
     stopMediaTracks(stream)
@@ -101,9 +117,14 @@ async function swapMicrophone(cx: Cx) {
   }
   teardownCurrentAudio(cx)
   const sendStream = await setupMicPipeline(cx, stream)
-  if (gen !== st.joinGeneration || !sendStream) {
+  if (gen !== st.joinGeneration) {
     stopMediaTracks(sendStream)
     stopMediaTracks(stream)
+    return
+  }
+  if (!sendStream) {
+    stopMediaTracks(stream)
+    dropMicrophone(cx)
     return
   }
   await installSwappedTrack(cx, sendStream)

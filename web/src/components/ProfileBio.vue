@@ -57,14 +57,13 @@ async function saveProfile() {
   if (!canEditProfile.value) return
   isSavingProfile.value = true
   profileSaveError.value = ''
+  const openId = chatStore.selectedUserProfile?.id
   try {
     const updated = await authStore.updateProfile({
       displayName: editDisplayName.value,
       bio: editBio.value
     })
-    if (chatStore.selectedUserProfile) {
-      chatStore.selectedUserProfile = { ...chatStore.selectedUserProfile, ...updated }
-    }
+    chatStore.patchOpenProfile(openId, updated)
     isEditingBio.value = false
     toasts.success(t('profile.profileSaved'))
   } catch (err) {

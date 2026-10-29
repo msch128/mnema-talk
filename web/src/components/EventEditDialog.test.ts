@@ -63,7 +63,7 @@ describe('EventEditDialog', () => {
     wrapper = mount(EventEditDialog)
     await titleInput()?.setValue('   ')
     await submit()
-    expect(wrapper.find('.text-red-400').text()).toContain('e.g. Game night')
+    expect(wrapper.find('.text-red-400').text()).toBe('Enter a title.')
     expect(create).not.toHaveBeenCalled()
   })
 
@@ -72,7 +72,7 @@ describe('EventEditDialog', () => {
     wrapper = mount(EventEditDialog)
     await titleInput()?.setValue('Party')
     await submit()
-    expect(wrapper.find('.text-red-400').text()).toBe('Start time')
+    expect(wrapper.find('.text-red-400').text()).toBe('Choose a start time.')
     expect(create).not.toHaveBeenCalled()
   })
 
@@ -83,7 +83,7 @@ describe('EventEditDialog', () => {
     await setText('input[type="datetime-local"]', '2026-11-01T18:00', 0)
     await setText('input[type="datetime-local"]', '2026-11-01T17:00', 1)
     await submit()
-    expect(wrapper.find('.text-red-400').text()).toContain('End time')
+    expect(wrapper.find('.text-red-400').text()).toBe('The end must not be before the start.')
     expect(create).not.toHaveBeenCalled()
   })
 
@@ -93,7 +93,7 @@ describe('EventEditDialog', () => {
     await titleInput()?.setValue('Party')
     await setText('input[type="datetime-local"]', '2026-11-01T18:00')
     await submit()
-    expect(wrapper.find('.text-red-400').text()).toContain('e.g. Room 42')
+    expect(wrapper.find('.text-red-400').text()).toBe('Enter a location.')
 
     await wrapper.find('input[type="radio"][value="talk"]').setValue(true)
     await submit()
@@ -226,5 +226,54 @@ describe('EventEditDialog', () => {
     wrapper = mount(EventEditDialog)
     await wrapper.findAll('button').find(b => b.text() === 'Cancel')?.trigger('click')
     expect(wrapper.emitted('close')).toHaveLength(1)
+  })
+  it('does not create a second event when the cover upload failed after the create', async () => {
+    const created = makeEvent({ id: fixtureId(7), title: 'Party' })
+    const store = useEventsStore()
+    const create = vi.spyOn(store, 'create').mockResolvedValue(created)
+    const update = vi.spyOn(store, 'update').mockResolvedValue(created)
+    const upload = vi.spyOn(store, 'uploadCover').mockRejectedValueOnce(new Error('too large')).mockResolvedValueOnce(created)
+    wrapper = mount(EventEditDialog)
+    await titleInput()?.setValue('Party')
+    await setText('input[type="datetime-local"]', '2026-11-01T18:00')
+    await wrapper.find('input[maxlength="255"]').setValue('Room 42')
+    const input = wrapper.find('input[type="file"]')
+    Object.defineProperty(input.element, 'files', { value: [new File(['x'], 'cover.png', { type: 'image/png' })], configurable: true })
+    await input.trigger('change')
+    await submit()
+    expect(wrapper.find('.text-red-400').text()).toBe('too large')
+    expect(wrapper.emitted('close')).toBeUndefined()
+
+    await submit()
+    expect(create).toHaveBeenCalledTimes(1)
+    expect(update).toHaveBeenCalledWith(created.id, expect.objectContaining({ title: 'Party' }))
+    expect(upload).toHaveBeenCalledTimes(2)
+    expect(wrapper.emitted('saved')).toHaveLength(1)
+    expect(wrapper.emitted('close')).toHaveLength(1)
+  })
+
+  it('names its fields for assistive technology, labels the remove button and frees replaced previews', async () => {
+    const revoke = vi.fn()
+    Object.defineProperty(URL, 'revokeObjectURL', { value: revoke, configurable: true })
+    wrapper = mount(EventEditDialog)
+    for (const input of wrapper.findAll('input[type="text"], textarea, input[type="datetime-local"]')) {
+      const id = input.attributes('id')
+      if (input.attributes('maxlength') === '255') continue
+      expect(id).toBeTruthy()
+      expect(wrapper.find(`label[for="${id}"]`).exists()).toBe(true)
+    }
+    const pick = async () => {
+      const input = wrapper!.find('input[type="file"]')
+      Object.defineProperty(input.element, 'files', { value: [new File(['x'], 'c.png', { type: 'image/png' })], configurable: true })
+      await input.trigger('change')
+    }
+    await pick()
+    expect(wrapper.find('button[aria-label="Remove cover"]').exists()).toBe(true)
+    expect(revoke).not.toHaveBeenCalled()
+    await pick()
+    expect(revoke).toHaveBeenCalledTimes(1)
+    wrapper.unmount()
+    wrapper = undefined
+    expect(revoke).toHaveBeenCalledTimes(2)
   })
 })

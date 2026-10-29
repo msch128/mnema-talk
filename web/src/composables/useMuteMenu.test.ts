@@ -46,6 +46,14 @@ describe('formatMuteEnd', () => {
   })
 })
 
+describe('formatMuteEnd locale', () => {
+  it('follows the given language, not the browser', () => {
+    const iso = '2026-01-04T14:30:00Z'
+    expect(formatMuteEnd(iso, NOW, 'en-US')).not.toEqual(formatMuteEnd(iso, NOW, 'de'))
+    expect(formatMuteEnd(iso, NOW, 'de')).toContain('04.01.26')
+  })
+})
+
 describe('notification menu', () => {
   it('offers the levels and every duration, with category wording for a category', () => {
     const channel = notifyMenuItems({ kind: 'channel', id: 'c1' })

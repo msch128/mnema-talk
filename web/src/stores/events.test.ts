@@ -243,6 +243,13 @@ describe('past events', () => {
     expect(store.pastLoaded).toBe(false)
   })
 
+  it('names a failure that carries no message', async () => {
+    apiMock.mockRejectedValueOnce('boom')
+    const store = useEventsStore()
+    await store.loadPast()
+    expect(store.error).toBe('Failed to load events')
+  })
+
   it('does nothing while the feature is off', async () => {
     useServerFeaturesStore().list = []
     await useEventsStore().loadPast()

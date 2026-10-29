@@ -49,6 +49,9 @@ async function load(more = false) {
 
 watch(status, () => {
   selected.value = null
+  // A failed load must not leave the previous filter's reports under the new one.
+  reports.value = []
+  hasMore.value = false
   void load()
 })
 

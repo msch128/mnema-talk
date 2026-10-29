@@ -43,10 +43,20 @@ const conversations = computed(() => {
     .filter(d => d.name.toLowerCase().includes(needle))
 })
 
+// The open channel is only a default when it is somewhere the member may write
+// (not a read-only channel, a category or a DM view).
+function defaultTarget(): string {
+  const id = chatStore.activeChannel?.id ?? ''
+  if (!id) return ''
+  const channelOk = chatStore.allChannels.some(c => c.id === id) && permissions.canIn(id, 'send_messages')
+  const dmOk = features.dm && features.has('forward') && chatStore.dms.some(d => d.id === id && d.can_send)
+  return channelOk || dmOk ? id : ''
+}
+
 watch(request, () => {
-  target.value = chatStore.activeChannel?.id ?? ''
   comment.value = ''
   filter.value = ''
+  target.value = defaultTarget()
   error.value = ''
 }, { immediate: true })
 

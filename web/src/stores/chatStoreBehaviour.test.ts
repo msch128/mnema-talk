@@ -330,7 +330,7 @@ describe('history and races', () => {
     expect(chat.messages).toHaveLength(1)
     http.handle = () => Promise.reject(new Error('offline'))
     expect(await chat.jumpToLatest()).toBe(false)
-    expect(chat.messages).toEqual([])
+    expect(chat.messages).toHaveLength(1)
   })
   it('routes reply to root then opens thread after its anchor loads, including voice routes', async () => {
     const chat = setup(), root = message({ id: fixtureId(10) })

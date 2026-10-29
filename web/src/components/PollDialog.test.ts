@@ -55,6 +55,15 @@ describe('PollDialog', () => {
     expect(post()?.disabled).toBe(false)
   })
 
+  it('focuses the new answer field when an answer is added', async () => {
+    const w = mountDialog()
+    await w.get('[data-testid="poll-add"]').trigger('click')
+    await flushPromises()
+    const inputs = answers(w)
+    expect(inputs).toHaveLength(3)
+    expect(document.activeElement).toBe(inputs[2]!.element)
+  })
+
   it('posts the poll with its settings and closes', async () => {
     const w = mountDialog()
     await w.get('#poll-question').setValue('  Lunch?  ')
