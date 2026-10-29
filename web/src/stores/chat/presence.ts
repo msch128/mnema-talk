@@ -1,15 +1,26 @@
+import { watch } from 'vue'
 import type { ChosenPresence, Presence } from '../../types/domain'
 import { decodeUser } from '../../types/domain'
 import { api } from '../../lib/api'
-import { applyPresenceUpdate, IDLE_AFTER_MS } from '../../lib/presence'
+import { applyPresenceUpdate, IDLE_AFTER_MS, VOICE_ACTIVITY_THROTTLE_MS } from '../../lib/presence'
 import { assertCommunity, type Cx } from './state'
 import { updateUserEverywhere } from './members'
 import { sendWSEvent } from './socket'
+
+/**
+ * Someone in a Talk who has not deafened themselves is present even without
+ * touching the keyboard (listening, or playing with the window in the
+ * background). Sharing the screen or the camera counts even when deafened.
+ */
+export function holdsPresence({ voiceStore: voice }: Cx): boolean {
+  return voice.isConnected && (!voice.isDeafened || voice.isScreenSharing || voice.isCameraOn)
+}
 
 export function markActive(cx: Cx) {
   const { cs } = cx
   clearTimeout(cs.idleTimer)
   cs.idleTimer = setTimeout(() => {
+    if (holdsPresence(cx)) return markActive(cx)
     cs.isIdle = true
     sendWSEvent(cx, 'presence_idle', { idle: true })
   }, IDLE_AFTER_MS)
@@ -25,6 +36,15 @@ export function onActivity(cx: Cx) {
   const now = Date.now()
   if (now - cs.lastActivityAt < 1000 && !cs.isIdle) return
   cs.lastActivityAt = now
+  markActive(cx)
+}
+
+/** Speaking and push-to-talk are activity; the timer is re-armed at most once per VOICE_ACTIVITY_THROTTLE_MS. */
+export function onVoiceActivity(cx: Cx) {
+  const { cs } = cx
+  const now = Date.now()
+  if (now - cs.lastVoiceActivityAt < VOICE_ACTIVITY_THROTTLE_MS && !cs.isIdle) return
+  cs.lastVoiceActivityAt = now
   markActive(cx)
 }
 
@@ -100,4 +120,9 @@ export function installActivityListeners(cx: Cx) {
     }
     markActive(cx)
   }
+  // Joining, leaving, deafening or sharing starts a fresh idle period.
+  watch(() => [cx.voiceStore.isConnected, cx.voiceStore.isDeafened, cx.voiceStore.isScreenSharing, cx.voiceStore.isCameraOn], () => markActive(cx), { flush: 'sync' })
+  // Also covers the desktop global hotkey, which sets the same flag.
+  watch(() => cx.voiceStore.isPttPressed, pressed => { if (pressed && cx.voiceStore.isConnected) onVoiceActivity(cx) }, { flush: 'sync' })
+  watch(() => cx.voiceStore.isSpeaking(cx.authStore.user?.id ?? null), speaking => { if (speaking && cx.voiceStore.isConnected) onVoiceActivity(cx) }, { flush: 'sync' })
 }

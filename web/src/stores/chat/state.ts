@@ -160,10 +160,11 @@ function syncState(markRead: (channelId: string) => void) {
     reconnectAttempt: ref(0),
     nextRetryAt: ref(0),
 
-    // After IDLE_AFTER_MS without input the server shows "online" as "away".
+    // After IDLE_AFTER_MS without input (and outside a Talk, see holdsPresence) the server shows "online" as "away".
     isIdle: false,
     idleTimer: undefined as Timer | undefined,
     lastActivityAt: 0,
+    lastVoiceActivityAt: 0,
     suppressAutoReadFor: null as string | null,
     markReadThrottled: createKeyedThrottle(markRead, MARK_READ_INTERVAL_MS)
   }
