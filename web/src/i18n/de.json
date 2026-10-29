@@ -590,6 +590,16 @@
     "searchProblemOption": "„{value}“ ist kein Wert für {filter}:. Wähle einen von: {options}.",
     "searchProblemEmpty": "{filter}: braucht einen Wert."
   },
+  "linkPreview": {
+    "play": "Video abspielen: {title}",
+    "playerTitle": "Videoplayer: {title}",
+    "authorBy": "von {name}",
+    "field": {
+      "price": "Preis",
+      "recommendations": "Empfehlungen"
+    },
+    "playerBlocked": "Diese App spielt keine Videos direkt ab. Der Link öffnet sich im Browser."
+  },
   "thread": {
     "title": "Thread",
     "close": "Thread schließen",
