@@ -1,0 +1,26 @@
+web/src/lib/media/guard.ts
+  s_06fcde5dbef956::t_030e0d8ceb1749 154,156,204,207,242
+  s_06fcde5dbef956::t_dd3a9e4878a37a 161,167
+  s_06fcde5dbef956::t_ff6644e9b49201 176,219,244
+  s_06fcde5dbef956::t_437d45b885fcee 215
+  s_06fcde5dbef956::t_a249d72512d36a 164
+  s_06fcde5dbef956::t_264e2676284ea5 162-163,165-166,168
+web/src/lib/media/guard.test.ts
+  s_06fcde5dbef956::t_66406e2528209c 215-229
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7e8e4a482979d7f12cde6fb0e32198e3c0a3ce95",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
