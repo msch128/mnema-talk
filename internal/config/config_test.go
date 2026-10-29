@@ -392,7 +392,8 @@ func TestWebRTCReachabilityWarning(t *testing.T) {
 		warn bool
 	}{
 		{"development", Config{AppEnv: "development"}, false},
-		{"production without address or TURN", Config{AppEnv: "production"}, true},
+		{"production without address or TURN", Config{AppEnv: "production", WebRTCBuiltinTURN: BuiltinTURNOff}, true},
+		{"production without address but with the built-in relay", Config{AppEnv: "production", WebRTCBuiltinTURN: BuiltinTURNAuto}, false},
 		{"production with announced address", Config{AppEnv: "production", WebRTCAnnounce: []string{"203.0.113.7"}}, false},
 		{"production with TURN", Config{AppEnv: "production", WebRTCTURNURLs: []string{"turn:turn.example.com:3478"}}, false},
 	}
@@ -420,6 +421,16 @@ func TestWebRTCRelayNotice(t *testing.T) {
 		if got := cfg.WebRTCRelayNotice() != ""; got != tc.note {
 			t.Errorf("%s: notice %v, want %v", tc.name, got, tc.note)
 		}
+	}
+}
+
+func TestWebRTCRelayNoticeKnowsTheBuiltinRelay(t *testing.T) {
+	cfg := Config{WebRTCTURNURLs: []string{"turn:turn.example.com:3478?transport=udp"}}
+	if cfg.WebRTCRelayNoticeWith(true) != "" {
+		t.Error("noticed a missing TCP path although the built-in relay listens on TCP")
+	}
+	if cfg.WebRTCRelayNoticeWith(false) == "" {
+		t.Error("no notice without any TCP path")
 	}
 }
 

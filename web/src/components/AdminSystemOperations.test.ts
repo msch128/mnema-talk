@@ -122,6 +122,17 @@ describe('admin system operational failures', () => {
       expect(w.text()).toContain('Not configured')
     },
   )
+  it.each([
+    ['running and reachable', { active: true, reachability: 'reachable' as const }, 'Port 3479 (UDP+TCP), 2 relayed, reachable from here'],
+    ['running, self-test failed', { active: true, reachability: 'unreachable' as const }, 'not reachable from here, check the port forward'],
+    ['asked for but not running', { active: false, enabled: true }, 'Not running'],
+    ['switched off', { active: false, enabled: false }, 'Off'],
+  ])('shows the built-in TURN relay: %s', async (_name, change, text) => {
+    const st = systemStatus()
+    Object.assign(st.health.voice.builtin_turn, change)
+    const w = await openSystem(st)
+    expect(w.find('[data-testid="system-builtin-turn"]').text()).toContain(text)
+  })
   it('shows a placeholder for a missing check time and guards a check while status is absent', async () => {
     const w = await openSystem()
     apiMock.mockResolvedValueOnce({

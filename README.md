@@ -299,8 +299,10 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 - **Measured**: `make load-test` reproduces a 100-member call with real
   decrypting browsers and lightweight viewers
   ([loadtest/README.md](loadtest/README.md)).
-- Optional TURN relay (`coturn` profile) and a self-update sidecar
-  (`autoupdate` profile, off by default).
+- A TURN relay built into the server for members behind firewalls that block
+  UDP (on by default while no external TURN is configured), an optional
+  `coturn` profile and a self-update sidecar (`autoupdate` profile, off by
+  default).
 
 ![The admin System tab with live operations charts while a Talk with a screen share is running](doc/images/operations.png)
 
@@ -349,7 +351,8 @@ chat.example.com {
 Voice and video bypass the proxy: forward the UDP range
 `WEBRTC_UDP_PORT_MIN`-`WEBRTC_UDP_PORT_MAX` (default `50000-50050/udp`) to the
 host and set `WEBRTC_NAT_1TO1_IP` to your public IP when the server is behind
-NAT. Users on networks that block UDP need the optional TURN relay. Ports,
+NAT. Users on networks that block UDP use the server's built-in TURN relay:
+forward port 3479 on UDP and TCP as well (only needed while the relay runs). Ports,
 proxy settings, TURN and troubleshooting:
 [doc/operations.md](doc/operations.md) and [doc/deployment.md](doc/deployment.md).
 

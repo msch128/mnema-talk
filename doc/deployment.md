@@ -22,8 +22,9 @@ network:
 |---|---|---|---|
 | 443 (and 80 for certificates) | TCP | Reverse proxy (HTTPS, WebSocket) | Yes |
 | 50000–50050 | UDP | App: voice, video and screen share (`WEBRTC_UDP_PORT_MIN/MAX`) | Yes |
-| 3478 | UDP + TCP | coturn, only with the `turn` profile | Yes, if you run it |
-| 49152–49200 | UDP | coturn relay ports, only with the `turn` profile | Yes, if you run it |
+| 3479 | UDP + TCP | App: built-in TURN relay for members whose network blocks the UDP range (`WEBRTC_BUILTIN_TURN_PORT`) | Yes |
+| 3478 | UDP + TCP | coturn, only with the `turn` profile | Yes, if you run coturn |
+| 49152–49200 | UDP | coturn relay ports, only with the `turn` profile | Yes, if you run coturn |
 | 8080 | TCP | App HTTP (`PORT`), reached by the proxy | No, proxy only |
 | 5432 | TCP | PostgreSQL | No, Docker network only |
 | 8333 | TCP | SeaweedFS S3 API | No, Docker network only |
@@ -34,7 +35,12 @@ network:
 - If you change `WEBRTC_UDP_PORT_MIN/MAX`, forward the new range; Docker
   publishes the same range.
 - Users behind strict firewalls that block UDP can only join voice through
-  TURN (`WEBRTC_TURN_URLS`, see `.env.example`).
+  TURN. The app has a relay of its own on 3479 (UDP and TCP; forward both) that
+  runs while no external TURN is configured, see
+  [operations.md](operations.md#built-in-turn-relay). coturn (`WEBRTC_TURN_URLS`)
+  keeps 3478 and can run beside it. Compose publishes 3479 in any case; the
+  forward is only needed while the relay runs, and a port clash is solved with
+  `WEBRTC_BUILTIN_TURN_PORT`.
 
 ## Fresh install
 

@@ -73,6 +73,9 @@ func (c *Config) validateBasics(portMin, portMax uint16) error {
 		return fmt.Errorf("invalid WebRTC UDP port range %d-%d", portMin, portMax)
 	}
 	c.WebRTCUDPPortMin, c.WebRTCUDPPortMax = portMin, portMax
+	if err := c.validateBuiltinTURN(); err != nil {
+		return err
+	}
 	if c.Port == "0" {
 		return fmt.Errorf("PORT must be a port number (1-65535), got 0")
 	}

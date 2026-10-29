@@ -224,6 +224,17 @@ var (
 	// rejected, error (no answer) and dropped (a full queue).
 	PushDeliveries = newVec("mnema_push_deliveries_total", "Web Push deliveries, by outcome", "outcome")
 
+	// TURNEvents counts the built-in TURN relay's events, by event:
+	// allocation, auth_failed, forbidden, rate_limited, quota_user,
+	// quota_total, peer_denied (a permission or channel for a peer that is
+	// not the SFU), packet_blocked (a datagram to or from anywhere but the
+	// SFU's media ports) and throttled (over the per-allocation byte rate).
+	TURNEvents = newVec("mnema_turn_events_total", "Built-in TURN relay events and refused abuse attempts, by event", "event")
+	// TURNRelayedBytes counts the bytes the built-in TURN relay forwarded, by
+	// direction (to_sfu, from_sfu). TURNAllocations is the live allocations.
+	TURNRelayedBytes = newVec("mnema_turn_relayed_bytes_total", "Bytes forwarded by the built-in TURN relay, by direction", "direction")
+	TURNAllocations  Gauge
+
 	// S3Operations counts object storage calls, by operation and result.
 	S3Operations = newVec("mnema_s3_operations_total", "Object storage operations, by operation and result", "op", "result")
 )
@@ -279,6 +290,9 @@ func WriteInstruments(w io.Writer) {
 	SFUICE.write(w)
 	SFUIngressDropped.write(w)
 	writeCounter(w, "mnema_sfu_peer_joins_total", "Media connections created", SFUPeerJoins.Load())
+	TURNEvents.write(w)
+	TURNRelayedBytes.write(w)
+	WriteGauge(w, "mnema_turn_allocations", "Live allocations of the built-in TURN relay", TURNAllocations.Load())
 	S3Operations.write(w)
 	WebhookDropped.write(w)
 	PushDeliveries.write(w)

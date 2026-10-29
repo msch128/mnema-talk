@@ -8,7 +8,8 @@ export function systemStatus(overrides: Partial<SystemStatus> = {}): SystemStatu
       storage: { configured: true, reachable: true, files: 3, total_bytes: 3 * 1024 * 1024, attachment_bytes: 2 * 1024 * 1024, avatar_bytes: 1024 * 1024 },
       voice: {
         enabled: true, rooms: 1, participants: 3, media_connections: 3, screen_shares: 1, cameras: 2,
-        websocket_connections: 5, online_users: 4, turn_configured: true, stun_configured: false
+        websocket_connections: 5, online_users: 4, turn_configured: true, stun_configured: false,
+        builtin_turn: { mode: 'auto', enabled: true, active: true, port: 3479, udp: true, tcp: true, allocations: 2, host: 'talk.example.test', reachability: 'reachable' }
       },
       runtime: { started_at: '2026-10-05T10:00:00Z', uptime_seconds: 93784, go_version: 'go1.27.0', goroutines: 42, mem_alloc_bytes: 10 * 1024 * 1024, mem_sys_bytes: 20 * 1024 * 1024 }
     },

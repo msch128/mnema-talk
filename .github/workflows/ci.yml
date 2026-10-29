@@ -848,7 +848,7 @@ jobs:
           # engine is dead (told, and still heard). The call specs that need the AI
           # noise filter to run (late-join.spec.ts) follow with an audio device.
           - browser: firefox
-            only: "--project=firefox smoke.spec.ts browser-sealing.spec.ts key-lifecycle.spec.ts search.spec.ts mentions.spec.ts screenshare.spec.ts audio-stall.spec.ts"
+            only: "--project=firefox smoke.spec.ts browser-sealing.spec.ts key-lifecycle.spec.ts search.spec.ts mentions.spec.ts screenshare.spec.ts audio-stall.spec.ts relay-call.spec.ts"
             withAudioDevice: "--project=firefox late-join.spec.ts"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

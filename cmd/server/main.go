@@ -22,6 +22,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/setupcheck"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/msch128/mnema-talk/internal/stunprobe"
+	"github.com/msch128/mnema-talk/internal/turnrelay"
 	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/msch128/mnema-talk/internal/version"
 )
@@ -92,10 +93,16 @@ func runWithContext(ctx context.Context) error {
 	}
 	defer closeVoice()
 
+	relay, closeRelay := startTURN(cfg, voice)
+	defer closeRelay()
+	if n := cfg.WebRTCRelayNoticeWith(relay != nil && relay.Status().TCP); n != "" && voice != nil {
+		slog.Info("webrtc relay: " + n)
+	}
+
 	updates := startUpdateChecker(ctx, cfg)
 	startSetupChecks(ctx, cfg, setup, pool.Ping, store.Ready)
 
-	router, err := server.NewRouter(server.Deps{Config: cfg, DB: pool, Store: store, StorageReady: store.Ready, SFU: voice, Version: version.Current(), Updates: updates, Context: ctx, Setup: setup})
+	router, err := server.NewRouter(server.Deps{Config: cfg, DB: pool, Store: store, StorageReady: store.Ready, SFU: voice, TURN: relay, Version: version.Current(), Updates: updates, Context: ctx, Setup: setup})
 	if err != nil {
 		return err
 	}
@@ -163,9 +170,6 @@ func startVoice(ctx context.Context, cfg *config.Config, setup *setupcheck.Runti
 		slog.Warn(w)
 		opwarn.Raise(opwarn.WebRTCReachability, 0)
 	}
-	if n := cfg.WebRTCRelayNotice(); n != "" {
-		slog.Info("webrtc relay: " + n)
-	}
 	if cfg.WebRTCUDPMuxPort == 0 {
 		// Each peer takes its own port(s) from the range, so the range
 		// bounds how many people can be in calls at once.
@@ -181,6 +185,56 @@ func startVoice(ctx context.Context, cfg *config.Config, setup *setupcheck.Runti
 		})
 	}
 	return voice, closeVoice, nil
+}
+
+// startTURN starts the TURN relay built into the server when the settings ask
+// for it (WEBRTC_BUILTIN_TURN) and returns it with the function that stops it.
+// It never fails the start: a relay that cannot run is logged, raised as an
+// operator warning, and the server carries on without it.
+func startTURN(cfg *config.Config, voice *sfu.SFU) (*turnrelay.Server, func()) {
+	none := func() {}
+	if !cfg.BuiltinTURNEnabled() {
+		slog.Info("built-in TURN relay off", "mode", cfg.WebRTCBuiltinTURN, "external_turn", len(cfg.WebRTCTURNURLs) > 0)
+		return nil, none
+	}
+	if voice == nil {
+		return nil, none // voice is already reported as unavailable
+	}
+	port := int(cfg.WebRTCBuiltinTURNPort)
+	relay, err := turnrelay.Start(turnrelay.Options{
+		Port:       port,
+		PublicHost: cfg.TURNPublicHost(),
+		Target:     func() turnrelay.Target { return turnTarget(voice.Endpoints()) },
+	})
+	if err != nil {
+		slog.Warn("built-in TURN relay unavailable, continuing without it: members behind strict firewalls may get no voice",
+			"port", port, "err", err)
+		opwarn.Raise(opwarn.TURNUnavailable, port)
+		if cfg.WebRTCReachabilityWarningWith(false) != "" {
+			opwarn.Raise(opwarn.WebRTCReachability, 0)
+		}
+		return nil, none
+	}
+	st := relay.Status()
+	if !st.UDP || !st.TCP {
+		slog.Warn("built-in TURN relay could not listen on every transport",
+			"port", port, "udp", st.UDP, "tcp", st.TCP, "udp_error", st.UDPError, "tcp_error", st.TCPErr)
+		opwarn.Raise(opwarn.TURNUnavailable, port)
+	}
+	slog.Info("built-in TURN relay listening", "port", port, "udp", st.UDP, "tcp", st.TCP, "host", cfg.TURNPublicHost())
+	if cfg.BuiltinTURNWithExternal() {
+		slog.Info("WEBRTC_BUILTIN_TURN=on with WEBRTC_TURN_URLS set: members are offered both TURN servers")
+	}
+	return relay, func() {
+		if err := relay.Close(); err != nil {
+			slog.Warn("close built-in TURN relay", "err", err)
+		}
+	}
+}
+
+// turnTarget tells the relay where the SFU's media sockets are.
+func turnTarget(ep sfu.Endpoints) turnrelay.Target {
+	return turnrelay.Target{LocalIPs: ep.Local, Announced: ep.Announced, PortMin: ep.PortMin, PortMax: ep.PortMax}
 }
 
 // startUpdateChecker starts the release check against GitHub (admin System

@@ -7016,6 +7016,66 @@
         ],
         "type": "object"
       },
+      "server.BuiltinTURNHealth": {
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "allocations": {
+            "description": "Allocations are the relayed sessions open now.",
+            "type": "integer"
+          },
+          "enabled": {
+            "description": "Enabled is whether the setting asks for the relay now; Active whether it\nis running and offered to members.",
+            "type": "boolean"
+          },
+          "host": {
+            "description": "Host is the name members are told to reach the relay at (from\nPUBLIC_URL); empty when none is known.",
+            "type": "string"
+          },
+          "mode": {
+            "description": "Mode is the setting: auto (on while no external TURN is configured),\non or off.",
+            "enum": [
+              "auto",
+              "on",
+              "off"
+            ],
+            "type": "string"
+          },
+          "port": {
+            "description": "Port is the UDP and TCP port it is configured to listen on.",
+            "type": "integer"
+          },
+          "reachability": {
+            "description": "Reachability is a best-effort self-test from this machine to Host:Port:\nreachable, unreachable (also what a router without NAT loopback shows\nfor a forwarded port) or unknown (not run, or nothing to test).",
+            "enum": [
+              "reachable",
+              "unreachable",
+              "unknown"
+            ],
+            "type": "string"
+          },
+          "tcp": {
+            "type": "boolean"
+          },
+          "udp": {
+            "description": "UDP and TCP say which transports are listening; one can fail to bind\nwhile the other works.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "active",
+          "allocations",
+          "enabled",
+          "host",
+          "mode",
+          "port",
+          "reachability",
+          "tcp",
+          "udp"
+        ],
+        "type": "object"
+      },
       "server.DatabaseHealth": {
         "properties": {
           "applied_migrations": {
@@ -7853,6 +7913,10 @@
       },
       "server.VoiceHealth": {
         "properties": {
+          "builtin_turn": {
+            "$ref": "#/components/schemas/server.BuiltinTURNHealth",
+            "description": "BuiltinTURN reports the TURN relay built into the server."
+          },
           "cameras": {
             "type": "integer"
           },
@@ -7881,6 +7945,7 @@
             "type": "boolean"
           },
           "turn_configured": {
+            "description": "TURNConfigured is true when members are offered any TURN relay: the\nexternal one (WEBRTC_TURN_URLS) or the one built into the server.",
             "type": "boolean"
           },
           "websocket_connections": {
@@ -7889,6 +7954,7 @@
           }
         },
         "required": [
+          "builtin_turn",
           "cameras",
           "enabled",
           "media_connections",
@@ -34701,7 +34767,7 @@
     },
     "/api/webrtc/config": {
       "get": {
-        "description": "STUN servers and, when configured, a TURN relay with fresh time-limited credentials. The list is empty when neither is configured.",
+        "description": "STUN servers and, when configured, TURN relays with fresh time-limited credentials: the external one named by WEBRTC_TURN_URLS and the one built into the server while it runs (members who may join voice only). The list is empty when none is configured.",
         "operationId": "getWebrtcConfig",
         "responses": {
           "200": {

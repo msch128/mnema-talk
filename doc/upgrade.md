@@ -138,10 +138,30 @@ web, desktop or bot client is affected, and the event `native_access_renewed`,
 which the server never sent, is removed from the event registry. A rollback to
 an older image needs the restore of the pre-update backup (see "Rollback" above).
 
-### 1.4.x → next release
+### 1.4.x → 2.0.0
 
-Nothing to change; every existing variable keeps working. New for operators:
+Update with the procedure above and take the backup first. No migration, no
+API break.
 
+**New port 3479 UDP+TCP for the built-in voice relay (TURN); forward it on your
+router; switch with `WEBRTC_BUILTIN_TURN=auto|on|off`; external coturn keeps
+working and turns the built-in relay off automatically.**
+
+- **Built-in TURN relay.** The server can relay media for members whose
+  network blocks UDP, without a second service. `WEBRTC_BUILTIN_TURN`
+  (`auto` by default) runs it only while `WEBRTC_TURN_URLS` is empty, so an
+  installation with an external TURN server changes nothing. `on` runs it
+  anyway; with `WEBRTC_TURN_URLS` set too, members are offered both servers.
+  `off` never runs it. Details, limits and metrics:
+  [operations.md](operations.md#built-in-turn-relay).
+- **`docker-compose.yml` publishes port 3479 (UDP and TCP) for the app.** Take
+  the new file (step 3 of the procedure) and forward 3479/udp and 3479/tcp in
+  your router (only needed while the relay runs; with `off`, or an external
+  TURN under `auto`, nothing listens there). It does not collide with coturn on
+  3478; if something else uses 3479, set `WEBRTC_BUILTIN_TURN_PORT`. Hosts that freeze their
+  compose file keep the old one until they take the new file.
+- **Admin > System** shows the relay (listening, sessions, a reachability
+  hint) and warns when it could not start.
 - **Easier first setup.** `docker run --rm -it ghcr.io/msch128/mnema-talk setup`
   writes a complete `.env` and `docker-compose.yml`, and the admin Status tab
   has a *Setup checks* list ([quick start](quick-start.md),

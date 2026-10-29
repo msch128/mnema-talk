@@ -24,6 +24,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/push"
 	"github.com/msch128/mnema-talk/internal/setupcheck"
 	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/msch128/mnema-talk/internal/turnrelay"
 	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/msch128/mnema-talk/internal/webhook"
 	"github.com/msch128/mnema-talk/internal/ws"
@@ -36,6 +37,9 @@ type Deps struct {
 	DB     *db.Pool
 	Store  media.Store // nil disables uploads
 	SFU    *sfu.SFU    // nil disables voice
+	// TURN is the relay built into the server (nil: not running). The router
+	// hands it the voice-permission check and offers it in the ICE servers.
+	TURN *turnrelay.Server
 	// Events overrides the publisher (tests); nil uses the WebSocket hub.
 	Events events.Publisher
 	// Perms replaces the database-backed permission service (tests); nil

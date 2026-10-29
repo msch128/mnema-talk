@@ -3,6 +3,7 @@ package perm_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	. "github.com/msch128/mnema-talk/internal/perm"
@@ -217,6 +218,41 @@ func TestPrivateChannelAndViewGate(t *testing.T) {
 	f.RoleOverwrite(true, ch, f.EveryoneID(), 0, 0)
 	if !snap.Channel(Subject{ID: out}, ch).Has(ViewChannel) {
 		t.Fatal("clearing the overwrite shows the channel again")
+	}
+}
+
+func TestMayConnectAnywhere(t *testing.T) {
+	f := permtest.NewFixture()
+	ch := f.Channel(uuid.Nil)
+	insider := f.Role(1, 0)
+	in, out, timedOut, admin := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	f.Assign(in, insider)
+	f.Assign(admin, f.Role(2, Administrator))
+	f.RoleOverwrite(true, ch, f.EveryoneID(), 0, ViewChannel|Connect)
+	f.RoleOverwrite(true, ch, insider, ViewChannel|Connect, 0)
+	snap := f.Snapshot()
+	if !snap.MayConnectAnywhere(Subject{ID: in}) {
+		t.Fatal("a member with view and connect was refused")
+	}
+	if snap.MayConnectAnywhere(Subject{ID: out}) {
+		t.Fatal("a member who cannot view or connect anywhere was allowed")
+	}
+	if !snap.MayConnectAnywhere(Subject{ID: admin}) || !snap.MayConnectAnywhere(Subject{ID: uuid.New(), Owner: true}) {
+		t.Fatal("an Administrator or the Owner was refused")
+	}
+	// A time-out removes Connect everywhere.
+	f2 := permtest.NewFixture()
+	f2.Channel(uuid.Nil)
+	f2.Timeout(timedOut, time.Now().Add(time.Hour), "")
+	if !f2.Snapshot().MayConnectAnywhere(Subject{ID: uuid.New()}) {
+		t.Fatal("a plain member was refused with the defaults")
+	}
+	if f2.Snapshot().MayConnectAnywhere(Subject{ID: timedOut}) {
+		t.Fatal("a member in time-out was allowed")
+	}
+	// No Talk or channel at all: nothing to join.
+	if permtest.NewFixture().Snapshot().MayConnectAnywhere(Subject{ID: uuid.New()}) {
+		t.Fatal("allowed with no channels")
 	}
 }
 

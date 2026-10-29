@@ -20,6 +20,9 @@ const (
 	WebRTCUDPMuxDisabled = "webrtc_udp_mux_disabled"
 	VoiceUnavailable     = "voice_unavailable"
 	InsecurePublicURL    = "insecure_public_url"
+	// TURNUnavailable: the built-in TURN relay is switched on (or auto) but
+	// could not start, or listens on only one of UDP and TCP; Value is the port.
+	TURNUnavailable = "turn_unavailable"
 )
 
 // MaxWarnings bounds the registry; further new codes are dropped.

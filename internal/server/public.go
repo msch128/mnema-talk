@@ -13,6 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/turnrelay"
 )
 
 // turnCredentialTTL is how long a TURN credential handed to a client is valid.
@@ -107,10 +108,12 @@ func turnCredentials(secret string, userID uuid.UUID, now time.Time, ttl time.Du
 
 // webrtcConfig gives a signed-in browser its ICE servers: STUN when
 // WEBRTC_STUN_URLS is set, and a TURN relay with fresh credentials when
-// WEBRTC_TURN_URLS is set. Without either the list is empty.
+// WEBRTC_TURN_URLS is set, and the built-in TURN relay with credentials of its
+// own while it runs and the member may join voice. Without any the list is
+// empty.
 //
 // @Summary ICE servers for voice
-// @Description STUN servers and, when configured, a TURN relay with fresh time-limited credentials. The list is empty when neither is configured.
+// @Description STUN servers and, when configured, TURN relays with fresh time-limited credentials: the external one named by WEBRTC_TURN_URLS and the one built into the server while it runs (members who may join voice only). The list is empty when none is configured.
 // @ID getWebrtcConfig
 // @Tags Realtime
 // @Produce json
@@ -122,19 +125,45 @@ func turnCredentials(secret string, userID uuid.UUID, now time.Time, ttl time.Du
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/webrtc/config [get]
-func webrtcConfig(cfg *config.Config) http.HandlerFunc {
+func webrtcConfig(cfg *config.Config, relay *turnrelay.Server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ice := []IceServer{}
 		if len(cfg.WebRTCSTUNURLs) > 0 {
 			ice = append(ice, IceServer{URLs: cfg.WebRTCSTUNURLs})
 		}
-		if len(cfg.WebRTCTURNURLs) > 0 {
-			user, cred := turnCredentials(cfg.WebRTCTURNSecret, auth.UserFrom(r.Context()).ID, time.Now(), turnCredentialTTL)
-			ice = append(ice, IceServer{URLs: cfg.WebRTCTURNURLs, Username: user, Credential: cred})
+		// The route is behind RequireUser; without a member there is no
+		// credential to mint.
+		if member := auth.UserFrom(r.Context()); member != nil {
+			if len(cfg.WebRTCTURNURLs) > 0 {
+				user, cred := turnCredentials(cfg.WebRTCTURNSecret, member.ID, time.Now(), turnCredentialTTL)
+				ice = append(ice, IceServer{URLs: cfg.WebRTCTURNURLs, Username: user, Credential: cred})
+			}
+			if s := builtinTURN(cfg, relay, member.ID); s != nil {
+				ice = append(ice, *s)
+			}
 		}
 		w.Header().Set("Cache-Control", "no-store")
 		httpx.WriteJSON(w, http.StatusOK, ICEConfig{ICEServers: ice})
 	}
+}
+
+// builtinTURN is the ICE entry of the TURN relay built into the server, or nil
+// when it is not running, listens nowhere reachable by name, or the member may
+// not join voice: credentials are minted only for members who could use them.
+func builtinTURN(cfg *config.Config, relay *turnrelay.Server, userID uuid.UUID) *IceServer {
+	if relay == nil || !relay.MayRelay(userID) {
+		return nil
+	}
+	host := cfg.TURNPublicHost()
+	if host == "" {
+		return nil
+	}
+	urls := relay.URLs(host)
+	if len(urls) == 0 {
+		return nil
+	}
+	user, cred, _ := relay.Credentials(userID)
+	return &IceServer{URLs: urls, Username: user, Credential: cred}
 }
 
 // openAPISpec serves the OpenAPI description of the REST API.

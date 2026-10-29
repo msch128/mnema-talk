@@ -1169,6 +1169,15 @@
       "connections": "WebSocket connections",
       "onlineUsers": "{count} online",
       "turn": "TURN configured",
+      "builtinTurn": "Built-in TURN",
+      "builtinTurnOff": "Off",
+      "builtinTurnDown": "Not running",
+      "builtinTurnActive": "Port {port} ({transports}), {count} relayed, {reach}",
+      "turnReach": {
+        "reachable": "reachable from here",
+        "unreachable": "not reachable from here, check the port forward",
+        "unknown": "not tested"
+      },
       "yes": "Yes",
       "no": "No",
       "uptime": "Uptime",
@@ -1276,6 +1285,10 @@
         "insecure_public_url": {
           "title": "PUBLIC_URL is not https",
           "body": "Session cookies are sent without the Secure flag and the __Host- prefix, so someone on the network path can read or replace them. Set PUBLIC_URL to the https:// address people open, behind a reverse proxy that terminates TLS."
+        },
+        "turn_unavailable": {
+          "title": "Built-in TURN relay is not fully running",
+          "body": "The TURN relay built into the server could not listen on port {port} (UDP or TCP), so members behind strict firewalls may get no voice. Free the port, choose another with WEBRTC_BUILTIN_TURN_PORT, or switch the relay off with WEBRTC_BUILTIN_TURN=off."
         },
         "voice_unavailable": {
           "title": "Voice is disabled",
