@@ -14,7 +14,7 @@ installHarness()
 
 describe('screen share with audio', () => {
   it('sends the screen audio on its own line, apart from the mic', async () => {
-    const { rtc, audio, screen, screenAudio, mic, voice } = await joined()
+    const { rtc, audio, screen, screenAudio, sentMic, voice } = await joined()
     const display = fakeStream(['video', 'audio'])
     stubDisplayMedia(display)
 
@@ -23,7 +23,7 @@ describe('screen share with audio', () => {
     expect(screen.track).toBe(present(display.getVideoTracks()[0]))
     expect(screenAudio.track).toBe(present(display.getAudioTracks()[0]))
     // The mic line keeps the bare microphone: nothing is mixed into the voice.
-    expect(audio.track).toBe(present(mic.getAudioTracks()[0]))
+    expect(audio.track).toBe(sentMic)
     expect(FakeAudioContext.sources.map(n => present(n.stream.getAudioTracks()[0]))).not.toContain(present(display.getAudioTracks()[0]))
     expect(voice.hasScreenAudio).toBe(true)
   })
@@ -83,7 +83,7 @@ describe('screen share with audio', () => {
   })
 
   it('warns once if capture protection cannot be confirmed and offers stream-only mute', async () => {
-    const { rtc, mic, screenAudio, voice } = await joined()
+    const { rtc, sentMic, screenAudio, voice } = await joined()
     const display = fakeStream(['video', 'audio'])
     const track = present(display.getAudioTracks()[0])
     track.getSettings = () => ({ restrictOwnAudio: false, echoCancellation: false })
@@ -97,7 +97,7 @@ describe('screen share with audio', () => {
     present(present(actionable[0]).action).onClick()
     expect(voice.isScreenAudioMuted).toBe(true)
     expect(track.enabled).toBe(false)
-    expect(present(mic.getAudioTracks()[0]).enabled).toBe(true)
+    expect(sentMic.enabled).toBe(true)
     rtc.stopScreenShare()
     voice.isScreenAudioMuted = false
     present(present(actionable[0]).action).onClick()
@@ -123,18 +123,18 @@ describe('screen share with audio', () => {
   })
 
   it('mute and the gate only silence the mic, never the screen audio', async () => {
-    const { rtc, voice, screenAudio, mic } = await joined()
+    const { rtc, voice, screenAudio, sentMic } = await joined()
     const display = fakeStream(['video', 'audio'])
     stubDisplayMedia(display)
     await rtc.startScreenShare()
 
     voice.toggleMute()
-    expect(present(mic.getAudioTracks()[0]).enabled).toBe(false)
+    expect(sentMic.enabled).toBe(false)
     expect(present(screenAudio.track).enabled).toBe(true)
   })
 
   it("the streamer's stream mute silences only the screen audio line", async () => {
-    const { rtc, voice, audio, screenAudio, mic } = await joined()
+    const { rtc, voice, audio, screenAudio, sentMic } = await joined()
     const display = fakeStream(['video', 'audio'])
     stubDisplayMedia(display)
     await rtc.startScreenShare()
@@ -142,32 +142,32 @@ describe('screen share with audio', () => {
     voice.toggleScreenAudioMute()
     await vi.waitFor(() => expect(present(display.getAudioTracks()[0]).enabled).toBe(false))
     expect(screenAudio.track).toBe(present(display.getAudioTracks()[0]))
-    expect(audio.track).toBe(present(mic.getAudioTracks()[0]))
-    expect(present(mic.getAudioTracks()[0]).enabled).toBe(true)
+    expect(audio.track).toBe(sentMic)
+    expect(sentMic.enabled).toBe(true)
     voice.toggleScreenAudioMute()
     await vi.waitFor(() => expect(present(display.getAudioTracks()[0]).enabled).toBe(true))
   })
 
   it('without screen audio the plain mic keeps being sent', async () => {
-    const { rtc, audio, screenAudio, mic, voice } = await joined()
+    const { rtc, audio, screenAudio, sentMic, voice } = await joined()
     const calls = audio.replaceTrack.mock.calls.length
     stubDisplayMedia(fakeStream(['video']))
     await rtc.startScreenShare()
     expect(audio.replaceTrack.mock.calls.length).toBe(calls)
-    expect(audio.track).toBe(present(mic.getAudioTracks()[0]))
+    expect(audio.track).toBe(sentMic)
     expect(screenAudio.track).toBeNull()
     expect(voice.hasScreenAudio).toBe(false)
   })
 
   it('empties the screen lines when sharing stops', async () => {
-    const { rtc, audio, screen, screenAudio, mic, sent, voice } = await joined()
+    const { rtc, audio, screen, screenAudio, sentMic, sent, voice } = await joined()
     stubDisplayMedia(fakeStream(['video', 'audio']))
     await rtc.startScreenShare()
 
     rtc.stopScreenShare()
     await vi.waitFor(() => expect(screenAudio.track).toBeNull())
     expect(screen.track).toBeNull()
-    expect(audio.track).toBe(present(mic.getAudioTracks()[0]))
+    expect(audio.track).toBe(sentMic)
     expect(voice.hasScreenAudio).toBe(false)
     expect(sent.some(e => e.type === 'webrtc_screenshare_stop')).toBe(true)
   })
@@ -196,20 +196,21 @@ describe('screen share with audio', () => {
     const lastMic = await grantMic()
     await Promise.all([first, second])
 
-    expect(audio.track).toBe(present(lastMic.getAudioTracks()[0]))
+    expect(audio.track).toBe(present(toRaw(voice.localAudioStream)?.getAudioTracks()[0]))
+    expect(audio.track).not.toBe(present(lastMic.getAudioTracks()[0]))
     expect(screenAudio.track).toBe(present(display.getAudioTracks()[0]))
     expect(voice.hasScreenAudio).toBe(true)
   })
 
   it('a reconnect sends the screen audio on its line again', async () => {
-    const { rtc, mic } = await joined()
+    const { rtc, sentMic } = await joined()
     const display = fakeStream(['video', 'audio'])
     stubDisplayMedia(display)
     await rtc.startScreenShare()
 
     rtc.rejoinAfterReconnect()
     const fresh = await negotiate()
-    expect(present(fresh.senders[0]).track).toBe(present(mic.getAudioTracks()[0]))
+    expect(present(fresh.senders[0]).track).toBe(sentMic)
     expect(present(fresh.senders[1]).track).toBe(present(display.getVideoTracks()[0]))
     expect(present(fresh.senders[3]).track).toBe(present(display.getAudioTracks()[0]))
   })

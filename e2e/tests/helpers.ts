@@ -84,7 +84,17 @@ export function responseUserId(response: ApiResponse): string {
   return decodeUser(response.json).id
 }
 
+/**
+ * Init script of every call spec. It also turns the AI noise filter off: the
+ * default (DeepFilterNet3) loads an 8 MB model and runs it in WebAssembly for
+ * each member, and on the two cores of a hosted macOS runner two members
+ * starve each other, so joining a call took 20 s instead of 3 and the specs'
+ * 20 s waits for the connection or for decoded audio ran out. The specs are
+ * about the call, not the filter; late-join.spec.ts turns it back on where it
+ * checks the filter itself (its init script runs after this one).
+ */
 export function trackPeerConnections(): void {
+  localStorage.setItem('mnema_noise', 'off')
   const Native = window.RTCPeerConnection
   window.__pcs = []
   window.RTCPeerConnection = class extends Native {
