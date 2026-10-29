@@ -553,6 +553,11 @@
     "moreActions": "Weitere Aktionen",
     "readOnly": "Du darfst in diesem Kanal nicht schreiben.",
     "noAttach": "Du darfst hier keine Dateien anhängen.",
+    "attachMediaOnly": "Es lassen sich nur Bilder und Videos anhängen.",
+    "attachSkipped": "Nur Bilder und Videos wurden angehängt. Andere Dateien wurden übersprungen.",
+    "attachFirstOnly": "Eine Nachricht trägt eine Datei. Die erste wurde angehängt.",
+    "attachOneSkipped": "Eine Nachricht trägt eine Datei: Das erste Bild oder Video wurde angehängt, die anderen Dateien wurden übersprungen.",
+    "dropFiles": "Zum Anhängen hier ablegen",
     "messageRemoved": "Nachricht entfernt",
     "searchSyntaxTip": "Tipp: „genaue Wendung“ sucht eine Wendung, -Wort schließt ein Wort aus.",
     "resultsCountMore": {
@@ -1544,7 +1549,28 @@
     "noInvitesHint": "Erstelle oben eine und teile ihren Link.",
     "showSpent": "{count} verbrauchte oder abgelaufene anzeigen",
     "hideSpent": "Verbrauchte und abgelaufene ausblenden",
-    "noMediaHint": "Hochgeladene Bilder und Dateien erscheinen hier."
+    "noMediaHint": "Hochgeladene Bilder und Dateien erscheinen hier.",
+    "editInvite": {
+      "title": "Einladung {code} bearbeiten",
+      "expiry": "Läuft ab",
+      "keep": "Beibehalten",
+      "custom": "Eigene",
+      "customDate": "Ablaufdatum und -uhrzeit",
+      "customUses": "Maximale Nutzungen",
+      "expiryPreset": {
+        "min30": "30 Min.",
+        "hour1": "1 Stunde",
+        "hour6": "6 Stunden",
+        "hour12": "12 Stunden",
+        "day": "1 Tag",
+        "week": "7 Tage"
+      },
+      "expiryInvalid": "Wähle ein Datum in der Zukunft, höchstens ein Jahr voraus.",
+      "usesInvalid": "Gib eine ganze Zahl von mindestens den bisherigen {used} Nutzungen bis {max} ein.",
+      "usesHint": "Bisher {used} genutzt. Das Limit kann nicht darunter liegen.",
+      "saved": "Einladung aktualisiert.",
+      "edit": "Einladung bearbeiten"
+    }
   },
   "profile": {
     "addedBy": "Hinzugefügt von {name}",
@@ -2201,6 +2227,7 @@
       },
       "invite": {
         "create": "Einladung erstellt",
+        "update": "Einladung bearbeitet",
         "revoke": "Einladung widerrufen"
       },
       "webhook": {
@@ -3361,7 +3388,8 @@
       "working": "Importiert …",
       "failed": "Der Import ist fehlgeschlagen.",
       "stale": "Die Vorlage oder dieser Server hat sich seit der Vorschau geändert. Bitte die Vorschau neu laden.",
-      "done": "Importiert: {summary}. Unten lässt sich das rückgängig machen."
+      "done": "Importiert: {summary}. Unten lässt sich das rückgängig machen.",
+      "step2Mapped": "{source} wird nicht angelegt. Die Kanaleinstellungen gehen an {name}, dessen Rechte sich nicht ändern."
     },
     "undo": {
       "title": "Diesen Import rückgängig machen?",
@@ -3374,6 +3402,15 @@
       "failed": "Der Import konnte nicht rückgängig gemacht werden.",
       "done": "Import rückgängig gemacht. Entfernt: {summary}.",
       "keptRoles": " {kept} Rolle(n) bleiben, weil du sie nicht mehr verwalten kannst."
+    },
+    "map": {
+      "hint": "Gibt es schon eine passende Rolle, etwa Admin oder Bot? Verbinde sie, statt ein Duplikat anzulegen. Rechte und Einstellungen der Rolle bleiben genau wie sie sind.",
+      "label": "Was mit der Discord-Rolle {name} geschehen soll",
+      "create": "Neue Rolle anlegen",
+      "group": "Mit bestehender Rolle verbinden",
+      "keeps": "Wird nicht angelegt. Die Kanaleinstellungen gelten für {name}, deren eigene Rechte bleiben unverändert.",
+      "sameName": "Hier gibt es bereits eine Rolle namens {name}.",
+      "sameNameUsed": "Mit {name} verbunden, weil die Namen übereinstimmen."
     }
   },
   "settings": {

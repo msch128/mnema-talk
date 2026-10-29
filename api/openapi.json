@@ -952,6 +952,28 @@
         ],
         "type": "object"
       },
+      "auth.UpdateInviteRequest": {
+        "properties": {
+          "expires_at": {
+            "description": "ExpiresAt is a future time (within 8760 hours); null removes the expiry.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "max_uses": {
+            "description": "MaxUses is at least the uses consumed so far; null (or 0) makes the invite unlimited.",
+            "maximum": 1000,
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
       "auth.UpdateProfileRequest": {
         "properties": {
           "bio": {
@@ -4823,6 +4845,13 @@
             "maxLength": 64,
             "type": "string"
           },
+          "role_map": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "RoleMap maps Discord role ids onto existing role ids; those roles are\nnot created and keep their own permissions. It must be the map the\npreview was made with.",
+            "type": "object"
+          },
           "template": {
             "maxLength": 300,
             "type": "string"
@@ -4996,6 +5025,20 @@
             "description": "Hash identifies this exact plan; the apply request must repeat it.",
             "type": "string"
           },
+          "mappable_roles": {
+            "description": "MappableRoles are the existing roles the importer may map a Discord\nrole onto (highest first); the roles a role_map may name.",
+            "items": {
+              "$ref": "#/components/schemas/discordimport.RoleChoice"
+            },
+            "type": "array"
+          },
+          "mapped_roles": {
+            "description": "MappedRoles are the Discord roles the administrator mapped onto an\nexisting role: nothing is created for them.",
+            "items": {
+              "$ref": "#/components/schemas/discordimport.PlanMappedRole"
+            },
+            "type": "array"
+          },
           "roles": {
             "description": "Roles are listed highest first; they are created below every existing role.",
             "items": {
@@ -5030,6 +5073,8 @@
           "dropped_bits",
           "everyone",
           "hash",
+          "mappable_roles",
+          "mapped_roles",
           "roles",
           "server_name",
           "skipped",
@@ -5127,6 +5172,30 @@
         ],
         "type": "object"
       },
+      "discordimport.PlanMappedRole": {
+        "properties": {
+          "role_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "role_name": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "source_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "role_id",
+          "role_name",
+          "source_id",
+          "source_name"
+        ],
+        "type": "object"
+      },
       "discordimport.PlanOverwrite": {
         "properties": {
           "allow": {
@@ -5151,6 +5220,11 @@
           },
           "everyone": {
             "type": "boolean"
+          },
+          "mapped_role_id": {
+            "description": "MappedRoleID is the existing role the overwrite is written for when the\nDiscord role was mapped onto one.",
+            "format": "uuid",
+            "type": "string"
           },
           "role_name": {
             "type": "string"
@@ -5212,6 +5286,14 @@
           },
           "source_name": {
             "type": "string"
+          },
+          "suggested_role_id": {
+            "description": "SuggestedRoleID is the existing role with the same name (ignoring case)\nthe administrator may map this role onto; null when there is none.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -5224,12 +5306,20 @@
           "permission_keys",
           "permissions",
           "source_id",
-          "source_name"
+          "source_name",
+          "suggested_role_id"
         ],
         "type": "object"
       },
       "discordimport.PreviewRequest": {
         "properties": {
+          "role_map": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "RoleMap maps Discord role ids onto existing role ids: those roles are\nleft out of the plan and their overwrites point at the existing role.",
+            "type": "object"
+          },
           "template": {
             "description": "Template is a Discord server template link (discord.new/<code>,\ndiscord.com/template/<code>) or the bare code.",
             "maxLength": 300,
@@ -5279,6 +5369,22 @@
           "template_code",
           "template_name",
           "undone_at"
+        ],
+        "type": "object"
+      },
+      "discordimport.RoleChoice": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
         ],
         "type": "object"
       },
@@ -13102,7 +13208,7 @@
     },
     "/api/admin/import/discord/apply": {
       "post": {
-        "description": "Downloads the template again and creates the categories, channels and roles of the plan in one transaction, strictly additively: categories and channels are appended at the end of the layout, roles are created below every existing role without Administrator, and @everyone is not touched. The request must repeat the plan_hash of the preview and carry all three confirmations (confirm_additive, confirm_roles, and confirm_text: the server name or IMPORT); a changed template or server state answers 409 and needs a new preview. Writes one audit entry (import.discord). Owner and Administrators only.",
+        "description": "Downloads the template again and creates the categories, channels and roles of the plan in one transaction, strictly additively: categories and channels are appended at the end of the layout, roles are created below every existing role without Administrator, and @everyone is not touched. Roles listed in role_map are not created: their channel overwrites are written for the existing role, whose own permissions stay as they are (managed roles such as Bot, roles above the importer and, unless the Owner imports, roles held by bots are refused). The request must repeat the plan_hash of the preview and carry all three confirmations (confirm_additive, confirm_roles, and confirm_text: the server name or IMPORT); a changed template or server state answers 409 and needs a new preview. Writes one audit entry (import.discord). Owner and Administrators only.",
         "operationId": "applyDiscordImport",
         "requestBody": {
           "content": {
@@ -13134,7 +13240,7 @@
                 }
               }
             },
-            "description": "Invalid input (INVALID_INPUT): a confirmation is missing or wrong, or the template contains nothing to import."
+            "description": "Invalid input (INVALID_INPUT): a confirmation is missing or wrong, the template contains nothing to import, or the role_map is invalid."
           },
           "401": {
             "content": {
@@ -13154,7 +13260,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: only the Owner and Administrators may import, or cross-origin request rejected."
+            "description": "FORBIDDEN: only the Owner and Administrators may import, a mapped role is managed, held by a bot or not below the importer's highest role, or cross-origin request rejected."
           },
           "404": {
             "content": {
@@ -13551,7 +13657,7 @@
     },
     "/api/admin/import/discord/preview": {
       "post": {
-        "description": "Downloads the Discord server template (discord.com only, 2 MB at most, no redirects) and returns exactly what importing it would create: categories, channels, roles with their mapped permissions, and the Discord permissions that are dropped. Writes nothing and is not audited. Owner and Administrators only. 404 when the template does not exist or is not shared, 502/503 when Discord cannot be reached.",
+        "description": "Downloads the Discord server template (discord.com only, 2 MB at most, no redirects) and returns exactly what importing it would create: categories, channels, roles with their mapped permissions, and the Discord permissions that are dropped. An optional role_map (Discord role id to existing role id) leaves those roles out of the plan; the suggested_role_id of each role names the existing role with the same name. Writes nothing and is not audited. Owner and Administrators only. 404 when the template does not exist or is not shared, 502/503 when Discord cannot be reached.",
         "operationId": "previewDiscordImport",
         "requestBody": {
           "content": {
@@ -13583,7 +13689,7 @@
                 }
               }
             },
-            "description": "Invalid input (INVALID_INPUT): not a template link or code, malformed JSON or unknown JSON fields."
+            "description": "Invalid input (INVALID_INPUT): not a template link or code, malformed JSON, unknown JSON fields or an invalid role_map."
           },
           "401": {
             "content": {
@@ -13603,7 +13709,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: only the Owner and Administrators may import, or cross-origin request rejected."
+            "description": "FORBIDDEN: only the Owner and Administrators may import, a mapped role is managed, held by a bot or not below the importer's highest role, or cross-origin request rejected."
           },
           "404": {
             "content": {
@@ -13952,6 +14058,122 @@
           }
         ],
         "summary": "Delete an invite",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "patch": {
+        "description": "Requires the Manage invites permission (403 otherwise). Absent fields are kept; null removes the expiry or the limit. A max_uses below the uses already consumed is refused (400).",
+        "operationId": "updateInvite",
+        "parameters": [
+          {
+            "description": "Resource ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.UpdateInviteRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.Invite"
+                }
+              }
+            },
+            "description": "Updated invite."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Manage invites permission, or cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Change an invite's expiry or use limit",
         "tags": [
           "Admin"
         ]

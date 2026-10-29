@@ -109,7 +109,7 @@ func (w *world) tables() map[string]int {
 
 func (w *world) preview(sub perm.Subject) *Plan {
 	w.t.Helper()
-	plan, err := w.im.Preview(context.Background(), sub, "https://discord.new/AbCdEf123456")
+	plan, err := w.im.Preview(context.Background(), sub, "https://discord.new/AbCdEf123456", nil)
 	w.must(err)
 	return plan
 }
@@ -145,7 +145,7 @@ func TestPreviewWritesNothing(t *testing.T) {
 func TestOnlyOwnerAndAdministratorsImport(t *testing.T) {
 	w := newWorld(t)
 	ctx := context.Background()
-	_, err := w.im.Preview(ctx, w.mod, "AbCdEf123456")
+	_, err := w.im.Preview(ctx, w.mod, "AbCdEf123456", nil)
 	wantStatus(t, "manage-roles member previews", err, http.StatusForbidden)
 	plan := w.preview(w.owner)
 	_, err = w.im.Apply(ctx, w.mod, "mod", applyReq(plan))

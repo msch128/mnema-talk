@@ -603,6 +603,19 @@ export function isAuthTwoFactorSetupRequest(value: unknown): value is AuthTwoFac
 
 export const decodeAuthTwoFactorSetupRequest = decoder("auth.TwoFactorSetupRequest", isAuthTwoFactorSetupRequest)
 
+export type AuthUpdateInviteRequest = {
+  expires_at?: string | null
+  max_uses?: number | null
+}
+
+export function isAuthUpdateInviteRequest(value: unknown): value is AuthUpdateInviteRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "expires_at") || (isTimestamp(value["expires_at"]) || value["expires_at"] === null))
+    && (!hasOwn(value, "max_uses") || ((isInteger(value["max_uses"]) && value["max_uses"] >= 0 && value["max_uses"] <= 1000) || value["max_uses"] === null))
+}
+
+export const decodeAuthUpdateInviteRequest = decoder("auth.UpdateInviteRequest", isAuthUpdateInviteRequest)
+
 export type AuthUpdateProfileRequest = {
   bio?: string
   display_name?: string
@@ -2875,6 +2888,7 @@ export type DiscordimportApplyRequest = {
   confirm_roles: boolean
   confirm_text: string
   plan_hash: string
+  role_map?: Record<string, unknown>
   template: string
 }
 
@@ -2884,6 +2898,7 @@ export function isDiscordimportApplyRequest(value: unknown): value is Discordimp
     && (hasOwn(value, "confirm_roles") && typeof value["confirm_roles"] === 'boolean')
     && (hasOwn(value, "confirm_text") && isString(value["confirm_text"], 100))
     && (hasOwn(value, "plan_hash") && isString(value["plan_hash"], 64))
+    && (!hasOwn(value, "role_map") || isRecord(value["role_map"]))
     && (hasOwn(value, "template") && isString(value["template"], 300))
 }
 
@@ -2970,6 +2985,8 @@ export type DiscordimportPlan = {
   dropped_bits: Array<string>
   everyone: DiscordimportEveryoneInfo
   hash: string
+  mappable_roles: Array<DiscordimportRoleChoice>
+  mapped_roles: Array<DiscordimportPlanMappedRole>
   roles: Array<DiscordimportPlanRole>
   server_name: string
   skipped: Array<string>
@@ -2987,6 +3004,8 @@ export function isDiscordimportPlan(value: unknown): value is DiscordimportPlan 
     && (hasOwn(value, "dropped_bits") && isArrayOf(value["dropped_bits"], item => isString(item)))
     && (hasOwn(value, "everyone") && isDiscordimportEveryoneInfo(value["everyone"]))
     && (hasOwn(value, "hash") && isString(value["hash"]))
+    && (hasOwn(value, "mappable_roles") && isArrayOf(value["mappable_roles"], item => isDiscordimportRoleChoice(item)))
+    && (hasOwn(value, "mapped_roles") && isArrayOf(value["mapped_roles"], item => isDiscordimportPlanMappedRole(item)))
     && (hasOwn(value, "roles") && isArrayOf(value["roles"], item => isDiscordimportPlanRole(item)))
     && (hasOwn(value, "server_name") && isString(value["server_name"]))
     && (hasOwn(value, "skipped") && isArrayOf(value["skipped"], item => isString(item)))
@@ -3044,12 +3063,30 @@ export function isDiscordimportPlanChannel(value: unknown): value is Discordimpo
 
 export const decodeDiscordimportPlanChannel = decoder("discordimport.PlanChannel", isDiscordimportPlanChannel)
 
+export type DiscordimportPlanMappedRole = {
+  role_id: string
+  role_name: string
+  source_id: string
+  source_name: string
+}
+
+export function isDiscordimportPlanMappedRole(value: unknown): value is DiscordimportPlanMappedRole {
+  return isRecord(value)
+    && (hasOwn(value, "role_id") && isIdentifier(value["role_id"]))
+    && (hasOwn(value, "role_name") && isString(value["role_name"]))
+    && (hasOwn(value, "source_id") && isString(value["source_id"]))
+    && (hasOwn(value, "source_name") && isString(value["source_name"]))
+}
+
+export const decodeDiscordimportPlanMappedRole = decoder("discordimport.PlanMappedRole", isDiscordimportPlanMappedRole)
+
 export type DiscordimportPlanOverwrite = {
   allow: number
   allow_keys: Array<string>
   deny: number
   deny_keys: Array<string>
   everyone: boolean
+  mapped_role_id?: string
   role_name: string
   role_source_id: string
 }
@@ -3061,6 +3098,7 @@ export function isDiscordimportPlanOverwrite(value: unknown): value is Discordim
     && (hasOwn(value, "deny") && (isInteger(value["deny"]) && value["deny"] >= 0))
     && (hasOwn(value, "deny_keys") && isArrayOf(value["deny_keys"], item => isString(item)))
     && (hasOwn(value, "everyone") && typeof value["everyone"] === 'boolean')
+    && (!hasOwn(value, "mapped_role_id") || isIdentifier(value["mapped_role_id"]))
     && (hasOwn(value, "role_name") && isString(value["role_name"]))
     && (hasOwn(value, "role_source_id") && isString(value["role_source_id"]))
 }
@@ -3078,6 +3116,7 @@ export type DiscordimportPlanRole = {
   permissions: number
   source_id: string
   source_name: string
+  suggested_role_id: string | null
 }
 
 export function isDiscordimportPlanRole(value: unknown): value is DiscordimportPlanRole {
@@ -3092,16 +3131,19 @@ export function isDiscordimportPlanRole(value: unknown): value is DiscordimportP
     && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
     && (hasOwn(value, "source_id") && isString(value["source_id"]))
     && (hasOwn(value, "source_name") && isString(value["source_name"]))
+    && (hasOwn(value, "suggested_role_id") && (isIdentifier(value["suggested_role_id"]) || value["suggested_role_id"] === null))
 }
 
 export const decodeDiscordimportPlanRole = decoder("discordimport.PlanRole", isDiscordimportPlanRole)
 
 export type DiscordimportPreviewRequest = {
+  role_map?: Record<string, unknown>
   template: string
 }
 
 export function isDiscordimportPreviewRequest(value: unknown): value is DiscordimportPreviewRequest {
   return isRecord(value)
+    && (!hasOwn(value, "role_map") || isRecord(value["role_map"]))
     && (hasOwn(value, "template") && isString(value["template"], 300))
 }
 
@@ -3129,6 +3171,19 @@ export function isDiscordimportRecord(value: unknown): value is DiscordimportRec
 }
 
 export const decodeDiscordimportRecord = decoder("discordimport.Record", isDiscordimportRecord)
+
+export type DiscordimportRoleChoice = {
+  id: string
+  name: string
+}
+
+export function isDiscordimportRoleChoice(value: unknown): value is DiscordimportRoleChoice {
+  return isRecord(value)
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "name") && isString(value["name"]))
+}
+
+export const decodeDiscordimportRoleChoice = decoder("discordimport.RoleChoice", isDiscordimportRoleChoice)
 
 export type DiscordimportUndoRequest = {
   accept_message_loss: boolean

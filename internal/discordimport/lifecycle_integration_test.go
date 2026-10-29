@@ -95,7 +95,7 @@ func TestApplyRefusesWhatCannotBeImported(t *testing.T) {
 		wantStatus(t, name, err, c.status)
 	}
 
-	_, err := w.im.Preview(ctx, w.admin, "not a link")
+	_, err := w.im.Preview(ctx, w.admin, "not a link", nil)
 	wantStatus(t, "preview of a non-link", err, http.StatusBadRequest)
 }
 
@@ -118,7 +118,7 @@ func TestTemplatesDiscordDoesNotKnowOrCannotServeAreRefused(t *testing.T) {
 			_, _ = rw.Write([]byte(c.body))
 		}))
 		w.im.Fetcher = loopbackFetcher(srv.URL)
-		_, perr := w.im.Preview(ctx, w.admin, "AbCdEf123456")
+		_, perr := w.im.Preview(ctx, w.admin, "AbCdEf123456", nil)
 		_, aerr := w.im.Apply(ctx, w.admin, "adm", ApplyRequest{Template: "AbCdEf123456", ConfirmAdditive: true, ConfirmRoles: true})
 		srv.Close()
 		wantStatus(t, c.name+" (preview)", perr, c.want)
@@ -139,7 +139,7 @@ func TestEverythingFailsCleanlyWhenTheRequestIsCanceled(t *testing.T) {
 	cancel()
 	req := applyReq(&Plan{})
 	calls := map[string]func() error{
-		"preview": func() error { _, err := w.im.Preview(ctx, w.admin, "AbCdEf123456"); return err },
+		"preview": func() error { _, err := w.im.Preview(ctx, w.admin, "AbCdEf123456", nil); return err },
 		"apply":   func() error { _, err := w.im.Apply(ctx, w.admin, "adm", req); return err },
 		"list":    func() error { _, err := w.im.List(ctx); return err },
 		"detail":  func() error { _, err := w.im.Detail(ctx, imp.ID); return err },

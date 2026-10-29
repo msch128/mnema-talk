@@ -7,6 +7,8 @@ import ReplyComposerBar from './ReplyComposerBar.vue'
 import EmojiButton from './EmojiButton.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
 import { useDraftModel } from '../composables/useDraftModel'
+import { useAutoGrow } from '../composables/useAutoGrow'
+import { useComposerFiles } from '../composables/useComposerFiles'
 import { useComposerAssist } from '../composables/useComposerAssist'
 import { handleComposerKeydown } from '../composables/useComposerKeys'
 
@@ -30,7 +32,9 @@ const looksLikeCommand = computed(() => /^\/[A-Za-z]/.test(text.value))
 const fileInput = ref<HTMLInputElement | null>(null)
 const textAreaEl = ref<HTMLTextAreaElement | null>(null)
 const assist = useComposerAssist(textAreaEl, text)
-defineExpose({ focus: () => textAreaEl.value?.focus() })
+const { multiline } = useAutoGrow(textAreaEl, text)
+const { attachFiles, onPaste } = useComposerFiles({ fileInput, canAttach: () => props.canAttach, busy: () => props.uploading || props.sending })
+defineExpose({ attachFiles, focus: () => textAreaEl.value?.focus() })
 
 function handleKeyDown(e: KeyboardEvent) {
   handleComposerKeydown(e, { consumers: [assist.onKeydown], replying: () => !!props.replyingTo, cancelReply: () => emit('cancel-reply'), send: () => emit('send') })
@@ -42,7 +46,8 @@ function handleKeyDown(e: KeyboardEvent) {
     <ReplyComposerBar v-if="replyingTo" :target="replyingTo" @cancel="emit('cancel-reply')" />
     <div
       :class="[
-        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 flex items-center gap-2 shadow-xs focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
+        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 flex gap-2 shadow-xs focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
+        multiline ? 'items-end' : 'items-center',
         replyingTo ? 'rounded-b-lg' : 'rounded-lg'
       ]"
     >
@@ -79,6 +84,7 @@ function handleKeyDown(e: KeyboardEvent) {
         data-bare
         v-model="text"
         @keydown="handleKeyDown"
+        @paste="onPaste"
         @input="assist.onInput"
         @click="assist.onInput"
         @keyup.left="assist.onInput"

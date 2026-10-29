@@ -9,6 +9,7 @@ import { useServerFeaturesStore } from '../stores/serverFeatures'
 import ChatHeader from './ChatHeader.vue'
 import ChannelAutoDeleteNote from './ChannelAutoDeleteNote.vue'
 import ChatComposer from './ChatComposer.vue'
+import FileDropOverlay from './FileDropOverlay.vue'
 import ImageLightbox from './ImageLightbox.vue'
 import ContextMenu from './ContextMenu.vue'
 import EphemeralNotes from './EphemeralNotes.vue'
@@ -228,7 +229,7 @@ const groupedIds = computed(() => {
     :id="panel ? undefined : 'main-content'"
     :tabindex="panel ? undefined : -1"
     :aria-label="panel ? $t('talk.chatPanel', { channel: channelName }) : undefined"
-    class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden focus:outline-hidden"
+    class="relative flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden focus:outline-hidden"
   >
     <ChatHeader :panel="panel" @close="emit('close')" @menu="(x, y, items) => menu.show(x, y, items)" />
     <ChannelAutoDeleteNote v-if="!panel" />
@@ -383,6 +384,7 @@ const groupedIds = computed(() => {
       @file="handleFileUpload"
     />
 
+    <FileDropOverlay @files="composer?.attachFiles($event)" />
     <!-- Image lightbox -->
     <ImageLightbox v-if="selectedImage" :src="selectedImage" @close="selectedImage = null" />
 

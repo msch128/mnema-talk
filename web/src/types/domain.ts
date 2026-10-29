@@ -3,7 +3,7 @@ export type {
   AuthUser as User, AuthAdminUser as AdminUser, AuthInvite as Invite,
   AuthUserEnvelope as UserEnvelope, AuthLoginRequest as LoginRequest,
   AuthRegisterRequest as RegisterRequest, AuthUpdateProfileRequest as UpdateProfileRequest,
-  AuthCreateInviteRequest as CreateInviteRequest,
+  AuthCreateInviteRequest as CreateInviteRequest, AuthUpdateInviteRequest as UpdateInviteRequest,
   ChatMember as Member,
   PermRole as Role, PermInfo as PermissionInfo, PermOverwrite as Overwrite,
   RolesPermissionsInfo as PermissionsInfo, RolesChannelPermissions as ChannelPermissions,

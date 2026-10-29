@@ -51,6 +51,7 @@ type Route struct {
 // unknown ones under a generic action, so nothing escapes the log.
 var Routes = []Route{
 	{Method: "POST", Pattern: "/invites", Action: "invite.create", TargetType: "invite"},
+	{Method: "PATCH", Pattern: "/invites/{id}", Action: "invite.update", TargetType: "invite", IDParam: "id", Snapshot: ResInvite},
 	{Method: "DELETE", Pattern: "/invites/{id}", Action: "invite.revoke", TargetType: "invite", IDParam: "id", Snapshot: ResInvite},
 
 	{Method: "POST", Pattern: "/users/{id}/disable", Action: "user.disable", TargetType: "user", IDParam: "id", Snapshot: ResUser},

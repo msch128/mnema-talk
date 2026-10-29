@@ -13,16 +13,24 @@ const BASE = '/api/admin/import/discord'
 /** The word that confirms an import when the community has no name. */
 export const CONFIRM_WORD = 'IMPORT'
 
+/** Discord role id to the id of the existing role it joins instead of being created. */
+export type RoleMap = Record<string, string>
+
 /** Downloads the template and returns what importing it would create. Writes nothing. */
-export function previewImport(template: string): Promise<DiscordimportPlan> {
-  return api(`${BASE}/preview`, { method: 'POST', json: { template }, decode: decodeDiscordimportPlan })
+export function previewImport(template: string, roleMap: RoleMap = {}): Promise<DiscordimportPlan> {
+  return api(`${BASE}/preview`, { method: 'POST', json: { template, ...mapField(roleMap) }, decode: decodeDiscordimportPlan })
+}
+
+// The field stays out of the request when nothing is mapped.
+function mapField(roleMap: RoleMap): { role_map?: RoleMap } {
+  return Object.keys(roleMap).length ? { role_map: roleMap } : {}
 }
 
 /** Runs the import the preview described; the three confirmations travel with it. */
-export function applyImport(template: string, plan: DiscordimportPlan, confirmText: string): Promise<DiscordimportRecord> {
+export function applyImport(template: string, plan: DiscordimportPlan, confirmText: string, roleMap: RoleMap = {}): Promise<DiscordimportRecord> {
   return api(`${BASE}/apply`, {
     method: 'POST',
-    json: { template, plan_hash: plan.hash, confirm_additive: true, confirm_roles: true, confirm_text: confirmText },
+    json: { template, plan_hash: plan.hash, confirm_additive: true, confirm_roles: true, confirm_text: confirmText, ...mapField(roleMap) },
     decode: decodeDiscordimportRecord
   })
 }

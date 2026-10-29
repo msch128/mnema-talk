@@ -553,6 +553,11 @@
     "moreActions": "More actions",
     "readOnly": "You can’t write in this channel.",
     "noAttach": "You can’t attach files here.",
+    "attachMediaOnly": "Only images and videos can be attached.",
+    "attachSkipped": "Only images and videos were attached. Other files were skipped.",
+    "attachFirstOnly": "A message carries one file. The first one was attached.",
+    "attachOneSkipped": "A message carries one file: the first image or video was attached, the other files were skipped.",
+    "dropFiles": "Drop to attach",
     "messageRemoved": "Message removed",
     "searchSyntaxTip": "Tip: “exact phrase” finds a phrase, -word leaves a word out.",
     "resultsCountMore": {
@@ -1544,7 +1549,28 @@
     "noInvitesHint": "Create one above and share its link.",
     "showSpent": "Show {count} used up or expired",
     "hideSpent": "Hide used up and expired",
-    "noMediaHint": "Uploaded images and files show up here."
+    "noMediaHint": "Uploaded images and files show up here.",
+    "editInvite": {
+      "title": "Edit invite {code}",
+      "expiry": "Expires",
+      "keep": "Keep",
+      "custom": "Custom",
+      "customDate": "Expiry date and time",
+      "customUses": "Maximum uses",
+      "expiryPreset": {
+        "min30": "30 min",
+        "hour1": "1 hour",
+        "hour6": "6 hours",
+        "hour12": "12 hours",
+        "day": "1 day",
+        "week": "7 days"
+      },
+      "expiryInvalid": "Choose a date in the future, within one year.",
+      "usesInvalid": "Enter a whole number from at least the {used} uses so far up to {max}.",
+      "usesHint": "{used} used so far. The limit cannot be lower than that.",
+      "saved": "Invite updated.",
+      "edit": "Edit invite"
+    }
   },
   "profile": {
     "addedBy": "Added by {name}",
@@ -2201,6 +2227,7 @@
       },
       "invite": {
         "create": "Invite created",
+        "update": "Invite edited",
         "revoke": "Invite revoked"
       },
       "webhook": {
@@ -3361,7 +3388,8 @@
       "working": "Importing…",
       "failed": "The import failed.",
       "stale": "The template or this server changed since the preview. Preview it again.",
-      "done": "Imported {summary}. You can undo it below."
+      "done": "Imported {summary}. You can undo it below.",
+      "step2Mapped": "{source} is not created. Its channel settings go to {name}, whose permissions do not change."
     },
     "undo": {
       "title": "Undo this import?",
@@ -3374,6 +3402,15 @@
       "failed": "The import could not be undone.",
       "done": "Import undone. Removed {summary}.",
       "keptRoles": " {kept} role(s) stay because you can no longer manage them."
+    },
+    "map": {
+      "hint": "Already have a matching role, like Admin or Bot? Connect it instead of creating a duplicate. Its permissions and settings stay exactly as they are.",
+      "label": "What to do with the Discord role {name}",
+      "create": "Create as a new role",
+      "group": "Connect to an existing role",
+      "keeps": "Not created. Its channel settings are applied to {name}, whose own permissions stay as they are.",
+      "sameName": "A role named {name} already exists here.",
+      "sameNameUsed": "Connected to {name} because the names match."
     }
   },
   "settings": {

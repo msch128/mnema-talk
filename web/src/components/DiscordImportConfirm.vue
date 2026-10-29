@@ -5,10 +5,11 @@ import { ref, computed } from 'vue'
 import BaseDialog from './BaseDialog.vue'
 import { applyImport, CONFIRM_WORD } from '../lib/discordImport'
 import { isApiError, caughtErrorMessage } from '../lib/api'
+import type { RoleMap } from '../lib/discordImport'
 import type { DiscordimportPlan, DiscordimportRecord } from '../types/rest'
 import { t } from '../i18n'
 
-const props = defineProps<{ plan: DiscordimportPlan, template: string }>()
+const props = defineProps<{ plan: DiscordimportPlan, template: string, roleMap?: RoleMap }>()
 const emit = defineEmits<{ close: [], done: [record: DiscordimportRecord], stale: [] }>()
 
 const step = ref<1 | 2 | 3>(1)
@@ -37,7 +38,7 @@ async function run() {
   busy.value = true
   error.value = ''
   try {
-    emit('done', await applyImport(props.template, props.plan, typed.value.trim()))
+    emit('done', await applyImport(props.template, props.plan, typed.value.trim(), props.roleMap))
   } catch (e) {
     if (isApiError(e) && e.status === 409) {
       error.value = t('discordImport.confirm.stale')
@@ -68,6 +69,11 @@ async function run() {
           <li v-for="role in plan.roles" :key="role.source_id">
             <span class="font-medium text-mnema-text">{{ role.name }}</span>
             <span class="text-mnema-muted">: {{ role.permission_keys.length ? role.permission_keys.map(permName).join(', ') : $t('discordImport.noPermissions') }}</span>
+          </li>
+        </ul>
+        <ul v-if="plan.mapped_roles.length" class="space-y-1 rounded-lg border border-mnema-hairline bg-mnema-surface p-3 text-sm" data-testid="import-step-2-mapped">
+          <li v-for="role in plan.mapped_roles" :key="role.source_id" class="text-mnema-muted">
+            {{ $t('discordImport.confirm.step2Mapped', { source: role.source_name, name: role.role_name }) }}
           </li>
         </ul>
         <p v-if="plan.dropped_bits.length" class="text-xs text-mnema-muted" data-testid="import-dropped">{{ $t('discordImport.confirm.step2Dropped', { list: plan.dropped_bits.join(', ') }) }}</p>
