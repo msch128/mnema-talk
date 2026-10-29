@@ -1,0 +1,19 @@
+.github/workflows/ff-verify.yml
+  s_1d172cff67c5a0::t_08eee28f76900c 1-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "101d98277347c198e3e77adb4a26a64b2ff479b4",
+  "prompts": {},
+  "sessions": {
+    "s_1d172cff67c5a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-firefox-dfn-dd6480b07de0372e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
