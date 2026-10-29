@@ -5,7 +5,7 @@
 // Talks) uses this; personal preferences save at once and do not.
 import { computed, reactive, ref, watch } from 'vue'
 import { caughtErrorMessage } from '../lib/api'
-import { confirmDiscard, onSaveShortcut, useLeaveGuard } from './draftGuard'
+import { confirmDiscard, saveKeys, useLeaveGuard } from './draftGuard'
 import { t } from '../i18n'
 
 /** Per-field normalisers: values that mean the same thing compare as equal. A normaliser also sees the whole state, for fields that only matter next to another one. */
@@ -125,8 +125,7 @@ export function useSettingsDraft<T extends object>(options: SettingsDraftOptions
     error.value = ''
   }
 
-  /** Ctrl/Cmd+S inside the form saves it. */
-  const onKeydown = (e: KeyboardEvent) => onSaveShortcut(e, save)
+  const onKeydown = saveKeys(save)
 
   /** True when nothing is lost by leaving: the draft is clean or the member agreed. */
   async function guard(): Promise<boolean> {

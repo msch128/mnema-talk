@@ -1115,7 +1115,6 @@
     "lobby": "Create-a-Talk lobby",
     "lobbyHint": "Joining this Talk opens a new Talk for the member, who leads it. Nobody stays in the lobby, and the new Talk follows the lobby’s permissions and limit.",
     "lobbyOpens": "Opens a new Talk when you join",
-    "lobbySaved": "Lobby setting saved.",
     "followsLobby": "This Talk follows its lobby’s permissions. Change them in the lobby.",
     "presetsTitle": "Who can join",
     "presetEveryone": "Everyone",
@@ -2565,11 +2564,6 @@
       "empty": "This role sees no channels you can see.",
       "exit": "Exit preview"
     },
-    "unsavedTitle": "Discard unsaved changes?",
-    "unsavedBody": "This role has changes you have not saved. Switching to another role drops them.",
-    "discard": "Discard",
-    "keepEditing": "Keep editing",
-    "unsaved": "Unsaved changes",
     "searchPermissions": "Search permissions",
     "noPermissionMatch": "No permission matches."
   },

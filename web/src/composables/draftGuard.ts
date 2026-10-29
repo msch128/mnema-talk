@@ -54,3 +54,20 @@ export function onSaveShortcut(e: KeyboardEvent, save: () => unknown) {
     void save()
   }
 }
+
+const ONE_LINE_TYPES = new Set(['text', 'number', 'search', 'url', 'email'])
+/** A single-line text field: Enter there means "done". */
+export function isOneLineField(target: EventTarget | null): boolean {
+  return target instanceof HTMLInputElement && ONE_LINE_TYPES.has(target.type)
+}
+
+/** The keys of a form: Ctrl/Cmd+S saves, and so does Enter in a one-line field (a form with several fields has no implicit submit). */
+export function saveKeys(save: () => unknown) {
+  return (e: KeyboardEvent) => {
+    onSaveShortcut(e, save)
+    if (e.key === 'Enter' && !e.isComposing && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && isOneLineField(e.target)) {
+      e.preventDefault()
+      void save()
+    }
+  }
+}

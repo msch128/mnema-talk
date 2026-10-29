@@ -367,6 +367,8 @@ onMounted(async () => {
     </template>
 
     <ToastHost />
+    <!-- Before the confirm host: its "Discard changes?" must open above the Talk settings. -->
+    <TalkSettingsHost />
     <ConfirmDialog />
     <ModerationDialog />
     <MessageModerationDialog />
@@ -374,6 +376,5 @@ onMounted(async () => {
     <ReportDialog />
     <ForwardDialog />
     <LaterDialog />
-    <TalkSettingsHost />
   </div>
 </template>

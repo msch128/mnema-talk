@@ -31,7 +31,6 @@ export function usePushSettings() {
   const loading = ref(true)
   const busy = ref(false)
   const failed = ref(false)
-
   const blocked = ref(isDenied())
   const enabledByOperator = computed(() => config.value?.enabled === true)
 
@@ -56,7 +55,6 @@ export function usePushSettings() {
   }
 
   const refresh = () => load(true)
-
   /** Runs one action with the busy flag and a toast for a failure; resolves to whether it went through. */
   async function act(work: () => Promise<void>, failure: string): Promise<boolean> {
     busy.value = true

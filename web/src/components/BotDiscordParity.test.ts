@@ -13,7 +13,7 @@ import { buildMemberItems } from '../composables/useNavMenus'
 import { PERMISSION_BITS } from '../lib/permissions'
 import { activityOf, activityText } from '../lib/presence'
 import { fixtureId, userFixture } from '../test-fixtures.fixture'
-import { setLocale, t } from '../i18n'
+import { setLocale } from '../i18n'
 import type { Member, Role } from '../types/domain'
 import type { BotBot } from '../types/rest'
 

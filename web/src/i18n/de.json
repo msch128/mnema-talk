@@ -1115,7 +1115,6 @@
     "lobby": "Talk-Lobby („Talk erstellen“)",
     "lobbyHint": "Wer diesem Talk beitritt, bekommt einen neuen Talk und leitet ihn. Niemand bleibt in der Lobby, und der neue Talk übernimmt Rechte und Limit der Lobby.",
     "lobbyOpens": "Öffnet beim Beitreten einen neuen Talk",
-    "lobbySaved": "Lobby-Einstellung gespeichert.",
     "followsLobby": "Dieser Talk übernimmt die Rechte seiner Lobby. Ändere sie in der Lobby.",
     "presetsTitle": "Wer beitreten darf",
     "presetEveryone": "Alle",
@@ -2565,11 +2564,6 @@
       "empty": "Diese Rolle sieht keine Kanäle, die du siehst.",
       "exit": "Vorschau beenden"
     },
-    "unsavedTitle": "Ungespeicherte Änderungen verwerfen?",
-    "unsavedBody": "Diese Rolle hat Änderungen, die nicht gespeichert sind. Beim Wechsel zu einer anderen Rolle gehen sie verloren.",
-    "discard": "Verwerfen",
-    "keepEditing": "Weiter bearbeiten",
-    "unsaved": "Ungespeicherte Änderungen",
     "searchPermissions": "Berechtigungen suchen",
     "noPermissionMatch": "Keine Berechtigung passt."
   },
@@ -3566,7 +3560,7 @@
     }
   },
   "draft": {
-    "unsaved": "Du hast ungespeicherte Änderungen",
+    "unsaved": "Ungespeicherte Änderungen",
     "reset": "Zurücksetzen",
     "saving": "Speichern …",
     "saved": "Gespeichert",

@@ -39,10 +39,16 @@ Rules:
 4. **After Save the draft is the saved state.** If the saved state changes elsewhere,
    fields you did not touch follow it; fields you are editing keep your value.
 5. **Leaving with unsaved changes asks "Discard changes?"**: closing a dialog
-   (`BaseDialog :guard="form.guard"`), switching a tab or section
-   (`provideDraftScope()` in the container, `scope.guard()` before the switch), and
-   reloading the page (`beforeunload`, automatic).
-6. **Ctrl/Cmd+S** inside the form saves it (`@keydown="form.onKeydown"`).
+   (`BaseDialog :guard="form.guard"`), replacing the edited item by another (another
+   role, another bot, another webhook) and reloading the page (`beforeunload`, automatic).
+6. **Ctrl/Cmd+S** inside the form saves it, and so does Enter in a one-line field
+   (`@keydown="form.onKeydown"`). A form with several fields has no implicit submit.
+7. **A container keeps its drafts alive.** The admin console keeps every tab mounted, so
+   switching tabs loses nothing; closing the console asks once for all of them
+   (`provideDraftScope()` + `BaseDialog :guard`). A draft that is not a field form (the
+   channel order, a list of overwrites) still uses `UnsavedChangesBar` and
+   `useLeaveGuard(dirty)`, with `dirty` computed by comparing with the saved state, never
+   a hand-set flag.
 
 ## Immediate
 

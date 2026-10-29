@@ -266,3 +266,25 @@ describe('draft scope', () => {
     expect(scope.dirty.value).toBe(false)
   })
 })
+
+describe('Enter in a one-line field', () => {
+  it('saves, but not from a checkbox or with a modifier', async () => {
+    const { api, save } = setup()
+    api.draft.name = 'A'
+    const text = document.createElement('input')
+    const check = document.createElement('input')
+    check.type = 'checkbox'
+    const press = (target: HTMLElement, init: KeyboardEventInit = {}) => {
+      const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, ...init })
+      target.dispatchEvent(event)
+      api.onKeydown(Object.defineProperty(event, 'target', { value: target }))
+      return event
+    }
+    expect(press(check).defaultPrevented).toBe(false)
+    expect(press(text, { shiftKey: true }).defaultPrevented).toBe(false)
+    expect(save).not.toHaveBeenCalled()
+    expect(press(text).defaultPrevented).toBe(true)
+    await flushPromises()
+    expect(save).toHaveBeenCalledTimes(1)
+  })
+})

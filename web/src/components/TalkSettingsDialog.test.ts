@@ -240,6 +240,21 @@ describe('TalkSettingsDialog', () => {
     })
   })
 
+  it('saves with Enter in the name field and with Ctrl+S, although the form has several fields', async () => {
+    const talk = channelFixture({ type: 'voice', name: 'Games' })
+    const w = setup(talk, { manager: true })
+    await flushPromises()
+    await w.find('[data-testid="talk-name"]').setValue('Board games')
+    await w.find('[data-testid="talk-name"]').trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(apiMock).toHaveBeenCalledWith(`/api/admin/channels/${talk.id}`, expect.objectContaining({ method: 'PATCH', json: { name: 'Board games' } }))
+    apiMock.mockClear()
+    await w.find('[data-testid="preset-limit-input"]').setValue(3)
+    await w.find('[data-testid="preset-limit-input"]').trigger('keydown', { key: 's', ctrlKey: true })
+    await flushPromises()
+    expect(apiMock).toHaveBeenCalledWith(`/api/admin/channels/${talk.id}`, expect.objectContaining({ json: { user_limit: 3 } }))
+  })
+
   it('resets the draft to the saved state', async () => {
     const w = setup(channelFixture({ type: 'voice', name: 'Games', user_limit: 2 }), { manager: true })
     await flushPromises()

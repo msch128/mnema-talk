@@ -25,7 +25,7 @@ const emit = defineEmits<{ save: []; reset: [] }>()
       <p class="flex min-w-0 items-center gap-2 text-sm text-mnema-muted" role="status" data-testid="unsaved-status">
         <template v-if="dirty">
           <span class="h-2 w-2 shrink-0 rounded-full bg-mnema-accent" aria-hidden="true" />
-          <span class="truncate">{{ $t('draft.unsaved') }}</span>
+          <span class="leading-snug">{{ $t('draft.unsaved') }}</span>
         </template>
       </p>
       <div class="flex shrink-0 items-center gap-2">

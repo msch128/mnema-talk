@@ -121,7 +121,7 @@ const field = 'w-full rounded-md border border-mnema-border-field bg-mnema-canva
 </script>
 
 <template>
-  <BaseDialog :title="$t('talk.settingsTitle', { name: channel.name })" panel-class="max-w-md" :guard="form.guard" @close="emit('close')">
+  <BaseDialog :title="$t('talk.settingsTitle', { name: channel.name })" panel-class="max-w-lg" :guard="form.guard" @close="emit('close')">
     <form class="flex min-h-0 flex-1 flex-col" data-testid="talk-settings" @submit.prevent="form.save" @keydown="form.onKeydown">
       <div class="min-h-0 flex-1 space-y-6 overflow-y-auto p-6">
         <div class="space-y-1.5">
