@@ -1,0 +1,19 @@
+web/src/components/OutgoingCallCard.vue
+  s_aa85192dedb9c8::t_2fdeca5ed78fcc 41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6aeabeaede96ddfa9527a753ecc2f61e23b43cc9",
+  "prompts": {},
+  "sessions": {
+    "s_aa85192dedb9c8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-abc8c4df490a3a9dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
