@@ -40,9 +40,9 @@ describe('MarkdownHelp', () => {
     expect(results.length).toBe(examples.length)
     examples.forEach((example, i) => {
       const source = example.find('code').text()
-      const rendered = renderMarkdown(source, { known: new Set() })
-      expect(rendered.length).toBeGreaterThan(0)
-      expect(results[i]?.text().length).toBeGreaterThan(0)
+      const expected = document.createElement('div')
+      expected.innerHTML = renderMarkdown(source, { known: new Set() })
+      expect(results[i]?.find('.markdown-body').element.innerHTML).toBe(expected.innerHTML)
     })
   })
 
@@ -56,8 +56,18 @@ describe('MarkdownHelp', () => {
     const w = mountHelp()
     const dialog = await openHelp(w)
     await dialog.find('[data-testid="format-example"]').trigger('click')
-    expect(w.emitted('insert')).toEqual([['**bold**']])
+    expect(w.emitted('insert')).toEqual([['**bold**', { block: false }]])
     expect(w.find('[role="dialog"]').exists()).toBe(false)
+  })
+
+  it('marks block examples and leaves a space after the mention', async () => {
+    const w = mountHelp()
+    const dialog = await openHelp(w)
+    const examples = dialog.findAll('[data-testid="format-example"]')
+    await examples[6]!.trigger('click')
+    await openHelp(w)
+    await w.findAll('[data-testid="format-example"]')[15]!.trigger('click')
+    expect(w.emitted('insert')).toEqual([['```js\nlet a = 1\n```', { block: true }], ['@all ', { block: false }]])
   })
 
   it('closes with Escape, the close button and a click elsewhere, and hands focus back', async () => {

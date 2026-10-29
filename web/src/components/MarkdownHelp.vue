@@ -8,7 +8,7 @@ import { useDismissable } from '../composables/useDismissable'
 import { boxOf, placeNear } from '../lib/floatingPosition'
 
 defineProps({ disabled: { type: Boolean, default: false } })
-const emit = defineEmits<{ insert: [source: string] }>()
+const emit = defineEmits<{ insert: [text: string, options: { block: boolean }] }>()
 
 // [label key, what to type]; the result column renders the same text.
 type Row = readonly [string, string]
@@ -46,6 +46,9 @@ const GROUPS: ReadonlyArray<{ key: string; rows: ReadonlyArray<Row> }> = [
   }
 ]
 
+// Rows that only render when they start a line.
+const BLOCK_ROWS = new Set(['codeBlock', 'heading', 'subtext', 'list', 'numbered', 'quote', 'blockQuote'])
+
 const MD_BREAKPOINT = 768
 const open = ref(false)
 const root = ref<HTMLElement | null>(null)
@@ -71,8 +74,9 @@ function place() {
   placement.value = { left: `${Math.round(x)}px`, top: `${Math.round(y)}px` }
 }
 
-function insert(source: string) {
-  emit('insert', source)
+function insert([key, source]: Row) {
+  // A mention is followed by more text: leave the space for it.
+  emit('insert', key === 'mentionAll' ? `${source} ` : source, { block: BLOCK_ROWS.has(key) })
   open.value = false
 }
 
@@ -136,20 +140,20 @@ onBeforeUnmount(() => window.removeEventListener('resize', place))
         <section v-for="group in GROUPS" :key="group.key" :aria-labelledby="`format-${group.key}`" class="mt-4 first:mt-3">
           <h3 :id="`format-${group.key}`" class="mb-1 text-xs font-semibold text-mnema-muted">{{ $t(`format.${group.key}`) }}</h3>
           <ul>
-            <li v-for="[key, source] in group.rows" :key="key" class="grid grid-cols-2 items-start gap-3 border-t border-mnema-hairline py-1.5 text-sm first:border-t-0">
+            <li v-for="row in group.rows" :key="row[0]" class="grid grid-cols-2 items-start gap-3 border-t border-mnema-hairline py-1.5 text-sm first:border-t-0">
               <button
                 type="button"
                 data-testid="format-example"
                 class="focus-ring group/ex -mx-1.5 min-w-0 rounded-md px-1.5 py-0.5 text-left transition hover:bg-mnema-surface"
-                :aria-label="`${$t(`format.${key}`)}: ${$t('format.insert')}`"
+                :aria-label="`${$t(`format.${row[0]}`)}: ${$t('format.insert')}`"
                 v-tooltip="$t('format.insert')"
-                @click="insert(source)"
+                @click="insert(row)"
               >
-                <code class="block whitespace-pre-wrap break-all font-mono text-xs text-mnema-text">{{ source }}</code>
-                <span class="mt-0.5 block text-xs text-mnema-tertiary">{{ $t(`format.${key}`) }}</span>
+                <code class="block whitespace-pre-wrap break-all font-mono text-xs text-mnema-text">{{ row[1] }}</code>
+                <span class="mt-0.5 block text-xs text-mnema-tertiary">{{ $t(`format.${row[0]}`) }}</span>
               </button>
               <div class="min-w-0 py-0.5 text-mnema-text" data-testid="format-result">
-                <MarkdownContent :content="source" :previews="false" />
+                <MarkdownContent :content="row[1]" :previews="false" />
               </div>
             </li>
           </ul>
