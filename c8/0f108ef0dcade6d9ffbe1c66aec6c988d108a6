@@ -1,0 +1,214 @@
+web/src/stores/dmCalls.ts
+  s_06fcde5dbef956::t_e5b26e9ba4bff7 1-22,24,31-32
+  s_06fcde5dbef956::t_2c6b0ea3710ef4 23
+  s_06fcde5dbef956::t_e903b9f902c40c 25-30
+  s_06fcde5dbef956::t_66f3410d294daf 33-34
+api/openapi.json
+  s_7e9329d487a94d::t_92708cd25c7308 2524-2531
+doc/architecture.md
+  s_82e9d48cb7fc7f::t_9997f96b61b7ac 195
+doc/desktop-trusted-client.md
+  s_82e9d48cb7fc7f::t_dba61047087392 508-530
+doc/glossary.md
+  s_8895e592af2d2b::t_c2df79265f3a2d 17
+doc/talks.md
+  s_82e9d48cb7fc7f::t_47d9bc3355b49d 72-113
+internal/chat/dm.go
+  s_06fcde5dbef956::t_9f71d34f21dcf0 110-112,137,145-146,157,184
+internal/server/dm_call_integration_test.go
+  s_7e9329d487a94d::t_a8b9297ca66c0c 153-158,160-161
+web/src/App.vue
+  s_8895e592af2d2b::t_55836962f83c07 37,371
+web/src/components/CallHost.test.ts
+  s_45fff186c97845::t_bd65fc3a9169e6 1-303
+web/src/components/CallHost.vue
+  s_45fff186c97845::t_7093a4e737d117 1-50
+web/src/components/CallMark.vue
+  s_30e74ceb0962ca::t_d6c4d127b60941 1-22
+web/src/components/CallMissedNote.vue
+  s_8895e592af2d2b::t_4a344f847946f7 1-54
+web/src/components/DmListRow.vue
+  s_fb29f048bd6d02::t_3d49e0280236a4 16-17,28-30,45-49,53,60,120-124
+web/src/components/DmTalkActions.vue
+  s_fb29f048bd6d02::t_d451eaeb63fb0d 7-8,12,23,32
+web/src/components/IncomingCallCard.vue
+  s_30e74ceb0962ca::t_9fdd67580d762a 1-78
+web/src/components/MessageEmbeds.vue
+  s_8895e592af2d2b::t_73c7c921d2418a 12,17-20,44
+web/src/components/MessageRow.vue
+  s_8895e592af2d2b::t_b670621ae63475 191
+web/src/components/OutgoingCallCard.vue
+  s_30e74ceb0962ca::t_0cd9c6785670b0 1-63
+web/src/components/SidebarDmSection.vue
+  s_fb29f048bd6d02::t_7d7a9a190065c7 15,25,38,85-86,161,199,225
+web/src/components/TalkInviteCard.vue
+  s_e11d4af221ee25::t_055851157c9f54 10,23,30,43
+web/src/composables/useCallParty.ts
+  s_30e74ceb0962ca::t_417dea18e3ff25 1-22
+web/src/composables/useDmCall.ts
+  s_fb29f048bd6d02::t_10a72ed1d921d4 1-61
+web/src/i18n/de.json
+  s_28915fd19e1e49::t_ffb3708644f093 769-770,1135-1136,3204-3206,3586-3610
+web/src/i18n/en.json
+  s_28915fd19e1e49::t_28b86e35830896 769-770,1135-1136,3204-3206,3586-3610
+web/src/lib/callKind.ts
+  s_fb29f048bd6d02::t_be42f4b13b66b6 1-10
+web/src/lib/dmList.test.ts
+  s_1a92838c482d40::t_68ef87ff2f2082 47-53,61-66
+web/src/lib/dmList.ts
+  s_fb29f048bd6d02::t_baaf05b2ce5c66 8,31-32,36-41,51-57,62
+web/src/lib/osNotify.test.ts
+  s_1a92838c482d40::t_885723fcd180f4 44-55,145-176
+web/src/lib/osNotify.ts
+  s_ecf7b9e687a24d::t_c107b50bfc2d7e 2,18-24,27-29,36-37,49-51,67-68,74,79-82,94-95,123-124,143,168-169,171,174-176,186
+web/src/lib/platform.ts
+  s_ecf7b9e687a24d::t_938288388c3b5e 40-41,101
+web/src/lib/soundEffects.test.ts
+  s_1a92838c482d40::t_9efb9535790de6 71
+web/src/lib/soundEffects.ts
+  s_ecf7b9e687a24d::t_ed60a6cbe5c468 102,142-149
+web/src/stores/chat/dmCalls.ts
+  s_fb29f048bd6d02::t_72c12424e8b559 1-92
+web/src/stores/chat/dms.ts
+  s_fb29f048bd6d02::t_4262cd134e1ab5 21,113
+web/src/stores/chat/events.ts
+  s_fb29f048bd6d02::t_fb6973e044ce95 19,206-207
+web/src/stores/chat/notifications.ts
+  s_fb29f048bd6d02::t_d9e453d994ad08 14,78-80,82,84,86
+web/src/stores/chat/reset.ts
+  s_fb29f048bd6d02::t_42964f7a02f928 11,25
+web/src/stores/chatDmCalls.test.ts
+  s_28915fd19e1e49::t_80b3f4e171d925 1-179
+web/src/stores/dmCalls.test.ts
+  s_5b748b0295d2f4::t_c9002433e70e34 1-195
+web/src/stores/dmCalls/actions.ts
+  s_731038fe4fc0d1::t_0e15cf8a023ea8 1-143
+web/src/stores/dmCalls/types.ts
+  s_731038fe4fc0d1::t_0f25309e84ad2d 1-26
+web/src/stores/voiceSettings.ts
+  s_ecf7b9e687a24d::t_3071aebe75ba37 20-21,36-37
+web/src/style.css
+  s_ecf7b9e687a24d::t_891ef719c9bfeb 8
+web/src/styles/calls.css
+  s_ecf7b9e687a24d::t_fbe7af92caef5f 1-65
+web/src/types/dmEvents.ts
+  s_5b748b0295d2f4::t_eb432431cfc7c6 1-84
+web/src/types/events.test.ts
+  s_1a92838c482d40::t_533a8cd1946347 33-39
+web/src/types/events.ts
+  s_30e74ceb0962ca::t_fe95533d23396f 10-11,91-94,336,366
+web/src/types/rest.ts
+  s_7e9329d487a94d::t_1242dff9e63738 1480-1500,1502,1511,1562,1580,1611,1627
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c80f108ef0dcade6d9ffbe1c66aec6c988d108a6",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_1a92838c482d40": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-talk-limit-f9c615740774e6fb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_28915fd19e1e49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-arrow-edit-f0518ce8535c51ee",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_30e74ceb0962ca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae5e20c7f981d1793",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_731038fe4fc0d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-saved-later-006f0c1510ca4d15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7e9329d487a94d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-status-profile-6b773a73ee58ea30",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_8895e592af2d2b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-newcomer-audit-5cf650531cfbcba0",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e11d4af221ee25": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aloadtest-build-a0df8b36f37826ce",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ecf7b9e687a24d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-product-setup-e379f010794b742e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
