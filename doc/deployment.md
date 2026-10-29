@@ -38,7 +38,9 @@ network:
   TURN. The app has a relay of its own on 3479 (UDP and TCP; forward both) that
   runs while no external TURN is configured, see
   [operations.md](operations.md#built-in-turn-relay). coturn (`WEBRTC_TURN_URLS`)
-  keeps 3478 and can run beside it.
+  keeps 3478 and can run beside it. Compose publishes 3479 in any case; the
+  forward is only needed while the relay runs, and a port clash is solved with
+  `WEBRTC_BUILTIN_TURN_PORT`.
 
 ## Fresh install
 

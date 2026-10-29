@@ -13,24 +13,40 @@ import (
 func (s *Server) authenticate(ra *turn.RequestAttributes) (string, []byte, bool) {
 	now := s.now()
 	ip := hostOf(ra.SrcAddr)
-	if !s.failLimit.available(ip, now) {
+	// Failures are counted per source address and username: a UDP source can
+	// be spoofed, and a budget per address alone would let anyone lock a real
+	// user (or a whole office behind one NAT) out with forged requests. A
+	// member with a valid username never fails here, so only broken or stale
+	// credentials use up a budget, and only their own.
+	key := ip + "|" + ra.Username
+	if !s.failLimit.available(key, now) {
 		metrics.TURNEvents.With("rate_limited").Inc()
 		return "", nil, false
 	}
 	user, _, err := s.auth.check(ra.Username, now)
 	if err != nil {
-		s.failLimit.allow(ip, now)
+		s.failLimit.allow(key, now)
 		metrics.TURNEvents.With("auth_failed").Inc()
 		s.debug("turn: refused credentials", "from", ip, "err", err)
 		return "", nil, false
 	}
-	if m := int(ra.Method); (m == methodAllocate || m == methodRefresh) && !s.MayRelay(user) {
-		metrics.TURNEvents.With("forbidden").Inc()
-		s.debug("turn: member may not join voice", "from", ip, "user", user)
-		if m == methodRefresh {
-			s.DropMember(user)
+	if m := int(ra.Method); m == methodAllocate || m == methodRefresh {
+		ok, err := (*s.check.Load())(user)
+		switch {
+		case err != nil && m == methodRefresh:
+			// Could not tell: keep the running call rather than cut it.
+			s.debug("turn: permission check failed, keeping the allocation", "user", user, "err", err)
+		case err != nil || !ok:
+			metrics.TURNEvents.With("forbidden").Inc()
+			s.debug("turn: member may not join voice", "from", ip, "user", user, "err", err)
+			if err == nil && m == methodRefresh {
+				s.DropMember(user)
+			}
+			return "", nil, false
 		}
-		return "", nil, false
+	}
+	if s.tcp != nil {
+		s.tcp.authenticated(ra.SrcAddr)
 	}
 	// The credential's username doubles as the allocation's identity: it
 	// carries the member and the expiry the generator needs.

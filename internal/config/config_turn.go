@@ -41,14 +41,17 @@ func (c *Config) validateBuiltinTURN() error {
 	default:
 		return fmt.Errorf("WEBRTC_BUILTIN_TURN must be auto, on or off, got %q", c.WebRTCBuiltinTURN)
 	}
-	// Only an explicit "on" can fail the start: under "auto" an installation
-	// that never asked for the relay keeps starting whatever the port says,
-	// and the relay itself declines (with a warning) when it cannot run.
+	// The host ends up in the TURN URLs of every member, so it is checked
+	// whenever the relay can run (auto without an external TURN, or on).
+	if h := strings.TrimSpace(c.WebRTCBuiltinTURNHost); c.BuiltinTURNEnabled() && strings.ContainsAny(h, "/:@ ?#") && net.ParseIP(h) == nil {
+		return fmt.Errorf("WEBRTC_BUILTIN_TURN_HOST must be a host name or IP address without scheme, port or path, got %q", h)
+	}
+	// Only an explicit "on" can fail the start over the port: under "auto" an
+	// installation that never asked for the relay keeps starting whatever the
+	// port says, and the relay itself declines (with a warning) when it
+	// cannot run.
 	if c.WebRTCBuiltinTURN != BuiltinTURNOn {
 		return nil
-	}
-	if h := c.WebRTCBuiltinTURNHost; strings.ContainsAny(h, "/:@ ?#") && net.ParseIP(h) == nil {
-		return fmt.Errorf("WEBRTC_BUILTIN_TURN_HOST must be a host name or IP address without scheme, port or path, got %q", h)
 	}
 	if c.WebRTCBuiltinTURNPort == 0 {
 		return fmt.Errorf("WEBRTC_BUILTIN_TURN_PORT must be a port number (1-65535), got 0")

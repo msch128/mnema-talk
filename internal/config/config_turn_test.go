@@ -39,6 +39,9 @@ func TestBuiltinTURNSwitch(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := turnConfig(t, tc.env)
+			if tc.wantDefault && cfg.WebRTCBuiltinTURN != BuiltinTURNAuto {
+				t.Errorf("mode = %q, want the default auto", cfg.WebRTCBuiltinTURN)
+			}
 			if got := cfg.BuiltinTURNEnabled(); got != tc.enabled {
 				t.Errorf("BuiltinTURNEnabled = %v, want %v", got, tc.enabled)
 			}
@@ -55,10 +58,10 @@ func TestBuiltinTURNSettingsAreValidated(t *testing.T) {
 		{"WEBRTC_BUILTIN_TURN": "true"},
 		{"WEBRTC_BUILTIN_TURN": "on", "WEBRTC_BUILTIN_TURN_PORT": "0"},
 		{"WEBRTC_BUILTIN_TURN": "on", "WEBRTC_BUILTIN_TURN_PORT": "50010"}, // inside the media range
+		{"WEBRTC_BUILTIN_TURN": "auto", "WEBRTC_BUILTIN_TURN_HOST": "https://turn.example.com/"},
 		{"WEBRTC_BUILTIN_TURN": "on", "WEBRTC_BUILTIN_TURN_HOST": "https://turn.example.com"},
 		{"WEBRTC_BUILTIN_TURN": "on", "WEBRTC_BUILTIN_TURN_HOST": "turn.example.com:3478"},
-		{"WEBRTC_BUILTIN_TURN_PORT": "70000"},
-		{"WEBRTC_BUILTIN_TURN_PORT": "abc"},
+		{"WEBRTC_BUILTIN_TURN": "on", "WEBRTC_BUILTIN_TURN_PORT": "abc"},
 	} {
 		env := base()
 		for k, v := range bad {
@@ -72,6 +75,17 @@ func TestBuiltinTURNSettingsAreValidated(t *testing.T) {
 	// its port range looks like: the relay itself declines when it cannot run.
 	if _, err := FromEnv(lookup(map[string]string{"DATABASE_URL": "postgres://x", "WEBRTC_UDP_PORT_MIN": "3470", "WEBRTC_UDP_PORT_MAX": "3500"})); err != nil {
 		t.Errorf("auto with 3478 inside the media range must not fail the start: %v", err)
+	}
+	// A malformed port only matters while the relay is explicitly switched on.
+	for _, env := range []map[string]string{
+		{"WEBRTC_BUILTIN_TURN_PORT": "abc"},
+		{"WEBRTC_BUILTIN_TURN_PORT": "70000"},
+		{"WEBRTC_BUILTIN_TURN": "off", "WEBRTC_BUILTIN_TURN_PORT": "abc"},
+		{"WEBRTC_BUILTIN_TURN": "off", "WEBRTC_BUILTIN_TURN_HOST": "https://turn.example.com"},
+	} {
+		if cfg := turnConfig(t, env); cfg.WebRTCBuiltinTURN != "off" && cfg.WebRTCBuiltinTURNPort != 3479 {
+			t.Errorf("%v: port = %d, want the default after a warning", env, cfg.WebRTCBuiltinTURNPort)
+		}
 	}
 	cfg := turnConfig(t, nil)
 	if cfg.WebRTCBuiltinTURN != "auto" || cfg.WebRTCBuiltinTURNPort != 3479 {

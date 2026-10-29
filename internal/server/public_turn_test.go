@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
@@ -60,7 +61,7 @@ func iceFor(t *testing.T, cfg *config.Config, relay *turnrelay.Server, member uu
 func TestICEConfigOffersTheBuiltinRelayToMembersWhoMayJoinVoice(t *testing.T) {
 	allowed := map[uuid.UUID]bool{}
 	relay := startTestRelay(t, func(id uuid.UUID) bool { return allowed[id] })
-	cfg := &config.Config{PublicURL: "https://talk.example.test", WebRTCBuiltinTURN: config.BuiltinTURNAuto}
+	cfg := &config.Config{PublicURL: "https://talk.example.test", WebRTCBuiltinTURN: config.BuiltinTURNAuto, WebRTCTURNSecret: "external-secret-0123456789"}
 
 	member, outsider := uuid.New(), uuid.New()
 	allowed[member] = true
@@ -77,8 +78,9 @@ func TestICEConfigOffersTheBuiltinRelayToMembersWhoMayJoinVoice(t *testing.T) {
 	if !strings.HasSuffix(s.Username, ":"+member.String()) || s.Credential == "" {
 		t.Fatalf("credential = %q / %q, want one bound to the member", s.Username, s.Credential)
 	}
-	if strings.Contains(s.Credential, cfg.WebRTCTURNSecret) && cfg.WebRTCTURNSecret != "" {
-		t.Fatal("credential leaks the external TURN secret")
+	// Signed by the relay's own secret, never by the external one.
+	if _, external := turnCredentials(cfg.WebRTCTURNSecret, member, time.Now(), turnCredentialTTL); s.Credential == external || strings.Contains(s.Credential, cfg.WebRTCTURNSecret) {
+		t.Fatal("the built-in credential derives from the external TURN secret")
 	}
 
 	if got := iceFor(t, cfg, relay, outsider); len(got) != 0 {

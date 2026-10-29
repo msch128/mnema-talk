@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 
@@ -66,6 +67,24 @@ func (r *envReader) bool(key string, def bool) bool {
 		return false
 	}
 	return v
+}
+
+// builtinTURNPort reads WEBRTC_BUILTIN_TURN_PORT. Only an explicit "on" lets a
+// malformed value stop the start; otherwise it falls back to the default with
+// a warning, so an installation that never asked for the relay keeps starting.
+func (r *envReader) builtinTURNPort(mode string) uint16 {
+	const key, def = "WEBRTC_BUILTIN_TURN_PORT", 3479
+	raw := r.get(key, strconv.Itoa(def))
+	v, err := strconv.ParseUint(raw, 10, 16)
+	if err == nil {
+		return uint16(v)
+	}
+	if mode == BuiltinTURNOn {
+		r.fail(fmt.Errorf("%s must be a port number (1-65535), got %q", key, raw))
+		return 0
+	}
+	slog.Warn(key+" is not a port number, using the default", "value", raw, "default", def)
+	return def
 }
 
 func (r *envReader) port(key string, def uint16) uint16 {
@@ -134,7 +153,7 @@ func (r *envReader) numericSettings(cfg *Config) (portMin, portMax uint16) {
 	if m := cfg.WebRTCUDPMuxPort; m != 0 && (m < portMin || m > portMax) {
 		r.fail(fmt.Errorf("WEBRTC_UDP_MUX_PORT must be 0 or inside WEBRTC_UDP_PORT_MIN/MAX"))
 	}
-	cfg.WebRTCBuiltinTURNPort = r.port("WEBRTC_BUILTIN_TURN_PORT", 3479)
+	cfg.WebRTCBuiltinTURNPort = r.builtinTURNPort(cfg.WebRTCBuiltinTURN)
 	cfg.Port = strconv.Itoa(int(r.port("PORT", 8080)))
 	cfg.S3ForcePathStyle = r.bool("S3_FORCE_PATH_STYLE", true)
 	cfg.LinkPreviews = r.bool("LINK_PREVIEWS_ENABLED", true)

@@ -5,12 +5,14 @@ import (
 	"errors"
 	"net"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/pion/stun/v4"
 	"github.com/pion/turn/v5"
 )
 
@@ -347,19 +349,127 @@ func TestAllocationAttemptsAreRateLimited(t *testing.T) {
 	}
 }
 
-func TestRepeatedBadCredentialsLockTheAddressOut(t *testing.T) {
+// Failed logins are counted per address and username: a spoofed source cannot
+// lock out the members who share an address, only burn its own made-up names.
+func TestBadCredentialsOnlyUseUpTheirOwnBudget(t *testing.T) {
 	h := newHarness(t, harnessOpts{limits: Limits{FailureBurst: 3, FailuresPerMinute: 1}})
-	for range 5 {
+	before := metrics.TURNEvents.With("rate_limited").Load()
+	for range 6 {
 		_, _ = h.dial("nonsense", "nonsense").Allocate()
 	}
-	// Good credentials from the same address are refused while it is blocked.
-	u, p, _ := h.srv.Credentials(uuid.New())
-	if _, err := h.dial(u, p).Allocate(); err == nil {
-		t.Fatal("an address with exhausted failures was still served")
+	if metrics.TURNEvents.With("rate_limited").Load() == before {
+		t.Fatal("repeated failures with one username were never throttled")
 	}
-	h.advance(10 * time.Minute)
+	u, p, _ := h.srv.Credentials(uuid.New())
 	if _, err := h.dial(u, p).Allocate(); err != nil {
-		t.Fatalf("after the budget refilled: %v", err)
+		t.Fatalf("a member behind the same address was locked out: %v", err)
+	}
+}
+
+func TestTotalQuotaIsReservedBeforeTheSocketExists(t *testing.T) {
+	s := &Server{limits: Limits{PerMember: 4, Total: 3}.withDefaults(), perUser: map[uuid.UUID]int{}, guards: map[*guard]struct{}{}}
+	s.limits.Total = 3
+	var granted atomic.Int32
+	var wg sync.WaitGroup
+	for range 20 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if s.acquire(uuid.New()) {
+				granted.Add(1)
+			}
+		}()
+	}
+	wg.Wait()
+	if granted.Load() != 3 {
+		t.Fatalf("%d concurrent allocations passed a total of 3", granted.Load())
+	}
+}
+
+func TestAMemberWhosePermissionCannotBeCheckedKeepsRunningCalls(t *testing.T) {
+	h := newHarness(t, harnessOpts{})
+	c, id := h.member()
+	if _, err := c.Allocate(); err != nil {
+		t.Fatal(err)
+	}
+	u, _, _ := h.srv.Credentials(id)
+	src := &net.UDPAddr{IP: net.IPv4(192, 0, 2, 1), Port: 4000}
+	req := func(method int) bool {
+		_, _, ok := h.srv.authenticate(&turn.RequestAttributes{Username: u, Realm: Realm, SrcAddr: src, Method: stun.Method(method)})
+		return ok
+	}
+	h.srv.SetRelayCheck(func(uuid.UUID) (bool, error) { return false, errors.New("database down") })
+	if !req(methodRefresh) {
+		t.Error("a refresh was refused because the permission lookup failed")
+	}
+	if req(methodAllocate) {
+		t.Error("a new allocation was granted although the permission lookup failed")
+	}
+	if n := h.srv.Status().Allocations; n != 1 {
+		t.Fatalf("allocations = %d, the running call was dropped", n)
+	}
+	// A definite no still ends it.
+	h.srv.SetRelayCheck(func(uuid.UUID) (bool, error) { return false, nil })
+	if req(methodRefresh) {
+		t.Error("a refresh was granted to a member who may not join voice")
+	}
+	if n := h.srv.Status().Allocations; n != 0 {
+		t.Fatalf("allocations = %d after the member lost the right", n)
+	}
+}
+
+func TestTrickledBytesDoNotHoldATCPSlot(t *testing.T) {
+	h := newHarness(t, harnessOpts{limits: Limits{HandshakeTimeout: 300 * time.Millisecond, IdleTimeout: 10 * time.Second}})
+	slow, err := net.Dial("tcp4", h.addr())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer slow.Close()
+	stop := make(chan struct{})
+	defer close(stop)
+	go func() {
+		for {
+			select {
+			case <-stop:
+				return
+			case <-time.After(80 * time.Millisecond):
+				if _, err := slow.Write([]byte{0}); err != nil {
+					return
+				}
+			}
+		}
+	}()
+	_ = slow.SetReadDeadline(time.Now().Add(3 * time.Second))
+	if _, err := slow.Read(make([]byte, 1)); err == nil {
+		t.Fatal("unexpected data from the relay")
+	} else if ne, ok := err.(net.Error); ok && ne.Timeout() {
+		t.Fatal("a connection trickling bytes was never closed")
+	}
+
+	// A client that authenticates in time is not cut by the handshake limit.
+	conn, err := net.Dial("tcp4", h.addr())
+	if err != nil {
+		t.Fatal(err)
+	}
+	u, p, _ := h.srv.Credentials(uuid.New())
+	c, err := turn.NewClient(&turn.ClientConfig{TURNServerAddr: h.addr(), Conn: turn.NewSTUNConn(conn), Username: u, Password: p, Realm: Realm})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Listen(); err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	relay, err := c.Allocate()
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(700 * time.Millisecond)
+	if _, err := relay.WriteTo([]byte("late"), h.sfuAddr()); err != nil {
+		t.Fatal(err)
+	}
+	if got, _, ok := recvWithin(h.sfu, 2*time.Second); !ok || string(got) != "late" {
+		t.Fatalf("the authenticated TCP connection was cut: %q (ok=%v)", got, ok)
 	}
 }
 

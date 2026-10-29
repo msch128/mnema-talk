@@ -64,7 +64,7 @@ func (s *Server) acquire(user uuid.UUID) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	switch {
-	case len(s.guards) >= s.limits.Total:
+	case s.total >= s.limits.Total:
 		metrics.TURNEvents.With("quota_total").Inc()
 		return false
 	case s.perUser[user] >= s.limits.PerMember:
@@ -72,6 +72,7 @@ func (s *Server) acquire(user uuid.UUID) bool {
 		return false
 	}
 	s.perUser[user]++
+	s.total++
 	return true
 }
 
@@ -86,6 +87,7 @@ func (s *Server) register(g *guard) {
 // unacquire gives back a place taken by acquire that never became an allocation.
 func (s *Server) unacquire(user uuid.UUID) {
 	s.mu.Lock()
+	s.total--
 	if s.perUser[user]--; s.perUser[user] <= 0 {
 		delete(s.perUser, user)
 	}
@@ -103,6 +105,7 @@ func (s *Server) release(g *guard) {
 				delete(s.byClient, k)
 			}
 		}
+		s.total--
 		if s.perUser[g.user]--; s.perUser[g.user] <= 0 {
 			delete(s.perUser, g.user)
 		}

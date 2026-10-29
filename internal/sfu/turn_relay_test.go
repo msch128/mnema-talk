@@ -24,6 +24,36 @@ func freeUDPPort(t *testing.T) uint16 {
 	return uint16(c.LocalAddr().(*net.UDPAddr).Port)
 }
 
+// freeUDPRange returns the first of n consecutive UDP ports that are all free
+// and cannot overflow a uint16.
+func freeUDPRange(t *testing.T, n int) uint16 {
+	t.Helper()
+	for range 50 {
+		first := freeUDPPort(t)
+		if int(first)+n > 65000 {
+			continue
+		}
+		var held []net.PacketConn
+		ok := true
+		for i := range n {
+			c, err := net.ListenPacket("udp4", net.JoinHostPort("127.0.0.1", strconv.Itoa(int(first)+i)))
+			if err != nil {
+				ok = false
+				break
+			}
+			held = append(held, c)
+		}
+		for _, c := range held {
+			_ = c.Close()
+		}
+		if ok {
+			return first
+		}
+	}
+	t.Fatal("no free UDP port range")
+	return 0
+}
+
 // freeRelayPort returns a port free for both UDP and TCP.
 func freeRelayPort(t *testing.T) int {
 	t.Helper()
@@ -117,7 +147,7 @@ func TestRelayOnlyClientsExchangeAudio(t *testing.T) {
 				port := freeUDPPort(t)
 				s, err = NewSFU(port, port, tc.announce, nil, WithUDPMuxPort(port))
 			} else {
-				min := freeUDPPort(t)
+				min := freeUDPRange(t, 21)
 				s, err = NewSFU(min, min+20, tc.announce, nil)
 			}
 			if err != nil {

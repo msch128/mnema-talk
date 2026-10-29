@@ -352,7 +352,7 @@ Voice and video bypass the proxy: forward the UDP range
 `WEBRTC_UDP_PORT_MIN`-`WEBRTC_UDP_PORT_MAX` (default `50000-50050/udp`) to the
 host and set `WEBRTC_NAT_1TO1_IP` to your public IP when the server is behind
 NAT. Users on networks that block UDP use the server's built-in TURN relay:
-forward port 3479 on UDP and TCP as well. Ports,
+forward port 3479 on UDP and TCP as well (only needed while the relay runs). Ports,
 proxy settings, TURN and troubleshooting:
 [doc/operations.md](doc/operations.md) and [doc/deployment.md](doc/deployment.md).
 

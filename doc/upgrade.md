@@ -156,7 +156,9 @@ working and turns the built-in relay off automatically.**
   [operations.md](operations.md#built-in-turn-relay).
 - **`docker-compose.yml` publishes port 3479 (UDP and TCP) for the app.** Take
   the new file (step 3 of the procedure) and forward 3479/udp and 3479/tcp in
-  your router. It does not collide with coturn on 3478. Hosts that freeze their
+  your router (only needed while the relay runs; with `off`, or an external
+  TURN under `auto`, nothing listens there). It does not collide with coturn on
+  3478; if something else uses 3479, set `WEBRTC_BUILTIN_TURN_PORT`. Hosts that freeze their
   compose file keep the old one until they take the new file.
 - **Admin > System** shows the relay (listening, sessions, a reachability
   hint) and warns when it could not start.

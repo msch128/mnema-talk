@@ -394,8 +394,11 @@ and the relay hands their media to the voice server on the same machine.
 **What to forward.** The relay port (`WEBRTC_BUILTIN_TURN_PORT`, default
 `3479`) on **both UDP and TCP** to the host, besides the media range
 (`50000-50050/udp`). It needs no relay port range of its own. Compose
-publishes the port; `TURN_PUBLISH_ADDR` narrows the address it is published on
-(default all). Members are given `turn:<host of PUBLIC_URL>:<port>`, so that
+publishes the port whether the relay runs or not (with `off`, or an external
+TURN under `auto`, nothing listens on it); the forward is only needed while the
+relay runs. If something else on the host uses 3479, set
+`WEBRTC_BUILTIN_TURN_PORT` to a free port. `TURN_PUBLISH_ADDR` narrows the
+address it is published on (default all). Members are given `turn:<host of PUBLIC_URL>:<port>`, so that
 name must resolve to the server itself from the outside, not to a CDN or tunnel
 that only forwards HTTP: set `WEBRTC_BUILTIN_TURN_HOST` to a name that does
 otherwise. Behind `localhost` or a loopback `PUBLIC_URL` the first
@@ -435,12 +438,18 @@ nothing else:
   at every start, so they stop working at a restart and are not
   `WEBRTC_TURN_SECRET`. They are valid for 12 hours (a running call cannot
   renew them, so this is deliberately longer than a long call). Starting or
-  refreshing a session re-checks that the member may still join voice.
+  refreshing a session re-checks that the account is neither disabled nor
+  banned and that the member may still join voice, so a removed member loses
+  the relay at the next refresh (within 10 minutes), not after 12 hours. If
+  that check cannot be made (database down), new sessions are refused but
+  running ones are kept.
 - Limits: 4 sessions per member and 256 in total, 120 allocation attempts a
-  minute per address (burst 60), an address with many failed logins is refused
-  for a while, 4 MiB/s per session towards the voice server, sessions that
-  carry nothing for 2 minutes or outlive their credential are closed, and TCP
-  connections are capped per address and idle-timed.
+  minute per address (burst 60), a username that keeps failing is refused
+  from that address for a while (counted per address and username, so forged
+  requests cannot lock out the members behind one address), 4 MiB/s per
+  session towards the voice server, sessions that carry nothing for 2 minutes
+  or outlive their credential are closed, and TCP connections are capped per
+  address, must authenticate within 15 seconds and are idle-timed.
 - Refused attempts are counted in `mnema_turn_events_total{event}`
   (`auth_failed`, `forbidden`, `rate_limited`, `quota_user`, `quota_total`,
   `peer_denied`, `packet_blocked`, `throttled`) and logged at debug level

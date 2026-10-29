@@ -2,11 +2,13 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/url"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/automod"
@@ -111,7 +113,7 @@ func (c *components) newCore() {
 	c.permSvc.SetUploadCeiling(cfg.MaxUploadMB)
 	hub.SetPermissions(c.permSvc)
 	if d.TURN != nil {
-		d.TURN.SetMayRelay(c.mayJoinVoice)
+		d.TURN.SetRelayCheck(c.mayJoinVoice)
 	}
 	c.pub = hub
 	if d.Events != nil {
@@ -276,16 +278,30 @@ func (c *components) newPush() error {
 }
 
 // mayJoinVoice is what the built-in TURN relay asks before it hands out or
-// honours credentials: the member could join a Talk right now. A failed
-// permission lookup says no.
-func (c *components) mayJoinVoice(user uuid.UUID) bool {
+// honours credentials: the account is neither disabled nor banned and the
+// member could join a Talk right now. An error means the answer is unknown
+// (a database or permission lookup failed), which the relay must not treat as
+// a withdrawal.
+func (c *components) mayJoinVoice(user uuid.UUID) (bool, error) {
 	ctx, cancel := context.WithTimeout(c.ctx, 2*time.Second)
 	defer cancel()
+	if c.d.DB != nil {
+		var active bool
+		if err := c.d.DB.QueryRow(ctx, `SELECT NOT `+auth.InactiveSQL("")+` FROM users WHERE id = $1`, user).Scan(&active); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return false, nil
+			}
+			return false, err
+		}
+		if !active {
+			return false, nil
+		}
+	}
 	snap, err := c.permSvc.Snapshot(ctx)
 	if err != nil {
-		return false
+		return false, err
 	}
-	return snap.MayConnectAnywhere(perm.Subject{ID: user}) && !snap.RulesPending(user)
+	return snap.MayConnectAnywhere(perm.Subject{ID: user}) && !snap.RulesPending(user), nil
 }
 
 // newSystem builds the admin System tab's handler, its ops sampler and, when

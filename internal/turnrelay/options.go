@@ -29,6 +29,9 @@ type Limits struct {
 	// a live call never idles, its connectivity checks flow every few
 	// seconds.
 	IdleTimeout time.Duration
+	// HandshakeTimeout is how long a new TCP connection may take to send a
+	// request the relay accepts, however slowly it trickles bytes.
+	HandshakeTimeout time.Duration
 	// TCPPerAddress and TCPTotal bound the TCP connections to the relay.
 	TCPPerAddress, TCPTotal int
 }
@@ -50,11 +53,19 @@ func (l Limits) withDefaults() Limits {
 	def(&l.BurstBytes, 1<<20)
 	def(&l.TCPPerAddress, 64)
 	def(&l.TCPTotal, 1024)
+	if l.HandshakeTimeout <= 0 {
+		l.HandshakeTimeout = 15 * time.Second
+	}
 	if l.IdleTimeout <= 0 {
 		l.IdleTimeout = 2 * time.Minute
 	}
 	return l
 }
+
+// RelayCheck decides whether a member may use the relay now. A non-nil error
+// means "could not tell" (a database hiccup): a new allocation is then refused,
+// but a refresh of a running one is let through rather than cutting a call.
+type RelayCheck func(uuid.UUID) (bool, error)
 
 // Options configure Start.
 type Options struct {
@@ -107,7 +118,9 @@ type Server struct {
 	byClient map[string]*guard
 	perUser  map[uuid.UUID]int
 
-	mayRelay atomic.Pointer[func(uuid.UUID) bool]
+	check atomic.Pointer[RelayCheck]
+	total int // live and in-flight allocations, under mu
+	tcp   *limitedListener
 
 	probe  atomic.Value // string
 	stop   context.CancelFunc

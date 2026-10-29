@@ -105,7 +105,8 @@ func (s *Server) listen() error {
 	}
 	tcp, tcpErr := net.Listen("tcp4", addr)
 	if tcpErr == nil {
-		cfg.ListenerConfigs = []turn.ListenerConfig{{Listener: newLimitedListener(tcp, s), RelayAddressGenerator: gen, PermissionHandler: s.permit}}
+		s.tcp = newLimitedListener(tcp, s)
+		cfg.ListenerConfigs = []turn.ListenerConfig{{Listener: s.tcp, RelayAddressGenerator: gen, PermissionHandler: s.permit}}
 		closers = append(closers, tcp)
 		s.status.TCP = true
 	} else {
@@ -130,13 +131,25 @@ func (s *Server) listen() error {
 // refuses everyone until this is called.
 func (s *Server) SetMayRelay(fn func(uuid.UUID) bool) {
 	if fn == nil {
-		fn = func(uuid.UUID) bool { return false }
+		s.SetRelayCheck(nil)
+		return
 	}
-	s.mayRelay.Store(&fn)
+	s.SetRelayCheck(func(id uuid.UUID) (bool, error) { return fn(id), nil })
+}
+
+// SetRelayCheck is SetMayRelay for a check that can fail to tell.
+func (s *Server) SetRelayCheck(fn RelayCheck) {
+	if fn == nil {
+		fn = func(uuid.UUID) (bool, error) { return false, nil }
+	}
+	s.check.Store(&fn)
 }
 
 // MayRelay reports whether the member may be handed credentials now.
-func (s *Server) MayRelay(user uuid.UUID) bool { return (*s.mayRelay.Load())(user) }
+func (s *Server) MayRelay(user uuid.UUID) bool {
+	ok, err := (*s.check.Load())(user)
+	return ok && err == nil
+}
 
 func (s *Server) now() time.Time { return s.opts.Now() }
 
