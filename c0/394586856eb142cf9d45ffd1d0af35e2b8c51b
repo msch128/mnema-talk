@@ -1,0 +1,65 @@
+web/src/composables/useSettingsDraft.ts
+  s_06fcde5dbef956::t_fb58e008c8942e 1-179
+web/src/components/BaseDialog.vue
+  s_17ef7810e0243d::t_1a04cc15065d93 24-26,33-43
+web/src/components/SavedIndicator.vue
+  s_7e9329d487a94d::t_15f92d25d89385 1-16
+web/src/components/TalkAccessPresets.vue
+  s_7e9329d487a94d::t_f26a80d2dc70a4 2-6,9,11-15,17-19,21,26,30-48,50-51,53-67
+web/src/components/TalkSettingsDialog.test.ts
+  s_06fcde5dbef956::t_16f2642163f015 13,60,72,77,86,93,102,117,119,133,145,151-155,159-296,304,327
+web/src/components/TalkSettingsDialog.vue
+  s_06fcde5dbef956::t_c1d8005512b55d 3-5,7-15,23,25-31,45,47-52,54-57,59,61-62,64,67,69-113,115,117-118,124-131,133-139,141-154
+web/src/components/UnsavedChangesBar.vue
+  s_17ef7810e0243d::t_da75aacfa4647a 1-42
+web/src/composables/usePreferenceSave.ts
+  s_7e9329d487a94d::t_55d165e8e2c814 1-34
+web/src/composables/useSettingsDraft.test.ts
+  s_5b748b0295d2f4::t_83bd6eac280506 1-268
+web/src/i18n/de.json
+  s_7e9329d487a94d::t_c8c3fd69e772f7 1129-1131,3568-3580
+web/src/i18n/en.json
+  s_7e9329d487a94d::t_7728ea41aa2f57 1129-1131,3568-3580
+web/src/lib/talks.ts
+  s_06fcde5dbef956::t_80a9505044b504 41-42,45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c0394586856eb142cf9d45ffd1d0af35e2b8c51b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7e9329d487a94d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-status-profile-6b773a73ee58ea30",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
