@@ -217,6 +217,29 @@ function applyInputVolume(cx: Cx, ctx: AudioContext, stream: MediaStream, sendSt
   }
 }
 
+// Without a filter or an input gain the capture used to be sent as it is and
+// metered through a clone. The gate switches the sent track off (track.enabled)
+// whenever the level is below the threshold, and WebKit then sometimes left the
+// clone silent for good: the meter read 0 %, the gate never reopened and the
+// member stayed silent for the whole call (seen on a reload, with the capture
+// not yet delivering when the gate first closed). The capture is therefore
+// routed through the audio context like the filtered one: the capture track
+// stays enabled and feeds both the meter and the sent stream, and the gate
+// only switches the sent stream's track. Returns null (the capture is then
+// sent as it is) where the audio graph cannot be built.
+function routeCapture(cx: Cx, ctx: AudioContext, stream: MediaStream): { sendStream: MediaStream; meterSource: AudioNode } | null {
+  try {
+    const source = ctx.createMediaStreamSource(stream)
+    const destination = ctx.createMediaStreamDestination()
+    source.connect(destination)
+    cx.st.rawMicStream = stream
+    return { sendStream: destination.stream, meterSource: source }
+  } catch (err) {
+    console.warn('[WebRTC] Capture routing unavailable:', err)
+    return null
+  }
+}
+
 // Only the desktop gaming bridge needs a native-key lease. The sent
 // microphone passes this gain even at 100% volume and without an AI filter.
 // Resolves to null when the lease cannot be set up.
@@ -295,9 +318,10 @@ export async function setupMicPipeline(cx: Cx, stream: MediaStream): Promise<Med
   const filtered = await applyNoiseFilter(cx, ctx, stream, controller)
   if (filtered.aborted) return null
   const volumed = applyInputVolume(cx, ctx, stream, filtered.sendStream)
-  const sendStream = applyGamingLease(cx, ctx, stream, volumed)
+  const routed = volumed === stream ? routeCapture(cx, ctx, stream) : null
+  const sendStream = applyGamingLease(cx, ctx, stream, routed?.sendStream ?? volumed)
   if (!sendStream) return null
-  attachMeter(cx, ctx, stream, filtered.meterSource)
+  attachMeter(cx, ctx, stream, filtered.meterSource ?? routed?.meterSource ?? null)
   return sendStream
 }
 

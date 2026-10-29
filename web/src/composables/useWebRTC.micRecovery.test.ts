@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { toRaw } from 'vue'
 import { present } from '../media-test.fixture'
 import { t } from '../i18n'
 import { useToastStore } from '../stores/toast'
@@ -129,6 +130,8 @@ describe('switching the microphone in a call', () => {
     vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue(replacement)
     await rtc.applyAudioSettings()
     expect(sent.at(-1)).toEqual({ type: 'voice_speaking', payload: { active: false } })
-    expect(present(replacement.getAudioTracks()[0]).enabled).toBe(false)
+    // The sent track is the one that stays closed; the capture behind it keeps feeding the meter.
+    expect(present(toRaw(voice.localAudioStream)?.getAudioTracks()[0]).enabled).toBe(false)
+    expect(present(replacement.getAudioTracks()[0]).enabled).toBe(true)
   })
 })

@@ -1,4 +1,5 @@
 import { beforeEach, afterEach, expect, vi } from 'vitest'
+import { toRaw } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 import { TestTrack, TestStream, present } from '../media-test.fixture'
 import type { ClientEventPayloads } from '../types/events'
@@ -248,7 +249,9 @@ export async function joined() {
   await join
   const pc = await negotiate()
   const audio = present(pc.senders[0]), screen = present(pc.senders[1]), camera = present(pc.senders[2]), screenAudio = present(pc.senders[3])
-  return { ...ctx, mic, pc, audio, screen, camera, screenAudio }
+  // The captured microphone is routed through the audio context: the mic line sends the stream the gate switches, not the capture itself.
+  const sentMic = present(present(toRaw(ctx.voice.localAudioStream)).getAudioTracks()[0])
+  return { ...ctx, mic, sentMic, pc, audio, screen, camera, screenAudio }
 }
 
 export function stubDisplayMedia(stream: MediaStream) {

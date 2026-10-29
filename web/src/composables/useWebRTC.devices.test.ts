@@ -301,8 +301,11 @@ describe('permission and microphone switching outcomes', () => {
     const replacement = await grantMic()
     await swap
     expect(present(mic.getTracks()[0]).stop).toHaveBeenCalled()
-    expect(present(pc.senders[0]).track).toBe(replacement.getAudioTracks()[0])
-    expect(present(replacement.getAudioTracks()[0]).enabled).toBe(false)
+    const sentTrack = present(toRaw(voice.localAudioStream)?.getAudioTracks()[0])
+    expect(present(pc.senders[0]).track).toBe(sentTrack)
+    // The muted state is on the sent track; the capture behind it keeps feeding the meter.
+    expect(sentTrack.enabled).toBe(false)
+    expect(present(replacement.getAudioTracks()[0]).enabled).toBe(true)
     expect(sent.filter(e => e.type === 'webrtc_answer')).toHaveLength(1)
   })
 
@@ -621,7 +624,7 @@ describe('loopback microphone changes and cancellation errors', () => {
     const stream = fakeStream()
     vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue(stream)
     await rtc.joinVoiceChannel('mic-test-transition')
-    const track = present(stream.getAudioTracks()[0])
+    const track = present(toRaw(voice.localAudioStream)?.getAudioTracks()[0])
     voice.isMicTesting = true
     expect(track.enabled).toBe(true)
     await vi.advanceTimersByTimeAsync(60)

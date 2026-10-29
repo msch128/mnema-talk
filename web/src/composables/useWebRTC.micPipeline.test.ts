@@ -42,6 +42,39 @@ describe('microphone pipeline fallbacks and filter cancellation', () => {
     } finally { Reflect.deleteProperty(window, '__MNEMA_GAMING_BRIDGE__'); vi.unstubAllGlobals() }
   })
 
+  it('switches only the sent track when the gate closes, so the meter that reopens it is never starved', async () => {
+    // WebKit left a meter on a clone of the gated capture silent for good after
+    // a reload: 0 %, the gate never reopened, the member stayed mute all call.
+    vi.useFakeTimers()
+    const { rtc, voice } = setup()
+    voice.noiseMode = 'off'
+    voice.inputVolume = 100
+    voice.hangoverMs = 0
+    voice.autoSensitivity = false
+    voice.sensitivityThreshold = 20
+    const capture = fakeStream()
+    vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue(capture)
+    await rtc.joinVoiceChannel('ch-1')
+    const sent = present(toRaw(voice.localAudioStream)?.getAudioTracks()[0])
+    const captured = present(capture.getAudioTracks()[0])
+
+    FakeAudioContext.sample = 128
+    await vi.advanceTimersByTimeAsync(120)
+    expect(sent.enabled).toBe(false)
+    expect(sent).not.toBe(captured)
+    // The capture stays on, and the meter listens to it directly rather than to a clone of the track the gate switches.
+    expect(captured.enabled).toBe(true)
+    expect(captured.clone).not.toHaveBeenCalled()
+    expect(FakeAudioContext.sources.some(source => source.stream === capture)).toBe(true)
+
+    FakeAudioContext.sample = 150
+    await vi.advanceTimersByTimeAsync(120)
+    expect(sent.enabled).toBe(true)
+    rtc.leaveVoiceChannel()
+    expect(captured.stop).toHaveBeenCalled()
+    expect(sent.stop).toHaveBeenCalled()
+  })
+
   it('falls back to the captured mic when AudioContext construction fails' , async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     vi.stubGlobal('AudioContext', class { constructor() { throw new Error('unavailable') } })
@@ -60,7 +93,9 @@ describe('microphone pipeline fallbacks and filter cancellation', () => {
     const join = rtc.joinVoiceChannel('ch-1')
     const raw = await grantMic()
     await join
-    expect(toRaw(voice.localAudioStream)).toBe(raw)
+    // The capture is routed to the sent stream whether or not it can be metered.
+    expect(toRaw(voice.localAudioStream)).toBe(present(FakeAudioContext.destinations.at(-1)).stream)
+    expect(present(raw.getAudioTracks()[0]).stop).not.toHaveBeenCalled()
   })
 
   it('applies input gain after AI suppression and releases both captured and processed tracks', async () => {
@@ -89,7 +124,8 @@ describe('microphone pipeline fallbacks and filter cancellation', () => {
     const join = rtc.joinVoiceChannel('ch-1')
     const raw = await grantMic()
     await join
-    expect(toRaw(voice.localAudioStream)).toBe(raw)
+    expect(toRaw(voice.localAudioStream)).toBe(present(FakeAudioContext.destinations.at(-1)).stream)
+    expect(present(raw.getAudioTracks()[0]).stop).not.toHaveBeenCalled()
   })
 
   it('discards a microphone pipeline whose filter finishes after leaving', async () => {
@@ -120,7 +156,8 @@ describe('microphone pipeline fallbacks and filter cancellation', () => {
     present(options.onFailure)()
     present(options.onFailure)()
     const replacement = await grantMic()
-    await vi.waitFor(() => expect(toRaw(voice.localAudioStream)).toBe(replacement))
+    await vi.waitFor(() => expect(FakeAudioContext.sources.some(source => source.stream === replacement)).toBe(true))
+    await vi.waitFor(() => expect(toRaw(voice.localAudioStream)).toBe(present(FakeAudioContext.destinations.at(-1)).stream))
     expect(voice.noiseMode).toBe('ai')
     expect(suppressor.models).toHaveLength(1)
     expect(navigator.mediaDevices.getUserMedia).toHaveBeenLastCalledWith({ audio: expect.objectContaining({ noiseSuppression: true }) })
@@ -152,7 +189,8 @@ describe('microphone pipeline fallbacks and filter cancellation', () => {
     await grantMic()
     await join
     const replacement = await grantMic()
-    await vi.waitFor(() => expect(toRaw(voice.localAudioStream)).toBe(replacement))
+    await vi.waitFor(() => expect(FakeAudioContext.sources.some(source => source.stream === replacement)).toBe(true))
+    await vi.waitFor(() => expect(toRaw(voice.localAudioStream)).toBe(present(FakeAudioContext.destinations.at(-1)).stream))
     expect(suppressor.models).toEqual(['gtcrn'])
   })
 
@@ -484,7 +522,8 @@ describe('serialized settings after native source construction fails', () => {
     const retry = rtc.applyAudioSettings()
     const replacement = await grantMic()
     await retry
-    expect(audio.track).toBe(replacement.getAudioTracks()[0])
+    expect(audio.track).toBe(present(toRaw(voice.localAudioStream)?.getAudioTracks()[0]))
+    expect(FakeAudioContext.sources.some(source => source.stream === replacement)).toBe(true)
     expect(voice.currentChannelId).toBe('ch-1')
   })
 })
