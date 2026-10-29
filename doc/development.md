@@ -57,6 +57,8 @@ make check             # everything CI runs: docs and English checks, lint, test
                        # npm audit, docker build
 make e2e               # Playwright (Chromium) against the real binary, see below
 make load-test         # voice/screen-share load test, see loadtest/README.md
+make load-test-host    # static chat/voice load-test tools for the server host (linux amd64 + arm64)
+make test-loadtest     # format, vet and tests of the load-test tools (own module)
 make upgrade-drill     # 0.8.16, 0.9.0, 1.0.0 and 1.1.0 images -> this build with seeded data (FROM_VERSIONS=1.0.0 for one)
 make backup-drill      # backup -> change -> restore on a throwaway stack (FROM_VERSION=1.0.0: back up on that release, restore into this build, check the downgrade refusal)
 make postgres-upgrade-drill # the one-time PostgreSQL 17 -> 18 move

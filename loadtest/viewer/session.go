@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,14 +10,15 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/msch128/mnema-talk/loadtest/viewer/internal/lt"
 	"github.com/pion/webrtc/v4"
 )
 
 // dialVoice opens the app's WebSocket with the member's session cookie.
 func dialVoice(base *url.URL, tk token) (*websocket.Conn, error) {
-	scheme, cookie := "ws", "mnema_session"
+	scheme, cookie := "ws", lt.CookieName(base)
 	if base.Scheme == "https" {
-		scheme, cookie = "wss", "__Host-mnema_session"
+		scheme = "wss"
 	}
 	h := http.Header{}
 	h.Set("Origin", base.Scheme+"://"+base.Host)
@@ -61,11 +63,16 @@ func (m *member) countTrack(tr *webrtc.TrackRemote) {
 	if !video {
 		m.audioT.Add(1)
 	}
+	stats := newTrackStats(classify(tr.Kind(), tr.StreamID()), freezeGap())
+	m.addTrack(stats)
 	buf := make([]byte, 1600)
 	for {
 		n, _, err := tr.Read(buf)
 		if err != nil {
 			return
+		}
+		if n >= 4 {
+			stats.observe(time.Now(), n, binary.BigEndian.Uint16(buf[2:4]))
 		}
 		if video {
 			m.videoMs.CompareAndSwap(0, time.Since(m.startedAt).Milliseconds()+1)
@@ -76,17 +83,25 @@ func (m *member) countTrack(tr *webrtc.TrackRemote) {
 	}
 }
 
-// keepSubscribed renews the screen subscription every 5 s until the member
-// stops.
-func (m *member) keepSubscribed(sharer string) {
+// keepSubscribed renews the subscriptions every 5 s until the member stops:
+// the screens it watches and, when asked, every camera.
+func (m *member) keepSubscribed(sharers []string, cameras bool) {
 	t := time.NewTicker(5 * time.Second)
 	defer t.Stop()
 	for {
-		sub := map[string]any{"kind": "screen", "user_id": sharer, "on": true}
-		if q := m.quality(); q != nil {
-			sub["quality"] = q
+		for _, sharer := range sharers {
+			if sharer == m.id {
+				continue
+			}
+			sub := map[string]any{"kind": "screen", "user_id": sharer, "on": true}
+			if q := m.quality(); q != nil {
+				sub["quality"] = q
+			}
+			m.send("webrtc_subscribe", sub)
 		}
-		m.send("webrtc_subscribe", sub)
+		if cameras {
+			m.send("webrtc_subscribe", map[string]any{"kind": "camera", "all": true, "on": true})
+		}
 		select {
 		case <-t.C:
 		case <-m.stop:
@@ -105,6 +120,10 @@ func (m *member) answerOffer(pc *webrtc.PeerConnection, payload json.RawMessage)
 		return
 	}
 	if err := pc.SetRemoteDescription(offer); err != nil {
+		return
+	}
+	if err := m.startPublishing(pc); err != nil {
+		m.failed.CompareAndSwap(nil, err.Error())
 		return
 	}
 	m.remoteApplied()
@@ -145,13 +164,17 @@ func (m *member) readLoop(conn *websocket.Conn, pc *webrtc.PeerConnection) error
 	}
 }
 
-func run(api *webrtc.API, base *url.URL, tk token, channel, sharer string, m *member) error {
-	conn, err := dialVoice(base, tk)
+func run(api *webrtc.API, c viewerConfig, tk token, m *member) error {
+	conn, err := dialVoice(c.base, tk)
 	if err != nil {
 		return err
 	}
 	m.conn = conn
-	pc, err := api.NewPeerConnection(webrtc.Configuration{})
+	rtcConfig, err := c.rtcConfiguration(tk)
+	if err != nil {
+		return err
+	}
+	pc, err := api.NewPeerConnection(rtcConfig)
 	if err != nil {
 		return err
 	}
@@ -164,11 +187,11 @@ func run(api *webrtc.API, base *url.URL, tk token, channel, sharer string, m *me
 		m.candMu.Unlock()
 	}
 	m.startedAt = time.Now()
-	m.send("voice_join", map[string]any{"channel_id": channel})
+	m.send("voice_join", map[string]any{"channel_id": c.channel})
 	if d := iceTimeout(); d > 0 {
 		go m.watchConnect(d)
 	}
-	m.send("voice_mute_state", map[string]any{"muted": true, "deafened": false})
-	go m.keepSubscribed(sharer)
+	m.send("voice_mute_state", map[string]any{"muted": !m.role.audio, "deafened": false})
+	go m.keepSubscribed(c.sharers, c.watchCameras)
 	return m.readLoop(conn, pc)
 }

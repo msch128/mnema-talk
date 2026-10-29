@@ -608,7 +608,26 @@ clients were verified with up to 24 viewers in one call; beyond that the single
 test machine, not the server, was the limit. These are single runs, not a
 qualified capacity guarantee.
 
-The measurements are reproducible with `make load-test` (see
+### Capacity table (server host)
+
+The scenarios of [`loadtest/host-run.sh`](../loadtest/host-run.sh) run on the
+server host itself, without browsers (see "On the host" in
+[`loadtest/README.md`](../loadtest/README.md)). The cells are filled from the
+`<scenario>.json` results of a run on the reference host; until then they
+read "to be measured". CPU is the app process in cores, averaged over the
+steady phase; memory is its peak resident set. The generator runs on the same
+host, so its own CPU is part of what the host spends.
+
+| Scenario | Load | Server CPU (cores) | Server memory (peak) | Result |
+|----------|------|--------------------|----------------------|--------|
+| Chat, 100 sessions | 10 writers x 0.2 msg/s, typing, reactions, edits | to be measured | to be measured | delivery p50/p95/p99, loss: to be measured |
+| Chat, 300 sessions | 30 writers x 0.2 msg/s | to be measured | to be measured | to be measured |
+| Chat, 1000 sessions | 100 writers x 0.2 msg/s | to be measured | to be measured | to be measured |
+| Voice, direct | 1 screen (1500 kbit/s) to 99 members | to be measured | to be measured | received kbit/s per member, loss, freezes: to be measured |
+| Voice, through the built-in TURN relay | 1 screen and 3 speakers to 100 members | to be measured | to be measured | members through the relay, loss, freezes: to be measured |
+| Voice, mixed | 1 screen, 10 cameras (300 kbit/s), 3 speakers, 100 members watching all | to be measured | to be measured | received kbit/s per member, loss, freezes: to be measured |
+
+The measurements above are reproducible with `make load-test` (see
 [`loadtest/README.md`](../loadtest/README.md)): one sharer, real browsers and
 lightweight Pion viewers, with join/reload stall checks, optional packet loss
 and jitter, server heap and goroutine sampling, and thresholds that fail the
