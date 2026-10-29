@@ -7,6 +7,7 @@ import { useSavedStore } from '../saved'
 import { useForwardQuotesStore } from '../forwardQuotes'
 import { useEventsStore } from '../events'
 import { useOnboardingStore } from '../onboarding'
+import { useFirstRunStore } from '../firstRun'
 import { useAccountStore } from '../account'
 import { useDmCallsStore } from '../dmCalls'
 import { emptyWindow } from '../../lib/messageWindow'
@@ -15,12 +16,13 @@ import { resetWindow, setWindow } from './messageWindow'
 import { closeWebSocket } from './socket'
 import { closeThread } from './threads'
 
-/** Drops what the stores keep of the signed-in member: saved list, quotes, events, onboarding record, account dialog. */
+/** Drops what the stores keep of the signed-in member: saved list, quotes, events, onboarding record, first-run checklist, account dialog. */
 export function resetMemberStores() {
   useSavedStore().reset()
   useForwardQuotesStore().reset()
   useEventsStore().reset()
   useOnboardingStore().reset()
+  useFirstRunStore().reset()
   useAccountStore().reset()
   useDmCallsStore().reset()
 }

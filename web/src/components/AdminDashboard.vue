@@ -4,7 +4,7 @@
 // sheet that opens on the list of sections and shows one section at a time.
 // Tabs stay alive while the dialog is open, so an unsaved draft survives a tab
 // switch; closing the console with an unsaved draft asks first (doc/settings-ux.md).
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { ArrowLeft, X } from '@lucide/vue'
 import { navigate } from '../lib/router'
 import { t } from '../i18n'
@@ -15,6 +15,7 @@ import type { AdminTab } from '../lib/adminNav'
 import { useCompactLayout } from '../composables/useCompactLayout'
 import { provideDraftScope } from '../composables/useSettingsDraft'
 import { useAuthStore } from '../stores/auth'
+import { useFirstRunStore } from '../stores/firstRun'
 import { usePermissionsStore } from '../stores/permissions'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import BaseDialog from './BaseDialog.vue'
@@ -132,6 +133,13 @@ const badges = computed<Partial<Record<AdminTab, string>>>(() =>
 // Focus starts on the dialog itself: no focus frame on a nav item or a button that was not asked for.
 const focusDialog = (root: HTMLElement) => root
 const signedInAs = computed(() => t('admin.nav.signedIn', { name: authStore.user?.display_name || authStore.user?.username || '' }))
+
+// Opening the channels or status page completes that step of the Owner's
+// checklist; closing the console reads the checklist again, as the Owner may
+// have changed what its other steps look at.
+const firstRun = useFirstRunStore()
+watch(activeTab, tab => { if (tab === 'channels' || tab === 'status') void firstRun.visit(tab) }, { immediate: true })
+onBeforeUnmount(() => { void firstRun.reload() })
 
 watch(activeTab, (tab) => {
   if (typeof window !== 'undefined' && window.location.pathname !== `/admin/${tab}`) {

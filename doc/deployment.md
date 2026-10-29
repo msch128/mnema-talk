@@ -71,6 +71,15 @@ built (`scripts/fresh-install-check.sh`).
 
 ### After the first start
 
+The Owner's first sign-in shows a **Get started** list under the channel header:
+name the community, invite people (a button creates and copies a 7-day link),
+review the channels, set up voice, check the status page and, optionally, write
+rules. The steps tick themselves from what exists on the server, or once you
+have opened the channels or status page. Close the list with the cross; the
+server menu brings it back (**Get started checklist**). A community that
+already had members when the Owner first looked starts with it closed. The
+state is kept per Owner (`GET`/`PUT /api/admin/first-run`).
+
 - Create the first invite: Admin console → Invites. Members register with that
   code; there is no public registration.
 - Set the community name and the rules new members accept (Admin console →

@@ -4,9 +4,12 @@ import { createPinia, setActivePinia } from 'pinia'
 import ChatHeader from './ChatHeader.vue'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { useAuthStore } from '../stores/auth'
+import { useFirstRunStore } from '../stores/firstRun'
+import { useOnboardingStore } from '../stores/onboarding'
 import { i18nPlugin, setLocale } from '../i18n'
 import { tooltip } from '../directives/tooltip'
-import { channelFixture } from '../test-fixtures.fixture'
+import { channelFixture, onboardingStateFixture, userFixture } from '../test-fixtures.fixture'
 
 const openSearch = vi.fn()
 vi.mock('../lib/globalSearch', async () => ({ openSearch: (q?: string) => openSearch(q), searchOpen: (await import('vue')).ref(false) }))
@@ -116,5 +119,32 @@ describe('ChatHeader overflow', () => {
     await wrapper.vm.$nextTick()
     expect(wrapper.find('[data-testid="header-more"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="mentions-inbox-button"]').exists()).toBe(true)
+  })
+})
+
+describe('ChatHeader and the Owner\'s checklist', () => {
+  function mountOwnerHeader() {
+    const chat = useChatStore()
+    chat.uncategorized = [channelFixture({ name: 'general' })]
+    chat.activeChannel = chat.uncategorized[0]!
+    useAuthStore().user = userFixture({ role: 'admin' })
+    useOnboardingStore().state = onboardingStateFixture({ welcome_done: true, dismissed_tips: [] })
+    useOnboardingStore().ensureLoaded = vi.fn().mockResolvedValue(undefined)
+    const firstRun = useFirstRunStore()
+    firstRun.ensureLoaded = vi.fn().mockResolvedValue(undefined)
+    return { firstRun, wrapper: mount(ChatHeader, { global: { plugins: [i18nPlugin], directives: { tooltip } } }) }
+  }
+  const steps = [{ id: 'name', done: false, optional: false }]
+
+  it('shows the checklist instead of a tip while it is open, and the tip once it is closed', async () => {
+    const { firstRun, wrapper } = mountOwnerHeader()
+    firstRun.state = { steps, hidden: false, complete: false }
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="first-run"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="tip-bar"]').exists()).toBe(false)
+    firstRun.state = { steps, hidden: true, complete: false }
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="first-run"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="tip-bar"]').exists()).toBe(true)
   })
 })

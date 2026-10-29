@@ -8,11 +8,13 @@ import { t } from '../i18n'
 import { useLaterStore } from '../stores/later'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useNotificationHint } from '../composables/useNotificationHint'
+import { useFirstRunShown } from '../composables/useFirstRunShown'
 import { durationLabel } from '../lib/moderation'
 import MentionsInbox from './MentionsInbox.vue'
 import SavedLaterPanel from './SavedLaterPanel.vue'
 import PinnedMessages from './PinnedMessages.vue'
 import TipBar from './TipBar.vue'
+import FirstRunCard from './FirstRunCard.vue'
 import NavDrawerButton from './NavDrawerButton.vue'
 import DmInfoDialog from './DmInfoDialog.vue'
 import DmTalkActions from './DmTalkActions.vue'
@@ -73,6 +75,7 @@ const channelIcon = computed<Component>(() => {
   return isDm.value ? MessageCircle : Hash
 })
 const { showNotifHint, dismissNotifHint, enableNotifications, notificationMenuItems } = useNotificationHint(() => props.panel)
+const firstRunShown = useFirstRunShown()
 
 function searchInChannel() {
   const channel = chatStore.activeChannel
@@ -287,6 +290,9 @@ function openNotificationMenu(e: MouseEvent) {
     </button>
   </div>
 
-  <!-- One feature tip at a time, never next to the notification hint -->
-  <TipBar v-if="!panel && !showNotifHint" />
+  <!-- One feature tip at a time, never next to the notification hint or the Owner's checklist -->
+  <TipBar v-if="!panel && !showNotifHint && !firstRunShown" />
+
+  <!-- The Owner's "Get started" list; renders nothing for anyone else -->
+  <FirstRunCard v-if="!panel" />
 </template>

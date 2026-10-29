@@ -10,6 +10,7 @@ import { usePermissionsStore } from './stores/permissions'
 import { useServerFeaturesStore } from './stores/serverFeatures'
 import { PERMISSION_BITS } from './lib/permissions'
 import * as router from './lib/router'
+import { requestAdminTab, adminTabRequest } from './lib/adminRequest'
 import { channelFixture, categoryFixture, messageFixture, userFixture, requireValue } from './test-fixtures.fixture'
 import App from './App.vue'
 import { useCompactLayout } from './composables/useCompactLayout'
@@ -337,6 +338,19 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     chat.isConnected = true
     await flushPromises()
     expect(rtc.resumeVoiceSession).toHaveBeenCalledTimes(2)
+  })
+  it('opens the console tab another part of the UI asks for, for people who may open it', async () => {
+    const { w } = await mountApp({ admin: true })
+    requestAdminTab('onboarding')
+    await flushPromises()
+    expect(adminTabRequest.value).toBeNull()
+    expect(w.findComponent({ name: 'AdminDashboard' }).props('initialTab')).toBe('onboarding')
+  })
+  it('does not open the console for a request from a member', async () => {
+    const { w } = await mountApp()
+    requestAdminTab('onboarding')
+    await flushPromises()
+    expect(w.findComponent({ name: 'AdminDashboard' }).exists()).toBe(false)
   })
   it('does not open admin for ordinary members and ignores routes after logout', async () => {
     const { w, auth, chat } = await mountApp()
