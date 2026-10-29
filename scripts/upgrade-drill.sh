@@ -45,9 +45,9 @@ if [ -z "${PREVIOUS_IMAGE:-}" ] && [ -z "${DRILL_LEG:-}" ]; then
   exit 0
 fi
 
-PORT="${DRILL_PORT:-$(free_port)}"
 UDP_MIN="${DRILL_UDP_PORT:-$(free_port_range 11)}"
 UDP_MAX=$((UDP_MIN + 10))
+PORT="${DRILL_PORT:-$(free_port "$UDP_MIN-$UDP_MAX")}"
 BASE="http://127.0.0.1:$PORT"
 ADMIN_PASSWORD="drill-$(openssl rand -hex 8)"
 ALICE_PASSWORD="alice-$(openssl rand -hex 8)"

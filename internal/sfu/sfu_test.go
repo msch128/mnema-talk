@@ -88,15 +88,6 @@ func (c *client) join(s *SFU, room uuid.UUID) {
 	})
 }
 
-// joinNative joins with a media authorization latch, like the desktop app.
-func (c *client) joinNative(s *SFU, room uuid.UUID, authorize func() bool) {
-	c.t.Helper()
-	c.joinWith(func(offer func(webrtc.SessionDescription)) (*Peer, error) {
-		_, p, err := s.JoinWithAuthorization(room, c.id, offer, nil, authorize)
-		return p, err
-	})
-}
-
 func (c *client) joinWith(connect func(offer func(webrtc.SessionDescription)) (*Peer, error)) {
 	c.t.Helper()
 	var mu sync.Mutex

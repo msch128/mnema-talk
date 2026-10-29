@@ -129,6 +129,15 @@ describe('forum post addresses', () => {
     expect(chatStore.openThread).toHaveBeenCalledWith(POST)
   })
 
+  it('stops paging for an unknown short id instead of walking the whole forum', async () => {
+    const { ctx, chatStore } = makeCtx()
+    let n = 0
+    fetchForumPosts.mockImplementation(async () => Array.from({ length: 100 }, () => ({ id: `${String(n++).padStart(8, '2')}-1111-4222-8333-444455556666` })))
+    await applyRoute(ctx, parseRoute('/c/ideas/p/x-deadbeef'))
+    expect(fetchForumPosts).toHaveBeenCalledTimes(50)
+    expect(chatStore.openThread).not.toHaveBeenCalled()
+  })
+
   it.each([
     ['an unknown post', [{ id: OTHER }]],
     ['an ambiguous short id', [{ id: POST }, { id: '0f3a9c1e-2222-4222-8333-444455556666' }]],

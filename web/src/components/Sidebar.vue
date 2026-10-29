@@ -218,13 +218,13 @@ function handleChannelClick(channel: Channel) {
 
 async function handleVoiceUserClick(channel: Channel, user: VoiceUser) {
   if (voiceStore.mediaState[user.id]?.screen) {
+    // The join settles after this click handler resumes, so only a cancelled switch is known here; the watch is recorded and applied once the subscriptions attach.
     if (voiceStore.currentChannelId !== channel.id) {
-      await handleVoiceClick(channel)
+      if (!(await handleVoiceClick(channel))) return
     } else {
       voiceStore.activeView = 'voice'
     }
-    // Only a Talk this member is in can deliver the stream: a cancelled switch or a refused join stays out.
-    if (voiceStore.currentChannelId === channel.id) voiceStore.watchScreen(user.id)
+    voiceStore.watchScreen(user.id)
     return
   }
   chatStore.openUserProfile(user)

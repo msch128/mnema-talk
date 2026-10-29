@@ -23,7 +23,7 @@ const isResettingPassword = ref(false)
 const ownerPassword = ref('')
 const ownerCode = ref('')
 const error = ref('')
-const needsCode = useOwnerNeedsCode()
+const { needsCode, known: codeKnown } = useOwnerNeedsCode()
 
 // Counted in characters like the server does, not UTF-16 units.
 const passwordTooShort = computed(() => [...newPasswordInput.value].length < MIN_PASSWORD_LENGTH)
@@ -71,7 +71,7 @@ async function submitPasswordReset() {
         </p>
       </div>
       <p class="text-sm text-mnema-muted">{{ $t('admin.confirmOwnerPrompt') }}</p>
-      <IdentityFields v-model:password="ownerPassword" v-model:code="ownerCode" :needs-code="needsCode" />
+      <IdentityFields v-model:password="ownerPassword" v-model:code="ownerCode" :needs-code="needsCode" :code-required="codeKnown" />
       <div v-if="error" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger" data-testid="owner-confirm-error">{{ error }}</div>
       <div class="flex justify-end gap-2 pt-2">
         <button

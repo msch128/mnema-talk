@@ -117,10 +117,7 @@ func (r *Room) RequestSourceKeyframe(publisherID uuid.UUID, source Source) {
 }
 
 func (r *Room) isTrackStaleLocked(info *TrackInfo) bool {
-	if r.peers[info.SenderID] != info.publisher || info.isSuperseded() {
-		return true
-	}
-	return info.publisher != nil && !info.publisher.mediaAuthorized()
+	return r.peers[info.SenderID] != info.publisher || info.isSuperseded()
 }
 
 func (r *Room) supersedePreviousCaptureLocked(info *TrackInfo, sourceKey string) {

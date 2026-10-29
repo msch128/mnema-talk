@@ -82,6 +82,8 @@ services:
       # 0 = keep the earlier versions of edited messages (moderator edit history).
       - EDIT_HISTORY_RETENTION_DAYS=${EDIT_HISTORY_RETENTION_DAYS:-0}
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      # Empty = the server default (de); `mnema-talk setup` writes the choice.
+      - INITIAL_LANGUAGE=${INITIAL_LANGUAGE:-}
       - ADMIN_INITIAL_PASSWORD=${ADMIN_INITIAL_PASSWORD:-}
       - WEBRTC_UDP_PORT_MIN=${WEBRTC_UDP_PORT_MIN:-50000}
       - WEBRTC_UDP_PORT_MAX=${WEBRTC_UDP_PORT_MAX:-50050}
@@ -371,6 +373,9 @@ services:
     container_name: mnema-updater
     entrypoint: ["/usr/local/bin/mnema-updater"]
     restart: unless-stopped
+    # Longer than the updater's 2 minute wait for a running swap, so a stop
+    # does not SIGKILL it between retagging and recreating the app.
+    stop_grace_period: 3m
     profiles:
       - autoupdate
     # The Docker socket is root:docker 660; uid 0 without capabilities can use it.
