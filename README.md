@@ -308,7 +308,10 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 
 You need a Linux host with Docker and Docker Compose, a domain with HTTPS
 (through a reverse proxy) and a UDP port range open for voice. No clone and no
-build are needed: [Fresh install in doc/deployment.md](doc/deployment.md#fresh-install)
+build are needed. The shortest path is the setup assistant, `docker run --rm -it
+-v "$PWD:/out" ghcr.io/msch128/mnema-talk setup`, which writes the `.env` and
+compose file ([quick start for Synology, Unraid and a VPS](doc/quick-start.md)).
+By hand: [Fresh install in doc/deployment.md](doc/deployment.md#fresh-install)
 downloads the compose file and `.env.example` of a release, lists the few
 values to set (`PUBLIC_URL`, `JWT_SECRET`, `POSTGRES_PASSWORD`,
 `S3_ACCESS_KEY` / `S3_SECRET_KEY`, `ADMIN_INITIAL_PASSWORD`) and starts the
@@ -403,6 +406,7 @@ and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client
 | **Read first when updating:** what 1.0 promises and what to do before updating; the 1.1 and 1.2 changes are in the upgrade notes | [doc/release-notes-1.0.md](doc/release-notes-1.0.md), [doc/upgrade.md](doc/upgrade.md) |
 | Components, data flow, capacity | [doc/architecture.md](doc/architecture.md) |
 | Configuration, reverse proxy, TURN, backups, metrics and alerts, troubleshooting | [doc/operations.md](doc/operations.md) |
+| Quick start per platform (Synology, Unraid, VPS), setup assistant | [doc/quick-start.md](doc/quick-start.md) |
 | Ports, image tags, platforms, updating | [doc/deployment.md](doc/deployment.md) |
 | Upgrade notes per version, rollback | [doc/upgrade.md](doc/upgrade.md) |
 | Roles, permissions and private channels | [doc/roles-and-permissions.md](doc/roles-and-permissions.md) |

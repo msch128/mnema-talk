@@ -67,6 +67,8 @@ services:
       - WEBHOOK_ALLOW_PRIVATE_TARGETS=${WEBHOOK_ALLOW_PRIVATE_TARGETS:-}
       # Release check against api.github.com every 30 min; false = no request.
       - UPDATE_CHECK_ENABLED=${UPDATE_CHECK_ENABLED:-true}
+      # Compare the server clock with NTP for the admin Status tab.
+      - CLOCK_CHECK_ENABLED=${CLOCK_CHECK_ENABLED:-true}
       # Self-update through the updater sidecar (profile autoupdate). Empty
       # UPDATER_TOKEN = no "update now" button. The app gets no Docker access.
       - UPDATER_URL=${UPDATER_URL:-http://mnema-updater:8080}
@@ -86,6 +88,9 @@ services:
       # Empty = WEBRTC_UDP_PORT_MIN (one shared port for all peers).
       - WEBRTC_UDP_MUX_PORT=${WEBRTC_UDP_MUX_PORT:-}
       - WEBRTC_NAT_1TO1_IP=${WEBRTC_NAT_1TO1_IP:-}
+      # Empty NAT_1TO1_IP: find the public IPv4 with a STUN request at startup.
+      - WEBRTC_AUTO_ANNOUNCE=${WEBRTC_AUTO_ANNOUNCE:-true}
+      - WEBRTC_DETECT_STUN_URLS=${WEBRTC_DETECT_STUN_URLS:-}
       - WEBRTC_STUN_URLS=${WEBRTC_STUN_URLS:-}
       - WEBRTC_TURN_URLS=${WEBRTC_TURN_URLS:-}
       - WEBRTC_TURN_SECRET=${WEBRTC_TURN_SECRET:-}

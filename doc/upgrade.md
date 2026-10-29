@@ -138,6 +138,24 @@ web, desktop or bot client is affected, and the event `native_access_renewed`,
 which the server never sent, is removed from the event registry. A rollback to
 an older image needs the restore of the pre-update backup (see "Rollback" above).
 
+### 1.4.x → next release
+
+Nothing to change; every existing variable keeps working. New for operators:
+
+- **Easier first setup.** `docker run --rm -it ghcr.io/msch128/mnema-talk setup`
+  writes a complete `.env` and `docker-compose.yml`, and the admin Status tab
+  has a *Setup checks* list ([quick start](quick-start.md),
+  [setup checks](operations.md#setup-checks)).
+- **Two new outbound requests, both only from the server's IP address.** A
+  production server with an empty `WEBRTC_NAT_1TO1_IP` finds its public IPv4
+  address with a STUN request to Google or Cloudflare at startup and announces
+  it (`WEBRTC_AUTO_ANNOUNCE=false` turns this off). The server clock is compared
+  with an NTP server (`CLOCK_CHECK_ENABLED=false` turns this off). An install
+  that sets `WEBRTC_NAT_1TO1_IP` sends the first request never. Both are named
+  in the in-app privacy policy (policy version 1.6) while they are active.
+- A `PUBLIC_URL` that is an IPv4 address (a LAN install opened by IP) is now
+  also announced for voice when `WEBRTC_NAT_1TO1_IP` is empty.
+
 ### 1.1.x → 1.2.0
 
 Update with the procedure above and take the backup first. 1.2.0 only adds, apart from raising the security floor (see "Calls and the

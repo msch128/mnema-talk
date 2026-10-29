@@ -7135,6 +7135,13 @@
       },
       "server.Legal": {
         "properties": {
+          "address_detection": {
+            "description": "AddressDetection is true when the server may ask public STUN servers\nfor its own address at startup (WEBRTC_AUTO_ANNOUNCE); ClockCheck is\ntrue when it compares its clock with NTP servers (CLOCK_CHECK_ENABLED).\nBoth reveal only the server's IP address.",
+            "type": "boolean"
+          },
+          "clock_check": {
+            "type": "boolean"
+          },
           "legal_version": {
             "type": "string"
           },
@@ -7175,6 +7182,8 @@
           }
         },
         "required": [
+          "address_detection",
+          "clock_check",
           "legal_version",
           "media_retention_days",
           "operator_country",
@@ -7227,6 +7236,13 @@
           "disk_free_bytes": {
             "type": "integer"
           },
+          "setup": {
+            "description": "Setup is the setup checklist: green, amber and red items, each red or\namber one naming the variable to set.",
+            "items": {
+              "$ref": "#/components/schemas/setupcheck.Check"
+            },
+            "type": "array"
+          },
           "storage": {
             "$ref": "#/components/schemas/server.StorageStatus"
           },
@@ -7248,6 +7264,7 @@
           "auto_deploy",
           "backup",
           "database",
+          "setup",
           "storage",
           "update",
           "version",
@@ -7880,6 +7897,46 @@
           "websocket_connections"
         ],
         "type": "object"
+      },
+      "setupcheck.Check": {
+        "properties": {
+          "detail": {
+            "description": "Detail says what was found, in one sentence.",
+            "type": "string"
+          },
+          "fix": {
+            "description": "Fix names the variable to set and the value to use; empty when ok.",
+            "type": "string"
+          },
+          "id": {
+            "description": "ID is the stable identifier of the check.",
+            "example": "public_url",
+            "type": "string"
+          },
+          "level": {
+            "$ref": "#/components/schemas/setupcheck.Level",
+            "description": "Level is ok (green), warn (amber) or fail (red)."
+          }
+        },
+        "required": [
+          "detail",
+          "id",
+          "level"
+        ],
+        "type": "object"
+      },
+      "setupcheck.Level": {
+        "enum": [
+          "ok",
+          "warn",
+          "fail"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "OK",
+          "Warn",
+          "Fail"
+        ]
       },
       "slash.Result": {
         "properties": {

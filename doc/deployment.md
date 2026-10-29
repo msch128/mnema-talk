@@ -7,6 +7,12 @@ reference, reverse proxy, TURN and monitoring are in
 [upgrade.md](upgrade.md); backups are in
 [operations.md](operations.md#backups-and-restore).
 
+Short, per-platform guides (Synology, Unraid, a plain VPS), including how to
+update each: [quick-start.md](quick-start.md). The steps below are the
+platform-independent reference; the setup assistant
+(`docker run --rm -it ghcr.io/msch128/mnema-talk setup`) does the "Fresh
+install" part for you.
+
 ## Ports
 
 What to open, assuming the default settings and a reverse proxy on the same
@@ -46,7 +52,9 @@ chmod 600 .env
 ```
 
 Edit `.env`: the values below are required in production, and the server
-refuses the public placeholders from `.env.example`.
+refuses the public placeholders from `.env.example`. (The setup assistant in
+[quick-start.md](quick-start.md#the-setup-assistant) generates this file and
+the secrets for you.)
 
 | Variable | Set it to |
 |---|---|
@@ -58,7 +66,8 @@ refuses the public placeholders from `.env.example`.
 | `ADMIN_INITIAL_PASSWORD` | The Owner's password, at least 14 characters; remove it after the first start |
 | `INITIAL_LANGUAGE` | Optional, `de` (default) or `en`: the language of the default category and channel names. Only the first start uses it. |
 
-Then start and check it:
+Then start and check it (the admin Status tab's
+[setup checks](operations.md#setup-checks) list anything still missing):
 
 ```sh
 docker compose config -q

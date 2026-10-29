@@ -65,6 +65,7 @@ function statusFixture(overrides: Partial<OperatorStatus> = {}): OperatorStatus 
       voice_participants: 2,
     },
     warnings: [],
+    setup: [],
     ...overrides,
   }
 }
@@ -243,5 +244,46 @@ describe('AdminStatusTab', () => {
     await flushPromises()
     expect(w.find('[data-testid="db-size"]').text()).toMatch(/TB$/)
     expect(w.find('[data-testid="storage-used-bytes"]').text()).toBe('1.5 KB')
+  })
+
+  it('lists the setup checks, red first, with the fix for every open item', async () => {
+    apiMock.mockResolvedValue(statusFixture({
+      setup: [
+        { id: 'public_url', level: 'ok', detail: 'PUBLIC_URL is https://chat.example.com.' },
+        { id: 'mail', level: 'warn', detail: 'No outgoing mail.', fix: 'Optional: set SMTP_HOST in .env.' },
+        { id: 'voice_address', level: 'fail', detail: 'No public voice address is known.', fix: 'Set WEBRTC_NAT_1TO1_IP=<your public IPv4 address> in .env.' },
+      ],
+    }))
+    const w = keep(mount(AdminStatusTab))
+    await flushPromises()
+
+    const rows = w.findAll('[data-testid^="setup-check-"]')
+    expect(rows.map(r => r.attributes('data-level'))).toEqual(['fail', 'warn', 'ok'])
+    expect(rows[0]?.text()).toContain('Voice address')
+    expect(w.find('[data-testid="setup-fix-voice_address"]').text()).toContain('WEBRTC_NAT_1TO1_IP=')
+    expect(w.find('[data-testid="setup-fix-mail"]').text()).toContain('SMTP_HOST')
+    expect(w.find('[data-testid="setup-fix-public_url"]').exists()).toBe(false)
+    expect(w.find('[data-testid="setup-summary"]').text()).toBe('2 of 3 checks need attention')
+  })
+
+  it('says so when every setup check is green, and falls back to the id for an unknown check', async () => {
+    apiMock.mockResolvedValue(statusFixture({
+      setup: [
+        { id: 'storage', level: 'ok', detail: 'Object storage is ready.' },
+        { id: 'future_check', level: 'ok', detail: 'Something newer.' },
+      ],
+    }))
+    const w = keep(mount(AdminStatusTab))
+    await flushPromises()
+
+    expect(w.find('[data-testid="setup-summary"]').text()).toBe('Everything needed is in place')
+    expect(w.find('[data-testid="setup-check-future_check"]').text()).toContain('future_check')
+  })
+
+  it('shows no setup section when the server sends no checks', async () => {
+    apiMock.mockResolvedValue(statusFixture())
+    const w = keep(mount(AdminStatusTab))
+    await flushPromises()
+    expect(w.find('[data-testid="status-setup"]').exists()).toBe(false)
   })
 })

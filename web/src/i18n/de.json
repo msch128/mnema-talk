@@ -891,7 +891,11 @@
       "rightsComplain": "Datenschutzaufsichtsbehörde zu beschweren",
       "rights2After": " (Art. 77 DSGVO), insbesondere in dem Land Ihres Wohnorts oder des Wohnsitzes des Betreibers.",
       "noiseFilter": "Die KI-Rauschunterdrückung (DeepFilterNet3 bzw. GTCRN) läuft vollständig in Ihrem Browser. Ihr Mikrofonsignal wird dafür an keinen Drittanbieter übertragen; Modell und Programmcode kommen von diesem Server.",
-      "selfService": "Ohne jemanden anzuschreiben: Unter Konto & Sicherheit im Kontomenü kannst du eine Kopie deiner Daten herunterladen (JSON-Dateien in einer ZIP-Datei, einmal pro Tag) und dein Konto selbst löschen. Beim Löschen werden Profil, Avatar, E-Mail-Adresse, Sitzungen und Uploads entfernt; deine Nachrichten bleiben ohne ihren Text als von „Gelöschtes Mitglied“ in ihren Threads stehen. Eine freiwillige E-Mail-Adresse dient nur zur Bestätigung und zum Zurücksetzen deines Passworts und wird anderen Mitgliedern nie angezeigt."
+      "selfService": "Ohne jemanden anzuschreiben: Unter Konto & Sicherheit im Kontomenü kannst du eine Kopie deiner Daten herunterladen (JSON-Dateien in einer ZIP-Datei, einmal pro Tag) und dein Konto selbst löschen. Beim Löschen werden Profil, Avatar, E-Mail-Adresse, Sitzungen und Uploads entfernt; deine Nachrichten bleiben ohne ihren Text als von „Gelöschtes Mitglied“ in ihren Threads stehen. Eine freiwillige E-Mail-Adresse dient nur zur Bestätigung und zum Zurücksetzen deines Passworts und wird anderen Mitgliedern nie angezeigt.",
+      "addressDetectionTitle": "Adress-Ermittlung:",
+      "addressDetection": " Hat der Betreiber die öffentliche Adresse des Servers nicht festgelegt, sendet der Server beim Start (und etwa alle 10 Minuten) eine STUN-Anfrage an Google (stun.l.google.com, Google LLC, USA) oder Cloudflare (stun.cloudflare.com, Cloudflare Inc., USA), um seine eigene Adresse für Sprache zu erfahren. Diese sehen nur die IP-Adresse des Servers; Daten von Nutzerinnen und Nutzern werden nicht übertragen. Der Betreiber kann dies abschalten.",
+      "clockCheckTitle": "Uhrzeit-Prüfung:",
+      "clockCheck": " Etwa alle 6 Stunden fragt der Server einen NTP-Zeitserver (time.cloudflare.com, Cloudflare Inc., USA, oder pool.ntp.org) nach der Uhrzeit, um seine eigene Uhr zu prüfen. Diese sehen nur die IP-Adresse des Servers; Daten von Nutzerinnen und Nutzern werden nicht übertragen. Der Betreiber kann dies abschalten."
     },
     "cookies": {
       "heading": "3. Cookies & lokaler Speicher",
@@ -1321,7 +1325,26 @@
       "warnings": "Betreiber-Warnungen",
       "noWarnings": "Keine aktiven Betreiber-Warnungen",
       "count": "Häufigkeit: {count}",
-      "since": "Aktiv seit: {since}"
+      "since": "Aktiv seit: {since}",
+      "setup": "Einrichtungs-Check",
+      "setupSummaryOk": "Alles Nötige ist eingerichtet",
+      "setupSummaryAttention": "{count} von {total} Prüfungen brauchen Aufmerksamkeit",
+      "level": {
+        "ok": "In Ordnung",
+        "warn": "Hinweis",
+        "fail": "Handlungsbedarf"
+      },
+      "check": {
+        "public_url": "Öffentliche Adresse",
+        "voice_address": "Sprach-Adresse",
+        "voice_udp": "Sprach-Port",
+        "turn": "TURN-Relay",
+        "mail": "E-Mail-Versand",
+        "storage": "Objektspeicher",
+        "database": "Datenbank",
+        "clock": "Serveruhr",
+        "reverse_proxy": "Reverse-Proxy"
+      }
     },
     "users": "Mitgliederverwaltung",
     "searchUsers": "Mitglieder suchen …",

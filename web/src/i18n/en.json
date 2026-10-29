@@ -891,7 +891,11 @@
       "rightsComplain": "lodge a complaint with a data protection supervisory authority",
       "rights2After": " (Art. 77 GDPR), in particular in the country where you live or where the operator is based.",
       "noiseFilter": "AI noise suppression (DeepFilterNet3 or GTCRN) runs entirely in your browser. Your microphone signal is not sent to any third party for it; the model and code come from this server.",
-      "selfService": "Without emailing anyone: under Account & security in the account menu you can download a copy of your data (JSON files in a ZIP, once per day) and delete your account yourself. Deleting erases your profile, avatar, e-mail address, sessions and uploads; your messages stay in their threads as written by “Deleted member” without their text. An optional e-mail address is used only to confirm it and to reset your password, and is never shown to other members."
+      "selfService": "Without emailing anyone: under Account & security in the account menu you can download a copy of your data (JSON files in a ZIP, once per day) and delete your account yourself. Deleting erases your profile, avatar, e-mail address, sessions and uploads; your messages stay in their threads as written by “Deleted member” without their text. An optional e-mail address is used only to confirm it and to reset your password, and is never shown to other members.",
+      "addressDetectionTitle": "Address detection:",
+      "addressDetection": " When the operator has not set the server’s public address, the server sends one STUN request at startup (and about every 10 minutes) to Google (stun.l.google.com, Google LLC, USA) or Cloudflare (stun.cloudflare.com, Cloudflare Inc., USA) to learn its own address for voice. They only see the server’s IP address; no user data is sent. The operator can turn this off.",
+      "clockCheckTitle": "Clock check:",
+      "clockCheck": " About every 6 hours the server asks an NTP time server (time.cloudflare.com, Cloudflare Inc., USA, or pool.ntp.org) for the time to check its own clock. They only see the server’s IP address; no user data is sent. The operator can turn this off."
     },
     "cookies": {
       "heading": "3. Cookies & local storage",
@@ -1321,7 +1325,26 @@
       "warnings": "Operator warnings",
       "noWarnings": "No active operator warnings",
       "count": "Occurrences: {count}",
-      "since": "Active since: {since}"
+      "since": "Active since: {since}",
+      "setup": "Setup checks",
+      "setupSummaryOk": "Everything needed is in place",
+      "setupSummaryAttention": "{count} of {total} checks need attention",
+      "level": {
+        "ok": "OK",
+        "warn": "Attention",
+        "fail": "Fix needed"
+      },
+      "check": {
+        "public_url": "Public address",
+        "voice_address": "Voice address",
+        "voice_udp": "Voice port",
+        "turn": "TURN relay",
+        "mail": "Outgoing mail",
+        "storage": "Object storage",
+        "database": "Database",
+        "clock": "Server clock",
+        "reverse_proxy": "Reverse proxy"
+      }
     },
     "users": "Member management",
     "searchUsers": "Search members…",

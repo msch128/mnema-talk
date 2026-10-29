@@ -4,11 +4,13 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/opwarn"
+	"github.com/msch128/mnema-talk/internal/setupcheck"
 	"github.com/msch128/mnema-talk/internal/version"
 )
 
@@ -23,6 +25,9 @@ type OperatorStatus struct {
 	Backup        BackupStatus     `json:"backup"`
 	Activity      ActivityStatus   `json:"activity"`
 	Warnings      []opwarn.Warning `json:"warnings"`
+	// Setup is the setup checklist: green, amber and red items, each red or
+	// amber one naming the variable to set.
+	Setup []setupcheck.Check `json:"setup"`
 }
 
 // DatabaseStatus reports reachability, database size and migration progress.
@@ -73,11 +78,11 @@ type ActivityStatus struct {
 // @Router /api/admin/status [get]
 func (h *systemHandler) operatorStatus(w http.ResponseWriter, r *http.Request) error {
 	w.Header().Set("Cache-Control", "no-store")
-	httpx.WriteJSON(w, http.StatusOK, h.operatorSnapshot(r.Context()))
+	httpx.WriteJSON(w, http.StatusOK, h.operatorSnapshot(r.Context(), requestOrigin(r)))
 	return nil
 }
 
-func (h *systemHandler) operatorSnapshot(ctx context.Context) OperatorStatus {
+func (h *systemHandler) operatorSnapshot(ctx context.Context, origin string) OperatorStatus {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
@@ -101,6 +106,8 @@ func (h *systemHandler) operatorSnapshot(ctx context.Context) OperatorStatus {
 		Warnings: h.operatorWarnings(),
 	}
 
+	st.Setup = h.setupChecks(st, origin)
+
 	if h.cfg != nil && h.cfg.MediaDiskPath != "" {
 		if free, err := media.FreeDiskBytes(h.cfg.MediaDiskPath); err == nil {
 			st.DiskFreeBytes = &free
@@ -108,6 +115,36 @@ func (h *systemHandler) operatorSnapshot(ctx context.Context) OperatorStatus {
 	}
 
 	return st
+}
+
+// setupChecks evaluates the setup checklist from the snapshot just taken.
+func (h *systemHandler) setupChecks(st OperatorStatus, origin string) []setupcheck.Check {
+	if h.cfg == nil {
+		return []setupcheck.Check{}
+	}
+	in := setupcheck.Input{
+		Cfg:               h.cfg,
+		Runtime:           h.setup,
+		Warnings:          st.Warnings,
+		DBReachable:       st.Database.Reachable,
+		StorageConfigured: h.hasStore,
+		RequestOrigin:     origin,
+	}
+	if h.storage != nil {
+		in.StorageErr = h.storage()
+	}
+	return setupcheck.Run(in)
+}
+
+// requestOrigin is the scheme and host the admin opened the page at. A TLS
+// terminating reverse proxy announces https in X-Forwarded-Proto; the value
+// only feeds an advisory comparison with PUBLIC_URL.
+func requestOrigin(r *http.Request) string {
+	scheme := "http"
+	if r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https") {
+		scheme = "https"
+	}
+	return scheme + "://" + r.Host
 }
 
 func (h *systemHandler) operatorDBStatus(ctx context.Context) DatabaseStatus {

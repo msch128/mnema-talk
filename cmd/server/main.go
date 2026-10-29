@@ -19,7 +19,9 @@ import (
 	"github.com/msch128/mnema-talk/internal/opwarn"
 	"github.com/msch128/mnema-talk/internal/s3"
 	"github.com/msch128/mnema-talk/internal/server"
+	"github.com/msch128/mnema-talk/internal/setupcheck"
 	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/msch128/mnema-talk/internal/stunprobe"
 	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/msch128/mnema-talk/internal/version"
 )
@@ -36,6 +38,9 @@ func run() error {
 	defer stop()
 	if len(os.Args) > 1 && os.Args[1] == "unlock" {
 		return unlockCommand(ctx, os.Args[2:], os.Stdout)
+	}
+	if len(os.Args) > 1 && os.Args[1] == "setup" {
+		return setupCommand(ctx, os.Args[2:], os.Stdin, os.Stdout)
 	}
 	if len(os.Args) > 1 && os.Args[1] == "reset-2fa" {
 		return reset2faCommand(ctx, os.Args[2:], os.Stdout)
@@ -80,15 +85,17 @@ func runWithContext(ctx context.Context) error {
 	media.StartRetentionWorker(ctx, pool, store, cfg.MediaRetentionDays)
 	media.StartOrphanScan(ctx, pool, store)
 
-	voice, closeVoice, err := startVoice(ctx, cfg)
+	setup := &setupcheck.Runtime{}
+	voice, closeVoice, err := startVoice(ctx, cfg, setup)
 	if err != nil {
 		return err
 	}
 	defer closeVoice()
 
 	updates := startUpdateChecker(ctx, cfg)
+	startSetupChecks(ctx, cfg, setup, pool.Ping, store.Ready)
 
-	router, err := server.NewRouter(server.Deps{Config: cfg, DB: pool, Store: store, StorageReady: store.Ready, SFU: voice, Version: version.Current(), Updates: updates, Context: ctx})
+	router, err := server.NewRouter(server.Deps{Config: cfg, DB: pool, Store: store, StorageReady: store.Ready, SFU: voice, Version: version.Current(), Updates: updates, Context: ctx, Setup: setup})
 	if err != nil {
 		return err
 	}
@@ -130,13 +137,16 @@ func warnInsecurePublicURL(cfg *config.Config) {
 // startVoice starts the SFU and returns it with the function that closes it.
 // When it cannot start, voice is disabled: the SFU is nil and the close
 // function does nothing.
-func startVoice(ctx context.Context, cfg *config.Config) (*sfu.SFU, func(), error) {
+func startVoice(ctx context.Context, cfg *config.Config, setup *setupcheck.Runtime) (*sfu.SFU, func(), error) {
 	// Addresses browsers send media to: typically the public IP (or a
-	// dynamic-DNS name for it) plus the LAN IP.
-	announce, err := sfu.ResolveAnnounce(ctx, cfg.WebRTCAnnounce)
+	// dynamic-DNS name for it) plus the LAN IP. Without WEBRTC_NAT_1TO1_IP a
+	// production server works them out itself.
+	ann := setupcheck.ResolveAnnouncement(ctx, cfg, stunprobe.Detect)
+	announce, err := sfu.ResolveAnnounce(ctx, ann.Entries)
 	if err != nil {
 		return nil, nil, err
 	}
+	setup.SetAnnounce(ann.Source, announce, ann.DetectErr)
 	voice, err := sfu.NewSFU(cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax, announce, cfg.WebRTCSTUNURLs, sfu.WithUDPMuxPort(cfg.WebRTCUDPMuxPort))
 	if err != nil {
 		slog.Warn("webrtc sfu unavailable, voice disabled", "err", err)
@@ -149,7 +159,7 @@ func startVoice(ctx context.Context, cfg *config.Config) (*sfu.SFU, func(), erro
 		}
 	}
 	slog.Info("webrtc announce", "ips", announce, "ports", fmt.Sprintf("%d-%d", cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax), "udp_mux_port", cfg.WebRTCUDPMuxPort)
-	if w := cfg.WebRTCReachabilityWarning(); w != "" {
+	if w := cfg.WebRTCReachabilityWarning(); w != "" && len(announce) == 0 {
 		slog.Warn(w)
 		opwarn.Raise(opwarn.WebRTCReachability, 0)
 	}
@@ -165,6 +175,11 @@ func startVoice(ctx context.Context, cfg *config.Config) (*sfu.SFU, func(), erro
 		opwarn.Raise(opwarn.WebRTCUDPMuxDisabled, ports)
 	}
 	voice.KeepAnnounceCurrent(ctx, cfg.WebRTCAnnounce, 5*time.Minute)
+	if ann.Source == setupcheck.SourceDetected {
+		voice.KeepAnnounceDetected(ctx, 10*time.Minute, func(ctx context.Context) (string, error) {
+			return setupcheck.DetectPublicIP(ctx, cfg)
+		})
+	}
 	return voice, closeVoice, nil
 }
 

@@ -81,6 +81,15 @@ COMPOSE=(docker compose -p "$PROJECT" --env-file "$ENV_FILE" -f docker-compose.y
 
 # Refuse collisions before any cleanup that could remove Docker resources.
 "${COMPOSE[@]}" config --quiet
+
+# The setup assistant of the image under test (doc/quick-start.md): it must
+# write an .env and a compose file that docker compose accepts.
+SETUP_DIR="$(mktemp -d)"
+docker run --rm --user "$(id -u):$(id -g)" -v "$SETUP_DIR:/out" "$IMAGE" \
+  setup --non-interactive --skip-preflight --public-url https://chat.example.com >/dev/null
+docker compose --project-directory "$SETUP_DIR" config --quiet
+test "$(stat -c %a "$SETUP_DIR/.env" 2>/dev/null || stat -f %Lp "$SETUP_DIR/.env")" = 600
+rm -rf "$SETUP_DIR"
 for kind in container network volume; do
   case "$kind" in
     container) names="$PROJECT-app $PROJECT-postgres $PROJECT-seaweedfs $PROJECT-coturn $PROJECT-updater $PROJECT-recreator" ;;

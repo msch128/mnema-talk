@@ -4,7 +4,7 @@ import { setLocale } from '../i18n'
 import LegalModal from './LegalModal.vue'
 import BaseDialog from './BaseDialog.vue'
 import type { ServerLegal } from '../types/rest'
-const legal: ServerLegal = { legal_version: '2.0', media_retention_days: 7, operator_country: 'Synthetic country', operator_email: 'operator@example.com', operator_name: 'Synthetic operator', project_notice: 'Synthetic notice', session_expiry_days: 10, stun_servers: ['stun:stun.example.com'], turn_servers: [], update_check: true }
+const legal: ServerLegal = { legal_version: '2.0', media_retention_days: 7, operator_country: 'Synthetic country', operator_email: 'operator@example.com', operator_name: 'Synthetic operator', project_notice: 'Synthetic notice', session_expiry_days: 10, stun_servers: ['stun:stun.example.com'], turn_servers: [], update_check: true, address_detection: true, clock_check: true }
 let wrapper: ReturnType<typeof mount<typeof LegalModal>>
 beforeEach(() => { setLocale('en') })
 afterEach(() => { wrapper?.unmount(); vi.unstubAllGlobals(); setLocale('de') })
@@ -17,6 +17,8 @@ describe('LegalModal', () => {
     expect(wrapper.text()).toContain('stun:stun.example.com')
     expect(wrapper.text()).toContain('2.0')
     expect(wrapper.find('[data-testid="legal-update-check"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="legal-address-detection"]').text()).toContain('stun.cloudflare.com')
+    expect(wrapper.find('[data-testid="legal-clock-check"]').text()).toContain('time.cloudflare.com')
     expect(wrapper.findAll('section')).toHaveLength(5)
     const tabs = wrapper.findAll('button[aria-pressed]')
     for (const [index, sections] of [[1, 1], [2, 2], [3, 1], [4, 1], [0, 5]] as const) {
@@ -31,7 +33,7 @@ describe('LegalModal', () => {
   it.each(['blank', 'unavailable', 'invalid', 'rejected'] as const)('keeps default policy when the response is %s', async mode => {
     const fetcher = vi.fn<typeof fetch>()
     if (mode === 'rejected') fetcher.mockRejectedValue(new Error('synthetic offline'))
-    else fetcher.mockResolvedValue(new Response(JSON.stringify(mode === 'blank' ? { ...legal, legal_version: '', media_retention_days: 0, session_expiry_days: 0, operator_name: '', operator_email: '', operator_country: '', project_notice: '', stun_servers: [], update_check: false } : {}), { status: mode === 'unavailable' ? 503 : 200 }))
+    else fetcher.mockResolvedValue(new Response(JSON.stringify(mode === 'blank' ? { ...legal, legal_version: '', media_retention_days: 0, session_expiry_days: 0, operator_name: '', operator_email: '', operator_country: '', project_notice: '', stun_servers: [], update_check: false, address_detection: false, clock_check: false } : {}), { status: mode === 'unavailable' ? 503 : 200 }))
     vi.stubGlobal('fetch', fetcher)
     wrapper = mount(LegalModal)
     await flushPromises()
@@ -40,5 +42,7 @@ describe('LegalModal', () => {
     expect(wrapper.find('[data-testid="legal-email-unset"]').text()).toBe('not specified by the operator')
     expect(wrapper.text()).not.toContain('v1.4')
     expect(wrapper.find('[data-testid="legal-update-check"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="legal-address-detection"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="legal-clock-check"]').exists()).toBe(false)
   })
 })
