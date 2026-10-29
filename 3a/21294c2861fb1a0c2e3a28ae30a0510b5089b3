@@ -1,0 +1,53 @@
+README.md
+  s_5aa38e778cf1ac::t_f0b5c50a5814fc 355
+cmd/server/turn_test.go
+  s_5aa38e778cf1ac::t_9f9828732272a5 11,66-83,86,108-109
+doc/deployment.md
+  s_5aa38e778cf1ac::t_6f369326a7adea 41-43
+doc/operations.md
+  s_5aa38e778cf1ac::t_aa1db75489a202 397-401,441-445,447-452
+doc/upgrade.md
+  s_5aa38e778cf1ac::t_268f0972fa473d 159-161
+internal/config/config_env.go
+  s_5aa38e778cf1ac::t_85d3054eb58dd4 5,72-89,156
+internal/config/config_turn.go
+  s_5aa38e778cf1ac::t_8eda2f6eaa21e1 44-52
+internal/config/config_turn_test.go
+  s_5aa38e778cf1ac::t_6819d3f19e668e 42-44,61,64,79-89
+internal/server/public_turn_test.go
+  s_5aa38e778cf1ac::t_e922d1df609826 10,64,81-83
+internal/server/router_build.go
+  s_5aa38e778cf1ac::t_76fb203fba0022 5,11,116,281-285,288-299,302,304
+internal/server/turn_relay_integration_test.go
+  s_5aa38e778cf1ac::t_cf463fecfb030b 1-40
+internal/sfu/turn_relay_test.go
+  s_5aa38e778cf1ac::t_6b85741da8a66b 27-56,150
+internal/turnrelay/allocations.go
+  s_5aa38e778cf1ac::t_edae970af492e9 67,75,90,108
+internal/turnrelay/handlers.go
+  s_5aa38e778cf1ac::t_72e29dd60475be 16-22,28,33-45,47-49
+internal/turnrelay/listener.go
+  s_5aa38e778cf1ac::t_af6af60884fb01 6,13-16,24,28,40,44-45,54,58-72,75-76,78,82-83,86-91,95-99,104
+internal/turnrelay/options.go
+  s_5aa38e778cf1ac::t_7202b620c8acb6 32-34,56-58,65-69,121-123
+internal/turnrelay/server.go
+  s_5aa38e778cf1ac::t_13cb9809536c40 108-109,134-135,137-145,149-152
+internal/turnrelay/server_test.go
+  s_5aa38e778cf1ac::t_64b2dcda1de4ce 8,15,352-354,356-357,360-361,363,365-472
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3a21294c2861fb1a0c2e3a28ae30a0510b5089b3",
+  "prompts": {},
+  "sessions": {
+    "s_5aa38e778cf1ac": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-builtin-turn-725a019b5a1e641a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
