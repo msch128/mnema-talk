@@ -27,7 +27,8 @@ name: Release
 # 2. The server ships only as a Docker image for linux/amd64 and linux/arm64,
 #    cross-compiled without QEMU and pushed to GHCR as
 #    :X.Y.Z, :X.Y and :latest, with OCI labels plus BuildKit provenance and
-#    SBOM attestations attached to the image.
+#    SBOM attestations attached to the image. The same image is then copied
+#    by digest to Docker Hub (job dockerhub-mirror) when it is configured.
 #    The desktop app (Windows, macOS Apple silicon, Linux) lives in
 #    msch128/mnema-talk-desktop.
 #    Releases through v0.7.3 keep the ZIP that was attached here.
@@ -222,6 +223,8 @@ jobs:
       contents: read
       packages: write
       id-token: write # keyless cosign signature (Sigstore), this job only
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     env:
       IMAGE: ghcr.io/msch128/mnema-talk
     steps:
@@ -284,6 +287,98 @@ jobs:
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
         run: cosign sign --yes "$IMAGE@$DIGEST"
+
+  # Copies the image that the image job pushed to Docker Hub, by digest: no
+  # rebuild, so the multi-arch index with its provenance and SBOM attestations
+  # is byte-identical and keeps the GHCR digest. The Docker Hub reference is
+  # signed with this workflow's keyless identity, like the GHCR one.
+  # Configuration (none of it is in the repository): repository variable
+  # DOCKERHUB_NAMESPACE and secrets DOCKERHUB_USERNAME and DOCKERHUB_TOKEN.
+  # Without them the job only prints a notice and succeeds, so a missing
+  # mirror never fails a release. Once configured, a digest mismatch fails it.
+  dockerhub-mirror:
+    needs: [release-please, image]
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      packages: read # pull from GHCR
+      id-token: write # keyless cosign signature (Sigstore)
+    env:
+      SOURCE: ghcr.io/msch128/mnema-talk
+      DIGEST: ${{ needs.image.outputs.digest }}
+      VERSION: ${{ needs.release-please.outputs.version }}
+      NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
+    steps:
+      - name: Is the Docker Hub mirror configured?
+        id: cfg
+        env:
+          DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DH_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -eu
+          if [ -z "$NAMESPACE" ] || [ -z "$DH_USER" ] || [ -z "$DH_TOKEN" ]; then
+            echo "::notice::DOCKERHUB_NAMESPACE, DOCKERHUB_USERNAME or DOCKERHUB_TOKEN is not set; the Docker Hub mirror is skipped."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          case "$NAMESPACE" in
+            *[!a-z0-9_-]*) echo "::error::DOCKERHUB_NAMESPACE must be a lowercase Docker Hub namespace"; exit 1 ;;
+          esac
+          case "$DIGEST" in
+            sha256:*) ;; *) echo "::error::the image job gave no digest"; exit 1 ;;
+          esac
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        if: steps.cfg.outputs.enabled == 'true'
+
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        if: steps.cfg.outputs.enabled == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        if: steps.cfg.outputs.enabled == 'true'
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Copy the image by digest
+        if: steps.cfg.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          target="docker.io/$NAMESPACE/mnema-talk"
+          major=${VERSION%%.*}
+          minor=${VERSION%.*}
+          docker buildx imagetools create \
+            --tag "$target:$VERSION" --tag "$target:$minor" --tag "$target:$major" --tag "$target:latest" \
+            "$SOURCE@$DIGEST"
+          for tag in "$VERSION" "$minor" "$major" latest; do
+            got=$(docker buildx imagetools inspect "$target:$tag" --format '{{json .Manifest}}' | jq -r .digest)
+            if [ "$got" != "$DIGEST" ]; then
+              echo "::error::$target:$tag has digest $got, expected $DIGEST"
+              exit 1
+            fi
+          done
+          echo "Mirrored $SOURCE@$DIGEST to $target (:$VERSION, :$minor, :$major, :latest)" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        if: steps.cfg.outputs.enabled == 'true'
+
+      # Same keyless identity as the GHCR signature, so the one documented
+      # `cosign verify` command works for both registries.
+      - name: Sign the Docker Hub image and check it
+        if: steps.cfg.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          ref="docker.io/$NAMESPACE/mnema-talk@$DIGEST"
+          cosign sign --yes "$ref"
+          cosign verify "$ref" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@' >/dev/null
 
   # The desktop client runs a signed bundle of the web app instead of the
   # server's JavaScript (doc/desktop-trusted-client.md). One job builds and

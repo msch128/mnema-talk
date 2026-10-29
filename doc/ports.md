@@ -91,6 +91,7 @@ own connections (to your server, and to the STUN or TURN servers you list in
 | Webhook targets an admin configured | Public addresses; private ones only if listed in `WEBHOOK_ALLOW_PRIVATE_TARGETS` | When a webhook fires | Outgoing webhooks | Do not create webhooks |
 | `discord.com` | 443, TCP | Only when an admin starts a Discord structure import from a template link | Fetch the Discord template ([Import](import.md)) | Do not use the import |
 | `ghcr.io` | 443, TCP | When you pull or update the image | `docker compose pull` and the self-update sidecar pull `ghcr.io/msch128/mnema-talk` | Pin a tag and update by hand |
+| `docker.io`, `registry-1.docker.io` | 443, TCP | Only if you pull the Docker Hub mirror (`docker.io/<namespace>/mnema-talk`) instead of GHCR | `docker compose pull` | Use `ghcr.io` |
 | `tuf-repo-cdn.sigstore.dev` | 443, TCP | Only with the `autoupdate` profile | The updater verifies the image signature through Sigstore before it pulls | `UPDATER_TRUSTED_ROOT` with a local `trusted_root.json` |
 | `raw.githubusercontent.com` | 443, TCP | Fresh install and manual upgrades | Download `docker-compose.yml` and `.env.example` of a release | Copy the files yourself |
 

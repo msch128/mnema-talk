@@ -48,7 +48,8 @@ docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-
 # update button:  --auto-update      other flags: setup --help
 ```
 
-The minimal `.env` it writes is what you would write by hand:
+The minimal `.env` it writes is what you would write by hand. The same image is also published on Docker Hub as `docker.io/<namespace>/mnema-talk` (same digest and signature, see [Verifying a release image](operations.md#verifying-a-release-image)); GHCR stays the primary reference used in this guide.
+
 
 ```sh
 PUBLIC_URL=https://chat.example.com
