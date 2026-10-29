@@ -1,0 +1,25 @@
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_689103d514e792 559
+web/src/composables/useComposerFiles.ts
+  s_06fcde5dbef956::t_689103d514e792 27-29
+web/src/composables/useComposerFiles.test.ts
+  s_06fcde5dbef956::t_389b65f0bf4ccf 76-84
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_689103d514e792 559
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "81adc3377ffb3bb111476facbb7a0bdef0e6d714",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
