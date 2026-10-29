@@ -1,7 +1,6 @@
 package sfu
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -33,19 +32,6 @@ func (s *SFU) AllMediaStates() map[uuid.UUID]map[uuid.UUID]MediaState {
 // connection of the same user. Lookup and join happen under one lock, so a
 // concurrent RemovePeer cannot drop the room in between.
 func (s *SFU) Join(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit)) (*Room, *Peer, error) {
-	return s.joinAuthorized(channelID, userID, sendOffer, sendICE, nil)
-}
-
-// JoinWithAuthorization attaches native transport authorization to every media
-// publication and recipient binding. No caller-supplied key/crypto trust is used.
-func (s *SFU) JoinWithAuthorization(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit), authorize func() bool) (*Room, *Peer, error) {
-	if authorize == nil || !authorize() {
-		return nil, nil, errors.New("native media authorization required")
-	}
-	return s.joinAuthorized(channelID, userID, sendOffer, sendICE, authorize)
-}
-
-func (s *SFU) joinAuthorized(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit), authorize func() bool) (*Room, *Peer, error) {
 	if s.closed.Load() {
 		return nil, nil, errSFUClosed
 	}
@@ -53,12 +39,6 @@ func (s *SFU) joinAuthorized(channelID, userID uuid.UUID, sendOffer func(webrtc.
 	// real time (transports, DTLS and ICE agents), and roomsMu serializes
 	// every join, leave and lookup of every room.
 	api, announced := s.apiAndAnnounced()
-	if authorize != nil {
-		var err error
-		if api, err = s.nativeAPI(authorize); err != nil {
-			return nil, nil, err
-		}
-	}
 	conn, err := newReceiveConn(api, s.iceServers)
 	if err != nil {
 		return nil, nil, err
@@ -76,16 +56,15 @@ func (s *SFU) joinAuthorized(channelID, userID uuid.UUID, sendOffer func(webrtc.
 	r, ok := s.rooms[channelID]
 	if !ok {
 		r = &Room{
-			ID:                  channelID,
-			load:                s.load,
-			sourceAuthorization: s.sourceAuthorization,
-			peers:               make(map[uuid.UUID]*Peer),
-			trackLocals:         make(map[string]*TrackInfo),
-			subs:                make(map[uuid.UUID]*Subscriptions),
-			lastMedia:           make(map[uuid.UUID]MediaState),
-			notifier:            s.notifier,
-			iceServers:          s.iceServers,
-			offerTimeout:        s.offerTimeout,
+			ID:           channelID,
+			load:         s.load,
+			peers:        make(map[uuid.UUID]*Peer),
+			trackLocals:  make(map[string]*TrackInfo),
+			subs:         make(map[uuid.UUID]*Subscriptions),
+			lastMedia:    make(map[uuid.UUID]MediaState),
+			notifier:     s.notifier,
+			iceServers:   s.iceServers,
+			offerTimeout: s.offerTimeout,
 		}
 		s.rooms[channelID] = r
 	}
@@ -93,7 +72,7 @@ func (s *SFU) joinAuthorized(channelID, userID uuid.UUID, sendOffer func(webrtc.
 	r.mu.Lock()
 	r.allowLoopbackCands = announcesLoopback(announced)
 	r.mu.Unlock()
-	return r, r.attachPeer(userID, conn, sendOffer, sendICE, authorize), nil
+	return r, r.attachPeer(userID, conn, sendOffer, sendICE), nil
 }
 
 // RemovePeer disconnects peer if it is still the user's current connection

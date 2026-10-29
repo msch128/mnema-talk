@@ -110,7 +110,8 @@ func TestAnnounceRefreshTracksDNSAndPreservesAddressOnFailure(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = s.Close() })
 	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
+	// The loop reads the swapped resolver: it must be gone before the test restores it.
+	t.Cleanup(func() { cancel(); s.announcers.Wait() })
 	s.KeepAnnounceCurrent(ctx, []string{"announce.test"}, 5*time.Millisecond)
 	// Repeated resolutions of an unchanged address must leave the API intact.
 	api := s.currentAPI()
@@ -149,7 +150,8 @@ func TestAnnounceRefreshReportsShutdownAndStopsOnCancellation(t *testing.T) {
 	}
 	dns.Store(1)
 	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
+	// The loop reads the swapped resolver: it must be gone before the test restores it.
+	t.Cleanup(func() { cancel(); s.announcers.Wait() })
 	s.KeepAnnounceCurrent(ctx, []string{"announce.test"}, 5*time.Millisecond)
 	waitSFUCondition(t, "closed SFU announcement warning", func() bool {
 		return strings.Contains(logs.String(), "webrtc announce: update failed")
@@ -164,7 +166,7 @@ func TestInvalidTransportRangeRejected(t *testing.T) {
 	if _, err := NewSFU(50001, 50000, nil, nil); err == nil || !strings.Contains(err.Error(), "UDP port range") {
 		t.Fatalf("inverted range error = %v", err)
 	}
-	if _, err := buildAPIWithAuthorization(0, 0, []string{"127.0.0.1"}, nil, nil, nil, nil); err != nil {
+	if _, err := buildAPI(0, 0, []string{"127.0.0.1"}, nil, nil); err != nil {
 		t.Fatalf("default API builder: %v", err)
 	}
 }

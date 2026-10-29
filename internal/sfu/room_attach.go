@@ -15,7 +15,7 @@ import (
 
 // attachPeer makes conn the user's connection in the room, replacing an
 // earlier one. It only wires callbacks and maps: nothing in it waits.
-func (r *Room) attachPeer(userID uuid.UUID, conn *receiveConn, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit), authorize func() bool) *Peer {
+func (r *Room) attachPeer(userID uuid.UUID, conn *receiveConn, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit)) *Peer {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	pc := conn.pc
@@ -23,12 +23,11 @@ func (r *Room) attachPeer(userID uuid.UUID, conn *receiveConn, sendOffer func(we
 	r.replacePeerLocked(userID)
 
 	peer := &Peer{
-		authorizeMedia: authorize,
-		ID:             userID,
-		PC:             pc,
-		SendOffer:      sendOffer,
-		SendICE:        sendICE,
-		room:           r,
+		ID:        userID,
+		PC:        pc,
+		SendOffer: sendOffer,
+		SendICE:   sendICE,
+		room:      r,
 
 		allowLoopbackCands: r.allowLoopbackCands,
 	}
@@ -321,7 +320,7 @@ const (
 // publisherVerdict re-checks, per packet, that the track is still current and
 // its publisher still allowed to send it.
 func publisherVerdict(info *TrackInfo) packetVerdict {
-	if info.isSuperseded() || info.publisher != nil && !info.publisher.mediaAuthorized() {
+	if info.isSuperseded() {
 		return endTrack
 	}
 	// Permission revoked while the track was live: drop its packets.
