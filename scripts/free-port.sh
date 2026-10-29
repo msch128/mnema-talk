@@ -11,12 +11,18 @@
 FREE_PORT_LOW="${FREE_PORT_LOW:-20000}"
 FREE_PORT_HIGH="${FREE_PORT_HIGH:-32000}"
 
-# free_port_range COUNT: prints the first port of COUNT consecutive ports that
-# are free for both TCP and UDP on 127.0.0.1 and 0.0.0.0.
+# free_port_range COUNT [TAKEN...]: prints the first port of COUNT consecutive
+# ports that are free for both TCP and UDP on 127.0.0.1 and 0.0.0.0. Each TAKEN
+# is a port or a FIRST-LAST range the caller has picked already but nothing
+# binds yet, so the new ports stay clear of it.
 free_port_range() {
-  python3 - "$1" "$FREE_PORT_LOW" "$FREE_PORT_HIGH" <<'PY'
+  python3 - "$1" "$FREE_PORT_LOW" "$FREE_PORT_HIGH" "${@:2}" <<'PY'
 import random, socket, sys
 count, low, high = (int(a) for a in sys.argv[1:4])
+taken = set()
+for spec in sys.argv[4:]:
+    first, _, last = spec.partition("-")
+    taken.update(range(int(first), int(last or first) + 1))
 
 def free(port):
     for kind in (socket.SOCK_STREAM, socket.SOCK_DGRAM):
@@ -32,12 +38,12 @@ def free(port):
 
 for _ in range(200):
     first = random.randint(low, high - count)
-    if all(free(p) for p in range(first, first + count)):
+    if all(p not in taken and free(p) for p in range(first, first + count)):
         print(first)
         sys.exit(0)
 sys.exit("no free port range of %d in %d-%d" % (count, low, high))
 PY
 }
 
-# free_port: one free port.
-free_port() { free_port_range 1; }
+# free_port [TAKEN...]: one free port, clear of the TAKEN ports and ranges.
+free_port() { free_port_range 1 "$@"; }

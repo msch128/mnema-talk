@@ -10,10 +10,11 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 ROOT="$PWD"
 source "$ROOT/scripts/free-port.sh"
-PG_PORT="${SHOTS_PG_PORT:-$(free_port)}"
-S3_PORT="${SHOTS_S3_PORT:-$(free_port)}"
-APP_PORT="${SHOTS_APP_PORT:-$(free_port)}"
 UDP_MIN="$(free_port_range 51)"
+# The ports are not bound yet, so each pick is told about the ones before it.
+PG_PORT="${SHOTS_PG_PORT:-$(free_port "$UDP_MIN-$((UDP_MIN + 50))")}"
+S3_PORT="${SHOTS_S3_PORT:-$(free_port "$UDP_MIN-$((UDP_MIN + 50))" "$PG_PORT")}"
+APP_PORT="${SHOTS_APP_PORT:-$(free_port "$UDP_MIN-$((UDP_MIN + 50))" "$PG_PORT" "$S3_PORT")}"
 BIN="$ROOT/bin/mnema-talk-shots"
 LOG="$(mktemp)"
 COMPOSE=(docker compose -p mnema-shots -f "$ROOT/e2e/docker-compose.yml")

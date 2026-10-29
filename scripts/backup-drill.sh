@@ -27,9 +27,9 @@ if [ -n "${FROM_VERSION:-}" ]; then
   drill_pull_image "$START_IMAGE"
   echo "==> cross-version: back up on $START_IMAGE, restore into $IMAGE"
 fi
-PORT="${DRILL_PORT:-$(free_port)}"
 UDP_MIN="${DRILL_UDP_PORT:-$(free_port_range 11)}"
 UDP_MAX=$((UDP_MIN + 10))
+PORT="${DRILL_PORT:-$(free_port "$UDP_MIN-$UDP_MAX")}"
 BASE="http://127.0.0.1:$PORT"
 ADMIN_PASSWORD="drill-$(openssl rand -hex 8)"
 

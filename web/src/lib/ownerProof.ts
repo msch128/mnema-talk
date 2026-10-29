@@ -10,18 +10,22 @@ export const ownerProof = (password: string, code: string): OwnerProof => ({ cur
 /**
  * Whether the signed-in Owner has two-factor sign-in on, i.e. whether the
  * confirmation needs a code. Unknown (not loaded, or the lookup failed) counts
- * as on: asking for a code the server ignores costs less than refusing the
- * request.
+ * as on, but `known` stays false so the field is shown without being required:
+ * the server decides, and an Owner without two-factor sign-in can still submit.
  */
 export function useOwnerNeedsCode() {
   const needsCode = ref(true)
+  const known = ref(false)
   onMounted(async () => {
     try {
       const info = await api('/api/users/me/account', { decode: decodeAuthAccountInfo })
-      if (info) needsCode.value = !!info.two_factor_enabled
+      if (info) {
+        needsCode.value = !!info.two_factor_enabled
+        known.value = true
+      }
     } catch (err) {
       void err
     }
   })
-  return needsCode
+  return { needsCode, known }
 }
