@@ -1,0 +1,14 @@
+.github/workflows/ff-verify.yml
+  h_0ff4f4713441f4 1-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3079af3c6784ecfb3c1da29c9e51caf4415f08e8",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
