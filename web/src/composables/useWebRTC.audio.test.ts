@@ -392,7 +392,7 @@ describe('voice activity, loopback and window lifecycle', () => {
     async function watched() {
       const ctx = await timedCall()
       ctx.voice.warnNoAudioDetected = true
-      ctx.voice.inputMode = 'vad'
+      ctx.voice.inputMode = 'activity'
       const toasts = useToastStore()
       vi.spyOn(toasts, 'info')
       return { ...ctx, toasts }
