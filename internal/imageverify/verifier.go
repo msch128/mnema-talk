@@ -121,7 +121,7 @@ func (v *Verifier) Verify(ctx context.Context, image string) (*Result, error) {
 	}
 	repo := ref.Context()
 	if !v.policy.Allows(repo.Name()) {
-		return nil, untrusted("repository %s is not %s", repo.Name(), v.policy.Repository)
+		return nil, untrusted("repository %s is not one of %s", repo.Name(), strings.Join(v.policy.Trusted(), ", "))
 	}
 	if _, pinned := ref.(name.Digest); pinned {
 		return nil, untrusted("%s is pinned by digest; there is nothing to update", image)

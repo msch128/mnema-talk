@@ -151,7 +151,7 @@ func Run(getenv func(string) string, stderr io.Writer) int {
 		defer cancel()
 		_ = hs.Shutdown(shutdown)
 	}()
-	log.Info("updater ready", "listen", cfg.Listen, "repository", cfg.Policy.Repository, "identity", cfg.Policy.IdentityRegexp)
+	log.Info("updater ready", "listen", cfg.Listen, "repository", cfg.Policy.Repository, "mirror", cfg.Policy.Mirror, "identity", cfg.Policy.IdentityRegexp)
 	if err := hs.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Error("serve", "err", err)
 		return 1

@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"regexp"
 	"regexp/syntax"
+	"slices"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -127,14 +128,20 @@ func DaemonRepository(repo string) string {
 	return repo
 }
 
-// Allows reports whether repo (a normalised name) is one the policy trusts.
-func (p Policy) Allows(repo string) bool {
-	for _, allowed := range []string{p.Repository, p.Mirror} {
-		if n, ok := NormalizeRepository(allowed); ok && allowed != "" && n == repo {
-			return true
+// Trusted lists the normalised names of the repositories the policy trusts.
+func (p Policy) Trusted() []string {
+	var out []string
+	for _, r := range []string{p.Repository, p.Mirror} {
+		if n, ok := NormalizeRepository(r); ok && r != "" {
+			out = append(out, n)
 		}
 	}
-	return false
+	return out
+}
+
+// Allows reports whether repo (a normalised name) is one the policy trusts.
+func (p Policy) Allows(repo string) bool {
+	return slices.Contains(p.Trusted(), repo)
 }
 
 // validateIdentity requires the pattern to be anchored as a whole: a
