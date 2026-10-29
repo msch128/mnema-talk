@@ -28,7 +28,11 @@ func (c *components) buildHandler() http.Handler {
 		httpx.CORS(cfg.AllowedOrigins),
 	)
 	r.Route("/api", c.mountAPI)
-	r.Handle("/*", web.Handler())
+	index := c.d.WebIndex
+	if index == nil {
+		index = web.IndexHTML()
+	}
+	r.Handle("/*", newSharePages(web.Handler(), index, cfg.PublicURL, c.onboardH))
 	return r
 }
 
