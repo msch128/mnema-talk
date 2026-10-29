@@ -1,0 +1,19 @@
+e2e/tests/talk-reactions.spec.ts
+  s_fc0f81897b6653::t_915612874eb080 44,89,91,98-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "16a324abb35abcbe58df7a5ff28a5b0e37c20823",
+  "prompts": {},
+  "sessions": {
+    "s_fc0f81897b6653": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-tests-fc20e0fa5cecb986",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
