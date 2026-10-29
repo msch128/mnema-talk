@@ -43,13 +43,15 @@ jobs:
       matrix:
         group:
           - name: sealing
-            specs: browser-sealing.spec.ts key-lifecycle.spec.ts late-join.spec.ts
+            specs: browser-sealing.spec.ts key-lifecycle.spec.ts
           - name: screen
             specs: screenshare.spec.ts stage-switch.spec.ts
           - name: talk
             specs: talk-extras.spec.ts voice-chat.spec.ts
           - name: basics
             specs: smoke.spec.ts roles.spec.ts
+          - name: audio
+            specs: audio-stall.spec.ts late-join.spec.ts
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
