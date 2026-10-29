@@ -46,3 +46,11 @@ export function useLeaveGuard(dirty: Ref<boolean>) {
     scope?.members.delete(member)
   })
 }
+
+/** Ctrl/Cmd+S runs `save` and keeps the browser's own "save page" away. */
+export function onSaveShortcut(e: KeyboardEvent, save: () => unknown) {
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
+    e.preventDefault()
+    void save()
+  }
+}

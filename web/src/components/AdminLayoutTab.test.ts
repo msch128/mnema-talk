@@ -91,10 +91,7 @@ describe('layout editing recovery and unsaved order', () => {
     await ch(w, 11).trigger('dragover')
     await ch(w, 11).trigger('dragstart')
     await ch(w, 11).trigger('dragend')
-    await w
-      .findAll('button')
-      .find((b) => b.text() === 'Save layout')!
-      .trigger('click')
+    await w.find('[data-testid="save-layout-button"]').trigger('click')
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith(
       '/api/admin/layout',
@@ -114,7 +111,7 @@ describe('layout editing recovery and unsaved order', () => {
     await w.find('form').trigger('submit')
     await flushPromises()
     expect(cat(w).text()).toContain('Renamed')
-    expect(w.text()).toContain('Unsaved changes')
+    expect(w.text()).toContain('You have unsaved changes')
     await cat(w).find('[data-testid="rename-category"]').trigger('click')
     await w.find('[data-dialog-close]').trigger('click')
     await flushPromises()
@@ -162,10 +159,15 @@ describe('layout editing recovery and unsaved order', () => {
       apiMock.mockRejectedValueOnce(new Error('edit denied'))
       await w.find('form').trigger('submit')
       await flushPromises()
-      expect(errors()).toContain('edit denied')
+      expect(w.find('[data-testid="unsaved-error"]').text()).toContain('edit denied')
+      expect(w.find('form').exists()).toBe(true)
+      // The refused rename stays unsaved, so closing asks first.
+      confirmMock.mockResolvedValueOnce(false)
+      await w.find('[data-dialog-close]').trigger('click')
+      await flushPromises()
       expect(w.find('form').exists()).toBe(true)
       await w.find('[data-dialog-close]').trigger('click')
-    await flushPromises()
+      await flushPromises()
       expect(w.find('form').exists()).toBe(false)
       await item.find(`[data-testid="rename-${kind}"]`).trigger('click')
       w.findComponent(BaseDialog).vm.$emit('close')
@@ -196,7 +198,7 @@ describe('layout editing recovery and unsaved order', () => {
     await ch(w, 10).find('[data-testid="delete-channel"]').trigger('click')
     await flushPromises()
     expect(ch(w, 10).exists()).toBe(false)
-    expect(w.text()).toContain('Unsaved changes')
+    expect(w.text()).toContain('You have unsaved changes')
   })
   it('reports a save failure and preserves the unsaved layout', async () => {
     const w = await openLayout()
@@ -205,7 +207,7 @@ describe('layout editing recovery and unsaved order', () => {
     await w.find('[data-testid="save-layout-button"]').trigger('click')
     await flushPromises()
     expect(errors()).toContain('save denied')
-    expect(w.text()).toContain('Unsaved changes')
+    expect(w.text()).toContain('You have unsaved changes')
     expect(
       w.find('[data-testid="save-layout-button"]').attributes('disabled'),
     ).toBeUndefined()
@@ -240,7 +242,7 @@ describe('layout editing recovery and unsaved order', () => {
     resolveReload(tree())
     await flushPromises()
     expect(cat(w).text()).toContain('new name')
-    expect(w.text()).toContain('Unsaved changes')
+    expect(w.text()).toContain('You have unsaved changes')
   })
   it('handles initial loading failures', async () => {
     apiMock.mockRejectedValue(new Error('layout offline'))
@@ -369,14 +371,14 @@ describe('layout save and create races', () => {
     release()
     await flushPromises()
     expect(calls.filter(c => c.path === '/api/admin/layout')).toHaveLength(1)
-    expect(w.text()).toContain('Unsaved changes')
+    expect(w.text()).toContain('You have unsaved changes')
     expect(w.findAll('[data-testid^="category-item-"]')[0]!.attributes('data-testid')).toBe(`category-item-${fixtureId(20)}`)
   })
 
-  it('sends one save for a double click on the banner button', async () => {
+  it('sends one save for a double click on the Save button', async () => {
     const { w, calls, release } = await open()
     await w.find('[data-testid^="category-item-"] [data-testid="move-down-category"]').trigger('click')
-    const banner = w.findAll('button').find(b => b.text() === 'Save layout' && b.classes().includes('btn-primary'))!
+    const banner = w.find('[data-testid="save-layout-button"]')
     await banner.trigger('click')
     await banner.trigger('click')
     release()

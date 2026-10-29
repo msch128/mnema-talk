@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { Plus, Save } from '@lucide/vue'
+import { Plus } from '@lucide/vue'
 
-// The layout editor's toolbar: a new category and saving the order.
+// The layout editor's toolbar: a new category (an action; the order is saved by the unsaved-changes bar).
 defineProps({
-  saving: { type: Boolean, default: false },
-  creating: { type: Boolean, default: false },
-  changed: { type: Boolean, default: false }
+  creating: { type: Boolean, default: false }
 })
-const emit = defineEmits<{ create: []; save: [] }>()
+const emit = defineEmits<{ create: [] }>()
 const newCategoryName = defineModel<string>('newCategoryName', { required: true })
 </script>
 
@@ -33,22 +31,5 @@ const newCategoryName = defineModel<string>('newCategoryName', { required: true 
         <span>{{ $t('admin.addCategory') }}</span>
       </button>
     </div>
-
-    <!-- Save Layout button -->
-    <button
-      data-testid="save-layout-button"
-      type="button"
-      :disabled="saving"
-      :class="[
-        'flex shrink-0 items-center justify-center gap-1.5 px-3 py-1 rounded-md text-sm font-semibold transition shadow-xs',
-        changed
-          ? 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover ring-2 ring-mnema-accent/40'
-          : 'bg-mnema-elevated border border-mnema-border text-mnema-muted hover:text-mnema-text'
-      ]"
-      @click="emit('save')"
-    >
-      <Save class="w-4 h-4" />
-      <span>{{ saving ? $t('common.save') : $t('admin.saveLayout') }}</span>
-    </button>
   </div>
 </template>

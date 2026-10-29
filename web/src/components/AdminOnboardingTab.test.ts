@@ -101,8 +101,11 @@ describe('AdminOnboardingTab', () => {
     apiMock.mockRejectedValue(new Error('nope'))
     await ok.find('form').trigger('submit')
     await flushPromises()
-    expect(useToastStore().toasts.length).toBe(2)
+    // A failed save is shown inline, the draft stays as typed and can be saved again.
+    expect(useToastStore().toasts.length).toBe(1)
+    expect(ok.find('[data-testid="unsaved-error"]').text()).toBe('nope')
     expect(ok.find<HTMLInputElement>('#onb-name').element.value).toBe('Changed')
+    expect(ok.find('[data-testid="onboarding-save"]').attributes('disabled')).toBeUndefined()
   })
 
   it('refuses over-long texts', async () => {
@@ -152,5 +155,30 @@ describe('AdminOnboardingTab', () => {
     const texts = useToastStore().toasts.map(x => x.text)
     expect(texts).toContain('Welcome and rules saved.')
     expect(useToastStore().toasts.some(x => x.type === 'error')).toBe(false)
+  })
+
+  it('counts only real differences as changes', async () => {
+    const w = await mountTab({ ...settings, rules_text: 'Be kind', rules_version: 1 })
+    const saveOff = () => w.find('[data-testid="onboarding-save"]').attributes('disabled') !== undefined
+    await w.find('#onb-name').setValue('  Home ')
+    expect(saveOff()).toBe(true)
+    await w.find('[data-testid="inactivity-days"]').setValue('9')
+    expect(saveOff()).toBe(false)
+    await w.find('[data-testid="inactivity-days"]').setValue('7')
+    expect(saveOff()).toBe(true)
+    await w.find('[data-testid="reaccept"]').setValue(true)
+    expect(saveOff()).toBe(false)
+    await w.find('[data-testid="unsaved-reset"]').trigger('click')
+    expect(saveOff()).toBe(true)
+    expect(w.find<HTMLInputElement>('[data-testid="reaccept"]').element.checked).toBe(false)
+  })
+
+  it('stores nothing before Save and asks before the draft is dropped', async () => {
+    const w = await mountTab()
+    apiMock.mockClear()
+    await w.find('#onb-name').setValue('Elsewhere')
+    await w.find('#onb-start').setValue(CH_TEXT)
+    expect(apiMock).not.toHaveBeenCalled()
+    expect(w.find('[data-testid="unsaved-status"]').text()).toBe('You have unsaved changes')
   })
 })

@@ -2,8 +2,8 @@
 // Admin dashboard shell: the grouped navigation and one component per tab. On a
 // desktop the navigation is a sidebar; on a phone the console is a full-screen
 // sheet that opens on the list of sections and shows one section at a time.
-// Tabs stay alive while the dialog is open, so an unsaved layout survives a tab
-// switch.
+// Tabs stay alive while the dialog is open, so an unsaved draft survives a tab
+// switch; closing the console with an unsaved draft asks first (doc/settings-ux.md).
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { ArrowLeft, X } from '@lucide/vue'
 import { navigate } from '../lib/router'
@@ -13,6 +13,7 @@ import { decodeChatReportsPage } from '../types/rest'
 import { ALL_TABS } from '../lib/adminNav'
 import type { AdminTab } from '../lib/adminNav'
 import { useCompactLayout } from '../composables/useCompactLayout'
+import { provideDraftScope } from '../composables/useSettingsDraft'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
@@ -46,6 +47,8 @@ const authStore = useAuthStore()
 const { isCompact } = useCompactLayout()
 const permissions = usePermissionsStore()
 const features = useServerFeaturesStore()
+// Every draft inside a tab registers here, so closing asks once for all of them.
+const drafts = provideDraftScope()
 
 // Each tab needs its own permission; storage and system are the Owner's.
 const ALLOWED: Record<AdminTab, () => boolean> = {
@@ -138,6 +141,7 @@ watch(activeTab, (tab) => {
   <BaseDialog
     panel-class="max-w-5xl h-[85vh] max-h-[860px] max-md:fixed max-md:inset-0 max-md:h-auto max-md:max-h-none max-md:max-w-none max-md:rounded-none max-md:border-0 max-md:pt-[env(safe-area-inset-top)] max-md:pb-[env(safe-area-inset-bottom)]"
     :initial-focus="focusDialog"
+    :guard="drafts.guard"
     @close="emit('close')"
   >
     <template #default="{ titleId, close }">

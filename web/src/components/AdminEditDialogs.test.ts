@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import AdminEditDialogs from './AdminEditDialogs.vue'
@@ -9,9 +9,12 @@ import { categoryFixture, channelFixture } from '../test-fixtures.fixture'
 beforeEach(() => {
   setActivePinia(createPinia())
   setLocale('en')
+  submit.mockReset()
+  submit.mockResolvedValue(undefined)
 })
 
-const mountDialog = (props: Record<string, unknown>) => mount(AdminEditDialogs, { props, global: { plugins: [i18nPlugin] } })
+const submit = vi.fn(async (_fields: { name: string; topic: string }) => {})
+const mountDialog = (props: Record<string, unknown>) => mount(AdminEditDialogs, { props: { submit, ...props }, global: { plugins: [i18nPlugin] } })
 const saveButton = (w: ReturnType<typeof mountDialog>) => w.get<HTMLButtonElement>('[data-testid="unsaved-save"]').element
 
 describe('AdminEditDialogs', () => {
@@ -22,10 +25,10 @@ describe('AdminEditDialogs', () => {
     expect(saveButton(w).disabled).toBe(true)
     await w.get('#admin-edit-name').setValue(' Work ')
     expect(saveButton(w).disabled).toBe(false)
-    expect(w.emitted('save-category')).toBeUndefined()
+    expect(submit).not.toHaveBeenCalled()
     await w.get('form').trigger('submit')
     await flushPromises()
-    expect(w.emitted('save-category')).toEqual([['Work']])
+    expect(submit).toHaveBeenCalledWith({ name: 'Work', topic: '' })
   })
 
   it('edits a channel name and topic together and refuses an empty name inline', async () => {
@@ -37,7 +40,7 @@ describe('AdminEditDialogs', () => {
     await w.get('#admin-edit-name').setValue('lounge')
     await w.get('[data-testid="unsaved-save"]').trigger('click')
     await flushPromises()
-    expect(w.emitted('save-channel')).toEqual([[{ name: 'lounge', topic: 'new topic' }]])
+    expect(submit).toHaveBeenCalledWith({ name: 'lounge', topic: 'new topic' })
   })
 
   it('asks before closing with unsaved edits', async () => {
@@ -52,5 +55,18 @@ describe('AdminEditDialogs', () => {
     pendingConfirm.value?.resolve(true)
     await flushPromises()
     expect(w.emitted('close')).toHaveLength(2)
+  })
+
+  it('shows a refused save inline and keeps the draft so it can be tried again', async () => {
+    submit.mockRejectedValueOnce(new Error('edit denied'))
+    const w = mountDialog({ category: categoryFixture({ name: 'Projects' }) })
+    await w.get('#admin-edit-name').setValue('Work')
+    await w.get('[data-testid="unsaved-save"]').trigger('click')
+    await flushPromises()
+    expect(w.get('[data-testid="unsaved-error"]').text()).toBe('edit denied')
+    expect(saveButton(w).disabled).toBe(false)
+    await w.get('[data-testid="unsaved-save"]').trigger('click')
+    await flushPromises()
+    expect(submit).toHaveBeenCalledTimes(2)
   })
 })

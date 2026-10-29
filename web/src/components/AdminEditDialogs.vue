@@ -8,27 +8,20 @@ import BaseDialog from './BaseDialog.vue'
 import UnsavedChangesBar from './UnsavedChangesBar.vue'
 
 // The rename dialogs of the layout editor: a category's name, or a channel's
-// name and topic. One draft with one Save; they hand the trimmed fields back,
-// storing them is the editor's.
+// name and topic. One draft with one Save; `submit` stores the trimmed fields
+// (the editor's job) and a rejection is shown inline with the draft kept.
 const props = defineProps({
   category: { type: Object as PropType<Category | null>, default: null },
-  channel: { type: Object as PropType<Channel | null>, default: null }
+  channel: { type: Object as PropType<Channel | null>, default: null },
+  submit: { type: Function as PropType<(fields: { name: string; topic: string }) => Promise<void>>, required: true }
 })
-const emit = defineEmits<{
-  close: []
-  'save-category': [name: string]
-  'save-channel': [fields: { name: string; topic: string }]
-}>()
+const emit = defineEmits<{ close: [] }>()
 
 const form = useSettingsDraft<{ name: string; topic: string }>({
   source: () => ({ name: (props.category ?? props.channel)?.name || '', topic: props.channel?.topic || '' }),
   normalisers: { name: normalise.text, topic: normalise.text },
   validate: draft => (normalise.text(draft.name) ? {} : { name: t('channel.nameRequired') }),
-  save: async ({ draft }) => {
-    const name = normalise.text(draft.name)
-    if (props.category) emit('save-category', name)
-    else emit('save-channel', { name, topic: normalise.text(draft.topic) })
-  }
+  save: ({ draft }) => props.submit({ name: normalise.text(draft.name), topic: normalise.text(draft.topic) })
 })
 const { draft, errors } = form
 const title = computed(() => props.category

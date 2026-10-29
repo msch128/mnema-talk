@@ -11,14 +11,15 @@ defineProps({
   error: { type: String, default: '' },
   /** Replaces "Save" where the form creates something. */
   saveLabel: { type: String, default: '' },
-  /** Stays at the bottom of a scrolling page instead of sitting in a dialog footer. */
+  saveTestid: { type: String, default: 'unsaved-save' },
+  /** Stays at the bottom of an admin page (inside the dashboard's padded area) instead of sitting in a dialog footer. */
   sticky: { type: Boolean, default: false }
 })
 const emit = defineEmits<{ save: []; reset: [] }>()
 </script>
 
 <template>
-  <div :class="['shrink-0 border-t border-mnema-hairline bg-mnema-raised', sticky && 'sticky bottom-0 z-10']" data-testid="unsaved-bar">
+  <div :class="['shrink-0 border-t border-mnema-hairline bg-mnema-raised', sticky && 'sticky bottom-0 z-10 -mx-6 -mb-6 max-md:-mx-4 max-md:-mb-4']" data-testid="unsaved-bar">
     <p v-if="error" role="alert" class="px-5 pt-3 text-sm text-mnema-danger" data-testid="unsaved-error">{{ error }}</p>
     <div class="flex min-h-14 items-center justify-between gap-3 px-5 py-3 max-md:flex-wrap">
       <p class="flex min-w-0 items-center gap-2 text-sm text-mnema-muted" role="status" data-testid="unsaved-status">
@@ -32,7 +33,7 @@ const emit = defineEmits<{ save: []; reset: [] }>()
         <button
           type="button"
           class="btn btn-primary h-9"
-          data-testid="unsaved-save"
+          :data-testid="saveTestid"
           :disabled="!canSave"
           :aria-busy="saving ? 'true' : undefined"
           :title="$t('draft.shortcut', { keys: saveShortcutLabel })"
