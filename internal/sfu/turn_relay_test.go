@@ -1,6 +1,7 @@
 package sfu
 
 import (
+	"context"
 	"net"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/turnrelay"
+	"github.com/pion/turn/v5"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -131,6 +133,7 @@ func TestRelayOnlyClientsExchangeAudio(t *testing.T) {
 	}{
 		{"loopback shared port over udp", []string{"127.0.0.1"}, true, "udp", false},
 		{"loopback shared port over tcp", []string{"127.0.0.1"}, true, "tcp", false},
+		{"host name and ip entries", []string{"localhost", "127.0.0.1"}, true, "udp", false},
 		{"loopback port range", []string{"127.0.0.1"}, false, "udp", false},
 		{"nat 1:1 public address shared port", []string{"203.0.113.7"}, true, "udp", true},
 		{"nat 1:1 public address over tcp", []string{"203.0.113.7"}, true, "tcp", true},
@@ -142,13 +145,18 @@ func TestRelayOnlyClientsExchangeAudio(t *testing.T) {
 				t.Skip("needs a non-loopback IPv4 interface")
 			}
 			var s *SFU
-			var err error
+			// Entries may be host names (dynamic DNS): the SFU is told the
+			// resolved addresses, which is also what the relay admits.
+			announce, err := ResolveAnnounce(context.Background(), tc.announce)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if tc.mux {
 				port := freeUDPPort(t)
-				s, err = NewSFU(port, port, tc.announce, nil, WithUDPMuxPort(port))
+				s, err = NewSFU(port, port, announce, nil, WithUDPMuxPort(port))
 			} else {
 				min := freeUDPRange(t, 21)
-				s, err = NewSFU(min, min+20, tc.announce, nil)
+				s, err = NewSFU(min, min+20, announce, nil)
 			}
 			if err != nil {
 				t.Fatal(err)
@@ -182,4 +190,57 @@ func TestRelayOnlyClientsExchangeAudio(t *testing.T) {
 			}
 		})
 	}
+}
+
+// When a dynamic-DNS entry of WEBRTC_NAT_1TO1_IP changes, the relay follows:
+// the new address is admitted as an SFU peer and the old one is not.
+func TestRelayFollowsAChangedAnnouncedAddress(t *testing.T) {
+	if len(interfaceIPv4s(false, false)) == 0 {
+		t.Skip("needs a non-loopback IPv4 interface")
+	}
+	port := freeUDPPort(t)
+	s, err := NewSFU(port, port, []string{"198.51.100.70"}, nil, WithUDPMuxPort(port))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+	relay := relayFor(t, s)
+	if err := s.SetAnnouncedIPs([]string{"198.51.100.77"}); err != nil {
+		t.Fatal(err)
+	}
+	c, err := newRelayAllocation(t, relay)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.CreatePermission(&net.UDPAddr{IP: net.ParseIP("198.51.100.77"), Port: int(port)}); err != nil {
+		t.Fatalf("the newly announced address was refused: %v", err)
+	}
+	if err := c.CreatePermission(&net.UDPAddr{IP: net.ParseIP("198.51.100.78"), Port: int(port)}); err == nil {
+		t.Fatal("an address that was never announced was admitted")
+	}
+}
+
+// newRelayAllocation signs a fresh member in to the relay with a plain TURN
+// client and allocates.
+func newRelayAllocation(t *testing.T, relay *turnrelay.Server) (*turn.Client, error) {
+	t.Helper()
+	conn, err := net.ListenPacket("udp4", "127.0.0.1:0")
+	if err != nil {
+		return nil, err
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	name, secret, _ := relay.Credentials(uuid.New())
+	addr := strings.TrimSuffix(strings.TrimPrefix(relay.URLs("127.0.0.1")[0], "turn:"), "?transport=udp")
+	c, err := turn.NewClient(&turn.ClientConfig{TURNServerAddr: addr, Conn: conn, Username: name, Password: secret, Realm: turnrelay.Realm})
+	if err != nil {
+		return nil, err
+	}
+	if err := c.Listen(); err != nil {
+		return nil, err
+	}
+	t.Cleanup(c.Close)
+	if _, err := c.Allocate(); err != nil {
+		return nil, err
+	}
+	return c, nil
 }
