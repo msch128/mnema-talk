@@ -246,7 +246,8 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 - **Privacy-minded**: no third-party STUN unless configured, no automatic data
   deletion unless enabled (`MEDIA_RETENTION_DAYS=0`), no telemetry (the optional release check is the only call home, and it can be
   turned off).
-- Release images are signed with cosign and ship provenance and an SBOM.
+- Release images are signed with cosign and ship provenance and an SBOM. They are
+  published on GHCR and mirrored on Docker Hub (`docker.io/<namespace>/mnema-talk`).
 
 ![Turning on two-factor sign-in: a QR code for the authenticator app, the manual key and a field for the first code](doc/images/two-factor.png)
 
@@ -318,7 +319,9 @@ downloads the compose file and `.env.example` of a release, lists the few
 values to set (`PUBLIC_URL`, `JWT_SECRET`, `POSTGRES_PASSWORD`,
 `S3_ACCESS_KEY` / `S3_SECRET_KEY`, `ADMIN_INITIAL_PASSWORD`) and starts the
 published image (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.2`, a pinned patch
-version or `:latest`). CI runs those exact steps.
+version or `:latest`). CI runs those exact steps. The same image is also on
+Docker Hub as `docker.io/<namespace>/mnema-talk`; GHCR stays the primary
+reference ([verify the signature](doc/operations.md#verifying-a-release-image)).
 
 Building from source is for development; see [Development](#development).
 
