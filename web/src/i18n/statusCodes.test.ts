@@ -62,8 +62,7 @@ describe('describing a code', () => {
     setLocale('de')
     const c = { id: 'voice_udp', level: 'ok' as const, code: 'voice_udp.ok', params: { port: '50000' }, detail: 'English.' }
     expect(describeCheck(c).detail).toContain('UDP 50000')
-    const { code: _code, ...withoutCode } = c
-    expect(describeCheck(withoutCode)).toEqual({ detail: 'English.', fix: '' })
+    expect(describeCheck({ id: c.id, level: c.level, params: c.params, detail: c.detail })).toEqual({ detail: 'English.', fix: '' })
     setLocale('de')
   })
 })
