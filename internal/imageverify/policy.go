@@ -26,6 +26,8 @@ import (
 	"regexp"
 	"regexp/syntax"
 	"strings"
+
+	"github.com/google/go-containerregistry/pkg/name"
 )
 
 // Defaults pin the identity of this repository's release workflow. They are
@@ -33,9 +35,12 @@ import (
 // ".../release.yml@refs/heads/main" (the workflow_run trigger runs on main).
 const (
 	DefaultRepository = "ghcr.io/msch128/mnema-talk"
-	DefaultIssuer     = "https://token.actions.githubusercontent.com"
-	DefaultSource     = "https://github.com/msch128/mnema-talk"
-	DefaultIdentity   = `^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@refs/heads/main$`
+	// DefaultMirror is the Docker Hub copy of the same images, mirrored by
+	// digest: same signature identity, same provenance.
+	DefaultMirror   = "docker.io/msch128/mnema-talk"
+	DefaultIssuer   = "https://token.actions.githubusercontent.com"
+	DefaultSource   = "https://github.com/msch128/mnema-talk"
+	DefaultIdentity = `^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@refs/heads/main$`
 )
 
 // Policy says which images are trusted.
@@ -43,6 +48,11 @@ type Policy struct {
 	// Repository is the only image repository the updater may pull from,
 	// e.g. "ghcr.io/msch128/mnema-talk".
 	Repository string
+	// Mirror is a second repository trusted under exactly the same identity
+	// and source (empty = none). The default policy sets the Docker Hub copy;
+	// overriding Repository drops it, so a third-party setup trusts one
+	// repository only.
+	Mirror string
 	// Issuer is the exact OIDC issuer in the signing certificate.
 	Issuer string
 	// IdentityRegexp must match the certificate's subject alternative name
@@ -55,17 +65,19 @@ type Policy struct {
 
 // DefaultPolicy is the policy for the official release images.
 func DefaultPolicy() Policy {
-	return Policy{Repository: DefaultRepository, Issuer: DefaultIssuer, IdentityRegexp: DefaultIdentity, Source: DefaultSource}
+	return Policy{Repository: DefaultRepository, Mirror: DefaultMirror, Issuer: DefaultIssuer, IdentityRegexp: DefaultIdentity, Source: DefaultSource}
 }
 
 // Validate refuses a policy that would trust too much (an empty or unanchored
 // identity) instead of silently verifying nothing.
 func (p Policy) Validate() error {
-	// A port in the registry host is fine ("localhost:5000/x"); a tag or a
-	// digest is not.
-	lastSlash := strings.LastIndex(p.Repository, "/")
-	if lastSlash < 0 || strings.ContainsAny(p.Repository, "@ ") || strings.Contains(p.Repository[lastSlash:], ":") {
-		return fmt.Errorf("repository %q is not an image repository without tag or digest", p.Repository)
+	if err := validateRepository(p.Repository); err != nil {
+		return err
+	}
+	if p.Mirror != "" {
+		if err := validateRepository(p.Mirror); err != nil {
+			return err
+		}
 	}
 	if p.Issuer == "" {
 		return errors.New("the certificate issuer must be set")
@@ -77,6 +89,41 @@ func (p Policy) Validate() error {
 		return errors.New("the source must be an https URL")
 	}
 	return nil
+}
+
+func validateRepository(repo string) error {
+	// A port in the registry host is fine ("localhost:5000/x"); a tag or a
+	// digest is not.
+	lastSlash := strings.LastIndex(repo, "/")
+	if lastSlash < 0 || strings.ContainsAny(repo, "@ ") || strings.Contains(repo[lastSlash:], ":") {
+		return fmt.Errorf("repository %q is not an image repository without tag or digest", repo)
+	}
+	if _, err := name.NewRepository(repo); err != nil {
+		return fmt.Errorf("repository %q: %w", repo, err)
+	}
+	return nil
+}
+
+// NormalizeRepository returns the canonical name of a repository, so that
+// "msch128/mnema-talk", "docker.io/msch128/mnema-talk" and
+// "index.docker.io/msch128/mnema-talk" are the same repository. ok is false
+// for something that is not a repository name.
+func NormalizeRepository(repo string) (string, bool) {
+	r, err := name.NewRepository(repo)
+	if err != nil {
+		return "", false
+	}
+	return r.Name(), true
+}
+
+// Allows reports whether repo (a normalised name) is one the policy trusts.
+func (p Policy) Allows(repo string) bool {
+	for _, allowed := range []string{p.Repository, p.Mirror} {
+		if n, ok := NormalizeRepository(allowed); ok && allowed != "" && n == repo {
+			return true
+		}
+	}
+	return false
 }
 
 // validateIdentity requires the pattern to be anchored as a whole: a

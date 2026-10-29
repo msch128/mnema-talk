@@ -221,3 +221,70 @@ func TestVerifyKeepsTheRealSignatureFailureBehindUnrelatedReferrers(t *testing.T
 		t.Fatalf("the refusal must stay on one log line: %q", err)
 	}
 }
+
+func TestNormalizeRepositoryTreatsDockerHubSpellingsAsOne(t *testing.T) {
+	const want = "index.docker.io/msch128/mnema-talk"
+	for _, in := range []string{"msch128/mnema-talk", "docker.io/msch128/mnema-talk", "index.docker.io/msch128/mnema-talk"} {
+		if got, ok := imageverify.NormalizeRepository(in); !ok || got != want {
+			t.Errorf("NormalizeRepository(%q) = %q, %v; want %q", in, got, ok, want)
+		}
+	}
+	if got, _ := imageverify.NormalizeRepository("ghcr.io/msch128/mnema-talk"); got != "ghcr.io/msch128/mnema-talk" {
+		t.Errorf("ghcr.io must stay as it is: %q", got)
+	}
+	if _, ok := imageverify.NormalizeRepository("Not A Repo!"); ok {
+		t.Error("garbage normalised")
+	}
+}
+
+func TestDefaultPolicyTrustsBothOfficialRepositoriesAndNothingElse(t *testing.T) {
+	p := imageverify.DefaultPolicy()
+	allowed := []string{"ghcr.io/msch128/mnema-talk", "msch128/mnema-talk", "docker.io/msch128/mnema-talk", "index.docker.io/msch128/mnema-talk"}
+	for _, in := range allowed {
+		image, ok := imageverify.NormalizeRepository(in)
+		if !ok || !p.Allows(image) {
+			t.Errorf("%s: not allowed", in)
+		}
+	}
+	for _, in := range []string{
+		"ghcr.io/other/mnema-talk", "other/mnema-talk", "docker.io/msch128/other", "msch128/mnema-talk-fork",
+		"quay.io/msch128/mnema-talk", "evil.example/msch128/mnema-talk", "ghcr.io/msch128/mnema-talk/sub",
+	} {
+		image, ok := imageverify.NormalizeRepository(in)
+		if ok && p.Allows(image) {
+			t.Errorf("%s: allowed", in)
+		}
+	}
+}
+
+func TestExplicitRepositoryDropsTheMirror(t *testing.T) {
+	p := imageverify.DefaultPolicy()
+	p.Repository, p.Mirror = "registry.example/team/mnema", ""
+	if err := p.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if p.Allows("index.docker.io/msch128/mnema-talk") || p.Allows("ghcr.io/msch128/mnema-talk") {
+		t.Error("a custom repository must not also trust the official ones")
+	}
+	if !p.Allows("registry.example/team/mnema") {
+		t.Error("the custom repository itself must be allowed")
+	}
+	p.Mirror = "msch128/mnema-talk:1.0"
+	if p.Validate() == nil {
+		t.Error("a tagged mirror was accepted")
+	}
+}
+
+func TestVerifyRefusesOtherDockerHubNamespacesBeforeAnyRequest(t *testing.T) {
+	v, err := imageverify.New(imageverify.DefaultPolicy(), func(context.Context) (root.TrustedMaterial, error) {
+		return nil, errors.New("must not be reached")
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, image := range []string{"other/mnema-talk:latest", "docker.io/msch128/other:latest", "index.docker.io/evil/mnema-talk:1.0"} {
+		if _, err := v.Verify(context.Background(), image); !errors.Is(err, imageverify.ErrUntrusted) {
+			t.Errorf("%s: err = %v, want ErrUntrusted", image, err)
+		}
+	}
+}

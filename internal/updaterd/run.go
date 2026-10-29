@@ -67,6 +67,13 @@ func envOr(get func(string) string, key, def string) string {
 // ParseConfig reads and validates the environment.
 func ParseConfig(get func(string) string) (Config, error) {
 	def := imageverify.DefaultPolicy()
+	repository := envOr(get, "UPDATER_IMAGE_REPOSITORY", "")
+	mirror := def.Mirror
+	if repository != "" {
+		mirror = "" // an explicit repository is the only one trusted
+	} else {
+		repository = def.Repository
+	}
 	c := Config{
 		Token:        strings.TrimSpace(get("UPDATER_TOKEN")),
 		Listen:       envOr(get, "UPDATER_LISTEN", ":8080"),
@@ -76,7 +83,8 @@ func ParseConfig(get func(string) string) (Config, error) {
 		TrustedRoot:  envOr(get, "UPDATER_TRUSTED_ROOT", ""),
 		CacheDir:     envOr(get, "UPDATER_TUF_CACHE", "/tmp/tuf"),
 		Policy: imageverify.Policy{
-			Repository:     envOr(get, "UPDATER_IMAGE_REPOSITORY", def.Repository),
+			Repository:     repository,
+			Mirror:         mirror,
 			Issuer:         envOr(get, "UPDATER_CERT_ISSUER", def.Issuer),
 			IdentityRegexp: envOr(get, "UPDATER_CERT_IDENTITY_REGEXP", def.IdentityRegexp),
 			Source:         envOr(get, "UPDATER_SOURCE_URL", def.Source),
