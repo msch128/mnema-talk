@@ -86,14 +86,14 @@ test('every quick reaction and the picker reach the other member of a Talk', asy
   await b.getByTestId('talk-react').click()
   await b.getByTestId('reaction-more').click()
   const picker = b.getByTestId('emoji-picker')
-  await picker.getByRole('searchbox').fill('partying')
+  await picker.locator('input[type="search"]').fill('partying')
   await picker.getByRole('option').first().click()
   await expect(floating(a, '🥳').first()).toBeVisible()
 
   // The same picker lists the community's custom emoji; one is found by name and shown as its picture.
   await b.getByTestId('talk-react').click()
   await b.getByTestId('reaction-more').click()
-  await b.getByTestId('emoji-picker').getByRole('searchbox').fill(EMOJI)
+  await b.getByTestId('emoji-picker').locator('input[type="search"]').fill(EMOJI)
   await b.getByTestId('emoji-picker').getByRole('option').first().click()
   await expect(a.getByTestId('talk-reaction').locator('img').first()).toBeVisible()
   await expect(b.getByTestId('talk-reaction').locator('img').first()).toBeVisible()
