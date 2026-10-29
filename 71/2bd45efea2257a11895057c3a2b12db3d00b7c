@@ -1,0 +1,131 @@
+.github/workflows/ci.yml
+  s_2156e9735076ff::t_c8b7057ca4f081 295-296
+.gitleaks.toml
+  s_2156e9735076ff::t_77e1fc321cb60d 31-33
+AGENTS.md
+  s_2156e9735076ff::t_23772e41a36dc6 87
+SECURITY.md
+  s_2156e9735076ff::t_795e27303bce68 883
+api/openapi.json
+  s_2156e9735076ff::t_5ec8eab51151bc 3267
+doc/api-stability.md
+  s_2156e9735076ff::t_9df94214deac83 56
+doc/architecture.md
+  s_2156e9735076ff::t_c0450c11acb15d 56,476
+doc/desktop-app.md
+  s_2156e9735076ff::t_6692c528b009df 180,222
+doc/desktop-trusted-client.md
+  s_2156e9735076ff::t_c7d9cbd11af066 417,702,705-707
+doc/moderation.md
+  s_2156e9735076ff::t_d92116288392ec 59,430
+doc/security/audit-package.md
+  s_2156e9735076ff::t_0685a9f42cc8f2 619,815
+doc/upgrade.md
+  s_2156e9735076ff::t_0cc407e6adaffc 129-140
+internal/auth/handler.go
+  s_2156e9735076ff::t_281e799a1a9cf2 246
+internal/auth/handler_account.go
+  s_2156e9735076ff::t_7618c71a7f5958 50
+internal/auth/password_reset_integration_test.go
+  s_2156e9735076ff::t_b2c55d4cb4bd73 19,27
+internal/auth/shared_login_test.go
+  s_2156e9735076ff::t_74fc05c971a8c4 28,47,57,76
+internal/chat/message_types.go
+  s_2156e9735076ff::t_fc532d78babbce 58
+internal/db/migrations/0077_drop_native_tables.sql
+  s_2156e9735076ff::t_c8d00eca2cc8f1 1-8
+internal/server/account_export_integration_test.go
+  s_2156e9735076ff::t_8e28946b120c7a 254
+internal/server/moderation_integration_test.go
+  s_2156e9735076ff::t_bca9cd6f07ee9f 365,380,453
+internal/server/password_reset_integration_test.go
+  s_2156e9735076ff::t_5bcb96af3c1a7c 25
+internal/server/server.go
+  s_2156e9735076ff::t_fb47975824624a 62-63,91,162
+internal/server/status_expiry_integration_test.go
+  s_2156e9735076ff::t_6e114a9555e203 99,117
+internal/ws/client.go
+  s_2156e9735076ff::t_18e586255582b6 28,33
+internal/ws/event_scope.go
+  s_04a9158107960a::t_c62a05c7f5c88a 8-10,12,35-37
+internal/ws/frame_peek.go
+  s_2156e9735076ff::t_6b9992d76a01eb 54,57
+internal/ws/handle.go
+  s_2156e9735076ff::t_b77be48507ffef 27,90,93,162,166,175-176,186
+internal/ws/handshake.go
+  s_2156e9735076ff::t_e4334fee396ae9 85
+internal/ws/lifecycle.go
+  s_2156e9735076ff::t_43190dea750e36 148,159,279
+internal/ws/lifecycle_pumps.go
+  s_2156e9735076ff::t_8e6a0c2e74055f 29-30,38,114,129,161,163
+internal/ws/payload_caps_test.go
+  s_2156e9735076ff::t_5ccee94bcd32c9 71-72,80,89
+internal/ws/presence.go
+  s_2156e9735076ff::t_59ac0aa7a3896b 57
+internal/ws/signal.go
+  s_2156e9735076ff::t_b19d527e0276c8 36
+internal/ws/tap_test.go
+  s_2156e9735076ff::t_3be778697573c6 10-12,28
+internal/ws/user_budget.go
+  s_2156e9735076ff::t_a3756fd563cc25 12,14
+internal/ws/voice_join.go
+  s_2156e9735076ff::t_52e5196b494e52 21,138,226
+internal/ws/voice_lobby.go
+  s_2156e9735076ff::t_edd35805be66fe 27
+web/eslint.config.ts
+  s_2156e9735076ff::t_6549d3bbb0828c 50,59,91
+web/scripts/check-event-registry.ts
+  s_2156e9735076ff::t_b0956e48f3c571 33
+web/src/App.test.ts
+  s_2156e9735076ff::t_357868776ce066 101-113
+web/src/App.vue
+  s_2156e9735076ff::t_fe816cb1840d0e 275
+web/src/components/DesktopSelector.test.ts
+  s_2156e9735076ff::t_f4b68e8b9a56e4 3,10
+web/src/components/SettingsDialog.vue
+  s_2156e9735076ff::t_3110bd50601552 31
+web/src/i18n/de.json
+  s_2156e9735076ff::t_b53c80051ea798 1888
+web/src/i18n/en.json
+  s_2156e9735076ff::t_f78ee5c398078d 1888
+web/src/lib/api.test.ts
+  s_2156e9735076ff::t_2894bb336cd058 193,197,225,271
+web/src/lib/api.ts
+  s_2156e9735076ff::t_19182d91975903 1-2,62,111,168,221
+web/src/lib/desktopRuntime.ts
+  s_2156e9735076ff::t_d850f0b88499a1 4
+web/src/lib/platform.test.ts
+  s_2156e9735076ff::t_5eea5967636bbe 10,19,33,40,44,141-142
+web/src/lib/platform.ts
+  s_2156e9735076ff::t_feff50fd800e68 2,8,104-105
+web/src/lib/pwa.test.ts
+  s_2156e9735076ff::t_77df9a71e0cd70 3,23,39,63
+web/src/lib/pwa.ts
+  s_2156e9735076ff::t_7c90f737082ebf 13
+web/src/main.ts
+  s_2156e9735076ff::t_abca22070b4aff 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "712bd45efea2257a11895057c3a2b12db3d00b7c",
+  "prompts": {},
+  "sessions": {
+    "s_04a9158107960a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adel-native-desktop-25714c3fee945686",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2156e9735076ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adel-native-server-78d153cdff05b628",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
