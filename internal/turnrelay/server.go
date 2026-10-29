@@ -50,7 +50,7 @@ func Start(opts Options) (*Server, error) {
 	}
 	s := &Server{
 		opts: opts, limits: opts.Limits.withDefaults(), auth: auth,
-		guards: map[*guard]struct{}{}, byPort: map[int]*guard{}, byClient: map[string]*guard{}, perUser: map[uuid.UUID]int{}, verdicts: map[uuid.UUID]verdict{},
+		guards: map[*guard]struct{}{}, byPort: map[int]*guard{}, byClient: map[string]*guard{}, perUser: map[uuid.UUID]int{}, verdicts: map[uuid.UUID]verdict{}, flights: map[uuid.UUID]*flight{},
 	}
 	s.allocLimit = newRateLimiter(s.limits.AllocationsPerMinute, s.limits.AllocationBurst, 4096)
 	s.failLimit = newRateLimiter(s.limits.FailuresPerMinute, s.limits.FailureBurst, 4096)

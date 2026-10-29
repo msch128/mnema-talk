@@ -120,6 +120,7 @@ type Server struct {
 
 	check    atomic.Pointer[RelayCheck]
 	verdicts map[uuid.UUID]verdict
+	flights  map[uuid.UUID]*flight
 	total    int // live and in-flight allocations, under mu
 	tcp      *limitedListener
 

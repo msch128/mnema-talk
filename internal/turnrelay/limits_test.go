@@ -68,6 +68,8 @@ func TestAllocationAttemptsAreRateLimited(t *testing.T) {
 	}
 }
 
+// Failed logins are counted per address and username: a spoofed source cannot
+// lock out the members who share an address, only burn its own made-up names.
 func TestBadCredentialsOnlyUseUpTheirOwnBudget(t *testing.T) {
 	h := newHarness(t, harnessOpts{limits: Limits{FailureBurst: 3, FailuresPerMinute: 1}})
 	before := metrics.TURNEvents.With("rate_limited").Load()
@@ -103,6 +105,9 @@ func TestTotalQuotaIsReservedBeforeTheSocketExists(t *testing.T) {
 	}
 }
 
+// Pion runs the auth callback before it checks the message integrity, so a
+// forger who knows a username can send unlimited requests: none of them may
+// reach the permission lookup, which is a database query.
 func TestForgedRequestsNeverReachThePermissionLookup(t *testing.T) {
 	h := newHarness(t, harnessOpts{limits: Limits{AllocationBurst: 1000, AllocationsPerMinute: 6000}})
 	var lookups atomic.Int32
@@ -262,5 +267,57 @@ func TestForgedCredentialsDoNotLiftTheTCPHandshakeLimit(t *testing.T) {
 			}
 			return
 		}
+	}
+}
+
+// A member's first Allocate costs exactly one permission lookup, although both
+// the verified request (OnAuth) and the allocation itself ask.
+func TestFirstAllocateCostsOneLookup(t *testing.T) {
+	h := newHarness(t, harnessOpts{})
+	var lookups atomic.Int32
+	h.srv.SetRelayCheck(func(uuid.UUID) (bool, error) {
+		lookups.Add(1)
+		time.Sleep(50 * time.Millisecond) // long enough for the two askers to overlap
+		return true, nil
+	})
+	c, _ := h.member()
+	if _, err := c.Allocate(); err != nil {
+		t.Fatal(err)
+	}
+	h.srv.awaitLookups()
+	if n := lookups.Load(); n != 1 {
+		t.Fatalf("a first Allocate cost %d lookups, want 1", n)
+	}
+}
+
+// A definite "no" is final: a cached refusal still ends the allocations.
+func TestCachedRefusalStillEndsAllocations(t *testing.T) {
+	h := newHarness(t, harnessOpts{})
+	c, id := h.member()
+	if _, err := c.Allocate(); err != nil {
+		t.Fatal(err)
+	}
+	h.srv.SetRelayCheck(func(uuid.UUID) (bool, error) { return false, nil })
+	h.advance(2 * verdictTTL)
+	if ok, err := h.srv.mayJoin(id); ok || err != nil {
+		t.Fatalf("mayJoin = %v, %v", ok, err)
+	}
+	if n := h.srv.Status().Allocations; n != 0 {
+		t.Fatalf("allocations = %d after a refusal", n)
+	}
+	// The same when the refusal is answered from the cache.
+	h.srv.SetRelayCheck(func(uuid.UUID) (bool, error) { return true, nil })
+	c2, id2 := h.member()
+	if _, err := c2.Allocate(); err != nil {
+		t.Fatal(err)
+	}
+	h.srv.mu.Lock()
+	h.srv.verdicts[id2] = verdict{ok: false, at: h.srv.now()}
+	h.srv.mu.Unlock()
+	if ok, _ := h.srv.mayJoin(id2); ok {
+		t.Fatal("a cached refusal was answered with a yes")
+	}
+	if n := h.srv.Status().Allocations; n != 0 {
+		t.Fatalf("allocations = %d after a cached refusal", n)
 	}
 }

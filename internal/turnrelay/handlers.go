@@ -44,60 +44,71 @@ func (s *Server) authenticate(ra *turn.RequestAttributes) (string, []byte, bool)
 const verdictTTL = 8 * time.Second
 
 type verdict struct {
-	ok       bool
-	at       time.Time
-	checking bool
+	ok bool
+	at time.Time
 }
 
-// mayJoin asks the permission check, reusing a definite answer for verdictTTL
-// so a burst of genuine requests costs one lookup. An error is not cached.
-func (s *Server) mayJoin(user uuid.UUID) (bool, error) {
+// flight is a lookup in progress, shared by everyone who asks about the member
+// meanwhile.
+type flight struct {
+	done chan struct{}
+	ok   bool
+	err  error
+}
+
+// lookup asks the permission check about a member: one lookup per member at a
+// time, and a definite answer is reused for verdictTTL. An error is returned,
+// not cached.
+func (s *Server) lookup(user uuid.UUID) (bool, error) {
 	now := s.now()
 	s.mu.Lock()
-	if v, ok := s.verdicts[user]; ok && now.Sub(v.at) < verdictTTL && !v.checking {
+	if v, ok := s.verdicts[user]; ok && now.Sub(v.at) < verdictTTL {
 		s.mu.Unlock()
 		return v.ok, nil
 	}
+	if f, ok := s.flights[user]; ok {
+		s.mu.Unlock()
+		<-f.done
+		return f.ok, f.err
+	}
+	f := &flight{done: make(chan struct{})}
+	s.flights[user] = f
 	s.mu.Unlock()
-	ok, err := (*s.check.Load())(user)
-	if err == nil {
-		s.mu.Lock()
+
+	f.ok, f.err = (*s.check.Load())(user)
+
+	s.mu.Lock()
+	delete(s.flights, user)
+	if f.err == nil {
 		if len(s.verdicts) > 4096 {
 			clear(s.verdicts)
 		}
-		s.verdicts[user] = verdict{ok: ok, at: now}
-		s.mu.Unlock()
+		s.verdicts[user] = verdict{ok: f.ok, at: s.now()}
+	}
+	s.mu.Unlock()
+	close(f.done)
+	return f.ok, f.err
+}
+
+// mayJoin is the answer for a new allocation, whose request passed the
+// integrity check. A definite no also ends the member's running allocations.
+func (s *Server) mayJoin(user uuid.UUID) (bool, error) {
+	ok, err := s.lookup(user)
+	if err == nil && !ok {
+		s.DropMember(user)
 	}
 	return ok, err
 }
 
 // revalidate re-checks a member whose request just passed the integrity check:
 // a definite "no" ends their allocations, an error keeps them. It runs in the
-// background and at most once at a time per member, so it neither blocks the
-// server loop nor multiplies lookups.
+// background so it never blocks the server loop; concurrent asks share one
+// lookup with mayJoin.
 func (s *Server) revalidate(user uuid.UUID) {
-	now := s.now()
-	s.mu.Lock()
-	v, ok := s.verdicts[user]
-	if (ok && now.Sub(v.at) < verdictTTL) || v.checking {
-		s.mu.Unlock()
-		return
-	}
-	s.verdicts[user] = verdict{ok: v.ok, at: v.at, checking: true}
-	s.mu.Unlock()
 	go func() {
-		allowed, err := (*s.check.Load())(user)
-		s.mu.Lock()
-		if err == nil {
-			s.verdicts[user] = verdict{ok: allowed, at: s.now()}
-		} else {
-			delete(s.verdicts, user)
-		}
-		s.mu.Unlock()
-		if err == nil && !allowed {
+		if ok, err := s.mayJoin(user); err == nil && !ok {
 			metrics.TURNEvents.With("forbidden").Inc()
 			s.debug("turn: member may no longer join voice, closing", "user", user)
-			s.DropMember(user)
 		}
 	}()
 }

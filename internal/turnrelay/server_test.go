@@ -293,8 +293,6 @@ func TestNobodyMayRelayUntilTheCheckIsInstalled(t *testing.T) {
 	}
 }
 
-// Failed logins are counted per address and username: a spoofed source cannot
-// lock out the members who share an address, only burn its own made-up names.
 func TestAMemberWhosePermissionCannotBeCheckedKeepsRunningCalls(t *testing.T) {
 	h := newHarness(t, harnessOpts{})
 	c, id := h.member()
@@ -306,9 +304,11 @@ func TestAMemberWhosePermissionCannotBeCheckedKeepsRunningCalls(t *testing.T) {
 		h.srv.events().OnAuth(&net.UDPAddr{IP: net.IPv4(192, 0, 2, 1), Port: 4000}, nil, "UDP", u, Realm, "Refresh", true)
 	}
 	h.advance(2 * verdictTTL)
-	h.srv.SetRelayCheck(func(uuid.UUID) (bool, error) { return false, errors.New("database down") })
+	asked := make(chan struct{}, 16)
+	h.srv.SetRelayCheck(func(uuid.UUID) (bool, error) { asked <- struct{}{}; return false, errors.New("database down") })
 	verified()
-	time.Sleep(200 * time.Millisecond)
+	<-asked // the background check has run
+	h.srv.awaitLookups()
 	if n := h.srv.Status().Allocations; n != 1 {
 		t.Fatalf("allocations = %d, a failed lookup dropped the running call", n)
 	}
@@ -328,11 +328,20 @@ func TestAMemberWhosePermissionCannotBeCheckedKeepsRunningCalls(t *testing.T) {
 	}
 }
 
+// awaitLookups waits until no permission lookup is in flight.
+func (s *Server) awaitLookups() {
+	for deadline := time.Now().Add(3 * time.Second); time.Now().Before(deadline); time.Sleep(5 * time.Millisecond) {
+		s.mu.Lock()
+		n := len(s.flights)
+		s.mu.Unlock()
+		if n == 0 {
+			return
+		}
+	}
+}
+
 func mustPassword(h *harness, username string) string { return h.srv.auth.password(username) }
 
-// Pion runs the auth callback before it checks the message integrity, so a
-// forger who knows a username can send unlimited requests: none of them may
-// reach the permission lookup, which is a database query.
 func TestDropMemberClosesTheirAllocations(t *testing.T) {
 	h := newHarness(t, harnessOpts{})
 	c, id := h.member()
