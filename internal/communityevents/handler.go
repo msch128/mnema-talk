@@ -285,32 +285,42 @@ func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 // is announced before the error is returned; the cancellation stays in effect
 // even though the client sees the edit's error.
 func (h *Handler) applyUpdate(r *http.Request, ev *CommunityEvent, req UpdateEventRequest, cancelling bool) (*CommunityEvent, error) {
-	id := ev.ID
-	var err error
 	updated := ev
 	if cancelling {
-		if updated, err = h.Store.Cancel(r.Context(), id); err != nil {
-			return nil, err
-		}
-		h.auditRecord(r, "event.cancel", updated)
-	}
-	if !cancelling || req.changesFields() {
-		edited, err := h.Store.Update(r.Context(), id, req)
+		cancelled, err := h.Store.Cancel(r.Context(), ev.ID)
 		if err != nil {
-			if cancelling {
-				h.broadcast(updated)
-			}
 			return nil, err
 		}
-		updated = edited
-		if updated.ChannelID != nil && !sameChannel(ev.ChannelID, updated.ChannelID) {
-			// Members who cannot view the new Talk drop their copy.
-			if err := h.retractFor(r.Context(), updated, ev.ChannelID); err != nil {
-				slog.ErrorContext(r.Context(), "retract moved event failed", "event_id", id, "err", err)
-			}
-		}
-		h.auditRecord(r, "event.edit", updated)
+		h.auditRecord(r, "event.cancel", cancelled)
+		updated = cancelled
 	}
+	if cancelling && !req.changesFields() {
+		return updated, nil
+	}
+	edited, err := h.applyEdit(r, ev, req)
+	if err != nil {
+		if cancelling {
+			h.broadcast(updated)
+		}
+		return nil, err
+	}
+	return edited, nil
+}
+
+// applyEdit stores an edit's field changes, retracts the event from members
+// who lose sight of it when it moves to another Talk, and audits the edit.
+func (h *Handler) applyEdit(r *http.Request, ev *CommunityEvent, req UpdateEventRequest) (*CommunityEvent, error) {
+	updated, err := h.Store.Update(r.Context(), ev.ID, req)
+	if err != nil {
+		return nil, err
+	}
+	if updated.ChannelID != nil && !sameChannel(ev.ChannelID, updated.ChannelID) {
+		// Members who cannot view the new Talk drop their copy.
+		if err := h.retractFor(r.Context(), updated, ev.ChannelID); err != nil {
+			slog.ErrorContext(r.Context(), "retract moved event failed", "event_id", ev.ID, "err", err)
+		}
+	}
+	h.auditRecord(r, "event.edit", updated)
 	return updated, nil
 }
 
