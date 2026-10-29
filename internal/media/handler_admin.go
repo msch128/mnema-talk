@@ -1,6 +1,7 @@
 package media
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -66,13 +67,13 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 // prune handles POST /api/admin/media/prune.
 //
 // @Summary Delete old chat attachments
-// @Description Avatars are never pruned. Without days, uses MEDIA_RETENTION_DAYS; 400 when that is disabled. Owner only (403 otherwise).
+// @Description Avatars are never pruned. Without days, uses MEDIA_RETENTION_DAYS; 400 when that is disabled. When storage refuses some objects the run still succeeds and skipped counts them. Owner only (403 otherwise).
 // @ID pruneMedia
 // @Tags Admin
 // @Produce json
 // @Security cookieAuth
 // @Param days query int false "Delete attachments older than this many days; defaults to MEDIA_RETENTION_DAYS." minimum(1) maximum(3650)
-// @Success 200 {object} PruneResult "Prune result."
+// @Success 200 {object} PruneResult "Prune result. skipped counts old objects that storage refused to delete."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner may do this, or cross-origin request rejected."
@@ -94,10 +95,15 @@ func (h *Handler) prune(w http.ResponseWriter, r *http.Request) error {
 		return httpx.ErrInvalidInput("retention is disabled; pass days explicitly")
 	}
 	n, err := PruneOlderThan(r.Context(), h.DB, h.Store, days)
-	if err != nil {
+	res := PruneResult{PrunedCount: n, CutoffDays: days}
+	var skipped *PruneSkippedError
+	if errors.As(err, &skipped) {
+		// The run worked; storage refused some keys. Report what was pruned.
+		res.Skipped = skipped.Skipped
+	} else if err != nil {
 		return err
 	}
-	httpx.WriteJSON(w, http.StatusOK, PruneResult{PrunedCount: n, CutoffDays: days})
+	httpx.WriteJSON(w, http.StatusOK, res)
 	return nil
 }
 
@@ -136,6 +142,8 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) error {
 type PruneResult struct {
 	PrunedCount int `json:"pruned_count"`
 	CutoffDays  int `json:"cutoff_days"`
+	// Skipped counts the old objects storage refused to delete; they stay.
+	Skipped int `json:"skipped,omitempty" binding:"optional"`
 }
 
 // orphans handles GET /api/admin/media/orphans.

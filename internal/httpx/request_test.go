@@ -54,6 +54,16 @@ func TestDecodeJSONTooLarge(t *testing.T) {
 	}
 }
 
+func TestDecodeJSONPaddingPastTheLimitIs413(t *testing.T) {
+	r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name":"a"}`+strings.Repeat(" ", 200)))
+	r.Body = http.MaxBytesReader(httptest.NewRecorder(), r.Body, 40)
+	var p struct{ Name string }
+	ae, ok := AsAPIError(DecodeJSON(r, &p))
+	if !ok || ae.Status != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected 413, got %v", ae)
+	}
+}
+
 func TestCleanText(t *testing.T) {
 	if _, err := CleanText("bio", "  ", 10, true); err == nil {
 		t.Error("required blank accepted")

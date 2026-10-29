@@ -68,6 +68,29 @@ describe('DFN node lifecycle', () => {
     expect(FakeWorker.instances).toHaveLength(0)
   })
 
+  it('is canceled, not failed, by a page that is being left', async () => {
+    const leave = (persisted: boolean) => window.dispatchEvent(Object.assign(new Event('pagehide'), { persisted }))
+    try {
+      const creating = createDeepFilterNode(context(), assets)
+      leave(false)
+      // The browser cancels the module import of the worker with the page.
+      worker().onerror()
+      expect(await creating).toBeNull()
+      expect(worker().terminate).toHaveBeenCalledOnce()
+      expect(await createDeepFilterNode(context(), assets)).toBeNull()
+      expect(FakeWorker.instances).toHaveLength(1)
+    } finally { window.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: false })) }
+  })
+
+  it('takes the node off the graph before it ends the worker', async () => {
+    const { node, worker: active } = await initialized()
+    const order: string[] = []
+    node.disconnect.mockImplementation(() => { order.push('disconnect') })
+    active.terminate.mockImplementation(() => { order.push('terminate') })
+    present(node.destroy)()
+    expect(order).toEqual(['disconnect', 'terminate'])
+  })
+
   it('transfers only communication ports, accepts validated stats, and destroys once', async () => {
     const controller = new AbortController()
     const { node, worker: active, channel, ctx } = await initialized({ signal: controller.signal })

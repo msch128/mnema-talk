@@ -722,6 +722,8 @@
     "noiseHint_browser": "Die Rauschunterdrückung deines Browsers dämpft gleichmäßige Geräusche wie Lüfter oder Brummen. Spart Rechenleistung.",
     "noiseHint_off": "Kein Filter. Für Studiomikrofone oder wenn du Musik überträgst.",
     "filterDegraded": "Der KI-Filter ist überlastet oder nicht verfügbar. Für diesen Talk wird die Browser-Rauschunterdrückung verwendet.",
+    "filterUnsupported": "Die KI-Rauschunterdrückung ist in diesem Browser nicht verfügbar. Stattdessen wird die Rauschunterdrückung des Browsers verwendet.",
+    "engineStalled": "Die Audioverarbeitung hat in diesem Browser nicht gestartet, daher wird dein Mikrofon unbearbeitet gesendet. Prüfe dein Audio-Ausgabegerät.",
     "micTest": "Mikrofontest",
     "micTestStart": "Mikrofon testen",
     "micTestStop": "Test beenden",

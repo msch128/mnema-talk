@@ -15,7 +15,7 @@ func extractEmojiParam(r *http.Request) (string, error) {
 	if decoded, err := url.PathUnescape(raw); err == nil {
 		raw = decoded
 	}
-	return ValidateEmoji(raw)
+	return validateReactionRef(raw)
 }
 
 // setBotReaction adds (want) or removes the bot's reaction, idempotently.

@@ -43,7 +43,7 @@ func (h *Handler) toggleReaction(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	emoji, err := ValidateEmoji(req.Emoji)
+	emoji, err := validateReactionRef(req.Emoji)
 	if err != nil {
 		return err
 	}

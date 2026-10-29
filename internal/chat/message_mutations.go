@@ -208,24 +208,19 @@ func changeReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID
 		if err := lockMessage(ctx, tx, messageID); err != nil {
 			return err
 		}
-		var present bool
-		if err := tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3)`,
-			messageID, userID, emoji).Scan(&present); err != nil {
-			return fmt.Errorf("read reaction: %w", err)
-		}
-		if target(present) == present {
-			return nil
+		present, err := reactionPresent(ctx, tx, messageID, userID, emoji)
+		if err != nil || target(present) == present {
+			return err
 		}
 		changed = true
 		if present {
-			if _, err := tx.Exec(ctx, `DELETE FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`, messageID, userID, emoji); err != nil {
-				return fmt.Errorf("remove reaction: %w", err)
-			}
-			return nil
+			return removeReaction(ctx, tx, messageID, userID, emoji)
 		}
 		if !canAdd {
 			return httpx.ErrForbidden("missing permission: add reactions")
+		}
+		if _, err := ValidateEmoji(emoji); err != nil {
+			return err
 		}
 		return addReaction(ctx, tx, messageID, userID, emoji)
 	})
@@ -234,6 +229,23 @@ func changeReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID
 	}
 	reactions, err := reactionSummary(ctx, p, messageID)
 	return reactions, changed, err
+}
+
+func reactionPresent(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, emoji string) (bool, error) {
+	var present bool
+	if err := tx.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3)`,
+		messageID, userID, emoji).Scan(&present); err != nil {
+		return false, fmt.Errorf("read reaction: %w", err)
+	}
+	return present, nil
+}
+
+func removeReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, emoji string) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`, messageID, userID, emoji); err != nil {
+		return fmt.Errorf("remove reaction: %w", err)
+	}
+	return nil
 }
 
 // lockMessage takes the message's row lock (errMessageNotFound when it is gone).

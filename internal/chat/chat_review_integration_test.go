@@ -288,3 +288,27 @@ func TestGetMemberReadsOneVisibleMember(t *testing.T) {
 		t.Fatalf("unknown member: %v", err)
 	}
 }
+
+// A reaction stored before the formatting-character rule stays removable by
+// its owner, while adding such an emoji is refused.
+func TestStoredReactionWithFormattingCharacterCanBeTakenBack(t *testing.T) {
+	f := newChatFixture(t)
+	ctx := context.Background()
+	const old = "👍‎"
+	if _, err := f.p.Exec(ctx, `INSERT INTO message_reactions (message_id, user_id, emoji) VALUES ($1, $2, $3)`, f.m, f.u.ID, old); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := validateReactionRef(old); err != nil {
+		t.Fatalf("lookup rule rejects the stored emoji: %v", err)
+	}
+	reactions, changed, err := SetReactionAs(ctx, f.p, f.m, f.u.ID, old, false, true)
+	if err != nil || !changed || len(reactions) != 0 {
+		t.Fatalf("taking back: %+v changed=%v err=%v", reactions, changed, err)
+	}
+	if _, _, err := SetReactionAs(ctx, f.p, f.m, f.u.ID, old, true, true); apiStatus(err) != http.StatusBadRequest {
+		t.Fatalf("adding it again: %v", err)
+	}
+	if _, err := ToggleReactionAs(ctx, f.p, f.m, f.u.ID, old, true); apiStatus(err) != http.StatusBadRequest {
+		t.Fatalf("toggling it on: %v", err)
+	}
+}
