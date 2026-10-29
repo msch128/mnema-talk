@@ -173,8 +173,7 @@ function defaultTypeFor(category: Category) {
   return chs.length && chs.every(c => c.type === 'voice') ? 'voice' : 'text'
 }
 
-// Null when the member backed out of leaving their current Talk, else the
-// join, which has been started but not necessarily settled.
+// Null when the member backed out of leaving their current Talk, else the started (not yet settled) join.
 async function handleVoiceClick(channel: Channel): Promise<{ joined: Promise<void> } | null> {
   if (voiceStore.warnSwitchChannel && voiceStore.currentChannelId && voiceStore.currentChannelId !== channel.id) {
     const ok = await confirm({
