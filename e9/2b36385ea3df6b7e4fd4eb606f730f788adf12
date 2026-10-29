@@ -1,0 +1,19 @@
+.github/workflows/ci-macos-calls.yml
+  s_d28a81e2a44968::t_de485445f56cb0 46,53-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e92b36385ea3df6b7e4fd4eb606f730f788adf12",
+  "prompts": {},
+  "sessions": {
+    "s_d28a81e2a44968": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-onboarding-turn-ce9435ce322aa431",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
