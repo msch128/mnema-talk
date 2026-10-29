@@ -1,0 +1,53 @@
+internal/sfu/transport.go
+  s_06fcde5dbef956::t_e4cb2f90150519 52-53,61-85
+  s_06fcde5dbef956::t_d0c357bb2de0ef 86-87
+internal/sfu/sfu_setup.go
+  s_06fcde5dbef956::t_e4cb2f90150519 154-155
+internal/ws/diag_log_test.go
+  s_06fcde5dbef956::t_11cc1b942a0e1b 1-34
+internal/config/config_test.go
+  s_06fcde5dbef956::t_c442cd6a361c3a 406-425
+internal/config/config.go
+  s_06fcde5dbef956::t_f3efafee39eb43 130-146
+web/src/composables/webrtc/iceServers.test.ts
+  s_06fcde5dbef956::t_d4a522420ffc93 51-65
+internal/sfu/announce_ipv6_test.go
+  s_06fcde5dbef956::t_8040ad8aeed84d 1-34,41-43,48,51-52,56,60-62
+  s_06fcde5dbef956::t_27d76f3e30427d 35-40,44-47,49-50,53-55,57-59
+internal/ws/handle.go
+  s_06fcde5dbef956::t_11cc1b942a0e1b 187-197,199
+cmd/server/main.go
+  s_06fcde5dbef956::t_f3efafee39eb43 156-158
+doc/operations.md
+  s_06fcde5dbef956::t_4ac95ed0920dc5 363-366,396-424,888-897
+web/src/composables/useWebRTC.connection.test.ts
+  s_06fcde5dbef956::t_caeba29d609cfd 1-46
+web/src/composables/webrtc/iceServers.ts
+  s_06fcde5dbef956::t_f6c70e1fba0ce1 18-22
+web/src/composables/webrtc/mediaRoom.ts
+  s_06fcde5dbef956::t_46b04be75e4e70 39,57,84-103
+web/src/composables/webrtc/peer.ts
+  s_06fcde5dbef956::t_76d6cad44f5e16 5,8,87
+web/src/composables/webrtc/session.ts
+  s_06fcde5dbef956::t_a40c18b3154daf 12,207-209,211
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_8b6221af1711db 643-644
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_e41af75bd25cca 643-644
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "00d587a08cd14e0e697f1421ac426375209fd670",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
