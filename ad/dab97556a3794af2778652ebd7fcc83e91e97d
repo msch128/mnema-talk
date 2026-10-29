@@ -1,0 +1,35 @@
+web/src/lib/presence.ts
+  s_e7f30a04698fc5::t_0d578dded947ee 17-19
+web/src/stores/chat/presence.test.ts
+  s_fb29f048bd6d02::t_3c04deb92a0438 1-134
+web/src/stores/chat/presence.ts
+  s_e7f30a04698fc5::t_0d3d301752d04c 1,5,10-18,23,42-50,123-127
+web/src/stores/chat/reset.ts
+  s_e7f30a04698fc5::t_3689fe30f4aa2c 90
+web/src/stores/chat/state.ts
+  s_e7f30a04698fc5::t_c3b89bcb2e33cd 163,167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "addab97556a3794af2778652ebd7fcc83e91e97d",
+  "prompts": {},
+  "sessions": {
+    "s_e7f30a04698fc5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4bf11774e4e51cc3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
