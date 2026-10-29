@@ -1,0 +1,19 @@
+web/src/composables/useWebRTC.audio.test.ts
+  s_06fcde5dbef956::t_87f0209a82e4b2 395
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7862c50078c0a5c8b82df8b7e6ddd88e5703a7ec",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
