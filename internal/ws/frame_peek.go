@@ -3,7 +3,6 @@ package ws
 import (
 	"bytes"
 	"encoding/json"
-	"strings"
 
 	"github.com/msch128/mnema-talk/internal/events"
 )
@@ -52,10 +51,10 @@ func peekEventType(message []byte) (string, bool) {
 
 // frameTooLarge reports a frame that cannot hold a payload within its type's
 // cap, so it can be dropped before it is decoded. Frames whose type is not
-// first, and native control frames, are judged after decoding.
+// first are judged after decoding.
 func frameTooLarge(message []byte) bool {
 	eventType, ok := peekEventType(message)
-	if !ok || strings.HasPrefix(eventType, "native_") {
+	if !ok {
 		return false
 	}
 	return len(message) > payloadCap(eventType)+frameEnvelopeSlack

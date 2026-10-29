@@ -286,7 +286,6 @@ days, default 7. A change applies to running sessions at once.
   the upgrade itself. A pre-upgrade session that has not made a request since
   is not listed yet, so "sign out all other sessions" does not reach it; use
   "Sign out everywhere" (or the admin action) to end those too.
-- The desktop client's native sessions are separate and not affected.
 
 ## Web Push and the installable app
 

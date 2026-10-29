@@ -23,8 +23,6 @@ func (h *Hub) Stats() Stats {
 	for c := range h.clients {
 		if c.sessionID != "" {
 			sessions["web:"+c.sessionID] = struct{}{}
-		} else if c.native != nil {
-			sessions["native:"+c.native.binding.FamilyID().String()] = struct{}{}
 		} else {
 			sessions["user:"+c.User.ID.String()] = struct{}{}
 		}

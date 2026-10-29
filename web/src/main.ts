@@ -24,9 +24,7 @@ const root = gamingSurface()
   ? (await import('./components/DesktopGamingOverlay.vue')).default
   : platform.isWebDesktopSelector()
     ? (await import('./components/DesktopSelector.vue')).default
-    : platform.isDesktop()
-      ? (await import('./NativePreviewApp.vue')).default
-      : App
+    : App
 
 createApp(root)
   .use(createPinia())

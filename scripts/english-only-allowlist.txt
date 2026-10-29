@@ -32,7 +32,6 @@ path: web/src/components/ConfirmDialog.test.ts | asserts German UI output
 path: web/src/components/ConnectionBanner.test.ts | asserts German UI output
 path: web/src/components/DesktopSelector.test.ts | asserts German UI output
 path: web/src/components/EditNameDialog.test.ts | asserts German UI output
-path: web/src/components/NativeTrustSetup.test.ts | asserts German UI output
 path: web/src/components/ProfilePassword.test.ts | asserts German UI output
 path: web/src/components/Sidebar.keyboard.test.ts | asserts German UI output
 path: web/src/components/Sidebar.menus.test.ts | asserts German UI output
@@ -50,7 +49,6 @@ path: web/src/i18n/noHardcodedText.test.ts | asserts German UI output
 path: web/src/lib/api.test.ts | asserts German UI output
 path: web/src/lib/deletedUser.test.ts | asserts German UI output
 path: web/src/lib/errorDetails.test.ts | asserts German UI output
-path: web/src/lib/native/nativeTransport.test.ts | asserts German UI output
 path: web/src/lib/rtcStats.test.ts | asserts German UI output
 path: web/src/stores/stores.test.ts | asserts German UI output
 path: web/src/stores/toast.test.ts | asserts German UI output

@@ -243,7 +243,7 @@ func (h *Handler) handleInvalidCredentials(ctx context.Context, key, account str
 	return 0, ErrInvalidCredentials
 }
 
-// verifyLogin is the shared browser/native credential and lockout policy.
+// verifyLogin is the browser credential and lockout policy.
 // Both transports must use this Handler's per-IP route limiter as well. It
 // returns the token version captured by password verification; callers must
 // never reload and substitute a newer version before issuing a session.

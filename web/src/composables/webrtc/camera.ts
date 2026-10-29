@@ -1,6 +1,5 @@
 import { useToastStore } from '../../stores/toast'
 import { t } from '../../i18n'
-import { platform } from '../../lib/platform'
 import { mediaUnprotected } from './mediaRoom'
 import type { Cx } from './state'
 import { tuneSender } from './senderTuning'
@@ -24,10 +23,6 @@ function cameraErrorKey(err: unknown) {
 }
 
 function canStartCamera(cx: Cx): boolean {
-  if (platform.isDesktop()) {
-    useToastStore().error(t('nativeDesktop.mediaUnavailable'))
-    return false
-  }
   if (mediaUnprotected()) return false
   return Boolean(cx.voice.currentChannelId && !cx.st.localCameraStream.value)
 }

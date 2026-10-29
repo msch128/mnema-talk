@@ -592,20 +592,3 @@ func TestReconnectWithinGraceResumesOriginalVoiceStay(t *testing.T) {
 		t.Fatal("resumed participant retained grace timer")
 	}
 }
-
-func TestActiveVoiceRoomNeedsAnAllowedClient(t *testing.T) {
-	h, _ := newSFUHub(t)
-	ch := voiceCh()
-	c := testClient(h, auth.User{ID: uuid.New()})
-	h.joinVoice(c, ch)
-	t.Cleanup(func() { h.leaveCurrentVoice(c); h.Close() })
-	if c.activeVoiceRoom() == nil {
-		t.Fatal("a joined member has no room")
-	}
-	c.native = &nativeSocketState{}
-	c.native.securityClosed.Store(true)
-	if c.activeVoiceRoom() != nil {
-		t.Fatal("a native socket whose lease is gone still gets the room")
-	}
-	c.native = nil
-}

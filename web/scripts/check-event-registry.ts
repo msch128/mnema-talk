@@ -4,9 +4,6 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-/** Events the web app never receives: the desktop bridge handles them before the page sees a frame. */
-const NATIVE_ONLY_SERVER_EVENTS = new Set(['native_access_renewed'])
-
 interface Golden { server: Record<string, string>; client: Record<string, string> }
 
 function read(path: string): string {
@@ -33,7 +30,7 @@ export function differences(direction: string, goEvents: string[], tsEvents: str
 function main(): void {
   const golden = JSON.parse(read('../../internal/events/testdata/events.golden.json')) as Golden
   const source = read('../src/types/events.ts')
-  const server = Object.values(golden.server).filter(name => !NATIVE_ONLY_SERVER_EVENTS.has(name))
+  const server = Object.values(golden.server)
   const problems = [
     ...differences('server', server, interfaceKeys(source, 'ServerEventPayloads')),
     ...differences('client', Object.values(golden.client), interfaceKeys(source, 'ClientEventPayloads'))

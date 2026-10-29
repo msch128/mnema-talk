@@ -1,9 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const platformMock = vi.hoisted(() => ({ desktop: false, trusted: false, selector: false }))
+const platformMock = vi.hoisted(() => ({ trusted: false, selector: false }))
 vi.mock('./platform', () => ({
   platform: {
-    isDesktop: () => platformMock.desktop,
     isTrustedDesktop: () => platformMock.trusted,
     isWebDesktopSelector: () => platformMock.selector,
   },
@@ -21,7 +20,7 @@ function fireInstallPrompt(outcome: 'accepted' | 'dismissed' = 'accepted') {
 }
 
 beforeEach(() => {
-  platformMock.desktop = platformMock.trusted = platformMock.selector = false
+  platformMock.trusted = platformMock.selector = false
   vi.stubGlobal('navigator', Object.assign(Object.create(navigator), { serviceWorker: { register: vi.fn(async () => ({})) } }))
 })
 
@@ -37,7 +36,7 @@ describe('where the service worker may run', () => {
   })
 
   it('does not run in the desktop client, its bundle or its selector', () => {
-    for (const key of ['desktop', 'trusted', 'selector'] as const) {
+    for (const key of ['trusted', 'selector'] as const) {
       platformMock[key] = true
       expect(serviceWorkerAllowed(), key).toBe(false)
       platformMock[key] = false
@@ -61,7 +60,7 @@ describe('registering the worker', () => {
     vi.stubEnv('PROD', false)
     registerServiceWorker()
     vi.stubEnv('PROD', true)
-    platformMock.desktop = true
+    platformMock.trusted = true
     registerServiceWorker()
     expect(navigator.serviceWorker.register).not.toHaveBeenCalled()
   })

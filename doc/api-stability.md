@@ -53,8 +53,7 @@ These change whenever the code needs it, also in a patch release:
   a library.
 - **Debug and operator-only endpoints**: everything under `/api/admin/` that the
   OpenAPI document marks as admin-only and that serves the admin UI (for example
-  `GET /api/admin/system/ops`), the API docs page, and the isolated native
-  preview transport (`internal/nativepreview`, experimental).
+  `GET /api/admin/system/ops`), the API docs page.
 - **Log formats and messages**, including the text of structured fields.
 - **Anything undocumented**: extra fields in a response that no schema lists,
   the order of array members the documentation does not sort, timing.

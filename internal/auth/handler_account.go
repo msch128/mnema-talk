@@ -47,8 +47,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// announceRegistered audits a new account and tells the clients about it. The
-// browser and native registration both end here.
+// announceRegistered audits a new account and tells the clients about it.
 func (h *Handler) announceRegistered(ctx context.Context, u *User) {
 	h.auditUser(ctx, u, "auth.register")
 	if h.Events != nil {

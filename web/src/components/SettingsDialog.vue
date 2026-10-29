@@ -28,7 +28,7 @@ const ICONS: Record<SettingsTab, Component> = { signin: KeyRound, sessions: Lapt
 const NEEDS_ACCOUNT: ReadonlySet<SettingsTab> = new Set(['signin', 'data'])
 
 // The installed desktop client has its own notifications and no install step.
-const visible = computed(() => SETTINGS_TABS.filter(tab => tab !== 'app' || (!platform.isDesktop() && !platform.isTrustedDesktop())))
+const visible = computed(() => SETTINGS_TABS.filter(tab => tab !== 'app' || !platform.isTrustedDesktop()))
 const groups = computed(() => [
   { id: 'account', tabs: visible.value.filter(tab => !['app', 'audio'].includes(tab)) },
   { id: 'device', tabs: visible.value.filter(tab => ['app', 'audio'].includes(tab)) }

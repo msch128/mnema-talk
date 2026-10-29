@@ -1,19 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const host = vi.hoisted(() => ({
-  desktop: false,
   selector: false,
   trusted: null as null | { role: string; version: string; capabilities: string[] },
   invoke: vi.fn(),
-  nativeTransport: vi.fn(),
-  initialize: vi.fn(),
-  connect: vi.fn(),
-  disconnect: vi.fn(),
-  capture: vi.fn(),
 }))
 
 vi.mock('@tauri-apps/api/core', async importOriginal => ({ ...await importOriginal<typeof import('@tauri-apps/api/core')>(), invoke: host.invoke }))
-vi.mock('./desktopRuntime', () => ({ isDesktopRuntime: () => host.desktop, isWebDesktopSelector: () => host.selector }))
+vi.mock('./desktopRuntime', () => ({ isWebDesktopSelector: () => host.selector }))
 vi.mock('./native/trustedDesktop', () => ({ trustedApp: () => host.trusted, isTrustedDesktop: () => host.trusted !== null }))
 const notify = vi.hoisted(() => ({
   browser: { permission: vi.fn(() => 'default'), refreshPermission: vi.fn(async () => 'default'), requestPermission: vi.fn(async () => 'granted'), notify: vi.fn(), setBadge: vi.fn() },
@@ -21,21 +15,10 @@ const notify = vi.hoisted(() => ({
 }))
 vi.mock('./osNotify', () => ({ browserNotify: notify.browser, hostNotify: notify.host }))
 vi.mock('./native/trustedSocket', () => ({ TrustedSocket: class TrustedSocket { kind = 'trusted'; constructor(public path?: string) {} } }))
-vi.mock('./native/nativeTransport', () => ({
-  NativeSocket: class NativeSocket { kind = 'native' },
-  nativeApiTransport: host.nativeTransport,
-  initializeNativeContext: host.initialize,
-  connectNative: host.connect,
-  disconnectNative: host.disconnect,
-  captureNativeTrustPresentation: host.capture,
-}))
-
-import { NativeSocket } from './native/nativeTransport'
 import { isTrustedDesktop } from './native/trustedDesktop'
-import { browserPlatform, desktopPlatform, platform } from './platform'
+import { browserPlatform, platform } from './platform'
 
 beforeEach(() => {
-  host.desktop = false
   host.selector = false
   host.trusted = null
   vi.clearAllMocks()
@@ -47,21 +30,18 @@ afterEach(() => {
 })
 
 describe('browser platform', () => {
-  it('is not a desktop, uses same-origin API calls and a plain WebSocket', () => {
+  it('opens a plain WebSocket', () => {
     const socket = vi.fn()
     vi.stubGlobal('WebSocket', socket)
-    expect(platform.isDesktop()).toBe(false)
-    expect(platform.apiTransport()).toBeNull()
     platform.openSocket('wss://example.invalid/api/ws')
     expect(socket).toHaveBeenCalledWith('wss://example.invalid/api/ws')
   })
 
-  it('keeps the native transport off the browser platform when the page is not trusted', () => {
+  it('keeps the relayed socket off the browser platform when the page is not trusted', () => {
     const socket = vi.fn()
     vi.stubGlobal('WebSocket', socket)
     expect(isTrustedDesktop()).toBe(false)
-    expect(browserPlatform.apiTransport()).toBeNull()
-    expect(browserPlatform.openSocket('wss://example.invalid/api/ws')).not.toBeInstanceOf(NativeSocket)
+    expect(browserPlatform.openSocket('wss://example.invalid/api/ws')).not.toMatchObject({ kind: 'trusted' })
     expect(socket).toHaveBeenCalledWith('wss://example.invalid/api/ws')
   })
 
@@ -155,46 +135,13 @@ describe('notifications', () => {
       }
       expect(notify.host.reportUnread).not.toHaveBeenCalled()
     })
-
-    it('behaves the same on the desktop platform', () => {
-      host.desktop = true
-      host.trusted = { role: 'instance', version: '1.2.3', capabilities: ['unread'] }
-      platform.reportUnread(counts)
-      expect(notify.host.reportUnread).toHaveBeenCalledWith(counts)
-    })
-  })
-
-  it('routes the same way on the desktop platform', () => {
-    host.desktop = true
-    platform.notify(toast)
-    expect(notify.browser.notify).toHaveBeenCalledWith(toast)
   })
 })
 
-describe('desktop platform', () => {
-  beforeEach(() => { host.desktop = true })
-
-  it('routes API calls and the socket through native IPC', () => {
-    expect(platform.isDesktop()).toBe(true)
-    expect(platform.apiTransport()).toBe(host.nativeTransport)
-    expect(platform.openSocket('wss://ignored.invalid')).toMatchObject({ kind: 'native' })
-    expect(desktopPlatform.apiTransport()).toBe(host.nativeTransport)
-    expect(desktopPlatform.openSocket('wss://ignored.invalid')).toBeInstanceOf(NativeSocket)
-    expect(desktopPlatform.isDesktop()).toBe(true)
-  })
-
-  it('forwards host commands and the native connection lifecycle', async () => {
+describe('host commands', () => {
+  it('forwards host commands', async () => {
     host.invoke.mockResolvedValue('reply')
-    host.connect.mockResolvedValue({ context: 'c', status: 200, body: null })
     expect(await platform.invoke('desktop_open_instance', { address: 'a' })).toBe('reply')
     expect(host.invoke).toHaveBeenCalledWith('desktop_open_instance', { address: 'a' })
-    await platform.initializeNative()
-    await platform.connectNative('community.example.invalid')
-    await platform.disconnectNative()
-    platform.captureTrustPresentation()
-    expect(host.initialize).toHaveBeenCalledOnce()
-    expect(host.connect).toHaveBeenCalledWith('community.example.invalid')
-    expect(host.disconnect).toHaveBeenCalledOnce()
-    expect(host.capture).toHaveBeenCalledOnce()
   })
 })

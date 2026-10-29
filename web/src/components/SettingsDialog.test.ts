@@ -7,7 +7,6 @@ import SettingsDialog from './SettingsDialog.vue'
 import { setLocale } from '../i18n'
 import { useAccountStore } from '../stores/account'
 import { settingsTab } from '../lib/settingsDialog'
-import { platform } from '../lib/platform'
 import { useToastStore } from '../stores/toast'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
@@ -216,15 +215,6 @@ describe('SettingsDialog sections', () => {
     await list.trigger('keydown', { key: 'x' })
     expect(settingsTab.value).toBe('signin')
     w.unmount()
-  })
-
-  it('offers no install section in the desktop client, which has its own notifications', async () => {
-    const desktop = vi.spyOn(platform, 'isDesktop').mockReturnValue(true)
-    const w = await openAt('app')
-    expect(w.find('[data-testid="settings-tab-app"]').exists()).toBe(false)
-    expect(w.get('[data-testid="settings-tab-signin"]').attributes('aria-selected')).toBe('true')
-    w.unmount()
-    desktop.mockRestore()
   })
 
   it('waits for the account only where it is needed', async () => {

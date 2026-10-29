@@ -52,23 +52,6 @@ async function mountApp({ authenticated = true, admin = false, path = '/c/ch1' }
 async function go(path: string) { router.navigate(path); await flushPromises() }
 
  describe('App routing and session lifecycle', () => {
-  it.each([false, true])('keeps the shared ChatArea mounted in desktop for admin=%s and limits root setup to admins', async admin => {
-    vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('http://tauri.localhost/'))
-    const { w, chat } = await mountApp({ admin })
-    expect(w.findComponent({ name: 'ChatArea' }).exists()).toBe(true)
-    expect(w.findComponent({ name: 'UpdateBanner' }).exists()).toBe(false)
-    const control = w.findComponent({ name: 'NativeTrustControl' })
-    expect(control.exists()).toBe(admin)
-    if (admin) {
-      chat.fetchMessages = vi.fn(async () => true)
-      control.vm.$emit('saved'); await flushPromises()
-      expect(chat.fetchMessages).toHaveBeenCalledExactlyOnceWith('ch1')
-      chat.activeChannel = null; await flushPromises()
-      control.vm.$emit('saved'); await flushPromises()
-      expect(chat.fetchMessages).toHaveBeenCalledOnce()
-      expect(w.findComponent({ name: 'NativeTrustControl' }).exists()).toBe(false)
-    }
-  })
   it('keeps the server reload banner available in the browser', async () => {
     vi.stubGlobal('isTauri', false)
     const { w } = await mountApp()
@@ -114,6 +97,19 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     navOpen.value = true
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     expect(navOpen.value).toBe(false)
+  })
+  it('gives a thread the whole screen on a phone and keeps the member list on a desktop', async () => {
+    const { isCompact } = useCompactLayout()
+    const { chat } = await mountApp()
+    isCompact.value = false
+    chat.showMemberList = true
+    chat.activeThread = messageFixture({ id: 't1' })
+    await flushPromises()
+    expect(chat.showMemberList).toBe(true)
+    isCompact.value = true
+    chat.activeThread = messageFixture({ id: 't2' })
+    await flushPromises()
+    expect(chat.showMemberList).toBe(false)
   })
   it('guards admin routes and repairs missing or incorrectly typed channels', async () => {
     const { toasts, w } = await mountApp()

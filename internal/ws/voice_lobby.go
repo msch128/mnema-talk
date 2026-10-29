@@ -24,7 +24,7 @@ type LobbyOpener interface {
 // join the lobby gets a Talk; the new Talk carries the lobby's permissions, and
 // that join checks them again.
 func (h *Hub) enterLobby(c *Client, lobby *chat.ChannelInfo) {
-	if !c.commandsAllowed() || !h.checkJoinPermission(c, lobby.ID) {
+	if !h.checkJoinPermission(c, lobby.ID) {
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), permTimeout)
