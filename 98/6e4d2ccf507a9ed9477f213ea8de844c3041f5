@@ -1,0 +1,142 @@
+internal/server/auth_hardening_integration_test.go
+  s_06fcde5dbef956::t_a13f191934df27 131
+  s_06fcde5dbef956::t_fa0dfd1ffab40a 125
+cmd/server/unlock_integration_test.go
+  s_06fcde5dbef956::t_fa0dfd1ffab40a 20
+internal/chat/mentions_test.go
+  s_06fcde5dbef956::t_914cf5b7ed0c74 59-65
+e2e/run.sh
+  s_863e1f0a5fe207::t_6b136888b0ee07 157
+e2e/tests/a11y.spec.ts
+  s_863e1f0a5fe207::t_57fe69c1cbd31b 6
+e2e/tests/account-delete.spec.ts
+  s_863e1f0a5fe207::t_0ad480b362b5e0 5
+e2e/tests/active-members.spec.ts
+  s_863e1f0a5fe207::t_62d13180e86ec0 7
+e2e/tests/audit.spec.ts
+  s_863e1f0a5fe207::t_13f13bb04bd42e 5
+e2e/tests/bot-members.spec.ts
+  s_863e1f0a5fe207::t_3ce5297f12d7ec 4
+e2e/tests/bots.spec.ts
+  s_863e1f0a5fe207::t_164733936332a3 6
+e2e/tests/browser-sealing.spec.ts
+  s_863e1f0a5fe207::t_48a50bb8a0f780 9
+e2e/tests/coherence.spec.ts
+  s_863e1f0a5fe207::t_f97e8490faf656 7
+e2e/tests/csp.spec.ts
+  s_863e1f0a5fe207::t_848737ca041f7d 11
+e2e/tests/dm-polish.spec.ts
+  s_863e1f0a5fe207::t_63494002faebc0 10
+e2e/tests/dm.spec.ts
+  s_863e1f0a5fe207::t_d469bb569538c0 9
+e2e/tests/drafts.spec.ts
+  s_863e1f0a5fe207::t_646512a6145264 5
+e2e/tests/forward.spec.ts
+  s_863e1f0a5fe207::t_931fdc9d97b376 5
+e2e/tests/key-lifecycle.spec.ts
+  s_863e1f0a5fe207::t_865446bad34fe3 5
+e2e/tests/late-join.spec.ts
+  s_863e1f0a5fe207::t_45e46e814faa42 5
+e2e/tests/layout.spec.ts
+  s_863e1f0a5fe207::t_cb38f4d1bee385 10
+e2e/tests/mentions.spec.ts
+  s_863e1f0a5fe207::t_0624c807e0f659 5
+e2e/tests/message-moderation.spec.ts
+  s_863e1f0a5fe207::t_3b075daaf27ea1 5
+e2e/tests/mobile.spec.ts
+  s_863e1f0a5fe207::t_83771159bac50a 11
+e2e/tests/moderation.spec.ts
+  s_863e1f0a5fe207::t_b3f8f33cb4d852 5
+e2e/tests/notifications.spec.ts
+  s_863e1f0a5fe207::t_11fd31a925b4dc 5
+e2e/tests/onboarding.spec.ts
+  s_863e1f0a5fe207::t_47b4bf861e3262 5
+e2e/tests/polls.spec.ts
+  s_863e1f0a5fe207::t_b3845d688a236f 5
+e2e/tests/profile-banner.spec.ts
+  s_863e1f0a5fe207::t_e35c2457d6a3ac 9
+e2e/tests/push.spec.ts
+  s_863e1f0a5fe207::t_b8e294d232f16f 17
+e2e/tests/roles.spec.ts
+  s_863e1f0a5fe207::t_82d1b07dbaedeb 5
+e2e/tests/saved.spec.ts
+  s_863e1f0a5fe207::t_d1d1f859ac9ca2 5
+e2e/tests/screen-layers.spec.ts
+  s_863e1f0a5fe207::t_fb42cac3bf0fe1 6
+e2e/tests/screenshare.spec.ts
+  s_863e1f0a5fe207::t_f20558490feeea 6
+e2e/tests/search.spec.ts
+  s_863e1f0a5fe207::t_c005db4719f093 5
+e2e/tests/sidebar-layout.spec.ts
+  s_863e1f0a5fe207::t_4aa868d3976c74 7
+e2e/tests/slash-builtins.spec.ts
+  s_863e1f0a5fe207::t_3ac06a0f3e5258 5
+e2e/tests/small-1-2.spec.ts
+  s_863e1f0a5fe207::t_cda0958be54858 8
+e2e/tests/smoke.spec.ts
+  s_863e1f0a5fe207::t_a137bcd14b81d8 6
+e2e/tests/speaking-urls.spec.ts
+  s_863e1f0a5fe207::t_c110a6d1fe5f61 9
+e2e/tests/stage-switch.spec.ts
+  s_863e1f0a5fe207::t_0df7fbade52595 5
+e2e/tests/talk-chat-read.spec.ts
+  s_863e1f0a5fe207::t_f015cc0278557c 8
+e2e/tests/talk-extras.spec.ts
+  s_863e1f0a5fe207::t_00a2ac9b855f81 5
+e2e/tests/talk-lobby.spec.ts
+  s_863e1f0a5fe207::t_d9c0856f6a7af0 9
+e2e/tests/talk-stage.spec.ts
+  s_863e1f0a5fe207::t_1b9a67ff94c087 9
+e2e/tests/two-factor.spec.ts
+  s_863e1f0a5fe207::t_ca91f7a1b7b52e 6
+e2e/tests/ui-events-polish.spec.ts
+  s_863e1f0a5fe207::t_e901d9a7a05857 9
+e2e/tests/unread-jump.spec.ts
+  s_863e1f0a5fe207::t_edcd22e9797776 5
+e2e/tests/upload-limit.spec.ts
+  s_863e1f0a5fe207::t_1cf17a1f5b5724 5
+e2e/tests/voice-chat.spec.ts
+  s_863e1f0a5fe207::t_d134f5496f7920 5
+e2e/tests/webhooks-outgoing.spec.ts
+  s_863e1f0a5fe207::t_3bae506a462770 8
+e2e/tests/webhooks-ui.spec.ts
+  s_863e1f0a5fe207::t_5649fa0eab9581 6
+e2e/tests/webhooks.spec.ts
+  s_863e1f0a5fe207::t_cde0279290d0e7 6
+scripts/backup-drill.sh
+  s_863e1f0a5fe207::t_99b44210488855 136
+scripts/fresh-install-check.sh
+  s_863e1f0a5fe207::t_6902de9e6c07d4 74
+scripts/postgres-upgrade-drill.sh
+  s_863e1f0a5fe207::t_3c4d94b2df3d2b 120
+scripts/smoke-image.sh
+  s_863e1f0a5fe207::t_4ba441ef2159d0 130
+scripts/upgrade-drill-data.sh
+  s_863e1f0a5fe207::t_85512c41b2b6cd 36-37,42-44,46,52,58,61,78,82,95-97,118,120,122,124,126,140,143-144,225,228
+scripts/upgrade-drill.sh
+  s_863e1f0a5fe207::t_2e03fd9f143cb7 160,162,165,170-173,179,193-195,207,221,228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "986e4d2ccf507a9ed9477f213ea8de844c3041f5",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_863e1f0a5fe207": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-naming-c8fa258a3ebe9b41",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
