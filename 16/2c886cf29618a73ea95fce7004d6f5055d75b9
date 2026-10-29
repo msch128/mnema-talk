@@ -1,0 +1,37 @@
+web/src/components/DesktopSelector.test.ts
+  s_06fcde5dbef956::t_e219e075297f3f 63-105
+web/src/components/DesktopSelector.vue
+  s_0352f380cbe166::t_7b370c209ecfaf 6,13-15,17,23-31,39-40,44-47,64-67,88-90
+web/src/i18n/de.json
+  s_0352f380cbe166::t_51e71a35844151 1947-1948
+web/src/i18n/en.json
+  s_0352f380cbe166::t_6f3139cd4ce4c9 1947-1948
+web/src/lib/copyText.ts
+  s_0352f380cbe166::t_3c97867f951f5b 1-29
+web/src/style.css
+  s_0352f380cbe166::t_01068879689bd6 388-396
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "162c886cf29618a73ea95fce7004d6f5055d75b9",
+  "prompts": {},
+  "sessions": {
+    "s_0352f380cbe166": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aweb-copy-host-errors-4124fa7dafac9662",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
