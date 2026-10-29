@@ -24,7 +24,7 @@ const props = defineProps({
   canReact: { type: Boolean, default: false },
   highlighted: { type: Boolean, default: false }
 })
-const emit = defineEmits<{ reply: []; jump: []; keydown: [event: KeyboardEvent]; 'open-image': [src: string] }>()
+const emit = defineEmits<{ reply: []; jump: []; 'edit-step': [step: -1 | 1, event: KeyboardEvent]; keydown: [event: KeyboardEvent]; 'open-image': [src: string] }>()
 
 const chatStore = useChatStore()
 const authStore = useAuthStore()
@@ -139,6 +139,7 @@ const { pickerId, editingId, editText } = props.actions
           :label="$t('thread.edit')"
           @save="actions.saveEdit(reply)"
           @cancel="actions.cancelEdit()"
+          @navigate="(step, e) => emit('edit-step', step, e)"
         />
 
         <MarkdownContent v-else-if="reply.content" :content="reply.content" :mention-roles="reply.mention_roles ?? []" class="mt-0.5" />

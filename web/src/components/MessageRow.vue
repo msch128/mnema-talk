@@ -45,7 +45,7 @@ const props = defineProps({
   tabStop: { type: Boolean, default: true }
 })
 const editText = defineModel<string>('editText', { type: String, default: '' })
-const emit = defineEmits<{ reply: []; edit: []; save: []; 'cancel-edit': []; more: [event: MouseEvent]; react: [emoji: string]; 'toggle-picker': [id: string]; 'close-picker': []; 'open-thread': []; 'open-profile': []; 'open-image': [src: string]; jump: [] }>()
+const emit = defineEmits<{ reply: []; edit: []; save: []; 'cancel-edit': []; 'edit-step': [step: -1 | 1, event: KeyboardEvent]; more: [event: MouseEvent]; react: [emoji: string]; 'toggle-picker': [id: string]; 'close-picker': []; 'open-thread': []; 'open-profile': []; 'open-image': [src: string]; jump: [] }>()
 
 const row = ref<HTMLElement | null>(null)
 // An unsent reply in this message's thread, like the Draft marker of a channel.
@@ -178,6 +178,7 @@ defineExpose({ el: row })
         :label="$t('chat.edit')"
         @save="emit('save')"
         @cancel="emit('cancel-edit')"
+        @navigate="(step, e) => emit('edit-step', step, e)"
       />
 
       <!-- Markdown Message Content -->

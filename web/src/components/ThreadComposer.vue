@@ -23,7 +23,7 @@ const props = defineProps({
   uploading: { type: Boolean, default: false },
   sending: { type: Boolean, default: false }
 })
-const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cancel-reply': []; file: [event: Event] }>()
+const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cancel-reply': []; file: [event: Event]; 'arrow-up': [event: KeyboardEvent] }>()
 
 const text = useDraftModel(() => props.modelValue, value => emit('update:modelValue', value))
 
@@ -38,7 +38,7 @@ const { attachFiles, onPaste } = useComposerFiles({ fileInput, canAttach: () => 
 defineExpose({ attachFiles, focus: () => textAreaEl.value?.focus() })
 
 function handleKeyDown(e: KeyboardEvent) {
-  handleComposerKeydown(e, { consumers: [assist.onKeydown], replying: () => !!props.replyingTo, cancelReply: () => emit('cancel-reply'), send: () => emit('send') })
+  handleComposerKeydown(e, { consumers: [assist.onKeydown], replying: () => !!props.replyingTo, cancelReply: () => emit('cancel-reply'), send: () => emit('send'), arrowUp: e => emit('arrow-up', e) })
 }
 </script>
 

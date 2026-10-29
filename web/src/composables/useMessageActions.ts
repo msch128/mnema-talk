@@ -178,18 +178,27 @@ export function useMessageActions({ container = null, deleteTitle = 'chat.delete
     return permissions.canIn(channelOf(msg), 'manage_messages')
   }
 
+  /** Resolves to whether the message is gone. */
   async function deleteMessage(msg: Message) {
     const ok = await confirmDelete(msg, deleteTitle)
-    if (!ok) return
+    if (!ok) return false
     try {
       await chatStore.deleteMessage(channelOf(msg), msg.id)
+      return true
     } catch (err) {
       toasts.error(caughtErrorMessage(err, t('chat.deleteFailed')))
+      return false
     }
   }
 
+  // Saving an empty text asks whether to delete the message, as Discord does.
+  async function saveOrDelete(msg: Message) {
+    if (editText.value.trim()) return saveEdit(msg)
+    if (editingId.value === msg.id && await deleteMessage(msg)) cancelEdit()
+  }
+
   return {
-    editingId, editText, isSavingEdit, startEdit, cancelEdit, saveEdit,
+    editingId, editText, isSavingEdit, startEdit, cancelEdit, saveEdit: saveOrDelete,
     deleteMessage, toggleReaction, isOwn, canDelete,
     pickerId, togglePicker, closePicker,
     isUploading, upload
