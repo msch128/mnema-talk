@@ -1,0 +1,27 @@
+web/src/components/Sidebar.test.ts
+  s_8d8b0c88a12980::t_184acc8b0dc241 596-606
+web/src/components/Sidebar.vue
+  s_8d8b0c88a12980::t_87171d985a65a1 176-178,187,192,196,223-227
+web/src/composables/useWebRTC.contextStall.test.ts
+  s_8d8b0c88a12980::t_6ced2d2b882de6 76-93
+web/src/composables/useWebRTC.harness.fixture.ts
+  s_8d8b0c88a12980::t_3f995059e2e37d 168-172
+web/src/composables/webrtc/audioSettings.ts
+  s_8d8b0c88a12980::t_927585a8d26a1e 49-51,63-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "84f68a2a69547783772a975d018377f4d5bbc845",
+  "prompts": {},
+  "sessions": {
+    "s_8d8b0c88a12980": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1cd6e61ac1eb5a6e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
