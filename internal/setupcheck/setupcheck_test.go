@@ -39,7 +39,7 @@ func prodConfig(t *testing.T, extra map[string]string) *config.Config {
 func healthy(cfg *config.Config) Input {
 	rt := &Runtime{}
 	rt.SetAnnounce(SourceDetected, []string{"203.0.113.7"}, "")
-	return Input{Cfg: cfg, Runtime: rt, DBReachable: true, StorageConfigured: true}
+	return Input{Cfg: cfg, Runtime: rt, DBReachable: true, StorageConfigured: true, TURNRunning: true}
 }
 
 func byID(checks []Check, id string) Check {
@@ -67,7 +67,7 @@ func TestHealthyInstallHasOnlyOptionalAmbers(t *testing.T) {
 }
 
 func TestEveryProblemNamesTheVariableToSet(t *testing.T) {
-	cfg := prodConfig(t, map[string]string{"PUBLIC_URL": "http://localhost:8080"})
+	cfg := prodConfig(t, map[string]string{"PUBLIC_URL": "http://localhost:8080", "WEBRTC_BUILTIN_TURN": "off"})
 	in := Input{Cfg: cfg, Runtime: &Runtime{}, StorageConfigured: true, StorageErr: errors.New("dial seaweedfs:8333")}
 	checks := Run(in)
 	want := map[string]struct {
@@ -76,7 +76,7 @@ func TestEveryProblemNamesTheVariableToSet(t *testing.T) {
 	}{
 		PublicURL:    {Fail, "PUBLIC_URL="},
 		VoiceAddress: {Fail, "WEBRTC_NAT_1TO1_IP="},
-		Turn:         {Warn, "WEBRTC_TURN_URLS="},
+		Turn:         {Warn, "WEBRTC_BUILTIN_TURN=off"},
 		Mail:         {Warn, "SMTP_HOST"},
 		Storage:      {Fail, "S3_ACCESS_KEY"},
 		Database:     {Fail, "POSTGRES_PASSWORD"},
@@ -266,5 +266,62 @@ func TestMeasureClockSkewAgainstAFakeNTPServer(t *testing.T) {
 	}
 	if _, err := MeasureClockSkew(context.Background(), nil, time.Second); err == nil {
 		t.Error("want an error without servers")
+	}
+}
+
+func TestTurnCheckStates(t *testing.T) {
+	ext := map[string]string{"WEBRTC_TURN_URLS": "turn:chat.example.com:3478", "WEBRTC_TURN_SECRET": "turn-secret-value-123456"}
+	unavailable := []opwarn.Warning{{Code: opwarn.TURNUnavailable}}
+	cases := []struct {
+		name   string
+		env    map[string]string
+		warns  []opwarn.Warning
+		probe  string
+		level  Level
+		detail string
+		fix    string
+	}{
+		{"built-in by default", nil, nil, "", OK, "built-in TURN relay serves members", ""},
+		{"probe reachable", nil, nil, "reachable", OK, "port 3479", ""},
+		{"probe unreachable", nil, nil, "unreachable", Warn, "did not answer", "Forward port 3479 (UDP and TCP)"},
+		{"custom port", map[string]string{"WEBRTC_BUILTIN_TURN_PORT": "3500"}, nil, "", OK, "port 3500", ""},
+		{"port taken", nil, unavailable, "", Warn, "could not listen on port 3479", "WEBRTC_BUILTIN_TURN_PORT"},
+		{"external replaces built-in in auto", ext, nil, "unreachable", OK, "A TURN relay is configured", ""},
+		{"forced on beside external, port taken", mergeEnv(ext, map[string]string{"WEBRTC_BUILTIN_TURN": "on"}), unavailable, "", OK, "could not start", ""},
+		{"switched off", map[string]string{"WEBRTC_BUILTIN_TURN": "off"}, nil, "", Warn, "No TURN relay", "WEBRTC_BUILTIN_TURN=off"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			in := healthy(prodConfig(t, tc.env))
+			in.Warnings, in.TURNProbe, in.TURNRunning = tc.warns, tc.probe, true
+			c := byID(Run(in), Turn)
+			if c.Level != tc.level || !strings.Contains(c.Detail, tc.detail) || !strings.Contains(c.Fix, tc.fix) || (tc.fix == "" && c.Fix != "") {
+				t.Errorf("turn = %+v, want level %s, detail containing %q, fix containing %q", c, tc.level, tc.detail, tc.fix)
+			}
+		})
+	}
+}
+
+func mergeEnv(a, b map[string]string) map[string]string {
+	m := map[string]string{}
+	for _, x := range []map[string]string{a, b} {
+		for k, v := range x {
+			m[k] = v
+		}
+	}
+	return m
+}
+
+func TestTurnCheckWarnsWhenTheBuiltInRelayDidNotStart(t *testing.T) {
+	in := healthy(prodConfig(t, nil))
+	in.TURNRunning = false
+	c := byID(Run(in), Turn)
+	if c.Level != Warn || !strings.Contains(c.Detail, "not running because voice is unavailable") {
+		t.Errorf("turn = %+v, want an amber check that says voice is unavailable", c)
+	}
+	in = healthy(prodConfig(t, map[string]string{"WEBRTC_TURN_URLS": "turn:chat.example.com:3478", "WEBRTC_TURN_SECRET": "turn-secret-value-123456", "WEBRTC_BUILTIN_TURN": "on"}))
+	in.TURNRunning = false
+	if c := byID(Run(in), Turn); c.Level != OK {
+		t.Errorf("an external relay keeps the check green, got %+v", c)
 	}
 }

@@ -70,6 +70,11 @@ func RenderEnv(o Options, s Secrets, now time.Time) string {
 	w("# Pin it (or give a dynamic-DNS name) if that is wrong or you want no lookup:")
 	w("# WEBRTC_NAT_1TO1_IP=203.0.113.7")
 	w("# WEBRTC_AUTO_ANNOUNCE=false")
+	w("# Members behind networks that block UDP connect through the built-in TURN relay")
+	w("# on port 3479 (UDP and TCP; forward it like the voice ports). It is off while")
+	w("# WEBRTC_TURN_URLS names an external TURN server. Switch it: auto (default), on, off.")
+	w("# WEBRTC_BUILTIN_TURN=auto")
+	w("# WEBRTC_BUILTIN_TURN_PORT=3479")
 	w("")
 	renderMail(w, o.SMTP)
 	if o.AutoUpdate {

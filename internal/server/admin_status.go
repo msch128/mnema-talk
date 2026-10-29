@@ -133,6 +133,9 @@ func (h *systemHandler) setupChecks(st OperatorStatus, origin string) []setupche
 	if h.storage != nil {
 		in.StorageErr = h.storage()
 	}
+	if h.turn != nil {
+		in.TURNRunning, in.TURNProbe = true, h.turn.Status().Probe
+	}
 	return setupcheck.Run(in)
 }
 

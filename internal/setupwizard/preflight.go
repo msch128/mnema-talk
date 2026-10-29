@@ -126,7 +126,7 @@ func reachFinding(ctx context.Context, u *url.URL, p Probe) Finding {
 }
 
 func udpNote() Finding {
-	return Finding{LevelNote, "Voice ports", "Forward UDP 50000-50050 from the router to this machine (and allow it in the firewall). This cannot be tested from inside; the admin console's Status tab shows what the server sees."}
+	return Finding{LevelNote, "Voice ports", "Forward UDP 50000-50050 and port 3479 (UDP and TCP, the built-in relay for members behind strict firewalls) from the router to this machine and allow them in the firewall. This cannot be tested from inside; the admin console's Status tab shows what the server sees."}
 }
 
 func clockFinding(ctx context.Context, p Probe) Finding {

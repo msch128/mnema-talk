@@ -14,7 +14,8 @@ image tags and the details behind these steps:
    50000-50050** for voice and video (the proxy does not carry them) and
    **UDP and TCP 3479** for the built-in TURN relay, which lets members behind
    firewalls that block UDP join calls. Every port, what it is for and the
-   outbound connections: [Network ports](ports.md).
+   outbound connections: [Network ports](ports.md). `WEBRTC_BUILTIN_TURN=off`
+   removes the relay; an external TURN server in `WEBRTC_TURN_URLS` replaces it.
 
 Nothing else is required. `PUBLIC_URL` is the one address you set; allowed
 origins, `Secure` cookies and the links in e-mails follow from it, and the
@@ -172,14 +173,15 @@ join with a second browser or phone and start a Talk.
 | Public address | `PUBLIC_URL` is `localhost`, plain `http://`, or not the address you opened the page at |
 | Voice address | The server found no public address: set `WEBRTC_NAT_1TO1_IP` |
 | Voice port | The UDP port is taken or capped (`WEBRTC_UDP_MUX_PORT`) |
-| TURN relay | None set: members behind networks that block UDP cannot join (optional) |
+| TURN relay | The built-in relay could not bind port 3479, did not answer on it, or is switched off with no external TURN set: members behind networks that block UDP cannot join |
 | Outgoing mail | None set: no password reset e-mails (optional) |
 | Object storage, Database | A container is down or the secrets in `.env` do not match |
 | Server clock | The host clock is off; turn on NTP |
 | Reverse proxy | The proxy is not listed in `TRUSTED_PROXY_CIDRS` |
 
 If the Talk connects for you but not for others, nearly always the router does
-not forward UDP 50000-50050 to the server, or two members are on the same LAN
+not forward UDP 50000-50050 to the server (members behind strict firewalls
+also need 3479, UDP and TCP), or two members are on the same LAN
 and the router lacks NAT loopback (list the server's LAN IP too:
 `WEBRTC_NAT_1TO1_IP=<public IP>,<LAN IP>`). More:
 [Nobody can join voice](operations.md#nobody-can-join-voice-or-it-connects-and-drops-after-a-few-seconds).

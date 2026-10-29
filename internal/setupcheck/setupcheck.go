@@ -121,6 +121,12 @@ type Input struct {
 	// RequestOrigin is the scheme and host the admin opened the page at
 	// ("https://chat.example.com"); empty when there is no request (startup).
 	RequestOrigin string
+	// TURNRunning is whether the built-in TURN relay was started; false when
+	// it is off or when it could not start (voice unavailable).
+	TURNRunning bool
+	// TURNProbe is the last self-test of the built-in TURN relay: "reachable",
+	// "unreachable" or "" / "unknown" (not run, or no relay).
+	TURNProbe string
 }
 
 // Run evaluates every check, in the order they are shown.
@@ -131,7 +137,7 @@ func Run(in Input) []Check {
 		publicURLCheck(in, has),
 		voiceAddressCheck(in.Cfg, rt),
 		voiceUDPCheck(in.Cfg, has),
-		turnCheck(in.Cfg),
+		turnCheck(in, has),
 		mailCheck(in.Cfg),
 		storageCheck(in),
 		databaseCheck(in.DBReachable),
@@ -262,20 +268,6 @@ func mediaPort(cfg *config.Config) uint16 {
 		return cfg.WebRTCUDPMuxPort
 	}
 	return cfg.WebRTCUDPPortMin
-}
-
-func turnCheck(cfg *config.Config) Check {
-	c := Check{ID: Turn}
-	switch {
-	case len(cfg.WebRTCTURNURLs) > 0:
-		c.Level = OK
-		c.Detail = "A TURN relay is configured for members behind strict firewalls."
-	default:
-		c.Level = Warn
-		c.Detail = "No TURN relay: members on networks that block UDP cannot join voice."
-		c.Fix = "Optional: start the turn profile (docker compose --profile turn up -d) and set WEBRTC_TURN_URLS=turn:chat.example.com:3478 and WEBRTC_TURN_SECRET."
-	}
-	return c
 }
 
 func mailCheck(cfg *config.Config) Check {

@@ -100,7 +100,7 @@ func runWithContext(ctx context.Context) error {
 	}
 
 	updates := startUpdateChecker(ctx, cfg)
-	startSetupChecks(ctx, cfg, setup, pool.Ping, store.Ready)
+	startSetupChecks(ctx, cfg, setup, pool.Ping, store.Ready, relay)
 
 	router, err := server.NewRouter(server.Deps{Config: cfg, DB: pool, Store: store, StorageReady: store.Ready, SFU: voice, TURN: relay, Version: version.Current(), Updates: updates, Context: ctx, Setup: setup})
 	if err != nil {

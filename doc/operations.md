@@ -744,7 +744,7 @@ run `docker compose up -d` and reload the tab.
 | Public address | `PUBLIC_URL` is `localhost` in production | plain `http://`, or the page was opened at another address (behind a reverse proxy: it must pass `Host` and `X-Forwarded-Proto`) |
 | Voice address | nothing announced and no TURN (`WEBRTC_NAT_1TO1_IP`) | nothing announced, TURN configured |
 | Voice port | the voice engine did not start (UDP ports busy) | `WEBRTC_UDP_MUX_PORT=0` caps the number of callers |
-| TURN relay | n/a | none configured (optional) |
+| TURN relay | n/a | built-in relay could not bind its port, or did not answer on it from the server (a router without NAT loopback also causes this), or `WEBRTC_BUILTIN_TURN=off` with no `WEBRTC_TURN_URLS` |
 | Outgoing mail | n/a | `SMTP_HOST` empty (optional) |
 | Object storage | not configured or not answering | n/a |
 | Database | not answering | n/a |
