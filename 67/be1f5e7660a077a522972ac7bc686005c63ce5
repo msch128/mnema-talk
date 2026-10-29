@@ -1,0 +1,20 @@
+doc/quick-start.md
+  s_06fcde5dbef956::t_54b791dbf2f2cd 86-93,103-124,149,157,179
+  s_06fcde5dbef956::t_16ce3239c26f56 180
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "67be1f5e7660a077a522972ac7bc686005c63ce5",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
