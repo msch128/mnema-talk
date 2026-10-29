@@ -1,0 +1,229 @@
+web/src/components/AdminAutomod.test.ts
+  s_3e68b8fa0e1785::t_401e346aa7d9e3 74-75,78-80,158,182
+web/src/components/AdminAutomodTab.vue
+  s_8895e592af2d2b::t_1a2c30f68a039d 10,87
+web/src/components/AdminBotsTab.test.ts
+  s_524065e4c1d78a::t_6dad2c0a68cb70 96,106-120
+web/src/components/AdminBotsTab.vue
+  s_ba0662248deca2::t_8f657384940c22 23,48,63-68,103,122
+web/src/components/AdminEditDialogs.test.ts
+  s_30e74ceb0962ca::t_79bbab8155146c 1-56
+web/src/components/AdminEditDialogs.vue
+  s_3b17690a73c198::t_ffc72dfdec1a57 4-6,8,11-12,23-36,43-61,63
+web/src/components/AdminLayoutTab.test.ts
+  s_8895e592af2d2b::t_ef71f0830a1be7 10,119-120,167-168,264-265,277-278
+web/src/components/AdminRolesTab.test.ts
+  s_524065e4c1d78a::t_df7db48c270e58 81,104,123,141,143-144,154,156,242,272,328,332,334-335,337-364
+web/src/components/AdminRolesTab.vue
+  s_fb29f048bd6d02::t_325b22fb835537 2-4,6,13,15,23-24,38,48,57,71,136,215
+web/src/components/AdminUploadLimit.test.ts
+  s_2d22d157720d46::t_2c0d4083d37c19 22-24,31-33,36-38,43,45,47-51,56-68,77,83,89,91-92
+web/src/components/AdminUploadLimit.vue
+  s_fc0029b3681126::t_f24e6d65506c03 4,8,11,20-31,33,37,47-62
+web/src/components/AutomodRuleDialog.test.ts
+  s_06fcde5dbef956::t_61fc9d220e1ab4 8,151,153,159-160,162-174,177-204
+web/src/components/AutomodRuleDialog.vue
+  s_3e68b8fa0e1785::t_da1649dcdb27d4 6-7,13-14,21,33-69,80-83,91-93,214-215
+web/src/components/BotDetailPanel.test.ts
+  s_524065e4c1d78a::t_5a6b99e365fddd 7,53,55-76,78-88,91,96,100-110,112-115,117,120,122-126,168-175,178-179
+web/src/components/BotDetailPanel.vue
+  s_5b748b0295d2f4::t_bf07d145a5a288 2-5,12,17,36,38-61,63-64,67-68,96,102-103,113,116,122,130-133
+web/src/components/BotDiscordParity.test.ts
+  s_06fcde5dbef956::t_59202e0fde251e 133,147
+web/src/components/BotMembers.test.ts
+  s_5b748b0295d2f4::t_64f40a85bca55b 176
+web/src/components/BotRolesPanel.test.ts
+  s_524065e4c1d78a::t_f1f05d0c66ef58 32-39,42,46,50,58-59,61-62,65,68,73
+web/src/components/BotRolesPanel.vue
+  s_30e74ceb0962ca::t_0c2843da7423a1 5,17-18
+web/src/components/ChannelAutoDelete.test.ts
+  s_8895e592af2d2b::t_a62d568ff2315e 2,39-40,42,45,47-48,51,55,57,59,61-64,66-68
+web/src/components/ChannelAutoDeleteField.vue
+  s_30e74ceb0962ca::t_7e45fcf5ae5436 3,5-8,17-25
+web/src/components/ChannelPermissionsDialog.test.ts
+  s_30e74ceb0962ca::t_0f04cee1e05b40 13,85,101,108,110-112,163,167-169,171,215-242
+web/src/components/ChannelPermissionsDialog.vue
+  s_3e68b8fa0e1785::t_82fa3f9eb894de 9,21,36-58,97,104,108,119,121,129-130,147,150,199-200
+web/src/components/ChannelWebhooksDialog.vue
+  s_06fcde5dbef956::t_6c4479ff1f7e29 7,19-25,29,42-43
+web/src/components/EditInviteDialog.test.ts
+  s_7e9329d487a94d::t_74371d4c9f13b3 11,32,145-187
+web/src/components/EditInviteDialog.vue
+  s_524065e4c1d78a::t_570694240374a6 5-6,9-10,14,32,34-35,46-48,50-51,54,60-63,68-70,72-96,102-107,115-117,122-125,127-128,134-137,139-140,145
+web/src/components/EditNameDialog.test.ts
+  s_06fcde5dbef956::t_345a3385048db8 11,13,27-28,32,81,83-84,86,108,126,128,130,132-188
+web/src/components/EditNameDialog.vue
+  s_524065e4c1d78a::t_28b134c00f8f64 5-6,12-13,18-20,35-40,43-86,88,91,93-95,98,100,103-127,131-136,138-153,155-179,181,184-186,188
+web/src/components/IncomingWebhookEditor.vue
+  s_30e74ceb0962ca::t_cdd43a7eba465b 1-74
+web/src/components/IncomingWebhooksPanel.vue
+  s_30e74ceb0962ca::t_432ce27bad3027 6,15,31,33-34,36-38,41-42,173,176,190
+web/src/components/MemberRolesDialog.test.ts
+  s_30e74ceb0962ca::t_c57de5c87306ad 12,65,76-77,79,91,107-118,120-121,123-130
+web/src/components/MemberRolesDialog.vue
+  s_fc0029b3681126::t_aef1539bec6c82 6-8,15,41-49,54-58,60,64-65,74,81-82
+web/src/components/OutgoingWebhookForm.vue
+  s_06fcde5dbef956::t_89e9ef6da474d4 1-108
+web/src/components/OutgoingWebhooksPanel.vue
+  s_524065e4c1d78a::t_fceaf0df870201 5,8,14,28-29,48-52,55-59,152
+web/src/components/RoleEditor.vue
+  s_fb29f048bd6d02::t_66433b05c38e49 1-193
+web/src/components/Sidebar.test.ts
+  s_8895e592af2d2b::t_ca9eb256f36823 557,559
+web/src/components/UnsavedChangesBar.vue
+  s_28915fd19e1e49::t_9b1579cf4e065d 12-13,40
+web/src/components/WebhookPanels.test.ts
+  s_e11d4af221ee25::t_05d57df393c513 85,90-94,96,98-100,132,134-141,143,147,205,215-222,224,230-241,322,343,351-355,357-359,364-372,386,388-402,404-420,534-557
+web/src/composables/draftGuard.ts
+  s_4c6a19030e223f::t_719b8a29eff496 1-48
+web/src/composables/useSettingsDraft.ts
+  s_28915fd19e1e49::t_dbb788aea5d8a2 6,8,11,29-30,141
+web/src/i18n/de.json
+  s_5b748b0295d2f4::t_e8c1497f8be935 2642-2645,2864,3291,3571
+web/src/i18n/en.json
+  s_3382ecde9b0159::t_7fc2439f17809a 2642-2645,2864,3291
+web/src/lib/autoDelete.ts
+  s_30e74ceb0962ca::t_09d5e760075da8 2-4,6-16
+web/src/lib/automod.test.ts
+  s_30e74ceb0962ca::t_8584d31465a64a 3,38
+web/src/lib/roleSave.test.ts
+  s_30e74ceb0962ca::t_0da03e338d4360 2,4
+web/src/lib/roleSave.ts
+  s_30e74ceb0962ca::t_faa3b6b7a05e89 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e88c94b42df07c256fc06b0560bdc5a00e181e23",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_28915fd19e1e49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-arrow-edit-f0518ce8535c51ee",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2d22d157720d46": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-format-help-1c4cc049037c526d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_30e74ceb0962ca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae5e20c7f981d1793",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3382ecde9b0159": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-lobby-naming-8e1227b00b9f47cd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3b17690a73c198": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac9fae189ea57b132",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3e68b8fa0e1785": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-reactions-7d1b14603defb791",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_524065e4c1d78a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-abfa07ecf4d340a57",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7e9329d487a94d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-status-profile-6b773a73ee58ea30",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_8895e592af2d2b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-newcomer-audit-5cf650531cfbcba0",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ba0662248deca2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-desktop-uploads-c294f35d64e7fce5",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e11d4af221ee25": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aloadtest-build-a0df8b36f37826ce",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fc0029b3681126": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-forum-close-472189c9bd464366",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
