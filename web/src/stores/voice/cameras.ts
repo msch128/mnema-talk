@@ -100,7 +100,9 @@ export function resendSubscriptions(cs: VoiceState) {
 // A subscription to a screen share carries the layer I chose, if I did.
 export function screenRequest(cs: VoiceState, userId: string, on: boolean): SubscribeRequest {
   const choice = cs.screenChoice.value[userId]
-  return choice === undefined ? { kind: 'screen', user_id: userId, on } : { kind: 'screen', user_id: userId, on, quality: choice }
+  const fit = cs.screenFit.value[userId]
+  const request: SubscribeRequest = choice === undefined ? { kind: 'screen', user_id: userId, on } : { kind: 'screen', user_id: userId, on, quality: choice }
+  return on && fit !== undefined ? { ...request, fit } : request
 }
 
 function resolveScreenStage(cs: VoiceState) {

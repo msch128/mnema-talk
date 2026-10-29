@@ -333,3 +333,26 @@ func TestUnsendableAnnouncementsAreDropped(t *testing.T) {
 		t.Fatalf("layers must be an array: %s", raw)
 	}
 }
+
+func TestSubscribeWithFit(t *testing.T) {
+	viewer, sharer := uuid.New(), uuid.New()
+	parse := func(body string) (subscribeRequest, bool) {
+		return parseSubscribe(json.RawMessage(body), viewer)
+	}
+	id := sharer.String()
+	if req, ok := parse(`{"kind":"screen","user_id":"` + id + `","on":true,"fit":2}`); !ok || !req.hasFit || req.fit != 2 || req.hasQuality {
+		t.Errorf("screen with fit: %+v ok=%v", req, ok)
+	}
+	if req, ok := parse(`{"kind":"screen","user_id":"` + id + `","on":true}`); !ok || req.hasFit {
+		t.Errorf("screen without fit: %+v ok=%v", req, ok)
+	}
+	for _, body := range []string{
+		`{"kind":"screen","user_id":"` + id + `","on":true,"fit":3}`,
+		`{"kind":"screen","user_id":"` + id + `","on":true,"fit":-1}`,
+		`{"kind":"camera","user_id":"` + id + `","on":true,"fit":1}`,
+	} {
+		if _, ok := parse(body); ok {
+			t.Errorf("accepted %s", body)
+		}
+	}
+}

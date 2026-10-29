@@ -100,3 +100,21 @@ export function layersKey(layers: readonly ScreenLayer[]): string {
 export function layersShape(layers: readonly ScreenLayer[]): string {
   return layers.map(l => l.fps).join(',')
 }
+
+/** A layer is enough for a picture when it has at least this share of the pixels the picture shows. */
+export const FIT_TOLERANCE = 0.9
+
+/**
+ * The index of the layer a picture of `cssHeight` CSS pixels at `pixelRatio`
+ * can use: the smallest one that still has the pixels the screen shows, so a
+ * small tile gets a small stream and a fullscreen one on a 4K screen gets the
+ * source. 0 (the best) while the size is unknown or no layer is large enough.
+ */
+export function fitLayer(layers: readonly ScreenLayer[], cssHeight: number, pixelRatio = 1): number {
+  if (layers.length < 2 || !(cssHeight > 0)) return 0
+  const needed = cssHeight * (pixelRatio > 0 ? pixelRatio : 1) * FIT_TOLERANCE
+  for (let i = layers.length - 1; i > 0; i--) {
+    if ((layers[i]?.height ?? 0) >= needed) return i
+  }
+  return 0
+}

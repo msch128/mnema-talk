@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { declaredLayers, layerDetail, layerName, layersKey, layersShape, MIN_LAYER_STEP, planScreenLayers } from './screenLayers'
+import { declaredLayers, fitLayer, layerDetail, layerName, layersKey, layersShape, MIN_LAYER_STEP, planScreenLayers } from './screenLayers'
 import { streamBitrate } from './streamQuality'
 
 const capture = (width: number, height: number): MediaTrackSettings => ({ width, height, frameRate: 60 })
@@ -75,5 +75,39 @@ describe('layer descriptions', () => {
     expect(layersShape(declared)).not.toBe(layersShape(declared.slice(0, 2)))
     expect(layersShape(declared)).not.toBe(layersShape(declared.map(l => ({ ...l, fps: 24 }))))
     expect(layersShape([])).toBe('')
+  })
+})
+
+describe('fitLayer', () => {
+  const layers = [{ width: 3840, height: 2160, fps: 60 }, { width: 1920, height: 1080, fps: 30 }, { width: 1280, height: 720, fps: 30 }]
+
+  it('gives a small tile the smallest layer that still has its pixels', () => {
+    expect(fitLayer(layers, 360, 1)).toBe(2)
+    expect(fitLayer(layers, 720, 1)).toBe(2)
+    expect(fitLayer(layers, 900, 1)).toBe(1)
+  })
+
+  it('counts device pixels: the same tile on a 2x screen needs the next layer up', () => {
+    expect(fitLayer(layers, 540, 1)).toBe(2)
+    expect(fitLayer(layers, 540, 2)).toBe(1)
+    expect(fitLayer(layers, 540, 3)).toBe(0)
+  })
+
+  it('gives fullscreen on a 4K screen the source, and 1080p fullscreen the 1080p layer', () => {
+    expect(fitLayer(layers, 2160, 1)).toBe(0)
+    expect(fitLayer(layers, 1080, 1)).toBe(1)
+    expect(fitLayer(layers, 1440, 1.5)).toBe(0)
+  })
+
+  it('tolerates a tile a few pixels taller than a layer, so a window drag does not flip it', () => {
+    expect(fitLayer(layers, 1100, 1)).toBe(1)
+  })
+
+  it('asks for the best while the size is unknown or there is nothing to choose', () => {
+    expect(fitLayer(layers, 0, 2)).toBe(0)
+    expect(fitLayer(layers, Number.NaN, 2)).toBe(0)
+    expect(fitLayer(layers.slice(0, 1), 100, 1)).toBe(0)
+    expect(fitLayer([], 100, 1)).toBe(0)
+    expect(fitLayer(layers, 500, 0)).toBe(2)
   })
 })

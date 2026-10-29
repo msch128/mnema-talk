@@ -400,9 +400,23 @@ its recent minimum or three keyframe requests in five seconds move it down one
 layer; the reports of the three seconds after any move are ignored (a keyframe
 burst loses packets on its own). After 12 seconds without trouble it tries one
 layer up, and a try that fails within eight seconds makes the next one wait
-twice as long (up to two minutes), so a link that carries the lower layer but
+twice as long (up to five minutes), so a link that carries the lower layer but
 not the higher one does not flap. A viewer who picked a layer is never moved.
 The SFU cannot read the media; it never estimates from it.
+
+*Size of the picture.* The stage tells the server how large it shows the share
+(`fit` on `webrtc_subscribe`: the index of the smallest layer that still has
+the pixels the stage shows, its CSS height times `devicePixelRatio`, see
+`fitLayer` in `web/src/lib/screenLayers.ts` and `useScreenFit`). Auto starts on
+that layer and never goes above it, so a small tile or a share that is watched
+but not on the stage costs a small stream. When the picture grows (fullscreen,
+a bigger window) a viewer that sat on the old limit climbs on after four quiet
+seconds per layer instead of twelve; a smaller picture moves it down at once.
+The viewer's menu shows what Auto chose ("Auto (1080p)"). The bandwidth
+estimate of a stream the link does not limit only ever reaches about 1.5 times
+what is sent, so while it is still rising after a move up it is not held
+against the better layer; it counts as a limit only when it stays below the
+layer's bitrate and stops rising.
 
 *Bandwidth* ([`bwe.go`](../internal/sfu/bwe.go)). A link that is too slow for
 a layer but queues instead of dropping shows neither loss nor a higher round

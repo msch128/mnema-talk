@@ -45,6 +45,11 @@ func (c *Client) activeVoiceRoom() *sfu.Room {
 }
 
 func (c *Client) applySubscriptionQuality(room *sfu.Room, req subscribeRequest) {
+	if req.hasFit && req.on && req.kind == sfu.SourceScreen {
+		if err := room.SetScreenFit(c.User.ID, req.publisher, req.fit); err != nil {
+			slog.Debug("sfu screen fit rejected", "user", c.User.ID, "err", err)
+		}
+	}
 	if req.hasQuality && req.on && req.kind == sfu.SourceScreen {
 		if err := room.SetScreenQuality(c.User.ID, req.publisher, req.quality); err != nil {
 			slog.Debug("sfu screen quality rejected", "user", c.User.ID, "err", err)
@@ -65,6 +70,10 @@ func (c *Client) handleSubscribe(payload json.RawMessage) {
 		return
 	}
 	c.applySubscriptionQuality(room, req)
+	if req.hasFit && !req.hasQuality {
+		// Only the size of the viewer's picture changed: nothing to renegotiate.
+		return
+	}
 	if err := room.Subscribe(c.User.ID, req.publisher, req.kind, req.all, req.on); err != nil {
 		slog.Debug("sfu subscribe rejected", "user", c.User.ID, "err", err)
 	}
@@ -80,6 +89,10 @@ type subscribeRequest struct {
 	// tells whether the message chose one.
 	quality    int
 	hasQuality bool
+	// fit is the best layer the viewer's picture of a screen share can use;
+	// hasFit tells whether the message said.
+	fit    int
+	hasFit bool
 }
 
 type subscribeWire struct {
@@ -88,6 +101,7 @@ type subscribeWire struct {
 	All     bool            `json:"all"`
 	On      bool            `json:"on"`
 	Quality json.RawMessage `json:"quality"`
+	Fit     *int            `json:"fit"`
 }
 
 func isValidSubscriptionKind(kind sfu.Source, all bool) bool {
@@ -106,6 +120,18 @@ func validateQuality(raw json.RawMessage, kind sfu.Source) (int, bool, bool) {
 		return 0, false, false
 	}
 	return quality, hasQuality, true
+}
+
+// validateFit reads the optional fit of a screen subscription: the index of
+// the best layer the viewer's picture can use.
+func validateFit(raw *int, kind sfu.Source) (fit int, present, ok bool) {
+	if raw == nil {
+		return 0, false, true
+	}
+	if kind != sfu.SourceScreen || *raw < 0 || *raw >= sfu.MaxLayers {
+		return 0, false, false
+	}
+	return *raw, true, true
 }
 
 func parsePublisher(all bool, userID string, viewer uuid.UUID) (uuid.UUID, bool) {
@@ -134,6 +160,10 @@ func parseSubscribe(payload json.RawMessage, viewer uuid.UUID) (subscribeRequest
 	if !ok {
 		return subscribeRequest{}, false
 	}
+	fit, hasFit, ok := validateFit(wire.Fit, kind)
+	if !ok {
+		return subscribeRequest{}, false
+	}
 	pub, ok := parsePublisher(wire.All, wire.UserID, viewer)
 	if !ok {
 		return subscribeRequest{}, false
@@ -145,5 +175,7 @@ func parseSubscribe(payload json.RawMessage, viewer uuid.UUID) (subscribeRequest
 		on:         wire.On,
 		quality:    quality,
 		hasQuality: hasQuality,
+		fit:        fit,
+		hasFit:     hasFit,
 	}, true
 }
