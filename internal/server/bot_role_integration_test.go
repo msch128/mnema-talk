@@ -132,7 +132,7 @@ func TestBotRolePermissionsFollowTheBotInvariant(t *testing.T) {
 	a := newApp(t, false)
 	owner := a.seedAdmin()
 	lead := a.register(owner, "lead")
-	admin := a.register(owner, "admin")
+	admin := a.register(owner, "deputy")
 	leadRole := createRole(t, owner, "Role admins", perm.ManageRoles|perm.ManageBots|perm.SendMessages|perm.ViewChannel)
 	adminRole := createRole(t, owner, "Administrators", perm.Administrator)
 	assignRoles(t, owner, lead, leadRole)

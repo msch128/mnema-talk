@@ -13,7 +13,7 @@ const SECOND = `entwurf-b-${suffix}`
 async function signIn(page: Page) {
   await page.goto('/')
   const dialog = page.getByRole('dialog')
-  await expect(dialog.getByRole('heading', { name: 'Mnema Talk' })).toBeVisible()
+  await expect(dialog.getByTestId('login-heading')).toBeVisible()
   await dialog.getByLabel('Benutzername').fill(ADMIN_USER)
   await dialog.getByLabel('Passwort').fill(ADMIN_PASSWORD)
   await dialog.getByRole('button', { name: 'Anmelden' }).click()
@@ -60,7 +60,7 @@ test('an unsent message waits in its channel across switching and reload, and le
     await expect.poll(() => draftKeys(page)).not.toEqual([])
     await page.getByTestId('account-menu-button').click()
     await page.getByRole('menuitem', { name: 'Abmelden' }).click()
-    await expect(page.getByRole('dialog').getByRole('heading', { name: 'Mnema Talk' })).toBeVisible()
+    await expect(page.getByRole('dialog').getByTestId('login-heading')).toBeVisible()
     expect(await draftKeys(page)).toEqual([])
   } finally {
     // The channels must not crowd the sidebar for the specs that follow.

@@ -21,7 +21,8 @@ test('the app has a manifest with working icons', async ({ page }) => {
   expect(res.status()).toBe(200)
   expect(res.headers()['content-type']).toContain('application/manifest+json')
   const manifest = await res.json() as Manifest
-  expect(manifest).toMatchObject({ name: 'Mnema Talk', display: 'standalone', start_url: '/', scope: '/' })
+  // No community name is set: the installed app carries the host the server is reached at.
+  expect(manifest).toMatchObject({ name: new URL(page.url()).hostname, short_name: new URL(page.url()).hostname, display: 'standalone', start_url: '/', scope: '/' })
   for (const icon of manifest.icons) {
     const file = await page.request.get(icon.src)
     expect(file.status(), icon.src).toBe(200)

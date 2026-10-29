@@ -22,7 +22,7 @@ async function expectNoViolations(page: Page, where: string) {
 async function signIn(page: Page) {
   await page.goto('/')
   const dialog = page.getByRole('dialog')
-  await expect(dialog.getByRole('heading', { name: 'Mnema Talk' })).toBeVisible()
+  await expect(dialog.getByTestId('login-heading')).toBeVisible()
   await expectNoViolations(page, 'the sign-in dialog')
   await dialog.getByLabel('Benutzername').fill(ADMIN_USER)
   await dialog.getByLabel('Passwort').fill(ADMIN_PASSWORD)

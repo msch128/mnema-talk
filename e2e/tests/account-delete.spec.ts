@@ -15,7 +15,7 @@ const WORDS = `private Worte von ${MEMBER}`
 async function signIn(page: Page, username: string, password: string) {
   await page.goto('/')
   const dialog = page.getByRole('dialog')
-  await expect(dialog.getByRole('heading', { name: 'Mnema Talk' })).toBeVisible()
+  await expect(dialog.getByTestId('login-heading')).toBeVisible()
   await dialog.getByLabel('Benutzername').fill(username)
   await dialog.getByLabel('Passwort').fill(password)
   await dialog.getByRole('button', { name: 'Anmelden' }).click()
@@ -53,7 +53,7 @@ test('a member deletes the account; the thread stays, the words and the name are
 
     // Back at the sign-in screen, and the old credentials are dead.
     await reloaded
-    await expect(m.getByRole('dialog').getByRole('heading', { name: 'Mnema Talk' })).toBeVisible()
+    await expect(m.getByRole('dialog').getByTestId('login-heading')).toBeVisible()
     expect((await apiFetch(m, 'POST', '/api/auth/login', { username: MEMBER, password: PASSWORD })).status).toBe(401)
 
     // The Owner sees the message as written by a deleted user, without words.

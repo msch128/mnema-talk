@@ -12,7 +12,7 @@ const COMMUNITY = `Heimat ${Date.now().toString(36)}`
 async function signIn(page: Page, username: string, password: string) {
   await page.goto('/')
   const dialog = page.getByRole('dialog')
-  await expect(dialog.getByRole('heading', { name: 'Mnema Talk' })).toBeVisible()
+  await expect(dialog.getByTestId('login-heading')).toBeVisible()
   await dialog.getByLabel('Benutzername').fill(username)
   await dialog.getByLabel('Passwort').fill(password)
   await dialog.getByRole('button', { name: 'Anmelden' }).click()
@@ -125,9 +125,15 @@ test('invite links name the community, rules block a member until accepted, and 
     await expect(v.getByTestId('invite-expiry')).toBeVisible()
     const preview = await apiFetch(v, 'GET', `/api/invites/${code}`)
     expect(Object.keys(preview.json as object).sort()).toEqual(['community_name', 'expires_at', 'valid'])
+    // The community's name is public and names the server everywhere: tab, installed app, health.
+    expect((await apiFetch(v, 'GET', '/api/health')).json).toMatchObject({ community_name: COMMUNITY })
+    const manifest = await (await v.request.get('/manifest.webmanifest')).json() as { name: string }
+    expect(manifest.name).toBe(COMMUNITY)
+    await v.goto('/')
+    await expect(v).toHaveTitle(COMMUNITY)
     await v.goto('/invite/zzzzzzzzzzzz')
     await expect(v.getByTestId('invite-invalid')).toBeVisible()
-    await expect(v.getByTestId('login-heading')).toHaveText('Mnema Talk')
+    await expect(v.getByTestId('login-heading')).toHaveText(COMMUNITY)
     expect((await apiFetch(v, 'GET', '/api/invites/zzzzzzzzzzzz')).json).toEqual({ valid: false })
 
     // The existing member must accept first: reading works, writing answers RULES_NOT_ACCEPTED.

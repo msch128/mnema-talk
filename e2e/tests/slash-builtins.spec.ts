@@ -14,7 +14,7 @@ const KICKED = { username: `kickee-${STAMP}`, password: 'kickee-password-123' }
 async function signIn(page: Page, username: string, password: string) {
   await page.goto('/')
   const dialog = page.getByRole('dialog')
-  await expect(dialog.getByRole('heading', { name: 'Mnema Talk' })).toBeVisible()
+  await expect(dialog.getByTestId('login-heading')).toBeVisible()
   await dialog.getByLabel('Benutzername').fill(username)
   await dialog.getByLabel('Passwort').fill(password)
   await dialog.getByRole('button', { name: 'Anmelden' }).click()
@@ -64,7 +64,7 @@ test('built-in commands post for the caller, and /kick signs a member out with a
 
     // The member reads a calm note and is signed out ...
     await expect(member.getByText('Du wurdest von einer Moderation abgemeldet: Pause')).toBeVisible()
-    await expect(member.getByRole('dialog').getByRole('heading', { name: 'Mnema Talk' })).toBeVisible()
+    await expect(member.getByRole('dialog').getByTestId('login-heading')).toBeVisible()
     // ... and may sign in again at once.
     await signIn(member, KICKED.username, KICKED.password)
     await member.goto(`/c/${channelId}`)

@@ -20,7 +20,7 @@ const MANAGE_MEMBERS = 1 << 15
 async function signIn(page: Page, username: string, password: string) {
   await page.goto('/')
   const dialog = page.getByRole('dialog')
-  await expect(dialog.getByRole('heading', { name: 'Mnema Talk' })).toBeVisible()
+  await expect(dialog.getByTestId('login-heading')).toBeVisible()
   await dialog.getByLabel('Benutzername').fill(username)
   await dialog.getByLabel('Passwort').fill(password)
   await dialog.getByRole('button', { name: 'Anmelden' }).click()

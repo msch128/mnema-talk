@@ -43,7 +43,7 @@ async function signedInContext(browser: Browser, permissions: string[] = []): Pr
 async function signIn(page: Page) {
   await page.goto('/')
   const dialog = page.getByRole('dialog')
-  await expect(dialog.getByRole('heading', { name: 'Mnema Talk' })).toBeVisible()
+  await expect(dialog.getByTestId('login-heading')).toBeVisible()
   await dialog.getByLabel('Benutzername').fill(ADMIN_USER)
   await dialog.getByLabel('Passwort').fill(ADMIN_PASSWORD)
   await dialog.getByRole('button', { name: 'Anmelden' }).click()
