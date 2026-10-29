@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import de from '../i18n/de.json'
 import { setLocale } from '../i18n'
-import { localizeHostError } from './hostError'
+import en from '../i18n/en.json'
+import hostErrors from './hostErrors.json'
+import { NAT_HINT, localizeHostError } from './hostError'
 
 // The sentences the Rust and Electron desktop clients send. A change to one of
 // them in the desktop repository needs the same change here.
@@ -78,4 +80,38 @@ it('speaks German by default and English on request', () => {
   expect(localizeHostError('At most 1 servers fit in one window.')).toBe(de.nativeDesktop.hostError.maxServers.one.replace('{count}', '1'))
   setLocale('en')
   expect(localizeHostError(TOO_OLD)).toContain('needs 0.9.0 or newer')
+})
+
+// hostErrors.json is a copy of the desktop repository's
+// test-vectors/host-errors.json: every sentence the desktop clients can send.
+describe('the list of sentences the desktop clients send', () => {
+  const listed = hostErrors.sentences
+  const translations = { de: de.nativeDesktop.hostError, en: en.nativeDesktop.hostError } as Record<string, Record<string, unknown>>
+
+  it('uses the hint wording of this page', () => {
+    expect(hostErrors.natHint).toBe(NAT_HINT)
+  })
+
+  it('has a German and an English text for every entry, and none without an entry', () => {
+    const ids = [...listed.map((s) => s.id), 'natHint'].sort()
+    for (const locale of ['de', 'en']) {
+      expect(Object.keys(translations[locale] ?? {}).sort(), locale).toEqual(ids)
+    }
+  })
+
+  it.each(['de', 'en'] as const)('translates every entry, with its hint and detail, in %s', (locale) => {
+    setLocale(locale)
+    for (const entry of listed) {
+      const sample = entry.text.replace('{version}', '0.8.9').replace('{count}', '3')
+      const variants = [sample]
+      if ('withHint' in entry) variants.push(`${sample} ${hostErrors.natHint}`)
+      if ('withDetail' in entry) variants.push(`${sample} (system detail)`)
+      for (const sent of variants) {
+        const text = localizeHostError(sent)
+        expect(text, sent).not.toContain('nativeDesktop.')
+        expect(text, sent).not.toMatch(/\{\w+\}/)
+        if (locale === 'de') expect(text, sent).not.toBe(sent)
+      }
+    }
+  })
 })

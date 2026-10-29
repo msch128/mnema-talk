@@ -6,7 +6,7 @@ import { t } from '../i18n'
 // this table does not know is shown as sent, so a newer or older host never
 // shows nothing. The wording is pinned in hostError.test.ts.
 
-const NAT_HINT =
+export const NAT_HINT =
   'If the server runs in your own network, your router may not support reaching it through its public address (NAT loopback/hairpin) — try the local address or another network.'
 
 // A trailing "(detail)" is the system's own cause, kept as the host sent it.
