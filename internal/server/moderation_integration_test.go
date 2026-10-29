@@ -482,7 +482,7 @@ func TestBanRevokesTheInviteOnlyForInviteManagers(t *testing.T) {
 	}
 	f.admin.post("/api/admin/invites", map[string]any{"max_uses": 5}).decode(t, &inv)
 	code := inv.Code
-	first := newMember(code, "guest-one")
+	first := newMember(code, "guest_one")
 
 	// Ban-only moderator: the ban works, the Owner's invite survives.
 	if res := f.mod.post("/api/admin/users/"+first+"/ban", map[string]any{}); res.status != http.StatusNoContent {
@@ -495,7 +495,7 @@ func TestBanRevokesTheInviteOnlyForInviteManagers(t *testing.T) {
 	// A moderator who also manages invites revokes it, as before.
 	inviter := a.register(f.admin, "inviter")
 	assignRoles(t, f.admin, inviter, createRole(t, f.admin, "inviters", perm.BanMembers|perm.CreateInvites))
-	second := newMember(code, "guest-two")
+	second := newMember(code, "guest_two")
 	if res := inviter.post("/api/admin/users/"+second+"/ban", map[string]any{}); res.status != http.StatusNoContent {
 		t.Fatalf("ban: %d %s", res.status, res.body)
 	}

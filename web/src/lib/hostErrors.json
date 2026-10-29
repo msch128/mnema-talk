@@ -1,0 +1,209 @@
+{
+ "format": 1,
+ "source": "Copy of test-vectors/host-errors.json in the desktop repository (msch128/mnema-talk-desktop). Edit it there first, then copy it here byte for byte.",
+ "note": "Edited by hand. Every sentence (clients: which of the two can send it) the connect page can receive from the Rust host and the Linux client; the web app (mnema-talk web/src/lib/hostErrors.json) translates them by exact text. {version} and {count} are placeholders; withHint sentences are followed by one space and natHint; withDetail sentences may end in ' (detail)'.",
+ "natHint": "If the server runs in your own network, your router may not support reaching it through its public address (NAT loopback/hairpin) — try the local address or another network.",
+ "sentences": [
+  {
+   "id": "enterAddress",
+   "text": "Enter an HTTPS instance address.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "invalidAddress",
+   "text": "Invalid instance address.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "httpsOrigin",
+   "text": "Use an HTTPS origin without credentials, a path or query.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "initHttps",
+   "text": "Unable to initialize HTTPS.",
+   "clients": [
+    "rust"
+   ]
+  },
+  {
+   "id": "refused",
+   "text": "The instance refused the connection. Check the address and the port.",
+   "withHint": true,
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "timeout",
+   "text": "The instance did not answer in time. Check the address, the port and your network.",
+   "withHint": true,
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "dns",
+   "text": "The instance address could not be resolved. Check the address and your network.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "certificate",
+   "text": "This computer does not trust the instance's HTTPS certificate. Check the system clock, and that no antivirus or network filter intercepts HTTPS.",
+   "withDetail": true,
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "unreachable",
+   "text": "Unable to reach the instance using trusted HTTPS.",
+   "withDetail": true,
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "unavailable",
+   "text": "The instance is unavailable or redirects to a different address.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "checkFailed",
+   "text": "Instance check failed.",
+   "clients": [
+    "rust"
+   ]
+  },
+  {
+   "id": "invalidResponse",
+   "text": "Invalid instance response.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "instanceNeedsUpdate",
+   "text": "This instance needs an update for the desktop client.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "notCompatible",
+   "text": "This instance is not compatible with this desktop client.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "noBundle",
+   "text": "This client has no verified app. Reinstall the desktop client.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "serverNewer",
+   "text": "This server needs a newer Mnema app than this client has. Update the desktop client.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "serverTooOld",
+   "text": "This server is too old for this desktop client (needs {version} or newer). Ask the administrator to update it.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "contractRetired",
+   "text": "This server speaks an older contract than any app in this client. Ask the administrator to update it.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "signerWithdrawn",
+   "text": "The app in this client was signed with a key that is no longer trusted. Update the desktop client; it fetches a newly signed app at its next check.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "rolledBack",
+   "text": "The newest verified app this client has used is no longer available, and older apps are refused. Update or reinstall the desktop client.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "alreadyListed",
+   "text": "This server is already in the list.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "maxServers",
+   "text": "At most {count} servers fit in one window.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "withdrawn",
+   "text": "The web app of this server was withdrawn. Restart the client to get a current one.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  },
+  {
+   "id": "needsMacos",
+   "text": "Several servers at once need macOS 14 or newer.",
+   "clients": [
+    "rust"
+   ]
+  },
+  {
+   "id": "selectorOnly",
+   "text": "Only the instance selector may open an instance.",
+   "clients": [
+    "rust",
+    "linux"
+   ]
+  }
+ ]
+}

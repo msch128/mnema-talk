@@ -60,7 +60,7 @@ func TestParseMentions(t *testing.T) {
 		"satzende @max.":            {"max"},
 		"(@max) @max @MAX":          {"max"},
 		"mail@max.de":               nil,
-		"@ab is too short":          nil,
+		"@a is too short":           nil,
 		"`@max` counts anyway":      {"max"},
 		"a.b@max and x-@moritz":     nil,
 		"@herzog.dev is a username": {"herzog.dev"},

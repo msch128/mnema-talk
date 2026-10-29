@@ -12,6 +12,7 @@ import PasswordInput from './PasswordInput.vue'
 import { useDialog } from '../composables/useDialog'
 import { t, locale, chooseLocale, SUPPORTED } from '../i18n'
 import type { InviteContext } from '../lib/inviteLink'
+import { normalizeUsername } from '../lib/username'
 
 const props = defineProps<{ invite?: InviteContext }>()
 
@@ -82,10 +83,11 @@ async function handleSubmit() {
   // event. Snapshot the displayed fields before any reactive/async work, then
   // synchronize the models so a pending render cannot restore older values.
   // Password bytes are preserved exactly; native validation stays authoritative.
-  const submittedUsername = usernameInput.value?.value ?? ''
+  const rawUsername = usernameInput.value?.value ?? ''
   const submittedPassword = passwordField.value?.el?.value ?? ''
   const submittedDisplayName = displayNameInput.value?.value ?? ''
   const submittedInviteCode = inviteCodeInput.value?.value ?? ''
+  const submittedUsername = isRegister.value ? normalizeUsername(rawUsername.trim()) : rawUsername
   username.value = submittedUsername
   password.value = submittedPassword
   if (isRegister.value) {
@@ -167,9 +169,14 @@ async function handleSubmit() {
             type="text"
             required
             autocomplete="username"
+            autocapitalize="none"
+            spellcheck="false"
+            :aria-describedby="isRegister ? 'login-username-hint' : undefined"
+            @input="isRegister && (username = normalizeUsername(username))"
             :placeholder="$t('login.usernamePlaceholder')"
             class="w-full bg-mnema-canvas border border-mnema-border-field rounded-lg px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary"
           />
+          <p v-if="isRegister" id="login-username-hint" class="mt-1.5 text-xs text-mnema-tertiary" data-testid="username-hint">{{ $t('login.usernameHint') }}</p>
         </div>
 
         <div v-if="isRegister">

@@ -2,6 +2,7 @@
 import { ref, onBeforeUnmount } from 'vue'
 import { t } from '../i18n'
 import { platform } from '../lib/platform'
+import { localizeHostError } from '../lib/hostError'
 
 const address = ref('')
 const verified = platform.trustedApp()
@@ -12,7 +13,7 @@ let attempt = 0
 onBeforeUnmount(() => { ++attempt })
 
 function hostFailure(cause: unknown): string {
-  return typeof cause === 'string' ? cause.slice(0, 300) : t('nativeDesktop.connectError')
+  return typeof cause === 'string' ? localizeHostError(cause.slice(0, 600)) : t('nativeDesktop.connectError')
 }
 
 async function connect() {
