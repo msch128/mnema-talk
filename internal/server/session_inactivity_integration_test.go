@@ -53,7 +53,7 @@ func TestInactivityLimitDefaultsToSevenDaysAndStaysWithinBounds(t *testing.T) {
 func TestAnInactiveMemberIsSignedOutAndSeesTheirOtherDevices(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
-	phone := a.login("Cool_Guy", "admin-password-123")
+	phone := a.login("cool_guy", "admin-password-123")
 	wantStatus(t, "me", phone.get("/api/auth/me"), http.StatusOK)
 
 	res := admin.get("/api/auth/sessions")

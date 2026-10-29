@@ -11,7 +11,7 @@ in the legal texts (Impressum, Datenschutz, AGB), which are formal by design.
 |---|---|---|---|---|
 | The space | community | Community | server (user-facing), instance, Gemeinschaft | "Server" means only the machine or software an operator runs (admin System tab, connection errors). Docs say "your server" or "this community". |
 | A person with an account | member | Mitglied | user, Nutzer | The login handle is the username / Benutzername. "Person" only as a neutral pronoun substitute. |
-| The single all-powerful account | Owner | Owner | admin, Cool_Guy (in docs) | Not translated; one per community. |
+| The single all-powerful account | Owner | Owner | admin, cool_guy (in docs) | Not translated; one per community. |
 | Role or permission with all rights | Administrator | Administrator | Admin as a noun for a person | "Admin console" / "Admin-Bereich" stays as the name of the area. |
 | Voice room | Talk | Talk | voice channel, Sprachkanal, call, Anruf, Raum | "Talk" is the Mnema product term in both languages. The create dialog may say "Talk (voice)" / "Talk (Sprache)". Verbs: join a Talk / einem Talk beitreten, leave. |
 | Lobby that opens Talks | Talk lobby | Talk-Lobby | Create-a-Talk room, Warteraum | A Talk marked as a lobby: joining it opens a temporary Talk ("Talk 1", "Talk 2", ...) instead of a seat. Shown as "Create a Talk" / „Talk erstellen“ in the sidebar when named so. |

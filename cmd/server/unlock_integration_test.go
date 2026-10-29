@@ -51,7 +51,7 @@ func TestUnlockCommandQueuesAndReports(t *testing.T) {
 		_, _ = pool.Exec(ctx, `DELETE FROM login_unlock_requests`)
 	}()
 	out.Reset()
-	if err := unlockCommand(ctx, []string{"Cool_Guy"}, &out); err != nil || !strings.Contains(out.String(), "cleared for Cool_Guy") {
+	if err := unlockCommand(ctx, []string{"cool_guy"}, &out); err != nil || !strings.Contains(out.String(), "cleared for cool_guy") {
 		t.Fatalf("one: %v %q", err, out.String())
 	}
 }

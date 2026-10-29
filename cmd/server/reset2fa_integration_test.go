@@ -19,7 +19,7 @@ func TestReset2faCommandTurnsTheSecondFactorOffAndIsAudited(t *testing.T) {
 	ctx := context.Background()
 	var id string
 	err := pool.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash, role, token_version)
-		VALUES ('Cool_Guy', 'Cool_Guy', 'x', 'admin', 3) RETURNING id`).Scan(&id)
+		VALUES ('cool_guy', 'cool_guy', 'x', 'admin', 3) RETURNING id`).Scan(&id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestReset2faCommandTurnsTheSecondFactorOffAndIsAudited(t *testing.T) {
 		t.Fatalf("unknown user: %v", err)
 	}
 	var out bytes.Buffer
-	if err := reset2faCommand(ctx, []string{"cool_guy"}, &out); err != nil || !strings.Contains(out.String(), "Two-factor sign-in is off for Cool_Guy") {
+	if err := reset2faCommand(ctx, []string{"cool_guy"}, &out); err != nil || !strings.Contains(out.String(), "Two-factor sign-in is off for cool_guy") {
 		t.Fatalf("reset: %v %q", err, out.String())
 	}
 	var left, version, audited int
@@ -68,7 +68,7 @@ func TestReset2faKeepsTheSecondFactorWhenTheAuditRowFails(t *testing.T) {
 	ctx := context.Background()
 	var id string
 	err := pool.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash, role, token_version)
-		VALUES ('Cool_Guy', 'Cool_Guy', 'x', 'admin', 3) RETURNING id`).Scan(&id)
+		VALUES ('cool_guy', 'cool_guy', 'x', 'admin', 3) RETURNING id`).Scan(&id)
 	if err != nil {
 		t.Fatal(err)
 	}

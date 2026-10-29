@@ -137,7 +137,7 @@ func TestLoginFailureLimiterEscalates(t *testing.T) {
 
 	fail := func(n int) {
 		for i := 0; i < n; i++ {
-			l.RecordFailure("Cool_Guy")
+			l.RecordFailure("cool_guy")
 		}
 	}
 	fail(2)

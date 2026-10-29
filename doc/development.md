@@ -110,7 +110,7 @@ uses (`APP_ENV=development`, a fresh `JWT_SECRET`, `ADMIN_INITIAL_PASSWORD`,
 
 ```sh
 cd e2e && npm ci
-E2E_BASE_URL=http://127.0.0.1:58080 E2E_ADMIN_USER=Cool_Guy \
+E2E_BASE_URL=http://127.0.0.1:58080 E2E_ADMIN_USER=cool_guy \
   E2E_ADMIN_PASSWORD=<the admin password you set> npx playwright test
 ```
 
