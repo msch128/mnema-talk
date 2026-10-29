@@ -1,0 +1,27 @@
+internal/imageverify/flow_test.go
+  s_ed465528c1dea9::t_cc9536baf7c762 208-230
+internal/imageverify/policy.go
+  s_ed465528c1dea9::t_f24b9bf5a91ffc 29-30,38-43,51-55,68,74-80,94-128
+internal/imageverify/verifier.go
+  s_ed465528c1dea9::t_1afc8ae7934613 114-116,123
+internal/updaterd/run.go
+  s_ed465528c1dea9::t_f2f33e3a23fb9b 70-76,86-87
+internal/updaterd/updaterd_test.go
+  s_ed465528c1dea9::t_ec38325dca8116 148-158
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "62e9e869248a93216b7a9c2d03f902c23adfb950",
+  "prompts": {},
+  "sessions": {
+    "s_ed465528c1dea9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adesk-portable-updater-45ca63f17c99138d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
