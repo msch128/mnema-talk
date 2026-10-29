@@ -188,7 +188,17 @@ export function createRtcState(): RtcState {
         if (inCall) playPausedRemoteAudio()
       }
     }),
-    statsPolling: createStatsPolling({ connection: () => st.pc, screenAudioGuard: () => st.screenAudioGuard })
+    statsPolling: createStatsPolling({
+      connection: () => st.pc,
+      screenAudioGuard: () => st.screenAudioGuard,
+      senders: () => [
+        ['mic', st.audioSender],
+        ['screenAudio', st.screenAudioSender],
+        ['camera', st.cameraSender],
+        ['screen', st.screenSender],
+        ...st.layerSenders.map((sender): ['screen', RTCRtpSender | null] => ['screen', sender])
+      ]
+    })
   }
   return st
 }

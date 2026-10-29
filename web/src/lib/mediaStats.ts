@@ -5,6 +5,8 @@ export interface MediaStat {
   timestamp?: number
   kind?: string
   mediaType?: string
+  mid?: string
+  contentType?: string
   mimeType?: string
   codecId?: string
   clockRate?: number

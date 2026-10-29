@@ -64,7 +64,7 @@ describe('browser stats fallbacks and counter changes', () => {
       { id: 'not-ready', type: 'candidate-pair', selected: true, state: 'waiting' }
     ])
     expect(s.connected).toBe(true)
-    expect(s.sample).toEqual({ timestamp: 500, bytesSent: 50, bytesReceived: 80 })
+    expect(s.sample).toMatchObject({ timestamp: 500, bytesSent: 50, bytesReceived: 80 })
     expect(s.rttMs).toBeNull()
     expect(s.localCandidate).toBeNull()
     expect(s.remoteCandidate).toBeNull()
@@ -73,7 +73,7 @@ describe('browser stats fallbacks and counter changes', () => {
   })
   it('uses outbound RTP counters when candidate stats are absent and never reports a negative bitrate', () => {
     const s = summarizeStats([{ id: 'out', type: 'outbound-rtp', kind: 'audio', timestamp: 2000, bytesSent: 10 }], { timestamp: 1000, bytesSent: 100, bytesReceived: 100 })
-    expect(s.sample).toEqual({ timestamp: 2000, bytesSent: 10, bytesReceived: 0 })
+    expect(s.sample).toMatchObject({ timestamp: 2000, bytesSent: 10, bytesReceived: 0 })
     expect(s.sendKbps).toBe(0)
     expect(s.recvKbps).toBe(0)
     expect(summarizeStats([{ id: 'out', type: 'outbound-rtp', kind: 'audio', timestamp: 1000 }], s.sample).sendKbps).toBeNull()

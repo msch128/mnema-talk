@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { Activity, Zap, ShieldCheck } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
 import { rateJitter } from '../lib/rtcStats'
+import { flowRows, micStatus } from '../lib/rtcFlowRows'
 import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 
@@ -45,12 +46,13 @@ function keyMembers(ids: string[]) {
   })
 }
 
-const rows = computed(() => {
+const rows = computed<[string, string | number, string?][]>(() => {
   const s = stats.value
   return [
     [t('stats.codec'), dash(s?.codec)],
     [t('stats.sendRecv'), s?.sendKbps != null ? `${s.sendKbps} / ${s.recvKbps} kbit/s` : '–'],
-    [t('stats.packets'), s ? `${s.packetsSent} / ${s.packetsReceived}` : '–'],
+    [t('stats.mic.title'), s ? micStatus(s.micState, voiceStore.isMuted, voiceStore.inputMode) : '–'],
+    ...flowRows(s),
     [t('stats.receivedVideo'), s?.videoIn.length ? s.videoIn.map(v => `${v.width}×${v.height} · ${t('talk.quality.fps', { fps: v.fps })}`).join(', ') : '–'],
     [t('stats.localCandidate'), dash(s?.localCandidate)],
     [t('stats.remoteCandidate'), dash(s?.remoteCandidate)],
@@ -145,7 +147,7 @@ const rows = computed(() => {
       <div class="space-y-1.5">
         <h3 class="text-xs uppercase font-mono tracking-wider text-mnema-tertiary font-semibold">{{ $t('stats.details') }}</h3>
         <div class="rounded-lg bg-mnema-surface border border-mnema-hairline divide-y divide-mnema-hairline text-sm">
-          <div v-for="[label, value] in rows" :key="label" class="px-3 py-2 flex items-center justify-between gap-4">
+          <div v-for="[label, value, id] in rows" :key="label" :data-stat="id" class="px-3 py-2 flex items-center justify-between gap-4">
             <span class="text-mnema-tertiary">{{ label }}</span>
             <span class="font-mono text-mnema-text text-right">{{ value }}</span>
           </div>
