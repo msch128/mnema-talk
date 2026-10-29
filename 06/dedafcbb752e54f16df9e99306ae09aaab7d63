@@ -1,0 +1,111 @@
+e2e/tests/stage-switch.spec.ts
+  s_06fcde5dbef956::t_76320b483b904e 13-21,52-53,55,59,65,123,134,143,150,155,188,200,203,208,215
+internal/auth/admin_seed_test.go
+  s_06fcde5dbef956::t_702143eb3b3e3b 15
+internal/auth/service.go
+  s_06fcde5dbef956::t_b7a7806ccbadee 37,223
+internal/server/sharepage.go
+  s_06fcde5dbef956::t_1a5ff216a44c5f 103
+internal/setupwizard/envfile.go
+  s_06fcde5dbef956::t_61c5f81c364c0d 53-55
+internal/setupwizard/run.go
+  s_06fcde5dbef956::t_20673a9f24acfc 124,151-155
+internal/sfu/authorization.go
+  s_06fcde5dbef956::t_fb8061c88561cf 1-162
+internal/sfu/authorization_test.go
+  s_06fcde5dbef956::t_11f06834587967 1-377
+internal/sfu/failure_paths_test.go
+  s_06fcde5dbef956::t_7032304fbd0998 4,10-57
+internal/sfu/layers.go
+  s_06fcde5dbef956::t_1d607f3b42f348 38-39
+internal/sfu/layers_native_test.go
+  s_06fcde5dbef956::t_504a09cbe1dc8c 1-40
+internal/sfu/layers_test.go
+  s_06fcde5dbef956::t_173b8ded39d92a 24-25,30
+internal/sfu/room_attach.go
+  s_06fcde5dbef956::t_98a936ee22925d 18,26-31,324
+internal/sfu/room_signal.go
+  s_06fcde5dbef956::t_fdc6d3bc67f8c9 220-221,236-242
+internal/sfu/room_tracks.go
+  s_06fcde5dbef956::t_eab3df3d7ef5ff 120-123
+internal/sfu/sfu.go
+  s_06fcde5dbef956::t_a387cd5ca65b0b 94,144-147,179-182,192
+internal/sfu/sfu_edges_test.go
+  s_06fcde5dbef956::t_85868948fcf4fe 113,152,167
+internal/sfu/sfu_join.go
+  s_06fcde5dbef956::t_40682b792919e2 4,36-48,56-61,79-88,96
+internal/sfu/sfu_setup.go
+  s_06fcde5dbef956::t_17e13dddced27b 59,61,75-85,108,117-125,181,203-206
+internal/sfu/sfu_test.go
+  s_06fcde5dbef956::t_b08df3c3445ddb 91-99
+internal/sfu/subscriptions_test.go
+  s_06fcde5dbef956::t_d00eaf6de96300 263
+scripts/backup-drill.sh
+  s_06fcde5dbef956::t_ce70ea795fca15 30
+scripts/free-port.sh
+  s_06fcde5dbef956::t_d4fab0dd8a5e3f 14-15,17,35,42-43
+scripts/fresh-install-check.sh
+  s_06fcde5dbef956::t_8d649010de7992 17
+scripts/postgres-upgrade-drill.sh
+  s_06fcde5dbef956::t_8f00ac10323fcd 12
+scripts/screenshots/run.sh
+  s_06fcde5dbef956::t_1bd194eded6354 13-15
+scripts/smoke-image.sh
+  s_06fcde5dbef956::t_267cd919bbba3d 16
+scripts/upgrade-drill.sh
+  s_06fcde5dbef956::t_a7ba41f27bb2f3 48
+web/src/components/AdminResetPasswordDialog.vue
+  s_06fcde5dbef956::t_4be1a79285130f 26,74
+web/src/components/AdminResetTwoFactorDialog.vue
+  s_06fcde5dbef956::t_9dd13df7da0d93 23,52
+web/src/components/AdminStatusTab.vue
+  s_06fcde5dbef956::t_f8e5f478cf681b 44,116-117,120
+web/src/components/IdentityFields.vue
+  s_06fcde5dbef956::t_5f0bf0381e13fb 8,18
+web/src/components/Sidebar.vue
+  s_06fcde5dbef956::t_92bb89f7b6d99d 222,226-227
+web/src/composables/appRoutingApply.ts
+  s_06fcde5dbef956::t_33558a4a9ea814 82
+web/src/composables/useWebRTC.audio.test.ts
+  s_06fcde5dbef956::t_001a14f631d2c9 3,59,61,130,136,139,144,148
+web/src/composables/useWebRTC.devices.test.ts
+  s_06fcde5dbef956::t_0d957f82b541d6 304-305,624
+web/src/composables/useWebRTC.harness.fixture.ts
+  s_06fcde5dbef956::t_dfae9b4c8e26fb 251
+web/src/composables/useWebRTC.layers.test.ts
+  s_06fcde5dbef956::t_d289c6d9ed4bac 17,26,86,100,126,132,137,145-146,152,157,163,170,199,205,212
+web/src/composables/useWebRTC.micPipeline.test.ts
+  s_06fcde5dbef956::t_3a2221f98e855a 63,92,123,155,487
+web/src/composables/useWebRTC.micRecovery.test.ts
+  s_06fcde5dbef956::t_d2c8695e4e1a86 132
+web/src/composables/webrtc/micPipeline.ts
+  s_06fcde5dbef956::t_040961d442aa0e 298,300
+web/src/lib/drafts.ts
+  s_06fcde5dbef956::t_c287b2c0cb4e01 141
+web/src/lib/media/guard.test.ts
+  s_06fcde5dbef956::t_a3347c640cf167 105
+web/src/lib/media/guard.ts
+  s_06fcde5dbef956::t_6b06f73d441f0b 154,156,194,204,208,231
+web/src/lib/ownerProof.ts
+  s_06fcde5dbef956::t_0928706ab78cf5 13-14,21,26
+web/src/stores/chatResilience.test.ts
+  s_06fcde5dbef956::t_0e05166c792e8f 11
+web/web.go
+  s_06fcde5dbef956::t_18a6096b44ad21 95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "06dedafcbb752e54f16df9e99306ae09aaab7d63",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
