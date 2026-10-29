@@ -1,0 +1,37 @@
+web/src/lib/media/guard.test.ts
+  s_06fcde5dbef956::t_67e88d8b5e5d64 105-106
+web/src/lib/media/guard.ts
+  s_06fcde5dbef956::t_67e88d8b5e5d64 154-156,159,244
+web/src/lib/drafts.ts
+  s_06fcde5dbef956::t_ed3ee1fc7e655f 52,124-127,132,135,148-149,157,236
+web/src/lib/drafts.test.ts
+  s_06fcde5dbef956::t_114f7746529dca 74-81
+web/src/stores/chatResilience.test.ts
+  s_06fcde5dbef956::t_43222e12594e80 11,106-132
+web/src/stores/chat/messageWindow.ts
+  s_d32fd7d992ab98::t_b2b10ce6a33008 98,100-102,113-118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1cf05a5e418a03504b87419413defd25a7c3773d",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_d32fd7d992ab98": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6f61a2152a424179",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
