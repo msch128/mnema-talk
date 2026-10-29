@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.0.0](https://github.com/msch128/mnema-talk/compare/v1.5.1...v2.0.0) (2026-10-29)
+
+
+### Features
+
+* **ops:** setup checks and assistant know the built-in TURN relay ([#494](https://github.com/msch128/mnema-talk/issues/494)) ([8c2d7be](https://github.com/msch128/mnema-talk/commit/8c2d7bef1c867bdb00e7f4bcec96150b596fe7b9))
+* **voice:** built-in TURN relay for members behind UDP-blocking firewalls ([#490](https://github.com/msch128/mnema-talk/issues/490)) ([5597aab](https://github.com/msch128/mnema-talk/commit/5597aab6e9a8f6ea1cd4567f9135eccf2a833fcf))
+
+
+### Documentation
+
+* one reference for network ports and outbound connections ([#506](https://github.com/msch128/mnema-talk/issues/506)) ([49e52cf](https://github.com/msch128/mnema-talk/commit/49e52cf3436de48b13a691d45de77d2d1495f116))
+
 ## [1.5.1](https://github.com/msch128/mnema-talk/compare/v1.5.0...v1.5.1) (2026-10-29)
 
 
