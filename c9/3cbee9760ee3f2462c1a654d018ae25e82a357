@@ -1,0 +1,53 @@
+doc/operations.md
+  s_06fcde5dbef956::t_b6f5d3b44baba9 463-470,511-513
+internal/server/public_turn_test.go
+  s_06fcde5dbef956::t_441e75d71f6e7b 11,174-206
+api/openapi.json
+  s_8bef1078239028::t_41cb32c69ac6b8 7312-7315,7360
+doc/upgrade.md
+  s_8bef1078239028::t_2b84e98774436e 135-142
+internal/server/public.go
+  s_8bef1078239028::t_d1bb4282bee41c 24,45-51,96
+web/src/components/LegalModal.test.ts
+  s_3714ef6ad48c2f::t_00a3bcfb3bb3d8 7,18,36,48-68
+web/src/components/LegalModal.vue
+  s_8bef1078239028::t_a677031b22811c 26-27,50-51,167-173
+web/src/i18n/de.json
+  s_8bef1078239028::t_a9f9ca92304665 860-864
+web/src/i18n/en.json
+  s_8bef1078239028::t_deea787dbf0368 862-866
+web/src/types/rest.ts
+  s_8bef1078239028::t_b05b369d32f4b2 4311,4328
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c93cbee9760ee3f2462c1a654d018ae25e82a357",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3714ef6ad48c2f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonboarding-review-e174c5b94ff41a48",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_8bef1078239028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aprivacy-turn-8d1fb8220c1150ef",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
