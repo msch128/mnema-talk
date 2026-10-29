@@ -1,10 +1,11 @@
 import type { DeepFilterAssets, FilterOptions, FilterStats } from './dfnTypes'
+import { isPageUnloading } from '../audioHealth'
 import { isDfnReady, isDfnFailed, isDfnStats } from './dfnTypes'
 
 export interface FilterNode extends AudioWorkletNode { destroy?: () => void; filterStats?: FilterStats }
 
 function isFilterCanceled(signal?: AbortSignal, ctx?: AudioContext): boolean {
-  if (signal?.aborted === true) return true
+  if (signal?.aborted === true || isPageUnloading()) return true
   return ctx?.state === 'closed'
 }
 
@@ -31,11 +32,15 @@ class FilterLifecycle {
   destroy = () => {
     if (this.destroyed) return
     this.destroyed = true
-    this.worker.terminate()
+    // Silence the worker's events first: terminating it while its module is
+    // still being imported would otherwise surface as a failure of its own.
+    this.worker.onmessage = () => {}
+    this.worker.onerror = () => {}
     this.signal?.removeEventListener('abort', this.abort)
+    try { this.node?.disconnect() } catch (err) { void err }
     this.channel?.port1.close()
     this.channel?.port2.close()
-    try { this.node?.disconnect() } catch (err) { void err }
+    this.worker.terminate()
   }
 
   fail = () => {

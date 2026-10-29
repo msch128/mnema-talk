@@ -6,6 +6,7 @@ import type { Cx } from './state'
 import { micErrorKey, requestMicrophone, setupMicPipeline, teardownMicPipeline } from './micPipeline'
 import { startMicTest } from './micTest'
 import { aiModel } from './audioMath'
+import { noticeOnce } from './audioNotice'
 import { activeAudioTrack, applyQos } from './senders'
 import { startSpeakingDetection, stopSpeakingDetection } from './voiceAudio'
 
@@ -34,6 +35,26 @@ export function recoverFilter(cx: Cx, ctx: AudioContext, model: NoiseModel, test
   setTimeout(() => {
     if (targetAudioContext(st, test) !== ctx) return
     reapplyDegradedFilter(cx, test)
+  }, 0)
+}
+
+/**
+ * The audio context did not start rendering (no audio output device, or the
+ * browser holds it back until a gesture). Whatever is routed through it is
+ * silent, so the call is rebuilt around it: no AI filter, the capture sent as
+ * it is, the gate open (see voiceAudio).
+ */
+export function recoverContext(cx: Cx, ctx: AudioContext) {
+  const { voice, st } = cx
+  if (st.audioContext !== ctx || st.contextStalled) return
+  console.warn('[WebRTC] The audio context did not start; sending the microphone around it')
+  st.contextStalled = true
+  const model = aiModel(voice.noiseMode)
+  if (model) st.failedAIModel = model
+  noticeOnce('audio.engineStalled')
+  setTimeout(() => {
+    if (st.audioContext !== ctx) return
+    reapplyDegradedFilter(cx, false)
   }, 0)
 }
 

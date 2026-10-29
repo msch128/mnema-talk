@@ -29,6 +29,9 @@ class FakeWorker {
   }
 }
 class FakeContext {
+  state: AudioContextState = 'running'
+  addEventListener = vi.fn()
+  removeEventListener = vi.fn()
   audioWorklet = { addModule: vi.fn().mockResolvedValue(undefined) }
   constructor(options: AudioContextOptions = {}) { this.sampleRate = options.sampleRate ?? 48000 }
   sampleRate: number
@@ -65,6 +68,50 @@ describe('createNoiseSuppressorNode', () => {
     vi.stubGlobal('AudioWorkletNode', undefined)
     expect(mod.isNoiseSuppressionSupported()).toBe(false)
     expect(await mod.createNoiseSuppressorNode(fakeContext())).toBeNull()
+  })
+
+  it('reports a browser without Worker support as unsupported', () => {
+    vi.stubGlobal('Worker', undefined)
+    expect(mod.isNoiseSuppressionSupported()).toBe(false)
+  })
+
+  it('gives up a DFN3 filter that processes no frame and reports it, so the call can fall back', async () => {
+    vi.useFakeTimers()
+    try {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const onFailure = vi.fn()
+      const node = await createNode(fakeContext(), 'dfn3', { onFailure })
+      const destroy = vi.spyOn(node, 'destroy')
+      await vi.advanceTimersByTimeAsync(2900)
+      expect(onFailure).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(300)
+      expect(onFailure).toHaveBeenCalledOnce()
+      expect(destroy).toHaveBeenCalledOnce()
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('no-frames'))
+    } finally { vi.useRealTimers() }
+  })
+
+  it('keeps a DFN3 filter that processes frames', async () => {
+    vi.useFakeTimers()
+    try {
+      const onFailure = vi.fn()
+      const node = await createNode(fakeContext(), 'dfn3', { onFailure })
+      node.filterStats = { processedFrames: 1, droppedFrames: 0, bridgeBudgetMs: 30 }
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(onFailure).not.toHaveBeenCalled()
+    } finally { vi.useRealTimers() }
+  })
+
+  it('does not blame the filter when the capture was cancelled while it loaded', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const controller = new AbortController()
+    const ctx = fakeContext()
+    vi.mocked(ctx.audioWorklet.addModule).mockImplementation(async () => {
+      controller.abort()
+      throw new DOMException('Importing a module script is canceled', 'AbortError')
+    })
+    expect(await mod.createNoiseSuppressorNode(ctx, 'dfn3', { signal: controller.signal })).toBeNull()
+    expect(warn).not.toHaveBeenCalled()
   })
 
   it('returns null for sample rates the model cannot run at', async () => {
