@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Admin dashboard: invite codes (registration is invite-only).
 import { ref, computed, onMounted } from 'vue'
-import { Link, Trash2, Check, Copy, ChevronRight } from '@lucide/vue'
+import { Link, Pencil, Trash2, Check, Copy, ChevronRight } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import type { Invite, CreateInviteRequest } from '../types/domain'
 import { isAuthInvite } from '../types/rest'
@@ -10,6 +10,7 @@ import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 import EmptyState from './EmptyState.vue'
+import EditInviteDialog from './EditInviteDialog.vue'
 
 const toasts = useToastStore()
 
@@ -18,6 +19,7 @@ const newInviteUses = ref<string | number>('')
 const newInviteHours = ref<string | number>('')
 const copiedCode = ref('')
 const creating = ref(false)
+const editing = ref<Invite | null>(null)
 
 function showError(e: unknown) {
   toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
@@ -67,6 +69,10 @@ async function deleteInvite(inv: Invite) {
   } catch (e) {
     showError(e)
   }
+}
+
+function onEdited(updated: Invite) {
+  invites.value = invites.value.map(i => (i.id === updated.id ? updated : i))
 }
 
 async function copyInviteLink(code: string) {
@@ -164,6 +170,16 @@ onMounted(loadInvites)
           </button>
           <button
             type="button"
+            class="text-mnema-tertiary hover:text-mnema-text transition"
+            data-testid="invite-edit"
+            :title="$t('admin.editInvite.edit')"
+            :aria-label="$t('admin.editInvite.edit')"
+            @click="editing = inv"
+          >
+            <Pencil class="w-4 h-4" />
+          </button>
+          <button
+            type="button"
             class="text-mnema-tertiary hover:text-mnema-danger transition"
             :title="$t('admin.deleteInvite')"
             :aria-label="$t('admin.deleteInvite')"
@@ -177,5 +193,6 @@ onMounted(loadInvites)
     <button v-if="spentCount" type="button" class="flex items-center gap-1.5 text-sm text-mnema-muted hover:text-mnema-text" :aria-expanded="showSpent ? 'true' : 'false'" data-testid="invites-spent-toggle" @click="showSpent = !showSpent">
       <ChevronRight :class="['h-4 w-4 transition', showSpent && 'rotate-90']" aria-hidden="true" />{{ $t(showSpent ? 'admin.hideSpent' : 'admin.showSpent', { count: spentCount }) }}
     </button>
+    <EditInviteDialog v-if="editing" :invite="editing" @close="editing = null" @saved="onEdited" />
   </section>
 </template>
