@@ -83,7 +83,14 @@ ADMIN_INITIAL_PASSWORD=...  # the Owner's first password, 14+ characters
    run `sudo docker login ghcr.io` once with a token that has `read:packages`.
 3. **Reverse proxy.** Control Panel > Login Portal > Advanced > Reverse Proxy >
    Create: source HTTPS, `chat.example.com`, port 443; destination HTTP,
-   `localhost`, port 8080. In Custom Header press Create > WebSocket (it adds the
+   `localhost`, and the port the app listens on: the `PORT` value in `.env`,
+   8080 unless you changed it. The compose file needs no edit for this. To use
+   another port, set `PORT=` in the `.env` in the project folder (Container
+   Manager reads it from there) and rebuild the project. If the proxy runs on
+   another machine, or in a container that cannot reach the NAS's loopback
+   address, also set `PUBLISH_ADDR=` to the NAS's LAN address (not `0.0.0.0` on
+   a NAS that faces the internet). Keep that port closed on the router
+   ([ports](ports.md)). In Custom Header press Create > WebSocket (it adds the
    `Upgrade` and `Connection` headers). Get the certificate under Control Panel >
    Security > Certificate (Let's Encrypt).
 4. **Router and firewall.** Forward TCP 443, **UDP 50000-50050** and **UDP and TCP 3479** to the NAS.
@@ -93,7 +100,28 @@ ADMIN_INITIAL_PASSWORD=...  # the Owner's first password, 14+ characters
    names the exact `TRUSTED_PROXY_CIDRS=` value if the DSM proxy shows up as an
    untrusted address.
 
-**Update.** Take a backup first ([upgrade.md](upgrade.md)). Over SSH:
+**One-click updates (recommended).** The optional updater sidecar adds an
+"Update now" button in Admin > System. It verifies the signature of the new
+image, pulls it and recreates only the app. Enable it when the setup assistant
+asks (or with `--auto-update`), or later by adding two lines to the `.env` in
+the project folder:
+
+```sh
+COMPOSE_PROFILES=autoupdate
+UPDATER_TOKEN=<output of: openssl rand -hex 32>
+```
+
+Run `openssl rand -hex 32` over SSH (or let the assistant generate the token),
+then rebuild the project once: Container Manager > Project > `mnema-talk` >
+Action > Stop, then Build. From then on use Admin > System > **Update now**.
+It needs outbound HTTPS to `ghcr.io` and to Sigstore ([ports](ports.md#outbound-connections)),
+and the token rules are in [operations.md](operations.md#updates). Container
+Manager's own image update view only tracks registries in its registry list, so
+it will not flag a new Mnema Talk image; the button and the admin update check
+do. The image is also mirrored on Docker Hub ([deployment.md](deployment.md#fresh-install)).
+Take a backup first ([upgrade.md](upgrade.md)).
+
+**Manual update (fallback).** Take a backup first ([upgrade.md](upgrade.md)). Over SSH:
 `cd /volume1/docker/mnema-talk && sudo docker compose pull && sudo docker compose up -d`.
 In the UI: Container Manager > Project > `mnema-talk` > Action > Stop, then
 Clean (removes the project's containers and images, not your data) and Build,
@@ -118,7 +146,7 @@ between DSM versions.
    [operations.md](operations.md#backups-and-restore).
 3. **Reverse proxy.** Nginx Proxy Manager, SWAG or Caddy from Community
    Applications all work: forward `chat.example.com` to `http://<unraid-ip>:8080`
-   with WebSockets on. Set `PUBLISH_ADDR=0.0.0.0` in `.env` when the proxy
+   (the `PORT` value in `.env`, 8080 unless changed) with WebSockets on. Set `PUBLISH_ADDR=0.0.0.0` in `.env` when the proxy
    runs in another container or on another machine, and list its address in
    `TRUSTED_PROXY_CIDRS` (the Status tab names it).
 4. **Router.** Forward TCP 443, **UDP 50000-50050** and **UDP and TCP 3479** to the Unraid server.
@@ -126,7 +154,7 @@ between DSM versions.
 
 **Update.** After a backup: `cd /mnt/user/appdata/mnema-talk && docker compose pull && docker compose up -d`.
 Prefer a button? The optional updater sidecar (`--auto-update`, or
-[Updates](deployment.md#updates)) adds "Update now" to the admin console; it
+[Updates](deployment.md#updates)) adds Admin > System > "Update now"; it
 verifies the new image's signature first and needs `/var/run/docker.sock`,
 which Unraid provides. Read its [threat model](../SECURITY.md#self-update-sidecar)
 before you enable it.
@@ -147,6 +175,8 @@ before you enable it.
        reverse_proxy 127.0.0.1:8080
    }
    ```
+
+   `8080` is the `PORT` value in `.env`; change both together.
 
    Then `sudo systemctl reload caddy`. Point the DNS A record of
    `chat.example.com` at the server before this step.
