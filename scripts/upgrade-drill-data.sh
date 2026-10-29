@@ -33,32 +33,32 @@ count_tables() {
 user_id() { api "$1" "$BASE/api/auth/me" | jq -r '.id // .user.id'; }
 
 seed_roles() {
-  MOD_ROLE="$(post_json Cool_Guy /api/admin/roles "{\"name\":\"drillmods\",\"color\":3447003,\"mentionable\":true,\"permissions\":$PERM_MEMBER}" | jq -r '.id')"
-  VIEW_ROLE="$(post_json Cool_Guy /api/admin/roles '{"name":"drillviewers","color":10066329,"mentionable":false,"permissions":2}' | jq -r '.id')"
+  MOD_ROLE="$(post_json cool_guy /api/admin/roles "{\"name\":\"drillmods\",\"color\":3447003,\"mentionable\":true,\"permissions\":$PERM_MEMBER}" | jq -r '.id')"
+  VIEW_ROLE="$(post_json cool_guy /api/admin/roles '{"name":"drillviewers","color":10066329,"mentionable":false,"permissions":2}' | jq -r '.id')"
   need_id "$MOD_ROLE" 'role id'
   need_id "$VIEW_ROLE" 'role id'
   ALICE_ID="$(user_id alice)"
   BOB_ID="$(user_id bob)"
-  put_json Cool_Guy "/api/admin/users/$ALICE_ID/roles" "{\"role_ids\":[\"$MOD_ROLE\"]}" >/dev/null
-  put_json Cool_Guy "/api/admin/users/$BOB_ID/roles" "{\"role_ids\":[\"$VIEW_ROLE\"]}" >/dev/null
-  put_json Cool_Guy "/api/admin/channels/$PROJECTS/overwrites" \
+  put_json cool_guy "/api/admin/users/$ALICE_ID/roles" "{\"role_ids\":[\"$MOD_ROLE\"]}" >/dev/null
+  put_json cool_guy "/api/admin/users/$BOB_ID/roles" "{\"role_ids\":[\"$VIEW_ROLE\"]}" >/dev/null
+  put_json cool_guy "/api/admin/channels/$PROJECTS/overwrites" \
     "{\"overwrites\":[{\"type\":\"role\",\"id\":\"$MOD_ROLE\",\"allow\":8,\"deny\":0},{\"type\":\"member\",\"id\":\"$BOB_ID\",\"allow\":0,\"deny\":8}]}" >/dev/null
-  put_json Cool_Guy "/api/admin/categories/$CATEGORY/overwrites" \
+  put_json cool_guy "/api/admin/categories/$CATEGORY/overwrites" \
     "{\"overwrites\":[{\"type\":\"role\",\"id\":\"$MOD_ROLE\",\"allow\":16,\"deny\":0}]}" >/dev/null
 }
 
 seed_integrations() {
   local hook bot
-  hook="$(post_json Cool_Guy "/api/admin/channels/$GENERAL/webhooks" '{"name":"drill-hook"}')"
+  hook="$(post_json cool_guy "/api/admin/channels/$GENERAL/webhooks" '{"name":"drill-hook"}')"
   HOOK_ID="$(jq -r '.id' <<<"$hook")"
   HOOK_TOKEN="$(jq -r '.token' <<<"$hook")"
   need_id "$HOOK_ID" 'webhook id'
   need_id "$HOOK_TOKEN" 'webhook token'
   hook_post "hook-before-$TAG"
-  bot="$(post_json Cool_Guy /api/admin/bots '{"name":"drillbot","allowed_intents":0}')"
+  bot="$(post_json cool_guy /api/admin/bots '{"name":"drillbot","allowed_intents":0}')"
   BOT_ID="$(jq -r '.id' <<<"$bot")"
   need_id "$BOT_ID" 'bot id'
-  BOT_SECRET="$(post_json Cool_Guy "/api/admin/bots/$BOT_ID/tokens" '{"name":"drill"}' | jq -r '.secret')"
+  BOT_SECRET="$(post_json cool_guy "/api/admin/bots/$BOT_ID/tokens" '{"name":"drill"}' | jq -r '.secret')"
   need_id "$BOT_SECRET" 'bot token'
 }
 
@@ -75,11 +75,11 @@ seed_notifications() {
 seed_090() {
   local version
   put_json bob "/api/categories/$CATEGORY/notifications" '{"level":"mute"}' >/dev/null
-  put_json Cool_Guy /api/admin/onboarding \
+  put_json cool_guy /api/admin/onboarding \
     "{\"community_name\":\"Drill Community\",\"welcome_text\":\"welcome-$TAG\",\"rules_text\":\"rules-$TAG\",\"start_channel_id\":\"$GENERAL\"}" >/dev/null
   version="$(api alice "$BASE/api/onboarding" | jq -r '.rules_version')"
   for person in alice bob; do post_json "$person" /api/onboarding/accept "{\"version\":$version}" >/dev/null; done
-  post_message Cool_Guy "$GENERAL" "ping @drillmods $TAG"
+  post_message cool_guy "$GENERAL" "ping @drillmods $TAG"
 }
 
 # Roles as the drill compares them. Two upgrades add a permission on purpose,
@@ -92,9 +92,9 @@ ROLES_JQ='map({id, name, color, permissions: (.permissions as $p | (if (($p / 41
 EVENTS_GRANT_JQ='all(.[]; (((.permissions / 33554432 | floor) % 2) == 1) == (((.permissions / 262144 | floor) % 2) == 1))'
 
 snapshot_integrations() {
-  ROLES_BEFORE="$(api Cool_Guy "$BASE/api/roles" | jq -S "$ROLES_JQ")"
-  OVERWRITES_BEFORE="$(api Cool_Guy "$BASE/api/admin/channels/$PROJECTS/overwrites" | jq -S '.overwrites | sort_by(.id)')"
-  CATEGORY_OVERWRITES_BEFORE="$(api Cool_Guy "$BASE/api/admin/categories/$CATEGORY/overwrites" | jq -S '.overwrites | sort_by(.id)')"
+  ROLES_BEFORE="$(api cool_guy "$BASE/api/roles" | jq -S "$ROLES_JQ")"
+  OVERWRITES_BEFORE="$(api cool_guy "$BASE/api/admin/channels/$PROJECTS/overwrites" | jq -S '.overwrites | sort_by(.id)')"
+  CATEGORY_OVERWRITES_BEFORE="$(api cool_guy "$BASE/api/admin/categories/$CATEGORY/overwrites" | jq -S '.overwrites | sort_by(.id)')"
   COUNTS_BEFORE="$(count_tables)"
 }
 
@@ -115,15 +115,15 @@ $(diff <(echo "$COUNTS_BEFORE") <(echo "$after") || true)"
 }
 
 verify_roles() {
-  [ "$(api Cool_Guy "$BASE/api/roles" | jq -S "$ROLES_JQ")" = "$ROLES_BEFORE" ] ||
+  [ "$(api cool_guy "$BASE/api/roles" | jq -S "$ROLES_JQ")" = "$ROLES_BEFORE" ] ||
     fail 'the roles changed'
-  api Cool_Guy "$BASE/api/roles" | jq -e 'any(.[]; ((.permissions / 4194304 | floor) % 2) == 1)' >/dev/null ||
+  api cool_guy "$BASE/api/roles" | jq -e 'any(.[]; ((.permissions / 4194304 | floor) % 2) == 1)' >/dev/null ||
     fail 'no role holds Send direct messages after the upgrade (migration 0050 gives it to @everyone)'
-  api Cool_Guy "$BASE/api/roles" | jq -e "$EVENTS_GRANT_JQ" >/dev/null ||
+  api cool_guy "$BASE/api/roles" | jq -e "$EVENTS_GRANT_JQ" >/dev/null ||
     fail 'Manage events does not match Timeout members after the upgrade (migration 0070)'
-  [ "$(api Cool_Guy "$BASE/api/admin/channels/$PROJECTS/overwrites" | jq -S '.overwrites | sort_by(.id)')" = "$OVERWRITES_BEFORE" ] ||
+  [ "$(api cool_guy "$BASE/api/admin/channels/$PROJECTS/overwrites" | jq -S '.overwrites | sort_by(.id)')" = "$OVERWRITES_BEFORE" ] ||
     fail 'the channel overwrites changed'
-  [ "$(api Cool_Guy "$BASE/api/admin/categories/$CATEGORY/overwrites" | jq -S '.overwrites | sort_by(.id)')" = "$CATEGORY_OVERWRITES_BEFORE" ] ||
+  [ "$(api cool_guy "$BASE/api/admin/categories/$CATEGORY/overwrites" | jq -S '.overwrites | sort_by(.id)')" = "$CATEGORY_OVERWRITES_BEFORE" ] ||
     fail 'the category overwrites changed'
   # The overwrite still bites: bob may not attach files in the project channel.
   # Deterministic binary content (sniffs as application/octet-stream); random
@@ -137,11 +137,11 @@ verify_roles() {
 }
 
 verify_integrations() {
-  [ "$(api Cool_Guy "$BASE/api/admin/channels/$GENERAL/webhooks" | jq -r '[.[] | select(.name == "drill-hook")] | length')" = 1 ] ||
+  [ "$(api cool_guy "$BASE/api/admin/channels/$GENERAL/webhooks" | jq -r '[.[] | select(.name == "drill-hook")] | length')" = 1 ] ||
     fail 'the webhook is gone'
   hook_post "hook-after-$TAG"
-  messages Cool_Guy "$GENERAL" | grep -qx "hook-after-$TAG" || fail 'the old webhook token no longer posts'
-  [ "$(api Cool_Guy "$BASE/api/admin/bots" | jq -r '[.[] | select(.name == "drillbot")] | length')" = 1 ] || fail 'the bot is gone'
+  messages cool_guy "$GENERAL" | grep -qx "hook-after-$TAG" || fail 'the old webhook token no longer posts'
+  [ "$(api cool_guy "$BASE/api/admin/bots" | jq -r '[.[] | select(.name == "drillbot")] | length')" = 1 ] || fail 'the bot is gone'
   [ "$(curl -fsS -H "Authorization: Bot $BOT_SECRET" "$BASE/api/bot/v1/users/@me" | jq -r '.username // .name')" = drillbot ] ||
     fail 'the old bot token no longer authenticates'
 }
@@ -222,10 +222,10 @@ exercise_new_tables() {
   put_json bob "/api/categories/$CATEGORY/notifications" '{"level":"mentions"}' >/dev/null
   [ "$(api bob "$BASE/api/notification-settings" | jq -r --arg c "$CATEGORY" '.categories[] | select(.category_id == $c) | .level')" = mentions ] ||
     fail 'a category level could not be set after the upgrade'
-  put_json Cool_Guy /api/admin/onboarding \
+  put_json cool_guy /api/admin/onboarding \
     "{\"community_name\":\"Drill Community\",\"welcome_text\":\"new-$TAG\",\"rules_text\":\"new-rules-$TAG\",\"start_channel_id\":\"$GENERAL\",\"require_reacceptance\":true}" >/dev/null
   [ "$(api alice "$BASE/api/onboarding" | jq -r '.rules_pending')" = true ] || fail 'raising the rules version did not ask alice to accept again'
-  post_message Cool_Guy "$GENERAL" "after @drillmods $TAG"
+  post_message cool_guy "$GENERAL" "after @drillmods $TAG"
   api alice "$BASE/api/mentions" | jq -r '.messages[].content' | grep -qx "after @drillmods $TAG" ||
     fail 'a role mention made after the upgrade did not reach alice'
 }

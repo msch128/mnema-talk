@@ -133,7 +133,7 @@ COOKIES="$DEPLOY/cookies"
 login() {
   rm -f "$COOKIES"
   curl -fsS -c "$COOKIES" -H "Origin: $BASE" -H 'Content-Type: application/json' \
-    --data "{\"username\":\"Cool_Guy\",\"password\":\"$ADMIN_PASSWORD\"}" \
+    --data "{\"username\":\"cool_guy\",\"password\":\"$ADMIN_PASSWORD\"}" \
     "$BASE/api/auth/login" >/dev/null
 }
 set_image() { sed -i.bak "s|^MNEMA_IMAGE=.*|MNEMA_IMAGE=$1|" .env && rm -f .env.bak; }

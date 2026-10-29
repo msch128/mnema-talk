@@ -6,7 +6,7 @@ import { test, expect } from './fixtures'
 // the opener leads it; when the leader leaves, the member present longest does.
 // Needs a call (fake microphone), so it runs in CI only.
 
-const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Cool_Guy'
+const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 

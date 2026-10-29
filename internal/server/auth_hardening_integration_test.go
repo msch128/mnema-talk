@@ -122,13 +122,13 @@ func TestEnsureAdminUserValidatesAndUsesAuthHashing(t *testing.T) {
 		t.Fatal(err)
 	}
 	var hash, display string
-	if err := a.db.QueryRow(ctx, `SELECT password_hash, display_name FROM users WHERE username = 'Mnema'`).Scan(&hash, &display); err != nil {
+	if err := a.db.QueryRow(ctx, `SELECT password_hash, display_name FROM users WHERE username = 'Cool_Guy'`).Scan(&hash, &display); err != nil {
 		t.Fatal(err)
 	}
 	if cost, _ := bcrypt.Cost([]byte(hash)); cost != auth.PasswordCost() {
 		t.Errorf("admin hash cost %d, want auth's %d", cost, auth.PasswordCost())
 	}
-	if display != "Mnema" {
+	if display != "Cool_Guy" {
 		t.Errorf("display name %q", display)
 	}
 	// Idempotent, and settings no longer matter once the admin exists.

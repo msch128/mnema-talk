@@ -154,5 +154,5 @@ curl -fsS "http://127.0.0.1:$APP_PORT/api/health" >/dev/null
 
 echo "==> running playwright"
 cd e2e
-E2E_BASE_URL="http://127.0.0.1:$APP_PORT" E2E_ADMIN_USER=Cool_Guy E2E_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+E2E_BASE_URL="http://127.0.0.1:$APP_PORT" E2E_ADMIN_USER=cool_guy E2E_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
   npx playwright test ${E2E_ONLY:---project=chromium}

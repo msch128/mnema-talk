@@ -127,7 +127,7 @@ echo
 echo "==> admin login"
 # Same-origin request: the CSRF check needs a matching Origin header.
 curl -fsS -c "$COOKIES" -H "Origin: $BASE" -H 'Content-Type: application/json' \
-  --data "{\"username\":\"Cool_Guy\",\"password\":\"$ADMIN_PASSWORD\"}" \
+  --data "{\"username\":\"cool_guy\",\"password\":\"$ADMIN_PASSWORD\"}" \
   "$BASE/api/auth/login" >/dev/null
 me="$(curl -fsS -b "$COOKIES" "$BASE/api/auth/me")"
 case "$me" in

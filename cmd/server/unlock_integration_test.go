@@ -17,7 +17,7 @@ func TestUnlockCommandQueuesAndReports(t *testing.T) {
 	testutil.Reset(t, pool)
 	startupEnv(t, pool)
 	ctx := context.Background()
-	if _, err := pool.Exec(ctx, `INSERT INTO users (username, display_name, password_hash, role) VALUES ('Mnema', 'Mnema', 'x', 'admin')`); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO users (username, display_name, password_hash, role) VALUES ('cool_guy', 'Mnema', 'x', 'admin')`); err != nil {
 		t.Fatal(err)
 	}
 	old := unlockWait

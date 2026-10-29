@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test'
 import { decodeMessage, decodeUserEnvelope } from '../../web/src/types/domain'
 import { apiFetch, responseString } from './helpers'
 
-const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Cool_Guy'
+const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 

@@ -6,7 +6,7 @@ import { test, expect } from './fixtures'
 // before it leaves, and refuse to take part where that is not possible. The
 // specs run on Chromium, WebKit and Firefox alike.
 
-const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Cool_Guy'
+const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 

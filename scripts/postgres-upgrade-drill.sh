@@ -117,7 +117,7 @@ ENV
   login() {
     rm -f "$COOKIES"
     curl -fsS -c "$COOKIES" -H "Origin: $BASE" -H 'Content-Type: application/json' \
-      --data "{\"username\":\"Cool_Guy\",\"password\":\"$ADMIN_PASSWORD\"}" "$BASE/api/auth/login" >/dev/null
+      --data "{\"username\":\"cool_guy\",\"password\":\"$ADMIN_PASSWORD\"}" "$BASE/api/auth/login" >/dev/null
   }
   api() { curl -fsS -b "$COOKIES" -H "Origin: $BASE" "$@"; }
   guard_refuses() {
