@@ -14,9 +14,9 @@ set -euo pipefail
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 IMAGE="${1:-mnema-talk:local}"
 source "$(cd "$(dirname "$0")" && pwd)/free-port.sh"
-PORT="${FRESH_PORT:-$(free_port)}"
 UDP_MIN="${FRESH_UDP_PORT:-$(free_port_range 11)}"
 UDP_MAX=$((UDP_MIN + 10))
+PORT="${FRESH_PORT:-$(free_port "$UDP_MIN-$UDP_MAX")}"
 PROJECT="mnema-fresh-$(openssl rand -hex 6)"
 DIR="$(mktemp -d)"
 BASE="http://127.0.0.1:$PORT"

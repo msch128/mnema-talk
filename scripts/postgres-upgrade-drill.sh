@@ -9,9 +9,9 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 IMAGE="${1:-mnema-talk:local}"
 # shellcheck source=scripts/free-port.sh
 source "$ROOT/scripts/free-port.sh"
-PORT="${DRILL_PORT:-$(free_port)}"
 UDP_MIN="${DRILL_UDP_PORT:-$(free_port_range 11)}"
 UDP_MAX=$((UDP_MIN + 10))
+PORT="${DRILL_PORT:-$(free_port "$UDP_MIN-$UDP_MAX")}"
 BASE="http://127.0.0.1:$PORT"
 SCENARIOS="${DRILL_SCENARIOS:-direct guard import-failure stop-failure}"
 REAL_DOCKER="$(command -v docker)"

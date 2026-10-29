@@ -558,7 +558,8 @@ func TestPruneSkipsAKeyStorageRefusesToDelete(t *testing.T) {
 	f.attachment(t, "uploads/ok-2", false)
 	store := stuckKeyStore{MemoryStore: f.store.MemoryStore, stuck: "uploads/stuck"}
 	n, err := PruneOlderThan(context.Background(), f.p, store, 1)
-	if n != 2 || err == nil || !strings.Contains(err.Error(), "skipped") {
+	var skipped *PruneSkippedError
+	if n != 2 || !errors.As(err, &skipped) || skipped.Skipped != 1 {
 		t.Fatalf("prune n=%d err=%v, want the two healthy objects removed and an error for the stuck one", n, err)
 	}
 	if store.Has("uploads/ok-1") || store.Has("uploads/ok-2") || !store.Has("uploads/stuck") {
@@ -567,5 +568,24 @@ func TestPruneSkipsAKeyStorageRefusesToDelete(t *testing.T) {
 	var deleted bool
 	if err := f.p.QueryRow(context.Background(), `SELECT is_deleted FROM media WHERE id=$1`, stuck).Scan(&deleted); err != nil || deleted {
 		t.Fatalf("stuck row is_deleted=%v err=%v", deleted, err)
+	}
+}
+
+func TestManualPruneReportsTheCountWhenKeysAreSkipped(t *testing.T) {
+	f := mediaDB(t)
+	f.attachment(t, "uploads/stuck", false)
+	f.attachment(t, "uploads/ok-1", false)
+	f.attachment(t, "uploads/ok-2", false)
+	f.h.Store = stuckKeyStore{MemoryStore: f.store.MemoryStore, stuck: "uploads/stuck"}
+	rec := httptest.NewRecorder()
+	if err := f.h.prune(rec, f.req(httptest.NewRequest(http.MethodPost, "/api/admin/media/prune?days=1", nil), "", "")); err != nil {
+		t.Fatalf("prune with a stuck key: %v", err)
+	}
+	var res PruneResult
+	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
+		t.Fatal(err)
+	}
+	if rec.Code != http.StatusOK || res.PrunedCount != 2 || res.Skipped != 1 || res.CutoffDays != 1 {
+		t.Fatalf("prune: %d %+v", rec.Code, res)
 	}
 }

@@ -148,6 +148,15 @@ describe('AdminStatusTab', () => {
     expect(w.find('[data-testid="status-warning-trusted_proxy_broad"]').text()).toContain('3')
   })
 
+  it('names the port count in the UDP mux warning', async () => {
+    apiMock.mockResolvedValue(statusFixture({
+      warnings: [{ code: 'webrtc_udp_mux_disabled', count: 1, since: '2026-10-24T10:00:00Z', value: 101 }],
+    }))
+    const w = keep(mount(AdminStatusTab))
+    await flushPromises()
+    expect(w.get('[data-testid="status-warning-webrtc_udp_mux_disabled"]').text()).toContain('101 ports')
+  })
+
   it('handles refresh button click and API error toast', async () => {
     apiMock.mockRejectedValueOnce(new Error('Network error'))
     const w = keep(mount(AdminStatusTab))

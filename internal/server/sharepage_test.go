@@ -15,6 +15,17 @@ const testShell = `<!DOCTYPE html>
   <body><div id="app"></div></body>
 </html>`
 
+func TestPageTagsNameTheHomeScreenLabel(t *testing.T) {
+	shell := strings.Replace(testShell, "<title>", `<meta name="apple-mobile-web-app-title" content="Mnema" />`+"\n    <title>", 1)
+	out := string(pageTags{title: "Chess <Club>", appName: "Chess <Club>"}.apply([]byte(shell)))
+	if !strings.Contains(out, `<meta name="apple-mobile-web-app-title" content="Chess &lt;Club&gt;" />`) {
+		t.Errorf("home-screen label not replaced:\n%s", out)
+	}
+	if out := string(pageTags{title: "x"}.apply([]byte(shell))); !strings.Contains(out, `content="Mnema" />`) {
+		t.Error("without an app name the built label must stay")
+	}
+}
+
 func TestPageTagsWriteTitleAndPreviewTags(t *testing.T) {
 	out := string(pageTags{
 		title: "Join Team on Mnema Talk", description: "Welcome to the team.",

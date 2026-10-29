@@ -41,7 +41,7 @@ function formatDate(iso: string | null | undefined): string {
   return new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'short' }).format(d)
 }
 
-const warnings = computed(() => status.value?.warnings || [])
+const warnings = computed(() => (status.value?.warnings || []).map(w => ({ ...w, ...describeWarning(w.code, w.value) })))
 const setup = computed(() => status.value?.setup || [])
 const setupAttention = computed(() => setup.value.filter(c => c.level !== 'ok').length)
 // Red items first, then amber, then green; the server order is kept within a level.
@@ -113,11 +113,11 @@ onMounted(refresh)
       </div>
       <ul class="space-y-3">
         <li v-for="w in warnings" :key="w.code" class="text-sm" :data-testid="`status-warning-${w.code}`">
-          <p class="font-medium text-mnema-text">{{ describeWarning(w.code, undefined).title }}</p>
-          <p class="text-mnema-muted">{{ describeWarning(w.code, undefined).body }}</p>
+          <p class="font-medium text-mnema-text">{{ w.title }}</p>
+          <p class="text-mnema-muted">{{ w.body }}</p>
           <p class="font-mono text-xs text-mnema-tertiary">{{ w.code }}</p>
           <p class="text-xs text-mnema-muted">{{ $t('admin.operatorStatus.count', { count: w.count }) }} · {{ $t('admin.operatorStatus.since', { since: formatDate(w.since) }) }}</p>
-          <a :href="describeWarning(w.code, undefined).doc" target="_blank" rel="noopener noreferrer" class="text-xs text-mnema-accent hover:underline">{{ $t('admin.system.warn.docs') }}</a>
+          <a :href="w.doc" target="_blank" rel="noopener noreferrer" class="text-xs text-mnema-accent hover:underline">{{ $t('admin.system.warn.docs') }}</a>
         </li>
       </ul>
     </div>

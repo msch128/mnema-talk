@@ -151,10 +151,12 @@ function isValidArmTarget(direction: 'send' | 'recv', channelId: string, senderI
   return true
 }
 
-function releasePort(ports: Set<KeyedPort>, lines: Map<object, KeyedPort>, port: KeyedPort) {
+// 'drop' empties the worker for the whole call, so only a reset sends it; a
+// replaced line just closes its port and leaves the other lines' keys alone.
+function releasePort(ports: Set<KeyedPort>, lines: Map<object, KeyedPort>, port: KeyedPort, dropKeys = false) {
   ports.delete(port)
   for (const [transform, line] of lines) if (line === port) lines.delete(transform)
-  try { port.postMessage({ type: 'drop' }) } catch (error) { ignoreClosedPort(error) }
+  if (dropKeys) try { port.postMessage({ type: 'drop' }) } catch (error) { ignoreClosedPort(error) }
   try { port.close() } catch (error) { ignoreClosedPort(error) }
 }
 
@@ -239,7 +241,7 @@ export function createMediaGuard(): MediaGuard {
     onStats(listener) { statsListener = listener },
     reset() {
       current = null
-      for (const port of [...ports]) releasePort(ports, lines, port)
+      for (const port of [...ports]) releasePort(ports, lines, port, true)
       armed = new WeakMap()
       lines = new Map()
       worker?.terminate()

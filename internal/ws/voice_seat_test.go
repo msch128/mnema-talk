@@ -51,6 +51,42 @@ func TestSecondConnectionJoiningTheSameRoomEvictsTheFirstFromVoice(t *testing.T)
 	}
 }
 
+// A second tab whose SFU join fails must not take the first tab's media away:
+// the first tab keeps its seat and its peer, and presence stays.
+func TestFailedJoinOfASecondTabLeavesTheFirstTabAlone(t *testing.T) {
+	s := newSeatTestSFU(t)
+	h := NewHub(nil, nil, s, nil)
+	ch := voiceCh()
+	user := auth.User{ID: uuid.New(), Username: "twotabsfail"}
+	a := testClient(h, user)
+	b := testClient(h, user)
+	defer h.unregister(a)
+	defer h.unregister(b)
+
+	h.joinVoice(a, ch)
+	peer := a.peer()
+	if peer == nil {
+		t.Fatal("no peer for the first tab")
+	}
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	h.joinVoice(b, ch)
+
+	if cur := a.currentVoice(); cur == nil || *cur != ch.ID || a.peer() != peer {
+		t.Fatal("the failed join of the second tab took the seat or the peer from the first")
+	}
+	if kicked := sentEvents(t, a, "voice_kicked"); len(kicked) != 0 {
+		t.Fatalf("first tab was kicked: %+v", kicked)
+	}
+	if kicked := sentEvents(t, b, "voice_kicked"); len(kicked) != 1 || kicked[0]["reason"] != "media_unavailable" {
+		t.Fatalf("voice_kicked to second tab = %+v", kicked)
+	}
+	if !inRoom(h, ch.ID, user.ID) {
+		t.Fatal("presence of the first tab was removed")
+	}
+}
+
 // Without a media connection the member would be listed and counted as in the
 // call while nobody can hear them: the seat is given up and the client told.
 func TestFailedSFUJoinGivesUpTheSeatAndTellsTheClient(t *testing.T) {

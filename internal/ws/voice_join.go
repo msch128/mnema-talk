@@ -201,7 +201,7 @@ func (h *Hub) recheckJoin(c *Client, chID uuid.UUID) (*perm.Snapshot, bool) {
 
 // evictSiblingConnections takes the media of chID's room away from the other
 // connections of c's user (a second tab or device): the SFU keeps one peer per
-// user and room, so the join below replaces theirs. They are told instead of
+// user and room, so the join replaces theirs. They are told instead of
 // being left on a dead connection. Presence stays; c now holds the seat.
 // Their voiceMu is not taken: two tabs joining at once would wait on each
 // other, and detaching only touches the connection's own state.
@@ -222,7 +222,6 @@ func (h *Hub) evictSiblingConnections(c *Client, chID uuid.UUID) {
 func (h *Hub) attachPeer(c *Client, chID uuid.UUID) bool {
 	sendOffer := func(offer webrtc.SessionDescription) { c.SendEvent(events.WebrtcOffer, offer) }
 	sendICE := func(cand *webrtc.ICECandidateInit) { c.SendEvent(events.WebrtcCandidate, cand) }
-	h.evictSiblingConnections(c, chID)
 	_, peer, err := h.SFU.Join(chID, c.User.ID, sendOffer, sendICE)
 	if err != nil {
 		// Without a media connection the seat is worth nothing: give it up
@@ -232,6 +231,9 @@ func (h *Hub) attachPeer(c *Client, chID uuid.UUID) bool {
 		c.SendEvent(events.VoiceKicked, map[string]any{"channel_id": chID, "reason": "media_unavailable"})
 		return false
 	}
+	// Only now: the join replaced the siblings' peers. After a failed join
+	// they still own theirs, and the other tabs keep their media.
+	h.evictSiblingConnections(c, chID)
 	c.setPeer(peer)
 	if peer != nil {
 		// A media connection that fails after the join leaves the seat

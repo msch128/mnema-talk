@@ -13,6 +13,7 @@ import (
 
 	"github.com/msch128/mnema-talk/internal/community"
 	"github.com/msch128/mnema-talk/internal/onboarding"
+	"github.com/msch128/mnema-talk/web"
 )
 
 // Link previews of the instance root and of invite links. Messengers and
@@ -100,7 +101,8 @@ func (s *sharePages) communityName(ctx context.Context) string {
 
 func (s *sharePages) rootTags(ctx context.Context) pageTags {
 	name := strings.TrimSpace(s.communityName(ctx))
-	t := pageTags{title: s.names.Get(ctx), description: shareTagline, url: s.abs("/"), image: s.abs(shareIcon)}
+	title := s.names.Get(ctx)
+	t := pageTags{title: title, appName: title, description: shareTagline, url: s.abs("/"), image: s.abs(shareIcon)}
 	if name != "" {
 		t.description = "Join " + name + " on " + shareProduct + ". " + shareTagline
 	}
@@ -121,6 +123,7 @@ func (s *sharePages) inviteTags(r *http.Request, code string) pageTags {
 	if name == "" {
 		name = shareProduct
 	}
+	t.appName = name
 	t.title = "Join " + name + " on " + shareProduct
 	t.description = info.Description
 	if t.description == "" {
@@ -141,6 +144,7 @@ func (s *sharePages) abs(path string) string {
 type pageTags struct {
 	title, description string
 	url, image         string // absolute, or empty
+	appName            string // home-screen label; empty keeps the built one
 	noindex            bool
 }
 
@@ -180,5 +184,8 @@ func (t pageTags) apply(index []byte) []byte {
 	meta("name", "twitter:description", t.description)
 
 	out := titleElement.ReplaceAllLiteral(index, []byte("<title>"+esc(t.title)+"</title>"))
+	if t.appName != "" {
+		out = web.SetAppTitle(out, t.appName)
+	}
 	return bytes.Replace(out, headClose, []byte(b.String()+"  </head>"), 1)
 }
