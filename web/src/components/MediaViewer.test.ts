@@ -16,9 +16,10 @@ const items: ViewerItem[] = [
 const message = { id: 'm1', channelId: 'c1', channelName: 'lobby', senderName: 'Ada', senderAvatarUrl: '/avatar.png', sentAt: '2026-01-01T10:00:00Z' }
 
 let w: ReturnType<typeof mount<typeof MediaViewer>>
+// The viewer is mounted once for the whole app and opened later: so is it here.
 async function show(req: Parameters<typeof openViewer>[0]) {
-  openViewer(req)
   w = mount(MediaViewer, { attachTo: document.body })
+  openViewer(req)
   await nextTick(); await nextTick()
 }
 const tid = (id: string) => w.get(`[data-testid="${id}"]`)
@@ -32,6 +33,7 @@ describe('MediaViewer', () => {
   it('is a labelled modal dialog and renders nothing while closed', async () => {
     w = mount(MediaViewer, { attachTo: document.body })
     expect(w.find('[role="dialog"]').exists()).toBe(false)
+    w.unmount()
     await show({ items, index: 0, message })
     const dialog = w.get('[role="dialog"]')
     expect(dialog.attributes('aria-modal')).toBe('true')
