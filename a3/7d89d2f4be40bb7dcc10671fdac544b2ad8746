@@ -1,0 +1,39 @@
+web/src/components/AdminSystemOperations.test.ts
+  s_06fcde5dbef956::t_63ef9ab070c570 126
+internal/turnrelay/doc.go
+  s_06fcde5dbef956::t_63ef9ab070c570 9
+internal/config/config_env.go
+  s_06fcde5dbef956::t_63ef9ab070c570 135
+doc/deployment.md
+  s_06fcde5dbef956::t_81d310e87a9634 19-20,32,34-35
+README.md
+  s_06fcde5dbef956::t_63ef9ab070c570 352
+doc/operations.md
+  s_06fcde5dbef956::t_81d310e87a9634 103,380,389-394,448-449
+web/src/components/systemStatus.fixture.ts
+  s_06fcde5dbef956::t_63ef9ab070c570 12
+doc/upgrade.md
+  s_06fcde5dbef956::t_81d310e87a9634 141,146-149,153-155,157-160
+.env.example
+  s_06fcde5dbef956::t_63ef9ab070c570 192-193,196
+docker-compose.yml
+  s_06fcde5dbef956::t_63ef9ab070c570 39-43,102
+internal/config/config_turn_test.go
+  s_06fcde5dbef956::t_3c580bab063335 77-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a37d89d2f4be40bb7dcc10671fdac544b2ad8746",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
