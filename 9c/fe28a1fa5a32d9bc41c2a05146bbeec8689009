@@ -1,0 +1,23 @@
+internal/imageverify/policy.go
+  s_5b748b0295d2f4::t_5efb2238510089 28,131-136,139-144
+internal/imageverify/verifier.go
+  s_5b748b0295d2f4::t_b3c4b32bcadbd1 124
+internal/updaterd/run.go
+  s_5b748b0295d2f4::t_24191708bc6401 154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9cfe28a1fa5a32d9bc41c2a05146bbeec8689009",
+  "prompts": {},
+  "sessions": {
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
