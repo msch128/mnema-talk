@@ -18,6 +18,8 @@ import SlashCommandBar from './SlashCommandBar.vue'
 import PollDialog from './PollDialog.vue'
 import { useCompactLayout } from '../composables/useCompactLayout'
 import { useDraftModel } from '../composables/useDraftModel'
+import { useAutoGrow } from '../composables/useAutoGrow'
+import { useComposerFiles } from '../composables/useComposerFiles'
 import { useComposerAssist } from '../composables/useComposerAssist'
 import { useSlashCommands } from '../composables/useSlashCommands'
 import { handleComposerKeydown } from '../composables/useComposerKeys'
@@ -43,6 +45,8 @@ const text = useDraftModel(() => props.modelValue, value => emit('update:modelVa
 const fileInput = ref<HTMLInputElement | null>(null)
 const textAreaEl = ref<HTMLTextAreaElement | null>(null)
 const assist = useComposerAssist(textAreaEl, text)
+const { multiline } = useAutoGrow(textAreaEl, text)
+const { attachFiles, onPaste } = useComposerFiles({ fileInput, canAttach: () => props.canAttach, busy: () => props.uploading || props.sending })
 const pollOpen = ref(false)
 const slash = useSlashCommands(text, () => chatStore.activeChannel?.id, () => { pollOpen.value = true })
 // "Send later" sits in a small menu next to the send button.
@@ -82,7 +86,7 @@ function onPlus() {
   if (isCompact.value) plusMenuOpen.value = !plusMenuOpen.value
   else fileInput.value?.click()
 }
-defineExpose({ textArea: textAreaEl, focus: () => textAreaEl.value?.focus() })
+defineExpose({ textArea: textAreaEl, attachFiles, focus: () => textAreaEl.value?.focus() })
 
 function handleComposerInput() {
   if (text.value.trim()) chatStore.sendTyping(chatStore.activeChannel?.id)
@@ -107,7 +111,8 @@ function handleKeyDown(e: KeyboardEvent) {
     <ReplyComposerBar v-if="replyingTo" :target="replyingTo" @cancel="emit('cancel-reply')" />
     <div
       :class="[
-        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 max-md:py-1 max-md:pr-1 flex items-center gap-1 sm:gap-2 shadow-xs field-focus-within transition',
+        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 max-md:py-1 max-md:pr-1 flex gap-1 sm:gap-2 shadow-xs field-focus-within transition',
+        multiline ? 'items-end' : 'items-center',
         replyingTo ? 'rounded-b-lg' : 'rounded-lg'
       ]"
     >
@@ -176,6 +181,7 @@ function handleKeyDown(e: KeyboardEvent) {
         data-composer-input
         v-model="text"
         @keydown="handleKeyDown"
+        @paste="onPaste"
         @input="handleComposerInput(); assist.onInput(); slash.onInput()"
         @click="assist.onInput"
         @keyup.left="assist.onInput"

@@ -15,6 +15,7 @@ import BlockedMessageRow from './BlockedMessageRow.vue'
 import { useBlocksStore } from '../stores/blocks'
 import { useDmChat } from '../composables/useDmChat'
 import ThreadComposer from './ThreadComposer.vue'
+import FileDropOverlay from './FileDropOverlay.vue'
 import { useMessageActions } from '../composables/useMessageActions'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
 import { useDraftSlot } from '../composables/useDraftSlot'
@@ -212,7 +213,7 @@ async function handleFileUpload(e: Event) {
 </script>
 
 <template>
-  <aside class="w-full min-w-0 bg-mnema-canvas border-l border-mnema-hairline flex flex-col h-full select-none">
+  <aside class="relative w-full min-w-0 bg-mnema-canvas border-l border-mnema-hairline flex flex-col h-full select-none">
     <!-- Thread Header -->
     <header class="h-12 pl-4 pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-2 shrink-0">
       <div class="flex items-center gap-2 min-w-0">
@@ -342,6 +343,7 @@ async function handleFileUpload(e: Event) {
       @cancel-reply="cancelReply"
       @file="handleFileUpload"
     />
+    <FileDropOverlay @files="composer?.attachFiles($event)" />
 
     <!-- Image lightbox -->
     <ImageLightbox v-if="selectedImage" :src="selectedImage" @close="selectedImage = null" />
