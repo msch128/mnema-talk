@@ -183,9 +183,20 @@ func (c *Client) handleCandidate(payload json.RawMessage) {
 // handleDiag logs a browser's own view of its voice connection, for
 // troubleshooting.
 func (c *Client) handleDiag(payload json.RawMessage) {
-	if len(payload) <= payloadCap(events.ClientWebrtcDiag) && c.allowDiag(time.Now()) {
-		slog.Debug("webrtc client diag", "user", c.User.Username, "diag", json.RawMessage(payload))
+	if len(payload) > payloadCap(events.ClientWebrtcDiag) || !c.allowDiag(time.Now()) {
+		return
 	}
+	// A browser whose ICE failed is the operator's lead for "no audio": it
+	// is logged at warn so the default level shows it, together with the
+	// candidate types it gathered and how many ICE servers it had.
+	var d struct {
+		ICE string `json:"ice"`
+	}
+	level := slog.LevelDebug
+	if json.Unmarshal(payload, &d) == nil && d.ICE == "failed" {
+		level = slog.LevelWarn
+	}
+	slog.Log(context.Background(), level, "webrtc client diag", "user", c.User.Username, "diag", json.RawMessage(payload))
 }
 
 // channelKnown reports whether the channel exists. The permission snapshot

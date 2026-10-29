@@ -403,6 +403,26 @@ func TestWebRTCReachabilityWarning(t *testing.T) {
 	}
 }
 
+func TestWebRTCRelayNotice(t *testing.T) {
+	cases := []struct {
+		name string
+		urls []string
+		note bool
+	}{
+		{"no TURN", nil, true},
+		{"UDP only", []string{"turn:turn.example.com:3478?transport=udp"}, true},
+		{"UDP by default", []string{"turn:turn.example.com:3478"}, true},
+		{"TCP", []string{"turn:turn.example.com:3478?transport=udp", "turn:turn.example.com:3478?transport=tcp"}, false},
+		{"TLS", []string{"TURNS:turn.example.com:443?transport=tcp"}, false},
+	}
+	for _, tc := range cases {
+		cfg := Config{WebRTCTURNURLs: tc.urls}
+		if got := cfg.WebRTCRelayNotice() != ""; got != tc.note {
+			t.Errorf("%s: notice %v, want %v", tc.name, got, tc.note)
+		}
+	}
+}
+
 func TestInsecurePublicURLWarning(t *testing.T) {
 	cases := []struct {
 		name string

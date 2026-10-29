@@ -640,6 +640,8 @@
     "kicked": "Du wurdest aus dem Talk entfernt.",
     "roomFull": "Dieser Talk ist voll. Versuche es erneut, sobald jemand den Talk verlässt.",
     "connectionLost": "Die Medienverbindung zum Talk ist abgebrochen. Tritt erneut bei, um fortzufahren.",
+    "noMediaConnection": "Keine Medienverbindung. Dein Netzwerk blockiert vermutlich UDP zum Server, oder er ist von außen nicht erreichbar. Probiere ein anderes Netzwerk oder frage die Betreiberin oder den Betreiber des Servers.",
+    "noMediaConnectionRelay": "Keine Medienverbindung. Dein Netzwerk blockiert vermutlich auch das Relay. Probiere ein anderes Netzwerk, schalte ein VPN aus oder frage die Betreiberin oder den Betreiber des Servers.",
     "mediaUnavailable": "Der Talk konnte keine Medienverbindung aufbauen. Versuche es erneut.",
     "joinedElsewhere": "Du bist diesem Talk in einem anderen Fenster oder auf einem anderen Gerät beigetreten.",
     "mediaUnsupported": "Dieser Browser kann die Medien eines Talks nicht schützen und kann deshalb nicht beitreten. Nutze Chrome oder Edge ab 137, Safari ab 17 oder Firefox ab 129.",

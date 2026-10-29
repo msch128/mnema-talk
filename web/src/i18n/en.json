@@ -640,6 +640,8 @@
     "kicked": "You were removed from the Talk.",
     "roomFull": "This Talk is full. Try again when someone leaves.",
     "connectionLost": "The media connection to the Talk was lost. Join again to continue.",
+    "noMediaConnection": "No media connection. Your network seems to block UDP to the server, or it is not reachable from outside. Try another network, or ask the server’s operator.",
+    "noMediaConnectionRelay": "No media connection. Your network seems to block the relay as well. Try another network or turn off a VPN, or ask the server’s operator.",
     "mediaUnavailable": "The Talk could not set up its media connection. Try joining again.",
     "joinedElsewhere": "You joined this Talk from another window or device.",
     "mediaUnsupported": "This browser cannot protect the media of a Talk, so it cannot join. Use Chrome or Edge 137+, Safari 17+ or Firefox 129+.",
