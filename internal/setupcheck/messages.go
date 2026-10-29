@@ -17,7 +17,7 @@ type message struct{ detail, fix string }
 
 // messages lists every outcome a check can have, keyed by its stable code
 // ("<check id>.<outcome>"). Never reuse or rename a code; the web app has a
-// translation for each (web/src/lib/setupCheckCodes.test.ts).
+// translation for each (web/src/i18n/statusCodes.test.ts).
 var messages = map[string]message{
 	"public_url.local": {
 		"PUBLIC_URL is {public_url}, which only this machine can open; invite links, e-mails and browser origin checks use it.",

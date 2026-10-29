@@ -348,7 +348,7 @@ func TestEveryCheckOutcomeHasAUniqueCodeAndEnglishText(t *testing.T) {
 
 // TestCodesMatchTheSharedList keeps api/status-codes.json, which the web
 // app's translation test reads, equal to the codes the server can send.
-// Run with -update-codes to rewrite it after adding a code.
+// Run with UPDATE_STATUS_CODES=1 to rewrite it after adding a code.
 func TestCodesMatchTheSharedList(t *testing.T) {
 	const path = "../../api/status-codes.json"
 	want, err := json.MarshalIndent(map[string][]string{"setup_checks": Codes(), "operator_warnings": opwarn.Codes()}, "", "  ")
