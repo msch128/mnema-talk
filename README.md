@@ -71,7 +71,9 @@ no accounts on someone else's platform.
 - **A Talk view built for long sessions.** Participant grid, a stage for the
   share or camera you focus, full screen, picture-in-picture while you read
   another channel, per-person and per-stream volume, push-to-talk, noise
-  suppression and the Talk's own chat as a resizable panel.
+  suppression and the Talk's own chat as a resizable panel. If your microphone
+  is on but its raw signal stays completely silent, you get a notice once per
+  call; you can dismiss it, or turn it off in the audio settings.
 - **No transcoding.** A Pion-based forwarding unit (SFU) copies RTP packets;
   see [doc/architecture.md](doc/architecture.md).
 
@@ -85,6 +87,8 @@ no accounts on someone else's platform.
   back), threads, reactions, emoji, @mentions, file and image attachments,
   link cards, search, typing notices, unread and mention markers,
   per-channel notification settings and presence with a status line.
+- **A composer that grows** with multi-line text. Paste (Ctrl/Cmd+V) or drag and
+  drop an image or video into a chat to attach it; a message carries one file.
 - **Pinned messages** (with who pinned them and when), **polls**, **custom
   emoji** managed by the community (and `:shortcode` suggestions for standard emoji), **edit history** for moderators, **drafts**
   that survive a reload and a **jump to the first unread message**.
@@ -234,7 +238,8 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
   The old media frame format 2 is gone in 1.2: only format 3 is sealed or
   opened, so a client that old must be reloaded or updated
   ([doc/upgrade.md](doc/upgrade.md#calls-and-the-security-floor)).
-- **Invite-only.** There is no public registration.
+- **Invite-only.** There is no public registration. Admins can change an
+  invite's expiry and use limit later, or remove them.
 - **Accounts you control.** Optional e-mail (password reset needs SMTP),
   two-factor sign-in with recovery codes, and self-service export and deletion
   of your own data.
@@ -269,6 +274,8 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 - **Discord import.** An admin can copy the categories, channels, Talks and roles
   of a Discord server from a template link: additive, after a preview and
   three confirmations, and it can be undone ([doc/import.md](doc/import.md)).
+  A Discord role can be connected to an existing role instead of created anew
+  (same-name roles are suggested; the protected Bot role is never overwritten).
 - **Audit log.** An append-only record of administrative and moderation
   actions with who, what, before and after, filterable in the admin console.
   It also holds deleted message text and Talk presence history, so mention it
@@ -280,7 +287,7 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 - **Admin console** for members (disable, kick, reset password, revoke
   sessions), roles, channel layout, invites, media and storage, and a System
   tab with health and a live operator view, and a Status page (version,
-  updates, database, storage, backups and live activity). The sidebar supports drag and drop
+  updates, database, storage, backups and live activity; its checks follow the display language). The sidebar supports drag and drop
   with undo.
 
 | Roles and permissions | Webhook settings |
