@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { setLocale } from '../i18n'
 import DesktopGamingOverlay from './DesktopGamingOverlay.vue'
 import type { GamingSnapshot } from '../lib/desktopGaming'
 const ipc = vi.hoisted(() => ({ invoke: vi.fn() }))
@@ -15,11 +16,16 @@ beforeEach(() => {
 })
 afterEach(() => { wrapper?.unmount(); wrapper = undefined; Reflect.deleteProperty(window, '__MNEMA_GAMING_SURFACE__'); vi.useRealTimers() })
 async function open(interactive = false) { Reflect.set(window, '__MNEMA_GAMING_SURFACE__', interactive ? 'gaming-overlay' : 'sidepeek'); wrapper = mount(DesktopGamingOverlay); await flushPromises(); return wrapper }
+const gameNames = (w: { findAll: (selector: string) => { text: () => string }[] }) => w.findAll('.game-row').map(row => row.text())
+async function addGame(w: Awaited<ReturnType<typeof open>>, value: string, how: 'enter' | 'button' = 'enter') {
+  const input = w.get('.game-input'); await input.setValue(value)
+  if (how === 'enter') await input.trigger('keydown', { key: 'Enter' }); else await w.get('[data-testid="game-add"]').trigger('click')
+}
 describe('native gaming surfaces', () => {
   it('uses persisted opacity and saves the global switch with the background setting', async () => {
     const passive = await open(); expect(passive.get('section').attributes('style')).toContain('--sidepeek-opacity: 0.55'); passive.unmount(); wrapper = undefined
     const w = await open(true); await w.findAll('button')[0]!.trigger('click')
-    await w.get('input[type="checkbox"]').setValue(false); await w.get('input[type="range"]').setValue('30'); await w.get('textarea').setValue('')
+    await w.get('[data-testid="gaming-enabled"]').trigger('click'); await w.get('input[type="range"]').setValue('30'); await w.get('.game-row button').trigger('click')
     await w.get('form').trigger('submit'); await flushPromises()
     expect(ipc.invoke).toHaveBeenCalledWith('desktop_gaming_settings', { settings: { ...snapshot.settings, enabled: false, sidepeek_opacity: 30, games: [] } })
     expect(snapshot.settings.enabled).toBe(true)
@@ -27,8 +33,8 @@ describe('native gaming surfaces', () => {
   it('allows reenabling without Talk or a game in the local configuration surface', async () => {
     snapshot.active = false; snapshot.settings.enabled = false; snapshot.voice.members = []
     Reflect.set(window, '__MNEMA_GAMING_SURFACE__', 'gaming-settings'); wrapper = mount(DesktopGamingOverlay); await flushPromises()
-    expect(wrapper.find('form').exists()).toBe(true); expect(wrapper.find('ul').exists()).toBe(false); expect(wrapper.find('[aria-pressed]').exists()).toBe(false)
-    await wrapper.get('input[type="checkbox"]').setValue(true); await wrapper.get('form').trigger('submit'); await flushPromises()
+    expect(wrapper.find('form').exists()).toBe(true); expect(wrapper.find('.speaker-dot').exists()).toBe(false); expect(wrapper.find('[aria-pressed]').exists()).toBe(false)
+    await wrapper.get('[data-testid="gaming-enabled"]').trigger('click'); await wrapper.get('form').trigger('submit'); await flushPromises()
     expect(ipc.invoke).toHaveBeenCalledWith('desktop_gaming_settings', { settings: { ...snapshot.settings, enabled: true } })
     expect(wrapper.find('form').exists()).toBe(true)
     await wrapper.findAll('button')[0]!.trigger('click'); expect(ipc.invoke).toHaveBeenCalledWith('desktop_gaming_control', { action: 'close' })
@@ -52,8 +58,8 @@ describe('native gaming surfaces', () => {
     const inputs = w.findAll<HTMLInputElement>('input[readonly]'); expect(inputs).toHaveLength(4)
     await inputs[0]!.trigger('keydown', { code: 'KeyK', ctrlKey: true }); expect(inputs[0]!.element.value).toBe('Ctrl+K')
     await inputs[1]!.trigger('keydown', { code: 'F4', altKey: true }); expect(inputs[1]!.element.value).toBe('Alt+N')
-    await w.get('textarea').setValue(' Other.exe\n\nSecond.exe '); await w.get('form').trigger('submit'); await flushPromises()
-    expect(ipc.invoke).toHaveBeenCalledWith('desktop_gaming_settings', { settings: { ...snapshot.settings, overlay: { ...chord(75), control: true }, games: ['Other.exe', 'Second.exe'] } })
+    await addGame(w, ' Other.exe '); await addGame(w, 'Second.exe'); await w.get('form').trigger('submit'); await flushPromises()
+    expect(ipc.invoke).toHaveBeenCalledWith('desktop_gaming_settings', { settings: { ...snapshot.settings, overlay: { ...chord(75), control: true }, games: ['Wow.exe', 'Other.exe', 'Second.exe'] } })
   })
   it('lets Tab and Escape leave a chord field instead of trapping focus', async () => {
     const w = await open(true); await w.findAll('button')[0]!.trigger('click')
@@ -74,7 +80,7 @@ describe('native gaming surfaces', () => {
     expect(ipc.invoke).not.toHaveBeenCalledWith('desktop_gaming_add_game', expect.anything())
     await w.get('[data-testid="add-confirm"]').trigger('click'); await flushPromises()
     expect(ipc.invoke).toHaveBeenCalledWith('desktop_gaming_add_game', { name: 'MyGame.exe' })
-    expect(w.get('textarea').element.value).toBe('Wow.exe\nMyGame.exe')
+    expect(gameNames(w)).toEqual(['Wow.exe', 'MyGame.exe'])
     expect(w.find('[role="group"]').exists()).toBe(false)
   })
   it('lets the person decline the offered app, and says when there is none or the host refuses', async () => {
@@ -82,7 +88,7 @@ describe('native gaming surfaces', () => {
     ipc.invoke.mockImplementation((command: string) => Promise.resolve(command === 'desktop_gaming_snapshot' ? structuredClone(snapshot) : command === 'desktop_gaming_candidate' ? 'Other.exe' : undefined))
     const ask = () => w.get('[data-testid="add-last"]')
     await ask().trigger('click'); await flushPromises(); await w.get('[data-testid="add-cancel"]').trigger('click')
-    expect(ipc.invoke).not.toHaveBeenCalledWith('desktop_gaming_add_game', expect.anything()); expect(w.get('textarea').element.value).toBe('Wow.exe')
+    expect(ipc.invoke).not.toHaveBeenCalledWith('desktop_gaming_add_game', expect.anything()); expect(gameNames(w)).toEqual(['Wow.exe'])
     ipc.invoke.mockImplementation((command: string) => Promise.resolve(command === 'desktop_gaming_snapshot' ? structuredClone(snapshot) : command === 'desktop_gaming_candidate' ? null : undefined))
     await ask().trigger('click'); await flushPromises(); expect(w.find('[role="status"]').exists()).toBe(true)
     ipc.invoke.mockImplementation((command: string) => command === 'desktop_gaming_snapshot' ? Promise.resolve(structuredClone(snapshot)) : Promise.reject(new Error('old host')))
@@ -106,5 +112,41 @@ describe('native gaming surfaces', () => {
     ipc.invoke.mockReturnValue(new Promise< GamingSnapshot >(done => { resolve = done }))
     const w = await open(); expect(Reflect.get(w.vm, 'members')).toEqual([]); await vi.advanceTimersByTimeAsync(600); expect(ipc.invoke).toHaveBeenCalledOnce(); w.unmount(); wrapper = undefined
     resolve?.(snapshot); await flushPromises(); await vi.advanceTimersByTimeAsync(400); expect(ipc.invoke).toHaveBeenCalledOnce()
+  })
+  describe('game list editor', () => {
+    beforeEach(() => setLocale('en'))
+    const settings = async () => { const w = await open(true); await w.findAll('button')[0]!.trigger('click'); return w }
+    const saved = async (w: Awaited<ReturnType<typeof open>>) => { await w.get('form').trigger('submit'); await flushPromises(); return ipc.invoke.mock.calls.find(call => call[0] === 'desktop_gaming_settings')?.[1].settings.games }
+    it('adds an entry with Enter without submitting the form, and clears the input', async () => {
+      const w = await settings(); await addGame(w, 'Game One.exe')
+      expect(gameNames(w)).toEqual(['Wow.exe', 'Game One.exe']); expect((w.get('.game-input').element as HTMLInputElement).value).toBe('')
+      expect(ipc.invoke.mock.calls.some(call => call[0] === 'desktop_gaming_settings')).toBe(false)
+      expect(await saved(w)).toEqual(['Wow.exe', 'Game One.exe'])
+    })
+    it('adds with the Add button, and reduces a pasted path to its file name', async () => {
+      const w = await settings(); await addGame(w, String.raw`D:\Games\Cool\Cool.exe`, 'button')
+      expect(gameNames(w)).toEqual(['Wow.exe', 'Cool.exe'])
+    })
+    it('removes a row', async () => {
+      const w = await settings(); await addGame(w, 'B.exe'); await w.get('[aria-label="Remove Wow.exe"]').trigger('click')
+      expect(gameNames(w)).toEqual(['B.exe']); expect(await saved(w)).toEqual(['B.exe'])
+    })
+    it('refuses duplicates in any letter case and names the problem', async () => {
+      const w = await settings(); await addGame(w, 'wow.EXE')
+      expect(gameNames(w)).toEqual(['Wow.exe']); expect(w.get('[role="alert"]').text()).toContain('already')
+    })
+    it('refuses names the host would reject', async () => {
+      const w = await settings()
+      for (const bad of ['Wow', '.exe', 'bad;name.exe', 'a'.repeat(129) + '.exe']) {
+        await addGame(w, bad); expect(w.find('[role="alert"]').exists()).toBe(true)
+      }
+      expect(gameNames(w)).toEqual(['Wow.exe'])
+      await addGame(w, 'Fine.exe'); expect(w.find('[role="alert"]').exists()).toBe(false)
+    })
+    it('ignores an empty entry and stops at the host limit', async () => {
+      const w = await settings(); await addGame(w, '   '); expect(gameNames(w)).toEqual(['Wow.exe']); expect(w.find('[role="alert"]').exists()).toBe(false)
+      for (let i = 0; i < 40; i++) await addGame(w, `G${i}.exe`)
+      expect(gameNames(w)).toHaveLength(32); expect(w.get('[role="alert"]').text()).toContain('32')
+    })
   })
 })

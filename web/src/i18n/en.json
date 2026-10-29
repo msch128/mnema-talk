@@ -2166,7 +2166,7 @@
     "mute": "Mute",
     "deafen": "Deafen",
     "ptt": "Push to talk",
-    "games": "Additional game executables (one per line)",
+    "games": "Additional games",
     "error": "Unable to apply. Check the connection and choose different supported shortcuts.",
     "enabled": "Enable gaming overlay and sidepeek",
     "opacity": "Sidepeek background opacity",
@@ -2176,7 +2176,21 @@
     "addLastNone": "No other app was in front yet. Switch to the game, then open the overlay again.",
     "addConfirm": "Add",
     "addCancel": "Cancel",
-    "addFailed": "Could not add this app."
+    "addFailed": "Could not add this app.",
+    "groupGeneral": "General",
+    "enabledHint": "Show the overlay and the sidepeek while you are in a game and in a Talk.",
+    "opacityHint": "How see-through the sidepeek background is.",
+    "groupShortcuts": "Shortcuts",
+    "shortcutsHelp": "Click a field and press the keys you want. Each shortcut must be different.",
+    "groupGames": "Games",
+    "gamesEmpty": "No extra games yet.",
+    "addGame": "Add",
+    "removeGame": "Remove {name}",
+    "problem": {
+      "invalid": "Enter a file name like Game.exe: letters, digits, spaces and - _ . ! only.",
+      "duplicate": "This game is already in the list.",
+      "full": "The list holds at most {max} games."
+    }
   },
   "perm": {
     "administrator": {

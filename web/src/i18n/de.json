@@ -2166,7 +2166,7 @@
     "mute": "Stummschalten",
     "deafen": "Ton aus",
     "ptt": "Push-to-Talk",
-    "games": "Zusätzliche Spiele-EXEs (eine pro Zeile)",
+    "games": "Zusätzliche Spiele",
     "error": "Nicht übernommen. Verbindung prüfen und unterschiedliche unterstützte Tasten wählen.",
     "enabled": "Gaming-Overlay und Sidepeek aktivieren",
     "opacity": "Deckkraft des Sidepeek-Hintergrunds",
@@ -2176,7 +2176,21 @@
     "addLastNone": "Noch keine andere App im Vordergrund. Wechsle zum Spiel und öffne das Overlay erneut.",
     "addConfirm": "Hinzufügen",
     "addCancel": "Abbrechen",
-    "addFailed": "Diese App konnte nicht hinzugefügt werden."
+    "addFailed": "Diese App konnte nicht hinzugefügt werden.",
+    "groupGeneral": "Allgemein",
+    "enabledHint": "Overlay und Sidepeek zeigen, solange du in einem Spiel und in einem Talk bist.",
+    "opacityHint": "Wie durchsichtig der Sidepeek-Hintergrund ist.",
+    "groupShortcuts": "Tastenkürzel",
+    "shortcutsHelp": "Feld anklicken und die gewünschten Tasten drücken. Jedes Kürzel muss anders sein.",
+    "groupGames": "Spiele",
+    "gamesEmpty": "Noch keine zusätzlichen Spiele.",
+    "addGame": "Hinzufügen",
+    "removeGame": "{name} entfernen",
+    "problem": {
+      "invalid": "Gib einen Dateinamen wie Game.exe ein: nur Buchstaben, Ziffern, Leerzeichen und - _ . !",
+      "duplicate": "Dieses Spiel steht schon in der Liste.",
+      "full": "Die Liste fasst höchstens {max} Spiele."
+    }
   },
   "perm": {
     "administrator": {
