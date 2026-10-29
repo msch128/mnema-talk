@@ -1,0 +1,19 @@
+web/src/lib/hostError.test.ts
+  s_06fcde5dbef956::t_c8f057f73d9be5 2,10-14,20-21,23,32,56,65,77-78,80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e03f3d434349139b3d73f9a064e331043873ff26",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
