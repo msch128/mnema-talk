@@ -32,7 +32,14 @@ const (
 	maxInviteCodeChars = 64
 )
 
+// usernamePattern is the lookup shape: every name an account can hold, legacy
+// ones included (login, mentions and URLs accept all of them).
 var usernamePattern = regexp.MustCompile(`^[A-Za-z0-9_.-]{3,32}$`)
+
+// newUsernamePattern is the rule for names chosen from now on: lowercase
+// letters, digits, '_' and '.', 2-32 characters. Dot placement is checked in
+// ValidateUsername.
+var newUsernamePattern = regexp.MustCompile(`^[a-z0-9_.]{2,32}$`)
 
 // reservedUsernames are mention keywords (@all, @here) no account may take.
 var reservedUsernames = map[string]bool{"all": true, "here": true}
@@ -186,15 +193,36 @@ func validatePasswordMin(password string, min int) error {
 	return nil
 }
 
-// ValidateUsername enforces the username policy.
+// NormalizeUsername applies the input normalisation of the sign-up form:
+// surrounding space is trimmed, spaces become '_' and letters lower-case.
+func NormalizeUsername(username string) string {
+	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(username), " ", "_"))
+}
+
+// ValidateUsername enforces the policy for new names (registration). Accounts
+// that predate it keep their names; see usernamePattern.
 func ValidateUsername(username string) error {
-	if !usernamePattern.MatchString(username) {
-		return httpx.ErrInvalidInput("username must be 3-32 characters: letters, digits, '_', '.', '-'")
+	if !newUsernamePattern.MatchString(username) ||
+		strings.HasPrefix(username, ".") || strings.HasSuffix(username, ".") || strings.Contains(username, "..") {
+		return httpx.ErrInvalidInput("username must be 2-32 characters: lowercase letters, digits, '_' and '.' (no leading, trailing or repeated '.')")
 	}
+	return checkReservedUsername(username)
+}
+
+func checkReservedUsername(username string) error {
 	if reservedUsernames[strings.ToLower(username)] || strings.HasPrefix(strings.ToLower(username), deletedUsernamePrefix) {
 		return httpx.ErrInvalidInput("this username is reserved")
 	}
 	return nil
+}
+
+// validateExistingUsername accepts any name an account can already hold. The
+// ADMIN_USERNAME of a running install must keep booting.
+func validateExistingUsername(username string) error {
+	if !usernamePattern.MatchString(username) {
+		return httpx.ErrInvalidInput("username must be 3-32 characters: letters, digits, '_', '.', '-'")
+	}
+	return checkReservedUsername(username)
 }
 
 // A status line whose time has passed reads as empty before RunStatusExpiry has cleared it.

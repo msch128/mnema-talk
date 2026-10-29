@@ -13,21 +13,21 @@ export interface RoleMention {
 const text = (v: string): Inline[] => (v ? [{ t: 'text', v }] : [])
 
 /**
- * @name for a member (3 to 32 letters, digits, "_", "." or "-"). With `known`
+ * @name for a member (2 to 32 letters, digits, "_", "." or "-"). With `known`
  * only those members and @all/@here are highlighted, and they get the data
  * the click handler needs. `me` marks the reader's own mentions.
  */
 export function userMentionRule(known: ReadonlySet<string> | null, me: string): TextRule {
   const self = me.toLowerCase()
   return {
-    re: /(^|[\s(])@([A-Za-z0-9_.-]{3,32})/g,
+    re: /(^|[\s(])@([A-Za-z0-9_.-]{2,32})/g,
     build(m) {
       const pre = m[1] ?? ''
       const raw = m[2] ?? ''
       const name = raw.replace(/[.-]+$/, '')
       const lower = name.toLowerCase()
       const group = lower === 'all' || lower === 'here'
-      if (name.length < 3 || (known && !group && !known.has(lower))) return null
+      if (name.length < 2 || (known && !group && !known.has(lower))) return null
       const cls = ['md-mention']
       if (group) cls.push('md-mention-group')
       if (lower === self) cls.push('md-mention-me')

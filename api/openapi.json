@@ -648,8 +648,7 @@
             "type": "string"
           },
           "username": {
-            "description": "Username must be unique; \"all\" and \"here\" are reserved.",
-            "pattern": "^[A-Za-z0-9_.-]{3,32}$",
+            "description": "Username: 2-32 characters, lowercase letters, digits, '_' and '.', no leading, trailing or repeated '.'. Spaces become '_' and capitals lower-case before checking. Unique regardless of case; \"all\" and \"here\" are reserved. Accounts created before this rule keep their names.",
             "type": "string"
           }
         },
