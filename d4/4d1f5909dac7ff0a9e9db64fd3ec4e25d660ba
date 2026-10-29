@@ -1,0 +1,75 @@
+internal/auth/login_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 28,35-36,84,94,117,122,126,132-133,139,185,222,232,234,241,253,257,259,267,269,272,278,280,283,291,293,296
+cmd/server/reset2fa_integration_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 22,37,71
+doc/development.md
+  s_06fcde5dbef956::t_4fc552ce4950d5 113
+internal/httpx/request_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 140
+internal/server/auth_hardening_integration_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 50,86,95,108-109,117,121,125,131,138,150
+internal/auth/shared_login_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 21,23,29,38,58,63,77
+internal/server/helpers_integration_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 215,218
+internal/server/bot_role_integration_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 179
+internal/server/auth_integration_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 61,76,79,93,160-161,179-180
+cmd/server/unlock_integration_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 54
+internal/onboarding/invite_budget_integration_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 25,28,110
+internal/chat/mentions_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 58
+internal/server/account_export_integration_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 174
+internal/server/audit_integration_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 75
+internal/auth/token_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 83
+internal/server/session_inactivity_integration_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 56
+internal/server/botapi_integration_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 422
+internal/auth/admin_seed_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 13-14,20-21,29
+web/src/lib/markdown.test.ts
+  s_06fcde5dbef956::t_4fc552ce4950d5 69,96
+internal/auth/admin_seed.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 37
+internal/auth/bcrypt_slots_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 77
+internal/server/users_admin_integration_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 71,253
+internal/auth/login_newdevice_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 21,26,36,42,56
+internal/server/chat_limits_integration_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 104
+internal/auth/owner_policy_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 24,27,30
+internal/server/automod_integration_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 303
+doc/glossary.md
+  s_06fcde5dbef956::t_4fc552ce4950d5 14
+internal/auth/paths_integration_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 43,46,136
+internal/server/moderation_history_integration_test.go
+  s_06fcde5dbef956::t_4fc552ce4950d5 208
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d44d1f5909dac7ff0a9e9db64fd3ec4e25d660ba",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
