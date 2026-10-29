@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.5.1](https://github.com/msch128/mnema-talk/compare/v1.5.0...v1.5.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **auth,setup:** two-character names sign in, setup writes what the server seeds ([#495](https://github.com/msch128/mnema-talk/issues/495)) ([f826152](https://github.com/msch128/mnema-talk/commit/f82615244036f8058d52992e942fcdabc0293896))
+* **server:** ban expiry audit, event cancel order, reaction removal, GIF edges, 413 bodies, prune count, voice eviction ([#496](https://github.com/msch128/mnema-talk/issues/496)) ([20a038f](https://github.com/msch128/mnema-talk/commit/20a038f1e576589c7057fd2f0beed0e2eec25564))
+* **setup,voice,web:** re-ask an invalid Owner name, restore the AI filter after a late audio start, watch only after a joined Talk ([#501](https://github.com/msch128/mnema-talk/issues/501)) ([a9bab7f](https://github.com/msch128/mnema-talk/commit/a9bab7f9076c2188618da461d388ad9cda7701c2))
+* **sfu:** ask again for the keyframe of a layer that sends nothing ([#500](https://github.com/msch128/mnema-talk/issues/500)) ([06f2e3e](https://github.com/msch128/mnema-talk/commit/06f2e3e5109759226ab7a28c13760b5eceed381e))
+* **voice:** never send silence when the audio engine or the AI filter does not run ([#493](https://github.com/msch128/mnema-talk/issues/493)) ([0555400](https://github.com/msch128/mnema-talk/commit/0555400cbcbf949469666b9c1bd08f55f51218a2))
+* **web:** keep live messages through reconnect refreshes, media line swaps and unwritable draft storage ([#498](https://github.com/msch128/mnema-talk/issues/498)) ([71039bc](https://github.com/msch128/mnema-talk/commit/71039bcf298029e9a969a05873a4a3b1036b84aa))
+* **web:** watch a screen after the join settles, keep the UDP mux port count, bound post lookup, relax unknown 2FA code ([#497](https://github.com/msch128/mnema-talk/issues/497)) ([2935112](https://github.com/msch128/mnema-talk/commit/293511289036d6f505df8bdcb7aa69c8d400c3cc))
+* **web:** WebKit calls stay audible after a reload, call specs no longer starve a macOS runner ([#478](https://github.com/msch128/mnema-talk/issues/478)) ([d7d89a8](https://github.com/msch128/mnema-talk/commit/d7d89a87896551ab9f42974f5057434cf235d2d3))
+
+
+### Code Refactoring
+
+* **sfu:** remove the native media authorization hooks ([#483](https://github.com/msch128/mnema-talk/issues/483)) ([201af9c](https://github.com/msch128/mnema-talk/commit/201af9ccf77880f3a538688f21657a44ea427835))
+
 ## [1.5.0](https://github.com/msch128/mnema-talk/compare/v1.4.0...v1.5.0) (2026-10-29)
 
 
