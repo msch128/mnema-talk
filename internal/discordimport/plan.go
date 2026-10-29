@@ -98,7 +98,7 @@ func (b *builder) roles(src []SrcRole) {
 	b.plan.Roles = make([]PlanRole, 0, len(order))
 	b.plan.MappedRoles = []PlanMappedRole{}
 	b.plan.MappableRoles = append([]RoleChoice{}, b.in.Mappable...)
-	suggest := suggestions(b.in.Mappable)
+	suggest, offered := suggestions(b.in.Mappable), map[uuid.UUID]bool{}
 	for _, i := range order {
 		if to, ok := b.in.RoleMap[string(src[i].ID)]; ok {
 			b.mappedBySrc[string(src[i].ID)] = to
@@ -107,7 +107,9 @@ func (b *builder) roles(src []SrcRole) {
 			continue
 		}
 		pr := b.role(src[i], taken)
-		if s, ok := suggest[strings.ToLower(strings.TrimSpace(src[i].Name))]; ok {
+		if s, ok := suggest[strings.ToLower(strings.TrimSpace(src[i].Name))]; ok && !offered[s.ID] {
+			// An existing role is suggested to one Discord role only.
+			offered[s.ID] = true
 			pr.SuggestedRoleID = &s.ID
 		}
 		b.plan.Roles = append(b.plan.Roles, pr)

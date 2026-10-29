@@ -117,3 +117,23 @@ func TestMappableRolesLeaveOutWhatIsRefused(t *testing.T) {
 		t.Fatalf("mappable = %v, want only the role below (not %v)", got, high)
 	}
 }
+
+func TestSuggestionGoesToOneDiscordRoleOnly(t *testing.T) {
+	tpl := parseSample(t)
+	for i := range tpl.Guild.Roles {
+		if tpl.Guild.Roles[i].Name == "Moderator" {
+			tpl.Guild.Roles[i].Name = "member" // same name as Member, ignoring case
+		}
+	}
+	target := RoleChoice{ID: uuid.New(), Name: "Member"}
+	p := BuildPlan(tpl, Inputs{Grantable: grantable(perm.All), Mappable: []RoleChoice{target}})
+	n := 0
+	for _, r := range p.Roles {
+		if r.SuggestedRoleID != nil {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("%d roles got the suggestion, want 1", n)
+	}
+}

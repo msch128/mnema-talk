@@ -53,8 +53,11 @@ async function loadHistory() {
 // A role with an existing role of the same name starts out joined to it.
 function suggestedMap(roles: DiscordimportPlanRole[]): RoleMap {
   const out: RoleMap = {}
+  const taken = new Set<string>()
   for (const r of roles) {
-    if (r.suggested_role_id) out[r.source_id] = r.suggested_role_id
+    if (!r.suggested_role_id || taken.has(r.suggested_role_id)) continue
+    taken.add(r.suggested_role_id)
+    out[r.source_id] = r.suggested_role_id
   }
   return out
 }
@@ -86,11 +89,12 @@ async function preview() {
 // Plans again with the chosen roles, then asks for the confirmations.
 async function review() {
   if (busy.value) return
-  if (!sameMap(roleMap.value, plannedMap.value)) {
+  const picks = { ...roleMap.value }
+  if (!sameMap(picks, plannedMap.value)) {
     busy.value = true
     try {
-      plan.value = await previewImport(previewed.value, roleMap.value)
-      plannedMap.value = { ...roleMap.value }
+      plan.value = await previewImport(previewed.value, picks)
+      plannedMap.value = picks
     } catch (e) {
       toasts.error(caughtErrorMessage(e, t('discordImport.previewFailed')))
       return
@@ -180,7 +184,7 @@ onMounted(() => { void loadHistory() })
     </form>
 
     <template v-if="plan">
-      <DiscordImportPreview v-model:role-map="roleMap" :plan="plan" :roles="sourceRoles" />
+      <DiscordImportPreview v-model:role-map="roleMap" :plan="plan" :roles="sourceRoles" :disabled="busy" />
       <button type="button" class="btn btn-primary" :disabled="busy" data-testid="import-review" @click="review">{{ $t('discordImport.review') }}</button>
     </template>
 

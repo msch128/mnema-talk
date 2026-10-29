@@ -9,7 +9,7 @@ import { t } from '../i18n'
 
 // roles are the Discord roles to choose for (the plan of a preview without a
 // mapping lists them all); roleMap says which of them join an existing role.
-const props = defineProps<{ plan: DiscordimportPlan, roles?: DiscordimportPlanRole[] }>()
+const props = defineProps<{ plan: DiscordimportPlan, roles?: DiscordimportPlanRole[], disabled?: boolean }>()
 const roleMap = defineModel<Record<string, string>>('roleMap', { default: () => ({}) })
 
 interface Group { key: string, name: string, channels: DiscordimportPlanChannel[] }
@@ -106,6 +106,7 @@ function sameNameHint(role: DiscordimportPlanRole): string {
             </div>
             <select
               v-if="canMap"
+              :disabled="disabled"
               :value="roleMap[role.source_id] ?? ''"
               :aria-label="$t('discordImport.map.label', { name: role.source_name })"
               data-testid="import-role-map"

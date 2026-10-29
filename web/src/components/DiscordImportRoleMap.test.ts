@@ -117,4 +117,19 @@ describe('Discord import role mapping', () => {
     await flushPromises()
     expect(bodies('/preview')[2]).toEqual({ template: 'AbCdEf123456' })
   })
+
+  it('preselects an existing role for one Discord role only when two share a name', async () => {
+    apiMock.mockImplementation(async (path, options) => {
+      const json = (options?.json ?? {}) as { role_map?: Record<string, string> }
+      if (path.endsWith('/preview')) {
+        const p = planFor(json.role_map ?? {})
+        const all = [role('13', 'Mod', ADMIN_ID), role('14', 'mod', ADMIN_ID)]
+        return { ...p, roles: all.filter(r => !json.role_map?.[r.source_id]) }
+      }
+      if (path.endsWith('/imports')) return []
+      throw new Error(`unexpected ${path}`)
+    })
+    await previewed()
+    expect(bodies('/preview')[1]).toEqual({ template: 'AbCdEf123456', role_map: { 13: ADMIN_ID } })
+  })
 })
