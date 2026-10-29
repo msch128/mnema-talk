@@ -14,7 +14,8 @@ image tags and the details behind these steps:
    50000-50050** for voice and video (the proxy does not carry them) and
    **UDP and TCP 3479** for the built-in TURN relay, which lets members behind
    firewalls that block UDP join calls. Every port, what it is for and the
-   outbound connections: [Network ports](ports.md).
+   outbound connections: [Network ports](ports.md). `WEBRTC_BUILTIN_TURN=off`
+   removes the relay; an external TURN server in `WEBRTC_TURN_URLS` replaces it.
 
 Nothing else is required. `PUBLIC_URL` is the one address you set; allowed
 origins, `Secure` cookies and the links in e-mails follow from it, and the
