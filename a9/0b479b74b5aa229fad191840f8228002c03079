@@ -1,0 +1,135 @@
+web/src/lib/settingsDialog.ts
+  s_ed05b7d59456d3::t_f8420c9f8c1658 3,5-6,9-15,17,19-20,22-27
+web/src/components/MicLevelMeter.vue
+  s_ed05b7d59456d3::t_c2df4b4d362444 1-63
+web/src/composables/useTalkControls.ts
+  s_ed05b7d59456d3::t_75f93a84acb504 6-10,17-19,32,34,38-50,67
+web/src/components/SettingsDialog.test.ts
+  s_06fcde5dbef956::t_c3b2d7999f48f6 34-35,210,213-214,216,218
+web/src/stores/voiceSettings.ts
+  s_0dfc723326fc69::t_52a3b3673a0f68 56-59
+web/src/i18n/de.json
+  s_46a6db8f9e8231::t_cc885d720a5b4b 683-684,686,691-692,694,696,701,703,721-722,725-726,735,769-781,1146-1147,3590-3592
+web/src/components/AudioInputSection.vue
+  s_46a6db8f9e8231::t_e8ae36346f3c9b 2-3,6-7,9-10,14,16-20,26-29,48,54-55,89,93,95,101,104-114
+web/src/components/AudioOutputSection.vue
+  s_3255aa8302478d::t_c4653f548f821c 39
+web/src/components/VoiceStage.phone.test.ts
+  s_06fcde5dbef956::t_fe9e27abd15f53 103,105,111-123
+web/src/components/AudioSettingsPanel.vue
+  s_3255aa8302478d::t_c2ba5473722670 2-3,7,31,34
+web/src/components/AudioSettingsPanel.test.ts
+  s_46a6db8f9e8231::t_e8cc686a00d4e3 275-326,334-342,351,354
+web/src/composables/useTalkControls.test.ts
+  s_2de5838cb2797c::t_b36bd9372a52e8 1-73
+web/src/components/SettingsDialog.vue
+  s_ed05b7d59456d3::t_d6f5d9af9e3f86 8,33-34,36,40
+web/src/components/AccountMenu.vue
+  s_06fcde5dbef956::t_85473be255d1f2 5,7,163-165
+web/src/lib/pttKey.test.ts
+  s_0dfc723326fc69::t_cc9adcbadb4f22 1-15
+web/src/components/AccountMenu.test.ts
+  s_06fcde5dbef956::t_3e658768d7d7d4 64
+web/src/lib/pttKey.ts
+  s_0dfc723326fc69::t_bbcbccc513c0ee 1-33
+web/src/App.vue
+  s_17ef7810e0243d::t_1307b778b934ed 57,113
+e2e/tests/ptt-hint.spec.ts
+  s_46a6db8f9e8231::t_def21cef540ad7 1-52
+web/src/components/AudioMicCheck.vue
+  s_75fc0e47390cec::t_b475897d7260ab 1-99
+web/src/i18n/en.json
+  s_46a6db8f9e8231::t_fbc12b2f80ce4d 683-684,686,691-692,694,696,701,703,721-722,725-726,735,769-781,1146-1147,3590-3592
+web/src/composables/usePttHint.test.ts
+  s_ed05b7d59456d3::t_a8df35104500f3 1-65
+web/src/components/AudioFineTune.vue
+  s_75fc0e47390cec::t_132c645f22935e 1-68
+web/src/components/AudioAdvancedSection.vue
+  s_3255aa8302478d::t_79d75360306a99 7,9,47-48
+web/src/composables/usePttHint.ts
+  s_7e9329d487a94d::t_90ad73f613fef3 1-28
+web/src/components/VoiceStage.vue
+  s_ed05b7d59456d3::t_a34339ef29c648 233,384,387
+web/src/lib/settingsDialog.test.ts
+  s_7e9329d487a94d::t_34aeb462b06c73 1-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a90b479b74b5aa229fad191840f8228002c03079",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0dfc723326fc69": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aci-secretscan-scope-eead97415a6d3132",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2de5838cb2797c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aperf-idle-a1f825253ff37314",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3255aa8302478d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adesk-gaming-ui-52e3f2038ee574d1",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_46a6db8f9e8231": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-owner-firstrun-b73e149d9963f888",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_75fc0e47390cec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-gaming-hang-b142da8f7ea70c03",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7e9329d487a94d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-status-profile-6b773a73ee58ea30",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ed05b7d59456d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a843a0ef992e8c6d6",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
