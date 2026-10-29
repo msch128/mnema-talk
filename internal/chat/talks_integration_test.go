@@ -127,8 +127,8 @@ func TestOpeningATalkCopiesTheLobbyAndNumbersFromOne(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = w.p.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1`, second.ID).Scan(&name2)
-	if name != "Talk 1" || name2 != "Talk 2" {
-		t.Fatalf("names = %q, %q; want Talk 1, Talk 2", name, name2)
+	if name != "Create a Talk 1" || name2 != "Create a Talk 2" {
+		t.Fatalf("names = %q, %q; want Create a Talk 1, Create a Talk 2", name, name2)
 	}
 	if category == nil || *category != w.category || limit != 4 || !isTemp || isLobby {
 		t.Fatalf("category %v limit %d temp %v lobby %v", category, limit, isTemp, isLobby)
@@ -154,8 +154,8 @@ func TestOpeningATalkCopiesTheLobbyAndNumbersFromOne(t *testing.T) {
 	}
 	var name3 string
 	_ = w.p.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1`, third.ID).Scan(&name3)
-	if name3 != "Talk 1" {
-		t.Fatalf("third = %q; want the freed Talk 1", name3)
+	if name3 != "Create a Talk 1" {
+		t.Fatalf("third = %q; want the freed Create a Talk 1", name3)
 	}
 	// The channel list marks the lobby and the temporary Talks.
 	cats, _, err := GetServerHierarchy(ctx, w.p)
@@ -294,7 +294,7 @@ func TestAnEmptyTalkIsRemovedAfterTheGraceAndAuditedAsTheSystem(t *testing.T) {
 	if auditErr != nil {
 		t.Fatalf("the removal is audited: %v", auditErr)
 	}
-	if actor != "system" || actorID != nil || name != "Talk 2" {
+	if actor != "system" || actorID != nil || name != "Create a Talk 2" {
 		t.Fatalf("audit entry: %q %v %q", actor, actorID, name)
 	}
 	if w.closed.Load() == 0 {

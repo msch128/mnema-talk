@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -19,26 +20,38 @@ import (
 // database side; talks_manager.go keeps the live state (leader, grace).
 
 const (
-	// TalkNamePrefix names a temporary Talk: "Talk 1", "Talk 2", ...
-	TalkNamePrefix = "Talk "
 	// MaxTempTalksPerLobby caps the temporary Talks one lobby has open.
 	MaxTempTalksPerLobby = 50
 )
 
 var (
-	errNotLobby       = httpx.ErrConflict("this Talk is not a lobby")
-	errTooManyTalks   = httpx.ErrConflict("too many open Talks for this lobby")
-	errNotTempTalk    = httpx.ErrNotFound("Talk not found")
-	errNotTalkLeader  = httpx.ErrForbidden("only the Talk leader can change this Talk")
-	errNoTalkLobby    = httpx.ErrConflict("this community has no Talk lobby you can use")
-	tempTalkNameRegex = regexp.MustCompile(`^` + TalkNamePrefix + `([0-9]+)$`)
+	errNotLobby      = httpx.ErrConflict("this Talk is not a lobby")
+	errTooManyTalks  = httpx.ErrConflict("too many open Talks for this lobby")
+	errNotTempTalk   = httpx.ErrNotFound("Talk not found")
+	errNotTalkLeader = httpx.ErrForbidden("only the Talk leader can change this Talk")
+	errNoTalkLobby   = httpx.ErrConflict("this community has no Talk lobby you can use")
 )
 
-// lowestFreeTalkNumber is the smallest n ≥ 1 for which no name is "Talk n".
-func lowestFreeTalkNumber(names []string) int {
+// tempTalkNumberDigits is the room a temporary Talk's number may take in the
+// name, so the base is cut the same way for every number of one lobby.
+var tempTalkNumberDigits = len(strconv.Itoa(MaxTempTalksPerLobby))
+
+// tempTalkBase is the lobby name as the stem of its temporary Talks' names,
+// cut on a rune boundary so "<base> <n>" fits MaxChannelNameLen.
+func tempTalkBase(lobbyName string) string {
+	room := MaxChannelNameLen - 1 - tempTalkNumberDigits
+	if r := []rune(strings.TrimSpace(lobbyName)); len(r) > room {
+		return strings.TrimSpace(string(r[:room]))
+	}
+	return strings.TrimSpace(lobbyName)
+}
+
+// lowestFreeTalkNumber is the smallest n ≥ 1 for which no name is "<base> n".
+func lowestFreeTalkNumber(base string, names []string) int {
+	re := regexp.MustCompile(`^` + regexp.QuoteMeta(base) + ` ([0-9]+)$`)
 	used := map[int]bool{}
 	for _, name := range names {
-		if m := tempTalkNameRegex.FindStringSubmatch(name); m != nil {
+		if m := re.FindStringSubmatch(name); m != nil {
 			if n, err := strconv.Atoi(m[1]); err == nil {
 				used[n] = true
 			}
@@ -97,7 +110,7 @@ func OpenTempTalk(ctx context.Context, p *db.Pool, lobbyID, creator uuid.UUID) (
 		if err := checkLobby(ctx, tx, lobby); err != nil {
 			return err
 		}
-		lobby.Name, err = nextTalkName(ctx, tx, lobby.CategoryID)
+		lobby.Name, err = nextTalkName(ctx, tx, lobby.Name, lobby.CategoryID)
 		if err != nil {
 			return err
 		}
@@ -130,9 +143,10 @@ func checkLobby(ctx context.Context, tx pgx.Tx, lobby *Channel) error {
 	return nil
 }
 
-// nextTalkName is "Talk n" for the lowest n no temporary Talk of the category
-// uses.
-func nextTalkName(ctx context.Context, tx pgx.Tx, category *uuid.UUID) (string, error) {
+// nextTalkName is "<lobby name> n" for the lowest n no temporary Talk of the
+// category uses under that name. Talks opened before a rename keep their
+// names; the numbering of the new name starts afresh.
+func nextTalkName(ctx context.Context, tx pgx.Tx, lobbyName string, category *uuid.UUID) (string, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT name FROM channels
 		WHERE is_temp AND category_id IS NOT DISTINCT FROM $1`, category)
@@ -151,7 +165,8 @@ func nextTalkName(ctx context.Context, tx pgx.Tx, category *uuid.UUID) (string, 
 	if err := rows.Err(); err != nil {
 		return "", err
 	}
-	return TalkNamePrefix + strconv.Itoa(lowestFreeTalkNumber(names)), nil
+	base := tempTalkBase(lobbyName)
+	return base + " " + strconv.Itoa(lowestFreeTalkNumber(base, names)), nil
 }
 
 func markTemp(ctx context.Context, tx pgx.Tx, ch *Channel, lobby, creator uuid.UUID) error {

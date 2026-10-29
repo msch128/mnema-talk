@@ -16,8 +16,11 @@ in a lobby. When a member joins it:
 1. The server checks that the member may view and join the lobby, like for any
    Talk, and that they have opened fewer than 5 Talks in the last 10 minutes and
    that the lobby has fewer than 50 temporary Talks open.
-2. It creates a **temporary Talk** in the lobby's category, named "Talk 1",
-   "Talk 2", ... (the lowest number no temporary Talk of that category uses),
+2. It creates a **temporary Talk** in the lobby's category, named after the
+   lobby: "<lobby name> 1", "<lobby name> 2", ... (the lowest number no
+   temporary Talk of that category uses under that name; a very long lobby name
+   is cut so the name stays within the channel name limit). Renaming the lobby
+   leaves open Talks as they are; new ones use the new name,
    with the lobby's member limit and a copy of its permission overwrites. Who
    may see and join the temporary Talk is exactly who may see and join the lobby.
    It sorts directly behind the lobby and moves no permanent channel.
