@@ -57,13 +57,15 @@ export function usePushSettings() {
 
   const refresh = () => load(true)
 
-  /** Runs one action with the busy flag and a toast for a failure. */
-  async function act(work: () => Promise<void>, failure: string) {
+  /** Runs one action with the busy flag and a toast for a failure; resolves to whether it went through. */
+  async function act(work: () => Promise<void>, failure: string): Promise<boolean> {
     busy.value = true
     try {
       await work()
+      return true
     } catch (error) {
       toasts.error(caughtErrorMessage(error, failure))
+      return false
     } finally {
       busy.value = false
     }

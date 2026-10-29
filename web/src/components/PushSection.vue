@@ -3,12 +3,20 @@ import { computed } from 'vue'
 import { Trash2 } from '@lucide/vue'
 import { usePushSettings } from '../composables/usePushSettings'
 import { locale } from '../i18n'
+import { usePreferenceSave } from '../composables/usePreferenceSave'
+import SavedIndicator from './SavedIndicator.vue'
 import SwitchRow from './SwitchRow.vue'
 
 // Push notifications: turn them on for this device, send a test, choose
 // whether they carry the message text, and see or remove the devices.
 const push = usePushSettings()
 const { availability, config, devices, mine, loading, busy, failed, blocked, enabledByOperator } = push
+
+// Personal preference: the preview switch applies at once and says "Saved" (doc/settings-ux.md).
+const pref = usePreferenceSave()
+async function setPreview(on: boolean) {
+  if (await push.setText(on)) pref.flash()
+}
 
 const preview = computed(() => config.value?.preview === true)
 const previewLocked = computed(() => config.value?.preview_allowed === false)
@@ -68,8 +76,9 @@ function created(value: string): string {
             :disabled="busy || previewLocked"
             hint-testid="push-preview-hint"
             data-testid="push-preview"
-            @toggle="push.setText"
+            @toggle="setPreview"
           />
+          <div class="mt-1 flex justify-end"><SavedIndicator :visible="pref.saved.value" /></div>
         </div>
       </template>
 
