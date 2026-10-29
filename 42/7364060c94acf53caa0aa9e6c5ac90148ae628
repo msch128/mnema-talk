@@ -1,0 +1,42 @@
+doc/operations.md
+  s_06fcde5dbef956::t_e13403e67d7a89 734
+cmd/server/setup_checks_test.go
+  s_06fcde5dbef956::t_96ed7a6d8f2317 105
+internal/setupcheck/setupcheck_test.go
+  s_06fcde5dbef956::t_96ed7a6d8f2317 70,79,271-313
+internal/setupwizard/envfile.go
+  s_06fcde5dbef956::t_e13403e67d7a89 75-79
+doc/quick-start.md
+  s_06fcde5dbef956::t_e13403e67d7a89 13-17,87
+  s_06fcde5dbef956::t_4cce762b964d8d 88,123-124,153-154,177,184-185
+cmd/server/main.go
+  s_06fcde5dbef956::t_46aec293fd9b8c 103-108
+cmd/server/setup_checks.go
+  s_06fcde5dbef956::t_239468a8394df8 23,41-43
+internal/server/admin_status.go
+  s_06fcde5dbef956::t_80ba29f6743164 136-138
+internal/setupcheck/setupcheck.go
+  s_06fcde5dbef956::t_a089632d91a77e 124-126,137,270-271,273-274,276-292,298
+internal/setupwizard/preflight.go
+  s_06fcde5dbef956::t_c84560ed80cece 129
+internal/setupwizard/run.go
+  s_06fcde5dbef956::t_e0c67179738a1e 160
+internal/setupwizard/run_test.go
+  s_06fcde5dbef956::t_72835efc42c5df 37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "427364060c94acf53caa0aa9e6c5ac90148ae628",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
