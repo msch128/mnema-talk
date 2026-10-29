@@ -1,0 +1,93 @@
+internal/linkpreview/testdata/bbc_news.html
+  s_06fcde5dbef956::t_6bbe011d5d2794 1-2
+internal/linkpreview/testdata/github_repo.html
+  s_06fcde5dbef956::t_6bbe011d5d2794 1-17
+internal/linkpreview/linkpreview_html.go
+  s_06fcde5dbef956::t_2df3f561f2a3c0 5,8-9,41-49,51-56,58,64,71-73,76,79-80,90-110,120-124,127,129-145,147-154,158-161,163-174,179,181,183-186,190-215
+  s_06fcde5dbef956::t_5dee4c24fabede 50,216
+internal/linkpreview/linkpreview.go
+  s_06fcde5dbef956::t_1181b62db08f19 50-51,56-60,64-91
+  s_06fcde5dbef956::t_e0b66d14910536 267-279,288-293,301-302
+internal/linkpreview/testdata/x_oembed.json
+  s_06fcde5dbef956::t_6bbe011d5d2794 1
+internal/linkpreview/testdata/youtube_oembed.json
+  s_06fcde5dbef956::t_6bbe011d5d2794 1
+internal/linkpreview/linkpreview_rich_test.go
+  s_06fcde5dbef956::t_89a6f30f99d452 138
+  s_06fcde5dbef956::t_61eae104d1de7e 1-137,139-363
+internal/linkpreview/testdata/youtube_watch.html
+  s_06fcde5dbef956::t_6bbe011d5d2794 1-2
+internal/linkpreview/linkpreview_oembed.go
+  s_06fcde5dbef956::t_89a6f30f99d452 79
+  s_06fcde5dbef956::t_e88bf1df295d69 1-74,76-78,80-82
+  s_06fcde5dbef956::t_cfab074039d435 75
+internal/linkpreview/testdata/vimeo_video.html
+  s_06fcde5dbef956::t_6bbe011d5d2794 1-41
+internal/linkpreview/testdata/steam_store.html
+  s_06fcde5dbef956::t_6bbe011d5d2794 1-21
+internal/linkpreview/testdata/x_status.html
+  s_06fcde5dbef956::t_6bbe011d5d2794 1-2
+internal/linkpreview/linkpreview_steam.go
+  s_06fcde5dbef956::t_b33b1f867b5dd4 35,37-111,122,131
+  s_06fcde5dbef956::t_b8fac4eda15f63 1-34,36,112-121,123-130
+api/openapi.json
+  s_06fcde5dbef956::t_ab888bc546152e 5761-5797,5800-5814,5818-5828,5834
+  s_3043ef48954715::t_b7db2a22280c7a 27852
+internal/linkpreview/linkpreview_video.go
+  s_06fcde5dbef956::t_e88bf1df295d69 1-164,166-174
+  s_06fcde5dbef956::t_4cad37288b3909 165
+internal/linkpreview/testdata/steam_appdetails.json
+  s_06fcde5dbef956::t_6bbe011d5d2794 1-57
+internal/linkpreview/testdata/evil_video.html
+  s_06fcde5dbef956::t_40a79a0b64da75 1-6
+internal/linkpreview/testdata/oembed_gap.html
+  s_06fcde5dbef956::t_58e5ec28f05c57 1-4
+internal/linkpreview/testdata/oembed_gap.json
+  s_06fcde5dbef956::t_f05f57ff9f3ba1 1
+internal/linkpreview/testdata/oembed_oddport.html
+  s_06fcde5dbef956::t_f9b4ccbffd6986 1-3
+internal/linkpreview/handler.go
+  s_5aa38e778cf1ac::t_9307d0dd185b65 30
+web/src/types/rest.ts
+  s_c3fcad2120d0c2::t_2736475fbf4ccb 3413-3440,3442-3445,3447-3448,3457-3460,3462-3463
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4c42f6b4f428a0e7979e2fabc74f4771375a957e",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3043ef48954715": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-drill-ports-b192b464b6201a17",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5aa38e778cf1ac": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-builtin-turn-725a019b5a1e641a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_c3fcad2120d0c2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-rich-previews-11262cb153097d18",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
