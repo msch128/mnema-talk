@@ -212,6 +212,21 @@ describe('media transform guard', () => {
     guard.reset()
   })
 
+  it('finds an armed line again when the browser hands out a new object for the same receiver', () => {
+    // WebKit collects an unreferenced receiver object and makes another when it is asked again. Arming that one
+    // anew put a second transform on a line already receiving, which then stopped delivering frames.
+    installBrowser()
+    const guard = createMediaGuard()
+    const receiver = { transform: null } as RTCRtpReceiver
+    expect(guard.armReceiver(receiver, 'channel', null)).toBe(true)
+    const sameReceiverAnewObject = { transform: receiver.transform } as RTCRtpReceiver
+    expect(guard.armReceiver(sameReceiverAnewObject, 'channel', null)).toBe(true)
+    expect(guard.armReceiver(sameReceiverAnewObject, 'channel', 'bob', 0)).toBe(true)
+    expect(created.transforms).toHaveLength(1)
+    expect(created.channels[0]?.port1.postMessage).toHaveBeenLastCalledWith({ type: 'sender', senderId: 'bob', source: 0 })
+    guard.reset()
+  })
+
   it('arms a receiver before its publisher is known and names the publisher later', () => {
     installBrowser()
     const guard = createMediaGuard()

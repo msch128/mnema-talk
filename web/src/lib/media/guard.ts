@@ -151,11 +151,20 @@ function isValidArmTarget(direction: 'send' | 'recv', channelId: string, senderI
   return true
 }
 
-function releasePort(ports: Set<KeyedPort>, port: KeyedPort) {
+function releasePort(ports: Set<KeyedPort>, lines: Map<object, KeyedPort>, port: KeyedPort) {
   ports.delete(port)
+  for (const [transform, line] of lines) if (line === port) lines.delete(transform)
   try { port.postMessage({ type: 'drop' }) } catch (error) { ignoreClosedPort(error) }
   try { port.close() } catch (error) { ignoreClosedPort(error) }
 }
+
+// A WebKit receiver object is not the same object every time it is asked for
+// (an unreferenced one is collected and made anew), so the receiver alone
+// forgot lines that were armed and armed them again: a second transform on a
+// line already receiving, which delivered a second or two of frames and then
+// none (the member could not be heard for the rest of the call). Receiving
+// lines are therefore also found through the transform they were armed with,
+// held strongly so that the object the receiver reports stays the same one.
 
 /** One worker seals every local track and opens every remote track of this call. */
 export function createMediaGuard(): MediaGuard {
@@ -164,6 +173,7 @@ export function createMediaGuard(): MediaGuard {
   // The port of the line each sender or receiver carries now, so arming it
   // again (renegotiation, a replaced track) releases the port it replaces.
   let armed = new WeakMap<TransformTarget, KeyedPort>()
+  let lines = new Map<object, KeyedPort>()
   // The last key message, given to a line armed later; seq lets the shared
   // worker apply a message once however many lines deliver it.
   let current: KeyMessage | null = null
@@ -191,9 +201,10 @@ export function createMediaGuard(): MediaGuard {
       return false
     }
     const replaced = armed.get(target)
-    if (replaced) releasePort(ports, replaced)
+    if (replaced) releasePort(ports, lines, replaced)
     ports.add(channel.port1)
     armed.set(target, channel.port1)
+    if (direction === 'recv' && target.transform) lines.set(target.transform, channel.port1)
     // A browser that cannot clone the key message (it holds CryptoKeys) leaves
     // the line without a key: it opens and seals nothing until setKey reaches it.
     if (current) postOrWarn(channel.port1, current)
@@ -201,11 +212,11 @@ export function createMediaGuard(): MediaGuard {
   }
 
   function armIncoming(receiver: RTCRtpReceiver, channelId: string, senderId: string | null, source?: FrameSource): boolean {
-    const port = armed.get(receiver)
+    const port = receiver.transform ? lines.get(receiver.transform) : undefined
     // Browsers only apply a receiver transform that was set before the line
     // started receiving, so a prepared receiver keeps its transform and is
     // told who publishes on it and what it carries.
-    if (port && receiver.transform) {
+    if (port) {
       if (senderId === null) return true
       port.postMessage({ type: 'sender', senderId, ...(source === undefined ? {} : { source }) })
       return true
@@ -228,8 +239,9 @@ export function createMediaGuard(): MediaGuard {
     onStats(listener) { statsListener = listener },
     reset() {
       current = null
-      for (const port of [...ports]) releasePort(ports, port)
+      for (const port of [...ports]) releasePort(ports, lines, port)
       armed = new WeakMap()
+      lines = new Map()
       worker?.terminate()
       worker = null
     },

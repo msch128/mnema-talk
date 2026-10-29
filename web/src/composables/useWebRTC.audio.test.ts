@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { TestStream, present } from '../media-test.fixture'
-import { toRaw, nextTick } from 'vue'
+import { nextTick } from 'vue'
 import { t } from '../i18n'
 import { useToastStore } from '../stores/toast'
 import { installHarness, FakeAudioContext, FakePC, attachedStream, audioElements, fakeStream, fakeTrack, grantMic, joined, negotiate, remoteStreamFor, setup, streamOf } from './useWebRTC.harness.fixture'
@@ -56,9 +56,12 @@ describe('audio settings in a call', () => {
     const apply = rtc.applyAudioSettings()
     const newStream = await grantMic()
     await apply
-    expect(sender.replaceTrack).toHaveBeenCalledWith(present(newStream.getAudioTracks()[0]))
+    // The new capture is routed through the audio context; its output is what the line sends.
+    const sent = present(present(rtc.localAudioStream.value).getAudioTracks()[0])
+    expect(sender.replaceTrack).toHaveBeenCalledWith(sent)
+    expect(sent).not.toBe(present(newStream.getAudioTracks()[0]))
     expect(present(oldStream.getTracks()[0]).stop).toHaveBeenCalled()
-    expect(toRaw(rtc.localAudioStream.value)).toBe(newStream)
+    expect(present(newStream.getAudioTracks()[0]).stop).not.toHaveBeenCalled()
   })
 })
 
@@ -127,25 +130,27 @@ describe('AI noise suppression', () => {
     await vi.waitFor(() => expect(voice.localAudioStream).not.toBe(previous))
     expect(lastConstraints().noiseSuppression).toBe(true)
     expect(voice.noiseMode).toBe('ai')
-    expect(present(nativeStream.getAudioTracks()[0]).enabled).toBe(false)
+    // Mute switches the sent track; the native capture behind it stays on for the meter.
+    expect(present(present(voice.localAudioStream).getAudioTracks()[0]).enabled).toBe(false)
+    expect(present(nativeStream.getAudioTracks()[0]).enabled).toBe(true)
     expect(useToastStore().toasts.filter(x => x.text === t('audio.filterDegraded'))).toHaveLength(1)
     expect(suppressor.models).toEqual(['dfn3'])
   })
 
   it('falls back to the browser filter when the worklet is unavailable', async () => {
-    const { raw } = await joinWith('ai')
+    const { voice } = await joinWith('ai')
 
     expect(lastConstraints().noiseSuppression).toBe(true)
-    expect(present(present(FakePC.instances.at(-1)).senders[0]).track).toBe(present(raw.getAudioTracks()[0]))
+    expect(present(present(FakePC.instances.at(-1)).senders[0]).track).toBe(present(present(voice.localAudioStream).getAudioTracks()[0]))
   })
 
   it('off disables every filter', async () => {
     suppressor.node = fakeSuppressor()
-    const { raw } = await joinWith('off')
+    const { voice } = await joinWith('off')
 
     expect(suppressor.models).toEqual([])
     expect(lastConstraints().noiseSuppression).toBe(false)
-    expect(present(present(FakePC.instances.at(-1)).senders[0]).track).toBe(present(raw.getAudioTracks()[0]))
+    expect(present(present(FakePC.instances.at(-1)).senders[0]).track).toBe(present(present(voice.localAudioStream).getAudioTracks()[0]))
   })
 })
 
