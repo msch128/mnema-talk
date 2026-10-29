@@ -1,0 +1,27 @@
+internal/discordimport/plan.go
+  s_d545d7eb443737::t_cfb4f25cbfb133 101,110-112
+internal/discordimport/role_map_test.go
+  s_d545d7eb443737::t_ad0812702e5708 120-139
+web/src/components/AdminImportTab.vue
+  s_d545d7eb443737::t_0e070930c4c734 56,58-60,92-93,96-97,187
+web/src/components/DiscordImportPreview.vue
+  s_d545d7eb443737::t_231671b4041545 12,109
+web/src/components/DiscordImportRoleMap.test.ts
+  s_d545d7eb443737::t_8b5e9a383c4eb7 120-134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "54422f9bba3a0b72f9c48515a0b523ab70b1bbe7",
+  "prompts": {},
+  "sessions": {
+    "s_d545d7eb443737": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-discord-rolemap-8ceb47ad89432618",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
