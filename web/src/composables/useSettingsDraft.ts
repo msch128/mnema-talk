@@ -3,14 +3,12 @@
 // "changed" is decided field by field on normalised values, and leaving with
 // unsaved changes asks first. Shared configuration (channels, roles, community,
 // Talks) uses this; personal preferences save at once and do not.
-import type { InjectionKey, Ref } from 'vue'
-import { computed, inject, onBeforeUnmount, onMounted, provide, reactive, ref, shallowReactive, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { caughtErrorMessage } from '../lib/api'
-import { confirm } from '../lib/confirm'
+import { confirmDiscard, useLeaveGuard } from './draftGuard'
 import { t } from '../i18n'
 
-/** Per-field normalisers: values that mean the same thing compare as equal. */
-/** A normaliser also sees the whole state, for fields that only matter next to another one. */
+/** Per-field normalisers: values that mean the same thing compare as equal. A normaliser also sees the whole state, for fields that only matter next to another one. */
 export type Normalisers<T> = { [K in keyof T]?: (value: T[K], state: T) => unknown }
 
 /** Normalisers for the usual field shapes. */
@@ -27,6 +25,8 @@ export const normalise = {
   /** Anything unset counts as off. */
   flag: (value: boolean | null | undefined): boolean => value === true
 }
+
+export { confirmDiscard, provideDraftScope } from './draftGuard'
 
 export type FieldErrors<T> = Partial<Record<keyof T, string>>
 
@@ -51,33 +51,6 @@ export interface SettingsDraftOptions<T extends object> {
   saved?: () => void | Promise<void>
   /** Save stays off while this returns true (still loading, not allowed). */
   blocked?: () => boolean
-}
-
-interface ScopeMember { dirty: Ref<boolean> }
-interface DraftScope { members: Set<ScopeMember> }
-const SCOPE: InjectionKey<DraftScope> = Symbol('settings-draft-scope')
-
-/** Asks whether unsaved changes may be dropped. */
-export function confirmDiscard(): Promise<boolean> {
-  return confirm({
-    title: t('draft.discardTitle'),
-    body: t('draft.discardBody'),
-    confirmLabel: t('draft.discard'),
-    cancelLabel: t('draft.keepEditing'),
-    danger: true
-  })
-}
-
-/**
- * A container (the admin dashboard, the settings dialog) that holds several
- * drafts at once. It knows whether any of them is unsaved, so a tab switch or
- * the close button can ask once for all of them.
- */
-export function provideDraftScope() {
-  const scope: DraftScope = { members: shallowReactive(new Set<ScopeMember>()) }
-  provide(SCOPE, scope)
-  const dirty = computed(() => [...scope.members].some(m => m.dirty.value))
-  return { dirty, guard: async () => !dirty.value || confirmDiscard() }
 }
 
 const isMac = typeof navigator !== 'undefined' && /mac|iphone|ipad/i.test(navigator.platform)
@@ -165,15 +138,7 @@ export function useSettingsDraft<T extends object>(options: SettingsDraftOptions
     return !dirty.value || confirmDiscard()
   }
 
-  const member: ScopeMember = { dirty }
-  const scope = inject(SCOPE, null)
-  scope?.members.add(member)
-  const beforeUnload = (e: BeforeUnloadEvent) => { if (dirty.value) e.preventDefault() }
-  onMounted(() => window.addEventListener('beforeunload', beforeUnload))
-  onBeforeUnmount(() => {
-    window.removeEventListener('beforeunload', beforeUnload)
-    scope?.members.delete(member)
-  })
+  useLeaveGuard(dirty)
 
   return { draft, dirty, changed, errors, valid, saving, error, canSave, save, reset, guard, onKeydown }
 }

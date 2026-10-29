@@ -3,20 +3,22 @@
 // form only keeps obvious mistakes from being sent.
 import type { PropType } from 'vue'
 import type { AutomodRule } from '../types/rest'
-import { computed, ref } from 'vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { computed } from 'vue'
+import { api } from '../lib/api'
 import { decodeAutomodRule } from '../types/rest'
 import {
   ACCOUNT_AGES, RAID_RESTRICTIONS, RAID_WINDOWS, RULE_TIMEOUTS, MAX_RULE_NAME,
   emptyForm, formFromRule, formProblem, inputFromForm, withCurrent
 } from '../lib/automod'
-import type { AutomodKind } from '../lib/automod'
+import type { AutomodKind, RuleForm } from '../lib/automod'
+import { confirmDiscard, normalise, useSettingsDraft } from '../composables/useSettingsDraft'
 import { durationLabel } from '../lib/moderation'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
+import UnsavedChangesBar from './UnsavedChangesBar.vue'
 
 const props = defineProps({
   rule: { type: Object as PropType<AutomodRule | null>, default: null },
@@ -28,9 +30,43 @@ const toasts = useToastStore()
 const chat = useChatStore()
 const permissions = usePermissionsStore()
 
-const form = ref(props.rule ? formFromRule(props.rule) : emptyForm(props.kind))
-const busy = ref(false)
-const problem = computed(() => formProblem(form.value))
+const isNew = !props.rule
+const defaults = props.rule ? formFromRule(props.rule) : emptyForm(props.kind)
+// Words and domains are lists: spacing, blank lines, duplicates and order do not matter.
+const lines = (text: string) => normalise.set(text.split('\n').map(l => l.trim()).filter(Boolean))
+// A new rule has nothing saved yet: its baseline is blank, so the defaults already count as a change that can be saved.
+const baseline: RuleForm = isNew ? { ...defaults, name: '', enabled: false } : defaults
+
+const draft = useSettingsDraft<RuleForm>({
+  source: () => baseline,
+  normalisers: {
+    name: normalise.text,
+    words: v => lines(v).join('\n'),
+    domains: (v, state) => (state.mode === 'block_all' ? '' : lines(v).join('\n')),
+    maxMentions: normalise.count, maxAgeSeconds: normalise.count, joins: normalise.count,
+    windowSeconds: normalise.count, restrictSeconds: normalise.count, timeoutSeconds: normalise.count,
+    exemptRoles: normalise.set, exemptChannels: normalise.set
+  },
+  validate: f => {
+    const text = formProblem(f)
+    return text ? { name: text } : {}
+  },
+  save: async ({ draft: f }) => {
+    const path = props.rule ? `/api/admin/automod/rules/${props.rule.id}` : '/api/admin/automod/rules'
+    await api(path, { method: props.rule ? 'PUT' : 'POST', json: inputFromForm(f), decode: decodeAutomodRule })
+  },
+  saved: () => {
+    toasts.success(t('automod.saved'))
+    emit('saved')
+    emit('close')
+  }
+})
+const form = computed(() => draft.draft)
+if (isNew) Object.assign(draft.draft, defaults)
+
+// What the member changed from what they were given (for a new rule: from the defaults).
+const edited = computed(() => (isNew ? JSON.stringify({ ...draft.draft }) !== JSON.stringify(defaults) : draft.dirty.value))
+const problem = computed(() => formProblem(draft.draft))
 const roles = computed(() => permissions.roles.filter(r => !r.is_everyone && !r.managed))
 const channels = computed(() => chat.allChannels)
 const isRaid = computed(() => form.value.kind === 'raid')
@@ -41,20 +77,10 @@ function toggle(list: string[], id: string) {
   else list.push(id)
 }
 
-async function save() {
-  if (problem.value || busy.value) return
-  busy.value = true
-  try {
-    const path = props.rule ? `/api/admin/automod/rules/${props.rule.id}` : '/api/admin/automod/rules'
-    await api(path, { method: props.rule ? 'PUT' : 'POST', json: inputFromForm(form.value), decode: decodeAutomodRule })
-    toasts.success(t('automod.saved'))
-    emit('saved')
-    emit('close')
-  } catch (error) {
-    toasts.error(caughtErrorMessage(error, t('automod.saveFailed')))
-  } finally {
-    busy.value = false
-  }
+const guard = async () => !edited.value || confirmDiscard()
+function reset() {
+  if (isNew) Object.assign(draft.draft, defaults, { exemptRoles: [], exemptChannels: [] })
+  else draft.reset()
 }
 
 const field = 'w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent'
@@ -62,8 +88,9 @@ const label = 'block text-xs font-medium text-mnema-muted font-mono uppercase tr
 </script>
 
 <template>
-  <BaseDialog :title="rule ? $t('automod.editTitle') : $t('automod.newTitle', { kind: $t(`automod.kind.${form.kind}`) })" panel-class="max-w-xl" @close="emit('close')">
-    <form class="space-y-4 overflow-y-auto p-5" data-testid="automod-form" @submit.prevent="save">
+  <BaseDialog :title="rule ? $t('automod.editTitle') : $t('automod.newTitle', { kind: $t(`automod.kind.${form.kind}`) })" panel-class="max-w-xl" :guard="guard" @close="emit('close')">
+    <form class="flex min-h-0 flex-1 flex-col" data-testid="automod-form" @submit.prevent="draft.save" @keydown="draft.onKeydown">
+    <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
       <p class="text-sm text-mnema-tertiary">{{ $t(`automod.about.${form.kind}`) }}</p>
 
       <div class="space-y-1">
@@ -184,10 +211,8 @@ const label = 'block text-xs font-medium text-mnema-muted font-mono uppercase tr
       </div>
 
       <p v-if="problem" class="text-xs text-mnema-danger" role="alert" data-testid="am-problem">{{ problem }}</p>
-      <div class="flex justify-end gap-2">
-        <button type="button" class="btn btn-ghost" @click="emit('close')">{{ $t('common.cancel') }}</button>
-        <button type="submit" :disabled="!!problem || busy" class="btn btn-primary" data-testid="am-save">{{ $t('common.save') }}</button>
-      </div>
+    </div>
+    <UnsavedChangesBar :dirty="edited" :can-save="draft.canSave.value" :saving="draft.saving.value" :error="draft.error.value" @save="draft.save" @reset="reset" />
     </form>
   </BaseDialog>
 </template>

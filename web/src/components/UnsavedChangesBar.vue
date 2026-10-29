@@ -9,6 +9,8 @@ defineProps({
   canSave: { type: Boolean, default: false },
   saving: { type: Boolean, default: false },
   error: { type: String, default: '' },
+  /** Replaces "Save" where the form creates something. */
+  saveLabel: { type: String, default: '' },
   /** Stays at the bottom of a scrolling page instead of sitting in a dialog footer. */
   sticky: { type: Boolean, default: false }
 })
@@ -35,7 +37,7 @@ const emit = defineEmits<{ save: []; reset: [] }>()
           :aria-busy="saving ? 'true' : undefined"
           :title="$t('draft.shortcut', { keys: saveShortcutLabel })"
           @click="emit('save')"
-        >{{ saving ? $t('draft.saving') : $t('common.save') }}</button>
+        >{{ saving ? $t('draft.saving') : saveLabel || $t('common.save') }}</button>
       </div>
     </div>
   </div>

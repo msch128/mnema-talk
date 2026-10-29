@@ -554,9 +554,9 @@ describe('Sidebar administrative lifecycle and navigation', () => {
   it('opens category and channel editors and closes their dialogs', async () => {
     await mountSidebar()
     await contextMenu(rowOf('general')); await choose('Kanal bearbeiten'); expect(q<HTMLInputElement>('#edit-name').value).toBe('general')
-    await wrapper.findAll('button').find(b => b.text() === 'Abbrechen')!.trigger('click'); expect(document.querySelector('#edit-name')).toBeNull()
+    await wrapper.find('[data-dialog-close]').trigger('click'); await flushPromises(); expect(document.querySelector('#edit-name')).toBeNull()
     await contextMenu(headerOf('text')); await choose('Kategorie bearbeiten'); expect(q<HTMLInputElement>('#edit-name').value).toBe('Text')
-    await wrapper.findAll('button').find(b => b.text() === 'Abbrechen')!.trigger('click')
+    await wrapper.find('[data-dialog-close]').trigger('click'); await flushPromises()
   })
   it('the category plus suggests voice only for voice-only categories and closes the create modal', async () => {
     await mountSidebar()

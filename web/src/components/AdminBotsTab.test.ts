@@ -93,7 +93,7 @@ describe('AdminBotsTab', () => {
     expect(w.find('[data-testid="bot-detail"]').exists()).toBe(true)
     apiMock.mockImplementationOnce(async () => bot(1, { name: 'Renamed' }))
     await w.get('[data-testid="bot-name"]').setValue('Renamed')
-    await w.get('[data-testid="bot-name"]').trigger('blur')
+    await w.get('[data-testid="unsaved-save"]').trigger('click')
     await flushPromises()
     expect(w.findAll('[data-testid="bot-row"]')[0]?.text()).toContain('Renamed')
     confirmMock.mockResolvedValueOnce(true)
@@ -101,6 +101,21 @@ describe('AdminBotsTab', () => {
     await flushPromises()
     expect(w.findAll('[data-testid="bot-row"]')).toHaveLength(1)
     expect(w.find('[data-testid="bot-detail"]').exists()).toBe(false)
+  })
+
+  it('asks before another bot replaces a detail with unsaved edits', async () => {
+    const w = await mountTab()
+    const rows = () => w.findAll('[data-testid="bot-row"] button')
+    await rows()[0]?.trigger('click')
+    await w.get('[data-testid="bot-name"]').setValue('Edited')
+    confirmMock.mockResolvedValueOnce(false)
+    await rows()[1]?.trigger('click')
+    await flushPromises()
+    expect((w.get('[data-testid="bot-name"]').element as HTMLInputElement).value).toBe('Edited')
+    confirmMock.mockResolvedValueOnce(true)
+    await rows()[1]?.trigger('click')
+    await flushPromises()
+    expect((w.get('[data-testid="bot-name"]').element as HTMLInputElement).value).not.toBe('Edited')
   })
 
   it('keeps the selection when another bot is deleted and reports load failures', async () => {

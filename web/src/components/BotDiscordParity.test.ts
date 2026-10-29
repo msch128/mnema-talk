@@ -130,7 +130,7 @@ describe('the own role of a bot', () => {
     expect(w.find('input[type="number"]').exists()).toBe(false)
     expect(w.text()).not.toContain('Delete role')
     // Colour and permissions stay editable.
-    expect(w.findAll('button').some(b => b.text() === t('roles.save'))).toBe(true)
+    expect(w.find('[data-testid="unsaved-save"]').exists()).toBe(true)
   })
 
   it('sends only the roles of the hierarchy when they are reordered', async () => {
@@ -144,7 +144,7 @@ describe('the own role of a bot', () => {
   it('is shown ticked for its own bot and not offered for another one', () => {
     usePermissionsStore().roles = [role(5, { name: 'Mods' }), sharedBotRole, helperRole, sleeperRole, everyone]
     const bot: BotBot = { id: fixtureId(5), user_id: helper.id, name: 'Helper', allowed_intents: 0, disabled: false, role_ids: [helperRole.id], created_at: '2026-01-02T03:04:05Z' }
-    const panel = mount(BotRolesPanel, { props: { bot } })
+    const panel = mount(BotRolesPanel, { props: { bot, roles: [...bot.role_ids] } })
     const own = panel.get('[data-role="Helper"] input').element as HTMLInputElement
     expect(own.checked).toBe(true)
     expect(own.disabled).toBe(true)

@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import type { ApiOptions } from '../lib/api'
 import BotDetailPanel from './BotDetailPanel.vue'
 import { useToastStore } from '../stores/toast'
+import { usePermissionsStore } from '../stores/permissions'
 import { fixtureId } from '../test-fixtures.fixture'
 import { setLocale } from '../i18n'
 import type { BotBot } from '../types/rest'
@@ -49,69 +50,80 @@ describe('BotDetailPanel', () => {
     expect(w.get('img').attributes('src')).toBe('/api/media/a')
   })
 
-  it('renames on enter and ignores unchanged or empty names', async () => {
+  it('keeps Save off until something really changed, ignoring spacing in the name', async () => {
     const w = await mountPanel()
-    const input = w.get('[data-testid="bot-name"]')
-    await input.setValue('Ping')
-    await input.trigger('keydown.enter')
-    await flushPromises()
-    expect(patches()).toEqual([{ name: 'Ping' }])
-    expect(w.emitted('updated')).toHaveLength(1)
-    await input.setValue('Echo')
-    await input.trigger('blur')
-    await input.setValue('  ')
-    await input.trigger('blur')
-    await flushPromises()
-    expect(patches()).toHaveLength(1)
-    expect(toastTexts()).toContain('A bot needs a name.')
-    expect((input.element as HTMLInputElement).value).toBe('Echo')
+    const save = () => w.get('[data-testid="unsaved-save"]').attributes('disabled')
+    expect(save()).toBeDefined()
+    await w.get('[data-testid="bot-name"]').setValue('  Echo ')
+    expect(save()).toBeDefined()
+    await w.get('[data-testid="bot-name"]').setValue('Ping')
+    expect(save()).toBeUndefined()
+    await w.get('[data-testid="bot-name"]').setValue('Echo')
+    expect(save()).toBeDefined()
   })
 
-  it('syncs the name field with the bot and reverts on a failed rename', async () => {
+  it('stores nothing until Save: name, switch, intents and roles go together', async () => {
+    usePermissionsStore().roles = [{ id: fixtureId(21), name: 'Role 1', color: 0, position: 1, permissions: 0, hoist: false, mentionable: false, is_everyone: false, max_upload_mb: null }]
+    const w = await mountPanel(bot({ disabled: true }))
+    expect(w.text()).toContain('A disabled bot is rejected at once')
+    await w.get('[data-testid="bot-name"]').setValue('Ping')
+    await w.get('[data-testid="bot-enabled"]').setValue(true)
+    await w.get('[data-intent="members"]').setValue(true)
+    await w.get('[data-intent="messages"]').setValue(false)
+    await w.get('[data-role="Role 1"] input').setValue(true)
+    expect(apiMock.mock.calls.some(([, o]) => o?.method === 'PATCH' || o?.method === 'PUT')).toBe(false)
+    expect(w.get('[data-testid="unsaved-status"]').text()).toBe('You have unsaved changes')
+    await w.get('[data-testid="unsaved-save"]').trigger('click')
+    await flushPromises()
+    expect(patches()).toEqual([{ name: 'Ping', disabled: false, allowed_intents: 2 }])
+    expect(apiMock).toHaveBeenCalledWith(`${base}/roles`, expect.objectContaining({ method: 'PUT', json: { role_ids: [fixtureId(21)] } }))
+    expect(w.emitted('updated')).toHaveLength(2)
+    expect(toastTexts()).toContain('Bot saved.')
+  })
+
+  it('refuses an empty name inline', async () => {
+    const w = await mountPanel()
+    await w.get('[data-testid="bot-name"]').setValue('  ')
+    expect(w.get('[data-testid="bot-name-error"]').text()).toBe('A bot needs a name.')
+    expect(w.get('[data-testid="unsaved-save"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('follows a rename from elsewhere, and reset brings the saved state back', async () => {
     const w = await mountPanel()
     await w.setProps({ bot: bot({ name: 'Renamed' }) })
     expect((w.get('[data-testid="bot-name"]').element as HTMLInputElement).value).toBe('Renamed')
-    apiMock.mockRejectedValueOnce(new Error('too long'))
     await w.get('[data-testid="bot-name"]').setValue('Other')
-    await w.get('[data-testid="bot-name"]').trigger('blur')
-    await flushPromises()
-    expect(toastTexts()).toContain('too long')
+    await w.get('[data-testid="unsaved-reset"]').trigger('click')
     expect((w.get('[data-testid="bot-name"]').element as HTMLInputElement).value).toBe('Renamed')
   })
 
-  it('puts a checkbox back when its toggle fails', async () => {
-    const w = await mountPanel(bot({ disabled: false }))
-    apiMock.mockRejectedValueOnce(new Error('nope'))
-    const box = w.get('[data-testid="bot-enabled"]')
-    await box.setValue(false)
-    await flushPromises()
-    expect((box.element as HTMLInputElement).checked).toBe(true)
-  })
-
-  it('toggles enabled and intents', async () => {
-    const w = await mountPanel(bot({ disabled: true }))
-    expect(w.text()).toContain('A disabled bot is rejected at once')
-    await w.get('[data-testid="bot-enabled"]').setValue(true)
-    await flushPromises()
-    await w.get('[data-intent="members"]').setValue(true)
-    await flushPromises()
-    await w.get('[data-intent="messages"]').setValue(false)
-    await flushPromises()
-    expect(patches()).toEqual([{ disabled: false }, { allowed_intents: 514 }, { allowed_intents: 0 }])
-  })
-
-  it('ignores a second change while one is being saved', async () => {
+  it('shows a failed save inline and keeps the edits; after a partial save only the roles stay unsaved', async () => {
+    usePermissionsStore().roles = [{ id: fixtureId(21), name: 'Role 1', color: 0, position: 1, permissions: 0, hoist: false, mentionable: false, is_everyone: false, max_upload_mb: null }]
     const w = await mountPanel()
-    let release: (b: BotBot) => void = () => {}
-    apiMock.mockImplementationOnce(() => new Promise(resolve => { release = resolve as (b: BotBot) => void }))
-    const input = w.get('[data-testid="bot-name"]')
-    await input.setValue('First')
-    void input.trigger('blur')
-    await input.setValue('Second')
-    await input.trigger('blur')
-    release(bot({ name: 'First' }))
+    apiMock.mockImplementation(async (path, options) => {
+      if (path === `${base}/roles`) throw new Error('only the Owner may assign this role')
+      if (path === base && options?.method === 'PATCH') return bot({ ...(options.json as object) })
+      return []
+    })
+    await w.get('[data-testid="bot-name"]').setValue('Ping')
+    await w.get('[data-role="Role 1"] input').setValue(true)
+    await w.get('[data-testid="unsaved-save"]').trigger('click')
     await flushPromises()
-    expect(patches()).toEqual([{ name: 'First' }])
+    expect(w.get('[data-testid="unsaved-error"]').text()).toContain('only the Owner may assign this role')
+    expect(w.get('[data-testid="unsaved-error"]').text()).toContain('Some changes were saved')
+    apiMock.mockClear()
+    await w.get('[data-testid="unsaved-save"]').trigger('click')
+    await flushPromises()
+    expect(patches()).toEqual([])
+  })
+
+  it('offers the discard guard to its parent', async () => {
+    const w = await mountPanel()
+    const guard = (w.vm as unknown as { guard: () => Promise<boolean> }).guard
+    expect(await guard()).toBe(true)
+    await w.get('[data-testid="bot-name"]').setValue('Ping')
+    confirmMock.mockResolvedValueOnce(false)
+    expect(await guard()).toBe(false)
   })
 
   it('uploads an avatar and reports failures', async () => {
@@ -153,12 +165,19 @@ describe('BotDetailPanel', () => {
     expect(w.emitted('deleted')?.[0]).toEqual([fixtureId(5)])
   })
 
-  it('reloads the access preview when roles change', async () => {
+  it('reloads the access preview after the roles were saved', async () => {
+    usePermissionsStore().roles = [{ id: fixtureId(21), name: 'Role 1', color: 0, position: 1, permissions: 0, hoist: false, mentionable: false, is_everyone: false, max_upload_mb: null }]
+    apiMock.mockImplementation(async (path, options) => {
+      if (path === `${base}/roles`) return bot({ role_ids: [fixtureId(21)] })
+      if (path === base && options?.method === 'PATCH') return bot()
+      if (path.endsWith('/access')) return { permissions: 0, elevated: false, channels: [] }
+      return []
+    })
     const w = await mountPanel()
     const before = apiMock.mock.calls.filter(([p]) => p.endsWith('/access')).length
-    w.findComponent({ name: 'BotRolesPanel' }).vm.$emit('updated', bot({ role_ids: [fixtureId(21)] }))
+    await w.get('[data-role="Role 1"] input').setValue(true)
+    await w.get('[data-testid="unsaved-save"]').trigger('click')
     await flushPromises()
     expect(apiMock.mock.calls.filter(([p]) => p.endsWith('/access')).length).toBe(before + 1)
-    expect(w.emitted('updated')).toHaveLength(1)
   })
 })

@@ -6,6 +6,7 @@
 // editor holds themselves; this only offers what fits.
 import type { PropType } from 'vue'
 import { ref, computed, onMounted } from 'vue'
+import { useSettingsDraft } from '../composables/useSettingsDraft'
 import { Trash2, Lock } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import { decodeOverwritesBody } from '../types/domain'
@@ -17,6 +18,7 @@ import { CHANNEL_PERMISSION_KEYS, PERMISSION_BITS } from '../lib/permissions'
 import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 import PermissionToggles from './PermissionToggles.vue'
+import UnsavedChangesBar from './UnsavedChangesBar.vue'
 
 const props = defineProps({
   kind: { type: String as PropType<'channel' | 'category'>, required: true },
@@ -28,11 +30,32 @@ const permissions = usePermissionsStore()
 const chat = useChatStore()
 const toasts = useToastStore()
 
-const entries = ref<Overwrite[]>([])
 const selected = ref<string | null>(null)
 const loaded = ref(false)
 const failed = ref(false)
-const busy = ref(false)
+
+// What is stored now; the draft is a copy the editor changes until Save.
+const stored = ref<Overwrite[]>([])
+// Entries that carry nothing are not stored, so they do not count as a change either.
+const sameEntries = (list: readonly Overwrite[]) => list
+  .filter(o => o.allow !== 0 || o.deny !== 0)
+  .map(o => `${o.type}:${o.id}:${o.allow}:${o.deny}`)
+  .sort()
+const form = useSettingsDraft<{ entries: Overwrite[] }>({
+  source: () => ({ entries: stored.value.map(o => ({ ...o })) }),
+  normalisers: { entries: sameEntries },
+  blocked: () => !loaded.value || failed.value,
+  save: async ({ draft }) => {
+    const overwrites = draft.entries.filter(o => o.allow !== 0 || o.deny !== 0)
+    await api(base.value, { method: 'PUT', json: { overwrites } })
+  },
+  saved: () => {
+    toasts.success(t('overwrites.saved'))
+    emit('close')
+  }
+})
+const { draft } = form
+const entries = computed(() => draft.entries)
 
 const base = computed(() => `/api/admin/${props.kind === 'channel' ? 'channels' : 'categories'}/${props.target.id}/overwrites`)
 const key = (o: { type: string; id: string }) => `${o.type}:${o.id}`
@@ -71,18 +94,18 @@ const addableMembers = computed(() => chat.members.filter(m => m.role !== 'admin
 function add(type: 'role' | 'member', id: string) {
   if (!id) return
   const entry: Overwrite = { type, id, allow: 0, deny: 0 }
-  entries.value = [...entries.value, entry]
+  draft.entries = [...draft.entries, entry]
   selected.value = key(entry)
 }
 
 function update(field: 'allow' | 'deny', value: number) {
   const o = current.value
   if (!o) return
-  entries.value = entries.value.map(e => (key(e) === key(o) ? { ...e, [field]: value } : e))
+  draft.entries = draft.entries.map(e => (key(e) === key(o) ? { ...e, [field]: value } : e))
 }
 
 function remove(o: Overwrite) {
-  entries.value = entries.value.filter(e => key(e) !== key(o))
+  draft.entries = draft.entries.filter(e => key(e) !== key(o))
   if (selected.value === key(o)) selected.value = null
 }
 
@@ -93,9 +116,9 @@ function makePrivate() {
   const view = PERMISSION_BITS.view_channel
   const existing = entries.value.find(o => o.type === 'role' && o.id === role.id)
   if (existing) {
-    entries.value = entries.value.map(e => (e === existing ? { ...e, allow: e.allow & ~view, deny: e.deny | view } : e))
+    draft.entries = draft.entries.map(e => (e === existing ? { ...e, allow: e.allow & ~view, deny: e.deny | view } : e))
   } else {
-    entries.value = [...entries.value, { type: 'role', id: role.id, allow: 0, deny: view }]
+    draft.entries = [...draft.entries, { type: 'role', id: role.id, allow: 0, deny: view }]
   }
   selected.value = `role:${role.id}`
 }
@@ -103,27 +126,14 @@ function makePrivate() {
 async function load() {
   try {
     const body = await api(base.value, { decode: decodeOverwritesBody })
-    entries.value = body.overwrites
+    stored.value = body.overwrites
+    draft.entries = body.overwrites.map(o => ({ ...o }))
     selected.value = entries.value[0] ? key(entries.value[0]) : null
   } catch (e) {
     failed.value = true
     toasts.error(caughtErrorMessage(e, t('overwrites.loadFailed')))
   } finally {
     loaded.value = true
-  }
-}
-
-async function save() {
-  busy.value = true
-  try {
-    const overwrites = entries.value.filter(o => o.allow !== 0 || o.deny !== 0)
-    await api(base.value, { method: 'PUT', json: { overwrites } })
-    toasts.success(t('overwrites.saved'))
-    emit('close')
-  } catch (e) {
-    toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
-  } finally {
-    busy.value = false
   }
 }
 
@@ -134,8 +144,10 @@ onMounted(load)
   <BaseDialog
     :title="kind === 'channel' ? $t('overwrites.titleChannel', { name: target.name }) : $t('overwrites.titleCategory', { name: target.name })"
     panel-class="max-w-3xl max-h-[90vh]"
+    :guard="form.guard"
     @close="emit('close')"
   >
+    <div class="flex min-h-0 flex-1 flex-col" data-testid="overwrites-form" @keydown="form.onKeydown">
     <div class="flex-1 space-y-4 overflow-y-auto p-5">
       <p class="text-sm text-mnema-tertiary">{{ kind === 'channel' ? $t('overwrites.hintChannel') : $t('overwrites.hintCategory') }}</p>
       <p class="text-xs text-mnema-tertiary">{{ $t('overwrites.ownerNote') }}</p>
@@ -184,10 +196,8 @@ onMounted(load)
         </div>
       </div>
 
-      <div class="flex justify-end gap-2">
-        <button type="button" class="btn btn-ghost" @click="emit('close')">{{ $t('common.cancel') }}</button>
-        <button type="button" :disabled="busy || !loaded || failed" class="btn btn-primary" @click="save">{{ $t('overwrites.save') }}</button>
-      </div>
+    </div>
+    <UnsavedChangesBar :dirty="form.dirty.value" :can-save="form.canSave.value" :saving="form.saving.value" :error="form.error.value" @save="form.save" @reset="form.reset" />
     </div>
   </BaseDialog>
 </template>

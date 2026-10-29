@@ -7,7 +7,7 @@ import AdminLayoutTab from './AdminLayoutTab.vue'
 import BaseDialog from './BaseDialog.vue'
 import { useChatStore } from '../stores/chat'
 import { categoryFixture, channelFixture, fixtureId, userFixture } from '../test-fixtures.fixture'
-import { tree, errors, button } from './adminTestkit.fixture'
+import { tree, errors } from './adminTestkit.fixture'
 import { useAuthStore } from '../stores/auth'
 import { setLocale } from '../i18n'
 import { useToastStore } from '../stores/toast'
@@ -116,7 +116,8 @@ describe('layout editing recovery and unsaved order', () => {
     expect(cat(w).text()).toContain('Renamed')
     expect(w.text()).toContain('Unsaved changes')
     await cat(w).find('[data-testid="rename-category"]').trigger('click')
-    await button(w, 'Cancel').trigger('click')
+    await w.find('[data-dialog-close]').trigger('click')
+    await flushPromises()
     expect(w.find('form').exists()).toBe(false)
     await cat(w).find('[data-testid="rename-category"]').trigger('click')
     w.findComponent(BaseDialog).vm.$emit('close')
@@ -163,7 +164,8 @@ describe('layout editing recovery and unsaved order', () => {
       await flushPromises()
       expect(errors()).toContain('edit denied')
       expect(w.find('form').exists()).toBe(true)
-      await button(w, 'Cancel').trigger('click')
+      await w.find('[data-dialog-close]').trigger('click')
+    await flushPromises()
       expect(w.find('form').exists()).toBe(false)
       await item.find(`[data-testid="rename-${kind}"]`).trigger('click')
       w.findComponent(BaseDialog).vm.$emit('close')
@@ -259,7 +261,8 @@ describe('layout defensive stale action handling', () => {
     await flushPromises()
     await w.find('[data-testid="rename-category"]').trigger('click')
     expect(w.find('form input').element).toHaveProperty('value', '')
-    await button(w, 'Cancel').trigger('click')
+    await w.find('[data-dialog-close]').trigger('click')
+    await flushPromises()
     await w
       .find(
         `[data-testid="channel-item-${fixtureId(21)}"] [data-testid="rename-channel"]`,
@@ -271,7 +274,8 @@ describe('layout defensive stale action handling', () => {
       'value',
       'new topic',
     )
-    await button(w, 'Cancel').trigger('click')
+    await w.find('[data-dialog-close]').trigger('click')
+    await flushPromises()
   })
   it.each(['category', 'channel'] as const)(
     'safely ignores a successful %s rename after concurrent removal',

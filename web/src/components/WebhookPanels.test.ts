@@ -82,18 +82,22 @@ describe('IncomingWebhooksPanel', () => {
     expect(w.findAll('[data-testid="incoming-webhook"]')).toHaveLength(1)
   })
 
-  it('puts a switch back when the server refuses the change', async () => {
+  it('stores nothing when a setting is switched and shows a refusal inline', async () => {
     apiMock.mockResolvedValueOnce([hook(1)])
     const w = mount(IncomingWebhooksPanel, { props: { channelId } })
     await flushPromises()
     await w.find('button[aria-label="Settings of Hook 1"]').trigger('click')
-    const box = w.find('input[data-setting="allow_everyone"]')
+    const save = w.find('[data-testid="unsaved-save"]')
+    expect(save.attributes('disabled')).toBeDefined()
+    await w.find('input[data-setting="allow_everyone"]').setValue(true)
+    expect(apiMock).toHaveBeenCalledTimes(1)
+    expect(save.attributes('disabled')).toBeUndefined()
     apiMock.mockRejectedValueOnce(new Error('forbidden'))
-    ;(box.element as HTMLInputElement).checked = true
-    await box.trigger('change')
+    await save.trigger('click')
     await flushPromises()
-    expect((box.element as HTMLInputElement).checked).toBe(false)
-    expect((box.element as HTMLInputElement).disabled).toBe(false)
+    expect(w.find('[data-testid="unsaved-error"]').text()).toBe('forbidden')
+    expect((w.find('input[data-setting="allow_everyone"]').element as HTMLInputElement).checked).toBe(true)
+    expect(save.attributes('disabled')).toBeUndefined()
   })
 
   it('creates a webhook, shows its URL once and copies it', async () => {
@@ -125,36 +129,22 @@ describe('IncomingWebhooksPanel', () => {
     expect(w.find('[data-testid="revealed-url"]').exists()).toBe(false)
   })
 
-  it('renames inline and ignores empty or cancelled names', async () => {
+  it('renames in the settings draft: spacing is no change, an empty name cannot be saved', async () => {
     const w = await mountPanel()
-    const rename = () => w.find('button[aria-label="Rename Hook 1"]')
-    await rename().trigger('click')
-    const input = w.find('li input[type="text"]')
-    await input.setValue('Renamed')
+    await w.find('button[aria-label="Settings of Hook 1"]').trigger('click')
+    const name = w.find('[data-testid="incoming-edit-name"]')
+    const save = w.find('[data-testid="unsaved-save"]')
+    await name.setValue('  Hook 1 ')
+    expect(save.attributes('disabled')).toBeDefined()
+    await name.setValue('  ')
+    expect(save.attributes('disabled')).toBeDefined()
+    await name.setValue('  Renamed ')
     apiMock.mockResolvedValueOnce({ ...hook(1), name: 'Renamed' })
-    await w.find('li form').trigger('submit')
+    await save.trigger('click')
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith(`/api/admin/webhooks/${hook(1).id}`, expect.objectContaining({ method: 'PATCH', json: { name: 'Renamed' } }))
     expect(w.findAll('[data-testid="incoming-name"]')[0]?.text()).toBe('Renamed')
-
-    await w.find('button[aria-label="Rename Hook 2"]').trigger('click')
-    await w.find('li input[type="text"]').setValue('  ')
-    await w.find('li input[type="text"]').trigger('blur')
-    await flushPromises()
-    expect(apiMock).toHaveBeenCalledTimes(2) // load + the one rename
-    await w.find(`button[aria-label="Rename Renamed"]`).trigger('click')
-    await w.find('li input[type="text"]').trigger('keydown.esc')
-    expect(w.find('li input[type="text"]').exists()).toBe(false)
-
-    await w.find('button[aria-label="Rename Hook 2"]').trigger('click')
-    await w.find('li input[type="text"]').setValue('Nope')
-    apiMock.mockRejectedValueOnce(new Error('forbidden'))
-    // Enter and the blur that follows it both arrive before the field is gone.
-    const field = w.find('li input[type="text"]').element
-    field.dispatchEvent(new Event('blur'))
-    field.dispatchEvent(new Event('blur'))
-    await flushPromises()
-    expect(toastTexts()).toContain('forbidden')
+    expect(toastTexts()).toContain('Webhook saved.')
   })
 
   it('makes a new URL after confirming', async () => {
@@ -212,7 +202,7 @@ describe('IncomingWebhooksPanel', () => {
     expect(w.findAll('[data-testid="incoming-webhook"]')).toHaveLength(2)
   })
 
-  it('shows and changes the settings of a webhook and who made it', async () => {
+  it('shows who made a webhook and saves several settings together', async () => {
     useChatStore().members = [{ ...userFixtureForMember(), display_name: 'Max' }]
     const w = await mountPanel([hook(1, { created_by: fixtureId(7) }), hook(2)])
     expect(w.find('[data-testid="webhook-settings"]').exists()).toBe(false)
@@ -222,22 +212,31 @@ describe('IncomingWebhooksPanel', () => {
     const box = (key: string) => w.find(`input[data-setting="${key}"]`)
     expect((box('allow_everyone').element as HTMLInputElement).checked).toBe(false)
     expect((box('allow_embeds').element as HTMLInputElement).checked).toBe(true)
-    apiMock.mockResolvedValueOnce(hook(1, { created_by: fixtureId(7), allow_everyone: true }))
-    ;(box('allow_everyone').element as HTMLInputElement).checked = true
-    await box('allow_everyone').trigger('change')
+    await box('allow_everyone').setValue(true)
+    await box('allow_embeds').setValue(false)
+    expect(apiMock).toHaveBeenCalledTimes(1)
+    apiMock.mockResolvedValueOnce(hook(1, { created_by: fixtureId(7), allow_everyone: true, allow_embeds: false }))
+    await w.find('[data-testid="unsaved-save"]').trigger('click')
     await flushPromises()
-    expect(apiMock).toHaveBeenLastCalledWith(`/api/admin/webhooks/${hook(1).id}`, expect.objectContaining({ method: 'PATCH', json: { allow_everyone: true } }))
-    expect((box('allow_everyone').element as HTMLInputElement).checked).toBe(true)
-    apiMock.mockRejectedValueOnce(new Error('cannot'))
-    ;(box('allow_embeds').element as HTMLInputElement).checked = false
-    await box('allow_embeds').trigger('change')
-    await flushPromises()
-    expect(toastTexts()).toContain('cannot')
-    // Another webhook, another switch; the same button closes it.
+    expect(apiMock).toHaveBeenLastCalledWith(`/api/admin/webhooks/${hook(1).id}`, expect.objectContaining({ method: 'PATCH', json: { allow_everyone: true, allow_embeds: false } }))
+    // Nothing unsaved left: another webhook opens without a question, the same button closes it.
     await open(2).trigger('click')
+    expect(confirmMock).not.toHaveBeenCalled()
     expect(w.find('[data-testid="incoming-audit"]').text()).toBe('Created by an unknown member')
     await open(2).trigger('click')
     expect(w.find('[data-testid="webhook-settings"]').exists()).toBe(false)
+  })
+
+  it('asks before another webhook replaces settings with unsaved edits', async () => {
+    const w = await mountPanel()
+    await w.find('button[aria-label="Settings of Hook 1"]').trigger('click')
+    await w.find('input[data-setting="allow_embeds"]').setValue(false)
+    confirmMock.mockResolvedValueOnce(false)
+    await w.find('button[aria-label="Settings of Hook 2"]').trigger('click')
+    await flushPromises()
+    expect(confirmMock).toHaveBeenCalledTimes(1)
+    expect(w.find('[data-testid="incoming-edit-name"]').exists()).toBe(true)
+    expect((w.find('[data-testid="incoming-edit-name"]').element as HTMLInputElement).value).toBe('Hook 1')
   })
 
   it('names a member by username when they have no display name', async () => {
@@ -320,7 +319,7 @@ describe('OutgoingWebhooksPanel', () => {
     const w = await mountPanel([])
     await w.find('[data-testid="outgoing-new"]').trigger('click')
     const form = w.find('[data-testid="outgoing-form"]')
-    const submit = form.find('button[type="submit"]')
+    const submit = form.find('[data-testid="unsaved-save"]')
     expect((submit.element as HTMLButtonElement).disabled).toBe(true)
     await form.find('input[type="text"]').setValue(' CI ')
     await form.find('input[type="url"]').setValue(' https://ci.example/hook ')
@@ -341,7 +340,7 @@ describe('OutgoingWebhooksPanel', () => {
     expect(useToastStore().toasts.some(t => t.detail === 'whsec_abc')).toBe(true)
   })
 
-  it('keeps the form open when saving fails, and can be cancelled', async () => {
+  it('keeps the form open when saving fails, and cancelling with edits asks first', async () => {
     const w = await mountPanel([])
     await w.find('[data-testid="outgoing-new"]').trigger('click')
     await w.find('input[type="text"]').setValue('CI')
@@ -349,12 +348,26 @@ describe('OutgoingWebhooksPanel', () => {
     apiMock.mockRejectedValueOnce(new Error('url not allowed'))
     await w.find('[data-testid="outgoing-form"]').trigger('submit')
     await flushPromises()
-    expect(toastTexts()).toContain('url not allowed')
+    expect(w.find('[data-testid="unsaved-error"]').text()).toBe('url not allowed')
     expect(w.find('[data-testid="outgoing-form"]').exists()).toBe(true)
-    await w.find('[data-testid="outgoing-form"] button[type="button"]').trigger('click')
+    confirmMock.mockResolvedValueOnce(false)
+    await w.find('[data-testid="outgoing-cancel"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="outgoing-form"]').exists()).toBe(true)
+    confirmMock.mockResolvedValueOnce(true)
+    await w.find('[data-testid="outgoing-cancel"]').trigger('click')
+    await flushPromises()
     expect(w.find('[data-testid="outgoing-form"]').exists()).toBe(false)
-    // Submitting a closed form does nothing.
     expect(apiMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('cancels a pristine form without asking', async () => {
+    const w = await mountPanel([])
+    await w.find('[data-testid="outgoing-new"]').trigger('click')
+    await w.find('[data-testid="outgoing-cancel"]').trigger('click')
+    await flushPromises()
+    expect(confirmMock).not.toHaveBeenCalled()
+    expect(w.find('[data-testid="outgoing-form"]').exists()).toBe(false)
   })
 
   it('edits an existing webhook', async () => {
@@ -370,21 +383,41 @@ describe('OutgoingWebhooksPanel', () => {
     expect(w.find('[data-testid="revealed-secret"]').exists()).toBe(false)
   })
 
-  it('switches a webhook off and on', async () => {
+  it('switches a webhook off and on in the edit draft, stored only on Save', async () => {
     const w = await mountPanel()
-    apiMock.mockResolvedValueOnce(out(1, { status: 'disabled' }))
-    await row(w, 1).find('button[aria-label="Switch off Out 1"]').trigger('click')
+    await row(w, 1).find('button[aria-label="Edit Out 1"]').trigger('click')
+    const box = () => w.find('[data-testid="outgoing-enabled"]')
+    const save = () => w.find('[data-testid="unsaved-save"]')
+    expect((box().element as HTMLInputElement).checked).toBe(true)
+    expect(save().attributes('disabled')).toBeDefined()
+    await box().setValue(false)
+    expect(apiMock).toHaveBeenCalledTimes(1)
+    expect(save().attributes('disabled')).toBeUndefined()
+    await box().setValue(true)
+    expect(save().attributes('disabled')).toBeDefined()
+    await box().setValue(false)
+    apiMock.mockResolvedValueOnce(out(1, { status: 'disabled' })).mockResolvedValueOnce([out(1, { status: 'disabled' })])
+    await save().trigger('click')
     await flushPromises()
-    expect(apiMock).toHaveBeenCalledWith(`/api/admin/outgoing-webhooks/${out(1).id}`, expect.objectContaining({ json: { enabled: false } }))
+    expect(apiMock).toHaveBeenCalledWith(`/api/admin/outgoing-webhooks/${out(1).id}`, expect.objectContaining({ method: 'PATCH', json: { enabled: false } }))
     expect(row(w, 1).find('[data-testid="outgoing-status"]').text()).toBe('Off')
-    apiMock.mockResolvedValueOnce(out(2))
-    await row(w, 2).find('button[aria-label="Switch on Out 2"]').trigger('click')
-    await flushPromises()
-    expect(apiMock).toHaveBeenLastCalledWith(`/api/admin/outgoing-webhooks/${out(2).id}`, expect.objectContaining({ json: { enabled: true } }))
-    apiMock.mockRejectedValueOnce(new Error('no'))
-    await row(w, 1).find('button[aria-label="Switch on Out 1"]').trigger('click')
-    await flushPromises()
-    expect(toastTexts()).toContain('no')
+  })
+
+  it('ignores spacing and event order when deciding what changed, and needs an event', async () => {
+    const w = await mountPanel([out(1, { events: ['MESSAGE_CREATE', 'MESSAGE_DELETE'] })])
+    await row(w, 1).find('button[aria-label="Edit Out 1"]').trigger('click')
+    const save = () => w.find('[data-testid="unsaved-save"]')
+    await w.find('input[type="text"]').setValue('  Out 1 ')
+    await w.find('input[type="url"]').setValue(' https://example.org/1 ')
+    await w.find('input[data-event="MESSAGE_CREATE"]').trigger('change')
+    await w.find('input[data-event="MESSAGE_DELETE"]').trigger('change')
+    await w.find('input[data-event="MESSAGE_DELETE"]').trigger('change')
+    await w.find('input[data-event="MESSAGE_CREATE"]').trigger('change')
+    expect(save().attributes('disabled')).toBeDefined()
+    await w.find('input[data-event="MESSAGE_CREATE"]').trigger('change')
+    await w.find('input[data-event="MESSAGE_DELETE"]').trigger('change')
+    expect(w.find('[data-testid="outgoing-events-error"]').exists()).toBe(true)
+    expect(save().attributes('disabled')).toBeDefined()
   })
 
   it('sends a test event and shows the result', async () => {
@@ -496,6 +529,30 @@ describe('ChannelWebhooksDialog', () => {
     expect(w.findComponent(IncomingWebhooksPanel).exists()).toBe(false)
     w.findComponent({ name: 'BaseDialog' }).vm.$emit('close')
     expect(w.emitted('close')).toHaveLength(1)
+    w.unmount()
+  })
+
+  it('asks before a tab switch or closing drops an unsaved webhook form', async () => {
+    apiMock.mockResolvedValue([])
+    const w = mount(ChannelWebhooksDialog, { props: { channel: { id: channelId, name: 'general' } }, attachTo: document.body })
+    await flushPromises()
+    const tabs = w.findAll('[role="tab"]')
+    await tabs[1]?.trigger('click')
+    await flushPromises()
+    await w.find('[data-testid="outgoing-new"]').trigger('click')
+    await w.find('input[type="text"]').setValue('CI')
+    confirmMock.mockResolvedValueOnce(false)
+    await tabs[0]?.trigger('click')
+    await flushPromises()
+    expect(w.findComponent(OutgoingWebhooksPanel).exists()).toBe(true)
+    confirmMock.mockResolvedValueOnce(false)
+    await w.get('[data-dialog-close]').trigger('click')
+    await flushPromises()
+    expect(w.emitted('close')).toBeUndefined()
+    confirmMock.mockResolvedValueOnce(true)
+    await tabs[0]?.trigger('click')
+    await flushPromises()
+    expect(w.findComponent(IncomingWebhooksPanel).exists()).toBe(true)
     w.unmount()
   })
 })
