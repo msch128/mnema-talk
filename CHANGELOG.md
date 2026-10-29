@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.5.0](https://github.com/msch128/mnema-talk/compare/v1.4.0...v1.5.0) (2026-10-29)
+
+
+### Features
+
+* **auth:** Discord-style username rules for new accounts ([#489](https://github.com/msch128/mnema-talk/issues/489)) ([25fdbaf](https://github.com/msch128/mnema-talk/commit/25fdbaf47e932c6bfb8c23c160348c7b93ffc0b7))
+* call the server by its community name everywhere ([#488](https://github.com/msch128/mnema-talk/issues/488)) ([85c026c](https://github.com/msch128/mnema-talk/commit/85c026c089c000eb5aaca9805073457c4eca21b5))
+* **linkpreview:** rich link previews with click-to-play video and share tags ([#484](https://github.com/msch128/mnema-talk/issues/484)) ([24d3460](https://github.com/msch128/mnema-talk/commit/24d346025f97cee7764137ec27ed8dfc9c49d807))
+* **ops:** setup assistant, setup checks and automatic voice address ([#487](https://github.com/msch128/mnema-talk/issues/487)) ([251ef62](https://github.com/msch128/mnema-talk/commit/251ef624dcc9f4f43ce50a7fb6cca6787a4473f9))
+* **web:** show the desktop clients' connect errors in the interface language ([#486](https://github.com/msch128/mnema-talk/issues/486)) ([833839d](https://github.com/msch128/mnema-talk/commit/833839dceb052d304e94e0ba5b9e9b98f174a1cd))
+
+
+### Bug Fixes
+
+* **media:** keep one bad key package from blocking every add commit ([#491](https://github.com/msch128/mnema-talk/issues/491)) ([5bba62e](https://github.com/msch128/mnema-talk/commit/5bba62eb86ae34cd442ea8c649f3c9cb65a55e39))
+* **voice:** say when no media connection comes up and keep unreachable IPv6 out of the offer ([#482](https://github.com/msch128/mnema-talk/issues/482)) ([234443a](https://github.com/msch128/mnema-talk/commit/234443af4c40f587b1cde6d75d850948b03e13f7))
+* web client review findings ([#480](https://github.com/msch128/mnema-talk/issues/480)) ([f3d1a01](https://github.com/msch128/mnema-talk/commit/f3d1a0115d9e051556fca72468b913bb07406dd9))
+
 ## [1.4.0](https://github.com/msch128/mnema-talk/compare/v1.3.0...v1.4.0) (2026-10-28)
 
 
