@@ -1,0 +1,21 @@
+scripts/onboarding-proxy-check.sh
+  s_fc0f81897b6653::t_e2da77075dc2ba 82,159
+scripts/onboarding_wizard_check.py
+  s_fc0f81897b6653::t_ef1a07d2514fca 147-149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c1cc15737645a35273b23ac27c84cddc1274a95d",
+  "prompts": {},
+  "sessions": {
+    "s_fc0f81897b6653": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-tests-fc20e0fa5cecb986",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
