@@ -616,7 +616,7 @@ permission check on the channel.
 
 ### WebSocket events
 
-**Server to client (56):** `block_updated`, `channels_changed`, `dm_created`, `dm_member_added`, `dm_member_removed`, `emoji_changed`, `event_delete`, `event_reminder`, `event_update`, `forum_tags_changed`, `interaction_response`, `kicked`, `media_handshake`, `member_joined`, `member_timeout`, `message_create`, `message_delete`, `message_reaction`, `message_update`, `moderation_notice`, `native_access_renewed`, `permissions_changed`, `pins_changed`, `poll_update`, `pong`, `presence_snapshot`, `presence_update`, `read_state`, `reminder_update`, `roles_changed`, `saved_updated`, `scheduled_message_update`, `screen_layers`, `screen_layers_wanted`, `screen_quality`, `screen_viewers`, `server_info`, `stage_hand`, `stage_talk_power`, `system_update`, `talk_leader`, `talk_moved`, `talk_reaction`, `thread_follow_updated`, `typing`, `user_stats`, `user_update`, `voice_kicked`, `voice_mute_state`, `voice_rooms`, `voice_snapshot`, `voice_speaking`, `voice_state_update`, `webrtc_candidate`, `webrtc_media_state`, `webrtc_offer`
+**Server to client (55):** `block_updated`, `channels_changed`, `dm_created`, `dm_member_added`, `dm_member_removed`, `emoji_changed`, `event_delete`, `event_reminder`, `event_update`, `forum_tags_changed`, `interaction_response`, `kicked`, `media_handshake`, `member_joined`, `member_timeout`, `message_create`, `message_delete`, `message_reaction`, `message_update`, `moderation_notice`, `permissions_changed`, `pins_changed`, `poll_update`, `pong`, `presence_snapshot`, `presence_update`, `read_state`, `reminder_update`, `roles_changed`, `saved_updated`, `scheduled_message_update`, `screen_layers`, `screen_layers_wanted`, `screen_quality`, `screen_viewers`, `server_info`, `stage_hand`, `stage_talk_power`, `system_update`, `talk_leader`, `talk_moved`, `talk_reaction`, `thread_follow_updated`, `typing`, `user_stats`, `user_update`, `voice_kicked`, `voice_mute_state`, `voice_rooms`, `voice_snapshot`, `voice_speaking`, `voice_state_update`, `webrtc_candidate`, `webrtc_media_state`, `webrtc_offer`
 
 
 **Client to server (20):** `media_handshake`, `ping`, `presence_idle`, `stage_hand`, `stage_talk_power`, `talk_reaction`, `typing`, `voice_join`, `voice_leave`, `voice_mute_state`, `voice_speaking`, `webrtc_answer`, `webrtc_camera_stop`, `webrtc_candidate`, `webrtc_diag`, `webrtc_layers`, `webrtc_request_keyframe`, `webrtc_screenshare_start`, `webrtc_screenshare_stop`, `webrtc_subscribe`
@@ -812,8 +812,7 @@ Ordered by where a mistake would cost most.
    are a map of what is already pinned.
 4. **Authentication.** Sign-in lockout and the known-device cookie, TOTP
    brute-force budget, reset and confirmation tokens, session revocation
-   paths (password change, log out everywhere, admin revoke, inactivity), native
-   (desktop) grants, bot token binding to the issuer.
+   paths (password change, log out everywhere, admin revoke, inactivity), bot token binding to the issuer.
 5. **Injection and rendering.** Markdown renderer and sanitiser, the CSP
    (every admin panel), filenames and Content-Disposition, link-card and GIF
    proxy handling, search filter parsing, automod normalisation (L2, M1),

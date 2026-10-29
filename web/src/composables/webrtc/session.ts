@@ -5,7 +5,6 @@ import { useAuthStore } from '../../stores/auth'
 import { usePermissionsStore } from '../../stores/permissions'
 import { mediaCall } from '../../lib/media/api'
 import { t } from '../../i18n'
-import { platform } from '../../lib/platform'
 import type { SubscribeRequest, ServerEventPayloads } from '../../types/events'
 import { loadIceServers } from './iceServers'
 import { isLobby, joinViaLobby, lobbyMoved, lobbyRefused } from './lobby'
@@ -62,10 +61,6 @@ async function captureMicrophone(cx: Cx): Promise<MediaStream | null> {
 function canJoinVoiceChannel(cx: Cx, channelId: string): boolean {
   if (!usePermissionsStore().canIn(channelId, 'connect')) {
     useToastStore().error(t('talk.noConnect'))
-    return false
-  }
-  if (platform.isDesktop()) {
-    useToastStore().error(t('nativeDesktop.mediaUnavailable'))
     return false
   }
   return !(channelId === cx.voice.currentChannelId && cx.st.localAudioStream.value)
@@ -157,7 +152,6 @@ const ROOM_STATE_GRACE_MS = 5000
 // treats it as a resume (no leave/join for the others) within its grace time.
 export function rejoinAfterReconnect(cx: Cx) {
   const { voice, chat } = cx
-  if (platform.isDesktop()) return
   const channelId = voice.currentChannelId
   if (!channelId) return
   // The server keeps the roster across a short disconnect, so nobody else
@@ -225,7 +219,6 @@ function handleKicked(cx: Cx, payload: ServerEventPayloads['voice_kicked']) {
 // Must run once the WebSocket is connected (voice_join goes over it).
 export async function resumeVoiceSession(cx: Cx) {
   const { voice, chat } = cx
-  if (platform.isDesktop()) return false
   const channelId = voiceSession.recent()
   if (!channelId || voice.currentChannelId) return false
   if (!chat.isVoiceChannel(channelId)) {

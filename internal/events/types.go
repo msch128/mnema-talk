@@ -45,7 +45,6 @@ const (
 	Typing              = "typing"
 	VoiceSpeaking       = "voice_speaking"
 	VoiceMuteState      = "voice_mute_state"
-	NativeAccessRenewed = "native_access_renewed"
 	EmojiChanged        = "emoji_changed"
 	ThreadFollowUpdated = "thread_follow_updated"
 	BlockUpdated        = "block_updated"

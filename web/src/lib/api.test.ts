@@ -190,11 +190,11 @@ describe('queued-session unauthorized effect guards', () => {
 })
 
 
-describe('separate browser and native API clients', () => {
+describe('separate browser and injected-transport API clients', () => {
   it('uses only injected transport and keeps runtime decoders at the boundary', async () => {
     const browserFetch = vi.fn<typeof fetch>()
     vi.stubGlobal('fetch', browserFetch)
-    const user = userFixture({ username: 'native-fixture' })
+    const user = userFixture({ username: 'injected-fixture' })
     const transport = vi.fn().mockResolvedValue({ status: 200, body: user })
     const client = createApiClient(transport)
     const controller = new AbortController()
@@ -222,7 +222,7 @@ describe('separate browser and native API clients', () => {
     } finally { offFirst(); offSecond(); offBrowser() }
   })
 
-  it('suppresses stale owner effects while still rejecting a pending native request', async () => {
+  it('suppresses stale owner effects while still rejecting a pending request', async () => {
     let resolveReply: ((reply: ApiReply) => void) | undefined
     const client = createApiClient(() => new Promise(resolve => { resolveReply = resolve }))
     const oldListener = vi.fn(), newListener = vi.fn()
@@ -268,7 +268,7 @@ describe('transport boundary failure classification', () => {
     expect(browserFetch).not.toHaveBeenCalled()
   })
 
-  it.each([NaN, Infinity, 200.5, 0, 600])('rejects invalid native reply status %s without accepting its payload', async status => {
+  it.each([NaN, Infinity, 200.5, 0, 600])('rejects invalid reply status %s without accepting its payload', async status => {
     const client = createApiClient(async () => ({ status, body: { private: 'PRIVATE_FIXTURE' } }))
     const decode = vi.fn((body: unknown) => body)
     const error = await apiFailure(client.api('/api/members', { decode }))

@@ -1893,42 +1893,13 @@
     "summary": "{voice} in Talks · {messages} messages"
   },
   "nativeDesktop": {
-    "contextError": "Couldn’t start the local connection.",
     "connectError": "This server is unavailable or does not support this DEV build.",
-    "disconnectError": "The connection ended. Connect again.",
     "dev": "DEV development build",
-    "changeServer": "Change server",
     "connectCommunity": "Connect to your community.",
     "address": "Server address",
     "checking": "Checking connection…",
     "connect": "Connect",
-    "placeholder": "talk.example.org",
-    "featureUnavailable": "This feature is not yet available in this DEV build.",
-    "mediaUnavailable": "Talks, camera and screen sharing are not yet available in this DEV build.",
-    "addressTooLong": "Server address is too long",
-    "loginRequired": "Sign in. Registration will not be retried automatically.",
-    "chatAuthorizationRequired": "This chat feature requires valid native authorization."
-  },
-  "nativeTrust": {
-    "title": "Set up encryption",
-    "description": "Set up encryption for this channel. Complete the final confirmation in the native security dialog.",
-    "community": "Community",
-    "server": "Server",
-    "channel": "Channel",
-    "account": "Account",
-    "device": "Device",
-    "fingerprint": "Key fingerprint",
-    "saved": "The key has been saved.",
-    "opening": "Opening…",
-    "confirm": "Check in security dialog",
-    "preparing": "Preparing…",
-    "prepare": "Prepare setup",
-    "expired": "Setup has expired. Start again.",
-    "cancelled": "Setup was cancelled.",
-    "failed": "Couldn’t complete the setup.",
-    "statusError": "Couldn’t read the security status.",
-    "beginError": "Couldn’t start the setup.",
-    "confirmError": "Couldn’t open the native confirmation."
+    "placeholder": "talk.example.org"
   },
   "gaming": {
     "title": "Talk · DEV",

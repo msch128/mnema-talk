@@ -18,7 +18,7 @@ import (
 func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 	c.voiceMu.Lock()
 	defer c.voiceMu.Unlock()
-	if c.closed.Load() || !c.commandsAllowed() {
+	if c.closed.Load() {
 		return
 	}
 	if !h.checkJoinPermission(c, ch.ID) {
@@ -135,7 +135,7 @@ func (h *Hub) takeSeat(c *Client, ch *chat.ChannelInfo, rejoin bool) (voiceSeat,
 	key := voiceKey{c.User.ID, ch.ID}
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if h.closed || !c.commandsAllowed() {
+	if h.closed {
 		return voiceSeat{}, false
 	}
 	if h.isVoiceRoomFull(ch, c.User.ID) {
@@ -223,10 +223,7 @@ func (h *Hub) attachPeer(c *Client, chID uuid.UUID) bool {
 	sendOffer := func(offer webrtc.SessionDescription) { c.SendEvent(events.WebrtcOffer, offer) }
 	sendICE := func(cand *webrtc.ICECandidateInit) { c.SendEvent(events.WebrtcCandidate, cand) }
 	h.evictSiblingConnections(c, chID)
-	peer, err, leased := c.joinLeasedVoice(h.SFU, chID, sendOffer, sendICE)
-	if !leased && c.commandsAllowed() {
-		_, peer, err = h.SFU.Join(chID, c.User.ID, sendOffer, sendICE)
-	}
+	_, peer, err := h.SFU.Join(chID, c.User.ID, sendOffer, sendICE)
 	if err != nil {
 		// Without a media connection the seat is worth nothing: give it up
 		// instead of announcing a member nobody can hear.

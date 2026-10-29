@@ -96,7 +96,7 @@ func TestExpiredStatusReadsEmptyAndTheSweepClearsAndBroadcasts(t *testing.T) {
 	}
 
 	before := len(a.events.Snapshot())
-	a.router.PreviewDeps().Accounts.ExpireStatuses(ctx)
+	a.router.accounts.ExpireStatuses(ctx)
 	var text string
 	var at *time.Time
 	if err := a.db.QueryRow(ctx, `SELECT status_text, status_expires_at FROM users WHERE username = 'max'`).Scan(&text, &at); err != nil {
@@ -114,7 +114,7 @@ func TestExpiredStatusReadsEmptyAndTheSweepClearsAndBroadcasts(t *testing.T) {
 	if updates != 1 {
 		t.Fatalf("user_update broadcasts after the sweep: %d, want 1", updates)
 	}
-	a.router.PreviewDeps().Accounts.ExpireStatuses(ctx)
+	a.router.accounts.ExpireStatuses(ctx)
 	if len(a.events.Snapshot()) != before+1 {
 		t.Fatal("a second sweep announced again")
 	}

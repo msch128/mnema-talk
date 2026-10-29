@@ -53,7 +53,7 @@ in PostgreSQL; uploads, avatars and profile banners live in S3-compatible object
 | [`internal/linkpreview`](../internal/linkpreview/linkpreview.go) | Link cards: fetches title, description and image of public pages with an SSRF guard (http(s) on 80/443 only, every resolved address checked, also on redirects) and a cache. |
 | [`internal/imageverify`](../internal/imageverify/verifier.go), [`internal/updaterd`](../internal/updaterd/server.go) | The self-update sidecar ([`cmd/updater`](../cmd/updater/main.go)): checks the cosign signature and SLSA provenance of a new release image against the pinned release workflow identity, then pulls that digest and has the recreator restart the app. |
 | [`internal/update`](../internal/update/checker.go) | Release check against GitHub every 30 minutes (ETag, backoff on 403/429), image-tag reach analysis ([`image.go`](../internal/update/image.go)) and the client for the optional updater sidecar ([`updater.go`](../internal/update/updater.go)).|
-| [`internal/nativepreview`](../internal/nativepreview/), [`internal/repo`](../internal/repo/limits_test.go) | The isolated native preview transport (experimental, not public API) and the repository-wide checks: size limits for Go files and functions ([AGENTS.md](../AGENTS.md)). |
+| [`internal/repo`](../internal/repo/limits_test.go) | The repository-wide checks: size limits for Go files and functions ([AGENTS.md](../AGENTS.md)). |
 | [`internal/version`](../internal/version/version.go) | Version and commit baked in at build time (`VERSION` / `REVISION` build args). |
 | [`web/web.go`](../web/web.go) | Embeds `web/dist` with `//go:embed` and serves the SPA. |
 
@@ -473,7 +473,7 @@ client works out the absolute time from the member's own time zone ("tonight"
 is 23:59 and "tomorrow morning" 08:00 where they are) and sends it as
 `expires_at`; the server only checks that it lies ahead, at most a year. Two
 mechanisms make the clearing exact without a timer per member: every read of a
-user (`auth.userColumns`, the member list, the native session lease) maps a
+user (`auth.userColumns`, the member list) maps a
 status past its time to an empty one, so nobody sees a stale line even between
 sweeps, and `Handler.RunStatusExpiry` (every 30 seconds, an indexed partial
 scan) clears the rows and broadcasts the usual `user_update`. Setting another

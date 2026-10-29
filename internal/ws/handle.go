@@ -24,10 +24,7 @@ type clientEvent struct {
 }
 
 func (c *Client) handle(eventType string, payload json.RawMessage) {
-	if !c.commandsAllowed() {
-		return
-	}
-	ctx, cancel := context.WithTimeout(c.commandContext(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	var p clientEvent
@@ -90,10 +87,10 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 }
 
 // currentRoom is the SFU room c is seated in, or nil when it is in none, the
-// SFU is off, or the lease no longer allows commands.
+// SFU is off.
 func (c *Client) currentRoom() *sfu.Room {
 	cur := c.currentVoice()
-	if cur == nil || c.hub.SFU == nil || !c.commandsAllowed() {
+	if cur == nil || c.hub.SFU == nil {
 		return nil
 	}
 	return c.hub.SFU.Room(*cur)
@@ -137,9 +134,6 @@ func (c *Client) handleTyping(ctx context.Context, channelID uuid.UUID) {
 }
 
 func (c *Client) canTypeInChannel(ctx context.Context, channelID uuid.UUID) bool {
-	if !c.commandsAllowed() {
-		return false
-	}
 	snap, ok := c.hub.permSnapshot(channelID)
 	if !ok || !c.hub.channelKnown(ctx, snap, channelID) {
 		return false
@@ -165,15 +159,11 @@ func (c *Client) handleAnswer(payload json.RawMessage) {
 		return
 	}
 	peer := c.peer()
-	if peer == nil || !c.commandsAllowed() {
+	if peer == nil {
 		return
 	}
 	if err := peer.SetAnswer(answer); err != nil {
-		if c.hasNativeLease() {
-			slog.Warn("native sfu answer rejected", "user", c.User.ID)
-		} else {
-			slog.Warn("sfu set remote description, the offer is sent again", "user", c.User.ID, "err", err)
-		}
+		slog.Warn("sfu set remote description, the offer is sent again", "user", c.User.ID, "err", err)
 	}
 }
 
@@ -182,10 +172,8 @@ func (c *Client) handleCandidate(payload json.RawMessage) {
 	if json.Unmarshal(payload, &cand) != nil {
 		return
 	}
-	if !c.hasNativeLease() {
-		slog.Debug("sfu remote candidate", "user", c.User.Username, "candidate", cand.Candidate)
-	}
-	if peer := c.peer(); peer != nil && c.commandsAllowed() {
+	slog.Debug("sfu remote candidate", "user", c.User.Username, "candidate", cand.Candidate)
+	if peer := c.peer(); peer != nil {
 		// Held until the answer is applied; a rejected candidate is
 		// logged by the SFU with its reason (rate-limited).
 		_ = peer.AddRemoteCandidate(cand)
@@ -195,7 +183,7 @@ func (c *Client) handleCandidate(payload json.RawMessage) {
 // handleDiag logs a browser's own view of its voice connection, for
 // troubleshooting.
 func (c *Client) handleDiag(payload json.RawMessage) {
-	if !c.hasNativeLease() && len(payload) <= payloadCap(events.ClientWebrtcDiag) && c.allowDiag(time.Now()) {
+	if len(payload) <= payloadCap(events.ClientWebrtcDiag) && c.allowDiag(time.Now()) {
 		slog.Debug("webrtc client diag", "user", c.User.Username, "diag", json.RawMessage(payload))
 	}
 }

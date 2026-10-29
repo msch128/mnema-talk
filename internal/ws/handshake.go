@@ -82,7 +82,7 @@ func handshakeChanged(err error, fresh *auth.User, userID uuid.UUID, freshTV, tv
 func (h *Hub) admitVerified(c *Client, fresh *auth.User) (before, after string, ok bool) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if h.closed || c.closed.Load() || !c.commandsAllowed() {
+	if h.closed || c.closed.Load() {
 		return "", "", false
 	}
 	if !h.takePending(c, fresh) {

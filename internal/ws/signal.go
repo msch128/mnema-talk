@@ -33,7 +33,7 @@ func screenViewersPayload(roomID, sharer uuid.UUID, viewers []uuid.UUID) map[str
 }
 
 func (c *Client) activeVoiceRoom() *sfu.Room {
-	if !c.commandsAllowed() || c.hub.SFU == nil {
+	if c.hub.SFU == nil {
 		return nil
 	}
 	cur := c.currentVoice()
@@ -41,11 +41,6 @@ func (c *Client) activeVoiceRoom() *sfu.Room {
 		return nil
 	}
 	room := c.hub.SFU.Room(*cur)
-	// The native lease may lapse while the room is looked up: check again
-	// before anything is subscribed.
-	if room == nil || !c.commandsAllowed() {
-		return nil
-	}
 	return room
 }
 
