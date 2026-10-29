@@ -3,11 +3,15 @@
 # 17, exercise the normal-start guard, and prove failed stop/import fail closed.
 # Usage: scripts/postgres-upgrade-drill.sh [image]
 # DRILL_SCENARIOS="direct guard import-failure stop-failure" (default all)
-# DRILL_PORT=58290; each scenario gets independent random containers/volumes.
+# DRILL_PORT (default: a free port); each scenario gets independent random containers/volumes.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 IMAGE="${1:-mnema-talk:local}"
-PORT="${DRILL_PORT:-58290}"
+# shellcheck source=scripts/free-port.sh
+source "$ROOT/scripts/free-port.sh"
+PORT="${DRILL_PORT:-$(free_port)}"
+UDP_MIN="${DRILL_UDP_PORT:-$(free_port_range 11)}"
+UDP_MAX=$((UDP_MIN + 10))
 BASE="http://127.0.0.1:$PORT"
 SCENARIOS="${DRILL_SCENARIOS:-direct guard import-failure stop-failure}"
 REAL_DOCKER="$(command -v docker)"
@@ -61,7 +65,7 @@ services:
     container_name: $project-app
     ports: !override
       - "127.0.0.1:$PORT:8080"
-      - "127.0.0.1:58300-58310:58300-58310/udp"
+      - "127.0.0.1:$UDP_MIN-$UDP_MAX:$UDP_MIN-$UDP_MAX/udp"
   postgres:
     container_name: $project-postgres
   seaweedfs:
@@ -104,8 +108,8 @@ ADMIN_USERNAME=cool_guy
 ADMIN_INITIAL_PASSWORD=$ADMIN_PASSWORD
 UPDATE_CHECK_ENABLED=false
 LINK_PREVIEWS_ENABLED=false
-WEBRTC_UDP_PORT_MIN=58300
-WEBRTC_UDP_PORT_MAX=58310
+WEBRTC_UDP_PORT_MIN=$UDP_MIN
+WEBRTC_UDP_PORT_MAX=$UDP_MAX
 WEBRTC_NAT_1TO1_IP=127.0.0.1
 ENV
   chmod 600 "$DEPLOY/.env"

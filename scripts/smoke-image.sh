@@ -6,13 +6,16 @@
 # everything down again. Exercises the image, its entrypoint and the compose
 # hardening (read-only root, cap_drop, tmpfs, memory limits) together.
 # Usage: scripts/smoke-image.sh [image]   (default mnema-talk:local; `make smoke`)
-#   SMOKE_PORT=58090  host port for the app
+#   SMOKE_PORT=<port>  host port for the app
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 IMAGE="${1:-mnema-talk:local}"
-PORT="${SMOKE_PORT:-58090}"
+source "$(pwd)/scripts/free-port.sh"
+PORT="${SMOKE_PORT:-$(free_port)}"
+UDP_MIN="${SMOKE_UDP_PORT:-$(free_port_range 11)}"
+UDP_MAX=$((UDP_MIN + 10))
 PROJECT="mnema-smoke-$(openssl rand -hex 8)"
 export COMPOSE_PROFILES=""
 OVERRIDE_FILE="$(mktemp)"
@@ -41,8 +44,8 @@ ADMIN_USERNAME=cool_guy
 ADMIN_INITIAL_PASSWORD=$ADMIN_PASSWORD
 UPDATE_CHECK_ENABLED=false
 LINK_PREVIEWS_ENABLED=false
-WEBRTC_UDP_PORT_MIN=58100
-WEBRTC_UDP_PORT_MAX=58110
+WEBRTC_UDP_PORT_MIN=$UDP_MIN
+WEBRTC_UDP_PORT_MAX=$UDP_MAX
 WEBRTC_NAT_1TO1_IP=127.0.0.1
 EOF
 
@@ -53,7 +56,7 @@ services:
     container_name: $PROJECT-app
     ports: !override
       - "127.0.0.1:$PORT:8080"
-      - "127.0.0.1:58100-58110:58100-58110/udp"
+      - "127.0.0.1:$UDP_MIN-$UDP_MAX:$UDP_MIN-$UDP_MAX/udp"
   postgres:
     container_name: $PROJECT-postgres
   seaweedfs:

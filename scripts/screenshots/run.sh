@@ -9,7 +9,11 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 ROOT="$PWD"
-PG_PORT="${SHOTS_PG_PORT:-55932}" S3_PORT="${SHOTS_S3_PORT:-58933}" APP_PORT="${SHOTS_APP_PORT:-58980}"
+source "$ROOT/scripts/free-port.sh"
+PG_PORT="${SHOTS_PG_PORT:-$(free_port)}"
+S3_PORT="${SHOTS_S3_PORT:-$(free_port)}"
+APP_PORT="${SHOTS_APP_PORT:-$(free_port)}"
+UDP_MIN="$(free_port_range 51)"
 BIN="$ROOT/bin/mnema-talk-shots"
 LOG="$(mktemp)"
 COMPOSE=(docker compose -p mnema-shots -f "$ROOT/e2e/docker-compose.yml")
@@ -42,7 +46,7 @@ env -i PATH="$PATH" HOME="$HOME" APP_ENV=development PORT="$APP_PORT" BIND_ADDR=
   DATABASE_URL="postgres://mnema:mnema@127.0.0.1:$PG_PORT/mnema_e2e?sslmode=disable" \
   S3_ENDPOINT="http://127.0.0.1:$S3_PORT" S3_BUCKET=mnema-shots S3_ACCESS_KEY=shotskey1 S3_SECRET_KEY=shotssecret12 S3_FORCE_PATH_STYLE=true \
   WEBHOOK_ALLOW_PRIVATE_TARGETS=127.0.0.0/8 LINK_PREVIEWS_ENABLED=false UPDATE_CHECK_ENABLED=false \
-  WEBRTC_UDP_PORT_MIN=50300 WEBRTC_UDP_PORT_MAX=50350 WEBRTC_NAT_1TO1_IP=127.0.0.1 \
+  WEBRTC_UDP_PORT_MIN="$UDP_MIN" WEBRTC_UDP_PORT_MAX=$((UDP_MIN + 50)) WEBRTC_NAT_1TO1_IP=127.0.0.1 \
   "$BIN" >"$LOG" 2>&1 &
 SERVER_PID=$!
 for _ in $(seq 1 60); do curl -fsS "http://127.0.0.1:$APP_PORT/api/health" >/dev/null 2>&1 && break; sleep 1; done
