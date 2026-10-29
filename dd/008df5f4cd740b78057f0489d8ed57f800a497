@@ -1,0 +1,19 @@
+.github/workflows/dbg-reload.yml
+  s_c42e191206b59f::t_5dc64c6b0ee6ba 41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dd008df5f4cd740b78057f0489d8ed57f800a497",
+  "prompts": {},
+  "sessions": {
+    "s_c42e191206b59f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-onboarding-ops-e64fb94d611ccb23",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
