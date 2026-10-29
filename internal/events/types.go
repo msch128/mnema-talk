@@ -82,6 +82,9 @@ const (
 	EventDelete = "event_delete"
 	// EventReminder notifies members 15 minutes before an event starts.
 	EventReminder = "event_reminder"
+	// CommunityUpdated announces the community's name after the Owner changed
+	// it, so open tabs retitle themselves without a reload.
+	CommunityUpdated = "community_updated"
 )
 
 // Client-to-server events.

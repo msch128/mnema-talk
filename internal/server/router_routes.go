@@ -28,7 +28,7 @@ func (c *components) buildHandler() http.Handler {
 		httpx.CORS(cfg.AllowedOrigins),
 	)
 	r.Route("/api", c.mountAPI)
-	r.Handle("/*", web.Handler())
+	r.Handle("/*", web.Handler(c.d.Names.Get))
 	return r
 }
 

@@ -363,3 +363,22 @@ func TestNewWithoutHostGivesNoMailer(t *testing.T) {
 		t.Fatal("accessors")
 	}
 }
+
+func TestSenderNameFollowsTheCommunityUnlessTheOperatorChoseOne(t *testing.T) {
+	cases := []struct{ from, fromName, want string }{
+		{"Mnema Talk <noreply@example.org>", "Lantern Fox", `"Lantern Fox" <noreply@example.org>`},
+		{"<noreply@example.org>", "Lantern Fox", `"Lantern Fox" <noreply@example.org>`},
+		{"Ops Desk <noreply@example.org>", "Lantern Fox", `"Ops Desk" <noreply@example.org>`},
+		{"Mnema Talk <noreply@example.org>", "", `"Mnema Talk" <noreply@example.org>`},
+	}
+	for _, c := range cases {
+		addr, err := mail.ParseAddress(c.from)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := (&Mailer{from: addr}).sender(Message{FromName: c.fromName})
+		if got != c.want {
+			t.Errorf("From %q name %q: got %s, want %s", c.from, c.fromName, got, c.want)
+		}
+	}
+}

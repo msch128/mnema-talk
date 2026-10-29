@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/msch128/mnema-talk/internal/community"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -23,6 +24,10 @@ type Health struct {
 	Version string `json:"version"`
 	// WebClientAPI identifies the HTTPS web-client desktop integration contract.
 	WebClientAPI int `json:"web_client_api"`
+	// CommunityName is what this server calls itself: the name the Owner set
+	// in the welcome settings, else the host it is served from. It is public
+	// on purpose, so a client can label a server before anyone signs in.
+	CommunityName string `json:"community_name" binding:"optional"`
 	// Features lists the optional features this server has, so a web app of a
 	// newer release can hide what an older server lacks (for example "blocks").
 	// A server of 1.0.x sends no list. See doc/api-stability.md.
@@ -120,7 +125,7 @@ func (h *healthCheck) check(ctx context.Context) *httpx.APIError {
 // @Success 200 {object} Health "Healthy."
 // @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
 // @Router /api/health [get]
-func health(hc *healthCheck, version string) http.HandlerFunc {
+func health(hc *healthCheck, version string, names *community.Names) http.HandlerFunc {
 	if version == "" {
 		version = "dev"
 	}
@@ -129,11 +134,15 @@ func health(hc *healthCheck, version string) http.HandlerFunc {
 			httpx.WriteError(w, err)
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, Health{Status: "ok", Version: version, WebClientAPI: WebClientAPI, Features: Features})
+		httpx.WriteJSON(w, http.StatusOK, Health{Status: "ok", Version: version, WebClientAPI: WebClientAPI, CommunityName: names.Get(r.Context()), Features: Features})
 	}
 }
 
 // HealthHandler returns the health handler for the given dependencies.
 func HealthHandler(deps Deps) http.HandlerFunc {
-	return health(newHealthCheck(deps.DB, deps.StorageReady, healthCacheTTL), deps.Version)
+	names := deps.Names
+	if names == nil && deps.DB != nil {
+		names = community.New(deps.DB, deps.Config.PublicURL)
+	}
+	return health(newHealthCheck(deps.DB, deps.StorageReady, healthCacheTTL), deps.Version, names)
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -140,6 +141,14 @@ func (h *Handler) putSettings(w http.ResponseWriter, r *http.Request) error {
 	}
 	// The rules in force may have changed: everybody's rights with them.
 	h.Perms.Changed(nil)
+	h.Names.Forget()
+	if h.Events != nil {
+		name := out.CommunityName
+		if h.Names != nil {
+			name = h.Names.Get(r.Context())
+		}
+		h.Events.Broadcast(events.CommunityUpdated, map[string]string{"community_name": name})
+	}
 	httpx.WriteJSON(w, http.StatusOK, out)
 	return nil
 }

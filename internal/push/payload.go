@@ -185,8 +185,8 @@ func clean(s string, limit int) string {
 }
 
 // testPayload is what the test button sends.
-func testPayload(locale string, at time.Time) Payload {
-	return Payload{Version: 1, Type: typeTest, Title: "Mnema Talk", Body: text(locale, "test"), Tag: "test", Timestamp: at.UnixMilli()}
+func testPayload(locale, title string, at time.Time) Payload {
+	return Payload{Version: 1, Type: typeTest, Title: title, Body: text(locale, "test"), Tag: "test", Timestamp: at.UnixMilli()}
 }
 
 // encode serialises the payload; it always fits one push record.

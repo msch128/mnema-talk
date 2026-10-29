@@ -9,10 +9,10 @@ import { notifyDialogOpen } from '../lib/notifyDialog'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { t } from '../i18n'
 import { useDismissable } from '../composables/useDismissable'
+import { useCommunityName } from '../composables/useCommunityName'
 
 // The server header (48px, aligned with the channel header) and its dropdown:
 // admin console, creating channels and categories, the legal notices.
-const SERVER_NAME = 'Mnema Talk'
 
 const emit = defineEmits<{ 'open-admin': []; 'open-legal': []; 'create-channel': []; 'create-category': []; 'mark-all-read': [] }>()
 
@@ -24,8 +24,10 @@ const versionStore = useAppVersionStore()
 const updateHint = computed(() => permissions.canOpenAdmin && versionStore.adminUpdateAvailable)
 const showRules = () => { rulesOpen.value = true }
 const showNotifications = () => { notifyDialogOpen.value = true }
-// The community's own name (Admin > Welcome & rules) sits under the product name.
-const subtitle = computed(() => onboarding.state?.community_name.trim() || t('sidebar.subtitle'))
+// The header carries the community's own name (Admin > Welcome & rules).
+const serverName = useCommunityName()
+const subtitle = computed(() => t('sidebar.subtitle'))
+const mark = computed(() => Array.from(serverName.value)[0]?.toUpperCase() ?? 'M')
 
 const menuOpen = ref(false)
 const menuRoot = ref<HTMLElement | null>(null)
@@ -110,16 +112,16 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
         'relative w-full h-12 pl-3 pr-3 border-b border-mnema-hairline flex items-center gap-2.5 text-left transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
         menuOpen ? 'bg-mnema-hover' : 'hover:bg-mnema-hover/70'
       ]"
-      v-tooltip.visual="SERVER_NAME"
+      v-tooltip.visual="serverName"
       @click="toggleMenu"
       @keydown="onMenuButtonKeydown"
     >
       <!-- Mnema Forest Mark -->
       <span class="w-7 h-7 rounded-md bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-semibold text-sm shadow-xs shrink-0">
-        M
+        {{ mark }}
       </span>
       <span class="flex flex-col min-w-0 flex-1">
-        <span class="font-semibold text-nav text-mnema-text truncate">{{ SERVER_NAME }}</span>
+        <span class="font-semibold text-nav text-mnema-text truncate">{{ serverName }}</span>
         <span class="text-xs text-mnema-tertiary truncate">{{ subtitle }}</span>
       </span>
       <X v-if="menuOpen" class="w-4 h-4 text-mnema-muted shrink-0" />

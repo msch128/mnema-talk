@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/community"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/metrics"
@@ -49,6 +50,9 @@ type Service struct {
 	DB     *db.Pool
 	Perms  Snapshots
 	Sender *Sender
+	// Names is the community name pushes use where they name the server (the
+	// test push, an event whose title is private); nil means the product name.
+	Names *community.Names
 	// Previews is false when the operator forbids message text in pushes.
 	Previews bool
 	// Burst is the coalescing window; zero means five seconds.

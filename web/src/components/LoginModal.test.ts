@@ -152,6 +152,14 @@ describe('LoginModal', () => {
     expect(w.find('[data-testid="forgot-password-link"]').exists()).toBe(false)
   })
 
+  it('heads the form with the name the server gives itself', async () => {
+    apiMock.mockResolvedValue({ password_reset: true, community_name: 'talk.example.org' })
+    const w = mountLogin()
+    expect(w.get('[data-testid="login-heading"]').text()).toBe('Mnema Talk')
+    await flushPromises()
+    expect(w.get('[data-testid="login-heading"]').text()).toBe('talk.example.org')
+  })
+
   it('does not guess before the server options are known', async () => {
     apiMock.mockRejectedValue(new Error('offline'))
     const w = mountLogin()

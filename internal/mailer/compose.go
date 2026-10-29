@@ -17,7 +17,7 @@ func (m *Mailer) compose(to string, msg Message) ([]byte, error) {
 	}
 	var b bytes.Buffer
 	header := func(k, v string) { b.WriteString(k + ": " + v + "\r\n") }
-	header("From", m.from.String())
+	header("From", m.sender(msg))
 	header("To", to)
 	header("Subject", mime.QEncoding.Encode("utf-8", msg.Subject))
 	header("Date", time.Now().UTC().Format(time.RFC1123Z))

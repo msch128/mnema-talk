@@ -10,6 +10,7 @@ import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
 import SecondFactorStep from './SecondFactorStep.vue'
 import PasswordInput from './PasswordInput.vue'
 import { useDialog } from '../composables/useDialog'
+import { useCommunityName } from '../composables/useCommunityName'
 import { t, locale, chooseLocale, SUPPORTED } from '../i18n'
 import type { InviteContext } from '../lib/inviteLink'
 
@@ -44,7 +45,10 @@ const isLoading = ref(false)
 
 // Opened from /invite/{code}: the code is filled in and, when the server says
 // it works, the heading names the community. A dead code falls back to sign-in.
-const heading = computed(() => (props.invite?.valid && props.invite.communityName) || 'Mnema Talk')
+const communityName = useCommunityName()
+// The sign-in options carry the server's own name for the pre-login heading.
+const optionsName = ref('')
+const heading = computed(() => (props.invite?.valid && props.invite.communityName) || optionsName.value || communityName.value)
 const inviteDead = computed(() => props.invite?.valid === false)
 const expiry = computed(() => {
   const at = props.invite?.valid ? props.invite.expiresAt : ''
@@ -70,7 +74,9 @@ onMounted(() => {
 
 async function loadOptions() {
   try {
-    canResetPassword.value = (await api('/api/auth/options', { decode: decodeAuthAuthOptions })).password_reset
+    const options = await api('/api/auth/options', { decode: decodeAuthAuthOptions })
+    canResetPassword.value = options.password_reset
+    optionsName.value = options.community_name?.trim() ?? ''
     optionsLoaded.value = true
   } catch {
     // Offline or limited: the form works without the link.
@@ -140,7 +146,7 @@ async function handleSubmit() {
         <div>
           <h1 :id="titleId" class="text-lg font-bold tracking-tight text-mnema-text" data-testid="login-heading">{{ heading }}</h1>
           <p class="text-sm text-mnema-muted mt-0.5">
-            {{ isRegister ? (invite?.valid ? $t('login.subtitleInvited') : $t('login.subtitleRegister')) : $t('login.subtitleLogin') }}
+            {{ isRegister ? (invite?.valid ? $t('login.subtitleInvited') : $t('login.subtitleRegister')) : $t('login.subtitleLogin', { name: heading }) }}
           </p>
           <p v-if="expiry" class="text-xs text-mnema-tertiary mt-1" data-testid="invite-expiry">{{ $t('login.inviteExpires', { when: expiry }) }}</p>
         </div>

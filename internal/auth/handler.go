@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/community"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -29,6 +30,9 @@ type Handler struct {
 	// Perms decides who may use the admin routes beyond the Owner. nil means
 	// only the Owner may.
 	Perms *perm.Service
+	// Names is the community name the e-mails and authenticator entries use;
+	// nil means the product name.
+	Names *community.Names
 	// Audit records sign-ins, failures, registrations and password changes;
 	// nil records nothing.
 	Audit       *audit.Log

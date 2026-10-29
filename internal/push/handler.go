@@ -319,7 +319,7 @@ func (s *Service) SendTest(ctx context.Context, userID uuid.UUID) (TestResult, e
 	if err := s.DB.QueryRow(ctx, `SELECT locale FROM users WHERE id = $1`, userID).Scan(&locale); err != nil {
 		return TestResult{}, err
 	}
-	body, err := testPayload(locale, s.Now()).encode()
+	body, err := testPayload(locale, s.Names.Get(ctx), s.Now()).encode()
 	if err != nil {
 		return TestResult{}, err
 	}

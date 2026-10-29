@@ -20,14 +20,14 @@ func TestStaticHandlerUnavailableAndMethod(t *testing.T) {
 		{http.MethodPost, "/assets/main.js", http.StatusMethodNotAllowed},
 	} {
 		rec := httptest.NewRecorder()
-		newHandler(fstest.MapFS{}).ServeHTTP(rec, httptest.NewRequest(tc.method, tc.path, nil))
+		newHandler(fstest.MapFS{}, nil).ServeHTTP(rec, httptest.NewRequest(tc.method, tc.path, nil))
 		if rec.Code != tc.status {
 			t.Fatalf("%s %s: %d", tc.method, tc.path, rec.Code)
 		}
 	}
 	// Exercise the actual embedded filesystem independently of which build is present.
 	rec := httptest.NewRecorder()
-	Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	Handler(nil).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
 	if rec.Code != http.StatusOK && rec.Code != http.StatusServiceUnavailable {
 		t.Fatal(rec.Code)
 	}
