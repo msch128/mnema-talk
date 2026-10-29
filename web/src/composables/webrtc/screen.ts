@@ -3,7 +3,6 @@ import { useToastStore } from '../../stores/toast'
 import { trackConstraints, streamTuning } from '../../lib/streamQuality'
 import { confirm } from '../../lib/confirm'
 import { t } from '../../i18n'
-import { platform } from '../../lib/platform'
 import type { MediaStat } from '../../lib/mediaStats'
 import type { StreamQuality } from '../../lib/streamQuality'
 import { mediaUnprotected } from './mediaRoom'
@@ -120,10 +119,6 @@ export async function attachScreen(cx: Cx, stream: MediaStream) {
 
 function cannotStartShare(cx: Cx): boolean {
   const { st } = cx
-  if (platform.isDesktop()) {
-    useToastStore().error(t('nativeDesktop.mediaUnavailable'))
-    return true
-  }
   return mediaUnprotected() || st.screenCapturePending
 }
 

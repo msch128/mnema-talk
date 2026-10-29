@@ -414,7 +414,7 @@ stack). Anything else must be HTTPS with normal system certificate checks.
 | Option | What it takes | Verdict |
 | --- | --- | --- |
 | **A. Custom origin + CORS + bearer token.** The app runs at `tauri://localhost` and calls `https://instance/api` cross-origin. | Server: allow the desktop origin in CORS, accept a bearer token (new auth path), change WebSocket auth (no cookie across sites; `SameSite=Lax` blocks it; the Origin check rejects it), change the CSP `connect-src`. Web: base-URL plumbing for every `fetch`, `<img>`, `<video>`, attachment link and WebSocket, token storage in the page. | Not simple, and it weakens the browser model: new CORS allow-list entry, a second auth path, a long-lived token in JavaScript land. |
-| **B. Existing native session APIs** (`internal/auth/native_*`, unmounted research code). | Mount routes, finish the broker, rewrite the web transport for the whole REST surface. | Large, and aimed at the native-crypto research mode. Not needed here. |
+| **B. A native session API with its own web transport.** (Existed as unmounted research code; removed from this repository.) | Mount routes, finish the broker, rewrite the web transport for the whole REST surface. | Large, and aimed at the native-crypto research mode. Not needed here. |
 | **C. Proxy inside the Tauri host.** The WebView loads the app from a custom protocol; the host forwards requests to the instance. | No server change. Host: URL handler, cookie jar, response filter, WebSocket bridge. Web: one socket factory. | **Chosen.** |
 
 ### The proxy
@@ -699,14 +699,9 @@ executable itself is trusted as far as its download was.
   Windows, media permission prompts, the gaming overlays) is listed as
   Windows-only in the desktop repository's status page.
 
-## Rules acceptance and the native DEV client
+## Rules acceptance
 
 Community rules (`/api/onboarding`, see [roles-and-permissions.md](roles-and-permissions.md))
-reach the shipped desktop clients through the trusted proxy like any other
-`/api` call, so members accept them in the web app as usual. The native IPC
-transport (`web/src/lib/native/nativeRoutes.ts`) belongs to the experimental
-native DEV client, which is not shipped; it does not carry `/api/onboarding`
-and a member of that client could not accept rules until a typed operation is
-added. The same holds for custom emoji (`/api/emoji`, `/api/admin/emoji`): the
-shipped clients get them through the trusted proxy, the native DEV client answers
-"unavailable".
+and custom emoji (`/api/emoji`, `/api/admin/emoji`) reach the shipped desktop
+clients through the trusted proxy like any other `/api` call, so members accept
+rules and use emoji in the web app as usual.

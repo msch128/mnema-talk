@@ -10,7 +10,7 @@ import { platform } from './platform'
 /** Whether this page may run the service worker. The desktop client has its own host and custom protocols, where one could only get in the way. */
 export function serviceWorkerAllowed(): boolean {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return false
-  if (platform.isDesktop() || platform.isTrustedDesktop() || platform.isWebDesktopSelector()) return false
+  if (platform.isTrustedDesktop() || platform.isWebDesktopSelector()) return false
   return window.location.protocol === 'https:' || window.location.protocol === 'http:'
 }
 

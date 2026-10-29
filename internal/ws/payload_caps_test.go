@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/metrics"
 )
@@ -69,8 +68,8 @@ func TestDispatchDropsOversizedFramesBeforeDecoding(t *testing.T) {
 	var budget eventBudget
 	dropped := metrics.WSDropped.With("oversize_event").Load()
 	for range 40 {
-		c.dispatchFrame(&budget, websocket.TextMessage, frameOf("typing", 60<<10))
-		c.dispatchFrame(&budget, websocket.TextMessage, frameOf("ping", 60<<10))
+		c.dispatchFrame(&budget, frameOf("typing", 60<<10))
+		c.dispatchFrame(&budget, frameOf("ping", 60<<10))
 	}
 	if got := metrics.WSDropped.With("oversize_event").Load() - dropped; got != 80 {
 		t.Fatalf("oversize drops = %d, want 80", got)
@@ -78,7 +77,7 @@ func TestDispatchDropsOversizedFramesBeforeDecoding(t *testing.T) {
 	if len(c.send) != 0 {
 		t.Fatal("an oversized ping was still answered")
 	}
-	c.dispatchFrame(&budget, websocket.TextMessage, frameOf("ping", 100))
+	c.dispatchFrame(&budget, frameOf("ping", 100))
 	if len(c.send) != 1 {
 		t.Fatal("a normal ping was not answered")
 	}
@@ -87,7 +86,7 @@ func TestDispatchDropsOversizedFramesBeforeDecoding(t *testing.T) {
 	}
 	// A frame with the type last is judged after decoding, by the budget.
 	late, _ := json.Marshal(map[string]any{"payload": map[string]string{"pad": strings.Repeat("x", 8<<10)}, "type": "ping"})
-	c.dispatchFrame(&budget, websocket.TextMessage, late)
+	c.dispatchFrame(&budget, late)
 	if len(c.send) != 1 {
 		t.Fatal("an oversized ping with its type last was answered")
 	}

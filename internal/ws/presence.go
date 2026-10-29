@@ -54,7 +54,7 @@ func (h *Hub) SetPresence(userID uuid.UUID, presence string) {
 // setIdle records whether c has gone idle and announces a resulting change.
 func (h *Hub) setIdle(c *Client, idle bool) {
 	h.mu.Lock()
-	if _, ok := h.clients[c]; !ok || !c.commandsAllowed() {
+	if _, ok := h.clients[c]; !ok {
 		h.mu.Unlock()
 		return
 	}
