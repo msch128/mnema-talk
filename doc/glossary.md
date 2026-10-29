@@ -40,6 +40,31 @@ in the legal texts (Impressum, Datenschutz, AGB), which are formal by design.
 | Invite | invite code | Einladungscode | | "Einladungen verwalten". |
 | Audit log | audit log | Audit-Log | | |
 
+## Voice and network terms
+
+Words from the installation and troubleshooting guides, in plain language.
+They are not interface strings, so there is no German column. Start with
+[How voice works](quick-start.md#how-it-fits-together) if these are new to you.
+
+| Term | What it means here |
+|---|---|
+| Reverse proxy | A small web server in front of the app. It owns the HTTPS certificate, accepts connections from the internet on port 443 and passes them on to the app on port 8080. Caddy, nginx, Nginx Proxy Manager and the DSM reverse proxy are examples. It carries chat and the web page, **not** voice. |
+| TLS / HTTPS | The encryption of web traffic (the padlock). It needs a certificate for your domain name; Let's Encrypt issues them for free. Browsers only allow microphone and camera on HTTPS pages (and on `localhost`). |
+| WebSocket | A long-lived connection between the browser and the app that carries live events: new messages, who is typing, who joined a Talk. A proxy that does not pass it on leaves the page loaded but dead ("Connection lost – reconnecting…"). |
+| WebRTC | The browser technology for real-time audio, video and screen share. Media travels as UDP packets directly between the browser and the voice server, not through the reverse proxy. |
+| SFU | Selective forwarding unit: the part of the Mnema Talk server that receives each member's audio and video once and forwards the packets to the others. It does not mix or re-encode them. |
+| UDP / TCP | The two ways data travels over a network. Web pages use TCP. Real-time media uses UDP because a late packet is worth less than a missing one. Routers and firewalls treat the two separately, so a port opened for TCP is not open for UDP. |
+| NAT | Network address translation: your home router shares one public address between all devices in the house and only lets traffic in that you forwarded on purpose. That is why a server at home needs port forwarding. |
+| Port forwarding | A router rule that sends incoming traffic on a port to one device inside your network. See [Network ports](ports.md#router-and-firewall-copy-paste-table). |
+| NAT loopback / hairpin | Reaching your own server from inside your home network through its public address. Some routers cannot do it; the symptom is "works from mobile data, not from the home Wi-Fi". The fix is to list the server's LAN address too: `WEBRTC_NAT_1TO1_IP=<public IP>,<LAN IP>`. |
+| CGNAT / DS-Lite | Your provider shares one public IPv4 address between many customers (carrier-grade NAT; DS-Lite is a common form). Your router then has no public address of its own, so forwarded ports never receive anything from outside. Hosting at home does not work; use a VPS. See [Can I host at home?](quick-start.md#can-i-host-at-home). |
+| STUN | A tiny service that tells a device its public address ("what do you see as my IP?"). The Mnema Talk server asks one (Google's or Cloudflare's by default) once at startup and every 10 minutes to find its own public IPv4 address, unless you set `WEBRTC_NAT_1TO1_IP`. |
+| TURN | A relay for members whose network blocks direct UDP, typically company networks, some VPNs and hotels. Their media goes to the relay over a single port and the relay hands it to the voice server. Mnema Talk has one built in (port 3479, UDP and TCP), on by default. |
+| ICE | The procedure a browser runs to find a working path to the server: it collects candidates, tries them in order of preference and picks one. "ICE failed" in a log means no candidate worked. |
+| Candidate | One possible address a connection could use. **host** is a device's own LAN address, **srflx** (server reflexive) is the public address as seen from outside through STUN, **relay** is an address on a TURN relay. See [Reading chrome://webrtc-internals](troubleshooting-voice.md#reading-chromewebrtc-internals-and-aboutwebrtc). |
+| Announced address | The address the server tells browsers to send media to (`WEBRTC_NAT_1TO1_IP`, or the one it found by itself). If it is wrong, browsers connect to nothing. |
+| Dynamic DNS | A host name (for example from your router vendor or a free DNS service) that always points to your changing home IP address. |
+
 ## Style rules
 
 - Sentence case for all UI text (proper names such as Talk and Owner keep their capital).

@@ -70,7 +70,7 @@ The desktop clients are Beta and unsigned ([how to install them](desktop-app.md#
 ## Before you update from 0.9.x
 
 Read [the 0.9.x to 1.0.0 notes](upgrade.md#09x--100), then follow the
-[update procedure](upgrade.md#update-procedure-compose-released-image) with a
+[update procedure](updating.md) with a
 backup first. The short version:
 
 1. Ten migrations (0038 to 0048; 0046 is intentionally unused) run on first

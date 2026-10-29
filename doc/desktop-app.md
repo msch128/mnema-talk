@@ -53,6 +53,28 @@ executable (`chmod +x`) before running it.
 If you cannot accept these warnings, use the browser app, which is the fully
 supported client.
 
+## Connecting to your server: errors and fixes
+
+When you enter your server's address, the desktop client checks it before it
+loads anything. If the check fails it shows one of these messages (the wording
+is the client's). The address must be an HTTPS address such as
+`https://chat.example.com`, without a path.
+
+| Message (shortened) | Cause | Fix |
+|---|---|---|
+| Enter an HTTPS address / not a valid server address / use an HTTPS address without credentials, path or query | The address is empty, malformed or has more than scheme and host | Type only `https://chat.example.com` (a port is allowed) |
+| The server refused the connection | Nothing listens at that address and port, or a firewall rejects it | Check the address and port; check the proxy is up and TCP 443 is forwarded |
+| The server did not answer in time | Wrong address, a firewall that drops packets, or the server is down | Open the same address in a browser on that computer; check DNS and port forwarding |
+| The server address could not be resolved | The name has no DNS record yet, or this computer's DNS cannot find it | Create the DNS A record; check the spelling |
+| Your router may not support reaching it through its public address (NAT loopback/hairpin) | The server is in your own network and the router cannot loop traffic back | Use the server's local address, or test from another network; see [the FAQ](faq.md#it-works-from-mobile-data-but-not-from-my-home-wi-fi) |
+| This computer does not trust the server's HTTPS certificate | Wrong name, self-signed or expired certificate, a wrong computer clock, or an antivirus or network filter that intercepts HTTPS | Fix the certificate ([TLS certificates](reverse-proxy.md#tls-certificates)), set the clock, turn off HTTPS scanning for this address |
+| The server offers no TLS version this client can use | The server only speaks TLS 1.0/1.1 | Enable TLS 1.2 or 1.3 in the proxy |
+| The server could not be reached over trusted HTTPS / the server is unavailable or redirects to a different address | A redirect to another host name, or a proxy error page | Use the final address, without redirects |
+| The server needs an update for the desktop client / is too old (needs X or newer) / the client needs a newer app | Server and client versions are too far apart | Update the server ([updating.md](updating.md)) or the desktop client |
+
+If the same address works in a browser but not in the client, an antivirus or a
+company network filter that re-signs HTTPS traffic is the usual reason.
+
 ## Windows Gaming DEV
 
 The shared-client host now connects gaming surfaces to the actual Vue Talk state

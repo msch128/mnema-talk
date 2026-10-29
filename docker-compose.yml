@@ -15,9 +15,11 @@ services:
       context: .
       dockerfile: Dockerfile
     # Default: built on this host. To run (and self-update) a released image,
-    # set MNEMA_IMAGE in .env, e.g. ghcr.io/msch128/mnema-talk:0.4 (follows
-    # 0.4.x) or :latest, and start with `docker compose pull app && docker
-    # compose up -d` instead of --build. See doc/deployment.md, "Updates".
+    # set MNEMA_IMAGE in .env, e.g. ghcr.io/msch128/mnema-talk:X.Y (follows the
+    # patch releases of one minor line; see the releases page for X.Y) or
+    # :latest, and start with `docker compose pull app && docker compose up -d`
+    # instead of --build. The setup assistant writes this for you
+    # (doc/quick-start.md); updating: doc/updating.md.
     image: ${MNEMA_IMAGE:-mnema-talk:local}
     container_name: mnema-talk
     restart: unless-stopped
@@ -28,9 +30,15 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
       - "com.centurylinklabs.watchtower.scope=mnema-talk"
     ports:
-      # Loopback only by default: put a reverse proxy in front. Set
-      # PUBLISH_ADDR=0.0.0.0 (or a LAN address) to reach the app directly.
+      # The web app and API. Loopback only by default, so that the only way in
+      # is your reverse proxy (it holds the HTTPS certificate and must pass
+      # WebSockets; doc/reverse-proxy.md). Never forward this port on your
+      # router. Set PUBLISH_ADDR=0.0.0.0 (or a LAN address) only when the proxy
+      # runs in another container or on another machine.
       - "${PUBLISH_ADDR:-127.0.0.1}:${PORT:-8080}:8080"
+      # Voice, video and screen share. Browsers send these UDP packets straight
+      # to the server; the reverse proxy does not carry them. Forward the whole
+      # range on your router (doc/ports.md); in the default mode all calls share its first port.
       - "${WEBRTC_UDP_PORT_MIN:-50000}-${WEBRTC_UDP_PORT_MAX:-50050}:${WEBRTC_UDP_PORT_MIN:-50000}-${WEBRTC_UDP_PORT_MAX:-50050}/udp"
       # The TURN relay built into the app (WEBRTC_BUILTIN_TURN, default auto:
       # it runs while WEBRTC_TURN_URLS is empty). It lets members whose network

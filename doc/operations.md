@@ -1,8 +1,9 @@
 # Operations
 
 Running Mnema Talk with `docker compose`: configuration, reverse proxy, TURN,
-storage, backups, monitoring and troubleshooting. For the update procedure
-see [upgrade.md](upgrade.md); for the security model see
+storage, backups, monitoring and troubleshooting. For updating
+see [updating.md](updating.md) and the per-version [upgrade.md](upgrade.md); new
+to all this? Start with the [quick start](quick-start.md); for the security model see
 [SECURITY.md](../SECURITY.md). Which ports to forward and which outbound
 connections the server makes: [ports.md](ports.md).
 
@@ -617,7 +618,7 @@ The image also carries BuildKit provenance and an SBOM. To check a pulled
 image before running it:
 
 ```sh
-cosign verify ghcr.io/msch128/mnema-talk:1.0 \
+cosign verify ghcr.io/msch128/mnema-talk:latest \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@'
 ```
@@ -626,7 +627,7 @@ The Docker Hub copy carries the same digest, signature identity, provenance
 and SBOM, so the same command works with the Docker Hub reference:
 
 ```sh
-cosign verify docker.io/msch128/mnema-talk:1.0 \
+cosign verify docker.io/msch128/mnema-talk:latest \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@'
 ```
@@ -756,18 +757,24 @@ run `docker compose up -d` and reload the tab.
 | Check | Red | Amber |
 |---|---|---|
 | Public address | `PUBLIC_URL` is `localhost` in production | plain `http://`, or the page was opened at another address (behind a reverse proxy: it must pass `Host` and `X-Forwarded-Proto`) |
-| Voice address | nothing announced and no TURN (`WEBRTC_NAT_1TO1_IP`) | nothing announced, TURN configured |
+| Voice address | nothing announced and no TURN (`WEBRTC_NAT_1TO1_IP`) | nothing announced, TURN configured; or the detected address is private or in `100.64.0.0/10` (carrier-grade NAT: [IPv6, DS-Lite and CGNAT](#ipv6-ds-lite-and-cgnat)) |
 | Voice port | the voice engine did not start (UDP ports busy) | `WEBRTC_UDP_MUX_PORT=0` caps the number of callers |
 | TURN relay | n/a | built-in relay could not bind its port, or did not answer on it from the server (a router without NAT loopback also causes this), or `WEBRTC_BUILTIN_TURN=off` with no `WEBRTC_TURN_URLS` |
 | Outgoing mail | n/a | `SMTP_HOST` empty (optional) |
 | Object storage | not configured or not answering | n/a |
 | Database | not answering | n/a |
 | Server clock | 30 seconds or more off | 5 seconds or more off (left out when `CLOCK_CHECK_ENABLED=false` or no NTP answers) |
+| WebSocket | n/a | the Owner's own session did not reach the server as a WebSocket: the proxy drops `Upgrade` and `Connection` ([WebSockets](reverse-proxy.md#websockets)) |
 | Reverse proxy | n/a | proxy headers from an untrusted address, or `TRUSTED_PROXY_CIDRS` too broad |
 
 Whether the router forwards the voice UDP port cannot be known from inside the
-host, so *Voice port* is green when the server listens. A call from a phone on
-mobile data is the real test.
+host, so *Voice port* reads "Listening – not yet confirmed from outside" until a
+member from outside the LAN has connected, then "Confirmed: a member from
+outside connected". The **Test my connection** button runs a browser-side check
+and tells you whether direct UDP works, only the relay works, or nothing works;
+`docker compose exec app mnema-talk doctor` prints these checks with their fixes
+in a terminal. A call from a phone on mobile data is the real test
+([voice troubleshooting](troubleshooting-voice.md)).
 
 The tab is gated by the `ops.status` feature key in `/api/health` and backed by `GET /api/admin/status` (restricted to the Owner and members with the *Administrator* permission; other users receive `403 Forbidden`).
 
@@ -1020,6 +1027,10 @@ state is held in memory; a restart is not needed to clear it:
 Otherwise sign in from a browser you used before, or wait.
 
 ### Nobody can join voice, or it connects and drops after a few seconds
+
+New to this? The [voice troubleshooting guide](troubleshooting-voice.md) walks
+through the layers in order, explains `chrome://webrtc-internals` and has a
+symptom table. The reference steps follow.
 
 1. **UDP range forwarded?** `WEBRTC_UDP_PORT_MIN`–`MAX` (default
    `50000-50050/udp`) must be forwarded from the router to the host and
