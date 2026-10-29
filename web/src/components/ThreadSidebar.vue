@@ -2,13 +2,13 @@
 import type { Message } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
-import { X, MessageSquare, Loader2, Bell, BellOff, Lock, Unlock } from '@lucide/vue'
+import { X, MessageSquare, Loader2, Bell, BellOff, Lock } from '@lucide/vue'
 import type { ThreadRoot } from '../stores/chat'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
 import { useAuthStore } from '../stores/auth'
-import { updateForumPost } from '../lib/forumApi'
 import ThreadRootCard from './ThreadRootCard.vue'
+import ForumPostHeader from './ForumPostHeader.vue'
 import ThreadReply from './ThreadReply.vue'
 import BlockedMessageRow from './BlockedMessageRow.vue'
 import { useBlocksStore } from '../stores/blocks'
@@ -37,19 +37,6 @@ const isLockedForMe = computed(() => !!chatStore.activeThread?.is_locked && !can
 const canSend = computed(() => !isLockedForMe.value && (dmChat.isDm.value ? dmChat.canSend.value : permissions.canIn(threadChannel.value, 'send_messages')))
 const canAttach = computed(() => canSend.value && (dmChat.isDm.value || permissions.canIn(threadChannel.value, 'attach_files')))
 const canReact = computed(() => (dmChat.isDm.value ? dmChat.canSend.value : permissions.canIn(threadChannel.value, 'add_reactions')))
-
-async function toggleLock() {
-  if (!chatStore.activeThread?.title || !canManageMessages.value) return
-  // The post that was asked: another one may be open when the answer arrives.
-  const thread = chatStore.activeThread
-  const newLock = !thread.is_locked
-  try {
-    await updateForumPost(threadChannel.value, thread.id, { is_locked: newLock })
-    if (chatStore.activeThread?.id === thread.id) chatStore.activeThread.is_locked = newLock
-  } catch (err) {
-    toasts.error(caughtErrorMessage(err, t('forum.lockFailed')))
-  }
-}
 
 const followed = computed(() => !!chatStore.activeThread && chatStore.followedThreads.has(chatStore.activeThread.id))
 const replyInput = ref('')
@@ -112,6 +99,12 @@ function flash(id: string) {
     highlightedId.value = id
     highlightTimer = setTimeout(() => { highlightedId.value = null }, 2000)
   })
+}
+
+// The first unread reply of a forum post.
+function jumpToReply(id: string) {
+  repliesContainer.value?.querySelector(`[data-reply-id="${id}"]`)?.scrollIntoView({ block: 'center' })
+  flash(id)
 }
 
 // Thread replies are fully loaded here, so jumps stay inside the panel.
@@ -242,20 +235,6 @@ async function handleFileUpload(e: Event) {
       </div>
 
       <button
-        v-if="chatStore.activeThread?.title && canManageMessages"
-        type="button"
-        data-testid="thread-lock-toggle"
-        :aria-label="chatStore.activeThread.is_locked ? $t('forum.unlockPost') : $t('forum.lockPost')"
-        class="w-8 h-8 flex items-center justify-center shrink-0 rounded-md hover:bg-mnema-surface transition"
-        :class="chatStore.activeThread.is_locked ? 'text-amber-400' : 'text-mnema-tertiary hover:text-mnema-text'"
-        v-tooltip="chatStore.activeThread.is_locked ? $t('forum.unlockPost') : $t('forum.lockPost')"
-        @click="toggleLock"
-      >
-        <Lock v-if="chatStore.activeThread.is_locked" class="w-[18px] h-[18px]" />
-        <Unlock v-else class="w-[18px] h-[18px]" />
-      </button>
-
-      <button
         v-if="chatStore.activeThread && chatStore.followKnown"
         type="button"
         data-testid="thread-follow"
@@ -281,6 +260,8 @@ async function handleFileUpload(e: Event) {
         <X class="w-5 h-5" />
       </button>
     </header>
+
+    <ForumPostHeader v-if="chatStore.activeThread?.title" @jump="jumpToReply" />
 
     <!-- Scrollable Thread Content Area -->
     <div ref="repliesContainer" class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3">

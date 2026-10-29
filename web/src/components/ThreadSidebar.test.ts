@@ -16,7 +16,12 @@ import * as forumApi from '../lib/forumApi'
 import { setLocale, t } from '../i18n'
 import { closeViewer, viewerState } from '../composables/useMediaViewer'
 
-vi.mock('../lib/forumApi', () => ({ updateForumPost: vi.fn() }))
+vi.mock('../lib/forumApi', () => ({
+  updateForumPost: vi.fn(),
+  markForumPostRead: vi.fn(async () => '2026-01-01T00:00:00Z'),
+  fetchForumTags: vi.fn(async () => []),
+  fetchForumSettings: vi.fn(async () => ({ require_tag: false, guidelines: '' }))
+}))
 
 let w!: ReturnType<typeof mount<typeof ThreadSidebar>>
 
@@ -66,7 +71,7 @@ describe('ThreadSidebar keyboard', () => {
     // The root card's reply button too.
     const root = w.find<HTMLElement>('[data-reply-id="root"]')
     expect(root.attributes('tabindex')).toBe('0')
-    expect(root.find<HTMLElement>('button.absolute').classes()).toContain('group-focus-within:flex')
+    expect(root.find<HTMLElement>('div.absolute.right-2').classes()).toContain('group-focus-within:flex')
   })
 
   it('arrows move between root and replies', () => {
@@ -200,7 +205,7 @@ describe('ThreadSidebar replies', () => {
 
   it('Escape in the composer cancels the reply target', async () => {
     setup()
-    await w.find<HTMLElement>('[data-reply-id="root"] button.absolute').trigger('click')
+    await w.find<HTMLElement>('[data-reply-id="root"] div.absolute.right-2 button:last-child').trigger('click')
     expect(w.text()).toContain('Antwort an')
     expect(key(textarea(), { key: 'Escape' }).defaultPrevented).toBe(true)
     await nextTick()

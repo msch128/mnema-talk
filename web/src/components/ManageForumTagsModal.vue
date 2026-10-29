@@ -1,253 +1,161 @@
 <script setup lang="ts">
-import { charCount } from '../lib/textLength'
-import { ref, computed } from 'vue'
-import { AlertCircle, Loader2, Plus, Trash2, Edit2, Check, X } from '@lucide/vue'
+import { ref } from 'vue'
+import { AlertCircle, Loader2, Plus, Trash2, Pencil, ArrowUp, ArrowDown, Lock } from '@lucide/vue'
 import type { ForumTag } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
-import { createForumTag, updateForumTag, deleteForumTag } from '../lib/forumApi'
+import { createForumTag, updateForumTag, deleteForumTag, reorderForumTags } from '../lib/forumApi'
+import type { ForumSettings } from '../lib/forumApi'
+import { MAX_FORUM_TAGS } from '../lib/forumTags'
+import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
+import ForumTagChip from './ForumTagChip.vue'
+import ForumTagEditor from './ForumTagEditor.vue'
+import ForumSettingsForm from './ForumSettingsForm.vue'
 
+// Where moderators define the tags of a forum (name, emoji, colour, moderated,
+// order) and its rules (a tag is required, the guidelines).
 const props = defineProps<{
   channelId: string
   tags: ForumTag[]
+  settings: ForumSettings
 }>()
 
 const emit = defineEmits<{
   close: []
   updated: []
+  'settings-saved': [settings: ForumSettings]
 }>()
 
-const newName = ref('')
-const newEmoji = ref('')
-const isAdding = ref(false)
+type Fields = { name: string; emoji: string; color: string; moderated: boolean }
+
 const error = ref('')
-
+const adding = ref(false)
 const editingId = ref<string | null>(null)
-const editName = ref('')
-const editEmoji = ref('')
+const busyId = ref<string | null>(null)
 const isSaving = ref(false)
-const deletingId = ref<string | null>(null)
-
-const canAdd = computed(() => {
-  return props.tags.length < 20 &&
-    newName.value.trim().length > 0 &&
-    charCount(newName.value.trim()) <= 20
-})
-
-function startEdit(tag: ForumTag) {
-  editingId.value = tag.id
-  editName.value = tag.name
-  editEmoji.value = tag.emoji || ''
-  error.value = ''
-}
-
-function cancelEdit() {
-  editingId.value = null
-  editName.value = ''
-  editEmoji.value = ''
-}
 
 // Escape while a tag is being edited leaves edit mode; the dialog stays open.
 function onDialogClose() {
-  if (editingId.value) cancelEdit()
-  else emit('close')
+  if (adding.value || editingId.value) {
+    adding.value = false
+    editingId.value = null
+  } else emit('close')
 }
 
-async function handleAddTag() {
-  if (!canAdd.value || isAdding.value) return
+async function run(failure: string, work: () => Promise<void>) {
   error.value = ''
-  isAdding.value = true
-
   try {
-    await createForumTag(props.channelId, newName.value.trim(), newEmoji.value.trim() || undefined)
-    newName.value = ''
-    newEmoji.value = ''
+    await work()
     emit('updated')
   } catch (err) {
-    error.value = caughtErrorMessage(err, t('forum.addTagFailed'))
-  } finally {
-    isAdding.value = false
+    error.value = caughtErrorMessage(err, failure)
   }
 }
 
-async function handleSaveEdit(tagId: string) {
-  if (editName.value.trim().length === 0 || charCount(editName.value.trim()) > 20 || isSaving.value) return
-  error.value = ''
+async function addTag(fields: Fields) {
   isSaving.value = true
-
-  try {
-    await updateForumTag(props.channelId, tagId, editName.value.trim(), editEmoji.value.trim())
-    cancelEdit()
-    emit('updated')
-  } catch (err) {
-    error.value = caughtErrorMessage(err, t('forum.updateTagFailed'))
-  } finally {
-    isSaving.value = false
-  }
+  await run(t('forum.addTagFailed'), async () => {
+    await createForumTag(props.channelId, fields.name, fields.emoji || undefined, { color: fields.color, moderated: fields.moderated })
+    adding.value = false
+  })
+  isSaving.value = false
 }
 
-async function handleDeleteTag(tagId: string) {
-  if (deletingId.value) return
-  error.value = ''
-  deletingId.value = tagId
+async function saveTag(tag: ForumTag, fields: Fields) {
+  isSaving.value = true
+  await run(t('forum.updateTagFailed'), async () => {
+    await updateForumTag(props.channelId, tag.id, fields.name, fields.emoji, { color: fields.color, moderated: fields.moderated })
+    editingId.value = null
+  })
+  isSaving.value = false
+}
 
-  try {
-    await deleteForumTag(props.channelId, tagId)
-    emit('updated')
-  } catch (err) {
-    error.value = caughtErrorMessage(err, t('forum.deleteTagFailed'))
-  } finally {
-    deletingId.value = null
-  }
+async function removeTag(tag: ForumTag) {
+  const ok = await confirm({
+    title: t('forum.deleteTagTitle'),
+    body: t('forum.deleteTagBody'),
+    excerpt: tag.name,
+    confirmLabel: t('common.delete'),
+    danger: true
+  })
+  if (!ok) return
+  busyId.value = tag.id
+  await run(t('forum.deleteTagFailed'), async () => { await deleteForumTag(props.channelId, tag.id) })
+  busyId.value = null
+}
+
+async function move(index: number, by: -1 | 1) {
+  const ids = props.tags.map(tag => tag.id)
+  const other = index + by
+  if (other < 0 || other >= ids.length) return
+  ;[ids[index], ids[other]] = [ids[other]!, ids[index]!]
+  await run(t('forum.reorderFailed'), async () => { await reorderForumTags(props.channelId, ids) })
 }
 </script>
 
 <template>
-  <BaseDialog
-    :title="$t('forum.manageTagsTitle')"
-    panel-class="max-w-md"
-    @close="onDialogClose"
-  >
-    <div class="p-6 space-y-4">
-      <div v-if="error" class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-sm text-red-400">
-        <AlertCircle class="w-4 h-4 shrink-0" />
+  <BaseDialog :title="$t('forum.manageTagsTitle')" panel-class="max-w-lg" sheet @close="onDialogClose">
+    <div class="space-y-6 overflow-y-auto p-6">
+      <div v-if="error" role="alert" class="flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">
+        <AlertCircle class="h-4 w-4 shrink-0" />
         <span>{{ error }}</span>
       </div>
 
-      <!-- Add New Tag Form (if under 20 limit) -->
-      <div v-if="tags.length < 20" class="p-3 bg-mnema-surface/60 border border-mnema-hairline rounded-lg space-y-3">
+      <section class="space-y-3">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-mnema-secondary uppercase tracking-wider">
-            {{ $t('forum.addTag') }}
-          </span>
-          <span class="text-xs text-mnema-tertiary">
-            {{ tags.length }}/20
-          </span>
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-mnema-secondary">{{ $t('forum.tagsTitle') }}</h3>
+          <span class="text-xs tabular-nums text-mnema-tertiary">{{ tags.length }}/{{ MAX_FORUM_TAGS }}</span>
         </div>
-        <div class="flex items-center gap-2">
-          <input
-            v-model="newEmoji"
-            type="text"
-            v-max-chars="32"
-            :placeholder="$t('forum.emojiPlaceholder')"
-            class="w-16 bg-mnema-surface border border-mnema-border rounded-lg px-2 py-1.5 text-sm text-center text-mnema-text focus:outline-hidden focus:border-mnema-accent"
-          />
-          <input
-            v-model="newName"
-            type="text"
-            v-max-chars="20"
-            :placeholder="$t('forum.tagNamePlaceholder')"
-            class="flex-1 min-w-0 bg-mnema-surface border border-mnema-border rounded-lg px-3 py-1.5 text-sm text-mnema-text focus:outline-hidden focus:border-mnema-accent"
-            @keydown.enter.prevent="handleAddTag"
-          />
-          <button
-            type="button"
-            :disabled="!canAdd || isAdding"
-            class="btn btn-primary px-3 py-1.5 text-xs flex items-center gap-1 shrink-0"
-            @click="handleAddTag"
-          >
-            <Loader2 v-if="isAdding" class="w-3.5 h-3.5 animate-spin" />
-            <Plus v-else class="w-3.5 h-3.5" />
-            <span>{{ $t('forum.add') }}</span>
-          </button>
-        </div>
-      </div>
-      <div v-else class="text-xs text-mnema-tertiary text-center">
-        {{ $t('forum.maxTagsReached') }} (20/20)
-      </div>
+        <p class="text-xs leading-relaxed text-mnema-tertiary">{{ $t('forum.tagsIntro') }}</p>
 
-      <!-- Existing Tags List -->
-      <div class="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-        <div
-          v-if="tags.length === 0"
-          class="text-xs text-mnema-tertiary text-center py-6 italic"
-        >
-          {{ $t('forum.noTags') }}
-        </div>
+        <p v-if="tags.length === 0 && !adding" class="py-4 text-center text-xs italic text-mnema-tertiary">{{ $t('forum.noTags') }}</p>
 
-        <div
-          v-for="tag in tags"
-          :key="tag.id"
-          class="flex items-center justify-between gap-2 p-2 bg-mnema-surface/40 hover:bg-mnema-surface rounded-lg border border-mnema-hairline/80 transition"
-        >
-          <!-- Editing Mode -->
-          <template v-if="editingId === tag.id">
-            <input
-              v-model="editEmoji"
-              type="text"
-              v-max-chars="32"
-              class="w-12 bg-mnema-surface border border-mnema-border rounded-md px-1.5 py-1 text-xs text-center text-mnema-text focus:outline-hidden focus:border-mnema-accent"
-            />
-            <input
-              v-model="editName"
-              type="text"
-              v-max-chars="20"
-              class="flex-1 min-w-0 bg-mnema-surface border border-mnema-border rounded-md px-2 py-1 text-xs text-mnema-text focus:outline-hidden focus:border-mnema-accent"
-              @keydown.enter.prevent="handleSaveEdit(tag.id)"
-            />
-            <div class="flex items-center gap-1 shrink-0">
-              <button
-                type="button"
-                :disabled="isSaving"
-                :aria-label="$t('common.save')"
-                class="p-1 hover:bg-mnema-hover rounded-md text-emerald-400"
-                @click="handleSaveEdit(tag.id)"
-              >
-                <Check class="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                :aria-label="$t('common.cancel')"
-                class="p-1 hover:bg-mnema-hover rounded-md text-mnema-tertiary hover:text-mnema-text"
-                @click="cancelEdit"
-              >
-                <X class="w-4 h-4" />
-              </button>
+        <ul class="space-y-1.5" data-testid="forum-tag-list">
+          <li v-for="(tag, index) in tags" :key="tag.id">
+            <ForumTagEditor v-if="editingId === tag.id" :tag="tag" :saving="isSaving" @save="saveTag(tag, $event)" @cancel="editingId = null" />
+            <div v-else class="flex items-center justify-between gap-2 rounded-lg border border-mnema-hairline/80 bg-mnema-surface/40 p-2 transition hover:bg-mnema-surface" data-testid="forum-tag-row">
+              <div class="flex min-w-0 items-center gap-2">
+                <ForumTagChip :tag="tag" />
+                <Lock v-if="tag.moderated" class="h-3.5 w-3.5 shrink-0 text-mnema-tertiary" :aria-label="$t('forum.moderatedTag')" v-tooltip="$t('forum.moderatedTag')" />
+              </div>
+              <div class="flex shrink-0 items-center">
+                <button type="button" class="btn btn-icon h-8 w-8 max-md:h-10 max-md:w-10" :disabled="index === 0" :aria-label="$t('forum.moveUp')" v-tooltip="$t('forum.moveUp')" @click="move(index, -1)">
+                  <ArrowUp class="h-3.5 w-3.5" />
+                </button>
+                <button type="button" class="btn btn-icon h-8 w-8 max-md:h-10 max-md:w-10" :disabled="index === tags.length - 1" :aria-label="$t('forum.moveDown')" v-tooltip="$t('forum.moveDown')" @click="move(index, 1)">
+                  <ArrowDown class="h-3.5 w-3.5" />
+                </button>
+                <button type="button" class="btn btn-icon h-8 w-8 max-md:h-10 max-md:w-10" :aria-label="$t('forum.edit')" v-tooltip="$t('forum.edit')" @click="editingId = tag.id; adding = false">
+                  <Pencil class="h-3.5 w-3.5" />
+                </button>
+                <button type="button" class="btn btn-icon h-8 w-8 hover:text-red-400 max-md:h-10 max-md:w-10" :disabled="busyId === tag.id" :aria-label="$t('common.delete')" v-tooltip="$t('common.delete')" @click="removeTag(tag)">
+                  <Loader2 v-if="busyId === tag.id" class="h-3.5 w-3.5 animate-spin" />
+                  <Trash2 v-else class="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
-          </template>
+          </li>
+        </ul>
 
-          <!-- Normal Display Mode -->
-          <template v-else>
-            <div class="flex items-center gap-2 min-w-0">
-              <span v-if="tag.emoji" class="text-sm shrink-0">{{ tag.emoji }}</span>
-              <span class="text-sm font-medium text-mnema-text truncate">{{ tag.name }}</span>
-            </div>
-            <div class="flex items-center gap-1 shrink-0">
-              <button
-                type="button"
-                class="p-1.5 hover:bg-mnema-hover rounded-md text-mnema-tertiary hover:text-mnema-text transition"
-                :title="$t('forum.edit')"
-                :aria-label="$t('forum.edit')"
-                @click="startEdit(tag)"
-              >
-                <Edit2 class="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                :disabled="deletingId === tag.id"
-                class="p-1.5 hover:bg-mnema-hover rounded-md text-mnema-tertiary hover:text-red-400 transition"
-                :title="$t('common.delete')"
-                :aria-label="$t('common.delete')"
-                @click="handleDeleteTag(tag.id)"
-              >
-                <Loader2 v-if="deletingId === tag.id" class="w-3.5 h-3.5 animate-spin" />
-                <Trash2 v-else class="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <!-- Close Button -->
-      <div class="flex justify-end pt-2">
+        <ForumTagEditor v-if="adding" :saving="isSaving" @save="addTag" @cancel="adding = false" />
         <button
+          v-else-if="tags.length < MAX_FORUM_TAGS"
           type="button"
-          class="btn btn-secondary px-4 py-2 text-sm"
-          @click="emit('close')"
+          data-testid="forum-add-tag"
+          class="btn btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-xs"
+          @click="adding = true; editingId = null"
         >
-          {{ $t('common.close') }}
+          <Plus class="h-3.5 w-3.5" />
+          <span>{{ $t('forum.addTag') }}</span>
         </button>
+        <p v-else class="text-center text-xs text-mnema-tertiary">{{ $t('forum.maxTagsReached') }}</p>
+      </section>
+
+      <ForumSettingsForm :channel-id="channelId" :settings="settings" :no-tags="tags.length === 0" @saved="emit('settings-saved', $event)" />
+
+      <div class="flex justify-end">
+        <button type="button" class="btn btn-secondary px-4 py-2 text-sm" @click="emit('close')">{{ $t('common.close') }}</button>
       </div>
     </div>
   </BaseDialog>

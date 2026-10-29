@@ -98,7 +98,7 @@ no accounts on someone else's platform.
   90 days; it is shown on the channel, audited, and never touches pinned
   messages or direct messages ([doc/moderation.md](doc/moderation.md#auto-delete)).
 - **Speaking addresses.** Channels, Talks, forum posts and conversations have readable web addresses (`/c/general`, `/v/lounge`, `/c/ideas/p/new-kitchen-0f3a9c1e`, `/dm/alice`) that survive renames; old links by id keep working ([doc/upgrade.md](doc/upgrade.md#speaking-urls)).
-- **Forum channels.** Structured discussions with posts as cards, up to 20 admin tags, tag filtering, sorting by latest activity, and moderation locks ([doc/forums.md](doc/forums.md)).
+- **Forum channels.** Structured discussions with posts as cards: coloured, ordered and moderator-only tags that authors can change afterwards, required tags and guidelines per forum, search, tag filter and sorting, pinned and solved posts, locks, unread markers with a jump to the first unread reply, and a first message with formatting and files ([doc/forums.md](doc/forums.md)).
 - **Community events.** Scheduled events with a description, a cover image, a
   location (a Talk or free text), RSVPs and a reminder 15 minutes before the
   start. Creating them needs the *Manage events* permission, which the seeded Moderator
