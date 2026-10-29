@@ -1,0 +1,41 @@
+doc/operations.md
+  s_06fcde5dbef956::t_26fd3f864db179 442-445
+internal/turnrelay/generator.go
+  s_06fcde5dbef956::t_5b08dcc294ba7f 31-37
+internal/turnrelay/limits_test.go
+  s_06fcde5dbef956::t_f6c944ab5222f8 1-266
+internal/turnrelay/server_test.go
+  s_06fcde5dbef956::t_2455f61edc1a3f 282,305-306,308,310-313,315,318,320-324,331,333-335
+internal/server/public_turn_test.go
+  s_5aa38e778cf1ac::t_89557d2124039f 18,56-77,117-118,120
+internal/turnrelay/handlers.go
+  s_5aa38e778cf1ac::t_8643ec32e11495 5-7,13-17,21-26,32,43-104,141-150
+internal/turnrelay/options.go
+  s_5aa38e778cf1ac::t_a75fb7d302145e 121-124
+internal/turnrelay/server.go
+  s_5aa38e778cf1ac::t_c2593db52f0e2d 53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "21fba716807e5954bb0f376107e6370803d20214",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5aa38e778cf1ac": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-builtin-turn-725a019b5a1e641a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
