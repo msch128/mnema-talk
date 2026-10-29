@@ -29,6 +29,8 @@ export interface RtcState {
   micTestController: AbortController | null
   /** A failed model uses browser suppression for this session; the saved choice is untouched, and leaving/rejoining permits a fresh attempt. */
   failedAIModel: NoiseModel | null
+  /** The audio context never started rendering: nothing routed through it is heard, and its meter cannot drive the gate. */
+  contextStalled: boolean
   speakingInterval: ReturnType<typeof setInterval> | null
   /** Whether the others currently see my speaking ring; survives a restart of the detection so the ring can always be taken down. */
   speakingAnnounced: boolean
@@ -103,6 +105,8 @@ export interface RtcState {
 interface Hooks {
   /** The noise model of an audio context failed; falls back to browser suppression and rebuilds. */
   filterFailed(audio: AudioContext, model: NoiseModel, test?: boolean): void
+  /** The audio context did not start rendering; the microphone is sent around it. */
+  contextStalled(audio: AudioContext): void
 }
 
 /** The context every function of the call modules receives. */
@@ -126,6 +130,7 @@ export function createRtcState(): RtcState {
     micPipelineController: null,
     micTestController: null,
     failedAIModel: null,
+    contextStalled: false,
     speakingInterval: null,
     speakingAnnounced: false,
     loopbackGain: null,

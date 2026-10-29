@@ -843,10 +843,13 @@ jobs:
           # list is every other spec, plus browser-sealing.spec.ts for the refusal.
           - browser: webkit
             only: "--project=webkit account-delete.spec.ts active-members.spec.ts audit.spec.ts bot-members.spec.ts bots.spec.ts browser-sealing.spec.ts crypto-state.spec.ts drafts.spec.ts layout.spec.ts mentions.spec.ts message-moderation.spec.ts moderation.spec.ts notifications.spec.ts onboarding.spec.ts polls.spec.ts pwa.spec.ts search.spec.ts sidebar-layout.spec.ts two-factor.spec.ts unread-jump.spec.ts upload-limit.spec.ts webhooks-outgoing.spec.ts webhooks-ui.spec.ts webhooks.spec.ts"
-          # late-join.spec.ts also asserts the AI noise filter, which does not run
-          # on the Linux Firefox of CI; it passes on macOS (see doc/product-status.md).
+          # The runner has no audio output device, and Firefox then never starts an
+          # AudioContext: audio-stall.spec.ts is the real case of a member whose audio
+          # engine is dead (told, and still heard). The call specs that need the AI
+          # noise filter to run (late-join.spec.ts) follow with an audio device.
           - browser: firefox
-            only: "--project=firefox smoke.spec.ts browser-sealing.spec.ts key-lifecycle.spec.ts search.spec.ts mentions.spec.ts screenshare.spec.ts"
+            only: "--project=firefox smoke.spec.ts browser-sealing.spec.ts key-lifecycle.spec.ts search.spec.ts mentions.spec.ts screenshare.spec.ts audio-stall.spec.ts"
+            withAudioDevice: "--project=firefox late-join.spec.ts"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -918,6 +921,20 @@ jobs:
           E2E_INSTALL_BROWSER: "1"
           E2E_BROWSERS: ${{ matrix.browser }}
           E2E_ONLY: ${{ matrix.only }} ${{ matrix.browser == 'webkit' && format('--shard={0}', matrix.shard) || '' }}
+        run: e2e/run.sh
+
+      # The same build, on a runner that has an audio output device.
+      - if: ${{ needs.changes.outputs.code == 'true' && matrix.withAudioDevice }}
+        name: Audio device
+        timeout-minutes: 5
+        run: e2e/ci-audio-sink.sh
+
+      - if: ${{ needs.changes.outputs.code == 'true' && matrix.withAudioDevice }}
+        name: Run the specs that need the AI noise filter
+        env:
+          SKIP_BUILD: "1"
+          E2E_BROWSERS: ${{ matrix.browser }}
+          E2E_ONLY: ${{ matrix.withAudioDevice }}
         run: e2e/run.sh
 
       - name: Upload Playwright traces and screenshots

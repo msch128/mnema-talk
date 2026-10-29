@@ -2,11 +2,13 @@ import { t } from '../../i18n'
 import { useToastStore } from '../../stores/toast'
 import { gamingMicLease } from '../../lib/gamingMicLease'
 import { createMeteringTrack } from '../../lib/micMetering'
+import { isPageUnloading, watchContextStart } from '../../lib/audioHealth'
 import { createNoiseSuppressorNode, isNoiseSuppressionSupported } from '../../lib/noiseSuppressor'
 import { platform } from '../../lib/platform'
 import { applyOutput } from './remoteAudio'
 import type { Cx } from './state'
 import { aiModel, setNodeGain } from './audioMath'
+import { noticeOnce } from './audioNotice'
 
 export async function refreshAudioDevices(cx: Cx) {
   const { voice } = cx
@@ -170,7 +172,12 @@ async function applyNoiseFilter(cx: Cx, ctx: AudioContext, stream: MediaStream, 
   const { voice, st } = cx
   const stage: FilterStage = { aborted: false, sendStream: stream, meterSource: null }
   const model = aiModel(voice.noiseMode)
-  if (!model || model === st.failedAIModel || !isNoiseSuppressionSupported()) return stage
+  if (!model || model === st.failedAIModel) return stage
+  if (!isNoiseSuppressionSupported()) {
+    // Said once; the capture then asks the browser for its own suppression.
+    noticeOnce('audio.filterUnsupported')
+    return stage
+  }
   const node = await createNoiseSuppressorNode(ctx, model, { signal: controller.signal, onFailure: () => cx.hooks.filterFailed(ctx, model) })
   // Torn down (left or settings changed again) while the model loaded.
   if (st.audioContext !== ctx) {
@@ -179,16 +186,25 @@ async function applyNoiseFilter(cx: Cx, ctx: AudioContext, stream: MediaStream, 
     return stage
   }
   if (!node) {
-    cx.hooks.filterFailed(ctx, model)
+    // Cancelled by a reload or a newer setup: nothing failed.
+    if (!controller.signal.aborted && !isPageUnloading()) cx.hooks.filterFailed(ctx, model)
     return stage
   }
-  const destination = ctx.createMediaStreamDestination()
-  ctx.createMediaStreamSource(stream).connect(node)
-  node.connect(destination)
-  st.suppressorNode = node
-  st.rawMicStream = stream
-  stage.sendStream = destination.stream
-  stage.meterSource = node
+  try {
+    const destination = ctx.createMediaStreamDestination()
+    ctx.createMediaStreamSource(stream).connect(node)
+    node.connect(destination)
+    st.suppressorNode = node
+    st.rawMicStream = stream
+    stage.sendStream = destination.stream
+    stage.meterSource = node
+  } catch (err) {
+    destroySuppressorSafely(node)
+    // A capture whose sample rate the context refuses to connect (Firefox): never leave the member without a microphone.
+    if (!(err instanceof DOMException && err.name === 'NotSupportedError')) throw err
+    console.warn('[WebRTC] AI filter could not be connected, using browser suppression:', err)
+    cx.hooks.filterFailed(ctx, model)
+  }
   return stage
 }
 
@@ -307,6 +323,7 @@ export async function setupMicPipeline(cx: Cx, stream: MediaStream): Promise<Med
   st.audioContext = ctx
   const controller = new AbortController()
   st.micPipelineController = controller
+  watchContextStart(ctx, controller.signal, () => cx.hooks.contextStalled(ctx))
   // Not awaited: after a reload (voice resume) there is no user gesture yet
   // and resume() may stay pending until there is one; the graph starts then.
   if (ctx.state === 'suspended') {

@@ -722,6 +722,8 @@
     "noiseHint_browser": "Your browser’s noise suppression dampens steady sounds such as fans or hum. Uses less CPU.",
     "noiseHint_off": "No filter. For studio microphones or when you share music.",
     "filterDegraded": "The AI filter is overloaded or unavailable. Browser noise suppression is used for this Talk.",
+    "filterUnsupported": "AI noise suppression is not available in this browser. Browser noise suppression is used instead.",
+    "engineStalled": "Audio processing has not started in this browser, so your microphone is sent unprocessed. Check your audio output device.",
     "micTest": "Mic test",
     "micTestStart": "Let’s check",
     "micTestStop": "Stop testing",
