@@ -2,43 +2,75 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { enableAutoUnmount, mount } from '@vue/test-utils'
 import MarkdownHelp from './MarkdownHelp.vue'
+import { renderMarkdown } from '../lib/markdown'
+import { setLocale } from '../i18n'
 
 enableAutoUnmount(afterEach)
-beforeEach(() => setActivePinia(createPinia()))
+beforeEach(() => {
+  setActivePinia(createPinia())
+  setLocale('en')
+})
 
 const mountHelp = (props = {}) => mount(MarkdownHelp, { props, attachTo: document.body })
+const button = (w: ReturnType<typeof mountHelp>) => w.find('[data-testid="markdown-help-button"]')
+const openHelp = async (w: ReturnType<typeof mountHelp>) => {
+  await button(w).trigger('click')
+  return w.find('[role="dialog"]')
+}
 
 describe('MarkdownHelp', () => {
-  it('shows what to type next to how it looks, rendered by the message renderer', async () => {
-    const w = mountHelp()
-    expect(w.find('[role="dialog"]').exists()).toBe(false)
-    await w.find('[data-testid="markdown-help-button"]').trigger('click')
-    const dialog = w.find('[role="dialog"]')
-    expect(dialog.exists()).toBe(true)
+  it('shows what to type next to how it looks, grouped, in columns', async () => {
+    const dialog = await openHelp(mountHelp())
+    expect(dialog.findAll('section h3').map(h => h.text())).toEqual(['Text', 'Blocks', 'Links and mentions'])
+    expect(dialog.text()).toContain('Type')
+    expect(dialog.text()).toContain('Result')
     expect(dialog.find('code').text()).toBe('**bold**')
     expect(dialog.find('strong').text()).toBe('bold')
     expect(dialog.find('.md-spoiler').exists()).toBe(true)
     expect(dialog.find('h1').text()).toBe('Heading')
     expect(dialog.find('.md-codeblock').exists()).toBe(true)
+    expect(dialog.find('.md-mention-group').text()).toBe('@all')
+  })
+
+  it('renders every example with the message renderer', async () => {
+    const dialog = await openHelp(mountHelp())
+    const examples = dialog.findAll('[data-testid="format-example"]')
+    const results = dialog.findAll('[data-testid="format-result"]')
+    expect(examples.length).toBe(16)
+    expect(results.length).toBe(examples.length)
+    examples.forEach((example, i) => {
+      const source = example.find('code').text()
+      const rendered = renderMarkdown(source, { known: new Set() })
+      expect(rendered.length).toBeGreaterThan(0)
+      expect(results[i]?.text().length).toBeGreaterThan(0)
+    })
   })
 
   it('never starts link previews from its examples', async () => {
     const w = mountHelp()
-    await w.find('[data-testid="markdown-help-button"]').trigger('click')
+    await openHelp(w)
     expect(w.findComponent({ name: 'LinkPreviewCard' }).exists()).toBe(false)
+  })
+
+  it('hands an example to the composer and closes', async () => {
+    const w = mountHelp()
+    const dialog = await openHelp(w)
+    await dialog.find('[data-testid="format-example"]').trigger('click')
+    expect(w.emitted('insert')).toEqual([['**bold**']])
+    expect(w.find('[role="dialog"]').exists()).toBe(false)
   })
 
   it('closes with Escape, the close button and a click elsewhere, and hands focus back', async () => {
     const w = mountHelp()
-    const open = () => w.find('[data-testid="markdown-help-button"]').trigger('click')
-    await open()
-    await w.find('[role="dialog"]').trigger('keydown', { key: 'Escape' })
+    await openHelp(w)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await w.vm.$nextTick()
     expect(w.find('[role="dialog"]').exists()).toBe(false)
-    expect(document.activeElement).toBe(w.find('[data-testid="markdown-help-button"]').element)
-    await open()
+    expect(document.activeElement).toBe(button(w).element)
+    await openHelp(w)
     await w.find('[role="dialog"] button').trigger('click')
     expect(w.find('[role="dialog"]').exists()).toBe(false)
-    await open()
+    await openHelp(w)
     document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }))
     await w.vm.$nextTick()
     expect(w.find('[role="dialog"]').exists()).toBe(false)
@@ -46,13 +78,13 @@ describe('MarkdownHelp', () => {
 
   it('stays open for clicks inside', async () => {
     const w = mountHelp()
-    await w.find('[data-testid="markdown-help-button"]').trigger('click')
-    w.find('[role="dialog"]').element.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    const dialog = await openHelp(w)
+    dialog.element.dispatchEvent(new Event('pointerdown', { bubbles: true }))
     await w.vm.$nextTick()
     expect(w.find('[role="dialog"]').exists()).toBe(true)
   })
 
   it('can be disabled with the composer', () => {
-    expect(mountHelp({ disabled: true }).find('[data-testid="markdown-help-button"]').attributes('disabled')).toBeDefined()
+    expect(button(mountHelp({ disabled: true })).attributes('disabled')).toBeDefined()
   })
 })
