@@ -1,0 +1,23 @@
+cmd/server/main.go
+  s_5aa38e778cf1ac::t_e6ac830f7c2e76 92-94
+internal/config/config.go
+  s_5aa38e778cf1ac::t_3f351e3b89d9b3 153-163
+internal/config/config_test.go
+  s_5aa38e778cf1ac::t_368545d97f2130 427-436
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "70d7659b95380af367e798c5f1c28f3e05fe1449",
+  "prompts": {},
+  "sessions": {
+    "s_5aa38e778cf1ac": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-builtin-turn-725a019b5a1e641a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
