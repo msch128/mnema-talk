@@ -1,0 +1,248 @@
+internal/config/config_validate.go
+  s_06fcde5dbef956::t_3b3575b02da741 76-78
+doc/operations.md
+  s_3043ef48954715::t_0a1b893fe44ab6 103-104,378-394,396,402-406,413-440,448,455-463,466-468,884-886,1027-1029
+  s_06fcde5dbef956::t_f566fcd10b2284 469-473
+  s_06fcde5dbef956::t_81d310e87a9634 105,395,407-412,474-475
+  s_5aa38e778cf1ac::t_aa1db75489a202 397-401,441,446-447,449-454
+  s_06fcde5dbef956::t_e13403e67d7a89 745
+doc/deployment.md
+  s_5aa38e778cf1ac::t_f5a17ded50a8ee 27,39
+  s_06fcde5dbef956::t_81d310e87a9634 25-26,38,40
+  s_5aa38e778cf1ac::t_6f369326a7adea 41-43
+go.mod
+  s_06fcde5dbef956::t_04fee3b96e4f07 25,29-30
+internal/server/router_routes.go
+  s_06fcde5dbef956::t_94d4eb23b4efbd 102
+doc/architecture.md
+  s_5aa38e778cf1ac::t_c29b57893aa668 326-331
+internal/turnrelay/creds.go
+  s_06fcde5dbef956::t_dd74d3aea2c65f 1-80,1-45,46-80
+api/openapi.json
+  s_06fcde5dbef956::t_9c96203b238e44 7019-7078,7916-7919,7948,7957,34770
+internal/turnrelay/creds_test.go
+  s_06fcde5dbef956::t_1bdb6ea5cdfc09 1-93
+web/src/components/AdminSystemTab.vue
+  s_06fcde5dbef956::t_e4c9c421083744 137-138,357-358
+  s_06fcde5dbef956::t_9e2c1daa63898a 12
+internal/turnrelay/limit.go
+  s_06fcde5dbef956::t_dd74d3aea2c65f 1-94
+internal/turnrelay/allocations.go
+  s_06fcde5dbef956::t_d089868bac23c6 1-66,68-74,76-89,91-107,109-126
+  s_5aa38e778cf1ac::t_edae970af492e9 67,75,90,108
+web/src/components/AdminLockoutAndWarnings.test.ts
+  s_06fcde5dbef956::t_c82b06b06a640c 98
+internal/server/system_edges_test.go
+  s_06fcde5dbef956::t_4cabfb146c24df 27
+web/src/components/adminSystemWarnings.ts
+  s_06fcde5dbef956::t_e9e0c2ddbe201f 2-12
+  s_06fcde5dbef956::t_a9560a412023ce 1
+internal/opwarn/opwarn.go
+  s_06fcde5dbef956::t_3983a587f703b2 23-25
+internal/turnrelay/handlers.go
+  s_06fcde5dbef956::t_6553097db79fb4 1-4,8-12,18-20,29-31,34-37,38-42,105-140,151,158-179
+  s_5aa38e778cf1ac::t_72e29dd60475be 27-28,33
+  s_5aa38e778cf1ac::t_d55d8464e305cc 152-157
+internal/config/config_turn_test.go
+  s_06fcde5dbef956::t_3c580bab063335 91-92
+  s_3043ef48954715::t_b5feb6264982b3 1-41,45-60,62-63,65-78,90,93-134
+  s_5aa38e778cf1ac::t_6819d3f19e668e 42-44,61,64,79-85,87-89
+  s_5aa38e778cf1ac::t_033a310d09eaca 86
+internal/sfu/sfu_test.go
+  s_06fcde5dbef956::t_6212aebdbcf0d3 50
+  s_06fcde5dbef956::t_47625c65f1515c 51-56,63
+internal/config/config_env.go
+  s_3043ef48954715::t_592a325e8ed7a3 103-132
+  s_5aa38e778cf1ac::t_85d3054eb58dd4 5,72-89,156
+internal/turnrelay/listener.go
+  s_5aa38e778cf1ac::t_343bfb9eb6b68f 1-5,7-12,17-23,25-27,29-39,41-43,46-53,55-57,73-74,77,79-81,84-85,92-94,100-103,105-106
+  s_5aa38e778cf1ac::t_af6af60884fb01 6,13-16,24,28,40,44-45,54,58-72,75-76,78,82-83,86-91,95-99,104
+docker-compose.yml
+  s_06fcde5dbef956::t_63ef9ab070c570 39-43,109
+  s_3043ef48954715::t_f9c74bf18764f6 35-38,108,110,286-290
+internal/config/config.go
+  s_5aa38e778cf1ac::t_3f351e3b89d9b3 193-203
+  s_3043ef48954715::t_7d8fa914a8df9d 59-67,172-174,176-183
+internal/server/system.go
+  s_06fcde5dbef956::t_6e5b688aa5f1a3 22,37-38,127-161,321-322,327-348
+internal/turnrelay/options.go
+  s_06fcde5dbef956::t_3d2f190c1d1de8 1-31,35-55,59-64,70-120,125-130
+  s_5aa38e778cf1ac::t_7202b620c8acb6 32-34,56-58,65-69
+.env.example
+  s_06fcde5dbef956::t_63ef9ab070c570 211-212,215
+  s_3043ef48954715::t_9a4ca6f9d173fb 200-210,213-214,216-220
+internal/turnrelay/generator.go
+  s_5aa38e778cf1ac::t_9856e3b101d032 1-30,38-87
+internal/sfu/turn_relay_test.go
+  s_06fcde5dbef956::t_47625c65f1515c 1-3,5-13,15-28,59-63,65-100,102-135,137-147,154-155,157,160-193
+  s_06fcde5dbef956::t_7469d3325c9f22 64
+  s_06fcde5dbef956::t_6e0e29b4f550bc 101
+  s_5aa38e778cf1ac::t_6b85741da8a66b 29-58,158
+  s_06fcde5dbef956::t_03548add29b0ed 4,14,136,148-153,156,159,194-246
+internal/server/public.go
+  s_06fcde5dbef956::t_7f2d9006fbad90 16,111-113,116,128,134-143,150-168
+e2e/tests/relay-call.spec.ts
+  s_06fcde5dbef956::t_0f0f95f4948c30 1-108
+cmd/server/main.go
+  s_06fcde5dbef956::t_596d178580db00 96-97,101,110,195-217,219-243
+  s_5aa38e778cf1ac::t_e6ac830f7c2e76 98-100
+  s_06fcde5dbef956::t_4fcbd4ff7a0bb6 25,218
+  s_06fcde5dbef956::t_15fd6e3560d797 244
+  s_06fcde5dbef956::t_46aec293fd9b8c 103-108
+internal/config/config_test.go
+  s_5aa38e778cf1ac::t_368545d97f2130 427-436
+  s_06fcde5dbef956::t_e1d517d5dd2387 395-396
+internal/turnrelay/server.go
+  s_9ed06b2303269d::t_764fa491d72f1e 1-26,27-52,54-101,104-127,130,140-142,147-209,147-167,168-209
+  s_5aa38e778cf1ac::t_13cb9809536c40 102-103,128-129,131-139,143-146
+web/src/components/AdminSystemOperations.test.ts
+  s_06fcde5dbef956::t_63ef9ab070c570 126
+  s_06fcde5dbef956::t_e91623d2bac39f 125,127-135
+internal/server/router_build.go
+  s_06fcde5dbef956::t_5c23942cb6fadf 115,117,280,286-287,300-301,303,305-306,316
+  s_5aa38e778cf1ac::t_76fb203fba0022 5,11,116,281-285,288-299,302,304
+internal/turnrelay/server_test.go
+  s_5aa38e778cf1ac::t_c2e0615d2c7162 1-281,1-7,8-13,14-281,283-295,302-303,307,317,322-325,326,328-330,332,336-499,500-568
+  s_5aa38e778cf1ac::t_64b2dcda1de4ce 296-297,298-304,307,309,314,316-317,319,325-330
+  s_06fcde5dbef956::t_a210e9c9b01b2f 569-572
+e2e/run.sh
+  s_5aa38e778cf1ac::t_3dc4c9ad118dd8 16-17,51-60,118,157
+internal/metrics/metrics.go
+  s_06fcde5dbef956::t_b030bf11a32eae 227-237,293-295
+internal/config/config_turn.go
+  s_3043ef48954715::t_115690b9c22f3f 1-43,53-55,56-98
+  s_5aa38e778cf1ac::t_8eda2f6eaa21e1 44-52
+internal/turnrelay/target.go
+  s_06fcde5dbef956::t_dd74d3aea2c65f 1-77
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_6ffd81adac5db4 1172-1180,1289-1292
+cmd/server/turn_test.go
+  s_9ed06b2303269d::t_14bd67ab28fe75 1-10,12-65,84,85,87-107,110-119
+  s_5aa38e778cf1ac::t_9f9828732272a5 11,66-83,86,108-109
+internal/perm/snapshot_channels.go
+  s_06fcde5dbef956::t_e2640a325ac1f4 158-173
+internal/turnrelay/guard.go
+  s_2156e9735076ff::t_2a1c4594bf3f2f 1-127
+internal/turnrelay/probe.go
+  s_5aa38e778cf1ac::t_fdde7e90765dd7 1-66
+internal/turnrelay/doc.go
+  s_06fcde5dbef956::t_63ef9ab070c570 9
+  s_06fcde5dbef956::t_dd74d3aea2c65f 1-8,10-29
+internal/perm/snapshot_test.go
+  s_06fcde5dbef956::t_f6a35d68d6480e 6,224-258
+internal/server/public_turn_test.go
+  s_06fcde5dbef956::t_82998702463199 1-3,7-11,13-18,13,14-18,20-48,79-95,99-100,102-114,123-172
+  s_5aa38e778cf1ac::t_e922d1df609826 98
+  s_5aa38e778cf1ac::t_520aaf3508e678 4-6,49-56,115-117,120,122
+internal/sfu/endpoints.go
+  s_5aa38e778cf1ac::t_7aadd3ce6fb934 1-91
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_4bf08a0924c038 4146-4172,4676,4691
+doc/upgrade.md
+  s_06fcde5dbef956::t_81d310e87a9634 141,146-149,153-155,157-158,162
+  s_5aa38e778cf1ac::t_cd7553acbcd303 142-145,150-152,156,163-164
+  s_5aa38e778cf1ac::t_268f0972fa473d 159-161
+README.md
+  s_5aa38e778cf1ac::t_94023cd7bcd419 302-305,354
+  s_5aa38e778cf1ac::t_f0b5c50a5814fc 355
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_17cb45e68ec965 1172-1180,1289-1292
+web/src/components/systemStatus.fixture.ts
+  s_06fcde5dbef956::t_63ef9ab070c570 12
+  s_06fcde5dbef956::t_05aeab4247bd1b 11
+internal/server/server.go
+  s_06fcde5dbef956::t_895097adc7e7d6 27,40-42
+web/src/lib/operatorWarnings.ts
+  s_8c12f50b80ade8::t_11db44c6affef8 23-24
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_46fb7e0ee63857 851
+web/src/components/adminSystemWarnings.test.ts
+  s_19761ad108c610::t_21989bd8937b1b 1-22
+internal/server/turn_relay_integration_test.go
+  s_5aa38e778cf1ac::t_cf463fecfb030b 1-40
+cmd/server/setup_checks_test.go
+  s_06fcde5dbef956::t_96ed7a6d8f2317 105
+internal/setupcheck/setupcheck_test.go
+  s_06fcde5dbef956::t_96ed7a6d8f2317 70,79,271-313
+internal/setupwizard/envfile.go
+  s_06fcde5dbef956::t_e13403e67d7a89 73-77
+doc/quick-start.md
+  s_06fcde5dbef956::t_e13403e67d7a89 13-17,87
+  s_06fcde5dbef956::t_4cce762b964d8d 88,123-124,153-154,177,184-185
+cmd/server/setup_checks.go
+  s_06fcde5dbef956::t_239468a8394df8 23,41-43
+internal/server/admin_status.go
+  s_06fcde5dbef956::t_80ba29f6743164 136-138
+internal/setupcheck/setupcheck.go
+  s_06fcde5dbef956::t_a089632d91a77e 124-126,137,270-271,273-274,276-292,298
+internal/setupwizard/preflight.go
+  s_06fcde5dbef956::t_c84560ed80cece 129
+internal/setupwizard/run.go
+  s_06fcde5dbef956::t_e0c67179738a1e 156
+internal/setupwizard/run_test.go
+  s_06fcde5dbef956::t_72835efc42c5df 37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cee6c533f32204d255a9754715028f8c825b1a58",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_19761ad108c610": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a71ad043d28ebc2fd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2156e9735076ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adel-native-server-78d153cdff05b628",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3043ef48954715": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-drill-ports-b192b464b6201a17",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5aa38e778cf1ac": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-builtin-turn-725a019b5a1e641a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_8c12f50b80ade8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a434bb4b7aa5b86c1",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_9ed06b2303269d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-username-rules-e27d9d8ac20722b1",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
