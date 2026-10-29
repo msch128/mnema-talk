@@ -21,6 +21,7 @@ import SidebarEventsEntry from './SidebarEventsEntry.vue'
 import SidebarDmSection from './SidebarDmSection.vue'
 import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
+import { refuseFullTalk } from '../lib/talks'
 import { loadCollapsed, saveCollapsed } from '../lib/channelTree'
 import { aggregateActivity } from '../lib/channelActivity'
 import { useToastStore } from '../stores/toast'
@@ -185,9 +186,8 @@ async function handleVoiceClick(channel: Channel): Promise<{ joined: Promise<voi
     })
     if (!ok) return null
   }
-  // Select channel messages for side-chat
-  chatStore.selectChannel(channel)
-  // Join voice and switch to the Talk
+  if (refuseFullTalk(channel, voiceStore.channelUsers[channel.id], voiceStore.currentChannelId === channel.id || permissions.canIn(channel.id, 'disconnect_members'))) return null
+  chatStore.selectChannel(channel) // the Talk's side chat
   const join = Promise.resolve(joinVoiceChannel(channel.id))
   voiceStore.activeView = 'voice'
   // /v/:id keeps the Talk's chat toggle as it is.

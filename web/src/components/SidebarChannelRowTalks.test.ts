@@ -4,7 +4,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import SidebarChannelRow from './SidebarChannelRow.vue'
 import TalkParticipants from './TalkParticipants.vue'
 import { useVoiceStore } from '../stores/voice'
-import { canConfigureTalk, isTalkLeader, isTempTalk } from '../lib/talks'
+import { canConfigureTalk, isTalkLeader, isTempTalk, talkSeats } from '../lib/talks'
 import { channelFixture, fixtureId, userFixture, voiceUserFixture } from '../test-fixtures.fixture'
 import { setLocale } from '../i18n'
 
@@ -77,5 +77,22 @@ describe('who sees the Talk settings', () => {
     expect(isTalkLeader(channelFixture({ type: 'voice', leader_id: me }), me)).toBe(false)
     expect(isTempTalk(led)).toBe(true)
     expect(isTempTalk(undefined)).toBe(false)
+  })
+})
+
+describe('talkSeats', () => {
+  const talk = (extra: Parameters<typeof channelFixture>[0]) => channelFixture({ type: 'voice', ...extra })
+
+  it('is null without a limit, for lobbies and for text channels', () => {
+    expect(talkSeats(talk({ user_limit: 0 }), 4)).toBeNull()
+    expect(talkSeats(talk({ user_limit: 2, is_lobby: true }), 0)).toBeNull()
+    expect(talkSeats(channelFixture({ type: 'text', user_limit: 2 }), 1)).toBeNull()
+    expect(talkSeats(null, 1)).toBeNull()
+  })
+
+  it('is full at the limit and stays full above it (3/2)', () => {
+    expect(talkSeats(talk({ user_limit: 2 }), 1)).toEqual({ limit: 2, count: 1, full: false })
+    expect(talkSeats(talk({ user_limit: 2 }), 2)?.full).toBe(true)
+    expect(talkSeats(talk({ user_limit: 2 }), 3)).toEqual({ limit: 2, count: 3, full: true })
   })
 })

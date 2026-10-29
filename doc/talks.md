@@ -82,6 +82,10 @@ the member limit, no new permission model:
 On a lobby they decide who may open Talks (its temporary Talks follow it); a temporary Talk itself offers only the limit. They need *Manage channels* (and the rank and permissions that editing overwrites
 needs anyway); a Talk leader can use the limit.
 
+### Member limit
+
+A Talk with a limit (1-999; 0 is unlimited) shows `N/limit` in the sidebar, live from the voice state events, in a warm colour once it is full. A join that would exceed the limit is refused with `voice_kicked` and `reason: "room_full"`, and the sidebar says so before trying. The check and the seat are taken under one lock, so two joins for the last seat cannot both get in. A member who is already in the Talk (a second tab) is never refused. *Disconnect members* in that Talk (Administrators and the Owner hold every permission) exceeds the limit, so `3/2` is possible: the permission to remove people from a Talk is the one that already marks its moderators, and *Manage channels* is not needed because those holders could raise the limit anyway. A lobby holds nobody and shows no counter.
+
 ## Stages
 
 A Talk can be a **Stage**: a room with a speakers' row and an audience. Without

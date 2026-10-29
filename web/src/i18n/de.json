@@ -972,6 +972,10 @@
     "dismiss": "Meldung von {name} ablehnen"
   },
   "talk": {
+    "seats": "Belegte Plätze des Teilnehmerlimits",
+    "seatsFull": "Dieser Talk ist voll",
+    "seatsOver": "Mehr Personen als das Limit (für Moderierende erlaubt)",
+    "fullToast": "Dieser Talk ist voll ({count}/{limit})",
     "react": "Reagieren",
     "participants": {
       "one": "{count} Teilnehmer",

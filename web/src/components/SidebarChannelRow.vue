@@ -10,6 +10,7 @@ import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
 import { channelDraftKey, hasDraft } from '../lib/drafts'
+import { talkSeats } from '../lib/talks'
 import UserAvatar from './UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import MuteMarks from './MuteMarks.vue'
@@ -68,6 +69,9 @@ const voiceUsers = computed(() => {
   const users = voiceStore.channelUsers[props.channel.id]
   return users ? Object.values(users) : []
 })
+
+// "2/3" next to the timer of a Talk with a user limit; warm once it is full.
+const seats = computed(() => talkSeats(props.channel, voiceUsers.value.length))
 
 // Badges and the timer sit at the row's right edge, the same place on every
 // row. The buttons beside the row (24px each) take that place while the
@@ -178,6 +182,13 @@ const rowClass = computed(() => [
 
       <!-- Unread & Mention Badges; for a Talk in use, how long it runs -->
       <div :class="['flex items-center gap-1 ml-auto shrink-0', trailingClass]">
+        <span
+          v-if="seats"
+          :class="['text-xs tabular-nums', seats.full ? 'text-amber-400' : 'text-mnema-tertiary']"
+          data-testid="sidebar-talk-seats"
+          :data-full="seats.full ? 'true' : undefined"
+          v-tooltip="seats.count > seats.limit ? $t('talk.seatsOver') : seats.full ? $t('talk.seatsFull') : $t('talk.seats')"
+        >{{ seats.count }}/{{ seats.limit }}</span>
         <VoiceTimer
           v-if="isVoice && voiceStore.roomStartedAt[channel.id]"
           :since="voiceStore.roomStartedAt[channel.id]"
