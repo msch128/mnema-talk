@@ -165,8 +165,11 @@ export class FakeAudioContext {
     return node
   }
   createBiquadFilter() { this.ensureActive(); return { type: '', frequency: { setValueAtTime() {} }, connect() {} } }
-  addEventListener() {}
-  removeEventListener() {}
+  private listeners = new Set<() => void>()
+  addEventListener(_type: string, fn: () => void) { this.listeners.add(fn) }
+  removeEventListener(_type: string, fn: () => void) { this.listeners.delete(fn) }
+  /** Changes the state the way the browser does, with a statechange event. */
+  moveTo(state: AudioContextState) { this.state = state; [...this.listeners].forEach(fn => fn()) }
   resume() { this.state = 'running'; return Promise.resolve() }
   close() { this.state = 'closed'; this.closed = true; return Promise.resolve() }
 }

@@ -73,6 +73,24 @@ describe('an audio context that never starts rendering', () => {
     expect(toasts('audio.engineStalled')).toHaveLength(1)
   })
 
+  it('gets the AI filter and the input volume back once the context starts after all', async () => {
+    suppressor.node = node()
+    const { voice } = await stalledCall('ai', 50)
+    await vi.advanceTimersByTimeAsync(3100)
+    expect(suppressor.models).toEqual(['dfn3'])
+    // The rebuilt call's context waits for the gesture as well.
+    await vi.advanceTimersByTimeAsync(3100)
+    const stalled = present(FakeAudioContext.instances.at(-1))
+    // The member clicks somewhere: the browser lets the context run.
+    suppressor.models.length = 0
+    vi.stubGlobal('AudioContext', FakeAudioContext)
+    stalled.moveTo('running')
+    await vi.advanceTimersByTimeAsync(200)
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(3)
+    expect(suppressor.models).toEqual(['dfn3'])
+    expect(toRaw(voice.localAudioStream)).not.toBe(captures[1])
+  })
+
   it('keeps the gate open: the dead meter reads silence and must not mute the member', async () => {
     const { voice } = await stalledCall()
     FakeAudioContext.sample = 128

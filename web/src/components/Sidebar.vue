@@ -173,8 +173,9 @@ function defaultTypeFor(category: Category) {
   return chs.length && chs.every(c => c.type === 'voice') ? 'voice' : 'text'
 }
 
-// False when the member backed out of leaving their current Talk.
-async function handleVoiceClick(channel: Channel): Promise<boolean> {
+// Null when the member backed out of leaving their current Talk, else the
+// join, which has been started but not necessarily settled.
+async function handleVoiceClick(channel: Channel): Promise<{ joined: Promise<void> } | null> {
   if (voiceStore.warnSwitchChannel && voiceStore.currentChannelId && voiceStore.currentChannelId !== channel.id) {
     const ok = await confirm({
       title: t('audio.switchChannelTitle'),
@@ -183,16 +184,16 @@ async function handleVoiceClick(channel: Channel): Promise<boolean> {
       cancelLabel: t('common.cancel'),
       danger: false
     })
-    if (!ok) return false
+    if (!ok) return null
   }
   // Select channel messages for side-chat
   chatStore.selectChannel(channel)
   // Join voice and switch to the Talk
-  joinVoiceChannel(channel.id)
+  const join = Promise.resolve(joinVoiceChannel(channel.id))
   voiceStore.activeView = 'voice'
   // /v/:id keeps the Talk's chat toggle as it is.
   navigate(talkPath(channel, { chat: currentRoute.value.view === 'voice' && !!currentRoute.value.showChat }))
-  return true
+  return { joined: join }
 }
 
 // The Talk's chat without joining: the Talk opens as a preview with its chat.
@@ -218,9 +219,12 @@ function handleChannelClick(channel: Channel) {
 
 async function handleVoiceUserClick(channel: Channel, user: VoiceUser) {
   if (voiceStore.mediaState[user.id]?.screen) {
-    // The join settles after this click handler resumes, so only a cancelled switch is known here; the watch is recorded and applied once the subscriptions attach.
     if (voiceStore.currentChannelId !== channel.id) {
-      if (!(await handleVoiceClick(channel))) return
+      const started = await handleVoiceClick(channel)
+      if (!started) return
+      // A refused join (no permission, media that cannot be sealed) leaves the member outside the Talk, and no screen to watch.
+      await started.joined.catch(() => {})
+      if (voiceStore.currentChannelId !== channel.id) return
     } else {
       voiceStore.activeView = 'voice'
     }
