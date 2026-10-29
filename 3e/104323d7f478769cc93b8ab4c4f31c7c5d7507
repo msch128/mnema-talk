@@ -1,0 +1,109 @@
+e2e/tests/stats-packets.spec.ts
+  s_afb3377f9f37f8::t_b9566072b32a1a 1-69
+web/src/components/ActivityAndConnectionStats.test.ts
+  s_0dfc723326fc69::t_8aa9620320f2b6 92-93,99
+web/src/components/ConnectionStatsModal.vue
+  s_afb3377f9f37f8::t_958e0caaaad432 6,49,54-55,150
+web/src/composables/webrtc/state.ts
+  s_fb29f048bd6d02::t_d7bc7f00891aac 191-201
+web/src/composables/webrtc/statsPolling.test.ts
+  s_2de5838cb2797c::t_d1a4e6900a65fd 1-133
+web/src/composables/webrtc/statsPolling.ts
+  s_06fcde5dbef956::t_28092794820072 4,7,12,19-20,23-24,26,28,30,34-52,60,71,73,84-85,95-98,106-108,111-114,120-131
+web/src/i18n/de.json
+  s_bf24ce51cd8f95::t_d030f11918803d 787-806
+web/src/i18n/en.json
+  s_bf24ce51cd8f95::t_8ecc68695773c0 787-806
+web/src/lib/mediaStats.ts
+  s_e516df595aeaf4::t_1ede46ea162b8d 8-9
+web/src/lib/rtcFlowRows.ts
+  s_afb3377f9f37f8::t_492abef52b8a55 1-64
+web/src/lib/rtcFlows.test.ts
+  s_afb3377f9f37f8::t_af28b662d85fb6 1-120
+web/src/lib/rtcFlows.ts
+  s_e516df595aeaf4::t_9f6caef6db4976 1-82
+web/src/lib/rtcStats.test.ts
+  s_28915fd19e1e49::t_5a950170f55684 67,76
+web/src/lib/rtcStats.ts
+  s_4c6a19030e223f::t_d227643ad9cd68 5-6,8-10,76,79,81,155,158,161-162,164-165,171-172,182-183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3e104323d7f478769cc93b8ab4c4f31c7c5d7507",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0dfc723326fc69": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aci-secretscan-scope-eead97415a6d3132",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_28915fd19e1e49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-arrow-edit-f0518ce8535c51ee",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2de5838cb2797c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aperf-idle-a1f825253ff37314",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_afb3377f9f37f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-proxy-limits-737a1a591bac000a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e516df595aeaf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-notify-links-78aaa4213a135c59",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
