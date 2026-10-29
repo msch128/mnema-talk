@@ -30,7 +30,7 @@ General rules:
 | Variable | Default | Meaning and validation |
 |---|---|---|
 | `APP_ENV` | `development` (compose: `production`) | `production`, `staging`, `development` or `test`; `prod`/`dev` are aliases. `production`/`staging` enforce strong secrets, enable HSTS and log at `info`. |
-| `PUBLIC_URL` | `http://localhost:8080` | Absolute `http(s)` URL browsers use. `https://` turns on `Secure` and `__Host-` cookies. Trailing slash and default ports are dropped so it matches the browser's `Origin`. |
+| `PUBLIC_URL` | `http://localhost:8080` | **The one address you must set**: the absolute `http(s)` URL browsers use. `https://` turns on `Secure` and `__Host-` cookies. Trailing slash and default ports are dropped so it matches the browser's `Origin`. Several defaults follow from it, see [what `PUBLIC_URL` sets](#public_url-and-secure-cookies). |
 | `CORS_ALLOWED_ORIGINS` | `PUBLIC_URL` | Comma-separated origins allowed for API and WebSocket requests (CSRF origin check). Add `http://localhost:3000` for the Vite dev server. |
 | `TRUSTED_PROXY_CIDRS` | `127.0.0.0/8,::1/128` (compose: the same) | CIDRs or IPs whose `X-Forwarded-For` is trusted. Each entry must parse. See [Reverse proxy](#reverse-proxy-and-trusted_proxy_cidrs). |
 | `PORT` | `8080` | HTTP port, 1–65535. In compose the container always listens on 8080; `PORT` there is the **host** port of the mapping. |
@@ -93,7 +93,9 @@ General rules:
 |---|---|---|
 | `WEBRTC_UDP_PORT_MIN` / `WEBRTC_UDP_PORT_MAX` | `50000` / `50050` | UDP range of the SFU; `1 <= MIN <= MAX`. Compose publishes the same range; forward it in your router. |
 | `WEBRTC_UDP_MUX_PORT` | `WEBRTC_UDP_PORT_MIN` | The one UDP port all media peers share (like LiveKit or Discord voice servers), separately bound on each local IPv4/IPv6 interface. Must be inside `MIN`–`MAX`, which Compose already publishes. `0` = legacy mode: every peer takes its own port(s) from the range, so the default 51 ports fit only about 25 people in calls at once (logged at startup). Requires restart. |
-| `WEBRTC_NAT_1TO1_IP` | empty | Comma-separated IPs or host names announced to browsers. Behind a home router list the public address (or a dynamic-DNS name, re-resolved every 5 minutes) **and** the server's LAN IP. In production, an empty value with no TURN configured logs a warning at startup. |
+| `WEBRTC_NAT_1TO1_IP` | empty | Comma-separated IPs or host names announced to browsers. Behind a home router list the public address (or a dynamic-DNS name, re-resolved every 5 minutes) **and** the server's LAN IP. Empty in production: the server announces an IPv4 address from `PUBLIC_URL` and finds its public address itself (`WEBRTC_AUTO_ANNOUNCE`); when that fails and no TURN is configured it logs a warning at startup. A value set here is used as it is and never replaced. |
+| `WEBRTC_AUTO_ANNOUNCE` | `true` | Production only, and only with `WEBRTC_NAT_1TO1_IP` empty: find the public IPv4 address with one STUN binding request at startup (and every 10 minutes, to follow a changed address) and announce it, logging what was found. The STUN server sees the server's IP address, nothing else. `false` = no request. |
+| `WEBRTC_DETECT_STUN_URLS` | `stun.l.google.com:19302,stun.cloudflare.com:3478` | STUN servers that detection asks, in order (`host:port` or `stun:host:port`). Not the STUN servers browsers use (`WEBRTC_STUN_URLS`). |
 | `WEBRTC_STUN_URLS` | empty | Optional STUN servers. Empty = no third-party STUN (named in the privacy policy when set). |
 | `WEBRTC_TURN_URLS` | empty | Optional TURN URLs, e.g. `turn:turn.example.com:3478?transport=udp,turn:turn.example.com:3478?transport=tcp`. |
 | `WEBRTC_TURN_SECRET` | empty | Shared secret with coturn (`use-auth-secret`). At least 16 characters when `WEBRTC_TURN_URLS` is set; no placeholder in production. |
@@ -139,6 +141,7 @@ behind it and so uses the stored language or the default.
 | Variable | Default | Meaning and validation |
 |---|---|---|
 | `UPDATE_CHECK_ENABLED` | `true` | Ask GitHub every 30 minutes for the latest release (admin System tab). `false` = no outbound request. |
+| `CLOCK_CHECK_ENABLED` | `true` | Compare the server clock with an NTP server (`time.cloudflare.com`, then `pool.ntp.org`) at startup and every 6 hours, for the *Server clock* item of the setup checks. The NTP server sees the server's IP address. `false` = no request; the item is then left out. |
 | `MNEMA_IMAGE` | compose: `mnema-talk:local` | Image the `app` service runs; the app reads it to tell whether a re-pull can reach the latest release. See the tag table in the [deployment guide](deployment.md#updates). |
 | `UPDATER_TOKEN` | empty | Turns on "Update now" through the updater sidecar (profile `autoupdate`). At least 32 characters of letters, digits and `._~+/=-`, no placeholder. Empty = feature off, `UPDATER_URL` ignored. |
 | `UPDATER_URL` | `http://mnema-updater:8080` | Where the app reaches the sidecar: `http(s)` without credentials, query or fragment. |
@@ -241,6 +244,18 @@ untrusted hop). Rate limits and the login lockout depend on that address.
   still log that warning.
 
 ### `PUBLIC_URL` and Secure cookies
+
+**What `PUBLIC_URL` sets.** Set it once; each of these follows from it unless its
+own variable is set (explicit values always win):
+
+| Derived setting | From `PUBLIC_URL` | Overridden by |
+|---|---|---|
+| Allowed origins (CSRF check, WebSocket, CORS) | its origin | `CORS_ALLOWED_ORIGINS` |
+| `Secure` and `__Host-` cookies | on when it is `https://` | nothing (set the scheme) |
+| Links in e-mails, invites and webhook URLs | its address | nothing |
+| Web Push contact (VAPID subject) | itself when `https://` | `PUSH_VAPID_SUBJECT` |
+| Voice address | an IPv4 address in it (a LAN install opened by IP) | `WEBRTC_NAT_1TO1_IP` |
+| Public IP for voice (host-name installs) | found by a STUN request at startup | `WEBRTC_NAT_1TO1_IP`, `WEBRTC_AUTO_ANNOUNCE=false` |
 
 `PUBLIC_URL` must be the `https://` URL users open; otherwise the CSRF origin
 check rejects their requests and cookies lose `Secure`. With an `http://`
@@ -618,6 +633,31 @@ The **Admin → Status** tab provides an operator status overview in a single vi
 - **Backups**: Status of host-level backups and restore verification drills (see [Backups and restore](#backups-and-restore)).
 - **Live activity**: Active sessions, connected WebSocket clients, active Talks, and current voice participants.
 - **Operator warnings**: Active configuration warnings collected by the server (e.g. broad trusted proxies, WebRTC reachability).
+- **Setup checks**: a green, amber and red list of what a new installation needs (below).
+
+### Setup checks
+
+The first block of the Status tab lists the checks below, red first. Every amber
+or red item names the variable to set; the same list is logged (`setup check:`
+lines, then one `setup checks` summary) about 20 seconds after the start, once
+object storage and the clock measurement have settled. Fix the cause in `.env`,
+run `docker compose up -d` and reload the tab.
+
+| Check | Red | Amber |
+|---|---|---|
+| Public address | `PUBLIC_URL` is `localhost` in production | plain `http://`, or the page was opened at another address (behind a reverse proxy: it must pass `Host` and `X-Forwarded-Proto`) |
+| Voice address | nothing announced and no TURN (`WEBRTC_NAT_1TO1_IP`) | nothing announced, TURN configured |
+| Voice port | the voice engine did not start (UDP ports busy) | `WEBRTC_UDP_MUX_PORT=0` caps the number of callers |
+| TURN relay | n/a | none configured (optional) |
+| Outgoing mail | n/a | `SMTP_HOST` empty (optional) |
+| Object storage | not configured or not answering | n/a |
+| Database | not answering | n/a |
+| Server clock | 30 seconds or more off | 5 seconds or more off (left out when `CLOCK_CHECK_ENABLED=false` or no NTP answers) |
+| Reverse proxy | n/a | proxy headers from an untrusted address, or `TRUSTED_PROXY_CIDRS` too broad |
+
+Whether the router forwards the voice UDP port cannot be known from inside the
+host, so *Voice port* is green when the server listens. A call from a phone on
+mobile data is the real test.
 
 The tab is gated by the `ops.status` feature key in `/api/health` and backed by `GET /api/admin/status` (restricted to the Owner and members with the *Administrator* permission; other users receive `403 Forbidden`).
 
@@ -872,8 +912,11 @@ Otherwise sign in from a browser you used before, or wait.
    `50000-50050/udp`) must be forwarded from the router to the host and
    published by Docker (compose does that). The reverse proxy does not carry
    voice.
-2. **Announced address right?** Check the `webrtc announce` log line. Behind
-   NAT set `WEBRTC_NAT_1TO1_IP` to the public IP or a dynamic-DNS name **and**
+2. **Announced address right?** The Status tab's *Voice address* item and the
+   `webrtc announce` log line show it and where it came from (set by you, taken
+   from `PUBLIC_URL`, or found with a STUN request). Behind
+   NAT, when the automatic detection is wrong (carrier-grade NAT, a proxy in
+   front of the server) or switched off, set `WEBRTC_NAT_1TO1_IP` to the public IP or a dynamic-DNS name **and**
    the server's LAN IP, e.g. `myhome.example.org,192.168.0.10`. Members in the
    LAN need the LAN IP when the router has no hairpin NAT.
 3. **Connection log.** `sfu ice connected` shows the chosen local and remote
