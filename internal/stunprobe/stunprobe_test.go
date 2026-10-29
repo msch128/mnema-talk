@@ -140,3 +140,56 @@ func TestHostPort(t *testing.T) {
 		}
 	}
 }
+
+// v6Response builds a binding success response reporting an IPv6 address.
+func v6Response(req []byte, ip netip.Addr, xor bool) []byte {
+	attr := make([]byte, 24)
+	typ := uint16(attrMappedAddress)
+	if xor {
+		typ = attrXORMapped
+	}
+	binary.BigEndian.PutUint16(attr[0:], typ)
+	binary.BigEndian.PutUint16(attr[2:], 20)
+	attr[5] = familyIPv6
+	binary.BigEndian.PutUint16(attr[6:], 4242)
+	raw := ip.As16()
+	if xor {
+		var key [16]byte
+		binary.BigEndian.PutUint32(key[:4], magicCookie)
+		copy(key[4:], req[8:20])
+		for i := range raw {
+			raw[i] ^= key[i]
+		}
+	}
+	copy(attr[8:], raw[:])
+	out := make([]byte, headerLen, headerLen+len(attr))
+	binary.BigEndian.PutUint16(out[0:], typeBindingSuccess)
+	binary.BigEndian.PutUint16(out[2:], uint16(len(attr)))
+	copy(out[4:], req[4:20])
+	return append(out, attr...)
+}
+
+func TestParseResponseReadsIPv6AndKeepsFamiliesApart(t *testing.T) {
+	want := netip.MustParseAddr("2001:db8::7")
+	req, txid := bindingRequest()
+	for _, xor := range []bool{true, false} {
+		got, err := parseResponse(v6Response(req, want, xor), txid, true)
+		if err != nil || got != want {
+			t.Errorf("xor=%v: got %v, %v; want %v", xor, got, err, want)
+		}
+	}
+	if _, err := parseResponse(v6Response(req, want, true), txid, false); err == nil {
+		t.Error("an IPv6 answer must not satisfy an IPv4 probe")
+	}
+	v4 := successResponse(req, netip.MustParseAddr("203.0.113.7"), true)
+	if _, err := parseResponse(v4, txid, true); err == nil {
+		t.Error("an IPv4 answer must not satisfy an IPv6 probe")
+	}
+}
+
+func TestParseResponseRejectsPrivateIPv6(t *testing.T) {
+	req, txid := bindingRequest()
+	if _, err := parseResponse(v6Response(req, netip.MustParseAddr("fd00::1"), true), txid, true); err == nil {
+		t.Fatal("a unique-local IPv6 address is not public")
+	}
+}

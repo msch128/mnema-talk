@@ -124,6 +124,7 @@ func (r *envReader) textSettings() *Config {
 		WebRTCBuiltinTURNHost: r.get("WEBRTC_BUILTIN_TURN_HOST", ""),
 		MetricsToken:          r.get("METRICS_TOKEN", ""),
 		WebRTCAnnounce:        SplitList(r.get("WEBRTC_NAT_1TO1_IP", "")),
+		WebRTCLANIPs:          SplitList(r.get("WEBRTC_LAN_IP", "")),
 		WebRTCSTUNURLs:        SplitList(r.get("WEBRTC_STUN_URLS", "")),
 		WebRTCDetectSTUN:      SplitList(r.get("WEBRTC_DETECT_STUN_URLS", strings.Join(stunprobe.DefaultServers, ","))),
 		LegalOperatorName:     r.get("LEGAL_OPERATOR_NAME", "Community Operator"),

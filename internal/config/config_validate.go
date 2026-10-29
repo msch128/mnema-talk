@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/netip"
 	"net/url"
 	"regexp"
 	"strings"
@@ -123,7 +124,22 @@ func (c *Config) validateLimits() error {
 	if err := validateAllowedOrigins(c.AllowedOrigins); err != nil {
 		return err
 	}
+	if err := validateLANIPs(c.WebRTCLANIPs); err != nil {
+		return err
+	}
 	return validateTrustedProxies(c.TrustedProxies)
+}
+
+// validateLANIPs requires WEBRTC_LAN_IP entries to be IPv4 addresses a
+// neighbour on the network could reach: not loopback, unspecified or multicast.
+func validateLANIPs(ips []string) error {
+	for _, e := range ips {
+		a, err := netip.ParseAddr(e)
+		if err != nil || !a.Is4() || !a.IsGlobalUnicast() {
+			return fmt.Errorf("WEBRTC_LAN_IP: %q is not the IPv4 address of this host on your network, e.g. 192.168.1.20", e)
+		}
+	}
+	return nil
 }
 
 // validateRetention checks the retention periods.

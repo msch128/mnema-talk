@@ -95,6 +95,7 @@ General rules:
 | `WEBRTC_UDP_PORT_MIN` / `WEBRTC_UDP_PORT_MAX` | `50000` / `50050` | UDP range of the SFU; `1 <= MIN <= MAX`. Compose publishes the same range; forward it in your router. |
 | `WEBRTC_UDP_MUX_PORT` | `WEBRTC_UDP_PORT_MIN` | The one UDP port all media peers share (like LiveKit or Discord voice servers), separately bound on each local IPv4/IPv6 interface. Must be inside `MIN`–`MAX`, which Compose already publishes. `0` = legacy mode: every peer takes its own port(s) from the range, so the default 51 ports fit only about 25 people in calls at once (logged at startup). Requires restart. |
 | `WEBRTC_NAT_1TO1_IP` | empty | Comma-separated IPs or host names announced to browsers. Behind a home router list the public address (or a dynamic-DNS name, re-resolved every 5 minutes) **and** the server's LAN IP. Empty in production: the server announces an IPv4 address from `PUBLIC_URL` and finds its public address itself (`WEBRTC_AUTO_ANNOUNCE`); when that fails and no TURN is configured it logs a warning at startup. A value set here is used as it is and never replaced. |
+| `WEBRTC_LAN_IP` | empty | Comma-separated IPv4 addresses of this host in your own network (for example `192.168.1.20`), announced to browsers after the public address the server found itself (`WEBRTC_NAT_1TO1_IP` empty). It solves "voice works from outside but not from inside the home network" on routers without NAT loopback. A process inside a Docker bridge network sees only the container's address, so the server cannot read the host's LAN address there: `mnema-talk setup` asks for it, or set it by hand. A server that runs outside a container announces its own private address when this is empty. Ignored when `WEBRTC_NAT_1TO1_IP` is set (list the LAN address there). |
 | `WEBRTC_AUTO_ANNOUNCE` | `true` | Production only, and only with `WEBRTC_NAT_1TO1_IP` empty: find the public IPv4 address with one STUN binding request at startup (and every 10 minutes, to follow a changed address) and announce it, logging what was found. The STUN server sees the server's IP address, nothing else. `false` = no request. |
 | `WEBRTC_DETECT_STUN_URLS` | `stun.l.google.com:19302,stun.cloudflare.com:3478` | STUN servers that detection asks, in order (`host:port` or `stun:host:port`). Not the STUN servers browsers use (`WEBRTC_STUN_URLS`). |
 | `WEBRTC_STUN_URLS` | empty | Optional STUN servers. Empty = no third-party STUN (named in the privacy policy when set). |
@@ -512,6 +513,39 @@ certificate, so `turns:` needs a coturn of your own with a TLS certificate (or a
 TCP/TLS multiplexer in front of it) and the secret from `WEBRTC_TURN_SECRET`.
 The app passes every URL in `WEBRTC_TURN_URLS` to the browser unchanged.
 
+## Can I host at home?
+
+Only if your internet connection has a public IPv4 address of its own. Voice
+and video reach the server over UDP ports that your router forwards to it; a
+provider that shares one public address between many customers (carrier-grade
+NAT, CGNAT) or gives you IPv6 plus a shared IPv4 (DS-Lite) never delivers
+those packets, however you configure the router. Chat over HTTPS may even work
+through a tunnel while every voice call outside your home fails.
+
+Mnema Talk looks for the signs and says so in the **Internet connection** item
+of the Status tab, in the startup log (`setup check:` line) and in the setup
+assistant's checks:
+
+- the address STUN reports, or the host's own WAN address, is in
+  `100.64.0.0/10` (the range providers reserve for CGNAT);
+- no public IPv4 address can be found while a global IPv6 address works
+  (typical for DS-Lite, for example some Fritz!Box lines);
+- the host has a public address of its own that differs from the one the
+  internet sees, so its traffic leaves through another gateway.
+
+Check it yourself in two minutes: open your router's overview page (on a
+Fritz!Box: *Internet > Online Monitor*), note the WAN or "Internet" IPv4
+address and compare it with what `curl -4 ifconfig.me` prints on any computer
+in the network. If they differ, or the router shows an address starting with
+`10.`, `192.168.`, `172.16.`-`172.31.` or `100.64.`-`100.127.`, port forwarding
+cannot work. Your options:
+
+1. Ask the provider for a public IPv4 address (often a free option or a business
+   tariff) or a dual-stack line instead of DS-Lite.
+2. Run Mnema Talk on a small VPS, which has a public address.
+3. Keep the instance at home and put an external relay in front of voice:
+   coturn on a VPS ([TURN (coturn)](#turn-coturn)).
+
 ## IPv6, DS-Lite and CGNAT
 
 - **The announced addresses are IPv4.** `WEBRTC_NAT_1TO1_IP` takes IPv4
@@ -755,7 +789,7 @@ run `docker compose up -d` and reload the tab.
 
 | Check | Red | Amber |
 |---|---|---|
-| Public address | `PUBLIC_URL` is `localhost` in production | plain `http://`, or the page was opened at another address (behind a reverse proxy: it must pass `Host` and `X-Forwarded-Proto`) |
+| Public address | n/a | `PUBLIC_URL` is `localhost` (fine for a trial on one computer, nobody else can join), plain `http://`, or the page was opened at another address (behind a reverse proxy: it must pass `Host` and `X-Forwarded-Proto`) |
 | Voice address | nothing announced and no TURN (`WEBRTC_NAT_1TO1_IP`) | nothing announced, TURN configured |
 | Voice port | the voice engine did not start (UDP ports busy) | `WEBRTC_UDP_MUX_PORT=0` caps the number of callers |
 | TURN relay | n/a | built-in relay could not bind its port, or did not answer on it from the server (a router without NAT loopback also causes this), or `WEBRTC_BUILTIN_TURN=off` with no `WEBRTC_TURN_URLS` |
@@ -764,10 +798,29 @@ run `docker compose up -d` and reload the tab.
 | Database | not answering | n/a |
 | Server clock | 30 seconds or more off | 5 seconds or more off (left out when `CLOCK_CHECK_ENABLED=false` or no NTP answers) |
 | Reverse proxy | n/a | proxy headers from an untrusted address, or `TRUSTED_PROXY_CIDRS` too broad |
+| Internet connection | the WAN address is in `100.64.0.0/10` (CGNAT): port forwarding cannot work | no public IPv4 while IPv6 works (DS-Lite), or the host's own public address differs from the one the internet sees. Shown only when there is a finding; see [Can I host at home?](#can-i-host-at-home) |
 
 Whether the router forwards the voice UDP port cannot be known from inside the
 host, so *Voice port* is green when the server listens. A call from a phone on
 mobile data is the real test.
+
+### The doctor command
+
+For installations managed over SSH there is no browser tab to read: run
+
+```sh
+docker compose exec app mnema-talk doctor
+```
+
+It prints the checks above, one line each with `[ ok ]`, `[warn]` or `[FAIL]`
+and the fix underneath every amber or red one, and exits with status 1 when a
+check is red (0 otherwise), so it also fits a script. It measures what a second
+process can: the configuration, the voice address (a STUN request, as at
+startup), the database, object storage, the clock, and whether the running
+server holds the voice and relay ports. The *Reverse proxy* check needs live
+requests and stays in the Status tab. Without a running server in the container
+the voice and relay checks are skipped and say so. The setup assistant runs it
+for you with `mnema-talk setup --start`.
 
 The tab is gated by the `ops.status` feature key in `/api/health` and backed by `GET /api/admin/status` (restricted to the Owner and members with the *Administrator* permission; other users receive `403 Forbidden`).
 
@@ -1031,7 +1084,14 @@ Otherwise sign in from a browser you used before, or wait.
    NAT, when the automatic detection is wrong (carrier-grade NAT, a proxy in
    front of the server) or switched off, set `WEBRTC_NAT_1TO1_IP` to the public IP or a dynamic-DNS name **and**
    the server's LAN IP, e.g. `myhome.example.org,192.168.0.10`. Members in the
-   LAN need the LAN IP when the router has no hairpin NAT.
+   LAN need the LAN IP when the router has no hairpin NAT: with the public
+   address detected automatically, `WEBRTC_LAN_IP=192.168.0.10` adds just that
+   (the setup assistant asks for it). No public IPv4 at all? See
+   [Can I host at home?](#can-i-host-at-home).
+   **A port in use** shows up in the log as `address already in use` with the
+   port, the protocol and the variable that moves it (`PORT`,
+   `WEBRTC_BUILTIN_TURN_PORT`, `WEBRTC_UDP_PORT_MIN`/`MAX`); stop the other
+   program or pick a free port and forward that one.
 3. **Connection log.** `sfu ice connected` shows the chosen local and remote
    address and the remote candidate type; `sfu ice failed`/`disconnected` and
    `sfu peer state ... failed` mean packets don't get through (firewall,

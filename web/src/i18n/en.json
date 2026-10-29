@@ -1365,6 +1365,7 @@
         "storage": "Object storage",
         "database": "Database",
         "clock": "Server clock",
+        "network": "Internet connection",
         "reverse_proxy": "Reverse proxy"
       },
       "checkMsg": {
@@ -1395,14 +1396,28 @@
             "detail": "Outgoing mail is configured ({host})."
           }
         },
+        "network": {
+          "address_mismatch": {
+            "detail": "This host’s own address {local} differs from the address {public} the internet sees, so its traffic leaves through another gateway and announcing {public} may be wrong.",
+            "fix": "If this host is reachable from outside on {local}, set WEBRTC_NAT_1TO1_IP={local}; if a router or gateway sits in front, forward the voice ports there."
+          },
+          "cgnat": {
+            "detail": "This home connection has no public IPv4 address of its own (the address {address} is in the carrier-grade NAT range 100.64.0.0/10), so port forwarding cannot work and members outside your network cannot reach voice.",
+            "fix": "Home connection without own public IPv4 - port forwarding cannot work. Options: ask the internet provider for a public IPv4 address, run Mnema Talk on a VPS, or use an external relay (WEBRTC_TURN_URLS and WEBRTC_TURN_SECRET). See “Can I host at home?” in doc/operations.md."
+          },
+          "no_ipv4": {
+            "detail": "No public IPv4 address was found but IPv6 works: this looks like a connection without its own public IPv4 (DS-Lite), so port forwarding cannot work and members outside your network cannot reach voice over IPv4.",
+            "fix": "Home connection without own public IPv4 - port forwarding cannot work. Options: ask the internet provider for a public IPv4 address, run Mnema Talk on a VPS, or use an external relay (WEBRTC_TURN_URLS and WEBRTC_TURN_SECRET). See “Can I host at home?” in doc/operations.md."
+          }
+        },
         "public_url": {
           "insecure": {
             "detail": "PUBLIC_URL is plain http://, so session cookies lose the Secure flag and the __Host- prefix.",
             "fix": "Put a reverse proxy with TLS in front and set PUBLIC_URL=https://chat.example.com (skip this on a trusted LAN)."
           },
           "local": {
-            "detail": "PUBLIC_URL is {public_url}, which only this machine can open; invite links, e-mails and browser origin checks use it.",
-            "fix": "Set PUBLIC_URL=https://chat.example.com (the address members type into their browser) in .env and run docker compose up -d."
+            "detail": "PUBLIC_URL is {public_url}, which only this machine can open; invite links, e-mails and browser origin checks use it. That is fine for trying Mnema Talk on this computer, but nobody else can join.",
+            "fix": "To invite others, set PUBLIC_URL=https://chat.example.com (the address members type into their browser) in .env and run docker compose up -d."
           },
           "ok": {
             "detail": "PUBLIC_URL is {public_url}."
@@ -1440,8 +1455,8 @@
         },
         "turn": {
           "builtin_failed": {
-            "detail": "The built-in TURN relay could not listen on port {port}: members on networks that block UDP cannot join voice.",
-            "fix": "Free port {port} (UDP and TCP) or pick another with WEBRTC_BUILTIN_TURN_PORT, then run docker compose up -d."
+            "detail": "The built-in TURN relay could not listen on port {port}: another program on this host is probably using it, so members on networks that block UDP cannot join voice.",
+            "fix": "Stop whatever uses port {port} (UDP and TCP) or pick another port with WEBRTC_BUILTIN_TURN_PORT (and forward that one), then run docker compose up -d."
           },
           "builtin_failed_external": {
             "detail": "A TURN relay is configured for members behind strict firewalls; the built-in relay could not start."
@@ -1508,7 +1523,7 @@
           },
           "unavailable": {
             "detail": "The voice engine did not start, so Talks have no audio or video.",
-            "fix": "Free UDP ports {port_min}-{port_max} on the host (or change WEBRTC_UDP_PORT_MIN and WEBRTC_UDP_PORT_MAX) and restart; the log names the cause."
+            "fix": "Another program may be using UDP ports {port_min}-{port_max} on the host: stop it or change WEBRTC_UDP_PORT_MIN and WEBRTC_UDP_PORT_MAX, then restart; the log names the cause."
           }
         }
       }

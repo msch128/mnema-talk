@@ -7,15 +7,27 @@ package setupwizard
 import (
 	"errors"
 	"fmt"
+	"net/netip"
 	"net/url"
 	"strings"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/version"
 )
 
 // DefaultAdminUsername is the Owner name the server seeds when none is set.
 const DefaultAdminUsername = "admin"
+
+// DefaultLanguage is the documented default of INITIAL_LANGUAGE (doc/operations.md,
+// .env.example and the server itself): the wizard asks with the same one.
+const DefaultLanguage = "de"
+
+// LocalURL is PUBLIC_URL of a trial on one computer.
+const LocalURL = "http://localhost:8080"
+
+// defaultAppPort is the host port the web app is published on (PORT).
+const defaultAppPort = "8080"
 
 // ImageRepository is the published image.
 const ImageRepository = "ghcr.io/msch128/mnema-talk"
@@ -46,6 +58,14 @@ type Options struct {
 	// AdminUsername is the Owner's user name.
 	AdminUsername string
 	SMTP          SMTP
+	// Local sets up a trial on this computer: PUBLIC_URL is http://localhost:8080
+	// unless PublicURL says otherwise, and nothing is published to the network.
+	Local bool
+	// LANIP is this host's address in the local network (WEBRTC_LAN_IP); empty
+	// when unknown.
+	LANIP string
+	// Start runs docker compose up -d --wait and the live checks afterwards.
+	Start bool
 	// AutoUpdate adds the updater sidecar profile and its token.
 	AutoUpdate bool
 	// Force replaces existing files; see the warning in Generate.
@@ -72,6 +92,9 @@ func defaultImage(v string) string {
 
 // normalize fills defaults and validates; the returned Options is a copy.
 func (o Options) normalize() (Options, error) {
+	if o.Local && o.PublicURL == "" {
+		o.PublicURL = LocalURL
+	}
 	pu, err := NormalizePublicURL(o.PublicURL)
 	if err != nil {
 		return o, err
@@ -81,7 +104,7 @@ func (o Options) normalize() (Options, error) {
 		o.Image = defaultImage(version.Current())
 	}
 	if o.Language == "" {
-		o.Language = "en"
+		o.Language = DefaultLanguage
 	}
 	if o.Language != "en" && o.Language != "de" {
 		return o, fmt.Errorf("language must be en or de, got %q", o.Language)
@@ -97,7 +120,38 @@ func (o Options) normalize() (Options, error) {
 	if o.Dir == "" {
 		o.Dir = "."
 	}
+	if err := validateLANIP(o.LANIP); err != nil {
+		return o, err
+	}
 	return o, o.validateSMTP()
+}
+
+// validateLANIP accepts an empty value or the IPv4 address of this host in the
+// local network.
+func validateLANIP(v string) error {
+	if v == "" {
+		return nil
+	}
+	a, err := netip.ParseAddr(v)
+	if err != nil || !a.Is4() || !a.IsGlobalUnicast() {
+		return fmt.Errorf("--lan-ip: %q is not the IPv4 address of this machine on your network, e.g. 192.168.1.20", v)
+	}
+	return nil
+}
+
+// IsLocal reports whether PUBLIC_URL names this computer only.
+func (o Options) IsLocal() bool {
+	u, err := url.Parse(o.PublicURL)
+	return err == nil && config.IsLoopbackAddr(u.Hostname())
+}
+
+// AppPort is the host port the web app is published on: the one in a local
+// PUBLIC_URL (http://localhost:9000), else the default 8080.
+func (o Options) AppPort() string {
+	if u, err := url.Parse(o.PublicURL); err == nil && o.IsLocal() && u.Port() != "" {
+		return u.Port()
+	}
+	return defaultAppPort
 }
 
 func (o Options) validateSMTP() error {
