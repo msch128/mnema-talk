@@ -83,7 +83,7 @@ func TestBuiltinTURNSettingsAreValidated(t *testing.T) {
 		{"WEBRTC_BUILTIN_TURN": "off", "WEBRTC_BUILTIN_TURN_PORT": "abc"},
 		{"WEBRTC_BUILTIN_TURN": "off", "WEBRTC_BUILTIN_TURN_HOST": "https://turn.example.com"},
 	} {
-		if cfg := turnConfig(t, env); cfg.WebRTCBuiltinTURN != "off" && cfg.WebRTCBuiltinTURNPort != 3479 {
+		if cfg := turnConfig(t, env); cfg.WebRTCBuiltinTURNPort != 3479 {
 			t.Errorf("%v: port = %d, want the default after a warning", env, cfg.WebRTCBuiltinTURNPort)
 		}
 	}

@@ -1,13 +1,15 @@
 package server
 
 import (
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/base64"
 	"encoding/json"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
@@ -40,6 +42,14 @@ func startTestRelay(t *testing.T, mayRelay func(uuid.UUID) bool) *turnrelay.Serv
 	}
 	t.Cleanup(func() { _ = relay.Close() })
 	return relay
+}
+
+// externalPassword is the password the external (coturn) path derives for a
+// username from its shared secret.
+func externalPassword(secret, username string) string {
+	mac := hmac.New(sha1.New, []byte(secret))
+	mac.Write([]byte(username))
+	return base64.StdEncoding.EncodeToString(mac.Sum(nil))
 }
 
 func iceFor(t *testing.T, cfg *config.Config, relay *turnrelay.Server, member uuid.UUID) []IceServer {
@@ -78,9 +88,14 @@ func TestICEConfigOffersTheBuiltinRelayToMembersWhoMayJoinVoice(t *testing.T) {
 	if !strings.HasSuffix(s.Username, ":"+member.String()) || s.Credential == "" {
 		t.Fatalf("credential = %q / %q, want one bound to the member", s.Username, s.Credential)
 	}
-	// Signed by the relay's own secret, never by the external one.
-	if _, external := turnCredentials(cfg.WebRTCTURNSecret, member, time.Now(), turnCredentialTTL); s.Credential == external || strings.Contains(s.Credential, cfg.WebRTCTURNSecret) {
-		t.Fatal("the built-in credential derives from the external TURN secret")
+	// Signed by the relay's own secret, never by the external one: the relay
+	// accepts it, and what the external secret would sign for the same
+	// username is not accepted.
+	if !relay.VerifyCredential(s.Username, s.Credential) {
+		t.Fatal("the credential does not verify against the relay's own secret")
+	}
+	if relay.VerifyCredential(s.Username, externalPassword(cfg.WebRTCTURNSecret, s.Username)) {
+		t.Fatal("a password derived from the external TURN secret is accepted by the relay")
 	}
 
 	if got := iceFor(t, cfg, relay, outsider); len(got) != 0 {

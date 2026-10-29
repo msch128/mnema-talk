@@ -761,3 +761,39 @@ func TestHostOf(t *testing.T) {
 		t.Errorf("hostOf = %q", got)
 	}
 }
+
+// A username that looks valid but whose password is wrong does not lift the
+// handshake limit of a TCP connection: only a request that passed the integrity
+// check does.
+func TestForgedCredentialsDoNotLiftTheTCPHandshakeLimit(t *testing.T) {
+	h := newHarness(t, harnessOpts{limits: Limits{HandshakeTimeout: 400 * time.Millisecond, IdleTimeout: 10 * time.Second}})
+	u, _, _ := h.srv.Credentials(uuid.New())
+	conn, err := net.Dial("tcp4", h.addr())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	c, err := turn.NewClient(&turn.ClientConfig{TURNServerAddr: h.addr(), Conn: turn.NewSTUNConn(conn), Username: u, Password: "not-the-password", Realm: Realm})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Listen(); err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	if _, err := c.Allocate(); err == nil {
+		t.Fatal("an allocation with a forged password was granted")
+	}
+	// The connection is closed by the server at the handshake limit although it
+	// presented a well-formed, unexpired username.
+	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	for {
+		if _, err := conn.Read(make([]byte, 512)); err != nil {
+			var ne net.Error
+			if errors.As(err, &ne) && ne.Timeout() {
+				t.Fatal("the connection outlived the handshake limit")
+			}
+			return
+		}
+	}
+}

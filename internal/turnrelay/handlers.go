@@ -45,9 +45,6 @@ func (s *Server) authenticate(ra *turn.RequestAttributes) (string, []byte, bool)
 			return "", nil, false
 		}
 	}
-	if s.tcp != nil {
-		s.tcp.authenticated(ra.SrcAddr)
-	}
 	// The credential's username doubles as the allocation's identity: it
 	// carries the member and the expiry the generator needs.
 	return ra.Username, turn.GenerateAuthKey(ra.Username, ra.Realm, s.auth.password(ra.Username)), true
@@ -90,6 +87,12 @@ func (s *Server) permit(client net.Addr, peer net.IP) bool {
 func (s *Server) events() turn.EventHandler {
 	return turn.EventHandler{
 		OnAllocationCreated: func(src, _ net.Addr, _, _, _ string, relay net.Addr, _ int) {
+			// Only a request that passed the integrity check ends in an
+			// allocation, so this, and not the auth callback (which sees any
+			// well-formed username), proves the TCP client holds a credential.
+			if s.tcp != nil {
+				s.tcp.authenticated(src)
+			}
 			udp, ok := relay.(*net.UDPAddr)
 			if !ok {
 				return

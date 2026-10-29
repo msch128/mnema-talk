@@ -171,6 +171,13 @@ func (s *Server) Credentials(user uuid.UUID) (username, password string, expires
 	return s.auth.mint(user, s.now(), CredentialTTL)
 }
 
+// VerifyCredential reports whether password is the one this relay minted for
+// username (tests and diagnostics; the TURN exchange itself proves it through
+// message integrity).
+func (s *Server) VerifyCredential(username, password string) bool {
+	return s.auth.verify(username, password)
+}
+
 // URLs lists the turn: URLs of the transports that are listening, for host.
 func (s *Server) URLs(host string) []string {
 	hostport := net.JoinHostPort(host, strconv.Itoa(s.opts.Port))
