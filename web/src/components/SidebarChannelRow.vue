@@ -5,10 +5,11 @@ import type { Channel, VoiceUser } from '../types/domain'
 // it for a voice channel. Admins can drag the row (and its users with it) or
 // move it with Alt+ArrowUp / Alt+ArrowDown.
 import { computed } from 'vue'
-import { Hash, Volume2, Radio, Trash2, Monitor, BellOff, MessageSquare, CirclePlus, MessagesSquare, AtSign } from '@lucide/vue'
+import { Hash, Volume2, Radio, Trash2, Monitor, BellOff, MessageSquare, CirclePlus, MessagesSquare, AtSign, Lock } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
+import { usePermissionsStore } from '../stores/permissions'
 import { channelDraftKey, hasDraft } from '../lib/drafts'
 import { talkSeats } from '../lib/talks'
 import UserAvatar from './UserAvatar.vue'
@@ -41,8 +42,11 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
 const authStore = useAuthStore()
+const permissions = usePermissionsStore()
 
 const isVoice = computed(() => props.channel.type === 'voice')
+// A Talk the member may see but not join: the lock says so before a click is refused.
+const cannotJoin = computed(() => isVoice.value && !props.channel.is_lobby && !permissions.canIn(props.channel.id, 'connect'))
 const active = computed(() =>
   isVoice.value
     ? voiceStore.currentChannelId === props.channel.id && voiceStore.activeView === 'voice'
@@ -140,6 +144,12 @@ const rowClass = computed(() => [
           data-testid="lobby-icon"
           class="w-5 h-5 shrink-0 text-mnema-accent"
           v-tooltip="$t('talk.lobbyOpens')"
+        />
+        <Lock
+          v-else-if="cannotJoin"
+          data-testid="talk-locked-icon"
+          class="w-5 h-5 shrink-0 text-mnema-tertiary"
+          v-tooltip="$t('talk.noConnect')"
         />
         <Radio
           v-else-if="isVoice && channel.is_stage"

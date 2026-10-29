@@ -177,5 +177,7 @@ func WriteRateLimited(w http.ResponseWriter, retry time.Duration) {
 
 func writeRateLimited(w http.ResponseWriter, retry time.Duration) {
 	w.Header().Set("Retry-After", retryAfterSeconds(retry))
-	WriteError(w, ErrRateLimited())
+	// The wait is also in the sentence: clients that cannot read the header
+	// still tell the member how long to hold back.
+	WriteError(w, NewAPIError(http.StatusTooManyRequests, CodeRateLimited, "too many requests: retry in "+retryAfterSeconds(retry)+" s"))
 }

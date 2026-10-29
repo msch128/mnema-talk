@@ -131,6 +131,7 @@
       "fileTooBig": "The file is larger than {size} MB",
       "missingPermission": "You don’t have permission to do that.",
       "slowMode": "Slow mode: wait {seconds} s before posting again",
+      "rateWait": "That was a lot at once. Try again in {time}.",
       "linkInvalid": "This link is invalid or has expired.",
       "emailInvalid": "Enter a valid e-mail address.",
       "emailInUse": "Another account has already confirmed this address.",
@@ -577,6 +578,13 @@
     "copiedLink": "Link copied",
     "moreActions": "More actions",
     "readOnly": "You can’t write in this channel.",
+    "timedOut": "You are timed out and can’t write right now.",
+    "uploadMax": "Upload a file or image (up to {size} MB)",
+    "limits": {
+      "slowWait": "Slow mode: you can write again in {time}",
+      "charsLeft": "{count} characters left",
+      "tooLong": "{count} characters too many (at most {max})"
+    },
     "noAttach": "You can’t attach files here.",
     "attachMediaOnly": "Only images and videos can be attached.",
     "attachSkipped": "Only images and videos were attached. Other files were skipped.",

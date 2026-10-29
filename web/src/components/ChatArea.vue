@@ -18,6 +18,8 @@ import BlockedMessageRow from './BlockedMessageRow.vue'
 import { useMessageActions } from '../composables/useMessageActions'
 import { useDmChat } from '../composables/useDmChat'
 import { viewerState } from '../composables/useMediaViewer'
+import { useChannelLimits } from '../composables/useComposerLimits'
+import { useChannelWrite } from '../composables/useChannelWrite'
 import { toggleSavedMessage, useMessageMenu } from '../composables/useMessageMenu'
 import { useOwnMessageNav } from '../composables/useOwnMessageNav'
 import { useMessageScroll } from '../composables/useMessageScroll'
@@ -31,7 +33,6 @@ import { useEscapeMarksRead } from '../composables/useComposerKeys'
 import { continuationIds } from '../lib/messageGrouping'
 import { typingLine } from '../lib/chatLogic'
 import { useToastStore } from '../stores/toast'
-import { usePermissionsStore } from '../stores/permissions'
 import { t } from '../i18n'
 
 // panel: the voice channel's chat under its Talk (VoiceChatPanel): a compact
@@ -56,15 +57,7 @@ const channelIcon = computed(() => {
 })
 const welcomeText = computed(() => (dmChat.isDm.value ? dmChat.welcome.value : t(props.panel ? 'talk.chatWelcome' : 'chat.welcome', { channel: channelName.value })))
 const beginningText = computed(() => (dmChat.isDm.value ? dmChat.beginning.value : t(props.panel ? 'talk.chatBeginning' : 'chat.beginning', { channel: channelName.value })))
-// What the member may do here; the server decides, this only hides what would fail.
-const canIn = (key: 'send_messages' | 'attach_files' | 'add_reactions') => permissions.canIn(chatStore.activeChannel?.id ?? '', key)
-const canSend = computed(() => (dmChat.isDm.value ? dmChat.canSend.value : canIn('send_messages')))
-const canAttach = computed(() => canSend.value && (dmChat.isDm.value || canIn('attach_files')))
-const canReact = computed(() => (dmChat.isDm.value ? dmChat.canSend.value : canIn('add_reactions')))
-const placeholder = computed(() => {
-  if (dmChat.isDm.value) return dmChat.placeholder.value
-  return canSend.value ? t(props.panel ? 'talk.chatPlaceholder' : 'chat.placeholder', { channel: channelName.value }) : t('chat.readOnly')
-})
+const { canSend, canAttach, canReact, placeholder } = useChannelWrite(dmChat, () => props.panel)
 
 const inputMessage = ref('')
 const messageContainer = ref<HTMLElement | null>(null)
@@ -73,6 +66,8 @@ const textAreaEl = computed(() => composer.value?.textArea ?? null)
 const isSending = ref(false)
 // Message the composer is currently replying to.
 const replyingTo = ref<DraftReply | null>(null)
+// The wait of slow mode and the length of the message, told before a send is refused.
+const limits = useChannelLimits(() => inputMessage.value)
 // Text and reply target stay with their channel while another one is open.
 useDraftSlot(() => (chatStore.activeChannel ? channelDraftKey(chatStore.activeChannel.id) : null), inputMessage, replyingTo)
 
@@ -171,7 +166,7 @@ async function revealOwnMessage() {
 
 function isSendBlocked(text: string): boolean {
   if (!text || !canSend.value) return true
-  return isUploading.value || isSending.value
+  return isUploading.value || isSending.value || !!limits.hint.value?.blocks
 }
 
 // The composer refs belong to whichever channel is open now, so a send that
@@ -186,6 +181,7 @@ async function handleSend() {
   const sentIn = chatStore.activeChannel?.id
   try {
     await chatStore.sendMessage(text, null, replyingTo.value?.id || null)
+    limits.sent(sentIn)
     if (stillIn(sentIn)) {
       inputMessage.value = ''
       replyingTo.value = null
@@ -195,6 +191,7 @@ async function handleSend() {
       setDraft(authStore.user.id, channelDraftKey(sentIn), null)
     }
   } catch (err) {
+    limits.refused(sentIn, err)
     toasts.error(dmChat.sendError(err, t('chat.sendFailed')))
   } finally {
     isSending.value = false
@@ -376,6 +373,7 @@ const groupedIds = computed(() => {
       :uploading="isUploading"
       :sending="isSending"
       :typing-text="typingText"
+      :limit="limits.hint.value"
       @send="handleSend"
       @cancel-reply="cancelReply"
       @arrow-up="ownNav.fromComposerKey($event, inputMessage)"
