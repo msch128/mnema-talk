@@ -1,0 +1,35 @@
+web/src/lib/media/groupEpoch.ts
+  s_06fcde5dbef956::t_f11a2e3c80c393 340-343,345-346,350-353
+  s_06fcde5dbef956::t_2cbfefd79377af 344
+  s_06fcde5dbef956::t_618290ab23fa9b 339
+  s_06fcde5dbef956::t_d7af5eb43c7ef5 354-356
+  s_27c4136a674f34::t_a0d9dc17578aa9 18
+web/src/lib/media/group.badPackage.test.ts
+  s_27c4136a674f34::t_873c1f7aea6f1f 1-74
+web/src/lib/media/groupAdds.ts
+  s_27c4136a674f34::t_876e5c1aa2e00b 1-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "50a2a96a1be652b82d94190417fb37c37839f04b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_27c4136a674f34": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-w20-01-bda38c72e25517d1",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
