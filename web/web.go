@@ -40,6 +40,16 @@ func APIDocsPage() []byte {
 	return b
 }
 
+// IndexHTML returns the built app shell (index.html), or nil when the web app
+// was not built. The server fills in link preview tags for a few public pages.
+func IndexHTML() []byte {
+	b, err := distFS.ReadFile("dist/index.html")
+	if err != nil {
+		return nil
+	}
+	return b
+}
+
 // Files of the installable app that sit at the root under a fixed name.
 const (
 	serviceWorkerScript = "sw.js"

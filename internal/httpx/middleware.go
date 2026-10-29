@@ -177,6 +177,10 @@ func maxBody(limit int64, refuse func(http.ResponseWriter, error)) func(http.Han
 // patched at build time to use adoptedStyleSheets and the CSSOM
 // (web/scripts/emojiPickerCsp.ts). The Playwright fixtures fail every spec on
 // any securitypolicyviolation event, so a regression cannot ship unnoticed.
+// frame-src names the two video players a link card can load after a click:
+// youtube-nocookie.com (YouTube's privacy-enhanced host) and Vimeo's player.
+// Nothing else may be framed, and the card sandboxes the iframe. See
+// SECURITY.md, "Link previews and video playback".
 // connect-src 'self' also covers same-origin WebSockets in current browsers.
 const SPAContentSecurityPolicy = "default-src 'self'; " +
 	"script-src 'self' 'wasm-unsafe-eval'; " +
@@ -187,6 +191,7 @@ const SPAContentSecurityPolicy = "default-src 'self'; " +
 	"font-src 'self' data:; " +
 	"connect-src 'self'; " +
 	"worker-src 'self' blob:; " +
+	"frame-src https://www.youtube-nocookie.com https://player.vimeo.com; " +
 	"frame-ancestors 'none'; " +
 	"base-uri 'none'; " +
 	"form-action 'self'; " +

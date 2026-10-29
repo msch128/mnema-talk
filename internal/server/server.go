@@ -55,6 +55,9 @@ type Deps struct {
 	// the five second window that merges a burst of messages into one push.
 	PushClient push.HTTPClient
 	PushBurst  time.Duration
+	// WebIndex replaces the built app shell that gets link preview tags
+	// (tests, where the web app is not built); nil uses the embedded one.
+	WebIndex []byte
 }
 
 // Router holds the assembled handler and the hub (for shutdown/tests).

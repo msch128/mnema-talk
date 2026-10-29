@@ -1,6 +1,7 @@
 package onboarding
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"regexp"
@@ -46,19 +47,7 @@ func (h *Handler) previewInvite(w http.ResponseWriter, r *http.Request) error {
 		httpx.WriteJSON(w, http.StatusOK, InvitePreview{})
 		return nil
 	}
-	var out InvitePreview
-	var expires *time.Time
-	err := h.DB.QueryRow(r.Context(), `
-		SELECT s.community_name, i.expires_at
-		FROM invites i CROSS JOIN instance_settings s
-		WHERE i.code = $1
-		  AND (i.expires_at IS NULL OR i.expires_at > NOW())
-		  AND (i.max_uses IS NULL OR i.uses_count < i.max_uses)`, code).Scan(&out.CommunityName, &expires)
-	// A legacy custom code below today's floor is guessable, so it no longer
-	// works: it answers exactly like an unknown code.
-	if err == nil && auth.IsWeakInviteCode(code) {
-		err = pgx.ErrNoRows
-	}
+	row, err := h.lookupInvite(r.Context(), code)
 	if errors.Is(err, pgx.ErrNoRows) {
 		httpx.WriteJSON(w, http.StatusOK, InvitePreview{})
 		return nil
@@ -66,7 +55,31 @@ func (h *Handler) previewInvite(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	out.Valid, out.ExpiresAt = true, expires
-	httpx.WriteJSON(w, http.StatusOK, out)
+	httpx.WriteJSON(w, http.StatusOK, InvitePreview{Valid: true, CommunityName: row.communityName, ExpiresAt: row.expiresAt})
 	return nil
+}
+
+// inviteRow is what a usable invite code shows to someone who holds it.
+type inviteRow struct {
+	communityName string
+	welcomeText   string
+	expiresAt     *time.Time
+}
+
+// lookupInvite reads the community behind a code that can still be used. An
+// unknown, expired, used-up or too weak legacy code is pgx.ErrNoRows.
+func (h *Handler) lookupInvite(ctx context.Context, code string) (inviteRow, error) {
+	var out inviteRow
+	err := h.DB.QueryRow(ctx, `
+		SELECT s.community_name, s.welcome_text, i.expires_at
+		FROM invites i CROSS JOIN instance_settings s
+		WHERE i.code = $1
+		  AND (i.expires_at IS NULL OR i.expires_at > NOW())
+		  AND (i.max_uses IS NULL OR i.uses_count < i.max_uses)`, code).Scan(&out.communityName, &out.welcomeText, &out.expiresAt)
+	// A legacy custom code below today's floor is guessable, so it no longer
+	// works: it answers exactly like an unknown code.
+	if err == nil && auth.IsWeakInviteCode(code) {
+		err = pgx.ErrNoRows
+	}
+	return out, err
 }
