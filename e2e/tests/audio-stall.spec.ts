@@ -32,6 +32,13 @@ const inboundBytes = (page: Page) => page.evaluate(async () => {
   if (pc) (await pc.getStats()).forEach((s) => { if (s.type === 'inbound-rtp' && s.kind === 'audio') bytes += s.bytesReceived || 0 })
   return bytes
 })
+// Where the engine reports it (Chromium), how much energy the other member's audio carries; a silenced track sends frames too, so bytes alone prove nothing.
+const inboundEnergy = (page: Page) => page.evaluate(async () => {
+  const pc = window.__pcs.at(-1)
+  let energy: number | undefined
+  if (pc) (await pc.getStats()).forEach((s) => { if (s.type === 'inbound-rtp' && s.kind === 'audio' && typeof s.totalAudioEnergy === 'number') energy = (energy ?? 0) + s.totalAudioEnergy })
+  return energy
+})
 const sendingTrackEnabled = (page: Page) => page.evaluate(() => window.__pcs.at(-1)?.getSenders().find(s => s.track?.kind === 'audio')?.track?.enabled ?? false)
 
 async function signIn(page: Page, username: string, password: string) {
@@ -75,13 +82,13 @@ test('a member whose audio engine never starts is told and is still heard', asyn
   // The member is told once, calmly, within the guard's few seconds.
   await expect(stalled.getByText(/Die Audioverarbeitung hat in diesem Browser nicht gestartet/)).toHaveCount(1, { timeout: 15_000 })
 
-  // And the microphone goes out as it is: the open track carries real audio to the other member.
+  // And the microphone goes out as it is: the voice gate cannot read a meter that never runs, so it stays open (a closed track sends silence, in as many bytes).
   await expect.poll(() => sendingTrackEnabled(stalled), { timeout: 15_000 }).toBe(true)
+  if (await inboundEnergy(other) !== undefined) await expect.poll(async () => (await inboundEnergy(other)) ?? 0, { timeout: 15_000 }).toBeGreaterThan(0.001)
   await expect.poll(async () => {
     const before = { out: await outboundBytes(stalled), inn: await inboundBytes(other) }
     await stalled.waitForTimeout(3000)
     const delta = { out: (await outboundBytes(stalled)) - before.out, inn: (await inboundBytes(other)) - before.inn }
-    console.log(`[audio-stall] bytes over 3 s: sent ${delta.out}, received ${delta.inn}`)
     return Math.min(delta.out, delta.inn)
   }, { timeout: 30_000, intervals: [500] }).toBeGreaterThan(6000)
 

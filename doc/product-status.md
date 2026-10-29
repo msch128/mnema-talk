@@ -179,9 +179,18 @@ layer not up in time, a voice-chat leave); each passes when run alone. They are
 retried once in CI, and the WebKit and Firefox e2e jobs use one retry and are not
 required checks until they have gone green for a while.
 
-The AI noise filter's worker pipeline was seen processing audio on macOS
-Firefox but not on CI's Linux Firefox, so its spec (`late-join`) is not in the
-Firefox CI subset.
+The AI noise filter's worker pipeline processes audio on Firefox wherever the
+browser has an audio output device. CI's Linux runner has none, and Firefox then
+never starts an `AudioContext` (it stays `suspended`; `resume()` never settles),
+so nothing routed through the Web Audio graph is rendered. That used to send
+silence (the voice gate read a dead meter and stayed shut) without any notice. The
+page now watches the context: if it is not rendering after 3 s the call is rebuilt
+around it (the capture is sent as it is, the gate stays open outside push-to-talk)
+and the member is told once; a filter that processes no frame within 3 s of the
+context running is given up the same way (`web/src/lib/audioHealth.ts`). The
+Firefox CI job covers both: `audio-stall.spec.ts` on the runner as it is, and
+`late-join.spec.ts` (filter running) after `e2e/ci-audio-sink.sh` gave it a null
+audio sink.
 
 Known limits: Firefox's fake microphone is a steady tone, which the AI noise
 filter removes, so the specs measure decoded samples rather than loudness.
