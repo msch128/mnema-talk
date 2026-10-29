@@ -1,0 +1,23 @@
+web/src/components/DesktopGamingOverlay.test.ts
+  s_fb29f048bd6d02::t_8bd7aa99aa5a91 151-158
+web/src/components/DesktopGamingOverlay.vue
+  s_fb29f048bd6d02::t_0067d008668fa6 15,53,117
+web/src/components/GamingGameList.vue
+  s_fb29f048bd6d02::t_8a42ff29ffc734 15-16,18,21,23-24,50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "356d45478041f8dc0e7e64da677b133cf9e21375",
+  "prompts": {},
+  "sessions": {
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
