@@ -28,6 +28,11 @@ type Health struct {
 	// in the welcome settings, else the host it is served from. It is public
 	// on purpose, so a client can label a server before anyone signs in.
 	CommunityName string `json:"community_name" binding:"optional"`
+	// CommunityIcon is the version of the community icon the Owner set, left
+	// out while there is none. GET /api/community/icon serves it (public); the
+	// version changes with every upload, so a client refetches when it differs
+	// from the one it has.
+	CommunityIcon string `json:"community_icon,omitempty" binding:"optional"`
 	// Features lists the optional features this server has, so a web app of a
 	// newer release can hide what an older server lacks (for example "blocks").
 	// A server of 1.0.x sends no list. See doc/api-stability.md.
@@ -134,7 +139,7 @@ func health(hc *healthCheck, version string, names *community.Names) http.Handle
 			httpx.WriteError(w, err)
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, Health{Status: "ok", Version: version, WebClientAPI: WebClientAPI, CommunityName: names.Get(r.Context()), Features: Features})
+		httpx.WriteJSON(w, http.StatusOK, Health{Status: "ok", Version: version, WebClientAPI: WebClientAPI, CommunityName: names.Get(r.Context()), CommunityIcon: names.Icon(r.Context()), Features: Features})
 	}
 }
 

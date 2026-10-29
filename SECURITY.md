@@ -225,6 +225,14 @@ details and the limits.
 - **Invite-only.** There is no public registration. Only the Owner
   (configurable, default `admin`) and members whose role holds *Manage
   invites* can create invite codes.
+- **Community icon (public, like the name).** `GET /api/community/icon` needs
+  no session, also on an invite-only server: the community name next to it is
+  public already (`GET /api/health`, the sign-in page, link previews) and an
+  icon is meant to be seen. Only the Owner and Administrators set it. The upload
+  is decoded and redrawn as two square PNGs, so metadata and anything hidden in
+  the container are gone and SVG never gets in; the route answers a fixed set of
+  sizes from stored files, has its own per-address rate limit and carries no
+  member data.
 - **Invite preview (the one public read).** `GET /api/invites/{code}` needs no
   session so an invite link can show the community's name before sign-up. It
   answers `{"valid": true, "community_name", "expires_at"?}` or exactly
@@ -942,7 +950,8 @@ details and the limits.
   link written as `<https://…>` gets no card at all. The public pages of this
   server (the root and `/invite/CODE`) carry Open Graph tags for messengers:
   the community name, for a working invite the welcome text cut to 200
-  characters as plain text, and the Mnema icon, all HTML-escaped; an unusable
+  characters as plain text, and the Mnema icon (the community icon, once the
+  Owner set one), all HTML-escaped; an unusable
   code, or a caller over the invite preview limit, gets the generic page.
   Invite pages ask for `noindex`.
 - **Outbound connections.** Besides link previews (`LINK_PREVIEWS_ENABLED`)

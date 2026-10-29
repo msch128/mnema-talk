@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -47,6 +46,10 @@ type Settings struct {
 	// SessionInactivityDays is how many days without an authenticated request
 	// sign a session out (1 to 365, default 7). Inactivity, not age.
 	SessionInactivityDays int `json:"session_inactivity_days" minimum:"1" maximum:"365"`
+	// CommunityIcon is the version of the community icon (GET
+	// /api/community/icon), empty while none is set. It changes with every
+	// upload. Set with PUT /api/admin/community/icon, not with the settings.
+	CommunityIcon string `json:"community_icon" binding:"optional"`
 }
 
 // SettingsInput is the body of PUT /api/admin/onboarding; it replaces the
@@ -69,11 +72,11 @@ type SettingsInput struct {
 	SessionInactivityDays *int `json:"session_inactivity_days" binding:"optional" minimum:"1" maximum:"365" extensions:"x-nullable"`
 }
 
-const settingsColumns = `community_name, welcome_text, rules_text, rules_version, start_channel_id, direct_messages_enabled, session_inactivity_days`
+const settingsColumns = `community_name, welcome_text, rules_text, rules_version, start_channel_id, direct_messages_enabled, session_inactivity_days, COALESCE(community_icon_version, '')`
 
 func scanSettings(row pgx.Row) (Settings, error) {
 	var s Settings
-	err := row.Scan(&s.CommunityName, &s.WelcomeText, &s.RulesText, &s.RulesVersion, &s.StartChannelID, &s.DirectMessagesEnabled, &s.SessionInactivityDays)
+	err := row.Scan(&s.CommunityName, &s.WelcomeText, &s.RulesText, &s.RulesVersion, &s.StartChannelID, &s.DirectMessagesEnabled, &s.SessionInactivityDays, &s.CommunityIcon)
 	return s, err
 }
 
@@ -142,13 +145,7 @@ func (h *Handler) putSettings(w http.ResponseWriter, r *http.Request) error {
 	// The rules in force may have changed: everybody's rights with them.
 	h.Perms.Changed(nil)
 	h.Names.Forget()
-	if h.Events != nil {
-		name := out.CommunityName
-		if h.Names != nil {
-			name = h.Names.Get(r.Context())
-		}
-		h.Events.Broadcast(events.CommunityUpdated, map[string]string{"community_name": name})
-	}
+	h.broadcastCommunity(r.Context(), out)
 	httpx.WriteJSON(w, http.StatusOK, out)
 	return nil
 }

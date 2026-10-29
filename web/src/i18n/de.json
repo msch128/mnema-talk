@@ -1654,7 +1654,16 @@
       "dmEnabledHint": "Wenn aus, kann niemand Direktnachrichten beginnen oder schreiben. Bestehende Gespräche bleiben lesbar.",
       "inactivity": "Nach Inaktivität abmelden (Tage)",
       "inactivityHint": "Eine Sitzung, die so viele Tage keine Anfrage stellt, wird abgemeldet und bekommt keine Benachrichtigungen mehr. Gezählt ab der letzten Nutzung, nicht ab der Anmeldung. 1 bis 365.",
-      "inactivityRange": "Gib eine ganze Zahl von {min} bis {max} ein."
+      "inactivityRange": "Gib eine ganze Zahl von {min} bis {max} ein.",
+      "icon": "Community-Icon",
+      "iconUpload": "Icon hochladen",
+      "iconChange": "Icon ändern",
+      "iconRemove": "Entfernen",
+      "iconHint": "Für alle sichtbar, auch vor der Anmeldung: in der Serverliste der Desktop-App, in der Seitenleiste, als Tab- und Homescreen-Icon und in Link-Vorschauen. PNG, JPEG, WebP oder GIF, mindestens 128×128 Pixel; es wird auf das mittlere Quadrat zugeschnitten.",
+      "iconSaved": "Icon gespeichert.",
+      "iconRemoved": "Icon entfernt.",
+      "iconFailed": "Das Icon konnte nicht geändert werden.",
+      "iconTooBig": "Das Bild ist größer als {size} MB."
     },
     "mail": {
       "title": "E-Mail (SMTP)",
@@ -2441,7 +2450,9 @@
       },
       "settings": {
         "upload_limit": "Upload-Limit geändert",
-        "onboarding": "Willkommen und Regeln geändert"
+        "onboarding": "Willkommen und Regeln geändert",
+        "community_icon": "Community-Icon geändert",
+        "community_icon_remove": "Community-Icon entfernt"
       },
       "moderation": {
         "timeout": "Mitglied in Auszeit geschickt",

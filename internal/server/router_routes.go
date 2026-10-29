@@ -9,6 +9,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/msch128/mnema-talk/internal/onboarding"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/webhook"
 	"github.com/msch128/mnema-talk/web"
@@ -32,7 +33,7 @@ func (c *components) buildHandler() http.Handler {
 	if index == nil {
 		index = web.IndexHTML()
 	}
-	r.Handle("/*", newSharePages(web.Handler(c.d.Names.Get), index, cfg.PublicURL, c.onboardH, c.d.Names))
+	r.Handle("/*", newSharePages(web.HandlerWithIcon(c.d.Names.Get, c.d.Names.Icon), index, cfg.PublicURL, c.onboardH, c.d.Names))
 	return r
 }
 
@@ -146,6 +147,10 @@ func (c *components) mountAdmin(adm chi.Router) {
 		u.Use(httpx.MaxBody(media.MaxAvatarBytes + 1<<20))
 		c.webhookH.MountAdminUploads(u)
 		c.botH.MountAdminUploads(u)
+	})
+	adm.Group(func(u chi.Router) {
+		u.Use(httpx.MaxBody(onboarding.IconBodyLimit))
+		c.onboardH.MountAdminIconUploads(u)
 	})
 	adm.Group(c.mountAdminJSON)
 }

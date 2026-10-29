@@ -139,3 +139,46 @@ func TestPageAndManifestCarryTheCommunityName(t *testing.T) {
 		t.Errorf("Content-Type %q", got)
 	}
 }
+
+func TestCommunityIconReplacesTheBuiltInIcons(t *testing.T) {
+	shell := `<head><link rel="icon" type="image/svg+xml" href="/favicon.svg" />` +
+		`<link rel="apple-touch-icon" href="/apple-touch-icon.png" /></head>`
+	version := ""
+	s := newHandler(fstest.MapFS{
+		"index.html":           {Data: []byte(shell)},
+		"manifest.webmanifest": {Data: []byte(`{"name":"Mnema Talk","icons":[{"src":"/pwa-icon-512.png"}]}`)},
+	}, nil)
+	s.icon = func(context.Context) string { return version }
+	get := func(path string) string {
+		rec := httptest.NewRecorder()
+		s.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		return rec.Body.String()
+	}
+
+	if got := get("/"); got != shell {
+		t.Errorf("without an icon the page is unchanged:\n%s", got)
+	}
+	if !strings.Contains(get("/manifest.webmanifest"), "pwa-icon-512.png") {
+		t.Error("without an icon the manifest keeps the Mnema icons")
+	}
+
+	version = "abc123"
+	page := get("/")
+	for _, want := range []string{
+		`<link rel="icon" type="image/png" sizes="128x128" href="/api/community/icon?size=128&amp;v=abc123" />`,
+		`<link rel="apple-touch-icon" href="/api/community/icon?size=512&amp;v=abc123" />`,
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("missing %q in %s", want, page)
+		}
+	}
+	var doc struct {
+		Icons []struct{ Src, Sizes, Type string }
+	}
+	if err := json.Unmarshal([]byte(get("/manifest.webmanifest")), &doc); err != nil {
+		t.Fatal(err)
+	}
+	if len(doc.Icons) != 2 || doc.Icons[1].Src != "/api/community/icon?size=512&v=abc123" || doc.Icons[1].Sizes != "512x512" || doc.Icons[1].Type != "image/png" {
+		t.Errorf("manifest icons: %+v", doc.Icons)
+	}
+}

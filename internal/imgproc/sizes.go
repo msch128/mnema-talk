@@ -16,3 +16,12 @@ const (
 	LegacyMaxEdge   = 30000
 	LegacyMaxPixels = 64 << 20
 )
+
+// Sizes of the community icon: both are squares, always exactly this size.
+const (
+	IconLargeEdge = 512
+	IconSmallEdge = 128
+	// IconMinEdge is the smallest source accepted; a smaller picture would be
+	// blurry at 512.
+	IconMinEdge = 128
+)

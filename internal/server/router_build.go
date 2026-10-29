@@ -146,6 +146,7 @@ func (c *components) newCore() {
 	c.onboardH.Names, c.onboardH.Events = d.Names, c.pub
 	c.newImport()
 	if d.Store != nil {
+		c.onboardH.Store = d.Store
 		c.chatH.Objects = d.Store
 		c.importH.Importer.Objects = d.Store
 	}

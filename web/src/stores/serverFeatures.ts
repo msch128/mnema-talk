@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '../lib/api'
 import { decodeServerHealth } from '../types/rest'
+import { syncDocumentIcons } from '../lib/communityIcon'
 
 // The optional features of the server this app talks to (GET /api/health
 // `features`). A 1.0.x server sends no list: every newer feature is then
@@ -13,11 +14,19 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
   const loaded = ref(false)
   // What the server calls itself; empty until the answer (or on an older server).
   const communityName = ref('')
+  // The version of the community icon (GET /api/community/icon); empty while the Owner set none.
+  const communityIcon = ref('')
   const names = computed(() => new Set(list.value))
   let pending: Promise<void> | null = null
 
   function has(name: string): boolean {
     return names.value.has(name)
+  }
+
+  /** Adopts the icon version the server announced and moves the tab icons with it. */
+  function setCommunityIcon(version: string) {
+    communityIcon.value = version
+    syncDocumentIcons(version)
   }
 
   /** Asks the server once; later calls share the answer. */
@@ -26,6 +35,7 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
       health => {
         list.value = health.features ?? []
         communityName.value = health.community_name?.trim() ?? ''
+        setCommunityIcon(health.community_icon ?? '')
         loaded.value = true
       },
       () => {
@@ -37,7 +47,7 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
   }
 
   return {
-    list, loaded, communityName, has, load,
+    list, loaded, communityName, communityIcon, setCommunityIcon, has, load,
     dm: computed(() => has('dm')),
     dmV2: computed(() => has('dm.v2')),
     blocks: computed(() => has('blocks')),

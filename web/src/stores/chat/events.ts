@@ -9,6 +9,7 @@ import { useAppVersionStore } from '../appVersion'
 import { useBlocksStore } from '../blocks'
 import { useEventsStore } from '../events'
 import { useOnboardingStore } from '../onboarding'
+import { useServerFeaturesStore } from '../serverFeatures'
 import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../lib/moderation'
 import { snapshotToMap, applyPresenceUpdate } from '../../lib/presence'
 import { MAX_EPHEMERAL } from './types'
@@ -176,8 +177,11 @@ const HANDLERS: Handlers = {
     voiceStore.serverScreenLayers = p?.screen_layers ?? 0
     versions.followAdminUpdates(() => authStore.isAdmin)
   },
-  // The Owner renamed the community: the header, tab title and login follow.
-  community_updated: () => { void useOnboardingStore().reload() },
+  // The Owner renamed the community or changed its icon: the header, tab title, tab icon and login follow.
+  community_updated: (_cx, p) => {
+    if (p && typeof p.community_icon === 'string') useServerFeaturesStore().setCommunityIcon(p.community_icon)
+    void useOnboardingStore().reload()
+  },
   // An admin started an update: the server restarts in a moment.
   system_update: (_cx, p) => useAppVersionStore().setUpdating(p?.version),
   presence_snapshot: onPresenceSnapshot,

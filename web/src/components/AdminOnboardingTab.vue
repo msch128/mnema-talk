@@ -4,6 +4,7 @@
 // members must accept them before they may post, react, upload or join a Talk
 // (the Owner and bots are exempt). "Require re-acceptance" raises the version.
 import { ref, computed, onMounted } from 'vue'
+import { ImagePlus, Trash2 } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import { decodeOnboardingSettings, type OnboardingSettings } from '../types/rest'
 import { useChatStore } from '../stores/chat'
@@ -11,6 +12,8 @@ import { useToastStore } from '../stores/toast'
 import { useOnboardingStore } from '../stores/onboarding'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { t } from '../i18n'
+import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
+import { communityIconUrl } from '../lib/communityIcon'
 import MarkdownContent from './MarkdownContent.vue'
 
 const MAX_NAME = 60
@@ -37,6 +40,10 @@ const inactivityDays = ref(7)
 const previewing = ref<'' | 'welcome' | 'rules'>('')
 const busy = ref(false)
 const loadFailed = ref(false)
+const iconInput = ref<HTMLInputElement | null>(null)
+const iconBusy = ref(false)
+// The stored icon, as the server serves it; the server crops uploads to the centre square.
+const iconUrl = computed(() => communityIconUrl(loaded.value?.community_icon ?? '', 128))
 
 const textChannels = computed(() => chat.allChannels.filter(c => c.type === 'text'))
 const dirty = computed(() => !!loaded.value && (
@@ -94,6 +101,46 @@ async function save() {
   await onboarding.reload().catch(() => {})
 }
 
+/** The icon is stored on its own, apart from the texts: unsaved edits above stay as they are. */
+function adoptIcon(s: OnboardingSettings) {
+  if (loaded.value) {
+    const next = { ...loaded.value }
+    if (s.community_icon) next.community_icon = s.community_icon
+    else delete next.community_icon
+    loaded.value = next
+  }
+  features.setCommunityIcon(s.community_icon ?? '')
+}
+
+async function onIconSelected(e: Event) {
+  const { file, tooBig } = pickImage(e.target as HTMLInputElement)
+  if (tooBig) toasts.error(t('admin.onboarding.iconTooBig', { size: IMAGE_UPLOAD_MAX_MB }))
+  if (!file) return
+  const form = new FormData()
+  form.append('icon', file)
+  iconBusy.value = true
+  try {
+    adoptIcon(await api('/api/admin/community/icon', { method: 'PUT', form, decode: decodeOnboardingSettings }))
+    toasts.success(t('admin.onboarding.iconSaved'))
+  } catch (err) {
+    toasts.error(caughtErrorMessage(err, t('admin.onboarding.iconFailed')))
+  } finally {
+    iconBusy.value = false
+  }
+}
+
+async function removeIcon() {
+  iconBusy.value = true
+  try {
+    adoptIcon(await api('/api/admin/community/icon', { method: 'DELETE', decode: decodeOnboardingSettings }))
+    toasts.success(t('admin.onboarding.iconRemoved'))
+  } catch (err) {
+    toasts.error(caughtErrorMessage(err, t('admin.onboarding.iconFailed')))
+  } finally {
+    iconBusy.value = false
+  }
+}
+
 function togglePreview(which: 'welcome' | 'rules') {
   previewing.value = previewing.value === which ? '' : which
 }
@@ -108,6 +155,26 @@ onMounted(load)
   </div>
   <form v-else-if="loaded" class="space-y-5" data-testid="onboarding-settings" @submit.prevent="save">
     <p class="text-xs text-mnema-tertiary">{{ $t('admin.onboarding.hint') }}</p>
+
+    <div class="space-y-2" data-testid="community-icon">
+      <span class="block text-xs font-medium text-mnema-muted font-mono uppercase tracking-wider">{{ $t('admin.onboarding.icon') }}</span>
+      <div class="flex items-center gap-3">
+        <img v-if="iconUrl" :src="iconUrl" alt="" class="h-16 w-16 shrink-0 rounded-xl border border-mnema-hairline object-cover" data-testid="community-icon-preview" />
+        <span v-else class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-mnema-mint/30 bg-mnema-band text-xl font-semibold text-mnema-mint" aria-hidden="true">M</span>
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" class="btn btn-secondary" :disabled="iconBusy" :aria-busy="iconBusy" data-testid="community-icon-change" @click="iconInput?.click()">
+            <ImagePlus class="h-4 w-4" aria-hidden="true" />
+            <span>{{ iconUrl ? $t('admin.onboarding.iconChange') : $t('admin.onboarding.iconUpload') }}</span>
+          </button>
+          <button v-if="iconUrl" type="button" class="btn btn-secondary" :disabled="iconBusy" data-testid="community-icon-remove" @click="removeIcon">
+            <Trash2 class="h-4 w-4" aria-hidden="true" />
+            <span>{{ $t('admin.onboarding.iconRemove') }}</span>
+          </button>
+          <input ref="iconInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden" data-testid="community-icon-input" @change="onIconSelected" />
+        </div>
+      </div>
+      <p class="text-xs text-mnema-tertiary">{{ $t('admin.onboarding.iconHint') }}</p>
+    </div>
 
     <div class="space-y-1">
       <label for="onb-name" class="block text-xs font-medium text-mnema-muted font-mono uppercase tracking-wider">{{ $t('admin.onboarding.name') }}</label>

@@ -7,6 +7,7 @@ import { useVoiceStore } from './voice'
 import { useEmojiStore } from './emoji'
 import { usePermissionsStore } from './permissions'
 import { useOnboardingStore } from './onboarding'
+import { useServerFeaturesStore } from './serverFeatures'
 import { fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 import type { CommunityEvent } from '../types/domain'
 
@@ -32,6 +33,25 @@ describe('community_updated', () => {
     const reload = vi.spyOn(useOnboardingStore(), 'reload').mockResolvedValue()
     chat.handleWSEvent({ type: 'community_updated', payload: { community_name: 'Lantern Fox' } })
     expect(reload).toHaveBeenCalledOnce()
+  })
+})
+
+describe('community_updated icon', () => {
+  it('adopts the announced icon version and moves it back when the icon is removed', () => {
+    const chat = useChatStore()
+    vi.spyOn(useOnboardingStore(), 'reload').mockResolvedValue()
+    chat.handleWSEvent({ type: 'community_updated', payload: { community_name: 'Lantern Fox', community_icon: 'v7' } })
+    expect(useServerFeaturesStore().communityIcon).toBe('v7')
+    chat.handleWSEvent({ type: 'community_updated', payload: { community_name: 'Lantern Fox', community_icon: '' } })
+    expect(useServerFeaturesStore().communityIcon).toBe('')
+  })
+
+  it('leaves the icon alone when a rename carries none', () => {
+    const chat = useChatStore()
+    vi.spyOn(useOnboardingStore(), 'reload').mockResolvedValue()
+    useServerFeaturesStore().setCommunityIcon('v7')
+    chat.handleWSEvent({ type: 'community_updated', payload: { community_name: 'Lantern Fox' } })
+    expect(useServerFeaturesStore().communityIcon).toBe('v7')
   })
 })
 

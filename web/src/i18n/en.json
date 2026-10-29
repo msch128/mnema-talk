@@ -1654,7 +1654,16 @@
       "dmEnabledHint": "When off, nobody can start or write direct messages. Existing conversations stay readable.",
       "inactivity": "Sign out after inactivity (days)",
       "inactivityHint": "A session that makes no request for this many days is signed out and its notifications stop. Counted from the last use, not from sign-in. 1 to 365.",
-      "inactivityRange": "Enter a whole number from {min} to {max}."
+      "inactivityRange": "Enter a whole number from {min} to {max}.",
+      "icon": "Community icon",
+      "iconUpload": "Upload icon",
+      "iconChange": "Change icon",
+      "iconRemove": "Remove",
+      "iconHint": "Shown to everyone, also before sign-in: in the server list of the desktop app, in the sidebar, as the tab and home-screen icon and in link previews. PNG, JPEG, WebP or GIF, at least 128×128 pixels; it is cropped to the centre square.",
+      "iconSaved": "Icon saved.",
+      "iconRemoved": "Icon removed.",
+      "iconFailed": "Couldn’t change the icon.",
+      "iconTooBig": "The picture is larger than {size} MB."
     },
     "mail": {
       "title": "E-mail (SMTP)",
@@ -2441,7 +2450,9 @@
       },
       "settings": {
         "upload_limit": "Upload limit changed",
-        "onboarding": "Welcome and rules changed"
+        "onboarding": "Welcome and rules changed",
+        "community_icon": "Community icon changed",
+        "community_icon_remove": "Community icon removed"
       },
       "moderation": {
         "timeout": "Member timed out",

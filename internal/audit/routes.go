@@ -116,6 +116,8 @@ var Routes = []Route{
 
 	{Method: "PUT", Pattern: "/upload-limit", Action: "settings.upload_limit", TargetType: "settings", Snapshot: ResSettings},
 
+	{Method: "PUT", Pattern: "/community/icon", Action: "settings.community_icon", TargetType: "settings", Snapshot: ResOnboarding, NoBody: true},
+	{Method: "DELETE", Pattern: "/community/icon", Action: "settings.community_icon_remove", TargetType: "settings", Snapshot: ResOnboarding},
 	{Method: "PUT", Pattern: "/onboarding", Action: "settings.onboarding", TargetType: "settings", Snapshot: ResOnboarding},
 
 	{Method: "POST", Pattern: "/emoji", Action: "emoji.create", TargetType: "emoji", Snapshot: ResEmoji, NoBody: true},
