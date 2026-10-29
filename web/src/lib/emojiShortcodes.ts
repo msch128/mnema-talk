@@ -6,7 +6,11 @@ import { shallowRef } from 'vue'
 let table: Promise<Readonly<Record<string, string>>> | null = null
 
 export function loadEmojiShortcodes(): Promise<Readonly<Record<string, string>>> {
-  table ??= import('./emojiShortcodes.json').then(m => m.default as Record<string, string>)
+  // A failed load (offline, a chunk swapped by a deploy) is forgotten so the next call retries.
+  table ??= import('./emojiShortcodes.json').then(m => m.default as Record<string, string>).catch((error: unknown) => {
+    table = null
+    throw error
+  })
   return table
 }
 

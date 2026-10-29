@@ -6,6 +6,7 @@ import ProfileStatus from './ProfileStatus.vue'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { i18nPlugin, setLocale } from '../i18n'
+import { dateTime } from '../lib/time'
 import { userFixture } from '../test-fixtures.fixture'
 
 let wrapper: VueWrapper
@@ -83,6 +84,23 @@ describe('status expiry in the profile', () => {
     open(['status.expiry'])
     await startEditing('   ')
     expect(wrapper.find('[data-testid="status-expiry"]').exists()).toBe(false)
+  })
+
+  it('writes the clear time in the app language', () => {
+    setLocale('de')
+    try {
+      useServerFeaturesStore().list = ['status.expiry']
+      const iso = '2026-10-24T22:00:00Z'
+      wrapper = mount(ProfileStatus, {
+        global: { plugins: [i18nPlugin] },
+        props: { profileUser: { ...me, status_text: 'Lunch', status_expires_at: iso }, isSelf: true }
+      })
+      const text = wrapper.get('[data-testid="profile-status-until"]').text()
+      expect(text).toContain(dateTime(iso, 'de'))
+      expect(text).not.toContain(dateTime(iso, 'en'))
+    } finally {
+      setLocale('en')
+    }
   })
 
   it('shows when a set status clears itself', () => {

@@ -11,17 +11,38 @@ import { fetchChannels } from './channels'
 import { fetchDms } from './dms'
 import { handleWSEvent } from './events'
 import { fetchMembers } from './members'
-import { fetchMessages } from './messageWindow'
+import { refreshLatest } from './messageWindow'
 import { fetchReadState } from './readState'
 import { fetchNotificationSettings } from './notifySettings'
 import { fetchFollowedThreads } from './threadFollow'
 import { loadNotifyPreview } from '../../lib/notifyPreview'
 import { openThread } from './threads'
 
-function startPingHeartbeat(cx: Cx) {
+const PING_INTERVAL_MS = 5000
+// A socket that answered no ping for this long is dead, even if the browser still reports it open.
+const PONG_TIMEOUT_MS = 15000
+
+function startPingHeartbeat(cx: Cx, session: SocketSession) {
   const { cs } = cx
   stopPingHeartbeat(cx)
-  cs.pingTimer = setInterval(() => sendWSEvent(cx, 'ping', { t: Date.now() }), 5000)
+  cs.lastPongAt = Date.now()
+  cs.lastPingAt = 0
+  cs.pingTimer = setInterval(() => {
+    // Judge the last ping actually sent: throttled timers (hidden tab, sleep) stretch the gap between ticks.
+    if (cs.lastPingAt > cs.lastPongAt && Date.now() - cs.lastPingAt > PONG_TIMEOUT_MS) {
+      // Close handshakes never finish on a half-open connection: drop the socket and reconnect now.
+      session.socket.onopen = null
+      session.socket.onmessage = null
+      session.socket.onclose = null
+      session.socket.close()
+      handleSocketClose(cx, session)
+      return
+    }
+    const now = Date.now()
+    // Keep the oldest unanswered ping as the reference so the wait keeps growing until a pong arrives.
+    if (cs.lastPingAt <= cs.lastPongAt) cs.lastPingAt = now
+    sendWSEvent(cx, 'ping', { t: now })
+  }, PING_INTERVAL_MS)
 }
 
 function stopPingHeartbeat(cx: Cx) {
@@ -52,7 +73,7 @@ function resyncState(cx: Cx) {
   void fetchFollowedThreads(cx)
   void loadNotifyPreview()
   const channel = cs.activeChannel.value
-  if (channel && channel.type === 'text' && !cs.hasMoreAfter.value) fetchMessages(cx, channel.id)
+  if (channel && channel.type === 'text' && !cs.hasMoreAfter.value) void refreshLatest(cx, channel.id)
   if (cs.activeThread.value) openThread(cx, cs.activeThread.value)
 }
 
@@ -106,7 +127,7 @@ function handleSocketOpen(cx: Cx, session: SocketSession) {
   cs.reconnectAttempt.value = 0
   cs.nextRetryAt.value = 0
   cs.reconnectDelay = 1000
-  startPingHeartbeat(cx)
+  startPingHeartbeat(cx, session)
   sendWSEvent(cx, 'ping', { t: Date.now() })
   if (cs.isIdle) sendWSEvent(cx, 'presence_idle', { idle: true })
   if (cs.hadConnection) cs.reconnectCount.value++

@@ -4,7 +4,6 @@ import type { ScreenQuality } from '../../lib/streamQuality'
 import type { MediaState, ScreenLayer, SubscribeRequest, VoiceSnapshot } from '../../types/events'
 import type { RTCConnectionStats } from '../../lib/rtcStats'
 import type { MediaVerification } from '../../lib/media/verify'
-import { isRecord } from '../../types/validation'
 import { usePlaybackPrefs, readJson } from '../../lib/voicePlayback'
 import { useVoiceSettings } from '../voiceSettings'
 import { useAuthStore } from '../auth'
@@ -24,7 +23,7 @@ function loadSavedScreenQuality(): ScreenQuality {
     const raw = localStorage.getItem(SCREEN_QUALITY_STORAGE_KEY)
     if (raw) {
       const parsed: unknown = JSON.parse(raw)
-      return { ...normalizeQuality(parsed), ...(isRecord(parsed) && parsed['custom'] === true ? { custom: true } : {}) }
+      return normalizeQuality(parsed)
     }
   } catch (error) {
     void error

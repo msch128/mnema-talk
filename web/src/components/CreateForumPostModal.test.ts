@@ -60,6 +60,14 @@ describe('CreateForumPostModal', () => {
     expect(submitBtn.attributes('disabled')).toBeUndefined()
   })
 
+  it('names the tag group for assistive technology', () => {
+    const w = mountModal()
+    const group = w.get('[role="group"]')
+    const label = w.get(`#${group.attributes('aria-labelledby')}`)
+    expect(label.text()).not.toBe('')
+    expect(group.findAll('[data-testid="tag-toggle-btn"]')).toHaveLength(6)
+  })
+
   it('allows selecting up to 5 tags and disables further selections', async () => {
     const w = mountModal()
     const tagButtons = w.findAll('[data-testid="tag-toggle-btn"]')
@@ -121,6 +129,7 @@ describe('CreateForumPostModal', () => {
     await flushPromises()
 
     expect(w.text()).toContain('Server error')
+    expect(w.get('[role="alert"]').text()).toContain('Server error')
     expect(w.emitted('created')).toBeFalsy()
   })
 })

@@ -7,6 +7,7 @@ import DmMuteButton from './DmMuteButton.vue'
 import AccountDirectMessages from './AccountDirectMessages.vue'
 import SearchConversationJump from './SearchConversationJump.vue'
 import DmAvatar from './DmAvatar.vue'
+import DmListRow from './DmListRow.vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
@@ -126,6 +127,27 @@ describe('the rich conversation list', () => {
 })
 
 describe('closing and favouriting', () => {
+  it('keeps the action buttons outside the button that opens the conversation', async () => {
+    const chat = setup()
+    chat.dms = [withAda]
+    chat.activeChannel = null
+    const w = mount(SidebarDmSection, { global })
+    const row = w.get(`[data-dm="${withAda.id}"]`)
+    expect(row.attributes('role')).toBeUndefined()
+    const opener = row.get('[data-testid="dm-open"]')
+    expect(opener.find('button').exists()).toBe(false)
+    expect(opener.element.contains(row.get('[data-testid="dm-star"]').element)).toBe(false)
+  })
+
+  it('names muted state and mentions in the row label', () => {
+    const chat = setup()
+    chat.dms = [withAda]
+    const w = mount(DmListRow, { global, props: { dm: withAda, unread: 2, mentions: 1, muted: true } })
+    const label = w.get('[data-testid="dm-open"]').attributes('aria-label')
+    expect(label).toContain('1 unread mentions')
+    expect(label).toContain('muted')
+  })
+
   it('closes a conversation at once, saves it and brings it back with the next message', async () => {
     const chat = setup()
     chat.dms = [withAda, withBo]
@@ -185,7 +207,7 @@ describe('closing and favouriting', () => {
     const chat = setup()
     chat.dms = [{ ...withAda, favourite_position: 0 }, { ...withBo, favourite_position: 1 }, { ...crew, favourite_position: 2 }]
     const w = mount(SidebarDmSection, { global })
-    await w.get(`[data-dm="${withAda.id}"]`).trigger('keydown', { key: 'ArrowDown', altKey: true })
+    await w.get(`[data-dm="${withAda.id}"] [data-testid="dm-open"]`).trigger('keydown', { key: 'ArrowDown', altKey: true })
     expect(puts().at(-1)).toEqual(['/api/dms/favourites', { ids: [withBo.id, withAda.id, crew.id] }])
     await w.get(`[data-dm="${crew.id}"]`).trigger('dragstart')
     await w.get(`[data-dm="${withBo.id}"]`).trigger('dragover', { clientY: 0 })
@@ -243,6 +265,20 @@ describe('finding and starting a conversation', () => {
     await input.trigger('keydown', { key: 'Enter' })
     expect(open).toHaveBeenCalledWith(withBo.id)
     expect((input.element as HTMLInputElement).value).toBe('')
+  })
+
+  it('does not pick a result when Enter commits an IME composition', async () => {
+    const chat = setup()
+    chat.dms = [withAda, withBo]
+    const open = vi.spyOn(chat, 'openDm').mockResolvedValue(undefined)
+    const w = mount(SidebarDmSection, { global })
+    const input = w.get('[data-testid="dm-find-input"]')
+    await input.setValue('bo')
+    await input.trigger('keydown', { key: 'Enter', isComposing: true })
+    await input.trigger('keydown', { key: 'Enter', keyCode: 229 })
+    expect(open).not.toHaveBeenCalled()
+    await input.trigger('keydown', { key: 'Enter' })
+    expect(open).toHaveBeenCalledWith(withBo.id)
   })
 
   it('starts a conversation with a member who has none yet and moves with the arrow keys', async () => {
@@ -450,7 +486,7 @@ describe('every entry of the context menu', () => {
     chat.dms = [withAda]
     chat.readStates = { [withAda.id]: { channel_id: withAda.id, unread_count: 4, mention_count: 0, notify_level: 'all', last_read_at: null } }
     http.handle = () => ({ channels: [], categories: [], server: { level: 'all', muted_until: null, suppress_everyone: false } })
-    const read = vi.spyOn(chat, 'markChannelRead').mockResolvedValue(undefined)
+    const read = vi.spyOn(chat, 'markChannelRead').mockResolvedValue(true)
     const w = mount(SidebarDmSection, { global, attachTo: document.body })
     await click(await menuFor(w, withAda.id), 'Mark as read')
     expect(read).toHaveBeenCalledWith(withAda.id)
@@ -478,7 +514,7 @@ describe('every entry of the context menu', () => {
     const chat = setup()
     chat.dms = [withAda]
     const w = mount(SidebarDmSection, { global, attachTo: document.body })
-    await w.get(`[data-dm="${withAda.id}"]`).trigger('keydown', { key: 'F10', shiftKey: true })
+    await w.get(`[data-dm="${withAda.id}"] [data-testid="dm-open"]`).trigger('keydown', { key: 'F10', shiftKey: true })
     await flushPromises()
     expect(document.querySelectorAll('[role="menuitem"]').length).toBeGreaterThan(0)
     await w.get('[data-testid="dm-more-actions"]').trigger('click')

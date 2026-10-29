@@ -5757,16 +5757,80 @@
         },
         "type": "object"
       },
+      "linkpreview.Embed": {
+        "properties": {
+          "provider": {
+            "enum": [
+              "youtube",
+              "vimeo"
+            ],
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "url"
+        ],
+        "type": "object"
+      },
+      "linkpreview.Field": {
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "value"
+        ],
+        "type": "object"
+      },
       "linkpreview.Preview": {
         "properties": {
+          "author": {
+            "description": "Author is the channel, creator or publisher; AuthorURL links to it.",
+            "type": "string"
+          },
+          "author_url": {
+            "type": "string"
+          },
+          "color": {
+            "description": "Color is the page's theme colour as #rrggbb, for a card accent.",
+            "type": "string"
+          },
+          "compact": {
+            "description": "Compact asks for a small thumbnail beside the text (a square avatar or\na \"summary\" card) instead of a wide image above it.",
+            "type": "boolean"
+          },
           "description": {
             "type": "string"
+          },
+          "embed": {
+            "$ref": "#/components/schemas/linkpreview.Embed",
+            "description": "Embed is set for videos the client may play inline after a click."
+          },
+          "fields": {
+            "description": "Fields are short labelled facts such as a price.",
+            "items": {
+              "$ref": "#/components/schemas/linkpreview.Field"
+            },
+            "type": "array"
           },
           "image": {
             "description": "Image is the original absolute image URL; clients load it through the\nimage proxy because the CSP only allows same-origin images.",
             "type": "string"
           },
           "site_name": {
+            "description": "SiteName is the provider (\"YouTube\", \"Steam\", the page's og:site_name).",
             "type": "string"
           },
           "title": {
@@ -27784,7 +27848,7 @@
     },
     "/api/link-preview": {
       "get": {
-        "description": "Only mounted when LINK_PREVIEWS is enabled. Answers 204 when the page has no card or may not be fetched. Extra rate limit (120 per minute).",
+        "description": "Only mounted when LINK_PREVIEWS is enabled. Reads Open Graph and Twitter card tags, the theme colour and oEmbed; YouTube and Vimeo links use the provider's oEmbed, Steam store links add price and recommendations. `embed` is set for YouTube and Vimeo videos only, with a fixed player address. Answers 204 when the page has no card or may not be fetched. Extra rate limit (120 per minute).",
         "operationId": "getLinkPreview",
         "parameters": [
           {

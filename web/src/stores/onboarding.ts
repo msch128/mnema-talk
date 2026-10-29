@@ -10,6 +10,22 @@ const RETRY_LOAD_MS = 1500
 // Waits before the retries of storing "welcome done"; the list length bounds them.
 const SAVE_BACKOFF_MS = [1000, 3000, 9000]
 
+/** Tips only get closed, never reopened: an answer to an earlier save must not bring back one closed since. */
+function keepClosedTips(next: OnboardingState, current: OnboardingState | null): OnboardingState {
+  const closed = new Set([...next.dismissed_tips, ...(current?.dismissed_tips ?? [])])
+  return { ...next, dismissed_tips: [...closed] }
+}
+
+/** One load per account at a time: callers meanwhile wait for the same one. */
+function loadOnce(pending: Map<string, Promise<boolean>>, userId: string, read: (userId: string) => Promise<boolean>, alive: () => boolean) {
+  let load = pending.get(userId)
+  if (!load) {
+    load = retryWithBackoff(() => read(userId), [RETRY_LOAD_MS], alive).finally(() => pending.delete(userId))
+    pending.set(userId, load)
+  }
+  return load
+}
+
 // The member's first-run record: the community's welcome text and rules, the
 // rules they accepted, the tips they closed and whether the welcome flow is done.
 export const useOnboardingStore = defineStore('onboarding', () => {
@@ -42,12 +58,7 @@ export const useOnboardingStore = defineStore('onboarding', () => {
   async function ensureLoaded() {
     const userId = auth.user?.id
     if (!userId || loadedFor === userId) return
-    let load = pending.get(userId)
-    if (!load) {
-      load = retryWithBackoff(() => read(userId), [RETRY_LOAD_MS], stillSignedIn(userId)).finally(() => pending.delete(userId))
-      pending.set(userId, load)
-    }
-    await load
+    await loadOnce(pending, userId, read, stillSignedIn(userId))
   }
 
   /** Re-reads the record (the rules may have changed meanwhile). */
@@ -58,7 +69,14 @@ export const useOnboardingStore = defineStore('onboarding', () => {
   async function save(input: OnboardingTipsInput) {
     const userId = auth.user?.id
     const next = await api('/api/onboarding/tips', { method: 'PUT', json: input, decode: decodeOnboardingState })
-    if (userId && auth.user?.id === userId) state.value = adopt(userId, next)
+    if (userId && auth.user?.id === userId) state.value = adopt(userId, keepClosedTips(next, state.value))
+  }
+
+  /** Forgets the signed-in account's record (sign-out). */
+  function reset() {
+    state.value = null; welcomeOpen.value = false
+    loadedFor = finishedFor = ''
+    pending.clear()
   }
 
   /** The welcome flow is done: kept locally at once (a tab switch must not reopen it), then stored with a few retries. */
@@ -67,8 +85,8 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     if (!userId) return
     finishedFor = userId
     if (state.value && !state.value.welcome_done) state.value = { ...state.value, welcome_done: true }
-    const store = () => save({ welcome_done: true }).then(() => true, () => false)
-    await retryWithBackoff(store, SAVE_BACKOFF_MS, stillSignedIn(userId)) // if it keeps failing, the next session asks again
+    // If it keeps failing, the next session asks again.
+    await retryWithBackoff(() => save({ welcome_done: true }).then(() => true, () => false), SAVE_BACKOFF_MS, stillSignedIn(userId))
   }
 
   /** Closes a tip at once and stores it; a failed save only means it may show again. */
@@ -82,13 +100,10 @@ export const useOnboardingStore = defineStore('onboarding', () => {
   /** Accepts the rules version the member read. False when they changed meanwhile (the new ones are loaded). */
   async function acceptRules(version: number): Promise<boolean> {
     const accepted = await api('/api/onboarding/accept', { method: 'POST', json: { version } }).then(() => true, () => false)
-    if (!accepted) {
-      await reload()
-      return false
-    }
-    if (state.value) state.value = { ...state.value, rules_accepted_version: version, rules_pending: false }
-    return true
+    if (!accepted) await reload()
+    else if (state.value) state.value = { ...state.value, rules_accepted_version: version, rules_pending: false }
+    return accepted
   }
 
-  return { state, welcomeOpen, ensureLoaded, reload, save, markWelcomeDone, dismiss, acceptRules }
+  return { state, welcomeOpen, ensureLoaded, reload, save, markWelcomeDone, dismiss, acceptRules, reset }
 })

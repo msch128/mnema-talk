@@ -30,6 +30,7 @@ describe('VoiceStatusPanel', () => {
     const audio = wrapper.get('[data-testid="voice-panel-stream-audio"]')
     await audio.trigger('click'); expect(audio.attributes('aria-pressed')).toBe('true')
     await audio.trigger('click'); expect(audio.attributes('aria-pressed')).toBe('false')
+    expect(wrapper.get('[data-testid="voice-panel-leave"]').classes()).toContain('max-md:h-11')
     await wrapper.get('[data-testid="voice-panel-leave"]').trigger('click'); expect(rtc.leaveVoiceChannel).toHaveBeenCalledOnce()
   })
 })

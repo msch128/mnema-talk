@@ -29,11 +29,13 @@ onMounted(async () => {
 function set(name: string, value: string | boolean) {
   emit('set', name, value)
 }
+// Enter in a checkbox toggles nothing and must not run the command; IME Enter only commits a candidate.
+const isTextField = (el: HTMLElement) => el.tagName === 'INPUT' && (el as HTMLInputElement).type !== 'checkbox'
 function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     e.preventDefault()
     emit('cancel')
-  } else if (e.key === 'Enter' && !e.shiftKey && (e.target as HTMLElement).tagName === 'INPUT') {
+  } else if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229 && isTextField(e.target as HTMLElement)) {
     e.preventDefault()
     emit('run')
   }

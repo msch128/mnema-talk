@@ -18,6 +18,14 @@ describe('escapeRegExp / mentionsUser', () => {
     expect(mentionsUser('hi @x(', 'x(')).toBe(true)
   })
 
+  it('counts a mention that ends a sentence, like the server', () => {
+    expect(mentionsUser('thanks @alice.', 'alice')).toBe(true)
+    expect(mentionsUser('ping @alice-', 'alice')).toBe(true)
+    expect(mentionsUser('ping @alice..', 'alice')).toBe(true)
+    expect(mentionsUser('ping @alice.b', 'alice')).toBe(false)
+    expect(mentionsUser('ping @alice-b', 'alice')).toBe(false)
+  })
+
   it('is case-insensitive and needs a word boundary', () => {
     expect(mentionsUser('@Max hello', 'max')).toBe(true)
     expect(mentionsUser('mail@max.de', 'max')).toBe(false)

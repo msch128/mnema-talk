@@ -324,6 +324,8 @@ export abstract class GroupEpoch extends GroupBase {
       if (renewal) wipeConsumed(result.consumed)
       return []
     }
+    // Only a renewal keeps the old state (in selfUpdate); any other commit retires it.
+    if (!renewal) this.wipeLeft(previous)
     // A renewal may race another commit for the same epoch: keep the state it left.
     if (renewal) this.selfUpdate = { state: previous, current, previousEpoch, sender: this.userId, until: clock.now() + CONFLICT_MS, held: result.consumed }
     return wires.welcome ? [wires.welcome, wires.commit] : [wires.commit]

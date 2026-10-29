@@ -247,6 +247,7 @@
     "deleteFailed": "Das Löschen hat nicht geklappt. Versuche es noch einmal.",
     "markRead": "Als gelesen markieren",
     "markedRead": "Als gelesen markiert",
+    "markReadFailed": "Das Markieren als gelesen hat nicht geklappt. Versuche es noch einmal.",
     "markAllRead": "Alle als gelesen markieren",
     "allMarkedRead": "Alle als gelesen markiert",
     "categoryMentions": "{n} Erwähnungen in dieser Kategorie",
@@ -329,7 +330,8 @@
     "rules": {
       "title": "Die Regeln",
       "intro": "Bitte lies die Regeln dieser Community. Mitlesen geht sofort – Schreiben, Reagieren, Hochladen und Talks beitreten erst, wenn du sie akzeptierst.",
-      "accept": "Ich akzeptiere die Regeln"
+      "accept": "Ich akzeptiere die Regeln",
+      "acceptFailed": "Das ließ sich nicht speichern. Prüfe deine Verbindung und versuche es erneut."
     },
     "profile": {
       "title": "Dein Profil",
@@ -407,6 +409,7 @@
     "sortActivity": "Letzte Aktivität",
     "sortNewest": "Neueste",
     "loadingPosts": "Beiträge werden geladen …",
+    "loadFailed": "Beiträge konnten nicht geladen werden. Versuche es erneut.",
     "emptyTitle": "Noch keine Beiträge",
     "emptyDescription": "Starte die Unterhaltung und erstelle den ersten Beitrag in diesem Forum.",
     "emptyTagFilter": "Keine Beiträge für den ausgewählten Tag-Filter gefunden.",
@@ -591,6 +594,16 @@
     "searchProblemOption": "„{value}“ ist kein Wert für {filter}:. Wähle einen von: {options}.",
     "searchProblemEmpty": "{filter}: braucht einen Wert."
   },
+  "linkPreview": {
+    "play": "Video abspielen: {title}",
+    "playerTitle": "Videoplayer: {title}",
+    "authorBy": "von {name}",
+    "field": {
+      "price": "Preis",
+      "recommendations": "Empfehlungen"
+    },
+    "playerBlocked": "Diese App spielt keine Videos direkt ab. Der Link öffnet sich im Browser."
+  },
   "thread": {
     "title": "Thread",
     "close": "Thread schließen",
@@ -600,6 +613,7 @@
     "notFollowing": "Du wirst bei Antworten in diesem Thread nicht benachrichtigt.",
     "followFailed": "Der Thread konnte nicht abonniert werden. Versuche es erneut.",
     "unfollowFailed": "Das Abo des Threads konnte nicht beendet werden. Versuche es erneut.",
+    "loadFailed": "Der Thread konnte nicht geladen werden. Versuche es erneut.",
     "edit": "Antwort bearbeiten",
     "delete": "Antwort löschen",
     "deleteTitle": "Antwort löschen?",
@@ -636,6 +650,12 @@
     "cameraDenied": "Kamerazugriff verweigert. Erlaube die Kamera für diese Seite in den Browser-Einstellungen.",
     "cameraNotFound": "Keine Kamera gefunden.",
     "cameraBusy": "Die Kamera wird gerade von einer anderen App benutzt.",
+    "micDenied": "Mikrofonzugriff verweigert. Erlaube das Mikrofon für diese Seite in den Browser-Einstellungen.",
+    "micNotFound": "Kein Mikrofon gefunden.",
+    "micBusy": "Das Mikrofon wird gerade von einer anderen App benutzt.",
+    "micFailed": "Mikrofon nicht verfügbar. Prüfe die Berechtigung im Browser.",
+    "micDeviceReset": "Dein gespeichertes Mikrofon ist nicht verfügbar. Das Standardmikrofon wird verwendet.",
+    "micLost": "Dein Mikrofon funktioniert nicht mehr. Verlasse den Talk und tritt erneut bei.",
     "memberMuted": "Stummgeschaltet",
     "memberDeafened": "Taub geschaltet",
     "kicked": "Du wurdest aus dem Talk entfernt.",
@@ -800,6 +820,7 @@
       "introAfter": " ist ein privates, nicht-kommerzielles Softwareprojekt für geschlossene Gemeinschaften – ohne Gewinnerzielungsabsicht, ohne Werbeeinnahmen und ohne geschäftliche Beziehung. Konten werden ausschließlich über persönliche Einladungsschlüssel vergeben.",
       "controller": "Verantwortlicher (Art. 4 Nr. 7 DSGVO)",
       "email": "E-Mail-Kontakt",
+      "emailUnset": "vom Betreiber nicht angegeben",
       "country": "Land / Gerichtsstand",
       "status": "Projektstatus",
       "statusNote": "{status} (keine § 5 DDG Impressumspflicht)"
@@ -1423,6 +1444,7 @@
       "invalid": "Gib eine ganze Zahl von 1 bis {ceiling} ein."
     },
     "onboarding": {
+      "loadFailed": "Die Einstellungen konnten nicht geladen werden.",
       "hint": "Wird neuen Mitgliedern gezeigt. Sobald es Regeln gibt, müssen Mitglieder sie akzeptieren, bevor sie schreiben, reagieren, hochladen oder einem Talk beitreten können. Du wirst nie gefragt.",
       "name": "Name der Community",
       "namePlaceholder": "Mnema Talk",
@@ -1845,7 +1867,8 @@
   "mentions": {
     "inbox": "Erwähnungen",
     "empty": "Dich erwähnt noch niemand.",
-    "failed": "Die Erwähnungen konnten nicht geladen werden. Versuche es noch einmal."
+    "failed": "Die Erwähnungen konnten nicht geladen werden. Versuche es noch einmal.",
+    "moreFailed": "Weitere Erwähnungen konnten nicht geladen werden. Versuche es noch einmal."
   },
   "emoji": {
     "open": "Emoji einfügen",
@@ -1865,6 +1888,7 @@
       "deleteBody": "Bestehende Nachrichten und Reaktionen zeigen :name: ab jetzt als Text. Das lässt sich nicht rückgängig machen.",
       "animated": "Animiert",
       "rename": "Umbenennen",
+      "nameRules": "2 bis 32 Zeichen: a–z, 0–9 und _",
       "empty": "Noch keine eigenen Emojis.",
       "full": "Das Limit ist erreicht. Lösche ein Emoji, um Platz zu schaffen.",
       "choose": "Datei wählen",
@@ -2026,6 +2050,7 @@
     }
   },
   "audit": {
+    "loadFailed": "Das Audit-Protokoll konnte nicht geladen werden. Versuche es noch einmal.",
     "title": "Audit-Log",
     "immutable": "Einträge sind unveränderlich.",
     "filterEvent": "Nach Ereignis filtern",
@@ -2272,6 +2297,7 @@
     "uploadInherit": "Erben",
     "uploadHint": "Leer lassen, um das globale Limit zu nutzen. Mitglieder erhalten das höchste Limit ihrer Rollen, nie mehr als das Server-Maximum.",
     "uploadInvalid": "Gib eine ganze Zahl in MB ein oder lass das Feld leer.",
+    "colorInvalid": "Nutze eine Farbe wie #5fd0b6.",
     "botRoles": "Bot-Rollen",
     "botRoleHint": "Verwaltete Rolle eines Bots: sie lässt sich nicht entfernen.",
     "botRoleNote": "„{name}“ ist die eigene Rolle eines Bots. Sie entsteht mit dem Bot, folgt seinem Namen und wird mit ihm gelöscht; nur dieser Bot hat sie, und sie lässt sich nicht von Hand umbenennen, jemand anderem geben, dem Bot wegnehmen oder löschen. Farbe und Rechte kannst du ändern. Niemand kann einem Bot Rechte geben, die er selbst nicht hat, und nur der Owner kann einen Bot erhöhen.",
@@ -2347,6 +2373,7 @@
     "copySecret": "Geheimnis kopieren",
     "urlOnce": "Kopiere die URL jetzt: Sie wird nur einmal angezeigt. Geht sie verloren, erstelle eine neue.",
     "secretOnce": "Kopiere das Geheimnis jetzt: Es wird nur einmal angezeigt. Damit prüfst du die Signatur jeder Zustellung.",
+    "loadFailed": "Die Webhooks konnten nicht geladen werden. Versuche es erneut.",
     "emptyIncoming": "In diesem Kanal gibt es noch keine eingehenden Webhooks.",
     "emptyOutgoing": "Noch keine ausgehenden Webhooks.",
     "rename": "{name} umbenennen",
@@ -2458,8 +2485,19 @@
     "details": "Details",
     "participants": "Rückmeldungen",
     "noResponses": "Noch keine Rückmeldungen.",
+    "noDescription": "Es gibt keine Beschreibung.",
+    "cancelFailed": "Das Event konnte nicht abgesagt werden.",
+    "participantsFailed": "Die Rückmeldungen konnten nicht geladen werden.",
     "created": "Veranstaltung erstellt",
-    "updated": "Veranstaltung aktualisiert"
+    "updated": "Veranstaltung aktualisiert",
+    "rsvpFailed": "Deine Antwort konnte nicht gespeichert werden. Versuche es erneut.",
+    "talkFallback": "Talk",
+    "saveFailed": "Das Event konnte nicht gespeichert werden. Versuche es erneut.",
+    "coverFailed": "Das Event wurde gespeichert, aber das Titelbild konnte nicht hochgeladen werden. Versuche es erneut.",
+    "errTitle": "Gib einen Titel ein.",
+    "errStart": "Wähle eine Startzeit.",
+    "errEnd": "Das Ende darf nicht vor dem Start liegen.",
+    "errLocation": "Gib einen Ort ein."
   },
   "moderation": {
     "timeoutAction": "Auszeit verhängen …",
@@ -2535,7 +2573,8 @@
     "slowModeTooLong": "Der Langsammodus kann höchstens 24 Stunden dauern.",
     "slowModeCustom": "Eigener Wert",
     "slowModeUnit": "Einheit",
-    "noBansHint": "Gesperrte Mitglieder erscheinen hier, und du kannst eine Sperre aufheben."
+    "noBansHint": "Gesperrte Mitglieder erscheinen hier, und du kannst eine Sperre aufheben.",
+    "bansLoadFailed": "Die Sperren konnten nicht geladen werden. Versuche es noch einmal."
   },
   "editHistory": {
     "menu": "Bearbeitungsverlauf",
@@ -2876,7 +2915,8 @@
       "everyoneHint": "Jedes Mitglied kann ein Gespräch mit dir beginnen.",
       "nobody": "Niemand",
       "nobodyHint": "Niemand kann ein Gespräch mit dir beginnen.",
-      "failed": "Die Einstellung konnte nicht gespeichert werden. Versuche es noch einmal."
+      "failed": "Die Einstellung konnte nicht gespeichert werden. Versuche es noch einmal.",
+      "loadFailed": "Die Einstellung konnte nicht geladen werden. Versuche es noch einmal."
     },
     "startTalk": "Talk starten",
     "startTalkFailed": "Der Talk konnte nicht gestartet werden.",
@@ -2889,6 +2929,7 @@
     "previewAttachment": "Anhang",
     "previewPoll": "Umfrage",
     "unreadCount": "{n} ungelesen",
+    "mutedState": "stummgeschaltet",
     "mentionCount": "{n} ungelesene Erwähnungen",
     "memberCount": "{n} Mitglieder",
     "favourites": "Favoriten",

@@ -79,6 +79,15 @@ describe('BotDetailPanel', () => {
     expect((w.get('[data-testid="bot-name"]').element as HTMLInputElement).value).toBe('Renamed')
   })
 
+  it('puts a checkbox back when its toggle fails', async () => {
+    const w = await mountPanel(bot({ disabled: false }))
+    apiMock.mockRejectedValueOnce(new Error('nope'))
+    const box = w.get('[data-testid="bot-enabled"]')
+    await box.setValue(false)
+    await flushPromises()
+    expect((box.element as HTMLInputElement).checked).toBe(true)
+  })
+
   it('toggles enabled and intents', async () => {
     const w = await mountPanel(bot({ disabled: true }))
     expect(w.text()).toContain('A disabled bot is rejected at once')

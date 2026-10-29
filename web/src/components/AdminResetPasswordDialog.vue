@@ -8,6 +8,7 @@ import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 import { ownerProof, useOwnerNeedsCode } from '../lib/ownerProof'
 import BaseDialog from './BaseDialog.vue'
+import PasswordInput from './PasswordInput.vue'
 import IdentityFields from './IdentityFields.vue'
 
 // The Owner sets a new password for an account.
@@ -55,16 +56,15 @@ async function submitPasswordReset() {
     <form @submit.prevent="submitPasswordReset" class="p-6 space-y-4">
       <p class="text-sm text-mnema-muted">{{ $t('admin.resetPasswordPrompt', { count: MIN_PASSWORD_LENGTH }) }}</p>
       <div>
-        <label class="block text-xs font-semibold text-mnema-tertiary uppercase tracking-wider mb-1.5 font-mono">
+        <label for="admin-new-password" class="block text-xs font-semibold text-mnema-tertiary uppercase tracking-wider mb-1.5 font-mono">
           {{ $t('admin.newPasswordLabel') }}
         </label>
-        <input
+        <PasswordInput
+          id="admin-new-password"
           v-model="newPasswordInput"
           data-testid="new-password-input"
-          type="password"
+          autocomplete="new-password"
           :placeholder="$t('admin.newPasswordPlaceholder', { count: MIN_PASSWORD_LENGTH })"
-          :aria-label="$t('admin.newPasswordLabel')"
-          class="w-full bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary outline-hidden focus:border-mnema-accent transition"
         />
         <p v-if="newPasswordInput && passwordTooShort" class="text-xs text-mnema-danger mt-1">
           {{ $t('admin.passwordTooShort', { count: MIN_PASSWORD_LENGTH }) }}

@@ -15,14 +15,16 @@ const activeTab = ref<LegalTab>('all')
 const operatorRaw = ref({ name: '', email: '', country: '', status: '' })
 const operator = computed(() => ({
   name: operatorRaw.value.name || t('legal.defaultOperator'),
-  email: operatorRaw.value.email || 'admin@example.com',
+  // No placeholder address: without a configured one the contact is shown as not specified.
+  email: operatorRaw.value.email,
   country: operatorRaw.value.country || t('legal.defaultCountry'),
   status: operatorRaw.value.status || t('legal.defaultStatus')
 }))
 const mediaRetentionDays = ref(0) // 0 = no automatic deletion
 const sessionExpiryDays = ref(30)
 const stunServers = ref<string[]>([])
-const legalVersion = ref('1.4')
+// Empty until the server has answered, so no wrong version is ever shown.
+const legalVersion = ref('')
 const updateCheck = ref(false)
 
 const TABS: readonly LegalTab[] = ['all', 'operator', 'privacy', 'terms', 'oss']
@@ -71,7 +73,7 @@ onMounted(() => {
     @close="emit('close')"
   >
     <template #badge>
-      <span class="shrink-0 rounded-sm border border-mnema-border bg-mnema-surface px-1.5 py-0.5 font-mono text-xs font-normal text-mnema-tertiary">{{ $t('legal.version', { version: legalVersion }) }}</span>
+      <span v-if="legalVersion" class="shrink-0 rounded-sm border border-mnema-border bg-mnema-surface px-1.5 py-0.5 font-mono text-xs font-normal text-mnema-tertiary">{{ $t('legal.version', { version: legalVersion }) }}</span>
     </template>
 
     <!-- Navigation tabs -->
@@ -107,7 +109,8 @@ onMounted(() => {
           </div>
           <div>
             <span class="block text-mnema-tertiary uppercase font-mono tracking-wider text-xs">{{ $t('legal.operator.email') }}</span>
-            <a :href="`mailto:${operator.email}`" class="font-medium text-mnema-accent hover:underline">{{ operator.email }}</a>
+            <a v-if="operator.email" :href="`mailto:${operator.email}`" class="font-medium text-mnema-accent hover:underline">{{ operator.email }}</a>
+            <span v-else class="text-mnema-text" data-testid="legal-email-unset">{{ $t('legal.operator.emailUnset') }}</span>
           </div>
           <div>
             <span class="block text-mnema-tertiary uppercase font-mono tracking-wider text-xs">{{ $t('legal.operator.country') }}</span>
@@ -210,7 +213,7 @@ onMounted(() => {
         <div class="space-y-1.5">
           <h4 class="font-semibold text-mnema-text text-sm">{{ $t('legal.privacy.rightsHeading') }}</h4>
           <p class="text-xs">
-            {{ $t('legal.privacy.rights1Before') }}<strong class="text-mnema-text">{{ $t('legal.privacy.rightsAccess') }}</strong>{{ $t('legal.privacy.rights1Mid1') }}<strong class="text-mnema-text">{{ $t('legal.privacy.rightsRectify') }}</strong>{{ $t('legal.privacy.rights1Mid2') }}<strong class="text-mnema-text">{{ $t('legal.privacy.rightsErase') }}</strong>{{ $t('legal.privacy.rights1Mid3') }}<strong class="text-mnema-text">{{ $t('legal.privacy.rightsRestrict') }}</strong>{{ $t('legal.privacy.rights1Mid4') }}<strong class="text-mnema-text">{{ $t('legal.privacy.rightsPortability') }}</strong>{{ $t('legal.privacy.rights1Mid5') }}<a :href="`mailto:${operator.email}`" class="text-mnema-accent hover:underline">{{ operator.email }}</a>{{ $t('legal.privacy.rights1After') }}
+            {{ $t('legal.privacy.rights1Before') }}<strong class="text-mnema-text">{{ $t('legal.privacy.rightsAccess') }}</strong>{{ $t('legal.privacy.rights1Mid1') }}<strong class="text-mnema-text">{{ $t('legal.privacy.rightsRectify') }}</strong>{{ $t('legal.privacy.rights1Mid2') }}<strong class="text-mnema-text">{{ $t('legal.privacy.rightsErase') }}</strong>{{ $t('legal.privacy.rights1Mid3') }}<strong class="text-mnema-text">{{ $t('legal.privacy.rightsRestrict') }}</strong>{{ $t('legal.privacy.rights1Mid4') }}<strong class="text-mnema-text">{{ $t('legal.privacy.rightsPortability') }}</strong>{{ $t('legal.privacy.rights1Mid5') }}<a v-if="operator.email" :href="`mailto:${operator.email}`" class="text-mnema-accent hover:underline">{{ operator.email }}</a><template v-else>{{ $t('legal.operator.emailUnset') }}</template>{{ $t('legal.privacy.rights1After') }}
           </p>
           <p class="text-xs" data-testid="legal-self-service">{{ $t('legal.privacy.selfService') }}</p>
           <p class="text-xs">

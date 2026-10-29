@@ -1,4 +1,4 @@
-import type { ChosenPresence } from '../../types/domain'
+import type { ChosenPresence, Presence } from '../../types/domain'
 import { decodeUser } from '../../types/domain'
 import { api } from '../../lib/api'
 import { applyPresenceUpdate, IDLE_AFTER_MS } from '../../lib/presence'
@@ -37,6 +37,14 @@ function updateLocalPresence(cx: Cx, meId: string, presence: ChosenPresence): vo
   })
 }
 
+/** Puts the member list's own entry back, unless a newer change already replaced the optimistic one. */
+function restoreListedPresence(cs: Cx['cs'], meId: string, optimistic: Presence | undefined, previous: Presence | undefined): void {
+  if (cs.presenceById.value[meId] !== optimistic) return
+  cs.presenceById.value = previous === undefined
+    ? Object.fromEntries(Object.entries(cs.presenceById.value).filter(([id]) => id !== meId))
+    : { ...cs.presenceById.value, [meId]: previous }
+}
+
 function restorePresenceOnFailure(authStore: Cx['authStore'], meId: string, previous?: ChosenPresence): void {
   const current = authStore.user
   if (current?.id !== meId) return
@@ -53,8 +61,10 @@ export async function setMyPresence(cx: Cx, presence: ChosenPresence) {
   const me = authStore.user
   if (!me) return
   const previous = me.presence
+  const previousListed = cs.presenceById.value[me.id]
   authStore.user = { ...me, presence }
   updateLocalPresence(cx, me.id, presence)
+  const optimisticListed = cs.presenceById.value[me.id]
   try {
     const updated = await api('/api/users/me/presence', { method: 'PUT', json: { presence }, decode: decodeUser })
     assertCommunity(cx, community)
@@ -64,6 +74,7 @@ export async function setMyPresence(cx: Cx, presence: ChosenPresence) {
     // A failed presence request must preserve newer profile updates and a
     // session that was cleared or switched while the request was pending.
     restorePresenceOnFailure(authStore, me.id, previous)
+    restoreListedPresence(cs, me.id, optimisticListed, previousListed)
     throw e
   }
 }

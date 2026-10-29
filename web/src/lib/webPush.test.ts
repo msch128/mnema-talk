@@ -208,6 +208,18 @@ describe('this device in the list', () => {
     expect(current.unsubscribe).not.toHaveBeenCalled()
   })
 
+  it('removes another device from the list even when the service worker never becomes active', async () => {
+    vi.useFakeTimers()
+    try {
+      const sw = (navigator as unknown as { serviceWorker: { ready: Promise<unknown> } }).serviceWorker
+      sw.ready = new Promise(() => {})
+      const removing = removeDevice({ id: DEV2, fingerprint: 'e'.repeat(32) } as never)
+      await vi.advanceTimersByTimeAsync(10_000)
+      await removing
+      expect(fakeApi.calls.at(-1)).toMatchObject({ path: `/api/push/subscriptions/${DEV2}`, method: 'DELETE' })
+    } finally { vi.useRealTimers() }
+  })
+
   it('no subscription means nothing to find', async () => {
     expect(await currentSubscription()).toBeNull()
     pwa.allowed = false

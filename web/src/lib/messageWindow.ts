@@ -50,6 +50,30 @@ export function fromLatest<T extends IdentifiedMessage = Message>(page: T[] | nu
 }
 
 /**
+ * Brings a window that already reaches the newest end up to date with a fresh
+ * newest page, keeping the older history the reader has paged in. Messages of
+ * the page replace their stale copies, ones the page no longer holds are
+ * dropped, new ones are appended. When the page does not overlap the window
+ * (more was missed than a page holds) nothing can be joined safely and the
+ * window becomes the page (`replaced`).
+ */
+export function mergeLatest<T extends IdentifiedMessage>(win: MessageWindow<T>, page: T[] | null | undefined, { limit = PAGE_SIZE, cap = WINDOW_CAP }: Pick<PageOptions, 'limit' | 'cap'> = {}): { window: MessageWindow<T>; replaced: boolean } {
+  const fresh = fromLatest(page, limit)
+  const byId = new Map(fresh.messages.map(m => [m.id, m]))
+  const overlap = win.messages.findIndex(m => byId.has(m.id))
+  if (overlap < 0) return { window: fresh, replaced: true }
+  const kept = win.messages.slice(0, overlap).concat(win.messages.slice(overlap).filter(m => byId.has(m.id)).map(m => byId.get(m.id) as T))
+  const known = new Set(kept.map(m => m.id))
+  let messages = kept.concat(fresh.messages.filter(m => !known.has(m.id)))
+  let hasMoreBefore = win.hasMoreBefore
+  if (messages.length > cap) {
+    messages = messages.slice(messages.length - cap)
+    hasMoreBefore = true
+  }
+  return { window: { messages, hasMoreBefore, hasMoreAfter: false }, replaced: false }
+}
+
+/**
  * Window built from an `around=<anchorId>` page. The server returns up to
  * floor(limit/2)+1 messages older than or equal to the anchor and fills the
  * rest of the page with newer ones; a side that came back short has reached

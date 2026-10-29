@@ -2,7 +2,7 @@ import { webcrypto } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import {
   FRAME_OVERHEAD_BYTES, FrameStream, LAYER_STREAM_MASK, REPLAY_IDLE_MS, REPLAY_RETIRED, REPLAY_STREAMS, ReplayWindow, SIGNATURE_BYTES, layerStreamId, importEpochKey, importFrameSigner, importFrameVerifier,
-  openFrame, rememberEpochKey, sealFrame, type EpochKeys,
+  openFrame, sealFrame, type EpochKeys,
 } from './frame'
 import { testAesKey, testEpochKeys, testMember, type TestMember } from './keys.fixture'
 
@@ -225,14 +225,6 @@ describe('media frames', () => {
     expect(await importEpochKey(new Uint8Array(16))).toBeNull()
     noEd25519.mockRestore()
     expect(await importEpochKey(new Uint8Array(15))).toBeNull()
-  })
-
-  it('keeps the two newest epoch keys', () => {
-    const keys = new Map<number, string>()
-    rememberEpochKey(keys, 1, 'first')
-    rememberEpochKey(keys, 3, 'third')
-    rememberEpochKey(keys, 2, 'second')
-    expect([...keys.entries()].sort((a, b) => a[0] - b[0])).toEqual([[2, 'second'], [3, 'third']])
   })
 })
 

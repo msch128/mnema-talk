@@ -28,7 +28,7 @@ export const useForwardQuotesStore = defineStore('forwardQuotes', () => {
     const request = api(`/api/messages/${forwardedId}/forward`, { decode: decodeChatForwardQuote }).then(
       quote => { if (generation === epoch.value) quotes.value.set(forwardedId, quote) },
       () => undefined
-    ).finally(() => { pending.delete(forwardedId) })
+    ).finally(() => { if (pending.get(forwardedId) === request) pending.delete(forwardedId) })
     pending.set(forwardedId, request)
     return request
   }
@@ -40,5 +40,5 @@ export const useForwardQuotesStore = defineStore('forwardQuotes', () => {
     epoch.value++
   }
 
-  return { epoch, quoteOf, ensure, invalidate }
+  return { epoch, quoteOf, ensure, invalidate, reset: invalidate }
 })

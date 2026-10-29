@@ -7,7 +7,7 @@ import qrcode from 'qrcode-generator'
 
 const props = defineProps<{ text: string; label: string }>()
 
-const QUIET = 3
+const QUIET = 4
 
 const matrix = computed(() => {
   const qr = qrcode(0, 'M')

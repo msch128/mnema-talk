@@ -640,6 +640,7 @@ describe('loopback microphone changes and cancellation errors', () => {
     vi.useFakeTimers()
     rtc.rejoinAfterReconnect()
     const pc = present(FakePC.instances.at(-1))
+    voice.handleMediaState({ channel_id: 'v1', user_id: 'alice', screen: true })
     voice.watchScreen('alice')
     voice.setRemoteScreen('alice', fakeStream(['video']))
     pc.getStats = vi.fn(async () => new Map([['i', { id: 'i', type: 'inbound-rtp', kind: 'video', bytesReceived: 1000 }]]))

@@ -9,14 +9,26 @@ import { decodePushConfig, type PushConfig } from '../types/rest'
  */
 export const notifyShowsText = ref(false)
 
+// Counts every change of the setting, so an older answer never overwrites a newer one.
+let generation = 0
+
 export function applyPushConfig(config: Pick<PushConfig, 'preview' | 'preview_allowed'>) {
+  generation++
   notifyShowsText.value = config.preview === true && config.preview_allowed === true
 }
 
+/** Hides the text again, e.g. when the account signs out, until the next account's answer is known. */
+export function resetNotifyPreview() {
+  generation++
+  notifyShowsText.value = false
+}
+
 export async function loadNotifyPreview() {
+  const mine = ++generation
+  let shows = false
   try {
-    applyPushConfig(await api('/api/push/config', { decode: decodePushConfig }))
-  } catch {
-    notifyShowsText.value = false
-  }
+    const config = await api('/api/push/config', { decode: decodePushConfig })
+    shows = config.preview === true && config.preview_allowed === true
+  } catch { /* the text stays hidden */ }
+  if (mine === generation) notifyShowsText.value = shows
 }

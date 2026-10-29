@@ -192,7 +192,8 @@ export function handleMediaState(cs: VoiceState, update: Pick<MediaState, 'user_
 }
 
 // The media connection restarted (reconnect): streams are gone and the server
-// announces what is published again. Opt-ins for shares that ended are dropped.
+// announces what is published again. Opt-ins for shares that were live are
+// kept for now; dropEndedWatches retires those the server did not announce.
 export function resetRemoteMedia(cs: VoiceState) {
   const keep: Record<string, boolean> = {}
   for (const id of Object.keys(cs.watchedScreens.value)) {
@@ -210,3 +211,11 @@ export function resetRemoteMedia(cs: VoiceState) {
   syncScreenFocus(cs, null)
 }
 
+
+// Once the server has announced what is published after a reconnect: a share
+// that ended during the gap is never announced, so retire its opt-in.
+export function dropEndedWatches(cs: VoiceState) {
+  for (const id of Object.keys(cs.watchedScreens.value)) {
+    if (!cs.mediaState.value[id]?.screen) cleanupEndedScreen(cs, id)
+  }
+}

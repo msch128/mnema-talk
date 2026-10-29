@@ -149,4 +149,43 @@ describe('TalkSettingsDialog', () => {
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith(`/api/admin/channels/${talk.id}`, expect.objectContaining({ method: 'PATCH', json: { is_lobby: true } }))
   })
+
+  it('does not send a stale name when the Talk was renamed elsewhere while the dialog is open', async () => {
+    const talk = channelFixture({ type: 'voice', name: 'Games' })
+    const w = setup(talk, { manager: true })
+    await flushPromises()
+    await w.setProps({ channel: { ...talk, name: 'Renamed by someone else' } })
+    await w.find('[data-testid="preset-roles"]').setValue(true)
+    await w.find('[data-testid="preset-role-list"] input').setValue(true)
+    await w.find('[data-testid="talk-save"]').trigger('click')
+    await flushPromises()
+    const patches = apiMock.mock.calls.filter(([, o]) => o?.method === 'PATCH')
+    expect(patches).toHaveLength(0)
+    expect(apiMock).toHaveBeenCalledWith(`/api/admin/channels/${talk.id}/overwrites`, expect.objectContaining({ method: 'PUT' }))
+  })
+
+  it('keeps Save off and the presets locked when the current overwrites could not be read', async () => {
+    const talk = channelFixture({ type: 'voice', name: 'Games' })
+    const w = setup(talk, { manager: true })
+    let fail = true
+    apiMock.mockImplementation(async (path, options) => {
+      if (path.endsWith('/overwrites')) {
+        if (options?.method === 'PUT') return undefined
+        if (fail) throw new Error('boom')
+        return { overwrites: [] }
+      }
+      return talk
+    })
+    await w.unmount()
+    const w2 = mount(TalkSettingsDialog, { props: { channel: talk } })
+    await flushPromises()
+    expect(w2.find('[data-testid="talk-presets"]').attributes('disabled')).toBeDefined()
+    expect(w2.find<HTMLButtonElement>('[data-testid="talk-save"]').element.disabled).toBe(true)
+    fail = false
+    await w2.find('[data-testid="preset-retry"]').trigger('click')
+    await flushPromises()
+    expect(w2.find('[data-testid="talk-presets"]').attributes('disabled')).toBeUndefined()
+    expect(w2.find('[data-testid="preset-retry"]').exists()).toBe(false)
+    expect(apiMock.mock.calls.some(([, o]) => o?.method === 'PUT')).toBe(false)
+  })
 })

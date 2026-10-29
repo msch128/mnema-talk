@@ -73,25 +73,23 @@ async function openRouteThread(ctx: RoutingContext, channel: ChannelLike, thread
 
 type ChannelLike = { id: string; type: string; slug?: string | undefined }
 
-/** The post a /p/:title-:shortId address names, looked up in the forum's newest posts; null when none or several match. */
+/** The post a /p/:title-:shortId address names, looked up page by page through the forum's posts, newest first; null when none or several match. */
 async function findForumPost(channelId: string, ref: string): Promise<string | null> {
   if (isUuid(ref)) return ref.toLowerCase()
   const short = postShortId(ref)
   if (!short) return null
   let before: string | undefined
-  for (let page = 0; page < MAX_POST_PAGES; page++) {
+  for (;;) {
     const posts = await fetchForumPosts(channelId, { sort: 'newest', limit: 100, ...(before ? { before } : {}) })
     const hits = posts.filter(p => p.id.startsWith(short))
     if (hits.length > 1) return null
     if (hits[0]) return hits[0].id
     const last = posts[posts.length - 1]
-    if (posts.length < 100 || !last) return null
+    // A cursor that does not advance would page forever.
+    if (posts.length < 100 || !last || last.id === before) return null
     before = last.id
   }
-  return null
 }
-
-const MAX_POST_PAGES = 5
 
 async function openRoutePost(ctx: RoutingContext, channel: ChannelLike, ref: string, superseded: Superseded) {
   const id = await findForumPost(channel.id, ref).catch(() => null)

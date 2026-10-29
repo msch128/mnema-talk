@@ -153,3 +153,27 @@ describe('drafts', () => {
     })
   })
 })
+
+describe('drafts across tabs', () => {
+  it('keeps a draft another tab stored when this tab saves a different one', () => {
+    setDraft('u1', 'c:random', { text: 'first', reply: null })
+    // Another tab saves a draft this tab has not seen.
+    const key = `${DRAFT_KEY_PREFIX}u1`
+    const stored = JSON.parse(localStorage.getItem(key) || '{}')
+    stored['c:general'] = { text: 'from tab A', reply: null, at: 5 }
+    localStorage.setItem(key, JSON.stringify(stored))
+    setDraft('u1', 'c:other', { text: 'second', reply: null })
+    expect(Object.keys(JSON.parse(localStorage.getItem(key) || '{}')).sort()).toEqual(['c:general', 'c:other', 'c:random'])
+  })
+
+  it('does not revive a draft another tab sent', () => {
+    setDraft('u1', 'c:a', { text: 'a', reply: null })
+    setDraft('u1', 'c:b', { text: 'b', reply: null })
+    const key = `${DRAFT_KEY_PREFIX}u1`
+    const stored = JSON.parse(localStorage.getItem(key) || '{}')
+    delete stored['c:a']
+    localStorage.setItem(key, JSON.stringify(stored))
+    setDraft('u1', 'c:c', { text: 'c', reply: null })
+    expect(Object.keys(JSON.parse(localStorage.getItem(key) || '{}')).sort()).toEqual(['c:b', 'c:c'])
+  })
+})

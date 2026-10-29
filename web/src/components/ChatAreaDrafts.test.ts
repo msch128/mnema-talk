@@ -6,6 +6,7 @@ import ChatArea from './ChatArea.vue'
 import ReplyComposerBar from './ReplyComposerBar.vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
+import { getDraft, channelDraftKey } from '../lib/drafts'
 import { useOnboardingStore } from '../stores/onboarding'
 import { channelFixture, messageFixture, onboardingStateFixture, userFixture } from '../test-fixtures.fixture'
 
@@ -73,5 +74,26 @@ describe('drafts per channel', () => {
     await nextTick()
     expect(box(view).element.value).toBe('answer')
     expect(view.findComponent(ReplyComposerBar).text()).toContain('Anna')
+  })
+
+  it('leaves the composer of the channel now open alone when a send resolves after a switch', async () => {
+    const chat = useChatStore()
+    let finish!: (message: null) => void
+    vi.spyOn(chat, 'sendMessage').mockImplementation(() => new Promise<null>(resolve => { finish = resolve }))
+    const view = open()
+    await box(view).setValue('sent text')
+    await box(view).trigger('keydown', { key: 'Enter' })
+
+    chat.activeChannel = random
+    await nextTick()
+    await box(view).setValue('typing in b')
+
+    finish(null)
+    for (let i = 0; i < 5; i++) await nextTick()
+    expect(box(view).element.value).toBe('typing in b')
+    expect(getDraft('me', channelDraftKey('ch1'))).toBeNull()
+
+    vi.advanceTimersByTime(500)
+    expect(getDraft('me', channelDraftKey('ch2'))?.text).toBe('typing in b')
   })
 })

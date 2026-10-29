@@ -25,6 +25,7 @@ const toasts = useToastStore()
 const layout = ref<ChannelHierarchy>({ uncategorized: [], categories: [] })
 const hasLayoutChanges = ref(false)
 const isSavingLayout = ref(false)
+const isCreatingCategory = ref(false)
 const editingCategory = ref<Category | null>(null)
 const editingChannel = ref<Channel | null>(null)
 const newCategoryName = ref('')
@@ -125,13 +126,17 @@ function onChannelDrop(e: DragEvent, targetCategoryId: string | null, targetInde
 }
 
 async function saveLayout() {
+  if (isSavingLayout.value) return
   isSavingLayout.value = true
+  const sent = layout.value
   try {
     await api('/api/admin/layout', {
       method: 'PUT',
-      json: toLayoutPayload(layout.value)
+      json: toLayoutPayload(sent)
     })
-    hasLayoutChanges.value = false
+    // A reorder made while the request ran replaced the layout; it is still
+    // unsaved and the reload below must not throw it away.
+    if (layout.value === sent) hasLayoutChanges.value = false
     toasts.success(t('admin.layoutSaved'))
     await chatStore.fetchChannels()
     await loadChannelsData()
@@ -235,7 +240,8 @@ async function deleteChannel(channel: Channel) {
 }
 
 async function createCategory() {
-  if (!newCategoryName.value.trim()) return
+  if (isCreatingCategory.value || !newCategoryName.value.trim()) return
+  isCreatingCategory.value = true
   try {
     const created = await api('/api/admin/categories', {
       method: 'POST',
@@ -243,12 +249,14 @@ async function createCategory() {
       decode: decodeCategory
     })
     newCategoryName.value = ''
-    toasts.success(t('admin.categoryUpdated'))
+    toasts.success(t('sidebar.categoryCreated'))
     await syncAfterEdit(() => {
       layout.value = addCategory(layout.value, created)
     })
   } catch (e) {
     showError(e)
+  } finally {
+    isCreatingCategory.value = false
   }
 }
 
@@ -268,6 +276,7 @@ onMounted(() => loadChannelsData())
       <AdminLayoutToolbar
         v-model:new-category-name="newCategoryName"
         :saving="isSavingLayout"
+        :creating="isCreatingCategory"
         :changed="hasLayoutChanges"
         @create="createCategory"
         @save="saveLayout"
@@ -279,6 +288,7 @@ onMounted(() => loadChannelsData())
       <span>{{ $t('admin.hasUnsavedLayout') }}</span>
       <button
         type="button"
+        :disabled="isSavingLayout"
         class="btn btn-primary btn-sm shrink-0"
         @click="saveLayout"
       >

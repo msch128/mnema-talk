@@ -27,3 +27,11 @@ describe('the audit "what changed" line', () => {
     expect(summarize({})).toBeNull()
   })
 })
+
+describe('long values', () => {
+  it('are cut between characters, never inside an emoji', () => {
+    const text = summarize({ changes: { note: { from: '', to: '🤖'.repeat(60) } } })?.text ?? ''
+    expect(text).toContain('🤖…')
+    expect(() => encodeURIComponent(text)).not.toThrow() // throws on a lone surrogate
+  })
+})

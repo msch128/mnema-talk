@@ -172,6 +172,7 @@ export function setChannel(cs: VoiceState, channelId: string | null) {
     cs.receivedLayer.value = {}
     cs.screenChoice.value = {}
     cs.layersWanted.value = null
+    cs.speakingUsers.value = {}
   }
   if (channelId) {
     if (prev !== channelId) {
@@ -207,6 +208,7 @@ export function disconnect(cs: VoiceState) {
   cs.screenChoice.value = {}
   cs.layersWanted.value = null
   cs.userVideoStreams.value = {}
+  cs.speakingUsers.value = {}
   cs.talkReactions.value = []
   cs.subscriptionSink = null
   cs.activeView.value = 'chat'

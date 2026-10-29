@@ -908,6 +908,43 @@ details and the limits.
   resolution, also on redirects). A fetch lasts at most 6 s in total; a host
   that runs into that deadline is not fetched again for 5 minutes, and one
   member holds at most two fetches at a time.
+- **Link previews and video playback.** A card is built from what the page
+  says about itself: Open Graph and Twitter card tags, the plain description,
+  the theme colour and, where a page advertises one, its oEmbed endpoint (JSON
+  only; the endpoint's HTML snippet is never read, let alone rendered). Every
+  extra fetch (oEmbed, the Steam store API for price and recommendations) goes
+  through the same SSRF-guarded client with the same size, time and
+  concurrency limits, and results are cached per link (6 hours, failures 5
+  minutes). YouTube and Vimeo links ask the provider's oEmbed endpoint first,
+  so a consent page in front of the watch page cannot empty the card. All text
+  is plain data that the client escapes; colours and links are validated
+  again in the browser, and images always load through the same-origin image
+  proxy. **Playback** is opt-in per click: a card shows only the thumbnail until
+  a member presses play, and nothing from YouTube or Vimeo is requested before.
+  The player address is built by the server from the video id in the posted
+  link, for exactly two hosts, `www.youtube-nocookie.com/embed/ID` and
+  `player.vimeo.com/video/ID?dnt=1`, and checked again by the client against
+  the same patterns; an address that a fetched page suggests never becomes a
+  frame. The iframe is sandboxed (`allow-scripts allow-same-origin
+  allow-presentation allow-popups allow-popups-to-escape-sandbox`: no top
+  navigation, no forms, no downloads) and delegates only autoplay, encrypted
+  media, picture-in-picture and fullscreen, never camera, microphone or
+  location. The web app's CSP gained one directive for this,
+  `frame-src https://www.youtube-nocookie.com https://player.vimeo.com`;
+  `frame-ancestors 'none'`, `default-src 'self'` and the rest are unchanged.
+  Pressing play tells the provider the member's IP address, and the frame is
+  loaded with `referrerpolicy="strict-origin-when-cross-origin"` (the page's
+  own `no-referrer` would make YouTube refuse the player), so the provider
+  sees this server's origin, not the path. The desktop clients keep their
+  policy as it is, without `frame-src`: their pages never reach the network
+  themselves (see doc/desktop-trusted-client.md), so there the card shows the
+  thumbnail, and pressing play opens the link in the system browser. A
+  link written as `<https://…>` gets no card at all. The public pages of this
+  server (the root and `/invite/CODE`) carry Open Graph tags for messengers:
+  the community name, for a working invite the welcome text cut to 200
+  characters as plain text, and the Mnema icon, all HTML-escaped; an unusable
+  code, or a caller over the invite preview limit, gets the generic page.
+  Invite pages ask for `noindex`.
 - **Outbound connections.** Besides link previews (`LINK_PREVIEWS_ENABLED`)
   and optional STUN/TURN, the server only asks GitHub for the latest release
   (`UPDATE_CHECK_ENABLED`, default on): an unauthenticated `GET` to

@@ -8,7 +8,7 @@ import { highlightCode, sanitizeHighlighted } from './highlight'
 const TAGS = new Set(['STRONG', 'EM', 'U', 'DEL', 'SPAN', 'CODE', 'A', 'H1', 'H2', 'H3', 'DIV', 'BLOCKQUOTE', 'UL', 'OL', 'LI', 'PRE', 'BUTTON'])
 const ATTRS: Record<string, readonly string[]> = {
   A: ['href', 'target', 'rel', 'class', 'title', 'data-host', 'data-confirm'],
-  SPAN: ['class', 'role', 'tabindex', 'data-mention', 'data-role-color'],
+  SPAN: ['class', 'role', 'aria-expanded', 'aria-label', 'tabindex', 'data-mention', 'data-role-color'],
   BUTTON: ['type', 'class', 'data-md-copy', 'aria-label', 'title'],
   OL: ['class', 'start']
 }
@@ -111,7 +111,7 @@ describe('code highlighting output', () => {
       for (const el of body?.querySelectorAll('*') ?? []) {
         expect(el.tagName).toBe('SPAN')
         expect([...el.attributes].map(a => a.name)).toEqual(['class'])
-        expect(el.getAttribute('class')).toMatch(/^hljs-[A-Za-z0-9_ -]+$/)
+        expect(el.getAttribute('class')).toMatch(/^(?:hljs|language)-[A-Za-z0-9_ -]+$/)
       }
     }
   })
@@ -189,6 +189,8 @@ describe('hostile input stays cheap', () => {
     ['open brackets', '['.repeat(8000)],
     ['open links', '[a]('.repeat(2000)],
     ['backticks', '`'.repeat(8000)],
+    ['emphasis around backticks', '*a `b '.repeat(2500)],
+    ['emphasis around code spans', '*a `b` '.repeat(2500)],
     ['alternating backticks', '`a``'.repeat(2000)],
     ['fences', '```a\n'.repeat(1500)],
     ['urls', 'http://a'.repeat(1500)],

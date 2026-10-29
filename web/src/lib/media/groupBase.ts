@@ -14,12 +14,12 @@ import { type MediaVerification } from './verify'
 import { SWAP_BASE_MS, RESET_BASE_MS, BACKOFF_MAX_MS, RIVAL_BASE_MS, RIVAL_MAX_MS, type MediaStep, type OwnPackage } from './groupParams'
 import { sameBytes, wipeConsumed, treeMembers, lowest, encodeWire } from './groupTree'
 
-function stateSecrets(state: ClientState): Uint8Array[] {
+function stateSecrets(state: ClientState, withTag = true): Uint8Array[] {
   const schedule = state.keySchedule
   return [
     schedule.exporterSecret, schedule.senderDataSecret, schedule.externalSecret, schedule.confirmationKey,
     schedule.membershipKey, schedule.resumptionPsk, schedule.epochAuthenticator, schedule.initSecret,
-    state.signaturePrivateKey, state.confirmationTag,
+    state.signaturePrivateKey, ...(withTag ? [state.confirmationTag] : []),
     ...Object.values(state.privatePath.privateKeys),
   ]
 }
@@ -198,8 +198,16 @@ export abstract class GroupBase {
     return this.committer(others) === this.userId
   }
 
+  /**
+   * Drops the secrets of an epoch this group has left. The confirmation tag is
+   * no secret (every commit carries it) and the next commit is still checked against it.
+   */
+  protected wipeLeft(state: ClientState) {
+    this.wipeRejected(state, false)
+  }
+
   /** Drops secrets of a state we refuse, without erasing keys the current group still uses. */
-  protected wipeRejected(state: ClientState) {
+  protected wipeRejected(state: ClientState, withTag = true) {
     const kept = new Set<Uint8Array>()
     const keep = (bytes: Uint8Array | undefined) => { if (bytes) kept.add(bytes) }
     keep(this.own.privatePackage.initPrivateKey)
@@ -208,7 +216,11 @@ export abstract class GroupBase {
     if (this.state) {
       for (const secret of stateSecrets(this.state)) keep(secret)
     }
-    for (const secret of stateSecrets(state)) {
+    // The state a self-update left may still come back if its commit loses the race.
+    if (this.selfUpdate) {
+      for (const secret of stateSecrets(this.selfUpdate.state)) keep(secret)
+    }
+    for (const secret of stateSecrets(state, withTag)) {
       if (secret && !kept.has(secret)) zeroOutUint8Array(secret)
     }
   }

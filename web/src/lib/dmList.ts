@@ -3,7 +3,8 @@
 import type { Message } from '../types/domain'
 import type { ChatDMLastMessage, ChatDirectMessage } from '../types/rest'
 import { markdownToPlain } from './markdown'
-import { dmPeers } from './dm'
+import { dmPeers, nameOf } from './dm'
+import { clockTimeOptions, startOfDay } from './time'
 
 /** Most conversations the server lets a member favourite. */
 export const DM_MAX_FAVOURITES = 25
@@ -49,7 +50,7 @@ export function dmPreview(dm: ChatDirectMessage, meId: string | null | undefined
   if (last.user_id === meId) return { kind, text, sender: 'me' }
   // In a pair the other member is obvious; a group names who spoke.
   const author = dm.group ? dmPeers(dm, meId).find(m => m.id === last.user_id) : null
-  return { kind, text, sender: author ? author.display_name || author.username : '' }
+  return { kind, text, sender: author ? nameOf(author) : '' }
 }
 
 const DAY_MS = 86_400_000
@@ -59,10 +60,9 @@ export function dmClock(iso: string | null, locale: string, now = Date.now()): s
   if (!iso) return ''
   const at = new Date(iso)
   if (Number.isNaN(at.getTime())) return ''
-  const startOfToday = new Date(now)
-  startOfToday.setHours(0, 0, 0, 0)
-  if (at.getTime() >= startOfToday.getTime()) return at.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
-  if (at.getTime() >= startOfToday.getTime() - 6 * DAY_MS) return at.toLocaleDateString(locale, { weekday: 'short' })
+  const startOfToday = startOfDay(now)
+  if (at.getTime() >= startOfToday) return at.toLocaleTimeString(locale, clockTimeOptions(locale))
+  if (at.getTime() >= startOfToday - 6 * DAY_MS) return at.toLocaleDateString(locale, { weekday: 'short' })
   return at.toLocaleDateString(locale, { day: 'numeric', month: 'short' })
 }
 

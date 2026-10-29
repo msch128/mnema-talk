@@ -8,6 +8,7 @@ import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import { findMentionQuery, suggestMentions, applyMention } from '../lib/mentionQuery'
 import { findEmojiQuery, suggestEmoji, suggestStandardEmoji, applyEmoji, applyStandardEmoji } from '../lib/emojiQuery'
+import { isImeKey } from './useComposerKeys'
 import { useEmojiShortcodes } from '../lib/emojiShortcodes'
 import { useEmojiStore } from '../stores/emoji'
 import type { CustomEmoji } from '../lib/customEmoji'
@@ -113,7 +114,7 @@ export function useComposerAssist(textarea: Ref<HTMLTextAreaElement | null>, mod
 
   /** Handles navigation keys while suggestions are open; true if consumed. */
   function onKeydown(e: KeyboardEvent) {
-    if (!open.value) return false
+    if (!open.value || isImeKey(e)) return false
     const n = suggestions.value.length
     if (e.key === 'ArrowDown') {
       active.value = (active.value + 1) % n
