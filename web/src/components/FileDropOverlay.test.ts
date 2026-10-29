@@ -48,4 +48,35 @@ describe('FileDropOverlay', () => {
     expect(received).toEqual([[png]])
     expect(overlay().isVisible()).toBe(false)
   })
+
+  it('allows the drop with a copy cursor, only for files', () => {
+    const { host } = setup()
+    const files = drag('dragover', ['Files'])
+    host.dispatchEvent(files)
+    expect(files.defaultPrevented).toBe(true)
+    expect((files as unknown as { dataTransfer: { dropEffect: string } }).dataTransfer.dropEffect).toBe('copy')
+    const text = drag('dragover', ['text/plain'])
+    host.dispatchEvent(text)
+    expect(text.defaultPrevented).toBe(false)
+  })
+
+  it('stays up while the drag moves between children and ignores text leaving or dropping', async () => {
+    const { host, overlay } = setup()
+    host.dispatchEvent(drag('dragenter', ['Files']))
+    host.dispatchEvent(drag('dragenter', ['Files']))
+    host.dispatchEvent(drag('dragleave', ['Files']))
+    host.dispatchEvent(drag('dragleave', ['text/plain']))
+    const text = drag('drop', ['text/plain'], [png])
+    host.dispatchEvent(text)
+    await nextTick()
+    expect(text.defaultPrevented).toBe(false)
+    expect(overlay().isVisible()).toBe(true)
+  })
+
+  it('stops listening when it is removed', () => {
+    const { w, host, received } = setup()
+    w.unmount()
+    host.dispatchEvent(drag('drop', ['Files'], [png]))
+    expect(received).toEqual([])
+  })
 })
