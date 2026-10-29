@@ -327,3 +327,53 @@ func TestInitialLanguageDefaultIsTheSameEverywhere(t *testing.T) {
 		t.Fatalf("server %q, .env.example %q, assistant %q", cfg.InitialLanguage, m, DefaultLanguage)
 	}
 }
+
+func writeEnv(t *testing.T, content string) string {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+func TestCheckListsEveryMissingSettingOfAnExistingEnv(t *testing.T) {
+	dir := writeEnv(t, "PUBLIC_URL=chat.example.com\n")
+	out, err := runSetup(t, "", "--check", "--dir", dir)
+	if err == nil {
+		t.Fatalf("a broken .env passed:\n%s", out)
+	}
+	if strings.Count(out, "cannot start") != 1 {
+		t.Errorf("not one block:\n%s", out)
+	}
+	for _, want := range []string{"POSTGRES_PASSWORD", "JWT_SECRET", "S3_SECRET_KEY", "PUBLIC_URL"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestCheckAcceptsTheEnvTheAssistantWrites(t *testing.T) {
+	dir := t.TempDir()
+	if _, err := runSetup(t, "", "-y", "--dir", dir, "--public-url", "https://chat.example.com", "--compose-template", repoCompose, "--skip-preflight"); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runSetup(t, "", "--check", "--dir", dir)
+	if err != nil || !strings.Contains(out, "all required settings are present") {
+		t.Fatalf("%v\n%s", err, out)
+	}
+}
+
+func TestCheckWithoutAnEnvSaysSo(t *testing.T) {
+	if _, err := runSetup(t, "", "--check", "--dir", t.TempDir()); err == nil || !strings.Contains(err.Error(), "no .env") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestSetupOverAnExistingEnvExplainsWhatIsWrongWithIt(t *testing.T) {
+	dir := writeEnv(t, "JWT_SECRET=short\n")
+	out, err := runSetup(t, "", "-y", "--dir", dir, "--public-url", "https://chat.example.com", "--compose-template", repoCompose)
+	if err == nil || !strings.Contains(err.Error(), "already exists") || !strings.Contains(out, "JWT_SECRET") {
+		t.Fatalf("err %v\n%s", err, out)
+	}
+}

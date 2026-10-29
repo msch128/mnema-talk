@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/setupcheck"
@@ -48,6 +49,8 @@ server.
                           (the same as the admin console's Status tab). Needs Docker Compose
                           on this machine; in the docker run --rm container it prints the command
   --skip-preflight        do not touch the network (DNS, STUN, NTP)
+  --check                 only check the .env in --dir for missing or invalid required
+                          settings (what the server refuses to start without), then exit
   --force                 replace existing files (generates new secrets!)
   --non-interactive, -y   never ask; --public-url (or --local) is then required`
 
@@ -61,6 +64,7 @@ func parseFlags(args []string) (o Options, nonInteractive bool, err error) {
 	fs.BoolVar(&o.Local, "local", false, "")
 	fs.StringVar(&o.LANIP, "lan-ip", "", "")
 	fs.BoolVar(&o.Start, "start", false, "")
+	fs.BoolVar(&o.CheckOnly, "check", false, "")
 	fs.StringVar(&o.AdminUsername, "admin-username", "", "")
 	fs.StringVar(&o.SMTP.Host, "smtp-host", "", "")
 	fs.StringVar(&o.SMTP.Port, "smtp-port", "", "")
@@ -101,6 +105,9 @@ func Run(ctx context.Context, args []string, env Env) error {
 	}
 	host := hostOf(env.Probe)
 	pr := newPrompter(env.In, env.Out)
+	if done, err := checkExistingEnv(env.Out, o); done {
+		return err
+	}
 	if nonInteractive {
 		if o.PublicURL == "" && !o.Local {
 			return errors.New("--public-url (or --local) is required with --non-interactive")
@@ -127,6 +134,29 @@ func Run(ctx context.Context, args []string, env Env) error {
 	printSummary(env.Out, o, g, findings, host.InContainer)
 	offerStart(ctx, pr, o, g.Dir(), env, !nonInteractive)
 	return nil
+}
+
+// checkExistingEnv looks at an .env that is already in the directory. With
+// --check that is the whole job; otherwise it explains what is wrong with it
+// before refusing to replace it (done is then true).
+func checkExistingEnv(out io.Writer, o Options) (done bool, err error) {
+	if !o.CheckOnly && o.Force {
+		return false, nil
+	}
+	found, problems, err := checkExisting(out, o.Dir)
+	switch {
+	case err != nil:
+		return true, err
+	case o.CheckOnly && !found:
+		return true, fmt.Errorf("no .env in %s to check", o.Dir)
+	case o.CheckOnly && len(problems) > 0:
+		return true, errors.New("fix the settings above and run the check again")
+	case o.CheckOnly:
+		return true, nil
+	case found:
+		return true, fmt.Errorf("%s already exists and was left alone; to start over (this generates new secrets, which an existing database will not accept) remove it or pass --force", filepath.Join(o.Dir, ".env"))
+	}
+	return false, nil
 }
 
 func hostOf(p Probe) setupcheck.Host {

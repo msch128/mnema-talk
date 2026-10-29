@@ -16,8 +16,10 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 	cfg := r.textSettings()
 	portMin, portMax := r.numericSettings(cfg)
 	cfg.SMTP = r.smtpSettings()
-	if r.err != nil {
-		return nil, r.err
+	problems := r.typedProblems()
+	problems = append(problems, RequiredProblems(lookup)...)
+	if len(problems) > 0 {
+		return nil, &ConfigError{Problems: problems}
 	}
 	for _, o := range SplitList(r.get("CORS_ALLOWED_ORIGINS", cfg.PublicURL)) {
 		cfg.AllowedOrigins = append(cfg.AllowedOrigins, normalizeURL(o))
@@ -29,17 +31,22 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 }
 
 // envReader reads typed settings from a lookup function. A malformed value
-// is remembered in err (the first one wins) and read as the zero value, so
-// the caller reads everything and checks err once.
+// is remembered in errs and read as the zero value, so
+// the caller reads everything and reports all of them at once.
 type envReader struct {
 	lookup func(string) (string, bool)
-	err    error
+	errs   []error
 }
 
-func (r *envReader) fail(err error) {
-	if r.err == nil {
-		r.err = err
+func (r *envReader) fail(err error) { r.errs = append(r.errs, err) }
+
+// typedProblems turns every malformed value read so far into a problem.
+func (r *envReader) typedProblems() []Problem {
+	ps := make([]Problem, 0, len(r.errs))
+	for _, err := range r.errs {
+		ps = append(ps, Problem{Text: err.Error()})
 	}
+	return ps
 }
 
 func (r *envReader) get(key, def string) string {

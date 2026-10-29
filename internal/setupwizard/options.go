@@ -64,6 +64,8 @@ type Options struct {
 	// LANIP is this host's address in the local network (WEBRTC_LAN_IP); empty
 	// when unknown.
 	LANIP string
+	// CheckOnly checks an existing .env and writes nothing.
+	CheckOnly bool
 	// Start runs docker compose up -d --wait and the live checks afterwards.
 	Start bool
 	// AutoUpdate adds the updater sidecar profile and its token.

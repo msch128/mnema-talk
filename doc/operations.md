@@ -1133,9 +1133,26 @@ to `TRUSTED_PROXY_CIDRS`.
 
 ### The app does not start
 
-`docker compose logs app` shows the validation message, e.g. a placeholder
-secret, `TRUSTED_PROXY_CIDRS contains an invalid entry`, or a migration
-failure (see [upgrade.md](upgrade.md)).
+`docker compose logs app` starts with one block that lists **every** required
+setting that is missing or invalid, each with why it is needed and an example:
+
+```
+Mnema Talk cannot start - fix these settings in .env:
+  - JWT_SECRET must be set to a random string of at least 32 characters in production: ...
+  - S3_SECRET_KEY is required in production: ...
+```
+
+Fix them in `.env` and run `docker compose up -d`. The process exits with
+status 78 (a refused configuration, not a crash) after a five second pause;
+Docker restarts the container (`restart: unless-stopped`), so the block
+repeats at that pace until the settings are right. The server deliberately
+serves no "error page" meanwhile: a half-started process would be an
+unauthenticated surface and every health check would have to special-case it.
+Check an `.env` without starting anything with
+`docker run --rm -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup --check --dir /out`
+(or `mnema-talk setup --check`). Other messages here: `TRUSTED_PROXY_CIDRS
+contains an invalid entry`, or a migration failure (see [upgrade.md](upgrade.md)).
+`mnema-talk doctor` prints the same block when the settings are wrong.
 
 ## Downgrading
 

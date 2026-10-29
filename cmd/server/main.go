@@ -6,10 +6,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -35,9 +37,46 @@ func main() {
 		if errors.Is(err, errDoctorRed) {
 			os.Exit(1)
 		}
+		var ce *config.ConfigError
+		if errors.As(err, &ce) {
+			os.Exit(reportConfigError(os.Stderr, ce, isServerStart(os.Args)))
+		}
 		slog.Error("fatal", "err", err)
 		os.Exit(1)
 	}
+}
+
+// configErrorDelay is how long a server that refuses to start for its settings
+// waits before it exits. Compose restarts the container (restart:
+// unless-stopped); without the pause it would loop in milliseconds and bury
+// the message in repeats. A test sets it to zero.
+var configErrorDelay = 5 * time.Second
+
+// isServerStart reports whether the command line starts the server rather than
+// one of the subcommands (setup, doctor, unlock, reset-2fa).
+func isServerStart(args []string) bool {
+	if len(args) < 2 || strings.HasPrefix(args[1], "-") {
+		return true
+	}
+	switch args[1] {
+	case "setup", "doctor", "unlock", "reset-2fa":
+		return false
+	}
+	return true
+}
+
+// reportConfigError prints the list of settings to fix as plain text, the
+// first thing in the container log, and returns the exit status. A server
+// start pauses first so a restart loop stays readable. Nothing listens in the
+// meantime: a "config error" web page would be an unauthenticated surface and
+// a half-alive process every health check has to special-case.
+func reportConfigError(w io.Writer, ce *config.ConfigError, server bool) int {
+	fmt.Fprintln(w, ce.Error())
+	if server {
+		fmt.Fprintf(w, "\nEdit .env, then run: docker compose up -d   (the full list of settings: doc/operations.md; check an .env with: docker compose run --rm app mnema-talk doctor)\nThis container exits now and is restarted by Docker; the message above repeats until the settings are fixed.\n")
+		time.Sleep(configErrorDelay)
+	}
+	return config.ExitCode
 }
 
 func run() error {

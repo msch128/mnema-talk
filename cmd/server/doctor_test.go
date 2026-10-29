@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/setupcheck"
 )
 
@@ -96,6 +97,18 @@ func TestDoctorReportsCGNAT(t *testing.T) {
 
 func TestDoctorRejectsArguments(t *testing.T) {
 	if err := doctorCommand(context.Background(), []string{"extra"}, &bytes.Buffer{}); err == nil || !strings.Contains(err.Error(), "usage: mnema-talk doctor") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestDoctorReportsAllMissingSettingsAsOneConfigError(t *testing.T) {
+	for _, k := range []string{"DATABASE_URL", "JWT_SECRET", "S3_ACCESS_KEY", "S3_SECRET_KEY"} {
+		t.Setenv(k, "")
+	}
+	t.Setenv("APP_ENV", "production")
+	err := doctorCommand(context.Background(), nil, &bytes.Buffer{})
+	var ce *config.ConfigError
+	if !errors.As(err, &ce) || len(ce.Problems) < 4 {
 		t.Fatalf("err = %v", err)
 	}
 }
