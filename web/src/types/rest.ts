@@ -4759,18 +4759,22 @@ export function isServerVoiceHealth(value: unknown): value is ServerVoiceHealth 
 export const decodeServerVoiceHealth = decoder("server.VoiceHealth", isServerVoiceHealth)
 
 export type SetupcheckCheck = {
+  code?: string
   detail: string
   fix?: string
   id: string
   level: SetupcheckLevel
+  params?: Record<string, unknown>
 }
 
 export function isSetupcheckCheck(value: unknown): value is SetupcheckCheck {
   return isRecord(value)
+    && (!hasOwn(value, "code") || isString(value["code"]))
     && (hasOwn(value, "detail") && isString(value["detail"]))
     && (!hasOwn(value, "fix") || isString(value["fix"]))
     && (hasOwn(value, "id") && isString(value["id"]))
     && (hasOwn(value, "level") && isSetupcheckLevel(value["level"]))
+    && (!hasOwn(value, "params") || isRecord(value["params"]))
 }
 
 export const decodeSetupcheckCheck = decoder("setupcheck.Check", isSetupcheckCheck)

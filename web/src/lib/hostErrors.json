@@ -71,6 +71,14 @@
    ]
   },
   {
+   "id": "tlsVersion",
+   "text": "The instance offers no TLS version this client can use. It speaks TLS 1.2 and 1.3; ask the administrator to enable one of them.",
+   "withDetail": true,
+   "clients": [
+    "rust"
+   ]
+  },
+  {
    "id": "unreachable",
    "text": "Unable to reach the instance using trusted HTTPS.",
    "withDetail": true,

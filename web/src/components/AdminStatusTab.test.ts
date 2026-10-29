@@ -289,6 +289,27 @@ describe('AdminStatusTab', () => {
     expect(w.find('[data-testid="setup-check-future_check"]').text()).toContain('future_check')
   })
 
+  it('shows the check text in the display language and keeps the server sentence for an unknown code', async () => {
+    apiMock.mockResolvedValue(statusFixture({
+      setup: [
+        { id: 'turn', level: 'warn', code: 'turn.none', params: { port: '3478' }, detail: 'No TURN relay.', fix: 'Optional: English fix.' },
+        { id: 'mail', level: 'warn', code: 'mail.from_the_future', detail: 'Newer server sentence.', fix: 'Newer fix.' },
+      ],
+    }))
+    setLocale('de')
+    const w = keep(mount(AdminStatusTab))
+    await flushPromises()
+    expect(w.find('[data-testid="setup-check-turn"]').text()).toContain('Kein TURN-Relay')
+    expect(w.find('[data-testid="setup-fix-turn"]').text()).toContain('Port 3478')
+    expect(w.find('[data-testid="setup-check-mail"]').text()).toContain('Newer server sentence.')
+    expect(w.find('[data-testid="setup-fix-mail"]').text()).toBe('Newer fix.')
+
+    setLocale('en')
+    await flushPromises()
+    expect(w.find('[data-testid="setup-check-turn"]').text()).toContain('No TURN relay: members')
+    expect(w.find('[data-testid="setup-fix-turn"]').text()).toContain('forward port 3478')
+  })
+
   it('shows no setup section when the server sends no checks', async () => {
     apiMock.mockResolvedValue(statusFixture())
     const w = keep(mount(AdminStatusTab))

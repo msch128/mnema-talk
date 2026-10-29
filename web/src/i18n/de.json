@@ -1366,6 +1366,151 @@
         "database": "Datenbank",
         "clock": "Serveruhr",
         "reverse_proxy": "Reverse-Proxy"
+      },
+      "checkMsg": {
+        "clock": {
+          "ok": {
+            "detail": "Die Serveruhr weicht höchstens {window} von der realen Zeit ab."
+          },
+          "skewed": {
+            "detail": "Die Serveruhr geht um etwa {skew} falsch, was Zwei-Faktor-Codes und das Ablaufen von Sitzungen stört.",
+            "fix": "Schalte die Zeitsynchronisation (NTP) auf dem Host ein; auf einer Synology: Systemsteuerung > Regionale Optionen > Zeit > Mit einem NTP-Server synchronisieren."
+          }
+        },
+        "database": {
+          "ok": {
+            "detail": "Die Datenbank ist erreichbar."
+          },
+          "unreachable": {
+            "detail": "Die Datenbank antwortet nicht.",
+            "fix": "Prüfe, ob der postgres-Container gesund ist (docker compose ps) und ob POSTGRES_PASSWORD in der .env das Passwort ist, mit dem er angelegt wurde."
+          }
+        },
+        "mail": {
+          "none": {
+            "detail": "Keine ausgehende E-Mail: Mitglieder bekommen keinen Link zum Zurücksetzen eines vergessenen Logins, und E-Mail-Adressen lassen sich nicht bestätigen.",
+            "fix": "Optional: Setze SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD und SMTP_FROM in der .env."
+          },
+          "ok": {
+            "detail": "Ausgehende E-Mail ist eingerichtet ({host})."
+          }
+        },
+        "public_url": {
+          "insecure": {
+            "detail": "PUBLIC_URL ist ein einfaches http://, daher verlieren Sitzungs-Cookies das Secure-Flag und das Präfix __Host-.",
+            "fix": "Stelle einen Reverse-Proxy mit TLS davor und setze PUBLIC_URL=https://chat.example.com (in einem vertrauenswürdigen LAN kannst du das überspringen)."
+          },
+          "local": {
+            "detail": "PUBLIC_URL ist {public_url} und nur auf diesem Rechner erreichbar; Einladungslinks, E-Mails und die Origin-Prüfung des Browsers nutzen sie.",
+            "fix": "Setze in der .env PUBLIC_URL=https://chat.example.com (die Adresse, die Mitglieder in den Browser tippen) und führe docker compose up -d aus."
+          },
+          "ok": {
+            "detail": "PUBLIC_URL ist {public_url}."
+          },
+          "origin_mismatch": {
+            "detail": "Du hast diese Seite unter {origin} geöffnet, aber PUBLIC_URL ist {public_url}.",
+            "fix": "Wenn Mitglieder {origin} benutzen, setze PUBLIC_URL={origin}; kommst du über einen Reverse-Proxy, muss er die Header Host und X-Forwarded-Proto durchreichen."
+          }
+        },
+        "reverse_proxy": {
+          "broad": {
+            "detail": "TRUSTED_PROXY_CIDRS umfasst einen großen Bereich, daher kann jeder Host darin eine Client-Adresse fälschen.",
+            "fix": "Trage in TRUSTED_PROXY_CIDRS nur die eigene Adresse des Reverse-Proxys ein."
+          },
+          "not_trusted": {
+            "detail": "Anfragen kommen mit X-Forwarded-For von einem Proxy, dem nicht vertraut wird, daher sehen Ratenbegrenzung und Anmeldesperre alle Mitglieder als eine Adresse.",
+            "fix": "Setze TRUSTED_PROXY_CIDRS=<Adresse deines Reverse-Proxys> in der .env (seine Container-IP, das Gateway der Docker-Bridge oder seine LAN-Adresse; nie einen ganzen privaten Bereich)."
+          },
+          "ok": {
+            "detail": "Keine Probleme mit Proxy-Headern gesehen."
+          }
+        },
+        "storage": {
+          "not_configured": {
+            "detail": "Der Objektspeicher ist nicht eingerichtet, daher funktionieren Uploads und Avatare nicht.",
+            "fix": "Setze S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY und S3_SECRET_KEY in der .env."
+          },
+          "ok": {
+            "detail": "Der Objektspeicher ist bereit."
+          },
+          "unreachable": {
+            "detail": "Der Objektspeicher antwortet noch nicht; Uploads schlagen fehl, bis er es tut.",
+            "fix": "Prüfe, ob der seaweedfs-Container läuft (docker compose ps) und ob S3_ACCESS_KEY und S3_SECRET_KEY in der .env zu denen passen, mit denen er zuerst gestartet wurde."
+          }
+        },
+        "turn": {
+          "builtin_failed": {
+            "detail": "Das eingebaute TURN-Relay konnte Port {port} nicht belegen: Mitglieder in Netzen, die UDP blockieren, können nicht an der Sprache teilnehmen.",
+            "fix": "Gib Port {port} (UDP und TCP) frei oder wähle mit WEBRTC_BUILTIN_TURN_PORT einen anderen und führe danach docker compose up -d aus."
+          },
+          "builtin_failed_external": {
+            "detail": "Für Mitglieder hinter strengen Firewalls ist ein TURN-Relay eingerichtet; das eingebaute Relay konnte nicht starten."
+          },
+          "builtin_off_external": {
+            "detail": "Für Mitglieder hinter strengen Firewalls ist ein TURN-Relay eingerichtet; das eingebaute Relay läuft nicht."
+          },
+          "builtin_ok": {
+            "detail": "Das eingebaute TURN-Relay versorgt Mitglieder hinter strengen Firewalls auf Port {port}; leite ihn (UDP und TCP) zusammen mit den Sprach-Ports weiter."
+          },
+          "external_ok": {
+            "detail": "Für Mitglieder hinter strengen Firewalls ist ein TURN-Relay eingerichtet."
+          },
+          "none": {
+            "detail": "Kein TURN-Relay: Mitglieder in Netzen, die UDP blockieren, können nicht an der Sprache teilnehmen.",
+            "fix": "Optional: Entferne WEBRTC_BUILTIN_TURN=off, um das eingebaute Relay zu nutzen (Port {port}, UDP und TCP weiterleiten), oder setze WEBRTC_TURN_URLS und WEBRTC_TURN_SECRET für ein externes."
+          },
+          "unreachable": {
+            "detail": "Das eingebaute TURN-Relay läuft, aber Port {port} hat von diesem Server aus nicht geantwortet; ein Router ohne NAT-Loopback verursacht das, obwohl die Weiterleitung funktioniert.",
+            "fix": "Leite Port {port} (UDP und TCP) an diesen Server weiter und teste mit einem Handy im Mobilfunknetz; setze WEBRTC_BUILTIN_TURN_HOST, wenn Mitglieder es unter einem anderen Namen erreichen müssen."
+          },
+          "voice_unavailable": {
+            "detail": "Das eingebaute TURN-Relay läuft nicht, weil die Sprache nicht verfügbar ist: Mitglieder in Netzen, die UDP blockieren, können nicht an der Sprache teilnehmen.",
+            "fix": "Behebe zuerst die Sprach-Engine (siehe Prüfung „Sprach-Port“) und führe danach docker compose up -d aus."
+          }
+        },
+        "voice_address": {
+          "announced_env": {
+            "detail": "Die Sprache wird unter {ips} angekündigt (aus WEBRTC_NAT_1TO1_IP)."
+          },
+          "announced_public_url": {
+            "detail": "Die Sprache wird unter {ips} angekündigt (aus PUBLIC_URL übernommen)."
+          },
+          "announced_stun": {
+            "detail": "Die Sprache wird unter {ips} angekündigt (per STUN-Anfrage ermittelt)."
+          },
+          "development": {
+            "detail": "Entwicklungsmodus: Die Sprache nutzt die eigenen Adressen dieses Rechners."
+          },
+          "missing": {
+            "detail": "Es ist keine öffentliche Sprachadresse bekannt, daher bekommen Browser die Adresse des Containers genannt.",
+            "fix": "Setze in der .env WEBRTC_NAT_1TO1_IP=<deine öffentliche IPv4-Adresse oder ein Dynamic-DNS-Name> (für Mitglieder im selben Netz die LAN-Adresse nach einem Komma ergänzen) und starte danach mit docker compose up -d neu."
+          },
+          "missing_detect_failed": {
+            "detail": "Es ist keine öffentliche Sprachadresse bekannt, daher bekommen Browser die Adresse des Containers genannt. Die automatische Erkennung ist fehlgeschlagen: {error}.",
+            "fix": "Setze in der .env WEBRTC_NAT_1TO1_IP=<deine öffentliche IPv4-Adresse oder ein Dynamic-DNS-Name> (für Mitglieder im selben Netz die LAN-Adresse nach einem Komma ergänzen) und starte danach mit docker compose up -d neu."
+          },
+          "missing_detect_failed_turn_only": {
+            "detail": "Es ist keine öffentliche Sprachadresse bekannt, daher bekommen Browser die Adresse des Containers genannt. Die automatische Erkennung ist fehlgeschlagen: {error}. Nur das TURN-Relay kann Sprache übertragen.",
+            "fix": "Setze in der .env WEBRTC_NAT_1TO1_IP=<deine öffentliche IPv4-Adresse oder ein Dynamic-DNS-Name> (für Mitglieder im selben Netz die LAN-Adresse nach einem Komma ergänzen) und starte danach mit docker compose up -d neu."
+          },
+          "missing_turn_only": {
+            "detail": "Es ist keine öffentliche Sprachadresse bekannt, daher bekommen Browser die Adresse des Containers genannt. Nur das TURN-Relay kann Sprache übertragen.",
+            "fix": "Setze in der .env WEBRTC_NAT_1TO1_IP=<deine öffentliche IPv4-Adresse oder ein Dynamic-DNS-Name> (für Mitglieder im selben Netz die LAN-Adresse nach einem Komma ergänzen) und starte danach mit docker compose up -d neu."
+          }
+        },
+        "voice_udp": {
+          "mux_disabled": {
+            "detail": "WEBRTC_UDP_MUX_PORT=0 gibt jedem Medienteilnehmer einen eigenen Port, was begrenzt, wie viele Personen gleichzeitig telefonieren können.",
+            "fix": "Entferne WEBRTC_UDP_MUX_PORT (oder setze es auf {port_min}), damit sich alle einen UDP-Port teilen."
+          },
+          "ok": {
+            "detail": "Die Sprache lauscht auf UDP {port}. Leite diesen Port am Router an diesen Host weiter; von innen lässt er sich nicht testen."
+          },
+          "unavailable": {
+            "detail": "Die Sprach-Engine ist nicht gestartet, daher haben Talks weder Ton noch Video.",
+            "fix": "Gib die UDP-Ports {port_min}-{port_max} auf dem Host frei (oder ändere WEBRTC_UDP_PORT_MIN und WEBRTC_UDP_PORT_MAX) und starte neu; die Ursache steht im Log."
+          }
+        }
       }
     },
     "users": "Mitgliederverwaltung",
@@ -1972,6 +2117,8 @@
     "summary": "{voice} im Talk · {messages} Nachrichten"
   },
   "nativeDesktop": {
+    "copy": "Kopieren",
+    "copied": "Kopiert",
     "connectError": "Dieser Server ist nicht erreichbar oder unterstützt diese DEV-Version nicht.",
     "dev": "DEV-Entwicklungsversion",
     "connectCommunity": "Mit deiner Community verbinden.",
@@ -1989,6 +2136,7 @@
       "dns": "Die Serveradresse konnte nicht aufgelöst werden. Prüfe die Adresse und dein Netzwerk.",
       "natHint": "Läuft der Server in deinem eigenen Netzwerk, unterstützt dein Router den Zugriff über die öffentliche Adresse eventuell nicht (NAT-Loopback/Hairpin). Probiere die lokale Adresse oder ein anderes Netzwerk.",
       "certificate": "Dieser Computer vertraut dem HTTPS-Zertifikat des Servers nicht. Prüfe die Systemuhr und ob ein Virenscanner oder Netzwerkfilter HTTPS abfängt.",
+      "tlsVersion": "Der Server bietet keine TLS-Version an, die dieser Client nutzen kann. Der Client spricht TLS 1.2 und 1.3; bitte die Administration, eine davon zu aktivieren.",
       "unreachable": "Der Server war über vertrauenswürdiges HTTPS nicht erreichbar.",
       "unavailable": "Der Server ist nicht verfügbar oder leitet auf eine andere Adresse um.",
       "checkFailed": "Die Prüfung des Servers ist fehlgeschlagen.",

@@ -44,9 +44,15 @@ type Check struct {
 	ID string `json:"id" example:"public_url"`
 	// Level is ok (green), warn (amber) or fail (red).
 	Level Level `json:"level" enums:"ok,warn,fail"`
-	// Detail says what was found, in one sentence.
+	// Code names the outcome ("public_url.local"): clients translate by it and
+	// fill in Params. Absent when the server has no code for the outcome.
+	Code string `json:"code,omitempty" binding:"optional"`
+	// Params are the values the message names (ports, variable values), by name.
+	Params map[string]string `json:"params,omitempty" binding:"optional"`
+	// Detail says what was found, in one sentence, in English; the fallback
+	// for clients that do not know the Code.
 	Detail string `json:"detail"`
-	// Fix names the variable to set and the value to use; empty when ok.
+	// Fix names the variable to set and the value to use, in English; empty when ok.
 	Fix string `json:"fix,omitempty" binding:"optional"`
 }
 
@@ -172,25 +178,16 @@ func warningSet(ws []opwarn.Warning) map[string]bool {
 
 func publicURLCheck(in Input, has map[string]bool) Check {
 	cfg := in.Cfg
-	c := Check{ID: PublicURL}
+	p := Params{"public_url": cfg.PublicURL, "origin": in.RequestOrigin}
 	switch {
 	case cfg.IsProduction() && cfg.PublicURLIsLocal():
-		c.Level = Fail
-		c.Detail = fmt.Sprintf("PUBLIC_URL is %s, which only this machine can open; invite links, e-mails and browser origin checks use it.", cfg.PublicURL)
-		c.Fix = "Set PUBLIC_URL=https://chat.example.com (the address members type into their browser) in .env and run docker compose up -d."
+		return newCheck(PublicURL, "public_url.local", Fail, p)
 	case in.RequestOrigin != "" && !sameOrigin(in.RequestOrigin, cfg.PublicURL):
-		c.Level = Warn
-		c.Detail = fmt.Sprintf("You opened this page at %s but PUBLIC_URL is %s.", in.RequestOrigin, cfg.PublicURL)
-		c.Fix = fmt.Sprintf("If %s is the address members use, set PUBLIC_URL=%s; if you came through a reverse proxy, let it pass the Host and X-Forwarded-Proto headers.", in.RequestOrigin, in.RequestOrigin)
-	case cfg.InsecurePublicURLWarning() != "" || (has[opwarn.InsecurePublicURL]):
-		c.Level = Warn
-		c.Detail = "PUBLIC_URL is plain http://, so session cookies lose the Secure flag and the __Host- prefix."
-		c.Fix = "Put a reverse proxy with TLS in front and set PUBLIC_URL=https://chat.example.com (skip this on a trusted LAN)."
-	default:
-		c.Level = OK
-		c.Detail = fmt.Sprintf("PUBLIC_URL is %s.", cfg.PublicURL)
+		return newCheck(PublicURL, "public_url.origin_mismatch", Warn, p)
+	case cfg.InsecurePublicURLWarning() != "" || has[opwarn.InsecurePublicURL]:
+		return newCheck(PublicURL, "public_url.insecure", Warn, p)
 	}
-	return c
+	return newCheck(PublicURL, "public_url.ok", OK, p)
 }
 
 // sameOrigin compares two origins ignoring case, a trailing slash and the
@@ -208,59 +205,48 @@ func sameOrigin(a, b string) bool {
 }
 
 func voiceAddressCheck(cfg *config.Config, rt runtimeSnapshot) Check {
-	c := Check{ID: VoiceAddress}
 	if !cfg.IsProduction() {
-		c.Level = OK
-		c.Detail = "Development mode: voice uses this machine's own addresses."
-		return c
+		return newCheck(VoiceAddress, "voice_address.development", OK, nil)
 	}
 	if rt.source != SourceNone && len(rt.ips) > 0 {
-		c.Level = OK
-		c.Detail = fmt.Sprintf("Voice is announced on %s (%s).", strings.Join(rt.ips, ", "), sourceLabel(rt.source))
-		return c
+		ips := strings.Join(rt.ips, ", ")
+		if code, ok := announcedCodes[rt.source]; ok {
+			return newCheck(VoiceAddress, code, OK, Params{"ips": ips})
+		}
+		return Check{ID: VoiceAddress, Level: OK, Detail: fmt.Sprintf("Voice is announced on %s (%s).", ips, rt.source)}
 	}
-	c.Detail = "No public voice address is known, so browsers are told the container's own address."
-	if rt.detectErr != "" {
-		c.Detail += " Automatic detection failed: " + rt.detectErr + "."
+	code, level := "voice_address.missing", Fail
+	switch {
+	case rt.detectErr != "" && len(cfg.WebRTCTURNURLs) > 0:
+		code, level = "voice_address.missing_detect_failed_turn_only", Warn
+	case rt.detectErr != "":
+		code = "voice_address.missing_detect_failed"
+	case len(cfg.WebRTCTURNURLs) > 0:
+		code, level = "voice_address.missing_turn_only", Warn
 	}
-	c.Fix = "Set WEBRTC_NAT_1TO1_IP=<your public IPv4 address or dynamic-DNS name> in .env (add the LAN address after a comma for members on the same network), then docker compose up -d."
-	if len(cfg.WebRTCTURNURLs) > 0 {
-		c.Level = Warn
-		c.Detail += " Only the TURN relay can carry voice."
-	} else {
-		c.Level = Fail
-	}
-	return c
+	return newCheck(VoiceAddress, code, level, Params{"error": rt.detectErr})
 }
 
-func sourceLabel(source string) string {
-	switch source {
-	case SourceEnv:
-		return "from WEBRTC_NAT_1TO1_IP"
-	case SourcePublicURL:
-		return "taken from PUBLIC_URL"
-	case SourceDetected:
-		return "detected with a STUN request"
-	}
-	return source
+// announcedCodes maps where the voice address came from to its check code.
+var announcedCodes = map[string]string{
+	SourceEnv:       "voice_address.announced_env",
+	SourcePublicURL: "voice_address.announced_public_url",
+	SourceDetected:  "voice_address.announced_stun",
 }
 
 func voiceUDPCheck(cfg *config.Config, has map[string]bool) Check {
-	c := Check{ID: VoiceUDP}
+	p := Params{
+		"port_min": fmt.Sprint(cfg.WebRTCUDPPortMin),
+		"port_max": fmt.Sprint(cfg.WebRTCUDPPortMax),
+		"port":     fmt.Sprint(mediaPort(cfg)),
+	}
 	switch {
 	case has[opwarn.VoiceUnavailable]:
-		c.Level = Fail
-		c.Detail = "The voice engine did not start, so Talks have no audio or video."
-		c.Fix = fmt.Sprintf("Free UDP ports %d-%d on the host (or change WEBRTC_UDP_PORT_MIN and WEBRTC_UDP_PORT_MAX) and restart; the log names the cause.", cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax)
+		return newCheck(VoiceUDP, "voice_udp.unavailable", Fail, p)
 	case has[opwarn.WebRTCUDPMuxDisabled]:
-		c.Level = Warn
-		c.Detail = "WEBRTC_UDP_MUX_PORT=0 gives every media peer its own port, which caps how many people can be in calls."
-		c.Fix = "Remove WEBRTC_UDP_MUX_PORT (or set it to " + fmt.Sprint(cfg.WebRTCUDPPortMin) + ") so all peers share one UDP port."
-	default:
-		c.Level = OK
-		c.Detail = fmt.Sprintf("Voice listens on UDP %d. Forward that port from the router to this host; it cannot be tested from inside.", mediaPort(cfg))
+		return newCheck(VoiceUDP, "voice_udp.mux_disabled", Warn, p)
 	}
-	return c
+	return newCheck(VoiceUDP, "voice_udp.ok", OK, p)
 }
 
 func mediaPort(cfg *config.Config) uint16 {
@@ -272,44 +258,26 @@ func mediaPort(cfg *config.Config) uint16 {
 
 func mailCheck(cfg *config.Config) Check {
 	if cfg.SMTP.Enabled() {
-		return Check{ID: Mail, Level: OK, Detail: "Outgoing mail is configured (" + cfg.SMTP.Host + ")."}
+		return newCheck(Mail, "mail.ok", OK, Params{"host": cfg.SMTP.Host})
 	}
-	return Check{
-		ID:     Mail,
-		Level:  Warn,
-		Detail: "No outgoing mail: members get no reset link for a forgotten login and e-mail addresses cannot be confirmed.",
-		Fix:    "Optional: set SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD and SMTP_FROM in .env.",
-	}
+	return newCheck(Mail, "mail.none", Warn, nil)
 }
 
 func storageCheck(in Input) Check {
-	c := Check{ID: Storage}
 	switch {
 	case !in.StorageConfigured:
-		c.Level = Fail
-		c.Detail = "Object storage is not configured, so uploads and avatars do not work."
-		c.Fix = "Set S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY and S3_SECRET_KEY in .env."
+		return newCheck(Storage, "storage.not_configured", Fail, nil)
 	case in.StorageErr != nil:
-		c.Level = Fail
-		c.Detail = "Object storage does not answer yet; uploads fail until it does."
-		c.Fix = "Check that the seaweedfs container is running (docker compose ps) and that S3_ACCESS_KEY and S3_SECRET_KEY in .env match the ones it was first started with."
-	default:
-		c.Level = OK
-		c.Detail = "Object storage is ready."
+		return newCheck(Storage, "storage.unreachable", Fail, nil)
 	}
-	return c
+	return newCheck(Storage, "storage.ok", OK, nil)
 }
 
 func databaseCheck(reachable bool) Check {
 	if reachable {
-		return Check{ID: Database, Level: OK, Detail: "The database is reachable."}
+		return newCheck(Database, "database.ok", OK, nil)
 	}
-	return Check{
-		ID:     Database,
-		Level:  Fail,
-		Detail: "The database does not answer.",
-		Fix:    "Check that the postgres container is healthy (docker compose ps) and that POSTGRES_PASSWORD in .env is the one it was created with.",
-	}
+	return newCheck(Database, "database.unreachable", Fail, nil)
 }
 
 // Thresholds: sign-in codes of two-factor authentication are valid for 30
@@ -330,36 +298,22 @@ func clockCheck(rt runtimeSnapshot) (Check, bool) {
 	if abs < 0 {
 		abs = -abs
 	}
-	c := Check{ID: Clock}
-	switch {
-	case abs >= clockFailSkew:
-		c.Level = Fail
-	case abs >= clockWarnSkew:
-		c.Level = Warn
-	default:
-		c.Level = OK
-		c.Detail = fmt.Sprintf("The server clock is within %s of real time.", clockWarnSkew)
-		return c, true
+	if abs < clockWarnSkew {
+		return newCheck(Clock, "clock.ok", OK, Params{"window": clockWarnSkew.String()}), true
 	}
-	c.Detail = fmt.Sprintf("The server clock is off by about %s, which breaks two-factor codes and session expiry.", abs.Round(time.Second))
-	c.Fix = "Turn on time synchronization (NTP) on the host; on a Synology: Control Panel > Regional Options > Time > Synchronize with an NTP server."
-	return c, true
+	level := Warn
+	if abs >= clockFailSkew {
+		level = Fail
+	}
+	return newCheck(Clock, "clock.skewed", level, Params{"skew": abs.Round(time.Second).String()}), true
 }
 
 func proxyCheck(has map[string]bool) Check {
-	c := Check{ID: ReverseProxy}
 	switch {
 	case has[opwarn.ProxyNotTrusted]:
-		c.Level = Warn
-		c.Detail = "Requests arrive with X-Forwarded-For from a proxy that is not trusted, so every member looks like one address to rate limits and the login lockout."
-		c.Fix = "Set TRUSTED_PROXY_CIDRS=<address of your reverse proxy> in .env (its container IP, the Docker bridge gateway or its LAN address; never a whole private range)."
+		return newCheck(ReverseProxy, "reverse_proxy.not_trusted", Warn, nil)
 	case has[opwarn.TrustedProxyBroad]:
-		c.Level = Warn
-		c.Detail = "TRUSTED_PROXY_CIDRS covers a wide range, so any host in it can forge a client address."
-		c.Fix = "List only the reverse proxy's own address in TRUSTED_PROXY_CIDRS."
-	default:
-		c.Level = OK
-		c.Detail = "No proxy header problems seen."
+		return newCheck(ReverseProxy, "reverse_proxy.broad", Warn, nil)
 	}
-	return c
+	return newCheck(ReverseProxy, "reverse_proxy.ok", OK, nil)
 }
