@@ -1177,7 +1177,9 @@
     "inviteFrom": "{name} invites you to a Talk",
     "inviteGeneric": "You’re invited to a Talk",
     "inviteIn": "You’re here",
-    "inviteUnavailable": "Not available to you"
+    "inviteUnavailable": "Not available to you",
+    "sharingScreen": "Sharing screen",
+    "cameraOn": "Camera on"
   },
   "admin": {
     "signedInAs": "Signed in as {name} (Owner)",
@@ -1806,8 +1808,6 @@
     "passwordTooShort": "The new password needs at least {count} characters.",
     "passwordMismatch": "The two passwords don’t match.",
     "passwordChanged": "Password changed",
-    "activity": "In a Talk",
-    "inVoice": "In the Talk:",
     "notInVoice": "Not in a Talk right now",
     "membership": "Membership",
     "memberSince": "Member since",
@@ -1849,7 +1849,11 @@
     "clearsAt": "Clears {time}",
     "moderationTitle": "Moderation",
     "rolesTitle": "Roles",
-    "account": "Account"
+    "account": "Account",
+    "inTalk": "In {name}",
+    "inTalkHidden": "In a Talk",
+    "talkCannotJoin": "You can’t join this Talk.",
+    "talkHidden": "This Talk isn’t available to you."
   },
   "nav": {
     "channelNotFound": "That channel doesn’t exist anymore.",

@@ -238,7 +238,7 @@ describe('UserProfileModal account interactions', () => {
     chat.uncategorized = [channel]
     voice.channelUsers = { unrelated: { another: voiceUserFixture() }, [channel.id]: { [stub.id]: voiceUserFixture({ ...stub }) } }
     wrapper = mount(UserProfileModal, { attachTo: document.body })
-    expect(wrapper.text()).toContain('#Lobby')
+    expect(wrapper.get('[data-testid="profile-talk-open"]').text()).toContain('Im Talk Lobby')
     expect(wrapper.find(`[aria-label="${t('profile.adminHint')}"]`).exists()).toBe(true)
   })
 
@@ -305,15 +305,27 @@ describe('UserProfileModal account interactions', () => {
     chat.categories = [categoryFixture({ channels: [channel] })]
     voice.channelUsers = { [channel.id]: { [stub.id]: voiceUserFixture({ ...stub }) } }
     wrapper = mount(UserProfileModal, { attachTo: document.body })
-    expect(wrapper.text()).toContain('#Workshop')
+    expect(wrapper.get('[data-testid="profile-talk"]').text()).toContain('Im Talk Workshop')
+    expect(wrapper.text()).not.toContain('Gerade in keinem Talk')
     expect(wrapper.get('[role="img"]').attributes('aria-label')).toBe(t('presence.focus'))
   })
 
-  it('falls back to a generic name for a voice channel absent from the channel hierarchy', () => {
+  it('names no Talk the viewer cannot see, and does not open it', () => {
     auth.user = userFixture({ ...stub })
     useVoiceStore().channelUsers = { unknown: { [stub.id]: voiceUserFixture({ ...stub }) } }
     wrapper = mount(UserProfileModal, { attachTo: document.body })
-    expect(wrapper.text()).toContain(`#${t('profile.talk')}`)
+    expect(wrapper.get('[data-testid="profile-talk"]').text()).toBe(t('profile.inTalkHidden'))
+    expect(wrapper.find('[data-testid="profile-talk-open"]').exists()).toBe(false)
+  })
+
+  it('opens the participants of the Talk from its single line', async () => {
+    auth.user = userFixture({ ...stub })
+    const channel = channelFixture({ type: 'voice', name: 'Workshop' })
+    chat.categories = [categoryFixture({ channels: [channel] })]
+    useVoiceStore().channelUsers = { [channel.id]: { [stub.id]: voiceUserFixture({ ...stub }) } }
+    wrapper = mount(UserProfileModal, { attachTo: document.body })
+    await wrapper.get('[data-testid="profile-talk-open"]').trigger('click')
+    expect(wrapper.findComponent({ name: 'TalkOverviewDialog' }).props('channelId')).toBe(channel.id)
   })
 
   it('uses the original join date when formatting rejects an invalid timestamp', () => {
