@@ -33,7 +33,12 @@ env:
   TRIVY_SHA256: c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0
 
 jobs:
-  # -- Secret scan: the whole tree plus the commits this push/PR adds --------
+  # -- Secret scan: the whole tree plus git history ---------------------------
+  # Pull requests scan the history of their own commits only (merge base to PR
+  # head), so a branch some other pull request or agent pushed cannot turn this
+  # job red. Pushes to main scan the full history of main and its tags.
+  # actions/checkout with fetch-depth 0 would fetch every remote branch, hence
+  # the shallow checkout and the explicit fetch of just the refs needed.
   secret-scan:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -41,7 +46,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0
 
       - name: Install gitleaks (pinned, checksum verified)
         run: |
@@ -55,10 +59,30 @@ jobs:
           "$RUNNER_TEMP/gitleaks" version
 
       - name: gitleaks
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
-          "$RUNNER_TEMP/gitleaks" dir --no-banner --redact --exit-code 1 --config .gitleaks.toml .
-          "$RUNNER_TEMP/gitleaks" git --no-banner --redact --exit-code 1 --config .gitleaks.toml .
+          gitleaks="$RUNNER_TEMP/gitleaks"
+          "$gitleaks" dir --no-banner --redact --exit-code 1 --config .gitleaks.toml .
+          if [ "$EVENT" = pull_request ]; then
+            # HEAD is the merge commit; its second parent is the PR head. Fetch
+            # the full history of the base branch and the PR head, nothing else.
+            git fetch --no-tags --unshallow origin \
+              "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}" \
+              "+refs/pull/${PR_NUMBER}/head:refs/remotes/pull/head"
+            range="refs/remotes/origin/${BASE_REF}..refs/remotes/pull/head"
+            echo "scanning commits $(git rev-list --count "$range") of this pull request"
+            "$gitleaks" git --no-banner --redact --exit-code 1 --config .gitleaks.toml \
+              --log-opts="--full-history $range" .
+          else
+            # Push to main: all of main plus the tags, no other branch.
+            git fetch --tags --unshallow origin "+refs/heads/main:refs/remotes/origin/main"
+            "$gitleaks" git --no-banner --redact --exit-code 1 --config .gitleaks.toml \
+              --log-opts="--full-history HEAD --tags" .
+          fi
 
   # -- What changed: docs-only pull requests skip the heavy work -------------
   # Every required check still reports: the jobs below run, skip their steps
