@@ -81,6 +81,7 @@ func NewSFU(portMin, portMax uint16, announceIPs []string, stunURLs []string, op
 		offerTimeout: defaultOfferTimeout,
 		rooms:        make(map[uuid.UUID]*Room),
 		notifier:     &mediaNotifier{},
+		iceSeen:      &iceObserver{},
 	}, nil
 }
 

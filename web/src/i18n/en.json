@@ -1400,7 +1400,8 @@
       "level": {
         "ok": "OK",
         "warn": "Attention",
-        "fail": "Fix needed"
+        "fail": "Fix needed",
+        "info": "Not verified"
       },
       "check": {
         "public_url": "Public address",
@@ -1412,7 +1413,8 @@
         "database": "Database",
         "clock": "Server clock",
         "network": "Internet connection",
-        "reverse_proxy": "Reverse proxy"
+        "reverse_proxy": "Reverse proxy",
+        "websocket": "WebSocket"
       },
       "checkMsg": {
         "clock": {
@@ -1521,8 +1523,8 @@
             "fix": "Optional: remove WEBRTC_BUILTIN_TURN=off to use the built-in relay (forward port {port}, UDP and TCP), or set WEBRTC_TURN_URLS and WEBRTC_TURN_SECRET for an external one."
           },
           "unreachable": {
-            "detail": "The built-in TURN relay runs, but port {port} did not answer from this server; a router without NAT loopback causes this although the forward works.",
-            "fix": "Forward port {port} (UDP and TCP) to this server and test from a phone on mobile data; set WEBRTC_BUILTIN_TURN_HOST if members must reach it under another name."
+            "detail": "The built-in TURN relay runs, but this server could not verify port {port} from the inside; a router without NAT loopback causes this although the forward works.",
+            "fix": "Open Test my connection from a phone on mobile data to check the relay from outside; if it fails, forward port {port} (UDP and TCP) to this server, or set WEBRTC_BUILTIN_TURN_HOST if members must reach it under another name."
           },
           "voice_unavailable": {
             "detail": "The built-in TURN relay is not running because voice is unavailable: members on networks that block UDP cannot join voice.",
@@ -1560,16 +1562,33 @@
           }
         },
         "voice_udp": {
+          "unconfirmed": {
+            "detail": "Listening – not yet confirmed from outside. Voice listens on UDP {port}, but no member from outside this network has connected since the server started, so the router forward is unproven.",
+            "fix": "Forward UDP {port_min}-{port_max} from the router to this host, then open Test my connection from a phone on mobile data (Wi-Fi off); this turns green once it works."
+          },
+          "confirmed": {
+            "detail": "Confirmed: a member from outside connected ({time}). Voice listens on UDP {port}."
+          },
           "mux_disabled": {
             "detail": "WEBRTC_UDP_MUX_PORT=0 gives every media peer its own port, which caps how many people can be in calls.",
             "fix": "Remove WEBRTC_UDP_MUX_PORT (or set it to {port_min}) so all peers share one UDP port."
           },
-          "ok": {
-            "detail": "Voice listens on UDP {port}. Forward that port from the router to this host; it cannot be tested from inside."
-          },
           "unavailable": {
             "detail": "The voice engine did not start, so Talks have no audio or video.",
             "fix": "Another program may be using UDP ports {port_min}-{port_max} on the host: stop it or change WEBRTC_UDP_PORT_MIN and WEBRTC_UDP_PORT_MAX, then restart; the log names the cause."
+          }
+        },
+        "websocket": {
+          "ok": {
+            "detail": "WebSocket via proxy OK: a browser opened /api/ws and it upgraded ({time})."
+          },
+          "unchecked": {
+            "detail": "Not checked yet: no browser has opened the live connection (/api/ws) since the server started.",
+            "fix": "Reload this page; if it stays unchecked, enable WebSocket in your reverse proxy."
+          },
+          "failing": {
+            "detail": "Browsers tried to open /api/ws {count} times without a WebSocket upgrade (last {time}); the reverse proxy most likely does not pass WebSocket connections, so the app shows “Connection lost”.",
+            "fix": "Enable WebSocket in your reverse proxy: it must pass the headers Upgrade: websocket and Connection: Upgrade. Nginx Proxy Manager: switch on Websockets Support. nginx: proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection upgrade; proxy_http_version 1.1. Caddy and Traefik do this by default."
           }
         }
       }
@@ -3670,5 +3689,74 @@
     "cameraFallback": "Camera {id}…",
     "cameraDevice": "Camera",
     "noShareSound": "This share has no sound to mute."
+  },
+  "connectionTest": {
+    "title": "Test my connection",
+    "intro": "Checks from this device whether voice can reach the server: directly over UDP and through the built-in relay. It needs no microphone and does not join a Talk.",
+    "run": "Run the test",
+    "running": "Testing…",
+    "again": "Run it again",
+    "step": {
+      "candidates": "Looking for addresses…",
+      "direct": "Trying the direct route…",
+      "relayUdp": "Trying the relay over UDP…",
+      "relayTcp": "Trying the relay over TCP…"
+    },
+    "addresses": "Addresses found: {host} local, {srflx} public, {relay} relay",
+    "path": {
+      "direct": "Direct (UDP to the voice port)",
+      "relayUdp": "Relay over UDP",
+      "relayTcp": "Relay over TCP"
+    },
+    "outcome": {
+      "ok": "Works",
+      "fail": "Does not work",
+      "unavailable": "Not offered"
+    },
+    "verdict": {
+      "direct": "Direct connection works",
+      "relay_only": "Only the relay works (direct UDP blocked or not forwarded)",
+      "none": "Nothing works",
+      "inconclusive": "Test not finished"
+    },
+    "cause": {
+      "ok": {
+        "text": "This device reached the voice port directly over UDP."
+      },
+      "same_network": {
+        "text": "This device seems to be on the same network as the server, so this says little about the way in from outside.",
+        "fix": "Run the test again from a phone on mobile data (Wi-Fi off)."
+      },
+      "udp_not_forwarded": {
+        "text": "The relay answers, but direct UDP to the voice port does not arrive. Most likely the router does not forward the voice ports, a firewall blocks them, or the announced address is wrong.",
+        "fix": "Forward the voice UDP ports (50000-50050 by default) from the router to the server, open them in the host firewall, and check WEBRTC_NAT_1TO1_IP."
+      },
+      "udp_blocked": {
+        "text": "Only the relay over TCP works: this network blocks UDP. That is common in company networks and with some VPNs.",
+        "fix": "Calls work through the relay. For better quality try another network or switch off the VPN."
+      },
+      "voice_off": {
+        "text": "The voice engine of the server is not running.",
+        "fix": "An administrator should open Admin > Status and fix the Voice port item; the server log names the cause."
+      },
+      "no_relay_offered": {
+        "text": "Direct UDP does not work and the server offers no TURN relay as a fallback.",
+        "fix": "Turn the built-in relay on (remove WEBRTC_BUILTIN_TURN=off), forward its port 3479 (UDP and TCP) and forward the voice UDP ports."
+      },
+      "only_local_addresses": {
+        "text": "This device found only local addresses: neither the STUN nor the relay servers answered. A firewall, a VPN or a browser privacy setting blocks UDP and the relay ports.",
+        "fix": "Try another network or switch off the VPN or WebRTC protection. On the server, forward port 3479 (UDP and TCP)."
+      },
+      "relay_unreachable": {
+        "text": "The relay did not answer on any route, and direct UDP does not work either.",
+        "fix": "Forward the relay port (3479 by default) for UDP and TCP to the server and check that Admin > Status shows the TURN relay as running."
+      },
+      "limited": {
+        "text": "Too many tests in a row.",
+        "fix": "Wait a few minutes and run the test again."
+      }
+    },
+    "docs": "Troubleshooting voice",
+    "failed": "The test could not run."
   }
 }

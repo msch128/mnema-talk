@@ -1400,7 +1400,8 @@
       "level": {
         "ok": "In Ordnung",
         "warn": "Hinweis",
-        "fail": "Handlungsbedarf"
+        "fail": "Handlungsbedarf",
+        "info": "Nicht geprüft"
       },
       "check": {
         "public_url": "Öffentliche Adresse",
@@ -1412,7 +1413,8 @@
         "database": "Datenbank",
         "clock": "Serveruhr",
         "network": "Internetanschluss",
-        "reverse_proxy": "Reverse-Proxy"
+        "reverse_proxy": "Reverse-Proxy",
+        "websocket": "WebSocket"
       },
       "checkMsg": {
         "clock": {
@@ -1521,8 +1523,8 @@
             "fix": "Optional: Entferne WEBRTC_BUILTIN_TURN=off, um das eingebaute Relay zu nutzen (Port {port}, UDP und TCP weiterleiten), oder setze WEBRTC_TURN_URLS und WEBRTC_TURN_SECRET für ein externes."
           },
           "unreachable": {
-            "detail": "Das eingebaute TURN-Relay läuft, aber Port {port} hat von diesem Server aus nicht geantwortet; ein Router ohne NAT-Loopback verursacht das, obwohl die Weiterleitung funktioniert.",
-            "fix": "Leite Port {port} (UDP und TCP) an diesen Server weiter und teste mit einem Handy im Mobilfunknetz; setze WEBRTC_BUILTIN_TURN_HOST, wenn Mitglieder es unter einem anderen Namen erreichen müssen."
+            "detail": "Das eingebaute TURN-Relay läuft, aber dieser Server konnte Port {port} von innen nicht prüfen; ein Router ohne NAT-Loopback verursacht das, obwohl die Weiterleitung funktioniert.",
+            "fix": "Öffne „Verbindung testen“ auf einem Handy im Mobilfunknetz, um das Relay von außen zu prüfen; schlägt es fehl, leite Port {port} (UDP und TCP) an diesen Server weiter oder setze WEBRTC_BUILTIN_TURN_HOST, wenn Mitglieder es unter einem anderen Namen erreichen müssen."
           },
           "voice_unavailable": {
             "detail": "Das eingebaute TURN-Relay läuft nicht, weil die Sprache nicht verfügbar ist: Mitglieder in Netzen, die UDP blockieren, können nicht an der Sprache teilnehmen.",
@@ -1560,16 +1562,33 @@
           }
         },
         "voice_udp": {
+          "unconfirmed": {
+            "detail": "Lauscht – von außen noch nicht bestätigt. Die Sprache lauscht auf UDP {port}, aber seit dem Start des Servers hat sich kein Mitglied von außerhalb dieses Netzes verbunden; die Weiterleitung im Router ist also unbewiesen.",
+            "fix": "Leite UDP {port_min}-{port_max} am Router an diesen Host weiter und öffne dann „Verbindung testen“ auf einem Handy im Mobilfunknetz (WLAN aus); der Punkt wird grün, sobald es klappt."
+          },
+          "confirmed": {
+            "detail": "Bestätigt: Ein Mitglied von außen hat sich verbunden ({time}). Die Sprache lauscht auf UDP {port}."
+          },
           "mux_disabled": {
             "detail": "WEBRTC_UDP_MUX_PORT=0 gibt jedem Medienteilnehmer einen eigenen Port, was begrenzt, wie viele Personen gleichzeitig telefonieren können.",
             "fix": "Entferne WEBRTC_UDP_MUX_PORT (oder setze es auf {port_min}), damit sich alle einen UDP-Port teilen."
           },
-          "ok": {
-            "detail": "Die Sprache lauscht auf UDP {port}. Leite diesen Port am Router an diesen Host weiter; von innen lässt er sich nicht testen."
-          },
           "unavailable": {
             "detail": "Die Sprach-Engine ist nicht gestartet, daher haben Talks weder Ton noch Video.",
             "fix": "Vielleicht belegt ein anderes Programm die UDP-Ports {port_min}-{port_max} auf dem Host: beende es oder ändere WEBRTC_UDP_PORT_MIN und WEBRTC_UDP_PORT_MAX und starte neu; die Ursache steht im Log."
+          }
+        },
+        "websocket": {
+          "ok": {
+            "detail": "WebSocket über den Proxy in Ordnung: Ein Browser hat /api/ws geöffnet und die Verbindung wurde hochgestuft ({time})."
+          },
+          "unchecked": {
+            "detail": "Noch nicht geprüft: Seit dem Start des Servers hat kein Browser die Live-Verbindung (/api/ws) geöffnet.",
+            "fix": "Lade diese Seite neu; bleibt der Punkt ungeprüft, aktiviere WebSocket in deinem Reverse-Proxy."
+          },
+          "failing": {
+            "detail": "Browser haben {count}-mal versucht, /api/ws zu öffnen, ohne dass ein WebSocket-Upgrade ankam (zuletzt {time}); der Reverse-Proxy leitet WebSocket-Verbindungen sehr wahrscheinlich nicht durch, daher zeigt die App „Verbindung verloren“.",
+            "fix": "Aktiviere WebSocket in deinem Reverse-Proxy: Er muss die Header Upgrade: websocket und Connection: Upgrade weiterreichen. Nginx Proxy Manager: „Websockets Support“ einschalten. nginx: proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection upgrade; proxy_http_version 1.1. Caddy und Traefik tun das standardmäßig."
           }
         }
       }
@@ -3670,5 +3689,74 @@
     "cameraFallback": "Kamera {id} …",
     "cameraDevice": "Kamera",
     "noShareSound": "Diese Übertragung hat keinen Ton zum Stummschalten."
+  },
+  "connectionTest": {
+    "title": "Verbindung testen",
+    "intro": "Prüft von diesem Gerät aus, ob die Sprache den Server erreicht: direkt über UDP und über das eingebaute Relay. Es braucht kein Mikrofon und betritt keinen Talk.",
+    "run": "Test starten",
+    "running": "Teste …",
+    "again": "Erneut testen",
+    "step": {
+      "candidates": "Suche Adressen …",
+      "direct": "Probiere die direkte Route …",
+      "relayUdp": "Probiere das Relay über UDP …",
+      "relayTcp": "Probiere das Relay über TCP …"
+    },
+    "addresses": "Gefundene Adressen: {host} lokal, {srflx} öffentlich, {relay} Relay",
+    "path": {
+      "direct": "Direkt (UDP zum Sprach-Port)",
+      "relayUdp": "Relay über UDP",
+      "relayTcp": "Relay über TCP"
+    },
+    "outcome": {
+      "ok": "Funktioniert",
+      "fail": "Funktioniert nicht",
+      "unavailable": "Nicht angeboten"
+    },
+    "verdict": {
+      "direct": "Direkte Verbindung funktioniert",
+      "relay_only": "Nur das Relay funktioniert (direktes UDP blockiert oder nicht weitergeleitet)",
+      "none": "Nichts funktioniert",
+      "inconclusive": "Test nicht abgeschlossen"
+    },
+    "cause": {
+      "ok": {
+        "text": "Dieses Gerät hat den Sprach-Port direkt über UDP erreicht."
+      },
+      "same_network": {
+        "text": "Dieses Gerät scheint im selben Netz wie der Server zu sein; das sagt wenig über den Weg von außen.",
+        "fix": "Wiederhole den Test mit einem Handy im Mobilfunknetz (WLAN aus)."
+      },
+      "udp_not_forwarded": {
+        "text": "Das Relay antwortet, aber direktes UDP kommt am Sprach-Port nicht an. Meist leitet der Router die Sprach-Ports nicht weiter, eine Firewall blockiert sie oder die angekündigte Adresse stimmt nicht.",
+        "fix": "Leite die UDP-Ports der Sprache (standardmäßig 50000-50050) am Router an den Server weiter, öffne sie in der Firewall des Hosts und prüfe WEBRTC_NAT_1TO1_IP."
+      },
+      "udp_blocked": {
+        "text": "Nur das Relay über TCP funktioniert: Dieses Netz blockiert UDP. Das ist in Firmennetzen und bei manchen VPNs üblich.",
+        "fix": "Talks laufen über das Relay. Für bessere Qualität nimm ein anderes Netz oder schalte das VPN aus."
+      },
+      "voice_off": {
+        "text": "Die Sprach-Engine des Servers läuft nicht.",
+        "fix": "Ein Administrator sollte Admin > Status öffnen und den Punkt Sprach-Port beheben; das Server-Log nennt die Ursache."
+      },
+      "no_relay_offered": {
+        "text": "Direktes UDP funktioniert nicht und der Server bietet kein TURN-Relay als Ausweg an.",
+        "fix": "Schalte das eingebaute Relay ein (entferne WEBRTC_BUILTIN_TURN=off), leite seinen Port 3479 (UDP und TCP) weiter und leite die UDP-Ports der Sprache weiter."
+      },
+      "only_local_addresses": {
+        "text": "Dieses Gerät hat nur lokale Adressen gefunden: Weder STUN- noch Relay-Server haben geantwortet. Eine Firewall, ein VPN oder eine Datenschutzeinstellung des Browsers blockiert UDP und die Relay-Ports.",
+        "fix": "Probiere ein anderes Netz oder schalte VPN bzw. WebRTC-Schutz aus. Leite auf dem Server Port 3479 (UDP und TCP) weiter."
+      },
+      "relay_unreachable": {
+        "text": "Das Relay hat auf keinem Weg geantwortet, und direktes UDP funktioniert ebenfalls nicht.",
+        "fix": "Leite den Relay-Port (standardmäßig 3479) für UDP und TCP an den Server weiter und prüfe, ob Admin > Status das TURN-Relay als laufend zeigt."
+      },
+      "limited": {
+        "text": "Zu viele Tests hintereinander.",
+        "fix": "Warte ein paar Minuten und starte den Test erneut."
+      }
+    },
+    "docs": "Sprache: Fehlersuche",
+    "failed": "Der Test konnte nicht laufen."
   }
 }

@@ -116,6 +116,7 @@ func (c *components) newCore() {
 	hub.UpgradeLimit = httpx.NewRateLimiter(30, time.Minute).Named("ws_user")
 	c.wsPerIP = httpx.NewRateLimiter(120, time.Minute).Named("ws_ip")
 	hub.Version = d.Version
+	hub.UpgradeSeen = func(upgraded bool) { d.Setup.RecordWebSocket(upgraded, time.Now()) }
 	c.hub = hub
 	c.permSvc = d.Perms
 	if c.permSvc == nil {
@@ -334,6 +335,8 @@ func (c *components) newSystem() error {
 		mail:     c.mail,
 
 		testMailLimit: httpx.NewRateLimiter(5, 10*time.Minute).Named("test_mail"),
+		probeLimit:    httpx.NewRateLimiter(12, 10*time.Minute).Named("connection_probe"),
+		wsReportLimit: httpx.NewRateLimiter(30, 10*time.Minute).Named("ws_report"),
 	}
 	if h.version == "" {
 		h.version = "dev"

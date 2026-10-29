@@ -4225,6 +4225,28 @@ export function isServerBuiltinTURNHealth(value: unknown): value is ServerBuilti
 
 export const decodeServerBuiltinTURNHealth = decoder("server.BuiltinTURNHealth", isServerBuiltinTURNHealth)
 
+export type ServerConnectionProbeAnswer = {
+  sdp: string
+}
+
+export function isServerConnectionProbeAnswer(value: unknown): value is ServerConnectionProbeAnswer {
+  return isRecord(value)
+    && (hasOwn(value, "sdp") && isString(value["sdp"]))
+}
+
+export const decodeServerConnectionProbeAnswer = decoder("server.ConnectionProbeAnswer", isServerConnectionProbeAnswer)
+
+export type ServerConnectionProbeRequest = {
+  sdp: string
+}
+
+export function isServerConnectionProbeRequest(value: unknown): value is ServerConnectionProbeRequest {
+  return isRecord(value)
+    && (hasOwn(value, "sdp") && isString(value["sdp"], 16384))
+}
+
+export const decodeServerConnectionProbeRequest = decoder("server.ConnectionProbeRequest", isServerConnectionProbeRequest)
+
 export type ServerDatabaseHealth = {
   applied_migrations: number
   latest_migration: string
@@ -4760,6 +4782,17 @@ export function isServerVoiceHealth(value: unknown): value is ServerVoiceHealth 
 
 export const decodeServerVoiceHealth = decoder("server.VoiceHealth", isServerVoiceHealth)
 
+export type ServerWebSocketReport = {
+  connected: boolean
+}
+
+export function isServerWebSocketReport(value: unknown): value is ServerWebSocketReport {
+  return isRecord(value)
+    && (hasOwn(value, "connected") && typeof value["connected"] === 'boolean')
+}
+
+export const decodeServerWebSocketReport = decoder("server.WebSocketReport", isServerWebSocketReport)
+
 export type SetupcheckCheck = {
   code?: string
   detail: string
@@ -4781,10 +4814,10 @@ export function isSetupcheckCheck(value: unknown): value is SetupcheckCheck {
 
 export const decodeSetupcheckCheck = decoder("setupcheck.Check", isSetupcheckCheck)
 
-export type SetupcheckLevel = "ok" | "warn" | "fail"
+export type SetupcheckLevel = "ok" | "warn" | "fail" | "info"
 
 export function isSetupcheckLevel(value: unknown): value is SetupcheckLevel {
-  return (value === "ok" || value === "warn" || value === "fail")
+  return (value === "ok" || value === "warn" || value === "fail" || value === "info")
 }
 
 export const decodeSetupcheckLevel = decoder("setupcheck.Level", isSetupcheckLevel)

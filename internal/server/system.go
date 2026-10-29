@@ -51,6 +51,9 @@ type systemHandler struct {
 	mail          *mailer.Mailer
 	names         *community.Names
 	testMailLimit *httpx.RateLimiter
+	// probeLimit bounds connection tests per member; wsReportLimit the
+	// WebSocket reports of the status tab per admin.
+	probeLimit, wsReportLimit *httpx.RateLimiter
 
 	selfMu sync.Mutex
 	self   selfUpdate

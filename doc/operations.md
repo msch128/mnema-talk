@@ -794,12 +794,15 @@ The **Admin → Status** tab provides an operator status overview in a single vi
 - **Backups**: Status of host-level backups and restore verification drills (see [Backups and restore](#backups-and-restore)).
 - **Live activity**: Active sessions, connected WebSocket clients, active Talks, and current voice participants.
 - **Operator warnings**: Active configuration warnings collected by the server (e.g. broad trusted proxies, WebRTC reachability).
-- **Setup checks**: a green, amber and red list of what a new installation needs (below).
+- **Setup checks**: a green, amber, red and neutral list of what a new installation needs (below).
+- **Test my connection**: a button that checks, from the browser you are using, whether voice reaches the server (below).
 
 ### Setup checks
 
-The first block of the Status tab lists the checks below, red first. Every amber
-or red item names the variable to set; the same list is logged (`setup check:`
+The first block of the Status tab lists the checks below, red first, then amber,
+then neutral (grey, *Not verified*), then green. The list needs about 20 seconds
+after a start to be complete: an earlier look can show partial results. Every
+amber or red item names the variable to set; the same list is logged (`setup check:`
 lines, then one `setup checks` summary) about 20 seconds after the start, once
 object storage and the clock measurement have settled. Fix the cause in `.env`,
 run `docker compose up -d` and reload the tab.
@@ -809,17 +812,63 @@ run `docker compose up -d` and reload the tab.
 | Public address | n/a | `PUBLIC_URL` is `localhost` (fine for a trial on one computer, nobody else can join), plain `http://`, or the page was opened at another address (behind a reverse proxy: it must pass `Host` and `X-Forwarded-Proto`) |
 | Voice address | nothing announced and no TURN (`WEBRTC_NAT_1TO1_IP`) | nothing announced, TURN configured |
 | Voice port | the voice engine did not start (UDP ports busy) | `WEBRTC_UDP_MUX_PORT=0` caps the number of callers |
-| TURN relay | n/a | built-in relay could not bind its port, or did not answer on it from the server (a router without NAT loopback also causes this), or `WEBRTC_BUILTIN_TURN=off` with no `WEBRTC_TURN_URLS` |
+| TURN relay | n/a | built-in relay could not bind its port, or `WEBRTC_BUILTIN_TURN=off` with no `WEBRTC_TURN_URLS` |
 | Outgoing mail | n/a | `SMTP_HOST` empty (optional) |
 | Object storage | not configured or not answering | n/a |
 | Database | not answering | n/a |
 | Server clock | 30 seconds or more off | 5 seconds or more off (left out when `CLOCK_CHECK_ENABLED=false` or no NTP answers) |
 | Reverse proxy | n/a | proxy headers from an untrusted address, or `TRUSTED_PROXY_CIDRS` too broad |
 | Internet connection | the WAN address is in `100.64.0.0/10` (CGNAT): port forwarding cannot work | no public IPv4 while IPv6 works (DS-Lite), or the host's own public address differs from the one the internet sees. Shown only when there is a finding; see [Can I host at home?](#can-i-host-at-home) |
+| WebSocket | n/a | browsers opened `/api/ws` three or more times in 15 minutes without a WebSocket upgrade and none succeeded since |
 
-Whether the router forwards the voice UDP port cannot be known from inside the
-host, so *Voice port* is green when the server listens. A call from a phone on
-mobile data is the real test.
+Two items are neutral until the server has seen proof, because it cannot know
+from inside the host whether the router forwards the voice UDP port:
+
+- **Voice port** reads *Listening – not yet confirmed from outside* until a
+  member whose address is not private (not on the LAN, loopback or
+  carrier-grade NAT) has completed a media connection since the server started.
+  Then it turns green and reads *Confirmed: a member from outside connected*
+  with the time. The record is kept in memory only, so it starts empty after
+  every restart. A connection made with *Test my connection* counts. To get it
+  green yourself, run the test from a phone on mobile data (Wi-Fi off).
+- **TURN relay** shows *Not verified* (neutral, no longer amber) when the server
+  could not reach its own relay port from the inside; a router without NAT
+  loopback causes that although the forward works. *Test my connection* from a
+  phone on mobile data answers it.
+
+**WebSocket.** When an administrator opens the tab, the page reports whether its
+own `/api/ws` connection is open, and the server notes every signed-in request
+for `/api/ws` that arrived with or without the WebSocket upgrade headers. The
+item reads *WebSocket via proxy OK* with the time of the last upgrade. It turns
+amber when requests keep arriving without the headers, which is what a reverse
+proxy without WebSocket support produces (the app then shows *Connection lost*).
+The fix is to enable WebSocket in the proxy: it must pass `Upgrade: websocket`
+and `Connection: Upgrade`. Nginx Proxy Manager has a *Websockets Support*
+switch; nginx needs `proxy_http_version 1.1;`,
+`proxy_set_header Upgrade $http_upgrade;` and
+`proxy_set_header Connection upgrade;`; Caddy and Traefik do it by default.
+The item is neutral (*Not checked yet*) until a browser has connected.
+
+### Test my connection
+
+**Test my connection** (Admin → Status, and under Settings → Audio for every
+member) runs in the browser and needs no microphone or camera: it does not join
+a Talk and leaves no presence. It
+
+1. gathers ICE candidates against the configured STUN and TURN servers and
+   reports how many are local (host), public (srflx) and relay;
+2. connects to the server's voice port directly over UDP, with one data channel
+   to a throwaway connection on the server (`POST /api/webrtc/probe`, signed-in
+   members only, twelve per ten minutes each, eight at a time);
+3. connects to the voice port through the built-in TURN relay over UDP, and
+   again over TCP, using relay candidates only.
+
+The verdict is one of *Direct connection works*, *Only the relay works (direct
+UDP blocked or not forwarded)* or *Nothing works*, with the likely cause and
+the fix, and a link to the voice troubleshooting guide. Run it from a device
+outside your network (a phone on mobile data) to test the way in from outside;
+on the same network it can only prove the inside. The test sends nothing to
+third parties beyond what voice itself does (the STUN servers you configured).
 
 ### The doctor command
 

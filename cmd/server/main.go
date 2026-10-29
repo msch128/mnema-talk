@@ -210,6 +210,7 @@ func startVoice(ctx context.Context, cfg *config.Config, setup *setupcheck.Runti
 		opwarn.Raise(opwarn.VoiceUnavailable, 0)
 		return nil, func() {}, nil
 	}
+	voice.SetICEConnectedHandler(func(ev sfu.ICEConnected) { setup.RecordICEConnected(ev.Remote, time.Now()) })
 	closeVoice := func() {
 		if err := voice.Close(); err != nil {
 			slog.Warn("close SFU", "err", err)

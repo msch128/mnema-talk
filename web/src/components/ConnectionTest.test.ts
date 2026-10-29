@@ -1,0 +1,90 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
+import ConnectionTest from './ConnectionTest.vue'
+import { setLocale } from '../i18n'
+import type { ConnectionReport } from '../lib/connectionVerdict'
+
+const runMock = vi.fn()
+vi.mock('../lib/connectionTest', () => ({ runConnectionTest: (...args: unknown[]) => runMock(...args) }))
+vi.mock('../lib/connectionTestApi', () => ({ browserTestDeps: {} }))
+
+const base: ConnectionReport = {
+  candidates: { host: 2, srflx: 1, relay: 2 }, stunOffered: true, turnOffered: true,
+  direct: { outcome: 'fail' }, relayUdp: { outcome: 'fail' }, relayTcp: { outcome: 'fail' }, voiceOff: false, limited: false
+}
+
+let wrapper: VueWrapper | null = null
+beforeEach(() => { setLocale('en'); runMock.mockReset() })
+afterEach(() => { wrapper?.unmount(); wrapper = null })
+
+async function runWith(report: ConnectionReport) {
+  runMock.mockResolvedValue(report)
+  wrapper = mount(ConnectionTest)
+  await wrapper.find('[data-testid="connection-test-run"]').trigger('click')
+  await flushPromises()
+  return wrapper
+}
+
+describe('ConnectionTest', () => {
+  it('explains itself and shows no result before it ran', () => {
+    wrapper = mount(ConnectionTest)
+    expect(wrapper.text()).toContain('Test my connection')
+    expect(wrapper.text()).toContain('needs no microphone')
+    expect(wrapper.find('[data-testid="connection-test-result"]').exists()).toBe(false)
+  })
+
+  it('says the direct connection works', async () => {
+    const w = await runWith({ ...base, direct: { outcome: 'ok', pair: { localType: 'srflx', remoteType: 'host', remoteAddress: '203.0.113.7' } } })
+    expect(w.get('[data-testid="connection-test-verdict"]').text()).toBe('Direct connection works')
+    expect(w.get('[data-testid="connection-test-verdict"]').attributes('data-kind')).toBe('direct')
+    expect(w.find('[data-testid="connection-test-fix"]').exists()).toBe(false)
+    expect(w.get('[data-testid="connection-test-run"]').text()).toBe('Run it again')
+  })
+
+  it('says only the relay works, with the cause, the fix and a link to the troubleshooting guide', async () => {
+    const w = await runWith({ ...base, relayUdp: { outcome: 'ok' }, relayTcp: { outcome: 'ok' } })
+    expect(w.get('[data-testid="connection-test-verdict"]').text()).toBe('Only the relay works (direct UDP blocked or not forwarded)')
+    expect(w.get('[data-testid="connection-test-cause"]').attributes('data-cause')).toBe('udp_not_forwarded')
+    expect(w.get('[data-testid="connection-test-fix"]').text()).toContain('Forward the voice UDP ports')
+    expect(w.get('a').attributes('href')).toContain('/doc/troubleshooting-voice.md')
+    expect(w.get('[data-testid="connection-test-path-direct"]').attributes('data-outcome')).toBe('fail')
+    expect(w.get('[data-testid="connection-test-path-relayUdp"]').text()).toBe('Relay over UDP: Works')
+    expect(w.get('[data-testid="connection-test-addresses"]').text()).toBe('Addresses found: 2 local, 1 public, 2 relay')
+  })
+
+  it('says nothing works', async () => {
+    const w = await runWith({ ...base, candidates: { host: 1, srflx: 0, relay: 0 } })
+    expect(w.get('[data-testid="connection-test-verdict"]').text()).toBe('Nothing works')
+    expect(w.get('[data-testid="connection-test-cause"]').attributes('data-cause')).toBe('only_local_addresses')
+  })
+
+  it('shows a progress line while running and the verdict in German', async () => {
+    setLocale('de')
+    let finish: (r: ConnectionReport) => void = () => {}
+    runMock.mockImplementation((_deps: unknown, onStep: (s: string) => void) => {
+      onStep('relayTcp')
+      return new Promise<ConnectionReport>(resolve => { finish = resolve })
+    })
+    wrapper = mount(ConnectionTest)
+    await wrapper.get('[data-testid="connection-test-run"]').trigger('click')
+    expect(wrapper.get('[data-testid="connection-test-step"]').text()).toBe('Probiere das Relay über TCP …')
+    expect(wrapper.get('[data-testid="connection-test-run"]').attributes('disabled')).toBeDefined()
+    finish({ ...base, direct: { outcome: 'ok', pair: { localType: 'host', remoteType: 'host', remoteAddress: '10.0.0.2' } } })
+    await flushPromises()
+    expect(wrapper.get('[data-testid="connection-test-verdict"]').text()).toBe('Direkte Verbindung funktioniert')
+    expect(wrapper.get('[data-testid="connection-test-cause"]').attributes('data-cause')).toBe('same_network')
+  })
+
+  it('says so when the test itself could not run', async () => {
+    runMock.mockRejectedValue(new Error('boom'))
+    wrapper = mount(ConnectionTest)
+    await wrapper.get('[data-testid="connection-test-run"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="connection-test-failed"]').text()).toBe('The test could not run.')
+  })
+
+  it('can hide its own heading when the surrounding section has one', () => {
+    wrapper = mount(ConnectionTest, { props: { heading: false } })
+    expect(wrapper.find('h4').exists()).toBe(false)
+  })
+})

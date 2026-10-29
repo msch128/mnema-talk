@@ -13,6 +13,10 @@ func Log(logger *slog.Logger, checks []Check) {
 		if c.Level == OK {
 			continue
 		}
+		if c.Level == Info {
+			logger.Info("setup check: "+c.Detail, "check", c.ID, "status", string(c.Level), "fix", c.Fix)
+			continue
+		}
 		problems++
 		level := slog.LevelWarn
 		if c.Level == Fail {

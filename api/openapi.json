@@ -7182,6 +7182,31 @@
         ],
         "type": "object"
       },
+      "server.ConnectionProbeAnswer": {
+        "properties": {
+          "sdp": {
+            "description": "SDP is the server's answer with all of its candidates.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sdp"
+        ],
+        "type": "object"
+      },
+      "server.ConnectionProbeRequest": {
+        "properties": {
+          "sdp": {
+            "description": "SDP is the browser's offer: one data channel and no audio or video,\nwith all of its candidates gathered.",
+            "maxLength": 16384,
+            "type": "string"
+          }
+        },
+        "required": [
+          "sdp"
+        ],
+        "type": "object"
+      },
       "server.DatabaseHealth": {
         "properties": {
           "applied_migrations": {
@@ -8079,6 +8104,18 @@
         ],
         "type": "object"
       },
+      "server.WebSocketReport": {
+        "properties": {
+          "connected": {
+            "description": "Connected is whether the admin's own /api/ws connection is open and\nupgraded.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "connected"
+        ],
+        "type": "object"
+      },
       "setupcheck.Check": {
         "properties": {
           "code": {
@@ -8100,7 +8137,7 @@
           },
           "level": {
             "$ref": "#/components/schemas/setupcheck.Level",
-            "description": "Level is ok (green), warn (amber) or fail (red)."
+            "description": "Level is ok (green), info (neutral: not verifiable from here), warn\n(amber) or fail (red)."
           },
           "params": {
             "additionalProperties": {
@@ -8121,13 +8158,15 @@
         "enum": [
           "ok",
           "warn",
-          "fail"
+          "fail",
+          "info"
         ],
         "type": "string",
         "x-enum-varnames": [
           "OK",
           "Warn",
-          "Fail"
+          "Fail",
+          "Info"
         ]
       },
       "slash.Result": {
@@ -16619,6 +16658,95 @@
           }
         ],
         "summary": "Operator status",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/status/websocket": {
+      "post": {
+        "description": "The admin page tells the server whether its own /api/ws connection came through the reverse proxy as an upgraded WebSocket. The Status tab shows the outcome as the WebSocket item. Owner or Administrator only (403 otherwise).",
+        "operationId": "reportAdminWebSocket",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.WebSocketReport"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed body."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and members with the Administrator permission may do this."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Report the admin's WebSocket",
         "tags": [
           "Admin"
         ]
@@ -35071,6 +35199,110 @@
           }
         ],
         "summary": "ICE servers for voice",
+        "tags": [
+          "Realtime"
+        ]
+      }
+    },
+    "/api/webrtc/probe": {
+      "post": {
+        "description": "Backs \"Test my connection\": answers a browser's data-channel-only offer with a throwaway peer connection that uses the same media sockets and announced addresses as a Talk, so the browser can tell whether its media reaches the server directly or only through the relay. No audio, no media permission, no room and no presence; the connection closes itself after a few seconds. Signed-in members only; at most twelve per ten minutes and eight at a time. Candidates of the offer are vetted like those of a Talk member.",
+        "operationId": "probeConnection",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.ConnectionProbeRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.ConnectionProbeAnswer"
+                }
+              }
+            },
+            "description": "The server's answer.",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): not a data-channel-only offer."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests, or too many tests running.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: the voice engine is not running."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Answer a connection test",
         "tags": [
           "Realtime"
         ]
