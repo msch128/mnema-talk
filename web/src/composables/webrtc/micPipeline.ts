@@ -9,6 +9,7 @@ import { applyOutput } from './remoteAudio'
 import type { Cx } from './state'
 import { aiModel, setNodeGain } from './audioMath'
 import { noticeOnce } from './audioNotice'
+import { attachRawTap, detachRawTap } from './rawSilence'
 
 export async function refreshAudioDevices(cx: Cx) {
   const { voice } = cx
@@ -340,6 +341,7 @@ export async function setupMicPipeline(cx: Cx, stream: MediaStream): Promise<Med
   const sendStream = applyGamingLease(cx, ctx, stream, routed?.sendStream ?? volumed)
   if (!sendStream) return null
   attachMeter(cx, ctx, stream, filtered.meterSource ?? routed?.meterSource ?? null)
+  attachRawTap(st, ctx, stream)
   return sendStream
 }
 
@@ -365,6 +367,7 @@ export function teardownMicPipeline(cx: Cx) {
   stopMediaTracks(st.rawMicStream)
   st.rawMicStream = null
 
+  detachRawTap(st)
   st.meteringTrack?.stop()
   st.meteringTrack = null
 

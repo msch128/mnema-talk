@@ -38,7 +38,14 @@ export interface RtcState {
   loopbackGain: GainNode | null
   loopbackCtx: AudioContext | null
   callBiquad: BiquadFilterNode | null
-  unmutedZeroAudioStartTime: number
+  /** Raw capture tap for the no-sound warning, read before any processing. */
+  rawAnalyser: AnalyserNode | null
+  /** Since when the raw capture has been silent (0: it is not). */
+  noAudioStart: number
+  /** The user closed the no-sound warning for this call. */
+  noAudioDismissed: boolean
+  /** The hardware-mute hint is shown once per call. */
+  hardwareMuteHinted: boolean
   lastNoAudioWarningToastTime: number
 
   pc: RTCPeerConnection | null
@@ -136,7 +143,10 @@ export function createRtcState(): RtcState {
     loopbackGain: null,
     loopbackCtx: null,
     callBiquad: null,
-    unmutedZeroAudioStartTime: 0,
+    rawAnalyser: null,
+    noAudioStart: 0,
+    noAudioDismissed: false,
+    hardwareMuteHinted: false,
     lastNoAudioWarningToastTime: 0,
     pc: null,
     audioSender: null,

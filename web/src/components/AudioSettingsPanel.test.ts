@@ -124,7 +124,7 @@ describe('AudioSettingsPanel mic test and extra settings', () => {
 
   it('toggles warning switches and persists to voiceStore', async () => {
     const wrapper = mount(AudioSettingsPanel, mountOpts)
-    const noAudioBtn = wrapper.find('button[aria-label="Warnung bei fehlendem Tonsignal"]')
+    const noAudioBtn = wrapper.find('button[aria-label="Warnen, wenn mein Mikrofon keinen Ton sendet"]')
     const switchChBtn = wrapper.find('button[aria-label="Bestätigung beim Talk-Wechsel"]')
 
     expect(noAudioBtn.exists()).toBe(true)

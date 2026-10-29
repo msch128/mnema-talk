@@ -346,9 +346,10 @@ describe('voice activity, loopback and window lifecycle', () => {
   async function timedCall() {
     vi.useFakeTimers()
     const ctx = setup()
-    vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue(fakeStream())
+    const captured = fakeStream()
+    vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue(captured)
     await ctx.rtc.joinVoiceChannel('timed')
-    return ctx
+    return { ...ctx, captured }
   }
 
   it('gates transmission, reports speaking transitions and mutes the active channel during loopback', async () => {
@@ -387,26 +388,73 @@ describe('voice activity, loopback and window lifecycle', () => {
     expect(track.enabled).toBe(false)
   })
 
-  it('warns after prolonged silence only once per cooldown and resets after speech or disabling warnings', async () => {
-    const { voice } = await timedCall()
-    vi.setSystemTime(new Date('2026-10-07T12:00:00Z'))
-    FakeAudioContext.sample = 128
-    voice.warnNoAudioDetected = true
-    const toasts = useToastStore()
-    vi.spyOn(toasts, 'info')
-    await vi.advanceTimersByTimeAsync(16_000)
-    expect(toasts.info).toHaveBeenCalledWith(t('audio.noAudioDetectedToast'))
-    const count = vi.mocked(toasts.info).mock.calls.length
-    await vi.advanceTimersByTimeAsync(16_000)
-    expect(toasts.info).toHaveBeenCalledTimes(count)
-    FakeAudioContext.sample = 140
-    await vi.advanceTimersByTimeAsync(60)
-    FakeAudioContext.sample = 128
-    voice.warnNoAudioDetected = false
-    await vi.advanceTimersByTimeAsync(60)
-    voice.warnNoAudioDetected = true
-    await vi.advanceTimersByTimeAsync(130_000)
-    expect(toasts.info).toHaveBeenCalledTimes(count + 1)
+  describe('no-sound warning reads the raw capture', () => {
+    async function watched() {
+      const ctx = await timedCall()
+      ctx.voice.warnNoAudioDetected = true
+      ctx.voice.inputMode = 'vad'
+      const toasts = useToastStore()
+      vi.spyOn(toasts, 'info')
+      return { ...ctx, toasts }
+    }
+
+    it('stays quiet in a quiet room: a faint raw signal is not silence, whatever the processed meter reads', async () => {
+      const { toasts } = await watched()
+      FakeAudioContext.sample = 128
+      FakeAudioContext.rawSample = 0.0005
+      await vi.advanceTimersByTimeAsync(40_000)
+      expect(toasts.info).not.toHaveBeenCalled()
+    })
+
+    it('warns once per cooldown on digital silence and resets after any signal', async () => {
+      const { toasts } = await watched()
+      FakeAudioContext.rawSample = 0
+      await vi.advanceTimersByTimeAsync(16_000)
+      expect(toasts.info).toHaveBeenCalledTimes(1)
+      expect(toasts.info).toHaveBeenCalledWith(t('audio.noAudioDetectedToast'), expect.anything())
+      await vi.advanceTimersByTimeAsync(30_000)
+      expect(toasts.info).toHaveBeenCalledTimes(1)
+      FakeAudioContext.rawSample = 0.001
+      await vi.advanceTimersByTimeAsync(60)
+      FakeAudioContext.rawSample = 0
+      await vi.advanceTimersByTimeAsync(130_000)
+      expect(toasts.info).toHaveBeenCalledTimes(2)
+    })
+
+    it('does not warn while muted in Mnema, in the mic test or with an idle push-to-talk key', async () => {
+      const { voice, toasts } = await watched()
+      FakeAudioContext.rawSample = 0
+      voice.isMuted = true
+      await vi.advanceTimersByTimeAsync(20_000)
+      voice.isMuted = false
+      voice.inputMode = 'ptt'
+      await vi.advanceTimersByTimeAsync(20_000)
+      expect(toasts.info).not.toHaveBeenCalled()
+    })
+
+    it('gives a hardware mute one calm hint per call', async () => {
+      const { captured, toasts } = await watched()
+      captured.getAudioTracks().forEach(track => { (track as unknown as { muted: boolean }).muted = true })
+      FakeAudioContext.rawSample = 0.05
+      await vi.advanceTimersByTimeAsync(16_000)
+      expect(toasts.info).toHaveBeenCalledTimes(1)
+      expect(toasts.info).toHaveBeenCalledWith(t('audio.micHardwareMutedToast'), expect.anything())
+      await vi.advanceTimersByTimeAsync(400_000)
+      expect(toasts.info).toHaveBeenCalledTimes(1)
+    })
+
+    it('stays off for the rest of the call once dismissed, and with the setting off', async () => {
+      const { voice, toasts } = await watched()
+      FakeAudioContext.rawSample = 0
+      await vi.advanceTimersByTimeAsync(16_000)
+      const options = vi.mocked(toasts.info).mock.calls[0]?.[1]
+      await present(options?.action).onClick()
+      await vi.advanceTimersByTimeAsync(400_000)
+      expect(toasts.info).toHaveBeenCalledTimes(1)
+      voice.warnNoAudioDetected = false
+      await vi.advanceTimersByTimeAsync(400_000)
+      expect(toasts.info).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('gates a standalone monitor from the measured input and closes its resources', async () => {
