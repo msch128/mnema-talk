@@ -7,7 +7,7 @@ import { t } from '../i18n'
 // shows nothing. The wording is pinned in hostError.test.ts.
 
 const NAT_HINT =
-  'If the server is in your own network, your router may not support reaching it through its public address (NAT loopback/hairpin); try from outside or use the local address.'
+  'If the server runs in your own network, your router may not support reaching it through its public address (NAT loopback/hairpin) — try the local address or another network.'
 
 // A trailing "(detail)" is the system's own cause, kept as the host sent it.
 const DETAIL = '(?: \\(([^]{1,160})\\))?'

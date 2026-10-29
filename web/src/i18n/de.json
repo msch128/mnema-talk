@@ -1910,7 +1910,7 @@
       "refused": "Der Server hat die Verbindung abgelehnt. Prüfe Adresse und Port.",
       "timeout": "Der Server hat nicht rechtzeitig geantwortet. Prüfe Adresse, Port und dein Netzwerk.",
       "dns": "Die Serveradresse konnte nicht aufgelöst werden. Prüfe die Adresse und dein Netzwerk.",
-      "natHint": "Steht der Server in deinem eigenen Netzwerk, unterstützt dein Router den Zugriff über die öffentliche Adresse eventuell nicht (NAT-Loopback/Hairpin). Probiere es von außerhalb oder nutze die lokale Adresse.",
+      "natHint": "Läuft der Server in deinem eigenen Netzwerk, unterstützt dein Router den Zugriff über die öffentliche Adresse eventuell nicht (NAT-Loopback/Hairpin). Probiere die lokale Adresse oder ein anderes Netzwerk.",
       "certificate": "Dieser Computer vertraut dem HTTPS-Zertifikat des Servers nicht. Prüfe die Systemuhr und ob ein Virenscanner oder Netzwerkfilter HTTPS abfängt.",
       "unreachable": "Der Server war über vertrauenswürdiges HTTPS nicht erreichbar.",
       "unavailable": "Der Server ist nicht verfügbar oder leitet auf eine andere Adresse um.",

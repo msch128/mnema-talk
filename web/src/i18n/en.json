@@ -1910,7 +1910,7 @@
       "refused": "The server refused the connection. Check the address and the port.",
       "timeout": "The server did not answer in time. Check the address, the port and your network.",
       "dns": "The server address could not be resolved. Check the address and your network.",
-      "natHint": "If the server is in your own network, your router may not support reaching it through its public address (NAT loopback/hairpin). Try from outside or use the local address.",
+      "natHint": "If the server runs in your own network, your router may not support reaching it through its public address (NAT loopback/hairpin). Try the local address or another network.",
       "certificate": "This computer does not trust the server’s HTTPS certificate. Check the system clock, and that no antivirus or network filter intercepts HTTPS.",
       "unreachable": "The server could not be reached over trusted HTTPS.",
       "unavailable": "The server is unavailable or redirects to a different address.",
