@@ -151,7 +151,8 @@ Nothing to change; every existing variable keeps working. New for operators:
   address with a STUN request to Google or Cloudflare at startup and announces
   it (`WEBRTC_AUTO_ANNOUNCE=false` turns this off). The server clock is compared
   with an NTP server (`CLOCK_CHECK_ENABLED=false` turns this off). An install
-  that sets `WEBRTC_NAT_1TO1_IP` sends the first request never.
+  that sets `WEBRTC_NAT_1TO1_IP` sends the first request never. Both are named
+  in the in-app privacy policy (policy version 1.6) while they are active.
 - A `PUBLIC_URL` that is an IPv4 address (a LAN install opened by IP) is now
   also announced for voice when `WEBRTC_NAT_1TO1_IP` is empty.
 

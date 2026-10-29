@@ -4219,6 +4219,8 @@ export function isServerIceServer(value: unknown): value is ServerIceServer {
 export const decodeServerIceServer = decoder("server.IceServer", isServerIceServer)
 
 export type ServerLegal = {
+  address_detection: boolean
+  clock_check: boolean
   legal_version: string
   media_retention_days: number
   operator_country: string
@@ -4233,6 +4235,8 @@ export type ServerLegal = {
 
 export function isServerLegal(value: unknown): value is ServerLegal {
   return isRecord(value)
+    && (hasOwn(value, "address_detection") && typeof value["address_detection"] === 'boolean')
+    && (hasOwn(value, "clock_check") && typeof value["clock_check"] === 'boolean')
     && (hasOwn(value, "legal_version") && isString(value["legal_version"]))
     && (hasOwn(value, "media_retention_days") && isInteger(value["media_retention_days"]))
     && (hasOwn(value, "operator_country") && isString(value["operator_country"]))

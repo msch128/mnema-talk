@@ -7127,6 +7127,13 @@
       },
       "server.Legal": {
         "properties": {
+          "address_detection": {
+            "description": "AddressDetection is true when the server may ask public STUN servers\nfor its own address at startup (WEBRTC_AUTO_ANNOUNCE); ClockCheck is\ntrue when it compares its clock with NTP servers (CLOCK_CHECK_ENABLED).\nBoth reveal only the server's IP address.",
+            "type": "boolean"
+          },
+          "clock_check": {
+            "type": "boolean"
+          },
           "legal_version": {
             "type": "string"
           },
@@ -7167,6 +7174,8 @@
           }
         },
         "required": [
+          "address_detection",
+          "clock_check",
           "legal_version",
           "media_retention_days",
           "operator_country",

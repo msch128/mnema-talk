@@ -26,6 +26,8 @@ const stunServers = ref<string[]>([])
 // Empty until the server has answered, so no wrong version is ever shown.
 const legalVersion = ref('')
 const updateCheck = ref(false)
+const addressDetection = ref(false)
+const clockCheck = ref(false)
 
 const TABS: readonly LegalTab[] = ['all', 'operator', 'privacy', 'terms', 'oss']
 
@@ -44,6 +46,8 @@ function applyLegalData(data: ReturnType<typeof decodeServerLegal>): void {
   if (data.session_expiry_days) sessionExpiryDays.value = data.session_expiry_days
   stunServers.value = data.stun_servers || []
   updateCheck.value = data.update_check === true
+  addressDetection.value = data.address_detection === true
+  clockCheck.value = data.clock_check === true
   if (data.legal_version) legalVersion.value = data.legal_version
 }
 
@@ -164,6 +168,13 @@ onMounted(() => {
         <!-- Outbound connection of the server itself -->
         <p v-if="updateCheck" class="text-xs" data-testid="legal-update-check">
           <strong class="text-mnema-text">{{ $t('legal.privacy.updateCheckTitle') }}</strong>{{ $t('legal.privacy.updateCheck') }}
+        </p>
+
+        <p v-if="addressDetection" class="text-xs" data-testid="legal-address-detection">
+          <strong class="text-mnema-text">{{ $t('legal.privacy.addressDetectionTitle') }}</strong>{{ $t('legal.privacy.addressDetection') }}
+        </p>
+        <p v-if="clockCheck" class="text-xs" data-testid="legal-clock-check">
+          <strong class="text-mnema-text">{{ $t('legal.privacy.clockCheckTitle') }}</strong>{{ $t('legal.privacy.clockCheck') }}
         </p>
 
         <!-- Data categories & retention -->

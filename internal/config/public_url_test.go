@@ -86,3 +86,30 @@ func TestPublicIPv4AndLocalURL(t *testing.T) {
 		}
 	}
 }
+
+func TestDetectsPublicAddressOnlyWhenNothingIsPinned(t *testing.T) {
+	for name, tc := range map[string]struct {
+		env  map[string]string
+		want bool
+	}{
+		"production default": {nil, true},
+		"pinned address":     {map[string]string{"WEBRTC_NAT_1TO1_IP": "203.0.113.5"}, false},
+		"switched off":       {map[string]string{"WEBRTC_AUTO_ANNOUNCE": "false"}, false},
+	} {
+		env := prodEnv()
+		for k, v := range tc.env {
+			env[k] = v
+		}
+		cfg, err := FromEnv(lookup(env))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.DetectsPublicAddress() != tc.want {
+			t.Errorf("%s: DetectsPublicAddress = %v", name, !tc.want)
+		}
+	}
+	cfg, _ := FromEnv(lookup(base()))
+	if cfg.DetectsPublicAddress() {
+		t.Error("development never probes")
+	}
+}

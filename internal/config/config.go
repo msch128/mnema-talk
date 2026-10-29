@@ -136,6 +136,12 @@ func (c *Config) PublicIPv4() (netip.Addr, bool) {
 	return a, true
 }
 
+// DetectsPublicAddress reports whether the server may ask public STUN servers
+// for its own address: production, no WEBRTC_NAT_1TO1_IP and detection on.
+func (c *Config) DetectsPublicAddress() bool {
+	return c.IsProduction() && len(c.WebRTCAnnounce) == 0 && c.WebRTCAutoAnnounce
+}
+
 // PublicURLIsLocal reports whether PUBLIC_URL names this machine only
 // (localhost or a loopback address), which no other device can open.
 func (c *Config) PublicURLIsLocal() bool { return IsLoopbackAddr(c.PublicHost()) }
