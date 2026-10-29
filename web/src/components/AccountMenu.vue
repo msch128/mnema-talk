@@ -2,9 +2,9 @@
 import type { PropType } from 'vue'
 import type { Locale } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
-// The ⋯ menu of the user bar: profile, audio, language, admin, legal, sign out.
+// The ⋯ menu of the user bar: profile, settings, notifications, sound, language, admin, legal, sign out.
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
-import { User, Settings, Languages, ShieldCheck, HelpCircle, LogOut, ChevronRight, Activity, Monitor, MonitorOff, Bell } from '@lucide/vue'
+import { User, Settings, SlidersHorizontal, Languages, ShieldCheck, HelpCircle, LogOut, ChevronRight, Activity, Monitor, MonitorOff, Bell } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
@@ -159,6 +159,9 @@ const item = 'flex min-h-9 w-full items-center gap-3 rounded-lg px-2.5 py-2 text
     </button>
     <button v-if="features.notifyLevelsV2" type="button" role="menuitem" tabindex="-1" :class="item" data-testid="menu-notification-settings" @click="run(() => { notifyDialogOpen = true })">
       <Bell class="h-4 w-4 shrink-0 text-mnema-tertiary" />{{ $t('menu.notificationSettings') }}
+    </button>
+    <button type="button" role="menuitem" tabindex="-1" :class="item" data-testid="menu-sound" @click="run(() => openSettings('audio'))">
+      <SlidersHorizontal class="h-4 w-4 shrink-0 text-mnema-tertiary" />{{ $t('settings.tab.audio') }}
     </button>
     <template v-if="voiceStore.isConnected">
       <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(() => { voiceStore.showStatsModal = true })">

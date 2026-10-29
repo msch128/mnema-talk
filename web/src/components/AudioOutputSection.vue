@@ -48,7 +48,7 @@ function previewMessageSound() {
           data-testid="output-device"
           class="w-full rounded-md border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text"
         >
-          <option value="">{{ $t('audio.defaultDevice') }}</option>
+          <option value="">{{ $t('audio.defaultOutput') }}</option>
           <option
             v-for="dev in voiceStore.availableOutputDevices.filter(d => d.deviceId && d.deviceId !== 'default')"
             :key="dev.deviceId"

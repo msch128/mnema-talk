@@ -61,7 +61,7 @@ describe('settings entry', () => {
     expect(w.find('[data-testid="account-app"]').exists()).toBe(false)
     await w.find('[data-testid="menu-settings"]').trigger('click')
     expect(useAccountStore().dialogOpen).toBe(true)
-    expect(settingsTab.value).toBe('signin')
+    expect(settingsTab.value).toBe('audio')
     useAccountStore().close()
   })
 })

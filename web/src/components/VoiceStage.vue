@@ -230,7 +230,7 @@ const compactBar = computed(() => {
   return w > 0 && w < COMPACT_BAR_WIDTH
 })
 
-const { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, onActivity, onTapStart, onTapCapture } = useTalkControls({
+const { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, showMoveHint, onActivity, onTapStart, onTapCapture } = useTalkControls({
   connected: isConnectedHere,
   others: () => usersInVoice.value.length,
   menuOpen: () => menu.state.open
@@ -381,10 +381,10 @@ const { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, on
       </div>
 
       <p
-        v-if="showTapHint"
+        v-if="showTapHint || showMoveHint"
         data-testid="talk-tap-hint"
         class="pointer-events-none absolute inset-x-0 bottom-2 z-10 text-center text-xs text-mnema-tertiary"
-      >{{ $t('talk.tapForControls') }}</p>
+      >{{ showTapHint ? $t('talk.tapForControls') : $t('talk.moveForControls') }}</p>
     </div>
 
     <ContextMenu

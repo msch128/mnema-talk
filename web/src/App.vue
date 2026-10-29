@@ -54,6 +54,7 @@ import { useAppRouting } from './composables/useAppRouting'
 import { useAppBadge } from './composables/useAppBadge'
 import { useCompactLayout } from './composables/useCompactLayout'
 import { usePushBridge } from './composables/usePushBridge'
+import { usePttHint } from './composables/usePttHint'
 import { useTitleBadge } from './composables/useTitleBadge'
 import { VOICE_CHAT_HEIGHT, STAGE_MIN_HEIGHT } from './lib/voiceChatPanel'
 
@@ -113,6 +114,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown, tru
 const routing = useAppRouting(() => alive)
 useAppBadge()
 usePushBridge()
+usePttHint()
 const { showAdminModal, adminTab, voiceShowChat, voiceChannelId, applyRoute, syncCurrentStateToRoute, openAdmin, closeAdmin, onVoiceJoin } = routing
 
 // Avoids flashing the login dialog while the session cookie is being checked.
