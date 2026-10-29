@@ -38,9 +38,11 @@ export function closeTalkSettings() {
 export interface TalkChange {
   name?: string
   user_limit?: number
+  /** Needs Manage channels. */
+  is_lobby?: boolean
 }
 
-/** Renames a Talk or sets its limit: through the admin route for those who manage channels, else as the Talk's leader. */
+/** Renames a Talk, sets its limit or makes it a lobby (one call, so the changes land together): through the admin route for those who manage channels, else as the Talk's leader. */
 export function updateTalk(channelId: string, change: TalkChange, asManager: boolean): Promise<Channel> {
   const path = asManager ? `/api/admin/channels/${channelId}` : `/api/talks/${channelId}`
   return api(path, { method: 'PATCH', json: change, decode: decodeChannel })

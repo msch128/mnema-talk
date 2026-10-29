@@ -1126,6 +1126,9 @@
     "presetLimit": "Limit",
     "presetLimitHint": "At most this many members at once. 0 means no limit.",
     "limitLabel": "Member limit",
+    "rolesRequired": "Choose at least one role, or switch to Everyone.",
+    "limitInvalid": "Enter a whole number from 0 to 999.",
+    "nameRequired": "A Talk needs a name.",
     "presetApply": "Apply",
     "presetApplied": "Talk updated.",
     "inviteFrom": "{name} invites you to a Talk",
@@ -3561,6 +3564,19 @@
       "sameName": "A role named {name} already exists here.",
       "sameNameUsed": "Connected to {name} because the names match."
     }
+  },
+  "draft": {
+    "unsaved": "You have unsaved changes",
+    "reset": "Reset",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "saveFailed": "Could not save your changes.",
+    "partialFailed": "Some changes were saved, the rest was not: {message}",
+    "discardTitle": "Discard changes?",
+    "discardBody": "You have changes that are not saved. Closing now drops them.",
+    "discard": "Discard",
+    "keepEditing": "Keep editing",
+    "shortcut": "Save with {keys}"
   },
   "settings": {
     "title": "Settings",

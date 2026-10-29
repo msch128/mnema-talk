@@ -1126,6 +1126,9 @@
     "presetLimit": "Limit",
     "presetLimitHint": "Höchstens so viele Mitglieder gleichzeitig. 0 heißt kein Limit.",
     "limitLabel": "Mitgliederlimit",
+    "rolesRequired": "Wähle mindestens eine Rolle oder wechsle zu „Alle“.",
+    "limitInvalid": "Gib eine ganze Zahl von 0 bis 999 ein.",
+    "nameRequired": "Ein Talk braucht einen Namen.",
     "presetApply": "Übernehmen",
     "presetApplied": "Talk aktualisiert.",
     "inviteFrom": "{name} lädt dich in einen Talk ein",
@@ -3561,6 +3564,19 @@
       "sameName": "Hier gibt es bereits eine Rolle namens {name}.",
       "sameNameUsed": "Mit {name} verbunden, weil die Namen übereinstimmen."
     }
+  },
+  "draft": {
+    "unsaved": "Du hast ungespeicherte Änderungen",
+    "reset": "Zurücksetzen",
+    "saving": "Speichern…",
+    "saved": "Gespeichert",
+    "saveFailed": "Die Änderungen konnten nicht gespeichert werden.",
+    "partialFailed": "Ein Teil der Änderungen wurde gespeichert, der Rest nicht: {message}",
+    "discardTitle": "Änderungen verwerfen?",
+    "discardBody": "Du hast Änderungen, die nicht gespeichert sind. Schließt du jetzt, gehen sie verloren.",
+    "discard": "Verwerfen",
+    "keepEditing": "Weiter bearbeiten",
+    "shortcut": "Speichern mit {keys}"
   },
   "settings": {
     "title": "Einstellungen",
