@@ -15,7 +15,7 @@
 #   PREVIOUS_IMAGE=ghcr.io/msch128/mnema-talk:0.9.0   one leg from exactly this
 #                                  image; FROM_VERSION names its version (default:
 #                                  the tag after the last colon)
-#   DRILL_PORT=58192               host port for the app
+#   DRILL_PORT=<port>              host port for the app (default: a free one)
 #   DRILL_PULL_ATTEMPTS / DRILL_PULL_DELAY   bounded registry retry (4 / 15s)
 #
 # A registry outage fails the drill after the retries; it is never skipped.
@@ -25,6 +25,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck source=scripts/drill-common.sh
 source "$ROOT/scripts/drill-common.sh"
+# shellcheck source=scripts/free-port.sh
+source "$ROOT/scripts/free-port.sh"
 # shellcheck source=scripts/upgrade-drill-data.sh
 source "$ROOT/scripts/upgrade-drill-data.sh"
 NEW_IMAGE="${1:-mnema-talk:local}"
@@ -43,7 +45,9 @@ if [ -z "${PREVIOUS_IMAGE:-}" ] && [ -z "${DRILL_LEG:-}" ]; then
   exit 0
 fi
 
-PORT="${DRILL_PORT:-58192}"
+PORT="${DRILL_PORT:-$(free_port)}"
+UDP_MIN="${DRILL_UDP_PORT:-$(free_port_range 11)}"
+UDP_MAX=$((UDP_MIN + 10))
 BASE="http://127.0.0.1:$PORT"
 ADMIN_PASSWORD="drill-$(openssl rand -hex 8)"
 ALICE_PASSWORD="alice-$(openssl rand -hex 8)"
@@ -84,8 +88,8 @@ ADMIN_USERNAME=Herzog
 ADMIN_INITIAL_PASSWORD=$ADMIN_PASSWORD
 UPDATE_CHECK_ENABLED=false
 LINK_PREVIEWS_ENABLED=false
-WEBRTC_UDP_PORT_MIN=58220
-WEBRTC_UDP_PORT_MAX=58230
+WEBRTC_UDP_PORT_MIN=$UDP_MIN
+WEBRTC_UDP_PORT_MAX=$UDP_MAX
 WEBRTC_NAT_1TO1_IP=127.0.0.1
 EOF
 chmod 600 "$DEPLOY/.env"
@@ -95,7 +99,7 @@ services:
     container_name: $COMPOSE_PROJECT_NAME-app
     ports: !override
       - "127.0.0.1:$PORT:8080"
-      - "127.0.0.1:58220-58230:58220-58230/udp"
+      - "127.0.0.1:$UDP_MIN-$UDP_MAX:$UDP_MIN-$UDP_MAX/udp"
   postgres:
     container_name: $COMPOSE_PROJECT_NAME-postgres
   seaweedfs:
