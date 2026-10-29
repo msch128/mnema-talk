@@ -57,7 +57,20 @@ describe('useComposerFiles', () => {
     const { files, received, toasts } = setup()
     files.attachFiles([mov, png])
     expect(received).toEqual([[mov]])
-    expect(toasts.toasts.at(-1)?.text).toBe('A message carries one file. The first one was attached.')
+    expect(toasts.toasts.map(x => x.text)).toEqual(['A message carries one file. The first one was attached.'])
+  })
+
+  it('says nothing extra for a single file', () => {
+    const { files, toasts } = setup()
+    files.attachFiles([png])
+    expect(toasts.toasts).toEqual([])
+  })
+
+  it('says that other files were skipped when only some are media', () => {
+    const { files, received, toasts } = setup()
+    files.attachFiles([pdf, png])
+    expect(received).toEqual([[png]])
+    expect(toasts.toasts.map(x => x.text)).toEqual(['Only images and videos were attached. Other files were skipped.'])
   })
 
   it('shows the permission message where attaching is not allowed', () => {

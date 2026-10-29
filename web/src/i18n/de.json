@@ -554,6 +554,7 @@
     "readOnly": "Du darfst in diesem Kanal nicht schreiben.",
     "noAttach": "Du darfst hier keine Dateien anhängen.",
     "attachMediaOnly": "Es lassen sich nur Bilder und Videos anhängen.",
+    "attachSkipped": "Nur Bilder und Videos wurden angehängt. Andere Dateien wurden übersprungen.",
     "attachFirstOnly": "Eine Nachricht trägt eine Datei. Die erste wurde angehängt.",
     "dropFiles": "Zum Anhängen hier ablegen",
     "messageRemoved": "Nachricht entfernt",

@@ -554,6 +554,7 @@
     "readOnly": "You can’t write in this channel.",
     "noAttach": "You can’t attach files here.",
     "attachMediaOnly": "Only images and videos can be attached.",
+    "attachSkipped": "Only images and videos were attached. Other files were skipped.",
     "attachFirstOnly": "A message carries one file. The first one was attached.",
     "dropFiles": "Drop to attach",
     "messageRemoved": "Message removed",

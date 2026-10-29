@@ -24,7 +24,8 @@ export function useComposerFiles(opts: { fileInput: Ref<HTMLInputElement | null>
       toasts.error(t('chat.attachMediaOnly'))
       return
     }
-    if (extra || rejected) toasts.info(t('chat.attachFirstOnly'))
+    if (rejected) toasts.info(t('chat.attachSkipped'))
+    if (extra) toasts.info(t('chat.attachFirstOnly'))
     const transfer = new DataTransfer()
     transfer.items.add(file)
     input.files = transfer.files
