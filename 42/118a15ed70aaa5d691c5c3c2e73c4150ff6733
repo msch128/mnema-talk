@@ -1,0 +1,29 @@
+web/src/composables/useWebRTC.contextStall.test.ts
+  s_06fcde5dbef956::t_442d4ca8305d01 2,25-27,30-31,34,52-60
+web/src/composables/webrtc/micPipeline.ts
+  s_8c12f50b80ade8::t_8f29a2f8038e1a 215-216,339
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "42118a15ed70aaa5d691c5c3c2e73c4150ff6733",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_8c12f50b80ade8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a434bb4b7aa5b86c1",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
