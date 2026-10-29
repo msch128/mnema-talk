@@ -153,7 +153,7 @@ func printSummary(out io.Writer, o Options, g Generated, findings []Finding) {
 	if strings.HasPrefix(o.PublicURL, "https://") {
 		fmt.Fprintf(out, "\nPut a reverse proxy with TLS in front: %s -> http://127.0.0.1:8080 (WebSocket enabled).\n", o.PublicURL)
 	}
-	fmt.Fprint(out, "Forward UDP 50000-50050 to this host for voice. Open the admin console, Status tab: the setup checks name anything still missing.\n")
+	fmt.Fprint(out, "Forward UDP 50000-50050 and port 3479 (UDP and TCP, built-in TURN relay) to this host for voice. Open the admin console, Status tab: the setup checks name anything still missing.\n")
 	fmt.Fprint(out, "Update later: docker compose pull && docker compose up -d\n")
 }
 

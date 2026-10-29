@@ -34,7 +34,7 @@ func TestNonInteractiveSetupWritesBothFiles(t *testing.T) {
 		t.Errorf("config from generated .env: %+v", cfg.SMTP)
 	}
 	env, _ := godotenv.Unmarshal(string(raw))
-	for _, want := range []string{"[ ok ] DNS", "[note] Voice ports", env["ADMIN_INITIAL_PASSWORD"], "docker compose up -d --wait", "docker compose pull && docker compose up -d"} {
+	for _, want := range []string{"[ ok ] DNS", "[note] Voice ports", "3479", env["ADMIN_INITIAL_PASSWORD"], "docker compose up -d --wait", "docker compose pull && docker compose up -d"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("summary lacks %q:\n%s", want, out)
 		}

@@ -20,7 +20,7 @@ const clockRecheck = 6 * time.Hour
 // startSetupChecks measures the clock in the background (CLOCK_CHECK_ENABLED)
 // and logs the setup checks once shortly after the start; the admin status
 // page evaluates the same checks on every request.
-func startSetupChecks(ctx context.Context, cfg *config.Config, rt *setupcheck.Runtime, ping func(context.Context) error, storageReady func() error) {
+func startSetupChecks(ctx context.Context, cfg *config.Config, rt *setupcheck.Runtime, ping func(context.Context) error, storageReady func() error, turnProbe func() string) {
 	if cfg.ClockCheck {
 		go watchClock(ctx, rt, setupcheck.DefaultNTPServers, clockRecheck)
 	}
@@ -37,6 +37,9 @@ func startSetupChecks(ctx context.Context, cfg *config.Config, rt *setupcheck.Ru
 			DBReachable:       ping(ctx) == nil,
 			StorageConfigured: true,
 			StorageErr:        storageReady(),
+		}
+		if turnProbe != nil {
+			in.TURNProbe = turnProbe()
 		}
 		setupcheck.Log(slog.Default(), setupcheck.Run(in))
 	}()

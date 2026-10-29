@@ -102,7 +102,7 @@ func TestStartSetupChecksLogsTheChecklistAfterTheDelay(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	startSetupChecks(ctx, productionTestConfig(t), &setupcheck.Runtime{},
-		func(context.Context) error { return nil }, func() error { return errors.New("starting") })
+		func(context.Context) error { return nil }, func() error { return errors.New("starting") }, nil)
 
 	deadline := time.Now().Add(5 * time.Second)
 	for !strings.Contains(buf.String(), `"msg":"setup checks"`) {
