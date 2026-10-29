@@ -288,11 +288,21 @@ func (h *Handler) ExpireBans(ctx context.Context) {
 		Name     string
 		Disabled bool
 	}
-	// The UPDATE is already committed: a broken stream must not pass silently.
-	done, err := pgx.CollectRows(rows, pgx.RowToStructByPos[expired])
-	if err != nil {
-		slog.Error("ban expiry: read lifted bans", "err", err, "read", len(done))
+	// The UPDATE is already committed: audit and announce every row that can
+	// be read, and say what could not be, instead of losing the lifted bans.
+	var done []expired
+	for rows.Next() {
+		var e expired
+		if err := rows.Scan(&e.ID, &e.Name, &e.Disabled); err != nil {
+			slog.Error("ban expiry: read lifted ban", "err", err)
+			continue
+		}
+		done = append(done, e)
 	}
+	if err := rows.Err(); err != nil {
+		slog.Error("ban expiry: iterate lifted bans", "err", err, "read", len(done))
+	}
+	rows.Close()
 	for _, e := range done {
 		id := e.ID
 		h.Audit.RecordOrLog(ctx, audit.Entry{
