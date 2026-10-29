@@ -1,0 +1,25 @@
+web/src/i18n/de.json
+  s_b0e8c0816cfc68::t_95982611699ac7 1964
+web/src/i18n/en.json
+  s_b0e8c0816cfc68::t_e14a471e908969 1964
+web/src/lib/hostError.ts
+  s_b0e8c0816cfc68::t_f5715763ee6475 32-35
+web/src/lib/hostErrors.json
+  s_b0e8c0816cfc68::t_b8a53989c7a8d5 73-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "344831f76685b00eb401ee540db0b4736d4b6d88",
+  "prompts": {},
+  "sessions": {
+    "s_b0e8c0816cfc68": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adesk-tls13-42d32cf89e71175c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
