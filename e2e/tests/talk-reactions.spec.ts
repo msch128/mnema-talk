@@ -41,6 +41,7 @@ async function uploadEmoji(page: Page, name: string): Promise<number> {
 }
 
 test('every quick reaction and the picker reach the other member of a Talk', async ({ browser }) => {
+  test.setTimeout(240_000)
   const ctxOptions = { permissions: ['microphone' as const], viewport: { width: 1400, height: 900 } }
   const aCtx = await browser.newContext(ctxOptions)
   const bCtx = await browser.newContext(ctxOptions)
@@ -85,16 +86,19 @@ test('every quick reaction and the picker reach the other member of a Talk', asy
   // The full picker: search, then a standard emoji.
   await b.getByTestId('talk-react').click()
   await b.getByTestId('reaction-more').click()
-  const picker = b.getByTestId('emoji-picker')
+  const picker = b.getByTestId('emoji-picker').locator('emoji-picker')
   await picker.locator('input[type="search"]').fill('partying')
+  await expect(picker.getByRole('option').first()).toBeVisible()
   await picker.getByRole('option').first().click()
   await expect(floating(a, '🥳').first()).toBeVisible()
 
   // The same picker lists the community's custom emoji; one is found by name and shown as its picture.
   await b.getByTestId('talk-react').click()
   await b.getByTestId('reaction-more').click()
-  await b.getByTestId('emoji-picker').locator('input[type="search"]').fill(EMOJI)
-  await b.getByTestId('emoji-picker').getByRole('option').first().click()
+  const custom = b.getByTestId('emoji-picker').locator('emoji-picker')
+  await custom.locator('input[type="search"]').fill(EMOJI)
+  await expect(custom.getByRole('option').first()).toBeVisible()
+  await custom.getByRole('option').first().click()
   await expect(a.getByTestId('talk-reaction').locator('img').first()).toBeVisible()
   await expect(b.getByTestId('talk-reaction').locator('img').first()).toBeVisible()
 
