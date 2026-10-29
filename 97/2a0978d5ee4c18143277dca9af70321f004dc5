@@ -1,0 +1,59 @@
+web/src/composables/webrtc/micPipeline.ts
+  s_06fcde5dbef956::t_c9c9f10b47aaf7 12,344,370
+web/src/composables/webrtc/state.ts
+  s_06fcde5dbef956::t_95835f0d518d48 41-48,146-149
+web/src/components/AudioSettingsPanel.test.ts
+  s_b0e8c0816cfc68::t_116dac882eb73a 127
+web/src/composables/useWebRTC.audio.test.ts
+  s_5ef897988b8153::t_b66e36adde59f3 349-350,352,391-457
+web/src/composables/useWebRTC.harness.fixture.ts
+  s_d34101b0e9d77a::t_db4625f0533a93 124-126,159,323
+web/src/composables/webrtc/rawSilence.ts
+  s_5ef897988b8153::t_41754a835282c2 1-81
+web/src/composables/webrtc/voiceAudio.ts
+  s_d34101b0e9d77a::t_a96258b4f4675d 7,96,130
+web/src/i18n/de.json
+  s_d34101b0e9d77a::t_6b765cb905acbb 735-739
+web/src/i18n/en.json
+  s_d34101b0e9d77a::t_ddbc29052accbb 735-739
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "972a0978d5ee4c18143277dca9af70321f004dc5",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5ef897988b8153": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aweb-mic-notice-dba4feb6d02e33fd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_b0e8c0816cfc68": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adesk-tls13-42d32cf89e71175c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_d34101b0e9d77a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adesk-updater-errors-c36b3f41f448c378",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
