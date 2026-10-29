@@ -1,0 +1,37 @@
+internal/turnrelay/creds.go
+  s_06fcde5dbef956::t_327caf1df9fc37 46-50
+internal/turnrelay/server.go
+  s_06fcde5dbef956::t_dee55f7fab15ff 174-180
+internal/turnrelay/server_test.go
+  s_06fcde5dbef956::t_a210e9c9b01b2f 764-799
+internal/config/config_turn_test.go
+  s_5aa38e778cf1ac::t_033a310d09eaca 86
+internal/server/public_turn_test.go
+  s_5aa38e778cf1ac::t_520aaf3508e678 4-6,47-54,91-98
+internal/turnrelay/handlers.go
+  s_5aa38e778cf1ac::t_d55d8464e305cc 90-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c0cb151485af2c35d38685388bb6c891bd748a28",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5aa38e778cf1ac": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-builtin-turn-725a019b5a1e641a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
