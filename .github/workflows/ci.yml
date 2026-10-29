@@ -520,6 +520,13 @@ jobs:
           cache-from: type=gha,scope=image
           cache-to: type=gha,scope=image,mode=max
 
+      # The updater hands the daemon docker.io/... for a Docker Hub install
+      # (imageverify.DaemonRepository); the container's own short name must find it.
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        run: |
+          docker pull docker.io/msch128/mnema-talk:2.1.1
+          docker image inspect msch128/mnema-talk:2.1.1 --format '{{.Id}}'
+
   # The required check `docker`: smoke test, install, backup, PostgreSQL
   # upgrade and image scan against the amd64 image from that cache.
   docker:

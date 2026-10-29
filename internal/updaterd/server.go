@@ -180,11 +180,12 @@ func (s *Server) swap(plan []verified) {
 	ctx, cancel := context.WithTimeout(context.Background(), swapTimeout)
 	defer cancel()
 	for _, v := range plan {
-		if err := s.Engine.Pull(ctx, v.result.Repository, v.result.Digest); err != nil {
+		repo := imageverify.DaemonRepository(v.result.Repository)
+		if err := s.Engine.Pull(ctx, repo, v.result.Digest); err != nil {
 			s.Log.Error("update aborted: pull of the verified image failed", "image", v.result.Ref(), "err", err)
 			return
 		}
-		if err := s.Engine.Tag(ctx, v.result.Repository, v.result.Digest, v.tag); err != nil {
+		if err := s.Engine.Tag(ctx, repo, v.result.Digest, v.tag); err != nil {
 			s.Log.Error("update aborted: tagging the verified image failed", "image", v.result.Ref(), "err", err)
 			return
 		}

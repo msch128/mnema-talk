@@ -116,6 +116,17 @@ func NormalizeRepository(repo string) (string, bool) {
 	return r.Name(), true
 }
 
+// DaemonRepository is the name to hand the Docker daemon for a verified
+// repository: the canonical "docker.io/..." the daemon itself uses for Docker
+// Hub, instead of the "index.docker.io/..." the registry client reports. Other
+// registries are returned as they are.
+func DaemonRepository(repo string) string {
+	if rest, ok := strings.CutPrefix(repo, "index.docker.io/"); ok {
+		return "docker.io/" + rest
+	}
+	return repo
+}
+
 // Allows reports whether repo (a normalised name) is one the policy trusts.
 func (p Policy) Allows(repo string) bool {
 	for _, allowed := range []string{p.Repository, p.Mirror} {

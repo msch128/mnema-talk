@@ -211,3 +211,34 @@ func TestWaitIdleCoversARunningSwap(t *testing.T) {
 		t.Fatal("WaitIdle did not return after the swap finished")
 	}
 }
+
+type hubVerifier struct{}
+
+func (hubVerifier) Verify(context.Context, string) (*imageverify.Result, error) {
+	return &imageverify.Result{Repository: "index.docker.io/msch128/mnema-talk", Digest: "sha256:" + strings.Repeat("b", 64), Version: "2.0.0"}, nil
+}
+
+type namingEngine struct {
+	stubEngine
+	pulled, tagged string
+}
+
+func (e *namingEngine) Pull(_ context.Context, repo, _ string) error { e.pulled = repo; return nil }
+func (e *namingEngine) Tag(_ context.Context, repo, _, tag string) error {
+	e.tagged = repo + ":" + tag
+	return nil
+}
+
+func TestDockerHubInstallIsPulledAndTaggedUnderTheCanonicalName(t *testing.T) {
+	eng := &namingEngine{stubEngine: stubEngine{targets: []Target{{Name: "app", Image: "msch128/mnema-talk:2.0", RunningVersion: "1.0.0"}}}}
+	srv := &Server{
+		Token: token, Engine: eng, Verifier: hubVerifier{}, Recreator: &countingRecreator{},
+		Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Background: func(f func()) { f() },
+	}
+	if r := post(srv, "Bearer "+token); r.Code != http.StatusAccepted {
+		t.Fatalf("status = %d", r.Code)
+	}
+	if eng.pulled != "docker.io/msch128/mnema-talk" || eng.tagged != "docker.io/msch128/mnema-talk:2.0" {
+		t.Fatalf("pulled %q, tagged %q", eng.pulled, eng.tagged)
+	}
+}

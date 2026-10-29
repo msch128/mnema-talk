@@ -288,3 +288,15 @@ func TestVerifyRefusesOtherDockerHubNamespacesBeforeAnyRequest(t *testing.T) {
 		}
 	}
 }
+
+func TestDaemonRepositoryUsesTheCanonicalDockerHubName(t *testing.T) {
+	for in, want := range map[string]string{
+		"index.docker.io/msch128/mnema-talk": "docker.io/msch128/mnema-talk",
+		"docker.io/msch128/mnema-talk":       "docker.io/msch128/mnema-talk",
+		"ghcr.io/msch128/mnema-talk":         "ghcr.io/msch128/mnema-talk",
+	} {
+		if got := imageverify.DaemonRepository(in); got != want {
+			t.Errorf("DaemonRepository(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
