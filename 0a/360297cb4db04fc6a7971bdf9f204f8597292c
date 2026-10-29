@@ -1,0 +1,25 @@
+web/src/lib/media/guard.ts
+  s_06fcde5dbef956::t_689e4a775bbd50 200
+web/src/lib/media/mediaFrameWorker.ts
+  s_06fcde5dbef956::t_689e4a775bbd50 263-266,269-271
+.github/workflows/dbg-reload.yml
+  s_06fcde5dbef956::t_102fc3d7267e0f 15
+web/src/composables/webrtc/peer.ts
+  s_06fcde5dbef956::t_3cdd2ce58c684e 1,126,215
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0a360297cb4db04fc6a7971bdf9f204f8597292c",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
