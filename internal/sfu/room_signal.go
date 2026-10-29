@@ -217,8 +217,7 @@ func (r *Room) addSender(peer *Peer, trackID string, info *TrackInfo) bool {
 }
 
 // recipientTrack picks what the peer's PeerConnection gets for info: the
-// shared track, a per-viewer layer switcher for screen shares, and an
-// authorization wrapper when either end requires media authorization.
+// shared track, or a per-viewer layer switcher for screen shares.
 func (r *Room) recipientTrack(peer *Peer, trackID string, info *TrackInfo) (webrtc.TrackLocal, *viewerTrack, error) {
 	var recipientTrack webrtc.TrackLocal = info.Track
 	var vt *viewerTrack
@@ -232,13 +231,6 @@ func (r *Room) recipientTrack(peer *Peer, trackID string, info *TrackInfo) (webr
 			return nil, nil, err
 		}
 		recipientTrack = vt
-	}
-	if peer.authorizeMedia != nil || (info.publisher != nil && info.publisher.authorizeMedia != nil) {
-		var source func() bool
-		if info.publisher != nil && info.publisher.authorizeMedia != nil {
-			source = info.publisher.mediaAuthorized
-		}
-		recipientTrack = &authorizedTrack{TrackLocal: recipientTrack, authorize: peer.mediaAuthorized, source: source, sources: r.sourceAuthorization}
 	}
 	return recipientTrack, vt, nil
 }

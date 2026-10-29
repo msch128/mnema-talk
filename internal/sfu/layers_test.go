@@ -21,13 +21,14 @@ type fakeClock struct {
 func useFakeClock(t *testing.T) *fakeClock {
 	t.Helper()
 	c := &fakeClock{now: time.Unix(1_700_000_000, 0)}
-	prev := layerNow
-	layerNow = func() time.Time {
+	prev := layerClock.Load()
+	now := func() time.Time {
 		c.mu.Lock()
 		defer c.mu.Unlock()
 		return c.now
 	}
-	t.Cleanup(func() { layerNow = prev })
+	layerClock.Store(&now)
+	t.Cleanup(func() { layerClock.Store(prev) })
 	return c
 }
 

@@ -91,7 +91,6 @@ func (t *TrackInfo) sameCapture(o *TrackInfo) bool {
 }
 
 type Peer struct {
-	authorizeMedia func() bool
 	// denied is the SourceSet the user may not publish.
 	denied    atomic.Uint32
 	ID        uuid.UUID
@@ -141,10 +140,9 @@ type Peer struct {
 }
 
 type Room struct {
-	allowLoopbackCands  bool
-	load                *peerLoad
-	sourceAuthorization *sourceAuthorizationRegistry
-	ID                  uuid.UUID
+	allowLoopbackCands bool
+	load               *peerLoad
+	ID                 uuid.UUID
 	// peers maps user → their current connection; a rejoin replaces it.
 	peers map[uuid.UUID]*Peer
 	// trackLocals is keyed by the local track ID, which is scoped to the
@@ -176,10 +174,11 @@ type Room struct {
 }
 
 type SFU struct {
-	sourceAuthorization *sourceAuthorizationRegistry
-	load                *peerLoad
-	apiMu               sync.RWMutex
-	api                 *webrtc.API
+	// announcers tracks the KeepAnnounceCurrent loops (tests wait for them).
+	announcers sync.WaitGroup
+	load       *peerLoad
+	apiMu      sync.RWMutex
+	api        *webrtc.API
 	// announced are the addresses offered to browsers (see SetAnnouncedIPs).
 	announced []string
 	portMin   uint16
@@ -189,7 +188,7 @@ type SFU struct {
 	closeOnce sync.Once
 	closeErr  error
 
-	// afterBuild runs in joinAuthorized right after the connection was built
+	// afterBuild runs in Join right after the connection was built
 	// (tests only).
 	afterBuild func()
 

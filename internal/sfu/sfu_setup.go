@@ -56,9 +56,8 @@ func NewSFU(portMin, portMax uint16, announceIPs []string, stunURLs []string, op
 	if err != nil {
 		return nil, err
 	}
-	sources := &sourceAuthorizationRegistry{}
 	load := &peerLoad{}
-	api, err := buildAPIWithAuthorization(portMin, portMax, announceIPs, mux, nil, sources, load)
+	api, err := buildAPI(portMin, portMax, announceIPs, mux, load)
 	if err != nil {
 		if mux != nil {
 			_ = mux.Close()
@@ -72,17 +71,16 @@ func NewSFU(portMin, portMax uint16, announceIPs []string, stunURLs []string, op
 	}
 
 	return &SFU{
-		api:                 api,
-		sourceAuthorization: sources,
-		load:                load,
-		announced:           append([]string(nil), announceIPs...),
-		portMin:             portMin,
-		portMax:             portMax,
-		udpMux:              mux,
-		iceServers:          iceServers,
-		offerTimeout:        defaultOfferTimeout,
-		rooms:               make(map[uuid.UUID]*Room),
-		notifier:            &mediaNotifier{},
+		api:          api,
+		load:         load,
+		announced:    append([]string(nil), announceIPs...),
+		portMin:      portMin,
+		portMax:      portMax,
+		udpMux:       mux,
+		iceServers:   iceServers,
+		offerTimeout: defaultOfferTimeout,
+		rooms:        make(map[uuid.UUID]*Room),
+		notifier:     &mediaNotifier{},
 	}, nil
 }
 
@@ -105,22 +103,13 @@ func (s *SFU) SetAnnouncedIPs(ips []string) error {
 	if s.udpMux != nil && onlyLoopbackAnnouncements(s.announced) != onlyLoopbackAnnouncements(ips) {
 		return fmt.Errorf("changing UDP mux loopback interface mode requires restart")
 	}
-	api, err := buildAPIWithAuthorization(s.portMin, s.portMax, ips, s.udpMux, nil, s.sourceAuthorization, s.load)
+	api, err := buildAPI(s.portMin, s.portMax, ips, s.udpMux, s.load)
 	if err != nil {
 		return err
 	}
 	s.api = api
 	s.announced = append([]string(nil), ips...)
 	return nil
-}
-
-func (s *SFU) nativeAPI(authorize func() bool) (*webrtc.API, error) {
-	s.apiMu.RLock()
-	defer s.apiMu.RUnlock()
-	if s.closed.Load() || authorize == nil {
-		return nil, errSFUClosed
-	}
-	return buildAPIWithAuthorization(s.portMin, s.portMax, s.announced, s.udpMux, authorize, s.sourceAuthorization, s.load)
 }
 
 func (s *SFU) currentAPI() *webrtc.API {
@@ -178,7 +167,7 @@ func configureICEPorts(se *webrtc.SettingEngine, portMin, portMax uint16, mux ic
 	return nil
 }
 
-func buildAPIWithAuthorization(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, authorize func() bool, sources *sourceAuthorizationRegistry, load *peerLoad) (*webrtc.API, error) {
+func buildAPI(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, load *peerLoad) (*webrtc.API, error) {
 	settingEngine, err := buildSettingEngine(portMin, portMax, announceIPs, mux)
 	if err != nil {
 		return nil, err
@@ -200,10 +189,6 @@ func buildAPIWithAuthorization(portMin, portMax uint16, announceIPs []string, mu
 		return nil, fmt.Errorf("failed to register the transport-cc stamp: %w", err)
 	}
 	registry.Add(telemetryFactory{})
-	if authorize != nil || sources != nil {
-		// First is the innermost writer, beneath retransmission caches.
-		registry.Add(mediaAuthorizationFactory{authorize: authorize, sources: sources})
-	}
 	var options []webrtc.InterceptorOption
 	if load != nil {
 		options = append(options, webrtc.WithNackResponderOptions(load.responderOption()))
