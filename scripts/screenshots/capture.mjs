@@ -253,7 +253,7 @@ if (wanted('two-factor')) {
   await login(page, 'ines', MEMBER_PASSWORD)
   await page.goto(BASE + '/')
   await page.getByTestId('account-menu-button').click()
-  await page.getByTestId('menu-account-security').click()
+  await page.getByTestId('menu-settings').click()
   await page.getByTestId('two-factor-start').click()
   await page.getByTestId('two-factor-password').fill(MEMBER_PASSWORD)
   await page.getByTestId('two-factor-continue').click()
