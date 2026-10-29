@@ -1,0 +1,153 @@
+api/openapi.json
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 3267
+internal/sfu/sfu_setup.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 154-155
+web/src/App.test.ts
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 101-112
+  s_06fcde5dbef956::t_54c7ab02af21a0 113
+web/src/lib/platform.test.ts
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 10,19,33,40,44,141-142
+cmd/server/main.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 156-158
+doc/operations.md
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 363-366,396-424,888-897
+internal/ws/handshake.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 85
+internal/auth/handler_account.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 50
+internal/server/server.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 62-63,91,162
+web/src/composables/useWebRTC.connection.test.ts
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 1-46
+.gitleaks.toml
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 31-33
+doc/security/audit-package.md
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 619,815
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 653-654,1904
+web/src/composables/webrtc/peer.ts
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 5,8,87
+web/src/lib/desktopRuntime.ts
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 4
+web/src/main.ts
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 27
+web/scripts/check-event-registry.ts
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 33
+internal/sfu/announce_ipv6_test.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 1-62
+internal/ws/event_scope.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 1-101
+internal/ws/lifecycle_pumps.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 29-30,38,114,129,161,163
+internal/auth/handler.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 246
+internal/auth/shared_login_test.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 28,47,57,76
+internal/ws/tap_test.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 10-12,28
+web/src/composables/webrtc/session.ts
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 12,214-216,218
+web/eslint.config.ts
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 50,59,91
+doc/desktop-app.md
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 180,222
+internal/ws/payload_caps_test.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 71-72,80,89
+internal/ws/presence.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 57
+internal/server/moderation_integration_test.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 365,380,453
+web/src/lib/pwa.ts
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 13
+SECURITY.md
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 883
+web/src/components/SettingsDialog.vue
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 31
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 148,159,279
+internal/ws/signal.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 36
+web/src/lib/api.ts
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 1-2,62,111,168,221
+web/src/components/DesktopSelector.test.ts
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 3,10
+web/src/composables/webrtc/mediaRoom.ts
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 39,57,84-103
+internal/server/account_export_integration_test.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 254
+internal/ws/client.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 28,33
+web/src/lib/platform.ts
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 2,8,104-105
+internal/db/migrations/0077_drop_native_tables.sql
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 1-8
+internal/ws/handle.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 27,90,93,162,166,175-176,186-197,199
+internal/auth/password_reset_integration_test.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 19,27
+internal/config/config_test.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 406-425
+internal/ws/voice_lobby.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 27
+internal/server/status_expiry_integration_test.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 99,117
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 295-296
+internal/ws/voice_join.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 21,138,226
+internal/chat/message_types.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 58
+doc/architecture.md
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 56,476
+doc/desktop-trusted-client.md
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 417,702,705-707
+doc/moderation.md
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 59,430
+internal/ws/user_budget.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 12,14
+web/src/composables/webrtc/iceServers.ts
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 19-23
+doc/api-stability.md
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 56
+internal/sfu/transport.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 52-53,61-85
+  s_06fcde5dbef956::t_825be99d02399c 86-87
+internal/ws/frame_peek.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 54,57
+web/src/lib/api.test.ts
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 193,197,225,271
+doc/upgrade.md
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 129-140
+internal/server/password_reset_integration_test.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 25
+web/src/App.vue
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 277
+internal/config/config.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 130-146
+AGENTS.md
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 87
+internal/ws/diag_log_test.go
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 1-34
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 653-654,1904
+web/src/lib/pwa.test.ts
+  s_06fcde5dbef956::t_cc8fdcbaf6577e 3,23,39,63
+web/src/composables/webrtc/iceServers.test.ts
+  s_06fcde5dbef956::t_e31d6ae99301de 89-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "06f7b0887abd75488a7592100f7c2350669628e9",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
