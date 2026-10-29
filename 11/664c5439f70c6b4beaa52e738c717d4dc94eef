@@ -1,0 +1,131 @@
+api/openapi.json
+  s_5b748b0295d2f4::t_4ff6dbbb2a31e5 35076
+doc/talks.md
+  s_2d22d157720d46::t_74534d8922d71b 142-152
+e2e/tests/voice-takeover.spec.ts
+  s_7e9329d487a94d::t_071b9deedc6880 1-72
+internal/ws/client.go
+  s_6f62c78e3c93c5::t_4634f7be236fb0 60-62,219,227-240
+internal/ws/handle.go
+  s_06fcde5dbef956::t_319e9aa9411f91 23-24,41,107,109,125-132
+internal/ws/hub.go
+  s_3255aa8302478d::t_25a438cbb43664 8,109-111
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_8c5eaffdd248ee 71,77
+internal/ws/voice_join.go
+  s_06fcde5dbef956::t_44b2af40b22d3b 18-20,22-61,65,68,72-76,83,89-93,97-128,141,150,289-293,298,300,307,321-322
+internal/ws/voice_takeover_integration_test.go
+  s_06fcde5dbef956::t_970e09e4a57a73 1-77
+internal/ws/voice_takeover_test.go
+  s_0f71275af3a9d5::t_0d71fa93d6fd00 1-201
+web/src/composables/useWebRTC.takeover.test.ts
+  s_4470fe4f4a10ca::t_79102a6c60a747 1-135
+web/src/composables/webrtc/session.ts
+  s_6f111b828bba31::t_73effcf2114dc8 14,103-109,111-116,119,143,173-174,233-236,250
+web/src/composables/webrtc/takeover.ts
+  s_6f111b828bba31::t_e4570b41ca7942 1-48
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_26698d7ba4b4e3 673-677
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_8dedf95aa3b59d 673-677
+web/src/types/events.test.ts
+  s_65ba608539a14a::t_b13f466c70f110 80
+web/src/types/events.ts
+  s_dbdfffe0fa33da::t_49524c627dc9ae 140,169,384
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "11664c5439f70c6b4beaa52e738c717d4dc94eef",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0f71275af3a9d5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aupdater-dockerhub-0045479572fc8370",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2d22d157720d46": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-format-help-1c4cc049037c526d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3255aa8302478d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adesk-gaming-ui-52e3f2038ee574d1",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4470fe4f4a10ca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a3c3476dc587ab846",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_65ba608539a14a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a83c210d97e86a798",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6f111b828bba31": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8e716a453eda91a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6f62c78e3c93c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aserver-community-icon-172addf752c84f0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7e9329d487a94d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-status-profile-6b773a73ee58ea30",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_dbdfffe0fa33da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-voice-takeover-a0aadf43d700b47c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
