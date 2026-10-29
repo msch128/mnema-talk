@@ -1,0 +1,31 @@
+internal/setupwizard/prompt.go
+  s_ba3c733195e8b3::t_f4e2c3908c12b8 12-13,82-96
+internal/setupwizard/run.go
+  s_8d8b0c88a12980::t_e0871d77a04388 124
+internal/setupwizard/run_test.go
+  s_8d8b0c88a12980::t_35b78f5030dab6 72-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "33a908f66d463dc315153291fa09ef1536650eb9",
+  "prompts": {},
+  "sessions": {
+    "s_8d8b0c88a12980": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1cd6e61ac1eb5a6e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ba3c733195e8b3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4d81102d29ac2bc8",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
