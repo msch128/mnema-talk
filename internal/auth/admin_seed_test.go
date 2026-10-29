@@ -12,7 +12,8 @@ func TestValidateAdminSeed(t *testing.T) {
 	}{
 		{"cool_guy", "", true},
 		{"cool_guy", "long-enough-password", true},
-		{"He", "", false},
+		{"x", "", false},
+		{"ab", "", true},
 		{strings.Repeat("a", 33), "", false},
 		{"bad name", "", false},
 		{"all", "", false},

@@ -68,7 +68,9 @@ func (s *SFU) KeepAnnounceCurrent(ctx context.Context, entries []string, every t
 	if !hasHostName(entries) {
 		return
 	}
+	s.announcers.Add(1)
 	go func() {
+		defer s.announcers.Done()
 		t := time.NewTicker(every)
 		defer t.Stop()
 		for {

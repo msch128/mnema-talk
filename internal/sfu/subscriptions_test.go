@@ -260,5 +260,5 @@ func (s *SFU) joinPeerIn(r *Room, userID uuid.UUID, sendOffer func(webrtc.Sessio
 	if err != nil {
 		return nil, err
 	}
-	return r.attachPeer(userID, conn, sendOffer, sendICE, nil), nil
+	return r.attachPeer(userID, conn, sendOffer, sendICE), nil
 }

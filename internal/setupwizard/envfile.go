@@ -50,9 +50,7 @@ func RenderEnv(o Options, s Secrets, now time.Time) string {
 	w("PUBLIC_URL=%s", o.PublicURL)
 	w("MNEMA_IMAGE=%s", o.Image)
 	w("INITIAL_LANGUAGE=%s", o.Language)
-	if o.AdminUsername != "" {
-		w("ADMIN_USERNAME=%s", o.AdminUsername)
-	}
+	w("ADMIN_USERNAME=%s", o.AdminUsername)
 	w("")
 	w("# --- Secrets, generated for this installation ---")
 	w("# Do not change POSTGRES_PASSWORD, S3_ACCESS_KEY or S3_SECRET_KEY after the")
