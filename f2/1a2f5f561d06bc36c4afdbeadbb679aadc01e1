@@ -1,0 +1,37 @@
+docker-compose.yml
+  s_06fcde5dbef956::t_37ff95c34c9f15 85-86,376-378
+internal/setupwizard/envfile.go
+  s_06fcde5dbef956::t_4ba439bad3d8e7 53
+internal/setupwizard/options.go
+  s_06fcde5dbef956::t_548b3ceaa60445 13,17-19,89-96
+internal/setupwizard/run.go
+  s_06fcde5dbef956::t_f242d47dca3e15 124,151
+internal/setupwizard/run_test.go
+  s_06fcde5dbef956::t_e89ec890155dc0 47-71
+internal/setupwizard/setupwizard_test.go
+  s_7693d91c80e84f::t_2e6f5126631be7 149-176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f21a2f5f561d06bc36c4afdbeadbb679aadc01e1",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7693d91c80e84f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a336e845763dcd9f7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
