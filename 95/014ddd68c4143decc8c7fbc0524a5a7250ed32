@@ -1,0 +1,145 @@
+api/openapi.json
+  s_58ecb9dda7416a::t_df108ebd4e512b 2395-2409,2414-2417,2816-2833,2840-2854,2866-2869,2873-2876,2883-2885,3344-3347,3610-3622,3761-3776,4465-4479,4514-4525,4528-4543,4548-4550,4564-4567,23310-23466,25255,25289-25296,25479-25547,25550,25648-25726,25967,26037,26135-26227,26300,26549-26557
+doc/forums.md
+  s_17ef7810e0243d::t_da9fcabd73159f 12,14,16-19,24-30,32-36,47-49,51
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_80abbc61bfb729 52
+internal/chat/forum.go
+  s_17ef7810e0243d::t_8f3e1766d4c33e 26-31,46,49,57,59,68,83,87,95
+internal/chat/forum_complete_integration_test.go
+  s_bf24ce51cd8f95::t_270119186135b7 1-390
+internal/chat/forum_errors_integration_test.go
+  s_06fcde5dbef956::t_1fd2120374709c 273,277,281,425,493-497,503
+internal/chat/forum_posts.go
+  s_f25d7044ea294b::t_542218fc53d0e5 36-48,51-58,73-76,78-82,84,86,88-93,95-125,161-171,174,176-177,179-180,182-183,185-189,195-205,209-214,217-243,252,255,261,273,276,303-304,307,310,316,318-319,325-326,333-334,338-340,344,347-359,363,371-378
+internal/chat/forum_reads.go
+  s_0cae4a4d7ab7c3::t_6ca400a1e59a98 1-68
+internal/chat/forum_review_integration_test.go
+  s_2de5838cb2797c::t_47c67098cf8af6 43,61,66,158
+internal/chat/forum_settings.go
+  s_82e9d48cb7fc7f::t_5397fddb9e3f07 1-82
+internal/chat/forum_tags.go
+  s_e516df595aeaf4::t_151d5edea23147 7,22-24,27-38,52-59,62-63,71,79-87,89-98,102,113-114,120-123,134-156,158-160,162-177,182-184,186-190,199,203-245,249,251,280-337
+internal/chat/handler_forum.go
+  s_f25d7044ea294b::t_5ceeafd52ba5f3 21-24,31-33,48-49,60,77,85,130,172-176,186,229-230,248,262-267,270,293-295,298-300,306-313
+internal/chat/handler_forum_extras.go
+  s_fb29f048bd6d02::t_3570d5bd282423 1-255
+internal/chat/handler_forum_tags.go
+  s_0cae4a4d7ab7c3::t_65b8663a9b3998 18,51,84,97,134,192,196-197
+internal/chat/message_types.go
+  s_17ef7810e0243d::t_0b6fb38354dfc0 87-88
+internal/db/migrations/0079_forum_complete.sql
+  s_17ef7810e0243d::t_207306443cca35 1-34
+internal/media/forum_upload_integration_test.go
+  s_37eec97fd12282::t_2b05dd00f0d1a9 1-73
+internal/media/handler_upload.go
+  s_06fcde5dbef956::t_0c9f90d30d0d3f 119,121-132,161-162
+internal/media/stream.go
+  s_7e9329d487a94d::t_aed62795294915 12,15,25-26,33-34,160-164,168-208
+web/src/types/rest.ts
+  s_58ecb9dda7416a::t_15be487bfc7512 1425,1427,1433,1435,1691-1703,1706,1710,1712,1718,1722,1724,1984,2020,2134-2144,2240-2250,2658-2668,2690-2702,2704,2706,2712,2714,2722,2730
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "95014ddd68c4143decc8c7fbc0524a5a7250ed32",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2de5838cb2797c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aperf-idle-a1f825253ff37314",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_37eec97fd12282": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a570130ba3ec9ee38",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_58ecb9dda7416a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-unread-sound-3a7f288cf9b01ab5",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7e9329d487a94d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-status-profile-6b773a73ee58ea30",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e516df595aeaf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-notify-links-78aaa4213a135c59",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_f25d7044ea294b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adesk-server-rail-8b6f70bd624eb14f",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
