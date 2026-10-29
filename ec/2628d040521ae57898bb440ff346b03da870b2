@@ -1,0 +1,203 @@
+internal/setupcheck/announce.go
+  s_06fcde5dbef956::t_aca7e69e041bae 27-32,42-60,68-72,93
+internal/config/config_validate.go
+  s_dbdfffe0fa33da::t_20f138958fbeb3 7,127-129,133-144
+internal/portconflict/portconflict.go
+  s_06fcde5dbef956::t_13fd6b25e3d852 1-42
+internal/setupwizard/options.go
+  s_6f111b828bba31::t_045de67438edd5 10,15,22-31,61-68,95-97,107,123-125,129-156
+internal/setupcheck/setupcheck.go
+  s_06fcde5dbef956::t_cf09f1d58f8804 39,75-76,89-96,111-112,121,167-169,173-180,208
+internal/setupwizard/questions.go
+  s_6df204337666d5::t_88a4b48e8b33bd 1-138
+internal/setupwizard/testdata/summary_lan_http.golden
+  s_5b748b0295d2f4::t_e534fa45b01336 1-19
+internal/portconflict/portconflict_test.go
+  s_06fcde5dbef956::t_f3fb888d30f51e 1-50
+scripts/fresh-install-check.sh
+  s_17ef7810e0243d::t_c31bc8dab92944 12-14,26-27,57,67-72,86,94-104
+internal/setupwizard/setupwizard_test.go
+  s_06fcde5dbef956::t_4bae7c9e4bf86a 70,246,258,263-266
+internal/setupcheck/setupcheck_test.go
+  s_06fcde5dbef956::t_f34da77c77c8a7 79,232
+web/src/i18n/en.json
+  s_5b748b0295d2f4::t_953e5093fe2927 1368,1399-1412,1419-1420,1458-1459,1526
+internal/setupwizard/summary.go
+  s_6f62c78e3c93c5::t_91c356d4b4a247 1-101
+internal/setupwizard/testdata/summary_local.golden
+  s_5b748b0295d2f4::t_fcdca41fc173ba 1-19
+internal/setupwizard/start.go
+  s_4470fe4f4a10ca::t_9b157e17e6905c 1-70
+web/src/i18n/de.json
+  s_5b748b0295d2f4::t_73c22bc3030cb1 1368,1399-1412,1419-1420,1458-1459,1526
+internal/server/run.go
+  s_b10e722bc60c79::t_55e7ec6156bba9 13,36
+internal/setupwizard/envfile.go
+  s_6f111b828bba31::t_ffe60a9ae61121 31-32,66-69,76-82
+cmd/server/doctor.go
+  s_e7d8df1dbb402e::t_d07a68f52c62a4 1-165
+api/status-codes.json
+  s_06fcde5dbef956::t_6e614bb453f6a3 18-20
+internal/setupcheck/network_test.go
+  s_fc0f81897b6653::t_6f3bb2ba286df0 1-195
+internal/stunprobe/stunprobe.go
+  s_6f62c78e3c93c5::t_5992a25165c2d9 33,41-51,60,84,88-92,115,133-135,153,157,166,169-176,191-209
+cmd/server/onboarding_integration_test.go
+  s_06fcde5dbef956::t_2bfef501d57a02 1-67
+internal/setupwizard/run.go
+  s_db0584e1ec8d0f::t_06cd10edba6e92 21-22,27-32,36-40,47-49,52,61-63,102-103,105-106,108,127-128,132-134,136
+internal/setupcheck/network.go
+  s_6df204337666d5::t_af3e745267413c 138-142
+  s_06fcde5dbef956::t_31f7c494a61fe9 135-137
+  s_06fcde5dbef956::t_fbcb455388fc54 1-134
+internal/setupwizard/testdata/summary_https.golden
+  s_5b748b0295d2f4::t_a8691707287406 1-24
+internal/setupcheck/report.go
+  s_e7d8df1dbb402e::t_e459408763232a 1-30
+cmd/server/main.go
+  s_e7d8df1dbb402e::t_8463130599ca50 7,12,22,35-37,52-54,160-162,170,194,222,231,246-254
+internal/sfu/announce_detected_test.go
+  s_06fcde5dbef956::t_e69feb67914501 22,45-61
+doc/operations.md
+  s_06fcde5dbef956::t_5284dce8120423 98,516-548,792,801,807-824,1087-1094
+docker-compose.yml
+  s_6f111b828bba31::t_9ecd7a696c1da9 102-103
+internal/setupwizard/summary_test.go
+  s_06fcde5dbef956::t_36800f914bbf70 1-103
+internal/config/config.go
+  s_dbdfffe0fa33da::t_e635196ea0e17a 110-113
+internal/setupcheck/messages.go
+  s_6f62c78e3c93c5::t_a7b340731cc85d 23-24,59,69-70,116-128,140-141
+internal/setupwizard/preflight.go
+  s_6df204337666d5::t_8c5bd4cf03e8a9 33-44,71-77,81-83,89-92,94-97,101,124,148,150
+cmd/server/doctor_test.go
+  s_fc0f81897b6653::t_6f8af7911b2c77 1-101
+internal/setupwizard/generate.go
+  s_4470fe4f4a10ca::t_f7d7e7dfa57e98 61-63
+internal/stunprobe/stunprobe_test.go
+  s_06fcde5dbef956::t_8ed4187dc853aa 143-195
+internal/sfu/announce.go
+  s_dbdfffe0fa33da::t_e695b07c2d07b8 120-122,137
+internal/setupwizard/prereq.go
+  s_6df204337666d5::t_6f6656e602665d 1-119
+.github/workflows/ci.yml
+  s_17ef7810e0243d::t_c87f55920f7ff4 564-569
+internal/setupwizard/testdata/summary_container.golden
+  s_5b748b0295d2f4::t_d842db7f38a7eb 1-25
+internal/config/config_env.go
+  s_6f62c78e3c93c5::t_2a73511ccbfd20 127
+internal/setupwizard/prereq_test.go
+  s_2d22d157720d46::t_530004c7f0531d 1-329
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ec2628d040521ae57898bb440ff346b03da870b2",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2d22d157720d46": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-format-help-1c4cc049037c526d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4470fe4f4a10ca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a3c3476dc587ab846",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6df204337666d5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-abd5e36ee770470d7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6f111b828bba31": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8e716a453eda91a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6f62c78e3c93c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aserver-community-icon-172addf752c84f0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_b10e722bc60c79": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-docs-e9d2378f61bc75a7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_db0584e1ec8d0f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a7009442ede648598",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_dbdfffe0fa33da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-voice-takeover-a0aadf43d700b47c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e7d8df1dbb402e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-product-app-66e452174912e1a3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fc0f81897b6653": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-tests-fc20e0fa5cecb986",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
