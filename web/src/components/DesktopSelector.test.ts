@@ -17,7 +17,7 @@ it.each([false, true])('opens the normal web instance (failure: %s)', async fail
   await wrapper.get('form').trigger('submit'); await flushPromises()
   expect(calls.open).toHaveBeenCalledExactlyOnceWith('desktop_open_instance', { address: 'community.example.invalid' })
   expect(wrapper.find('[role="alert"]').exists()).toBe(failure)
-  if (failure) expect(wrapper.text()).toContain('This instance needs an update')
+  if (failure) expect(wrapper.text()).toContain('Dieser Server braucht ein Update für den Desktop-Client.')
   wrapper.unmount()
 })
 it('shows the verified bundle in the selector of the trusted desktop client', async () => {
