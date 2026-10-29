@@ -21,6 +21,16 @@ describe('toast store', () => {
     expect(toasts.toasts).toHaveLength(0)
   })
 
+  it('shows the same error once while it is on screen', () => {
+    const toasts = useToastStore()
+    const first = toasts.error('Zu viele Anfragen')
+    expect(toasts.error('Zu viele Anfragen')).toBe(first)
+    toasts.error('Zu viele Anfragen')
+    expect(toasts.toasts).toHaveLength(1)
+    toasts.error('Etwas anderes')
+    expect(toasts.toasts).toHaveLength(2)
+  })
+
   it('keeps errors and toasts with an action until dismissed', () => {
     const toasts = useToastStore()
     const e = toasts.error('boom')
