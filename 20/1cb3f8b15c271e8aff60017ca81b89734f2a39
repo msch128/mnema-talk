@@ -1,0 +1,99 @@
+api/openapi.json
+  s_0cae4a4d7ab7c3::t_de122e9cfe5838 35076
+doc/talks.md
+  s_1a92838c482d40::t_13715d392dffb0 85-88
+e2e/tests/talk-user-limit.spec.ts
+  s_28915fd19e1e49::t_41e7e73aaefba7 1-62
+internal/ws/lifecycle.go
+  s_1a92838c482d40::t_d08662b4277d61 71
+internal/ws/voice_join.go
+  s_1a92838c482d40::t_6478d5a7609bb2 136,142,164-174
+internal/ws/voice_limit_test.go
+  s_b10e722bc60c79::t_bf329f9c1f4aff 1-82
+web/src/components/Sidebar.test.ts
+  s_afb3377f9f37f8::t_bb3ab777bd05db 52,229-276
+web/src/components/Sidebar.vue
+  s_17ef7810e0243d::t_be288a3cea3bcc 24,189-190
+web/src/components/SidebarChannelRow.vue
+  s_0f71275af3a9d5::t_ab058a7e3fc7f9 13,73-75,185-191
+web/src/components/SidebarChannelRowTalks.test.ts
+  s_28915fd19e1e49::t_a5b5770ad70252 7,82-98
+web/src/i18n/de.json
+  s_4c6a19030e223f::t_c93e22ff63773a 975-978
+web/src/i18n/en.json
+  s_4c6a19030e223f::t_7bf0c39a67018b 975-978
+web/src/lib/talks.ts
+  s_17ef7810e0243d::t_7c3cfec784c46e 7-8,29-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "201cb3f8b15c271e8aff60017ca81b89734f2a39",
+  "prompts": {},
+  "sessions": {
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0f71275af3a9d5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aupdater-dockerhub-0045479572fc8370",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_1a92838c482d40": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-talk-limit-f9c615740774e6fb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_28915fd19e1e49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-arrow-edit-f0518ce8535c51ee",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_afb3377f9f37f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-proxy-limits-737a1a591bac000a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_b10e722bc60c79": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-docs-e9d2378f61bc75a7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
