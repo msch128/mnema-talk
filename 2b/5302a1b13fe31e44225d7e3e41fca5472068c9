@@ -1,0 +1,27 @@
+doc/platform-notes.md
+  s_46a6db8f9e8231::t_555a27e26d66db 14,74
+doc/ports.md
+  s_46a6db8f9e8231::t_d2b74463cbb93d 53-54
+doc/quick-start.md
+  s_46a6db8f9e8231::t_9664470c88a63f 63-65,106,130
+doc/reverse-proxy.md
+  s_46a6db8f9e8231::t_ee92a203c4e28e 26-28
+doc/upgrade.md
+  s_46a6db8f9e8231::t_26ddc1ceffecf4 51,56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2b5302a1b13fe31e44225d7e3e41fca5472068c9",
+  "prompts": {},
+  "sessions": {
+    "s_46a6db8f9e8231": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-owner-firstrun-b73e149d9963f888",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
