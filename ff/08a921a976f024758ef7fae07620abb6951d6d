@@ -1,0 +1,19 @@
+.github/workflows/ci.yml
+  s_e7f30a04698fc5::t_c7f30a191f10cc 36-41,62-65,68-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ff08a921a976f024758ef7fae07620abb6951d6d",
+  "prompts": {},
+  "sessions": {
+    "s_e7f30a04698fc5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4bf11774e4e51cc3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
