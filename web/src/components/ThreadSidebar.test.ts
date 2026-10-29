@@ -324,22 +324,27 @@ describe('ThreadSidebar complete interactions', () => {
   })
 
   it('cancels replies through the bar and row Escape, and cancels edits through root/reply Escape', async () => {
-    setup()
+    const chat = setup()
     const root = w.find('[data-reply-id=root]')
+    // With nothing to cancel the key is left to the panel, which closes.
     expect(key(root, { key: 'Escape' }).defaultPrevented).toBe(false)
-    key(root, { key: 'r' })
+    expect(chat.activeThread).toBeNull()
+    chat.activeThread = msg('root', 'u2')
+    chat.threadReplies = [msg('r1', 'u2'), msg('r2', 'me'), msg('r3', 'u2')]
+    await nextTick()
+    key(w.find('[data-reply-id=root]'), { key: 'r' })
     await nextTick()
     w.findComponent(ReplyComposerBar).vm.$emit('cancel')
     await nextTick()
     expect(w.findComponent(ReplyComposerBar).exists()).toBe(false)
-    key(root, { key: 'r' })
+    key(w.find('[data-reply-id=root]'), { key: 'r' })
     await nextTick()
-    key(root, { key: 'Escape' })
+    key(w.find('[data-reply-id=root]'), { key: 'Escape' })
     await nextTick()
     expect(w.findComponent(ReplyComposerBar).exists()).toBe(false)
     key(w.find('[data-reply-id=r2]'), { key: 'e' })
     await nextTick()
-    key(root, { key: 'Escape' })
+    key(w.find('[data-reply-id=root]'), { key: 'Escape' })
     await nextTick()
     expect(w.findComponent(MessageEditor).exists()).toBe(false)
     key(w.find('[data-reply-id=r2]'), { key: 'e' })
@@ -347,7 +352,9 @@ describe('ThreadSidebar complete interactions', () => {
     key(w.find('[data-reply-id=r1]'), { key: 'Escape' })
     await nextTick()
     expect(w.findComponent(MessageEditor).exists()).toBe(false)
+    expect(chat.activeThread).not.toBeNull()
     expect(key(w.find('[data-reply-id=r1]'), { key: 'Escape' }).defaultPrevented).toBe(false)
+    expect(chat.activeThread).toBeNull()
   })
 
   it('edits via the quick action, binds the editor, saves and cancels via child events', async () => {
@@ -679,5 +686,23 @@ describe('ThreadSidebar races and deleted authors', () => {
       await flushPromises()
       expect(container.scrollTop).toBe(1000)
     })
+  })
+})
+
+describe('ThreadSidebar closing', () => {
+  it('the X button closes the thread', async () => {
+    const chat = setup()
+    await w.find('[data-testid="thread-close"]').trigger('click')
+    expect(chat.activeThread).toBeNull()
+  })
+
+  it('Escape closes the thread, unless something inside used the key', async () => {
+    const chat = setup()
+    const used = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    used.preventDefault()
+    w.find('[data-reply-id="r1"]').element.dispatchEvent(used)
+    expect(chat.activeThread).not.toBeNull()
+    key(w.find('[data-reply-id="r1"]'), { key: 'Escape' })
+    expect(chat.activeThread).toBeNull()
   })
 })

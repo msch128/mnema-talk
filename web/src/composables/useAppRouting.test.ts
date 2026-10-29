@@ -35,6 +35,11 @@ describe('the address of what is on screen', () => {
     expect(statePath(ctxWith({ active: { id: 'f1', type: 'forum', slug: 'ideas' }, thread: { id: POST, title: 'New kitchen?' } }), null)).toBe('/c/ideas/p/new-kitchen-0f3a9c1e')
   })
 
+  it('goes back to the forum address once the post is closed', () => {
+    const forum = { id: 'f1', type: 'forum', slug: 'ideas' }
+    expect(statePath(ctxWith({ active: forum, thread: null }), null)).toBe('/c/ideas')
+  })
+
   it('has no address for nothing, or for a channel that is gone', () => {
     expect(statePath(ctxWith({}), null)).toBe('/')
     expect(statePath(ctxWith({ active: { id: 'gone', type: 'text' } }), null)).toBe('/')

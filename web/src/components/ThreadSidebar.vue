@@ -164,6 +164,13 @@ function onReplyKeydown(e: KeyboardEvent, msg: Message, { editable = true } = {}
   })
 }
 
+// Escape closes the panel once nothing inside has used it: an edit, a reply,
+// a suggestion list, a picker or the lightbox take the key first.
+function onEscape(e: KeyboardEvent) {
+  if (e.defaultPrevented || e.isComposing || selectedImage.value || activeReactionPickerMsgId.value) return
+  chatStore.closeThread()
+}
+
 onMounted(() => {
   scrollToBottom()
 })
@@ -213,7 +220,10 @@ async function handleFileUpload(e: Event) {
 </script>
 
 <template>
-  <aside class="relative w-full min-w-0 bg-mnema-canvas border-l border-mnema-hairline flex flex-col h-full select-none">
+  <aside
+    class="relative w-full min-w-0 bg-mnema-canvas border-l border-mnema-hairline flex flex-col h-full select-none"
+    @keydown.esc="onEscape"
+  >
     <!-- Thread Header -->
     <header class="h-12 pl-4 pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-2 shrink-0">
       <div class="flex items-center gap-2 min-w-0">
@@ -258,9 +268,12 @@ async function handleFileUpload(e: Event) {
       </button>
 
       <button
-        @click="chatStore.closeThread"
+        type="button"
+        data-testid="thread-close"
+        @click="chatStore.closeThread()"
         class="btn btn-icon w-8 h-8 shrink-0"
-        v-tooltip="$t('thread.close')"
+        :aria-label="$t('thread.close')"
+        v-tooltip="{ text: $t('thread.close'), shortcut: 'Esc' }"
       >
         <X class="w-5 h-5" />
       </button>

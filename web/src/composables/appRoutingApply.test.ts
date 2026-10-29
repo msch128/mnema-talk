@@ -103,6 +103,19 @@ describe('forum post addresses', () => {
     expect(navigate).toHaveBeenLastCalledWith('/c/ideas/p/neue-kueche-0f3a9c1e', { replace: true })
   })
 
+  it('leaves the address alone when it already is the post address, so closing the post stays closed', async () => {
+    const { ctx } = makeCtx()
+    fetchForumPosts.mockResolvedValue([{ id: POST }])
+    window.history.replaceState({}, '', '/c/ideas/p/neue-kueche-0f3a9c1e')
+    try {
+      await applyRoute(ctx, parseRoute('/c/ideas/p/neue-kueche-0f3a9c1e'))
+      // A replace to the same address re-applies the route and reopens the post, forever.
+      expect(navigate).not.toHaveBeenCalled()
+    } finally {
+      window.history.replaceState({}, '', '/')
+    }
+  })
+
   it('takes a full id without asking the server which posts exist', async () => {
     const { ctx, chatStore } = makeCtx()
     await applyRoute(ctx, parseRoute(`/c/ideas/p/${POST}`))
