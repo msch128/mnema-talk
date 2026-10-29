@@ -1,0 +1,117 @@
+import { beforeEach, describe, expect, it } from 'vitest'
+import de from '../i18n/de.json'
+import { setLocale } from '../i18n'
+import en from '../i18n/en.json'
+import hostErrors from './hostErrors.json'
+import { NAT_HINT, localizeHostError } from './hostError'
+
+// The sentences the Rust and Electron desktop clients send. A change to one of
+// them in the desktop repository needs the same change here.
+const HINT =
+  'If the server runs in your own network, your router may not support reaching it through its public address (NAT loopback/hairpin) — try the local address or another network.'
+const REFUSED = 'The instance refused the connection. Check the address and the port.'
+const TIMEOUT = 'The instance did not answer in time. Check the address, the port and your network.'
+const CERTIFICATE =
+  "This computer does not trust the instance's HTTPS certificate. Check the system clock, and that no antivirus or network filter intercepts HTTPS."
+const TOO_OLD = 'This server is too old for this desktop client (needs 0.9.0 or newer). Ask the administrator to update it.'
+const SENT = [
+  'Enter an HTTPS instance address.',
+  'Invalid instance address.',
+  'Use an HTTPS origin without credentials, a path or query.',
+  'Unable to initialize HTTPS.',
+  REFUSED,
+  TIMEOUT,
+  'The instance address could not be resolved. Check the address and your network.',
+  CERTIFICATE,
+  'Unable to reach the instance using trusted HTTPS.',
+  'The instance is unavailable or redirects to a different address.',
+  'Instance check failed.',
+  'Invalid instance response.',
+  'This instance needs an update for the desktop client.',
+  'This instance is not compatible with this desktop client.',
+  'This client has no verified app. Reinstall the desktop client.',
+  'This server needs a newer Mnema app than this client has. Update the desktop client.',
+  TOO_OLD,
+  'This server speaks an older contract than any app in this client. Ask the administrator to update it.',
+  'The app in this client was signed with a key that is no longer trusted. Update the desktop client; it fetches a newly signed app at its next check.',
+  'The newest verified app this client has used is no longer available, and older apps are refused. Update or reinstall the desktop client.',
+  'This server is already in the list.',
+  'At most 8 servers fit in one window.',
+  'The web app of this server was withdrawn. Restart the client to get a current one.',
+  'Several servers at once need macOS 14 or newer.',
+  'Only the instance selector may open an instance.'
+]
+
+describe.each(['de', 'en'] as const)('host errors in %s', (locale) => {
+  beforeEach(() => setLocale(locale))
+
+  it('translates every sentence the desktop clients send', () => {
+    for (const sent of SENT) {
+      const text = localizeHostError(sent)
+      if (locale === 'de') expect(text, sent).not.toBe(sent)
+      expect(text, sent).not.toContain('nativeDesktop.')
+      expect(text, sent).not.toMatch(/\{\w+\}/)
+    }
+  })
+
+  it('adds the hint for a server in the own network to a refusal and a timeout', () => {
+    for (const sent of [REFUSED, TIMEOUT]) {
+      const text = localizeHostError(`${sent} ${HINT}`)
+      expect(text.startsWith(localizeHostError(sent))).toBe(true)
+      expect(text.length).toBeGreaterThan(localizeHostError(sent).length + 40)
+      expect(text).not.toContain('NAT loopback/hairpin);')
+    }
+  })
+
+  it('keeps the system detail of a certificate refusal', () => {
+    const text = localizeHostError(`${CERTIFICATE} (The certificate chain was issued by an untrusted authority. (0x800B0109))`)
+    expect(text).toContain('0x800B0109')
+    expect(text).toContain('(The certificate chain was issued')
+  })
+
+  it('shows what it does not know as sent', () => {
+    expect(localizeHostError('Something new.')).toBe('Something new.')
+  })
+})
+
+it('speaks German by default and English on request', () => {
+  setLocale('de')
+  expect(localizeHostError(REFUSED)).toBe(de.nativeDesktop.hostError.refused)
+  expect(localizeHostError('At most 1 servers fit in one window.')).toBe(de.nativeDesktop.hostError.maxServers.one.replace('{count}', '1'))
+  setLocale('en')
+  expect(localizeHostError(TOO_OLD)).toContain('needs 0.9.0 or newer')
+})
+
+// hostErrors.json is a copy of the desktop repository's
+// test-vectors/host-errors.json: every sentence the desktop clients can send.
+describe('the list of sentences the desktop clients send', () => {
+  const listed = hostErrors.sentences
+  const translations = { de: de.nativeDesktop.hostError, en: en.nativeDesktop.hostError } as Record<string, Record<string, unknown>>
+
+  it('uses the hint wording of this page', () => {
+    expect(hostErrors.natHint).toBe(NAT_HINT)
+  })
+
+  it('has a German and an English text for every entry, and none without an entry', () => {
+    const ids = [...listed.map((s) => s.id), 'natHint'].sort()
+    for (const locale of ['de', 'en']) {
+      expect(Object.keys(translations[locale] ?? {}).sort(), locale).toEqual(ids)
+    }
+  })
+
+  it.each(['de', 'en'] as const)('translates every entry, with its hint and detail, in %s', (locale) => {
+    setLocale(locale)
+    for (const entry of listed) {
+      const sample = entry.text.replace('{version}', '0.8.9').replace('{count}', '3')
+      const variants = [sample]
+      if ('withHint' in entry) variants.push(`${sample} ${hostErrors.natHint}`)
+      if ('withDetail' in entry) variants.push(`${sample} (system detail)`)
+      for (const sent of variants) {
+        const text = localizeHostError(sent)
+        expect(text, sent).not.toContain('nativeDesktop.')
+        expect(text, sent).not.toMatch(/\{\w+\}/)
+        if (locale === 'de') expect(text, sent).not.toBe(sent)
+      }
+    }
+  })
+})
