@@ -1,0 +1,14 @@
+neg_probe.txt
+  h_0ff4f4713441f4 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0153460b538e9e7c38c655ca33308b227f8897ab",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
