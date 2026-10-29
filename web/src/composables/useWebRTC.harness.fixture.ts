@@ -9,6 +9,7 @@ import type { MediaVerification } from '../lib/media/verify'
 import { useWebRTC } from './useWebRTC'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
+import { resetNotices } from './webrtc/audioNotice'
 import { suppressor } from './useWebRTC.noiseSuppressor.fixture'
 
 export type ClientSentEvent = { type: keyof ClientEventPayloads; payload: ClientEventPayloads[keyof ClientEventPayloads] }
@@ -164,6 +165,8 @@ export class FakeAudioContext {
     return node
   }
   createBiquadFilter() { this.ensureActive(); return { type: '', frequency: { setValueAtTime() {} }, connect() {} } }
+  addEventListener() {}
+  removeEventListener() {}
   resume() { this.state = 'running'; return Promise.resolve() }
   close() { this.state = 'closed'; this.closed = true; return Promise.resolve() }
 }
@@ -298,6 +301,9 @@ export function installHarness() {
   beforeEach(() => {
     audioElements = []
     localStorage.clear()
+    // The default AI filter is unsupported here (see suppressor.supported); specs that need it say so.
+    localStorage.setItem('mnema_noise', 'browser')
+    resetNotices()
     setActivePinia(createPinia())
     suppressor.node = null
     suppressor.models = []

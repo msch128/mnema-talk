@@ -85,12 +85,16 @@ function gateTransmission(cx: Cx, tick: SpeakingTick, level: number) {
   const { voice, chat, st } = cx
   setGamingPttLease(st, voice.isPttPressed)
   const shouldTransmit = tick.gateOpen(level)
+  // A context that never started reads level 0 for good: voice activity would
+  // keep the track closed forever. Push-to-talk needs no meter and stays as is.
+  const gateBroken = st.contextStalled && voice.inputMode !== 'ptt' && st.audioContext?.state !== 'running'
 
   // Physical audio track gate (muting track when below threshold to eliminate background bleed)
   if (st.localAudioStream.value) {
     const track = st.localAudioStream.value.getAudioTracks()[0]
-    if (track && track.enabled !== shouldTransmit) {
-      track.enabled = shouldTransmit
+    const send = shouldTransmit || gateBroken
+    if (track && track.enabled !== send) {
+      track.enabled = send
     }
   }
 
@@ -145,6 +149,7 @@ export function startSpeakingDetection(cx: Cx) {
 export function cleanupVoiceAudio(cx: Cx) {
   const { voice, st } = cx
   st.failedAIModel = null
+  st.contextStalled = false
   if (st.speakingInterval) {
     clearInterval(st.speakingInterval)
     st.speakingInterval = null

@@ -5,8 +5,9 @@ import { installMediaCallFactory } from '../lib/media/api'
 import type { StreamQuality } from '../lib/streamQuality'
 import { onMediaUnprotected } from './webrtc/mediaRoom'
 import { createRtcState, type Cx } from './webrtc/state'
-import { recoverFilter, applyAudioSettings } from './webrtc/audioSettings'
-import { refreshAudioDevices } from './webrtc/micPipeline'
+import { onPageLeave } from '../lib/audioHealth'
+import { recoverContext, recoverFilter, applyAudioSettings } from './webrtc/audioSettings'
+import { refreshAudioDevices, teardownMicPipeline } from './webrtc/micPipeline'
 import { startMicTest, stopMicTest, toggleMicTest } from './webrtc/micTest'
 import { cleanupVoiceAudio, setGamingPttLease as setLease } from './webrtc/voiceAudio'
 import { getScreenCaptureSettings, getScreenSendStats, replaceScreenShare, startScreenShare, stopScreenShare, toggleScreenShare } from './webrtc/screen'
@@ -22,6 +23,7 @@ installMediaCallFactory(browserMediaCall)
 
 // Shared by every component that calls useWebRTC(): one call, one state.
 const rtc = createRtcState()
+let leaveHooked = false
 
 export function setGamingPttLease(pressed: boolean): void {
   setLease(rtc, pressed)
@@ -32,7 +34,16 @@ export function useWebRTC() {
     voice: useVoiceStore(),
     chat: useChatStore(),
     st: rtc,
-    hooks: { filterFailed: (audio, model, test) => recoverFilter(cx, audio, model, test) }
+    hooks: {
+      filterFailed: (audio, model, test) => recoverFilter(cx, audio, model, test),
+      contextStalled: audio => recoverContext(cx, audio)
+    }
+  }
+  // Leaving the page (reload, navigation) takes the workers and worklets down in
+  // order, instead of the browser cancelling their module imports mid-flight.
+  if (!leaveHooked) {
+    leaveHooked = true
+    onPageLeave(() => { stopMicTest(cx); teardownMicPipeline(cx) })
   }
   onMediaUnprotected(() => {
     stopScreenShare(cx)

@@ -12,6 +12,7 @@ import gtcrnWasmUrl from '@sapphi-red/web-noise-suppressor/gtcrn.wasm?url'
 import dfnWorkletUrl from './dfn/dfnBridgeWorklet.ts?worker&url'
 import dfnWasmUrl from '../third_party/deepfilternet3/df_bg.wasm?url'
 import dfnModelUrl from '../third_party/deepfilternet3/DeepFilterNet3_onnx.tgz?url'
+import { isPageUnloading, watchFilterFrames } from './audioHealth'
 import { createDeepFilterNode } from './dfn/dfnNode'
 import type { FilterNode } from './dfn/dfnNode'
 import type { FilterOptions, NoiseModel } from './dfn/dfnTypes'
@@ -24,6 +25,7 @@ const registeredWorklets = new WeakMap<AudioContext, Map<NoiseModel, Promise<voi
 
 export function isNoiseSuppressionSupported() {
   return typeof AudioWorkletNode !== 'undefined' && typeof WebAssembly !== 'undefined'
+    && typeof Worker !== 'undefined' && typeof MessageChannel !== 'undefined'
 }
 
 function fetchOnce(url: string): Promise<ArrayBuffer> {
@@ -143,7 +145,7 @@ async function buildNode(
  */
 export async function createNoiseSuppressorNode(audioContext: AudioContext, model: NoiseModel = 'dfn3', options: FilterOptions = {}): Promise<FilterNode | null> {
   if (!isContextCompatible(audioContext, model)) return null
-  const stale = () => Boolean(options.signal?.aborted || audioContext.state === 'closed')
+  const stale = () => Boolean(options.signal?.aborted || audioContext.state === 'closed' || isPageUnloading())
   if (stale()) return null
 
   try {
@@ -151,9 +153,23 @@ export async function createNoiseSuppressorNode(audioContext: AudioContext, mode
     if (stale()) return null
     await registerWorkletModule(audioContext, model, MODELS[model].workletUrl)
     if (stale()) return null
-    return await buildNode(audioContext, loaded, options)
+    const node = await buildNode(audioContext, loaded, options)
+    if (node && model === 'dfn3') guardFrames(audioContext, node, model, options)
+    return node
   } catch (err) {
+    // A reload or a closed context cancels the worker and the module import; that is no failure.
+    if (stale()) return null
     console.warn(`AI noise suppression (${model}) unavailable:`, err)
     return null
   }
+}
+
+// Only DFN3 reports its processed frames. A filter whose context renders but which delivers no frame is given up, so
+// the call falls back to the browser's own suppression instead of going quiet.
+function guardFrames(audioContext: AudioContext, node: FilterNode, model: NoiseModel, options: FilterOptions) {
+  watchFilterFrames(audioContext, node, options.signal, reason => {
+    console.warn(`AI noise suppression (${model}) gave up: ${reason}, falling back to the browser's suppression`)
+    try { node.destroy?.() } catch (err) { console.debug('Filter destroy error:', err) }
+    options.onFailure?.()
+  })
 }
