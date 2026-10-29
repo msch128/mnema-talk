@@ -26,13 +26,13 @@ Replace the version and paths with yours.
 
 ```sh
 cd /path/to/mnema-talk
-NEW=1.0.0                                  # version to install
+NEW=$(curl -fsSL https://api.github.com/repos/msch128/mnema-talk/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')  # or set a version
 
 # 1. Back up database, media and .env (see operations.md, "Backups")
 BACKUP_DIR=/path/to/backups ./scripts/backup.sh
 
 # 2. Note what runs now, for a rollback
-grep '^MNEMA_IMAGE=' .env                  # e.g. ghcr.io/msch128/mnema-talk:0.9.0
+grep '^MNEMA_IMAGE=' .env                  # e.g. ghcr.io/msch128/mnema-talk:2.1
 curl -fsS http://127.0.0.1:8080/api/health # {"status":"ok","version":"..."}
 cp docker-compose.yml docker-compose.yml.bak
 
@@ -105,6 +105,7 @@ with the preserved `postgres-data` volume. PostgreSQL 18 has a separate
 The preserved PostgreSQL 17 database reflects the upgrade's cutover, so writes
 made afterward on PostgreSQL 18 are not in that rollback.
 
+<!-- test:allow-old-version -->
 ```sh
 set -e
 docker compose stop app postgres

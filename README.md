@@ -325,7 +325,7 @@ By hand: [Fresh install in doc/deployment.md](doc/deployment.md#fresh-install)
 downloads the compose file and `.env.example` of a release, lists the few
 values to set (`PUBLIC_URL`, `JWT_SECRET`, `POSTGRES_PASSWORD`,
 `S3_ACCESS_KEY` / `S3_SECRET_KEY`, `ADMIN_INITIAL_PASSWORD`) and starts the
-published image (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.2`, a pinned patch
+published image (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:2.1`, a pinned patch
 version or `:latest`). CI runs those exact steps. The same image is also on
 Docker Hub as `docker.io/msch128/mnema-talk`; GHCR stays the primary
 reference ([verify the signature](doc/operations.md#verifying-a-release-image)).

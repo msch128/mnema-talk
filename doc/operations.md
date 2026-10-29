@@ -196,6 +196,7 @@ the built-in TURN port). All ports: [ports.md](ports.md).
 
 Caddy (passes `X-Forwarded-For` and WebSocket upgrades by default):
 
+<!-- test:caddy -->
 ```caddy
 chat.example.com {
     reverse_proxy app-host:8080
@@ -204,6 +205,7 @@ chat.example.com {
 
 nginx:
 
+<!-- test:nginx -->
 ```nginx
 map $http_upgrade $connection_upgrade {
     default upgrade;
@@ -660,7 +662,7 @@ The image also carries BuildKit provenance and an SBOM. To check a pulled
 image before running it:
 
 ```sh
-cosign verify ghcr.io/msch128/mnema-talk:1.0 \
+cosign verify ghcr.io/msch128/mnema-talk:latest \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@'
 ```
@@ -669,7 +671,7 @@ The Docker Hub copy carries the same digest, signature identity, provenance
 and SBOM, so the same command works with the Docker Hub reference:
 
 ```sh
-cosign verify docker.io/msch128/mnema-talk:1.0 \
+cosign verify docker.io/msch128/mnema-talk:latest \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@'
 ```
@@ -820,6 +822,49 @@ run `docker compose up -d` and reload the tab.
 Whether the router forwards the voice UDP port cannot be known from inside the
 host, so *Voice port* is green when the server listens. A call from a phone on
 mobile data is the real test.
+
+**Check codes.** The API (`GET /api/admin/status`) and the web app identify each
+outcome by a stable code, `<check>.<outcome>`; this table is the reference for
+what each means. A CI check fails when a code the server can send is missing
+here.
+
+| Code | Meaning and what to do |
+|---|---|
+| `public_url.ok` | `PUBLIC_URL` is set to an address members can use. |
+| `public_url.local` | `PUBLIC_URL` is `localhost`: set it to the address members type into their browser. |
+| `public_url.insecure` | `PUBLIC_URL` is plain `http://`: cookies lose `Secure`. Put TLS in front and use `https://` (skip on a trusted LAN). |
+| `public_url.origin_mismatch` | The page was opened at another address than `PUBLIC_URL`: fix `PUBLIC_URL`, or let the proxy pass `Host` and `X-Forwarded-Proto`. |
+| `voice_address.development` | Development mode: voice uses the machine's own addresses. |
+| `voice_address.announced_env` | Voice is announced on the address from `WEBRTC_NAT_1TO1_IP`. |
+| `voice_address.announced_public_url` | Voice is announced on the address taken from `PUBLIC_URL`. |
+| `voice_address.announced_stun` | Voice is announced on the address a STUN request detected. |
+| `voice_address.missing` | No public voice address is known: set `WEBRTC_NAT_1TO1_IP`. |
+| `voice_address.missing_detect_failed` | As above, and automatic detection failed (the check names the error): set `WEBRTC_NAT_1TO1_IP`. |
+| `voice_address.missing_turn_only` | As `voice_address.missing`, and only the TURN relay can carry voice. |
+| `voice_address.missing_detect_failed_turn_only` | Detection failed and only the TURN relay can carry voice: set `WEBRTC_NAT_1TO1_IP`. |
+| `voice_udp.ok` | Voice listens on the named UDP port; forward it from the router (it cannot be tested from inside). |
+| `voice_udp.unavailable` | The voice engine did not start: free the UDP range (or change `WEBRTC_UDP_PORT_MIN` / `WEBRTC_UDP_PORT_MAX`); the log names the cause. |
+| `voice_udp.mux_disabled` | `WEBRTC_UDP_MUX_PORT=0` gives each peer its own port and caps the callers: remove it. |
+| `turn.builtin_ok` | The built-in TURN relay serves members behind strict firewalls; forward its port (UDP and TCP). |
+| `turn.builtin_failed` | The built-in relay could not listen on its port: free it or set `WEBRTC_BUILTIN_TURN_PORT`. |
+| `turn.builtin_failed_external` | The built-in relay could not start, but an external TURN relay is configured. |
+| `turn.builtin_off_external` | The built-in relay is off and an external TURN relay is configured. |
+| `turn.voice_unavailable` | The relay is not running because the voice engine is down: fix `voice_udp.unavailable` first. |
+| `turn.unreachable` | The relay runs but its port did not answer from the server (a router without NAT loopback also causes this): forward the port and test from mobile data. |
+| `turn.external_ok` | An external TURN relay is configured. |
+| `turn.none` | No TURN relay: members on networks that block UDP cannot join (optional; see the *TURN relay* row above). |
+| `mail.ok` | Outgoing mail is configured. |
+| `mail.none` | No outgoing mail: no password reset e-mails (optional). |
+| `storage.ok` | Object storage is ready. |
+| `storage.not_configured` | Object storage is not configured: set the `S3_*` variables. |
+| `storage.unreachable` | Object storage does not answer: check the `seaweedfs` container and the `S3_ACCESS_KEY` / `S3_SECRET_KEY` pair. |
+| `database.ok` | The database is reachable. |
+| `database.unreachable` | The database does not answer: check the `postgres` container and `POSTGRES_PASSWORD`. |
+| `clock.ok` | The server clock is within the window of real time. |
+| `clock.skewed` | The clock is off: turn on NTP on the host. |
+| `reverse_proxy.ok` | No proxy header problems seen. |
+| `reverse_proxy.not_trusted` | Requests carry `X-Forwarded-For` from a proxy that is not trusted: set `TRUSTED_PROXY_CIDRS` to the proxy's own address. |
+| `reverse_proxy.broad` | `TRUSTED_PROXY_CIDRS` covers a wide range: list only the proxy's address. |
 
 ### The doctor command
 

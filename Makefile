@@ -3,7 +3,7 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test fuzz-smoke test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-go-profile coverage-web lint complexity-check fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill fresh-install docs-check english-check
+.PHONY: help dev web build run test fuzz-smoke test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-go-profile coverage-web lint complexity-check fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill fresh-install docs-check onboarding-check english-check
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -173,9 +173,16 @@ smoke: docker ## Start the built image with the production compose file and chec
 fresh-install: docker ## Follow doc/deployment.md "Fresh install" in an empty directory with this build, then sign in as the Owner
 	scripts/fresh-install-check.sh mnema-talk:local
 
-docs-check: ## Relative links and anchors in README.md, SECURITY.md and doc/*.md, and no merge-conflict markers in tracked files (no network)
+docs-check: ## Relative links and anchors in README.md, SECURITY.md and doc/*.md, no merge-conflict markers, stale versions, setup check codes and ports in the docs (no network)
 	node scripts/check-doc-links.mjs
 	node scripts/check-conflict-markers.mjs
+	node --test scripts/check-onboarding-docs.test.mjs
+	node scripts/check-onboarding-docs.mjs
+
+onboarding-check: ## The documented setup assistant lines and the Caddy and nginx snippets against IMAGE (default mnema-talk:local; needs Docker and a free 127.0.0.1:443)
+	python3 scripts/onboarding_wizard_check.py $(or $(IMAGE),mnema-talk:local)
+	scripts/onboarding-proxy-check.sh caddy $(or $(IMAGE),mnema-talk:local)
+	scripts/onboarding-proxy-check.sh nginx $(or $(IMAGE),mnema-talk:local)
 
 english-check: ## No German outside the locale resources and the allowlist (scripts/english-only-allowlist.txt)
 	node --test scripts/check-english-only.test.mjs
