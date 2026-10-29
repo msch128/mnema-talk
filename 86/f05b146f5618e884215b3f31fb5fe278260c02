@@ -1,0 +1,69 @@
+web/src/components/AdminOwnerConfirm.test.ts
+  s_06fcde5dbef956::t_56c7cda1bb76aa 59-72
+web/src/components/AdminResetPasswordDialog.vue
+  s_06fcde5dbef956::t_7dc80f0a9f361e 26,74
+web/src/components/AdminResetTwoFactorDialog.vue
+  s_06fcde5dbef956::t_ec879d869470f1 23,52
+web/src/components/AdminStatusTab.test.ts
+  s_06fcde5dbef956::t_1ab66ad460ca71 151-159
+web/src/components/AdminStatusTab.vue
+  s_06fcde5dbef956::t_32fa11d4c29eb5 44,116-117,120
+web/src/components/IdentityFields.vue
+  s_06fcde5dbef956::t_3aab6a427b1ade 8,18
+web/src/components/Sidebar.test.ts
+  s_06fcde5dbef956::t_18eea97ac73cef 589-597
+web/src/components/Sidebar.vue
+  s_06fcde5dbef956::t_4c3be7e0f922bd 221,223,227
+web/src/composables/appRoutingApply.test.ts
+  s_06fcde5dbef956::t_5763aac8003197 132-140
+web/src/composables/appRoutingApply.ts
+  s_06fcde5dbef956::t_d264aba5d02a08 74-76,85,95
+web/src/lib/ownerProof.ts
+  s_06fcde5dbef956::t_bdcf7bfd57c7bd 13-14,18,22-25,30
+scripts/backup-drill.sh
+  s_bb88621b24cf0b::t_21d435c24ea9c2 32
+scripts/free-port.sh
+  s_0a2d8b5d45e64c::t_abf1388b4c7bf1 14-17,19,22-25,41,48-49
+scripts/fresh-install-check.sh
+  s_bb88621b24cf0b::t_256b2a8d54cc92 19
+scripts/postgres-upgrade-drill.sh
+  s_bb88621b24cf0b::t_9cb42c3a003a0f 14
+scripts/screenshots/run.sh
+  s_bb88621b24cf0b::t_0393b6d6577bc6 14-17
+scripts/smoke-image.sh
+  s_bb88621b24cf0b::t_b9ac04a77de1df 18
+scripts/upgrade-drill.sh
+  s_bb88621b24cf0b::t_d7ddefcc59a561 50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "86f05b146f5618e884215b3f31fb5fe278260c02",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0a2d8b5d45e64c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-stage-switch-92afc6f836a3bb3d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bb88621b24cf0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0f996feec0426a46",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
