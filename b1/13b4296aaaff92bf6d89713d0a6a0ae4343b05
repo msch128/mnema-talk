@@ -1,0 +1,33 @@
+web/src/components/DmTalkActions.vue
+  s_afb3377f9f37f8::t_7effc912a337bf 6,11,25,30-33,38-39,62,64-68,71-72
+web/src/components/TalkInvite.test.ts
+  s_e7f30a04698fc5::t_15c29f4e07e321 13,132-151
+web/src/i18n/de.json
+  s_afb3377f9f37f8::t_d2d3813bfb337f 3610-3611
+web/src/i18n/en.json
+  s_afb3377f9f37f8::t_013808b7b35df6 3610-3611
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b113b4296aaaff92bf6d89713d0a6a0ae4343b05",
+  "prompts": {},
+  "sessions": {
+    "s_afb3377f9f37f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-proxy-limits-737a1a591bac000a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e7f30a04698fc5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4bf11774e4e51cc3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
