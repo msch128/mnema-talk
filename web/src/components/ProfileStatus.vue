@@ -10,7 +10,8 @@ import { usePermissionsStore } from '../stores/permissions'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { EXPIRY_CHOICES, expiryTime, isFuture, toLocalInput } from '../lib/statusExpiry'
 import type { ExpiryChoice } from '../lib/statusExpiry'
-import { t } from '../i18n'
+import { locale, t } from '../i18n'
+import { dateTime } from '../lib/time'
 
 // The status line of a profile: the user edits their own; an admin may edit or clear anyone's.
 const props = defineProps({
@@ -61,13 +62,7 @@ async function saveStatus(text = editStatus.value) {
   isSavingStatus.value = true
   try {
     const updated = await chatStore.setStatusText(id, text.trim(), expiresAt)
-    const selected = chatStore.selectedUserProfile
-    if (selected) {
-      const next = { ...selected, status_text: updated.status_text }
-      if (updated.status_expires_at) next.status_expires_at = updated.status_expires_at
-      else delete next.status_expires_at
-      chatStore.selectedUserProfile = next
-    }
+    chatStore.patchOpenProfile(id, { status_text: updated.status_text, ...(updated.status_expires_at ? { status_expires_at: updated.status_expires_at } : {}) }, updated.status_expires_at ? [] : ['status_expires_at'])
     isEditingStatus.value = false
     toasts.success(text.trim() ? t('profile.statusSaved') : t('profile.statusCleared'))
   } catch (err) {
@@ -150,7 +145,7 @@ async function saveStatus(text = editStatus.value) {
     <template v-else-if="profileUser.status_text">
       <p class="wrap-break-word text-sm text-mnema-text">{{ profileUser.status_text }}</p>
       <p v-if="profileUser.status_expires_at" data-testid="profile-status-until" class="mt-0.5 text-xs text-mnema-tertiary">
-        {{ $t('profile.clearsAt', { time: new Date(profileUser.status_expires_at).toLocaleString() }) }}
+        {{ $t('profile.clearsAt', { time: dateTime(profileUser.status_expires_at, locale) }) }}
       </p>
     </template>
     <p v-else class="text-sm italic text-mnema-tertiary">{{ $t('profile.noStatus') }}</p>

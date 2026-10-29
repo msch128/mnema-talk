@@ -9,11 +9,11 @@ import type { SubscribeRequest, ServerEventPayloads } from '../../types/events'
 import { loadIceServers } from './iceServers'
 import { isLobby, joinViaLobby, lobbyMoved, lobbyRefused } from './lobby'
 import { resumeRemoteAudio as resumeRemotePlayback } from './remoteAudio'
-import { closeMediaRoom, openMediaRoom, resetMediaAnnouncements } from './mediaRoom'
+import { closeMediaRoom, mediaConnectionAnnounced, openMediaRoom, resetMediaAnnouncements } from './mediaRoom'
 import type { Cx } from './state'
 import { aiModel } from './audioMath'
 import { stopCamera } from './camera'
-import { getAudioConstraints, refreshAudioDevices, setupMicPipeline } from './micPipeline'
+import { micErrorKey, refreshAudioDevices, requestMicrophone, setupMicPipeline } from './micPipeline'
 import { stopMicTest } from './micTest'
 import { cleanupPeerConnection, handleRemoteCandidate, handleRemoteOffer, setupPeerConnection } from './peer'
 import { stopScreenShare } from './screen'
@@ -49,9 +49,11 @@ async function captureMicrophone(cx: Cx): Promise<MediaStream | null> {
   if (model) preloadNoiseSuppressor(model)
   try {
     await refreshAudioDevices(cx)
-    return await navigator.mediaDevices.getUserMedia({ audio: getAudioConstraints(cx) })
+    return await requestMicrophone(cx)
   } catch (err) {
     console.warn('Microphone access denied or unavailable:', err)
+    // The join goes on listen-only; say why instead of leaving the user mute.
+    useToastStore().error(t(micErrorKey(err)))
     return null
   }
 }
@@ -142,6 +144,9 @@ export function sendMuteState(cx: Cx) {
   chat.sendWSEvent('voice_mute_state', { muted: !!voice.isMuted, deafened: !!voice.isDeafened })
 }
 
+// How long the room state after a rejoin gets to arrive.
+const ROOM_STATE_GRACE_MS = 5000
+
 // After the WebSocket reconnected the server may have dropped our media
 // peer; start a fresh connection and announce the join again. The server
 // treats it as a resume (no leave/join for the others) within its grace time.
@@ -156,6 +161,8 @@ export function rejoinAfterReconnect(cx: Cx) {
   // After the join, so a package it produces is not dropped by the hub.
   mediaCall().resume()
   attachSubscriptions(cx)
+  // The room state arrives right after the join; a share missing by then ended.
+  setTimeout(() => { if (voice.currentChannelId === channelId) voice.dropEndedWatches() }, ROOM_STATE_GRACE_MS)
 }
 
 // Which video I receive is decided on the server: tell it my camera opt-outs
@@ -204,7 +211,11 @@ function handleKicked(cx: Cx, payload: ServerEventPayloads['voice_kicked']) {
   if (lobbyRefused(cx, payload)) return
   if (!voice.currentChannelId) return
   if (payload.channel_id !== voice.currentChannelId) return
+  // The browser already explained a failed media connection; the server's
+  // notice for the same loss would only repeat it.
+  const explained = payload.reason === 'connection_lost' && mediaConnectionAnnounced()
   endCall(cx, { notifyServer: false })
+  if (explained) return
   useToastStore().info(t(KICK_NOTICE[payload.reason ?? ''] ?? 'voice.kicked'))
 }
 

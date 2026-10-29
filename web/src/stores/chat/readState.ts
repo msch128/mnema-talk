@@ -37,9 +37,10 @@ export async function fetchReadState(cx: Cx) {
   }
 }
 
-export async function markChannelRead(cx: Cx, channelId: string) {
+/** Marks a channel read; false when the server could not be told (the badge is cleared either way). */
+export async function markChannelRead(cx: Cx, channelId: string): Promise<boolean> {
   const { cs } = cx
-  if (!channelId) return
+  if (!channelId) return false
   if (cs.suppressAutoReadFor === channelId) cs.suppressAutoReadFor = null
 
   const prev = cs.readStates.value[channelId] || { channel_id: channelId, notify_level: 'all' as const, unread_count: 0, mention_count: 0, last_read_at: null }
@@ -54,8 +55,10 @@ export async function markChannelRead(cx: Cx, channelId: string) {
   }
   try {
     await api(`/api/channels/${channelId}/read`, { method: 'POST' })
+    return true
   } catch (e) {
     console.warn('Failed to mark channel read:', e)
+    return false
   }
 }
 

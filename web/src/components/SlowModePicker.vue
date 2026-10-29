@@ -47,6 +47,20 @@ function choose(seconds: number) {
 function onCustom() {
   if (parsed.value !== null && parsed.value <= MAX_SECONDS) model.value = parsed.value
 }
+
+// A cleared field leaves no chip pressed, so what is saved must be what shows: Off.
+function onAmount() {
+  if (!customSet.value) model.value = 0
+  else onCustom()
+}
+
+// A value that arrives from outside (the channel loads late) shows in the field or the chips.
+watch(model, seconds => {
+  if (customSet.value && parsed.value === seconds) return
+  const next = split(isPreset(seconds) ? 0 : seconds)
+  amount.value = next.amount
+  unit.value = next.unit
+})
 </script>
 
 <template>
@@ -77,7 +91,7 @@ function onCustom() {
         inputmode="numeric"
         data-testid="slow-mode-custom"
         class="w-20 rounded-md border border-mnema-border-field bg-mnema-canvas px-2 py-1 text-sm text-mnema-text focus:outline-hidden focus:border-mnema-accent"
-        @input="onCustom"
+        @input="onAmount"
       />
       <select
         v-model="unit"

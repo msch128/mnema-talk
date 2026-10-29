@@ -48,5 +48,11 @@ export const useSavedStore = defineStore('saved', () => {
     void list.load()
   }
 
-  return { ...list, isSaved, save, remove, onUpdated }
+  /** Forgets everything of the signed-in member's list (sign-out). */
+  function reset() {
+    list.reset()
+    known.value = new Set()
+  }
+
+  return { ...list, reset, isSaved, save, remove, onUpdated }
 })

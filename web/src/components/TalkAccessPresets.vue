@@ -27,11 +27,13 @@ const chosenRoles = ref<string[]>([])
 const limit = ref(props.channel.user_limit || 0)
 const entries = ref<Overwrite[]>([])
 const loaded = ref(!props.canAccess)
+// The overwrites could not be read: saving would replace them from an empty list.
+const loadFailed = ref(false)
 const busy = ref(false)
 // What is stored now: the form only has something to save once it differs.
 const snapshot = () => JSON.stringify([choice.value, [...chosenRoles.value].sort(), limit.value])
 const baseline = ref(snapshot())
-const dirty = computed(() => loaded.value && snapshot() !== baseline.value)
+const dirty = computed(() => loaded.value && !loadFailed.value && snapshot() !== baseline.value)
 
 const everyoneId = computed(() => permissions.roles.find(r => r.is_everyone)?.id ?? '')
 const base = computed(() => `/api/admin/channels/${props.channel.id}/overwrites`)
@@ -41,11 +43,14 @@ const needsRole = computed(() => choice.value === 'roles' && chosenRoles.value.l
 
 async function load() {
   if (!props.canAccess) return
+  loaded.value = false
+  loadFailed.value = false
   try {
     entries.value = (await api(base.value, { decode: decodeOverwritesBody })).overwrites
     choice.value = currentPreset(entries.value, everyoneId.value)
     chosenRoles.value = rolesLetIn(entries.value, everyoneId.value)
   } catch (e) {
+    loadFailed.value = true
     toasts.error(caughtErrorMessage(e, t('overwrites.loadFailed')))
   } finally {
     loaded.value = true
@@ -82,7 +87,8 @@ const option = 'flex items-start gap-3 rounded-lg border border-mnema-hairline b
 </script>
 
 <template>
-  <fieldset class="space-y-2" data-testid="talk-presets" :disabled="!loaded || busy">
+  <div>
+  <fieldset class="space-y-2" data-testid="talk-presets" :disabled="!loaded || busy || loadFailed">
     <legend class="mb-1.5 font-mono text-xs font-medium uppercase tracking-wider text-mnema-tertiary">{{ canAccess ? $t('talk.presetsTitle') : $t('talk.presetLimit') }}</legend>
 
     <label v-if="canAccess" :class="option">
@@ -123,4 +129,6 @@ const option = 'flex items-start gap-3 rounded-lg border border-mnema-hairline b
     </label>
 
   </fieldset>
+    <button v-if="loadFailed" type="button" class="btn btn-secondary btn-sm" data-testid="preset-retry" @click="load">{{ $t('common.retry') }}</button>
+  </div>
 </template>

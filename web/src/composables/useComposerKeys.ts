@@ -11,8 +11,14 @@ interface ComposerKeys {
   send: () => void
 }
 
+/** A key that belongs to an IME: Safari reports the confirming Enter after compositionend, as keyCode 229. */
+export function isImeKey(e: KeyboardEvent) {
+  return e.isComposing || e.keyCode === 229
+}
+
 /** Escape leaves a reply; Enter sends, Shift+Enter breaks the line. */
 export function handleComposerKeydown(e: KeyboardEvent, { consumers, replying, cancelReply, send }: ComposerKeys) {
+  if (isImeKey(e)) return
   if (consumers.some(consume => consume(e))) return
   if (e.key === 'Escape' && replying()) {
     e.preventDefault()

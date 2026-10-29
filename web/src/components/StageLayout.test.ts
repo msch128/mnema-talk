@@ -128,6 +128,12 @@ describe('the tiles and rows of a Stage', () => {
     expect(w.emitted('menu')).toHaveLength(1)
     await w.get('[data-testid="stage-listener"]').trigger('contextmenu')
     expect(w.emitted('menu')).toHaveLength(2)
+    const row = w.get('[data-testid="stage-listener"]')
+    expect(row.attributes('tabindex')).toBe('0')
+    await row.trigger('keydown', { key: 'F10', shiftKey: true })
+    expect(w.emitted('menu')).toHaveLength(3)
+    await row.trigger('keydown', { key: 'ContextMenu' })
+    expect(w.emitted('menu')).toHaveLength(4)
   })
 
   it('name members without a display name by their username and show an empty audience calmly', () => {

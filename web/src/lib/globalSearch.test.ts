@@ -76,3 +76,20 @@ describe('global search keyboard lifecycle', () => {
     expect(searchOpen.value).toBe(false)
   })
 })
+
+describe('failed lazy load', () => {
+  it('is reported without an unhandled rejection and retried on the next call', async () => {
+    vi.resetModules()
+    vi.doMock('../components/GlobalSearch.vue', () => { throw new Error('chunk failed') })
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const fresh = await import('./globalSearch')
+    await fresh.openSearch()
+    expect(fresh.searchOpen.value).toBe(false)
+    expect(log).toHaveBeenCalled()
+    vi.doMock('../components/GlobalSearch.vue', () => ({ default: { template: '<div data-search-host>Search</div>' } }))
+    await fresh.openSearch()
+    expect(fresh.searchOpen.value).toBe(true)
+    vi.doUnmock('../components/GlobalSearch.vue')
+    log.mockRestore()
+  })
+})

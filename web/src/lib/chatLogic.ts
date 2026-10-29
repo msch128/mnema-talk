@@ -7,10 +7,25 @@ export function escapeRegExp(text: string): string {
   return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+const mentionPatterns = new Map<string, RegExp>()
+
+// Like the server (internal/mention): "@name" at the start or after a character
+// that cannot be part of a username, with a trailing '.' or '-' (end of a
+// sentence) not part of the name.
+function mentionPattern(username: string): RegExp {
+  let pattern = mentionPatterns.get(username)
+  if (!pattern) {
+    pattern = new RegExp('(^|[^A-Za-z0-9_.-])@' + escapeRegExp(username) + '[.-]*($|[^A-Za-z0-9_.-])', 'i')
+    if (mentionPatterns.size >= 64) mentionPatterns.clear()
+    mentionPatterns.set(username, pattern)
+  }
+  return pattern
+}
+
 // Whether `content` contains an @mention of `username` (case-insensitive).
 export function mentionsUser(content: string | null | undefined, username: string | null | undefined): boolean {
   if (!username || !content) return false
-  return new RegExp('(^|[^A-Za-z0-9_.-])@' + escapeRegExp(username) + '($|[^A-Za-z0-9_.-])', 'i').test(content)
+  return mentionPattern(username).test(content)
 }
 
 // Whether a new message should raise a desktop notification. A muted channel

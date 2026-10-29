@@ -10,6 +10,7 @@ import { decodeRole } from '../types/domain'
 import type { Role } from '../types/domain'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
+import { customNameMissing, ownerUploadRejected, saveClosed, uploadPatch } from '../lib/roleSave'
 import { PERMISSION_BITS, ROLE_COLOR_PRESETS, parseRoleColor, roleColorCss } from '../lib/permissions'
 import { t } from '../i18n'
 import RolePermissionPicker from './RolePermissionPicker.vue'
@@ -56,6 +57,9 @@ const uploadValue = computed<number | null | undefined>(() => {
   const n = Number(raw)
   return Number.isInteger(n) && n >= 1 ? n : undefined
 })
+// Text the field keeps showing but that would be ignored on save.
+const uploadInvalid = computed(() => permissions.isOwner && uploadValue.value === undefined)
+const colorInvalid = computed(() => hex.value.trim() !== '' && parseRoleColor(hex.value) === null)
 function isDirty(role: Role) {
   return allow.value !== role.permissions
     || (permissions.isOwner && uploadValue.value !== undefined && uploadValue.value !== role.max_upload_mb)
@@ -69,13 +73,15 @@ function fail(e: unknown) {
   toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
 }
 
-// Switching roles with unsaved edits asks first.
+// Leaving the open role with unsaved edits asks first.
+async function mayDiscardEdits(): Promise<boolean> {
+  if (!dirty.value) return true
+  return confirm({ title: t('roles.unsavedTitle'), body: t('roles.unsavedBody'), confirmLabel: t('roles.discard'), cancelLabel: t('roles.keepEditing'), danger: true })
+}
+
 async function choose(id: string) {
   if (id === selectedId.value) return
-  if (dirty.value) {
-    const ok = await confirm({ title: t('roles.unsavedTitle'), body: t('roles.unsavedBody'), confirmLabel: t('roles.discard'), cancelLabel: t('roles.keepEditing'), danger: true })
-    if (!ok) return
-  }
+  if (!(await mayDiscardEdits())) return
   select(id)
 }
 
@@ -106,6 +112,7 @@ function typeColor() {
 }
 
 async function create() {
+  if (busy.value || !(await mayDiscardEdits())) return
   busy.value = true
   try {
     const role = await api('/api/admin/roles', { method: 'POST', json: { name: t('roles.newName') }, decode: decodeRole })
@@ -117,29 +124,6 @@ async function create() {
   } finally {
     busy.value = false
   }
-}
-
-function saveClosed(role: Role | null, isBusy: boolean): boolean {
-  if (!role) return true
-  return isBusy
-}
-
-function customNameMissing(role: Role, trimmed: string): boolean {
-  if (role.is_everyone) return false
-  return trimmed.length === 0
-}
-
-function ownerUploadRejected(owner: boolean, upload: number | null | undefined): boolean {
-  if (!owner) return false
-  return upload === undefined
-}
-
-function uploadPatch(owner: boolean, upload: number | null | undefined, current: number | null) {
-  // Only the Owner may send the upload limit; it is the one field the
-  // server refuses from role managers.
-  if (!owner) return {}
-  if (upload === undefined || upload === current) return {}
-  return { max_upload_mb: upload }
 }
 
 function savedRole(role: Role, trimmed: string, upload: { max_upload_mb?: number | null }) {
@@ -280,6 +264,7 @@ onMounted(async () => {
             :draggable="permissions.outranks(role)"
             :class="['flex items-center gap-1 border-b border-mnema-hairline last:border-b-0', selectedId === role.id ? 'bg-mnema-accent-subtle' : '']"
             @dragstart="dragging = role.id"
+            @dragend="dragging = null"
             @dragover.prevent
             @drop.prevent="onDrop(role.id)"
           >
@@ -360,8 +345,9 @@ onMounted(async () => {
                 :style="{ background: roleColorCss(preset) }"
                 @click="pickColor(preset)"
               ></button>
-              <input v-model="hex" :disabled="readonly" :aria-label="$t('roles.colorCustom')" :placeholder="'#rrggbb'" maxlength="7" class="w-24 rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1 font-mono text-xs text-mnema-text outline-hidden focus:border-mnema-accent disabled:opacity-50" @input="typeColor" />
+              <input v-model="hex" :disabled="readonly" :aria-label="$t('roles.colorCustom')" :aria-invalid="colorInvalid" :placeholder="'#rrggbb'" maxlength="7" class="w-24 rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1 font-mono text-xs text-mnema-text outline-hidden focus:border-mnema-accent disabled:opacity-50" @input="typeColor" />
             </div>
+            <p v-if="colorInvalid" class="text-xs text-mnema-danger" role="alert" data-testid="role-color-invalid">{{ $t('roles.colorInvalid') }}</p>
           </div>
 
           <label class="flex items-center gap-2 text-sm text-mnema-text">
@@ -373,10 +359,11 @@ onMounted(async () => {
         <label v-if="permissions.isOwner && !isManaged" class="block stack-1">
           <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('roles.uploadLimit') }}</span>
           <span class="flex items-center gap-2">
-            <input v-model="uploadMb" type="number" inputmode="numeric" min="1" step="1" :placeholder="$t('roles.uploadInherit')" :aria-label="$t('roles.uploadLimit')" class="w-32 rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1 text-sm tabular-nums text-mnema-text outline-hidden focus:border-mnema-accent" />
+            <input v-model="uploadMb" type="number" inputmode="numeric" min="1" step="1" :placeholder="$t('roles.uploadInherit')" :aria-label="$t('roles.uploadLimit')" :aria-invalid="uploadInvalid" class="w-32 rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1 text-sm tabular-nums text-mnema-text outline-hidden focus:border-mnema-accent" />
             <span class="text-sm text-mnema-tertiary">MB</span>
           </span>
-          <span class="block text-xs text-mnema-tertiary">{{ $t('roles.uploadHint') }}</span>
+          <span v-if="uploadInvalid" class="block text-xs text-mnema-danger" role="alert" data-testid="role-upload-invalid">{{ $t('roles.uploadInvalid') }}</span>
+          <span v-else class="block text-xs text-mnema-tertiary">{{ $t('roles.uploadHint') }}</span>
         </label>
 
         <RolePermissionPicker :key="selected.id" v-model:allow="allow" :locked="lockedBits" :readonly="readonly" />
@@ -391,7 +378,7 @@ onMounted(async () => {
           <span v-else></span>
           <div class="flex flex-wrap items-center justify-end gap-3">
             <button v-if="dirty" type="button" class="btn btn-ghost" data-testid="role-discard" @click="select(selected.id)">{{ $t('roles.discard') }}</button>
-            <button type="button" :disabled="!isDirty(selected) || busy" class="btn btn-primary" @click="save">{{ $t('roles.save') }}</button>
+            <button type="button" :disabled="!isDirty(selected) || busy || uploadInvalid || colorInvalid" class="btn btn-primary" @click="save">{{ $t('roles.save') }}</button>
           </div>
         </div>
       </div>

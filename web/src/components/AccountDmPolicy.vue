@@ -12,14 +12,17 @@ import RadioCard from './RadioCard.vue'
 const toasts = useToastStore()
 const policy = ref<ChatPrivacy['dm_policy']>('everyone')
 const loaded = ref(false)
+const failed = ref(false)
 const busy = ref(false)
 
 async function load() {
   try {
     policy.value = (await api('/api/users/me/privacy', { decode: decodeChatPrivacy })).dm_policy
     loaded.value = true
+    failed.value = false
   } catch (error) {
     console.warn('Failed to read the privacy settings:', error)
+    failed.value = true
   }
 }
 
@@ -42,7 +45,11 @@ onMounted(load)
 </script>
 
 <template>
-  <div v-if="loaded" class="space-y-3" data-testid="dm-policy">
+  <div v-if="failed && !loaded" class="space-y-2" data-testid="dm-policy-failed">
+    <p role="alert" class="text-sm text-mnema-danger">{{ $t('dm.policy.loadFailed') }}</p>
+    <button type="button" class="btn btn-ghost btn-sm" data-testid="dm-policy-retry" @click="load">{{ $t('common.retry') }}</button>
+  </div>
+  <div v-else-if="loaded" class="space-y-3" data-testid="dm-policy">
     <div>
       <h4 id="dm-policy-title" class="settings-subtitle">{{ $t('dm.policy.title') }}</h4>
       <p class="settings-help">{{ $t('dm.policy.intro') }}</p>

@@ -29,6 +29,49 @@ beforeEach(() => {
   apiMock.mockReset()
 })
 
+describe('AdminAuditTab loading', () => {
+  it('shows a failed load with a retry instead of an empty log', async () => {
+    apiMock.mockRejectedValueOnce(new Error('boom'))
+    const w = mount(AdminAuditTab)
+    await flushPromises()
+    expect(w.text()).not.toContain('No entries.')
+    expect(w.get('[data-testid="audit-error"]').text()).toContain('Couldn’t load the audit log.')
+    apiMock.mockResolvedValueOnce(page([entry(1, 'role.update')]))
+    await w.get('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="audit-error"]').exists()).toBe(false)
+    expect(w.text()).toContain('Role edited')
+  })
+
+  it('keeps loading while a page holds only hidden sign-ins', async () => {
+    apiMock.mockResolvedValueOnce(page([entry(3, 'auth.login'), entry(2, 'auth.login')], 2))
+    apiMock.mockResolvedValueOnce(page([entry(1, 'role.update')]))
+    const w = mount(AdminAuditTab)
+    await flushPromises()
+    expect(apiMock).toHaveBeenCalledTimes(2)
+    expect(apiMock.mock.calls[1]![0]).toContain('before=2')
+    expect(w.text()).toContain('Role edited')
+    expect(w.text()).not.toContain('No entries.')
+  })
+
+  it('lets a filter apply replace a load more still in flight', async () => {
+    apiMock.mockResolvedValueOnce(page([entry(5, 'role.update')], 5))
+    const w = mount(AdminAuditTab)
+    await flushPromises()
+    let release: (v: unknown) => void = () => undefined
+    apiMock.mockImplementationOnce(() => new Promise(resolve => { release = resolve }))
+    await w.findAll('button').find(b => b.text() === 'Load more')!.trigger('click')
+    apiMock.mockResolvedValueOnce(page([entry(9, 'channel.create')]))
+    await w.get('[data-testid="audit-filters"]').trigger('submit')
+    await flushPromises()
+    release(page([entry(4, 'role.update')]))
+    await flushPromises()
+    expect(w.find('[data-testid="audit-entry-9"]').exists()).toBe(true)
+    expect(w.find('[data-testid="audit-entry-4"]').exists()).toBe(false)
+    expect(w.find('[data-testid="audit-entry-5"]').exists()).toBe(false)
+  })
+})
+
 describe('AdminAuditTab', () => {
   it('lists entries with translated and raw action names, and expands details', async () => {
     apiMock.mockResolvedValue(page([entry(2, 'role.update'), entry(1, 'future.thing', { actor_id: null, actor_name: '', target_name: '', target_id: '' })]))
@@ -105,7 +148,7 @@ describe('AdminAuditTab', () => {
     expect(apiMock).toHaveBeenLastCalledWith('/api/admin/audit-log?limit=50&actor=u1', { decode: expect.any(Function) })
   })
 
-  it('reports a failed load and ignores a second load while one runs', async () => {
+  it('reports a failed load and lets a new filter apply supersede a load still running', async () => {
     apiMock.mockRejectedValueOnce(new Error('boom'))
     const w = mount(AdminAuditTab)
     await flushPromises()
@@ -114,7 +157,7 @@ describe('AdminAuditTab', () => {
     apiMock.mockReturnValueOnce(new Promise(r => { release = r }))
     await w.find('form').trigger('submit')
     await w.find('form').trigger('submit')
-    expect(apiMock).toHaveBeenCalledTimes(2)
+    expect(apiMock).toHaveBeenCalledTimes(3)
     release(page([]))
     await flushPromises()
   })

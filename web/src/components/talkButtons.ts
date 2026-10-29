@@ -16,3 +16,6 @@ export const overlayButton = 'w-8 h-8 max-md:w-11 max-md:h-11 flex items-center 
 // A control the member may not use here (an audience member's microphone on a
 // Stage): the quiet grey of "not available", never the red of "muted".
 export const blockedButton = 'bg-mnema-surface text-mnema-tertiary opacity-60 cursor-not-allowed'
+
+// Square icon button of the voice bars (user bar, call panel); 44px on phones.
+export const barIconButton = 'flex h-8 w-8 max-md:h-11 max-md:w-11 shrink-0 items-center justify-center rounded-md transition focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent'

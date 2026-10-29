@@ -1,3 +1,5 @@
+import { t } from '../../i18n'
+import { useToastStore } from '../../stores/toast'
 import { gamingMicLease } from '../../lib/gamingMicLease'
 import { createMeteringTrack } from '../../lib/micMetering'
 import { createNoiseSuppressorNode, isNoiseSuppressionSupported } from '../../lib/noiseSuppressor'
@@ -26,7 +28,7 @@ function useBrowserNoiseSuppression(cx: Cx) {
   return mode === 'browser' || (aiModel(mode) !== null && (!isNoiseSuppressionSupported() || aiModel(mode) === st.failedAIModel))
 }
 
-export function getAudioConstraints(cx: Cx) {
+export function getAudioConstraints(cx: Cx, withDevice = true) {
   const { voice } = cx
   const audioConstraints: MediaTrackConstraints & { googEchoCancellation: boolean; googAutoGainControl: boolean; googNoiseSuppression: boolean; googHighpassFilter: boolean } = {
     channelCount: 1,
@@ -39,10 +41,50 @@ export function getAudioConstraints(cx: Cx) {
     googNoiseSuppression: useBrowserNoiseSuppression(cx),
     googHighpassFilter: true
   }
-  if (voice.selectedInputDeviceId) {
+  if (withDevice && voice.selectedInputDeviceId) {
     audioConstraints.deviceId = { exact: voice.selectedInputDeviceId }
   }
   return audioConstraints
+}
+
+function errorName(err: unknown) {
+  return typeof err === 'object' && err !== null && 'name' in err ? err.name : undefined
+}
+
+/** Tells the user why the microphone failed instead of leaving them silent. */
+export function micErrorKey(err: unknown) {
+  switch (errorName(err)) {
+    case 'NotAllowedError':
+    case 'SecurityError':
+      return 'voice.micDenied'
+    case 'NotFoundError':
+    case 'OverconstrainedError':
+      return 'voice.micNotFound'
+    case 'NotReadableError':
+    case 'AbortError':
+      return 'voice.micBusy'
+    default:
+      return 'voice.micFailed'
+  }
+}
+
+/**
+ * Captures the microphone. A saved device that is gone (unplugged headset)
+ * must not silence every later join: the capture falls back to the default
+ * device once, forgets the dead id and says so. Any other failure is thrown.
+ */
+export async function requestMicrophone(cx: Cx): Promise<MediaStream> {
+  const { voice } = cx
+  try {
+    return await navigator.mediaDevices.getUserMedia({ audio: getAudioConstraints(cx) })
+  } catch (err) {
+    const name = errorName(err)
+    if (!voice.selectedInputDeviceId || (name !== 'NotFoundError' && name !== 'OverconstrainedError')) throw err
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: getAudioConstraints(cx, false) })
+    voice.selectedInputDeviceId = ''
+    useToastStore().info(t('voice.micDeviceReset'))
+    return stream
+  }
 }
 
 // Builds the mic-test monitor (what I hear of myself) once, on the given

@@ -68,16 +68,22 @@ const MODELS = {
     load: () => {
       // The package's entry subclasses AudioWorkletNode at import time, so it
       // is only imported once support is confirmed.
-      if (!gtcrnModulePromise) gtcrnModulePromise = import('@sapphi-red/web-noise-suppressor')
+      if (!gtcrnModulePromise) {
+        const loading = import('@sapphi-red/web-noise-suppressor')
+        gtcrnModulePromise = loading
+        // A failed chunk fetch must not be remembered: the next attempt retries.
+        loading.catch(() => { if (gtcrnModulePromise === loading) gtcrnModulePromise = null })
+      }
       return Promise.all([gtcrnModulePromise, fetchOnce(gtcrnWasmUrl)])
     },
     create: (ctx: AudioContext, [{ GtcrnWorkletNode }, wasmBinary]: readonly [typeof import('@sapphi-red/web-noise-suppressor'), ArrayBuffer]) => new GtcrnWorkletNode(ctx, { maxChannels: 1, wasmBinary })
   }
 }
 
-/** Starts downloading a model early (e.g. while the mic permission prompt is open). */
-export function preloadNoiseSuppressor(model: NoiseModel = 'dfn3') {
-  if (isNoiseSuppressionSupported() && MODELS[model]) MODELS[model].load().catch(() => {})
+/** Starts downloading a model early (e.g. while the mic permission prompt is open). Resolves once it is loaded or has failed. */
+export function preloadNoiseSuppressor(model: NoiseModel = 'dfn3'): Promise<void> {
+  if (!isNoiseSuppressionSupported() || !MODELS[model]) return Promise.resolve()
+  return MODELS[model].load().then(() => {}, () => {})
 }
 
 function isContextCompatible(audioContext: AudioContext, model: NoiseModel): boolean {

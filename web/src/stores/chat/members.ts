@@ -184,6 +184,21 @@ export async function openUserProfile(cx: Cx, userOrMessage: ProfileCandidate) {
   }
 }
 
+/**
+ * Shows a saved change on the open profile. It applies only while the profile
+ * of `id` is still the open one: a slow save that finishes after another member's
+ * profile was opened must not overwrite that profile. `removeKeys` are fields a
+ * save cleared, which the answer leaves out and the merge must not keep.
+ */
+export function patchOpenProfile(cx: Cx, id: string | undefined, patch: Partial<User>, removeKeys: (keyof User)[] = []) {
+  const { cs } = cx
+  const open = cs.selectedUserProfile.value
+  if (!open || !id || open.id !== id) return
+  const next: Partial<User> = { ...open, ...patch }
+  for (const key of removeKeys) delete next[key]
+  cs.selectedUserProfile.value = next as typeof open
+}
+
 export function closeUserProfile(cx: Cx) {
   const { cs } = cx
   cs.selectedUserProfile.value = null

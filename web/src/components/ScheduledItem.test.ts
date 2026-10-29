@@ -127,6 +127,19 @@ describe('ScheduledItem', () => {
     expect(w.find('form').exists()).toBe(false)
   })
 
+  it('sends one delete however often the button is pressed', async () => {
+    let finish!: () => void
+    const remove = vi.spyOn(later, 'removeScheduled').mockImplementation(() => new Promise<void>(resolve => { finish = resolve }))
+    const w = mountItem()
+    await w.get('[data-testid=scheduled-delete]').trigger('click')
+    await w.get('[data-testid=scheduled-delete]').trigger('click')
+    expect(remove).toHaveBeenCalledTimes(1)
+    expect(w.get('[data-testid=scheduled-delete]').attributes('disabled')).toBeDefined()
+    finish()
+    await flushPromises()
+    expect(w.get('[data-testid=scheduled-delete]').attributes('disabled')).toBeUndefined()
+  })
+
   it('deletes the entry, and toasts when that fails', async () => {
     const remove = vi.spyOn(later, 'removeScheduled').mockResolvedValue()
     const w = mountItem()

@@ -110,8 +110,12 @@ const name = (user: { display_name?: string | undefined; username?: string | und
           v-for="user in split.audience"
           :key="user.id"
           data-testid="stage-listener"
-          class="relative flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-mnema-hover"
+          tabindex="0"
+          aria-haspopup="menu"
+          :class="['relative flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-mnema-hover', focusRing]"
           @contextmenu.prevent="emit('menu', $event, user)"
+          @keydown.f10.shift.self.prevent="emit('menu', $event, user)"
+          @keydown.context-menu.self.prevent="emit('menu', $event, user)"
         >
           <TalkReactionFloat :reactions="reactionsOf(user.id)" compact />
           <UserAvatar :user="user" size="xs" />

@@ -376,4 +376,4 @@ export class FrameStream {
   }
 }
 
-export { REPLAY_STREAMS, REPLAY_IDLE_MS, REPLAY_RETIRED, ReplayWindow, rememberEpochKey } from './replay'
+export { REPLAY_STREAMS, REPLAY_IDLE_MS, REPLAY_RETIRED, ReplayWindow } from './replay'

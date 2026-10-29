@@ -115,7 +115,7 @@ describe('EventsModal details and editing', () => {
   it('opens the detail view from the title and closes it again', async () => {
     seed([makeEvent({ title: 'Game Night' })])
     wrapper = mount(EventsModal)
-    await wrapper.find('h3').trigger('click')
+    await wrapper.find('h3 button').trigger('click')
     const detail = wrapper.findComponent({ name: 'EventDetailModal' })
     expect(detail.exists()).toBe(true)
     detail.vm.$emit('close')
@@ -182,6 +182,15 @@ describe('EventsModal details and editing', () => {
     await button('Maybe')?.trigger('click')
     await flushPromises()
     expect(useToastStore().toasts.some(t => t.text === 'Full')).toBe(true)
+  })
+
+  it('words a failed RSVP without a server message in the UI language', async () => {
+    const store = seed([makeEvent()])
+    vi.spyOn(store, 'setRSVP').mockRejectedValue('offline')
+    wrapper = mount(EventsModal)
+    await button('Maybe')?.trigger('click')
+    await flushPromises()
+    expect(useToastStore().toasts.some(t => t.text === 'Couldn’t save your response. Try again.')).toBe(true)
   })
 
   it('closes through the dialog', () => {

@@ -10,7 +10,7 @@ import { useDismissable } from '../composables/useDismissable'
 import { emojiImage, emojiToken } from '../lib/customEmoji'
 import { prefersReducedMotion, useEmojiStore } from '../stores/emoji'
 
-const emit = defineEmits<{ pick: [emoji: string]; close: [] }>()
+const emit = defineEmits<{ pick: [emoji: string]; close: [reason?: 'outside' | 'escape'] }>()
 const props = defineProps({
   // Element that opened the picker; clicks on it do not count as "outside".
   trigger: { type: Object as PropType<HTMLElement | null>, default: null },
@@ -82,7 +82,7 @@ async function create() {
 }
 
 // Presses on the picker or on its trigger don't close it; Escape does.
-useDismissable(() => [host.value, props.trigger], () => emit('close'))
+useDismissable(() => [host.value, props.trigger], (_event, reason) => emit('close', reason))
 
 onMounted(() => {
   keepInViewport()
@@ -103,6 +103,8 @@ onBeforeUnmount(() => {
   <div
     ref="host"
     data-testid="emoji-picker"
+    role="dialog"
+    :aria-label="$t('emoji.suggestTitle')"
     class="z-40 overflow-hidden rounded-xl bg-mnema-elevated shadow-popover pop-in"
   >
     <div v-if="loading" class="flex h-[377px] w-[340px] max-w-[calc(100vw-16px)] items-center justify-center text-sm text-mnema-tertiary">

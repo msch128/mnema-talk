@@ -67,7 +67,7 @@ export function isoDay(offsetDays = 0): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-const DAY_WORDS: Record<string, number> = { today: 0, heute: 0, yesterday: -1, gestern: -1 }
+const DAY_WORDS: ReadonlyMap<string, number> = new Map([['today', 0], ['heute', 0], ['yesterday', -1], ['gestern', -1]])
 
 function isDateKey(key: string): boolean {
   return key === 'before' || key === 'after' || key === 'during'
@@ -76,7 +76,7 @@ function isDateKey(key: string): boolean {
 /** The value as written after "key:", with day words and word values normalized. */
 function readValue(key: FilterKey, value: string): string {
   if (isWordKey(key)) return value.toLowerCase()
-  const offset = isDateKey(key) ? DAY_WORDS[value.toLowerCase()] : undefined
+  const offset = isDateKey(key) ? DAY_WORDS.get(value.toLowerCase()) : undefined
   return offset === undefined ? value : isoDay(offset)
 }
 

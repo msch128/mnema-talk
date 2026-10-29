@@ -14,6 +14,7 @@ export function useMentionsInbox() {
   const loading = ref(false)
   const loadingMore = ref(false)
   const failed = ref(false)
+  const loadMoreFailed = ref(false)
   let seq = 0
 
   async function fetchPage(before?: string) {
@@ -27,6 +28,7 @@ export function useMentionsInbox() {
     const mine = ++seq
     loading.value = true
     failed.value = false
+    loadMoreFailed.value = false
     try {
       const page = await fetchPage()
       if (mine !== seq) return
@@ -49,6 +51,7 @@ export function useMentionsInbox() {
     if (!last || loadingMore.value || !hasMore.value) return
     const mine = seq
     loadingMore.value = true
+    loadMoreFailed.value = false
     try {
       const page = await fetchPage(last.id)
       if (mine !== seq) return
@@ -56,10 +59,11 @@ export function useMentionsInbox() {
       hasMore.value = page.has_more
     } catch (e) {
       console.warn('Failed to load more mentions:', e)
+      if (mine === seq) loadMoreFailed.value = true
     } finally {
       loadingMore.value = false
     }
   }
 
-  return { items, hasMore, loading, loadingMore, failed, load, loadMore }
+  return { items, hasMore, loading, loadingMore, failed, loadMoreFailed, load, loadMore }
 }

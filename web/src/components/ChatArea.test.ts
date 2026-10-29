@@ -102,13 +102,13 @@ describe('ChatArea typing indicator', () => {
     const chat = setup()
     chat.typingByChannel = { ch1: [{ user_id: 'u2', display_name: 'Anna', username: 'anna' }] }
     await nextTick()
-    expect(w.find<HTMLElement>('[role="status"]').text()).toBe('Anna tippt …')
+    expect(w.find<HTMLElement>('[data-testid="typing-indicator"]').text()).toBe('Anna tippt …')
     chat.typingByChannel = { ch1: [{ user_id: 'u2', display_name: 'Anna', username: 'anna' }, { user_id: 'u3', username: 'ben', display_name: '' }] }
     await nextTick()
-    expect(w.find<HTMLElement>('[role="status"]').text()).toBe('Anna und ben tippen …')
+    expect(w.find<HTMLElement>('[data-testid="typing-indicator"]').text()).toBe('Anna und ben tippen …')
     chat.typingByChannel = { ch1: [{ user_id: 'u2', username: 'a', display_name: '' }, { user_id: 'u3', username: 'b', display_name: '' }, { user_id: 'u4', username: 'c', display_name: '' }] }
     await nextTick()
-    expect(w.find<HTMLElement>('[role="status"]').text()).toBe('Mehrere Personen tippen …')
+    expect(w.find<HTMLElement>('[data-testid="typing-indicator"]').text()).toBe('Mehrere Personen tippen …')
   })
 
   it('announces typing through the composer, but not for empty text', async () => {
@@ -709,7 +709,7 @@ describe('ChatArea history scrolling', () => {
 describe('ChatArea Escape guards', () => {
   it('marks read for unread counts or mentions and skips already read/no channel', async () => {
     const chat = setup()
-    const read = vi.spyOn(chat, 'markChannelRead').mockResolvedValue(undefined)
+    const read = vi.spyOn(chat, 'markChannelRead').mockResolvedValue(true)
     const escape = () => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
     escape()
     expect(read).not.toHaveBeenCalled()
@@ -727,7 +727,7 @@ describe('ChatArea Escape guards', () => {
   it('ignores Escape used by other controls, dialogs, lightboxes, editing and reply targets', async () => {
     const chat = setup()
     chat.readStates.ch1 = readStateFixture({ channel_id: 'ch1', unread_count: 2 })
-    const read = vi.spyOn(chat, 'markChannelRead').mockResolvedValue(undefined)
+    const read = vi.spyOn(chat, 'markChannelRead').mockResolvedValue(true)
     const other = document.createElement('input')
     document.body.append(other)
     other.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))

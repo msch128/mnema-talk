@@ -36,6 +36,7 @@ export function closeMediaRoom() {
 let unprotectedAnnounced = false
 let rekeyAnnounced = false
 let outdatedAnnounced = false
+let connectionAnnounced = false
 let releaseUnprotected: () => void = () => {}
 
 /** What to stop when the call turns out to carry media unprotected. */
@@ -53,6 +54,7 @@ export function resetMediaAnnouncements() {
   unprotectedAnnounced = false
   rekeyAnnounced = false
   outdatedAnnounced = false
+  connectionAnnounced = false
 }
 
 // The group dropped this member without being asked: whoever relays the call
@@ -78,4 +80,24 @@ export function announceMediaUnprotected() {
   unprotectedAnnounced = true
   releaseUnprotected()
   useToastStore().error(t('voice.mediaUnprotected'))
+}
+
+// How long the "no media connection" notice stays: it explains something the
+// member cannot fix alone, so it outlives the usual five seconds.
+const CONNECTION_NOTICE_MS = 20_000
+
+/** True once this call has told the member that no media connection came up. */
+export function mediaConnectionAnnounced() {
+  return connectionAnnounced
+}
+
+/**
+ * The browser could not reach the voice server (ICE failed): once per call,
+ * say that the network is the likely cause. Without a TURN relay on offer the
+ * server's operator is the one who can help, so the notice says so.
+ */
+export function announceNoMediaConnection(relayOffered: boolean) {
+  if (connectionAnnounced) return
+  connectionAnnounced = true
+  useToastStore().push({ type: 'info', text: t(relayOffered ? 'voice.noMediaConnectionRelay' : 'voice.noMediaConnection'), duration: CONNECTION_NOTICE_MS })
 }

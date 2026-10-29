@@ -128,7 +128,7 @@ describe('ChatArea boundary and teardown behavior', () => {
   it('handles global Escape from a non-element event target and marks the channel read', () => {
     const chat = seed()
     chat.readStates[channelId] = readStateFixture({ unread_count: 1 })
-    const markRead = vi.spyOn(chat, 'markChannelRead').mockResolvedValue(undefined)
+    const markRead = vi.spyOn(chat, 'markChannelRead').mockResolvedValue(true)
     render()
     const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })
     window.dispatchEvent(event)

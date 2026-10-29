@@ -2,10 +2,10 @@ import { mediaCall } from '../../lib/media/api'
 import { SOURCE_CAMERA, SOURCE_MIC, SOURCE_SCREEN, SOURCE_SCREEN_AUDIO } from '../../lib/media/frame'
 import { canSendH264 } from './h264Support'
 import { publishMids, restrictVideoCodecs, tuneScreenLines } from './sdp'
-import { iceServers } from './iceServers'
+import { iceServers, relayOffered } from './iceServers'
 import { attachRemoteAudio, releaseRemoteAudio } from './remoteAudio'
 import { CAMERA_STREAM_PREFIX, SCREEN_AUDIO_STREAM_PREFIX, publisherId } from './streamIds'
-import { announceMediaUnprotected } from './mediaRoom'
+import { announceMediaUnprotected, announceNoMediaConnection } from './mediaRoom'
 import type { Cx } from './state'
 import { stopCaptureWatch, syncLayers } from './layers'
 import { bindPublishSenders, tuneBoundSenders } from './senders'
@@ -84,6 +84,7 @@ function wireIceDiagnostics(cx: Cx, conn: RTCPeerConnection) {
   conn.oniceconnectionstatechange = () => {
     const state = st.pc?.iceConnectionState
     if (state && REPORTABLE_ICE_STATES.has(state)) reportDiag('ice')
+    if (state === 'failed' && st.pc === conn) announceNoMediaConnection(relayOffered())
   }
 }
 

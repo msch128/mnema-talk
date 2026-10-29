@@ -24,7 +24,7 @@ import { useRovingMessages } from '../composables/useRovingMessages'
 import { useFirstUnreadJump } from '../composables/useFirstUnreadJump'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
 import { useDraftSlot } from '../composables/useDraftSlot'
-import { channelDraftKey, type DraftReply } from '../lib/drafts'
+import { channelDraftKey, setDraft, type DraftReply } from '../lib/drafts'
 import { useEscapeMarksRead } from '../composables/useComposerKeys'
 import { continuationIds } from '../lib/messageGrouping'
 import { typingLine } from '../lib/chatLogic'
@@ -90,8 +90,6 @@ const { stopId } = useRovingMessages(messageContainer, () => (chatStore.messages
 const { dividerSince, dividerBeforeId, dividerLabel, markAllRead } = useUnreadDivider()
 const { showJumpToUnread, jumpToFirstUnread } = useFirstUnreadJump({ container: messageContainer, since: dividerSince, dividerBeforeId })
 
-// ---- Typing indicator ----
-
 const typingText = computed(() => {
   const line = typingLine(chatStore.typingByChannel[chatStore.activeChannel?.id ?? ''])
   return line ? t(line.key, line.params) : ''
@@ -102,12 +100,6 @@ watch(() => chatStore.activeChannel?.id, () => {
   actions.cancelEdit()
   nextTick(() => composer.value?.focus())
 })
-
-async function handleJumpToPresent() {
-  await chatStore.jumpToLatest()
-}
-
-// ---- Replies ----
 
 function startReply(msg: Message) {
   replyingTo.value = msg
@@ -184,16 +176,26 @@ function isSendBlocked(text: string): boolean {
   return isUploading.value || isSending.value
 }
 
+// The composer refs belong to whichever channel is open now, so a send that
+// resolves after a channel switch must not touch them.
+const stillIn = (channelId: string | undefined) => chatStore.activeChannel?.id === channelId
+
 async function handleSend() {
   const text = inputMessage.value.trim()
   if (isSendBlocked(text)) return
 
   isSending.value = true
+  const sentIn = chatStore.activeChannel?.id
   try {
     await chatStore.sendMessage(text, null, replyingTo.value?.id || null)
-    inputMessage.value = ''
-    replyingTo.value = null
-    await revealOwnMessage()
+    if (stillIn(sentIn)) {
+      inputMessage.value = ''
+      replyingTo.value = null
+      await revealOwnMessage()
+    } else if (authStore.user?.id && sentIn) {
+      // The switch already saved the sent text as the old channel's draft; drop it.
+      setDraft(authStore.user.id, channelDraftKey(sentIn), null)
+    }
   } catch (err) {
     toasts.error(dmChat.sendError(err, t('chat.sendFailed')))
   } finally {
@@ -203,8 +205,10 @@ async function handleSend() {
 
 async function handleFileUpload(e: Event) {
   const replyId = replyingTo.value?.id || null
+  const uploadedIn = chatStore.activeChannel?.id
   const ok = await actions.upload(e.target as HTMLInputElement, (file: File) => chatStore.uploadMedia(file, '', null, replyId))
   if (!ok) return
+  if (!stillIn(uploadedIn)) return
   replyingTo.value = null
   await revealOwnMessage()
 }
@@ -337,7 +341,7 @@ const groupedIds = computed(() => {
       v-if="chatStore.hasMoreAfter && chatStore.messages.length"
       type="button"
       class="absolute left-4 right-4 bottom-1 h-8 px-3 flex items-center justify-between gap-2 rounded-lg bg-mnema-band text-mnema-mint text-sm font-medium shadow-lg hover:brightness-110 transition z-20"
-      @click="handleJumpToPresent"
+      @click="chatStore.jumpToLatest()"
     >
       <span class="truncate">
         {{ chatStore.missedLiveCount > 0 ? $t('chat.newMessages') : $t('chat.viewingOlder') }}

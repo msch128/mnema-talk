@@ -55,6 +55,16 @@ describe('native gaming surfaces', () => {
     await w.get('textarea').setValue(' Other.exe\n\nSecond.exe '); await w.get('form').trigger('submit'); await flushPromises()
     expect(ipc.invoke).toHaveBeenCalledWith('desktop_gaming_settings', { settings: { ...snapshot.settings, overlay: { ...chord(75), control: true }, games: ['Other.exe', 'Second.exe'] } })
   })
+  it('lets Tab and Escape leave a chord field instead of trapping focus', async () => {
+    const w = await open(true); await w.findAll('button')[0]!.trigger('click')
+    const input = w.findAll<HTMLInputElement>('input[readonly]')[0]!
+    for (const code of ['Tab', 'Escape']) {
+      const event = new KeyboardEvent('keydown', { code, key: code, cancelable: true, bubbles: true })
+      input.element.dispatchEvent(event)
+      expect(event.defaultPrevented).toBe(false)
+    }
+    expect(input.element.value).toBe('Alt+M')
+  })
   it('adds the app that was just in front only after the person confirms its name', async () => {
     const w = await open(true); await w.findAll('button')[0]!.trigger('click')
     ipc.invoke.mockImplementation((command: string) => Promise.resolve(command === 'desktop_gaming_snapshot' ? structuredClone(snapshot) : command === 'desktop_gaming_candidate' ? 'MyGame.exe' : command === 'desktop_gaming_add_game' ? ['Wow.exe', 'MyGame.exe'] : undefined))

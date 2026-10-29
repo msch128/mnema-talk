@@ -5,6 +5,7 @@ import type { Message } from '../types/domain'
 import type { ThreadRoot } from '../stores/chat'
 import { useChatStore } from '../stores/chat'
 import { dateTime } from '../lib/time'
+import { isRemovedMessage, shownName } from '../lib/deletedUser'
 import { locale } from '../i18n'
 import type { useMessageActions } from '../composables/useMessageActions'
 import UserAvatar from './UserAvatar.vue'
@@ -87,7 +88,7 @@ const formatDate = (dateStr?: string) => dateTime(dateStr, locale.value)
           @click="chatStore.openUserProfile(root)"
           class="font-semibold text-message text-mnema-text hover:text-mnema-accent transition-colors cursor-pointer truncate block max-w-full text-left focus-visible:text-mnema-accent"
         >
-          {{ root.display_name || root.username }}
+          {{ shownName(root) }}
         </button>
         <BotBadge v-if="root.is_bot" :webhook="root.is_webhook === true" />
         <span class="text-xs text-mnema-tertiary font-mono">
@@ -97,6 +98,7 @@ const formatDate = (dateStr?: string) => dateTime(dateStr, locale.value)
     </div>
 
     <MarkdownContent v-if="root.content" :content="root.content" :mention-roles="root.mention_roles ?? []" />
+    <p v-else-if="isRemovedMessage(root)" data-testid="message-removed" class="text-sm italic text-mnema-tertiary">{{ $t('chat.messageRemoved') }}</p>
     <MessageEmbeds :embeds="root.embeds ?? []" />
     <!-- A poll that started the thread keeps its options, votes and time left here -->
     <PollCard v-if="root.poll" :msg="root as Message" />

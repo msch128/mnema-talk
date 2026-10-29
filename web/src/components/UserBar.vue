@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { barIconButton } from './talkButtons'
 import type { User } from '../types/domain'
 import { ref, computed } from 'vue'
 import { Mic, MicOff, Headphones, HeadphoneOff, MoreHorizontal } from '@lucide/vue'
@@ -44,7 +45,7 @@ function openOwnProfile() {
   if (authStore.user) chatStore.openUserProfile(authStore.user)
 }
 
-const ib = 'flex h-8 w-8 max-md:h-11 max-md:w-11 shrink-0 items-center justify-center rounded-md transition focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent'
+const ib = barIconButton
 function ibTone(active: boolean) {
   return active
     ? 'bg-mnema-danger/12 text-mnema-danger'

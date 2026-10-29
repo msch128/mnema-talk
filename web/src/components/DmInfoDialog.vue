@@ -17,6 +17,7 @@ import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 import UserAvatar from './UserAvatar.vue'
 import DmCreateDialog from './DmCreateDialog.vue'
+import { shownName } from '../lib/deletedUser'
 
 const props = defineProps({
   dm: { type: Object as PropType<ChatDirectMessage>, required: true }
@@ -70,7 +71,7 @@ function openProfile(member: ChatDirectMessage['members'][number]) {
               @click="openProfile(member)"
             >
               <UserAvatar :user="member" size="sm" />
-              <span class="min-w-0 flex-1 truncate text-sm font-medium text-mnema-text">{{ member.display_name || member.username }}</span>
+              <span class="min-w-0 flex-1 truncate text-sm font-medium text-mnema-text">{{ shownName(member) }}</span>
               <span v-if="member.id === authStore.user?.id" class="text-xs text-mnema-tertiary">{{ $t('dm.you') }}</span>
             </button>
           </li>

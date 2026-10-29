@@ -55,7 +55,11 @@ describe('forum tags api', () => {
     const [path, opts] = lastCall()
     expect(path).toBe(`/api/channels/${encoded}/tags/t%2F1`)
     expect(opts.method).toBe('PATCH')
-    expect(opts.json).toEqual({ name: 'new', emoji: undefined })
+    // An empty emoji clears it: it must reach the server as "", not be dropped as "unchanged".
+    expect(opts.json).toEqual({ name: 'new', emoji: '' })
+    expect(JSON.stringify(opts.json)).toContain('"emoji":""')
+    await updateForumTag(channelId, 't1', 'new')
+    expect(JSON.stringify(lastCall()[1].json)).not.toContain('emoji')
     await updateForumTag(channelId, 't1', 'new', '!')
     expect(lastCall()[1].json).toEqual({ name: 'new', emoji: '!' })
   })

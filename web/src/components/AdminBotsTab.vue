@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Admin dashboard: bots. A list on the left, the selected bot's settings on
 // the right. The server checks every rule; this only offers what fits.
+import { useReloadOnActivate } from '../composables/useReloadOnActivate'
 import { ref, computed, onMounted } from 'vue'
 import { Bot, Plus } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
@@ -66,6 +67,7 @@ function onDeleted(id: string) {
   if (selectedId.value === id) selectedId.value = null
 }
 
+useReloadOnActivate(load)
 onMounted(async () => {
   await Promise.all([load(), permissions.loadRoles()])
 })

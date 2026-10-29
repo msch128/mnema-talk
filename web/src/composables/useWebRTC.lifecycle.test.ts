@@ -117,6 +117,24 @@ describe('session restoration and playback permission', () => {
   })
 })
 
+describe('boosted playback on a suspended context', () => {
+  it('asks for a click while the amplified voices cannot start, and drops the banner once they can', async () => {
+    const { pc, voice } = await joined()
+    let allow: (() => void) | undefined
+    vi.stubGlobal('AudioContext', class extends FakeAudioContext {
+      constructor() { super(); this.state = 'suspended' }
+      resume() { return new Promise<void>(resolve => { allow = () => { this.state = 'running'; resolve() } }) }
+    })
+    voice.setUserVolume('alice', 150)
+    present(pc.ontrack)({ track: fakeTrack(), streams: [remoteStreamFor('alice')] })
+    expect(voice.audioBlocked).toBe(true)
+    present(allow)()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(voice.audioBlocked).toBe(false)
+  })
+})
+
 describe('sender failure cleanup', () => {
   it('keeps media controls responsive when negotiated sender replacement fails', async () => {
     const { rtc, voice, pc } = await joined()

@@ -150,6 +150,23 @@ describe('router browser/environment edges', () => {
     expect(currentRoute.value).toEqual({ view: 'voice', channelRef: 'second', watching: true })
     expect(resolveRoute({ view: 'root' })).toBeNull()
   })
+  it('never keeps or follows a protocol-relative path', () => {
+    window.history.replaceState(null, '', '/')
+    sessionStorage.setItem('mnema_pending_route', '//evil.example/x')
+    expect(consumePendingRoute()).toBeNull()
+    expect(() => navigate('//evil.example/x', { replace: true })).not.toThrow()
+    expect(window.location.pathname).toBe('/')
+    expect(currentRoute.value).toEqual({ view: 'root' })
+  })
+  it('survives blocked session storage', () => {
+    window.history.replaceState(null, '', '/c/first')
+    const blocked = () => { throw new DOMException('blocked') }
+    vi.stubGlobal('sessionStorage', { setItem: blocked, getItem: blocked, removeItem: blocked })
+    try {
+      expect(() => savePendingRoute()).not.toThrow()
+      expect(consumePendingRoute()).toBeNull()
+    } finally { vi.unstubAllGlobals() }
+  })
   it('has safe no-browser defaults and skips history/storage/listener access', async () => {
     vi.resetModules()
     vi.stubGlobal('window', undefined)

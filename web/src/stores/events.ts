@@ -83,16 +83,21 @@ export const useEventsStore = defineStore('communityEvents', () => {
     past.replace(item)
   }
 
+  // Bumped by every load() and by reset(): only the latest answer is applied.
+  let loadSeq = 0
+
   async function load() {
     if (!enabled.value) return
+    const mine = ++loadSeq
     loading.value = true
     error.value = null
     try {
-      events.value = await apiFetchEvents()
+      const list = await apiFetchEvents()
+      if (mine === loadSeq) events.value = list
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to load events'
+      if (mine === loadSeq) error.value = err instanceof Error ? err.message : 'Failed to load events'
     } finally {
-      loading.value = false
+      if (mine === loadSeq) loading.value = false
     }
   }
 
@@ -125,6 +130,7 @@ export const useEventsStore = defineStore('communityEvents', () => {
       useToastStore().info(t('events.reminderToast', { title: p.title }))
     },
     reset: () => {
+      ++loadSeq
       events.value = []
       past.reset()
       loading.value = false

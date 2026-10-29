@@ -6,7 +6,8 @@ import BotBadge from './BotBadge.vue'
 import MessageRow from './MessageRow.vue'
 import { messageFixture } from '../test-fixtures.fixture'
 import type { ChatEmbed } from '../types/rest'
-import { t } from '../i18n'
+import { setLocale, t } from '../i18n'
+import { dateTime } from '../lib/time'
 
 enableAutoUnmount(afterEach)
 beforeEach(() => setActivePinia(createPinia()))
@@ -23,6 +24,19 @@ const full: ChatEmbed = {
   footer: { text: 'ci' },
   timestamp: '2026-01-02T03:04:05Z'
 }
+
+describe('MessageEmbeds locale', () => {
+  it('writes the timestamp in the app language, not the browser language', () => {
+    setLocale('de')
+    try {
+      const w = mount(MessageEmbeds, { props: { embeds: [{ description: 'd', timestamp: full.timestamp! }] } })
+      expect(w.get('time').text()).toBe(dateTime(full.timestamp, 'de'))
+      expect(w.get('time').text()).not.toBe(dateTime(full.timestamp, 'en'))
+    } finally {
+      setLocale('en')
+    }
+  })
+})
 
 describe('MessageEmbeds', () => {
   it('renders nothing without embeds', () => {

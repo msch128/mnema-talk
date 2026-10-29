@@ -20,9 +20,10 @@ export async function createForumTag(channelId: string, name: string, emoji?: st
 }
 
 export async function updateForumTag(channelId: string, tagId: string, name?: string, emoji?: string): Promise<ForumTag> {
+  // emoji: undefined keeps it, '' clears it (the server reads an omitted field as unchanged).
   return api(`/api/channels/${encodeURIComponent(channelId)}/tags/${encodeURIComponent(tagId)}`, {
     method: 'PATCH',
-    json: { name, emoji: emoji || undefined },
+    json: { name, emoji },
     decode: decodeForumTag
   })
 }
@@ -37,6 +38,8 @@ export interface FetchForumPostsOptions {
   sort?: 'activity' | 'newest' | undefined
   tagId?: string | undefined
   before?: string | undefined
+  // With the activity sort: the last_activity_at the client saw for `before`.
+  beforeActivity?: string | undefined
   limit?: number | undefined
 }
 
@@ -45,6 +48,7 @@ export async function fetchForumPosts(channelId: string, options: FetchForumPost
   if (options.sort) params.set('sort', options.sort)
   if (options.tagId) params.set('tag_id', options.tagId)
   if (options.before) params.set('before', options.before)
+  if (options.beforeActivity) params.set('before_activity', options.beforeActivity)
   if (options.limit) params.set('limit', String(options.limit))
 
   const qs = params.toString()

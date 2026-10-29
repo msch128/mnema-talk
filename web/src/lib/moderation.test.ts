@@ -32,6 +32,9 @@ describe('moderation helpers', () => {
     expect(formatRemaining(12 * 60_000 + 5_000)).toBe('12:05')
     expect(formatRemaining((3600 + 2 * 60 + 9) * 1000)).toBe('1:02:09')
     expect(formatRemaining((3 * 86400 + 4 * 3600 + 5) * 1000)).toBe('3 d 4 h')
+    setLocale('de')
+    expect(formatRemaining((3 * 86400 + 4 * 3600 + 5) * 1000)).toBe('3 T 4 Std.')
+    setLocale('en')
   })
 
   it('words the notice a member reads', () => {

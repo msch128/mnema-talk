@@ -48,7 +48,13 @@ function handleInputModeChange(mode: InputMode) {
 
 function handleKeyRecord(e: KeyboardEvent) {
   if (!isRecordingPttKey.value) return
+  // Tab keeps moving focus (the blur ends recording) and a lone modifier is not a key to bind.
+  if (e.key === 'Tab' || ['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return
   e.preventDefault()
+  if (e.key === 'Escape') {
+    isRecordingPttKey.value = false
+    return
+  }
   voiceStore.pttKey = e.code || e.key
   isRecordingPttKey.value = false
   voiceStore.saveSettings()
@@ -145,6 +151,7 @@ async function handleDeviceChange() {
               :class="['btn', isRecordingPttKey ? 'btn-primary animate-pulse' : 'btn-secondary font-mono']"
               @click="isRecordingPttKey = true"
               @keydown="handleKeyRecord"
+              @blur="isRecordingPttKey = false"
             >
               {{ isRecordingPttKey ? $t('audio.pressKey') : voiceStore.pttKey }}
             </button>
