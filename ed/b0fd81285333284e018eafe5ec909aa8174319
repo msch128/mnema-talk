@@ -1,0 +1,77 @@
+api/openapi.json
+  s_06fcde5dbef956::t_90f15e0d48b374 955-976,13980-14095
+doc/moderation.md
+  s_06fcde5dbef956::t_e29719e7e4939e 410
+internal/audit/classes_test.go
+  s_06fcde5dbef956::t_8f5122d12f34df 20
+internal/audit/routes.go
+  s_06fcde5dbef956::t_9933acbe95c0da 54
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_8c0a4f886abf14 606-618
+internal/auth/invite_update.go
+  s_6555261ae6c18c::t_2216fd36ac846b 1-126
+internal/auth/invite_update_test.go
+  s_4af89352f3466f::t_67c345e547b31a 1-59
+internal/auth/invites.go
+  s_6555261ae6c18c::t_75fa58c52965bf 169,230-266
+internal/server/invite_update_integration_test.go
+  s_df753646bf5237::t_d9bcc54e31d70e 1-198
+web/src/components/AdminInvitesTab.test.ts
+  s_6555261ae6c18c::t_c36261ef6085cd 206-220
+web/src/components/AdminInvitesTab.vue
+  s_6555261ae6c18c::t_39ef5d6d64b46c 4,13,22,74-77,171-180,196
+web/src/components/EditInviteDialog.test.ts
+  s_6555261ae6c18c::t_b1eb42f6e22af5 1-144
+web/src/components/EditInviteDialog.vue
+  s_5ef897988b8153::t_e6b593005159c6 1-140
+web/src/types/domain.ts
+  s_6555261ae6c18c::t_a942b2678bd092 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "edb0fd81285333284e018eafe5ec909aa8174319",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4af89352f3466f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aweb-composer-b8b0463e97030fe4",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5ef897988b8153": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aweb-mic-notice-dba4feb6d02e33fd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6555261ae6c18c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-invite-edit-c4c8580fe616b9e7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_df753646bf5237": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aadmin-status-i18n-fdc55cfd0397c5cc",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
