@@ -1,0 +1,39 @@
+scripts/backup-drill.sh
+  s_3043ef48954715::t_7d21fc166d588c 7,18-19,30-32,61-62,73
+scripts/free-port.sh
+  s_3043ef48954715::t_270fa1868b2879 1-43
+scripts/fresh-install-check.sh
+  s_3043ef48954715::t_e0eeaf718ffa77 11,16-19,60-61
+scripts/postgres-upgrade-drill.sh
+  s_3043ef48954715::t_5698377fd1a10a 6,10-14,68,111-112
+scripts/screenshots/run.sh
+  s_5aa38e778cf1ac::t_7c4b5914989d66 12-16,49
+scripts/smoke-image.sh
+  s_3043ef48954715::t_c551de13350306 9,15-18,47-48,59
+scripts/upgrade-drill.sh
+  s_3043ef48954715::t_17a9da912f61b4 18,28-29,48-50,91-92,102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9b62d34a53f783a5318ad8ba473c9940cbd2c739",
+  "prompts": {},
+  "sessions": {
+    "s_3043ef48954715": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-drill-ports-b192b464b6201a17",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5aa38e778cf1ac": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-builtin-turn-725a019b5a1e641a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
