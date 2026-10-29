@@ -1,0 +1,65 @@
+internal/mention/mention.go
+  s_06fcde5dbef956::t_14bb93e75840d5 14,19-21
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_14bb93e75840d5 110,206
+internal/auth/service_accounts.go
+  s_06fcde5dbef956::t_14bb93e75840d5 19,69-73,75,78,82,89,91
+internal/chat/search_fuzz_test.go
+  s_06fcde5dbef956::t_14bb93e75840d5 134
+e2e/tests/slash-builtins.spec.ts
+  s_06fcde5dbef956::t_14bb93e75840d5 12,83
+web/src/components/LoginModal.username.test.ts
+  s_06fcde5dbef956::t_14bb93e75840d5 1-39
+web/src/lib/username.test.ts
+  s_06fcde5dbef956::t_14bb93e75840d5 1-13
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_14bb93e75840d5 110,206
+internal/chat/mentions_test.go
+  s_06fcde5dbef956::t_14bb93e75840d5 58
+  s_06fcde5dbef956::t_4960630199a3d4 63
+api/openapi.json
+  s_06fcde5dbef956::t_14bb93e75840d5 655
+internal/server/username_rules_integration_test.go
+  s_06fcde5dbef956::t_14bb93e75840d5 1-68
+internal/auth/paths_integration_test.go
+  s_06fcde5dbef956::t_14bb93e75840d5 492,530
+internal/auth/admin_seed.go
+  s_06fcde5dbef956::t_14bb93e75840d5 19
+web/src/components/LoginModal.vue
+  s_06fcde5dbef956::t_14bb93e75840d5 16,92,96,178-181,185
+internal/auth/service.go
+  s_06fcde5dbef956::t_14bb93e75840d5 35-36,39-43,196-203,205-207,209-212,219-226
+  s_06fcde5dbef956::t_7bd456dd7ae7d4 227
+internal/auth/token_test.go
+  s_06fcde5dbef956::t_14bb93e75840d5 78,83,90-101
+  s_06fcde5dbef956::t_ed430d78fd4b1b 102-105
+internal/auth/handler_account.go
+  s_06fcde5dbef956::t_14bb93e75840d5 117-118
+web/src/lib/username.ts
+  s_06fcde5dbef956::t_14bb93e75840d5 1-8
+web/src/lib/markdown/mentions.ts
+  s_06fcde5dbef956::t_14bb93e75840d5 16,23,30
+internal/automod/compile_test.go
+  s_06fcde5dbef956::t_14bb93e75840d5 101
+internal/mention/mention_test.go
+  s_06fcde5dbef956::t_14bb93e75840d5 10,16-19
+  s_06fcde5dbef956::t_568b871064c739 20-23
+internal/server/moderation_integration_test.go
+  s_06fcde5dbef956::t_14bb93e75840d5 485,498
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e6c02cc962ef41e3585ef50554e6263bc346c587",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
