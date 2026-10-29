@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/google/uuid"
@@ -92,12 +93,12 @@ func iceFor(t *testing.T, cfg *config.Config, relay *turnrelay.Server, member uu
 }
 
 func TestICEConfigOffersTheBuiltinRelayToMembersWhoMayJoinVoice(t *testing.T) {
-	allowed := map[uuid.UUID]bool{}
-	relay := startTestRelay(t, func(id uuid.UUID) bool { return allowed[id] })
+	var allowed sync.Map // read by the relay's background re-check
+	relay := startTestRelay(t, func(id uuid.UUID) bool { _, ok := allowed.Load(id); return ok })
 	cfg := &config.Config{PublicURL: "https://talk.example.test", WebRTCBuiltinTURN: config.BuiltinTURNAuto, WebRTCTURNSecret: "external-secret-0123456789"}
 
 	member, outsider := uuid.New(), uuid.New()
-	allowed[member] = true
+	allowed.Store(member, true)
 
 	got := iceFor(t, cfg, relay, member)
 	if len(got) != 1 {
