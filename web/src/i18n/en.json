@@ -1987,6 +1987,7 @@
       "dns": "The server address could not be resolved. Check the address and your network.",
       "natHint": "If the server runs in your own network, your router may not support reaching it through its public address (NAT loopback/hairpin). Try the local address or another network.",
       "certificate": "This computer does not trust the server’s HTTPS certificate. Check the system clock, and that no antivirus or network filter intercepts HTTPS.",
+      "tlsVersion": "The server offers no TLS version this client can use. The client speaks TLS 1.2 and 1.3; ask the administrator to enable one of them.",
       "unreachable": "The server could not be reached over trusted HTTPS.",
       "unavailable": "The server is unavailable or redirects to a different address.",
       "checkFailed": "The server check failed.",

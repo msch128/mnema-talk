@@ -1987,6 +1987,7 @@
       "dns": "Die Serveradresse konnte nicht aufgelöst werden. Prüfe die Adresse und dein Netzwerk.",
       "natHint": "Läuft der Server in deinem eigenen Netzwerk, unterstützt dein Router den Zugriff über die öffentliche Adresse eventuell nicht (NAT-Loopback/Hairpin). Probiere die lokale Adresse oder ein anderes Netzwerk.",
       "certificate": "Dieser Computer vertraut dem HTTPS-Zertifikat des Servers nicht. Prüfe die Systemuhr und ob ein Virenscanner oder Netzwerkfilter HTTPS abfängt.",
+      "tlsVersion": "Der Server bietet keine TLS-Version an, die dieser Client nutzen kann. Der Client spricht TLS 1.2 und 1.3; bitte die Administration, eine davon zu aktivieren.",
       "unreachable": "Der Server war über vertrauenswürdiges HTTPS nicht erreichbar.",
       "unavailable": "Der Server ist nicht verfügbar oder leitet auf eine andere Adresse um.",
       "checkFailed": "Die Prüfung des Servers ist fehlgeschlagen.",
