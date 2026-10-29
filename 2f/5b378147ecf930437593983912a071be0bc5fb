@@ -1,0 +1,21 @@
+.github/workflows/dbg-stage.yml
+  s_9f4436af8e4f6c::t_9e3ea438ae8b8c 91-116
+e2e/tests/stage-switch.spec.ts
+  s_9f4436af8e4f6c::t_4175c86663a767 13-18,49-50,52,56,62,120,131,140,147,152,185,197,200,205,212
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2f5b378147ecf930437593983912a071be0bc5fb",
+  "prompts": {},
+  "sessions": {
+    "s_9f4436af8e4f6c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a698777256b544f82",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
