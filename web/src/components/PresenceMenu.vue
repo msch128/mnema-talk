@@ -11,6 +11,7 @@ import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { CHOOSABLE } from '../lib/presence'
 import { t } from '../i18n'
+import { useStatusEditor } from '../composables/useStatusEditor'
 import PresenceDot from './PresenceDot.vue'
 
 const props = defineProps({ trigger: { type: Object as PropType<HTMLElement | null>, default: null } })
@@ -40,9 +41,10 @@ async function choose(p: ChosenPresence) {
   }
 }
 
+const statusEditor = useStatusEditor()
 function editStatus() {
-  close()
-  if (authStore.user) chatStore.openUserProfile(authStore.user)
+  close(false)
+  statusEditor.show()
 }
 
 function onKeydown(e: KeyboardEvent) {

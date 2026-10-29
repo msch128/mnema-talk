@@ -132,7 +132,7 @@ function handleMention() {
 </script>
 
 <template>
-  <BaseDialog panel-class="max-w-sm select-none bg-mnema-surface" initial-focus="[data-dialog-close]" @close="emit('close')">
+  <BaseDialog panel-class="max-w-md select-none bg-mnema-surface" initial-focus="[data-dialog-close]" @close="emit('close')">
     <template #default="{ titleId }">
     <div class="flex min-h-0 flex-col overflow-y-auto">
       <!-- Top banner -->
@@ -160,11 +160,11 @@ function handleMention() {
       </div>
 
       <!-- Profile Header (Avatar overlap & badges) -->
-      <div class="px-5 pb-5 pt-0 relative bg-mnema-surface">
+      <div class="relative bg-mnema-surface px-6 pb-6 pt-0 max-md:px-5">
         <ProfileAvatar :profile-user="profileUser" :is-self="!!isSelf" :live-status="liveStatus" :can-message="showMessage" @mention="handleMention" @message="handleMessage" />
 
         <!-- Name & Badges -->
-        <div class="bg-mnema-canvas/70 border border-mnema-hairline rounded-xl p-3.5 shadow-inner">
+        <div>
           <div class="flex items-center justify-between">
             <div>
               <h2 :id="titleId" class="text-lg font-bold text-mnema-text leading-tight flex items-center gap-1.5">
@@ -223,27 +223,22 @@ function handleMention() {
 
           <ProfileModerationTab v-if="hasModerationTab" v-show="tab === 'moderation'" class="mt-3" :user-id="profileId" @strikes="strikes = $event" />
 
-          <div v-show="tab === 'profile' || !hasModerationTab">
-          <ProfileMemberActions v-if="!isSelf" :profile-user="profileUser" :is-bot="isBot" />
-          <ProfileStatus :profile-user="profileUser" :is-self="!!isSelf" />
-
-          <!-- Divider -->
-          <div class="h-px bg-mnema-hairline my-3"></div>
+          <ProfileMemberActions v-if="!isSelf" v-show="tab === 'profile' || !hasModerationTab" :profile-user="profileUser" :is-bot="isBot" />
+          <div v-show="tab === 'profile' || !hasModerationTab" class="mt-5 divide-y divide-mnema-hairline [&>*]:py-4 [&>:first-child]:pt-0 [&>:last-child]:pb-0">
+          <ProfileStatus :profile-user="profileUser" :is-self="!!isSelf" @close="emit('close')" />
 
           <ProfileBio :profile-user="profileUser" :is-self="!!isSelf" />
 
-          <div v-if="isSelf" class="mb-3">
-            <button type="button" data-testid="profile-password-link" class="flex items-center gap-1 text-xs text-mnema-accent hover:underline" @click="openSecurity">
-              <KeyRound class="w-3.5 h-3.5" /><span>{{ $t('profile.passwordLink') }}</span>
+          <div v-if="isSelf" data-testid="profile-account">
+            <div class="mb-2 text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('profile.account') }}</div>
+            <button type="button" data-testid="profile-password-link" class="flex min-h-8 items-center gap-1.5 text-sm text-mnema-accent hover:underline max-md:min-h-11" @click="openSecurity">
+              <KeyRound class="w-4 h-4" /><span>{{ $t('profile.passwordLink') }}</span>
             </button>
           </div>
 
-          <!-- Divider -->
-          <div class="h-px bg-mnema-hairline my-3"></div>
-
           <!-- Voice activity -->
-          <div class="mb-3">
-            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-1">{{ $t('profile.activity') }}</div>
+          <div>
+            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-2">{{ $t('profile.activity') }}</div>
             <div 
               v-if="voiceHangout" 
               class="flex items-center gap-2 p-2 rounded-lg bg-mnema-accent/10 border border-mnema-accent/25 text-mnema-accent text-sm"
@@ -265,14 +260,14 @@ function handleMention() {
           </div>
 
           <!-- Totals: time in Talks and messages sent -->
-          <div class="mb-3">
-            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-1">{{ $t('activity.title') }}</div>
+          <div>
+            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-2">{{ $t('activity.title') }}</div>
             <ActivityStats :user="profileUser" variant="full" />
           </div>
 
           <!-- Membership -->
           <div>
-            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-1">{{ $t('profile.membership') }}</div>
+            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-2">{{ $t('profile.membership') }}</div>
             <div class="flex items-center gap-2 text-sm text-mnema-muted">
               <Calendar class="w-4 h-4 text-mnema-tertiary" />
               <span>{{ $t('profile.memberSince') }} <strong class="text-mnema-text font-medium">{{ memberSinceFormatted }}</strong></span>

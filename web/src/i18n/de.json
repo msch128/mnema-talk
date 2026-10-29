@@ -1838,16 +1838,18 @@
     "passwordLink": "Passwort und Konto in den Einstellungen",
     "clearAfter": "Löschen nach",
     "expiry": {
+      "never": "Nicht löschen",
+      "min30": "30 Minuten",
       "hour": "1 Stunde",
-      "tonight": "Heute Nacht (23:59)",
-      "tomorrow": "Morgen früh (08:00)",
-      "never": "Nie",
-      "custom": "Datum und Uhrzeit wählen …"
+      "hours4": "4 Stunden",
+      "today": "Heute",
+      "week": "Diese Woche"
     },
     "expiryPast": "Wähle einen Zeitpunkt in der Zukunft.",
     "clearsAt": "Wird gelöscht: {time}",
     "moderationTitle": "Moderation",
-    "rolesTitle": "Rollen"
+    "rolesTitle": "Rollen",
+    "account": "Konto"
   },
   "nav": {
     "channelNotFound": "Diesen Kanal gibt es nicht mehr.",
@@ -3670,5 +3672,10 @@
     "cameraFallback": "Kamera {id} …",
     "cameraDevice": "Kamera",
     "noShareSound": "Diese Übertragung hat keinen Ton zum Stummschalten."
+  },
+  "statusEditor": {
+    "subtitle": "Wird allen neben deinem Namen angezeigt.",
+    "hint": "Sag, was du gerade machst. Bis zu 32 Zeichen.",
+    "clear": "Status löschen"
   }
 }

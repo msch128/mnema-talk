@@ -1838,16 +1838,18 @@
     "passwordLink": "Password and account in settings",
     "clearAfter": "Clear after",
     "expiry": {
+      "never": "Don’t clear",
+      "min30": "30 minutes",
       "hour": "1 hour",
-      "tonight": "Tonight (23:59)",
-      "tomorrow": "Tomorrow morning (08:00)",
-      "never": "Never",
-      "custom": "Pick date and time…"
+      "hours4": "4 hours",
+      "today": "Today",
+      "week": "This week"
     },
     "expiryPast": "Pick a time in the future.",
     "clearsAt": "Clears {time}",
     "moderationTitle": "Moderation",
-    "rolesTitle": "Roles"
+    "rolesTitle": "Roles",
+    "account": "Account"
   },
   "nav": {
     "channelNotFound": "That channel doesn’t exist anymore.",
@@ -3670,5 +3672,10 @@
     "cameraFallback": "Camera {id}…",
     "cameraDevice": "Camera",
     "noShareSound": "This share has no sound to mute."
+  },
+  "statusEditor": {
+    "subtitle": "Shown next to your name for everyone to see.",
+    "hint": "Say what you are up to. Up to 32 characters.",
+    "clear": "Clear status"
   }
 }

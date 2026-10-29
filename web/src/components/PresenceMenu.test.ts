@@ -9,6 +9,7 @@ import { setLocale } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
+import { useStatusEditor } from '../composables/useStatusEditor'
 
 vi.mock('../lib/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/api')>()),
@@ -31,6 +32,7 @@ const option = (w: VueWrapper, p: string) => w.find<HTMLElement>(`[data-presence
 const key = (w: VueWrapper, k: string) => w.find('[role="menu"]')!.trigger('keydown', { key: k })
 
 beforeEach(() => {
+  useStatusEditor().hide()
   setActivePinia(createPinia())
   setLocale('en')
   auth = useAuthStore()
@@ -94,10 +96,11 @@ describe('PresenceMenu', () => {
     expect(useToastStore().toasts.at(-1)!.text).toBe('offline')
   })
 
-  it('opens the profile to edit the status message', async () => {
+  it('opens the status dialog to set the status message', async () => {
     const w = mountMenu()
     await w.find('[role="menuitem"]')!.trigger('click')
-    expect(chat.openUserProfile).toHaveBeenCalledWith(auth.user)
+    expect(useStatusEditor().open.value).toBe(true)
+    expect(chat.openUserProfile).not.toHaveBeenCalled()
     expect(w.emitted('close')!).toHaveLength(1)
   })
 

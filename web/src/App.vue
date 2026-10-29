@@ -31,6 +31,8 @@ import { notifyDialogOpen } from './lib/notifyDialog'
 import NotificationSettingsDialog from './components/NotificationSettingsDialog.vue'
 import ScreenShareModal from './components/ScreenShareModal.vue'
 import UserProfileModal from './components/UserProfileModal.vue'
+import StatusDialog from './components/StatusDialog.vue'
+import { useStatusEditor } from './composables/useStatusEditor'
 import LegalModal from './components/LegalModal.vue'
 import ResizeHandle from './components/ResizeHandle.vue'
 import ToastHost from './components/ToastHost.vue'
@@ -63,6 +65,7 @@ const chatStore = useChatStore()
 useTitleBadge()
 const voiceStore = useVoiceStore()
 const accountStore = useAccountStore()
+const statusEditor = useStatusEditor()
 // A link from an account e-mail (confirm address, reset password) takes over the
 // page, signed in or not; the token is read here once and then removed from the URL.
 const recovery = recoveryFromLocation(window.location.pathname, window.location.hash)
@@ -342,6 +345,9 @@ onMounted(async () => {
         @close="chatStore.closeUserProfile()"
         @mention="(uname) => chatStore.insertMention(uname)"
       />
+
+      <!-- Set a status message -->
+      <StatusDialog v-if="statusEditor.open.value" @close="statusEditor.hide()" />
 
       <!-- Settings: account, privacy, push and app, audio -->
       <SettingsDialog v-if="accountStore.dialogOpen" />

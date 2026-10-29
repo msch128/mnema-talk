@@ -76,7 +76,7 @@ async function removeAvatar() {
 </script>
 
 <template>
-  <div class="flex justify-between items-end -mt-12 mb-3">
+  <div class="-mt-12 mb-4 flex items-end justify-between gap-3">
     <!-- Large Avatar with overlap -->
     <div class="relative group">
       <div
@@ -133,7 +133,7 @@ async function removeAvatar() {
     </div>
 
     <!-- Action Buttons in Top Right -->
-    <div class="flex items-center gap-2">
+    <div class="flex min-w-0 flex-wrap items-center justify-end gap-2">
       <button
         v-if="!isSelf"
         @click="emit('mention')"
