@@ -123,7 +123,7 @@ export interface ServerEventPayloads {
   screen_layers_wanted: ScreenLayersWanted
   voice_speaking: SpeakingState
   voice_mute_state: MuteState
-  voice_kicked: { channel_id: string; reason?: 'room_full' | 'missing_permission' | 'rules_not_accepted' | 'talk_rate_limited' | 'talk_unavailable' | 'connection_lost' | 'media_unavailable' | 'joined_elsewhere' }
+  voice_kicked: { channel_id: string; reason?: 'room_full' | 'missing_permission' | 'rules_not_accepted' | 'talk_rate_limited' | 'talk_unavailable' | 'connection_lost' | 'media_unavailable' | 'joined_elsewhere' | 'voice_taken_over' }
   /** Who leads a temporary Talk now (null: nobody). */
   talk_leader: { channel_id: string; leader_id: string | null }
   /** Joining a Create-a-Talk lobby opened this Talk: join it like any other. */
@@ -152,7 +152,7 @@ export type SubscribeRequest =
 export interface ClientEventPayloads {
   ping: { t: number }
   presence_idle: { idle: boolean }
-  voice_join: { channel_id: string }
+  voice_join: { channel_id: string; takeover?: true; resume?: true }
   voice_leave: Record<string, never>
   typing: { channel_id: string }
   voice_speaking: { active: boolean }
@@ -359,7 +359,7 @@ function isNoteEmbed(value: unknown): boolean {
   return isRecord(value) && (!hasOwn(value, 'title') || isString(value['title'], 1_000)) && (!hasOwn(value, 'description') || isString(value['description'], 8_000))
 }
 
-const VOICE_KICK_REASONS = new Set(['room_full', 'missing_permission', 'rules_not_accepted', 'talk_rate_limited', 'talk_unavailable', 'connection_lost', 'media_unavailable', 'joined_elsewhere'])
+const VOICE_KICK_REASONS = new Set(['room_full', 'missing_permission', 'rules_not_accepted', 'talk_rate_limited', 'talk_unavailable', 'connection_lost', 'media_unavailable', 'joined_elsewhere', 'voice_taken_over'])
 
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',

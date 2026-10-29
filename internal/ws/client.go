@@ -57,6 +57,9 @@ type Client struct {
 
 	mu      sync.Mutex
 	voiceCh *uuid.UUID
+	// seat orders the seated voice connections of one user: the hub's clock
+	// at the moment the SFU join succeeded, 0 while not seated yet.
+	seat uint64
 	// sfuPeer is this connection's own media peer. Another connection of the
 	// same user (reconnect, second tab) gets its own, and tearing this one
 	// down never touches the other.
@@ -213,11 +216,26 @@ func (c *Client) currentVoice() *uuid.UUID {
 func (c *Client) setVoice(ch *uuid.UUID) {
 	c.mu.Lock()
 	c.voiceCh = ch
+	c.seat = 0
 	c.speaking = false
 	if ch == nil {
 		c.sfuPeer = nil
 	}
 	c.mu.Unlock()
+}
+
+// stampSeat records that c's seat in its voice room is live, newer than every
+// seat stamped before.
+func (c *Client) stampSeat(clock uint64) {
+	c.mu.Lock()
+	c.seat = clock
+	c.mu.Unlock()
+}
+
+func (c *Client) seatStamp() uint64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.seat
 }
 
 func (c *Client) setPeer(p *sfu.Peer) {

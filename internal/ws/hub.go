@@ -5,6 +5,7 @@ package ws
 import (
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -110,6 +111,9 @@ type Hub struct {
 	// writes of voice time.
 	voiceGate voiceGate
 	vtimes    voiceTimes
+	// seatClock numbers live voice seats (Client.seat), so of two connections
+	// of one user the later one is known.
+	seatClock atomic.Uint64
 	// stage holds talk power and raised hands of Stage seats; stageGate and
 	// reactionGate limit Stage commands and live reactions per member.
 	stage        stageBook

@@ -11,6 +11,7 @@ import { isLobby, joinViaLobby, lobbyMoved, lobbyRefused } from './lobby'
 import { resumeRemoteAudio as resumeRemotePlayback } from './remoteAudio'
 import { closeMediaRoom, mediaConnectionAnnounced, openMediaRoom, resetMediaAnnouncements } from './mediaRoom'
 import type { Cx } from './state'
+import { announceTakenOver, askTakeover } from './takeover'
 import { aiModel } from './audioMath'
 import { stopCamera } from './camera'
 import { micErrorKey, refreshAudioDevices, requestMicrophone, setupMicPipeline } from './micPipeline'
@@ -99,11 +100,23 @@ function sealingRefusal(): Promise<boolean> | null {
   })
 }
 
-export async function joinVoiceChannel(cx: Cx, channelId: string): Promise<void> {
+/**
+ * auto: a rejoin the user did not ask for (after a reload), never asks to take
+ * the call over. takeover: the user already agreed to move the call here.
+ */
+export interface JoinOptions { auto?: boolean, takeover?: boolean }
+
+export async function joinVoiceChannel(cx: Cx, channelId: string, opts: JoinOptions = {}): Promise<void> {
   if (!canJoinVoiceChannel(cx, channelId)) return
+  let takeover = !!opts.takeover
+  const ask = opts.auto || takeover ? null : askTakeover(cx)
+  if (ask) {
+    if (!await ask) return
+    takeover = true
+  }
   if (isLobby(cx, channelId)) {
     registerSignalingHandlers(cx)
-    return joinViaLobby(cx, channelId, talkId => joinVoiceChannel(cx, talkId))
+    return joinViaLobby(cx, channelId, talkId => joinVoiceChannel(cx, talkId, { takeover }))
   }
   const refusal = sealingRefusal()
   if (refusal && await refusal) return
@@ -127,7 +140,7 @@ export async function joinVoiceChannel(cx: Cx, channelId: string): Promise<void>
   st.localAudioStream.value = sendStream
   voice.localAudioStream = sendStream
   setupPeerConnection(cx)
-  chat.sendWSEvent('voice_join', { channel_id: channelId })
+  chat.sendWSEvent('voice_join', takeover ? { channel_id: channelId, takeover: true } : { channel_id: channelId })
   openMediaRoom()
   attachSubscriptions(cx)
 
@@ -157,7 +170,8 @@ export function rejoinAfterReconnect(cx: Cx) {
   // The server keeps the roster across a short disconnect, so nobody else
   // joins or leaves and a handshake that was dropped is not sent again.
   setupPeerConnection(cx)
-  chat.sendWSEvent('voice_join', { channel_id: channelId })
+  // resume: the server refuses it when another device took the call over meanwhile.
+  chat.sendWSEvent('voice_join', { channel_id: channelId, resume: true })
   // After the join, so a package it produces is not dropped by the hub.
   mediaCall().resume()
   attachSubscriptions(cx)
@@ -216,6 +230,10 @@ function handleKicked(cx: Cx, payload: ServerEventPayloads['voice_kicked']) {
   const explained = payload.reason === 'connection_lost' && mediaConnectionAnnounced()
   endCall(cx, { notifyServer: false })
   if (explained) return
+  if (payload.reason === 'voice_taken_over') {
+    announceTakenOver(payload.channel_id, id => { void joinVoiceChannel(cx, id, { takeover: true }) })
+    return
+  }
   useToastStore().info(t(KICK_NOTICE[payload.reason ?? ''] ?? 'voice.kicked'))
 }
 
@@ -229,7 +247,7 @@ export async function resumeVoiceSession(cx: Cx) {
     voiceSession.forget()
     return false
   }
-  await joinVoiceChannel(cx, channelId)
+  await joinVoiceChannel(cx, channelId, { auto: true })
   return true
 }
 
