@@ -102,7 +102,8 @@ describe('media transform guard', () => {
     expect(guard.armSender(sender, 'channel', 'alice', 0)).toBe(true)
     expect(guard.armSender(sender, 'channel', 'alice', 0)).toBe(true)
     const [first, second] = created.channels
-    expect(first?.port1.postMessage).toHaveBeenCalledWith({ type: 'drop' })
+    // 'drop' wipes the worker's keys for every line, so a replaced line must not send it.
+    expect(first?.port1.postMessage).not.toHaveBeenCalledWith({ type: 'drop' })
     expect(first?.port1.close).toHaveBeenCalledOnce()
     expect(second?.port1.close).not.toHaveBeenCalled()
     // Only the live line hears the next key.

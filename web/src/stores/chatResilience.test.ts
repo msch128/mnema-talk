@@ -8,7 +8,7 @@ import { dmFixture, dmMemberFixture } from '../dm.fixture'
 import { createChatState, type Cx } from './chat/state'
 import { useVoiceStore } from './voice'
 import { saveDmSettings } from './chat/dmPrefs'
-import { refreshLatest } from './chat/messageWindow'
+import { insertMessage, refreshLatest } from './chat/messageWindow'
 import type { ApiOptions } from '../lib/api'
 import { api } from '../lib/api'
 
@@ -101,6 +101,53 @@ describe('reconnect refresh', () => {
     expect(cx.cs.messages.value.map(m => m.id)).toEqual([msg(1).id, msg(2).id, msg(3).id])
     expect(cx.cs.hasMoreBefore.value).toBe(true)
     expect(cx.cs.latestLoadSeq.value).toBe(seq)
+  })
+
+  it('keeps a live message that arrives while the page is in flight', async () => {
+    const cx: Cx = { cs: createChatState(() => {}), authStore: useAuthStore(), voiceStore: useVoiceStore() }
+    cx.cs.activeChannel.value = { ...ch }
+    cx.cs.messages.value = [msg(1), msg(2)]
+    const wait = deferred<unknown>()
+    http.handle = () => wait.promise
+    const refresh = refreshLatest(cx, ch.id)
+    insertMessage(cx, msg(4))
+    wait.resolve([msg(2), msg(3)])
+    expect(await refresh).toBe(true)
+    expect(cx.cs.messages.value.map(m => m.id)).toEqual([msg(1).id, msg(2).id, msg(3).id, msg(4).id])
+    expect(cx.cs.isLoadingWindow.value).toBe(false)
+  })
+
+  it('keeps holding live messages until the last of two overlapping refreshes ends', async () => {
+    const cx: Cx = { cs: createChatState(() => {}), authStore: useAuthStore(), voiceStore: useVoiceStore() }
+    cx.cs.activeChannel.value = { ...ch }
+    cx.cs.messages.value = [msg(1), msg(2)]
+    const first = deferred<unknown>()
+    const second = deferred<unknown>()
+    const pages = [first.promise, second.promise]
+    http.handle = () => pages.shift()
+    const a = refreshLatest(cx, ch.id)
+    const b = refreshLatest(cx, ch.id)
+    first.resolve([msg(2)])
+    expect(await a).toBe(true)
+    expect(cx.cs.isLoadingWindow.value).toBe(true)
+    insertMessage(cx, msg(4))
+    second.resolve([msg(2), msg(3)])
+    expect(await b).toBe(true)
+    expect(cx.cs.messages.value.map(m => m.id)).toEqual([msg(1).id, msg(2).id, msg(3).id, msg(4).id])
+    expect(cx.cs.isLoadingWindow.value).toBe(false)
+  })
+
+  it('joins a live message held during a refresh that failed', async () => {
+    const cx: Cx = { cs: createChatState(() => {}), authStore: useAuthStore(), voiceStore: useVoiceStore() }
+    cx.cs.activeChannel.value = { ...ch }
+    cx.cs.messages.value = [msg(1)]
+    const wait = deferred<unknown>()
+    http.handle = () => wait.promise
+    const refresh = refreshLatest(cx, ch.id)
+    insertMessage(cx, msg(2))
+    wait.reject(new Error('502'))
+    expect(await refresh).toBe(false)
+    expect(cx.cs.messages.value.map(m => m.id)).toEqual([msg(1).id, msg(2).id])
   })
 
   it('leaves the window alone when the refresh fails', async () => {
