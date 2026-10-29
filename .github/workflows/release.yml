@@ -437,9 +437,17 @@ jobs:
           set -euo pipefail
           ref="docker.io/$NAMESPACE/mnema-talk@$DIGEST"
           cosign sign --yes "$ref"
-          cosign verify "$ref" \
-            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@' >/dev/null
+          # Docker Hub can take a moment before a fresh signature is readable.
+          for _ in 1 2 3 4 5 6; do
+            if cosign verify "$ref" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@' >/dev/null; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::the Docker Hub signature could not be verified"
+          exit 1
 
   # The desktop client runs a signed bundle of the web app instead of the
   # server's JavaScript (doc/desktop-trusted-client.md). One job builds and

@@ -610,7 +610,7 @@ BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
 ## Verifying a release image
 
 Release images on GHCR (`ghcr.io/msch128/mnema-talk`, every tag of a release)
-and their mirror on Docker Hub (`docker.io/<namespace>/mnema-talk`, see below)
+and their mirror on Docker Hub (`docker.io/msch128/mnema-talk`, see below)
 are signed keylessly with [cosign](https://github.com/sigstore/cosign) by the
 release workflow, using its GitHub OIDC identity; no long-lived key exists.
 The image also carries BuildKit provenance and an SBOM. To check a pulled
@@ -626,7 +626,7 @@ The Docker Hub copy carries the same digest, signature identity, provenance
 and SBOM, so the same command works with the Docker Hub reference:
 
 ```sh
-cosign verify docker.io/<namespace>/mnema-talk:1.0 \
+cosign verify docker.io/msch128/mnema-talk:1.0 \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@'
 ```

@@ -70,7 +70,7 @@ docker compose logs --since 10m app | grep -E 'migration applied|"level":"(WARN|
 Then open the app: other open tabs show a reload notice; voice calls
 reconnect after the reload. Admin → System shows the new version.
 
-The same image is also published on Docker Hub as `docker.io/<namespace>/mnema-talk` (same digest and signature, see [Verifying a release image](operations.md#verifying-a-release-image)); GHCR stays the primary reference used in this guide.
+The same image is also published on Docker Hub as `docker.io/msch128/mnema-talk` (same digest and signature, see [Verifying a release image](operations.md#verifying-a-release-image)); GHCR stays the primary reference used in this guide.
 
 If you follow a minor line instead (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:0.4`),
 step 4 is unnecessary within that line: `docker compose pull app && docker
