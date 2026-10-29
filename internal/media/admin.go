@@ -135,9 +135,18 @@ func PruneOlderThan(ctx context.Context, p *db.Pool, store Store, days int) (int
 		slog.Info("media pruned", "count", total, "older_than_days", days)
 	}
 	if len(skip) > 0 {
-		return total, fmt.Errorf("%d media objects could not be deleted and were skipped", len(skip))
+		return total, &PruneSkippedError{Skipped: len(skip)}
 	}
 	return total, nil
+}
+
+// PruneSkippedError ends a prune that otherwise worked: Skipped objects were
+// refused by storage and stay in place. The count PruneOlderThan returns with
+// it is still valid.
+type PruneSkippedError struct{ Skipped int }
+
+func (e *PruneSkippedError) Error() string {
+	return fmt.Sprintf("%d media objects could not be deleted and were skipped", e.Skipped)
 }
 
 // pruneNextBatch removes the next batch of old attachments. Ids in skip are

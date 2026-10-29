@@ -5934,6 +5934,10 @@
           },
           "pruned_count": {
             "type": "integer"
+          },
+          "skipped": {
+            "description": "Skipped counts the old objects storage refused to delete; they stay.",
+            "type": "integer"
           }
         },
         "required": [
@@ -14259,7 +14263,7 @@
     },
     "/api/admin/media/prune": {
       "post": {
-        "description": "Avatars are never pruned. Without days, uses MEDIA_RETENTION_DAYS; 400 when that is disabled. Owner only (403 otherwise).",
+        "description": "Avatars are never pruned. Without days, uses MEDIA_RETENTION_DAYS; 400 when that is disabled. When storage refuses some objects the run still succeeds and skipped counts them. Owner only (403 otherwise).",
         "operationId": "pruneMedia",
         "parameters": [
           {
@@ -14282,7 +14286,7 @@
                 }
               }
             },
-            "description": "Prune result."
+            "description": "Prune result. skipped counts old objects that storage refused to delete."
           },
           "400": {
             "content": {
