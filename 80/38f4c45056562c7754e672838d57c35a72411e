@@ -1,0 +1,19 @@
+web/src/components/adminSystemWarnings.test.ts
+  s_19761ad108c610::t_21989bd8937b1b 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8038f4c45056562c7754e672838d57c35a72411e",
+  "prompts": {},
+  "sessions": {
+    "s_19761ad108c610": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a71ad043d28ebc2fd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
