@@ -78,6 +78,11 @@ var (
 	appTitleTag = []byte(`<meta name="apple-mobile-web-app-title" content="Mnema" />`)
 )
 
+// SetAppTitle names the iOS home-screen label of a copy of the built page.
+func SetAppTitle(page []byte, name string) []byte {
+	return bytes.Replace(page, appTitleTag, []byte(`<meta name="apple-mobile-web-app-title" content="`+html.EscapeString(name)+`" />`), 1)
+}
+
 // shortNameRunes is how much of the name fits under a home-screen icon.
 const shortNameRunes = 12
 
@@ -92,7 +97,7 @@ func (s *staticServer) serveIndex(w http.ResponseWriter, r *http.Request) {
 	if s.name != nil {
 		name := html.EscapeString(s.name(r.Context()))
 		page = bytes.Replace(page, titleTag, []byte("<title>"+name+"</title>"), 1)
-		page = bytes.Replace(page, appTitleTag, []byte(`<meta name="apple-mobile-web-app-title" content="`+name+`" />`), 1)
+		page = SetAppTitle(page, s.name(r.Context()))
 	}
 	if _, err := w.Write(page); err != nil {
 		return
