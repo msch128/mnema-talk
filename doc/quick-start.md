@@ -113,13 +113,18 @@ UPDATER_TOKEN=<output of: openssl rand -hex 32>
 
 Run `openssl rand -hex 32` over SSH (or let the assistant generate the token),
 then rebuild the project once: Container Manager > Project > `mnema-talk` >
-Action > Stop, then Build. From then on use Admin > System > **Update now**.
+Action > Stop, then Build. Container Manager reads the profile from that `.env`
+and starts `mnema-updater` and `mnema-recreator` next to the app (confirmed on DSM 7.2).
+From then on use Admin > System > **Update now**.
 It needs outbound HTTPS to `ghcr.io` and to Sigstore ([ports](ports.md#outbound-connections)),
 and the token rules are in [operations.md](operations.md#updates). Container
 Manager's own image update view only tracks registries in its registry list, so
 it will not flag a new Mnema Talk image; the button and the admin update check
 do. The image is also mirrored on Docker Hub ([deployment.md](deployment.md#fresh-install)).
 Take a backup first ([upgrade.md](upgrade.md)).
+
+In Container Manager's image list, `<none>` as the tag of the postgres,
+seaweedfs and watchtower images is expected: they are pinned by digest.
 
 **Manual update (fallback).** Take a backup first ([upgrade.md](upgrade.md)). Over SSH:
 `cd /volume1/docker/mnema-talk && sudo docker compose pull && sudo docker compose up -d`.
