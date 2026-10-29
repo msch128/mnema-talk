@@ -700,8 +700,8 @@ describe('ChatArea history scrolling', () => {
     const cancel = vi.spyOn(window, 'cancelAnimationFrame')
     el.dispatchEvent(new Event('scroll'))
     w.unmount()
-    // The timeline and the header each watch their size.
-    expect(disconnect).toHaveBeenCalledTimes(2)
+    // The timeline, the header and the composer's textarea each watch their size.
+    expect(disconnect).toHaveBeenCalledTimes(3)
     expect(cancel).toHaveBeenCalled()
   })
 })

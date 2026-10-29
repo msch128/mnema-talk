@@ -47,6 +47,19 @@ An import never changes, renames, reorders or removes anything that exists:
   above the highest role of the administrator who imports. Imported roles never
   hold *Administrator* and never hold a permission the importing administrator
   does not hold. *Manage bots* is never imported.
+- **Connecting a role to an existing one.** In the role step each Discord role
+  can be created as a new role (the default) or connected to a role you already
+  have, so "Admin" or "Bot" does not appear twice. A connected role is not
+  created: the channel and category overwrites of the Discord role are written
+  for the existing role instead. The existing role itself is **not changed**; its
+  permissions, name and colour stay as they are. A role with the same name
+  (ignoring case) is preselected, and you can change it. The API takes an
+  optional `role_map` (Discord role id to role id) in the preview and the apply
+  request; the apply request must repeat the map of the preview. Refused: the
+  managed Bot roles, @everyone, a role at or above your highest role (the Owner
+  may pick any), a role a bot holds (Owner only), an unknown role, and two Discord
+  roles onto one role. Undo removes what the import created and leaves a
+  connected role alone.
 - Discord's `@everyone` permissions are **not applied** to Mnema's `@everyone`.
   The preview shows them for information only.
 - Names are kept. Channel and category names need not be unique here, so they

@@ -1,6 +1,9 @@
 package discordimport
 
-import "github.com/msch128/mnema-talk/internal/perm"
+import (
+	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/perm"
+)
 
 // Plan is the exact list of what an import creates. It is computed from the
 // template and the current state without writing anything; applying it
@@ -15,8 +18,14 @@ type Plan struct {
 	Categories []PlanCategory `json:"categories"`
 	Channels   []PlanChannel  `json:"channels"`
 	// Roles are listed highest first; they are created below every existing role.
-	Roles    []PlanRole   `json:"roles"`
-	Everyone EveryoneInfo `json:"everyone"`
+	Roles []PlanRole `json:"roles"`
+	// MappedRoles are the Discord roles the administrator mapped onto an
+	// existing role: nothing is created for them.
+	MappedRoles []PlanMappedRole `json:"mapped_roles"`
+	// MappableRoles are the existing roles the importer may map a Discord
+	// role onto (highest first); the roles a role_map may name.
+	MappableRoles []RoleChoice `json:"mappable_roles"`
+	Everyone      EveryoneInfo `json:"everyone"`
 	// Skipped lists template channels that have no counterpart (threads and the like).
 	Skipped []string `json:"skipped"`
 	// DroppedBits names every Discord permission dropped from the roles and overwrites.
@@ -70,6 +79,9 @@ type PlanOverwrite struct {
 	Deny         perm.Set `json:"deny" swaggertype:"integer" minimum:"0"`
 	AllowKeys    []string `json:"allow_keys"`
 	DenyKeys     []string `json:"deny_keys"`
+	// MappedRoleID is the existing role the overwrite is written for when the
+	// Discord role was mapped onto one.
+	MappedRoleID *uuid.UUID `json:"mapped_role_id,omitempty" binding:"optional" format:"uuid"`
 }
 
 // PlanRole is a role to create.
@@ -84,6 +96,17 @@ type PlanRole struct {
 	PermissionKeys       []string `json:"permission_keys"`
 	Dropped              []string `json:"dropped"`
 	AdministratorDropped bool     `json:"administrator_dropped"`
+	// SuggestedRoleID is the existing role with the same name (ignoring case)
+	// the administrator may map this role onto; null when there is none.
+	SuggestedRoleID *uuid.UUID `json:"suggested_role_id" format:"uuid" extensions:"x-nullable"`
+}
+
+// PlanMappedRole is a Discord role mapped onto an existing role.
+type PlanMappedRole struct {
+	SourceID   string    `json:"source_id"`
+	SourceName string    `json:"source_name"`
+	RoleID     uuid.UUID `json:"role_id" format:"uuid"`
+	RoleName   string    `json:"role_name"`
 }
 
 // EveryoneInfo shows what Discord's @everyone held. It is information only:

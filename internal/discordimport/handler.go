@@ -47,12 +47,15 @@ type PreviewRequest struct {
 	// Template is a Discord server template link (discord.new/<code>,
 	// discord.com/template/<code>) or the bare code.
 	Template string `json:"template" maxLength:"300"`
+	// RoleMap maps Discord role ids onto existing role ids: those roles are
+	// left out of the plan and their overwrites point at the existing role.
+	RoleMap map[string]string `json:"role_map,omitempty" binding:"optional"`
 }
 
 // preview handles POST /api/admin/import/discord/preview.
 //
 // @Summary Preview a Discord server import
-// @Description Downloads the Discord server template (discord.com only, 2 MB at most, no redirects) and returns exactly what importing it would create: categories, channels, roles with their mapped permissions, and the Discord permissions that are dropped. Writes nothing and is not audited. Owner and Administrators only. 404 when the template does not exist or is not shared, 502/503 when Discord cannot be reached.
+// @Description Downloads the Discord server template (discord.com only, 2 MB at most, no redirects) and returns exactly what importing it would create: categories, channels, roles with their mapped permissions, and the Discord permissions that are dropped. An optional role_map (Discord role id to existing role id) leaves those roles out of the plan; the suggested_role_id of each role names the existing role with the same name. Writes nothing and is not audited. Owner and Administrators only. 404 when the template does not exist or is not shared, 502/503 when Discord cannot be reached.
 // @ID previewDiscordImport
 // @Tags Admin
 // @Accept json
@@ -60,9 +63,9 @@ type PreviewRequest struct {
 // @Security cookieAuth
 // @Param request body PreviewRequest true "Request body."
 // @Success 200 {object} Plan "The plan."
-// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): not a template link or code, malformed JSON or unknown JSON fields."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): not a template link or code, malformed JSON, unknown JSON fields or an invalid role_map."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner and Administrators may import, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner and Administrators may import, a mapped role is managed, held by a bot or not below the importer's highest role, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the template does not exist or is no longer shared."
 // @Failure 413 {object} httpx.ErrorResponse "The template is larger than 2 MB or has more channels or roles than Discord allows."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
@@ -78,7 +81,7 @@ func (h *Handler) preview(w http.ResponseWriter, r *http.Request) error {
 	if err := h.allow(r); err != nil {
 		return err
 	}
-	plan, err := h.Importer.Preview(r.Context(), auth.UserFrom(r.Context()).Subject(), req.Template)
+	plan, err := h.Importer.Preview(r.Context(), auth.UserFrom(r.Context()).Subject(), req.Template, req.RoleMap)
 	if err != nil {
 		return err
 	}
@@ -89,7 +92,7 @@ func (h *Handler) preview(w http.ResponseWriter, r *http.Request) error {
 // apply handles POST /api/admin/import/discord/apply.
 //
 // @Summary Import a Discord server structure
-// @Description Downloads the template again and creates the categories, channels and roles of the plan in one transaction, strictly additively: categories and channels are appended at the end of the layout, roles are created below every existing role without Administrator, and @everyone is not touched. The request must repeat the plan_hash of the preview and carry all three confirmations (confirm_additive, confirm_roles, and confirm_text: the server name or IMPORT); a changed template or server state answers 409 and needs a new preview. Writes one audit entry (import.discord). Owner and Administrators only.
+// @Description Downloads the template again and creates the categories, channels and roles of the plan in one transaction, strictly additively: categories and channels are appended at the end of the layout, roles are created below every existing role without Administrator, and @everyone is not touched. Roles listed in role_map are not created: their channel overwrites are written for the existing role, whose own permissions stay as they are (managed roles such as Bot, roles above the importer and, unless the Owner imports, roles held by bots are refused). The request must repeat the plan_hash of the preview and carry all three confirmations (confirm_additive, confirm_roles, and confirm_text: the server name or IMPORT); a changed template or server state answers 409 and needs a new preview. Writes one audit entry (import.discord). Owner and Administrators only.
 // @ID applyDiscordImport
 // @Tags Admin
 // @Accept json
@@ -97,9 +100,9 @@ func (h *Handler) preview(w http.ResponseWriter, r *http.Request) error {
 // @Security cookieAuth
 // @Param request body ApplyRequest true "Request body."
 // @Success 201 {object} Record "The recorded import."
-// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): a confirmation is missing or wrong, or the template contains nothing to import."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): a confirmation is missing or wrong, the template contains nothing to import, or the role_map is invalid."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner and Administrators may import, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner and Administrators may import, a mapped role is managed, held by a bot or not below the importer's highest role, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the template does not exist or is no longer shared."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the preview is out of date, or the import would exceed the role limit."
 // @Failure 413 {object} httpx.ErrorResponse "The template is too large."
