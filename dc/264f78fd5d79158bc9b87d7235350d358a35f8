@@ -81,6 +81,7 @@ doc/deployment.md
   s_5aa38e778cf1ac::t_f5a17ded50a8ee 19-20,31-35
 doc/operations.md
   s_3043ef48954715::t_0a1b893fe44ab6 101-103,363-443,446-448,840-842,980-982
+  s_06fcde5dbef956::t_f566fcd10b2284 449-456
 doc/upgrade.md
   s_5aa38e778cf1ac::t_cd7553acbcd303 142-162
 docker-compose.yml
