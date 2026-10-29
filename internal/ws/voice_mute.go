@@ -51,10 +51,6 @@ func (h *Hub) setMuteState(c *Client, st MuteState) {
 	}
 	key := voiceKey{c.User.ID, *cur}
 	h.mu.Lock()
-	if !c.commandsAllowed() {
-		h.mu.Unlock()
-		return
-	}
 	if _, seated := h.voice[key.ch][key.user]; !seated {
 		// A leave or kick got in between: a mark written now would outlive
 		// the stay and be announced with the next one.

@@ -3264,7 +3264,7 @@
             "type": "string"
           },
           "mention_roles": {
-            "description": "MentionRoles are the roles this message mentions (@Role); the client\ndraws them as role pills. A role that was deleted since drops out. The\nserver always sends it; it is optional for clients that build messages\nthemselves (the desktop app's native chat path).",
+            "description": "MentionRoles are the roles this message mentions (@Role); the client\ndraws them as role pills. A role that was deleted since drops out. The\nserver always sends it; it is optional for clients that build messages\nthemselves.",
             "items": {
               "format": "uuid",
               "type": "string"

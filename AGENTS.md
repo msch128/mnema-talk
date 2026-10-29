@@ -84,7 +84,7 @@ mnema-talk/
 │   ├── media/               # Uploads (MIME sniffing), authenticated media serving, retention
 │   ├── s3/                  # S3 client
 │   ├── events/              # Event types / publishing to the hub
-│   ├── ws/                  # Real-time WebSocket hub (events, presence); native_*.go (lease, admission, metadata socket) is dormant: only nativepreview mounts it, never the production server
+│   ├── ws/                  # Real-time WebSocket hub (events, presence)
 │   ├── bot/                 # Bot accounts, tokens, bot API authentication, slash commands (doc/bots.md)
 │   ├── slash/               # Built-in slash commands: the registry and the Builtin interface (doc/bots.md)
 │   ├── slashcmd/            # The built-ins besides /poll: /me, /shrug, /tableflip, /unflip, /spoiler, /nick, /thread, /msg, /timeout, /ban, /kick
@@ -95,7 +95,6 @@ mnema-talk/
 │   ├── updaterd/            # The updater sidecar (cmd/updater): verify, pull by digest, tag, restart
 │   ├── imageverify/         # cosign signature + SLSA provenance check of a release image
 │   ├── version/             # Build version/revision (ldflags), shared with the web build
-│   ├── nativepreview/       # Isolated transport preview router and ciphertext relay research fixtures
 │   ├── tools/openapifix/    # Post-processes the generated OpenAPI document (`make openapi`)
 │   ├── server/              # Router wiring + integration tests
 │   └── testutil/            # Postgres fixture for integration tests (dockertest / TEST_DATABASE_URL)

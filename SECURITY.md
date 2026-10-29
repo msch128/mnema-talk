@@ -880,7 +880,7 @@ details and the limits.
   the permission snapshot, so REST, the WebSocket hub and the SFU all honour it
   and overwrites cannot undo it. A ban is a separate state from a disabled
   account and is checked wherever an account may act (sign-in, sessions,
-  WebSockets, native sessions). The checks and the writes happen in one
+  WebSockets). The checks and the writes happen in one
   transaction under the permission lock. Slow mode is enforced in the message
   insert's transaction. See doc/moderation.md.
 - **Audit log.** Administrative actions (roles, permissions, channels,

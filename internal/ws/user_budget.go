@@ -9,9 +9,9 @@ import (
 
 const (
 	// maxUserFramesPerSec and maxUserEventsPerSec bound all of one account's
-	// browser and native connections together. The per-connection budgets stop
+	// browser connections together. The per-connection budgets stop
 	// one noisy socket; these stop an account from multiplying them by opening
-	// several (up to maxBrowserSockets browser sockets plus native ones). They
+	// several (up to maxBrowserSockets browser sockets). They
 	// leave room for a few busy tabs, which a person never keeps up.
 	maxUserFramesPerSec = 2 * maxFramesPerSec
 	maxUserEventsPerSec = 2 * maxEventsPerSec

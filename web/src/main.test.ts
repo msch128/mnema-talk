@@ -34,13 +34,6 @@ describe('browser application entry', () => {
     expect(boot.app.use.mock.calls).toEqual([[boot.pinia], [boot.plugin]])
     Reflect.deleteProperty(window, '__MNEMA_GAMING_SURFACE__')
   })
-  it('mounts native discovery with the same plugins inside a real Tauri runtime', async () => {
-    vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('http://tauri.localhost/'))
-    await import('./main')
-    expect(boot.createApp).toHaveBeenCalledWith((await import('./NativePreviewApp.vue')).default)
-    expect(boot.app.use.mock.calls).toEqual([[boot.pinia], [boot.plugin]])
-    expect(boot.app.mount).toHaveBeenCalledWith('#app')
-  })
   it('mounts the instance selector for the verified bundle in the trusted desktop client', async () => {
     vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('mnema://localhost/'))
     vi.stubGlobal('__MNEMA_TRUSTED_APP__', { version: '0.8.0', source: 'builtin', webClientApi: 1, keyId: '1069c76ff2e11272', role: 'selector' })

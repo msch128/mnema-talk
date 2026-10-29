@@ -47,7 +47,7 @@ export default tseslint.config(
     files: ['**/*.vue'],
     languageOptions: { parser: vueParser, parserOptions: { parser: tseslint.parser } }
   },
-  // The desktop client's window globals, IPC and native transports are reached
+  // The desktop client's window globals and IPC are reached
   // only through lib/platform.ts (doc/desktop-trusted-client.md). Everything
   // else stays platform-agnostic.
   {
@@ -56,7 +56,7 @@ export default tseslint.config(
       'no-restricted-imports': ['error', {
         patterns: [
           { group: ['@tauri-apps/*'], message: 'Reach the desktop host through lib/platform.' },
-          { group: ['**/nativeTransport', '**/trustedDesktop', '**/trustedSocket', '**/desktopRuntime'], message: 'Use lib/platform instead of the desktop adapter internals.' }
+          { group: ['**/trustedDesktop', '**/trustedSocket', '**/desktopRuntime'], message: 'Use lib/platform instead of the desktop adapter internals.' }
         ]
       }],
       'no-restricted-globals': ['error',
@@ -88,8 +88,7 @@ export default tseslint.config(
       '**/src/lib/desktopRuntime.ts',
       '**/src/lib/osNotify.ts',
       '**/src/lib/native/trustedDesktop.ts',
-      '**/src/lib/native/trustedSocket.ts',
-      '**/src/lib/native/nativeTransport.ts'
+      '**/src/lib/native/trustedSocket.ts'
     ],
     rules: { 'no-restricted-imports': 'off', 'no-restricted-globals': 'off', 'no-restricted-properties': 'off', 'no-restricted-syntax': 'off' }
   },

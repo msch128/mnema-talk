@@ -5,15 +5,12 @@ package server
 import (
 	"context"
 	"log/slog"
-	"net"
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/bot"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -63,24 +60,10 @@ type Deps struct {
 	WebIndex []byte
 }
 
-// SystemAdminMounter mounts the admin system routes.
-type SystemAdminMounter interface {
-	MountAdmin(r chi.Router)
-}
-
-// PreviewDeps holds internal dependencies needed by the native preview router.
-type PreviewDeps struct {
-	Accounts *auth.Handler
-	Chat     *chat.Handler
-	System   SystemAdminMounter
-	PerUser  *httpx.RateLimiter
-	Trusted  []*net.IPNet
-}
-
 // Router holds the assembled handler and the hub (for shutdown/tests).
 type Router struct {
-	// preview is retained for explicitly constructed native preview; NewRouter mounts no native routes.
-	preview PreviewDeps
+	// accounts is drained on Close (tests also run its sweeps).
+	accounts *auth.Handler
 	http.Handler
 	Hub *ws.Hub
 	// Webhooks is the incoming webhook handler (tests adjust its limits).
@@ -100,11 +83,6 @@ type Router struct {
 	outgoing *webhook.Dispatcher
 }
 
-// PreviewDeps returns internal dependencies needed by the native preview router.
-func (r *Router) PreviewDeps() PreviewDeps {
-	return r.preview
-}
-
 // Close stops background work and closes the hub's upgraded WebSockets.
 func (r *Router) Close() {
 	if r.Hub != nil {
@@ -113,7 +91,7 @@ func (r *Router) Close() {
 	if r.cancel != nil {
 		r.cancel()
 	}
-	if a := r.preview.Accounts; a != nil && !a.Drain(jobsStopWait) {
+	if a := r.accounts; a != nil && !a.Drain(jobsStopWait) {
 		slog.Warn("account jobs still running at shutdown")
 	}
 	if r.outgoing != nil {
@@ -184,6 +162,6 @@ func NewRouter(d Deps) (*Router, error) {
 		EventsScheduler: c.eventsScheduler,
 		cancel:          func() { automod.Detach(d.DB, c.engine); cancel() },
 		outgoing:        c.outgoing,
-		preview:         PreviewDeps{Accounts: c.authH, Chat: c.chatH, System: c.systemH, PerUser: c.perUser, Trusted: trusted},
+		accounts:        c.authH,
 	}, nil
 }

@@ -13,8 +13,6 @@ import { currentRoute, navigate, popRedirectRoute, savePendingRoute } from './li
 import Sidebar from './components/Sidebar.vue'
 import UserBar from './components/UserBar.vue'
 import ChatArea from './components/ChatArea.vue'
-import NativeTrustControl from './components/NativeTrustControl.vue'
-import { platform } from './lib/platform'
 import VoiceStage from './components/VoiceStage.vue'
 import VoiceChatPanel from './components/VoiceChatPanel.vue'
 import ForumArea from './components/ForumArea.vue'
@@ -274,8 +272,7 @@ onMounted(async () => {
       <div class="flex-1 min-w-0 h-full flex flex-col">
         <ConnectionBanner />
         <TimeoutBanner />
-        <!-- Reloading embedded assets cannot update the unsigned DEV application. -->
-        <UpdateBanner v-if="!platform.isDesktop()" />
+        <UpdateBanner />
         <template v-if="voiceStore.activeView === 'voice'">
           <VoiceStage
             :channel-id="voiceChannelId"
@@ -292,7 +289,6 @@ onMounted(async () => {
           />
         </template>
         <div v-else class="min-h-0 flex flex-1 flex-col">
-          <NativeTrustControl v-if="platform.isDesktop() && authStore.isAdmin && chatStore.activeChannel && !inConversation" :key="authStore.user?.id + ':' + chatStore.activeChannel.id" :channel-id="chatStore.activeChannel.id" @saved="chatStore.activeChannel && chatStore.fetchMessages(chatStore.activeChannel.id)" />
           <ForumArea v-if="chatStore.activeChannel?.type === 'forum'" class="min-h-0 flex-1" />
           <ChatArea v-else class="min-h-0 flex-1" />
         </div>

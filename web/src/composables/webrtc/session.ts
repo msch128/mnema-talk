@@ -5,12 +5,11 @@ import { useAuthStore } from '../../stores/auth'
 import { usePermissionsStore } from '../../stores/permissions'
 import { mediaCall } from '../../lib/media/api'
 import { t } from '../../i18n'
-import { platform } from '../../lib/platform'
 import type { SubscribeRequest, ServerEventPayloads } from '../../types/events'
 import { loadIceServers } from './iceServers'
 import { isLobby, joinViaLobby, lobbyMoved, lobbyRefused } from './lobby'
 import { resumeRemoteAudio as resumeRemotePlayback } from './remoteAudio'
-import { closeMediaRoom, openMediaRoom, resetMediaAnnouncements } from './mediaRoom'
+import { closeMediaRoom, mediaConnectionAnnounced, openMediaRoom, resetMediaAnnouncements } from './mediaRoom'
 import type { Cx } from './state'
 import { aiModel } from './audioMath'
 import { stopCamera } from './camera'
@@ -60,10 +59,6 @@ async function captureMicrophone(cx: Cx): Promise<MediaStream | null> {
 function canJoinVoiceChannel(cx: Cx, channelId: string): boolean {
   if (!usePermissionsStore().canIn(channelId, 'connect')) {
     useToastStore().error(t('talk.noConnect'))
-    return false
-  }
-  if (platform.isDesktop()) {
-    useToastStore().error(t('nativeDesktop.mediaUnavailable'))
     return false
   }
   return !(channelId === cx.voice.currentChannelId && cx.st.localAudioStream.value)
@@ -152,7 +147,6 @@ export function sendMuteState(cx: Cx) {
 // treats it as a resume (no leave/join for the others) within its grace time.
 export function rejoinAfterReconnect(cx: Cx) {
   const { voice, chat } = cx
-  if (platform.isDesktop()) return
   const channelId = voice.currentChannelId
   if (!channelId) return
   // The server keeps the roster across a short disconnect, so nobody else
@@ -210,7 +204,11 @@ function handleKicked(cx: Cx, payload: ServerEventPayloads['voice_kicked']) {
   if (lobbyRefused(cx, payload)) return
   if (!voice.currentChannelId) return
   if (payload.channel_id !== voice.currentChannelId) return
+  // The browser already explained a failed media connection; the server's
+  // notice for the same loss would only repeat it.
+  const explained = payload.reason === 'connection_lost' && mediaConnectionAnnounced()
   endCall(cx, { notifyServer: false })
+  if (explained) return
   useToastStore().info(t(KICK_NOTICE[payload.reason ?? ''] ?? 'voice.kicked'))
 }
 
@@ -218,7 +216,6 @@ function handleKicked(cx: Cx, payload: ServerEventPayloads['voice_kicked']) {
 // Must run once the WebSocket is connected (voice_join goes over it).
 export async function resumeVoiceSession(cx: Cx) {
   const { voice, chat } = cx
-  if (platform.isDesktop()) return false
   const channelId = voiceSession.recent()
   if (!channelId || voice.currentChannelId) return false
   if (!chat.isVoiceChannel(channelId)) {

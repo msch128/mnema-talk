@@ -1,7 +1,7 @@
 import { isTauri } from '@tauri-apps/api/core'
 import { trustedApp } from './native/trustedDesktop'
 
-/** Only a local Tauri host selects native IPC. Browser requests stay same-origin. */
+/** The legacy local Tauri origin that hosts the desktop client's instance selector page. */
 export function isDesktopRuntime(): boolean {
   if (typeof window === 'undefined' || !isTauri()) return false
   const { protocol, hostname, port } = window.location

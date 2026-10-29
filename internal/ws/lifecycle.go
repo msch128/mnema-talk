@@ -145,11 +145,7 @@ func (h *Hub) registerPending(c *Client) (bool, []*Client) {
 		return false, nil
 	}
 	var evicted []*Client
-	if !c.hasNativeLease() {
-		evicted = h.browserOverflowLocked(c)
-	} else if h.nativeFamilyCountLocked(c) >= 4 {
-		return false, nil
-	}
+	evicted = h.browserOverflowLocked(c)
 	h.pending[c] = struct{}{}
 	return true, evicted
 }
@@ -160,7 +156,7 @@ func (h *Hub) browserOverflowLocked(c *Client) []*Client {
 	var mine []*Client
 	for _, set := range []map[*Client]struct{}{h.clients, h.pending} {
 		for existing := range set {
-			if !existing.hasNativeLease() && existing.User.ID == c.User.ID && !existing.closed.Load() {
+			if existing.User.ID == c.User.ID && !existing.closed.Load() {
 				mine = append(mine, existing)
 			}
 		}
@@ -280,11 +276,7 @@ func (h *Hub) recordLastSeen(ids ...uuid.UUID) {
 }
 
 func (h *Hub) unregister(c *Client) {
-	if c.leaseSealed() {
-		h.leaveCurrentVoice(c)
-	} else {
-		h.dropVoiceForGrace(c)
-	}
+	h.dropVoiceForGrace(c)
 	h.mu.Lock()
 	if _, ok := h.clients[c]; !ok {
 		h.mu.Unlock()

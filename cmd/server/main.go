@@ -153,6 +153,9 @@ func startVoice(ctx context.Context, cfg *config.Config) (*sfu.SFU, func(), erro
 		slog.Warn(w)
 		opwarn.Raise(opwarn.WebRTCReachability, 0)
 	}
+	if n := cfg.WebRTCRelayNotice(); n != "" {
+		slog.Info("webrtc relay: " + n)
+	}
 	if cfg.WebRTCUDPMuxPort == 0 {
 		// Each peer takes its own port(s) from the range, so the range
 		// bounds how many people can be in calls at once.

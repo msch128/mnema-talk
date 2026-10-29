@@ -362,7 +362,7 @@ func TestBansWithADurationExpire(t *testing.T) {
 	if _, err := f.a.db.Exec(ctx, `UPDATE users SET banned_until = NOW() - INTERVAL '1 second' WHERE id = $1`, f.target.user.ID); err != nil {
 		t.Fatal(err)
 	}
-	f.a.router.PreviewDeps().Accounts.ExpireBans(ctx)
+	f.a.router.accounts.ExpireBans(ctx)
 	if res := f.a.anon().post("/api/auth/login", map[string]string{"username": "troll", "password": "member-password-123"}); res.status != http.StatusOK {
 		t.Fatalf("login after expiry: %d %s", res.status, res.body)
 	}
@@ -377,7 +377,7 @@ func TestBansWithADurationExpire(t *testing.T) {
 	if res := f.mod.post("/api/admin/users/"+id+"/ban", map[string]any{}); res.status != http.StatusNoContent {
 		t.Fatal(res.status)
 	}
-	f.a.router.PreviewDeps().Accounts.ExpireBans(ctx)
+	f.a.router.accounts.ExpireBans(ctx)
 	if res := f.a.anon().post("/api/auth/login", map[string]string{"username": "troll", "password": "member-password-123"}); res.status != http.StatusForbidden {
 		t.Fatalf("permanent ban lifted: %d", res.status)
 	}
@@ -450,7 +450,7 @@ func TestBanAndDisableDoNotClobberEachOther(t *testing.T) {
 	if _, err := f.a.db.Exec(ctx, `UPDATE users SET banned_until = NOW() - INTERVAL '1 second' WHERE id = $1`, f.target.user.ID); err != nil {
 		t.Fatal(err)
 	}
-	f.a.router.PreviewDeps().Accounts.ExpireBans(ctx)
+	f.a.router.accounts.ExpireBans(ctx)
 	if got := login(); got != http.StatusForbidden {
 		t.Fatalf("expiry re-enabled a disabled account: %d", got)
 	}

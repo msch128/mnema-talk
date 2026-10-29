@@ -177,7 +177,7 @@ API and client compatibility before offering credentials. Self-hosted certificat
 authorities use normal system trust; there is no certificate bypass. Switching
 instances must isolate credentials, device keys, cached data and active connections.
 
-A native session broker must preserve the browser's existing cookie, CSRF, Origin
+The desktop shells must preserve the browser's existing cookie, CSRF, Origin
 and CSP protections. The desktop shells apply the strict web CSP (`style-src 'self'; style-src-attr 'none'`)
 only for web bundles >= 1.1.0; older bundles keep the old policy. Old desktop
 storage from before multi-server support is wiped once and never handed to a
@@ -219,7 +219,7 @@ notices and reproducible source/package identification.
 | Gate | Required result |
 |---|---|
 | G0 — feasibility | Real target-hardware evidence for fullscreen overlay, press/release input and encrypted media in each required platform route |
-| G1 — transport | Bounded discovery, explicit compatibility, isolated native sessions and narrow IPC |
+| G1 — transport | Bounded discovery, explicit compatibility, isolated instances and narrow IPC |
 | G2 — crypto | Reviewed provider/protocol selection, device trust, storage and recovery model |
 | G3 — shared client | Locally bundled web feature parity with a single session/media owner |
 | G4 — gaming | Game detection, gated participant widget, interactive overlay, rebindable shortcuts and safe input cleanup |
@@ -244,14 +244,6 @@ inspection. Only explicitly selected executable basenames are returned; full pat
 window titles and unrelated process lists are not transmitted. Portable policy tests
 exercise Voice/media/game/input/lock gating. The UI distinguishes API presence from
 actual capture or encryption support.
-
-The native-session foundation includes hash-only token persistence, bounded
-session families, single-use refresh rotation with committed replay revocation,
-and a shared browser/native credential and lockout policy. Its isolated HTTP
-handler rejects browser Origin/cookie traffic and provides explicit bearer
-authentication. These endpoints are not mounted in the server router; the probe
-still cannot log in. Migration 0015 adds the storage tables and runs through the
-normal forward-only migration mechanism when this server candidate starts.
 
 The portable game-window owner binds focus operations to its native owner,
 session, Voice and window generations. Stale operations and loss of context clear

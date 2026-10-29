@@ -55,7 +55,7 @@ type Message struct {
 	// MentionRoles are the roles this message mentions (@Role); the client
 	// draws them as role pills. A role that was deleted since drops out. The
 	// server always sends it; it is optional for clients that build messages
-	// themselves (the desktop app's native chat path).
+	// themselves.
 	MentionRoles []uuid.UUID `json:"mention_roles" binding:"optional" format:"uuid"`
 	CreatedAt    time.Time   `json:"created_at" format:"date-time"`
 	UpdatedAt    time.Time   `json:"updated_at" format:"date-time"`

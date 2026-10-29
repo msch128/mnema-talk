@@ -286,7 +286,6 @@ days, default 7. A change applies to running sessions at once.
   the upgrade itself. A pre-upgrade session that has not made a request since
   is not listed yet, so "sign out all other sessions" does not reach it; use
   "Sign out everywhere" (or the admin action) to end those too.
-- The desktop client's native sessions are separate and not affected.
 
 ## Web Push and the installable app
 
@@ -361,7 +360,10 @@ installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
 ## TURN (coturn)
 
 Needed only for members whose network blocks the UDP range (strict
-firewalls, some VPNs, Opera with its VPN or WebRTC protection on).
+firewalls, some VPNs, Opera with its VPN or WebRTC protection on). Without it
+those members get no voice: their browser tells them "No media connection" and
+the server log shows `sfu ice failed` for them. At startup the server logs
+`webrtc relay: ...` when no TURN URL is set, or none that works over TCP or TLS.
 
 1. In `.env`:
    ```sh
@@ -390,6 +392,35 @@ credential on a voice join when its copy is older than an hour. A credential
 therefore outlives a sign-out for up to 12 hours but can only use the relay,
 within the quotas above.
 Configured TURN servers are listed in the privacy policy.
+
+**Networks that block more than UDP.** `transport=tcp` on port 3478 passes
+firewalls that drop UDP but allow other ports. Some company networks only allow
+TCP 443 and inspect it; for them list a `turns:` URL
+(`turns:turn.example.com:443?transport=tcp`). The bundled coturn has no
+certificate, so `turns:` needs a coturn of your own with a TLS certificate (or a
+TCP/TLS multiplexer in front of it) and the secret from `WEBRTC_TURN_SECRET`.
+The app passes every URL in `WEBRTC_TURN_URLS` to the browser unchanged.
+
+## IPv6, DS-Lite and CGNAT
+
+- **The announced addresses are IPv4.** `WEBRTC_NAT_1TO1_IP` takes IPv4
+  addresses and names that resolve to IPv4. With it set, the server offers
+  browsers those addresses instead of its own and no IPv6 address that a
+  browser cannot reach (Docker's unique-local `fd00::/8`, link-local or
+  loopback). A global IPv6 address on a host-networked server is still offered.
+  An instance with only an `A` record (no `AAAA`) is fine.
+- **Members on IPv6-only or DS-Lite lines** reach the server's IPv4 address
+  through their provider's translation (CLAT/NAT64 or the carrier-grade NAT).
+  Outbound UDP works through it, so they need nothing from you; if their
+  provider blocks it, only TURN over TCP helps.
+- **The server behind DS-Lite or CGNAT** (no public IPv4 of its own: the
+  router's WAN address is private, or `ipv4.icanhazip.com` and the router
+  disagree) cannot receive the forwarded UDP range at all. Browsers outside
+  the LAN then never connect directly. Rent a small VPS with a public address,
+  run coturn there (`--profile turn`, `WEBRTC_NAT_1TO1_IP` set to the VPS) and
+  list it in `WEBRTC_TURN_URLS`; or run the whole instance on the VPS.
+- **Forward UDP for the SFU** (`WEBRTC_UDP_PORT_MIN`-`MAX`, default
+  `50000-50050/udp`) to the host. Forwarding an IPv6 port is not needed.
 
 ## SeaweedFS S3 authentication
 
@@ -854,6 +885,16 @@ Otherwise sign in from a browser you used before, or wait.
    Revert to the default afterwards.
 5. **UDP blocked on the member's side** (company network, VPN, Opera's VPN or
    WebRTC protection): only TURN over TCP helps, see [TURN](#turn-coturn).
+   The affected member sees "No media connection" in the app; the log has
+   `webrtc client diag` at warn level with `"ice":"failed"` and the candidate
+   types the browser gathered (no `relay` entry means no TURN was on offer).
+6. **Works for you, not for someone else.** Compare your `sfu ice connected`
+   line (`remote_type`) with theirs. If theirs is missing or `failed`, their
+   network is the difference: ask for another network (a phone hotspot), the
+   browser and whether a VPN is on. Make sure the instance runs a release that
+   drops a failed peer and tells its owner (1.2.6 or newer); older ones leave
+   the member in the call without media and without a message.
+   See [IPv6, DS-Lite and CGNAT](#ipv6-ds-lite-and-cgnat).
 
 ### A screen share shows nothing
 

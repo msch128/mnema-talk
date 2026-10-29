@@ -251,7 +251,7 @@ func TestExportNeedsTheSecondFactorAndExpires(t *testing.T) {
 	// The sweeper removes the file.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go a.router.PreviewDeps().Accounts.RunExportSweep(ctx, 20*time.Millisecond)
+	go a.router.accounts.RunExportSweep(ctx, 20*time.Millisecond)
 	deadline := time.Now().Add(3 * time.Second)
 	for a.store.Len() != 0 && time.Now().Before(deadline) {
 		time.Sleep(20 * time.Millisecond)

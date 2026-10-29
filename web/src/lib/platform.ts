@@ -1,21 +1,11 @@
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
-import type { ApiTransport } from './api'
-import { isDesktopRuntime, isWebDesktopSelector } from './desktopRuntime'
-import {
-  NativeSocket,
-  captureNativeTrustPresentation,
-  connectNative,
-  disconnectNative,
-  initializeNativeContext,
-  nativeApiTransport,
-  type NativeReply,
-} from './native/nativeTransport'
+import { isWebDesktopSelector } from './desktopRuntime'
 import { isTrustedDesktop, trustedApp, type TrustedApp } from './native/trustedDesktop'
 import { browserNotify, hostNotify, type NotifyAdapter, type NotifyPermission, type OsNotification, type UnreadCounts } from './osNotify'
 import { TrustedSocket } from './native/trustedSocket'
 
 /** What the chat store needs from a live socket, whichever host opens it. */
-export type PlatformSocket = WebSocket | NativeSocket | TrustedSocket
+export type PlatformSocket = WebSocket | TrustedSocket
 
 /**
  * The one seam between the app and the host it runs in. Everything that
@@ -25,16 +15,12 @@ export type PlatformSocket = WebSocket | NativeSocket | TrustedSocket
  * (doc/desktop-trusted-client.md) and are read nowhere else.
  */
 export interface Platform {
-  /** The app runs inside the desktop client's native-IPC host. */
-  isDesktop(): boolean
   /** The desktop client's instance selector page. */
   isWebDesktopSelector(): boolean
   /** The app runs from the desktop client's verified web bundle. */
   isTrustedDesktop(): boolean
   /** The verified bundle announcement, or null. */
   trustedApp(): TrustedApp | null
-  /** Transport for API calls, or null to use same-origin fetch. */
-  apiTransport(): ApiTransport | null
   /** Opens the real-time socket of this host. */
   openSocket(url: string): PlatformSocket
   /** Gaming overlay surface the host rendered this page as, or null. */
@@ -62,11 +48,6 @@ export interface Platform {
   reportUnread(counts: UnreadCounts): void
   /** The host takes `reportUnread` (it then also sums the badge over its instances). */
   supportsUnreadReport(): boolean
-  /** Native connection lifecycle (desktop only). */
-  initializeNative(): Promise<void>
-  connectNative(address: string): Promise<NativeReply>
-  disconnectNative(): Promise<void>
-  captureTrustPresentation(): ReturnType<typeof captureNativeTrustPresentation>
 }
 
 function windowString(name: string): string | null {
@@ -104,11 +85,9 @@ function unreadReporter(): NotifyAdapter | null {
 
 /** A browser tab, including the trusted bundle served from the client's own origin. */
 export const browserPlatform: Platform = {
-  isDesktop: () => false,
   isWebDesktopSelector,
   isTrustedDesktop,
   trustedApp,
-  apiTransport: () => null,
   openSocket: url => isTrustedDesktop() ? new TrustedSocket(trustedSocketPath(url)) : new WebSocket(url),
   gamingSurface: () => windowString('__MNEMA_GAMING_SURFACE__'),
   gamingBridgeToken: () => windowString('__MNEMA_GAMING_BRIDGE__'),
@@ -120,44 +99,7 @@ export const browserPlatform: Platform = {
   setBadge: count => notifier().setBadge(count),
   reportUnread: counts => unreadReporter()?.reportUnread?.(counts),
   supportsUnreadReport: () => unreadReporter()?.reportUnread !== undefined,
-  initializeNative: initializeNativeContext,
-  connectNative,
-  disconnectNative,
-  captureTrustPresentation: captureNativeTrustPresentation,
 }
 
-/** The desktop client's native-IPC host. */
-export const desktopPlatform: Platform = {
-  ...browserPlatform,
-  isDesktop: () => true,
-  apiTransport: () => nativeApiTransport,
-  openSocket: () => new NativeSocket(),
-}
-
-function current(): Platform {
-  return isDesktopRuntime() ? desktopPlatform : browserPlatform
-}
-
-/** The platform of this page. Resolved per call: the host never changes under a live page, but tests do. */
-export const platform: Platform = {
-  isDesktop: () => current().isDesktop(),
-  isWebDesktopSelector: () => current().isWebDesktopSelector(),
-  isTrustedDesktop: () => current().isTrustedDesktop(),
-  trustedApp: () => current().trustedApp(),
-  apiTransport: () => current().apiTransport(),
-  openSocket: url => current().openSocket(url),
-  gamingSurface: () => current().gamingSurface(),
-  gamingBridgeToken: () => current().gamingBridgeToken(),
-  invoke: <T = unknown>(command: string, args?: Record<string, unknown>) => current().invoke<T>(command, args),
-  notificationPermission: () => current().notificationPermission(),
-  refreshNotificationPermission: () => current().refreshNotificationPermission(),
-  requestNotificationPermission: () => current().requestNotificationPermission(),
-  notify: n => current().notify(n),
-  setBadge: count => current().setBadge(count),
-  reportUnread: counts => current().reportUnread(counts),
-  supportsUnreadReport: () => current().supportsUnreadReport(),
-  initializeNative: () => current().initializeNative(),
-  connectNative: address => current().connectNative(address),
-  disconnectNative: () => current().disconnectNative(),
-  captureTrustPresentation: () => current().captureTrustPresentation(),
-}
+/** The platform of this page. */
+export const platform: Platform = browserPlatform

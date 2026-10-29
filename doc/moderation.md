@@ -56,7 +56,7 @@ it). The account and its messages stay. A ban is its own state, separate from
 Disable: banning does not disable the account, and lifting a ban (or its expiry)
 never re-enables an account that was disabled before, just as Enable never
 lifts a ban. Every check of whether an account may act (sign-in, sessions,
-WebSockets, native sessions, mentions, the member list) uses one condition
+WebSockets, mentions, the member list) uses one condition
 (`auth.ActiveSQL`) that covers both, and a ban whose time has passed stops
 counting at once, before the expiry job (it runs every minute) clears it.
 
@@ -427,7 +427,7 @@ requests leave no entry. Reading the log is not recorded.
 | `channel.auto_delete_run` | The sweeper removed messages of a channel | The channel, the period (`days`), how many `messages` and `attachments` went, and whether the run finished (`complete`). Written by the server itself, without an actor; a run that removes nothing writes nothing. Never the text |
 | `voice.join`, `voice.leave` | A member enters or leaves a Talk | Member and Talk with the time. A reload within the grace period is neither. High volume on a busy server: filter by the *Talk presence* group |
 | `report.create`, `report.resolve`, `report.delete` | A member reports a message; a moderator closes or deletes the report | The report id and category (and the closing status). Never message text or notes. See [Blocking and reports](#blocking-and-reports) |
-| `auth.login` | Successful sign-in (browser and native) | The member |
+| `auth.login` | Successful sign-in | The member |
 | `auth.login_failed`, `auth.login_locked` | A wrong password, or a blocked attempt, for an **existing** account | The member. At most one entry per account and kind per minute, and no address, password or typed name; a name that is no account is not stored at all |
 | `auth.register`, `auth.password_change`, `auth.logout_all` | Own-account events | The member |
 | `auth.session_revoke`, `auth.sessions_revoke_others` | A member signs out one of their sessions, or all others, under *Settings* > *Sessions* | The member |

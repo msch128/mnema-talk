@@ -2,7 +2,6 @@ package sfu
 
 import (
 	"fmt"
-	"net"
 
 	"github.com/google/uuid"
 	"github.com/pion/ice/v4"
@@ -152,8 +151,8 @@ func buildSettingEngine(portMin, portMax uint16, announceIPs []string, mux ice.U
 }
 
 func configureICEAddresses(se *webrtc.SettingEngine, announceIPs []string) error {
-	if onlyLoopbackAnnouncements(announceIPs) {
-		se.SetIPFilter(func(ip net.IP) bool { return ip.IsLoopback() })
+	if filter := announceIPFilter(announceIPs); filter != nil {
+		se.SetIPFilter(filter)
 	}
 	if announcesLoopback(announceIPs) {
 		se.SetIncludeLoopbackCandidate(true)
