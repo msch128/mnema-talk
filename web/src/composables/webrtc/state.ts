@@ -30,6 +30,8 @@ export interface RtcState {
   /** A failed model uses browser suppression for this session; the saved choice is untouched, and leaving/rejoining permits a fresh attempt. */
   failedAIModel: NoiseModel | null
   speakingInterval: ReturnType<typeof setInterval> | null
+  /** Whether the others currently see my speaking ring; survives a restart of the detection so the ring can always be taken down. */
+  speakingAnnounced: boolean
   /** The mic-test monitor: a gain stage to the speakers on the context it was built on (the call's or the standalone test's). */
   loopbackGain: GainNode | null
   loopbackCtx: AudioContext | null
@@ -125,6 +127,7 @@ export function createRtcState(): RtcState {
     micTestController: null,
     failedAIModel: null,
     speakingInterval: null,
+    speakingAnnounced: false,
     loopbackGain: null,
     loopbackCtx: null,
     callBiquad: null,

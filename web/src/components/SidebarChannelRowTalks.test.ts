@@ -27,6 +27,16 @@ describe('Talks in the sidebar', () => {
     expect(rows[1]?.find('[data-testid="talk-leader-mark"]').exists()).toBe(false)
   })
 
+  it('opens a participant with Space as well as Enter', async () => {
+    const talk = channelFixture({ id: fixtureId(5), type: 'voice', name: 'Talk 1' })
+    useVoiceStore().channelUsers = { [talk.id]: { [ann.id]: ann } }
+    const w = mount(SidebarChannelRow, { props: { channel: talk } })
+    const row = w.get('[data-voice-user]')
+    await row.trigger('keydown', { key: ' ' })
+    await row.trigger('keydown', { key: 'Enter' })
+    expect(w.emitted('voice-user-click')).toHaveLength(2)
+  })
+
   it('shows a lobby with its own icon and without the Talk chat button', () => {
     const lobby = channelFixture({ id: fixtureId(6), type: 'voice', name: 'Create a Talk', is_lobby: true })
     const w = mount(SidebarChannelRow, { props: { channel: lobby } })

@@ -95,7 +95,8 @@ describe('EventDetailModal', () => {
     vi.spyOn(store, 'listRSVPs').mockResolvedValue([])
     wrapper = mount(EventDetailModal, { props: { event: makeEvent({ description: '' }) } })
     await flushPromises()
-    expect(wrapper.text().match(/No responses yet\./g)).toHaveLength(2)
+    expect(wrapper.text()).toContain('There is no description.')
+    expect(wrapper.text().match(/No responses yet\./g)).toHaveLength(1)
   })
 
   it('keeps working when the responses cannot be loaded', async () => {
@@ -104,8 +105,34 @@ describe('EventDetailModal', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     wrapper = mount(EventDetailModal, { props: { event: makeEvent() } })
     await flushPromises()
-    expect(wrapper.text()).toContain('No responses yet.')
+    expect(wrapper.text()).toContain('Could not load the responses.')
+    expect(wrapper.text()).not.toContain('No responses yet.')
     warn.mockRestore()
+  })
+
+  it('sends one RSVP while the first is still running', async () => {
+    const store = useEventsStore()
+    vi.spyOn(store, 'listRSVPs').mockResolvedValue([])
+    let release: (e: CommunityEvent) => void = () => {}
+    const set = vi.spyOn(store, 'setRSVP').mockImplementation(() => new Promise(r => { release = r }))
+    wrapper = mount(EventDetailModal, { props: { event: makeEvent() } })
+    await flushPromises()
+    const going = button('I’m going')
+    await going?.trigger('click')
+    await going?.trigger('click')
+    expect(set).toHaveBeenCalledTimes(1)
+    release(makeEvent({ my_rsvp: 'going' }))
+    await flushPromises()
+  })
+
+  it('shows a translated toast when the error has no message', async () => {
+    const store = useEventsStore()
+    vi.spyOn(store, 'listRSVPs').mockResolvedValue([])
+    vi.spyOn(store, 'setRSVP').mockRejectedValue('boom')
+    wrapper = mount(EventDetailModal, { props: { event: makeEvent() } })
+    await button('Can’t make it')?.trigger('click')
+    await flushPromises()
+    expect(useToastStore().toasts.some(t => t.text === 'Couldn’t save your response. Try again.')).toBe(true)
   })
 
   it.each([

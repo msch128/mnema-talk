@@ -56,9 +56,19 @@ export function deviceLabel(ua = typeof navigator === 'undefined' ? '' : navigat
   return (browser && system ? `${browser} on ${system}` : browser || system).slice(0, 64)
 }
 
+const WORKER_WAIT_MS = 5000
+
 /** The worker's registration once it is active; null when none was registered (a development build, or registration failed). */
 async function registration(): Promise<ServiceWorkerRegistration | null> {
-  return await navigator.serviceWorker.getRegistration('/') ? navigator.serviceWorker.ready : null
+  if (!await navigator.serviceWorker.getRegistration('/')) return null
+  // `ready` never settles while no worker becomes active (a stuck install), so it is not awaited for long.
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const stuck = new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), WORKER_WAIT_MS) })
+  try {
+    return await Promise.race([navigator.serviceWorker.ready, stuck])
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /** This browser's push subscription, if it has one. */
@@ -132,8 +142,9 @@ function sameKey(sub: globalThis.PushSubscription, key: Uint8Array): boolean {
 
 /** Removes a device from the account. When it is this browser, its subscription ends too. */
 export async function removeDevice(device: PushSubscription, quiet = false): Promise<void> {
-  const mine = await thisDevice([device])
+  // The server's entry goes first, so a stuck worker never keeps a device on the list.
   await api(`/api/push/subscriptions/${device.id}`, { method: 'DELETE', ...(quiet ? { shouldNotifyUnauthorized: () => false } : {}) })
+  const mine = await thisDevice([device])
   if (mine) {
     await (await currentSubscription())?.unsubscribe()
     pushOnThisDevice.value = false

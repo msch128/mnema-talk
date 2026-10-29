@@ -27,6 +27,7 @@ describe('bots helpers', () => {
     expect(curlExample('https://x.test')).toBe('curl -H "Authorization: Bot <token>" https://x.test/api/bot/v1/users/@me')
     expect(botInitial(' ab')).toBe('A')
     expect(botInitial('  ')).toBe('?')
+    expect(botInitial('🤖 Helper')).toBe('🤖')
   })
   it('turns a date into an RFC3339 end of day', () => {
     expect(endOfDayIso('')).toBeUndefined()

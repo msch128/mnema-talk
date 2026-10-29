@@ -1,7 +1,8 @@
 // Syntax highlighting for fenced code blocks, with highlight.js (core build,
 // a fixed list of languages, no auto-detection). highlight.js returns HTML;
 // it is never trusted: the output is re-tokenised below and only
-// <span class="hljs-…"> pairs and text survive. Everything else, and anything
+// <span class="hljs-…"> and <span class="language-…"> (embedded sublanguages,
+// e.g. a <script> inside html) pairs and text survive. Everything else, and anything
 // unbalanced, falls back to the plain escaped code.
 import hljs from 'highlight.js/lib/core'
 import bash from 'highlight.js/lib/languages/bash'
@@ -49,8 +50,7 @@ export function isHighlightable(lang: string): boolean {
   return KNOWN.has(lang)
 }
 
-const TOKEN = /<span class="hljs-[A-Za-z0-9_ -]{1,60}">|<\/span>|[^<]+|</g
-const OPEN = '<span class="hljs-'
+const TOKEN = /<span class="(?:hljs|language)-[A-Za-z0-9_ -]{1,60}">|<\/span>|[^<]+|</g
 const KNOWN_ENTITY = /&(?!(?:amp|lt|gt|quot|#x27|#39);)/g
 
 /**
@@ -61,7 +61,7 @@ export function sanitizeHighlighted(html: string): string | null {
   let depth = 0
   let out = ''
   for (const [token] of html.matchAll(TOKEN)) {
-    if (token.startsWith(OPEN)) {
+    if (token.startsWith('<span ')) {
       depth++
       out += token
     } else if (token === '</span>') {

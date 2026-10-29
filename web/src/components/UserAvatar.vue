@@ -3,6 +3,7 @@ import type { PropType } from 'vue'
 import type { AvatarUser, AvatarSize, LivePresence } from './presentationTypes'
 import { computed } from 'vue'
 import PresenceDot from './PresenceDot.vue'
+import { initialOf } from '../lib/initial'
 
 const props = defineProps({
   user: {
@@ -50,8 +51,7 @@ const sizeClasses = computed(() => {
 })
 
 const initial = computed(() => {
-  const name = props.user?.display_name || props.user?.username || '?'
-  return name.charAt(0).toUpperCase()
+  return initialOf(props.user?.display_name || props.user?.username)
 })
 
 const dotStatus = computed(() => props.status || (props.isOnline ? 'online' : 'offline'))

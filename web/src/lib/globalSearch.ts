@@ -24,6 +24,10 @@ function ensureMounted() {
       const host = document.createElement('div')
       document.body.appendChild(host)
       createApp(GlobalSearch).use(i18nPlugin).directive('tooltip', tooltip).mount(host)
+    }).catch((error: unknown) => {
+      // Forget the failed load (a network blip, a chunk swapped by a deploy) so the next try fetches again.
+      mounting = null
+      throw error
     })
   }
   return mounting
@@ -47,7 +51,12 @@ function mergePrefill(kept: string, prefill: string): string {
 export function openSearch(prefill?: string, scope: SearchScope = 'channels') {
   searchScope.value = scope
   if (prefill !== undefined) searchText.value = mergePrefill(searchText.value, prefill)
-  return ensureMounted().then(() => { searchOpen.value = true })
+  return ensureMounted().then(() => { searchOpen.value = true }, failed)
+}
+
+/** The lazy modal could not be loaded; the next Ctrl/Cmd+K tries again. */
+function failed(error: unknown) {
+  console.error('search: could not load the search', error)
 }
 
 function isSearchShortcut(e: KeyboardEvent): boolean {
@@ -59,7 +68,7 @@ function isSearchShortcut(e: KeyboardEvent): boolean {
 function onKeydown(e: KeyboardEvent) {
   if (!isSearchShortcut(e)) return
   e.preventDefault()
-  ensureMounted().then(() => { searchOpen.value = !searchOpen.value })
+  ensureMounted().then(() => { searchOpen.value = !searchOpen.value }, failed)
 }
 
 export function installGlobalSearch() {

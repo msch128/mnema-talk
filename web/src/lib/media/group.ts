@@ -225,6 +225,8 @@ export class MediaGroup extends GroupSync {
         // The epoch was refused (for instance a leaf identity held twice): this group is out of step.
         return this.recoverNow()
       }
+      // The epoch I left is superseded: its secrets must not outlive the switch.
+      this.wipeLeft(previous)
     } catch {
       return this.step()
     }

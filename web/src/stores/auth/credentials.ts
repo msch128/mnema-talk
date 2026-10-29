@@ -1,6 +1,7 @@
 import type { Ref } from 'vue'
 import { api, ApiError } from '../../lib/api'
 import { releaseThisDevice } from '../../lib/webPush'
+import { resetNotifyPreview } from '../../lib/notifyPreview'
 import { clearAllDrafts, beginDraftSession } from '../../lib/drafts'
 import { decodeUser, decodeUserEnvelope, type User } from '../../types/domain'
 import { decodeAuthTwoFactorLoginResult, isAuthTwoFactorChallenge, type AuthSecurityNotice } from '../../types/rest'
@@ -139,6 +140,7 @@ async function logout({ core, user }: AuthDeps) {
   const { s, advanceSession, sessionSnapshot, isCurrentSession, queueCookieRequest } = core
   advanceSession()
   user.value = null
+  resetNotifyPreview()
   // Unsent messages stay on this device only while the account is signed in.
   clearAllDrafts()
   const session = sessionSnapshot()
@@ -171,6 +173,7 @@ export function createAuthActions(deps: AuthDeps) {
     resetLocalSession() {
       core.advanceSession()
       user.value = null
+      resetNotifyPreview()
       clearAllDrafts()
       core.s.cookieAccountId = undefined
     }

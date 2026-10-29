@@ -68,6 +68,7 @@ describe('BotCommandsPanel', () => {
     await w.findAll('input[type="checkbox"]')[0]?.setValue(false)
     await flushPromises()
     expect(toastTexts()).toContain('patch failed')
+    expect((w.findAll('input[type="checkbox"]')[0]!.element as HTMLInputElement).checked).toBe(true)
     expect(w.findAll('[data-testid="bot-command"]')).toHaveLength(1)
   })
 

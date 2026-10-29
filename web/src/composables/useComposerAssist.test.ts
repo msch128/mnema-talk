@@ -43,6 +43,18 @@ async function type(w: ReturnType<typeof mount<typeof Harness>>, value: string) 
 }
 
 describe('useComposerAssist', () => {
+  it('does not pick a suggestion with the Enter that confirms an IME composition', async () => {
+    const w = mount(Harness, { attachTo: document.body })
+    await type(w, '@m')
+    const a = w.vm.assist
+    expect(a.open.value).toBe(true)
+    expect(a.onKeydown(new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, cancelable: true }))).toBe(false)
+    expect(a.onKeydown(new KeyboardEvent('keydown', { key: 'Tab', keyCode: 229, cancelable: true }))).toBe(false)
+    expect(w.vm.text).toBe('@m')
+    expect(a.open.value).toBe(true)
+    w.unmount()
+  })
+
   it('wraps arrow navigation, consumes Tab, and leaves ordinary and shifted Enter keys', async () => {
     const w = mount(Harness, { attachTo: document.body })
     await type(w, '@m')

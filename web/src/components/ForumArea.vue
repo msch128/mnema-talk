@@ -4,10 +4,13 @@ import { MessagesSquare, Plus, Tags, ArrowUpDown, Loader2, Search } from '@lucid
 import type { ForumTag, Message } from '../types/domain'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
+import { useToastStore } from '../stores/toast'
 import { fetchForumTags, fetchForumPosts } from '../lib/forumApi'
 import { caughtErrorMessage } from '../lib/api'
+import { t } from '../i18n'
 import { openSearch } from '../lib/globalSearch'
 import { quoteValue } from '../lib/searchQuery'
+import StatePanel from './StatePanel.vue'
 import NavDrawerButton from './NavDrawerButton.vue'
 import ForumPostCard from './ForumPostCard.vue'
 import CreateForumPostModal from './CreateForumPostModal.vue'
@@ -15,6 +18,7 @@ import ManageForumTagsModal from './ManageForumTagsModal.vue'
 
 const chatStore = useChatStore()
 const permissions = usePermissionsStore()
+const toasts = useToastStore()
 
 const channelId = computed(() => chatStore.activeChannel?.id ?? '')
 const channelName = computed(() => chatStore.activeChannel?.name ?? '')
@@ -34,31 +38,73 @@ const error = ref('')
 const showCreateModal = ref(false)
 const showManageTagsModal = ref(false)
 
+// The server's default page size; a full page means there may be older posts.
+const PAGE_SIZE = 50
+const hasMore = ref(false)
+const isLoadingMore = ref(false)
+// Answers of a superseded request (older channel, sort or tag) are dropped.
+let tagsSeq = 0
+let postsSeq = 0
+
 async function loadTags() {
   if (!channelId.value) return
+  const seq = ++tagsSeq
   isLoadingTags.value = true
   try {
-    tags.value = await fetchForumTags(channelId.value)
+    const loaded = await fetchForumTags(channelId.value)
+    if (seq === tagsSeq) tags.value = loaded
   } catch (err) {
-    console.error('Failed to load forum tags:', err)
+    if (seq === tagsSeq) console.error('Failed to load forum tags:', err)
   } finally {
-    isLoadingTags.value = false
+    if (seq === tagsSeq) isLoadingTags.value = false
   }
 }
 
 async function loadPosts() {
   if (!channelId.value) return
+  const seq = ++postsSeq
   isLoadingPosts.value = true
+  isLoadingMore.value = false
   error.value = ''
   try {
-    posts.value = await fetchForumPosts(channelId.value, {
+    const page = await fetchForumPosts(channelId.value, {
       sort: sortMode.value,
       tagId: selectedTagId.value ?? undefined
     })
+    if (seq !== postsSeq) return
+    posts.value = page
+    hasMore.value = page.length >= PAGE_SIZE
   } catch (err) {
-    error.value = caughtErrorMessage(err, 'Failed to load posts')
+    if (seq !== postsSeq) return
+    posts.value = []
+    hasMore.value = false
+    error.value = caughtErrorMessage(err, t('forum.loadFailed'))
   } finally {
-    isLoadingPosts.value = false
+    if (seq === postsSeq) isLoadingPosts.value = false
+  }
+}
+
+async function loadMore() {
+  const last = posts.value[posts.value.length - 1]
+  if (!channelId.value || !last || isLoadingMore.value) return
+  const seq = postsSeq
+  isLoadingMore.value = true
+  try {
+    const page = await fetchForumPosts(channelId.value, {
+      sort: sortMode.value,
+      tagId: selectedTagId.value ?? undefined,
+      before: last.id,
+      beforeActivity: sortMode.value === 'activity' ? last.last_activity_at : undefined
+    })
+    if (seq !== postsSeq) return
+    const known = new Set(posts.value.map(p => p.id))
+    posts.value = [...posts.value, ...page.filter(p => !known.has(p.id))]
+    hasMore.value = page.length >= PAGE_SIZE
+  } catch (err) {
+    if (seq !== postsSeq) return
+    toasts.error(caughtErrorMessage(err, t('forum.loadFailed')))
+  } finally {
+    if (seq === postsSeq) isLoadingMore.value = false
   }
 }
 
@@ -80,9 +126,10 @@ function selectTagFilter(tagId: string | null) {
 }
 
 watch(channelId, () => {
-  selectedTagId.value = null
   loadTags()
-  loadPosts()
+  // Clearing a tag filter reloads through the filter watcher; load once.
+  if (selectedTagId.value !== null) selectedTagId.value = null
+  else loadPosts()
 })
 
 watch([sortMode, selectedTagId], () => {
@@ -216,6 +263,10 @@ onMounted(() => {
         <span class="text-xs">{{ $t('forum.loadingPosts') }}</span>
       </div>
 
+      <StatePanel v-else-if="error" state="error" retryable data-testid="forum-error" @retry="loadPosts">
+        {{ error }}
+      </StatePanel>
+
       <!-- Empty State -->
       <div
         v-else-if="posts.length === 0"
@@ -249,6 +300,17 @@ onMounted(() => {
           :post="post"
           @select="handleSelectPost"
         />
+        <div v-if="hasMore" class="flex justify-center pt-1">
+          <button
+            type="button"
+            data-testid="forum-load-more"
+            class="btn btn-secondary px-3 py-1.5 text-xs"
+            :disabled="isLoadingMore"
+            @click="loadMore"
+          >
+            {{ $t('common.loadMore') }}
+          </button>
+        </div>
       </div>
     </div>
 

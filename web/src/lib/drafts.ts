@@ -135,6 +135,20 @@ function current(uid: string): Items {
   return state.value.items
 }
 
+/**
+ * The account's drafts as storage holds them now, so a change made here never
+ * drops (or revives) a draft another tab saved (or sent) since this tab last
+ * looked. Without readable storage this tab's own snapshot is all there is.
+ */
+function fresh(uid: string): Items {
+  try {
+    localStorage.getItem(storageKey(uid))
+  } catch {
+    return { ...current(uid) }
+  }
+  return read(uid)
+}
+
 /** The newest MAX_DRAFTS drafts. */
 function trimmed(items: Items): Items {
   const keys = Object.keys(items)
@@ -157,7 +171,7 @@ export function hasDraft(uid: string | null | undefined, key: string): boolean {
 /** Stores the draft, or forgets it when it holds no text and no reply. */
 export function setDraft(uid: string, key: string, draft: Draft | null) {
   if (!sessionAlive()) return
-  const items = { ...current(uid) }
+  const items = fresh(uid)
   const text = (draft?.text ?? '').slice(0, MAX_DRAFT_TEXT)
   if (draft && (text.trim() || draft.reply)) items[key] = { text, reply: draft.reply, at: Date.now() }
   else delete items[key]
@@ -173,9 +187,9 @@ export function setDraft(uid: string, key: string, draft: Draft | null) {
  */
 export function pruneChannelDrafts(uid: string, channelIds: ReadonlySet<string>) {
   if (!sessionAlive()) return
-  const items = current(uid)
+  const items = fresh(uid)
   const kept = Object.entries(items).filter(([key]) => !key.startsWith('c:') || channelIds.has(key.slice(2)))
-  if (kept.length === Object.keys(items).length) return
+  if (kept.length === Object.keys(items).length) { state.value = { uid, items }; return }
   state.value = { uid, items: Object.fromEntries(kept) }
   write(uid, state.value.items)
 }

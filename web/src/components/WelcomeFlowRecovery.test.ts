@@ -6,6 +6,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import WelcomeFlow from './WelcomeFlow.vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
+import { useOnboardingStore } from '../stores/onboarding'
 import { i18nPlugin, setLocale } from '../i18n'
 import { tooltip } from '../directives/tooltip'
 import { userFixture } from '../test-fixtures.fixture'
@@ -16,13 +17,21 @@ let gets: number
 let puts: number
 let failGets: number
 let failPuts: number
+let failAccepts: number
+let slowGets: Promise<void> | null
 
 vi.mock('../lib/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/api')>()),
   api: (path: string, options: ApiOptions = {}) => {
     if (!path.startsWith('/api/onboarding')) return Promise.reject(new Error('not part of this test'))
+    if (path === '/api/onboarding/accept') {
+      if (failAccepts > 0) { failAccepts--; return Promise.reject(new Error('offline')) }
+      server = { ...server, rules_accepted_version: server.rules_version, rules_pending: false }
+      return Promise.resolve(undefined)
+    }
     if (path === '/api/onboarding') {
       gets++
+      if (slowGets) return slowGets.then(() => structuredClone(server))
       if (failGets > 0) { failGets--; return Promise.reject(new Error('rate limited')) }
     }
     if (path === '/api/onboarding/tips') {
@@ -77,6 +86,8 @@ beforeEach(() => {
   puts = 0
   failGets = 0
   failPuts = 0
+  failAccepts = 0
+  slowGets = null
   bus.rules = []
   window.history.replaceState(null, '', '/')
   useChatStore().notificationPermission = 'unsupported'
@@ -119,6 +130,33 @@ describe('finishing the welcome flow when the save does not go through', () => {
 })
 
 describe('the rules step after a failed load or changed rules', () => {
+  it('says so when accepting the rules fails, and closes after a retry', async () => {
+    server = state({ welcome_done: true, rules_pending: true })
+    failAccepts = 1
+    const w = await flow()
+    const accept = () => document.querySelector<HTMLElement>('[data-testid="welcome-accept"]')
+    accept()?.click()
+    await flushPromises()
+    expect(document.querySelector('[data-testid="welcome-accept-failed"]')).not.toBeNull()
+    expect(title()).toBe('The rules')
+    accept()?.click()
+    await flushPromises()
+    expect(dialog()).toBeNull()
+    w.unmount()
+  })
+
+  it('opens nothing when the component is gone before the onboarding state arrives', async () => {
+    server = state({ welcome_done: true, rules_pending: true })
+    let release = () => {}
+    slowGets = new Promise<void>(resolve => { release = resolve })
+    const w = mount(WelcomeFlow, { attachTo: document.body, global: { plugins: [i18nPlugin], directives: { tooltip } } })
+    await flushPromises()
+    w.unmount()
+    release()
+    await flushPromises()
+    expect(useOnboardingStore().welcomeOpen).toBe(false)
+  })
+
   it('retries a failed first load once and opens the rules', async () => {
     server = state({ welcome_done: true, rules_pending: true })
     failGets = 1

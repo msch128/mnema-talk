@@ -39,8 +39,10 @@ async function control(action: string) {
 }
 function settings() { draft.value = snapshot.value ? structuredClone(toRaw(snapshot.value.settings)) : null; editing.value = !editing.value; error.value = false }
 function bind(key: 'overlay' | 'mute' | 'deafen' | 'ptt', event: KeyboardEvent) {
-  event.preventDefault(); event.stopPropagation()
   const chord = chordFromKey(event)
+  // Tab and Escape without a chord must still leave the field.
+  if (!chord && (event.key === 'Tab' || event.key === 'Escape')) return
+  event.preventDefault(); event.stopPropagation()
   if (chord && draft.value) draft.value[key] = chord
 }
 async function save() {

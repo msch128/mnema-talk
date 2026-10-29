@@ -53,7 +53,7 @@ export function toggleScreenAudioMute(cs: VoiceState) {
 
 // q: { resolution, fps, custom? } (see useStreamQuality).
 export function setScreenQuality(cs: VoiceState, q: ScreenQuality) {
-  const norm = { ...normalizeQuality(q), ...(q?.custom === true ? { custom: true } : {}) }
+  const norm = normalizeQuality(q)
   cs.screenQuality.value = norm
   try {
     localStorage.setItem(SCREEN_QUALITY_STORAGE_KEY, JSON.stringify(norm))

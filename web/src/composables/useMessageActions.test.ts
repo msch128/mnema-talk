@@ -105,6 +105,21 @@ describe('useMessageActions upload', () => {
 describe('useMessageActions edit / delete / react', () => {
   const msg = messageFixture({ id: 'm1', user_id: 'me', content: 'hello', channel_id: 'ch1' })
 
+  it('keeps a newer edit open when the save of an older one finishes', async () => {
+    const a = setup()
+    const other = messageFixture({ id: 'm2', user_id: 'me', content: 'second', channel_id: 'ch1' })
+    let finish: () => void = () => undefined
+    vi.spyOn(useChatStore(), 'editMessage').mockImplementation(() => new Promise<null>(r => { finish = () => r(null) }))
+    a.startEdit(msg)
+    const saving = a.saveEdit(msg)
+    a.startEdit(other)
+    a.editText.value = 'typed in the new editor'
+    finish()
+    await saving
+    expect(a.editingId.value).toBe('m2')
+    expect(a.editText.value).toBe('typed in the new editor')
+  })
+
   it('guards empty and concurrent edits, falls back to message channel and handles non-Error failures', async () => {
     const a = setup()
     useChatStore().activeChannel = null

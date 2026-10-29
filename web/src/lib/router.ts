@@ -86,10 +86,16 @@ export function canGoBackInApp() {
 export function navigateTo(path: string, opts: boolean | { replace?: boolean } = false) {
   if (typeof window === 'undefined') return
   const replace = typeof opts === 'boolean' ? opts : !!opts?.replace
-  if (replace) {
-    window.history.replaceState({ idx: historyIndex() }, '', path)
-  } else if (window.location.pathname !== path) {
-    window.history.pushState({ idx: historyIndex() + 1 }, '', path)
+  // A path the browser resolves to another origin (like "//host/x") makes history throw; show the start page instead.
+  if (path.startsWith('//')) path = '/'
+  try {
+    if (replace) {
+      window.history.replaceState({ idx: historyIndex() }, '', path)
+    } else if (window.location.pathname !== path) {
+      window.history.pushState({ idx: historyIndex() + 1 }, '', path)
+    }
+  } catch {
+    path = '/'
   }
   currentRoute.value = parseRoute(path)
 }
@@ -188,18 +194,22 @@ export const popRedirectRoute = consumePendingRoute
 export function savePendingRoute() {
   if (typeof window === 'undefined') return
   const path = window.location.pathname
-  if (path && path !== '/' && path !== '/login' && !isInvitePath(path)) {
-    sessionStorage.setItem(PENDING_ROUTE_KEY, path)
+  if (path && path !== '/' && !path.startsWith('//') && path !== '/login' && !isInvitePath(path)) {
+    try {
+      sessionStorage.setItem(PENDING_ROUTE_KEY, path)
+    } catch { /* storage is blocked: the link is simply not remembered */ }
   }
 }
 
 export function consumePendingRoute() {
   if (typeof window === 'undefined') return null
-  const pending = sessionStorage.getItem(PENDING_ROUTE_KEY)
-  if (pending) {
-    sessionStorage.removeItem(PENDING_ROUTE_KEY)
-    return pending
-  }
+  try {
+    const pending = sessionStorage.getItem(PENDING_ROUTE_KEY)
+    if (pending) {
+      sessionStorage.removeItem(PENDING_ROUTE_KEY)
+      return pending.startsWith('//') ? null : pending
+    }
+  } catch { /* storage is blocked */ }
   return null
 }
 

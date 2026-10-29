@@ -66,6 +66,16 @@ describe('slash commands in the composer', () => {
     expect(w.find('[data-testid="slash-bar"]').exists()).toBe(false)
   })
 
+  it('points the combobox at the slash list and its highlighted command', async () => {
+    const ta = w.get('textarea')
+    expect(ta.attributes('aria-controls')).toBeUndefined()
+    await ta.setValue('/pi')
+    await flushPromises()
+    expect(ta.attributes('aria-controls')).toBe('chat-slash')
+    expect(ta.attributes('aria-activedescendant')).toBe('chat-slash-0')
+    expect(w.find('#chat-slash-0').exists()).toBe(true)
+  })
+
   it('can be dropped without running it, and an ordinary slash message still sends', async () => {
     const ta = w.get('textarea')
     await ta.setValue('/ping')

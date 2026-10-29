@@ -26,7 +26,7 @@ async function copy(text: string) {
 </script>
 
 <template>
-  <BaseDialog :title="$t('bots.secret.title', { name: botName })" panel-class="max-w-lg" @close="emit('close')">
+  <BaseDialog :title="$t('bots.secret.title', { name: botName })" panel-class="max-w-lg" :close-on-scrim="false" @close="emit('close')">
     <div class="space-y-4 p-5" data-testid="bot-secret">
       <p class="flex items-start gap-2 rounded-md border border-mnema-danger/40 bg-mnema-danger/10 px-3 py-2 text-sm text-mnema-text" role="alert">
         <TriangleAlert class="mt-0.5 h-4 w-4 shrink-0 text-mnema-danger" aria-hidden="true" />

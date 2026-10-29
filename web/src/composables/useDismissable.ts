@@ -48,14 +48,15 @@ export function useDismissable(target: MaybeRefOrGetter<DismissTarget>, onClose:
     if (listening || typeof document === 'undefined') return
     listening = true
     document.addEventListener('pointerdown', onPointerDown, true)
-    if (escape) document.addEventListener('keydown', onKeydown, true)
+    // On window, so it runs before the capture listeners on document (an open dialog's) and stopPropagation reaches them.
+    if (escape) window.addEventListener('keydown', onKeydown, true)
   }
 
   function stop() {
     if (!listening) return
     listening = false
     document.removeEventListener('pointerdown', onPointerDown, true)
-    document.removeEventListener('keydown', onKeydown, true)
+    window.removeEventListener('keydown', onKeydown, true)
   }
 
   const stopWatch = watch(() => !!toValue(active), on => (on ? start() : stop()), { immediate: true, flush: 'sync' })

@@ -20,6 +20,8 @@ import { moderateMessages } from '../lib/messageModeration'
 import { previewText } from '../lib/replies'
 import { shortcodesForEditing } from '../lib/customEmoji'
 import { t } from '../i18n'
+import { caughtErrorMessage } from '../lib/api'
+import { copyToClipboard } from '../lib/clipboard'
 import { messageSafetyItems } from './dmMenuItems'
 import { boxOf, type AnchorBox } from '../lib/floatingPosition'
 
@@ -29,10 +31,6 @@ interface MenuDeps {
   actions: MessageActions
   reply: (message: Message) => void
   copy: (text: string, doneKey: string) => Promise<void>
-}
-
-function errorText(err: unknown, fallback: string) {
-  return err instanceof Error && err.message ? err.message : fallback
 }
 
 function markUnreadItem(msg: Message): ContextMenuItem {
@@ -46,7 +44,7 @@ function markUnreadItem(msg: Message): ContextMenuItem {
         await chatStore.markChannelUnread(chatStore.activeChannel?.id ?? msg.channel_id, msg.id)
         toasts.success(t('chat.markedUnread'))
       } catch (err) {
-        toasts.error(errorText(err, t('chat.markUnreadFailed')))
+        toasts.error(caughtErrorMessage(err, t('chat.markUnreadFailed')))
       }
     }
   }
@@ -62,7 +60,7 @@ export async function toggleSavedMessage(msg: Message): Promise<void> {
     else await saved.save(msg.id)
     toasts.success(t(was ? 'saved.removed' : 'saved.added'))
   } catch (err) {
-    toasts.error(errorText(err, t(was ? 'saved.removeFailed' : 'saved.saveFailed')))
+    toasts.error(caughtErrorMessage(err, t(was ? 'saved.removeFailed' : 'saved.saveFailed')))
   }
 }
 
@@ -125,7 +123,7 @@ function pinItem(msg: Message, channelId: string): ContextMenuItem {
       try {
         await chatStore.setPinned(channelId, msg.id, !msg.is_pinned)
       } catch (err) {
-        toasts.error(errorText(err, t('moderation.failed')))
+        toasts.error(caughtErrorMessage(err, t('moderation.failed')))
       }
     }
   }
@@ -186,8 +184,6 @@ function messageItems(msg: Message, deps: MenuDeps): ContextMenuItem[] {
  * @param reply    (msg) => void, starts a reply in the composer
  */
 export function useMessageMenu({ actions, reply }: { actions: MessageActions; reply: (message: Message) => void }) {
-  const toasts = useToastStore()
-
   // Bound to <ContextMenu>; also used for other menus of the view.
   const state = ref<{ open: boolean; x: number; y: number; anchor: AnchorBox | null; items: ContextMenuItem[] }>({ open: false, x: 0, y: 0, anchor: null, items: [] })
 
@@ -199,14 +195,7 @@ export function useMessageMenu({ actions, reply }: { actions: MessageActions; re
     state.value.open = false
   }
 
-  async function copy(text: string, doneKey: string) {
-    try {
-      await navigator.clipboard.writeText(text)
-      toasts.success(t(doneKey))
-    } catch (err) {
-      console.warn('Copy failed:', err)
-    }
-  }
+  const copy = async (text: string, doneKey: string) => { await copyToClipboard(text, t(doneKey)) }
 
   const itemsFor = (msg: Message) => messageItems(msg, { actions, reply, copy })
 

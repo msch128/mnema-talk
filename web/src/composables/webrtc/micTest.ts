@@ -1,9 +1,11 @@
+import { t } from '../../i18n'
+import { useToastStore } from '../../stores/toast'
 import { createNoiseSuppressorNode, isNoiseSuppressionSupported } from '../../lib/noiseSuppressor'
 import { createVoiceGate } from '../../lib/levelMeter'
 import { updateRemoteVolume } from './remoteAudio'
 import type { Cx } from './state'
 import { aiModel, calculateRMSLevel, setNodeGain } from './audioMath'
-import { connectLoopback, disconnectLoopback, getAudioConstraints, refreshAudioDevices } from './micPipeline'
+import { connectLoopback, disconnectLoopback, micErrorKey, refreshAudioDevices, requestMicrophone } from './micPipeline'
 
 type Stale = () => boolean
 
@@ -11,9 +13,10 @@ async function acquireTestStream(cx: Cx, stale: Stale) {
   const { voice } = cx
   let stream
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: getAudioConstraints(cx) })
+    stream = await requestMicrophone(cx)
   } catch (err) {
     console.warn('Mic test failed (permission denied or no device):', err)
+    if (!stale()) useToastStore().error(t(micErrorKey(err)))
     if (!stale()) voice.currentInputLevel = 0
     if (!stale()) voice.isMicTesting = false
     return null
@@ -143,6 +146,7 @@ function startCallLoopback(cx: Cx): boolean | null {
   connectLoopback(cx, st.audioContext, st.callBiquad)
   const track = st.localAudioStream.value.getAudioTracks()[0]
   if (track) track.enabled = false
+  st.speakingAnnounced = false
   chat.sendWSEvent('voice_speaking', { active: false })
   updateRemoteVolume(voice)
   return !!st.loopbackGain

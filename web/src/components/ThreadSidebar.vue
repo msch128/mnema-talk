@@ -6,6 +6,7 @@ import { X, MessageSquare, Loader2, Bell, BellOff, Lock, Unlock } from '@lucide/
 import type { ThreadRoot } from '../stores/chat'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
+import { useAuthStore } from '../stores/auth'
 import { updateForumPost } from '../lib/forumApi'
 import ThreadRootCard from './ThreadRootCard.vue'
 import ImageLightbox from './ImageLightbox.vue'
@@ -17,13 +18,14 @@ import ThreadComposer from './ThreadComposer.vue'
 import { useMessageActions } from '../composables/useMessageActions'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
 import { useDraftSlot } from '../composables/useDraftSlot'
-import { threadDraftKey, type DraftReply } from '../lib/drafts'
+import { setDraft, threadDraftKey, type DraftReply } from '../lib/drafts'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 
 const chatStore = useChatStore()
 const toasts = useToastStore()
 const permissions = usePermissionsStore()
+const authStore = useAuthStore()
 // The thread lives in a channel; the server decides, this hides what would fail.
 const threadChannel = computed(() => chatStore.activeThread?.channel_id ?? chatStore.activeChannel?.id ?? '')
 const blocks = useBlocksStore()
@@ -37,10 +39,12 @@ const canReact = computed(() => (dmChat.isDm.value ? dmChat.canSend.value : perm
 
 async function toggleLock() {
   if (!chatStore.activeThread?.title || !canManageMessages.value) return
-  const newLock = !chatStore.activeThread.is_locked
+  // The post that was asked: another one may be open when the answer arrives.
+  const thread = chatStore.activeThread
+  const newLock = !thread.is_locked
   try {
-    await updateForumPost(threadChannel.value, chatStore.activeThread.id, { is_locked: newLock })
-    chatStore.activeThread.is_locked = newLock
+    await updateForumPost(threadChannel.value, thread.id, { is_locked: newLock })
+    if (chatStore.activeThread?.id === thread.id) chatStore.activeThread.is_locked = newLock
   } catch (err) {
     toasts.error(caughtErrorMessage(err, t('forum.lockFailed')))
   }
@@ -64,9 +68,18 @@ function scrollToBottom() {
   })
 }
 
-watch(() => chatStore.threadReplies.length, () => {
-  scrollToBottom()
-})
+// A new reply moves the view only for someone who is at the end already or who
+// wrote it; reading older replies must not be interrupted. Decided before the
+// DOM grows ('pre'), so the position is the one the reader had.
+const NEAR_BOTTOM_PX = 80
+watch(() => chatStore.threadReplies.length, (count, before) => {
+  const el = repliesContainer.value
+  const last = chatStore.threadReplies.at(-1)
+  const own = !!last && last.user_id === authStore.user?.id
+  const atEnd = !el || before === 0 || el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_PX
+  if (count > before && own) scrollToBottom()
+  else if (atEnd) scrollToBottom()
+}, { flush: 'pre' })
 
 // ---- Replies inside the thread ----
 
@@ -167,12 +180,20 @@ async function handleSendReply() {
   const text = replyInput.value.trim()
   if (isReplyBlocked(text)) return
 
+  // The thread and target of this send: the reader may be elsewhere or typing on when it lands.
+  const threadId = chatStore.activeThread?.id
+  const target = replyingTo.value?.id || null
   isSending.value = true
   try {
-    await chatStore.sendThreadReply(text, replyingTo.value?.id || null)
-    replyInput.value = ''
-    replyingTo.value = null
-    scrollToBottom()
+    await chatStore.sendThreadReply(text, target)
+    if (chatStore.activeThread?.id === threadId) {
+      if (replyInput.value.trim() === text) replyInput.value = ''
+      if ((replyingTo.value?.id || null) === target) replyingTo.value = null
+      scrollToBottom()
+    } else if (threadId && authStore.user) {
+      // The draft slot of the thread that was left still holds what was just sent.
+      setDraft(authStore.user.id, threadDraftKey(threadId), null)
+    }
   } catch (err) {
     toasts.error(caughtErrorMessage(err, t('thread.sendFailed')))
   } finally {
@@ -182,9 +203,10 @@ async function handleSendReply() {
 
 async function handleFileUpload(e: Event) {
   const replyId = replyingTo.value?.id || null
+  const threadId = chatStore.activeThread?.id
   const ok = await actions.upload(e.target as HTMLInputElement, (file: File) => chatStore.uploadThreadMedia(file, '', replyId))
-  if (!ok) return
-  replyingTo.value = null
+  if (!ok || chatStore.activeThread?.id !== threadId) return
+  if ((replyingTo.value?.id || null) === replyId) replyingTo.value = null
   scrollToBottom()
 }
 </script>
@@ -246,8 +268,14 @@ async function handleFileUpload(e: Event) {
     <!-- Scrollable Thread Content Area -->
     <div ref="repliesContainer" class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3">
       <!-- Root Message Card -->
+      <BlockedMessageRow
+        v-if="chatStore.activeThread && blocks.hides(chatStore.activeThread)"
+        :msg="chatStore.activeThread as Message"
+        compact
+        @show="blocks.reveal(chatStore.activeThread.id)"
+      />
       <ThreadRootCard
-        v-if="chatStore.activeThread"
+        v-else-if="chatStore.activeThread"
         :root="chatStore.activeThread"
         :actions="actions"
         :can-react="canReact"

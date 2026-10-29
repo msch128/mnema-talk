@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { effectScope, ref, nextTick } from 'vue'
+import { effectScope, ref, nextTick, defineComponent, h } from 'vue'
+import { mount } from '@vue/test-utils'
+import { useDialog } from './useDialog'
 import { useDismissable } from './useDismissable'
 import { required } from '../store-test-support.fixture'
 
@@ -131,23 +133,42 @@ describe('useDismissable', () => {
 
     open.value = true
     await nextTick()
-    expect(add).toHaveBeenCalledTimes(2)
+    expect(add).toHaveBeenCalledTimes(1) // pointerdown; Escape listens on window
     press(el())
     expect(onClose).toHaveBeenCalledTimes(1)
 
     open.value = false
     await nextTick()
-    expect(remove).toHaveBeenCalledTimes(2)
+    expect(remove).toHaveBeenCalledTimes(1)
     press(el())
     expect(onClose).toHaveBeenCalledTimes(1)
 
     open.value = true
     scope.stop()
-    expect(remove).toHaveBeenCalledTimes(4)
+    expect(remove).toHaveBeenCalledTimes(2)
     press(el())
     escape()
     expect(onClose).toHaveBeenCalledTimes(1)
     add.mockRestore()
     remove.mockRestore()
+  })
+})
+
+describe('useDismissable inside a dialog', () => {
+  it('takes Escape before an open dialog, so one press closes only the popover', () => {
+    const root = ref<HTMLElement | null>(null)
+    const closeDialog = vi.fn()
+    const closePopover = vi.fn()
+    const Dialog = defineComponent({ setup() { useDialog(root, { onClose: closeDialog }); return () => h('div', { ref: root, tabindex: -1 }) } })
+    const Popover = defineComponent({ setup() { useDismissable(null, closePopover); return () => h('span') } })
+    const dialog = mount(Dialog, { attachTo: document.body })
+    const popover = mount(Popover, { attachTo: document.body })
+    escape()
+    expect(closePopover).toHaveBeenCalledTimes(1)
+    expect(closeDialog).not.toHaveBeenCalled()
+    popover.unmount()
+    escape()
+    expect(closeDialog).toHaveBeenCalledTimes(1)
+    dialog.unmount()
   })
 })

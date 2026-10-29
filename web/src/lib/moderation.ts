@@ -68,7 +68,7 @@ export function formatRemaining(ms: number): string {
   const h = Math.floor((total % 86400) / 3600)
   const m = Math.floor((total % 3600) / 60)
   const s = total % 60
-  if (d > 0) return `${d} d ${h} h`
+  if (d > 0) return `${t('moderation.units.d', { n: d })} ${t('moderation.units.h', { n: h })}`
   const mm = String(m).padStart(2, '0')
   const ss = String(s).padStart(2, '0')
   return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`

@@ -115,6 +115,12 @@ describe('SlashCommandBar', () => {
     await w.get('[data-option="text"]').trigger('keydown', { key: 'Enter', shiftKey: true })
     await w.get('[data-option="who"]').trigger('keydown', { key: 'Enter' })
     expect(w.emitted('run')).toHaveLength(2)
+    // Enter that commits an IME candidate, or sits in a checkbox, does not run it.
+    await w.get('[data-option="text"]').trigger('keydown', { key: 'Enter', isComposing: true })
+    await w.get('[data-option="text"]').trigger('keydown', { key: 'Process', keyCode: 229 })
+    await w.get('[data-option="text"]').trigger('keydown', { key: 'Enter', keyCode: 229 })
+    await w.get('[data-option="loud"]').trigger('keydown', { key: 'Enter' })
+    expect(w.emitted('run')).toHaveLength(2)
     await w.get('[data-testid="slash-cancel"]').trigger('click')
     await w.get('[data-option="text"]').trigger('keydown', { key: 'Escape' })
     await w.get('[data-option="text"]').trigger('keydown', { key: 'a' })

@@ -167,6 +167,10 @@ describe('search filters v3', () => {
     expect(textTerms('')).toEqual([])
   })
 
+  it('keeps a value that only matches an Object.prototype member', () => {
+    expect(parseSearchQuery('after:constructor').invalid).toEqual(['after:constructor'])
+    expect(filterTokens('after:constructor ')[0]?.value).toBe('constructor')
+  })
   it('reads today and yesterday (English and German) as dates', () => {
     expect(parseSearchQuery('before:heute after:Gestern during:today').filters).toEqual({ before: isoDay(0), after: isoDay(-1), during: isoDay(0) })
     expect(parseSearchQuery('before:yesterday').filters.before).toBe(isoDay(-1))

@@ -129,4 +129,28 @@ describe('AdminOnboardingTab', () => {
     }))
     expect(w.find<HTMLInputElement>('[data-testid="inactivity-days"]').element.value).toBe('30')
   })
+
+  it('offers a retry when the first load fails', async () => {
+    apiMock.mockRejectedValueOnce(new Error('offline'))
+    const w = mount(AdminOnboardingTab, { global: { stubs } })
+    await flushPromises()
+    expect(w.find('[data-testid="onboarding-load-failed"]').exists()).toBe(true)
+    apiMock.mockResolvedValue(settings)
+    await w.get('[data-testid="onboarding-retry"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="onboarding-settings"]').exists()).toBe(true)
+    expect(w.find('[data-testid="onboarding-load-failed"]').exists()).toBe(false)
+  })
+
+  it('does not report a saved change as failed when the shared copy cannot refresh', async () => {
+    const w = await mountTab()
+    await w.find('#onb-name').setValue('Renamed')
+    apiMock.mockResolvedValueOnce({ ...settings, community_name: 'Renamed' })
+    apiMock.mockRejectedValue(new Error('offline'))
+    await w.find('form').trigger('submit')
+    await flushPromises()
+    const texts = useToastStore().toasts.map(x => x.text)
+    expect(texts).toContain('Welcome and rules saved.')
+    expect(useToastStore().toasts.some(x => x.type === 'error')).toBe(false)
+  })
 })

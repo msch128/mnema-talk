@@ -582,8 +582,19 @@ describe('Sidebar administrative lifecycle and navigation', () => {
     await nextTick(); await wrapper.find('[data-voice-user]').trigger('click'); expect(profile).toHaveBeenCalledWith(person)
     await wrapper.find('[data-voice-user]').trigger('contextmenu'); await flush(); expect(menuLabels()).toContain('Profil ansehen')
     voice.mediaState.viewer = { channel_id: 'lounge', screen: true, camera: false }
+    joinVoiceChannel.mockImplementationOnce((id: string) => voice.setChannel(id))
     await nextTick(); await wrapper.find('[data-voice-user]').trigger('click'); await flush(); expect(joinVoiceChannel).toHaveBeenCalledWith('lounge'); expect(watch).toHaveBeenCalledWith('viewer')
     voice.setChannel('lounge'); voice.activeView = 'chat'; await wrapper.find('[data-voice-user]').trigger('click'); await flush(); expect(voice.activeView).toBe('voice')
+  })
+  it('does not watch a screen when the switch to its Talk is cancelled', async () => {
+    await mountSidebar({ role: 'user' }); vi.spyOn(chat, 'selectChannel').mockResolvedValue()
+    voice.channelUsers.lounge = { viewer: voiceUserFixture({ id: 'viewer', username: 'viewer' }) }
+    voice.mediaState.viewer = { channel_id: 'lounge', screen: true, camera: false }
+    voice.setChannel('other'); voice.warnSwitchChannel = true
+    const watch = vi.spyOn(voice, 'watchScreen')
+    confirmMock.mockResolvedValueOnce(false)
+    await nextTick(); await wrapper.find('[data-voice-user]').trigger('click'); await flush()
+    expect(joinVoiceChannel).not.toHaveBeenCalled(); expect(watch).not.toHaveBeenCalled()
   })
   it('keeps a connected voice row visible inside its collapsed category', async () => {
     await mountSidebar({ collapsed: ['voice'] }); voice.setChannel('lounge'); await nextTick(); expect(channelIds('voice')).toEqual(['lounge'])

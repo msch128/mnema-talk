@@ -9,9 +9,10 @@ import SearchModal from './SearchModal.vue'
 import GlobalSearch from './GlobalSearch.vue'
 import { searchOpen, searchText } from '../lib/globalSearch'
 import { useChatStore } from '../stores/chat'
+import { useToastStore } from '../stores/toast'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { channelFixture, messageFixture, userFixture, fixtureId, requireValue } from '../test-fixtures.fixture'
-import { i18nPlugin, setLocale } from '../i18n'
+import { i18nPlugin, setLocale, t } from '../i18n'
 import { tooltip } from '../directives/tooltip'
 
 const mockApi = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
@@ -254,6 +255,40 @@ it('ignores a stale failed search and stale paginated results after clearing cri
   page.resolve({ messages: [messageFixture()], has_more: true }); await flushPromises()
   expect(document.querySelector('[role="option"]')).toBeNull()
   expect(document.querySelector('[role="alert"]')).toBeNull()
+})
+
+it('pages the list on screen with its own query while a new one is still being typed', async () => {
+  mockApi.mockResolvedValueOnce({ messages: [messageFixture()], has_more: true }).mockResolvedValue({ messages: [], has_more: false })
+  await open(); await query('old')
+  input().value = 'brand new'
+  input().dispatchEvent(new Event('input'))
+  const more = requireValue([...document.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent.includes('Mehr laden')))
+  more.click(); await flushPromises()
+  const page = new URLSearchParams(mockApi.mock.calls[1]![0].split('?')[1])
+  expect(page.get('q')).toBe('old')
+  expect(page.get('before')).toBe(messageFixture().id)
+})
+
+it('tells when another page could not be loaded', async () => {
+  vi.spyOn(console, 'warn').mockImplementation(() => {})
+  mockApi.mockResolvedValueOnce({ messages: [messageFixture()], has_more: true }).mockRejectedValueOnce(new Error('offline'))
+  await open(); await query('hello')
+  requireValue([...document.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent.includes('Mehr laden'))).click()
+  await flushPromises()
+  expect(useToastStore().toasts.map(x => x.text)).toContain(t('chat.searchFailed'))
+  vi.restoreAllMocks()
+})
+
+it('leaves Enter to the IME while a composition is committed', async () => {
+  const chat = useChatStore()
+  chat.goToMessage = vi.fn()
+  mockApi.mockResolvedValue({ messages: [messageFixture()], has_more: false })
+  await open(); await query('result')
+  input().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true, cancelable: true }))
+  input().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 229, bubbles: true, cancelable: true }))
+  expect(chat.goToMessage).not.toHaveBeenCalled()
+  key('Enter')
+  expect(chat.goToMessage).toHaveBeenCalledTimes(1)
 })
 
 it('does not paginate an empty result page even if the server advertises more', async () => {

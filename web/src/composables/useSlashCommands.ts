@@ -12,6 +12,7 @@ import { slashQuery, filterCommands, emptyValues, buildOptions, hasForm } from '
 import type { OptionValues } from '../lib/slashCommands'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
+import { isImeKey } from './useComposerKeys'
 
 /** How long the commands of a channel are reused before they are asked for again. */
 const FRESH_MS = 60_000
@@ -24,6 +25,8 @@ function useChannelCommands() {
 
   async function load(id: string) {
     if (loadedFor === id && Date.now() - loadedAt < FRESH_MS) return
+    // The list of the channel left behind must not be offered in this one.
+    if (loadedFor !== id) commands.value = []
     loadedFor = id
     loadedAt = Date.now()
     try {
@@ -32,8 +35,10 @@ function useChannelCommands() {
     } catch (err) {
       void err
       // No list is no menu; typing "/" stays an ordinary message.
-      loadedAt = 0
-      commands.value = []
+      if (loadedFor === id) {
+        loadedAt = 0
+        commands.value = []
+      }
     }
   }
   return { commands, load }
@@ -49,6 +54,7 @@ function onListKey(
     dismissed: Ref<boolean>
   }
 ) {
+  if (isImeKey(e)) return false
   const n = suggestions.length
   if (e.key === 'ArrowDown') { e.preventDefault(); active.value = (active.value + 1) % n; return true }
   if (e.key === 'ArrowUp') { e.preventDefault(); active.value = (active.value + n - 1) % n; return true }

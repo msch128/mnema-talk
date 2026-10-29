@@ -27,6 +27,7 @@ const when = ref('')
 // saving ends, that would pick the other of the two equal clock times.
 const initialWhen = ref('')
 const busy = ref(false)
+const removing = ref(false)
 const error = ref('')
 
 const failed = computed(() => props.item.state === 'failed')
@@ -68,10 +69,14 @@ async function save() {
 }
 
 async function remove() {
+  if (removing.value) return
+  removing.value = true
   try {
     await later.removeScheduled(props.item.id)
   } catch (e) {
     toasts.error(caughtErrorMessage(e, t('later.removeFailed')))
+  } finally {
+    removing.value = false
   }
 }
 </script>
@@ -108,6 +113,7 @@ async function remove() {
         class="btn btn-icon h-7 w-7 shrink-0 max-md:h-11 max-md:w-11"
         :aria-label="$t('later.delete')"
         v-tooltip="$t('later.delete')"
+        :disabled="removing"
         @click="remove"
       >
         <Trash2 class="h-3.5 w-3.5" />

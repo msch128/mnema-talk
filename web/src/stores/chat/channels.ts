@@ -101,8 +101,10 @@ export async function selectChannel(cx: Cx, channel: Channel | null) {
   resetWindow(cx)
   setWindow(cx, emptyWindow())
   cs.activeChannelLastReadAt.value = cs.readStates.value[channel.id]?.last_read_at || null
-  await fetchMessages(cx, channel.id)
+  const shown = await fetchMessages(cx, channel.id)
   if (community !== cs.communityGeneration) return
+  // Only a window the reader actually got to see counts as read.
+  if (!shown || cs.activeChannel.value?.id !== channel.id) return
   if (channel.type !== 'voice' || cs.voiceChatReading.value) {
     await markChannelRead(cx, channel.id)
   }

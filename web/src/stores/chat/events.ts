@@ -165,7 +165,8 @@ function onMessageDelete(cx: Cx, p: Payload<'message_delete'>) {
 }
 
 const HANDLERS: Handlers = {
-  pong: ({ voiceStore }, p) => {
+  pong: ({ cs, voiceStore }, p) => {
+    cs.lastPongAt = Date.now()
     if (p?.t) voiceStore.recordPing(Date.now() - p.t)
   },
   server_info: ({ authStore, voiceStore }, p) => {

@@ -18,6 +18,19 @@ beforeEach(() => {
 })
 
 describe('useMentionsInbox', () => {
+  it('reports a failed load of the next page and clears it on retry', async () => {
+    apiMock.mockResolvedValueOnce(page([5, 4], true)).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(page([3]))
+    const inbox = useMentionsInbox()
+    await inbox.load()
+    await inbox.loadMore()
+    expect(inbox.loadMoreFailed.value).toBe(true)
+    expect(inbox.failed.value).toBe(false)
+    expect(inbox.items.value).toHaveLength(2)
+    await inbox.loadMore()
+    expect(inbox.loadMoreFailed.value).toBe(false)
+    expect(inbox.items.value).toHaveLength(3)
+  })
+
   it('loads the newest page, then pages back with the oldest id', async () => {
     apiMock.mockResolvedValueOnce(page([5, 4], true)).mockResolvedValueOnce(page([3]))
     const inbox = useMentionsInbox()

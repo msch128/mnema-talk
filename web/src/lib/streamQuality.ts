@@ -50,14 +50,14 @@ function isStreamFrameRate(value: unknown): value is StreamFrameRate {
   return value === 60
 }
 
-/** A valid choice: unknown values fall back to the default ones. */
+/** A valid choice: unknown values fall back to the default ones; Custom picked on purpose is kept. */
 export function normalizeQuality(q: unknown): StreamQuality {
   const input = typeof q === 'object' && q !== null ? q : {}
   const chosenResolution = 'resolution' in input ? input.resolution : undefined
   const chosenFps = 'fps' in input ? input.fps : undefined
   const resolution = isStreamResolution(chosenResolution) ? chosenResolution : DEFAULT_STREAM_QUALITY.resolution
   const fps = isStreamFrameRate(chosenFps) ? chosenFps : DEFAULT_STREAM_QUALITY.fps
-  return { resolution, fps }
+  return { resolution, fps, ...(markedCustom(q) ? { custom: true } : {}) }
 }
 
 /**

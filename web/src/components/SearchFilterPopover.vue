@@ -43,6 +43,11 @@ function chooseDay(day: string) {
   if (day) emit('pick', `${dateKind.value}:${day}`)
 }
 
+// A date field reports a value as soon as the first year digit is typed (0002-10-28); wait for a real year.
+function chooseTypedDay() {
+  if (Number(pickedDay.value.slice(0, 4)) >= 1000) chooseDay(pickedDay.value)
+}
+
 function applyTyped() {
   const first = items.value[0]
   if (key.value && first) choose(key.value, first.value)
@@ -59,7 +64,9 @@ function onKeydown(e: KeyboardEvent) {
   if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
   const stops = [...(rootEl.value?.querySelectorAll<HTMLElement>('input[type="text"], [data-pop-item]') ?? [])]
   const at = stops.indexOf(document.activeElement as HTMLElement)
-  const next = stops[(at + (e.key === 'ArrowDown' ? 1 : stops.length - 1)) % stops.length]
+  const down = e.key === 'ArrowDown'
+  // Focus outside the list (kind buttons, date input): Down enters at the top, Up at the bottom.
+  const next = at < 0 ? stops[down ? 0 : stops.length - 1] : stops[(at + (down ? 1 : stops.length - 1)) % stops.length]
   if (!next) return
   e.preventDefault()
   next.focus()
@@ -142,7 +149,7 @@ onMounted(() => nextTick(() => {
         data-date-input
         :aria-label="$t('chat.chooseDate')"
         class="mt-1 w-full rounded-md border border-mnema-border bg-mnema-surface px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"
-        @change="chooseDay(pickedDay)"
+        @change="chooseTypedDay"
       />
     </template>
 

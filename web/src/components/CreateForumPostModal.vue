@@ -71,7 +71,7 @@ async function handleSubmit() {
     @close="emit('close')"
   >
     <form @submit.prevent="handleSubmit" class="p-6 space-y-4">
-      <div v-if="error" class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-sm text-red-400">
+      <div v-if="error" role="alert" class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-sm text-red-400">
         <AlertCircle class="w-4 h-4 shrink-0" />
         <span>{{ error }}</span>
       </div>
@@ -100,14 +100,14 @@ async function handleSubmit() {
       <!-- Tags Selector (if available) -->
       <div v-if="availableTags.length > 0">
         <div class="flex items-center justify-between mb-1.5">
-          <label class="text-xs font-semibold text-mnema-secondary uppercase tracking-wider">
+          <span id="post-tags-label" class="text-xs font-semibold text-mnema-secondary uppercase tracking-wider">
             {{ $t('forum.tagsLabel') }}
-          </label>
+          </span>
           <span class="text-xs text-mnema-tertiary">
             {{ selectedTagIds.length }}/5
           </span>
         </div>
-        <div class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1 bg-mnema-surface/50 border border-mnema-hairline rounded-lg">
+        <div role="group" aria-labelledby="post-tags-label" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1 bg-mnema-surface/50 border border-mnema-hairline rounded-lg">
           <button
             v-for="tag in availableTags"
             :key="tag.id"

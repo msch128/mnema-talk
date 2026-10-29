@@ -137,6 +137,28 @@ describe('media group', () => {
     await bob.close()
   }, 30_000)
 
+  it('wipes the secrets of the epoch it leaves, as the committer and as a member', async () => {
+    const { alice, bob, groups } = await joinedPair()
+    const exporter = (group: MediaGroup) => (group as unknown as { state: mls.ClientState }).state.keySchedule.exporterSecret
+    const oldAlice = exporter(alice)
+    const oldBob = exporter(bob)
+    expect(oldAlice.some(byte => byte !== 0)).toBe(true)
+    expect(oldBob.some(byte => byte !== 0)).toBe(true)
+    const carol = await opened(carolId)
+    groups.set(carolId, carol)
+    const roster = [aliceId, bobId, carolId]
+    const offer = await carol.sync(roster)
+    await deliver(groups, carolId, offer.wires, roster)
+    expect((await alice.sync(roster)).epoch).toBe(2)
+    expect((await bob.sync(roster)).epoch).toBe(2)
+    expect(exporter(alice)).not.toBe(oldAlice)
+    expect(oldAlice.every(byte => byte === 0)).toBe(true)
+    expect(oldBob.every(byte => byte === 0)).toBe(true)
+    expect(exporter(alice).some(byte => byte !== 0)).toBe(true)
+    expect(exporter(bob).some(byte => byte !== 0)).toBe(true)
+    for (const group of groups.values()) await group.close()
+  }, 30_000)
+
   it('adds members whose packages arrived together in one commit when the call batches', async () => {
     const alice = await opened(aliceId)
     const bob = await opened(bobId)

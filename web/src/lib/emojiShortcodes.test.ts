@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { loadEmojiShortcodes, useEmojiShortcodes } from './emojiShortcodes'
 
 describe('emoji shortcode table', () => {
@@ -16,5 +16,17 @@ describe('emoji shortcode table', () => {
     expect(loaded.tada).toBe('🎉')
     await ensure()
     expect(table.value).toBe(loaded)
+  })
+})
+
+describe('failed table load', () => {
+  it('is retried on the next call instead of cached', async () => {
+    vi.resetModules()
+    vi.doMock('./emojiShortcodes.json', () => { throw new Error('chunk failed') })
+    const fresh = await import('./emojiShortcodes')
+    await expect(fresh.loadEmojiShortcodes()).rejects.toThrow()
+    vi.doMock('./emojiShortcodes.json', () => ({ default: { smile: 'x' } }))
+    expect((await fresh.loadEmojiShortcodes()).smile).toBe('x')
+    vi.doUnmock('./emojiShortcodes.json')
   })
 })

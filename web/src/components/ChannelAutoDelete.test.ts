@@ -61,6 +61,30 @@ describe('ChannelAutoDeleteField', () => {
     expect(useToastStore().toasts[0]?.text).toBe('Auto-delete updated.')
   })
 
+  it('settles after saving: the select matches the stored value and Apply is disabled again', async () => {
+    enable()
+    const chat = useChatStore()
+    const stale = channelFixture({ id: 'c1', name: 'general', auto_delete_days: 0 })
+    chat.uncategorized = [stale]
+    const w = mount(ChannelAutoDeleteField, { props: { channel: stale }, global: { plugins: [i18nPlugin] } })
+    await w.get('[data-testid="auto-delete-select"]').setValue('7')
+    // The store replaces the channel object, the dialog still holds the old one.
+    chat.uncategorized = [channelFixture({ id: 'c1', name: 'general', auto_delete_days: 7 })]
+    await flushPromises()
+    expect(w.get('[data-testid="auto-delete-apply"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('follows a change made elsewhere while nothing is pending', async () => {
+    enable()
+    const chat = useChatStore()
+    const stale = channelFixture({ id: 'c1', auto_delete_days: 0 })
+    chat.uncategorized = [stale]
+    const w = mount(ChannelAutoDeleteField, { props: { channel: stale }, global: { plugins: [i18nPlugin] } })
+    chat.uncategorized = [channelFixture({ id: 'c1', auto_delete_days: 30 })]
+    await flushPromises()
+    expect((w.get('[data-testid="auto-delete-select"]').element as HTMLSelectElement).value).toBe('30')
+  })
+
   it('turns it off without a warning', async () => {
     enable()
     const w = mount(ChannelAutoDeleteField, { props: { channel: channelFixture({ id: 'c1', auto_delete_days: 30 }) }, global: { plugins: [i18nPlugin] } })

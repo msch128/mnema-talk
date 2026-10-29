@@ -187,4 +187,20 @@ describe('AdminInvitesTab', () => {
     await w.get('[data-preset="never"]').trigger('click')
     expect(w.get<HTMLInputElement>('#invite-hours').element.value).toBe('')
   })
+
+  it('creates one invite for a double submit', async () => {
+    apiMock.mockResolvedValueOnce(invites())
+    const w = mount(AdminInvitesTab)
+    await flushPromises()
+    let release: (() => void) | undefined
+    apiMock.mockImplementationOnce(() => new Promise((resolve) => { release = () => resolve({}) }))
+    apiMock.mockResolvedValue(invites())
+    await submit(w).trigger('submit')
+    await submit(w).trigger('submit')
+    expect(submit(w).attributes('disabled')).toBeDefined()
+    release?.()
+    await flushPromises()
+    expect(apiMock.mock.calls.filter(c => c[1]?.method === 'POST')).toHaveLength(1)
+    expect(submit(w).attributes('disabled')).toBeUndefined()
+  })
 })

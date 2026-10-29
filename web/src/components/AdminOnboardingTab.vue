@@ -36,6 +36,7 @@ const dmEnabled = ref(true)
 const inactivityDays = ref(7)
 const previewing = ref<'' | 'welcome' | 'rules'>('')
 const busy = ref(false)
+const loadFailed = ref(false)
 
 const textChannels = computed(() => chat.allChannels.filter(c => c.type === 'text'))
 const dirty = computed(() => !!loaded.value && (
@@ -60,9 +61,11 @@ function apply(s: OnboardingSettings) {
 }
 
 async function load() {
+  loadFailed.value = false
   try {
     apply(await api('/api/admin/onboarding', { decode: decodeOnboardingSettings }))
   } catch (e) {
+    loadFailed.value = true
     toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
   }
 }
@@ -81,12 +84,14 @@ async function save() {
       decode: decodeOnboardingSettings
     }))
     toasts.success(t('admin.onboarding.saved'))
-    await onboarding.reload()
   } catch (e) {
     toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
+    return
   } finally {
     busy.value = false
   }
+  // The settings are saved; a failed refresh of the shared copy is no save error.
+  await onboarding.reload().catch(() => {})
 }
 
 function togglePreview(which: 'welcome' | 'rules') {
@@ -97,7 +102,11 @@ onMounted(load)
 </script>
 
 <template>
-  <form v-if="loaded" class="space-y-5" data-testid="onboarding-settings" @submit.prevent="save">
+  <div v-if="!loaded && loadFailed" class="space-y-3" role="alert" data-testid="onboarding-load-failed">
+    <p class="text-sm text-mnema-danger">{{ $t('admin.onboarding.loadFailed') }}</p>
+    <button type="button" class="btn btn-secondary" data-testid="onboarding-retry" @click="load">{{ $t('common.retry') }}</button>
+  </div>
+  <form v-else-if="loaded" class="space-y-5" data-testid="onboarding-settings" @submit.prevent="save">
     <p class="text-xs text-mnema-tertiary">{{ $t('admin.onboarding.hint') }}</p>
 
     <div class="space-y-1">
