@@ -39,7 +39,7 @@ func prodConfig(t *testing.T, extra map[string]string) *config.Config {
 func healthy(cfg *config.Config) Input {
 	rt := &Runtime{}
 	rt.SetAnnounce(SourceDetected, []string{"203.0.113.7"}, "")
-	return Input{Cfg: cfg, Runtime: rt, DBReachable: true, StorageConfigured: true}
+	return Input{Cfg: cfg, Runtime: rt, DBReachable: true, StorageConfigured: true, TURNRunning: true}
 }
 
 func byID(checks []Check, id string) Check {
@@ -293,7 +293,7 @@ func TestTurnCheckStates(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			in := healthy(prodConfig(t, tc.env))
-			in.Warnings, in.TURNProbe = tc.warns, tc.probe
+			in.Warnings, in.TURNProbe, in.TURNRunning = tc.warns, tc.probe, true
 			c := byID(Run(in), Turn)
 			if c.Level != tc.level || !strings.Contains(c.Detail, tc.detail) || !strings.Contains(c.Fix, tc.fix) || (tc.fix == "" && c.Fix != "") {
 				t.Errorf("turn = %+v, want level %s, detail containing %q, fix containing %q", c, tc.level, tc.detail, tc.fix)
@@ -310,4 +310,18 @@ func mergeEnv(a, b map[string]string) map[string]string {
 		}
 	}
 	return m
+}
+
+func TestTurnCheckWarnsWhenTheBuiltInRelayDidNotStart(t *testing.T) {
+	in := healthy(prodConfig(t, nil))
+	in.TURNRunning = false
+	c := byID(Run(in), Turn)
+	if c.Level != Warn || !strings.Contains(c.Detail, "not running because voice is unavailable") {
+		t.Errorf("turn = %+v, want an amber check that says voice is unavailable", c)
+	}
+	in = healthy(prodConfig(t, map[string]string{"WEBRTC_TURN_URLS": "turn:chat.example.com:3478", "WEBRTC_TURN_SECRET": "turn-secret-value-123456", "WEBRTC_BUILTIN_TURN": "on"}))
+	in.TURNRunning = false
+	if c := byID(Run(in), Turn); c.Level != OK {
+		t.Errorf("an external relay keeps the check green, got %+v", c)
+	}
 }
