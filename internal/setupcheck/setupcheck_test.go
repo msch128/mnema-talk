@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net"
 	"net/netip"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -323,5 +325,62 @@ func TestTurnCheckWarnsWhenTheBuiltInRelayDidNotStart(t *testing.T) {
 	in.TURNRunning = false
 	if c := byID(Run(in), Turn); c.Level != OK {
 		t.Errorf("an external relay keeps the check green, got %+v", c)
+	}
+}
+
+func TestEveryCheckOutcomeHasAUniqueCodeAndEnglishText(t *testing.T) {
+	codes := Codes()
+	seen := map[string]bool{}
+	for _, c := range codes {
+		if seen[c] {
+			t.Errorf("code %q listed twice", c)
+		}
+		seen[c] = true
+		m := messages[c]
+		if m.detail == "" {
+			t.Errorf("code %q has no English detail", c)
+		}
+		if !strings.Contains(c, ".") {
+			t.Errorf("code %q is not <check>.<outcome>", c)
+		}
+	}
+}
+
+// TestCodesMatchTheSharedList keeps api/status-codes.json, which the web
+// app's translation test reads, equal to the codes the server can send.
+// Run with UPDATE_STATUS_CODES=1 to rewrite it after adding a code.
+func TestCodesMatchTheSharedList(t *testing.T) {
+	const path = "../../api/status-codes.json"
+	want, err := json.MarshalIndent(map[string][]string{"setup_checks": Codes(), "operator_warnings": opwarn.Codes()}, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want = append(want, '\n')
+	if os.Getenv("UPDATE_STATUS_CODES") != "" {
+		if err := os.WriteFile(path, want, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(got, want) {
+		t.Fatalf("%s is out of date (err %v); run UPDATE_STATUS_CODES=1 go test ./internal/setupcheck and add the translations in web/src/i18n", path, err)
+	}
+}
+
+func TestRunReturnsOnlyKnownCodesWithTheirParams(t *testing.T) {
+	good := healthy(prodConfig(t, nil))
+	bad := Input{Cfg: prodConfig(t, map[string]string{"PUBLIC_URL": "http://localhost:8080"}), RequestOrigin: "https://other.example.com", Warnings: []opwarn.Warning{{Code: opwarn.VoiceUnavailable}, {Code: opwarn.ProxyNotTrusted}}}
+	for _, in := range []Input{good, bad} {
+		for _, c := range Run(in) {
+			if _, ok := messages[c.Code]; !ok {
+				t.Errorf("check %s: unknown code %q", c.ID, c.Code)
+			}
+			if !strings.HasPrefix(c.Code, c.ID+".") {
+				t.Errorf("check %s: code %q does not belong to it", c.ID, c.Code)
+			}
+			if strings.Contains(c.Detail+c.Fix, "{") {
+				t.Errorf("check %s: unfilled placeholder in %q / %q", c.ID, c.Detail, c.Fix)
+			}
+		}
 	}
 }
